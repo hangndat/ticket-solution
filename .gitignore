@@ -14,6 +14,8 @@ coverage/
 *.log
 apps/mobile/ios/
 apps/mobile/android/
+apps/web/.uat-artifacts/
+apps/mobile/.uat-artifacts/
 # Added by code-review-graph
 .code-review-graph/
 # Local Cursor MCP / machine-specific agent config (rules live in .cursor/rules/)
