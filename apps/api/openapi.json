@@ -66,12 +66,170 @@
           "Me"
         ]
       }
+    },
+    "/v1/tenants/{tenantId}/events/{eventId}/redemptions": {
+      "post": {
+        "operationId": "TicketIssueController_redeem",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "eventId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "idempotency-key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RedeemBodyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RedeemResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "redemptions"
+        ]
+      }
+    },
+    "/v1/me/tickets": {
+      "get": {
+        "operationId": "TicketIssueController_meTickets",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeTicketsDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "redemptions"
+        ]
+      }
+    },
+    "/v1/operations/{clientOperationId}": {
+      "get": {
+        "operationId": "TicketIssueController_operation",
+        "parameters": [
+          {
+            "name": "clientOperationId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "eventId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "command",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "redemptions"
+        ]
+      }
     }
   },
   "info": {
-    "title": "Ticket API — D1 identity",
-    "description": "Liveness and authenticated GET /v1/me after OIDC JWT verification. Tenant business APIs remain closed.",
-    "version": "0.1.0",
+    "title": "Ticket API — D2 issue",
+    "description": "Identity plus redemption issue (PostgreSQL quota/outbox). Redis does not decide quota.",
+    "version": "0.2.0",
     "contact": {}
   },
   "tags": [],
@@ -164,6 +322,133 @@
           "message",
           "requestId",
           "retryable"
+        ]
+      },
+      "RedeemBodyDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "formVersion": {
+            "type": "string"
+          },
+          "termsVersion": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code"
+        ]
+      },
+      "RedeemResponseDto": {
+        "type": "object",
+        "properties": {
+          "ticketId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "operationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "eventId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "ticketTypeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sourceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "ACTIVE"
+            ]
+          },
+          "credentialVersion": {
+            "type": "number"
+          },
+          "replayed": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ticketId",
+          "requestId",
+          "operationId",
+          "eventId",
+          "ticketTypeId",
+          "sourceId",
+          "state",
+          "credentialVersion",
+          "replayed"
+        ]
+      },
+      "TicketSummaryDto": {
+        "type": "object",
+        "properties": {
+          "ticketId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tenantId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "eventId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "ticketTypeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sourceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "state": {
+            "type": "string"
+          },
+          "credentialVersion": {
+            "type": "number"
+          },
+          "createdAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "ticketId",
+          "tenantId",
+          "eventId",
+          "ticketTypeId",
+          "sourceId",
+          "state",
+          "credentialVersion",
+          "createdAt"
+        ]
+      },
+      "MeTicketsDto": {
+        "type": "object",
+        "properties": {
+          "tickets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TicketSummaryDto"
+            }
+          }
+        },
+        "required": [
+          "tickets"
         ]
       }
     }
