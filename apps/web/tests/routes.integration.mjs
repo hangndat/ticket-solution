@@ -88,9 +88,10 @@ test('production routes isolate tenant content and reject unknown pairs', async 
     assert.ok(home.includes('/t/northline/events/form-forum-2026'));
     const admin = await fetch(base + '/admin');
     assert.equal(admin.status, 200);
-    assert.ok(
-      (await admin.text()).includes('Not authenticated. Not implemented.'),
-    );
+    const adminHtml = await admin.text();
+    assert.ok(adminHtml.includes('Cấu hình sự kiện'));
+    assert.ok(adminHtml.includes('OIDC chưa cấu hình'));
+    assert.ok(adminHtml.includes('Không coi là đã lưu'));
     const authPoc = await fetch(base + '/auth');
     assert.equal(authPoc.status, 200);
     const authHtml = await authPoc.text();
@@ -141,6 +142,18 @@ test('production routes isolate tenant content and reject unknown pairs', async 
     assert.equal(redeemBff.status, 503);
     const redeemErr = await redeemBff.json();
     assert.equal(redeemErr.code, 'OIDC_MISCONFIGURED');
+
+    const publishBff = await fetch(base + '/api/bff/admin/publish', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        tenantId: '11111111-1111-4111-8111-111111111111',
+        eventId: '22222222-2222-4222-8222-222222222222',
+        expectedVersion: 1,
+      }),
+    });
+    assert.equal(publishBff.status, 503);
+    assert.equal((await publishBff.json()).code, 'OIDC_MISCONFIGURED');
   } finally {
     const stopped = once(child, 'exit');
     child.kill('SIGTERM');
