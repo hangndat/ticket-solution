@@ -99,6 +99,15 @@ test('serialized secure writes cannot resurrect credential after logout', async 
   await Promise.all([establish, logout]);
   assert.equal(f.credential(), null);
 });
+test('getCredential returns SecureStore bearer only while verified', async () => {
+  const f = fixture();
+  assert.equal(await f.boundary.getCredential(), null);
+  await f.boundary.establish('alice-token', verify);
+  assert.equal(await f.boundary.getCredential(), 'alice-token');
+  await f.boundary.logout();
+  assert.equal(await f.boundary.getCredential(), null);
+});
+
 test('secure deletion failure propagates while private data remains inaccessible', async () => {
   const f = fixture();
   await f.boundary.establish('alice', verify);

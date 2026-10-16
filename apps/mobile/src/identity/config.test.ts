@@ -4,6 +4,7 @@ import {
   getApiBaseUrl,
   getOidcClientId,
   getOidcIssuer,
+  getTenantId,
   isOidcConfigured,
 } from './config.ts';
 
@@ -54,4 +55,16 @@ test('API base URL trims trailing slashes', () => {
   assert.equal(getApiBaseUrl(), 'http://127.0.0.1:3001');
   if (previous === undefined) delete process.env.EXPO_PUBLIC_API_BASE_URL;
   else process.env.EXPO_PUBLIC_API_BASE_URL = previous;
+});
+
+test('tenant id empty is null (no invented tenant)', () => {
+  const previous = process.env.EXPO_PUBLIC_TENANT_ID;
+  delete process.env.EXPO_PUBLIC_TENANT_ID;
+  assert.equal(getTenantId(), null);
+  process.env.EXPO_PUBLIC_TENANT_ID = '  ';
+  assert.equal(getTenantId(), null);
+  process.env.EXPO_PUBLIC_TENANT_ID = '22222222-2222-2222-2222-222222222222';
+  assert.equal(getTenantId(), '22222222-2222-2222-2222-222222222222');
+  if (previous === undefined) delete process.env.EXPO_PUBLIC_TENANT_ID;
+  else process.env.EXPO_PUBLIC_TENANT_ID = previous;
 });

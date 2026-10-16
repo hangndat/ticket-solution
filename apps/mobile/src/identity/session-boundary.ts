@@ -88,6 +88,14 @@ export class SessionBoundary {
     // Propagate deletion failures: callers must not claim durable logout succeeded.
     await this.storage(() => this.store.clear());
   }
+  /**
+   * Short-lived bearer for authenticated API calls. Only available while
+   * SessionBoundary is verified — never invents a token from UI state.
+   */
+  async getCredential(): Promise<string | null> {
+    if (this.identity.status !== 'verified') return null;
+    return this.storage(() => this.store.read());
+  }
   private key(tenantSlug: string, resource: string) {
     if (this.identity.status !== 'verified') return null;
     return JSON.stringify([this.identity.userId, tenantSlug, resource]);
