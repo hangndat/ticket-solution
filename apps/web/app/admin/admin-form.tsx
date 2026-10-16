@@ -8,6 +8,12 @@ import {
   type AdminDecision,
 } from '../../src/admin/decide';
 import {
+  TICKET_STATES,
+  interpretEventReport,
+  reportShowsNumbers,
+  type EventReportView,
+} from '../../src/admin/report';
+import {
   editConfigPayload,
   initialPayloadEditor,
   lockPublishedPayload,
@@ -23,8 +29,15 @@ type Props = { initialTenantId?: string; initialEventId?: string };
 
 type UnclearAttempt = { key: string; fingerprint: string; unclear: boolean };
 
-function reuseUnclearKey(existing: UnclearAttempt | null, fingerprint: string): string {
-  if (existing?.unclear && existing.fingerprint === fingerprint && existing.key) {
+function reuseUnclearKey(
+  existing: UnclearAttempt | null,
+  fingerprint: string,
+): string {
+  if (
+    existing?.unclear &&
+    existing.fingerprint === fingerprint &&
+    existing.key
+  ) {
     return existing.key;
   }
   return crypto.randomUUID();
@@ -51,6 +64,7 @@ export function AdminForm({
   const [denyAttempt, setDenyAttempt] = useState<UnclearAttempt | null>(null);
   const [busy, setBusy] = useState(false);
   const [decision, setDecision] = useState<AdminDecision | null>(null);
+  const [report, setReport] = useState<EventReportView | null>(null);
   const locked = payloadLocked(editor);
 
   async function call(action: AdminAction, path: string, init: RequestInit) {
@@ -141,6 +155,25 @@ export function AdminForm({
     await call('quota', `/api/bff/admin/quota?${params.toString()}`, {
       method: 'GET',
     });
+  }
+
+  async function loadReport() {
+    setBusy(true);
+    setReport(null);
+    const params = new URLSearchParams(scope());
+    const result = await fetchJson(
+      `/api/bff/admin/report?${params.toString()}`,
+      { method: 'GET' },
+      REQUEST_TIMEOUT_MS,
+    );
+    setReport(
+      interpretEventReport(
+        result.status,
+        result.json,
+        result.networkError || result.timedOut,
+      ),
+    );
+    setBusy(false);
   }
 
   async function decideRedemption(action: 'approve' | 'deny') {
@@ -237,6 +270,56 @@ export function AdminForm({
           />
         </label>
       </div>
+      <section aria-labelledby="event-report-heading">
+        <h2 id="event-report-heading">Báo cáo sự kiện</h2>
+        <p>
+          Chỉ đọc: số vé theo trạng thái, quota capacity/allocated, và số yêu
+          cầu chờ duyệt. Lỗi máy chủ, timeout hoặc mất mạng là chưa biết — các
+          số đó không được hiện.
+        </p>
+        <div className="auth-buttons">
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void loadReport()}
+          >
+            Tải báo cáo
+          </button>
+        </div>
+        {report && reportShowsNumbers(report) ? (
+          <dl data-testid="event-report-numbers">
+            {TICKET_STATES.map((state) => (
+              <div key={state}>
+                <dt>{state}</dt>
+                <dd>{report.ticketsByState[state]}</dd>
+              </div>
+            ))}
+            <div>
+              <dt>Quota capacity</dt>
+              <dd>
+                {report.quota.capacity === null
+                  ? 'null'
+                  : report.quota.capacity}
+              </dd>
+            </div>
+            <div>
+              <dt>Quota allocated</dt>
+              <dd>{report.quota.allocated}</dd>
+            </div>
+            <div>
+              <dt>Chờ duyệt</dt>
+              <dd>{report.pendingApprovalCount}</dd>
+            </div>
+          </dl>
+        ) : null}
+        {report && !reportShowsNumbers(report) ? (
+          <p data-testid="event-report-unknown" role="status">
+            {report.kind === 'rejected'
+              ? `${report.code}: ${report.message}`
+              : report.message}
+          </p>
+        ) : null}
+      </section>
       <label>
         Payload cấu hình (JSON)
         <textarea
