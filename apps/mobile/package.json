@@ -3,7 +3,6 @@
   "version": "0.1.0",
   "main": "expo-router/entry",
   "dependencies": {
-    "@clerk/expo": "4.12.0",
     "@expo/ui": "58.0.19",
     "@ticket/contracts": "workspace:*",
     "expo": "58.0.12",

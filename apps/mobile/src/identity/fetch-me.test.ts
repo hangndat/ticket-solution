@@ -46,7 +46,7 @@ test('verifyViaMe maps MeResponse.userId and rejects HTTP errors', async () => {
     new Response(
       JSON.stringify({
         userId: 'usr_1',
-        issuer: 'https://clerk.example',
+        issuer: 'http://127.0.0.1:8080/realms/ticket',
         subject: 'user_abc',
         email: 'a@b.c',
         emailVerified: true,

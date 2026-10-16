@@ -13,7 +13,7 @@ Tracking lâu dài: GitHub Issues + Project (tiếng Việt). Project: https://g
 | Mục | Trạng thái | Ghi chú |
 | --- | --- | --- |
 | W0 Foundation | **Hoàn thành** (user duyệt) | Prototype/foundation — **không** đồng nghĩa production auth, isolation mọi module, hoặc ticketing xong. Issues #1/#8/#9 đóng; milestone D0 closed. |
-| Identity / OIDC | **Clerk đã chốt**; code POC + membership xong | Còn **live** OTP/MFA/revocation smoke. [DECISION-LOG](./DECISION-LOG.md), [review #11](./reviews/D1-ISSUE-11-CLERK.md) |
+| Identity / OIDC | **Keycloak self-host đã chốt**; gỡ Clerk | Live P4 UAT **PASS** (script + web BFF + iOS Simulator Sign in). Device native install/launch xong. [smoke](./reviews/D1-P4-KEYCLOAK-SMOKE.md) |
 | Mã / quota / issue / outbox | Chưa bắt đầu | Thuộc đợt nhận vé |
 | Gate / check-in | Chưa bắt đầu | Thuộc đợt check-in |
 | Admin / platform đầy đủ | Chưa bắt đầu | Thuộc đợt hoàn thiện |
@@ -87,10 +87,11 @@ Mỗi nhóm dưới đây tương ứng parent Issue trên GitHub; sub-issues ma
 ### D1 — Quyết định & Identity
 
 - [x] Chốt / ghi log O01–O08 — [DECISION-LOG.md](./DECISION-LOG.md), Issue #10
-- [x] Spike OIDC code POC (Clerk web/iOS + Nest `/v1/me`) — Issue #11; **live P4 smoke còn lại**
+- [x] Spike OIDC code POC ban đầu (Issue #11) — **đã chuyển ADR-09 → Keycloak**; gỡ Clerk SDK
 - [x] Membership tenant/event + deny-by-default; thu hồi — Issue #12
 - [x] Session web BFF + iOS SecureStore (phủ bởi #11) — Issue #13
-- [ ] Không mở endpoint nghiệp vụ tenant khi chưa có live P4 evidence / membership đủ proof
+- [x] Live P4 smoke trên **Keycloak local** (PKCE, email verified, MFA gate, revoke refresh, logout, account switch, iOS Simulator Sign in) — [D1-P4-KEYCLOAK-SMOKE](./reviews/D1-P4-KEYCLOAK-SMOKE.md)
+- [ ] Không mở endpoint nghiệp vụ tenant khi chưa có live P4 evidence / membership đủ proof — P4 API/web đạt; mở D2 khi coordinator xác nhận scope
 
 ### D2 — Nhận vé
 
@@ -133,7 +134,8 @@ Mỗi nhóm dưới đây tương ứng parent Issue trên GitHub; sub-issues ma
 | --- | --- | --- | --- |
 | O01–O05, O07–O08 | (xem DECISION-LOG) | **Đã chốt MVP** | [DECISION-LOG.md](./DECISION-LOG.md) |
 | O06 | Retention, vùng dữ liệu, SLA? | Chưa chốt số | Trước dữ liệu user thật |
-| ADR-09 | Provider OIDC cụ thể? | **Clerk đã chốt** — POC P4 | [spikes/D1-OIDC-PROVIDER.md](./spikes/D1-OIDC-PROVIDER.md) |
+| ADR-09 | Provider OIDC cụ thể? | **Keycloak self-host đã chốt** — POC P4 local | [spikes/D1-OIDC-PROVIDER.md](./spikes/D1-OIDC-PROVIDER.md) |
+| ADR-11…15 | SaaS cấm; MinIO/SMTP/APNs/Caddy | **Đã chốt MVP** | [DECISION-LOG.md](./DECISION-LOG.md) |
 
 ## 8. Quy ước tracking GitHub
 
@@ -158,4 +160,4 @@ Mỗi nhóm dưới đây tương ứng parent Issue trên GitHub; sub-issues ma
 
 1. ~~User xác nhận roadmap / đóng D0~~ — đã duyệt.
 2. ~~Cập nhật Issue statuses~~ — D0 Hoàn thành; D1 code slice (#10–#13) xong; parent #2 Chờ duyệt.
-3. **Trước D2:** live Clerk OTP/MFA/revocation smoke (P4) — vẫn chặn mở business endpoints đến khi có evidence.
+3. **Trước D2:** P4 Keycloak API/web UAT đã có evidence ([smoke](./reviews/D1-P4-KEYCLOAK-SMOKE.md)); iOS device smoke khuyến nghị trước pilot. Business endpoints vẫn chờ coordinator mở D2.

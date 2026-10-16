@@ -1,6 +1,6 @@
-# Spike D1 — Managed OIDC provider (P4)
+# Spike D1 — Self-hosted OIDC provider (P4)
 
-Ngày: 2026-10-16  
+Ngày: 2026-10-16 (cập nhật: cấm SaaS → Keycloak)  
 Issue: [#11](https://github.com/hangndat/ticket-solution/issues/11)  
 Decision log: [DECISION-LOG.md](../DECISION-LOG.md)  
 Tiêu chí: TECHNICAL-DESIGN §5.1 và bảng P4 (§17)
@@ -9,45 +9,43 @@ Tiêu chí: TECHNICAL-DESIGN §5.1 và bảng P4 (§17)
 
 | # | Yêu cầu | Ghi chú |
 | --- | --- | --- |
-| R1 | Managed OIDC (không tự xây protocol) | ADR-09 |
-| R2 | Authorization Code + **PKCE** trên iOS | Expo / ASWebAuthenticationSession hoặc SDK tương đương |
-| R3 | **Verified email** (OTP hoặc magic link) trước issue vé | PRD M02 |
-| R4 | **MFA** cho staff/admin | PRD M02 |
+| R1 | **Self-hosted OIDC** (không tự xây protocol; không SaaS IdP) | ADR-09 / ADR-11 |
+| R2 | Authorization Code + **PKCE** trên iOS | Expo `expo-auth-session` / ASWebAuthenticationSession |
+| R3 | **Verified email** (OTP hoặc verify flow Keycloak) trước issue vé | PRD M02 |
+| R4 | **MFA** TOTP cho staff/admin | PRD M02 |
 | R5 | Refresh token **rotation**; lưu iOS trong SecureStore | W0 boundary đã có |
 | R6 | Backend NestJS tự verify session/JWT; BFF không tự cấp tenant/permission | TD §3.2 |
 | R7 | Map user nội bộ `(issuer, subject)`; không dùng email làm khóa duy nhất | TD §5.1 |
 | R8 | Thu hồi / logout / account switch không để stale cache | P4 + mobile W0 |
 | R9 | Xuất / xóa identity theo policy (GDPR-ish) | PRD account deletion |
-| R10 | **Cấm** Expo/EAS Cloud Build — SDK auth phải chạy local / Expo Go hoặc local dev client | AGENTS |
+| R10 | **Cấm** Expo/EAS Cloud Build — SDK auth chạy local / Expo Go hoặc local dev client | AGENTS |
+| R11 | **Cấm** Clerk / Auth0 / Cognito / WorkOS và IdP SaaS khác | ADR-11 |
 
-## 2. Ứng viên và đánh giá
+## 2. Ứng viên và đánh giá (self-host)
 
-| Tiêu chí | **Clerk** | Auth0 | WorkOS AuthKit | Cognito | Supabase Auth |
-| --- | --- | --- | --- | --- | --- |
-| OIDC / JWT verify backend | Có (JWKS) | Rất mạnh | Có | Có | Có (GoTrue) |
-| Next.js App Router / BFF cookie | SDK chín | Có, nặng hơn | Có | DIY nhiều | Gắn stack Supabase |
-| Expo / RN + PKCE + SecureStore | **SDK / token-cache tốt** | Browser-based / SDK riêng | WebBrowser + PKCE | Amplify, cấu hình nhiều | Hạn chế hơn Expo |
-| Email OTP / magic link attendee | Có | Có | Có (Magic Auth) | Có | Có |
-| MFA staff | Có (Pro) | Có (Essentials+) | Có | Có | TOTP |
-| Enterprise SSO/SCIM sau này | Có (metered / Enterprise) | Mạnh | **Thế mạnh** | DIY | Yếu |
-| Phù hợp monorepo Nest riêng DB | Tốt (chỉ identity) | Tốt | Tốt | Tốt | Dễ “kéo” cả Supabase |
-| Độ phức tạp vận hành MVP | **Thấp** | Cao | Trung bình (B2B-first) | Trung bình–cao | Trung bình |
-| Rủi ro chính | Vendor API surface; MFA/SSO pricing | Chi phí & DX | Attendee UX kém “consumer” hơn | Config & Expo DX | Khóa hệ sinh thái |
+| Tiêu chí | **Keycloak** | Authentik | Zitadel |
+| --- | --- | --- | --- |
+| OIDC / JWT verify backend | Có (JWKS) | Có | Có |
+| Next.js BFF cookie (Auth Code) | DIY chuẩn OIDC | DIY | DIY |
+| Expo + PKCE + SecureStore | `expo-auth-session` | Tương tự | Tương tự |
+| Email verify / OTP | Có (+ SMTP Mailpit/Postal) | Có | Có |
+| MFA staff TOTP | Có | Có | Có |
+| Phù hợp Nest riêng DB | Chỉ identity | Chỉ identity | Chỉ identity |
+| Độ phức tạp ops MVP | Trung bình (Compose sẵn) | Trung bình | Trung bình |
+| Rủi ro chính | Config realm/client; audience mapper | Ít tài liệu Expo | Surface API riêng |
 
-Nguồn tham chiếu công khai (2026): Expo auth guide; Clerk Expo/Next so sánh; WorkOS vs Clerk; không lấy pricing làm cam kết — kiểm tra lại lúc ký hợp đồng.
+**Không chọn** SaaS (Clerk/Auth0/WorkOS/Cognito/Supabase hosted) — chính sách ADR-11.
 
-## 3. Kết luận đề xuất
+## 3. Kết luận
 
-**Clerk đã được user chốt (ADR-09, 2026-10-16).** POC P4 vẫn bắt buộc trước khi mở business endpoints.
+**Keycloak đã chốt (ADR-09, 2026-10-16)** sau khi user yêu cầu không dùng dịch vụ cloud SaaS. App Store + DNS registrar vẫn được phép.
 
 Lý do ngắn:
 
-1. Khớp stack đã chốt (Next.js + Expo iOS) với đường auth native ngắn hơn Auth0/Cognito.
-2. Attendee cần OTP/magic link + staff MFA — Clerk cover cả hai mà không bắt WorkOS-style enterprise-first.
-3. NestJS vẫn là nguồn quyền: chỉ verify JWT/session claims tối thiểu (`iss`, `sub`, email verified); **membership/RBAC nằm PostgreSQL của ta** (O08/ADR-02).
-4. Enterprise SSO/SCIM (nếu bán B2B lớn) có thể bổ sung Clerk Enterprise hoặc WorkOS sau — không chặn pilot.
-
-**Không chọn** cho MVP: Auth0 (nặng hơn mức cần), WorkOS (ưu tiên SSO hơn attendee), Cognito (DX Expo kém), Supabase Auth (kéo stack DB/auth lệch Nest/Prisma).
+1. OIDC chuẩn; Nest giữ verifier JWKS generic (`OIDC_ISSUER` / `OIDC_AUDIENCE` / `OIDC_JWKS_URL`).
+2. Chạy trong Compose cạnh Postgres/Redis/MinIO/Mailpit — cùng đường lên VPS.
+3. Membership/RBAC vẫn PostgreSQL (O08/ADR-02); không tin role claim Keycloak cho mutation tenant.
+4. Authentik/Zitadel giữ làm phương án dự phòng; MVP chỉ Keycloak.
 
 ## 4. Kiến trúc tích hợp mục tiêu
 
@@ -55,12 +53,12 @@ Lý do ngắn:
 Attendee/Staff (Web)     Attendee/Staff (iOS)
         │                        │
         ▼                        ▼
- Next.js BFF (HttpOnly cookie)   Expo + Clerk/SecureStore
+ Next.js BFF (HttpOnly cookie)   Expo auth-session + SecureStore
         │                        │  (short-lived bearer)
         └────────────┬───────────┘
                      ▼
               NestJS API
-         verify JWT via JWKS
+         verify JWT via JWKS (Keycloak)
          load users(issuer,sub)
          check membership/session DB
                      ▼
@@ -71,40 +69,42 @@ Attendee/Staff (Web)     Attendee/Staff (iOS)
 - iOS: bearer ngắn hạn; refresh trong SecureStore; logout xóa credential + cache (W0).
 - Không tin org/role claim của provider cho mutation tenant — chỉ dùng làm identity; permission đọc từ DB.
 
-## 5. Checklist POC (còn lại trên Issue #11)
-
-POC **chưa chạy** trong lượt docs này — cần tạo Clerk application (dev) và secrets local (không commit).
+## 5. Checklist POC (Keycloak local)
 
 | Bước | Web | iOS | Backend |
 | --- | --- | --- | --- |
-| Tạo Clerk app + instances | ☐ | ☐ | JWKS URL / issuer |
-| Email OTP hoặc magic link | ☐ verified email | ☐ | claim `email_verified` |
-| PKCE / session | cookie BFF | Auth session + SecureStore | — |
-| MFA bật cho user staff demo | ☐ | ☐ | — |
-| Nest verify JWT (JWKS) | ☐ | ☐ | unit + một route `/v1/me` |
-| Logout + account switch | ☐ | ☐ không stale | revoke / phiên DB |
-| Không stub 200 khi thiếu token | ☐ | ☐ | fail closed |
+| Compose Keycloak + realm import | ✅ | ✅ code | ✅ live JWKS 200 |
+| Email verify (SMTP → Mailpit) | ✅ JWT + `/v1/me` | ✅ code | ✅ |
+| PKCE / session | ✅ BFF cookie UAT | ✅ auth-session code | — |
+| MFA TOTP staff gate | ✅ `CONFIGURE_TOTP` blocks silent login | ☐ device enroll | — |
+| Nest verify JWT (JWKS) | ✅ BFF→`/v1/me` | ✅ | ✅ unit + live |
+| Logout + account switch | ✅ UAT | ✅ code | ✅ logout-all → refresh invalid |
+| Không stub 200 khi thiếu token | ✅ | ✅ | ✅ fail closed |
 
-Sau POC: cập nhật DECISION-LOG ADR-09 → `Đã chốt`, đánh dấu Issue #11 Hoàn thành.
+Chi tiết evidence: [D1-P4-KEYCLOAK-SMOKE.md](../reviews/D1-P4-KEYCLOAK-SMOKE.md).
 
 ## 6. Biến môi trường (documentation only)
 
-Thêm vào `.env.example` (giá trị trống / placeholder). **Không** commit secret thật.
-
 ```bash
-OIDC_PROVIDER=clerk
-OIDC_ISSUER=
-OIDC_AUDIENCE=
-OIDC_JWKS_URL=
-# Web Clerk publishable/secret chỉ trong apps/web local env — không vào git
-# Mobile publishable key chỉ trong apps/mobile local env — không vào git
+OIDC_PROVIDER=keycloak
+OIDC_ISSUER=http://127.0.0.1:8080/realms/ticket
+OIDC_AUDIENCE=ticket-api
+OIDC_JWKS_URL=http://127.0.0.1:8080/realms/ticket/protocol/openid-connect/certs
+# Web OIDC client (confidential) — apps/web local env
+# OIDC_CLIENT_ID=ticket-web
+# OIDC_CLIENT_SECRET=
+# OIDC_REDIRECT_URI=http://127.0.0.1:3000/api/auth/callback
+# Mobile public client — apps/mobile
+# EXPO_PUBLIC_OIDC_ISSUER=...
+# EXPO_PUBLIC_OIDC_CLIENT_ID=ticket-mobile
+# EXPO_PUBLIC_API_BASE_URL=http://127.0.0.1:3001
 ```
 
 ## 7. Rủi ro và giảm thiểu
 
 | Rủi ro | Giảm thiểu |
 | --- | --- |
-| Clerk lock-in UI/SDK | Giữ verifier JWKS generic; domain `users(issuer,sub)` |
-| MFA chỉ trên Pro | Chấp nhận cost Pro trước pilot staff; ghi vào O06/ops |
-| Stale session sau revoke membership | Mutation Gate/issue lock membership (TD §5.2); test D1 tiếp |
+| Keycloak audience/`azp` mismatch | Audience mapper → `ticket-api`; Nest verify `aud` |
+| SMTP chưa cấu hình → không verify email | Mailpit trong Compose; Postal trên VPS |
+| Stale session sau revoke membership | Mutation Gate/issue lock membership (TD §5.2) |
 | Agent/CI lộ secret | Chỉ `.env.local`; CI dùng fake JWKS fixture |

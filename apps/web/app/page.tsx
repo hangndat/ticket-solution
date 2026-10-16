@@ -48,7 +48,7 @@ export default function Home() {
         <strong>Preview, with clear limits.</strong> All event details are
         fictional. Redemption, ticket issuance and Gate check-in are not
         implemented. Identity is a separate{' '}
-        <Link href="/auth">Clerk BFF POC</Link> (fail closed without keys).
+        <Link href="/auth">Keycloak BFF POC</Link> (fail closed without env).
       </aside>
     </main>
   );
