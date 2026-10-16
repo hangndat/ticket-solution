@@ -3,6 +3,7 @@ import {
   isOidcConfigured,
   resolveWebAuthState,
 } from '../../src/oidc/config';
+import { BrandMark } from '../../src/brand-mark';
 import { AuthPoc } from './auth-poc';
 
 /** OIDC env is runtime-only — never SSG the fail-closed / configured branch. */
@@ -22,7 +23,8 @@ export default function AuthPocPage() {
     <main id="main" className="container shell auth-page">
       <nav aria-label="Main navigation">
         <Link href="/" className="wordmark">
-          ticket<span>↗</span>
+          <BrandMark />
+          vemoki<span>↗</span>
         </Link>
         <Link href="/">Demo events</Link>
       </nav>

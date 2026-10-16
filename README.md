@@ -1,6 +1,6 @@
-# Ticket Solution
+# Vemoki
 
-Multi-tenant event ticketing platform: Next.js web, Expo iOS, NestJS API/worker, PostgreSQL and Redis. Android is deferred.
+Multi-tenant event ticketing platform (**Vemoki**, domain `vemoki.com`): Next.js web, Expo iOS, NestJS API/worker, PostgreSQL and Redis. Android is deferred. The Git repository and npm workspace name remain `ticket-solution`.
 
 ## iOS build policy
 

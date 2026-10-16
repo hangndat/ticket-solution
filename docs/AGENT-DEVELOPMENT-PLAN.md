@@ -137,7 +137,7 @@ Chia thành các task nhỏ nối tiếp, không giao một worker “làm toàn
 
 Mỗi nhóm có backend contract trước, consumer có mock, rồi integration API thật. Security-sensitive changes có reviewer khác tác giả trước merge.
 
-Gate W3: tenant thứ hai tự tạo event và brand qua admin, không sửa code; không hardcode FUN FEST/VIP/Brand/Fandom; đủ release scope PRD.
+Gate W3: tenant thứ hai tự tạo event và brand qua admin, không sửa code; không hardcode MFest/VIP/Brand/Fandom; đủ release scope PRD.
 
 ### W4 — Hardening và pilot readiness *(khung → D5; board Đang làm; chưa pilot ready)*
 

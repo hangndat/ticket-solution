@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: { default: 'Ticket · Demo events', template: '%s · Ticket demo' },
+  title: { default: 'Vemoki · Demo events', template: '%s · Vemoki' },
   description: 'W0 event platform foundation. Fictional demo content only.',
   robots: { index: false, follow: false },
 };
@@ -17,7 +17,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         </a>
         {children}
         <footer className="footer">
-          TICKET / W0 FOUNDATION{' '}
+          VEMOKI / W0 FOUNDATION{' '}
           <span>Fictional fixtures. No live ticketing.</span>
         </footer>
       </body>
