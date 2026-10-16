@@ -63,10 +63,15 @@ export {
   type RedeemOutcome,
   type ListedTicket,
 } from './issue';
+export { InventoryError, INVENTORY_ERROR_CODES, type InventoryErrorCode } from './inventory-error';
 export {
   seedEventInventory,
+  importRedemptionCodes,
+  readEventQuota,
   type SeedInventoryInput,
   type SeedInventoryResult,
+  type ImportCodesResult,
+  type EventQuotaResult,
 } from './inventory';
 export {
   claimOutboxBatch,

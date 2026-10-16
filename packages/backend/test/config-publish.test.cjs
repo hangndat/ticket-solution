@@ -15,6 +15,12 @@ const {
   CONFIG_ERROR_CODES,
   saveEventConfigVersion,
   publishEventConfig,
+  importRedemptionCodes,
+  readEventQuota,
+  InventoryError,
+  INVENTORY_ERROR_CODES,
+  readCodeHmacEnvironment,
+  hashRedemptionCode,
 } = require('../dist');
 
 const docker = (...args) =>
@@ -107,13 +113,13 @@ test('config publish is versioned, immutable, and does not rewrite tickets', { t
         tenantId,
         userId: manager.userId,
         role: 'MANAGER',
-        permissions: ['event.config', 'event.publish'],
+        permissions: ['event.config', 'event.publish', 'inventory.import'],
       });
       await grantEventAssignment(tx, {
         tenantId,
         eventId,
         membershipId: membership.membershipId,
-        permissions: ['event.config', 'event.publish'],
+        permissions: ['event.config', 'event.publish', 'inventory.import'],
       });
     });
 
@@ -176,6 +182,53 @@ test('config publish is versioned, immutable, and does not rewrite tickets', { t
     assert.equal(stored[0].published_config_version, 2);
     assert.equal(stored[0].payload.title, 'Fun Fest');
     assert.equal(stored[0].payload.brand, 'Northline');
+
+    const hmac = readCodeHmacEnvironment({
+      CODE_HMAC_PEPPER: 'd4-import-pepper!!',
+      CODE_HMAC_VERSION: '1',
+    });
+    const imported = await withTenant(db, tenantId, (tx) =>
+      importRedemptionCodes(tx, hmac, {
+        tenantId,
+        eventId,
+        actorUserId: manager.userId,
+        rawCodes: ['INVITE-1', 'INVITE-2'],
+        eventQuota: 10,
+      }),
+    );
+    assert.equal(imported.imported, 2);
+    const quota = await withTenant(db, tenantId, (tx) =>
+      readEventQuota(tx, { tenantId, eventId, actorUserId: manager.userId }),
+    );
+    assert.equal(quota.capacity, 10);
+    assert.equal(quota.allocated, 0);
+    const storedCodes = await withTenant(db, tenantId, (tx) =>
+      tx.$queryRaw`SELECT code_hmac FROM redemption_codes WHERE event_id = ${eventId}::uuid`,
+    );
+    const hashes = storedCodes.map((row) => row.code_hmac).sort();
+    assert.deepEqual(
+      hashes,
+      ['INVITE-1', 'INVITE-2'].map((code) => hashRedemptionCode(hmac, code)).sort(),
+    );
+    assert.ok(!JSON.stringify(storedCodes).includes('INVITE-1'));
+    await assert.rejects(
+      () =>
+        withTenant(db, tenantId, (tx) =>
+          importRedemptionCodes(tx, hmac, {
+            tenantId,
+            eventId,
+            actorUserId: manager.userId,
+            rawCodes: ['INVITE-1'],
+          }),
+        ),
+      (error) =>
+        error instanceof InventoryError &&
+        error.code === INVENTORY_ERROR_CODES.CODE_DUPLICATE,
+    );
+    const stillPublished = await withTenant(db, tenantId, (tx) =>
+      tx.$queryRaw`SELECT status FROM events WHERE id = ${eventId}::uuid`,
+    );
+    assert.equal(stillPublished[0].status, 'PUBLISHED');
   } finally {
     if (db) await db.$disconnect();
     if (name) execFileSync('docker', ['rm', '-f', name], { stdio: 'ignore' });
