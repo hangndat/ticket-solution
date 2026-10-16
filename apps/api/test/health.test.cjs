@@ -1,7 +1,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { createApp, createOpenApi, readApiEnvironment } = require('../dist/app');
-test('Fastify liveness matches contract; D2 redeem routes documented', async () => {
+test('Fastify liveness matches contract; redeem and gate routes documented', async () => {
   const app = await createApp(false);
   try {
     await app.init();
@@ -19,6 +19,12 @@ test('Fastify liveness matches contract; D2 redeem routes documented', async () 
     );
     const doc = createOpenApi(app);
     assert.deepEqual(Object.keys(doc.paths).sort(), [
+      '/v1/gate/events/{eventId}/checkins/{checkinId}/undo',
+      '/v1/gate/events/{eventId}/reservations',
+      '/v1/gate/events/{eventId}/reservations/{reservationId}/confirm',
+      '/v1/gate/events/{eventId}/sessions',
+      '/v1/gate/events/{eventId}/sessions/revoke',
+      '/v1/gate/events/{eventId}/tickets/{ticketId}/revoke',
       '/v1/health',
       '/v1/me',
       '/v1/me/tickets',
