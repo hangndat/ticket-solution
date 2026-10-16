@@ -1,14 +1,14 @@
-# PRD — Event Ticketing Platform
+# PRD — Vemoki
 
 Phiên bản: 0.3 — Draft để review  
 Ngày: 2026-10-16  
-Nguồn: FUN-FEST-2026-Bao-Gia-v1.0.pdf và yêu cầu sản phẩm trong trao đổi.  
-Tên sản phẩm: tạm đặt, chưa chốt thương hiệu.  
+Nguồn: yêu cầu sản phẩm trong trao đổi.  
+Tên sản phẩm: **Vemoki**. Domain platform: `vemoki.com`.  
 Thiết kế kỹ thuật: [Technical Design v0.1](./TECHNICAL-DESIGN.md) — các quyết định đề xuất và test scenarios được ghi riêng, chưa thay thế giả định sản phẩm.
 
 ## 1. Mục tiêu
 
-Xây dựng platform multi-tenant để doanh nghiệp và agency tự thiết lập sự kiện, phân phối vé, phục vụ người tham dự và kiểm soát vào cổng. Sản phẩm có web và ứng dụng native iOS phân phối qua Apple App Store. FUN FEST là sự kiện pilot; sản phẩm không chứa tích hợp hoặc nghiệp vụ phụ thuộc TikTok.
+Xây dựng platform multi-tenant để doanh nghiệp và agency tự thiết lập sự kiện, phân phối vé, phục vụ người tham dự và kiểm soát vào cổng. Sản phẩm có web và ứng dụng native iOS phân phối qua Apple App Store. MFest là sự kiện pilot; sản phẩm không chứa tích hợp hoặc nghiệp vụ phụ thuộc TikTok.
 
 Một tenant đại diện một tổ chức. Một tổ chức có nhiều event, nhiều nhân sự và nhận diện thương hiệu riêng. Các tenant dùng chung nền tảng nhưng dữ liệu, quyền và tài nguyên được kiểm soát độc lập.
 
@@ -23,6 +23,7 @@ Không bàn ngân sách hoặc giá dịch vụ trong PRD này.
 - Giữ bài toán đổi mã, cấp QR, gửi vé, quản trị và check-in từ tài liệu gốc.
 - Không tích hợp TikTok.
 - Không bao giờ dùng Expo/EAS Cloud Build. Native iOS build chạy local bằng Xcode/xcodebuild hoặc fastlane trên Mac/runner macOS tự quản lý; không fallback lên Expo cloud.
+- Thương hiệu platform là **Vemoki**, domain `vemoki.com`. App iOS dùng tên hiển thị Vemoki; bundle ID giữ `com.hangndat.ticket`.
 
 ### Giả định thiết kế, cần xác nhận
 
@@ -345,7 +346,7 @@ Tham chiếu kỹ thuật chính thức:
 - Không mất vé khi email/push hoặc worker gián đoạn.
 - App iOS được test qua TestFlight; release công khai theo dõi trạng thái duyệt thực tế.
 - Role tests, backup restore, monitoring, support và incident runbook hoàn tất.
-- Pilot FUN FEST chạy bằng cấu hình chung; không tồn tại logic hardcode tên nhóm vé hoặc tenant.
+- Pilot MFest chạy bằng cấu hình chung; không tồn tại logic hardcode tên nhóm vé hoặc tenant.
 
 ## 13. Chỉ số thành công
 
@@ -364,7 +365,7 @@ Tham chiếu kỹ thuật chính thức:
 3. Mobile end-to-end: đăng nhập, event, đổi vé, ví vé, deep link, push và offline display.
 4. Gate: app scan, reservation/confirm, web fallback, supervisor và dashboard.
 5. Hardening: load/concurrency/security test, device UAT, restore drill và phát hành iOS lên App Store.
-6. Pilot: vận hành FUN FEST và một tenant demo thứ hai để kiểm chứng tính tổng quát.
+6. Pilot: vận hành MFest và một tenant demo thứ hai để kiểm chứng tính tổng quát.
 
 Các bước là thứ tự phụ thuộc sản phẩm, chưa phải lịch hoặc cam kết thời gian.
 
