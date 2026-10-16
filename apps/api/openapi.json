@@ -599,6 +599,88 @@
           "config"
         ]
       }
+    },
+    "/v1/tenants/{tenantId}/events/{eventId}/imports": {
+      "post": {
+        "operationId": "InventoryController_importCodes",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "eventId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportBodyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "inventory"
+        ]
+      }
+    },
+    "/v1/tenants/{tenantId}/events/{eventId}/quota": {
+      "get": {
+        "operationId": "InventoryController_quota",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "eventId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "inventory"
+        ]
+      }
     }
   },
   "info": {
@@ -1013,6 +1095,23 @@
         },
         "required": [
           "expectedVersion"
+        ]
+      },
+      "ImportBodyDto": {
+        "type": "object",
+        "properties": {
+          "codes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "eventQuota": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "codes"
         ]
       }
     }

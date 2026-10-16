@@ -42,6 +42,7 @@ import {
   type PrismaClient,
 } from '@ticket/backend';
 import { ConfigPublishController, ConfigPublishService } from './config';
+import { InventoryController, InventoryService } from './inventory';
 import { GateController, GateService } from './gate';
 import {
   TicketIssueController,
@@ -308,6 +309,7 @@ export async function createApp(
       TicketIssueController,
       GateController,
       ConfigPublishController,
+      InventoryController,
     ],
     providers: [
       {
@@ -329,6 +331,10 @@ export async function createApp(
       {
         provide: ConfigPublishService,
         useValue: new ConfigPublishService(ticketDeps),
+      },
+      {
+        provide: InventoryService,
+        useValue: new InventoryService(ticketDeps),
       },
       {
         provide: DatabaseShutdown,
