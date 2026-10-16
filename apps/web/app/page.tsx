@@ -8,7 +8,10 @@ export default function Home() {
         <span className="wordmark">
           ticket<span>↗</span>
         </span>
-        <Link href="/admin">Admin shell</Link>
+        <span className="nav-links">
+          <Link href="/auth">Identity POC</Link>
+          <Link href="/admin">Admin shell</Link>
+        </span>
       </nav>
       <p className="eyebrow">W0 FOUNDATION / DEMO DIRECTORY</p>
       <h1>
@@ -43,8 +46,9 @@ export default function Home() {
       </div>
       <aside className="notice">
         <strong>Preview, with clear limits.</strong> All event details are
-        fictional. Authentication, redemption, ticket issuance and Gate check-in
-        are not implemented.
+        fictional. Redemption, ticket issuance and Gate check-in are not
+        implemented. Identity is a separate{' '}
+        <Link href="/auth">Clerk BFF POC</Link> (fail closed without keys).
       </aside>
     </main>
   );

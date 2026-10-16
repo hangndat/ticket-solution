@@ -91,6 +91,13 @@ test('production routes isolate tenant content and reject unknown pairs', async 
     assert.ok(
       (await admin.text()).includes('Not authenticated. Not implemented.'),
     );
+    const authPoc = await fetch(base + '/auth');
+    assert.equal(authPoc.status, 200);
+    const authHtml = await authPoc.text();
+    assert.ok(authHtml.includes('OIDC chưa cấu hình'));
+    assert.ok(authHtml.includes('unconfigured'));
+    assert.ok(authHtml.includes('không coi là đã'));
+    assert.ok(!authHtml.includes('Signed in (Clerk session cookie)'));
   } finally {
     const stopped = once(child, 'exit');
     child.kill('SIGTERM');
