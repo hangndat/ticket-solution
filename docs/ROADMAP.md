@@ -117,7 +117,9 @@ Mỗi nhóm dưới đây tương ứng parent Issue trên GitHub; sub-issues ma
 ### D5 — Hardening & phát hành
 
 - [ ] Review/test độc lập RLS, authorization, transaction races
-- [ ] Observability, backup/restore drill, load/admission
+- [x] Backup/restore drill cục bộ — Issue #25. Lệnh đúng: `./scripts/d5-backup-drill.sh` (hai container Postgres vứt bỏ, không đụng `ticket_dev`). Pass chỉ chứng minh một dòng fixture đánh dấu còn sau `pg_dump` và restore. Không phải backup production và không phải SLO.
+- [ ] Observability
+- [ ] Load/admission — chưa đo; không có số liệu
 - [ ] UAT thiết bị thật / TestFlight (camera, deep link, push, offline ví, revoke) — build **local** signed
 - [ ] Runbook, release checklist; theo dõi submitted / approved / available riêng
 
