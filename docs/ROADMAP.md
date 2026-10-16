@@ -13,7 +13,7 @@ Tracking lâu dài: GitHub Issues + Project (tiếng Việt). Project: https://g
 | Mục | Trạng thái | Ghi chú |
 | --- | --- | --- |
 | W0 Foundation | **Hoàn thành** (user duyệt) | Prototype/foundation — **không** đồng nghĩa production auth, isolation mọi module, hoặc ticketing xong. Issues #1/#8/#9 đóng; milestone D0 closed. |
-| Identity / OIDC | Đề xuất **Clerk**; POC P4 còn lại | Xem [DECISION-LOG](./DECISION-LOG.md), [spike](./spikes/D1-OIDC-PROVIDER.md) |
+| Identity / OIDC | **Clerk đã chốt**; POC P4 đang làm | [DECISION-LOG](./DECISION-LOG.md), [spike](./spikes/D1-OIDC-PROVIDER.md) |
 | Mã / quota / issue / outbox | Chưa bắt đầu | Thuộc đợt nhận vé |
 | Gate / check-in | Chưa bắt đầu | Thuộc đợt check-in |
 | Admin / platform đầy đủ | Chưa bắt đầu | Thuộc đợt hoàn thiện |
@@ -131,7 +131,7 @@ Mỗi nhóm dưới đây tương ứng parent Issue trên GitHub; sub-issues ma
 | --- | --- | --- | --- |
 | O01–O05, O07–O08 | (xem DECISION-LOG) | **Đã chốt MVP** | [DECISION-LOG.md](./DECISION-LOG.md) |
 | O06 | Retention, vùng dữ liệu, SLA? | Chưa chốt số | Trước dữ liệu user thật |
-| ADR-09 | Provider OIDC cụ thể? | **Clerk (đề xuất)** — POC P4 | [spikes/D1-OIDC-PROVIDER.md](./spikes/D1-OIDC-PROVIDER.md) |
+| ADR-09 | Provider OIDC cụ thể? | **Clerk đã chốt** — POC P4 | [spikes/D1-OIDC-PROVIDER.md](./spikes/D1-OIDC-PROVIDER.md) |
 
 ## 8. Quy ước tracking GitHub
 

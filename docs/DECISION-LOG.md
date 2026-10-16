@@ -24,7 +24,7 @@ Tracking: Issues [#10](https://github.com/hangndat/ticket-solution/issues/10), [
 | ID | Quyết định | Trạng thái | Ghi chú |
 | --- | --- | --- | --- |
 | ADR-07 | App chung hai chế độ | Khớp O01/O02 đã chốt | White-label vẫn sau MVP |
-| ADR-09 | Managed OIDC, Auth Code + PKCE iOS | **Provider đề xuất: Clerk** — xem [spike](./spikes/D1-OIDC-PROVIDER.md) | Chốt cuối sau POC P4 (web + iOS) |
+| ADR-09 | Managed OIDC, Auth Code + PKCE iOS | **Clerk** — xem [spike](./spikes/D1-OIDC-PROVIDER.md) | **Đã chốt (MVP)** 2026-10-16 (user xác nhận). POC P4 vẫn bắt buộc trước business endpoints. |
 | ADR-02 | Shared DB + RLS | Khớp O08 | Không đổi |
 
 ## Điều kiện mở business endpoints
@@ -40,3 +40,4 @@ Chỉ mở redemption / Gate / admin tenant **sau khi**:
 | Ngày | Thay đổi |
 | --- | --- |
 | 2026-10-16 | User duyệt roadmap/D0. Chốt O01–O05, O07–O08 theo baseline PRD. O06 giữ mở. Đề xuất Clerk cho ADR-09. |
+| 2026-10-16 | User xác nhận **Clerk ok**. ADR-09 chốt Clerk. Dispatch POC song song BE/web/iOS (Orca `--agent cursor`). |

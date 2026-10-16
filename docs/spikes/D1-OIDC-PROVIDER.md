@@ -38,7 +38,7 @@ Nguồn tham chiếu công khai (2026): Expo auth guide; Clerk Expo/Next so sán
 
 ## 3. Kết luận đề xuất
 
-**Chọn Clerk làm provider MVP (ADR-09 đề xuất chốt),** với điều kiện POC P4 pass trước khi mở business endpoints.
+**Clerk đã được user chốt (ADR-09, 2026-10-16).** POC P4 vẫn bắt buộc trước khi mở business endpoints.
 
 Lý do ngắn:
 

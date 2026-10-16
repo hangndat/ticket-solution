@@ -1,0 +1,45 @@
+---
+description: Orca workers — Cursor for code; Codex for plan/review (fallback Cursor on quota)
+alwaysApply: true
+---
+
+# Orca — agent routing (Cursor vs Codex)
+
+When spawning Orca workers (`worker-start --agent …`), pick the agent by **task kind**:
+
+| Task kind | `--agent` | Notes |
+| --------- | --------- | ----- |
+| Implementation / coding / fix / migrate / tests that write code | `cursor` | Default for all ownership slices (BE / web / iOS / coordinator code) |
+| Plan, design, spike write-up, architecture choice, code review, critique | `codex` | Prefer Codex; do not use Codex as the primary coding worker |
+| Plan/review when Codex unavailable | `cursor` | Fallback only |
+
+## Fallback (Codex quota / launch failure)
+
+If `worker-start --agent codex` fails (quota, auth, launch error) or the worker reports quota exhaustion:
+
+1. Retry the **same Task** with `--agent cursor` (same `--spec` / `--task`, same scope).
+2. Note in the coordinator report: Codex unavailable → Cursor fallback for plan/review.
+3. Do **not** switch coding workers from Cursor to Codex to “save” Cursor quota.
+
+## Examples
+
+```text
+✅ Coding (parallel wave):
+ORCA orchestration worker-start --spec "<BE impl>" --worktree current --agent cursor --json
+ORCA orchestration worker-start --spec "<web impl>" --worktree current --agent cursor --json
+
+✅ Plan then review:
+ORCA orchestration worker-start --spec "<plan D1 membership>" --worktree current --agent codex --json
+# … later …
+ORCA orchestration worker-start --spec "<review PR / diff>" --worktree current --agent codex --json
+
+✅ Codex quota exhausted → same plan/review task with --agent cursor
+
+❌ Coding worker with --agent codex
+❌ Plan/review with --agent claude (or other) unless the user names that agent
+```
+
+## Overrides
+
+- User explicitly names an agent/model → honor that for that Task.
+- Still respect ownership scopes and parallel-first coding (see `orca-parallel-workers.mdc`).

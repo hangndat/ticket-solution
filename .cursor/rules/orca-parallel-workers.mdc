@@ -33,6 +33,8 @@ When the user asks for coding work that Orca should run (or when you are the Orc
 ❌ Start worker A, wait for worker_done, then start worker B for independent work
 ❌ One mega-spec that mixes apps/api + apps/web + apps/mobile
 
-✅ worker-start BE + worker-start web (+ worker-start iOS) in one wave → check --wait
-✅ Contract task first (if needed) → then parallel consumer workers
+✅ worker-start --agent cursor for BE + web (+ iOS) in one wave → check --wait
+✅ Contract task first (if needed) → then parallel consumer workers (--agent cursor)
 ```
+
+Coding workers must use `--agent cursor`. Plan/review agent choice: see `orca-agent-routing.mdc`.
