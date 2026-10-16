@@ -23,7 +23,11 @@ export {
   type IdentityUserRepository,
   type StoredUser,
 } from './users';
-export { AuthzError, AUTHZ_ERROR_CODES, type AuthzErrorCode } from './authz-error';
+export {
+  AuthzError,
+  AUTHZ_ERROR_CODES,
+  type AuthzErrorCode,
+} from './authz-error';
 export {
   isMembershipActive,
   lockActiveMembershipForShare,
@@ -65,7 +69,11 @@ export {
   type PendingApprovalResult,
   type ListedTicket,
 } from './issue';
-export { InventoryError, INVENTORY_ERROR_CODES, type InventoryErrorCode } from './inventory-error';
+export {
+  InventoryError,
+  INVENTORY_ERROR_CODES,
+  type InventoryErrorCode,
+} from './inventory-error';
 export {
   seedEventInventory,
   importRedemptionCodes,
@@ -124,6 +132,16 @@ export {
   type ApprovalRejection,
   type ApprovalOutcome,
 } from './approval';
+export {
+  ReportError,
+  REPORT_ERROR_CODES,
+  type ReportErrorCode,
+} from './report-error';
+export {
+  readEventReport,
+  type EventReport,
+  type TicketStateCounts,
+} from './reporting';
 export {
   createNoopEmailAdapter,
   createFailingEmailAdapter,

@@ -34,6 +34,7 @@ const MIGRATIONS = [
   'prisma/migrations/202610160004_d2_issue_ticket/migration.sql',
   'prisma/migrations/202610170005_d3_gate/migration.sql',
   'prisma/migrations/202610170006_d4_config_publish/migration.sql',
+  'prisma/migrations/202610170008_d4_report_retry/migration.sql',
 ];
 
 const HMAC = readCodeHmacEnvironment({
@@ -348,9 +349,7 @@ test(
         reconcile.ops.every((o) => o.status === 'COMPLETED'),
         'both ops COMPLETED',
       );
-      const loserOp = reconcile.ops.find(
-        (o) => o.client_key === loseActor.key,
-      );
+      const loserOp = reconcile.ops.find((o) => o.client_key === loseActor.key);
       assert.ok(loserOp, 'loser operation row present');
       assert.equal(loserOp.actor, loseActor.userId);
       assert.equal(loserOp.response_json.code, loss.code);
@@ -507,6 +506,21 @@ test(
       });
       assert.equal(outboxAfterFail, 'PENDING');
 
+      await withTenant(db, A, async (tx) => {
+        await tx.$executeRaw`
+          UPDATE notifications
+          SET next_attempt_at = clock_timestamp() - interval '1 second'
+          WHERE tenant_id = ${A}::uuid
+            AND next_attempt_at > clock_timestamp()
+        `;
+        await tx.$executeRaw`
+          UPDATE outbox
+          SET next_attempt_at = clock_timestamp() - interval '1 second'
+          WHERE tenant_id = ${A}::uuid
+            AND next_attempt_at > clock_timestamp()
+        `;
+      });
+
       const okRelay = await relayOutboxOnce(
         db,
         createNoopEmailAdapter(),
@@ -647,10 +661,20 @@ test(
           command: REDEEM_COMMAND,
           clientKey: rejectKey,
         });
-        return { ops, quotas, tickets: tickets[0].n, outbox: outbox[0].n, opRow };
+        return {
+          ops,
+          quotas,
+          tickets: tickets[0].n,
+          outbox: outbox[0].n,
+          opRow,
+        };
       });
 
-      assert.equal(beforeBump.ops.length, 1, 'rejection op must survive commit');
+      assert.equal(
+        beforeBump.ops.length,
+        1,
+        'rejection op must survive commit',
+      );
       assert.equal(beforeBump.ops[0].status, 'COMPLETED');
       assert.equal(
         beforeBump.ops[0].response_json.code,
