@@ -37,6 +37,7 @@ const MIGRATIONS = [
   '202610160003_d1_membership',
   '202610160004_d2_issue_ticket',
   '202610170005_d3_gate',
+  '202610170006_d4_config_publish',
 ].map((name) =>
   path.join(__dirname, '../prisma/migrations', name, 'migration.sql'),
 );

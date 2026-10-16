@@ -41,6 +41,8 @@ import {
   type OidcVerifier,
   type PrismaClient,
 } from '@ticket/backend';
+import { ConfigPublishController, ConfigPublishService } from './config';
+import { InventoryController, InventoryService } from './inventory';
 import { GateController, GateService } from './gate';
 import {
   TicketIssueController,
@@ -301,7 +303,14 @@ export async function createApp(
   };
 
   @Module({
-    controllers: [HealthController, MeController, TicketIssueController, GateController],
+    controllers: [
+      HealthController,
+      MeController,
+      TicketIssueController,
+      GateController,
+      ConfigPublishController,
+      InventoryController,
+    ],
     providers: [
       {
         provide: IdentityService,
@@ -318,6 +327,14 @@ export async function createApp(
       {
         provide: GateService,
         useValue: new GateService(ticketDeps),
+      },
+      {
+        provide: ConfigPublishService,
+        useValue: new ConfigPublishService(ticketDeps),
+      },
+      {
+        provide: InventoryService,
+        useValue: new InventoryService(ticketDeps),
       },
       {
         provide: DatabaseShutdown,
