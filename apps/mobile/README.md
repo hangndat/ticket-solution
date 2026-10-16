@@ -27,6 +27,22 @@ See `apps/mobile/.env.example`:
    Contracts do not yet expose a signed Gate JWS credential.
 5. **Log out** — `session.logout()` clears SecureStore; best-effort Keycloak end-session.
 
+## Simulator UAT (headless — no macOS mouse)
+
+Do **not** drive Simulator with `cliclick`, AppleScript, or Orca computer-use clicks.
+Use AXe HID via the repo helper (install once: `brew install cameroncooke/axe/axe`):
+
+```bash
+export SIM_DEVICE='iPhone 17 Pro'
+./scripts/sim-uat.sh boot "$SIM_DEVICE"
+./scripts/sim-uat.sh launch com.hangndat.ticket
+./scripts/sim-uat.sh describe
+./scripts/sim-uat.sh tap --label 'Sign in'
+./scripts/sim-uat.sh screenshot
+```
+
+Screenshots land in `apps/mobile/.uat-artifacts/` (gitignored).
+
 ## Local
 
 ```bash

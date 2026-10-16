@@ -1,0 +1,41 @@
+---
+description: Web + iOS UAT must be headless — never steal the user's macOS mouse
+alwaysApply: true
+---
+
+# UAT / nghiệm thu e2e — headless only
+
+Never drive the user's visible desktop mouse or focus for UAT. Prefer HTTP scripts, Playwright headless, AXe HID, or Orca's **embedded** browser — not Computer Use on Chrome/Safari/Simulator.
+
+## Web
+
+1. Prefer `scripts/web-uat.sh` / `node scripts/web-uat.mjs` (Playwright **headless** Chromium).
+2. Prefer HTTP/cookie scripts when enough (`pnpm uat:p4-oidc`, curl to `/api/auth/*` + `/api/bff/me`).
+3. Orca **embedded** browser (`orca-cli` browser refs) is OK — it is not the user's Chrome/Safari window.
+4. Default launcher is cached `chrome-headless-shell` (no Chrome.app window). System Chrome only as fallback. `WEB_UAT_HEADED=1` only if the user explicitly asks to watch.
+5. Optional: `pnpm exec playwright install chromium` for a bundled browser.
+
+### Forbidden (web)
+
+- `cliclick` / AppleScript clicks on Chrome, Safari, Arc, Edge, etc.
+- `ORCA computer click` (or any computer-use mouse path) targeting an external browser
+- Opening a headed Playwright/Chrome window unless the user asked to watch
+
+## iOS Simulator
+
+1. Prefer `scripts/sim-uat.sh` (AXe HID + `xcrun simctl`).
+2. Boot with `sim-uat boot` / `simctl boot` — do **not** `open -a Simulator` unless the user asks to watch.
+3. Interact with `sim-uat tap|type|describe|screenshot` or `axe … --udid <UDID>`.
+
+### Forbidden (iOS)
+
+- `cliclick` / AppleScript `System Events` clicks on Simulator
+- `ORCA computer click` targeting Simulator.app
+- CGEvent / Quartz mouse injection at the Simulator window
+
+## Artifacts
+
+- Web screenshots: `apps/web/.uat-artifacts/` (gitignored)
+- Sim screenshots: `apps/mobile/.uat-artifacts/` (gitignored)
+
+Still never use Expo/EAS Cloud Build for this project.

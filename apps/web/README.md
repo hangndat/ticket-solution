@@ -56,3 +56,19 @@ Demo users (realm import): `attendee@example.com` / `attendee-demo`,
 Redeem needs real tenant/event UUIDs and a seeded redemption code from the API
 inventory (not the fictional demo event fixture IDs). Optional query prefills:
 `/redeem?tenantId=<uuid>&eventId=<uuid>`.
+
+## Web UAT (headless — no macOS mouse)
+
+Do **not** drive Chrome/Safari with `cliclick`, AppleScript, or Orca computer-use clicks.
+Use Playwright headless (or HTTP scripts when enough):
+
+```bash
+pnpm exec playwright install chromium
+
+./scripts/web-uat.sh auth-smoke http://127.0.0.1:3000
+./scripts/web-uat.sh bff-login http://127.0.0.1:3000
+./scripts/web-uat.sh screenshot http://127.0.0.1:3000/auth
+```
+
+Also: `pnpm uat:p4-oidc` (OIDC/BFF parity over HTTP, no browser).
+Screenshots: `apps/web/.uat-artifacts/` (gitignored). Uses cached `chrome-headless-shell` (no Chrome window). `WEB_UAT_HEADED=1` only if you ask to watch.
