@@ -1,0 +1,19 @@
+{
+  "expo": {
+    "name": "Ticket",
+    "slug": "ticket-mobile",
+    "version": "0.1.0",
+    "platforms": ["ios"],
+    "orientation": "default",
+    "scheme": "ticket-foundation",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.example.ticket.foundation"
+    },
+    "plugins": ["expo-router", "expo-secure-store", "expo-font"],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
