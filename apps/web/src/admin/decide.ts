@@ -22,13 +22,10 @@ export function decideAdmin(
   json: unknown,
   networkError: boolean,
 ): AdminDecision {
-  if (networkError || status === 0) {
+  if (networkError || status === 0 || status >= 500) {
     return { kind: 'unknown', message: ADMIN_UNKNOWN };
   }
   const body = record(json);
-  if (status >= 500 && typeof body?.code !== 'string') {
-    return { kind: 'unknown', message: ADMIN_UNKNOWN };
-  }
   if (
     action === 'save' &&
     (status === 200 || status === 201) &&

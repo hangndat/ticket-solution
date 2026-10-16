@@ -71,7 +71,7 @@ describe('decideAdmin', () => {
     );
   });
 
-  it('shows an API error code from 503 without treating it as success', () => {
+  it('treats a 503 with a business code as unknown', () => {
     assert.deepEqual(
       decideAdmin(
         'publish',
@@ -83,12 +83,7 @@ describe('decideAdmin', () => {
         },
         false,
       ),
-      {
-        kind: 'rejected',
-        code: 'OIDC_MISCONFIGURED',
-        message: 'OIDC chưa cấu hình',
-        requestId: 'req-9',
-      },
+      { kind: 'unknown', message: ADMIN_UNKNOWN },
     );
   });
 
