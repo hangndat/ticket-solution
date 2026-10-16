@@ -7,6 +7,7 @@
     "@ticket/contracts": "workspace:*",
     "expo": "58.0.12",
     "expo-auth-session": "58.0.12",
+    "expo-camera": "~58.0.10",
     "expo-constants": "58.0.12",
     "expo-crypto": "58.0.6",
     "expo-font": "58.0.8",
@@ -36,7 +37,7 @@
     "dev": "expo start --ios --port 8083",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src",
-    "test": "node --experimental-strip-types --test src/identity/*.test.ts src/data/*.test.ts src/tickets/*.test.ts",
+    "test": "node --experimental-strip-types --test src/identity/*.test.ts src/data/*.test.ts src/tickets/*.test.ts src/gate/*.test.ts",
     "build": "expo export --platform ios --output-dir dist"
   },
   "private": true,
