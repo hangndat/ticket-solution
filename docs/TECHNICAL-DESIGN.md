@@ -1,8 +1,8 @@
-# Technical Design — Event Ticketing Platform
+# Technical Design — Vemoki
 
 Phiên bản: 0.1 — Proposed, để review và làm spike trước triển khai  
 Ngày: 2026-10-16  
-Đặc tả sản phẩm: [PRD v0.3](./PRD.md)  
+Đặc tả sản phẩm: [PRD v0.3](./PRD.md) — thương hiệu **Vemoki**, domain `vemoki.com`.  
 Phạm vi: web + app iOS; backend NestJS; Android giai đoạn sau.
 
 ## 1. Kết luận thiết kế
@@ -470,7 +470,7 @@ Native simulator build và archive/signing chạy bằng Xcode/xcodebuild hoặc
 
 ### 15.1 Môi trường
 
-Development local, staging và production tách dữ liệu, secrets, OIDC client, Redis, buckets và push environment. Production chạy **self-host trên VPS** (Docker Compose hoặc tương đương): PostgreSQL có standby/PITR khi đủ ops, Redis persistence cho cache/admission (MVP không BullMQ — ADR-17), Keycloak, MinIO, SMTP (Postal/Postfix), Caddy TLS. **Không** dùng managed DB/Redis/CDN SaaS cho MVP. Vùng dữ liệu (O06) chốt trước dữ liệu user thật.
+Development local, staging và production tách dữ liệu, secrets, OIDC client, Redis, buckets và push environment. Production chạy **self-host trên VPS** (Docker Compose hoặc tương đương): PostgreSQL có standby/PITR khi đủ ops, Redis persistence cho cache/admission (MVP không BullMQ — ADR-17), Keycloak, MinIO, SMTP (Postal/Postfix), TLS ở reverse proxy. **Không** dùng managed DB/Redis/CDN SaaS cho MVP. Bản VPS đầu giữ nginx đang chiếm cổng 80/443 và chạy app bằng image Node mỏng, mount source đã build — xem [infra/deploy/README.md](../infra/deploy/README.md). Vùng dữ liệu (O06) chốt trước dữ liệu user thật.
 
 API/worker containers, health/readiness endpoints riêng. Rolling deploy và graceful shutdown: dừng nhận request/job mới, chờ transaction kết thúc có deadline. Worker job dài phải resumable. Kubernetes không bắt buộc bản đầu.
 

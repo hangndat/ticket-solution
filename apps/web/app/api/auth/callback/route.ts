@@ -10,6 +10,7 @@ import {
   PKCE_COOKIE,
   REFRESH_COOKIE,
   STATE_COOKIE,
+  publicOrigin,
   sessionCookieOptions,
 } from '../../../../src/oidc/cookies';
 import {
@@ -28,7 +29,7 @@ type TokenResponse = {
 /** Exchange authorization code for tokens; store in HttpOnly cookies. */
 export async function GET(request: NextRequest) {
   if (!isOidcConfigured()) {
-    return NextResponse.redirect(new URL('/auth?error=misconfigured', request.url));
+    return NextResponse.redirect(new URL('/auth?error=misconfigured', publicOrigin(request)));
   }
 
   const config = readOidcWebConfig()!;
@@ -39,7 +40,7 @@ export async function GET(request: NextRequest) {
 
   if (oauthError) {
     return NextResponse.redirect(
-      new URL(`/auth?error=${encodeURIComponent(oauthError)}`, request.url),
+      new URL(`/auth?error=${encodeURIComponent(oauthError)}`, publicOrigin(request)),
     );
   }
 
@@ -48,7 +49,7 @@ export async function GET(request: NextRequest) {
   const verifier = jar.get(PKCE_COOKIE)?.value;
 
   if (!code || !state || !expectedState || state !== expectedState || !verifier) {
-    return NextResponse.redirect(new URL('/auth?error=invalid_state', request.url));
+    return NextResponse.redirect(new URL('/auth?error=invalid_state', publicOrigin(request)));
   }
 
   const tokenUrl = `${discoveryBase(config.issuer)}/protocol/openid-connect/token`;
@@ -74,12 +75,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(
         new URL(
           `/auth?error=${encodeURIComponent(tokens.error ?? 'token_exchange')}`,
-          request.url,
+          publicOrigin(request),
         ),
       );
     }
   } catch {
-    return NextResponse.redirect(new URL('/auth?error=token_exchange', request.url));
+    return NextResponse.redirect(new URL('/auth?error=token_exchange', publicOrigin(request)));
   }
 
   const maxAge = Math.max(60, tokens.expires_in ?? 300);
@@ -98,6 +99,6 @@ export async function GET(request: NextRequest) {
   jar.delete(POST_LOGIN_COOKIE);
 
   return NextResponse.redirect(
-    new URL(postLogin ?? '/auth', request.url),
+    new URL(postLogin ?? '/auth', publicOrigin(request)),
   );
 }

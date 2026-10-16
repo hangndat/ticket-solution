@@ -27,6 +27,16 @@ export async function readAccessToken(): Promise<string | null> {
   return value.length > 0 ? value : null;
 }
 
+/** Origin for redirects behind nginx. Next's bind address is 0.0.0.0, which must not leak into Location. */
+export function publicOrigin(request: { headers: Headers; url: string }): string {
+  const forwardedHost = request.headers.get('x-forwarded-host')?.split(',')[0]?.trim();
+  const proto = request.headers.get('x-forwarded-proto')?.split(',')[0]?.trim();
+  if (forwardedHost && proto && !forwardedHost.startsWith('0.0.0.0')) {
+    return `${proto}://${forwardedHost}`;
+  }
+  return new URL(request.url).origin;
+}
+
 export async function clearSessionCookies(): Promise<void> {
   const jar = await cookies();
   jar.delete(ACCESS_COOKIE);
