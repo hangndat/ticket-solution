@@ -2,28 +2,29 @@
 
 import {
   useCallback,
+  useEffect,
   useMemo,
+  useRef,
   useState,
   useTransition,
   type FormEvent,
 } from 'react';
-import type {
-  ApiError,
-  MeTicketsResponse,
-  OperationStatusResponse,
-  RedeemResponse,
-} from '@ticket/contracts';
+import type { MeTicketsResponse, RedeemResponse } from '@ticket/contracts';
 import {
   messageForApiError,
+  networkMessage,
   successMessage,
   timeoutMessage,
   verifyingMessage,
   type RedeemUxMessage,
 } from '../../src/redeem/messages';
-
-const REQUEST_TIMEOUT_MS = 20_000;
-const POLL_INTERVAL_MS = 1_500;
-const POLL_MAX_MS = 30_000;
+import { fetchJson } from '../../src/redeem/fetch-json';
+import {
+  isApiError,
+  isRedeemResponse,
+  pollOperation,
+  REQUEST_TIMEOUT_MS,
+} from '../../src/redeem/poll-operation';
 
 type Props = {
   initialTenantId?: string;
@@ -37,56 +38,6 @@ type FormState = {
   formVersion: string;
   termsVersion: string;
 };
-
-function isRedeemResponse(value: unknown): value is RedeemResponse {
-  if (!value || typeof value !== 'object') return false;
-  const o = value as Record<string, unknown>;
-  return (
-    typeof o.ticketId === 'string' &&
-    typeof o.requestId === 'string' &&
-    o.state === 'ACTIVE'
-  );
-}
-
-function isApiError(value: unknown): value is ApiError {
-  if (!value || typeof value !== 'object') return false;
-  const o = value as Record<string, unknown>;
-  return typeof o.code === 'string' && typeof o.message === 'string';
-}
-
-async function fetchJson(
-  input: RequestInfo,
-  init: RequestInit,
-  timeoutMs: number,
-): Promise<{ status: number; json: unknown; timedOut: boolean }> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    const response = await fetch(input, {
-      ...init,
-      signal: controller.signal,
-      credentials: 'same-origin',
-      cache: 'no-store',
-    });
-    let json: unknown = null;
-    const text = await response.text();
-    if (text) {
-      try {
-        json = JSON.parse(text) as unknown;
-      } catch {
-        json = { code: 'INVALID_UPSTREAM_JSON', message: text.slice(0, 400) };
-      }
-    }
-    return { status: response.status, json, timedOut: false };
-  } catch (error) {
-    if (error instanceof DOMException && error.name === 'AbortError') {
-      return { status: 0, json: null, timedOut: true };
-    }
-    throw error;
-  } finally {
-    clearTimeout(timer);
-  }
-}
 
 export function RedeemForm({ initialTenantId = '', initialEventId = '' }: Props) {
   const [form, setForm] = useState<FormState>(() => ({
@@ -103,81 +54,75 @@ export function RedeemForm({ initialTenantId = '', initialEventId = '' }: Props)
   const [idempotencyKey, setIdempotencyKey] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const [polling, setPolling] = useState(false);
+  const generationRef = useRef(0);
+
+  useEffect(() => {
+    return () => {
+      generationRef.current += 1;
+    };
+  }, []);
 
   const busy = pending || polling;
 
-  const applySuccess = useCallback((body: RedeemResponse) => {
+  const isStale = useCallback((generation: number) => generation !== generationRef.current, []);
+
+  const applySuccess = useCallback((body: RedeemResponse, generation: number) => {
+    if (isStale(generation)) return;
     setTicket(body);
     setUx(successMessage(body.ticketId, body.replayed));
-    setPolling(false);
-  }, []);
+  }, [isStale]);
 
-  const applyError = useCallback((body: unknown) => {
+  const applyError = useCallback((body: unknown, generation: number) => {
+    if (isStale(generation)) return;
     if (isApiError(body)) {
       setUx(messageForApiError(body.code, body.message, body.retryable));
     } else {
       setUx(messageForApiError(undefined, 'Unexpected response shape.'));
     }
-    setPolling(false);
-  }, []);
+  }, [isStale]);
 
-  const pollOperation = useCallback(
-    async (key: string, tenantId: string, eventId: string) => {
-      setPolling(true);
-      setUx({
-        kind: 'polling',
-        title: 'Đang dò trạng thái thao tác…',
-        detail: `GET /api/bff/operations/${key} (timeout / retryable).`,
-        retryable: true,
-      });
-      const started = Date.now();
-      while (Date.now() - started < POLL_MAX_MS) {
-        const qs = new URLSearchParams({ tenantId, eventId, command: 'redeem' });
-        const result = await fetchJson(
-          `/api/bff/operations/${encodeURIComponent(key)}?${qs}`,
-          { method: 'GET' },
-          REQUEST_TIMEOUT_MS,
-        );
-        setRaw(JSON.stringify(result.json, null, 2));
-        if (result.timedOut) {
-          setUx(timeoutMessage());
-          await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
-          continue;
-        }
-        const op = result.json as OperationStatusResponse | ApiError;
-        if (isApiError(op) && !('status' in (op as object))) {
-          applyError(op);
-          return;
-        }
-        if (op && typeof op === 'object' && 'status' in op) {
-          const status = (op as OperationStatusResponse).status;
-          const response = (op as OperationStatusResponse).response;
-          if (status === 'COMPLETED' && response) {
-            if (isRedeemResponse(response)) {
-              applySuccess(response);
-              return;
-            }
-            if (isApiError(response)) {
-              applyError(response);
-              return;
-            }
-          }
-          if (status === 'FAILED' && response && isApiError(response)) {
-            applyError(response);
-            return;
-          }
-        }
-        await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
-      }
-      setUx(timeoutMessage());
-      setPolling(false);
+  const runPoll = useCallback(
+    async (key: string, tenantId: string, eventId: string, generation: number) => {
+      await pollOperation(
+        key,
+        tenantId,
+        eventId,
+        {
+          onStart: () => {
+            if (isStale(generation)) return;
+            setPolling(true);
+            setUx({
+              kind: 'polling',
+              title: 'Đang dò trạng thái thao tác…',
+              detail: `GET /api/bff/operations/${key} (timeout / retryable).`,
+              retryable: true,
+            });
+          },
+          onRaw: (json) => {
+            if (isStale(generation)) return;
+            setRaw(JSON.stringify(json, null, 2));
+          },
+          onTransient: (kind) => {
+            if (isStale(generation)) return;
+            setUx(kind === 'network' ? networkMessage() : timeoutMessage());
+          },
+          onSuccess: (body) => applySuccess(body, generation),
+          onError: (body) => applyError(body, generation),
+          onFinally: () => {
+            if (isStale(generation)) return;
+            setPolling(false);
+          },
+        },
+        { isCancelled: () => isStale(generation) },
+      );
     },
-    [applyError, applySuccess],
+    [applyError, applySuccess, isStale],
   );
 
   function onSubmit(event: FormEvent) {
     event.preventDefault();
     const key = crypto.randomUUID();
+    const generation = generationRef.current;
     setIdempotencyKey(key);
     setTicket(null);
     setTickets(null);
@@ -202,17 +147,20 @@ export function RedeemForm({ initialTenantId = '', initialEventId = '' }: Props)
         REQUEST_TIMEOUT_MS,
       );
 
-      if (result.timedOut) {
-        setUx(timeoutMessage());
+      if (isStale(generation)) return;
+
+      if (result.timedOut || result.networkError) {
+        setUx(result.networkError ? networkMessage() : timeoutMessage());
         setRaw(null);
-        await pollOperation(key, form.tenantId.trim(), form.eventId.trim());
+        // Outcome unclear — poll same key; never claim success from network loss alone.
+        await runPoll(key, form.tenantId.trim(), form.eventId.trim(), generation);
         return;
       }
 
       setRaw(JSON.stringify(result.json, null, 2));
 
       if (result.status >= 200 && result.status < 300 && isRedeemResponse(result.json)) {
-        applySuccess(result.json);
+        applySuccess(result.json, generation);
         return;
       }
 
@@ -224,7 +172,7 @@ export function RedeemForm({ initialTenantId = '', initialEventId = '' }: Props)
         );
         setUx(mapped);
         if (mapped.retryable || result.status === 503) {
-          await pollOperation(key, form.tenantId.trim(), form.eventId.trim());
+          await runPoll(key, form.tenantId.trim(), form.eventId.trim(), generation);
         }
         return;
       }
@@ -234,6 +182,7 @@ export function RedeemForm({ initialTenantId = '', initialEventId = '' }: Props)
   }
 
   function loadTickets() {
+    const generation = generationRef.current;
     startTransition(async () => {
       const qs = new URLSearchParams({ tenantId: form.tenantId.trim() });
       const result = await fetchJson(
@@ -241,6 +190,11 @@ export function RedeemForm({ initialTenantId = '', initialEventId = '' }: Props)
         { method: 'GET' },
         REQUEST_TIMEOUT_MS,
       );
+      if (isStale(generation)) return;
+      if (result.timedOut || result.networkError) {
+        setUx(result.networkError ? networkMessage() : timeoutMessage());
+        return;
+      }
       setRaw(JSON.stringify(result.json, null, 2));
       if (result.status >= 200 && result.status < 300) {
         setTickets(result.json as MeTicketsResponse);
@@ -251,7 +205,7 @@ export function RedeemForm({ initialTenantId = '', initialEventId = '' }: Props)
           retryable: false,
         });
       } else if (isApiError(result.json)) {
-        applyError(result.json);
+        applyError(result.json, generation);
       } else {
         setUx(messageForApiError(undefined, `HTTP ${result.status}`));
       }
