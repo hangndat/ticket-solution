@@ -96,6 +96,8 @@ test('production routes isolate tenant content and reject unknown pairs', async 
     assert.ok(adminHtml.includes('Lưu phiên bản'));
     assert.ok(adminHtml.includes('Nhập mã'));
     assert.ok(adminHtml.includes('Đọc quota'));
+    assert.ok(adminHtml.includes('Báo cáo sự kiện'));
+    assert.ok(adminHtml.includes('Tải báo cáo'));
     assert.ok(adminHtml.includes('Duyệt'));
     assert.ok(adminHtml.includes('Từ chối'));
     assert.ok(adminHtml.includes('Lý do từ chối'));
@@ -180,6 +182,12 @@ test('production routes isolate tenant content and reject unknown pairs', async 
     );
     assert.equal(quotaBff.status, 503);
     assert.equal((await quotaBff.json()).code, 'OIDC_MISCONFIGURED');
+    const reportBff = await fetch(
+      base +
+        '/api/bff/admin/report?tenantId=11111111-1111-4111-8111-111111111111&eventId=22222222-2222-4222-8222-222222222222',
+    );
+    assert.equal(reportBff.status, 503);
+    assert.equal((await reportBff.json()).code, 'OIDC_MISCONFIGURED');
 
     const approvalBody = {
       tenantId: '11111111-1111-4111-8111-111111111111',
