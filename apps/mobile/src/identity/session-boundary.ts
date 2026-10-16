@@ -8,10 +8,31 @@ export type Identity =
   | { status: 'signed-out' }
   | { status: 'verified'; userId: string };
 
+/**
+ * Probe returned when the auth server cannot be reached.
+ * Restore keeps the SecureStore credential but never elevates to verified.
+ * Establish treats this like a failed verification (signed-out, no write).
+ */
+export const CREDENTIAL_UNREACHABLE = Symbol('ticket.credentialUnreachable');
+
 /** Only a server-validated provider adapter may produce this result. */
 export type VerifyCredential = (
   credential: string,
-) => Promise<{ userId: string } | null>;
+) => Promise<
+  { userId: string } | null | typeof CREDENTIAL_UNREACHABLE
+>;
+
+export type RestoreOutcome =
+  | 'verified'
+  | 'signed-out'
+  | 'unreachable'
+  | 'unknown';
+
+/** Generation + verified user captured before an async ticket/API operation. */
+export type SessionEpoch = {
+  generation: number;
+  userId: string;
+};
 
 export class SessionBoundary {
   private identity: Identity = { status: 'unknown' };
@@ -49,20 +70,63 @@ export class SessionBoundary {
     this.storageQueue = result.catch(() => undefined);
     return result;
   }
+
+  /**
+   * Capture verified generation+user before any async read/write/fetch.
+   * Returns null when not verified — callers must not proceed with online sync.
+   */
+  captureEpoch(): SessionEpoch | null {
+    if (this.identity.status !== 'verified') return null;
+    return { generation: this.generation, userId: this.identity.userId };
+  }
+
+  /** True only when the same verified user and generation are still current. */
+  isEpochCurrent(epoch: SessionEpoch | null): boolean {
+    if (!epoch) return false;
+    return (
+      this.generation === epoch.generation &&
+      this.identity.status === 'verified' &&
+      this.identity.userId === epoch.userId
+    );
+  }
+
+  /**
+   * Register an AbortController aborted on logout/account-switch invalidate.
+   * Call `endRequest` in a finally block so the set does not leak.
+   */
+  beginRequest(): AbortController {
+    const controller = new AbortController();
+    this.requests.add(controller);
+    return controller;
+  }
+
+  endRequest(controller: AbortController): void {
+    this.requests.delete(controller);
+  }
+
   /** Keychain restoration alone never establishes identity. */
-  async restore(verify?: VerifyCredential) {
+  async restore(verify?: VerifyCredential): Promise<RestoreOutcome> {
     const generation = this.invalidate({ status: 'unknown' });
     try {
       const credential = await this.storage(() => this.store.read());
       const verified = credential && verify ? await verify(credential) : null;
-      if (generation !== this.generation) return;
-      if (verified?.userId)
-        this.publish({ status: 'verified', userId: verified.userId });
-      else {
-        await this.storage(() => this.store.clear());
-        if (generation === this.generation)
-          this.publish({ status: 'signed-out' });
+      if (generation !== this.generation) return 'unknown';
+      if (verified === CREDENTIAL_UNREACHABLE) {
+        // Network/unreachable: keep credential for a later online probe.
+        // Never treat local keychain presence as verified identity.
+        this.publish({ status: 'signed-out' });
+        return 'unreachable';
       }
+      if (verified && typeof verified === 'object' && verified.userId) {
+        this.publish({ status: 'verified', userId: verified.userId });
+        return 'verified';
+      }
+      await this.storage(() => this.store.clear());
+      if (generation === this.generation) {
+        this.publish({ status: 'signed-out' });
+        return 'signed-out';
+      }
+      return 'unknown';
     } catch (error) {
       if (generation === this.generation) this.publish({ status: 'unknown' });
       throw error;
@@ -75,7 +139,12 @@ export class SessionBoundary {
     await this.storage(() => this.store.clear());
     const verified = await verify(credential);
     if (generation !== this.generation) return;
-    if (!verified?.userId) {
+    if (
+      verified === CREDENTIAL_UNREACHABLE ||
+      !verified ||
+      typeof verified !== 'object' ||
+      !verified.userId
+    ) {
       this.publish({ status: 'signed-out' });
       return;
     }

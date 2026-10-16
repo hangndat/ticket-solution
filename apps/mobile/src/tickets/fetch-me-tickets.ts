@@ -24,17 +24,45 @@ function isMeTicketsResponse(value: unknown): value is MeTicketsResponse {
   return body.tickets.every(isTicketSummary);
 }
 
+export type MeTicketsProbeResult =
+  | { status: 'ok'; body: MeTicketsResponse }
+  | { status: 'unauthorized' }
+  | { status: 'unreachable' }
+  | { status: 'invalid' };
+
+/** Ticket list probe must not hang forever when offline. */
+export const ME_TICKETS_PROBE_TIMEOUT_MS = 8_000;
+
+function withTimeoutSignal(
+  signal: AbortSignal | undefined,
+  timeoutMs: number,
+): { signal: AbortSignal; cancel: () => void } {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const onAbort = () => controller.abort();
+  signal?.addEventListener('abort', onAbort);
+  return {
+    signal: controller.signal,
+    cancel: () => {
+      clearTimeout(timer);
+      signal?.removeEventListener('abort', onAbort);
+    },
+  };
+}
+
 /**
- * GET /v1/me/tickets?tenantId= with short-lived bearer.
- * Returns null on misconfig, network, or non-OK — never invents tickets.
+ * Discriminated GET /v1/me/tickets probe.
+ * Callers must not fall back to offline cache on unauthorized.
  */
-export async function fetchMeTickets(
+export async function probeMeTickets(
   bearer: string,
   tenantId: string,
   signal?: AbortSignal,
-): Promise<MeTicketsResponse | null> {
+  timeoutMs: number = ME_TICKETS_PROBE_TIMEOUT_MS,
+): Promise<MeTicketsProbeResult> {
   const base = getApiBaseUrl();
-  if (!base || !bearer || !tenantId) return null;
+  if (!base || !bearer || !tenantId) return { status: 'invalid' };
+  const timed = withTimeoutSignal(signal, timeoutMs);
   try {
     const url = new URL(`${base}/v1/me/tickets`);
     url.searchParams.set('tenantId', tenantId);
@@ -44,12 +72,40 @@ export async function fetchMeTickets(
         Accept: 'application/json',
         Authorization: `Bearer ${bearer}`,
       },
-      signal,
+      signal: timed.signal,
     });
-    if (!response.ok) return null;
+    if (response.status === 401 || response.status === 403) {
+      return { status: 'unauthorized' };
+    }
+    if (response.status >= 500) {
+      return { status: 'unreachable' };
+    }
+    if (!response.ok) {
+      return { status: 'invalid' };
+    }
     const body: unknown = await response.json();
-    return isMeTicketsResponse(body) ? body : null;
-  } catch {
-    return null;
+    return isMeTicketsResponse(body)
+      ? { status: 'ok', body }
+      : { status: 'invalid' };
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      return { status: 'unreachable' };
+    }
+    return { status: 'unreachable' };
+  } finally {
+    timed.cancel();
   }
+}
+
+/**
+ * GET /v1/me/tickets?tenantId= with short-lived bearer.
+ * Returns null on misconfig, network, or non-OK — never invents tickets.
+ */
+export async function fetchMeTickets(
+  bearer: string,
+  tenantId: string,
+  signal?: AbortSignal,
+): Promise<MeTicketsResponse | null> {
+  const result = await probeMeTickets(bearer, tenantId, signal);
+  return result.status === 'ok' ? result.body : null;
 }
