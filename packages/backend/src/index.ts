@@ -75,6 +75,17 @@ export {
   type ClaimedOutboxRow,
   type ProcessOutboxResult,
 } from './outbox';
+export {
+  ConfigError,
+  CONFIG_ERROR_CODES,
+  type ConfigErrorCode,
+} from './config-error';
+export {
+  saveEventConfigVersion,
+  publishEventConfig,
+  type ConfigVersionResult,
+  type PublishResult,
+} from './config-publish';
 export { GateError, GATE_ERROR_CODES, type GateErrorCode } from './gate-error';
 export {
   openStaffSession,

@@ -507,6 +507,98 @@
           "gate"
         ]
       }
+    },
+    "/v1/tenants/{tenantId}/events/{eventId}/config-versions": {
+      "post": {
+        "operationId": "ConfigPublishController_save",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "eventId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfigBodyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "config"
+        ]
+      }
+    },
+    "/v1/tenants/{tenantId}/events/{eventId}/publish": {
+      "post": {
+        "operationId": "ConfigPublishController_publish",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "eventId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishBodyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "config"
+        ]
+      }
     }
   },
   "info": {
@@ -895,6 +987,32 @@
         "required": [
           "tenantId",
           "reason"
+        ]
+      },
+      "ConfigBodyDto": {
+        "type": "object",
+        "properties": {
+          "payload": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "schemaVersion": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "payload"
+        ]
+      },
+      "PublishBodyDto": {
+        "type": "object",
+        "properties": {
+          "expectedVersion": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "expectedVersion"
         ]
       }
     }

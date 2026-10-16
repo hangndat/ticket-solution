@@ -33,6 +33,7 @@ const MIGRATIONS = [
   'prisma/migrations/202610160003_d1_membership/migration.sql',
   'prisma/migrations/202610160004_d2_issue_ticket/migration.sql',
   'prisma/migrations/202610170005_d3_gate/migration.sql',
+  'prisma/migrations/202610170006_d4_config_publish/migration.sql',
 ];
 
 const HMAC = readCodeHmacEnvironment({

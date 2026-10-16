@@ -29,6 +29,8 @@ test('Fastify liveness matches contract; redeem and gate routes documented', asy
       '/v1/me',
       '/v1/me/tickets',
       '/v1/operations/{clientOperationId}',
+      '/v1/tenants/{tenantId}/events/{eventId}/config-versions',
+      '/v1/tenants/{tenantId}/events/{eventId}/publish',
       '/v1/tenants/{tenantId}/events/{eventId}/redemptions',
     ]);
     assert.equal(
