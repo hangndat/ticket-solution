@@ -681,11 +681,139 @@
           "inventory"
         ]
       }
+    },
+    "/v1/tenants/{tenantId}/events/{eventId}/redemptions/{requestId}/approve": {
+      "post": {
+        "operationId": "ApprovalController_approve",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "eventId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "requestId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "idempotency-key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApprovalResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "redemptions"
+        ]
+      }
+    },
+    "/v1/tenants/{tenantId}/events/{eventId}/redemptions/{requestId}/deny": {
+      "post": {
+        "operationId": "ApprovalController_deny",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "eventId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "requestId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "idempotency-key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DenyBodyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApprovalResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "redemptions"
+        ]
+      }
     }
   },
   "info": {
     "title": "Ticket API — D2 issue",
-    "description": "Identity plus redemption issue (PostgreSQL quota/outbox). Redis does not decide quota.",
+    "description": "Identity, redemption issue, and manual approval. PostgreSQL quota is the source of truth; Redis is not.",
     "version": "0.2.0",
     "contact": {}
   },
@@ -1113,6 +1241,58 @@
         "required": [
           "codes"
         ]
+      },
+      "ApprovalResponseDto": {
+        "type": "object",
+        "properties": {
+          "decision": {
+            "type": "string",
+            "enum": [
+              "approve",
+              "deny"
+            ]
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ISSUED",
+              "REJECTED"
+            ]
+          },
+          "ticketId": {
+            "type": "string",
+            "nullable": true
+          },
+          "operationId": {
+            "type": "string"
+          },
+          "ownerUserId": {
+            "type": "string"
+          },
+          "replayed": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "decision",
+          "requestId",
+          "status",
+          "ticketId",
+          "operationId",
+          "ownerUserId",
+          "replayed"
+        ]
+      },
+      "DenyBodyDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string"
+          }
+        }
       }
     }
   }

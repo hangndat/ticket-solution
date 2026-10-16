@@ -1,0 +1,226 @@
+import { randomUUID } from 'node:crypto';
+import {
+  Body,
+  Controller,
+  Headers,
+  HttpException,
+  Injectable,
+  Param,
+  Post,
+} from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiHeader,
+  ApiOkResponse,
+  ApiProperty,
+  ApiTags,
+} from '@nestjs/swagger';
+import { type ApiError } from '@ticket/contracts';
+import {
+  ApprovalError,
+  APPROVAL_ERROR_CODES,
+  AuthzError,
+  IdentityError,
+  IDENTITY_ERROR_CODES,
+  decideRedemption,
+  unwrapApprovalOutcome,
+  withTenant,
+  type IdentityUserRepository,
+  type OidcVerifier,
+  type PrismaClient,
+} from '@ticket/backend';
+
+const UUID =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+class DenyBodyDto {
+  @ApiProperty({ required: false })
+  reason?: string;
+}
+
+class ApprovalResponseDto {
+  @ApiProperty({ enum: ['approve', 'deny'] }) decision!: 'approve' | 'deny';
+  @ApiProperty() requestId!: string;
+  @ApiProperty({ enum: ['ISSUED', 'REJECTED'] }) status!: 'ISSUED' | 'REJECTED';
+  @ApiProperty({ nullable: true, type: String }) ticketId!: string | null;
+  @ApiProperty() operationId!: string;
+  @ApiProperty() ownerUserId!: string;
+  @ApiProperty() replayed!: boolean;
+}
+
+type Deps = {
+  db: PrismaClient | null;
+  verifier: OidcVerifier | null;
+  users: IdentityUserRepository | null;
+  bootError: IdentityError | null;
+  credentialKey: string | null;
+};
+
+function scopeError(message: string): HttpException {
+  return new HttpException(
+    {
+      code: 'SCOPE_REQUIRED',
+      message,
+      requestId: randomUUID(),
+      retryable: false,
+    } satisfies ApiError,
+    422,
+  );
+}
+
+function requireUuid(value: string | undefined, name: string): string {
+  if (!value || !UUID.test(value)) throw scopeError(`${name} must be a UUID`);
+  return value;
+}
+
+@Injectable()
+export class ApprovalService {
+  constructor(private readonly deps: Deps) {}
+
+  private async actor(authorization: string | undefined) {
+    if (this.deps.bootError) throw this.deps.bootError;
+    if (!this.deps.db || !this.deps.verifier || !this.deps.users) {
+      throw new IdentityError(
+        IDENTITY_ERROR_CODES.OIDC_MISCONFIGURED,
+        'Approval services are not configured',
+      );
+    }
+    if (!this.deps.credentialKey) {
+      throw new IdentityError(
+        IDENTITY_ERROR_CODES.OIDC_MISCONFIGURED,
+        'TICKET_CREDENTIAL_KEY is required',
+      );
+    }
+    const verified = await this.deps.verifier.verifyBearerToken(authorization);
+    return this.deps.users.upsertFromVerifiedIdentity(verified);
+  }
+
+  async decide(
+    authorization: string | undefined,
+    tenantId: string,
+    eventId: string,
+    requestId: string,
+    idempotencyKey: string | undefined,
+    decision: 'approve' | 'deny',
+    reason?: string | null,
+  ) {
+    const user = await this.actor(authorization);
+    const outcome = await withTenant(this.deps.db!, tenantId, (tx) =>
+      decideRedemption(tx, this.deps.credentialKey!, {
+        tenantId,
+        eventId,
+        requestId,
+        actorUserId: user.userId,
+        decision,
+        idempotencyKey: idempotencyKey ?? '',
+        reason: reason ?? null,
+      }),
+    );
+    return unwrapApprovalOutcome(outcome);
+  }
+}
+
+@ApiTags('redemptions')
+@Controller()
+export class ApprovalController {
+  constructor(private readonly approvals: ApprovalService) {}
+
+  private fail(error: unknown): never {
+    if (error instanceof IdentityError) {
+      throw new HttpException(
+        {
+          code: error.code,
+          message: error.message,
+          requestId: randomUUID(),
+          retryable: error.retryable,
+        } satisfies ApiError,
+        error.code === IDENTITY_ERROR_CODES.OIDC_MISCONFIGURED ? 503 : 401,
+      );
+    }
+    if (error instanceof AuthzError) {
+      throw new HttpException(
+        {
+          code: error.code,
+          message: error.message,
+          requestId: randomUUID(),
+          retryable: false,
+        } satisfies ApiError,
+        403,
+      );
+    }
+    if (error instanceof ApprovalError) {
+      const status =
+        error.code === APPROVAL_ERROR_CODES.REQUEST_NOT_FOUND
+          ? 404
+          :         error.code === APPROVAL_ERROR_CODES.IDEMPOTENCY_KEY_REQUIRED ||
+              error.code === APPROVAL_ERROR_CODES.REASON_REQUIRED ||
+              error.code === APPROVAL_ERROR_CODES.REASON_TOO_LONG
+            ? 422
+            : error.code === APPROVAL_ERROR_CODES.RETRYABLE_CONFLICT
+              ? 503
+              : 409;
+      throw new HttpException(
+        {
+          code: error.code,
+          message: error.message,
+          requestId: randomUUID(),
+          retryable: error.retryable,
+        } satisfies ApiError,
+        status,
+      );
+    }
+    throw error;
+  }
+
+  @Post('tenants/:tenantId/events/:eventId/redemptions/:requestId/approve')
+  @ApiBearerAuth()
+  @ApiHeader({ name: 'idempotency-key', required: true })
+  @ApiOkResponse({ type: ApprovalResponseDto })
+  approve(
+    @Headers('authorization') authorization: string | undefined,
+    @Headers('idempotency-key') idempotencyKey: string | undefined,
+    @Param('tenantId') tenantId: string,
+    @Param('eventId') eventId: string,
+    @Param('requestId') requestId: string,
+  ) {
+    return this.approvals
+      .decide(
+        authorization,
+        requireUuid(tenantId, 'tenantId'),
+        requireUuid(eventId, 'eventId'),
+        requireUuid(requestId, 'requestId'),
+        idempotencyKey,
+        'approve',
+        null,
+      )
+      .catch((error) => this.fail(error));
+  }
+
+  @Post('tenants/:tenantId/events/:eventId/redemptions/:requestId/deny')
+  @ApiBearerAuth()
+  @ApiHeader({ name: 'idempotency-key', required: true })
+  @ApiOkResponse({ type: ApprovalResponseDto })
+  deny(
+    @Headers('authorization') authorization: string | undefined,
+    @Headers('idempotency-key') idempotencyKey: string | undefined,
+    @Param('tenantId') tenantId: string,
+    @Param('eventId') eventId: string,
+    @Param('requestId') requestId: string,
+    @Body() body: DenyBodyDto,
+  ) {
+    if (body?.reason != null && typeof body.reason !== 'string') {
+      throw scopeError('reason must be a string');
+    }
+    return this.approvals
+      .decide(
+        authorization,
+        requireUuid(tenantId, 'tenantId'),
+        requireUuid(eventId, 'eventId'),
+        requireUuid(requestId, 'requestId'),
+        idempotencyKey,
+        'deny',
+        body?.reason ?? null,
+      )
+      .catch((error) => this.fail(error));
+  }
+}
