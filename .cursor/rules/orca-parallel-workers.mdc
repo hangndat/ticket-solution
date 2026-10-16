@@ -37,4 +37,5 @@ When the user asks for coding work that Orca should run (or when you are the Orc
 ✅ Contract task first (if needed) → then parallel consumer workers (--agent cursor)
 ```
 
-Coding workers must use `--agent cursor`. Plan/review agent choice: see `orca-agent-routing.mdc`.
+Coding workers must use `--agent cursor`. Plan/review agent choice: see `orca-agent-routing.mdc`.  
+When a worker becomes free and unblocked, fill it from the ready backlog immediately: see `orca-idle-worker-fill.mdc`.

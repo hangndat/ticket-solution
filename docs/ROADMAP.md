@@ -31,6 +31,8 @@ Một đầu việc trên board chỉ chuyển **Hoàn thành** khi:
 
 `worker_done` / Dispatch settled **không** đồng nghĩa task đã hoàn thành trên GitHub Project.
 
+**Agent sync (bắt buộc):** Cập nhật Status Project theo sự kiện (Đang làm / Chờ duyệt / Bị chặn / Hoàn thành) **không chờ user duyệt board**. Khi vào Chờ duyệt, spawn một Orca worker `--agent cursor` đóng vai người duyệt (khác session implementer). Chi tiết: `.cursor/rules/github-project-tracking.mdc`.
+
 ## 3. Vai trò phụ trách
 
 | Nhóm | Ownership | Không tự ý |

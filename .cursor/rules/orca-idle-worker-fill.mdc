@@ -1,0 +1,37 @@
+---
+description: Orca coordinator must keep idle unblocked workers busy with next ready tasks
+alwaysApply: true
+---
+
+# Orca — never leave an unblocked worker idle
+
+As coordinator (or any agent supervising an Orca Run): **if a worker capacity is free and work exists that is not blocked by other in-flight Tasks, dispatch it immediately.** Do not wait for the whole wave to finish, and do not wait for the user to assign the next Issue.
+
+## Idle / free means
+
+- No active Dispatch for that ownership slice (or settled `worker_done` / released terminal ready for reuse), **and**
+- Next candidate Task’s real deps are satisfied (no unfinished blocker Task; Project Status not `Bị chặn` for a hard dependency still open).
+
+## Always do
+
+1. Maintain a ready queue from GitHub Project #3: prefer Status `Sẵn sàng`, then unblocked items in the active đợt (D1…); respect ownership (BE / web / iOS / coordinator).
+2. On every checkpoint (`worker_done`, escalation resolved, dep unblocked, `check` batch processed): **fill every free, unblocked slot** with `worker-start` (coding → `--agent cursor`; plan → Codex per routing; DoD review → Cursor reviewer).
+3. Pull the next ready Issue for that scope; set Project Status → `Đang làm` when dispatching (see `github-project-tracking.mdc`).
+4. Prefer reusing a settled worker terminal when Orca allows; otherwise start a new worker for that slice.
+5. Parallel-first still applies: fill multiple free slices in one wave before `check --wait`.
+
+## Do not
+
+```text
+❌ Hold a free BE worker idle while only waiting on unrelated web/iOS
+❌ Serialize “one Issue at a time” globally when other scopes are ready
+❌ Ask the user “làm Issue nào tiếp?” when Sẵn sàng / unblocked backlog exists
+❌ Dispatch work whose deps are still running (true block → leave idle or mark Bị chặn)
+
+✅ After iOS worker_done, immediately dispatch next Sẵn sàng iOS (or DoD review) if unblocked
+✅ While BE coding runs, keep web/iOS busy on independent ready Issues
+```
+
+## Empty backlog
+
+If no unblocked ready work remains for a free worker: leave it idle, report “no ready Tasks for \<scope\>”, and do not invent scope-breaking busywork.

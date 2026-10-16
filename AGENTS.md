@@ -37,7 +37,9 @@ All user-facing roadmap, GitHub Projects, milestones, Issue titles/bodies, label
 - Use Orca lifecycle commands from your live dispatch preamble. Check follow-ups at checkpoints and before worker_done.
 - No delegation without task authorization.
 - **Orca parallel-first (coding):** If a coding task spans two or more independent ownership slices (backend / web / iOS / coordinator), spawn those Orca workers in one wave and wait together — do not serialize independent implementation. Use Task dependencies only for real ordering (e.g. shared contract before consumer apps). See `.cursor/rules/orca-parallel-workers.mdc`.
-- **Orca agent routing:** Coding/implementation workers always `--agent cursor`. Plan, design, spike, and review workers use `--agent codex`; if Codex is out of quota or fails to launch, retry that plan/review Task with `--agent cursor`. Do not use Codex as the primary coding agent. See `.cursor/rules/orca-agent-routing.mdc`.
+- **Orca agent routing:** Coding/implementation workers always `--agent cursor`. Plan/design/spike use `--agent codex` (Cursor fallback on quota). **DoD / acceptance review** of implementation: spawn one `--agent cursor` reviewer (≠ implementer); do not wait for the user to approve. See `.cursor/rules/orca-agent-routing.mdc`.
+- **GitHub Project sync:** Keep [Project #3](https://github.com/users/hangndat/projects/3) Status in sync (Đang làm → Chờ duyệt → Hoàn thành / Bị chặn) without waiting for user board approval. `worker_done` ≠ Hoàn thành. See `.cursor/rules/github-project-tracking.mdc` and `docs/ROADMAP.md` §2/§8.
+- **Orca idle fill:** Any free worker whose next Task is not blocked by other workers/deps must be given the next ready Project work immediately — do not wait for the full wave or for the user to pick the next Issue. See `.cursor/rules/orca-idle-worker-fill.mdc`.
 
 <!-- code-review-graph MCP tools -->
 ## MCP Tools: code-review-graph

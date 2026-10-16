@@ -1,5 +1,5 @@
 ---
-description: Orca workers — Cursor for code; Codex for plan/review (fallback Cursor on quota)
+description: Orca workers — Cursor for code + DoD review; Codex for plan/design (fallback Cursor on quota)
 alwaysApply: true
 ---
 
@@ -10,8 +10,9 @@ When spawning Orca workers (`worker-start --agent …`), pick the agent by **tas
 | Task kind | `--agent` | Notes |
 | --------- | --------- | ----- |
 | Implementation / coding / fix / migrate / tests that write code | `cursor` | Default for all ownership slices (BE / web / iOS / coordinator code) |
-| Plan, design, spike write-up, architecture choice, code review, critique | `codex` | Prefer Codex; do not use Codex as the primary coding worker |
-| Plan/review when Codex unavailable | `cursor` | Fallback only |
+| Plan, design, spike write-up, architecture choice, design critique | `codex` | Prefer Codex; do not use Codex as the primary coding worker |
+| Plan/design when Codex unavailable | `cursor` | Fallback only |
+| DoD / acceptance review of implementation (Issue → Chờ duyệt) | `cursor` | Always spawn one Cursor reviewer ≠ implementer; no user approval gate — see `github-project-tracking.mdc` |
 
 ## Fallback (Codex quota / launch failure)
 
@@ -28,15 +29,15 @@ If `worker-start --agent codex` fails (quota, auth, launch error) or the worker 
 ORCA orchestration worker-start --spec "<BE impl>" --worktree current --agent cursor --json
 ORCA orchestration worker-start --spec "<web impl>" --worktree current --agent cursor --json
 
-✅ Plan then review:
+✅ Plan (Codex) then DoD review (Cursor):
 ORCA orchestration worker-start --spec "<plan D1 membership>" --worktree current --agent codex --json
-# … later …
-ORCA orchestration worker-start --spec "<review PR / diff>" --worktree current --agent codex --json
+ORCA orchestration worker-start --spec "<DoD review Issue #N; paths; checklist>" --worktree current --agent cursor --json
 
-✅ Codex quota exhausted → same plan/review task with --agent cursor
+✅ Codex quota exhausted on plan → retry plan with --agent cursor
 
 ❌ Coding worker with --agent codex
-❌ Plan/review with --agent claude (or other) unless the user names that agent
+❌ Skip Cursor DoD reviewer and mark Project Hoàn thành
+❌ Plan/DoD review with --agent claude (or other) unless the user names that agent
 ```
 
 ## Overrides
