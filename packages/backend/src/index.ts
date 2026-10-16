@@ -54,9 +54,13 @@ export {
   redeemAndIssueTicket,
   listTicketsForOwner,
   getOperationForActor,
+  storedRejectionFromResponse,
   throwIfStoredRejection,
+  unwrapRedeemOutcome,
   type RedeemInput,
   type IssuedTicketResult,
+  type TerminalRejection,
+  type RedeemOutcome,
   type ListedTicket,
 } from './issue';
 export {
