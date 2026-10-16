@@ -105,6 +105,24 @@ export {
   type UndoResult,
 } from './gate';
 export {
+  ApprovalError,
+  APPROVAL_ERROR_CODES,
+  type ApprovalErrorCode,
+} from './approval-error';
+export {
+  APPROVE_COMMAND,
+  DENY_COMMAND,
+  holdCodeForReview,
+  decideRedemption,
+  unwrapApprovalOutcome,
+  type ApprovalDecision,
+  type HoldPendingInput,
+  type DecideRedemptionInput,
+  type ApprovalResult,
+  type ApprovalRejection,
+  type ApprovalOutcome,
+} from './approval';
+export {
   createNoopEmailAdapter,
   createFailingEmailAdapter,
   createSmtpEmailAdapter,

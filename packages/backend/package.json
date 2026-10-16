@@ -10,7 +10,7 @@
     "lint": "eslint src",
     "test": "pnpm build && node --test test/env.test.cjs test/oidc.test.cjs test/membership-unit.test.cjs test/issue-unit.test.cjs",
     "generate": "prisma generate",
-    "test:db": "pnpm -w --filter @ticket/contracts build && pnpm build && node --test test/rls.test.cjs test/membership.test.cjs test/issue.test.cjs test/gate.test.cjs test/config-publish.test.cjs",
+    "test:db": "pnpm -w --filter @ticket/contracts build && pnpm build && node --test test/rls.test.cjs test/membership.test.cjs test/issue.test.cjs test/gate.test.cjs test/config-publish.test.cjs test/approval.test.cjs",
     "migrate": "prisma migrate deploy"
   },
   "dependencies": {
