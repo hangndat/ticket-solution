@@ -4,8 +4,8 @@ export type AdminDecision =
   | { kind: 'saved'; version: number }
   | { kind: 'published'; version: number }
   | { kind: 'imported'; count: number }
-  | { kind: 'quota'; capacity: number; allocated: number }
-  | { kind: 'rejected'; code: string; message: string }
+  | { kind: 'quota'; capacity: number | null; allocated: number }
+  | { kind: 'rejected'; code: string; message: string; requestId?: string }
   | { kind: 'unknown'; message: string };
 
 export const ADMIN_UNKNOWN =
@@ -22,11 +22,18 @@ export function decideAdmin(
   json: unknown,
   networkError: boolean,
 ): AdminDecision {
-  if (networkError || status === 0 || status >= 500) {
+  if (networkError || status === 0) {
     return { kind: 'unknown', message: ADMIN_UNKNOWN };
   }
   const body = record(json);
-  if (action === 'save' && (status === 200 || status === 201) && typeof body?.version === 'number') {
+  if (status >= 500 && typeof body?.code !== 'string') {
+    return { kind: 'unknown', message: ADMIN_UNKNOWN };
+  }
+  if (
+    action === 'save' &&
+    (status === 200 || status === 201) &&
+    typeof body?.version === 'number'
+  ) {
     return { kind: 'saved', version: body.version };
   }
   if (
@@ -47,16 +54,23 @@ export function decideAdmin(
   if (
     action === 'quota' &&
     status === 200 &&
-    typeof body?.capacity === 'number' &&
+    (body?.capacity === null || typeof body?.capacity === 'number') &&
     typeof body.allocated === 'number'
   ) {
-    return { kind: 'quota', capacity: body.capacity, allocated: body.allocated };
+    return {
+      kind: 'quota',
+      capacity: body.capacity as number | null,
+      allocated: body.allocated,
+    };
   }
   if (typeof body?.code === 'string') {
     return {
       kind: 'rejected',
       code: body.code,
       message: typeof body.message === 'string' ? body.message : body.code,
+      ...(typeof body.requestId === 'string'
+        ? { requestId: body.requestId }
+        : {}),
     };
   }
   return { kind: 'unknown', message: ADMIN_UNKNOWN };

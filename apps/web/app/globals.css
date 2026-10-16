@@ -416,6 +416,8 @@ details p {
   font-size: 0.88rem;
 }
 .redeem-fields input,
+.redeem-fields textarea,
+.redeem-form textarea,
 .redeem-versions input {
   font: inherit;
   font-weight: 400;
@@ -423,6 +425,9 @@ details p {
   border: 2px solid #22241f40;
   background: #fff;
   color: var(--ink);
+}
+.redeem-form textarea[readonly] {
+  background: #22241f0d;
 }
 .redeem-versions {
   display: grid;
