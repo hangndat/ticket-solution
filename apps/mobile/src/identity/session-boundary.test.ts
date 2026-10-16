@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { SessionBoundary, type CredentialStore } from './session-boundary.ts';
+import {
+  CREDENTIAL_UNREACHABLE,
+  SessionBoundary,
+  type CredentialStore,
+} from './session-boundary.ts';
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -99,6 +103,15 @@ test('serialized secure writes cannot resurrect credential after logout', async 
   await Promise.all([establish, logout]);
   assert.equal(f.credential(), null);
 });
+test('getCredential returns SecureStore bearer only while verified', async () => {
+  const f = fixture();
+  assert.equal(await f.boundary.getCredential(), null);
+  await f.boundary.establish('alice-token', verify);
+  assert.equal(await f.boundary.getCredential(), 'alice-token');
+  await f.boundary.logout();
+  assert.equal(await f.boundary.getCredential(), null);
+});
+
 test('secure deletion failure propagates while private data remains inaccessible', async () => {
   const f = fixture();
   await f.boundary.establish('alice', verify);
@@ -112,4 +125,46 @@ test('secure deletion failure propagates while private data remains inaccessible
     f.boundary.load('tenant-a', 'tickets', async () => ['private']),
     /Verified identity required/,
   );
+});
+
+test('unreachable restore keeps credential but never elevates to verified', async () => {
+  const f = fixture('keychain-token');
+  const outcome = await f.boundary.restore(async () => CREDENTIAL_UNREACHABLE);
+  assert.equal(outcome, 'unreachable');
+  assert.equal(f.boundary.getSnapshot().status, 'signed-out');
+  assert.equal(f.credential(), 'keychain-token');
+});
+
+test('rejected restore still clears credential (invalid/revoked)', async () => {
+  const f = fixture('keychain-token');
+  const outcome = await f.boundary.restore(async () => null);
+  assert.equal(outcome, 'signed-out');
+  assert.equal(f.boundary.getSnapshot().status, 'signed-out');
+  assert.equal(f.credential(), null);
+});
+
+test('epoch capture guards stale work across logout and same-user re-login', async () => {
+  const f = fixture();
+  await f.boundary.establish('alice', verify);
+  const epoch = f.boundary.captureEpoch();
+  assert.ok(epoch);
+  assert.equal(f.boundary.isEpochCurrent(epoch), true);
+  await f.boundary.logout();
+  assert.equal(f.boundary.isEpochCurrent(epoch), false);
+  await f.boundary.establish('alice', verify);
+  assert.equal(f.boundary.isEpochCurrent(epoch), false);
+  const next = f.boundary.captureEpoch();
+  assert.ok(next);
+  assert.notEqual(next.generation, epoch!.generation);
+  assert.equal(f.boundary.isEpochCurrent(next), true);
+});
+
+test('beginRequest aborts on account switch so fetch outside load is cancelled', async () => {
+  const { boundary } = fixture();
+  await boundary.establish('alice', verify);
+  const controller = boundary.beginRequest();
+  assert.equal(controller.signal.aborted, false);
+  await boundary.establish('bob', verify);
+  assert.equal(controller.signal.aborted, true);
+  boundary.endRequest(controller);
 });

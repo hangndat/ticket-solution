@@ -1,15 +1,21 @@
-import { useCallback, useState, useSyncExternalStore } from 'react';
+import { useCallback, useMemo, useState, useSyncExternalStore } from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import type { MeResponse } from '@ticket/contracts';
 import { Notice, Page } from '@/components/page';
 import { colors } from '@/theme/colors';
-import { isOidcConfigured } from '@/identity/config';
+import { getTenantId, isOidcConfigured } from '@/identity/config';
 import { fetchMe, verifyViaMe } from '@/identity/fetch-me';
 import {
   endKeycloakSession,
   loginWithKeycloak,
 } from '@/identity/oidc-login';
 import { session } from '@/identity/session';
+import {
+  bindIfStillVerified,
+  captureOfflineBindingEpoch,
+} from '@/tickets/bind-after-verify';
+import { offlineDisplay } from '@/tickets/offline-display-session';
+import { logoutAndClearWalletArtifacts } from '@/tickets/wallet-logout';
 
 function ActionButton({
   label,
@@ -89,22 +95,39 @@ function ConfiguredAccount() {
     session.getSnapshot,
     session.getSnapshot,
   );
+  const offline = useSyncExternalStore(
+    offlineDisplay.subscribe,
+    offlineDisplay.getSnapshot,
+    offlineDisplay.getSnapshot,
+  );
   const verifiedUserId =
     identity.status === 'verified' ? identity.userId : null;
   const isSignedIn = identity.status === 'verified' || accessToken !== null;
 
+  // Refuse stale /v1/me UI immediately on identity switch (no effect delay).
+  const visibleMe = useMemo(() => {
+    if (identity.status !== 'verified' || !me) return null;
+    return me.userId === identity.userId ? me : null;
+  }, [identity, me]);
+
   const refreshMe = useCallback(async () => {
     setBusy(true);
     setMeError(null);
+    const epoch = session.captureEpoch();
     try {
-      const token = accessToken;
-      if (!token) {
+      // Online verified path only — never call API with offline-display auth.
+      const token = await session.getCredential();
+      if (!session.isEpochCurrent(epoch)) return;
+      if (!token || !epoch) {
         setMe(null);
-        setMeError('No short-lived bearer. Sign in first.');
+        setMeError(
+          'No verified bearer in SessionBoundary. Offline display cannot authorize GET /v1/me.',
+        );
         return;
       }
       const result = await fetchMe(token);
-      if (!result) {
+      if (!session.isEpochCurrent(epoch)) return;
+      if (!result || result.userId !== epoch.userId) {
         setMe(null);
         setMeError(
           'GET /v1/me failed or returned an invalid body. Check EXPO_PUBLIC_API_BASE_URL and that the Nest JWT verifier is running.',
@@ -112,16 +135,24 @@ function ConfiguredAccount() {
         return;
       }
       setMe(result);
+      setAccessToken(token);
     } finally {
       setBusy(false);
     }
-  }, [accessToken]);
+  }, []);
 
   const onSignIn = useCallback(async () => {
     setBusy(true);
     setMe(null);
     setMeError(null);
     try {
+      // Account switch: clear prior offline binding before hydrating a new user.
+      try {
+        await offlineDisplay.clear();
+      } catch {
+        /* best-effort */
+      }
+      const bindingEpoch = captureOfflineBindingEpoch();
       const result = await loginWithKeycloak();
       if (!result.ok) {
         setMeError(result.reason);
@@ -129,6 +160,17 @@ function ConfiguredAccount() {
       }
       setAccessToken(result.accessToken);
       await session.establish(result.accessToken, verifyViaMe);
+      const snap = session.getSnapshot();
+      const tenantId = getTenantId();
+      if (snap.status === 'verified' && tenantId) {
+        await bindIfStillVerified({
+          session,
+          offline: offlineDisplay,
+          userId: snap.userId,
+          tenantId,
+          bindingEpoch,
+        });
+      }
     } catch (error) {
       setMeError(
         error instanceof Error ? error.message : 'Keycloak sign-in failed.',
@@ -142,20 +184,26 @@ function ConfiguredAccount() {
     setBusy(true);
     setMe(null);
     setMeError(null);
+    const userId =
+      verifiedUserId ??
+      (offline.status === 'bound' ? offline.userId : null);
+    const tenantId =
+      getTenantId() ??
+      (offline.status === 'bound' ? offline.tenantId : null);
     try {
-      await session.logout();
+      await logoutAndClearWalletArtifacts({ userId, tenantId });
       setAccessToken(null);
       await endKeycloakSession();
     } catch (error) {
       setMeError(
         error instanceof Error
           ? error.message
-          : 'Logout failed while clearing SecureStore.',
+          : 'Logout failed while clearing SecureStore / ticket cache.',
       );
     } finally {
       setBusy(false);
     }
-  }, []);
+  }, [offline, verifiedUserId]);
 
   return (
     <Page>
@@ -171,6 +219,11 @@ function ConfiguredAccount() {
         {'\n'}
         SessionBoundary: {identity.status}
         {verifiedUserId ? ` (${verifiedUserId})` : ''}
+        {'\n'}
+        Offline display:{' '}
+        {offline.status === 'bound'
+          ? `bound (${offline.userId})`
+          : offline.status}
       </Notice>
 
       <View style={{ gap: 12 }}>
@@ -185,7 +238,7 @@ function ConfiguredAccount() {
             <ActionButton
               label="Refresh GET /v1/me"
               onPress={() => void refreshMe()}
-              disabled={busy}
+              disabled={busy || identity.status !== 'verified'}
             />
             <ActionButton
               label="Log out"
@@ -194,6 +247,13 @@ function ConfiguredAccount() {
             />
           </>
         )}
+        {!isSignedIn && offline.status === 'bound' ? (
+          <ActionButton
+            label="Log out (clear offline display)"
+            onPress={() => void onLogout()}
+            disabled={busy}
+          />
+        ) : null}
       </View>
 
       {busy ? (
@@ -204,17 +264,17 @@ function ConfiguredAccount() {
 
       {meError ? <Notice title="Request failed">{meError}</Notice> : null}
 
-      {me ? (
+      {visibleMe ? (
         <Notice title="GET /v1/me">
-          userId: {me.userId}
+          userId: {visibleMe.userId}
           {'\n'}
-          subject: {me.subject}
+          subject: {visibleMe.subject}
           {'\n'}
-          issuer: {me.issuer}
+          issuer: {visibleMe.issuer}
           {'\n'}
-          email: {me.email ?? '(none)'}
+          email: {visibleMe.email ?? '(none)'}
           {'\n'}
-          emailVerified: {me.emailVerified ? 'true' : 'false'}
+          emailVerified: {visibleMe.emailVerified ? 'true' : 'false'}
         </Notice>
       ) : null}
 

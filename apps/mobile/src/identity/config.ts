@@ -23,6 +23,15 @@ export function getApiBaseUrl(): string | null {
   return url.replace(/\/+$/, '');
 }
 
+/**
+ * Tenant UUID for GET /v1/me/tickets?tenantId= (required by API).
+ * Empty → wallet stays empty / prompts config; never invents a tenant.
+ */
+export function getTenantId(): string | null {
+  const id = process.env.EXPO_PUBLIC_TENANT_ID?.trim() ?? '';
+  return id.length > 0 ? id : null;
+}
+
 export function isOidcConfigured(): boolean {
   return getOidcIssuer() !== null && getOidcClientId() !== null;
 }
