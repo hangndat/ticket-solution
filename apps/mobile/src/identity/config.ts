@@ -32,6 +32,12 @@ export function getTenantId(): string | null {
   return id.length > 0 ? id : null;
 }
 
+/** Event UUID used when a scan is a bare ticket id. QR display payloads carry their own. */
+export function getEventId(): string | null {
+  const id = process.env.EXPO_PUBLIC_EVENT_ID?.trim() ?? '';
+  return id.length > 0 ? id : null;
+}
+
 export function isOidcConfigured(): boolean {
   return getOidcIssuer() !== null && getOidcClientId() !== null;
 }
