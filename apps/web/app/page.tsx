@@ -10,6 +10,7 @@ export default function Home() {
         </span>
         <span className="nav-links">
           <Link href="/redeem">Đổi mã</Link>
+          <Link href="/gate">Cổng</Link>
           <Link href="/auth">Identity POC</Link>
           <Link href="/admin">Admin shell</Link>
         </span>
