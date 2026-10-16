@@ -25,6 +25,7 @@ Deploy một service khi chỉ service đó đổi. `restart` đủ sau khi buil
 | postgres | không deploy app | không tạo lại volume |
 | mailpit | không có source | chỉ bật nếu container tắt |
 
+
 ## Lệnh
 
 Từ `infra/deploy`, với env file ngoài git:
@@ -49,7 +50,7 @@ Proxy:
 
 Giữ `Host`, `X-Forwarded-For`, `X-Forwarded-Proto`. **Bắt buộc** ghi đè `X-Forwarded-Host $host` (không chuyển tiếp header client). Web nên dùng `PUBLIC_WEB_ORIGIN=https://vemoki.com` (allowlist) thay vì tin forwarded host thô.
 
-Next bind `0.0.0.0` nên `request.url` có thể thành `https://0.0.0.0:3000/...`. Nginx đổi `Location` còn trỏ `0.0.0.0:3000` về `https://vemoki.com`.
+Next bind `0.0.0.0` nên `request.url` có thể thành `https://0.0.0.0:3000/...`. Callback và logout dùng `publicOrigin` (forwarded host do nginx ghi đè). Nginx đổi `Location` còn trỏ `0.0.0.0:3000` về `https://vemoki.com`.
 
 ## Đã kiểm tra
 
