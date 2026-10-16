@@ -44,6 +44,7 @@ import {
 import { ConfigPublishController, ConfigPublishService } from './config';
 import { InventoryController, InventoryService } from './inventory';
 import { ApprovalController, ApprovalService } from './approval';
+import { ReportController, ReportService } from './reporting';
 import { GateController, GateService } from './gate';
 import {
   TicketIssueController,
@@ -189,9 +190,7 @@ export function readApiEnvironment(env: NodeJS.ProcessEnv) {
   return { ...common, port: Number(port), host };
 }
 
-function resolveIdentity(
-  options: CreateAppOptions,
-): {
+function resolveIdentity(options: CreateAppOptions): {
   verifier: OidcVerifier | null;
   users: IdentityUserRepository | null;
   bootError: IdentityError | null;
@@ -225,7 +224,12 @@ function resolveIdentity(
     };
   }
 
-  if (!options.fromEnv && !options.env && !options.databaseUrl && !options.database) {
+  if (
+    !options.fromEnv &&
+    !options.env &&
+    !options.databaseUrl &&
+    !options.database
+  ) {
     return {
       verifier: null,
       users: null,
@@ -312,6 +316,7 @@ export async function createApp(
       ConfigPublishController,
       InventoryController,
       ApprovalController,
+      ReportController,
     ],
     providers: [
       {
@@ -343,6 +348,10 @@ export async function createApp(
         useValue: new ApprovalService(ticketDeps),
       },
       {
+        provide: ReportService,
+        useValue: new ReportService(ticketDeps),
+      },
+      {
         provide: DatabaseShutdown,
         useValue: new DatabaseShutdown(identity.ownsDb ? identity.db : null),
       },
@@ -370,7 +379,7 @@ export function createOpenApi(app: NestFastifyApplication) {
       .setTitle('Ticket API — D2 issue')
       .setVersion('0.2.0')
       .setDescription(
-        'Identity, redemption issue, and manual approval. PostgreSQL quota is the source of truth; Redis is not.',
+        'Identity, redemption issue, manual approval, and read-only event reports. PostgreSQL quota is the source of truth; Redis is not.',
       )
       .addBearerAuth()
       .build(),
