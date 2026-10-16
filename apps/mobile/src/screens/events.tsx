@@ -17,9 +17,12 @@ export function EventsScreen() {
       ListHeaderComponent={
         <View style={{ gap: 16 }}>
           <Notice title="Find your next moment">
-            Demo event directory. These fixtures do not offer registration or
-            real tickets.
+            Demo event directory. These fixtures do not offer registration.
+            Live codes use Redeem.
           </Notice>
+          <Link href="/redeem" style={{ color: colors.accent, fontSize: 17 }}>
+            Redeem a code
+          </Link>
           <Text selectable style={{ color: colors.secondary }}>
             Organization: {tenant}
           </Text>
