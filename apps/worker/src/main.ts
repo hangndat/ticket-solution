@@ -1,7 +1,7 @@
 import { createWorker } from './index';
 void createWorker()
   .then((app) => {
-    console.info('W0 worker idle: no job processors registered');
+    console.info('D2 worker: outbox relay polling (TicketIssued → email)');
     const keepAlive = setInterval(() => {}, 60_000);
     const clear = () => clearInterval(keepAlive);
     process.once('SIGINT', clear);

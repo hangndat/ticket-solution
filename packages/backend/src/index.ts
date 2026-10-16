@@ -1,7 +1,9 @@
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient, Prisma } from './generated/prisma/client';
+import { withTenant } from './tenant-context';
 
 export { PrismaClient, Prisma };
+export { withTenant };
 export {
   IdentityError,
   IDENTITY_ERROR_CODES,
@@ -36,6 +38,49 @@ export {
   type GrantMembershipInput,
   type GrantEventAssignmentInput,
 } from './membership';
+export {
+  IssueError,
+  ISSUE_ERROR_CODES,
+  type IssueErrorCode,
+} from './issue-error';
+export {
+  readCodeHmacEnvironment,
+  hashRedemptionCode,
+  codesEqualHmac,
+  type CodeHmacConfig,
+} from './code-hmac';
+export {
+  REDEEM_COMMAND,
+  redeemAndIssueTicket,
+  listTicketsForOwner,
+  getOperationForActor,
+  throwIfStoredRejection,
+  type RedeemInput,
+  type IssuedTicketResult,
+  type ListedTicket,
+} from './issue';
+export {
+  seedEventInventory,
+  type SeedInventoryInput,
+  type SeedInventoryResult,
+} from './inventory';
+export {
+  claimOutboxBatch,
+  processClaimedOutbox,
+  relayOutboxOnce,
+  type ClaimedOutboxRow,
+  type ProcessOutboxResult,
+} from './outbox';
+export {
+  createNoopEmailAdapter,
+  createFailingEmailAdapter,
+  createSmtpEmailAdapter,
+  readEmailEnvironment,
+  type EmailAdapter,
+  type TicketIssuedEmailPayload,
+  type EmailSendResult,
+  type SmtpAdapterOptions,
+} from './email-adapter';
 
 export function createDatabase(
   connectionString: string,
@@ -62,36 +107,18 @@ export function validateDatabaseUrl(value: string): string {
   }
 }
 
-/** Only call after identity, active membership and operation authorization.
- * This primitive is not authentication: never populate it from an unchecked header.
- * Callback must use tx exclusively and must not escape/retain it.
- * Do not use for the global users table.
- */
-export async function withTenant<T>(
-  db: PrismaClient,
-  tenantId: string,
-  operation: (tx: Prisma.TransactionClient) => Promise<T>,
-): Promise<T> {
-  if (
-    !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
-      tenantId,
-    )
-  ) {
-    throw new Error('Invalid tenant ID');
-  }
-  return db.$transaction(
-    async (tx) => {
-      await tx.$queryRaw`SELECT set_config('app.tenant_id', ${tenantId}, true)`;
-      await tx.$queryRaw`SELECT set_config('statement_timeout', '5000', true)`;
-      return operation(tx);
-    },
-    { maxWait: 5000, timeout: 10000 },
-  );
-}
-
 export function readProcessEnvironment(env: NodeJS.ProcessEnv) {
   const nodeEnv = env['NODE_ENV'] ?? 'development';
   if (!['development', 'test', 'production'].includes(nodeEnv))
     throw new Error('Invalid NODE_ENV');
   return { nodeEnv };
+}
+
+/** Credential sealing material for ticket QR tokens (local/dev). */
+export function readCredentialKeyEnvironment(env: NodeJS.ProcessEnv): string {
+  const key = env['TICKET_CREDENTIAL_KEY']?.trim();
+  if (!key || key.length < 16) {
+    throw new Error('TICKET_CREDENTIAL_KEY must be set (≥16 characters)');
+  }
+  return key;
 }

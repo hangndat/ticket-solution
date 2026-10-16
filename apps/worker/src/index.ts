@@ -1,17 +1,125 @@
 import 'reflect-metadata';
-import { Module } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
+import { Module, type OnModuleDestroy } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
-import { readProcessEnvironment } from '@ticket/backend';
-@Module({})
-class WorkerModule {}
+import {
+  createDatabase,
+  createSmtpEmailAdapter,
+  readEmailEnvironment,
+  readProcessEnvironment,
+  relayOutboxOnce,
+  type EmailAdapter,
+  type PrismaClient,
+} from '@ticket/backend';
+
+export type CreateWorkerOptions = {
+  env?: NodeJS.ProcessEnv;
+  logging?: boolean;
+  database?: PrismaClient;
+  emailAdapter?: EmailAdapter;
+  relayOnceOnStart?: boolean;
+  leaseOwner?: string;
+  /** Poll interval; 0 disables background polling. */
+  pollMs?: number;
+};
+
+class WorkerRelay implements OnModuleDestroy {
+  private timer: NodeJS.Timeout | null = null;
+  private stopped = false;
+
+  constructor(
+    private readonly db: PrismaClient | null,
+    private readonly email: EmailAdapter,
+    private readonly leaseOwner: string,
+    private readonly ownsDb: boolean,
+    private readonly intervalMs: number,
+  ) {}
+
+  start() {
+    if (!this.db || this.intervalMs <= 0) return;
+    const tick = async () => {
+      if (this.stopped || !this.db) return;
+      try {
+        await relayOutboxOnce(this.db, this.email, this.leaseOwner, 10);
+      } catch {
+        // Keep looping; outbox remains source of truth.
+      }
+    };
+    void tick();
+    this.timer = setInterval(() => void tick(), this.intervalMs);
+  }
+
+  async relayOnce() {
+    if (!this.db) return { claimed: 0, completed: 0, failed: 0 };
+    return relayOutboxOnce(this.db, this.email, this.leaseOwner, 10);
+  }
+
+  async onModuleDestroy() {
+    this.stopped = true;
+    if (this.timer) clearInterval(this.timer);
+    if (this.ownsDb && this.db) await this.db.$disconnect();
+  }
+}
+
+function isOptionsObject(value: unknown): value is CreateWorkerOptions {
+  if (typeof value !== 'object' || value === null) return false;
+  return (
+    'database' in value ||
+    'emailAdapter' in value ||
+    'relayOnceOnStart' in value ||
+    'leaseOwner' in value ||
+    'pollMs' in value ||
+    'env' in value ||
+    ('logging' in value && !('PATH' in value))
+  );
+}
+
+/** @deprecated Prefer createWorker({ env, logging }). Kept for W0 main.ts. */
 export async function createWorker(
-  env: NodeJS.ProcessEnv = process.env,
+  envOrOptions: NodeJS.ProcessEnv | CreateWorkerOptions = process.env,
   logging = true,
 ) {
+  const options: CreateWorkerOptions = isOptionsObject(envOrOptions)
+    ? { logging, ...envOrOptions }
+    : { env: envOrOptions as NodeJS.ProcessEnv, logging };
+
+  const env = options.env ?? process.env;
   readProcessEnvironment(env);
+
+  let db = options.database ?? null;
+  let ownsDb = false;
+  if (!db && env['DATABASE_URL']?.trim()) {
+    db = createDatabase(env['DATABASE_URL']);
+    ownsDb = true;
+  }
+
+  const email =
+    options.emailAdapter ??
+    createSmtpEmailAdapter(readEmailEnvironment(env));
+  const leaseOwner = options.leaseOwner ?? `worker-${randomUUID()}`;
+  const intervalMs =
+    options.pollMs ??
+    (Number.isFinite(Number(env['OUTBOX_POLL_MS']))
+      ? Number(env['OUTBOX_POLL_MS'])
+      : 2000);
+
+  const relay = new WorkerRelay(db, email, leaseOwner, ownsDb, intervalMs);
+
+  @Module({
+    providers: [{ provide: WorkerRelay, useValue: relay }],
+  })
+  class WorkerModule {}
+
   const app = await NestFactory.createApplicationContext(WorkerModule, {
-    logger: logging ? undefined : false,
+    logger: (options.logging ?? true) ? undefined : false,
   });
   app.enableShutdownHooks();
-  return app;
+
+  if (options.relayOnceOnStart) {
+    await relay.relayOnce();
+  } else {
+    relay.start();
+  }
+
+  return Object.assign(app, { relay });
 }

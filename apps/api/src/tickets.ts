@@ -1,0 +1,397 @@
+import { randomUUID } from 'node:crypto';
+import {
+  Body,
+  Controller,
+  Get,
+  Headers,
+  HttpException,
+  Injectable,
+  Param,
+  Post,
+  Query,
+} from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiHeader,
+  ApiOkResponse,
+  ApiProperty,
+  ApiTags,
+  ApiUnauthorizedResponse,
+} from '@nestjs/swagger';
+import {
+  IDENTITY_ERROR_CODES,
+  ISSUE_ERROR_CODES,
+  type ApiError,
+  type MeTicketsResponse,
+  type OperationStatusResponse,
+  type RedeemRequestBody,
+  type RedeemResponse,
+  type TicketSummary,
+} from '@ticket/contracts';
+import {
+  IdentityError,
+  IssueError,
+  REDEEM_COMMAND,
+  createDatabase,
+  getOperationForActor,
+  listTicketsForOwner,
+  readCodeHmacEnvironment,
+  readCredentialKeyEnvironment,
+  redeemAndIssueTicket,
+  throwIfStoredRejection,
+  withTenant,
+  type CodeHmacConfig,
+  type IdentityUserRepository,
+  type OidcVerifier,
+  type PrismaClient,
+} from '@ticket/backend';
+
+class ApiErrorDto implements ApiError {
+  @ApiProperty() code!: string;
+  @ApiProperty() message!: string;
+  @ApiProperty() requestId!: string;
+  @ApiProperty({ required: false }) operationId?: string;
+  @ApiProperty() retryable!: boolean;
+}
+
+class RedeemBodyDto implements RedeemRequestBody {
+  @ApiProperty() code!: string;
+  @ApiProperty({ required: false }) formVersion?: string;
+  @ApiProperty({ required: false }) termsVersion?: string;
+}
+
+class RedeemResponseDto implements RedeemResponse {
+  @ApiProperty({ format: 'uuid' }) ticketId!: string;
+  @ApiProperty({ format: 'uuid' }) requestId!: string;
+  @ApiProperty({ format: 'uuid' }) operationId!: string;
+  @ApiProperty({ format: 'uuid' }) eventId!: string;
+  @ApiProperty({ format: 'uuid' }) ticketTypeId!: string;
+  @ApiProperty({ format: 'uuid' }) sourceId!: string;
+  @ApiProperty({ enum: ['ACTIVE'] }) state!: 'ACTIVE';
+  @ApiProperty() credentialVersion!: number;
+  @ApiProperty() replayed!: boolean;
+}
+
+class TicketSummaryDto implements TicketSummary {
+  @ApiProperty({ format: 'uuid' }) ticketId!: string;
+  @ApiProperty({ format: 'uuid' }) tenantId!: string;
+  @ApiProperty({ format: 'uuid' }) eventId!: string;
+  @ApiProperty({ format: 'uuid' }) ticketTypeId!: string;
+  @ApiProperty({ format: 'uuid' }) sourceId!: string;
+  @ApiProperty() state!: string;
+  @ApiProperty() credentialVersion!: number;
+  @ApiProperty() createdAt!: string;
+}
+
+class MeTicketsDto implements MeTicketsResponse {
+  @ApiProperty({ type: [TicketSummaryDto] }) tickets!: TicketSummaryDto[];
+}
+
+function issueHttpException(error: IssueError, operationId?: string): HttpException {
+  const requestId = randomUUID();
+  const body: ApiError = {
+    code: error.code,
+    message: error.message,
+    requestId,
+    operationId,
+    retryable: error.retryable,
+  };
+  const status =
+    error.code === ISSUE_ERROR_CODES.EMAIL_NOT_VERIFIED
+      ? 403
+      : error.code === ISSUE_ERROR_CODES.IDEMPOTENCY_CONFLICT ||
+          error.code === ISSUE_ERROR_CODES.CODE_CONSUMED ||
+          error.code === ISSUE_ERROR_CODES.QUOTA_EXHAUSTED
+        ? 409
+        : error.code === ISSUE_ERROR_CODES.RETRYABLE_CONFLICT
+          ? 503
+          : error.code === ISSUE_ERROR_CODES.IDEMPOTENCY_KEY_REQUIRED ||
+              error.code === ISSUE_ERROR_CODES.CODE_INVALID
+            ? 422
+            : 409;
+  return new HttpException(body, status);
+}
+
+function identityHttpException(error: IdentityError): HttpException {
+  const requestId = randomUUID();
+  const body: ApiError = {
+    code: error.code,
+    message: error.message,
+    requestId,
+    retryable: error.retryable,
+  };
+  const status =
+    error.code === IDENTITY_ERROR_CODES.UNAUTHENTICATED
+      ? 401
+      : error.code === IDENTITY_ERROR_CODES.OIDC_MISCONFIGURED
+        ? 503
+        : error.code === IDENTITY_ERROR_CODES.EMAIL_NOT_VERIFIED
+          ? 403
+          : 401;
+  return new HttpException(body, status);
+}
+
+export type TicketServices = {
+  db: PrismaClient | null;
+  verifier: OidcVerifier | null;
+  users: IdentityUserRepository | null;
+  bootError: IdentityError | null;
+  hmac: CodeHmacConfig | null;
+  credentialKey: string | null;
+};
+
+@Injectable()
+export class TicketIssueService {
+  constructor(private readonly deps: TicketServices) {}
+
+  private async requireUser(authorization: string | undefined) {
+    if (this.deps.bootError) throw this.deps.bootError;
+    if (!this.deps.verifier || !this.deps.users) {
+      throw new IdentityError(
+        IDENTITY_ERROR_CODES.OIDC_MISCONFIGURED,
+        'Identity services are not configured',
+      );
+    }
+    const verified = await this.deps.verifier.verifyBearerToken(authorization);
+    return this.deps.users.upsertFromVerifiedIdentity(verified);
+  }
+
+  async redeem(
+    authorization: string | undefined,
+    tenantId: string,
+    eventId: string,
+    idempotencyKey: string | undefined,
+    body: RedeemRequestBody,
+  ): Promise<RedeemResponse> {
+    if (!this.deps.db || !this.deps.hmac || !this.deps.credentialKey) {
+      throw new IssueError(
+        ISSUE_ERROR_CODES.CODE_HMAC_MISCONFIGURED,
+        'Issue services are not configured',
+      );
+    }
+    const user = await this.requireUser(authorization);
+    return withTenant(this.deps.db, tenantId, (tx) =>
+      redeemAndIssueTicket(tx, this.deps.hmac!, this.deps.credentialKey!, {
+        tenantId,
+        eventId,
+        actorUserId: user.userId,
+        actorEmail: user.email,
+        emailVerified: user.emailVerified,
+        rawCode: body.code,
+        idempotencyKey: idempotencyKey ?? '',
+        formVersion: body.formVersion,
+        termsVersion: body.termsVersion,
+      }),
+    );
+  }
+
+  async listMine(
+    authorization: string | undefined,
+    tenantId: string,
+  ): Promise<MeTicketsResponse> {
+    if (!this.deps.db) {
+      throw new IdentityError(
+        IDENTITY_ERROR_CODES.OIDC_MISCONFIGURED,
+        'Database is not configured',
+      );
+    }
+    const user = await this.requireUser(authorization);
+    const tickets = await withTenant(this.deps.db, tenantId, (tx) =>
+      listTicketsForOwner(tx, tenantId, user.userId),
+    );
+    return {
+      tickets: tickets.map(
+        (t): TicketSummary => ({
+          ticketId: t.ticketId,
+          tenantId,
+          eventId: t.eventId,
+          ticketTypeId: t.ticketTypeId,
+          sourceId: t.sourceId,
+          state: t.state,
+          credentialVersion: t.credentialVersion,
+          createdAt: t.createdAt.toISOString(),
+        }),
+      ),
+    };
+  }
+
+  async operationStatus(
+    authorization: string | undefined,
+    clientKey: string,
+    tenantId: string,
+    eventId: string,
+    command: string,
+  ): Promise<OperationStatusResponse> {
+    if (!this.deps.db) {
+      throw new IdentityError(
+        IDENTITY_ERROR_CODES.OIDC_MISCONFIGURED,
+        'Database is not configured',
+      );
+    }
+    const user = await this.requireUser(authorization);
+    const row = await withTenant(this.deps.db, tenantId, (tx) =>
+      getOperationForActor(tx, {
+        tenantId,
+        eventId,
+        actorUserId: user.userId,
+        command: command || REDEEM_COMMAND,
+        clientKey,
+      }),
+    );
+    if (!row) {
+      throw new HttpException(
+        {
+          code: 'NOT_FOUND',
+          message: 'Operation not found',
+          requestId: randomUUID(),
+          retryable: true,
+        } satisfies ApiError,
+        404,
+      );
+    }
+    if (row.status === 'COMPLETED' && row.response) {
+      try {
+        throwIfStoredRejection(row.response);
+      } catch (error) {
+        if (error instanceof IssueError) {
+          return {
+            operationId: row.operationId,
+            status: row.status,
+            response: {
+              code: error.code,
+              message: error.message,
+              requestId: randomUUID(),
+              operationId: row.operationId,
+              retryable: error.retryable,
+            },
+          };
+        }
+        throw error;
+      }
+    }
+    return {
+      operationId: row.operationId,
+      status: row.status,
+      response: row.response as RedeemResponse | null,
+    };
+  }
+}
+
+@ApiTags('redemptions')
+@Controller()
+export class TicketIssueController {
+  constructor(private readonly tickets: TicketIssueService) {}
+
+  @Post('tenants/:tenantId/events/:eventId/redemptions')
+  @ApiBearerAuth()
+  @ApiHeader({ name: 'idempotency-key', required: true })
+  @ApiOkResponse({ type: RedeemResponseDto })
+  @ApiUnauthorizedResponse({ type: ApiErrorDto })
+  async redeem(
+    @Headers('authorization') authorization: string | undefined,
+    @Headers('idempotency-key') idempotencyKey: string | undefined,
+    @Param('tenantId') tenantId: string,
+    @Param('eventId') eventId: string,
+    @Body() body: RedeemBodyDto,
+  ): Promise<RedeemResponse> {
+    try {
+      return await this.tickets.redeem(
+        authorization,
+        tenantId,
+        eventId,
+        idempotencyKey,
+        body,
+      );
+    } catch (error) {
+      if (error instanceof IdentityError) throw identityHttpException(error);
+      if (error instanceof IssueError) throw issueHttpException(error);
+      throw error;
+    }
+  }
+
+  @Get('me/tickets')
+  @ApiBearerAuth()
+  @ApiOkResponse({ type: MeTicketsDto })
+  async meTickets(
+    @Headers('authorization') authorization: string | undefined,
+    @Query('tenantId') tenantId: string,
+  ): Promise<MeTicketsResponse> {
+    if (!tenantId) {
+      throw new HttpException(
+        {
+          code: 'TENANT_REQUIRED',
+          message: 'tenantId query parameter is required',
+          requestId: randomUUID(),
+          retryable: false,
+        } satisfies ApiError,
+        422,
+      );
+    }
+    try {
+      return await this.tickets.listMine(authorization, tenantId);
+    } catch (error) {
+      if (error instanceof IdentityError) throw identityHttpException(error);
+      throw error;
+    }
+  }
+
+  @Get('operations/:clientOperationId')
+  @ApiBearerAuth()
+  async operation(
+    @Headers('authorization') authorization: string | undefined,
+    @Param('clientOperationId') clientOperationId: string,
+    @Query('tenantId') tenantId: string,
+    @Query('eventId') eventId: string,
+    @Query('command') command?: string,
+  ): Promise<OperationStatusResponse> {
+    if (!tenantId || !eventId) {
+      throw new HttpException(
+        {
+          code: 'SCOPE_REQUIRED',
+          message: 'tenantId and eventId query parameters are required',
+          requestId: randomUUID(),
+          retryable: false,
+        } satisfies ApiError,
+        422,
+      );
+    }
+    try {
+      return await this.tickets.operationStatus(
+        authorization,
+        clientOperationId,
+        tenantId,
+        eventId,
+        command ?? REDEEM_COMMAND,
+      );
+    } catch (error) {
+      if (error instanceof IdentityError) throw identityHttpException(error);
+      if (error instanceof HttpException) throw error;
+      throw error;
+    }
+  }
+}
+
+export function resolveIssueDeps(env: NodeJS.ProcessEnv): {
+  hmac: CodeHmacConfig | null;
+  credentialKey: string | null;
+  issueBootError: IdentityError | null;
+} {
+  try {
+    return {
+      hmac: readCodeHmacEnvironment(env),
+      credentialKey: readCredentialKeyEnvironment(env),
+      issueBootError: null,
+    };
+  } catch (error) {
+    return {
+      hmac: null,
+      credentialKey: null,
+      issueBootError: new IdentityError(
+        IDENTITY_ERROR_CODES.OIDC_MISCONFIGURED,
+        error instanceof Error ? error.message : 'Issue config missing',
+      ),
+    };
+  }
+}
+
+export { createDatabase };
