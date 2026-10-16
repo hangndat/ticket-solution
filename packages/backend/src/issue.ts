@@ -42,6 +42,24 @@ export type IssuedTicketResult = {
   replayed: boolean;
 };
 
+/** Terminal business rejection persisted on operations (TD §8.1). */
+export type TerminalRejection = {
+  code: IssueErrorCode;
+  message: string;
+  retryable: false;
+  operationId: string;
+};
+
+/**
+ * Outcome of redeemAndIssueTicket inside an open transaction.
+ * Terminal rejections return `{ ok: false }` so the caller can commit the
+ * COMPLETED operation row, then map to IssueError/HTTP outside withTenant.
+ * Retryable / unexpected failures still throw and roll back the transaction.
+ */
+export type RedeemOutcome =
+  | { ok: true; result: IssuedTicketResult }
+  | { ok: false; rejection: TerminalRejection };
+
 type EventPolicyRow = {
   id: string;
   status: string;
@@ -136,13 +154,14 @@ function mapIssuedResponse(
 /**
  * Auto-issue redemption inside an open withTenant transaction (TD §8.2).
  * Caller must set tenant context; Redis must not decide quota.
+ * Map `{ ok: false }` to IssueError only after withTenant commits.
  */
 export async function redeemAndIssueTicket(
   tx: Prisma.TransactionClient,
   hmac: CodeHmacConfig,
   credentialKeyMaterial: string,
   input: RedeemInput,
-): Promise<IssuedTicketResult> {
+): Promise<RedeemOutcome> {
   if (!input.emailVerified) {
     throw new IssueError(
       ISSUE_ERROR_CODES.EMAIL_NOT_VERIFIED,
@@ -204,8 +223,19 @@ export async function redeemAndIssueTicket(
     );
   }
   if (op.status === 'COMPLETED') {
-    throwIfStoredRejection(op.response_json);
-    return mapIssuedResponse(op, true);
+    const stored = storedRejectionFromResponse(op.response_json);
+    if (stored) {
+      return {
+        ok: false,
+        rejection: {
+          code: stored.code,
+          message: stored.message,
+          retryable: false,
+          operationId: op.id,
+        },
+      };
+    }
+    return { ok: true, result: mapIssuedResponse(op, true) };
   }
   if (op.status === 'FAILED') {
     throw new IssueError(
@@ -235,26 +265,36 @@ export async function redeemAndIssueTicket(
         AND id = ${op.id}::uuid
     `;
     await tx.$executeRaw`RELEASE SAVEPOINT issue_business`;
-    return { ...result, replayed: false };
+    return { ok: true, result: { ...result, replayed: false } };
   } catch (error) {
     await tx.$executeRaw`ROLLBACK TO SAVEPOINT issue_business`;
     if (error instanceof IssueError && !error.retryable) {
       // Terminal business rejection: keep operation completed with error payload
       // so retries with same key replay the rejection without re-mutating.
-      const rejection = {
+      // Return (do not throw) so withTenant can commit this UPDATE.
+      const rejectionPayload = {
         code: error.code,
         message: error.message,
-        retryable: false,
+        retryable: false as const,
       };
       await tx.$executeRaw`
         UPDATE operations
         SET status = 'COMPLETED',
-            response_json = ${JSON.stringify(rejection)}::jsonb,
+            response_json = ${JSON.stringify(rejectionPayload)}::jsonb,
             updated_at = now()
         WHERE tenant_id = ${input.tenantId}::uuid
           AND id = ${op.id}::uuid
       `;
+      await tx.$executeRaw`RELEASE SAVEPOINT issue_business`;
+      return {
+        ok: false,
+        rejection: {
+          ...rejectionPayload,
+          operationId: op.id,
+        },
+      };
     }
+    // Retryable / unexpected: leave transaction to roll back claim + mutations.
     throw error;
   }
 }
@@ -655,10 +695,10 @@ export async function getOperationForActor(
   };
 }
 
-/** Replay helper: if completed operation stored a rejection envelope, rethrow. */
-export function throwIfStoredRejection(
+/** Parse COMPLETED operation response_json when it is a rejection envelope. */
+export function storedRejectionFromResponse(
   response: Prisma.JsonValue | null,
-): void {
+): { code: IssueErrorCode; message: string; retryable: boolean } | null {
   if (
     response &&
     typeof response === 'object' &&
@@ -672,10 +712,31 @@ export function throwIfStoredRejection(
       message?: string;
       retryable?: boolean;
     };
-    throw new IssueError(
-      body.code,
-      body.message ?? body.code,
-      Boolean(body.retryable),
-    );
+    return {
+      code: body.code,
+      message: body.message ?? body.code,
+      retryable: Boolean(body.retryable),
+    };
   }
+  return null;
+}
+
+/** Replay helper: if completed operation stored a rejection envelope, rethrow. */
+export function throwIfStoredRejection(
+  response: Prisma.JsonValue | null,
+): void {
+  const stored = storedRejectionFromResponse(response);
+  if (stored) {
+    throw new IssueError(stored.code, stored.message, stored.retryable);
+  }
+}
+
+/** Map RedeemOutcome to IssuedTicketResult or IssueError (call outside withTenant). */
+export function unwrapRedeemOutcome(outcome: RedeemOutcome): IssuedTicketResult {
+  if (outcome.ok) return outcome.result;
+  throw new IssueError(
+    outcome.rejection.code,
+    outcome.rejection.message,
+    false,
+  );
 }

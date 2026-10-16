@@ -39,6 +39,7 @@ import {
   readCredentialKeyEnvironment,
   redeemAndIssueTicket,
   throwIfStoredRejection,
+  unwrapRedeemOutcome,
   withTenant,
   type CodeHmacConfig,
   type IdentityUserRepository,
@@ -170,7 +171,9 @@ export class TicketIssueService {
       );
     }
     const user = await this.requireUser(authorization);
-    return withTenant(this.deps.db, tenantId, (tx) =>
+    // Commit terminal rejection inside withTenant, then map to IssueError outside
+    // so operations COMPLETED+rejection is durable (TD §8.1).
+    const outcome = await withTenant(this.deps.db, tenantId, (tx) =>
       redeemAndIssueTicket(tx, this.deps.hmac!, this.deps.credentialKey!, {
         tenantId,
         eventId,
@@ -183,6 +186,7 @@ export class TicketIssueService {
         termsVersion: body.termsVersion,
       }),
     );
+    return unwrapRedeemOutcome(outcome);
   }
 
   async listMine(
