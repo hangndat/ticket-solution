@@ -2,6 +2,10 @@
 
 Multi-tenant event ticketing platform: Next.js web, Expo iOS, NestJS API/worker, PostgreSQL and Redis. Android is deferred.
 
+## iOS build policy
+
+Expo/EAS Cloud Build is prohibited by project requirement. Native iOS builds use local Expo prebuild and Xcode/xcodebuild (or fastlane) on a Mac or self-managed macOS runner. CI on Linux validates JavaScript exports only; it does not build native iOS binaries.
+
 ## Requirements
 
 Node.js 24 LTS (Node 26 also permitted locally), pnpm 10.32.1, Docker Compose. Use a macOS/Xcode environment for iOS simulator/device builds.
@@ -40,5 +44,7 @@ Each app has its own README and environment examples. Database runtime role prov
 - [PRD](docs/PRD.md)
 - [Technical design](docs/TECHNICAL-DESIGN.md)
 - [Agent development plan](docs/AGENT-DEVELOPMENT-PLAN.md)
+- [Roadmap](docs/ROADMAP.md)
+- [W0 foundation report](docs/W0-FOUNDATION-REPORT.md)
 
 W0 is foundation work. Identity provider, transactional issuance, and Gate correctness require dedicated implementation and validation before pilot.

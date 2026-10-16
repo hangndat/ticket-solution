@@ -1,6 +1,6 @@
 # Kế hoạch phát triển song song bằng Orca agents
 
-Trạng thái: đề xuất, chưa khởi chạy workers hoặc thay đổi runtime Orca.  
+Trạng thái: kế hoạch đã được dùng để thực thi W0; kết quả tại [W0 report](./W0-FOUNDATION-REPORT.md). Các wave tiếp theo vẫn là đề xuất.  
 Nguồn: [PRD](./PRD.md), [Technical Design](./TECHNICAL-DESIGN.md).  
 Mục tiêu: build web + iOS + NestJS bằng các wave nhỏ, tích hợp sớm và kiểm chứng invariants trước mở rộng.
 
@@ -8,12 +8,12 @@ Mục tiêu: build web + iOS + NestJS bằng các wave nhỏ, tích hợp sớm 
 
 Một coordinator/integrator và ba worker đang chạy cùng lúc là cấu hình đề xuất, không phải giới hạn nền tảng Orca. Tăng concurrency chỉ khi có task độc lập thực sự, đủ tài nguyên máy và không làm tích hợp trở thành nút thắt.
 
-| Vai trò | Ownership chính | Không tự ý thay đổi |
-|---|---|---|
+| Vai trò                  | Ownership chính                                                                                                           | Không tự ý thay đổi                                      |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
 | Coordinator / Integrator | Backlog, dependencies, decisions, bootstrap chung, integration branch, root tooling, contract review, merge và smoke test | Không đổi nghiệp vụ đã freeze chỉ để giải quyết conflict |
-| A — Backend / Data | NestJS modules, schema/migrations, transactions, RLS, outbox, endpoint implementation và backend tests | Public contract chưa thống nhất; UI web/mobile |
-| B — Web | Next.js portal, admin, web Gate, browser tests và web-specific components | Database, auth policy, native app |
-| C — iOS | Expo app, navigation, auth client, ví vé, camera/Gate client, native capability tests | Backend rules, web app, store submission thật ngoài task |
+| A — Backend / Data       | NestJS modules, schema/migrations, transactions, RLS, outbox, endpoint implementation và backend tests                    | Public contract chưa thống nhất; UI web/mobile           |
+| B — Web                  | Next.js portal, admin, web Gate, browser tests và web-specific components                                                 | Database, auth policy, native app                        |
+| C — iOS                  | Expo app, navigation, auth client, ví vé, camera/Gate client, native capability tests                                     | Backend rules, web app, store submission thật ngoài task |
 
 Ở wave hardening, chuyển một slot thành QA/security reviewer hoặc infrastructure worker tùy task. Không giữ agent chỉ vì tên vai trò: worker thực hiện task có đầu ra cụ thể rồi được tái sử dụng hoặc release.
 
@@ -23,18 +23,18 @@ Các module bảo mật quan trọng cần review độc lập sau khi implement
 
 Cấu trúc mục tiêu kế thừa technical design; hiện chưa scaffold code.
 
-| Khu vực | Writer chính |
-|---|---|
-| `apps/api/**`, `apps/worker/**`, `packages/backend/**` | A |
-| Schema/migrations, SQL policies | A, serial theo migration sequence |
-| `apps/web/**` | B |
-| `apps/mobile/**` | C |
-| `packages/contracts/**` và OpenAPI source | A đề xuất, coordinator review và publish snapshot |
-| `packages/api-client/**` | Generated bằng lệnh chung; không sửa tay |
-| `packages/brand-tokens/**` | Coordinator chốt baseline; B/C đề xuất qua task |
-| Root manifests, workspace config, lockfile, CI chung | Coordinator |
-| `infra/**` | Coordinator trong các wave đầu; giao độc quyền một worker khi hardening |
-| PRD/technical design | Coordinator quản lý decision log, worker gửi đề xuất |
+| Khu vực                                                | Writer chính                                                            |
+| ------------------------------------------------------ | ----------------------------------------------------------------------- |
+| `apps/api/**`, `apps/worker/**`, `packages/backend/**` | A                                                                       |
+| Schema/migrations, SQL policies                        | A, serial theo migration sequence                                       |
+| `apps/web/**`                                          | B                                                                       |
+| `apps/mobile/**`                                       | C                                                                       |
+| `packages/contracts/**` và OpenAPI source              | A đề xuất, coordinator review và publish snapshot                       |
+| `packages/api-client/**`                               | Generated bằng lệnh chung; không sửa tay                                |
+| `packages/brand-tokens/**`                             | Coordinator chốt baseline; B/C đề xuất qua task                         |
+| Root manifests, workspace config, lockfile, CI chung   | Coordinator                                                             |
+| `infra/**`                                             | Coordinator trong các wave đầu; giao độc quyền một worker khi hardening |
+| PRD/technical design                                   | Coordinator quản lý decision log, worker gửi đề xuất                    |
 
 Không để ba agent cùng sửa Prisma schema hoặc tự thêm trạng thái/API error codes. Cần đổi contract thì gửi coordinator: vấn đề, diff đề xuất, consumer bị ảnh hưởng và cách giữ compatibility.
 
@@ -42,7 +42,7 @@ Việc API bootstrap/import module phải có owner cụ thể trong task. Worke
 
 ## 3. Workspace và Git strategy
 
-Hiện thư mục chỉ có tài liệu/PDF, chưa là Git repository. Điều này không ngăn Orca chạy agents trong folder; nhưng khi phát triển song song có package manifests, lockfile và schema, worktree isolation là lựa chọn đề xuất.
+Tại thời điểm lập kế hoạch, thư mục chỉ có tài liệu/PDF, chưa là Git repository. Hiện baseline Git và repo private đã được tạo; xem W0 report. Điều này không ngăn Orca chạy agents trong folder; nhưng khi phát triển song song có package manifests, lockfile và schema, worktree isolation là lựa chọn đề xuất.
 
 Trước khi launch implementation:
 
@@ -86,11 +86,11 @@ Một bước serial ngắn do coordinator sở hữu:
 
 Sau baseline, ba task chạy song song:
 
-| Worker | Task | Bằng chứng hoàn tất |
-|---|---|---|
-| A | Tenant/identity boundary, schema nền, Prisma transaction context, RLS prototype | DB tests truy cập chéo, pool reuse, owner-only read; role không bypass RLS |
-| B | Web shell, routing tenant/event, brand renderer, published event page fixture | Browser flow hai tenant, không lẫn cache/brand; build/typecheck |
-| C | iOS shell, auth adapter, event screen, SecureStore/cache lifecycle spike | Development build chạy trên iPhone/simulator, account switch/logout đúng |
+| Worker | Task                                                                            | Bằng chứng hoàn tất                                                        |
+| ------ | ------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| A      | Tenant/identity boundary, schema nền, Prisma transaction context, RLS prototype | DB tests truy cập chéo, pool reuse, owner-only read; role không bypass RLS |
+| B      | Web shell, routing tenant/event, brand renderer, published event page fixture   | Browser flow hai tenant, không lẫn cache/brand; build/typecheck            |
+| C      | iOS shell, auth adapter, event screen, SecureStore/cache lifecycle spike        | Development build chạy trên iPhone/simulator, account switch/logout đúng   |
 
 Chọn identity provider bằng spike với acceptance criteria trong technical design; không dùng auth stub như giải pháp production. Nếu cần credentials, worker báo dependency sớm và tiếp tục phần không phụ thuộc.
 
@@ -100,11 +100,11 @@ Gate W0: foundation integrated, scripts chạy được từ clean checkout, RLS
 
 Giới hạn scope để có lát cắt end-to-end sớm: một event, một nguồn mã, một loại vé, auto-approve. Multi-tenant isolation có từ đầu, không retrofit sau.
 
-| Worker | Task | Bằng chứng hoàn tất |
-|---|---|---|
-| A | Mã/quota → issue transaction → ticket → outbox/email adapter | Concurrency test tranh suất cuối; retry cùng key trả cùng vé; email lỗi không mất vé |
-| B | Form đổi mã, auth/verification states, success/ticket view | Browser đổi vé qua API thật, xử lý exhausted/used/timeout |
-| C | My Tickets, chi tiết QR, local cache tối thiểu | Vé đổi trên web xuất hiện trên iOS cùng identity; mở vé đã lưu khi offline |
+| Worker | Task                                                         | Bằng chứng hoàn tất                                                                  |
+| ------ | ------------------------------------------------------------ | ------------------------------------------------------------------------------------ |
+| A      | Mã/quota → issue transaction → ticket → outbox/email adapter | Concurrency test tranh suất cuối; retry cùng key trả cùng vé; email lỗi không mất vé |
+| B      | Form đổi mã, auth/verification states, success/ticket view   | Browser đổi vé qua API thật, xử lý exhausted/used/timeout                            |
+| C      | My Tickets, chi tiết QR, local cache tối thiểu               | Vé đổi trên web xuất hiện trên iOS cùng identity; mở vé đã lưu khi offline           |
 
 Có fixture cho pending review nhưng chưa triển khai toàn bộ approval UX nếu không thuộc task. Email local dùng sandbox adapter, staging dùng provider cấu hình thật trước nghiệm thu delivery.
 
@@ -112,11 +112,11 @@ Gate W1: demo web đổi vé → email/sandbox notification → cùng user mở 
 
 ### W2 — Check-in xuyên app và web
 
-| Worker | Task | Bằng chứng hoàn tất |
-|---|---|---|
-| A | Staff session, reserve/confirm/status, revoke/undo, audit | Hai confirm chỉ một thành công; race revoke/expiry/permission revocation; timeout recovery |
-| B | Web Gate dự phòng, CS lookup tối thiểu, operation status UI | Browser flow API thật, lỗi rõ và không cho qua khi kết quả chưa biết |
-| C | Camera scan, dedupe callback, reserve/confirm, persisted operation recovery | Hai thiết bị scan cùng vé; app restart/đổi mạng vẫn đối soát kết quả |
+| Worker | Task                                                                        | Bằng chứng hoàn tất                                                                        |
+| ------ | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| A      | Staff session, reserve/confirm/status, revoke/undo, audit                   | Hai confirm chỉ một thành công; race revoke/expiry/permission revocation; timeout recovery |
+| B      | Web Gate dự phòng, CS lookup tối thiểu, operation status UI                 | Browser flow API thật, lỗi rõ và không cho qua khi kết quả chưa biết                       |
+| C      | Camera scan, dedupe callback, reserve/confirm, persisted operation recovery | Hai thiết bị scan cùng vé; app restart/đổi mạng vẫn đối soát kết quả                       |
 
 Gate W2: hai thiết bị thật hoặc môi trường thiết bị kiểm chứng tương đương; không chỉ unit test camera mock. Chạy kịch bản nhân viên phát vòng và timeout theo runbook.
 
@@ -138,11 +138,11 @@ Gate W3: tenant thứ hai tự tạo event và brand qua admin, không sửa cod
 
 Đổi phân công theo workload thay vì giữ ba vai trò cố định:
 
-| Slot | Công việc |
-|---|---|
+| Slot     | Công việc                                                                                                |
+| -------- | -------------------------------------------------------------------------------------------------------- |
 | Worker 1 | Review/test độc lập RLS, authorization, transaction races; không tự viết lại kiến trúc trong review task |
-| Worker 2 | CI/staging, observability, backup/failover drill, k6/load scenarios và admission spike |
-| Worker 3 | iOS physical-device UAT/TestFlight, camera/mạng yếu, deep link/push, bugfix được giao |
+| Worker 2 | CI/staging, observability, backup/failover drill, k6/load scenarios và admission spike                   |
+| Worker 3 | iOS physical-device UAT/TestFlight, camera/mạng yếu, deep link/push, bugfix được giao                    |
 
 Coordinator phân task fix cho owner thích hợp, tích hợp regression, chuẩn bị runbook và release checklist. Reviewer phát hiện lỗi không tự sửa ngoài scope; fix được dispatch thành task rõ ràng rồi reviewer kiểm chứng lại.
 
@@ -244,4 +244,4 @@ Không ước lượng tốc độ tăng tuyến tính theo số agent. Bắt đ
 3. Tạo Run W0 và ba task foundation với ownership cụ thể.
 4. Launch workers trong Orca-managed workspaces đã xác minh; coordinator theo dõi đến settlement và integration gate.
 
-Đây là kế hoạch đề xuất. Chưa tạo Run/Task/Dispatch, chưa khởi chạy agent, chưa init Git hoặc scaffold source trong lượt lập kế hoạch này.
+W0 đã được chạy bằng Orca supervised orchestration; xem W0 report cho evidence. Chưa triển khai W1 trở đi. Native iOS build bắt buộc local Xcode/xcodebuild/fastlane trên Mac/runner macOS tự quản lý; tuyệt đối không dùng Expo/EAS Cloud Build, workflow EAS-hosted hoặc fallback cloud.

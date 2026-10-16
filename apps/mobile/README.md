@@ -51,3 +51,7 @@ The real Expo SecureStore adapter uses `WHEN_UNLOCKED_THIS_DEVICE_ONLY` with a d
 Coordinator must regenerate the root pnpm lockfile after merging this package. Installation needed **no additional `onlyBuiltDependencies` entries**; `unrs-resolver` was already allowlisted. Root tooling/contracts were not committed by this worker. See `W0-REPORT.md` for exact checks and limitations.
 
 Versioned references: [SDK 58](https://docs.expo.dev/versions/v58.0.0/), [SecureStore](https://docs.expo.dev/versions/v58.0.0/sdk/securestore/), [Expo UI](https://docs.expo.dev/versions/v58.0.0/sdk/ui/).
+
+## Mandatory build policy
+
+Never use Expo/EAS Cloud Build, EAS-hosted build workflows or automatic cloud fallback. Build native iOS binaries locally with Expo prebuild plus Xcode/xcodebuild or fastlane on a Mac/self-managed macOS runner. No Expo cloud build has been used for W0; the simulator binary in W0-REPORT.md was compiled locally. If local tooling is unavailable, report the limitation.

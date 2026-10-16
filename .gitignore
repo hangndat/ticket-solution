@@ -14,3 +14,5 @@ coverage/
 *.log
 apps/mobile/ios/
 apps/mobile/android/
+# Added by code-review-graph
+.code-review-graph/

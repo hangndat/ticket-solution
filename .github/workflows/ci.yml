@@ -1,3 +1,4 @@
+# Native iOS builds: local/self-managed macOS only. Never use Expo/EAS Cloud Build.
 name: CI
 on:
   push:

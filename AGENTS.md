@@ -2,14 +2,26 @@
 
 Read docs/PRD.md, docs/TECHNICAL-DESIGN.md and your task spec. Work only in assigned scope. Current milestone is W0 foundation, not production ticketing.
 
+## Planning and tracking language
+
+All user-facing roadmap, GitHub Projects, milestones, Issue titles/bodies, labels, statuses and progress reports must be in Vietnamese. Preserve technical terms, IDs, API names, commands and original verification logs as needed. Do not start new product feature code until the roadmap is prepared for user review.
+
 ## Ownership
+
 - Coordinator owns root tooling, lockfile, CI, shared contracts and integration.
 - Backend worker: apps/api, apps/worker, packages/backend and database tests/migrations.
 - Web worker: apps/web only.
 - iOS worker: apps/mobile only. Read Expo overview and React Native skills before coding.
 - Do not edit another scope to make your build pass. Ask the coordinator for contract/dependency changes.
 
+## iOS build policy — explicit user requirement
+
+- NEVER use Expo/EAS Cloud Build, including automatic cloud-build fallback or EAS-hosted build workflows. This requirement persists across all tasks.
+- Build native iOS binaries on a local Mac or a self-managed macOS runner using local Expo prebuild plus Xcode/xcodebuild or fastlane. Expo framework and local CLI remain allowed.
+- Do not upload source, credentials or signing material to Expo build infrastructure. If local build tooling is unavailable, report that limitation; do not switch to cloud builds.
+
 ## Safety and correctness
+
 - Never add real secrets, credentials or user data. .env.example is documentation only.
 - Do not silently add mock authentication to production paths. Mark fixture/demo data explicitly.
 - Database business state belongs in PostgreSQL. Redis is not the source of truth for quota or check-in.
@@ -18,8 +30,67 @@ Read docs/PRD.md, docs/TECHNICAL-DESIGN.md and your task spec. Work only in assi
 - Do not control another worker's simulator or database. Use task-specific ports/project names.
 
 ## Workflow
+
 - pnpm workspaces; install exact versions. Root lockfile belongs to coordinator.
 - Generated code is regenerated, not edited manually. API contract changes require coordinator agreement.
 - Report commit SHA, changed files, exact checks and limitations. A successful build does not prove security/concurrency behavior.
 - Use Orca lifecycle commands from your live dispatch preamble. Check follow-ups at checkpoints and before worker_done.
 - No delegation without task authorization.
+
+<!-- code-review-graph MCP tools -->
+## MCP Tools: code-review-graph
+
+Namespace: `user-code-review-graph-ticket` (ticket-solution). Other graphs: BE=`user-code-review-graph`, FE=`user-code-review-graph-fe`, SGAMES=`user-code-review-graph-sgames`.
+Graph auto-updates via watch/hooks. Narrow with the graph, then verify in source.
+
+### Recommended tool flow (force for this repo)
+
+1. **Symbols first** — query PascalCase names (`TicketService`, `CheckInController`), not URL slugs.
+2. Call MCP namespace `user-code-review-graph-ticket`: `semantic_search_nodes_tool(query=Symbol)` → if ambiguous, retry with `qualified_name`.
+3. Then `query_graph_tool` (`callees_of` / `callers_of` / `imports_of` / `tests_for`) or `get_impact_radius_tool` / `get_affected_flows_tool`.
+4. **lean-ctx** only for routes/docs/literals CRG does not index.
+5. **ctx_read** hotspots; source wins if graph and source disagree.
+6. Do not change code from graph output alone.
+
+**This project has a knowledge graph. Start with the code-review-graph
+MCP tools to narrow scope, then read the source.** The graph is cheaper than scanning files and
+gives you structural context (callers, dependents, test coverage) that file search cannot.
+
+### When to use graph tools FIRST
+
+- **Exploring code**: `semantic_search_nodes_tool` or `query_graph_tool` instead of Grep
+- **Understanding impact**: `get_impact_radius_tool` instead of manually tracing imports
+- **Code review**: `detect_changes_tool` + `get_review_context_tool` instead of reading entire files
+- **Finding relationships**: `query_graph_tool` with callers_of/callees_of/imports_of/tests_for
+- **Architecture questions**: `get_architecture_overview_tool` + `list_communities_tool`
+
+### Verify in the source
+
+- Narrow scope with the graph, then read the source. Do not change code from graph output alone.
+- For any non-trivial change, read the implementation and the relevant tests before concluding.
+- Verify the exact source when touching behavior, database logic, migrations, retries, fallbacks,
+  recovery, or compatibility code.
+- When the graph and the source disagree, the source wins. The graph may be stale or may not
+  model that relationship.
+- An empty graph result can mean "not indexed" or "not statically visible", not "does not exist".
+
+### Key Tools
+
+| Tool | Use when |
+| ------ | ---------- |
+| `detect_changes_tool` | Reviewing code changes — gives risk-scored analysis |
+| `get_review_context_tool` | Need source snippets for review — token-efficient |
+| `get_impact_radius_tool` | Understanding blast radius of a change |
+| `get_affected_flows_tool` | Finding which execution paths are impacted |
+| `query_graph_tool` | Tracing callers, callees, imports, tests, dependencies |
+| `semantic_search_nodes_tool` | Finding functions/classes by name or keyword |
+| `get_architecture_overview_tool` | Understanding high-level codebase structure |
+| `refactor_tool` | Planning renames, finding dead code |
+
+### Workflow
+
+1. The graph auto-updates on file changes (via hooks).
+2. Use `detect_changes_tool` for code review.
+3. Use `get_affected_flows_tool` to understand impact.
+4. Use `query_graph_tool` pattern="tests_for" to check coverage.
+<!-- /code-review-graph MCP tools -->

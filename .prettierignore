@@ -7,3 +7,4 @@ coverage
 *.pdf
 **/next-env.d.ts
 **/src/generated/
+apps/api/openapi.json

@@ -2,7 +2,7 @@
 
 Phiên bản: 0.1 — Proposed, để review và làm spike trước triển khai  
 Ngày: 2026-10-16  
-Đặc tả sản phẩm: [PRD v0.2](./PRD.md)  
+Đặc tả sản phẩm: [PRD v0.3](./PRD.md)  
 Phạm vi: web + app iOS; backend NestJS; Android giai đoạn sau.
 
 ## 1. Kết luận thiết kế
@@ -17,18 +17,18 @@ Các quyết định trong tài liệu là đề xuất kỹ thuật, không t�
 
 ## 2. Các quyết định chính
 
-| ID | Quyết định | Lý do / đánh đổi |
-|---|---|---|
-| ADR-01 | NestJS + TypeScript, Fastify adapter | Đồng bộ ngôn ngữ; kiểm tra tương thích plugin trước pin phiên bản |
-| ADR-02 | PostgreSQL shared schema + RLS + backend authorization | Cách ly nhiều lớp; bắt buộc test connection pooling, role và worker |
-| ADR-03 | Prisma cho CRUD; SQL tham số hóa cho hot transaction và policy | Không ép ORM biểu diễn toàn bộ locking/RLS |
-| ADR-04 | PostgreSQL outbox → BullMQ → worker idempotent | Chấp nhận giao việc ít nhất một lần; không hứa gửi email exactly-once |
-| ADR-05 | Quota dùng counter transaction, lock nhất quán | Ưu tiên tính đúng; event counter có thể thành điểm tranh khóa |
-| ADR-06 | Check-in online reserve/confirm | Không cam kết chống trùng toàn hệ thống khi các cổng mất kết nối |
-| ADR-07 | App chung có hai chế độ là baseline tạm | Không khóa phương án white-label khi sản phẩm chưa chốt |
-| ADR-08 | Cấu hình có schema/version, template giới hạn | Bảo trì được qua nhiều event và nhiều phiên bản app |
-| ADR-09 | Managed OIDC, Authorization Code + PKCE cho iOS | Không tự xây giao thức identity; provider là dependency cần chốt qua spike |
-| ADR-10 | Admission control trước khi cần sharding quota | Hạn chế contention và bảo vệ DB; không cam kết FIFO tuyệt đối |
+| ID     | Quyết định                                                     | Lý do / đánh đổi                                                           |
+| ------ | -------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| ADR-01 | NestJS + TypeScript, Fastify adapter                           | Đồng bộ ngôn ngữ; kiểm tra tương thích plugin trước pin phiên bản          |
+| ADR-02 | PostgreSQL shared schema + RLS + backend authorization         | Cách ly nhiều lớp; bắt buộc test connection pooling, role và worker        |
+| ADR-03 | Prisma cho CRUD; SQL tham số hóa cho hot transaction và policy | Không ép ORM biểu diễn toàn bộ locking/RLS                                 |
+| ADR-04 | PostgreSQL outbox → BullMQ → worker idempotent                 | Chấp nhận giao việc ít nhất một lần; không hứa gửi email exactly-once      |
+| ADR-05 | Quota dùng counter transaction, lock nhất quán                 | Ưu tiên tính đúng; event counter có thể thành điểm tranh khóa              |
+| ADR-06 | Check-in online reserve/confirm                                | Không cam kết chống trùng toàn hệ thống khi các cổng mất kết nối           |
+| ADR-07 | App chung có hai chế độ là baseline tạm                        | Không khóa phương án white-label khi sản phẩm chưa chốt                    |
+| ADR-08 | Cấu hình có schema/version, template giới hạn                  | Bảo trì được qua nhiều event và nhiều phiên bản app                        |
+| ADR-09 | Managed OIDC, Authorization Code + PKCE cho iOS                | Không tự xây giao thức identity; provider là dependency cần chốt qua spike |
+| ADR-10 | Admission control trước khi cần sharding quota                 | Hạn chế contention và bảo vệ DB; không cam kết FIFO tuyệt đối              |
 
 Chưa khóa version framework, SDK, database hoặc cloud provider. Khi scaffold phải chọn bộ phiên bản được hỗ trợ, pin lockfile và đối chiếu tài liệu đúng phiên bản.
 
@@ -36,19 +36,19 @@ Chưa khóa version framework, SDK, database hoặc cloud provider. Khi scaffold
 
 ### 3.1 Thành phần triển khai
 
-| Thành phần | Vai trò | Scale / lưu trạng thái |
-|---|---|---|
-| CDN/WAF | Public event pages, assets, bot/rate controls | Không cache API cá nhân |
-| Next.js public web | Portal và web ticket view | Cache theo tenant/event/config version |
-| Next.js admin/Gate | Tenant admin, platform console, Gate dự phòng | Authenticated, no-store |
-| NestJS API | Authz, tenant context, domain commands/queries | Stateless, nhiều instance |
-| Gate API pool | Cùng code API, ưu tiên tài nguyên cho check-in | Deployment và DB connection budget riêng |
-| Outbox relay | Claim outbox rồi enqueue | Lease ngắn, retry và reconciliation |
-| Workers | Email, push, import/export, aggregate | Queue/concurrency riêng từng nhóm |
-| PostgreSQL primary + standby | Vé, quota, check-in, audit | Read/write critical qua primary |
-| Redis | BullMQ, rate limit, cache không quan trọng | Không quyết định vé đã cấp/đã vào |
-| Object storage | Asset, import, export, bản render nếu cần | Private, URL ký ngắn hạn |
-| Managed OIDC | Identity, verification, MFA | Backend kiểm tra token và session |
+| Thành phần                   | Vai trò                                        | Scale / lưu trạng thái                   |
+| ---------------------------- | ---------------------------------------------- | ---------------------------------------- |
+| CDN/WAF                      | Public event pages, assets, bot/rate controls  | Không cache API cá nhân                  |
+| Next.js public web           | Portal và web ticket view                      | Cache theo tenant/event/config version   |
+| Next.js admin/Gate           | Tenant admin, platform console, Gate dự phòng  | Authenticated, no-store                  |
+| NestJS API                   | Authz, tenant context, domain commands/queries | Stateless, nhiều instance                |
+| Gate API pool                | Cùng code API, ưu tiên tài nguyên cho check-in | Deployment và DB connection budget riêng |
+| Outbox relay                 | Claim outbox rồi enqueue                       | Lease ngắn, retry và reconciliation      |
+| Workers                      | Email, push, import/export, aggregate          | Queue/concurrency riêng từng nhóm        |
+| PostgreSQL primary + standby | Vé, quota, check-in, audit                     | Read/write critical qua primary          |
+| Redis                        | BullMQ, rate limit, cache không quan trọng     | Không quyết định vé đã cấp/đã vào        |
+| Object storage               | Asset, import, export, bản render nếu cần      | Private, URL ký ngắn hạn                 |
+| Managed OIDC                 | Identity, verification, MFA                    | Backend kiểm tra token và session        |
 
 Gate API pool giảm cạnh tranh CPU/connection nhưng vẫn dùng cùng PostgreSQL; không coi đây là cách ly hoàn toàn. Import/export và dashboard phải có statement timeout, concurrency cap và cơ chế giảm tải khi cổng bận.
 
@@ -148,14 +148,14 @@ CREATE POLICY tenant_scope ON ticket_types
 
 ### 6.3 Database roles
 
-| Role | Quyền |
-|---|---|
-| Migration owner | DDL; credentials chỉ cho deploy job |
-| Tenant API writer | DML cần thiết, không owner/superuser/BYPASSRLS |
-| Identity reader | Read projection theo actor ownership, không mutation tenant |
-| Worker | DML theo tenant context và loại job |
-| Relay dispatcher | Chỉ claim/ack outbox envelope qua function giới hạn |
-| Reporting | Read tenant-scoped, không ghi bảng nghiệp vụ |
+| Role              | Quyền                                                       |
+| ----------------- | ----------------------------------------------------------- |
+| Migration owner   | DDL; credentials chỉ cho deploy job                         |
+| Tenant API writer | DML cần thiết, không owner/superuser/BYPASSRLS              |
+| Identity reader   | Read projection theo actor ownership, không mutation tenant |
+| Worker            | DML theo tenant context và loại job                         |
+| Relay dispatcher  | Chỉ claim/ack outbox envelope qua function giới hạn         |
+| Reporting         | Read tenant-scoped, không ghi bảng nghiệp vụ                |
 
 RLS context không tự chống SQL injection từ role có khả năng đặt context; SQL luôn tham số hóa và service là ranh giới tin cậy. Không quảng cáo RLS như biện pháp bảo vệ khi credentials backend đã bị chiếm.
 
@@ -165,34 +165,34 @@ Dispatcher cần thấy việc của nhiều tenant: chỉ được EXECUTE func
 
 UUID cho ID; timestamp dùng UTC `timestamptz`; event lưu IANA timezone để render. Database time quyết định deadline. JSONB chỉ dùng nội dung/cấu hình/schema form đã version; quota, quyền, mã và trạng thái phải là cột có constraint.
 
-| Bảng | Trường/ràng buộc quan trọng |
-|---|---|
-| tenants | id, slug unique, status, brand_version |
-| users / identities | id; UNIQUE issuer+subject; không chứa tenant role global |
-| memberships | tenant_id, user_id, role, status; UNIQUE tenant+user |
-| event_assignments | tenant, event, membership, permissions |
-| sessions | user, provider_session, revoked_at, expires_at |
-| support_grants | operator, tenant, scopes, reason, expires_at |
-| events | tenant, id, slug, status, windows, timezone, published_config_id |
-| event_config_versions | tenant, event, version, schema_version, payload, author; immutable khi publish |
-| ticket_types | tenant, event, id, label, entitlement_snapshot_version |
-| issuance_sources | tenant, event, id, approval_mode, deadline |
-| source_ticket_types | tenant, event, source, type; allowlist |
-| quota_buckets | tenant, event, scope, scope_id, capacity nullable, allocated; CHECK allocated>=0 và capacity null hoặc allocated<=capacity |
-| redemption_codes | tenant, event, code_hmac, source, type, status, active_request_id; UNIQUE tenant+event+code_hmac |
-| event_attendees | tenant, event, user, canonical_email, profile; UNIQUE event+user và event+canonical_email theo policy |
-| attendee_counters | tenant, event, attendee, issued_count; dùng serialize giới hạn vé/người |
-| redemption_requests | tenant, event, actor, code, status, expiry, form_version, terms_version |
-| tickets | tenant, event, owner, type, source, request_id unique, redemption_code_id nullable, state, credential_version, entitlement_snapshot |
-| ticket_credentials | tenant, ticket, version, kid, token_hash, encrypted_token, status |
-| gates / staff_sessions | tenant, event, gate, actor, device; quyền và revocation |
-| checkin_reservations | ticket, staff_session, token_hash, expires_at, status; tối đa một HELD/ticket |
-| checkins | tenant, event, ticket, operation, confirmed_at, undone_at; tối đa một record chưa undo/ticket |
-| operations | tenant, event, actor, scope, key, request_hash, response_json; UNIQUE scope+actor+key trong tenant/event |
-| outbox | tenant, event, type, aggregate_id, payload_version, lease, status, attempts |
-| notifications / attempts | business_key unique, provider_ref, state, attempts, next_attempt_at |
-| imports / exports | tenant, event, owner, status, private_object_key, expiry |
-| audit_logs | tenant, event, actor, action, resource, reason, sanitized diff, operation |
+| Bảng                     | Trường/ràng buộc quan trọng                                                                                                         |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
+| tenants                  | id, slug unique, status, brand_version                                                                                              |
+| users / identities       | id; UNIQUE issuer+subject; không chứa tenant role global                                                                            |
+| memberships              | tenant_id, user_id, role, status; UNIQUE tenant+user                                                                                |
+| event_assignments        | tenant, event, membership, permissions                                                                                              |
+| sessions                 | user, provider_session, revoked_at, expires_at                                                                                      |
+| support_grants           | operator, tenant, scopes, reason, expires_at                                                                                        |
+| events                   | tenant, id, slug, status, windows, timezone, published_config_id                                                                    |
+| event_config_versions    | tenant, event, version, schema_version, payload, author; immutable khi publish                                                      |
+| ticket_types             | tenant, event, id, label, entitlement_snapshot_version                                                                              |
+| issuance_sources         | tenant, event, id, approval_mode, deadline                                                                                          |
+| source_ticket_types      | tenant, event, source, type; allowlist                                                                                              |
+| quota_buckets            | tenant, event, scope, scope_id, capacity nullable, allocated; CHECK allocated>=0 và capacity null hoặc allocated<=capacity          |
+| redemption_codes         | tenant, event, code_hmac, source, type, status, active_request_id; UNIQUE tenant+event+code_hmac                                    |
+| event_attendees          | tenant, event, user, canonical_email, profile; UNIQUE event+user và event+canonical_email theo policy                               |
+| attendee_counters        | tenant, event, attendee, issued_count; dùng serialize giới hạn vé/người                                                             |
+| redemption_requests      | tenant, event, actor, code, status, expiry, form_version, terms_version                                                             |
+| tickets                  | tenant, event, owner, type, source, request_id unique, redemption_code_id nullable, state, credential_version, entitlement_snapshot |
+| ticket_credentials       | tenant, ticket, version, kid, token_hash, encrypted_token, status                                                                   |
+| gates / staff_sessions   | tenant, event, gate, actor, device; quyền và revocation                                                                             |
+| checkin_reservations     | ticket, staff_session, token_hash, expires_at, status; tối đa một HELD/ticket                                                       |
+| checkins                 | tenant, event, ticket, operation, confirmed_at, undone_at; tối đa một record chưa undo/ticket                                       |
+| operations               | tenant, event, actor, scope, key, request_hash, response_json; UNIQUE scope+actor+key trong tenant/event                            |
+| outbox                   | tenant, event, type, aggregate_id, payload_version, lease, status, attempts                                                         |
+| notifications / attempts | business_key unique, provider_ref, state, attempts, next_attempt_at                                                                 |
+| imports / exports        | tenant, event, owner, status, private_object_key, expiry                                                                            |
+| audit_logs               | tenant, event, actor, action, resource, reason, sanitized diff, operation                                                           |
 
 Indexes bắt đầu bằng tenant/event cho query scoped; thêm owner index cho My Tickets, code_hmac lookup, notification due, outbox due, audit time và check-in ticket. Validate query plans với dataset đại diện, không index mọi cột.
 
@@ -326,25 +326,25 @@ Không queue confirm offline để tự đẩy sau. Khi hết TTL: scan lại; k
 
 Base `/v1`; OpenAPI là contract sinh client. DTO public không lộ ORM. Pagination cursor, giới hạn page size, error codes ổn định. Ngày giờ ISO-8601 UTC; server trả event timezone riêng.
 
-| Nhóm | Endpoint tiêu biểu | Quyền |
-|---|---|---|
-| Public | GET /public/tenants/{slug}/events/{slug} | Chỉ projection published |
-| Self | GET /me/tickets; GET /me/tickets/{id} | Owner |
-| Redeem | POST /tenants/{t}/events/{e}/redemptions | Verified attendee + admission token nếu bật |
-| Status | GET /me/redemptions/{id} | Owner |
-| Operation | GET /operations/{clientOperationId}?eventId=...&command=... | Actor sở hữu, tenant/event/command scoped |
-| Tenant | GET/PATCH /tenants/{t}; POST /tenants/{t}/members | Tenant permission |
-| Event | POST /tenants/{t}/events; PATCH .../{e} | Event Manager |
-| Config | POST .../{e}/config-versions; POST .../{e}/publish | Publish permission + expected version |
-| Inventory | POST .../{e}/imports; GET .../{e}/quota | Inventory permission |
-| Review | POST .../{e}/redemptions/{id}/approve hoặc reject | Approval permission |
-| CS | GET .../{e}/tickets; POST .../tickets/{id}/resend | CS scope |
-| Gate | POST /gate/events/{e}/sessions; POST .../reservations | Assigned staff |
-| Confirm | POST /gate/events/{e}/reservations/{id}/confirm | Holder + active permission |
-| Undo | POST /gate/events/{e}/checkins/{id}/undo | Supervisor |
-| Export | POST .../{e}/exports; GET .../exports/{id}/download | Export permission |
-| Webhook | POST /integrations/email/{provider}/events | Provider signature, replay control |
-| Platform | /platform/tenants; /platform/support-grants | Operator scope |
+| Nhóm      | Endpoint tiêu biểu                                          | Quyền                                       |
+| --------- | ----------------------------------------------------------- | ------------------------------------------- |
+| Public    | GET /public/tenants/{slug}/events/{slug}                    | Chỉ projection published                    |
+| Self      | GET /me/tickets; GET /me/tickets/{id}                       | Owner                                       |
+| Redeem    | POST /tenants/{t}/events/{e}/redemptions                    | Verified attendee + admission token nếu bật |
+| Status    | GET /me/redemptions/{id}                                    | Owner                                       |
+| Operation | GET /operations/{clientOperationId}?eventId=...&command=... | Actor sở hữu, tenant/event/command scoped   |
+| Tenant    | GET/PATCH /tenants/{t}; POST /tenants/{t}/members           | Tenant permission                           |
+| Event     | POST /tenants/{t}/events; PATCH .../{e}                     | Event Manager                               |
+| Config    | POST .../{e}/config-versions; POST .../{e}/publish          | Publish permission + expected version       |
+| Inventory | POST .../{e}/imports; GET .../{e}/quota                     | Inventory permission                        |
+| Review    | POST .../{e}/redemptions/{id}/approve hoặc reject           | Approval permission                         |
+| CS        | GET .../{e}/tickets; POST .../tickets/{id}/resend           | CS scope                                    |
+| Gate      | POST /gate/events/{e}/sessions; POST .../reservations       | Assigned staff                              |
+| Confirm   | POST /gate/events/{e}/reservations/{id}/confirm             | Holder + active permission                  |
+| Undo      | POST /gate/events/{e}/checkins/{id}/undo                    | Supervisor                                  |
+| Export    | POST .../{e}/exports; GET .../exports/{id}/download         | Export permission                           |
+| Webhook   | POST /integrations/email/{provider}/events                  | Provider signature, replay control          |
+| Platform  | /platform/tenants; /platform/support-grants                 | Operator scope                              |
 
 Tenant của Gate được resolve từ event và assignment, không nhận tenant tùy ý từ QR để cấp quyền. Resend, revoke, quota change, cancel, clone và publish phải có endpoint riêng có audit; không dùng generic PATCH cho mọi trạng thái.
 
@@ -431,15 +431,15 @@ Entitlement snapshot và terms version trên ticket/request tách với nội du
 
 Đây là test scenarios đề xuất, không phải yêu cầu tải đã được xác nhận hoặc khả năng đã chứng minh.
 
-| Scenario | Mẫu tải | Điều cần đo |
-|---|---|---|
-| S1 — Volume | Một event 50k attendee/ticket, hai tenant hoạt động | Query plan, storage, export, dashboard |
-| S2 — Public burst | 50k phiên mở trang trong 60 giây, chủ yếu CDN | Origin request rate, cache hit, tải metadata |
-| S3 — Redeem pilot | 50 issue/s + 20 confirm/s, nhiều tenant | p95, lỗi, lock wait, connection saturation |
-| S4 — Opening shock | 50k attempt trong 10 giây, admission bật | Edge rejection/queue, accepted throughput, fairness |
-| S5 — Gate | 100 thiết bị, 20 confirm/s, scan/reserve riêng | Duplicate frames, hold contention, retry/recovery |
-| S6 — Noisy neighbor | Tenant A import/export và mở vé, B check-in | Tail latency và tài nguyên Gate còn lại |
-| S7 — Failure | Kill API/worker, Redis restart, network timeout | Invariants, outbox replay, outcome recovery |
+| Scenario            | Mẫu tải                                             | Điều cần đo                                         |
+| ------------------- | --------------------------------------------------- | --------------------------------------------------- |
+| S1 — Volume         | Một event 50k attendee/ticket, hai tenant hoạt động | Query plan, storage, export, dashboard              |
+| S2 — Public burst   | 50k phiên mở trang trong 60 giây, chủ yếu CDN       | Origin request rate, cache hit, tải metadata        |
+| S3 — Redeem pilot   | 50 issue/s + 20 confirm/s, nhiều tenant             | p95, lỗi, lock wait, connection saturation          |
+| S4 — Opening shock  | 50k attempt trong 10 giây, admission bật            | Edge rejection/queue, accepted throughput, fairness |
+| S5 — Gate           | 100 thiết bị, 20 confirm/s, scan/reserve riêng      | Duplicate frames, hold contention, retry/recovery   |
+| S6 — Noisy neighbor | Tenant A import/export và mở vé, B check-in         | Tail latency và tài nguyên Gate còn lại             |
+| S7 — Failure        | Kill API/worker, Redis restart, network timeout     | Invariants, outbox replay, outcome recovery         |
 
 S4 tương đương trung bình 5.000 attempts/s tại lớp tiếp nhận, không đòi PostgreSQL commit 5.000 vé/s. Nếu yêu cầu thực tế là 50k concurrent users duy trì lâu hoặc cần cấp vé ở tốc độ đó, phải benchmark và điều chỉnh ADR trước cam kết.
 
@@ -455,6 +455,12 @@ Tổng connection phải tính: replicas × pool size cho API, Gate, worker, rel
 
 CPU-heavy parsing/rendering chạy worker. Event loop lag, DB lock wait, WAL/IO, pool wait và queue age là metric bắt buộc. Chưa khóa số vCPU/RAM trước benchmark, không suy capacity từ benchmark framework.
 
+### Chính sách build iOS bắt buộc (áp dụng toàn project)
+
+Theo yêu cầu người dùng: không bao giờ sử dụng Expo/EAS Cloud Build hoặc workflow build được host bởi EAS; không fallback cloud khi thiếu công cụ local. Expo framework và CLI local/prebuild vẫn được dùng.
+
+Native simulator build và archive/signing chạy bằng Xcode/xcodebuild hoặc fastlane trên máy Mac hoặc runner macOS tự quản lý. Signing credentials nằm trong Keychain/secret store của môi trường đó, không upload lên Expo build infrastructure. Phát hành qua App Store Connect/TestFlight sau khi có task phát hành được giao. GitHub CI Linux chỉ kiểm tra JavaScript/Hermes export, không được coi là native binary build.
+
 ## 15. Deployment, backup và incident behavior
 
 ### 15.1 Môi trường
@@ -467,16 +473,16 @@ Migration theo expand → backfill → switch → contract; chạy job đơn v�
 
 ### 15.2 Failure matrix
 
-| Sự cố | Hành vi |
-|---|---|
-| Email/push provider lỗi | Vé vẫn cấp; notification pending, retry có giới hạn |
-| Redis lỗi | Không mất ticket/check-in; outbox giữ việc; admission phụ thuộc Redis fail closed hoặc chế độ bảo thủ được định nghĩa; Gate được tiếp tục nếu DB/auth còn khỏe |
-| Database primary không truy cập được | Không issue/confirm; hiển thị unavailable, không nhận thành công giả |
-| Client timeout sau commit | Retry cùng key / tra operation, không tạo transaction nghiệp vụ mới |
-| Worker chết | Lease hết hạn, reconcile/requeue; effects idempotent |
-| Dashboard quá tải | Giảm tần suất/tạm ngưng reporting trước Gate |
-| Mạng venue đứt | Chuyển đường truyền dự phòng; không tự bật offline confirm |
-| Auth provider gián đoạn | Token/phiên hiện tại có thể tiếp tục trong thời hạn hợp lệ với DB revocation; login/refresh mới có thể lỗi, không bỏ qua xác thực |
+| Sự cố                                | Hành vi                                                                                                                                                        |
+| ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Email/push provider lỗi              | Vé vẫn cấp; notification pending, retry có giới hạn                                                                                                            |
+| Redis lỗi                            | Không mất ticket/check-in; outbox giữ việc; admission phụ thuộc Redis fail closed hoặc chế độ bảo thủ được định nghĩa; Gate được tiếp tục nếu DB/auth còn khỏe |
+| Database primary không truy cập được | Không issue/confirm; hiển thị unavailable, không nhận thành công giả                                                                                           |
+| Client timeout sau commit            | Retry cùng key / tra operation, không tạo transaction nghiệp vụ mới                                                                                            |
+| Worker chết                          | Lease hết hạn, reconcile/requeue; effects idempotent                                                                                                           |
+| Dashboard quá tải                    | Giảm tần suất/tạm ngưng reporting trước Gate                                                                                                                   |
+| Mạng venue đứt                       | Chuyển đường truyền dự phòng; không tự bật offline confirm                                                                                                     |
+| Auth provider gián đoạn              | Token/phiên hiện tại có thể tiếp tục trong thời hạn hợp lệ với DB revocation; login/refresh mới có thể lỗi, không bỏ qua xác thực                              |
 
 Gate critical path không được phụ thuộc Redis cache/rate limiter theo cách bắt buộc fail khi Redis lỗi; dùng per-process protective cap + ingress controls và DB authz. Nếu implementation chọn phụ thuộc Redis cho Gate thì phải cập nhật failure matrix, không mặc định claim Gate hoạt động.
 
@@ -501,16 +507,16 @@ Trước pilot phải diễn tập restore DB + keys, failover, reconnect và re
 
 ## 17. Kế hoạch kiểm chứng trước pilot
 
-| Spike / test | Deliverable | Điều kiện đạt |
-|---|---|---|
-| P1 — RLS + Prisma pool | DB roles, sample policies, integration tests | Không lộ tenant qua request xen kẽ/pool reuse/worker/export; owner reader chỉ thấy vé mình |
-| P2 — Issue transaction | Prototype + concurrency/fault tests | Không vượt quota/limit, không trùng code/request; retry sau timeout trả cùng ticket |
-| P3 — Gate protocol | API prototype + hai iPhone qua TestFlight | Một confirm thắng; revoke/expiry/undo có thứ tự; app restart recover operation |
-| P4 — Identity | Provider ADR và auth demo web/iOS | PKCE, verified email, MFA, account claim, revocation, logout và account switch đúng |
-| P5 — Outbox/queue | Failure injection và replay report | Redis mất queue/worker kill không mất việc đã commit; duplicate effects được quản lý |
-| P6 — Capacity | k6 scenario scripts + benchmark report | Đạt pilot SLO, không lỗi invariants; overload có kiểm soát và không làm Gate sập |
-| P7 — iOS capability | Device matrix, camera/deep link/push/offline report | Hoạt động trên thiết bị hỗ trợ, ánh sáng yếu và mạng chập chờn; local data đúng tài khoản |
-| P8 — Recovery | Runbook + failover/restore evidence | Biết RPO/RTO thực, không mở lại Gate trên dữ liệu thiếu mà không đối soát |
+| Spike / test           | Deliverable                                         | Điều kiện đạt                                                                              |
+| ---------------------- | --------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| P1 — RLS + Prisma pool | DB roles, sample policies, integration tests        | Không lộ tenant qua request xen kẽ/pool reuse/worker/export; owner reader chỉ thấy vé mình |
+| P2 — Issue transaction | Prototype + concurrency/fault tests                 | Không vượt quota/limit, không trùng code/request; retry sau timeout trả cùng ticket        |
+| P3 — Gate protocol     | API prototype + hai iPhone qua TestFlight           | Một confirm thắng; revoke/expiry/undo có thứ tự; app restart recover operation             |
+| P4 — Identity          | Provider ADR và auth demo web/iOS                   | PKCE, verified email, MFA, account claim, revocation, logout và account switch đúng        |
+| P5 — Outbox/queue      | Failure injection và replay report                  | Redis mất queue/worker kill không mất việc đã commit; duplicate effects được quản lý       |
+| P6 — Capacity          | k6 scenario scripts + benchmark report              | Đạt pilot SLO, không lỗi invariants; overload có kiểm soát và không làm Gate sập           |
+| P7 — iOS capability    | Device matrix, camera/deep link/push/offline report | Hoạt động trên thiết bị hỗ trợ, ánh sáng yếu và mạng chập chờn; local data đúng tài khoản  |
+| P8 — Recovery          | Runbook + failover/restore evidence                 | Biết RPO/RTO thực, không mở lại Gate trên dữ liệu thiếu mà không đối soát                  |
 
 P1–P4 cần làm trước khi mở rộng các màn quản trị. Test không chỉ assertion HTTP 200: phải đối soát counter, code, ticket, outbox, check-in và audit sau tải/failure.
 
@@ -520,16 +526,16 @@ Release gate: architecture tests + isolation/security tests + concurrency tests 
 
 ## 18. Quyết định còn mở và điều kiện chốt
 
-| Quyết định | Baseline | Khi cần chốt |
-|---|---|---|
-| App chung hay white-label | App chung, staff/attendee modes | Trước bundle ID và store branding |
-| Identity provider | Managed OIDC đạt P4 | Trước foundation implementation |
-| 50k nghĩa là volume/burst/concurrent? | Test theo S1–S4, chưa claim concurrent | Trước capacity sizing và event SLA |
-| Cloud/region/admission provider | Managed services + edge controls | Trước production benchmark |
-| Pending TTL, cancel/release policy | Verified-only hold; không tự hoàn quota | Trước redemption schema/API freeze |
-| Data retention và support access | Least privilege, thời hạn còn mở | Trước dữ liệu người dùng thật |
-| Đối chiếu danh tính tại cổng | QR bearer, một lượt | Trước Gate UAT và train staff |
-| Mức chấp nhận mất giao dịch khi disaster | Không tự mở lại trên DB restore thiếu | Trước pilot approval |
+| Quyết định                               | Baseline                                | Khi cần chốt                       |
+| ---------------------------------------- | --------------------------------------- | ---------------------------------- |
+| App chung hay white-label                | App chung, staff/attendee modes         | Trước bundle ID và store branding  |
+| Identity provider                        | Managed OIDC đạt P4                     | Trước foundation implementation    |
+| 50k nghĩa là volume/burst/concurrent?    | Test theo S1–S4, chưa claim concurrent  | Trước capacity sizing và event SLA |
+| Cloud/region/admission provider          | Managed services + edge controls        | Trước production benchmark         |
+| Pending TTL, cancel/release policy       | Verified-only hold; không tự hoàn quota | Trước redemption schema/API freeze |
+| Data retention và support access         | Least privilege, thời hạn còn mở        | Trước dữ liệu người dùng thật      |
+| Đối chiếu danh tính tại cổng             | QR bearer, một lượt                     | Trước Gate UAT và train staff      |
+| Mức chấp nhận mất giao dịch khi disaster | Không tự mở lại trên DB restore thiếu   | Trước pilot approval               |
 
 ## 19. Ràng buộc SQL mẫu để triển khai
 

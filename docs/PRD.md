@@ -1,6 +1,6 @@
 # PRD — Event Ticketing Platform
 
-Phiên bản: 0.2 — Draft để review  
+Phiên bản: 0.3 — Draft để review  
 Ngày: 2026-10-16  
 Nguồn: FUN-FEST-2026-Bao-Gia-v1.0.pdf và yêu cầu sản phẩm trong trao đổi.  
 Tên sản phẩm: tạm đặt, chưa chốt thương hiệu.  
@@ -22,6 +22,7 @@ Không bàn ngân sách hoặc giá dịch vụ trong PRD này.
 - Có website và app iOS trên Apple App Store. Android tạm hoãn, ngoài phạm vi release đầu.
 - Giữ bài toán đổi mã, cấp QR, gửi vé, quản trị và check-in từ tài liệu gốc.
 - Không tích hợp TikTok.
+- Không bao giờ dùng Expo/EAS Cloud Build. Native iOS build chạy local bằng Xcode/xcodebuild hoặc fastlane trên Mac/runner macOS tự quản lý; không fallback lên Expo cloud.
 
 ### Giả định thiết kế, cần xác nhận
 
@@ -33,15 +34,15 @@ Không bàn ngân sách hoặc giá dịch vụ trong PRD này.
 
 ## 3. Người dùng và công việc cần hoàn thành
 
-| Persona | Công việc chính | Kết quả mong muốn |
-|---|---|---|
-| Platform Operator | Tạo/quản lý tenant, hạn mức, hỗ trợ vận hành | Nhiều khách sử dụng đồng thời, không lẫn dữ liệu |
-| Tenant Owner | Quản lý công ty, thành viên, nhận diện | Kiểm soát event và quyền nội bộ |
-| Event Manager | Tạo event, loại vé, nguồn phát, quota, publish | Tự chạy sự kiện trong phạm vi cấu hình |
-| CS | Tìm yêu cầu/vé, xử lý lỗi, gửi lại email | Hỗ trợ khách mà không sửa cấu hình hệ thống |
-| Supervisor | Giám sát cổng, xử lý ngoại lệ | Giải quyết sự cố có lưu dấu vết |
-| Scanner | Quét và xác nhận check-in | Thao tác nhanh, kết quả rõ, không vào trùng |
-| Attendee | Nhận vé, xem QR, xem thông tin event | Dễ lấy vé và vào cổng trên web hoặc app |
+| Persona           | Công việc chính                                | Kết quả mong muốn                                |
+| ----------------- | ---------------------------------------------- | ------------------------------------------------ |
+| Platform Operator | Tạo/quản lý tenant, hạn mức, hỗ trợ vận hành   | Nhiều khách sử dụng đồng thời, không lẫn dữ liệu |
+| Tenant Owner      | Quản lý công ty, thành viên, nhận diện         | Kiểm soát event và quyền nội bộ                  |
+| Event Manager     | Tạo event, loại vé, nguồn phát, quota, publish | Tự chạy sự kiện trong phạm vi cấu hình           |
+| CS                | Tìm yêu cầu/vé, xử lý lỗi, gửi lại email       | Hỗ trợ khách mà không sửa cấu hình hệ thống      |
+| Supervisor        | Giám sát cổng, xử lý ngoại lệ                  | Giải quyết sự cố có lưu dấu vết                  |
+| Scanner           | Quét và xác nhận check-in                      | Thao tác nhanh, kết quả rõ, không vào trùng      |
+| Attendee          | Nhận vé, xem QR, xem thông tin event           | Dễ lấy vé và vào cổng trên web hoặc app          |
 
 ## 4. Phạm vi và nguyên tắc
 
@@ -69,20 +70,20 @@ Các mục giai đoạn sau chưa được tính là cam kết release đầu ti
 
 Ký hiệu: Có = thuộc release đầu; — = không thuộc giao diện đó.
 
-| Module | Web khách | Web quản trị | App khách | App nhân viên |
-|---|---|---|---|---|
-| Thông tin event, FAQ, điều khoản | Có | Biên tập | Có | Xem |
-| Đổi mã, xem kết quả yêu cầu | Có | Hỗ trợ | Có | — |
-| Xem vé/QR, gửi lại email | Có | Hỗ trợ | Có | Tra cứu theo quyền |
-| Ví vé, vé đã lưu offline | — | — | Có | — |
-| Push giao dịch/nhắc sự kiện | — | Soạn lịch nhắc | Có | Thông báo vận hành |
-| Công ty, thành viên, phân quyền | — | Có | — | — |
-| Event, branding, template | — | Có | — | — |
-| Mã, quota, import/export, duyệt | — | Có | — | — |
-| Scan và xác nhận vào cổng | — | Có, màn Gate | — | Có |
-| Dashboard | — | Đầy đủ | — | Tóm tắt theo quyền |
-| Xử lý ngoại lệ | — | Supervisor | — | Supervisor |
-| Quản trị platform | — | Khu vực riêng | — | — |
+| Module                           | Web khách | Web quản trị   | App khách | App nhân viên      |
+| -------------------------------- | --------- | -------------- | --------- | ------------------ |
+| Thông tin event, FAQ, điều khoản | Có        | Biên tập       | Có        | Xem                |
+| Đổi mã, xem kết quả yêu cầu      | Có        | Hỗ trợ         | Có        | —                  |
+| Xem vé/QR, gửi lại email         | Có        | Hỗ trợ         | Có        | Tra cứu theo quyền |
+| Ví vé, vé đã lưu offline         | —         | —              | Có        | —                  |
+| Push giao dịch/nhắc sự kiện      | —         | Soạn lịch nhắc | Có        | Thông báo vận hành |
+| Công ty, thành viên, phân quyền  | —         | Có             | —         | —                  |
+| Event, branding, template        | —         | Có             | —         | —                  |
+| Mã, quota, import/export, duyệt  | —         | Có             | —         | —                  |
+| Scan và xác nhận vào cổng        | —         | Có, màn Gate   | —         | Có                 |
+| Dashboard                        | —         | Đầy đủ         | —         | Tóm tắt theo quyền |
+| Xử lý ngoại lệ                   | —         | Supervisor     | —         | Supervisor         |
+| Quản trị platform                | —         | Khu vực riêng  | —         | —                  |
 
 App là trải nghiệm native có camera, ví vé, lưu vé và push; không chỉ đóng website trong WebView. App có thể chuyển chế độ khách/nhân viên nếu tài khoản có quyền; chuyển chế độ không tự cấp quyền mới.
 
@@ -268,19 +269,19 @@ Trạng thái tách biệt:
 
 Các chỉ tiêu tải dưới đây là baseline đề xuất để thiết kế và test, chưa phải nhu cầu đã được người dùng xác nhận.
 
-| Nhóm | Tiêu chí release |
-|---|---|
-| Pilot tải | 2 event đồng thời, 20.000 vé/event, 50 thiết bị scan/event |
+| Nhóm          | Tiêu chí release                                                                                                                                |
+| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| Pilot tải     | 2 event đồng thời, 20.000 vé/event, 50 thiết bị scan/event                                                                                      |
 | API nghiệp vụ | p95 không quá 1 giây ở 50 lượt cấp vé/giây và 20 lượt xác nhận check-in/giây tổng, loại thời gian provider ngoài; phải xác định môi trường test |
-| Tính đúng | Không vượt quota, không cấp trùng mã, không xác nhận trùng vé trong concurrency test |
-| Khả dụng | Mục tiêu 99,9%/tháng cho API; theo dõi riêng cửa sổ event, có runbook và cảnh báo |
-| Khôi phục | Mục tiêu RPO ≤ 15 phút, RTO ≤ 2 giờ; phải diễn tập restore trước pilot |
-| Thiết bị | Web responsive; chốt ma trận iOS/browser trước UAT, thử camera trên thiết bị thật |
-| Accessibility | Luồng chính hỗ trợ screen reader, tăng cỡ chữ, focus và tương phản; không dùng màu làm tín hiệu duy nhất |
-| Bảo mật | TLS, secrets ngoài source, rate limit, MFA admin, kiểm tra file, log không chứa OTP/QR token/PII thô |
-| Dữ liệu | Có retention, xóa/anonymize, thời hạn file export và chính sách backup; giá trị cụ thể cần chốt |
-| Quan sát | Request/operation ID, metric theo tenant/event, cảnh báo queue chậm, email lỗi và scan lỗi tăng |
-| Tương thích | API có phiên bản, hỗ trợ mobile release đang lưu hành; migration không làm app cũ hỏng đột ngột |
+| Tính đúng     | Không vượt quota, không cấp trùng mã, không xác nhận trùng vé trong concurrency test                                                            |
+| Khả dụng      | Mục tiêu 99,9%/tháng cho API; theo dõi riêng cửa sổ event, có runbook và cảnh báo                                                               |
+| Khôi phục     | Mục tiêu RPO ≤ 15 phút, RTO ≤ 2 giờ; phải diễn tập restore trước pilot                                                                          |
+| Thiết bị      | Web responsive; chốt ma trận iOS/browser trước UAT, thử camera trên thiết bị thật                                                               |
+| Accessibility | Luồng chính hỗ trợ screen reader, tăng cỡ chữ, focus và tương phản; không dùng màu làm tín hiệu duy nhất                                        |
+| Bảo mật       | TLS, secrets ngoài source, rate limit, MFA admin, kiểm tra file, log không chứa OTP/QR token/PII thô                                            |
+| Dữ liệu       | Có retention, xóa/anonymize, thời hạn file export và chính sách backup; giá trị cụ thể cần chốt                                                 |
+| Quan sát      | Request/operation ID, metric theo tenant/event, cảnh báo queue chậm, email lỗi và scan lỗi tăng                                                 |
+| Tương thích   | API có phiên bản, hỗ trợ mobile release đang lưu hành; migration không làm app cũ hỏng đột ngột                                                 |
 
 SLO không thay thế việc test thực tế đường truyền và camera tại địa điểm tổ chức.
 
@@ -288,25 +289,25 @@ SLO không thay thế việc test thực tế đường truyền và camera tạ
 
 Đây là đề xuất để triển khai PRD, không khóa phiên bản thư viện trước bước technical design.
 
-| Lớp | Đề xuất | Vai trò |
-|---|---|---|
-| Web | Next.js + React + TypeScript | Portal public, tenant admin, platform admin, web Gate |
-| Mobile | React Native + Expo + TypeScript + Expo Router | App native iOS, ví vé, camera, push, deep link |
-| Backend | NestJS + TypeScript, REST + OpenAPI | API chung, RBAC, tenant context, nghiệp vụ và tích hợp |
-| Kiến trúc backend | Modular monolith; worker chạy riêng | Dễ giữ transaction nhất quán, triển khai độc lập worker; chưa cần microservices |
-| Database | PostgreSQL | Nguồn dữ liệu chuẩn cho quota, vé, check-in, cấu hình |
-| Tenant isolation | Shared schema + tenant keys + PostgreSQL RLS | Backend authz là lớp chính, RLS là lớp bảo vệ bổ sung |
-| ORM/migration | Prisma, SQL migration khi cần | Schema, truy vấn; transaction và tenant context phải được review cụ thể |
-| Queue/cache | Redis + BullMQ | Email, import/export, rate limit; không làm nguồn chuẩn cho quota/check-in |
-| Tính nhất quán tác vụ | Transactional outbox trong PostgreSQL | Không mất tác vụ gửi thông báo sau khi cấp vé thành công |
-| File | S3-compatible private object storage + signed URLs | Asset, QR render nếu cần, import/export |
-| Email | Provider transactional, qua adapter | Gửi và webhook trạng thái; chọn provider sau |
-| Push | expo-notifications, provider transport qua adapter | Đăng ký thiết bị, gửi và xử lý delivery receipt |
-| Mobile local | SecureStore cho token; local database/cache cho ví vé | Phân vùng theo tài khoản và dọn khi logout |
-| Monorepo | pnpm workspace + Turborepo | Chia sẻ API types, schema, domain helpers, brand tokens |
-| Vận hành | Container API/worker, managed PostgreSQL/Redis, CDN | Tách staging/production, scale API và worker riêng |
-| Quan sát | OpenTelemetry + error tracking | Trace, metric, lỗi web/app/API |
-| Mobile delivery | EAS Build/Submit và TestFlight | Build ký số, kiểm thử và submit store |
+| Lớp                   | Đề xuất                                                            | Vai trò                                                                         |
+| --------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------------- |
+| Web                   | Next.js + React + TypeScript                                       | Portal public, tenant admin, platform admin, web Gate                           |
+| Mobile                | React Native + Expo + TypeScript + Expo Router                     | App native iOS, ví vé, camera, push, deep link                                  |
+| Backend               | NestJS + TypeScript, REST + OpenAPI                                | API chung, RBAC, tenant context, nghiệp vụ và tích hợp                          |
+| Kiến trúc backend     | Modular monolith; worker chạy riêng                                | Dễ giữ transaction nhất quán, triển khai độc lập worker; chưa cần microservices |
+| Database              | PostgreSQL                                                         | Nguồn dữ liệu chuẩn cho quota, vé, check-in, cấu hình                           |
+| Tenant isolation      | Shared schema + tenant keys + PostgreSQL RLS                       | Backend authz là lớp chính, RLS là lớp bảo vệ bổ sung                           |
+| ORM/migration         | Prisma, SQL migration khi cần                                      | Schema, truy vấn; transaction và tenant context phải được review cụ thể         |
+| Queue/cache           | Redis + BullMQ                                                     | Email, import/export, rate limit; không làm nguồn chuẩn cho quota/check-in      |
+| Tính nhất quán tác vụ | Transactional outbox trong PostgreSQL                              | Không mất tác vụ gửi thông báo sau khi cấp vé thành công                        |
+| File                  | S3-compatible private object storage + signed URLs                 | Asset, QR render nếu cần, import/export                                         |
+| Email                 | Provider transactional, qua adapter                                | Gửi và webhook trạng thái; chọn provider sau                                    |
+| Push                  | expo-notifications, provider transport qua adapter                 | Đăng ký thiết bị, gửi và xử lý delivery receipt                                 |
+| Mobile local          | SecureStore cho token; local database/cache cho ví vé              | Phân vùng theo tài khoản và dọn khi logout                                      |
+| Monorepo              | pnpm workspace + Turborepo                                         | Chia sẻ API types, schema, domain helpers, brand tokens                         |
+| Vận hành              | Container API/worker, managed PostgreSQL/Redis, CDN                | Tách staging/production, scale API và worker riêng                              |
+| Quan sát              | OpenTelemetry + error tracking                                     | Trace, metric, lỗi web/app/API                                                  |
+| Mobile delivery       | Local Xcode/xcodebuild hoặc fastlane; App Store Connect/TestFlight | Build ký số trên Mac/runner macOS tự quản lý; không Expo/EAS Cloud Build        |
 
 Chia sẻ type, validation, API client và token thương hiệu giữa web/app; UI web và native được xây theo trải nghiệm từng nền tảng. Backend là nơi quyết định quyền, quota và trạng thái.
 
@@ -317,7 +318,7 @@ Authentication dùng giải pháp OIDC hoặc thư viện được duy trì; mob
 Tham chiếu kỹ thuật chính thức:
 
 - Next.js App Router: https://nextjs.org/docs/app/getting-started
-- Expo build: https://docs.expo.dev/build/setup/
+- Expo local development: https://docs.expo.dev/guides/local-app-development/
 - Expo distribution: https://docs.expo.dev/distribution/introduction/
 - Expo push: https://docs.expo.dev/push-notifications/what-you-need-to-know/
 - PostgreSQL row security: https://www.postgresql.org/docs/current/ddl-rowsecurity.html
@@ -367,15 +368,15 @@ Các bước là thứ tự phụ thuộc sản phẩm, chưa phải lịch ho�
 
 ## 15. Quyết định còn mở
 
-| ID | Câu hỏi | Baseline tạm thời | Ảnh hưởng |
-|---|---|---|---|
-| O01 | App chung hay app riêng từng công ty? | Một app chung có hai chế độ theo quyền | Branding store, release pipeline, identity và deep link |
-| O02 | Có cần app riêng cho staff? | Staff trong app chung | UX, quyền và phân phối thiết bị |
-| O03 | Tải, số tenant/event và số cổng thực tế? | Theo baseline pilot ở mục 9 | Capacity, SLO và kế hoạch test |
-| O04 | Form cần dữ liệu và ngôn ngữ nào? | Tiếng Việt; schema sẵn sàng mở rộng | Nội dung, email và quyền riêng tư |
-| O05 | Có cần tái nhập cổng, nhiều ngày/phiên? | Một vé một lượt toàn event | Ticket entitlement và check-in model |
-| O06 | Retention, vị trí lưu dữ liệu, SLA hỗ trợ? | Chưa chốt | Hạ tầng, vận hành và lifecycle dữ liệu |
-| O07 | Cần custom domain/sender ngay release đầu? | Subdomain và sender platform | DNS, xác minh sở hữu và deliverability |
-| O08 | Tổ chức có cần database riêng? | Shared database/schema có RLS | Deployment và isolation tier |
+| ID  | Câu hỏi                                    | Baseline tạm thời                      | Ảnh hưởng                                               |
+| --- | ------------------------------------------ | -------------------------------------- | ------------------------------------------------------- |
+| O01 | App chung hay app riêng từng công ty?      | Một app chung có hai chế độ theo quyền | Branding store, release pipeline, identity và deep link |
+| O02 | Có cần app riêng cho staff?                | Staff trong app chung                  | UX, quyền và phân phối thiết bị                         |
+| O03 | Tải, số tenant/event và số cổng thực tế?   | Theo baseline pilot ở mục 9            | Capacity, SLO và kế hoạch test                          |
+| O04 | Form cần dữ liệu và ngôn ngữ nào?          | Tiếng Việt; schema sẵn sàng mở rộng    | Nội dung, email và quyền riêng tư                       |
+| O05 | Có cần tái nhập cổng, nhiều ngày/phiên?    | Một vé một lượt toàn event             | Ticket entitlement và check-in model                    |
+| O06 | Retention, vị trí lưu dữ liệu, SLA hỗ trợ? | Chưa chốt                              | Hạ tầng, vận hành và lifecycle dữ liệu                  |
+| O07 | Cần custom domain/sender ngay release đầu? | Subdomain và sender platform           | DNS, xác minh sở hữu và deliverability                  |
+| O08 | Tổ chức có cần database riêng?             | Shared database/schema có RLS          | Deployment và isolation tier                            |
 
 PRD đủ để review phạm vi và dựng user flow. Các giả định chưa xác nhận phải được chốt trước khi khóa thiết kế chi tiết liên quan, không được coi là yêu cầu đã được người dùng duyệt.
