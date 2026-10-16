@@ -95,17 +95,17 @@ Mỗi nhóm dưới đây tương ứng parent Issue trên GitHub; sub-issues ma
 
 ### D2 — Nhận vé
 
-- [ ] Backend: mã/quota → issue transaction → ticket → outbox/email adapter
-- [ ] Web: form đổi mã, trạng thái verify, success/ticket qua API thật
-- [ ] iOS: My Tickets, QR, cache tối thiểu; vé web xuất hiện cùng identity
-- [ ] Kiểm thử độc lập: tranh suất cuối, idempotency key, email lỗi không mất vé
+- [x] Backend: mã/quota → issue transaction → ticket → outbox/email adapter
+- [x] Web: form đổi mã, trạng thái verify, success/ticket qua API thật
+- [x] iOS: My Tickets, QR, cache tối thiểu; vé web xuất hiện cùng identity
+- [x] Kiểm thử độc lập: tranh suất cuối, idempotency key, email lỗi không mất vé
 
 ### D3 — Check-in
 
-- [ ] Backend: staff session, reserve/confirm/status, revoke/undo, audit
-- [ ] Web Gate dự phòng + CS lookup tối thiểu
-- [ ] iOS: camera scan, dedupe, recovery sau restart/mạng
-- [ ] Hai thiết bị / race / timeout recovery theo runbook
+- [x] Backend: staff session, reserve/confirm/status, revoke/undo, audit
+- [x] Web Gate dự phòng + CS lookup tối thiểu
+- [x] iOS: dedupe và recovery sau restart/mạng. Camera thiết bị thật hoãn sang D5 (#26)
+- [x] Hai thiết bị / race / timeout recovery theo test Postgres và quyết định unknown trên web/iOS
 
 ### D4 — Admin & Platform
 

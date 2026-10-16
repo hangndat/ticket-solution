@@ -63,10 +63,15 @@ export {
   type RedeemOutcome,
   type ListedTicket,
 } from './issue';
+export { InventoryError, INVENTORY_ERROR_CODES, type InventoryErrorCode } from './inventory-error';
 export {
   seedEventInventory,
+  importRedemptionCodes,
+  readEventQuota,
   type SeedInventoryInput,
   type SeedInventoryResult,
+  type ImportCodesResult,
+  type EventQuotaResult,
 } from './inventory';
 export {
   claimOutboxBatch,
@@ -75,6 +80,17 @@ export {
   type ClaimedOutboxRow,
   type ProcessOutboxResult,
 } from './outbox';
+export {
+  ConfigError,
+  CONFIG_ERROR_CODES,
+  type ConfigErrorCode,
+} from './config-error';
+export {
+  saveEventConfigVersion,
+  publishEventConfig,
+  type ConfigVersionResult,
+  type PublishResult,
+} from './config-publish';
 export { GateError, GATE_ERROR_CODES, type GateErrorCode } from './gate-error';
 export {
   openStaffSession,
