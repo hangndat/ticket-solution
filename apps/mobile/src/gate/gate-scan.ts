@@ -104,6 +104,29 @@ export function canReconcile(op: GateOp): boolean {
   return op.phase === 'unknown' && Boolean(op.reservationId) && Boolean(op.token);
 }
 
+export const SUPERVISOR_NOT_ADMISSION =
+  'Not an admission. Unknown results, timeouts, and server errors never admit.';
+
+export type SupervisorClass = 'admission' | 'not-admission';
+
+/** Only a recorded check-in is an admission. Unknown is never an admission. */
+export function classifySupervisorOp(
+  op: Pick<GateOp, 'phase' | 'checkinId'>,
+): SupervisorClass {
+  if (
+    op.phase === 'admitted' &&
+    typeof op.checkinId === 'string' &&
+    op.checkinId.length > 0
+  ) {
+    return 'admission';
+  }
+  return 'not-admission';
+}
+
+export function listUnknownGateOps(ops: readonly GateOp[]): GateOp[] {
+  return ops.filter((op) => op.phase === 'unknown');
+}
+
 type FetchResult = {
   status: number;
   json: unknown;
