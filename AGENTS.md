@@ -40,6 +40,7 @@ All user-facing roadmap, GitHub Projects, milestones, Issue titles/bodies, label
 - **Orca agent routing:** Coding/implementation workers always `--agent cursor`. Plan/design/spike use `--agent codex` (Cursor fallback on quota). **DoD / acceptance review** of implementation: spawn one `--agent cursor` reviewer (≠ implementer); do not wait for the user to approve. See `.cursor/rules/orca-agent-routing.mdc`.
 - **GitHub Project sync:** Keep [Project #3](https://github.com/users/hangndat/projects/3) Status in sync (Đang làm → Chờ duyệt → Hoàn thành / Bị chặn) without waiting for user board approval. `worker_done` ≠ Hoàn thành. See `.cursor/rules/github-project-tracking.mdc` and `docs/ROADMAP.md` §2/§8.
 - **Orca idle fill:** Any free worker whose next Task is not blocked by other workers/deps must be given the next ready Project work immediately — do not wait for the full wave or for the user to pick the next Issue. See `.cursor/rules/orca-idle-worker-fill.mdc`.
+- **Git workflow:** Feature branch off integration `main` → conventional commits → push → PR → Cursor DoD review → CI → coordinator merge. No feature commits directly on `main`. See `.cursor/rules/git-workflow.mdc`.
 
 <!-- code-review-graph MCP tools -->
 ## MCP Tools: code-review-graph

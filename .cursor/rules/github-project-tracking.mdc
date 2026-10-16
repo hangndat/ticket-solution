@@ -32,7 +32,7 @@ alwaysApply: true
 All of:
 
 1. Review **pass** (see Reviewer below) — security-sensitive: reviewer ≠ implementer agent/session.
-2. Merged to integration branch (`main`) when the task requires integration.
+2. Merged to integration branch (`main`) when the task requires integration (via PR — see `git-workflow.mdc`).
 3. CI green on the integrated commit (incl. database-isolation when relevant).
 4. Acceptance evidence matching the Issue criteria (commands/logs/tests — not only `worker_done`).
 

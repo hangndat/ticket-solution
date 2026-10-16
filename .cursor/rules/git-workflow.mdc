@@ -1,0 +1,50 @@
+---
+description: GitHub Flow for commits — feature branch, conventional commits, PR, no direct main
+alwaysApply: true
+---
+
+# Git workflow (commit & integrate)
+
+Use **GitHub Flow**. Integration branch is `main`. Do not land feature work as drive-by commits on `main`.
+
+## Branch
+
+1. Start from the coordinator’s **base / integration commit** (usually latest `main`), not an unrelated dirty tree.
+2. Branch name: `<github-user>/<dot>-<scope>-<slug>`  
+   Examples: `hangndat/d1-web-clerk`, `hangndat/d1-backend-membership`, `hangndat/d2-ios-wallet`.
+3. One Issue (or one clear ownership slice) per branch when practical. No mixing BE+web+iOS on one branch.
+4. Workers stay on their task branch; do not push/merge to `main` unless the task explicitly authorizes integration.
+
+## Commit
+
+1. Commit **only when asked** by the user/coordinator/task spec (or when the task DoD requires a commit SHA for handoff). Otherwise leave a clean report of uncommitted work.
+2. Conventional Commits, Vietnamese or English OK for subject; prefer short why-focused subjects matching repo style:
+
+   ```text
+   feat(api): add membership deny-by-default guard
+   fix(mobile): isolate identity cache by user
+   docs(agents): sync GitHub Project status rules
+   ```
+
+3. HEREDOC for `git commit -m`. Never `--no-verify` / force-skip hooks unless the user explicitly orders it.
+4. This repo is **not** Seatincorp S10: if the local Jira commit hook blocks, use `JIRA_COMMIT_SKIP=1` for the commit (do **not** invent fake `S10-####` keys).
+5. Never commit secrets, `.env`, credentials, or real user data. Do not `git add` unrelated untracked noise (local `mcp.json`, etc.) unless intended.
+6. No `commit --amend` / force-push unless the user explicitly requests and safety conditions in the agent commit protocol are met. Preserve commits; rebase/fix via owner, don’t reset away work.
+
+## Pull request & merge
+
+1. Push the feature branch (`-u` when new) when the task needs remote CI / review — not “publish production”, but required for DoD when CI must run on GitHub.
+2. Open PR with `gh pr create` into `main`. Title/body user-facing bits in **Vietnamese**; keep Issue refs, commands, SHAs intact. Link `Fixes #N` / `Closes #N` when that Issue is the DoD unit.
+3. After PR is up: Project Status → `Chờ duyệt`; spawn Cursor DoD reviewer (see `github-project-tracking.mdc` + `orca-agent-routing.mdc`).
+4. **Coordinator** merges after review pass + CI green (incl. database-isolation when relevant). Workers do not self-merge unless the task explicitly says so.
+5. After merge: Project → `Hoàn thành` when full DoD is met; delete remote feature branch if appropriate; report merge commit SHA.
+
+## Anti-patterns
+
+```text
+❌ git commit on main for feature/fix work
+❌ One PR spanning apps/api + apps/web + apps/mobile
+❌ Force-push main / destructive reset to “clean” conflicts
+❌ Mark Hoàn thành with only local commits and no PR/CI when DoD requires integration
+✅ branch → commit(s) → push → PR → Cursor review → CI → coordinator merge
+```
