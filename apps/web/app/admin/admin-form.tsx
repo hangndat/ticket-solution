@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import {
+  adminDecisionLabel,
   decideAdmin,
   type AdminAction,
   type AdminDecision,
@@ -20,22 +21,13 @@ import { REQUEST_TIMEOUT_MS } from '../../src/redeem/poll-operation';
 
 type Props = { initialTenantId?: string; initialEventId?: string };
 
-function label(decision: AdminDecision): string {
-  if (decision.kind === 'saved')
-    return `Đã lưu phiên bản ${decision.version}. Chưa publish.`;
-  if (decision.kind === 'published') {
-    return `Đã publish phiên bản ${decision.version}. Payload này không sửa được.`;
+type UnclearAttempt = { key: string; fingerprint: string; unclear: boolean };
+
+function reuseUnclearKey(existing: UnclearAttempt | null, fingerprint: string): string {
+  if (existing?.unclear && existing.fingerprint === fingerprint && existing.key) {
+    return existing.key;
   }
-  if (decision.kind === 'imported')
-    return `Đã nhập ${decision.count} mã. Mã gốc không được lưu.`;
-  if (decision.kind === 'quota') {
-    return `Quota event: ${decision.allocated} / ${decision.capacity ?? 'null'}.`;
-  }
-  if (decision.kind === 'rejected') {
-    const id = decision.requestId ? ` · requestId ${decision.requestId}` : '';
-    return `${decision.code}: ${decision.message}${id}`;
-  }
-  return decision.message;
+  return crypto.randomUUID();
 }
 
 export function AdminForm({
@@ -51,6 +43,12 @@ export function AdminForm({
   const [expectedVersion, setExpectedVersion] = useState('');
   const [codesText, setCodesText] = useState('');
   const [eventQuota, setEventQuota] = useState('');
+  const [requestId, setRequestId] = useState('');
+  const [denyReason, setDenyReason] = useState('');
+  const [approveAttempt, setApproveAttempt] = useState<UnclearAttempt | null>(
+    null,
+  );
+  const [denyAttempt, setDenyAttempt] = useState<UnclearAttempt | null>(null);
   const [busy, setBusy] = useState(false);
   const [decision, setDecision] = useState<AdminDecision | null>(null);
   const locked = payloadLocked(editor);
@@ -143,6 +141,74 @@ export function AdminForm({
     await call('quota', `/api/bff/admin/quota?${params.toString()}`, {
       method: 'GET',
     });
+  }
+
+  async function decideRedemption(action: 'approve' | 'deny') {
+    const id = requestId.trim();
+    if (!id) {
+      setDecision({
+        kind: 'rejected',
+        code: 'REQUEST_ID_REQUIRED',
+        message: 'requestId must be a UUID.',
+      });
+      return;
+    }
+    const reason = denyReason.trim();
+    if (action === 'deny' && !reason) {
+      setDecision({
+        kind: 'rejected',
+        code: 'REASON_REQUIRED',
+        message: 'Denial reason is required.',
+      });
+      return;
+    }
+    if (action === 'deny' && reason.length > 500) {
+      setDecision({
+        kind: 'rejected',
+        code: 'REASON_TOO_LONG',
+        message: 'Denial reason must be at most 500 characters.',
+      });
+      return;
+    }
+    const fingerprint = JSON.stringify({
+      ...scope(),
+      requestId: id,
+      reason: action === 'deny' ? reason : '',
+    });
+    const existing = action === 'approve' ? approveAttempt : denyAttempt;
+    const idempotencyKey = reuseUnclearKey(existing, fingerprint);
+    const remember = (unclear: boolean) => {
+      const next = { key: idempotencyKey, fingerprint, unclear };
+      if (action === 'approve') setApproveAttempt(next);
+      else setDenyAttempt(next);
+    };
+    setBusy(true);
+    setDecision(null);
+    const result = await fetchJson(
+      action === 'approve'
+        ? '/api/bff/admin/redemptions/approve'
+        : '/api/bff/admin/redemptions/deny',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...scope(),
+          requestId: id,
+          idempotencyKey,
+          ...(action === 'deny' ? { reason } : {}),
+        }),
+      },
+      REQUEST_TIMEOUT_MS,
+    );
+    const next = decideAdmin(
+      action,
+      result.status,
+      result.json,
+      result.networkError || result.timedOut,
+    );
+    remember(next.kind === 'unknown');
+    setDecision(next);
+    setBusy(false);
   }
 
   return (
@@ -268,6 +334,45 @@ export function AdminForm({
           Đọc quota
         </button>
       </div>
+      <h2>Duyệt yêu cầu đổi mã</h2>
+      <label>
+        Request ID đang chờ
+        <input
+          name="requestId"
+          value={requestId}
+          onChange={(e) => setRequestId(e.target.value)}
+          autoComplete="off"
+          spellCheck={false}
+          placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+        />
+      </label>
+      <label>
+        Lý do từ chối
+        <textarea
+          id="admin-deny-reason"
+          value={denyReason}
+          onChange={(e) => setDenyReason(e.target.value)}
+          rows={3}
+          maxLength={500}
+          required
+        />
+      </label>
+      <div className="auth-buttons">
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => void decideRedemption('approve')}
+        >
+          Duyệt
+        </button>
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => void decideRedemption('deny')}
+        >
+          Từ chối
+        </button>
+      </div>
       {decision ? (
         <section
           className={
@@ -278,7 +383,7 @@ export function AdminForm({
           role="alert"
           data-testid="admin-notice"
         >
-          <p>{label(decision)}</p>
+          <p>{adminDecisionLabel(decision)}</p>
         </section>
       ) : null}
     </div>
