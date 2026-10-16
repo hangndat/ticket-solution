@@ -1,0 +1,29 @@
+{
+  "name": "@ticket/web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --port 3000",
+    "build": "next build",
+    "start": "next start --port 3000",
+    "lint": "eslint . --max-warnings 0",
+    "typecheck": "next typegen && tsc --noEmit",
+    "test": "tsx --test tests/*.test.ts",
+    "test:routes": "node --test tests/routes.integration.mjs"
+  },
+  "dependencies": {
+    "@ticket/contracts": "workspace:*",
+    "next": "16.4.2",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.2",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "eslint": "9.39.4",
+    "eslint-config-next": "16.4.2",
+    "tsx": "4.23.15",
+    "typescript": "5.9.3"
+  }
+}
