@@ -50,7 +50,12 @@ export async function processClaimedOutbox(
     try {
       if (row.type !== 'TicketIssued') {
         await withTenant(db, row.tenant_id, async (tx) => {
-          await markOutboxDead(tx, row.tenant_id, row.outbox_id, 'unsupported type');
+          await markOutboxDead(
+            tx,
+            row.tenant_id,
+            row.outbox_id,
+            'unsupported type',
+          );
         });
         failed += 1;
         continue;
@@ -88,9 +93,7 @@ export async function processClaimedOutbox(
         }
 
         const businessKey = `ticket:${ticketId}:issued:email`;
-        const notes = await tx.$queryRaw<
-          { id: string; state: string }[]
-        >`
+        const notes = await tx.$queryRaw<{ id: string; state: string }[]>`
           SELECT id, state FROM notifications
           WHERE tenant_id = ${row.tenant_id}::uuid
             AND business_key = ${businessKey}
@@ -136,6 +139,7 @@ export async function processClaimedOutbox(
             SET status = 'PENDING',
                 lease_owner = NULL,
                 lease_expires_at = NULL,
+                next_attempt_at = clock_timestamp() + interval '30 seconds',
                 updated_at = now()
             WHERE tenant_id = ${row.tenant_id}::uuid
               AND id = ${row.outbox_id}::uuid
