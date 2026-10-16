@@ -28,6 +28,7 @@ All user-facing roadmap, GitHub Projects, milestones, Issue titles/bodies, label
 - Tenant context must be transaction-local and queries parameterized. Runtime role must not own tables or bypass RLS.
 - Do not create cloud resources, publish production, submit stores or push remote branches unless task explicitly authorizes it.
 - Do not control another worker's simulator or database. Use task-specific ports/project names.
+- **UAT is headless (web + iOS):** never steal the user's macOS mouse. Web → `scripts/web-uat.sh` (Playwright headless) or HTTP scripts / Orca embedded browser; iOS → `scripts/sim-uat.sh` (AXe HID + `simctl`). Never `cliclick`, AppleScript clicks, or `ORCA computer click` on Chrome/Safari/Simulator. See `.cursor/rules/uat-headless.mdc`.
 
 ## Workflow
 
