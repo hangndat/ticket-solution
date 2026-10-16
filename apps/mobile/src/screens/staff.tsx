@@ -1,5 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
+import {
+  gateCheckInAnnouncement,
+  gateOutcomeAnnouncement,
+  gateReconcileAnnouncement,
+  supervisorListAnnouncement,
+  supervisorUnknownItemAnnouncement,
+} from '@/a11y/announcements';
 import { Notice, Page } from '@/components/page';
 import {
   SUPERVISOR_NOT_ADMISSION,
@@ -126,7 +133,8 @@ export function StaffScreen() {
         }}
       />
       <Pressable
-        accessibilityRole="button"
+        {...gateCheckInAnnouncement()}
+        accessibilityState={{ disabled: busy || !ready || raw.trim().length === 0 }}
         disabled={busy || !ready || raw.trim().length === 0}
         onPress={() => void submitScan()}
         style={{
@@ -140,7 +148,14 @@ export function StaffScreen() {
         </Text>
       </Pressable>
       {current ? (
-        <View accessibilityRole="summary">
+        <View
+          {...gateOutcomeAnnouncement({
+            phase: current.phase,
+            title: outcomeTitle(current),
+            message: current.message,
+          })}
+          accessibilityLiveRegion={current.phase === 'unknown' ? 'assertive' : 'polite'}
+        >
           <Notice title={outcomeTitle(current)}>{current.message}</Notice>
           {current.checkinId ? (
             <Text selectable style={{ color: colors.secondary }}>
@@ -151,7 +166,8 @@ export function StaffScreen() {
       ) : null}
       {current && canReconcile(current) ? (
         <Pressable
-          accessibilityRole="button"
+          {...gateReconcileAnnouncement()}
+          accessibilityState={{ disabled: busy }}
           disabled={busy}
           onPress={() => void reconcile()}
           style={{ padding: 14, borderRadius: 12, backgroundColor: colors.card }}
@@ -161,7 +177,7 @@ export function StaffScreen() {
           </Text>
         </Pressable>
       ) : null}
-      <View accessibilityRole="summary" accessibilityLabel={SUPERVISOR_NOT_ADMISSION}>
+      <View {...supervisorListAnnouncement(SUPERVISOR_NOT_ADMISSION)}>
         <Notice title="Supervisor — unknown operations">
           {SUPERVISOR_NOT_ADMISSION} Persisted unknown gate operations are listed
           here and are not admissions.
@@ -175,6 +191,10 @@ export function StaffScreen() {
             <Text
               key={op.id}
               selectable
+              {...supervisorUnknownItemAnnouncement({
+                label: op.ticketId || op.id,
+                message: op.message,
+              })}
               style={{ color: colors.label, fontSize: 17, lineHeight: 24 }}
             >
               {op.ticketId || op.id}: {op.message} Not an admission.
