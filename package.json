@@ -7,7 +7,7 @@
     "node": ">=24 <27"
   },
   "scripts": {
-    "dev": "turbo run dev --parallel",
+    "dev": "pnpm --filter @ticket/contracts build && turbo run dev --parallel",
     "build": "turbo run build",
     "typecheck": "turbo run typecheck",
     "lint": "turbo run lint",
@@ -16,7 +16,10 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "infra:up": "docker compose up -d --wait",
-    "infra:down": "docker compose down"
+    "infra:down": "docker compose down",
+    "dev:web": "pnpm --filter @ticket/contracts build && pnpm --filter @ticket/web dev",
+    "dev:api": "pnpm --filter @ticket/contracts build && pnpm --filter @ticket/api dev",
+    "dev:ios": "pnpm --filter @ticket/contracts build && pnpm --filter @ticket/mobile dev"
   },
   "devDependencies": {
     "turbo": "2.11.8",
