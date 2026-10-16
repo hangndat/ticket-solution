@@ -18,7 +18,7 @@ test('Fastify liveness matches contract; no business route', async () => {
       404,
     );
     const doc = createOpenApi(app);
-    assert.deepEqual(Object.keys(doc.paths), ['/v1/health']);
+    assert.deepEqual(Object.keys(doc.paths).sort(), ['/v1/health', '/v1/me']);
     assert.equal(
       doc.components.schemas.HealthDto.properties.status.enum[0],
       'ok',

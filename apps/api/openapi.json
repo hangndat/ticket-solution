@@ -21,17 +21,69 @@
           "Health"
         ]
       }
+    },
+    "/v1/me": {
+      "get": {
+        "operationId": "MeController_me",
+        "parameters": [
+          {
+            "name": "authorization",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "Me"
+        ]
+      }
     }
   },
   "info": {
-    "title": "Ticket API — W0 foundation",
-    "description": "Liveness only. Tenant business APIs await verified identity and authorization.",
+    "title": "Ticket API — D1 identity",
+    "description": "Liveness and authenticated GET /v1/me after OIDC JWT verification. Tenant business APIs remain closed.",
     "version": "0.1.0",
     "contact": {}
   },
   "tags": [],
   "servers": [],
   "components": {
+    "securitySchemes": {
+      "bearer": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http"
+      }
+    },
     "schemas": {
       "HealthDto": {
         "type": "object",
@@ -57,6 +109,61 @@
           "status",
           "service",
           "version"
+        ]
+      },
+      "MeDto": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "issuer": {
+            "type": "string"
+          },
+          "subject": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "nullable": true
+          },
+          "emailVerified": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "userId",
+          "issuer",
+          "subject",
+          "email",
+          "emailVerified"
+        ]
+      },
+      "ApiErrorDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "operationId": {
+            "type": "string"
+          },
+          "retryable": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "requestId",
+          "retryable"
         ]
       }
     }

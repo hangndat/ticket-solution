@@ -4,7 +4,11 @@ const { execFileSync } = require('node:child_process');
 const { randomBytes } = require('node:crypto');
 const { readFileSync } = require('node:fs');
 const { Client } = require('pg');
-const { createDatabase, withTenant } = require('../dist');
+const {
+  createDatabase,
+  withTenant,
+  createPrismaIdentityUserRepository,
+} = require('../dist');
 const docker = (...args) =>
   execFileSync('docker', args, {
     encoding: 'utf8',
@@ -112,6 +116,12 @@ test(
           'utf8',
         ),
       );
+      await admin.query(
+        readFileSync(
+          'prisma/migrations/202610160002_d1_users/migration.sql',
+          'utf8',
+        ),
+      );
       await admin.query('RESET ROLE');
       await admin.query(
         "CREATE ROLE w0_login LOGIN PASSWORD '" +
@@ -135,13 +145,33 @@ test(
       assert.equal(roles[0].rolsuper, false);
       assert.equal(roles[0].rolbypassrls, false);
       const tables =
-        await db.$queryRaw`SELECT c.relname, c.relrowsecurity, c.relforcerowsecurity, pg_get_userbyid(c.relowner) AS owner FROM pg_class c WHERE c.relname IN ('tenants', 'events') AND c.relnamespace = 'public'::regnamespace`;
-      assert.equal(tables.length, 2);
+        await db.$queryRaw`SELECT c.relname, c.relrowsecurity, c.relforcerowsecurity, pg_get_userbyid(c.relowner) AS owner FROM pg_class c WHERE c.relname IN ('tenants', 'events', 'users') AND c.relnamespace = 'public'::regnamespace`;
+      assert.equal(tables.length, 3);
       for (const table of tables) {
         assert.equal(table.owner, 'migration_owner');
         assert.equal(table.relrowsecurity, true);
         assert.equal(table.relforcerowsecurity, true);
       }
+      // Global users: upsert without tenant context (never withTenant).
+      const users = createPrismaIdentityUserRepository(db);
+      const stored = await users.upsertFromVerifiedIdentity({
+        issuer: 'https://example.clerk.accounts.dev',
+        subject: 'user_rls_1',
+        email: 'rls@example.com',
+        emailVerified: false,
+      });
+      assert.equal(stored.subject, 'user_rls_1');
+      assert.equal(stored.emailVerified, false);
+      const again = await users.upsertFromVerifiedIdentity({
+        issuer: 'https://example.clerk.accounts.dev',
+        subject: 'user_rls_1',
+        email: 'rls-updated@example.com',
+        emailVerified: true,
+      });
+      assert.equal(again.userId, stored.userId);
+      assert.equal(again.email, 'rls-updated@example.com');
+      assert.equal(again.emailVerified, true);
+      assert.equal(await db.user.count(), 1);
       const A = 'aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa';
       const B = 'bbbbbbbb-bbbb-4bbb-bbbb-bbbbbbbbbbbb';
       const event = 'eeeeeeee-eeee-4eee-eeee-eeeeeeeeeeee';

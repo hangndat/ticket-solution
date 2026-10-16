@@ -5,10 +5,11 @@ src/generated/prisma. Run `pnpm --filter @ticket/backend generate` after install
 or schema changes; never edit generated files. Build includes generation.
 PostgreSQL is the business source of truth. There is no Redis business state.
 
-The sample migration creates tenants/events, a composite event primary key and
-tenant-scoped slug uniqueness, tenant foreign key and FORCE ROW LEVEL SECURITY
-policies for SELECT/INSERT/UPDATE/DELETE. Missing context returns no rows and
-denies writes. It is representative foundation, not the full ticketing schema.
+The sample migrations create tenants/events plus a global `users` identity table
+(`UNIQUE (issuer, subject)`), composite event primary keys and tenant-scoped slug
+uniqueness, tenant foreign keys, and FORCE ROW LEVEL SECURITY. Tenant tables deny
+missing context; `users` is not tenant-scoped and must not be queried via
+`withTenant`. Representative foundation, not the full ticketing schema.
 
 Provision a separate non-login group before migration:
 `CREATE ROLE ticket_runtime NOLOGIN NOSUPERUSER NOBYPASSRLS;`

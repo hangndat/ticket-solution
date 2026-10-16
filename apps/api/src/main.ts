@@ -1,7 +1,7 @@
 import { createApp, readApiEnvironment } from './app';
 async function main() {
   const env = readApiEnvironment(process.env);
-  const app = await createApp();
+  const app = await createApp({ logging: true, fromEnv: true });
   try {
     await app.listen(env.port, env.host);
   } catch (error) {

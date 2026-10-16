@@ -1,25 +1,44 @@
 generator client {
-  provider = "prisma-client"
-  output = "../src/generated/prisma"
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
   moduleFormat = "cjs"
 }
+
 datasource db {
   provider = "postgresql"
 }
+
 model Tenant {
-  id String @id @db.Uuid
-  slug String @unique
-  name String
+  id     String  @id @db.Uuid
+  slug   String  @unique
+  name   String
   events Event[]
+
   @@map("tenants")
 }
+
 model Event {
   tenantId String @map("tenant_id") @db.Uuid
-  id String @db.Uuid
-  slug String
-  name String
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  id       String @db.Uuid
+  slug     String
+  name     String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
   @@id([tenantId, id])
   @@unique([tenantId, slug])
   @@map("events")
+}
+
+/// Global OIDC identity mapping. Not tenant-scoped — never query via withTenant.
+model User {
+  id            String   @id @db.Uuid
+  issuer        String
+  subject       String
+  email         String?
+  emailVerified Boolean  @default(false) @map("email_verified")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@unique([issuer, subject])
+  @@map("users")
 }

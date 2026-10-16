@@ -1,6 +1,27 @@
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient, Prisma } from './generated/prisma/client';
 
+export { PrismaClient, Prisma };
+export {
+  IdentityError,
+  IDENTITY_ERROR_CODES,
+  type IdentityErrorCode,
+} from './identity-error';
+export {
+  readOidcEnvironment,
+  createOidcVerifier,
+  createLocalJwks,
+  type OidcConfig,
+  type OidcVerifier,
+  type VerifiedIdentity,
+  type CreateOidcVerifierOptions,
+} from './oidc';
+export {
+  createPrismaIdentityUserRepository,
+  type IdentityUserRepository,
+  type StoredUser,
+} from './users';
+
 export function createDatabase(
   connectionString: string,
   max = 5,
@@ -29,6 +50,7 @@ export function validateDatabaseUrl(value: string): string {
 /** Only call after identity, active membership and operation authorization.
  * This primitive is not authentication: never populate it from an unchecked header.
  * Callback must use tx exclusively and must not escape/retain it.
+ * Do not use for the global users table.
  */
 export async function withTenant<T>(
   db: PrismaClient,

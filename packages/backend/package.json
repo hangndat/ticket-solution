@@ -8,23 +8,25 @@
     "build": "pnpm generate && tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint src",
-    "test": "pnpm build && node --test test/env.test.cjs",
+    "test": "pnpm build && node --test test/env.test.cjs test/oidc.test.cjs",
     "generate": "prisma generate",
     "test:db": "pnpm build && node --test test/rls.test.cjs",
     "migrate": "prisma migrate deploy"
   },
   "dependencies": {
-    "@prisma/client": "7.10.1",
     "@prisma/adapter-pg": "7.10.1",
+    "@prisma/client": "7.10.1",
+    "@ticket/contracts": "workspace:*",
+    "jose": "5.10.0",
     "pg": "8.23.1"
   },
   "devDependencies": {
+    "@eslint/js": "10.0.1",
     "@types/node": "24.19.2",
-    "typescript": "5.9.3",
-    "prisma": "7.10.1",
     "@types/pg": "8.23.1",
     "eslint": "10.12.0",
-    "@eslint/js": "10.0.1",
+    "prisma": "7.10.1",
+    "typescript": "5.9.3",
     "typescript-eslint": "8.71.2"
   }
 }
