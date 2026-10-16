@@ -51,6 +51,7 @@ export {
 } from './code-hmac';
 export {
   REDEEM_COMMAND,
+  APPROVAL_PENDING,
   redeemAndIssueTicket,
   listTicketsForOwner,
   getOperationForActor,
@@ -61,6 +62,7 @@ export {
   type IssuedTicketResult,
   type TerminalRejection,
   type RedeemOutcome,
+  type PendingApprovalResult,
   type ListedTicket,
 } from './issue';
 export { InventoryError, INVENTORY_ERROR_CODES, type InventoryErrorCode } from './inventory-error';

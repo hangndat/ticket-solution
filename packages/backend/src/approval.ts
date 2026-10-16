@@ -10,7 +10,7 @@ import { requireTenantPermission } from './membership';
 
 export const APPROVE_COMMAND = 'redemption.approve' as const;
 export const DENY_COMMAND = 'redemption.deny' as const;
-const PERMISSION_REVIEW = 'redemption.review';
+const PERMISSION_REVIEW = 'redemption.approve';
 const UUID =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -21,6 +21,8 @@ export type HoldPendingInput = {
   eventId: string;
   ownerUserId: string;
   codeId: string;
+  formVersion?: string | null;
+  termsVersion?: string | null;
 };
 
 export type DecideRedemptionInput = {
@@ -183,10 +185,11 @@ export async function holdCodeForReview(
   await tx.$executeRaw`
     INSERT INTO redemption_requests (
       tenant_id, event_id, id, actor_user_id, redemption_code_id,
-      status, created_at, updated_at
+      status, form_version, terms_version, created_at, updated_at
     ) VALUES (
       ${input.tenantId}::uuid, ${input.eventId}::uuid, ${requestId}::uuid,
       ${input.ownerUserId}::uuid, ${input.codeId}::uuid, 'PENDING_REVIEW',
+      ${input.formVersion ?? null}, ${input.termsVersion ?? null},
       now(), now()
     )
   `;
@@ -217,7 +220,22 @@ export async function decideRedemption(
       'Idempotency-Key must be a UUID',
     );
   }
-  if (input.reason != null && input.reason.length > 500) {
+  if (input.decision === 'deny') {
+    const reason = input.reason?.trim() ?? '';
+    if (!reason) {
+      throw new ApprovalError(
+        APPROVAL_ERROR_CODES.REASON_REQUIRED,
+        'Denial reason is required',
+      );
+    }
+    if (reason.length > 500) {
+      throw new ApprovalError(
+        APPROVAL_ERROR_CODES.REASON_TOO_LONG,
+        'Denial reason must be at most 500 characters',
+      );
+    }
+    input = { ...input, reason };
+  } else if (input.reason != null && input.reason.length > 500) {
     throw new ApprovalError(
       APPROVAL_ERROR_CODES.REASON_TOO_LONG,
       'Denial reason must be at most 500 characters',
@@ -490,7 +508,9 @@ async function denyPending(
   }
   const updated = await tx.$executeRaw`
     UPDATE redemption_requests
-    SET status = 'REJECTED', updated_at = now()
+    SET status = 'REJECTED',
+        decision_reason = ${input.reason ?? null},
+        updated_at = now()
     WHERE tenant_id = ${input.tenantId}::uuid
       AND id = ${request.id}::uuid
       AND status = 'PENDING_REVIEW'

@@ -34,6 +34,8 @@ test('Fastify liveness matches contract; redeem and gate routes documented', asy
       '/v1/tenants/{tenantId}/events/{eventId}/publish',
       '/v1/tenants/{tenantId}/events/{eventId}/quota',
       '/v1/tenants/{tenantId}/events/{eventId}/redemptions',
+      '/v1/tenants/{tenantId}/events/{eventId}/redemptions/{requestId}/approve',
+      '/v1/tenants/{tenantId}/events/{eventId}/redemptions/{requestId}/deny',
     ]);
     assert.equal(
       doc.components.schemas.HealthDto.properties.status.enum[0],
