@@ -51,6 +51,7 @@ export {
 } from './code-hmac';
 export {
   REDEEM_COMMAND,
+  APPROVAL_PENDING,
   redeemAndIssueTicket,
   listTicketsForOwner,
   getOperationForActor,
@@ -61,6 +62,7 @@ export {
   type IssuedTicketResult,
   type TerminalRejection,
   type RedeemOutcome,
+  type PendingApprovalResult,
   type ListedTicket,
 } from './issue';
 export { InventoryError, INVENTORY_ERROR_CODES, type InventoryErrorCode } from './inventory-error';
@@ -104,6 +106,24 @@ export {
   type ConfirmResult,
   type UndoResult,
 } from './gate';
+export {
+  ApprovalError,
+  APPROVAL_ERROR_CODES,
+  type ApprovalErrorCode,
+} from './approval-error';
+export {
+  APPROVE_COMMAND,
+  DENY_COMMAND,
+  holdCodeForReview,
+  decideRedemption,
+  unwrapApprovalOutcome,
+  type ApprovalDecision,
+  type HoldPendingInput,
+  type DecideRedemptionInput,
+  type ApprovalResult,
+  type ApprovalRejection,
+  type ApprovalOutcome,
+} from './approval';
 export {
   createNoopEmailAdapter,
   createFailingEmailAdapter,
