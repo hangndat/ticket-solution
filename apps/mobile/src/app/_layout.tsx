@@ -1,10 +1,7 @@
 import { useEffect } from 'react';
 import { Stack } from 'expo-router/stack';
-import { ClerkProvider } from '@clerk/expo';
-import { clerkTokenCache } from '@/identity/clerk-token-cache';
-import { getClerkPublishableKey } from '@/identity/config';
+import { isOidcConfigured } from '@/identity/config';
 import { session } from '@/identity/session';
-import { SessionBridge } from '@/identity/session-bridge';
 
 function AppStack() {
   return (
@@ -19,24 +16,15 @@ function AppStack() {
 }
 
 export default function RootLayout() {
-  const publishableKey = getClerkPublishableKey();
+  const configured = isOidcConfigured();
 
   useEffect(() => {
-    if (publishableKey) return;
-    // Fail closed: no provider verifier → clear any leftover Keychain credential.
+    if (configured) return;
+    // Fail closed: no OIDC → clear any leftover Keychain credential.
     void session.restore().catch(() => {
       /* Remain unknown on storage failure; never infer verified identity. */
     });
-  }, [publishableKey]);
+  }, [configured]);
 
-  if (!publishableKey) {
-    return <AppStack />;
-  }
-
-  return (
-    <ClerkProvider publishableKey={publishableKey} tokenCache={clerkTokenCache}>
-      <SessionBridge />
-      <AppStack />
-    </ClerkProvider>
-  );
+  return <AppStack />;
 }
