@@ -96,6 +96,9 @@ test('production routes isolate tenant content and reject unknown pairs', async 
     assert.ok(adminHtml.includes('Lưu phiên bản'));
     assert.ok(adminHtml.includes('Nhập mã'));
     assert.ok(adminHtml.includes('Đọc quota'));
+    assert.ok(adminHtml.includes('Duyệt'));
+    assert.ok(adminHtml.includes('Từ chối'));
+    assert.ok(adminHtml.includes('Lý do từ chối'));
     assert.equal(/FUN FEST|fun-fest/i.test(adminHtml), false);
     const authPoc = await fetch(base + '/auth');
     assert.equal(authPoc.status, 200);
@@ -177,6 +180,27 @@ test('production routes isolate tenant content and reject unknown pairs', async 
     );
     assert.equal(quotaBff.status, 503);
     assert.equal((await quotaBff.json()).code, 'OIDC_MISCONFIGURED');
+
+    const approvalBody = {
+      tenantId: '11111111-1111-4111-8111-111111111111',
+      eventId: '22222222-2222-4222-8222-222222222222',
+      requestId: '33333333-3333-4333-8333-333333333333',
+      idempotencyKey: '44444444-4444-4444-8444-444444444444',
+    };
+    const approveBff = await fetch(base + '/api/bff/admin/redemptions/approve', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(approvalBody),
+    });
+    assert.equal(approveBff.status, 503);
+    assert.equal((await approveBff.json()).code, 'OIDC_MISCONFIGURED');
+    const denyBff = await fetch(base + '/api/bff/admin/redemptions/deny', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...approvalBody, reason: 'Không đủ điều kiện' }),
+    });
+    assert.equal(denyBff.status, 503);
+    assert.equal((await denyBff.json()).code, 'OIDC_MISCONFIGURED');
   } finally {
     const stopped = once(child, 'exit');
     child.kill('SIGTERM');
