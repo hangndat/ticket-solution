@@ -36,10 +36,17 @@ import {
   IdentityError,
   readOidcEnvironment,
   readProcessEnvironment,
+  type CodeHmacConfig,
   type IdentityUserRepository,
   type OidcVerifier,
   type PrismaClient,
 } from '@ticket/backend';
+import {
+  TicketIssueController,
+  TicketIssueService,
+  resolveIssueDeps,
+  type TicketServices,
+} from './tickets';
 
 class HealthDto implements HealthResponse {
   @ApiProperty({ enum: ['ok'] }) status!: 'ok';
@@ -154,6 +161,10 @@ export type CreateAppOptions = {
   identityBootError?: IdentityError;
   /** Owned Prisma client closed on app destroy when created from env. */
   databaseUrl?: string;
+  /** Inject DB for redeem/tickets (tests). */
+  database?: PrismaClient;
+  hmac?: CodeHmacConfig;
+  credentialKey?: string;
 };
 
 @Injectable()
@@ -181,6 +192,9 @@ function resolveIdentity(
   users: IdentityUserRepository | null;
   bootError: IdentityError | null;
   db: PrismaClient | null;
+  ownsDb: boolean;
+  hmac: CodeHmacConfig | null;
+  credentialKey: string | null;
 } {
   if (options.identityBootError) {
     return {
@@ -188,18 +202,26 @@ function resolveIdentity(
       users: null,
       bootError: options.identityBootError,
       db: null,
+      ownsDb: false,
+      hmac: null,
+      credentialKey: null,
     };
   }
   if (options.oidcVerifier && options.users) {
+    const env = options.env ?? process.env;
+    const issue = resolveIssueDeps(env);
     return {
       verifier: options.oidcVerifier,
       users: options.users,
       bootError: null,
-      db: null,
+      db: options.database ?? null,
+      ownsDb: false,
+      hmac: options.hmac ?? issue.hmac,
+      credentialKey: options.credentialKey ?? issue.credentialKey,
     };
   }
 
-  if (!options.fromEnv && !options.env && !options.databaseUrl) {
+  if (!options.fromEnv && !options.env && !options.databaseUrl && !options.database) {
     return {
       verifier: null,
       users: null,
@@ -208,6 +230,9 @@ function resolveIdentity(
         'Identity services are not configured',
       ),
       db: null,
+      ownsDb: false,
+      hmac: null,
+      credentialKey: null,
     };
   }
 
@@ -223,24 +248,37 @@ function resolveIdentity(
     }
   }
 
-  let db: PrismaClient | null = null;
+  let db: PrismaClient | null = options.database ?? null;
+  let ownsDb = false;
   let users: IdentityUserRepository | null = options.users ?? null;
   if (!users) {
     const databaseUrl = options.databaseUrl ?? env['DATABASE_URL'];
-    if (!databaseUrl?.trim()) {
+    if (!databaseUrl?.trim() && !db) {
       bootError =
         bootError ??
         new IdentityError(
           IDENTITY_ERROR_CODES.OIDC_MISCONFIGURED,
           'DATABASE_URL is required for identity persistence',
         );
-    } else {
+    } else if (!db && databaseUrl) {
       db = createDatabase(databaseUrl);
+      ownsDb = true;
+      users = createPrismaIdentityUserRepository(db);
+    } else if (db) {
       users = createPrismaIdentityUserRepository(db);
     }
   }
 
-  return { verifier, users, bootError, db };
+  const issue = resolveIssueDeps(env);
+  return {
+    verifier,
+    users,
+    bootError,
+    db,
+    ownsDb,
+    hmac: options.hmac ?? issue.hmac,
+    credentialKey: options.credentialKey ?? issue.credentialKey,
+  };
 }
 
 export async function createApp(
@@ -252,8 +290,17 @@ export async function createApp(
   const logging = normalized.logging ?? true;
   const identity = resolveIdentity(normalized);
 
+  const ticketDeps: TicketServices = {
+    db: identity.db,
+    verifier: identity.verifier,
+    users: identity.users,
+    bootError: identity.bootError,
+    hmac: identity.hmac,
+    credentialKey: identity.credentialKey,
+  };
+
   @Module({
-    controllers: [HealthController, MeController],
+    controllers: [HealthController, MeController, TicketIssueController],
     providers: [
       {
         provide: IdentityService,
@@ -264,8 +311,12 @@ export async function createApp(
         ),
       },
       {
+        provide: TicketIssueService,
+        useValue: new TicketIssueService(ticketDeps),
+      },
+      {
         provide: DatabaseShutdown,
-        useValue: new DatabaseShutdown(identity.db),
+        useValue: new DatabaseShutdown(identity.ownsDb ? identity.db : null),
       },
     ],
   })
@@ -288,10 +339,10 @@ export function createOpenApi(app: NestFastifyApplication) {
   return SwaggerModule.createDocument(
     app,
     new DocumentBuilder()
-      .setTitle('Ticket API — D1 identity')
-      .setVersion('0.1.0')
+      .setTitle('Ticket API — D2 issue')
+      .setVersion('0.2.0')
       .setDescription(
-        'Liveness and authenticated GET /v1/me after OIDC JWT verification. Tenant business APIs remain closed.',
+        'Identity plus redemption issue (PostgreSQL quota/outbox). Redis does not decide quota.',
       )
       .addBearerAuth()
       .build(),

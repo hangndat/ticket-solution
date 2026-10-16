@@ -1,7 +1,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { createApp, createOpenApi, readApiEnvironment } = require('../dist/app');
-test('Fastify liveness matches contract; no business route', async () => {
+test('Fastify liveness matches contract; D2 redeem routes documented', async () => {
   const app = await createApp(false);
   try {
     await app.init();
@@ -18,7 +18,13 @@ test('Fastify liveness matches contract; no business route', async () => {
       404,
     );
     const doc = createOpenApi(app);
-    assert.deepEqual(Object.keys(doc.paths).sort(), ['/v1/health', '/v1/me']);
+    assert.deepEqual(Object.keys(doc.paths).sort(), [
+      '/v1/health',
+      '/v1/me',
+      '/v1/me/tickets',
+      '/v1/operations/{clientOperationId}',
+      '/v1/tenants/{tenantId}/events/{eventId}/redemptions',
+    ]);
     assert.equal(
       doc.components.schemas.HealthDto.properties.status.enum[0],
       'ok',

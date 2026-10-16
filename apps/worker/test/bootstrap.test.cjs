@@ -22,7 +22,7 @@ test(
         let output = '';
         child.stdout.on('data', (chunk) => {
           output += chunk;
-          if (output.includes('no job processors registered')) resolve();
+          if (output.includes('outbox relay polling')) resolve();
         });
         child.once('error', reject);
         child.once('exit', () =>

@@ -9,22 +9,39 @@ datasource db {
 }
 
 model Tenant {
-  id           String       @id @db.Uuid
-  slug         String       @unique
-  name         String
-  events       Event[]
-  memberships  Membership[]
+  id            String         @id @db.Uuid
+  slug          String         @unique
+  name          String
+  events        Event[]
+  memberships   Membership[]
+  outbox        Outbox[]
+  notifications Notification[]
+  auditLogs     AuditLog[]
 
   @@map("tenants")
 }
 
 model Event {
-  tenantId         String            @map("tenant_id") @db.Uuid
-  id               String            @db.Uuid
-  slug             String
-  name             String
-  tenant           Tenant            @relation(fields: [tenantId], references: [id], onDelete: Restrict)
-  eventAssignments EventAssignment[]
+  tenantId             String               @map("tenant_id") @db.Uuid
+  id                   String               @db.Uuid
+  slug                 String
+  name                 String
+  status               String               @default("DRAFT")
+  timezone             String               @default("Asia/Ho_Chi_Minh")
+  redemptionOpensAt    DateTime?            @map("redemption_opens_at") @db.Timestamptz(3)
+  redemptionClosesAt   DateTime?            @map("redemption_closes_at") @db.Timestamptz(3)
+  tenant               Tenant               @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  eventAssignments     EventAssignment[]
+  ticketTypes          TicketType[]
+  issuanceSources      IssuanceSource[]
+  sourceTicketTypes    SourceTicketType[]
+  quotaBuckets         QuotaBucket[]
+  redemptionCodes      RedemptionCode[]
+  eventAttendees       EventAttendee[]
+  attendeeCounters     AttendeeCounter[]
+  redemptionRequests   RedemptionRequest[]
+  tickets              Ticket[]
+  operations           Operation[]
 
   @@id([tenantId, id])
   @@unique([tenantId, slug])
@@ -33,14 +50,18 @@ model Event {
 
 /// Global OIDC identity mapping. Not tenant-scoped — never query via withTenant.
 model User {
-  id            String       @id @db.Uuid
-  issuer        String
-  subject       String
-  email         String?
-  emailVerified Boolean      @default(false) @map("email_verified")
-  createdAt     DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt     DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
-  memberships   Membership[]
+  id                 String              @id @db.Uuid
+  issuer             String
+  subject            String
+  email              String?
+  emailVerified      Boolean             @default(false) @map("email_verified")
+  createdAt          DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime            @updatedAt @map("updated_at") @db.Timestamptz(3)
+  memberships        Membership[]
+  eventAttendees     EventAttendee[]
+  redemptionRequests RedemptionRequest[]
+  tickets            Ticket[]
+  operations         Operation[]
 
   @@unique([issuer, subject])
   @@map("users")
@@ -85,4 +106,264 @@ model EventAssignment {
   @@unique([tenantId, eventId, membershipId])
   @@index([membershipId])
   @@map("event_assignments")
+}
+
+model TicketType {
+  tenantId             String             @map("tenant_id") @db.Uuid
+  eventId              String             @map("event_id") @db.Uuid
+  id                   String             @db.Uuid
+  label                String
+  entitlementSnapshot  Json               @default("{}") @map("entitlement_snapshot")
+  createdAt            DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt            DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
+  event                Event              @relation(fields: [tenantId, eventId], references: [tenantId, id], onDelete: Restrict)
+  sourceTicketTypes    SourceTicketType[]
+  redemptionCodes      RedemptionCode[]
+  tickets              Ticket[]
+
+  @@id([tenantId, id])
+  @@map("ticket_types")
+}
+
+model IssuanceSource {
+  tenantId          String             @map("tenant_id") @db.Uuid
+  eventId           String             @map("event_id") @db.Uuid
+  id                String             @db.Uuid
+  name              String
+  approvalMode      String             @default("AUTO") @map("approval_mode")
+  createdAt         DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
+  event             Event              @relation(fields: [tenantId, eventId], references: [tenantId, id], onDelete: Restrict)
+  sourceTicketTypes SourceTicketType[]
+  redemptionCodes   RedemptionCode[]
+  tickets           Ticket[]
+
+  @@id([tenantId, id])
+  @@map("issuance_sources")
+}
+
+model SourceTicketType {
+  tenantId     String         @map("tenant_id") @db.Uuid
+  eventId      String         @map("event_id") @db.Uuid
+  sourceId     String         @map("source_id") @db.Uuid
+  ticketTypeId String         @map("ticket_type_id") @db.Uuid
+  event        Event          @relation(fields: [tenantId, eventId], references: [tenantId, id], onDelete: Restrict)
+  source       IssuanceSource @relation(fields: [tenantId, sourceId], references: [tenantId, id], onDelete: Restrict)
+  ticketType   TicketType     @relation(fields: [tenantId, ticketTypeId], references: [tenantId, id], onDelete: Restrict)
+
+  @@id([tenantId, sourceId, ticketTypeId])
+  @@map("source_ticket_types")
+}
+
+model QuotaBucket {
+  tenantId  String   @map("tenant_id") @db.Uuid
+  eventId   String   @map("event_id") @db.Uuid
+  id        String   @db.Uuid
+  scope     String
+  scopeId   String?  @map("scope_id") @db.Uuid
+  capacity  Int?
+  allocated Int      @default(0)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  event     Event    @relation(fields: [tenantId, eventId], references: [tenantId, id], onDelete: Restrict)
+
+  @@id([tenantId, id])
+  @@unique([tenantId, eventId, scope, scopeId])
+  @@map("quota_buckets")
+}
+
+model RedemptionCode {
+  tenantId         String              @map("tenant_id") @db.Uuid
+  eventId          String              @map("event_id") @db.Uuid
+  id               String              @db.Uuid
+  codeHmac         String              @map("code_hmac")
+  codePepperVersion Int                @default(1) @map("code_pepper_version")
+  sourceId         String              @map("source_id") @db.Uuid
+  ticketTypeId     String              @map("ticket_type_id") @db.Uuid
+  status           String              @default("AVAILABLE")
+  activeRequestId  String?             @map("active_request_id") @db.Uuid
+  createdAt        DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime            @updatedAt @map("updated_at") @db.Timestamptz(3)
+  event            Event               @relation(fields: [tenantId, eventId], references: [tenantId, id], onDelete: Restrict)
+  source           IssuanceSource      @relation(fields: [tenantId, sourceId], references: [tenantId, id], onDelete: Restrict)
+  ticketType       TicketType          @relation(fields: [tenantId, ticketTypeId], references: [tenantId, id], onDelete: Restrict)
+  redemptionRequests RedemptionRequest[]
+  tickets          Ticket[]
+
+  @@id([tenantId, id])
+  @@unique([tenantId, eventId, codeHmac])
+  @@map("redemption_codes")
+}
+
+model EventAttendee {
+  tenantId        String           @map("tenant_id") @db.Uuid
+  eventId         String           @map("event_id") @db.Uuid
+  id              String           @db.Uuid
+  userId          String           @map("user_id") @db.Uuid
+  canonicalEmail  String?          @map("canonical_email")
+  createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+  event           Event            @relation(fields: [tenantId, eventId], references: [tenantId, id], onDelete: Restrict)
+  user            User             @relation(fields: [userId], references: [id], onDelete: Restrict)
+  counter         AttendeeCounter?
+
+  @@id([tenantId, id])
+  @@unique([tenantId, eventId, userId])
+  @@map("event_attendees")
+}
+
+model AttendeeCounter {
+  tenantId    String        @map("tenant_id") @db.Uuid
+  eventId     String        @map("event_id") @db.Uuid
+  attendeeId  String        @map("attendee_id") @db.Uuid
+  issuedCount Int           @default(0) @map("issued_count")
+  maxTickets  Int?          @map("max_tickets")
+  updatedAt   DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
+  event       Event         @relation(fields: [tenantId, eventId], references: [tenantId, id], onDelete: Restrict)
+  attendee    EventAttendee @relation(fields: [tenantId, attendeeId], references: [tenantId, id], onDelete: Restrict)
+
+  @@id([tenantId, attendeeId])
+  @@map("attendee_counters")
+}
+
+model RedemptionRequest {
+  tenantId         String         @map("tenant_id") @db.Uuid
+  eventId          String         @map("event_id") @db.Uuid
+  id               String         @db.Uuid
+  actorUserId      String         @map("actor_user_id") @db.Uuid
+  redemptionCodeId String         @map("redemption_code_id") @db.Uuid
+  status           String
+  formVersion      String?        @map("form_version")
+  termsVersion     String?        @map("terms_version")
+  createdAt        DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
+  event            Event          @relation(fields: [tenantId, eventId], references: [tenantId, id], onDelete: Restrict)
+  actor            User           @relation(fields: [actorUserId], references: [id], onDelete: Restrict)
+  redemptionCode   RedemptionCode @relation(fields: [tenantId, redemptionCodeId], references: [tenantId, id], onDelete: Restrict)
+  ticket           Ticket?
+
+  @@id([tenantId, id])
+  @@map("redemption_requests")
+}
+
+model Ticket {
+  tenantId            String             @map("tenant_id") @db.Uuid
+  eventId             String             @map("event_id") @db.Uuid
+  id                  String             @db.Uuid
+  ownerUserId         String             @map("owner_user_id") @db.Uuid
+  ticketTypeId        String             @map("ticket_type_id") @db.Uuid
+  sourceId            String             @map("source_id") @db.Uuid
+  requestId           String             @map("request_id") @db.Uuid
+  redemptionCodeId    String?            @map("redemption_code_id") @db.Uuid
+  state               String             @default("ACTIVE")
+  credentialVersion   Int                @default(1) @map("credential_version")
+  entitlementSnapshot Json               @default("{}") @map("entitlement_snapshot")
+  createdAt           DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt           DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
+  event               Event              @relation(fields: [tenantId, eventId], references: [tenantId, id], onDelete: Restrict)
+  owner               User               @relation(fields: [ownerUserId], references: [id], onDelete: Restrict)
+  ticketType          TicketType         @relation(fields: [tenantId, ticketTypeId], references: [tenantId, id], onDelete: Restrict)
+  source              IssuanceSource     @relation(fields: [tenantId, sourceId], references: [tenantId, id], onDelete: Restrict)
+  request             RedemptionRequest  @relation(fields: [tenantId, requestId], references: [tenantId, id], onDelete: Restrict)
+  redemptionCode      RedemptionCode?    @relation(fields: [tenantId, redemptionCodeId], references: [tenantId, id], onDelete: Restrict)
+  credentials         TicketCredential[]
+
+  @@id([tenantId, id])
+  @@unique([tenantId, requestId])
+  @@index([tenantId, ownerUserId])
+  @@map("tickets")
+}
+
+model TicketCredential {
+  tenantId       String   @map("tenant_id") @db.Uuid
+  ticketId       String   @map("ticket_id") @db.Uuid
+  version        Int
+  kid            String
+  tokenHash      String   @map("token_hash")
+  encryptedToken String   @map("encrypted_token")
+  status         String   @default("ACTIVE")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  ticket         Ticket   @relation(fields: [tenantId, ticketId], references: [tenantId, id], onDelete: Restrict)
+
+  @@id([tenantId, ticketId, version])
+  @@map("ticket_credentials")
+}
+
+model Operation {
+  tenantId     String   @map("tenant_id") @db.Uuid
+  eventId      String   @map("event_id") @db.Uuid
+  id           String   @db.Uuid
+  actorUserId  String   @map("actor_user_id") @db.Uuid
+  command      String
+  clientKey    String   @map("client_key")
+  requestHash  String   @map("request_hash")
+  status       String   @default("IN_PROGRESS")
+  responseJson Json?    @map("response_json")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  event        Event    @relation(fields: [tenantId, eventId], references: [tenantId, id], onDelete: Restrict)
+  actor        User     @relation(fields: [actorUserId], references: [id], onDelete: Restrict)
+
+  @@id([tenantId, id])
+  @@unique([tenantId, eventId, actorUserId, command, clientKey])
+  @@map("operations")
+}
+
+model Outbox {
+  tenantId       String    @map("tenant_id") @db.Uuid
+  eventId        String?   @map("event_id") @db.Uuid
+  id             String    @id @db.Uuid
+  type           String
+  aggregateId    String    @map("aggregate_id") @db.Uuid
+  payloadVersion Int       @default(1) @map("payload_version")
+  payload        Json      @default("{}")
+  status         String    @default("PENDING")
+  attempts       Int       @default(0)
+  leaseOwner     String?   @map("lease_owner")
+  leaseExpiresAt DateTime? @map("lease_expires_at") @db.Timestamptz(3)
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  tenant         Tenant    @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
+  @@unique([tenantId, id])
+  @@map("outbox")
+}
+
+model Notification {
+  tenantId      String    @map("tenant_id") @db.Uuid
+  eventId       String?   @map("event_id") @db.Uuid
+  id            String    @db.Uuid
+  businessKey   String    @map("business_key")
+  channel       String    @default("email")
+  state         String    @default("PENDING")
+  providerRef   String?   @map("provider_ref")
+  attempts      Int       @default(0)
+  nextAttemptAt DateTime? @map("next_attempt_at") @db.Timestamptz(3)
+  lastError     String?   @map("last_error")
+  payload       Json      @default("{}")
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  tenant        Tenant    @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
+  @@id([tenantId, id])
+  @@unique([tenantId, businessKey])
+  @@map("notifications")
+}
+
+model AuditLog {
+  tenantId       String   @map("tenant_id") @db.Uuid
+  eventId        String?  @map("event_id") @db.Uuid
+  id             String   @db.Uuid
+  actorUserId    String?  @map("actor_user_id") @db.Uuid
+  action         String
+  resourceType   String   @map("resource_type")
+  resourceId     String?  @map("resource_id") @db.Uuid
+  reason         String?
+  sanitizedDiff  Json?    @map("sanitized_diff")
+  operationId    String?  @map("operation_id") @db.Uuid
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  tenant         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
+  @@id([tenantId, id])
+  @@map("audit_logs")
 }
