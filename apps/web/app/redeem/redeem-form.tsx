@@ -18,6 +18,11 @@ import {
   verifyingMessage,
   type RedeemUxMessage,
 } from '../../src/redeem/messages';
+import {
+  redeemPayloadFingerprint,
+  resolveIdempotencyKey,
+  type RedeemAttempt,
+} from '../../src/redeem/attempt-key';
 import { fetchJson } from '../../src/redeem/fetch-json';
 import {
   isApiError,
@@ -52,6 +57,7 @@ export function RedeemForm({ initialTenantId = '', initialEventId = '' }: Props)
   const [tickets, setTickets] = useState<MeTicketsResponse | null>(null);
   const [raw, setRaw] = useState<string | null>(null);
   const [idempotencyKey, setIdempotencyKey] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState<RedeemAttempt | null>(null);
   const [pending, startTransition] = useTransition();
   const [polling, setPolling] = useState(false);
   const generationRef = useRef(0);
@@ -63,27 +69,43 @@ export function RedeemForm({ initialTenantId = '', initialEventId = '' }: Props)
   }, []);
 
   const busy = pending || polling;
+  const canRepoll = Boolean(attempt?.unclear && attempt.key && !busy);
 
   const isStale = useCallback((generation: number) => generation !== generationRef.current, []);
+
+  const markAttemptClear = useCallback((generation: number) => {
+    if (isStale(generation)) return;
+    setAttempt((prev) => (prev ? { ...prev, unclear: false } : prev));
+  }, [isStale]);
+
+  const markAttemptUnclear = useCallback((generation: number) => {
+    if (isStale(generation)) return;
+    setAttempt((prev) => (prev ? { ...prev, unclear: true } : prev));
+  }, [isStale]);
 
   const applySuccess = useCallback((body: RedeemResponse, generation: number) => {
     if (isStale(generation)) return;
     setTicket(body);
     setUx(successMessage(body.ticketId, body.replayed));
-  }, [isStale]);
+    markAttemptClear(generation);
+  }, [isStale, markAttemptClear]);
 
   const applyError = useCallback((body: unknown, generation: number) => {
     if (isStale(generation)) return;
     if (isApiError(body)) {
-      setUx(messageForApiError(body.code, body.message, body.retryable));
+      const mapped = messageForApiError(body.code, body.message, body.retryable);
+      setUx(mapped);
+      if (!mapped.retryable) markAttemptClear(generation);
+      else markAttemptUnclear(generation);
     } else {
       setUx(messageForApiError(undefined, 'Unexpected response shape.'));
+      markAttemptClear(generation);
     }
-  }, [isStale]);
+  }, [isStale, markAttemptClear, markAttemptUnclear]);
 
   const runPoll = useCallback(
     async (key: string, tenantId: string, eventId: string, generation: number) => {
-      await pollOperation(
+      const outcome = await pollOperation(
         key,
         tenantId,
         eventId,
@@ -115,14 +137,22 @@ export function RedeemForm({ initialTenantId = '', initialEventId = '' }: Props)
         },
         { isCancelled: () => isStale(generation) },
       );
+      if (isStale(generation)) return outcome;
+      if (outcome === 'timeout' || outcome === 'cancelled') {
+        markAttemptUnclear(generation);
+      }
+      return outcome;
     },
-    [applyError, applySuccess, isStale],
+    [applyError, applySuccess, isStale, markAttemptUnclear],
   );
 
   function onSubmit(event: FormEvent) {
     event.preventDefault();
-    const key = crypto.randomUUID();
+    const fingerprint = redeemPayloadFingerprint(form);
+    const { key } = resolveIdempotencyKey(attempt, fingerprint, () => crypto.randomUUID());
+    const nextAttempt: RedeemAttempt = { key, fingerprint, unclear: true };
     const generation = generationRef.current;
+    setAttempt(nextAttempt);
     setIdempotencyKey(key);
     setTicket(null);
     setTickets(null);
@@ -173,11 +203,23 @@ export function RedeemForm({ initialTenantId = '', initialEventId = '' }: Props)
         setUx(mapped);
         if (mapped.retryable || result.status === 503) {
           await runPoll(key, form.tenantId.trim(), form.eventId.trim(), generation);
+        } else {
+          markAttemptClear(generation);
         }
         return;
       }
 
       setUx(messageForApiError(undefined, `HTTP ${result.status}`));
+      markAttemptClear(generation);
+    });
+  }
+
+  function pollAgain() {
+    if (!attempt?.unclear || !attempt.key || busy) return;
+    const generation = generationRef.current;
+    const key = attempt.key;
+    startTransition(async () => {
+      await runPoll(key, form.tenantId.trim(), form.eventId.trim(), generation);
     });
   }
 
@@ -290,6 +332,9 @@ export function RedeemForm({ initialTenantId = '', initialEventId = '' }: Props)
         <div className="auth-buttons">
           <button type="submit" disabled={busy}>
             {busy ? 'Đang xử lý…' : 'Đổi mã (API thật)'}
+          </button>
+          <button type="button" onClick={pollAgain} disabled={!canRepoll}>
+            Dò lại trạng thái
           </button>
           <button type="button" onClick={loadTickets} disabled={busy || !form.tenantId.trim()}>
             Xem vé của tôi
