@@ -92,6 +92,11 @@ test('production routes isolate tenant content and reject unknown pairs', async 
     assert.ok(adminHtml.includes('Cấu hình sự kiện'));
     assert.ok(adminHtml.includes('OIDC chưa cấu hình'));
     assert.ok(adminHtml.includes('Không coi là đã lưu'));
+    assert.ok(adminHtml.includes('Xem trước'));
+    assert.ok(adminHtml.includes('Lưu phiên bản'));
+    assert.ok(adminHtml.includes('Nhập mã'));
+    assert.ok(adminHtml.includes('Đọc quota'));
+    assert.equal(/FUN FEST|fun-fest/i.test(adminHtml), false);
     const authPoc = await fetch(base + '/auth');
     assert.equal(authPoc.status, 200);
     const authHtml = await authPoc.text();
@@ -154,6 +159,24 @@ test('production routes isolate tenant content and reject unknown pairs', async 
     });
     assert.equal(publishBff.status, 503);
     assert.equal((await publishBff.json()).code, 'OIDC_MISCONFIGURED');
+    const importBff = await fetch(base + '/api/bff/admin/imports', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        tenantId: '11111111-1111-4111-8111-111111111111',
+        eventId: '22222222-2222-4222-8222-222222222222',
+        codes: ['CODE-A'],
+        eventQuota: 10,
+      }),
+    });
+    assert.equal(importBff.status, 503);
+    assert.equal((await importBff.json()).code, 'OIDC_MISCONFIGURED');
+    const quotaBff = await fetch(
+      base +
+        '/api/bff/admin/quota?tenantId=11111111-1111-4111-8111-111111111111&eventId=22222222-2222-4222-8222-222222222222',
+    );
+    assert.equal(quotaBff.status, 503);
+    assert.equal((await quotaBff.json()).code, 'OIDC_MISCONFIGURED');
   } finally {
     const stopped = once(child, 'exit');
     child.kill('SIGTERM');
