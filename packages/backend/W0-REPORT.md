@@ -61,3 +61,35 @@ quota, tickets or check-in are implemented. RLS tests prove this representative
 schema and Prisma transaction path; they do not prove future authz, concurrency
 business invariants, worker job isolation, capacity or production security.
 Migration role/group provisioning remains an explicit operator prerequisite.
+
+## Follow-up: isolated database startup readiness
+
+The original socket-based `docker exec pg_isready` could accept the image's
+temporary initialization server before the final TCP listener starts. This is
+consistent with the coordinator's early connection termination; that exact
+failure was not independently reproduced here. The probe now explicitly uses
+`-h 127.0.0.1`, followed by authenticated `pg` connection and `SELECT 1` readiness
+through the actual random published host port. Connection/query timeouts are
+one second, with at most 30 connection attempts and 500 ms between failures;
+failed clients are closed. Only readiness is retried, before any migration or
+RLS assertion. The complete scenario still executes once and fails normally.
+Existing isolated-container cleanup, non-owner/non-BYPASSRLS assertions and all
+other checks are preserved.
+
+Validation on Node v26.11.0, pnpm 10.32.1, Docker Engine 29.4.0:
+
+- `pnpm --filter @ticket/backend test:db`: passed, 1 scenario, 0 skipped;
+  scenario duration 5404.76 ms.
+- `for run in 1 2 3 4 5; do pnpm --filter @ticket/backend test:db || exit $?; done`:
+  exited 0; five consecutive fresh-container scenarios passed, each with
+  1 pass, 0 failures and 0 skipped. Scenario durations: 8088.49, 15269.99,
+  8443.88, 12415.22 and 11124.76 ms. Each invocation also rebuilt the backend.
+- `pnpm --filter @ticket/backend test`: passed, 1 validation test.
+- `git diff --check`: passed.
+- `docker ps -a --filter label=ticket.task=task_bb55492e627d --format '{{.Names}}'`:
+  empty after all runs; no test-owned containers remain.
+
+Six successful local starts provide repeatability evidence, not a guarantee
+against every Docker/network failure or proof of production concurrency or
+security. Node 24 CI and the coordinator's independent rerun remain external
+validation. This follow-up changes only this report and `test/rls.test.cjs`.

@@ -44,6 +44,9 @@ test(
             'exec',
             name,
             'pg_isready',
+            // The image's temporary bootstrap server only accepts Unix sockets.
+            '-h',
+            '127.0.0.1',
             '-U',
             'postgres',
             '-d',
@@ -58,15 +61,40 @@ test(
       assert.ok(ready, 'task database must become ready');
       const binding = docker('port', name, '5432/tcp');
       const port = binding.split(':').at(-1);
-      admin = new Client({
+      const adminConfig = {
         connectionString:
           'postgresql://postgres:' +
           password +
           '@127.0.0.1:' +
           port +
           '/w0_backend_test',
-      });
-      await admin.connect();
+        connectionTimeoutMillis: 1000,
+        query_timeout: 1000,
+      };
+      let connectionError;
+      for (let i = 0; i < 30; i++) {
+        const candidate = new Client(adminConfig);
+        // A startup disconnect can also emit an error outside the query promise.
+        const onStartupError = (error) => {
+          connectionError = error;
+        };
+        candidate.on('error', onStartupError);
+        try {
+          await candidate.connect();
+          await candidate.query('SELECT 1');
+          candidate.removeListener('error', onStartupError);
+          admin = candidate;
+          break;
+        } catch (error) {
+          connectionError = error;
+          await candidate.end();
+          await new Promise((r) => setTimeout(r, 500));
+        }
+      }
+      assert.ok(
+        admin,
+        'task database TCP connection must become ready: ' + connectionError,
+      );
       // Privileged setup only. All isolation assertions below use a separate login.
       await admin.query(
         'CREATE ROLE ticket_runtime NOLOGIN NOSUPERUSER NOBYPASSRLS',
