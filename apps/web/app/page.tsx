@@ -9,6 +9,7 @@ export default function Home() {
           ticket<span>↗</span>
         </span>
         <span className="nav-links">
+          <Link href="/redeem">Đổi mã</Link>
           <Link href="/auth">Identity POC</Link>
           <Link href="/admin">Admin shell</Link>
         </span>
@@ -45,10 +46,10 @@ export default function Home() {
         })}
       </div>
       <aside className="notice">
-        <strong>Preview, with clear limits.</strong> All event details are
-        fictional. Redemption, ticket issuance and Gate check-in are not
-        implemented. Identity is a separate{' '}
-        <Link href="/auth">Keycloak BFF POC</Link> (fail closed without env).
+        <strong>Preview, with clear limits.</strong> Event directory content is
+        fictional. Live redemption uses Nest via the{' '}
+        <Link href="/redeem">Đổi mã</Link> form (Keycloak BFF cookies — no mock
+        proof). Identity POC: <Link href="/auth">/auth</Link>.
       </aside>
     </main>
   );
