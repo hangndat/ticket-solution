@@ -1,7 +1,8 @@
-# @ticket/web — W0 foundation + D1 Keycloak OIDC POC
+# @ticket/web — W0 foundation + D1 Keycloak OIDC + D2 redeem
 
-Next.js App Router shell for public demo events, admin placeholder, and
-self-hosted OIDC identity POC (Authorization Code + PKCE BFF).
+Next.js App Router shell for public demo events, admin placeholder,
+self-hosted OIDC identity POC (Authorization Code + PKCE BFF), and D2
+redemption against Nest (real API, no mock proof).
 
 ## Environment (Keycloak OIDC)
 
@@ -15,19 +16,32 @@ Copy `apps/web/.env.example` → `.env.local` (never commit secrets).
 | `OIDC_REDIRECT_URI` | `http://127.0.0.1:3000/api/auth/callback` |
 | `API_BASE_URL` | Nest upstream for BFF (`http://127.0.0.1:3001`) |
 
-If any required OIDC env is missing, `/auth` shows **OIDC chưa cấu hình** and
-treats the user as **not authenticated** (fail closed). No mock logged-in user.
+If any required OIDC env is missing, `/auth` and `/redeem` show **OIDC chưa cấu hình** and
+treat the user as **not authenticated** (fail closed). No mock logged-in user.
 
 Session tokens stay in **HttpOnly** cookies set by `/api/auth/callback`. The
-browser calls same-origin `GET /api/bff/me`; the route handler reads the cookie
-and forwards `Authorization: Bearer` to Nest `GET /v1/me`. Access tokens are not
-stored in `localStorage`. No Clerk / SaaS IdP.
+browser calls same-origin BFF routes; handlers read the cookie and forward
+`Authorization: Bearer` to Nest. Access tokens are not stored in `localStorage`.
+No Clerk / SaaS IdP.
 
 ## Routes
 
 - `/` — demo event directory
 - `/auth` — D1 Keycloak identity POC (sign-in, BFF `/v1/me`, sign-out)
+- `/redeem` — D2 form đổi mã → verify → success/ticket (Nest redeem)
 - `/admin` — shell placeholder
+
+## BFF (D2)
+
+| Browser | Nest |
+| --- | --- |
+| `POST /api/bff/redeem` | `POST /v1/tenants/{tenantId}/events/{eventId}/redemptions` + `idempotency-key` |
+| `GET /api/bff/tickets?tenantId=` | `GET /v1/me/tickets?tenantId=` |
+| `GET /api/bff/operations/{key}?tenantId=&eventId=` | `GET /v1/operations/{clientOperationId}` |
+| `GET /api/bff/me` | `GET /v1/me` |
+
+UX maps API codes: `QUOTA_EXHAUSTED` (exhausted), `CODE_CONSUMED` (used),
+client/upstream timeout → poll operation with the same idempotency key.
 
 ## Local
 
@@ -38,3 +52,7 @@ pnpm --filter @ticket/web dev
 
 Demo users (realm import): `attendee@example.com` / `attendee-demo`,
 `staff@example.com` / `staff-demo`.
+
+Redeem needs real tenant/event UUIDs and a seeded redemption code from the API
+inventory (not the fictional demo event fixture IDs). Optional query prefills:
+`/redeem?tenantId=<uuid>&eventId=<uuid>`.

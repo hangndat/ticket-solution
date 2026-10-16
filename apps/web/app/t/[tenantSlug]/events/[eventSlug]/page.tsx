@@ -100,9 +100,10 @@ export default async function EventPage({ params }: Props) {
         <aside className="notice">
           <h2>Demo preview only</h2>
           <p>
-            This is fictional fixture content, not a live event listing.
-            Registration, code redemption, tickets and Gate check-in are not
-            available.
+            This is fictional fixture content, not a live event listing. For
+            real Nest redeem (tenant/event UUID + code), use{' '}
+            <Link href="/redeem">/redeem</Link> after Keycloak sign-in. Gate
+            check-in is still out of scope.
           </p>
         </aside>
         <section className="faq" aria-labelledby="faq-title">
@@ -110,8 +111,9 @@ export default async function EventPage({ params }: Props) {
           <details>
             <summary>Can I get a ticket here?</summary>
             <p>
-              No. This W0 preview demonstrates public event information only. It
-              does not accept codes, personal details or payments.
+              Not on this fixture page. Use the D2{' '}
+              <Link href="/redeem">redeem form</Link> with real tenant/event
+              UUIDs and a redemption code against the Nest API (Keycloak BFF).
             </p>
           </details>
           <details>
