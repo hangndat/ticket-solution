@@ -99,6 +99,27 @@ test('production routes isolate tenant content and reject unknown pairs', async 
     assert.ok(authHtml.includes('không coi là đã'));
     assert.ok(!authHtml.includes('Clerk'));
     assert.ok(authHtml.includes('Keycloak'));
+
+    const redeem = await fetch(base + '/redeem');
+    assert.equal(redeem.status, 200);
+    const redeemHtml = await redeem.text();
+    assert.ok(redeemHtml.includes('Đổi mã lấy vé'));
+    assert.ok(redeemHtml.includes('OIDC chưa cấu hình'));
+    assert.ok(redeemHtml.includes('không mock'));
+    assert.ok(!redeemHtml.includes('Clerk'));
+
+    const redeemBff = await fetch(base + '/api/bff/redeem', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        tenantId: '11111111-1111-4111-8111-111111111111',
+        eventId: '22222222-2222-4222-8222-222222222222',
+        code: 'DEMO',
+      }),
+    });
+    assert.equal(redeemBff.status, 503);
+    const redeemErr = await redeemBff.json();
+    assert.equal(redeemErr.code, 'OIDC_MISCONFIGURED');
   } finally {
     const stopped = once(child, 'exit');
     child.kill('SIGTERM');
