@@ -159,6 +159,17 @@ export function timeoutMessage(): RedeemUxMessage {
   };
 }
 
+/** Network loss while outcome is unclear — never claim success; keep same idempotency-key. */
+export function networkMessage(): RedeemUxMessage {
+  return {
+    kind: 'timeout',
+    title: 'Mất kết nối mạng',
+    detail:
+      'Không gọi được API (mạng/upstream). Đang / sẽ dò trạng thái bằng cùng idempotency-key — không gửi mã lần nữa nếu chưa chắc kết quả.',
+    retryable: true,
+  };
+}
+
 export function verifyingMessage(): RedeemUxMessage {
   return {
     kind: 'verifying',
