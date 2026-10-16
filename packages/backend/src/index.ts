@@ -21,6 +21,21 @@ export {
   type IdentityUserRepository,
   type StoredUser,
 } from './users';
+export { AuthzError, AUTHZ_ERROR_CODES, type AuthzErrorCode } from './authz-error';
+export {
+  isMembershipActive,
+  lockActiveMembershipForShare,
+  requireTenantPermission,
+  grantMembership,
+  grantEventAssignment,
+  revokeMembership,
+  revokeEventAssignment,
+  type MembershipRecord,
+  type EventAssignmentRecord,
+  type RequireTenantPermissionInput,
+  type GrantMembershipInput,
+  type GrantEventAssignmentInput,
+} from './membership';
 
 export function createDatabase(
   connectionString: string,

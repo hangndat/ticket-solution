@@ -122,6 +122,12 @@ test(
           'utf8',
         ),
       );
+      await admin.query(
+        readFileSync(
+          'prisma/migrations/202610160003_d1_membership/migration.sql',
+          'utf8',
+        ),
+      );
       await admin.query('RESET ROLE');
       await admin.query(
         "CREATE ROLE w0_login LOGIN PASSWORD '" +
@@ -145,8 +151,8 @@ test(
       assert.equal(roles[0].rolsuper, false);
       assert.equal(roles[0].rolbypassrls, false);
       const tables =
-        await db.$queryRaw`SELECT c.relname, c.relrowsecurity, c.relforcerowsecurity, pg_get_userbyid(c.relowner) AS owner FROM pg_class c WHERE c.relname IN ('tenants', 'events', 'users') AND c.relnamespace = 'public'::regnamespace`;
-      assert.equal(tables.length, 3);
+        await db.$queryRaw`SELECT c.relname, c.relrowsecurity, c.relforcerowsecurity, pg_get_userbyid(c.relowner) AS owner FROM pg_class c WHERE c.relname IN ('tenants', 'events', 'users', 'memberships', 'event_assignments') AND c.relnamespace = 'public'::regnamespace`;
+      assert.equal(tables.length, 5);
       for (const table of tables) {
         assert.equal(table.owner, 'migration_owner');
         assert.equal(table.relrowsecurity, true);

@@ -8,9 +8,9 @@
     "build": "pnpm generate && tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint src",
-    "test": "pnpm build && node --test test/env.test.cjs test/oidc.test.cjs",
+    "test": "pnpm build && node --test test/env.test.cjs test/oidc.test.cjs test/membership-unit.test.cjs",
     "generate": "prisma generate",
-    "test:db": "pnpm build && node --test test/rls.test.cjs",
+    "test:db": "pnpm build && node --test test/rls.test.cjs test/membership.test.cjs",
     "migrate": "prisma migrate deploy"
   },
   "dependencies": {
