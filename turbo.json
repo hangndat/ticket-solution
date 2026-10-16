@@ -13,21 +13,29 @@
     },
     "typecheck": {
       "dependsOn": [
-        "^build"
+        "build"
       ]
     },
     "lint": {},
     "test": {
       "dependsOn": [
-        "^build"
+        "build",
+        "^test"
       ],
-      "outputs": [
-        "coverage/**"
-      ]
+      "outputs": []
     },
     "dev": {
       "cache": false,
       "persistent": true
+    },
+    "@ticket/backend#build": {
+      "dependsOn": [
+        "^build"
+      ],
+      "outputs": [
+        "dist/**",
+        "src/generated/**"
+      ]
     }
   }
 }

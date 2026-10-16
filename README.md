@@ -25,6 +25,16 @@ pnpm test
 pnpm build
 ```
 
+## Workspace commands
+
+- `pnpm dev:web`: web on port 3000.
+- `pnpm dev:api`: health API on port 3001.
+- `pnpm dev:ios`: Metro/iOS development (requires local iOS tooling).
+- `pnpm --filter @ticket/backend test:db`: isolated PostgreSQL RLS test; Docker required.
+- `pnpm --filter @ticket/web test:routes`: production HTTP routing test after web build.
+
+Each app has its own README and environment examples. Database runtime role provisioning is documented in `packages/backend/README.md`; root Compose is development infrastructure, not a production provisioning flow.
+
 ## Documentation
 
 - [PRD](docs/PRD.md)
