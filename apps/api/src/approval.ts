@@ -152,7 +152,8 @@ export class ApprovalController {
       const status =
         error.code === APPROVAL_ERROR_CODES.REQUEST_NOT_FOUND
           ? 404
-          : error.code === APPROVAL_ERROR_CODES.IDEMPOTENCY_KEY_REQUIRED ||
+          :         error.code === APPROVAL_ERROR_CODES.IDEMPOTENCY_KEY_REQUIRED ||
+              error.code === APPROVAL_ERROR_CODES.REASON_REQUIRED ||
               error.code === APPROVAL_ERROR_CODES.REASON_TOO_LONG
             ? 422
             : error.code === APPROVAL_ERROR_CODES.RETRYABLE_CONFLICT

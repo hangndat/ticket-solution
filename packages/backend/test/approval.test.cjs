@@ -15,9 +15,12 @@ const {
   readCodeHmacEnvironment,
   holdCodeForReview,
   decideRedemption,
+  redeemAndIssueTicket,
   AuthzError,
   AUTHZ_ERROR_CODES,
   APPROVAL_ERROR_CODES,
+  APPROVAL_PENDING,
+  ISSUE_ERROR_CODES,
 } = require('../dist');
 
 const docker = (...args) =>
@@ -30,6 +33,7 @@ const MIGRATIONS = [
   '202610160004_d2_issue_ticket',
   '202610170005_d3_gate',
   '202610170006_d4_config_publish',
+  '202610170007_d4_manual_approval',
 ].map((name) => path.join(__dirname, '../prisma/migrations', name, 'migration.sql'));
 
 const HMAC = readCodeHmacEnvironment({
@@ -166,13 +170,13 @@ test('manual approval is audited, idempotent, and tenant-denied', { timeout: 120
         tenantId,
         userId: staff.userId,
         role: 'MANAGER',
-        permissions: ['redemption.review'],
+        permissions: ['redemption.approve'],
       });
       await grantEventAssignment(tx, {
         tenantId,
         eventId,
         membershipId: membership.membershipId,
-        permissions: ['redemption.review'],
+        permissions: ['redemption.approve'],
       });
       const limitedMembership = await grantMembership(tx, {
         tenantId,
@@ -217,13 +221,13 @@ test('manual approval is audited, idempotent, and tenant-denied', { timeout: 120
         tenantId: otherTenantId,
         userId: outsider.userId,
         role: 'MANAGER',
-        permissions: ['redemption.review'],
+        permissions: ['redemption.approve'],
       });
       await grantEventAssignment(tx, {
         tenantId: otherTenantId,
         eventId: otherEventId,
         membershipId: membership.membershipId,
-        permissions: ['redemption.review'],
+        permissions: ['redemption.approve'],
       });
     });
 
@@ -347,6 +351,16 @@ test('manual approval is audited, idempotent, and tenant-denied', { timeout: 120
     );
     assert.equal(deniedCode[0].status, 'AVAILABLE');
     assert.equal(deniedCode[0].active_request_id, null);
+    const deniedRequest = await withTenant(db, tenantId, (tx) =>
+      tx.$queryRaw`
+        SELECT status, decision_reason
+        FROM redemption_requests
+        WHERE tenant_id = ${tenantId}::uuid
+          AND id = ${setup.denyHold.requestId}::uuid
+      `,
+    );
+    assert.equal(deniedRequest[0].status, 'REJECTED');
+    assert.equal(deniedRequest[0].decision_reason, 'not on the list');
     const deniedTickets = await ticketFingerprint(db, tenantId, setup.denyHold.requestId);
     assert.equal(deniedTickets.length, 0);
     assert.equal(await eventAllocated(db, tenantId, eventId), 1);
@@ -408,3 +422,220 @@ test('manual approval is audited, idempotent, and tenant-denied', { timeout: 120
     }
   }
 });
+
+test(
+  'manual redeem does not allocate, second account is blocked, approve issues one ticket, deny releases',
+  { timeout: 120000 },
+  async () => {
+    let name;
+    let db;
+    try {
+      const boot = await startIsolatedPostgres();
+      name = boot.name;
+      db = createDatabase(boot.url, 2);
+      const users = createPrismaIdentityUserRepository(db);
+      const issuer = 'http://127.0.0.1:8080/realms/ticket';
+      const alice = await users.upsertFromVerifiedIdentity({
+        issuer,
+        subject: 'alice-manual',
+        email: 'alice-manual@example.com',
+        emailVerified: true,
+      });
+      const bob = await users.upsertFromVerifiedIdentity({
+        issuer,
+        subject: 'bob-manual',
+        email: 'bob-manual@example.com',
+        emailVerified: true,
+      });
+      const staff = await users.upsertFromVerifiedIdentity({
+        issuer,
+        subject: 'staff-manual',
+        email: 'staff-manual@example.com',
+        emailVerified: true,
+      });
+      const tenantId = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+      const eventId = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
+      const seeded = await withTenant(db, tenantId, async (tx) => {
+        await tx.tenant.create({ data: { id: tenantId, slug: 'manual', name: 'Manual' } });
+        await tx.event.create({
+          data: { tenantId, id: eventId, slug: 'manual', name: 'Manual', status: 'DRAFT' },
+        });
+        const membership = await grantMembership(tx, {
+          tenantId,
+          userId: staff.userId,
+          role: 'MANAGER',
+          permissions: ['redemption.approve'],
+        });
+        await grantEventAssignment(tx, {
+          tenantId,
+          eventId,
+          membershipId: membership.membershipId,
+          permissions: ['redemption.approve'],
+        });
+        const inventory = await seedEventInventory(tx, HMAC, {
+          tenantId,
+          eventId,
+          eventQuota: 5,
+          rawCodes: ['HOLD-ME', 'DENY-HOLD'],
+        });
+        await tx.$executeRaw`
+          UPDATE issuance_sources
+          SET approval_mode = 'MANUAL', updated_at = now()
+          WHERE tenant_id = ${tenantId}::uuid
+            AND id = ${inventory.sourceId}::uuid
+        `;
+        return inventory;
+      });
+
+      const aliceKey = randomUUID();
+      const pending = await withTenant(db, tenantId, (tx) =>
+        redeemAndIssueTicket(tx, HMAC, CREDENTIAL_KEY, {
+          tenantId,
+          eventId,
+          actorUserId: alice.userId,
+          actorEmail: alice.email,
+          emailVerified: true,
+          rawCode: 'HOLD-ME',
+          idempotencyKey: aliceKey,
+        }),
+      );
+      assert.equal(pending.ok, 'pending');
+      assert.equal(pending.result.code, APPROVAL_PENDING);
+      assert.equal(pending.result.status, 'PENDING_REVIEW');
+      assert.equal(pending.result.replayed, false);
+      assert.equal('ticketId' in pending.result, false);
+      assert.equal(await eventAllocated(db, tenantId, eventId), 0);
+      const pendingTickets = await ticketFingerprint(db, tenantId, pending.result.requestId);
+      assert.equal(pendingTickets.length, 0);
+
+      const replay = await withTenant(db, tenantId, (tx) =>
+        redeemAndIssueTicket(tx, HMAC, CREDENTIAL_KEY, {
+          tenantId,
+          eventId,
+          actorUserId: alice.userId,
+          actorEmail: alice.email,
+          emailVerified: true,
+          rawCode: 'HOLD-ME',
+          idempotencyKey: aliceKey,
+        }),
+      );
+      assert.equal(replay.ok, 'pending');
+      assert.equal(replay.result.replayed, true);
+      assert.equal(replay.result.requestId, pending.result.requestId);
+      assert.equal(await eventAllocated(db, tenantId, eventId), 0);
+
+      const blocked = await withTenant(db, tenantId, (tx) =>
+        redeemAndIssueTicket(tx, HMAC, CREDENTIAL_KEY, {
+          tenantId,
+          eventId,
+          actorUserId: bob.userId,
+          actorEmail: bob.email,
+          emailVerified: true,
+          rawCode: 'HOLD-ME',
+          idempotencyKey: randomUUID(),
+        }),
+      );
+      assert.equal(blocked.ok, false);
+      assert.equal(blocked.rejection.code, ISSUE_ERROR_CODES.CODE_DISABLED);
+      assert.equal(await eventAllocated(db, tenantId, eventId), 0);
+      assert.equal(
+        (await ticketFingerprint(db, tenantId, pending.result.requestId)).length,
+        0,
+      );
+
+      const approveKey = randomUUID();
+      const approved = await withTenant(db, tenantId, (tx) =>
+        decideRedemption(tx, CREDENTIAL_KEY, {
+          tenantId,
+          eventId,
+          requestId: pending.result.requestId,
+          actorUserId: staff.userId,
+          decision: 'approve',
+          idempotencyKey: approveKey,
+        }),
+      );
+      assert.equal(approved.ok, true);
+      assert.equal(approved.result.status, 'ISSUED');
+      assert.ok(approved.result.ticketId);
+      assert.equal(await eventAllocated(db, tenantId, eventId), 1);
+      const issued = await ticketFingerprint(db, tenantId, pending.result.requestId);
+      assert.equal(issued.length, 1);
+
+      const approveReplay = await withTenant(db, tenantId, (tx) =>
+        decideRedemption(tx, CREDENTIAL_KEY, {
+          tenantId,
+          eventId,
+          requestId: pending.result.requestId,
+          actorUserId: staff.userId,
+          decision: 'approve',
+          idempotencyKey: approveKey,
+        }),
+      );
+      assert.equal(approveReplay.ok, true);
+      assert.equal(approveReplay.result.replayed, true);
+      assert.equal(approveReplay.result.ticketId, approved.result.ticketId);
+      assert.equal(await eventAllocated(db, tenantId, eventId), 1);
+      assert.equal(
+        (await ticketFingerprint(db, tenantId, pending.result.requestId)).length,
+        1,
+      );
+
+      const denyPending = await withTenant(db, tenantId, (tx) =>
+        redeemAndIssueTicket(tx, HMAC, CREDENTIAL_KEY, {
+          tenantId,
+          eventId,
+          actorUserId: bob.userId,
+          actorEmail: bob.email,
+          emailVerified: true,
+          rawCode: 'DENY-HOLD',
+          idempotencyKey: randomUUID(),
+        }),
+      );
+      assert.equal(denyPending.ok, 'pending');
+      assert.equal(await eventAllocated(db, tenantId, eventId), 1);
+
+      const denied = await withTenant(db, tenantId, (tx) =>
+        decideRedemption(tx, CREDENTIAL_KEY, {
+          tenantId,
+          eventId,
+          requestId: denyPending.result.requestId,
+          actorUserId: staff.userId,
+          decision: 'deny',
+          idempotencyKey: randomUUID(),
+          reason: 'duplicate guest',
+        }),
+      );
+      assert.equal(denied.ok, true);
+      assert.equal(denied.result.ticketId, null);
+      assert.equal(denied.result.status, 'REJECTED');
+      assert.equal(
+        (await ticketFingerprint(db, tenantId, denyPending.result.requestId)).length,
+        0,
+      );
+      assert.equal(await eventAllocated(db, tenantId, eventId), 1);
+      const released = await withTenant(db, tenantId, (tx) =>
+        tx.$queryRaw`
+          SELECT c.status AS code_status, r.status AS request_status, r.decision_reason
+          FROM redemption_codes c
+          JOIN redemption_requests r
+            ON r.tenant_id = c.tenant_id AND r.redemption_code_id = c.id
+          WHERE c.tenant_id = ${tenantId}::uuid
+            AND c.id = ${seeded.codeIds[1]}::uuid
+            AND r.id = ${denyPending.result.requestId}::uuid
+        `,
+      );
+      assert.equal(released[0].code_status, 'AVAILABLE');
+      assert.equal(released[0].request_status, 'REJECTED');
+      assert.equal(released[0].decision_reason, 'duplicate guest');
+    } finally {
+      if (db) await db.$disconnect().catch(() => {});
+      if (name) {
+        try {
+          docker('rm', '-f', name);
+        } catch {
+          /* container already gone */
+        }
+      }
+    }
+  },
+);

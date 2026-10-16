@@ -5,6 +5,8 @@ import {
   randomUUID,
 } from 'node:crypto';
 import type { Prisma } from './generated/prisma/client';
+import { ApprovalError } from './approval-error';
+import { holdCodeForReview } from './approval';
 import {
   hashRedemptionCode,
   type CodeHmacConfig,
@@ -16,6 +18,7 @@ import {
 } from './issue-error';
 
 export const REDEEM_COMMAND = 'redemption.redeem' as const;
+export const APPROVAL_PENDING = 'APPROVAL_PENDING' as const;
 
 export type RedeemInput = {
   tenantId: string;
@@ -42,6 +45,18 @@ export type IssuedTicketResult = {
   replayed: boolean;
 };
 
+/** MANUAL source: code is held, quota is not allocated, no ticket exists yet. */
+export type PendingApprovalResult = {
+  code: typeof APPROVAL_PENDING;
+  requestId: string;
+  operationId: string;
+  eventId: string;
+  ticketTypeId: string;
+  sourceId: string;
+  status: 'PENDING_REVIEW';
+  replayed: boolean;
+};
+
 /** Terminal business rejection persisted on operations (TD §8.1). */
 export type TerminalRejection = {
   code: IssueErrorCode;
@@ -58,7 +73,12 @@ export type TerminalRejection = {
  */
 export type RedeemOutcome =
   | { ok: true; result: IssuedTicketResult }
+  | { ok: 'pending'; result: PendingApprovalResult }
   | { ok: false; rejection: TerminalRejection };
+
+type IssueBusinessResult =
+  | { kind: 'issued'; ticket: Omit<IssuedTicketResult, 'replayed'> }
+  | { kind: 'pending'; pending: Omit<PendingApprovalResult, 'replayed'> };
 
 type EventPolicyRow = {
   id: string;
@@ -72,6 +92,8 @@ type CodeRow = {
   source_id: string;
   ticket_type_id: string;
   status: string;
+  active_request_id: string | null;
+  approval_mode: string;
   entitlement_snapshot: Prisma.JsonValue;
 };
 
@@ -223,6 +245,13 @@ export async function redeemAndIssueTicket(
     );
   }
   if (op.status === 'COMPLETED') {
+    const pendingReplay = pendingFromStored(op.response_json);
+    if (pendingReplay) {
+      return {
+        ok: 'pending',
+        result: { ...pendingReplay, operationId: op.id, replayed: true },
+      };
+    }
     const stored = storedRejectionFromResponse(op.response_json);
     if (stored) {
       return {
@@ -249,23 +278,31 @@ export async function redeemAndIssueTicket(
   await tx.$executeRaw`SAVEPOINT issue_business`;
 
   try {
-    const result = await runIssueBusiness(
+    const business = await runIssueBusiness(
       tx,
       hmac,
       credentialKeyMaterial,
       input,
       op.id,
     );
+    const storedBody =
+      business.kind === 'issued' ? business.ticket : business.pending;
     await tx.$executeRaw`
       UPDATE operations
       SET status = 'COMPLETED',
-          response_json = ${JSON.stringify(result)}::jsonb,
+          response_json = ${JSON.stringify(storedBody)}::jsonb,
           updated_at = now()
       WHERE tenant_id = ${input.tenantId}::uuid
         AND id = ${op.id}::uuid
     `;
     await tx.$executeRaw`RELEASE SAVEPOINT issue_business`;
-    return { ok: true, result: { ...result, replayed: false } };
+    if (business.kind === 'pending') {
+      return {
+        ok: 'pending',
+        result: { ...business.pending, replayed: false },
+      };
+    }
+    return { ok: true, result: { ...business.ticket, replayed: false } };
   } catch (error) {
     await tx.$executeRaw`ROLLBACK TO SAVEPOINT issue_business`;
     if (error instanceof IssueError && !error.retryable) {
@@ -305,7 +342,7 @@ async function runIssueBusiness(
   credentialKeyMaterial: string,
   input: RedeemInput,
   operationId: string,
-): Promise<Omit<IssuedTicketResult, 'replayed'>> {
+): Promise<IssueBusinessResult> {
   // 2) Event policy FOR SHARE
   const events = await tx.$queryRaw<EventPolicyRow[]>`
     SELECT id, status, redemption_opens_at, redemption_closes_at
@@ -338,11 +375,13 @@ async function runIssueBusiness(
   // 3) Lock code FOR UPDATE
   const codeHmac = hashRedemptionCode(hmac, input.rawCode);
   const codes = await tx.$queryRaw<CodeRow[]>`
-    SELECT c.id, c.source_id, c.ticket_type_id, c.status,
-           t.entitlement_snapshot
+    SELECT c.id, c.source_id, c.ticket_type_id, c.status, c.active_request_id,
+           s.approval_mode, t.entitlement_snapshot
     FROM redemption_codes c
     JOIN ticket_types t
       ON t.tenant_id = c.tenant_id AND t.id = c.ticket_type_id
+    JOIN issuance_sources s
+      ON s.tenant_id = c.tenant_id AND s.id = c.source_id
     WHERE c.tenant_id = ${input.tenantId}::uuid
       AND c.event_id = ${input.eventId}::uuid
       AND c.code_hmac = ${codeHmac}
@@ -361,11 +400,14 @@ async function runIssueBusiness(
       'Redemption code has already been used',
     );
   }
-  if (code.status === 'DISABLED' || code.status === 'HELD') {
+  if (code.status === 'DISABLED') {
     throw new IssueError(
       ISSUE_ERROR_CODES.CODE_DISABLED,
       'Redemption code is not available',
     );
+  }
+  if (code.status === 'HELD') {
+    return resumeOrRejectHold(tx, input, code, operationId);
   }
   if (code.status !== 'AVAILABLE') {
     throw new IssueError(
@@ -390,7 +432,11 @@ async function runIssueBusiness(
     );
   }
 
-  // 4) Upsert attendee + lock counter
+  if (code.approval_mode === 'MANUAL') {
+    return holdManualRedemption(tx, input, code, operationId);
+  }
+
+  // 4) Upsert attendee + lock counter (AUTO issue only)
   const attendeeId = randomUUID();
   await tx.$executeRaw`
     INSERT INTO event_attendees (
@@ -607,14 +653,114 @@ async function runIssueBusiness(
   `;
 
   return {
-    ticketId,
+    kind: 'issued',
+    ticket: {
+      ticketId,
+      requestId,
+      operationId,
+      eventId: input.eventId,
+      ticketTypeId: code.ticket_type_id,
+      sourceId: code.source_id,
+      state: 'ACTIVE',
+      credentialVersion: 1,
+    },
+  };
+}
+
+function pendingBody(
+  input: RedeemInput,
+  code: CodeRow,
+  requestId: string,
+  operationId: string,
+): Omit<PendingApprovalResult, 'replayed'> {
+  return {
+    code: APPROVAL_PENDING,
     requestId,
     operationId,
     eventId: input.eventId,
     ticketTypeId: code.ticket_type_id,
     sourceId: code.source_id,
-    state: 'ACTIVE',
-    credentialVersion: 1,
+    status: 'PENDING_REVIEW',
+  };
+}
+
+async function resumeOrRejectHold(
+  tx: Prisma.TransactionClient,
+  input: RedeemInput,
+  code: CodeRow,
+  operationId: string,
+): Promise<IssueBusinessResult> {
+  if (code.approval_mode === 'MANUAL' && code.active_request_id) {
+    const rows = await tx.$queryRaw<
+      Array<{ id: string; actor_user_id: string; status: string }>
+    >`
+      SELECT id, actor_user_id, status
+      FROM redemption_requests
+      WHERE tenant_id = ${input.tenantId}::uuid
+        AND event_id = ${input.eventId}::uuid
+        AND id = ${code.active_request_id}::uuid
+      FOR UPDATE
+    `;
+    const pending = rows[0];
+    if (
+      pending &&
+      pending.status === 'PENDING_REVIEW' &&
+      pending.actor_user_id === input.actorUserId
+    ) {
+      return {
+        kind: 'pending',
+        pending: pendingBody(input, code, pending.id, operationId),
+      };
+    }
+  }
+  throw new IssueError(
+    ISSUE_ERROR_CODES.CODE_DISABLED,
+    'Redemption code is not available',
+  );
+}
+
+/** Bind the code to one PENDING_REVIEW request. Does not allocate quota or insert a ticket. */
+async function holdManualRedemption(
+  tx: Prisma.TransactionClient,
+  input: RedeemInput,
+  code: CodeRow,
+  operationId: string,
+): Promise<IssueBusinessResult> {
+  let requestId: string;
+  try {
+    const held = await holdCodeForReview(tx, {
+      tenantId: input.tenantId,
+      eventId: input.eventId,
+      ownerUserId: input.actorUserId,
+      codeId: code.id,
+      formVersion: input.formVersion ?? null,
+      termsVersion: input.termsVersion ?? null,
+    });
+    requestId = held.requestId;
+  } catch (error) {
+    if (error instanceof ApprovalError) {
+      throw new IssueError(
+        ISSUE_ERROR_CODES.CODE_DISABLED,
+        'Redemption code is not available',
+      );
+    }
+    throw error;
+  }
+  await tx.$executeRaw`
+    INSERT INTO audit_logs (
+      tenant_id, event_id, id, actor_user_id, action, resource_type,
+      resource_id, sanitized_diff, operation_id, created_at
+    ) VALUES (
+      ${input.tenantId}::uuid, ${input.eventId}::uuid, ${randomUUID()}::uuid,
+      ${input.actorUserId}::uuid, 'redemption.pending', 'redemption_request',
+      ${requestId}::uuid,
+      ${JSON.stringify({ codeId: code.id, sourceId: code.source_id })}::jsonb,
+      ${operationId}::uuid, now()
+    )
+  `;
+  return {
+    kind: 'pending',
+    pending: pendingBody(input, code, requestId, operationId),
   };
 }
 
@@ -708,12 +854,18 @@ export function storedRejectionFromResponse(
     !('ticketId' in response)
   ) {
     const body = response as {
-      code: IssueErrorCode;
+      code: string;
       message?: string;
       retryable?: boolean;
     };
+    if (body.code === APPROVAL_PENDING) return null;
+    if (
+      !(Object.values(ISSUE_ERROR_CODES) as string[]).includes(body.code)
+    ) {
+      return null;
+    }
     return {
-      code: body.code,
+      code: body.code as IssueErrorCode,
       message: body.message ?? body.code,
       retryable: Boolean(body.retryable),
     };
@@ -731,9 +883,41 @@ export function throwIfStoredRejection(
   }
 }
 
+function pendingFromStored(
+  response: Prisma.JsonValue | null,
+): Omit<PendingApprovalResult, 'replayed'> | null {
+  if (
+    !response ||
+    typeof response !== 'object' ||
+    Array.isArray(response) ||
+    !('code' in response) ||
+    (response as { code: unknown }).code !== APPROVAL_PENDING ||
+    !('requestId' in response) ||
+    typeof (response as { requestId: unknown }).requestId !== 'string'
+  ) {
+    return null;
+  }
+  const body = response as Omit<PendingApprovalResult, 'replayed'>;
+  return {
+    code: APPROVAL_PENDING,
+    requestId: body.requestId,
+    operationId: body.operationId,
+    eventId: body.eventId,
+    ticketTypeId: body.ticketTypeId,
+    sourceId: body.sourceId,
+    status: 'PENDING_REVIEW',
+  };
+}
+
 /** Map RedeemOutcome to IssuedTicketResult or IssueError (call outside withTenant). */
 export function unwrapRedeemOutcome(outcome: RedeemOutcome): IssuedTicketResult {
-  if (outcome.ok) return outcome.result;
+  if (outcome.ok === true) return outcome.result;
+  if (outcome.ok === 'pending') {
+    throw new IssueError(
+      ISSUE_ERROR_CODES.CODE_DISABLED,
+      'Redemption is waiting for approval',
+    );
+  }
   throw new IssueError(
     outcome.rejection.code,
     outcome.rejection.message,

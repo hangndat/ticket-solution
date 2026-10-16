@@ -40,6 +40,7 @@ import {
   redeemAndIssueTicket,
   throwIfStoredRejection,
   unwrapRedeemOutcome,
+  type PendingApprovalResult,
   withTenant,
   type CodeHmacConfig,
   type IdentityUserRepository,
@@ -163,7 +164,7 @@ export class TicketIssueService {
     eventId: string,
     idempotencyKey: string | undefined,
     body: RedeemRequestBody,
-  ): Promise<RedeemResponse> {
+  ): Promise<RedeemResponse | PendingApprovalResult> {
     if (!this.deps.db || !this.deps.hmac || !this.deps.credentialKey) {
       throw new IssueError(
         ISSUE_ERROR_CODES.CODE_HMAC_MISCONFIGURED,
@@ -186,6 +187,7 @@ export class TicketIssueService {
         termsVersion: body.termsVersion,
       }),
     );
+    if (outcome.ok === 'pending') return outcome.result;
     return unwrapRedeemOutcome(outcome);
   }
 
@@ -297,7 +299,7 @@ export class TicketIssueController {
     @Param('tenantId') tenantId: string,
     @Param('eventId') eventId: string,
     @Body() body: RedeemBodyDto,
-  ): Promise<RedeemResponse> {
+  ): Promise<RedeemResponse | PendingApprovalResult> {
     try {
       return await this.tickets.redeem(
         authorization,
