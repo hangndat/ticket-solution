@@ -809,11 +809,54 @@
           "redemptions"
         ]
       }
+    },
+    "/v1/tenants/{tenantId}/events/{eventId}/report": {
+      "get": {
+        "operationId": "ReportController_report",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "eventId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventReportDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "reporting"
+        ]
+      }
     }
   },
   "info": {
     "title": "Ticket API — D2 issue",
-    "description": "Identity, redemption issue, and manual approval. PostgreSQL quota is the source of truth; Redis is not.",
+    "description": "Identity, redemption issue, manual approval, and read-only event reports. PostgreSQL quota is the source of truth; Redis is not.",
     "version": "0.2.0",
     "contact": {}
   },
@@ -1293,6 +1336,69 @@
             "type": "string"
           }
         }
+      },
+      "TicketStateCountsDto": {
+        "type": "object",
+        "properties": {
+          "ACTIVE": {
+            "type": "number"
+          },
+          "REVOKED": {
+            "type": "number"
+          },
+          "CANCELLED": {
+            "type": "number"
+          },
+          "USED": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "ACTIVE",
+          "REVOKED",
+          "CANCELLED",
+          "USED"
+        ]
+      },
+      "EventQuotaSummaryDto": {
+        "type": "object",
+        "properties": {
+          "capacity": {
+            "type": "number",
+            "nullable": true
+          },
+          "allocated": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "capacity",
+          "allocated"
+        ]
+      },
+      "EventReportDto": {
+        "type": "object",
+        "properties": {
+          "eventId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "ticketsByState": {
+            "$ref": "#/components/schemas/TicketStateCountsDto"
+          },
+          "quota": {
+            "$ref": "#/components/schemas/EventQuotaSummaryDto"
+          },
+          "pendingApprovalCount": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "eventId",
+          "ticketsByState",
+          "quota",
+          "pendingApprovalCount"
+        ]
       }
     }
   }

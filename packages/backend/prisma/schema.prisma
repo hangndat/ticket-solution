@@ -322,6 +322,7 @@ model Outbox {
   attempts       Int       @default(0)
   leaseOwner     String?   @map("lease_owner")
   leaseExpiresAt DateTime? @map("lease_expires_at") @db.Timestamptz(3)
+  nextAttemptAt  DateTime? @map("next_attempt_at") @db.Timestamptz(3)
   createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
   tenant         Tenant    @relation(fields: [tenantId], references: [id], onDelete: Restrict)
