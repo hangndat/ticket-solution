@@ -37,4 +37,6 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # backend tsc resolves @ticket/contracts from dist — build workspace dep first
+      - run: pnpm --filter @ticket/contracts build
       - run: pnpm --filter @ticket/backend test:db

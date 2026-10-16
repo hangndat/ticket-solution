@@ -17,6 +17,7 @@
     "format:check": "prettier --check .",
     "infra:up": "docker compose up -d --wait",
     "infra:down": "docker compose down",
+    "uat:p4-oidc": "python3 scripts/uat-d1-p4-keycloak.py",
     "dev:web": "pnpm --filter @ticket/contracts build && pnpm --filter @ticket/web dev",
     "dev:api": "pnpm --filter @ticket/api... build && pnpm --filter @ticket/api dev",
     "dev:ios": "pnpm --filter @ticket/contracts build && pnpm --filter @ticket/mobile dev"
@@ -25,12 +26,5 @@
     "turbo": "2.11.8",
     "typescript": "5.9.3",
     "prettier": "3.9.10"
-  },
-  "pnpm": {
-    "peerDependencyRules": {
-      "allowedVersions": {
-        "@clerk/expo>expo": "58"
-      }
-    }
   }
 }

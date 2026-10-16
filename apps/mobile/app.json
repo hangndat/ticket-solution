@@ -5,18 +5,13 @@
     "version": "0.1.0",
     "platforms": ["ios"],
     "orientation": "default",
-    "scheme": "ticket-foundation",
+    "scheme": "ticketsolution",
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.example.ticket.foundation"
     },
-    "plugins": [
-      "expo-router",
-      "expo-secure-store",
-      "expo-font",
-      ["@clerk/expo", { "appleSignIn": false }]
-    ],
+    "plugins": ["expo-router", "expo-secure-store", "expo-font"],
     "experiments": {
       "typedRoutes": true
     }

@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { FlatList, Text, View } from 'react-native';
-import { Button, Host } from '@expo/ui';
+import { FlatList, Pressable, Text, View } from 'react-native';
 import { Link } from 'expo-router';
 import { demoTenants, eventDate, listDemoEvents } from '@/data/demo-events';
 import { Notice } from '@/components/page';
 import { colors } from '@/theme/colors';
+
 export function EventsScreen() {
   const [tenant, setTenant] = useState<string>(demoTenants[0]);
   return (
@@ -23,17 +23,33 @@ export function EventsScreen() {
           <Text selectable style={{ color: colors.secondary }}>
             Organization: {tenant}
           </Text>
-          <Host matchContents>
-            <Button
-              onPress={() =>
-                setTenant(
-                  tenant === demoTenants[0] ? demoTenants[1] : demoTenants[0],
-                )
-              }
+          <Pressable
+            accessibilityRole="button"
+            onPress={() =>
+              setTenant(
+                tenant === demoTenants[0] ? demoTenants[1] : demoTenants[0],
+              )
+            }
+            style={({ pressed }) => ({
+              paddingVertical: 14,
+              paddingHorizontal: 18,
+              borderRadius: 12,
+              borderCurve: 'continuous',
+              backgroundColor: colors.accent,
+              opacity: pressed ? 0.85 : 1,
+            })}
+          >
+            <Text
+              style={{
+                color: '#fff',
+                fontSize: 17,
+                fontWeight: '600',
+                textAlign: 'center',
+              }}
             >
               Switch demo organization
-            </Button>
-          </Host>
+            </Text>
+          </Pressable>
         </View>
       }
       ListEmptyComponent={

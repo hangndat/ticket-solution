@@ -300,12 +300,13 @@ SLO không thay thế việc test thực tế đường truyền và camera tạ
 | ORM/migration         | Prisma, SQL migration khi cần                                      | Schema, truy vấn; transaction và tenant context phải được review cụ thể         |
 | Queue/cache           | Redis + BullMQ                                                     | Email, import/export, rate limit; không làm nguồn chuẩn cho quota/check-in      |
 | Tính nhất quán tác vụ | Transactional outbox trong PostgreSQL                              | Không mất tác vụ gửi thông báo sau khi cấp vé thành công                        |
-| File                  | S3-compatible private object storage + signed URLs                 | Asset, QR render nếu cần, import/export                                         |
-| Email                 | Provider transactional, qua adapter                                | Gửi và webhook trạng thái; chọn provider sau                                    |
-| Push                  | expo-notifications, provider transport qua adapter                 | Đăng ký thiết bị, gửi và xử lý delivery receipt                                 |
+| File                  | MinIO (S3-compatible) private + signed URLs                        | Asset, QR render nếu cần, import/export; self-host                              |
+| Email                 | SMTP adapter (Mailpit dev; Postal/Postfix trên VPS)               | Gửi và trạng thái; **không** SaaS transactional                                 |
+| Push                  | expo-notifications UI + **APNs trực tiếp** từ worker               | Device token DB; **không** Expo Push Service                                    |
+| Identity              | Keycloak self-host (OIDC)                                          | Auth Code + PKCE; Nest verify JWKS; **không** Clerk/Auth0                       |
 | Mobile local          | SecureStore cho token; local database/cache cho ví vé              | Phân vùng theo tài khoản và dọn khi logout                                      |
 | Monorepo              | pnpm workspace + Turborepo                                         | Chia sẻ API types, schema, domain helpers, brand tokens                         |
-| Vận hành              | Container API/worker, managed PostgreSQL/Redis, CDN                | Tách staging/production, scale API và worker riêng                              |
+| Vận hành              | Container API/worker trên VPS; Postgres/Redis self-host; Caddy TLS | Tách staging/production; **không** managed DB/CDN SaaS MVP                      |
 | Quan sát              | OpenTelemetry + error tracking                                     | Trace, metric, lỗi web/app/API                                                  |
 | Mobile delivery       | Local Xcode/xcodebuild hoặc fastlane; App Store Connect/TestFlight | Build ký số trên Mac/runner macOS tự quản lý; không Expo/EAS Cloud Build        |
 
@@ -313,14 +314,15 @@ Chia sẻ type, validation, API client và token thương hiệu giữa web/app;
 
 RLS phải sử dụng tenant context trong transaction khi chạy qua connection pool; app role không sở hữu bảng hoặc có BYPASSRLS. Worker và export cũng chịu cùng policy. Redis key và object path có tenant namespace, nhưng namespace không thay thế authorization.
 
-Authentication dùng giải pháp OIDC hoặc thư viện được duy trì; mobile dùng luồng phù hợp native và lưu token an toàn. Không tự xây giao thức identity. Lựa chọn provider là quyết định technical design còn mở.
+Authentication dùng **Keycloak self-host (OIDC)**; mobile Auth Code + PKCE và SecureStore. Không tự xây giao thức identity. Không dùng IdP SaaS (Clerk/Auth0/…). Ngoại lệ nền tảng: Apple App Store / APNs; DNS registrar user mua.
 
 Tham chiếu kỹ thuật chính thức:
 
 - Next.js App Router: https://nextjs.org/docs/app/getting-started
 - Expo local development: https://docs.expo.dev/guides/local-app-development/
 - Expo distribution: https://docs.expo.dev/distribution/introduction/
-- Expo push: https://docs.expo.dev/push-notifications/what-you-need-to-know/
+- Apple Push Notification service: https://developer.apple.com/documentation/usernotifications
+- Keycloak server: https://www.keycloak.org/documentation
 - PostgreSQL row security: https://www.postgresql.org/docs/current/ddl-rowsecurity.html
 
 ## 11. Phát hành app và vận hành đa nền tảng

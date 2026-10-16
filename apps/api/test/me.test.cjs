@@ -9,7 +9,7 @@ const {
 } = require('@ticket/backend');
 const { createApp, createOpenApi } = require('../dist/app');
 
-const ISSUER = 'https://example.clerk.accounts.dev';
+const ISSUER = 'http://127.0.0.1:8080/realms/ticket';
 const AUDIENCE = 'ticket-api';
 
 async function localVerifier() {
@@ -100,7 +100,7 @@ test('GET /v1/me returns MeResponse including emailVerified false', async () => 
   try {
     await app.init();
     await app.getHttpAdapter().getInstance().ready();
-    const token = await sign(privateKey, { sub: 'clerk_user_1' });
+    const token = await sign(privateKey, { sub: 'keycloak_user_1' });
     const response = await app.inject({
       method: 'GET',
       url: '/v1/me',
@@ -110,7 +110,7 @@ test('GET /v1/me returns MeResponse including emailVerified false', async () => 
     assert.deepEqual(response.json(), {
       userId: '11111111-1111-4111-8111-111111111111',
       issuer: ISSUER,
-      subject: 'clerk_user_1',
+      subject: 'keycloak_user_1',
       email: 'attendee@example.com',
       emailVerified: false,
     });

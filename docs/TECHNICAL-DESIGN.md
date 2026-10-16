@@ -27,10 +27,15 @@ Các quyết định trong tài liệu là đề xuất kỹ thuật, không t�
 | ADR-06 | Check-in online reserve/confirm                                | Không cam kết chống trùng toàn hệ thống khi các cổng mất kết nối           |
 | ADR-07 | App chung có hai chế độ là baseline tạm                        | Không khóa phương án white-label khi sản phẩm chưa chốt                    |
 | ADR-08 | Cấu hình có schema/version, template giới hạn                  | Bảo trì được qua nhiều event và nhiều phiên bản app                        |
-| ADR-09 | Managed OIDC, Authorization Code + PKCE cho iOS                | Không tự xây giao thức identity; provider là dependency cần chốt qua spike |
+| ADR-09 | Self-hosted Keycloak OIDC, Authorization Code + PKCE cho iOS   | Không tự xây protocol; **cấm** IdP SaaS (Clerk/Auth0/…); Compose/VPS       |
 | ADR-10 | Admission control trước khi cần sharding quota                 | Hạn chế contention và bảo vệ DB; không cam kết FIFO tuyệt đối              |
+| ADR-11 | Cấm SaaS runtime; self-host Postgres/Redis/MinIO/SMTP/Caddy    | Ngoại lệ: App Store/APNs; DNS+Let's Encrypt; GitHub tooling                |
+| ADR-12 | Push APNs trực tiếp từ worker                                  | Không Expo Push Service                                                    |
+| ADR-13 | Email SMTP adapter (Mailpit → Postal/Postfix)                 | Không transactional email SaaS                                             |
+| ADR-14 | Object storage MinIO                                           | S3-compatible self-host                                                    |
+| ADR-15 | Waiting room / admission trên Caddy hoặc nginx                 | Không Cloudflare Waiting Room                                              |
 
-Chưa khóa version framework, SDK, database hoặc cloud provider. Khi scaffold phải chọn bộ phiên bản được hỗ trợ, pin lockfile và đối chiếu tài liệu đúng phiên bản.
+Pin version framework/SDK/Keycloak trong lockfile và Compose. Không phụ thuộc managed cloud cho runtime MVP.
 
 ## 3. Topology và ranh giới tin cậy
 
@@ -38,7 +43,7 @@ Chưa khóa version framework, SDK, database hoặc cloud provider. Khi scaffold
 
 | Thành phần                   | Vai trò                                        | Scale / lưu trạng thái                   |
 | ---------------------------- | ---------------------------------------------- | ---------------------------------------- |
-| CDN/WAF                      | Public event pages, assets, bot/rate controls  | Không cache API cá nhân                  |
+| Caddy (TLS + rate limit)     | Public event pages, assets, bot/rate controls  | Không cache API cá nhân; không CDN SaaS  |
 | Next.js public web           | Portal và web ticket view                      | Cache theo tenant/event/config version   |
 | Next.js admin/Gate           | Tenant admin, platform console, Gate dự phòng  | Authenticated, no-store                  |
 | NestJS API                   | Authz, tenant context, domain commands/queries | Stateless, nhiều instance                |
@@ -48,7 +53,7 @@ Chưa khóa version framework, SDK, database hoặc cloud provider. Khi scaffold
 | PostgreSQL primary + standby | Vé, quota, check-in, audit                     | Read/write critical qua primary          |
 | Redis                        | BullMQ, rate limit, cache không quan trọng     | Không quyết định vé đã cấp/đã vào        |
 | Object storage               | Asset, import, export, bản render nếu cần      | Private, URL ký ngắn hạn                 |
-| Managed OIDC                 | Identity, verification, MFA                    | Backend kiểm tra token và session        |
+| Keycloak (self-host)         | Identity, verification, MFA TOTP               | Backend kiểm tra JWT qua JWKS            |
 
 Gate API pool giảm cạnh tranh CPU/connection nhưng vẫn dùng cùng PostgreSQL; không coi đây là cách ly hoàn toàn. Import/export và dashboard phải có statement timeout, concurrency cap và cơ chế giảm tải khi cổng bận.
 
@@ -447,7 +452,7 @@ S4 tương đương trung bình 5.000 attempts/s tại lớp tiếp nhận, khô
 
 Default có per-user/event rate limit và global in-flight cap. Khi mở vé lớn, dùng edge waiting room/admission layer có token ký, event/user/session binding và TTL. Token admission không giữ vé và không thay authz/quota check. Chỉ backend từ ingress hợp lệ mới được chấp nhận, tránh bypass bằng URL origin.
 
-Waiting room/edge provider cần chọn qua spike. Nếu layer này lỗi, đường cấp vé đông phải fail closed hoặc chuyển rate limit bảo thủ; Gate không đi qua waiting room. Không cam kết FIFO theo thời gian mở tab. Backoff và polling có jitter để tránh retry storm.
+Waiting room/admission chạy trên **Caddy hoặc nginx** (ADR-15), không Cloudflare. Nếu layer này lỗi, đường cấp vé đông fail closed hoặc rate limit bảo thủ; Gate không đi qua waiting room. Không cam kết FIFO theo thời gian mở tab. Backoff và polling có jitter để tránh retry storm.
 
 ### 14.3 Ngân sách tài nguyên
 
@@ -465,9 +470,9 @@ Native simulator build và archive/signing chạy bằng Xcode/xcodebuild hoặc
 
 ### 15.1 Môi trường
 
-Development local, staging và production tách dữ liệu, secrets, OIDC client, Redis, buckets và push environment. Production ưu tiên managed PostgreSQL có standby/failover, PITR và monitoring; managed Redis với persistence phù hợp BullMQ. Chọn cloud/region theo địa điểm event và yêu cầu dữ liệu trước production.
+Development local, staging và production tách dữ liệu, secrets, OIDC client, Redis, buckets và push environment. Production chạy **self-host trên VPS** (Docker Compose hoặc tương đương): PostgreSQL có standby/PITR khi đủ ops, Redis persistence cho BullMQ, Keycloak, MinIO, SMTP (Postal/Postfix), Caddy TLS. **Không** dùng managed DB/Redis/CDN SaaS cho MVP. Vùng dữ liệu (O06) chốt trước dữ liệu user thật.
 
-API/worker containers, health/readiness endpoints riêng. Rolling deploy và graceful shutdown: dừng nhận request/job mới, chờ transaction kết thúc có deadline. Worker job dài phải resumable. Không cần Kubernetes trong bản đầu nếu managed container service đáp ứng.
+API/worker containers, health/readiness endpoints riêng. Rolling deploy và graceful shutdown: dừng nhận request/job mới, chờ transaction kết thúc có deadline. Worker job dài phải resumable. Kubernetes không bắt buộc bản đầu.
 
 Migration theo expand → backfill → switch → contract; chạy job đơn với migration role. App release cũ phải hoạt động trong cửa sổ hỗ trợ; không drop/rename API hoặc cột cùng lúc deployment đầu tiên cần chúng.
 
@@ -529,9 +534,9 @@ Release gate: architecture tests + isolation/security tests + concurrency tests 
 | Quyết định                               | Baseline                                | Khi cần chốt                       |
 | ---------------------------------------- | --------------------------------------- | ---------------------------------- |
 | App chung hay white-label                | App chung, staff/attendee modes         | Trước bundle ID và store branding  |
-| Identity provider                        | Managed OIDC đạt P4                     | Trước foundation implementation    |
+| Identity provider                        | **Keycloak self-host** đạt P4           | Đã chốt; còn live smoke            |
 | 50k nghĩa là volume/burst/concurrent?    | Test theo S1–S4, chưa claim concurrent  | Trước capacity sizing và event SLA |
-| Cloud/region/admission provider          | Managed services + edge controls        | Trước production benchmark         |
+| Hosting / admission                      | VPS self-host + Caddy admission         | Trước production benchmark         |
 | Pending TTL, cancel/release policy       | Verified-only hold; không tự hoàn quota | Trước redemption schema/API freeze |
 | Data retention và support access         | Least privilege, thời hạn còn mở        | Trước dữ liệu người dùng thật      |
 | Đối chiếu danh tính tại cổng             | QR bearer, một lượt                     | Trước Gate UAT và train staff      |

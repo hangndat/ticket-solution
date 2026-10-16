@@ -2,35 +2,50 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
   getApiBaseUrl,
-  getClerkPublishableKey,
-  isClerkConfigured,
+  getOidcClientId,
+  getOidcIssuer,
+  isOidcConfigured,
 } from './config.ts';
 
-test('missing publishable key is fail-closed (not configured)', () => {
-  const previous = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY;
-  delete process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY;
-  assert.equal(getClerkPublishableKey(), null);
-  assert.equal(isClerkConfigured(), false);
-  if (previous === undefined) delete process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY;
-  else process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY = previous;
+test('missing OIDC env is fail-closed (not configured)', () => {
+  const prevIssuer = process.env.EXPO_PUBLIC_OIDC_ISSUER;
+  const prevClient = process.env.EXPO_PUBLIC_OIDC_CLIENT_ID;
+  delete process.env.EXPO_PUBLIC_OIDC_ISSUER;
+  delete process.env.EXPO_PUBLIC_OIDC_CLIENT_ID;
+  assert.equal(getOidcIssuer(), null);
+  assert.equal(getOidcClientId(), null);
+  assert.equal(isOidcConfigured(), false);
+  if (prevIssuer === undefined) delete process.env.EXPO_PUBLIC_OIDC_ISSUER;
+  else process.env.EXPO_PUBLIC_OIDC_ISSUER = prevIssuer;
+  if (prevClient === undefined) delete process.env.EXPO_PUBLIC_OIDC_CLIENT_ID;
+  else process.env.EXPO_PUBLIC_OIDC_CLIENT_ID = prevClient;
 });
 
-test('blank publishable key is fail-closed', () => {
-  const previous = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY;
-  process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY = '   ';
-  assert.equal(getClerkPublishableKey(), null);
-  assert.equal(isClerkConfigured(), false);
-  if (previous === undefined) delete process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY;
-  else process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY = previous;
+test('blank OIDC env is fail-closed', () => {
+  const prevIssuer = process.env.EXPO_PUBLIC_OIDC_ISSUER;
+  const prevClient = process.env.EXPO_PUBLIC_OIDC_CLIENT_ID;
+  process.env.EXPO_PUBLIC_OIDC_ISSUER = '   ';
+  process.env.EXPO_PUBLIC_OIDC_CLIENT_ID = 'ticket-mobile';
+  assert.equal(getOidcIssuer(), null);
+  assert.equal(isOidcConfigured(), false);
+  if (prevIssuer === undefined) delete process.env.EXPO_PUBLIC_OIDC_ISSUER;
+  else process.env.EXPO_PUBLIC_OIDC_ISSUER = prevIssuer;
+  if (prevClient === undefined) delete process.env.EXPO_PUBLIC_OIDC_CLIENT_ID;
+  else process.env.EXPO_PUBLIC_OIDC_CLIENT_ID = prevClient;
 });
 
-test('non-empty publishable key is configured', () => {
-  const previous = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY;
-  process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY = 'pk_test_example';
-  assert.equal(getClerkPublishableKey(), 'pk_test_example');
-  assert.equal(isClerkConfigured(), true);
-  if (previous === undefined) delete process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY;
-  else process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY = previous;
+test('issuer + client id is configured', () => {
+  const prevIssuer = process.env.EXPO_PUBLIC_OIDC_ISSUER;
+  const prevClient = process.env.EXPO_PUBLIC_OIDC_CLIENT_ID;
+  process.env.EXPO_PUBLIC_OIDC_ISSUER = 'http://127.0.0.1:8080/realms/ticket/';
+  process.env.EXPO_PUBLIC_OIDC_CLIENT_ID = 'ticket-mobile';
+  assert.equal(getOidcIssuer(), 'http://127.0.0.1:8080/realms/ticket');
+  assert.equal(getOidcClientId(), 'ticket-mobile');
+  assert.equal(isOidcConfigured(), true);
+  if (prevIssuer === undefined) delete process.env.EXPO_PUBLIC_OIDC_ISSUER;
+  else process.env.EXPO_PUBLIC_OIDC_ISSUER = prevIssuer;
+  if (prevClient === undefined) delete process.env.EXPO_PUBLIC_OIDC_CLIENT_ID;
+  else process.env.EXPO_PUBLIC_OIDC_CLIENT_ID = prevClient;
 });
 
 test('API base URL trims trailing slashes', () => {
