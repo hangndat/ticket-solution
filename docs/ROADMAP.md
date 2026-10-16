@@ -6,13 +6,13 @@ Tracking lâu dài: GitHub Issues + Project (tiếng Việt). Project: https://g
 
 **Chưa chốt lịch / thời lượng.** Không gắn ngày giả. Timeline Project có thể tạo view trước, ngày mục tiêu để trống đến khi người dùng chốt.
 
-**Không bắt đầu code nghiệp vụ wave mới** cho đến khi roadmap này được người dùng review.
+**Roadmap đã được user duyệt (2026-10-16).** Đợt tiếp theo: D1 — Quyết định & Identity. Không mở business endpoints (nhận vé/Gate) trước khi identity đủ proof.
 
 ## 1. Trạng thái hiện tại
 
 | Mục | Trạng thái | Ghi chú |
 | --- | --- | --- |
-| W0 Foundation | Có evidence, đã tích hợp main | Prototype/foundation — **không** đồng nghĩa production auth, isolation mọi module, hoặc ticketing xong |
+| W0 Foundation | **Hoàn thành** (user duyệt) | Prototype/foundation — **không** đồng nghĩa production auth, isolation mọi module, hoặc ticketing xong. Issues #1/#8/#9 đóng; milestone D0 closed. |
 | Identity / OIDC | Chưa chốt provider | ADR-09 còn mở; cần spike trước mở tenant business endpoints |
 | Mã / quota / issue / outbox | Chưa bắt đầu | Thuộc đợt nhận vé |
 | Gate / check-in | Chưa bắt đầu | Thuộc đợt check-in |
@@ -47,7 +47,7 @@ Gợi ý từ kế hoạch agent, tinh chỉnh thêm cổng quyết định/iden
 
 | Đợt | Tên | Mục tiêu | Gate |
 | --- | --- | --- | --- |
-| D0 | W0 Foundation | Monorepo, CI, Compose, API health, RLS prototype, web shell, iOS shell | Đã có evidence W0; đánh dấu Hoàn thành trên board sau review user |
+| D0 | W0 Foundation | Monorepo, CI, Compose, API health, RLS prototype, web shell, iOS shell | **Đã duyệt / Hoàn thành** (2026-10-16) |
 | D1 | Quyết định & Identity | Chốt O01–O08 liên quan, OIDC provider, membership/revocation proof | Identity spike đạt criteria; chưa mở business endpoints thiếu auth |
 | D2 | Nhận vé xuyên web/app | Mã/quota/issue/outbox + web redeem + iOS ví với API thật | Demo đổi vé web → thông báo → cùng user mở vé trên app; concurrency quota/idempotency |
 | D3 | Check-in | Gate reserve/confirm/recovery + web Gate + iOS scan | Hai thiết bị; race revoke/timeout; không chỉ mock camera |
@@ -75,12 +75,12 @@ Android, payment/refund, seat map, Apple/Google Wallet, offline Gate multi-devic
 
 ## 6. Backlog đầu việc (nhóm Issue)
 
-Mỗi nhóm dưới đây tương ứng parent Issue trên GitHub; sub-issues mang tiêu chí nghiệm thu cụ thể. Trạng thái ban đầu: D0 có evidence → **Chờ duyệt**; phần còn lại → **Chưa lên lịch** hoặc **Sẵn sàng** nếu không bị chặn quyết định.
+Mỗi nhóm dưới đây tương ứng parent Issue trên GitHub; sub-issues mang tiêu chí nghiệm thu cụ thể. D0 đã **Hoàn thành**; D1 **Sẵn sàng**; D2+ vẫn **Bị chặn** / chưa lên lịch cho đến identity.
 
-### D0 — W0 Foundation (đã có code + evidence)
+### D0 — W0 Foundation (đã duyệt)
 
-- [ ] Xác nhận W0 foundation đủ để đóng đợt (tooling, CI, RLS test, web shell, iOS shell, chính sách no EAS Cloud Build)
-- [ ] Bảo toàn commit/policy/lockfile trên remote `main` và CI Node 24 có iOS JS export
+- [x] Xác nhận W0 foundation đủ để đóng đợt (tooling, CI, RLS test, web shell, iOS shell, chính sách no EAS Cloud Build) — Issues #1/#9
+- [x] Bảo toàn commit/policy/lockfile trên remote `main` và CI Node 24 có iOS JS export — Issue #8, commit `76986e1`
 
 ### D1 — Quyết định & Identity
 
@@ -154,8 +154,8 @@ Mỗi nhóm dưới đây tương ứng parent Issue trên GitHub; sub-issues ma
 - W0 evidence: [W0-FOUNDATION-REPORT.md](./W0-FOUNDATION-REPORT.md)
 - Chính sách iOS: không bao giờ Expo/EAS Cloud Build — xem root/mobile `AGENTS.md`, README, PRD, technical design.
 
-## 10. Bước sau khi user review
+## 10. Sau khi duyệt (đã xong 2026-10-16)
 
-1. User xác nhận / chỉnh đợt, thứ tự, quyết định ưu tiên.
-2. Cập nhật Issue statuses và dependencies cho khớp.
-3. Chỉ khi đó mới dispatch coding D1/D2 (identity trước business issuance).
+1. ~~User xác nhận roadmap / đóng D0~~ — đã duyệt.
+2. ~~Cập nhật Issue statuses~~ — D0 Hoàn thành; D1 Sẵn sàng.
+3. Tiếp theo: làm D1 (chốt O01–O08 + spike OIDC) trước khi dispatch D2 nhận vé.
