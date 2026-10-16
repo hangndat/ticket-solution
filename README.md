@@ -16,7 +16,7 @@ pnpm build
 pnpm dev
 ```
 
-Default local infrastructure ports: PostgreSQL `55432`, Redis `56379`. Both bind only to localhost. Use different ports and COMPOSE_PROJECT_NAME for each worktree. Development database credentials are not production credentials.
+Default local infrastructure ports: PostgreSQL `55432`, Redis `56379`. Both bind only to localhost. Use different ports and COMPOSE_PROJECT_NAME for each worktree. Development database credentials are not production credentials. The Compose bootstrap database user is an administrative development account; application runtime must use a separate non-owner, non-BYPASSRLS role. Never use the bootstrap account to claim RLS isolation works.
 
 ```sh
 pnpm lint
