@@ -75,6 +75,19 @@ export {
   type ClaimedOutboxRow,
   type ProcessOutboxResult,
 } from './outbox';
+export { GateError, GATE_ERROR_CODES, type GateErrorCode } from './gate-error';
+export {
+  openStaffSession,
+  revokeStaffSession,
+  reserveCheckin,
+  confirmCheckin,
+  undoCheckin,
+  revokeTicket,
+  type StaffSessionResult,
+  type ReserveResult,
+  type ConfirmResult,
+  type UndoResult,
+} from './gate';
 export {
   createNoopEmailAdapter,
   createFailingEmailAdapter,
