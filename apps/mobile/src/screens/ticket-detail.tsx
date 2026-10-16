@@ -9,11 +9,39 @@ import { getTenantId } from '@/identity/config';
 import { session } from '@/identity/session';
 import { buildDisplayQrPayload } from '@/tickets/display-payload';
 import { readTicketDisplayCache } from '@/tickets/display-cache';
+import { offlineDisplay } from '@/tickets/offline-display-session';
+
+type LoadOwner = {
+  ownerUserId: string;
+  ownerTenantId: string;
+  ticketId: string;
+  mode: 'verified' | 'offline-display';
+};
 
 type LoadState =
   | { status: 'idle' }
-  | { status: 'ready'; ticket: TicketSummary; syncedAt: string | null; fromCache: boolean }
-  | { status: 'missing' };
+  | (LoadOwner & {
+      status: 'ready';
+      ticket: TicketSummary;
+      syncedAt: string | null;
+      fromCache: boolean;
+    })
+  | (LoadOwner & { status: 'missing' });
+
+function loadMatchesOwner(
+  load: LoadState,
+  owner: LoadOwner | null,
+): load is Extract<LoadState, { status: 'ready' | 'missing' }> {
+  if (!owner || (load.status !== 'ready' && load.status !== 'missing')) {
+    return false;
+  }
+  return (
+    load.ownerUserId === owner.ownerUserId &&
+    load.ownerTenantId === owner.ownerTenantId &&
+    load.ticketId === owner.ticketId &&
+    load.mode === owner.mode
+  );
+}
 
 export function TicketDetailScreen() {
   const { ticketId } = useLocalSearchParams<{ ticketId: string }>();
@@ -22,34 +50,78 @@ export function TicketDetailScreen() {
     session.getSnapshot,
     session.getSnapshot,
   );
-  const tenantId = getTenantId();
+  const offline = useSyncExternalStore(
+    offlineDisplay.subscribe,
+    offlineDisplay.getSnapshot,
+    offlineDisplay.getSnapshot,
+  );
+  const envTenantId = getTenantId();
   const [load, setLoad] = useState<LoadState>({ status: 'idle' });
 
-  const canLoad =
-    identity.status === 'verified' && Boolean(tenantId) && Boolean(ticketId);
+  const verifiedUserId =
+    identity.status === 'verified' ? identity.userId : null;
+  const offlineUserId = offline.status === 'bound' ? offline.userId : null;
+  const offlineTenantId = offline.status === 'bound' ? offline.tenantId : null;
+
+  const displayUserId = verifiedUserId ?? offlineUserId;
+  const displayTenantId =
+    (verifiedUserId ? envTenantId : null) ?? offlineTenantId;
+  const displayMode: 'verified' | 'offline-display' | null = verifiedUserId
+    ? 'verified'
+    : offlineUserId
+      ? 'offline-display'
+      : null;
+
+  const owner = useMemo<LoadOwner | null>(() => {
+    if (!displayUserId || !displayTenantId || !ticketId || !displayMode) {
+      return null;
+    }
+    return {
+      ownerUserId: displayUserId,
+      ownerTenantId: displayTenantId,
+      ticketId,
+      mode: displayMode,
+    };
+  }, [displayMode, displayTenantId, displayUserId, ticketId]);
+
+  // Refuse stale ready state immediately on identity switch — do not wait for
+  // useEffect to clear, or one frame can render account A's QR under B.
+  const visibleLoad = useMemo<LoadState>(
+    () => (loadMatchesOwner(load, owner) ? load : { status: 'idle' }),
+    [load, owner],
+  );
 
   useEffect(() => {
-    if (!canLoad || identity.status !== 'verified' || !tenantId || !ticketId) {
+    if (!displayUserId || !displayTenantId || !ticketId || !displayMode) {
       return;
     }
-    const userId = identity.userId;
+    const ownerUserId = displayUserId;
+    const ownerTenantId = displayTenantId;
+    const id = ticketId;
+    const mode = displayMode;
     let cancelled = false;
     void (async () => {
-      const memory = session.read<TicketSummary[]>(tenantId, 'me-tickets');
-      const fromMemory = memory?.find((t) => t.ticketId === ticketId) ?? null;
-      if (fromMemory) {
-        if (!cancelled) {
-          setLoad({
-            status: 'ready',
-            ticket: fromMemory,
-            syncedAt: new Date().toISOString(),
-            fromCache: false,
-          });
+      if (mode === 'verified') {
+        const memory = session.read<TicketSummary[]>(ownerTenantId, 'me-tickets');
+        const fromMemory = memory?.find((t) => t.ticketId === id) ?? null;
+        if (fromMemory) {
+          if (!cancelled) {
+            setLoad({
+              status: 'ready',
+              ticket: fromMemory,
+              syncedAt: new Date().toISOString(),
+              fromCache: false,
+              ownerUserId,
+              ownerTenantId,
+              ticketId: id,
+              mode,
+            });
+          }
+          return;
         }
-        return;
       }
-      const cache = await readTicketDisplayCache(userId, tenantId);
-      const found = cache?.tickets.find((t) => t.ticketId === ticketId) ?? null;
+      const cache = await readTicketDisplayCache(ownerUserId, ownerTenantId);
+      const found = cache?.tickets.find((t) => t.ticketId === id) ?? null;
       if (cancelled) return;
       if (found) {
         setLoad({
@@ -57,40 +129,56 @@ export function TicketDetailScreen() {
           ticket: found,
           syncedAt: cache?.syncedAt ?? null,
           fromCache: true,
+          ownerUserId,
+          ownerTenantId,
+          ticketId: id,
+          mode,
         });
       } else {
-        setLoad({ status: 'missing' });
+        setLoad({
+          status: 'missing',
+          ownerUserId,
+          ownerTenantId,
+          ticketId: id,
+          mode,
+        });
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [canLoad, identity, tenantId, ticketId]);
+  }, [displayMode, displayTenantId, displayUserId, ticketId]);
 
   const qrValue = useMemo(
-    () => (load.status === 'ready' ? buildDisplayQrPayload(load.ticket) : ''),
-    [load],
+    () =>
+      visibleLoad.status === 'ready'
+        ? buildDisplayQrPayload(visibleLoad.ticket)
+        : '',
+    [visibleLoad],
   );
 
-  if (identity.status !== 'verified') {
+  if (!displayMode || !owner) {
     return (
       <Page>
         <Notice title="Sign in required">
-          Ticket detail requires a verified SessionBoundary (GET /v1/me).
+          Ticket detail requires a verified SessionBoundary (GET /v1/me) or a
+          prior offline-display binding on this device.
         </Notice>
       </Page>
     );
   }
 
-  if (!canLoad || load.status === 'idle') {
+  if (visibleLoad.status === 'idle') {
     return (
       <Page>
-        <Notice title="Loading ticket">Reading session memory or offline display cache…</Notice>
+        <Notice title="Loading ticket">
+          Reading session memory or offline display cache…
+        </Notice>
       </Page>
     );
   }
 
-  if (load.status === 'missing') {
+  if (visibleLoad.status === 'missing') {
     return (
       <Page>
         <Notice title="Ticket not found">
@@ -101,7 +189,7 @@ export function TicketDetailScreen() {
     );
   }
 
-  const { ticket, syncedAt, fromCache } = load;
+  const { ticket, syncedAt, fromCache, mode } = visibleLoad;
 
   return (
     <Page>
@@ -148,9 +236,11 @@ export function TicketDetailScreen() {
       </View>
 
       <Notice title="Sync">
-        {fromCache
-          ? 'Source: durable offline display cache'
-          : 'Source: session memory / last fetch'}
+        {mode === 'offline-display'
+          ? 'Mode: offline-display binding (not SessionBoundary verified)'
+          : fromCache
+            ? 'Source: durable offline display cache'
+            : 'Source: session memory / last fetch'}
         {'\n'}
         Last synced: {syncedAt ?? 'unknown'}
         {'\n'}

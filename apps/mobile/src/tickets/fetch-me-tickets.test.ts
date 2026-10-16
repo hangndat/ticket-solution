@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { fetchMeTickets } from './fetch-me-tickets.ts';
+import { fetchMeTickets, probeMeTickets } from './fetch-me-tickets.ts';
 
 const sampleTicket = {
   ticketId: '11111111-1111-1111-1111-111111111111',
@@ -47,6 +47,29 @@ test('fetchMeTickets accepts MeTicketsResponse and rejects invalid bodies', asyn
     body = { tickets: [sampleTicket] };
     status = 401;
     assert.equal(await fetchMeTickets('tok', sampleTicket.tenantId), null);
+    assert.equal(
+      (await probeMeTickets('tok', sampleTicket.tenantId)).status,
+      'unauthorized',
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (previous === undefined) delete process.env.EXPO_PUBLIC_API_BASE_URL;
+    else process.env.EXPO_PUBLIC_API_BASE_URL = previous;
+  }
+});
+
+test('probeMeTickets marks network failure unreachable (not unauthorized)', async () => {
+  const previous = process.env.EXPO_PUBLIC_API_BASE_URL;
+  process.env.EXPO_PUBLIC_API_BASE_URL = 'http://127.0.0.1:39999';
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => {
+    throw new TypeError('Network request failed');
+  };
+  try {
+    assert.equal(
+      (await probeMeTickets('tok', sampleTicket.tenantId)).status,
+      'unreachable',
+    );
   } finally {
     globalThis.fetch = originalFetch;
     if (previous === undefined) delete process.env.EXPO_PUBLIC_API_BASE_URL;
