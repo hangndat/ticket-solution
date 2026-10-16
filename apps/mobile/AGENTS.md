@@ -1,6 +1,6 @@
 # Mobile working agreement
 
-Read the root AGENTS.md, docs/PRD.md, docs/TECHNICAL-DESIGN.md and your current task. Root ownership and dispatch constraints take precedence over generated template guidance. Only edit apps/mobile; coordinator owns root tooling, lockfile and shared contracts.
+Read the root AGENTS.md, `.cursor/rules/*.mdc` (Orca parallel/routing/idle-fill, GitHub Project, GitHub Flow), docs/PRD.md, docs/TECHNICAL-DESIGN.md and your current task. Root ownership and dispatch constraints take precedence over generated template guidance. Only edit apps/mobile; coordinator owns root tooling, lockfile and shared contracts. Feature work: branch + PR — không commit thẳng `main`.
 
 Explicit user requirement: NEVER use Expo/EAS Cloud Build or EAS-hosted build workflows, and never fall back to cloud builds. Native binaries must be built locally with Xcode/xcodebuild/fastlane on a Mac or self-managed macOS runner. Local Expo CLI/prebuild is allowed. If local tools are unavailable, report the limitation instead of uploading to Expo build infrastructure.
 

@@ -16,3 +16,6 @@ apps/mobile/ios/
 apps/mobile/android/
 # Added by code-review-graph
 .code-review-graph/
+# Local Cursor MCP / machine-specific agent config (rules live in .cursor/rules/)
+.cursor/mcp.json
+.cursorrules

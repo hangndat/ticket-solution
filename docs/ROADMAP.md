@@ -13,7 +13,7 @@ Tracking lâu dài: GitHub Issues + Project (tiếng Việt). Project: https://g
 | Mục | Trạng thái | Ghi chú |
 | --- | --- | --- |
 | W0 Foundation | **Hoàn thành** (user duyệt) | Prototype/foundation — **không** đồng nghĩa production auth, isolation mọi module, hoặc ticketing xong. Issues #1/#8/#9 đóng; milestone D0 closed. |
-| Identity / OIDC | **Clerk đã chốt**; POC P4 đang làm | [DECISION-LOG](./DECISION-LOG.md), [spike](./spikes/D1-OIDC-PROVIDER.md) |
+| Identity / OIDC | **Clerk đã chốt**; code POC + membership xong | Còn **live** OTP/MFA/revocation smoke. [DECISION-LOG](./DECISION-LOG.md), [review #11](./reviews/D1-ISSUE-11-CLERK.md) |
 | Mã / quota / issue / outbox | Chưa bắt đầu | Thuộc đợt nhận vé |
 | Gate / check-in | Chưa bắt đầu | Thuộc đợt check-in |
 | Admin / platform đầy đủ | Chưa bắt đầu | Thuộc đợt hoàn thiện |
@@ -87,10 +87,10 @@ Mỗi nhóm dưới đây tương ứng parent Issue trên GitHub; sub-issues ma
 ### D1 — Quyết định & Identity
 
 - [x] Chốt / ghi log O01–O08 — [DECISION-LOG.md](./DECISION-LOG.md), Issue #10
-- [ ] Spike OIDC POC P4 (so sánh + đề xuất Clerk **đã có** trong [spike](./spikes/D1-OIDC-PROVIDER.md); còn demo web/iOS) — Issue #11
-- [ ] Membership tenant/event + deny-by-default; thu hồi chặn request tiếp theo
-- [ ] Session web (BFF/cookie) và iOS SecureStore; logout xóa dữ liệu cục bộ
-- [ ] Không mở endpoint nghiệp vụ tenant khi chưa chứng minh identity/membership
+- [x] Spike OIDC code POC (Clerk web/iOS + Nest `/v1/me`) — Issue #11; **live P4 smoke còn lại**
+- [x] Membership tenant/event + deny-by-default; thu hồi — Issue #12
+- [x] Session web BFF + iOS SecureStore (phủ bởi #11) — Issue #13
+- [ ] Không mở endpoint nghiệp vụ tenant khi chưa có live P4 evidence / membership đủ proof
 
 ### D2 — Nhận vé
 
@@ -137,21 +137,25 @@ Mỗi nhóm dưới đây tương ứng parent Issue trên GitHub; sub-issues ma
 
 ## 8. Quy ước tracking GitHub
 
-- **Project:** private, gắn repo `hangndat/ticket-solution`.
+- **Project:** https://github.com/users/hangndat/projects/3 — private, gắn `hangndat/ticket-solution`.
 - **Fields (tiếng Việt):** Trạng thái, Ưu tiên, Đợt bàn giao, Nhóm phụ trách, Ngày bắt đầu, Ngày mục tiêu.
 - **Trạng thái:** Chưa lên lịch · Sẵn sàng · Đang làm · Chờ duyệt · Bị chặn · Hoàn thành.
 - **Labels:** đợt (`dot-d0`…), nhóm (`nhom-backend`…), loại (`loai-quyet-dinh`, `loai-tinh-nang`, `loai-ha-tang`, `loai-kiem-thu`), ưu tiên.
 - **Views:** Tổng quan/Backlog, Board theo trạng thái, Roadmap (không gắn ngày giả).
 - **Parent / sub-issues** theo nhóm module; **blocked-by** khi phụ thuộc thật (ví dụ D2 bị chặn bởi D1 identity).
+- **Đồng bộ board:** không chờ user duyệt từng bước Status; `worker_done` ≠ Hoàn thành — xem `.cursor/rules/github-project-tracking.mdc`.
+- **GitHub Flow:** feature branch → commit → push → PR → Cursor DoD review → CI → coordinator merge `main`. Không commit feature thẳng `main` — xem `.cursor/rules/git-workflow.mdc`.
+- **Orca:** coding song song `--agent cursor`; plan/design Codex (fallback Cursor); idle worker nhận task `Sẵn sàng` ngay — xem `orca-*.mdc` trong `.cursor/rules/`.
 
 ## 9. Liên kết vận hành
 
 - Repo: https://github.com/hangndat/ticket-solution
+- Agent rules: root [AGENTS.md](../AGENTS.md) + `.cursor/rules/*.mdc`
 - W0 evidence: [W0-FOUNDATION-REPORT.md](./W0-FOUNDATION-REPORT.md)
 - Chính sách iOS: không bao giờ Expo/EAS Cloud Build — xem root/mobile `AGENTS.md`, README, PRD, technical design.
 
 ## 10. Sau khi duyệt (đã xong 2026-10-16)
 
 1. ~~User xác nhận roadmap / đóng D0~~ — đã duyệt.
-2. ~~Cập nhật Issue statuses~~ — D0 Hoàn thành; D1 Sẵn sàng.
-3. Tiếp theo: làm D1 (chốt O01–O08 + spike OIDC) trước khi dispatch D2 nhận vé.
+2. ~~Cập nhật Issue statuses~~ — D0 Hoàn thành; D1 code slice (#10–#13) xong; parent #2 Chờ duyệt.
+3. **Trước D2:** live Clerk OTP/MFA/revocation smoke (P4) — vẫn chặn mở business endpoints đến khi có evidence.

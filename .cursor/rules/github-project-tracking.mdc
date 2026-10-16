@@ -52,7 +52,7 @@ Design/architecture **planning** still follows `orca-agent-routing.mdc` (Codex, 
 ```bash
 # Resolve item for Issue N, then set Status (use option name or id from field-list)
 gh project item-list 3 --owner hangndat --format json
-gh project item-edit --project-id PVT_kwHOAGoDWs4BnWaNzhl7cPQ \
+gh project item-edit --project-id PVT_kwHOAGoDWs4BnWaN \
   --id <ITEM_ID> --field-id PVTSSF_lAHOAGoDWs4BnWaNzhl7cPk \
   --single-select-option-id <OPTION_ID>
 ```
