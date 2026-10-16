@@ -17,6 +17,10 @@ function AppStack() {
         name="events/[tenantSlug]/[slug]"
         options={{ title: 'Event details' }}
       />
+      <Stack.Screen
+        name="events/fixture/[eventId]"
+        options={{ title: 'Fixture event' }}
+      />
       <Stack.Screen name="redeem" options={{ title: 'Redeem' }} />
     </Stack>
   );

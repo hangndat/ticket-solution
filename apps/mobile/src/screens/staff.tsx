@@ -2,7 +2,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 import { Notice, Page } from '@/components/page';
 import {
+  SUPERVISOR_NOT_ADMISSION,
   canReconcile,
+  listUnknownGateOps,
   reconcileOp,
   runScan,
   type GateOp,
@@ -159,6 +161,27 @@ export function StaffScreen() {
           </Text>
         </Pressable>
       ) : null}
+      <View accessibilityRole="summary" accessibilityLabel={SUPERVISOR_NOT_ADMISSION}>
+        <Notice title="Supervisor — unknown operations">
+          {SUPERVISOR_NOT_ADMISSION} Persisted unknown gate operations are listed
+          here and are not admissions.
+        </Notice>
+        {listUnknownGateOps(ops).length === 0 ? (
+          <Text selectable style={{ color: colors.secondary, fontSize: 17 }}>
+            No persisted unknown operations.
+          </Text>
+        ) : (
+          listUnknownGateOps(ops).map((op) => (
+            <Text
+              key={op.id}
+              selectable
+              style={{ color: colors.label, fontSize: 17, lineHeight: 24 }}
+            >
+              {op.ticketId || op.id}: {op.message} Not an admission.
+            </Text>
+          ))
+        )}
+      </View>
     </Page>
   );
 }
