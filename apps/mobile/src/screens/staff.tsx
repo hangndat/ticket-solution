@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 import { Notice, Page } from '@/components/page';
@@ -21,6 +22,7 @@ function outcomeTitle(op: GateOp | null): string {
 }
 
 export function StaffScreen() {
+  const router = useRouter();
   const [raw, setRaw] = useState('');
   const [ops, setOps] = useState<GateOp[]>([]);
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -106,6 +108,16 @@ export function StaffScreen() {
         Scan or paste a ticket display QR. Admit only after the API records a
         check-in. A lost response stays unknown after restart.
       </Notice>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Open supervisor"
+        onPress={() => router.push('/staff/supervisor')}
+        style={{ padding: 14, borderRadius: 12, backgroundColor: colors.card }}
+      >
+        <Text style={{ color: colors.label, fontSize: 17, textAlign: 'center' }}>
+          Supervisor
+        </Text>
+      </Pressable>
       <GateCamera disabled={busy || !ready} onScan={(data) => void submitScan(data)} />
       <TextInput
         value={raw}
