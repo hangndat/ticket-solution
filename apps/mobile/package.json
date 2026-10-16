@@ -36,7 +36,7 @@
     "dev": "expo start --ios --port 8083",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src",
-    "test": "node --experimental-strip-types --test src/identity/*.test.ts src/data/*.test.ts",
+    "test": "node --experimental-strip-types --test src/identity/*.test.ts src/data/*.test.ts src/tickets/*.test.ts",
     "build": "expo export --platform ios --output-dir dist"
   },
   "private": true,
