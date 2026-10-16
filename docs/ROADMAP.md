@@ -13,7 +13,7 @@ Tracking lâu dài: GitHub Issues + Project (tiếng Việt). Project: https://g
 | Mục | Trạng thái | Ghi chú |
 | --- | --- | --- |
 | W0 Foundation | **Hoàn thành** (user duyệt) | Prototype/foundation — **không** đồng nghĩa production auth, isolation mọi module, hoặc ticketing xong. Issues #1/#8/#9 đóng; milestone D0 closed. |
-| Identity / OIDC | Chưa chốt provider | ADR-09 còn mở; cần spike trước mở tenant business endpoints |
+| Identity / OIDC | Đề xuất **Clerk**; POC P4 còn lại | Xem [DECISION-LOG](./DECISION-LOG.md), [spike](./spikes/D1-OIDC-PROVIDER.md) |
 | Mã / quota / issue / outbox | Chưa bắt đầu | Thuộc đợt nhận vé |
 | Gate / check-in | Chưa bắt đầu | Thuộc đợt check-in |
 | Admin / platform đầy đủ | Chưa bắt đầu | Thuộc đợt hoàn thiện |
@@ -84,8 +84,8 @@ Mỗi nhóm dưới đây tương ứng parent Issue trên GitHub; sub-issues ma
 
 ### D1 — Quyết định & Identity
 
-- [ ] Chốt / ghi log O01–O08 (app chung, staff app, tải pilot, form/ngôn ngữ, tái nhập cổng, retention/SLA, custom domain, DB riêng)
-- [ ] Spike + chọn managed OIDC (email verify, PKCE iOS, MFA staff, revocation)
+- [x] Chốt / ghi log O01–O08 — [DECISION-LOG.md](./DECISION-LOG.md), Issue #10
+- [ ] Spike OIDC POC P4 (so sánh + đề xuất Clerk **đã có** trong [spike](./spikes/D1-OIDC-PROVIDER.md); còn demo web/iOS) — Issue #11
 - [ ] Membership tenant/event + deny-by-default; thu hồi chặn request tiếp theo
 - [ ] Session web (BFF/cookie) và iOS SecureStore; logout xóa dữ liệu cục bộ
 - [ ] Không mở endpoint nghiệp vụ tenant khi chưa chứng minh identity/membership
@@ -129,15 +129,9 @@ Mỗi nhóm dưới đây tương ứng parent Issue trên GitHub; sub-issues ma
 
 | ID | Câu hỏi | Baseline tạm | Ảnh hưởng |
 | --- | --- | --- | --- |
-| O01 | App chung hay app riêng từng công ty? | App chung hai chế độ | Store, pipeline, identity, deep link |
-| O02 | App riêng cho staff? | Staff trong app chung | UX, quyền, phân phối thiết bị |
-| O03 | Tải / số tenant / cổng thực tế? | Baseline pilot PRD mục 9 | Capacity, SLO, test |
-| O04 | Form dữ liệu và ngôn ngữ? | Tiếng Việt; schema mở rộng | Nội dung, email, privacy |
-| O05 | Tái nhập cổng / nhiều ngày? | Một vé một lượt | Entitlement, check-in model |
-| O06 | Retention, vùng dữ liệu, SLA? | Chưa chốt | Hạ tầng, lifecycle |
-| O07 | Custom domain/sender ngay release đầu? | Subdomain + sender platform | DNS, deliverability |
-| O08 | Database riêng theo tổ chức? | Shared DB + RLS | Deployment, isolation tier |
-| ADR-09 | Provider OIDC cụ thể? | Managed OIDC + PKCE | Toàn bộ D1+ |
+| O01–O05, O07–O08 | (xem DECISION-LOG) | **Đã chốt MVP** | [DECISION-LOG.md](./DECISION-LOG.md) |
+| O06 | Retention, vùng dữ liệu, SLA? | Chưa chốt số | Trước dữ liệu user thật |
+| ADR-09 | Provider OIDC cụ thể? | **Clerk (đề xuất)** — POC P4 | [spikes/D1-OIDC-PROVIDER.md](./spikes/D1-OIDC-PROVIDER.md) |
 
 ## 8. Quy ước tracking GitHub
 

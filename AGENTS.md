@@ -1,6 +1,6 @@
 # Agent working agreement
 
-Read docs/PRD.md, docs/TECHNICAL-DESIGN.md and your task spec. Work only in assigned scope. Current milestone is W0 foundation, not production ticketing.
+Read docs/PRD.md, docs/TECHNICAL-DESIGN.md, docs/DECISION-LOG.md and your task spec. Work only in assigned scope. Current milestone is D1 identity (OIDC/membership), not production ticketing.
 
 ## Planning and tracking language
 

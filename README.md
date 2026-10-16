@@ -45,6 +45,8 @@ Each app has its own README and environment examples. Database runtime role prov
 - [Technical design](docs/TECHNICAL-DESIGN.md)
 - [Agent development plan](docs/AGENT-DEVELOPMENT-PLAN.md)
 - [Roadmap](docs/ROADMAP.md)
+- [Decision log](docs/DECISION-LOG.md)
+- [OIDC spike D1](docs/spikes/D1-OIDC-PROVIDER.md)
 - [W0 foundation report](docs/W0-FOUNDATION-REPORT.md)
 
 W0 is foundation work. Identity provider, transactional issuance, and Gate correctness require dedicated implementation and validation before pilot.
