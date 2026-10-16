@@ -43,6 +43,7 @@ import {
 } from '@ticket/backend';
 import { ConfigPublishController, ConfigPublishService } from './config';
 import { InventoryController, InventoryService } from './inventory';
+import { ApprovalController, ApprovalService } from './approval';
 import { GateController, GateService } from './gate';
 import {
   TicketIssueController,
@@ -310,6 +311,7 @@ export async function createApp(
       GateController,
       ConfigPublishController,
       InventoryController,
+      ApprovalController,
     ],
     providers: [
       {
@@ -335,6 +337,10 @@ export async function createApp(
       {
         provide: InventoryService,
         useValue: new InventoryService(ticketDeps),
+      },
+      {
+        provide: ApprovalService,
+        useValue: new ApprovalService(ticketDeps),
       },
       {
         provide: DatabaseShutdown,
@@ -364,7 +370,7 @@ export function createOpenApi(app: NestFastifyApplication) {
       .setTitle('Ticket API — D2 issue')
       .setVersion('0.2.0')
       .setDescription(
-        'Identity plus redemption issue (PostgreSQL quota/outbox). Redis does not decide quota.',
+        'Identity, redemption issue, and manual approval. PostgreSQL quota is the source of truth; Redis is not.',
       )
       .addBearerAuth()
       .build(),
