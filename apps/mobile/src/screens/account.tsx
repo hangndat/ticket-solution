@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState, useSyncExternalStore } from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import type { MeResponse } from '@ticket/contracts';
 import { Notice, Page } from '@/components/page';
+import { PushStatus } from '@/push/push-status';
 import { colors } from '@/theme/colors';
 import { getTenantId, isOidcConfigured } from '@/identity/config';
 import { fetchMe, verifyViaMe } from '@/identity/fetch-me';
@@ -78,6 +79,7 @@ export function AccountScreen() {
           Current SessionBoundary status: {identity.status}. No staff
           authorization is implied.
         </Notice>
+        <PushStatus />
       </Page>
     );
   }
@@ -277,6 +279,8 @@ function ConfiguredAccount() {
           emailVerified: {visibleMe.emailVerified ? 'true' : 'false'}
         </Notice>
       ) : null}
+
+      <PushStatus />
 
       <Notice title="Not staff authorization">
         A verified SessionBoundary identity does not grant staff tools, tenant

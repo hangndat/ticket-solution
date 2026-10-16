@@ -1,5 +1,10 @@
 import { useState } from 'react';
-import { Pressable, Text, TextInput } from 'react-native';
+import { Pressable, Text, TextInput, View } from 'react-native';
+import {
+  redeemActionAnnouncement,
+  redeemDecisionAnnouncement,
+  redeemReconcileAnnouncement,
+} from '@/a11y/announcements';
 import { Notice, Page } from '@/components/page';
 import { getApiBaseUrl, getEventId, getTenantId } from '@/identity/config';
 import { session } from '@/identity/session';
@@ -100,16 +105,36 @@ export function RedeemScreen() {
         style={field}
       />
       <Pressable
-        accessibilityRole="button"
+        {...redeemActionAnnouncement()}
+        accessibilityState={{ disabled: busy || code.trim().length === 0 }}
         disabled={busy || code.trim().length === 0}
         onPress={() => void submit()}
         style={button}
       >
         <Text style={buttonLabel}>{busy ? 'Checking…' : 'Redeem'}</Text>
       </Pressable>
-      {decision ? <Notice title={titleFor(decision)}>{decision.kind === 'issued' ? decision.ticketId : decision.message}</Notice> : null}
+      {decision ? (
+        <View
+          {...redeemDecisionAnnouncement({
+            kind: decision.kind,
+            title: titleFor(decision),
+            detail: decision.kind === 'issued' ? decision.ticketId : decision.message,
+          })}
+          accessibilityLiveRegion={decision.kind === 'unknown' ? 'assertive' : 'polite'}
+        >
+          <Notice title={titleFor(decision)}>
+            {decision.kind === 'issued' ? decision.ticketId : decision.message}
+          </Notice>
+        </View>
+      ) : null}
       {decision?.kind === 'issued' ? null : pendingKey ? (
-        <Pressable accessibilityRole="button" disabled={busy} onPress={() => void reconcile()} style={button}>
+        <Pressable
+          {...redeemReconcileAnnouncement()}
+          accessibilityState={{ disabled: busy }}
+          disabled={busy}
+          onPress={() => void reconcile()}
+          style={button}
+        >
           <Text style={buttonLabel}>Reconcile same attempt</Text>
         </Pressable>
       ) : null}
