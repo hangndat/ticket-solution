@@ -108,6 +108,27 @@ test('production routes isolate tenant content and reject unknown pairs', async 
     assert.ok(redeemHtml.includes('không mock'));
     assert.ok(!redeemHtml.includes('Clerk'));
 
+    const gate = await fetch(base + '/gate');
+    assert.equal(gate.status, 200);
+    const gateHtml = await gate.text();
+    assert.ok(gateHtml.includes('Cổng check-in'));
+    assert.ok(gateHtml.includes('Không cho khách qua'));
+    assert.ok(gateHtml.includes('OIDC chưa cấu hình'));
+
+    const gateBff = await fetch(base + '/api/bff/gate/confirm', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        tenantId: '11111111-1111-4111-8111-111111111111',
+        eventId: '22222222-2222-4222-8222-222222222222',
+        reservationId: '33333333-3333-4333-8333-333333333333',
+        staffSessionId: '44444444-4444-4444-8444-444444444444',
+        token: 'hold-token',
+      }),
+    });
+    assert.equal(gateBff.status, 503);
+    assert.equal((await gateBff.json()).code, 'OIDC_MISCONFIGURED');
+
     const redeemBff = await fetch(base + '/api/bff/redeem', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
