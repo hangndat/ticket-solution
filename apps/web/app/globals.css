@@ -398,7 +398,119 @@ details p {
 .skip-link:focus {
   top: 16px;
 }
+.redeem-form {
+  display: grid;
+  gap: 28px;
+  margin: 32px 0;
+  max-width: 720px;
+}
+.redeem-fields {
+  display: grid;
+  gap: 16px;
+}
+.redeem-fields label,
+.redeem-versions label {
+  display: grid;
+  gap: 6px;
+  font-weight: 700;
+  font-size: 0.88rem;
+}
+.redeem-fields input,
+.redeem-versions input {
+  font: inherit;
+  font-weight: 400;
+  padding: 12px 14px;
+  border: 2px solid #22241f40;
+  background: #fff;
+  color: var(--ink);
+}
+.redeem-versions {
+  display: grid;
+  gap: 16px;
+}
+.redeem-status {
+  padding: 18px 20px;
+  border: 2px solid #22241f40;
+  background: #22241f08;
+}
+.redeem-status h3 {
+  margin: 0 0 8px;
+  font-size: 1.15rem;
+}
+.redeem-status p {
+  margin: 0;
+}
+.redeem-status--success {
+  border-color: #154c42;
+  background: #e0ebe4;
+  color: #154c42;
+}
+.redeem-status--exhausted,
+.redeem-status--used,
+.redeem-status--closed {
+  border-color: #783013;
+  background: #f7dfb9;
+  color: #783013;
+}
+.redeem-status--timeout,
+.redeem-status--polling,
+.redeem-status--verifying {
+  border-color: #235fd0;
+  background: #e8effc;
+  color: #163a7a;
+}
+.redeem-status--auth,
+.redeem-status--error,
+.redeem-status--invalid,
+.redeem-status--conflict {
+  border-color: #8a1f1f;
+  background: #f8e8e8;
+  color: #8a1f1f;
+}
+.redeem-meta {
+  margin-top: 10px !important;
+  font-size: 0.85rem;
+  word-break: break-all;
+}
+.redeem-ticket dl,
+.redeem-ticket-list ul {
+  margin: 0;
+  padding: 0;
+}
+.redeem-ticket dl {
+  display: grid;
+  gap: 10px;
+}
+.redeem-ticket dl > div {
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  gap: 12px;
+}
+.redeem-ticket dt {
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+.redeem-ticket dd {
+  margin: 0;
+  word-break: break-all;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.9rem;
+}
+.redeem-ticket-list ul {
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+.redeem-ticket-list li {
+  padding: 10px 12px;
+  background: #22241f0d;
+  border: 1px solid #22241f30;
+  font-size: 0.92rem;
+}
 @media (min-width: 760px) {
+  .redeem-versions {
+    grid-template-columns: 1fr 1fr;
+  }
   .container {
     padding: 0 48px;
   }
