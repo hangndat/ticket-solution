@@ -110,6 +110,7 @@ async function startIsolatedPostgres() {
     'prisma/migrations/202610160002_d1_users/migration.sql',
     'prisma/migrations/202610160003_d1_membership/migration.sql',
     'prisma/migrations/202610160004_d2_issue_ticket/migration.sql',
+    'prisma/migrations/202610170005_d3_gate/migration.sql',
   ]) {
     await admin.query(readFileSync(file, 'utf8'));
   }
