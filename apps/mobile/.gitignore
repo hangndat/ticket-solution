@@ -42,3 +42,6 @@ example
 # generated native folders
 /ios
 /android
+
+# local headless UAT screenshots (scripts/sim-uat.sh)
+.uat-artifacts/
