@@ -1,0 +1,38 @@
+---
+description: Orca coding tasks must spawn parallel workers by ownership when independent
+alwaysApply: true
+---
+
+# Orca — parallel coding workers (default)
+
+When the user asks for coding work that Orca should run (or when you are the Orca coordinator), **prefer parallel worker spawn over serial solo coding**.
+
+## Default
+
+1. Decompose the request into independent slices by ownership:
+   - Backend → `apps/api`, `apps/worker`, `packages/backend` (+ DB tests/migrations)
+   - Web → `apps/web`
+   - iOS → `apps/mobile`
+   - Coordinator-only → root tooling, lockfile, CI, shared contracts / OpenAPI
+2. If **two or more slices are independent**, create one Run and **`worker-start` every independent worker in the same wave** before any `check --wait`. Do not code those slices yourself serially.
+3. Use real Task dependencies only when ordering is required (e.g. contract/API first → then web + iOS consumers in parallel). Prefer shallow DAGs over long chains.
+4. Each worker stays in its scope; no cross-scope edits. Task-specific ports/project names; do not control another worker's simulator or DB.
+5. Load Orca orchestration via `ORCA skills get orchestration` and use the live preamble IDs — never invent lifecycle args.
+
+## When NOT to parallelize
+
+- Single-scope change (one ownership boundary only)
+- Hard serial dependency with no parallel tail (e.g. only coordinator lockfile regen)
+- User explicitly asks for one agent / sequential / no Orca workers
+- Exploration-only / Q&A with no implementation
+
+## Anti-patterns
+
+```text
+❌ Plan BE + web + iOS, then implement all three yourself in one terminal
+❌ Start worker A, wait for worker_done, then start worker B for independent work
+❌ One mega-spec that mixes apps/api + apps/web + apps/mobile
+
+✅ worker-start BE + worker-start web (+ worker-start iOS) in one wave → check --wait
+✅ Contract task first (if needed) → then parallel consumer workers
+```
