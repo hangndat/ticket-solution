@@ -1,12 +1,14 @@
 import { useCallback, useState, useSyncExternalStore } from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
-import { useAuth, useClerk } from '@clerk/expo';
-import { useHostedAuth } from '@clerk/expo/hosted-auth';
 import type { MeResponse } from '@ticket/contracts';
 import { Notice, Page } from '@/components/page';
 import { colors } from '@/theme/colors';
-import { isClerkConfigured } from '@/identity/config';
-import { fetchMe } from '@/identity/fetch-me';
+import { isOidcConfigured } from '@/identity/config';
+import { fetchMe, verifyViaMe } from '@/identity/fetch-me';
+import {
+  endKeycloakSession,
+  loginWithKeycloak,
+} from '@/identity/oidc-login';
 import { session } from '@/identity/session';
 
 function ActionButton({
@@ -51,7 +53,7 @@ function ActionButton({
 }
 
 export function AccountScreen() {
-  const configured = isClerkConfigured();
+  const configured = isOidcConfigured();
   const identity = useSyncExternalStore(
     session.subscribe,
     session.getSnapshot,
@@ -61,10 +63,10 @@ export function AccountScreen() {
   if (!configured) {
     return (
       <Page>
-        <Notice title="Clerk is not configured">
-          Set EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY in a local .env (see
-          apps/mobile/.env.example). Without a publishable key this build stays
-          signed out and never stubs a verified user.
+        <Notice title="OIDC is not configured">
+          Set EXPO_PUBLIC_OIDC_ISSUER and EXPO_PUBLIC_OIDC_CLIENT_ID in a local
+          .env (see apps/mobile/.env.example). Without Keycloak config this
+          build stays signed out and never stubs a verified user.
         </Notice>
         <Notice title="Identity status">
           Current SessionBoundary status: {identity.status}. No staff
@@ -78,12 +80,10 @@ export function AccountScreen() {
 }
 
 function ConfiguredAccount() {
-  const { isLoaded, isSignedIn, getToken, userId } = useAuth();
-  const { signOut } = useClerk();
-  const { startHostedAuth } = useHostedAuth();
   const [me, setMe] = useState<MeResponse | null>(null);
   const [meError, setMeError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [accessToken, setAccessToken] = useState<string | null>(null);
   const identity = useSyncExternalStore(
     session.subscribe,
     session.getSnapshot,
@@ -91,15 +91,16 @@ function ConfiguredAccount() {
   );
   const verifiedUserId =
     identity.status === 'verified' ? identity.userId : null;
+  const isSignedIn = identity.status === 'verified' || accessToken !== null;
 
   const refreshMe = useCallback(async () => {
     setBusy(true);
     setMeError(null);
     try {
-      const token = await getToken();
+      const token = accessToken;
       if (!token) {
         setMe(null);
-        setMeError('No short-lived bearer from Clerk session.');
+        setMeError('No short-lived bearer. Sign in first.');
         return;
       }
       const result = await fetchMe(token);
@@ -114,22 +115,28 @@ function ConfiguredAccount() {
     } finally {
       setBusy(false);
     }
-  }, [getToken]);
+  }, [accessToken]);
 
   const onSignIn = useCallback(async () => {
     setBusy(true);
     setMe(null);
     setMeError(null);
     try {
-      await startHostedAuth({ mode: 'sign-in' });
+      const result = await loginWithKeycloak();
+      if (!result.ok) {
+        setMeError(result.reason);
+        return;
+      }
+      setAccessToken(result.accessToken);
+      await session.establish(result.accessToken, verifyViaMe);
     } catch (error) {
       setMeError(
-        error instanceof Error ? error.message : 'Hosted sign-in failed.',
+        error instanceof Error ? error.message : 'Keycloak sign-in failed.',
       );
     } finally {
       setBusy(false);
     }
-  }, [startHostedAuth]);
+  }, []);
 
   const onLogout = useCallback(async () => {
     setBusy(true);
@@ -137,7 +144,8 @@ function ConfiguredAccount() {
     setMeError(null);
     try {
       await session.logout();
-      await signOut();
+      setAccessToken(null);
+      await endKeycloakSession();
     } catch (error) {
       setMeError(
         error instanceof Error
@@ -147,28 +155,19 @@ function ConfiguredAccount() {
     } finally {
       setBusy(false);
     }
-  }, [signOut]);
-
-  if (!isLoaded) {
-    return (
-      <Page>
-        <View style={{ padding: 24, alignItems: 'center' }}>
-          <ActivityIndicator />
-        </View>
-      </Page>
-    );
-  }
+  }, []);
 
   return (
     <Page>
-      <Notice title="D1 identity POC (Clerk)">
-        Hosted Account Portal sign-in with PKCE-capable browser session. Tokens
-        use SecureStore (WHEN_UNLOCKED_THIS_DEVICE_ONLY). Verified app identity
-        only after GET /v1/me — not from local JWT claims alone.
+      <Notice title="D1 identity POC (Keycloak)">
+        Authorization Code + PKCE via expo-auth-session against self-hosted
+        Keycloak. Tokens use SecureStore (WHEN_UNLOCKED_THIS_DEVICE_ONLY).
+        Verified app identity only after GET /v1/me — not from local JWT claims
+        alone. No Clerk / SaaS IdP.
       </Notice>
 
       <Notice title="Session">
-        Clerk: {isSignedIn ? `signed in (${userId ?? 'unknown'})` : 'signed out'}
+        Local bearer: {accessToken ? 'present' : 'none'}
         {'\n'}
         SessionBoundary: {identity.status}
         {verifiedUserId ? ` (${verifiedUserId})` : ''}

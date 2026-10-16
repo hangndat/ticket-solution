@@ -1,7 +1,19 @@
-/** Clerk publishable key from Expo public env. Empty → fail closed (no verified user). */
-export function getClerkPublishableKey(): string | null {
-  const key = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY?.trim() ?? '';
-  return key.length > 0 ? key : null;
+/** Keycloak issuer from Expo public env. Empty → fail closed (no verified user). */
+export function getOidcIssuer(): string | null {
+  const issuer = process.env.EXPO_PUBLIC_OIDC_ISSUER?.trim() ?? '';
+  return issuer.length > 0 ? issuer.replace(/\/+$/, '') : null;
+}
+
+/** Public OIDC client id for iOS (PKCE). */
+export function getOidcClientId(): string | null {
+  const id = process.env.EXPO_PUBLIC_OIDC_CLIENT_ID?.trim() ?? '';
+  return id.length > 0 ? id : null;
+}
+
+export function getOidcScopes(): string {
+  return (
+    process.env.EXPO_PUBLIC_OIDC_SCOPES?.trim() || 'openid profile email'
+  );
 }
 
 /** Nest API base URL for GET /v1/me (no trailing slash). */
@@ -11,6 +23,6 @@ export function getApiBaseUrl(): string | null {
   return url.replace(/\/+$/, '');
 }
 
-export function isClerkConfigured(): boolean {
-  return getClerkPublishableKey() !== null;
+export function isOidcConfigured(): boolean {
+  return getOidcIssuer() !== null && getOidcClientId() !== null;
 }

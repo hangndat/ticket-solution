@@ -97,7 +97,8 @@ test('production routes isolate tenant content and reject unknown pairs', async 
     assert.ok(authHtml.includes('OIDC chưa cấu hình'));
     assert.ok(authHtml.includes('unconfigured'));
     assert.ok(authHtml.includes('không coi là đã'));
-    assert.ok(!authHtml.includes('Signed in (Clerk session cookie)'));
+    assert.ok(!authHtml.includes('Clerk'));
+    assert.ok(authHtml.includes('Keycloak'));
   } finally {
     const stopped = once(child, 'exit');
     child.kill('SIGTERM');

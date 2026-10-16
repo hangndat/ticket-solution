@@ -1,6 +1,6 @@
-import { auth } from '@clerk/nextjs/server';
 import { IDENTITY_ERROR_CODES, type ApiError } from '@ticket/contracts';
-import { isClerkConfigured } from '../../../../src/clerk/config';
+import { isOidcConfigured } from '../../../../src/oidc/config';
+import { readAccessToken } from '../../../../src/oidc/cookies';
 
 function apiError(
   code: string,
@@ -18,32 +18,23 @@ function apiError(
 }
 
 /**
- * Same-origin BFF: read Clerk session (HttpOnly cookie), forward JWT to API.
- * Never exposes CLERK_SECRET_KEY or puts access tokens in localStorage.
+ * Same-origin BFF: read OIDC access token (HttpOnly cookie), forward to Nest.
+ * Never puts access tokens in localStorage.
  */
 export async function GET() {
-  if (!isClerkConfigured()) {
+  if (!isOidcConfigured()) {
     return apiError(
       IDENTITY_ERROR_CODES.OIDC_MISCONFIGURED,
-      'OIDC chưa cấu hình — thiếu NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY hoặc CLERK_SECRET_KEY.',
+      'OIDC chưa cấu hình — thiếu OIDC_ISSUER / OIDC_CLIENT_ID / OIDC_CLIENT_SECRET / OIDC_REDIRECT_URI.',
       503,
     );
   }
 
-  const session = await auth();
-  if (!session.userId) {
-    return apiError(
-      IDENTITY_ERROR_CODES.UNAUTHENTICATED,
-      'Not signed in.',
-      401,
-    );
-  }
-
-  const token = await session.getToken();
+  const token = await readAccessToken();
   if (!token) {
     return apiError(
       IDENTITY_ERROR_CODES.UNAUTHENTICATED,
-      'Session has no usable access token.',
+      'Not signed in.',
       401,
     );
   }

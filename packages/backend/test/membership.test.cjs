@@ -147,13 +147,13 @@ test(
 
       const users = createPrismaIdentityUserRepository(db);
       const actor = await users.upsertFromVerifiedIdentity({
-        issuer: 'https://example.clerk.accounts.dev',
+        issuer: 'http://127.0.0.1:8080/realms/ticket',
         subject: 'user_membership_1',
         email: 'member@example.com',
         emailVerified: true,
       });
       const stranger = await users.upsertFromVerifiedIdentity({
-        issuer: 'https://example.clerk.accounts.dev',
+        issuer: 'http://127.0.0.1:8080/realms/ticket',
         subject: 'user_stranger',
         email: 'stranger@example.com',
         emailVerified: true,

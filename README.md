@@ -20,7 +20,7 @@ pnpm build
 pnpm dev
 ```
 
-Default local infrastructure ports: PostgreSQL `55432`, Redis `56379`. Both bind only to localhost. Use different ports and COMPOSE_PROJECT_NAME for each worktree. Development database credentials are not production credentials. The Compose bootstrap database user is an administrative development account; application runtime must use a separate non-owner, non-BYPASSRLS role. Never use the bootstrap account to claim RLS isolation works.
+Default local infrastructure ports (all bind `127.0.0.1` only): PostgreSQL `55432`, Redis `56379`, Keycloak `8080`, MinIO `9000`/`9001`, Mailpit SMTP `1025` / UI `8025`. Use different ports and `COMPOSE_PROJECT_NAME` for each worktree. Identity is **self-hosted Keycloak** (no Clerk/SaaS IdP). Development database credentials are not production credentials. The Compose bootstrap database user is an administrative development account; application runtime must use a separate non-owner, non-BYPASSRLS role. Never use the bootstrap account to claim RLS isolation works.
 
 ```sh
 pnpm lint
@@ -50,4 +50,4 @@ Each app has its own README and environment examples. Database runtime role prov
 - [W0 foundation report](docs/W0-FOUNDATION-REPORT.md)
 - Agent rules: [AGENTS.md](AGENTS.md) and `.cursor/rules/` (Orca, Project board, GitHub Flow)
 
-W0 is foundation work. Identity provider, transactional issuance, and Gate correctness require dedicated implementation and validation before pilot.
+W0 is foundation work. Keycloak P4 live smoke, transactional issuance, and Gate correctness require dedicated validation before pilot. See [D1-P4-KEYCLOAK-SMOKE](docs/reviews/D1-P4-KEYCLOAK-SMOKE.md).

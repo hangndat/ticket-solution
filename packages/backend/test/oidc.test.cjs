@@ -9,7 +9,7 @@ const {
   IDENTITY_ERROR_CODES,
 } = require('../dist');
 
-const ISSUER = 'https://example.clerk.accounts.dev';
+const ISSUER = 'http://127.0.0.1:8080/realms/ticket';
 const AUDIENCE = 'ticket-api';
 
 async function fixtureKeys() {
@@ -57,7 +57,7 @@ test('readOidcEnvironment fails closed when config missing', () => {
   const config = readOidcEnvironment({
     OIDC_ISSUER: ISSUER,
     OIDC_AUDIENCE: AUDIENCE,
-    OIDC_JWKS_URL: 'https://example.clerk.accounts.dev/.well-known/jwks.json',
+    OIDC_JWKS_URL: 'http://127.0.0.1:8080/realms/ticket/.well-known/jwks.json',
   });
   assert.equal(config.issuer, ISSUER);
 });

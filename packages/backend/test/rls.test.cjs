@@ -161,7 +161,7 @@ test(
       // Global users: upsert without tenant context (never withTenant).
       const users = createPrismaIdentityUserRepository(db);
       const stored = await users.upsertFromVerifiedIdentity({
-        issuer: 'https://example.clerk.accounts.dev',
+        issuer: 'http://127.0.0.1:8080/realms/ticket',
         subject: 'user_rls_1',
         email: 'rls@example.com',
         emailVerified: false,
@@ -169,7 +169,7 @@ test(
       assert.equal(stored.subject, 'user_rls_1');
       assert.equal(stored.emailVerified, false);
       const again = await users.upsertFromVerifiedIdentity({
-        issuer: 'https://example.clerk.accounts.dev',
+        issuer: 'http://127.0.0.1:8080/realms/ticket',
         subject: 'user_rls_1',
         email: 'rls-updated@example.com',
         emailVerified: true,

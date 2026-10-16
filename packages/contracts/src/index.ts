@@ -13,7 +13,7 @@ export interface ApiError {
   retryable: boolean;
 }
 
-/** Authenticated caller identity after OIDC JWT verification (Clerk). */
+/** Authenticated caller identity after OIDC JWT verification (Keycloak). */
 export interface MeResponse {
   userId: string;
   issuer: string;
