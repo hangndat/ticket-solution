@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { ISSUE_ERROR_CODES } from '@ticket/contracts';
+import {
+  redeemPayloadFingerprint,
+  resolveIdempotencyKey,
+} from '../src/redeem/attempt-key';
 import { fetchJson } from '../src/redeem/fetch-json';
 import {
   messageForApiError,
@@ -223,4 +227,36 @@ test('exhausted/used/timeout UX kinds remain distinct and network is retryable t
   assert.equal(networkMessage().kind, 'timeout');
   assert.equal(networkMessage().retryable, true);
   assert.match(networkMessage().detail, /idempotency-key/i);
+});
+
+test('resolveIdempotencyKey reuses key only when unclear + same payload', () => {
+  const payload = {
+    tenantId: '11111111-1111-4111-8111-111111111111',
+    eventId: '22222222-2222-4222-8222-222222222222',
+    code: 'CODE-A',
+    formVersion: 'web-redeem-d2',
+    termsVersion: 'web-terms-d2',
+  };
+  const fingerprint = redeemPayloadFingerprint(payload);
+  const existing = { key: 'keep-me', fingerprint, unclear: true };
+
+  const reused = resolveIdempotencyKey(existing, fingerprint, () => 'fresh-1');
+  assert.equal(reused.reused, true);
+  assert.equal(reused.key, 'keep-me');
+
+  const afterClear = resolveIdempotencyKey(
+    { ...existing, unclear: false },
+    fingerprint,
+    () => 'fresh-2',
+  );
+  assert.equal(afterClear.reused, false);
+  assert.equal(afterClear.key, 'fresh-2');
+
+  const changed = resolveIdempotencyKey(
+    existing,
+    redeemPayloadFingerprint({ ...payload, code: 'CODE-B' }),
+    () => 'fresh-3',
+  );
+  assert.equal(changed.reused, false);
+  assert.equal(changed.key, 'fresh-3');
 });
