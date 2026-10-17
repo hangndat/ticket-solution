@@ -11,6 +11,7 @@ test('ticket link opens the existing ticket screen', () => {
   const href = `/my-tickets/${ticketId}`;
   for (const input of [
     `ticketsolution://tickets/${ticketId}`,
+    `vemoki://tickets/${ticketId}`,
     `ticketsolution://tickets/${ticketId}/`,
     `ticketsolution:///tickets/${ticketId}`,
     `tickets/${ticketId}`,
@@ -26,20 +27,24 @@ test('ticket link opens the existing ticket screen', () => {
 });
 
 test('event link opens fixture catalog content by event id', () => {
-  const parsed = parseInstalledAppLink(
+  for (const input of [
     'ticketsolution://events/demo-fun-fest',
-  );
-  assert.equal(parsed.kind, 'event');
-  if (parsed.kind !== 'event') return;
-  assert.equal(parsed.eventId, 'demo-fun-fest');
-  assert.equal(parsed.href, '/events/fixture/demo-fun-fest');
-  assert.match(parsed.href, /fixture/);
+    'vemoki://events/demo-fun-fest',
+  ]) {
+    const parsed = parseInstalledAppLink(input);
+    assert.equal(parsed.kind, 'event');
+    if (parsed.kind !== 'event') return;
+    assert.equal(parsed.eventId, 'demo-fun-fest');
+    assert.equal(parsed.href, '/events/fixture/demo-fun-fest');
+    assert.match(parsed.href, /fixture/);
+  }
 });
 
 test('oauth callback is not rewritten onto a screen', () => {
   for (const input of [
     'ticketsolution://oauth/callback',
     'ticketsolution://oauth/callback?code=abc&state=xyz',
+    'vemoki://oauth/callback',
     '/oauth/callback',
   ]) {
     assert.equal(parseInstalledAppLink(input).kind, 'oauth-callback');

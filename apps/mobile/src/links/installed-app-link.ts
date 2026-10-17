@@ -1,3 +1,5 @@
+import { isAppScheme } from '../identity/app-schemes.ts';
+
 const UUID =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const EVENT_ID = /^[A-Za-z0-9][A-Za-z0-9-]{0,80}$/;
@@ -10,8 +12,9 @@ export type InstalledAppLink =
 
 /**
  * Classify an installed-app URL before Expo Router sees it.
- * `ticketsolution://oauth/callback` stays an auth redirect (router must not navigate).
- * Ticket and event links rewrite onto existing screens.
+ * `vemoki://oauth/callback` and `ticketsolution://oauth/callback` stay auth
+ * redirects (router must not navigate). Ticket and event links rewrite onto
+ * existing screens. Fixture event ids (e.g. `demo-fun-fest`) are preserved.
  */
 export function parseInstalledAppLink(input: string): InstalledAppLink {
   const raw = input.trim();
@@ -60,7 +63,7 @@ function linkSegments(
     } catch {
       return null;
     }
-    if (url.protocol !== 'ticketsolution:') return null;
+    if (!isAppScheme(url.protocol)) return null;
     host = url.hostname;
     pathname = url.pathname;
   } else {
