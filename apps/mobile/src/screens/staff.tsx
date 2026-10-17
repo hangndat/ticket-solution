@@ -19,8 +19,40 @@ import {
 import { GateCamera } from '@/gate/gate-camera';
 import { loadGateOps, saveGateOps } from '@/gate/gate-store';
 import { getApiBaseUrl, getEventId, getTenantId } from '@/identity/config';
+import { verifyViaMe } from '@/identity/fetch-me';
 import { session } from '@/identity/session';
 import { colors } from '@/theme/colors';
+
+/**
+ * Gate needs a verified bearer + baked API base. If cold-start left the
+ * keychain token in "unreachable → signed-out", re-probe /v1/me before deny.
+ */
+async function resolveGateAuth(): Promise<
+  | { ok: true; bearer: string; apiBase: string }
+  | { ok: false; message: string }
+> {
+  const apiBase = getApiBaseUrl();
+  if (!apiBase) {
+    return {
+      ok: false,
+      message:
+        'Thiếu EXPO_PUBLIC_API_BASE_URL (bake Release/TestFlight). Không cho vào.',
+    };
+  }
+
+  let bearer = await session.getCredential();
+  if (!bearer) {
+    await session.restore(verifyViaMe);
+    bearer = await session.getCredential();
+  }
+  if (!bearer) {
+    return {
+      ok: false,
+      message: 'Đăng nhập staff (Account → Đăng nhập) trước khi quét. Không cho vào.',
+    };
+  }
+  return { ok: true, bearer, apiBase };
+}
 
 function outcomeTitle(op: GateOp | null): string {
   if (!op) return 'Chờ mã';
@@ -72,9 +104,8 @@ export function StaffScreen() {
     const code = payload.trim();
     if (!code || lock.current) return;
     lock.current = true;
-    const bearer = await session.getCredential();
-    const apiBase = getApiBaseUrl();
-    if (!bearer || !apiBase) {
+    const auth = await resolveGateAuth();
+    if (!auth.ok) {
       setCurrent({
         id: 'local',
         ticketId: '',
@@ -82,7 +113,7 @@ export function StaffScreen() {
         eventId: '',
         staffSessionId: '',
         phase: 'denied',
-        message: 'Đăng nhập và cấu hình API trước khi quét. Không cho vào.',
+        message: auth.message,
       });
       lock.current = false;
       return;
@@ -91,8 +122,8 @@ export function StaffScreen() {
     try {
       const result = await runScan({
         raw: code,
-        bearer,
-        apiBase,
+        bearer: auth.bearer,
+        apiBase: auth.apiBase,
         ops,
         staffSessionId: sessionId,
         fallback: { tenantId: getTenantId(), eventId: getEventId() },
@@ -107,12 +138,15 @@ export function StaffScreen() {
 
   async function reconcile() {
     if (!current || !canReconcile(current)) return;
-    const bearer = await session.getCredential();
-    const apiBase = getApiBaseUrl();
-    if (!bearer || !apiBase) return;
+    const auth = await resolveGateAuth();
+    if (!auth.ok) return;
     setBusy(true);
     try {
-      const next = await reconcileOp({ op: current, bearer, apiBase });
+      const next = await reconcileOp({
+        op: current,
+        bearer: auth.bearer,
+        apiBase: auth.apiBase,
+      });
       const rest = ops.filter((op) => op.id !== current.id);
       await persist([next, ...rest], next);
     } finally {
@@ -126,9 +160,12 @@ export function StaffScreen() {
       <Notice title="Quét cổng">
         Quét hoặc dán QR hiển thị trên vé. Chỉ cho vào sau khi API ghi nhận
         check-in. Phản hồi mất vẫn giữ “chưa rõ” sau khi mở lại app.
+        {'\n'}
+        API: {getApiBaseUrl() ?? 'chưa bake'} · Phiên: {session.getSnapshot().status}
       </Notice>
       <GateCamera disabled={busy || !ready} onScan={(data) => void submitScan(data)} />
       <TextInput
+        testID="gate-scan-input"
         value={raw}
         onChangeText={setRaw}
         placeholder="Dán JSON QR hoặc ticket id"
@@ -138,6 +175,8 @@ export function StaffScreen() {
         selectionColor={colors.focus}
         onFocus={() => setInputFocused(true)}
         onBlur={() => setInputFocused(false)}
+        blurOnSubmit
+        onSubmitEditing={() => void submitScan()}
         style={{
           minHeight: 88,
           padding: 12,
@@ -151,6 +190,7 @@ export function StaffScreen() {
       />
       <Pressable
         {...gateCheckInAnnouncement()}
+        testID="gate-checkin-button"
         accessibilityState={{ disabled: busy || !ready || raw.trim().length === 0 }}
         disabled={busy || !ready || raw.trim().length === 0}
         onPress={() => void submitScan()}
