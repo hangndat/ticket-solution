@@ -50,31 +50,68 @@ export function PushStatus() {
   const [tokenSummary, setTokenSummary] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const onRegister = useCallback(async () => {
+  const onRegister = useCallback(() => {
     const gen = currentApnsRegistrationGeneration();
     const epoch = session.captureEpoch();
     setBusy(true);
-    try {
-      const result = await registerApnsDeviceToken({ session });
+    setTokenSummary('Registering native APNs device token…');
+
+    let settled = false;
+    const finish = (result: ApnsDeviceTokenResult) => {
+      if (settled) return;
+      settled = true;
       if (currentApnsRegistrationGeneration() !== gen) return;
       if (epoch && !session.isEpochCurrent(epoch)) return;
       if (session.getSnapshot().status === 'signed-out') return;
       setTokenSummary(summarizeToken(result));
-    } finally {
-      if (currentApnsRegistrationGeneration() === gen) {
-        setBusy(false);
-      }
-    }
+      setBusy(false);
+    };
+
+    // UI watchdog: native APNs callbacks can stall under WDA/iOS 26 without
+    // rejecting the JS promise; still unblock the Register affordance.
+    const watchdog = setTimeout(() => {
+      finish({
+        status: 'unavailable',
+        transport: 'apns',
+        reason:
+          'APNs device token watchdog timed out (no native callback). Check Push capability / provisioning, then retry.',
+      });
+    }, 12_000);
+
+    void registerApnsDeviceToken({ session })
+      .then((result) => {
+        clearTimeout(watchdog);
+        finish(result);
+      })
+      .catch((err: unknown) => {
+        clearTimeout(watchdog);
+        const message =
+          err instanceof Error
+            ? err.message
+            : typeof err === 'string'
+              ? err
+              : 'APNs device token registration failed unexpectedly.';
+        finish({
+          status: 'unavailable',
+          transport: 'apns',
+          reason: message,
+        });
+      });
   }, []);
 
   return (
-    <View accessibilityRole="text" accessibilityLabel={copy.announcement}>
+    <View accessibilityLabel={copy.announcement}>
       <Notice title={copy.title}>{copy.body}</Notice>
       {isApnsProvider(provider) ? (
         <View style={{ gap: 8, marginTop: 8 }}>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Register APNs device token"
+            accessibilityLabel={
+              busy
+                ? 'Registering APNs device token'
+                : 'Register APNs device token'
+            }
+            testID="register-apns-device-token"
             disabled={busy}
             onPress={() => void onRegister()}
             style={({ pressed }) => ({
