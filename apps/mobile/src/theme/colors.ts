@@ -1,17 +1,7 @@
 import { Color } from 'expo-router';
+import { brand } from './tokens.ts';
 
-/**
- * Canonical platform brand from `brand/vemoki/tokens.json` (O09).
- * Do not invent a second palette — event (M04) themes override event surfaces only.
- */
-export const brand = {
-  ink: '#22241f',
-  paper: '#f7f6f1',
-  signal: '#9b3a18',
-  focus: '#235fd0',
-  wordmark: 'vemoki',
-  signalMark: '↗',
-} as const;
+export { brand };
 
 export const colors = {
   /** System semantics adapt to light/dark; product accent is Vemoki signal. */
