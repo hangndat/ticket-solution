@@ -60,6 +60,29 @@ export function reportShowsNumbers(
   return view.kind === 'shown';
 }
 
+/** Admin section anchors for O12 P3 deep-links (no approve/resend on KPI). */
+export const REPORT_PENDING_APPROVAL_SECTION_ID = 'guests-codes-heading';
+export const REPORT_EMAIL_CS_SECTION_ID = 'cs-heading';
+
+export const REPORT_PENDING_APPROVAL_CTA_LABEL =
+  'Đi tới duyệt khách và mã đang chờ';
+export const REPORT_EMAIL_CS_CTA_LABEL =
+  'Đi tới hỗ trợ tra cứu và gửi lại email';
+
+/** CTA only when shown + count > 0; never for unknown/rejected. */
+export function reportShowsPendingApprovalCta(
+  view: EventReportView,
+): view is ShownEventReport {
+  return reportShowsNumbers(view) && view.pendingApprovalCount > 0;
+}
+
+/** CTA only when shown + count > 0; never for unknown/rejected. */
+export function reportShowsEmailCsCta(
+  view: EventReportView,
+): view is ShownEventReport {
+  return reportShowsNumbers(view) && view.emailNeedsCsCount > 0;
+}
+
 export function formatQuotaCapacityState(state: QuotaCapacityState): string {
   switch (state) {
     case 'FINITE':

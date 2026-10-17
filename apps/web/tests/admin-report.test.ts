@@ -5,11 +5,17 @@ import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import {
   EVENT_REPORT_OPENAPI_PATH,
+  REPORT_EMAIL_CS_CTA_LABEL,
+  REPORT_EMAIL_CS_SECTION_ID,
+  REPORT_PENDING_APPROVAL_CTA_LABEL,
+  REPORT_PENDING_APPROVAL_SECTION_ID,
   REPORT_UNKNOWN,
   formatQuotaCapacityState,
   formatQuotaRemaining,
   interpretEventReport,
+  reportShowsEmailCsCta,
   reportShowsNumbers,
+  reportShowsPendingApprovalCta,
   reportUpstreamPath,
 } from '../src/admin/report';
 
@@ -190,6 +196,74 @@ describe('interpretEventReport', () => {
     assert.equal(formatQuotaRemaining(3, 'FINITE'), '3');
     assert.equal(formatQuotaRemaining(null, 'UNLIMITED'), 'không áp dụng');
     assert.equal(formatQuotaRemaining(null, 'MISSING_BUCKET'), 'không áp dụng');
+  });
+
+  it('shows P3 deep-link CTAs only when shown and count > 0', () => {
+    const shown = interpretEventReport(200, current, false);
+    assert.equal(reportShowsPendingApprovalCta(shown), true);
+    assert.equal(reportShowsEmailCsCta(shown), true);
+
+    const zeroPending = interpretEventReport(
+      200,
+      { ...current, pendingApprovalCount: 0, emailNeedsCsCount: 0 },
+      false,
+    );
+    assert.equal(reportShowsPendingApprovalCta(zeroPending), false);
+    assert.equal(reportShowsEmailCsCta(zeroPending), false);
+
+    const unknown = interpretEventReport(500, current, false);
+    assert.equal(reportShowsPendingApprovalCta(unknown), false);
+    assert.equal(reportShowsEmailCsCta(unknown), false);
+
+    const rejected = interpretEventReport(
+      403,
+      { code: 'FORBIDDEN', message: 'denied' },
+      false,
+    );
+    assert.equal(reportShowsPendingApprovalCta(rejected), false);
+    assert.equal(reportShowsEmailCsCta(rejected), false);
+  });
+
+  it('wires EventReport KPI deep-links to existing admin sections (no KPI approve/resend)', () => {
+    const root = join(dirname(fileURLToPath(import.meta.url)), '..');
+    const form = readFileSync(join(root, 'app/admin/admin-form.tsx'), 'utf8');
+    const numbersStart = form.indexOf('data-testid="event-report-numbers"');
+    const numbersEnd = form.indexOf('data-testid="event-report-unknown"');
+    assert.ok(numbersStart > 0 && numbersEnd > numbersStart);
+    const kpiBlock = form.slice(numbersStart, numbersEnd);
+
+    assert.ok(kpiBlock.includes('event-report-cta-pending-approval'));
+    assert.ok(kpiBlock.includes('REPORT_PENDING_APPROVAL_SECTION_ID'));
+    assert.ok(kpiBlock.includes('REPORT_PENDING_APPROVAL_CTA_LABEL'));
+    assert.ok(kpiBlock.includes('event-report-cta-email-cs'));
+    assert.ok(kpiBlock.includes('REPORT_EMAIL_CS_SECTION_ID'));
+    assert.ok(kpiBlock.includes('REPORT_EMAIL_CS_CTA_LABEL'));
+    assert.ok(kpiBlock.includes('reportShowsPendingApprovalCta'));
+    assert.ok(kpiBlock.includes('reportShowsEmailCsCta'));
+    // P3: deep-link only — no approve/deny/resend actions on the KPI card.
+    assert.equal(kpiBlock.includes('approveInvitation'), false);
+    assert.equal(kpiBlock.includes('denyInvitation'), false);
+    assert.equal(kpiBlock.includes('resendTicketEmail'), false);
+    assert.equal(kpiBlock.includes('/approve'), false);
+    assert.equal(kpiBlock.includes('/deny'), false);
+    assert.equal(kpiBlock.includes('/resend'), false);
+
+    assert.equal(REPORT_PENDING_APPROVAL_SECTION_ID, 'guests-codes-heading');
+    assert.equal(REPORT_EMAIL_CS_SECTION_ID, 'cs-heading');
+    assert.equal(
+      REPORT_PENDING_APPROVAL_CTA_LABEL,
+      'Đi tới duyệt khách và mã đang chờ',
+    );
+    assert.equal(
+      REPORT_EMAIL_CS_CTA_LABEL,
+      'Đi tới hỗ trợ tra cứu và gửi lại email',
+    );
+    assert.ok(
+      form.includes(`id="${REPORT_PENDING_APPROVAL_SECTION_ID}"`),
+    );
+    assert.ok(form.includes(`id="${REPORT_EMAIL_CS_SECTION_ID}"`));
+    assert.ok(form.includes('tabIndex={-1}'));
+    assert.ok(form.includes('goToAdminSection'));
   });
 
   it('forwards the OpenAPI report path and required O12 fields', () => {
