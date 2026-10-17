@@ -1,8 +1,8 @@
 # Roadmap — Event Ticketing Platform
 
 Ngày cập nhật nội dung: 2026-10-17  
-Đối chiếu live: `origin/main` `05618b5ed1401a3e524243a5823ed336b8731796` (Merge PR [#94](https://github.com/hangndat/ticket-solution/pull/94) D6 S7 docs; coding PR [#92](https://github.com/hangndat/ticket-solution/pull/92) web `eb0d078…`, PR [#93](https://github.com/hangndat/ticket-solution/pull/93) iOS `b93124b…`) và [GitHub Project #3](https://github.com/users/hangndat/projects/3) cùng ngày.  
-Nguồn phạm vi: [PRD](./PRD.md), [Technical Design](./TECHNICAL-DESIGN.md), [Agent Development Plan](./AGENT-DEVELOPMENT-PLAN.md), [W0 report](./W0-FOUNDATION-REPORT.md).  
+Đối chiếu live: `origin/main` `7c1abae72ab0d847e2a909d2da3ed2323edacf94` (MinIO/APNs D5 [#101](https://github.com/hangndat/ticket-solution/pull/101); D6 web [#92](https://github.com/hangndat/ticket-solution/pull/92) / iOS [#93](https://github.com/hangndat/ticket-solution/pull/93) / docs [#94](https://github.com/hangndat/ticket-solution/pull/94)) và [GitHub Project #3](https://github.com/users/hangndat/projects/3) cùng ngày.  
+Nguồn phạm vi: [PRD](./PRD.md), [Technical Design](./TECHNICAL-DESIGN.md), [Decision Log](./DECISION-LOG.md) (O10 — MVP mở rộng), [Agent Development Plan](./AGENT-DEVELOPMENT-PLAN.md), [W0 report](./W0-FOUNDATION-REPORT.md).  
 Tracking lâu dài: GitHub Issues + Project (tiếng Việt). Orca Task/Dispatch chỉ là lần giao thực thi.
 
 **Chưa chốt lịch / thời lượng.** Không gắn ngày giả. Timeline Project có thể tạo view trước; ngày mục tiêu để trống đến khi người dùng chốt.
@@ -18,7 +18,7 @@ Tracking lâu dài: GitHub Issues + Project (tiếng Việt). Orca Task/Dispatch
 
 **Roadmap đã được user duyệt lần đầu (2026-10-16)** — đóng D0 và mở D1. Các đoạn “đợt tiếp theo = D1 / chưa mở business endpoints” bên dưới §10 là **lịch sử**; không còn mô tả hiện tại.
 
-**Trọng tâm hiện tại (Project #3, 2026-10-17):** parent **D5 (#6)** đang **Đang làm** (Gate camera staff + push DELIVERED; MinIO/APNs prod). Parent **D0–D4 (#1–#5)** và **D6 UX/UI (#81)** đã **Hoàn thành**/closed — Tenant 2 prod UAT: [D4-TENANT2-PROD-UAT.md](./reviews/D4-TENANT2-PROD-UAT.md); D6 web [#92](https://github.com/hangndat/ticket-solution/pull/92) / iOS [#93](https://github.com/hangndat/ticket-solution/pull/93) / docs [#94](https://github.com/hangndat/ticket-solution/pull/94). Sau MVP (#7) **Chưa lên lịch**. Không tuyên bố pilot production sẵn sàng.
+**Trọng tâm hiện tại (Project #3, 2026-10-17):** parent **D5 (#6)** đang **Đang làm** (Gate camera staff + push DELIVERED; MinIO/APNs prod). Parent **D0–D4 (#1–#5)** và **D6 UX/UI (#81)** đã **Hoàn thành**/closed — Tenant 2 prod UAT: [D4-TENANT2-PROD-UAT.md](./reviews/D4-TENANT2-PROD-UAT.md); D6 web [#92](https://github.com/hangndat/ticket-solution/pull/92) / iOS [#93](https://github.com/hangndat/ticket-solution/pull/93) / docs [#94](https://github.com/hangndat/ticket-solution/pull/94). **MVP mở rộng (O10):** sau D5 còn D7–D10 (Offline Gate multi-device → White-label → Demo seed/UX-media → App Store metadata). Issue [#7](https://github.com/hangndat/ticket-solution/issues/7) sẽ được **rewrite** trên board (worker GitHub) — không còn backlog “Android/payment/seat/Wallet trong MVP”. Không tuyên bố pilot production / store submission sẵn sàng.
 
 ## 1. Trạng thái hiện tại (tóm tắt theo Project + main)
 
@@ -31,9 +31,13 @@ Cột **Board** = Status parent Issue trên Project #3 tại thời điểm đ�
 | Nhận vé (D2) | **Hoàn thành** (#3) | Nghiệm thu đợt | Mã/quota/issue/outbox + web redeem + iOS ví đã có trên `main` (PRs #30–#32…) |
 | Check-in (D3) | **Hoàn thành** (#4) | Nghiệm thu đợt (có ngoại lệ UAT) | Gate + web Gate + iOS scan/recovery trên `main`. **Camera thiết bị thật** hoãn sang D5 (#26) — không ghi là UAT camera physical đã PASS |
 | Admin & Platform (D4) | **Hoàn thành** (#5) | Nghiệm thu đợt (PASS with known gap) | Tenant 2 prod: [D4-TENANT2-PROD-UAT.md](./reviews/D4-TENANT2-PROD-UAT.md). Gap CSRF invite UI / MinIO export / invite email → theo dõi D5 ops |
-| Hardening / UAT / phát hành (D5) | **Đang làm** (#6) | Child #24/#25/#26/#56 **Hoàn thành** trên board; parent chưa đóng | Còn Gate camera staff + push **DELIVERED** trên thiết bị (TF 0.1.0 (7)); APNs/MinIO chưa gắn prod. Build native **chỉ** local Xcode; **cấm** Expo/EAS Cloud Build |
-| UX/UI polish (D6) | **Hoàn thành** (#81) | Nghiệm thu đợt (acceptance) | Web [#92](https://github.com/hangndat/ticket-solution/pull/92) · iOS [#93](https://github.com/hangndat/ticket-solution/pull/93) · docs S7 [#94](https://github.com/hangndat/ticket-solution/pull/94). #82–#85/#87–#89 + parent #81 closed; Milestone #8 closed. Plan [`D6-UX-UI-PLAN.md`](./plans/D6-UX-UI-PLAN.md). **Proof limits:** D6 ≠ pilot ready / store / production |
-| Android / payment / seat map / white-label | **Chưa lên lịch** (#7) | Ngoài MVP | Theo PRD — không gắn D2–D6 |
+| Hardening / UAT / phát hành (D5) | **Đang làm** (#6) | Child #24/#25/#26/#56 **Hoàn thành** trên board; parent chưa đóng | Còn Gate camera staff + push **DELIVERED** trên thiết bị (TF 0.1.0 (7)); MinIO/APNs wiring đã có [#101](https://github.com/hangndat/ticket-solution/pull/101) — còn gắn/verify prod. Build native **chỉ** local Xcode; **cấm** Expo/EAS Cloud Build |
+| UX/UI polish (D6) | **Hoàn thành** (#81) | Nghiệm thu đợt (acceptance) | Web [#92](https://github.com/hangndat/ticket-solution/pull/92) · iOS [#93](https://github.com/hangndat/ticket-solution/pull/93) · docs S7 [#94](https://github.com/hangndat/ticket-solution/pull/94). #82–#85/#87–#89 + parent #81 closed; Milestone #8 closed. Plan [`D6-UX-UI-PLAN.md`](./plans/D6-UX-UI-PLAN.md). **Không tuyên bố lại từ đầu** — status lấy từ Project. **Proof limits:** D6 ≠ pilot ready / store / production |
+| Offline Gate multi-device (D7) | **Chưa lên lịch** (Issue mới / #7 rewrite) | Trong MVP mở rộng | Đồng bộ board sau rewrite #7 — docs mô tả phạm vi; không spawn coding trước khi Issue sẵn sàng |
+| White-label (D8) | **Chưa lên lịch** | Trong MVP mở rộng | App/branding theo tenant trong phạm vi O10; không Android native |
+| Demo seed + UX/media (D9) | **Chưa lên lịch** | Trong MVP mở rộng | Seed data đủ demo; UX/UI còn lại + thiết kế media |
+| App Store metadata (D10) | **Chưa lên lịch** | Trong MVP mở rộng | Privacy, screenshots, review notes, local signed archive — **không** submit store trừ task riêng ủy quyền |
+| Ngoài phạm vi có chủ đích | — (#7 sau rewrite) | **Không** làm trong MVP | Android native; payment/refund/chuyển nhượng; seat map; Apple/Google Wallet — xem §6 |
 
 ### 1.1 Ba mức hoàn thành (bắt buộc phân biệt)
 
@@ -76,9 +80,22 @@ Một đầu việc trên board chỉ chuyển **Hoàn thành** khi:
 
 ## 4. Đợt bàn giao (Milestones) — phạm vi & gate
 
-Gợi ý từ kế hoạch agent; cổng identity trước business đã **đi qua** (D1 Hoàn thành trên board).
+Gợi ý từ kế hoạch agent; cổng identity trước business đã **đi qua** (D1 Hoàn thành trên board).  
+**MVP mở rộng (O10, 2026-10-17):** D0–D10. Các mục **hủy khỏi kế hoạch MVP** (Android native; payment/refund/chuyển nhượng; seat map; Apple/Google Wallet) nằm ở §6 «Ngoài phạm vi có chủ đích» — không đưa vào backlog đợt D0–D10.
 
-| Đợt | Tên | Mục tiêu | Gate | Board (2026-10-17) |
+### 4.1 Gate bắt buộc mỗi Milestone (D0–D10 khi áp dụng)
+
+Trước khi parent đợt chuyển **Hoàn thành** trên Project #3, phải có đủ (ghi rõ SHA / artifact; không chỉ `worker_done`):
+
+1. **Headless UAT** — web (`scripts/web-uat.sh` / Playwright headless) và/hoặc iOS Simulator (`scripts/sim-uat.sh` / AXe) theo phạm vi đợt; không dùng mouse desktop người dùng.
+2. **Local iOS build** — prebuild + Xcode/`xcodebuild` local; **cấm** Expo/EAS Cloud Build.
+3. **Deploy prod** — chỉ khi task/coordinator **ủy quyền** rõ; nếu chưa authorize thì ghi “chưa deploy” + lý do, không tự deploy.
+4. **Bằng chứng UAT / artifact** — log, screenshot path (vd. `apps/web/.uat-artifacts/`, `apps/mobile/.uat-artifacts/`), Issue/PR comment hoặc `docs/reviews/*` kèm exact SHA.
+5. **Cập nhật GitHub Project** — Status parent/sub-issue đúng sự kiện (Đang làm → Chờ duyệt → Hoàn thành); board là authority.
+
+Gate chuyên biệt từng đợt (bảng dưới) **bổ sung**, không thay thế 4.1.
+
+| Đợt | Tên | Mục tiêu | Gate chuyên biệt | Board (2026-10-17) |
 | --- | --- | --- | --- | --- |
 | D0 | W0 Foundation | Monorepo, CI, Compose, API health, RLS prototype, web/iOS shell | Foundation integrated; no EAS Cloud Build policy | Hoàn thành |
 | D1 | Quyết định & Identity | O01–O08 liên quan, OIDC, membership/revocation proof | Identity spike đạt criteria trước khi mở business endpoints | Hoàn thành |
@@ -87,8 +104,10 @@ Gợi ý từ kế hoạch agent; cổng identity trước business đã **đi q
 | D4 | Admin & Platform | Permissions, import, approval, config publish, CS, reporting, app feature còn lại | Tenant thứ hai tự tạo event/brand qua admin, không hardcode pilot | Hoàn thành |
 | D5 | Hardening & phát hành | Security review, capacity, restore, device UAT, local signed iOS / TestFlight | Evidence đạt technical design; publish/store là task riêng → **pilot ready** | Đang làm |
 | D6 | Hoàn thiện UX/UI | Polish brand Vemoki + IA/states/a11y trên web & iOS đã có chức năng | Brand test + headless/sim screenshots; không gộp D5 hardening | Hoàn thành (#81 closed; PRs #92/#93/#94) |
-
-Android, payment/refund, seat map, Apple/Google Wallet, offline Gate multi-device, white-label app: **sau MVP**, không gắn vào D2–D6 trừ khi user mở rộng phạm vi.
+| D7 | Offline Gate multi-device | Check-in / Gate hoạt động khi nhiều thiết bị và mất mạng có kiểm soát (theo design đợt) | Multi-device + offline/reconcile evidence; không mở Android/payment | Chưa lên lịch |
+| D8 | White-label | Branding / cấu hình app theo tenant trong một codebase (không fork) | Tenant brand smoke + config version; không store submit | Chưa lên lịch |
+| D9 | Demo seed + UX/media | Seed data đủ demo end-to-end; UX/UI còn lại; thiết kế media | Demo script + media assets; headless/sim screenshots | Chưa lên lịch |
+| D10 | App Store metadata | Privacy Nutrition Labels, screenshots, review notes, local signed archive | Metadata + archive sẵn; **không** submit trừ task ủy quyền riêng | Chưa lên lịch |
 
 ## 5. Ánh xạ module PRD → đợt
 
@@ -103,9 +122,12 @@ Android, payment/refund, seat map, Apple/Google Wallet, offline Gate multi-devic
 | M07 | Redemption và duyệt | D2 (auto-approve) → D4 (duyệt thủ công) | M05, M02 |
 | M08 | Ticket và ví vé | D2 | M07 |
 | M09 | Email và push | D2 (email sandbox) → D4 (push/retry) | Outbox; M08 |
-| M10 | Gate và check-in | D3 | M08 |
+| M10 | Gate và check-in | D3 → **D7 offline multi-device** | M08 |
 | M11 | CS, báo cáo, vận hành | D3 tối thiểu → D4 | M07–M10 |
 | M12 | Platform Operations | D4–D5 | M01 |
+| M04+ | Branding / white-label mở rộng | D4 publish → D6 polish → **D8 white-label** | M04, O01/O10 |
+| — | Demo seed & media | **D9** | D4–D6 |
+| — | Store metadata (không submit) | **D10** | D5 local signed + D6 surfaces |
 
 ## 6. Backlog đầu việc (checkbox = tiến độ docs; Status live = Project)
 
@@ -167,20 +189,51 @@ Mỗi nhóm tương ứng parent Issue trên GitHub; sub-issues mang tiêu chí 
 - [x] ROADMAP sync & nghiệm thu đợt — D6-S7 (#89) — merge PR [#94](https://github.com/hangndat/ticket-solution/pull/94) `05618b5ed1401a3e524243a5823ed336b8731796`; parent #81 **Hoàn thành**/closed
 
 Parent [#81](https://github.com/hangndat/ticket-solution/issues/81) **Hoàn thành**/closed. Milestone [D6 — Hoàn thiện UX/UI Vemoki](https://github.com/hangndat/ticket-solution/milestone/8) **closed**.  
-**Gate:** xem [docs/plans/D6-UX-UI-PLAN.md](./plans/D6-UX-UI-PLAN.md) §7 — đợt acceptance xong trên board. **Proof limits:** D6 ≠ pilot ready / store submission / production deploy.
+**Gate:** xem [docs/plans/D6-UX-UI-PLAN.md](./plans/D6-UX-UI-PLAN.md) §7 — đợt acceptance xong trên board. **Không tuyên bố lại D6 từ đầu** — chỉ sync Status từ Project. **Proof limits:** D6 ≠ pilot ready / store submission / production deploy.
 
-### Sau MVP (board: Chưa lên lịch)
+### D7 — Offline Gate multi-device (board: Chưa lên lịch — sau rewrite #7)
 
-- Android native
-- Thanh toán / refund / chuyển nhượng
-- Seat map; Apple/Google Wallet
-- Offline check-in nhiều thiết bị; white-label app; SSO/billing nâng cao
+- [ ] Thiết kế + contract: offline/reconcile multi-device không phá invariant online Gate (ADR-06)
+- [ ] Backend + web Gate + iOS staff: hành vi mất mạng / nhiều máy quét theo spec đợt
+- [ ] Gate §4.1 + evidence multi-device; cập nhật Project
+
+### D8 — White-label (board: Chưa lên lịch)
+
+- [ ] Cấu hình brand/tenant (theme, copy, assets) trong một app chung — không fork per-tenant
+- [ ] Smoke tenant thứ hai với brand khác; Gate §4.1; cập nhật Project
+- [ ] **Không** Android native; **không** store submit trong D8
+
+### D9 — Demo seed + UX/UI còn lại + thiết kế media (board: Chưa lên lịch)
+
+- [ ] Seed data đủ chạy demo end-to-end (tenant/event/mã/vé/staff) — đánh dấu fixture rõ
+- [ ] UX/UI còn lại sau D6 + thiết kế media (ảnh event, asset marketing tối thiểu)
+- [ ] Gate §4.1 + artifact demo; cập nhật Project
+
+### D10 — Chuẩn bị metadata App Store (board: Chưa lên lịch)
+
+- [ ] Privacy Nutrition Labels / privacy policy copy; screenshots; App Review notes
+- [ ] Local signed archive (Xcode) sẵn sàng upload — **không** submit App Store trừ task riêng ủy quyền
+- [ ] Gate §4.1 (headless/sim + local build + Project sync); deploy prod chỉ nếu authorize
+
+### Ngoài phạm vi có chủ đích (không làm trong MVP mở rộng)
+
+Quyết định user **2026-10-17 (O10)** — **hủy khỏi kế hoạch/roadmap MVP** (Issue [#7](https://github.com/hangndat/ticket-solution/issues/7) rewrite đồng bộ board; worker GitHub sở hữu Issue):
+
+| Hủy khỏi MVP | Ghi chú |
+| --- | --- |
+| Android native | Khách Android dùng web responsive; không Google Play trong MVP |
+| Payment / refund / chuyển nhượng vé | Vé miễn phí qua mã / invite như PRD baseline |
+| Seat map | Không sơ đồ ghế trong MVP |
+| Apple / Google Wallet | Ví trong-app + QR; không pass Wallet |
+
+Vẫn **sau MVP** (không thuộc D7–D10, không bị “hủy” khỏi tầm nhìn dài hạn): SSO doanh nghiệp; billing tự động; custom domain/sender tenant; workflow builder tổng quát; marketplace template.
 
 ## 7. Quyết định còn mở (chặn thiết kế liên quan)
 
 | ID | Câu hỏi | Baseline tạm | Ảnh hưởng |
 | --- | --- | --- | --- |
-| O01–O05, O07–O08 | (xem DECISION-LOG) | **Đã chốt MVP** | [DECISION-LOG.md](./DECISION-LOG.md) |
+| O01–O05, O07–O09 | (xem DECISION-LOG) | **Đã chốt MVP** | [DECISION-LOG.md](./DECISION-LOG.md) |
+| O10 | Mở rộng MVP / hủy Android·payment·seat·Wallet | **Đã chốt** 2026-10-17 — D7–D10 trong MVP; mục hủy → §6 | [DECISION-LOG.md](./DECISION-LOG.md) |
 | O06 | Retention, vùng dữ liệu, SLA? | Chưa chốt số | Trước dữ liệu user thật |
 | ADR-09 | Provider OIDC cụ thể? | **Keycloak self-host đã chốt** — POC P4 local | [spikes/D1-OIDC-PROVIDER.md](./spikes/D1-OIDC-PROVIDER.md) |
 | ADR-11…15 | SaaS cấm; MinIO/SMTP/APNs/Caddy | **Đã chốt MVP** | [DECISION-LOG.md](./DECISION-LOG.md) |
@@ -213,3 +266,4 @@ Parent [#81](https://github.com/hangndat/ticket-solution/issues/81) **Hoàn thà
 2. ~~Cập nhật Issue statuses lúc mở D1~~ — D0 Hoàn thành; D1 code slice (#10–#13) rồi Chờ duyệt / đóng.
 3. ~~Trước D2:~~ P4 Keycloak API/web UAT có evidence ([smoke](./reviews/D1-P4-KEYCLOAK-SMOKE.md)); business endpoints đã được mở và D2/D3 đã **Hoàn thành** trên board sau đó.
 4. **2026-10-17:** docs process sync — sửa văn bản “đợt tiếp theo = D1 / D2–D5 chưa bắt đầu” còn sót sau PR #51 (chỉ cập nhật checkbox §6, chưa sửa §1). Đối chiếu `ed6f0dd` + Project #3.
+5. **2026-10-17:** User mở rộng MVP (O10) — thêm D7–D10; hủy Android/payment/seat/Wallet khỏi kế hoạch MVP; #7 rewrite (board). Đối chiếu `7c1abae` + Project #3.
