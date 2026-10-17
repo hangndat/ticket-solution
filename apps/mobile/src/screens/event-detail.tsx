@@ -1,6 +1,12 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { Page, Notice } from '@/components/page';
+import {
+  EmptyState,
+  ErrorState,
+  LoadingState,
+} from '@/components/screen-state';
+import { eventsCopy } from '@/components/screen-state-copy';
 import { eventDate, findDemoEvent } from '@/data/demo-events';
 import {
   fetchPublishedEventDetail,
@@ -36,10 +42,10 @@ function FixtureDemoDetail({
   if (!event) {
     return (
       <Page>
-        <Notice title="Không có trong catalog demo">
+        <EmptyState title="Không có trong catalog demo">
           Id này không khớp sự kiện mẫu. Liên kết không tải sự kiện đã xuất bản
           và không phải nội dung M04 chung.
-        </Notice>
+        </EmptyState>
       </Page>
     );
   }
@@ -119,12 +125,9 @@ function PublishedEventDetailView({
   if (phase.kind === 'loading') {
     return (
       <Page>
-        <View style={{ padding: 16, alignItems: 'center' }}>
-          <ActivityIndicator />
-          <Text style={{ color: colors.secondary, marginTop: 8 }}>
-            Đang tải sự kiện đã xuất bản…
-          </Text>
-        </View>
+        <LoadingState title={eventsCopy.loadingDetail.title}>
+          {eventsCopy.loadingDetail.body}
+        </LoadingState>
       </Page>
     );
   }
@@ -132,11 +135,11 @@ function PublishedEventDetailView({
   if (phase.kind === 'misconfigured') {
     return (
       <Page>
-        <Notice title="Chưa cấu hình API">
+        <ErrorState title="Chưa cấu hình API">
           Đặt EXPO_PUBLIC_API_BASE_URL để tải GET
           /v1/public/tenants/…/events/…. Demo chỉ trên route fixture — không
           thay thế ở đây.
-        </Notice>
+        </ErrorState>
       </Page>
     );
   }
@@ -144,10 +147,10 @@ function PublishedEventDetailView({
   if (phase.kind === 'not-found') {
     return (
       <Page>
-        <Notice title="Sự kiện không khả dụng">
+        <EmptyState title="Sự kiện không khả dụng">
           Không có projection đã xuất bản cho tổ chức/sự kiện này (404). Bản
           nháp không hiện. Đây không phải demo.
-        </Notice>
+        </EmptyState>
       </Page>
     );
   }
@@ -155,7 +158,9 @@ function PublishedEventDetailView({
   if (phase.kind === 'error') {
     return (
       <Page>
-        <Notice title="Lỗi nội dung đã xuất bản">{phase.message}</Notice>
+        <ErrorState title={eventsCopy.errorDetail.title}>
+          {phase.message}
+        </ErrorState>
       </Page>
     );
   }

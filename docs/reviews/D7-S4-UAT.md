@@ -3,96 +3,101 @@
 **Ngày:** 2026-10-17  
 **Story:** [#115](https://github.com/hangndat/ticket-solution/issues/115) · **Task:** [#116](https://github.com/hangndat/ticket-solution/issues/116)  
 **Epic:** [#103](https://github.com/hangndat/ticket-solution/issues/103)  
-**Role:** Cursor QA / milestone gate (không EAS Cloud; không cliclick / ORCA computer mouse)
+**PR:** [#190](https://github.com/hangndat/ticket-solution/pull/190)  
+**Role:** Cursor iOS worker (sim-uat / AXe — không cliclick / Computer Use; không EAS Cloud)
 
-## SHA under review (exact)
+## SHA under evidence (exact)
 
-| Slice | Merge / tip | Exact SHA |
-| --- | --- | --- |
-| Integration tip (`origin/main` at gate run) | tip | `d6f53624ca8d5cd5410bf75ac614748eba1d7971` |
-| Web gate offline (PR [#182](https://github.com/hangndat/ticket-solution/pull/182)) | merge | `e511058b6c149ef89a5b3b5b9b23f9d16502f9d4` |
-| iOS offline queue (PR [#178](https://github.com/hangndat/ticket-solution/pull/178)) | merge | `0c8bcdf7846703628f6abbf98c4c06c896fb3aac` |
-| BE offline sync (PR [#183](https://github.com/hangndat/ticket-solution/pull/183)) | merge | `0ff9460b7324512841a4aa115b838189455e4bd9` |
-
-S1–S3 claimed **Hoàn thành** on Project #3 after merges above.
-
-## T1 — Web headless UAT (#116)
-
-### Commands
-
-```bash
-# Unit (gate decide + connectivity)
-pnpm --filter @ticket/web exec tsx --test tests/gate-decide.test.ts tests/gate-connectivity.test.ts
-# → 10/10 pass
-
-# Next dev (UAT host) — worktree d7-web-offline (gate sources ≡ main for apps/web/app/gate)
-pnpm exec next dev --hostname 127.0.0.1 --port 3010
-
-# Playwright offline mode (never steals macOS mouse)
-node apps/web/tests/gate-offline-uat.mjs http://127.0.0.1:3010
-# → ok: offlineBanner=true, data-link=offline, CHECKIN_OFFLINE guide present
-
-scripts/web-uat.sh screenshot http://127.0.0.1:3010/gate apps/web/.uat-artifacts/d7-s4-gate-online.png
-```
-
-### Result
-
-| Check | Result |
+| Slice | Exact SHA |
 | --- | --- |
-| Online `/gate` 200 | PASS |
-| Playwright `context.setOffline(true)` → banner `data-testid=gate-offline-banner` | PASS |
-| Banner VI guides iOS `CHECKIN_OFFLINE` | PASS |
-| Confirm submit disabled while offline | PASS |
-| Unit gate-decide + connectivity | 10/10 PASS |
+| Client tip (`hangndat/d7-milestone` after this evidence push) | *(fill after `git rev-parse HEAD` on push tip — see PR #190 tip)* |
+| Server / integration (`origin/main` runtime for API + offline-sync) | `f7c88ffd6f936b6da56aa8cea8451f3ae889c278` |
+| Prior FAIL tip (DoD c9bd246) | `3f352a5e2710b2a99f19b40bbf480c3fc5ed8d61` |
 
-### Screenshots (curated)
+## T1 — iOS sim-uat offline queue (#116) — PASS (re-run)
 
-- [`d7-uat/web/d7-s4-gate-offline.png`](./d7-uat/web/d7-s4-gate-offline.png)
-- [`d7-uat/web/d7-s4-gate-online.png`](./d7-uat/web/d7-s4-gate-online.png)
+### Preconditions
 
-## T1 — iOS sim-uat offline queue (#116)
+- Simulator `F191CF59-4B73-44E5-BFA8-4CE439EB31AD` (iPhone 17 Pro)
+- Local API `:3001`, Keycloak ROPC `staff@example.com` / `staff-demo`
+- Embedded HBC from `expo export` into Debug `Vemoki.app` (native+JS same D7 tree)
+- Deep links: `vemoki://uat/staff-session?access_token=…`, `vemoki://uat/scan?ticketId=…&preferOffline=1`
 
-### Commands
+### Commands (headless)
 
 ```bash
-# Unit (incl. offline-queue.test.ts) — worktree d7-ios-offline / main tip sources
-pnpm --filter @ticket/mobile test
-# → 148/148 pass
+SIM=F191CF59-4B73-44E5-BFA8-4CE439EB31AD
+ROOT=/Users/admin/orca/workspaces/ticket-solution/d7-milestone
+UAT=$ROOT/apps/mobile/.uat-artifacts
+TICKET=ace74a71-7646-431a-a73e-7281848002a1
 
-# Headless Simulator (AXe + simctl — scripts/sim-uat.sh; no cliclick)
-SIM=F191CF59-4B73-44E5-BFA8-4CE439EB31AD   # iPhone 17 Pro Booted
+pnpm --filter @ticket/mobile test   # 182/182 pass
+
+# Staff session (verified via /v1/me — not signed-out)
+TOKEN=$(curl -s -X POST 'http://127.0.0.1:8080/realms/ticket/protocol/openid-connect/token' \
+  -d 'grant_type=password' -d 'client_id=ticket-mobile' \
+  -d 'username=staff@example.com' -d 'password=staff-demo' \
+  | python3 -c 'import sys,json;print(json.load(sys.stdin)["access_token"])')
+xcrun simctl openurl "$SIM" "vemoki://uat/staff-session?access_token=${TOKEN}" &
 xcrun simctl launch "$SIM" com.hangndat.ticket
-scripts/sim-uat.sh screenshot "$SIM" apps/mobile/.uat-artifacts/d7-s4-sim-launch.png
-scripts/sim-uat.sh tap --label "Nhân viên" --udid "$SIM"
-scripts/sim-uat.sh screenshot "$SIM" apps/mobile/.uat-artifacts/d7-s4-staff-screen.png
-scripts/sim-uat.sh describe "$SIM"
+scripts/sim-uat.sh screenshot "$SIM" "$UAT/d7-s4-staff-verified.png"
+
+# Offline enqueue (session open online, then CHECKIN_OFFLINE — no live admit)
+xcrun simctl openurl "$SIM" "vemoki://uat/scan?ticketId=${TICKET}&preferOffline=1"
+scripts/sim-uat.sh screenshot "$SIM" "$UAT/d7-s4-offline-enqueued.png"
+# AX: OFFLINE_ENQUEUED pending=1
+
+# Persist across process kill (queue FileSystem, checkins still 0)
+xcrun simctl terminate "$SIM" com.hangndat.ticket
+# Documents/ticket-gate-offline/queue-<userId>.json → localStatus=pending
+
+# Restart + online replay
+xcrun simctl openurl "$SIM" "vemoki://uat/staff-session?access_token=${TOKEN}" &
+xcrun simctl launch "$SIM" com.hangndat.ticket
+scripts/sim-uat.sh screenshot "$SIM" "$UAT/d7-s4-offline-after-restart.png"
+scripts/sim-uat.sh screenshot "$SIM" "$UAT/d7-s4-offline-after-replay.png"
+# DB: checkins=1; queue localStatus=applied
+
+# Retry same ticket offline — no duplicate check-in
+xcrun simctl openurl "$SIM" "vemoki://uat/scan?ticketId=${TICKET}&preferOffline=1"
+# DB: checkins still 1
+scripts/sim-uat.sh screenshot "$SIM" "$UAT/d7-s4-offline-retry-nodup.png"
 ```
 
 ### Result
 
 | Check | Result |
 | --- | --- |
-| Launch `com.hangndat.ticket` (Vemoki) via simctl | PASS |
-| Staff tab «Nhân viên» reachable (AXe tap) | PASS |
-| Staff scan UI shows fail-closed copy (không admit khi phản hồi mất) | PASS |
-| Offline queue unit + banner copy tests | 148/148 PASS |
-| Live offline banner with pending queue on device | **GAP** — session `signed-out`; enqueue requires prior online `staffSessionId` |
+| Staff session `Phiên: verified` (not signed-out) | PASS |
+| Offline enqueue `OFFLINE_ENQUEUED pending=1` | PASS |
+| Persist across terminate (FileSystem queue `localStatus=pending`, checkins=0) | PASS |
+| Online replay → `localStatus=applied`, `checkinId` set, DB checkins=1 | PASS |
+| Retry same ticket → checkins remains 1 (no duplicate) | PASS |
+| Multi-device / already-used conflict banner (earlier run) | PASS (feasible) — VI conflict copy when ticket already USED |
+| Unit tests `@ticket/mobile` | 182/182 PASS |
+| Tooling | sim-uat.sh / AXe / simctl only |
 
-### Screenshots (curated)
+### Artifacts (curated under `docs/reviews/`)
 
-- [`d7-uat/ios/d7-s4-sim-launch.png`](./d7-uat/ios/d7-s4-sim-launch.png) — Events
-- [`d7-uat/ios/d7-s4-staff-screen.png`](./d7-uat/ios/d7-s4-staff-screen.png) — Staff / Quét cổng (`Phiên: signed-out`)
-- [`d7-uat/ios/d7-s2-offline-banner.png`](./d7-uat/ios/d7-s2-offline-banner.png) — VI offline queue banner (S2 evidence, retained)
-- [`d7-uat/ios/d7-s2-syncing-banner.png`](./d7-uat/ios/d7-s2-syncing-banner.png)
-- [`d7-uat/ios/d7-s2-conflict-banner.png`](./d7-uat/ios/d7-s2-conflict-banner.png)
+- [`d7-uat/ios/d7-s4-staff-verified.png`](./d7-uat/ios/d7-s4-staff-verified.png)
+- [`d7-uat/ios/d7-s4-offline-enqueued.png`](./d7-uat/ios/d7-s4-offline-enqueued.png) — `OFFLINE_ENQUEUED pending=1`
+- [`d7-uat/ios/d7-s4-offline-after-restart.png`](./d7-uat/ios/d7-s4-offline-after-restart.png)
+- [`d7-uat/ios/d7-s4-offline-after-replay.png`](./d7-uat/ios/d7-s4-offline-after-replay.png)
+- [`d7-uat/ios/d7-s4-offline-retry-nodup.png`](./d7-uat/ios/d7-s4-offline-retry-nodup.png)
+- [`d7-uat/ios/d7-s4-queue-final.json`](./d7-uat/ios/d7-s4-queue-final.json) — redacted queue row (`applied` + checkinId)
 
-## Gaps (explicit)
+### Client fixes in this re-run (iOS ownership)
 
-1. **iOS live offline enqueue/replay on Simulator** not driven end-to-end in this gate run (signed-out; no staff OIDC session). Covered by unit tests + S2 banner PNGs + staff screen fail-closed copy.
-2. Web UAT ran against `d7-web-offline` worktree Next process; gate file tree matches merged PR #182 behavior. Integration SHA cited is `origin/main` tip above.
-3. Sim UI showed Expo Go chrome on the running app; native local build evidence is separate (#117).
+- Gate offline queue durable store → `expo-file-system` (SecureStore/Settings wedged Simulator JS thread)
+- Accept HTTP **201** on gate session open
+- UAT deep-link helpers: `uat/staff-session`, `uat/scan?preferOffline=1`
+- `createUuid` via `expo-crypto` (Hermes lacks `crypto.randomUUID`)
 
-## Related artifacts
+## Web UAT (#116) — retained from prior gate
+
+See prior section evidence (Playwright offline `/gate`) — unchanged; SHAs in history above.
+
+## Related
 
 - [#117 iOS build](./D7-S4-IOS-BUILD.md)
-- [#118 deploy prod](./D7-S4-DEPLOY-PROD.md) — **NOT authorized** (skipped)
+- [#118 deploy](./D7-S4-DEPLOY-PROD.md) — **skip** (not authorized)

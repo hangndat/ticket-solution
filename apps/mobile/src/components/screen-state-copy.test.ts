@@ -1,0 +1,29 @@
+import assert from 'node:assert/strict';
+import { test } from 'node:test';
+import {
+  eventsCopy,
+  scanCopy,
+  walletCopy,
+} from './screen-state-copy.ts';
+
+test('wallet copy covers loading empty error without jargon', () => {
+  assert.match(walletCopy.loading.title, /vé/i);
+  assert.match(walletCopy.emptyOnline.body, /API/);
+  assert.doesNotMatch(walletCopy.emptyOnline.body, /POC|W0|F-WEB/i);
+  assert.equal(walletCopy.errorTitle, 'Không tải được ví');
+});
+
+test('scan copy idle and checking are fail-closed Vietnamese', () => {
+  assert.match(scanCopy.idle.body, /API/);
+  assert.match(scanCopy.checking.body, /Không cho vào/);
+  assert.doesNotMatch(scanCopy.idle.title, /POC/i);
+});
+
+test('events copy separates published empty from demo empty', () => {
+  assert.notEqual(
+    eventsCopy.emptyPublished.title,
+    eventsCopy.emptyDemo.title,
+  );
+  assert.match(eventsCopy.loadingList.body, /Demo/);
+  assert.match(eventsCopy.errorList.title, /Lỗi/);
+});

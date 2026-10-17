@@ -5,6 +5,7 @@ import {
   getOidcClientId,
   getOidcIssuer,
   getTenantId,
+  getTenantSlug,
   isOidcConfigured,
 } from './config.ts';
 
@@ -57,6 +58,17 @@ test('API base URL trims trailing slashes', () => {
   else process.env.EXPO_PUBLIC_API_BASE_URL = previous;
 });
 
+test('API base URL prefers env over empty extra (no invented URL in unit env)', () => {
+  const previous = process.env.EXPO_PUBLIC_API_BASE_URL;
+  delete process.env.EXPO_PUBLIC_API_BASE_URL;
+  // Without Metro bake / expo-constants extra in node:test, missing env → null.
+  assert.equal(getApiBaseUrl(), null);
+  process.env.EXPO_PUBLIC_API_BASE_URL = 'https://api.vemoki.com/';
+  assert.equal(getApiBaseUrl(), 'https://api.vemoki.com');
+  if (previous === undefined) delete process.env.EXPO_PUBLIC_API_BASE_URL;
+  else process.env.EXPO_PUBLIC_API_BASE_URL = previous;
+});
+
 test('tenant id empty is null (no invented tenant)', () => {
   const previous = process.env.EXPO_PUBLIC_TENANT_ID;
   delete process.env.EXPO_PUBLIC_TENANT_ID;
@@ -67,4 +79,16 @@ test('tenant id empty is null (no invented tenant)', () => {
   assert.equal(getTenantId(), '22222222-2222-2222-2222-222222222222');
   if (previous === undefined) delete process.env.EXPO_PUBLIC_TENANT_ID;
   else process.env.EXPO_PUBLIC_TENANT_ID = previous;
+});
+
+test('tenant slug empty is null (theme keeps Vemoki defaults)', () => {
+  const previous = process.env.EXPO_PUBLIC_TENANT_SLUG;
+  delete process.env.EXPO_PUBLIC_TENANT_SLUG;
+  assert.equal(getTenantSlug(), null);
+  process.env.EXPO_PUBLIC_TENANT_SLUG = '  ';
+  assert.equal(getTenantSlug(), null);
+  process.env.EXPO_PUBLIC_TENANT_SLUG = 'demo-fun';
+  assert.equal(getTenantSlug(), 'demo-fun');
+  if (previous === undefined) delete process.env.EXPO_PUBLIC_TENANT_SLUG;
+  else process.env.EXPO_PUBLIC_TENANT_SLUG = previous;
 });

@@ -133,7 +133,11 @@ cmd_type() {
   done
   [[ -n "$text" ]] || die "usage: sim-uat type [--udid UDID] 'text'"
   udid="$(resolve_udid "${udid:-}")"
-  axe type --udid "$udid" "${args[@]}" "$text"
+  if [[ ${#args[@]} -gt 0 ]]; then
+    axe type --udid "$udid" "${args[@]}" "$text"
+  else
+    axe type --udid "$udid" "$text"
+  fi
 }
 
 cmd_launch() {

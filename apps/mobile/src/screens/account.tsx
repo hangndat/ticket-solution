@@ -5,7 +5,7 @@ import { Notice, Page } from '@/components/page';
 import { SessionScopedAccountDeletionPanel } from '@/account-deletion/account-deletion-panel';
 import { SessionScopedPushStatus } from '@/push/push-status';
 import { colors } from '@/theme/colors';
-import { getTenantId, isOidcConfigured } from '@/identity/config';
+import { getApiBaseUrl, getTenantId, isOidcConfigured } from '@/identity/config';
 import { fetchMe, verifyViaMe } from '@/identity/fetch-me';
 import {
   endKeycloakSession,
@@ -105,7 +105,8 @@ function ConfiguredAccount() {
   );
   const verifiedUserId =
     identity.status === 'verified' ? identity.userId : null;
-  const isSignedIn = identity.status === 'verified' || accessToken !== null;
+  // Only SessionBoundary verified counts — local OIDC token alone is not signed-in.
+  const isSignedIn = identity.status === 'verified';
 
   // Refuse stale /v1/me UI immediately on identity switch (no effect delay).
   const visibleMe = useMemo(() => {
@@ -166,14 +167,25 @@ function ConfiguredAccount() {
       const bindingEpoch = captureOfflineBindingEpoch();
       const result = await loginWithKeycloak();
       if (!result.ok) {
+        setAccessToken(null);
         setMeError(result.reason);
         return;
       }
-      setAccessToken(result.accessToken);
       await session.establish(result.accessToken, verifyViaMe);
       const snap = session.getSnapshot();
+      if (snap.status !== 'verified') {
+        // Unreachable establish still persists the bearer; do not pretend signed-in.
+        setAccessToken(null);
+        setMeError(
+          getApiBaseUrl()
+            ? 'OIDC ok nhưng GET /v1/me chưa xác minh (mạng/API). Thử lại khi online — token đã giữ trong SecureStore.'
+            : 'OIDC ok nhưng thiếu EXPO_PUBLIC_API_BASE_URL (bake Release). Không xác minh được phiên.',
+        );
+        return;
+      }
+      setAccessToken(result.accessToken);
       const tenantId = getTenantId();
-      if (snap.status === 'verified' && tenantId) {
+      if (tenantId) {
         await bindIfStillVerified({
           session,
           offline: offlineDisplay,

@@ -18,6 +18,15 @@ export type InstalledAppLink =
       eventSlug?: string;
       href: string;
     }
+  /** Headless sim-uat only: bearer still verified via GET /v1/me (never stubs identity). */
+  | { kind: 'uat-staff-session'; accessToken: string; href: string }
+  /** Headless sim-uat only: submit gate scan without HID TextInput. */
+  | {
+      kind: 'uat-scan';
+      ticketId: string;
+      preferOffline: boolean;
+      href: string;
+    }
   | { kind: 'oauth-callback' }
   | { kind: 'passthrough' };
 
@@ -34,6 +43,12 @@ export function parseInstalledAppLink(input: string): InstalledAppLink {
 
   const claim = parseInvitationClaimLink(raw);
   if (claim) return claim;
+
+  const uatSession = parseUatStaffSessionLink(raw);
+  if (uatSession) return uatSession;
+
+  const uatScan = parseUatScanLink(raw);
+  if (uatScan) return uatScan;
 
   const segments = linkSegments(raw);
   if (!segments) return { kind: 'passthrough' };
@@ -66,11 +81,104 @@ export function routeForInstalledAppLink(input: string): string | null {
   if (
     parsed.kind === 'ticket' ||
     parsed.kind === 'event' ||
-    parsed.kind === 'invitation-claim'
+    parsed.kind === 'invitation-claim' ||
+    parsed.kind === 'uat-staff-session' ||
+    parsed.kind === 'uat-scan'
   ) {
     return parsed.href;
   }
   return input;
+}
+
+/**
+ * Headless sim-uat bootstrap (Debug / `__DEV__` screen enforces gate):
+ * `vemoki://uat/staff-session?access_token=<Keycloak JWT>`
+ * Token must still pass SessionBoundary.establish → verifyViaMe.
+ */
+function parseUatStaffSessionLink(raw: string): InstalledAppLink | null {
+  let url: URL;
+  try {
+    if (/^[a-z][a-z0-9+.-]*:/i.test(raw)) {
+      url = new URL(raw);
+      if (!isAppScheme(url.protocol)) return null;
+    } else {
+      const path = raw.startsWith('/') ? raw : `/${raw}`;
+      url = new URL(`ticketsolution://host${path}`);
+    }
+  } catch {
+    return null;
+  }
+
+  const parts = [
+    url.hostname,
+    ...url.pathname.split('/').filter((p) => p.length > 0),
+  ].filter((p) => p && p !== 'host');
+
+  if (
+    parts.length !== 2 ||
+    parts[0]?.toLowerCase() !== 'uat' ||
+    parts[1]?.toLowerCase() !== 'staff-session'
+  ) {
+    return null;
+  }
+
+  const accessToken = url.searchParams.get('access_token')?.trim() ?? '';
+  // JWT shape + length bound; never log the token.
+  if (
+    accessToken.length < 32 ||
+    accessToken.length > 8192 ||
+    accessToken.split('.').length !== 3
+  ) {
+    return { kind: 'passthrough' };
+  }
+
+  const qs = new URLSearchParams({ access_token: accessToken });
+  return {
+    kind: 'uat-staff-session',
+    accessToken,
+    href: `/uat/staff-session?${qs.toString()}`,
+  };
+}
+
+/** `vemoki://uat/scan?ticketId=<uuid>&preferOffline=1` */
+function parseUatScanLink(raw: string): InstalledAppLink | null {
+  let url: URL;
+  try {
+    if (/^[a-z][a-z0-9+.-]*:/i.test(raw)) {
+      url = new URL(raw);
+      if (!isAppScheme(url.protocol)) return null;
+    } else {
+      const path = raw.startsWith('/') ? raw : `/${raw}`;
+      url = new URL(`ticketsolution://host${path}`);
+    }
+  } catch {
+    return null;
+  }
+
+  const parts = [
+    url.hostname,
+    ...url.pathname.split('/').filter((p) => p.length > 0),
+  ].filter((p) => p && p !== 'host');
+
+  if (
+    parts.length !== 2 ||
+    parts[0]?.toLowerCase() !== 'uat' ||
+    parts[1]?.toLowerCase() !== 'scan'
+  ) {
+    return null;
+  }
+
+  const ticketId = url.searchParams.get('ticketId')?.trim() ?? '';
+  if (!UUID.test(ticketId)) return { kind: 'passthrough' };
+  const preferOffline = url.searchParams.get('preferOffline') === '1';
+  const qs = new URLSearchParams({ ticketId });
+  if (preferOffline) qs.set('preferOffline', '1');
+  return {
+    kind: 'uat-scan',
+    ticketId,
+    preferOffline,
+    href: `/uat/scan?${qs.toString()}`,
+  };
 }
 
 /**

@@ -1,26 +1,72 @@
-/** Keycloak issuer from Expo public env. Empty → fail closed (no verified user). */
+type TicketPublicExtra = {
+  apiBaseUrl?: string;
+  oidcIssuer?: string;
+  oidcClientId?: string;
+  oidcScopes?: string;
+  tenantId?: string;
+  eventId?: string;
+  pushProvider?: string;
+};
+
+/**
+ * Runtime fallback for Release/TestFlight when Metro did not inline EXPO_PUBLIC_*.
+ * Soft-load expo-constants so node:test (no native modules) still runs.
+ */
+function readTicketPublicExtra(): TicketPublicExtra {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const mod = require('expo-constants') as {
+      default?: { expoConfig?: { extra?: { ticketPublic?: TicketPublicExtra } } };
+      expoConfig?: { extra?: { ticketPublic?: TicketPublicExtra } };
+    };
+    const Constants = mod.default ?? mod;
+    return Constants.expoConfig?.extra?.ticketPublic ?? {};
+  } catch {
+    return {};
+  }
+}
+
+function pickPublic(
+  envValue: string | undefined,
+  extraValue: string | undefined,
+): string | null {
+  const value = envValue?.trim() || extraValue?.trim() || '';
+  return value.length > 0 ? value : null;
+}
+
+/** Keycloak issuer from Expo public env / baked extra. Empty → fail closed. */
 export function getOidcIssuer(): string | null {
-  const issuer = process.env.EXPO_PUBLIC_OIDC_ISSUER?.trim() ?? '';
-  return issuer.length > 0 ? issuer.replace(/\/+$/, '') : null;
+  const issuer = pickPublic(
+    process.env.EXPO_PUBLIC_OIDC_ISSUER,
+    readTicketPublicExtra().oidcIssuer,
+  );
+  return issuer ? issuer.replace(/\/+$/, '') : null;
 }
 
 /** Public OIDC client id for iOS (PKCE). */
 export function getOidcClientId(): string | null {
-  const id = process.env.EXPO_PUBLIC_OIDC_CLIENT_ID?.trim() ?? '';
-  return id.length > 0 ? id : null;
+  return pickPublic(
+    process.env.EXPO_PUBLIC_OIDC_CLIENT_ID,
+    readTicketPublicExtra().oidcClientId,
+  );
 }
 
 export function getOidcScopes(): string {
   return (
-    process.env.EXPO_PUBLIC_OIDC_SCOPES?.trim() || 'openid profile email'
+    pickPublic(
+      process.env.EXPO_PUBLIC_OIDC_SCOPES,
+      readTicketPublicExtra().oidcScopes,
+    ) || 'openid profile email'
   );
 }
 
 /** Nest API base URL for GET /v1/me (no trailing slash). */
 export function getApiBaseUrl(): string | null {
-  const url = process.env.EXPO_PUBLIC_API_BASE_URL?.trim() ?? '';
-  if (!url) return null;
-  return url.replace(/\/+$/, '');
+  const url = pickPublic(
+    process.env.EXPO_PUBLIC_API_BASE_URL,
+    readTicketPublicExtra().apiBaseUrl,
+  );
+  return url ? url.replace(/\/+$/, '') : null;
 }
 
 /**
@@ -28,14 +74,27 @@ export function getApiBaseUrl(): string | null {
  * Empty → wallet stays empty / prompts config; never invents a tenant.
  */
 export function getTenantId(): string | null {
-  const id = process.env.EXPO_PUBLIC_TENANT_ID?.trim() ?? '';
-  return id.length > 0 ? id : null;
+  return pickPublic(
+    process.env.EXPO_PUBLIC_TENANT_ID,
+    readTicketPublicExtra().tenantId,
+  );
+}
+
+/**
+ * Public tenant slug for branding / published catalog.
+ * Empty → ThemeProvider keeps Vemoki defaults (no invented tenant).
+ */
+export function getTenantSlug(): string | null {
+  const slug = process.env.EXPO_PUBLIC_TENANT_SLUG?.trim() ?? '';
+  return slug.length > 0 ? slug : null;
 }
 
 /** Event UUID used when a scan is a bare ticket id. QR display payloads carry their own. */
 export function getEventId(): string | null {
-  const id = process.env.EXPO_PUBLIC_EVENT_ID?.trim() ?? '';
-  return id.length > 0 ? id : null;
+  return pickPublic(
+    process.env.EXPO_PUBLIC_EVENT_ID,
+    readTicketPublicExtra().eventId,
+  );
 }
 
 export function isOidcConfigured(): boolean {
