@@ -1,4 +1,4 @@
-import { bffApiError } from './upstream';
+import { bffApiError } from './api-error';
 
 function canonicalizeOrigin(raw: string): string | null {
   try {
