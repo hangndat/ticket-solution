@@ -1,7 +1,7 @@
-# @ticket/web — W0 foundation + D1 Keycloak OIDC + D2 redeem
+# @ticket/web — Keycloak OIDC identity + redeem
 
 Next.js App Router shell for public demo events, admin placeholder,
-self-hosted OIDC identity POC (Authorization Code + PKCE BFF), and D2
+self-hosted OIDC identity session (Authorization Code + PKCE BFF), and
 redemption against Nest (real API, no mock proof).
 
 ## Environment (Keycloak OIDC)
@@ -27,11 +27,11 @@ No Clerk / SaaS IdP.
 ## Routes
 
 - `/` — demo event directory
-- `/auth` — D1 Keycloak identity POC (sign-in, BFF `/v1/me`, sign-out)
-- `/redeem` — D2 form đổi mã → verify → success/ticket (Nest redeem)
+- `/auth` — Keycloak identity session (sign-in, BFF `/v1/me`, sign-out)
+- `/redeem` — form đổi mã → verify → success/ticket (Nest redeem)
 - `/admin` — shell placeholder
 
-## BFF (D2)
+## BFF (redeem / tickets)
 
 | Browser | Nest |
 | --- | --- |
