@@ -91,7 +91,7 @@ test('production routes isolate tenant content and reject unknown pairs', async 
     const adminHtml = await admin.text();
     assert.ok(adminHtml.includes('Cấu hình sự kiện'));
     assert.ok(adminHtml.includes('OIDC chưa cấu hình'));
-    assert.ok(adminHtml.includes('Không coi là đã lưu'));
+    assert.ok(adminHtml.includes('không coi là thành công'));
     assert.ok(adminHtml.includes('Xem trước'));
     assert.ok(adminHtml.includes('Lưu phiên bản'));
     assert.ok(adminHtml.includes('Nhập mã'));
@@ -105,6 +105,7 @@ test('production routes isolate tenant content and reject unknown pairs', async 
     assert.ok(adminHtml.includes('Tìm vé CS'));
     assert.ok(adminHtml.includes('Gửi lại email'));
     assert.ok(adminHtml.includes('Tạo export CSV'));
+    assert.ok(adminHtml.includes('Tải CSV'));
     assert.ok(adminHtml.includes('không hardcode demo festival'));
     assert.equal(/FUN FEST|fun-fest/i.test(adminHtml), false);
     const authPoc = await fetch(base + '/auth');
@@ -158,9 +159,27 @@ test('production routes isolate tenant content and reject unknown pairs', async 
     const redeemErr = await redeemBff.json();
     assert.equal(redeemErr.code, 'OIDC_MISCONFIGURED');
 
-    const publishBff = await fetch(base + '/api/bff/admin/publish', {
+    // CSRF: mutating admin BFF without Origin must fail closed before OIDC.
+    const csrfBlocked = await fetch(base + '/api/bff/admin/publish', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        tenantId: '11111111-1111-4111-8111-111111111111',
+        eventId: '22222222-2222-4222-8222-222222222222',
+        expectedVersion: 1,
+      }),
+    });
+    assert.equal(csrfBlocked.status, 403);
+    assert.equal((await csrfBlocked.json()).code, 'CSRF_ORIGIN_REQUIRED');
+
+    const sameOriginJson = {
+      'Content-Type': 'application/json',
+      Origin: base,
+    };
+
+    const publishBff = await fetch(base + '/api/bff/admin/publish', {
+      method: 'POST',
+      headers: sameOriginJson,
       body: JSON.stringify({
         tenantId: '11111111-1111-4111-8111-111111111111',
         eventId: '22222222-2222-4222-8222-222222222222',
@@ -171,7 +190,7 @@ test('production routes isolate tenant content and reject unknown pairs', async 
     assert.equal((await publishBff.json()).code, 'OIDC_MISCONFIGURED');
     const importBff = await fetch(base + '/api/bff/admin/imports', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: sameOriginJson,
       body: JSON.stringify({
         tenantId: '11111111-1111-4111-8111-111111111111',
         eventId: '22222222-2222-4222-8222-222222222222',
@@ -202,14 +221,14 @@ test('production routes isolate tenant content and reject unknown pairs', async 
     };
     const approveBff = await fetch(base + '/api/bff/admin/redemptions/approve', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: sameOriginJson,
       body: JSON.stringify(approvalBody),
     });
     assert.equal(approveBff.status, 503);
     assert.equal((await approveBff.json()).code, 'OIDC_MISCONFIGURED');
     const denyBff = await fetch(base + '/api/bff/admin/redemptions/deny', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: sameOriginJson,
       body: JSON.stringify({ ...approvalBody, reason: 'Không đủ điều kiện' }),
     });
     assert.equal(denyBff.status, 503);
@@ -217,11 +236,12 @@ test('production routes isolate tenant content and reject unknown pairs', async 
 
     const createEventBff = await fetch(base + '/api/bff/admin/events', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: sameOriginJson,
       body: JSON.stringify({
         tenantId: '11111111-1111-4111-8111-111111111111',
         slug: 'aurora-night',
         name: 'Aurora Night',
+        idempotencyKey: '66666666-6666-4666-8666-666666666666',
       }),
     });
     assert.equal(createEventBff.status, 503);
@@ -239,7 +259,7 @@ test('production routes isolate tenant content and reject unknown pairs', async 
         '/api/bff/admin/tickets/33333333-3333-4333-8333-333333333333/resend',
       {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: sameOriginJson,
         body: JSON.stringify({
           tenantId: '11111111-1111-4111-8111-111111111111',
           eventId: '22222222-2222-4222-8222-222222222222',
@@ -252,7 +272,7 @@ test('production routes isolate tenant content and reject unknown pairs', async 
 
     const exportBff = await fetch(base + '/api/bff/admin/exports', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: sameOriginJson,
       body: JSON.stringify({
         tenantId: '11111111-1111-4111-8111-111111111111',
         eventId: '22222222-2222-4222-8222-222222222222',

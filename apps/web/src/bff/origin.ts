@@ -24,15 +24,13 @@ export function assertSameOrigin(request: Request): Response | null {
   }
   const origin = request.headers.get('origin');
   if (!origin) {
-    const fetchSite = request.headers.get('sec-fetch-site');
-    if (fetchSite === 'cross-site' || fetchSite === 'same-site') {
-      return bffApiError(
-        'CSRF_ORIGIN_REQUIRED',
-        'Mutating BFF calls require a matching Origin.',
-        403,
-      );
-    }
-    return null;
+    // Fail-closed: cookie-authenticated mutations require Origin.
+    // Sec-Fetch-Site alone is not enough to allow missing Origin.
+    return bffApiError(
+      'CSRF_ORIGIN_REQUIRED',
+      'Mutating BFF calls require a matching Origin.',
+      403,
+    );
   }
   const expected = canonicalizeOrigin(request.url);
   const actual = canonicalizeOrigin(origin);

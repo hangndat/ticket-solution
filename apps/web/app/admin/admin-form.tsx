@@ -610,18 +610,32 @@ export function AdminForm({
         );
       } else {
         const buf = await response.arrayBuffer();
-        bumpNotice();
-        setExportView(
-          interpretExportDownload(
-            response.status,
-            null,
-            false,
-            id,
-            contentType,
-            buf.byteLength,
-            filenameMatch?.[1] ?? null,
-          ),
+        const filename = filenameMatch?.[1] ?? `export-${id}.csv`;
+        const view = interpretExportDownload(
+          response.status,
+          null,
+          false,
+          id,
+          contentType,
+          buf.byteLength,
+          filenameMatch?.[1] ?? null,
         );
+        if (view.kind === 'download') {
+          const blob = new Blob([buf], {
+            type: contentType ?? 'text/csv',
+          });
+          const objectUrl = URL.createObjectURL(blob);
+          const anchor = document.createElement('a');
+          anchor.href = objectUrl;
+          anchor.download = filename;
+          anchor.rel = 'noopener';
+          document.body.appendChild(anchor);
+          anchor.click();
+          anchor.remove();
+          URL.revokeObjectURL(objectUrl);
+        }
+        bumpNotice();
+        setExportView(view);
       }
     } catch {
       bumpNotice();
@@ -1228,7 +1242,7 @@ export function AdminForm({
             disabled={busy}
             onClick={() => void downloadExport()}
           >
-            Lấy link tải
+            Tải CSV
           </button>
         </div>
       </section>
