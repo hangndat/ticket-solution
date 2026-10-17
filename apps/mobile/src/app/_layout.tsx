@@ -1,9 +1,11 @@
 import { useEffect } from 'react';
+import { router } from 'expo-router';
 import { Stack } from 'expo-router/stack';
 import { getTenantId, isOidcConfigured } from '@/identity/config';
 import { verifyViaMe } from '@/identity/fetch-me';
 import { session } from '@/identity/session';
 import '@/push/push-notifications-init';
+import { attachNotificationRouting } from '@/push/notification-routing';
 import {
   bindIfStillVerified,
   captureOfflineBindingEpoch,
@@ -33,9 +35,43 @@ function AppStack() {
  * - Hydrate offline-display binding (never elevates SessionBoundary).
  * - restore(verifyViaMe): verified | signed-out (401/403) | unreachable (network).
  * - unauthorized/signed-out clears offline binding; unreachable keeps binding for display.
+ * - Push tap cold/warm listener (C-N) — never gates wallet on permission/denied.
  */
 export default function RootLayout() {
   const configured = isOidcConfigured();
+
+  useEffect(() => {
+    let stopRouting: (() => void) | undefined;
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        const handle = await attachNotificationRouting({
+          session,
+          navigate: (href) => {
+            try {
+              // Href is a validated published/ticket path from resolve — not fixture.
+              router.push(href as never);
+            } catch {
+              /* Navigation must never crash wallet bootstrap. */
+            }
+          },
+        });
+        if (cancelled) {
+          handle.stop();
+          return;
+        }
+        stopRouting = () => handle.stop();
+      } catch {
+        /* Missing native notifications module → wallet still works. */
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      stopRouting?.();
+    };
+  }, []);
 
   useEffect(() => {
     void (async () => {
