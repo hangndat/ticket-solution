@@ -34,6 +34,8 @@ const MIGRATIONS = [
   '202610170005_d3_gate',
   '202610170006_d4_config_publish',
   '202610170007_d4_manual_approval',
+  '202610170008_d4_report_retry',
+  '202610170009_n1_notification_delivery',
 ].map((name) => path.join(__dirname, '../prisma/migrations', name, 'migration.sql'));
 
 const HMAC = readCodeHmacEnvironment({

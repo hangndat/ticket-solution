@@ -1,5 +1,5 @@
 ---
-description: Orca coordinator must keep idle unblocked workers busy with next ready tasks
+description: Orca coordinator keeps idle workers busy — with review-queue backpressure
 alwaysApply: true
 ---
 
@@ -15,23 +15,42 @@ As coordinator (or any agent supervising an Orca Run): **if a worker capacity is
 ## Always do
 
 1. Maintain a ready queue from GitHub Project #3: prefer Status `Sẵn sàng`, then unblocked items in the active đợt (D1…); respect ownership (BE / web / iOS / coordinator).
-2. On every checkpoint (`worker_done`, escalation resolved, dep unblocked, `check` batch processed): **fill every free, unblocked slot** with `worker-start` (coding → `--agent cursor`; plan → Codex per routing; DoD review → Cursor reviewer).
+2. On every checkpoint (`worker_done`, escalation resolved, dep unblocked, `check` batch processed): **fill every free, unblocked slot** — nhưng **ưu tiên loại việc** theo backpressure bên dưới.
 3. Pull the next ready Issue for that scope; set Project Status → `Đang làm` when dispatching (see `github-project-tracking.mdc`).
 4. Prefer reusing a settled worker terminal when Orca allows; otherwise start a new worker for that slice.
-5. Parallel-first still applies: fill multiple free slices in one wave before `check --wait`.
+5. Parallel-first still applies khi dưới ngưỡng WIP: fill multiple free slices in one wave before `check --wait`.
+
+## Backpressure — ưu tiên khi hàng đợi duyệt đầy
+
+Trước khi `worker-start` **feature coding** mới, kiểm tra tín hiệu đầy trong `github-project-tracking.mdc` (Chờ duyệt / PR mở / slice).
+
+Khi đầy, thứ tự fill cho worker rảnh:
+
+1. **DoD / security review** Cursor (`--agent cursor`, reviewer ≠ implementer) cho item `Chờ duyệt` hoặc PR thiếu evidence exact-SHA  
+2. **Fix** theo findings review / CI đỏ (cùng Issue hoặc PR)  
+3. **Integration support** (rebase/conflict cùng slice do owner slice; không merge hộ ngoài ủy quyền)  
+4. **Feature `Sẵn sàng` mới** — chỉ khi hàng đợi không còn đầy **hoặc** slice đó không góp thêm `Chờ duyệt` (ví dụ chỉ còn việc review)
+
+Không được để reviewer/fix idle trong khi vẫn spawn thêm feature cùng slice làm phình queue. Parallel-first **giữ** cho các slice độc lập khi mỗi slice còn dưới ngưỡng.
 
 ## Do not
 
 ```text
-❌ Hold a free BE worker idle while only waiting on unrelated web/iOS
-❌ Serialize “one Issue at a time” globally when other scopes are ready
+❌ Hold a free BE worker idle while only waiting on unrelated web/iOS (và BE còn Sẵn sàng / review)
+❌ Serialize “one Issue at a time” globally when other scopes are ready and queue not full
 ❌ Ask the user “làm Issue nào tiếp?” when Sẵn sàng / unblocked backlog exists
 ❌ Dispatch work whose deps are still running (true block → leave idle or mark Bị chặn)
+❌ Unlimited feature dispatch while ≥ ngưỡng Chờ duyệt / PR chờ DoD (xem github-project-tracking.mdc)
 
-✅ After iOS worker_done, immediately dispatch next Sẵn sàng iOS (or DoD review) if unblocked
-✅ While BE coding runs, keep web/iOS busy on independent ready Issues
+✅ After iOS worker_done, immediately dispatch next Sẵn sàng iOS — hoặc DoD review nếu queue ưu tiên
+✅ While BE coding runs, keep web/iOS busy on independent ready Issues (nếu dưới WIP cap)
+✅ Free worker + full review queue → spawn Cursor DoD reviewer trước feature mới
 ```
 
 ## Empty backlog
 
 If no unblocked ready work remains for a free worker: leave it idle, report “no ready Tasks for \<scope\>”, and do not invent scope-breaking busywork.
+
+## Đo nhẹ khi fill
+
+Khi áp dụng backpressure, ghi 1 dòng coordinator: số `Chờ duyệt`, số PR mở chờ DoD/CI, và việc đã ưu tiên (review / fix / feature). Chỉ số chi tiết: `github-project-tracking.mdc` § đo lường.

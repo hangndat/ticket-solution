@@ -8,9 +8,9 @@
     "build": "pnpm generate && tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint src",
-    "test": "pnpm build && node --test test/env.test.cjs test/oidc.test.cjs test/membership-unit.test.cjs test/issue-unit.test.cjs",
+    "test": "pnpm build && node --test test/env.test.cjs test/oidc.test.cjs test/membership-unit.test.cjs test/issue-unit.test.cjs test/notification-unit.test.cjs",
     "generate": "prisma generate",
-    "test:db": "pnpm -w --filter @ticket/contracts build && pnpm build && node --test test/rls.test.cjs test/rls-catalog.test.cjs test/membership.test.cjs test/issue.test.cjs test/gate.test.cjs test/config-publish.test.cjs test/approval.test.cjs test/reporting.test.cjs",
+    "test:db": "pnpm -w --filter @ticket/contracts build && pnpm build && node --test test/rls.test.cjs test/rls-catalog.test.cjs test/membership.test.cjs test/issue.test.cjs test/gate.test.cjs test/config-publish.test.cjs test/approval.test.cjs test/reporting.test.cjs test/n1-email-mime.test.cjs",
     "migrate": "prisma migrate deploy"
   },
   "dependencies": {
@@ -18,12 +18,16 @@
     "@prisma/client": "7.10.1",
     "@ticket/contracts": "workspace:*",
     "jose": "5.10.0",
-    "pg": "8.23.1"
+    "nodemailer": "6.10.1",
+    "pg": "8.23.1",
+    "qrcode": "1.5.4"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
     "@types/node": "24.19.2",
+    "@types/nodemailer": "6.4.17",
     "@types/pg": "8.23.1",
+    "@types/qrcode": "1.5.5",
     "eslint": "10.12.0",
     "prisma": "7.10.1",
     "typescript": "5.9.3",

@@ -1,3 +1,4 @@
+import { assertSameOrigin } from '../../../../../src/bff/origin';
 import { bffApiError, forwardWithBearer } from '../../../../../src/bff/upstream';
 import { eventPath, isScope, scopeError } from '../../../../../src/admin/scope';
 
@@ -11,6 +12,8 @@ type Body = {
 };
 
 export async function POST(request: Request) {
+  const csrf = assertSameOrigin(request);
+  if (csrf) return csrf;
   let body: Body;
   try {
     body = (await request.json()) as Body;

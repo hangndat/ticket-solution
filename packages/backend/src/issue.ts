@@ -631,11 +631,12 @@ async function runIssueBusiness(
   const businessKey = `ticket:${ticketId}:issued:email`;
   await tx.$executeRaw`
     INSERT INTO notifications (
-      tenant_id, event_id, id, business_key, channel, state,
-      attempts, payload, created_at, updated_at
+      tenant_id, event_id, id, business_key, channel, kind, payload_version,
+      state, attempts, payload, created_at, updated_at
     ) VALUES (
       ${input.tenantId}::uuid, ${input.eventId}::uuid, ${notificationId}::uuid,
-      ${businessKey}, 'email', 'PENDING', 0,
+      ${businessKey}, 'email', 'TicketIssued', 1,
+      'PENDING', 0,
       ${JSON.stringify(outboxPayload)}::jsonb, now(), now()
     )
   `;

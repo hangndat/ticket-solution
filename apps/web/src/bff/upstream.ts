@@ -25,6 +25,58 @@ export function bffApiError(
   return Response.json(body, { status });
 }
 
+function passthroughUpstream(
+  upstream: Response,
+  body: ArrayBuffer,
+): Response {
+  const contentType =
+    upstream.headers.get('Content-Type') ?? 'application/json';
+  const outHeaders = new Headers({ 'Content-Type': contentType });
+  const cacheControl = upstream.headers.get('Cache-Control');
+  if (cacheControl) outHeaders.set('Cache-Control', cacheControl);
+  else outHeaders.set('Cache-Control', 'private, no-store');
+  const disposition = upstream.headers.get('Content-Disposition');
+  if (disposition) outHeaders.set('Content-Disposition', disposition);
+  return new Response(body, {
+    status: upstream.status,
+    headers: outHeaders,
+  });
+}
+
+/**
+ * Unauthenticated forward for public published projections only.
+ * Never attach Bearer; always no-store.
+ */
+export async function forwardPublic(
+  pathAndQuery: string,
+  init: RequestInit = {},
+): Promise<Response> {
+  const base = apiBaseUrl();
+  const url = `${base}${pathAndQuery.startsWith('/') ? pathAndQuery : `/${pathAndQuery}`}`;
+  const headers = new Headers(init.headers);
+  if (!headers.has('Accept')) {
+    headers.set('Accept', 'application/json');
+  }
+  headers.delete('Authorization');
+
+  try {
+    const upstream = await fetch(url, {
+      ...init,
+      headers,
+      cache: 'no-store',
+    });
+    const body = await upstream.arrayBuffer();
+    return passthroughUpstream(upstream, body);
+  } catch {
+    return bffApiError(
+      'UPSTREAM_UNAVAILABLE',
+      `Cannot reach API ${init.method ?? 'GET'} ${url}.`,
+      502,
+      true,
+    );
+  }
+}
+
 /**
  * Read HttpOnly OIDC access cookie and forward to Nest with Bearer.
  * Returns a Response (error or upstream passthrough). Never exposes the token.
@@ -64,13 +116,8 @@ export async function forwardWithBearer(
       headers,
       cache: 'no-store',
     });
-    const text = await upstream.text();
-    const contentType =
-      upstream.headers.get('Content-Type') ?? 'application/json';
-    return new Response(text, {
-      status: upstream.status,
-      headers: { 'Content-Type': contentType },
-    });
+    const body = await upstream.arrayBuffer();
+    return passthroughUpstream(upstream, body);
   } catch {
     return bffApiError(
       'UPSTREAM_UNAVAILABLE',

@@ -30,26 +30,24 @@ test('CODE_HMAC_PEPPER required and hashes are stable + case-insensitive', () =>
 });
 
 test('email adapters: noop succeeds, failing throws without touching tickets', async () => {
-  const ok = createNoopEmailAdapter();
-  const result = await ok.sendTicketIssued({
+  const payload = {
     tenantId: 't',
     eventId: 'e',
     ticketId: 'ticket',
     toEmail: 'a@example.com',
     requestId: 'r',
-  });
+    subject: 's',
+    text: 'body',
+    html: '<p>body</p>',
+    qrPng: Buffer.from([1, 2, 3]),
+    credentialVersion: 1,
+    credentialTokenHash: 'hash',
+  };
+  const ok = createNoopEmailAdapter();
+  const result = await ok.sendTicketIssued(payload);
   assert.match(result.providerRef, /^noop:/);
+  assert.equal(result.providerStatus, 'ACCEPTED');
 
   const bad = createFailingEmailAdapter('boom');
-  await assert.rejects(
-    () =>
-      bad.sendTicketIssued({
-        tenantId: 't',
-        eventId: 'e',
-        ticketId: 'ticket',
-        toEmail: null,
-        requestId: 'r',
-      }),
-    /boom/,
-  );
+  await assert.rejects(() => bad.sendTicketIssued(payload), /boom/);
 });
