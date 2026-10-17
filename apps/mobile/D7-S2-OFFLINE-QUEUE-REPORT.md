@@ -43,3 +43,7 @@ cd apps/mobile && pnpm test && pnpm typecheck && pnpm lint
 - Durable server apply still stubbed until BE #106 — client keeps pending on `OFFLINE_SYNC_NOT_IMPLEMENTED`.
 - Full Simulator UI drive deferred; headless banner PNGs + unit replay cover acceptance for this slice.
 - Contract types mirrored locally until PR #173 (`@ticket/contracts` offline-sync) lands on `main`.
+
+## Impl SHA
+
+`d2c8f07095a1658f647138c9f96e927dcfdac636`
