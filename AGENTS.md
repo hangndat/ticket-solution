@@ -37,11 +37,15 @@ All user-facing roadmap, GitHub Projects, milestones, Issue titles/bodies, label
 - Report commit SHA, changed files, exact checks and limitations. A successful build does not prove security/concurrency behavior.
 - Use Orca lifecycle commands from your live dispatch preamble. Check follow-ups at checkpoints and before worker_done.
 - No delegation without task authorization.
-- **Orca parallel-first (coding):** If a coding task spans two or more independent ownership slices (backend / web / iOS / coordinator), spawn those Orca workers in one wave and wait together — do not serialize independent implementation. Use Task dependencies only for real ordering (e.g. shared contract before consumer apps). See `.cursor/rules/orca-parallel-workers.mdc`.
-- **Orca agent routing:** Coding/implementation workers always `--agent cursor`. Plan/design/spike use `--agent codex` (Cursor fallback on quota). **DoD / acceptance review** of implementation: spawn one `--agent cursor` reviewer (≠ implementer); do not wait for the user to approve. See `.cursor/rules/orca-agent-routing.mdc`.
-- **GitHub Project sync:** Keep [Project #3](https://github.com/users/hangndat/projects/3) Status in sync (Đang làm → Chờ duyệt → Hoàn thành / Bị chặn) without waiting for user board approval. `worker_done` ≠ Hoàn thành. See `.cursor/rules/github-project-tracking.mdc` and `docs/ROADMAP.md` §2/§8.
+- **Orca agent routing (TEMPORARY Cursor-only):** Every task kind — plan, design, coding, DoD, security — uses `--agent cursor`. Codex is temporarily disabled. See `.cursor/rules/orca-agent-routing.mdc`.
+- **Epic orchestrator:** Each Epic (parent Issue đợt/module) spawns **one** Cursor orchestrator that decomposes Epic → Story → Task and dispatches ownership workers; does not code the whole Epic serially. `worker_done` ≠ Hoàn thành. See `.cursor/rules/orca-epic-orchestrator.mdc`.
+- **Orca parallel-first (coding):** If a coding task spans two or more independent ownership slices (backend / web / iOS / coordinator), spawn those Orca workers (`--agent cursor`) in one wave and wait together — do not serialize independent implementation. Use Task dependencies only for real ordering (e.g. shared contract before consumer apps). See `.cursor/rules/orca-parallel-workers.mdc`.
+- **DoD / acceptance review:** Spawn one `--agent cursor` reviewer (≠ implementer); do not wait for the user to approve. Exact-SHA evidence in `docs/reviews/*` (or Issue/PR comment).
+- **Milestone gates:** Closing a milestone/Epic requires (a) headless UAT evidence, (b) local iOS build evidence when mobile is in scope, (c) deploy prod evidence only when the task authorizes it, (d) review artifacts + exact SHA. See `.cursor/rules/github-project-tracking.mdc` and `.cursor/rules/uat-headless.mdc`.
+- **GitHub Project sync:** Keep [Project #3](https://github.com/users/hangndat/projects/3) Status in sync **per Task** (Đang làm → Chờ duyệt → Hoàn thành / Bị chặn) without waiting for user board approval. Hierarchy Epic → Story → Task. See `.cursor/rules/github-project-tracking.mdc` and `docs/ROADMAP.md` §2/§8.
 - **Orca idle fill:** Any free worker whose next Task is not blocked by other workers/deps must be given the next ready Project work immediately — do not wait for the full wave or for the user to pick the next Issue. See `.cursor/rules/orca-idle-worker-fill.mdc`.
 - **Git workflow:** Feature branch off integration `main` → conventional commits → push → PR → Cursor DoD review → CI → coordinator merge. No feature commits directly on `main`. See `.cursor/rules/git-workflow.mdc`.
+
 
 <!-- code-review-graph MCP tools -->
 ## MCP Tools: code-review-graph

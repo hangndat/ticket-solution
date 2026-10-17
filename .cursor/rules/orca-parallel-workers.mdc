@@ -1,11 +1,13 @@
 ---
-description: Orca coding tasks spawn parallel workers by ownership — with review WIP caps
+description: Orca coding tasks spawn parallel workers by ownership — with review WIP caps; Cursor only
 alwaysApply: true
 ---
 
 # Orca — parallel coding workers (default)
 
-When the user asks for coding work that Orca should run (or when you are the Orca coordinator), **prefer parallel worker spawn over serial solo coding**.
+When the user asks for coding work that Orca should run (or when you are the Orca coordinator / epic orchestrator), **prefer parallel worker spawn over serial solo coding**.
+
+Epic-level work: spawn **one** Cursor epic orchestrator first (`orca-epic-orchestrator.mdc`); that orchestrator decomposes Stories/Tasks and applies this parallel rule for ownership workers — do not serialize the whole Epic in one terminal.
 
 ## Default
 
@@ -45,11 +47,13 @@ Mục tiêu: giữ throughput đa slice, giảm thời gian chờ duyệt và CI
 ❌ Start worker A, wait for worker_done, then start worker B for independent work
 ❌ One mega-spec that mixes apps/api + apps/web + apps/mobile
 ❌ Spawn 3 feature workers while ≥3 Chờ duyệt / nhiều PR cùng slice chưa DoD
+❌ Epic orchestrator tự code hết serial thay vì spawn ownership workers
 
 ✅ worker-start --agent cursor for BE + web (+ iOS) in one wave → check --wait
 ✅ Contract task first (if needed) → then parallel consumer workers (--agent cursor)
 ✅ Queue full → parallel Cursor DoD reviewers / fix workers; trì hoãn feature wave
+✅ One Cursor epic orchestrator → parallel Cursor Story/Task workers
 ```
 
-Coding workers must use `--agent cursor`. Plan/review agent choice: see `orca-agent-routing.mdc`.  
+**All coding (and plan/DoD) workers use `--agent cursor`** — temporary Cursor-only policy; see `orca-agent-routing.mdc`.  
 When a worker becomes free and unblocked, fill it from the ready backlog immediately: see `orca-idle-worker-fill.mdc`.
