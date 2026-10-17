@@ -37,15 +37,15 @@ const BY_CODE: Record<
 > = {
   [ISSUE_ERROR_CODES.QUOTA_EXHAUSTED]: {
     kind: 'exhausted',
-    title: 'Hết suất (quota exhausted)',
+    title: 'Hết suất',
     detail:
-      'Quota sự kiện / loại vé / nguồn phát đã hết. Mã không thể đổi thành vé mới.',
+      'Sự kiện hoặc loại vé đã hết suất. Mã này không thể đổi thành vé mới.',
     retryable: false,
   },
   [ISSUE_ERROR_CODES.CODE_CONSUMED]: {
     kind: 'used',
-    title: 'Mã đã dùng (code consumed)',
-    detail: 'Mã đổi vé này đã được tiêu thụ trước đó và không thể dùng lại.',
+    title: 'Mã đã dùng',
+    detail: 'Mã đổi vé này đã được dùng trước đó và không thể dùng lại.',
     retryable: false,
   },
   [ISSUE_ERROR_CODES.CODE_DISABLED]: {
@@ -57,7 +57,7 @@ const BY_CODE: Record<
   [ISSUE_ERROR_CODES.CODE_INVALID]: {
     kind: 'invalid',
     title: 'Mã không hợp lệ',
-    detail: 'Không tìm thấy mã trong phạm vi tenant/event đã chọn.',
+    detail: 'Không tìm thấy mã cho sự kiện đã chọn.',
     retryable: false,
   },
   [ISSUE_ERROR_CODES.EVENT_CLOSED]: {
@@ -74,123 +74,124 @@ const BY_CODE: Record<
   },
   [ISSUE_ERROR_CODES.ATTENDEE_LIMIT]: {
     kind: 'exhausted',
-    title: 'Đã đạt giới hạn vé / người',
+    title: 'Đã đạt giới hạn vé',
     detail: 'Bạn đã nhận đủ số vé tối đa cho sự kiện này.',
     retryable: false,
   },
   [ISSUE_ERROR_CODES.EMAIL_NOT_VERIFIED]: {
     kind: 'auth',
-    title: 'Email chưa xác minh',
-    detail: 'Xác minh email trên Keycloak trước khi đổi mã lấy vé.',
+    title: 'Cần xác minh email',
+    detail: 'Xác minh email trên tài khoản trước khi đổi mã lấy vé.',
     retryable: false,
   },
   [ISSUE_ERROR_CODES.IDEMPOTENCY_CONFLICT]: {
     kind: 'conflict',
-    title: 'Xung đột idempotency',
-    detail:
-      'Cùng khóa idempotency nhưng payload khác — thử lại với khóa mới (gửi form lại).',
+    title: 'Xung đột thao tác',
+    detail: 'Yêu cầu trùng khóa nhưng khác nội dung — gửi lại form để thử lần mới.',
     retryable: false,
   },
   [ISSUE_ERROR_CODES.IDEMPOTENCY_KEY_REQUIRED]: {
     kind: 'error',
-    title: 'Thiếu idempotency-key',
-    detail: 'BFF/API yêu cầu header idempotency-key cho mỗi lần đổi mã.',
+    title: 'Không gửi được yêu cầu',
+    detail: 'Thiếu khóa thao tác. Tải lại trang rồi thử đổi mã lại.',
     retryable: true,
   },
   [ISSUE_ERROR_CODES.RETRYABLE_CONFLICT]: {
     kind: 'polling',
-    title: 'Đang xử lý — xung đột tạm thời',
-    detail: 'Máy chủ báo xung đột có thể thử lại. Đang dò trạng thái thao tác…',
+    title: 'Đang xử lý',
+    detail: 'Máy chủ đang xử lý yêu cầu. Đang kiểm tra lại trạng thái…',
     retryable: true,
   },
   [ISSUE_ERROR_CODES.CODE_HMAC_MISCONFIGURED]: {
     kind: 'error',
-    title: 'API chưa sẵn sàng cấp vé',
-    detail: 'Dịch vụ issue chưa cấu hình HMAC/credential — liên hệ vận hành.',
+    title: 'Chưa sẵn sàng cấp vé',
+    detail: 'Dịch vụ cấp vé chưa sẵn sàng — liên hệ ban tổ chức.',
     retryable: true,
   },
   [FORM_ERROR_CODES.FORM_VERSION_STALE]: {
     kind: 'stale',
-    title: 'Form đã đổi (FORM_VERSION_STALE)',
-    detail: 'Tải lại form published và điền lại. Vé đã cấp vẫn giữ kết quả cũ khi replay.',
+    title: 'Biểu mẫu đã đổi',
+    detail:
+      'Biểu mẫu sự kiện đã được cập nhật. Đang tải lại — bạn cần điền và đồng ý điều khoản lại trước khi gửi.',
     retryable: false,
   },
   [FORM_ERROR_CODES.TERMS_VERSION_STALE]: {
     kind: 'stale',
-    title: 'Điều khoản đã đổi (TERMS_VERSION_STALE)',
-    detail: 'Đọc lại điều khoản mới và đồng ý lại trước khi gửi.',
+    title: 'Điều khoản đã đổi',
+    detail: 'Điều khoản mới đã được xuất bản. Đọc lại và đồng ý trước khi gửi.',
     retryable: false,
   },
   [FORM_ERROR_CODES.TERMS_REQUIRED]: {
     kind: 'denied',
     title: 'Cần đồng ý điều khoản',
-    detail: 'Phải chấp nhận điều khoản published trước khi đổi mã.',
+    detail: 'Phải chấp nhận điều khoản trước khi đổi mã.',
     retryable: false,
   },
   [FORM_ERROR_CODES.FORM_REQUIRED]: {
     kind: 'denied',
-    title: 'Thiếu form bắt buộc',
-    detail: 'Sự kiện yêu cầu form published — tải schema rồi điền đủ trường.',
+    title: 'Thiếu biểu mẫu',
+    detail: 'Sự kiện yêu cầu biểu mẫu — tải lại rồi điền đủ trường.',
     retryable: false,
   },
   [FORM_ERROR_CODES.FORM_INVALID]: {
     kind: 'denied',
-    title: 'Form không hợp lệ',
-    detail: 'Một hoặc nhiều trường không đạt kiểm tra phía máy chủ.',
+    title: 'Biểu mẫu chưa hợp lệ',
+    detail: 'Một hoặc nhiều trường chưa đạt yêu cầu. Kiểm tra lại các mục đánh dấu.',
     retryable: false,
   },
   [FORM_ERROR_CODES.PENDING_EXPIRED]: {
     kind: 'expired',
     title: 'Yêu cầu chờ duyệt đã hết hạn',
-    detail: 'Pending đã hết TTL — không còn đảm bảo suất. Có thể thử mã lại nếu còn hiệu lực.',
+    detail:
+      'Yêu cầu đã hết hạn và không còn giữ suất. Có thể thử mã lại nếu còn hiệu lực.',
     retryable: false,
   },
   [FORM_ERROR_CODES.PENDING_LIMIT]: {
     kind: 'denied',
-    title: 'Quá số pending cho phép',
+    title: 'Quá số yêu cầu chờ duyệt',
     detail: 'Bạn đã có quá nhiều yêu cầu chờ duyệt cho sự kiện này.',
     retryable: false,
   },
   [IDENTITY_ERROR_CODES.UNAUTHENTICATED]: {
     kind: 'auth',
-    title: 'Chưa đăng nhập',
-    detail: 'Đăng nhập Keycloak rồi quay lại đổi mã.',
+    title: 'Cần đăng nhập',
+    detail: 'Đăng nhập rồi quay lại đổi mã lấy vé.',
     retryable: false,
   },
   [IDENTITY_ERROR_CODES.OIDC_MISCONFIGURED]: {
     kind: 'auth',
-    title: 'OIDC chưa cấu hình',
-    detail: 'Thiếu biến môi trường OIDC trên web BFF — fail closed.',
+    title: 'Đăng nhập chưa sẵn sàng',
+    detail: 'Cổng đăng nhập chưa cấu hình. Liên hệ vận hành — không thể đổi mã lúc này.',
     retryable: false,
   },
   UPSTREAM_UNAVAILABLE: {
     kind: 'timeout',
-    title: 'Không kết nối được API',
-    detail: 'BFF không tới được Nest upstream. Kiểm tra API_BASE_URL / api đang chạy.',
+    title: 'Không kết nối được',
+    detail: 'Không tới được dịch vụ cấp vé. Thử lại sau vài phút.',
     retryable: true,
   },
   CSRF_TOKEN_INVALID: {
     kind: 'auth',
-    title: 'CSRF không hợp lệ',
-    detail: 'Tải lại trang để nhận CSRF cookie rồi thử lại.',
+    title: 'Phiên trang hết hạn',
+    detail: 'Tải lại trang rồi thử lại.',
     retryable: false,
   },
   CSRF_ORIGIN_REQUIRED: {
     kind: 'auth',
-    title: 'Thiếu Origin',
-    detail: 'Mutation BFF yêu cầu Origin cùng nguồn.',
+    title: 'Yêu cầu bị từ chối',
+    detail: 'Gửi lại từ cùng trang đổi mã (cùng nguồn).',
     retryable: false,
   },
   SCOPE_REQUIRED: {
     kind: 'invalid',
-    title: 'Thiếu phạm vi tenant/event',
-    detail: 'tenantId và eventId phải là UUID hợp lệ.',
+    title: 'Thiếu phạm vi sự kiện',
+    detail: 'Cần chọn đúng tổ chức và sự kiện trước khi đổi mã.',
     retryable: false,
   },
   TENANT_REQUIRED: {
     kind: 'invalid',
-    title: 'Thiếu tenantId',
-    detail: 'tenantId (UUID) là bắt buộc cho danh sách vé.',
+    title: 'Thiếu tổ chức',
+    detail: 'Cần chọn tổ chức để xem vé.',
     retryable: false,
   },
 };
@@ -211,8 +212,8 @@ export function messageForApiError(
   }
   return {
     kind: 'error',
-    title: code ? `Lỗi ${code}` : 'Đổi mã thất bại',
-    detail: fallbackMessage?.trim() || 'API trả lỗi không xác định.',
+    title: 'Không đổi được mã',
+    detail: fallbackMessage?.trim() || 'Đã xảy ra lỗi. Thử lại hoặc liên hệ ban tổ chức.',
     retryable: Boolean(retryableHint),
   };
 }
@@ -220,9 +221,9 @@ export function messageForApiError(
 export function timeoutMessage(): RedeemUxMessage {
   return {
     kind: 'timeout',
-    title: 'Hết thời gian chờ (timeout)',
+    title: 'Hết thời gian chờ',
     detail:
-      'Yêu cầu đổi mã quá lâu. Đang dò trạng thái thao tác bằng cùng idempotency-key — không gửi mã lần nữa nếu chưa chắc.',
+      'Yêu cầu đổi mã quá lâu. Đang kiểm tra lại trạng thái — chưa chắc đã có vé; đừng gửi mã lần nữa nếu chưa rõ kết quả.',
     retryable: true,
   };
 }
@@ -233,7 +234,7 @@ export function networkMessage(): RedeemUxMessage {
     kind: 'timeout',
     title: 'Mất kết nối mạng',
     detail:
-      'Không gọi được API (mạng/upstream). Đang / sẽ dò trạng thái bằng cùng idempotency-key — không gửi mã lần nữa nếu chưa chắc kết quả.',
+      'Không gọi được dịch vụ. Đang / sẽ kiểm tra lại trạng thái — chưa chắc đã có vé; đừng gửi mã lần nữa nếu chưa rõ kết quả.',
     retryable: true,
   };
 }
@@ -242,7 +243,7 @@ export function verifyingMessage(): RedeemUxMessage {
   return {
     kind: 'verifying',
     title: 'Đang xác minh mã…',
-    detail: 'Gọi Nest POST /redemptions qua BFF (Bearer từ cookie Keycloak).',
+    detail: 'Đang gửi yêu cầu đổi mã. Chưa phải vé.',
     retryable: false,
   };
 }
@@ -250,8 +251,10 @@ export function verifyingMessage(): RedeemUxMessage {
 export function successMessage(ticketId: string, replayed: boolean): RedeemUxMessage {
   return {
     kind: 'success',
-    title: replayed ? 'Vé đã cấp (idempotent replay)' : 'Đổi mã thành công',
-    detail: `Ticket ${ticketId} từ API thật — không dùng mock proof.`,
+    title: replayed ? 'Vé đã cấp trước đó' : 'Đổi mã thành công',
+    detail: replayed
+      ? `Vé của bạn đã sẵn sàng (mã vé ${ticketId}).`
+      : `Vé của bạn đã được cấp — mã vé ${ticketId}.`,
     retryable: false,
   };
 }
@@ -264,17 +267,19 @@ export function pendingMessage(
     kind: 'pending',
     title: 'Đang chờ duyệt — chưa phải vé',
     detail: expiresAt
-      ? `Yêu cầu ${requestId} chưa đảm bảo suất. Hết hạn: ${expiresAt}.`
-      : `Yêu cầu ${requestId} chưa đảm bảo suất cho đến khi được duyệt.`,
+      ? `Yêu cầu đang chờ duyệt (hết hạn: ${expiresAt}). Chưa có vé.`
+      : 'Yêu cầu đang chờ duyệt. Chưa có vé cho đến khi được chấp nhận.',
     retryable: false,
   };
 }
 
 export function unknownMessage(idempotencyKey: string): RedeemUxMessage {
+  void idempotencyKey;
   return {
     kind: 'unknown',
-    title: 'Chưa rõ kết quả — không phải vé',
-    detail: `Giữ idempotency-key ${idempotencyKey} và dò lại trạng thái. Không coi là đã cấp vé.`,
+    title: 'Chưa rõ kết quả — chưa phải vé',
+    detail:
+      'Chưa xác nhận đã cấp vé. Bấm «Kiểm tra lại» — không hiện vé giả. Khóa thao tác đã giữ để dò an toàn.',
     retryable: true,
   };
 }
@@ -296,7 +301,7 @@ export function messageForDecision(decision: RedeemDecision): RedeemUxMessage {
     case 'denied':
       return messageForApiError(decision.code, decision.message);
     default:
-      return messageForApiError(undefined, 'Unexpected decision.');
+      return messageForApiError(undefined, 'Không xác định được kết quả.');
   }
 }
 
@@ -315,17 +320,17 @@ export function messageForOwnerStatus(
       return {
         kind: 'denied',
         title: 'Yêu cầu bị từ chối',
-        detail: status.reason?.trim() || 'Staff đã từ chối yêu cầu đổi mã.',
+        detail: status.reason?.trim() || 'Ban tổ chức đã từ chối yêu cầu đổi mã.',
         retryable: false,
       };
     case 'EXPIRED':
       return {
         kind: 'expired',
         title: 'Yêu cầu đã hết hạn',
-        detail: `Pending hết hạn lúc ${status.expiredAt}. Không còn đảm bảo suất.`,
+        detail: `Yêu cầu hết hạn lúc ${status.expiredAt}. Không còn giữ suất.`,
         retryable: false,
       };
     default:
-      return messageForApiError(undefined, 'Unknown owner status.');
+      return messageForApiError(undefined, 'Không đọc được trạng thái yêu cầu.');
   }
 }

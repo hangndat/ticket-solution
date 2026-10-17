@@ -270,7 +270,8 @@ test('exhausted/used/timeout UX kinds remain distinct and network is retryable t
   assert.equal(timeoutMessage().retryable, true);
   assert.equal(networkMessage().kind, 'timeout');
   assert.equal(networkMessage().retryable, true);
-  assert.match(networkMessage().detail, /idempotency-key/i);
+  assert.match(networkMessage().detail, /chưa chắc đã có vé/i);
+  assert.match(networkMessage().detail, /đừng gửi mã lần nữa/i);
 });
 
 test('resolveIdempotencyKey reuses key only when unclear + same payload incl answers', () => {
