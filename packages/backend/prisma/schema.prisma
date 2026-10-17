@@ -338,6 +338,7 @@ model Outbox {
   status         String    @default("PENDING")
   attempts       Int       @default(0)
   leaseOwner     String?   @map("lease_owner")
+  leaseToken     String?   @map("lease_token")
   leaseExpiresAt DateTime? @map("lease_expires_at") @db.Timestamptz(3)
   nextAttemptAt  DateTime? @map("next_attempt_at") @db.Timestamptz(3)
   createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
@@ -349,24 +350,93 @@ model Outbox {
 }
 
 model Notification {
-  tenantId      String    @map("tenant_id") @db.Uuid
-  eventId       String?   @map("event_id") @db.Uuid
-  id            String    @db.Uuid
-  businessKey   String    @map("business_key")
-  channel       String    @default("email")
-  state         String    @default("PENDING")
-  providerRef   String?   @map("provider_ref")
-  attempts      Int       @default(0)
-  nextAttemptAt DateTime? @map("next_attempt_at") @db.Timestamptz(3)
-  lastError     String?   @map("last_error")
-  payload       Json      @default("{}")
-  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
-  tenant        Tenant    @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  tenantId         String                @map("tenant_id") @db.Uuid
+  eventId          String?               @map("event_id") @db.Uuid
+  id               String                @db.Uuid
+  businessKey      String                @map("business_key")
+  channel          String                @default("email")
+  kind             String                @default("TicketIssued")
+  payloadVersion   Int                   @default(1) @map("payload_version")
+  templateVersion  Int?                  @map("template_version")
+  state            String                @default("PENDING")
+  providerRef      String?               @map("provider_ref")
+  attempts         Int                   @default(0)
+  nextAttemptAt    DateTime?             @map("next_attempt_at") @db.Timestamptz(3)
+  lastError        String?               @map("last_error")
+  payload          Json                  @default("{}")
+  leaseOwner       String?               @map("lease_owner")
+  leaseToken       String?               @map("lease_token")
+  leaseExpiresAt   DateTime?             @map("lease_expires_at") @db.Timestamptz(3)
+  createdAt        DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime              @updatedAt @map("updated_at") @db.Timestamptz(3)
+  tenant           Tenant                @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  attemptsLog      NotificationAttempt[]
 
   @@id([tenantId, id])
   @@unique([tenantId, businessKey])
   @@map("notifications")
+}
+
+model NotificationAttempt {
+  tenantId         String       @map("tenant_id") @db.Uuid
+  notificationId   String       @map("notification_id") @db.Uuid
+  ordinal          Int
+  channel          String
+  leaseOwner       String?      @map("lease_owner")
+  leaseToken       String?      @map("lease_token")
+  startedAt        DateTime     @default(now()) @map("started_at") @db.Timestamptz(3)
+  finishedAt       DateTime?    @map("finished_at") @db.Timestamptz(3)
+  providerStatus   String       @map("provider_status")
+  providerRef      String?      @map("provider_ref")
+  sanitizedError   String?      @map("sanitized_error")
+  createdAt        DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  notification     Notification @relation(fields: [tenantId, notificationId], references: [tenantId, id], onDelete: Restrict)
+
+  @@id([tenantId, notificationId, ordinal])
+  @@map("notification_attempts")
+}
+
+model NotificationTemplate {
+  tenantId          String                         @map("tenant_id") @db.Uuid
+  eventId           String                         @map("event_id") @db.Uuid
+  id                String                         @db.Uuid
+  kind              String
+  publishedVersion  Int?                           @map("published_version")
+  createdAt         DateTime                       @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime                       @updatedAt @map("updated_at") @db.Timestamptz(3)
+  versions          NotificationTemplateVersion[]
+
+  @@id([tenantId, id])
+  @@unique([tenantId, eventId, kind])
+  @@map("notification_templates")
+}
+
+model NotificationTemplateVersion {
+  tenantId    String                @map("tenant_id") @db.Uuid
+  templateId  String                @map("template_id") @db.Uuid
+  version     Int
+  subject     String
+  bodyText    String                @map("body_text")
+  bodyHtml    String                @map("body_html")
+  variables   Json                  @default("[]")
+  publishedAt DateTime?             @map("published_at") @db.Timestamptz(3)
+  createdBy   String?               @map("created_by") @db.Uuid
+  createdAt   DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
+  template    NotificationTemplate  @relation(fields: [tenantId, templateId], references: [tenantId, id], onDelete: Restrict)
+
+  @@id([tenantId, templateId, version])
+  @@map("notification_template_versions")
+}
+
+model NotificationRateCounter {
+  tenantId         String   @map("tenant_id") @db.Uuid
+  bucketKey        String   @map("bucket_key")
+  windowStartedAt  DateTime @map("window_started_at") @db.Timestamptz(3)
+  count            Int      @default(0)
+  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@id([tenantId, bucketKey, windowStartedAt])
+  @@map("notification_rate_counters")
 }
 
 model AuditLog {

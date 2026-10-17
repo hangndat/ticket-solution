@@ -5,5 +5,14 @@ export default function EventRoute() {
     tenantSlug: string;
     slug: string;
   }>();
-  return <EventDetailScreen tenantSlug={tenantSlug} slug={slug} />;
+  const tenant = typeof tenantSlug === 'string' ? tenantSlug : '';
+  const eventSlug = typeof slug === 'string' ? slug : '';
+  // Remount on route change so loading phase resets without setState-in-effect.
+  return (
+    <EventDetailScreen
+      key={`published:${tenant}:${eventSlug}`}
+      tenantSlug={tenant}
+      slug={eventSlug}
+    />
+  );
 }

@@ -170,13 +170,56 @@ export {
 export {
   createNoopEmailAdapter,
   createFailingEmailAdapter,
+  createMisconfiguredEmailAdapter,
   createSmtpEmailAdapter,
   readEmailEnvironment,
+  readPublicWebBaseUrl,
   type EmailAdapter,
   type TicketIssuedEmailPayload,
   type EmailSendResult,
   type SmtpAdapterOptions,
 } from './email-adapter';
+export {
+  sealCredentialToken,
+  openCredentialToken,
+  hashCredentialToken,
+} from './credential-crypto';
+export {
+  NotificationError,
+  NOTIFICATION_ERROR_CODES,
+  type NotificationErrorCode,
+} from './notification-error';
+export {
+  computeBackoffSeconds,
+  isWithinJitterBounds,
+  readRetryConfig,
+  tryConsumeRateLimit,
+  assertResendCaps,
+  type RetryConfig,
+} from './notification-retry';
+export {
+  TICKET_ISSUED_TEMPLATE_VARS,
+  DEFAULT_TICKET_ISSUED_TEMPLATE,
+  escapeHtml,
+  validateTemplateLiterals,
+  renderTemplate,
+  renderEscapedPreview,
+  previewNotificationTemplate,
+  publishNotificationTemplate,
+  resolveTicketIssuedTemplate,
+  readPublishedGuideContact,
+} from './notification-templates';
+export {
+  buildCredentialQrJson,
+  renderCredentialQrPng,
+  openCurrentCredentialForQr,
+  buildOwnerTicketLink,
+} from './qr-ticket';
+export {
+  listEventNotifications,
+  retryNotificationDelivery,
+} from './notification-service';
+export { sendMimeMailViaSmtp, sendMailViaSmtp } from './smtp-send';
 
 export function createDatabase(
   connectionString: string,

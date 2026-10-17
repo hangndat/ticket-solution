@@ -1,6 +1,6 @@
 # Agent working agreement
 
-Read docs/PRD.md, docs/TECHNICAL-DESIGN.md, docs/DECISION-LOG.md and your task spec. Work only in assigned scope. Current milestone is D1 identity (OIDC/membership), not production ticketing.
+Read docs/PRD.md, docs/TECHNICAL-DESIGN.md, docs/DECISION-LOG.md and your task spec. Work only in assigned scope. **Trạng thái đợt động:** [GitHub Project #3](https://github.com/users/hangndat/projects/3) (không đoán từ docs cũ). Scope/gate/evidence: [docs/ROADMAP.md](docs/ROADMAP.md). Tại lần sync docs 2026-10-17: D0–D3 parent **Hoàn thành** trên board; trọng tâm **D4 Admin & Platform** và **D5 Hardening** (**Đang làm**). Phân biệt code complete / acceptance complete / pilot ready — chưa tuyên bố pilot production hay store submission.
 
 ## Planning and tracking language
 

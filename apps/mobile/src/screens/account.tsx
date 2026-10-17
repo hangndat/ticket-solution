@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState, useSyncExternalStore } from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import type { MeResponse } from '@ticket/contracts';
 import { Notice, Page } from '@/components/page';
+import { SessionScopedAccountDeletionPanel } from '@/account-deletion/account-deletion-panel';
 import { SessionScopedPushStatus } from '@/push/push-status';
 import { colors } from '@/theme/colors';
 import { getTenantId, isOidcConfigured } from '@/identity/config';
@@ -289,6 +290,10 @@ function ConfiguredAccount() {
       ) : null}
 
       <SessionScopedPushStatus />
+
+      {identity.status === 'verified' ? (
+        <SessionScopedAccountDeletionPanel />
+      ) : null}
 
       <Notice title="Not staff authorization">
         A verified SessionBoundary identity does not grant staff tools, tenant

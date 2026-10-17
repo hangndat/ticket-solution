@@ -48,6 +48,10 @@ import { ReportController, ReportService } from './reporting';
 import { GateController, GateService } from './gate';
 import { EventAdminController, EventAdminService } from './events';
 import {
+  NotificationController,
+  NotificationService,
+} from './notifications';
+import {
   TicketIssueController,
   TicketIssueService,
   resolveIssueDeps,
@@ -319,6 +323,7 @@ export async function createApp(
       InventoryController,
       ApprovalController,
       ReportController,
+      NotificationController,
     ],
     providers: [
       {
@@ -356,6 +361,10 @@ export async function createApp(
       {
         provide: ReportService,
         useValue: new ReportService(ticketDeps),
+      },
+      {
+        provide: NotificationService,
+        useValue: new NotificationService(ticketDeps),
       },
       {
         provide: DatabaseShutdown,
