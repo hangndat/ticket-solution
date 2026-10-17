@@ -1,10 +1,23 @@
+/**
+ * Config / asset error codes — aligned with CONFIG_FEATURE_ERROR_CODES in contracts.
+ */
 export const CONFIG_ERROR_CODES = {
   EVENT_NOT_FOUND: 'EVENT_NOT_FOUND',
   EVENT_CLOSED: 'EVENT_CLOSED',
   CONFIG_PAYLOAD_REQUIRED: 'CONFIG_PAYLOAD_REQUIRED',
   CONFIG_VERSION_NOT_FOUND: 'CONFIG_VERSION_NOT_FOUND',
   CONFIG_VERSION_MISMATCH: 'CONFIG_VERSION_MISMATCH',
+  CONFIG_SCHEMA_UNSUPPORTED: 'CONFIG_SCHEMA_UNSUPPORTED',
+  CONFIG_INCOMPATIBLE: 'CONFIG_INCOMPATIBLE',
   ALREADY_PUBLISHED: 'ALREADY_PUBLISHED',
+  REVISION_CONFLICT: 'REVISION_CONFLICT',
+  ASSET_NOT_FOUND: 'ASSET_NOT_FOUND',
+  ASSET_NOT_READY: 'ASSET_NOT_READY',
+  ASSET_INVALID: 'ASSET_INVALID',
+  ASSET_LIMIT: 'ASSET_LIMIT',
+  IDEMPOTENCY_KEY_REQUIRED: 'IDEMPOTENCY_KEY_REQUIRED',
+  IDEMPOTENCY_CONFLICT: 'IDEMPOTENCY_CONFLICT',
+  MINIO_MISCONFIGURED: 'MINIO_MISCONFIGURED',
 } as const;
 
 export type ConfigErrorCode =
@@ -12,10 +25,12 @@ export type ConfigErrorCode =
 
 export class ConfigError extends Error {
   readonly code: ConfigErrorCode;
+  readonly retryable: boolean;
 
-  constructor(code: ConfigErrorCode, message: string) {
+  constructor(code: ConfigErrorCode, message: string, retryable = false) {
     super(message);
     this.name = 'ConfigError';
     this.code = code;
+    this.retryable = retryable;
   }
 }

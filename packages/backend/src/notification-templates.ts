@@ -349,6 +349,22 @@ export async function resolveTicketIssuedTemplate(
   };
 }
 
+function sectionBodyText(payload: Record<string, unknown>, kind: string): string {
+  const sections = Array.isArray(payload.sections) ? payload.sections : [];
+  for (const section of sections) {
+    if (!section || typeof section !== 'object' || Array.isArray(section)) {
+      continue;
+    }
+    const row = section as Record<string, unknown>;
+    if (row.kind !== kind) continue;
+    const body = row.body;
+    if (!body || typeof body !== 'object' || Array.isArray(body)) continue;
+    const text = (body as Record<string, unknown>).text;
+    if (typeof text === 'string' && text.trim() !== '') return text;
+  }
+  return '';
+}
+
 export function readPublishedGuideContact(payload: unknown): {
   guideText: string;
   contactText: string;
@@ -357,18 +373,29 @@ export function readPublishedGuideContact(payload: unknown): {
     payload && typeof payload === 'object' && !Array.isArray(payload)
       ? (payload as Record<string, unknown>)
       : {};
+  const brand =
+    root.brand && typeof root.brand === 'object' && !Array.isArray(root.brand)
+      ? (root.brand as Record<string, unknown>)
+      : {};
+  const guideFromSection = sectionBodyText(root, 'guide');
+  const orgName =
+    typeof brand.organizationName === 'string' ? brand.organizationName.trim() : '';
   const guide =
     typeof root['guide'] === 'string'
       ? root['guide']
       : typeof root['guideText'] === 'string'
         ? root['guideText']
-        : 'Vui lòng mang theo vé điện tử khi check-in.';
+        : guideFromSection !== ''
+          ? guideFromSection
+          : 'Vui lòng mang theo vé điện tử khi check-in.';
   const contact =
     typeof root['contact'] === 'string'
       ? root['contact']
       : typeof root['contactText'] === 'string'
         ? root['contactText']
-        : 'Liên hệ ban tổ chức qua cổng sự kiện.';
+        : orgName !== ''
+          ? orgName
+          : 'Liên hệ ban tổ chức qua cổng sự kiện.';
   return {
     guideText: guide.slice(0, 4000),
     contactText: contact.slice(0, 2000),
