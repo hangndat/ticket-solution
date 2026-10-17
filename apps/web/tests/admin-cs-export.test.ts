@@ -4,6 +4,7 @@ import {
   CREATE_EVENT_UNKNOWN,
   createEventUpstreamPath,
   interpretCreateEvent,
+  interpretEventList,
 } from '../src/admin/create-event';
 import {
   CS_UNKNOWN,
@@ -15,7 +16,6 @@ import {
   ticketsListPath,
 } from '../src/admin/cs';
 import {
-  EXPORT_UNKNOWN,
   exportDownloadPath,
   exportStatusPath,
   exportsCreatePath,
@@ -23,10 +23,27 @@ import {
   interpretExportDownload,
   interpretExportStatus,
 } from '../src/admin/export-job';
+import {
+  interpretSourceCreate,
+  interpretTicketTypeCreate,
+  sourcesPath,
+  ticketTypesPath,
+} from '../src/admin/event-setup';
 
 const scope = {
   tenantId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
   eventId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+};
+
+const summary = {
+  ticketId: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+  state: 'ISSUED',
+  ticketTypeId: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+  sourceId: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
+  createdAt: '2026-10-17T00:00:00.000Z',
+  ownerEmailMasked: 'a***@example.com',
+  lastCheckInAt: null,
+  notification: null,
 };
 
 describe('CS paths and interpreters', () => {
@@ -45,37 +62,75 @@ describe('CS paths and interpreters', () => {
     );
   });
 
-  it('treats 5xx and network as unknown; accepts loose list shapes', () => {
-    assert.equal(interpretCsList(503, { tickets: [] }, false).kind, 'unknown');
+  it('fail-closed: rejects loose tickets/results aliases and 5xx', () => {
+    assert.equal(interpretCsList(503, { items: [] }, false).kind, 'unknown');
     const net = interpretCsList(0, null, true);
     assert.equal(net.kind, 'unknown');
     if (net.kind === 'unknown') assert.equal(net.message, CS_UNKNOWN);
+    assert.equal(
+      interpretCsList(200, { tickets: [], nextCursor: null }, false).kind,
+      'unknown',
+    );
     const list = interpretCsList(
       200,
-      { items: [{ id: '1' }], nextCursor: 'n' },
+      { items: [summary], nextCursor: 'n' },
       false,
     );
     assert.equal(list.kind, 'list');
     if (list.kind === 'list') {
       assert.equal(list.items.length, 1);
       assert.equal(list.cursor, 'n');
+      assert.equal(list.items[0]?.ownerEmailMasked, 'a***@example.com');
     }
   });
 
-  it('does not treat ACCEPTED resend as delivered', () => {
-    const resent = interpretCsResend(
-      202,
-      { status: 'ACCEPTED' },
+  it('detail requires timeline fields; rejects raw email keys', () => {
+    const detail = interpretCsDetail(
+      200,
+      {
+        ...summary,
+        timeline: [
+          { at: '2026-10-17T01:00:00.000Z', kind: 'issued', summary: 'issued' },
+        ],
+      },
       false,
-      'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+      summary.ticketId,
     );
-    assert.equal(resent.kind, 'resent');
-    if (resent.kind === 'resent') {
-      assert.equal(resent.providerStatus, 'ACCEPTED');
+    assert.equal(detail.kind, 'detail');
+    if (detail.kind === 'detail') {
+      assert.equal(detail.ticket.timeline.length, 1);
     }
     assert.equal(
-      interpretCsDetail(500, { id: 'x' }, false, 'cccccccc-cccc-4ccc-8ccc-cccccccccccc')
-        .kind,
+      interpretCsDetail(
+        200,
+        { ...summary, email: 'raw@example.com', timeline: [] },
+        false,
+        summary.ticketId,
+      ).kind,
+      'unknown',
+    );
+  });
+
+  it('resend requires CsResendDto; does not accept ACCEPTED as success', () => {
+    const resent = interpretCsResend(
+      200,
+      {
+        operationId: 'ffffffff-ffff-4fff-8fff-ffffffffffff',
+        notificationId: '11111111-1111-4111-8111-111111111111',
+        providerStatus: 'PENDING',
+        replayed: false,
+      },
+      false,
+      summary.ticketId,
+    );
+    assert.equal(resent.kind, 'resent');
+    assert.equal(
+      interpretCsResend(
+        202,
+        { status: 'ACCEPTED' },
+        false,
+        summary.ticketId,
+      ).kind,
       'unknown',
     );
   });
@@ -97,64 +152,157 @@ describe('export paths and interpreters', () => {
     );
   });
 
-  it('creates and status loosely; 5xx unknown', () => {
+  it('requires ExportJobDto fields including expiresAt; rejects id alias', () => {
     assert.equal(
       interpretExportCreate(500, { exportId: 'x' }, false).kind,
       'unknown',
     );
-    const net = interpretExportCreate(0, null, true);
-    assert.equal(net.kind, 'unknown');
-    if (net.kind === 'unknown') assert.equal(net.message, EXPORT_UNKNOWN);
+    assert.equal(
+      interpretExportCreate(
+        201,
+        { id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd', status: 'PENDING' },
+        false,
+      ).kind,
+      'unknown',
+    );
     const created = interpretExportCreate(
       201,
-      { id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd', status: 'PENDING' },
+      {
+        exportId: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+        status: 'PENDING',
+        rowCount: null,
+        expiresAt: null,
+        error: null,
+      },
       false,
     );
     assert.equal(created.kind, 'created');
+    if (created.kind === 'created') {
+      assert.equal(created.job.status, 'PENDING');
+      assert.equal(created.job.expiresAt, null);
+    }
     const status = interpretExportStatus(
       200,
-      { status: 'READY' },
+      {
+        exportId: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+        status: 'READY',
+        rowCount: 2,
+        expiresAt: '2026-10-18T00:00:00.000Z',
+        error: null,
+      },
       false,
       'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
     );
     assert.equal(status.kind, 'status');
+    if (status.kind === 'status') {
+      assert.equal(status.job.expiresAt, '2026-10-18T00:00:00.000Z');
+    }
+  });
+
+  it('download success is streamed CSV, not guessed URL JSON', () => {
+    assert.equal(
+      interpretExportDownload(
+        200,
+        { downloadUrl: 'https://example.invalid/x?sig=1' },
+        false,
+        'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+        'application/json',
+      ).kind,
+      'unknown',
+    );
     const download = interpretExportDownload(
       200,
-      { downloadUrl: 'https://example.invalid/x?sig=1' },
+      null,
       false,
       'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
-      'application/json',
+      'text/csv; charset=utf-8',
+      42,
+      'export.csv',
     );
     assert.equal(download.kind, 'download');
     if (download.kind === 'download') {
-      assert.ok(download.href?.includes('example.invalid'));
+      assert.equal(download.byteLength, 42);
     }
   });
 });
 
-describe('create event interpreter', () => {
-  it('maps path and 404 unavailable without claiming success', () => {
+describe('create event / list / ticket type / source', () => {
+  it('maps create path and rejects incomplete success shapes', () => {
     assert.equal(
       createEventUpstreamPath(scope.tenantId),
       `/v1/tenants/${scope.tenantId}/events`,
     );
-    const missing = interpretCreateEvent(404, { message: 'nope' }, false);
-    assert.equal(missing.kind, 'rejected');
-    if (missing.kind === 'rejected') {
-      assert.equal(missing.code, 'EVENT_CREATE_UNAVAILABLE');
-    }
-    const net = interpretCreateEvent(0, null, true);
-    assert.equal(net.kind, 'unknown');
-    if (net.kind === 'unknown') assert.equal(net.message, CREATE_EVENT_UNKNOWN);
+    assert.equal(
+      interpretCreateEvent(201, { eventId: 'x', slug: 'a' }, false).kind,
+      'unknown',
+    );
     const ok = interpretCreateEvent(
       201,
       {
         eventId: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
         slug: 'aurora',
         name: 'Aurora Night',
+        status: 'DRAFT',
+        timezone: 'Asia/Ho_Chi_Minh',
       },
       false,
     );
     assert.equal(ok.kind, 'created');
+    const unclear = interpretCreateEvent(0, null, true);
+    assert.equal(unclear.kind, 'unknown');
+    if (unclear.kind === 'unknown') {
+      assert.equal(unclear.message, CREATE_EVENT_UNKNOWN);
+    }
+  });
+
+  it('lists events strictly from items[]', () => {
+    const list = interpretEventList(
+      200,
+      {
+        items: [
+          {
+            eventId: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
+            slug: 'aurora',
+            name: 'Aurora Night',
+            status: 'DRAFT',
+            timezone: 'Asia/Ho_Chi_Minh',
+          },
+        ],
+      },
+      false,
+    );
+    assert.equal(list.kind, 'list');
+  });
+
+  it('ticket type and source paths + shapes', () => {
+    assert.equal(
+      ticketTypesPath(scope),
+      `/v1/tenants/${scope.tenantId}/events/${scope.eventId}/ticket-types`,
+    );
+    assert.equal(
+      sourcesPath(scope),
+      `/v1/tenants/${scope.tenantId}/events/${scope.eventId}/sources`,
+    );
+    const tt = interpretTicketTypeCreate(
+      200,
+      { ticketTypeId: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd', label: 'GA' },
+      false,
+    );
+    assert.equal(tt.kind, 'created');
+    const src = interpretSourceCreate(
+      200,
+      {
+        sourceId: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
+        name: 'Invite',
+        approvalMode: 'AUTO',
+        ticketTypeId: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+      },
+      false,
+    );
+    assert.equal(src.kind, 'created');
+    assert.equal(
+      interpretSourceCreate(200, { id: 'x', name: 'Invite' }, false).kind,
+      'unknown',
+    );
   });
 });

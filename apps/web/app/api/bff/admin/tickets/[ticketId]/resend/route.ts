@@ -1,6 +1,7 @@
 import { ticketResendPath } from '../../../../../../../src/admin/cs';
 import { isScope, scopeError } from '../../../../../../../src/admin/scope';
 import { isUuid } from '../../../../../../../src/bff/ids';
+import { assertSameOrigin } from '../../../../../../../src/bff/origin';
 import {
   bffApiError,
   forwardWithBearer,
@@ -16,6 +17,8 @@ type Body = {
 
 /** POST /api/bff/admin/tickets/{ticketId}/resend → CS resend with Idempotency-Key. */
 export async function POST(request: Request, { params }: Props) {
+  const csrf = assertSameOrigin(request);
+  if (csrf) return csrf;
   const { ticketId: rawId } = await params;
   const ticketId = rawId?.trim() ?? '';
   if (!isUuid(ticketId)) {

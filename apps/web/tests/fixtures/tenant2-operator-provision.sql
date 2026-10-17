@@ -1,12 +1,12 @@
 -- FIXTURE ONLY — not production data.
 -- Operator-provisioned second tenant + staff membership for local UAT.
--- Does NOT create events (event must be created via /admin → POST create when BE ships).
+-- Does NOT create events / ticket types / sources / config (create via /admin UI + BFF).
 -- Use on a task-specific Postgres only; never against shared ticket_dev without isolation.
 --
 -- Example (task DB on a dedicated port):
 --   psql "$DATABASE_URL" -f apps/web/tests/fixtures/tenant2-operator-provision.sql
 --
--- After seed: open /admin with Tenant ID = :tenant2_id, create event via UI (not SQL).
+-- After seed: open /admin with Tenant ID = tenant2, tạo event/type/source qua UI.
 
 BEGIN;
 
