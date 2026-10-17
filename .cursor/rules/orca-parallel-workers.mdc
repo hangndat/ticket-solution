@@ -1,5 +1,5 @@
 ---
-description: Orca coding tasks must spawn parallel workers by ownership when independent
+description: Orca coding tasks spawn parallel workers by ownership — with review WIP caps
 alwaysApply: true
 ---
 
@@ -19,12 +19,24 @@ When the user asks for coding work that Orca should run (or when you are the Orc
 4. Each worker stays in its scope; no cross-scope edits. Task-specific ports/project names; do not control another worker's simulator or DB.
 5. Load Orca orchestration via `ORCA skills get orchestration` and use the live preamble IDs — never invent lifecycle args.
 
+## WIP / backpressure (không phá parallel-first)
+
+Parallel-first **không** có nghĩa dispatch feature không giới hạn. Trước mỗi wave feature:
+
+1. Đọc tín hiệu hàng đợi đầy trong `github-project-tracking.mdc`.
+2. Nếu đầy: wave ưu tiên **review + fix + integration** (có thể song song nhiều slice) thay vì wave feature mới.
+3. Nếu một slice dưới ngưỡng còn slice khác đầy: vẫn spawn parallel cho slice còn room; slice đầy chỉ nhận review/fix.
+4. Idle fill tuân `orca-idle-worker-fill.mdc` (cùng thứ tự ưu tiên).
+
+Mục tiêu: giữ throughput đa slice, giảm thời gian chờ duyệt và CI re-run do quá nhiều PR mở cùng lúc.
+
 ## When NOT to parallelize
 
 - Single-scope change (one ownership boundary only)
 - Hard serial dependency with no parallel tail (e.g. only coordinator lockfile regen)
 - User explicitly asks for one agent / sequential / no Orca workers
 - Exploration-only / Q&A with no implementation
+- Review queue full **và** chỉ còn việc serial trên một PR/fix (vẫn có thể parallel reviewers trên PR khác)
 
 ## Anti-patterns
 
@@ -32,9 +44,11 @@ When the user asks for coding work that Orca should run (or when you are the Orc
 ❌ Plan BE + web + iOS, then implement all three yourself in one terminal
 ❌ Start worker A, wait for worker_done, then start worker B for independent work
 ❌ One mega-spec that mixes apps/api + apps/web + apps/mobile
+❌ Spawn 3 feature workers while ≥3 Chờ duyệt / nhiều PR cùng slice chưa DoD
 
 ✅ worker-start --agent cursor for BE + web (+ iOS) in one wave → check --wait
 ✅ Contract task first (if needed) → then parallel consumer workers (--agent cursor)
+✅ Queue full → parallel Cursor DoD reviewers / fix workers; trì hoãn feature wave
 ```
 
 Coding workers must use `--agent cursor`. Plan/review agent choice: see `orca-agent-routing.mdc`.  
