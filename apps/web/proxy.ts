@@ -1,10 +1,44 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
+import {
+  decideHostRouting,
+  marketingHostsFromEnv,
+  marketingOriginFromEnv,
+  productOriginFromEnv,
+} from './src/marketing/hosts';
 
 /**
- * Next.js 16 proxy convention. OIDC session is HttpOnly cookies set by
- * /api/auth/* — no Clerk middleware. Fail closed in UI/BFF when env missing.
+ * Next.js 16 proxy — O13 host-aware marketing vs product.
+ * OIDC session remains HttpOnly cookies on product host only (no Domain=.vemoki.com).
  */
-export default function proxy() {
+export default function proxy(request: NextRequest) {
+  const hostHeader =
+    request.headers.get('x-forwarded-host') ?? request.headers.get('host');
+  const { pathname, search } = request.nextUrl;
+
+  const decision = decideHostRouting({
+    host: hostHeader ?? '',
+    pathname,
+    search,
+    productOrigin: productOriginFromEnv(),
+    marketingOrigin: marketingOriginFromEnv(),
+    marketingHosts: marketingHostsFromEnv(),
+  });
+
+  if (decision.type === 'redirect') {
+    return NextResponse.redirect(decision.location, decision.status);
+  }
+
+  if (decision.type === 'rewrite') {
+    const url = request.nextUrl.clone();
+    url.pathname = decision.pathname;
+    const requestHeaders = new Headers(request.headers);
+    requestHeaders.set('x-vemoki-surface', 'marketing');
+    requestHeaders.set('x-vemoki-locale', decision.locale);
+    return NextResponse.rewrite(url, {
+      request: { headers: requestHeaders },
+    });
+  }
+
   return NextResponse.next();
 }
 
