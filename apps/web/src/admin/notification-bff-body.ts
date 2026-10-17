@@ -15,7 +15,8 @@ import {
   buildTemplatePublishBody,
   isNotificationKind,
 } from './notifications';
-import { bffApiError, isUuid } from '../bff/upstream';
+import { bffApiError } from '../bff/api-error';
+import { isUuid } from '../bff/ids';
 
 export type ParsedScope = { tenantId: string; eventId: string };
 
