@@ -36,8 +36,10 @@ export {
 export {
   getTenantBranding,
   updateTenantBranding,
+  parseBrandingUpdatePatch,
   type TenantBrandingRecord,
   type UpdateTenantBrandingInput,
+  type BrandingUpdatePatch,
 } from './branding';
 export {
   isMembershipActive,
