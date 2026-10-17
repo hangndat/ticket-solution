@@ -1,10 +1,12 @@
 name: Setup pnpm + Node + Turbo cache
-description: Checkout already done. Installs pnpm/Node, restores local Turbo cache (ADR-11, no remote).
+description: >
+  Installs pnpm/Node (pnpm store via setup-node). Restores local Turbo cache
+  under .turbo (ADR-11 — no Turbo Remote/SaaS). Save is a separate step so
+  parallel jobs can each persist under unique keys while sharing restores.
 inputs:
-  turbo-key-prefix:
-    description: Cache key prefix to avoid clobbering across job kinds
-    required: false
-    default: turbo
+  turbo-job:
+    description: Job id used only for the save key (allows parallel saves)
+    required: true
 runs:
   using: composite
   steps:
@@ -13,13 +15,16 @@ runs:
       with:
         node-version: 24
         cache: pnpm
-    - name: Cache Turbo (local .turbo, không remote)
-      uses: actions/cache@v4
+    # Shared restore across jobs/runs. Exact key rarely hits (per-SHA); restore-keys
+    # pick the newest turbo-* blob for this lockfile so contracts/web/backend warm each other.
+    - name: Restore Turbo cache (local .turbo, không remote)
+      id: turbo-restore
+      uses: actions/cache/restore@v4
       with:
         path: .turbo
-        key: ${{ inputs.turbo-key-prefix }}-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('**/package.json') }}
+        key: turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}
         restore-keys: |
-          ${{ inputs.turbo-key-prefix }}-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
-          ${{ inputs.turbo-key-prefix }}-${{ runner.os }}-
+          turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
+          turbo-${{ runner.os }}-
     - shell: bash
       run: pnpm install --frozen-lockfile

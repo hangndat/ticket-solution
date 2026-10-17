@@ -1,0 +1,17 @@
+name: Save Turbo cache
+description: >
+  Persist local .turbo cache under a per-job key so parallel CI jobs can all
+  save (Actions cache keys are immutable once written). Next runs restore via
+  shared restore-keys on the same lockfile.
+inputs:
+  turbo-job:
+    description: Job id suffix for the save key
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Save Turbo cache (local .turbo, không remote)
+      uses: actions/cache/save@v4
+      with:
+        path: .turbo
+        key: turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}-${{ inputs.turbo-job }}
