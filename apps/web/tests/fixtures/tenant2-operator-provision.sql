@@ -11,7 +11,7 @@
 BEGIN;
 
 -- Fixed UUIDs for reproducible headless scripts (fixture labels only).
--- tenant2 ≠ sunburst/FUN FEST pilot.
+-- tenant2 ≠ mfest/MFest pilot.
 INSERT INTO tenants (id, slug, name)
 VALUES (
   'a2222222-2222-4222-8222-222222222222',

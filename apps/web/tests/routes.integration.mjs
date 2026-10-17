@@ -49,18 +49,18 @@ test('production routes isolate tenant content and reject unknown pairs', async 
     assert.ok(ready, output);
     for (const [path, own, foreign] of [
       [
-        '/t/sunburst/events/fun-fest-2026',
-        'Sunburst Collective',
+        '/t/mfest/events/mfest-2026',
+        'MFest',
         'Northline Studio',
       ],
       [
         '/t/northline/events/form-forum-2026',
         'Northline Studio',
-        'Sunburst Collective',
+        'MFest',
       ],
       [
-        '/t/sunburst/events/fun-fest-2026',
-        'Sunburst Collective',
+        '/t/mfest/events/mfest-2026',
+        'MFest',
         'Northline Studio',
       ],
     ]) {
@@ -72,19 +72,19 @@ test('production routes isolate tenant content and reject unknown pairs', async 
       assert.ok(html.includes('Sự kiện demo · Fixture hư cấu'));
     }
     for (const path of [
-      '/t/sunburst/events/form-forum-2026',
-      '/t/northline/events/fun-fest-2026',
-      '/t/unknown/events/fun-fest-2026',
-      '/t/sunburst/events/unknown',
+      '/t/mfest/events/form-forum-2026',
+      '/t/northline/events/mfest-2026',
+      '/t/unknown/events/mfest-2026',
+      '/t/mfest/events/unknown',
     ]) {
       const response = await fetch(base + path);
       assert.equal(response.status, 404, path);
       const html = await response.text();
-      assert.ok(!html.includes('Sunburst Collective'));
+      assert.ok(!html.includes('MFest'));
       assert.ok(!html.includes('Northline Studio'));
     }
     const home = await (await fetch(base)).text();
-    assert.ok(home.includes('/t/sunburst/events/fun-fest-2026'));
+    assert.ok(home.includes('/t/mfest/events/mfest-2026'));
     assert.ok(home.includes('/t/northline/events/form-forum-2026'));
     const admin = await fetch(base + '/admin');
     assert.equal(admin.status, 200);
@@ -112,7 +112,7 @@ test('production routes isolate tenant content and reject unknown pairs', async 
     assert.ok(adminHtml.includes('admin-tech-details'));
     assert.ok(!adminHtml.includes('ticket↗'));
     assert.ok(adminHtml.includes('vemoki'));
-    assert.equal(/FUN FEST|fun-fest/i.test(adminHtml), false);
+    assert.equal(/MFest|mfest/i.test(adminHtml), false);
     const authPoc = await fetch(base + '/auth');
     assert.equal(authPoc.status, 200);
     const authHtml = await authPoc.text();

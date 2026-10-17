@@ -41,7 +41,7 @@ function formatListDate(startsAt: string, timezone: string): string {
 export function EventsScreen() {
   const { applyBranding, theme } = useTheme();
   const [tenant, setTenant] = useState<string>(demoTenants[0]);
-  const [publishedTenant, setPublishedTenant] = useState('demo-fun');
+  const [publishedTenant, setPublishedTenant] = useState('mfest-demo');
   const [published, setPublished] = useState<PublishedEventSummary[]>([]);
   const [publishedPhase, setPublishedPhase] = useState<
     'idle' | 'loading' | 'ready' | 'error' | 'misconfigured'
@@ -259,7 +259,7 @@ export function EventsScreen() {
             accessibilityLabel="Đổi tenant slug để thử API đã xuất bản"
             onPress={() =>
               setPublishedTenant((t) =>
-                t === 'demo-fun' ? 'demo-studio' : 'demo-fun',
+                t === 'mfest-demo' ? 'demo-studio' : 'mfest-demo',
               )
             }
             style={({ pressed }) => ({

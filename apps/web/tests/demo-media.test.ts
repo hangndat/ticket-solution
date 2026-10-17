@@ -35,14 +35,14 @@ test('every web marketing fixture resolves a local media pack', () => {
 
 test('seed fixture ids and UUIDs also resolve demo media', () => {
   for (const id of [
-    'demo-fun-fest',
+    'demo-mfest',
     'demo-studio-night',
     '11111111-1111-4111-8111-111111111101',
     '22222222-2222-4222-8222-222222222201',
   ]) {
     assert.ok(demoMediaForEventId(id));
   }
-  assert.ok(demoMediaForTenantSlug('demo-fun'));
+  assert.ok(demoMediaForTenantSlug('mfest-demo'));
   assert.ok(demoMediaForTenantSlug('demo-studio'));
 });
 
