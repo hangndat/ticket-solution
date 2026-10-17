@@ -51,4 +51,4 @@ pnpm --filter @ticket/backend exec node --test test/demo-seed-unit.test.cjs
 
 ## Commit SHA
 
-_Filled after commit — see git rev-parse on branch tip._
+`8d33cfb084b637abb801d88e5705bd90540d7466`
