@@ -5,6 +5,7 @@ import {
   getOidcIssuer,
   getOidcScopes,
 } from './config';
+import { OIDC_REDIRECT_SCHEME } from './app-schemes';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -24,7 +25,7 @@ export async function loginWithKeycloak(): Promise<OidcLoginResult> {
   }
 
   const redirectUri = AuthSession.makeRedirectUri({
-    scheme: 'ticketsolution',
+    scheme: OIDC_REDIRECT_SCHEME,
     path: 'oauth/callback',
   });
 
@@ -84,7 +85,7 @@ export async function endKeycloakSession(): Promise<void> {
     const discovery = await AuthSession.fetchDiscoveryAsync(issuer);
     if (!discovery.endSessionEndpoint) return;
     const postLogout = AuthSession.makeRedirectUri({
-      scheme: 'ticketsolution',
+      scheme: OIDC_REDIRECT_SCHEME,
       path: 'oauth/logout',
     });
     const url = new URL(discovery.endSessionEndpoint);

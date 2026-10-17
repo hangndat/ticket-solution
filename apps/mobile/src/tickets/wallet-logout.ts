@@ -45,6 +45,15 @@ export async function logoutAndClearWalletArtifacts(
     errors.push(asError(error, 'Offline display binding clear failed'));
   }
 
+  try {
+    const { clearApnsRegistrationState } = await import(
+      '../push/apns-device-token.ts'
+    );
+    await clearApnsRegistrationState();
+  } catch (error) {
+    errors.push(asError(error, 'APNs local registration clear failed'));
+  }
+
   if (input.userId && input.tenantId) {
     try {
       await clearTicketDisplayCache(input.userId, input.tenantId);
