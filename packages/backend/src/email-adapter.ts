@@ -1,8 +1,13 @@
 /**
- * SMTP / sandbox email adapter (ADR-13).
+ * SMTP email adapter (ADR-13) — MIME text+HTML + inline QR PNG.
  * Delivery failures must never roll back an already-committed ticket.
+ * Production missing SMTP is fail-closed (no silent noop success).
  */
-import { sendMailViaSmtp } from './smtp-send';
+import { sendMimeMailViaSmtp } from './smtp-send';
+import {
+  NotificationError,
+  NOTIFICATION_ERROR_CODES,
+} from './notification-error';
 
 export type TicketIssuedEmailPayload = {
   tenantId: string;
@@ -10,10 +15,20 @@ export type TicketIssuedEmailPayload = {
   ticketId: string;
   toEmail: string | null;
   requestId: string;
+  subject: string;
+  text: string;
+  html: string;
+  qrPng: Buffer;
+  /** Stable Message-ID / business correlation. */
+  messageId?: string;
+  credentialVersion: number;
+  credentialTokenHash: string;
 };
 
 export type EmailSendResult = {
   providerRef: string;
+  /** Provider accepted the message — never means end-user delivered. */
+  providerStatus: 'ACCEPTED' | 'UNKNOWN';
 };
 
 export type EmailAdapter = {
@@ -22,11 +37,14 @@ export type EmailAdapter = {
   ): Promise<EmailSendResult>;
 };
 
-/** Always succeeds — used in unit/dev when SMTP is unavailable. */
+/** Always succeeds — explicit test/dev injection only. */
 export function createNoopEmailAdapter(): EmailAdapter {
   return {
     async sendTicketIssued(payload) {
-      return { providerRef: `noop:${payload.ticketId}` };
+      return {
+        providerRef: `noop:${payload.ticketId}`,
+        providerStatus: 'ACCEPTED',
+      };
     },
   };
 }
@@ -42,49 +60,116 @@ export function createFailingEmailAdapter(
   };
 }
 
+export function createMisconfiguredEmailAdapter(
+  message = 'SMTP is not configured',
+): EmailAdapter {
+  return {
+    async sendTicketIssued() {
+      throw new NotificationError(
+        NOTIFICATION_ERROR_CODES.SMTP_MISCONFIGURED,
+        message,
+        true,
+      );
+    },
+  };
+}
+
 export type SmtpAdapterOptions = {
-  /** e.g. smtp://127.0.0.1:1025 for Mailpit. Empty → noop. */
+  /** e.g. smtp://127.0.0.1:1025 (Mailpit) or smtps://user:pass@postal:465 */
   smtpUrl?: string;
   fromAddress?: string;
+  nodeEnv?: string;
+  /** Explicit opt-in for local/dev noop when SMTP_URL unset. Never in production. */
+  allowNoop?: boolean;
 };
 
 /**
- * Minimal SMTP adapter. If smtpUrl is unset, falls back to noop (local/dev).
+ * Authenticated/TLS SMTP adapter. Production without SMTP_URL fails closed.
  * Does not use SaaS transactional providers (ADR-11/13).
  */
 export function createSmtpEmailAdapter(
   options: SmtpAdapterOptions = {},
 ): EmailAdapter {
   const smtpUrl = options.smtpUrl?.trim();
-  if (!smtpUrl) return createNoopEmailAdapter();
+  const nodeEnv = options.nodeEnv ?? process.env['NODE_ENV'] ?? 'development';
+  if (!smtpUrl) {
+    if (nodeEnv === 'production' || !options.allowNoop) {
+      return createMisconfiguredEmailAdapter(
+        'SMTP_URL is required (production fail-closed; noop only via EMAIL_ALLOW_NOOP=1 in non-production)',
+      );
+    }
+    return createNoopEmailAdapter();
+  }
 
   return {
     async sendTicketIssued(payload) {
+      if (!payload.toEmail?.trim()) {
+        throw new Error('ticket recipient email is missing');
+      }
+      if (!payload.qrPng?.length) {
+        throw new Error('QR PNG is required for TicketIssued email');
+      }
       const from = options.fromAddress ?? 'tickets@localhost';
-      const to = payload.toEmail ?? 'undeliverable@localhost';
-      const subject = `Vé đã cấp — ${payload.ticketId}`;
-      const body = [
-        `Ticket ${payload.ticketId} đã được cấp.`,
-        `Event: ${payload.eventId}`,
-        `Request: ${payload.requestId}`,
-        '',
-        'Đây là email sandbox (Mailpit / self-host SMTP).',
-      ].join('\n');
-      const providerRef = await sendMailViaSmtp({
+      const cid = 'ticket-qr@vemoki';
+      const htmlWithQr = payload.html.includes('cid:ticket-qr')
+        ? payload.html
+        : `${payload.html}<p><img src="cid:${cid}" alt="Ticket QR" /></p>`;
+
+      const result = await sendMimeMailViaSmtp({
         smtpUrl,
         from,
-        to,
-        subject,
-        body,
+        to: payload.toEmail.trim(),
+        subject: payload.subject,
+        text: payload.text,
+        html: htmlWithQr,
+        messageId: payload.messageId,
+        attachments: [
+          {
+            filename: `ticket-${payload.ticketId}.png`,
+            content: payload.qrPng,
+            contentType: 'image/png',
+            cid,
+          },
+        ],
       });
-      return { providerRef };
+
+      return {
+        providerRef: result.providerRef,
+        providerStatus: result.unknown ? 'UNKNOWN' : 'ACCEPTED',
+      };
     },
   };
 }
 
 export function readEmailEnvironment(env: NodeJS.ProcessEnv): SmtpAdapterOptions {
+  const nodeEnv = env['NODE_ENV'] ?? 'development';
+  const allowNoop =
+    nodeEnv !== 'production' && env['EMAIL_ALLOW_NOOP'] === '1';
   return {
     smtpUrl: env['SMTP_URL']?.trim() || undefined,
     fromAddress: env['SMTP_FROM']?.trim() || undefined,
+    nodeEnv,
+    allowNoop,
   };
+}
+
+export function readPublicWebBaseUrl(env: NodeJS.ProcessEnv): string {
+  const value = env['PUBLIC_WEB_BASE_URL']?.trim();
+  if (value) {
+    const url = new URL(value);
+    if (url.protocol !== 'https:' && env['NODE_ENV'] === 'production') {
+      throw new NotificationError(
+        NOTIFICATION_ERROR_CODES.SMTP_MISCONFIGURED,
+        'PUBLIC_WEB_BASE_URL must be https in production',
+      );
+    }
+    return value.replace(/\/+$/, '');
+  }
+  if (env['NODE_ENV'] === 'production') {
+    throw new NotificationError(
+      NOTIFICATION_ERROR_CODES.SMTP_MISCONFIGURED,
+      'PUBLIC_WEB_BASE_URL is required in production',
+    );
+  }
+  return 'http://127.0.0.1:3000';
 }

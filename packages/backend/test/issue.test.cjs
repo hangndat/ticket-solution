@@ -35,6 +35,7 @@ const MIGRATIONS = [
   'prisma/migrations/202610170005_d3_gate/migration.sql',
   'prisma/migrations/202610170006_d4_config_publish/migration.sql',
   'prisma/migrations/202610170008_d4_report_retry/migration.sql',
+  'prisma/migrations/202610170009_n1_notification_delivery/migration.sql',
 ];
 
 const HMAC = readCodeHmacEnvironment({
@@ -42,6 +43,7 @@ const HMAC = readCodeHmacEnvironment({
   CODE_HMAC_VERSION: '1',
 });
 const CRED_KEY = 'd2-issue-test-cred-key';
+const RELAY_OPTS = { credentialKeyMaterial: CRED_KEY };
 
 async function startIsolatedPostgres() {
   const name = 'ticket-d2-issue-' + randomBytes(6).toString('hex');
@@ -486,6 +488,7 @@ test(
         createFailingEmailAdapter('smtp down'),
         'test-relay-fail',
         10,
+        RELAY_OPTS,
       );
       assert.ok(failRelay.failed >= 1);
 
@@ -526,6 +529,7 @@ test(
         createNoopEmailAdapter(),
         'test-relay-ok',
         10,
+        RELAY_OPTS,
       );
       assert.ok(okRelay.completed >= 1);
 

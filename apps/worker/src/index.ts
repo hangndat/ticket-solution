@@ -5,6 +5,7 @@ import { NestFactory } from '@nestjs/core';
 import {
   createDatabase,
   createSmtpEmailAdapter,
+  readCredentialKeyEnvironment,
   readEmailEnvironment,
   readProcessEnvironment,
   relayOutboxOnce,
@@ -33,14 +34,29 @@ class WorkerRelay implements OnModuleDestroy {
     private readonly leaseOwner: string,
     private readonly ownsDb: boolean,
     private readonly intervalMs: number,
+    private readonly credentialKeyMaterial: string,
+    private readonly env: NodeJS.ProcessEnv,
   ) {}
+
+  private relayOpts() {
+    return {
+      credentialKeyMaterial: this.credentialKeyMaterial,
+      env: this.env,
+    };
+  }
 
   start() {
     if (!this.db || this.intervalMs <= 0) return;
     const tick = async () => {
       if (this.stopped || !this.db) return;
       try {
-        await relayOutboxOnce(this.db, this.email, this.leaseOwner, 10);
+        await relayOutboxOnce(
+          this.db,
+          this.email,
+          this.leaseOwner,
+          10,
+          this.relayOpts(),
+        );
       } catch {
         // Keep looping; outbox remains source of truth.
       }
@@ -51,7 +67,13 @@ class WorkerRelay implements OnModuleDestroy {
 
   async relayOnce() {
     if (!this.db) return { claimed: 0, completed: 0, failed: 0 };
-    return relayOutboxOnce(this.db, this.email, this.leaseOwner, 10);
+    return relayOutboxOnce(
+      this.db,
+      this.email,
+      this.leaseOwner,
+      10,
+      this.relayOpts(),
+    );
   }
 
   async onModuleDestroy() {
@@ -102,8 +124,22 @@ export async function createWorker(
     (Number.isFinite(Number(env['OUTBOX_POLL_MS']))
       ? Number(env['OUTBOX_POLL_MS'])
       : 2000);
+  let credentialKeyMaterial = '';
+  try {
+    credentialKeyMaterial = readCredentialKeyEnvironment(env);
+  } catch {
+    // Misconfigured key → relay marks FAILED/retry; tickets remain committed.
+  }
 
-  const relay = new WorkerRelay(db, email, leaseOwner, ownsDb, intervalMs);
+  const relay = new WorkerRelay(
+    db,
+    email,
+    leaseOwner,
+    ownsDb,
+    intervalMs,
+    credentialKeyMaterial,
+    env,
+  );
 
   @Module({
     providers: [{ provide: WorkerRelay, useValue: relay }],

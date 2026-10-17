@@ -40,6 +40,7 @@ const MIGRATIONS = [
   '202610170006_d4_config_publish',
   '202610170007_d4_manual_approval',
   '202610170008_d4_report_retry',
+  '202610170009_n1_notification_delivery',
 ].map((name) =>
   path.join(__dirname, '../prisma/migrations', name, 'migration.sql'),
 );
@@ -49,6 +50,7 @@ const HMAC = readCodeHmacEnvironment({
   CODE_HMAC_VERSION: '1',
 });
 const CREDENTIAL_KEY = 'd4-report-credential-key';
+const RELAY_OPTS = { credentialKeyMaterial: CREDENTIAL_KEY };
 
 async function startIsolatedPostgres() {
   const name = 'ticket-d4-report-' + randomBytes(4).toString('hex');
@@ -152,7 +154,10 @@ function countingAdapter() {
     adapter: {
       async sendTicketIssued(payload) {
         calls.push(payload.ticketId);
-        return { providerRef: 'count:' + payload.ticketId };
+        return {
+          providerRef: 'count:' + payload.ticketId,
+          providerStatus: 'ACCEPTED',
+        };
       },
     },
   };
@@ -376,6 +381,7 @@ test(
         createNoopEmailAdapter(),
         'drain',
         10,
+        RELAY_OPTS,
       );
       assert.ok(drained.completed >= 4);
 
@@ -385,6 +391,7 @@ test(
         createFailingEmailAdapter('smtp down'),
         'fail-once',
         10,
+        RELAY_OPTS,
       );
       assert.ok(failed.failed >= 1);
       const tooSoon = await claimOutboxBatch(db, 'too-soon', 10);
@@ -416,7 +423,7 @@ test(
       await withTenant(db, tenantId, async (tx) => {
         await tx.$executeRaw`
           UPDATE notifications
-          SET state = 'SENT', provider_ref = 'already', updated_at = now()
+          SET state = 'ACCEPTED', provider_ref = 'already', updated_at = now()
           WHERE tenant_id = ${tenantId}::uuid
             AND business_key = ${'ticket:' + alreadySent.ticketId + ':issued:email'}
         `;
@@ -427,6 +434,7 @@ test(
         counter.adapter,
         'sent-once',
         10,
+        RELAY_OPTS,
       );
       assert.equal(counter.calls.includes(alreadySent.ticketId), false);
       assert.equal(counter.calls.includes(waiting.ticketId), false);
@@ -461,6 +469,7 @@ test(
         retryCounter.adapter,
         'retry-due',
         10,
+        RELAY_OPTS,
       );
       assert.deepEqual(retryCounter.calls, [waiting.ticketId]);
       assert.ok(retried.completed >= 1);
