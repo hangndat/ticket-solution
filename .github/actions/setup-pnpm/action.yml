@@ -34,14 +34,14 @@ runs:
           echo $! >> /tmp/ticket-ci/docker-pulls.pids
           echo "prefetch start: $img pid=$!"
         done
-    - uses: pnpm/action-setup@v4
-    - uses: actions/setup-node@v4
+    - uses: pnpm/action-setup@v6
+    - uses: actions/setup-node@v7
       with:
         node-version: 24
         cache: pnpm
     - name: Restore Turbo cache (local .turbo, không remote)
       if: inputs.skip-turbo != 'true'
-      uses: actions/cache/restore@v4
+      uses: actions/cache/restore@v6
       with:
         path: .turbo
         key: turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}-merged
