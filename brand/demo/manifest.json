@@ -1,0 +1,67 @@
+{
+  "$schemaComment": "D9 media demo seed — stable UUIDs for MinIO ready keys; align S1 DB seed later. Explicit demo only.",
+  "bucketEnv": "MINIO_BUCKET_ASSETS",
+  "defaultBucket": "vemoki-assets",
+  "platformBrandPrefix": "demo/brand/vemoki",
+  "tenants": [
+    {
+      "slug": "demo-fun",
+      "tenantId": "11111111-1111-4111-8111-111111111111",
+      "event": {
+        "slug": "fun-fest",
+        "fixtureId": "demo-fun-fest",
+        "eventId": "11111111-1111-4111-8111-111111111101",
+        "assets": [
+          {
+            "role": "logo",
+            "assetId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaa0001",
+            "source": "brand/vemoki/lockup.png",
+            "contentType": "image/png",
+            "extension": "png"
+          },
+          {
+            "role": "banner",
+            "assetId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaa0002",
+            "source": "brand/vemoki/og.png",
+            "contentType": "image/png",
+            "extension": "png"
+          }
+        ]
+      }
+    },
+    {
+      "slug": "demo-studio",
+      "tenantId": "22222222-2222-4222-8222-222222222222",
+      "event": {
+        "slug": "studio-night",
+        "fixtureId": "demo-studio-night",
+        "eventId": "22222222-2222-4222-8222-222222222201",
+        "assets": [
+          {
+            "role": "logo",
+            "assetId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbb0001",
+            "source": "brand/vemoki/lockup.png",
+            "contentType": "image/png",
+            "extension": "png"
+          },
+          {
+            "role": "banner",
+            "assetId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbb0002",
+            "source": "brand/vemoki/og.png",
+            "contentType": "image/png",
+            "extension": "png"
+          }
+        ]
+      }
+    }
+  ],
+  "platformFiles": [
+    "brand/vemoki/lockup.png",
+    "brand/vemoki/og.png",
+    "brand/vemoki/email-header.png",
+    "brand/vemoki/app-icon.png",
+    "brand/vemoki/mark.svg",
+    "brand/vemoki/mark-mono.svg",
+    "brand/vemoki/tokens.json"
+  ]
+}
