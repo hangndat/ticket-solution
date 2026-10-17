@@ -31,11 +31,15 @@ export const scanCopy = {
   },
   idle: {
     title: 'Chờ mã quét',
-    body: 'Quét QR trên vé hoặc dán mã. Chỉ cho vào sau khi API ghi nhận check-in.',
+    body: 'Quét QR trên vé hoặc dán mã. Chỉ cho vào sau khi hệ thống (API) ghi nhận check-in.',
   },
   checking: {
-    title: 'Đang kiểm tra cổng',
-    body: 'Đợi phản hồi API. Không cho vào khi chưa có kết quả.',
+    title: 'Đang kiểm tra',
+    body: 'Đợi phản hồi. Không cho vào khi chưa có kết quả.',
+  },
+  contextHint: {
+    title: 'Ngữ cảnh cổng',
+    body: 'Sự kiện · phiên staff · trạng thái mạng. ID nội bộ chỉ để đối chiếu.',
   },
 } as const;
 
