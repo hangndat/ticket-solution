@@ -168,4 +168,10 @@ jobs:
         run: ./scripts/d5-business-restore-drill.sh
       - name: Admission S4 isolated (nginx edge)
         run: ./scripts/d5-admission-s4.sh
+      - name: R-INT tenant host / cache / cookie unit
+        run: pnpm test:rint-host
+      - name: R-INT stack manifest smoke
+        run: ./scripts/rint-stack-smoke.sh
+      - name: R-INT outbox Redis-loss + lease reclaim
+        run: ./scripts/rint-outbox-recovery.sh
       # Full PRD 2×20k + sustained S3 needs local Keycloak + long runtime — not CI.
