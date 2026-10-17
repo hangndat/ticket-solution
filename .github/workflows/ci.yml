@@ -174,4 +174,7 @@ jobs:
         run: ./scripts/rint-stack-smoke.sh
       - name: R-INT outbox Redis-loss + lease reclaim
         run: ./scripts/rint-outbox-recovery.sh
+      - name: Platform security-config + realm posture
+        run: ./scripts/platform-security-config-smoke.sh
       # Full PRD 2×20k + sustained S3 needs local Keycloak + long runtime — not CI.
+      # Live Keycloak assurance: ./scripts/platform-keycloak-assurance-smoke.sh (local).

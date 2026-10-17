@@ -1,0 +1,33 @@
+{
+  "$schemaNote": "Coordinator freeze M01/M02/M12 — security vận hành configurable. KHÔNG phải O06 retention/region/SLA.",
+  "version": 1,
+  "frozenAt": "2026-10-17",
+  "productionFailClosed": true,
+  "invite": {
+    "ttlHours": 48,
+    "note": "Membership invite expiry từ lúc tạo; resend cấp token mới + TTL mới"
+  },
+  "supportGrant": {
+    "maxTtlHours": 1,
+    "scopesAllowlist": ["cs.read"],
+    "note": "Thiếu expiry hoặc vượt max → fail closed, không grant vô hạn"
+  },
+  "mfaStepUp": {
+    "maxAuthTimeAgeMinutes": 15,
+    "requiredAcr": "2",
+    "note": "Platform + tenant Owner/admin step-up; attendee không bắt buộc MFA"
+  },
+  "oidc": {
+    "platformAudience": "ticket-platform-api",
+    "tenantApiAudience": "ticket-api",
+    "platformClientId": "ticket-platform-web",
+    "tenantAdminClientId": "ticket-admin-web",
+    "attendeeClientId": "ticket-web",
+    "mobileClientId": "ticket-mobile",
+    "mobileMustNotReceivePlatformAudience": true
+  },
+  "o06": {
+    "retentionRegionSla": "UNRESOLVED",
+    "note": "Giữ mở — xem docs/ops/O06-OPTIONS.md; không bịa số"
+  }
+}
