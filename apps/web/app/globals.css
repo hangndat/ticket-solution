@@ -579,11 +579,37 @@ details p {
 }
 .state-empty,
 .state-error,
-.state-unknown {
+.state-unknown,
+.state-loading {
   padding: var(--space-4) var(--space-5);
   border: 2px solid var(--ink-faint);
   background: color-mix(in srgb, var(--paper) 92%, var(--ink) 8%);
   margin: var(--space-4) 0;
+}
+.surface-state {
+  display: grid;
+  gap: var(--space-2);
+  max-width: 42rem;
+}
+.surface-state__title {
+  font-family: var(--font-display), Syne, ui-sans-serif, sans-serif;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.surface-state__detail {
+  margin: 0;
+  color: inherit;
+  opacity: 0.92;
+  font-size: 0.95rem;
+}
+.surface-state__action {
+  margin-top: var(--space-2);
+}
+.state-loading {
+  border-color: color-mix(in srgb, var(--focus) 40%, var(--ink-faint));
+  background: color-mix(in srgb, var(--paper) 90%, var(--focus) 10%);
+  animation: state-pulse 1.2s ease-in-out infinite;
 }
 .state-error {
   border-color: color-mix(in srgb, #8a1f1f 55%, transparent);
@@ -594,6 +620,20 @@ details p {
   border-color: #4a4a4a;
   background: #ececec;
   color: #2a2a2a;
+}
+@keyframes state-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.72;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .state-loading {
+    animation: none;
+  }
 }
 .redeem-form {
   display: grid;
