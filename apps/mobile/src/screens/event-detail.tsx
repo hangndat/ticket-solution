@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
+import { EventMediaHeader } from '@/components/event-media';
 import { Page, Notice } from '@/components/page';
 import {
   EmptyState,
@@ -54,6 +55,11 @@ function FixtureDemoDetail({
       <Notice title="Demo · chưa xuất bản">
         Catalog mẫu — không phải nội dung M04 đã xuất bản trên server.
       </Notice>
+      <EventMediaHeader
+        eventId={event.id}
+        tenantSlug={event.tenantSlug}
+        testID={`fixture-media-${event.id}`}
+      />
       <Notice title={event.name}>{event.brand.organizationName}</Notice>
       <Text selectable style={{ color: colors.label, fontSize: 19 }}>
         {eventDate(event)}
@@ -184,6 +190,13 @@ function PublishedEventDetailView({
           gap: 8,
         }}
       >
+        <EventMediaHeader
+          eventId={event.id}
+          tenantSlug={event.tenantSlug}
+          bannerUrl={event.brand.bannerUrl}
+          logoUrl={event.brand.logoUrl}
+          testID={`pub-detail-media-${event.id}`}
+        />
         <Text selectable style={{ color: colors.secondary }}>
           {event.brand.organizationName}
         </Text>

@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import { FlatList, Pressable, Text, View } from 'react-native';
 import { Link } from 'expo-router';
 import { demoTenants, eventDate, listDemoEvents } from '@/data/demo-events';
+import { EventMediaHeader } from '@/components/event-media';
 import { BrandWordmark } from '@/components/page';
 import {
   EmptyState,
@@ -156,6 +157,13 @@ export function EventsScreen() {
                 borderTopColor: item.brand.primaryColor,
               }}
             >
+              <EventMediaHeader
+                eventId={item.id}
+                tenantSlug={item.tenantSlug}
+                bannerUrl={item.brand.bannerUrl}
+                logoUrl={item.brand.logoUrl}
+                testID={`pub-media-${item.id}`}
+              />
               <Text selectable style={{ color: colors.secondary, fontSize: 13 }}>
                 Đã xuất bản · v{item.publishedConfigVersion}
               </Text>
@@ -254,6 +262,11 @@ export function EventsScreen() {
             borderTopColor: item.brand.primaryColor,
           }}
         >
+          <EventMediaHeader
+            eventId={item.id}
+            tenantSlug={item.tenantSlug}
+            testID={`demo-media-${item.id}`}
+          />
           <Text selectable style={{ color: colors.secondary, fontSize: 13 }}>
             Demo · chưa xuất bản
           </Text>
