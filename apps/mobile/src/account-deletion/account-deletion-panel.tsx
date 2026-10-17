@@ -12,6 +12,8 @@ import {
   clearAllPendingIdempotencyKeys,
   loadCurrentAccountDeletionRequest,
   peekPendingIdempotencyKey,
+  resolveAccountDeletionRetryAction,
+  retryAccountDeletionError,
   submitAccountDeletionRequest,
   type AccountDeletionUiPhase,
 } from './account-deletion-flow';
@@ -187,11 +189,11 @@ export function AccountDeletionPanel() {
     setBusy(true);
     setPhase({ kind: 'loading' });
     try {
-      const next = await submitAccountDeletionRequest({
+      const next = await retryAccountDeletionError({
+        phase,
         session,
         epoch,
         userId: epoch.userId,
-        idempotencyKey: phase.idempotencyKey,
       });
       if (!session.isEpochCurrent(epoch)) return;
       setPhase(next);
@@ -259,10 +261,22 @@ export function AccountDeletionPanel() {
 
       {phase.kind === 'error' ? (
         <View style={{ gap: 8 }}>
-          <Notice title="Không gửi được yêu cầu">{phase.message}</Notice>
+          <Notice
+            title={
+              resolveAccountDeletionRetryAction(phase) === 'resubmit'
+                ? 'Không gửi được yêu cầu'
+                : 'Không tải được trạng thái'
+            }
+          >
+            {phase.message}
+          </Notice>
           {phase.retryable ? (
             <PrimaryButton
-              label="Thử lại (cùng Idempotency-Key)"
+              label={
+                resolveAccountDeletionRetryAction(phase) === 'resubmit'
+                  ? 'Thử lại (cùng Idempotency-Key)'
+                  : 'Thử tải lại trạng thái'
+              }
               onPress={() => void onRetry()}
               disabled={busy}
             />
