@@ -1,7 +1,7 @@
 # ADR-18 — Offline Gate sync (D7)
 
 Ngày: 2026-10-17  
-Trạng thái: **Đã chốt (contract #105)** — apply durable thuộc Issue #106  
+Trạng thái: **Đã chốt** — contract #105 + durable apply #106/#107  
 Đối chiếu: [ADR-06](../TECHNICAL-DESIGN.md) (online reserve/confirm), [DECISION-LOG](../DECISION-LOG.md) O05/O10, contract `@ticket/contracts` `offline-sync.ts`
 
 ## Quyết định
@@ -37,13 +37,14 @@ ADR-06 và §9.5 trước đây **cấm** queue confirm offline. O10 đưa Offli
 Chi tiết type/code: `packages/contracts/src/offline-sync.ts`.  
 HTTP schema: `apps/api` OpenAPI path `/v1/gate/events/{eventId}/offline-sync`.
 
-## Ngoài phạm vi (#105)
+## Ngoài phạm vi
 
-- Durable apply / DB migration / conflict resolution runtime → **#106**
 - iOS SecureStore queue UI → D7-S2
 - Web offline banner → D7-S3
 - Undo/revoke offline — **không** hỗ trợ trong D7 (online only)
 
-## #105 stub
+## Apply runtime (#106 / #107)
 
-Endpoint xác thực + validate transport rồi trả **501** `OFFLINE_SYNC_NOT_IMPLEMENTED` cho đến khi #106 wire apply.
+- Ledger `offline_sync_events` (tenant + `clientEventId`) + check-in `source=OFFLINE`
+- `applyOfflineSyncBatch` — API `POST …/offline-sync` và worker `replayOfflineSyncBatch`
+- Per-item `APPLIED` / `DUPLICATE` / `REJECTED` / `CONFLICT`; audit `gate.offline_sync.apply`

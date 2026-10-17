@@ -19,6 +19,12 @@ import {
   type PrismaClient,
 } from '@ticket/backend';
 
+export {
+  replayOfflineSyncBatch,
+  applyOfflineSyncBatch,
+  type ReplayOfflineSyncBatchInput,
+} from './offline-sync-replay';
+
 export type CreateWorkerOptions = {
   env?: NodeJS.ProcessEnv;
   logging?: boolean;
