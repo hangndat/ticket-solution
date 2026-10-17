@@ -67,6 +67,350 @@
         ]
       }
     },
+    "/v1/tenants/{tenantId}/events": {
+      "post": {
+        "operationId": "EventAdminController_create",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateEventBodyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "events"
+        ]
+      },
+      "get": {
+        "operationId": "EventAdminController_list",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "events"
+        ]
+      }
+    },
+    "/v1/tenants/{tenantId}/events/{eventId}": {
+      "get": {
+        "operationId": "EventAdminController_get",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "eventId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "events"
+        ]
+      },
+      "patch": {
+        "operationId": "EventAdminController_patch",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "eventId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchEventBodyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "events"
+        ]
+      }
+    },
+    "/v1/tenants/{tenantId}/events/{eventId}/clone": {
+      "post": {
+        "operationId": "EventAdminController_clone",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "eventId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CloneEventBodyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "events"
+        ]
+      }
+    },
+    "/v1/tenants/{tenantId}/events/{eventId}/archive": {
+      "post": {
+        "operationId": "EventAdminController_archive",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "eventId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ArchiveEventBodyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "events"
+        ]
+      }
+    },
+    "/v1/tenants/{tenantId}/events/{eventId}/cancel": {
+      "post": {
+        "operationId": "EventAdminController_cancel",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "eventId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelEventBodyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "events"
+        ]
+      }
+    },
+    "/v1/tenants/{tenantId}/events/{eventId}/impact-preview": {
+      "post": {
+        "operationId": "EventAdminController_impactPreview",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "eventId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImpactPreviewBodyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "events"
+        ]
+      }
+    },
     "/v1/tenants/{tenantId}/events/{eventId}/redemptions": {
       "post": {
         "operationId": "TicketIssueController_redeem",
@@ -947,6 +1291,206 @@
           "message",
           "requestId",
           "retryable"
+        ]
+      },
+      "CreateEventBodyDto": {
+        "type": "object",
+        "properties": {
+          "slug": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "timezone": {
+            "type": "string"
+          },
+          "visibility": {
+            "type": "string",
+            "enum": [
+              "PUBLIC",
+              "UNLISTED"
+            ]
+          },
+          "startsAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "endsAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "venue": {
+            "type": "object",
+            "nullable": true
+          },
+          "contact": {
+            "type": "object",
+            "nullable": true
+          },
+          "redemptionOpensAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "redemptionClosesAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "checkInOpensAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "checkInClosesAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "maxTicketsPerAttendee": {
+            "type": "number",
+            "nullable": true
+          }
+        },
+        "required": [
+          "slug",
+          "name"
+        ]
+      },
+      "PatchEventBodyDto": {
+        "type": "object",
+        "properties": {
+          "expectedRevision": {
+            "type": "number"
+          },
+          "name": {
+            "type": "string"
+          },
+          "timezone": {
+            "type": "string"
+          },
+          "visibility": {
+            "type": "string",
+            "enum": [
+              "PUBLIC",
+              "UNLISTED"
+            ]
+          },
+          "startsAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "endsAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "venue": {
+            "type": "object",
+            "nullable": true
+          },
+          "contact": {
+            "type": "object",
+            "nullable": true
+          },
+          "redemptionOpensAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "redemptionClosesAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "checkInOpensAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "checkInClosesAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "maxTicketsPerAttendee": {
+            "type": "number",
+            "nullable": true
+          },
+          "confirmIssuedImpact": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "notifyAttendees": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "expectedRevision"
+        ]
+      },
+      "CloneEventBodyDto": {
+        "type": "object",
+        "properties": {
+          "slug": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "copyConfig": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "slug",
+          "name"
+        ]
+      },
+      "ArchiveEventBodyDto": {
+        "type": "object",
+        "properties": {
+          "expectedRevision": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "expectedRevision"
+        ]
+      },
+      "CancelEventBodyDto": {
+        "type": "object",
+        "properties": {
+          "expectedRevision": {
+            "type": "number"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "notifyAttendees": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "expectedRevision",
+          "reason"
+        ]
+      },
+      "ImpactPreviewBodyDto": {
+        "type": "object",
+        "properties": {
+          "expectedRevision": {
+            "type": "number"
+          },
+          "startsAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "endsAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "venue": {
+            "type": "object",
+            "nullable": true
+          }
+        },
+        "required": [
+          "expectedRevision"
         ]
       },
       "RedeemBodyDto": {
