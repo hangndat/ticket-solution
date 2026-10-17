@@ -16,7 +16,7 @@ Chỉ lấy task thuộc Epic/Run đã được user/coordinator ủy quyền; k
 
 ## Always do
 
-1. Maintain a ready queue from GitHub Project #3: prefer Status `Sẵn sàng`, then unblocked items in the active đợt (D1…); respect ownership (BE / web / iOS / coordinator / BA / PD / reviewer) và hierarchy Epic → Story → Task — **không** serialize theo Story nếu Task đã ready.
+1. Maintain a ready queue from GitHub Project #3: prefer Status `Sẵn sàng`, then unblocked items in the active đợt (D1…); respect ownership (BE / web / iOS / coordinator / BA / PD / architect / reviewer) và hierarchy Epic → Story → Task — **không** serialize theo Story nếu Task đã ready.
 2. On every checkpoint (`worker_done`, escalation resolved, dep unblocked, `check` batch processed): **fill every free, unblocked slot trong cùng một wave** (tối đa fan-out) — nhưng **ưu tiên loại việc** theo backpressure bên dưới.
 3. Pull các Issue ready cho mọi scope đang free (không chỉ một slice); set Project Status → `Đang làm` when dispatching (see `github-project-tracking.mdc`).
 4. Prefer reusing a settled worker terminal when Orca allows; otherwise start a new worker for that slice/role.

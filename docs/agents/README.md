@@ -25,6 +25,7 @@ docs/agents/
 | -- | ---- | -------- | ------------------- |
 | `product-ba` | [roles/product-ba.md](./roles/product-ba.md) | Làm rõ bài toán, non-goals, AC, ưu tiên trong MVP đã chốt | Docs/Issue; không mở rộng MVP |
 | `product-design` | [roles/product-design.md](./roles/product-design.md) | User flow, trạng thái UI, a11y, AC UI, hướng dẫn triển khai | Docs/design handoff; không code ownership slice khác |
+| `architect` | [roles/architect.md](./roles/architect.md) | Quyết định kiến trúc, contract, ADR, failure/recovery và kiểm tra sự phù hợp khi cần | Docs/handoff trong scope; không sở hữu code đa slice hoặc thay reviewer độc lập |
 | `backend` | [roles/backend.md](./roles/backend.md) | Implement NestJS / DB / worker | `apps/api`, `apps/worker`, `packages/backend` |
 | `web` | [roles/web.md](./roles/web.md) | Implement Next.js | `apps/web` only |
 | `ios` | [roles/ios.md](./roles/ios.md) | Implement Expo/RN iOS | `apps/mobile` only; local build, không EAS Cloud |
@@ -40,6 +41,8 @@ Agent runtime: luôn Cursor (`--agent cursor`), trừ khi user override rõ. Rol
 | Loại Task | Role chính | Role phụ (tùy chọn) |
 | --------- | ---------- | ------------------- |
 | Discovery / AC / phân Story | `product-ba` | `product-design` nếu cần flow UI |
+| Thiết kế kỹ thuật có architecture impact | `architect` | BA/PD là Task riêng khi cần |
+| Kiểm tra sự phù hợp kiến trúc trên exact SHA khi cần | `architect` (session độc lập) | Không thay DoD/security |
 | Design trước coding UI | `product-design` | — |
 | Coding BE / web / iOS | `backend` / `web` / `ios` | — |
 | DoD sau `Chờ duyệt` | `reviewer-dod` | `reviewer-security` nếu slice authz/RLS/quota/check-in/secrets |
@@ -53,11 +56,13 @@ Thêm khối sau vào spec `worker-start` (tiếng Việt cho phần mô tả us
 
 ```markdown
 ## Vai trò chuyên môn (bổ sung)
-- Role ID: <product-ba|product-design|backend|web|ios|reviewer-dod|reviewer-security>
+- Role ID: <product-ba|product-design|architect|backend|web|ios|reviewer-dod|reviewer-security>
 - File: docs/agents/roles/<id>.md
 - Đọc file role SAU AGENTS.md và rule Orca; nếu xung đột → rule dự án thắng.
 - Không mở rộng MVP / ngoài phạm vi Issue.
 - Agent: cursor (theo orca-agent-routing.mdc)
+- Architecture impact: Có | Không — lý do + link thiết kế/ADR hiện hành
+- Nếu Có: quyết định còn mở, Task architect/handoff và consumer thực sự phải chờ
 ```
 
 Với reviewer, thêm:
@@ -70,20 +75,53 @@ Với reviewer, thêm:
 - Artifact: docs/reviews/<slug>.md
 ```
 
-### 3. Không làm gì với role
+### 3. Architect trong quy trình
+
+```text
+Coordinator + Epic planner: xác định scope, xét architecture impact
+  BA ∥ PD ∥ Architect (khi có quyết định kỹ thuật còn mở) ∥ planner
+                       ↓ handoff/ADR được coordinator xác nhận trong thẩm quyền
+  BE ∥ web ∥ iOS (chỉ consumer phụ thuộc phải chờ; Task độc lập chạy ngay)
+                       ↓ PR / exact SHA
+  DoD ∥ security khi cần ∥ kiểm tra kiến trúc độc lập khi cần
+                       ↓ CI + evidence + coordinator integration đã được ủy quyền
+```
+
+Áp dụng trigger, đầu ra và giới hạn trong [role architect](./roles/architect.md). Không thêm gate Architect cho mọi PR. Architect đề xuất giải pháp, planner chia việc; coordinator quyết định trong thẩm quyền và giao đúng ownership. ADR/scope vượt thẩm quyền phải chuyển user, không tự duyệt. Reviewer DoD kiểm tra handoff/ADR khi Task có impact; review kiến trúc không thay nghiệm thu/security.
+
+Khối bổ sung khi giao Task Architect (điền cùng parent/scope/AC trong spec thông thường):
+
+```markdown
+## Vai trò chuyên môn (bổ sung)
+- Role ID: architect
+- File: docs/agents/roles/architect.md
+- Agent: cursor (theo orca-agent-routing.mdc)
+- Mode: Thiết kế | Kiểm tra sự phù hợp
+- Architecture impact: Có — <quyết định/rủi ro cụ thể>
+- Input: <Issue/Task, PR nếu có, exact source SHA, thiết kế/ADR liên quan>
+- Output/paths được sửa: <docs/architecture/<slug>.md hoặc docs/reviews/<slug>-architecture.md>
+- Quyết định cần giải: <câu hỏi + constraints đã chốt>
+- Consumer thực sự phải chờ: <Task IDs + artifact thiếu, hoặc không có>
+- Người xác nhận handoff/quyết định: coordinator trong thẩm quyền
+- Checks/evidence: <source/tests cần đối chiếu, không tự claim runtime PASS>
+- Nếu review: session khác tác giả implementation/design liên quan; ghi exact SHA + verdict
+- Đọc AGENTS.md + rule Orca trước role; không code chéo scope hoặc spawn con.
+```
+
+### 4. Không làm gì với role
 
 - Không copy `roles/*.md` vào `.cursor/rules/` với `alwaysApply: true`.
 - Không cài roster upstream qua Agency Agents app / `install.sh --tool cursor` cho toàn bộ division.
 - Không đổi `--agent` theo role.
 - Không để worker depth > 1; planner/worker không spawn con.
 
-### 4. Wave tối đa song song (ownership giữ nguyên)
+### 5. Wave tối đa song song (ownership giữ nguyên)
 
 Coordinator / Epic planner **fan-out hết** Task ready trong một wave (capacity + WIP cho phép). Chỉ xếp tuần tự khi có dependency artifact thật.
 
 ```text
 Wave rộng (ví dụ — spawn cùng lúc nếu unblocked):
-  product-ba ∥ product-design ∥ backend ∥ web ∥ ios
+  product-ba ∥ product-design ∥ architect khi cần ∥ backend ∥ web ∥ ios
        │              │              │
        └──────────────┴── contract / PD handoff chỉ khi thật sự chặn ──┘
                                       ↓

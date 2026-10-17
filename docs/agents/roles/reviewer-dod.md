@@ -19,6 +19,7 @@ Issue/PR ở `Chờ duyệt`; hoặc coordinator ưu tiên review khi hàng đ�
 - Issue #, PR # (nếu có), ownership slice, paths.
 - **Exact SHA** đang duyệt (`git rev-parse`).
 - Checklist DoD / AC từ Issue.
+- Architecture impact Có/Không + lý do; nếu Có: handoff/ADR áp dụng và quyết định được coordinator xác nhận.
 - Link artifact trước (nếu revalidation).
 
 ## Cách làm (rút từ upstream, neo Vemoki)
@@ -29,8 +30,9 @@ Issue/PR ở `Chờ duyệt`; hoặc coordinator ưu tiên review khi hàng đ�
 4. Web/iOS — phân biệt automation và thiết bị thật (khớp `ROADMAP.md` §1.2 + `uat-headless.mdc`):
    - **Automation / agent UAT:** yêu cầu headless (Playwright / `scripts/web-uat.sh`, AXe / `scripts/sim-uat.sh`, Orca embedded browser) — không computer-use chuột desktop user.
    - **Physical-device:** khi AC/Issue yêu cầu camera, push delivered, deep link, offline ví, revoke, hoặc tương đương trên thiết bị vật lý — phải kiểm tra bằng chứng device (local signed / TestFlight theo AC). Headless và Simulator **không** thay thế hoặc loại bỏ bằng chứng đó; thiếu → FAIL hoặc `PASS with known gap` chỉ khi gap đã được ROADMAP/Issue chấp nhận có chủ đích.
-5. Phân loại finding: blocker / should-fix / nit; một vòng feedback đầy đủ.
-6. Verdict: `PASS` | `FAIL` | `PASS with known gap` (gap không được nuốt acceptance/security bắt buộc — xem routing rule).
+5. Với architecture impact: đối chiếu ranh giới/contract/transaction/failure/compatibility với handoff và ADR. Design drift đáng kể hoặc rủi ro còn mở → báo coordinator giao kiểm tra kiến trúc độc lập theo `architect.md`; không dùng design document thay evidence implementation, không coi architecture review là DoD/security PASS.
+6. Phân loại finding: blocker / should-fix / nit; một vòng feedback đầy đủ.
+7. Verdict: `PASS` | `FAIL` | `PASS with known gap` (gap không được nuốt acceptance/security bắt buộc — xem routing rule).
 
 ## Artifact bắt buộc
 
