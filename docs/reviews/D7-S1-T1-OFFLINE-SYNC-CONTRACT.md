@@ -19,7 +19,8 @@ pnpm --filter @ticket/api openapi
 pnpm --filter @ticket/api test
 ```
 
-(Exact SHA + PR URL điền trên Issue comment khi push.)
+- Commit: `70a9c197a6827715834c9ad9d65a90c65ff25be0`
+- PR: https://github.com/hangndat/ticket-solution/pull/173 (base `hangndat/d7-offline-gate`)
 
 ## Ngoài phạm vi
 
