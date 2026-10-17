@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Đổi mã lấy vé — D11 prototype</title>
+  <link rel="stylesheet" href="../css/d11.css" />
+</head>
+<body>
+  <a class="skip" href="#main">Bỏ qua điều hướng</a>
+  <div class="wrap">
+    <header class="top">
+      <a class="wordmark" href="../index.html" aria-label="vemoki trang chủ prototype">vemoki<span aria-hidden="true">↗</span></a>
+      <nav class="nav" aria-label="Khách">
+        <a href="attendee-redeem.html" aria-current="page">Đổi mã</a>
+        <a href="../index.html">Sự kiện demo</a>
+        <a href="#auth-note">Đăng nhập</a>
+      </nav>
+    </header>
+
+    <div class="demo-banner" role="status">
+      <strong>demo:attendee</strong> —
+      Màn khách để review. Fixture không phải API. Vé minh họa gắn nhãn không dùng vào cổng.
+      Auth hiện tại (source): cần đăng nhập / email đã xác minh — không mở anonymous.
+    </div>
+
+    <main id="main">
+      <div class="grid split">
+        <section class="product" aria-labelledby="event-title">
+          <div class="event-hero">
+            <p class="eyebrow">Sunburst Collective · sự kiện demo</p>
+            <h1 id="event-title">Fun Fest 2026</h1>
+            <p class="meta">Tối 18 tháng 10 · Công viên Demo, TP.HCM · Nhạc / Cộng đồng</p>
+          </div>
+
+          <div id="auth-gate" class="status-msg" data-kind="error" hidden>
+            <strong id="auth-title">Cần đăng nhập</strong>
+            <p id="auth-detail" class="muted">Đăng nhập rồi quay lại đổi mã. Chưa đăng nhập thì không gửi mã.</p>
+            <button type="button" class="secondary" id="btn-fake-login">Đăng nhập (demo)</button>
+          </div>
+
+          <form id="redeem-form" aria-labelledby="form-heading" novalidate onsubmit="return false;">
+            <h2 id="form-heading">Đổi mã lấy vé</h2>
+            <p class="muted">Điền mã trên thư mời và thông tin ngắn. Đây không phải bán vé.</p>
+            <label>
+              Mã trên thư / email
+              <input id="code" name="code" value="DEMO-REDEEM-OK" autocomplete="off" />
+            </label>
+            <p id="code-error" class="muted" role="alert" hidden style="color:var(--deny);margin:-4px 0 12px;font-weight:600"></p>
+            <label>
+              Họ và tên
+              <input name="fullName" value="Nguyễn Minh Anh" />
+            </label>
+            <label id="terms-label" style="display:flex;gap:10px;align-items:flex-start;font-weight:500">
+              <input type="checkbox" id="terms" checked style="width:auto;margin-top:4px" />
+              <span>Tôi đã đọc và đồng ý điều khoản sự kiện (bản demo)</span>
+            </label>
+            <p id="terms-error" class="muted" role="alert" hidden style="color:var(--deny);margin:-4px 0 12px;font-weight:600"></p>
+            <div class="row">
+              <button type="button" id="btn-submit">Nhận vé</button>
+            </div>
+          </form>
+
+          <div id="surface" class="status-msg" data-kind="empty" role="status" aria-live="polite">
+            <strong id="surface-title">Sẵn sàng đổi mã</strong>
+            <p id="surface-detail" class="muted">Nhập mã rồi nhấn Nhận vé.</p>
+          </div>
+
+          <article id="ticket" class="ticket-card" hidden aria-live="polite">
+            <p class="eyebrow">Vé của bạn</p>
+            <h2 style="margin:0">Fun Fest 2026</h2>
+            <p class="meta">General · Nguyễn Minh Anh</p>
+            <div class="qr-fake" role="img" aria-label="Mã QR minh họa — không dùng vào cổng"></div>
+            <p class="muted" id="ticket-id">Mã vé demo:ticket-7f3a</p>
+            <span class="warn">DEMO — KHÔNG DÙNG VÀO CỔNG</span>
+            <p class="muted" style="margin-top:12px">Trên app: mở tab Vé của tôi sau khi đăng nhập cùng tài khoản để xem khi mất mạng (chỉ hiển thị).</p>
+          </article>
+        </section>
+
+        <aside class="product" id="auth-note">
+          <h2>Trước khi vào cổng</h2>
+          <ol class="muted" style="padding-left:1.2rem;margin:0">
+            <li>Đăng nhập / xác minh email (bắt buộc theo contract hiện tại).</li>
+            <li>Đổi mã trên trang này hoặc app.</li>
+            <li>Đưa QR cho nhân viên quét — chỉ khi vé thật, không dùng bản demo.</li>
+          </ol>
+          <p class="muted" style="margin-top:16px">
+            Hướng production (BA P0-7): trang chủ không còn câu Nest BFF / fixture kỹ thuật trên đường khách;
+            demo giữ nhãn «DEMO» riêng.
+          </p>
+        </aside>
+      </div>
+    </main>
+
+    <aside class="review-dock" aria-label="Khu review PD — không phải UI khách">
+      <h2>Review · mô phỏng trạng thái</h2>
+      <p class="muted">Chỉ cho reviewer/PD. Chip độc lập với validation form; đổi state hủy timer submit đang chờ.</p>
+      <div class="chips" role="group" id="review-chips">
+        <button type="button" data-state="ready" aria-pressed="true">ready</button>
+        <button type="button" data-state="auth" aria-pressed="false">cần đăng nhập</button>
+        <button type="button" data-state="loading" aria-pressed="false">loading</button>
+        <button type="button" data-state="issued" aria-pressed="false">đã cấp vé</button>
+        <button type="button" data-state="retry" aria-pressed="false">chưa rõ</button>
+        <button type="button" data-state="denied" aria-pressed="false">từ chối</button>
+        <button type="button" data-state="expired" aria-pressed="false">biểu mẫu đổi</button>
+        <button type="button" data-state="offline" aria-pressed="false">offline</button>
+      </div>
+    </aside>
+
+    <footer class="footer">Issue #225 · demo:attendee · <a href="../index.html">Hub</a></footer>
+  </div>
+  <script>
+    const COPY = {
+      ready: { kind: "empty", title: "Sẵn sàng đổi mã", detail: "Nhập mã rồi nhấn Nhận vé." },
+      loading: { kind: "loading", title: "Đang xử lý…", detail: "Chưa xác nhận đã có vé." },
+      issued: { kind: "empty", title: "Đã cấp vé", detail: "Xem thẻ vé bên dưới." },
+      retry: { kind: "error", title: "Chưa rõ kết quả", detail: "Kiểm tra lại — chưa phải vé. Không gửi mã lần nữa nếu chưa chắc." },
+      denied: { kind: "error", title: "Không cấp vé", detail: "Mã không hợp lệ hoặc đã hết suất cho sự kiện này." },
+      expired: { kind: "error", title: "Biểu mẫu hoặc điều khoản đã đổi", detail: "Tải lại trang, đọc điều khoản mới và gửi lại." },
+      offline: { kind: "error", title: "Không có mạng", detail: "Thử lại khi có kết nối." },
+      auth: { kind: "error", title: "Cần đăng nhập", detail: "Đăng nhập rồi quay lại đổi mã." },
+      codeEmpty: { kind: "error", title: "Thiếu mã đổi vé", detail: "Nhập mã trên thư / email trước khi nhận vé." },
+      termsRequired: { kind: "error", title: "Cần đồng ý điều khoản", detail: "Đánh dấu đồng ý điều khoản sự kiện rồi thử lại." }
+    };
+
+    let loggedIn = true;
+    let submitNonce = 0;
+    let pendingTimer = null;
+    let uiState = "ready";
+
+    const surface = document.getElementById("surface");
+    const title = document.getElementById("surface-title");
+    const detail = document.getElementById("surface-detail");
+    const ticket = document.getElementById("ticket");
+    const authGate = document.getElementById("auth-gate");
+    const form = document.getElementById("redeem-form");
+    const submitBtn = document.getElementById("btn-submit");
+    const codeInput = document.getElementById("code");
+    const termsInput = document.getElementById("terms");
+    const codeError = document.getElementById("code-error");
+    const termsError = document.getElementById("terms-error");
+
+    function clearFieldErrors() {
+      codeError.hidden = true;
+      codeError.textContent = "";
+      termsError.hidden = true;
+      termsError.textContent = "";
+      codeInput.removeAttribute("aria-invalid");
+      termsInput.removeAttribute("aria-invalid");
+    }
+
+    function cancelPending() {
+      if (pendingTimer != null) {
+        clearTimeout(pendingTimer);
+        pendingTimer = null;
+      }
+      submitNonce += 1;
+    }
+
+    function setSubmitLocked(locked) {
+      submitBtn.disabled = Boolean(locked);
+      submitBtn.setAttribute("aria-busy", locked ? "true" : "false");
+    }
+
+    function syncReviewChips(key) {
+      document.querySelectorAll("#review-chips button").forEach((b) => {
+        b.setAttribute("aria-pressed", b.dataset.state === key ? "true" : "false");
+      });
+    }
+
+    /**
+     * @param {string} key
+     * @param {{ updateChips?: boolean, lockSubmit?: boolean }} [opts]
+     */
+    function setState(key, opts) {
+      const updateChips = opts && opts.updateChips === false ? false : true;
+      const forceLock = opts && opts.lockSubmit;
+
+      cancelPending();
+      uiState = key;
+      clearFieldErrors();
+
+      if (updateChips && COPY[key]) {
+        syncReviewChips(key === "codeEmpty" || key === "termsRequired" ? "ready" : key);
+      }
+
+      if (key === "auth") {
+        loggedIn = false;
+        authGate.hidden = false;
+        form.hidden = true;
+        surface.hidden = true;
+        ticket.hidden = true;
+        setSubmitLocked(false);
+        return;
+      }
+
+      loggedIn = true;
+      authGate.hidden = true;
+      form.hidden = key === "issued";
+      const c = COPY[key] || COPY.ready;
+      surface.hidden = false;
+      surface.dataset.kind = c.kind;
+      title.textContent = c.title;
+      detail.textContent = c.detail;
+      ticket.hidden = key !== "issued";
+
+      const loading = key === "loading" || forceLock === true;
+      setSubmitLocked(loading);
+    }
+
+    function showCodeEmpty() {
+      cancelPending();
+      uiState = "ready";
+      setSubmitLocked(false);
+      ticket.hidden = true;
+      form.hidden = false;
+      surface.hidden = false;
+      surface.dataset.kind = "error";
+      title.textContent = COPY.codeEmpty.title;
+      detail.textContent = COPY.codeEmpty.detail;
+      codeError.hidden = false;
+      codeError.textContent = "Mã không được để trống.";
+      codeInput.setAttribute("aria-invalid", "true");
+      termsError.hidden = true;
+      termsInput.removeAttribute("aria-invalid");
+      codeInput.focus();
+    }
+
+    function showTermsRequired() {
+      cancelPending();
+      uiState = "ready";
+      setSubmitLocked(false);
+      ticket.hidden = true;
+      form.hidden = false;
+      surface.hidden = false;
+      surface.dataset.kind = "error";
+      title.textContent = COPY.termsRequired.title;
+      detail.textContent = COPY.termsRequired.detail;
+      termsError.hidden = false;
+      termsError.textContent = "Cần đồng ý điều khoản trước khi nhận vé.";
+      termsInput.setAttribute("aria-invalid", "true");
+      codeError.hidden = true;
+      codeInput.removeAttribute("aria-invalid");
+      termsInput.focus();
+    }
+
+    function startSubmit() {
+      if (!loggedIn) {
+        setState("auth");
+        return;
+      }
+      if (submitBtn.disabled || uiState === "loading") {
+        return;
+      }
+
+      clearFieldErrors();
+      const code = codeInput.value.trim();
+      if (!code) {
+        showCodeEmpty();
+        return;
+      }
+      if (!termsInput.checked) {
+        showTermsRequired();
+        return;
+      }
+
+      cancelPending();
+      const nonce = submitNonce;
+      uiState = "loading";
+      syncReviewChips("loading");
+      authGate.hidden = true;
+      form.hidden = false;
+      ticket.hidden = true;
+      surface.hidden = false;
+      surface.dataset.kind = COPY.loading.kind;
+      title.textContent = COPY.loading.title;
+      detail.textContent = COPY.loading.detail;
+      setSubmitLocked(true);
+
+      pendingTimer = setTimeout(() => {
+        pendingTimer = null;
+        if (nonce !== submitNonce) return;
+        setState("issued", { updateChips: true });
+      }, 550);
+    }
+
+    document.querySelectorAll("#review-chips button").forEach((b) => {
+      b.addEventListener("click", () => {
+        setState(b.dataset.state, { updateChips: true });
+      });
+    });
+    document.getElementById("btn-fake-login").addEventListener("click", () => {
+      setState("ready", { updateChips: true });
+    });
+    submitBtn.addEventListener("click", () => startSubmit());
+    codeInput.addEventListener("input", () => {
+      if (!codeError.hidden) {
+        codeError.hidden = true;
+        codeInput.removeAttribute("aria-invalid");
+      }
+    });
+    termsInput.addEventListener("change", () => {
+      if (!termsError.hidden && termsInput.checked) {
+        termsError.hidden = true;
+        termsInput.removeAttribute("aria-invalid");
+      }
+    });
+
+    setState("ready", { updateChips: true });
+  </script>
+</body>
+</html>

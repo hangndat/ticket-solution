@@ -1,11 +1,15 @@
 # PRD — Vemoki
 
-Phiên bản: 0.4 — Draft để review (MVP mở rộng O10)  
-Ngày: 2026-10-17  
-Nguồn: yêu cầu sản phẩm trong trao đổi; quyết định mở rộng MVP 2026-10-17.  
-Tên sản phẩm: **Vemoki**. Domain platform: `vemoki.com`.  
-Thiết kế kỹ thuật: [Technical Design v0.1](./TECHNICAL-DESIGN.md) — các quyết định đề xuất và test scenarios được ghi riêng, chưa thay thế giả định sản phẩm.  
+> **D11 đã được user duyệt triển khai 18/10/2026:** phạm vi và wave theo [gói review D11](./plans/D11-REVIEW-PACKAGE.md). Giữ các non-goals và gate production/store; approval không chứng minh pilot ready.
+
+Phiên bản: 0.4 — Draft để review (MVP mở rộng O10)
+Ngày: 2026-10-17
+Nguồn: yêu cầu sản phẩm trong trao đổi; quyết định mở rộng MVP 2026-10-17.
+Tên sản phẩm: **Vemoki**. Domain platform: `vemoki.com`.
+Thiết kế kỹ thuật: [Technical Design v0.1](./TECHNICAL-DESIGN.md) — các quyết định đề xuất và test scenarios được ghi riêng, chưa thay thế giả định sản phẩm.
 Phạm vi đợt: [ROADMAP](./ROADMAP.md) D0–D10; quyết định: [DECISION-LOG](./DECISION-LOG.md) O10.
+
+> **Bổ sung định hướng ngày 18/10/2026 (O11):** user yêu cầu mở rộng MVP với trọng tâm UX/UI cho vận hành production. D11 nghiên cứu nghiệp vụ (BA), thiết kế trải nghiệm/giao diện (PD) và roadmap theo ownership; [kế hoạch D11](./plans/D11-UX-PRODUCTION-PLAN.md) là bản đề xuất để review trước feature coding. Phạm vi chức năng D0–D10 bên dưới là baseline; tính năng đề xuất D11+ chưa tự trở thành yêu cầu được duyệt. Các phạm vi hủy và chính sách iOS local build vẫn giữ nguyên.
 
 ## 1. Mục tiêu
 

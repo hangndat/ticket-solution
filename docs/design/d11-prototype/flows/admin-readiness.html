@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Quản trị sự kiện — D11 prototype</title>
+  <link rel="stylesheet" href="../css/d11.css" />
+</head>
+<body>
+  <a class="skip" href="#main">Bỏ qua điều hướng</a>
+  <div class="wrap">
+    <header class="top">
+      <a class="wordmark" href="../index.html">vemoki<span aria-hidden="true">↗</span></a>
+      <nav class="nav" aria-label="Admin">
+        <a href="admin-readiness.html" aria-current="page">Sự kiện</a>
+        <a href="../index.html">Platform</a>
+        <a href="../index.html">Tài khoản</a>
+      </nav>
+    </header>
+
+    <div class="demo-banner" role="status">
+      <strong>demo:admin</strong> —
+      IA theo việc (BA P0-6): Chuẩn bị · Khách & mã · Cổng · Hỗ trợ.
+      Evidence lịch sử D8 admin dài một trang — prototype đề xuất tách job, không claim pixel main hôm nay.
+    </div>
+
+    <main id="main">
+      <div class="event-summary">
+        <p class="eyebrow">Tổ chức · MFest Demo</p>
+        <h1 style="font-size:clamp(1.6rem,3vw,2.2rem);margin:0 0 6px">Đêm Demo — không bán vé</h1>
+        <p class="muted" style="margin:0">Trạng thái: Nháp · 18/10/2026 · Hạn mức: không giới hạn (demo)</p>
+      </div>
+
+      <div class="grid admin-layout">
+        <nav class="job-nav product" aria-label="Việc quản trị">
+          <button type="button" data-job="setup" aria-current="true">Chuẩn bị</button>
+          <button type="button" data-job="guests" aria-current="false">Khách &amp; mã</button>
+          <button type="button" data-job="gate" aria-current="false">Cổng</button>
+          <button type="button" data-job="support" aria-current="false">Hỗ trợ</button>
+        </nav>
+
+        <div>
+          <section class="product job-panel" data-panel="setup">
+            <h2>Chuẩn bị sự kiện</h2>
+            <p class="muted">Một việc / khu vực. UUID nội bộ thu vào «Chi tiết kỹ thuật».</p>
+            <label>Tên sự kiện<input value="Đêm Demo — không bán vé" /></label>
+            <label>Địa điểm<input value="Nhà demo, Q.1" /></label>
+            <details>
+              <summary>Chi tiết kỹ thuật (ID)</summary>
+              <p class="muted">tenant demo:tenant-mfest · event demo:event-night-01</p>
+            </details>
+            <div class="row">
+              <button type="button" class="secondary" id="btn-save">Lưu thông tin</button>
+              <button type="button" id="btn-publish" disabled>Xuất bản</button>
+            </div>
+            <p id="save-note" class="muted" role="status"></p>
+          </section>
+
+          <section class="product job-panel" data-panel="guests" hidden>
+            <h2>Khách &amp; mã</h2>
+            <p class="muted">Import danh sách, duyệt đổi mã, tạo nguồn phát hành.</p>
+            <div class="row">
+              <button type="button" id="add-source">Thêm nguồn mã (demo)</button>
+              <button type="button" class="secondary">Tải mẫu CSV (demo)</button>
+            </div>
+            <p id="sources-copy" class="muted">Chưa có nguồn mã — chưa sẵn sàng xuất bản.</p>
+          </section>
+
+          <section class="product job-panel" data-panel="gate" hidden>
+            <h2>Cổng</h2>
+            <p class="muted">Mở phiên cổng, xem báo cáo vào cổng. Scan chính trên app Nhân viên.</p>
+            <a class="btn secondary" href="staff-scan.html">Xem prototype cổng staff</a>
+          </section>
+
+          <section class="product job-panel" data-panel="support" hidden>
+            <h2>Hỗ trợ</h2>
+            <p class="muted">Tra cứu vé / gửi lại email — kết quả «chưa biết» không coi là đã gửi.</p>
+            <label>Email hoặc mã vé<input placeholder="khach@example.com" /></label>
+            <button type="button" class="secondary">Tra cứu (demo)</button>
+          </section>
+        </div>
+
+        <aside class="product" aria-labelledby="ready-title">
+          <h2 id="ready-title">Sẵn sàng xuất bản</h2>
+          <ul class="check" id="checklist">
+            <li data-key="types" data-ok="true"><span class="mark">✓</span><span>Loại vé</span></li>
+            <li data-key="sources" data-ok="false"><span class="mark">!</span><span>Nguồn mã</span></li>
+            <li data-key="quota" data-ok="true"><span class="mark">✓</span><span>Hạn mức đã rõ (không giới hạn)</span></li>
+            <li data-key="form" data-ok="true"><span class="mark">✓</span><span>Biểu mẫu / điều khoản</span></li>
+            <li data-key="brand" data-ok="true"><span class="mark">✓</span><span>Nhận diện tối thiểu</span></li>
+          </ul>
+          <p id="ready-summary" class="muted" style="margin-top:12px">Thiếu nguồn mã — nút Xuất bản tắt.</p>
+        </aside>
+      </div>
+    </main>
+
+    <aside class="review-dock" aria-label="Khu review PD">
+      <h2>Review · trạng thái workbench</h2>
+      <div class="chips" role="group">
+        <button type="button" data-state="blocked" aria-pressed="true">thiếu nguồn</button>
+        <button type="button" data-state="go" aria-pressed="false">đủ sẵn sàng</button>
+        <button type="button" data-state="unclear" aria-pressed="false">lưu chưa rõ</button>
+        <button type="button" data-state="offline" aria-pressed="false">offline</button>
+      </div>
+    </aside>
+    <footer class="footer">Issue #225 · demo:admin · <a href="../index.html">Hub</a></footer>
+  </div>
+  <script>
+    let sourcesOk = false;
+    const publishBtn = document.getElementById("btn-publish");
+    const summary = document.getElementById("ready-summary");
+    const sourcesCopy = document.getElementById("sources-copy");
+    const saveNote = document.getElementById("save-note");
+
+    function refresh() {
+      const map = { types: true, sources: sourcesOk, quota: true, form: true, brand: true };
+      document.querySelectorAll("#checklist li").forEach((li) => {
+        const ok = map[li.dataset.key];
+        li.dataset.ok = ok ? "true" : "false";
+        li.querySelector(".mark").textContent = ok ? "✓" : "!";
+      });
+      const all = Object.values(map).every(Boolean);
+      publishBtn.disabled = !all;
+      summary.textContent = all ? "Đủ sẵn sàng — có thể xuất bản (demo)." : "Thiếu nguồn mã — nút Xuất bản tắt.";
+      sourcesCopy.textContent = sourcesOk ? "Đã có nguồn: CODE-POOL-1." : "Chưa có nguồn mã — chưa sẵn sàng xuất bản.";
+    }
+
+    document.querySelectorAll(".job-nav button").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".job-nav button").forEach((b) => b.setAttribute("aria-current", b === btn ? "true" : "false"));
+        document.querySelectorAll(".job-panel").forEach((p) => {
+          p.hidden = p.dataset.panel !== btn.dataset.job;
+        });
+      });
+    });
+
+    document.getElementById("add-source").addEventListener("click", () => {
+      sourcesOk = true;
+      saveNote.textContent = "";
+      refresh();
+      document.querySelectorAll(".chips button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.state === "go" ? "true" : "false"));
+    });
+
+    document.querySelectorAll(".chips button").forEach((b) => {
+      b.addEventListener("click", () => {
+        document.querySelectorAll(".chips button").forEach((x) => x.setAttribute("aria-pressed", x === b ? "true" : "false"));
+        if (b.dataset.state === "go") { sourcesOk = true; saveNote.textContent = ""; }
+        if (b.dataset.state === "blocked") { sourcesOk = false; saveNote.textContent = ""; }
+        if (b.dataset.state === "unclear") {
+          saveNote.textContent = "Chưa rõ kết quả lưu — không đánh dấu đã xuất bản.";
+          publishBtn.disabled = true;
+          return;
+        }
+        if (b.dataset.state === "offline") {
+          saveNote.textContent = "Mất mạng — tạm dừng chỉnh sửa.";
+          publishBtn.disabled = true;
+          return;
+        }
+        refresh();
+      });
+    });
+
+    document.getElementById("btn-save").addEventListener("click", () => {
+      saveNote.textContent = "Đã lưu thông tin (demo) — chưa xuất bản.";
+    });
+    publishBtn.addEventListener("click", () => {
+      saveNote.textContent = "Đã xuất bản (demo) — không gọi API.";
+    });
+    refresh();
+  </script>
+</body>
+</html>
