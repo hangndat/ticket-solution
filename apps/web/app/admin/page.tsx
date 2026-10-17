@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import { ensureCsrfCookie } from '../../src/bff/csrf';
 import { isOidcConfigured, resolveWebAuthState } from '../../src/oidc/config';
 import { AdminForm } from './admin-form';
 
@@ -17,8 +16,8 @@ export default async function Admin({ searchParams }: Props) {
   const params = await searchParams;
   const configured = isOidcConfigured();
   const state = resolveWebAuthState({ configured, subject: null });
-  // Double-submit CSRF cookie for admin mutations (create/patch/clone/cancel…).
-  await ensureCsrfCookie();
+  // CSRF cookie is issued by GET /api/bff/me/tenants (Route Handler) when
+  // AdminForm mounts — cookies().set() is illegal in RSC render (Next 15+/16 → 500).
 
   return (
     <main id="main" className="container shell redeem-page">
