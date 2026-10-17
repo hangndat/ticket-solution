@@ -8,8 +8,9 @@ import {
 
 test('wallet copy covers loading empty error without jargon', () => {
   assert.match(walletCopy.loading.title, /vé/i);
-  assert.match(walletCopy.emptyOnline.body, /API/);
-  assert.doesNotMatch(walletCopy.emptyOnline.body, /POC|W0|F-WEB/i);
+  assert.match(walletCopy.emptyOnline.body, /Đổi mã|kéo để làm mới/i);
+  assert.doesNotMatch(walletCopy.emptyOnline.body, /POC|W0|F-WEB|Keycloak|Nest|BFF/i);
+  assert.doesNotMatch(walletCopy.signInLoading.body, /Keycloak/i);
   assert.equal(walletCopy.errorTitle, 'Không tải được ví');
 });
 
@@ -25,5 +26,5 @@ test('events copy separates published empty from demo empty', () => {
     eventsCopy.emptyDemo.title,
   );
   assert.match(eventsCopy.loadingList.body, /Demo/);
-  assert.match(eventsCopy.errorList.title, /Lỗi/);
+  assert.match(eventsCopy.errorList.title, /Không tải|Lỗi/i);
 });
