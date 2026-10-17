@@ -40,3 +40,15 @@ jobs:
       # backend tsc resolves @ticket/contracts from dist — build workspace dep first
       - run: pnpm --filter @ticket/contracts build
       - run: pnpm --filter @ticket/backend test:db
+  # Issue #25 — root drills (throwaway Docker Postgres; not production SLO)
+  d5-hardening-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Observability artifact smoke
+        run: ./scripts/d5-observability-smoke.sh
+      - name: Fixture backup drill
+        run: ./scripts/d5-backup-drill.sh
+      - name: Business + key restore drill
+        run: ./scripts/d5-business-restore-drill.sh
+      # Full PRD 2×20k + 50 scanners needs local Keycloak + long runtime — not CI.
