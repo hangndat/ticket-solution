@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 export const metadata = {
   title: 'Quản trị sự kiện',
   description:
-    'Lưu cấu hình, publish, nhập mã, duyệt hoặc từ chối yêu cầu đổi mã, và xem báo cáo chỉ đọc. Kết quả chưa biết không được coi là đã xong.',
+    'Tạo event trong tenant đã provision, cấu hình/publish/import, duyệt, CS lookup/resend, export CSV và báo cáo chỉ đọc. Kết quả chưa biết không được coi là đã xong.',
 };
 
 type Props = { searchParams: Promise<{ tenantId?: string; eventId?: string }> };
@@ -31,12 +31,13 @@ export default async function Admin({ searchParams }: Props) {
       <p className="eyebrow">D4 / QUẢN TRỊ · API THẬT</p>
       <h1>Cấu hình sự kiện</h1>
       <p className="intro">
-        Lưu phiên bản cấu hình, xem trước payload, publish đúng phiên bản vừa
-        lưu, nhập mã, đọc quota, duyệt hoặc từ chối yêu cầu đổi mã đang chờ,
-        hoặc tải báo cáo chỉ đọc. Timeout, lỗi máy chủ và mất mạng là chưa biết.
-        Không coi là đã lưu, đã publish, đã nhập mã, đã duyệt, hoặc đã từ chối.
-        Payload đã publish không sửa trên form. Mã đổi dạng chữ không hiện lại
-        trên trạng thái.
+        Tenant UUID do Operator cấp — không hardcode demo festival. Tạo event
+        qua API, lưu/publish cấu hình (brand), nhập mã (tự tạo type/source lần
+        đầu), duyệt, CS tra cứu/gửi lại email, export CSV, và báo cáo chỉ đọc.
+        Timeout, lỗi máy chủ và mất mạng là chưa biết. Không coi là đã lưu, đã
+        publish, đã nhập mã, đã duyệt, đã gửi lại, hoặc đã export xong. Payload
+        đã publish không sửa trên form. Mã đổi dạng chữ không hiện lại trên
+        trạng thái.
       </p>
       {!configured ? (
         <aside className="notice auth-unconfigured" role="status">
