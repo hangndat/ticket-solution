@@ -1,0 +1,7 @@
+{
+  "otpBrowserFlowAlias": "vemoki otp browser",
+  "copyFrom": "browser",
+  "bindBrowserOverride": ["ticket-platform-web", "ticket-admin-web"],
+  "doNotBind": ["ticket-web", "ticket-mobile"],
+  "note": "Applied by scripts/platform-keycloak-apply-realm.sh after realm import (Keycloak cannot resolve overrides if flow not yet present in same JSON import)."
+}
