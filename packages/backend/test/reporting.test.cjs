@@ -28,7 +28,8 @@ const {
   reserveCheckin,
   confirmCheckin,
   undoCheckin,
-  recordGateReject,
+  unwrapReserveOutcome,
+  unwrapConfirmOutcome,
   GATE_ERROR_CODES,
 } = require('../dist');
 
@@ -373,7 +374,33 @@ test(
           userId: gateStaff.userId,
         }),
       );
-      const hold = await withTenant(db, tenantId, (tx) =>
+      const hold = unwrapReserveOutcome(
+        await withTenant(db, tenantId, (tx) =>
+          reserveCheckin(tx, {
+            tenantId,
+            eventId,
+            ticketId: kept.ticketId,
+            staffSessionId: session.sessionId,
+            actorUserId: gateStaff.userId,
+          }),
+        ),
+      );
+      const confirmed = unwrapConfirmOutcome(
+        await withTenant(db, tenantId, (tx) =>
+          confirmCheckin(tx, {
+            tenantId,
+            eventId,
+            reservationId: hold.reservationId,
+            token: hold.token,
+            staffSessionId: session.sessionId,
+            actorUserId: gateStaff.userId,
+          }),
+        ),
+      );
+      // O14: online Gate deny must auto-audit so rejectByReason is not undercounted.
+      // After confirm the ticket is USED → reserve denies with TICKET_NOT_ACTIVE.
+      // Outcome (not throw) so withTenant commits gate.reject audit.
+      const onlineDeny = await withTenant(db, tenantId, (tx) =>
         reserveCheckin(tx, {
           tenantId,
           eventId,
@@ -382,26 +409,8 @@ test(
           actorUserId: gateStaff.userId,
         }),
       );
-      const confirmed = await withTenant(db, tenantId, (tx) =>
-        confirmCheckin(tx, {
-          tenantId,
-          eventId,
-          reservationId: hold.reservationId,
-          token: hold.token,
-          staffSessionId: session.sessionId,
-          actorUserId: gateStaff.userId,
-        }),
-      );
-      await withTenant(db, tenantId, (tx) =>
-        recordGateReject(tx, {
-          tenantId,
-          eventId,
-          actorUserId: gateStaff.userId,
-          reason: GATE_ERROR_CODES.ALREADY_CHECKED_IN,
-          resourceType: 'ticket',
-          resourceId: kept.ticketId,
-        }),
-      );
+      assert.equal(onlineDeny.ok, false);
+      assert.equal(onlineDeny.code, GATE_ERROR_CODES.TICKET_NOT_ACTIVE);
       const afterConfirm = await withTenant(db, tenantId, (tx) =>
         readEventReport(tx, {
           tenantId,
@@ -413,7 +422,7 @@ test(
       assert.equal(afterConfirm.ticketsByState.USED, 2);
       assert.equal(afterConfirm.ticketsByState.ACTIVE, 0);
       assert.deepEqual(afterConfirm.rejectByReason, {
-        [GATE_ERROR_CODES.ALREADY_CHECKED_IN]: 1,
+        [GATE_ERROR_CODES.TICKET_NOT_ACTIVE]: 1,
       });
 
       await withTenant(db, tenantId, (tx) =>

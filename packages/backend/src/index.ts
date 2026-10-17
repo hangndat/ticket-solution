@@ -193,9 +193,14 @@ export {
   undoCheckin,
   revokeTicket,
   recordGateReject,
+  unwrapReserveOutcome,
+  unwrapConfirmOutcome,
   type StaffSessionResult,
   type ReserveResult,
   type ConfirmResult,
+  type ReserveOutcome,
+  type ConfirmOutcome,
+  type GateDenyOutcome,
   type UndoResult,
 } from './gate';
 export {
