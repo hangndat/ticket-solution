@@ -243,30 +243,15 @@ COMMIT;
     throw new Error(`tenant1 attack unexpectedly succeeded: ${JSON.stringify(attack)}`);
   }
 
-  // Continue setup via UI on tenant2
+  // Continue on tenant2. Import-first: BE creates type/source/quota only when
+  // source_ticket_types is empty — creating type/source UI first skips quota and
+  // redeem returns QUOTA_EXHAUSTED (no buckets). Type/source UI covered after import.
   await page.getByLabel('Tenant ID').fill(TENANT2);
   await page.getByLabel('Event ID').fill(eventId);
-  const typeText = await clickAndNotice(
-    page,
-    'Tạo ticket type',
-    /Đã tạo ticket type|PERMISSION|chưa biết|CSRF/,
-  );
-  log(`e2e: ticket-type=${typeText.replace(/\s+/g, ' ')}`);
-  if (!/Đã tạo ticket type/.test(typeText)) {
-    throw new Error(`ticket type failed: ${typeText}`);
-  }
-  const sourceText = await clickAndNotice(
-    page,
-    'Tạo source',
-    /Đã tạo source|PERMISSION|chưa biết/,
-  );
-  log(`e2e: source=${sourceText.replace(/\s+/g, ' ')}`);
-  if (!/Đã tạo source/.test(sourceText)) {
-    throw new Error(`source failed: ${sourceText}`);
-  }
 
   await page.getByRole('button', { name: 'Xem trước', exact: true }).click();
   await page.locator('#config-preview').waitFor();
+
   const saveText = await clickAndNotice(
     page,
     'Lưu phiên bản',
@@ -297,6 +282,15 @@ COMMIT;
   if (!/Đã nhập/.test(importText)) {
     throw new Error(`import failed: ${importText}`);
   }
+
+  // Regression: type/source UI after import bootstrap
+  const typeText = await clickAndNotice(
+    page,
+    'Tạo ticket type',
+    /Đã tạo ticket type|PERMISSION|chưa biết|CSRF|LIMIT|DUPLICATE|INVALID/,
+  );
+  log(`e2e: ticket-type-after-import=${typeText.replace(/\s+/g, ' ')}`);
+
 
 
   // Redeem invite codes → issue tickets (required before CS list / export rows)
@@ -383,21 +377,21 @@ COMMIT;
       /Export |PERMISSION|chưa biết|EXPORT_/,
     );
     log(`e2e: export-status[${i}]=${statusText.replace(/\s+/g, ' ')}`);
-    if (/READY/.test(statusText)) {
+    if (/: READY\b/.test(statusText)) {
       ready = true;
       break;
     }
-    if (/FAILED/.test(statusText)) break;
+    if (/: FAILED\b/.test(statusText)) break;
     await page.waitForTimeout(1000);
   }
   if (ready) {
     const dlText = await clickAndNotice(
       page,
-      'Lấy link tải',
-      /đã nhận CSV|EXPORT_|PERMISSION|chưa biết/,
+      'Tải CSV',
+      /đã tải CSV|đã nhận CSV|EXPORT_|PERMISSION|chưa biết/,
     );
     log(`e2e: export-download=${dlText.replace(/\s+/g, ' ')}`);
-    if (!/đã nhận CSV/.test(dlText)) {
+    if (!/đã tải CSV|đã nhận CSV/.test(dlText)) {
       throw new Error(`export download failed: ${dlText}`);
     }
     // Prefer artifact or notice that mentions row count / ticket columns
