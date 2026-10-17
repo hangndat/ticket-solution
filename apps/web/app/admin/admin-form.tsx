@@ -65,16 +65,13 @@ import {
   type EventReportView,
 } from '../../src/admin/report';
 import {
-  editConfigPayload,
-  initialPayloadEditor,
-  lockPublishedPayload,
-  payloadLocked,
-  previewConfigJson,
-  startNewConfigDraft,
-  type PayloadEditor,
-} from '../../src/admin/payload';
+  initialConfigEditor,
+  lockPublishedConfig,
+  type ConfigEditor,
+} from '../../src/admin/config-editor';
 import { fetchJson } from '../../src/redeem/fetch-json';
 import { REQUEST_TIMEOUT_MS } from '../../src/redeem/poll-operation';
+import { ConfigBrandPanel } from './config-brand-panel';
 
 type Props = { initialTenantId?: string; initialEventId?: string };
 
@@ -103,11 +100,11 @@ export function AdminForm({
   const [eventSlug, setEventSlug] = useState('');
   const [eventName, setEventName] = useState('');
   const [eventTimezone, setEventTimezone] = useState('Asia/Ho_Chi_Minh');
-  const [editor, setEditor] = useState<PayloadEditor>(() =>
-    initialPayloadEditor(),
+  const [configEditor, setConfigEditor] = useState<ConfigEditor>(() =>
+    initialConfigEditor(),
   );
-  const [preview, setPreview] = useState<string | null>(null);
   const [expectedVersion, setExpectedVersion] = useState('');
+  const [configNotice, setConfigNotice] = useState<string | null>(null);
   const [codesText, setCodesText] = useState('');
   const [eventQuota, setEventQuota] = useState('');
   const [requestId, setRequestId] = useState('');
@@ -178,7 +175,6 @@ export function AdminForm({
   const [csView, setCsView] = useState<CsView | null>(null);
   const [exportView, setExportView] = useState<ExportView | null>(null);
   const [report, setReport] = useState<EventReportView | null>(null);
-  const locked = payloadLocked(editor);
   const currentEvent: EventDetail | null =
     detailView?.kind === 'detail' ? detailView.event : null;
   const selectedTenant = tenantChoices.find((t) => t.tenantId === tenantId.trim());
@@ -264,7 +260,7 @@ export function AdminForm({
     );
     if (next.kind === 'saved') setExpectedVersion(String(next.version));
     if (next.kind === 'published') {
-      setEditor((prev) => lockPublishedPayload(prev));
+      setConfigEditor((prev) => lockPublishedConfig(prev));
       setExpectedVersion(String(next.version));
     }
     bumpNotice();
@@ -274,49 +270,6 @@ export function AdminForm({
 
   function scope() {
     return { tenantId: tenantId.trim(), eventId: eventId.trim() };
-  }
-
-  function showPreview() {
-    const parsed = previewConfigJson(editor.text);
-    if (!parsed.ok) {
-      setPreview(null);
-      setDecision({
-        kind: 'rejected',
-        code: parsed.code,
-        message: parsed.message,
-      });
-      return;
-    }
-    setPreview(parsed.pretty);
-  }
-
-  async function saveConfig() {
-    const parsed = previewConfigJson(editor.text);
-    if (!parsed.ok) {
-      setDecision({
-        kind: 'rejected',
-        code: parsed.code,
-        message: parsed.message,
-      });
-      return;
-    }
-    await call('save', '/api/bff/admin/config-versions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        ...scope(),
-        payload: JSON.parse(editor.text) as unknown,
-      }),
-    });
-  }
-
-  async function publish() {
-    const version = Number(expectedVersion);
-    await call('publish', '/api/bff/admin/publish', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...scope(), expectedVersion: version }),
-    });
   }
 
   async function importCodes() {
@@ -1593,70 +1546,43 @@ export function AdminForm({
           </p>
         ) : null}
       </section>
-      <label>
-        Payload cấu hình (JSON)
-        <textarea
-          id="admin-payload"
-          value={editor.text}
-          readOnly={locked}
-          aria-readonly={locked}
-          onChange={(e) =>
-            setEditor((prev) => editConfigPayload(prev, e.target.value))
+      <ConfigBrandPanel
+        editor={configEditor}
+        onEditorChange={setConfigEditor}
+        scope={scope()}
+        busy={busy}
+        expectedVersion={expectedVersion}
+        onExpectedVersion={setExpectedVersion}
+        eventRevision={null}
+        onSavedVersion={(version) => {
+          setExpectedVersion(String(version));
+          setDecision({ kind: 'saved', version });
+          bumpNotice();
+        }}
+        onPublished={(version) => {
+          setConfigEditor((prev) => lockPublishedConfig(prev));
+          setExpectedVersion(String(version));
+          setDecision({ kind: 'published', version });
+          bumpNotice();
+        }}
+        onNotice={(message, kind) => {
+          setConfigNotice(message);
+          if (kind === 'error') {
+            setDecision({
+              kind: 'rejected',
+              code: 'CONFIG_EDITOR',
+              message,
+            });
+          } else if (kind === 'unknown') {
+            setDecision({ kind: 'unknown', message });
           }
-          rows={6}
-          spellCheck={false}
-        />
-      </label>
-      <div className="auth-buttons">
-        <button type="button" disabled={busy} onClick={showPreview}>
-          Xem trước
-        </button>
-        <button
-          type="button"
-          disabled={busy || locked}
-          onClick={() => void saveConfig()}
-        >
-          Lưu phiên bản
-        </button>
-      </div>
-      {preview ? (
-        <pre id="config-preview" className="me-result" tabIndex={0}>
-          {preview}
-        </pre>
-      ) : null}
-      <label>
-        Phiên bản cần publish
-        <input
-          value={expectedVersion}
-          onChange={(e) => setExpectedVersion(e.target.value)}
-          inputMode="numeric"
-          readOnly={locked}
-        />
-      </label>
-      <div className="auth-buttons">
-        <button
-          type="button"
-          disabled={busy || locked}
-          onClick={() => void publish()}
-        >
-          Publish
-        </button>
-        {locked ? (
-          <button
-            type="button"
-            onClick={() => setEditor((prev) => startNewConfigDraft(prev))}
-          >
-            Soạn bản mới
-          </button>
-        ) : null}
-      </div>
-      {editor.publishedSnapshot ? (
-        <div>
-          <h3>Payload đã publish (chỉ đọc)</h3>
-          <pre id="admin-published" className="me-result" tabIndex={0}>
-            {editor.publishedSnapshot}
-          </pre>
-        </div>
+          bumpNotice();
+        }}
+      />
+      {configNotice ? (
+        <p role="status" data-testid="config-panel-notice">
+          {configNotice}
+        </p>
       ) : null}
       <label>
         Mã mời, mỗi dòng một mã
