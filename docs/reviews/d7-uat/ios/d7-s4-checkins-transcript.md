@@ -2,7 +2,7 @@
 
 **Ngày:** 2026-10-17  
 **Story/Task:** #115 / #116 · PR #190  
-**client tip:** `3fb6dc5f0a68d38444d8af761170d4bd1ba4cfef`  
+**client tip:** `dc65c4023a03a843f644c0cf83049c9c1ecb3584`  
 **evidence commit (F1/F2 artifacts):** `763e14951c7a74f081ccb50e08ac0bc8201ac244`  
 **behavior SHA (mobile):** `c8606fe59a8e5771aac79c420736960781d3ee3a`  
 **server/runtime SHA (`origin/main` API with offline-sync):** `f7c88ffd6f936b6da56aa8cea8451f3ae889c278`  
