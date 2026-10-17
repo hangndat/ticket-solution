@@ -15,7 +15,9 @@ export type GatePhase =
   | 'confirming'
   | 'admitted'
   | 'denied'
-  | 'unknown';
+  | 'unknown'
+  /** Local offline queue — never an admission until server apply. */
+  | 'queued';
 
 export type GateOp = {
   id: string;
@@ -28,6 +30,8 @@ export type GateOp = {
   phase: GatePhase;
   checkinId?: string;
   message: string;
+  /** Link to SecureStore offline queue row when phase === 'queued'. */
+  clientEventId?: string;
 };
 
 export function parseScan(
@@ -76,6 +80,8 @@ export function classifyScan(
   const mine = ops.filter((op) => op.ticketId === ticketId);
   const admitted = mine.find((op) => op.phase === 'admitted' && op.checkinId);
   if (admitted) return { action: 'show', op: admitted };
+  const queued = mine.find((op) => op.phase === 'queued');
+  if (queued) return { action: 'wait', op: queued };
   const inflight = mine.find(
     (op) =>
       op.phase === 'holding' ||
@@ -109,7 +115,7 @@ export const SUPERVISOR_NOT_ADMISSION =
 
 export type SupervisorClass = 'admission' | 'not-admission';
 
-/** Only a recorded check-in is an admission. Unknown is never an admission. */
+/** Only a recorded check-in is an admission. Unknown/queued are never admissions. */
 export function classifySupervisorOp(
   op: Pick<GateOp, 'phase' | 'checkinId'>,
 ): SupervisorClass {
@@ -208,6 +214,15 @@ async function readJson(
   }
 }
 
+export type RunScanResult = {
+  ops: GateOp[];
+  staffSessionId: string | null;
+  current: GateOp | null;
+  /** True when the first network hop failed — caller may enqueue offline. */
+  networkUnavailable?: boolean;
+  parsed?: ParsedScan;
+};
+
 export async function runScan(input: {
   raw: string;
   bearer: string;
@@ -217,7 +232,9 @@ export async function runScan(input: {
   fallback?: { tenantId?: string | null; eventId?: string | null };
   fetchImpl?: typeof fetch;
   createId?: () => string;
-}): Promise<{ ops: GateOp[]; staffSessionId: string | null; current: GateOp | null }> {
+  /** When true and network fails with an existing session, skip reserve/confirm. */
+  preferOfflineQueue?: boolean;
+}): Promise<RunScanResult> {
   const fetchImpl = input.fetchImpl ?? fetch;
   const createId = input.createId ?? (() => crypto.randomUUID());
   const parsed = parseScan(input.raw, input.fallback);
@@ -253,13 +270,30 @@ export async function runScan(input: {
     );
     const body = asRecord(opened.json);
     if (opened.networkError || opened.status !== 200 || typeof body?.sessionId !== 'string') {
+      if (opened.networkError) {
+        const current: GateOp = {
+          id: createId(),
+          ...parsed,
+          staffSessionId: '',
+          phase: 'denied',
+          message:
+            'Mất mạng và chưa có phiên nhân viên. Cần online một lần để mở phiên trước khi xếp hàng offline.',
+        };
+        return {
+          ops: [current, ...input.ops],
+          staffSessionId: null,
+          current,
+          networkUnavailable: true,
+          parsed,
+        };
+      }
       const current: GateOp = {
         id: createId(),
         ...parsed,
         staffSessionId: '',
-        phase: opened.networkError || opened.status >= 500 ? 'unknown' : 'denied',
+        phase: opened.status >= 500 ? 'unknown' : 'denied',
         message:
-          opened.networkError || opened.status >= 500
+          opened.status >= 500
             ? GATE_UNKNOWN_MESSAGE
             : typeof body?.message === 'string'
               ? body.message
@@ -272,6 +306,16 @@ export async function runScan(input: {
       };
     }
     staffSessionId = body.sessionId;
+  }
+
+  if (input.preferOfflineQueue) {
+    return {
+      ops: [...input.ops],
+      staffSessionId,
+      current: null,
+      networkUnavailable: true,
+      parsed,
+    };
   }
 
   const reserved = await readJson(
@@ -291,6 +335,15 @@ export async function runScan(input: {
     typeof hold?.reservationId !== 'string' ||
     typeof hold.token !== 'string'
   ) {
+    if (reserved.networkError && staffSessionId) {
+      return {
+        ops: [...input.ops],
+        staffSessionId,
+        current: null,
+        networkUnavailable: true,
+        parsed,
+      };
+    }
     const failed = applyConfirm(
       {
         id: createId(),
@@ -327,8 +380,43 @@ export async function runScan(input: {
       token: hold.token,
     },
   );
+  if (confirmed.networkError && staffSessionId) {
+    // Hold was obtained but confirm never reached the server — queue offline
+    // so the scan is not lost; do not treat as admission.
+    return {
+      ops: [...input.ops],
+      staffSessionId,
+      current: null,
+      networkUnavailable: true,
+      parsed,
+    };
+  }
   const current = applyConfirm(confirming, confirmed);
   return { ops: [current, ...input.ops], staffSessionId, current };
+}
+
+/** Build a non-admission GateOp after a successful local enqueue. */
+export function gateOpFromQueued(input: {
+  id: string;
+  ticketId: string;
+  tenantId: string;
+  eventId: string;
+  staffSessionId: string;
+  clientEventId: string;
+  message?: string;
+}): GateOp {
+  return {
+    id: input.id,
+    ticketId: input.ticketId,
+    tenantId: input.tenantId,
+    eventId: input.eventId,
+    staffSessionId: input.staffSessionId,
+    phase: 'queued',
+    clientEventId: input.clientEventId,
+    message:
+      input.message ??
+      'Đã xếp hàng offline. Chưa cho vào — chờ đồng bộ khi có mạng.',
+  };
 }
 
 export async function reconcileOp(input: {
