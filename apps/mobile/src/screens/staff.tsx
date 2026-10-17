@@ -203,7 +203,10 @@ export function StaffScreen() {
 
       await persist(result.ops, result.current);
       if (!result.networkUnavailable) {
-        void offlineScanQueue.replay({ bearer, apiBase });
+        void offlineScanQueue.replay({
+          bearer: auth.bearer,
+          apiBase: auth.apiBase,
+        });
       }
     } finally {
       lock.current = false;
