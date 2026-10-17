@@ -1,11 +1,11 @@
 ---
-description: Orca coordinator keeps idle workers busy — with review-queue backpressure
+description: Orca coordinator/epic-orchestrator keeps idle workers busy — review-queue backpressure; Cursor only
 alwaysApply: true
 ---
 
 # Orca — never leave an unblocked worker idle
 
-As coordinator (or any agent supervising an Orca Run): **if a worker capacity is free and work exists that is not blocked by other in-flight Tasks, dispatch it immediately.** Do not wait for the whole wave to finish, and do not wait for the user to assign the next Issue.
+As coordinator, **epic orchestrator** (`orca-epic-orchestrator.mdc`), or any agent supervising an Orca Run: **if a worker capacity is free and work exists that is not blocked by other in-flight Tasks, dispatch it immediately.** Do not wait for the whole wave to finish, and do not wait for the user to assign the next Issue.
 
 ## Idle / free means
 
@@ -14,11 +14,12 @@ As coordinator (or any agent supervising an Orca Run): **if a worker capacity is
 
 ## Always do
 
-1. Maintain a ready queue from GitHub Project #3: prefer Status `Sẵn sàng`, then unblocked items in the active đợt (D1…); respect ownership (BE / web / iOS / coordinator).
+1. Maintain a ready queue from GitHub Project #3: prefer Status `Sẵn sàng`, then unblocked items in the active đợt (D1…); respect ownership (BE / web / iOS / coordinator) and hierarchy Epic → Story → Task.
 2. On every checkpoint (`worker_done`, escalation resolved, dep unblocked, `check` batch processed): **fill every free, unblocked slot** — nhưng **ưu tiên loại việc** theo backpressure bên dưới.
 3. Pull the next ready Issue for that scope; set Project Status → `Đang làm` when dispatching (see `github-project-tracking.mdc`).
 4. Prefer reusing a settled worker terminal when Orca allows; otherwise start a new worker for that slice.
 5. Parallel-first still applies khi dưới ngưỡng WIP: fill multiple free slices in one wave before `check --wait`.
+6. **Coding / plan / DoD / security workers: `--agent cursor` only** (temporary — see `orca-agent-routing.mdc`).
 
 ## Backpressure — ưu tiên khi hàng đợi duyệt đầy
 
@@ -41,6 +42,7 @@ Không được để reviewer/fix idle trong khi vẫn spawn thêm feature cùn
 ❌ Ask the user “làm Issue nào tiếp?” when Sẵn sàng / unblocked backlog exists
 ❌ Dispatch work whose deps are still running (true block → leave idle or mark Bị chặn)
 ❌ Unlimited feature dispatch while ≥ ngưỡng Chờ duyệt / PR chờ DoD (xem github-project-tracking.mdc)
+❌ Spawn --agent codex (temporarily disabled — Cursor only)
 
 ✅ After iOS worker_done, immediately dispatch next Sẵn sàng iOS — hoặc DoD review nếu queue ưu tiên
 ✅ While BE coding runs, keep web/iOS busy on independent ready Issues (nếu dưới WIP cap)

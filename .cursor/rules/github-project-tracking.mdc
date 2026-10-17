@@ -1,5 +1,5 @@
 ---
-description: Sync GitHub Project #3 task status without waiting for user; Cursor agent as reviewer; exact-SHA evidence
+description: Sync GitHub Project #3 Epic→Story→Task status; Cursor reviewer; milestone DoD gates + exact-SHA
 alwaysApply: true
 ---
 
@@ -10,17 +10,27 @@ alwaysApply: true
 **Orca ≠ board:** `worker_done` / Dispatch settled does **not** mean Project **Hoàn thành**.  
 **Nguồn trạng thái động:** Project #3 là authority cho Status hiện tại; roadmap/docs chỉ ghi scope, cổng và evidence lịch sử.
 
+## Hierarchy — Epic → Story → Task
+
+| Level | Meaning | Who owns dispatch |
+| ----- | ------- | ----------------- |
+| **Epic** | Parent Issue đợt/module | One Cursor **epic orchestrator** (`orca-epic-orchestrator.mdc`) |
+| **Story** | Capability / user-facing slice under Epic | Orchestrator decomposes; may track as Project item |
+| **Task** | Ownership-scoped work unit (BE / web / iOS / coordinator) | Coding/review workers; Status updated **per Task** |
+
+Cập nhật Project #3 **mỗi Task** (không chỉ lúc đóng Epic). Comments board: Tiếng Việt.
+
 ## Status values (Status field)
 
 `Chưa lên lịch` · `Sẵn sàng` · `Đang làm` · `Chờ duyệt` · `Bị chặn` · `Hoàn thành`
 
 | Event | Set Status to | Who |
 | ----- | ------------- | --- |
-| Coordinator dispatches / worker starts coding | `Đang làm` | Coordinator or coding worker |
+| Coordinator / epic orchestrator dispatches / worker starts coding | `Đang làm` | Orchestrator, coordinator, or coding worker |
 | Blocked on real dependency / external wait | `Bị chặn` (+ comment why) | Whoever discovers it |
-| Unblocked and ready to resume | `Sẵn sàng` or `Đang làm` | Coordinator |
+| Unblocked and ready to resume | `Sẵn sàng` or `Đang làm` | Coordinator / epic orchestrator |
 | Impl done + evidence posted; awaiting review | `Chờ duyệt` | Coding worker before/at `worker_done` |
-| DoD met (below) | `Hoàn thành` + close Issue if appropriate | Coordinator after reviewer **pass** |
+| DoD met (below) | `Hoàn thành` + close Issue if appropriate | Coordinator / epic orchestrator after reviewer **pass** |
 
 ## Do not wait for the user
 
@@ -30,25 +40,39 @@ alwaysApply: true
 
 ## Definition of Done → `Hoàn thành`
 
+### Per Task
+
 All of:
 
 1. Review **pass** (see Reviewer + Evidence below) — security-sensitive: reviewer ≠ implementer agent/session.
 2. Merged to integration branch (`main`) when the task requires integration (via PR — see `git-workflow.mdc`).
 3. CI green on the integrated commit (incl. database-isolation when relevant).
 4. Acceptance evidence matching the Issue criteria (commands/logs/tests — not only `worker_done`).
+5. Artifact under `docs/reviews/*` (or Issue/PR comment equivalent) citing **exact SHA** + verdict.
+
+### Milestone / Epic DoD (bắt buộc khi đóng milestone hoặc Epic)
+
+Ngoài per-Task DoD, milestone/Epic **Hoàn thành** cần đủ evidence:
+
+| Gate | Yêu cầu |
+| ---- | ------- |
+| (a) Headless UAT | Evidence UAT headless (web và/hoặc iOS theo scope) — xem `uat-headless.mdc`; artifact paths/commands trong comment hoặc `docs/reviews/*` |
+| (b) Local iOS build | Evidence local Expo prebuild + Xcode/xcodebuild (hoặc fastlane) khi milestone chạm `apps/mobile` — **không** EAS Cloud Build |
+| (c) Deploy prod | Evidence deploy prod **chỉ khi** task/Epic **authorize** explicitly — không deploy mặc định |
+| (d) Review artifact | `docs/reviews/*` + **exact SHA** cho các Task then-chốt (hoặc index review liên kết SHA) |
 
 Phân biệt (không gộp): **code complete** (impl + PR) ≠ **acceptance complete** (DoD pass + evidence) ≠ **pilot ready** (device/UAT/ops gates riêng).
 
-## Reviewer (spawn Cursor — no user gate)
+## Reviewer (spawn Codex — no user gate)
 
 When a coding Task moves to `Chờ duyệt` (or DoD review is required):
 
-1. Spawn **one** Orca worker: `--agent cursor`, scope = review only (no drive-by refactors).
+1. Spawn **one** Orca worker: `--agent codex` (Cursor fallback on quota), scope = review only (no drive-by refactors). Temporary policy: Cursor only for all agents — see `orca-agent-routing.mdc`.
 2. Spec must name the Issue #, diff/PR/paths, **exact commit SHA(s)** under review, and DoD checklist; outcome `succeeded` only on pass.
-3. On pass → coordinator may set `Hoàn thành` once merge+CI+evidence are done.
+3. On pass → coordinator / epic orchestrator may set `Hoàn thành` once merge+CI+evidence (và milestone gates nếu áp dụng) are done.
 4. On fail → Status stays `Chờ duyệt` or back to `Đang làm`; comment findings; re-dispatch coding worker.
 
-Design/architecture **planning** still follows `orca-agent-routing.mdc` (Codex, Cursor fallback). **Acceptance / DoD review of implementation** → always Cursor reviewer agent. Security-sensitive slices keep an independent security gate (reviewer ≠ implementer); DoD Cursor review does not replace it.
+**Acceptance / DoD review** và **security-sensitive** slices: luôn Cursor reviewer ≠ implementer; DoD không thay security gate độc lập khi slice nhạy cảm.
 
 ### Evidence bắt buộc (exact SHA)
 
@@ -56,18 +80,19 @@ Comment / artifact nghiệm thu khi `Chờ duyệt` hoặc sau DoD **phải** gh
 
 | Trường | Yêu cầu |
 | ------ | ------- |
-| Reviewer / session | Agent Cursor DoD (hoặc security) **khác** session implementer; ghi nhận cách spawn (Orca worker / worktree) |
-| Scope | Issue #, PR # (nếu có), đường dẫn / ownership slice |
+| Reviewer / session | Agent Codex DoD (Cursor fallback; hoặc security) **khác** session implementer; ghi nhận cách spawn (Orca worker / worktree) |
+| Scope | Issue #, PR # (nếu có), đường dẫn / ownership slice; Epic/Story parent nếu có |
 | Commit SHA | **Exact SHA** (full 40 hoặc rút gọn unambiguous từ `git rev-parse`) của commit đang duyệt — không “HEAD lúc nào đó”, không chỉ tên branch |
 | Checks | Lệnh/test/CI đã chạy trên SHA đó (hoặc ghi rõ “docs-only / không chạy runtime”) |
 | Findings / limitations | PASS / FAIL / PASS with known gap; liệt kê gap có chủ đích |
 | Revalidation | Nếu có commit hành vi mới **sau** review trước → bắt buộc review lại trên SHA mới; không tái dùng verdict cũ |
+| Artifact path | Ưu tiên `docs/reviews/<slug>.md` (hoặc tương đương) + link Issue/PR |
 
-**Thiếu GitHub PR review / approval UI không chứng minh thiếu Orca/Cursor DoD review.** Ngược lại: có approve GitHub mà không có evidence exact-SHA + reviewer độc lập cũng **không** đủ DoD. Ưu tiên artifact trong Issue comment, `docs/reviews/*`, hoặc comment PR ghi SHA + verdict.
+**Thiếu GitHub PR review / approval UI không chứng minh thiếu Orca Codex/Cursor DoD review.** Ngược lại: có approve GitHub mà không có evidence exact-SHA + reviewer độc lập cũng **không** đủ DoD.
 
 ## WIP / hàng đợi duyệt (backpressure nhẹ)
 
-Song song với parallel-first (`orca-parallel-workers.mdc`), coordinator **không** dispatch feature mới không giới hạn khi hàng đợi duyệt đầy.
+Song song với parallel-first (`orca-parallel-workers.mdc`), coordinator / epic orchestrator **không** dispatch feature mới không giới hạn khi hàng đợi duyệt đầy.
 
 **Tín hiệu hàng đợi đầy (mềm — chọn cái chặt hơn đang đúng):**
 

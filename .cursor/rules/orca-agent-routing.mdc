@@ -1,5 +1,5 @@
 ---
-description: Orca workers — Cursor for code + DoD review; Codex for plan/design; exact-SHA evidence
+description: Orca workers — Cursor for code; Codex for plan + DoD review; exact-SHA evidence; then coordinator duyệt
 alwaysApply: true
 ---
 
@@ -10,54 +10,53 @@ When spawning Orca workers (`worker-start --agent …`), pick the agent by **tas
 | Task kind | `--agent` | Notes |
 | --------- | --------- | ----- |
 | Implementation / coding / fix / migrate / tests that write code | `cursor` | Default for all ownership slices (BE / web / iOS / coordinator code) |
-| Plan, design, spike write-up, architecture choice, design critique | `codex` | Prefer Codex; do not use Codex as the primary coding worker |
+| Plan, design, spike write-up, architecture choice, design critique | `codex` | Prefer Codex; Cursor fallback on quota/launch failure |
 | Plan/design when Codex unavailable | `cursor` | Fallback only |
-| DoD / acceptance review of implementation (Issue → Chờ duyệt) | `cursor` | Always spawn one Cursor reviewer ≠ implementer; no user approval gate — see `github-project-tracking.mdc` |
-| Security-sensitive review (RLS/authz/races) | `cursor` | Independent of implementer; may be separate from DoD; both require exact-SHA evidence |
+| DoD / acceptance review of implementation (Issue → `Chờ duyệt`) | `codex` | Spawn one Codex reviewer ≠ implementer; **no user approval gate** |
+| Security-sensitive review (RLS/authz/races) | `codex` | Independent of implementer; may be separate from DoD; exact-SHA evidence |
+| Epic orchestrator (parent Issue đợt/module) | `cursor` | One orchestrator per Epic — see `orca-epic-orchestrator.mdc` |
+
+## Sau DoD PASS — coordinator phải duyệt (không chờ user)
+
+Khi reviewer **PASS** / **PASS with known gap** + CI xanh trên exact SHA:
+
+1. Merge PR vào `main` (coordinator).
+2. Cập nhật Project #3 Status → **Hoàn thành** (+ comment evidence SHA).
+3. Đóng Issue nếu đó là đơn vị DoD.
+4. **Không** để item treo `Chờ duyệt` chờ user bấm duyệt.
+
+FAIL → giữ `Chờ duyệt` hoặc trả `Đang làm`; comment findings; re-dispatch coding worker.
 
 ## DoD / security review — bắt buộc trong spec
 
-Spec reviewer phải gồm:
-
 1. Issue # / PR # / paths  
-2. **Exact commit SHA(s)** đang duyệt (`git rev-parse`)  
+2. **Exact commit SHA(s)** đang duyệt  
 3. Checklist DoD hoặc security  
-4. Yêu cầu báo cáo: reviewer/session id hoặc worktree, checks đã chạy, findings/limitations, verdict PASS|FAIL|PASS with known gap  
-5. Nếu SHA đổi hành vi sau review trước → revalidation; cấm tái dùng verdict  
+4. Báo cáo: reviewer/session, checks, findings/limitations, verdict PASS|FAIL|PASS with known gap  
+5. SHA hành vi mới sau review → revalidation; cấm tái dùng verdict  
 
-**Thiếu GitHub PR review UI ≠ thiếu Orca review.** Reviewer ghi artifact (Issue/PR comment hoặc `docs/reviews/*`) với SHA; coordinator không được đánh FAIL chỉ vì GitHub “Reviewers: none” khi artifact Orca Cursor DoD hợp lệ đã có.
+**Thiếu GitHub PR review UI ≠ thiếu Orca DoD.** Artifact Issue/PR/`docs/reviews/*` + exact SHA là đủ để coordinator duyệt.
 
 ## Fallback (Codex quota / launch failure)
 
 If `worker-start --agent codex` fails (quota, auth, launch error) or the worker reports quota exhaustion:
 
 1. Retry the **same Task** with `--agent cursor` (same `--spec` / `--task`, same scope).
-2. Note in the coordinator report: Codex unavailable → Cursor fallback for plan/review.
+2. Note in the coordinator report: Codex unavailable → Cursor fallback for plan/DoD.
 3. Do **not** switch coding workers from Cursor to Codex to “save” Cursor quota.
 
 ## Examples
 
 ```text
-✅ Coding (parallel wave):
-ORCA orchestration worker-start --spec "<BE impl>" --worktree current --agent cursor --json
-ORCA orchestration worker-start --spec "<web impl>" --worktree current --agent cursor --json
-
-✅ Plan (Codex) then DoD review (Cursor) with exact SHA:
-ORCA orchestration worker-start --spec "<plan D1 membership>" --worktree current --agent codex --json
-ORCA orchestration worker-start --spec "<DoD review Issue #N PR #M SHA abc123…; paths; checklist>" --worktree current --agent cursor --json
-
-✅ Codex quota exhausted on plan → retry plan with --agent cursor
-
-✅ Queue full → prioritize Cursor DoD/security workers over new feature coding (see idle-fill + parallel rules)
-
+✅ Coding: --agent cursor
+✅ DoD on Chờ duyệt: --agent codex → PASS → coordinator merge + Hoàn thành
+✅ Codex quota → retry DoD with --agent cursor
+❌ Leave Chờ duyệt after PASS waiting for user
 ❌ Coding worker with --agent codex
-❌ Skip Cursor DoD reviewer and mark Project Hoàn thành
-❌ DoD pass without naming exact SHA / without independent session
-❌ Plan/DoD review with --agent claude (or other) unless the user names that agent
-❌ Treat “no GitHub approve” as proof that Orca DoD never ran
+❌ DoD pass without exact SHA / without independent session
 ```
 
 ## Overrides
 
 - User explicitly names an agent/model → honor that for that Task.
-- Still respect ownership scopes, parallel-first coding, and WIP backpressure (see `orca-parallel-workers.mdc`, `orca-idle-worker-fill.mdc`).
+- Still respect ownership scopes, parallel-first coding, and WIP backpressure.
