@@ -1,24 +1,13 @@
-# ADR-15 admission / waiting room sketch (Issue #25).
-# NOT wired into local compose or production by this PR.
-# Gate traffic must bypass this layer (direct staff/API path).
+# ADR-15 Caddy sketch (Issue #25).
+# Measurable local stack uses nginx compose (compose.admission.yaml) because
+# stock Caddy needs xcaddy + rate_limit plugin for equivalent limits.
+# Gate must bypass waiting room. Replace placeholders before any deploy.
 #
-# Goals when product enables large-sale admission:
-# - signed admission token (event/user/session binding + TTL)
-# - rate limit + global in-flight cap at edge
-# - fail closed / conservative rate limit if layer unhealthy
-# - never treat admission token as authz or quota decision
-#
-# Example sketch only — replace placeholders before any deploy.
+# When product enables xcaddy rate_limit, prefer Caddyfile (sibling) over this sketch.
 
 # {$PUBLIC_HOST:localhost} {
 #   @sale path /events/* /api/public/*
-#   rate_limit @sale {
-#     zone sale_burst
-#     key {remote_host}
-#     events 20
-#     window 1s
-#   }
-#   # waiting-room plugin / custom handler would issue short-lived signed tokens here
+#   # rate_limit requires caddy-ratelimit / xcaddy build — not stock image
 #   reverse_proxy 127.0.0.1:3000
 # }
 #
@@ -28,7 +17,6 @@
 #     reverse_proxy 127.0.0.1:3001
 #   }
 #   handle {
-#     # Non-gate public API may require admission cookie/token when sale mode on
 #     reverse_proxy 127.0.0.1:3001
 #   }
 # }

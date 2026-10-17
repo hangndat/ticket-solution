@@ -1,21 +1,16 @@
 # Local observability scrape config (Issue #25).
-# Scrapes process health until BE exposes Prometheus /metrics (coord-approved gap).
+# App Prometheus /metrics text is a deferred BE follow-up — do NOT scrape JSON
+# /v1/health as metrics_path (not Prometheus exposition).
+#
+# When BE lands /metrics, enable job ticket-api-metrics with bearer_token_file
+# (see secrets/metrics_bearer.example). Never log the token.
+
 global:
   scrape_interval: 15s
   evaluation_interval: 15s
 
 scrape_configs:
-  - job_name: ticket-api-health
-    metrics_path: /v1/health
-    scheme: http
-    static_configs:
-      - targets: ['host.docker.internal:3001']
-        labels:
-          service: api
-          probe: liveness
-    # /v1/health is JSON liveness, not Prometheus text — blackbox-style only.
-    # Prefer BE /metrics when available; see docs/reviews/D5-ISSUE-25-EVIDENCE.md
-
+  # Infra exporters — usable Prometheus text
   - job_name: postgres-exporter
     static_configs:
       - targets: ['postgres-exporter:9187']
@@ -27,3 +22,35 @@ scrape_configs:
       - targets: ['redis-exporter:9121']
         labels:
           service: redis
+
+  # BE /metrics (no /v1 prefix) — Authorization: Bearer from file.
+  # Contract: METRICS_TOKEN / credentials_file; never log the token.
+  # Enable when BE worker lands the endpoint; path is /metrics not /v1/metrics.
+  - job_name: ticket-api-metrics
+    metrics_path: /metrics
+    scheme: http
+    authorization:
+      type: Bearer
+      # Local default: example token file. Prod: copy to metrics_bearer (gitignored).
+      credentials_file: /etc/prometheus/secrets/metrics_bearer.example
+    static_configs:
+      - targets: ['host.docker.internal:3001']
+        labels:
+          service: api
+    # Scrape fails closed until secret file + BE endpoint exist — expected in CI smoke.
+
+  # Optional blackbox HTTP probe for liveness (JSON health) — not metric series.
+  # Requires blackbox_exporter in compose when enabled.
+  # - job_name: ticket-api-blackbox
+  #   metrics_path: /probe
+  #   params:
+  #     module: [http_2xx]
+  #   static_configs:
+  #     - targets: ['http://host.docker.internal:3001/v1/health']
+  #   relabel_configs:
+  #     - source_labels: [__address__]
+  #       target_label: __param_target
+  #     - source_labels: [__param_target]
+  #       target_label: instance
+  #     - target_label: __address__
+  #       replacement: blackbox-exporter:9115

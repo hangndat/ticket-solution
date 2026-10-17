@@ -1,0 +1,15 @@
+.git
+**/.git
+**/node_modules
+**/.next
+**/dist
+**/.turbo
+**/.uat-artifacts
+docs
+brand
+apps/mobile/*
+!apps/mobile/package.json
+*.md
+.env
+.env.*
+!.env.example

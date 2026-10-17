@@ -1,6 +1,7 @@
 /**
  * k6: N virtual scanners — each VU uses one staff session and reserve→confirm.
- * Env from harness: BASE_URL, STAFF_TOKEN, TENANT_ID, EVENT_ID, SESSION_IDS, TICKET_IDS, VUS
+ * Env: BASE_URL, STAFF_TOKEN, TENANT_ID, EVENT_ID, SESSION_IDS, TICKET_IDS, VUS,
+ *      ITERATIONS (default 2), MAX_ERROR_RATE (default 0.05)
  */
 import http from 'k6/http';
 import { check, sleep } from 'k6';
@@ -18,19 +19,22 @@ const EVENT = __ENV.EVENT_ID;
 const SESSIONS = (__ENV.SESSION_IDS || '').split(',').filter(Boolean);
 const TICKETS = (__ENV.TICKET_IDS || '').split(',').filter(Boolean);
 const VUS = Number(__ENV.VUS || SESSIONS.length || 1);
+const ITERATIONS = Number(__ENV.ITERATIONS || 2);
+const MAX_ERR = __ENV.MAX_ERROR_RATE || '0.05';
 
 export const options = {
   scenarios: {
     scanners: {
       executor: 'per-vu-iterations',
       vus: VUS,
-      iterations: 2,
+      iterations: ITERATIONS,
       maxDuration: '5m',
     },
   },
   thresholds: {
-    gate_errors: ['rate<0.5'],
-    http_req_failed: ['rate<0.5'],
+    gate_errors: [`rate<${MAX_ERR}`],
+    http_req_failed: [`rate<${MAX_ERR}`],
+    gate_confirm_ms: ['p(95)<1000'],
   },
 };
 
@@ -44,7 +48,7 @@ function headers() {
 export default function () {
   const vu = __VU - 1;
   const sessionId = SESSIONS[vu % SESSIONS.length];
-  const ticketId = TICKETS[(vu + (__ITER * VUS)) % TICKETS.length];
+  const ticketId = TICKETS[(vu + __ITER * VUS) % TICKETS.length];
 
   const reserveRes = http.post(
     `${BASE}/v1/gate/events/${EVENT}/reservations`,
@@ -57,12 +61,9 @@ export default function () {
   );
 
   const reserved = check(reserveRes, {
-    'reserve 2xx or conflict': (r) =>
-      (r.status >= 200 && r.status < 300) ||
-      r.status === 409 ||
-      r.status === 422,
+    'reserve 2xx': (r) => r.status >= 200 && r.status < 300,
   });
-  if (!reserved || reserveRes.status >= 300) {
+  if (!reserved) {
     confirmFail.add(1);
     errorRate.add(1);
     sleep(0.05);
@@ -99,13 +100,9 @@ export default function () {
   confirmTrend.add(Date.now() - t0);
 
   const ok = check(confirmRes, {
-    'confirm 2xx or already': (r) =>
-      (r.status >= 200 && r.status < 300) || r.status === 409,
+    'confirm 2xx': (r) => r.status >= 200 && r.status < 300,
   });
-  if (ok && confirmRes.status < 300) {
-    confirmOk.add(1);
-    errorRate.add(0);
-  } else if (ok) {
+  if (ok) {
     confirmOk.add(1);
     errorRate.add(0);
   } else {

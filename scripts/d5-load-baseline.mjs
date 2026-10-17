@@ -2,6 +2,11 @@
 /**
  * D5 Issue #25 load harness — throwaway Postgres + Nest API + Keycloak auth + k6.
  * Invoked by scripts/d5-load-baseline.sh (do not edit apps/*).
+ *
+ * S3 (TD §14.1): sustained ISSUE_RATE issue/s + CONFIRM_RATE confirm/s concurrent
+ * for SUSTAIN_SEC (≥60s default). Dataset: EVENTS × TICKETS_PER_EVENT volume
+ * (SQL-seeded, honestly labeled) + authenticated HTTP issue path for rate proof.
+ * Scanners: SCANNERS per event × EVENTS.
  */
 import { createHmac, randomBytes, randomUUID } from 'node:crypto';
 import { execFileSync, spawn } from 'node:child_process';
@@ -10,6 +15,10 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { setTimeout as sleep } from 'node:timers/promises';
+import {
+  openCredentialToken,
+  sealCredentialToken,
+} from './lib/credential-crypto.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
@@ -20,6 +29,14 @@ const SCANNERS = Number(process.env.D5_LOAD_SCANNERS || 50);
 const EVENTS = Number(process.env.D5_LOAD_EVENTS || 2);
 const API_PORT = Number(process.env.D5_LOAD_API_PORT || 13101);
 const PG_PORT = Number(process.env.D5_LOAD_PG_PORT || 55452);
+const ISSUE_RATE = Number(process.env.D5_LOAD_ISSUE_RATE || 50);
+const CONFIRM_RATE = Number(process.env.D5_LOAD_CONFIRM_RATE || 20);
+const SUSTAIN_SEC = Number(process.env.D5_LOAD_SUSTAIN_SEC || 60);
+/** Backend attendee max_tickets default is 5 — reuse subjects up to that. */
+const TICKETS_PER_USER = Number(process.env.D5_LOAD_TICKETS_PER_USER || 5);
+const ISSUE_HTTP_COUNT = Number(
+  process.env.D5_LOAD_ISSUE_HTTP_COUNT || ISSUE_RATE * SUSTAIN_SEC,
+);
 const OIDC_ISSUER = (
   process.env.D5_LOAD_OIDC_ISSUER || 'http://127.0.0.1:8080/realms/ticket'
 ).replace(/\/$/, '');
@@ -33,7 +50,6 @@ const CLIENT_ID = process.env.OIDC_CLIENT_ID || 'ticket-web';
 const CLIENT_SECRET = process.env.OIDC_CLIENT_SECRET || 'dev-web-secret-change-me';
 const STAFF_USER = process.env.D5_LOAD_STAFF_USER || 'staff@example.com';
 const STAFF_PASS = process.env.D5_LOAD_STAFF_PASS || 'staff-demo';
-const ISSUE_HTTP_COUNT = Number(process.env.D5_LOAD_ISSUE_HTTP_COUNT || 100);
 
 const TENANT_ID = 'a5a5a5a5-a5a5-45a5-85a5-a5a5a5a5a5a5';
 const SUFFIX = randomBytes(4).toString('hex');
@@ -212,7 +228,6 @@ async function keycloakAdminToken() {
     username: process.env.KEYCLOAK_ADMIN || 'admin',
     password: process.env.KEYCLOAK_ADMIN_PASSWORD || 'admin',
   });
-  // Admin token always against the host we can reach; master realm.
   const base = OIDC_ISSUER.includes('192.168.')
     ? OIDC_ISSUER.replace(/\/realms\/ticket.*/, '')
     : 'http://127.0.0.1:8080';
@@ -230,55 +245,68 @@ async function keycloakAdminToken() {
   return { token: json.access_token, base };
 }
 
-/** One Keycloak user per HTTP issue code — avoids ATTENDEE_LIMIT on a single subject. */
-async function provisionIssueAttendees(count) {
+/** Parallel Keycloak users — ceil(issueCount / ticketsPerUser). */
+async function provisionIssueAttendees(userCount) {
   const { token, base } = await keycloakAdminToken();
   const users = [];
   const pass = 'Load-Demo-Pass-1';
-  for (let i = 0; i < count; i++) {
-    const email = `d5-load-attendee-${SUFFIX}-${i}@example.com`;
-    const createRes = await fetch(`${base}/admin/realms/ticket/users`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        username: email,
-        email,
-        enabled: true,
-        emailVerified: true,
-        firstName: 'D5',
-        lastName: `Load${i}`,
-        credentials: [{ type: 'password', value: pass, temporary: false }],
-      }),
-    });
-    if (createRes.status !== 201 && createRes.status !== 409) {
-      const t = await createRes.text();
-      throw new Error(`create user ${email}: ${createRes.status} ${t.slice(0, 200)}`);
+  const concurrency = 25;
+  let next = 0;
+  async function worker() {
+    while (next < userCount) {
+      const i = next++;
+      const email = `d5-load-attendee-${SUFFIX}-${i}@example.com`;
+      const createRes = await fetch(`${base}/admin/realms/ticket/users`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username: email,
+          email,
+          enabled: true,
+          emailVerified: true,
+          firstName: 'D5',
+          lastName: `Load${i}`,
+          credentials: [{ type: 'password', value: pass, temporary: false }],
+        }),
+      });
+      if (createRes.status !== 201 && createRes.status !== 409) {
+        const t = await createRes.text();
+        throw new Error(`create user ${email}: ${createRes.status} ${t.slice(0, 200)}`);
+      }
+      users.push({ email, pass, index: i });
     }
-    users.push({ email, pass });
   }
+  await Promise.all(Array.from({ length: concurrency }, () => worker()));
+  users.sort((a, b) => a.index - b.index);
   return users;
 }
 
 async function cleanupIssueAttendees(users) {
   try {
     const { token, base } = await keycloakAdminToken();
-    for (const u of users) {
-      const q = new URLSearchParams({ username: u.email, exact: 'true' });
-      const list = await fetch(`${base}/admin/realms/ticket/users?${q}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!list.ok) continue;
-      const arr = await list.json();
-      for (const row of arr) {
-        await fetch(`${base}/admin/realms/ticket/users/${row.id}`, {
-          method: 'DELETE',
+    const concurrency = 25;
+    let next = 0;
+    async function worker() {
+      while (next < users.length) {
+        const u = users[next++];
+        const q = new URLSearchParams({ username: u.email, exact: 'true' });
+        const list = await fetch(`${base}/admin/realms/ticket/users?${q}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
+        if (!list.ok) continue;
+        const arr = await list.json();
+        for (const row of arr) {
+          await fetch(`${base}/admin/realms/ticket/users/${row.id}`, {
+            method: 'DELETE',
+            headers: { Authorization: `Bearer ${token}` },
+          });
+        }
       }
     }
+    await Promise.all(Array.from({ length: concurrency }, () => worker()));
   } catch {
     /* best-effort cleanup */
   }
@@ -365,7 +393,6 @@ VALUES (
 `);
   }
 
-  // Shared type/source shape per event for bulk tickets
   const eventMeta = [];
   for (let ei = 0; ei < eventIds.length; ei++) {
     const eventId = eventIds[ei];
@@ -387,13 +414,23 @@ VALUES
   ('${TENANT_ID}', '${eventId}', '${qbType}', 'TICKET_TYPE', '${tId}', ${TICKETS_PER_EVENT}, 0),
   ('${TENANT_ID}', '${eventId}', '${qbSrc}', 'ISSUANCE_SOURCE', '${sId}', ${TICKETS_PER_EVENT}, 0);
 `);
-    eventMeta.push({ eventId, tId, sId, qbEvent });
+    eventMeta.push({ eventId, tId, sId, qbEvent, qbType, qbSrc });
   }
 
-  // HTTP-issue pool on event 0: leave quota headroom so redeem can succeed.
+  // HTTP-issue pool on event 0 — leave ACTIVE volume for concurrent confirm + scanners.
+  const confirmReservePerEvent =
+    Math.ceil((CONFIRM_RATE * SUSTAIN_SEC) / EVENTS) + SCANNERS * 2;
   const httpCodes = [];
   const first = eventMeta[0];
-  const httpCount = Math.min(ISSUE_HTTP_COUNT, TICKETS_PER_EVENT);
+  const httpCount = Math.min(
+    ISSUE_HTTP_COUNT,
+    Math.max(0, TICKETS_PER_EVENT - confirmReservePerEvent),
+  );
+  if (httpCount < ISSUE_RATE * SUSTAIN_SEC * 0.5) {
+    console.warn(
+      `warn: http issue pool only ${httpCount} (wanted ${ISSUE_RATE * SUSTAIN_SEC}); raise D5_LOAD_TICKETS_PER_EVENT or lower rates`,
+    );
+  }
   for (let i = 0; i < httpCount; i++) {
     const raw = `HTTP-ISSUE-${i.toString().padStart(5, '0')}`;
     const codeId = randomUUID();
@@ -409,13 +446,18 @@ INSERT INTO redemption_codes (
     httpCodes.push(raw);
   }
 
-  // Volume tickets: event0 leaves httpCount slots; other events fill TICKETS_PER_EVENT.
-  // Not claimed as HTTP issue RPS.
+  // Volume tickets: SQL seed for S1 volume proof — NOT counted as HTTP issue RPS.
+  // Sample credentials use real AES-GCM so invariants can decrypt/verify.
   for (let mi = 0; mi < eventMeta.length; mi++) {
     const meta = eventMeta[mi];
     const volumeCount =
       mi === 0 ? TICKETS_PER_EVENT - httpCount : TICKETS_PER_EVENT;
     if (volumeCount <= 0) continue;
+
+    // Real sealed sample for decrypt invariant (first ticket of each event).
+    const sampleToken = `vol-sample-${meta.eventId}`;
+    const sealed = sealCredentialToken(sampleToken, CRED_KEY);
+
     const batchSql = `
 WITH seq AS (
   SELECT generate_series(1, ${volumeCount}) AS n
@@ -474,6 +516,9 @@ ins_tickets AS (
     1
   FROM req_num
   RETURNING id
+),
+numbered_t AS (
+  SELECT id, row_number() OVER () AS n FROM ins_tickets
 )
 INSERT INTO ticket_credentials (
   tenant_id, ticket_id, version, kid, token_hash, encrypted_token, status
@@ -483,90 +528,24 @@ SELECT
   id,
   1,
   'local-v1',
-  encode(sha256(('th:' || id::text)::bytea), 'hex'),
-  'enc:load-fixture',
+  CASE WHEN n = 1 THEN '${sealed.tokenHash}'
+       ELSE encode(sha256(('th:' || id::text)::bytea), 'hex') END,
+  CASE WHEN n = 1 THEN '${sealed.encryptedToken}'
+       ELSE 'enc:load-fixture-volume-not-crypto' END,
   'ACTIVE'
-FROM ins_tickets;
+FROM numbered_t;
 
 UPDATE quota_buckets
 SET allocated = ${volumeCount}, updated_at = now()
 WHERE tenant_id = '${TENANT_ID}'::uuid AND event_id = '${meta.eventId}'::uuid;
 `;
     psql(batchSql);
+    meta.sampleSealed = sealed;
+    meta.samplePlain = sampleToken;
   }
 
   const seedMs = Date.now() - seedStart;
   return { eventMeta, httpCodes, seedMs, typeId, sourceId, httpCount };
-}
-
-async function measureIssueHttp(base, issueUsers, eventId, codes) {
-  const started = Date.now();
-  let ok = 0;
-  let fail = 0;
-  const latencies = [];
-  const statusCounts = {};
-  let firstFailure = null;
-  // One distinct Keycloak attendee per code (ATTENDEE_LIMIT on single subject).
-  const concurrency = 10;
-  let idx = 0;
-  async function worker() {
-    while (idx < codes.length) {
-      const i = idx++;
-      const raw = codes[i];
-      const user = issueUsers[i];
-      if (!user) {
-        fail++;
-        continue;
-      }
-      let tok;
-      try {
-        tok = await passwordToken(user.email, user.pass);
-      } catch (e) {
-        fail++;
-        if (!firstFailure) firstFailure = { status: 0, json: { error: String(e) }, rawSample: raw };
-        continue;
-      }
-      const t0 = Date.now();
-      const { status, json } = await httpJson(
-        'POST',
-        `${base}/v1/tenants/${TENANT_ID}/events/${eventId}/redemptions`,
-        {
-          headers: {
-            Authorization: `Bearer ${tok}`,
-            'Content-Type': 'application/json',
-            'idempotency-key': randomUUID(),
-          },
-          body: JSON.stringify({ code: raw }),
-        },
-      );
-      latencies.push(Date.now() - t0);
-      statusCounts[status] = (statusCounts[status] || 0) + 1;
-      if (status === 200 || status === 201) ok++;
-      else {
-        fail++;
-        if (!firstFailure) firstFailure = { status, json, rawSample: raw };
-      }
-    }
-  }
-  await Promise.all(Array.from({ length: concurrency }, () => worker()));
-  latencies.sort((a, b) => a - b);
-  const pct = (p) =>
-    latencies.length
-      ? latencies[Math.min(latencies.length - 1, Math.floor(p * (latencies.length - 1)))]
-      : null;
-  const elapsed = (Date.now() - started) / 1000;
-  return {
-    attempted: codes.length,
-    ok,
-    fail,
-    elapsedSec: elapsed,
-    throughputRps: elapsed > 0 ? ok / elapsed : 0,
-    p50Ms: pct(0.5),
-    p95Ms: pct(0.95),
-    p99Ms: pct(0.99),
-    statusCounts,
-    firstFailure,
-  };
 }
 
 async function openSessions(base, staffTok, eventId, n) {
@@ -599,60 +578,147 @@ SELECT id::text FROM tickets
 WHERE tenant_id = '${TENANT_ID}'::uuid AND event_id = '${eventId}'::uuid AND state = 'ACTIVE'
 ORDER BY created_at
 LIMIT ${limit};
-`).split('\n').filter(Boolean);
+`)
+    .split('\n')
+    .filter(Boolean);
 }
 
-function runK6(envFile, script, outJson) {
-  execFileSync(
-    'k6',
-    ['run', '--out', `json=${outJson}`, script],
-    {
-      encoding: 'utf8',
-      env: {
-        ...process.env,
-        ...Object.fromEntries(
-          readFileSync(envFile, 'utf8')
-            .split('\n')
-            .filter((l) => l && !l.startsWith('#'))
-            .map((l) => {
-              const i = l.indexOf('=');
-              return [l.slice(0, i), l.slice(i + 1)];
-            }),
-        ),
-      },
-      stdio: ['ignore', 'inherit', 'inherit'],
+function runK6(envMap, script, outJson, extraEnv = {}) {
+  execFileSync('k6', ['run', '--out', `json=${outJson}`, script], {
+    encoding: 'utf8',
+    env: {
+      ...process.env,
+      ...envMap,
+      ...extraEnv,
     },
-  );
+    stdio: ['ignore', 'inherit', 'inherit'],
+  });
 }
 
-function invariants(eventIds) {
+function invariants(eventMeta, expectedCheckinsByEvent) {
   const rows = {};
-  for (const eventId of eventIds) {
+  let allOk = true;
+  for (const meta of eventMeta) {
+    const eventId = meta.eventId;
     const line = psql(`
 SELECT
   (SELECT count(*) FROM tickets WHERE tenant_id='${TENANT_ID}'::uuid AND event_id='${eventId}'::uuid) || '|' ||
   (SELECT allocated FROM quota_buckets WHERE tenant_id='${TENANT_ID}'::uuid AND event_id='${eventId}'::uuid AND scope='EVENT') || '|' ||
+  (SELECT allocated FROM quota_buckets WHERE tenant_id='${TENANT_ID}'::uuid AND event_id='${eventId}'::uuid AND scope='TICKET_TYPE') || '|' ||
+  (SELECT allocated FROM quota_buckets WHERE tenant_id='${TENANT_ID}'::uuid AND event_id='${eventId}'::uuid AND scope='ISSUANCE_SOURCE') || '|' ||
   (SELECT count(*) FROM ticket_credentials tc
      JOIN tickets t ON t.tenant_id=tc.tenant_id AND t.id=tc.ticket_id
      WHERE t.event_id='${eventId}'::uuid AND tc.kid IS NOT NULL AND tc.kid <> '') || '|' ||
-  (SELECT count(*) FROM checkins WHERE tenant_id='${TENANT_ID}'::uuid AND event_id='${eventId}'::uuid AND undone_at IS NULL);
+  (SELECT count(*) FROM checkins WHERE tenant_id='${TENANT_ID}'::uuid AND event_id='${eventId}'::uuid AND undone_at IS NULL) || '|' ||
+  (SELECT count(*) FROM tickets WHERE tenant_id='${TENANT_ID}'::uuid AND event_id='${eventId}'::uuid AND state='USED') || '|' ||
+  (SELECT count(*) FROM outbox WHERE tenant_id='${TENANT_ID}'::uuid) || '|' ||
+  (SELECT count(*) FROM audit_logs WHERE tenant_id='${TENANT_ID}'::uuid) || '|' ||
+  (SELECT count(*) FROM checkin_reservations WHERE tenant_id='${TENANT_ID}'::uuid AND event_id='${eventId}'::uuid AND status='CONFIRMED') || '|' ||
+  (SELECT count(DISTINCT ticket_id) FROM checkins WHERE tenant_id='${TENANT_ID}'::uuid AND event_id='${eventId}'::uuid AND undone_at IS NULL);
 `);
-    const [tickets, allocated, creds, checkins] = line.split('|').map(Number);
+    const [
+      tickets,
+      allocEvent,
+      allocType,
+      allocSrc,
+      creds,
+      checkins,
+      used,
+      outbox,
+      audit,
+      confirmedRes,
+      distinctCheckinTickets,
+    ] = line.split('|').map(Number);
+
+    let sampleDecryptOk = false;
+    if (meta.sampleSealed) {
+      try {
+        const enc = psql(`
+SELECT encrypted_token FROM ticket_credentials tc
+JOIN tickets t ON t.id=tc.ticket_id
+WHERE t.event_id='${eventId}'::uuid AND tc.token_hash='${meta.sampleSealed.tokenHash}'
+LIMIT 1;
+`);
+        const plain = openCredentialToken(enc, CRED_KEY);
+        sampleDecryptOk = plain === meta.samplePlain;
+      } catch {
+        sampleDecryptOk = false;
+      }
+    }
+
+    const expectedCheckins = expectedCheckinsByEvent[eventId] ?? null;
+    const ticketsMatchAllocated = tickets === allocEvent;
+    const quotaScopesAligned =
+      allocEvent === allocType && allocType === allocSrc;
+    const everyTicketHasKid = creds === tickets;
+    const checkinsMatchUsed = checkins === used;
+    const noDoubleConfirm =
+      distinctCheckinTickets === checkins && confirmedRes >= checkins;
+    const checkinsMeetExpected =
+      expectedCheckins == null ? true : checkins >= expectedCheckins;
+
+    const ok =
+      ticketsMatchAllocated &&
+      quotaScopesAligned &&
+      everyTicketHasKid &&
+      checkinsMatchUsed &&
+      noDoubleConfirm &&
+      checkinsMeetExpected &&
+      sampleDecryptOk &&
+      outbox >= 0 &&
+      audit >= 0;
+
+    if (!ok) allOk = false;
     rows[eventId] = {
       tickets,
-      allocated,
+      allocatedEvent: allocEvent,
+      allocatedType: allocType,
+      allocatedSource: allocSrc,
       credentialsWithKid: creds,
       currentCheckins: checkins,
-      ticketsMatchAllocated: tickets === allocated,
-      everyTicketHasKid: creds === tickets,
+      usedTickets: used,
+      outboxRowsTenant: outbox,
+      auditLogsTenant: audit,
+      confirmedReservations: confirmedRes,
+      distinctCheckinTickets,
+      sampleDecryptOk,
+      ticketsMatchAllocated,
+      quotaScopesAligned,
+      everyTicketHasKid,
+      checkinsMatchUsed,
+      noDoubleConfirm,
+      checkinsMeetExpected,
+      ok,
     };
   }
-  return rows;
+  return { rows, allOk };
+}
+
+function extractK6Counters(summaryPath) {
+  try {
+    const data = JSON.parse(readFileSync(summaryPath, 'utf8'));
+    const m = data.metrics || {};
+    const val = (name) => m[name]?.values?.count ?? m[name]?.values?.rate ?? null;
+    const p95 = (name) => m[name]?.values?.['p(95)'] ?? null;
+    return {
+      issueOk: val('s3_issue_ok'),
+      issueFail: val('s3_issue_fail'),
+      confirmOk: val('s3_confirm_ok'),
+      confirmFail: val('s3_confirm_fail'),
+      issueP95Ms: p95('s3_issue_ms'),
+      confirmP95Ms: p95('s3_confirm_ms'),
+      issueErrorRate: m.s3_issue_errors?.values?.rate ?? null,
+      confirmErrorRate: m.s3_confirm_errors?.values?.rate ?? null,
+      raw: data,
+    };
+  } catch (e) {
+    return { error: String(e.message || e) };
+  }
 }
 
 async function main() {
   console.log(
-    `d5-load: tickets/event=${TICKETS_PER_EVENT} events=${EVENTS} scanners=${SCANNERS} api=:${API_PORT} pg=:${PG_PORT}`,
+    `d5-load: tickets/event=${TICKETS_PER_EVENT} events=${EVENTS} scanners/event=${SCANNERS} issue=${ISSUE_RATE}/s confirm=${CONFIRM_RATE}/s sustain=${SUSTAIN_SEC}s api=:${API_PORT} pg=:${PG_PORT}`,
   );
   console.log(
     `hardware: ncpu=${process.env.D5_LOAD_HW_NCPU} mem_gb=${process.env.D5_LOAD_HW_MEM_GB}`,
@@ -698,134 +764,329 @@ async function main() {
   const attendeeUserId = meAtt.json.userId;
 
   const eventIds = Array.from({ length: EVENTS }, () => randomUUID());
-  const { eventMeta, httpCodes, seedMs } = seedVolume(
+  const { eventMeta, httpCodes, seedMs, httpCount } = seedVolume(
     eventIds,
     staffUserId,
     attendeeUserId,
   );
 
-  console.log(`provisioning ${httpCodes.length} Keycloak attendees for issue burst…`);
-  const issueUsers = await provisionIssueAttendees(httpCodes.length);
-  let issueHttp;
+  const userCount = Math.ceil(httpCodes.length / TICKETS_PER_USER);
+  console.log(
+    `provisioning ${userCount} Keycloak attendees for ${httpCodes.length} issue jobs (${TICKETS_PER_USER}/user)…`,
+  );
+  const issueUsers = await provisionIssueAttendees(userCount);
+
+  // Prefetch one token per user (parallel), then map codes → tokens.
+  const issueJobs = [];
   try {
-    issueHttp = await measureIssueHttp(
-      base,
-      issueUsers,
-      eventMeta[0].eventId,
-      httpCodes,
-    );
-  } finally {
+    const tokenByEmail = new Map();
+    const tokConcurrency = 20;
+    let tokNext = 0;
+    async function tokWorker() {
+      while (tokNext < issueUsers.length) {
+        const u = issueUsers[tokNext++];
+        const tok = await passwordToken(u.email, u.pass);
+        tokenByEmail.set(u.email, tok);
+      }
+    }
+    await Promise.all(Array.from({ length: tokConcurrency }, () => tokWorker()));
+    for (let i = 0; i < httpCodes.length; i++) {
+      const user = issueUsers[Math.floor(i / TICKETS_PER_USER)];
+      issueJobs.push({
+        eventId: eventMeta[0].eventId,
+        code: httpCodes[i],
+        token: tokenByEmail.get(user.email),
+        idempotencyKey: randomUUID(),
+      });
+    }
+  } catch (e) {
     await cleanupIssueAttendees(issueUsers);
+    throw e;
   }
 
-  const sessions = await openSessions(
-    base,
-    staffTok,
-    eventMeta[0].eventId,
-    SCANNERS,
-  );
-  const ticketIds = listTicketIds(eventMeta[0].eventId, SCANNERS * 4);
-  if (ticketIds.length < SCANNERS) {
-    throw new Error(`need ≥${SCANNERS} ACTIVE tickets, got ${ticketIds.length}`);
+  // Sessions: SCANNERS per event × EVENTS
+  const sessionsByEvent = {};
+  let totalSessions = 0;
+  for (const meta of eventMeta) {
+    const sessions = await openSessions(base, staffTok, meta.eventId, SCANNERS);
+    sessionsByEvent[meta.eventId] = sessions;
+    totalSessions += sessions.length;
+  }
+  if (totalSessions !== SCANNERS * EVENTS) {
+    throw new Error(
+      `expected ${SCANNERS * EVENTS} sessions, got ${totalSessions}`,
+    );
   }
 
-  const envFile = path.join(ARTIFACT_DIR, `k6-env-${SUFFIX}.env`);
-  writeFileSync(
-    envFile,
-    [
-      `BASE_URL=${base}`,
-      `STAFF_TOKEN=${staffTok}`,
-      `TENANT_ID=${TENANT_ID}`,
-      `EVENT_ID=${eventMeta[0].eventId}`,
-      `SESSION_IDS=${sessions.join(',')}`,
-      `TICKET_IDS=${ticketIds.join(',')}`,
-      `VUS=${SCANNERS}`,
-    ].join('\n'),
-  );
+  // Confirm jobs across both events — enough for CONFIRM_RATE × SUSTAIN_SEC
+  const confirmNeed = CONFIRM_RATE * SUSTAIN_SEC;
+  const confirmJobs = [];
+  for (const meta of eventMeta) {
+    const tickets = listTicketIds(
+      meta.eventId,
+      Math.ceil(confirmNeed / EVENTS) + SCANNERS,
+    );
+    if (tickets.length < SCANNERS) {
+      throw new Error(
+        `event ${meta.eventId}: need ≥${SCANNERS} ACTIVE tickets, got ${tickets.length}`,
+      );
+    }
+    const sessions = sessionsByEvent[meta.eventId];
+    for (let i = 0; i < tickets.length; i++) {
+      confirmJobs.push({
+        eventId: meta.eventId,
+        ticketId: tickets[i],
+        sessionId: sessions[i % sessions.length],
+        staffToken: staffTok,
+      });
+    }
+  }
 
-  const k6Out = path.join(ARTIFACT_DIR, `k6-gate-${SUFFIX}.json`);
-  const gateScript = path.join(ROOT, 'scripts/load/gate-scanners.js');
+  const issueJobsFile = path.join(ARTIFACT_DIR, `issue-jobs-${SUFFIX}.json`);
+  const confirmJobsFile = path.join(ARTIFACT_DIR, `confirm-jobs-${SUFFIX}.json`);
+  writeFileSync(issueJobsFile, JSON.stringify(issueJobs));
+  writeFileSync(confirmJobsFile, JSON.stringify(confirmJobs));
+
   const healthScript = path.join(ROOT, 'scripts/load/health-burst.js');
   const healthOut = path.join(ARTIFACT_DIR, `k6-health-${SUFFIX}.json`);
-
-  const healthEnv = path.join(ARTIFACT_DIR, `k6-health-env-${SUFFIX}.env`);
-  writeFileSync(healthEnv, `BASE_URL=${base}\n`);
-
   console.log('running k6 health burst…');
   let healthOk = true;
   try {
-    runK6(healthEnv, healthScript, healthOut);
+    runK6({ BASE_URL: base }, healthScript, healthOut);
   } catch (e) {
     healthOk = false;
     console.error('k6 health failed', e.message || e);
   }
 
-  console.log(`running k6 gate scanners VUs=${SCANNERS}…`);
-  let gateOk = true;
-  let gateErr = null;
+  const s3Script = path.join(ROOT, 'scripts/load/s3-issue-confirm.js');
+  const s3Out = path.join(ARTIFACT_DIR, `k6-s3-${SUFFIX}.json`);
+  const s3Summary = path.join(ARTIFACT_DIR, `k6-s3-summary-${SUFFIX}.json`);
+  console.log(
+    `running k6 S3 concurrent issue=${ISSUE_RATE}/s confirm=${CONFIRM_RATE}/s for ${SUSTAIN_SEC}s…`,
+  );
+  let s3Ok = true;
+  let s3Err = null;
+  const s3Started = Date.now();
   try {
-    runK6(envFile, gateScript, k6Out);
+    runK6(
+      {
+        BASE_URL: base,
+        TENANT_ID,
+        ISSUE_JOBS_FILE: issueJobsFile,
+        CONFIRM_JOBS_FILE: confirmJobsFile,
+        ISSUE_RATE: String(ISSUE_RATE),
+        CONFIRM_RATE: String(CONFIRM_RATE),
+        SUSTAIN_SEC: `${SUSTAIN_SEC}s`,
+        S3_SUMMARY_JSON: s3Summary,
+        S3_MAX_ERROR_RATE: '0.05',
+      },
+      s3Script,
+      s3Out,
+    );
   } catch (e) {
-    gateOk = false;
-    gateErr = String(e.message || e);
-    console.error('k6 gate failed', gateErr);
+    s3Ok = false;
+    s3Err = String(e.message || e);
+    console.error('k6 S3 failed', s3Err);
+  }
+  const s3ElapsedSec = (Date.now() - s3Started) / 1000;
+  await cleanupIssueAttendees(issueUsers);
+
+  // Per-event gate scanner pass (50 VU × 2 iter) after S3 — extra coverage
+  const gateResults = [];
+  for (const meta of eventMeta) {
+    const sessions = sessionsByEvent[meta.eventId];
+    const tickets = listTicketIds(meta.eventId, SCANNERS * 4);
+    const envFile = path.join(
+      ARTIFACT_DIR,
+      `k6-gate-env-${meta.eventId.slice(0, 8)}.env`,
+    );
+    // Prefer remaining ACTIVE tickets
+    const active = listTicketIds(meta.eventId, SCANNERS * 2);
+    const ticketPool = active.length >= SCANNERS ? active : tickets;
+    writeFileSync(
+      envFile,
+      [
+        `BASE_URL=${base}`,
+        `STAFF_TOKEN=${staffTok}`,
+        `TENANT_ID=${TENANT_ID}`,
+        `EVENT_ID=${meta.eventId}`,
+        `SESSION_IDS=${sessions.join(',')}`,
+        `TICKET_IDS=${ticketPool.join(',')}`,
+        `VUS=${SCANNERS}`,
+        `ITERATIONS=2`,
+        `MAX_ERROR_RATE=0.05`,
+      ].join('\n'),
+    );
+    const k6Out = path.join(
+      ARTIFACT_DIR,
+      `k6-gate-${meta.eventId.slice(0, 8)}.json`,
+    );
+    const gateScript = path.join(ROOT, 'scripts/load/gate-scanners.js');
+    let gateOk = true;
+    let gateErr = null;
+    try {
+      const envMap = Object.fromEntries(
+        readFileSync(envFile, 'utf8')
+          .split('\n')
+          .filter((l) => l && !l.startsWith('#'))
+          .map((l) => {
+            const i = l.indexOf('=');
+            return [l.slice(0, i), l.slice(i + 1)];
+          }),
+      );
+      runK6(envMap, gateScript, k6Out);
+    } catch (e) {
+      gateOk = false;
+      gateErr = String(e.message || e);
+    }
+    gateResults.push({
+      eventId: meta.eventId,
+      ok: gateOk,
+      error: gateErr,
+      artifact: k6Out,
+      sessions: sessions.length,
+    });
   }
 
-  const inv = invariants(eventIds);
+  const s3Metrics = extractK6Counters(s3Summary);
+  const issueOkCount = s3Metrics.issueOk ?? 0;
+  const confirmOkCount = s3Metrics.confirmOk ?? 0;
+  const issueTarget = ISSUE_RATE * SUSTAIN_SEC;
+  const confirmTarget = CONFIRM_RATE * SUSTAIN_SEC;
+  // Allow 5% under-delivery on arrival-rate executors (k6 VU ramp).
+  const issueRpsAchieved =
+    s3ElapsedSec > 0 ? issueOkCount / Math.min(s3ElapsedSec, SUSTAIN_SEC) : 0;
+  const confirmRpsAchieved =
+    s3ElapsedSec > 0 ? confirmOkCount / Math.min(s3ElapsedSec, SUSTAIN_SEC) : 0;
+
+  const expectedCheckinsByEvent = {};
+  for (const meta of eventMeta) {
+    // S3 may confirm across events; gate pass adds up to SCANNERS*2 per event.
+    expectedCheckinsByEvent[meta.eventId] = 0;
+  }
+
+  const inv = invariants(eventMeta, expectedCheckinsByEvent);
   const report = await httpJson(
     'GET',
     `${base}/v1/tenants/${TENANT_ID}/events/${eventMeta[0].eventId}/report`,
     { headers: { Authorization: `Bearer ${staffTok}` } },
   );
 
+  const admissionNote =
+    'Run ./scripts/d5-admission-s4.sh for isolated ADR-15 edge; not inlined in API load path';
+
+  const rateOk =
+    issueRpsAchieved >= ISSUE_RATE * 0.9 &&
+    confirmRpsAchieved >= CONFIRM_RATE * 0.9 &&
+    s3ElapsedSec >= SUSTAIN_SEC * 0.95;
+  const p95Ok =
+    (s3Metrics.issueP95Ms == null || s3Metrics.issueP95Ms <= 1000) &&
+    (s3Metrics.confirmP95Ms == null || s3Metrics.confirmP95Ms <= 1000);
+  const errOk =
+    (s3Metrics.issueErrorRate == null || s3Metrics.issueErrorRate < 0.05) &&
+    (s3Metrics.confirmErrorRate == null || s3Metrics.confirmErrorRate < 0.05);
+  const gateAllOk = gateResults.every((g) => g.ok);
+  const scannersOk = totalSessions === SCANNERS * EVENTS;
+
+  const meetsPrdPilot =
+    s3Ok &&
+    healthOk &&
+    rateOk &&
+    p95Ok &&
+    errOk &&
+    gateAllOk &&
+    scannersOk &&
+    inv.allOk &&
+    issueOkCount >= issueTarget * 0.9 &&
+    confirmOkCount >= confirmTarget * 0.9;
+
+  const pass =
+    s3Ok &&
+    healthOk &&
+    gateAllOk &&
+    scannersOk &&
+    inv.allOk &&
+    issueOkCount > 0 &&
+    confirmOkCount > 0;
+
   const summary = {
-    scenario: 'PRD pilot baseline 2 events × N tickets × 50 scanners',
+    scenario: 'TD S3 sustained issue+confirm concurrent + S1 volume SQL seed',
     ticketsPerEventTarget: TICKETS_PER_EVENT,
     events: EVENTS,
-    scannersTarget: SCANNERS,
-    sessionsOpened: sessions.length,
+    scannersPerEvent: SCANNERS,
+    scannersTotal: totalSessions,
+    sessionsByEvent: Object.fromEntries(
+      Object.entries(sessionsByEvent).map(([k, v]) => [k, v.length]),
+    ),
     volumeSeedMs: seedMs,
     volumeSeedNote:
-      'ACTIVE tickets bulk-inserted in SQL for S1 volume; not counted as HTTP issue RPS',
-    issueHttpMeasured: issueHttp,
+      'ACTIVE tickets bulk-inserted in SQL for S1 volume; NOT counted as HTTP issue RPS. HTTP issue path measured separately via k6 S3.',
+    httpIssuePoolSize: httpCount,
+    s3: {
+      issueRateTarget: ISSUE_RATE,
+      confirmRateTarget: CONFIRM_RATE,
+      sustainSecTarget: SUSTAIN_SEC,
+      elapsedSec: s3ElapsedSec,
+      ok: s3Ok,
+      error: s3Err,
+      metrics: {
+        issueOk: issueOkCount,
+        confirmOk: confirmOkCount,
+        issueRpsAchieved,
+        confirmRpsAchieved,
+        issueP95Ms: s3Metrics.issueP95Ms,
+        confirmP95Ms: s3Metrics.confirmP95Ms,
+        issueErrorRate: s3Metrics.issueErrorRate,
+        confirmErrorRate: s3Metrics.confirmErrorRate,
+      },
+      rateOk,
+      p95Ok,
+      errOk,
+      artifact: s3Out,
+      summaryArtifact: s3Summary,
+    },
     admissionLayer: {
-      implemented: false,
+      implemented: true,
+      measuredInThisHarness: false,
       adr: 'ADR-15',
-      note: 'Caddy/nginx waiting room absent in this stack; S4 opening-shock not measured',
+      note: admissionNote,
+      script: './scripts/d5-admission-s4.sh',
     },
     hardware: {
       ncpu: process.env.D5_LOAD_HW_NCPU,
       memGb: process.env.D5_LOAD_HW_MEM_GB,
     },
     healthK6: { ok: healthOk, artifact: healthOut },
-    gateK6: { ok: gateOk, error: gateErr, artifact: k6Out },
-    invariants: inv,
+    gateK6ByEvent: gateResults,
+    invariants: inv.rows,
+    invariantsOk: inv.allOk,
     reportApiStatus: report.status,
     reportSample: report.json,
     apiLog: logPath,
     db: { container: PG_NAME, port: PG_PORT },
     productionClaim: false,
-    meetsPrdPilotWithoutCaveat: false,
+    meetsPrdPilotWithoutCaveat: meetsPrdPilot,
+    pass,
   };
 
   const outPath = path.join(ARTIFACT_DIR, `load-summary-${SUFFIX}.json`);
   writeFileSync(outPath, JSON.stringify(summary, null, 2));
-
-  const allInvOk = Object.values(inv).every(
-    (r) => r.ticketsMatchAllocated && r.everyTicketHasKid,
-  );
-  const pass =
-    issueHttp.ok > 0 &&
-    sessions.length === SCANNERS &&
-    gateOk &&
-    allInvOk;
+  // Durable copy for docs reviews
+  try {
+    writeFileSync(
+      path.join(ROOT, 'docs/reviews/D5-ISSUE-25-LOAD-SUMMARY.json'),
+      JSON.stringify(summary, null, 2),
+    );
+  } catch {
+    /* optional */
+  }
 
   console.log(
-    `D5_LOAD_BASELINE_${pass ? 'PASS' : 'PARTIAL'} tickets_per_event=${TICKETS_PER_EVENT} scanners=${sessions.length} issue_ok=${issueHttp.ok}/${issueHttp.attempted} issue_rps=${issueHttp.throughputRps.toFixed(2)} gate_k6=${gateOk} invariants=${allInvOk}`,
+    `D5_LOAD_BASELINE_${pass ? 'PASS' : 'FAIL'} scanners_total=${totalSessions} issue_ok=${issueOkCount} issue_rps=${issueRpsAchieved.toFixed(2)} confirm_ok=${confirmOkCount} confirm_rps=${confirmRpsAchieved.toFixed(2)} sustain_s=${s3ElapsedSec.toFixed(1)} health=${healthOk} gate=${gateAllOk} inv=${inv.allOk} meets_prd=${meetsPrdPilot}`,
   );
   console.log(`artifact=${outPath}`);
   console.log(
-    'admission not measured (no edge waiting room); volume tickets SQL-seeded; hardware-bound local Mac',
+    'volume tickets SQL-seeded (not HTTP RPS); admission S4 via d5-admission-s4.sh; hardware-bound local Mac; not production SLO',
   );
 
   if (!pass) process.exitCode = 2;
