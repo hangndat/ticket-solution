@@ -172,14 +172,11 @@ export function StaffScreen() {
         autoCapitalize="none"
         autoCorrect={false}
         multiline
-<<<<<<< HEAD
         selectionColor={colors.focus}
         onFocus={() => setInputFocused(true)}
         onBlur={() => setInputFocused(false)}
-=======
         blurOnSubmit
         onSubmitEditing={() => void submitScan()}
->>>>>>> 1ee83b9 (fix(mobile): bake prod EXPO_PUBLIC_* for Gate device UAT)
         style={{
           minHeight: 88,
           padding: 12,
