@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import localFont from 'next/font/local';
-import { headers } from 'next/headers';
 import {
   ThemeProvider,
   VEMOKI_BRANDING,
@@ -18,6 +17,10 @@ import './globals.css';
  * Colors stay O09 from brand/vemoki/tokens.json (ink/paper/signal/focus).
  * D8-S2: ThemeProvider applies tenant overrides when present; root = Vemoki.
  * Files + OFL notices: apps/web/fonts/
+ *
+ * O13: do NOT call headers() here — it forces all routes dynamic and breaks
+ * `dynamicParams = false` 404 isolation for /t/[tenant]/events/[event].
+ * Marketing locale/surface lives under app/marketing/layout.tsx.
  */
 const fontDisplay = localFont({
   src: '../fonts/Syne-Variable.ttf',
@@ -60,39 +63,26 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default async function RootLayout({ children }: { children: ReactNode }) {
+export default function RootLayout({ children }: { children: ReactNode }) {
   const rootVars = brandingToCssVars(VEMOKI_BRANDING);
-  const h = await headers();
-  const surface = h.get('x-vemoki-surface');
-  const locale = h.get('x-vemoki-locale') === 'en' ? 'en' : 'vi';
-  const isMarketing = surface === 'marketing';
-
   return (
     <html
-      lang={isMarketing ? locale : 'vi'}
+      lang="vi"
       className={`${fontDisplay.variable} ${fontBody.variable}`}
       style={rootVars}
       data-branding-source={VEMOKI_BRANDING.source}
-      data-surface={isMarketing ? 'marketing' : 'product'}
+      data-surface="product"
     >
       <body>
         <ThemeProvider branding={VEMOKI_BRANDING}>
-          {!isMarketing ? (
-            <a className="skip-link" href="#main">
-              Bỏ qua đến nội dung
-            </a>
-          ) : (
-            <a className="skip-link" href="#main">
-              {locale === 'en' ? 'Skip to content' : 'Bỏ qua nội dung'}
-            </a>
-          )}
+          <a className="skip-link" href="#main">
+            Bỏ qua đến nội dung
+          </a>
           {children}
-          {!isMarketing ? (
-            <footer className="footer">
-              <FooterBrand />
-              <span>Demo mang nhãn rõ · Đổi mã / cổng qua API thật</span>
-            </footer>
-          ) : null}
+          <footer className="footer">
+            <FooterBrand />
+            <span>Demo mang nhãn rõ · Đổi mã / cổng qua API thật</span>
+          </footer>
         </ThemeProvider>
       </body>
     </html>

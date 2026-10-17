@@ -141,7 +141,12 @@ export function redeemHref(productOrigin: string): string {
 }
 
 export type HostRoutingDecision =
-  | { type: 'next' }
+  | { type: 'next'; surface?: undefined; locale?: undefined }
+  | {
+      type: 'next';
+      surface: 'marketing';
+      locale: MarketingLocale;
+    }
   | {
       type: 'rewrite';
       pathname: string;
@@ -206,13 +211,12 @@ export function decideHostRouting(input: {
     if (mapped.internal.startsWith('/api/')) {
       return { type: 'next' };
     }
-    // /marketing/* already internal
-    if (pathname.startsWith('/marketing')) {
+    // Already on internal tree — NextResponse.next + surface headers (no self-rewrite).
+    if (pathname === '/marketing' || pathname.startsWith('/marketing/')) {
       return {
-        type: 'rewrite',
-        pathname: mapped.internal,
-        locale: mapped.locale,
+        type: 'next',
         surface: 'marketing',
+        locale: mapped.locale,
       };
     }
     return {
