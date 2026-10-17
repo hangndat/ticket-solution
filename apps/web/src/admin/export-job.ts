@@ -157,7 +157,7 @@ export function exportViewLabel(view: ExportView): string {
   }
   if (view.kind === 'download') {
     const name = view.filename ? ` · ${view.filename}` : '';
-    return `Export ${view.exportId}: đã nhận CSV (${view.contentType}, ${view.byteLength} bytes)${name}. Không lưu URL dài hạn.`;
+    return `Export ${view.exportId}: đã tải CSV xuống máy (${view.contentType}, ${view.byteLength} bytes)${name}. Không lưu URL dài hạn.`;
   }
   if (view.kind === 'rejected') {
     return `${view.code}: ${view.message}`;
