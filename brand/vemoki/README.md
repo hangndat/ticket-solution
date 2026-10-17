@@ -1,0 +1,13 @@
+# Pack thương hiệu Vemoki
+
+Canonical tokens: `tokens.json`. Raster/SVG dưới đây là nguồn platform (không thay bằng CDN SaaS — ADR-14 MinIO self-host).
+
+| File | Vai trò | Kích thước |
+| --- | --- | --- |
+| `mark.svg` / `mark-mono.svg` | Glyph | vector |
+| `lockup.png` | Wordmark + mark | 760×200 |
+| `og.png` | Open Graph / banner mẫu | 1200×630 |
+| `email-header.png` | Header email | 600×160 |
+| `app-icon.png` | App icon nguồn | 1024×1024 |
+
+Upload event (logo/banner) phải tuân `docs/ops/MEDIA-ASSET-CHECKLIST.md` và `ASSET_LIMITS` (PNG/JPEG/WebP, ≤5 MiB). SVG **không** đi qua C-B upload.
