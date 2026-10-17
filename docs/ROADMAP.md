@@ -109,14 +109,14 @@ Mỗi nhóm dưới đây tương ứng parent Issue trên GitHub; sub-issues ma
 
 ### D4 — Admin & Platform
 
-- [ ] Backend: permissions, import, approval, config version/publish, notification retry, reporting APIs
-- [ ] Web admin: event setup, mã/quota, approval/CS, preview/publish, dashboard/export
-- [ ] iOS: đổi mã trên app, nội dung event, push/deep link, supervisor UX, a11y
-- [ ] Tenant thứ hai tự vận hành qua cấu hình, không hardcode FUN FEST
+- [x] Backend: permissions, import, approval, config version/publish, notification retry, reporting APIs — Issues #21; PRs #38/#43/#48
+- [x] Web admin: event setup, mã/quota, approval, preview/publish, dashboard số liệu — Issue #22; PRs #40/#49/#50. CS và export vẫn chưa có API
+- [x] iOS: đổi mã trên app, nội dung fixture qua deep link, supervisor unknown trên Gate, a11y, push fail-closed — Issue #23; PRs #39/#44/#46. APNs thật và TestFlight vẫn hoãn #26
+- [ ] Tenant thứ hai tự vận hành qua cấu hình, không hardcode FUN FEST — chưa nghiệm thu end-to-end trên UI với tenant thật thứ hai
 
 ### D5 — Hardening & phát hành
 
-- [ ] Review/test độc lập RLS, authorization, transaction races
+- [x] Review/test độc lập RLS, authorization, transaction races — Issue #24; PR #47 (+ test:db gate/issue/approval)
 - [x] Backup/restore drill cục bộ — Issue #25. Lệnh đúng: `./scripts/d5-backup-drill.sh` (hai container Postgres vứt bỏ, không đụng `ticket_dev`). Pass chỉ chứng minh một dòng fixture đánh dấu còn sau `pg_dump` và restore. Không phải backup production và không phải SLO.
 - [ ] Observability
 - [ ] Load/admission — chưa đo; không có số liệu
