@@ -1,9 +1,11 @@
+import type { CreateEventBodyV2, EventVisibility } from '@ticket/contracts';
 import {
-  apiErrorFrom,
-  asRecord,
-  isNonEmptyString,
-  optionalString,
-} from './contract-shape';
+  EVENT_DETAIL_UNKNOWN,
+  interpretEventListDetail,
+  interpretEventMutation,
+  type EventListDetailView,
+  type EventMutationView,
+} from './event-lifecycle';
 
 export function createEventUpstreamPath(tenantId: string): string {
   return `/v1/tenants/${encodeURIComponent(tenantId)}/events`;
@@ -13,90 +15,31 @@ export function eventsListUpstreamPath(tenantId: string): string {
   return `/v1/tenants/${encodeURIComponent(tenantId)}/events`;
 }
 
-export type CreateEventView =
-  | {
-      kind: 'created';
-      eventId: string;
-      slug: string;
-      name: string;
-      status: string;
-      timezone: string;
-      replayed: boolean | null;
-    }
-  | { kind: 'rejected'; code: string; message: string }
-  | { kind: 'unknown'; message: string };
+/** Create success uses C-E EventDetail (+ optional replayed). */
+export type CreateEventView = EventMutationView;
 
-export type EventListView =
-  | {
-      kind: 'list';
-      items: Array<{
-        eventId: string;
-        slug: string;
-        name: string;
-        status: string;
-        timezone: string;
-      }>;
-    }
-  | { kind: 'rejected'; code: string; message: string }
-  | { kind: 'unknown'; message: string };
+/** List uses C-E EventListPage (items: EventDetail[]). */
+export type EventListView = EventListDetailView;
 
 export const CREATE_EVENT_UNKNOWN =
   'Kết quả tạo event chưa biết. Không coi là đã tạo sự kiện.';
 
-export const EVENT_LIST_UNKNOWN =
-  'Kết quả danh sách event chưa biết. Không hiện danh sách theo shape sai.';
-
-function parseEventSummary(body: Record<string, unknown> | null): {
-  eventId: string;
-  slug: string;
-  name: string;
-  status: string;
-  timezone: string;
-  replayed: boolean | null;
-} | null {
-  if (!body) return null;
-  if (
-    !isNonEmptyString(body.eventId) ||
-    !isNonEmptyString(body.slug) ||
-    !isNonEmptyString(body.name) ||
-    !isNonEmptyString(body.status) ||
-    !isNonEmptyString(body.timezone)
-  ) {
-    return null;
-  }
-  return {
-    eventId: body.eventId.trim(),
-    slug: body.slug.trim(),
-    name: body.name.trim(),
-    status: body.status.trim(),
-    timezone: body.timezone.trim(),
-    replayed: typeof body.replayed === 'boolean' ? body.replayed : null,
-  };
-}
+export const EVENT_LIST_UNKNOWN = EVENT_DETAIL_UNKNOWN;
 
 /**
- * Strict EventSummaryDto interpreter (BE PR54).
- * Rejects legacy aliases (id) and incomplete success bodies.
+ * Strict create interpreter against C-E EventDetail.
+ * Rejects legacy EventSummary (`status` without contentStatus/businessStatus).
  */
 export function interpretCreateEvent(
   status: number,
   json: unknown,
   networkError: boolean,
 ): CreateEventView {
-  if (networkError || status === 0 || status >= 500) {
+  const view = interpretEventMutation(status, json, networkError);
+  if (view.kind === 'unknown') {
     return { kind: 'unknown', message: CREATE_EVENT_UNKNOWN };
   }
-  const body = asRecord(json);
-  if (status === 200 || status === 201) {
-    const summary = parseEventSummary(body);
-    if (summary) {
-      return { kind: 'created', ...summary };
-    }
-    return { kind: 'unknown', message: CREATE_EVENT_UNKNOWN };
-  }
-  const err = apiErrorFrom(body);
-  if (err) return { kind: 'rejected', ...err };
-  return { kind: 'unknown', message: CREATE_EVENT_UNKNOWN };
+  return view;
 }
 
 export function interpretEventList(
@@ -104,42 +47,14 @@ export function interpretEventList(
   json: unknown,
   networkError: boolean,
 ): EventListView {
-  if (networkError || status === 0 || status >= 500) {
-    return { kind: 'unknown', message: EVENT_LIST_UNKNOWN };
-  }
-  const body = asRecord(json);
-  if (status === 200 && body && Array.isArray(body.items)) {
-    const items: Array<{
-      eventId: string;
-      slug: string;
-      name: string;
-      status: string;
-      timezone: string;
-    }> = [];
-    for (const row of body.items) {
-      const summary = parseEventSummary(asRecord(row));
-      if (!summary) {
-        return { kind: 'unknown', message: EVENT_LIST_UNKNOWN };
-      }
-      items.push({
-        eventId: summary.eventId,
-        slug: summary.slug,
-        name: summary.name,
-        status: summary.status,
-        timezone: summary.timezone,
-      });
-    }
-    return { kind: 'list', items };
-  }
-  const err = apiErrorFrom(body);
-  if (err) return { kind: 'rejected', ...err };
-  return { kind: 'unknown', message: EVENT_LIST_UNKNOWN };
+  return interpretEventListDetail(status, json, networkError);
 }
 
 export function createEventLabel(view: CreateEventView): string {
-  if (view.kind === 'created') {
+  if (view.kind === 'ok') {
+    const e = view.event;
     const replay = view.replayed ? ' (replayed)' : '';
-    return `Đã tạo event ${view.eventId} · ${view.slug} (${view.name}) · ${view.status}${replay}.`;
+    return `Đã tạo event ${e.eventId} · ${e.slug} (${e.name}) · ${e.contentStatus}/${e.businessStatus}${replay}.`;
   }
   if (view.kind === 'rejected') {
     return `${view.code}: ${view.message}`;
@@ -157,7 +72,67 @@ export function eventListLabel(view: EventListView): string {
   return view.message;
 }
 
-/** @deprecated kept for call sites that only need slug/name display */
-export function optionalEventField(value: unknown): string | null {
-  return optionalString(value);
+const VISIBILITIES: readonly EventVisibility[] = ['PUBLIC', 'UNLISTED'];
+
+export function isEventVisibility(value: unknown): value is EventVisibility {
+  return (
+    typeof value === 'string' &&
+    (VISIBILITIES as readonly string[]).includes(value)
+  );
+}
+
+/** Allowlisted create body fields for BFF (CreateEventBodyV2). */
+export function buildCreateEventUpstreamBody(input: {
+  slug: string;
+  name: string;
+  timezone?: string;
+  visibility?: string;
+  startsAt?: string | null;
+  endsAt?: string | null;
+  venueName?: string;
+  venueAddress?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  contactUrl?: string;
+  redemptionOpensAt?: string | null;
+  redemptionClosesAt?: string | null;
+  checkInOpensAt?: string | null;
+  checkInClosesAt?: string | null;
+  maxTicketsPerAttendee?: number | null;
+}): CreateEventBodyV2 {
+  const body: CreateEventBodyV2 = {
+    slug: input.slug.trim(),
+    name: input.name.trim(),
+  };
+  if (input.timezone?.trim()) body.timezone = input.timezone.trim();
+  if (isEventVisibility(input.visibility)) body.visibility = input.visibility;
+  if (input.startsAt !== undefined) body.startsAt = input.startsAt;
+  if (input.endsAt !== undefined) body.endsAt = input.endsAt;
+  if (input.venueName?.trim() && input.venueAddress?.trim()) {
+    body.venue = {
+      name: input.venueName.trim(),
+      address: input.venueAddress.trim(),
+    };
+  }
+  const contact: NonNullable<CreateEventBodyV2['contact']> = {};
+  if (input.contactEmail?.trim()) contact.email = input.contactEmail.trim();
+  if (input.contactPhone?.trim()) contact.phone = input.contactPhone.trim();
+  if (input.contactUrl?.trim()) contact.url = input.contactUrl.trim();
+  if (Object.keys(contact).length > 0) body.contact = contact;
+  if (input.redemptionOpensAt !== undefined) {
+    body.redemptionOpensAt = input.redemptionOpensAt;
+  }
+  if (input.redemptionClosesAt !== undefined) {
+    body.redemptionClosesAt = input.redemptionClosesAt;
+  }
+  if (input.checkInOpensAt !== undefined) {
+    body.checkInOpensAt = input.checkInOpensAt;
+  }
+  if (input.checkInClosesAt !== undefined) {
+    body.checkInClosesAt = input.checkInClosesAt;
+  }
+  if (input.maxTicketsPerAttendee !== undefined) {
+    body.maxTicketsPerAttendee = input.maxTicketsPerAttendee;
+  }
+  return body;
 }
