@@ -51,4 +51,6 @@ jobs:
         run: ./scripts/d5-backup-drill.sh
       - name: Business + key restore drill
         run: ./scripts/d5-business-restore-drill.sh
-      # Full PRD 2×20k + 50 scanners needs local Keycloak + long runtime — not CI.
+      - name: Admission S4 isolated (nginx edge)
+        run: ./scripts/d5-admission-s4.sh
+      # Full PRD 2×20k + sustained S3 needs local Keycloak + long runtime — not CI.

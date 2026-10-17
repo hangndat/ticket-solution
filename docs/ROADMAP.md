@@ -118,9 +118,9 @@ Mỗi nhóm dưới đây tương ứng parent Issue trên GitHub; sub-issues ma
 
 - [x] Review/test độc lập RLS, authorization, transaction races — Issue #24; PR #47 (+ test:db gate/issue/approval)
 - [x] Backup/restore drill cục bộ — Issue #25. Lệnh đúng: `./scripts/d5-backup-drill.sh` (hai container Postgres vứt bỏ, không đụng `ticket_dev`). Pass chỉ chứng minh một dòng fixture đánh dấu còn sau `pg_dump` và restore. Không phải backup production và không phải SLO.
-- [x] Business/key restore drill — `./scripts/d5-business-restore-drill.sh` (2 tenant × 2 event, ticket_credentials.kid, check-in, quota). RTO = wall-clock dump+restore local; RPO continuous chưa đo. Evidence: [D5-ISSUE-25-EVIDENCE.md](./reviews/D5-ISSUE-25-EVIDENCE.md)
-- [x] Observability (hạ tầng local) — overlay Prometheus + exporters (`infra/observability/`, `./scripts/d5-observability-smoke.sh`). **Chưa đạt §16:** API chưa có Prometheus `/metrics` text (BE task riêng). Health JSON không đủ metric Gate/issue/queue.
-- [x] Load/admission (đo local có caveat) — harness `./scripts/d5-load-baseline.sh` (API+Postgres+OIDC+k6 thật). Baseline PRD 2 event × 20k vé × 50 scanner; admission edge ADR-15 **chưa deploy** (S4 không đo). Số liệu + hạn chế phần cứng trong evidence #25 — không claim SLO prod / không che bằng demo pass.
+- [ ] Business/key restore drill — `./scripts/d5-business-restore-drill.sh` (AES-GCM decrypt + API reconnect + RPO dump-point). **Chưa tick Done:** continuous RPO ≤15 phút / RTO prod ≤2h chưa đo trên hạ tầng đích. Evidence: [D5-ISSUE-25-EVIDENCE.md](./reviews/D5-ISSUE-25-EVIDENCE.md)
+- [ ] Observability (hạ tầng local) — overlay Prometheus + exporters (`infra/observability/`, `./scripts/d5-observability-smoke.sh`). **Chưa đạt §16 / chưa Done:** API Prometheus `/metrics` text là BE follow-up; scrape Bearer file đã chuẩn bị.
+- [ ] Load/admission — harness `./scripts/d5-load-baseline.sh` (S3 sustained) + `./scripts/d5-admission-s4.sh` (nginx edge isolated). **Chưa tick Done** tới khi evidence đạt 50 issue/s + 20 confirm/s ≥60s, 50 scanner/event × 2, và không claim SLO prod. Chi tiết: evidence #25.
 - [ ] UAT thiết bị thật / TestFlight (camera, deep link, push, offline ví, revoke) — build **local** signed
 - [x] Runbook, release checklist, O06 options (chưa chốt số) — `docs/ops/RUNBOOK.md`, `RELEASE-CHECKLIST.md`, `O06-OPTIONS.md`. Store submitted/approved/available vẫn theo dõi ở #26.
 

@@ -6,8 +6,12 @@
 #
 # Env (optional):
 #   D5_LOAD_TICKETS_PER_EVENT   default 20000 (PRD pilot). Use 500 for smoke.
-#   D5_LOAD_SCANNERS            default 50
+#   D5_LOAD_SCANNERS            default 50 per event
 #   D5_LOAD_EVENTS              default 2
+#   D5_LOAD_ISSUE_RATE          default 50 (issue/s, TD S3)
+#   D5_LOAD_CONFIRM_RATE        default 20 (confirm/s, TD S3)
+#   D5_LOAD_SUSTAIN_SEC         default 60 (concurrent issue+confirm)
+#   D5_LOAD_ISSUE_HTTP_COUNT    default rate×sustain (authenticated issue pool)
 #   D5_LOAD_API_PORT            default 13101 (task-specific; avoids :3001)
 #   D5_LOAD_PG_PORT             default 55452
 #   D5_LOAD_OIDC_ISSUER         default http://127.0.0.1:8080/realms/ticket
@@ -15,7 +19,7 @@
 #
 # Uses throwaway Postgres (docker label ticket.task=d5-load). Does not touch
 # ticket_dev / compose project ticket-solution volumes.
-# Admission (ADR-15 Caddy/nginx waiting room) is NOT deployed — gap recorded.
+# Admission edge: ./scripts/d5-admission-s4.sh (isolated; Gate bypass).
 
 set -euo pipefail
 
@@ -25,6 +29,9 @@ cd "${ROOT}"
 export D5_LOAD_TICKETS_PER_EVENT="${D5_LOAD_TICKETS_PER_EVENT:-20000}"
 export D5_LOAD_SCANNERS="${D5_LOAD_SCANNERS:-50}"
 export D5_LOAD_EVENTS="${D5_LOAD_EVENTS:-2}"
+export D5_LOAD_ISSUE_RATE="${D5_LOAD_ISSUE_RATE:-50}"
+export D5_LOAD_CONFIRM_RATE="${D5_LOAD_CONFIRM_RATE:-20}"
+export D5_LOAD_SUSTAIN_SEC="${D5_LOAD_SUSTAIN_SEC:-60}"
 export D5_LOAD_API_PORT="${D5_LOAD_API_PORT:-13101}"
 export D5_LOAD_PG_PORT="${D5_LOAD_PG_PORT:-55452}"
 if [[ -z "${D5_LOAD_OIDC_ISSUER:-}" ]]; then
