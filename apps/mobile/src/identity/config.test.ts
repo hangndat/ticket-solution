@@ -57,6 +57,17 @@ test('API base URL trims trailing slashes', () => {
   else process.env.EXPO_PUBLIC_API_BASE_URL = previous;
 });
 
+test('API base URL prefers env over empty extra (no invented URL in unit env)', () => {
+  const previous = process.env.EXPO_PUBLIC_API_BASE_URL;
+  delete process.env.EXPO_PUBLIC_API_BASE_URL;
+  // Without Metro bake / expo-constants extra in node:test, missing env → null.
+  assert.equal(getApiBaseUrl(), null);
+  process.env.EXPO_PUBLIC_API_BASE_URL = 'https://api.vemoki.com/';
+  assert.equal(getApiBaseUrl(), 'https://api.vemoki.com');
+  if (previous === undefined) delete process.env.EXPO_PUBLIC_API_BASE_URL;
+  else process.env.EXPO_PUBLIC_API_BASE_URL = previous;
+});
+
 test('tenant id empty is null (no invented tenant)', () => {
   const previous = process.env.EXPO_PUBLIC_TENANT_ID;
   delete process.env.EXPO_PUBLIC_TENANT_ID;

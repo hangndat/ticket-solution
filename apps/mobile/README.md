@@ -97,7 +97,7 @@ Uses the owner's **personal** Apple Developer team only — not company Apple ID
 
 Do **not** use Xcode account `eschmeler5431@icloud.com` / team SCHMELER ERUNG (`3WHS6JDYV2`) for this app.
 
-**TestFlight:** `0.1.0 (7)` — same as (6): OIDC `prompt=login` + `vemoki://oauth/logout` (ASC already had build 6). Prod API `https://api.vemoki.com`, OIDC `https://auth.vemoki.com/realms/ticket`, tenant/event bake for device UAT. Team `BLUA62D52G`. Local Release archive + upload only (never EAS Cloud).
+**TestFlight / device Release:** `0.1.0 (8)` — `APS_ENVIRONMENT=production` bakes public Vemoki defaults into `extra.ticketPublic` + Metro `EXPO_PUBLIC_*` when unset (`https://api.vemoki.com`, `https://auth.vemoki.com/realms/ticket`, `ticket-mobile`, `apns`). Optional `EXPO_PUBLIC_TENANT_ID` / `EVENT_ID` still from local `.env`. Team `BLUA62D52G`. Local Release archive + upload only (never EAS Cloud).
 
 Local binary (no EAS Cloud, no TestFlight upload from this worker unless authorized):
 
