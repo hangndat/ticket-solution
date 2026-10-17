@@ -427,7 +427,7 @@ async function runIssueBusiness(
     );
   }
   if (code.status === 'HELD') {
-    return resumeOrRejectHold(tx, input, code, operationId, consent);
+    return resumeOrRejectHold(tx, input, code, operationId);
   }
   if (code.status !== 'AVAILABLE') {
     throw new IssueError(
@@ -723,7 +723,6 @@ async function resumeOrRejectHold(
   input: RedeemInput,
   code: CodeRow,
   operationId: string,
-  _consent: ConsentSnapshot,
 ): Promise<IssueBusinessResult> {
   if (code.approval_mode === 'MANUAL' && code.active_request_id) {
     // Code already locked; lock request next (order: … → code → request).

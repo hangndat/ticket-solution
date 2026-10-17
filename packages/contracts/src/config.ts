@@ -4,6 +4,7 @@
  */
 
 import type { CursorPage } from './common';
+import type { FormDefinition } from './redemption-forms';
 
 /** Fixed section kinds (MVP allowlist — no arbitrary HTML/CSS/JS). */
 export const EVENT_CONTENT_SECTION_KINDS = [
@@ -54,6 +55,8 @@ export interface EventConfigPayload {
   brand: EventBrandSnapshot;
   sections: EventContentSection[];
   formDefinitionId?: string;
+  /** Optional redeem form snapshot (C-F); stored in published config JSON. */
+  form?: FormDefinition;
   termsVersion?: string;
 }
 

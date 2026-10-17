@@ -359,6 +359,8 @@ test(
             emailVerified: true,
             rawCode: 'N1-A',
             idempotencyKey: randomUUID(),
+            termsVersion: 'terms-v1',
+            termsAccepted: true,
           }),
         ),
       );
