@@ -16,6 +16,8 @@ const ticketId = '11111111-1111-4111-8111-111111111111';
 const tenantId = '22222222-2222-4222-8222-222222222222';
 const eventId = '33333333-3333-4333-8333-333333333333';
 const staffSessionId = '44444444-4444-4444-8444-444444444444';
+const userA = 'user-a';
+const userB = 'user-b';
 
 function jsonResponse(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
@@ -24,9 +26,19 @@ function jsonResponse(status: number, body: unknown): Response {
   });
 }
 
+async function queueFor(
+  store: ReturnType<typeof createMemoryOfflineQueueStore>,
+  userId: string,
+  opts?: { createId?: () => string; nowIso?: () => string },
+): Promise<OfflineScanQueue> {
+  const q = new OfflineScanQueue(store, opts);
+  await q.bindUser(userId);
+  return q;
+}
+
 test('persist queue survives re-hydrate (SecureStore-shaped store)', async () => {
-  const store = createMemoryOfflineQueueStore();
-  const q1 = new OfflineScanQueue(store, {
+  const store = createMemoryOfflineQueueStore([], userA);
+  const q1 = await queueFor(store, userA, {
     createId: (() => {
       let n = 0;
       return () => {
@@ -39,17 +51,69 @@ test('persist queue survives re-hydrate (SecureStore-shaped store)', async () =>
   await q1.enqueue({ ticketId, tenantId, eventId, staffSessionId });
   assert.equal(q1.getSnapshot().pendingCount, 1);
 
-  const q2 = new OfflineScanQueue(store);
-  await q2.hydrate();
+  const q2 = await queueFor(store, userA);
   assert.equal(q2.getSnapshot().pendingCount, 1);
   assert.equal(q2.getSnapshot().items[0]?.ticketId, ticketId);
   assert.equal(q2.getSnapshot().items[0]?.clientSeq, 0);
 });
 
-test('clientSeq is monotonic per device+session', async () => {
-  const store = createMemoryOfflineQueueStore();
+test('getSnapshot returns stable reference until emit', async () => {
+  const store = createMemoryOfflineQueueStore([], userA);
+  const q = await queueFor(store, userA, {
+    createId: () => '00000000-0000-4000-8000-000000000001',
+    nowIso: () => '2026-10-17T08:00:00.000Z',
+  });
+  const a = q.getSnapshot();
+  const b = q.getSnapshot();
+  assert.equal(a, b);
+  await q.enqueue({ ticketId, tenantId, eventId, staffSessionId });
+  const c = q.getSnapshot();
+  assert.notEqual(a, c);
+  assert.equal(c, q.getSnapshot());
+});
+
+test('queue is partitioned by userId; logout clear removes durable rows', async () => {
+  const store = createMemoryOfflineQueueStore([], userA);
   let n = 0;
-  const q = new OfflineScanQueue(store, {
+  const createId = () => {
+    n += 1;
+    return `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
+  };
+  const qa = await queueFor(store, userA, {
+    createId,
+    nowIso: () => '2026-10-17T08:00:00.000Z',
+  });
+  await qa.enqueue({ ticketId, tenantId, eventId, staffSessionId });
+  assert.equal(qa.getSnapshot().pendingCount, 1);
+
+  const qb = await queueFor(store, userB, {
+    createId,
+    nowIso: () => '2026-10-17T08:00:00.000Z',
+  });
+  assert.equal(qb.getSnapshot().pendingCount, 0);
+  await qb.enqueue({
+    ticketId: '55555555-5555-4555-8555-555555555555',
+    tenantId,
+    eventId,
+    staffSessionId,
+  });
+  assert.equal(qb.getSnapshot().pendingCount, 1);
+
+  await qb.clearForUser(userB);
+  assert.equal(qb.getSnapshot().pendingCount, 0);
+  assert.equal(qb.ownerUserIdOrNull(), null);
+
+  const qaAgain = await queueFor(store, userA);
+  assert.equal(qaAgain.getSnapshot().pendingCount, 1);
+  await qaAgain.clearForUser(userA);
+  const empty = await queueFor(store, userA);
+  assert.equal(empty.getSnapshot().pendingCount, 0);
+});
+
+test('clientSeq is monotonic per device+session', async () => {
+  const store = createMemoryOfflineQueueStore([], userA);
+  let n = 0;
+  const q = await queueFor(store, userA, {
     createId: () => {
       n += 1;
       return `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
@@ -68,9 +132,9 @@ test('clientSeq is monotonic per device+session', async () => {
 });
 
 test('replay maps CONFLICT_LOST and keeps ALREADY_CHECKED_IN messaging', async () => {
-  const store = createMemoryOfflineQueueStore();
+  const store = createMemoryOfflineQueueStore([], userA);
   let n = 0;
-  const q = new OfflineScanQueue(store, {
+  const q = await queueFor(store, userA, {
     createId: () => {
       n += 1;
       return `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
@@ -109,9 +173,9 @@ test('replay maps CONFLICT_LOST and keeps ALREADY_CHECKED_IN messaging', async (
 });
 
 test('replay APPLIED clears pending and records checkinId', async () => {
-  const store = createMemoryOfflineQueueStore();
+  const store = createMemoryOfflineQueueStore([], userA);
   let n = 0;
-  const q = new OfflineScanQueue(store, {
+  const q = await queueFor(store, userA, {
     createId: () => {
       n += 1;
       return `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
@@ -142,9 +206,9 @@ test('replay APPLIED clears pending and records checkinId', async () => {
 });
 
 test('NOT_IMPLEMENTED keeps pending so queue survives stub BE', async () => {
-  const store = createMemoryOfflineQueueStore();
+  const store = createMemoryOfflineQueueStore([], userA);
   let n = 0;
-  const q = new OfflineScanQueue(store, {
+  const q = await queueFor(store, userA, {
     createId: () => {
       n += 1;
       return `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
@@ -168,9 +232,9 @@ test('NOT_IMPLEMENTED keeps pending so queue survives stub BE', async () => {
 });
 
 test('network failure during replay keeps pending', async () => {
-  const store = createMemoryOfflineQueueStore();
+  const store = createMemoryOfflineQueueStore([], userA);
   let n = 0;
-  const q = new OfflineScanQueue(store, {
+  const q = await queueFor(store, userA, {
     createId: () => {
       n += 1;
       return `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;

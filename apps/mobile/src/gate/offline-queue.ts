@@ -129,6 +129,14 @@ function applyItemResult(
   };
 }
 
+export const EMPTY_OFFLINE_QUEUE_SNAPSHOT: OfflineQueueSnapshot = {
+  items: [],
+  pendingCount: 0,
+  conflictCount: 0,
+  syncing: false,
+  lastSyncError: null,
+};
+
 export class OfflineScanQueue {
   private items: QueuedOfflineScan[] = [];
   private deviceId: string | null = null;
@@ -136,8 +144,10 @@ export class OfflineScanQueue {
   private syncing = false;
   private lastSyncError: string | null = null;
   private hydrated = false;
+  private ownerUserId: string | null = null;
   private generation = 0;
   private listeners = new Set<() => void>();
+  private snapshot: OfflineQueueSnapshot = EMPTY_OFFLINE_QUEUE_SNAPSHOT;
   private store: OfflineQueueStore;
   private createId: () => string;
   private nowIso: () => string;
@@ -158,30 +168,94 @@ export class OfflineScanQueue {
     };
   };
 
-  getSnapshot = (): OfflineQueueSnapshot => {
+  /** Stable reference for useSyncExternalStore — rebuilt only on emit. */
+  getSnapshot = (): OfflineQueueSnapshot => this.snapshot;
+
+  private rebuildSnapshot(): void {
     const pendingCount = this.items.filter(
       (i) => i.localStatus === 'pending' || i.localStatus === 'syncing',
     ).length;
     const conflictCount = this.items.filter(
       (i) => i.localStatus === 'conflict' || i.localStatus === 'rejected',
     ).length;
-    return {
+    this.snapshot = {
       items: this.items,
       pendingCount,
       conflictCount,
       syncing: this.syncing,
       lastSyncError: this.lastSyncError,
     };
-  };
+  }
 
   private emit() {
+    this.rebuildSnapshot();
     this.generation += 1;
     for (const listener of this.listeners) listener();
   }
 
+  ownerUserIdOrNull(): string | null {
+    return this.ownerUserId;
+  }
+
+  /**
+   * Bind the in-memory queue to a verified user partition and hydrate that
+   * user's durable SecureStore keys. Switching users fail-closes memory first.
+   */
+  async bindUser(userId: string): Promise<void> {
+    if (!userId) {
+      this.invalidateMemory();
+      return;
+    }
+    if (this.ownerUserId === userId && this.hydrated) return;
+    if (this.ownerUserId && this.ownerUserId !== userId) {
+      this.resetMemoryKeepingListeners();
+    }
+    this.ownerUserId = userId;
+    this.hydrated = false;
+    await this.hydrate();
+  }
+
+  /** Immediate fail-closed memory clear (does not touch durable store). */
+  invalidateMemory(): void {
+    this.resetMemoryKeepingListeners();
+    this.emit();
+  }
+
+  private resetMemoryKeepingListeners(): void {
+    this.items = [];
+    this.seqMap = {};
+    this.syncing = false;
+    this.lastSyncError = null;
+    this.ownerUserId = null;
+    this.hydrated = false;
+    // deviceId stays — physical device identity is not user-scoped.
+  }
+
+  /**
+   * Clear memory + durable queue/seq for a user (logout / account switch).
+   * Safe when owner is already null — still deletes that user's SecureStore keys.
+   */
+  async clearForUser(userId: string): Promise<void> {
+    if (!userId) return;
+    if (this.ownerUserId === userId || this.ownerUserId === null) {
+      this.resetMemoryKeepingListeners();
+      this.emit();
+    }
+    await this.store.clearQueue(userId);
+    await this.store.clearSeqMap(userId);
+  }
+
   async hydrate(): Promise<void> {
     if (this.hydrated) return;
-    const raw = await this.store.readQueue();
+    const userId = this.ownerUserId;
+    if (!userId) {
+      this.items = [];
+      this.seqMap = {};
+      this.hydrated = false;
+      this.emit();
+      return;
+    }
+    const raw = await this.store.readQueue(userId);
     this.items = raw.map((row) => ({
       ...row,
       type: 'CHECKIN_OFFLINE' as const,
@@ -189,7 +263,7 @@ export class OfflineScanQueue {
       localStatus: normalizeLocalStatus(row.localStatus),
     }));
     this.deviceId = await this.store.readDeviceId();
-    this.seqMap = await this.store.readSeqMap();
+    this.seqMap = await this.store.readSeqMap(userId);
     if (!this.deviceId) {
       this.deviceId = this.createId();
       await this.store.writeDeviceId(this.deviceId);
@@ -225,11 +299,17 @@ export class OfflineScanQueue {
     staffSessionId: string;
   }): Promise<QueuedOfflineScan> {
     await this.hydrate();
+    const userId = this.ownerUserId;
+    if (!userId) {
+      throw new Error(
+        'Offline queue chưa gắn user — đăng nhập staff trước khi xếp hàng offline.',
+      );
+    }
     const deviceId = await this.ensureDeviceId();
     const key = seqKey(deviceId, input.staffSessionId);
     const nextSeq = (this.seqMap[key] ?? -1) + 1;
     this.seqMap = { ...this.seqMap, [key]: nextSeq };
-    await this.store.writeSeqMap(this.seqMap);
+    await this.store.writeSeqMap(userId, this.seqMap);
 
     const item: QueuedOfflineScan = {
       clientEventId: this.createId(),
@@ -252,6 +332,8 @@ export class OfflineScanQueue {
   }
 
   private async persistTrimmed(): Promise<void> {
+    const userId = this.ownerUserId;
+    if (!userId) return;
     const pending = this.items.filter(
       (i) => i.localStatus === 'pending' || i.localStatus === 'syncing',
     );
@@ -262,7 +344,7 @@ export class OfflineScanQueue {
       )
       .slice(0, RETAIN_SETTLED);
     this.items = [...pending, ...settled];
-    await this.store.writeQueue(this.items);
+    await this.store.writeQueue(userId, this.items);
   }
 
   /**
@@ -275,6 +357,9 @@ export class OfflineScanQueue {
     fetchImpl?: typeof fetch;
   }): Promise<{ flushed: number; results: OfflineSyncItemResult[] }> {
     await this.hydrate();
+    if (!this.ownerUserId) {
+      return { flushed: 0, results: [] };
+    }
     if (this.syncing) {
       return { flushed: 0, results: [] };
     }

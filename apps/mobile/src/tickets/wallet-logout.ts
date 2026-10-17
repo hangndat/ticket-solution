@@ -5,6 +5,7 @@ import {
 } from './display-cache.ts';
 import { invalidateOfflineBindingWrites } from './offline-display.ts';
 import { offlineDisplay } from './offline-display-session.ts';
+import { offlineScanQueue } from '../gate/offline-queue-session.ts';
 
 export type WalletLogoutInput = {
   userId: string | null;
@@ -30,6 +31,7 @@ export async function logoutAndClearWalletArtifacts(
   invalidateTicketDisplayWrites();
   invalidateOfflineBindingWrites();
   offlineDisplay.invalidateMemory();
+  offlineScanQueue.invalidateMemory();
 
   const errors: Error[] = [];
 
@@ -71,6 +73,14 @@ export async function logoutAndClearWalletArtifacts(
     await offlineDisplay.clear();
   } catch (error) {
     errors.push(asError(error, 'Xóa liên kết hiển thị offline thất bại'));
+  }
+
+  if (input.userId) {
+    try {
+      await offlineScanQueue.clearForUser(input.userId);
+    } catch (error) {
+      errors.push(asError(error, 'Xóa hàng đợi quét offline thất bại'));
+    }
   }
 
   if (input.userId && input.tenantId) {
