@@ -1,0 +1,7 @@
+Đang ngoại tuyến
+Mất mạng. Quét mới sẽ được xếp hàng trên máy (cần phiên nhân viên đã mở trước đó).
+Quét hoặc dán QR hiển thị trên vé. Chỉ cho vào sau khi API ghi nhận check-in. Offline: xếp hàng trên máy, đồng bộ khi có mạng — không cho vào sớm. Phản hồi mất vẫn giữ “chưa rõ” sau khi mở lại app.\nAPI: http:\/\/192.168.86.8:3001 · Phiên: signed-out
+Check-in vé
+Đã xếp hàng offline
+Đã xếp hàng offline. Chưa cho vào — chờ đồng bộ khi có mạng.
+Không có thao tác chưa rõ đã lưu.
