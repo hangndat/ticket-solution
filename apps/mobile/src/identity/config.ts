@@ -80,6 +80,15 @@ export function getTenantId(): string | null {
   );
 }
 
+/**
+ * Public tenant slug for branding / published catalog.
+ * Empty → ThemeProvider keeps Vemoki defaults (no invented tenant).
+ */
+export function getTenantSlug(): string | null {
+  const slug = process.env.EXPO_PUBLIC_TENANT_SLUG?.trim() ?? '';
+  return slug.length > 0 ? slug : null;
+}
+
 /** Event UUID used when a scan is a bare ticket id. QR display payloads carry their own. */
 export function getEventId(): string | null {
   return pickPublic(

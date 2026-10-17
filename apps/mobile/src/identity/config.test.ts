@@ -5,6 +5,7 @@ import {
   getOidcClientId,
   getOidcIssuer,
   getTenantId,
+  getTenantSlug,
   isOidcConfigured,
 } from './config.ts';
 
@@ -78,4 +79,16 @@ test('tenant id empty is null (no invented tenant)', () => {
   assert.equal(getTenantId(), '22222222-2222-2222-2222-222222222222');
   if (previous === undefined) delete process.env.EXPO_PUBLIC_TENANT_ID;
   else process.env.EXPO_PUBLIC_TENANT_ID = previous;
+});
+
+test('tenant slug empty is null (theme keeps Vemoki defaults)', () => {
+  const previous = process.env.EXPO_PUBLIC_TENANT_SLUG;
+  delete process.env.EXPO_PUBLIC_TENANT_SLUG;
+  assert.equal(getTenantSlug(), null);
+  process.env.EXPO_PUBLIC_TENANT_SLUG = '  ';
+  assert.equal(getTenantSlug(), null);
+  process.env.EXPO_PUBLIC_TENANT_SLUG = 'demo-fun';
+  assert.equal(getTenantSlug(), 'demo-fun');
+  if (previous === undefined) delete process.env.EXPO_PUBLIC_TENANT_SLUG;
+  else process.env.EXPO_PUBLIC_TENANT_SLUG = previous;
 });
