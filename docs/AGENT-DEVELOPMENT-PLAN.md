@@ -184,7 +184,7 @@ Dependencies ở Task-level chỉ diễn tả ordering thật; không bắt iOS 
 Dùng supervised orchestration cho kế hoạch này: một Run cho milestone, Tasks là các phần việc, Dispatch là từng lần giao thực hiện. Không dùng terminal send làm cơ chế theo dõi task chính.
 
 1. Coordinator tạo self-contained task spec, ownership, base commit, dependencies và acceptance.
-2. Launch toàn bộ task ready trong wave trước khi chờ. Để agent/model theo cấu hình mặc định của người dùng; không tự chọn model/effort.
+2. Launch toàn bộ task ready trong wave trước khi chờ. Chọn agent theo `orca-agent-routing.mdc`; giữ model/effort mặc định nếu task không chỉ định.
 3. Worker check follow-ups ở checkpoint; câu hỏi blocking gửi qua orchestration ask để coordinator trả lời.
 4. Coordinator xử lý thay đổi contract và questions, không để worker tự đoán các quyết định nghiệp vụ lớn.
 5. Worker báo `worker_done` với outcome và evidence; điều này chứng minh worker báo xong, chưa tự chứng minh branch đã integrated.
