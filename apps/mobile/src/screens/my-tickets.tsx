@@ -8,6 +8,7 @@ import {
   View,
 } from 'react-native';
 import type { TicketSummary } from '@ticket/contracts';
+import { EventLogo } from '@/components/event-media';
 import { BrandWordmark, Notice } from '@/components/page';
 import {
   EmptyState,
@@ -15,6 +16,7 @@ import {
   LoadingState,
 } from '@/components/screen-state';
 import { walletCopy } from '@/components/screen-state-copy';
+import { hasDemoMediaForEventId } from '@/data/demo-media';
 import { brand, colors } from '@/theme/colors';
 import { isOidcConfigured, getTenantId } from '@/identity/config';
 import { verifyViaMe } from '@/identity/fetch-me';
@@ -106,6 +108,14 @@ function TicketRow({ ticket }: { ticket: TicketSummary }) {
           gap: 6,
         })}
       >
+        {hasDemoMediaForEventId(ticket.eventId) ? (
+          <EventLogo
+            eventId={ticket.eventId}
+            height={28}
+            testID={`ticket-logo-${ticket.ticketId}`}
+            accessibilityLabel="Logo sự kiện demo trên vé"
+          />
+        ) : null}
         <Text style={{ color: brand.ink, fontSize: 17, fontWeight: '600' }}>
           {ticket.state} · v{ticket.credentialVersion}
         </Text>

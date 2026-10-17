@@ -2,8 +2,10 @@ import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { Text, View } from 'react-native';
 import type { TicketSummary } from '@ticket/contracts';
+import { EventBanner, EventLogo } from '@/components/event-media';
 import { BrandWordmark, Notice, Page } from '@/components/page';
 import { QrCode } from '@/components/qr-code';
+import { hasDemoMediaForEventId } from '@/data/demo-media';
 import { brand, colors } from '@/theme/colors';
 import { typography } from '@/theme/typography';
 import { getTenantId } from '@/identity/config';
@@ -210,8 +212,26 @@ export function TicketDetailScreen() {
             backgroundColor: brand.signal,
           }}
         />
+        {hasDemoMediaForEventId(ticket.eventId) ? (
+          <EventBanner
+            eventId={ticket.eventId}
+            height={120}
+            style={{ borderRadius: 0 }}
+            testID="ticket-detail-banner"
+            accessibilityLabel="Banner sự kiện demo trên vé"
+          />
+        ) : null}
         <View style={{ padding: 20, gap: 16, alignItems: 'center' }}>
-          <BrandWordmark compact />
+          {hasDemoMediaForEventId(ticket.eventId) ? (
+            <EventLogo
+              eventId={ticket.eventId}
+              height={32}
+              testID="ticket-detail-logo"
+              accessibilityLabel="Logo sự kiện demo trên vé"
+            />
+          ) : (
+            <BrandWordmark compact />
+          )}
           <Text
             style={{
               color: brand.ink,
