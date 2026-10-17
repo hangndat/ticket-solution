@@ -64,28 +64,13 @@ test('resolveApnsApiEnvironment maps production env to production', () => {
   );
 });
 
-test('permission-denied and empty token fail closed without POST', async () => {
+test('empty token and native token throw fail closed without POST', async () => {
   __resetApnsRegistrationGenerationForTests();
   process.env.EXPO_PUBLIC_API_BASE_URL = 'http://api.test';
   const store = credentialStore('tok');
   const boundary = new SessionBoundary(store);
   await boundary.establish('tok', async () => ({ userId: 'user-a' }));
   let posts = 0;
-  const denied = await registerApnsDeviceToken({
-    session: boundary,
-    platform: 'ios',
-    store: createMemoryApnsRegistrationStore(),
-    notifications: notificationsFixture({
-      getPermissionsAsync: async () => ({ status: 'denied' }),
-      requestPermissionsAsync: async () => ({ status: 'denied' }),
-    }),
-    fetchImpl: mockFetch(async () => {
-      posts += 1;
-      return new Response('{}', { status: 500 });
-    }),
-  });
-  assert.equal(denied.status, 'permission-denied');
-  assert.equal(posts, 0);
 
   const empty = await registerApnsDeviceToken({
     session: boundary,
@@ -100,6 +85,23 @@ test('permission-denied and empty token fail closed without POST', async () => {
     }),
   });
   assert.equal(empty.status, 'unavailable');
+  assert.equal(posts, 0);
+
+  const threw = await registerApnsDeviceToken({
+    session: boundary,
+    platform: 'ios',
+    store: createMemoryApnsRegistrationStore(),
+    notifications: notificationsFixture({
+      getDevicePushTokenAsync: async () => {
+        throw new Error('native unavailable');
+      },
+    }),
+    fetchImpl: mockFetch(async () => {
+      posts += 1;
+      return new Response('{}', { status: 500 });
+    }),
+  });
+  assert.equal(threw.status, 'unavailable');
   assert.equal(posts, 0);
 });
 
@@ -370,3 +372,29 @@ test('signed-out register skips backend POST (skipped-unsigned)', async () => {
   }
   assert.equal(posts, 0);
 });
+
+test('getDevicePushToken failure fails closed without POST (no permission gate)', async () => {
+  __resetApnsRegistrationGenerationForTests();
+  process.env.EXPO_PUBLIC_API_BASE_URL = 'http://api.test';
+  const store = credentialStore('tok');
+  const boundary = new SessionBoundary(store);
+  await boundary.establish('tok', async () => ({ userId: 'user-a' }));
+  let posts = 0;
+  const unavailable = await registerApnsDeviceToken({
+    session: boundary,
+    platform: 'ios',
+    store: createMemoryApnsRegistrationStore(),
+    notifications: notificationsFixture({
+      getDevicePushTokenAsync: async () => {
+        throw new Error('native token failed');
+      },
+    }),
+    fetchImpl: mockFetch(async () => {
+      posts += 1;
+      return new Response('{}', { status: 500 });
+    }),
+  });
+  assert.equal(unavailable.status, 'unavailable');
+  assert.equal(posts, 0);
+});
+

@@ -40,6 +40,7 @@ import {
 } from '@/tickets/ticket-sync-guard';
 import { logoutAndClearWalletArtifacts } from '@/tickets/wallet-logout';
 import { AccountScreen } from '@/screens/account';
+import { SessionScopedPushStatus } from '@/push/push-status';
 
 function ActionButton({
   label,
@@ -589,6 +590,8 @@ function VerifiedWallet({ userId }: { userId: string }) {
         onPress={() => void onLogout()}
         disabled={busy}
       />
+
+      <SessionScopedPushStatus />
 
       <Text style={{ color: colors.secondary, fontSize: 13, lineHeight: 18 }}>
         Vé đã cache mở được khi mất mạng chỉ để xem. Không phải check-in offline;
