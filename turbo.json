@@ -17,6 +17,16 @@
       "cache": false,
       "persistent": true
     },
+    "@ticket/web#typegen": {
+      "outputs": [".next/types/**"]
+    },
+    "@ticket/web#typecheck": {
+      "dependsOn": ["^build", "typegen"]
+    },
+    "@ticket/web#build": {
+      "dependsOn": ["^build", "typecheck"],
+      "outputs": [".next/**", "!.next/cache/**"]
+    },
     "@ticket/backend#build": {
       "dependsOn": ["^build"],
       "outputs": ["dist/**", "src/generated/**"]
