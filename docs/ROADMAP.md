@@ -18,7 +18,7 @@ Tracking lâu dài: GitHub Issues + Project (tiếng Việt). Orca Task/Dispatch
 
 **Roadmap đã được user duyệt lần đầu (2026-10-16)** — đóng D0 và mở D1. Các đoạn “đợt tiếp theo = D1 / chưa mở business endpoints” bên dưới §10 là **lịch sử**; không còn mô tả hiện tại.
 
-**Trọng tâm hiện tại (Project #3, 2026-10-17):** parent **D4 (#5)** và **D5 (#6)** đang **Đang làm**. Parent **D0–D3 (#1–#4)** đã **Hoàn thành** trên board. Sau MVP (#7) **Chưa lên lịch**. Không tuyên bố pilot production sẵn sàng.
+**Trọng tâm hiện tại (Project #3, 2026-10-17):** parent **D4 (#5)** và **D5 (#6)** đang **Đang làm**. Parent **D0–D3 (#1–#4)** đã **Hoàn thành** trên board. **D6 UX/UI (#81)** đã chèn board (**Chưa lên lịch**); implement sau D5 acceptance (Option A). Sau MVP (#7) **Chưa lên lịch**. Không tuyên bố pilot production sẵn sàng.
 
 ## 1. Trạng thái hiện tại (tóm tắt theo Project + main)
 
@@ -32,7 +32,8 @@ Cột **Board** = Status parent Issue trên Project #3 tại thời điểm đ�
 | Check-in (D3) | **Hoàn thành** (#4) | Nghiệm thu đợt (có ngoại lệ UAT) | Gate + web Gate + iOS scan/recovery trên `main`. **Camera thiết bị thật** hoãn sang D5 (#26) — không ghi là UAT camera physical đã PASS |
 | Admin & Platform (D4) | **Đang làm** (#5) | Một phần code trên `main`; đợt chưa nghiệm thu | #21 Hoàn thành (PRs #38/#43/#48). #22/#23/#56 **Đang làm** (CS/export/APNs/tenant2 — PR mở #54/#55…). Tenant 2 E2E UI chưa Hoàn thành |
 | Hardening / UAT / phát hành (D5) | **Đang làm** (#6) | Một phần code/drill trên `main`; đợt chưa nghiệm thu | #24 Hoàn thành (PR #47). #25 **Đang làm** (obs/load + drill cục bộ). #26 **Chờ duyệt** (UAT TestFlight / thiết bị thật). Build native **chỉ** local Xcode; **cấm** Expo/EAS Cloud Build |
-| Android / payment / seat map / white-label | **Chưa lên lịch** (#7) | Ngoài MVP | Theo PRD — không gắn D2–D5 |
+| UX/UI polish (D6) | **Chưa lên lịch** (#81) | Chưa mở implement | Sau D5 acceptance (Option A); plan [`D6-UX-UI-PLAN.md`](./plans/D6-UX-UI-PLAN.md); không = pilot ready |
+| Android / payment / seat map / white-label | **Chưa lên lịch** (#7) | Ngoài MVP | Theo PRD — không gắn D2–D6 |
 
 ### 1.1 Ba mức hoàn thành (bắt buộc phân biệt)
 
@@ -85,8 +86,9 @@ Gợi ý từ kế hoạch agent; cổng identity trước business đã **đi q
 | D3 | Check-in | Gate reserve/confirm/recovery + web Gate + iOS scan | Hai thiết bị / race / recovery; camera physical có thể tách D5 nếu ghi rõ | Hoàn thành (UAT camera device → #26) |
 | D4 | Admin & Platform | Permissions, import, approval, config publish, CS, reporting, app feature còn lại | Tenant thứ hai tự tạo event/brand qua admin, không hardcode pilot | Đang làm |
 | D5 | Hardening & phát hành | Security review, capacity, restore, device UAT, local signed iOS / TestFlight | Evidence đạt technical design; publish/store là task riêng → **pilot ready** | Đang làm |
+| D6 | Hoàn thiện UX/UI | Polish brand Vemoki + IA/states/a11y trên web & iOS đã có chức năng | Brand test + headless/sim screenshots; không gộp D5 hardening | Chưa lên lịch (#81) |
 
-Android, payment/refund, seat map, Apple/Google Wallet, offline Gate multi-device, white-label app: **sau MVP**, không gắn vào D2–D5 trừ khi user mở rộng phạm vi.
+Android, payment/refund, seat map, Apple/Google Wallet, offline Gate multi-device, white-label app: **sau MVP**, không gắn vào D2–D6 trừ khi user mở rộng phạm vi.
 
 ## 5. Ánh xạ module PRD → đợt
 
@@ -95,7 +97,7 @@ Android, payment/refund, seat map, Apple/Google Wallet, offline Gate multi-devic
 | M01 | Tenant và cách ly dữ liệu | D0 (prototype) → D1/D4 (đầy đủ) | — |
 | M02 | Identity và quyền | D1 | Quyết định provider; O01/O02 |
 | M03 | Event lifecycle | D2 skeleton → D4 đầy đủ | M01, M02 |
-| M04 | Branding và nội dung | D0 fixture → D4 publish | M03 |
+| M04 | Branding và nội dung | D0 fixture → D4 publish → **D6 polish platform+event surfaces** | M03 |
 | M05 | Loại vé, nguồn phát, quota | D2 | M03; identity verified trước issue |
 | M06 | Import mã và khách mời | D4 | M05 |
 | M07 | Redemption và duyệt | D2 (auto-approve) → D4 (duyệt thủ công) | M05, M02 |
@@ -155,6 +157,19 @@ Mỗi nhóm tương ứng parent Issue trên GitHub; sub-issues mang tiêu chí 
 - [ ] Load/admission — harness `./scripts/d5-load-baseline.sh` (S3 sustained) + `./scripts/d5-admission-s4.sh` (nginx edge isolated). **Chưa tick Done** tới khi evidence đạt 50 issue/s + 20 confirm/s ≥60s, 50 scanner/event × 2, và không claim SLO prod. Chi tiết: evidence #25.
 - [ ] UAT thiết bị thật / TestFlight (camera, deep link, push, offline ví, revoke) — #26 Chờ duyệt; build **local** signed; **không** EAS Cloud
 - [x] Runbook, release checklist, O06 options (chưa chốt số) — `docs/ops/RUNBOOK.md`, `RELEASE-CHECKLIST.md`, `O06-OPTIONS.md`. Store submitted/approved/available vẫn theo dõi ở #26.
+
+### D6 — Hoàn thiện UX/UI (board: Chưa lên lịch)
+
+- [ ] Tokens & design contract — D6-S1 (#82)
+- [ ] Web guest / redeem / claim / event — D6-S2 (#83)
+- [ ] Web gate & account — D6-S3 (#84)
+- [ ] Web admin & platform — D6-S4 (#85)
+- [ ] iOS theme + Events/Redeem/Claim — D6-S5 (#87)
+- [ ] iOS ví + Staff scan UX — D6-S6 (#88)
+- [ ] ROADMAP sync & nghiệm thu đợt — D6-S7 (#89)
+
+Parent [#81](https://github.com/hangndat/ticket-solution/issues/81). Milestone [D6 — Hoàn thiện UX/UI Vemoki](https://github.com/hangndat/ticket-solution/milestone/8).  
+**Gate:** xem [docs/plans/D6-UX-UI-PLAN.md](./plans/D6-UX-UI-PLAN.md) §7. Implement sau D5 parent #6 Hoàn thành (Option A). Không tuyên bố pilot ready.
 
 ### Sau MVP (board: Chưa lên lịch)
 
