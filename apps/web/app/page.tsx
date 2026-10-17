@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { BrandMark } from '../src/brand-mark';
+import { HeroWordmark } from '../src/branding/hero-wordmark';
 import { SiteNav } from '../src/site-chrome';
 import { demoEventRoutes, findDemoEvent, demoEventHref } from '../src/events';
 import { SurfaceState } from '../src/ui/surface-state';
@@ -9,10 +9,7 @@ export default function Home() {
     <main id="main" className="container home">
       <SiteNav variant="guest" />
       <section className="home-hero" aria-labelledby="home-title">
-        <p className="wordmark-hero" aria-hidden="true">
-          <BrandMark />
-          vemoki<span>↗</span>
-        </p>
+        <HeroWordmark />
         <h1 id="home-title">Điều tốt đẹp đưa chúng ta lại gần.</h1>
         <p className="intro">
           Đổi mã lấy vé, nhận lời mời, hoặc xem sự kiện demo mang nhãn rõ — một
