@@ -145,7 +145,16 @@ export class OfflineScanQueue {
   private lastSyncError: string | null = null;
   private hydrated = false;
   private ownerUserId: string | null = null;
-  private generation = 0;
+  /** Bumps on bind/invalidate — fences late hydrate / in-memory apply. */
+  private bindGeneration = 0;
+  /** Bumps on clearForUser — fences late durable enqueue writes after logout. */
+  private writeGeneration = 0;
+  /**
+   * Per-user writeGeneration of the last successful durable persist.
+   * Stale rollbacks must not clear partitions that a newer session already
+   * committed after logout/re-login.
+   */
+  private lastSuccessfulWriteGeneration = new Map<string, number>();
   private listeners = new Set<() => void>();
   private snapshot: OfflineQueueSnapshot = EMPTY_OFFLINE_QUEUE_SNAPSHOT;
   private store: OfflineQueueStore;
@@ -189,8 +198,50 @@ export class OfflineScanQueue {
 
   private emit() {
     this.rebuildSnapshot();
-    this.generation += 1;
     for (const listener of this.listeners) listener();
+  }
+
+  private isBindCurrent(bindGeneration: number, userId: string): boolean {
+    return (
+      bindGeneration === this.bindGeneration && this.ownerUserId === userId
+    );
+  }
+
+  private isWriteCurrent(writeGeneration: number): boolean {
+    return writeGeneration === this.writeGeneration;
+  }
+
+  private markSuccessfulWrite(userId: string, writeGeneration: number): void {
+    this.lastSuccessfulWriteGeneration.set(userId, writeGeneration);
+  }
+
+  /**
+   * Undo a late durable write that lost the clear/logout race — but only when
+   * no newer session has successfully persisted to this partition. If a newer
+   * writeGeneration already committed, repair durable state from current memory
+   * when we still own the user (late write may have clobbered seq/queue).
+   */
+  private async rollbackStaleDurableWrite(
+    userId: string,
+    staleWriteGeneration: number,
+  ): Promise<void> {
+    const lastOk = this.lastSuccessfulWriteGeneration.get(userId);
+    if (
+      lastOk !== undefined &&
+      lastOk === this.writeGeneration &&
+      this.writeGeneration > staleWriteGeneration
+    ) {
+      if (
+        this.ownerUserId === userId &&
+        this.isWriteCurrent(this.writeGeneration)
+      ) {
+        await this.store.writeSeqMap(userId, this.seqMap);
+        await this.store.writeQueue(userId, this.items);
+      }
+      return;
+    }
+    await this.store.clearQueue(userId);
+    await this.store.clearSeqMap(userId);
   }
 
   ownerUserIdOrNull(): string | null {
@@ -207,8 +258,12 @@ export class OfflineScanQueue {
       return;
     }
     if (this.ownerUserId === userId && this.hydrated) return;
-    if (this.ownerUserId && this.ownerUserId !== userId) {
+    if (this.ownerUserId !== userId) {
       this.resetMemoryKeepingListeners();
+    } else {
+      // Same user, overlapping hydrate — cancel the in-flight one.
+      this.bindGeneration += 1;
+      this.hydrated = false;
     }
     this.ownerUserId = userId;
     this.hydrated = false;
@@ -222,6 +277,7 @@ export class OfflineScanQueue {
   }
 
   private resetMemoryKeepingListeners(): void {
+    this.bindGeneration += 1;
     this.items = [];
     this.seqMap = {};
     this.syncing = false;
@@ -234,9 +290,12 @@ export class OfflineScanQueue {
   /**
    * Clear memory + durable queue/seq for a user (logout / account switch).
    * Safe when owner is already null — still deletes that user's SecureStore keys.
+   * Bumps writeGeneration first so in-flight enqueue cannot resurrect durable rows.
    */
   async clearForUser(userId: string): Promise<void> {
     if (!userId) return;
+    this.writeGeneration += 1;
+    this.lastSuccessfulWriteGeneration.delete(userId);
     if (this.ownerUserId === userId || this.ownerUserId === null) {
       this.resetMemoryKeepingListeners();
       this.emit();
@@ -248,6 +307,7 @@ export class OfflineScanQueue {
   async hydrate(): Promise<void> {
     if (this.hydrated) return;
     const userId = this.ownerUserId;
+    const bindGeneration = this.bindGeneration;
     if (!userId) {
       this.items = [];
       this.seqMap = {};
@@ -256,17 +316,26 @@ export class OfflineScanQueue {
       return;
     }
     const raw = await this.store.readQueue(userId);
-    this.items = raw.map((row) => ({
+    if (!this.isBindCurrent(bindGeneration, userId)) return;
+    const items = raw.map((row) => ({
       ...row,
       type: 'CHECKIN_OFFLINE' as const,
       payloadVersion: OFFLINE_SYNC_PAYLOAD_VERSION,
       localStatus: normalizeLocalStatus(row.localStatus),
     }));
-    this.deviceId = await this.store.readDeviceId();
-    this.seqMap = await this.store.readSeqMap(userId);
+    const deviceId = await this.store.readDeviceId();
+    if (!this.isBindCurrent(bindGeneration, userId)) return;
+    const seqMap = await this.store.readSeqMap(userId);
+    if (!this.isBindCurrent(bindGeneration, userId)) return;
+
+    this.items = items;
+    this.seqMap = seqMap;
+    this.deviceId = deviceId;
     if (!this.deviceId) {
-      this.deviceId = this.createId();
-      await this.store.writeDeviceId(this.deviceId);
+      const created = this.createId();
+      await this.store.writeDeviceId(created);
+      if (!this.isBindCurrent(bindGeneration, userId)) return;
+      this.deviceId = created;
     }
     this.hydrated = true;
     this.emit();
@@ -298,18 +367,50 @@ export class OfflineScanQueue {
     eventId: string;
     staffSessionId: string;
   }): Promise<QueuedOfflineScan> {
-    await this.hydrate();
+    // Capture owner/generation BEFORE any await so a mid-flight bind switch
+    // cannot re-attribute this scan to a different partition.
     const userId = this.ownerUserId;
+    const bindGeneration = this.bindGeneration;
+    const writeGeneration = this.writeGeneration;
     if (!userId) {
       throw new Error(
         'Offline queue chưa gắn user — đăng nhập staff trước khi xếp hàng offline.',
       );
     }
+    await this.hydrate();
+    if (
+      !this.isBindCurrent(bindGeneration, userId) ||
+      !this.isWriteCurrent(writeGeneration)
+    ) {
+      throw new Error(
+        'Hàng đợi offline đã bị hủy (đổi user/đăng xuất) — không xếp hàng.',
+      );
+    }
     const deviceId = await this.ensureDeviceId();
+    if (
+      !this.isBindCurrent(bindGeneration, userId) ||
+      !this.isWriteCurrent(writeGeneration)
+    ) {
+      throw new Error(
+        'Hàng đợi offline đã bị hủy (đổi user/đăng xuất) — không xếp hàng.',
+      );
+    }
     const key = seqKey(deviceId, input.staffSessionId);
     const nextSeq = (this.seqMap[key] ?? -1) + 1;
-    this.seqMap = { ...this.seqMap, [key]: nextSeq };
-    await this.store.writeSeqMap(userId, this.seqMap);
+    const nextSeqMap = { ...this.seqMap, [key]: nextSeq };
+    await this.store.writeSeqMap(userId, nextSeqMap);
+    if (!this.isWriteCurrent(writeGeneration)) {
+      await this.rollbackStaleDurableWrite(userId, writeGeneration);
+      throw new Error(
+        'Hàng đợi offline đã bị hủy (đăng xuất) — không xếp hàng.',
+      );
+    }
+    if (!this.isBindCurrent(bindGeneration, userId)) {
+      throw new Error(
+        'Hàng đợi offline đã bị hủy (đổi user) — không xếp hàng.',
+      );
+    }
+    this.seqMap = nextSeqMap;
 
     const item: QueuedOfflineScan = {
       clientEventId: this.createId(),
@@ -326,14 +427,34 @@ export class OfflineScanQueue {
         'Đã xếp hàng offline. Chưa cho vào — chờ đồng bộ khi có mạng.',
     };
     this.items = [item, ...this.items];
-    await this.persistTrimmed();
+    const persisted = await this.persistTrimmed(
+      userId,
+      bindGeneration,
+      writeGeneration,
+    );
+    if (!persisted) {
+      throw new Error(
+        'Hàng đợi offline đã bị hủy (đổi user/đăng xuất) — không xếp hàng.',
+      );
+    }
+    this.markSuccessfulWrite(userId, writeGeneration);
     this.emit();
     return item;
   }
 
-  private async persistTrimmed(): Promise<void> {
-    const userId = this.ownerUserId;
-    if (!userId) return;
+  /**
+   * Persist trimmed queue for a captured userId.
+   * Late writes after clearForUser are rolled back; bind-switch leaves the
+   * prior user's partition intact and does not mutate the new owner's memory.
+   */
+  private async persistTrimmed(
+    userId: string,
+    bindGeneration: number,
+    writeGeneration: number,
+  ): Promise<boolean> {
+    if (!userId) return false;
+    if (!this.isWriteCurrent(writeGeneration)) return false;
+    if (!this.isBindCurrent(bindGeneration, userId)) return false;
     const pending = this.items.filter(
       (i) => i.localStatus === 'pending' || i.localStatus === 'syncing',
     );
@@ -343,8 +464,18 @@ export class OfflineScanQueue {
           i.localStatus !== 'pending' && i.localStatus !== 'syncing',
       )
       .slice(0, RETAIN_SETTLED);
-    this.items = [...pending, ...settled];
-    await this.store.writeQueue(userId, this.items);
+    const nextItems = [...pending, ...settled];
+    await this.store.writeQueue(userId, nextItems);
+    if (!this.isWriteCurrent(writeGeneration)) {
+      await this.rollbackStaleDurableWrite(userId, writeGeneration);
+      return false;
+    }
+    if (!this.isBindCurrent(bindGeneration, userId)) {
+      return false;
+    }
+    this.items = nextItems;
+    this.markSuccessfulWrite(userId, writeGeneration);
+    return true;
   }
 
   /**
@@ -357,7 +488,10 @@ export class OfflineScanQueue {
     fetchImpl?: typeof fetch;
   }): Promise<{ flushed: number; results: OfflineSyncItemResult[] }> {
     await this.hydrate();
-    if (!this.ownerUserId) {
+    const ownerUserId = this.ownerUserId;
+    const bindGeneration = this.bindGeneration;
+    const writeGeneration = this.writeGeneration;
+    if (!ownerUserId) {
       return { flushed: 0, results: [] };
     }
     if (this.syncing) {
@@ -377,6 +511,14 @@ export class OfflineScanQueue {
     const fetchImpl = input.fetchImpl ?? fetch;
     const base = input.apiBase.replace(/\/$/, '');
     const deviceId = await this.ensureDeviceId();
+    if (
+      !this.isBindCurrent(bindGeneration, ownerUserId) ||
+      !this.isWriteCurrent(writeGeneration)
+    ) {
+      this.syncing = false;
+      this.emit();
+      return { flushed: 0, results: [] };
+    }
     const allResults: OfflineSyncItemResult[] = [];
     let flushed = 0;
 
@@ -389,6 +531,12 @@ export class OfflineScanQueue {
       }
 
       for (const [eventId, eventItems] of byEvent) {
+        if (
+          !this.isBindCurrent(bindGeneration, ownerUserId) ||
+          !this.isWriteCurrent(writeGeneration)
+        ) {
+          return { flushed, results: allResults };
+        }
         const bySession = new Map<string, QueuedOfflineScan[]>();
         for (const item of eventItems) {
           const sk = `${item.tenantId}::${item.staffSessionId}`;
@@ -400,6 +548,12 @@ export class OfflineScanQueue {
         for (const group of bySession.values()) {
           const sorted = group.slice().sort(compareOfflineReplayOrder);
           for (let i = 0; i < sorted.length; i += OFFLINE_SYNC_MAX_BATCH) {
+            if (
+              !this.isBindCurrent(bindGeneration, ownerUserId) ||
+              !this.isWriteCurrent(writeGeneration)
+            ) {
+              return { flushed, results: allResults };
+            }
             const chunk = sorted.slice(i, i + OFFLINE_SYNC_MAX_BATCH);
             const ids = new Set(chunk.map((c) => c.clientEventId));
             this.items = this.items.map((row) =>
@@ -425,6 +579,13 @@ export class OfflineScanQueue {
               body,
             });
 
+            if (
+              !this.isBindCurrent(bindGeneration, ownerUserId) ||
+              !this.isWriteCurrent(writeGeneration)
+            ) {
+              return { flushed, results: allResults };
+            }
+
             if (outcome.kind === 'network') {
               this.items = this.items.map((row) =>
                 ids.has(row.clientEventId)
@@ -438,7 +599,11 @@ export class OfflineScanQueue {
               );
               this.lastSyncError =
                 'Không kết nối được máy chủ khi đồng bộ hàng đợi offline.';
-              await this.persistTrimmed();
+              await this.persistTrimmed(
+                ownerUserId,
+                bindGeneration,
+                writeGeneration,
+              );
               return { flushed, results: allResults };
             }
 
@@ -464,7 +629,11 @@ export class OfflineScanQueue {
                   : row,
               );
               this.lastSyncError = vi;
-              await this.persistTrimmed();
+              await this.persistTrimmed(
+                ownerUserId,
+                bindGeneration,
+                writeGeneration,
+              );
               if (!keepPending) flushed += chunk.length;
               continue;
             }
@@ -487,7 +656,11 @@ export class OfflineScanQueue {
               return applyItemResult(row, result);
             });
             flushed += chunk.length;
-            await this.persistTrimmed();
+            await this.persistTrimmed(
+              ownerUserId,
+              bindGeneration,
+              writeGeneration,
+            );
           }
         }
       }
