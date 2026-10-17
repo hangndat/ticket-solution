@@ -179,6 +179,30 @@ async function writeAudit(
   `;
 }
 
+/** Persist a Gate reject for EventReport.rejectByReason (O12 / audit `gate.reject`). */
+export async function recordGateReject(
+  tx: Prisma.TransactionClient,
+  input: {
+    tenantId: string;
+    eventId: string;
+    actorUserId: string;
+    reason: string;
+    resourceType?: string;
+    resourceId?: string;
+  },
+): Promise<void> {
+  const reason = input.reason.trim() || 'UNKNOWN';
+  await writeAudit(tx, {
+    tenantId: input.tenantId,
+    eventId: input.eventId,
+    actorUserId: input.actorUserId,
+    action: 'gate.reject',
+    resourceType: input.resourceType ?? 'gate',
+    resourceId: input.resourceId ?? input.eventId,
+    reason,
+  });
+}
+
 export async function openStaffSession(
   tx: Prisma.TransactionClient,
   input: { tenantId: string; eventId: string; userId: string },
