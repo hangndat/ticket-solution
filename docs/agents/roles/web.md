@@ -40,5 +40,6 @@
 ## Orca
 
 - Agent: `--agent cursor`.
-- Có thể chạy song song `backend` / `ios` khi không conflict contract.
+- Coordinator spawn song song `backend` / `ios` / BA/PD khi không conflict contract; PD handoff chỉ chặn Task UI cần design.
+- Một lúc chỉ một feature coding Dispatch trên slice web.
 - Reviewer ≠ session này.
