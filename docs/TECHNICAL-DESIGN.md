@@ -3,7 +3,7 @@
 Phiên bản: 0.1 — Proposed, để review và làm spike trước triển khai  
 Ngày: 2026-10-16  
 Đặc tả sản phẩm: [PRD v0.3](./PRD.md) — thương hiệu **Vemoki**, domain `vemoki.com`.  
-Phạm vi: web + app iOS; backend NestJS; Android giai đoạn sau.
+Phạm vi: web + app iOS; backend NestJS. Android native **ngoài phạm vi có chủ đích** (O10 — không làm trong MVP). MVP mở rộng gồm D7 Offline Gate multi-device, D8 White-label cấu hình, D9 demo/media, D10 App Store metadata (không submit trừ ủy quyền) — xem [ROADMAP](./ROADMAP.md), [DECISION-LOG](./DECISION-LOG.md) O10.
 
 ## 1. Kết luận thiết kế
 
@@ -25,7 +25,7 @@ Các quyết định trong tài liệu là đề xuất kỹ thuật, không t�
 | ADR-04 | PostgreSQL outbox → BullMQ → worker idempotent                 | Chấp nhận giao việc ít nhất một lần; không hứa gửi email exactly-once. **MVP thực tế: [ADR-17](./ops/ADR-17-OUTBOX-PG-DIRECT.md)** — leased outbox + poll trực tiếp, chưa BullMQ |
 | ADR-05 | Quota dùng counter transaction, lock nhất quán                 | Ưu tiên tính đúng; event counter có thể thành điểm tranh khóa              |
 | ADR-06 | Check-in online reserve/confirm                                | Không cam kết chống trùng toàn hệ thống khi các cổng mất kết nối           |
-| ADR-07 | App chung có hai chế độ là baseline tạm                        | Không khóa phương án white-label khi sản phẩm chưa chốt                    |
+| ADR-07 | App chung có hai chế độ; white-label cấu hình = D8 (O10)       | Không fork per-tenant; Android native ngoài MVP                            |
 | ADR-08 | Cấu hình có schema/version, template giới hạn                  | Bảo trì được qua nhiều event và nhiều phiên bản app                        |
 | ADR-09 | Self-hosted Keycloak OIDC, Authorization Code + PKCE cho iOS   | Không tự xây protocol; **cấm** IdP SaaS (Clerk/Auth0/…); Compose/VPS       |
 | ADR-10 | Admission control trước khi cần sharding quota                 | Hạn chế contention và bảo vệ DB; không cam kết FIFO tuyệt đối              |
@@ -533,7 +533,7 @@ Release gate: architecture tests + isolation/security tests + concurrency tests 
 
 | Quyết định                               | Baseline                                | Khi cần chốt                       |
 | ---------------------------------------- | --------------------------------------- | ---------------------------------- |
-| App chung hay white-label                | App chung, staff/attendee modes         | Trước bundle ID và store branding  |
+| App chung hay white-label                | App chung + **D8** cấu hình brand (O10) | Trong đợt D8; trước D10 metadata   |
 | Identity provider                        | **Keycloak self-host** đạt P4           | Đã chốt; còn live smoke            |
 | 50k nghĩa là volume/burst/concurrent?    | Test theo S1–S4, chưa claim concurrent  | Trước capacity sizing và event SLA |
 | Hosting / admission                      | VPS self-host + Caddy admission         | Trước production benchmark         |
