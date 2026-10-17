@@ -3,10 +3,21 @@ import { isAppScheme } from '../identity/app-schemes.ts';
 const UUID =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const EVENT_ID = /^[A-Za-z0-9][A-Za-z0-9-]{0,80}$/;
+/** Opaque claim token — length-bounded; never logged by callers. */
+const CLAIM_TOKEN = /^[A-Za-z0-9._~-]{16,512}$/;
 
 export type InstalledAppLink =
   | { kind: 'ticket'; ticketId: string; href: string }
   | { kind: 'event'; eventId: string; href: string }
+  | {
+      kind: 'invitation-claim';
+      token: string;
+      tenantId: string;
+      eventId: string;
+      tenantSlug?: string;
+      eventSlug?: string;
+      href: string;
+    }
   | { kind: 'oauth-callback' }
   | { kind: 'passthrough' };
 
@@ -15,10 +26,15 @@ export type InstalledAppLink =
  * `vemoki://oauth/callback` and `ticketsolution://oauth/callback` stay auth
  * redirects (router must not navigate). Ticket and event links rewrite onto
  * existing screens. Fixture event ids (e.g. `demo-fun-fest`) are preserved.
+ * Invitation claim links never fall back to fixture routes.
  */
 export function parseInstalledAppLink(input: string): InstalledAppLink {
   const raw = input.trim();
   if (!raw) return { kind: 'passthrough' };
+
+  const claim = parseInvitationClaimLink(raw);
+  if (claim) return claim;
+
   const segments = linkSegments(raw);
   if (!segments) return { kind: 'passthrough' };
   if (segments.oauthCallback) return { kind: 'oauth-callback' };
@@ -47,8 +63,76 @@ export function parseInstalledAppLink(input: string): InstalledAppLink {
 export function routeForInstalledAppLink(input: string): string | null {
   const parsed = parseInstalledAppLink(input);
   if (parsed.kind === 'oauth-callback') return null;
-  if (parsed.kind === 'ticket' || parsed.kind === 'event') return parsed.href;
+  if (
+    parsed.kind === 'ticket' ||
+    parsed.kind === 'event' ||
+    parsed.kind === 'invitation-claim'
+  ) {
+    return parsed.href;
+  }
   return input;
+}
+
+/**
+ * Guest claim deep links (C-I):
+ * - `vemoki://invitations/claim?token=&tenantId=&eventId=`
+ * - path `/invitations/claim` with the same query
+ * Token stays in query for the claim screen; not written to fixture routes.
+ */
+function parseInvitationClaimLink(raw: string): InstalledAppLink | null {
+  let url: URL;
+  try {
+    if (/^[a-z][a-z0-9+.-]*:/i.test(raw)) {
+      url = new URL(raw);
+      if (!isAppScheme(url.protocol)) return null;
+    } else {
+      const path = raw.startsWith('/') ? raw : `/${raw}`;
+      url = new URL(`ticketsolution://host${path}`);
+    }
+  } catch {
+    return null;
+  }
+
+  const parts = [
+    url.hostname,
+    ...url.pathname.split('/').filter((p) => p.length > 0),
+  ].filter((p) => p && p !== 'host');
+
+  const invitationsIdx = parts.findIndex(
+    (p) => p.toLowerCase() === 'invitations',
+  );
+  if (invitationsIdx < 0) return null;
+  const claimPart = parts[invitationsIdx + 1];
+  if (!claimPart || claimPart.toLowerCase() !== 'claim') return null;
+  if (parts[invitationsIdx + 2] !== undefined) return null;
+
+  const token = url.searchParams.get('token')?.trim() ?? '';
+  const tenantId = url.searchParams.get('tenantId')?.trim() ?? '';
+  const eventId = url.searchParams.get('eventId')?.trim() ?? '';
+  const tenantSlug = url.searchParams.get('tenantSlug')?.trim() || undefined;
+  const eventSlug = url.searchParams.get('eventSlug')?.trim() || undefined;
+
+  if (!CLAIM_TOKEN.test(token) || !UUID.test(tenantId) || !UUID.test(eventId)) {
+    return { kind: 'passthrough' };
+  }
+
+  const qs = new URLSearchParams({
+    token,
+    tenantId,
+    eventId,
+  });
+  if (tenantSlug) qs.set('tenantSlug', tenantSlug);
+  if (eventSlug) qs.set('eventSlug', eventSlug);
+
+  return {
+    kind: 'invitation-claim',
+    token,
+    tenantId,
+    eventId,
+    tenantSlug,
+    eventSlug,
+    href: `/claim?${qs.toString()}`,
+  };
 }
 
 function linkSegments(
