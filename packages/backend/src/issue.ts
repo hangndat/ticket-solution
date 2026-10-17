@@ -28,6 +28,7 @@ import {
   dbClock,
 } from './event-policy';
 import { metricsInc } from './metrics-registry';
+import { assertTenantAllowsIssue, lockTenantPolicyForShare } from './tenant-policy';
 
 export const REDEEM_COMMAND = 'redemption.redeem' as const;
 export const APPROVAL_PENDING = 'APPROVAL_PENDING' as const;
@@ -238,6 +239,9 @@ export async function redeemAndIssueTicket(
 
   const requestHash = canonicalRequestHash(input);
   const operationId = randomUUID();
+
+  const policy = await lockTenantPolicyForShare(tx, input.tenantId);
+  assertTenantAllowsIssue(policy.status);
 
   // 1) Claim idempotency operation (ON CONFLICT DO NOTHING).
   await tx.$executeRaw`

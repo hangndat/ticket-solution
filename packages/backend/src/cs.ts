@@ -8,6 +8,7 @@ import {
   providerStatusFromDbState,
   type ProviderStatus,
 } from './notification-status';
+import { assertTenantAllowsAdminMutation, lockTenantPolicyForShare } from './tenant-policy';
 
 const PERMISSION_LOOKUP = 'cs.lookup';
 const PERMISSION_RESEND = 'cs.resend';
@@ -391,6 +392,9 @@ export async function resendTicketEmail(
     permission: PERMISSION_RESEND,
     eventId: input.eventId,
   });
+  const policy = await lockTenantPolicyForShare(tx, input.tenantId);
+  assertTenantAllowsAdminMutation(policy.status);
+
 
   const existing = await tx.$queryRaw<
     { id: string; status: string; response_json: Prisma.JsonValue }[]

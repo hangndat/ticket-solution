@@ -400,3 +400,61 @@ export {
   collectDbRuntimeMetrics,
   type OutboxMetricSnapshot,
 } from './metrics-db';
+
+export {
+  PlatformError,
+  PLATFORM_ERROR_CODES,
+  type PlatformErrorCode,
+} from './platform-error';
+export {
+  readPlatformSecurityConfig,
+  type PlatformSecurityConfig,
+} from './platform-config';
+export {
+  createPlatformOidcVerifier,
+  type PlatformOidcVerifier,
+  type PlatformVerifiedIdentity,
+} from './platform-oidc';
+export {
+  tenantPermissionsForRole,
+  eventPermissionsForRole,
+  isMembershipRole,
+  ROLE_SCHEMA_VERSION,
+} from './role-map';
+export {
+  bootstrapPlatformOperator,
+  requireActivePlatformOperator,
+  getPlatformMe,
+  withPlatformOperator,
+} from './platform-operator';
+export {
+  provisionTenant,
+  setTenantStatus,
+  updateTenantLimits,
+  getPlatformTenantDetail,
+  type ProvisionResult,
+} from './platform-tenant';
+export {
+  listMyTenants,
+  createMembershipInvite,
+  acceptMembershipInvite,
+  revokeMembershipKeepingLastOwner,
+} from './membership-invite';
+export {
+  createSupportGrant,
+  revokeSupportGrant,
+  listSupportTickets,
+} from './support-grant';
+export {
+  createAccountDeletionRequest,
+  getCurrentAccountDeletionRequest,
+} from './account-deletion';
+export {
+  lockTenantPolicyForShare,
+  lockTenantPolicyForUpdate,
+  assertTenantAllowsIssue,
+  assertTenantAllowsAdminMutation,
+  type TenantPolicyRow,
+} from './tenant-policy';
+
+export { withPlatformRole } from './platform-context';
