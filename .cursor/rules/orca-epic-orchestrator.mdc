@@ -48,3 +48,16 @@ Epic (parent Issue đợt/module)
 - Parallel spawn: `orca-parallel-workers.mdc`
 - Idle fill: `orca-idle-worker-fill.mdc`
 - Project Status + milestone DoD: `github-project-tracking.mdc`
+
+## Nested depth (Orca constraint)
+
+Orca enforces `nested_worker_depth` (current host max **1**). An epic orchestrator Dispatch is already depth≥1, so **`worker-start` of child workers fails** with `nested_worker_depth_exceeded`.
+
+**Required pattern while max=1:**
+
+1. Epic orchestrator: Project Status sync, break Stories/Tasks, create Orca Tasks with specs, ask coordinator if spawn blocked.
+2. **Coordinator (depth 0)** spawns story/task coding workers (`worker-start --agent cursor`) for that Epic.
+3. Epic orchestrator may still track progress, prepare DoD reviewer specs, and milestone-gate checklists — but must not assume it can launch nested workers until Nested worker depth ≥2 in Orca Settings.
+
+Do **not** fall back to serial solo implementation in the epic terminal unless the user explicitly authorizes it.
+
