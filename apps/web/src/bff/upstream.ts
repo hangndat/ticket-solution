@@ -1,28 +1,15 @@
-import { IDENTITY_ERROR_CODES, type ApiError } from '@ticket/contracts';
+import { IDENTITY_ERROR_CODES } from '@ticket/contracts';
 import { isOidcConfigured } from '../oidc/config';
 import { readAccessToken } from '../oidc/cookies';
+import { bffApiError } from './api-error';
 
+export { bffApiError } from './api-error';
 export { isUuid } from './ids';
 
 export function apiBaseUrl(
   env: NodeJS.ProcessEnv = process.env,
 ): string {
   return (env.API_BASE_URL ?? 'http://127.0.0.1:3001').replace(/\/$/, '');
-}
-
-export function bffApiError(
-  code: string,
-  message: string,
-  status: number,
-  retryable = false,
-): Response {
-  const body: ApiError = {
-    code,
-    message,
-    requestId: crypto.randomUUID(),
-    retryable,
-  };
-  return Response.json(body, { status });
 }
 
 /**
