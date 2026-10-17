@@ -15,6 +15,7 @@ import {
 } from '@/published/published-event-api';
 import type { PublishedEventDetail } from '@/published/types';
 import { colors } from '@/theme/colors';
+import { useTheme } from '@/theme/ThemeProvider';
 
 export function EventDetailScreen({
   tenantSlug,
@@ -39,7 +40,22 @@ function FixtureDemoDetail({
   tenantSlug: string;
   slug: string;
 }) {
+  const { applyBranding } = useTheme();
   const event = findDemoEvent(tenantSlug, slug);
+
+  useEffect(() => {
+    if (!event) return;
+    applyBranding(
+      {
+        tenantSlug: event.tenantSlug,
+        organizationName: event.brand.organizationName,
+        primaryColor: event.brand.primaryColor,
+        wordmark: event.brand.organizationName,
+      },
+      'api',
+    );
+  }, [applyBranding, event]);
+
   if (!event) {
     return (
       <Page>
@@ -53,7 +69,7 @@ function FixtureDemoDetail({
   return (
     <Page>
       <Notice title="Demo · chưa xuất bản">
-        Catalog mẫu — không phải nội dung M04 đã xuất bản trên server.
+        Catalog mẫu — không phải nội dung đã xuất bản trên máy chủ.
       </Notice>
       <EventMediaHeader
         eventId={event.id}
@@ -171,14 +187,35 @@ function PublishedEventDetailView({
     );
   }
 
-  const event = phase.event;
+  return <PublishedEventBrandSync event={phase.event} />;
+}
+
+/** Apply published event brand into ThemeProvider (S-P0-C) then render chrome. */
+function PublishedEventBrandSync({
+  event,
+}: {
+  event: PublishedEventDetail;
+}) {
+  const { applyBranding } = useTheme();
   const sections = visibleSectionsInOrder(event);
+
+  useEffect(() => {
+    applyBranding(
+      {
+        tenantSlug: event.tenantSlug,
+        organizationName: event.brand.organizationName,
+        primaryColor: event.brand.primaryColor,
+        logoUrl: event.brand.logoUrl,
+        wordmark: event.brand.organizationName,
+      },
+      'api',
+    );
+  }, [applyBranding, event]);
 
   return (
     <Page>
       <Text style={{ color: colors.secondary, fontSize: 13 }}>
-        Đã xuất bản · config v{event.publishedConfigVersion} · schema v
-        {event.schemaVersion}
+        Đã xuất bản · {event.brand.organizationName}
       </Text>
       <View
         style={{
@@ -212,7 +249,7 @@ function PublishedEventDetailView({
           </Text>
         ) : (
           <Text selectable style={{ color: colors.secondary, fontSize: 17 }}>
-            Start time not set on published metadata
+            Chưa có giờ bắt đầu trên nội dung đã xuất bản
           </Text>
         )}
         {event.location ? (
@@ -234,23 +271,23 @@ function PublishedEventDetailView({
       ))}
 
       {event.faq.length > 0 ? (
-        <Notice title="FAQ">
+        <Notice title="Câu hỏi thường gặp">
           {event.faq.map((item, index) => (
             <Text
               key={`${item.q}-${index}`}
               selectable
               style={{ marginBottom: 8, color: colors.label }}
             >
-              Q: {item.q}
+              H: {item.q}
               {'\n'}
-              A: {item.a}
+              Đ: {item.a}
             </Text>
           ))}
         </Notice>
       ) : null}
 
       {event.terms ? (
-        <Notice title={`Terms (${event.terms.version})`}>
+        <Notice title={`Điều khoản (${event.terms.version})`}>
           {event.terms.bodyMarkdown}
         </Notice>
       ) : null}
@@ -260,7 +297,7 @@ function PublishedEventDetailView({
 
 function formatPublishedDate(startsAt: string, timezone: string): string {
   try {
-    return new Intl.DateTimeFormat('en', {
+    return new Intl.DateTimeFormat('vi', {
       dateStyle: 'long',
       timeStyle: 'short',
       timeZone: timezone,

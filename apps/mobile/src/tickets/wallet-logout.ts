@@ -1,4 +1,6 @@
+import { getTenantId, getTenantSlug } from '../identity/config.ts';
 import { session } from '../identity/session.ts';
+import { clearCachedBranding } from '../theme/branding-cache.ts';
 import {
   clearTicketDisplayCache,
   invalidateTicketDisplayWrites,
@@ -89,6 +91,16 @@ export async function logoutAndClearWalletArtifacts(
     } catch (error) {
       errors.push(asError(error, 'Xóa bộ đệm hiển thị vé thất bại'));
     }
+  }
+
+  // S-P0-C: drop durable tenant brand cache so next session cannot flash prior chrome.
+  try {
+    const tenantId = (input.tenantId ?? getTenantId() ?? '').trim();
+    const tenantSlug = (getTenantSlug() ?? '').trim();
+    if (tenantId) await clearCachedBranding(`id:${tenantId}`);
+    if (tenantSlug) await clearCachedBranding(`slug:${tenantSlug}`);
+  } catch (error) {
+    errors.push(asError(error, 'Xóa bộ đệm brand thất bại'));
   }
 
   if (errors.length === 1) throw errors[0];
