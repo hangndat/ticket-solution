@@ -1,14 +1,26 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
+import {
+  isApiUnreachableResult,
+  readBrowserOnline,
+  resolveGateLinkState,
+  type GateLinkState,
+} from '../../src/gate/connectivity';
 import {
   decideGateConfirm,
   lookupKnownCheckin,
   type GateDecision,
   type KnownCheckin,
 } from '../../src/gate/decide';
+import {
+  BLOCKED_DEGRADED_DECISION,
+  BLOCKED_OFFLINE_DECISION,
+  UNREACHABLE_CONFIRM,
+} from '../../src/gate/offline-messages';
 import { fetchJson } from '../../src/redeem/fetch-json';
 import { REQUEST_TIMEOUT_MS } from '../../src/redeem/poll-operation';
+import { GateOfflineBanner } from './offline-banner';
 
 type Props = {
   initialTenantId?: string;
@@ -37,6 +49,26 @@ export function GateForm({ initialTenantId = '', initialEventId = '' }: Props) {
   const [busy, setBusy] = useState(false);
   const [decision, setDecision] = useState<GateDecision | null>(null);
   const [notes, setNotes] = useState<KnownCheckin[]>([]);
+  const [browserOnline, setBrowserOnline] = useState(true);
+  const [apiUnreachable, setApiUnreachable] = useState(false);
+
+  const link: GateLinkState = resolveGateLinkState({ browserOnline, apiUnreachable });
+  const actionsBlocked = link !== 'online';
+
+  useEffect(() => {
+    function syncBrowser() {
+      setBrowserOnline(readBrowserOnline(window.navigator));
+    }
+    syncBrowser();
+    window.addEventListener('online', syncBrowser);
+    window.addEventListener('offline', syncBrowser);
+    const timer = window.setInterval(syncBrowser, 1000);
+    return () => {
+      window.removeEventListener('online', syncBrowser);
+      window.removeEventListener('offline', syncBrowser);
+      window.clearInterval(timer);
+    };
+  }, []);
 
   async function post(path: string, body: unknown) {
     return fetchJson(
@@ -50,13 +82,50 @@ export function GateForm({ initialTenantId = '', initialEventId = '' }: Props) {
     );
   }
 
+  function noteUnreachable(result: {
+    timedOut: boolean;
+    networkError: boolean;
+    status: number;
+  }) {
+    if (isApiUnreachableResult(result)) {
+      setApiUnreachable(true);
+      return true;
+    }
+    setApiUnreachable(false);
+    return false;
+  }
+
+  /** Fail-closed guard before mutating Gate calls. */
+  function guardBeforeMutate(): boolean {
+    if (!readBrowserOnline()) {
+      setBrowserOnline(false);
+      setDecision(BLOCKED_OFFLINE_DECISION);
+      return false;
+    }
+    if (apiUnreachable) {
+      const proceed =
+        typeof window !== 'undefined' && window.confirm(UNREACHABLE_CONFIRM);
+      if (!proceed) {
+        setDecision(BLOCKED_DEGRADED_DECISION);
+        return false;
+      }
+    }
+    return true;
+  }
+
   async function openSession(event: FormEvent) {
     event.preventDefault();
+    if (!guardBeforeMutate()) return;
     setBusy(true);
     setDecision(null);
     setHold(null);
     try {
       const result = await post('/api/bff/gate/sessions', { tenantId, eventId });
+      if (noteUnreachable(result)) {
+        setSessionId('');
+        setDecision(decideGateConfirm(result));
+        return;
+      }
       const body = result.json as { sessionId?: string; code?: string; message?: string } | null;
       if (result.status === 200 && body?.sessionId) {
         setSessionId(body.sessionId);
@@ -84,6 +153,7 @@ export function GateForm({ initialTenantId = '', initialEventId = '' }: Props) {
       });
       return;
     }
+    if (!guardBeforeMutate()) return;
     setBusy(true);
     setDecision(null);
     try {
@@ -93,15 +163,15 @@ export function GateForm({ initialTenantId = '', initialEventId = '' }: Props) {
         ticketId,
         staffSessionId: sessionId,
       });
+      if (noteUnreachable(reserved)) {
+        setDecision(decideGateConfirm(reserved));
+        return;
+      }
       const holdBody = reserved.json as {
         reservationId?: string;
         token?: string;
         ticketId?: string;
       } | null;
-      if (reserved.timedOut || reserved.networkError || reserved.status >= 500 || reserved.status === 0) {
-        setDecision(decideGateConfirm(reserved));
-        return;
-      }
       if (reserved.status !== 200 || !holdBody?.reservationId || !holdBody.token) {
         setHold(null);
         setDecision(decideGateConfirm(reserved));
@@ -120,6 +190,10 @@ export function GateForm({ initialTenantId = '', initialEventId = '' }: Props) {
         staffSessionId: sessionId,
         token: nextHold.token,
       });
+      if (noteUnreachable(confirmed)) {
+        setDecision(decideGateConfirm(confirmed));
+        return;
+      }
       const next = decideGateConfirm(confirmed);
       setDecision(next);
       if (next.kind === 'admit' && next.checkinId) {
@@ -140,6 +214,8 @@ export function GateForm({ initialTenantId = '', initialEventId = '' }: Props) {
 
   return (
     <>
+      <GateOfflineBanner link={link} />
+
       <form onSubmit={openSession}>
         <label>
           Tenant ID
@@ -149,10 +225,14 @@ export function GateForm({ initialTenantId = '', initialEventId = '' }: Props) {
           Event ID
           <input value={eventId} onChange={(e) => setEventId(e.target.value)} required />
         </label>
-        <button type="submit" disabled={busy}>
+        <button type="submit" disabled={busy || !browserOnline} data-testid="gate-session-submit">
           Mở phiên cổng
         </button>
-        {sessionId ? <p>Phiên: <code>{sessionId}</code></p> : null}
+        {sessionId ? (
+          <p>
+            Phiên: <code>{sessionId}</code>
+          </p>
+        ) : null}
       </form>
 
       <form onSubmit={confirmEntry}>
@@ -160,10 +240,23 @@ export function GateForm({ initialTenantId = '', initialEventId = '' }: Props) {
           Ticket ID
           <input value={ticketId} onChange={(e) => setTicketId(e.target.value)} required />
         </label>
-        <button type="submit" disabled={busy || !sessionId}>
+        <button
+          type="submit"
+          disabled={busy || !sessionId || !browserOnline}
+          data-testid="gate-confirm-submit"
+          title={
+            actionsBlocked
+              ? 'Cổng offline/degraded — không check-in giả thành công trên web'
+              : undefined
+          }
+        >
           Giữ chỗ và xác nhận
         </button>
-        {hold ? <p>Đang giữ reservation <code>{hold.reservationId}</code></p> : null}
+        {hold ? (
+          <p>
+            Đang giữ reservation <code>{hold.reservationId}</code>
+          </p>
+        ) : null}
       </form>
 
       <form onSubmit={lookup}>
@@ -182,6 +275,7 @@ export function GateForm({ initialTenantId = '', initialEventId = '' }: Props) {
         <aside
           role="status"
           data-outcome={decision.kind}
+          data-testid="gate-decision"
           className={
             decision.kind === 'admit'
               ? 'redeem-status redeem-status--success gate-status--admit'
