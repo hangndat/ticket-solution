@@ -1,5 +1,8 @@
 # Native iOS builds: local/self-managed macOS only. Never use Expo/EAS Cloud Build.
 # Không dùng Turbo Remote Cache / SaaS cache (ADR-11). Chỉ cache local Actions `.turbo`.
+#
+# Layout: changes → parallel scope jobs → aggregator `ci` (required check).
+# PR chỉ đụng docs/** hoặc meta → gần như chỉ chạy `changes` + `ci`.
 name: CI
 on:
   push:
@@ -12,149 +15,186 @@ concurrency:
   cancel-in-progress: true
 env:
   TURBO_TELEMETRY_DISABLED: "1"
-  # Local filesystem cache only — never set TURBO_TOKEN / remote cache.
   TURBO_CACHE_DIR: .turbo
+
 jobs:
-  check:
+  changes:
     runs-on: ubuntu-latest
+    outputs:
+      docs_only: ${{ steps.set.outputs.docs_only }}
+      web: ${{ steps.set.outputs.web }}
+      mobile: ${{ steps.set.outputs.mobile }}
+      backend: ${{ steps.set.outputs.backend }}
+      db: ${{ steps.set.outputs.db }}
+      hardening: ${{ steps.set.outputs.hardening }}
     steps:
       - uses: actions/checkout@v4
+      - name: Path filters (PR)
+        if: github.event_name == 'pull_request'
+        id: filter
+        uses: dorny/paths-filter@v3
         with:
-          fetch-depth: 0
-      - name: Phát hiện thay đổi chỉ docs/**
-        id: scope
+          # Predicate true nếu có ít nhất một file khớp (sau negation).
+          filters: |
+            code:
+              - '**'
+              - '!docs/**'
+              - '!**/*.md'
+              - '!*.md'
+              - '!LICENSE'
+              - '!.gitignore'
+              - '!.gitattributes'
+              - '!.editorconfig'
+              - '!**/.gitkeep'
+            web:
+              - 'apps/web/**'
+              - 'packages/contracts/**'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - 'package.json'
+              - 'turbo.json'
+              - '.npmrc'
+              - '.github/workflows/ci.yml'
+              - '.github/actions/**'
+            mobile:
+              - 'apps/mobile/**'
+              - 'packages/contracts/**'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - 'package.json'
+              - 'turbo.json'
+              - '.npmrc'
+              - '.github/workflows/ci.yml'
+              - '.github/actions/**'
+            backend:
+              - 'apps/api/**'
+              - 'apps/worker/**'
+              - 'packages/backend/**'
+              - 'packages/contracts/**'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - 'package.json'
+              - 'turbo.json'
+              - '.npmrc'
+              - '.github/workflows/ci.yml'
+              - '.github/actions/**'
+            db:
+              - 'packages/backend/**'
+              - 'packages/contracts/**'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - 'package.json'
+              - 'turbo.json'
+              - '.github/workflows/ci.yml'
+              - '.github/actions/**'
+            hardening:
+              - 'scripts/d5-**'
+              - 'scripts/rint-**'
+              - 'scripts/lib/**'
+              - 'infra/**'
+              - 'docker-compose*.yml'
+              - 'compose*.yml'
+              - '.github/workflows/ci.yml'
+              - '.github/actions/**'
+      - name: Set scope outputs
+        id: set
         shell: bash
         run: |
           set -euo pipefail
           if [[ "${{ github.event_name }}" == "push" ]]; then
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
-            echo "scope=push-main (full checks)"
+            echo "web=true" >> "$GITHUB_OUTPUT"
+            echo "mobile=true" >> "$GITHUB_OUTPUT"
+            echo "backend=true" >> "$GITHUB_OUTPUT"
+            echo "db=true" >> "$GITHUB_OUTPUT"
+            echo "hardening=true" >> "$GITHUB_OUTPUT"
+            echo "scope=push-main (full)"
             exit 0
           fi
-          BASE="${{ github.event.pull_request.base.sha }}"
-          HEAD="${{ github.event.pull_request.head.sha }}"
-          mapfile -t FILES < <(git diff --name-only "${BASE}...${HEAD}")
-          if [[ ${#FILES[@]} -eq 0 ]]; then
+
+          code="${{ steps.filter.outputs.code }}"
+          web="${{ steps.filter.outputs.web }}"
+          mobile="${{ steps.filter.outputs.mobile }}"
+          backend="${{ steps.filter.outputs.backend }}"
+          db="${{ steps.filter.outputs.db }}"
+          hardening="${{ steps.filter.outputs.hardening }}"
+
+          if [[ "$code" == "true" ]]; then
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
-            echo "scope=empty-diff (full checks)"
-            exit 0
+          else
+            echo "docs_only=true" >> "$GITHUB_OUTPUT"
+            # Docs/meta-only: không chạy scope jobs.
+            web=false; mobile=false; backend=false; db=false; hardening=false
           fi
-          docs_only=true
-          for f in "${FILES[@]}"; do
-            # Full checks bắt buộc khi đụng contracts/lockfile/tooling/CI/apps/packages/infra/scripts.
-            if [[ ! "$f" =~ ^docs/ ]]; then
-              docs_only=false
-              break
-            fi
-          done
-          echo "docs_only=${docs_only}" >> "$GITHUB_OUTPUT"
-          echo "scope files=${#FILES[@]} docs_only=${docs_only}"
-      - name: Bỏ qua lint/typecheck/test/build (chỉ docs/**)
-        if: steps.scope.outputs.docs_only == 'true'
+
+          echo "web=${web}" >> "$GITHUB_OUTPUT"
+          echo "mobile=${mobile}" >> "$GITHUB_OUTPUT"
+          echo "backend=${backend}" >> "$GITHUB_OUTPUT"
+          echo "db=${db}" >> "$GITHUB_OUTPUT"
+          echo "hardening=${hardening}" >> "$GITHUB_OUTPUT"
+          echo "scope code=${code} web=${web} mobile=${mobile} backend=${backend} db=${db} hardening=${hardening}"
+
+  web:
+    needs: changes
+    if: needs.changes.outputs.web == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-pnpm
+        with:
+          turbo-key-prefix: turbo-web
+      # Một turbo graph — lint/typecheck/test/build song song theo dependsOn.
+      - run: pnpm exec turbo run lint typecheck test build --filter=@ticket/web...
+      - run: pnpm --filter @ticket/web test:routes
+
+  mobile:
+    needs: changes
+    if: needs.changes.outputs.mobile == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-pnpm
+        with:
+          turbo-key-prefix: turbo-mobile
+      - run: pnpm exec turbo run lint typecheck test build --filter=@ticket/mobile...
+
+  backend:
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-pnpm
+        with:
+          turbo-key-prefix: turbo-backend
+      # api + worker (+ deps contracts/backend). Không kéo web/mobile.
+      - run: pnpm exec turbo run lint typecheck test build --filter=@ticket/api... --filter=@ticket/worker...
+      - name: OpenAPI drift
         run: |
-          echo "PR chỉ đổi docs/** — giữ tên job check xanh, không chạy full pipeline."
-          echo "Xem docs/reviews/PROCESS-CI-PR-HYGIENE.md"
-      - uses: pnpm/action-setup@v4
-        if: steps.scope.outputs.docs_only != 'true'
-      - uses: actions/setup-node@v4
-        if: steps.scope.outputs.docs_only != 'true'
-        with:
-          node-version: 24
-          cache: pnpm
-      - name: Cache Turbo (local .turbo, không remote)
-        if: steps.scope.outputs.docs_only != 'true'
-        uses: actions/cache@v4
-        with:
-          path: .turbo
-          key: turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('**/package.json') }}
-          restore-keys: |
-            turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
-            turbo-${{ runner.os }}-
-      - if: steps.scope.outputs.docs_only != 'true'
-        run: pnpm install --frozen-lockfile
-      - if: steps.scope.outputs.docs_only != 'true'
-        run: pnpm lint
-      - if: steps.scope.outputs.docs_only != 'true'
-        run: pnpm typecheck
-      - if: steps.scope.outputs.docs_only != 'true'
-        run: pnpm test
-      - if: steps.scope.outputs.docs_only != 'true'
-        run: pnpm build
-      - if: steps.scope.outputs.docs_only != 'true'
-        run: pnpm --filter @ticket/web test:routes
-      - if: steps.scope.outputs.docs_only != 'true'
-        run: pnpm --filter @ticket/api openapi
-      - if: steps.scope.outputs.docs_only != 'true'
-        run: git diff --exit-code -- apps/api/openapi.json
+          pnpm --filter @ticket/api openapi
+          git diff --exit-code -- apps/api/openapi.json
+
   database-isolation:
+    needs: changes
+    if: needs.changes.outputs.db == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-pnpm
         with:
-          fetch-depth: 0
-      - name: Phát hiện thay đổi chỉ docs/**
-        id: scope
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [[ "${{ github.event_name }}" == "push" ]]; then
-            echo "docs_only=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          BASE="${{ github.event.pull_request.base.sha }}"
-          HEAD="${{ github.event.pull_request.head.sha }}"
-          mapfile -t FILES < <(git diff --name-only "${BASE}...${HEAD}")
-          if [[ ${#FILES[@]} -eq 0 ]]; then
-            echo "docs_only=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          docs_only=true
-          for f in "${FILES[@]}"; do
-            if [[ ! "$f" =~ ^docs/ ]]; then
-              docs_only=false
-              break
-            fi
-          done
-          echo "docs_only=${docs_only}" >> "$GITHUB_OUTPUT"
-      - name: Bỏ qua test:db (chỉ docs/**)
-        if: steps.scope.outputs.docs_only == 'true'
-        run: echo "PR chỉ đổi docs/** — bỏ qua database-isolation nặng."
-      - uses: pnpm/action-setup@v4
-        if: steps.scope.outputs.docs_only != 'true'
-      - uses: actions/setup-node@v4
-        if: steps.scope.outputs.docs_only != 'true'
-        with:
-          node-version: 24
-          cache: pnpm
-      - name: Cache Turbo (local .turbo, không remote)
-        if: steps.scope.outputs.docs_only != 'true'
-        uses: actions/cache@v4
-        with:
-          path: .turbo
-          key: turbo-db-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('**/package.json') }}
-          restore-keys: |
-            turbo-db-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
-            turbo-db-${{ runner.os }}-
-      - if: steps.scope.outputs.docs_only != 'true'
-        run: pnpm install --frozen-lockfile
-      # backend tsc resolves @ticket/contracts from dist — build workspace dep first
-      - if: steps.scope.outputs.docs_only != 'true'
-        run: pnpm --filter @ticket/contracts build
-      - if: steps.scope.outputs.docs_only != 'true'
-        run: pnpm --filter @ticket/backend test:db
-  # Issue #25 — root drills (throwaway Docker Postgres; not production SLO)
+          turbo-key-prefix: turbo-db
+      - run: pnpm --filter @ticket/contracts build
+      - run: pnpm --filter @ticket/backend test:db
+
   d5-hardening-smoke:
+    needs: changes
+    if: needs.changes.outputs.hardening == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-pnpm
         with:
-          fetch-depth: 0
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '24'
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+          turbo-key-prefix: turbo-d5
       - name: Build API (restore reconnect + metrics E2E deps)
         run: |
           pnpm --filter @ticket/contracts build
@@ -174,4 +214,51 @@ jobs:
         run: ./scripts/rint-stack-smoke.sh
       - name: R-INT outbox Redis-loss + lease reclaim
         run: ./scripts/rint-outbox-recovery.sh
-      # Full PRD 2×20k + sustained S3 needs local Keycloak + long runtime — not CI.
+
+  # Single required status check: skipped scope jobs are OK; failures fail the gate.
+  ci:
+    needs:
+      - changes
+      - web
+      - mobile
+      - backend
+      - database-isolation
+      - d5-hardening-smoke
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Aggregate scope results
+        shell: bash
+        run: |
+          set -euo pipefail
+          changes="${{ needs.changes.result }}"
+          if [[ "$changes" != "success" ]]; then
+            echo "changes job: $changes"
+            exit 1
+          fi
+
+          fail=0
+          for pair in \
+            "web:${{ needs.web.result }}" \
+            "mobile:${{ needs.mobile.result }}" \
+            "backend:${{ needs.backend.result }}" \
+            "database-isolation:${{ needs.database-isolation.result }}" \
+            "d5-hardening-smoke:${{ needs.d5-hardening-smoke.result }}"
+          do
+            name="${pair%%:*}"
+            result="${pair#*:}"
+            echo "job ${name}=${result}"
+            case "$result" in
+              success|skipped) ;;
+              *)
+                echo "::error::CI scope job failed: ${name} (${result})"
+                fail=1
+                ;;
+            esac
+          done
+
+          if [[ "$fail" -ne 0 ]]; then
+            exit 1
+          fi
+
+          echo "CI scopes OK (docs_only=${{ needs.changes.outputs.docs_only }} web=${{ needs.changes.outputs.web }} mobile=${{ needs.changes.outputs.mobile }} backend=${{ needs.changes.outputs.backend }} db=${{ needs.changes.outputs.db }} hardening=${{ needs.changes.outputs.hardening }})"

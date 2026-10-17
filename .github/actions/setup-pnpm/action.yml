@@ -1,0 +1,25 @@
+name: Setup pnpm + Node + Turbo cache
+description: Checkout already done. Installs pnpm/Node, restores local Turbo cache (ADR-11, no remote).
+inputs:
+  turbo-key-prefix:
+    description: Cache key prefix to avoid clobbering across job kinds
+    required: false
+    default: turbo
+runs:
+  using: composite
+  steps:
+    - uses: pnpm/action-setup@v4
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 24
+        cache: pnpm
+    - name: Cache Turbo (local .turbo, không remote)
+      uses: actions/cache@v4
+      with:
+        path: .turbo
+        key: ${{ inputs.turbo-key-prefix }}-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('**/package.json') }}
+        restore-keys: |
+          ${{ inputs.turbo-key-prefix }}-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
+          ${{ inputs.turbo-key-prefix }}-${{ runner.os }}-
+    - shell: bash
+      run: pnpm install --frozen-lockfile
