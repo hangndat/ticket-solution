@@ -6,7 +6,7 @@
 
 ## Khi nào dùng
 
-Làm rõ bài toán, non-goals, acceptance criteria, phân Story/Task tiêu chí — trước hoặc song song với Epic planner. Không thay Epic planner; không tự dispatch coding worker.
+Làm rõ bài toán, non-goals, acceptance criteria, phân Story/Task tiêu chí — trước hoặc song song với Epic planner. Có thể chạy **song song** `product-design` và coding slice không phụ thuộc AC đang soạn. Không thay Epic planner; không tự dispatch coding worker.
 
 ## Phạm vi
 
