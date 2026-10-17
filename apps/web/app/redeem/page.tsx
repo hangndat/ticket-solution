@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import { ensureCsrfCookie } from '../../src/bff/csrf';
 import { isOidcConfigured, resolveWebAuthState } from '../../src/oidc/config';
 import { RedeemForm } from './redeem-form';
 
@@ -25,8 +24,8 @@ export default async function RedeemPage({ searchParams }: Props) {
   const params = await searchParams;
   const configured = isOidcConfigured();
   const state = resolveWebAuthState({ configured, subject: null });
-  // Double-submit CSRF cookie for redeem mutation.
-  await ensureCsrfCookie();
+  // CSRF cookie is issued by GET BFF route handlers (e.g. public published
+  // schema), not RSC render — cookies().set is illegal in Server Components.
 
   return (
     <main id="main" className="container shell redeem-page">
