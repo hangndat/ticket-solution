@@ -1,4 +1,5 @@
 import type { FetchJsonResult } from '../redeem/fetch-json';
+import { IOS_OFFLINE_QUEUE_GUIDE } from './offline-messages';
 
 export type GateDecision =
   | {
@@ -11,7 +12,7 @@ export type GateDecision =
   | { kind: 'unknown'; message: string };
 
 const UNKNOWN_MESSAGE =
-  'Kết quả check-in chưa biết. Không cho khách qua. Giữ khách lại và thử đối soát lại; không đoán là đã vào.';
+  `Kết quả check-in chưa biết. Không cho khách qua. Giữ khách lại và thử đối soát lại; không đoán là đã vào. ${IOS_OFFLINE_QUEUE_GUIDE}`;
 
 function record(value: unknown): Record<string, unknown> | null {
   if (!value || typeof value !== 'object') return null;
