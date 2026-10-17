@@ -19,6 +19,7 @@ import {
   type OfflineSyncResponse,
 } from '@ticket/contracts';
 import { GateError, GATE_ERROR_CODES } from './gate-error';
+import { recordGateReject } from './gate';
 import { assertOpenForGate } from './event-policy';
 import { requireTenantPermission } from './membership';
 import { metricsInc } from './metrics-registry';
@@ -632,16 +633,28 @@ export async function applyOfflineSyncBatch(
 
   const results: OfflineSyncItemResult[] = [];
   for (const event of validated.events) {
-    results.push(
-      await applyOneOfflineEvent(tx, {
+    const item = await applyOneOfflineEvent(tx, {
+      tenantId: validated.tenantId,
+      eventId: input.pathEventId,
+      deviceId: validated.deviceId,
+      staffSessionId: validated.staffSessionId,
+      actorUserId: input.actorUserId,
+      event,
+    });
+    if (
+      (item.status === 'REJECTED' || item.status === 'CONFLICT') &&
+      item.code
+    ) {
+      await recordGateReject(tx, {
         tenantId: validated.tenantId,
         eventId: input.pathEventId,
-        deviceId: validated.deviceId,
-        staffSessionId: validated.staffSessionId,
         actorUserId: input.actorUserId,
-        event,
-      }),
-    );
+        reason: item.code,
+        resourceType: 'ticket',
+        resourceId: event.ticketId,
+      });
+    }
+    results.push(item);
   }
 
   return {
