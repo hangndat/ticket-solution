@@ -1,62 +1,40 @@
 ---
-description: Orca workers — Cursor for code; Codex for plan + DoD review; exact-SHA evidence; then coordinator duyệt
+description: Nguồn chính sách chọn agent cho Orca worker — mọi Task dùng Cursor; override rõ từ user
 alwaysApply: true
 ---
 
-# Orca — agent routing (Cursor vs Codex)
+# Orca — chọn agent khi spawn worker
 
-When spawning Orca workers (`worker-start --agent …`), pick the agent by **task kind**:
+Đây là **nguồn chính sách duy nhất** cho việc chọn agent. Các rule khác dẫn chiếu file này; nếu nội dung lặp lại bị lệch, chính sách ở đây được ưu tiên trong phạm vi rule của repo.
 
-| Task kind | `--agent` | Notes |
-| --------- | --------- | ----- |
-| Implementation / coding / fix / migrate / tests that write code | `cursor` | Default for all ownership slices (BE / web / iOS / coordinator code) |
-| Plan, design, spike write-up, architecture choice, design critique | `codex` | Prefer Codex; Cursor fallback on quota/launch failure |
-| Plan/design when Codex unavailable | `cursor` | Fallback only |
-| DoD / acceptance review of implementation (Issue → `Chờ duyệt`) | `codex` | Spawn one Codex reviewer ≠ implementer; **no user approval gate** |
-| Security-sensitive review (RLS/authz/races) | `codex` | Independent of implementer; may be separate from DoD; exact-SHA evidence |
-| Epic orchestrator (parent Issue đợt/module) | `cursor` | One orchestrator per Epic — see `orca-epic-orchestrator.mdc` |
+## Chính sách hiện hành — mọi Task dùng Cursor
 
-## Sau DoD PASS — coordinator phải duyệt (không chờ user)
+Tạm thời mọi worker đều dùng `--agent cursor`: implementation, fix, tests, plan/design/spike/architecture, Epic planner, DoD/acceptance và security review. Không chọn Codex theo loại Task hoặc vì quota đã phục hồi. Chính sách này áp dụng cho dispatch mới; không tự thay agent của session đang chạy.
 
-Khi reviewer **PASS** / **PASS with known gap** + CI xanh trên exact SHA:
+- Chỉ **coordinator gốc (depth 0)** được `worker-start`, kể cả planner, reviewer, retry, replacement và idle fill. Epic planner và ownership workers không spawn worker con.
+- Trước mỗi spawn, đọc chính sách này và ghi agent/lý do vào dispatch evidence. Không kiểm tra quota Codex khi spawn Cursor; quota Codex không phải gate của Cursor.
+- Chỉ dùng agent khác khi user chỉ định rõ cho Task đó và host hỗ trợ; không suy ra override từ mô tả loại Task ở file khác. Nếu override là Codex, kiểm tra quota đúng account/profile qua nguồn host hỗ trợ, dữ liệu tối đa 5 phút, ghi `available | exhausted | unknown` và reset nếu có. Không bịa lệnh hoặc launch Codex chỉ để thử quota. Khi quota hết/không rõ, dùng Cursor; nếu user yêu cầu **chỉ Codex**, báo bị chặn.
+- Lỗi launch/auth/runtime Cursor phải chẩn đoán theo lỗi thực tế; không tự chuyển sang Codex.
+- Reviewer phải khác session implementer. Không reuse session implementer để review chính Task đó.
 
-1. Merge PR vào `main` (coordinator).
-2. Cập nhật Project #3 Status → **Hoàn thành** (+ comment evidence SHA).
-3. Đóng Issue nếu đó là đơn vị DoD.
-4. **Không** để item treo `Chờ duyệt` chờ user bấm duyệt.
+## Codex hết quota giữa task có override hoặc dispatch cũ — coordinator tiếp quản
 
-FAIL → giữ `Chờ duyệt` hoặc trả `Đang làm`; comment findings; re-dispatch coding worker.
+1. Phát hiện qua worker escalation hoặc terminal/session báo usage limit/quota exhausted. Phân biệt với lỗi mạng, auth, timeout; khi không xác định được, ghi nguyên nhân chưa rõ. Không cần chờ worker gửi `worker_done`: quota có thể khiến worker không gửi được checkpoint.
+2. Ngừng giao thêm việc cho dispatch Codex đó; dùng lifecycle được host hỗ trợ để dừng/settle và xác nhận không còn process/command đang ghi vào scope trước khi chuyển chủ. Không chạy Codex và Cursor cùng ghi một worktree. Không kill process của worker khác.
+3. Coordinator thu checkpoint từ source + git + bounded terminal logs: Issue/Task/Run/Dispatch, spec/ownership, worktree/branch, base và HEAD SHA, diff staged/unstaged/untracked liên quan, checks đã chạy/kết quả, phần còn lại, blockers và side effects đang dở. Không reset/clean, xóa worktree hoặc bỏ thay đổi chưa commit. Nếu Codex không tự bàn giao được, coordinator dựng checkpoint và ghi rõ giới hạn evidence.
+4. Áp dụng chính sách hiện hành rồi spawn **Cursor replacement** cho cùng Task/scope/spec và checkpoint, liên kết dispatch cũ → mới; không tạo task sản phẩm trùng. Ưu tiên tiếp tục trên worktree đã xác nhận bàn giao an toàn. Nếu host buộc worktree mới, giữ nguyên bản cũ và chuyển đúng commit/diff/files liên quan sau khi kiểm tra, không chỉ chuyển HEAD rồi bỏ phần chưa commit.
+5. Cursor đọc lại source/diff, kiểm tra side effects trước khi retry lệnh, hoàn thành phần còn lại và chạy checks cần thiết. Kết quả review dang dở không phải PASS; Cursor reviewer độc lập phải review đủ checklist trên exact SHA. Evidence checks trước chỉ dùng được khi xác minh đúng SHA và trạng thái working tree phù hợp.
+6. Giữ Project `Đang làm` (implementation) hoặc `Chờ duyệt` (review); chỉ `Bị chặn` khi không thể tiếp tục an toàn, kèm lý do. Quota exhaustion không phải lỗi sản phẩm hoặc bằng chứng hoàn thành. Ghi fallback và provenance evidence; không chờ user duyệt lại fallback đã được rule này cho phép.
+7. Chỉ release terminal/worktree cũ theo lifecycle sau khi xác nhận checkpoint đã được nhận và thay đổi được bảo toàn. Không tự đổi replacement đang chạy về Codex khi quota phục hồi; áp dụng chính sách hiện hành cho dispatch kế tiếp.
 
-## DoD / security review — bắt buộc trong spec
+## Review và integration
 
-1. Issue # / PR # / paths  
-2. **Exact commit SHA(s)** đang duyệt  
-3. Checklist DoD hoặc security  
-4. Báo cáo: reviewer/session, checks, findings/limitations, verdict PASS|FAIL|PASS with known gap  
-5. SHA hành vi mới sau review → revalidation; cấm tái dùng verdict  
+Spec review phải có Issue/PR/paths, exact SHA, checklist DoD/security. Artifact ghi reviewer/session, checks, findings, limitations và verdict `PASS|FAIL|PASS with known gap`.
 
-**Thiếu GitHub PR review UI ≠ thiếu Orca DoD.** Artifact Issue/PR/`docs/reviews/*` + exact SHA là đủ để coordinator duyệt.
+- `PASS`: coordinator chỉ merge khi đã được ủy quyền integration, CI xanh và các acceptance/gate bắt buộc đủ evidence. Hoàn thành còn cần CI trên integrated commit theo `github-project-tracking.mdc`.
+- `PASS with known gap`: chỉ được coi là pass nếu gap không vi phạm acceptance/gate bắt buộc hoặc bảo mật; artifact phải có lý do, issue theo dõi và coordinator có thẩm quyền chấp nhận. Coordinator không tự miễn yêu cầu bắt buộc; thay đổi scope cần user cho phép.
+- `FAIL` hoặc thiếu gate bắt buộc: giữ `Chờ duyệt` hoặc trả `Đang làm`; ghi findings và giao sửa trong phạm vi được phép.
+- Có commit thay đổi hành vi sau review: revalidate exact SHA mới, không kế thừa verdict.
+- Không chờ user duyệt lại các hành động đã được ủy quyền. Thiếu quyền integration thì báo rõ, không tự merge.
 
-## Fallback (Codex quota / launch failure)
-
-If `worker-start --agent codex` fails (quota, auth, launch error) or the worker reports quota exhaustion:
-
-1. Retry the **same Task** with `--agent cursor` (same `--spec` / `--task`, same scope).
-2. Note in the coordinator report: Codex unavailable → Cursor fallback for plan/DoD.
-3. Do **not** switch coding workers from Cursor to Codex to “save” Cursor quota.
-
-## Examples
-
-```text
-✅ Coding: --agent cursor
-✅ DoD on Chờ duyệt: --agent codex → PASS → coordinator merge + Hoàn thành
-✅ Codex quota → retry DoD with --agent cursor
-❌ Leave Chờ duyệt after PASS waiting for user
-❌ Coding worker with --agent codex
-❌ DoD pass without exact SHA / without independent session
-```
-
-## Overrides
-
-- User explicitly names an agent/model → honor that for that Task.
-- Still respect ownership scopes, parallel-first coding, and WIP backpressure.
+Thiếu GitHub Approve UI không đồng nghĩa thiếu DoD: artifact exact-SHA từ reviewer độc lập trong Issue/PR hoặc `docs/reviews/*` được chấp nhận. Ownership, WIP và milestone gates vẫn áp dụng.
