@@ -1,8 +1,10 @@
-{
-  "localStatus": "applied",
-  "clientEventId": "e81186df-bd87-4b75-9781-6f21b59124f5",
-  "ticketId": "ace74a71-7646-431a-a73e-7281848002a1",
-  "checkinId": "dfec08db-a952-4850-9aa5-cb51187c1e6f",
-  "clientSeq": 0,
-  "type": "CHECKIN_OFFLINE"
-}
+[
+  {
+    "localStatus": "applied",
+    "clientEventId": "2a5bfe8b-dd0d-4b71-a46a-95c8c66e0057",
+    "ticketId": "ace74a71-7646-431a-a73e-7281848002a1",
+    "clientSeq": 0,
+    "type": "CHECKIN_OFFLINE",
+    "checkinId": "431913ad-f107-4a6a-936b-2239f5d78d2e"
+  }
+]
