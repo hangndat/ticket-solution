@@ -63,11 +63,11 @@ Ngoài per-Task DoD, milestone/Epic **Hoàn thành** cần đủ evidence:
 
 Phân biệt (không gộp): **code complete** (impl + PR) ≠ **acceptance complete** (DoD pass + evidence) ≠ **pilot ready** (device/UAT/ops gates riêng).
 
-## Reviewer (spawn Cursor — no user gate)
+## Reviewer (spawn Codex — no user gate)
 
 When a coding Task moves to `Chờ duyệt` (or DoD review is required):
 
-1. Spawn **one** Orca worker: `--agent cursor`, scope = review only (no drive-by refactors). Temporary policy: Cursor only for all agents — see `orca-agent-routing.mdc`.
+1. Spawn **one** Orca worker: `--agent codex` (Cursor fallback on quota), scope = review only (no drive-by refactors). Temporary policy: Cursor only for all agents — see `orca-agent-routing.mdc`.
 2. Spec must name the Issue #, diff/PR/paths, **exact commit SHA(s)** under review, and DoD checklist; outcome `succeeded` only on pass.
 3. On pass → coordinator / epic orchestrator may set `Hoàn thành` once merge+CI+evidence (và milestone gates nếu áp dụng) are done.
 4. On fail → Status stays `Chờ duyệt` or back to `Đang làm`; comment findings; re-dispatch coding worker.
@@ -80,7 +80,7 @@ Comment / artifact nghiệm thu khi `Chờ duyệt` hoặc sau DoD **phải** gh
 
 | Trường | Yêu cầu |
 | ------ | ------- |
-| Reviewer / session | Agent Cursor DoD (hoặc security) **khác** session implementer; ghi nhận cách spawn (Orca worker / worktree) |
+| Reviewer / session | Agent Codex DoD (Cursor fallback; hoặc security) **khác** session implementer; ghi nhận cách spawn (Orca worker / worktree) |
 | Scope | Issue #, PR # (nếu có), đường dẫn / ownership slice; Epic/Story parent nếu có |
 | Commit SHA | **Exact SHA** (full 40 hoặc rút gọn unambiguous từ `git rev-parse`) của commit đang duyệt — không “HEAD lúc nào đó”, không chỉ tên branch |
 | Checks | Lệnh/test/CI đã chạy trên SHA đó (hoặc ghi rõ “docs-only / không chạy runtime”) |
@@ -88,7 +88,7 @@ Comment / artifact nghiệm thu khi `Chờ duyệt` hoặc sau DoD **phải** gh
 | Revalidation | Nếu có commit hành vi mới **sau** review trước → bắt buộc review lại trên SHA mới; không tái dùng verdict cũ |
 | Artifact path | Ưu tiên `docs/reviews/<slug>.md` (hoặc tương đương) + link Issue/PR |
 
-**Thiếu GitHub PR review / approval UI không chứng minh thiếu Orca/Cursor DoD review.** Ngược lại: có approve GitHub mà không có evidence exact-SHA + reviewer độc lập cũng **không** đủ DoD.
+**Thiếu GitHub PR review / approval UI không chứng minh thiếu Orca Codex/Cursor DoD review.** Ngược lại: có approve GitHub mà không có evidence exact-SHA + reviewer độc lập cũng **không** đủ DoD.
 
 ## WIP / hàng đợi duyệt (backpressure nhẹ)
 
