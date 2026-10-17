@@ -149,6 +149,12 @@ export class OfflineScanQueue {
   private bindGeneration = 0;
   /** Bumps on clearForUser — fences late durable enqueue writes after logout. */
   private writeGeneration = 0;
+  /**
+   * Per-user writeGeneration of the last successful durable persist.
+   * Stale rollbacks must not clear partitions that a newer session already
+   * committed after logout/re-login.
+   */
+  private lastSuccessfulWriteGeneration = new Map<string, number>();
   private listeners = new Set<() => void>();
   private snapshot: OfflineQueueSnapshot = EMPTY_OFFLINE_QUEUE_SNAPSHOT;
   private store: OfflineQueueStore;
@@ -205,8 +211,35 @@ export class OfflineScanQueue {
     return writeGeneration === this.writeGeneration;
   }
 
-  /** Drop a late durable write that lost the clear/logout race. */
-  private async rollbackStaleDurableWrite(userId: string): Promise<void> {
+  private markSuccessfulWrite(userId: string, writeGeneration: number): void {
+    this.lastSuccessfulWriteGeneration.set(userId, writeGeneration);
+  }
+
+  /**
+   * Undo a late durable write that lost the clear/logout race — but only when
+   * no newer session has successfully persisted to this partition. If a newer
+   * writeGeneration already committed, repair durable state from current memory
+   * when we still own the user (late write may have clobbered seq/queue).
+   */
+  private async rollbackStaleDurableWrite(
+    userId: string,
+    staleWriteGeneration: number,
+  ): Promise<void> {
+    const lastOk = this.lastSuccessfulWriteGeneration.get(userId);
+    if (
+      lastOk !== undefined &&
+      lastOk === this.writeGeneration &&
+      this.writeGeneration > staleWriteGeneration
+    ) {
+      if (
+        this.ownerUserId === userId &&
+        this.isWriteCurrent(this.writeGeneration)
+      ) {
+        await this.store.writeSeqMap(userId, this.seqMap);
+        await this.store.writeQueue(userId, this.items);
+      }
+      return;
+    }
     await this.store.clearQueue(userId);
     await this.store.clearSeqMap(userId);
   }
@@ -262,6 +295,7 @@ export class OfflineScanQueue {
   async clearForUser(userId: string): Promise<void> {
     if (!userId) return;
     this.writeGeneration += 1;
+    this.lastSuccessfulWriteGeneration.delete(userId);
     if (this.ownerUserId === userId || this.ownerUserId === null) {
       this.resetMemoryKeepingListeners();
       this.emit();
@@ -333,13 +367,23 @@ export class OfflineScanQueue {
     eventId: string;
     staffSessionId: string;
   }): Promise<QueuedOfflineScan> {
-    await this.hydrate();
+    // Capture owner/generation BEFORE any await so a mid-flight bind switch
+    // cannot re-attribute this scan to a different partition.
     const userId = this.ownerUserId;
     const bindGeneration = this.bindGeneration;
     const writeGeneration = this.writeGeneration;
     if (!userId) {
       throw new Error(
         'Offline queue chưa gắn user — đăng nhập staff trước khi xếp hàng offline.',
+      );
+    }
+    await this.hydrate();
+    if (
+      !this.isBindCurrent(bindGeneration, userId) ||
+      !this.isWriteCurrent(writeGeneration)
+    ) {
+      throw new Error(
+        'Hàng đợi offline đã bị hủy (đổi user/đăng xuất) — không xếp hàng.',
       );
     }
     const deviceId = await this.ensureDeviceId();
@@ -356,7 +400,7 @@ export class OfflineScanQueue {
     const nextSeqMap = { ...this.seqMap, [key]: nextSeq };
     await this.store.writeSeqMap(userId, nextSeqMap);
     if (!this.isWriteCurrent(writeGeneration)) {
-      await this.rollbackStaleDurableWrite(userId);
+      await this.rollbackStaleDurableWrite(userId, writeGeneration);
       throw new Error(
         'Hàng đợi offline đã bị hủy (đăng xuất) — không xếp hàng.',
       );
@@ -393,6 +437,7 @@ export class OfflineScanQueue {
         'Hàng đợi offline đã bị hủy (đổi user/đăng xuất) — không xếp hàng.',
       );
     }
+    this.markSuccessfulWrite(userId, writeGeneration);
     this.emit();
     return item;
   }
@@ -422,13 +467,14 @@ export class OfflineScanQueue {
     const nextItems = [...pending, ...settled];
     await this.store.writeQueue(userId, nextItems);
     if (!this.isWriteCurrent(writeGeneration)) {
-      await this.rollbackStaleDurableWrite(userId);
+      await this.rollbackStaleDurableWrite(userId, writeGeneration);
       return false;
     }
     if (!this.isBindCurrent(bindGeneration, userId)) {
       return false;
     }
     this.items = nextItems;
+    this.markSuccessfulWrite(userId, writeGeneration);
     return true;
   }
 
