@@ -1,5 +1,6 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import {
   interpretCreateTenant,
@@ -24,6 +25,7 @@ import { REQUEST_TIMEOUT_MS } from '../../src/redeem/poll-operation';
 type Props = { misconfigured: boolean; initialError?: string };
 
 export function PlatformConsole({ misconfigured, initialError }: Props) {
+  const router = useRouter();
   const [me, setMe] = useState<ViewResult<PlatformMeResponse> | null>(null);
   const [createView, setCreateView] =
     useState<ViewResult<PlatformCreateTenantResponse> | null>(null);
@@ -157,7 +159,8 @@ export function PlatformConsole({ misconfigured, initialError }: Props) {
             void fetch('/api/auth/platform/logout', { method: 'POST' }).then(
               () => {
                 setMe(null);
-                window.location.href = '/platform';
+                router.push('/platform');
+                router.refresh();
               },
             );
           }}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import {
   interpretAcceptInvite,
   viewLabel,
@@ -13,27 +13,18 @@ import { REQUEST_TIMEOUT_MS } from '../../src/redeem/poll-operation';
 const STORAGE_KEY = 'vemoki_invite_token';
 
 /**
- * Invite token prefers URL fragment (#token=…) then sessionStorage.
- * Never put raw token in query (Referrer / server logs).
+ * Pure snapshot: invite token from URL fragment (#token=…) then sessionStorage.
+ * Never put raw token in query (Referrer / server logs). Side effects (persist /
+ * clear hash) run in an effect — not here.
  */
-function readTokenFromLocation(): string {
-  if (typeof window === 'undefined') return '';
+function getInviteTokenSnapshot(): string {
   const hash = window.location.hash.replace(/^#/, '');
   if (hash) {
     const params = new URLSearchParams(hash);
     const fromHash =
       params.get('token')?.trim() ||
       (hash.includes('=') ? '' : hash.trim());
-    if (fromHash) {
-      try {
-        sessionStorage.setItem(STORAGE_KEY, fromHash);
-      } catch {
-        /* ignore quota */
-      }
-      // Clear fragment from address bar without reload.
-      history.replaceState(null, '', window.location.pathname);
-      return fromHash;
-    }
+    if (fromHash) return fromHash;
   }
   try {
     return sessionStorage.getItem(STORAGE_KEY)?.trim() ?? '';
@@ -42,16 +33,40 @@ function readTokenFromLocation(): string {
   }
 }
 
+function subscribeInviteToken(onStoreChange: () => void): () => void {
+  window.addEventListener('hashchange', onStoreChange);
+  return () => window.removeEventListener('hashchange', onStoreChange);
+}
+
+function persistInviteToken(token: string): void {
+  try {
+    sessionStorage.setItem(STORAGE_KEY, token);
+  } catch {
+    /* ignore quota */
+  }
+  // Clear fragment from address bar without reload.
+  if (window.location.hash) {
+    history.replaceState(null, '', window.location.pathname);
+  }
+}
+
 export function InviteAcceptForm() {
-  const [token, setToken] = useState('');
+  const locationToken = useSyncExternalStore(
+    subscribeInviteToken,
+    getInviteTokenSnapshot,
+    () => '',
+  );
+  const [tokenOverride, setTokenOverride] = useState<string | null>(null);
+  const token = tokenOverride !== null ? tokenOverride : locationToken;
   const [view, setView] = useState<ViewResult<AcceptInviteResponse> | null>(
     null,
   );
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    setToken(readTokenFromLocation());
-  }, []);
+    if (!locationToken) return;
+    persistInviteToken(locationToken);
+  }, [locationToken]);
 
   async function accept() {
     setBusy(true);
@@ -73,7 +88,7 @@ export function InviteAcceptForm() {
       } catch {
         /* ignore */
       }
-      setToken('');
+      setTokenOverride('');
     }
     setBusy(false);
   }
@@ -93,7 +108,7 @@ export function InviteAcceptForm() {
         Token invite (tự lấy từ #fragment — không dán vào query)
         <input
           value={token}
-          onChange={(e) => setToken(e.target.value)}
+          onChange={(e) => setTokenOverride(e.target.value)}
           autoComplete="off"
           spellCheck={false}
           aria-label="Invite token"
