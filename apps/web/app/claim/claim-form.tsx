@@ -149,8 +149,9 @@ export function GuestClaimForm() {
       setFieldErrors({});
       setUx({
         kind: 'verifying',
-        title: 'Schema đã tải',
-        detail: `form ${result.schema.form?.formVersion ?? '—'} · terms ${result.schema.terms?.version ?? '—'}`,
+        title: 'Đã tải biểu mẫu',
+        detail:
+          'Điền các trường và đồng ý điều khoản trước khi nhận lời mời.',
         retryable: false,
       });
     } else {
@@ -159,13 +160,13 @@ export function GuestClaimForm() {
       setTermsBody(null);
       setUx({
         kind: 'error',
-        title: 'Không tải được form/terms',
+        title: 'Không tải được biểu mẫu',
         detail:
           result.status === 'not-found'
-            ? 'Không tìm thấy event published.'
+            ? 'Không tìm thấy sự kiện đã xuất bản.'
             : result.status === 'unreachable'
-              ? 'Published API không tới được — fail-closed, không dùng form demo.'
-              : 'Published schema không hợp lệ hoặc thiếu slug.',
+              ? 'Không tải được biểu mẫu sự kiện. Thử lại sau — không dùng bản demo.'
+              : 'Thiếu đường dẫn tổ chức/sự kiện hoặc biểu mẫu không hợp lệ.',
         retryable: false,
       });
     }
@@ -181,9 +182,9 @@ export function GuestClaimForm() {
     if (!token.trim()) {
       setUx({
         kind: 'error',
-        title: 'Thiếu token',
+        title: 'Thiếu mã lời mời',
         detail:
-          'Token chỉ lấy từ #fragment hoặc bộ nhớ tạm — không dán vào query.',
+          'Mở liên kết lời mời để lấy mã — không dán mã vào địa chỉ trang.',
         retryable: false,
       });
       setBusy(false);
@@ -192,8 +193,8 @@ export function GuestClaimForm() {
     if (!displayTenantId.trim() || !displayEventId.trim()) {
       setUx({
         kind: 'error',
-        title: 'Thiếu scope',
-        detail: 'Cần tenantId và eventId (UUID) cùng lời mời.',
+        title: 'Thiếu thông tin sự kiện',
+        detail: 'Cần mã tổ chức và mã sự kiện kèm theo lời mời.',
         retryable: false,
       });
       setBusy(false);
@@ -202,8 +203,9 @@ export function GuestClaimForm() {
     if (!formDefinition || !termsVersion) {
       setUx({
         kind: 'error',
-        title: 'Chưa có schema',
-        detail: 'Tải form/terms published (slug) trước khi claim.',
+        title: 'Chưa có biểu mẫu',
+        detail:
+          'Tải biểu mẫu sự kiện đã xuất bản trước khi nhận lời mời.',
         retryable: false,
       });
       setBusy(false);
@@ -223,7 +225,7 @@ export function GuestClaimForm() {
     if (!validated.ok || termsIssue) {
       setUx({
         kind: 'error',
-        title: 'Form/consent chưa hợp lệ',
+        title: 'Biểu mẫu chưa hợp lệ',
         detail: 'Sửa các trường được đánh dấu rồi thử lại.',
         retryable: false,
       });
@@ -297,19 +299,19 @@ export function GuestClaimForm() {
   return (
     <div className="redeem-form">
       <p>
-        Guest claim (C-I): đăng nhập OIDC verified đúng email lời mời · token
-        one-time · form/consent C-F · không auto-account. Wrong-email /
-        unverified / expired không cấp vé. Token không vào query hay analytics.
+        Đăng nhập bằng đúng email đã được mời, mở liên kết lời mời, rồi điền
+        biểu mẫu và đồng ý điều khoản. Email chưa xác minh, sai email, hoặc lời
+        mời hết hạn sẽ không được cấp vé. Không tự tạo tài khoản mới.
       </p>
 
       <div className="auth-buttons">
         <a className="button-link" href={loginHref}>
-          Đăng nhập rồi quay lại claim
+          Đăng nhập rồi quay lại nhận lời mời
         </a>
       </div>
 
       <label>
-        Tenant slug (published)
+        Đường dẫn tổ chức
         <input
           value={displayTenantSlug}
           onChange={(e) => {
@@ -321,7 +323,7 @@ export function GuestClaimForm() {
         />
       </label>
       <label>
-        Event slug (published)
+        Đường dẫn sự kiện
         <input
           value={displayEventSlug}
           onChange={(e) => {
@@ -333,7 +335,7 @@ export function GuestClaimForm() {
         />
       </label>
       <label>
-        Tenant ID
+        Mã tổ chức
         <input
           value={displayTenantId}
           onChange={(e) => {
@@ -345,7 +347,7 @@ export function GuestClaimForm() {
         />
       </label>
       <label>
-        Event ID
+        Mã sự kiện
         <input
           value={displayEventId}
           onChange={(e) => {
@@ -357,21 +359,21 @@ export function GuestClaimForm() {
         />
       </label>
       <label>
-        Token claim (từ #fragment — không dán query)
+        Mã lời mời (từ liên kết — không dán vào địa chỉ trang)
         <input
           value={token}
           onChange={(e) => setTokenOverride(e.target.value)}
           autoComplete="off"
           spellCheck={false}
-          aria-label="Claim token"
+          aria-label="Mã lời mời"
         />
       </label>
 
       {!token.trim() ? (
         <SurfaceState
           kind="empty"
-          title="Chưa có token claim"
-          detail="Mở link lời mời (token trong #fragment) sau khi đăng nhập. Không dán token vào query."
+          title="Chưa có mã lời mời"
+          detail="Mở liên kết lời mời sau khi đăng nhập. Không dán mã vào địa chỉ trang."
           testId="claim-token-empty"
         />
       ) : null}
@@ -382,7 +384,7 @@ export function GuestClaimForm() {
           disabled={busy || !displayTenantSlug.trim() || !displayEventSlug.trim()}
           onClick={() => void loadSchema()}
         >
-          {busy && !formDefinition ? 'Đang tải…' : 'Tải form/terms'}
+          {busy && !formDefinition ? 'Đang tải…' : 'Tải biểu mẫu'}
         </button>
       </div>
 
@@ -390,7 +392,7 @@ export function GuestClaimForm() {
         <SurfaceState
           kind="loading"
           title="Đang xử lý…"
-          detail="Chưa có kết quả claim — đợi phản hồi từ máy chủ."
+          detail="Đang chờ phản hồi từ máy chủ — chưa có kết quả nhận lời mời."
           testId="claim-busy-loading"
         />
       ) : null}
@@ -412,7 +414,7 @@ export function GuestClaimForm() {
               checked={termsAccepted}
               onChange={(e) => setTermsAccepted(e.target.checked)}
             />
-            <span>Đồng ý điều khoản ({termsVersion})</span>
+            <span>Tôi đồng ý với điều khoản</span>
           </label>
           {termsBody ? (
             <pre className="me-result" tabIndex={0}>
@@ -427,7 +429,7 @@ export function GuestClaimForm() {
         disabled={busy || !token.trim()}
         onClick={() => void submitClaim()}
       >
-        {busy ? 'Đang claim…' : 'Nhận lời mời (claim)'}
+        {busy ? 'Đang gửi…' : 'Nhận lời mời'}
       </button>
 
       {ux ? (
@@ -445,13 +447,13 @@ export function GuestClaimForm() {
           <h2>{ux.title}</h2>
           <p>{ux.detail}</p>
           {decision?.kind === 'pending' ? (
-            <p>Pending chưa đảm bảo suất. Không coi là vé đã cấp.</p>
+            <p>Đang chờ duyệt — chưa coi là vé đã cấp.</p>
           ) : null}
         </section>
       ) : null}
 
       <details>
-        <summary>Trạng thái intent (đã che token)</summary>
+        <summary>Trạng thái đã lưu (mã lời mời đã được che)</summary>
         <pre className="me-result" tabIndex={0}>
           {JSON.stringify(redacted, null, 2)}
         </pre>
