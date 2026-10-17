@@ -29,6 +29,17 @@ export {
   type AuthzErrorCode,
 } from './authz-error';
 export {
+  BrandingError,
+  BRANDING_ERROR_CODES,
+  type BrandingErrorCode,
+} from './branding-error';
+export {
+  getTenantBranding,
+  updateTenantBranding,
+  type TenantBrandingRecord,
+  type UpdateTenantBrandingInput,
+} from './branding';
+export {
   isMembershipActive,
   lockActiveMembershipForShare,
   requireTenantPermission,
