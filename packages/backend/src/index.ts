@@ -192,6 +192,7 @@ export {
   confirmCheckin,
   undoCheckin,
   revokeTicket,
+  recordGateReject,
   type StaffSessionResult,
   type ReserveResult,
   type ConfirmResult,
@@ -266,8 +267,10 @@ export {
 } from './report-error';
 export {
   readEventReport,
+  GATE_REJECT_AUDIT_ACTION,
   type EventReport,
   type TicketStateCounts,
+  type QuotaCapacityState,
 } from './reporting';
 export {
   createNoopEmailAdapter,

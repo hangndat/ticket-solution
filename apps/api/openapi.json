@@ -3720,15 +3720,54 @@
           "quota": {
             "$ref": "#/components/schemas/EventQuotaSummaryDto"
           },
+          "quotaRemaining": {
+            "type": "number",
+            "nullable": true
+          },
+          "quotaCapacityState": {
+            "type": "string",
+            "enum": [
+              "FINITE",
+              "UNLIMITED",
+              "MISSING_BUCKET"
+            ],
+            "description": "FINITE: capacity number + remaining; UNLIMITED: bucket capacity null; MISSING_BUCKET: no EVENT bucket"
+          },
           "pendingApprovalCount": {
             "type": "number"
+          },
+          "checkInSuccessCount": {
+            "type": "number"
+          },
+          "rejectByReason": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "number"
+            },
+            "example": {
+              "ALREADY_CHECKED_IN": 2,
+              "TICKET_NOT_ACTIVE": 1
+            }
+          },
+          "emailNeedsCsCount": {
+            "type": "number"
+          },
+          "asOf": {
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
           "eventId",
           "ticketsByState",
           "quota",
-          "pendingApprovalCount"
+          "quotaRemaining",
+          "quotaCapacityState",
+          "pendingApprovalCount",
+          "checkInSuccessCount",
+          "rejectByReason",
+          "emailNeedsCsCount",
+          "asOf"
         ]
       },
       "CsNotificationDto": {

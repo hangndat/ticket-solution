@@ -24,6 +24,12 @@ const {
   relayOutboxOnce,
   createFailingEmailAdapter,
   createNoopEmailAdapter,
+  openStaffSession,
+  reserveCheckin,
+  confirmCheckin,
+  undoCheckin,
+  recordGateReject,
+  GATE_ERROR_CODES,
 } = require('../dist');
 
 const docker = (...args) =>
@@ -230,6 +236,7 @@ test(
           membershipId: membership.membershipId,
           permissions: ['report.read'],
         });
+        const reporterMembershipId = membership.membershipId;
         const clerkMembership = await grantMembership(tx, {
           tenantId,
           userId: clerk.userId,
@@ -273,7 +280,7 @@ test(
           codeId: primary.codeIds[3],
           ownerUserId: attendee.userId,
         });
-        return { primary, other };
+        return { primary, other, reporterMembershipId };
       });
 
       const issue = (event, rawCode) =>
@@ -316,17 +323,190 @@ test(
           actorUserId: reporter.userId,
         }),
       );
-      assert.deepEqual(report, {
-        eventId,
-        ticketsByState: { ACTIVE: 1, REVOKED: 1, CANCELLED: 0, USED: 1 },
-        quota: { capacity: 10, allocated: 3 },
-        pendingApprovalCount: 1,
+      assert.equal(report.eventId, eventId);
+      assert.deepEqual(report.ticketsByState, {
+        ACTIVE: 1,
+        REVOKED: 1,
+        CANCELLED: 0,
+        USED: 1,
       });
+      assert.deepEqual(report.quota, { capacity: 10, allocated: 3 });
+      assert.equal(report.quotaRemaining, 7);
+      assert.equal(report.quotaCapacityState, 'FINITE');
+      assert.equal(report.pendingApprovalCount, 1);
+      assert.equal(report.checkInSuccessCount, 0);
+      assert.deepEqual(report.rejectByReason, {});
+      assert.equal(report.emailNeedsCsCount, 0);
+      assert.equal(typeof report.asOf, 'string');
+      assert.ok(!Number.isNaN(Date.parse(report.asOf)), 'asOf must be ISO');
       const serialized = JSON.stringify(report);
       assert.equal(serialized.includes('attendee@example.com'), false);
       assert.equal(serialized.includes('KEEP-1'), false);
       assert.equal(serialized.includes(seeded.primary.codeIds[0]), false);
       assert.equal(Object.hasOwn(report, 'email'), false);
+
+      // O12: checkInSuccessCount follows current checkins, not tickets.state=USED alone.
+      const gateStaff = await users.upsertFromVerifiedIdentity({
+        issuer,
+        subject: 'gate-staff',
+        email: 'gate-staff@example.com',
+        emailVerified: true,
+      });
+      await withTenant(db, tenantId, async (tx) => {
+        const membership = await grantMembership(tx, {
+          tenantId,
+          userId: gateStaff.userId,
+          role: 'STAFF',
+          permissions: ['gate.confirm', 'gate.undo'],
+        });
+        await grantEventAssignment(tx, {
+          tenantId,
+          eventId,
+          membershipId: membership.membershipId,
+          permissions: ['gate.confirm', 'gate.undo'],
+        });
+      });
+      const session = await withTenant(db, tenantId, (tx) =>
+        openStaffSession(tx, {
+          tenantId,
+          eventId,
+          userId: gateStaff.userId,
+        }),
+      );
+      const hold = await withTenant(db, tenantId, (tx) =>
+        reserveCheckin(tx, {
+          tenantId,
+          eventId,
+          ticketId: kept.ticketId,
+          staffSessionId: session.sessionId,
+          actorUserId: gateStaff.userId,
+        }),
+      );
+      const confirmed = await withTenant(db, tenantId, (tx) =>
+        confirmCheckin(tx, {
+          tenantId,
+          eventId,
+          reservationId: hold.reservationId,
+          token: hold.token,
+          staffSessionId: session.sessionId,
+          actorUserId: gateStaff.userId,
+        }),
+      );
+      await withTenant(db, tenantId, (tx) =>
+        recordGateReject(tx, {
+          tenantId,
+          eventId,
+          actorUserId: gateStaff.userId,
+          reason: GATE_ERROR_CODES.ALREADY_CHECKED_IN,
+          resourceType: 'ticket',
+          resourceId: kept.ticketId,
+        }),
+      );
+      const afterConfirm = await withTenant(db, tenantId, (tx) =>
+        readEventReport(tx, {
+          tenantId,
+          eventId,
+          actorUserId: reporter.userId,
+        }),
+      );
+      assert.equal(afterConfirm.checkInSuccessCount, 1);
+      assert.equal(afterConfirm.ticketsByState.USED, 2);
+      assert.equal(afterConfirm.ticketsByState.ACTIVE, 0);
+      assert.deepEqual(afterConfirm.rejectByReason, {
+        [GATE_ERROR_CODES.ALREADY_CHECKED_IN]: 1,
+      });
+
+      await withTenant(db, tenantId, (tx) =>
+        undoCheckin(tx, {
+          tenantId,
+          eventId,
+          checkinId: confirmed.checkinId,
+          actorUserId: gateStaff.userId,
+          reason: 'supervisor undo for report fixture',
+        }),
+      );
+      const afterUndo = await withTenant(db, tenantId, (tx) =>
+        readEventReport(tx, {
+          tenantId,
+          eventId,
+          actorUserId: reporter.userId,
+        }),
+      );
+      assert.equal(afterUndo.checkInSuccessCount, 0);
+      assert.equal(afterUndo.ticketsByState.USED, 1);
+      assert.equal(afterUndo.ticketsByState.ACTIVE, 1);
+
+      // O12 quota: UNLIMITED (capacity null) vs MISSING_BUCKET — never fake remaining 0.
+      const unlimitedEventId = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+      const missingBucketEventId = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+      await withTenant(db, tenantId, async (tx) => {
+        await tx.event.create({
+          data: {
+            tenantId,
+            id: unlimitedEventId,
+            slug: 'unlimited',
+            name: 'Unlimited',
+            status: 'DRAFT',
+          },
+        });
+        await tx.event.create({
+          data: {
+            tenantId,
+            id: missingBucketEventId,
+            slug: 'missing-bucket',
+            name: 'Missing bucket',
+            status: 'DRAFT',
+          },
+        });
+        await tx.$executeRaw`
+          INSERT INTO quota_buckets (
+            tenant_id, event_id, id, scope, scope_id, capacity, allocated
+          ) VALUES (
+            ${tenantId}::uuid,
+            ${unlimitedEventId}::uuid,
+            ${randomUUID()}::uuid,
+            'EVENT',
+            NULL,
+            NULL,
+            4
+          )
+        `;
+        await grantEventAssignment(tx, {
+          tenantId,
+          eventId: unlimitedEventId,
+          membershipId: seeded.reporterMembershipId,
+          permissions: ['report.read'],
+        });
+        await grantEventAssignment(tx, {
+          tenantId,
+          eventId: missingBucketEventId,
+          membershipId: seeded.reporterMembershipId,
+          permissions: ['report.read'],
+        });
+      });
+      const unlimitedReport = await withTenant(db, tenantId, (tx) =>
+        readEventReport(tx, {
+          tenantId,
+          eventId: unlimitedEventId,
+          actorUserId: reporter.userId,
+        }),
+      );
+      assert.equal(unlimitedReport.quotaCapacityState, 'UNLIMITED');
+      assert.equal(unlimitedReport.quota.capacity, null);
+      assert.equal(unlimitedReport.quota.allocated, 4);
+      assert.equal(unlimitedReport.quotaRemaining, null);
+
+      const missingReport = await withTenant(db, tenantId, (tx) =>
+        readEventReport(tx, {
+          tenantId,
+          eventId: missingBucketEventId,
+          actorUserId: reporter.userId,
+        }),
+      );
+      assert.equal(missingReport.quotaCapacityState, 'MISSING_BUCKET');
+      assert.equal(missingReport.quota.capacity, null);
+      assert.equal(missingReport.quota.allocated, 0);
+      assert.equal(missingReport.quotaRemaining, null);
 
       await assert.rejects(
         () =>
@@ -411,6 +591,16 @@ test(
       assert.equal(waitingRow.outbox_waiting, true);
       assert.equal(waitingRow.outbox_status, 'PENDING');
 
+      // Temporary FAILED (retry scheduled) must not inflate emailNeedsCsCount.
+      const midFailReport = await withTenant(db, tenantId, (tx) =>
+        readEventReport(tx, {
+          tenantId,
+          eventId,
+          actorUserId: reporter.userId,
+        }),
+      );
+      assert.equal(midFailReport.emailNeedsCsCount, 0);
+
       const alreadySent = await issue(eventId, 'SENT-1');
       await withTenant(db, tenantId, async (tx) => {
         await tx.$executeRaw`
@@ -465,6 +655,35 @@ test(
       );
       assert.deepEqual(retryCounter.calls, [waiting.ticketId]);
       assert.ok(retried.completed >= 1);
+
+      // Terminal delivery DEAD = needs CS; revoke/cancel DEAD must not count.
+      await withTenant(db, tenantId, async (tx) => {
+        await tx.$executeRaw`
+          INSERT INTO notifications (
+            tenant_id, event_id, id, business_key, channel, kind,
+            state, attempts, last_error, payload
+          ) VALUES (
+            ${tenantId}::uuid,
+            ${eventId}::uuid,
+            ${randomUUID()}::uuid,
+            ${'ticket:' + randomUUID() + ':issued:email'},
+            'email',
+            'TicketIssued',
+            'DEAD',
+            5,
+            'smtp down',
+            '{}'::jsonb
+          )
+        `;
+      });
+      const deadReport = await withTenant(db, tenantId, (tx) =>
+        readEventReport(tx, {
+          tenantId,
+          eventId,
+          actorUserId: reporter.userId,
+        }),
+      );
+      assert.equal(deadReport.emailNeedsCsCount, 1);
     } finally {
       if (db) await db.$disconnect().catch(() => {});
       if (name) {
