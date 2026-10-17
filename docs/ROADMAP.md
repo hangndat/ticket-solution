@@ -1,8 +1,18 @@
 # Roadmap — Event Ticketing Platform
 
-Ngày cập nhật nội dung: 2026-10-17  
-Đối chiếu live: `origin/main` `7c1abae72ab0d847e2a909d2da3ed2323edacf94` (MinIO/APNs D5 [#101](https://github.com/hangndat/ticket-solution/pull/101); D6 web [#92](https://github.com/hangndat/ticket-solution/pull/92) / iOS [#93](https://github.com/hangndat/ticket-solution/pull/93) / docs [#94](https://github.com/hangndat/ticket-solution/pull/94)) và [GitHub Project #3](https://github.com/users/hangndat/projects/3) cùng ngày.  
-Nguồn phạm vi: [PRD](./PRD.md), [Technical Design](./TECHNICAL-DESIGN.md), [Decision Log](./DECISION-LOG.md) (O10 — MVP mở rộng), [Agent Development Plan](./AGENT-DEVELOPMENT-PLAN.md), [W0 report](./W0-FOUNDATION-REPORT.md).  
+> **Đã duyệt triển khai ngày 18/10/2026:** user trả lời “duyệt” cho gói D11. Phạm vi thực thi: web admin theo công việc/readiness; iOS Gate feedback/offline/conflict; attendee web/iOS nhận vé/QR/recovery; brand-test đa tenant và a11y trong các bề mặt đó. Thứ tự wave: web admin ∥ iOS Gate, rồi attendee theo slot ownership. Cho phép workflow feature branch → PR → review độc lập → CI → coordinator integration theo git-workflow. Validate-only/manual lookup, metrics mới, O06 số liệu, publish privacy, production deploy và store submit **không** được tự mở từ phê duyệt này. Các phần “chưa approved” bên dưới là snapshot proposal trước phê duyệt; Task Spec cụ thể và comment approval trên #222 là authority thực thi.
+
+
+> **Đối chiếu live 18/10/2026 — cập nhật D11:** Project #3 xác nhận D0–D10 **Hoàn thành**; tại checkpoint trước D11 có 100/101 item Hoàn thành, item #7 là phạm vi hủy. `main` đối chiếu: `3e61cde42d55654897048d6d627ab6834b54b808`. Các bảng snapshot ngày 17/10 bên dưới giữ làm lịch sử; không dùng để suy ra trạng thái hiện tại.
+>
+> **Định hướng mở rộng được user giao ngày 18/10:** đẩy mạnh UX/UI và giao BA/PD nghiên cứu, thiết kế cho vận hành production. Mở **D11 — nghiên cứu và thiết kế UX/UI production** ([Epic #222](https://github.com/hangndat/ticket-solution/issues/222)); pha discovery/design đang thực hiện. Phạm vi tính năng, thứ tự ưu tiên và thiết kế chi tiết là **đề xuất để user review trước feature coding**. Kế hoạch: [D11-UX-PRODUCTION-PLAN](./plans/D11-UX-PRODUCTION-PLAN.md); nghiên cứu: [D11-BA-RESEARCH](./plans/D11-BA-RESEARCH.md); thiết kế: [D11-PRODUCTION-UX-UI](./design/D11-PRODUCTION-UX-UI.md).
+>
+> **Gate D11:** (1) BA nêu pain có nguồn, journeys, ưu tiên và AC/metrics; (2) PD bàn giao flow/state/a11y/UI AC/handoff + prototype tương tác đánh dấu demo; (3) planner chia Epic→Story→Task theo ownership, role/path, dependency thật và wave; (4) user review roadmap trước coding. Research/design complete không phải code complete, acceptance complete hay pilot ready. Không tự deploy production hoặc submit store. Các phạm vi hủy O10 giữ nguyên. O06 retention và các gap phát hành phải được đánh giá bằng evidence khi lập release gate.
+
+
+Ngày cập nhật nội dung: 2026-10-17
+Đối chiếu live: `origin/main` `7c1abae72ab0d847e2a909d2da3ed2323edacf94` (MinIO/APNs D5 [#101](https://github.com/hangndat/ticket-solution/pull/101); D6 web [#92](https://github.com/hangndat/ticket-solution/pull/92) / iOS [#93](https://github.com/hangndat/ticket-solution/pull/93) / docs [#94](https://github.com/hangndat/ticket-solution/pull/94)) và [GitHub Project #3](https://github.com/users/hangndat/projects/3) cùng ngày.
+Nguồn phạm vi: [PRD](./PRD.md), [Technical Design](./TECHNICAL-DESIGN.md), [Decision Log](./DECISION-LOG.md) (O10 — MVP mở rộng), [Agent Development Plan](./AGENT-DEVELOPMENT-PLAN.md), [W0 report](./W0-FOUNDATION-REPORT.md).
 Tracking lâu dài: GitHub Issues + Project (tiếng Việt). Orca Task/Dispatch chỉ là lần giao thực thi.
 
 **Chưa chốt lịch / thời lượng.** Không gắn ngày giả. Timeline Project có thể tạo view trước; ngày mục tiêu để trống đến khi người dùng chốt.
@@ -83,7 +93,7 @@ Catalog chuyên môn Orca (Role ID gắn Task Spec, không `alwaysApply`): [docs
 
 ## 4. Đợt bàn giao (Milestones) — phạm vi & gate
 
-Gợi ý từ kế hoạch agent; cổng identity trước business đã **đi qua** (D1 Hoàn thành trên board).  
+Gợi ý từ kế hoạch agent; cổng identity trước business đã **đi qua** (D1 Hoàn thành trên board).
 **MVP mở rộng (O10, 2026-10-17):** D0–D10. Các mục **hủy khỏi kế hoạch MVP** (Android native; payment/refund/chuyển nhượng; seat map; Apple/Google Wallet) nằm ở §6 «Ngoài phạm vi có chủ đích» — không đưa vào backlog đợt D0–D10.
 
 ### 4.1 Gate bắt buộc mỗi Milestone (D0–D10 khi áp dụng)
@@ -134,7 +144,7 @@ Gate chuyên biệt từng đợt (bảng dưới) **bổ sung**, không thay th
 
 ## 6. Backlog đầu việc (checkbox = tiến độ docs; Status live = Project)
 
-Mỗi nhóm tương ứng parent Issue trên GitHub; sub-issues mang tiêu chí nghiệm thu cụ thể.  
+Mỗi nhóm tương ứng parent Issue trên GitHub; sub-issues mang tiêu chí nghiệm thu cụ thể.
 **Cập nhật Status luôn theo Project #3.** Checkbox dưới đây phản ánh evidence đã ghi trên `main` / Issue tại lần đối chiếu `ed6f0dd` — nếu lệch board, sửa docs, không “sửa” thực tế bằng cách đánh dấu sớm.
 
 ### D0 — W0 Foundation (board: Hoàn thành)
@@ -191,7 +201,7 @@ Mỗi nhóm tương ứng parent Issue trên GitHub; sub-issues mang tiêu chí 
 - [x] iOS ví + Staff scan UX — D6-S6 (#88) — cùng PR #93
 - [x] ROADMAP sync & nghiệm thu đợt — D6-S7 (#89) — merge PR [#94](https://github.com/hangndat/ticket-solution/pull/94) `05618b5ed1401a3e524243a5823ed336b8731796`; parent #81 **Hoàn thành**/closed
 
-Parent [#81](https://github.com/hangndat/ticket-solution/issues/81) **Hoàn thành**/closed. Milestone [D6 — Hoàn thiện UX/UI Vemoki](https://github.com/hangndat/ticket-solution/milestone/8) **closed**.  
+Parent [#81](https://github.com/hangndat/ticket-solution/issues/81) **Hoàn thành**/closed. Milestone [D6 — Hoàn thiện UX/UI Vemoki](https://github.com/hangndat/ticket-solution/milestone/8) **closed**.
 **Gate:** xem [docs/plans/D6-UX-UI-PLAN.md](./plans/D6-UX-UI-PLAN.md) §7 — đợt acceptance xong trên board. **Không tuyên bố lại D6 từ đầu** — chỉ sync Status từ Project. **Proof limits:** D6 ≠ pilot ready / store submission / production deploy.
 
 ### D7 — Offline Gate multi-device (board: Chưa lên lịch — sau rewrite #7)

@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>D11 Prototype — Vemoki UX production</title>
+  <link rel="stylesheet" href="css/d11.css" />
+</head>
+<body>
+  <a class="skip" href="#main">Bỏ qua điều hướng</a>
+  <div class="wrap">
+    <header class="top">
+      <a class="wordmark" href="index.html" aria-label="vemoki hub">vemoki<span aria-hidden="true">↗</span></a>
+      <nav class="nav" aria-label="Prototype">
+        <a href="flows/attendee-redeem.html">Khách</a>
+        <a href="flows/admin-readiness.html">Admin</a>
+        <a href="flows/staff-scan.html">Cổng</a>
+      </nav>
+    </header>
+
+    <div class="demo-banner" role="status">
+      <strong>demo:hub</strong> —
+      Prototype HTML tự chứa · Issue PD
+      <a href="https://github.com/hangndat/ticket-solution/issues/225">#225</a>
+      · reconcile BA
+      <a href="../plans/D11-BA-RESEARCH.md">D11-BA-RESEARCH</a>.
+      Không phải runtime; không claim a11y đạt chuẩn.
+    </div>
+
+    <main id="main">
+      <h1>Prototype UX production</h1>
+      <p class="lead">
+        Ba màn review được như sản phẩm: khách đổi mã → thẻ vé;
+        admin theo việc + sẵn sàng xuất bản; staff scan kiểu điện thoại với hàng đợi ADR-18.
+        Chip trạng thái nằm trong khu Review dưới mỗi trang.
+      </p>
+
+      <div class="grid grid-3">
+        <a class="card-link" href="flows/attendee-redeem.html">
+          <div class="eyebrow">Attendee</div>
+          <h2>Đổi mã → vé</h2>
+          <p>Event identity, form VI, thẻ vé/QR nhãn DEMO — KHÔNG dùng vào cổng.</p>
+        </a>
+        <a class="card-link" href="flows/admin-readiness.html">
+          <div class="eyebrow">Event Manager</div>
+          <h2>Workbench theo việc</h2>
+          <p>Chuẩn bị / Khách / Cổng / Hỗ trợ + readiness (hạn mức có thể «không giới hạn»).</p>
+        </a>
+        <a class="card-link" href="flows/staff-scan.html">
+          <div class="eyebrow">Scanner</div>
+          <h2>Scan · offline · CONFLICT</h2>
+          <p>Phone shell, outcome lớn, queue pending/APPLIED/CONFLICT.</p>
+        </a>
+      </div>
+
+      <section class="product" style="margin-top:24px">
+        <h2>Baseline & giới hạn</h2>
+        <ul class="muted">
+          <li>Public live đã xem: <code>vemoki.com</code> 200 — còn disclaimer kỹ thuật (P0-7).</li>
+          <li>Privacy 404 — ops P0-2, ngoài ownership PD coding.</li>
+          <li>Screenshot admin D8 = lịch sử; prototype = đề xuất IA.</li>
+          <li>Không tuyên bố pilot / production ready.</li>
+        </ul>
+        <p><a href="../D11-PRODUCTION-UX-UI.md">Mở spec PD</a> · <a href="fixtures/demo.json">Fixture demo.json</a></p>
+      </section>
+    </main>
+    <footer class="footer">vemoki↗ · D11 · Epic #222 · PD #225</footer>
+  </div>
+</body>
+</html>
