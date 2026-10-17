@@ -148,12 +148,13 @@ Mỗi nhóm tương ứng parent Issue trên GitHub; sub-issues mang tiêu chí 
 
 ### D5 — Hardening & phát hành (board: Đang làm)
 
-- [x] Review/test độc lập RLS, authorization, transaction races — #24; PR #47
-- [x] Backup/restore drill cục bộ (một phần #25) — `./scripts/d5-backup-drill.sh`; xem §1.2 proof limits
-- [ ] Observability đầy đủ — #25 Đang làm
-- [ ] Load/admission có số liệu — #25 Đang làm; chưa có benchmark đạt gate pilot
-- [ ] UAT thiết bị thật / TestFlight — #26 Chờ duyệt; build **local** signed; **không** EAS Cloud
-- [ ] Runbook, release checklist; theo dõi submitted / approved / available riêng → điều kiện **pilot ready**
+- [x] Review/test độc lập RLS, authorization, transaction races — Issue #24; PR #47 (+ test:db gate/issue/approval)
+- [x] Backup/restore drill cục bộ — Issue #25. Lệnh đúng: `./scripts/d5-backup-drill.sh` (hai container Postgres vứt bỏ, không đụng `ticket_dev`). Pass chỉ chứng minh một dòng fixture đánh dấu còn sau `pg_dump` và restore. Không phải backup production và không phải SLO.
+- [ ] Business/key restore drill — `./scripts/d5-business-restore-drill.sh` (AES-GCM decrypt + API reconnect + RPO dump-point). **Chưa tick Done:** continuous RPO ≤15 phút / RTO prod ≤2h chưa đo trên hạ tầng đích. Evidence: [D5-ISSUE-25-EVIDENCE.md](./reviews/D5-ISSUE-25-EVIDENCE.md)
+- [ ] Observability (hạ tầng local) — overlay Prometheus + exporters (`infra/observability/`, `./scripts/d5-observability-smoke.sh`). **Chưa đạt §16 / chưa Done:** API Prometheus `/metrics` text là BE follow-up; scrape Bearer file đã chuẩn bị.
+- [ ] Load/admission — harness `./scripts/d5-load-baseline.sh` (S3 sustained) + `./scripts/d5-admission-s4.sh` (nginx edge isolated). **Chưa tick Done** tới khi evidence đạt 50 issue/s + 20 confirm/s ≥60s, 50 scanner/event × 2, và không claim SLO prod. Chi tiết: evidence #25.
+- [ ] UAT thiết bị thật / TestFlight (camera, deep link, push, offline ví, revoke) — #26 Chờ duyệt; build **local** signed; **không** EAS Cloud
+- [x] Runbook, release checklist, O06 options (chưa chốt số) — `docs/ops/RUNBOOK.md`, `RELEASE-CHECKLIST.md`, `O06-OPTIONS.md`. Store submitted/approved/available vẫn theo dõi ở #26.
 
 ### Sau MVP (board: Chưa lên lịch)
 

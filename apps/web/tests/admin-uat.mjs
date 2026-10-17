@@ -54,23 +54,23 @@ async function launchBrowser() {
 }
 
 async function clickAndNotice(page, name, pattern) {
-  const before =
+  const beforeSeq =
     (await page
       .locator('[data-testid="admin-notice"]')
-      .textContent()
-      .catch(() => '')) ?? '';
+      .getAttribute('data-notice-seq')
+      .catch(() => null)) ?? '';
   await page.getByRole('button', { name, exact: true }).click();
   let handle;
   try {
     handle = await page.waitForFunction(
-      ({ source, previous }) => {
-        const text =
-          document.querySelector('[data-testid="admin-notice"]')?.textContent ??
-          '';
-        if (!text || text === previous) return null;
+      ({ source, previousSeq }) => {
+        const el = document.querySelector('[data-testid="admin-notice"]');
+        const text = el?.textContent ?? '';
+        const seq = el?.getAttribute('data-notice-seq') ?? '';
+        if (!text || seq === previousSeq) return null;
         return new RegExp(source).test(text) ? text : null;
       },
-      { source: pattern.source, previous: before },
+      { source: pattern.source, previousSeq: beforeSeq },
     );
   } catch (error) {
     const notice = await page
@@ -102,28 +102,22 @@ try {
   await page.getByLabel('Event ID').fill(EVENT);
   await page.getByRole('button', { name: 'Xem trước', exact: true }).click();
   await page.locator('#config-preview').waitFor();
-  const saveText = await clickAndNotice(
-    page,
-    'Lưu phiên bản',
-    /OIDC_MISCONFIGURED|UNAUTHENTICATED|Đã lưu/,
-  );
+  // Fail-closed: OIDC unset → OIDC_MISCONFIGURED; signed-out → UNAUTHENTICATED;
+  // OIDC set but API down → unknown (never claim saved/published/imported).
+  const failClosed =
+    /OIDC_MISCONFIGURED|UNAUTHENTICATED|chưa biết|EVENT_CREATE|CONFIG_VERSION|QUOTA_REQUIRED|CS:|Export |Đã lưu|Đã publish|Đã nhập|Đã tạo event|Quota event/;
+  const saveText = await clickAndNotice(page, 'Lưu phiên bản', failClosed);
   await page.getByLabel('Phiên bản cần publish').fill('1');
-  const publishText = await clickAndNotice(
-    page,
-    'Publish',
-    /OIDC_MISCONFIGURED|UNAUTHENTICATED|CONFIG_VERSION|Đã publish/,
-  );
+  const publishText = await clickAndNotice(page, 'Publish', failClosed);
   await page.locator('#admin-codes').fill('CODE-A\nCODE-B');
-  const importText = await clickAndNotice(
-    page,
-    'Nhập mã',
-    /OIDC_MISCONFIGURED|UNAUTHENTICATED|Đã nhập/,
-  );
-  const quotaText = await clickAndNotice(
-    page,
-    'Đọc quota',
-    /OIDC_MISCONFIGURED|UNAUTHENTICATED|QUOTA_REQUIRED|Quota event/,
-  );
+  const importText = await clickAndNotice(page, 'Nhập mã', failClosed);
+  const quotaText = await clickAndNotice(page, 'Đọc quota', failClosed);
+  await page.getByLabel('Event slug').fill('aurora-night');
+  await page.getByLabel('Event name').fill('Aurora Night');
+  const createText = await clickAndNotice(page, 'Tạo event', failClosed);
+  await page.getByLabel('Từ khóa CS').fill('lookup');
+  const csText = await clickAndNotice(page, 'Tìm vé CS', failClosed);
+  const exportText = await clickAndNotice(page, 'Tạo export CSV', failClosed);
   if (await page.locator('#admin-payload').getAttribute('readonly')) {
     throw new Error('unpublished payload was locked');
   }
@@ -134,6 +128,9 @@ try {
   console.log(`admin-uat: publish=${publishText.replace(/\s+/g, ' ')}`);
   console.log(`admin-uat: import=${importText.replace(/\s+/g, ' ')}`);
   console.log(`admin-uat: quota=${quotaText.replace(/\s+/g, ' ')}`);
+  console.log(`admin-uat: create=${createText.replace(/\s+/g, ' ')}`);
+  console.log(`admin-uat: cs=${csText.replace(/\s+/g, ' ')}`);
+  console.log(`admin-uat: export=${exportText.replace(/\s+/g, ' ')}`);
   console.log(`admin-uat: screenshot ${shot}`);
 } finally {
   await browser.close();
