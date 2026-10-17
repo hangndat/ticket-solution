@@ -69,7 +69,7 @@ export function resolveApnsApiEnvironment(
 
 export type ApnsNotificationsLike = {
   getPermissionsAsync(): Promise<{ status: string }>;
-  requestPermissionsAsync(): Promise<{ status: string }>;
+  requestPermissionsAsync(permissions?: unknown): Promise<{ status: string }>;
   getDevicePushTokenAsync(): Promise<{ data: unknown }>;
   setBadgeCountAsync(count: number): Promise<unknown>;
 };
@@ -94,17 +94,36 @@ export type ClearApnsDeps = {
 };
 
 async function defaultNotifications(): Promise<ApnsNotificationsLike> {
-  const Notifications = await import('expo-notifications');
-  return Notifications;
+  // Release Hermes: `await import('expo-notifications')` throws
+  // "Cannot read property 'default' of undefined". Metro `require` is stable.
+  // Kept lazy so node:test can inject `notifications` without loading native.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const mod = require('expo-notifications') as ApnsNotificationsLike & {
+    default?: ApnsNotificationsLike;
+  };
+  const root = mod.default ?? mod;
+  if (typeof root.getDevicePushTokenAsync !== 'function') {
+    throw new Error(
+      `expo-notifications.getDevicePushTokenAsync missing (keys: ${Object.keys(mod).join(',')})`,
+    );
+  }
+  return root;
 }
 
 async function defaultPlatform(): Promise<string> {
-  const { Platform } = await import('react-native');
+  // Same Hermes Release pitfall as expo-notifications dynamic import.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { Platform } = require('react-native') as {
+    Platform: { OS: string };
+  };
   return Platform.OS;
 }
 
 async function defaultBoundary(): Promise<SessionBoundary> {
-  const { session } = await import('../identity/session.ts');
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { session } = require('../identity/session.ts') as {
+    session: SessionBoundary;
+  };
   return session;
 }
 
@@ -135,38 +154,34 @@ export async function registerApnsDeviceToken(
   const genAtStart = registrationGeneration;
   const epoch = boundary.captureEpoch();
 
-  let permissions = await notifications.getPermissionsAsync();
-  if (permissions.status !== 'granted') {
-    permissions = await notifications.requestPermissionsAsync();
-  }
-  if (registrationGeneration !== genAtStart) {
-    return {
-      status: 'cancelled',
-      transport: 'apns',
-      reason: 'Registration cancelled after logout or account switch.',
-    };
-  }
-  if (permissions.status !== 'granted') {
-    return {
-      status: 'permission-denied',
-      transport: 'apns',
-      reason: 'Notification permission was not granted.',
-    };
-  }
-
+  // Device tokens come from UIApplication.registerForRemoteNotifications —
+  // no UNUserNotificationCenter permission dialog required. Asking for alert
+  // permission under WDA/iOS 26 hung the JS bridge (Promise.race timers never
+  // fired). Alert authorization is separate from token minting / worker push.
   let token: string;
   try {
-    const device = await notifications.getDevicePushTokenAsync();
+    const device = await Promise.race([
+      notifications.getDevicePushTokenAsync(),
+      new Promise<never>((_, reject) => {
+        setTimeout(
+          () => reject(new Error('getDevicePushTokenAsync timed out')),
+          15_000,
+        );
+      }),
+    ]);
     token =
       typeof device.data === 'string'
         ? device.data.trim()
         : String(device.data ?? '').trim();
-  } catch {
+  } catch (err) {
+    const detail =
+      err instanceof Error && err.message.trim()
+        ? err.message.trim()
+        : 'simulator, missing Push Notifications capability, unsigned build, or timed out';
     return {
       status: 'unavailable',
       transport: 'apns',
-      reason:
-        'Native APNs device token is unavailable (simulator, missing Push Notifications capability, or unsigned build).',
+      reason: `Native APNs device token is unavailable (${detail}).`,
     };
   }
 
