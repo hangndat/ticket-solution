@@ -43,5 +43,6 @@
 ## Orca
 
 - Agent: `--agent cursor`.
-- Parallel với `web` / `ios` khi contract ổn định.
+- Coordinator spawn song song với `web` / `ios` / BA/PD / reviewers khác PR khi unblocked; không chờ Story khác đóng.
+- Một lúc chỉ một feature coding Dispatch trên slice BE (tránh conflict).
 - Reviewer DoD/security: session khác; exact SHA.

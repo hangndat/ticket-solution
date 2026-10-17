@@ -77,15 +77,27 @@ Với reviewer, thêm:
 - Không đổi `--agent` theo role.
 - Không để worker depth > 1; planner/worker không spawn con.
 
-### 4. Wave gợi ý (ownership giữ nguyên)
+### 4. Wave tối đa song song (ownership giữ nguyên)
+
+Coordinator / Epic planner **fan-out hết** Task ready trong một wave (capacity + WIP cho phép). Chỉ xếp tuần tự khi có dependency artifact thật.
 
 ```text
-product-ba / product-design  →  (contract nếu cần)  →  parallel: backend + web + ios
-                                                         ↓
-                                              reviewer-dod (± reviewer-security)
+Wave rộng (ví dụ — spawn cùng lúc nếu unblocked):
+  product-ba ∥ product-design ∥ backend ∥ web ∥ ios
+       │              │              │
+       └──────────────┴── contract / PD handoff chỉ khi thật sự chặn ──┘
+                                      ↓
+              reviewer-dod (± reviewer-security)  ×  N PR/Issue độc lập
 ```
 
-Parallel coding vẫn theo `orca-parallel-workers.mdc`. WIP / `Chờ duyệt` đầy → ưu tiên reviewer/fix trước feature mới.
+| Được song song | Không gom serial |
+| -------------- | ---------------- |
+| BA ∥ PD (docs khác path) | BA xong mới PD nếu PD không cần AC BA |
+| BE ∥ web ∥ iOS sau contract (hoặc ngay nếu không đụng contract) | Một mega-worker làm cả ba slice |
+| Nhiều `reviewer-dod` trên PR khác nhau | Một reviewer duyệt tuần tự mọi PR khi còn room |
+| Coding slice A ∥ review/fix slice B ∥ BA/PD | Chờ cả Story đóng mới mở Task ready Story khác |
+
+Cùng ownership slice: tối đa **một** feature coding Dispatch active (tránh conflict git). Parallel vẫn theo `orca-parallel-workers.mdc` + idle fill. WIP / `Chờ duyệt` đầy → ưu tiên **song song** reviewer/fix trước feature mới.
 
 ## Upstream
 

@@ -50,4 +50,5 @@ Cùng chuẩn exact-SHA như DoD (`docs/reviews/*` hoặc comment), thêm:
 ## Orca
 
 - Coordinator ghi trong Spec: SHA, paths, implementer session id.
+- Có thể spawn cùng wave với `reviewer-dod` (session khác) hoặc với security review PR khác độc lập.
 - FAIL → giữ `Chờ duyệt` hoặc trả `Đang làm`; spawn fix worker riêng.
