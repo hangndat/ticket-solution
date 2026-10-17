@@ -27,7 +27,7 @@ Event tickets & gate check-in
 ### Promotional Text (170) — optional, editable without new binary
 
 ```
-Vemoki helps organizers run events and attendees keep tickets handy. View your QR, get delivery updates, and let staff check guests in at the gate—online confirmation, clear results.
+Vemoki helps organizers run events and attendees keep tickets handy—QR at the gate, delivery updates, and clear online check-in.
 ```
 
 ### Description (4000)
