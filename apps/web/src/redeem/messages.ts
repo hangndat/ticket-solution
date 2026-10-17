@@ -1,7 +1,14 @@
-import { ISSUE_ERROR_CODES, IDENTITY_ERROR_CODES } from '@ticket/contracts';
+import {
+  FORM_ERROR_CODES,
+  IDENTITY_ERROR_CODES,
+  ISSUE_ERROR_CODES,
+} from '@ticket/contracts';
+import type { RedeemDecision } from './decide';
+import type { OwnerRedemptionStatus } from '@ticket/contracts';
 
 export type RedeemUxKind =
   | 'success'
+  | 'pending'
   | 'verifying'
   | 'polling'
   | 'exhausted'
@@ -11,6 +18,10 @@ export type RedeemUxKind =
   | 'auth'
   | 'closed'
   | 'conflict'
+  | 'stale'
+  | 'expired'
+  | 'denied'
+  | 'unknown'
   | 'error';
 
 export type RedeemUxMessage = {
@@ -20,7 +31,10 @@ export type RedeemUxMessage = {
   retryable: boolean;
 };
 
-const BY_CODE: Record<string, Omit<RedeemUxMessage, 'retryable'> & { retryable?: boolean }> = {
+const BY_CODE: Record<
+  string,
+  Omit<RedeemUxMessage, 'retryable'> & { retryable?: boolean }
+> = {
   [ISSUE_ERROR_CODES.QUOTA_EXHAUSTED]: {
     kind: 'exhausted',
     title: 'Hết suất (quota exhausted)',
@@ -95,6 +109,48 @@ const BY_CODE: Record<string, Omit<RedeemUxMessage, 'retryable'> & { retryable?:
     detail: 'Dịch vụ issue chưa cấu hình HMAC/credential — liên hệ vận hành.',
     retryable: true,
   },
+  [FORM_ERROR_CODES.FORM_VERSION_STALE]: {
+    kind: 'stale',
+    title: 'Form đã đổi (FORM_VERSION_STALE)',
+    detail: 'Tải lại form published và điền lại. Vé đã cấp vẫn giữ kết quả cũ khi replay.',
+    retryable: false,
+  },
+  [FORM_ERROR_CODES.TERMS_VERSION_STALE]: {
+    kind: 'stale',
+    title: 'Điều khoản đã đổi (TERMS_VERSION_STALE)',
+    detail: 'Đọc lại điều khoản mới và đồng ý lại trước khi gửi.',
+    retryable: false,
+  },
+  [FORM_ERROR_CODES.TERMS_REQUIRED]: {
+    kind: 'denied',
+    title: 'Cần đồng ý điều khoản',
+    detail: 'Phải chấp nhận điều khoản published trước khi đổi mã.',
+    retryable: false,
+  },
+  [FORM_ERROR_CODES.FORM_REQUIRED]: {
+    kind: 'denied',
+    title: 'Thiếu form bắt buộc',
+    detail: 'Sự kiện yêu cầu form published — tải schema rồi điền đủ trường.',
+    retryable: false,
+  },
+  [FORM_ERROR_CODES.FORM_INVALID]: {
+    kind: 'denied',
+    title: 'Form không hợp lệ',
+    detail: 'Một hoặc nhiều trường không đạt kiểm tra phía máy chủ.',
+    retryable: false,
+  },
+  [FORM_ERROR_CODES.PENDING_EXPIRED]: {
+    kind: 'expired',
+    title: 'Yêu cầu chờ duyệt đã hết hạn',
+    detail: 'Pending đã hết TTL — không còn đảm bảo suất. Có thể thử mã lại nếu còn hiệu lực.',
+    retryable: false,
+  },
+  [FORM_ERROR_CODES.PENDING_LIMIT]: {
+    kind: 'denied',
+    title: 'Quá số pending cho phép',
+    detail: 'Bạn đã có quá nhiều yêu cầu chờ duyệt cho sự kiện này.',
+    retryable: false,
+  },
   [IDENTITY_ERROR_CODES.UNAUTHENTICATED]: {
     kind: 'auth',
     title: 'Chưa đăng nhập',
@@ -112,6 +168,18 @@ const BY_CODE: Record<string, Omit<RedeemUxMessage, 'retryable'> & { retryable?:
     title: 'Không kết nối được API',
     detail: 'BFF không tới được Nest upstream. Kiểm tra API_BASE_URL / api đang chạy.',
     retryable: true,
+  },
+  CSRF_TOKEN_INVALID: {
+    kind: 'auth',
+    title: 'CSRF không hợp lệ',
+    detail: 'Tải lại trang để nhận CSRF cookie rồi thử lại.',
+    retryable: false,
+  },
+  CSRF_ORIGIN_REQUIRED: {
+    kind: 'auth',
+    title: 'Thiếu Origin',
+    detail: 'Mutation BFF yêu cầu Origin cùng nguồn.',
+    retryable: false,
   },
   SCOPE_REQUIRED: {
     kind: 'invalid',
@@ -186,4 +254,78 @@ export function successMessage(ticketId: string, replayed: boolean): RedeemUxMes
     detail: `Ticket ${ticketId} từ API thật — không dùng mock proof.`,
     retryable: false,
   };
+}
+
+export function pendingMessage(
+  requestId: string,
+  expiresAt?: string,
+): RedeemUxMessage {
+  return {
+    kind: 'pending',
+    title: 'Đang chờ duyệt — chưa phải vé',
+    detail: expiresAt
+      ? `Yêu cầu ${requestId} chưa đảm bảo suất. Hết hạn: ${expiresAt}.`
+      : `Yêu cầu ${requestId} chưa đảm bảo suất cho đến khi được duyệt.`,
+    retryable: false,
+  };
+}
+
+export function unknownMessage(idempotencyKey: string): RedeemUxMessage {
+  return {
+    kind: 'unknown',
+    title: 'Chưa rõ kết quả — không phải vé',
+    detail: `Giữ idempotency-key ${idempotencyKey} và dò lại trạng thái. Không coi là đã cấp vé.`,
+    retryable: true,
+  };
+}
+
+export function messageForDecision(decision: RedeemDecision): RedeemUxMessage {
+  switch (decision.kind) {
+    case 'issued':
+      return successMessage(decision.ticketId, decision.replayed);
+    case 'pending':
+      return pendingMessage(decision.requestId, decision.expiresAt);
+    case 'unknown':
+      return unknownMessage(decision.idempotencyKey);
+    case 'stale':
+      return messageForApiError(decision.code, decision.message);
+    case 'expired':
+      return messageForApiError(decision.code, decision.message);
+    case 'field_errors':
+      return messageForApiError(decision.code, decision.message);
+    case 'denied':
+      return messageForApiError(decision.code, decision.message);
+    default:
+      return messageForApiError(undefined, 'Unexpected decision.');
+  }
+}
+
+export function messageForOwnerStatus(
+  status: OwnerRedemptionStatus,
+): RedeemUxMessage {
+  switch (status.status) {
+    case 'PENDING_REVIEW':
+      return pendingMessage(
+        status.requestId,
+        status.expiresAt ?? undefined,
+      );
+    case 'ISSUED':
+      return successMessage(status.ticketId, false);
+    case 'REJECTED':
+      return {
+        kind: 'denied',
+        title: 'Yêu cầu bị từ chối',
+        detail: status.reason?.trim() || 'Staff đã từ chối yêu cầu đổi mã.',
+        retryable: false,
+      };
+    case 'EXPIRED':
+      return {
+        kind: 'expired',
+        title: 'Yêu cầu đã hết hạn',
+        detail: `Pending hết hạn lúc ${status.expiredAt}. Không còn đảm bảo suất.`,
+        retryable: false,
+      };
+    default:
+      return messageForApiError(undefined, 'Unknown owner status.');
+  }
 }

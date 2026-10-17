@@ -146,9 +146,28 @@ test('production routes isolate tenant content and reject unknown pairs', async 
     assert.equal(gateBff.status, 503);
     assert.equal((await gateBff.json()).code, 'OIDC_MISCONFIGURED');
 
-    const redeemBff = await fetch(base + '/api/bff/redeem', {
+    // Redeem BFF: CSRF/Origin fail-closed before OIDC.
+    const redeemCsrfBlocked = await fetch(base + '/api/bff/redeem', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        tenantId: '11111111-1111-4111-8111-111111111111',
+        eventId: '22222222-2222-4222-8222-222222222222',
+        code: 'DEMO',
+      }),
+    });
+    assert.equal(redeemCsrfBlocked.status, 403);
+    assert.equal((await redeemCsrfBlocked.json()).code, 'CSRF_ORIGIN_REQUIRED');
+
+    const csrfToken = 'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
+    const redeemBff = await fetch(base + '/api/bff/redeem', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Origin: base,
+        'x-csrf-token': csrfToken,
+        Cookie: `vemoki_csrf=${csrfToken}`,
+      },
       body: JSON.stringify({
         tenantId: '11111111-1111-4111-8111-111111111111',
         eventId: '22222222-2222-4222-8222-222222222222',

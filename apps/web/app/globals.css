@@ -467,10 +467,83 @@ details p {
 .redeem-status--auth,
 .redeem-status--error,
 .redeem-status--invalid,
-.redeem-status--conflict {
+.redeem-status--conflict,
+.redeem-status--denied,
+.redeem-status--stale {
   border-color: #8a1f1f;
   background: #f8e8e8;
   color: #8a1f1f;
+}
+.redeem-status--pending {
+  border-color: #6a4a12;
+  background: #f6eed8;
+  color: #6a4a12;
+}
+.redeem-status--expired,
+.redeem-status--unknown {
+  border-color: #4a4a4a;
+  background: #ececec;
+  color: #2a2a2a;
+}
+.redeem-published-fields,
+.redeem-terms {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+  padding: 16px;
+  border: 2px solid #22241f30;
+}
+.redeem-published-fields legend,
+.redeem-terms legend {
+  font-weight: 700;
+  padding: 0 6px;
+}
+.redeem-field {
+  display: grid;
+  gap: 6px;
+}
+.redeem-field select {
+  font: inherit;
+  font-weight: 400;
+  padding: 12px 14px;
+  border: 2px solid #22241f40;
+  background: #fff;
+  color: var(--ink);
+}
+.redeem-checkbox {
+  display: flex !important;
+  align-items: flex-start;
+  gap: 10px;
+  font-weight: 600;
+}
+.redeem-checkbox input {
+  margin-top: 4px;
+  width: auto;
+}
+.redeem-field-error {
+  margin: 0;
+  color: #8a1f1f;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.redeem-schema-notice {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #3a3a35;
+}
+.redeem-terms-body {
+  margin: 0;
+  max-height: 180px;
+  overflow: auto;
+  white-space: pre-wrap;
+  font-size: 0.88rem;
+  padding: 12px;
+  background: #22241f0d;
+  border: 1px solid #22241f30;
+}
+input[aria-invalid='true'],
+select[aria-invalid='true'] {
+  border-color: #8a1f1f;
 }
 .redeem-meta {
   margin-top: 10px !important;
