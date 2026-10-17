@@ -17,6 +17,16 @@ Tạm thời mọi worker đều dùng `--agent cursor`: implementation, fix, te
 - Lỗi launch/auth/runtime Cursor phải chẩn đoán theo lỗi thực tế; không tự chuyển sang Codex.
 - Reviewer phải khác session implementer. Không reuse session implementer để review chính Task đó.
 
+## Vai trò chuyên môn (role ≠ agent)
+
+**Agent** (`--agent cursor` / override) và **role** (catalog `docs/agents/`) là hai lớp khác nhau. Role không đổi vendor agent.
+
+- Catalog áp dụng: [docs/agents/README.md](../../docs/agents/README.md) — `product-ba`, `product-design`, `backend`, `web`, `ios`, `reviewer-dod`, `reviewer-security`.
+- Trước mỗi `worker-start` cho ownership hoặc reviewer Task: chọn Role ID theo bảng trong README; nhúng khối «Vai trò chuyên môn» + path `docs/agents/roles/<id>.md` vào Task Spec; ghi Role ID trong dispatch evidence cùng agent.
+- Role chỉ bổ sung chuyên môn. Xung đột với `AGENTS.md` / rule Orca / Project → rule dự án thắng.
+- **Không** copy `docs/agents/roles/*.md` vào `.cursor/rules/` với `alwaysApply: true`. Không cài toàn bộ roster upstream agency-agents.
+- Epic planner: không gắn role coding catalog; vẫn Cursor theo chính sách trên.
+
 ## Codex hết quota giữa task có override hoặc dispatch cũ — coordinator tiếp quản
 
 1. Phát hiện qua worker escalation hoặc terminal/session báo usage limit/quota exhausted. Phân biệt với lỗi mạng, auth, timeout; khi không xác định được, ghi nguyên nhân chưa rõ. Không cần chờ worker gửi `worker_done`: quota có thể khiến worker không gửi được checkpoint.
@@ -29,7 +39,7 @@ Tạm thời mọi worker đều dùng `--agent cursor`: implementation, fix, te
 
 ## Review và integration
 
-Spec review phải có Issue/PR/paths, exact SHA, checklist DoD/security. Artifact ghi reviewer/session, checks, findings, limitations và verdict `PASS|FAIL|PASS with known gap`.
+Spec review phải có Issue/PR/paths, exact SHA, checklist DoD/security, và Role ID `reviewer-dod` (thêm `reviewer-security` khi slice nhạy cảm — xem `docs/agents/roles/`). Artifact ghi reviewer/session, checks, findings, limitations và verdict `PASS|FAIL|PASS with known gap`.
 
 - `PASS`: coordinator chỉ merge khi đã được ủy quyền integration, CI xanh và các acceptance/gate bắt buộc đủ evidence. Hoàn thành còn cần CI trên integrated commit theo `github-project-tracking.mdc`.
 - `PASS with known gap`: chỉ được coi là pass nếu gap không vi phạm acceptance/gate bắt buộc hoặc bảo mật; artifact phải có lý do, issue theo dõi và coordinator có thẩm quyền chấp nhận. Coordinator không tự miễn yêu cầu bắt buộc; thay đổi scope cần user cho phép.
