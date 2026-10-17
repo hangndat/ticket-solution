@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { BrandMark } from '../src/brand-mark';
 import { demoEventRoutes, findDemoEvent, demoEventHref } from '../src/events';
 
 export default function Home() {
@@ -6,7 +7,8 @@ export default function Home() {
     <main id="main" className="container home">
       <nav aria-label="Main navigation">
         <span className="wordmark">
-          ticket<span>↗</span>
+          <BrandMark />
+          vemoki<span>↗</span>
         </span>
         <span className="nav-links">
           <Link href="/redeem">Đổi mã</Link>

@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import type { CSSProperties } from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { BrandMark } from '../../../../../src/brand-mark';
 import {
   demoEventRoutes,
   findDemoEvent,
@@ -34,8 +35,9 @@ export default async function EventPage({ params }: Props) {
     >
       <div className="container">
         <nav aria-label="Event navigation">
-          <Link href="/" aria-label="All demo events">
-            ticket ↗
+          <Link href="/" className="wordmark" aria-label="vemoki, all demo events">
+            <BrandMark />
+            vemoki<span>↗</span>
           </Link>
           <span>{event.brand.organizationName}</span>
         </nav>

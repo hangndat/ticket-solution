@@ -125,13 +125,23 @@ nav a {
   font-size: 0.9em;
 }
 .wordmark {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28em;
   font-size: 2rem;
   font-weight: 800;
   letter-spacing: -2px;
+  text-decoration: none;
+}
+.brand-mark {
+  width: 0.92em;
+  height: 0.92em;
+  display: block;
+  flex: none;
 }
 .wordmark span {
   color: #9b3a18;
-  margin-left: 4px;
+  margin-left: 0.06em;
 }
 .eyebrow,
 .demo-label {
@@ -228,6 +238,9 @@ h2 {
 }
 .event-page nav {
   border-color: currentColor;
+}
+.event-page .wordmark {
+  font-size: 1.35rem;
 }
 .demo-label {
   display: inline-block;
