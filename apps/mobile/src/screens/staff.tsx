@@ -9,6 +9,11 @@ import {
 } from '@/a11y/announcements';
 import { BrandWordmark, Notice, Page } from '@/components/page';
 import {
+  EmptyState,
+  LoadingState,
+} from '@/components/screen-state';
+import { scanCopy } from '@/components/screen-state-copy';
+import {
   SUPERVISOR_NOT_ADMISSION,
   canReconcile,
   listUnknownGateOps,
@@ -163,6 +168,11 @@ export function StaffScreen() {
         {'\n'}
         API: {getApiBaseUrl() ?? 'chưa bake'} · Phiên: {session.getSnapshot().status}
       </Notice>
+      {!ready ? (
+        <LoadingState title={scanCopy.loadingStore.title}>
+          {scanCopy.loadingStore.body}
+        </LoadingState>
+      ) : null}
       <GateCamera disabled={busy || !ready} onScan={(data) => void submitScan(data)} />
       <TextInput
         testID="gate-scan-input"
@@ -172,6 +182,7 @@ export function StaffScreen() {
         autoCapitalize="none"
         autoCorrect={false}
         multiline
+        editable={ready && !busy}
         selectionColor={colors.focus}
         onFocus={() => setInputFocused(true)}
         onBlur={() => setInputFocused(false)}
@@ -186,6 +197,7 @@ export function StaffScreen() {
           fontSize: 16,
           borderWidth: 2,
           borderColor: inputFocused ? colors.focus : 'transparent',
+          opacity: ready ? 1 : 0.55,
         }}
       />
       <Pressable
@@ -215,6 +227,14 @@ export function StaffScreen() {
           {busy ? 'Đang kiểm tra…' : 'Check-in'}
         </Text>
       </Pressable>
+      {busy ? (
+        <LoadingState title={scanCopy.checking.title}>
+          {scanCopy.checking.body}
+        </LoadingState>
+      ) : null}
+      {!busy && ready && !current ? (
+        <EmptyState title={scanCopy.idle.title}>{scanCopy.idle.body}</EmptyState>
+      ) : null}
       {current ? (
         <View
           {...gateOutcomeAnnouncement({

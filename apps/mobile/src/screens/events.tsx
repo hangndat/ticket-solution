@@ -1,8 +1,15 @@
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, Text, View } from 'react-native';
+import { FlatList, Pressable, Text, View } from 'react-native';
 import { Link } from 'expo-router';
 import { demoTenants, eventDate, listDemoEvents } from '@/data/demo-events';
-import { BrandWordmark, Notice } from '@/components/page';
+import { BrandWordmark } from '@/components/page';
+import {
+  EmptyState,
+  ErrorState,
+  LoadingState,
+  StateCaption,
+} from '@/components/screen-state';
+import { eventsCopy } from '@/components/screen-state-copy';
 import { fetchPublishedEventList } from '@/published/published-event-api';
 import type { PublishedEventSummary } from '@/published/types';
 import { getApiBaseUrl } from '@/identity/config';
@@ -110,26 +117,32 @@ export function EventsScreen() {
                 : 'Tải danh sách đã xuất bản'}
             </Text>
           </Pressable>
-          {publishedPhase === 'loading' ? <ActivityIndicator /> : null}
+          {publishedPhase === 'loading' ? (
+            <LoadingState title={eventsCopy.loadingList.title}>
+              {eventsCopy.loadingList.body}
+            </LoadingState>
+          ) : null}
           {publishedPhase === 'misconfigured' ? (
-            <Notice title="Chưa cấu hình API">
+            <ErrorState title="Chưa cấu hình API">
               Đặt EXPO_PUBLIC_API_BASE_URL. Demo vẫn chỉ là mẫu.
-            </Notice>
+            </ErrorState>
           ) : null}
           {publishedPhase === 'idle' ? (
-            <Text style={{ color: colors.secondary, ...typography.caption }}>
-              Chạm nút trên để gọi API công khai.
-            </Text>
+            <StateCaption>Chạm nút trên để gọi API công khai.</StateCaption>
           ) : null}
           {publishedPhase === 'error' && publishedError ? (
-            <Notice title="Lỗi danh sách" tone="deny">
+            <ErrorState
+              title={eventsCopy.errorList.title}
+              onRetry={() => void loadPublished()}
+              retryLabel="Tải lại danh sách"
+            >
               {publishedError}
-            </Notice>
+            </ErrorState>
           ) : null}
           {publishedPhase === 'ready' && published.length === 0 ? (
-            <Notice title="Chưa có sự kiện đã xuất bản">
-              API trả về danh sách trống cho tenant này.
-            </Notice>
+            <EmptyState title={eventsCopy.emptyPublished.title}>
+              {eventsCopy.emptyPublished.body}
+            </EmptyState>
           ) : null}
           {published.map((item) => (
             <View
@@ -225,9 +238,9 @@ export function EventsScreen() {
         </View>
       }
       ListEmptyComponent={
-        <Notice title="Không có sự kiện demo">
-          Tổ chức này chưa có sự kiện mẫu.
-        </Notice>
+        <EmptyState title={eventsCopy.emptyDemo.title}>
+          {eventsCopy.emptyDemo.body}
+        </EmptyState>
       }
       renderItem={({ item }) => (
         <View
