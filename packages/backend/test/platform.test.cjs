@@ -242,11 +242,14 @@ test(
         const ev = await createEvent(tx, {
           tenantId: provisioned.tenantId,
           actorUserId: owner.userId,
-          clientKey: 'evt-1',
-          slug: 'fest',
-          name: 'Fest',
+          idempotencyKey: randomUUID(),
+          body: {
+            slug: 'fest',
+            name: 'Fest',
+            timezone: 'Asia/Ho_Chi_Minh',
+          },
         });
-        eventId = ev.eventId;
+        eventId = ev.event.eventId;
         await seedEventInventory(tx, HMAC, {
           tenantId: provisioned.tenantId,
           eventId,
@@ -367,9 +370,12 @@ test(
             createEvent(tx, {
               tenantId: provisioned.tenantId,
               actorUserId: manager.userId,
-              clientKey: 'evt-future',
-              slug: 'nope',
-              name: 'Nope',
+              idempotencyKey: randomUUID(),
+              body: {
+                slug: 'nope',
+                name: 'Nope',
+                timezone: 'Asia/Ho_Chi_Minh',
+              },
             }),
           ),
         (e) => e instanceof AuthzError,
