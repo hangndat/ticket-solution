@@ -292,6 +292,30 @@ test(
           e.code === BRANDING_ERROR_CODES.INVALID_INPUT,
       );
 
+      // Wrong runtime types → BrandingError INVALID_INPUT (not TypeError / 500)
+      for (const bad of [
+        { displayName: 42 },
+        { primaryColor: false },
+        { secondaryColor: 3 },
+        { logoAssetId: ['uuid'] },
+      ]) {
+        await assert.rejects(
+          () =>
+            withTenant(db, A, (tx) =>
+              updateTenantBranding(tx, {
+                tenantId: A,
+                actorUserId: owner.userId,
+                expectedVersion: 2,
+                ...bad,
+              }),
+            ),
+          (e) =>
+            e instanceof BrandingError &&
+            e.code === BRANDING_ERROR_CODES.INVALID_INPUT &&
+            !(e instanceof TypeError),
+        );
+      }
+
       // Tenant B branding remains isolated
       const brandB = await withTenant(db, B, (tx) =>
         getTenantBranding(tx, { tenantId: B, actorUserId: outsider.userId }),

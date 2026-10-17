@@ -27,6 +27,7 @@ import {
   IdentityError,
   IDENTITY_ERROR_CODES,
   getTenantBranding,
+  parseBrandingUpdatePatch,
   updateTenantBranding,
   withTenant,
   type IdentityUserRepository,
@@ -123,15 +124,22 @@ export class BrandingService {
         'expectedVersion must be a positive integer',
       );
     }
+    // Fail closed on wrong runtime types before withTenant/DB (no TypeError → 500).
+    const patch = parseBrandingUpdatePatch({
+      displayName: body.displayName,
+      primaryColor: body.primaryColor,
+      secondaryColor: body.secondaryColor,
+      logoAssetId: body.logoAssetId,
+    });
     return withTenant(this.deps.db!, tenantId, (tx) =>
       updateTenantBranding(tx, {
         tenantId,
         actorUserId: user.userId,
         expectedVersion: body.expectedVersion,
-        displayName: body.displayName,
-        primaryColor: body.primaryColor,
-        secondaryColor: body.secondaryColor,
-        logoAssetId: body.logoAssetId,
+        displayName: patch.displayName,
+        primaryColor: patch.primaryColor,
+        secondaryColor: patch.secondaryColor,
+        logoAssetId: patch.logoAssetId,
       }),
     );
   }
