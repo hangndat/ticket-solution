@@ -1,0 +1,22 @@
+name: Upload Turbo cache shard
+description: >
+  Upload this job's .turbo as an artifact shard. A later turbo-persist job merges
+  shards and writes one Actions cache entry (avoids restore-keys picking the
+  sparsest/last-finishing job).
+inputs:
+  turbo-job:
+    description: Job id used in the artifact name
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Upload Turbo shard
+      uses: actions/upload-artifact@v4
+      with:
+        name: turbo-shard-${{ inputs.turbo-job }}
+        path: .turbo
+        # .turbo is a dot-directory — required or upload is empty
+        include-hidden-files: true
+        if-no-files-found: warn
+        retention-days: 1
+        compression-level: 6
