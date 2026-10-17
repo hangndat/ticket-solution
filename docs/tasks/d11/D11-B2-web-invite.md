@@ -1,6 +1,6 @@
 # Spec đề xuất — D11-B2-web-invite (S-P0-A)
 
-> **CHƯA APPROVED** coding. Parent [`D11-B2-attendee-web.md`](./D11-B2-attendee-web.md) = TEMPLATE.  
+> **CHƯA APPROVED** coding. Parent [`D11-B2-attendee-web.md`](./D11-B2-attendee-web.md) = TEMPLATE.
 > **Một Issue / một Dispatch / `web` only.**
 
 ## Vai trò chuyên môn

@@ -1,13 +1,13 @@
 # Spec đề xuất — D11-B4-ios-staff-scan (S-P0-B)
 
-> **CHƯA APPROVED** coding. Parent [`D11-B4-gate-staff-ux.md`](./D11-B4-gate-staff-ux.md) = TEMPLATE.  
+> **CHƯA APPROVED** coding. Parent [`D11-B4-gate-staff-ux.md`](./D11-B4-gate-staff-ux.md) = TEMPLATE.
 > **Một Issue / một Dispatch / `ios` only.** Wave P0 khuyên slot ios.
 
 ## Vai trò chuyên môn
 
-- Role ID: `ios` · File: `docs/agents/roles/ios.md` · Agent: cursor  
-- Trước code: expo-overview + RN best practices  
-- Check-in: ± `reviewer-security`  
+- Role ID: `ios` · File: `docs/agents/roles/ios.md` · Agent: cursor
+- Trước code: expo-overview + RN best practices
+- Check-in: ± `reviewer-security`
 - Team `BLUA62D52G`; **cấm** EAS Cloud Build
 
 ## Mục tiêu

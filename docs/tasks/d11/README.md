@@ -1,7 +1,7 @@
 # D11 — Task specs (Epic planner)
 
-**Epic:** [#222](https://github.com/hangndat/ticket-solution/issues/222)  
-**Story discovery:** [#223](https://github.com/hangndat/ticket-solution/issues/223)  
+**Epic:** [#222](https://github.com/hangndat/ticket-solution/issues/222)
+**Story discovery:** [#223](https://github.com/hangndat/ticket-solution/issues/223)
 **Plan:** [`docs/plans/D11-UX-PRODUCTION-PLAN.md`](../../plans/D11-UX-PRODUCTION-PLAN.md)
 
 ## Quy ước
@@ -9,7 +9,7 @@
 - Tiếng Việt user-facing; giữ ID/path/SHA/command.
 - Role ID bắt buộc trong mọi Spec ownership/reviewer — xem [`docs/agents/README.md`](../../agents/README.md).
 - Agent: `--agent cursor` ([orca-agent-routing](../../../.cursor/rules/orca-agent-routing.mdc)).
-- `D11-A*` = pha discovery (đã ủy quyền O11).  
+- `D11-A*` = pha discovery (đã ủy quyền O11).
 - `D11-B*` = **đề xuất** implementation — **không** dispatch coding cho đến user review roadmap.
 - Parent multi-slice (`B2`/`B4`/`B6`/`B7`) = **TEMPLATE NOT DISPATCH-READY** — chỉ `worker-start` **sub-spec** một ownership.
 - Contract/OpenAPI **không** auto-approve từ Task UX.

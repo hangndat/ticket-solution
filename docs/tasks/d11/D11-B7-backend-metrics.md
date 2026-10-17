@@ -1,11 +1,11 @@
 # Spec đề xuất — D11-B7-backend-metrics
 
-> **CHƯA APPROVED** coding. Parent [`D11-B7-metrics-release.md`](./D11-B7-metrics-release.md) = TEMPLATE.  
+> **CHƯA APPROVED** coding. Parent [`D11-B7-metrics-release.md`](./D11-B7-metrics-release.md) = TEMPLATE.
 > **Một Issue / một Dispatch / `backend` only.** Soft-dep BA §10 — **không** block P0 UI.
 
 ## Vai trò chuyên môn
 
-- Role ID: `backend` · File: `docs/agents/roles/backend.md` · Agent: cursor  
+- Role ID: `backend` · File: `docs/agents/roles/backend.md` · Agent: cursor
 - Nhạy cảm PII labels → `reviewer-security`
 
 ## Mục tiêu
@@ -14,8 +14,8 @@ Instrumentation tối thiểu đã duyệt cho metric defs BA §10 (redeem compl
 
 ## Phụ thuộc
 
-- Soft: BA §10 defs  
-- Soft: TD §16 cardinality  
+- Soft: BA §10 defs
+- Soft: TD §16 cardinality
 - Schema/event mới → escalate duyệt (**không** auto-approve)
 
 ## Ownership

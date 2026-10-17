@@ -1,14 +1,14 @@
 # TEMPLATE — D11-B4 Gate / staff / supervisor UX
 
-> **TEMPLATE NOT DISPATCH-READY.**  
-> Parent index only — **cấm** một Dispatch trộn ios+web (+BE).  
-> Sau user review: **một Issue / một Dispatch / một ownership** qua sub-spec.  
+> **TEMPLATE NOT DISPATCH-READY.**
+> Parent index only — **cấm** một Dispatch trộn ios+web (+BE).
+> Sau user review: **một Issue / một Dispatch / một ownership** qua sub-spec.
 > Contract Gate/offline **không** auto-approve; thiếu field → escalate BE Task riêng.
 
 ## Vai trò chuyên môn (khi split)
 
-- `ios` hoặc `web` (hoặc `backend` cho optional validate-only) — **không** “và/hoặc” trong cùng Dispatch  
-- Files: `docs/agents/roles/ios.md` / `web.md` / `backend.md`  
+- `ios` hoặc `web` (hoặc `backend` cho optional validate-only) — **không** “và/hoặc” trong cùng Dispatch
+- Files: `docs/agents/roles/ios.md` / `web.md` / `backend.md`
 - Agent: cursor · check-in nhạy cảm → thêm `reviewer-security`
 
 ## Sub-specs (DISPATCH-READY candidates — vẫn CHƯA APPROVED coding)

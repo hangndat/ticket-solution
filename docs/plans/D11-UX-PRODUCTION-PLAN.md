@@ -3,10 +3,10 @@
 > **Đã duyệt triển khai ngày 18/10/2026:** user trả lời “duyệt” cho gói D11. Phạm vi thực thi: web admin theo công việc/readiness; iOS Gate feedback/offline/conflict; attendee web/iOS nhận vé/QR/recovery; brand-test đa tenant và a11y trong các bề mặt đó. Thứ tự wave: web admin ∥ iOS Gate, rồi attendee theo slot ownership. Cho phép workflow feature branch → PR → review độc lập → CI → coordinator integration theo git-workflow. Validate-only/manual lookup, metrics mới, O06 số liệu, publish privacy, production deploy và store submit **không** được tự mở từ phê duyệt này. Các phần “chưa approved” bên dưới là snapshot proposal trước phê duyệt; Task Spec cụ thể và comment approval trên #222 là authority thực thi.
 
 
-**Trạng thái artifact:** DRAFT proposal **đã reconcile BA/PD lần 1** (pha discovery) — **chưa** là roadmap triển khai đã duyệt.  
-**Ngày soạn / reconcile:** 2026-10-18  
-**Baseline source `main`/HEAD:** `3e61cde42d55654897048d6d627ab6834b54b808` — **không** chứng minh SHA deployment production (xem [D11-DISCOVERY-BASELINE](../reviews/D11-DISCOVERY-BASELINE.md)).  
-**Quyết định:** [DECISION-LOG O11](../DECISION-LOG.md) — ủy quyền discovery/design; **không** tự chốt feature list.  
+**Trạng thái artifact:** DRAFT proposal **đã reconcile BA/PD lần 1** (pha discovery) — **chưa** là roadmap triển khai đã duyệt.
+**Ngày soạn / reconcile:** 2026-10-18
+**Baseline source `main`/HEAD:** `3e61cde42d55654897048d6d627ab6834b54b808` — **không** chứng minh SHA deployment production (xem [D11-DISCOVERY-BASELINE](../reviews/D11-DISCOVERY-BASELINE.md)).
+**Quyết định:** [DECISION-LOG O11](../DECISION-LOG.md) — ủy quyền discovery/design; **không** tự chốt feature list.
 **Board (authority):** [Project #3](https://github.com/users/hangndat/projects/3)
 
 | Issue | Vai trò | Ownership path |
@@ -19,9 +19,9 @@
 
 **Artifact liên kết (đã có trên disk — local, chưa commit):**
 
-- BA: [`docs/plans/D11-BA-RESEARCH.md`](./D11-BA-RESEARCH.md) — #224; P0/P1 + §12 (4 quyết định khuyến nghị); DoD docs [`D11-BA-DOCS-REVIEW.md`](../reviews/D11-BA-DOCS-REVIEW.md) **PASS with known gap** (research-only)  
-- PD: [`docs/design/D11-PRODUCTION-UX-UI.md`](../design/D11-PRODUCTION-UX-UI.md) + prototype **đủ 6 files** (`index` + 3 flows gồm `staff-scan.html` + css + fixtures)  
-- Baseline: [`docs/reviews/D11-DISCOVERY-BASELINE.md`](../reviews/D11-DISCOVERY-BASELINE.md) — public `vemoki.com` 200; `/privacy` 404 tươi 18/10  
+- BA: [`docs/plans/D11-BA-RESEARCH.md`](./D11-BA-RESEARCH.md) — #224; P0/P1 + §12 (4 quyết định khuyến nghị); DoD docs [`D11-BA-DOCS-REVIEW.md`](../reviews/D11-BA-DOCS-REVIEW.md) **PASS with known gap** (research-only)
+- PD: [`docs/design/D11-PRODUCTION-UX-UI.md`](../design/D11-PRODUCTION-UX-UI.md) + prototype **đủ 6 files** (`index` + 3 flows gồm `staff-scan.html` + css + fixtures)
+- Baseline: [`docs/reviews/D11-DISCOVERY-BASELINE.md`](../reviews/D11-DISCOVERY-BASELINE.md) — public `vemoki.com` 200; `/privacy` 404 tươi 18/10
 - Task specs: [`docs/tasks/d11/`](../tasks/d11/) — pha B dùng ID `D11-B*` (không trùng Story #223)
 
 **Không phải:** code complete · acceptance complete · pilot ready · store submit · deploy prod (trừ task riêng ủy quyền sau này).
@@ -42,9 +42,9 @@
 
 ## 1. Mục tiêu pha discovery (đã ủy quyền)
 
-1. Làm rõ **pain / journey / ưu tiên** cho UX/UI hướng vận hành production trên baseline D0–D10 (BA).  
-2. Bàn giao **flow · state · a11y · UI AC · handoff** + prototype tương tác đánh dấu demo (PD).  
-3. Chia **Epic → Story → Task** với Role ID/path, dependency thật, wave fan-out, và **spec đủ để coordinator dispatch sau khi user review roadmap** (planner — file này).  
+1. Làm rõ **pain / journey / ưu tiên** cho UX/UI hướng vận hành production trên baseline D0–D10 (BA).
+2. Bàn giao **flow · state · a11y · UI AC · handoff** + prototype tương tác đánh dấu demo (PD).
+3. Chia **Epic → Story → Task** với Role ID/path, dependency thật, wave fan-out, và **spec đủ để coordinator dispatch sau khi user review roadmap** (planner — file này).
 4. Tách rõ: **research/design complete** ≠ coding; coding chỉ sau **user review** proposal.
 
 ### Non-goals (pha này và mọi đề xuất D11+)
@@ -65,8 +65,8 @@
 
 ### 2.1 Board / đợt (observed)
 
-- **Quan sát:** ROADMAP live note 18/10 — D0–D10 **Hoàn thành** trên Project #3; #7 ngoài phạm vi hủy.  
-- **Quan sát:** snapshot bảng §1 ngày 17/10 trong ROADMAP là **lịch sử** (vd. D5 “Đang làm”) — không dùng làm status hiện tại.  
+- **Quan sát:** ROADMAP live note 18/10 — D0–D10 **Hoàn thành** trên Project #3; #7 ngoài phạm vi hủy.
+- **Quan sát:** snapshot bảng §1 ngày 17/10 trong ROADMAP là **lịch sử** (vd. D5 “Đang làm”) — không dùng làm status hiện tại.
 - **Suy luận:** D6 brand polish + D7 offline Gate + D8 white-label + D9 seed/media/UX + D10 ASC prep đã có acceptance-level evidence riêng; D11 không làm lại D6 từ đầu.
 
 ### 2.2 UX đã có (observed từ reviews/plans — không re-audit toàn `apps/**` trong planner)
@@ -123,8 +123,8 @@ Pha A — Discovery / design          Pha B — Implementation (đề xuất)
 
 ### Epic
 
-**[#222] D11 — Nghiên cứu & thiết kế UX/UI production (Vemoki)**  
-Nhóm: Coordinator + Epic planner.  
+**[#222] D11 — Nghiên cứu & thiết kế UX/UI production (Vemoki)**
+Nhóm: Coordinator + Epic planner.
 DoD Epic (discovery): đủ Gate ROADMAP D11 (1)–(4) với (4)=user review ghi nhận; không merge feature; không Hoàn thành Epic chỉ vì `worker_done`.
 
 ### Story discovery
@@ -199,8 +199,8 @@ Checklist đầy đủ: [`docs/tasks/d11/D11-S-P0-C-brand-test-ac.md`](../tasks/
 
 ### 5.3 Quy tắc Dispatch (WIP ownership)
 
-- Cùng lúc tối đa **một** feature Dispatch `web`, **một** `ios`, **một** `backend` (+ docs/reviewer độc lập).  
-- Ready queue: nếu nhiều Task web P0 (invite, home, admin, privacy) → **xếp hàng**; không `S2 ∥ S5 ∥ S6` cùng wave.  
+- Cùng lúc tối đa **một** feature Dispatch `web`, **một** `ios`, **một** `backend` (+ docs/reviewer độc lập).
+- Ready queue: nếu nhiều Task web P0 (invite, home, admin, privacy) → **xếp hàng**; không `S2 ∥ S5 ∥ S6` cùng wave.
 - Reviewer-dod: song song được trên nhiều PR **khác** SHA khi room.
 
 ### 5.4 Task Spec skeleton
@@ -280,10 +280,10 @@ Xem thư mục [`docs/tasks/d11/`](../tasks/d11/):
 
 ## 9. Việc coordinator làm (planner không làm)
 
-1. Đồng bộ Project Status theo sự kiện (chỉ coordinator đổi board).  
-2. Sau research complete: đưa package cho **user review** roadmap/Issues pha B.  
-3. Sau duyệt: tạo/gắn Issues triển khai, `worker-start --agent cursor` theo wave + Role.  
-4. Không merge/deploy/store trừ ủy quyền.  
+1. Đồng bộ Project Status theo sự kiện (chỉ coordinator đổi board).
+2. Sau research complete: đưa package cho **user review** roadmap/Issues pha B.
+3. Sau duyệt: tạo/gắn Issues triển khai, `worker-start --agent cursor` theo wave + Role.
+4. Không merge/deploy/store trừ ủy quyền.
 5. Reuse/release workers theo mailbox rules.
 
 ---
@@ -303,8 +303,8 @@ Xem thư mục [`docs/tasks/d11/`](../tasks/d11/):
 
 ## 11. Kết luận khuyến nghị (cho user review)
 
-1. **Pha A đủ Gate (1)–(3) trên disk (local, chưa commit):** BA (+ docs review PASS w/ known gap) + PD prototype đủ + plan/specs `D11-B*`. Gate (4) = user review roadmap trước coding.  
-2. **Review roadmap** theo BA §12 (4 quyết định khuyến nghị): ưu tiên Admin IA + attendee copy + Gate feedback + a11y; O06/home/pilot tách.  
-3. **Không** coi D0–D10 Hoàn thành / UI prototype = pilot ready; O06 + privacy duyệt + device/ops là cổng riêng (BA G-A…G-E).  
-4. **Wave coding sau duyệt:** ≤1 web + ≤1 ios feature; P0 khuyên: ios `D11-B4-ios-staff-scan` ∥ một web (`D11-B2-web-home` **hoặc** `D11-B5`); **không** dispatch parent B2/B4/B6/B7.  
+1. **Pha A đủ Gate (1)–(3) trên disk (local, chưa commit):** BA (+ docs review PASS w/ known gap) + PD prototype đủ + plan/specs `D11-B*`. Gate (4) = user review roadmap trước coding.
+2. **Review roadmap** theo BA §12 (4 quyết định khuyến nghị): ưu tiên Admin IA + attendee copy + Gate feedback + a11y; O06/home/pilot tách.
+3. **Không** coi D0–D10 Hoàn thành / UI prototype = pilot ready; O06 + privacy duyệt + device/ops là cổng riêng (BA G-A…G-E).
+4. **Wave coding sau duyệt:** ≤1 web + ≤1 ios feature; P0 khuyên: ios `D11-B4-ios-staff-scan` ∥ một web (`D11-B2-web-home` **hoặc** `D11-B5`); **không** dispatch parent B2/B4/B6/B7.
 5. Role + exact-SHA DoD; cấm EAS Cloud / SaaS / O10-hủy; không tự deploy/store; brand-test AC theo `D11-S-P0-C-brand-test-ac.md`.

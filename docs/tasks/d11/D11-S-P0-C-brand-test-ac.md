@@ -1,13 +1,13 @@
 # AC dùng chung — S-P0-C Brand-test multi-tenant
 
-> **Không phải Task Dispatch riêng.** Gắn checklist này vào Issue/Dispatch surface (`D11-B2-web-*`, `D11-B3`, `D11-B5`) khi scope gồm white-label / event chrome.  
-> **CHƯA APPROVED** cho coding — proposal chờ user review roadmap.  
+> **Không phải Task Dispatch riêng.** Gắn checklist này vào Issue/Dispatch surface (`D11-B2-web-*`, `D11-B3`, `D11-B5`) khi scope gồm white-label / event chrome.
+> **CHƯA APPROVED** cho coding — proposal chờ user review roadmap.
 > Nguồn: BA S-P0-C / P0-4; PD §6.3; tokens `brand/vemoki/tokens.json`; evidence mẫu D8 (lịch sử).
 
 ## Vai trò khi gắn vào Task
 
-- Role theo surface: `web` hoặc `ios` (một ownership / Dispatch).  
-- Agent: cursor.  
+- Role theo surface: `web` hoặc `ios` (một ownership / Dispatch).
+- Agent: cursor.
 - **Không** đổi API/auth/contract trong brand-test; gap projection → escalate coordinator.
 
 ## AC cụ thể

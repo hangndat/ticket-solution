@@ -69,7 +69,7 @@
 
 ### Should-fix
 
-1. **Staff prototype thiếu chip tương tác `DUPLICATE`.**  
+1. **Staff prototype thiếu chip tương tác `DUPLICATE`.**
    Spec §2.4 + principles + `demo.json` `adr18ItemStatuses` liệt kê DUPLICATE; review chips có APPLIED/CONFLICT/unknown/queued nhưng **không** có `data-phase="duplicate"`. Semantics đủ trên giấy; reviewer/implementer phải dựa matrix chứ không demo được tone DUPLICATE. Không nuốt invariant (principles: CONFLICT/DUPLICATE ≠ lượt vào mới).
 
 ### Nit
@@ -78,19 +78,19 @@
 
 ### Không phải finding (đã đúng)
 
-- Không claim pilot/production ready / WCAG đã đo / venue UAT / user research.  
-- Anonymous redeem không mở.  
-- Validate-only không mock production right.  
-- Review dock tách khỏi chrome khách.  
+- Không claim pilot/production ready / WCAG đã đo / venue UAT / user research.
+- Anonymous redeem không mở.
+- Validate-only không mock production right.
+- Review dock tách khỏi chrome khách.
 - Final QA dùng `/tmp/d11-prototype-final-qa` (và durable copy), không dùng results FAIL cũ.
 
 ## Limitations / known gaps (bắt buộc nêu)
 
-- Verdict = **design + HTML prototype quality only** — không nghiệm thu `apps/web` / `apps/mobile`, API, RLS, concurrency.  
-- **Native** Gate (camera, haptics, VoiceOver device) **chưa** chạy.  
-- **Full a11y** (axe suite / screen reader thật / contrast đo) **chưa** — chỉ pattern + checklist.  
-- **Venue / physical-device / user research** **chưa** chạy.  
-- Working-tree hashes lệch nếu file bị sửa sau review → cần revalidation.  
+- Verdict = **design + HTML prototype quality only** — không nghiệm thu `apps/web` / `apps/mobile`, API, RLS, concurrency.
+- **Native** Gate (camera, haptics, VoiceOver device) **chưa** chạy.
+- **Full a11y** (axe suite / screen reader thật / contrast đo) **chưa** — chỉ pattern + checklist.
+- **Venue / physical-device / user research** **chưa** chạy.
+- Working-tree hashes lệch nếu file bị sửa sau review → cần revalidation.
 - P1-3 validate-only vẫn **proposal** chờ user review roadmap — không coi đã approved.
 
 ## Verdict

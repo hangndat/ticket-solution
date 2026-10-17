@@ -50,32 +50,32 @@ Reviewer re-ran: `curl` privacy → **404**; `scripts` evidence paths tồn tạ
 
 ### Should-fix
 
-1. **Benchmark Splash / Fever Zendesk không re-verify được nội dung (severity này).**  
+1. **Benchmark Splash / Fever Zendesk không re-verify được nội dung (severity này).**
    URLs Splash (`splashthat.com/platform/*`) và Fever Partners Zendesk validate-ticket trả **HTTP 403** (Cloudflare / bot challenge) với curl desktop UA. Eventbrite, Ticketbox, Accelevents, Fever business marketing vẫn **200**. Không kết luận link “sai”; chỉ **không xác nhận lại** claim chi tiết từ các trang bị chặn. Đủ ≥3 nguồn kiểm chứng được cho acceptance research; gap ghi nhận.
 
-2. **Lệch wording sau khi giảm câu hỏi §12.**  
-   §12: không cần user trả lời bảng để hoàn tất handoff; chỉ cần review roadmap trước coding.  
+2. **Lệch wording sau khi giảm câu hỏi §12.**
+   §12: không cần user trả lời bảng để hoàn tất handoff; chỉ cần review roadmap trước coding.
    §13 flowchart vẫn `User trả lời §12` và §15: “sau khi user trả lời §12”. Nên chỉnh thành “user review roadmap / chốt phạm vi IN” để khớp §12 + ROADMAP gate — **không** blocker research quality.
 
 ### Nit
 
-3. PRD dòng header vẫn “quyết định: DECISION-LOG O10” trong khi đã có callout O11.  
-4. DECISION-LOG bảng Lịch sử chưa có dòng 2026-10-18 cho O11.  
+3. PRD dòng header vẫn “quyết định: DECISION-LOG O10” trong khi đã có callout O11.
+4. DECISION-LOG bảng Lịch sử chưa có dòng 2026-10-18 cho O11.
 5. Ticketbox hàng benchmark ghi “App Store listing” nhưng chỉ link Play Store + ticketbox.vn.
 
 ### Không phải finding (đã đúng)
 
-- Không claim pilot/production ready / store submit.  
-- Không hồi sinh Android/payment/refund/transfer/seat/Wallet.  
-- Không coi graph stale là truth.  
-- Metrics baseline = chưa đo.  
+- Không claim pilot/production ready / store submit.
+- Không hồi sinh Android/payment/refund/transfer/seat/Wallet.
+- Không coi graph stale là truth.
+- Metrics baseline = chưa đo.
 - Coordinator baseline pin SHA + “docs chưa commit”.
 
 ## Limitations
 
-- Verdict = **docs research quality only**; không nghiệm thu product/UAT/device.  
-- Không review PD (`docs/design/**`) hay planner plan đang sửa.  
-- Không chạy Playwright lại trên `vemoki.com` (tin baseline coordinator + curl privacy).  
+- Verdict = **docs research quality only**; không nghiệm thu product/UAT/device.
+- Không review PD (`docs/design/**`) hay planner plan đang sửa.
+- Không chạy Playwright lại trên `vemoki.com` (tin baseline coordinator + curl privacy).
 - Working-tree hashes trên sẽ lệch nếu file bị sửa sau review → cần revalidation.
 
 ## Verdict

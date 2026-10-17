@@ -8,7 +8,7 @@
 | Ngày | 2026-10-18 |
 | Trạng thái | **Đề xuất design** — chờ user review roadmap; **không** pilot/production ready |
 
-**Reconcile BA:** đã đọc [`docs/plans/D11-BA-RESEARCH.md`](../plans/D11-BA-RESEARCH.md) (P0-1…P0-7, P1-1…P1-5, handoff §14).  
+**Reconcile BA:** đã đọc [`docs/plans/D11-BA-RESEARCH.md`](../plans/D11-BA-RESEARCH.md) (P0-1…P0-7, P1-1…P1-5, handoff §14).
 **Baseline:** [`docs/reviews/D11-DISCOVERY-BASELINE.md`](../reviews/D11-DISCOVERY-BASELINE.md) + public screenshot `d11-public-baseline.png` / `/tmp/d11-baseline-public.png`.
 
 ---
@@ -69,7 +69,7 @@
 | Current web redeem fail-closed khi thiếu auth | Quan sát `UNAUTHENTICATED` / `EMAIL_NOT_VERIFIED` |
 | Ví iOS / danh sách vé | Cần phiên verified; offline = chỉ hiển thị cache |
 
-**Copy guest (UI):** dùng «sự kiện», «biểu mẫu», «điều khoản», «cần đăng nhập», «đang xử lý», «vé của bạn».  
+**Copy guest (UI):** dùng «sự kiện», «biểu mẫu», «điều khoản», «cần đăng nhập», «đang xử lý», «vé của bạn».
 **Handoff dev (không lên chrome khách):** schema/published/tenant UUID/Keycloak/idempotency/credentialVersion/SessionBoundary.
 
 ### 1.2 Event Manager — workbench theo việc (BA P0-6 / P1-2)
@@ -159,7 +159,7 @@ States: empty (chưa chọn event) · loading · ready · error/retry (unclear) 
 
 ## 3. Accessibility (WCAG 2.2 AA + HIG)
 
-Giữ checklist A1–A10 (contrast, focus `--focus`, 44px, label, live region assertive cho unknown/queued, reduced-motion, skip link, không chỉ màu, QR alt, dialog fail-closed).  
+Giữ checklist A1–A10 (contrast, focus `--focus`, 44px, label, live region assertive cho unknown/queued, reduced-motion, skip link, không chỉ màu, QR alt, dialog fail-closed).
 Prototype **không** claim đã đạt chuẩn — chỉ thể hiện pattern; đo bằng axe/Playwright/VoiceOver khi coding.
 
 ---
@@ -203,14 +203,14 @@ UAT: `scripts/web-uat.sh` / `scripts/sim-uat.sh`. Prototype file:// chỉ review
 
 ### 6.1 IA
 
-- **Guest nav đề xuất:** Đổi mã · (context sự kiện) · Đăng nhập / Tài khoản. Invite thành viên → Owner/admin (giả thuyết BA-aligned).  
-- **Admin jobs:** Chuẩn bị | Khách & mã | Cổng | Hỗ trợ — progressive disclosure; UUID trong «Chi tiết kỹ thuật».  
+- **Guest nav đề xuất:** Đổi mã · (context sự kiện) · Đăng nhập / Tài khoản. Invite thành viên → Owner/admin (giả thuyết BA-aligned).
+- **Admin jobs:** Chuẩn bị | Khách & mã | Cổng | Hỗ trợ — progressive disclosure; UUID trong «Chi tiết kỹ thuật».
 - **iOS:** 3 tab; Staff ẩn/disabled nếu không có quyền (escalate nếu thiếu flag).
 
 ### 6.2 Hierarchy / density / forms
 
-- Guest: brand-first một composition (baseline public đã gần — gỡ Nest BFF).  
-- Admin: sticky event summary + readiness; dense forms trong job.  
+- Guest: brand-first một composition (baseline public đã gần — gỡ Nest BFF).
+- Admin: sticky event summary + readiness; dense forms trong job.
 - Gate: outcome ≥40% vùng nhìn sau scan; camera/canvas trên; queue dưới.
 
 ### 6.3 Brand / motion
@@ -274,14 +274,14 @@ State switcher nằm trong **khu Review / PD** (không lẫn chrome khách). Vé
 
 ## 11. DoD role PD
 
-- [x] Flows + lỗi/auth pin  
-- [x] State matrix copy VI  
-- [x] a11y checklist  
-- [x] UI AC headless  
-- [x] Handoff ownership  
-- [x] Prototype 3 flow + fixture demo  
-- [x] Reconcile BA  
-- [x] Issue #225 ghi trong artifact  
+- [x] Flows + lỗi/auth pin
+- [x] State matrix copy VI
+- [x] a11y checklist
+- [x] UI AC headless
+- [x] Handoff ownership
+- [x] Prototype 3 flow + fixture demo
+- [x] Reconcile BA
+- [x] Issue #225 ghi trong artifact
 
 **Không:** commit/push; sửa apps; spawn worker; tuyên bố production ready.
 

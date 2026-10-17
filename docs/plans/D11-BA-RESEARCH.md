@@ -197,7 +197,7 @@ Chỉ đề xuất phục vụ UX — **không** mở payment/seat/Wallet/Androi
 
 ## 8. Ma trận ưu tiên Impact / Effort / Risk
 
-Thang: Impact H/M/L · Effort S/M/L · Risk (kỹ thuật/phạm vi) L/M/H.  
+Thang: Impact H/M/L · Effort S/M/L · Risk (kỹ thuật/phạm vi) L/M/H.
 **P0** = nên làm trước khi tuyên bố gần production/pilot path. **P1** = đợt UX tiếp. **P2** = backlog có chủ đích.
 
 | ID | Hạng mục | Loại | Impact | Effort | Risk | Prio | Persona chính |
@@ -227,74 +227,74 @@ Thang: Impact H/M/L · Effort S/M/L · Risk (kỹ thuật/phạm vi) L/M/H.
 
 ### S-P0-A — Onboarding Owner không kẹt invite
 
-**Persona:** Tenant Owner  
-**Given** tenant mới tạo và Owner nhận link `/invite` trên `vemoki.com`  
-**When** chấp nhận invite bằng UI chuẩn (cookie/BFF đúng origin)  
-**Then** membership ACTIVE và vào được admin tenant; nếu lỗi thì message VI có bước khắc phục (không chỉ mã CSRF nội bộ).  
+**Persona:** Tenant Owner
+**Given** tenant mới tạo và Owner nhận link `/invite` trên `vemoki.com`
+**When** chấp nhận invite bằng UI chuẩn (cookie/BFF đúng origin)
+**Then** membership ACTIVE và vào được admin tenant; nếu lỗi thì message VI có bước khắc phục (không chỉ mã CSRF nội bộ).
 **Evidence:** HTTP 2xx + Project comment; không dùng SQL `accept_membership_invite` làm đường chính.
 
 ### S-P0-B — Scanner hiểu offline queue
 
-**Persona:** Scanner  
-**Given** phiên Gate verified và thiết bị mất mạng sau khi quét  
-**When** xem màn Staff sau quét offline  
-**Then** UI phân biệt rõ: đã xếp hàng chờ đồng bộ / đã áp dụng / xung đột (kèm mã conflict thân thiện); retry không tạo check-in trùng (giữ invariant D7).  
+**Persona:** Scanner
+**Given** phiên Gate verified và thiết bị mất mạng sau khi quét
+**When** xem màn Staff sau quét offline
+**Then** UI phân biệt rõ: đã xếp hàng chờ đồng bộ / đã áp dụng / xung đột (kèm mã conflict thân thiện); retry không tạo check-in trùng (giữ invariant D7).
 **Evidence:** sim-uat + (khi ủy quyền) device UAT; artifact path + SHA.
 
 ### S-P0-C — Brand-test multi-tenant
 
-**Persona:** Attendee + Manager  
-**Given** ≥2 tenant/event đã publish brand khác nhau  
-**When** mở web event + iOS surface event tương ứng  
-**Then** bỏ chrome platform trong crop review vẫn nhận đúng org/event brand; không fallback wordmark Vemoki trên surface event đã resolve brand.  
+**Persona:** Attendee + Manager
+**Given** ≥2 tenant/event đã publish brand khác nhau
+**When** mở web event + iOS surface event tương ứng
+**Then** bỏ chrome platform trong crop review vẫn nhận đúng org/event brand; không fallback wordmark Vemoki trên surface event đã resolve brand.
 **Evidence:** headless screenshots ≥2 tenant (mẫu D8) + brand-test checklist PD.
 
 ### S-P0-D — Privacy & store prep gates
 
-**Persona:** Platform Operator  
-**Given** docs ASC đã có (D10)  
-**When** kiểm tra `https://vemoki.com/privacy` và checklist ASC  
-**Then** privacy HTTP 200; checklist ASC có evidence đã điền (screenshot che secret) **hoặc** ghi rõ còn thiếu — không claim submit.  
+**Persona:** Platform Operator
+**Given** docs ASC đã có (D10)
+**When** kiểm tra `https://vemoki.com/privacy` và checklist ASC
+**Then** privacy HTTP 200; checklist ASC có evidence đã điền (screenshot che secret) **hoặc** ghi rõ còn thiếu — không claim submit.
 **Evidence:** curl + docs; submit vẫn cần ủy quyền riêng.
 
 ### S-P1-A — Redeem sau publish không “bí ẩn”
 
-**Persona:** Attendee  
-**Given** Event Manager vừa publish config/form mới trong khi khách đang mở redeem  
-**When** khách submit  
-**Then** không dừng ở 409 thô: client refresh form version và hướng dẫn thử lại một lần; thành công thì cấp vé như M07.  
+**Persona:** Attendee
+**Given** Event Manager vừa publish config/form mới trong khi khách đang mở redeem
+**When** khách submit
+**Then** không dừng ở 409 thô: client refresh form version và hướng dẫn thử lại một lần; thành công thì cấp vé như M07.
 **Evidence:** web-uat script + JSON lỗi/thành công.
 
 ### S-P0-E — Admin theo việc (nâng từ P1 sau evidence source + D8 screenshot)
 
-**Persona:** Event Manager / CS  
-**Given** user có quyền Manager hoặc CS trên `/admin`  
-**When** mở admin  
-**Then** IA nhóm tối thiểu Setup / Khách & mã / Cổng / Hỗ trợ (progressive disclosure — không một scroll chứa mọi panel); tenant/event context luôn đọc được bằng tên thân thiện; UUID/mã kỹ thuật (`C-E`, …) không phải chrome chính; CS không thấy control đổi quota.  
+**Persona:** Event Manager / CS
+**Given** user có quyền Manager hoặc CS trên `/admin`
+**When** mở admin
+**Then** IA nhóm tối thiểu Setup / Khách & mã / Cổng / Hỗ trợ (progressive disclosure — không một scroll chứa mọi panel); tenant/event context luôn đọc được bằng tên thân thiện; UUID/mã kỹ thuật (`C-E`, …) không phải chrome chính; CS không thấy control đổi quota.
 **Evidence:** headless screenshots trước/sau + authz test; đối chiếu không dùng screenshot D8 làm proof runtime trừ khi chụp lại trên tip đang duyệt.
 
 ### S-P0-F — Guest home production-lite
 
-**Persona:** Attendee  
-**Given** mở `/` trên môi trường gần production  
-**When** đọc viewport đầu + banner  
-**Then** không lộ jargon triển khai (Nest BFF, fixture nội bộ) trên đường khách; nếu còn demo thì nhãn DEMO rõ và CTA chính vẫn “Đổi mã”; brand-test pass (Vemoki nhận diện được, không chỉ đổi màu).  
+**Persona:** Attendee
+**Given** mở `/` trên môi trường gần production
+**When** đọc viewport đầu + banner
+**Then** không lộ jargon triển khai (Nest BFF, fixture nội bộ) trên đường khách; nếu còn demo thì nhãn DEMO rõ và CTA chính vẫn “Đổi mã”; brand-test pass (Vemoki nhận diện được, không chỉ đổi màu).
 **Evidence:** headless screenshot `vemoki.com` / staging + checklist PD.
 
 ### S-P1-B — Admin readiness & context (sau S-P0-E)
 
-**Persona:** Event Manager  
-**Given** chưa chọn event hoặc config chưa publish  
-**When** vào các job phụ thuộc event  
-**Then** trạng thái readiness rõ (chưa chọn / draft / published) và hành động bị khóa có giải thích VI — không chỉ error box kỹ thuật.  
+**Persona:** Event Manager
+**Given** chưa chọn event hoặc config chưa publish
+**When** vào các job phụ thuộc event
+**Then** trạng thái readiness rõ (chưa chọn / draft / published) và hành động bị khóa có giải thích VI — không chỉ error box kỹ thuật.
 **Evidence:** headless + copy review PD.
 
 ### S-P1-C — Validate-only & tra cứu thủ công
 
-**Persona:** Scanner / Supervisor  
-**Given** quyền Gate phù hợp  
-**When** bật chế độ “Chỉ kiểm tra” hoặc nhập mã hiển thị khi camera lỗi  
-**Then** validate-only không tạo check-in; tra cứu thủ công chỉ hiện thông tin tối thiểu theo quyền; admit vẫn idempotent.  
+**Persona:** Scanner / Supervisor
+**Given** quyền Gate phù hợp
+**When** bật chế độ “Chỉ kiểm tra” hoặc nhập mã hiển thị khi camera lỗi
+**Then** validate-only không tạo check-in; tra cứu thủ công chỉ hiện thông tin tối thiểu theo quyền; admit vẫn idempotent.
 **Evidence:** unit/API + sim-uat.
 
 ---
@@ -353,20 +353,20 @@ PD #225 đã chạy song song; các non-goals O10 giữ nguyên, không yêu c�
 
 ### IN (đề xuất)
 
-- P0-1…P0-7 và stories S-P0-A…F (gồm **Admin IA** + **guest home copy** sau follow-up coordinator)  
-- P1 chọn lọc khi user review roadmap (mặc định khuyến nghị: P1-1, P1-2/S-P1-B, P1-5; P1-3 nếu chấp nhận mở rộng Gate)  
-- Handoff PD [#225](https://github.com/hangndat/ticket-solution/issues/225): IA admin theo job, progressive disclosure, tenant/event context, Gate/redeem states, brand đủ chất lượng (không skin-only)  
-- Planner [#226](https://github.com/hangndat/ticket-solution/issues/226) reconcile BA/PD khi PD artifact xuất hiện  
-- Cập nhật PRD/ROADMAP/O11 **do coordinator** (đã thông báo); workers không sửa các file đó  
+- P0-1…P0-7 và stories S-P0-A…F (gồm **Admin IA** + **guest home copy** sau follow-up coordinator)
+- P1 chọn lọc khi user review roadmap (mặc định khuyến nghị: P1-1, P1-2/S-P1-B, P1-5; P1-3 nếu chấp nhận mở rộng Gate)
+- Handoff PD [#225](https://github.com/hangndat/ticket-solution/issues/225): IA admin theo job, progressive disclosure, tenant/event context, Gate/redeem states, brand đủ chất lượng (không skin-only)
+- Planner [#226](https://github.com/hangndat/ticket-solution/issues/226) reconcile BA/PD khi PD artifact xuất hiện
+- Cập nhật PRD/ROADMAP/O11 **do coordinator** (đã thông báo); workers không sửa các file đó
 - Metrics instrumentation tối thiểu (P2-3) chỉ khi user muốn đo baseline
 
 ### OUT (cứng)
 
-- Android / payment / refund / transfer / seat / Wallet  
-- Custom domain/sender (O07)  
-- Feature coding trong task nghiên cứu này  
-- Deploy prod / store submit  
-- Tuyên bố production/pilot ready từ tài liệu này  
+- Android / payment / refund / transfer / seat / Wallet
+- Custom domain/sender (O07)
+- Feature coding trong task nghiên cứu này
+- Deploy prod / store submit
+- Tuyên bố production/pilot ready từ tài liệu này
 
 ### Phụ thuộc
 
@@ -395,11 +395,11 @@ User trả lời §12
 
 Handoff cho PD #225 (đã chạy song song), dựa trên nghiên cứu này:
 
-1. **Brand rules:** bảng surface → brand nguồn (platform Vemoki vs tenant vs event M04); criteria brand-test.  
-2. **Gate state machine UI:** online admit / offline pending / applied / conflict / validate-only.  
-3. **Redeem states:** success / pending review / stale form / quota / closed — copy VI.  
-4. **Admin IA:** 4 nhóm job + progressive disclosure; tenant/event context thân thiện; readiness states; ẩn UUID/mã đợt khỏi chrome chính; dense-but-scannable — **không** chỉ đổi màu/bo góc. Tham chiếu source `admin-form.tsx` + screenshot lịch sử D8 (ghi rõ lịch sử).  
-5. **Attendee first viewport / home:** production-lite; gỡ jargon Nest BFF/fixture; brand-first (khớp design rules repo).  
+1. **Brand rules:** bảng surface → brand nguồn (platform Vemoki vs tenant vs event M04); criteria brand-test.
+2. **Gate state machine UI:** online admit / offline pending / applied / conflict / validate-only.
+3. **Redeem states:** success / pending review / stale form / quota / closed — copy VI.
+4. **Admin IA:** 4 nhóm job + progressive disclosure; tenant/event context thân thiện; readiness states; ẩn UUID/mã đợt khỏi chrome chính; dense-but-scannable — **không** chỉ đổi màu/bo góc. Tham chiếu source `admin-form.tsx` + screenshot lịch sử D8 (ghi rõ lịch sử).
+5. **Attendee first viewport / home:** production-lite; gỡ jargon Nest BFF/fixture; brand-first (khớp design rules repo).
 6. **Không** thiết kế payment/seat/Wallet/Android.
 
 Artifact PD: [`docs/design/D11-PRODUCTION-UX-UI.md`](../design/D11-PRODUCTION-UX-UI.md); prototype: [`docs/design/d11-prototype/index.html`](../design/d11-prototype/index.html).
@@ -430,16 +430,16 @@ D0–D10 đã đóng chức năng MVP mở rộng trên board; khoảng cách t�
 
 ## Phụ lục B — URL benchmark (truy cập 2026-10-18)
 
-- https://www.eventbrite.com/organizer/features/organizer-check-in-app/  
-- https://www.eventbrite.com/help/en-us/articles/741083/how-to-check-in-attendees-at-the-event-with-eventbrite-organizer/  
-- https://www.eventbrite.com/help/en-us/articles/509534/how-to-manage-roles-and-permissions/  
-- https://play.google.com/store/apps/details?hl=en_GB&id=ticketbox.eventmanager  
-- https://ticketbox.vn/  
-- https://www.accelevents.com/platform/white-label  
-- https://support.accelevents.com/en/articles/443011-check-in-attendees-through-the-admin-app  
-- https://support.accelevents.com/en/articles/6993576-activating-ipad-kiosk-mode  
-- https://business.feverup.com/  
-- https://feverpartners.zendesk.com/hc/en-us/articles/24421647446930-How-to-validate-a-ticket  
-- https://splashthat.com/platform/events  
-- https://splashthat.com/platform/design  
-- https://splashthat.com/platform/ticketing  
+- https://www.eventbrite.com/organizer/features/organizer-check-in-app/
+- https://www.eventbrite.com/help/en-us/articles/741083/how-to-check-in-attendees-at-the-event-with-eventbrite-organizer/
+- https://www.eventbrite.com/help/en-us/articles/509534/how-to-manage-roles-and-permissions/
+- https://play.google.com/store/apps/details?hl=en_GB&id=ticketbox.eventmanager
+- https://ticketbox.vn/
+- https://www.accelevents.com/platform/white-label
+- https://support.accelevents.com/en/articles/443011-check-in-attendees-through-the-admin-app
+- https://support.accelevents.com/en/articles/6993576-activating-ipad-kiosk-mode
+- https://business.feverup.com/
+- https://feverpartners.zendesk.com/hc/en-us/articles/24421647446930-How-to-validate-a-ticket
+- https://splashthat.com/platform/events
+- https://splashthat.com/platform/design
+- https://splashthat.com/platform/ticketing

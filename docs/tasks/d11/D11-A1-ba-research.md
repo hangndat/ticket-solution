@@ -26,7 +26,7 @@ Nghiên cứu pain/journey/ưu tiên/AC cho UX/UI hướng vận hành productio
 
 ## IN / OUT
 
-**IN:** Personas PRD §3; luồng PRD §7; gap từ reviews (D6–D10, O06, privacy 404); non-goals; metric *đề xuất* cách đo.  
+**IN:** Personas PRD §3; luồng PRD §7; gap từ reviews (D6–D10, O06, privacy 404); non-goals; metric *đề xuất* cách đo.
 **OUT:** Phỏng vấn bịa; số baseline bịa; feature coding; tuyên bố pilot ready; chốt O06 số liệu thay user.
 
 ## Phụ thuộc

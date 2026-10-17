@@ -1,13 +1,13 @@
 # TEMPLATE — D11-B2 Attendee journeys (web)
 
-> **TEMPLATE NOT DISPATCH-READY.**  
-> Parent index only — **cấm** `worker-start` / tạo một Issue trộn home+invite+redeem.  
-> Sau user review roadmap: mở **một Issue + một Dispatch** cho đúng **một** sub-spec bên dưới.  
+> **TEMPLATE NOT DISPATCH-READY.**
+> Parent index only — **cấm** `worker-start` / tạo một Issue trộn home+invite+redeem.
+> Sau user review roadmap: mở **một Issue + một Dispatch** cho đúng **một** sub-spec bên dưới.
 > Contract/OpenAPI **không** auto-approve từ template này.
 
 ## Vai trò chuyên môn (khi split)
 
-- Role ID: `web` · File: `docs/agents/roles/web.md` · Agent: cursor  
+- Role ID: `web` · File: `docs/agents/roles/web.md` · Agent: cursor
 - Brand-test (S-P0-C): gắn [`D11-S-P0-C-brand-test-ac.md`](./D11-S-P0-C-brand-test-ac.md) vào sub-spec surface tương ứng
 
 ## Sub-specs (DISPATCH-READY candidates — vẫn CHƯA APPROVED coding)

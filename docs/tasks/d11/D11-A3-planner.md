@@ -24,13 +24,13 @@ Chuẩn bị hierarchy Epic→Story→Task, Role ID+path, AC, deps thật, wave 
 
 ## Acceptance criteria
 
-- [ ] Plan ghi Issue #222–#226; O11; pha A vs B  
-- [ ] Phân biệt observed / inferred / hypothesis  
-- [ ] Production ≠ UI: O06, unmeasured metrics, release, runbook/rollback, device UAT, no self-authorize deploy/store  
-- [ ] Task specs `docs/tasks/d11/*` đủ để coordinator dispatch **sau** user review  
-- [ ] Wave: BA ∥ PD; pha B fan-out ghi rõ  
-- [ ] Nhật ký reconcile cập nhật khi BA/PD land  
-- [ ] Không tuyên bố pilot/production ready  
+- [ ] Plan ghi Issue #222–#226; O11; pha A vs B
+- [ ] Phân biệt observed / inferred / hypothesis
+- [ ] Production ≠ UI: O06, unmeasured metrics, release, runbook/rollback, device UAT, no self-authorize deploy/store
+- [ ] Task specs `docs/tasks/d11/*` đủ để coordinator dispatch **sau** user review
+- [ ] Wave: BA ∥ PD; pha B fan-out ghi rõ
+- [ ] Nhật ký reconcile cập nhật khi BA/PD land
+- [ ] Không tuyên bố pilot/production ready
 
 ## Checkpoint
 

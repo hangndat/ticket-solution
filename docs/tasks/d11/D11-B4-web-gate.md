@@ -1,11 +1,11 @@
 # Spec đề xuất — D11-B4-web-gate (S-P0-B web)
 
-> **CHƯA APPROVED** coding. Parent [`D11-B4-gate-staff-ux.md`](./D11-B4-gate-staff-ux.md) = TEMPLATE.  
+> **CHƯA APPROVED** coding. Parent [`D11-B4-gate-staff-ux.md`](./D11-B4-gate-staff-ux.md) = TEMPLATE.
 > **Một Issue / một Dispatch / `web` only.** Chỉ khi slot web rảnh và user chọn Gate web trong đợt (không ∥ feature web khác).
 
 ## Vai trò chuyên môn
 
-- Role ID: `web` · File: `docs/agents/roles/web.md` · Agent: cursor  
+- Role ID: `web` · File: `docs/agents/roles/web.md` · Agent: cursor
 - ± `reviewer-security` nếu đụng Gate authz
 
 ## Mục tiêu

@@ -1,6 +1,6 @@
 # Spec đề xuất — D11-B6-web-a11y
 
-> **CHƯA APPROVED** coding. Parent [`D11-B6-a11y.md`](./D11-B6-a11y.md) = TEMPLATE.  
+> **CHƯA APPROVED** coding. Parent [`D11-B6-a11y.md`](./D11-B6-a11y.md) = TEMPLATE.
 > **Một Issue / một Dispatch / `web` only.**
 
 ## Vai trò chuyên môn
@@ -13,8 +13,8 @@ A11y AA residual trên routes web được chọn (PD checklist); `prefers-reduc
 
 ## Phụ thuộc
 
-- Soft: PD §3 / a11y  
-- Tokens `brand/vemoki/tokens.json` — không đổi O09 trừ user chốt  
+- Soft: PD §3 / a11y
+- Tokens `brand/vemoki/tokens.json` — không đổi O09 trừ user chốt
 - Ready queue: không ∥ feature web khác cùng slice
 
 ## Ownership

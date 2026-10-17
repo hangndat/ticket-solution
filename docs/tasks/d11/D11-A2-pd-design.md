@@ -26,11 +26,11 @@ Handoff đủ 5 mục DoD role PD + prototype tương tác đánh dấu **demo**
 
 ## Deliverables bắt buộc
 
-1. User flow (persona + nhánh lỗi/denied) — web vs iOS  
-2. States: empty / loading / ready / error / denied (+ offline Gate nếu scope)  
-3. a11y: WCAG 2.2 AA mục tiêu; checklist  
-4. UI AC quan sát được → map `web-uat` / `sim-uat`  
-5. Hướng dẫn triển khai: ownership web/ios; token; contract gaps → flag coordinator  
+1. User flow (persona + nhánh lỗi/denied) — web vs iOS
+2. States: empty / loading / ready / error / denied (+ offline Gate nếu scope)
+3. a11y: WCAG 2.2 AA mục tiêu; checklist
+4. UI AC quan sát được → map `web-uat` / `sim-uat`
+5. Hướng dẫn triển khai: ownership web/ios; token; contract gaps → flag coordinator
 
 Prototype: static/HTML trong `d11-prototype/`; mọi màn ghi rõ demo.
 
@@ -41,10 +41,10 @@ Prototype: static/HTML trong `d11-prototype/`; mọi màn ghi rõ demo.
 
 ## Acceptance criteria
 
-- [ ] `D11-PRODUCTION-UX-UI.md` đủ 5 mục  
-- [ ] Prototype có ≥1 flow chính tương tác; banner/label demo  
-- [ ] Tách observed (từ source/review) vs assumed  
-- [ ] Không yêu cầu Android/Wallet/payment  
+- [ ] `D11-PRODUCTION-UX-UI.md` đủ 5 mục
+- [ ] Prototype có ≥1 flow chính tương tác; banner/label demo
+- [ ] Tách observed (từ source/review) vs assumed
+- [ ] Không yêu cầu Android/Wallet/payment
 
 ## Evidence
 

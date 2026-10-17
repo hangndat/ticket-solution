@@ -28,10 +28,10 @@
 
 ## Checklist DoD discovery
 
-- [ ] Gate ROADMAP D11 (1)–(3) đủ evidence trên disk  
-- [ ] Phân loại bằng chứng rõ  
-- [ ] OUT O10/O11 tôn trọng  
-- [ ] Không tuyên bố pilot/code complete từ discovery  
+- [ ] Gate ROADMAP D11 (1)–(3) đủ evidence trên disk
+- [ ] Phân loại bằng chứng rõ
+- [ ] OUT O10/O11 tôn trọng
+- [ ] Không tuyên bố pilot/code complete từ discovery
 - [ ] Verdict: PASS / FAIL / PASS with known gap (+ gap có chủ đích)
 
 ## OUT

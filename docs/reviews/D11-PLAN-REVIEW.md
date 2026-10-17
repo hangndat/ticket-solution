@@ -76,11 +76,11 @@ Evidence liên kết (không phải ownership review này): `docs/reviews/D11-PR
 
 ### Revalidation checklist
 
-- [x] Chờ `FIX_FROZEN` (`msg_5ccb7e11f665`) trước khi đọc target / worker_done  
-- [x] Pin SHA256 mới (25 files plan+tasks) + baseline source SHA  
-- [x] 3 findings RESOLVED — **không** còn blocker  
-- [x] Guards không regress  
-- [x] Verdict = plan/spec **proposal quality** cho user review roadmap — **không** approval feature coding  
+- [x] Chờ `FIX_FROZEN` (`msg_5ccb7e11f665`) trước khi đọc target / worker_done
+- [x] Pin SHA256 mới (25 files plan+tasks) + baseline source SHA
+- [x] 3 findings RESOLVED — **không** còn blocker
+- [x] Guards không regress
+- [x] Verdict = plan/spec **proposal quality** cho user review roadmap — **không** approval feature coding
 
 ---
 
@@ -96,27 +96,27 @@ Evidence liên kết (không phải ownership review này): `docs/reviews/D11-PR
 
 ### Original findings (tóm tắt)
 
-1. **Should-fix / blocker đến fix:** Plan §5.1 claim staff-scan thiếu file dù file đã có.  
-2. **Should-fix:** B2/B4/B6/B7 multi-slice = TEMPLATE chưa tách — chưa dispatch-ready.  
-3. **Should-fix:** S-P0-C không có Spec/AC riêng trên B2/B3/B5.  
+1. **Should-fix / blocker đến fix:** Plan §5.1 claim staff-scan thiếu file dù file đã có.
+2. **Should-fix:** B2/B4/B6/B7 multi-slice = TEMPLATE chưa tách — chưa dispatch-ready.
+3. **Should-fix:** S-P0-C không có Spec/AC riêng trên B2/B3/B5.
 
 Early findings mailbox: `msg_8a662a4a7f94`. Premature worker_done race → escalation `msg_38b712eb94d1`; re-dispatch `ctx_2ebf00a78094`.
 
 ### Original positives (vẫn đúng sau fix)
 
-- Pha A vs B; discovery ≠ code ≠ acceptance ≠ pilot  
-- WIP ≤1/slice; O06/privacy/O10/O11 OUT  
-- Role ID + path; soft deps thật; S-P1-C optional  
-- Linked evidence paths tồn tại  
+- Pha A vs B; discovery ≠ code ≠ acceptance ≠ pilot
+- WIP ≤1/slice; O06/privacy/O10/O11 OUT
+- Role ID + path; soft deps thật; S-P1-C optional
+- Linked evidence paths tồn tại
 
 ---
 
 ## Limitations
 
-- Verdict = **plan/spec proposal quality only** — đủ Gate roadmap review (user Gate 4); **không** ủy quyền coding / merge / deploy / store / pilot.  
-- Docs **uncommitted**; hash lệch nếu sửa sau pin → revalidation lại.  
-- Không sửa target; không board/commit/PR.  
-- Không chấm PD visual polish / product UAT (chỉ xác nhận path evidence tồn tại theo FIX_FROZEN).  
+- Verdict = **plan/spec proposal quality only** — đủ Gate roadmap review (user Gate 4); **không** ủy quyền coding / merge / deploy / store / pilot.
+- Docs **uncommitted**; hash lệch nếu sửa sau pin → revalidation lại.
+- Không sửa target; không board/commit/PR.
+- Không chấm PD visual polish / product UAT (chỉ xác nhận path evidence tồn tại theo FIX_FROZEN).
 
 ## Verdict cuối
 

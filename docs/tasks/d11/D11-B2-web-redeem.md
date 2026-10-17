@@ -1,6 +1,6 @@
 # Spec đề xuất — D11-B2-web-redeem (S-P1-A)
 
-> **CHƯA APPROVED** coding. Parent [`D11-B2-attendee-web.md`](./D11-B2-attendee-web.md) = TEMPLATE.  
+> **CHƯA APPROVED** coding. Parent [`D11-B2-attendee-web.md`](./D11-B2-attendee-web.md) = TEMPLATE.
 > **Một Issue / một Dispatch / `web` only.**
 
 ## Vai trò chuyên môn
