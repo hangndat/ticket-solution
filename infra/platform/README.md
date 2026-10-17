@@ -48,6 +48,8 @@ OTP browser flow được copy từ `browser` rồi bind bằng **flow UUID** (K
 
 Pool/credential **tách** tenant `ticket_app`. BE migration cấp SELECT/INSERT hẹp trên metadata/platform tables; **không** GRANT tickets/PII/credentials.
 
+Ephemeral drills/smoke (`scripts/d5-*-drill.sh`, `d5-metrics-scrape-e2e.sh`, `rint-outbox-recovery.sh`, `d5-load-baseline.mjs`) apply `infra/platform/sql/ephemeral-pre-migrate-roles.sql` trước migrations — cùng posture NOLOGIN/NOBYPASSRLS, không LOGIN password.
+
 ## Bootstrap operator (offline)
 
 ```bash
