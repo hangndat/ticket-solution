@@ -1,6 +1,6 @@
 # N-IOS — báo cáo worker
 
-**SHA:** (xem commit sau push)  
+**SHA:** `a74d7a97ab380967137fb3f03932d172082191a0`  
 **Branch:** `hangndat/d5-ios-n-ios-push-response`  
 **Scope:** `apps/mobile` only  
 **Base:** F-IOS `7c54c4c` (published routes + redeem) — PR stack trên #68
