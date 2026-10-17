@@ -1052,6 +1052,81 @@
         ]
       }
     },
+    "/v1/gate/events/{eventId}/offline-sync": {
+      "post": {
+        "operationId": "GateController_offlineSync",
+        "parameters": [
+          {
+            "name": "eventId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OfflineSyncBodyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OfflineSyncResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "gate"
+        ]
+      }
+    },
     "/v1/tenants/{tenantId}/events/{eventId}/config-versions": {
       "post": {
         "operationId": "ConfigPublishController_save",
@@ -3202,6 +3277,167 @@
         "required": [
           "tenantId",
           "reason"
+        ]
+      },
+      "OfflineSyncEventDto": {
+        "type": "object",
+        "properties": {
+          "clientEventId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "CHECKIN_OFFLINE"
+            ]
+          },
+          "eventId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "ticketId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "clientOccurredAt": {
+            "type": "string",
+            "description": "ISO-8601 UTC when the scan was accepted on-device"
+          },
+          "clientSeq": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Monotonic per device+staffSession queue sequence"
+          },
+          "payloadVersion": {
+            "type": "number",
+            "enum": [
+              1
+            ]
+          }
+        },
+        "required": [
+          "clientEventId",
+          "type",
+          "eventId",
+          "ticketId",
+          "clientOccurredAt",
+          "clientSeq",
+          "payloadVersion"
+        ]
+      },
+      "OfflineSyncBodyDto": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "staffSessionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "deviceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "clientClockAt": {
+            "type": "string",
+            "description": "ISO-8601 UTC client wall clock when the batch was assembled"
+          },
+          "events": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OfflineSyncEventDto"
+            }
+          }
+        },
+        "required": [
+          "tenantId",
+          "staffSessionId",
+          "deviceId",
+          "clientClockAt",
+          "events"
+        ]
+      },
+      "OfflineSyncItemResultDto": {
+        "type": "object",
+        "properties": {
+          "clientEventId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "APPLIED",
+              "DUPLICATE",
+              "REJECTED",
+              "CONFLICT"
+            ]
+          },
+          "checkinId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "type": "string",
+            "enum": [
+              "OFFLINE_SYNC_BATCH_TOO_LARGE",
+              "OFFLINE_SYNC_CLOCK_SKEW_EXCEEDED",
+              "OFFLINE_SYNC_IDEMPOTENCY_CONFLICT",
+              "OFFLINE_SYNC_CONFLICT_LOST",
+              "ALREADY_CHECKED_IN",
+              "OFFLINE_SYNC_EVENT_TYPE_UNSUPPORTED",
+              "OFFLINE_SYNC_PAYLOAD_VERSION_UNSUPPORTED",
+              "SESSION_NOT_ACTIVE",
+              "TICKET_NOT_FOUND",
+              "CHECKIN_WINDOW_CLOSED",
+              "EVENT_CANCELLED",
+              "OFFLINE_SYNC_REPLAY_ORDER_INVALID",
+              "OFFLINE_SYNC_NOT_IMPLEMENTED"
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "winningCheckinId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "winningDeviceId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "clientEventId",
+          "status"
+        ]
+      },
+      "OfflineSyncResponseDto": {
+        "type": "object",
+        "properties": {
+          "serverTime": {
+            "type": "string"
+          },
+          "maxClockSkewSeconds": {
+            "type": "number",
+            "enum": [
+              300
+            ]
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OfflineSyncItemResultDto"
+            }
+          }
+        },
+        "required": [
+          "serverTime",
+          "maxClockSkewSeconds",
+          "results"
         ]
       },
       "ConfigBodyDto": {
