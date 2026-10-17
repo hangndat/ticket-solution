@@ -9,7 +9,8 @@
 | Team | `BLUA62D52G` (Hang Nguyen Dat — personal) |
 | Bundle / product | `com.hangndat.ticket` · **Vemoki** |
 | Version / build (source) | `0.1.0` / `buildNumber` **`9`** (`apps/mobile/app.config.ts`) |
-| Source tip (branch base / main tại lúc viết) | `f4e079d8266d8ad56af9411d92ea4ed03390becc` |
+| Source tip (main base) | `f4e079d8266d8ad56af9411d92ea4ed03390becc` |
+| Artifact commit (checklist) | `71dfc3ec458b1b9422a47de63dc35ec3b19bb520` (tip PR = `git rev-parse HEAD` sau mọi commit docs) |
 | Implementer | Orca Cursor worker · Role `ios` · dispatch `ctx_7207821f78a7` |
 | EAS Cloud Build | **Không dùng** (cấm dự án) |
 | App Store production submit | **Không làm** (ngoài scope #162) |
@@ -180,5 +181,6 @@ Hoặc: Xcode → Organizer → Distribute App → App Store Connect → Upload 
 
 ## Exact SHA
 
-- **Base / evidence source tip:** `f4e079d8266d8ad56af9411d92ea4ed03390becc` (`origin/main` lúc branch)
-- **Tip commit của PR docs này:** điền sau `git rev-parse HEAD` khi commit (PR template + Issue comment)
+- **Base `main`:** `f4e079d8266d8ad56af9411d92ea4ed03390becc`
+- **Checklist added:** `71dfc3ec458b1b9422a47de63dc35ec3b19bb520`
+- **PR tip for DoD:** `git rev-parse HEAD` trên branch `hangndat/d10-ios-tf-162` (ghi trên PR / Issue comment)
