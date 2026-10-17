@@ -1,10 +1,11 @@
 # PRD — Vemoki
 
-Phiên bản: 0.3 — Draft để review  
-Ngày: 2026-10-16  
-Nguồn: yêu cầu sản phẩm trong trao đổi.  
+Phiên bản: 0.4 — Draft để review (MVP mở rộng O10)  
+Ngày: 2026-10-17  
+Nguồn: yêu cầu sản phẩm trong trao đổi; quyết định mở rộng MVP 2026-10-17.  
 Tên sản phẩm: **Vemoki**. Domain platform: `vemoki.com`.  
-Thiết kế kỹ thuật: [Technical Design v0.1](./TECHNICAL-DESIGN.md) — các quyết định đề xuất và test scenarios được ghi riêng, chưa thay thế giả định sản phẩm.
+Thiết kế kỹ thuật: [Technical Design v0.1](./TECHNICAL-DESIGN.md) — các quyết định đề xuất và test scenarios được ghi riêng, chưa thay thế giả định sản phẩm.  
+Phạm vi đợt: [ROADMAP](./ROADMAP.md) D0–D10; quyết định: [DECISION-LOG](./DECISION-LOG.md) O10.
 
 ## 1. Mục tiêu
 
@@ -19,18 +20,19 @@ Không bàn ngân sách hoặc giá dịch vụ trong PRD này.
 ### Đã chốt
 
 - Phát triển theo mô hình multi-tenant, tùy chỉnh cho từng công ty và event.
-- Có website và app iOS trên Apple App Store. Android tạm hoãn, ngoài phạm vi release đầu.
+- Có website và app iOS; chuẩn bị metadata / local signed archive để lên Apple App Store (D10). **Submit store** chỉ khi task riêng ủy quyền. Android native **hủy khỏi kế hoạch MVP** (ngoài phạm vi có chủ đích) — khách Android dùng web responsive.
 - Giữ bài toán đổi mã, cấp QR, gửi vé, quản trị và check-in từ tài liệu gốc.
 - Không tích hợp TikTok.
 - Không bao giờ dùng Expo/EAS Cloud Build. Native iOS build chạy local bằng Xcode/xcodebuild hoặc fastlane trên Mac/runner macOS tự quản lý; không fallback lên Expo cloud.
 - Thương hiệu platform là **Vemoki**, domain `vemoki.com`. App iOS dùng tên hiển thị Vemoki; bundle ID giữ `com.hangndat.ticket`.
+- **MVP mở rộng (2026-10-17, O10):** ngoài D0–D6 còn D7 Offline Gate multi-device, D8 White-label, D9 Demo seed + UX/media, D10 App Store metadata. **Hủy khỏi MVP:** Android native; payment/refund/chuyển nhượng; seat map; Apple/Google Wallet.
 
 ### Giả định thiết kế, cần xác nhận
 
-- Baseline tạm thời: một app chung của platform, có chế độ người tham dự và nhân viên theo quyền. Chưa chốt app riêng theo thương hiệu từng công ty.
+- Baseline: một app chung của platform, chế độ khách / nhân viên theo quyền; **D8** bổ sung white-label qua cấu hình (không fork code per-tenant). Chi tiết chốt trong đợt D8.
 - Khách có thể nhận và sử dụng vé bằng web/email, không bắt buộc cài app.
-- Bản đầu tập trung vé miễn phí qua mã và khách mời import; chưa bán vé có thanh toán.
-- Check-in xác nhận online; app xem vé đã lưu khi offline nhưng không xác nhận vào cổng offline.
+- Bản đầu tập trung vé miễn phí qua mã và khách mời import; **không** bán vé / thanh toán / refund / chuyển nhượng trong MVP.
+- Check-in: online reserve/confirm là nền; **D7** mở rộng offline Gate multi-device theo design đợt (không phá invariant chống trùng đã chốt). App vẫn xem vé đã lưu khi offline.
 - Một tenant sở hữu event. Agency quản lý nhiều công ty bằng membership trong nhiều tenant; chưa có mô hình đồng sở hữu event.
 
 ## 3. Người dùng và công việc cần hoàn thành
@@ -47,17 +49,24 @@ Không bàn ngân sách hoặc giá dịch vụ trong PRD này.
 
 ## 4. Phạm vi và nguyên tắc
 
-### Release đầu tiên bắt buộc
+### Release đầu / MVP mở rộng (bắt buộc)
 
-Multi-tenant; membership/RBAC; event; branding theo cấu hình; nguồn mã; loại vé; quota; đổi vé; import khách mời; duyệt nếu cần; QR; email; ví vé trên app; push thông báo giao dịch; check-in trên app và web dự phòng; CS; dashboard; audit; vận hành và phân phối app iOS lên Apple App Store.
+Multi-tenant; membership/RBAC; event; branding theo cấu hình; nguồn mã; loại vé; quota; đổi vé; import khách mời; duyệt nếu cần; QR; email; ví vé trên app; push thông báo giao dịch; check-in trên app và web dự phòng; CS; dashboard; audit; hardening/UAT (D5); UX/UI (D6); **offline Gate multi-device (D7)**; **white-label cấu hình (D8)**; **demo seed + UX/media còn lại (D9)**; **chuẩn bị metadata App Store + local signed archive (D10)** — không tự submit store.
 
-### Giai đoạn sau
+Mỗi đợt D0–D10 khi đóng: headless UAT + local iOS build + deploy prod (nếu ủy quyền) + artifact evidence + cập nhật GitHub Project — xem [ROADMAP §4.1](./ROADMAP.md).
 
-Android được tạm hoãn; chưa triển khai build, kiểm thử native hoặc phát hành Google Play trong release đầu. Khách dùng thiết bị Android có thể sử dụng web responsive; khả năng camera trên web theo ma trận trình duyệt được kiểm thử.
+### Ngoài phạm vi có chủ đích (không làm trong MVP)
 
-Bán vé và thanh toán, refund; chuyển nhượng vé; seat map; Apple/Google Wallet; offline check-in nhiều thiết bị; workflow builder tổng quát; marketplace template; SSO doanh nghiệp; hệ thống billing tự động; tên miền và email sender riêng cho tenant; white-label app riêng từng công ty.
+- **Android native** / Google Play — khách Android dùng web responsive; camera web theo ma trận trình duyệt được kiểm thử.
+- **Bán vé và thanh toán, refund; chuyển nhượng vé.**
+- **Seat map.**
+- **Apple Wallet / Google Wallet.**
 
-Các mục giai đoạn sau chưa được tính là cam kết release đầu tiên. Nếu chọn app riêng từng công ty, phải cập nhật phạm vi phát hành và tiêu chí nghiệm thu trước khi triển khai.
+### Sau MVP (tầm nhìn dài hạn — chưa lên lịch)
+
+Workflow builder tổng quát; marketplace template; SSO doanh nghiệp; hệ thống billing tự động; tên miền và email sender riêng cho tenant (bổ sung O07). Không liệt kê Android/payment/seat/Wallet như backlog MVP.
+
+Các mục «ngoài phạm vi» và «sau MVP» chưa phải cam kết release. Thay đổi white-label / offline Gate chi tiết phải cập nhật tiêu chí nghiệm thu đợt tương ứng trước khi triển khai.
 
 ### Nguyên tắc
 
