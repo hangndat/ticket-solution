@@ -98,9 +98,38 @@ export {
 export {
   saveEventConfigVersion,
   publishEventConfig,
+  listEventConfigVersions,
+  previewEventConfigVersion,
+  rollbackEventConfig,
   type ConfigVersionResult,
   type PublishResult,
 } from './config-publish';
+export {
+  parseConfigPayload,
+  requireValidConfigPayload,
+  isSchemaCompatible,
+  CONFIG_SCHEMA_VERSION,
+  SUPPORTED_CONFIG_SCHEMA_VERSIONS,
+  CONFIG_TEXT_LIMITS,
+} from './config-schema';
+export {
+  initEventAssetUpload,
+  finalizeEventAssetUpload,
+  reencodeRasterAsset,
+  assertAssetsReadyForBrand,
+  assertAssetInitBody,
+} from './config-assets';
+export {
+  readMinioEnvironment,
+  requireMinioConfig,
+  createMinioObjectStore,
+  createMemoryObjectStore,
+  putObject,
+  getObject,
+  createPresignedPutUrl,
+  type MinioConfig,
+  type ObjectStore,
+} from './minio';
 export {
   EventError,
   EVENT_ERROR_CODES,
