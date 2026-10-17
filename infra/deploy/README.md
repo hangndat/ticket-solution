@@ -1,6 +1,8 @@
 # Vemoki trên VPS
 
-Bản đầu chạy trên máy đã có nginx giữ cổng 80/443. Compose Vemoki không publish 80/443. TLS và vhost nằm ở nginx đó. SMTP production (ADR-13) chưa bật; worker vẫn trỏ Mailpit.
+Bản đầu chạy trên máy đã có nginx giữ cổng 80/443. Compose Vemoki không publish 80/443. TLS và vhost nằm ở nginx đó. SMTP production (ADR-13) chưa bật; worker vẫn trỏ Mailpit. MinIO chạy **internal-only** (không publish 9000/9001 lên edge).
+
+Env mẫu (không secrets): [`./.env.example`](./.env.example) → copy vào `/opt/vemoki/.env` (mode 600).
 
 ## Image
 
@@ -24,7 +26,38 @@ Deploy một service khi chỉ service đó đổi. `restart` đủ sau khi buil
 | nginx | `vemoki.conf` | `nginx -t` rồi reload, không compose stack nginx |
 | postgres | không deploy app | không tạo lại volume |
 | mailpit | không có source | chỉ bật nếu container tắt |
+| minio | object store CSV/assets | `up -d minio minio-init`; volume `minio_data` |
+| minio-init | tạo bucket private | one-shot; exit 0 |
 
+
+## MinIO (CSV export)
+
+Prod từng trả `MINIO_MISCONFIGURED` vì api/worker thiếu endpoint + không có container. Sau khi merge:
+
+1. Thêm vào `/opt/vemoki/.env`: `MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD`, `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`, buckets (`vemoki-exports` / `vemoki-assets` / `vemoki-imports`). **Không** commit giá trị thật.
+2. Từ `infra/deploy`: `docker compose --env-file /opt/vemoki/.env up -d minio minio-init` (đợi minio-init exit 0).
+3. `docker compose --env-file /opt/vemoki/.env up -d --no-deps api worker` (hoặc `restart` sau rebuild).
+4. Verify: tạo CSV export trên admin → job READY + download; `docker compose … logs api` không còn `MINIO_MISCONFIGURED`.
+
+Thiếu `MINIO_ENDPOINT` / keys → API **fail-closed** (`MINIO_MISCONFIGURED`, HTTP 503). Không fallback memory store trên production path.
+
+## APNs (push ACCEPTED ≠ DELIVERED)
+
+Mặc định `APNS_ENABLED=false` (không cần `.p8`). Team `BLUA62D52G`, bundle `com.hangndat.ticket`.
+
+Bật trên VPS (operator):
+
+1. Tạo thư mục host: `mkdir -p /opt/vemoki/secrets/apns && chmod 700 /opt/vemoki/secrets/apns`
+2. Đặt AuthKey Apple (`.p8`) thành `/opt/vemoki/secrets/apns/AuthKey.p8` (mode `400`). **Không** commit / rsync vào git.
+3. Trong `/opt/vemoki/.env`: `APNS_ENABLED=true`, `APNS_KEY_ID=<Key ID>`, giữ `APNS_TEAM_ID=BLUA62D52G`, `APNS_BUNDLE_ID=com.hangndat.ticket`, `APNS_KEY_PATH=/run/secrets/apns/AuthKey.p8`, `APNS_PRODUCTION=true` (TF/prod gateway).
+4. Uncomment volume mount APNs trong `compose.yaml` service `worker`, rồi `up -d --no-deps --force-recreate worker`.
+5. Verify: worker start không crash; notification `providerStatus=ACCEPTED` sau gửi thành công — **không** ghi `DELIVERED` (ADR-12). Device delivery thật thuộc UAT thiết bị.
+
+`APNS_ENABLED=true` mà thiếu key/path → worker **fail-closed** khi khởi tạo adapter (`APNS_MISCONFIGURED`).
+
+## MembershipInvite / Mailpit
+
+Worker cần `PUBLIC_WEB_BASE_URL=https://vemoki.com` và `TICKET_CREDENTIAL_KEY` (cho TicketIssued QR). Invite email relay qua SMTP → Mailpit; thiếu `PUBLIC_WEB_BASE_URL` làm fail-closed link accept. Outbox type `MembershipInvite` không bị chặn chỉ vì thiếu credential key (đã tách khỏi TicketIssued).
 
 ## Lệnh
 

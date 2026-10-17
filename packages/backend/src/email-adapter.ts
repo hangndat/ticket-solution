@@ -39,6 +39,8 @@ export type MembershipInviteEmailPayload = {
   /** Raw token — only for encrypted delivery path; never log. */
   token: string;
   expiresAt: string;
+  /** Absolute accept URL (token in query). Never log. */
+  acceptUrl?: string;
 };
 
 export type EmailAdapter = {
@@ -161,19 +163,29 @@ export function createSmtpEmailAdapter(
       };
     },
     async sendMembershipInvite(payload) {
+      if (!payload.toEmail?.trim()) {
+        throw new Error('invite recipient email is missing');
+      }
       const from = options.fromAddress ?? 'tickets@localhost';
       const subject = 'Lời mời tham gia tenant';
+      const acceptUrl =
+        payload.acceptUrl?.trim() ||
+        (payload.token
+          ? `(token length ${payload.token.length} — set PUBLIC_WEB_BASE_URL for accept link)`
+          : '');
       const body = [
         `Bạn được mời với vai trò ${payload.role}.`,
         `Invite: ${payload.inviteId}`,
         `Hết hạn: ${payload.expiresAt}`,
         '',
-        'Dùng token trong session accept (không log token).',
+        acceptUrl.startsWith('http')
+          ? `Mở liên kết để chấp nhận: ${acceptUrl}`
+          : 'Thiếu PUBLIC_WEB_BASE_URL — không tạo được link accept (worker misconfigured).',
       ].join('\n');
       const providerRef = await sendMailViaSmtp({
         smtpUrl,
         from,
-        to: payload.toEmail,
+        to: payload.toEmail.trim(),
         subject,
         body,
       });

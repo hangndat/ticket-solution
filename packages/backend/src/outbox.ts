@@ -115,13 +115,19 @@ export async function processClaimedOutbox(
         if (!email.sendMembershipInvite) {
           throw new Error('invite_email_unsupported');
         }
+        const inviteToken = invitePayload.token ?? '';
+        if (!inviteToken || !(invitePayload.email ?? '').trim()) {
+          throw new Error('invite_payload_incomplete');
+        }
+        const acceptUrl = `${publicWebBaseUrl.replace(/\/$/, '')}/invite?token=${encodeURIComponent(inviteToken)}`;
         await email.sendMembershipInvite({
           tenantId: row.tenant_id,
           inviteId: invitePayload.inviteId ?? row.aggregate_id,
           toEmail: invitePayload.email ?? '',
           role: invitePayload.role ?? 'Owner',
-          token: invitePayload.token ?? '',
+          token: inviteToken,
           expiresAt: invitePayload.expiresAt ?? '',
+          acceptUrl,
         });
         await withTenant(db, row.tenant_id, async (tx) => {
           await markOutboxCompleteFenced(tx, row, options.leaseOwner);
@@ -801,28 +807,57 @@ export async function relayOutboxOnce(
     options?.credentialKeyMaterial?.trim() ||
     process.env['TICKET_CREDENTIAL_KEY']?.trim() ||
     '';
+  // TicketIssued needs credential key for QR; MembershipInvite must not stall on it.
   if (credentialKeyMaterial.length < 16) {
-    const retry = options?.retryConfig ?? readRetryConfig(options?.env);
-    for (const row of claimed) {
-      try {
-        await withTenant(db, row.tenant_id, async (tx) => {
-          await scheduleRetryFenced(
-            tx,
-            row,
-            leaseOwner,
-            retry,
-            'TICKET_CREDENTIAL_KEY misconfigured',
-            'FAILED',
-          );
-        });
-      } catch {
-        /* ignore */
+    const needsCredential = claimed.filter((r) => r.type === 'TicketIssued');
+    const invitesOnly = claimed.filter((r) => r.type !== 'TicketIssued');
+    if (needsCredential.length > 0) {
+      const retry = options?.retryConfig ?? readRetryConfig(options?.env);
+      for (const row of needsCredential) {
+        try {
+          await withTenant(db, row.tenant_id, async (tx) => {
+            await scheduleRetryFenced(
+              tx,
+              row,
+              leaseOwner,
+              retry,
+              'TICKET_CREDENTIAL_KEY misconfigured',
+              'FAILED',
+            );
+          });
+        } catch {
+          /* ignore */
+        }
       }
     }
+    if (invitesOnly.length === 0) {
+      return {
+        claimed: claimed.length,
+        completed: 0,
+        failed: needsCredential.length,
+      };
+    }
+    // Process non-TicketIssued (e.g. MembershipInvite) without credential key.
+    const inviteOpts: ProcessOutboxOptions = {
+      credentialKeyMaterial: '',
+      leaseOwner,
+      publicWebBaseUrl: options?.publicWebBaseUrl,
+      retryConfig: options?.retryConfig,
+      env: options?.env,
+    };
+    if (options && Object.prototype.hasOwnProperty.call(options, 'apns')) {
+      inviteOpts.apns = options.apns;
+    }
+    const inviteResult = await processClaimedOutbox(
+      db,
+      email,
+      invitesOnly,
+      inviteOpts,
+    );
     return {
       claimed: claimed.length,
-      completed: 0,
-      failed: claimed.length,
+      completed: inviteResult.completed,
+      failed: needsCredential.length + inviteResult.failed,
     };
   }
   return processClaimedOutbox(db, email, claimed, {

@@ -7,6 +7,8 @@ export type ProviderStatus = 'PENDING' | 'ACCEPTED' | 'FAILED' | 'DEAD';
 export function providerStatusFromDbState(state: string): ProviderStatus {
   switch (state) {
     case 'SENT':
+    case 'ACCEPTED':
+      // Provider accepted (SMTP/APNs 200). Never map to a fictional DELIVERED.
       return 'ACCEPTED';
     case 'FAILED':
       return 'FAILED';

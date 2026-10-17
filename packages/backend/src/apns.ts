@@ -1,9 +1,10 @@
 /**
  * Direct APNs HTTP/2 provider token auth (ADR-12).
  * 200 = ACCEPTED by APNs, never end-user delivered.
- * Missing config → fail-closed (throw), never silent success.
+ * Missing config when enabled → fail-closed (throw), never silent success.
  */
 import { createPrivateKey, randomUUID } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import { connect, type ClientHttp2Session } from 'node:http2';
 import { SignJWT, importPKCS8 } from 'jose';
 import {
@@ -39,21 +40,53 @@ export type ApnsSendResult =
       retryable: boolean;
     };
 
+/** True only when operator explicitly enables push (APNS_ENABLED=true|1|yes). */
+export function isApnsEnabled(env: NodeJS.ProcessEnv): boolean {
+  const raw = env['APNS_ENABLED']?.trim().toLowerCase();
+  return raw === 'true' || raw === '1' || raw === 'yes';
+}
+
+/**
+ * Resolve AuthKey PEM from env (never invent/commit .p8).
+ * Prefer APNS_KEY_PATH (host/secret mount), then APNS_KEY_P8 / APNS_PRIVATE_KEY.
+ */
+export function readApnsPrivateKeyPem(env: NodeJS.ProcessEnv): string | null {
+  const path = env['APNS_KEY_PATH']?.trim();
+  if (path) {
+    try {
+      const pem = readFileSync(path, 'utf8').trim();
+      return pem.length > 0 ? pem : null;
+    } catch {
+      return null;
+    }
+  }
+  const inline =
+    env['APNS_KEY_P8']?.trim() || env['APNS_PRIVATE_KEY']?.trim() || '';
+  if (!inline) return null;
+  return inline.replace(/\\n/g, '\n');
+}
+
 export function readApnsEnvironment(env: NodeJS.ProcessEnv): ApnsConfig | null {
   const keyId = env['APNS_KEY_ID']?.trim();
   const teamId = env['APNS_TEAM_ID']?.trim();
-  const privateKeyPem = env['APNS_PRIVATE_KEY']?.trim()?.replace(/\\n/g, '\n');
+  const privateKeyPem = readApnsPrivateKeyPem(env);
   const bundleId = env['APNS_BUNDLE_ID']?.trim();
   if (!keyId || !teamId || !privateKeyPem || !bundleId) return null;
   return { keyId, teamId, privateKeyPem, bundleId };
 }
 
 export function requireApnsConfig(env: NodeJS.ProcessEnv): ApnsConfig {
+  if (!isApnsEnabled(env)) {
+    throw new DeviceTokenError(
+      DEVICE_TOKEN_ERROR_CODES.APNS_MISCONFIGURED,
+      'APNs is disabled (APNS_ENABLED is not true)',
+    );
+  }
   const cfg = readApnsEnvironment(env);
   if (!cfg) {
     throw new DeviceTokenError(
       DEVICE_TOKEN_ERROR_CODES.APNS_MISCONFIGURED,
-      'APNs is not configured',
+      'APNs is enabled but key/config is incomplete (APNS_KEY_ID, APNS_TEAM_ID, APNS_BUNDLE_ID, APNS_KEY_PATH|APNS_KEY_P8)',
     );
   }
   // Validate key parses early (fail-closed).
@@ -155,8 +188,15 @@ export type ApnsAdapter = {
   send(input: ApnsSendInput): Promise<ApnsSendResult>;
 };
 
-/** Fail-closed adapter when config missing — every send throws. */
+/**
+ * Fail-closed adapter when APNS_ENABLED without usable key.
+ * Callers that omit options.apns skip push; do not use this adapter when disabled.
+ */
 export function createApnsAdapter(env: NodeJS.ProcessEnv): ApnsAdapter {
+  // Validate at construction when enabled — refuse to start half-configured.
+  if (isApnsEnabled(env)) {
+    requireApnsConfig(env);
+  }
   return {
     async send(input) {
       const cfg = requireApnsConfig(env);

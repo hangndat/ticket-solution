@@ -35,7 +35,10 @@ export function readMinioEnvironment(env: NodeJS.ProcessEnv): MinioConfig | null
     env['MINIO_ACCESS_KEY']?.trim() || env['MINIO_ROOT_USER']?.trim();
   const secretKey =
     env['MINIO_SECRET_KEY']?.trim() || env['MINIO_ROOT_PASSWORD']?.trim();
+  // Prefer explicit export/assets names from ENV-MANIFEST; keep legacy aliases.
   const bucket =
+    env['MINIO_BUCKET_EXPORTS']?.trim() ||
+    env['MINIO_BUCKET_ASSETS']?.trim() ||
     env['MINIO_ASSETS_BUCKET']?.trim() ||
     env['MINIO_BUCKET']?.trim() ||
     'ticket-assets';

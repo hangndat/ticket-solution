@@ -288,6 +288,8 @@ export {
   type DeviceTokenRegistration,
 } from './device-tokens';
 export {
+  isApnsEnabled,
+  readApnsPrivateKeyPem,
   readApnsEnvironment,
   requireApnsConfig,
   sendApnsPush,
