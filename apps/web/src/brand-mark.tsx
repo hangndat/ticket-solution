@@ -1,7 +1,38 @@
+'use client';
+
+import { useBranding } from './branding';
+
 /** Vemoki mark — two strokes as V; rust dot = admission punch (tokens.signal). */
-export function BrandMark() {
+export function BrandMark({
+  logoUrl: logoUrlProp,
+}: {
+  /** Override context logo (e.g. tests / forced fixture). */
+  logoUrl?: string | null;
+} = {}) {
+  const branding = useBranding();
+  const logoUrl = logoUrlProp !== undefined ? logoUrlProp : branding.logoUrl;
+
+  if (logoUrl) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element -- tenant logo URL is allowlisted https or root-relative
+      <img
+        className="brand-mark brand-mark-img"
+        src={logoUrl}
+        alt=""
+        width={64}
+        height={64}
+        data-testid="brand-logo-img"
+      />
+    );
+  }
+
   return (
-    <svg className="brand-mark" viewBox="0 0 64 64" aria-hidden="true">
+    <svg
+      className="brand-mark"
+      viewBox="0 0 64 64"
+      aria-hidden="true"
+      data-testid="brand-mark-svg"
+    >
       <g fill="currentColor">
         <rect
           x="25"

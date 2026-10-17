@@ -1,13 +1,27 @@
+'use client';
+
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { BrandMark } from './brand-mark';
+import { useBranding } from './branding';
 
-/** Platform wordmark — canonical `vemoki↗` from brand/vemoki/tokens.json */
+/** Platform / tenant wordmark — defaults to Vemoki lockup from ThemeProvider. */
 export function Wordmark({ href = '/' }: { href?: string }) {
+  const branding = useBranding();
+  const label = `${branding.displayName} — trang chủ`;
   return (
-    <Link href={href} className="wordmark" aria-label="Vemoki — trang chủ">
+    <Link
+      href={href}
+      className="wordmark"
+      aria-label={label}
+      data-testid="site-wordmark"
+      data-branding-source={branding.source}
+    >
       <BrandMark />
-      vemoki<span aria-hidden="true">↗</span>
+      {branding.wordmark}
+      {branding.signalGlyph ? (
+        <span aria-hidden="true">{branding.signalGlyph}</span>
+      ) : null}
     </Link>
   );
 }
@@ -60,5 +74,18 @@ export function SiteNav({
         {trailing}
       </span>
     </nav>
+  );
+}
+
+/** Footer brand lockup — mirrors wordmark from ThemeProvider. */
+export function FooterBrand() {
+  const branding = useBranding();
+  return (
+    <span className="footer-brand" data-testid="footer-brand">
+      {branding.wordmark}
+      {branding.signalGlyph ? (
+        <span aria-hidden="true">{branding.signalGlyph}</span>
+      ) : null}
+    </span>
   );
 }

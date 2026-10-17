@@ -179,8 +179,13 @@ nav a,
   display: block;
   flex: none;
 }
+.brand-mark-img {
+  object-fit: contain;
+  border-radius: var(--radius-sm);
+}
 .wordmark span,
-.footer-brand span {
+.footer-brand span,
+.wordmark-hero span {
   color: var(--signal);
   margin-left: 0.06em;
 }
