@@ -4,6 +4,7 @@ const assert = require('node:assert/strict');
 const { execFileSync } = require('node:child_process');
 const { randomBytes } = require('node:crypto');
 const { readFileSync } = require('node:fs');
+const { migrationFiles } = require('./migration-files.cjs');
 const { Client } = require('pg');
 const {
   createDatabase,
@@ -111,66 +112,9 @@ test(
         'GRANT CREATE, USAGE ON SCHEMA public TO migration_owner',
       );
       await admin.query('SET ROLE migration_owner');
-      await admin.query(
-        readFileSync(
-          'prisma/migrations/202610160001_foundation/migration.sql',
-          'utf8',
-        ),
-      );
-      await admin.query(
-        readFileSync(
-          'prisma/migrations/202610160002_d1_users/migration.sql',
-          'utf8',
-        ),
-      );
-      await admin.query(
-        readFileSync(
-          'prisma/migrations/202610160003_d1_membership/migration.sql',
-          'utf8',
-        ),
-      );
-      await admin.query(
-        readFileSync(
-          'prisma/migrations/202610160004_d2_issue_ticket/migration.sql',
-          'utf8',
-        ),
-      );
-      await admin.query(
-        readFileSync(
-          'prisma/migrations/202610170005_d3_gate/migration.sql',
-          'utf8',
-        ),
-      );
-      await admin.query(
-        readFileSync(
-          'prisma/migrations/202610170006_d4_config_publish/migration.sql',
-          'utf8',
-        ),
-      );
-      await admin.query(
-        readFileSync(
-          'prisma/migrations/202610170009_n1_notification_delivery/migration.sql',
-          'utf8',
-        ),
-      );
-      await admin.query(
-        readFileSync(
-          'prisma/migrations/202610170010_e_be_event_lifecycle/migration.sql',
-          'utf8',
-        ),
-      );
-      await admin.query(
-        readFileSync(
-          'prisma/migrations/202610170011_b_be_config_assets/migration.sql',
-          'utf8',
-        ),
-      );
-      await admin.query(
-        readFileSync(
-          'prisma/migrations/202610170012_f_be_form_consent/migration.sql',
-          'utf8',
-        ),
-      );
+      for (const file of migrationFiles()) {
+        await admin.query(readFileSync(file, 'utf8'));
+      }
       await admin.query('RESET ROLE');
       await admin.query(
         "CREATE ROLE w0_login LOGIN PASSWORD '" +

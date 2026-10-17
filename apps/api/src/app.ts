@@ -46,7 +46,10 @@ import { InventoryController, InventoryService } from './inventory';
 import { ApprovalController, ApprovalService } from './approval';
 import { ReportController, ReportService } from './reporting';
 import { GateController, GateService } from './gate';
+import { CsController, CsService } from './cs';
+import { ExportController, ExportApiService } from './exports';
 import { EventAdminController, EventAdminService } from './events';
+import { DeviceTokenController, DeviceTokenService } from './device-tokens';
 import {
   NotificationController,
   NotificationService,
@@ -57,6 +60,7 @@ import {
   resolveIssueDeps,
   type TicketServices,
 } from './tickets';
+import { registerMetricsEndpoint } from './metrics';
 
 class HealthDto implements HealthResponse {
   @ApiProperty({ enum: ['ok'] }) status!: 'ok';
@@ -311,6 +315,7 @@ export async function createApp(
     hmac: identity.hmac,
     credentialKey: identity.credentialKey,
   };
+  const env = normalized.env ?? process.env;
 
   @Module({
     controllers: [
@@ -323,6 +328,9 @@ export async function createApp(
       InventoryController,
       ApprovalController,
       ReportController,
+      CsController,
+      ExportController,
+      DeviceTokenController,
       NotificationController,
     ],
     providers: [
@@ -363,6 +371,18 @@ export async function createApp(
         useValue: new ReportService(ticketDeps),
       },
       {
+        provide: CsService,
+        useValue: new CsService(ticketDeps),
+      },
+      {
+        provide: ExportApiService,
+        useValue: new ExportApiService({ ...ticketDeps, env }),
+      },
+      {
+        provide: DeviceTokenService,
+        useValue: new DeviceTokenService(ticketDeps),
+      },
+      {
         provide: NotificationService,
         useValue: new NotificationService(ticketDeps),
       },
@@ -384,6 +404,7 @@ export async function createApp(
   );
   app.setGlobalPrefix(API_VERSION);
   app.enableShutdownHooks();
+  registerMetricsEndpoint(app, { env, db: identity.db });
   return app;
 }
 
@@ -391,10 +412,10 @@ export function createOpenApi(app: NestFastifyApplication) {
   return SwaggerModule.createDocument(
     app,
     new DocumentBuilder()
-      .setTitle('Ticket API — D2 issue')
-      .setVersion('0.2.0')
+      .setTitle('Ticket API — D4 CS/export/events')
+      .setVersion('0.4.0')
       .setDescription(
-        'Identity, redemption issue, manual approval, and read-only event reports. PostgreSQL quota is the source of truth; Redis is not.',
+        'Identity, redemption, gate, CS lookup/resend, CSV export (MinIO), event admin, device tokens. Notification providerStatus ACCEPTED ≠ delivered. PostgreSQL is source of truth.',
       )
       .addBearerAuth()
       .build(),

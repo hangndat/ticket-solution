@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const { execFileSync } = require('node:child_process');
 const { randomBytes, randomUUID } = require('node:crypto');
 const { readFileSync } = require('node:fs');
+const { migrationFiles } = require('./migration-files.cjs');
 const path = require('node:path');
 const { Client } = require('pg');
 const {
@@ -26,20 +27,7 @@ const {
 const docker = (...args) =>
   execFileSync('docker', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
 
-const MIGRATIONS = [
-  '202610160001_foundation',
-  '202610160002_d1_users',
-  '202610160003_d1_membership',
-  '202610160004_d2_issue_ticket',
-  '202610170005_d3_gate',
-  '202610170006_d4_config_publish',
-  '202610170007_d4_manual_approval',
-  '202610170008_d4_report_retry',
-  '202610170009_n1_notification_delivery',
-  '202610170010_e_be_event_lifecycle',
-  '202610170011_b_be_config_assets',
-  '202610170012_f_be_form_consent',
-].map((name) => path.join(__dirname, '../prisma/migrations', name, 'migration.sql'));
+const MIGRATIONS = migrationFiles();
 
 const HMAC = readCodeHmacEnvironment({
   CODE_HMAC_PEPPER: 'd4-approval-test-pepper!!',

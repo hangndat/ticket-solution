@@ -11,7 +11,7 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiProperty, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOkResponse, ApiProperty, ApiTags } from '@nestjs/swagger';
 import {
   type ApiError,
   type ArchiveEventBody,
@@ -23,6 +23,8 @@ import {
 } from '@ticket/contracts';
 import {
   AuthzError,
+  EventAdminError,
+  EVENT_ADMIN_ERROR_CODES,
   EventError,
   EVENT_ERROR_CODES,
   IdentityError,
@@ -31,6 +33,8 @@ import {
   cancelEvent,
   cloneEvent,
   createEvent,
+  createIssuanceSource,
+  createTicketType,
   getEvent,
   listEvents,
   previewEventImpact,
@@ -123,6 +127,31 @@ class ImpactPreviewBodyDto implements EventImpactPreviewRequest {
   endsAt?: string | null;
   @ApiProperty({ required: false, nullable: true, type: Object })
   venue?: { name: string; address: string } | null;
+}
+
+
+class CreateTicketTypeBodyDto {
+  @ApiProperty() label!: string;
+  @ApiProperty({ required: false })
+  entitlementSnapshot?: Record<string, unknown>;
+}
+
+class TicketTypeCreatedDto {
+  @ApiProperty({ format: 'uuid' }) ticketTypeId!: string;
+  @ApiProperty() label!: string;
+}
+
+class CreateSourceBodyDto {
+  @ApiProperty() name!: string;
+  @ApiProperty({ enum: ['AUTO', 'MANUAL'] }) approvalMode!: 'AUTO' | 'MANUAL';
+  @ApiProperty({ format: 'uuid' }) ticketTypeId!: string;
+}
+
+class SourceCreatedDto {
+  @ApiProperty({ format: 'uuid' }) sourceId!: string;
+  @ApiProperty() name!: string;
+  @ApiProperty({ enum: ['AUTO', 'MANUAL'] }) approvalMode!: 'AUTO' | 'MANUAL';
+  @ApiProperty({ format: 'uuid' }) ticketTypeId!: string;
 }
 
 type Deps = {
@@ -318,6 +347,43 @@ export class EventAdminService {
       }),
     );
   }
+
+  async ticketType(
+    authorization: string | undefined,
+    tenantId: string,
+    eventId: string,
+    body: CreateTicketTypeBodyDto,
+  ) {
+    const user = await this.actor(authorization);
+    return withTenant(this.deps.db!, tenantId, (tx) =>
+      createTicketType(tx, {
+        tenantId,
+        eventId,
+        actorUserId: user.userId,
+        label: body.label,
+        entitlementSnapshot: body.entitlementSnapshot,
+      }),
+    );
+  }
+
+  async source(
+    authorization: string | undefined,
+    tenantId: string,
+    eventId: string,
+    body: CreateSourceBodyDto,
+  ) {
+    const user = await this.actor(authorization);
+    return withTenant(this.deps.db!, tenantId, (tx) =>
+      createIssuanceSource(tx, {
+        tenantId,
+        eventId,
+        actorUserId: user.userId,
+        name: body.name,
+        approvalMode: body.approvalMode,
+        ticketTypeId: body.ticketTypeId,
+      }),
+    );
+  }
 }
 
 @ApiTags('events')
@@ -346,6 +412,23 @@ export class EventAdminController {
           retryable: false,
         } satisfies ApiError,
         403,
+      );
+    }
+    if (error instanceof EventAdminError) {
+      const status =
+        error.code === EVENT_ADMIN_ERROR_CODES.EVENT_NOT_FOUND
+          ? 404
+          : error.code === EVENT_ADMIN_ERROR_CODES.SLUG_TAKEN
+            ? 409
+            : 422;
+      throw new HttpException(
+        {
+          code: error.code,
+          message: error.message,
+          requestId: randomUUID(),
+          retryable: false,
+        } satisfies ApiError,
+        status,
       );
     }
     if (error instanceof EventError) {
@@ -481,6 +564,38 @@ export class EventAdminController {
     const event = requireUuid(eventId, 'eventId');
     return this.events
       .impactPreview(authorization, tenant, event, body)
+      .catch((error) => this.fail(error));
+  }
+
+  @Post('tenants/:tenantId/events/:eventId/ticket-types')
+  @ApiBearerAuth()
+  @ApiOkResponse({ type: TicketTypeCreatedDto })
+  ticketType(
+    @Headers('authorization') authorization: string | undefined,
+    @Param('tenantId') tenantId: string,
+    @Param('eventId') eventId: string,
+    @Body() body: CreateTicketTypeBodyDto,
+  ) {
+    const tenant = requireUuid(tenantId, 'tenantId');
+    const event = requireUuid(eventId, 'eventId');
+    return this.events
+      .ticketType(authorization, tenant, event, body)
+      .catch((error) => this.fail(error));
+  }
+
+  @Post('tenants/:tenantId/events/:eventId/sources')
+  @ApiBearerAuth()
+  @ApiOkResponse({ type: SourceCreatedDto })
+  source(
+    @Headers('authorization') authorization: string | undefined,
+    @Param('tenantId') tenantId: string,
+    @Param('eventId') eventId: string,
+    @Body() body: CreateSourceBodyDto,
+  ) {
+    const tenant = requireUuid(tenantId, 'tenantId');
+    const event = requireUuid(eventId, 'eventId');
+    return this.events
+      .source(authorization, tenant, event, body)
       .catch((error) => this.fail(error));
   }
 }

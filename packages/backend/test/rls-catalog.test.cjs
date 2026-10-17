@@ -2,8 +2,7 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { execFileSync } = require('node:child_process');
 const { randomBytes, randomUUID } = require('node:crypto');
-const { readdirSync, readFileSync, statSync } = require('node:fs');
-const path = require('node:path');
+const { readFileSync } = require('node:fs');
 const { Client } = require('pg');
 const { createDatabase, withTenant } = require('../dist');
 
@@ -13,19 +12,16 @@ const docker = (...args) =>
     stdio: ['ignore', 'pipe', 'pipe'],
   }).trim();
 
-const MIGRATIONS_DIR = path.join(__dirname, '../prisma/migrations');
+const { migrationFiles } = require('./migration-files.cjs');
 
 // users is global identity (policy USING true). outbox is ENABLE without FORCE
 // so the migration-owned SECURITY DEFINER claim can see every tenant.
+// device_tokens is actor-scoped (app.actor_id), not tenant-scoped.
+// exports keeps FORCE RLS; migration_owner policy enables claim_exports_batch.
 const GLOBAL_TABLES = new Set(['users']);
+const ACTOR_TABLES = new Set(['device_tokens']);
 const UNFORCED_TABLES = new Set(['outbox']);
-
-function migrationFiles() {
-  return readdirSync(MIGRATIONS_DIR)
-    .filter((name) => statSync(path.join(MIGRATIONS_DIR, name)).isDirectory())
-    .sort()
-    .map((name) => path.join(MIGRATIONS_DIR, name, 'migration.sql'));
-}
+const DEFINER_OWNER_TABLES = new Set(['device_tokens', 'exports']);
 
 async function startIsolatedPostgres() {
   const name = 'ticket-rls-cat-' + randomBytes(4).toString('hex');
@@ -228,10 +224,25 @@ test(
       const covered = new Set();
       for (const policy of policies) {
         covered.add(policy.relname);
+        if (policy.role_name === 'migration_owner') {
+          // Owner policy only for FORCE RLS + SECURITY DEFINER helpers.
+          assert.ok(
+            DEFINER_OWNER_TABLES.has(policy.relname),
+            'unexpected owner policy on ' + policy.relname,
+          );
+          assert.equal(policy.using_expr, 'true');
+          continue;
+        }
         assert.equal(policy.role_name, 'ticket_runtime', policy.relname + ' policy role');
         if (GLOBAL_TABLES.has(policy.relname)) {
           assert.equal(policy.using_expr, 'true');
           assert.equal(policy.check_expr, 'true');
+          continue;
+        }
+        if (ACTOR_TABLES.has(policy.relname)) {
+          assert.match(policy.using_expr, /app\.actor_id/);
+          assert.match(policy.check_expr, /app\.actor_id/);
+          assert.notEqual(policy.using_expr, 'true', policy.relname + ' policy');
           continue;
         }
         assert.match(policy.using_expr, /app\.tenant_id/);

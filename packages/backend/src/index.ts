@@ -89,6 +89,7 @@ export {
   relayOutboxOnce,
   type ClaimedOutboxRow,
   type ProcessOutboxResult,
+  type ProcessOutboxOptions,
 } from './outbox';
 export {
   ConfigError,
@@ -153,8 +154,17 @@ export {
   cancelEvent,
   previewEventImpact,
   deterministicEventId,
+  createTicketType,
+  createIssuanceSource,
+  CREATOR_EVENT_PERMISSIONS,
   type EventMutationResult,
+  type EventSummary,
 } from './event-admin';
+export {
+  EventAdminError,
+  EVENT_ADMIN_ERROR_CODES,
+  type EventAdminErrorCode,
+} from './event-admin-error';
 export { GateError, GATE_ERROR_CODES, type GateErrorCode } from './gate-error';
 export {
   openStaffSession,
@@ -239,6 +249,58 @@ export {
   type EmailSendResult,
   type SmtpAdapterOptions,
 } from './email-adapter';
+export { CsError, CS_ERROR_CODES, type CsErrorCode } from './cs-error';
+export {
+  listCsTickets,
+  getCsTicket,
+  resendTicketEmail,
+  type CsTicketSummary,
+  type CsTicketDetail,
+  type CsTimelineItem,
+  type CsNotificationSummary,
+} from './cs';
+export {
+  ExportError,
+  EXPORT_ERROR_CODES,
+  type ExportErrorCode,
+} from './export-error';
+export {
+  createExportJob,
+  getExportJob,
+  downloadExport,
+  processExportJob,
+  relayExportsOnce,
+  parseTtlSeconds,
+  type ExportFilter,
+  type ExportJob,
+} from './export';
+export { escapeCsvCell, toCsvRow } from './csv-guard';
+export {
+  DeviceTokenError,
+  DEVICE_TOKEN_ERROR_CODES,
+  type DeviceTokenErrorCode,
+} from './device-token-error';
+export {
+  registerDeviceToken,
+  revokeDeviceToken,
+  revokeDeviceTokenByValue,
+  listActiveDeviceTokensForUser,
+  type DeviceTokenRegistration,
+} from './device-tokens';
+export {
+  readApnsEnvironment,
+  requireApnsConfig,
+  sendApnsPush,
+  createApnsAdapter,
+  type ApnsConfig,
+  type ApnsAdapter,
+  type ApnsSendResult,
+} from './apns';
+export {
+  providerStatusFromDbState,
+  maskEmail,
+  type ProviderStatus,
+} from './notification-status';
 export {
   sealCredentialToken,
   openCredentialToken,
@@ -321,3 +383,20 @@ export function readCredentialKeyEnvironment(env: NodeJS.ProcessEnv): string {
   }
   return key;
 }
+
+export {
+  metricsInc,
+  metricsObserveSeconds,
+  metricsSetGauge,
+  renderPrometheusText,
+  resetMetricsForTests,
+  routeTemplateFromPath,
+  statusClass,
+  startEventLoopLagMonitor,
+  getEventLoopLagSeconds,
+} from './metrics-registry';
+export {
+  collectOutboxMetrics,
+  collectDbRuntimeMetrics,
+  type OutboxMetricSnapshot,
+} from './metrics-db';

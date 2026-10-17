@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const { execFileSync } = require('node:child_process');
 const { randomBytes, randomUUID } = require('node:crypto');
 const { readFileSync } = require('node:fs');
+const { migrationFiles } = require('./migration-files.cjs');
 const { Client } = require('pg');
 const {
   createDatabase,
@@ -27,20 +28,7 @@ const docker = (...args) =>
     stdio: ['ignore', 'pipe', 'pipe'],
   }).trim();
 
-const MIGRATIONS = [
-  'prisma/migrations/202610160001_foundation/migration.sql',
-  'prisma/migrations/202610160002_d1_users/migration.sql',
-  'prisma/migrations/202610160003_d1_membership/migration.sql',
-  'prisma/migrations/202610160004_d2_issue_ticket/migration.sql',
-  'prisma/migrations/202610170005_d3_gate/migration.sql',
-  'prisma/migrations/202610170006_d4_config_publish/migration.sql',
-  'prisma/migrations/202610170007_d4_manual_approval/migration.sql',
-  'prisma/migrations/202610170008_d4_report_retry/migration.sql',
-  'prisma/migrations/202610170009_n1_notification_delivery/migration.sql',
-  'prisma/migrations/202610170010_e_be_event_lifecycle/migration.sql',
-  'prisma/migrations/202610170011_b_be_config_assets/migration.sql',
-  'prisma/migrations/202610170012_f_be_form_consent/migration.sql',
-];
+const MIGRATIONS = migrationFiles();
 
 const HMAC = readCodeHmacEnvironment({
   CODE_HMAC_PEPPER: 'd2-issue-test-pepper!!',
