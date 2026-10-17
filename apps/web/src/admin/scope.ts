@@ -1,4 +1,5 @@
-import { bffApiError, isUuid } from '../bff/upstream';
+import { bffApiError } from '../bff/api-error';
+import { isUuid } from '../bff/ids';
 
 export type AdminScope = { tenantId: string; eventId: string };
 
