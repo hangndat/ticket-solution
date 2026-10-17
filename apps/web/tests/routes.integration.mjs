@@ -97,7 +97,7 @@ test('production routes isolate tenant content and reject unknown pairs', async 
     assert.ok(adminHtml.includes('Nhập mã'));
     assert.ok(adminHtml.includes('Đọc quota'));
     assert.ok(adminHtml.includes('Cổng · báo cáo sự kiện'));
-    assert.ok(adminHtml.includes('Tải báo cáo'));
+    assert.ok(adminHtml.includes('Tải lại báo cáo'));
     assert.ok(adminHtml.includes('Duyệt'));
     assert.ok(adminHtml.includes('Từ chối'));
     assert.ok(adminHtml.includes('Lý do từ chối'));
