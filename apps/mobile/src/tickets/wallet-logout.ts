@@ -40,7 +40,7 @@ export async function logoutAndClearWalletArtifacts(
     );
     await clearApnsRegistrationState({ session });
   } catch (error) {
-    errors.push(asError(error, 'APNs registration detach failed'));
+    errors.push(asError(error, 'Gỡ đăng ký APNs thất bại'));
   }
 
   // Drop guest claim login-return intent + answers isolation (C-I).
@@ -48,7 +48,7 @@ export async function logoutAndClearWalletArtifacts(
     const { clearGuestClaimIntent } = await import('../redeem/claim-intent.ts');
     clearGuestClaimIntent();
   } catch (error) {
-    errors.push(asError(error, 'Guest claim intent clear failed'));
+    errors.push(asError(error, 'Xóa intent claim khách thất bại'));
   }
 
   // Drop push tap login-return intent (C-N) so late resolve cannot route prior user.
@@ -58,33 +58,33 @@ export async function logoutAndClearWalletArtifacts(
     );
     clearNotificationTapIntent();
   } catch (error) {
-    errors.push(asError(error, 'Push notification intent clear failed'));
+    errors.push(asError(error, 'Xóa intent chạm thông báo thất bại'));
   }
 
   try {
     await session.logout();
   } catch (error) {
-    errors.push(asError(error, 'Session logout failed'));
+    errors.push(asError(error, 'Đăng xuất phiên thất bại'));
   }
 
   try {
     await offlineDisplay.clear();
   } catch (error) {
-    errors.push(asError(error, 'Offline display binding clear failed'));
+    errors.push(asError(error, 'Xóa liên kết hiển thị offline thất bại'));
   }
 
   if (input.userId && input.tenantId) {
     try {
       await clearTicketDisplayCache(input.userId, input.tenantId);
     } catch (error) {
-      errors.push(asError(error, 'Ticket display cache clear failed'));
+      errors.push(asError(error, 'Xóa bộ đệm hiển thị vé thất bại'));
     }
   }
 
   if (errors.length === 1) throw errors[0];
   if (errors.length > 1) {
     throw new Error(
-      `Logout cleanup failed (${errors.length} steps): ${errors
+      `Dọn dẹp đăng xuất thất bại (${errors.length} bước): ${errors
         .map((error) => error.message)
         .join('; ')}`,
     );

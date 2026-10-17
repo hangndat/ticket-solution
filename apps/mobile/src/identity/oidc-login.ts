@@ -21,7 +21,7 @@ export async function loginWithKeycloak(): Promise<OidcLoginResult> {
   const issuer = getOidcIssuer();
   const clientId = getOidcClientId();
   if (!issuer || !clientId) {
-    return { ok: false, reason: 'OIDC is not configured.' };
+    return { ok: false, reason: 'Chưa cấu hình OIDC.' };
   }
 
   const redirectUri = AuthSession.makeRedirectUri({
@@ -47,13 +47,13 @@ export async function loginWithKeycloak(): Promise<OidcLoginResult> {
       ok: false,
       reason:
         result.type === 'dismiss' || result.type === 'cancel'
-          ? 'Sign-in cancelled.'
-          : 'Authorization failed.',
+          ? 'Đã hủy đăng nhập.'
+          : 'Ủy quyền thất bại.',
     };
   }
 
   if (!request.codeVerifier) {
-    return { ok: false, reason: 'PKCE verifier missing after authorize.' };
+    return { ok: false, reason: 'Thiếu PKCE verifier sau authorize.' };
   }
 
   const token = await AuthSession.exchangeCodeAsync(
@@ -69,7 +69,7 @@ export async function loginWithKeycloak(): Promise<OidcLoginResult> {
   );
 
   if (!token.accessToken) {
-    return { ok: false, reason: 'Token response missing access_token.' };
+    return { ok: false, reason: 'Phản hồi token thiếu access_token.' };
   }
 
   return {

@@ -23,7 +23,7 @@ test('unknown is not an admission', () => {
   const unknown: GateOp = {
     ...holding,
     phase: 'unknown',
-    message: 'Result unknown. Do not admit.',
+    message: 'Kết quả chưa rõ. Không cho vào.',
   };
   assert.equal(classifySupervisorOp(unknown), 'not-admission');
   assert.notEqual(classifySupervisorOp(unknown), 'admission');

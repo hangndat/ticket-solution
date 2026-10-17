@@ -2,7 +2,7 @@ const UUID =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export const GATE_UNKNOWN_MESSAGE =
-  'Result unknown. Do not admit. Reconcile before letting anyone through.';
+  'Kết quả chưa rõ. Không cho vào. Đối soát trước khi cho bất kỳ ai qua.';
 
 export type ParsedScan = {
   ticketId: string;
@@ -153,7 +153,7 @@ export function applyConfirm(op: GateOp, result: FetchResult): GateOp {
       phase: 'admitted',
       checkinId: body.checkinId,
       token: undefined,
-      message: 'Admitted. Check-in recorded.',
+      message: 'Cho vào. Đã ghi nhận check-in.',
     };
   }
   if (result.status === 409 && body?.code === 'ALREADY_CHECKED_IN') {
@@ -162,7 +162,8 @@ export function applyConfirm(op: GateOp, result: FetchResult): GateOp {
       phase: 'admitted',
       checkinId: typeof body.checkinId === 'string' ? body.checkinId : op.checkinId,
       token: undefined,
-      message: 'Already checked in. Known result — admit, do not confirm again.',
+      message:
+        'Đã check-in. Kết quả đã rõ — cho vào, không xác nhận lại.',
     };
   }
   return {
@@ -172,7 +173,7 @@ export function applyConfirm(op: GateOp, result: FetchResult): GateOp {
     message:
       typeof body?.message === 'string' && body.message.trim()
         ? body.message
-        : 'Denied. Do not admit.',
+        : 'Từ chối. Không cho vào.',
   };
 }
 
@@ -228,7 +229,7 @@ export async function runScan(input: {
       eventId: '',
       staffSessionId: input.staffSessionId ?? '',
       phase: 'denied',
-      message: 'Unreadable code. Do not admit.',
+      message: 'Mã không đọc được. Không cho vào.',
     };
     return { ops: [...input.ops], staffSessionId: input.staffSessionId, current };
   }
@@ -262,7 +263,7 @@ export async function runScan(input: {
             ? GATE_UNKNOWN_MESSAGE
             : typeof body?.message === 'string'
               ? body.message
-              : 'Staff session was not opened. Do not admit.',
+              : 'Chưa mở phiên nhân viên. Không cho vào.',
       };
       return {
         ops: [current, ...input.ops],
