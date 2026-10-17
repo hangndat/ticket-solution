@@ -1,0 +1,68 @@
+name: Setup pnpm + Node + Turbo cache
+description: >
+  Installs pnpm/Node (pnpm store via setup-node). Restores merged local Turbo
+  cache under .turbo (ADR-11 — no Turbo Remote/SaaS). Optionally prefetches
+  Docker images (nohup) in parallel with Node/pnpm setup.
+inputs:
+  docker-images:
+    description: Space-separated images to docker pull in background during setup
+    required: false
+    default: ''
+  skip-turbo:
+    description: If 'true', skip Turbo cache restore
+    required: false
+    default: 'false'
+  wait-docker:
+    description: If 'true', block until docker-images are present before finishing setup
+    required: false
+    default: 'false'
+runs:
+  using: composite
+  steps:
+    - name: Prefetch Docker images (background)
+      if: inputs.docker-images != ''
+      shell: bash
+      run: |
+        set -euo pipefail
+        mkdir -p /tmp/ticket-ci/docker-pulls
+        : > /tmp/ticket-ci/docker-pulls.pids
+        i=0
+        for img in ${{ inputs.docker-images }}; do
+          i=$((i + 1))
+          log="/tmp/ticket-ci/docker-pulls/${i}.log"
+          nohup docker pull "$img" >"$log" 2>&1 &
+          echo $! >> /tmp/ticket-ci/docker-pulls.pids
+          echo "prefetch start: $img pid=$!"
+        done
+    - uses: pnpm/action-setup@v4
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 24
+        cache: pnpm
+    - name: Restore Turbo cache (local .turbo, không remote)
+      if: inputs.skip-turbo != 'true'
+      uses: actions/cache/restore@v4
+      with:
+        path: .turbo
+        key: turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}-merged
+        restore-keys: |
+          turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
+          turbo-${{ runner.os }}-
+    - shell: bash
+      run: pnpm install --frozen-lockfile --prefer-offline
+    - name: Wait for Docker prefetch
+      if: inputs.docker-images != '' && inputs.wait-docker == 'true'
+      shell: bash
+      run: |
+        set -euo pipefail
+        deadline=$((SECONDS + 180))
+        for img in ${{ inputs.docker-images }}; do
+          while ! docker image inspect "$img" >/dev/null 2>&1; do
+            if (( SECONDS >= deadline )); then
+              echo "timeout waiting for $img — continuing anyway"
+              break
+            fi
+            sleep 1
+          done
+          docker image inspect "$img" --format 'ready: {{.RepoTags}}' 2>/dev/null || true
+        done
