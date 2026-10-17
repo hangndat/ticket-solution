@@ -6,6 +6,7 @@ import { verifyViaMe } from '@/identity/fetch-me';
 import { session } from '@/identity/session';
 import '@/push/push-notifications-init';
 import { attachNotificationRouting } from '@/push/notification-routing';
+import { ThemeProvider } from '@/theme/ThemeProvider';
 import {
   bindIfStillVerified,
   captureOfflineBindingEpoch,
@@ -129,5 +130,9 @@ export default function RootLayout() {
     })();
   }, [configured]);
 
-  return <AppStack />;
+  return (
+    <ThemeProvider>
+      <AppStack />
+    </ThemeProvider>
+  );
 }
