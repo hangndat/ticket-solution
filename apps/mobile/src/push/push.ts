@@ -7,10 +7,10 @@ export type PushNotification = {
   body: string;
 };
 
-/** `delivered: true` is not a member. This module does not call APNs. */
+/** `delivered: true` is not a member. This module does not call APNs HTTP/2. */
 export type PushReceipt = {
   readonly delivered: false;
-  readonly status: 'not-configured' | 'transport-unavailable';
+  readonly status: 'not-configured' | 'transport-unavailable' | 'client-only';
   readonly message: string;
 };
 
@@ -32,6 +32,10 @@ export function pushProviderName(
   return raw.length > 0 ? raw : null;
 }
 
+export function isApnsProvider(provider: string | null): boolean {
+  return (provider ?? '').toLowerCase() === 'apns';
+}
+
 export function pushUiCopy(provider: string | null): {
   title: string;
   body: string;
@@ -44,6 +48,14 @@ export function pushUiCopy(provider: string | null): {
       announcement: `${PUSH_NOT_CONFIGURED}. Notifications are not delivered.`,
     };
   }
+  if (isApnsProvider(provider)) {
+    return {
+      title: 'APNs client configured',
+      body: 'This build registers a native APNs device token only. Delivery is via the self-hosted worker (not Expo Push). A token is not a delivery receipt.',
+      announcement:
+        'APNs client configured. Device token registration only. Not delivered.',
+    };
+  }
   return {
     title: 'Push is not delivered',
     body: 'A provider name is set, but this build does not send notifications.',
@@ -52,9 +64,8 @@ export function pushUiCopy(provider: string | null): {
 }
 
 /**
- * Fail-closed send. An empty provider returns not-configured and
- * `delivered: false`. A named provider still cannot be delivered: there is
- * no APNs client in this module.
+ * Fail-closed send. The mobile app never talks to APNs HTTP/2 or Expo Push.
+ * Worker-side delivery is out of this module's ownership.
  */
 export function sendPush(
   notification: PushNotification,
@@ -91,6 +102,14 @@ function settle(provider: string | null, delivered: boolean): PushReceipt {
       'transport-unavailable',
       'Push transport is not available',
     );
+  }
+  if (isApnsProvider(provider)) {
+    return {
+      delivered: false,
+      status: 'client-only',
+      message:
+        'APNs device-token client only; worker delivery is not claimed here',
+    };
   }
   return {
     delivered: false,

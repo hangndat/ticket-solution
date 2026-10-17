@@ -33,6 +33,16 @@ export async function logoutAndClearWalletArtifacts(
 
   const errors: Error[] = [];
 
+  // Detach push while the bearer is still readable (before session.logout).
+  try {
+    const { clearApnsRegistrationState } = await import(
+      '../push/apns-device-token.ts'
+    );
+    await clearApnsRegistrationState({ session });
+  } catch (error) {
+    errors.push(asError(error, 'APNs registration detach failed'));
+  }
+
   try {
     await session.logout();
   } catch (error) {

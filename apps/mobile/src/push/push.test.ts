@@ -43,15 +43,33 @@ test('unconfigured push refuses a delivered state', () => {
   assert.equal(quiet.status, 'not-configured');
 });
 
-test('a named provider still cannot be marked delivered', () => {
+test('apns provider is client-only and never marks delivered', () => {
   const sent = sendPush(
     { id: 'note-2', title: 'Ticket', body: 'Issued' },
     'apns',
   );
   assert.equal(sent.delivered, false);
-  assert.equal(sent.status, 'transport-unavailable');
+  assert.equal(sent.status, 'client-only');
+  assert.match(pushUiCopy('apns').body, /native APNs device token/i);
   assert.throws(
     () => acceptDeliveredClaim({ delivered: true }, 'apns'),
+    (error: unknown) => {
+      assert.ok(error instanceof PushDeliveryRefused);
+      assert.equal(error.delivered, false);
+      return true;
+    },
+  );
+});
+
+test('unknown named provider still cannot be marked delivered', () => {
+  const sent = sendPush(
+    { id: 'note-3', title: 'Ticket', body: 'Issued' },
+    'other',
+  );
+  assert.equal(sent.delivered, false);
+  assert.equal(sent.status, 'transport-unavailable');
+  assert.throws(
+    () => acceptDeliveredClaim({ delivered: true }, 'other'),
     (error: unknown) => {
       assert.ok(error instanceof PushDeliveryRefused);
       assert.equal(error.delivered, false);
