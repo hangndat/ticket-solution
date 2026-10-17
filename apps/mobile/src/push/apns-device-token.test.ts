@@ -225,6 +225,130 @@ test('logout path: clear before logout cancels late register and drops store', a
   assert.equal(boundary.getSnapshot().status, 'signed-out');
 });
 
+test('late POST 2xx after clear compensates with DELETE registrationId', async () => {
+  __resetApnsRegistrationGenerationForTests();
+  process.env.EXPO_PUBLIC_API_BASE_URL = 'http://api.test';
+  const store = credentialStore('tok');
+  const boundary = new SessionBoundary(store);
+  await boundary.establish('tok', async () => ({ userId: 'user-a' }));
+  const regStore = createMemoryApnsRegistrationStore();
+
+  let resolvePost: ((value: Response) => void) | undefined;
+  const postBody = new Promise<Response>((resolve) => {
+    resolvePost = resolve;
+  });
+  let postStarted!: () => void;
+  const started = new Promise<void>((resolve) => {
+    postStarted = resolve;
+  });
+  const deletedUrls: string[] = [];
+
+  const registerPromise = registerApnsDeviceToken({
+    session: boundary,
+    platform: 'ios',
+    store: regStore,
+    notifications: notificationsFixture(),
+    resolveEnvironment: () => 'sandbox',
+    fetchImpl: mockFetch(async (url, init) => {
+      if (init?.method === 'POST') {
+        postStarted();
+        return postBody;
+      }
+      if (init?.method === 'DELETE') {
+        deletedUrls.push(url);
+        return new Response(null, { status: 204 });
+      }
+      return new Response('', { status: 500 });
+    }),
+  });
+
+  await started;
+  await clearApnsRegistrationState({
+    session: boundary,
+    store: regStore,
+    notifications: notificationsFixture(),
+    fetchImpl: mockFetch(async () => new Response(null, { status: 204 })),
+  });
+  resolvePost!(
+    new Response(
+      JSON.stringify({
+        registrationId: '44444444-4444-4444-4444-444444444444',
+        environment: 'sandbox',
+        registeredAt: '2026-10-17T04:00:00.000Z',
+      }),
+      { status: 200 },
+    ),
+  );
+
+  const result = await registerPromise;
+  assert.equal(result.status, 'cancelled');
+  assert.ok(
+    deletedUrls.some((url) =>
+      url.includes('/v1/me/device-tokens/44444444-4444-4444-4444-444444444444'),
+    ),
+    `expected compensating DELETE, got ${JSON.stringify(deletedUrls)}`,
+  );
+  assert.equal(regStore.peek(), null);
+});
+
+test('DELETE failure after late POST still cancels without keeping local registration', async () => {
+  __resetApnsRegistrationGenerationForTests();
+  process.env.EXPO_PUBLIC_API_BASE_URL = 'http://api.test';
+  const store = credentialStore('tok');
+  const boundary = new SessionBoundary(store);
+  await boundary.establish('tok', async () => ({ userId: 'user-a' }));
+  const regStore = createMemoryApnsRegistrationStore();
+
+  let resolvePost: ((value: Response) => void) | undefined;
+  const postBody = new Promise<Response>((resolve) => {
+    resolvePost = resolve;
+  });
+  let postStarted!: () => void;
+  const started = new Promise<void>((resolve) => {
+    postStarted = resolve;
+  });
+
+  const registerPromise = registerApnsDeviceToken({
+    session: boundary,
+    platform: 'ios',
+    store: regStore,
+    notifications: notificationsFixture(),
+    resolveEnvironment: () => 'sandbox',
+    fetchImpl: mockFetch(async (_url, init) => {
+      if (init?.method === 'POST') {
+        postStarted();
+        return postBody;
+      }
+      if (init?.method === 'DELETE') {
+        throw new TypeError('network down during compensate DELETE');
+      }
+      return new Response('', { status: 500 });
+    }),
+  });
+
+  await started;
+  await clearApnsRegistrationState({
+    session: boundary,
+    store: regStore,
+    notifications: notificationsFixture(),
+    fetchImpl: mockFetch(async () => new Response(null, { status: 204 })),
+  });
+  resolvePost!(
+    new Response(
+      JSON.stringify({
+        registrationId: '55555555-5555-5555-5555-555555555555',
+        environment: 'sandbox',
+        registeredAt: '2026-10-17T04:30:00.000Z',
+      }),
+      { status: 200 },
+    ),
+  );
+
+  const result = await registerPromise;
+  assert.equal(result.status, 'cancelled');
+  assert.equal(regStore.peek(), null);
+});
+
 test('signed-out register skips backend POST (skipped-unsigned)', async () => {
   __resetApnsRegistrationGenerationForTests();
   process.env.EXPO_PUBLIC_API_BASE_URL = 'http://api.test';
