@@ -1,6 +1,6 @@
 # Vai trò chuyên môn Vemoki (Orca)
 
-Bộ đề xuất này **bổ sung chuyên môn** khi spawn worker. Không thay thế và không được ưu tiên hơn:
+**Trạng thái:** đã áp dụng trên `main` (PR #195 + wiring process). Catalog này **bổ sung chuyên môn** khi spawn worker — bắt buộc gắn Role ID vào Task Spec theo `AGENTS.md` / rule Orca. Không thay thế và không được ưu tiên hơn:
 
 - [AGENTS.md](../../AGENTS.md)
 - `.cursor/rules/orca-agent-routing.mdc` (mọi worker dùng `--agent cursor`)

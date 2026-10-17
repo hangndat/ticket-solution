@@ -79,6 +79,8 @@ Một đầu việc trên board chỉ chuyển **Hoàn thành** khi:
 | iOS | `apps/mobile` | Backend rules, web, store submission ngoài task |
 | QA / Security (hardening) | Review độc lập RLS/authz/races, load, restore | Không tự viết lại kiến trúc trong task review |
 
+Catalog chuyên môn Orca (Role ID gắn Task Spec, không `alwaysApply`): [docs/agents/README.md](./agents/README.md) — `product-ba`, `product-design`, `backend`, `web`, `ios`, `reviewer-dod`, `reviewer-security`.
+
 ## 4. Đợt bàn giao (Milestones) — phạm vi & gate
 
 Gợi ý từ kế hoạch agent; cổng identity trước business đã **đi qua** (D1 Hoàn thành trên board).  

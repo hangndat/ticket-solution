@@ -20,8 +20,8 @@ Coordinator gốc (depth 0): dispatch, lifecycle, integration
 
 ## Phân công
 
-1. **Epic planner:** phân Epic → Story → Task theo ownership: backend (`apps/api`, `apps/worker`, `packages/backend`, DB tests/migrations), web (`apps/web`), iOS (`apps/mobile`), coordinator (root tooling, lockfile, CI, shared contracts, docs/rules).
-2. Planner chuẩn bị spec mỗi Task: parent Epic/Story, scope/paths, dependencies thật, acceptance/DoD, checks và evidence cần thu. Gửi danh sách Task sẵn sàng và đề xuất wave cho coordinator; không dispatch hoặc tự code thay ownership workers.
+1. **Epic planner:** phân Epic → Story → Task theo ownership: backend (`apps/api`, `apps/worker`, `packages/backend`, DB tests/migrations), web (`apps/web`), iOS (`apps/mobile`), coordinator (root tooling, lockfile, CI, shared contracts, docs/rules). Map ownership → Role ID catalog (`backend` / `web` / `ios`; discovery → `product-ba`; UI handoff → `product-design`; DoD → `reviewer-dod` ± `reviewer-security`) theo [docs/agents/README.md](../../docs/agents/README.md).
+2. Planner chuẩn bị spec mỗi Task: parent Epic/Story, scope/paths, **Role ID + path `docs/agents/roles/<id>.md`**, dependencies thật, acceptance/DoD, checks và evidence cần thu. Gửi danh sách Task sẵn sàng và đề xuất wave cho coordinator; không dispatch hoặc tự code thay ownership workers.
 3. Planner theo dõi tiến độ/phụ thuộc, báo blocker và cập nhật đề xuất ready queue; chuẩn bị spec reviewer exact SHA, checklist milestone gates và index evidence nghiệm thu. Planner báo dữ kiện cho coordinator cập nhật Project; không tự đóng Task/Epic hoặc merge.
 4. **Coordinator gốc:** sở hữu dispatch, sync Project theo sự kiện mỗi Task, WIP/backpressure, mailbox, settlement, cleanup và integration trong phạm vi đã ủy quyền. Spawn các Task độc lập cùng wave theo `orca-parallel-workers.mdc`; nhận ready queue từ planner và chủ động idle fill.
 5. **Ownership workers:** chỉ thực hiện Task được giao trong scope; báo checks, SHA, evidence và blocker. **Reviewer độc lập:** khác session implementer, review exact SHA theo `github-project-tracking.mdc`.
@@ -37,6 +37,7 @@ Coordinator gốc (depth 0): dispatch, lifecycle, integration
 ## Liên quan
 
 - Agent: `orca-agent-routing.mdc`
+- Vai trò chuyên môn: [docs/agents/README.md](../../docs/agents/README.md)
 - Parallel dispatch: `orca-parallel-workers.mdc`
 - Ready queue / idle fill: `orca-idle-worker-fill.mdc`
 - Project / DoD: `github-project-tracking.mdc`
