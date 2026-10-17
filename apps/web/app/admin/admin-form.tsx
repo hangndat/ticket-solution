@@ -74,6 +74,7 @@ import {
 import { fetchJson } from '../../src/redeem/fetch-json';
 import { REQUEST_TIMEOUT_MS } from '../../src/redeem/poll-operation';
 import { ConfigBrandPanel } from './config-brand-panel';
+import { SurfaceState } from '../../src/ui/surface-state';
 
 type Props = { initialTenantId?: string; initialEventId?: string };
 
@@ -145,6 +146,7 @@ export function AdminForm({
   const [noticeSeq, setNoticeSeq] = useState(0);
   const [tenantChoices, setTenantChoices] = useState<MeTenantItem[]>([]);
   const [tenantsLoadError, setTenantsLoadError] = useState<string | null>(null);
+  const [tenantsPhase, setTenantsPhase] = useState<'loading' | 'ready'>('loading');
   const [decision, setDecision] = useState<AdminDecision | null>(null);
   const [createView, setCreateView] = useState<CreateEventView | null>(null);
   const [listView, setListView] = useState<EventListView | null>(null);
@@ -206,6 +208,7 @@ export function AdminForm({
       } else {
         setTenantsLoadError(view.message);
       }
+      setTenantsPhase('ready');
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- load once on mount
   }, []);
@@ -1089,11 +1092,27 @@ export function AdminForm({
           />
         </label>
       </div>
-      {tenantsLoadError ? (
-        <p className="intro" role="status">
-          Selector /me/tenants: {tenantsLoadError}. Dùng ô Tenant ID tạm khi BE
-          platform chưa sẵn sàng; vận hành thật ưu tiên selector.
-        </p>
+      {tenantsPhase === 'loading' ? (
+        <SurfaceState
+          kind="loading"
+          title="Đang tải danh sách tenant…"
+          detail="Discovery qua /me/tenants — chưa chọn ngữ cảnh sự kiện."
+          testId="admin-tenants-loading"
+        />
+      ) : tenantsLoadError ? (
+        <SurfaceState
+          kind="error"
+          title="Không tải được tenant"
+          detail={`Selector /me/tenants: ${tenantsLoadError}. Có thể dùng ô Tenant ID tạm khi BE chưa sẵn sàng.`}
+          testId="admin-tenants-error"
+        />
+      ) : tenantChoices.length === 0 ? (
+        <SurfaceState
+          kind="empty"
+          title="Chưa có tenant trong tài khoản"
+          detail="Đăng nhập đúng tài khoản có membership, hoặc nhận invite thành viên trước khi quản trị sự kiện."
+          testId="admin-tenants-empty"
+        />
       ) : (
         <p className="intro">
           Tenant discovery qua selector (không coi ô UUID là đường vận hành
@@ -1193,19 +1212,28 @@ export function AdminForm({
           </button>
         </div>
         {listView?.kind === 'list' ? (
-          <ul data-testid="event-list">
-            {listView.items.map((item) => (
-              <li key={item.eventId}>
-                <button
-                  type="button"
-                  onClick={() => void selectEventContext(item.eventId)}
-                >
-                  {item.slug} · {item.name} ({item.contentStatus}/
-                  {item.businessStatus} · rev {item.revision})
-                </button>
-              </li>
-            ))}
-          </ul>
+          listView.items.length === 0 ? (
+            <SurfaceState
+              kind="empty"
+              title="Chưa có event trong tenant"
+              detail="Tạo event mới phía trên, hoặc kiểm tra tenant đã chọn đúng chưa."
+              testId="admin-events-empty"
+            />
+          ) : (
+            <ul data-testid="event-list">
+              {listView.items.map((item) => (
+                <li key={item.eventId}>
+                  <button
+                    type="button"
+                    onClick={() => void selectEventContext(item.eventId)}
+                  >
+                    {item.slug} · {item.name} ({item.contentStatus}/
+                    {item.businessStatus} · rev {item.revision})
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )
         ) : null}
       </section>
       <section className="admin-section" aria-labelledby="event-lifecycle-heading">

@@ -15,6 +15,7 @@ import {
   platformMutate,
 } from '../../src/platform/client-fetch';
 import { REQUEST_TIMEOUT_MS } from '../../src/redeem/poll-operation';
+import { SurfaceState } from '../../src/ui/surface-state';
 
 type Props = { tenantId: string };
 
@@ -45,9 +46,12 @@ export function TenantStaffPanel({ tenantId }: Props) {
   const tid = tenantId.trim();
   if (!tid) {
     return (
-      <p className="intro">
-        Chọn tenant từ selector trước khi mời / revoke thành viên.
-      </p>
+      <SurfaceState
+        kind="empty"
+        title="Chưa chọn tenant"
+        detail="Chọn tenant từ selector trước khi mời hoặc thu hồi thành viên."
+        testId="staff-tenant-empty"
+      />
     );
   }
 
@@ -205,6 +209,14 @@ export function TenantStaffPanel({ tenantId }: Props) {
           Liệt kê invites
         </button>
       </div>
+      {busy ? (
+        <SurfaceState
+          kind="loading"
+          title="Đang xử lý thành viên…"
+          detail="Chờ phản hồi BFF — chưa khẳng định kết quả."
+          testId="staff-busy-loading"
+        />
+      ) : null}
       {inviteView ? (
         <p data-testid="invite-create-result">
           {inviteView.kind === 'ok'

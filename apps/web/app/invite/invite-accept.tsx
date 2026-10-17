@@ -9,6 +9,7 @@ import {
 import type { AcceptInviteResponse } from '../../src/platform/contracts';
 import { platformMutate } from '../../src/platform/client-fetch';
 import { REQUEST_TIMEOUT_MS } from '../../src/redeem/poll-operation';
+import { SurfaceState } from '../../src/ui/surface-state';
 
 const STORAGE_KEY = 'vemoki_invite_token';
 
@@ -114,13 +115,29 @@ export function InviteAcceptForm() {
           aria-label="Invite token"
         />
       </label>
+      {!token.trim() ? (
+        <SurfaceState
+          kind="empty"
+          title="Chưa có token invite"
+          detail="Mở link mời (token trong #fragment) hoặc dán token vào ô trên sau khi đăng nhập đúng email."
+          testId="invite-token-empty"
+        />
+      ) : null}
       <button
         type="button"
         disabled={busy || !token.trim()}
         onClick={() => void accept()}
       >
-        Nhận invite
+        {busy ? 'Đang nhận…' : 'Nhận invite'}
       </button>
+      {busy ? (
+        <SurfaceState
+          kind="loading"
+          title="Đang nhận invite…"
+          detail="Backend kiểm tra expiry / single-use / email — UI không tự cấp quyền."
+          testId="invite-accept-loading"
+        />
+      ) : null}
       {view ? (
         <section
           className={
