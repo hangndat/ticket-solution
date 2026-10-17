@@ -6,13 +6,9 @@
 
 ## Exact commit SHA
 
-Pin tại tip branch sau commit evidence (cập nhật khi push):
+`15370969d8d2eceb00dfdb292b7a554b35cea040`
 
-```bash
-git rev-parse HEAD
-```
-
-*(SHA đầy đủ ghi trong PR body / Issue comment nghiệm thu.)*
+*(Tip implementer: `feat(mobile): render bundled demo media…`. Revalidation bắt buộc nếu có commit hành vi mới sau SHA này.)*
 
 ## Thay đổi
 
