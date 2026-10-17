@@ -29,6 +29,8 @@ Production thiếu SMTP → notification FAILED/PENDING/misconfigured rõ (N-BE)
 
 Buckets private; không public anonymous. Signed URL ngắn hạn do app cấp.
 
+Demo media seed (D9-S2): `./scripts/d9-seed-media.sh` — checklist `MEDIA-ASSET-CHECKLIST.md`, manifest `brand/demo/manifest.json`.
+
 ## 3. APNs (ADR-12)
 
 | Biến | Bắt buộc prod push | Dev | Ý nghĩa |
