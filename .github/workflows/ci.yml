@@ -143,8 +143,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-pnpm
-        with:
-          turbo-job: web
       # Một turbo graph — lint/typecheck/test/build song song theo dependsOn.
       - run: pnpm exec turbo run lint typecheck test build --filter=@ticket/web...
       - run: pnpm --filter @ticket/web test:routes
@@ -160,8 +158,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-pnpm
-        with:
-          turbo-job: mobile
       - run: pnpm exec turbo run lint typecheck test build --filter=@ticket/mobile...
       - uses: ./.github/actions/save-turbo
         if: success()
@@ -175,8 +171,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-pnpm
-        with:
-          turbo-job: backend
       # api + worker (+ deps contracts/backend). Không kéo web/mobile.
       - run: pnpm exec turbo run lint typecheck test build --filter=@ticket/api... --filter=@ticket/worker...
       - name: OpenAPI drift
@@ -195,15 +189,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-pnpm
-        with:
-          turbo-job: db
       # Warm contracts via turbo cache; test:db tự build backend.
       - run: pnpm exec turbo run build --filter=@ticket/contracts
       - run: pnpm --filter @ticket/backend test:db
-      - uses: ./.github/actions/save-turbo
-        if: success()
-        with:
-          turbo-job: db
 
   d5-hardening-smoke:
     needs: changes
@@ -215,8 +203,6 @@ jobs:
           # d5-observability-smoke resolves historical metrics SHAs
           fetch-depth: 0
       - uses: ./.github/actions/setup-pnpm
-        with:
-          turbo-job: d5
       - name: Build API (restore reconnect + metrics E2E deps)
         run: pnpm exec turbo run build --filter=@ticket/api...
       - name: Observability artifact smoke
@@ -233,10 +219,57 @@ jobs:
         run: ./scripts/rint-stack-smoke.sh
       - name: R-INT outbox Redis-loss + lease reclaim
         run: ./scripts/rint-outbox-recovery.sh
-      - uses: ./.github/actions/save-turbo
-        if: success()
+
+
+  # Merge turbo shards from scope jobs into one Actions cache (content-addressed).
+  turbo-persist:
+    needs: [web, mobile, backend]
+    if: always() && (needs.web.result == 'success' || needs.mobile.result == 'success' || needs.backend.result == 'success')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download turbo shards
+        uses: actions/download-artifact@v4
+        continue-on-error: true
         with:
-          turbo-job: d5
+          pattern: turbo-shard-*
+          path: /tmp/turbo-shards
+          merge-multiple: false
+      - name: Merge shards into .turbo
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .turbo
+          if [[ ! -d /tmp/turbo-shards ]]; then
+            echo "no turbo shards to merge"
+            exit 0
+          fi
+          shopt -s nullglob
+          for shard in /tmp/turbo-shards/*/; do
+            echo "merging shard $(basename "$shard")"
+            if [[ -d "${shard}.turbo" ]]; then
+              src="${shard}.turbo"
+            else
+              src="${shard%/}"
+            fi
+            # Content-addressed: copy all files; keep larger on collision
+            while IFS= read -r -d '' f; do
+              rel="${f#"$src"/}"
+              dest=".turbo/${rel}"
+              mkdir -p "$(dirname "$dest")"
+              if [[ -f "$dest" ]] && [[ "$(wc -c < "$f")" -le "$(wc -c < "$dest")" ]]; then
+                continue
+              fi
+              cp -f "$f" "$dest"
+            done < <(find "$src" -type f -print0)
+          done
+          echo "merged turbo files: $(find .turbo -type f | wc -l)"
+          du -sh .turbo || true
+      - name: Save merged Turbo cache
+        uses: actions/cache/save@v4
+        with:
+          path: .turbo
+          key: turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}-merged
 
   # Single required status check: skipped scope jobs are OK; failures fail the gate.
   ci:
