@@ -37,6 +37,8 @@ import {
   revokeStaffSession,
   revokeTicket,
   undoCheckin,
+  unwrapConfirmOutcome,
+  unwrapReserveOutcome,
   withTenant,
   type IdentityUserRepository,
   type OidcVerifier,
@@ -276,14 +278,17 @@ export class GateService {
     body: ReserveBodyDto,
   ) {
     const user = await this.actor(authorization);
-    const hold = await withTenant(this.deps.db!, body.tenantId, (tx) =>
-      reserveCheckin(tx, {
-        tenantId: body.tenantId,
-        eventId,
-        ticketId: body.ticketId,
-        staffSessionId: body.staffSessionId,
-        actorUserId: user.userId,
-      }),
+    // Unwrap after withTenant so gate.reject audit commits on business deny.
+    const hold = unwrapReserveOutcome(
+      await withTenant(this.deps.db!, body.tenantId, (tx) =>
+        reserveCheckin(tx, {
+          tenantId: body.tenantId,
+          eventId,
+          ticketId: body.ticketId,
+          staffSessionId: body.staffSessionId,
+          actorUserId: user.userId,
+        }),
+      ),
     );
     return { ...hold, expiresAt: hold.expiresAt.toISOString() };
   }
@@ -295,15 +300,17 @@ export class GateService {
     body: ConfirmBodyDto,
   ) {
     const user = await this.actor(authorization);
-    return withTenant(this.deps.db!, body.tenantId, (tx) =>
-      confirmCheckin(tx, {
-        tenantId: body.tenantId,
-        eventId,
-        reservationId,
-        token: body.token,
-        staffSessionId: body.staffSessionId,
-        actorUserId: user.userId,
-      }),
+    return unwrapConfirmOutcome(
+      await withTenant(this.deps.db!, body.tenantId, (tx) =>
+        confirmCheckin(tx, {
+          tenantId: body.tenantId,
+          eventId,
+          reservationId,
+          token: body.token,
+          staffSessionId: body.staffSessionId,
+          actorUserId: user.userId,
+        }),
+      ),
     );
   }
 
