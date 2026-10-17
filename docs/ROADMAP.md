@@ -1,7 +1,7 @@
 # Roadmap — Event Ticketing Platform
 
 Ngày cập nhật nội dung: 2026-10-17  
-Đối chiếu live: `origin/main` `ed6f0dd7f7703e3c85972151303f4a7eaeb37f21` (Merge PR #52) và [GitHub Project #3](https://github.com/users/hangndat/projects/3) cùng ngày.  
+Đối chiếu live: `origin/main` `b93124b58eb1740d263fc5191ddd9a9aad4506f6` (Merge PR #93 D6 iOS; trước đó PR #92 D6 web `eb0d0784f300571dc7a557c0db3ecd865c4e9cfe`) và [GitHub Project #3](https://github.com/users/hangndat/projects/3) cùng ngày.  
 Nguồn phạm vi: [PRD](./PRD.md), [Technical Design](./TECHNICAL-DESIGN.md), [Agent Development Plan](./AGENT-DEVELOPMENT-PLAN.md), [W0 report](./W0-FOUNDATION-REPORT.md).  
 Tracking lâu dài: GitHub Issues + Project (tiếng Việt). Orca Task/Dispatch chỉ là lần giao thực thi.
 
@@ -18,7 +18,7 @@ Tracking lâu dài: GitHub Issues + Project (tiếng Việt). Orca Task/Dispatch
 
 **Roadmap đã được user duyệt lần đầu (2026-10-16)** — đóng D0 và mở D1. Các đoạn “đợt tiếp theo = D1 / chưa mở business endpoints” bên dưới §10 là **lịch sử**; không còn mô tả hiện tại.
 
-**Trọng tâm hiện tại (Project #3, 2026-10-17):** parent **D4 (#5)** và **D5 (#6)** đang **Đang làm**. Parent **D0–D3 (#1–#4)** đã **Hoàn thành** trên board. **D6 UX/UI (#81)** đã chèn board (**Chưa lên lịch**); implement sau D5 acceptance (Option A). Sau MVP (#7) **Chưa lên lịch**. Không tuyên bố pilot production sẵn sàng.
+**Trọng tâm hiện tại (Project #3, 2026-10-17):** parent **D4 (#5)** và **D5 (#6)** đang **Đang làm**. Parent **D0–D3 (#1–#4)** đã **Hoàn thành** trên board. **D6 UX/UI (#81):** coding S1–S6 đã merge `main` (web PR [#92](https://github.com/hangndat/ticket-solution/pull/92), iOS PR [#93](https://github.com/hangndat/ticket-solution/pull/93)); Issues #82–#85, #87–#88 **Hoàn thành**/closed; còn **S7 (#89)** sync ROADMAP + nghiệm thu parent — đợt chưa đóng. Sau MVP (#7) **Chưa lên lịch**. Không tuyên bố pilot production sẵn sàng.
 
 ## 1. Trạng thái hiện tại (tóm tắt theo Project + main)
 
@@ -32,7 +32,7 @@ Cột **Board** = Status parent Issue trên Project #3 tại thời điểm đ�
 | Check-in (D3) | **Hoàn thành** (#4) | Nghiệm thu đợt (có ngoại lệ UAT) | Gate + web Gate + iOS scan/recovery trên `main`. **Camera thiết bị thật** hoãn sang D5 (#26) — không ghi là UAT camera physical đã PASS |
 | Admin & Platform (D4) | **Đang làm** (#5) | Một phần code trên `main`; đợt chưa nghiệm thu | #21 Hoàn thành (PRs #38/#43/#48). #22/#23/#56 **Đang làm** (CS/export/APNs/tenant2 — PR mở #54/#55…). Tenant 2 E2E UI chưa Hoàn thành |
 | Hardening / UAT / phát hành (D5) | **Đang làm** (#6) | Một phần code/drill trên `main`; đợt chưa nghiệm thu | #24 Hoàn thành (PR #47). #25 **Đang làm** (obs/load + drill cục bộ). #26 **Chờ duyệt** (UAT TestFlight / thiết bị thật). Build native **chỉ** local Xcode; **cấm** Expo/EAS Cloud Build |
-| UX/UI polish (D6) | **Chưa lên lịch** (#81) | Chưa mở implement | Sau D5 acceptance (Option A); plan [`D6-UX-UI-PLAN.md`](./plans/D6-UX-UI-PLAN.md); không = pilot ready |
+| UX/UI polish (D6) | **Đang làm** (#81) | Code complete S1–S6 trên `main`; đợt chưa nghiệm thu | Web [#92](https://github.com/hangndat/ticket-solution/pull/92) `eb0d078…` · iOS [#93](https://github.com/hangndat/ticket-solution/pull/93) `b93124b…`. #82–#85/#87–#88 closed. Còn [#89](https://github.com/hangndat/ticket-solution/issues/89) (S7). Plan [`D6-UX-UI-PLAN.md`](./plans/D6-UX-UI-PLAN.md). D6 ≠ pilot ready |
 | Android / payment / seat map / white-label | **Chưa lên lịch** (#7) | Ngoài MVP | Theo PRD — không gắn D2–D6 |
 
 ### 1.1 Ba mức hoàn thành (bắt buộc phân biệt)
@@ -158,18 +158,18 @@ Mỗi nhóm tương ứng parent Issue trên GitHub; sub-issues mang tiêu chí 
 - [ ] UAT thiết bị thật / TestFlight (camera, deep link, push, offline ví, revoke) — #26 Chờ duyệt; build **local** signed; **không** EAS Cloud
 - [x] Runbook, release checklist, O06 options (chưa chốt số) — `docs/ops/RUNBOOK.md`, `RELEASE-CHECKLIST.md`, `O06-OPTIONS.md`. Store submitted/approved/available vẫn theo dõi ở #26.
 
-### D6 — Hoàn thiện UX/UI (board: Chưa lên lịch)
+### D6 — Hoàn thiện UX/UI (board: Đang làm / Chờ duyệt S7)
 
-- [ ] Tokens & design contract — D6-S1 (#82)
-- [ ] Web guest / redeem / claim / event — D6-S2 (#83)
-- [ ] Web gate & account — D6-S3 (#84)
-- [ ] Web admin & platform — D6-S4 (#85)
-- [ ] iOS theme + Events/Redeem/Claim — D6-S5 (#87)
-- [ ] iOS ví + Staff scan UX — D6-S6 (#88)
-- [ ] ROADMAP sync & nghiệm thu đợt — D6-S7 (#89)
+- [x] Tokens & design contract — D6-S1 (#82) — closed; consumed by PR #92 + #93
+- [x] Web guest / redeem / claim / event — D6-S2 (#83) — merge PR [#92](https://github.com/hangndat/ticket-solution/pull/92) `eb0d0784f300571dc7a557c0db3ecd865c4e9cfe` (DoD PASS w/ gaps @ `ec8eac6…`)
+- [x] Web gate & account — D6-S3 (#84) — cùng PR #92
+- [x] Web admin & platform — D6-S4 (#85) — cùng PR #92
+- [x] iOS theme + Events/Redeem/Claim — D6-S5 (#87) — merge PR [#93](https://github.com/hangndat/ticket-solution/pull/93) `b93124b58eb1740d263fc5191ddd9a9aad4506f6` (DoD PASS w/ gaps @ `a3eabf2…`)
+- [x] iOS ví + Staff scan UX — D6-S6 (#88) — cùng PR #93
+- [ ] ROADMAP sync & nghiệm thu đợt — D6-S7 (#89) — docs PR này; parent #81 chưa Hoàn thành đến khi S7 merge + DoD đợt
 
 Parent [#81](https://github.com/hangndat/ticket-solution/issues/81). Milestone [D6 — Hoàn thiện UX/UI Vemoki](https://github.com/hangndat/ticket-solution/milestone/8).  
-**Gate:** xem [docs/plans/D6-UX-UI-PLAN.md](./plans/D6-UX-UI-PLAN.md) §7. Implement sau D5 parent #6 Hoàn thành (Option A). Không tuyên bố pilot ready.
+**Gate:** xem [docs/plans/D6-UX-UI-PLAN.md](./plans/D6-UX-UI-PLAN.md) §7. Coding S1–S6 đã trên `main`; còn nghiệm thu parent qua #89. Không tuyên bố pilot ready.
 
 ### Sau MVP (board: Chưa lên lịch)
 
