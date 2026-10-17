@@ -139,12 +139,16 @@ export class SessionBoundary {
     await this.storage(() => this.store.clear());
     const verified = await verify(credential);
     if (generation !== this.generation) return;
-    if (
-      verified === CREDENTIAL_UNREACHABLE ||
-      !verified ||
-      typeof verified !== 'object' ||
-      !verified.userId
-    ) {
+    if (verified === CREDENTIAL_UNREACHABLE) {
+      // OIDC succeeded but /v1/me unreachable (missing API bake, brief outage).
+      // Keep the new bearer for a later online restore — never elevate offline.
+      await this.storage(() => this.store.write(credential));
+      if (generation === this.generation) {
+        this.publish({ status: 'signed-out' });
+      }
+      return;
+    }
+    if (!verified || typeof verified !== 'object' || !verified.userId) {
       this.publish({ status: 'signed-out' });
       return;
     }
