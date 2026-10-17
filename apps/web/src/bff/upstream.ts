@@ -64,12 +64,18 @@ export async function forwardWithBearer(
       headers,
       cache: 'no-store',
     });
-    const text = await upstream.text();
     const contentType =
       upstream.headers.get('Content-Type') ?? 'application/json';
-    return new Response(text, {
+    const outHeaders = new Headers({ 'Content-Type': contentType });
+    const cacheControl = upstream.headers.get('Cache-Control');
+    if (cacheControl) outHeaders.set('Cache-Control', cacheControl);
+    else outHeaders.set('Cache-Control', 'private, no-store');
+    const disposition = upstream.headers.get('Content-Disposition');
+    if (disposition) outHeaders.set('Content-Disposition', disposition);
+    const body = await upstream.arrayBuffer();
+    return new Response(body, {
       status: upstream.status,
-      headers: { 'Content-Type': contentType },
+      headers: outHeaders,
     });
   } catch {
     return bffApiError(
