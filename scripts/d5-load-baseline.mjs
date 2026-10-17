@@ -158,9 +158,13 @@ function migrate() {
     .split('\n')
     .filter(Boolean);
   if (!files.length) throw new Error('no migrations');
-  let sql = `
-CREATE ROLE ticket_runtime NOLOGIN NOSUPERUSER NOBYPASSRLS;
-CREATE ROLE migration_owner NOLOGIN NOSUPERUSER NOBYPASSRLS;
+  const ephemeralRoles = readFileSync(
+    path.join(ROOT, 'infra/platform/sql/ephemeral-pre-migrate-roles.sql'),
+    'utf8',
+  );
+  let sql =
+    ephemeralRoles +
+    `
 GRANT CREATE, USAGE ON SCHEMA public TO migration_owner;
 SET ROLE migration_owner;
 `;

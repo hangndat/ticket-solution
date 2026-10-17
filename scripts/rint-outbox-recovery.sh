@@ -15,6 +15,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+EPHEMERAL_ROLES_SQL="${ROOT}/infra/platform/sql/ephemeral-pre-migrate-roles.sql"
 MIGRATION_DIR="${ROOT}/packages/backend/prisma/migrations"
 IMAGE="${RINT_POSTGRES_IMAGE:-postgres:18.1-alpine}"
 REDIS_IMAGE="${RINT_REDIS_IMAGE:-redis:7-alpine}"
@@ -80,9 +81,8 @@ for _ in $(seq 1 40); do
 done
 
 {
+  cat "${EPHEMERAL_ROLES_SQL}"
   cat <<'SQL'
-CREATE ROLE ticket_runtime NOLOGIN NOSUPERUSER NOBYPASSRLS;
-CREATE ROLE migration_owner NOLOGIN NOSUPERUSER NOBYPASSRLS;
 GRANT CREATE, USAGE ON SCHEMA public TO migration_owner;
 SET ROLE migration_owner;
 SQL

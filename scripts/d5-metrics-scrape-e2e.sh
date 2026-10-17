@@ -4,6 +4,7 @@
 # (default 1f5fc31) via throwaway worktree — does NOT commit apps into this PR.
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+EPHEMERAL_ROLES_SQL="${ROOT}/infra/platform/sql/ephemeral-pre-migrate-roles.sql"
 REF="${D5_METRICS_REF:-1f5fc31}"
 PORT="${D5_METRICS_API_PORT:-13121}"
 PG_PORT="${D5_METRICS_PG_PORT:-55471}"
@@ -78,8 +79,7 @@ wait_pg
 MIGRATION_DIR="${SRC}/packages/backend/prisma/migrations"
 MIG_SQL="${ARTIFACT}/metrics-migrate-${SUFFIX}.sql"
 {
-  echo "CREATE ROLE ticket_runtime NOLOGIN NOSUPERUSER NOBYPASSRLS;"
-  echo "CREATE ROLE migration_owner NOLOGIN NOSUPERUSER NOBYPASSRLS;"
+  cat "${EPHEMERAL_ROLES_SQL}"
   echo "GRANT CREATE, USAGE ON SCHEMA public TO migration_owner; SET ROLE migration_owner;"
   find "${MIGRATION_DIR}" -mindepth 2 -maxdepth 2 -name migration.sql | sort | while read -r f; do
     cat "$f"

@@ -16,6 +16,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MIGRATION_DIR="${ROOT}/packages/backend/prisma/migrations"
+EPHEMERAL_ROLES_SQL="${ROOT}/infra/platform/sql/ephemeral-pre-migrate-roles.sql"
 IMAGE="${D5_DRILL_POSTGRES_IMAGE:-postgres:18.1-alpine}"
 SUFFIX="$(openssl rand -hex 4)"
 SRC="d5-backup-drill-src-${SUFFIX}"
@@ -86,9 +87,8 @@ echo "starting throwaway source ${SRC} (${IMAGE}, database ${SRC_DB})"
 start_pg "${SRC}" "${SRC_DB}"
 
 {
+  cat "${EPHEMERAL_ROLES_SQL}"
   cat <<'SQL'
-CREATE ROLE ticket_runtime NOLOGIN NOSUPERUSER NOBYPASSRLS;
-CREATE ROLE migration_owner NOLOGIN NOSUPERUSER NOBYPASSRLS;
 GRANT CREATE, USAGE ON SCHEMA public TO migration_owner;
 SET ROLE migration_owner;
 SQL
@@ -112,10 +112,7 @@ docker exec -e PGPASSWORD="${PW}" "${SRC}" \
 echo "starting throwaway restore target ${DST} (database ${DST_DB})"
 start_pg "${DST}" "${DST_DB}"
 
-psql_exec "${DST}" "${DST_DB}" >/dev/null <<'SQL'
-CREATE ROLE ticket_runtime NOLOGIN NOSUPERUSER NOBYPASSRLS;
-CREATE ROLE migration_owner NOLOGIN NOSUPERUSER NOBYPASSRLS;
-SQL
+psql_exec "${DST}" "${DST_DB}" >/dev/null <"${EPHEMERAL_ROLES_SQL}"
 
 echo "restoring dump into ${DST_DB}"
 psql_exec "${DST}" "${DST_DB}" <"${DUMP}" >/dev/null
