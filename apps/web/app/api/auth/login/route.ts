@@ -1,5 +1,5 @@
 import { cookies } from 'next/headers';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import {
   discoveryBase,
   isOidcConfigured,
@@ -11,13 +11,21 @@ import {
   sessionCookieOptions,
 } from '../../../../src/oidc/cookies';
 import {
+  POST_LOGIN_COOKIE,
+  postLoginCookieOptions,
+  sanitizePostLoginPath,
+} from '../../../../src/oidc/post-login';
+import {
   codeChallengeS256,
   generateCodeVerifier,
   generateOAuthState,
 } from '../../../../src/oidc/pkce';
 
-/** Start Authorization Code + PKCE against Keycloak; sets short-lived cookies. */
-export async function GET() {
+/**
+ * Start Authorization Code + PKCE against Keycloak; sets short-lived cookies.
+ * Optional ?return=/claim (allowlisted) for guest claim login-return.
+ */
+export async function GET(request: NextRequest) {
   if (!isOidcConfigured()) {
     return NextResponse.json(
       {
@@ -37,6 +45,15 @@ export async function GET() {
   const shortLived = sessionCookieOptions(600);
   jar.set(PKCE_COOKIE, verifier, shortLived);
   jar.set(STATE_COOKIE, state, shortLived);
+
+  const returnPath = sanitizePostLoginPath(
+    request.nextUrl.searchParams.get('return'),
+  );
+  if (returnPath) {
+    jar.set(POST_LOGIN_COOKIE, returnPath, postLoginCookieOptions(600));
+  } else {
+    jar.delete(POST_LOGIN_COOKIE);
+  }
 
   const authorize = new URL(
     `${discoveryBase(config.issuer)}/protocol/openid-connect/auth`,

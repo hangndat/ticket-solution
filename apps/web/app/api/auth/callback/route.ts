@@ -12,6 +12,10 @@ import {
   STATE_COOKIE,
   sessionCookieOptions,
 } from '../../../../src/oidc/cookies';
+import {
+  POST_LOGIN_COOKIE,
+  sanitizePostLoginPath,
+} from '../../../../src/oidc/post-login';
 
 type TokenResponse = {
   access_token?: string;
@@ -90,5 +94,10 @@ export async function GET(request: NextRequest) {
   jar.delete(PKCE_COOKIE);
   jar.delete(STATE_COOKIE);
 
-  return NextResponse.redirect(new URL('/auth', request.url));
+  const postLogin = sanitizePostLoginPath(jar.get(POST_LOGIN_COOKIE)?.value);
+  jar.delete(POST_LOGIN_COOKIE);
+
+  return NextResponse.redirect(
+    new URL(postLogin ?? '/auth', request.url),
+  );
 }
