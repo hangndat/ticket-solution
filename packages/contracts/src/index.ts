@@ -616,6 +616,25 @@ export interface TenantProfilePatchBody {
   expectedVersion: number;
 }
 
+/** D8-S1 — Tenant white-label branding (resolved defaults applied by API). */
+export interface TenantBranding {
+  tenantId: string;
+  slug: string;
+  displayName: string;
+  primaryColor: string;
+  secondaryColor: string | null;
+  logoAssetId: string | null;
+  version: number;
+}
+
+export interface TenantBrandingUpdateBody {
+  displayName?: string;
+  primaryColor?: string;
+  secondaryColor?: string | null;
+  logoAssetId?: string | null;
+  expectedVersion: number;
+}
+
 export interface CreateInviteBody {
   email: string;
   role: MembershipRole;
