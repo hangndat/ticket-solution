@@ -55,4 +55,5 @@ Ghi `docs/reviews/<slug>.md` hoặc comment Issue/PR tương đương:
 ## Orca
 
 - Coordinator spawn reviewer; ack/settle theo mailbox.
+- Nhiều PR/Issue `Chờ duyệt` độc lập → nhiều reviewer DoD **cùng wave** (mỗi PR một session ≠ implementer).
 - Commit hành vi mới sau PASS → **revalidation** SHA mới.

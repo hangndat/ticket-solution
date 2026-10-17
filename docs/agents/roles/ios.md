@@ -41,5 +41,6 @@
 ## Orca
 
 - Agent: `--agent cursor`.
-- Parallel với `web` / `backend` khi contract ổn.
+- Coordinator spawn song song `web` / `backend` / BA/PD khi contract ổn; không chờ Story khác đóng nếu Task đã ready.
+- Một lúc chỉ một feature coding Dispatch trên slice iOS.
 - Reviewer ≠ session này; security review khi đụng token/Keychain/APNs secrets handling.

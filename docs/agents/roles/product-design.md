@@ -6,7 +6,7 @@
 
 ## Khi nào dùng
 
-Trước hoặc chặn nhẹ coding UI: cần handoff rõ để web/iOS implement đúng flow và trạng thái. Không thay worker `web` / `ios`; không tự mở rộng visual system ngoài Task.
+Trước hoặc chặn nhẹ coding UI: cần handoff rõ để web/iOS implement đúng flow và trạng thái. Có thể chạy **song song** `product-ba` (docs khác path) và coding BE/non-UI; chỉ chặn worker `web`/`ios` khi Task UI thật sự cần handoff PD. Không thay worker `web` / `ios`; không tự mở rộng visual system ngoài Task.
 
 ## Phạm vi
 
