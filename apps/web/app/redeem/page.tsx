@@ -8,17 +8,24 @@ export const dynamic = 'force-dynamic';
 export const metadata = {
   title: 'Đổi mã lấy vé',
   description:
-    'D2 web redeem — form đổi mã, verify, success/ticket qua Nest API thật (BFF Keycloak).',
+    'F-WEB redeem — published form/terms, pending/status discriminated UX qua Nest BFF.',
 };
 
 type Props = {
-  searchParams: Promise<{ tenantId?: string; eventId?: string }>;
+  searchParams: Promise<{
+    tenantId?: string;
+    eventId?: string;
+    tenantSlug?: string;
+    eventSlug?: string;
+  }>;
 };
 
 export default async function RedeemPage({ searchParams }: Props) {
   const params = await searchParams;
   const configured = isOidcConfigured();
   const state = resolveWebAuthState({ configured, subject: null });
+  // CSRF cookie is issued by GET BFF route handlers (e.g. public published
+  // schema), not RSC render — cookies().set is illegal in Server Components.
 
   return (
     <main id="main" className="container shell redeem-page">
@@ -32,13 +39,12 @@ export default async function RedeemPage({ searchParams }: Props) {
         </span>
       </nav>
 
-      <p className="eyebrow">D2 / REDEEM · API THẬT · KHÔNG MOCK</p>
+      <p className="eyebrow">F-WEB / REDEEM · FORM PUBLISHED · C-F</p>
       <h1>Đổi mã lấy vé</h1>
       <p className="intro">
-        Multi-tenant: nhập <code>tenantId</code> + <code>eventId</code> (UUID) và
-        mã đổi vé. BFF đọc cookie Keycloak và gọi Nest{' '}
-        <code>RedeemBodyDto</code> / <code>RedeemResponseDto</code>. Trạng thái
-        exhausted / used / timeout hiện rõ từ mã lỗi API.
+        Tải form/terms từ event published, gửi answers + consent qua BFF CSRF.
+        Trạng thái pending / issued / rejected / expired / unknown tách biệt —
+        timeout giữ cùng idempotency-key.
       </p>
 
       {!configured ? (
@@ -55,9 +61,11 @@ export default async function RedeemPage({ searchParams }: Props) {
         </aside>
       ) : (
         <RedeemForm
-          key={`${params.tenantId ?? ''}:${params.eventId ?? ''}`}
+          key={`${params.tenantId ?? ''}:${params.eventId ?? ''}:${params.tenantSlug ?? ''}:${params.eventSlug ?? ''}`}
           initialTenantId={params.tenantId?.trim() ?? ''}
           initialEventId={params.eventId?.trim() ?? ''}
+          initialTenantSlug={params.tenantSlug?.trim() ?? ''}
+          initialEventSlug={params.eventSlug?.trim() ?? ''}
         />
       )}
 
