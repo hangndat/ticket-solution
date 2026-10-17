@@ -26,6 +26,11 @@ export type AccountDeletionUiPhase =
       kind: 'error';
       message: string;
       retryable: boolean;
+      /**
+       * refresh = retry GET /current (never invent POST).
+       * resubmit = retry POST after user already confirmed (same Idempotency-Key).
+       */
+      retryAction?: 'refresh' | 'resubmit';
       /** Reuse on timeout recovery — same Idempotency-Key. */
       idempotencyKey?: string;
     }
@@ -87,6 +92,7 @@ export function mapPostResult(
       message:
         'Không xác định được kết quả (timeout/mạng). Thử lại với cùng Idempotency-Key — không tạo yêu cầu trùng.',
       retryable: true,
+      retryAction: 'resubmit',
       idempotencyKey,
     };
   }
@@ -143,6 +149,7 @@ export function mapGetResult(
       kind: 'error',
       message: 'Không tải được trạng thái yêu cầu (mạng/timeout).',
       retryable: true,
+      retryAction: 'refresh',
     };
   }
   if (result.status === 'unauthorized') {
@@ -228,4 +235,48 @@ export async function loadCurrentAccountDeletionRequest(input: {
   } finally {
     input.session.endRequest(controller);
   }
+}
+
+/**
+ * Retry an error phase without bypassing confirmation.
+ * GET/load failures → refresh GET only.
+ * Confirmed POST timeout → resubmit with the same Idempotency-Key.
+ */
+export function resolveAccountDeletionRetryAction(
+  phase: AccountDeletionUiPhase,
+): 'refresh' | 'resubmit' | null {
+  if (phase.kind !== 'error' || !phase.retryable) return null;
+  if (phase.retryAction === 'resubmit' && phase.idempotencyKey) {
+    return 'resubmit';
+  }
+  if (phase.retryAction === 'refresh') return 'refresh';
+  // Fail closed: never POST without an explicit resubmit + key.
+  return phase.idempotencyKey ? 'resubmit' : 'refresh';
+}
+
+export async function retryAccountDeletionError(input: {
+  phase: Extract<AccountDeletionUiPhase, { kind: 'error' }>;
+  session: SessionBoundary;
+  epoch: SessionEpoch;
+  userId: string;
+  fetchImpl?: typeof fetch;
+}): Promise<AccountDeletionUiPhase> {
+  const action = resolveAccountDeletionRetryAction(input.phase);
+  if (action === 'resubmit' && input.phase.idempotencyKey) {
+    return submitAccountDeletionRequest({
+      session: input.session,
+      epoch: input.epoch,
+      userId: input.userId,
+      idempotencyKey: input.phase.idempotencyKey,
+      fetchImpl: input.fetchImpl,
+    });
+  }
+  if (action === 'refresh') {
+    return loadCurrentAccountDeletionRequest({
+      session: input.session,
+      epoch: input.epoch,
+      fetchImpl: input.fetchImpl,
+    });
+  }
+  return input.phase;
 }
