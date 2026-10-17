@@ -142,3 +142,30 @@ jobs:
         run: pnpm --filter @ticket/contracts build
       - if: steps.scope.outputs.docs_only != 'true'
         run: pnpm --filter @ticket/backend test:db
+  # Issue #25 — root drills (throwaway Docker Postgres; not production SLO)
+  d5-hardening-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Build API (restore reconnect + metrics E2E deps)
+        run: |
+          pnpm --filter @ticket/contracts build
+          pnpm --filter @ticket/backend build
+          pnpm --filter @ticket/api build
+      - name: Observability artifact smoke
+        run: ./scripts/d5-observability-smoke.sh
+      - name: Fixture backup drill
+        run: ./scripts/d5-backup-drill.sh
+      - name: Business + key restore drill
+        run: ./scripts/d5-business-restore-drill.sh
+      - name: Admission S4 isolated (nginx edge)
+        run: ./scripts/d5-admission-s4.sh
+      # Full PRD 2×20k + sustained S3 needs local Keycloak + long runtime — not CI.
