@@ -22,3 +22,7 @@ apps/mobile/.uat-artifacts/
 .cursor/mcp.json
 .cursorrules
 infra/observability/secrets/metrics_bearer
+
+# Apple APNs auth keys — never commit
+AuthKey_*.p8
+*.p8
