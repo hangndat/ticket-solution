@@ -3,6 +3,7 @@ import { HeroWordmark } from '../src/branding/hero-wordmark';
 import { SiteNav } from '../src/site-chrome';
 import { demoEventRoutes, findDemoEvent, demoEventHref } from '../src/events';
 import { SurfaceState } from '../src/ui/surface-state';
+import { EventBanner, EventLogo } from '../src/ui/event-media';
 
 export default function Home() {
   return (
@@ -38,7 +39,22 @@ export default function Home() {
                 href={demoEventHref(event)}
                 key={event.id}
                 role="listitem"
+                data-testid={`home-event-${event.id}`}
               >
+                <EventBanner
+                  eventId={event.id}
+                  tenantSlug={event.tenantSlug}
+                  className="event-banner event-banner-card"
+                  testId={`home-banner-${event.id}`}
+                  alt=""
+                />
+                <EventLogo
+                  eventId={event.id}
+                  tenantSlug={event.tenantSlug}
+                  className="event-logo event-logo-card"
+                  testId={`home-logo-${event.id}`}
+                  alt=""
+                />
                 <span className="eyebrow">
                   {event.brand.organizationName} · Demo
                 </span>
