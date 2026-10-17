@@ -46,6 +46,7 @@ import { InventoryController, InventoryService } from './inventory';
 import { ApprovalController, ApprovalService } from './approval';
 import { ReportController, ReportService } from './reporting';
 import { GateController, GateService } from './gate';
+import { EventAdminController, EventAdminService } from './events';
 import {
   NotificationController,
   NotificationService,
@@ -315,6 +316,7 @@ export async function createApp(
     controllers: [
       HealthController,
       MeController,
+      EventAdminController,
       TicketIssueController,
       GateController,
       ConfigPublishController,
@@ -331,6 +333,10 @@ export async function createApp(
           identity.users,
           identity.bootError,
         ),
+      },
+      {
+        provide: EventAdminService,
+        useValue: new EventAdminService(ticketDeps),
       },
       {
         provide: TicketIssueService,

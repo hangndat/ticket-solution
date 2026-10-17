@@ -1,6 +1,7 @@
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import type { Prisma } from './generated/prisma/client';
 import { GateError, GATE_ERROR_CODES } from './gate-error';
+import { assertOpenForGate } from './event-policy';
 import { requireTenantPermission } from './membership';
 
 const PERMISSION_CONFIRM = 'gate.confirm';
@@ -264,6 +265,7 @@ export async function reserveCheckin(
     permission: PERMISSION_CONFIRM,
     eventId: input.eventId,
   });
+  await assertOpenForGate(tx, input.tenantId, input.eventId);
   await assertSessionActive(
     tx,
     input.tenantId,
@@ -375,6 +377,7 @@ export async function confirmCheckin(
     permission: PERMISSION_CONFIRM,
     eventId: input.eventId,
   });
+  await assertOpenForGate(tx, input.tenantId, input.eventId);
   await assertSessionActive(
     tx,
     input.tenantId,

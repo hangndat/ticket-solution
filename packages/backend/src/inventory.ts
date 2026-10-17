@@ -42,6 +42,7 @@ export async function seedEventInventory(
   await tx.$executeRaw`
     UPDATE events
     SET status = 'PUBLISHED',
+        content_status = 'PUBLISHED',
         redemption_opens_at = COALESCE(redemption_opens_at, now() - interval '1 hour'),
         redemption_closes_at = COALESCE(redemption_closes_at, now() + interval '7 days')
     WHERE tenant_id = ${input.tenantId}::uuid
@@ -174,7 +175,7 @@ export async function importRedemptionCodes(
   if (!event) {
     throw new InventoryError(INVENTORY_ERROR_CODES.EVENT_NOT_FOUND, 'Event not found');
   }
-  if (event.status === 'CLOSED') {
+  if (event.status === 'CLOSED' || event.status === 'ARCHIVED') {
     throw new InventoryError(INVENTORY_ERROR_CODES.EVENT_CLOSED, 'Event is closed');
   }
 

@@ -101,6 +101,31 @@ export {
   type ConfigVersionResult,
   type PublishResult,
 } from './config-publish';
+export {
+  EventError,
+  EVENT_ERROR_CODES,
+  type EventErrorCode,
+} from './event-error';
+export {
+  canEnqueueOutboxKind,
+  isWindowOpen,
+  lockEventPolicyForShare,
+  assertOpenForIssuance,
+  assertOpenForGate,
+  SUPPORTED_OUTBOX_KINDS,
+} from './event-policy';
+export {
+  createEvent,
+  getEvent,
+  listEvents,
+  updateEvent,
+  cloneEvent,
+  archiveEvent,
+  cancelEvent,
+  previewEventImpact,
+  deterministicEventId,
+  type EventMutationResult,
+} from './event-admin';
 export { GateError, GATE_ERROR_CODES, type GateErrorCode } from './gate-error';
 export {
   openStaffSession,
