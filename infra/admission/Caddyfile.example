@@ -1,0 +1,22 @@
+# ADR-15 Caddy sketch (Issue #25).
+# Measurable local stack uses nginx compose (compose.admission.yaml) because
+# stock Caddy needs xcaddy + rate_limit plugin for equivalent limits.
+# Gate must bypass waiting room. Replace placeholders before any deploy.
+#
+# When product enables xcaddy rate_limit, prefer Caddyfile (sibling) over this sketch.
+
+# {$PUBLIC_HOST:localhost} {
+#   @sale path /events/* /api/public/*
+#   # rate_limit requires caddy-ratelimit / xcaddy build — not stock image
+#   reverse_proxy 127.0.0.1:3000
+# }
+#
+# api.{$PUBLIC_HOST:localhost} {
+#   @gate path /v1/gate/*
+#   handle @gate {
+#     reverse_proxy 127.0.0.1:3001
+#   }
+#   handle {
+#     reverse_proxy 127.0.0.1:3001
+#   }
+# }

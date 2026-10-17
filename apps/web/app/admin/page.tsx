@@ -29,6 +29,10 @@ export default async function Admin({ searchParams }: Props) {
         <span className="nav-links">
           <Link href="/redeem">Đổi mã</Link>
           <Link href="/gate">Cổng</Link>
+          <Link href="/platform">Platform</Link>
+          <Link href="/invite">Invite</Link>
+          <Link href="/account">Tài khoản</Link>
+          <Link href="/auth">Đăng nhập</Link>
         </span>
       </nav>
       <p className="eyebrow">D4 / QUẢN TRỊ · API THẬT</p>

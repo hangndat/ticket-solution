@@ -43,6 +43,14 @@ export async function logoutAndClearWalletArtifacts(
     errors.push(asError(error, 'APNs registration detach failed'));
   }
 
+  // Drop guest claim login-return intent + answers isolation (C-I).
+  try {
+    const { clearGuestClaimIntent } = await import('../redeem/claim-intent.ts');
+    clearGuestClaimIntent();
+  } catch (error) {
+    errors.push(asError(error, 'Guest claim intent clear failed'));
+  }
+
   try {
     await session.logout();
   } catch (error) {

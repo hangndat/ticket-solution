@@ -11,9 +11,7 @@ export async function ensureCsrfCookie(): Promise<string> {
   const jar = await cookies();
   const existing = jar.get(CSRF_COOKIE)?.value?.trim() ?? '';
   if (existing.length >= 32) return existing;
-  const token =
-    crypto.randomUUID().replace(/-/g, '') +
-    crypto.randomUUID().replace(/-/g, '');
+  const token = crypto.randomUUID().replace(/-/g, '') + crypto.randomUUID().replace(/-/g, '');
   jar.set(CSRF_COOKIE, token, {
     ...sessionCookieOptions(60 * 60 * 8),
     httpOnly: false, // readable by same-origin JS for header echo
@@ -27,7 +25,9 @@ export async function ensureCsrfCookie(): Promise<string> {
  * Full mutating guard: Origin/Sec-Fetch + CSRF double-submit + JSON Content-Type.
  * Host allowlist via WEB_PUBLIC_ORIGIN (canonical), never trust X-Forwarded-Host alone.
  */
-export function assertMutatingBrowser(request: Request): Response | null {
+export function assertMutatingBrowser(
+  request: Request,
+): Response | null {
   const originErr = assertSameOrigin(request);
   if (originErr) return originErr;
 
@@ -79,6 +79,7 @@ export function assertMutatingBrowser(request: Request): Response | null {
     );
   }
 
+  // Cookie may be read async by caller; sync path uses header + Cookie header.
   const headerToken = request.headers.get(CSRF_HEADER)?.trim() ?? '';
   const cookieHeader = request.headers.get('cookie') ?? '';
   const match = cookieHeader.match(
@@ -100,6 +101,7 @@ export async function assertMutatingBrowserAsync(
 ): Promise<Response | null> {
   const sync = assertMutatingBrowser(request);
   if (sync) return sync;
+  // Ensure cookie exists for subsequent UI calls
   await ensureCsrfCookie();
   return null;
 }

@@ -1,6 +1,10 @@
 import type { PublicEvent } from '@ticket/contracts';
 
-/** Explicit W0 demo fixtures, never a fallback for a failing production API. */
+/**
+ * Explicit W0 demo fixtures only.
+ * Never a fallback for a failing/missing published API (M04).
+ * Deep links under `/events/fixture/*` and `*://events/demo-*` stay here.
+ */
 const events: readonly PublicEvent[] = [
   {
     id: 'demo-fun-fest',

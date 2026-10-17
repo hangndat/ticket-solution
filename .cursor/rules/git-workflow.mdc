@@ -1,5 +1,5 @@
 ---
-description: GitHub Flow for commits — feature branch, conventional commits, PR, no direct main
+description: GitHub Flow for commits — feature branch, conventional commits, PR, exact-SHA DoD evidence
 alwaysApply: true
 ---
 
@@ -34,10 +34,20 @@ Use **GitHub Flow**. Integration branch is `main`. Do not land feature work as d
 ## Pull request & merge
 
 1. Push the feature branch (`-u` when new) when the task needs remote CI / review — not “publish production”, but required for DoD when CI must run on GitHub.
-2. Open PR with `gh pr create` into `main`. Title/body user-facing bits in **Vietnamese**; keep Issue refs, commands, SHAs intact. Link `Fixes #N` / `Closes #N` when that Issue is the DoD unit.
-3. After PR is up: Project Status → `Chờ duyệt`; spawn Cursor DoD reviewer (see `github-project-tracking.mdc` + `orca-agent-routing.mdc`).
+2. Open PR with `gh pr create` into `main`. Title/body user-facing bits in **Vietnamese**; keep Issue refs, commands, SHAs intact. Link `Fixes #N` / `Closes #N` when that Issue is the DoD unit. Dùng template `.github/PULL_REQUEST_TEMPLATE.md` (ghi SHA tip branch).
+3. After PR is up: Project Status → `Chờ duyệt`; spawn Cursor DoD reviewer (see `github-project-tracking.mdc` + `orca-agent-routing.mdc`). Spec reviewer phải kèm **exact SHA** đang duyệt.
 4. **Coordinator** merges after review pass + CI green (incl. database-isolation when relevant). Workers do not self-merge unless the task explicitly says so.
-5. After merge: Project → `Hoàn thành` when full DoD is met; delete remote feature branch if appropriate; report merge commit SHA.
+5. After merge: Project → `Hoàn thành` when full DoD is met; delete remote feature branch if appropriate; report **merge commit SHA** (exact).
+
+### Evidence trên PR / Issue
+
+- Comment nghiệm thu hoặc `docs/reviews/*` phải cite **exact SHA** đã review, reviewer/session, scope, checks, findings/limitations (xem `github-project-tracking.mdc`).
+- Push commit hành vi mới sau DoD → **revalidation** trên SHA mới; không “PASS kế thừa”.
+- **Thiếu GitHub Review / Approve trên UI không chứng minh thiếu Orca Cursor DoD.** Ghi rõ nếu DoD chạy ngoài GitHub (Orca worker) và link/artifact + SHA.
+
+### WIP trước khi mở PR feature mới
+
+Nếu hàng đợi duyệt đầy (ngưỡng trong `github-project-tracking.mdc`): ưu tiên đóng / sửa / merge PR đang mở cùng slice trước khi mở thêm PR feature. PR **fix review** và PR **docs/process** nhỏ vẫn được ưu tiên.
 
 ## Anti-patterns
 
@@ -46,5 +56,7 @@ Use **GitHub Flow**. Integration branch is `main`. Do not land feature work as d
 ❌ One PR spanning apps/api + apps/web + apps/mobile
 ❌ Force-push main / destructive reset to “clean” conflicts
 ❌ Mark Hoàn thành with only local commits and no PR/CI when DoD requires integration
-✅ branch → commit(s) → push → PR → Cursor review → CI → coordinator merge
+❌ DoD “PASS” without exact commit SHA / without independent Cursor reviewer
+❌ Treat missing GitHub approve as “no review happened” when Orca DoD artifact exists
+✅ branch → commit(s) → push → PR → Cursor review (exact SHA) → CI → coordinator merge
 ```
