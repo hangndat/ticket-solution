@@ -203,7 +203,19 @@ jobs:
       - uses: ./.github/actions/setup-pnpm
         with:
           docker-images: postgres:18.1-alpine axllent/mailpit:v1.27.10
-      - run: pnpm exec turbo run build --filter=@ticket/backend...
+      - name: Build backend + wait Docker prefetch
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm exec turbo run build --filter=@ticket/backend... &
+          build_pid=$!
+          for img in postgres:18.1-alpine axllent/mailpit:v1.27.10; do
+            for _ in $(seq 1 120); do
+              docker image inspect "$img" >/dev/null 2>&1 && break
+              sleep 1
+            done
+          done
+          wait "$build_pid"
       - name: DB tests (${{ matrix.shard }})
         working-directory: packages/backend
         run: node --test --test-concurrency=4 --test-force-exit ${{ matrix.files }}
@@ -220,7 +232,19 @@ jobs:
       - uses: ./.github/actions/setup-pnpm
         with:
           docker-images: postgres:18.1-alpine
-      - run: pnpm exec turbo run build --filter=@ticket/api...
+      - name: Build API + wait Docker prefetch
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm exec turbo run build --filter=@ticket/api... &
+          build_pid=$!
+          for img in postgres:18.1-alpine; do
+            for _ in $(seq 1 120); do
+              docker image inspect "$img" >/dev/null 2>&1 && break
+              sleep 1
+            done
+          done
+          wait "$build_pid"
       - run: ./scripts/d5-observability-smoke.sh
 
   d5-drills:
@@ -232,7 +256,19 @@ jobs:
       - uses: ./.github/actions/setup-pnpm
         with:
           docker-images: postgres:18.1-alpine
-      - run: pnpm exec turbo run build --filter=@ticket/api...
+      - name: Build API + wait Docker prefetch
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm exec turbo run build --filter=@ticket/api... &
+          build_pid=$!
+          for img in postgres:18.1-alpine; do
+            for _ in $(seq 1 120); do
+              docker image inspect "$img" >/dev/null 2>&1 && break
+              sleep 1
+            done
+          done
+          wait "$build_pid"
       - name: Backup + business restore + admission (parallel)
         shell: bash
         run: |
@@ -258,7 +294,19 @@ jobs:
       - uses: ./.github/actions/setup-pnpm
         with:
           docker-images: postgres:18.1-alpine redis:7-alpine
-      - run: pnpm exec turbo run build --filter=@ticket/api...
+      - name: Build API + wait Docker prefetch
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm exec turbo run build --filter=@ticket/api... &
+          build_pid=$!
+          for img in postgres:18.1-alpine redis:7-alpine; do
+            for _ in $(seq 1 120); do
+              docker image inspect "$img" >/dev/null 2>&1 && break
+              sleep 1
+            done
+          done
+          wait "$build_pid"
       - run: pnpm test:rint-host
       - run: ./scripts/rint-stack-smoke.sh
       - run: ./scripts/rint-outbox-recovery.sh
