@@ -89,6 +89,7 @@ jobs:
             hardening:
               - 'scripts/d5-**'
               - 'scripts/rint-**'
+              - 'scripts/platform-**'
               - 'scripts/lib/**'
               - 'infra/**'
               - 'docker-compose*.yml'
@@ -317,6 +318,10 @@ jobs:
       - run: pnpm test:rint-host
       - run: ./scripts/rint-stack-smoke.sh
       - run: ./scripts/rint-outbox-recovery.sh
+      - name: Platform security-config + realm posture
+        run: ./scripts/platform-security-config-smoke.sh
+      # Full PRD 2×20k + sustained S3 needs local Keycloak + long runtime — not CI.
+      # Live Keycloak assurance: ./scripts/platform-keycloak-assurance-smoke.sh (local).
 
   # Merge turbo shards from scope jobs into one Actions cache (content-addressed).
   turbo-persist:
