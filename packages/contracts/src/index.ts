@@ -161,6 +161,7 @@ export {
   NOTIFICATION_REMINDER_CREATE_COMMAND,
   NOTIFICATION_REMINDER_CANCEL_COMMAND,
   NOTIFICATION_RETRY_COMMAND,
+  OFFLINE_SYNC_COMMAND,
   type OperationCommand,
 } from './commands';
 
@@ -279,6 +280,26 @@ export {
   type NotificationRetryBody,
   type NotificationErrorCode,
 } from './notifications';
+
+export {
+  OFFLINE_SYNC_MAX_BATCH,
+  OFFLINE_SYNC_MAX_CLOCK_SKEW_SECONDS,
+  OFFLINE_SYNC_PAYLOAD_VERSION,
+  OFFLINE_SYNC_ENDPOINTS,
+  OFFLINE_SYNC_EVENT_TYPES,
+  OFFLINE_SYNC_ERROR_CODES,
+  compareOfflineReplayOrder,
+  offlineClockSkewSeconds,
+  isWithinOfflineClockSkew,
+  type OfflineSyncEventType,
+  type OfflineSyncErrorCode,
+  type OfflineSyncEvent,
+  type OfflineSyncRequestBody,
+  type OfflineSyncItemStatus,
+  type OfflineSyncItemResult,
+  type OfflineSyncResponse,
+  type OfflineSyncBatchError,
+} from './offline-sync';
 
 /* —— CS / export / event-admin / device-token (PR54) —— */
 /* NotificationProviderStatus: from C-N (PR54 values + UNKNOWN). */
