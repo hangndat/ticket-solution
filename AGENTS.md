@@ -1,6 +1,6 @@
 # Agent working agreement
 
-Read docs/PRD.md, docs/TECHNICAL-DESIGN.md, docs/DECISION-LOG.md and your task spec. Work only in assigned scope. **Trạng thái đợt động:** [GitHub Project #3](https://github.com/users/hangndat/projects/3) (không đoán từ docs cũ). Scope/gate/evidence: [docs/ROADMAP.md](docs/ROADMAP.md). Tại lần sync docs 2026-10-17: D0–D4 và **D6 UX/UI (#81)** parent **Hoàn thành**/closed trên board; trọng tâm còn lại **D5 Hardening (#6)** (**Đang làm** — Gate camera staff + push DELIVERED + MinIO/APNs). Phân biệt code complete / acceptance complete / pilot ready — chưa tuyên bố pilot production hay store submission.
+Read docs/PRD.md, docs/TECHNICAL-DESIGN.md, docs/DECISION-LOG.md and your task spec. Work only in assigned scope. **Trạng thái đợt động:** [GitHub Project #3](https://github.com/users/hangndat/projects/3) (không đoán từ docs cũ). Scope/gate/evidence: [docs/ROADMAP.md](docs/ROADMAP.md). Phân biệt code complete / acceptance complete / pilot ready — chưa tuyên bố pilot production hay store submission.
 
 ## Planning and tracking language
 
@@ -26,7 +26,7 @@ All user-facing roadmap, GitHub Projects, milestones, Issue titles/bodies, label
 - Do not silently add mock authentication to production paths. Mark fixture/demo data explicitly.
 - Database business state belongs in PostgreSQL. Redis is not the source of truth for quota or check-in.
 - Tenant context must be transaction-local and queries parameterized. Runtime role must not own tables or bypass RLS.
-- Do not create cloud resources, publish production, submit stores or push remote branches unless task explicitly authorizes it.
+- Do not create cloud resources, publish production or submit stores unless the task explicitly authorizes it. Commit/push/PR/merge permissions follow `.cursor/rules/git-workflow.mdc`; a general request to edit or review files does not authorize remote integration.
 - Do not control another worker's simulator or database. Use task-specific ports/project names.
 - **UAT is headless (web + iOS):** never steal the user's macOS mouse. Web → `scripts/web-uat.sh` (Playwright headless) or HTTP scripts / Orca embedded browser; iOS → `scripts/sim-uat.sh` (AXe HID + `simctl`). Never `cliclick`, AppleScript clicks, or `ORCA computer click` on Chrome/Safari/Simulator. See `.cursor/rules/uat-headless.mdc`.
 
@@ -36,16 +36,17 @@ All user-facing roadmap, GitHub Projects, milestones, Issue titles/bodies, label
 - Generated code is regenerated, not edited manually. API contract changes require coordinator agreement.
 - Report commit SHA, changed files, exact checks and limitations. A successful build does not prove security/concurrency behavior.
 - Use Orca lifecycle commands from your live dispatch preamble. Check follow-ups at checkpoints and before worker_done.
-- No delegation without task authorization.
-- **Orca agent routing (TEMPORARY Cursor-only):** Every task kind — plan, design, coding, DoD, security — uses `--agent cursor`. Codex is temporarily disabled. See `.cursor/rules/orca-agent-routing.mdc`.
-- **Epic orchestrator:** Each Epic (parent Issue đợt/module) spawns **one** Cursor orchestrator that decomposes Epic → Story → Task and dispatches ownership workers; does not code the whole Epic serially. `worker_done` ≠ Hoàn thành. See `.cursor/rules/orca-epic-orchestrator.mdc`.
-- **Orca parallel-first (coding):** If a coding task spans two or more independent ownership slices (backend / web / iOS / coordinator), spawn those Orca workers (`--agent cursor`) in one wave and wait together — do not serialize independent implementation. Use Task dependencies only for real ordering (e.g. shared contract before consumer apps). See `.cursor/rules/orca-parallel-workers.mdc`.
-- **DoD / acceptance review:** Spawn one `--agent cursor` reviewer (≠ implementer); do not wait for the user to approve. Exact-SHA evidence in `docs/reviews/*` (or Issue/PR comment).
+- Delegation is authorized within an assigned implementation Epic or multi-ownership task, including independent DoD/security reviewers. Do not delegate Q&A/read-only work or expand beyond the assigned scope. A local docs/rules edit does not require worker dispatch unless integration/DoD is requested.
+- **Orca agent routing:** `.cursor/rules/orca-agent-routing.mdc` là nguồn chính sách duy nhất: tạm thời mọi Task dùng Cursor, gồm plan/design và DoD/security review. Chỉ đổi agent khi user chỉ định rõ cho Task đó; quota Codex không phải gate khi spawn Cursor.
+- **Epic planner:** Coordinator gốc (depth 0) trực tiếp spawn một planner mỗi Epic và các ownership workers/reviewers; quản lý dispatch, lifecycle và integration. Planner phân Epic → Story → Task, theo dõi phụ thuộc và chuẩn bị nghiệm thu; không spawn worker con hoặc tự code toàn Epic. Reuse planner đang active. `worker_done` ≠ Hoàn thành. Xem `.cursor/rules/orca-epic-orchestrator.mdc`.
+- **Orca parallel-first (coding):** If a coding task spans two or more independent ownership slices (backend / web / iOS / coordinator), spawn those Orca workers (agent selected by the routing rule) in one wave and wait together — do not serialize independent implementation. Use Task dependencies only for real ordering (e.g. shared contract before consumer apps). See `.cursor/rules/orca-parallel-workers.mdc`.
+- **DoD / acceptance review:** Spawn one reviewer selected by the routing rule (≠ implementer); do not wait for the user to approve. Exact-SHA evidence in `docs/reviews/*` (or Issue/PR comment).
 - **Milestone gates:** Closing a milestone/Epic requires (a) headless UAT evidence, (b) local iOS build evidence when mobile is in scope, (c) deploy prod evidence only when the task authorizes it, (d) review artifacts + exact SHA. See `.cursor/rules/github-project-tracking.mdc` and `.cursor/rules/uat-headless.mdc`.
 - **GitHub Project sync:** Keep [Project #3](https://github.com/users/hangndat/projects/3) Status in sync **per Task** (Đang làm → Chờ duyệt → Hoàn thành / Bị chặn) without waiting for user board approval. Hierarchy Epic → Story → Task. See `.cursor/rules/github-project-tracking.mdc` and `docs/ROADMAP.md` §2/§8.
-- **Orca idle fill:** Any free worker whose next Task is not blocked by other workers/deps must be given the next ready Project work immediately — do not wait for the full wave or for the user to pick the next Issue. See `.cursor/rules/orca-idle-worker-fill.mdc`.
+- **Orca idle fill:** Within the authorized Epic/Run and available worker/WIP limits, any free worker whose next Task is not blocked by other workers/deps must be given the next ready Project work immediately — do not wait for the full wave or for the user to pick the next Issue. See `.cursor/rules/orca-idle-worker-fill.mdc`.
 - **Orca coordinator mailbox:** Coordinators always `check` / `reply` / `ack` / `worker-release` themselves — do not wait for “You have N messages” or a user nudge. See `.cursor/rules/orca-coordinator-mailbox.mdc`.
-- **Git workflow:** Feature branch off integration `main` → conventional commits → push → PR → Cursor DoD review → CI → coordinator merge. No feature commits directly on `main`. See `.cursor/rules/git-workflow.mdc`.
+- **Agent/worker cleanup:** Coordinator must promptly release every finished or superseded worker after preserving handoff/evidence; close its task-owned session/terminal and stop task-owned background processes through supported lifecycle commands. Reuse only for an immediately assigned authorized task; otherwise release, do not retain idle workers indefinitely. Audit cleanup before ending the Run/turn. See `.cursor/rules/orca-coordinator-mailbox.mdc` § Cleanup.
+- **Git workflow:** Feature branch off integration `main` → conventional commits → push → PR → independent DoD review → CI → coordinator merge. No feature commits directly on `main`. See `.cursor/rules/git-workflow.mdc`.
 
 
 <!-- code-review-graph MCP tools -->
@@ -54,9 +55,11 @@ All user-facing roadmap, GitHub Projects, milestones, Issue titles/bodies, label
 Namespace: `user-code-review-graph-ticket` (ticket-solution). Other graphs: BE=`user-code-review-graph`, FE=`user-code-review-graph-fe`, SGAMES=`user-code-review-graph-sgames`.
 Graph auto-updates via watch/hooks. Narrow with the graph, then verify in source.
 
-### Recommended tool flow (force for this repo)
+### Preferred tool flow (when tools are available)
 
-1. **Symbols first** — query PascalCase names (`TicketService`, `CheckInController`), not URL slugs.
+If graph/lean-ctx tools are unavailable, error, or do not index the relevant source, use `rg` and direct source reads; report the limitation. Docs/rules-only work can read files directly. Do not block work solely on missing MCP tools.
+
+1. **Symbols first** — query actual class/function/hook names (`TicketService`, `CheckInController`, etc.), not URL slugs.
 2. Call MCP namespace `user-code-review-graph-ticket`: `semantic_search_nodes_tool(query=Symbol)` → if ambiguous, retry with `qualified_name`.
 3. Then `query_graph_tool` (`callees_of` / `callers_of` / `imports_of` / `tests_for`) or `get_impact_radius_tool` / `get_affected_flows_tool`.
 4. **lean-ctx** only for routes/docs/literals CRG does not index.

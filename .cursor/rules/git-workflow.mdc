@@ -7,6 +7,12 @@ alwaysApply: true
 
 Use **GitHub Flow**. Integration branch is `main`. Do not land feature work as drive-by commits on `main`.
 
+## Phạm vi ủy quyền
+
+- Task yêu cầu triển khai đến PR/CI hoặc giao Epic end-to-end mặc định cho phép commit, push feature branch và mở PR trong scope đó. Giao Epic end-to-end hoặc yêu cầu integration/merge cũng cho phép coordinator merge sau đủ DoD + CI.
+- Yêu cầu chỉ sửa file local, lập kế hoạch hoặc review không mặc định cho phép commit/push/PR/merge. Tôn trọng mọi giới hạn cụ thể trong task; không hỏi lại quyền đã có.
+- Tạo cloud resources, deploy production và submit store luôn cần ủy quyền riêng. Status `Sẵn sàng` không tự cấp quyền thực thi task ngoài Epic/Run đã giao.
+
 ## Branch
 
 1. Start from the coordinator’s **base / integration commit** (usually latest `main`), not an unrelated dirty tree.
@@ -17,7 +23,7 @@ Use **GitHub Flow**. Integration branch is `main`. Do not land feature work as d
 
 ## Commit
 
-1. Commit **only when asked** by the user/coordinator/task spec (or when the task DoD requires a commit SHA for handoff). Otherwise leave a clean report of uncommitted work.
+1. Commit only within the authorization above, when asked by the user/coordinator/task spec, or when the authorized task DoD requires a commit SHA for handoff. Otherwise leave a clean report of uncommitted work.
 2. Conventional Commits, Vietnamese or English OK for subject; prefer short why-focused subjects matching repo style:
 
    ```text
@@ -33,17 +39,17 @@ Use **GitHub Flow**. Integration branch is `main`. Do not land feature work as d
 
 ## Pull request & merge
 
-1. Push the feature branch (`-u` when new) when the task needs remote CI / review — not “publish production”, but required for DoD when CI must run on GitHub.
+1. Push the feature branch (`-u` when new) only within the authorization above, when the task needs remote CI / review — not “publish production”, but required for DoD when CI must run on GitHub.
 2. Open PR with `gh pr create` into `main`. Title/body user-facing bits in **Vietnamese**; keep Issue refs, commands, SHAs intact. Link `Fixes #N` / `Closes #N` when that Issue is the DoD unit. Dùng template `.github/PULL_REQUEST_TEMPLATE.md` (ghi SHA tip branch).
-3. After PR is up: Project Status → `Chờ duyệt`; spawn Cursor DoD reviewer (see `github-project-tracking.mdc` + `orca-agent-routing.mdc`). Spec reviewer phải kèm **exact SHA** đang duyệt.
-4. **Coordinator** merges after review pass + CI green (incl. database-isolation when relevant). Workers do not self-merge unless the task explicitly says so.
+3. After PR is up: Project Status → `Chờ duyệt`; coordinator gốc spawn DoD reviewer theo `orca-agent-routing.mdc` (see `github-project-tracking.mdc` + `orca-agent-routing.mdc`). Spec reviewer phải kèm **exact SHA** đang duyệt.
+4. **Coordinator**, when authorized for integration, merges after review pass + CI green (incl. database-isolation when relevant). Workers do not self-merge unless the task explicitly says so.
 5. After merge: Project → `Hoàn thành` when full DoD is met; delete remote feature branch if appropriate; report **merge commit SHA** (exact).
 
 ### Evidence trên PR / Issue
 
 - Comment nghiệm thu hoặc `docs/reviews/*` phải cite **exact SHA** đã review, reviewer/session, scope, checks, findings/limitations (xem `github-project-tracking.mdc`).
 - Push commit hành vi mới sau DoD → **revalidation** trên SHA mới; không “PASS kế thừa”.
-- **Thiếu GitHub Review / Approve trên UI không chứng minh thiếu Orca Cursor DoD.** Ghi rõ nếu DoD chạy ngoài GitHub (Orca worker) và link/artifact + SHA.
+- **Thiếu GitHub Review / Approve trên UI không chứng minh thiếu Orca DoD.** Ghi rõ nếu DoD chạy ngoài GitHub (Orca worker) và link/artifact + SHA.
 
 ### WIP trước khi mở PR feature mới
 
@@ -56,7 +62,7 @@ Nếu hàng đợi duyệt đầy (ngưỡng trong `github-project-tracking.mdc`
 ❌ One PR spanning apps/api + apps/web + apps/mobile
 ❌ Force-push main / destructive reset to “clean” conflicts
 ❌ Mark Hoàn thành with only local commits and no PR/CI when DoD requires integration
-❌ DoD “PASS” without exact commit SHA / without independent Cursor reviewer
+❌ DoD “PASS” without exact commit SHA / without independent reviewer theo routing rule
 ❌ Treat missing GitHub approve as “no review happened” when Orca DoD artifact exists
-✅ branch → commit(s) → push → PR → Cursor review (exact SHA) → CI → coordinator merge
+✅ branch → commit(s) → push → PR → independent review (exact SHA) → CI → coordinator merge
 ```
