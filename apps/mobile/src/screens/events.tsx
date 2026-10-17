@@ -2,15 +2,16 @@ import { useCallback, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, Text, View } from 'react-native';
 import { Link } from 'expo-router';
 import { demoTenants, eventDate, listDemoEvents } from '@/data/demo-events';
-import { Notice } from '@/components/page';
+import { BrandWordmark, Notice } from '@/components/page';
 import { fetchPublishedEventList } from '@/published/published-event-api';
 import type { PublishedEventSummary } from '@/published/types';
 import { getApiBaseUrl } from '@/identity/config';
 import { colors } from '@/theme/colors';
+import { typography } from '@/theme/typography';
 
 function formatListDate(startsAt: string, timezone: string): string {
   try {
-    return new Intl.DateTimeFormat('en', {
+    return new Intl.DateTimeFormat('vi', {
       dateStyle: 'long',
       timeStyle: 'short',
       timeZone: timezone,
@@ -51,8 +52,8 @@ export function EventsScreen() {
     setPublishedPhase('error');
     setPublishedError(
       result.status === 'misconfigured'
-        ? 'API base URL missing'
-        : 'Published list unreachable or invalid — fixtures are not used as fallback.',
+        ? 'Thiếu URL API'
+        : 'Không tải được danh sách đã xuất bản — không dùng demo thay thế.',
     );
   }, [publishedTenant]);
 
@@ -67,26 +68,26 @@ export function EventsScreen() {
       keyExtractor={(item) => `demo:${item.tenantSlug}:${item.id}`}
       ListHeaderComponent={
         <View style={{ gap: 16 }}>
-          <Notice title="Find your next moment">
-            Demo fixtures below are explicit sample data — not shared published
-            M04 content. Live registration uses Redeem; ticket deep links require
-            ticket ownership via GET /v1/me/tickets.
-          </Notice>
+          <BrandWordmark />
+          <Text style={{ color: colors.label, ...typography.title }}>
+            Tìm sự kiện tiếp theo
+          </Text>
+          <Text style={{ color: colors.secondary, ...typography.body }}>
+            Đổi mã để nhận vé. Mục demo bên dưới chỉ là dữ liệu mẫu.
+          </Text>
           <Link href="/redeem" style={{ color: colors.accent, fontSize: 17 }}>
-            Redeem a code
+            Đổi mã
           </Link>
 
-          <Notice title="Published events (server)">
-            GET /v1/public/tenants/{'{slug}'}/events — published-only. Fail-closed
-            when the API is missing; never substitutes the demo catalog. Tap
-            reload to fetch (no silent fallback).
-          </Notice>
-          <Text selectable style={{ color: colors.secondary }}>
-            Published tenant slug: {publishedTenant}
+          <Text style={{ color: colors.secondary, fontWeight: '600', marginTop: 4 }}>
+            Sự kiện đã xuất bản
+          </Text>
+          <Text selectable style={{ color: colors.secondary, ...typography.caption }}>
+            Tenant: {publishedTenant}
           </Text>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Reload published events"
+            accessibilityLabel="Tải danh sách sự kiện đã xuất bản"
             onPress={() => void loadPublished()}
             style={({ pressed }) => ({
               paddingVertical: 12,
@@ -98,35 +99,36 @@ export function EventsScreen() {
           >
             <Text
               style={{
-                color: '#fff',
+                color: colors.onAccent,
                 fontSize: 16,
                 fontWeight: '600',
                 textAlign: 'center',
               }}
             >
               {publishedPhase === 'loading'
-                ? 'Loading published…'
-                : 'Load published list'}
+                ? 'Đang tải…'
+                : 'Tải danh sách đã xuất bản'}
             </Text>
           </Pressable>
           {publishedPhase === 'loading' ? <ActivityIndicator /> : null}
           {publishedPhase === 'misconfigured' ? (
-            <Notice title="Published API not configured">
-              Set EXPO_PUBLIC_API_BASE_URL. Demo fixtures remain labeled demo
-              only.
+            <Notice title="Chưa cấu hình API">
+              Đặt EXPO_PUBLIC_API_BASE_URL. Demo vẫn chỉ là mẫu.
             </Notice>
           ) : null}
           {publishedPhase === 'idle' ? (
-            <Notice title="Published list idle">
-              Tap “Load published list” to call the public API.
-            </Notice>
+            <Text style={{ color: colors.secondary, ...typography.caption }}>
+              Chạm nút trên để gọi API công khai.
+            </Text>
           ) : null}
           {publishedPhase === 'error' && publishedError ? (
-            <Notice title="Published list error">{publishedError}</Notice>
+            <Notice title="Lỗi danh sách" tone="deny">
+              {publishedError}
+            </Notice>
           ) : null}
           {publishedPhase === 'ready' && published.length === 0 ? (
-            <Notice title="No published events">
-              API returned an empty published list for this tenant.
+            <Notice title="Chưa có sự kiện đã xuất bản">
+              API trả về danh sách trống cho tenant này.
             </Notice>
           ) : null}
           {published.map((item) => (
@@ -142,7 +144,7 @@ export function EventsScreen() {
               }}
             >
               <Text selectable style={{ color: colors.secondary, fontSize: 13 }}>
-                Published · v{item.publishedConfigVersion}
+                Đã xuất bản · v{item.publishedConfigVersion}
               </Text>
               <Text selectable style={{ color: colors.secondary }}>
                 {item.brand.organizationName}
@@ -164,7 +166,7 @@ export function EventsScreen() {
               <Text selectable style={{ color: colors.label }}>
                 {item.startsAt
                   ? formatListDate(item.startsAt, item.timezone)
-                  : 'Start time unset'}
+                  : 'Chưa có giờ bắt đầu'}
               </Text>
             </View>
           ))}
@@ -173,10 +175,11 @@ export function EventsScreen() {
             selectable
             style={{ color: colors.secondary, marginTop: 8, fontWeight: '600' }}
           >
-            Demo fixtures · Organization: {tenant}
+            Demo · Tổ chức: {tenant}
           </Text>
           <Pressable
             accessibilityRole="button"
+            accessibilityLabel="Đổi tổ chức demo"
             onPress={() =>
               setTenant(
                 tenant === demoTenants[0] ? demoTenants[1] : demoTenants[0],
@@ -199,11 +202,12 @@ export function EventsScreen() {
                 textAlign: 'center',
               }}
             >
-              Switch demo organization
+              Đổi tổ chức demo
             </Text>
           </Pressable>
           <Pressable
             accessibilityRole="button"
+            accessibilityLabel="Đổi tenant slug để thử API đã xuất bản"
             onPress={() =>
               setPublishedTenant((t) =>
                 t === 'demo-fun' ? 'demo-studio' : 'demo-fun',
@@ -215,14 +219,14 @@ export function EventsScreen() {
             })}
           >
             <Text style={{ color: colors.accent, textAlign: 'center' }}>
-              Toggle published tenant slug probe
+              Đổi tenant slug (thử API)
             </Text>
           </Pressable>
         </View>
       }
       ListEmptyComponent={
-        <Notice title="No demo events">
-          This organization has no demo events.
+        <Notice title="Không có sự kiện demo">
+          Tổ chức này chưa có sự kiện mẫu.
         </Notice>
       }
       renderItem={({ item }) => (
@@ -238,7 +242,7 @@ export function EventsScreen() {
           }}
         >
           <Text selectable style={{ color: colors.secondary, fontSize: 13 }}>
-            Demo fixture · not published
+            Demo · chưa xuất bản
           </Text>
           <Text selectable style={{ color: colors.secondary }}>
             {item.brand.organizationName}

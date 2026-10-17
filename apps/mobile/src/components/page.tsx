@@ -1,6 +1,8 @@
 import type { PropsWithChildren } from 'react';
 import { ScrollView, Text, View } from 'react-native';
-import { colors } from '@/theme/colors';
+import { brand, colors } from '@/theme/colors';
+import { typography } from '@/theme/typography';
+
 export function Page({ children }: PropsWithChildren) {
   return (
     <ScrollView
@@ -12,10 +14,41 @@ export function Page({ children }: PropsWithChildren) {
     </ScrollView>
   );
 }
+
+/** Platform wordmark — brand-first chrome (`vemoki↗`). */
+export function BrandWordmark({ compact = false }: { compact?: boolean } = {}) {
+  return (
+    <Text
+      accessibilityRole="header"
+      accessibilityLabel={`${brand.wordmark}${brand.signalMark}`}
+      style={{
+        ...(compact ? typography.callout : typography.wordmark),
+        color: brand.ink,
+      }}
+    >
+      {brand.wordmark}
+      <Text style={{ color: brand.signal }}>{brand.signalMark}</Text>
+    </Text>
+  );
+}
+
 export function Notice({
   title,
   children,
-}: PropsWithChildren<{ title: string }>) {
+  tone = 'default',
+}: PropsWithChildren<{
+  title: string;
+  tone?: 'default' | 'admit' | 'deny' | 'unknown';
+}>) {
+  const accent =
+    tone === 'admit'
+      ? colors.admit
+      : tone === 'deny'
+        ? colors.deny
+        : tone === 'unknown'
+          ? colors.unknown
+          : undefined;
+
   return (
     <View
       style={{
@@ -24,6 +57,8 @@ export function Notice({
         backgroundColor: colors.card,
         borderRadius: 16,
         borderCurve: 'continuous',
+        borderLeftWidth: accent ? 4 : 0,
+        borderLeftColor: accent,
       }}
     >
       <Text
@@ -32,12 +67,14 @@ export function Notice({
       >
         {title}
       </Text>
-      <Text
-        selectable
-        style={{ color: colors.secondary, fontSize: 17, lineHeight: 25 }}
-      >
-        {children}
-      </Text>
+      {children != null && children !== '' ? (
+        <Text
+          selectable
+          style={{ color: colors.secondary, fontSize: 17, lineHeight: 25 }}
+        >
+          {children}
+        </Text>
+      ) : null}
     </View>
   );
 }

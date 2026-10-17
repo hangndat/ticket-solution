@@ -1,7 +1,7 @@
-export const REDEEM_ACTION_LABEL = 'Redeem code';
-export const REDEEM_RECONCILE_LABEL = 'Reconcile the same redeem attempt';
-export const GATE_CHECK_IN_LABEL = 'Check in ticket';
-export const GATE_RECONCILE_LABEL = 'Reconcile unknown result';
+export const REDEEM_ACTION_LABEL = 'Đổi mã';
+export const REDEEM_RECONCILE_LABEL = 'Đối soát cùng lần đổi mã';
+export const GATE_CHECK_IN_LABEL = 'Check-in vé';
+export const GATE_RECONCILE_LABEL = 'Đối soát kết quả chưa rõ';
 
 export type AnnouncementRole = 'button' | 'alert' | 'summary' | 'list' | 'text';
 
@@ -30,7 +30,7 @@ export function redeemDecisionAnnouncement(input: {
   if (input.kind === 'unknown' || input.kind === 'pending') {
     return {
       accessibilityRole: 'alert',
-      accessibilityLabel: `${input.title}. ${input.detail} Not an issued ticket.`,
+      accessibilityLabel: `${input.title}. ${input.detail} Đây không phải vé đã phát hành.`,
     };
   }
   return {
@@ -42,7 +42,7 @@ export function redeemDecisionAnnouncement(input: {
 export function redeemStatusRefreshAnnouncement(): Announcement {
   return {
     accessibilityRole: 'button',
-    accessibilityLabel: 'Refresh redemption status',
+    accessibilityLabel: 'Làm mới trạng thái đổi mã',
   };
 }
 
@@ -50,8 +50,8 @@ export function termsConsentAnnouncement(accepted: boolean): Announcement {
   return {
     accessibilityRole: 'button',
     accessibilityLabel: accepted
-      ? 'Terms accepted. Double tap to withdraw consent.'
-      : 'Accept published terms. Required before redeem.',
+      ? 'Đã chấp nhận điều khoản. Chạm đúp để rút đồng ý.'
+      : 'Chấp nhận điều khoản đã công bố. Bắt buộc trước khi đổi mã.',
   };
 }
 
@@ -74,7 +74,7 @@ export function gateOutcomeAnnouncement(input: {
   if (input.phase === 'unknown') {
     return {
       accessibilityRole: 'alert',
-      accessibilityLabel: `${input.title}. ${input.message} Do not admit.`,
+      accessibilityLabel: `${input.title}. ${input.message} Không cho vào.`,
     };
   }
   return {
@@ -93,6 +93,6 @@ export function supervisorUnknownItemAnnouncement(input: {
 }): Announcement {
   return {
     accessibilityRole: 'text',
-    accessibilityLabel: `${input.label}. ${input.message} Not an admission.`,
+    accessibilityLabel: `${input.label}. ${input.message} Không phải lượt vào.`,
   };
 }
