@@ -13,6 +13,7 @@ import {
 } from '../../src/admin/create-event';
 import type { MeTenantItem } from '../../src/platform/contracts';
 import { interpretMeTenants } from '../../src/platform/shape';
+import { ImportPanel } from './import-panel';
 import { TenantStaffPanel } from './tenant-staff';
 import {
   csViewLabel,
@@ -115,6 +116,7 @@ export function AdminForm({
   const [exportId, setExportId] = useState('');
   const [ticketTypeLabelInput, setTicketTypeLabelInput] = useState('GA');
   const [ticketTypeId, setTicketTypeId] = useState('');
+  const [sourceId, setSourceId] = useState('');
   const [sourceName, setSourceName] = useState('Invite');
   const [approvalMode, setApprovalMode] = useState<'AUTO' | 'MANUAL'>('AUTO');
   const [approveAttempt, setApproveAttempt] = useState<UnclearAttempt | null>(
@@ -718,6 +720,7 @@ export function AdminForm({
       result.json,
       result.networkError || result.timedOut,
     );
+    if (next.kind === 'created') setSourceId(next.sourceId);
     bumpNotice();
     setSourceView(next);
     setBusy(false);
@@ -1495,7 +1498,34 @@ export function AdminForm({
             Tạo source
           </button>
         </div>
+        <label>
+          Source ID
+          <input
+            name="sourceId"
+            value={sourceId}
+            onChange={(e) => setSourceId(e.target.value)}
+            autoComplete="off"
+            spellCheck={false}
+            placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+          />
+        </label>
       </section>
+      <ImportPanel
+        tenantId={tenantId}
+        eventId={eventId}
+        sourceId={sourceId}
+        ticketTypeId={ticketTypeId}
+        busy={busy}
+        setBusy={setBusy}
+        onNotice={(message) => {
+          bumpNotice();
+          setDecision({
+            kind: 'rejected',
+            code: 'IMPORT_NOTICE',
+            message,
+          });
+        }}
+      />
       <section aria-labelledby="event-report-heading">
         <h2 id="event-report-heading">Báo cáo sự kiện</h2>
         <p>
