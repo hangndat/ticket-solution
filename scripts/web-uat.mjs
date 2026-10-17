@@ -6,6 +6,7 @@
  * Usage:
  *   node scripts/web-uat.mjs auth-smoke [baseUrl]
  *   node scripts/web-uat.mjs bff-login [baseUrl] [email] [password]
+ *   node scripts/web-uat.mjs redeem [baseUrl] [code] [tenantId] [eventId]
  *   node scripts/web-uat.mjs screenshot <url> [out.png]
  *   node scripts/web-uat.mjs goto <url>
  */
@@ -62,6 +63,7 @@ Never uses cliclick / AppleScript / ORCA computer mouse clicks on Chrome/Safari.
 Commands:
   auth-smoke [baseUrl]                         /auth + anonymous BFF 401
   bff-login [baseUrl] [email] [password]       Keycloak login → BFF /api/bff/me
+  redeem [baseUrl] [code] [tenantId] [eventId] Login + /redeem DEMO code (D9)
   screenshot <url> [out.png]                   PNG under apps/web/.uat-artifacts/
   goto <url>                                   Print final URL + title
 
@@ -71,6 +73,7 @@ Env:
   WEB_UAT_PASS     default attendee-demo
   WEB_UAT_OUT_DIR  screenshot directory
   WEB_UAT_HEADED=1 optional visible browser (only if user asks to watch)
+  WEB_UAT_REDEEM_CODE / TENANT_ID / EVENT_ID   redeem defaults (D9 demo-fun)
 
 Browsers: uses Playwright Chromium if installed, else system Chrome (headless).
 Optional: WEB_UAT_CHANNEL=chrome|chromium|msedge
@@ -148,80 +151,82 @@ async function cmdAuthSmoke(baseUrl) {
   });
 }
 
+/** Keycloak password login; leaves page on app base with session cookies. */
+async function loginKeycloak(page, base, user, pass) {
+  await page.goto(`${base}/auth`, { waitUntil: 'networkidle' });
+  await page.getByRole('link', { name: /Sign in \(Keycloak\)/i }).click();
+  await page.waitForURL(/openid-connect\/auth|login-actions/, { timeout: 30_000 });
+
+  // Pin Keycloak to its advertised frontend host for the whole login so
+  // AUTH_SESSION cookies are not dropped when start-dev rewrites 127↔LAN.
+  {
+    let prefer = process.env.KEYCLOAK_PUBLIC_HOST || '';
+    if (!prefer) {
+      try {
+        const disc = await page.request.get(
+          'http://127.0.0.1:8080/realms/ticket/.well-known/openid-configuration',
+        );
+        if (disc.ok()) {
+          const body = await disc.json();
+          prefer = new URL(body.issuer).hostname;
+        }
+      } catch {
+        prefer = '';
+      }
+    }
+    if (!prefer) prefer = '127.0.0.1';
+    const u = new URL(page.url());
+    if (u.port === '8080' && u.hostname !== prefer) {
+      u.hostname = prefer;
+      await page.goto(u.toString(), { waitUntil: 'networkidle' });
+    }
+  }
+
+  const userField =
+    page.locator('#username').or(page.getByLabel(/username|email/i)).first();
+  const passField =
+    page.locator('#password').or(page.getByLabel(/password/i)).first();
+  await userField.waitFor({ state: 'visible', timeout: 20_000 });
+  await userField.fill(user);
+  await passField.fill(pass);
+  await page.locator('#kc-login').or(page.getByRole('button', { name: /sign in|log in/i })).first().click();
+
+  try {
+    const baseUrl = new URL(base);
+    const appHosts = new Set(['127.0.0.1', 'localhost', baseUrl.hostname]);
+    await page.waitForURL((url) => {
+      return (
+        appHosts.has(url.hostname) &&
+        url.port === baseUrl.port &&
+        !url.pathname.startsWith('/api/auth/login')
+      );
+    }, { timeout: 45_000 });
+  } catch (err) {
+    mkdirSync(OUT_DIR, { recursive: true });
+    const failShot = join(OUT_DIR, `bff-login-fail-${Date.now()}.png`);
+    await page.screenshot({ path: failShot, fullPage: true });
+    die(`login did not return to app (url=${page.url()} shot=${failShot}): ${err}`);
+  }
+
+  const landed = new URL(page.url());
+  const err = landed.searchParams.get('error');
+  if (err) die(`callback returned error=${err} url=${page.url()}`);
+  const onBase =
+    landed.hostname === new URL(base).hostname &&
+    landed.port === new URL(base).port &&
+    landed.pathname.startsWith('/auth');
+  if (!onBase) {
+    await page.goto(`${base}/auth`, { waitUntil: 'networkidle' });
+  }
+}
+
 async function cmdBffLogin(baseUrl, email, password) {
   const base = (baseUrl || DEFAULT_BASE).replace(/\/$/, '');
   const user = email || DEFAULT_USER;
   const pass = password || DEFAULT_PASS;
 
   return withBrowser(async ({ page }) => {
-    await page.goto(`${base}/auth`, { waitUntil: 'networkidle' });
-    await page.getByRole('link', { name: /Sign in \(Keycloak\)/i }).click();
-    await page.waitForURL(/openid-connect\/auth|login-actions/, { timeout: 30_000 });
-
-    // Pin Keycloak to its advertised frontend host for the whole login so
-    // AUTH_SESSION cookies are not dropped when start-dev rewrites 127↔LAN.
-    {
-      let prefer = process.env.KEYCLOAK_PUBLIC_HOST || '';
-      if (!prefer) {
-        try {
-          const disc = await page.request.get(
-            'http://127.0.0.1:8080/realms/ticket/.well-known/openid-configuration',
-          );
-          if (disc.ok()) {
-            const body = await disc.json();
-            prefer = new URL(body.issuer).hostname;
-          }
-        } catch {
-          prefer = '';
-        }
-      }
-      if (!prefer) prefer = '127.0.0.1';
-      const u = new URL(page.url());
-      if (u.port === '8080' && u.hostname !== prefer) {
-        u.hostname = prefer;
-        await page.goto(u.toString(), { waitUntil: 'networkidle' });
-      }
-    }
-
-    // Keycloak login form (username/password themes vary slightly)
-    const userField =
-      page.locator('#username').or(page.getByLabel(/username|email/i)).first();
-    const passField =
-      page.locator('#password').or(page.getByLabel(/password/i)).first();
-    await userField.waitFor({ state: 'visible', timeout: 20_000 });
-    await userField.fill(user);
-    await passField.fill(pass);
-    await page.locator('#kc-login').or(page.getByRole('button', { name: /sign in|log in/i })).first().click();
-
-    try {
-      const baseUrl = new URL(base);
-      const appHosts = new Set(['127.0.0.1', 'localhost', baseUrl.hostname]);
-      await page.waitForURL((url) => {
-        return (
-          appHosts.has(url.hostname) &&
-          url.port === baseUrl.port &&
-          !url.pathname.startsWith('/api/auth/login')
-        );
-      }, { timeout: 45_000 });
-    } catch (err) {
-      mkdirSync(OUT_DIR, { recursive: true });
-      const failShot = join(OUT_DIR, `bff-login-fail-${Date.now()}.png`);
-      await page.screenshot({ path: failShot, fullPage: true });
-      die(`login did not return to app (url=${page.url()} shot=${failShot}): ${err}`);
-    }
-
-    // Session cookies are host-scoped to the redirect URI host (usually 127.0.0.1).
-    // Next may bounce the final page to localhost — stay on the configured base.
-    const landed = new URL(page.url());
-    const err = landed.searchParams.get('error');
-    if (err) die(`callback returned error=${err} url=${page.url()}`);
-    const onBase =
-      landed.hostname === new URL(base).hostname &&
-      landed.port === new URL(base).port &&
-      landed.pathname.startsWith('/auth');
-    if (!onBase) {
-      await page.goto(`${base}/auth`, { waitUntil: 'networkidle' });
-    }
+    await loginKeycloak(page, base, user, pass);
 
     const meRes = await page.request.get(`${base}/api/bff/me`);
     const meStatus = meRes.status();
@@ -247,6 +252,91 @@ async function cmdBffLogin(baseUrl, email, password) {
       screenshot: shot,
     }, null, 2));
     if (meStatus !== 200) process.exitCode = 2;
+  });
+}
+
+/** D9 demo: attendee login → /redeem with DEMO-FUN-* → ticket issued. */
+async function cmdRedeem(baseUrl, codeArg, tenantArg, eventArg) {
+  const base = (baseUrl || DEFAULT_BASE).replace(/\/$/, '');
+  const user = DEFAULT_USER;
+  const pass = DEFAULT_PASS;
+  const code =
+    codeArg ||
+    process.env.WEB_UAT_REDEEM_CODE ||
+    'DEMO-FUN-006';
+  const tenantId =
+    tenantArg ||
+    process.env.WEB_UAT_TENANT_ID ||
+    'd9d9f001-0001-4000-8000-000000000001';
+  const eventId =
+    eventArg ||
+    process.env.WEB_UAT_EVENT_ID ||
+    'd9d9f001-0002-4000-8000-000000000001';
+
+  return withBrowser(async ({ page }) => {
+    await loginKeycloak(page, base, user, pass);
+
+    const meRes = await page.request.get(`${base}/api/bff/me`);
+    if (meRes.status() !== 200) {
+      die(`BFF /me before redeem: HTTP ${meRes.status()}`);
+    }
+
+    const redeemUrl =
+      `${base}/redeem?tenantId=${encodeURIComponent(tenantId)}` +
+      `&eventId=${encodeURIComponent(eventId)}` +
+      `&tenantSlug=demo-fun&eventSlug=fun-fest`;
+    await page.goto(redeemUrl, { waitUntil: 'networkidle' });
+
+    await page.locator('input[name="code"]').fill(code);
+    await page.getByRole('button', { name: /Đổi mã \(API thật\)/i }).click();
+
+    // Success surface: ticket section or decision UX
+    const ticketSection = page.locator('.redeem-ticket, [data-testid="redeem-ticket"]').first();
+    const successHint = page.getByText(/đã cấp|ticketId|ACTIVE|Vé/i).first();
+    try {
+      await Promise.race([
+        ticketSection.waitFor({ state: 'visible', timeout: 45_000 }),
+        successHint.waitFor({ state: 'visible', timeout: 45_000 }),
+      ]);
+    } catch (err) {
+      mkdirSync(OUT_DIR, { recursive: true });
+      const failShot = join(OUT_DIR, `d9-e2e-redeem-fail-${Date.now()}.png`);
+      await page.screenshot({ path: failShot, fullPage: true });
+      die(`redeem did not show success (url=${page.url()} shot=${failShot}): ${err}`);
+    }
+
+    mkdirSync(OUT_DIR, { recursive: true });
+    const shot = join(OUT_DIR, `d9-e2e-redeem-${Date.now()}.png`);
+    await page.screenshot({ path: shot, fullPage: true });
+
+    const ticketsRes = await page.request.get(
+      `${base}/api/bff/tickets?tenantId=${encodeURIComponent(tenantId)}`,
+    );
+    const ticketsStatus = ticketsRes.status();
+    const ticketsBody = await ticketsRes.text();
+    let ticketCount = 0;
+    try {
+      const json = JSON.parse(ticketsBody);
+      ticketCount = Array.isArray(json.tickets) ? json.tickets.length : 0;
+    } catch {
+      /* leave 0 */
+    }
+
+    const ok = ticketsStatus === 200 && ticketCount >= 1;
+    console.log(JSON.stringify({
+      ok,
+      login: true,
+      base,
+      user,
+      code,
+      tenantId,
+      eventId,
+      ticketsStatus,
+      ticketCount,
+      screenshot: shot,
+      redeemUrl,
+    }, null, 2));
+    if (!ok) process.exitCode = 2;
   });
 }
 
@@ -288,6 +378,9 @@ switch (cmd) {
     break;
   case 'bff-login':
     await cmdBffLogin(args[0], args[1], args[2]);
+    break;
+  case 'redeem':
+    await cmdRedeem(args[0], args[1], args[2], args[3]);
     break;
   case 'screenshot':
     await cmdScreenshot(args[0], args[1]);
