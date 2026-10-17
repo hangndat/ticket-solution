@@ -135,6 +135,17 @@ test('unreachable restore keeps credential but never elevates to verified', asyn
   assert.equal(f.credential(), 'keychain-token');
 });
 
+test('unreachable establish persists bearer for later restore; never verified', async () => {
+  const f = fixture('stale-prior');
+  await f.boundary.establish('fresh-oidc-token', async () => CREDENTIAL_UNREACHABLE);
+  assert.equal(f.boundary.getSnapshot().status, 'signed-out');
+  assert.equal(f.credential(), 'fresh-oidc-token');
+  assert.equal(await f.boundary.getCredential(), null);
+  const outcome = await f.boundary.restore(async () => ({ userId: 'staff-1' }));
+  assert.equal(outcome, 'verified');
+  assert.equal(await f.boundary.getCredential(), 'fresh-oidc-token');
+});
+
 test('rejected restore still clears credential (invalid/revoked)', async () => {
   const f = fixture('keychain-token');
   const outcome = await f.boundary.restore(async () => null);

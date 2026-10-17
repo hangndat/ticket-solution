@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { Pressable, Text, TextInput, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { AppState, Pressable, Text, TextInput, View } from 'react-native';
 import {
   gateCheckInAnnouncement,
   gateOutcomeAnnouncement,
@@ -9,22 +9,67 @@ import {
 } from '@/a11y/announcements';
 import { BrandWordmark, Notice, Page } from '@/components/page';
 import {
+  EmptyState,
+  LoadingState,
+} from '@/components/screen-state';
+import { scanCopy } from '@/components/screen-state-copy';
+import {
   SUPERVISOR_NOT_ADMISSION,
   canReconcile,
+  gateOpFromQueued,
   listUnknownGateOps,
   reconcileOp,
   runScan,
   type GateOp,
 } from '@/gate/gate-scan';
 import { GateCamera } from '@/gate/gate-camera';
+import {
+  offlineBannerCopy,
+  probeConnectivity,
+  type ConnectivityState,
+} from '@/gate/offline-queue';
+import { offlineScanQueue } from '@/gate/offline-queue-session';
 import { loadGateOps, saveGateOps } from '@/gate/gate-store';
 import { getApiBaseUrl, getEventId, getTenantId } from '@/identity/config';
+import { verifyViaMe } from '@/identity/fetch-me';
 import { session } from '@/identity/session';
 import { colors } from '@/theme/colors';
+
+/**
+ * Gate needs a verified bearer + baked API base. If cold-start left the
+ * keychain token in "unreachable → signed-out", re-probe /v1/me before deny.
+ */
+async function resolveGateAuth(): Promise<
+  | { ok: true; bearer: string; apiBase: string }
+  | { ok: false; message: string }
+> {
+  const apiBase = getApiBaseUrl();
+  if (!apiBase) {
+    return {
+      ok: false,
+      message:
+        'Thiếu EXPO_PUBLIC_API_BASE_URL (bake Release/TestFlight). Không cho vào.',
+    };
+  }
+
+  let bearer = await session.getCredential();
+  if (!bearer) {
+    await session.restore(verifyViaMe);
+    bearer = await session.getCredential();
+  }
+  if (!bearer) {
+    return {
+      ok: false,
+      message: 'Đăng nhập staff (Account → Đăng nhập) trước khi quét. Không cho vào.',
+    };
+  }
+  return { ok: true, bearer, apiBase };
+}
 
 function outcomeTitle(op: GateOp | null): string {
   if (!op) return 'Chờ mã';
   if (op.phase === 'admitted') return 'Cho vào';
+  if (op.phase === 'queued') return 'Đã xếp hàng offline';
   if (op.phase === 'unknown') return 'Chưa rõ — không cho vào';
   return 'Không cho vào';
 }
@@ -33,6 +78,7 @@ function outcomeTone(
   phase: GateOp['phase'] | undefined,
 ): 'admit' | 'deny' | 'unknown' | 'default' {
   if (phase === 'admitted') return 'admit';
+  if (phase === 'queued') return 'unknown';
   if (phase === 'unknown') return 'unknown';
   if (phase === 'denied') return 'deny';
   return 'default';
@@ -47,20 +93,14 @@ export function StaffScreen() {
   const [ready, setReady] = useState(false);
   const [inputFocused, setInputFocused] = useState(false);
   const [checkInFocused, setCheckInFocused] = useState(false);
+  const [connectivity, setConnectivity] = useState<ConnectivityState>('unknown');
   const lock = useRef(false);
 
-  useEffect(() => {
-    let cancelled = false;
-    void loadGateOps().then((loaded) => {
-      if (cancelled) return;
-      setOps(loaded);
-      setCurrent(loaded[0] ?? null);
-      setReady(true);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const queueSnap = useSyncExternalStore(
+    offlineScanQueue.subscribe,
+    offlineScanQueue.getSnapshot,
+    offlineScanQueue.getSnapshot,
+  );
 
   const persist = useCallback(async (next: GateOp[], active: GateOp | null) => {
     setOps(next);
@@ -68,13 +108,61 @@ export function StaffScreen() {
     await saveGateOps(next);
   }, []);
 
+  const identity = useSyncExternalStore(
+    session.subscribe,
+    session.getSnapshot,
+    session.getSnapshot,
+  );
+  const verifiedUserId =
+    identity.status === 'verified' ? identity.userId : null;
+
+  const refreshConnectivityAndSync = useCallback(async () => {
+    const apiBase = getApiBaseUrl();
+    if (!apiBase) {
+      setConnectivity('unknown');
+      return;
+    }
+    const state = await probeConnectivity(apiBase);
+    setConnectivity(state);
+    if (state !== 'online') return;
+    const snap = session.getSnapshot();
+    if (snap.status !== 'verified') return;
+    await offlineScanQueue.bindUser(snap.userId);
+    const bearer = await session.getCredential();
+    if (!bearer) return;
+    await offlineScanQueue.replay({ bearer, apiBase });
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      if (verifiedUserId) {
+        await offlineScanQueue.bindUser(verifiedUserId);
+      } else {
+        offlineScanQueue.invalidateMemory();
+      }
+      const loaded = await loadGateOps();
+      if (cancelled) return;
+      setOps(loaded);
+      setCurrent(loaded[0] ?? null);
+      setReady(true);
+      await refreshConnectivityAndSync();
+    })();
+    const sub = AppState.addEventListener('change', (next) => {
+      if (next === 'active') void refreshConnectivityAndSync();
+    });
+    return () => {
+      cancelled = true;
+      sub.remove();
+    };
+  }, [refreshConnectivityAndSync, verifiedUserId]);
+
   async function submitScan(payload: string = raw) {
     const code = payload.trim();
     if (!code || lock.current) return;
     lock.current = true;
-    const bearer = await session.getCredential();
-    const apiBase = getApiBaseUrl();
-    if (!bearer || !apiBase) {
+    const auth = await resolveGateAuth();
+    if (!auth.ok) {
       setCurrent({
         id: 'local',
         ticketId: '',
@@ -82,23 +170,74 @@ export function StaffScreen() {
         eventId: '',
         staffSessionId: '',
         phase: 'denied',
-        message: 'Đăng nhập và cấu hình API trước khi quét. Không cho vào.',
+        message: auth.message,
       });
       lock.current = false;
       return;
     }
     setBusy(true);
     try {
+      const snap = session.getSnapshot();
+      if (snap.status !== 'verified') {
+        setCurrent({
+          id: 'local',
+          ticketId: '',
+          tenantId: '',
+          eventId: '',
+          staffSessionId: '',
+          phase: 'denied',
+          message:
+            'Phiên staff chưa verified — đăng nhập lại trước khi quét. Không cho vào.',
+        });
+        return;
+      }
+      await offlineScanQueue.bindUser(snap.userId);
+      const preferOffline = connectivity === 'offline';
       const result = await runScan({
         raw: code,
-        bearer,
-        apiBase,
+        bearer: auth.bearer,
+        apiBase: auth.apiBase,
         ops,
         staffSessionId: sessionId,
         fallback: { tenantId: getTenantId(), eventId: getEventId() },
+        preferOfflineQueue: preferOffline,
       });
       setSessionId(result.staffSessionId);
+
+      if (result.networkUnavailable && result.parsed && result.staffSessionId) {
+        const queued = await offlineScanQueue.enqueue({
+          ticketId: result.parsed.ticketId,
+          tenantId: result.parsed.tenantId,
+          eventId: result.parsed.eventId,
+          staffSessionId: result.staffSessionId,
+        });
+        setConnectivity('offline');
+        const currentOp = gateOpFromQueued({
+          id: queued.clientEventId,
+          ticketId: queued.ticketId,
+          tenantId: queued.tenantId,
+          eventId: queued.eventId,
+          staffSessionId: queued.staffSessionId,
+          clientEventId: queued.clientEventId,
+          message: queued.lastMessage,
+        });
+        await persist([currentOp, ...result.ops], currentOp);
+        return;
+      }
+
+      if (result.networkUnavailable) {
+        setConnectivity('offline');
+      } else if (preferOffline === false) {
+        setConnectivity('online');
+      }
+
       await persist(result.ops, result.current);
+      if (!result.networkUnavailable) {
+        void offlineScanQueue.replay({
+          bearer: auth.bearer,
+          apiBase: auth.apiBase,
+        });
+      }
     } finally {
       lock.current = false;
       setBusy(false);
@@ -107,12 +246,15 @@ export function StaffScreen() {
 
   async function reconcile() {
     if (!current || !canReconcile(current)) return;
-    const bearer = await session.getCredential();
-    const apiBase = getApiBaseUrl();
-    if (!bearer || !apiBase) return;
+    const auth = await resolveGateAuth();
+    if (!auth.ok) return;
     setBusy(true);
     try {
-      const next = await reconcileOp({ op: current, bearer, apiBase });
+      const next = await reconcileOp({
+        op: current,
+        bearer: auth.bearer,
+        apiBase: auth.apiBase,
+      });
       const rest = ops.filter((op) => op.id !== current.id);
       await persist([next, ...rest], next);
     } finally {
@@ -120,24 +262,67 @@ export function StaffScreen() {
     }
   }
 
+  async function syncNow() {
+    const auth = await resolveGateAuth();
+    if (!auth.ok) return;
+    const snap = session.getSnapshot();
+    if (snap.status !== 'verified') return;
+    setBusy(true);
+    try {
+      await offlineScanQueue.bindUser(snap.userId);
+      setConnectivity(await probeConnectivity(auth.apiBase));
+      await offlineScanQueue.replay({
+        bearer: auth.bearer,
+        apiBase: auth.apiBase,
+      });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const banner = offlineBannerCopy({
+    connectivity,
+    pendingCount: queueSnap.pendingCount,
+    conflictCount: queueSnap.conflictCount,
+    syncing: queueSnap.syncing,
+    lastSyncError: queueSnap.lastSyncError,
+  });
+
+  const recentQueue = queueSnap.items.slice(0, 8);
+
   return (
     <Page>
       <BrandWordmark compact />
+      <Notice title={banner.title} tone={banner.tone}>
+        {banner.body}
+      </Notice>
       <Notice title="Quét cổng">
         Quét hoặc dán QR hiển thị trên vé. Chỉ cho vào sau khi API ghi nhận
-        check-in. Phản hồi mất vẫn giữ “chưa rõ” sau khi mở lại app.
+        check-in. Offline: xếp hàng trên máy, đồng bộ khi có mạng — không cho vào
+        sớm. Phản hồi mất vẫn giữ “chưa rõ” sau khi mở lại app.
+        {'\n'}
+        API: {getApiBaseUrl() ?? 'chưa bake'} · Phiên: {session.getSnapshot().status}
       </Notice>
+      {!ready ? (
+        <LoadingState title={scanCopy.loadingStore.title}>
+          {scanCopy.loadingStore.body}
+        </LoadingState>
+      ) : null}
       <GateCamera disabled={busy || !ready} onScan={(data) => void submitScan(data)} />
       <TextInput
+        testID="gate-scan-input"
         value={raw}
         onChangeText={setRaw}
         placeholder="Dán JSON QR hoặc ticket id"
         autoCapitalize="none"
         autoCorrect={false}
         multiline
+        editable={ready && !busy}
         selectionColor={colors.focus}
         onFocus={() => setInputFocused(true)}
         onBlur={() => setInputFocused(false)}
+        blurOnSubmit
+        onSubmitEditing={() => void submitScan()}
         style={{
           minHeight: 88,
           padding: 12,
@@ -147,10 +332,12 @@ export function StaffScreen() {
           fontSize: 16,
           borderWidth: 2,
           borderColor: inputFocused ? colors.focus : 'transparent',
+          opacity: ready ? 1 : 0.55,
         }}
       />
       <Pressable
         {...gateCheckInAnnouncement()}
+        testID="gate-checkin-button"
         accessibilityState={{ disabled: busy || !ready || raw.trim().length === 0 }}
         disabled={busy || !ready || raw.trim().length === 0}
         onPress={() => void submitScan()}
@@ -175,14 +362,40 @@ export function StaffScreen() {
           {busy ? 'Đang kiểm tra…' : 'Check-in'}
         </Text>
       </Pressable>
+      {busy ? (
+        <LoadingState title={scanCopy.checking.title}>
+          {scanCopy.checking.body}
+        </LoadingState>
+      ) : null}
+      {!busy && ready && !current ? (
+        <EmptyState title={scanCopy.idle.title}>{scanCopy.idle.body}</EmptyState>
+      ) : null}
+      {queueSnap.pendingCount > 0 || queueSnap.conflictCount > 0 ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Đồng bộ hàng đợi offline"
+          accessibilityState={{ disabled: busy || queueSnap.syncing }}
+          disabled={busy || queueSnap.syncing}
+          onPress={() => void syncNow()}
+          style={{ padding: 14, borderRadius: 12, backgroundColor: colors.card }}
+        >
+          <Text style={{ color: colors.label, fontSize: 17, textAlign: 'center' }}>
+            {queueSnap.syncing ? 'Đang đồng bộ…' : 'Đồng bộ hàng đợi ngay'}
+          </Text>
+        </Pressable>
+      ) : null}
       {current ? (
         <View
           {...gateOutcomeAnnouncement({
-            phase: current.phase,
+            phase: current.phase === 'queued' ? 'unknown' : current.phase,
             title: outcomeTitle(current),
             message: current.message,
           })}
-          accessibilityLiveRegion={current.phase === 'unknown' ? 'assertive' : 'polite'}
+          accessibilityLiveRegion={
+            current.phase === 'unknown' || current.phase === 'queued'
+              ? 'assertive'
+              : 'polite'
+          }
         >
           <Notice title={outcomeTitle(current)} tone={outcomeTone(current.phase)}>
             {current.message}
@@ -207,6 +420,22 @@ export function StaffScreen() {
           </Text>
         </Pressable>
       ) : null}
+      {recentQueue.length > 0 ? (
+        <Notice title="Hàng đợi offline / đồng bộ" tone="default">
+          Các mục dưới đây lưu trên máy (SecureStore). Trạng thái máy chủ quyết định
+          cho vào — bản thua xung đột không phải lượt vào.
+        </Notice>
+      ) : null}
+      {recentQueue.map((item) => (
+        <Text
+          key={item.clientEventId}
+          selectable
+          style={{ color: colors.label, fontSize: 15, lineHeight: 22 }}
+        >
+          [{item.localStatus}] {item.ticketId.slice(0, 8)}… —{' '}
+          {item.lastMessage ?? 'Chờ đồng bộ'}
+        </Text>
+      ))}
       <View {...supervisorListAnnouncement(SUPERVISOR_NOT_ADMISSION)}>
         <Notice title="Giám sát — thao tác chưa rõ" tone="unknown">
           {SUPERVISOR_NOT_ADMISSION} Các thao tác cổng chưa rõ được lưu ở đây và

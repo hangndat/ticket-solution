@@ -1,16 +1,36 @@
 import { useEffect } from 'react';
+import { Linking } from 'react-native';
 import { router } from 'expo-router';
 import { Stack } from 'expo-router/stack';
 import { getTenantId, isOidcConfigured } from '@/identity/config';
 import { verifyViaMe } from '@/identity/fetch-me';
 import { session } from '@/identity/session';
+import { parseInstalledAppLink } from '@/links/installed-app-link';
 import '@/push/push-notifications-init';
 import { attachNotificationRouting } from '@/push/notification-routing';
+import { ThemeProvider } from '@/theme/ThemeProvider';
 import {
   bindIfStillVerified,
   captureOfflineBindingEpoch,
 } from '@/tickets/bind-after-verify';
 import { offlineDisplay } from '@/tickets/offline-display-session';
+
+/**
+ * Headless sim-uat: real Keycloak access_token via deep link → verifyViaMe.
+ * Never elevates without API success (not fixture auth).
+ */
+async function consumeUatStaffSessionUrl(url: string): Promise<boolean> {
+  const parsed = parseInstalledAppLink(url);
+  if (parsed.kind !== 'uat-staff-session') return false;
+  await session.establish(parsed.accessToken, verifyViaMe);
+  if (session.getSnapshot().status !== 'verified') return false;
+  try {
+    router.replace('/(tabs)/staff' as never);
+  } catch {
+    /* best-effort navigation */
+  }
+  return true;
+}
 
 function AppStack() {
   return (
@@ -26,6 +46,14 @@ function AppStack() {
       />
       <Stack.Screen name="redeem" options={{ title: 'Redeem' }} />
       <Stack.Screen name="claim" options={{ title: 'Claim invitation' }} />
+      <Stack.Screen
+        name="uat/staff-session"
+        options={{ title: 'UAT staff session', headerShown: false }}
+      />
+      <Stack.Screen
+        name="uat/scan"
+        options={{ title: 'UAT scan', headerShown: false }}
+      />
     </Stack>
   );
 }
@@ -74,11 +102,40 @@ export default function RootLayout() {
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
+    const onUrl = ({ url }: { url: string }) => {
+      void consumeUatStaffSessionUrl(url);
+    };
+    const sub = Linking.addEventListener('url', onUrl);
+    void Linking.getInitialURL().then((url) => {
+      if (cancelled || !url) return;
+      void consumeUatStaffSessionUrl(url);
+    });
+    return () => {
+      cancelled = true;
+      sub.remove();
+    };
+  }, []);
+
+  useEffect(() => {
     void (async () => {
-      try {
-        await offlineDisplay.hydrate();
-      } catch {
-        /* Binding hydrate failure → treat as none; never invent verified. */
+      // Cold-start UAT deep link owns establish — skip restore + offline-display
+      // hydrate so Keychain is not raced (Simulator can wedge concurrent SecureStore).
+      const initialUrl = await Linking.getInitialURL();
+      const uatStaffColdStart =
+        !!initialUrl &&
+        parseInstalledAppLink(initialUrl).kind === 'uat-staff-session';
+
+      if (!uatStaffColdStart) {
+        try {
+          await offlineDisplay.hydrate();
+        } catch {
+          /* Binding hydrate failure → treat as none; never invent verified. */
+        }
+      }
+
+      if (uatStaffColdStart) {
+        return;
       }
 
       if (!configured) {
@@ -129,5 +186,9 @@ export default function RootLayout() {
     })();
   }, [configured]);
 
-  return <AppStack />;
+  return (
+    <ThemeProvider>
+      <AppStack />
+    </ThemeProvider>
+  );
 }

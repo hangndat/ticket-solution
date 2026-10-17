@@ -1,9 +1,10 @@
 import { NativeTabs } from 'expo-router/native-tabs';
-import { brand } from '@/theme/colors';
+import { useTheme } from '@/theme/ThemeProvider';
 
 export default function TabLayout() {
+  const { theme } = useTheme();
   return (
-    <NativeTabs tintColor={brand.signal}>
+    <NativeTabs tintColor={theme.signal}>
       <NativeTabs.Trigger name="(events)">
         <NativeTabs.Trigger.Icon sf="calendar" />
         <NativeTabs.Trigger.Label>Sự kiện</NativeTabs.Trigger.Label>

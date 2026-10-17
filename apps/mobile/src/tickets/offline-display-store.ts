@@ -1,4 +1,5 @@
 import * as SecureStore from 'expo-secure-store';
+import { serialSecureStore } from '@/platform/secure-store-serial';
 import type {
   OfflineDisplayBinding,
   OfflineDisplayStore,
@@ -6,7 +7,7 @@ import type {
 
 const options: SecureStore.SecureStoreOptions = {
   keychainService: 'ticket-foundation.offline-display',
-  keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+  keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY,
 };
 
 const BINDING_KEY = 'ticket.offline-display.v1';
@@ -28,17 +29,23 @@ function parseBinding(raw: string | null): OfflineDisplayBinding | null {
 
 export const secureOfflineDisplayStore: OfflineDisplayStore = {
   async read() {
-    const raw = await SecureStore.getItemAsync(BINDING_KEY, options);
+    const raw = await serialSecureStore(() =>
+      SecureStore.getItemAsync(BINDING_KEY, options),
+    );
     return parseBinding(raw);
   },
   async write(binding) {
-    await SecureStore.setItemAsync(
-      BINDING_KEY,
-      JSON.stringify(binding),
-      options,
+    await serialSecureStore(() =>
+      SecureStore.setItemAsync(
+        BINDING_KEY,
+        JSON.stringify(binding),
+        options,
+      ),
     );
   },
   async clear() {
-    await SecureStore.deleteItemAsync(BINDING_KEY, options);
+    await serialSecureStore(() =>
+      SecureStore.deleteItemAsync(BINDING_KEY, options),
+    );
   },
 };

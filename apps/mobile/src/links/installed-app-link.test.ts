@@ -94,3 +94,23 @@ test('invitation claim with short token is not routed', () => {
   );
   assert.equal(parsed.kind, 'passthrough');
 });
+
+test('uat staff-session deep link routes to /uat/staff-session', () => {
+  const jwt =
+    'eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.signaturepaddingvalue';
+  const input = `vemoki://uat/staff-session?access_token=${jwt}`;
+  const parsed = parseInstalledAppLink(input);
+  assert.equal(parsed.kind, 'uat-staff-session');
+  if (parsed.kind !== 'uat-staff-session') return;
+  assert.equal(parsed.accessToken, jwt);
+  assert.match(parsed.href, /^\/uat\/staff-session\?/);
+  assert.equal(routeForInstalledAppLink(input), parsed.href);
+});
+
+test('uat staff-session rejects non-jwt', () => {
+  assert.equal(
+    parseInstalledAppLink('vemoki://uat/staff-session?access_token=not-a-jwt')
+      .kind,
+    'passthrough',
+  );
+});

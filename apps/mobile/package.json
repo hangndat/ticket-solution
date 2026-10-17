@@ -10,6 +10,7 @@
     "expo-camera": "~58.0.10",
     "expo-constants": "58.0.12",
     "expo-crypto": "58.0.6",
+    "expo-file-system": "58.0.9",
     "expo-font": "58.0.8",
     "expo-linking": "58.0.13",
     "expo-notifications": "58.1.5",
@@ -38,7 +39,7 @@
     "dev": "expo start --ios --port 8083",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src",
-    "test": "node --experimental-strip-types --test src/identity/*.test.ts src/data/*.test.ts src/tickets/*.test.ts src/gate/*.test.ts src/redeem/*.test.ts src/links/*.test.ts src/push/*.test.ts src/account-deletion/*.test.ts src/published/*.test.ts",
+    "test": "node --experimental-strip-types --test src/identity/*.test.ts src/data/*.test.ts src/tickets/*.test.ts src/gate/*.test.ts src/redeem/*.test.ts src/links/*.test.ts src/push/*.test.ts src/account-deletion/*.test.ts src/published/*.test.ts src/theme/*.test.ts src/components/*.test.ts",
     "build": "expo export --platform ios --output-dir dist"
   },
   "private": true,
