@@ -20,6 +20,24 @@
     "@ticket/backend#build": {
       "dependsOn": ["^build"],
       "outputs": ["dist/**", "src/generated/**"]
+    },
+    "@ticket/backend#typecheck": {
+      "dependsOn": ["build"]
+    },
+    "@ticket/backend#test": {
+      "dependsOn": ["build"]
+    },
+    "@ticket/api#typecheck": {
+      "dependsOn": ["build"]
+    },
+    "@ticket/api#test": {
+      "dependsOn": ["build"]
+    },
+    "@ticket/worker#typecheck": {
+      "dependsOn": ["build"]
+    },
+    "@ticket/worker#test": {
+      "dependsOn": ["build"]
     }
   }
 }
