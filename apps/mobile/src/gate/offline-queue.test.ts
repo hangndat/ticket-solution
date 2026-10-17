@@ -305,3 +305,105 @@ test('replay order comparator matches contract', () => {
   };
   assert.ok(compareOfflineReplayOrder(b, a) < 0);
 });
+
+function deferred<T>(): {
+  promise: Promise<T>;
+  resolve: (value: T) => void;
+} {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((r) => {
+    resolve = r;
+  });
+  return { promise, resolve };
+}
+
+test('late hydrate for user A after bind B does not apply A tickets or replay under B', async () => {
+  const store = createMemoryOfflineQueueStore([], userA);
+  let n = 0;
+  const createId = () => {
+    n += 1;
+    return `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
+  };
+  const seed = await queueFor(store, userA, {
+    createId,
+    nowIso: () => '2026-10-17T08:00:00.000Z',
+  });
+  await seed.enqueue({ ticketId, tenantId, eventId, staffSessionId });
+  assert.equal(seed.getSnapshot().pendingCount, 1);
+
+  const reading = deferred<void>();
+  const release = deferred<void>();
+  const realRead = store.readQueue.bind(store);
+  store.readQueue = async (id) => {
+    if (id === userA) {
+      reading.resolve();
+      await release.promise;
+    }
+    return realRead(id);
+  };
+
+  const q = new OfflineScanQueue(store, {
+    createId,
+    nowIso: () => '2026-10-17T08:00:00.000Z',
+  });
+  const bindA = q.bindUser(userA);
+  await reading.promise;
+  await q.bindUser(userB);
+  release.resolve();
+  await bindA;
+
+  assert.equal(q.ownerUserIdOrNull(), userB);
+  assert.equal(q.getSnapshot().pendingCount, 0);
+  assert.equal(
+    q.getSnapshot().items.some((i) => i.ticketId === ticketId),
+    false,
+  );
+
+  const fetchCalls: string[] = [];
+  await q.replay({
+    bearer: 'bearer-b',
+    apiBase: 'https://api.example',
+    fetchImpl: async (input) => {
+      fetchCalls.push(String(input));
+      return jsonResponse(200, {
+        serverTime: '2026-10-17T08:00:01.000Z',
+        maxClockSkewSeconds: 300,
+        results: [],
+      });
+    },
+  });
+  assert.equal(fetchCalls.length, 0);
+  assert.equal(q.getSnapshot().pendingCount, 0);
+});
+
+test('late enqueue write after clearForUser does not restore durable queue', async () => {
+  const store = createMemoryOfflineQueueStore([], userA);
+  let n = 0;
+  const q = await queueFor(store, userA, {
+    createId: () => {
+      n += 1;
+      return `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
+    },
+    nowIso: () => '2026-10-17T08:00:00.000Z',
+  });
+
+  const writing = deferred<void>();
+  const release = deferred<void>();
+  const realWrite = store.writeQueue.bind(store);
+  store.writeQueue = async (id, items) => {
+    writing.resolve();
+    await release.promise;
+    return realWrite(id, items);
+  };
+
+  const pending = q.enqueue({ ticketId, tenantId, eventId, staffSessionId });
+  await writing.promise;
+  await q.clearForUser(userA);
+  release.resolve();
+
+  await assert.rejects(pending, /đăng xuất|đổi user|hủy/i);
+  assert.equal(q.ownerUserIdOrNull(), null);
+  assert.equal(q.getSnapshot().pendingCount, 0);
+  assert.deepEqual(await store.readQueue(userA), []);
+  assert.deepEqual(await store.readSeqMap(userA), {});
+});
