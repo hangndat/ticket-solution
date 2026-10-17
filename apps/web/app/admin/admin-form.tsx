@@ -61,12 +61,18 @@ import {
   type TicketTypeView,
 } from '../../src/admin/event-setup';
 import {
+  REPORT_EMAIL_CS_CTA_LABEL,
+  REPORT_EMAIL_CS_SECTION_ID,
+  REPORT_PENDING_APPROVAL_CTA_LABEL,
+  REPORT_PENDING_APPROVAL_SECTION_ID,
   TICKET_STATES,
   formatQuotaCapacityState,
   formatQuotaRemaining,
   formatReportAsOf,
   interpretEventReport,
+  reportShowsEmailCsCta,
   reportShowsNumbers,
+  reportShowsPendingApprovalCta,
   type EventReportView,
 } from '../../src/admin/report';
 import {
@@ -214,6 +220,20 @@ export function AdminForm({
     reportHold.eventId === eventId.trim()
       ? reportHold.view
       : null;
+
+  /** Switch job panel then scroll/focus the target section (O12 P3 deep-link). */
+  function goToAdminSection(job: AdminJob, sectionId: string) {
+    setActiveJob(job);
+    window.setTimeout(() => {
+      const el = document.getElementById(sectionId);
+      if (!el) return;
+      if (window.location.hash !== `#${sectionId}`) {
+        window.history.replaceState(null, '', `#${sectionId}`);
+      }
+      el.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      el.focus({ preventScroll: true });
+    }, 0);
+  }
   const currentEvent: EventDetail | null =
     detailView?.kind === 'detail' ? detailView.event : null;
   const selectedTenant = tenantChoices.find((t) => t.tenantId === tenantId.trim());
@@ -1764,7 +1784,9 @@ export function AdminForm({
         className="admin-section"
         aria-labelledby="guests-codes-heading"
       >
-        <h2 id="guests-codes-heading">Khách &amp; mã · nhập và duyệt</h2>
+         <h2 id="guests-codes-heading" tabIndex={-1}>
+           Khách &amp; mã · nhập và duyệt
+         </h2>
         <label>
           Mã mời, mỗi dòng một mã
           <textarea
@@ -1919,9 +1941,28 @@ export function AdminForm({
               </div>
               <div>
                 <dt>Chờ duyệt</dt>
-                <dd>{report.pendingApprovalCount}</dd>
+                <dd data-testid="event-report-pending-approval">
+                  {report.pendingApprovalCount}
+                </dd>
               </div>
             </dl>
+            {reportShowsPendingApprovalCta(report) ? (
+              <p className="intro">
+                <a
+                  href={`#${REPORT_PENDING_APPROVAL_SECTION_ID}`}
+                  data-testid="event-report-cta-pending-approval"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    goToAdminSection(
+                      'guests',
+                      REPORT_PENDING_APPROVAL_SECTION_ID,
+                    );
+                  }}
+                >
+                  {REPORT_PENDING_APPROVAL_CTA_LABEL}
+                </a>
+              </p>
+            ) : null}
             <h3>Vé theo trạng thái</h3>
             <dl>
               {TICKET_STATES.map((state) => (
@@ -1964,6 +2005,20 @@ export function AdminForm({
                 </dd>
               </div>
             </dl>
+            {reportShowsEmailCsCta(report) ? (
+              <p className="intro">
+                <a
+                  href={`#${REPORT_EMAIL_CS_SECTION_ID}`}
+                  data-testid="event-report-cta-email-cs"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    goToAdminSection('support', REPORT_EMAIL_CS_SECTION_ID);
+                  }}
+                >
+                  {REPORT_EMAIL_CS_CTA_LABEL}
+                </a>
+              </p>
+            ) : null}
           </div>
         ) : null}
         {report && !reportShowsNumbers(report) ? (
@@ -1982,7 +2037,9 @@ export function AdminForm({
       >
       <TenantStaffPanel tenantId={tenantId} />
       <section className="admin-section" aria-labelledby="cs-heading">
-        <h2 id="cs-heading">Hỗ trợ · tra cứu và gửi lại email</h2>
+        <h2 id="cs-heading" tabIndex={-1}>
+          Hỗ trợ · tra cứu và gửi lại email
+        </h2>
         <p>
           PII mặc định đã che trên API. Trạng thái provider ACCEPTED không được
           hiểu là đã giao email.
