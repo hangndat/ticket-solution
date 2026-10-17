@@ -23,7 +23,7 @@ export function GateCamera({ disabled, onScan }: Props) {
         style={{ padding: 14, borderRadius: 12, backgroundColor: colors.card }}
       >
         <Text style={{ color: colors.label, fontSize: 17, textAlign: 'center' }}>
-          Allow camera to scan ticket QR
+          Cho phép camera để quét QR vé
         </Text>
       </Pressable>
     );

@@ -27,14 +27,14 @@ import { RedeemFormFields } from '@/redeem/redeem-form-fields';
 import { colors } from '@/theme/colors';
 
 function titleFor(decision: RedeemDecision | null): string {
-  if (!decision) return 'Redeem a code';
+  if (!decision) return 'Đổi mã';
   if (decision.kind === 'issued') {
-    return decision.replayed ? 'Ticket already issued' : 'Ticket issued';
+    return decision.replayed ? 'Vé đã được phát hành' : 'Đã phát hành vé';
   }
-  if (decision.kind === 'pending') return 'Pending review — not a ticket';
-  if (decision.kind === 'unknown') return 'Unknown — not a ticket';
-  if (decision.kind === 'stale') return 'Form or terms changed';
-  return 'Not issued';
+  if (decision.kind === 'pending') return 'Chờ duyệt — chưa phải vé';
+  if (decision.kind === 'unknown') return 'Chưa rõ — chưa phải vé';
+  if (decision.kind === 'stale') return 'Form hoặc điều khoản đã đổi';
+  return 'Chưa phát hành';
 }
 
 function detailFor(decision: RedeemDecision): string {
@@ -68,11 +68,11 @@ export function RedeemScreen() {
     const e = eventSlug.trim();
     if (!t || !e) {
       setSchemaNotice(
-        'Optional: set tenant/event slugs to load published form and terms. No fixture fallback.',
+        'Tuỳ chọn: nhập slug tenant/sự kiện để tải form và điều khoản đã xuất bản. Không dùng fixture.',
       );
       return;
     }
-    setSchemaNotice('Loading published form…');
+    setSchemaNotice('Đang tải form đã xuất bản…');
     const result = await fetchPublishedEventDetail(t, e);
     if (result.status === 'ok') {
       setForm(result.event.form ?? null);
@@ -80,7 +80,7 @@ export function RedeemScreen() {
       setTermsBody(result.event.terms?.bodyMarkdown ?? null);
       if (result.event.id) setEventId(result.event.id);
       setSchemaNotice(
-        `Loaded published schema v${result.event.schemaVersion} / config v${result.event.publishedConfigVersion}.`,
+        `Đã tải schema v${result.event.schemaVersion} / config v${result.event.publishedConfigVersion}.`,
       );
       setAnswers({});
       setTermsAccepted(false);
@@ -89,15 +89,15 @@ export function RedeemScreen() {
     }
     if (result.status === 'misconfigured') {
       setSchemaNotice(
-        'Published API not configured (EXPO_PUBLIC_API_BASE_URL). Fail-closed — no demo form.',
+        'Chưa cấu hình API (EXPO_PUBLIC_API_BASE_URL). Không dùng form demo.',
       );
       return;
     }
     if (result.status === 'not-found') {
-      setSchemaNotice('Published event not found. Drafts are never shown.');
+      setSchemaNotice('Không tìm thấy sự kiện đã xuất bản. Bản nháp không hiện.');
       return;
     }
-    setSchemaNotice('Published form unreachable or invalid. Fail-closed.');
+    setSchemaNotice('Không tải được form đã xuất bản.');
   }, [tenantSlug, eventSlug]);
 
   useEffect(() => {
@@ -123,7 +123,7 @@ export function RedeemScreen() {
       setDecision({
         kind: 'denied',
         code: 'UNAUTHENTICATED',
-        message: 'Sign in and set the API base before redeeming.',
+        message: 'Đăng nhập và cấu hình API trước khi đổi mã.',
       });
       return;
     }
@@ -176,7 +176,7 @@ export function RedeemScreen() {
         setAttempt({ key, fingerprint, unclear: true });
       } else if (next.kind === 'pending') {
         setAttempt(null);
-        setStatusNote('Pending — refresh status after staff review. Not a ticket.');
+        setStatusNote('Đang chờ — làm mới sau khi nhân viên duyệt. Chưa phải vé.');
       } else {
         setAttempt(null);
       }
@@ -231,23 +231,23 @@ export function RedeemScreen() {
             requestId: body.requestId,
             replayed: true,
           });
-          setStatusNote('Status ISSUED — ticket is available.');
+          setStatusNote('Trạng thái ISSUED — vé đã sẵn sàng.');
         } else if (body.status === 'PENDING_REVIEW') {
           setStatusNote(
-            `Still pending review${body.expiresAt ? ` · expires ${body.expiresAt}` : ''}. No seat guarantee.`,
+            `Vẫn chờ duyệt${body.expiresAt ? ` · hết hạn ${body.expiresAt}` : ''}. Không đảm bảo chỗ.`,
           );
         } else if (body.status === 'REJECTED') {
           setDecision({
             kind: 'denied',
             code: 'REJECTED',
-            message: body.reason ?? 'Request was rejected.',
+            message: body.reason ?? 'Yêu cầu bị từ chối.',
           });
           setStatusNote(null);
         } else if (body.status === 'EXPIRED') {
           setDecision({
             kind: 'denied',
             code: 'PENDING_EXPIRED',
-            message: 'Pending request expired. Code may be released.',
+            message: 'Yêu cầu chờ đã hết hạn. Mã có thể được giải phóng.',
           });
           setStatusNote(null);
         }
@@ -255,11 +255,11 @@ export function RedeemScreen() {
       }
       if (result.status === 'not-found') {
         setStatusNote(
-          'Status API returned 404 — live F-BE endpoint may not be integrated yet. Pending is still not a ticket.',
+          'API trạng thái trả 404. Đang chờ vẫn chưa phải vé.',
         );
         return;
       }
-      setStatusNote('Could not refresh status (network/auth). Keep pending as unknown outcome.');
+      setStatusNote('Không làm mới được trạng thái (mạng/auth). Giữ kết quả chờ.');
     } finally {
       if (session.isEpochCurrent(epoch)) setBusy(false);
     }
@@ -267,38 +267,37 @@ export function RedeemScreen() {
 
   return (
     <Page>
-      <Notice title="Redeem">
-        Live redeem API with published form/terms when loaded. Pending is not a
-        ticket. Lost responses stay unknown until the same idempotency key
-        resolves with command redemption.redeem.
+      <Notice title="Đổi mã">
+        Nhập mã để nhận vé. Đang chờ duyệt chưa phải vé. Phản hồi mất vẫn giữ
+        trạng thái chưa rõ đến khi đối soát cùng lần thử.
       </Notice>
       {schemaNotice ? (
-        <Notice title="Published schema">{schemaNotice}</Notice>
+        <Notice title="Form đã xuất bản">{schemaNotice}</Notice>
       ) : null}
       <TextInput
         value={tenantSlug}
         onChangeText={setTenantSlug}
-        placeholder="Tenant slug (for published form)"
+        placeholder="Slug tenant (form đã xuất bản)"
         autoCapitalize="none"
-        accessibilityLabel="Tenant slug for published form"
+        accessibilityLabel="Slug tenant cho form đã xuất bản"
         style={field}
       />
       <TextInput
         value={eventSlug}
         onChangeText={setEventSlug}
-        placeholder="Event slug (for published form)"
+        placeholder="Slug sự kiện (form đã xuất bản)"
         autoCapitalize="none"
-        accessibilityLabel="Event slug for published form"
+        accessibilityLabel="Slug sự kiện cho form đã xuất bản"
         style={field}
       />
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="Load published form and terms"
+        accessibilityLabel="Tải form và điều khoản đã xuất bản"
         disabled={busy}
         onPress={() => void loadPublishedSchema()}
         style={buttonSecondary}
       >
-        <Text style={buttonSecondaryLabel}>Load published form/terms</Text>
+        <Text style={buttonSecondaryLabel}>Tải form / điều khoản</Text>
       </Pressable>
       <TextInput
         value={tenantId}
@@ -319,9 +318,9 @@ export function RedeemScreen() {
       <TextInput
         value={code}
         onChangeText={setCode}
-        placeholder="Redemption code"
+        placeholder="Mã đổi"
         autoCapitalize="characters"
-        accessibilityLabel="Redemption code"
+        accessibilityLabel="Mã đổi"
         style={field}
       />
       <RedeemFormFields
@@ -344,7 +343,7 @@ export function RedeemScreen() {
         onPress={() => void submit()}
         style={button}
       >
-        <Text style={buttonLabel}>{busy ? 'Checking…' : 'Redeem'}</Text>
+        <Text style={buttonLabel}>{busy ? 'Đang kiểm tra…' : 'Đổi mã'}</Text>
       </Pressable>
       {decision ? (
         <View
@@ -359,10 +358,21 @@ export function RedeemScreen() {
               : 'polite'
           }
         >
-          <Notice title={titleFor(decision)}>{detailFor(decision)}</Notice>
+          <Notice
+            title={titleFor(decision)}
+            tone={
+              decision.kind === 'issued'
+                ? 'admit'
+                : decision.kind === 'unknown' || decision.kind === 'pending'
+                  ? 'unknown'
+                  : 'deny'
+            }
+          >
+            {detailFor(decision)}
+          </Notice>
         </View>
       ) : null}
-      {statusNote ? <Notice title="Status">{statusNote}</Notice> : null}
+      {statusNote ? <Notice title="Trạng thái">{statusNote}</Notice> : null}
       {decision?.kind === 'pending' ? (
         <Pressable
           {...redeemStatusRefreshAnnouncement()}
@@ -371,7 +381,7 @@ export function RedeemScreen() {
           onPress={() => void refreshStatus()}
           style={button}
         >
-          <Text style={buttonLabel}>Refresh current status</Text>
+          <Text style={buttonLabel}>Làm mới trạng thái</Text>
         </Pressable>
       ) : null}
       {decision?.kind === 'issued' ? null : attempt?.key ? (
@@ -382,7 +392,7 @@ export function RedeemScreen() {
           onPress={() => void reconcile()}
           style={button}
         >
-          <Text style={buttonLabel}>Reconcile same attempt</Text>
+          <Text style={buttonLabel}>Đối soát cùng lần thử</Text>
         </Pressable>
       ) : null}
     </Page>
@@ -405,7 +415,7 @@ const button = {
 };
 
 const buttonLabel = {
-  color: 'white',
+  color: colors.onAccent,
   fontSize: 17,
   fontWeight: '600' as const,
   textAlign: 'center' as const,

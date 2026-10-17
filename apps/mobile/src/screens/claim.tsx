@@ -33,12 +33,12 @@ function firstParam(
 }
 
 function titleFor(decision: RedeemDecision | null): string {
-  if (!decision) return 'Guest invitation claim';
-  if (decision.kind === 'issued') return 'Ticket issued from claim';
-  if (decision.kind === 'pending') return 'Claim pending review — not a ticket';
-  if (decision.kind === 'unknown') return 'Claim result unknown';
-  if (decision.kind === 'stale') return 'Form or terms changed';
-  return 'Claim rejected';
+  if (!decision) return 'Nhận vé mời';
+  if (decision.kind === 'issued') return 'Đã phát hành vé từ lời mời';
+  if (decision.kind === 'pending') return 'Lời mời đang chờ duyệt — chưa phải vé';
+  if (decision.kind === 'unknown') return 'Kết quả nhận vé chưa rõ';
+  if (decision.kind === 'stale') return 'Form hoặc điều khoản đã đổi';
+  return 'Từ chối lời mời';
 }
 
 /**
@@ -129,7 +129,7 @@ export function ClaimScreen() {
         isEpochCurrent: (e) => session.isEpochCurrent(e),
       });
       if (resumed.ok) {
-        setNotice('Signed in — resume claim with the same invitation.');
+        setNotice('Đã đăng nhập — tiếp tục nhận vé với cùng lời mời.');
       }
     });
   }, [
@@ -153,15 +153,15 @@ export function ClaimScreen() {
         setTermsVersion(result.event.terms?.version ?? null);
         setTermsBody(result.event.terms?.bodyMarkdown ?? null);
         setNotice(
-          `Loaded published form for claim (schema v${result.event.schemaVersion}).`,
+          `Đã tải form đã xuất bản (schema v${result.event.schemaVersion}).`,
         );
         return;
       }
       if (result.status === 'misconfigured') {
-        setNotice('Published API not configured — claim form not loaded.');
+        setNotice('Chưa cấu hình API — chưa tải form nhận vé.');
         return;
       }
-      setNotice('Published form unavailable. Fail-closed (no fixture).');
+      setNotice('Form đã xuất bản không khả dụng. Không dùng fixture.');
     })();
     return () => {
       cancelled = true;
@@ -169,7 +169,7 @@ export function ClaimScreen() {
   }, [activeScope.tenantSlug, activeScope.eventSlug]);
 
   const loginHint = needsLogin
-    ? 'Sign in with the invited verified email, then return here.'
+    ? 'Đăng nhập bằng email đã được mời, rồi quay lại đây.'
     : null;
 
   async function submitClaim() {
@@ -180,17 +180,17 @@ export function ClaimScreen() {
     });
     if (!resumed.ok) {
       if (resumed.reason === 'epoch-stale' || resumed.reason === 'user-mismatch') {
-        setNotice('Claim intent cleared after account switch or logout.');
+        setNotice('Đã xoá lời mời sau khi đổi tài khoản hoặc đăng xuất.');
         return;
       }
-      setNotice('Missing claim token or tenant/event scope.');
+      setNotice('Thiếu token lời mời hoặc phạm vi tenant/sự kiện.');
       return;
     }
 
     const bearer = await session.getCredential();
     const apiBase = getApiBaseUrl();
     if (!session.isEpochCurrent(epoch) || !bearer || !apiBase || !epoch) {
-      setNotice('Verified session required for invitation claim.');
+      setNotice('Cần phiên đã xác minh để nhận vé mời.');
       return;
     }
 
@@ -258,17 +258,17 @@ export function ClaimScreen() {
         setDecision({
           kind: 'denied',
           code: 'REJECTED',
-          message: result.body.reason ?? 'Claim was rejected.',
+          message: result.body.reason ?? 'Lời mời bị từ chối.',
         });
       } else if (result.status === 'ok' && result.body.status === 'EXPIRED') {
         setDecision({
           kind: 'denied',
           code: 'PENDING_EXPIRED',
-          message: 'Pending claim expired.',
+          message: 'Lời mời chờ đã hết hạn.',
         });
       } else if (result.status === 'not-found') {
         setNotice(
-          'Status endpoint not found yet (F-BE). Pending remains not a ticket.',
+          'Chưa có API trạng thái. Đang chờ vẫn chưa phải vé.',
         );
       }
     } finally {
@@ -278,21 +278,20 @@ export function ClaimScreen() {
 
   return (
     <Page>
-      <Notice title="Invitation claim">
-        Verified matching-email claim only. Token stays in memory for
-        login-return and is cleared on logout or account switch. No fixture
-        fallback.
+      <Notice title="Nhận vé mời">
+        Chỉ email đã được mời và xác minh. Token giữ trong bộ nhớ để quay lại
+        sau đăng nhập; xoá khi đăng xuất hoặc đổi tài khoản.
       </Notice>
-      {loginHint ? <Notice title="Sign in required">{loginHint}</Notice> : null}
-      {notice ? <Notice title="Status">{notice}</Notice> : null}
+      {loginHint ? <Notice title="Cần đăng nhập">{loginHint}</Notice> : null}
+      {notice ? <Notice title="Trạng thái">{notice}</Notice> : null}
       {needsLogin ? (
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Go to account to sign in"
-          onPress={() => router.push('/(tabs)/account')}
+          accessibilityLabel="Đến tài khoản để đăng nhập"
+          onPress={() => router.push('/my-tickets')}
           style={button}
         >
-          <Text style={buttonLabel}>Sign in to claim</Text>
+          <Text style={buttonLabel}>Đăng nhập để nhận vé</Text>
         </Pressable>
       ) : null}
       <RedeemFormFields
@@ -310,13 +309,13 @@ export function ClaimScreen() {
       />
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="Submit invitation claim"
+        accessibilityLabel="Gửi nhận vé mời"
         accessibilityState={{ disabled: busy || needsLogin || !activeScope.token }}
         disabled={busy || needsLogin || !activeScope.token}
         onPress={() => void submitClaim()}
         style={button}
       >
-        <Text style={buttonLabel}>{busy ? 'Claiming…' : 'Claim invitation'}</Text>
+        <Text style={buttonLabel}>{busy ? 'Đang nhận…' : 'Nhận vé mời'}</Text>
       </Pressable>
       {decision ? (
         <View
@@ -331,7 +330,16 @@ export function ClaimScreen() {
                   : decision.message,
           })}
         >
-          <Notice title={titleFor(decision)}>
+          <Notice
+            title={titleFor(decision)}
+            tone={
+              decision.kind === 'issued'
+                ? 'admit'
+                : decision.kind === 'unknown' || decision.kind === 'pending'
+                  ? 'unknown'
+                  : 'deny'
+            }
+          >
             {decision.kind === 'issued'
               ? decision.ticketId
               : decision.kind === 'pending'
@@ -347,7 +355,7 @@ export function ClaimScreen() {
           onPress={() => void refreshStatus()}
           style={button}
         >
-          <Text style={buttonLabel}>Refresh claim status</Text>
+          <Text style={buttonLabel}>Làm mới trạng thái</Text>
         </Pressable>
       ) : null}
     </Page>
@@ -361,7 +369,7 @@ const button = {
 };
 
 const buttonLabel = {
-  color: 'white',
+  color: colors.onAccent,
   fontSize: 17,
   fontWeight: '600' as const,
   textAlign: 'center' as const,
