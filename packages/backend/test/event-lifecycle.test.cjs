@@ -42,7 +42,26 @@ const docker = (...args) =>
     stdio: ['ignore', 'pipe', 'pipe'],
   }).trim();
 
+<<<<<<< HEAD
 const MIGRATIONS = migrationFiles();
+=======
+const MIGRATIONS = [
+  '202610160001_foundation',
+  '202610160002_d1_users',
+  '202610160003_d1_membership',
+  '202610160004_d2_issue_ticket',
+  '202610170005_d3_gate',
+  '202610170006_d4_config_publish',
+  '202610170007_d4_manual_approval',
+  '202610170008_d4_report_retry',
+  '202610170009_n1_notification_delivery',
+  '202610170010_e_be_event_lifecycle',
+  '202610170011_b_be_config_assets',
+  '202610170012_d4_platform_m01',
+].map((name) =>
+  path.join(__dirname, '../prisma/migrations', name, 'migration.sql'),
+);
+>>>>>>> 51faec9 (fix(backend): xanh CI PR #61 sau rebase lên CS/export)
 
 const HMAC = readCodeHmacEnvironment({
   CODE_HMAC_PEPPER: 'e-be-lifecycle-pepper!!',
@@ -104,6 +123,7 @@ async function startIsolatedPostgres() {
       }
     }
     await admin.query('CREATE ROLE ticket_runtime NOLOGIN NOSUPERUSER NOBYPASSRLS');
+    await admin.query('CREATE ROLE ticket_platform_runtime NOLOGIN NOSUPERUSER NOBYPASSRLS');
     await admin.query('CREATE ROLE migration_owner NOLOGIN NOSUPERUSER NOBYPASSRLS');
     await admin.query('GRANT CREATE, USAGE ON SCHEMA public TO migration_owner');
     await admin.query('SET ROLE migration_owner');

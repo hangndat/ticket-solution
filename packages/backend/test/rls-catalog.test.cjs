@@ -19,9 +19,36 @@ const { migrationFiles } = require('./migration-files.cjs');
 // device_tokens is actor-scoped (app.actor_id), not tenant-scoped.
 // exports keeps FORCE RLS; migration_owner policy enables claim_exports_batch.
 const GLOBAL_TABLES = new Set(['users']);
-const ACTOR_TABLES = new Set(['device_tokens']);
+const ACTOR_TABLES = new Set(['device_tokens', 'account_deletion_requests']);
 const UNFORCED_TABLES = new Set(['outbox']);
-const DEFINER_OWNER_TABLES = new Set(['device_tokens', 'exports']);
+const DEFINER_OWNER_TABLES = new Set([
+  'device_tokens',
+  'exports',
+  'tenant_limits',
+  'membership_invites',
+  'platform_operators',
+  'platform_bootstrap_state',
+  'platform_audit_logs',
+  'tenants',
+  'memberships',
+  'support_grants',
+  'events',
+  'tickets',
+  'users',
+  'account_deletion_requests',
+]);
+/** Platform metadata pool — USING(true) cross-tenant (NOBYPASSRLS). */
+const PLATFORM_OPEN_TABLES = new Set([
+  'tenant_limits',
+  'tenants',
+  'platform_operators',
+  'platform_bootstrap_state',
+  'platform_audit_logs',
+  'platform_operations',
+  'membership_invites',
+  'support_grants',
+  'tenant_email_usage',
+]);
 
 async function startIsolatedPostgres() {
   const name = 'ticket-rls-cat-' + randomBytes(4).toString('hex');
@@ -79,6 +106,7 @@ async function startIsolatedPostgres() {
       }
     }
     await admin.query('CREATE ROLE ticket_runtime NOLOGIN NOSUPERUSER NOBYPASSRLS');
+    await admin.query('CREATE ROLE ticket_platform_runtime NOLOGIN NOSUPERUSER NOBYPASSRLS');
     await admin.query('CREATE ROLE migration_owner NOLOGIN NOSUPERUSER NOBYPASSRLS');
     await admin.query('GRANT CREATE, USAGE ON SCHEMA public TO migration_owner');
     await admin.query('SET ROLE migration_owner');
@@ -120,7 +148,7 @@ test(
       const roles = await db.$queryRaw`
         SELECT rolname, rolsuper, rolbypassrls, rolcanlogin
         FROM pg_roles
-        WHERE rolname IN ('ticket_runtime', 'catalog_login')
+        WHERE rolname IN ('ticket_runtime', 'ticket_platform_runtime', 'catalog_login')
         ORDER BY rolname
       `;
       assert.deepEqual(
@@ -136,6 +164,12 @@ test(
             rolsuper: false,
             rolbypassrls: false,
             rolcanlogin: true,
+          },
+          {
+            rolname: 'ticket_platform_runtime',
+            rolsuper: false,
+            rolbypassrls: false,
+            rolcanlogin: false,
           },
           {
             rolname: 'ticket_runtime',
@@ -207,6 +241,16 @@ test(
         'notification_templates',
         'notification_template_versions',
         'notification_rate_counters',
+        'tenant_limits',
+        'platform_operators',
+        'platform_bootstrap_state',
+        'platform_audit_logs',
+        'platform_operations',
+        'tenant_admin_operations',
+        'membership_invites',
+        'support_grants',
+        'account_deletion_requests',
+        'tenant_email_usage',
       ]) {
         assert.ok(names.has(required), 'missing table ' + required);
       }
@@ -231,6 +275,15 @@ test(
             'unexpected owner policy on ' + policy.relname,
           );
           assert.equal(policy.using_expr, 'true');
+          continue;
+        }
+        if (policy.role_name === 'ticket_platform_runtime') {
+          assert.ok(
+            PLATFORM_OPEN_TABLES.has(policy.relname),
+            'unexpected platform policy on ' + policy.relname,
+          );
+          assert.equal(policy.using_expr, 'true');
+          assert.equal(policy.check_expr, 'true');
           continue;
         }
         assert.equal(policy.role_name, 'ticket_runtime', policy.relname + ' policy role');

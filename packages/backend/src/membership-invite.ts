@@ -1,12 +1,10 @@
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
-import type { PrismaClient, Prisma } from './generated/prisma/client';
+import type { PrismaClient } from './generated/prisma/client';
 import type { MembershipRole } from '@ticket/contracts';
 import { PlatformError, PLATFORM_ERROR_CODES } from './platform-error';
 import {
-  eventPermissionsForRole,
   isMembershipRole,
   ROLE_SCHEMA_VERSION,
-  tenantPermissionsForRole,
 } from './role-map';
 import type { PlatformSecurityConfig } from './platform-config';
 import {

@@ -124,7 +124,7 @@ export async function processClaimedOutbox(
           expiresAt: invitePayload.expiresAt ?? '',
         });
         await withTenant(db, row.tenant_id, async (tx) => {
-          await markOutboxComplete(tx, row.tenant_id, row.outbox_id);
+          await markOutboxCompleteFenced(tx, row, options.leaseOwner);
         });
         metricsInc('notification_provider_total', {
           channel: 'email_invite',

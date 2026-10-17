@@ -3,7 +3,7 @@
  * Delivery failures must never roll back an already-committed ticket.
  * Production missing SMTP is fail-closed (no silent noop success).
  */
-import { sendMimeMailViaSmtp } from './smtp-send';
+import { sendMailViaSmtp, sendMimeMailViaSmtp } from './smtp-send';
 import {
   NotificationError,
   NOTIFICATION_ERROR_CODES,
@@ -60,7 +60,10 @@ export function createNoopEmailAdapter(): EmailAdapter {
       };
     },
     async sendMembershipInvite(payload) {
-      return { providerRef: `noop-invite:${payload.inviteId}` };
+      return {
+        providerRef: `noop-invite:${payload.inviteId}`,
+        providerStatus: 'ACCEPTED',
+      };
     },
   };
 }
@@ -174,7 +177,7 @@ export function createSmtpEmailAdapter(
         subject,
         body,
       });
-      return { providerRef };
+      return { providerRef, providerStatus: 'ACCEPTED' };
     },
   };
 }

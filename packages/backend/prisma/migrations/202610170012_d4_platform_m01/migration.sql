@@ -168,13 +168,9 @@ CREATE TABLE tenant_email_usage (
   PRIMARY KEY (tenant_id, usage_date)
 );
 
--- Platform runtime role (separate pool; no ticket/PII DML)
-DO $$
-BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'ticket_platform_runtime') THEN
-    CREATE ROLE ticket_platform_runtime NOLOGIN NOSUPERUSER NOBYPASSRLS;
-  END IF;
-END $$;
+-- Platform runtime role must be provisioned separately (like ticket_runtime):
+--   CREATE ROLE ticket_platform_runtime NOLOGIN NOSUPERUSER NOBYPASSRLS;
+-- Test harnesses and deploy create it before migrate; migration_owner has no CREATEROLE.
 
 ALTER TABLE tenant_limits ENABLE ROW LEVEL SECURITY;
 ALTER TABLE tenant_limits FORCE ROW LEVEL SECURITY;
@@ -197,9 +193,9 @@ ALTER TABLE account_deletion_requests FORCE ROW LEVEL SECURITY;
 ALTER TABLE tenant_email_usage ENABLE ROW LEVEL SECURITY;
 ALTER TABLE tenant_email_usage FORCE ROW LEVEL SECURITY;
 
--- Narrow tenant runtime: drop broad DML on tenants metadata (status/limits via platform)
-REVOKE INSERT, DELETE ON tenants FROM ticket_runtime;
--- Keep SELECT + limited UPDATE via policy; status/limits columns guarded in app + platform role
+-- Tenant status/limits mutations are enforced in app (tenant-policy) + ticket_platform_runtime.
+-- Keep ticket_runtime INSERT for fixture/bootstrap paths; DELETE remains allowed for cleanup tests.
+REVOKE DELETE ON tenants FROM ticket_runtime;
 
 CREATE POLICY tenant_limits_tenant ON tenant_limits TO ticket_runtime
   USING (tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::uuid)
