@@ -6,7 +6,7 @@ import { GuestClaimForm } from './claim-form';
 export const metadata: Metadata = {
   title: 'Nhận lời mời sự kiện',
   description:
-    'Claim lời mời khách sau đăng nhập Keycloak (token qua fragment).',
+    'Nhận lời mời sự kiện sau khi đăng nhập — email đã xác minh phải khớp lời mời.',
   referrer: 'no-referrer',
 };
 
@@ -16,9 +16,9 @@ export default function ClaimPage() {
       <SiteNav variant="guest" />
       <h1>Nhận lời mời sự kiện</h1>
       <p className="intro">
-        Khác invite thành viên. Token đi qua fragment / sessionStorage;
-        Referrer-Policy no-referrer. Sau đăng nhập quay về /claim. Không tự tạo
-        tài khoản — email đã xác minh phải khớp lời mời.
+        Đây là lời mời khách nhận vé — khác mời thành viên tổ chức. Mở liên kết
+        mời, đăng nhập nếu cần, rồi hoàn tất biểu mẫu. Email đã xác minh phải
+        khớp lời mời; không tự tạo tài khoản mới.
       </p>
       <GuestClaimForm />
       <p>
