@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   createEventLabel,
   eventListLabel,
@@ -9,6 +9,9 @@ import {
   type CreateEventView,
   type EventListView,
 } from '../../src/admin/create-event';
+import type { MeTenantItem } from '../../src/platform/contracts';
+import { interpretMeTenants } from '../../src/platform/shape';
+import { TenantStaffPanel } from './tenant-staff';
 import {
   csViewLabel,
   interpretCsDetail,
@@ -114,6 +117,8 @@ export function AdminForm({
   );
   const [busy, setBusy] = useState(false);
   const [noticeSeq, setNoticeSeq] = useState(0);
+  const [tenantChoices, setTenantChoices] = useState<MeTenantItem[]>([]);
+  const [tenantsLoadError, setTenantsLoadError] = useState<string | null>(null);
   const [decision, setDecision] = useState<AdminDecision | null>(null);
   const [createView, setCreateView] = useState<CreateEventView | null>(null);
   const [listView, setListView] = useState<EventListView | null>(null);
@@ -125,6 +130,35 @@ export function AdminForm({
   const [exportView, setExportView] = useState<ExportView | null>(null);
   const [report, setReport] = useState<EventReportView | null>(null);
   const locked = payloadLocked(editor);
+  const selectedTenant = tenantChoices.find((t) => t.tenantId === tenantId.trim());
+  const tenantSuspended = selectedTenant?.status === 'SUSPENDED';
+
+  useEffect(() => {
+    void (async () => {
+      const result = await fetchJson(
+        '/api/bff/me/tenants',
+        { method: 'GET' },
+        REQUEST_TIMEOUT_MS,
+      );
+      const view = interpretMeTenants(
+        result.status,
+        result.json,
+        result.networkError || result.timedOut,
+      );
+      if (view.kind === 'ok') {
+        setTenantChoices(view.value.items);
+        setTenantsLoadError(null);
+        if (!tenantId.trim() && view.value.items.length === 1) {
+          setTenantId(view.value.items[0]!.tenantId);
+        }
+      } else if (view.kind === 'rejected') {
+        setTenantsLoadError(`${view.code}: ${view.message}`);
+      } else {
+        setTenantsLoadError(view.message);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- load once on mount
+  }, []);
 
   function clearSpecialViews() {
     setCreateView(null);
@@ -690,7 +724,27 @@ export function AdminForm({
     <div className="redeem-form">
       <div className="redeem-fields">
         <label>
-          Tenant ID
+          Tenant (từ /me/tenants)
+          <select
+            name="tenantSelector"
+            data-testid="tenant-selector"
+            value={
+              tenantChoices.some((t) => t.tenantId === tenantId.trim())
+                ? tenantId.trim()
+                : ''
+            }
+            onChange={(e) => setTenantId(e.target.value)}
+          >
+            <option value="">— chọn tenant —</option>
+            {tenantChoices.map((t) => (
+              <option key={t.tenantId} value={t.tenantId}>
+                {t.slug} · {t.name} ({t.status}/{t.role})
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Tenant ID (fallback / UAT)
           <input
             name="tenantId"
             value={tenantId}
@@ -712,11 +766,27 @@ export function AdminForm({
           />
         </label>
       </div>
-      <p className="intro">
-        Tenant do Operator provision (UUID). Không gắn cứng demo festival. Event,
-        ticket type và source tạo qua API/UI thật; brand nằm trong payload cấu
-        hình.
-      </p>
+      {tenantsLoadError ? (
+        <p className="intro" role="status">
+          Selector /me/tenants: {tenantsLoadError}. Dùng ô Tenant ID tạm khi BE
+          platform chưa sẵn sàng; vận hành thật ưu tiên selector.
+        </p>
+      ) : (
+        <p className="intro">
+          Tenant discovery qua selector (không coi ô UUID là đường vận hành
+          chính). Event, ticket type và source tạo qua API/UI thật.
+        </p>
+      )}
+      {tenantSuspended ? (
+        <aside className="notice" role="status" data-testid="suspend-banner">
+          <strong>Tenant SUSPENDED</strong>
+          <p>
+            Admin mutations bị chặn. Vé đã phát / Gate / recovery vẫn dùng được.
+            Backend vẫn enforce — UI chỉ cảnh báo.
+          </p>
+        </aside>
+      ) : null}
+      <TenantStaffPanel tenantId={tenantId} />
       <section aria-labelledby="create-event-heading">
         <h2 id="create-event-heading">Tạo / liệt kê event trong tenant</h2>
         <p>
