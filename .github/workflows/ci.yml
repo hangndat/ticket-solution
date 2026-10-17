@@ -191,19 +191,22 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - shard: rls-membership
-            files: test/rls.test.cjs test/rls-catalog.test.cjs test/membership.test.cjs
+          # Mỗi file tự Docker — concurrency trong shard + 4 shard cân tải.
+          - shard: rls
+            files: test/rls.test.cjs test/rls-catalog.test.cjs
+          - shard: membership-report
+            files: test/membership.test.cjs test/reporting.test.cjs
           - shard: issue-gate-approval
             files: test/issue.test.cjs test/gate.test.cjs test/approval.test.cjs
-          - shard: config-n1-report
-            files: test/config-publish.test.cjs test/event-lifecycle.test.cjs test/n1-email-mime.test.cjs test/reporting.test.cjs
+          - shard: config-n1-lifecycle
+            files: test/config-publish.test.cjs test/n1-email-mime.test.cjs test/event-lifecycle.test.cjs
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-pnpm
       - run: pnpm exec turbo run build --filter=@ticket/backend...
       - name: DB tests (${{ matrix.shard }})
         working-directory: packages/backend
-        run: node --test ${{ matrix.files }}
+        run: node --test --test-concurrency=4 ${{ matrix.files }}
 
   # D5 drills tách 3 job song song (ports/container name độc lập).
   d5-observability:
