@@ -17,6 +17,7 @@ See `apps/mobile/.env.example`:
 - `EXPO_PUBLIC_API_BASE_URL` — Nest API base for `/v1/me` and `/v1/me/tickets`.
 - `EXPO_PUBLIC_TENANT_ID` — tenant UUID required by `GET /v1/me/tickets?tenantId=`.
 - `EXPO_PUBLIC_PUSH_PROVIDER` — empty = not configured; `apns` = native device-token UI only.
+- `EXPO_PUBLIC_APS_ENVIRONMENT` / `APS_ENVIRONMENT` / `APP_VARIANT` — set `production` before Release/TestFlight `expo prebuild` so `aps-environment` entitlement is `production` (default `development` / API `sandbox`).
 
 ## Auth + wallet
 
@@ -27,7 +28,7 @@ See `apps/mobile/.env.example`:
    durable SecureStore display cache for offline open (not offline check-in).
 4. **Display QR** — encodes `TicketSummary` fields (`kind: ticket.display`).
    Contracts do not yet expose a signed Gate JWS credential.
-5. **Log out** — `session.logout()` clears SecureStore; best-effort Keycloak end-session + local APNs badge clear.
+5. **Log out** — detach APNs (`DELETE /v1/me/device-tokens/{id}` + clear local registration) **before** `session.logout()`; then SecureStore clear + best-effort Keycloak end-session. Account switch uses the same detach.
 
 ## Deep links
 
@@ -41,9 +42,14 @@ Fixture id `demo-fun-fest` / slug `fun-fest` stays on main; do not rename to hid
 
 ## Push (APNs client)
 
-- Configured via `app.json` (`expo-notifications` plugin, `UIBackgroundModes`, `aps-environment`).
+- Configured via `app.config.ts` (`expo-notifications` plugin, `UIBackgroundModes`,
+  dynamic `aps-environment`: default `development`; set `APS_ENVIRONMENT=production`
+  for Archive / TestFlight). Do **not** use EAS Cloud Build.
 - Runtime uses `Notifications.getDevicePushTokenAsync()` only — **never**
   `getExpoPushTokenAsync` / Expo Push Service.
+- Verified session: `POST /v1/me/device-tokens` `{ token, environment }` → store
+  `registrationId`; logout/switch: `DELETE /v1/me/device-tokens/{registrationId}`
+  under SessionBoundary epoch + generation cancel guards.
 - `sendPush` / `acceptDeliveredClaim` stay fail-closed: a device token is **not**
   a delivery receipt. Worker APNs HTTP/2 + `.p8` keys are outside this app.
 
@@ -82,7 +88,7 @@ Uses the owner's **personal** Apple Developer team only — not company Apple ID
 | Apple ID | `hangndat@gmail.com` (Hang Nguyen Dat) |
 | Team ID | `BLUA62D52G` |
 | Bundle ID | `com.hangndat.ticket` (home-screen / binary: **Vemoki**) |
-| Config | `app.json` → `expo.ios.appleTeamId` |
+| Config | `app.config.ts` → `expo.ios.appleTeamId` |
 
 Do **not** use Xcode account `eschmeler5431@icloud.com` / team SCHMELER ERUNG (`3WHS6JDYV2`) for this app.
 

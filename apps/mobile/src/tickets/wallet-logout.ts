@@ -33,6 +33,16 @@ export async function logoutAndClearWalletArtifacts(
 
   const errors: Error[] = [];
 
+  // Detach push while the bearer is still readable (before session.logout).
+  try {
+    const { clearApnsRegistrationState } = await import(
+      '../push/apns-device-token.ts'
+    );
+    await clearApnsRegistrationState({ session });
+  } catch (error) {
+    errors.push(asError(error, 'APNs registration detach failed'));
+  }
+
   try {
     await session.logout();
   } catch (error) {
@@ -43,15 +53,6 @@ export async function logoutAndClearWalletArtifacts(
     await offlineDisplay.clear();
   } catch (error) {
     errors.push(asError(error, 'Offline display binding clear failed'));
-  }
-
-  try {
-    const { clearApnsRegistrationState } = await import(
-      '../push/apns-device-token.ts'
-    );
-    await clearApnsRegistrationState();
-  } catch (error) {
-    errors.push(asError(error, 'APNs local registration clear failed'));
   }
 
   if (input.userId && input.tenantId) {
