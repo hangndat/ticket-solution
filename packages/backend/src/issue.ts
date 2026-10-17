@@ -16,6 +16,11 @@ import {
   ISSUE_ERROR_CODES,
   type IssueErrorCode,
 } from './issue-error';
+import {
+  assertOpenForIssuance,
+  lockEventPolicyForShare,
+  dbClock,
+} from './event-policy';
 
 export const REDEEM_COMMAND = 'redemption.redeem' as const;
 export const APPROVAL_PENDING = 'APPROVAL_PENDING' as const;
@@ -79,13 +84,6 @@ export type RedeemOutcome =
 type IssueBusinessResult =
   | { kind: 'issued'; ticket: Omit<IssuedTicketResult, 'replayed'> }
   | { kind: 'pending'; pending: Omit<PendingApprovalResult, 'replayed'> };
-
-type EventPolicyRow = {
-  id: string;
-  status: string;
-  redemption_opens_at: Date | null;
-  redemption_closes_at: Date | null;
-};
 
 type CodeRow = {
   id: string;
@@ -343,34 +341,14 @@ async function runIssueBusiness(
   input: RedeemInput,
   operationId: string,
 ): Promise<IssueBusinessResult> {
-  // 2) Event policy FOR SHARE
-  const events = await tx.$queryRaw<EventPolicyRow[]>`
-    SELECT id, status, redemption_opens_at, redemption_closes_at
-    FROM events
-    WHERE tenant_id = ${input.tenantId}::uuid
-      AND id = ${input.eventId}::uuid
-    FOR SHARE
-  `;
-  const event = events[0];
-  if (!event || event.status !== 'PUBLISHED') {
-    throw new IssueError(
-      ISSUE_ERROR_CODES.EVENT_CLOSED,
-      'Event is not open for redemption',
-    );
-  }
-  const nowRows = await tx.$queryRaw<{ now: Date }[]>`
-    SELECT clock_timestamp() AS now
-  `;
-  const now = nowRows[0]?.now ?? new Date();
-  if (
-    (event.redemption_opens_at && now < event.redemption_opens_at) ||
-    (event.redemption_closes_at && now > event.redemption_closes_at)
-  ) {
-    throw new IssueError(
-      ISSUE_ERROR_CODES.REDEMPTION_WINDOW_CLOSED,
-      'Redemption window is closed',
-    );
-  }
+  // 2) Event policy FOR SHARE — content PUBLISHED, business ACTIVE, half-open window.
+  const event = await lockEventPolicyForShare(
+    tx,
+    input.tenantId,
+    input.eventId,
+  );
+  const now = await dbClock(tx);
+  assertOpenForIssuance(event, now, 'issue');
 
   // 3) Lock code FOR UPDATE
   const codeHmac = hashRedemptionCode(hmac, input.rawCode);
@@ -466,7 +444,7 @@ async function runIssueBusiness(
       tenant_id, event_id, attendee_id, issued_count, max_tickets, updated_at
     ) VALUES (
       ${input.tenantId}::uuid, ${input.eventId}::uuid, ${attendee.id}::uuid,
-      0, 5, now()
+      0, ${event.max_tickets_per_attendee}, now()
     )
     ON CONFLICT (tenant_id, attendee_id) DO NOTHING
   `;

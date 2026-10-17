@@ -22,26 +22,43 @@ model Tenant {
 }
 
 model Event {
-  tenantId             String               @map("tenant_id") @db.Uuid
-  id                   String               @db.Uuid
-  slug                 String
-  name                 String
-  status               String               @default("DRAFT")
-  timezone             String               @default("Asia/Ho_Chi_Minh")
-  redemptionOpensAt    DateTime?            @map("redemption_opens_at") @db.Timestamptz(3)
-  redemptionClosesAt   DateTime?            @map("redemption_closes_at") @db.Timestamptz(3)
-  tenant               Tenant               @relation(fields: [tenantId], references: [id], onDelete: Restrict)
-  eventAssignments     EventAssignment[]
-  ticketTypes          TicketType[]
-  issuanceSources      IssuanceSource[]
-  sourceTicketTypes    SourceTicketType[]
-  quotaBuckets         QuotaBucket[]
-  redemptionCodes      RedemptionCode[]
-  eventAttendees       EventAttendee[]
-  attendeeCounters     AttendeeCounter[]
-  redemptionRequests   RedemptionRequest[]
-  tickets              Ticket[]
-  operations           Operation[]
+  tenantId               String               @map("tenant_id") @db.Uuid
+  id                     String               @db.Uuid
+  slug                   String
+  name                   String
+  /// Mirrored content status (DRAFT|PUBLISHED|ARCHIVED). Kept in sync with contentStatus.
+  status                 String               @default("DRAFT")
+  contentStatus          String               @default("DRAFT") @map("content_status")
+  businessStatus         String               @default("ACTIVE") @map("business_status")
+  revision               Int                  @default(1)
+  visibility             String               @default("UNLISTED")
+  timezone               String               @default("Asia/Ho_Chi_Minh")
+  startsAt               DateTime?            @map("starts_at") @db.Timestamptz(3)
+  endsAt                 DateTime?            @map("ends_at") @db.Timestamptz(3)
+  venueName              String?              @map("venue_name")
+  venueAddress           String?              @map("venue_address")
+  contactEmail           String?              @map("contact_email")
+  contactPhone           String?              @map("contact_phone")
+  contactUrl             String?              @map("contact_url")
+  redemptionOpensAt      DateTime?            @map("redemption_opens_at") @db.Timestamptz(3)
+  redemptionClosesAt     DateTime?            @map("redemption_closes_at") @db.Timestamptz(3)
+  checkInOpensAt         DateTime?            @map("check_in_opens_at") @db.Timestamptz(3)
+  checkInClosesAt        DateTime?            @map("check_in_closes_at") @db.Timestamptz(3)
+  maxTicketsPerAttendee  Int?                 @map("max_tickets_per_attendee")
+  cancelReason           String?              @map("cancel_reason")
+  cancelledAt            DateTime?            @map("cancelled_at") @db.Timestamptz(3)
+  tenant                 Tenant               @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  eventAssignments       EventAssignment[]
+  ticketTypes            TicketType[]
+  issuanceSources        IssuanceSource[]
+  sourceTicketTypes      SourceTicketType[]
+  quotaBuckets           QuotaBucket[]
+  redemptionCodes        RedemptionCode[]
+  eventAttendees         EventAttendee[]
+  attendeeCounters       AttendeeCounter[]
+  redemptionRequests     RedemptionRequest[]
+  tickets                Ticket[]
+  operations             Operation[]
 
   @@id([tenantId, id])
   @@unique([tenantId, slug])
