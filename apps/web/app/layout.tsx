@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import localFont from 'next/font/local';
+import { headers } from 'next/headers';
 import {
   ThemeProvider,
   VEMOKI_BRANDING,
@@ -59,25 +60,39 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default async function RootLayout({ children }: { children: ReactNode }) {
   const rootVars = brandingToCssVars(VEMOKI_BRANDING);
+  const h = await headers();
+  const surface = h.get('x-vemoki-surface');
+  const locale = h.get('x-vemoki-locale') === 'en' ? 'en' : 'vi';
+  const isMarketing = surface === 'marketing';
+
   return (
     <html
-      lang="vi"
+      lang={isMarketing ? locale : 'vi'}
       className={`${fontDisplay.variable} ${fontBody.variable}`}
       style={rootVars}
       data-branding-source={VEMOKI_BRANDING.source}
+      data-surface={isMarketing ? 'marketing' : 'product'}
     >
       <body>
         <ThemeProvider branding={VEMOKI_BRANDING}>
-          <a className="skip-link" href="#main">
-            Bỏ qua đến nội dung
-          </a>
+          {!isMarketing ? (
+            <a className="skip-link" href="#main">
+              Bỏ qua đến nội dung
+            </a>
+          ) : (
+            <a className="skip-link" href="#main">
+              {locale === 'en' ? 'Skip to content' : 'Bỏ qua nội dung'}
+            </a>
+          )}
           {children}
-          <footer className="footer">
-            <FooterBrand />
-            <span>Demo mang nhãn rõ · Đổi mã / cổng qua API thật</span>
-          </footer>
+          {!isMarketing ? (
+            <footer className="footer">
+              <FooterBrand />
+              <span>Demo mang nhãn rõ · Đổi mã / cổng qua API thật</span>
+            </footer>
+          ) : null}
         </ThemeProvider>
       </body>
     </html>
