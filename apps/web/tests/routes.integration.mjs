@@ -101,6 +101,11 @@ test('production routes isolate tenant content and reject unknown pairs', async 
     assert.ok(adminHtml.includes('Duyệt'));
     assert.ok(adminHtml.includes('Từ chối'));
     assert.ok(adminHtml.includes('Lý do từ chối'));
+    assert.ok(adminHtml.includes('Tạo event'));
+    assert.ok(adminHtml.includes('Tìm vé CS'));
+    assert.ok(adminHtml.includes('Gửi lại email'));
+    assert.ok(adminHtml.includes('Tạo export CSV'));
+    assert.ok(adminHtml.includes('không hardcode demo festival'));
     assert.equal(/FUN FEST|fun-fest/i.test(adminHtml), false);
     const authPoc = await fetch(base + '/auth');
     assert.equal(authPoc.status, 200);
@@ -209,6 +214,54 @@ test('production routes isolate tenant content and reject unknown pairs', async 
     });
     assert.equal(denyBff.status, 503);
     assert.equal((await denyBff.json()).code, 'OIDC_MISCONFIGURED');
+
+    const createEventBff = await fetch(base + '/api/bff/admin/events', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        tenantId: '11111111-1111-4111-8111-111111111111',
+        slug: 'aurora-night',
+        name: 'Aurora Night',
+      }),
+    });
+    assert.equal(createEventBff.status, 503);
+    assert.equal((await createEventBff.json()).code, 'OIDC_MISCONFIGURED');
+
+    const csListBff = await fetch(
+      base +
+        '/api/bff/admin/tickets?tenantId=11111111-1111-4111-8111-111111111111&eventId=22222222-2222-4222-8222-222222222222&q=test',
+    );
+    assert.equal(csListBff.status, 503);
+    assert.equal((await csListBff.json()).code, 'OIDC_MISCONFIGURED');
+
+    const csResendBff = await fetch(
+      base +
+        '/api/bff/admin/tickets/33333333-3333-4333-8333-333333333333/resend',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tenantId: '11111111-1111-4111-8111-111111111111',
+          eventId: '22222222-2222-4222-8222-222222222222',
+          idempotencyKey: '44444444-4444-4444-8444-444444444444',
+        }),
+      },
+    );
+    assert.equal(csResendBff.status, 503);
+    assert.equal((await csResendBff.json()).code, 'OIDC_MISCONFIGURED');
+
+    const exportBff = await fetch(base + '/api/bff/admin/exports', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        tenantId: '11111111-1111-4111-8111-111111111111',
+        eventId: '22222222-2222-4222-8222-222222222222',
+        format: 'csv',
+        idempotencyKey: '55555555-5555-4555-8555-555555555555',
+      }),
+    });
+    assert.equal(exportBff.status, 503);
+    assert.equal((await exportBff.json()).code, 'OIDC_MISCONFIGURED');
   } finally {
     const stopped = once(child, 'exit');
     child.kill('SIGTERM');

@@ -2,11 +2,30 @@
 
 import { useState } from 'react';
 import {
+  createEventLabel,
+  interpretCreateEvent,
+  type CreateEventView,
+} from '../../src/admin/create-event';
+import {
+  csViewLabel,
+  interpretCsDetail,
+  interpretCsList,
+  interpretCsResend,
+  type CsView,
+} from '../../src/admin/cs';
+import {
   adminDecisionLabel,
   decideAdmin,
   type AdminAction,
   type AdminDecision,
 } from '../../src/admin/decide';
+import {
+  exportViewLabel,
+  interpretExportCreate,
+  interpretExportDownload,
+  interpretExportStatus,
+  type ExportView,
+} from '../../src/admin/export-job';
 import {
   TICKET_STATES,
   interpretEventReport,
@@ -49,6 +68,9 @@ export function AdminForm({
 }: Props) {
   const [tenantId, setTenantId] = useState(initialTenantId);
   const [eventId, setEventId] = useState(initialEventId);
+  const [eventSlug, setEventSlug] = useState('');
+  const [eventName, setEventName] = useState('');
+  const [eventTimezone, setEventTimezone] = useState('Asia/Ho_Chi_Minh');
   const [editor, setEditor] = useState<PayloadEditor>(() =>
     initialPayloadEditor(),
   );
@@ -58,18 +80,39 @@ export function AdminForm({
   const [eventQuota, setEventQuota] = useState('');
   const [requestId, setRequestId] = useState('');
   const [denyReason, setDenyReason] = useState('');
+  const [csQuery, setCsQuery] = useState('');
+  const [csTicketId, setCsTicketId] = useState('');
+  const [csCursor, setCsCursor] = useState<string | null>(null);
+  const [exportId, setExportId] = useState('');
   const [approveAttempt, setApproveAttempt] = useState<UnclearAttempt | null>(
     null,
   );
   const [denyAttempt, setDenyAttempt] = useState<UnclearAttempt | null>(null);
+  const [resendAttempt, setResendAttempt] = useState<UnclearAttempt | null>(
+    null,
+  );
+  const [exportAttempt, setExportAttempt] = useState<UnclearAttempt | null>(
+    null,
+  );
   const [busy, setBusy] = useState(false);
+  const [noticeSeq, setNoticeSeq] = useState(0);
   const [decision, setDecision] = useState<AdminDecision | null>(null);
+  const [createView, setCreateView] = useState<CreateEventView | null>(null);
+  const [csView, setCsView] = useState<CsView | null>(null);
+  const [exportView, setExportView] = useState<ExportView | null>(null);
   const [report, setReport] = useState<EventReportView | null>(null);
   const locked = payloadLocked(editor);
+
+  function bumpNotice() {
+    setNoticeSeq((n) => n + 1);
+  }
 
   async function call(action: AdminAction, path: string, init: RequestInit) {
     setBusy(true);
     setDecision(null);
+    setCreateView(null);
+    setCsView(null);
+    setExportView(null);
     const result = await fetchJson(path, init, REQUEST_TIMEOUT_MS);
     const next = decideAdmin(
       action,
@@ -82,6 +125,7 @@ export function AdminForm({
       setEditor((prev) => lockPublishedPayload(prev));
       setExpectedVersion(String(next.version));
     }
+    bumpNotice();
     setDecision(next);
     setBusy(false);
   }
@@ -160,17 +204,254 @@ export function AdminForm({
   async function loadReport() {
     setBusy(true);
     setReport(null);
+    setDecision(null);
+    setCreateView(null);
+    setCsView(null);
+    setExportView(null);
     const params = new URLSearchParams(scope());
     const result = await fetchJson(
       `/api/bff/admin/report?${params.toString()}`,
       { method: 'GET' },
       REQUEST_TIMEOUT_MS,
     );
+    bumpNotice();
     setReport(
       interpretEventReport(
         result.status,
         result.json,
         result.networkError || result.timedOut,
+      ),
+    );
+    setBusy(false);
+  }
+
+  async function createEvent() {
+    setBusy(true);
+    setDecision(null);
+    setCreateView(null);
+    setCsView(null);
+    setExportView(null);
+    const result = await fetchJson(
+      '/api/bff/admin/events',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tenantId: tenantId.trim(),
+          slug: eventSlug.trim(),
+          name: eventName.trim(),
+          timezone: eventTimezone.trim() || undefined,
+        }),
+      },
+      REQUEST_TIMEOUT_MS,
+    );
+    const next = interpretCreateEvent(
+      result.status,
+      result.json,
+      result.networkError || result.timedOut,
+    );
+    if (next.kind === 'created') setEventId(next.eventId);
+    bumpNotice();
+    setCreateView(next);
+    setBusy(false);
+  }
+
+  async function csSearch() {
+    setBusy(true);
+    setDecision(null);
+    setCreateView(null);
+    setExportView(null);
+    const params = new URLSearchParams({
+      ...scope(),
+      ...(csQuery.trim() ? { q: csQuery.trim() } : {}),
+      limit: '20',
+      ...(csCursor ? { cursor: csCursor } : {}),
+    });
+    const result = await fetchJson(
+      `/api/bff/admin/tickets?${params.toString()}`,
+      { method: 'GET' },
+      REQUEST_TIMEOUT_MS,
+    );
+    const next = interpretCsList(
+      result.status,
+      result.json,
+      result.networkError || result.timedOut,
+    );
+    if (next.kind === 'list') setCsCursor(next.cursor);
+    bumpNotice();
+    setCsView(next);
+    setBusy(false);
+  }
+
+  async function csDetail() {
+    const id = csTicketId.trim();
+    if (!id) {
+      setCsView({
+        kind: 'rejected',
+        code: 'TICKET_ID_REQUIRED',
+        message: 'ticketId must be a UUID.',
+      });
+      return;
+    }
+    setBusy(true);
+    setDecision(null);
+    setCreateView(null);
+    setExportView(null);
+    const params = new URLSearchParams(scope());
+    const result = await fetchJson(
+      `/api/bff/admin/tickets/${encodeURIComponent(id)}?${params.toString()}`,
+      { method: 'GET' },
+      REQUEST_TIMEOUT_MS,
+    );
+    bumpNotice();
+    setCsView(
+      interpretCsDetail(
+        result.status,
+        result.json,
+        result.networkError || result.timedOut,
+        id,
+      ),
+    );
+    setBusy(false);
+  }
+
+  async function csResend() {
+    const id = csTicketId.trim();
+    if (!id) {
+      setCsView({
+        kind: 'rejected',
+        code: 'TICKET_ID_REQUIRED',
+        message: 'ticketId must be a UUID.',
+      });
+      return;
+    }
+    const fingerprint = JSON.stringify({ ...scope(), ticketId: id });
+    const idempotencyKey = reuseUnclearKey(resendAttempt, fingerprint);
+    setBusy(true);
+    setDecision(null);
+    setCreateView(null);
+    setExportView(null);
+    const result = await fetchJson(
+      `/api/bff/admin/tickets/${encodeURIComponent(id)}/resend`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...scope(), idempotencyKey }),
+      },
+      REQUEST_TIMEOUT_MS,
+    );
+    const next = interpretCsResend(
+      result.status,
+      result.json,
+      result.networkError || result.timedOut,
+      id,
+    );
+    setResendAttempt({
+      key: idempotencyKey,
+      fingerprint,
+      unclear: next.kind === 'unknown',
+    });
+    bumpNotice();
+    setCsView(next);
+    setBusy(false);
+  }
+
+  async function createExport() {
+    const fingerprint = JSON.stringify({ ...scope(), format: 'csv' });
+    const idempotencyKey = reuseUnclearKey(exportAttempt, fingerprint);
+    setBusy(true);
+    setDecision(null);
+    setCreateView(null);
+    setCsView(null);
+    const result = await fetchJson(
+      '/api/bff/admin/exports',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...scope(),
+          format: 'csv',
+          idempotencyKey,
+        }),
+      },
+      REQUEST_TIMEOUT_MS,
+    );
+    const next = interpretExportCreate(
+      result.status,
+      result.json,
+      result.networkError || result.timedOut,
+    );
+    setExportAttempt({
+      key: idempotencyKey,
+      fingerprint,
+      unclear: next.kind === 'unknown',
+    });
+    if (next.kind === 'created') setExportId(next.exportId);
+    bumpNotice();
+    setExportView(next);
+    setBusy(false);
+  }
+
+  async function loadExportStatus() {
+    const id = exportId.trim();
+    if (!id) {
+      setExportView({
+        kind: 'rejected',
+        code: 'EXPORT_ID_REQUIRED',
+        message: 'exportId must be a UUID.',
+      });
+      return;
+    }
+    setBusy(true);
+    setDecision(null);
+    setCreateView(null);
+    setCsView(null);
+    const params = new URLSearchParams(scope());
+    const result = await fetchJson(
+      `/api/bff/admin/exports/${encodeURIComponent(id)}?${params.toString()}`,
+      { method: 'GET' },
+      REQUEST_TIMEOUT_MS,
+    );
+    bumpNotice();
+    setExportView(
+      interpretExportStatus(
+        result.status,
+        result.json,
+        result.networkError || result.timedOut,
+        id,
+      ),
+    );
+    setBusy(false);
+  }
+
+  async function downloadExport() {
+    const id = exportId.trim();
+    if (!id) {
+      setExportView({
+        kind: 'rejected',
+        code: 'EXPORT_ID_REQUIRED',
+        message: 'exportId must be a UUID.',
+      });
+      return;
+    }
+    setBusy(true);
+    setDecision(null);
+    setCreateView(null);
+    setCsView(null);
+    const params = new URLSearchParams(scope());
+    const result = await fetchJson(
+      `/api/bff/admin/exports/${encodeURIComponent(id)}/download?${params.toString()}`,
+      { method: 'GET' },
+      REQUEST_TIMEOUT_MS,
+    );
+    bumpNotice();
+    setExportView(
+      interpretExportDownload(
+        result.status,
+        result.json,
+        result.networkError || result.timedOut,
+        id,
+        null,
       ),
     );
     setBusy(false);
@@ -217,6 +498,9 @@ export function AdminForm({
     };
     setBusy(true);
     setDecision(null);
+    setCreateView(null);
+    setCsView(null);
+    setExportView(null);
     const result = await fetchJson(
       action === 'approve'
         ? '/api/bff/admin/redemptions/approve'
@@ -240,6 +524,7 @@ export function AdminForm({
       result.networkError || result.timedOut,
     );
     remember(next.kind === 'unknown');
+    bumpNotice();
     setDecision(next);
     setBusy(false);
   }
@@ -270,6 +555,58 @@ export function AdminForm({
           />
         </label>
       </div>
+      <p className="intro">
+        Tenant do Operator provision (UUID). Không gắn cứng demo festival. Event
+        tạo qua API thật bên dưới; brand/type/source lần nhập đầu đi kèm import
+        + payload cấu hình.
+      </p>
+      <section aria-labelledby="create-event-heading">
+        <h2 id="create-event-heading">Tạo event trong tenant</h2>
+        <p>
+          Chỉ cần tenant đã có. Nếu upstream chưa có POST create event, thông
+          báo sẽ ghi rõ — không giả lập đã tạo.
+        </p>
+        <label>
+          Event slug
+          <input
+            name="eventSlug"
+            value={eventSlug}
+            onChange={(e) => setEventSlug(e.target.value)}
+            autoComplete="off"
+            spellCheck={false}
+            placeholder="my-event-2026"
+          />
+        </label>
+        <label>
+          Event name
+          <input
+            name="eventName"
+            value={eventName}
+            onChange={(e) => setEventName(e.target.value)}
+            autoComplete="off"
+            spellCheck={false}
+          />
+        </label>
+        <label>
+          Timezone
+          <input
+            name="eventTimezone"
+            value={eventTimezone}
+            onChange={(e) => setEventTimezone(e.target.value)}
+            autoComplete="off"
+            spellCheck={false}
+          />
+        </label>
+        <div className="auth-buttons">
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void createEvent()}
+          >
+            Tạo event
+          </button>
+        </div>
+      </section>
       <section aria-labelledby="event-report-heading">
         <h2 id="event-report-heading">Báo cáo sự kiện</h2>
         <p>
@@ -456,19 +793,157 @@ export function AdminForm({
           Từ chối
         </button>
       </div>
-      {decision ? (
-        <section
-          className={
-            decision.kind === 'rejected'
-              ? 'redeem-status redeem-status--error'
-              : 'notice'
-          }
-          role="alert"
-          data-testid="admin-notice"
-        >
-          <p>{adminDecisionLabel(decision)}</p>
-        </section>
-      ) : null}
+      <section aria-labelledby="cs-heading">
+        <h2 id="cs-heading">CS — tra cứu và gửi lại email</h2>
+        <p>
+          PII mặc định đã che trên API. Trạng thái provider ACCEPTED không được
+          hiểu là đã giao email.
+        </p>
+        <label>
+          Từ khóa CS
+          <input
+            name="csQuery"
+            value={csQuery}
+            onChange={(e) => {
+              setCsQuery(e.target.value);
+              setCsCursor(null);
+            }}
+            autoComplete="off"
+            spellCheck={false}
+          />
+        </label>
+        <div className="auth-buttons">
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => {
+              setCsCursor(null);
+              void csSearch();
+            }}
+          >
+            Tìm vé CS
+          </button>
+          {csCursor ? (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void csSearch()}
+            >
+              Trang CS tiếp
+            </button>
+          ) : null}
+        </div>
+        <label>
+          Ticket ID
+          <input
+            name="csTicketId"
+            value={csTicketId}
+            onChange={(e) => setCsTicketId(e.target.value)}
+            autoComplete="off"
+            spellCheck={false}
+            placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+          />
+        </label>
+        <div className="auth-buttons">
+          <button type="button" disabled={busy} onClick={() => void csDetail()}>
+            Xem chi tiết CS
+          </button>
+          <button type="button" disabled={busy} onClick={() => void csResend()}>
+            Gửi lại email
+          </button>
+        </div>
+        {csView?.kind === 'list' || csView?.kind === 'detail' ? (
+          <pre
+            data-testid="cs-raw"
+            className="me-result"
+            tabIndex={0}
+            aria-label="CS payload"
+          >
+            {JSON.stringify(csView.raw, null, 2)}
+          </pre>
+        ) : null}
+      </section>
+      <section aria-labelledby="export-heading">
+        <h2 id="export-heading">Export CSV</h2>
+        <p>
+          Job nền + link tải có hạn (MinIO private). Không lưu URL dài hạn trên
+          form.
+        </p>
+        <div className="auth-buttons">
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void createExport()}
+          >
+            Tạo export CSV
+          </button>
+        </div>
+        <label>
+          Export ID
+          <input
+            name="exportId"
+            value={exportId}
+            onChange={(e) => setExportId(e.target.value)}
+            autoComplete="off"
+            spellCheck={false}
+            placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+          />
+        </label>
+        <div className="auth-buttons">
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void loadExportStatus()}
+          >
+            Trạng thái export
+          </button>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void downloadExport()}
+          >
+            Lấy link tải
+          </button>
+        </div>
+      </section>
+      {(() => {
+        const notice = createView
+          ? {
+              error: createView.kind === 'rejected',
+              text: createEventLabel(createView),
+            }
+          : csView
+            ? {
+                error: csView.kind === 'rejected',
+                text: csViewLabel(csView),
+              }
+            : exportView
+              ? {
+                  error: exportView.kind === 'rejected',
+                  text: exportViewLabel(exportView),
+                }
+              : decision
+                ? {
+                    error: decision.kind === 'rejected',
+                    text: adminDecisionLabel(decision),
+                  }
+                : null;
+        if (!notice) return null;
+        return (
+          <section
+            className={
+              notice.error
+                ? 'redeem-status redeem-status--error'
+                : 'notice'
+            }
+            role="alert"
+            data-testid="admin-notice"
+            data-notice-seq={noticeSeq}
+          >
+            <p>{notice.text}</p>
+          </section>
+        );
+      })()}
     </div>
   );
 }
