@@ -64,4 +64,17 @@ test('timeout and 5xx never admit', () => {
     networkError: false,
   });
   assert.equal(classifySupervisorOp(admitted), 'admission');
+  assert.equal(admitted.admissionKind, 'fresh');
+
+  const already = applyConfirm(holding, {
+    status: 409,
+    json: {
+      code: 'ALREADY_CHECKED_IN',
+      checkinId: '66666666-6666-4666-8666-666666666666',
+    },
+    networkError: false,
+  });
+  assert.equal(already.phase, 'admitted');
+  assert.equal(already.admissionKind, 'already');
+  assert.equal(classifySupervisorOp(already), 'admission');
 });
