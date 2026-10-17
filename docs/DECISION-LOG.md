@@ -21,6 +21,10 @@ Tracking: Issues [#10](https://github.com/hangndat/ticket-solution/issues/10), [
 | O09 | Tên thương hiệu và domain platform? | **Vemoki**, domain `vemoki.com` | Đã chốt (MVP) | Tên hiển thị store/web, sender `noreply@vemoki.com`, deep link `vemoki://`; repo `ticket-solution` và bundle `com.hangndat.ticket` giữ nguyên |
 | O10 | Mở rộng MVP / hủy Android·payment·seat·Wallet? | **Có mở rộng** — đưa **D7** Offline Gate multi-device, **D8** White-label, **D9** Demo seed + UX/media, **D10** App Store metadata vào MVP. **Hủy khỏi kế hoạch MVP:** Android native; payment/refund/chuyển nhượng; seat map; Apple/Google Wallet (ngoài phạm vi có chủ đích). Issue [#7](https://github.com/hangndat/ticket-solution/issues/7) rewrite đồng bộ board (worker GitHub). | Đã chốt (MVP mở rộng) 2026-10-17 | [ROADMAP](./ROADMAP.md) §1/§4/§6; [PRD](./PRD.md) §4 |
 
+### O11 — Định hướng mở rộng UX/UI cho vận hành production (18/10/2026)
+
+User giao mở rộng MVP, đẩy mạnh UX/UI và yêu cầu BA (`product-ba`) cùng PD (`product-design`) nghiên cứu/thiết kế. **Đã chốt định hướng và ủy quyền discovery/design**; danh sách tính năng mới, roadmap triển khai và thiết kế chi tiết **chưa được duyệt**. D11 ([#222](https://github.com/hangndat/ticket-solution/issues/222)) cung cấp báo cáo BA, handoff PD/prototype và kế hoạch để review trước feature coding. Không hồi sinh Android/payment/refund/transfer/seat map/Wallet; không đổi các invariant tenant/auth/quota/check-in, không tự deploy/submit store. Đánh giá production cần bằng chứng độc lập, không suy ra từ UI/prototype hay Status D0–D10.
+
 ## ADR — Quyết định kỹ thuật liên quan D1
 
 | ID | Quyết định | Trạng thái | Ghi chú |
@@ -58,3 +62,7 @@ Chỉ mở redemption / Gate / admin tenant **sau khi**:
 | 2026-10-17 | Freeze security vận hành (không O06): invite TTL 48h, support grant max 1h, MFA `auth_time` step-up 15m, ACR=`2`; platform client/audience Keycloak; O06 giữ UNRESOLVED. |
 | 2026-10-17 | User **mở rộng MVP (O10)**: D7–D10 vào phạm vi; hủy Android / payment·refund·chuyển nhượng / seat map / Apple·Google Wallet khỏi kế hoạch MVP. Cập nhật O01 (white-label → D8), ADR-07, ROADMAP, PRD §4. #7 rewrite trên board (không thuộc worker docs). |
 | 2026-10-17 | **ADR-18** — contract Offline Gate sync (Issue #105): payload, idempotency `clientEventId`, clock skew ±300s, conflict codes, replay order; endpoint OpenAPI stub 501 đến #106. |
+
+## O11 — Phê duyệt thực thi 18/10/2026
+
+User duyệt gói D11 trong cuộc hội thoại: admin theo công việc/readiness, iOS Gate feedback/offline/conflict, attendee web/iOS và brand/a11y trong scope. Bắt đầu wave web admin ∥ iOS Gate, tiếp theo attendee. Dùng feature branch/PR, review độc lập, CI và coordinator integration theo git-workflow. Không tự mở validate-only/manual lookup, metrics mới, policy O06 số liệu, publish privacy, deploy production hoặc submit store. Phần discovery trước đó giữ làm lịch sử; approval không thay bằng chứng runtime/pilot.

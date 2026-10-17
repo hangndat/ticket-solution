@@ -1,5 +1,15 @@
 # Roadmap — Event Ticketing Platform
 
+> **Đã duyệt triển khai ngày 18/10/2026:** user trả lời “duyệt” cho gói D11. Phạm vi thực thi: web admin theo công việc/readiness; iOS Gate feedback/offline/conflict; attendee web/iOS nhận vé/QR/recovery; brand-test đa tenant và a11y trong các bề mặt đó. Thứ tự wave: web admin ∥ iOS Gate, rồi attendee theo slot ownership. Cho phép workflow feature branch → PR → review độc lập → CI → coordinator integration theo git-workflow. Validate-only/manual lookup, metrics mới, O06 số liệu, publish privacy, production deploy và store submit **không** được tự mở từ phê duyệt này. Các phần “chưa approved” bên dưới là snapshot proposal trước phê duyệt; Task Spec cụ thể và comment approval trên #222 là authority thực thi.
+
+
+> **Đối chiếu live 18/10/2026 — cập nhật D11:** Project #3 xác nhận D0–D10 **Hoàn thành**; tại checkpoint trước D11 có 100/101 item Hoàn thành, item #7 là phạm vi hủy. `main` đối chiếu: `3e61cde42d55654897048d6d627ab6834b54b808`. Các bảng snapshot ngày 17/10 bên dưới giữ làm lịch sử; không dùng để suy ra trạng thái hiện tại.
+>
+> **Định hướng mở rộng được user giao ngày 18/10:** đẩy mạnh UX/UI và giao BA/PD nghiên cứu, thiết kế cho vận hành production. Mở **D11 — nghiên cứu và thiết kế UX/UI production** ([Epic #222](https://github.com/hangndat/ticket-solution/issues/222)); pha discovery/design đang thực hiện. Phạm vi tính năng, thứ tự ưu tiên và thiết kế chi tiết là **đề xuất để user review trước feature coding**. Kế hoạch: [D11-UX-PRODUCTION-PLAN](./plans/D11-UX-PRODUCTION-PLAN.md); nghiên cứu: [D11-BA-RESEARCH](./plans/D11-BA-RESEARCH.md); thiết kế: [D11-PRODUCTION-UX-UI](./design/D11-PRODUCTION-UX-UI.md).
+>
+> **Gate D11:** (1) BA nêu pain có nguồn, journeys, ưu tiên và AC/metrics; (2) PD bàn giao flow/state/a11y/UI AC/handoff + prototype tương tác đánh dấu demo; (3) planner chia Epic→Story→Task theo ownership, role/path, dependency thật và wave; (4) user review roadmap trước coding. Research/design complete không phải code complete, acceptance complete hay pilot ready. Không tự deploy production hoặc submit store. Các phạm vi hủy O10 giữ nguyên. O06 retention và các gap phát hành phải được đánh giá bằng evidence khi lập release gate.
+
+
 Ngày cập nhật nội dung: 2026-10-17  
 Đối chiếu live: `origin/main` `7c1abae72ab0d847e2a909d2da3ed2323edacf94` (MinIO/APNs D5 [#101](https://github.com/hangndat/ticket-solution/pull/101); D6 web [#92](https://github.com/hangndat/ticket-solution/pull/92) / iOS [#93](https://github.com/hangndat/ticket-solution/pull/93) / docs [#94](https://github.com/hangndat/ticket-solution/pull/94)) và [GitHub Project #3](https://github.com/users/hangndat/projects/3) cùng ngày.  
 Nguồn phạm vi: [PRD](./PRD.md), [Technical Design](./TECHNICAL-DESIGN.md), [Decision Log](./DECISION-LOG.md) (O10 — MVP mở rộng), [Agent Development Plan](./AGENT-DEVELOPMENT-PLAN.md), [W0 report](./W0-FOUNDATION-REPORT.md).  
