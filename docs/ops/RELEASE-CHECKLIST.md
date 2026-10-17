@@ -16,8 +16,12 @@ Theo dõi trạng thái store **riêng**: submitted · approved · available. Bu
 - [ ] `./scripts/d5-load-baseline.sh` chạy thật; ghi số đo + hạn chế phần cứng; **không** che bằng demo pass
 - [ ] Observability: overlay smoke `./scripts/d5-observability-smoke.sh`; BE `/metrics` khi đã có
 - [ ] Runbook đã đọc bởi on-call giả định
-- [ ] O06: đã chọn hướng retention/region/SLA **trước** ingest user thật (xem `O06-OPTIONS.md`) — chưa chốt số thì không bịa
+- [ ] O06: đã chọn hướng retention/region/SLA **trước** ingest user thật (xem `O06-OPTIONS.md`) — **vẫn mở / UNRESOLVED**; chưa chốt số thì không bịa và không store release
 - [ ] R-INT: ADR-17 + `pnpm test:rint-host` + `./scripts/rint-outbox-recovery.sh` + ma trận [`R-INT-MATRIX.md`](./R-INT-MATRIX.md); SMTP/APNs device vẫn Unknown đến evidence thật
+- [ ] Platform security-config freeze: `./scripts/platform-security-config-smoke.sh` (invite 48h, support ≤1h, MFA step-up ≤15m, ACR=2)
+- [ ] Keycloak assurance: clients platform/admin; mobile **không** nhận `ticket-platform-api`; `./scripts/platform-keycloak-assurance-smoke.sh`
+- [ ] Platform DB roles: `ticket_platform_*` NOBYPASSRLS, tách pool tenant (init-db)
+- [ ] Operator bootstrap offline documented; không public bootstrap / demo escalation
 
 ## iOS / store (Issue #26 — ngoài scope #25)
 
