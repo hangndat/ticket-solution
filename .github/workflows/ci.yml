@@ -22,7 +22,7 @@ env:
 
 jobs:
   changes:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       docs_only: ${{ steps.set.outputs.docs_only }}
       web: ${{ steps.set.outputs.web }}
@@ -31,11 +31,11 @@ jobs:
       db: ${{ steps.set.outputs.db }}
       hardening: ${{ steps.set.outputs.hardening }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Path filters (PR)
         if: github.event_name == 'pull_request'
         id: filter
-        uses: dorny/paths-filter@v3
+        uses: dorny/paths-filter@v4
         with:
           # Predicate true nếu có ít nhất một file khớp (sau negation).
           filters: |
@@ -143,9 +143,9 @@ jobs:
   web:
     needs: changes
     if: needs.changes.outputs.web == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup-pnpm
       # Một turbo graph — lint/typecheck/test/build song song theo dependsOn.
       - run: pnpm exec turbo run lint typecheck test build --filter=@ticket/web...
@@ -158,9 +158,9 @@ jobs:
   mobile:
     needs: changes
     if: needs.changes.outputs.mobile == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup-pnpm
       - run: pnpm exec turbo run lint typecheck test build --filter=@ticket/mobile...
       - uses: ./.github/actions/save-turbo
@@ -171,9 +171,9 @@ jobs:
   backend:
     needs: changes
     if: needs.changes.outputs.backend == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup-pnpm
       # api + worker (+ deps contracts/backend). Không kéo web/mobile.
       - run: pnpm exec turbo run lint typecheck test build --filter=@ticket/api... --filter=@ticket/worker...
@@ -190,7 +190,7 @@ jobs:
   database-isolation:
     needs: changes
     if: needs.changes.outputs.db == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
@@ -209,7 +209,7 @@ jobs:
           - shard: branding
             files: test/branding.test.cjs
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup-pnpm
         with:
           docker-images: postgres:18.1-alpine axllent/mailpit:v1.27.10
@@ -234,9 +234,9 @@ jobs:
   d5-observability:
     needs: changes
     if: needs.changes.outputs.hardening == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - uses: ./.github/actions/setup-pnpm
@@ -260,9 +260,9 @@ jobs:
   d5-drills:
     needs: changes
     if: needs.changes.outputs.hardening == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup-pnpm
         with:
           docker-images: postgres:18.1-alpine
@@ -298,9 +298,9 @@ jobs:
   d5-rint:
     needs: changes
     if: needs.changes.outputs.hardening == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup-pnpm
         with:
           docker-images: postgres:18.1-alpine redis:7-alpine
@@ -329,11 +329,11 @@ jobs:
   turbo-persist:
     needs: [web, mobile, backend]
     if: always() && (needs.web.result == 'success' || needs.mobile.result == 'success' || needs.backend.result == 'success')
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Download turbo shards
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         continue-on-error: true
         with:
           pattern: turbo-shard-*
@@ -370,7 +370,7 @@ jobs:
           echo "merged turbo files: $(find .turbo -type f | wc -l)"
           du -sh .turbo || true
       - name: Save merged Turbo cache
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: .turbo
           key: turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}-merged
@@ -387,7 +387,7 @@ jobs:
       - d5-drills
       - d5-rint
     if: always()
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Aggregate scope results
         shell: bash
