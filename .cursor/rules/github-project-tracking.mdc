@@ -67,7 +67,7 @@ Phân biệt (không gộp): **code complete** (impl + PR) ≠ **acceptance comp
 
 When a coding Task moves to `Chờ duyệt` (or DoD review is required):
 
-1. Coordinator gốc spawn **one** independent Orca reviewer, scope = review only (no drive-by refactors). Chọn agent/override theo `orca-agent-routing.mdc`; gắn Role `reviewer-dod` (và `reviewer-security` khi slice nhạy cảm) theo [docs/agents/README.md](../../docs/agents/README.md).
+1. Coordinator gốc spawn **một reviewer độc lập / Task (hoặc PR)** — scope = review only (no drive-by refactors). Nhiều Task/PR `Chờ duyệt` độc lập → spawn **nhiều reviewer cùng wave** (max fan-out; xem `orca-parallel-workers.mdc`). Chọn agent/override theo `orca-agent-routing.mdc`; gắn Role `reviewer-dod` (và `reviewer-security` khi slice nhạy cảm) theo [docs/agents/README.md](../../docs/agents/README.md).
 2. Spec must name the Issue #, diff/PR/paths, **exact commit SHA(s)** under review, Role ID(s), and DoD checklist; outcome `succeeded` only on pass.
 3. `PASS with known gap` chỉ được tính pass theo điều kiện gap trong `orca-agent-routing.mdc`; thiếu acceptance/security gate bắt buộc không được Hoàn thành.
 4. On pass → coordinator gốc may set `Hoàn thành` once merge+CI+evidence (và milestone gates nếu áp dụng) are done.
