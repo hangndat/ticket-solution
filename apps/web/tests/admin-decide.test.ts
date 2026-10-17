@@ -174,7 +174,7 @@ describe('decideAdmin', () => {
   });
 
   it('previews JSON and refuses edits to a published payload', () => {
-    assert.equal(DEFAULT_CONFIG_PAYLOAD.includes('FUN FEST'), false);
+    assert.equal(DEFAULT_CONFIG_PAYLOAD.includes('MFest'), false);
     assert.equal(previewConfigJson(DEFAULT_CONFIG_PAYLOAD).ok, true);
     assert.equal(previewConfigJson('[]').ok, false);
     let editor = initialPayloadEditor('{"title":"Draft"}');

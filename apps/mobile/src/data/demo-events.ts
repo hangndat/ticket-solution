@@ -7,14 +7,14 @@ import type { PublicEvent } from '@ticket/contracts';
  */
 const events: readonly PublicEvent[] = [
   {
-    id: 'demo-fun-fest',
-    tenantSlug: 'demo-fun',
-    slug: 'fun-fest',
-    name: 'FUN FEST · Demo',
+    id: 'demo-mfest',
+    tenantSlug: 'mfest-demo',
+    slug: 'mfest',
+    name: 'MFest · Demo',
     startsAt: '2027-03-20T10:00:00+07:00',
     timezone: 'Asia/Ho_Chi_Minh',
     location: 'Demo riverside venue, Ho Chi Minh City',
-    brand: { primaryColor: '#245B47', organizationName: 'Demo FUN Collective' },
+    brand: { primaryColor: '#245B47', organizationName: 'MFest Demo' },
   },
   {
     id: 'demo-studio-night',
@@ -30,7 +30,7 @@ const events: readonly PublicEvent[] = [
     },
   },
 ];
-export const demoTenants = ['demo-fun', 'demo-studio'] as const;
+export const demoTenants = ['mfest-demo', 'demo-studio'] as const;
 export function listDemoEvents(tenantSlug: string) {
   return events.filter((event) => event.tenantSlug === tenantSlug);
 }

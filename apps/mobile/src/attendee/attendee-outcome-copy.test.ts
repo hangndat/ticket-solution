@@ -11,7 +11,7 @@ import {
 const sampleTicket: TicketSummary = {
   ticketId: '11111111-1111-4111-8111-111111111111',
   tenantId: '22222222-2222-4222-8222-222222222222',
-  eventId: 'demo-fun-fest',
+  eventId: 'demo-mfest',
   ticketTypeId: '33333333-3333-4333-8333-333333333333',
   sourceId: '44444444-4444-4444-8444-444444444444',
   state: 'ACTIVE',
@@ -27,9 +27,9 @@ test('ticketStateLabelVi maps known states to Vietnamese', () => {
 
 test('presentTicketRow puts event name and status above UUID/credential', () => {
   const row = presentTicketRow(sampleTicket);
-  assert.equal(row.eventTitle, 'FUN FEST · Demo');
+  assert.equal(row.eventTitle, 'MFest · Demo');
   assert.equal(row.statusLabel, 'Còn hiệu lực');
-  assert.match(row.accessibilityLabel, /FUN FEST/);
+  assert.match(row.accessibilityLabel, /MFest/);
   assert.equal(row.ticketId, sampleTicket.ticketId);
   assert.match(row.credentialLine, /3/);
   assert.doesNotMatch(row.eventTitle, /v3|credential/i);

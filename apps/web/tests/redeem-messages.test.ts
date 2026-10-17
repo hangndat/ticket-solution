@@ -35,6 +35,6 @@ test('success message includes ticket id', () => {
 
 test('isUuid accepts RFC-ish UUIDs only', () => {
   assert.equal(isUuid('11111111-1111-4111-8111-111111111111'), true);
-  assert.equal(isUuid('fixture-fun-fest'), false);
+  assert.equal(isUuid('fixture-mfest'), false);
   assert.equal(isUuid(''), false);
 });

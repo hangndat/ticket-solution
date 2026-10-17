@@ -15,15 +15,15 @@ const ROOT = 'vemoki.com';
 describe('tenant-host allowlist', () => {
   const allow = buildTenantHostAllowlist({
     rootDomain: ROOT,
-    tenantSlugs: ['sunburst', 'northline'],
+    tenantSlugs: ['mfest', 'northline'],
   });
 
   it('resolves canonical subdomain', () => {
-    const r = resolveTenantHost('sunburst.vemoki.com', allow, { rootDomain: ROOT });
+    const r = resolveTenantHost('mfest.vemoki.com', allow, { rootDomain: ROOT });
     assert.equal(r.ok, true);
     if (r.ok) {
-      assert.equal(r.tenantSlug, 'sunburst');
-      assert.equal(r.canonicalHost, 'sunburst.vemoki.com');
+      assert.equal(r.tenantSlug, 'mfest');
+      assert.equal(r.canonicalHost, 'mfest.vemoki.com');
     }
   });
 
@@ -31,11 +31,11 @@ describe('tenant-host allowlist', () => {
     const local = buildTenantHostAllowlist({
       rootDomain: 'localhost',
       tenantSlugs: [],
-      extraBindings: [{ tenantSlug: 'sunburst', canonicalHost: 'sunburst.localhost' }],
+      extraBindings: [{ tenantSlug: 'mfest', canonicalHost: 'mfest.localhost' }],
     });
-    const r = resolveTenantHost('sunburst.localhost:3000', local, { rootDomain: 'localhost' });
+    const r = resolveTenantHost('mfest.localhost:3000', local, { rootDomain: 'localhost' });
     assert.equal(r.ok, true);
-    if (r.ok) assert.equal(r.tenantSlug, 'sunburst');
+    if (r.ok) assert.equal(r.tenantSlug, 'mfest');
   });
 
   it('rejects apex and unknown host (no Host spoof)', () => {
@@ -63,8 +63,8 @@ describe('tenant-host allowlist', () => {
 describe('public cache key isolation', () => {
   it('differs by tenant, version, locale, host', () => {
     const base = {
-      canonicalHost: 'sunburst.vemoki.com',
-      tenantSlug: 'sunburst',
+      canonicalHost: 'mfest.vemoki.com',
+      tenantSlug: 'mfest',
       eventSlug: 'gala',
       publishedVersion: 3,
       schemaVersion: 1,
@@ -97,10 +97,10 @@ describe('host-only cookies', () => {
 describe('path vs host tenant', () => {
   it('blocks cross-tenant path under wrong host', () => {
     assert.equal(
-      assertPathTenantMatchesHost('northline', 'sunburst').ok,
+      assertPathTenantMatchesHost('northline', 'mfest').ok,
       false,
     );
-    assert.deepEqual(assertPathTenantMatchesHost('sunburst', 'sunburst'), {
+    assert.deepEqual(assertPathTenantMatchesHost('mfest', 'mfest'), {
       ok: true,
     });
   });

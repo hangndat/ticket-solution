@@ -17,10 +17,10 @@ const DEMO_MARKER = '· Demo';
 export const D9_DEMO = {
   marker: DEMO_MARKER,
   tenants: {
-    fun: {
+    mfest: {
       id: 'd9d9f001-0001-4000-8000-000000000001',
-      slug: 'demo-fun',
-      name: `FUN Collective ${DEMO_MARKER}`,
+      slug: 'mfest-demo',
+      name: `MFest ${DEMO_MARKER}`,
     },
     studio: {
       id: 'd9d9f001-0001-4000-8000-000000000002',
@@ -29,11 +29,11 @@ export const D9_DEMO = {
     },
   },
   events: {
-    funFest: {
+    mfest: {
       id: 'd9d9f001-0002-4000-8000-000000000001',
-      tenantKey: 'fun' as const,
-      slug: 'fun-fest',
-      name: `FUN FEST ${DEMO_MARKER}`,
+      tenantKey: 'mfest' as const,
+      slug: 'mfest',
+      name: `MFest ${DEMO_MARKER}`,
       venueName: 'Demo riverside venue, Ho Chi Minh City (fixture)',
       startsAt: new Date('2027-03-20T10:00:00+07:00'),
       ticketTypeId: 'd9d9f001-0003-4000-8000-000000000001',
@@ -44,7 +44,7 @@ export const D9_DEMO = {
       sourceBucketId: 'd9d9f001-0005-4000-8000-000000000021',
       eventQuota: 50,
       rawCodes: Array.from({ length: 10 }, (_, i) =>
-        `DEMO-FUN-${String(i + 1).padStart(3, '0')}`,
+        `DEMO-MFEST-${String(i + 1).padStart(3, '0')}`,
       ),
     },
     studioNight: {
@@ -92,7 +92,7 @@ export type D9DemoSeedOptions = {
   attendeeSubject?: string;
 };
 
-function tenantByKey(key: 'fun' | 'studio') {
+function tenantByKey(key: 'mfest' | 'studio') {
   return D9_DEMO.tenants[key];
 }
 
@@ -186,7 +186,7 @@ async function ensureEvent(
     where: { tenantId_id: { tenantId, id: event.id } },
   });
   const brand = {
-    primaryColor: event.tenantKey === 'fun' ? '#245B47' : '#59428A',
+    primaryColor: event.tenantKey === 'mfest' ? '#245B47' : '#59428A',
     organizationName: tenantByKey(event.tenantKey).name,
     fixture: true,
   };
@@ -454,14 +454,14 @@ export async function seedD9DemoDataset(
     attendeeUserIds,
   };
 
-  for (const tenant of [D9_DEMO.tenants.fun, D9_DEMO.tenants.studio]) {
+  for (const tenant of [D9_DEMO.tenants.mfest, D9_DEMO.tenants.studio]) {
     const created = await withTenant(db, tenant.id, (tx) =>
       ensureTenant(tx, tenant),
     );
     report.tenants.push({ id: tenant.id, slug: tenant.slug, created });
   }
 
-  for (const event of [D9_DEMO.events.funFest, D9_DEMO.events.studioNight]) {
+  for (const event of [D9_DEMO.events.mfest, D9_DEMO.events.studioNight]) {
     const tenant = tenantByKey(event.tenantKey);
     const created = await withTenant(db, tenant.id, async (tx) => {
       const eventCreated = await ensureEvent(tx, tenant.id, event);

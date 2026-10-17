@@ -55,7 +55,7 @@ Checklist trước khi gửi file:
 
 - Platform pack: `brand/vemoki/<role>.<ext>` + `tokens.json`.
 - Demo seed (D9): `brand/demo/manifest.json` — map tenant/event UUID ổn định → file nguồn → object key ready.
-- Slug fixture mobile (`demo-fun` / `fun-fest`) **không** thay UUID trong object key; seed dùng UUID cố định trong manifest để S1/S3 gắn DB sau.
+- Slug fixture mobile (`mfest-demo` / `mfest`) **không** thay UUID trong object key; seed dùng UUID cố định trong manifest để S1/S3 gắn DB sau.
 
 ## 5. Ops seed MinIO
 

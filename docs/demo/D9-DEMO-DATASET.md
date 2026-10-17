@@ -11,11 +11,11 @@
 
 | Entity | Slug / label | UUID (ổn định) |
 | --- | --- | --- |
-| Tenant A | `demo-fun` | `d9d9f001-0001-4000-8000-000000000001` |
+| Tenant A | `mfest-demo` | `d9d9f001-0001-4000-8000-000000000001` |
 | Tenant B | `demo-studio` | `d9d9f001-0001-4000-8000-000000000002` |
-| Event A | `fun-fest` @ demo-fun | `d9d9f001-0002-4000-8000-000000000001` |
+| Event A | `mfest` @ mfest-demo | `d9d9f001-0002-4000-8000-000000000001` |
 | Event B | `studio-night` @ demo-studio | `d9d9f001-0002-4000-8000-000000000002` |
-| Ticket type A | General (demo-fun) | `d9d9f001-0003-4000-8000-000000000001` |
+| Ticket type A | General (mfest-demo) | `d9d9f001-0003-4000-8000-000000000001` |
 | Ticket type B | General (demo-studio) | `d9d9f001-0003-4000-8000-000000000002` |
 | Source A | Demo VIP (fixture) | `d9d9f001-0004-4000-8000-000000000001` |
 | Source B | Demo GA (fixture) | `d9d9f001-0004-4000-8000-000000000002` |
@@ -26,7 +26,7 @@
 | Quota TYPE B | — | `d9d9f001-0005-4000-8000-000000000012` |
 | Quota SOURCE B | — | `d9d9f001-0005-4000-8000-000000000022` |
 
-Slug cặp **khớp** catalog fixture iOS (`apps/mobile/src/data/demo-events.ts`: `demo-fun` / `demo-studio`). Web marketing fixtures (`sunburst` / `northline`) là catalog tĩnh riêng — không ghi đè bởi seed này.
+Slug cặp **khớp** catalog fixture iOS (`apps/mobile/src/data/demo-events.ts`: `mfest-demo` / `demo-studio`). Web marketing fixtures (`mfest` / `northline`) là catalog tĩnh riêng — không ghi đè bởi seed này.
 
 ## Roles & identities (Keycloak realm demo)
 
@@ -43,7 +43,7 @@ Pepper: `CODE_HMAC_PEPPER` (local placeholder). Codes lưu HMAC only.
 
 | Tenant | Event | Quota EVENT | Codes (uppercase) |
 | --- | --- | --- | --- |
-| demo-fun | fun-fest | 50 | `DEMO-FUN-001` … `DEMO-FUN-010` |
+| mfest-demo | mfest | 50 | `DEMO-MFEST-001` … `DEMO-MFEST-010` |
 | demo-studio | studio-night | 50 | `DEMO-STUDIO-001` … `DEMO-STUDIO-010` |
 
 ## Idempotency

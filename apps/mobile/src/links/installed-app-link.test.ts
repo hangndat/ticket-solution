@@ -28,14 +28,14 @@ test('ticket link opens the existing ticket screen', () => {
 
 test('event link opens fixture catalog content by event id', () => {
   for (const input of [
-    'ticketsolution://events/demo-fun-fest',
-    'vemoki://events/demo-fun-fest',
+    'ticketsolution://events/demo-mfest',
+    'vemoki://events/demo-mfest',
   ]) {
     const parsed = parseInstalledAppLink(input);
     assert.equal(parsed.kind, 'event');
     if (parsed.kind !== 'event') return;
-    assert.equal(parsed.eventId, 'demo-fun-fest');
-    assert.equal(parsed.href, '/events/fixture/demo-fun-fest');
+    assert.equal(parsed.eventId, 'demo-mfest');
+    assert.equal(parsed.href, '/events/fixture/demo-mfest');
     assert.match(parsed.href, /fixture/);
   }
 });
@@ -63,7 +63,7 @@ test('unrelated and invalid links are left untouched', () => {
     'passthrough',
   );
   assert.equal(
-    parseInstalledAppLink('ticketsolution://events/demo-fun-fest/extra').kind,
+    parseInstalledAppLink('ticketsolution://events/demo-mfest/extra').kind,
     'passthrough',
   );
   assert.equal(

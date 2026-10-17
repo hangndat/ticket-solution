@@ -87,8 +87,8 @@ test('tenant slug empty is null (theme keeps Vemoki defaults)', () => {
   assert.equal(getTenantSlug(), null);
   process.env.EXPO_PUBLIC_TENANT_SLUG = '  ';
   assert.equal(getTenantSlug(), null);
-  process.env.EXPO_PUBLIC_TENANT_SLUG = 'demo-fun';
-  assert.equal(getTenantSlug(), 'demo-fun');
+  process.env.EXPO_PUBLIC_TENANT_SLUG = 'mfest-demo';
+  assert.equal(getTenantSlug(), 'mfest-demo');
   if (previous === undefined) delete process.env.EXPO_PUBLIC_TENANT_SLUG;
   else process.env.EXPO_PUBLIC_TENANT_SLUG = previous;
 });

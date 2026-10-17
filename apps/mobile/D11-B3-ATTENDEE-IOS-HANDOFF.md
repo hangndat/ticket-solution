@@ -11,7 +11,7 @@
 | --- | --- |
 | Ví / QR | Hierarchy PD: tên sự kiện + trạng thái VI primary; UUID / credentialVersion secondary selectable |
 | Đổi mã / claim | `presentRedeemDecision` — copy VI plain; auth / stale / unknown / pending không giả vé |
-| Events | Demo ≥2 tenant (`demo-fun` / `demo-studio`) apply brand chrome; label `Tổ chức:` |
+| Events | Demo ≥2 tenant (`mfest-demo` / `demo-studio`) apply brand chrome; label `Tổ chức:` |
 | Brand logout | Clear branding SecureStore cache + ThemeProvider reset khi signed-out (S-P0-C) |
 | Copy guest | Bỏ Keycloak / Nest / schema version khỏi chrome khách |
 
@@ -34,7 +34,7 @@ cd apps/mobile && pnpm test && pnpm typecheck && pnpm lint
 
 | Tenant | Marker |
 | --- | --- |
-| `demo-fun` | Demo FUN Collective · `#245B47` · FUN FEST · Demo |
+| `mfest-demo` | Demo MFest · `#245B47` · MFest · Demo |
 | `demo-studio` | Demo Studio Organization · `#59428A` · Studio Night · Demo |
 
 Sau «Đổi tổ chức demo»: chrome/org name đổi; không lẫn brand tenant trước.
