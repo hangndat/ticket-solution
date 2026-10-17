@@ -30,6 +30,7 @@ export default async function Admin({ searchParams }: Props) {
           <Link href="/gate">Cổng</Link>
           <Link href="/platform">Platform</Link>
           <Link href="/invite">Invite</Link>
+          <Link href="/claim">Claim</Link>
           <Link href="/account">Tài khoản</Link>
           <Link href="/auth">Đăng nhập</Link>
         </span>
