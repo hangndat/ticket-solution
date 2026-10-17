@@ -2,6 +2,8 @@ import { createHash, randomUUID } from 'node:crypto';
 import type { PrismaClient, Prisma } from './generated/prisma/client';
 import type { EmailAdapter } from './email-adapter';
 import { readPublicWebBaseUrl } from './email-adapter';
+import type { ApnsAdapter } from './apns';
+import { revokeDeviceTokenByValue } from './device-tokens';
 import { withTenant } from './tenant-context';
 import {
   computeBackoffSeconds,
@@ -19,6 +21,7 @@ import {
   openCurrentCredentialForQr,
   renderCredentialQrPng,
 } from './qr-ticket';
+import { metricsInc } from './metrics-registry';
 
 export type ClaimedOutboxRow = {
   outbox_id: string;
@@ -43,6 +46,8 @@ export type ProcessOutboxOptions = {
   retryConfig?: RetryConfig;
   leaseOwner: string;
   env?: NodeJS.ProcessEnv;
+  /** Fail-closed when tokens exist but adapter missing/misconfigured. */
+  apns?: ApnsAdapter | null;
 };
 
 /** Claim a batch via SECURITY DEFINER function (cross-tenant, no PII). */
@@ -139,7 +144,9 @@ export async function processClaimedOutbox(
 
         const ticketId = payload.ticketId ?? row.aggregate_id;
         const eventId = payload.eventId ?? row.event_id ?? '';
-        const businessKey = `ticket:${ticketId}:issued:email`;
+        const businessKey =
+          (payload as { businessKey?: string }).businessKey ??
+          `ticket:${ticketId}:issued:email`;
 
         const notes = await tx.$queryRaw<
           Array<{
@@ -389,6 +396,131 @@ export async function processClaimedOutbox(
             'UNKNOWN',
           );
           return 'failed' as const;
+        }
+
+        // APNs push for TicketIssued (ADR-12). Only when caller opts in via
+        // options.apns (including null = fail-closed if tokens exist).
+        // N1-only callers omit the key and skip push entirely.
+        if (!Object.prototype.hasOwnProperty.call(options, 'apns')) {
+          await markOutboxCompleteFenced(tx, row, options.leaseOwner);
+          return 'completed' as const;
+        }
+        const ownerForPush =
+          (payload as { ownerUserId?: string }).ownerUserId ??
+          ticket.owner_user_id ??
+          null;
+        if (ownerForPush) {
+          // listActiveDeviceTokensForUser opens its own tenant scope; call outside
+          // this tx by returning a marker — instead inline token query here.
+          const devices = await tx.$queryRaw<
+            Array<{ id: string; token: string; environment: string }>
+          >`
+            SELECT id, token, environment
+            FROM list_active_device_tokens_for_user(${ownerForPush}::uuid)
+          `;
+          if (devices.length > 0) {
+            const apns = options.apns;
+            if (!apns) {
+              throw new Error('apns_misconfigured');
+            }
+            for (const device of devices) {
+              const pushKey = `ticket:${ticketId}:issued:push:${device.id}`;
+              const existingPush = await tx.$queryRaw<
+                Array<{ id: string; state: string }>
+              >`
+                SELECT id, state FROM notifications
+                WHERE tenant_id = ${row.tenant_id}::uuid
+                  AND business_key = ${pushKey}
+                FOR UPDATE
+              `;
+              const existing = existingPush[0];
+              if (existing?.state === 'SENT' || existing?.state === 'ACCEPTED') {
+                continue;
+              }
+              if (!existing) {
+                const notificationId = randomUUID();
+                await tx.$executeRaw`
+                  INSERT INTO notifications (
+                    tenant_id, event_id, id, business_key, channel, state,
+                    attempts, payload, created_at, updated_at
+                  ) VALUES (
+                    ${row.tenant_id}::uuid,
+                    ${eventId}::uuid,
+                    ${notificationId}::uuid,
+                    ${pushKey},
+                    'push',
+                    'PENDING',
+                    0,
+                    ${JSON.stringify({ ticketId, deviceRegistrationId: device.id })}::jsonb,
+                    now(),
+                    now()
+                  )
+                  ON CONFLICT (tenant_id, business_key) DO NOTHING
+                `;
+              }
+              const sendResult = await apns.send({
+                deviceToken: device.token,
+                environment: device.environment as 'sandbox' | 'production',
+                title: 'Vé đã sẵn sàng',
+                body: 'Vé của bạn đã được cấp.',
+                data: { ticketId },
+              });
+              if (sendResult.ok) {
+                await tx.$executeRaw`
+                  UPDATE notifications
+                  SET state = 'ACCEPTED',
+                      provider_ref = ${sendResult.providerRef},
+                      attempts = attempts + 1,
+                      last_error = NULL,
+                      updated_at = now()
+                  WHERE tenant_id = ${row.tenant_id}::uuid
+                    AND business_key = ${pushKey}
+                `;
+                metricsInc('notification_provider_total', {
+                  channel: 'push',
+                  result: 'accepted',
+                });
+                continue;
+              }
+              if (sendResult.invalidateToken) {
+                await revokeDeviceTokenByValue(db, device.token);
+                await tx.$executeRaw`
+                  UPDATE notifications
+                  SET state = 'FAILED',
+                      attempts = attempts + 1,
+                      last_error = 'provider_error',
+                      updated_at = now()
+                  WHERE tenant_id = ${row.tenant_id}::uuid
+                    AND business_key = ${pushKey}
+                `;
+                metricsInc('notification_provider_total', {
+                  channel: 'push',
+                  result: 'invalidated',
+                });
+                continue;
+              }
+              if (sendResult.retryable) {
+                metricsInc('notification_provider_total', {
+                  channel: 'push',
+                  result: 'retryable',
+                });
+                throw new Error('provider_error');
+              }
+              await tx.$executeRaw`
+                UPDATE notifications
+                SET state = 'FAILED',
+                    attempts = attempts + 1,
+                    last_error = 'provider_error',
+                    updated_at = now()
+                WHERE tenant_id = ${row.tenant_id}::uuid
+                  AND business_key = ${pushKey}
+              `;
+              metricsInc('notification_provider_total', {
+                channel: 'push',
+                result: 'failed',
+              });
+            }
+          }
         }
 
         await markOutboxCompleteFenced(tx, row, options.leaseOwner);
@@ -652,5 +784,6 @@ export async function relayOutboxOnce(
     publicWebBaseUrl: options?.publicWebBaseUrl,
     retryConfig: options?.retryConfig,
     env: options?.env ?? process.env,
+    apns: options?.apns,
   });
 }

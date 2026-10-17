@@ -27,6 +27,7 @@ import {
   lockEventPolicyForShare,
   dbClock,
 } from './event-policy';
+import { metricsInc } from './metrics-registry';
 
 export const REDEEM_COMMAND = 'redemption.redeem' as const;
 export const APPROVAL_PENDING = 'APPROVAL_PENDING' as const;
@@ -684,6 +685,7 @@ async function runIssueBusiness(
     )
   `;
 
+  metricsInc('ticket_issue_total', { result: 'issued' });
   return {
     kind: 'issued',
     ticket: {
@@ -764,6 +766,7 @@ async function resumeOrRejectHold(
         SELECT expires_at FROM redemption_requests
         WHERE tenant_id = ${input.tenantId}::uuid AND id = ${pending.id}::uuid
       `;
+      metricsInc('ticket_issue_total', { result: 'pending' });
       return {
         kind: 'pending',
         pending: pendingBody(
@@ -882,6 +885,7 @@ async function holdManualRedemption(
       ${operationId}::uuid, now()
     )
   `;
+  metricsInc('ticket_issue_total', { result: 'pending' });
   return {
     kind: 'pending',
     pending: pendingBody(input, code, requestId, operationId, expiresAt),

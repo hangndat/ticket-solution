@@ -1,0 +1,978 @@
+const { test } = require('node:test');
+const assert = require('node:assert/strict');
+const { execFileSync } = require('node:child_process');
+const { createServer } = require('node:http');
+const { randomBytes, randomUUID } = require('node:crypto');
+const { readFileSync } = require('node:fs');
+const { Client } = require('pg');
+const {
+  createDatabase,
+  withTenant,
+  createPrismaIdentityUserRepository,
+  grantMembership,
+  grantEventAssignment,
+  seedEventInventory,
+  readCodeHmacEnvironment,
+  redeemAndIssueTicket,
+  unwrapRedeemOutcome,
+  listCsTickets,
+  getCsTicket,
+  resendTicketEmail,
+  createExportJob,
+  getExportJob,
+  downloadExport,
+  processExportJob,
+  relayExportsOnce,
+  createEvent,
+  listEvents,
+  createTicketType,
+  createIssuanceSource,
+  registerDeviceToken,
+  revokeDeviceToken,
+  revokeMembership,
+  listActiveDeviceTokensForUser,
+  relayOutboxOnce,
+  createNoopEmailAdapter,
+  ExportError,
+  AuthzError,
+  providerStatusFromDbState,
+} = require('../dist');
+
+const docker = (...args) =>
+  execFileSync('docker', args, {
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe'],
+  }).trim();
+
+const { migrationFiles } = require('./migration-files.cjs');
+const MIGRATIONS = migrationFiles();
+
+const HMAC = readCodeHmacEnvironment({
+  CODE_HMAC_PEPPER: 'd4-cs-export-test-pepper!',
+  CODE_HMAC_VERSION: '1',
+});
+const CREDENTIAL_KEY = 'd4-cs-export-credential';
+
+async function startFakeMinio() {
+  const store = new Map();
+  const bucket = 'ticket-exports';
+  const server = createServer((req, res) => {
+    const url = new URL(req.url, 'http://127.0.0.1');
+    const key = decodeURIComponent(url.pathname.replace(`/${bucket}/`, ''));
+    const auth = req.headers.authorization || '';
+    if (!String(auth).startsWith('AWS4-HMAC-SHA256 ')) {
+      res.statusCode = 403;
+      res.end('unsigned');
+      return;
+    }
+    if (req.method === 'PUT') {
+      const chunks = [];
+      req.on('data', (c) => chunks.push(c));
+      req.on('end', () => {
+        store.set(key, Buffer.concat(chunks));
+        res.statusCode = 200;
+        res.end();
+      });
+      return;
+    }
+    if (req.method === 'GET') {
+      const body = store.get(key);
+      if (!body) {
+        res.statusCode = 404;
+        res.end('missing');
+        return;
+      }
+      res.statusCode = 200;
+      res.end(body);
+      return;
+    }
+    res.statusCode = 405;
+    res.end();
+  });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const { port } = server.address();
+  return {
+    close: () => new Promise((r) => server.close(r)),
+    cfg: {
+      endpoint: `http://127.0.0.1:${port}`,
+      accessKey: 'minioadmin',
+      secretKey: 'minioadmin',
+      bucket,
+      region: 'us-east-1',
+    },
+  };
+}
+
+async function startIsolatedPostgres() {
+  const name = 'ticket-d4-cs-' + randomBytes(4).toString('hex');
+  const password = randomBytes(18).toString('hex');
+  docker(
+    'run',
+    '-d',
+    '--name',
+    name,
+    '-e',
+    'POSTGRES_PASSWORD=' + password,
+    '-e',
+    'POSTGRES_DB=d4_cs_test',
+    '-p',
+    '127.0.0.1::5432',
+    'postgres:18.1-alpine',
+  );
+  let ready = false;
+  for (let i = 0; i < 80; i++) {
+    try {
+      docker(
+        'exec',
+        name,
+        'pg_isready',
+        '-h',
+        '127.0.0.1',
+        '-U',
+        'postgres',
+        '-d',
+        'd4_cs_test',
+      );
+      ready = true;
+      break;
+    } catch {
+      await new Promise((r) => setTimeout(r, 400));
+    }
+  }
+  assert.ok(ready, 'database must become ready');
+  const port = docker('port', name, '5432/tcp').split(':').at(-1);
+  const admin = new Client({
+    connectionString:
+      'postgresql://postgres:' +
+      password +
+      '@127.0.0.1:' +
+      port +
+      '/d4_cs_test',
+  });
+  try {
+    for (let i = 0; i < 30; i++) {
+      try {
+        await admin.connect();
+        break;
+      } catch {
+        await new Promise((r) => setTimeout(r, 400));
+      }
+    }
+    await admin.query(
+      'CREATE ROLE ticket_runtime NOLOGIN NOSUPERUSER NOBYPASSRLS',
+    );
+    await admin.query(
+      'CREATE ROLE migration_owner NOLOGIN NOSUPERUSER NOBYPASSRLS',
+    );
+    await admin.query(
+      'GRANT CREATE, USAGE ON SCHEMA public TO migration_owner',
+    );
+    await admin.query('SET ROLE migration_owner');
+    for (const file of MIGRATIONS)
+      await admin.query(readFileSync(file, 'utf8'));
+    await admin.query('RESET ROLE');
+    await admin.query(
+      "CREATE ROLE d4_login LOGIN PASSWORD '" +
+        password +
+        "' NOSUPERUSER NOBYPASSRLS INHERIT",
+    );
+    await admin.query('GRANT ticket_runtime TO d4_login');
+  } finally {
+    await admin.end().catch(() => {});
+  }
+  return {
+    name,
+    url:
+      'postgresql://d4_login:' +
+      password +
+      '@127.0.0.1:' +
+      port +
+      '/d4_cs_test',
+  };
+}
+
+test(
+  'CS lookup/export/events/device tokens: authz, mask, MinIO, delivery honesty',
+  { timeout: 240000 },
+  async () => {
+    let name;
+    let db;
+    let minio;
+    try {
+      const boot = await startIsolatedPostgres();
+      name = boot.name;
+      db = createDatabase(boot.url, 2);
+      minio = await startFakeMinio();
+      const users = createPrismaIdentityUserRepository(db);
+      const issuer = 'http://127.0.0.1:8080/realms/ticket';
+      const cs = await users.upsertFromVerifiedIdentity({
+        issuer,
+        subject: 'cs-agent',
+        email: 'cs@example.com',
+        emailVerified: true,
+      });
+      const manager = await users.upsertFromVerifiedIdentity({
+        issuer,
+        subject: 'mgr',
+        email: 'mgr@example.com',
+        emailVerified: true,
+      });
+      const stranger = await users.upsertFromVerifiedIdentity({
+        issuer,
+        subject: 'stranger',
+        email: 'stranger@example.com',
+        emailVerified: true,
+      });
+      const attendee = await users.upsertFromVerifiedIdentity({
+        issuer,
+        subject: 'attendee',
+        email: 'attendee@example.com',
+        emailVerified: true,
+      });
+
+      const tenantId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+      let eventId;
+      let csMembershipId;
+
+      await withTenant(db, tenantId, async (tx) => {
+        await tx.tenant.create({
+          data: { id: tenantId, slug: 'cs-a', name: 'CS A' },
+        });
+        await grantMembership(tx, {
+          tenantId,
+          userId: manager.userId,
+          role: 'OWNER',
+          permissions: ['event.create', 'event.list'],
+        });
+        const createKey = randomUUID();
+        const ev = await createEvent(tx, {
+          tenantId,
+          actorUserId: manager.userId,
+          idempotencyKey: createKey,
+          body: {
+            slug: 'fest',
+            name: 'Fest',
+            timezone: 'Asia/Ho_Chi_Minh',
+            visibility: 'UNLISTED',
+          },
+        });
+        eventId = ev.event.eventId;
+        const replay = await createEvent(tx, {
+          tenantId,
+          actorUserId: manager.userId,
+          idempotencyKey: createKey,
+          body: {
+            slug: 'fest',
+            name: 'Fest',
+            timezone: 'Asia/Ho_Chi_Minh',
+            visibility: 'UNLISTED',
+          },
+        });
+        assert.equal(replay.replayed, true);
+        assert.equal(replay.event.eventId, eventId);
+
+        const tt = await createTicketType(tx, {
+          tenantId,
+          eventId,
+          actorUserId: manager.userId,
+          label: 'GA',
+        });
+        await createIssuanceSource(tx, {
+          tenantId,
+          eventId,
+          actorUserId: manager.userId,
+          name: 'Door',
+          approvalMode: 'AUTO',
+          ticketTypeId: tt.ticketTypeId,
+        });
+        const listed = await listEvents(tx, {
+          tenantId,
+          actorUserId: manager.userId,
+        });
+        assert.ok(listed.items.some((i) => i.eventId === eventId));
+
+        const mem = await grantMembership(tx, {
+          tenantId,
+          userId: cs.userId,
+          role: 'CS',
+          permissions: [
+            'cs.lookup',
+            'cs.resend',
+            'export.create',
+            'export.download',
+          ],
+        });
+        csMembershipId = mem.membershipId;
+        await grantEventAssignment(tx, {
+          tenantId,
+          eventId,
+          membershipId: mem.membershipId,
+          permissions: [
+            'cs.lookup',
+            'cs.resend',
+            'export.create',
+            'export.download',
+          ],
+        });
+        await grantMembership(tx, {
+          tenantId,
+          userId: stranger.userId,
+          role: 'GUEST',
+          permissions: [],
+        });
+        await seedEventInventory(tx, HMAC, {
+          tenantId,
+          eventId,
+          eventQuota: 10,
+          rawCodes: ['CODE-CS-1', 'CODE-CS-2'],
+        });
+      });
+
+      const issued = await withTenant(db, tenantId, (tx) =>
+        redeemAndIssueTicket(tx, HMAC, CREDENTIAL_KEY, {
+          tenantId,
+          eventId,
+          actorUserId: attendee.userId,
+          actorEmail: 'attendee@example.com',
+          emailVerified: true,
+          rawCode: 'CODE-CS-1',
+          idempotencyKey: '11111111-1111-4111-8111-111111111111',
+        }),
+      );
+      const ticket = unwrapRedeemOutcome(issued);
+
+      let exportId;
+      await withTenant(db, tenantId, async (tx) => {
+        await assert.rejects(
+          () =>
+            listCsTickets(tx, HMAC, {
+              tenantId,
+              eventId,
+              actorUserId: stranger.userId,
+            }),
+          (e) => e instanceof AuthzError,
+        );
+
+        const list = await listCsTickets(tx, HMAC, {
+          tenantId,
+          eventId,
+          actorUserId: cs.userId,
+          q: 'attendee@example.com',
+        });
+        assert.equal(list.items.length, 1);
+        assert.equal(list.items[0].ownerEmailMasked, 'a***@example.com');
+        assert.ok(!JSON.stringify(list.items).includes('attendee@example.com'));
+
+        const detail = await getCsTicket(tx, {
+          tenantId,
+          eventId,
+          actorUserId: cs.userId,
+          ticketId: ticket.ticketId,
+        });
+        assert.ok(detail.timeline.length >= 1);
+        if (detail.notification) {
+          assert.equal(
+            detail.notification.providerStatus,
+            providerStatusFromDbState(detail.notification.state),
+          );
+          assert.equal(detail.notification.lastError, null);
+        }
+
+        const resend = await resendTicketEmail(tx, {
+          tenantId,
+          eventId,
+          actorUserId: cs.userId,
+          ticketId: ticket.ticketId,
+          clientKey: 'resend-1',
+        });
+        assert.equal(resend.providerStatus, 'PENDING');
+        const resendReplay = await resendTicketEmail(tx, {
+          tenantId,
+          eventId,
+          actorUserId: cs.userId,
+          ticketId: ticket.ticketId,
+          clientKey: 'resend-1',
+        });
+        assert.equal(resendReplay.replayed, true);
+
+        const job = await createExportJob(tx, {
+          tenantId,
+          eventId,
+          actorUserId: cs.userId,
+          clientKey: 'exp-1',
+          filter: { states: ['ACTIVE'] },
+          ttlSeconds: 3600,
+        });
+        assert.equal(job.status, 'PENDING');
+        exportId = job.exportId;
+      });
+
+      await processExportJob(db, minio.cfg, tenantId, exportId, 3600);
+
+      await withTenant(db, tenantId, async (tx) => {
+        const status = await getExportJob(tx, {
+          tenantId,
+          eventId,
+          actorUserId: cs.userId,
+          exportId,
+        });
+        assert.equal(status.status, 'READY');
+        assert.ok((status.rowCount ?? 0) >= 1);
+      });
+      {
+        const file = await downloadExport(db, minio.cfg, {
+          tenantId,
+          eventId,
+          actorUserId: cs.userId,
+          exportId,
+        });
+        const csv = file.body.toString('utf8');
+        assert.ok(csv.includes('ticketId'));
+        assert.ok(csv.includes('a***@example.com'));
+        assert.ok(!csv.includes('attendee@example.com'));
+      }
+
+      // Production-like roles: ticket_runtime (NOBYPASSRLS) create → claim → process → download.
+      // claim_exports_batch is SECURITY DEFINER owned by migration_owner (not superuser).
+      {
+        const fnOwner = await db.$queryRaw`
+          SELECT r.rolname AS owner, r.rolbypassrls, r.rolsuper
+          FROM pg_proc p
+          JOIN pg_namespace n ON n.oid = p.pronamespace
+          JOIN pg_roles r ON r.oid = p.proowner
+          WHERE n.nspname = 'public'
+            AND p.proname = 'claim_exports_batch'
+        `;
+        assert.equal(fnOwner[0].owner, 'migration_owner');
+        assert.equal(fnOwner[0].rolbypassrls, false);
+        assert.equal(fnOwner[0].rolsuper, false);
+
+        let claimedId;
+        await withTenant(db, tenantId, async (tx) => {
+          const job = await createExportJob(tx, {
+            tenantId,
+            eventId,
+            actorUserId: cs.userId,
+            clientKey: 'exp-claim-path',
+            filter: { states: ['ACTIVE'] },
+            ttlSeconds: 3600,
+          });
+          assert.equal(job.status, 'PENDING');
+          claimedId = job.exportId;
+        });
+        const minioEnv = {
+          MINIO_ENDPOINT: minio.cfg.endpoint,
+          MINIO_ACCESS_KEY: minio.cfg.accessKey,
+          MINIO_SECRET_KEY: minio.cfg.secretKey,
+          MINIO_BUCKET: minio.cfg.bucket,
+          MINIO_REGION: minio.cfg.region,
+          EXPORT_TTL_SECONDS: '3600',
+        };
+        const relayed = await relayExportsOnce(
+          db,
+          minioEnv,
+          'worker-claim-a',
+          5,
+        );
+        assert.ok(relayed.claimed >= 1, 'claim must see PENDING under FORCE RLS');
+        assert.ok(relayed.completed >= 1);
+        const claimedFile = await downloadExport(db, minio.cfg, {
+          tenantId,
+          eventId,
+          actorUserId: cs.userId,
+          exportId: claimedId,
+        });
+        assert.ok(claimedFile.body.toString('utf8').includes('ticketId'));
+
+        // Stale PROCESSING lease reclaim by a different worker after expiry.
+        let reclaimId;
+        await withTenant(db, tenantId, async (tx) => {
+          const job = await createExportJob(tx, {
+            tenantId,
+            eventId,
+            actorUserId: cs.userId,
+            clientKey: 'exp-reclaim',
+            filter: { states: ['ACTIVE'] },
+            ttlSeconds: 3600,
+          });
+          reclaimId = job.exportId;
+          await tx.$executeRaw`
+            UPDATE exports
+            SET status = 'PROCESSING',
+                lease_owner = 'dead-worker',
+                lease_expires_at = now() - interval '1 minute',
+                updated_at = now()
+            WHERE tenant_id = ${tenantId}::uuid AND id = ${reclaimId}::uuid
+          `;
+        });
+        const reclaimed = await relayExportsOnce(
+          db,
+          minioEnv,
+          'worker-reclaim-b',
+          5,
+        );
+        assert.ok(reclaimed.claimed >= 1, 'expired lease must be reclaimable');
+        assert.ok(reclaimed.completed >= 1);
+        await withTenant(db, tenantId, async (tx) => {
+          const status = await getExportJob(tx, {
+            tenantId,
+            eventId,
+            actorUserId: cs.userId,
+            exportId: reclaimId,
+          });
+          assert.equal(status.status, 'READY');
+        });
+
+        // Live lease owned by another worker must not be stolen before expiry.
+        let liveId;
+        await withTenant(db, tenantId, async (tx) => {
+          const job = await createExportJob(tx, {
+            tenantId,
+            eventId,
+            actorUserId: cs.userId,
+            clientKey: 'exp-live-lease',
+            filter: { states: ['ACTIVE'] },
+            ttlSeconds: 3600,
+          });
+          liveId = job.exportId;
+          await tx.$executeRaw`
+            UPDATE exports
+            SET status = 'PROCESSING',
+                lease_owner = 'owner-live',
+                lease_expires_at = now() + interval '10 minutes',
+                updated_at = now()
+            WHERE tenant_id = ${tenantId}::uuid AND id = ${liveId}::uuid
+          `;
+        });
+        const stolen = await relayExportsOnce(
+          db,
+          minioEnv,
+          'worker-thief',
+          5,
+        );
+        assert.equal(stolen.claimed, 0, 'live unexpired lease must not be claimed');
+        await processExportJob(
+          db,
+          minio.cfg,
+          tenantId,
+          liveId,
+          3600,
+          'worker-thief',
+        );
+        await withTenant(db, tenantId, async (tx) => {
+          const after = await tx.$queryRaw`
+            SELECT status, lease_owner
+            FROM exports
+            WHERE tenant_id = ${tenantId}::uuid AND id = ${liveId}::uuid
+          `;
+          assert.equal(after[0].status, 'PROCESSING');
+          assert.equal(after[0].lease_owner, 'owner-live');
+        });
+        // Legitimate owner can finish.
+        await processExportJob(
+          db,
+          minio.cfg,
+          tenantId,
+          liveId,
+          3600,
+          'owner-live',
+        );
+        await withTenant(db, tenantId, async (tx) => {
+          const done = await getExportJob(tx, {
+            tenantId,
+            eventId,
+            actorUserId: cs.userId,
+            exportId: liveId,
+          });
+          assert.equal(done.status, 'READY');
+        });
+      }
+
+      const token = 'device-token-abcdef123456';
+      const reg = await registerDeviceToken(db, {
+        userId: attendee.userId,
+        token,
+        environment: 'sandbox',
+      });
+      assert.ok(reg.registrationId);
+      assert.ok(reg.registeredAt);
+
+      // Account switch: same device token moves to another user; old owner loses it.
+      const switched = await registerDeviceToken(db, {
+        userId: manager.userId,
+        token,
+        environment: 'production',
+      });
+      assert.notEqual(switched.registrationId, reg.registrationId);
+      await assert.rejects(
+        () =>
+          revokeDeviceToken(db, {
+            userId: attendee.userId,
+            registrationId: reg.registrationId,
+          }),
+        (e) => e.code === 'REGISTRATION_NOT_FOUND',
+      );
+      // Late logout of previous owner cannot revoke the new owner's registration.
+      await assert.rejects(
+        () =>
+          revokeDeviceToken(db, {
+            userId: attendee.userId,
+            registrationId: switched.registrationId,
+          }),
+        (e) => e.code === 'REGISTRATION_NOT_FOUND',
+      );
+      await revokeDeviceToken(db, {
+        userId: manager.userId,
+        registrationId: switched.registrationId,
+      });
+      await assert.rejects(
+        () =>
+          registerDeviceToken(db, {
+            userId: attendee.userId,
+            token: null,
+            environment: 'sandbox',
+          }),
+        (e) => e.code === 'TOKEN_REQUIRED',
+      );
+
+      // --- revoked membership → export status/download denied ---
+      await withTenant(db, tenantId, async (tx) => {
+        await revokeMembership(tx, tenantId, csMembershipId);
+        await assert.rejects(
+          () =>
+            getExportJob(tx, {
+              tenantId,
+              eventId,
+              actorUserId: cs.userId,
+              exportId,
+            }),
+          (e) => e instanceof AuthzError,
+        );
+      });
+      await assert.rejects(
+        () =>
+          downloadExport(db, minio.cfg, {
+            tenantId,
+            eventId,
+            actorUserId: cs.userId,
+            exportId,
+          }),
+        (e) => e instanceof AuthzError,
+      );
+
+      // Reactivate same membership/assignment rows (tenant+user unique).
+      await withTenant(db, tenantId, async (tx) => {
+        await tx.$executeRaw`
+          UPDATE memberships
+          SET revoked_at = NULL, activated_at = now()
+          WHERE tenant_id = ${tenantId}::uuid
+            AND id = ${csMembershipId}::uuid
+        `;
+        await tx.$executeRaw`
+          UPDATE event_assignments
+          SET revoked_at = NULL, activated_at = now()
+          WHERE tenant_id = ${tenantId}::uuid
+            AND membership_id = ${csMembershipId}::uuid
+        `;
+      });
+
+      // --- resend cooldown + hourly cap ---
+      await withTenant(db, tenantId, async (tx) => {
+        await assert.rejects(
+          () =>
+            resendTicketEmail(tx, {
+              tenantId,
+              eventId,
+              actorUserId: cs.userId,
+              ticketId: ticket.ticketId,
+              clientKey: 'resend-cooldown',
+            }),
+          (e) => e.code === 'RESEND_COOLDOWN',
+        );
+        // Force-clear cooldown window by backdating audits, then hit hourly cap.
+        await tx.$executeRaw`
+          UPDATE audit_logs
+          SET created_at = now() - interval '2 minutes'
+          WHERE tenant_id = ${tenantId}::uuid
+            AND action = 'ticket.email_resend'
+        `;
+        // Already 1 audit from earlier resend; add 9 more → 10, then overflow.
+        for (let i = 0; i < 9; i++) {
+          await resendTicketEmail(tx, {
+            tenantId,
+            eventId,
+            actorUserId: cs.userId,
+            ticketId: ticket.ticketId,
+            clientKey: 'resend-cap-' + i,
+          });
+          await tx.$executeRaw`
+            UPDATE audit_logs
+            SET created_at = now() - interval '2 minutes'
+            WHERE tenant_id = ${tenantId}::uuid
+              AND action = 'ticket.email_resend'
+          `;
+        }
+        await assert.rejects(
+          () =>
+            resendTicketEmail(tx, {
+              tenantId,
+              eventId,
+              actorUserId: cs.userId,
+              ticketId: ticket.ticketId,
+              clientKey: 'resend-cap-overflow',
+            }),
+          (e) => e.code === 'RESEND_LIMIT',
+        );
+      });
+
+      // --- export expiry ---
+      let expiredId;
+      await withTenant(db, tenantId, async (tx) => {
+        const job = await createExportJob(tx, {
+          tenantId,
+          eventId,
+          actorUserId: cs.userId,
+          clientKey: 'exp-expired',
+          filter: { states: ['ACTIVE'] },
+          ttlSeconds: 3600,
+        });
+        expiredId = job.exportId;
+      });
+      await processExportJob(db, minio.cfg, tenantId, expiredId, 3600);
+      await withTenant(db, tenantId, async (tx) => {
+        await tx.$executeRaw`
+          UPDATE exports
+          SET expires_at = now() - interval '1 minute'
+          WHERE tenant_id = ${tenantId}::uuid AND id = ${expiredId}::uuid
+        `;
+      });
+      await assert.rejects(
+        () =>
+          downloadExport(db, minio.cfg, {
+            tenantId,
+            eventId,
+            actorUserId: cs.userId,
+            exportId: expiredId,
+          }),
+        (e) => e instanceof ExportError && e.code === 'EXPORT_EXPIRED',
+      );
+
+      // --- concurrent register / reassign / stale DELETE ---
+      const shared = 'concurrent-token-xyz-12345';
+      const [a, b] = await Promise.all([
+        registerDeviceToken(db, {
+          userId: attendee.userId,
+          token: shared,
+          environment: 'sandbox',
+        }),
+        registerDeviceToken(db, {
+          userId: manager.userId,
+          token: shared,
+          environment: 'production',
+        }),
+      ]);
+      const active = await listActiveDeviceTokensForUser(db, manager.userId);
+      const activeAttendee = await listActiveDeviceTokensForUser(
+        db,
+        attendee.userId,
+      );
+      // Exactly one active owner for the physical token.
+      const owners = [...active, ...activeAttendee].filter(
+        (r) => r.token === shared,
+      );
+      assert.equal(owners.length, 1);
+      const winner = owners[0];
+      const winnerIsAttendee = activeAttendee.some((r) => r.id === winner.id);
+      const loserUserId = winnerIsAttendee ? manager.userId : attendee.userId;
+      // Stale DELETE by non-owner cannot revoke the winner registration.
+      await assert.rejects(
+        () =>
+          revokeDeviceToken(db, {
+            userId: loserUserId,
+            registrationId: winner.id,
+          }),
+        (e) => e.code === 'REGISTRATION_NOT_FOUND',
+      );
+      // Stale id from the lost race is not deletable by either party as active.
+      const staleId =
+        a.registrationId === winner.id ? b.registrationId : a.registrationId;
+      await assert.rejects(
+        () =>
+          revokeDeviceToken(db, {
+            userId: attendee.userId,
+            registrationId: staleId,
+          }),
+        (e) => e.code === 'REGISTRATION_NOT_FOUND',
+      );
+      void a;
+      void b;
+
+      // SMTP/APNs: no active devices → email path COMPLETE even when APNs unset.
+      // Clear attendee devices first so drain/email can COMPLETE with apns unset.
+      {
+        const leftover = await listActiveDeviceTokensForUser(
+          db,
+          attendee.userId,
+        );
+        for (const row of leftover) {
+          await revokeDeviceToken(db, {
+            userId: attendee.userId,
+            registrationId: row.id,
+          });
+        }
+        assert.equal(
+          (await listActiveDeviceTokensForUser(db, attendee.userId)).length,
+          0,
+        );
+      }
+      await relayOutboxOnce(
+        db,
+        createNoopEmailAdapter(),
+        'test-worker-drain',
+        20,
+        { apns: null, credentialKeyMaterial: CREDENTIAL_KEY },
+      );
+      const outboxNoDevice = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+      await withTenant(db, tenantId, async (tx) => {
+        await tx.$executeRaw`
+          INSERT INTO outbox (
+            tenant_id, event_id, id, type, aggregate_id, payload_version,
+            payload, status, attempts, created_at, updated_at
+          ) VALUES (
+            ${tenantId}::uuid, ${eventId}::uuid, ${outboxNoDevice}::uuid,
+            'TicketIssued', ${ticket.ticketId}::uuid, 1,
+            ${JSON.stringify({
+              ticketId: ticket.ticketId,
+              ownerUserId: attendee.userId,
+              email: 'attendee@example.com',
+              eventId,
+              businessKey:
+                'ticket:' + ticket.ticketId + ':issued:email:nodev',
+            })}::jsonb,
+            'PENDING', 0, now(), now()
+          )
+        `;
+        await tx.$executeRaw`
+          INSERT INTO notifications (
+            tenant_id, event_id, id, business_key, channel, state,
+            attempts, payload, created_at, updated_at
+          ) VALUES (
+            ${tenantId}::uuid, ${eventId}::uuid,
+            ${'dddddddd-dddd-4ddd-8ddd-dddddddddddd'}::uuid,
+            ${'ticket:' + ticket.ticketId + ':issued:email:nodev'},
+            'email', 'PENDING', 0, '{}'::jsonb, now(), now()
+          )
+        `;
+      });
+      const completedNoPush = await relayOutboxOnce(
+        db,
+        createNoopEmailAdapter(),
+        'test-worker-nodev',
+        5,
+        { apns: null, credentialKeyMaterial: CREDENTIAL_KEY },
+      );
+      assert.equal(completedNoPush.failed, 0, 'no-device path must not fail-closed');
+      assert.ok(completedNoPush.completed >= 1);
+      await withTenant(db, tenantId, async (tx) => {
+        const rows = await tx.$queryRaw`
+          SELECT status FROM outbox
+          WHERE tenant_id = ${tenantId}::uuid AND id = ${outboxNoDevice}::uuid
+        `;
+        assert.equal(rows[0].status, 'COMPLETE');
+      });
+
+      // --- APNs fail-closed when tokens exist but adapter missing ---
+      const pushToken = 'apns-failclosed-token-001';
+      await registerDeviceToken(db, {
+        userId: attendee.userId,
+        token: pushToken,
+        environment: 'sandbox',
+      });
+      // Insert a TicketIssued outbox row pointing at attendee.
+      const outboxId = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+      await withTenant(db, tenantId, async (tx) => {
+        await tx.$executeRaw`
+          INSERT INTO outbox (
+            tenant_id, event_id, id, type, aggregate_id, payload_version,
+            payload, status, attempts, created_at, updated_at
+          ) VALUES (
+            ${tenantId}::uuid, ${eventId}::uuid, ${outboxId}::uuid,
+            'TicketIssued', ${ticket.ticketId}::uuid, 1,
+            ${JSON.stringify({
+              ticketId: ticket.ticketId,
+              ownerUserId: attendee.userId,
+              email: 'attendee@example.com',
+              eventId,
+              businessKey: 'ticket:' + ticket.ticketId + ':issued:email:test',
+            })}::jsonb,
+            'PENDING', 0, now(), now()
+          )
+        `;
+        await tx.$executeRaw`
+          INSERT INTO notifications (
+            tenant_id, event_id, id, business_key, channel, state,
+            attempts, payload, created_at, updated_at
+          ) VALUES (
+            ${tenantId}::uuid, ${eventId}::uuid, ${'cccccccc-cccc-4ccc-8ccc-cccccccccccc'}::uuid,
+            ${'ticket:' + ticket.ticketId + ':issued:email:test'},
+            'email', 'PENDING', 0, '{}'::jsonb, now(), now()
+          )
+        `;
+      });
+      const failClosed = await relayOutboxOnce(
+        db,
+        createNoopEmailAdapter(),
+        'test-worker',
+        5,
+        { apns: null, credentialKeyMaterial: CREDENTIAL_KEY },
+      );
+      assert.ok(failClosed.failed >= 1);
+
+      // APNs invalid token → revoke; retryable → leave pending
+      const invalidAdapter = {
+        async send() {
+          return {
+            ok: false,
+            providerStatus: 'FAILED',
+            reason: 'BadDeviceToken',
+            invalidateToken: true,
+            retryable: false,
+          };
+        },
+      };
+      // Reset outbox to PENDING for retry with invalid adapter
+      await withTenant(db, tenantId, async (tx) => {
+        await tx.$executeRaw`
+          UPDATE outbox SET status = 'PENDING', lease_owner = NULL,
+            lease_expires_at = NULL, next_attempt_at = now()
+          WHERE tenant_id = ${tenantId}::uuid AND id = ${outboxId}::uuid
+        `;
+        await tx.$executeRaw`
+          UPDATE notifications SET state = 'PENDING'
+          WHERE tenant_id = ${tenantId}::uuid
+            AND business_key = ${'ticket:' + ticket.ticketId + ':issued:email:test'}
+        `;
+      });
+      const invalidated = await relayOutboxOnce(
+        db,
+        createNoopEmailAdapter(),
+        'test-worker-2',
+        5,
+        { apns: invalidAdapter, credentialKeyMaterial: CREDENTIAL_KEY },
+      );
+      assert.ok(invalidated.completed >= 1);
+      const still = await listActiveDeviceTokensForUser(db, attendee.userId);
+      assert.ok(!still.some((r) => r.token === pushToken));
+    } finally {
+      if (db) await db.$disconnect().catch(() => {});
+      if (minio) await minio.close();
+      if (name) {
+        try {
+          docker('rm', '-f', name);
+        } catch {
+          // ignore
+        }
+      }
+    }
+  },
+);
