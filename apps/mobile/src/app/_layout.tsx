@@ -3,6 +3,7 @@ import { Stack } from 'expo-router/stack';
 import { getTenantId, isOidcConfigured } from '@/identity/config';
 import { verifyViaMe } from '@/identity/fetch-me';
 import { session } from '@/identity/session';
+import '@/push/push-notifications-init';
 import {
   bindIfStillVerified,
   captureOfflineBindingEpoch,
