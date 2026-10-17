@@ -193,6 +193,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # d5-observability-smoke resolves historical metrics SHAs
+          fetch-depth: 0
       - uses: ./.github/actions/setup-pnpm
         with:
           turbo-key-prefix: turbo-d5
