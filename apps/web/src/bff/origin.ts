@@ -1,21 +1,15 @@
 import { bffApiError } from './api-error';
-
-function canonicalizeOrigin(raw: string): string | null {
-  try {
-    const url = new URL(raw);
-    const host =
-      url.hostname === '127.0.0.1' || url.hostname === '::1'
-        ? 'localhost'
-        : url.hostname;
-    return `${url.protocol}//${host}${url.port ? `:${url.port}` : ''}`;
-  } catch {
-    return null;
-  }
-}
+import {
+  canonicalizeOrigin,
+  resolvePublicOrigin,
+  webPublicOriginAllowlist,
+} from '../oidc/public-origin';
 
 /**
  * Same-origin CSRF guard for cookie-authenticated mutating BFF routes.
  * Treats 127.0.0.1 and localhost as the same host for local UAT.
+ * When WEB_PUBLIC_ORIGIN is set (prod), Origin must match that allowlist —
+ * never trust request.url bind address alone (nginx → 127.0.0.1/0.0.0.0).
  */
 export function assertSameOrigin(request: Request): Response | null {
   const method = request.method.toUpperCase();
@@ -32,9 +26,23 @@ export function assertSameOrigin(request: Request): Response | null {
       403,
     );
   }
-  const expected = canonicalizeOrigin(request.url);
   const actual = canonicalizeOrigin(origin);
-  if (!expected || !actual) {
+  if (!actual) {
+    return bffApiError('INVALID_REQUEST_URL', 'Request URL is invalid.', 400);
+  }
+
+  const allowlist = webPublicOriginAllowlist();
+  if (allowlist.length > 0) {
+    if (allowlist.includes(actual)) return null;
+    return bffApiError(
+      'CSRF_ORIGIN_MISMATCH',
+      'Origin does not match this host.',
+      403,
+    );
+  }
+
+  const expected = canonicalizeOrigin(resolvePublicOrigin(request));
+  if (!expected) {
     return bffApiError('INVALID_REQUEST_URL', 'Request URL is invalid.', 400);
   }
   if (actual !== expected) {
