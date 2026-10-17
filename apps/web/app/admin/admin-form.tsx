@@ -62,6 +62,9 @@ import {
 } from '../../src/admin/event-setup';
 import {
   TICKET_STATES,
+  formatQuotaCapacityState,
+  formatQuotaRemaining,
+  formatReportAsOf,
   interpretEventReport,
   reportShowsNumbers,
   type EventReportView,
@@ -263,6 +266,11 @@ export function AdminForm({
       window.removeEventListener('offline', sync);
     };
   }, []);
+
+  // Fail-closed: never keep prior event numbers when tenant/event changes.
+  useEffect(() => {
+    setReport(null);
+  }, [tenantId, eventId]);
 
   function clearSpecialViews() {
     setCreateView(null);
@@ -1841,10 +1849,11 @@ export function AdminForm({
       >
         <h2 id="event-report-heading">Cổng · báo cáo sự kiện</h2>
         <p>
-          Chỉ đọc: số vé theo trạng thái, quota capacity/allocated, và số yêu
-          cầu chờ duyệt. Lỗi máy chủ, timeout hoặc mất mạng là chưa biết — các
-          số đó không được hiện. Scan chính trên app Nhân viên; cổng web không
-          xếp hàng offline.
+          Chỉ đọc theo snapshot máy chủ (không tự làm mới). Manager xem quota và
+          chờ duyệt trước; Supervisor xem check-in thành công và từ chối theo lý
+          do. Lỗi máy chủ, timeout hoặc mất mạng là chưa biết — các số đó không
+          được hiện. Scan chính trên app Nhân viên; cổng web không xếp hàng
+          offline.
         </p>
         <p className="intro">
           <a href="/gate">Mở cổng web (dự phòng)</a>
@@ -1854,35 +1863,99 @@ export function AdminForm({
             type="button"
             disabled={busy}
             onClick={() => void loadReport()}
+            data-testid="event-report-reload"
           >
-            Tải báo cáo
+            Tải lại báo cáo
           </button>
         </div>
         {report && reportShowsNumbers(report) ? (
-          <dl data-testid="event-report-numbers">
-            {TICKET_STATES.map((state) => (
-              <div key={state}>
-                <dt>{state}</dt>
-                <dd>{report.ticketsByState[state]}</dd>
+          <div data-testid="event-report-numbers">
+            <p
+              className="intro"
+              data-testid="event-report-asof"
+              role="status"
+              title={report.asOf}
+            >
+              Số liệu tại thời điểm: {formatReportAsOf(report.asOf)} (
+              {report.asOf})
+            </p>
+            <h3>Manager · quota &amp; chờ duyệt</h3>
+            <dl>
+              <div>
+                <dt>Trạng thái sức chứa</dt>
+                <dd>
+                  {formatQuotaCapacityState(report.quotaCapacityState)}
+                </dd>
               </div>
-            ))}
-            <div>
-              <dt>Quota capacity</dt>
-              <dd>
-                {report.quota.capacity === null
-                  ? 'null (không giới hạn)'
-                  : report.quota.capacity}
-              </dd>
-            </div>
-            <div>
-              <dt>Quota allocated</dt>
-              <dd>{report.quota.allocated}</dd>
-            </div>
-            <div>
-              <dt>Chờ duyệt</dt>
-              <dd>{report.pendingApprovalCount}</dd>
-            </div>
-          </dl>
+              <div>
+                <dt>Dung lượng quota</dt>
+                <dd>
+                  {report.quota.capacity === null
+                    ? 'không giới hạn / chưa có'
+                    : report.quota.capacity}
+                </dd>
+              </div>
+              <div>
+                <dt>Đã cấp phát</dt>
+                <dd>{report.quota.allocated}</dd>
+              </div>
+              <div>
+                <dt>Còn lại</dt>
+                <dd>
+                  {formatQuotaRemaining(
+                    report.quotaRemaining,
+                    report.quotaCapacityState,
+                  )}
+                </dd>
+              </div>
+              <div>
+                <dt>Chờ duyệt</dt>
+                <dd>{report.pendingApprovalCount}</dd>
+              </div>
+            </dl>
+            <h3>Vé theo trạng thái</h3>
+            <dl>
+              {TICKET_STATES.map((state) => (
+                <div key={state}>
+                  <dt>{state}</dt>
+                  <dd>{report.ticketsByState[state]}</dd>
+                </div>
+              ))}
+            </dl>
+            <h3>Supervisor · check-in &amp; từ chối</h3>
+            <dl>
+              <div>
+                <dt>Check-in thành công</dt>
+                <dd>{report.checkInSuccessCount}</dd>
+              </div>
+            </dl>
+            <h4>Từ chối theo lý do</h4>
+            {Object.keys(report.rejectByReason).length === 0 ? (
+              <p data-testid="event-report-rejects-empty" role="status">
+                Chưa có lần từ chối cổng nào.
+              </p>
+            ) : (
+              <dl data-testid="event-report-rejects">
+                {Object.entries(report.rejectByReason)
+                  .sort(([a], [b]) => a.localeCompare(b))
+                  .map(([reason, count]) => (
+                    <div key={reason}>
+                      <dt>{reason}</dt>
+                      <dd>{count}</dd>
+                    </div>
+                  ))}
+              </dl>
+            )}
+            <h3>Email cần CS</h3>
+            <dl>
+              <div>
+                <dt>Email cần hỗ trợ CS</dt>
+                <dd data-testid="event-report-email-cs">
+                  {report.emailNeedsCsCount}
+                </dd>
+              </div>
+            </dl>
+          </div>
         ) : null}
         {report && !reportShowsNumbers(report) ? (
           <p data-testid="event-report-unknown" role="status">
