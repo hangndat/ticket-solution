@@ -1,0 +1,29 @@
+# Local observability scrape config (Issue #25).
+# Scrapes process health until BE exposes Prometheus /metrics (coord-approved gap).
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: ticket-api-health
+    metrics_path: /v1/health
+    scheme: http
+    static_configs:
+      - targets: ['host.docker.internal:3001']
+        labels:
+          service: api
+          probe: liveness
+    # /v1/health is JSON liveness, not Prometheus text — blackbox-style only.
+    # Prefer BE /metrics when available; see docs/reviews/D5-ISSUE-25-EVIDENCE.md
+
+  - job_name: postgres-exporter
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+        labels:
+          service: postgres
+
+  - job_name: redis-exporter
+    static_configs:
+      - targets: ['redis-exporter:9121']
+        labels:
+          service: redis
