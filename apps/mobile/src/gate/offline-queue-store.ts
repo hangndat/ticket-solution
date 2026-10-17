@@ -11,9 +11,16 @@ const options: SecureStore.SecureStoreOptions = {
   keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
 };
 
-const QUEUE_KEY = 'ticket.gate.offline-queue.v1';
+/** Device-global (physical device identity for ADR-18 deviceId). */
 const DEVICE_KEY = 'ticket.gate.device-id.v1';
-const SEQ_KEY = 'ticket.gate.offline-seq.v1';
+
+function queueKey(userId: string): string {
+  return `ticket.gate.offline-queue.v1.${userId}`;
+}
+
+function seqKey(userId: string): string {
+  return `ticket.gate.offline-seq.v1.${userId}`;
+}
 
 function parseQueue(raw: string | null): StoredOfflineScan[] {
   if (!raw) return [];
@@ -55,12 +62,22 @@ function parseSeqMap(raw: string | null): Record<string, number> {
 }
 
 export const secureOfflineQueueStore: OfflineQueueStore = {
-  async readQueue() {
-    const raw = await SecureStore.getItemAsync(QUEUE_KEY, options);
+  async readQueue(userId) {
+    if (!userId) return [];
+    const raw = await SecureStore.getItemAsync(queueKey(userId), options);
     return parseQueue(raw);
   },
-  async writeQueue(items) {
-    await SecureStore.setItemAsync(QUEUE_KEY, JSON.stringify(items), options);
+  async writeQueue(userId, items) {
+    if (!userId) return;
+    await SecureStore.setItemAsync(
+      queueKey(userId),
+      JSON.stringify(items),
+      options,
+    );
+  },
+  async clearQueue(userId) {
+    if (!userId) return;
+    await SecureStore.deleteItemAsync(queueKey(userId), options);
   },
   async readDeviceId() {
     return SecureStore.getItemAsync(DEVICE_KEY, options);
@@ -68,11 +85,21 @@ export const secureOfflineQueueStore: OfflineQueueStore = {
   async writeDeviceId(id) {
     await SecureStore.setItemAsync(DEVICE_KEY, id, options);
   },
-  async readSeqMap() {
-    const raw = await SecureStore.getItemAsync(SEQ_KEY, options);
+  async readSeqMap(userId) {
+    if (!userId) return {};
+    const raw = await SecureStore.getItemAsync(seqKey(userId), options);
     return parseSeqMap(raw);
   },
-  async writeSeqMap(map) {
-    await SecureStore.setItemAsync(SEQ_KEY, JSON.stringify(map), options);
+  async writeSeqMap(userId, map) {
+    if (!userId) return;
+    await SecureStore.setItemAsync(
+      seqKey(userId),
+      JSON.stringify(map),
+      options,
+    );
+  },
+  async clearSeqMap(userId) {
+    if (!userId) return;
+    await SecureStore.deleteItemAsync(seqKey(userId), options);
   },
 };

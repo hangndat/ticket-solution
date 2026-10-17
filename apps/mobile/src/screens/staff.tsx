@@ -108,6 +108,14 @@ export function StaffScreen() {
     await saveGateOps(next);
   }, []);
 
+  const identity = useSyncExternalStore(
+    session.subscribe,
+    session.getSnapshot,
+    session.getSnapshot,
+  );
+  const verifiedUserId =
+    identity.status === 'verified' ? identity.userId : null;
+
   const refreshConnectivityAndSync = useCallback(async () => {
     const apiBase = getApiBaseUrl();
     if (!apiBase) {
@@ -117,6 +125,9 @@ export function StaffScreen() {
     const state = await probeConnectivity(apiBase);
     setConnectivity(state);
     if (state !== 'online') return;
+    const snap = session.getSnapshot();
+    if (snap.status !== 'verified') return;
+    await offlineScanQueue.bindUser(snap.userId);
     const bearer = await session.getCredential();
     if (!bearer) return;
     await offlineScanQueue.replay({ bearer, apiBase });
@@ -125,7 +136,11 @@ export function StaffScreen() {
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      await offlineScanQueue.hydrate();
+      if (verifiedUserId) {
+        await offlineScanQueue.bindUser(verifiedUserId);
+      } else {
+        offlineScanQueue.invalidateMemory();
+      }
       const loaded = await loadGateOps();
       if (cancelled) return;
       setOps(loaded);
@@ -140,7 +155,7 @@ export function StaffScreen() {
       cancelled = true;
       sub.remove();
     };
-  }, [refreshConnectivityAndSync]);
+  }, [refreshConnectivityAndSync, verifiedUserId]);
 
   async function submitScan(payload: string = raw) {
     const code = payload.trim();
@@ -162,6 +177,21 @@ export function StaffScreen() {
     }
     setBusy(true);
     try {
+      const snap = session.getSnapshot();
+      if (snap.status !== 'verified') {
+        setCurrent({
+          id: 'local',
+          ticketId: '',
+          tenantId: '',
+          eventId: '',
+          staffSessionId: '',
+          phase: 'denied',
+          message:
+            'Phiên staff chưa verified — đăng nhập lại trước khi quét. Không cho vào.',
+        });
+        return;
+      }
+      await offlineScanQueue.bindUser(snap.userId);
       const preferOffline = connectivity === 'offline';
       const result = await runScan({
         raw: code,
@@ -233,13 +263,18 @@ export function StaffScreen() {
   }
 
   async function syncNow() {
-    const bearer = await session.getCredential();
-    const apiBase = getApiBaseUrl();
-    if (!bearer || !apiBase) return;
+    const auth = await resolveGateAuth();
+    if (!auth.ok) return;
+    const snap = session.getSnapshot();
+    if (snap.status !== 'verified') return;
     setBusy(true);
     try {
-      setConnectivity(await probeConnectivity(apiBase));
-      await offlineScanQueue.replay({ bearer, apiBase });
+      await offlineScanQueue.bindUser(snap.userId);
+      setConnectivity(await probeConnectivity(auth.apiBase));
+      await offlineScanQueue.replay({
+        bearer: auth.bearer,
+        apiBase: auth.apiBase,
+      });
     } finally {
       setBusy(false);
     }
