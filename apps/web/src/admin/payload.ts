@@ -1,4 +1,12 @@
-export const DEFAULT_CONFIG_PAYLOAD = '{\n  "title": ""\n}';
+/**
+ * Legacy JSON textarea helpers — DEFAULT is now typed C-B EventConfigPayload.
+ * Prefer config-editor.ts for section/brand mutations.
+ */
+
+import { defaultConfigPayload, parseConfigPayload } from './config-schema';
+import { payloadToJson } from './config-editor';
+
+export const DEFAULT_CONFIG_PAYLOAD = payloadToJson(defaultConfigPayload());
 
 export type PayloadEditor = {
   text: string;
@@ -36,9 +44,15 @@ export function startNewConfigDraft(editor: PayloadEditor): PayloadEditor {
   };
 }
 
+/**
+ * Validates typed C-B payload. Pretty JSON alone is NOT acceptance —
+ * callers must still use ConfigRenderer for rendered preview.
+ */
 export function previewConfigJson(
   text: string,
-): { ok: true; pretty: string } | { ok: false; code: string; message: string } {
+):
+  | { ok: true; pretty: string }
+  | { ok: false; code: string; message: string } {
   let value: unknown;
   try {
     value = JSON.parse(text) as unknown;
@@ -49,12 +63,14 @@ export function previewConfigJson(
       message: 'Payload phải là JSON object.',
     };
   }
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+  const parsed = parseConfigPayload(value);
+  if (!parsed.ok) {
+    const first = parsed.issues[0];
     return {
       ok: false,
-      code: 'CONFIG_PAYLOAD_REQUIRED',
-      message: 'Payload phải là JSON object.',
+      code: first?.code ?? 'CONFIG_PAYLOAD_REQUIRED',
+      message: first?.message ?? 'Payload không hợp lệ theo schema C-B.',
     };
   }
-  return { ok: true, pretty: JSON.stringify(value, null, 2) };
+  return { ok: true, pretty: payloadToJson(parsed.payload) };
 }
