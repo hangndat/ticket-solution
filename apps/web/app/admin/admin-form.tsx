@@ -1553,7 +1553,7 @@ export function AdminForm({
         busy={busy}
         expectedVersion={expectedVersion}
         onExpectedVersion={setExpectedVersion}
-        eventRevision={null}
+        eventRevision={currentEvent?.revision ?? null}
         onSavedVersion={(version) => {
           setExpectedVersion(String(version));
           setDecision({ kind: 'saved', version });
