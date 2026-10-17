@@ -123,29 +123,43 @@ if not any(f.get("alias") == flow for f in flows):
 else:
     print(f"flow exists: {flow}")
 
-# Only force OTP Form REQUIRED inside nested conditional OTP (not whole org/forms)
+# Force MFA: raise Conditional OTP subflow to REQUIRED (always OTP), and OTP Form REQUIRED.
+# Keycloak flat executions list uses displayName (flowAlias often null on top-level copy).
 flow_enc = up.quote(flow)
 st, raw = api("GET", f"/admin/realms/{realm}/authentication/flows/{flow_enc}/executions")
 execs = json.loads(raw.decode())
 updated = 0
 for e in execs:
-    alias = e.get("flowAlias") or ""
-    if "conditional otp" in alias.lower() or alias.endswith("Conditional OTP"):
-        # Keep CONDITIONAL parent; make OTP Form REQUIRED inside
-        st2, raw2 = api("GET", f"/admin/realms/{realm}/authentication/flows/{up.quote(alias)}/executions")
-        nested = json.loads(raw2.decode())
-        for ne in nested:
-            prov = ne.get("providerId") or ""
-            disp = (ne.get("displayName") or "").lower()
-            if prov == "auth-otp-form" or "otp form" in disp:
-                ne["requirement"] = "REQUIRED"
-                st3, raw3 = api(
-                    "PUT",
-                    f"/admin/realms/{realm}/authentication/flows/{up.quote(alias)}/executions",
-                    ne,
-                )
-                print(f"OTP Form REQUIRED in {alias} http={st3}")
-                updated += 1
+    disp = (e.get("displayName") or "")
+    disp_l = disp.lower()
+    # Parent Conditional OTP → REQUIRED (mandatory TOTP for platform/admin clients)
+    if e.get("authenticationFlow") and "conditional otp" in disp_l:
+        if e.get("requirement") != "REQUIRED":
+            e["requirement"] = "REQUIRED"
+            st3, raw3 = api(
+                "PUT",
+                f"/admin/realms/{realm}/authentication/flows/{flow_enc}/executions",
+                e,
+            )
+            print(f"Conditional OTP → REQUIRED ({disp}) http={st3}")
+            if st3 >= 400:
+                print(raw3.decode()[:300], file=sys.stderr)
+                sys.exit(1)
+            updated += 1
+    # OTP Form leaf → REQUIRED
+    if (e.get("providerId") == "auth-otp-form") or ("otp form" in disp_l and not e.get("authenticationFlow")):
+        if e.get("requirement") != "REQUIRED":
+            e["requirement"] = "REQUIRED"
+            st3, raw3 = api(
+                "PUT",
+                f"/admin/realms/{realm}/authentication/flows/{flow_enc}/executions",
+                e,
+            )
+            print(f"OTP Form → REQUIRED ({disp}) http={st3}")
+            if st3 >= 400:
+                print(raw3.decode()[:300], file=sys.stderr)
+                sys.exit(1)
+            updated += 1
 print(f"otp_form_updates={updated}")
 
 # Keycloak expects flow UUID (not alias) in authenticationFlowBindingOverrides

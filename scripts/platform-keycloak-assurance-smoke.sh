@@ -127,6 +127,8 @@ if [[ "${PLATFORM_CODE}" == "200" ]]; then
 fi
 echo "platform_password_grant_blocked http=${PLATFORM_CODE}"
 
+# Live Auth Code + PKCE + TOTP → acr=2 / aud platform (task requires live proof)
+D5_PLATFORM_OIDC_ISSUER="${OIDC_ISSUER}"   node "${ROOT}/scripts/lib/platform-keycloak-mfa-live-proof.mjs"
+
 echo "PLATFORM_KEYCLOAK_ASSURANCE_SMOKE_PASS issuer=${OIDC_ISSUER}"
-echo "gap: full TOTP Auth Code + acr=2 live proof after enroll — bootstrap --token-file"
 echo "not production; O06 unresolved"
