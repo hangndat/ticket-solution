@@ -47,6 +47,7 @@ model Event {
   maxTicketsPerAttendee  Int?                 @map("max_tickets_per_attendee")
   cancelReason           String?              @map("cancel_reason")
   cancelledAt            DateTime?            @map("cancelled_at") @db.Timestamptz(3)
+  publishedBrandSnapshot Json?                @map("published_brand_snapshot")
   tenant                 Tenant               @relation(fields: [tenantId], references: [id], onDelete: Restrict)
   eventAssignments       EventAssignment[]
   ticketTypes            TicketType[]
