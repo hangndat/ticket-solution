@@ -126,6 +126,8 @@ jobs:
           fi
 
           # Label `ci:docker` → bắt buộc Docker jobs trên PR (kể cả PR nhẹ).
+          # Lưu ý: `gh run rerun` giữ payload pull_request gốc — gắn label sau khi mở PR
+          # rồi rerun sẽ thấy labels rỗng; cần synchronize (push commit) để đọc label mới.
           labels='${{ join(github.event.pull_request.labels.*.name, ',') }}'
           if [[ ",${labels}," == *",ci:docker,"* ]]; then
             db=true
