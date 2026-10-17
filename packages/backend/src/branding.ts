@@ -82,12 +82,18 @@ function assertDisplayName(value: string): string {
       `displayName length must be 1–${DISPLAY_NAME_MAX}`,
     );
   }
-  // Reject control chars / obvious HTML injection in plain display text.
-  if (/[\u0000-\u0008\u000B\u000C\u000E-\u001F<>]/.test(trimmed)) {
-    throw new BrandingError(
-      BRANDING_ERROR_CODES.INVALID_INPUT,
-      'displayName contains disallowed characters',
-    );
+  // Reject C0 controls (except TAB/LF/CR) and angle brackets — charCodes avoid
+  // eslint no-control-regex on a literal character class.
+  for (let i = 0; i < trimmed.length; i++) {
+    const code = trimmed.charCodeAt(i);
+    const isDisallowedControl =
+      code <= 0x1f && code !== 0x09 && code !== 0x0a && code !== 0x0d;
+    if (isDisallowedControl || code === 0x3c || code === 0x3e) {
+      throw new BrandingError(
+        BRANDING_ERROR_CODES.INVALID_INPUT,
+        'displayName contains disallowed characters',
+      );
+    }
   }
   return trimmed;
 }
