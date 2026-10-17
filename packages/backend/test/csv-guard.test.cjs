@@ -16,10 +16,12 @@ test('csv guard prefixes formula-like and whitespace-led cells', () => {
   assert.equal(toCsvRow(['=1', 'ok']).startsWith("'=1"), true);
 });
 
-test('providerStatus maps SENT to ACCEPTED never delivered', () => {
+test('providerStatus maps SENT/ACCEPTED never delivered', () => {
   assert.equal(providerStatusFromDbState('SENT'), 'ACCEPTED');
+  assert.equal(providerStatusFromDbState('ACCEPTED'), 'ACCEPTED');
   assert.equal(providerStatusFromDbState('PENDING'), 'PENDING');
   assert.equal(providerStatusFromDbState('FAILED'), 'FAILED');
+  assert.notEqual(providerStatusFromDbState('SENT'), 'DELIVERED');
   assert.equal(maskEmail('attendee@example.com'), 'a***@example.com');
   assert.equal(maskEmail(null), null);
 });

@@ -6,6 +6,7 @@ import {
   createApnsAdapter,
   createDatabase,
   createSmtpEmailAdapter,
+  isApnsEnabled,
   readCredentialKeyEnvironment,
   readEmailEnvironment,
   readMinioEnvironment,
@@ -37,7 +38,8 @@ class WorkerRelay implements OnModuleDestroy {
   constructor(
     private readonly db: PrismaClient | null,
     private readonly email: EmailAdapter,
-    private readonly apns: ApnsAdapter,
+    /** Undefined = APNs disabled (omit options.apns → skip push). Null = fail-closed. */
+    private readonly apns: ApnsAdapter | null | undefined,
     private readonly leaseOwner: string,
     private readonly ownsDb: boolean,
     private readonly intervalMs: number,
@@ -46,10 +48,15 @@ class WorkerRelay implements OnModuleDestroy {
   ) {}
 
   private relayOpts() {
-    return {
+    const base = {
       credentialKeyMaterial: this.credentialKeyMaterial,
       env: this.env,
     };
+    // Only opt into APNs when enabled (or test injects adapter/null).
+    if (this.apns !== undefined) {
+      return { ...base, apns: this.apns };
+    }
+    return base;
   }
 
   start() {
@@ -67,7 +74,7 @@ class WorkerRelay implements OnModuleDestroy {
           this.email,
           this.leaseOwner,
           10,
-          { ...this.relayOpts(), apns: this.apns },
+          this.relayOpts(),
         );
       } catch {
         // Keep looping; outbox remains source of truth.
@@ -91,7 +98,7 @@ class WorkerRelay implements OnModuleDestroy {
       this.email,
       this.leaseOwner,
       10,
-      { ...this.relayOpts(), apns: this.apns },
+      this.relayOpts(),
     );
     if (readMinioEnvironment(this.env)) {
       await relayExportsOnce(this.db, this.env, this.leaseOwner, 5);
@@ -142,7 +149,13 @@ export async function createWorker(
   const email =
     options.emailAdapter ??
     createSmtpEmailAdapter(readEmailEnvironment(env));
-  const apns = options.apnsAdapter ?? createApnsAdapter(env);
+  // APNS_ENABLED=false → omit adapter (skip push). Enabled without key → fail-closed at construct.
+  const apns: ApnsAdapter | null | undefined =
+    options.apnsAdapter !== undefined
+      ? options.apnsAdapter
+      : isApnsEnabled(env)
+        ? createApnsAdapter(env)
+        : undefined;
   const leaseOwner = options.leaseOwner ?? `worker-${randomUUID()}`;
   const intervalMs =
     options.pollMs ??
