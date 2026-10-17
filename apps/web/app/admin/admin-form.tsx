@@ -1,6 +1,8 @@
 'use client';
 
 import { useState } from 'react';
+import type { EventDetail, EventVisibility } from '@ticket/contracts';
+import { adminGet, adminMutate } from '../../src/admin/client-fetch';
 import {
   createEventLabel,
   eventListLabel,
@@ -29,6 +31,22 @@ import {
   interpretExportStatus,
   type ExportView,
 } from '../../src/admin/export-job';
+import {
+  buildCancelEventBody,
+  buildCloneEventBody,
+  buildImpactPreviewRequest,
+  buildPatchEventBody,
+  eventDetailLabel,
+  eventImpactLabel,
+  eventMutationLabel,
+  interpretEventDetail,
+  interpretEventImpactPreview,
+  interpretEventMutation,
+  patchMayAffectIssuedTickets,
+  type EventDetailView,
+  type EventImpactView,
+  type EventMutationView,
+} from '../../src/admin/event-lifecycle';
 import {
   interpretSourceCreate,
   interpretTicketTypeCreate,
@@ -112,11 +130,42 @@ export function AdminForm({
   const [createAttempt, setCreateAttempt] = useState<UnclearAttempt | null>(
     null,
   );
+  const [patchAttempt, setPatchAttempt] = useState<UnclearAttempt | null>(null);
+  const [cloneAttempt, setCloneAttempt] = useState<UnclearAttempt | null>(null);
+  const [cancelAttempt, setCancelAttempt] = useState<UnclearAttempt | null>(
+    null,
+  );
+  const [archiveAttempt, setArchiveAttempt] = useState<UnclearAttempt | null>(
+    null,
+  );
   const [busy, setBusy] = useState(false);
   const [noticeSeq, setNoticeSeq] = useState(0);
   const [decision, setDecision] = useState<AdminDecision | null>(null);
   const [createView, setCreateView] = useState<CreateEventView | null>(null);
   const [listView, setListView] = useState<EventListView | null>(null);
+  const [detailView, setDetailView] = useState<EventDetailView | null>(null);
+  const [lifecycleView, setLifecycleView] = useState<EventMutationView | null>(
+    null,
+  );
+  const [impactView, setImpactView] = useState<EventImpactView | null>(null);
+  const [metaVisibility, setMetaVisibility] =
+    useState<EventVisibility>('UNLISTED');
+  const [metaStartsAt, setMetaStartsAt] = useState('');
+  const [metaEndsAt, setMetaEndsAt] = useState('');
+  const [metaVenueName, setMetaVenueName] = useState('');
+  const [metaVenueAddress, setMetaVenueAddress] = useState('');
+  const [metaContactEmail, setMetaContactEmail] = useState('');
+  const [metaRedeemOpen, setMetaRedeemOpen] = useState('');
+  const [metaRedeemClose, setMetaRedeemClose] = useState('');
+  const [metaCheckInOpen, setMetaCheckInOpen] = useState('');
+  const [metaCheckInClose, setMetaCheckInClose] = useState('');
+  const [metaMaxTickets, setMetaMaxTickets] = useState('');
+  const [confirmIssuedImpact, setConfirmIssuedImpact] = useState(false);
+  const [notifyAttendees, setNotifyAttendees] = useState(false);
+  const [cloneSlug, setCloneSlug] = useState('');
+  const [cloneName, setCloneName] = useState('');
+  const [copyConfig, setCopyConfig] = useState(true);
+  const [cancelReason, setCancelReason] = useState('');
   const [ticketTypeView, setTicketTypeView] = useState<TicketTypeView | null>(
     null,
   );
@@ -125,14 +174,43 @@ export function AdminForm({
   const [exportView, setExportView] = useState<ExportView | null>(null);
   const [report, setReport] = useState<EventReportView | null>(null);
   const locked = payloadLocked(editor);
+  const currentEvent: EventDetail | null =
+    detailView?.kind === 'detail' ? detailView.event : null;
 
   function clearSpecialViews() {
     setCreateView(null);
     setListView(null);
+    setLifecycleView(null);
+    setImpactView(null);
     setTicketTypeView(null);
     setSourceView(null);
     setCsView(null);
     setExportView(null);
+  }
+
+  function applyEventToEditor(event: EventDetail) {
+    setEventId(event.eventId);
+    setEventSlug(event.slug);
+    setEventName(event.name);
+    setEventTimezone(event.timezone);
+    setMetaVisibility(event.visibility);
+    setMetaStartsAt(event.startsAt ?? '');
+    setMetaEndsAt(event.endsAt ?? '');
+    setMetaVenueName(event.venue?.name ?? '');
+    setMetaVenueAddress(event.venue?.address ?? '');
+    setMetaContactEmail(event.contact?.email ?? '');
+    setMetaRedeemOpen(event.redemptionWindow.opensAt ?? '');
+    setMetaRedeemClose(event.redemptionWindow.closesAt ?? '');
+    setMetaCheckInOpen(event.checkInWindow.opensAt ?? '');
+    setMetaCheckInClose(event.checkInWindow.closesAt ?? '');
+    setMetaMaxTickets(
+      event.maxTicketsPerAttendee === null
+        ? ''
+        : String(event.maxTicketsPerAttendee),
+    );
+    setConfirmIssuedImpact(false);
+    setCloneSlug(`${event.slug}-copy`);
+    setCloneName(`${event.name} (copy)`);
   }
 
   function bumpNotice() {
@@ -279,23 +357,34 @@ export function AdminForm({
       slug: eventSlug.trim(),
       name: eventName.trim(),
       timezone: eventTimezone.trim() || undefined,
+      visibility: metaVisibility,
     });
     const idempotencyKey = reuseUnclearKey(createAttempt, fingerprint);
     setBusy(true);
     setDecision(null);
     clearSpecialViews();
-    const result = await fetchJson(
+    const result = await adminMutate(
       '/api/bff/admin/events',
       {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tenantId: tenantId.trim(),
-          slug: eventSlug.trim(),
-          name: eventName.trim(),
-          timezone: eventTimezone.trim() || undefined,
-          idempotencyKey,
-        }),
+        tenantId: tenantId.trim(),
+        slug: eventSlug.trim(),
+        name: eventName.trim(),
+        timezone: eventTimezone.trim() || undefined,
+        visibility: metaVisibility,
+        startsAt: metaStartsAt.trim() || null,
+        endsAt: metaEndsAt.trim() || null,
+        venueName: metaVenueName.trim() || undefined,
+        venueAddress: metaVenueAddress.trim() || undefined,
+        contactEmail: metaContactEmail.trim() || undefined,
+        redemptionOpensAt: metaRedeemOpen.trim() || null,
+        redemptionClosesAt: metaRedeemClose.trim() || null,
+        checkInOpensAt: metaCheckInOpen.trim() || null,
+        checkInClosesAt: metaCheckInClose.trim() || null,
+        maxTicketsPerAttendee:
+          metaMaxTickets.trim() === ''
+            ? null
+            : Number(metaMaxTickets.trim()),
+        idempotencyKey,
       },
       REQUEST_TIMEOUT_MS,
     );
@@ -309,9 +398,286 @@ export function AdminForm({
       fingerprint,
       unclear: next.kind === 'unknown',
     });
-    if (next.kind === 'created') setEventId(next.eventId);
+    if (next.kind === 'ok') {
+      setEventId(next.event.eventId);
+      applyEventToEditor(next.event);
+      setDetailView({
+        kind: 'detail',
+        event: next.event,
+        replayed: next.replayed,
+      });
+    }
     bumpNotice();
     setCreateView(next);
+    setBusy(false);
+  }
+
+  async function selectEventContext(nextEventId: string) {
+    setEventId(nextEventId);
+    setBusy(true);
+    setDecision(null);
+    clearSpecialViews();
+    setDetailView(null);
+    const params = new URLSearchParams({
+      tenantId: tenantId.trim(),
+    });
+    const result = await adminGet(
+      `/api/bff/admin/events/${encodeURIComponent(nextEventId)}?${params}`,
+      REQUEST_TIMEOUT_MS,
+    );
+    const next = interpretEventDetail(
+      result.status,
+      result.json,
+      result.networkError || result.timedOut,
+    );
+    if (next.kind === 'detail') applyEventToEditor(next.event);
+    bumpNotice();
+    setDetailView(next);
+    setBusy(false);
+  }
+
+  async function loadEventDetail() {
+    await selectEventContext(eventId.trim());
+  }
+
+  async function previewImpact() {
+    if (!currentEvent) return;
+    setBusy(true);
+    setDecision(null);
+    setImpactView(null);
+    setLifecycleView(null);
+    const body = buildImpactPreviewRequest({
+      expectedRevision: currentEvent.revision,
+      startsAt: metaStartsAt.trim() || null,
+      endsAt: metaEndsAt.trim() || null,
+      venueName: metaVenueName.trim() || undefined,
+      venueAddress: metaVenueAddress.trim() || undefined,
+    });
+    const result = await adminMutate(
+      `/api/bff/admin/events/${encodeURIComponent(eventId.trim())}/impact-preview`,
+      { tenantId: tenantId.trim(), ...body },
+      REQUEST_TIMEOUT_MS,
+    );
+    const next = interpretEventImpactPreview(
+      result.status,
+      result.json,
+      result.networkError || result.timedOut,
+    );
+    bumpNotice();
+    setImpactView(next);
+    setBusy(false);
+  }
+
+  async function saveEventMetadata() {
+    if (!currentEvent) return;
+    const mayAffect = patchMayAffectIssuedTickets(currentEvent, {
+      startsAt: metaStartsAt.trim() || null,
+      venueName: metaVenueName.trim() || undefined,
+      venueAddress: metaVenueAddress.trim() || undefined,
+    });
+    if (
+      mayAffect &&
+      impactView?.kind === 'preview' &&
+      impactView.preview.requiresConfirm &&
+      !confirmIssuedImpact
+    ) {
+      setLifecycleView({
+        kind: 'rejected',
+        code: 'IMPACT_CONFIRM_REQUIRED',
+        message:
+          'Đổi giờ/địa điểm ảnh hưởng vé đã cấp — chạy preview và tick confirmIssuedImpact.',
+      });
+      bumpNotice();
+      return;
+    }
+    const patch = buildPatchEventBody({
+      expectedRevision: currentEvent.revision,
+      name: eventName.trim() || undefined,
+      timezone: eventTimezone.trim() || undefined,
+      visibility: metaVisibility,
+      startsAt: metaStartsAt.trim() || null,
+      endsAt: metaEndsAt.trim() || null,
+      venueName: metaVenueName.trim() || undefined,
+      venueAddress: metaVenueAddress.trim() || undefined,
+      contactEmail: metaContactEmail.trim() || undefined,
+      redemptionOpensAt: metaRedeemOpen.trim() || null,
+      redemptionClosesAt: metaRedeemClose.trim() || null,
+      checkInOpensAt: metaCheckInOpen.trim() || null,
+      checkInClosesAt: metaCheckInClose.trim() || null,
+      maxTicketsPerAttendee:
+        metaMaxTickets.trim() === ''
+          ? null
+          : Number(metaMaxTickets.trim()),
+      confirmIssuedImpact: confirmIssuedImpact || undefined,
+      notifyAttendees: mayAffect ? notifyAttendees : undefined,
+    });
+    const fingerprint = JSON.stringify({
+      tenantId: tenantId.trim(),
+      eventId: eventId.trim(),
+      patch,
+    });
+    const idempotencyKey = reuseUnclearKey(patchAttempt, fingerprint);
+    setBusy(true);
+    setDecision(null);
+    setCreateView(null);
+    setListView(null);
+    const result = await adminMutate(
+      `/api/bff/admin/events/${encodeURIComponent(eventId.trim())}`,
+      { tenantId: tenantId.trim(), idempotencyKey, ...patch },
+      REQUEST_TIMEOUT_MS,
+      'PATCH',
+    );
+    const next = interpretEventMutation(
+      result.status,
+      result.json,
+      result.networkError || result.timedOut,
+    );
+    setPatchAttempt({
+      key: idempotencyKey,
+      fingerprint,
+      unclear: next.kind === 'unknown',
+    });
+    if (next.kind === 'ok') {
+      applyEventToEditor(next.event);
+      setDetailView({
+        kind: 'detail',
+        event: next.event,
+        replayed: next.replayed,
+      });
+      setConfirmIssuedImpact(false);
+    }
+    bumpNotice();
+    setLifecycleView(next);
+    setBusy(false);
+  }
+
+  async function cloneCurrentEvent() {
+    const body = buildCloneEventBody({
+      slug: cloneSlug.trim(),
+      name: cloneName.trim(),
+      copyConfig,
+    });
+    const fingerprint = JSON.stringify({
+      tenantId: tenantId.trim(),
+      eventId: eventId.trim(),
+      ...body,
+    });
+    const idempotencyKey = reuseUnclearKey(cloneAttempt, fingerprint);
+    setBusy(true);
+    setDecision(null);
+    setCreateView(null);
+    setListView(null);
+    const result = await adminMutate(
+      `/api/bff/admin/events/${encodeURIComponent(eventId.trim())}/clone`,
+      { tenantId: tenantId.trim(), idempotencyKey, ...body },
+      REQUEST_TIMEOUT_MS,
+    );
+    const next = interpretEventMutation(
+      result.status,
+      result.json,
+      result.networkError || result.timedOut,
+    );
+    setCloneAttempt({
+      key: idempotencyKey,
+      fingerprint,
+      unclear: next.kind === 'unknown',
+    });
+    if (next.kind === 'ok') {
+      applyEventToEditor(next.event);
+      setDetailView({
+        kind: 'detail',
+        event: next.event,
+        replayed: next.replayed,
+      });
+    }
+    bumpNotice();
+    setLifecycleView(next);
+    setBusy(false);
+  }
+
+  async function archiveCurrentEvent() {
+    if (!currentEvent) return;
+    const fingerprint = JSON.stringify({
+      tenantId: tenantId.trim(),
+      eventId: eventId.trim(),
+      expectedRevision: currentEvent.revision,
+      op: 'archive',
+    });
+    const idempotencyKey = reuseUnclearKey(archiveAttempt, fingerprint);
+    setBusy(true);
+    setDecision(null);
+    const result = await adminMutate(
+      `/api/bff/admin/events/${encodeURIComponent(eventId.trim())}/archive`,
+      {
+        tenantId: tenantId.trim(),
+        idempotencyKey,
+        expectedRevision: currentEvent.revision,
+      },
+      REQUEST_TIMEOUT_MS,
+    );
+    const next = interpretEventMutation(
+      result.status,
+      result.json,
+      result.networkError || result.timedOut,
+    );
+    setArchiveAttempt({
+      key: idempotencyKey,
+      fingerprint,
+      unclear: next.kind === 'unknown',
+    });
+    if (next.kind === 'ok') {
+      applyEventToEditor(next.event);
+      setDetailView({
+        kind: 'detail',
+        event: next.event,
+        replayed: next.replayed,
+      });
+    }
+    bumpNotice();
+    setLifecycleView(next);
+    setBusy(false);
+  }
+
+  async function cancelCurrentEvent() {
+    if (!currentEvent) return;
+    const body = buildCancelEventBody({
+      expectedRevision: currentEvent.revision,
+      reason: cancelReason,
+      notifyAttendees,
+    });
+    const fingerprint = JSON.stringify({
+      tenantId: tenantId.trim(),
+      eventId: eventId.trim(),
+      ...body,
+    });
+    const idempotencyKey = reuseUnclearKey(cancelAttempt, fingerprint);
+    setBusy(true);
+    setDecision(null);
+    const result = await adminMutate(
+      `/api/bff/admin/events/${encodeURIComponent(eventId.trim())}/cancel`,
+      { tenantId: tenantId.trim(), idempotencyKey, ...body },
+      REQUEST_TIMEOUT_MS,
+    );
+    const next = interpretEventMutation(
+      result.status,
+      result.json,
+      result.networkError || result.timedOut,
+    );
+    setCancelAttempt({
+      key: idempotencyKey,
+      fingerprint,
+      unclear: next.kind === 'unknown',
+    });
+    if (next.kind === 'ok') {
+      applyEventToEditor(next.event);
+      setDetailView({
+        kind: 'detail',
+        event: next.event,
+        replayed: next.replayed,
+      });
+    }
+    bumpNotice();
+    setLifecycleView(next);
     setBusy(false);
   }
 
@@ -720,8 +1086,15 @@ export function AdminForm({
       <section aria-labelledby="create-event-heading">
         <h2 id="create-event-heading">Tạo / liệt kê event trong tenant</h2>
         <p>
-          POST create kèm Idempotency-Key. Shape sai → chưa biết, không coi là
-          đã tạo.
+          Context hiện tại: tenant + event đã chọn. POST create kèm
+          Idempotency-Key và CSRF. Shape sai → chưa biết, không coi là đã tạo.
+        </p>
+        <p data-testid="current-event-context" className="intro">
+          Context: tenant={tenantId.trim() || '—'} · event=
+          {eventId.trim() || '—'}
+          {currentEvent
+            ? ` · ${currentEvent.contentStatus}/${currentEvent.businessStatus} · rev ${currentEvent.revision}`
+            : ''}
         </p>
         <label>
           Event slug
@@ -754,6 +1127,21 @@ export function AdminForm({
             spellCheck={false}
           />
         </label>
+        <label>
+          Visibility
+          <select
+            name="eventVisibility"
+            value={metaVisibility}
+            onChange={(e) =>
+              setMetaVisibility(
+                e.target.value === 'PUBLIC' ? 'PUBLIC' : 'UNLISTED',
+              )
+            }
+          >
+            <option value="UNLISTED">UNLISTED</option>
+            <option value="PUBLIC">PUBLIC</option>
+          </select>
+        </label>
         <div className="auth-buttons">
           <button
             type="button"
@@ -769,6 +1157,13 @@ export function AdminForm({
           >
             Liệt kê event
           </button>
+          <button
+            type="button"
+            disabled={busy || !eventId.trim()}
+            onClick={() => void loadEventDetail()}
+          >
+            Tải metadata event
+          </button>
         </div>
         {listView?.kind === 'list' ? (
           <ul data-testid="event-list">
@@ -776,14 +1171,238 @@ export function AdminForm({
               <li key={item.eventId}>
                 <button
                   type="button"
-                  onClick={() => setEventId(item.eventId)}
+                  onClick={() => void selectEventContext(item.eventId)}
                 >
-                  {item.slug} · {item.name} ({item.status})
+                  {item.slug} · {item.name} ({item.contentStatus}/
+                  {item.businessStatus} · rev {item.revision})
                 </button>
               </li>
             ))}
           </ul>
         ) : null}
+      </section>
+      <section aria-labelledby="event-lifecycle-heading">
+        <h2 id="event-lifecycle-heading">Metadata &amp; lifecycle (C-E)</h2>
+        <p>
+          PATCH dùng expectedRevision; đổi startsAt/venue sau khi đã có vé cần
+          impact preview + confirmIssuedImpact. Clone chỉ DRAFT allowlist —
+          không sao staff/mã/vé. Cancel/archive tách business/content status.
+        </p>
+        <label>
+          startsAt (UTC ISO)
+          <input
+            name="metaStartsAt"
+            value={metaStartsAt}
+            onChange={(e) => setMetaStartsAt(e.target.value)}
+            autoComplete="off"
+            spellCheck={false}
+            placeholder="2026-11-01T10:00:00.000Z"
+          />
+        </label>
+        <label>
+          endsAt (UTC ISO)
+          <input
+            name="metaEndsAt"
+            value={metaEndsAt}
+            onChange={(e) => setMetaEndsAt(e.target.value)}
+            autoComplete="off"
+            spellCheck={false}
+          />
+        </label>
+        <label>
+          Venue name
+          <input
+            name="metaVenueName"
+            value={metaVenueName}
+            onChange={(e) => setMetaVenueName(e.target.value)}
+            autoComplete="off"
+            spellCheck={false}
+          />
+        </label>
+        <label>
+          Venue address
+          <input
+            name="metaVenueAddress"
+            value={metaVenueAddress}
+            onChange={(e) => setMetaVenueAddress(e.target.value)}
+            autoComplete="off"
+            spellCheck={false}
+          />
+        </label>
+        <label>
+          Contact email
+          <input
+            name="metaContactEmail"
+            value={metaContactEmail}
+            onChange={(e) => setMetaContactEmail(e.target.value)}
+            autoComplete="off"
+            spellCheck={false}
+          />
+        </label>
+        <label>
+          Redemption opensAt
+          <input
+            name="metaRedeemOpen"
+            value={metaRedeemOpen}
+            onChange={(e) => setMetaRedeemOpen(e.target.value)}
+            autoComplete="off"
+            spellCheck={false}
+          />
+        </label>
+        <label>
+          Redemption closesAt
+          <input
+            name="metaRedeemClose"
+            value={metaRedeemClose}
+            onChange={(e) => setMetaRedeemClose(e.target.value)}
+            autoComplete="off"
+            spellCheck={false}
+          />
+        </label>
+        <label>
+          Check-in opensAt
+          <input
+            name="metaCheckInOpen"
+            value={metaCheckInOpen}
+            onChange={(e) => setMetaCheckInOpen(e.target.value)}
+            autoComplete="off"
+            spellCheck={false}
+          />
+        </label>
+        <label>
+          Check-in closesAt
+          <input
+            name="metaCheckInClose"
+            value={metaCheckInClose}
+            onChange={(e) => setMetaCheckInClose(e.target.value)}
+            autoComplete="off"
+            spellCheck={false}
+          />
+        </label>
+        <label>
+          maxTicketsPerAttendee (trống = unlimited)
+          <input
+            name="metaMaxTickets"
+            value={metaMaxTickets}
+            onChange={(e) => setMetaMaxTickets(e.target.value)}
+            autoComplete="off"
+            spellCheck={false}
+          />
+        </label>
+        <label>
+          <input
+            type="checkbox"
+            checked={confirmIssuedImpact}
+            onChange={(e) => setConfirmIssuedImpact(e.target.checked)}
+          />{' '}
+          confirmIssuedImpact (bắt buộc khi impact requiresConfirm)
+        </label>
+        <label>
+          <input
+            type="checkbox"
+            checked={notifyAttendees}
+            onChange={(e) => setNotifyAttendees(e.target.checked)}
+          />{' '}
+          notifyAttendees
+        </label>
+        <div className="auth-buttons">
+          <button
+            type="button"
+            disabled={busy || !currentEvent}
+            onClick={() => void previewImpact()}
+          >
+            Preview impact
+          </button>
+          <button
+            type="button"
+            disabled={busy || !currentEvent}
+            onClick={() => void saveEventMetadata()}
+          >
+            Lưu metadata (PATCH)
+          </button>
+        </div>
+        {impactView?.kind === 'preview' ? (
+          <aside
+            className="notice"
+            role="status"
+            data-testid="event-impact-preview"
+          >
+            <p>{eventImpactLabel(impactView)}</p>
+            <ul>
+              {impactView.preview.diff.map((d) => (
+                <li key={`${d.field}-${d.from}-${d.to}`}>
+                  {d.field}: {d.from ?? '∅'} → {d.to ?? '∅'}
+                </li>
+              ))}
+            </ul>
+          </aside>
+        ) : null}
+        <h3>Clone DRAFT</h3>
+        <label>
+          Clone slug
+          <input
+            name="cloneSlug"
+            value={cloneSlug}
+            onChange={(e) => setCloneSlug(e.target.value)}
+            autoComplete="off"
+            spellCheck={false}
+          />
+        </label>
+        <label>
+          Clone name
+          <input
+            name="cloneName"
+            value={cloneName}
+            onChange={(e) => setCloneName(e.target.value)}
+            autoComplete="off"
+            spellCheck={false}
+          />
+        </label>
+        <label>
+          <input
+            type="checkbox"
+            checked={copyConfig}
+            onChange={(e) => setCopyConfig(e.target.checked)}
+          />{' '}
+          copyConfig (allowlist cấu hình; không inventory/staff)
+        </label>
+        <div className="auth-buttons">
+          <button
+            type="button"
+            disabled={busy || !eventId.trim()}
+            onClick={() => void cloneCurrentEvent()}
+          >
+            Clone event
+          </button>
+        </div>
+        <h3>Archive / Cancel</h3>
+        <label>
+          Cancel reason
+          <input
+            name="cancelReason"
+            value={cancelReason}
+            onChange={(e) => setCancelReason(e.target.value)}
+            autoComplete="off"
+            spellCheck={false}
+            placeholder="Lý do hủy (1–500)"
+          />
+        </label>
+        <div className="auth-buttons">
+          <button
+            type="button"
+            disabled={busy || !currentEvent}
+            onClick={() => void archiveCurrentEvent()}
+          >
+            Archive (content)
+          </button>
+          <button
+            type="button"
+            disabled={busy || !currentEvent || cancelReason.trim().length < 1}
+            onClick={() => void cancelCurrentEvent()}
+          >
+            Cancel (business)
+          </button>
+        </div>
       </section>
       <section aria-labelledby="type-source-heading">
         <h2 id="type-source-heading">Ticket type &amp; source</h2>
@@ -1182,37 +1801,52 @@ export function AdminForm({
               error: createView.kind === 'rejected',
               text: createEventLabel(createView),
             }
-          : listView
+          : lifecycleView
             ? {
-                error: listView.kind === 'rejected',
-                text: eventListLabel(listView),
+                error: lifecycleView.kind === 'rejected',
+                text: eventMutationLabel(lifecycleView),
               }
-            : ticketTypeView
+            : impactView
               ? {
-                  error: ticketTypeView.kind === 'rejected',
-                  text: ticketTypeLabel(ticketTypeView),
+                  error: impactView.kind === 'rejected',
+                  text: eventImpactLabel(impactView),
                 }
-              : sourceView
+              : detailView
                 ? {
-                    error: sourceView.kind === 'rejected',
-                    text: sourceLabel(sourceView),
+                    error: detailView.kind === 'rejected',
+                    text: eventDetailLabel(detailView),
                   }
-                : csView
+                : listView
                   ? {
-                      error: csView.kind === 'rejected',
-                      text: csViewLabel(csView),
+                      error: listView.kind === 'rejected',
+                      text: eventListLabel(listView),
                     }
-                  : exportView
+                  : ticketTypeView
                     ? {
-                        error: exportView.kind === 'rejected',
-                        text: exportViewLabel(exportView),
+                        error: ticketTypeView.kind === 'rejected',
+                        text: ticketTypeLabel(ticketTypeView),
                       }
-                    : decision
+                    : sourceView
                       ? {
-                          error: decision.kind === 'rejected',
-                          text: adminDecisionLabel(decision),
+                          error: sourceView.kind === 'rejected',
+                          text: sourceLabel(sourceView),
                         }
-                      : null;
+                      : csView
+                        ? {
+                            error: csView.kind === 'rejected',
+                            text: csViewLabel(csView),
+                          }
+                        : exportView
+                          ? {
+                              error: exportView.kind === 'rejected',
+                              text: exportViewLabel(exportView),
+                            }
+                          : decision
+                            ? {
+                                error: decision.kind === 'rejected',
+                                text: adminDecisionLabel(decision),
+                              }
+                            : null;
         if (!notice) return null;
         return (
           <section
