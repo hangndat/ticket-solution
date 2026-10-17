@@ -31,9 +31,22 @@ export type EmailSendResult = {
   providerStatus: 'ACCEPTED' | 'UNKNOWN';
 };
 
+export type MembershipInviteEmailPayload = {
+  tenantId: string;
+  inviteId: string;
+  toEmail: string;
+  role: string;
+  /** Raw token — only for encrypted delivery path; never log. */
+  token: string;
+  expiresAt: string;
+};
+
 export type EmailAdapter = {
   sendTicketIssued(
     payload: TicketIssuedEmailPayload,
+  ): Promise<EmailSendResult>;
+  sendMembershipInvite?(
+    payload: MembershipInviteEmailPayload,
   ): Promise<EmailSendResult>;
 };
 
@@ -46,6 +59,9 @@ export function createNoopEmailAdapter(): EmailAdapter {
         providerStatus: 'ACCEPTED',
       };
     },
+    async sendMembershipInvite(payload) {
+      return { providerRef: `noop-invite:${payload.inviteId}` };
+    },
   };
 }
 
@@ -55,6 +71,9 @@ export function createFailingEmailAdapter(
 ): EmailAdapter {
   return {
     async sendTicketIssued() {
+      throw new Error(message);
+    },
+    async sendMembershipInvite() {
       throw new Error(message);
     },
   };
@@ -137,6 +156,25 @@ export function createSmtpEmailAdapter(
         providerRef: result.providerRef,
         providerStatus: result.unknown ? 'UNKNOWN' : 'ACCEPTED',
       };
+    },
+    async sendMembershipInvite(payload) {
+      const from = options.fromAddress ?? 'tickets@localhost';
+      const subject = 'Lời mời tham gia tenant';
+      const body = [
+        `Bạn được mời với vai trò ${payload.role}.`,
+        `Invite: ${payload.inviteId}`,
+        `Hết hạn: ${payload.expiresAt}`,
+        '',
+        'Dùng token trong session accept (không log token).',
+      ].join('\n');
+      const providerRef = await sendMailViaSmtp({
+        smtpUrl,
+        from,
+        to: payload.toEmail,
+        subject,
+        body,
+      });
+      return { providerRef };
     },
   };
 }

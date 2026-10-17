@@ -88,6 +88,53 @@ export async function processClaimedOutbox(
 
   for (const row of rows) {
     try {
+      if (row.type === 'MembershipInvite') {
+        await withTenant(db, row.tenant_id, async (tx) => {
+          await tx.$executeRaw`
+            UPDATE outbox
+            SET status = 'PROCESSING', updated_at = now()
+            WHERE tenant_id = ${row.tenant_id}::uuid
+              AND id = ${row.outbox_id}::uuid
+              AND status = 'LEASED'
+          `;
+        });
+        const invitePayloads = await withTenant(db, row.tenant_id, async (tx) =>
+          tx.$queryRaw<{ payload: Prisma.JsonValue }[]>`
+            SELECT payload FROM outbox
+            WHERE tenant_id = ${row.tenant_id}::uuid
+              AND id = ${row.outbox_id}::uuid
+          `,
+        );
+        const invitePayload = (invitePayloads[0]?.payload ?? {}) as {
+          inviteId?: string;
+          email?: string;
+          role?: string;
+          token?: string;
+          expiresAt?: string;
+        };
+        if (!email.sendMembershipInvite) {
+          throw new Error('invite_email_unsupported');
+        }
+        await email.sendMembershipInvite({
+          tenantId: row.tenant_id,
+          inviteId: invitePayload.inviteId ?? row.aggregate_id,
+          toEmail: invitePayload.email ?? '',
+          role: invitePayload.role ?? 'Owner',
+          token: invitePayload.token ?? '',
+          expiresAt: invitePayload.expiresAt ?? '',
+        });
+        await withTenant(db, row.tenant_id, async (tx) => {
+          await markOutboxComplete(tx, row.tenant_id, row.outbox_id);
+        });
+        metricsInc('notification_provider_total', {
+          channel: 'email_invite',
+          result: 'accepted',
+        });
+        completed += 1;
+        metricsInc('outbox_jobs_total', { result: 'completed' });
+        continue;
+      }
+
       if (row.type !== 'TicketIssued') {
         await withTenant(db, row.tenant_id, async (tx) => {
           await markOutboxDeadFenced(
