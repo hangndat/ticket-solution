@@ -1,0 +1,10 @@
+[
+  {
+    "localStatus": "pending",
+    "clientEventId": "2a5bfe8b-dd0d-4b71-a46a-95c8c66e0057",
+    "ticketId": "ace74a71-7646-431a-a73e-7281848002a1",
+    "clientSeq": 0,
+    "type": "CHECKIN_OFFLINE",
+    "checkinId": null
+  }
+]
