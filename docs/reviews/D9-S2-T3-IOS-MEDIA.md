@@ -6,10 +6,8 @@
 
 ## Exact commit SHA
 
-**Tip branch (review this):** `180cc45e0629cec66bcff11c5ce59ef2df0dcb59`  
-**Behavior commit:** `15370969d8d2eceb00dfdb292b7a554b35cea040` (`feat(mobile): render bundled demo media…`)
-
-*(Docs pin commit không đổi hành vi runtime. Revalidation bắt buộc nếu có commit hành vi mới sau tip.)*
+**Behavior commit (code):** `15370969d8d2eceb00dfdb292b7a554b35cea040` (`feat(mobile): render bundled demo media…`)  
+**DoD tip:** head của PR [#218](https://github.com/hangndat/ticket-solution/pull/218) (`hangndat/d9-s2-t3-ios-media`) — docs-only commits sau behavior không đổi runtime; commit hành vi mới → revalidation bắt buộc.
 
 ## Thay đổi
 
