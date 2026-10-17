@@ -45,6 +45,8 @@ export function StaffScreen() {
   const [current, setCurrent] = useState<GateOp | null>(null);
   const [busy, setBusy] = useState(false);
   const [ready, setReady] = useState(false);
+  const [inputFocused, setInputFocused] = useState(false);
+  const [checkInFocused, setCheckInFocused] = useState(false);
   const lock = useRef(false);
 
   useEffect(() => {
@@ -133,6 +135,9 @@ export function StaffScreen() {
         autoCapitalize="none"
         autoCorrect={false}
         multiline
+        selectionColor={colors.focus}
+        onFocus={() => setInputFocused(true)}
+        onBlur={() => setInputFocused(false)}
         style={{
           minHeight: 88,
           padding: 12,
@@ -140,6 +145,8 @@ export function StaffScreen() {
           backgroundColor: colors.card,
           color: colors.label,
           fontSize: 16,
+          borderWidth: 2,
+          borderColor: inputFocused ? colors.focus : 'transparent',
         }}
       />
       <Pressable
@@ -147,10 +154,14 @@ export function StaffScreen() {
         accessibilityState={{ disabled: busy || !ready || raw.trim().length === 0 }}
         disabled={busy || !ready || raw.trim().length === 0}
         onPress={() => void submitScan()}
+        onFocus={() => setCheckInFocused(true)}
+        onBlur={() => setCheckInFocused(false)}
         style={{
           padding: 14,
           borderRadius: 12,
           backgroundColor: colors.accent,
+          borderWidth: checkInFocused ? 2 : 0,
+          borderColor: colors.focus,
         }}
       >
         <Text

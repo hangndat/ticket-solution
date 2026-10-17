@@ -45,11 +45,14 @@ function ActionButton({
   onPress: () => void;
   disabled?: boolean;
 }) {
+  const [focused, setFocused] = useState(false);
   return (
     <Pressable
       accessibilityRole="button"
       disabled={disabled}
       onPress={onPress}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
       style={({ pressed }) => ({
         paddingVertical: 14,
         paddingHorizontal: 18,
@@ -57,6 +60,8 @@ function ActionButton({
         borderCurve: 'continuous',
         backgroundColor: colors.accent,
         opacity: disabled ? 0.45 : pressed ? 0.85 : 1,
+        borderWidth: focused ? 2 : 0,
+        borderColor: colors.focus,
       })}
     >
       <Text
@@ -74,11 +79,14 @@ function ActionButton({
 }
 
 function TicketRow({ ticket }: { ticket: TicketSummary }) {
+  const [focused, setFocused] = useState(false);
   return (
     <Link href={`/my-tickets/${ticket.ticketId}`} asChild>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={`Vé ${ticket.state}`}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
         style={({ pressed }) => ({
           padding: 16,
           borderRadius: 14,
@@ -86,6 +94,8 @@ function TicketRow({ ticket }: { ticket: TicketSummary }) {
           backgroundColor: colors.ticketCanvas,
           borderLeftWidth: 4,
           borderLeftColor: brand.signal,
+          borderWidth: focused ? 2 : 0,
+          borderColor: focused ? colors.focus : 'transparent',
           opacity: pressed ? 0.85 : 1,
           gap: 6,
         })}
@@ -240,7 +250,7 @@ function OfflineDisplayWallet({
           setTickets([]);
           setSyncedAt(null);
           setError(
-            'Offline display binding exists but no ticket cache was found for this account.',
+            'Có liên kết hiển thị offline nhưng không tìm thấy bộ đệm vé cho tài khoản này.',
           );
           return;
         }
@@ -252,7 +262,7 @@ function OfflineDisplayWallet({
           setError(
             err instanceof Error
               ? err.message
-              : 'Failed to read offline display cache.',
+              : 'Không đọc được bộ đệm hiển thị offline.',
           );
         }
       } finally {
@@ -274,7 +284,7 @@ function OfflineDisplayWallet({
       setError(
         err instanceof Error
           ? err.message
-          : 'Logout failed while clearing SecureStore / ticket cache.',
+          : 'Đăng xuất thất bại khi xóa SecureStore / bộ đệm vé.',
       );
     } finally {
       setBusy(false);
@@ -409,7 +419,7 @@ function VerifiedWallet({ userId }: { userId: string }) {
           setError(
             err instanceof Error
               ? err.message
-              : 'Authorized session ended but durable logout cleanup failed.',
+              : 'Phiên đã hết quyền nhưng dọn dẹp đăng xuất bền vững thất bại.',
           );
         }
         return;
@@ -502,7 +512,7 @@ function VerifiedWallet({ userId }: { userId: string }) {
       setError(
         err instanceof Error
           ? err.message
-          : 'Logout failed while clearing SecureStore / ticket cache.',
+          : 'Đăng xuất thất bại khi xóa SecureStore / bộ đệm vé.',
       );
     } finally {
       setBusy(false);
