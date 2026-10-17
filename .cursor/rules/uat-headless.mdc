@@ -7,6 +7,10 @@ alwaysApply: true
 
 Never drive the user's visible desktop mouse or focus for UAT. Prefer HTTP scripts, Playwright headless, AXe HID, or Orca's **embedded** browser — not Computer Use on Chrome/Safari/Simulator.
 
+## Milestone gate
+
+Closing a **milestone / Epic** on Project #3 requires **headless UAT evidence** (web and/or iOS per scope) as part of Milestone DoD — see `github-project-tracking.mdc` § Milestone / Epic DoD gate (a). Record commands, artifact paths (`apps/web/.uat-artifacts/`, `apps/mobile/.uat-artifacts/`), and exact SHA in `docs/reviews/*` or the Issue comment. Headed UAT does **not** satisfy the gate unless the user explicitly waived headless for that milestone.
+
 ## Web
 
 1. Prefer `scripts/web-uat.sh` / `node scripts/web-uat.mjs` (Playwright **headless** Chromium).
