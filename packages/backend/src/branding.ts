@@ -32,11 +32,94 @@ export type UpdateTenantBrandingInput = {
   tenantId: string;
   actorUserId: string;
   expectedVersion: number;
+  /** Runtime JSON may send non-strings — validated before trim. */
+  displayName?: unknown;
+  primaryColor?: unknown;
+  secondaryColor?: unknown;
+  logoAssetId?: unknown;
+};
+
+export type BrandingUpdatePatch = {
   displayName?: string;
   primaryColor?: string;
   secondaryColor?: string | null;
   logoAssetId?: string | null;
 };
+
+/**
+ * Validate nullability/types for PUT branding fields before any `.trim()`.
+ * Throws BrandingError(INVALID_INPUT) — never TypeError — on wrong runtime types.
+ */
+export function parseBrandingUpdatePatch(input: {
+  displayName?: unknown;
+  primaryColor?: unknown;
+  secondaryColor?: unknown;
+  logoAssetId?: unknown;
+}): BrandingUpdatePatch {
+  const patch: BrandingUpdatePatch = {};
+
+  if (input.displayName !== undefined) {
+    if (typeof input.displayName !== 'string') {
+      throw new BrandingError(
+        BRANDING_ERROR_CODES.INVALID_INPUT,
+        'displayName must be a string',
+      );
+    }
+    patch.displayName = assertDisplayName(input.displayName);
+  }
+
+  if (input.primaryColor !== undefined) {
+    if (typeof input.primaryColor !== 'string') {
+      throw new BrandingError(
+        BRANDING_ERROR_CODES.INVALID_INPUT,
+        'primaryColor must be a string',
+      );
+    }
+    patch.primaryColor = assertHexColor('primaryColor', input.primaryColor);
+  }
+
+  if (input.secondaryColor !== undefined) {
+    if (input.secondaryColor === null) {
+      patch.secondaryColor = null;
+    } else if (typeof input.secondaryColor !== 'string') {
+      throw new BrandingError(
+        BRANDING_ERROR_CODES.INVALID_INPUT,
+        'secondaryColor must be a string or null',
+      );
+    } else if (input.secondaryColor.trim() === '') {
+      patch.secondaryColor = null;
+    } else {
+      patch.secondaryColor = assertHexColor(
+        'secondaryColor',
+        input.secondaryColor,
+      );
+    }
+  }
+
+  if (input.logoAssetId !== undefined) {
+    if (input.logoAssetId === null) {
+      patch.logoAssetId = null;
+    } else if (typeof input.logoAssetId !== 'string') {
+      throw new BrandingError(
+        BRANDING_ERROR_CODES.INVALID_INPUT,
+        'logoAssetId must be a string or null',
+      );
+    } else if (input.logoAssetId.trim() === '') {
+      patch.logoAssetId = null;
+    } else {
+      const id = input.logoAssetId.trim();
+      if (!UUID_RE.test(id)) {
+        throw new BrandingError(
+          BRANDING_ERROR_CODES.INVALID_INPUT,
+          'logoAssetId must be a UUID',
+        );
+      }
+      patch.logoAssetId = id;
+    }
+  }
+
+  return patch;
+}
 
 type TenantBrandingRow = {
   id: string;
@@ -161,37 +244,30 @@ export async function updateTenantBranding(
     );
   }
 
+  // Type/nullability before trim — wrong JSON types → INVALID_INPUT, not TypeError.
+  const patch = parseBrandingUpdatePatch({
+    displayName: input.displayName,
+    primaryColor: input.primaryColor,
+    secondaryColor: input.secondaryColor,
+    logoAssetId: input.logoAssetId,
+  });
+
   let displayName = row.display_name;
   let primaryColor = row.primary_color;
   let secondaryColor = row.secondary_color;
   let logoAssetId = row.logo_asset_id;
 
-  if (input.displayName !== undefined) {
-    displayName = assertDisplayName(input.displayName);
+  if (patch.displayName !== undefined) {
+    displayName = patch.displayName;
   }
-  if (input.primaryColor !== undefined) {
-    primaryColor = assertHexColor('primaryColor', input.primaryColor);
+  if (patch.primaryColor !== undefined) {
+    primaryColor = patch.primaryColor;
   }
-  if (input.secondaryColor !== undefined) {
-    if (input.secondaryColor === null || input.secondaryColor.trim() === '') {
-      secondaryColor = null;
-    } else {
-      secondaryColor = assertHexColor('secondaryColor', input.secondaryColor);
-    }
+  if (patch.secondaryColor !== undefined) {
+    secondaryColor = patch.secondaryColor;
   }
-  if (input.logoAssetId !== undefined) {
-    if (input.logoAssetId === null || input.logoAssetId.trim() === '') {
-      logoAssetId = null;
-    } else {
-      const id = input.logoAssetId.trim();
-      if (!UUID_RE.test(id)) {
-        throw new BrandingError(
-          BRANDING_ERROR_CODES.INVALID_INPUT,
-          'logoAssetId must be a UUID',
-        );
-      }
-      logoAssetId = id;
-    }
+  if (patch.logoAssetId !== undefined) {
+    logoAssetId = patch.logoAssetId;
   }
 
   const nextVersion = row.version + 1;
