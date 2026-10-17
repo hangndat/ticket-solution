@@ -10,7 +10,7 @@
 
 | Slice | Exact SHA |
 | --- | --- |
-| Client tip (`hangndat/d7-milestone` after this evidence push) | *(tip after commit — see PR #190)* |
+| Client tip (`hangndat/d7-milestone` after this evidence push) |  |
 | Behavior (mobile offline UAT code) | `c8606fe59a8e5771aac79c420736960781d3ee3a` |
 | Server / integration (`origin/main` API with `POST …/offline-sync`) | `f7c88ffd6f936b6da56aa8cea8451f3ae889c278` |
 | Prior DoD reval FAIL tip | `94eade19cd8d436cdab117eb654cf5407158eb1a` |
