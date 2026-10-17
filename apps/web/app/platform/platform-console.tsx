@@ -190,7 +190,7 @@ export function PlatformConsole({ misconfigured, initialError }: Props) {
         </p>
       ) : null}
 
-      <section aria-labelledby="provision-heading">
+      <section className="admin-section" aria-labelledby="provision-heading">
         <h2 id="provision-heading">Tạo tenant (Operator)</h2>
         <p>
           Status PENDING + owner invite. Limits null = unlimited. Không seed
@@ -234,7 +234,7 @@ export function PlatformConsole({ misconfigured, initialError }: Props) {
         </button>
       </section>
 
-      <section aria-labelledby="manage-heading">
+      <section className="admin-section" aria-labelledby="manage-heading">
         <h2 id="manage-heading">Status / limits / health</h2>
         <p>
           Limits null = unlimited. SUSPENDED chặn issue/admin nhưng giữ vé/Gate/
@@ -433,7 +433,7 @@ export function PlatformConsole({ misconfigured, initialError }: Props) {
         {manageNotice ? <p role="status">{manageNotice}</p> : null}
       </section>
 
-      <section aria-labelledby="support-heading">
+      <section className="admin-section" aria-labelledby="support-heading">
         <h2 id="support-heading">Support grant (cs.read)</h2>
         <p>
           Banner read-only: lý do + hết hạn (tối đa 1h theo cấu hình security).

@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { isOidcConfigured, resolveWebAuthState } from '../../src/oidc/config';
+import { SiteNav } from '../../src/site-chrome';
 import { RedeemForm } from './redeem-form';
 
 /** OIDC + redeem are runtime — never SSG the fail-closed branch. */
@@ -8,7 +9,7 @@ export const dynamic = 'force-dynamic';
 export const metadata = {
   title: 'Đổi mã lấy vé',
   description:
-    'F-WEB redeem — published form/terms, pending/status discriminated UX qua Nest BFF.',
+    'Đổi mã lấy vé — form/terms published, trạng thái phân biệt qua Nest BFF.',
 };
 
 type Props = {
@@ -29,29 +30,20 @@ export default async function RedeemPage({ searchParams }: Props) {
 
   return (
     <main id="main" className="container shell redeem-page">
-      <nav aria-label="Main navigation">
-        <Link href="/" className="wordmark">
-          ticket<span>↗</span>
-        </Link>
-        <span className="nav-links">
-          <Link href="/auth">Identity POC</Link>
-          <Link href="/">Demo events</Link>
-        </span>
-      </nav>
+      <SiteNav variant="guest" />
 
-      <p className="eyebrow">F-WEB / REDEEM · FORM PUBLISHED · C-F</p>
       <h1>Đổi mã lấy vé</h1>
       <p className="intro">
-        Tải form/terms từ event published, gửi answers + consent qua BFF CSRF.
-        Trạng thái pending / issued / rejected / expired / unknown tách biệt —
-        timeout giữ cùng idempotency-key.
+        Tải form và điều khoản từ event đã publish, gửi câu trả lời cùng đồng ý
+        qua BFF (CSRF). Trạng thái chờ / đã cấp / từ chối / hết hạn / chưa biết
+        được tách rõ — timeout giữ cùng idempotency-key.
       </p>
 
       {!configured ? (
-        <aside className="notice auth-unconfigured" role="status">
+        <aside className="notice auth-unconfigured state-error" role="status">
           <h2>OIDC chưa cấu hình</h2>
           <p>
-            Redeem fail closed khi thiếu OIDC — không mock session. Auth state:{' '}
+            Đổi mã fail closed khi thiếu OIDC — không mock session. Auth state:{' '}
             <strong>
               {state.status} / authenticated={String(state.authenticated)}
             </strong>
@@ -70,9 +62,9 @@ export default async function RedeemPage({ searchParams }: Props) {
       )}
 
       <p>
-        <Link href="/">← Demo events</Link>
+        <Link href="/">← Trang chủ</Link>
         {' · '}
-        <Link href="/auth">Identity POC</Link>
+        <Link href="/auth">Đăng nhập</Link>
       </p>
     </main>
   );

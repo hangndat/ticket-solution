@@ -154,7 +154,7 @@ const BY_CODE: Record<
   [IDENTITY_ERROR_CODES.UNAUTHENTICATED]: {
     kind: 'auth',
     title: 'Chưa đăng nhập',
-    detail: 'Đăng nhập Keycloak (Identity POC) rồi quay lại đổi mã.',
+    detail: 'Đăng nhập Keycloak rồi quay lại đổi mã.',
     retryable: false,
   },
   [IDENTITY_ERROR_CODES.OIDC_MISCONFIGURED]: {
