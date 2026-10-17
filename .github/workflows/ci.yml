@@ -149,7 +149,8 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup-pnpm
-      # Một turbo graph — lint/typecheck/test/build song song theo dependsOn.
+      # typegen trước → routes.d.ts; turbo: web#build dependsOn typecheck (no race).
+      - run: pnpm --filter @ticket/web run typegen
       - run: pnpm exec turbo run lint typecheck test build --filter=@ticket/web...
       - run: pnpm --filter @ticket/web test:routes
       - uses: ./.github/actions/save-turbo
