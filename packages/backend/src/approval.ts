@@ -12,6 +12,8 @@ import {
   lockEventPolicyForShare,
 } from './event-policy';
 import { requireTenantPermission } from './membership';
+import { expirePendingRequest } from './pending-expiry';
+import type { FormAnswerValue } from '@ticket/contracts';
 
 export const APPROVE_COMMAND = 'redemption.approve' as const;
 export const DENY_COMMAND = 'redemption.deny' as const;
@@ -28,6 +30,12 @@ export type HoldPendingInput = {
   codeId: string;
   formVersion?: string | null;
   termsVersion?: string | null;
+  answers?: Record<string, FormAnswerValue>;
+  termsAccepted?: true | null;
+  consentAcceptedAt?: Date | null;
+  formDefinitionHash?: string | null;
+  termsContentHash?: string | null;
+  expiresAt?: Date | null;
 };
 
 export type DecideRedemptionInput = {
@@ -190,11 +198,19 @@ export async function holdCodeForReview(
   await tx.$executeRaw`
     INSERT INTO redemption_requests (
       tenant_id, event_id, id, actor_user_id, redemption_code_id,
-      status, form_version, terms_version, created_at, updated_at
+      status, form_version, terms_version, answers_json, terms_accepted,
+      consent_accepted_at, form_definition_hash, terms_content_hash,
+      expires_at, created_at, updated_at
     ) VALUES (
       ${input.tenantId}::uuid, ${input.eventId}::uuid, ${requestId}::uuid,
       ${input.ownerUserId}::uuid, ${input.codeId}::uuid, 'PENDING_REVIEW',
       ${input.formVersion ?? null}, ${input.termsVersion ?? null},
+      ${JSON.stringify(input.answers ?? {})}::jsonb,
+      ${input.termsAccepted ?? null},
+      ${input.consentAcceptedAt ?? null},
+      ${input.formDefinitionHash ?? null},
+      ${input.termsContentHash ?? null},
+      ${input.expiresAt ?? null},
       now(), now()
     )
   `;
@@ -359,6 +375,116 @@ async function applyDecision(
   input: DecideRedemptionInput,
   operationId: string,
 ): Promise<Omit<ApprovalResult, 'replayed'>> {
+  // Peek without lock to learn code id; then lock event → code → request.
+  const peeks = await tx.$queryRaw<RequestRow[]>`
+    SELECT id, status, actor_user_id, redemption_code_id
+    FROM redemption_requests
+    WHERE tenant_id = ${input.tenantId}::uuid
+      AND event_id = ${input.eventId}::uuid
+      AND id = ${input.requestId}::uuid
+  `;
+  const peek = peeks[0];
+  if (!peek) {
+    throw new ApprovalError(
+      APPROVAL_ERROR_CODES.REQUEST_NOT_FOUND,
+      'Redemption request was not found',
+    );
+  }
+
+  if (peek.status === 'ISSUED' || peek.status === 'REJECTED') {
+    // Terminal outcomes: lock request alone for consistent read.
+    const requests = await tx.$queryRaw<RequestRow[]>`
+      SELECT id, status, actor_user_id, redemption_code_id
+      FROM redemption_requests
+      WHERE tenant_id = ${input.tenantId}::uuid
+        AND event_id = ${input.eventId}::uuid
+        AND id = ${input.requestId}::uuid
+      FOR UPDATE
+    `;
+    const request = requests[0]!;
+    if (request.status === 'ISSUED') {
+      if (input.decision !== 'approve') {
+        throw new ApprovalError(
+          APPROVAL_ERROR_CODES.DECISION_CONFLICT,
+          'Issued redemption cannot be denied',
+        );
+      }
+      const existing = await loadIssuedTicket(tx, input.tenantId, request.id);
+      return {
+        decision: 'approve',
+        requestId: request.id,
+        status: 'ISSUED',
+        ticketId: existing.id,
+        operationId,
+        ownerUserId: request.actor_user_id,
+      };
+    }
+    if (request.status === 'REJECTED') {
+      if (input.decision !== 'deny') {
+        throw new ApprovalError(
+          APPROVAL_ERROR_CODES.DECISION_CONFLICT,
+          'Denied redemption cannot be approved',
+        );
+      }
+      return {
+        decision: 'deny',
+        requestId: request.id,
+        status: 'REJECTED',
+        ticketId: null,
+        operationId,
+        ownerUserId: request.actor_user_id,
+      };
+    }
+    if (request.status === 'EXPIRED') {
+      throw new ApprovalError(
+        APPROVAL_ERROR_CODES.PENDING_EXPIRED,
+        'Pending redemption has expired',
+      );
+    }
+  }
+
+  if (peek.status === 'EXPIRED') {
+    throw new ApprovalError(
+      APPROVAL_ERROR_CODES.PENDING_EXPIRED,
+      'Pending redemption has expired',
+    );
+  }
+
+  if (peek.status !== 'PENDING_REVIEW') {
+    throw new ApprovalError(
+      APPROVAL_ERROR_CODES.DECISION_CONFLICT,
+      'Redemption is not waiting for review',
+    );
+  }
+
+  // Lazy expiry before decision (same lock order as approve/deny).
+  const expired = await expirePendingRequest(tx, {
+    tenantId: input.tenantId,
+    eventId: input.eventId,
+    requestId: input.requestId,
+    actorUserId: input.actorUserId,
+  });
+  if (expired.expired) {
+    throw new ApprovalError(
+      APPROVAL_ERROR_CODES.PENDING_EXPIRED,
+      'Pending redemption has expired',
+    );
+  }
+
+  // Lock order: event → code → request (event already locked inside expire peek path;
+  // re-take consistently for the decision mutation).
+  await tx.$queryRaw`
+    SELECT id FROM events
+    WHERE tenant_id = ${input.tenantId}::uuid
+      AND id = ${input.eventId}::uuid
+    FOR SHARE
+  `;
+  await tx.$queryRaw`
+    SELECT id FROM redemption_codes
+    WHERE tenant_id = ${input.tenantId}::uuid
+      AND id = ${peek.redemption_code_id}::uuid
+    FOR UPDATE
+  `;
   const requests = await tx.$queryRaw<RequestRow[]>`
     SELECT id, status, actor_user_id, redemption_code_id
     FROM redemption_requests
@@ -374,42 +500,12 @@ async function applyDecision(
       'Redemption request was not found',
     );
   }
-
-  if (request.status === 'ISSUED') {
-    if (input.decision !== 'approve') {
-      throw new ApprovalError(
-        APPROVAL_ERROR_CODES.DECISION_CONFLICT,
-        'Issued redemption cannot be denied',
-      );
-    }
-    const existing = await loadIssuedTicket(tx, input.tenantId, request.id);
-    return {
-      decision: 'approve',
-      requestId: request.id,
-      status: 'ISSUED',
-      ticketId: existing.id,
-      operationId,
-      ownerUserId: request.actor_user_id,
-    };
+  if (request.status === 'EXPIRED') {
+    throw new ApprovalError(
+      APPROVAL_ERROR_CODES.PENDING_EXPIRED,
+      'Pending redemption has expired',
+    );
   }
-
-  if (request.status === 'REJECTED') {
-    if (input.decision !== 'deny') {
-      throw new ApprovalError(
-        APPROVAL_ERROR_CODES.DECISION_CONFLICT,
-        'Denied redemption cannot be approved',
-      );
-    }
-    return {
-      decision: 'deny',
-      requestId: request.id,
-      status: 'REJECTED',
-      ticketId: null,
-      operationId,
-      ownerUserId: request.actor_user_id,
-    };
-  }
-
   if (request.status !== 'PENDING_REVIEW') {
     throw new ApprovalError(
       APPROVAL_ERROR_CODES.DECISION_CONFLICT,
@@ -515,6 +611,7 @@ async function denyPending(
     UPDATE redemption_requests
     SET status = 'REJECTED',
         decision_reason = ${input.reason ?? null},
+        decided_at = clock_timestamp(),
         updated_at = now()
     WHERE tenant_id = ${input.tenantId}::uuid
       AND id = ${request.id}::uuid
@@ -526,6 +623,7 @@ async function denyPending(
       'Redemption is not waiting for review',
     );
   }
+  // Audit: reason + owner id only — never answers/PII payload.
   await tx.$executeRaw`
     INSERT INTO audit_logs (
       tenant_id, event_id, id, actor_user_id, action, resource_type,
@@ -558,6 +656,7 @@ async function approvePending(
   const now = await dbClock(tx);
   assertOpenForIssuance(event, now, 'approval');
 
+  // Code should already be locked by applyDecision; re-lock is same-tx safe.
   const codes = await tx.$queryRaw<CodeRow[]>`
     SELECT c.id, c.source_id, c.ticket_type_id, c.status, c.active_request_id,
            t.entitlement_snapshot
@@ -711,7 +810,9 @@ async function approvePending(
   }
   const issued = await tx.$executeRaw`
     UPDATE redemption_requests
-    SET status = 'ISSUED', updated_at = now()
+    SET status = 'ISSUED',
+        decided_at = ${now},
+        updated_at = now()
     WHERE tenant_id = ${input.tenantId}::uuid
       AND id = ${request.id}::uuid
       AND status = 'PENDING_REVIEW'
