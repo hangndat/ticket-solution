@@ -1,58 +1,54 @@
 import Link from 'next/link';
 import { BrandMark } from '../src/brand-mark';
+import { SiteNav } from '../src/site-chrome';
 import { demoEventRoutes, findDemoEvent, demoEventHref } from '../src/events';
 
 export default function Home() {
   return (
     <main id="main" className="container home">
-      <nav aria-label="Main navigation">
-        <span className="wordmark">
+      <SiteNav variant="guest" />
+      <section className="home-hero" aria-labelledby="home-title">
+        <p className="wordmark-hero" aria-hidden="true">
           <BrandMark />
           vemoki<span>↗</span>
-        </span>
-        <span className="nav-links">
-          <Link href="/redeem">Đổi mã</Link>
-          <Link href="/gate">Cổng</Link>
-          <Link href="/auth">Identity POC</Link>
-          <Link href="/admin">Admin shell</Link>
-        </span>
-      </nav>
-      <p className="eyebrow">W0 FOUNDATION / DEMO DIRECTORY</p>
-      <h1>
-        Good things
-        <br />
-        bring us together.
-      </h1>
-      <p className="intro">
-        Two organizations. Two distinct experiences. Explore the public event
-        shell with fictional fixture content.
-      </p>
-      <div className="event-grid">
+        </p>
+        <h1 id="home-title">Điều tốt đẹp đưa chúng ta lại gần.</h1>
+        <p className="intro">
+          Đổi mã lấy vé, nhận lời mời, hoặc xem sự kiện demo mang nhãn rõ — một
+          thương hiệu, không chrome thử nghiệm trên đường khách.
+        </p>
+        <p className="home-cta">
+          <Link className="button" href="/redeem">
+            Đổi mã lấy vé
+          </Link>
+        </p>
+      </section>
+      <div className="event-list" role="list">
         {demoEventRoutes().map((route) => {
           const event = findDemoEvent(route.tenantSlug, route.eventSlug)!;
           return (
             <Link
-              className={`event-card ${event.theme}`}
+              className="event-row"
               href={demoEventHref(event)}
               key={event.id}
+              role="listitem"
             >
               <span className="eyebrow">
-                {event.brand.organizationName} / DEMO
+                {event.brand.organizationName} · Demo
               </span>
               <h2>{event.name}</h2>
               <p>{event.category}</p>
               <span className="card-action">
-                Explore demo event <span aria-hidden="true">↗</span>
+                Xem sự kiện demo <span aria-hidden="true">↗</span>
               </span>
             </Link>
           );
         })}
       </div>
-      <aside className="notice">
-        <strong>Preview, with clear limits.</strong> Event directory content is
-        fictional. Live redemption uses Nest via the{' '}
-        <Link href="/redeem">Đổi mã</Link> form (Keycloak BFF cookies — no mock
-        proof). Identity POC: <Link href="/auth">/auth</Link>.
+      <aside className="notice" role="note">
+        <strong>Demo có giới hạn rõ.</strong> Thư mục sự kiện là fixture hư cấu.
+        Đổi mã thật qua Nest BFF tại <Link href="/redeem">Đổi mã</Link>. Đăng
+        nhập: <Link href="/auth">/auth</Link>.
       </aside>
     </main>
   );

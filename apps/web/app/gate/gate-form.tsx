@@ -179,7 +179,17 @@ export function GateForm({ initialTenantId = '', initialEventId = '' }: Props) {
       </form>
 
       {decision ? (
-        <aside role="status" data-outcome={decision.kind}>
+        <aside
+          role="status"
+          data-outcome={decision.kind}
+          className={
+            decision.kind === 'admit'
+              ? 'redeem-status redeem-status--success gate-status--admit'
+              : decision.kind === 'deny'
+                ? 'redeem-status redeem-status--denied gate-status--deny'
+                : 'redeem-status redeem-status--unknown state-unknown'
+          }
+        >
           <h2>{outcomeLabel(decision)}</h2>
           <p>{decision.message}</p>
           {decision.kind === 'admit' && decision.checkinId ? (
@@ -187,7 +197,14 @@ export function GateForm({ initialTenantId = '', initialEventId = '' }: Props) {
               Check-in <code>{decision.checkinId}</code>
             </p>
           ) : null}
-          {decision.kind === 'deny' ? <p>Mã lỗi: <code>{decision.code}</code></p> : null}
+          {decision.kind === 'deny' ? (
+            <p>
+              Mã lỗi: <code>{decision.code}</code>
+            </p>
+          ) : null}
+          {decision.kind !== 'admit' && decision.kind !== 'deny' ? (
+            <p>Kết quả chưa biết — không cho khách qua.</p>
+          ) : null}
         </aside>
       ) : null}
     </>
