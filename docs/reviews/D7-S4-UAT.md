@@ -10,7 +10,7 @@
 
 | Slice | Exact SHA |
 | --- | --- |
-| Client tip (`hangndat/d7-milestone` after this evidence push) | *(fill after `git rev-parse HEAD` on push tip — see PR #190 tip)* |
+| Client tip (`hangndat/d7-milestone` after this evidence push) | `c8606fe59a8e5771aac79c420736960781d3ee3a` |
 | Server / integration (`origin/main` runtime for API + offline-sync) | `f7c88ffd6f936b6da56aa8cea8451f3ae889c278` |
 | Prior FAIL tip (DoD c9bd246) | `3f352a5e2710b2a99f19b40bbf480c3fc5ed8d61` |
 
