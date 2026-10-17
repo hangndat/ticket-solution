@@ -32,6 +32,11 @@ export type GateOp = {
   message: string;
   /** Link to SecureStore offline queue row when phase === 'queued'. */
   clientEventId?: string;
+  /**
+   * UI-only hint when phase === 'admitted'.
+   * Does not affect classifyScan / reconcile / supervisor admission class.
+   */
+  admissionKind?: 'fresh' | 'already';
 };
 
 export function parseScan(
@@ -146,7 +151,12 @@ function asRecord(value: unknown): Record<string, unknown> | null {
 
 export function applyConfirm(op: GateOp, result: FetchResult): GateOp {
   if (result.networkError || result.status === 0 || result.status >= 500) {
-    return { ...op, phase: 'unknown', message: GATE_UNKNOWN_MESSAGE };
+    return {
+      ...op,
+      phase: 'unknown',
+      admissionKind: undefined,
+      message: GATE_UNKNOWN_MESSAGE,
+    };
   }
   const body = asRecord(result.json);
   if (
@@ -157,6 +167,7 @@ export function applyConfirm(op: GateOp, result: FetchResult): GateOp {
     return {
       ...op,
       phase: 'admitted',
+      admissionKind: 'fresh',
       checkinId: body.checkinId,
       token: undefined,
       message: 'Cho vào. Đã ghi nhận check-in.',
@@ -166,15 +177,17 @@ export function applyConfirm(op: GateOp, result: FetchResult): GateOp {
     return {
       ...op,
       phase: 'admitted',
+      admissionKind: 'already',
       checkinId: typeof body.checkinId === 'string' ? body.checkinId : op.checkinId,
       token: undefined,
       message:
-        'Đã check-in. Kết quả đã rõ — cho vào, không xác nhận lại.',
+        'Đã check-in. Kết quả đã rõ — cho vào theo lần ghi nhận trước, không tạo lượt mới.',
     };
   }
   return {
     ...op,
     phase: 'denied',
+    admissionKind: undefined,
     token: undefined,
     message:
       typeof body?.message === 'string' && body.message.trim()
