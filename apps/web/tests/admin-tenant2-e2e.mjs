@@ -298,6 +298,28 @@ COMMIT;
     throw new Error(`import failed: ${importText}`);
   }
 
+
+  // Redeem invite codes → issue tickets (required before CS list / export rows)
+  await page.goto(`${base}/redeem?tenantId=${encodeURIComponent(TENANT2)}&eventId=${encodeURIComponent(eventId)}`, {
+    waitUntil: 'domcontentloaded',
+    timeout: 60000,
+  });
+  await page.getByLabel(/Tenant ID/).fill(TENANT2);
+  await page.getByLabel(/Event ID/).fill(eventId);
+  await page.getByLabel(/Mã đổi vé|code/i).fill('UAT-CODE-A');
+  await page.getByRole('button', { name: /Đổi mã/ }).click();
+  await page.waitForTimeout(2500);
+  const redeemUx = await page.locator('.redeem-status').first().textContent().catch(() => '');
+  log(`e2e: redeem=${(redeemUx || '').replace(/\s+/g, ' ')}`);
+  // Second code for export row density
+  await page.getByLabel(/Mã đổi vé|code/i).fill('UAT-CODE-B');
+  await page.getByRole('button', { name: /Đổi mã/ }).click();
+  await page.waitForTimeout(2500);
+
+  await page.goto(`${base}/admin`, { waitUntil: 'domcontentloaded', timeout: 60000 });
+  await page.getByLabel('Tenant ID').fill(TENANT2);
+  await page.getByLabel('Event ID').fill(eventId);
+
   const csText = await clickAndNotice(
     page,
     'Tìm vé CS',
@@ -308,30 +330,38 @@ COMMIT;
     throw new Error(`cs list failed: ${csText}`);
   }
 
-  // Pick first ticket id from CS list if present
   const listJson = await page
     .locator('[data-testid="cs-list"]')
     .textContent()
     .catch(() => null);
-  if (listJson) {
-    const parsed = JSON.parse(listJson);
-    const first = Array.isArray(parsed) ? parsed[0] : null;
-    if (first?.ticketId) {
-      await page.getByLabel('Ticket ID').fill(first.ticketId);
-      const detailText = await clickAndNotice(
-        page,
-        'Xem chi tiết CS',
-        /CS: chi tiết|PERMISSION|chưa biết/,
-      );
-      log(`e2e: cs-detail=${detailText.replace(/\s+/g, ' ')}`);
-      await page.locator('[data-testid="cs-timeline"]').waitFor({ timeout: 10000 });
-      const resendText = await clickAndNotice(
-        page,
-        'Gửi lại email',
-        /CS: đã yêu cầu|RESEND_|PERMISSION|chưa biết|IDEMPOTENCY/,
-      );
-      log(`e2e: cs-resend=${resendText.replace(/\s+/g, ' ')}`);
-    }
+  if (!listJson) {
+    throw new Error('cs-list empty after redeem — expected ticket rows');
+  }
+  const parsed = JSON.parse(listJson);
+  const first = Array.isArray(parsed) ? parsed[0] : null;
+  if (!first?.ticketId) {
+    throw new Error(`cs-list missing ticketId after redeem: ${listJson.slice(0, 200)}`);
+  }
+  await page.getByLabel('Ticket ID').fill(first.ticketId);
+  const detailText = await clickAndNotice(
+    page,
+    'Xem chi tiết CS',
+    /CS: chi tiết|PERMISSION|chưa biết/,
+  );
+  log(`e2e: cs-detail=${detailText.replace(/\s+/g, ' ')}`);
+  if (!/CS: chi tiết/.test(detailText)) {
+    throw new Error(`cs detail failed: ${detailText}`);
+  }
+  await page.locator('[data-testid="cs-timeline"]').waitFor({ timeout: 10000 });
+  const resendText = await clickAndNotice(
+    page,
+    'Gửi lại email',
+    /CS: đã yêu cầu|RESEND_|PERMISSION|chưa biết|IDEMPOTENCY/,
+  );
+  log(`e2e: cs-resend=${resendText.replace(/\s+/g, ' ')}`);
+  if (!/CS: đã yêu cầu|RESEND_/.test(resendText) && !/đã yêu cầu/.test(resendText)) {
+    // soft: resend may be rate-limited; detail+timeline already prove ticket issued
+    log('e2e: cs-resend soft-fail (detail/timeline ok)');
   }
 
   const exportText = await clickAndNotice(
@@ -367,6 +397,14 @@ COMMIT;
       /đã nhận CSV|EXPORT_|PERMISSION|chưa biết/,
     );
     log(`e2e: export-download=${dlText.replace(/\s+/g, ' ')}`);
+    if (!/đã nhận CSV/.test(dlText)) {
+      throw new Error(`export download failed: ${dlText}`);
+    }
+    // Prefer artifact or notice that mentions row count / ticket columns
+    const csvHint = await page.locator('[data-testid="admin-notice"]').textContent().catch(() => dlText);
+    log(`e2e: export-csv-hint=${(csvHint || '').replace(/\s+/g, ' ').slice(0, 240)}`);
+  } else {
+    throw new Error('export never reached READY after redeem/issue');
   }
 
   const shot = join(OUT, 'admin-tenant2-e2e.png');
