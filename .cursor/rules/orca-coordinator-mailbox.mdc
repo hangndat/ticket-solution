@@ -1,0 +1,49 @@
+---
+description: Orca coordinator always drains mailbox — check/ack/reply/release without waiting for "You have N messages"
+alwaysApply: true
+---
+
+# Orca — coordinator mailbox (auto drain)
+
+As coordinator (or any agent supervising an Orca Run): **always drive the mailbox yourself.** Do not wait for the user (or UI copy like “You have N messages”) to remind you to check, ack, reply, or release.
+
+## Always do — every coordinator turn / checkpoint
+
+1. **`check`** — consume the bound Run inbox (`ORCA orchestration check … --json`, or `check --wait` while supervising). Process every delivered message before ending the turn.
+2. **`reply`** — answer every `question` / blocking ask with `ORCA orchestration reply --id <message_id> --body "…" --json`. Never leave a worker blocked on the coordinator.
+3. **Validate + decide** — for each `worker_done` / `escalation`, validate against the expected active Dispatch, record outcome, then choose next owner: reuse, retain (with reason), or release.
+4. **`ack`** — acknowledge the delivery only after the batch is fully processed (`check --ack <delivery_id> …`). Do not ack then ignore remaining work in that batch.
+5. **`worker-release`** — when settlement authorizes cleanup and you are not reusing/retaining the terminal, run `ORCA orchestration worker-release --dispatch <dispatch_id> --json` in the same wave. Do not leave `reclaimable` / `nextAction.kind=release` sitting until someone pings you.
+
+## Triggers (proactive — no user nudge)
+
+Run the drain loop when any of these happen, **without** waiting for a “You have N messages” prompt:
+
+- After `worker-start` / wave dispatch
+- After `check --wait` returns (or timeout with pending attention)
+- On any `worker_done`, `escalation`, or `question`
+- When `worker-list` shows `nextAction.kind` of `release` / reply / ack
+- At natural coordinator checkpoints (before reporting to the user, before idle fill, before ending a turn)
+- When the UI or session shows an unread mailbox count — treat it as **already overdue**, not as the first signal to act
+
+## Do not
+
+```text
+❌ End a coordinator turn with unacked deliveries or unanswered questions
+❌ Wait for the user to say “check messages” / “You have N messages”
+❌ Ack a batch before reply + settlement decisions for every message
+❌ Leave settled reclaimable terminals unreleased when nextAction is release
+❌ Treat UI attention badges as optional / “later”
+
+✅ check → process (reply / validate worker_done) → release|reuse|retain → ack → idle-fill
+✅ Same turn: drain mailbox fully, then report to user
+✅ Proactive check even when count might be 0 (cheap; proves empty)
+```
+
+## Relationship to other Orca rules
+
+- Parallel spawn: `orca-parallel-workers.mdc`
+- Idle fill after drain: `orca-idle-worker-fill.mdc`
+- Agent routing / DoD reviewer: `orca-agent-routing.mdc`
+
+Mailbox drain is **orthogonal** and **higher urgency** than spawning new feature work: clear the inbox and settle terminals before starting another feature wave when attention is pending.

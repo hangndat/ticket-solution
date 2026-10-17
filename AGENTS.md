@@ -44,6 +44,7 @@ All user-facing roadmap, GitHub Projects, milestones, Issue titles/bodies, label
 - **Milestone gates:** Closing a milestone/Epic requires (a) headless UAT evidence, (b) local iOS build evidence when mobile is in scope, (c) deploy prod evidence only when the task authorizes it, (d) review artifacts + exact SHA. See `.cursor/rules/github-project-tracking.mdc` and `.cursor/rules/uat-headless.mdc`.
 - **GitHub Project sync:** Keep [Project #3](https://github.com/users/hangndat/projects/3) Status in sync **per Task** (Đang làm → Chờ duyệt → Hoàn thành / Bị chặn) without waiting for user board approval. Hierarchy Epic → Story → Task. See `.cursor/rules/github-project-tracking.mdc` and `docs/ROADMAP.md` §2/§8.
 - **Orca idle fill:** Any free worker whose next Task is not blocked by other workers/deps must be given the next ready Project work immediately — do not wait for the full wave or for the user to pick the next Issue. See `.cursor/rules/orca-idle-worker-fill.mdc`.
+- **Orca coordinator mailbox:** Coordinators always `check` / `reply` / `ack` / `worker-release` themselves — do not wait for “You have N messages” or a user nudge. See `.cursor/rules/orca-coordinator-mailbox.mdc`.
 - **Git workflow:** Feature branch off integration `main` → conventional commits → push → PR → Cursor DoD review → CI → coordinator merge. No feature commits directly on `main`. See `.cursor/rules/git-workflow.mdc`.
 
 
