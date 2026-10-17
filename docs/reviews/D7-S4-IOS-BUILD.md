@@ -15,7 +15,7 @@
 
 | Tree | Exact SHA |
 | --- | --- |
-| Branch tip after evidence push (`hangndat/d7-milestone`) | *(fill `git rev-parse HEAD` on PR #190 tip)* |
+| Branch tip after evidence push (`hangndat/d7-milestone`) | `c8606fe59a8e5771aac79c420736960781d3ee3a` |
 | Prior FAIL doc cited D6 native tree | `31490627…` — **superseded** |
 | Server/main runtime used with this `.app` | `f7c88ffd6f936b6da56aa8cea8451f3ae889c278` |
 
