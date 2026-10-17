@@ -43,7 +43,7 @@ export function findDemoEventById(eventId: string) {
   return events.find((event) => event.id === eventId);
 }
 export function eventDate(event: PublicEvent) {
-  return new Intl.DateTimeFormat('en', {
+  return new Intl.DateTimeFormat('vi', {
     dateStyle: 'long',
     timeStyle: 'short',
     timeZone: event.timezone,

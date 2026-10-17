@@ -16,6 +16,10 @@ import {
   LoadingState,
 } from '@/components/screen-state';
 import { walletCopy } from '@/components/screen-state-copy';
+import {
+  attendeeWalletCopy,
+  presentTicketRow,
+} from '@/attendee/attendee-outcome-copy';
 import { hasDemoMediaForEventId } from '@/data/demo-media';
 import { brand, colors } from '@/theme/colors';
 import { isOidcConfigured, getTenantId } from '@/identity/config';
@@ -88,11 +92,12 @@ function ActionButton({
 
 function TicketRow({ ticket }: { ticket: TicketSummary }) {
   const [focused, setFocused] = useState(false);
+  const row = presentTicketRow(ticket);
   return (
     <Link href={`/my-tickets/${ticket.ticketId}`} asChild>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={`Vé ${ticket.state}`}
+        accessibilityLabel={row.accessibilityLabel}
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
         style={({ pressed }) => ({
@@ -117,13 +122,16 @@ function TicketRow({ ticket }: { ticket: TicketSummary }) {
           />
         ) : null}
         <Text style={{ color: brand.ink, fontSize: 17, fontWeight: '600' }}>
-          {ticket.state} · v{ticket.credentialVersion}
+          {row.eventTitle}
         </Text>
-        <Text style={{ color: colors.secondary, fontSize: 15 }} selectable>
-          {ticket.ticketId}
+        <Text style={{ color: brand.signal, fontSize: 15, fontWeight: '600' }}>
+          {row.statusLabel}
         </Text>
-        <Text style={{ color: colors.secondary, fontSize: 13 }}>
-          Sự kiện {ticket.eventId.slice(0, 8)}…
+        <Text style={{ color: colors.secondary, fontSize: 13 }} selectable>
+          {row.ticketId}
+        </Text>
+        <Text style={{ color: colors.secondary, fontSize: 12 }} selectable>
+          {row.credentialLine}
         </Text>
       </Pressable>
     </Link>
@@ -210,7 +218,7 @@ function SignedOutWallet() {
       }
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : 'Đăng nhập Keycloak thất bại.',
+        err instanceof Error ? err.message : 'Đăng nhập thất bại.',
       );
     } finally {
       setBusy(false);
@@ -224,12 +232,11 @@ function SignedOutWallet() {
       contentContainerStyle={{ padding: 20, paddingBottom: 48, gap: 20 }}
     >
       <BrandWordmark />
-      <Notice title="Vé của tôi">
-        Đăng nhập cùng danh tính Keycloak với web. Phiên chỉ được xác minh sau
-        GET /v1/me — sau đó tải vé từ GET /v1/me/tickets.
+      <Notice title={attendeeWalletCopy.signedOutTitle}>
+        {attendeeWalletCopy.signedOutBody}
       </Notice>
       <Text style={{ color: colors.secondary, fontSize: 15 }}>
-        Phiên: {identity.status}
+        Phiên: {identity.status === 'verified' ? 'đã xác minh' : identity.status}
       </Text>
       <ActionButton
         label="Đăng nhập"
@@ -319,17 +326,16 @@ function OfflineDisplayWallet({
       style={{ backgroundColor: colors.background }}
       contentContainerStyle={{ padding: 20, paddingBottom: 48, gap: 16 }}
     >
-      <Notice title="Hiển thị offline">
-        Đang xem vé đã lưu từ tài khoản từng xác minh online trên thiết bị này.
-        Đây không phải SessionBoundary verified và không ủy quyền API hay
-        check-in cổng.
-        {'\n'}
-        User: {userId}
-        {'\n'}
-        Tenant: {tenantId}
+      <Notice title={attendeeWalletCopy.offlineBannerTitle}>
+        {attendeeWalletCopy.offlineBannerBody}
         {'\n'}
         Đồng bộ lần cuối: {syncedAt ?? '—'}
       </Notice>
+      <Text selectable style={{ color: colors.secondary, fontSize: 12 }}>
+        Tài khoản · {userId}
+        {'\n'}
+        Tổ chức · {tenantId}
+      </Text>
 
       {busy && tickets.length === 0 ? (
         <LoadingState title={walletCopy.loading.title}>
@@ -553,13 +559,24 @@ function VerifiedWallet({ userId }: { userId: string }) {
       }
     >
       <BrandWordmark compact />
-      <Text style={{ color: colors.secondary, fontSize: 15, lineHeight: 22 }}>
-        Đã xác minh · {userId}
-        {'\n'}
-        Tenant: {tenantId ?? '(đặt EXPO_PUBLIC_TENANT_ID)'}
-        {'\n'}
+      <Text style={{ color: brand.ink, fontSize: 17, fontWeight: '600' }}>
+        {attendeeWalletCopy.verifiedCaption}
+      </Text>
+      {offline ? (
+        <Notice title={attendeeWalletCopy.offlineBannerTitle}>
+          {attendeeWalletCopy.offlineBannerBody}
+        </Notice>
+      ) : null}
+      <Text
+        selectable
+        style={{ color: colors.secondary, fontSize: 13, lineHeight: 20 }}
+      >
         Đồng bộ: {syncedAt ?? '—'}
         {offline ? ' · bộ đệm offline' : ''}
+        {'\n'}
+        Tài khoản · {userId}
+        {'\n'}
+        Tổ chức · {tenantId ?? '(chưa cấu hình)'}
       </Text>
 
       {busy && tickets.length === 0 ? (
