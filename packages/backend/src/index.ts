@@ -84,6 +84,12 @@ export {
   type EventQuotaResult,
 } from './inventory';
 export {
+  D9_DEMO,
+  seedD9DemoDataset,
+  type D9DemoSeedOptions,
+  type D9DemoSeedReport,
+} from './demo-seed';
+export {
   claimOutboxBatch,
   processClaimedOutbox,
   relayOutboxOnce,
