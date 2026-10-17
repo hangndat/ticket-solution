@@ -2385,6 +2385,25 @@
         ]
       }
     },
+    "/v1/me/membership-invites/accept": {
+      "post": {
+        "operationId": "PlatformController_accept",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "platform"
+        ]
+      }
+    },
     "/v1/tenants/{tenantId}/members/{membershipId}/revoke": {
       "post": {
         "operationId": "PlatformController_revokeMember",
@@ -2453,6 +2472,44 @@
             }
           }
         ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "platform"
+        ]
+      }
+    },
+    "/v1/me/account-deletion-requests": {
+      "post": {
+        "operationId": "PlatformController_requestDeletion",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "platform"
+        ]
+      }
+    },
+    "/v1/me/account-deletion-requests/current": {
+      "get": {
+        "operationId": "PlatformController_currentDeletion",
+        "parameters": [],
         "responses": {
           "200": {
             "description": ""
@@ -3718,10 +3775,6 @@
           "reason"
         ]
       }
-    },
-    "responses": {},
-    "parameters": {},
-    "requestBodies": {},
-    "headers": {}
+    }
   }
 }
