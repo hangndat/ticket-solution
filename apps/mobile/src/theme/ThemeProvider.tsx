@@ -27,6 +27,8 @@ type ThemeContextValue = {
     branding: TenantBrandingDto | null,
     source?: 'api' | 'cache',
   ) => void;
+  /** Reset chrome to Vemoki defaults (logout / switch — S-P0-C). */
+  resetToDefault: () => void;
 };
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
@@ -62,6 +64,10 @@ export function ThemeProvider({
     },
     [],
   );
+
+  const resetToDefault = useCallback(() => {
+    setTheme(defaultThemeTokens());
+  }, []);
 
   const loadBranding = useCallback(
     async (opts: { signal?: { cancelled: boolean } } = {}) => {
@@ -128,9 +134,19 @@ export function ThemeProvider({
     };
   }, [loadBranding]);
 
+  // S-P0-C: after logout / signed-out, do not keep prior tenant chrome in memory.
+  useEffect(() => {
+    return session.subscribe(() => {
+      const snap = session.getSnapshot();
+      if (snap.status === 'signed-out' || snap.status === 'unknown') {
+        setTheme(defaultThemeTokens());
+      }
+    });
+  }, []);
+
   const value = useMemo(
-    () => ({ theme, loading, refresh, applyBranding }),
-    [theme, loading, refresh, applyBranding],
+    () => ({ theme, loading, refresh, applyBranding, resetToDefault }),
+    [theme, loading, refresh, applyBranding, resetToDefault],
   );
 
   return (
@@ -146,6 +162,7 @@ export function useTheme(): ThemeContextValue {
       loading: false,
       refresh: async () => {},
       applyBranding: () => {},
+      resetToDefault: () => {},
     };
   }
   return ctx;
