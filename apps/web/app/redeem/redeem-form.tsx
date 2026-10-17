@@ -48,6 +48,7 @@ import {
   REQUEST_TIMEOUT_MS,
 } from '../../src/redeem/poll-operation';
 import { loadPublishedRedeemSchema } from '../../src/redeem/published-schema';
+import { SurfaceState } from '../../src/ui/surface-state';
 
 type Props = {
   initialTenantId?: string;
@@ -512,9 +513,25 @@ export function RedeemForm({
             Tải form/terms published
           </button>
           {schemaNotice ? (
-            <p className="redeem-schema-notice" role="status">
-              {schemaNotice}
-            </p>
+            <SurfaceState
+              kind={
+                schemaNotice.startsWith('Đang tải')
+                  ? 'loading'
+                  : schemaNotice.startsWith('Không') ||
+                      schemaNotice.startsWith('Published')
+                    ? 'error'
+                    : 'empty'
+              }
+              title={
+                schemaNotice.startsWith('Đang tải')
+                  ? 'Đang tải form/terms…'
+                  : schemaNotice.startsWith('Đã tải')
+                    ? 'Schema đã sẵn sàng'
+                    : 'Trạng thái schema'
+              }
+              detail={schemaNotice}
+              testId="redeem-schema-notice"
+            />
           ) : null}
 
           <label>
@@ -547,10 +564,12 @@ export function RedeemForm({
               }}
             />
           ) : (
-            <p className="redeem-schema-notice">
-              Chưa có form published — tải schema hoặc sự kiện không yêu cầu
-              field (chỉ mã + terms nếu có).
-            </p>
+            <SurfaceState
+              kind="empty"
+              title="Chưa có form published"
+              detail="Tải schema bằng slug tenant/event, hoặc sự kiện không yêu cầu field (chỉ mã + terms nếu có)."
+              testId="redeem-schema-empty"
+            />
           )}
 
           {termsVersion ? (

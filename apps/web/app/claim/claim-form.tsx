@@ -24,6 +24,7 @@ import {
 } from '../../src/redeem/messages';
 import { loadPublishedRedeemSchema } from '../../src/redeem/published-schema';
 import { REQUEST_TIMEOUT_MS } from '../../src/redeem/poll-operation';
+import { SurfaceState } from '../../src/ui/surface-state';
 
 type ClaimLocation = {
   token: string;
@@ -366,15 +367,33 @@ export function GuestClaimForm() {
         />
       </label>
 
+      {!token.trim() ? (
+        <SurfaceState
+          kind="empty"
+          title="Chưa có token claim"
+          detail="Mở link lời mời (token trong #fragment) sau khi đăng nhập. Không dán token vào query."
+          testId="claim-token-empty"
+        />
+      ) : null}
+
       <div className="auth-buttons">
         <button
           type="button"
           disabled={busy || !displayTenantSlug.trim() || !displayEventSlug.trim()}
           onClick={() => void loadSchema()}
         >
-          Tải form/terms
+          {busy && !formDefinition ? 'Đang tải…' : 'Tải form/terms'}
         </button>
       </div>
+
+      {busy && !ux ? (
+        <SurfaceState
+          kind="loading"
+          title="Đang xử lý…"
+          detail="Chưa có kết quả claim — đợi phản hồi từ máy chủ."
+          testId="claim-busy-loading"
+        />
+      ) : null}
 
       {formDefinition ? (
         <>
@@ -408,7 +427,7 @@ export function GuestClaimForm() {
         disabled={busy || !token.trim()}
         onClick={() => void submitClaim()}
       >
-        Claim invitation
+        {busy ? 'Đang claim…' : 'Nhận lời mời (claim)'}
       </button>
 
       {ux ? (
