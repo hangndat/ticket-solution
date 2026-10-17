@@ -29,7 +29,7 @@ Có thể chạy **thêm** sau hoặc song song logic với `reviewer-dod`; secu
 3. **Idempotency / replay** — không double-issue ticket hoặc double check-in.
 4. **Injection / unsafe query** — parameterized; cẩn thận raw SQL.
 5. **Secrets** — không commit; không log token; không Expo Cloud cho signing.
-6. **Dependency / supply** — chỉ khi diff đụng lockfile đáng ngờ; không audit toàn monorepo mỗi PR nhỏ.
+6. **Dependency / supply** — kích hoạt khi diff (hoặc phần bị ảnh hưởng) chạm dependency, nguồn tải, hoặc cơ chế thực thi: `package.json` / workspace manifests, lockfile, lifecycle scripts (`preinstall`/`postinstall`/…), registry/URL tải ngoài, CI/workflow tải hoặc chạy mã bên thứ ba. Giới hạn trong diff + blast radius; không audit toàn monorepo mỗi PR nhỏ.
 
 Phân loại: **fix trước merge** (exploitable / invariant gãy) vs **hardening** (cải thiện khi có thể).
 
