@@ -200,9 +200,20 @@ export function AdminForm({
   const [sourceView, setSourceView] = useState<SourceView | null>(null);
   const [csView, setCsView] = useState<CsView | null>(null);
   const [exportView, setExportView] = useState<ExportView | null>(null);
-  const [report, setReport] = useState<EventReportView | null>(null);
+  const [reportHold, setReportHold] = useState<{
+    tenantId: string;
+    eventId: string;
+    view: EventReportView;
+  } | null>(null);
   const [activeJob, setActiveJob] = useState<AdminJob>('setup');
   const [browserOnline, setBrowserOnline] = useState(true);
+  // Fail-closed O12: only surface numbers for the current tenant/event scope.
+  const report =
+    reportHold !== null &&
+    reportHold.tenantId === tenantId.trim() &&
+    reportHold.eventId === eventId.trim()
+      ? reportHold.view
+      : null;
   const currentEvent: EventDetail | null =
     detailView?.kind === 'detail' ? detailView.event : null;
   const selectedTenant = tenantChoices.find((t) => t.tenantId === tenantId.trim());
@@ -266,11 +277,6 @@ export function AdminForm({
       window.removeEventListener('offline', sync);
     };
   }, []);
-
-  // Fail-closed: never keep prior event numbers when tenant/event changes.
-  useEffect(() => {
-    setReport(null);
-  }, [tenantId, eventId]);
 
   function clearSpecialViews() {
     setCreateView(null);
@@ -363,24 +369,27 @@ export function AdminForm({
   }
 
   async function loadReport() {
+    const requestScope = scope();
     setBusy(true);
-    setReport(null);
+    setReportHold(null);
     setDecision(null);
     clearSpecialViews();
-    const params = new URLSearchParams(scope());
+    const params = new URLSearchParams(requestScope);
     const result = await fetchJson(
       `/api/bff/admin/report?${params.toString()}`,
       { method: 'GET' },
       REQUEST_TIMEOUT_MS,
     );
     bumpNotice();
-    setReport(
-      interpretEventReport(
+    setReportHold({
+      tenantId: requestScope.tenantId,
+      eventId: requestScope.eventId,
+      view: interpretEventReport(
         result.status,
         result.json,
         result.networkError || result.timedOut,
       ),
-    );
+    });
     setBusy(false);
   }
 
