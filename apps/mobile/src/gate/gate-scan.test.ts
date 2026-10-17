@@ -124,3 +124,43 @@ test('lost confirm stays unknown across restart and blocks a second scan', async
   assert.equal(again.current?.id, 'op-1');
   assert.equal(again.current?.phase, 'unknown');
 });
+
+test('network error on reserve signals offline enqueue (does not admit)', async () => {
+  const fetchImpl: typeof fetch = async () => {
+    throw new TypeError('Network request failed');
+  };
+  const scanned = await runScan({
+    raw: qr,
+    bearer: 'token',
+    apiBase: 'http://127.0.0.1:3001',
+    ops: [],
+    staffSessionId: '44444444-4444-4444-8444-444444444444',
+    fetchImpl,
+    createId: () => 'op-offline',
+  });
+  assert.equal(scanned.networkUnavailable, true);
+  assert.equal(scanned.current, null);
+  assert.equal(scanned.parsed?.ticketId, ticketId);
+  assert.equal(scanned.staffSessionId, '44444444-4444-4444-8444-444444444444');
+});
+
+test('preferOfflineQueue skips online reserve when session exists', async () => {
+  let calls = 0;
+  const fetchImpl: typeof fetch = async () => {
+    calls += 1;
+    return jsonResponse(200, {});
+  };
+  const scanned = await runScan({
+    raw: qr,
+    bearer: 'token',
+    apiBase: 'http://127.0.0.1:3001',
+    ops: [],
+    staffSessionId: '44444444-4444-4444-8444-444444444444',
+    fetchImpl,
+    preferOfflineQueue: true,
+    createId: () => 'op-pref',
+  });
+  assert.equal(calls, 0);
+  assert.equal(scanned.networkUnavailable, true);
+  assert.equal(scanned.parsed?.ticketId, ticketId);
+});
