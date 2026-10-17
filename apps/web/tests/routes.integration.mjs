@@ -69,7 +69,7 @@ test('production routes isolate tenant content and reject unknown pairs', async 
       const html = await response.text();
       assert.ok(html.includes(own));
       assert.ok(!html.includes(foreign));
-      assert.ok(html.includes('Sự kiện demo · Fixture hư cấu'));
+      assert.ok(html.includes('Sự kiện demo · Không dùng vào cổng'));
     }
     for (const path of [
       '/t/sunburst/events/form-forum-2026',
@@ -116,19 +116,22 @@ test('production routes isolate tenant content and reject unknown pairs', async 
     const authPoc = await fetch(base + '/auth');
     assert.equal(authPoc.status, 200);
     const authHtml = await authPoc.text();
-    assert.ok(authHtml.includes('OIDC chưa cấu hình'));
+    assert.ok(authHtml.includes('Cần đăng nhập'));
     assert.ok(authHtml.includes('unconfigured'));
     assert.ok(authHtml.includes('không coi là đã'));
+    assert.ok(authHtml.includes('không dùng phiên giả'));
     assert.ok(!authHtml.includes('Clerk'));
-    assert.ok(authHtml.includes('Keycloak'));
+    assert.ok(!authHtml.includes('Keycloak'));
 
     const redeem = await fetch(base + '/redeem');
     assert.equal(redeem.status, 200);
     const redeemHtml = await redeem.text();
     assert.ok(redeemHtml.includes('Đổi mã lấy vé'));
-    assert.ok(redeemHtml.includes('OIDC chưa cấu hình'));
-    assert.ok(redeemHtml.includes('không mock'));
+    assert.ok(redeemHtml.includes('Cần đăng nhập'));
+    assert.ok(redeemHtml.includes('không thể đổi mã'));
+    assert.ok(redeemHtml.includes('unconfigured'));
     assert.ok(!redeemHtml.includes('Clerk'));
+    assert.ok(!redeemHtml.includes('Keycloak'));
 
     const gate = await fetch(base + '/gate');
     assert.equal(gate.status, 200);
