@@ -36,6 +36,9 @@ export async function loginWithKeycloak(): Promise<OidcLoginResult> {
     scopes: getOidcScopes().split(/\s+/).filter(Boolean),
     usePKCE: true,
     responseType: AuthSession.ResponseType.Code,
+    // Always show credentials UI so Sign in after Log out can switch accounts
+    // (Keycloak SSO cookie alone must not silently reuse the previous attendee).
+    prompt: AuthSession.Prompt.Login,
   });
 
   const result = await request.promptAsync(discovery);
@@ -84,14 +87,22 @@ export async function endKeycloakSession(): Promise<void> {
   try {
     const discovery = await AuthSession.fetchDiscoveryAsync(issuer);
     if (!discovery.endSessionEndpoint) return;
-    const postLogout = AuthSession.makeRedirectUri({
-      scheme: OIDC_REDIRECT_SCHEME,
-      path: 'oauth/logout',
-    });
+    // Fixed brand URI (must match Keycloak ticket-mobile allowlist). Do not use
+    // AuthSession.makeRedirectUri here — Expo Go / proxy variants were rejected
+    // as "Invalid redirect uri" and left the SSO cookie intact.
+    const postLogout = 'vemoki://oauth/logout';
     const url = new URL(discovery.endSessionEndpoint);
     url.searchParams.set('client_id', clientId);
     url.searchParams.set('post_logout_redirect_uri', postLogout);
-    await WebBrowser.openAuthSessionAsync(url.toString(), postLogout);
+    try {
+      await WebBrowser.openAuthSessionAsync(url.toString(), postLogout);
+    } catch {
+      // Sheet / redirect failure: bare end-session with client_id only (no
+      // invalid post_logout_redirect_uri) so Keycloak still clears SSO.
+      const bare = new URL(discovery.endSessionEndpoint);
+      bare.searchParams.set('client_id', clientId);
+      await WebBrowser.openAuthSessionAsync(bare.toString(), postLogout);
+    }
   } catch {
     /* Best-effort RP-initiated logout; local SecureStore already cleared. */
   }
