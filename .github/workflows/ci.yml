@@ -87,8 +87,6 @@ jobs:
               - 'pnpm-workspace.yaml'
               - 'package.json'
               - 'turbo.json'
-              - '.github/workflows/ci.yml'
-              - '.github/actions/**'
             hardening:
               - 'scripts/d5-**'
               - 'scripts/rint-**'
@@ -96,8 +94,6 @@ jobs:
               - 'infra/**'
               - 'docker-compose*.yml'
               - 'compose*.yml'
-              - '.github/workflows/ci.yml'
-              - '.github/actions/**'
       - name: Set scope outputs
         id: set
         shell: bash
@@ -205,10 +201,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-pnpm
+        with:
+          docker-images: postgres:18.1-alpine axllent/mailpit:v1.27.10
       - run: pnpm exec turbo run build --filter=@ticket/backend...
       - name: DB tests (${{ matrix.shard }})
         working-directory: packages/backend
-        run: node --test --test-concurrency=4 ${{ matrix.files }}
+        run: node --test --test-concurrency=4 --test-force-exit ${{ matrix.files }}
 
   # D5 drills tách 3 job song song (ports/container name độc lập).
   d5-observability:
@@ -220,6 +218,8 @@ jobs:
         with:
           fetch-depth: 0
       - uses: ./.github/actions/setup-pnpm
+        with:
+          docker-images: postgres:18.1-alpine
       - run: pnpm exec turbo run build --filter=@ticket/api...
       - run: ./scripts/d5-observability-smoke.sh
 
@@ -230,6 +230,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-pnpm
+        with:
+          docker-images: postgres:18.1-alpine
       - run: pnpm exec turbo run build --filter=@ticket/api...
       - name: Backup + business restore + admission (parallel)
         shell: bash
@@ -254,6 +256,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-pnpm
+        with:
+          docker-images: postgres:18.1-alpine redis:7-alpine
       - run: pnpm exec turbo run build --filter=@ticket/api...
       - run: pnpm test:rint-host
       - run: ./scripts/rint-stack-smoke.sh
