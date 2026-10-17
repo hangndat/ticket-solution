@@ -30,7 +30,7 @@ node apps/web/tests/gate-offline-uat.mjs http://127.0.0.1:3010
 
 ## SHA tip
 
-`0b16fdc31e413642e9db75ad008ed67bda2aab28`
+`0d1e43d1aec8d0b692f14493ebe5dfa3e25a3428`
 
 ## Headless UAT
 
