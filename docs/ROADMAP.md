@@ -66,13 +66,14 @@ Một đầu việc trên board chỉ chuyển **Hoàn thành** khi:
 
 `worker_done` / Dispatch settled **không** đồng nghĩa task đã hoàn thành trên GitHub Project.
 
-**Agent sync (bắt buộc):** Cập nhật Status Project theo sự kiện (Đang làm / Chờ duyệt / Bị chặn / Hoàn thành) **không chờ user duyệt board**. Khi vào Chờ duyệt, spawn một Orca worker `--agent cursor` đóng vai người duyệt (khác session implementer). Chi tiết: `.cursor/rules/github-project-tracking.mdc`.
+**Agent sync (bắt buộc):** Cập nhật Status Project theo sự kiện (Đang làm / Chờ duyệt / Bị chặn / Hoàn thành) **không chờ user duyệt board**. Khi vào Chờ duyệt, coordinator gốc spawn một Orca worker theo `.cursor/rules/orca-agent-routing.mdc` đóng vai người duyệt (khác session implementer). Chi tiết: `.cursor/rules/github-project-tracking.mdc`.
 
 ## 3. Vai trò phụ trách
 
 | Nhóm | Ownership | Không tự ý |
 | --- | --- | --- |
-| Coordinator | Backlog, dependencies, quyết định, root tooling, lockfile, CI, contracts, merge | Không đổi nghiệp vụ đã freeze chỉ để giải conflict |
+| Coordinator gốc | Trực tiếp spawn planner/workers/reviewers; dispatch, lifecycle, Project sync, root tooling, lockfile, CI, contracts, integration đã ủy quyền | Không đổi nghiệp vụ đã freeze chỉ để giải conflict |
+| Epic planner | Phân Epic → Story → Task, theo dõi phụ thuộc, chuẩn bị spec và nghiệm thu | Không spawn worker con, tự đóng Epic hoặc merge |
 | Backend | `apps/api`, `apps/worker`, `packages/backend`, schema/migrations, RLS tests | UI web/mobile; contract chưa thống nhất |
 | Web | `apps/web` | Database, auth policy, native app |
 | iOS | `apps/mobile` | Backend rules, web, store submission ngoài task |
@@ -248,7 +249,7 @@ Vẫn **sau MVP** (không thuộc D7–D10, không bị “hủy” khỏi tầm
 - **Parent / sub-issues** theo nhóm module; **blocked-by** khi phụ thuộc thật (ví dụ lịch sử: D2 từng bị chặn bởi D1 identity).
 - **Đồng bộ board:** không chờ user duyệt từng bước Status; `worker_done` ≠ Hoàn thành — xem `.cursor/rules/github-project-tracking.mdc`.
 - **GitHub Flow:** feature branch → commit → push → PR → Cursor DoD review → CI → coordinator merge `main`. Không commit feature thẳng `main` — xem `.cursor/rules/git-workflow.mdc`.
-- **Orca:** coding song song `--agent cursor`; plan/design Codex (fallback Cursor); idle worker nhận task `Sẵn sàng` ngay — xem `orca-*.mdc` trong `.cursor/rules/`.
+- **Orca:** chính sách agent duy nhất tại `.cursor/rules/orca-agent-routing.mdc`: tạm thời mọi Task dùng Cursor, trừ override rõ từ user. Coordinator gốc trực tiếp spawn Epic planner và ownership workers/reviewers cùng depth 1; planner phân Story/Task, theo dõi phụ thuộc và chuẩn bị nghiệm thu, không spawn worker con. Idle fill và WIP theo `orca-*.mdc` trong `.cursor/rules/`.
 
 ## 9. Liên kết vận hành
 

@@ -12,10 +12,10 @@ alwaysApply: true
 
 ## Hierarchy — Epic → Story → Task
 
-| Level | Meaning | Who owns dispatch |
+| Level | Meaning | Phân công |
 | ----- | ------- | ----------------- |
-| **Epic** | Parent Issue đợt/module | One Cursor **epic orchestrator** (`orca-epic-orchestrator.mdc`) |
-| **Story** | Capability / user-facing slice under Epic | Orchestrator decomposes; may track as Project item |
+| **Epic** | Parent Issue đợt/module | Coordinator gốc dispatch; một **Epic planner** (`orca-epic-orchestrator.mdc`) |
+| **Story** | Capability / user-facing slice under Epic | Planner phân Story/Task và theo dõi phụ thuộc; coordinator dispatch |
 | **Task** | Ownership-scoped work unit (BE / web / iOS / coordinator) | Coding/review workers; Status updated **per Task** |
 
 Cập nhật Project #3 **mỗi Task** (không chỉ lúc đóng Epic). Comments board: Tiếng Việt.
@@ -26,11 +26,11 @@ Cập nhật Project #3 **mỗi Task** (không chỉ lúc đóng Epic). Comments
 
 | Event | Set Status to | Who |
 | ----- | ------------- | --- |
-| Coordinator / epic orchestrator dispatches / worker starts coding | `Đang làm` | Orchestrator, coordinator, or coding worker |
+| Coordinator gốc dispatch / worker starts coding | `Đang làm` | Coordinator gốc hoặc coding worker |
 | Blocked on real dependency / external wait | `Bị chặn` (+ comment why) | Whoever discovers it |
-| Unblocked and ready to resume | `Sẵn sàng` or `Đang làm` | Coordinator / epic orchestrator |
+| Unblocked and ready to resume | `Sẵn sàng` or `Đang làm` | Coordinator gốc |
 | Impl done + evidence posted; awaiting review | `Chờ duyệt` | Coding worker before/at `worker_done` |
-| DoD met (below) | `Hoàn thành` + close Issue if appropriate | Coordinator / epic orchestrator after reviewer **pass** |
+| DoD met (below) | `Hoàn thành` + close Issue if appropriate | Coordinator gốc sau reviewer **pass** và đủ gates |
 
 ## Do not wait for the user
 
@@ -63,16 +63,17 @@ Ngoài per-Task DoD, milestone/Epic **Hoàn thành** cần đủ evidence:
 
 Phân biệt (không gộp): **code complete** (impl + PR) ≠ **acceptance complete** (DoD pass + evidence) ≠ **pilot ready** (device/UAT/ops gates riêng).
 
-## Reviewer (spawn Codex — no user gate)
+## Reviewer (theo chính sách agent — không thêm user gate)
 
 When a coding Task moves to `Chờ duyệt` (or DoD review is required):
 
-1. Spawn **one** Orca worker: `--agent codex` (Cursor fallback on quota), scope = review only (no drive-by refactors). Temporary policy: Cursor only for all agents — see `orca-agent-routing.mdc`.
+1. Coordinator gốc spawn **one** independent Orca reviewer, scope = review only (no drive-by refactors). Chọn agent/override theo `orca-agent-routing.mdc`.
 2. Spec must name the Issue #, diff/PR/paths, **exact commit SHA(s)** under review, and DoD checklist; outcome `succeeded` only on pass.
-3. On pass → coordinator / epic orchestrator may set `Hoàn thành` once merge+CI+evidence (và milestone gates nếu áp dụng) are done.
-4. On fail → Status stays `Chờ duyệt` or back to `Đang làm`; comment findings; re-dispatch coding worker.
+3. `PASS with known gap` chỉ được tính pass theo điều kiện gap trong `orca-agent-routing.mdc`; thiếu acceptance/security gate bắt buộc không được Hoàn thành.
+4. On pass → coordinator gốc may set `Hoàn thành` once merge+CI+evidence (và milestone gates nếu áp dụng) are done.
+5. On fail → Status stays `Chờ duyệt` or back to `Đang làm`; comment findings; re-dispatch coding worker.
 
-**Acceptance / DoD review** và **security-sensitive** slices: luôn Cursor reviewer ≠ implementer; DoD không thay security gate độc lập khi slice nhạy cảm.
+**Acceptance / DoD review** và **security-sensitive** slices: luôn reviewer khác session implementer (agent theo `orca-agent-routing.mdc`); DoD không thay security gate độc lập khi slice nhạy cảm.
 
 ### Evidence bắt buộc (exact SHA)
 
@@ -80,7 +81,7 @@ Comment / artifact nghiệm thu khi `Chờ duyệt` hoặc sau DoD **phải** gh
 
 | Trường | Yêu cầu |
 | ------ | ------- |
-| Reviewer / session | Agent Codex DoD (Cursor fallback; hoặc security) **khác** session implementer; ghi nhận cách spawn (Orca worker / worktree) |
+| Reviewer / session | Agent theo `orca-agent-routing.mdc`, DoD/security **khác** session implementer; ghi nhận cách spawn (Orca worker / worktree) |
 | Scope | Issue #, PR # (nếu có), đường dẫn / ownership slice; Epic/Story parent nếu có |
 | Commit SHA | **Exact SHA** (full 40 hoặc rút gọn unambiguous từ `git rev-parse`) của commit đang duyệt — không “HEAD lúc nào đó”, không chỉ tên branch |
 | Checks | Lệnh/test/CI đã chạy trên SHA đó (hoặc ghi rõ “docs-only / không chạy runtime”) |
@@ -88,11 +89,11 @@ Comment / artifact nghiệm thu khi `Chờ duyệt` hoặc sau DoD **phải** gh
 | Revalidation | Nếu có commit hành vi mới **sau** review trước → bắt buộc review lại trên SHA mới; không tái dùng verdict cũ |
 | Artifact path | Ưu tiên `docs/reviews/<slug>.md` (hoặc tương đương) + link Issue/PR |
 
-**Thiếu GitHub PR review / approval UI không chứng minh thiếu Orca Codex/Cursor DoD review.** Ngược lại: có approve GitHub mà không có evidence exact-SHA + reviewer độc lập cũng **không** đủ DoD.
+**Thiếu GitHub PR review / approval UI không chứng minh thiếu Orca DoD review theo chính sách agent.** Ngược lại: có approve GitHub mà không có evidence exact-SHA + reviewer độc lập cũng **không** đủ DoD.
 
 ## WIP / hàng đợi duyệt (backpressure nhẹ)
 
-Song song với parallel-first (`orca-parallel-workers.mdc`), coordinator / epic orchestrator **không** dispatch feature mới không giới hạn khi hàng đợi duyệt đầy.
+Song song với parallel-first (`orca-parallel-workers.mdc`), coordinator gốc **không** dispatch feature mới không giới hạn khi hàng đợi duyệt đầy.
 
 **Tín hiệu hàng đợi đầy (mềm — chọn cái chặt hơn đang đúng):**
 

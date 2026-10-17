@@ -1,11 +1,13 @@
 ---
-description: Orca coordinator/epic-orchestrator keeps idle workers busy — review-queue backpressure; Cursor only
+description: Coordinator gốc keeps idle workers busy — review-queue backpressure; agent routing theo chính sách hiện hành
 alwaysApply: true
 ---
 
 # Orca — never leave an unblocked worker idle
 
-As coordinator, **epic orchestrator** (`orca-epic-orchestrator.mdc`), or any agent supervising an Orca Run: **if a worker capacity is free and work exists that is not blocked by other in-flight Tasks, dispatch it immediately.** Do not wait for the whole wave to finish, and do not wait for the user to assign the next Issue.
+Coordinator gốc phải dispatch ngay khi còn capacity và Task sẵn sàng trong scope, không chờ cả wave hoặc user chọn Issue. Epic planner (`orca-epic-orchestrator.mdc`) theo dõi dependencies, chuẩn bị ready queue và đề xuất fill cho coordinator; planner/workers không tự spawn.
+
+Chỉ lấy task thuộc Epic/Run đã được user/coordinator ủy quyền; không tự chạy backlog toàn board. Tuân giới hạn worker của host, WIP và ngân sách/thời hạn nếu được giao. Dừng fill khi scope hoàn tất, hết việc sẵn sàng, user yêu cầu dừng hoặc hết giới hạn được giao. Task ngoài phạm vi cần ủy quyền mới.
 
 ## Idle / free means
 
@@ -19,7 +21,7 @@ As coordinator, **epic orchestrator** (`orca-epic-orchestrator.mdc`), or any age
 3. Pull the next ready Issue for that scope; set Project Status → `Đang làm` when dispatching (see `github-project-tracking.mdc`).
 4. Prefer reusing a settled worker terminal when Orca allows; otherwise start a new worker for that slice.
 5. Parallel-first still applies khi dưới ngưỡng WIP: fill multiple free slices in one wave before `check --wait`.
-6. **Coding / plan / DoD / security workers: `--agent cursor` only** (temporary — see `orca-agent-routing.mdc`).
+6. **Chỉ coordinator gốc spawn; áp dụng `orca-agent-routing.mdc` cho idle fill/reviewer/replacement. Mọi Task dùng Cursor trừ override rõ từ user; không kiểm tra quota Codex cho Cursor.**
 
 ## Backpressure — ưu tiên khi hàng đợi duyệt đầy
 
@@ -27,7 +29,7 @@ Trước khi `worker-start` **feature coding** mới, kiểm tra tín hiệu đ�
 
 Khi đầy, thứ tự fill cho worker rảnh:
 
-1. **DoD / security review** Cursor (`--agent cursor`, reviewer ≠ implementer) cho item `Chờ duyệt` hoặc PR thiếu evidence exact-SHA  
+1. **DoD / security review** (agent theo `orca-agent-routing.mdc`, reviewer ≠ implementer) cho item `Chờ duyệt` hoặc PR thiếu evidence exact-SHA
 2. **Fix** theo findings review / CI đỏ (cùng Issue hoặc PR)  
 3. **Integration support** (rebase/conflict cùng slice do owner slice; không merge hộ ngoài ủy quyền)  
 4. **Feature `Sẵn sàng` mới** — chỉ khi hàng đợi không còn đầy **hoặc** slice đó không góp thêm `Chờ duyệt` (ví dụ chỉ còn việc review)
@@ -42,16 +44,16 @@ Không được để reviewer/fix idle trong khi vẫn spawn thêm feature cùn
 ❌ Ask the user “làm Issue nào tiếp?” when Sẵn sàng / unblocked backlog exists
 ❌ Dispatch work whose deps are still running (true block → leave idle or mark Bị chặn)
 ❌ Unlimited feature dispatch while ≥ ngưỡng Chờ duyệt / PR chờ DoD (xem github-project-tracking.mdc)
-❌ Spawn --agent codex (temporarily disabled — Cursor only)
+❌ Planner/worker spawn worker con hoặc bỏ qua chính sách agent
 
 ✅ After iOS worker_done, immediately dispatch next Sẵn sàng iOS — hoặc DoD review nếu queue ưu tiên
 ✅ While BE coding runs, keep web/iOS busy on independent ready Issues (nếu dưới WIP cap)
-✅ Free worker + full review queue → spawn Cursor DoD reviewer trước feature mới
+✅ Free worker + full review queue → spawn DoD reviewer theo `orca-agent-routing.mdc` trước feature mới
 ```
 
 ## Empty backlog
 
-If no unblocked ready work remains for a free worker: leave it idle, report “no ready Tasks for \<scope\>”, and do not invent scope-breaking busywork.
+Nếu không còn task sẵn sàng trong phạm vi: release worker đã settle, đóng session/terminal và dừng process riêng của task theo `orca-coordinator-mailbox.mdc` § Cleanup; để capacity trống, báo “không còn Task sẵn sàng cho scope này”. Không giữ agent rảnh hoặc tự tạo việc ngoài scope.
 
 ## Đo nhẹ khi fill
 

@@ -40,6 +40,19 @@ Run the drain loop when any of these happen, **without** waiting for a “You ha
 ✅ Proactive check even when count might be 0 (cheap; proves empty)
 ```
 
+## Cleanup — dọn toàn bộ agent/worker đã xong việc
+
+Coordinator chịu trách nhiệm cleanup chủ động, không chờ user nhắc. Áp dụng cho coding, reviewer, Epic planner đã kết thúc Epic/Run và worker cũ sau fallback/replacement, kể cả task failed/cancelled đã được settle.
+
+1. Sau mỗi settlement/checkpoint và trước khi kết thúc turn/Run, liệt kê worker/dispatch/session thuộc phạm vi Run đang quản lý. Đối chiếu ID và ownership; không dọn session của user hoặc Run/worker khác.
+2. Khi dispatch kết thúc, lưu kết quả, exact SHA/checks/artifact và checkpoint cần thiết; xác nhận thay đổi staged/unstaged/untracked liên quan đã được bảo toàn và bên nhận đã có handoff. `worker_done` cho phép bắt đầu settlement, không tự chứng minh task đã nghiệm thu hoặc working tree sạch.
+3. Chỉ reuse session nếu có task được ủy quyền giao **ngay trong checkpoint này**, phù hợp agent/ownership và không vi phạm reviewer independence. Không giữ worker rảnh vô thời hạn để “có thể cần sau”. Nếu cần retain cho bàn giao/check đang chạy, ghi lý do, owner và điều kiện giải phóng; kiểm tra lại ở checkpoint kế tiếp.
+4. Với worker không reuse: hoàn tất settlement theo live lifecycle rồi gọi `worker-release` khi được phép. Kiểm tra kết quả; nếu session/terminal hoặc process nền do task đó tạo vẫn còn chạy, đóng/dừng đúng tài nguyên đó bằng lệnh host hỗ trợ sau khi xác nhận không còn consumer cần dùng. Không đoán flags, không kill hàng loạt theo tên agent, không tự đóng session đang thực thi hoặc bàn giao chưa an toàn.
+5. Sau cleanup, liệt kê lại để xác nhận không còn finished/reclaimable worker chưa release, terminal agent mồ côi hoặc process nền của task đã kết thúc. Báo số đã release/đóng và các mục retain/cleanup lỗi cùng lý do; lỗi tool không được báo là cleanup thành công. Xử lý delivery/reply/ack còn lại theo lifecycle.
+6. Cleanup session **không đồng nghĩa xóa branch/worktree/evidence**. Không dùng reset/clean/force-remove để làm sạch. Chỉ xóa worktree/branch khi phạm vi cho phép, thay đổi đã được tích hợp hoặc bảo toàn có thể kiểm chứng, và không còn reviewer/consumer dùng. Giữ log/artifact cần cho audit.
+
+Không có task sẵn sàng trong phạm vi thì release worker đã settle và giải phóng capacity. Review/CI chưa xong không bắt buộc giữ agent coding sống nếu source/evidence đã bàn giao đầy đủ. Cleanup không tự chuyển Project sang `Hoàn thành` hoặc đóng Issue.
+
 ## Relationship to other Orca rules
 
 - Parallel spawn: `orca-parallel-workers.mdc`
