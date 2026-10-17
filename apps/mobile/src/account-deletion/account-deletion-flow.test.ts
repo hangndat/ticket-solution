@@ -12,9 +12,12 @@ import {
 import {
   clearAllPendingIdempotencyKeys,
   loadCurrentAccountDeletionRequest,
+  mapGetResult,
   mapPostResult,
   peekPendingIdempotencyKey,
+  resolveAccountDeletionRetryAction,
   resolveIdempotencyKeyForSubmit,
+  retryAccountDeletionError,
   submitAccountDeletionRequest,
 } from './account-deletion-flow.ts';
 
@@ -182,4 +185,95 @@ test('loadCurrent after switch drops stale epoch', async () => {
     ),
   });
   assert.equal(phase.kind, 'idle');
+});
+
+test('GET fail retry refreshes status and never POSTs without confirmation', async () => {
+  clearAllPendingIdempotencyKeys();
+  process.env.EXPO_PUBLIC_API_BASE_URL = 'http://api.test';
+  const boundary = new SessionBoundary(credentialStore());
+  await boundary.establish('tok', async () => ({ userId: 'user-a' }));
+  const epoch = boundary.captureEpoch();
+  assert.ok(epoch);
+
+  const getFail = mapGetResult({ status: 'unreachable' });
+  assert.equal(getFail.kind, 'error');
+  if (getFail.kind !== 'error') return;
+  assert.equal(getFail.retryable, true);
+  assert.equal(getFail.retryAction, 'refresh');
+  assert.equal(getFail.idempotencyKey, undefined);
+  assert.equal(resolveAccountDeletionRetryAction(getFail), 'refresh');
+
+  let posts = 0;
+  let gets = 0;
+  const next = await retryAccountDeletionError({
+    phase: getFail,
+    session: boundary,
+    epoch: epoch!,
+    userId: 'user-a',
+    fetchImpl: mockFetch(async (url, init) => {
+      const method = (init?.method ?? 'GET').toUpperCase();
+      if (method === 'POST') {
+        posts += 1;
+        return new Response(JSON.stringify(awaiting), { status: 202 });
+      }
+      gets += 1;
+      assert.match(url, /account-deletion-requests\/current/);
+      return new Response(JSON.stringify(null), { status: 200 });
+    }),
+  });
+  assert.equal(posts, 0);
+  assert.equal(gets, 1);
+  assert.equal(next.kind, 'idle');
+  assert.equal(peekPendingIdempotencyKey('user-a'), undefined);
+});
+
+test('confirmed POST timeout retry resubmits same Idempotency-Key', async () => {
+  clearAllPendingIdempotencyKeys();
+  process.env.EXPO_PUBLIC_API_BASE_URL = 'http://api.test';
+  const boundary = new SessionBoundary(credentialStore());
+  await boundary.establish('tok', async () => ({ userId: 'user-a' }));
+  const epoch = boundary.captureEpoch();
+  assert.ok(epoch);
+
+  const key = 'fixed-key-aaaa-bbbb-cccc-ddddeeee0002';
+  const timedOut = mapPostResult({ status: 'unreachable' }, key);
+  assert.equal(timedOut.kind, 'error');
+  if (timedOut.kind !== 'error') return;
+  assert.equal(timedOut.retryAction, 'resubmit');
+  assert.equal(timedOut.idempotencyKey, key);
+  assert.equal(resolveAccountDeletionRetryAction(timedOut), 'resubmit');
+
+  let postedKey: string | null = null;
+  let posts = 0;
+  const next = await retryAccountDeletionError({
+    phase: timedOut,
+    session: boundary,
+    epoch: epoch!,
+    userId: 'user-a',
+    fetchImpl: mockFetch(async (_url, init) => {
+      posts += 1;
+      postedKey = new Headers(init?.headers).get('Idempotency-Key');
+      return new Response(JSON.stringify(awaiting), { status: 202 });
+    }),
+  });
+  assert.equal(posts, 1);
+  assert.equal(postedKey, key);
+  assert.equal(next.kind, 'acknowledged');
+});
+
+test('account switch clears pending keys so consent is not carried', () => {
+  clearAllPendingIdempotencyKeys();
+  resolveIdempotencyKeyForSubmit('user-a', () => 'consent-key-a');
+  assert.equal(peekPendingIdempotencyKey('user-a'), 'consent-key-a');
+  clearAllPendingIdempotencyKeys();
+  assert.equal(peekPendingIdempotencyKey('user-a'), undefined);
+  assert.equal(
+    resolveAccountDeletionRetryAction({
+      kind: 'error',
+      message: 'load fail',
+      retryable: true,
+      retryAction: 'refresh',
+    }),
+    'refresh',
+  );
 });
