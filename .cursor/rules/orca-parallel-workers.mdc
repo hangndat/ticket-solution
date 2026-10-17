@@ -12,11 +12,11 @@ Epic-level work: coordinator gốc spawn/reuse **một Epic planner** (`orca-epi
 ## Default
 
 1. Decompose the request into independent slices by ownership:
-   - Backend → `apps/api`, `apps/worker`, `packages/backend` (+ DB tests/migrations)
-   - Web → `apps/web`
-   - iOS → `apps/mobile`
+   - Backend → `apps/api`, `apps/worker`, `packages/backend` (+ DB tests/migrations) — Role `backend`
+   - Web → `apps/web` — Role `web`
+   - iOS → `apps/mobile` — Role `ios`
    - Coordinator-only → root tooling, lockfile, CI, shared contracts / OpenAPI
-2. If **two or more slices are independent**, create one Run and **`worker-start` every independent worker in the same wave** before any `check --wait`. Do not code those slices yourself serially.
+2. If **two or more slices are independent**, create one Run and **`worker-start` every independent worker in the same wave** before any `check --wait`. Do not code those slices yourself serially. Mỗi Task Spec gắn Role ID theo [docs/agents/README.md](../../docs/agents/README.md) (agent vẫn `--agent cursor`).
 3. Use real Task dependencies only when ordering is required (e.g. contract/API first → then web + iOS consumers in parallel). Prefer shallow DAGs over long chains.
 4. Each worker stays in its scope; no cross-scope edits. Task-specific ports/project names; do not control another worker's simulator or DB.
 5. Load Orca orchestration via `ORCA skills get orchestration` and use the live preamble IDs — never invent lifecycle args.
