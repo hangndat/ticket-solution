@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start --port 3000",
     "lint": "eslint . --max-warnings 0",
-    "typecheck": "next typegen && tsc --noEmit",
+    "typegen": "node -e \"require('fs').mkdirSync(require('path').join('.next','types'),{recursive:true})\" && next typegen",
+    "typecheck": "pnpm run typegen && tsc --noEmit",
     "test": "tsx --test tests/*.test.ts",
     "test:routes": "node --test tests/routes.integration.mjs"
   },
