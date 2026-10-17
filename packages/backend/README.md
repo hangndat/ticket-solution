@@ -48,3 +48,12 @@ References used for the implementation:
 
 - https://www.postgresql.org/docs/current/ddl-rowsecurity.html
 - https://www.prisma.io/docs/orm/v7/prisma-client/setup-and-configuration/generating-prisma-client
+
+## Outbox MVP (N1)
+
+Notification delivery uses the existing PostgreSQL leased transactional outbox
+(`claim_outbox_batch` + worker poll). This deliberately keeps ADR-04's durable
+intent in Postgres without claiming BullMQ is deployed. Redis is not the source
+of truth for notification jobs. Root/coordinator should record the ADR delta
+against TECHNICAL-DESIGN ADR-04 when integrating.
+

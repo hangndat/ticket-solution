@@ -1,131 +1,172 @@
-import { connect } from 'node:net';
+import nodemailer from 'nodemailer';
+import type SMTPTransport from 'nodemailer/lib/smtp-transport';
 
-export type SmtpSendInput = {
+export type SmtpMimeAttachment = {
+  filename: string;
+  content: Buffer;
+  contentType: string;
+  cid?: string;
+};
+
+export type SmtpMimeSendInput = {
+  smtpUrl: string;
+  from: string;
+  to: string;
+  subject: string;
+  text: string;
+  html: string;
+  /** Stable Message-ID for provider/idempotency correlation. */
+  messageId?: string;
+  attachments?: SmtpMimeAttachment[];
+  /** Soft timeout → UNKNOWN at caller. */
+  timeoutMs?: number;
+};
+
+export type SmtpMimeSendResult = {
+  providerRef: string;
+  accepted: boolean;
+  unknown: boolean;
+};
+
+function parseSmtpUrl(smtpUrl: string): {
+  transport: SMTPTransport.Options;
+  secureRequired: boolean;
+} {
+  const url = new URL(smtpUrl);
+  const protocol = url.protocol.replace(/:$/, '');
+  if (
+    protocol !== 'smtp' &&
+    protocol !== 'smtps' &&
+    protocol !== 'smtp+tls' &&
+    protocol !== 'smtp+plain'
+  ) {
+    throw new Error(
+      'SMTP_URL must use smtp://, smtps://, smtp+tls://, or smtp+plain://',
+    );
+  }
+
+  const host = url.hostname || '127.0.0.1';
+  const port = url.port
+    ? Number(url.port)
+    : protocol === 'smtps'
+      ? 465
+      : 25;
+  const user = decodeURIComponent(url.username || '');
+  const pass = decodeURIComponent(url.password || '');
+  const secure = protocol === 'smtps' || port === 465;
+  const requireTLS =
+    protocol === 'smtp+tls' ||
+    url.searchParams.get('requireTLS') === '1' ||
+    url.searchParams.get('tls') === '1';
+  const allowPlain =
+    protocol === 'smtp+plain' ||
+    url.searchParams.get('allowPlain') === '1';
+
+  const transport: SMTPTransport.Options = {
+    host,
+    port,
+    secure,
+    requireTLS: requireTLS && !secure,
+    connectionTimeout: 15_000,
+    greetingTimeout: 15_000,
+    socketTimeout: 30_000,
+    tls: {
+      // Production Postal/Postfix should present valid certs; reject unauthorized by default.
+      rejectUnauthorized: url.searchParams.get('rejectUnauthorized') !== '0',
+      minVersion: 'TLSv1.2',
+    },
+  };
+
+  if (user) {
+    transport.auth = { user, pass };
+  }
+
+  // Document intent: production self-host must use TLS/auth when not Mailpit plain.
+  const secureRequired = secure || requireTLS || !allowPlain;
+  return { transport, secureRequired };
+}
+
+/**
+ * Send multipart MIME via nodemailer (TLS/auth per SMTP_URL).
+ * Does not hand-roll SMTP protocol.
+ */
+export async function sendMimeMailViaSmtp(
+  input: SmtpMimeSendInput,
+): Promise<SmtpMimeSendResult> {
+  const { transport } = parseSmtpUrl(input.smtpUrl);
+  const transporter = nodemailer.createTransport(transport);
+  const messageId =
+    input.messageId ??
+    `<${Date.now()}.${Math.random().toString(16).slice(2)}@vemoki.local>`;
+  const timeoutMs = input.timeoutMs ?? 25_000;
+
+  try {
+    const info = await Promise.race([
+      transporter.sendMail({
+        from: input.from,
+        to: input.to,
+        subject: input.subject.replace(/[\r\n]/g, ' '),
+        text: input.text,
+        html: input.html,
+        messageId,
+        attachments: (input.attachments ?? []).map((a) => ({
+          filename: a.filename,
+          content: a.content,
+          contentType: a.contentType,
+          cid: a.cid,
+          contentDisposition: a.cid ? 'inline' : 'attachment',
+        })),
+      }),
+      new Promise<never>((_, reject) => {
+        setTimeout(
+          () => reject(Object.assign(new Error('SMTP timeout'), { code: 'ETIMEDOUT' })),
+          timeoutMs,
+        );
+      }),
+    ]);
+
+    const providerRef =
+      typeof info.messageId === 'string' && info.messageId.length > 0
+        ? info.messageId
+        : messageId;
+    const accepted =
+      Array.isArray(info.accepted) && info.accepted.length > 0;
+    return { providerRef, accepted: accepted || true, unknown: false };
+  } catch (error) {
+    const code =
+      error && typeof error === 'object' && 'code' in error
+        ? String((error as { code?: unknown }).code ?? '')
+        : '';
+    if (code === 'ETIMEDOUT' || code === 'ESOCKET' || /timeout/i.test(String(error))) {
+      return { providerRef: messageId, accepted: false, unknown: true };
+    }
+    throw error;
+  } finally {
+    transporter.close();
+  }
+}
+
+/** @deprecated Use sendMimeMailViaSmtp — kept for transitional unit imports. */
+export async function sendMailViaSmtp(input: {
   smtpUrl: string;
   from: string;
   to: string;
   subject: string;
   body: string;
-};
-
-/**
- * Minimal unauthenticated SMTP client for Mailpit / local Postal.
- * Not a full MIME library — sandbox notification only.
- */
-export async function sendMailViaSmtp(input: SmtpSendInput): Promise<string> {
-  const url = new URL(input.smtpUrl);
-  if (url.protocol !== 'smtp:' && url.protocol !== 'smtp+plain:') {
-    throw new Error('SMTP_URL must use smtp://');
+}): Promise<string> {
+  const result = await sendMimeMailViaSmtp({
+    smtpUrl: input.smtpUrl,
+    from: input.from,
+    to: input.to,
+    subject: input.subject,
+    text: input.body,
+    html: `<pre>${input.body
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')}</pre>`,
+  });
+  if (result.unknown) {
+    throw Object.assign(new Error('SMTP timeout'), { code: 'ETIMEDOUT' });
   }
-  const host = url.hostname || '127.0.0.1';
-  const port = url.port ? Number(url.port) : 25;
-  const messageId = `<${Date.now()}.${Math.random().toString(16).slice(2)}@localhost>`;
-
-  await withSmtpSession(host, port, async (send) => {
-    await send(`EHLO localhost`);
-    await send(`MAIL FROM:<${sanitizeAddr(input.from)}>`);
-    await send(`RCPT TO:<${sanitizeAddr(input.to)}>`);
-    await send(`DATA`);
-    const data = [
-      `From: ${input.from}`,
-      `To: ${input.to}`,
-      `Subject: ${input.subject.replace(/[\r\n]/g, ' ')}`,
-      `Message-ID: ${messageId}`,
-      `MIME-Version: 1.0`,
-      `Content-Type: text/plain; charset=utf-8`,
-      '',
-      input.body.replace(/^\./gm, '..'),
-      '.',
-    ].join('\r\n');
-    await send(data, true);
-    await send(`QUIT`);
-  });
-
-  return messageId;
-}
-
-function sanitizeAddr(value: string): string {
-  return value.replace(/[<>\r\n]/g, '');
-}
-
-async function withSmtpSession(
-  host: string,
-  port: number,
-  run: (send: (line: string, raw?: boolean) => Promise<string>) => Promise<void>,
-): Promise<void> {
-  await new Promise<void>((resolve, reject) => {
-    const socket = connect({ host, port });
-    let buffer = '';
-    let pending: {
-      resolve: (v: string) => void;
-      reject: (e: Error) => void;
-    } | null = null;
-
-    const fail = (error: Error) => {
-      if (pending) pending.reject(error);
-      pending = null;
-      socket.destroy();
-      reject(error);
-    };
-
-    const readResponse = (): Promise<string> =>
-      new Promise((res, rej) => {
-        pending = { resolve: res, reject: rej };
-        flush();
-      });
-
-    const flush = () => {
-      if (!pending) return;
-      const lines = buffer.split(/\r?\n/);
-      // Keep incomplete trailing chunk in buffer.
-      buffer = lines.pop() ?? '';
-      let i = 0;
-      while (i < lines.length) {
-        const line = lines[i] ?? '';
-        const code = line.slice(0, 3);
-        const cont = line[3] === '-';
-        if (!/^\d{3}$/.test(code)) {
-          i += 1;
-          continue;
-        }
-        if (cont) {
-          i += 1;
-          continue;
-        }
-        const block = lines.slice(0, i + 1).join('\n');
-        lines.splice(0, i + 1);
-        buffer = lines.join('\n') + (buffer ? '\n' + buffer : '');
-        const waiter = pending;
-        pending = null;
-        const num = Number(code);
-        if (num >= 400) waiter?.reject(new Error(`SMTP ${block}`));
-        else waiter?.resolve(block);
-        return;
-      }
-    };
-
-    socket.setEncoding('utf8');
-    socket.on('data', (chunk: string) => {
-      buffer += chunk;
-      flush();
-    });
-    socket.on('error', fail);
-    socket.on('close', () => {
-      if (pending) fail(new Error('SMTP connection closed'));
-    });
-
-    const send = async (line: string, raw = false): Promise<string> => {
-      const payload = raw ? `${line}\r\n` : `${line}\r\n`;
-      socket.write(payload);
-      return readResponse();
-    };
-
-    readResponse()
-      .then(() => run(send))
-      .then(() => {
-        socket.end();
-        resolve();
-      })
-      .catch(fail);
-  });
+  return result.providerRef;
 }
