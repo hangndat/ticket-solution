@@ -115,6 +115,7 @@ async function startIsolatedPostgres() {
     'prisma/migrations/202610170009_n1_notification_delivery/migration.sql',
     'prisma/migrations/202610170010_e_be_event_lifecycle/migration.sql',
     'prisma/migrations/202610170011_b_be_config_assets/migration.sql',
+    'prisma/migrations/202610170012_f_be_form_consent/migration.sql',
   ]) {
     await admin.query(readFileSync(file, 'utf8'));
   }
