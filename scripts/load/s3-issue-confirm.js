@@ -82,10 +82,18 @@ export function issueVu() {
     },
   );
   issueTrend.add(Date.now() - t0);
+  let bodyOk = false;
+  try {
+    const body = res.json();
+    bodyOk = !!(body && (body.ticketId || body.id || body.operationId));
+  } catch {
+    bodyOk = false;
+  }
   const ok = check(res, {
     'issue 2xx': (r) => r.status === 200 || r.status === 201,
+    'issue body has ticket': () => bodyOk,
   });
-  if (ok) {
+  if (ok && bodyOk) {
     issueOk.add(1);
     issueErr.add(0);
   } else {

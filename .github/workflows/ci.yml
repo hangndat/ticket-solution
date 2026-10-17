@@ -45,6 +45,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Build API (restore reconnect + metrics E2E deps)
+        run: |
+          pnpm --filter @ticket/contracts build
+          pnpm --filter @ticket/backend build
+          pnpm --filter @ticket/api build
       - name: Observability artifact smoke
         run: ./scripts/d5-observability-smoke.sh
       - name: Fixture backup drill
