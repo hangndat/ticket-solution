@@ -126,6 +126,9 @@ async function startIsolatedPostgres() {
     'CREATE ROLE ticket_runtime NOLOGIN NOSUPERUSER NOBYPASSRLS',
   );
   await admin.query(
+    'CREATE ROLE ticket_platform_runtime NOLOGIN NOSUPERUSER NOBYPASSRLS',
+  );
+  await admin.query(
     'CREATE ROLE migration_owner NOLOGIN NOSUPERUSER NOBYPASSRLS',
   );
   await admin.query('GRANT CREATE, USAGE ON SCHEMA public TO migration_owner');
