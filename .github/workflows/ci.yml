@@ -191,15 +191,17 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Mỗi file tự Docker — concurrency trong shard + 4 shard cân tải.
+          # Mỗi file tự Docker. n1 (Mailpit) tách riêng — tránh kéo critical path.
           - shard: rls
             files: test/rls.test.cjs test/rls-catalog.test.cjs
           - shard: membership-report
             files: test/membership.test.cjs test/reporting.test.cjs
-          - shard: issue-gate-approval
-            files: test/issue.test.cjs test/gate.test.cjs test/approval.test.cjs
-          - shard: config-n1-lifecycle
-            files: test/config-publish.test.cjs test/n1-email-mime.test.cjs test/event-lifecycle.test.cjs
+          - shard: issue-gate
+            files: test/issue.test.cjs test/gate.test.cjs
+          - shard: approval-config-lifecycle
+            files: test/approval.test.cjs test/config-publish.test.cjs test/event-lifecycle.test.cjs
+          - shard: n1-email
+            files: test/n1-email-mime.test.cjs
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-pnpm
