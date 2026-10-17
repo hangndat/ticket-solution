@@ -51,6 +51,13 @@ if [[ "${D5_OBS_UP:-0}" == "1" ]]; then
   echo "prometheus ready + exporter targets visible on :${D5_PROM_PORT:-19090}"
 fi
 
+echo "D5_OBSERVABILITY_CONFIG_SMOKE_PASS"
+echo "scrape overlay: /metrics + credentials_file (Bearer) — not /v1/health"
+
+# Actual BE /metrics scrape (worktree 1f5fc31 if metrics.ts absent on this branch)
+if [[ "${D5_METRICS_E2E:-1}" == "1" ]]; then
+  "${ROOT}/scripts/d5-metrics-scrape-e2e.sh"
+else
+  echo "D5_METRICS_E2E=0 — skipped live scrape"
+fi
 echo "D5_OBSERVABILITY_SMOKE_PASS"
-echo "gap: API Prometheus /metrics text exposition owned by BE dispatch (not this root PR)"
-echo "scrape overlay ready: authorization.credentials_file → secrets/metrics_bearer (not logged)"

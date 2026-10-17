@@ -58,14 +58,20 @@ ASSIGN_A="ac111111-1111-4111-8111-111111111111"
 CODE_HMAC="deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef"
 
 cleanup() {
-  if [[ -n "${API_PID}" ]] && kill -0 "${API_PID}" 2>/dev/null; then
+  if [[ -n "${API_PID:-}" ]] && kill -0 "${API_PID}" 2>/dev/null; then
     kill "${API_PID}" 2>/dev/null || true
     wait "${API_PID}" 2>/dev/null || true
+  fi
+  if [[ -n "${MINT_PID:-}" ]] && kill -0 "${MINT_PID}" 2>/dev/null; then
+    kill "${MINT_PID}" 2>/dev/null || true
+    wait "${MINT_PID}" 2>/dev/null || true
   fi
   docker rm -f "${SRC}" "${DST}" >/dev/null 2>&1 || true
   rm -f "${DUMP}"
 }
 trap cleanup EXIT
+API_PID=""
+MINT_PID=""
 
 case "${SRC}${DST}${SRC_DB}${DST_DB}" in
   *ticket_dev*|*ticket_solution*)
@@ -328,49 +334,110 @@ if [[ "${CROSS}" != "2|${TENANT_A}" ]]; then
   exit 1
 fi
 
-# API reconnect to restored DB
+# API reconnect: build if needed, ephemeral JWKS+JWT, authenticated GET /v1/me/tickets
 API_RECONNECT_OK=false
-if [[ -f "${ROOT}/apps/api/dist/main.js" ]]; then
-  DATABASE_URL="postgresql://${RUNTIME_USER}:${RUNTIME_PW}@127.0.0.1:${PG_PORT}/${DST_DB}" \
-  PORT="${API_PORT}" HOST=127.0.0.1 \
-  OIDC_ISSUER="${OIDC_ISSUER:-http://127.0.0.1:8080/realms/ticket}" \
-  OIDC_AUDIENCE=ticket-api \
-  OIDC_JWKS_URL="${OIDC_ISSUER:-http://127.0.0.1:8080/realms/ticket}/protocol/openid-connect/certs" \
-  CODE_HMAC_PEPPER=local-dev-code-pepper-change-me \
-  CODE_HMAC_VERSION=1 \
-  TICKET_CREDENTIAL_KEY="${CRED_KEY}" \
-  NODE_ENV=development \
-    node "${ROOT}/apps/api/dist/main.js" >"${API_LOG}" 2>&1 &
-  API_PID=$!
-  for _ in $(seq 1 40); do
-    if curl -sf "http://127.0.0.1:${API_PORT}/v1/health" >/dev/null 2>&1; then
-      API_RECONNECT_OK=true
-      break
-    fi
-    if ! kill -0 "${API_PID}" 2>/dev/null; then
-      break
-    fi
-    sleep 0.25
-  done
-  if [[ "${API_RECONNECT_OK}" != "true" ]]; then
-    echo "API reconnect health failed; log=${API_LOG}" >&2
-    tail -n 40 "${API_LOG}" >&2 || true
-    exit 1
+API_BUSINESS_READ_OK=false
+MINT_PID=""
+if [[ ! -f "${ROOT}/apps/api/dist/main.js" ]]; then
+  echo "building @ticket/api for reconnect smoke…"
+  (cd "${ROOT}" && pnpm --filter @ticket/contracts build \
+    && pnpm --filter @ticket/backend build \
+    && pnpm --filter @ticket/api build)
+fi
+if [[ ! -f "${ROOT}/apps/api/dist/main.js" ]]; then
+  echo "apps/api/dist/main.js missing after build" >&2
+  exit 1
+fi
+
+MINT_PORT="${D5_BIZ_RESTORE_JWKS_PORT:-18999}"
+MINT_OUT="${ARTIFACT_DIR}/mint-${SUFFIX}.json"
+MINT_SUB="restore-owner-${SUFFIX}"
+MINT_PORT="${MINT_PORT}" MINT_OUT="${MINT_OUT}" MINT_SUB="${MINT_SUB}" \
+  MINT_EMAIL="owner-drill@example.com" \
+  node "${ROOT}/scripts/lib/mint-test-jwt-server.mjs" &
+MINT_PID=$!
+for _ in $(seq 1 40); do
+  [[ -f "${MINT_OUT}" ]] && break
+  sleep 0.1
+done
+if [[ ! -f "${MINT_OUT}" ]]; then
+  echo "mint JWT server failed" >&2
+  exit 1
+fi
+MINT_ISSUER="$(node -e 'const j=require(process.argv[1]); process.stdout.write(j.issuer)' "${MINT_OUT}")"
+MINT_JWKS="$(node -e 'const j=require(process.argv[1]); process.stdout.write(j.jwksUrl)' "${MINT_OUT}")"
+ACCESS_TOKEN="$(node -e 'const j=require(process.argv[1]); process.stdout.write(j.token)' "${MINT_OUT}")"
+
+# Bind restored owner row to minted subject so /v1/me/tickets can authorize
+psql_exec "${DST}" "${DST_DB}" >/dev/null <<SQL
+UPDATE users SET
+  issuer = '${MINT_ISSUER}',
+  subject = '${MINT_SUB}',
+  email = 'owner-drill@example.com',
+  email_verified = true
+WHERE id = '${USER_OWNER}'::uuid;
+SQL
+
+DATABASE_URL="postgresql://${RUNTIME_USER}:${RUNTIME_PW}@127.0.0.1:${PG_PORT}/${DST_DB}" \
+PORT="${API_PORT}" HOST=127.0.0.1 \
+OIDC_ISSUER="${MINT_ISSUER}" \
+OIDC_AUDIENCE=ticket-api \
+OIDC_JWKS_URL="${MINT_JWKS}" \
+CODE_HMAC_PEPPER=local-dev-code-pepper-change-me \
+CODE_HMAC_VERSION=1 \
+TICKET_CREDENTIAL_KEY="${CRED_KEY}" \
+NODE_ENV=development \
+  node "${ROOT}/apps/api/dist/main.js" >"${API_LOG}" 2>&1 &
+API_PID=$!
+
+for _ in $(seq 1 60); do
+  if curl -sf "http://127.0.0.1:${API_PORT}/v1/health" >/dev/null 2>&1; then
+    API_RECONNECT_OK=true
+    break
   fi
-  # Re-verify ciphertext still decryptable while API is live (reconciliation smoke)
-  STILL="$(psql_exec "${DST}" "${DST_DB}" <<SQL
+  if ! kill -0 "${API_PID}" 2>/dev/null; then
+    break
+  fi
+  sleep 0.25
+done
+if [[ "${API_RECONNECT_OK}" != "true" ]]; then
+  echo "API reconnect health failed; log=${API_LOG}" >&2
+  tail -n 60 "${API_LOG}" >&2 || true
+  kill "${MINT_PID}" 2>/dev/null || true
+  exit 1
+fi
+
+# Authenticated business read against restored DB (not health-only)
+ME_TICKETS="$(curl -sS -H "Authorization: Bearer ${ACCESS_TOKEN}" \
+  "http://127.0.0.1:${API_PORT}/v1/me/tickets?tenantId=${TENANT_A}" || true)"
+if echo "${ME_TICKETS}" | node -e '
+const fs=require("fs"); const t=fs.readFileSync(0,"utf8");
+let j; try { j=JSON.parse(t); } catch { process.exit(2); }
+const items=j.items||j.tickets||j;
+const arr=Array.isArray(items)?items:(items&&items.length!=null?items:[]);
+const ok=Array.isArray(j)?j.some(x=>x.ticketId||x.id): (Array.isArray(arr)&&arr.some(x=>String(x.ticketId||x.id||"").includes("ee111111")||x.ticketId||x.id));
+process.exit(ok?0:1);
+'; then
+  API_BUSINESS_READ_OK=true
+else
+  echo "API business read /v1/me/tickets failed: ${ME_TICKETS:0:400}" >&2
+  kill "${MINT_PID}" 2>/dev/null || true
+  exit 1
+fi
+
+# Ciphertext still decryptable while API is live
+STILL="$(psql_exec "${DST}" "${DST_DB}" <<SQL
 SELECT encrypted_token FROM ticket_credentials WHERE ticket_id = '${TICKET_A1}'::uuid AND version = 1;
 SQL
 )"
-  STILL_OPEN="$(node "${ROOT}/scripts/lib/credential-cli.mjs" open "${STILL}" "${CRED_KEY}")"
-  if [[ "${STILL_OPEN}" != "${PLAIN_TOKEN}" ]]; then
-    echo "live reconcile decrypt failed" >&2
-    exit 1
-  fi
-else
-  echo "apps/api/dist/main.js missing — build API before reconnect smoke" >&2
+STILL_OPEN="$(node "${ROOT}/scripts/lib/credential-cli.mjs" open "${STILL}" "${CRED_KEY}")"
+if [[ "${STILL_OPEN}" != "${PLAIN_TOKEN}" ]]; then
+  echo "live reconcile decrypt failed" >&2
+  kill "${MINT_PID}" 2>/dev/null || true
   exit 1
 fi
+kill "${MINT_PID}" 2>/dev/null || true
+MINT_PID=""
 
 # RPO measured: post-backup mutation lost; window = time from backup mark to restore complete.
 # Continuous RPO ≤15m requires PITR — not claimed.
@@ -388,6 +455,7 @@ cat >"${RESULT_JSON}" <<JSON
   "checkinsCurrent": 1,
   "cryptoDecryptOk": ${CRYPTO_OK},
   "apiReconnectOk": ${API_RECONNECT_OK},
+  "apiBusinessReadOk": ${API_BUSINESS_READ_OK},
   "postBackupMutationAbsent": true,
   "postBackupEventId": "${POST_BACKUP_EVENT}",
   "backupMarkAt": "${BACKUP_MARK_AT}",
@@ -405,7 +473,7 @@ cat >"${RESULT_JSON}" <<JSON
 }
 JSON
 
-echo "D5_BUSINESS_RESTORE_PASS tenants=2 events=4 kid=${KID} crypto=1 api_reconnect=1 rpo_post_mutation_absent=1 dump_bytes=${DUMP_BYTES} dump_s=${DUMP_SECONDS} restore_s=${RESTORE_SECONDS} rto_wall_s=${RTO_SECONDS}"
+echo "D5_BUSINESS_RESTORE_PASS tenants=2 events=4 kid=${KID} crypto=1 api_reconnect=1 api_business_read=1 rpo_post_mutation_absent=1 dump_bytes=${DUMP_BYTES} dump_s=${DUMP_SECONDS} restore_s=${RESTORE_SECONDS} rto_wall_s=${RTO_SECONDS}"
 echo "artifact=${RESULT_JSON}"
 echo "not production backup; continuous RPO≤15m not claimed (dump-point method only); RTO is local dump+restore wall-clock"
 echo "tearing down ${SRC} and ${DST}"

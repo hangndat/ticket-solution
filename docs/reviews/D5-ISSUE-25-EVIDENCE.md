@@ -5,32 +5,33 @@ Ownership: root tooling / CI / infra / scripts / docs. **Không** sửa `apps/*`
 
 ## Gap matrix M01–M12 + release gates
 
-| Module / gate | Trạng thái | Evidence / nguồn | Owner tiếp theo | Internal / External |
+Nguồn: `/tmp/vemoki-platform-plan.md` + source verify trên branch này. **Không** map Issue closed / skeleton → PASS module.
+
+| Module | Nội bộ (subcriteria) | Evidence trên PR #53 | Gap còn lại | Ghi chú |
 | --- | --- | --- | --- | --- |
-| M01 Tenant + RLS | PASS (D1/D4) | Issue #12/#24; `test:db` | — | Internal done |
-| M02 Identity OIDC | PASS local | Keycloak P4; realm Vemoki dual scheme | — | Internal done; prod realm sync external |
-| M03 Event lifecycle | PASS skeleton→D4 | Admin publish PRs | — | Internal done |
-| M04 Branding | PARTIAL | `brand/vemoki/**` port từ #42; web/iOS assets workers | Web/iOS | Internal ready |
-| M05 Loại vé / quota | PASS D2 | Issue path + quota scopes trong load invariants | — | Internal done |
-| M06 Import mã | PASS D4 | Admin import | — | Internal done |
-| M07 Redemption | PASS đo local | S3 HTTP redeem thật + OIDC | — | Internal done (scale prod external) |
-| M08 Ticket / ví / credential | PASS drill crypto | AES-GCM seal/open sau restore | — | Internal done; key custody prod external |
-| M09 Email / push | PARTIAL | Outbox rows counted; SMTP Mailpit; APNs thật → #26 | Worker/#26 | External (APNs/TestFlight) |
-| M10 Gate check-in | PASS local | 50 scanner/event × 2; confirm S3 | — | Internal done (device UAT external) |
-| M11 CS / báo cáo | PARTIAL | Report API trong harness; CS API thiếu | BE | Internal ready backlog |
-| M12 Platform ops | PARTIAL | Backup/restore/obs/admission scripts; `/metrics` BE follow-up | BE metrics + ops | Internal + external VPS |
-| Release: CI check + db-isolation | PENDING merge | PR #53 checks | Coordinator | Internal |
-| Release: RPO≤15m / RTO≤2h prod | GAP | Dump-point RPO method only; continuous PITR chưa | Ops | **External** |
-| Release: Store / TestFlight | GAP | #26 | iOS | **External** |
-| Release: O06 retention/region/SLA | OPTIONS | `O06-OPTIONS.md` | Product | **External** (chặn data thật) |
+| M01 Tenant + RLS | **PARTIAL** | RLS/`test:db` D1–D4 còn; **thiếu** tenant status/limits/provision operator flow (plan §4–5) | Platform BE + contracts | Không claim module Done |
+| M02 Identity OIDC | **PARTIAL** | Keycloak realm dual callback local; **thiếu** invite/accept/MFA assurance platform + membership activation (plan §3/6) | Platform root+BE wave | Prod realm sync external |
+| M03 Event lifecycle | **PARTIAL** | Admin publish path skeleton/D4 | Full platform event ops | Không checkbox Done |
+| M04 Branding | **PARTIAL** | `brand/vemoki/**` port #42; web/iOS assets ngoài scope | Web/iOS workers | Internal assets ready |
+| M05 Loại vé / quota | **PARTIAL** | Quota scopes trong load invariants | Scale/prod external | Harness ≠ module Done |
+| M06 Import mã | **PARTIAL** | Admin import D4 path | Cap/flag limits platform | Skeleton ≠ Done |
+| M07 Redemption | **PARTIAL** | S3 HTTP redeem local + OIDC | Opening-shock/prod SLO | Đo local ≠ Done |
+| M08 Ticket / ví / credential | **PARTIAL** | AES-GCM seal/open toàn volume + restore decrypt | Key custody prod | Crypto drill OK; module chưa Done |
+| M09 Email / push | **PARTIAL** | Outbox đếm + ngưỡng vs issue; SMTP Mailpit | APNs/TestFlight #26; handler types | External + internal |
+| M10 Gate check-in | **PARTIAL** | 50 scanner/event ×2 + confirm S3 local | Device UAT external | Không claim prod |
+| M11 CS / báo cáo | **PARTIAL** | Report API harness; CS/export trên BE khác PR | BE CS follow-up | |
+| M12 Platform ops | **PARTIAL** | Backup/restore/obs/admission scripts; `/metrics` scrape E2E isolate `1f5fc31` | Bootstrap/Keycloak MFA platform PR; VPS | O06 retention/region/SLA **UNRESOLVED** |
+| O06 Retention/region/SLA | **CHƯA KIỂM / mở** | Không chốt trong PR này | Policy product | Fail-closed khi thiếu config prod |
+| Release checklist ops | **PARTIAL** | Drill scripts + evidence JSON `productionClaim: false` | Continuous RPO≤15m PITR external | |
+
 
 ## Gap matrix ops (Issue #25)
 
 | Hạng mục | Trạng thái | Evidence / lệnh | Chưa đạt |
 | --- | --- | --- | --- |
 | Fixture backup drill | PASS | `./scripts/d5-backup-drill.sh` | Không phải backup prod / SLO |
-| Business + key restore | PASS local | `./scripts/d5-business-restore-drill.sh` — AES-GCM decrypt + API reconnect + post-backup mutation absent | Continuous RPO≤15m / RTO prod **external** |
-| Observability overlay | PASS smoke | `./scripts/d5-observability-smoke.sh`; scrape `/metrics` + Bearer file sẵn | BE `/metrics` series đầy đủ §16 — BE follow-up |
+| Business + key restore | PASS local (sau fix) | `./scripts/d5-business-restore-drill.sh` — AES-GCM + authenticated `GET /v1/me/tickets` + post-backup mutation absent | Continuous RPO≤15m / RTO prod **external** |
+| Observability overlay | PASS smoke + E2E | config grep + `d5-metrics-scrape-e2e.sh` HTTP `/metrics` 401/200 Bearer (isolate BE ref nếu thiếu `metrics.ts`) | Series đầy đủ §16 vẫn BE |
 | Load S3 sustained | PASS local (xem summary) | `./scripts/d5-load-baseline.sh` | Không claim SLO prod |
 | Admission ADR-15 S4 isolated | PASS | `./scripts/d5-admission-s4.sh` — 429+Retry-After; Gate bypass | Opening-shock 50k không claim |
 | O06 | OPTIONS | `docs/ops/O06-OPTIONS.md` | Chưa chốt số |
@@ -40,7 +41,7 @@ Ownership: root tooling / CI / infra / scripts / docs. **Không** sửa `apps/*`
 ## Restore (business)
 
 ```
-D5_BUSINESS_RESTORE_PASS tenants=2 events=4 kid=local-v1 crypto=1 api_reconnect=1
+D5_BUSINESS_RESTORE_PASS … crypto=1 api_reconnect=1 api_business_read=1 (sau fix; SHA cập nhật khi push)
 rpo_post_mutation_absent=1 dump_s≈0 restore_s≈1 rto_wall_s≈1
 ```
 

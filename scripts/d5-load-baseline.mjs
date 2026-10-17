@@ -528,10 +528,8 @@ SELECT
   id,
   1,
   'local-v1',
-  CASE WHEN n = 1 THEN '${sealed.tokenHash}'
-       ELSE encode(sha256(('th:' || id::text)::bytea), 'hex') END,
-  CASE WHEN n = 1 THEN '${sealed.encryptedToken}'
-       ELSE 'enc:load-fixture-volume-not-crypto' END,
+  encode(sha256(('pending:' || id::text)::bytea), 'hex'),
+  'enc:pending-seal',
   'ACTIVE'
 FROM numbered_t;
 
@@ -540,12 +538,55 @@ SET allocated = ${volumeCount}, updated_at = now()
 WHERE tenant_id = '${TENANT_ID}'::uuid AND event_id = '${meta.eventId}'::uuid;
 `;
     psql(batchSql);
+    // Seal EVERY volume credential with real AES-GCM (not placeholder enc:).
+    sealAllCredentialsForEvent(meta.eventId);
     meta.sampleSealed = sealed;
     meta.samplePlain = sampleToken;
   }
 
   const seedMs = Date.now() - seedStart;
   return { eventMeta, httpCodes, seedMs, typeId, sourceId, httpCount };
+}
+
+/** Replace pending placeholders with AES-GCM ciphertext for all tickets on event. */
+function sealAllCredentialsForEvent(eventId) {
+  const ids = psql(`
+SELECT ticket_id::text FROM ticket_credentials tc
+JOIN tickets t ON t.id = tc.ticket_id AND t.tenant_id = tc.tenant_id
+WHERE t.event_id = '${eventId}'::uuid AND tc.encrypted_token = 'enc:pending-seal';
+`)
+    .split('\n')
+    .filter(Boolean);
+  const batchSize = 200;
+  for (let i = 0; i < ids.length; i += batchSize) {
+    const chunk = ids.slice(i, i + batchSize);
+    const values = chunk
+      .map((id) => {
+        const plain = `vol-ticket:${id}`;
+        const s = sealCredentialToken(plain, CRED_KEY);
+        return `('${id}'::uuid,'${s.tokenHash}','${s.encryptedToken}')`;
+      })
+      .join(',\n');
+    psql(`
+UPDATE ticket_credentials AS tc SET
+  token_hash = v.token_hash,
+  encrypted_token = v.encrypted_token,
+  kid = 'local-v1'
+FROM (VALUES ${values}) AS v(ticket_id, token_hash, encrypted_token)
+WHERE tc.ticket_id = v.ticket_id AND tc.tenant_id = '${TENANT_ID}'::uuid;
+`);
+  }
+  const left = psql(`
+SELECT count(*)::text FROM ticket_credentials tc
+JOIN tickets t ON t.id = tc.ticket_id
+WHERE t.event_id = '${eventId}'::uuid
+  AND (tc.encrypted_token LIKE 'enc:%' OR tc.encrypted_token = '');
+`);
+  if (Number(left) !== 0) {
+    throw new Error(
+      `sealAllCredentialsForEvent: ${left} non-AES credentials remain on ${eventId}`,
+    );
+  }
 }
 
 async function openSessions(base, staffTok, eventId, n) {
@@ -614,7 +655,12 @@ SELECT
   (SELECT count(*) FROM outbox WHERE tenant_id='${TENANT_ID}'::uuid) || '|' ||
   (SELECT count(*) FROM audit_logs WHERE tenant_id='${TENANT_ID}'::uuid) || '|' ||
   (SELECT count(*) FROM checkin_reservations WHERE tenant_id='${TENANT_ID}'::uuid AND event_id='${eventId}'::uuid AND status='CONFIRMED') || '|' ||
-  (SELECT count(DISTINCT ticket_id) FROM checkins WHERE tenant_id='${TENANT_ID}'::uuid AND event_id='${eventId}'::uuid AND undone_at IS NULL);
+  (SELECT count(DISTINCT ticket_id) FROM checkins WHERE tenant_id='${TENANT_ID}'::uuid AND event_id='${eventId}'::uuid AND undone_at IS NULL) || '|' ||
+  (SELECT count(*) FROM redemption_codes WHERE tenant_id='${TENANT_ID}'::uuid AND event_id='${eventId}'::uuid) || '|' ||
+  (SELECT count(DISTINCT code_hmac) FROM redemption_codes WHERE tenant_id='${TENANT_ID}'::uuid AND event_id='${eventId}'::uuid) || '|' ||
+  (SELECT count(*) FROM redemption_codes WHERE tenant_id='${TENANT_ID}'::uuid AND event_id='${eventId}'::uuid AND code_pepper_version=${CODE_VERSION}) || '|' ||
+  (SELECT count(*) FROM ticket_credentials tc JOIN tickets t ON t.id=tc.ticket_id
+     WHERE t.event_id='${eventId}'::uuid AND tc.encrypted_token NOT LIKE 'enc:%' AND length(tc.encrypted_token) > 40);
 `);
     const [
       tickets,
@@ -628,22 +674,34 @@ SELECT
       audit,
       confirmedRes,
       distinctCheckinTickets,
+      codeCount,
+      distinctHmac,
+      pepperOk,
+      aesCreds,
     ] = line.split('|').map(Number);
 
     let sampleDecryptOk = false;
-    if (meta.sampleSealed) {
-      try {
-        const enc = psql(`
-SELECT encrypted_token FROM ticket_credentials tc
+    let allSampleOk = false;
+    try {
+      // Prefer volume-sealed rows (plain = vol-ticket:<id>); HTTP-issued also must decrypt.
+      const sample = psql(`
+SELECT tc.ticket_id::text || '|' || tc.encrypted_token FROM ticket_credentials tc
 JOIN tickets t ON t.id=tc.ticket_id
-WHERE t.event_id='${eventId}'::uuid AND tc.token_hash='${meta.sampleSealed.tokenHash}'
-LIMIT 1;
-`);
+WHERE t.event_id='${eventId}'::uuid
+  AND tc.encrypted_token NOT LIKE 'enc:%'
+ORDER BY tc.ticket_id
+LIMIT 8;
+`).split('\n').filter(Boolean);
+      let okN = 0;
+      for (const row of sample) {
+        const [tid, enc] = row.split('|');
         const plain = openCredentialToken(enc, CRED_KEY);
-        sampleDecryptOk = plain === meta.samplePlain;
-      } catch {
-        sampleDecryptOk = false;
+        if (plain === `vol-ticket:${tid}` || plain.length > 0) okN++;
       }
+      sampleDecryptOk = okN >= 1;
+      allSampleOk = okN === sample.length && sample.length > 0;
+    } catch {
+      sampleDecryptOk = false;
     }
 
     const expectedCheckins = expectedCheckinsByEvent[eventId] ?? null;
@@ -656,6 +714,9 @@ LIMIT 1;
       distinctCheckinTickets === checkins && confirmedRes >= checkins;
     const checkinsMeetExpected =
       expectedCheckins == null ? true : checkins >= expectedCheckins;
+    const hmacUnique = codeCount === distinctHmac && codeCount === tickets;
+    const pepperConsistent = pepperOk === codeCount;
+    const allAes = aesCreds === tickets;
 
     const ok =
       ticketsMatchAllocated &&
@@ -665,8 +726,10 @@ LIMIT 1;
       noDoubleConfirm &&
       checkinsMeetExpected &&
       sampleDecryptOk &&
-      outbox >= 0 &&
-      audit >= 0;
+      allSampleOk &&
+      hmacUnique &&
+      pepperConsistent &&
+      allAes;
 
     if (!ok) allOk = false;
     rows[eventId] = {
@@ -682,6 +745,12 @@ LIMIT 1;
       confirmedReservations: confirmedRes,
       distinctCheckinTickets,
       sampleDecryptOk,
+      allSampleOk,
+      hmacUnique,
+      pepperConsistent,
+      allAesCredentials: allAes,
+      codeCount,
+      distinctHmac,
       ticketsMatchAllocated,
       quotaScopesAligned,
       everyTicketHasKid,
@@ -959,10 +1028,11 @@ async function main() {
   const confirmRpsAchieved =
     s3ElapsedSec > 0 ? confirmOkCount / Math.min(s3ElapsedSec, SUSTAIN_SEC) : 0;
 
+  // Expected check-ins: gate sessions (SCANNERS*2) per event, minus small slack.
+  // S3 confirms span events unevenly — assert tenant-wide below, not per-event share.
   const expectedCheckinsByEvent = {};
   for (const meta of eventMeta) {
-    // S3 may confirm across events; gate pass adds up to SCANNERS*2 per event.
-    expectedCheckinsByEvent[meta.eventId] = 0;
+    expectedCheckinsByEvent[meta.eventId] = Math.max(0, SCANNERS * 2 - 5);
   }
 
   const inv = invariants(eventMeta, expectedCheckinsByEvent);
@@ -988,6 +1058,20 @@ async function main() {
   const gateAllOk = gateResults.every((g) => g.ok);
   const scannersOk = totalSessions === SCANNERS * EVENTS;
 
+  const totalDistinctCheckins = Object.values(inv.rows).reduce(
+    (n, r) => n + Number(r.distinctCheckinTickets || 0),
+    0,
+  );
+  const checkinsVsConfirmOk =
+    confirmOkCount === 0 || totalDistinctCheckins >= Math.floor(confirmOkCount * 0.85);
+
+    const outboxOk =
+    Number(
+      Object.values(inv.rows)[0]?.outboxRowsTenant ??
+        Object.values(inv.rows)[0]?.outbox ??
+        0,
+    ) >= Math.floor(issueOkCount * 0.9) || issueOkCount === 0;
+
   const meetsPrdPilot =
     s3Ok &&
     healthOk &&
@@ -997,17 +1081,13 @@ async function main() {
     gateAllOk &&
     scannersOk &&
     inv.allOk &&
+    outboxOk &&
+    checkinsVsConfirmOk &&
     issueOkCount >= issueTarget * 0.9 &&
     confirmOkCount >= confirmTarget * 0.9;
 
-  const pass =
-    s3Ok &&
-    healthOk &&
-    gateAllOk &&
-    scannersOk &&
-    inv.allOk &&
-    issueOkCount > 0 &&
-    confirmOkCount > 0;
+  // pass ≡ meetsPrdPilot (no weak “≥1 OK” escape hatch)
+  const pass = meetsPrdPilot;
 
   const summary = {
     scenario: 'TD S3 sustained issue+confirm concurrent + S1 volume SQL seed',
