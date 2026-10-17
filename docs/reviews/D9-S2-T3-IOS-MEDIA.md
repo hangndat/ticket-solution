@@ -6,7 +6,7 @@
 
 ## Exact commit SHA
 
-**Tip branch (review this):** `9194a39f7fcb5d4631d234aeb221d5dc741e2189`  
+**Tip branch (review this):** `180cc45e0629cec66bcff11c5ce59ef2df0dcb59`  
 **Behavior commit:** `15370969d8d2eceb00dfdb292b7a554b35cea040` (`feat(mobile): render bundled demo media…`)
 
 *(Docs pin commit không đổi hành vi runtime. Revalidation bắt buộc nếu có commit hành vi mới sau tip.)*
