@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { ISSUE_ERROR_CODES } from '@ticket/contracts';
+import { APPROVAL_PENDING, ISSUE_ERROR_CODES, REDEMPTION_COMMAND } from '@ticket/contracts';
 import {
   redeemPayloadFingerprint,
   resolveIdempotencyKey,
@@ -13,6 +13,7 @@ import {
 } from '../src/redeem/messages';
 import { pollOperation } from '../src/redeem/poll-operation';
 import type { FetchJsonResult } from '../src/redeem/fetch-json';
+import type { RedeemDecision } from '../src/redeem/decide';
 
 test('fetchJson maps TypeError network failure without throwing', async () => {
   const result = await fetchJson(
@@ -62,10 +63,9 @@ test('pollOperation clears busy after consecutive network rejections (no stuck p
       onTransient: (kind) => {
         transients.push(kind);
       },
-      onSuccess: () => {
-        successCount += 1;
+      onDecision: (d) => {
+        if (d.kind === 'issued') successCount += 1;
       },
-      onError: () => {},
       onFinally: () => {
         polling = false;
         finallyCount += 1;
@@ -106,6 +106,7 @@ test('pollOperation recovers after network rejection then COMPLETED redeem', asy
   let polling = true;
   let gotTicket: string | null = null;
   let calls = 0;
+  let usedCommand = '';
 
   const redeemBody = {
     ticketId: '33333333-3333-4333-8333-333333333333',
@@ -129,17 +130,18 @@ test('pollOperation recovers after network rejection then COMPLETED redeem', asy
       },
       onRaw: () => {},
       onTransient: () => {},
-      onSuccess: (body) => {
-        gotTicket = body.ticketId;
+      onDecision: (d: RedeemDecision) => {
+        if (d.kind === 'issued') gotTicket = d.ticketId;
       },
-      onError: () => {},
       onFinally: () => {
         polling = false;
       },
     },
     {
-      fetchJsonImpl: async (): Promise<FetchJsonResult> => {
+      fetchJsonImpl: async (input): Promise<FetchJsonResult> => {
         calls += 1;
+        const url = String(input);
+        usedCommand = new URL(url, 'http://local.test').searchParams.get('command') ?? '';
         if (calls === 1) {
           return { status: 0, json: null, timedOut: false, networkError: true };
         }
@@ -165,11 +167,57 @@ test('pollOperation recovers after network rejection then COMPLETED redeem', asy
   assert.equal(gotTicket, redeemBody.ticketId);
   assert.equal(polling, false);
   assert.equal(calls, 2);
+  assert.equal(usedCommand, REDEMPTION_COMMAND);
+});
+
+test('pollOperation maps COMPLETED pending without claiming ticket', async () => {
+  let kind: RedeemDecision['kind'] | null = null;
+
+  await pollOperation(
+    'idem-key-pending',
+    '11111111-1111-4111-8111-111111111111',
+    '22222222-2222-4222-8222-222222222222',
+    {
+      onStart: () => {},
+      onRaw: () => {},
+      onTransient: () => {},
+      onDecision: (d) => {
+        kind = d.kind;
+      },
+      onFinally: () => {},
+    },
+    {
+      fetchJsonImpl: async () =>
+        ({
+          status: 200,
+          json: {
+            status: 'COMPLETED',
+            response: {
+              code: APPROVAL_PENDING,
+              requestId: '55555555-5555-4555-8555-555555555555',
+              operationId: 'op',
+              eventId: '22222222-2222-4222-8222-222222222222',
+              ticketTypeId: 'tt',
+              sourceId: 'src',
+              status: 'PENDING_REVIEW',
+              replayed: false,
+            },
+          },
+          timedOut: false,
+          networkError: false,
+        }) satisfies FetchJsonResult,
+      sleep: async () => {},
+      now: () => 0,
+      pollMaxMs: 10,
+    },
+  );
+
+  assert.equal(kind, 'pending');
 });
 
 test('pollOperation maps FAILED ApiError without claiming success', async () => {
   let errorCode: string | undefined;
-  let success = false;
+  let issued = false;
   let polling = true;
 
   await pollOperation(
@@ -182,13 +230,9 @@ test('pollOperation maps FAILED ApiError without claiming success', async () => 
       },
       onRaw: () => {},
       onTransient: () => {},
-      onSuccess: () => {
-        success = true;
-      },
-      onError: (body) => {
-        if (body && typeof body === 'object' && 'code' in body) {
-          errorCode = String((body as { code: string }).code);
-        }
+      onDecision: (d) => {
+        if (d.kind === 'issued') issued = true;
+        if (d.kind === 'denied') errorCode = d.code;
       },
       onFinally: () => {
         polling = false;
@@ -214,7 +258,7 @@ test('pollOperation maps FAILED ApiError without claiming success', async () => 
     },
   );
 
-  assert.equal(success, false);
+  assert.equal(issued, false);
   assert.equal(errorCode, ISSUE_ERROR_CODES.QUOTA_EXHAUSTED);
   assert.equal(polling, false);
 });
@@ -229,13 +273,15 @@ test('exhausted/used/timeout UX kinds remain distinct and network is retryable t
   assert.match(networkMessage().detail, /idempotency-key/i);
 });
 
-test('resolveIdempotencyKey reuses key only when unclear + same payload', () => {
+test('resolveIdempotencyKey reuses key only when unclear + same payload incl answers', () => {
   const payload = {
     tenantId: '11111111-1111-4111-8111-111111111111',
     eventId: '22222222-2222-4222-8222-222222222222',
     code: 'CODE-A',
-    formVersion: 'web-redeem-d2',
-    termsVersion: 'web-terms-d2',
+    formVersion: 'form-v1',
+    termsVersion: 'terms-v1',
+    answers: { full_name: 'Ada' },
+    termsAccepted: true,
   };
   const fingerprint = redeemPayloadFingerprint(payload);
   const existing = { key: 'keep-me', fingerprint, unclear: true };
@@ -254,7 +300,7 @@ test('resolveIdempotencyKey reuses key only when unclear + same payload', () => 
 
   const changed = resolveIdempotencyKey(
     existing,
-    redeemPayloadFingerprint({ ...payload, code: 'CODE-B' }),
+    redeemPayloadFingerprint({ ...payload, answers: { full_name: 'Bob' } }),
     () => 'fresh-3',
   );
   assert.equal(changed.reused, false);

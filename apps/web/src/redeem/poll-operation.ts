@@ -1,4 +1,10 @@
-import type { ApiError, OperationStatusResponse, RedeemResponse } from '@ticket/contracts';
+import {
+  REDEMPTION_COMMAND,
+  type ApiError,
+  type OperationStatusResponse,
+  type RedeemResponse,
+} from '@ticket/contracts';
+import { decideRedeemBody, type RedeemDecision } from './decide';
 import { fetchJson, type FetchJsonResult } from './fetch-json';
 
 export const REQUEST_TIMEOUT_MS = 20_000;
@@ -28,8 +34,7 @@ export type PollOperationHandlers = {
   onStart: () => void;
   onRaw: (json: unknown) => void;
   onTransient: (kind: 'timeout' | 'network') => void;
-  onSuccess: (body: RedeemResponse) => void;
-  onError: (body: unknown) => void;
+  onDecision: (decision: RedeemDecision) => void;
   /** Always invoked once when the poll loop ends (success/error/timeout/cancel). */
   onFinally: () => void;
 };
@@ -54,8 +59,7 @@ const defaultSleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
 
 /**
  * Poll GET /api/bff/operations/{key} until terminal status, budget, or cancel.
- * Network/abort never leave the caller stuck: onFinally always runs.
- * Does not invent success; keeps using the same idempotency-key the caller passes.
+ * Uses frozen REDEMPTION_COMMAND. Network/abort never leave the caller stuck.
  */
 export async function pollOperation(
   key: string,
@@ -84,7 +88,11 @@ export async function pollOperation(
         return outcome;
       }
 
-      const qs = new URLSearchParams({ tenantId, eventId, command: 'redeem' });
+      const qs = new URLSearchParams({
+        tenantId,
+        eventId,
+        command: REDEMPTION_COMMAND,
+      });
       const result = await fetchImpl(
         `/api/bff/operations/${encodeURIComponent(key)}?${qs}`,
         { method: 'GET' },
@@ -118,7 +126,9 @@ export async function pollOperation(
 
       const op = result.json as OperationStatusResponse | ApiError;
       if (isApiError(op) && !('status' in (op as object))) {
-        handlers.onError(op);
+        handlers.onDecision(
+          decideRedeemBody(result.status, op, key, false),
+        );
         outcome = 'error';
         return outcome;
       }
@@ -127,19 +137,20 @@ export async function pollOperation(
         const status = (op as OperationStatusResponse).status;
         const response = (op as OperationStatusResponse).response;
         if (status === 'COMPLETED' && response) {
-          if (isRedeemResponse(response)) {
-            handlers.onSuccess(response);
-            outcome = 'success';
-            return outcome;
-          }
-          if (isApiError(response)) {
-            handlers.onError(response);
-            outcome = 'error';
+          const decision = decideRedeemBody(200, response, key, false);
+          if (decision.kind === 'unknown') {
+            // Keep polling when envelope is incomplete.
+          } else {
+            handlers.onDecision(decision);
+            outcome =
+              decision.kind === 'issued' || decision.kind === 'pending'
+                ? 'success'
+                : 'error';
             return outcome;
           }
         }
-        if (status === 'FAILED' && response && isApiError(response)) {
-          handlers.onError(response);
+        if (status === 'FAILED' && response) {
+          handlers.onDecision(decideRedeemBody(200, response, key, false));
           outcome = 'error';
           return outcome;
         }
