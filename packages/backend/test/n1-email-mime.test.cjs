@@ -269,8 +269,66 @@ test(
           eventId,
           actorUserId: staff.userId,
           payload: {
-            guide: 'Check-in tại cổng A trước 18:00.',
-            contact: 'hotline@example.test',
+            schemaVersion: 1,
+            brand: {
+              primaryColor: '#0B3D2E',
+              organizationName: 'hotline@example.test',
+            },
+            sections: [
+              {
+                kind: 'hero',
+                id: 'hero-1',
+                visible: true,
+                order: 0,
+                body: { title: 'N1 Launch', text: 'Hello' },
+              },
+              {
+                kind: 'info',
+                id: 'info-1',
+                visible: true,
+                order: 1,
+                body: { title: 'Info', text: 'Details' },
+              },
+              {
+                kind: 'redeem',
+                id: 'redeem-1',
+                visible: true,
+                order: 2,
+                body: { title: 'Redeem', text: 'Code' },
+              },
+              {
+                kind: 'guide',
+                id: 'guide-1',
+                visible: true,
+                order: 3,
+                body: {
+                  title: 'Guide',
+                  text: 'Check-in tại cổng A trước 18:00.',
+                },
+              },
+              {
+                kind: 'faq',
+                id: 'faq-1',
+                visible: true,
+                order: 4,
+                body: {
+                  title: 'FAQ',
+                  items: [{ question: 'When?', answer: 'Tonight' }],
+                },
+              },
+              {
+                kind: 'terms',
+                id: 'terms-1',
+                visible: true,
+                order: 5,
+                body: {
+                  title: 'Terms',
+                  termsVersion: 'terms-v1',
+                  text: 'Be kind',
+                },
+              },
+            ],
+            termsVersion: 'terms-v1',
           },
         });
         await publishEventConfig(tx, {

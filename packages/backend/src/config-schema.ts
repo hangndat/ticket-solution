@@ -71,12 +71,21 @@ export function assertSafePlainText(
       message: `${fieldId} exceeds ${maxLen} characters`,
     };
   }
-  if (/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/.test(value)) {
-    return {
-      fieldId,
-      code: 'CONFIG_TEXT_INVALID',
-      message: `${fieldId} contains control characters`,
-    };
+  for (let i = 0; i < value.length; i++) {
+    const code = value.charCodeAt(i);
+    // C0 controls except TAB (\t) and LF (\n); CR (\r) also rejected.
+    if (
+      (code >= 0x00 && code <= 0x08) ||
+      code === 0x0b ||
+      code === 0x0c ||
+      (code >= 0x0e && code <= 0x1f)
+    ) {
+      return {
+        fieldId,
+        code: 'CONFIG_TEXT_INVALID',
+        message: `${fieldId} contains control characters`,
+      };
+    }
   }
   const lower = value.toLowerCase();
   if (

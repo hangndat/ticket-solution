@@ -288,18 +288,14 @@ export async function reencodeRasterAsset(buf: Buffer): Promise<{
   }
 
   let out: Buffer;
-  let mime: AssetMime = magicMime;
   try {
     const rotated = pipeline.rotate();
     if (magicMime === 'image/png') {
       out = await rotated.png({ compressionLevel: 9 }).toBuffer();
-      mime = 'image/png';
     } else if (magicMime === 'image/jpeg') {
       out = await rotated.jpeg({ quality: 85, mozjpeg: true }).toBuffer();
-      mime = 'image/jpeg';
     } else {
       out = await rotated.webp({ quality: 85 }).toBuffer();
-      mime = 'image/webp';
     }
   } catch {
     throw new ConfigError(
@@ -315,7 +311,7 @@ export async function reencodeRasterAsset(buf: Buffer): Promise<{
     );
   }
 
-  return { mime, widthPx, heightPx, body: out };
+  return { mime: magicMime, widthPx, heightPx, body: out };
 }
 
 export async function finalizeEventAssetUpload(
