@@ -640,6 +640,17 @@ details p {
     animation: none;
   }
 }
+.gate-offline-banner {
+  margin-top: var(--space-4);
+  animation: rise-in 0.35s ease-out both;
+}
+.gate-offline-banner--offline {
+  border-width: 2px;
+}
+.gate-offline-banner--degraded {
+  border-width: 2px;
+  border-style: dashed;
+}
 .redeem-form {
   display: grid;
   gap: 28px;
