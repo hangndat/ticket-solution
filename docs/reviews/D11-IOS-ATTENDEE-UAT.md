@@ -2,7 +2,7 @@
 
 **Issue:** [#235](https://github.com/hangndat/ticket-solution/issues/235)  
 **Ownership:** `apps/mobile` · **không** EAS Cloud Build · Team `BLUA62D52G`  
-**Evidence tip SHA:** ghi sau commit (xem comment Issue / PR)
+**Evidence tip SHA:** `0c0eb7cccc29a466566df8a4b2295d680ce3613f`
 
 ## Commands
 
