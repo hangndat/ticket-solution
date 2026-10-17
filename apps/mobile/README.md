@@ -29,6 +29,11 @@ See `apps/mobile/.env.example`:
 4. **Display QR** — encodes `TicketSummary` fields (`kind: ticket.display`).
    Contracts do not yet expose a signed Gate JWS credential.
 5. **Log out** — detach APNs (`DELETE /v1/me/device-tokens/{id}` + clear local registration) **before** `session.logout()`; then SecureStore clear + best-effort Keycloak end-session. Account switch uses the same detach.
+6. **Account deletion request** — Account → “Yêu cầu xóa tài khoản” → confirm →
+   `POST /v1/me/account-deletion-requests` `{confirmation:true}` + `Idempotency-Key`
+   → **202** `AWAITING_POLICY` / `policyStatus:UNRESOLVED`. ACK ≠ erasure (O06 chưa
+   chốt). Timeout retry cùng key; account-switch hủy late status. Không tự xóa
+   vé/audit/identity; request-only không đủ store approval.
 
 ## Deep links
 
