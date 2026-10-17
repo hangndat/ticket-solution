@@ -216,10 +216,21 @@ export async function registerApnsDeviceToken(
       controller.signal,
       fetchImpl,
     );
-    if (
+    const staleAfterPost =
       registrationGeneration !== genAtStart ||
-      !boundary.isEpochCurrent(epoch)
-    ) {
+      !boundary.isEpochCurrent(epoch);
+    if (staleAfterPost) {
+      // POST may have succeeded after clearApns bumped generation (beginRequest
+      // is not aborted by clear). Compensate so the old account cannot keep the
+      // device token on the server (TD §413 / PRD M09).
+      if (posted.status === 'ok') {
+        await compensateOrphanServerRegistration({
+          bearer,
+          registrationId: posted.registration.registrationId,
+          store,
+          fetchImpl,
+        });
+      }
       return {
         status: 'cancelled',
         transport: 'apns',
@@ -243,12 +254,12 @@ export async function registerApnsDeviceToken(
       registrationGeneration !== genAtStart ||
       !boundary.isEpochCurrent(epoch)
     ) {
-      // Late write after switch: drop local registration — do not keep prior user.
-      try {
-        await store.clear();
-      } catch {
-        /* best-effort */
-      }
+      await compensateOrphanServerRegistration({
+        bearer,
+        registrationId: posted.registration.registrationId,
+        store,
+        fetchImpl,
+      });
       return {
         status: 'cancelled',
         transport: 'apns',
@@ -264,6 +275,34 @@ export async function registerApnsDeviceToken(
     };
   } finally {
     boundary.endRequest(controller);
+  }
+}
+
+/**
+ * Best-effort DELETE + local clear when a registration landed on the server
+ * after detach/account-switch invalidated the client generation/epoch.
+ * Uses the bearer captured for the original POST (may still be valid before logout).
+ */
+async function compensateOrphanServerRegistration(input: {
+  bearer: string;
+  registrationId: string;
+  store: ApnsRegistrationStore;
+  fetchImpl: typeof fetch;
+}): Promise<void> {
+  try {
+    await deleteDeviceToken(
+      input.bearer,
+      input.registrationId,
+      undefined,
+      input.fetchImpl,
+    );
+  } catch {
+    /* best-effort — cannot prove server revoke if DELETE fails */
+  }
+  try {
+    await input.store.clear();
+  } catch {
+    /* best-effort */
   }
 }
 
