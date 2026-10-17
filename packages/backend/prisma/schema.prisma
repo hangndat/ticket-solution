@@ -149,6 +149,10 @@ model IssuanceSource {
   id                String             @db.Uuid
   name              String
   approvalMode      String             @default("AUTO") @map("approval_mode")
+  /** Technical pending TTL hours (default 24). Not a customer SLA. */
+  pendingTtlHours   Int                @default(24) @map("pending_ttl_hours")
+  /** Max PENDING_REVIEW rows per actor/event for this source (default 5). */
+  maxPendingPerUser Int                @default(5) @map("max_pending_per_user")
   createdAt         DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt         DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
   event             Event              @relation(fields: [tenantId, eventId], references: [tenantId, id], onDelete: Restrict)
@@ -245,21 +249,29 @@ model AttendeeCounter {
 }
 
 model RedemptionRequest {
-  tenantId         String         @map("tenant_id") @db.Uuid
-  eventId          String         @map("event_id") @db.Uuid
-  id               String         @db.Uuid
-  actorUserId      String         @map("actor_user_id") @db.Uuid
-  redemptionCodeId String         @map("redemption_code_id") @db.Uuid
-  status           String
-  formVersion      String?        @map("form_version")
-  termsVersion     String?        @map("terms_version")
-  decisionReason   String?        @map("decision_reason")
-  createdAt        DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt        DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
-  event            Event          @relation(fields: [tenantId, eventId], references: [tenantId, id], onDelete: Restrict)
-  actor            User           @relation(fields: [actorUserId], references: [id], onDelete: Restrict)
-  redemptionCode   RedemptionCode @relation(fields: [tenantId, redemptionCodeId], references: [tenantId, id], onDelete: Restrict)
-  ticket           Ticket?
+  tenantId           String         @map("tenant_id") @db.Uuid
+  eventId            String         @map("event_id") @db.Uuid
+  id                 String         @db.Uuid
+  actorUserId        String         @map("actor_user_id") @db.Uuid
+  redemptionCodeId   String         @map("redemption_code_id") @db.Uuid
+  status             String
+  formVersion        String?        @map("form_version")
+  termsVersion       String?        @map("terms_version")
+  decisionReason     String?        @map("decision_reason")
+  expiresAt          DateTime?      @map("expires_at") @db.Timestamptz(3)
+  answersJson        Json?          @map("answers_json")
+  /** null = legacy; never fabricate true for old rows. */
+  termsAccepted      Boolean?       @map("terms_accepted")
+  consentAcceptedAt  DateTime?      @map("consent_accepted_at") @db.Timestamptz(3)
+  formDefinitionHash String?        @map("form_definition_hash")
+  termsContentHash   String?        @map("terms_content_hash")
+  decidedAt          DateTime?      @map("decided_at") @db.Timestamptz(3)
+  createdAt          DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
+  event              Event          @relation(fields: [tenantId, eventId], references: [tenantId, id], onDelete: Restrict)
+  actor              User           @relation(fields: [actorUserId], references: [id], onDelete: Restrict)
+  redemptionCode     RedemptionCode @relation(fields: [tenantId, redemptionCodeId], references: [tenantId, id], onDelete: Restrict)
+  ticket             Ticket?
 
   @@id([tenantId, id])
   @@map("redemption_requests")

@@ -5,10 +5,13 @@
 import {
   ASSET_LIMITS,
   EVENT_CONTENT_SECTION_KINDS,
+  FORM_LIMITS,
   type EventBrandSnapshot,
   type EventConfigPayload,
   type EventContentSection,
   type EventContentSectionKind,
+  type FormDefinition,
+  type FormFieldType,
 } from '@ticket/contracts';
 import { ConfigError, CONFIG_ERROR_CODES } from './config-error';
 
@@ -319,6 +322,147 @@ export function parseBrand(raw: unknown): {
   return { brand, issues };
 }
 
+const FORM_FIELD_TYPES = new Set<FormFieldType>([
+  'text',
+  'email',
+  'phone',
+  'select',
+  'checkbox',
+]);
+
+/** Parse optional C-F FormDefinition; pushes issues and returns null on failure. */
+function parseFormDefinition(
+  raw: unknown,
+  issues: ConfigValidationIssue[],
+): FormDefinition | null {
+  if (!isPlainObject(raw)) {
+    issues.push({
+      fieldId: 'form',
+      code: 'CONFIG_FORM_INVALID',
+      message: 'form must be an object',
+    });
+    return null;
+  }
+  if (typeof raw.formVersion !== 'string' || raw.formVersion.trim() === '') {
+    issues.push({
+      fieldId: 'form.formVersion',
+      code: 'CONFIG_FORM_INVALID',
+      message: 'form.formVersion must be a non-empty string',
+    });
+    return null;
+  }
+  if (!Array.isArray(raw.fields)) {
+    issues.push({
+      fieldId: 'form.fields',
+      code: 'CONFIG_FORM_INVALID',
+      message: 'form.fields must be an array',
+    });
+    return null;
+  }
+  if (raw.fields.length > FORM_LIMITS.maxFields) {
+    issues.push({
+      fieldId: 'form.fields',
+      code: 'CONFIG_FORM_INVALID',
+      message: `form.fields exceeds max ${FORM_LIMITS.maxFields}`,
+    });
+    return null;
+  }
+
+  const fields: FormDefinition['fields'] = [];
+  for (let i = 0; i < raw.fields.length; i++) {
+    const prefix = `form.fields[${i}]`;
+    const f = raw.fields[i];
+    if (!isPlainObject(f)) {
+      issues.push({
+        fieldId: prefix,
+        code: 'CONFIG_FORM_INVALID',
+        message: 'field must be an object',
+      });
+      continue;
+    }
+    if (
+      typeof f.id !== 'string' ||
+      f.id.length === 0 ||
+      f.id.length > FORM_LIMITS.maxFieldIdLength
+    ) {
+      issues.push({
+        fieldId: `${prefix}.id`,
+        code: 'CONFIG_FORM_INVALID',
+        message: 'field id is required',
+      });
+      continue;
+    }
+    if (
+      typeof f.label !== 'string' ||
+      f.label.length > FORM_LIMITS.maxLabelLength
+    ) {
+      issues.push({
+        fieldId: `${prefix}.label`,
+        code: 'CONFIG_FORM_INVALID',
+        message: 'field label is required',
+      });
+      continue;
+    }
+    if (typeof f.type !== 'string' || !FORM_FIELD_TYPES.has(f.type as FormFieldType)) {
+      issues.push({
+        fieldId: `${prefix}.type`,
+        code: 'CONFIG_FORM_INVALID',
+        message: 'field type is not allowlisted',
+      });
+      continue;
+    }
+    if (typeof f.required !== 'boolean') {
+      issues.push({
+        fieldId: `${prefix}.required`,
+        code: 'CONFIG_FORM_INVALID',
+        message: 'field required must be boolean',
+      });
+      continue;
+    }
+    let options: FormDefinition['fields'][number]['options'];
+    if (f.type === 'select') {
+      if (!Array.isArray(f.options) || f.options.length > FORM_LIMITS.maxSelectOptions) {
+        issues.push({
+          fieldId: `${prefix}.options`,
+          code: 'CONFIG_FORM_INVALID',
+          message: 'select options are required',
+        });
+        continue;
+      }
+      options = [];
+      for (const opt of f.options) {
+        if (!isPlainObject(opt) || typeof opt.id !== 'string' || typeof opt.label !== 'string') {
+          issues.push({
+            fieldId: `${prefix}.options`,
+            code: 'CONFIG_FORM_INVALID',
+            message: 'select option id/label required',
+          });
+          options = undefined;
+          break;
+        }
+        options.push({ id: opt.id, label: opt.label });
+      }
+      if (!options) continue;
+    }
+    fields.push({
+      id: f.id,
+      label: f.label,
+      type: f.type as FormFieldType,
+      required: f.required,
+      ...(options ? { options } : {}),
+    });
+  }
+
+  if (
+    issues.some(
+      (i) => i.fieldId === 'form' || i.fieldId.startsWith('form.'),
+    )
+  ) {
+    return null;
+  }
+  return { formVersion: raw.formVersion.trim(), fields };
+}
+
 export function parseConfigPayload(raw: unknown): {
   ok: boolean;
   payload: EventConfigPayload;
@@ -497,6 +641,20 @@ export function parseConfigPayload(raw: unknown): {
       formDefinitionId = raw.formDefinitionId.trim();
     }
   }
+
+  // C-F: optional published FormDefinition (accept form or formDefinition alias).
+  let form: FormDefinition | undefined;
+  const formRaw =
+    raw.form !== undefined
+      ? raw.form
+      : raw.formDefinition !== undefined
+        ? raw.formDefinition
+        : undefined;
+  if (formRaw !== undefined) {
+    const parsedForm = parseFormDefinition(formRaw, issues);
+    if (parsedForm) form = parsedForm;
+  }
+
   let termsVersion: string | undefined;
   if (raw.termsVersion !== undefined) {
     if (typeof raw.termsVersion !== 'string') {
@@ -523,6 +681,8 @@ export function parseConfigPayload(raw: unknown): {
         'brand',
         'sections',
         'formDefinitionId',
+        'form',
+        'formDefinition',
         'termsVersion',
       ].includes(k),
   );
@@ -539,6 +699,7 @@ export function parseConfigPayload(raw: unknown): {
     brand,
     sections: sections.sort((a, b) => a.order - b.order),
     ...(formDefinitionId ? { formDefinitionId } : {}),
+    ...(form ? { form } : {}),
     ...(termsVersion ? { termsVersion } : {}),
   };
 

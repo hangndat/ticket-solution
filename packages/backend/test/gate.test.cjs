@@ -38,9 +38,12 @@ const MIGRATIONS = [
   '202610160004_d2_issue_ticket',
   '202610170005_d3_gate',
   '202610170006_d4_config_publish',
+  '202610170007_d4_manual_approval',
+  '202610170008_d4_report_retry',
   '202610170009_n1_notification_delivery',
   '202610170010_e_be_event_lifecycle',
   '202610170011_b_be_config_assets',
+  '202610170012_f_be_form_consent',
 ].map((name) =>
   path.join(__dirname, '../prisma/migrations', name, 'migration.sql'),
 );

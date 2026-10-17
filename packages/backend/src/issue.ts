@@ -17,6 +17,12 @@ import {
   type IssueErrorCode,
 } from './issue-error';
 import {
+  resolveAndValidateConsent,
+  type ConsentSnapshot,
+} from './form-consent';
+import type { FormAnswerValue } from '@ticket/contracts';
+import { expirePendingRequest } from './pending-expiry';
+import {
   assertOpenForIssuance,
   lockEventPolicyForShare,
   dbClock,
@@ -36,6 +42,9 @@ export type RedeemInput = {
   idempotencyKey: string;
   formVersion?: string;
   termsVersion?: string;
+  answers?: Record<string, FormAnswerValue>;
+  /** Explicit consent; must be true when published terms require it. */
+  termsAccepted?: boolean;
 };
 
 export type IssuedTicketResult = {
@@ -59,6 +68,7 @@ export type PendingApprovalResult = {
   ticketTypeId: string;
   sourceId: string;
   status: 'PENDING_REVIEW';
+  expiresAt?: string;
   replayed: boolean;
 };
 
@@ -84,6 +94,7 @@ export type RedeemOutcome =
 type IssueBusinessResult =
   | { kind: 'issued'; ticket: Omit<IssuedTicketResult, 'replayed'> }
   | { kind: 'pending'; pending: Omit<PendingApprovalResult, 'replayed'> };
+
 
 type CodeRow = {
   id: string;
@@ -113,19 +124,42 @@ type OperationRow = {
 type AttendeeRow = { id: string };
 type CounterRow = { issued_count: number; max_tickets: number | null };
 
+/** Trim strings, drop empties, sort keys — must match consent snapshot shape. */
+function normalizeAnswersForHash(
+  answers: Record<string, FormAnswerValue> | undefined,
+): Record<string, FormAnswerValue> {
+  const out: Record<string, FormAnswerValue> = {};
+  for (const key of Object.keys(answers ?? {}).sort()) {
+    const value = answers![key];
+    if (typeof value === 'boolean') {
+      out[key] = value;
+      continue;
+    }
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      if (trimmed.length > 0) out[key] = trimmed;
+    }
+  }
+  return out;
+}
+
 function canonicalRequestHash(input: {
   tenantId: string;
   eventId: string;
   rawCode: string;
-  formVersion?: string;
-  termsVersion?: string;
+  formVersion?: string | null;
+  termsVersion?: string | null;
+  answers?: Record<string, FormAnswerValue>;
+  termsAccepted?: boolean;
 }): string {
   const payload = JSON.stringify({
     tenantId: input.tenantId,
     eventId: input.eventId,
     code: input.rawCode.trim().toUpperCase(),
-    formVersion: input.formVersion ?? null,
-    termsVersion: input.termsVersion ?? null,
+    formVersion: input.formVersion?.trim() || null,
+    termsVersion: input.termsVersion?.trim() || null,
+    answers: normalizeAnswersForHash(input.answers),
+    termsAccepted: input.termsAccepted === true ? true : null,
   });
   return createHash('sha256').update(payload).digest('hex');
 }
@@ -350,6 +384,14 @@ async function runIssueBusiness(
   const now = await dbClock(tx);
   assertOpenForIssuance(event, now, 'issue');
 
+  // Published form/terms gate (before code mutation).
+  const { snapshot: consent } = await resolveAndValidateConsent(
+    tx,
+    input.tenantId,
+    input.eventId,
+    input,
+  );
+
   // 3) Lock code FOR UPDATE
   const codeHmac = hashRedemptionCode(hmac, input.rawCode);
   const codes = await tx.$queryRaw<CodeRow[]>`
@@ -411,7 +453,7 @@ async function runIssueBusiness(
   }
 
   if (code.approval_mode === 'MANUAL') {
-    return holdManualRedemption(tx, input, code, operationId);
+    return holdManualRedemption(tx, input, code, operationId, consent, now);
   }
 
   // 4) Upsert attendee + lock counter (AUTO issue only)
@@ -546,15 +588,20 @@ async function runIssueBusiness(
       AND status = 'AVAILABLE'
   `;
 
+  const consentAcceptedAt = consent.requiresConsentTimestamp ? now : null;
   await tx.$executeRaw`
     INSERT INTO redemption_requests (
       tenant_id, event_id, id, actor_user_id, redemption_code_id,
-      status, form_version, terms_version, created_at, updated_at
+      status, form_version, terms_version, answers_json, terms_accepted,
+      consent_accepted_at, form_definition_hash, terms_content_hash,
+      decided_at, created_at, updated_at
     ) VALUES (
       ${input.tenantId}::uuid, ${input.eventId}::uuid, ${requestId}::uuid,
       ${input.actorUserId}::uuid, ${code.id}::uuid, 'ISSUED',
-      ${input.formVersion ?? null}, ${input.termsVersion ?? null},
-      now(), now()
+      ${consent.formVersion}, ${consent.termsVersion},
+      ${JSON.stringify(consent.answers)}::jsonb, ${consent.termsAccepted},
+      ${consentAcceptedAt}, ${consent.formDefinitionHash},
+      ${consent.termsContentHash}, ${now}, now(), now()
     )
   `;
 
@@ -588,7 +635,7 @@ async function runIssueBusiness(
     )
   `;
 
-  // 7) Audit + outbox TicketIssued + notification (same commit)
+  // 7) Audit + outbox TicketIssued + notification (same commit). No answers/PII in audit.
   const outboxPayload = {
     ticketId,
     requestId,
@@ -626,7 +673,13 @@ async function runIssueBusiness(
       ${input.tenantId}::uuid, ${input.eventId}::uuid, ${auditId}::uuid,
       ${input.actorUserId}::uuid, 'ticket.issued', 'ticket',
       ${ticketId}::uuid,
-      ${JSON.stringify({ requestId, codeId: code.id })}::jsonb,
+      ${JSON.stringify({
+        requestId,
+        codeId: code.id,
+        formVersion: consent.formVersion,
+        termsVersion: consent.termsVersion,
+        termsAccepted: consent.termsAccepted === true,
+      })}::jsonb,
       ${operationId}::uuid, now()
     )
   `;
@@ -651,6 +704,7 @@ function pendingBody(
   code: CodeRow,
   requestId: string,
   operationId: string,
+  expiresAt: Date | null,
 ): Omit<PendingApprovalResult, 'replayed'> {
   return {
     code: APPROVAL_PENDING,
@@ -660,6 +714,7 @@ function pendingBody(
     ticketTypeId: code.ticket_type_id,
     sourceId: code.source_id,
     status: 'PENDING_REVIEW',
+    expiresAt: expiresAt ? expiresAt.toISOString() : undefined,
   };
 }
 
@@ -670,10 +725,16 @@ async function resumeOrRejectHold(
   operationId: string,
 ): Promise<IssueBusinessResult> {
   if (code.approval_mode === 'MANUAL' && code.active_request_id) {
+    // Code already locked; lock request next (order: … → code → request).
     const rows = await tx.$queryRaw<
-      Array<{ id: string; actor_user_id: string; status: string }>
+      Array<{
+        id: string;
+        actor_user_id: string;
+        status: string;
+        expires_at: Date | null;
+      }>
     >`
-      SELECT id, actor_user_id, status
+      SELECT id, actor_user_id, status, expires_at
       FROM redemption_requests
       WHERE tenant_id = ${input.tenantId}::uuid
         AND event_id = ${input.eventId}::uuid
@@ -686,9 +747,32 @@ async function resumeOrRejectHold(
       pending.status === 'PENDING_REVIEW' &&
       pending.actor_user_id === input.actorUserId
     ) {
+      const expired = await expirePendingRequest(tx, {
+        tenantId: input.tenantId,
+        eventId: input.eventId,
+        requestId: pending.id,
+        actorUserId: input.actorUserId,
+      });
+      if (expired.expired) {
+        throw new IssueError(
+          ISSUE_ERROR_CODES.PENDING_EXPIRED,
+          'Pending redemption has expired',
+        );
+      }
+      // Re-read expires_at after lazy expire check (still pending).
+      const refreshed = await tx.$queryRaw<Array<{ expires_at: Date | null }>>`
+        SELECT expires_at FROM redemption_requests
+        WHERE tenant_id = ${input.tenantId}::uuid AND id = ${pending.id}::uuid
+      `;
       return {
         kind: 'pending',
-        pending: pendingBody(input, code, pending.id, operationId),
+        pending: pendingBody(
+          input,
+          code,
+          pending.id,
+          operationId,
+          refreshed[0]?.expires_at ?? pending.expires_at,
+        ),
       };
     }
   }
@@ -704,7 +788,56 @@ async function holdManualRedemption(
   input: RedeemInput,
   code: CodeRow,
   operationId: string,
+  consent: ConsentSnapshot,
+  now: Date,
 ): Promise<IssueBusinessResult> {
+  const sources = await tx.$queryRaw<
+    Array<{ pending_ttl_hours: number; max_pending_per_user: number }>
+  >`
+    SELECT pending_ttl_hours, max_pending_per_user
+    FROM issuance_sources
+    WHERE tenant_id = ${input.tenantId}::uuid
+      AND id = ${code.source_id}::uuid
+  `;
+  const source = sources[0];
+  const ttlHours = source?.pending_ttl_hours ?? 24;
+  const maxPending = source?.max_pending_per_user ?? 5;
+
+  // Serialize pending-cap checks per actor/event via attendee row lock (no quota).
+  const holdAttendeeId = randomUUID();
+  await tx.$executeRaw`
+    INSERT INTO event_attendees (
+      tenant_id, event_id, id, user_id, canonical_email, created_at, updated_at
+    ) VALUES (
+      ${input.tenantId}::uuid, ${input.eventId}::uuid, ${holdAttendeeId}::uuid,
+      ${input.actorUserId}::uuid, ${input.actorEmail}, now(), now()
+    )
+    ON CONFLICT (tenant_id, event_id, user_id) DO NOTHING
+  `;
+  await tx.$queryRaw`
+    SELECT id FROM event_attendees
+    WHERE tenant_id = ${input.tenantId}::uuid
+      AND event_id = ${input.eventId}::uuid
+      AND user_id = ${input.actorUserId}::uuid
+    FOR UPDATE
+  `;
+
+  const pendingCount = await tx.$queryRaw<Array<{ n: number }>>`
+    SELECT COUNT(*)::int AS n
+    FROM redemption_requests
+    WHERE tenant_id = ${input.tenantId}::uuid
+      AND event_id = ${input.eventId}::uuid
+      AND actor_user_id = ${input.actorUserId}::uuid
+      AND status = 'PENDING_REVIEW'
+  `;
+  if ((pendingCount[0]?.n ?? 0) >= maxPending) {
+    throw new IssueError(
+      ISSUE_ERROR_CODES.PENDING_LIMIT,
+      'Pending redemption limit reached for this event',
+    );
+  }
+
+  const expiresAt = new Date(now.getTime() + ttlHours * 60 * 60 * 1000);
   let requestId: string;
   try {
     const held = await holdCodeForReview(tx, {
@@ -712,8 +845,14 @@ async function holdManualRedemption(
       eventId: input.eventId,
       ownerUserId: input.actorUserId,
       codeId: code.id,
-      formVersion: input.formVersion ?? null,
-      termsVersion: input.termsVersion ?? null,
+      formVersion: consent.formVersion,
+      termsVersion: consent.termsVersion,
+      answers: consent.answers,
+      termsAccepted: consent.termsAccepted,
+      consentAcceptedAt: consent.requiresConsentTimestamp ? now : null,
+      formDefinitionHash: consent.formDefinitionHash,
+      termsContentHash: consent.termsContentHash,
+      expiresAt,
     });
     requestId = held.requestId;
   } catch (error) {
@@ -733,13 +872,19 @@ async function holdManualRedemption(
       ${input.tenantId}::uuid, ${input.eventId}::uuid, ${randomUUID()}::uuid,
       ${input.actorUserId}::uuid, 'redemption.pending', 'redemption_request',
       ${requestId}::uuid,
-      ${JSON.stringify({ codeId: code.id, sourceId: code.source_id })}::jsonb,
+      ${JSON.stringify({
+        codeId: code.id,
+        sourceId: code.source_id,
+        formVersion: consent.formVersion,
+        termsVersion: consent.termsVersion,
+        termsAccepted: consent.termsAccepted === true,
+      })}::jsonb,
       ${operationId}::uuid, now()
     )
   `;
   return {
     kind: 'pending',
-    pending: pendingBody(input, code, requestId, operationId),
+    pending: pendingBody(input, code, requestId, operationId, expiresAt),
   };
 }
 
@@ -885,6 +1030,7 @@ function pendingFromStored(
     ticketTypeId: body.ticketTypeId,
     sourceId: body.sourceId,
     status: 'PENDING_REVIEW',
+    expiresAt: body.expiresAt,
   };
 }
 
