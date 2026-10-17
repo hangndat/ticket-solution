@@ -40,6 +40,9 @@ export const NOTIFICATION_REMINDER_CANCEL_COMMAND =
   'notification.reminder.cancel' as const;
 export const NOTIFICATION_RETRY_COMMAND = 'notification.retry' as const;
 
+/** D7 offline Gate sync batch (see packages/contracts/src/offline-sync.ts). */
+export const OFFLINE_SYNC_COMMAND = 'gate.offline_sync' as const;
+
 export type OperationCommand =
   | typeof REDEMPTION_COMMAND
   | typeof REDEMPTION_APPROVE_COMMAND
@@ -60,4 +63,5 @@ export type OperationCommand =
   | typeof NOTIFICATION_TEMPLATE_PUBLISH_COMMAND
   | typeof NOTIFICATION_REMINDER_CREATE_COMMAND
   | typeof NOTIFICATION_REMINDER_CANCEL_COMMAND
-  | typeof NOTIFICATION_RETRY_COMMAND;
+  | typeof NOTIFICATION_RETRY_COMMAND
+  | typeof OFFLINE_SYNC_COMMAND;

@@ -234,6 +234,7 @@ test(
         'staff_sessions',
         'checkin_reservations',
         'checkins',
+        'offline_sync_events',
         'event_config_versions',
         'outbox',
         'notifications',
