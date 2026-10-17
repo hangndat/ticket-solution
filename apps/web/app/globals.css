@@ -98,7 +98,7 @@ nav a,
 .auth-page .intro {
   max-width: 640px;
 }
-.auth-poc {
+.auth-session {
   display: grid;
   gap: 32px;
   margin: 32px 0;
