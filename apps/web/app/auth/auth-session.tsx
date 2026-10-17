@@ -8,7 +8,7 @@ type MeCallResult = {
 };
 
 /**
- * Identity session — Keycloak OIDC via BFF cookies.
+ * Identity session — OIDC via same-origin cookies.
  * Session lives in HttpOnly cookies; /api/bff/me uses the server cookie.
  */
 export function AuthSession() {
@@ -31,33 +31,35 @@ export function AuthSession() {
   return (
     <div className="auth-session">
       <section className="auth-status" aria-live="polite">
-        <h2>Session status</h2>
+        <h2>Trạng thái phiên</h2>
         <p className="intro">
-          Access token is stored in an HttpOnly cookie after Authorization Code
-          + PKCE against self-hosted Keycloak. Browser never holds the token in
-          localStorage.
+          Phiên đăng nhập được lưu an toàn trên máy chủ (cookie HttpOnly). Trình
+          duyệt không giữ token trong localStorage.
         </p>
       </section>
 
       <section className="auth-actions">
-        <h2>Actions</h2>
+        <h2>Thao tác</h2>
         <div className="auth-buttons">
           <a className="button-link" href="/api/auth/login">
-            Sign in (Keycloak)
+            Đăng nhập
           </a>
           <button type="button" onClick={callMe} disabled={pending}>
-            {pending ? 'Calling GET /v1/me…' : 'GET /v1/me (via BFF)'}
+            {pending ? 'Đang kiểm tra phiên…' : 'Kiểm tra phiên'}
           </button>
           <a className="button-link" href="/api/auth/logout">
-            Sign out
+            Đăng xuất
           </a>
         </div>
         {meResult ? (
-          <pre className="me-result" tabIndex={0}>
-            HTTP {meResult.status}
-            {'\n'}
-            {meResult.body}
-          </pre>
+          <details className="redeem-meta" open>
+            <summary>Kết quả kiểm tra phiên</summary>
+            <pre className="me-result" tabIndex={0}>
+              HTTP {meResult.status}
+              {'\n'}
+              {meResult.body}
+            </pre>
+          </details>
         ) : null}
       </section>
     </div>
