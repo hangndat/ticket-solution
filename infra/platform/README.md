@@ -33,6 +33,7 @@ D5_PLATFORM_OIDC_ISSUER=http://127.0.0.1:18089/realms/ticket \
   ./scripts/platform-keycloak-apply-realm.sh
 D5_PLATFORM_OIDC_ISSUER=http://127.0.0.1:18089/realms/ticket \
   ./scripts/platform-keycloak-assurance-smoke.sh
+# includes Auth Code+PKCE+CONFIGURE_TOTP → acr=2 live proof
 ./scripts/platform-keycloak-task-stack.sh down
 ```
 
