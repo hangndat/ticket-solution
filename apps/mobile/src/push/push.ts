@@ -25,11 +25,31 @@ export class PushDeliveryRefused extends Error {
   }
 }
 
+/**
+ * Runtime fallback for Release/TestFlight when Metro did not inline
+ * EXPO_PUBLIC_PUSH_PROVIDER (mirrors identity/config ticketPublic bake).
+ */
+function readBakedPushProvider(): string | null {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const mod = require('expo-constants') as {
+      default?: { expoConfig?: { extra?: { ticketPublic?: { pushProvider?: string } } } };
+      expoConfig?: { extra?: { ticketPublic?: { pushProvider?: string } } };
+    };
+    const Constants = mod.default ?? mod;
+    const raw = Constants.expoConfig?.extra?.ticketPublic?.pushProvider?.trim() ?? '';
+    return raw.length > 0 ? raw : null;
+  } catch {
+    return null;
+  }
+}
+
 export function pushProviderName(
   env: Record<string, string | undefined> = process.env,
 ): string | null {
   const raw = env.EXPO_PUBLIC_PUSH_PROVIDER?.trim() ?? '';
-  return raw.length > 0 ? raw : null;
+  if (raw.length > 0) return raw;
+  return readBakedPushProvider();
 }
 
 export function isApnsProvider(provider: string | null): boolean {
