@@ -1,7 +1,6 @@
 import { Link } from 'expo-router';
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import {
-  ActivityIndicator,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -10,6 +9,12 @@ import {
 } from 'react-native';
 import type { TicketSummary } from '@ticket/contracts';
 import { BrandWordmark, Notice } from '@/components/page';
+import {
+  EmptyState,
+  ErrorState,
+  LoadingState,
+} from '@/components/screen-state';
+import { walletCopy } from '@/components/screen-state-copy';
 import { brand, colors } from '@/theme/colors';
 import { isOidcConfigured, getTenantId } from '@/identity/config';
 import { verifyViaMe } from '@/identity/fetch-me';
@@ -220,8 +225,14 @@ function SignedOutWallet() {
         onPress={() => void onSignIn()}
         disabled={busy}
       />
-      {busy ? <ActivityIndicator /> : null}
-      {error ? <Notice title="Đăng nhập thất bại">{error}</Notice> : null}
+      {busy ? (
+        <LoadingState title={walletCopy.signInLoading.title}>
+          {walletCopy.signInLoading.body}
+        </LoadingState>
+      ) : null}
+      {error ? (
+        <ErrorState title={walletCopy.signInErrorTitle}>{error}</ErrorState>
+      ) : null}
     </ScrollView>
   );
 }
@@ -310,17 +321,19 @@ function OfflineDisplayWallet({
       </Notice>
 
       {busy && tickets.length === 0 ? (
-        <View style={{ padding: 16, alignItems: 'center' }}>
-          <ActivityIndicator />
-        </View>
+        <LoadingState title={walletCopy.loading.title}>
+          {walletCopy.loading.body}
+        </LoadingState>
       ) : null}
 
-      {error ? <Notice title="Thông báo">{error}</Notice> : null}
+      {error ? (
+        <ErrorState title={walletCopy.errorTitle}>{error}</ErrorState>
+      ) : null}
 
       {tickets.length === 0 && !busy ? (
-        <Notice title="Chưa có vé trong bộ đệm">
-          Đăng nhập online rồi kéo để làm mới nhằm đổ bộ đệm hiển thị offline.
-        </Notice>
+        <EmptyState title={walletCopy.emptyOffline.title}>
+          {walletCopy.emptyOffline.body}
+        </EmptyState>
       ) : (
         <View style={{ gap: 12 }}>
           {tickets.map((ticket) => (
@@ -539,18 +552,25 @@ function VerifiedWallet({ userId }: { userId: string }) {
       </Text>
 
       {busy && tickets.length === 0 ? (
-        <View style={{ padding: 16, alignItems: 'center' }}>
-          <ActivityIndicator />
-        </View>
+        <LoadingState title={walletCopy.loading.title}>
+          {walletCopy.loading.body}
+        </LoadingState>
       ) : null}
 
-      {error ? <Notice title="Thông báo">{error}</Notice> : null}
+      {error ? (
+        <ErrorState
+          title={walletCopy.errorTitle}
+          onRetry={() => void onRefresh()}
+          retryLabel="Làm mới vé"
+        >
+          {error}
+        </ErrorState>
+      ) : null}
 
       {tickets.length === 0 && !busy ? (
-        <Notice title="Chưa có vé">
-          Đổi mã trên web bằng cùng tài khoản Keycloak, rồi kéo để làm mới. Danh
-          sách trống nghĩa là API trả về không có vé — không phải ví giả.
-        </Notice>
+        <EmptyState title={walletCopy.emptyOnline.title}>
+          {walletCopy.emptyOnline.body}
+        </EmptyState>
       ) : (
         <View style={{ gap: 12 }}>
           {tickets.map((ticket) => (
