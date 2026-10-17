@@ -55,7 +55,7 @@ const fontBody = localFont({
 export const metadata: Metadata = {
   title: { default: 'Vemoki', template: '%s · Vemoki' },
   description:
-    'Vemoki — nền tảng sự kiện. Nội dung demo mang nhãn rõ; đổi mã và cổng dùng API thật qua BFF.',
+    'Vemoki — nền tảng sự kiện. Nội dung demo mang nhãn rõ; đổi mã và cổng dùng hệ thống thật.',
   robots: { index: false, follow: false },
 };
 
