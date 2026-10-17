@@ -10,7 +10,7 @@
 
 | Slice | Exact SHA |
 | --- | --- |
-| Client tip (`hangndat/d7-milestone` after this evidence push) | `625adafe944218c97b4af3dec7a97f90c8d3a022` |
+| Client tip (`hangndat/d7-milestone` after this evidence push) | `3fb6dc5f0a68d38444d8af761170d4bd1ba4cfef` |
 | Evidence commit (F1/F2 artifacts) | `763e14951c7a74f081ccb50e08ac0bc8201ac244` |
 | Behavior (mobile offline UAT code) | `c8606fe59a8e5771aac79c420736960781d3ee3a` |
 | Server / integration (`origin/main` API with `POST …/offline-sync`) | `f7c88ffd6f936b6da56aa8cea8451f3ae889c278` |
