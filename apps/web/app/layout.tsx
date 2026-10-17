@@ -1,6 +1,12 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import localFont from 'next/font/local';
+import {
+  ThemeProvider,
+  VEMOKI_BRANDING,
+  brandingToCssVars,
+} from '../src/branding';
+import { FooterBrand } from '../src/site-chrome';
 import './globals.css';
 
 /**
@@ -9,6 +15,7 @@ import './globals.css';
  * - Display: Syne — geometric, expressive; used for wordmark / hero.
  * - Body: Be Vietnam Pro — readable VI + Latin; not Inter/Arial/system.
  * Colors stay O09 from brand/vemoki/tokens.json (ink/paper/signal/focus).
+ * D8-S2: ThemeProvider applies tenant overrides when present; root = Vemoki.
  * Files + OFL notices: apps/web/fonts/
  */
 const fontDisplay = localFont({
@@ -53,19 +60,25 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
+  const rootVars = brandingToCssVars(VEMOKI_BRANDING);
   return (
-    <html lang="vi" className={`${fontDisplay.variable} ${fontBody.variable}`}>
+    <html
+      lang="vi"
+      className={`${fontDisplay.variable} ${fontBody.variable}`}
+      style={rootVars}
+      data-branding-source={VEMOKI_BRANDING.source}
+    >
       <body>
-        <a className="skip-link" href="#main">
-          Bỏ qua đến nội dung
-        </a>
-        {children}
-        <footer className="footer">
-          <span className="footer-brand">
-            vemoki<span aria-hidden="true">↗</span>
-          </span>
-          <span>Demo mang nhãn rõ · Đổi mã / cổng qua API thật</span>
-        </footer>
+        <ThemeProvider branding={VEMOKI_BRANDING}>
+          <a className="skip-link" href="#main">
+            Bỏ qua đến nội dung
+          </a>
+          {children}
+          <footer className="footer">
+            <FooterBrand />
+            <span>Demo mang nhãn rõ · Đổi mã / cổng qua API thật</span>
+          </footer>
+        </ThemeProvider>
       </body>
     </html>
   );
