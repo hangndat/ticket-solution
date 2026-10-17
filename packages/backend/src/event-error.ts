@@ -1,0 +1,36 @@
+/** Stable business error codes for event metadata / lifecycle (C-E). */
+export const EVENT_ERROR_CODES = {
+  EVENT_NOT_FOUND: 'EVENT_NOT_FOUND',
+  SLUG_TAKEN: 'SLUG_TAKEN',
+  INVALID_SLUG: 'INVALID_SLUG',
+  INVALID_TIMEZONE: 'INVALID_TIMEZONE',
+  INVALID_WINDOW: 'INVALID_WINDOW',
+  INVALID_VISIBILITY: 'INVALID_VISIBILITY',
+  INVALID_METADATA: 'INVALID_METADATA',
+  REVISION_CONFLICT: 'REVISION_CONFLICT',
+  EVENT_CANCELLED: 'EVENT_CANCELLED',
+  EVENT_ARCHIVED: 'EVENT_ARCHIVED',
+  EVENT_CLOSED: 'EVENT_CLOSED',
+  CHECKIN_WINDOW_CLOSED: 'CHECKIN_WINDOW_CLOSED',
+  REDEMPTION_WINDOW_CLOSED: 'REDEMPTION_WINDOW_CLOSED',
+  IMPACT_CONFIRM_REQUIRED: 'IMPACT_CONFIRM_REQUIRED',
+  CLONE_NOT_DRAFT: 'CLONE_NOT_DRAFT',
+  IDEMPOTENCY_KEY_REQUIRED: 'IDEMPOTENCY_KEY_REQUIRED',
+  IDEMPOTENCY_CONFLICT: 'IDEMPOTENCY_CONFLICT',
+  RETRYABLE_CONFLICT: 'RETRYABLE_CONFLICT',
+} as const;
+
+export type EventErrorCode =
+  (typeof EVENT_ERROR_CODES)[keyof typeof EVENT_ERROR_CODES];
+
+export class EventError extends Error {
+  readonly code: EventErrorCode;
+  readonly retryable: boolean;
+
+  constructor(code: EventErrorCode, message: string, retryable = false) {
+    super(message);
+    this.name = 'EventError';
+    this.code = code;
+    this.retryable = retryable;
+  }
+}
