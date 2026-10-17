@@ -51,6 +51,16 @@ export async function logoutAndClearWalletArtifacts(
     errors.push(asError(error, 'Guest claim intent clear failed'));
   }
 
+  // Drop push tap login-return intent (C-N) so late resolve cannot route prior user.
+  try {
+    const { clearNotificationTapIntent } = await import(
+      '../push/notification-intent.ts'
+    );
+    clearNotificationTapIntent();
+  } catch (error) {
+    errors.push(asError(error, 'Push notification intent clear failed'));
+  }
+
   try {
     await session.logout();
   } catch (error) {
