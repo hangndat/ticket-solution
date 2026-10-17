@@ -1,8 +1,11 @@
 import {
+  buildCreateEventUpstreamBody,
   createEventUpstreamPath,
   eventsListUpstreamPath,
+  isEventVisibility,
 } from '../../../../../src/admin/create-event';
-import { assertSameOrigin } from '../../../../../src/bff/origin';
+import { requireIdempotencyKey } from '../../../../../src/admin/event-bff-body';
+import { assertMutatingBrowserAsync } from '../../../../../src/bff/csrf';
 import { isUuid } from '../../../../../src/bff/ids';
 import {
   bffApiError,
@@ -14,17 +17,30 @@ type Body = {
   slug?: string;
   name?: string;
   timezone?: string;
-  redemptionOpensAt?: string;
-  redemptionClosesAt?: string;
+  visibility?: string;
+  startsAt?: string | null;
+  endsAt?: string | null;
+  venueName?: string;
+  venueAddress?: string;
+  venue?: { name?: string; address?: string } | null;
+  contactEmail?: string;
+  contactPhone?: string;
+  contactUrl?: string;
+  contact?: { email?: string; phone?: string; url?: string } | null;
+  redemptionOpensAt?: string | null;
+  redemptionClosesAt?: string | null;
+  checkInOpensAt?: string | null;
+  checkInClosesAt?: string | null;
+  maxTicketsPerAttendee?: number | null;
   idempotencyKey?: string;
 };
 
 /**
  * POST /api/bff/admin/events → POST /v1/tenants/{tenantId}/events
- * Requires Idempotency-Key (contract).
+ * C-E CreateEventBodyV2 + Idempotency-Key + CSRF.
  */
 export async function POST(request: Request) {
-  const csrf = assertSameOrigin(request);
+  const csrf = await assertMutatingBrowserAsync(request);
   if (csrf) return csrf;
   let body: Body;
   try {
@@ -36,14 +52,8 @@ export async function POST(request: Request) {
   if (!isUuid(tenantId)) {
     return bffApiError('TENANT_REQUIRED', 'tenantId must be a UUID.', 422);
   }
-  const idempotencyKey = body.idempotencyKey?.trim() ?? '';
-  if (!isUuid(idempotencyKey)) {
-    return bffApiError(
-      'IDEMPOTENCY_KEY_REQUIRED',
-      'idempotencyKey must be a UUID.',
-      422,
-    );
-  }
+  const idempotencyKey = requireIdempotencyKey(body.idempotencyKey);
+  if (idempotencyKey instanceof Response) return idempotencyKey;
   const slug = body.slug?.trim() ?? '';
   const name = body.name?.trim() ?? '';
   if (!slug || !name) {
@@ -53,14 +63,76 @@ export async function POST(request: Request) {
       422,
     );
   }
-  const payload: Record<string, unknown> = { slug, name };
-  if (body.timezone?.trim()) payload.timezone = body.timezone.trim();
-  if (body.redemptionOpensAt?.trim()) {
-    payload.redemptionOpensAt = body.redemptionOpensAt.trim();
+  if (
+    body.visibility !== undefined &&
+    body.visibility !== null &&
+    !isEventVisibility(body.visibility.trim())
+  ) {
+    return bffApiError(
+      'INVALID_VISIBILITY',
+      'visibility must be PUBLIC or UNLISTED.',
+      422,
+    );
   }
-  if (body.redemptionClosesAt?.trim()) {
-    payload.redemptionClosesAt = body.redemptionClosesAt.trim();
+  if (
+    body.maxTicketsPerAttendee !== undefined &&
+    body.maxTicketsPerAttendee !== null &&
+    (typeof body.maxTicketsPerAttendee !== 'number' ||
+      !Number.isInteger(body.maxTicketsPerAttendee) ||
+      body.maxTicketsPerAttendee < 1)
+  ) {
+    return bffApiError(
+      'INVALID_INPUT',
+      'maxTicketsPerAttendee must be a positive integer or null.',
+      422,
+    );
   }
+
+  const venueName =
+    body.venueName?.trim() ||
+    (body.venue && typeof body.venue === 'object'
+      ? body.venue.name?.trim()
+      : undefined);
+  const venueAddress =
+    body.venueAddress?.trim() ||
+    (body.venue && typeof body.venue === 'object'
+      ? body.venue.address?.trim()
+      : undefined);
+  const contactEmail =
+    body.contactEmail?.trim() ||
+    (body.contact && typeof body.contact === 'object'
+      ? body.contact.email?.trim()
+      : undefined);
+  const contactPhone =
+    body.contactPhone?.trim() ||
+    (body.contact && typeof body.contact === 'object'
+      ? body.contact.phone?.trim()
+      : undefined);
+  const contactUrl =
+    body.contactUrl?.trim() ||
+    (body.contact && typeof body.contact === 'object'
+      ? body.contact.url?.trim()
+      : undefined);
+
+  const payload = buildCreateEventUpstreamBody({
+    slug,
+    name,
+    timezone: body.timezone,
+    visibility: body.visibility?.trim(),
+    startsAt: body.startsAt,
+    endsAt: body.endsAt,
+    venueName,
+    venueAddress,
+    contactEmail,
+    contactPhone,
+    contactUrl,
+    redemptionOpensAt: body.redemptionOpensAt,
+    redemptionClosesAt: body.redemptionClosesAt,
+    checkInOpensAt: body.checkInOpensAt,
+    checkInClosesAt: body.checkInClosesAt,
+    maxTicketsPerAttendee: body.maxTicketsPerAttendee,
+  });
+
   return forwardWithBearer(createEventUpstreamPath(tenantId), {
     method: 'POST',
     headers: {

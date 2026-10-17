@@ -227,6 +227,25 @@ describe('export paths and interpreters', () => {
 });
 
 describe('create event / list / ticket type / source', () => {
+  const eventDetail = {
+    eventId: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
+    tenantId: scope.tenantId,
+    slug: 'aurora',
+    name: 'Aurora Night',
+    contentStatus: 'DRAFT',
+    businessStatus: 'ACTIVE',
+    visibility: 'UNLISTED',
+    timezone: 'Asia/Ho_Chi_Minh',
+    startsAt: null,
+    endsAt: null,
+    venue: null,
+    contact: null,
+    redemptionWindow: { opensAt: null, closesAt: null },
+    checkInWindow: { opensAt: null, closesAt: null },
+    revision: 1,
+    maxTicketsPerAttendee: null,
+  };
+
   it('maps create path and rejects incomplete success shapes', () => {
     assert.equal(
       createEventUpstreamPath(scope.tenantId),
@@ -236,18 +255,23 @@ describe('create event / list / ticket type / source', () => {
       interpretCreateEvent(201, { eventId: 'x', slug: 'a' }, false).kind,
       'unknown',
     );
-    const ok = interpretCreateEvent(
-      201,
-      {
-        eventId: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
-        slug: 'aurora',
-        name: 'Aurora Night',
-        status: 'DRAFT',
-        timezone: 'Asia/Ho_Chi_Minh',
-      },
-      false,
+    // Legacy status summary (pre-C-E) is fail-closed.
+    assert.equal(
+      interpretCreateEvent(
+        201,
+        {
+          eventId: eventDetail.eventId,
+          slug: 'aurora',
+          name: 'Aurora Night',
+          status: 'DRAFT',
+          timezone: 'Asia/Ho_Chi_Minh',
+        },
+        false,
+      ).kind,
+      'unknown',
     );
-    assert.equal(ok.kind, 'created');
+    const ok = interpretCreateEvent(201, eventDetail, false);
+    assert.equal(ok.kind, 'ok');
     const unclear = interpretCreateEvent(0, null, true);
     assert.equal(unclear.kind, 'unknown');
     if (unclear.kind === 'unknown') {
@@ -255,19 +279,12 @@ describe('create event / list / ticket type / source', () => {
     }
   });
 
-  it('lists events strictly from items[]', () => {
+  it('lists events strictly from C-E EventDetail items[]', () => {
     const list = interpretEventList(
       200,
       {
-        items: [
-          {
-            eventId: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
-            slug: 'aurora',
-            name: 'Aurora Night',
-            status: 'DRAFT',
-            timezone: 'Asia/Ho_Chi_Minh',
-          },
-        ],
+        items: [eventDetail],
+        nextCursor: null,
       },
       false,
     );

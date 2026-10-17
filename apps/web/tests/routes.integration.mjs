@@ -234,6 +234,7 @@ test('production routes isolate tenant content and reject unknown pairs', async 
     assert.equal(denyBff.status, 503);
     assert.equal((await denyBff.json()).code, 'OIDC_MISCONFIGURED');
 
+    // C-E create uses full CSRF double-submit (not Origin-only); missing token → 403.
     const createEventBff = await fetch(base + '/api/bff/admin/events', {
       method: 'POST',
       headers: sameOriginJson,
@@ -244,8 +245,8 @@ test('production routes isolate tenant content and reject unknown pairs', async 
         idempotencyKey: '66666666-6666-4666-8666-666666666666',
       }),
     });
-    assert.equal(createEventBff.status, 503);
-    assert.equal((await createEventBff.json()).code, 'OIDC_MISCONFIGURED');
+    assert.equal(createEventBff.status, 403);
+    assert.equal((await createEventBff.json()).code, 'CSRF_TOKEN_INVALID');
 
     const csListBff = await fetch(
       base +
