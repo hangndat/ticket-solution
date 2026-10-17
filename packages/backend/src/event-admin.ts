@@ -15,11 +15,46 @@ import {
   type PatchEventBody,
 } from '@ticket/contracts';
 import { EventError, EVENT_ERROR_CODES } from './event-error';
+import {
+  EventAdminError,
+  EVENT_ADMIN_ERROR_CODES,
+} from './event-admin-error';
 import { canEnqueueOutboxKind, dbClock } from './event-policy';
-import { requireTenantPermission } from './membership';
+import {
+  grantEventAssignment,
+  requireTenantPermission,
+} from './membership';
 
 const PERMISSION_CREATE = 'event.create';
 const PERMISSION_UPDATE = 'event.update';
+const PERMISSION_CONFIG = 'event.config';
+
+/** Management allowlist granted to event creator (not client-supplied). */
+export type EventSummary = {
+  eventId: string;
+  slug: string;
+  name: string;
+  status: string;
+  timezone: string;
+};
+
+export const CREATOR_EVENT_PERMISSIONS = [
+  'event.config',
+  'event.publish',
+  'inventory.import',
+  'redemption.approve',
+  'report.read',
+  'cs.lookup',
+  'cs.resend',
+  'export.create',
+  'export.download',
+  'gate.confirm',
+  'gate.undo',
+  'ticket.revoke',
+] as const;
+
+const APPROVAL_MODES = new Set(['AUTO', 'MANUAL']);
+
 const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -611,17 +646,12 @@ export async function createEvent(
     userId: input.actorUserId,
     permission: PERMISSION_CREATE,
   });
-  await tx.$executeRaw`
-    INSERT INTO event_assignments (
-      id, tenant_id, event_id, membership_id, permissions, activated_at, created_at, updated_at
-    ) VALUES (
-      ${randomUUID()}::uuid, ${input.tenantId}::uuid, ${eventId}::uuid,
-      ${membership.membership.membershipId}::uuid,
-      ARRAY[${PERMISSION_UPDATE}, 'event.config', 'event.publish', 'inventory.import']::text[],
-      now(), now(), now()
-    )
-    ON CONFLICT (tenant_id, event_id, membership_id) DO NOTHING
-  `;
+  await grantEventAssignment(tx, {
+    tenantId: input.tenantId,
+    eventId,
+    membershipId: membership.membership.membershipId,
+    permissions: [PERMISSION_UPDATE, ...CREATOR_EVENT_PERMISSIONS],
+  });
 
   const row = await selectEvent(tx, input.tenantId, eventId);
   if (!row) {
@@ -1047,16 +1077,12 @@ export async function cloneEvent(
     permission: PERMISSION_UPDATE,
     eventId: input.sourceEventId,
   });
-  await tx.$executeRaw`
-    INSERT INTO event_assignments (
-      id, tenant_id, event_id, membership_id, permissions, activated_at, created_at, updated_at
-    ) VALUES (
-      ${randomUUID()}::uuid, ${input.tenantId}::uuid, ${newEventId}::uuid,
-      ${membership.membership.membershipId}::uuid,
-      ARRAY[${PERMISSION_UPDATE}, 'event.config', 'event.publish', 'inventory.import']::text[],
-      now(), now(), now()
-    )
-  `;
+  await grantEventAssignment(tx, {
+    tenantId: input.tenantId,
+    eventId: newEventId,
+    membershipId: membership.membership.membershipId,
+    permissions: [PERMISSION_UPDATE, ...CREATOR_EVENT_PERMISSIONS],
+  });
 
   // Explicit zero-copy guard: no staff sessions / codes / attendees / tickets / quotas.
   const leaked = await tx.$queryRaw<{ n: bigint }[]>`
@@ -1272,3 +1298,122 @@ export async function cancelEvent(
 
 // Re-export Archive body type alias for API layer convenience.
 export type { ArchiveEventBody } from '@ticket/contracts';
+
+export async function createTicketType(
+  tx: Prisma.TransactionClient,
+  input: {
+    tenantId: string;
+    eventId: string;
+    actorUserId: string;
+    label: string;
+    entitlementSnapshot?: Record<string, unknown>;
+  },
+): Promise<{ ticketTypeId: string; label: string }> {
+  await requireTenantPermission(tx, {
+    tenantId: input.tenantId,
+    userId: input.actorUserId,
+    permission: PERMISSION_CONFIG,
+    eventId: input.eventId,
+  });
+  const events = await tx.$queryRaw<{ id: string }[]>`
+    SELECT id FROM events
+    WHERE tenant_id = ${input.tenantId}::uuid AND id = ${input.eventId}::uuid
+  `;
+  if (!events[0]) {
+    throw new EventAdminError(
+      EVENT_ADMIN_ERROR_CODES.EVENT_NOT_FOUND,
+      'Event not found',
+    );
+  }
+  const label = input.label.trim();
+  if (!label || label.length > 120) {
+    throw new EventAdminError(
+      EVENT_ADMIN_ERROR_CODES.INVALID_SLUG,
+      'Invalid label',
+    );
+  }
+  const ticketTypeId = randomUUID();
+  const snapshot = JSON.stringify(input.entitlementSnapshot ?? {});
+  await tx.$executeRaw`
+    INSERT INTO ticket_types (
+      tenant_id, event_id, id, label, entitlement_snapshot, created_at, updated_at
+    ) VALUES (
+      ${input.tenantId}::uuid, ${input.eventId}::uuid, ${ticketTypeId}::uuid,
+      ${label}, ${snapshot}::jsonb, now(), now()
+    )
+  `;
+  return { ticketTypeId, label };
+}
+
+export async function createIssuanceSource(
+  tx: Prisma.TransactionClient,
+  input: {
+    tenantId: string;
+    eventId: string;
+    actorUserId: string;
+    name: string;
+    approvalMode: string;
+    ticketTypeId: string;
+  },
+): Promise<{
+  sourceId: string;
+  name: string;
+  approvalMode: 'AUTO' | 'MANUAL';
+  ticketTypeId: string;
+}> {
+  await requireTenantPermission(tx, {
+    tenantId: input.tenantId,
+    userId: input.actorUserId,
+    permission: PERMISSION_CONFIG,
+    eventId: input.eventId,
+  });
+  if (!APPROVAL_MODES.has(input.approvalMode)) {
+    throw new EventAdminError(
+      EVENT_ADMIN_ERROR_CODES.INVALID_APPROVAL_MODE,
+      'approvalMode must be AUTO or MANUAL',
+    );
+  }
+  const types = await tx.$queryRaw<{ id: string }[]>`
+    SELECT id FROM ticket_types
+    WHERE tenant_id = ${input.tenantId}::uuid
+      AND event_id = ${input.eventId}::uuid
+      AND id = ${input.ticketTypeId}::uuid
+  `;
+  if (!types[0]) {
+    throw new EventAdminError(
+      EVENT_ADMIN_ERROR_CODES.TICKET_TYPE_NOT_FOUND,
+      'Ticket type not found',
+    );
+  }
+  const name = input.name.trim();
+  if (!name || name.length > 120) {
+    throw new EventAdminError(
+      EVENT_ADMIN_ERROR_CODES.INVALID_SLUG,
+      'Invalid source name',
+    );
+  }
+  const sourceId = randomUUID();
+  const mode = input.approvalMode as 'AUTO' | 'MANUAL';
+  await tx.$executeRaw`
+    INSERT INTO issuance_sources (
+      tenant_id, event_id, id, name, approval_mode, created_at, updated_at
+    ) VALUES (
+      ${input.tenantId}::uuid, ${input.eventId}::uuid, ${sourceId}::uuid,
+      ${name}, ${mode}, now(), now()
+    )
+  `;
+  await tx.$executeRaw`
+    INSERT INTO source_ticket_types (
+      tenant_id, event_id, source_id, ticket_type_id
+    ) VALUES (
+      ${input.tenantId}::uuid, ${input.eventId}::uuid,
+      ${sourceId}::uuid, ${input.ticketTypeId}::uuid
+    )
+  `;
+  return {
+    sourceId,
+    name,
+    approvalMode: mode,
+    ticketTypeId: input.ticketTypeId,
+  };
+}

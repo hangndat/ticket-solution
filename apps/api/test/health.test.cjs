@@ -27,6 +27,8 @@ test('Fastify liveness matches contract; redeem and gate routes documented', asy
       '/v1/gate/events/{eventId}/tickets/{ticketId}/revoke',
       '/v1/health',
       '/v1/me',
+      '/v1/me/device-tokens',
+      '/v1/me/device-tokens/{registrationId}',
       '/v1/me/redemptions/{requestId}',
       '/v1/me/tickets',
       '/v1/operations/{clientOperationId}',
@@ -40,6 +42,9 @@ test('Fastify liveness matches contract; redeem and gate routes documented', asy
       '/v1/tenants/{tenantId}/events/{eventId}/config-versions',
       '/v1/tenants/{tenantId}/events/{eventId}/config-versions/{version}/preview',
       '/v1/tenants/{tenantId}/events/{eventId}/config/rollback',
+      '/v1/tenants/{tenantId}/events/{eventId}/exports',
+      '/v1/tenants/{tenantId}/events/{eventId}/exports/{exportId}',
+      '/v1/tenants/{tenantId}/events/{eventId}/exports/{exportId}/download',
       '/v1/tenants/{tenantId}/events/{eventId}/impact-preview',
       '/v1/tenants/{tenantId}/events/{eventId}/imports',
       '/v1/tenants/{tenantId}/events/{eventId}/notification-templates/preview',
@@ -52,7 +57,13 @@ test('Fastify liveness matches contract; redeem and gate routes documented', asy
       '/v1/tenants/{tenantId}/events/{eventId}/redemptions/{requestId}/approve',
       '/v1/tenants/{tenantId}/events/{eventId}/redemptions/{requestId}/deny',
       '/v1/tenants/{tenantId}/events/{eventId}/report',
+      '/v1/tenants/{tenantId}/events/{eventId}/sources',
+      '/v1/tenants/{tenantId}/events/{eventId}/ticket-types',
+      '/v1/tenants/{tenantId}/events/{eventId}/tickets',
+      '/v1/tenants/{tenantId}/events/{eventId}/tickets/{ticketId}',
+      '/v1/tenants/{tenantId}/events/{eventId}/tickets/{ticketId}/resend',
     ]);
+    // /metrics is Fastify-native outside OpenAPI /v1 prefix.
     assert.equal(
       doc.components.schemas.HealthDto.properties.status.enum[0],
       'ok',

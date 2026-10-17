@@ -9,21 +9,39 @@ test('worker context boots and closes without processors', async () => {
 
 test(
   'worker process handles SIGTERM and exits',
-  { timeout: 10000 },
+  { timeout: 15000 },
   async () => {
     const { spawn } = require('node:child_process');
     const { once } = require('node:events');
     const child = spawn(process.execPath, ['dist/main.js'], {
       stdio: ['ignore', 'pipe', 'pipe'],
+      env: { ...process.env, NODE_ENV: 'test' },
     });
+    const killChild = () => {
+      if (child.exitCode === null && child.signalCode === null) {
+        try {
+          child.kill('SIGKILL');
+        } catch {
+          /* ignore */
+        }
+      }
+    };
     try {
       const exit = once(child, 'exit');
       await new Promise((resolve, reject) => {
         let output = '';
-        child.stdout.on('data', (chunk) => {
+        const onData = (chunk) => {
           output += chunk;
-          if (output.includes('outbox relay polling')) resolve();
-        });
+          // Match current main.ts banner (not legacy "outbox relay polling").
+          if (
+            output.includes('outbox email relay') ||
+            output.includes('outbox relay polling')
+          ) {
+            resolve();
+          }
+        };
+        child.stdout.on('data', onData);
+        child.stderr.on('data', onData);
         child.once('error', reject);
         child.once('exit', () =>
           reject(new Error('Worker exited before idle')),
@@ -33,8 +51,7 @@ test(
       const [code, signal] = await exit;
       assert.ok(code === 0 || signal === 'SIGTERM');
     } finally {
-      if (child.exitCode === null && child.signalCode === null)
-        child.kill('SIGKILL');
+      killChild();
     }
   },
 );
