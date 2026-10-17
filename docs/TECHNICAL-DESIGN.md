@@ -22,7 +22,7 @@ Các quyết định trong tài liệu là đề xuất kỹ thuật, không t�
 | ADR-01 | NestJS + TypeScript, Fastify adapter                           | Đồng bộ ngôn ngữ; kiểm tra tương thích plugin trước pin phiên bản          |
 | ADR-02 | PostgreSQL shared schema + RLS + backend authorization         | Cách ly nhiều lớp; bắt buộc test connection pooling, role và worker        |
 | ADR-03 | Prisma cho CRUD; SQL tham số hóa cho hot transaction và policy | Không ép ORM biểu diễn toàn bộ locking/RLS                                 |
-| ADR-04 | PostgreSQL outbox → BullMQ → worker idempotent                 | Chấp nhận giao việc ít nhất một lần; không hứa gửi email exactly-once      |
+| ADR-04 | PostgreSQL outbox → BullMQ → worker idempotent                 | Chấp nhận giao việc ít nhất một lần; không hứa gửi email exactly-once. **MVP thực tế: [ADR-17](./ops/ADR-17-OUTBOX-PG-DIRECT.md)** — leased outbox + poll trực tiếp, chưa BullMQ |
 | ADR-05 | Quota dùng counter transaction, lock nhất quán                 | Ưu tiên tính đúng; event counter có thể thành điểm tranh khóa              |
 | ADR-06 | Check-in online reserve/confirm                                | Không cam kết chống trùng toàn hệ thống khi các cổng mất kết nối           |
 | ADR-07 | App chung có hai chế độ là baseline tạm                        | Không khóa phương án white-label khi sản phẩm chưa chốt                    |
@@ -51,7 +51,7 @@ Pin version framework/SDK/Keycloak trong lockfile và Compose. Không phụ thu�
 | Outbox relay                 | Claim outbox rồi enqueue                       | Lease ngắn, retry và reconciliation      |
 | Workers                      | Email, push, import/export, aggregate          | Queue/concurrency riêng từng nhóm        |
 | PostgreSQL primary + standby | Vé, quota, check-in, audit                     | Read/write critical qua primary          |
-| Redis                        | BullMQ, rate limit, cache không quan trọng     | Không quyết định vé đã cấp/đã vào        |
+| Redis                        | Rate limit / admission / cache không quan trọng; **MVP không BullMQ** ([ADR-17](./ops/ADR-17-OUTBOX-PG-DIRECT.md)) | Không quyết định vé đã cấp/đã vào / outbox |
 | Object storage               | Asset, import, export, bản render nếu cần      | Private, URL ký ngắn hạn                 |
 | Keycloak (self-host)         | Identity, verification, MFA TOTP               | Backend kiểm tra JWT qua JWKS            |
 
@@ -373,9 +373,9 @@ Critical responses `Cache-Control: no-store`. Mutation dùng expected_version/If
 
 ### 11.1 Relay
 
-Business transaction insert outbox. Relay claim batch bằng lease/`FOR UPDATE SKIP LOCKED` trong function hẹp, commit lease rồi enqueue BullMQ job với deterministic safe job ID. Sau enqueue ack. Crash trước ack có thể enqueue lại; worker và DB business key phải chịu được duplicate. Không giữ DB transaction trong lúc gọi Redis.
+Business transaction insert outbox. Relay claim batch bằng lease/`FOR UPDATE SKIP LOCKED` trong function hẹp (`claim_outbox_batch`). **MVP ([ADR-17](./ops/ADR-17-OUTBOX-PG-DIRECT.md)):** worker poll trực tiếp và xử lý sau claim — không enqueue BullMQ. Hướng ADR-04 (claim → BullMQ job ID deterministic → ack) giữ làm lựa chọn sau benchmark; không tuyên bố đã triển khai BullMQ.
 
-Redis mất dữ liệu không được làm mất job nghiệp vụ: outbox chỉ COMPLETE khi worker hoàn tất ở DB, không phải khi relay đã enqueue. Reconciler re-enqueue bản ghi chưa COMPLETE, lease/processing timeout hết hạn. Worker claim DB processing lease để hạn chế chạy song song.
+Redis mất dữ liệu không được làm mất job nghiệp vụ: outbox chỉ COMPLETE khi worker hoàn tất ở DB. Lease/processing hết hạn cho phép reclaim (crash recovery). Worker claim DB lease để hạn chế chạy song song. Drill root: `./scripts/rint-outbox-recovery.sh`.
 
 Outbox cho notification quan trọng được ưu tiên hơn aggregate/reporting. Payload version được kiểm tra để deployment mới không làm job cũ không đọc được.
 
@@ -470,7 +470,7 @@ Native simulator build và archive/signing chạy bằng Xcode/xcodebuild hoặc
 
 ### 15.1 Môi trường
 
-Development local, staging và production tách dữ liệu, secrets, OIDC client, Redis, buckets và push environment. Production chạy **self-host trên VPS** (Docker Compose hoặc tương đương): PostgreSQL có standby/PITR khi đủ ops, Redis persistence cho BullMQ, Keycloak, MinIO, SMTP (Postal/Postfix), Caddy TLS. **Không** dùng managed DB/Redis/CDN SaaS cho MVP. Vùng dữ liệu (O06) chốt trước dữ liệu user thật.
+Development local, staging và production tách dữ liệu, secrets, OIDC client, Redis, buckets và push environment. Production chạy **self-host trên VPS** (Docker Compose hoặc tương đương): PostgreSQL có standby/PITR khi đủ ops, Redis persistence cho cache/admission (MVP không BullMQ — ADR-17), Keycloak, MinIO, SMTP (Postal/Postfix), Caddy TLS. **Không** dùng managed DB/Redis/CDN SaaS cho MVP. Vùng dữ liệu (O06) chốt trước dữ liệu user thật.
 
 API/worker containers, health/readiness endpoints riêng. Rolling deploy và graceful shutdown: dừng nhận request/job mới, chờ transaction kết thúc có deadline. Worker job dài phải resumable. Kubernetes không bắt buộc bản đầu.
 

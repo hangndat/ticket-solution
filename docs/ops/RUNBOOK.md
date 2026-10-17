@@ -27,11 +27,13 @@ Alert gợi ý (khi có metric): Gate error tăng, queue age tăng, DB pool wait
 2. `curl` discovery Keycloak; xác nhận realm `ticket`.
 3. Không bypass auth; fail-closed.
 
-### 3.2 Redis / BullMQ lỗi
+### 3.2 Redis / queue (ADR-17 — chưa BullMQ MVP)
 
-- Vé/check-in phải còn trên Postgres; outbox giữ việc.
+- Vé/check-in/outbox phải còn trên Postgres; **Redis không phải durable queue** (ADR-17 bổ sung ADR-04).
+- Drill: `./scripts/rint-outbox-recovery.sh` (flush/restart Redis + lease reclaim).
 - Admission phụ thuộc Redis: fail closed hoặc chế độ bảo thủ — ghi rõ trước event.
 - Gate: không phụ thuộc Redis bắt buộc theo failure matrix TD §15.2.
+- Chi tiết env SMTP/MinIO/APNs: [`ENV-MANIFEST.md`](./ENV-MANIFEST.md); ma trận R-INT: [`R-INT-MATRIX.md`](./R-INT-MATRIX.md).
 
 ### 3.3 Postgres primary mất
 
