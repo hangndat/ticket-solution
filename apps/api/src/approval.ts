@@ -2,11 +2,13 @@ import { randomUUID } from 'node:crypto';
 import {
   Body,
   Controller,
+  Get,
   Headers,
   HttpException,
   Injectable,
   Param,
   Post,
+  Query,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -23,6 +25,7 @@ import {
   IdentityError,
   IDENTITY_ERROR_CODES,
   decideRedemption,
+  listStaffPendingRedemptions,
   unwrapApprovalOutcome,
   withTenant,
   type IdentityUserRepository,
@@ -118,6 +121,25 @@ export class ApprovalService {
     );
     return unwrapApprovalOutcome(outcome);
   }
+
+  async listPending(
+    authorization: string | undefined,
+    tenantId: string,
+    eventId: string,
+    cursor?: string,
+    limit?: number,
+  ) {
+    const user = await this.actor(authorization);
+    return withTenant(this.deps.db!, tenantId, (tx) =>
+      listStaffPendingRedemptions(tx, {
+        tenantId,
+        eventId,
+        actorUserId: user.userId,
+        cursor,
+        limit,
+      }),
+    );
+  }
 }
 
 @ApiTags('redemptions')
@@ -152,13 +174,15 @@ export class ApprovalController {
       const status =
         error.code === APPROVAL_ERROR_CODES.REQUEST_NOT_FOUND
           ? 404
-          :         error.code === APPROVAL_ERROR_CODES.IDEMPOTENCY_KEY_REQUIRED ||
+          : error.code === APPROVAL_ERROR_CODES.IDEMPOTENCY_KEY_REQUIRED ||
               error.code === APPROVAL_ERROR_CODES.REASON_REQUIRED ||
               error.code === APPROVAL_ERROR_CODES.REASON_TOO_LONG
             ? 422
             : error.code === APPROVAL_ERROR_CODES.RETRYABLE_CONFLICT
               ? 503
-              : 409;
+              : error.code === APPROVAL_ERROR_CODES.PENDING_EXPIRED
+                ? 409
+                : 409;
       throw new HttpException(
         {
           code: error.code,
@@ -170,6 +194,37 @@ export class ApprovalController {
       );
     }
     throw error;
+  }
+
+  @Get('tenants/:tenantId/events/:eventId/redemptions')
+  @ApiBearerAuth()
+  listPending(
+    @Headers('authorization') authorization: string | undefined,
+    @Param('tenantId') tenantId: string,
+    @Param('eventId') eventId: string,
+    @Query('status') status?: string,
+    @Query('cursor') cursor?: string,
+    @Query('limit') limitRaw?: string,
+  ) {
+    if (status && status !== 'PENDING_REVIEW') {
+      throw scopeError('status must be PENDING_REVIEW when provided');
+    }
+    const limit =
+      limitRaw != null && limitRaw !== ''
+        ? Number(limitRaw)
+        : undefined;
+    if (limit != null && (!Number.isFinite(limit) || limit < 1)) {
+      throw scopeError('limit must be a positive integer');
+    }
+    return this.approvals
+      .listPending(
+        authorization,
+        requireUuid(tenantId, 'tenantId'),
+        requireUuid(eventId, 'eventId'),
+        cursor,
+        limit,
+      )
+      .catch((error) => this.fail(error));
   }
 
   @Post('tenants/:tenantId/events/:eventId/redemptions/:requestId/approve')

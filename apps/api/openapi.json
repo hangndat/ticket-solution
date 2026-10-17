@@ -480,6 +480,100 @@
         "tags": [
           "redemptions"
         ]
+      },
+      "get": {
+        "operationId": "ApprovalController_listPending",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "eventId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "redemptions"
+        ]
+      }
+    },
+    "/v1/me/redemptions/{requestId}": {
+      "get": {
+        "operationId": "TicketIssueController_meRedemptionStatus",
+        "parameters": [
+          {
+            "name": "requestId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "redemptions"
+        ]
       }
     },
     "/v1/me/tickets": {
@@ -1926,6 +2020,13 @@
           },
           "termsVersion": {
             "type": "string"
+          },
+          "answers": {
+            "type": "object",
+            "description": "Map fieldId → string|boolean; unknown keys rejected"
+          },
+          "termsAccepted": {
+            "type": "boolean"
           }
         },
         "required": [

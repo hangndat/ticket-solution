@@ -38,6 +38,7 @@ import {
   readCodeHmacEnvironment,
   readCredentialKeyEnvironment,
   redeemAndIssueTicket,
+  getOwnerRedemptionStatus,
   throwIfStoredRejection,
   unwrapRedeemOutcome,
   type PendingApprovalResult,
@@ -60,6 +61,12 @@ class RedeemBodyDto implements RedeemRequestBody {
   @ApiProperty() code!: string;
   @ApiProperty({ required: false }) formVersion?: string;
   @ApiProperty({ required: false }) termsVersion?: string;
+  @ApiProperty({
+    required: false,
+    description: 'Map fieldId → string|boolean; unknown keys rejected',
+  })
+  answers?: Record<string, string | boolean>;
+  @ApiProperty({ required: false }) termsAccepted?: true;
 }
 
 class RedeemResponseDto implements RedeemResponse {
@@ -91,26 +98,36 @@ class MeTicketsDto implements MeTicketsResponse {
 
 function issueHttpException(error: IssueError, operationId?: string): HttpException {
   const requestId = randomUUID();
-  const body: ApiError = {
+  const body: ApiError & { fields?: IssueError['fields'] } = {
     code: error.code,
     message: error.message,
     requestId,
     operationId,
     retryable: error.retryable,
   };
+  if (error.fields?.length) body.fields = error.fields;
   const status =
     error.code === ISSUE_ERROR_CODES.EMAIL_NOT_VERIFIED
       ? 403
-      : error.code === ISSUE_ERROR_CODES.IDEMPOTENCY_CONFLICT ||
-          error.code === ISSUE_ERROR_CODES.CODE_CONSUMED ||
-          error.code === ISSUE_ERROR_CODES.QUOTA_EXHAUSTED
-        ? 409
-        : error.code === ISSUE_ERROR_CODES.RETRYABLE_CONFLICT
-          ? 503
-          : error.code === ISSUE_ERROR_CODES.IDEMPOTENCY_KEY_REQUIRED ||
-              error.code === ISSUE_ERROR_CODES.CODE_INVALID
-            ? 422
-            : 409;
+      : error.code === ISSUE_ERROR_CODES.REDEMPTION_NOT_FOUND
+        ? 404
+        : error.code === ISSUE_ERROR_CODES.FORM_VERSION_STALE ||
+            error.code === ISSUE_ERROR_CODES.TERMS_VERSION_STALE ||
+            error.code === ISSUE_ERROR_CODES.IDEMPOTENCY_CONFLICT ||
+            error.code === ISSUE_ERROR_CODES.CODE_CONSUMED ||
+            error.code === ISSUE_ERROR_CODES.QUOTA_EXHAUSTED ||
+            error.code === ISSUE_ERROR_CODES.PENDING_EXPIRED ||
+            error.code === ISSUE_ERROR_CODES.PENDING_LIMIT
+          ? 409
+          : error.code === ISSUE_ERROR_CODES.RETRYABLE_CONFLICT
+            ? 503
+            : error.code === ISSUE_ERROR_CODES.IDEMPOTENCY_KEY_REQUIRED ||
+                error.code === ISSUE_ERROR_CODES.CODE_INVALID ||
+                error.code === ISSUE_ERROR_CODES.FORM_REQUIRED ||
+                error.code === ISSUE_ERROR_CODES.FORM_INVALID ||
+                error.code === ISSUE_ERROR_CODES.TERMS_REQUIRED
+              ? 422
+              : 409;
   return new HttpException(body, status);
 }
 
@@ -185,10 +202,33 @@ export class TicketIssueService {
         idempotencyKey: idempotencyKey ?? '',
         formVersion: body.formVersion,
         termsVersion: body.termsVersion,
+        answers: body.answers,
+        termsAccepted: body.termsAccepted,
       }),
     );
     if (outcome.ok === 'pending') return outcome.result;
     return unwrapRedeemOutcome(outcome);
+  }
+
+  async ownerRedemptionStatus(
+    authorization: string | undefined,
+    tenantId: string,
+    requestId: string,
+  ) {
+    if (!this.deps.db) {
+      throw new IdentityError(
+        IDENTITY_ERROR_CODES.OIDC_MISCONFIGURED,
+        'Identity services are not configured',
+      );
+    }
+    const user = await this.requireUser(authorization);
+    return withTenant(this.deps.db, tenantId, (tx) =>
+      getOwnerRedemptionStatus(tx, {
+        tenantId,
+        requestId,
+        ownerUserId: user.userId,
+      }),
+    );
   }
 
   async listMine(
@@ -307,6 +347,37 @@ export class TicketIssueController {
         eventId,
         idempotencyKey,
         body,
+      );
+    } catch (error) {
+      if (error instanceof IdentityError) throw identityHttpException(error);
+      if (error instanceof IssueError) throw issueHttpException(error);
+      throw error;
+    }
+  }
+
+  @Get('me/redemptions/:requestId')
+  @ApiBearerAuth()
+  async meRedemptionStatus(
+    @Headers('authorization') authorization: string | undefined,
+    @Param('requestId') requestId: string,
+    @Query('tenantId') tenantId: string,
+  ) {
+    if (!tenantId) {
+      throw new HttpException(
+        {
+          code: 'TENANT_REQUIRED',
+          message: 'tenantId query parameter is required',
+          requestId: randomUUID(),
+          retryable: false,
+        } satisfies ApiError,
+        422,
+      );
+    }
+    try {
+      return await this.tickets.ownerRedemptionStatus(
+        authorization,
+        tenantId,
+        requestId,
       );
     } catch (error) {
       if (error instanceof IdentityError) throw identityHttpException(error);
