@@ -89,14 +89,14 @@ test('production routes isolate tenant content and reject unknown pairs', async 
     const admin = await fetch(base + '/admin');
     assert.equal(admin.status, 200);
     const adminHtml = await admin.text();
-    assert.ok(adminHtml.includes('Cấu hình sự kiện'));
+    assert.ok(adminHtml.includes('Không gian quản trị sự kiện'));
     assert.ok(adminHtml.includes('OIDC chưa cấu hình'));
     assert.ok(adminHtml.includes('không coi là thành công'));
     assert.ok(adminHtml.includes('Xem trước'));
     assert.ok(adminHtml.includes('Lưu phiên bản'));
     assert.ok(adminHtml.includes('Nhập mã'));
     assert.ok(adminHtml.includes('Đọc quota'));
-    assert.ok(adminHtml.includes('Báo cáo sự kiện'));
+    assert.ok(adminHtml.includes('Cổng · báo cáo sự kiện'));
     assert.ok(adminHtml.includes('Tải báo cáo'));
     assert.ok(adminHtml.includes('Duyệt'));
     assert.ok(adminHtml.includes('Từ chối'));
@@ -106,7 +106,10 @@ test('production routes isolate tenant content and reject unknown pairs', async 
     assert.ok(adminHtml.includes('Gửi lại email'));
     assert.ok(adminHtml.includes('Tạo export CSV'));
     assert.ok(adminHtml.includes('Tải CSV'));
-    assert.ok(adminHtml.includes('Operator cấp'));
+    assert.ok(adminHtml.includes('Hỗ trợ · tra cứu và gửi lại email'));
+    assert.ok(adminHtml.includes('Chuẩn bị'));
+    assert.ok(adminHtml.includes('Xuất bản'));
+    assert.ok(adminHtml.includes('admin-tech-details'));
     assert.ok(!adminHtml.includes('ticket↗'));
     assert.ok(adminHtml.includes('vemoki'));
     assert.equal(/FUN FEST|fun-fest/i.test(adminHtml), false);
