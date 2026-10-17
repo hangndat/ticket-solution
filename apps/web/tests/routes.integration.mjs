@@ -133,6 +133,20 @@ test('production routes isolate tenant content and reject unknown pairs', async 
     assert.ok(!redeemHtml.includes('Clerk'));
     assert.ok(!redeemHtml.includes('Keycloak'));
 
+    // Guest claim chrome: plain VI, no OIDC/C-I jargon, not route error.tsx.
+    const claim = await fetch(base + '/claim');
+    assert.equal(claim.status, 200);
+    const claimHtml = await claim.text();
+    assert.ok(claimHtml.includes('Nhận lời mời sự kiện'));
+    assert.ok(claimHtml.includes('Chưa có mã lời mời'));
+    assert.ok(claimHtml.includes('Đăng nhập rồi quay lại nhận lời mời'));
+    assert.ok(!claimHtml.includes('OIDC'));
+    assert.ok(!claimHtml.includes('C-I'));
+    assert.ok(!claimHtml.includes('C-F'));
+    assert.ok(!claimHtml.includes('Guest claim'));
+    assert.ok(!claimHtml.includes('Keycloak'));
+    assert.ok(!claimHtml.includes('Không tải được trang này'));
+
     const gate = await fetch(base + '/gate');
     assert.equal(gate.status, 200);
     const gateHtml = await gate.text();

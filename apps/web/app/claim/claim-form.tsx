@@ -9,7 +9,6 @@ import {
   parkGuestClaimIntent,
   peekGuestClaimIntent,
   readClaimTokenFromLocation,
-  redactGuestClaimIntent,
 } from '../../src/guest/claim-intent';
 import { redeemMutate } from '../../src/redeem/client-fetch';
 import type { RedeemDecision } from '../../src/redeem/decide';
@@ -34,31 +33,62 @@ type ClaimLocation = {
   eventSlug: string;
 };
 
-function emptyLocation(): ClaimLocation {
-  return {
-    token: '',
-    tenantId: '',
-    eventId: '',
-    tenantSlug: '',
-    eventSlug: '',
-  };
+/** Stable empty snapshot — useSyncExternalStore requires cached getServerSnapshot. */
+const EMPTY_LOCATION: ClaimLocation = {
+  token: '',
+  tenantId: '',
+  eventId: '',
+  tenantSlug: '',
+  eventSlug: '',
+};
+
+let cachedLocationSnapshot: ClaimLocation = EMPTY_LOCATION;
+
+function sameClaimLocation(a: ClaimLocation, b: ClaimLocation): boolean {
+  return (
+    a.token === b.token &&
+    a.tenantId === b.tenantId &&
+    a.eventId === b.eventId &&
+    a.tenantSlug === b.tenantSlug &&
+    a.eventSlug === b.eventSlug
+  );
 }
 
-/** Pure snapshot: fragment + parked intent (no side effects). */
+/**
+ * Pure snapshot: fragment + parked intent (no side effects).
+ * Returns a cached reference when values are unchanged so useSyncExternalStore
+ * does not infinite-loop (Object.is) into the route error boundary.
+ */
 function getClaimLocationSnapshot(): ClaimLocation {
   const fromLoc = readClaimTokenFromLocation();
+  let next: ClaimLocation;
   if (fromLoc.token || fromLoc.tenantId || fromLoc.eventId) {
-    return fromLoc;
+    next = {
+      token: fromLoc.token,
+      tenantId: fromLoc.tenantId,
+      eventId: fromLoc.eventId,
+      tenantSlug: fromLoc.tenantSlug,
+      eventSlug: fromLoc.eventSlug,
+    };
+  } else {
+    const parked = peekGuestClaimIntent();
+    if (!parked) {
+      next = EMPTY_LOCATION;
+    } else {
+      next = {
+        token: parked.token,
+        tenantId: parked.tenantId,
+        eventId: parked.eventId,
+        tenantSlug: parked.tenantSlug ?? '',
+        eventSlug: parked.eventSlug ?? '',
+      };
+    }
   }
-  const parked = peekGuestClaimIntent();
-  if (!parked) return emptyLocation();
-  return {
-    token: parked.token,
-    tenantId: parked.tenantId,
-    eventId: parked.eventId,
-    tenantSlug: parked.tenantSlug ?? '',
-    eventSlug: parked.eventSlug ?? '',
-  };
+  if (sameClaimLocation(cachedLocationSnapshot, next)) {
+    return cachedLocationSnapshot;
+  }
+  cachedLocationSnapshot = next;
+  return cachedLocationSnapshot;
 }
 
 function subscribeClaimLocation(onStoreChange: () => void): () => void {
@@ -74,7 +104,7 @@ export function GuestClaimForm() {
   const locationSnap = useSyncExternalStore(
     subscribeClaimLocation,
     getClaimLocationSnapshot,
-    emptyLocation,
+    () => EMPTY_LOCATION,
   );
 
   const [tokenOverride, setTokenOverride] = useState<string | null>(null);
@@ -94,7 +124,12 @@ export function GuestClaimForm() {
   const [decision, setDecision] = useState<RedeemDecision | null>(null);
   const [ux, setUx] = useState<RedeemUxMessage | null>(null);
   const [busy, setBusy] = useState(false);
-  const [idempotencyKey] = useState(() => crypto.randomUUID());
+  const [idempotencyKey] = useState(
+    () =>
+      typeof crypto !== 'undefined' && 'randomUUID' in crypto
+        ? crypto.randomUUID()
+        : `claim-${Date.now().toString(16)}`,
+  );
 
   const token =
     tokenOverride !== null ? tokenOverride : locationSnap.token;
@@ -282,19 +317,6 @@ export function GuestClaimForm() {
   }
 
   const loginHref = `/api/auth/login?return=${encodeURIComponent('/claim')}`;
-  const parked = peekGuestClaimIntent();
-  const redacted = redactGuestClaimIntent(
-    token
-      ? {
-          token,
-          tenantId: displayTenantId,
-          eventId: displayEventId,
-          tenantSlug: displayTenantSlug || undefined,
-          eventSlug: displayEventSlug || undefined,
-          createdAt: parked?.createdAt ?? 0,
-        }
-      : null,
-  );
 
   return (
     <div className="redeem-form">
@@ -451,13 +473,6 @@ export function GuestClaimForm() {
           ) : null}
         </section>
       ) : null}
-
-      <details>
-        <summary>Trạng thái đã lưu (mã lời mời đã được che)</summary>
-        <pre className="me-result" tabIndex={0}>
-          {JSON.stringify(redacted, null, 2)}
-        </pre>
-      </details>
     </div>
   );
 }

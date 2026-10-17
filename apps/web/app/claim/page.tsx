@@ -3,6 +3,9 @@ import Link from 'next/link';
 import { SiteNav } from '../../src/site-chrome';
 import { GuestClaimForm } from './claim-form';
 
+/** Client claim form + fragment intent — never SSG a stale empty shell. */
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   title: 'Nhận lời mời sự kiện',
   description:
