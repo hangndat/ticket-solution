@@ -1,0 +1,55 @@
+{
+  "_meta": {
+    "demo": true,
+    "label": "demo:fixture",
+    "issue": 225,
+    "note": "Fixture prototype D11 — không phải API/prod. Vé demo không dùng vào cổng."
+  },
+  "tenant": {
+    "id": "demo:tenant-mfest",
+    "slug": "mfest-demo",
+    "displayName": "MFest Demo"
+  },
+  "event": {
+    "id": "demo:event-night-01",
+    "slug": "dem-dem-01",
+    "title": "Đêm Demo — không bán vé",
+    "status": "DRAFT",
+    "capacity": null,
+    "capacityNote": "NULL = không giới hạn — không ép checklist «quota hữu hạn»"
+  },
+  "readiness": {
+    "ticketTypes": true,
+    "sources": false,
+    "capacityConfigured": true,
+    "formTerms": true,
+    "brand": true
+  },
+  "redeem": {
+    "requiresAuth": true,
+    "authNote": "Current source: UNAUTHENTICATED / EMAIL_NOT_VERIFIED — không mở anonymous trong D11",
+    "code": "DEMO-REDEEM-OK",
+    "ticketId": "demo:ticket-7f3a",
+    "requestId": "demo:req-991",
+    "ticketWarning": "DEMO — KHÔNG DÙNG VÀO CỔNG"
+  },
+  "gate": {
+    "sessionId": "demo:gate-session",
+    "adr18ItemStatuses": ["APPLIED", "DUPLICATE", "REJECTED", "CONFLICT"],
+    "clientPhases": ["idle", "checking", "admitted", "denied", "unknown", "queued"],
+    "queue": [
+      {
+        "clientEventId": "demo:q-1",
+        "ticketId": "demo:ticket-aa01",
+        "localStatus": "pending",
+        "lastMessage": "Chờ đồng bộ — chưa cho vào"
+      },
+      {
+        "clientEventId": "demo:q-2",
+        "ticketId": "demo:ticket-bb02",
+        "localStatus": "CONFLICT",
+        "lastMessage": "Xung đột — không phải lượt vào"
+      }
+    ]
+  }
+}

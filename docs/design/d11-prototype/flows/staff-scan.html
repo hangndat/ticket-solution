@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Nhân viên · Quét cổng — D11 prototype</title>
+  <link rel="stylesheet" href="../css/d11.css" />
+</head>
+<body>
+  <a class="skip" href="#main">Bỏ qua điều hướng</a>
+  <div class="wrap">
+    <header class="top">
+      <a class="wordmark" href="../index.html">vemoki<span aria-hidden="true">↗</span></a>
+      <nav class="nav" aria-label="Prototype">
+        <a href="../index.html">Hub</a>
+        <a href="attendee-redeem.html">Khách</a>
+        <a href="admin-readiness.html">Admin</a>
+      </nav>
+    </header>
+
+    <div class="demo-banner" role="status">
+      <strong>demo:staff</strong> —
+      Composition gần iOS: ngữ cảnh cổng · vùng quét · outcome lớn · hàng đợi ADR-18
+      (pending / APPLIED / CONFLICT). Không cam kết chống trùng đa thiết bị khi còn offline.
+      P1 validate-only chỉ ở khu review.
+    </div>
+
+    <main id="main">
+      <div class="grid split">
+        <div class="phone" aria-label="Khung app Nhân viên (demo)">
+          <div class="phone-bar">
+            <span>NHÂN VIÊN</span>
+            <span id="conn-label">Trực tuyến</span>
+          </div>
+          <div class="phone-body">
+            <div>
+              <p class="eyebrow" style="margin:0">Đêm Demo · Cổng A</p>
+              <p class="muted" style="margin:4px 0 0">Phiên đã mở · quét QR trên vé khách</p>
+            </div>
+
+            <div class="scan-canvas" id="canvas">
+              Đưa mã QR vào khung<br /><span class="muted" style="font-weight:500">hoặc dán mã bên dưới</span>
+            </div>
+
+            <label style="margin:0">
+              Mã vé / QR
+              <input id="raw" value="demo:ticket-7f3a" autocomplete="off" />
+            </label>
+
+            <button type="button" id="btn-scan">Check-in</button>
+            <button type="button" class="secondary" id="btn-sync">Đồng bộ hàng đợi</button>
+            <button type="button" class="secondary" id="btn-reconcile" hidden>Đối soát kết quả chưa rõ</button>
+
+            <div id="outcome" class="outcome" data-tone="idle" role="status" aria-live="polite">
+              <h2 id="out-title">Chờ mã quét</h2>
+              <p id="out-body" style="margin:0">Chỉ cho vào sau khi hệ thống ghi nhận. Mất mạng: xếp hàng — chưa cho qua.</p>
+            </div>
+
+            <div>
+              <p class="eyebrow">Hàng đợi đồng bộ</p>
+              <div id="queue"></div>
+            </div>
+          </div>
+        </div>
+
+        <aside class="product">
+          <h2>Nguyên tắc cổng</h2>
+          <ul class="muted" style="padding-left:1.2rem;margin:0">
+            <li><strong>Cho vào</strong> chỉ khi online admit hoặc sync APPLIED.</li>
+            <li><strong>Đã xếp hàng</strong> ≠ đã vào.</li>
+            <li><strong>CONFLICT / DUPLICATE</strong> không phải lượt vào mới.</li>
+            <li>Cổng web mất mạng: không xếp hàng — dùng app.</li>
+          </ul>
+          <p style="margin-top:16px"><a class="btn secondary" href="admin-readiness.html">← Admin workbench</a></p>
+        </aside>
+      </div>
+    </main>
+
+    <aside class="review-dock" aria-label="Khu review PD">
+      <h2>Review · phase Gate</h2>
+      <div class="chips" role="group">
+        <button type="button" data-phase="idle" aria-pressed="true">idle</button>
+        <button type="button" data-phase="checking" aria-pressed="false">đang kiểm tra</button>
+        <button type="button" data-phase="admitted" aria-pressed="false">cho vào</button>
+        <button type="button" data-phase="denied" aria-pressed="false">từ chối</button>
+        <button type="button" data-phase="unknown" aria-pressed="false">chưa rõ</button>
+        <button type="button" data-phase="queued" aria-pressed="false">xếp hàng</button>
+        <button type="button" data-phase="applied" aria-pressed="false">APPLIED</button>
+        <button type="button" data-phase="conflict" aria-pressed="false">CONFLICT</button>
+        <button type="button" data-phase="web-offline" aria-pressed="false">web offline</button>
+        <button type="button" data-phase="validate" aria-pressed="false">P1 chỉ kiểm tra</button>
+      </div>
+      <p class="muted">«P1 chỉ kiểm tra» = proposal BA P1-3 — không cấp quyền production trong demo chính.</p>
+    </aside>
+    <footer class="footer">Issue #225 · demo:staff · ADR-18 · <a href="../index.html">Hub</a></footer>
+  </div>
+  <script>
+    const QUEUE_PENDING = [
+      { status: "pending", ticket: "demo:ticket-aa01", msg: "Chờ đồng bộ — chưa cho vào" },
+      { status: "CONFLICT", ticket: "demo:ticket-bb02", msg: "Xung đột: máy chủ đã có check-in — không phải lượt vào" }
+    ];
+    const QUEUE_AFTER = [
+      { status: "APPLIED", ticket: "demo:ticket-aa01", msg: "Đã áp dụng trên máy chủ" },
+      { status: "CONFLICT", ticket: "demo:ticket-bb02", msg: "Vẫn xung đột — không phải lượt vào" }
+    ];
+    const outcome = document.getElementById("outcome");
+    const outTitle = document.getElementById("out-title");
+    const outBody = document.getElementById("out-body");
+    const reconcile = document.getElementById("btn-reconcile");
+    const queueEl = document.getElementById("queue");
+    const conn = document.getElementById("conn-label");
+
+    function renderQueue(items) {
+      queueEl.innerHTML = "";
+      if (!items || !items.length) {
+        queueEl.innerHTML = "<p class='muted' style='margin:0'>Không có mục chờ.</p>";
+        return;
+      }
+      items.forEach((item) => {
+        const d = document.createElement("div");
+        d.className = "queue-item";
+        d.dataset.status = item.status;
+        d.innerHTML = `<strong>[${item.status}]</strong> ${item.ticket}<br/><span class="muted">${item.msg}</span>`;
+        queueEl.appendChild(d);
+      });
+    }
+
+    function setPhase(phase) {
+      document.querySelectorAll(".chips button").forEach((b) => {
+        b.setAttribute("aria-pressed", b.dataset.phase === phase ? "true" : "false");
+      });
+      reconcile.hidden = true;
+      outcome.setAttribute("aria-live", "polite");
+      conn.textContent = "Trực tuyến";
+      renderQueue([]);
+
+      const map = {
+        idle: ["idle", "Chờ mã quét", "Chỉ cho vào sau khi hệ thống ghi nhận."],
+        checking: ["idle", "Đang kiểm tra", "Đợi phản hồi — chưa cho vào."],
+        admitted: ["admit", "Cho vào", "Đã ghi nhận check-in."],
+        denied: ["deny", "Không cho vào", "Vé không hợp lệ hoặc đã dùng."],
+        unknown: ["unknown", "Chưa rõ — không cho vào", "Đối soát trước khi quyết định."],
+        queued: ["unknown", "Đã xếp hàng", "Lưu trên máy. Đồng bộ sau — chưa cho vào."],
+        applied: ["admit", "Đồng bộ: đã áp dụng", "APPLIED — có thể coi là đã vào sau sync."],
+        conflict: ["unknown", "Xung đột đồng bộ", "CONFLICT — không phải lượt vào mới."],
+        "web-offline": ["deny", "Cổng web offline", "Không xếp hàng trên web. Dùng app Nhân viên."],
+        validate: ["idle", "Chỉ kiểm tra (P1 đề xuất)", "Không tạo check-in — proposal, chưa production."]
+      };
+      const [tone, title, body] = map[phase] || map.idle;
+      outcome.dataset.tone = tone;
+      outTitle.textContent = title;
+      outBody.textContent = body;
+      if (phase === "unknown") { outcome.setAttribute("aria-live", "assertive"); reconcile.hidden = false; }
+      if (phase === "queued") { outcome.setAttribute("aria-live", "assertive"); conn.textContent = "Ngoại tuyến"; renderQueue(QUEUE_PENDING); }
+      if (phase === "conflict") { outcome.setAttribute("aria-live", "assertive"); renderQueue(QUEUE_PENDING); }
+      if (phase === "applied") renderQueue(QUEUE_AFTER);
+      if (phase === "web-offline") conn.textContent = "Web · offline";
+    }
+
+    document.querySelectorAll(".chips button").forEach((b) => b.addEventListener("click", () => setPhase(b.dataset.phase)));
+    document.getElementById("btn-scan").addEventListener("click", () => {
+      setPhase("checking");
+      setTimeout(() => setPhase("admitted"), 480);
+    });
+    document.getElementById("btn-sync").addEventListener("click", () => {
+      setPhase("queued");
+      setTimeout(() => setPhase("applied"), 500);
+    });
+    reconcile.addEventListener("click", () => setPhase("admitted"));
+    setPhase("idle");
+  </script>
+</body>
+</html>
