@@ -19,6 +19,7 @@ import {
   acceptMembershipInvite,
   createAccountDeletionRequest,
   createMembershipInvite,
+  createOidcVerifier,
   createPlatformOidcVerifier,
   createSupportGrant,
   getCurrentAccountDeletionRequest,
@@ -39,12 +40,16 @@ import {
   type PrismaClient,
   type PlatformSecurityConfig,
   type PlatformOidcVerifier,
+  type OidcVerifier,
   type IdentityUserRepository,
 } from '@ticket/backend';
 
 type Deps = {
   db: PrismaClient | null;
+  /** MFA / platform audience — /platform/* only. */
   platformVerifier: PlatformOidcVerifier | null;
+  /** Standard attendee/staff OIDC (ticket-api) — /me/* self routes. */
+  identityVerifier: OidcVerifier | null;
   users: IdentityUserRepository | null;
   security: PlatformSecurityConfig | null;
   bootError: Error | null;
@@ -116,7 +121,7 @@ export class PlatformService {
   }
 
   private async selfActor(authorization: string | undefined) {
-    // Self endpoints use standard identity (injected via same users/db).
+    // /me/* uses standard attendee OIDC (no MFA ACR). Do not widen platform verifier.
     if (this.deps.bootError) throw this.deps.bootError;
     if (!this.deps.users || !this.deps.db) {
       throw new IdentityError(
@@ -124,18 +129,14 @@ export class PlatformService {
         'Identity not configured',
       );
     }
-    // Reuse platform verifier only when present; otherwise caller must inject.
-    if (!this.deps.platformVerifier) {
+    if (!this.deps.identityVerifier) {
       throw new IdentityError(
         IDENTITY_ERROR_CODES.OIDC_MISCONFIGURED,
-        'Verifier not configured',
+        'Identity verifier not configured',
       );
     }
-    // For /me/* accept platform or would need attendee verifier — use platform verifier
-    // only for MFA endpoints; listMyTenants uses verified identity without ACR in tests
-    // via injected path. Production wires both.
     const verified =
-      await this.deps.platformVerifier.verifyBearerToken(authorization);
+      await this.deps.identityVerifier.verifyBearerToken(authorization);
     return this.deps.users.upsertFromVerifiedIdentity({
       issuer: verified.issuer,
       subject: verified.subject,
@@ -473,17 +474,27 @@ export class PlatformController {
 export function buildPlatformDeps(env: NodeJS.ProcessEnv, db: PrismaClient | null): Deps {
   try {
     const security = readPlatformSecurityConfig(env);
-    const oidc = readOidcEnvironment({
+    const platformOidc = readOidcEnvironment({
       ...env,
       OIDC_AUDIENCE: security.platformAudience,
     });
-    const platformVerifier = createPlatformOidcVerifier(oidc, security);
+    const platformVerifier = createPlatformOidcVerifier(platformOidc, security);
+    // Attendee/staff audience from env OIDC_AUDIENCE (ticket-api) — no MFA step-up.
+    const identityVerifier = createOidcVerifier(readOidcEnvironment(env));
     const users = db ? createPrismaIdentityUserRepository(db) : null;
-    return { db, platformVerifier, users, security, bootError: null };
+    return {
+      db,
+      platformVerifier,
+      identityVerifier,
+      users,
+      security,
+      bootError: null,
+    };
   } catch (error) {
     return {
       db,
       platformVerifier: null,
+      identityVerifier: null,
       users: null,
       security: null,
       bootError: error instanceof Error ? error : new Error('platform boot'),
