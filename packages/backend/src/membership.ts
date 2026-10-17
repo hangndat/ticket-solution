@@ -132,6 +132,12 @@ export async function lockActiveMembershipForShare(
       'Tenant membership is not active',
     );
   }
+  if (row.activated_at.getTime() > Date.now()) {
+    throw new AuthzError(
+      AUTHZ_ERROR_CODES.MEMBERSHIP_REQUIRED,
+      'Tenant membership is not yet active',
+    );
+  }
   return mapMembership(row);
 }
 
@@ -160,6 +166,12 @@ async function lockActiveEventAssignmentForShare(
     throw new AuthzError(
       AUTHZ_ERROR_CODES.EVENT_ASSIGNMENT_REQUIRED,
       'Event assignment is not active',
+    );
+  }
+  if (row.activated_at.getTime() > Date.now()) {
+    throw new AuthzError(
+      AUTHZ_ERROR_CODES.EVENT_ASSIGNMENT_REQUIRED,
+      'Event assignment is not yet active',
     );
   }
   return mapAssignment(row);
@@ -204,7 +216,7 @@ export async function requireTenantPermission(
   return { membership };
 }
 
-/** Test/admin helper: create a membership row (defaults to immediately active). */
+/** Test-only helper. Production must use role-map invite/accept — never expose arbitrary permissions via API. */
 export async function grantMembership(
   tx: Prisma.TransactionClient,
   input: GrantMembershipInput,

@@ -24,6 +24,8 @@ import {
   grantEventAssignment,
   requireTenantPermission,
 } from './membership';
+import { assertTenantAllowsAdminMutation, lockTenantPolicyForShare } from './tenant-policy';
+import { PlatformError, PLATFORM_ERROR_CODES } from './platform-error';
 
 const PERMISSION_CREATE = 'event.create';
 const PERMISSION_UPDATE = 'event.update';
@@ -527,6 +529,25 @@ export async function createEvent(
     userId: input.actorUserId,
     permission: PERMISSION_CREATE,
   });
+  const policy = await lockTenantPolicyForShare(tx, input.tenantId);
+  assertTenantAllowsAdminMutation(policy.status);
+  const lim = await tx.$queryRaw<{ max_events: number | null }[]>`
+    SELECT max_events FROM tenant_limits
+    WHERE tenant_id = ${input.tenantId}::uuid
+    FOR UPDATE
+  `;
+  const maxEvents = lim[0]?.max_events ?? null;
+  if (maxEvents !== null) {
+    const cnt = await tx.$queryRaw<{ n: number }[]>`
+      SELECT COUNT(*)::int AS n FROM events WHERE tenant_id = ${input.tenantId}::uuid
+    `;
+    if ((cnt[0]?.n ?? 0) >= maxEvents) {
+      throw new PlatformError(
+        PLATFORM_ERROR_CODES.TENANT_LIMIT_REACHED,
+        'Event limit reached',
+      );
+    }
+  }
 
   const slug = assertValidSlug(input.body.slug);
   const name = input.body.name?.trim() ?? '';
