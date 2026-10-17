@@ -187,6 +187,37 @@ export {
   type ApprovalOutcome,
 } from './approval';
 export {
+  validateFormAnswers,
+  hashFormDefinition,
+  hashTermsContent,
+  canonicalizeAnswers,
+  type FormValidateResult,
+} from './form-validate';
+export {
+  resolveAndValidateConsent,
+  buildConsentSnapshot,
+  type ConsentSnapshot,
+  type RedeemFormInput,
+} from './form-consent';
+export {
+  loadPublishedFormTerms,
+  type PublishedFormTerms,
+} from './published-form';
+export {
+  expirePendingRequest,
+  expireDuePendingBatch,
+  type ExpirePendingResult,
+} from './pending-expiry';
+export {
+  listDuePendingRedemptions,
+  reconcileDuePendingRedemptions,
+  type DuePendingRow,
+} from './pending-expiry-worker';
+export {
+  getOwnerRedemptionStatus,
+  listStaffPendingRedemptions,
+} from './redemption-status';
+export {
   ReportError,
   REPORT_ERROR_CODES,
   type ReportErrorCode,

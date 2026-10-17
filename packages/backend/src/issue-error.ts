@@ -1,4 +1,6 @@
-/** Stable business error codes for redemption / issue (D2). */
+import type { FieldValidationError } from '@ticket/contracts';
+
+/** Stable business error codes for redemption / issue (D2 + C-F). */
 export const ISSUE_ERROR_CODES = {
   EMAIL_NOT_VERIFIED: 'EMAIL_NOT_VERIFIED',
   CODE_INVALID: 'CODE_INVALID',
@@ -15,6 +17,14 @@ export const ISSUE_ERROR_CODES = {
   IDEMPOTENCY_KEY_REQUIRED: 'IDEMPOTENCY_KEY_REQUIRED',
   RETRYABLE_CONFLICT: 'RETRYABLE_CONFLICT',
   CODE_HMAC_MISCONFIGURED: 'CODE_HMAC_MISCONFIGURED',
+  FORM_REQUIRED: 'FORM_REQUIRED',
+  FORM_INVALID: 'FORM_INVALID',
+  FORM_VERSION_STALE: 'FORM_VERSION_STALE',
+  TERMS_REQUIRED: 'TERMS_REQUIRED',
+  TERMS_VERSION_STALE: 'TERMS_VERSION_STALE',
+  PENDING_EXPIRED: 'PENDING_EXPIRED',
+  PENDING_LIMIT: 'PENDING_LIMIT',
+  REDEMPTION_NOT_FOUND: 'REDEMPTION_NOT_FOUND',
 } as const;
 
 export type IssueErrorCode =
@@ -24,11 +34,18 @@ export type IssueErrorCode =
 export class IssueError extends Error {
   readonly code: IssueErrorCode;
   readonly retryable: boolean;
+  readonly fields?: FieldValidationError[];
 
-  constructor(code: IssueErrorCode, message: string, retryable = false) {
+  constructor(
+    code: IssueErrorCode,
+    message: string,
+    retryable = false,
+    fields?: FieldValidationError[],
+  ) {
     super(message);
     this.name = 'IssueError';
     this.code = code;
     this.retryable = retryable;
+    this.fields = fields;
   }
 }

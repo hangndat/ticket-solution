@@ -8,6 +8,7 @@ import {
   readCredentialKeyEnvironment,
   readEmailEnvironment,
   readProcessEnvironment,
+  reconcileDuePendingRedemptions,
   relayOutboxOnce,
   type EmailAdapter,
   type PrismaClient,
@@ -49,6 +50,11 @@ class WorkerRelay implements OnModuleDestroy {
     if (!this.db || this.intervalMs <= 0) return;
     const tick = async () => {
       if (this.stopped || !this.db) return;
+      try {
+        await reconcileDuePendingRedemptions(this.db, 50);
+      } catch {
+        // Keep looping; pending expiry is lazy-reconciled on read/decide too.
+      }
       try {
         await relayOutboxOnce(
           this.db,
