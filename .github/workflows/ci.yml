@@ -206,6 +206,8 @@ jobs:
             files: test/approval.test.cjs test/config-publish.test.cjs test/event-lifecycle.test.cjs test/form-consent.test.cjs
           - shard: n1-email
             files: test/n1-email-mime.test.cjs
+          - shard: branding
+            files: test/branding.test.cjs
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-pnpm
