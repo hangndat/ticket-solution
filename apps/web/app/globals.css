@@ -555,3 +555,89 @@ details p {
     transform: none;
   }
 }
+
+/* C-B config / brand editor + sanitized preview */
+.cfg-editor {
+  margin: 28px 0;
+  padding-top: 12px;
+  border-top: 1px solid #22241f30;
+}
+.cfg-brand,
+.cfg-rollback {
+  border: 1px solid #22241f30;
+  padding: 12px 16px;
+  margin: 16px 0;
+}
+.cfg-section-list {
+  list-style: none;
+  padding: 0;
+  margin: 16px 0;
+  display: grid;
+  gap: 16px;
+}
+.cfg-section-item {
+  padding: 12px;
+  background: #22241f08;
+  border: 1px solid #22241f20;
+}
+.cfg-section-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.cfg-hint,
+.cfg-meta,
+.cfg-muted {
+  font-size: 0.85rem;
+  opacity: 0.8;
+}
+.cfg-error {
+  color: #9b3a18;
+  font-weight: 600;
+}
+.cfg-preview-wrap {
+  margin: 16px 0;
+  outline: none;
+}
+.cfg-preview-wrap:focus {
+  box-shadow: 0 0 0 2px var(--cfg-brand, #0b3d2e);
+}
+.cfg-preview {
+  padding: 16px;
+  border: 1px solid #22241f30;
+  background: linear-gradient(180deg, #f7f6f2 0%, #efeee8 100%);
+  border-left: 4px solid var(--cfg-brand, #0b3d2e);
+}
+.cfg-preview-header {
+  margin-bottom: 12px;
+}
+.cfg-brand-org {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--cfg-brand, #0b3d2e);
+}
+.cfg-section {
+  margin: 12px 0;
+}
+.cfg-section h3 {
+  margin-bottom: 6px;
+}
+.cfg-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.cfg-faq-item {
+  margin: 8px 0;
+  padding: 8px;
+  border: 1px dashed #22241f30;
+}
