@@ -71,3 +71,26 @@ test('unrelated and invalid links are left untouched', () => {
     'passthrough',
   );
 });
+
+test('invitation claim link routes to /claim without fixture fallback', () => {
+  const token = 'opaque-claim-token-16chars';
+  const tenantId = '22222222-2222-4222-8222-222222222222';
+  const eventId = '33333333-3333-4333-8333-333333333333';
+  const input = `vemoki://invitations/claim?token=${token}&tenantId=${tenantId}&eventId=${eventId}&tenantSlug=acme&eventSlug=spring`;
+  const parsed = parseInstalledAppLink(input);
+  assert.equal(parsed.kind, 'invitation-claim');
+  if (parsed.kind !== 'invitation-claim') return;
+  assert.equal(parsed.token, token);
+  assert.equal(parsed.tenantId, tenantId);
+  assert.equal(parsed.eventId, eventId);
+  assert.match(parsed.href, /^\/claim\?/);
+  assert.doesNotMatch(parsed.href, /fixture/);
+  assert.equal(routeForInstalledAppLink(input), parsed.href);
+});
+
+test('invitation claim with short token is not routed', () => {
+  const parsed = parseInstalledAppLink(
+    'vemoki://invitations/claim?token=short&tenantId=22222222-2222-4222-8222-222222222222&eventId=33333333-3333-4333-8333-333333333333',
+  );
+  assert.equal(parsed.kind, 'passthrough');
+});

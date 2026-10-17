@@ -206,6 +206,11 @@ test(
         'checkins',
         'event_config_versions',
         'outbox',
+        'notifications',
+        'notification_attempts',
+        'notification_templates',
+        'notification_template_versions',
+        'notification_rate_counters',
       ]) {
         assert.ok(names.has(required), 'missing table ' + required);
       }

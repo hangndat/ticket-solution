@@ -17,6 +17,7 @@ Theo dõi trạng thái store **riêng**: submitted · approved · available. Bu
 - [ ] Observability: overlay smoke `./scripts/d5-observability-smoke.sh`; BE `/metrics` khi đã có
 - [ ] Runbook đã đọc bởi on-call giả định
 - [ ] O06: đã chọn hướng retention/region/SLA **trước** ingest user thật (xem `O06-OPTIONS.md`) — chưa chốt số thì không bịa
+- [ ] R-INT: ADR-17 + `pnpm test:rint-host` + `./scripts/rint-outbox-recovery.sh` + ma trận [`R-INT-MATRIX.md`](./R-INT-MATRIX.md); SMTP/APNs device vẫn Unknown đến evidence thật
 
 ## iOS / store (Issue #26 — ngoài scope #25)
 

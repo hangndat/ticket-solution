@@ -1,0 +1,70 @@
+# Env manifest — self-host SMTP / MinIO / APNs (không secrets)
+
+Ngày: 2026-10-17 · R-INT  
+Nguồn mẫu: root `.env.example`, `apps/worker/.env.example`, Compose `compose.yaml`.  
+**Không** commit giá trị production. Placeholder local chỉ để tài liệu / Compose.
+
+## 1. SMTP (ADR-13)
+
+| Biến | Bắt buộc prod | Dev/test | Ý nghĩa |
+| --- | --- | --- | --- |
+| `SMTP_URL` | Có (TLS/auth theo URL) | `smtp://127.0.0.1:1025` → Mailpit | Transport; **prod không fallback noop** |
+| `SMTP_FROM` | Có | `tickets@localhost` | Envelope/from hiển thị |
+| `MAILPIT_SMTP_PORT` / `MAILPIT_UI_PORT` | Không | `1025` / `8025` | Chỉ Compose Mailpit |
+
+Production thiếu SMTP → notification FAILED/PENDING/misconfigured rõ (N-BE). Mailpit **không** chứng minh delivery internet.
+
+## 2. MinIO (ADR-14)
+
+| Biến | Bắt buộc khi dùng object | Dev | Ý nghĩa |
+| --- | --- | --- | --- |
+| `MINIO_API_PORT` / `MINIO_CONSOLE_PORT` | — | `9000` / `9001` | Compose publish loopback |
+| `MINIO_ROOT_USER` / `MINIO_ROOT_PASSWORD` | Có (local placeholder) | `minioadmin` | Bootstrap root; đổi trên VPS |
+| `MINIO_ENDPOINT` | Có (app) | `http://127.0.0.1:9000` | S3 API base |
+| `MINIO_BUCKET_ASSETS` | Có khi B-BE | `vemoki-assets` | Brand/config raster (quarantine → ready) |
+| `MINIO_BUCKET_EXPORTS` | Có khi export | `vemoki-exports` | Private export/error reports |
+| `MINIO_BUCKET_IMPORTS` | Có khi I-BE | `vemoki-imports` | CSV quarantine |
+| `MINIO_ACCESS_KEY` / `MINIO_SECRET_KEY` | Có | local placeholders | App credentials ≠ root nếu tách được |
+| `MINIO_REGION` | Tuỳ | `us-east-1` | S3 SDK |
+
+Buckets private; không public anonymous. Signed URL ngắn hạn do app cấp.
+
+## 3. APNs (ADR-12)
+
+| Biến | Bắt buộc prod push | Dev | Ý nghĩa |
+| --- | --- | --- | --- |
+| `APNS_ENABLED` | `true` khi bật | `false` | Fail-closed khi thiếu cấu hình |
+| `APNS_KEY_ID` | Có | — | Key ID từ Apple Developer |
+| `APNS_TEAM_ID` | Có | `BLUA62D52G` (personal team id — không phải secret) | Team |
+| `APNS_BUNDLE_ID` | Có | `com.hangndat.ticket` | Topic |
+| `APNS_KEY_PATH` hoặc `APNS_KEY_P8` | Có (một trong hai) | — | `.p8` trên đĩa host / secret mount — **không** commit |
+| `APNS_PRODUCTION` | `true`/`false` | `false` | sandbox vs production gateway |
+| `EXPO_PUBLIC_PUSH_PROVIDER` | — | `apns` (mobile) | Client chỉ đăng ký token; không Expo Push |
+
+Thiếu key/env khi `APNS_ENABLED=true` → worker fail-closed (không silent success). Device delivery thật thuộc D5 / N-IOS UAT.
+
+## 4. Outbox / worker (ADR-17)
+
+| Biến | Mặc định | Ý nghĩa |
+| --- | --- | --- |
+| `OUTBOX_POLL_MS` | `2000` | Poll interval |
+| `OUTBOX_CLAIM_LIMIT` | `10` | Batch size (khi BE đọc) |
+| `OUTBOX_LEASE_SECONDS` | `30` | Lease fence |
+| `WORKER_LEASE_OWNER` | hostname/pid | Id reclaim |
+
+Redis: `REDIS_PORT` / URL chỉ cache/admission — **không** durable outbox.
+
+## 5. Tenant host (O07 / TD §12.1)
+
+| Biến | Ví dụ | Ý nghĩa |
+| --- | --- | --- |
+| `PLATFORM_ROOT_DOMAIN` | `vemoki.com` | Apex + wildcard `*.vemoki.com` |
+| `TENANT_HOST_ALLOWLIST` | JSON/file path | Canonical host → tenantSlug (không tin Host thô) |
+| `PUBLIC_WEB_ORIGIN` | `https://vemoki.com` | Redirect/BFF allowlist |
+
+Cookie session: **host-only** (không `Domain=.vemoki.com`). Xem `scripts/lib/tenant-host.mjs`.
+
+## Cấm
+
+- Commit `.env` thật, `.p8`, MinIO root production, SMTP password.
+- SaaS SMTP/push/object runtime (ADR-11).

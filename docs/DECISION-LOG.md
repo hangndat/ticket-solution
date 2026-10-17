@@ -33,6 +33,7 @@ Tracking: Issues [#10](https://github.com/hangndat/ticket-solution/issues/10), [
 | ADR-14 | Object storage **MinIO** (S3-compatible) | Compose local; cùng image trên VPS | Signed URL ngắn hạn |
 | ADR-15 | Admission / waiting room trên **Caddy hoặc nginx** | Rate-limit + token admission ký; Gate không đi qua layer này | Không Cloudflare Waiting Room |
 | ADR-16 | VPS đầu: nginx có sẵn + image runtime mỏng, app mount từ đĩa host | pnpm store cùng mount với source để hard link. Redirect web dùng `PUBLIC_WEB_ORIGIN` / Host do nginx ghi đè — không tin client `X-Forwarded-*` thô; không bind `0.0.0.0` trong Location | Xem [infra/deploy/README.md](../infra/deploy/README.md). SMTP prod (ADR-13) vẫn để sau |
+| ADR-17 | **MVP queue: leased PG outbox + worker poll trực tiếp** (không BullMQ trong MVP) | Bổ sung/đối chiếu ADR-04: Redis không nguồn chuẩn job; crash reclaim bằng lease; cân nhắc BullMQ sau benchmark | Chi tiết [ops/ADR-17-OUTBOX-PG-DIRECT.md](./ops/ADR-17-OUTBOX-PG-DIRECT.md); recovery `./scripts/rint-outbox-recovery.sh` |
 
 ## Điều kiện mở business endpoints
 
@@ -51,3 +52,4 @@ Chỉ mở redemption / Gate / admin tenant **sau khi**:
 | 2026-10-16 | User đổi: **không dùng SaaS**; App Store + DNS tự mua được phép. **ADR-09 → Keycloak self-host**; thêm ADR-11…15 (MinIO, SMTP, APNs direct, Caddy admission). Gỡ Clerk SDK. |
 | 2026-10-17 | User chốt thương hiệu **Vemoki** và domain `vemoki.com` (O09). |
 | 2026-10-17 | VPS `vemoki.com`: ADR-16 — runtime image + bind mount, nginx proxy web/api/auth; PR #42 root assets port vào #53. |
+| 2026-10-17 | Coordinator freeze MVP: **ADR-17** giữ leased PostgreSQL outbox + direct worker poll (không triển khai BullMQ); Redis restart/crash reclaim drills thuộc R-INT. |

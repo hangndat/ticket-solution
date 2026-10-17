@@ -148,6 +148,7 @@ test(
       );
       await admin.query(
         readFileSync(
+          'prisma/migrations/202610170009_n1_notification_delivery/migration.sql',
           'prisma/migrations/202610170010_e_be_event_lifecycle/migration.sql',
           'utf8',
         ),
