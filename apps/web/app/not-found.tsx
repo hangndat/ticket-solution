@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { SurfaceState } from '../src/ui/surface-state';
 
 export default function NotFound() {
   return (
@@ -12,12 +13,17 @@ export default function NotFound() {
       <p className="intro">
         Không tìm thấy tổ hợp tenant và sự kiện này — hoặc trang đã chuyển đi.
       </p>
-      <aside className="state-empty" role="status">
-        Kiểm tra lại đường dẫn, hoặc quay về trang chủ để chọn sự kiện demo.
-      </aside>
-      <Link className="button" href="/">
-        Về trang chủ
-      </Link>
+      <SurfaceState
+        kind="empty"
+        title="Không tìm thấy trang"
+        detail="Kiểm tra lại đường dẫn, hoặc quay về trang chủ để chọn sự kiện demo."
+        testId="route-not-found"
+        action={
+          <Link className="button" href="/">
+            Về trang chủ
+          </Link>
+        }
+      />
     </main>
   );
 }

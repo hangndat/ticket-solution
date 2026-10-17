@@ -21,6 +21,7 @@ import {
   platformMutate,
 } from '../../src/platform/client-fetch';
 import { REQUEST_TIMEOUT_MS } from '../../src/redeem/poll-operation';
+import { SurfaceState } from '../../src/ui/surface-state';
 
 type Props = { misconfigured: boolean; initialError?: string };
 
@@ -47,10 +48,14 @@ export function PlatformConsole({ misconfigured, initialError }: Props) {
   const [healthJson, setHealthJson] = useState<string | null>(null);
   const [statusReason, setStatusReason] = useState('ops');
   const [manageNotice, setManageNotice] = useState<string | null>(null);
+  const [mePhase, setMePhase] = useState<'idle' | 'loading' | 'ready'>(
+    misconfigured ? 'idle' : 'loading',
+  );
 
   useEffect(() => {
     if (misconfigured) return;
     void (async () => {
+      setMePhase('loading');
       const result = await platformGet(
         '/api/bff/platform/me',
         REQUEST_TIMEOUT_MS,
@@ -62,6 +67,7 @@ export function PlatformConsole({ misconfigured, initialError }: Props) {
           result.networkError || result.timedOut,
         ),
       );
+      setMePhase('ready');
     })();
   }, [misconfigured]);
 
@@ -168,6 +174,30 @@ export function PlatformConsole({ misconfigured, initialError }: Props) {
           Đăng xuất platform
         </button>
       </div>
+      {mePhase === 'loading' ? (
+        <SurfaceState
+          kind="loading"
+          title="Đang tải phiên platform…"
+          detail="Kiểm tra operator / MFA assurance qua BFF."
+          testId="platform-me-loading"
+        />
+      ) : null}
+      {mePhase === 'ready' && !me ? (
+        <SurfaceState
+          kind="empty"
+          title="Chưa có phiên platform"
+          detail="Đăng nhập platform (MFA) để xem operator và chạy lệnh."
+          testId="platform-me-empty"
+        />
+      ) : null}
+      {mePhase === 'ready' && me && me.kind !== 'ok' ? (
+        <SurfaceState
+          kind="error"
+          title="Không đọc được phiên platform"
+          detail={viewLabel(me)}
+          testId="platform-me-error"
+        />
+      ) : null}
       {me?.kind === 'ok' ? (
         <dl data-testid="platform-me">
           <div>
@@ -230,7 +260,7 @@ export function PlatformConsole({ misconfigured, initialError }: Props) {
           disabled={busy}
           onClick={() => void createTenant()}
         >
-          Tạo tenant
+          {busy ? 'Đang xử lý…' : 'Tạo tenant'}
         </button>
       </section>
 

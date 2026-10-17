@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { BrandMark } from '../src/brand-mark';
 import { SiteNav } from '../src/site-chrome';
 import { demoEventRoutes, findDemoEvent, demoEventHref } from '../src/events';
+import { SurfaceState } from '../src/ui/surface-state';
 
 export default function Home() {
   return (
@@ -23,28 +24,37 @@ export default function Home() {
           </Link>
         </p>
       </section>
-      <div className="event-list" role="list">
-        {demoEventRoutes().map((route) => {
-          const event = findDemoEvent(route.tenantSlug, route.eventSlug)!;
-          return (
-            <Link
-              className="event-row"
-              href={demoEventHref(event)}
-              key={event.id}
-              role="listitem"
-            >
-              <span className="eyebrow">
-                {event.brand.organizationName} · Demo
-              </span>
-              <h2>{event.name}</h2>
-              <p>{event.category}</p>
-              <span className="card-action">
-                Xem sự kiện demo <span aria-hidden="true">↗</span>
-              </span>
-            </Link>
-          );
-        })}
-      </div>
+      {demoEventRoutes().length === 0 ? (
+        <SurfaceState
+          kind="empty"
+          title="Chưa có sự kiện demo"
+          detail="Fixture demo chưa sẵn sàng. Đổi mã thật vẫn dùng được tại Đổi mã."
+          testId="home-events-empty"
+        />
+      ) : (
+        <div className="event-list" role="list">
+          {demoEventRoutes().map((route) => {
+            const event = findDemoEvent(route.tenantSlug, route.eventSlug)!;
+            return (
+              <Link
+                className="event-row"
+                href={demoEventHref(event)}
+                key={event.id}
+                role="listitem"
+              >
+                <span className="eyebrow">
+                  {event.brand.organizationName} · Demo
+                </span>
+                <h2>{event.name}</h2>
+                <p>{event.category}</p>
+                <span className="card-action">
+                  Xem sự kiện demo <span aria-hidden="true">↗</span>
+                </span>
+              </Link>
+            );
+          })}
+        </div>
+      )}
       <aside className="notice" role="note">
         <strong>Demo có giới hạn rõ.</strong> Thư mục sự kiện là fixture hư cấu.
         Đổi mã thật qua Nest BFF tại <Link href="/redeem">Đổi mã</Link>. Đăng
