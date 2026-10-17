@@ -16,6 +16,9 @@ model Tenant {
   contact          String?
   defaultTimezone  String         @default("Asia/Ho_Chi_Minh") @map("default_timezone")
   logoAssetId      String?        @map("logo_asset_id") @db.Uuid
+  displayName      String?        @map("display_name")
+  primaryColor     String?        @map("primary_color")
+  secondaryColor   String?        @map("secondary_color")
   version          Int            @default(1)
   createdAt        DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt        DateTime       @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
