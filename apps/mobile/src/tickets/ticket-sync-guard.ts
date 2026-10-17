@@ -59,7 +59,7 @@ export function decideTicketSyncApply(input: {
       syncedAt: input.cached.syncedAt,
       offline: true,
       notice:
-        'Could not refresh from API. Showing last offline display cache. Status may have changed.',
+        'Không làm mới được từ API. Đang hiện bộ đệm hiển thị offline gần nhất. Trạng thái có thể đã đổi.',
     };
   }
   if (!input.isEpochCurrent(input.epoch)) return { action: 'stale' };
@@ -67,8 +67,8 @@ export function decideTicketSyncApply(input: {
     action: 'error',
     message:
       input.probe.status === 'unreachable'
-        ? 'GET /v1/me/tickets unreachable. No offline display cache for this account.'
-        : 'GET /v1/me/tickets failed. Check API base URL, tenantId, and that Nest is running.',
+        ? 'GET /v1/me/tickets không tới được. Không có bộ đệm hiển thị offline cho tài khoản này.'
+        : 'GET /v1/me/tickets thất bại. Kiểm tra API base URL, tenantId và Nest đang chạy.',
   };
 }
 

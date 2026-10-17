@@ -28,22 +28,23 @@ function ActionButton({
   onPress: () => void;
   disabled?: boolean;
 }) {
+  const [focused, setFocused] = useState(false);
   return (
     <Pressable
       accessibilityRole="button"
       disabled={disabled}
       onPress={onPress}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
       style={({ pressed }) => ({
         paddingVertical: 14,
         paddingHorizontal: 18,
         borderRadius: 12,
         borderCurve: 'continuous',
-        backgroundColor: disabled
-          ? colors.card
-          : pressed
-            ? colors.accent
-            : colors.accent,
+        backgroundColor: disabled ? colors.card : colors.accent,
         opacity: disabled ? 0.45 : pressed ? 0.85 : 1,
+        borderWidth: focused ? 2 : 0,
+        borderColor: colors.focus,
       })}
     >
       <Text
@@ -123,7 +124,7 @@ function ConfiguredAccount() {
       if (!token || !epoch) {
         setMe(null);
         setMeError(
-          'No verified bearer in SessionBoundary. Offline display cannot authorize GET /v1/me.',
+          'Không có bearer đã xác minh trong SessionBoundary. Hiển thị offline không được gọi GET /v1/me.',
         );
         return;
       }
@@ -132,7 +133,7 @@ function ConfiguredAccount() {
       if (!result || result.userId !== epoch.userId) {
         setMe(null);
         setMeError(
-          'GET /v1/me failed or returned an invalid body. Check EXPO_PUBLIC_API_BASE_URL and that the Nest JWT verifier is running.',
+          'GET /v1/me thất bại hoặc body không hợp lệ. Kiểm tra EXPO_PUBLIC_API_BASE_URL và Nest JWT verifier.',
         );
         return;
       }
@@ -183,7 +184,7 @@ function ConfiguredAccount() {
       }
     } catch (error) {
       setMeError(
-        error instanceof Error ? error.message : 'Keycloak sign-in failed.',
+        error instanceof Error ? error.message : 'Đăng nhập Keycloak thất bại.',
       );
     } finally {
       setBusy(false);
@@ -208,7 +209,7 @@ function ConfiguredAccount() {
       setMeError(
         error instanceof Error
           ? error.message
-          : 'Logout failed while clearing SecureStore / ticket cache.',
+          : 'Đăng xuất thất bại khi xóa SecureStore / bộ đệm vé.',
       );
     } finally {
       setBusy(false);
