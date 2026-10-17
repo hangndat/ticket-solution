@@ -74,3 +74,40 @@ Admission edge (Caddy) chưa deploy — xem `infra/admission/Caddyfile.example`.
 
 - Không deploy/migration/config rủi ro trong giờ Gate mở, trừ hotfix có chủ sở hữu + rollback.
 - Dashboard quá tải: giảm polling/reporting trước khi đụng Gate.
+
+## 7. Platform operator bootstrap / recovery (M12)
+
+Policy: [`PLATFORM-POLICY.md`](./PLATFORM-POLICY.md) · Config: `infra/platform/security-config.json`.
+
+### Bootstrap lần đầu (offline, one-time)
+
+1. Enroll TOTP cho account operator trên Keycloak (`ticket-platform-web` — Auth Code + OTP bắt buộc).
+2. Lấy access token (audience `ticket-platform-api`, `acr=2`, `auth_time` tươi ≤15 phút).
+3. Ghi token vào file `chmod 600` — **không** đưa token/password lên argv hay log.
+
+```bash
+./scripts/platform-operator-bootstrap.sh --verify-only --token-file /path/token
+./scripts/platform-operator-bootstrap.sh --token-file /path/token
+```
+
+4. Script verify JWT rồi gọi module BE (khi đã có). Lần hai phải fail “already bootstrapped” phía BE.
+5. **Cấm:** public bootstrap route, env “auto owner by email”, demo account escalation, `SET ROLE` runtime.
+
+### Recovery mất mọi operator
+
+- Chỉ runbook offline explicit + audit (BE); **không** backdoor runtime / permissive escalation.
+- Không tự mở lại bootstrap sau khi đã từng thành công trừ thủ tục recovery có kiểm soát.
+
+### DB roles
+
+- `ticket_platform_app` / `ticket_platform_runtime`: NOBYPASSRLS, không inherit `ticket_runtime`, không đọc tickets/PII.
+- Xem `infra/deploy/init-db.sh` và `infra/platform/sql/01-platform-roles.sql`.
+
+## 8. Assurance Keycloak
+
+```bash
+./scripts/platform-security-config-smoke.sh
+./scripts/platform-keycloak-assurance-smoke.sh   # cần Keycloak local
+```
+
+Attendee (`ticket-web`) không ép OTP; Owner/admin (`ticket-admin-web`) và platform (`ticket-platform-web`) bind flow OTP.
