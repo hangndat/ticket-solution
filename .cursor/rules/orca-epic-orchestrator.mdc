@@ -21,11 +21,20 @@ Coordinator gốc (depth 0): dispatch, lifecycle, integration
 ## Phân công
 
 1. **Epic planner:** phân Epic → Story → Task theo ownership: backend (`apps/api`, `apps/worker`, `packages/backend`, DB tests/migrations), web (`apps/web`), iOS (`apps/mobile`), coordinator (root tooling, lockfile, CI, shared contracts, docs/rules). Map ownership → Role ID catalog (`backend` / `web` / `ios`; discovery → `product-ba`; UI handoff → `product-design`; DoD → `reviewer-dod` ± `reviewer-security`) theo [docs/agents/README.md](../../docs/agents/README.md).
-2. Planner chuẩn bị spec mỗi Task: parent Epic/Story, scope/paths, **Role ID + path `docs/agents/roles/<id>.md`**, dependencies thật, acceptance/DoD, checks và evidence cần thu. Gửi danh sách Task sẵn sàng và đề xuất wave cho coordinator; không dispatch hoặc tự code thay ownership workers.
-3. Planner theo dõi tiến độ/phụ thuộc, báo blocker và cập nhật đề xuất ready queue; chuẩn bị spec reviewer exact SHA, checklist milestone gates và index evidence nghiệm thu. Planner báo dữ kiện cho coordinator cập nhật Project; không tự đóng Task/Epic hoặc merge.
-4. **Coordinator gốc:** sở hữu dispatch, sync Project theo sự kiện mỗi Task, WIP/backpressure, mailbox, settlement, cleanup và integration trong phạm vi đã ủy quyền. Spawn các Task độc lập cùng wave theo `orca-parallel-workers.mdc`; nhận ready queue từ planner và chủ động idle fill.
+2. Planner chuẩn bị spec mỗi Task: parent Epic/Story, scope/paths, **Role ID + path `docs/agents/roles/<id>.md`**, **chỉ dependencies thật** (artifact/contract/path conflict), acceptance/DoD, checks và evidence cần thu. Gửi ready queue + đề xuất **wave bề rộng tối đa** (mọi Task unblocked cùng đợt, kể cả khác Story) cho coordinator; không dispatch hoặc tự code thay ownership workers.
+3. Planner theo dõi tiến độ/phụ thuộc, báo blocker và cập nhật đề xuất ready queue mỗi khi deps mở; chuẩn bị spec reviewer exact SHA (có thể nhiều PR song song), checklist milestone gates và index evidence nghiệm thu. Planner báo dữ kiện cho coordinator cập nhật Project; không tự đóng Task/Epic hoặc merge.
+4. **Coordinator gốc:** sở hữu dispatch, sync Project theo sự kiện mỗi Task, WIP/backpressure, mailbox, settlement, cleanup và integration trong phạm vi đã ủy quyền. **Spawn hết** Task độc lập trong wave theo `orca-parallel-workers.mdc` trước `check --wait`; nhận ready queue từ planner và chủ động idle fill mọi slot free.
 5. **Ownership workers:** chỉ thực hiện Task được giao trong scope; báo checks, SHA, evidence và blocker. **Reviewer độc lập:** khác session implementer, review exact SHA theo `github-project-tracking.mdc`.
 6. `worker_done` ≠ **Hoàn thành**. Coordinator chỉ đóng Task/Epic sau đủ DoD, CI, evidence và milestone gates; planner chuẩn bị nghiệm thu không thay reviewer độc lập.
+
+## Wave bề rộng (bắt buộc khi đề xuất)
+
+Planner / coordinator khi lập wave phải:
+
+1. Liệt kê mọi Task `Sẵn sàng` / unblocked trong Epic (không gom theo Story serial).
+2. Gắn edge deps chỉ khi thiếu artifact thật (contract OpenAPI, PD handoff, merge SHA blocker).
+3. Đề xuất một wave gồm **tất cả** node ready dưới capacity host + WIP — gồm BA∥PD, BE∥web∥iOS, và nhiều `reviewer-dod` trên PR khác nhau.
+4. Ghi rõ Task bị loại khỏi wave vì: WIP đầy, cùng ownership đang có feature Dispatch, hoặc hard dep chưa xong — không bỏ vì “làm tuần tự cho dễ”.
 
 ## Quy ước và giới hạn
 
