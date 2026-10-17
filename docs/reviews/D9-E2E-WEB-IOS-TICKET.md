@@ -4,7 +4,7 @@
 **Đóng known gap:** [#147](https://github.com/hangndat/ticket-solution/issues/147) DoD (iOS bake `api.vemoki.com` + thiếu evidence Web→iOS)  
 **Ownership:** web (+ phụ ios) · **không** EAS Cloud Build · UAT headless only  
 **Branch:** `hangndat/d9-e2e-web-ios-ticket-2`  
-**Exact tip SHA:** ghi trong PR / sau commit evidence (self-referential tránh pin trước commit).
+**Evidence commit SHA:** `d691d7eeed859d496ad1a17868b1464bf87d6fc1` (UAT screenshots + `web-uat redeem`). Tip PR: `git rev-parse HEAD` trên branch.
 
 ## Seed + local stack
 
