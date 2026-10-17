@@ -1,9 +1,9 @@
 # Native iOS builds: local/self-managed macOS only. Never use Expo/EAS Cloud Build.
 # Không dùng Turbo Remote Cache / SaaS cache (ADR-11). Chỉ cache local Actions `.turbo`.
 #
-# Layout: changes → parallel scope jobs → aggregator `ci` (required check).
+# Layout: changes → parallel scopes (web/mobile/backend + db matrix + d5×3) → `ci`.
 # PR chỉ đụng docs/** hoặc meta → gần như chỉ chạy `changes` + `ci`.
-# Turbo: restore chung theo lockfile; mỗi job save key riêng (tránh race immutable cache).
+# Turbo: restore chung theo lockfile; web/mobile/backend upload shard → turbo-persist merge.
 name: CI
 on:
   push:
@@ -182,44 +182,77 @@ jobs:
         with:
           turbo-job: backend
 
+  # Mỗi file test:db tự spin Postgres — shard matrix để song song (critical path).
   database-isolation:
     needs: changes
     if: needs.changes.outputs.db == 'true'
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - shard: rls-membership
+            files: test/rls.test.cjs test/rls-catalog.test.cjs test/membership.test.cjs
+          - shard: issue-gate-approval
+            files: test/issue.test.cjs test/gate.test.cjs test/approval.test.cjs
+          - shard: config-n1-report
+            files: test/config-publish.test.cjs test/event-lifecycle.test.cjs test/n1-email-mime.test.cjs test/reporting.test.cjs
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-pnpm
-      # Warm contracts via turbo cache; test:db tự build backend.
-      - run: pnpm exec turbo run build --filter=@ticket/contracts
-      - run: pnpm --filter @ticket/backend test:db
+      - run: pnpm exec turbo run build --filter=@ticket/backend...
+      - name: DB tests (${{ matrix.shard }})
+        working-directory: packages/backend
+        run: node --test ${{ matrix.files }}
 
-  d5-hardening-smoke:
+  # D5 drills tách 3 job song song (ports/container name độc lập).
+  d5-observability:
     needs: changes
     if: needs.changes.outputs.hardening == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
-          # d5-observability-smoke resolves historical metrics SHAs
           fetch-depth: 0
       - uses: ./.github/actions/setup-pnpm
-      - name: Build API (restore reconnect + metrics E2E deps)
-        run: pnpm exec turbo run build --filter=@ticket/api...
-      - name: Observability artifact smoke
-        run: ./scripts/d5-observability-smoke.sh
-      - name: Fixture backup drill
-        run: ./scripts/d5-backup-drill.sh
-      - name: Business + key restore drill
-        run: ./scripts/d5-business-restore-drill.sh
-      - name: Admission S4 isolated (nginx edge)
-        run: ./scripts/d5-admission-s4.sh
-      - name: R-INT tenant host / cache / cookie unit
-        run: pnpm test:rint-host
-      - name: R-INT stack manifest smoke
-        run: ./scripts/rint-stack-smoke.sh
-      - name: R-INT outbox Redis-loss + lease reclaim
-        run: ./scripts/rint-outbox-recovery.sh
+      - run: pnpm exec turbo run build --filter=@ticket/api...
+      - run: ./scripts/d5-observability-smoke.sh
 
+  d5-drills:
+    needs: changes
+    if: needs.changes.outputs.hardening == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-pnpm
+      - run: pnpm exec turbo run build --filter=@ticket/api...
+      - name: Backup + business restore + admission (parallel)
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./scripts/d5-backup-drill.sh &
+          p1=$!
+          ./scripts/d5-business-restore-drill.sh &
+          p2=$!
+          ./scripts/d5-admission-s4.sh &
+          p3=$!
+          fail=0
+          wait "$p1" || fail=1
+          wait "$p2" || fail=1
+          wait "$p3" || fail=1
+          exit "$fail"
+
+  d5-rint:
+    needs: changes
+    if: needs.changes.outputs.hardening == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-pnpm
+      - run: pnpm exec turbo run build --filter=@ticket/api...
+      - run: pnpm test:rint-host
+      - run: ./scripts/rint-stack-smoke.sh
+      - run: ./scripts/rint-outbox-recovery.sh
 
   # Merge turbo shards from scope jobs into one Actions cache (content-addressed).
   turbo-persist:
@@ -279,7 +312,9 @@ jobs:
       - mobile
       - backend
       - database-isolation
-      - d5-hardening-smoke
+      - d5-observability
+      - d5-drills
+      - d5-rint
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -299,7 +334,9 @@ jobs:
             "mobile:${{ needs.mobile.result }}" \
             "backend:${{ needs.backend.result }}" \
             "database-isolation:${{ needs.database-isolation.result }}" \
-            "d5-hardening-smoke:${{ needs.d5-hardening-smoke.result }}"
+            "d5-observability:${{ needs.d5-observability.result }}" \
+            "d5-drills:${{ needs.d5-drills.result }}" \
+            "d5-rint:${{ needs.d5-rint.result }}"
           do
             name="${pair%%:*}"
             result="${pair#*:}"
