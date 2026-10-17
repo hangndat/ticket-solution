@@ -22,11 +22,23 @@ async function lockEvent(
   tx: Prisma.TransactionClient,
   tenantId: string,
   eventId: string,
-): Promise<{ id: string; status: string; published_config_version: number | null }> {
+): Promise<{
+  id: string;
+  status: string;
+  content_status: string;
+  business_status: string;
+  published_config_version: number | null;
+}> {
   const rows = await tx.$queryRaw<
-    Array<{ id: string; status: string; published_config_version: number | null }>
+    Array<{
+      id: string;
+      status: string;
+      content_status: string;
+      business_status: string;
+      published_config_version: number | null;
+    }>
   >`
-    SELECT id, status, published_config_version
+    SELECT id, status, content_status, business_status, published_config_version
     FROM events
     WHERE tenant_id = ${tenantId}::uuid AND id = ${eventId}::uuid
     FOR UPDATE
@@ -36,6 +48,23 @@ async function lockEvent(
     throw new ConfigError(CONFIG_ERROR_CODES.EVENT_NOT_FOUND, 'Event not found');
   }
   return row;
+}
+
+function assertConfigMutable(event: {
+  status: string;
+  content_status: string;
+  business_status: string;
+}): void {
+  if (
+    event.content_status === 'ARCHIVED' ||
+    event.status === 'ARCHIVED' ||
+    event.status === 'CLOSED'
+  ) {
+    throw new ConfigError(CONFIG_ERROR_CODES.EVENT_CLOSED, 'Event is archived');
+  }
+  if (event.business_status === 'CANCELLED') {
+    throw new ConfigError(CONFIG_ERROR_CODES.EVENT_CLOSED, 'Event is cancelled');
+  }
 }
 
 export async function saveEventConfigVersion(
@@ -61,9 +90,7 @@ export async function saveEventConfigVersion(
     eventId: input.eventId,
   });
   const event = await lockEvent(tx, input.tenantId, input.eventId);
-  if (event.status === 'CLOSED') {
-    throw new ConfigError(CONFIG_ERROR_CODES.EVENT_CLOSED, 'Event is closed');
-  }
+  assertConfigMutable(event);
   const schemaVersion = input.schemaVersion ?? 1;
   const inserted = await tx.$queryRaw<Array<{ version: number }>>`
     INSERT INTO event_config_versions (
@@ -112,9 +139,7 @@ export async function publishEventConfig(
     eventId: input.eventId,
   });
   const event = await lockEvent(tx, input.tenantId, input.eventId);
-  if (event.status === 'CLOSED') {
-    throw new ConfigError(CONFIG_ERROR_CODES.EVENT_CLOSED, 'Event is closed');
-  }
+  assertConfigMutable(event);
   const rows = await tx.$queryRaw<
     Array<{ version: number; published_at: Date | null }>
   >`
@@ -161,6 +186,7 @@ export async function publishEventConfig(
   await tx.$executeRaw`
     UPDATE events
     SET status = 'PUBLISHED',
+        content_status = 'PUBLISHED',
         published_config_version = ${input.expectedVersion}
     WHERE tenant_id = ${input.tenantId}::uuid AND id = ${input.eventId}::uuid
   `;

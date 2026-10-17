@@ -6,6 +6,11 @@ import {
 } from 'node:crypto';
 import type { Prisma } from './generated/prisma/client';
 import { ApprovalError, APPROVAL_ERROR_CODES } from './approval-error';
+import {
+  assertOpenForIssuance,
+  dbClock,
+  lockEventPolicyForShare,
+} from './event-policy';
 import { requireTenantPermission } from './membership';
 
 export const APPROVE_COMMAND = 'redemption.approve' as const;
@@ -545,40 +550,13 @@ async function approvePending(
   request: RequestRow,
   operationId: string,
 ): Promise<string> {
-  const events = await tx.$queryRaw<
-    Array<{
-      id: string;
-      status: string;
-      redemption_opens_at: Date | null;
-      redemption_closes_at: Date | null;
-    }>
-  >`
-    SELECT id, status, redemption_opens_at, redemption_closes_at
-    FROM events
-    WHERE tenant_id = ${input.tenantId}::uuid
-      AND id = ${input.eventId}::uuid
-    FOR SHARE
-  `;
-  const event = events[0];
-  if (!event || event.status !== 'PUBLISHED') {
-    throw new ApprovalError(
-      APPROVAL_ERROR_CODES.EVENT_CLOSED,
-      'Event is not open for redemption',
-    );
-  }
-  const nowRows = await tx.$queryRaw<Array<{ now: Date }>>`
-    SELECT clock_timestamp() AS now
-  `;
-  const now = nowRows[0]?.now ?? new Date();
-  if (
-    (event.redemption_opens_at && now < event.redemption_opens_at) ||
-    (event.redemption_closes_at && now > event.redemption_closes_at)
-  ) {
-    throw new ApprovalError(
-      APPROVAL_ERROR_CODES.REDEMPTION_WINDOW_CLOSED,
-      'Redemption window is closed',
-    );
-  }
+  const event = await lockEventPolicyForShare(
+    tx,
+    input.tenantId,
+    input.eventId,
+  );
+  const now = await dbClock(tx);
+  assertOpenForIssuance(event, now, 'approval');
 
   const codes = await tx.$queryRaw<CodeRow[]>`
     SELECT c.id, c.source_id, c.ticket_type_id, c.status, c.active_request_id,
@@ -636,7 +614,7 @@ async function approvePending(
       tenant_id, event_id, attendee_id, issued_count, max_tickets, updated_at
     ) VALUES (
       ${input.tenantId}::uuid, ${input.eventId}::uuid, ${attendee.id}::uuid,
-      0, 5, now()
+      0, ${event.max_tickets_per_attendee}, now()
     )
     ON CONFLICT (tenant_id, attendee_id) DO NOTHING
   `;
