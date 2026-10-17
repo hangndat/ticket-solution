@@ -30,7 +30,9 @@ Deploy một service khi chỉ service đó đổi. `restart` đủ sau khi buil
 | minio-init | tạo bucket private | one-shot; exit 0 |
 
 
-## MinIO (CSV export)
+## MinIO (CSV export + D9 demo assets)
+
+Local demo seed (không prod): `D9_MEDIA_STACK_UP=1 ./scripts/d9-seed-media.sh` — checklist `docs/ops/MEDIA-ASSET-CHECKLIST.md`. Nếu Docker Hub chặn `minio/minio`, script fallback `cleanstart/minio` giống test `minio-real`.
 
 Prod từng trả `MINIO_MISCONFIGURED` vì api/worker thiếu endpoint + không có container. Sau khi merge:
 
