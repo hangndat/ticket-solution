@@ -3,7 +3,8 @@
 **Issue:** [#142](https://github.com/hangndat/ticket-solution/issues/142) · Story [#139](https://github.com/hangndat/ticket-solution/issues/139) · Epic [#134](https://github.com/hangndat/ticket-solution/issues/134)  
 **Ownership:** `apps/web` only (iOS sibling trên branch `hangndat/d9-s2-t3-ios-media` — không đóng #142 chỉ vì web PR)  
 **Branch:** `hangndat/d9-s2-t3-web-media`  
-**Exact SHA:** _(điền sau commit tip — chạy `git rev-parse HEAD`)_
+**Exact SHA (impl tip):** `99d01b0b9065c4fa8ef73ff8966a3bf90348e303`  
+**Note:** Commit docs pin này có thể đẩy tip branch thêm 1 SHA — DoD reviewer dùng tip `git rev-parse HEAD` trên PR.
 
 ## Phạm vi đã làm
 
