@@ -21,13 +21,13 @@ export function redeemReconcileAnnouncement(): Announcement {
   };
 }
 
-/** Unknown redeem results are alerts so they are announced, and are not tickets. */
+/** Unknown / pending redeem results are alerts and are not tickets. */
 export function redeemDecisionAnnouncement(input: {
-  kind: 'issued' | 'denied' | 'unknown';
+  kind: 'issued' | 'denied' | 'unknown' | 'pending' | 'stale';
   title: string;
   detail: string;
 }): Announcement {
-  if (input.kind === 'unknown') {
+  if (input.kind === 'unknown' || input.kind === 'pending') {
     return {
       accessibilityRole: 'alert',
       accessibilityLabel: `${input.title}. ${input.detail} Not an issued ticket.`,
@@ -36,6 +36,22 @@ export function redeemDecisionAnnouncement(input: {
   return {
     accessibilityRole: 'summary',
     accessibilityLabel: `${input.title}. ${input.detail}`,
+  };
+}
+
+export function redeemStatusRefreshAnnouncement(): Announcement {
+  return {
+    accessibilityRole: 'button',
+    accessibilityLabel: 'Refresh redemption status',
+  };
+}
+
+export function termsConsentAnnouncement(accepted: boolean): Announcement {
+  return {
+    accessibilityRole: 'button',
+    accessibilityLabel: accepted
+      ? 'Terms accepted. Double tap to withdraw consent.'
+      : 'Accept published terms. Required before redeem.',
   };
 }
 

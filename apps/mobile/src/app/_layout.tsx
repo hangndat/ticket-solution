@@ -23,6 +23,7 @@ function AppStack() {
         options={{ title: 'Fixture event' }}
       />
       <Stack.Screen name="redeem" options={{ title: 'Redeem' }} />
+      <Stack.Screen name="claim" options={{ title: 'Claim invitation' }} />
     </Stack>
   );
 }

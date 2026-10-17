@@ -3,6 +3,8 @@
  * Mirror until packages/contracts lands — do not invent HTML/JS or draft fields.
  */
 
+import type { FormDefinition } from '../redeem/contract.ts';
+
 export const PUBLISHED_SECTION_KINDS = [
   'hero',
   'info',
@@ -53,6 +55,8 @@ export type PublishedEventDetail = {
   sections: PublishedSection[];
   faq: PublishedFaqItem[];
   terms: PublishedTerms | null;
+  /** C-F published form — absent/null means no client fields required. */
+  form?: FormDefinition | null;
   brand: PublishedBrand;
 };
 

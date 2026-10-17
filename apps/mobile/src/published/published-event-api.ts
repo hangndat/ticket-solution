@@ -70,7 +70,37 @@ export function isPublishedEventDetail(
       return false;
     }
   }
+  if (value.form !== undefined && value.form !== null) {
+    if (!isPublishedForm(value.form)) return false;
+  }
   return isBrand(value.brand);
+}
+
+function isPublishedForm(value: unknown): boolean {
+  if (!isRecord(value)) return false;
+  if (typeof value.formVersion !== 'string' || !value.formVersion) return false;
+  if (!Array.isArray(value.fields)) return false;
+  const allowed = new Set(['text', 'email', 'phone', 'select', 'checkbox']);
+  for (const field of value.fields) {
+    if (!isRecord(field)) return false;
+    if (typeof field.id !== 'string' || !field.id) return false;
+    if (typeof field.label !== 'string') return false;
+    if (typeof field.type !== 'string' || !allowed.has(field.type)) return false;
+    if (typeof field.required !== 'boolean') return false;
+    if (field.options !== undefined) {
+      if (!Array.isArray(field.options)) return false;
+      for (const opt of field.options) {
+        if (
+          !isRecord(opt) ||
+          typeof opt.id !== 'string' ||
+          typeof opt.label !== 'string'
+        ) {
+          return false;
+        }
+      }
+    }
+  }
+  return true;
 }
 
 export function isPublishedEventSummary(
