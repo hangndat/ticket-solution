@@ -24,7 +24,9 @@
     "test:rint-stack": "./scripts/rint-stack-smoke.sh",
     "dev:web": "pnpm --filter @ticket/contracts build && pnpm --filter @ticket/web dev",
     "dev:api": "pnpm --filter @ticket/api... build && pnpm --filter @ticket/api dev",
-    "dev:ios": "pnpm --filter @ticket/contracts build && pnpm --filter @ticket/mobile dev"
+    "dev:ios": "pnpm --filter @ticket/contracts build && pnpm --filter @ticket/mobile dev",
+    "demo:seed": "./scripts/d9-demo-seed.sh",
+    "demo:seed-smoke": "./scripts/d9-demo-seed-smoke.sh"
   },
   "devDependencies": {
     "playwright": "1.56.1",
