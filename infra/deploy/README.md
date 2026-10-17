@@ -47,9 +47,9 @@ Proxy:
 - `api.vemoki.com` → `vemoki-api:3001`
 - `auth.vemoki.com` → `vemoki-keycloak:8080`
 
-Giữ header `Host`, `X-Forwarded-For`, `X-Forwarded-Proto`.
+Giữ `Host`, `X-Forwarded-For`, `X-Forwarded-Proto`. **Bắt buộc** ghi đè `X-Forwarded-Host $host` (không chuyển tiếp header client). Web nên dùng `PUBLIC_WEB_ORIGIN=https://vemoki.com` (allowlist) thay vì tin forwarded host thô.
 
-Next bind `0.0.0.0` nên `request.url` có thể thành `https://0.0.0.0:3000/...`. Callback và logout dùng `X-Forwarded-Host`. Nginx đổi `Location` còn trỏ `0.0.0.0:3000` về `https://vemoki.com`.
+Next bind `0.0.0.0` nên `request.url` có thể thành `https://0.0.0.0:3000/...`. Nginx đổi `Location` còn trỏ `0.0.0.0:3000` về `https://vemoki.com`.
 
 ## Đã kiểm tra
 

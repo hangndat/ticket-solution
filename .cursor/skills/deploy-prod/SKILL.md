@@ -9,7 +9,7 @@ description: >-
 
 # Deploy Vemoki production
 
-SSH: `ssh dexter@113.161.116.5`. The zsh alias `conanphong` does not exist in non-interactive SSH. Tree: `/opt/vemoki/src`. Secrets: `/opt/vemoki/.env` (mode 600). Never print that file or realm client secrets.
+SSH: use the local shell alias / SSH config host `conanphong` (or `VEMoki_SSH_HOST` if set). Do **not** embed production IP/user in this skill. Tree: `/opt/vemoki/src`. Secrets: `/opt/vemoki/.env` (mode 600). Never print that file or realm client secrets.
 
 Compose directory: `/opt/vemoki/src/infra/deploy`. Always pass `--env-file /opt/vemoki/.env`. Deploy **one service** unless the user asked for the whole stack. `docker compose up -d <service>` without `--no-deps` restarts dependencies. After a bind-mount rebuild, `docker compose restart <service>` is enough. Use `up -d --no-deps --force-recreate <service>` only when the compose file for that service changed.
 
@@ -64,7 +64,7 @@ Verify: health becomes healthy, and `https://auth.vemoki.com/realms/ticket/.well
 
 Edit only `data/nginx/vemoki.conf`. `nginx -t` then reload inside `nginx-letencrypt-nginx-1`. Do not compose-up that stack.
 
-Targets: `vemoki.com` → `vemoki-web:3000`, `api.vemoki.com` → `vemoki-api:3001`, `auth.vemoki.com` → `vemoki-keycloak:8080`. Send `Host`, `X-Forwarded-For`, `X-Forwarded-Proto`. Rewrite `Location` values `http://0.0.0.0:3000/` and `https://0.0.0.0:3000/` to `https://vemoki.com/`.
+Targets: `vemoki.com` → `vemoki-web:3000`, `api.vemoki.com` → `vemoki-api:3001`, `auth.vemoki.com` → `vemoki-keycloak:8080`. Set `Host`, `X-Forwarded-For`, `X-Forwarded-Proto`, and **overwrite** `X-Forwarded-Host $host` (strip client-supplied value). Prefer app `PUBLIC_WEB_ORIGIN=https://vemoki.com` over trusting raw forwarded headers. Rewrite `Location` values `http://0.0.0.0:3000/` and `https://0.0.0.0:3000/` to `https://vemoki.com/`.
 
 Verify the three hosts above plus `https://ancafe.anphong.vn/` still 200.
 
