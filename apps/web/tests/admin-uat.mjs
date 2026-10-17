@@ -118,8 +118,17 @@ try {
   const failClosed =
     /OIDC_MISCONFIGURED|UNAUTHENTICATED|chưa biết|EVENT_CREATE|CONFIG_VERSION|QUOTA_REQUIRED|CS:|Export |Đã lưu|Đã publish|Đã nhập|Đã tạo event|Quota event|Payload không hợp lệ|CONFIG_EDITOR/;
   const saveText = await clickAndNotice(page, 'Lưu phiên bản', failClosed);
-  await page.getByLabel(/Phiên bản cần publish/).fill('1');
-  const publishText = await clickAndNotice(page, 'Publish', failClosed);
+  await page.getByLabel(/Phiên bản cần xuất bản|Phiên bản cần publish/).fill('1');
+  const publishBtn = page.getByTestId('config-publish-button');
+  const publishDisabled = await publishBtn.isDisabled();
+  let publishText;
+  if (publishDisabled) {
+    publishText =
+      'Publish UI gated (checklist chưa đủ) — không coi đã xuất bản; backend vẫn fail-closed.';
+    console.log('admin-uat: publish gated disabled=true (PD AC-M1)');
+  } else {
+    publishText = await clickAndNotice(page, 'Xuất bản', failClosed);
+  }
   await page.getByTestId('admin-job-guests').click();
   await page.locator('#admin-codes').fill('CODE-A\nCODE-B');
   const importText = await clickAndNotice(page, 'Nhập mã', failClosed);

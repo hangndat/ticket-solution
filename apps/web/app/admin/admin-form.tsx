@@ -1122,11 +1122,11 @@ export function AdminForm({
         </h2>
         <p className="admin-event-summary__meta muted" data-testid="current-event-context">
           {currentEvent
-            ? `Trạng thái: ${currentEvent.contentStatus}/${currentEvent.businessStatus} · rev ${currentEvent.revision}`
+            ? `Trạng thái: ${currentEvent.contentStatus}/${currentEvent.businessStatus}`
             : eventId.trim()
-              ? 'Đã có Event ID — tải metadata để hiện tên/slug.'
+              ? 'Đã chọn sự kiện — tải metadata nếu tên chưa hiện.'
               : 'Chọn tổ chức và sự kiện để làm việc.'}
-          {selectedTenant ? ` · ${selectedTenant.status}/${selectedTenant.role}` : ''}
+          {selectedTenant ? ` · ${selectedTenant.role}` : ''}
         </p>
       </header>
       {tenantsPhase === 'loading' ? (
@@ -1156,7 +1156,7 @@ export function AdminForm({
         </p>
       )}
       <label>
-        Tổ chức (từ /me/tenants)
+        Tổ chức
         <select
           name="tenantSelector"
           data-testid="tenant-selector"
@@ -1239,9 +1239,16 @@ export function AdminForm({
       >
         <h2 id="create-event-heading">Chuẩn bị · sự kiện</h2>
         <p>
-          Tạo / liệt kê event trong tổ chức. POST create kèm Idempotency-Key và
-          CSRF. Shape sai → chưa biết, không coi là đã tạo.
+          Tạo hoặc liệt kê sự kiện trong tổ chức. Kết quả chưa rõ (timeout/5xx)
+          không coi là đã tạo.
         </p>
+        <details className="admin-tech-details">
+          <summary>Chi tiết kỹ thuật · tạo sự kiện</summary>
+          <p className="muted">
+            POST create qua BFF kèm Idempotency-Key và CSRF. Shape sai → chưa
+            biết, không coi là đã tạo.
+          </p>
+        </details>
         <label>
           Event slug
           <input
@@ -1344,10 +1351,18 @@ export function AdminForm({
       >
         <h2 id="event-lifecycle-heading">Metadata &amp; vòng đời</h2>
         <p>
-          PATCH dùng expectedRevision; đổi startsAt/venue sau khi đã có vé cần
-          impact preview + confirmIssuedImpact. Clone chỉ DRAFT allowlist —
-          không sao staff/mã/vé. Cancel/archive tách business/content status.
+          Cập nhật thời gian, địa điểm và liên hệ. Đổi lịch/địa điểm sau khi đã
+          có vé cần xem trước tác động và xác nhận. Clone chỉ bản nháp — không
+          sao staff/mã/vé. Hủy và lưu trữ tách trạng thái vận hành / nội dung.
         </p>
+        <details className="admin-tech-details">
+          <summary>Chi tiết kỹ thuật · metadata</summary>
+          <p className="muted">
+            Lưu metadata dùng PATCH + expectedRevision. Impact preview +
+            confirmIssuedImpact khi đổi startsAt/venue sau khi đã có vé.
+            Cancel/archive tách business/content status.
+          </p>
+        </details>
         <label>
           startsAt (UTC ISO)
           <input
@@ -1478,7 +1493,7 @@ export function AdminForm({
             disabled={busy || !currentEvent}
             onClick={() => void saveEventMetadata()}
           >
-            Lưu metadata (PATCH)
+            Lưu metadata
           </button>
         </div>
         {impactView?.kind === 'preview' ? (
@@ -1669,6 +1684,7 @@ export function AdminForm({
         expectedVersion={expectedVersion}
         onExpectedVersion={setExpectedVersion}
         eventRevision={currentEvent?.revision ?? null}
+        publishReady={publishReady}
         onSavedVersion={(version) => {
           setExpectedVersion(String(version));
           setDecision({ kind: 'saved', version });
@@ -1701,7 +1717,7 @@ export function AdminForm({
       ) : null}
       <p className="intro" data-testid="admin-publish-gate" role="status">
         {publishReady
-          ? 'Checklist sẵn sàng đủ theo dữ liệu form — nút Publish vẫn do backend enforce; timeout/chưa rõ ≠ đã xuất bản.'
+          ? 'Checklist đủ — nút xuất bản hiện trong phần nội dung & brand. Backend vẫn enforce; chưa rõ ≠ đã xuất bản.'
           : readinessSummary(readinessItems)}
       </p>
       </div>

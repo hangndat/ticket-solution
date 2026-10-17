@@ -25,9 +25,8 @@ export default async function Admin({ searchParams }: Props) {
       <SiteNav variant="admin" />
       <h1>Không gian quản trị sự kiện</h1>
       <p className="intro">
-        Làm theo việc: Chuẩn bị · Khách &amp; mã · Cổng · Hỗ trợ. Chọn tổ chức /
-        sự kiện theo tên; checklist sẵn sàng dựa trên dữ liệu form thật. Shape
-        sai hoặc timeout/5xx là chưa biết — không coi là thành công.
+        Chọn tổ chức và sự kiện, rồi làm theo việc. Kết quả chưa rõ không coi
+        là thành công.
       </p>
       {!configured ? (
         <aside className="notice auth-unconfigured state-error" role="status">
