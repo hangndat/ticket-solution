@@ -72,14 +72,14 @@ test('brandingCssVarEntries expose D6 token names', () => {
 
 test('brandingFromEventBrand scopes demo event chrome', () => {
   const b = brandingFromEventBrand(
-    { primaryColor: '#783013', organizationName: 'Sunburst Collective' },
-    'sunburst',
+    { primaryColor: '#783013', organizationName: 'MFest' },
+    'mfest',
   );
   assert.equal(b.source, 'demo-event');
-  assert.equal(b.tenantSlug, 'sunburst');
+  assert.equal(b.tenantSlug, 'mfest');
   assert.equal(b.colors.signal, '#783013');
-  assert.equal(b.displayName, 'Sunburst Collective');
-  assert.match(b.wordmark, /sunburst/);
+  assert.equal(b.displayName, 'MFest');
+  assert.match(b.wordmark, /mfest/);
 });
 
 test('toBrandingDto is JSON-safe for BFF responses', () => {

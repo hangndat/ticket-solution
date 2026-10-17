@@ -12,14 +12,14 @@ export type DemoEvent = Readonly<
 
 const events: readonly DemoEvent[] = [
   {
-    id: 'fixture-fun-fest',
-    tenantSlug: 'sunburst',
-    slug: 'fun-fest-2026',
-    name: 'FUN FEST 2026',
+    id: 'fixture-mfest',
+    tenantSlug: 'mfest',
+    slug: 'mfest-2026',
+    name: 'MFest 2026',
     startsAt: '2026-12-12T09:00:00+07:00',
     timezone: 'Asia/Ho_Chi_Minh',
     location: 'Riverside Park · Ho Chi Minh City (demo venue)',
-    brand: { primaryColor: '#783013', organizationName: 'Sunburst Collective' },
+    brand: { primaryColor: '#783013', organizationName: 'MFest' },
     category: 'Music / Community / Discovery',
     theme: 'festival',
     description:

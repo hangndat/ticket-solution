@@ -43,9 +43,9 @@ test('resolveThemeTokens null → full Vemoki default', () => {
 test('resolveThemeTokens falls back wordmark to organizationName', () => {
   const tokens = resolveThemeTokens({
     tenantSlug: 'fun',
-    organizationName: 'FUN Collective',
+    organizationName: 'MFest',
     primaryColor: '#59428a',
   });
-  assert.equal(tokens.wordmark, 'FUN Collective');
+  assert.equal(tokens.wordmark, 'MFest');
   assert.equal(tokens.logoUrl, null);
 });
