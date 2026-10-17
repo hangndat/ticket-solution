@@ -2,7 +2,8 @@
 
 **Ngày:** 2026-10-17  
 **Story/Task:** #115 / #116 · PR #190  
-**client tip (docs commit will update):** 763e14951c7a74f081ccb50e08ac0bc8201ac244  
+**client tip:** `625adafe944218c97b4af3dec7a97f90c8d3a022`  
+**evidence commit (F1/F2 artifacts):** `763e14951c7a74f081ccb50e08ac0bc8201ac244`  
 **behavior SHA (mobile):** `c8606fe59a8e5771aac79c420736960781d3ee3a`  
 **server/runtime SHA (`origin/main` API with offline-sync):** `f7c88ffd6f936b6da56aa8cea8451f3ae889c278`  
 **ticketId:** `ace74a71-7646-431a-a73e-7281848002a1`  
