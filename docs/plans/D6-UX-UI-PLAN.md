@@ -1,11 +1,11 @@
 # D6 — Hoàn thiện UX/UI toàn sản phẩm (kế hoạch)
 
-**Trạng thái:** **Coding S1–S6 đã merge `main` (2026-10-17)** — web PR [#92](https://github.com/hangndat/ticket-solution/pull/92) `eb0d0784f300571dc7a557c0db3ecd865c4e9cfe` · iOS PR [#93](https://github.com/hangndat/ticket-solution/pull/93) `b93124b58eb1740d263fc5191ddd9a9aad4506f6`. Issues #82–#85, #87–#88 **Hoàn thành**/closed. Còn **S7 (#89)** ROADMAP sync + nghiệm thu parent **#81** (đợt chưa đóng). Plan đã duyệt user 2026-10-17; Milestone #8.  
+**Trạng thái:** **Đợt D6 acceptance complete (2026-10-17)** — parent [#81](https://github.com/hangndat/ticket-solution/issues/81) **Hoàn thành**/closed trên Project #3; Milestone #8 closed. Coding: web PR [#92](https://github.com/hangndat/ticket-solution/pull/92) `eb0d078…` · iOS PR [#93](https://github.com/hangndat/ticket-solution/pull/93) `b93124b…`. S7 docs: PR [#94](https://github.com/hangndat/ticket-solution/pull/94) `05618b5…`. Issues #82–#85/#87–#89 closed. Plan đã duyệt user 2026-10-17.  
 **Ngày soạn:** 2026-10-17  
 **Ngày duyệt:** 2026-10-17  
-**Cập nhật tiến độ:** 2026-10-17 (sau merge #92/#93)
+**Cập nhật tiến độ:** 2026-10-17 (board Hoàn thành #81; đóng gap ROADMAP §4)
 
-**Đối chiếu code:** `main` tip `b93124b58eb1740d263fc5191ddd9a9aad4506f6` (sau D6 iOS). DoD coding: PASS with known gaps (web @ `ec8eac6…`, iOS @ `a3eabf2…`).  
+**Đối chiếu code:** `main` tip `05618b5ed1401a3e524243a5823ed336b8731796` (sau D6 S7 docs #94). DoD coding: PASS with known gaps (web @ `ec8eac6…`, iOS @ `a3eabf2…`).  
 **Không phải:** pilot ready, store submission, production deploy, hay gộp hardening D5.
 
 ---
@@ -231,7 +231,7 @@ Parent D6 chỉ **Hoàn thành** khi:
 ## 9. GitHub board (đã tạo 2026-10-17)
 
 **Đã tạo:** Milestone #8 · Parent #81 · S1–S7 #82 #83 #84 #85 #87 #88 #89 · label `dot-d6` · Project #3 Đợt `D6 — Hoàn thiện UX/UI`.  
-**Tiến độ board (2026-10-17):** #82–#85/#87–#88 closed sau merge coding; #89 + parent #81 còn mở đến khi S7 docs sync + gate §7 đợt xong.
+**Tiến độ board (2026-10-17):** #82–#85/#87–#89 + parent #81 **Hoàn thành**/closed; Milestone #8 **closed**. PRs #92/#93/#94 trên `main`.
 
 **Milestone (VI):** `D6 — Hoàn thiện UX/UI Vemoki`  
 **Label:** `dot-d6` (+ `nhom-web` / `nhom-ios` / `nhom-coordinator` / `loai-tinh-nang` khi tạo thật)  
@@ -290,15 +290,15 @@ apps/web | apps/mobile | docs only
 ### §1 bảng trạng thái — thêm hàng (sau D5, trước Android/…)
 
 ```markdown
-| UX/UI polish (D6) | **Chưa lên lịch** (sau duyệt) | Chưa mở implement | Sau D5 acceptance; không = pilot ready |
+| UX/UI polish (D6) | **Hoàn thành** (#81) | Nghiệm thu đợt (acceptance) | PRs #92/#93/#94; D6 ≠ pilot ready |
 ```
 
-(Cập nhật Board khi đã có parent Issue.)
+**(Đã apply trên `docs/ROADMAP.md` — board Project #3 thắng; stub dưới đây chỉ lịch sử đề xuất.)**
 
 ### §4 — thêm hàng milestone
 
 ```markdown
-| D6 | Hoàn thiện UX/UI | Polish brand Vemoki + IA/states/a11y trên web & iOS đã có chức năng | Brand test + headless/sim screenshots; không gộp D5 hardening | Chưa lên lịch |
+| D6 | Hoàn thiện UX/UI | Polish brand Vemoki + IA/states/a11y trên web & iOS đã có chức năng | Brand test + headless/sim screenshots; không gộp D5 hardening | Hoàn thành (#81 closed; PRs #92/#93/#94) |
 ```
 
 Giữ câu Sau MVP: *không gắn vào D2–D6* (Android/payment/…).
@@ -314,7 +314,7 @@ Giữ câu Sau MVP: *không gắn vào D2–D6* (Android/payment/…).
 ### §6 — section mới trước “Sau MVP”
 
 ```markdown
-### D6 — Hoàn thiện UX/UI (board: Đang làm / Chờ duyệt S7)
+### D6 — Hoàn thiện UX/UI (board: Hoàn thành)
 
 - [x] Tokens & design contract — D6-S1 (#82) — PR #92 + #93
 - [x] Web guest / redeem / claim / event — D6-S2 (#83) — PR #92
@@ -322,14 +322,14 @@ Giữ câu Sau MVP: *không gắn vào D2–D6* (Android/payment/…).
 - [x] Web admin & platform — D6-S4 (#85) — PR #92
 - [x] iOS theme + Events/Redeem/Claim — D6-S5 (#87) — PR #93
 - [x] iOS ví + Staff scan UX — D6-S6 (#88) — PR #93
-- [ ] ROADMAP sync & nghiệm thu đợt — D6-S7 (#89)
+- [x] ROADMAP sync & nghiệm thu đợt — D6-S7 (#89) — PR #94
 
-**Gate:** xem docs/plans/D6-UX-UI-PLAN.md §7. Coding S1–S6 trên main; còn nghiệm thu parent #81 qua #89. Không tuyên bố pilot ready.
+**Gate:** xem docs/plans/D6-UX-UI-PLAN.md §7. Đợt acceptance xong; D6 ≠ pilot ready.
 ```
 
 ### §0 / trọng tâm — câu gợi ý (khi board đã có D6)
 
-> D6 coding S1–S6 đã merge; trọng tâm nghiệm thu đợt qua **#89 / parent #81**. D4/D5 vẫn Đang làm. Sau MVP (#7) vẫn Chưa lên lịch.
+> D6 parent **#81 Hoàn thành**/closed (PRs #92/#93/#94). Trọng tâm còn lại D4/D5 theo board live. Sau MVP (#7) vẫn Chưa lên lịch.
 
 ---
 

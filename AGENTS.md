@@ -1,6 +1,6 @@
 # Agent working agreement
 
-Read docs/PRD.md, docs/TECHNICAL-DESIGN.md, docs/DECISION-LOG.md and your task spec. Work only in assigned scope. **Trạng thái đợt động:** [GitHub Project #3](https://github.com/users/hangndat/projects/3) (không đoán từ docs cũ). Scope/gate/evidence: [docs/ROADMAP.md](docs/ROADMAP.md). Tại lần sync docs 2026-10-17: D0–D3 parent **Hoàn thành** trên board; trọng tâm **D4 Admin & Platform** và **D5 Hardening** (**Đang làm**). **D6 UX/UI** (#81): coding S1–S6 đã merge `main` (web PR #92, iOS PR #93; #82–#85/#87–#88 closed); còn **S7 (#89)** ROADMAP sync + nghiệm thu parent — chưa đánh Hoàn thành #81 đến khi S7/DoD đợt xong. Phân biệt code complete / acceptance complete / pilot ready — chưa tuyên bố pilot production hay store submission.
+Read docs/PRD.md, docs/TECHNICAL-DESIGN.md, docs/DECISION-LOG.md and your task spec. Work only in assigned scope. **Trạng thái đợt động:** [GitHub Project #3](https://github.com/users/hangndat/projects/3) (không đoán từ docs cũ). Scope/gate/evidence: [docs/ROADMAP.md](docs/ROADMAP.md). Tại lần sync docs 2026-10-17: D0–D3 và **D6 UX/UI (#81)** parent **Hoàn thành**/closed trên board (PRs #92/#93/#94; Milestone #8 closed); trọng tâm còn lại **D4 Admin & Platform** và **D5 Hardening** (đối chiếu board live). Phân biệt code complete / acceptance complete / pilot ready — D6 acceptance ≠ pilot production hay store submission.
 
 ## Planning and tracking language
 
