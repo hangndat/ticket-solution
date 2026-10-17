@@ -31,13 +31,12 @@ export default async function Admin({ searchParams }: Props) {
       <p className="eyebrow">D4 / QUẢN TRỊ · API THẬT</p>
       <h1>Cấu hình sự kiện</h1>
       <p className="intro">
-        Tenant UUID do Operator cấp — không hardcode demo festival. Tạo event
-        qua API, lưu/publish cấu hình (brand), nhập mã (tự tạo type/source lần
-        đầu), duyệt, CS tra cứu/gửi lại email, export CSV, và báo cáo chỉ đọc.
-        Timeout, lỗi máy chủ và mất mạng là chưa biết. Không coi là đã lưu, đã
-        publish, đã nhập mã, đã duyệt, đã gửi lại, hoặc đã export xong. Payload
-        đã publish không sửa trên form. Mã đổi dạng chữ không hiện lại trên
-        trạng thái.
+        Tenant UUID do Operator cấp — không hardcode demo festival. Tạo/liệt kê
+        event, ticket type, source qua UI/API thật; lưu/publish cấu hình
+        (brand), nhập mã, duyệt, CS tra cứu/timeline/gửi lại email, export CSV
+        (status/expires/download stream), và báo cáo chỉ đọc. Shape sai hoặc
+        timeout/5xx là chưa biết — không coi là thành công. Payload đã publish
+        không sửa trên form.
       </p>
       {!configured ? (
         <aside className="notice auth-unconfigured" role="status">

@@ -1,4 +1,8 @@
-import { createEventUpstreamPath } from '../../../../../src/admin/create-event';
+import {
+  createEventUpstreamPath,
+  eventsListUpstreamPath,
+} from '../../../../../src/admin/create-event';
+import { assertSameOrigin } from '../../../../../src/bff/origin';
 import { isUuid } from '../../../../../src/bff/ids';
 import {
   bffApiError,
@@ -12,13 +16,16 @@ type Body = {
   timezone?: string;
   redemptionOpensAt?: string;
   redemptionClosesAt?: string;
+  idempotencyKey?: string;
 };
 
 /**
  * POST /api/bff/admin/events → POST /v1/tenants/{tenantId}/events
- * Body fields beyond tenantId/slug/name are forwarded when present (schema TBD).
+ * Requires Idempotency-Key (contract).
  */
 export async function POST(request: Request) {
+  const csrf = assertSameOrigin(request);
+  if (csrf) return csrf;
   let body: Body;
   try {
     body = (await request.json()) as Body;
@@ -28,6 +35,14 @@ export async function POST(request: Request) {
   const tenantId = body.tenantId?.trim() ?? '';
   if (!isUuid(tenantId)) {
     return bffApiError('TENANT_REQUIRED', 'tenantId must be a UUID.', 422);
+  }
+  const idempotencyKey = body.idempotencyKey?.trim() ?? '';
+  if (!isUuid(idempotencyKey)) {
+    return bffApiError(
+      'IDEMPOTENCY_KEY_REQUIRED',
+      'idempotencyKey must be a UUID.',
+      422,
+    );
   }
   const slug = body.slug?.trim() ?? '';
   const name = body.name?.trim() ?? '';
@@ -48,11 +63,22 @@ export async function POST(request: Request) {
   }
   return forwardWithBearer(createEventUpstreamPath(tenantId), {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'Idempotency-Key': idempotencyKey,
+    },
     body: JSON.stringify(payload),
   });
 }
 
-export async function GET() {
-  return bffApiError('METHOD_NOT_ALLOWED', 'Use POST.', 405);
+/** GET /api/bff/admin/events?tenantId= → GET /v1/tenants/{tenantId}/events */
+export async function GET(request: Request) {
+  const url = new URL(request.url);
+  const tenantId = url.searchParams.get('tenantId')?.trim() ?? '';
+  if (!isUuid(tenantId)) {
+    return bffApiError('TENANT_REQUIRED', 'tenantId must be a UUID.', 422);
+  }
+  return forwardWithBearer(eventsListUpstreamPath(tenantId), {
+    method: 'GET',
+  });
 }

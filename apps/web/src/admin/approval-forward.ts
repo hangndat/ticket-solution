@@ -1,3 +1,4 @@
+import { assertSameOrigin } from '../bff/origin';
 import { bffApiError, forwardWithBearer, isUuid } from '../bff/upstream';
 import { eventPath, isScope, scopeError, type AdminScope } from './scope';
 
@@ -11,6 +12,8 @@ export type ApprovalCommand = {
 export async function readApprovalCommand(
   request: Request,
 ): Promise<Response | ApprovalCommand> {
+  const csrf = assertSameOrigin(request);
+  if (csrf) return csrf;
   let body: Record<string, unknown>;
   try {
     body = (await request.json()) as Record<string, unknown>;

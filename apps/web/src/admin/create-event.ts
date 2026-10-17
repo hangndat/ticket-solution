@@ -1,5 +1,15 @@
-/** Create-event path proposal — BE has not shipped OpenAPI yet. */
+import {
+  apiErrorFrom,
+  asRecord,
+  isNonEmptyString,
+  optionalString,
+} from './contract-shape';
+
 export function createEventUpstreamPath(tenantId: string): string {
+  return `/v1/tenants/${encodeURIComponent(tenantId)}/events`;
+}
+
+export function eventsListUpstreamPath(tenantId: string): string {
   return `/v1/tenants/${encodeURIComponent(tenantId)}/events`;
 }
 
@@ -7,9 +17,25 @@ export type CreateEventView =
   | {
       kind: 'created';
       eventId: string;
-      slug: string | null;
-      name: string | null;
-      raw: unknown;
+      slug: string;
+      name: string;
+      status: string;
+      timezone: string;
+      replayed: boolean | null;
+    }
+  | { kind: 'rejected'; code: string; message: string }
+  | { kind: 'unknown'; message: string };
+
+export type EventListView =
+  | {
+      kind: 'list';
+      items: Array<{
+        eventId: string;
+        slug: string;
+        name: string;
+        status: string;
+        timezone: string;
+      }>;
     }
   | { kind: 'rejected'; code: string; message: string }
   | { kind: 'unknown'; message: string };
@@ -17,14 +43,40 @@ export type CreateEventView =
 export const CREATE_EVENT_UNKNOWN =
   'Kết quả tạo event chưa biết. Không coi là đã tạo sự kiện.';
 
-function record(json: unknown): Record<string, unknown> | null {
-  if (!json || typeof json !== 'object' || Array.isArray(json)) return null;
-  return json as Record<string, unknown>;
+export const EVENT_LIST_UNKNOWN =
+  'Kết quả danh sách event chưa biết. Không hiện danh sách theo shape sai.';
+
+function parseEventSummary(body: Record<string, unknown> | null): {
+  eventId: string;
+  slug: string;
+  name: string;
+  status: string;
+  timezone: string;
+  replayed: boolean | null;
+} | null {
+  if (!body) return null;
+  if (
+    !isNonEmptyString(body.eventId) ||
+    !isNonEmptyString(body.slug) ||
+    !isNonEmptyString(body.name) ||
+    !isNonEmptyString(body.status) ||
+    !isNonEmptyString(body.timezone)
+  ) {
+    return null;
+  }
+  return {
+    eventId: body.eventId.trim(),
+    slug: body.slug.trim(),
+    name: body.name.trim(),
+    status: body.status.trim(),
+    timezone: body.timezone.trim(),
+    replayed: typeof body.replayed === 'boolean' ? body.replayed : null,
+  };
 }
 
 /**
- * Loose interpreter for POST create event.
- * Accepts eventId/id when present; does not freeze the full request schema.
+ * Strict EventSummaryDto interpreter (BE PR54).
+ * Rejects legacy aliases (id) and incomplete success bodies.
  */
 export function interpretCreateEvent(
   status: number,
@@ -34,51 +86,78 @@ export function interpretCreateEvent(
   if (networkError || status === 0 || status >= 500) {
     return { kind: 'unknown', message: CREATE_EVENT_UNKNOWN };
   }
-  const body = record(json);
+  const body = asRecord(json);
   if (status === 200 || status === 201) {
-    const eventId =
-      typeof body?.eventId === 'string'
-        ? body.eventId
-        : typeof body?.id === 'string'
-          ? body.id
-          : null;
-    if (eventId && eventId.trim()) {
-      return {
-        kind: 'created',
-        eventId: eventId.trim(),
-        slug: typeof body?.slug === 'string' ? body.slug : null,
-        name: typeof body?.name === 'string' ? body.name : null,
-        raw: json,
-      };
+    const summary = parseEventSummary(body);
+    if (summary) {
+      return { kind: 'created', ...summary };
     }
+    return { kind: 'unknown', message: CREATE_EVENT_UNKNOWN };
   }
-  if (body && typeof body.code === 'string') {
-    return {
-      kind: 'rejected',
-      code: body.code,
-      message: typeof body.message === 'string' ? body.message : body.code,
-    };
-  }
-  // 404 often means BE route not shipped yet — still unknown/rejected via code if present.
-  if (status === 404) {
-    return {
-      kind: 'rejected',
-      code: 'EVENT_CREATE_UNAVAILABLE',
-      message:
-        'API tạo event chưa có trên upstream (404). Tenant đã provision vẫn cần BE POST /v1/tenants/{tenantId}/events.',
-    };
-  }
+  const err = apiErrorFrom(body);
+  if (err) return { kind: 'rejected', ...err };
   return { kind: 'unknown', message: CREATE_EVENT_UNKNOWN };
+}
+
+export function interpretEventList(
+  status: number,
+  json: unknown,
+  networkError: boolean,
+): EventListView {
+  if (networkError || status === 0 || status >= 500) {
+    return { kind: 'unknown', message: EVENT_LIST_UNKNOWN };
+  }
+  const body = asRecord(json);
+  if (status === 200 && body && Array.isArray(body.items)) {
+    const items: Array<{
+      eventId: string;
+      slug: string;
+      name: string;
+      status: string;
+      timezone: string;
+    }> = [];
+    for (const row of body.items) {
+      const summary = parseEventSummary(asRecord(row));
+      if (!summary) {
+        return { kind: 'unknown', message: EVENT_LIST_UNKNOWN };
+      }
+      items.push({
+        eventId: summary.eventId,
+        slug: summary.slug,
+        name: summary.name,
+        status: summary.status,
+        timezone: summary.timezone,
+      });
+    }
+    return { kind: 'list', items };
+  }
+  const err = apiErrorFrom(body);
+  if (err) return { kind: 'rejected', ...err };
+  return { kind: 'unknown', message: EVENT_LIST_UNKNOWN };
 }
 
 export function createEventLabel(view: CreateEventView): string {
   if (view.kind === 'created') {
-    const slug = view.slug ? ` · ${view.slug}` : '';
-    const name = view.name ? ` (${view.name})` : '';
-    return `Đã tạo event ${view.eventId}${slug}${name}. Tiếp tục cấu hình/publish/import trên form.`;
+    const replay = view.replayed ? ' (replayed)' : '';
+    return `Đã tạo event ${view.eventId} · ${view.slug} (${view.name}) · ${view.status}${replay}.`;
   }
   if (view.kind === 'rejected') {
     return `${view.code}: ${view.message}`;
   }
   return view.message;
+}
+
+export function eventListLabel(view: EventListView): string {
+  if (view.kind === 'list') {
+    return `Danh sách event: ${view.items.length} mục.`;
+  }
+  if (view.kind === 'rejected') {
+    return `${view.code}: ${view.message}`;
+  }
+  return view.message;
+}
+
+/** @deprecated kept for call sites that only need slug/name display */
+export function optionalEventField(value: unknown): string | null {
+  return optionalString(value);
 }

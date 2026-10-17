@@ -3,8 +3,11 @@
 import { useState } from 'react';
 import {
   createEventLabel,
+  eventListLabel,
   interpretCreateEvent,
+  interpretEventList,
   type CreateEventView,
+  type EventListView,
 } from '../../src/admin/create-event';
 import {
   csViewLabel,
@@ -26,6 +29,14 @@ import {
   interpretExportStatus,
   type ExportView,
 } from '../../src/admin/export-job';
+import {
+  interpretSourceCreate,
+  interpretTicketTypeCreate,
+  sourceLabel,
+  ticketTypeLabel,
+  type SourceView,
+  type TicketTypeView,
+} from '../../src/admin/event-setup';
 import {
   TICKET_STATES,
   interpretEventReport,
@@ -84,6 +95,10 @@ export function AdminForm({
   const [csTicketId, setCsTicketId] = useState('');
   const [csCursor, setCsCursor] = useState<string | null>(null);
   const [exportId, setExportId] = useState('');
+  const [ticketTypeLabelInput, setTicketTypeLabelInput] = useState('GA');
+  const [ticketTypeId, setTicketTypeId] = useState('');
+  const [sourceName, setSourceName] = useState('Invite');
+  const [approvalMode, setApprovalMode] = useState<'AUTO' | 'MANUAL'>('AUTO');
   const [approveAttempt, setApproveAttempt] = useState<UnclearAttempt | null>(
     null,
   );
@@ -94,14 +109,31 @@ export function AdminForm({
   const [exportAttempt, setExportAttempt] = useState<UnclearAttempt | null>(
     null,
   );
+  const [createAttempt, setCreateAttempt] = useState<UnclearAttempt | null>(
+    null,
+  );
   const [busy, setBusy] = useState(false);
   const [noticeSeq, setNoticeSeq] = useState(0);
   const [decision, setDecision] = useState<AdminDecision | null>(null);
   const [createView, setCreateView] = useState<CreateEventView | null>(null);
+  const [listView, setListView] = useState<EventListView | null>(null);
+  const [ticketTypeView, setTicketTypeView] = useState<TicketTypeView | null>(
+    null,
+  );
+  const [sourceView, setSourceView] = useState<SourceView | null>(null);
   const [csView, setCsView] = useState<CsView | null>(null);
   const [exportView, setExportView] = useState<ExportView | null>(null);
   const [report, setReport] = useState<EventReportView | null>(null);
   const locked = payloadLocked(editor);
+
+  function clearSpecialViews() {
+    setCreateView(null);
+    setListView(null);
+    setTicketTypeView(null);
+    setSourceView(null);
+    setCsView(null);
+    setExportView(null);
+  }
 
   function bumpNotice() {
     setNoticeSeq((n) => n + 1);
@@ -110,9 +142,7 @@ export function AdminForm({
   async function call(action: AdminAction, path: string, init: RequestInit) {
     setBusy(true);
     setDecision(null);
-    setCreateView(null);
-    setCsView(null);
-    setExportView(null);
+    clearSpecialViews();
     const result = await fetchJson(path, init, REQUEST_TIMEOUT_MS);
     const next = decideAdmin(
       action,
@@ -205,9 +235,7 @@ export function AdminForm({
     setBusy(true);
     setReport(null);
     setDecision(null);
-    setCreateView(null);
-    setCsView(null);
-    setExportView(null);
+    clearSpecialViews();
     const params = new URLSearchParams(scope());
     const result = await fetchJson(
       `/api/bff/admin/report?${params.toString()}`,
@@ -225,12 +253,37 @@ export function AdminForm({
     setBusy(false);
   }
 
-  async function createEvent() {
+  async function listEvents() {
     setBusy(true);
     setDecision(null);
-    setCreateView(null);
-    setCsView(null);
-    setExportView(null);
+    clearSpecialViews();
+    const params = new URLSearchParams({ tenantId: tenantId.trim() });
+    const result = await fetchJson(
+      `/api/bff/admin/events?${params.toString()}`,
+      { method: 'GET' },
+      REQUEST_TIMEOUT_MS,
+    );
+    const next = interpretEventList(
+      result.status,
+      result.json,
+      result.networkError || result.timedOut,
+    );
+    bumpNotice();
+    setListView(next);
+    setBusy(false);
+  }
+
+  async function createEvent() {
+    const fingerprint = JSON.stringify({
+      tenantId: tenantId.trim(),
+      slug: eventSlug.trim(),
+      name: eventName.trim(),
+      timezone: eventTimezone.trim() || undefined,
+    });
+    const idempotencyKey = reuseUnclearKey(createAttempt, fingerprint);
+    setBusy(true);
+    setDecision(null);
+    clearSpecialViews();
     const result = await fetchJson(
       '/api/bff/admin/events',
       {
@@ -241,6 +294,7 @@ export function AdminForm({
           slug: eventSlug.trim(),
           name: eventName.trim(),
           timezone: eventTimezone.trim() || undefined,
+          idempotencyKey,
         }),
       },
       REQUEST_TIMEOUT_MS,
@@ -250,17 +304,76 @@ export function AdminForm({
       result.json,
       result.networkError || result.timedOut,
     );
+    setCreateAttempt({
+      key: idempotencyKey,
+      fingerprint,
+      unclear: next.kind === 'unknown',
+    });
     if (next.kind === 'created') setEventId(next.eventId);
     bumpNotice();
     setCreateView(next);
     setBusy(false);
   }
 
+  async function createTicketType() {
+    setBusy(true);
+    setDecision(null);
+    clearSpecialViews();
+    const result = await fetchJson(
+      '/api/bff/admin/ticket-types',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...scope(),
+          label: ticketTypeLabelInput.trim(),
+        }),
+      },
+      REQUEST_TIMEOUT_MS,
+    );
+    const next = interpretTicketTypeCreate(
+      result.status,
+      result.json,
+      result.networkError || result.timedOut,
+    );
+    if (next.kind === 'created') setTicketTypeId(next.ticketTypeId);
+    bumpNotice();
+    setTicketTypeView(next);
+    setBusy(false);
+  }
+
+  async function createSource() {
+    setBusy(true);
+    setDecision(null);
+    clearSpecialViews();
+    const result = await fetchJson(
+      '/api/bff/admin/sources',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...scope(),
+          name: sourceName.trim(),
+          approvalMode,
+          ticketTypeId: ticketTypeId.trim(),
+        }),
+      },
+      REQUEST_TIMEOUT_MS,
+    );
+    const next = interpretSourceCreate(
+      result.status,
+      result.json,
+      result.networkError || result.timedOut,
+    );
+    bumpNotice();
+    setSourceView(next);
+    setBusy(false);
+  }
+
   async function csSearch() {
     setBusy(true);
     setDecision(null);
-    setCreateView(null);
-    setExportView(null);
+    clearSpecialViews();
     const params = new URLSearchParams({
       ...scope(),
       ...(csQuery.trim() ? { q: csQuery.trim() } : {}),
@@ -295,8 +408,7 @@ export function AdminForm({
     }
     setBusy(true);
     setDecision(null);
-    setCreateView(null);
-    setExportView(null);
+    clearSpecialViews();
     const params = new URLSearchParams(scope());
     const result = await fetchJson(
       `/api/bff/admin/tickets/${encodeURIComponent(id)}?${params.toString()}`,
@@ -329,8 +441,7 @@ export function AdminForm({
     const idempotencyKey = reuseUnclearKey(resendAttempt, fingerprint);
     setBusy(true);
     setDecision(null);
-    setCreateView(null);
-    setExportView(null);
+    clearSpecialViews();
     const result = await fetchJson(
       `/api/bff/admin/tickets/${encodeURIComponent(id)}/resend`,
       {
@@ -361,8 +472,7 @@ export function AdminForm({
     const idempotencyKey = reuseUnclearKey(exportAttempt, fingerprint);
     setBusy(true);
     setDecision(null);
-    setCreateView(null);
-    setCsView(null);
+    clearSpecialViews();
     const result = await fetchJson(
       '/api/bff/admin/exports',
       {
@@ -386,7 +496,7 @@ export function AdminForm({
       fingerprint,
       unclear: next.kind === 'unknown',
     });
-    if (next.kind === 'created') setExportId(next.exportId);
+    if (next.kind === 'created') setExportId(next.job.exportId);
     bumpNotice();
     setExportView(next);
     setBusy(false);
@@ -404,8 +514,7 @@ export function AdminForm({
     }
     setBusy(true);
     setDecision(null);
-    setCreateView(null);
-    setCsView(null);
+    clearSpecialViews();
     const params = new URLSearchParams(scope());
     const result = await fetchJson(
       `/api/bff/admin/exports/${encodeURIComponent(id)}?${params.toString()}`,
@@ -436,25 +545,59 @@ export function AdminForm({
     }
     setBusy(true);
     setDecision(null);
-    setCreateView(null);
-    setCsView(null);
+    clearSpecialViews();
     const params = new URLSearchParams(scope());
-    const result = await fetchJson(
-      `/api/bff/admin/exports/${encodeURIComponent(id)}/download?${params.toString()}`,
-      { method: 'GET' },
-      REQUEST_TIMEOUT_MS,
-    );
-    bumpNotice();
-    setExportView(
-      interpretExportDownload(
-        result.status,
-        result.json,
-        result.networkError || result.timedOut,
-        id,
-        null,
-      ),
-    );
-    setBusy(false);
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    try {
+      const response = await fetch(
+        `/api/bff/admin/exports/${encodeURIComponent(id)}/download?${params.toString()}`,
+        {
+          method: 'GET',
+          credentials: 'same-origin',
+          cache: 'no-store',
+          signal: controller.signal,
+        },
+      );
+      const contentType = response.headers.get('Content-Type');
+      const disposition = response.headers.get('Content-Disposition');
+      const filenameMatch = disposition?.match(/filename="([^"]+)"/);
+      if ((contentType ?? '').includes('application/json')) {
+        const json = (await response.json()) as unknown;
+        bumpNotice();
+        setExportView(
+          interpretExportDownload(
+            response.status,
+            json,
+            false,
+            id,
+            contentType,
+          ),
+        );
+      } else {
+        const buf = await response.arrayBuffer();
+        bumpNotice();
+        setExportView(
+          interpretExportDownload(
+            response.status,
+            null,
+            false,
+            id,
+            contentType,
+            buf.byteLength,
+            filenameMatch?.[1] ?? null,
+          ),
+        );
+      }
+    } catch {
+      bumpNotice();
+      setExportView(
+        interpretExportDownload(0, null, true, id, null),
+      );
+    } finally {
+      clearTimeout(timer);
+      setBusy(false);
+    }
   }
 
   async function decideRedemption(action: 'approve' | 'deny') {
@@ -556,15 +699,15 @@ export function AdminForm({
         </label>
       </div>
       <p className="intro">
-        Tenant do Operator provision (UUID). Không gắn cứng demo festival. Event
-        tạo qua API thật bên dưới; brand/type/source lần nhập đầu đi kèm import
-        + payload cấu hình.
+        Tenant do Operator provision (UUID). Không gắn cứng demo festival. Event,
+        ticket type và source tạo qua API/UI thật; brand nằm trong payload cấu
+        hình.
       </p>
       <section aria-labelledby="create-event-heading">
-        <h2 id="create-event-heading">Tạo event trong tenant</h2>
+        <h2 id="create-event-heading">Tạo / liệt kê event trong tenant</h2>
         <p>
-          Chỉ cần tenant đã có. Nếu upstream chưa có POST create event, thông
-          báo sẽ ghi rõ — không giả lập đã tạo.
+          POST create kèm Idempotency-Key. Shape sai → chưa biết, không coi là
+          đã tạo.
         </p>
         <label>
           Event slug
@@ -604,6 +747,96 @@ export function AdminForm({
             onClick={() => void createEvent()}
           >
             Tạo event
+          </button>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void listEvents()}
+          >
+            Liệt kê event
+          </button>
+        </div>
+        {listView?.kind === 'list' ? (
+          <ul data-testid="event-list">
+            {listView.items.map((item) => (
+              <li key={item.eventId}>
+                <button
+                  type="button"
+                  onClick={() => setEventId(item.eventId)}
+                >
+                  {item.slug} · {item.name} ({item.status})
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </section>
+      <section aria-labelledby="type-source-heading">
+        <h2 id="type-source-heading">Ticket type &amp; source</h2>
+        <p>
+          Mapping type → source bắt buộc trước import. Không seed SQL cho
+          type/source.
+        </p>
+        <label>
+          Ticket type label
+          <input
+            name="ticketTypeLabel"
+            value={ticketTypeLabelInput}
+            onChange={(e) => setTicketTypeLabelInput(e.target.value)}
+            autoComplete="off"
+            spellCheck={false}
+          />
+        </label>
+        <div className="auth-buttons">
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void createTicketType()}
+          >
+            Tạo ticket type
+          </button>
+        </div>
+        <label>
+          Ticket type ID
+          <input
+            name="ticketTypeId"
+            value={ticketTypeId}
+            onChange={(e) => setTicketTypeId(e.target.value)}
+            autoComplete="off"
+            spellCheck={false}
+            placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+          />
+        </label>
+        <label>
+          Source name
+          <input
+            name="sourceName"
+            value={sourceName}
+            onChange={(e) => setSourceName(e.target.value)}
+            autoComplete="off"
+            spellCheck={false}
+          />
+        </label>
+        <label>
+          Approval mode
+          <select
+            name="approvalMode"
+            value={approvalMode}
+            onChange={(e) =>
+              setApprovalMode(e.target.value === 'MANUAL' ? 'MANUAL' : 'AUTO')
+            }
+          >
+            <option value="AUTO">AUTO</option>
+            <option value="MANUAL">MANUAL</option>
+          </select>
+        </label>
+        <div className="auth-buttons">
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void createSource()}
+          >
+            Tạo source
           </button>
         </div>
       </section>
@@ -852,15 +1085,38 @@ export function AdminForm({
             Gửi lại email
           </button>
         </div>
-        {csView?.kind === 'list' || csView?.kind === 'detail' ? (
+        {csView?.kind === 'list' ? (
           <pre
-            data-testid="cs-raw"
+            data-testid="cs-list"
             className="me-result"
             tabIndex={0}
-            aria-label="CS payload"
+            aria-label="CS list"
           >
-            {JSON.stringify(csView.raw, null, 2)}
+            {JSON.stringify(csView.items, null, 2)}
           </pre>
+        ) : null}
+        {csView?.kind === 'detail' ? (
+          <div data-testid="cs-detail">
+            <pre className="me-result" tabIndex={0} aria-label="CS detail">
+              {JSON.stringify(
+                {
+                  ticketId: csView.ticket.ticketId,
+                  state: csView.ticket.state,
+                  ownerEmailMasked: csView.ticket.ownerEmailMasked,
+                  notification: csView.ticket.notification,
+                },
+                null,
+                2,
+              )}
+            </pre>
+            <ol data-testid="cs-timeline" aria-label="CS timeline">
+              {csView.ticket.timeline.map((item) => (
+                <li key={`${item.at}-${item.kind}-${item.summary}`}>
+                  {item.at} · {item.kind}: {item.summary}
+                </li>
+              ))}
+            </ol>
+          </div>
         ) : null}
       </section>
       <section aria-labelledby="export-heading">
@@ -912,22 +1168,37 @@ export function AdminForm({
               error: createView.kind === 'rejected',
               text: createEventLabel(createView),
             }
-          : csView
+          : listView
             ? {
-                error: csView.kind === 'rejected',
-                text: csViewLabel(csView),
+                error: listView.kind === 'rejected',
+                text: eventListLabel(listView),
               }
-            : exportView
+            : ticketTypeView
               ? {
-                  error: exportView.kind === 'rejected',
-                  text: exportViewLabel(exportView),
+                  error: ticketTypeView.kind === 'rejected',
+                  text: ticketTypeLabel(ticketTypeView),
                 }
-              : decision
+              : sourceView
                 ? {
-                    error: decision.kind === 'rejected',
-                    text: adminDecisionLabel(decision),
+                    error: sourceView.kind === 'rejected',
+                    text: sourceLabel(sourceView),
                   }
-                : null;
+                : csView
+                  ? {
+                      error: csView.kind === 'rejected',
+                      text: csViewLabel(csView),
+                    }
+                  : exportView
+                    ? {
+                        error: exportView.kind === 'rejected',
+                        text: exportViewLabel(exportView),
+                      }
+                    : decision
+                      ? {
+                          error: decision.kind === 'rejected',
+                          text: adminDecisionLabel(decision),
+                        }
+                      : null;
         if (!notice) return null;
         return (
           <section

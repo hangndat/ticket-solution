@@ -1,6 +1,7 @@
 import { exportsCreatePath } from '../../../../../src/admin/export-job';
 import { isScope, scopeError } from '../../../../../src/admin/scope';
 import { isUuid } from '../../../../../src/bff/ids';
+import { assertSameOrigin } from '../../../../../src/bff/origin';
 import {
   bffApiError,
   forwardWithBearer,
@@ -16,6 +17,8 @@ type Body = {
 
 /** POST /api/bff/admin/exports → create CSV export job with Idempotency-Key. */
 export async function POST(request: Request) {
+  const csrf = assertSameOrigin(request);
+  if (csrf) return csrf;
   let body: Body;
   try {
     body = (await request.json()) as Body;
