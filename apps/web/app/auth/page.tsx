@@ -3,16 +3,16 @@ import {
   isOidcConfigured,
   resolveWebAuthState,
 } from '../../src/oidc/config';
-import { BrandMark } from '../../src/brand-mark';
+import { SiteNav } from '../../src/site-chrome';
 import { AuthPoc } from './auth-poc';
 
 /** OIDC env is runtime-only — never SSG the fail-closed / configured branch. */
 export const dynamic = 'force-dynamic';
 
 export const metadata = {
-  title: 'Identity POC (Keycloak)',
+  title: 'Đăng nhập',
   description:
-    'D1 OIDC POC — self-hosted Keycloak + BFF cookie. Not production authentication.',
+    'Đăng nhập Keycloak + BFF cookie (OIDC). Không phải cổng kiểm soát vé production.',
 };
 
 export default function AuthPocPage() {
@@ -21,30 +21,22 @@ export default function AuthPocPage() {
 
   return (
     <main id="main" className="container shell auth-page">
-      <nav aria-label="Main navigation">
-        <Link href="/" className="wordmark">
-          <BrandMark />
-          vemoki<span>↗</span>
-        </Link>
-        <Link href="/">Demo events</Link>
-      </nav>
+      <SiteNav variant="guest" />
 
-      <p className="eyebrow">D1 / IDENTITY POC · NOT PRODUCTION AUTH</p>
-      <h1>Keycloak web session</h1>
+      <h1>Đăng nhập</h1>
       <p className="intro">
-        Proof-of-concept for self-hosted OIDC on Next.js App Router: HttpOnly
-        session cookies via Authorization Code + PKCE and same-origin BFF for{' '}
-        <code>GET /v1/me</code>. Do not treat this page as live ticketing access
-        control. No SaaS IdP.
+        Phiên web qua Keycloak tự host: cookie HttpOnly, Authorization Code +
+        PKCE, BFF same-origin cho <code>GET /v1/me</code>. Không dùng trang này
+        làm kiểm soát vé live. Không IdP SaaS.
       </p>
 
       {!configured ? (
-        <aside className="notice auth-unconfigured" role="status">
+        <aside className="notice auth-unconfigured state-error" role="status">
           <h2>OIDC chưa cấu hình</h2>
           <p>
             Thiếu <code>OIDC_ISSUER</code>, <code>OIDC_CLIENT_ID</code>,{' '}
             <code>OIDC_CLIENT_SECRET</code> hoặc <code>OIDC_REDIRECT_URI</code>.
-            POC fail closed — không coi là đã đăng nhập, không mock user.
+            Fail closed — không coi là đã đăng nhập, không mock user.
           </p>
           <p>
             Auth state:{' '}
@@ -53,9 +45,9 @@ export default function AuthPocPage() {
             </strong>
           </p>
           <p>
-            Copy placeholders from <code>apps/web/.env.example</code> into a
-            local <code>.env.local</code> (never commit real secrets). Start
-            Keycloak via Compose: <code>docker compose up -d keycloak</code>.
+            Sao chép placeholder từ <code>apps/web/.env.example</code> sang{' '}
+            <code>.env.local</code> (không commit secret). Khởi động Keycloak:{' '}
+            <code>docker compose up -d keycloak</code>.
           </p>
         </aside>
       ) : (
@@ -63,7 +55,7 @@ export default function AuthPocPage() {
       )}
 
       <p>
-        <Link href="/">← Return to demo events</Link>
+        <Link href="/">← Trang chủ</Link>
       </p>
     </main>
   );

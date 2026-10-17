@@ -1110,7 +1110,7 @@ export function AdminForm({
         </aside>
       ) : null}
       <TenantStaffPanel tenantId={tenantId} />
-      <section aria-labelledby="create-event-heading">
+      <section className="admin-section" aria-labelledby="create-event-heading">
         <h2 id="create-event-heading">Tạo / liệt kê event trong tenant</h2>
         <p>
           Context hiện tại: tenant + event đã chọn. POST create kèm
@@ -1208,7 +1208,7 @@ export function AdminForm({
           </ul>
         ) : null}
       </section>
-      <section aria-labelledby="event-lifecycle-heading">
+      <section className="admin-section" aria-labelledby="event-lifecycle-heading">
         <h2 id="event-lifecycle-heading">Metadata &amp; lifecycle (C-E)</h2>
         <p>
           PATCH dùng expectedRevision; đổi startsAt/venue sau khi đã có vé cần
@@ -1431,7 +1431,7 @@ export function AdminForm({
           </button>
         </div>
       </section>
-      <section aria-labelledby="type-source-heading">
+      <section className="admin-section" aria-labelledby="type-source-heading">
         <h2 id="type-source-heading">Ticket type &amp; source</h2>
         <p>
           Mapping type → source bắt buộc trước import. Không seed SQL cho
@@ -1527,7 +1527,7 @@ export function AdminForm({
           });
         }}
       />
-      <section aria-labelledby="event-report-heading">
+      <section className="admin-section" aria-labelledby="event-report-heading">
         <h2 id="event-report-heading">Báo cáo sự kiện</h2>
         <p>
           Chỉ đọc: số vé theo trạng thái, quota capacity/allocated, và số yêu
@@ -1693,7 +1693,7 @@ export function AdminForm({
           Từ chối
         </button>
       </div>
-      <section aria-labelledby="cs-heading">
+      <section className="admin-section" aria-labelledby="cs-heading">
         <h2 id="cs-heading">CS — tra cứu và gửi lại email</h2>
         <p>
           PII mặc định đã che trên API. Trạng thái provider ACCEPTED không được
@@ -1786,7 +1786,7 @@ export function AdminForm({
           </div>
         ) : null}
       </section>
-      <section aria-labelledby="export-heading">
+      <section className="admin-section" aria-labelledby="export-heading">
         <h2 id="export-heading">Export CSV</h2>
         <p>
           Job nền + link tải có hạn (MinIO private). Không lưu URL dài hạn trên

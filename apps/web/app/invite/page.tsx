@@ -1,29 +1,28 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { SiteNav } from '../../src/site-chrome';
 import { InviteAcceptForm } from './invite-accept';
 
 export const metadata: Metadata = {
-  title: 'Nhận invite — Vemoki',
-  description: 'Accept membership invite after Keycloak login (token via fragment).',
+  title: 'Nhận invite thành viên',
+  description:
+    'Chấp nhận membership invite sau đăng nhập Keycloak (token qua fragment).',
   referrer: 'no-referrer',
 };
 
 export default function InvitePage() {
   return (
-    <main className="shell">
-      <nav className="top-nav" aria-label="Chính">
-        <Link href="/">Vemoki</Link>
-        <Link href="/admin">Admin</Link>
-        <Link href="/invite">Nhận invite</Link>
-        <Link href="/account">Tài khoản</Link>
-      </nav>
-      <p className="eyebrow">M02 · MEMBERSHIP INVITE</p>
-      <h1>Nhận invite</h1>
+    <main id="main" className="container shell redeem-page">
+      <SiteNav variant="guest" />
+      <h1>Nhận invite thành viên</h1>
       <p className="intro">
-        Token chỉ qua fragment / bộ nhớ tạm, Referrer-Policy no-referrer. Không
-        seed membership SQL để claim self-service.
+        Token chỉ qua fragment / bộ nhớ tạm; Referrer-Policy no-referrer. Không
+        seed membership bằng SQL để claim self-service.
       </p>
       <InviteAcceptForm />
+      <p>
+        <Link href="/">← Trang chủ</Link>
+      </p>
     </main>
   );
 }

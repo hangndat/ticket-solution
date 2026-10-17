@@ -69,7 +69,7 @@ test('production routes isolate tenant content and reject unknown pairs', async 
       const html = await response.text();
       assert.ok(html.includes(own));
       assert.ok(!html.includes(foreign));
-      assert.ok(html.includes('FICTIONAL EVENT / DEMO FIXTURE'));
+      assert.ok(html.includes('Sự kiện demo · Fixture hư cấu'));
     }
     for (const path of [
       '/t/sunburst/events/form-forum-2026',
@@ -106,7 +106,9 @@ test('production routes isolate tenant content and reject unknown pairs', async 
     assert.ok(adminHtml.includes('Gửi lại email'));
     assert.ok(adminHtml.includes('Tạo export CSV'));
     assert.ok(adminHtml.includes('Tải CSV'));
-    assert.ok(adminHtml.includes('không hardcode demo festival'));
+    assert.ok(adminHtml.includes('Operator cấp'));
+    assert.ok(!adminHtml.includes('ticket↗'));
+    assert.ok(adminHtml.includes('vemoki'));
     assert.equal(/FUN FEST|fun-fest/i.test(adminHtml), false);
     const authPoc = await fetch(base + '/auth');
     assert.equal(authPoc.status, 200);

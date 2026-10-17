@@ -1,17 +1,25 @@
 'use client';
 import Link from 'next/link';
+
 export default function ErrorBoundary({ reset }: { reset: () => void }) {
   return (
     <main id="main" className="container shell">
-      <h1>This page couldn’t load.</h1>
-      <p>
-        Please try again. No ticketing action has been performed by this demo.
+      <p className="eyebrow">Lỗi</p>
+      <h1>Không tải được trang này.</h1>
+      <p className="intro">
+        Thử lại. Không có thao tác vé nào được thực hiện từ màn hình này.
       </p>
-      <button className="button" onClick={reset}>
-        Try again
-      </button>
+      <aside className="state-error" role="alert">
+        <strong>Trạng thái:</strong> lỗi tải giao diện — chưa biết kết quả phía
+        máy chủ.
+      </aside>
       <p>
-        <Link href="/">Return to demo events</Link>
+        <button type="button" className="button" onClick={reset}>
+          Thử lại
+        </button>
+      </p>
+      <p>
+        <Link href="/">← Trang chủ</Link>
       </p>
     </main>
   );

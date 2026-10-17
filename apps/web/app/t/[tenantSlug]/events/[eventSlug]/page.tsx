@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import type { CSSProperties } from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { BrandMark } from '../../../../../src/brand-mark';
+import { Wordmark } from '../../../../../src/site-chrome';
 import {
   demoEventRoutes,
   findDemoEvent,
@@ -20,7 +20,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!event) notFound();
   return {
     title: `${event.name} — ${event.brand.organizationName}`,
-    description: `Fictional demo event by ${event.brand.organizationName}. ${event.description}`,
+    description: `Sự kiện demo hư cấu của ${event.brand.organizationName}. ${event.description}`,
   };
 }
 export default async function EventPage({ params }: Props) {
@@ -34,29 +34,26 @@ export default async function EventPage({ params }: Props) {
       style={{ '--brand': event.brand.primaryColor } as CSSProperties}
     >
       <div className="container">
-        <nav aria-label="Event navigation">
-          <Link href="/" className="wordmark" aria-label="vemoki, all demo events">
-            <BrandMark />
-            vemoki<span>↗</span>
-          </Link>
+        <nav aria-label="Điều hướng sự kiện">
+          <Wordmark />
           <span>{event.brand.organizationName}</span>
         </nav>
-        <p className="demo-label">FICTIONAL EVENT / DEMO FIXTURE</p>
+        <p className="demo-label">Sự kiện demo · Fixture hư cấu</p>
         <section className="hero" aria-labelledby="event-title">
           <div>
             <p className="eyebrow">{event.category}</p>
             <h1 id="event-title">{event.name}</h1>
             <p className="intro">{event.description}</p>
             <a className="button" href="#event-details">
-              Discover the day <span aria-hidden="true">↓</span>
+              Xem chi tiết ngày <span aria-hidden="true">↓</span>
             </a>
           </div>
           <div className="poster" aria-hidden="true">
             <span className="poster-orbit" />
             <span className="poster-word">
               {event.theme === 'festival'
-                ? 'FEEL THE FUN.'
-                : 'NEW POINTS OF VIEW.'}
+                ? 'CẢM NHẬN VUI.'
+                : 'GÓC NHÌN MỚI.'}
             </span>
             <span className="poster-caption">
               {event.brand.organizationName} / 2026
@@ -68,28 +65,28 @@ export default async function EventPage({ params }: Props) {
           className="details"
           aria-labelledby="details-title"
         >
-          <h2 id="details-title">Plan your day.</h2>
+          <h2 id="details-title">Lên kế hoạch cho ngày.</h2>
           <dl>
             <div>
-              <dt>When</dt>
+              <dt>Khi nào</dt>
               <dd>
                 <time dateTime={event.startsAt}>{formatEventDate(event)}</time>
                 <small>{event.timezone}</small>
               </dd>
             </div>
             <div>
-              <dt>Where</dt>
+              <dt>Ở đâu</dt>
               <dd>{event.location}</dd>
             </div>
             <div>
-              <dt>Hosted by</dt>
+              <dt>Tổ chức bởi</dt>
               <dd>{event.brand.organizationName}</dd>
             </div>
           </dl>
         </section>
         <section className="highlights" aria-labelledby="highlights-title">
-          <p className="eyebrow">A TASTE OF WHAT’S AHEAD</p>
-          <h2 id="highlights-title">Come curious.</h2>
+          <p className="eyebrow">Gợi ý trước khi đến</p>
+          <h2 id="highlights-title">Đến với sự tò mò.</h2>
           <ul>
             {event.highlights.map((highlight, index) => (
               <li key={highlight}>
@@ -100,31 +97,30 @@ export default async function EventPage({ params }: Props) {
           </ul>
         </section>
         <aside className="notice">
-          <h2>Demo preview only</h2>
+          <h2>Chỉ là bản xem trước demo</h2>
           <p>
-            This is fictional fixture content, not a live event listing. For
-            real Nest redeem (tenant/event UUID + code), use{' '}
-            <Link href="/redeem">/redeem</Link> after Keycloak sign-in. Gate
-            check-in is still out of scope.
+            Nội dung fixture hư cấu, không phải listing live. Đổi mã thật
+            (tenant/event UUID + mã) tại <Link href="/redeem">Đổi mã</Link>{' '}
+            sau khi đăng nhập Keycloak.
           </p>
         </aside>
         <section className="faq" aria-labelledby="faq-title">
-          <h2 id="faq-title">Before you go</h2>
+          <h2 id="faq-title">Trước khi đi</h2>
           <details>
-            <summary>Can I get a ticket here?</summary>
+            <summary>Tôi lấy vé ở đây được không?</summary>
             <p>
-              Not on this fixture page. Use the D2{' '}
-              <Link href="/redeem">redeem form</Link> with real tenant/event
-              UUIDs and a redemption code against the Nest API (Keycloak BFF).
+              Không trên trang fixture này. Dùng{' '}
+              <Link href="/redeem">form đổi mã</Link> với UUID tenant/event và
+              mã đổi qua Nest API (Keycloak BFF).
             </p>
           </details>
           <details>
-            <summary>Are the date and venue confirmed?</summary>
-            <p>No. All details on this page are fictional demo fixtures.</p>
+            <summary>Ngày và địa điểm đã chốt chưa?</summary>
+            <p>Chưa. Mọi chi tiết trên trang này là fixture demo hư cấu.</p>
           </details>
         </section>
         <Link className="back-link" href="/">
-          ← All demo events
+          ← Tất cả sự kiện demo
         </Link>
       </div>
     </main>
