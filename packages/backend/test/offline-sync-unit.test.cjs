@@ -6,6 +6,7 @@ const {
   sortOfflineEventsForReplay,
   validateOfflineSyncRequest,
   offlineSyncNotImplemented,
+  offlineEventPayloadHash,
   compareOfflineReplayOrder,
   OFFLINE_SYNC_MAX_CLOCK_SKEW_SECONDS,
 } = require('../dist');
@@ -127,7 +128,7 @@ test('validateOfflineSyncRequest rejects clock skew and oversized batch', () => 
   assert.equal(OFFLINE_SYNC_MAX_CLOCK_SKEW_SECONDS, 300);
 });
 
-test('offlineSyncNotImplemented validates then throws NOT_IMPLEMENTED', () => {
+test('offlineSyncNotImplemented validates then throws NOT_IMPLEMENTED (legacy stub)', () => {
   assert.throws(
     () =>
       offlineSyncNotImplemented(
@@ -145,4 +146,25 @@ test('offlineSyncNotImplemented validates then throws NOT_IMPLEMENTED', () => {
       error instanceof GateError &&
       error.code === GATE_ERROR_CODES.OFFLINE_SYNC_NOT_IMPLEMENTED,
   );
+});
+
+test('offlineEventPayloadHash is stable for identical canonical fields', () => {
+  const a = event({
+    clientEventId: '55555555-5555-4555-8555-555555555555',
+    clientOccurredAt: '2026-11-01T09:04:30.000Z',
+    clientSeq: 0,
+  });
+  const b = event({
+    clientEventId: '55555555-5555-4555-8555-555555555555',
+    clientOccurredAt: '2026-11-01T09:04:30.000Z',
+    clientSeq: 0,
+  });
+  assert.equal(offlineEventPayloadHash(a), offlineEventPayloadHash(b));
+  const c = event({
+    clientEventId: '55555555-5555-4555-8555-555555555555',
+    ticketId: TICKET_B,
+    clientOccurredAt: '2026-11-01T09:04:30.000Z',
+    clientSeq: 0,
+  });
+  assert.notEqual(offlineEventPayloadHash(a), offlineEventPayloadHash(c));
 });

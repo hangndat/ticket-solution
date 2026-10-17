@@ -58,7 +58,7 @@ export const OFFLINE_SYNC_ERROR_CODES = {
   EVENT_CANCELLED: 'EVENT_CANCELLED',
   /** clientSeq must be >= 0 integer; device queue must not go backwards for same key. */
   REPLAY_ORDER_INVALID: 'OFFLINE_SYNC_REPLAY_ORDER_INVALID',
-  /** Contract published; durable apply not wired yet (removed by #106). */
+  /** Legacy stub code from #105; apply path (#106) no longer returns this. */
   NOT_IMPLEMENTED: 'OFFLINE_SYNC_NOT_IMPLEMENTED',
 } as const;
 

@@ -31,7 +31,7 @@ import {
   IdentityError,
   IDENTITY_ERROR_CODES,
   confirmCheckin,
-  offlineSyncNotImplemented,
+  applyOfflineSyncBatch,
   openStaffSession,
   reserveCheckin,
   revokeStaffSession,
@@ -181,15 +181,13 @@ function gateHttpException(error: GateError): HttpException {
     requestId: randomUUID(),
     retryable: false,
   };
-  if (error.code === GATE_ERROR_CODES.OFFLINE_SYNC_NOT_IMPLEMENTED) {
-    return new HttpException(body, 501);
-  }
   if (
     error.code === GATE_ERROR_CODES.OFFLINE_SYNC_BATCH_TOO_LARGE ||
     error.code === GATE_ERROR_CODES.OFFLINE_SYNC_CLOCK_SKEW_EXCEEDED ||
     error.code === GATE_ERROR_CODES.OFFLINE_SYNC_EVENT_TYPE_UNSUPPORTED ||
     error.code === GATE_ERROR_CODES.OFFLINE_SYNC_PAYLOAD_VERSION_UNSUPPORTED ||
-    error.code === GATE_ERROR_CODES.OFFLINE_SYNC_REPLAY_ORDER_INVALID
+    error.code === GATE_ERROR_CODES.OFFLINE_SYNC_REPLAY_ORDER_INVALID ||
+    error.code === GATE_ERROR_CODES.OFFLINE_SYNC_IDEMPOTENCY_CONFLICT
   ) {
     return new HttpException(body, 422);
   }
@@ -346,16 +344,21 @@ export class GateService {
   }
 
   /**
-   * D7 schema gate (#105): auth + transport validation, apply deferred to #106.
+   * D7 offline queue replay (#106/#107): auth + validate + durable idempotent apply.
    */
   async offlineSync(
     authorization: string | undefined,
     eventId: string,
     body: OfflineSyncBodyDto,
   ): Promise<OfflineSyncResponse> {
-    await this.actor(authorization);
-    // Throws GateError after transport validation (NOT_IMPLEMENTED until #106).
-    offlineSyncNotImplemented(eventId, body);
+    const user = await this.actor(authorization);
+    return withTenant(this.deps.db!, body.tenantId, (tx) =>
+      applyOfflineSyncBatch(tx, {
+        pathEventId: eventId,
+        body,
+        actorUserId: user.userId,
+      }),
+    );
   }
 }
 
@@ -476,7 +479,7 @@ export class GateController {
   @ApiBearerAuth()
   @ApiOkResponse({ type: OfflineSyncResponseDto })
   @ApiResponse({ status: 422, type: ApiErrorDto })
-  @ApiResponse({ status: 501, type: ApiErrorDto })
+  @ApiResponse({ status: 409, type: ApiErrorDto })
   @ApiUnauthorizedResponse({ type: ApiErrorDto })
   offlineSync(
     @Headers('authorization') authorization: string | undefined,

@@ -188,11 +188,14 @@ export {
   sortOfflineEventsForReplay,
   validateOfflineSyncRequest,
   offlineSyncNotImplemented,
+  applyOfflineSyncBatch,
+  offlineEventPayloadHash,
   compareOfflineReplayOrder,
   isWithinOfflineClockSkew,
   OFFLINE_SYNC_MAX_BATCH,
   OFFLINE_SYNC_MAX_CLOCK_SKEW_SECONDS,
   OFFLINE_SYNC_ERROR_CODES,
+  type ApplyOfflineSyncInput,
 } from './offline-sync';
 export {
   ApprovalError,

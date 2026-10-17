@@ -1096,7 +1096,7 @@
               }
             }
           },
-          "422": {
+          "409": {
             "description": "",
             "content": {
               "application/json": {
@@ -1106,7 +1106,7 @@
               }
             }
           },
-          "501": {
+          "422": {
             "description": "",
             "content": {
               "application/json": {
