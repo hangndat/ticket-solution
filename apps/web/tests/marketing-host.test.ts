@@ -129,4 +129,37 @@ describe('decideHostRouting', () => {
       surface: 'marketing',
     });
   });
+
+  it('does not self-rewrite already-internal /marketing paths', () => {
+    const sales = decideHostRouting({
+      ...base,
+      host: 'localhost:3000',
+      pathname: '/marketing',
+    });
+    assert.deepEqual(sales, {
+      type: 'next',
+      surface: 'marketing',
+      locale: 'vi',
+    });
+    const privacy = decideHostRouting({
+      ...base,
+      host: 'vemoki.com',
+      pathname: '/marketing/privacy',
+    });
+    assert.deepEqual(privacy, {
+      type: 'next',
+      surface: 'marketing',
+      locale: 'vi',
+    });
+    const en = decideHostRouting({
+      ...base,
+      host: '127.0.0.1:3000',
+      pathname: '/marketing/en',
+    });
+    assert.deepEqual(en, {
+      type: 'next',
+      surface: 'marketing',
+      locale: 'en',
+    });
+  });
 });

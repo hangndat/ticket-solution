@@ -39,6 +39,16 @@ export default function proxy(request: NextRequest) {
     });
   }
 
+  // Already-internal /marketing… — pass through with surface headers (no self-rewrite).
+  if (decision.type === 'next' && decision.surface === 'marketing') {
+    const requestHeaders = new Headers(request.headers);
+    requestHeaders.set('x-vemoki-surface', 'marketing');
+    requestHeaders.set('x-vemoki-locale', decision.locale);
+    return NextResponse.next({
+      request: { headers: requestHeaders },
+    });
+  }
+
   return NextResponse.next();
 }
 
