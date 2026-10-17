@@ -13,6 +13,8 @@ import {
   findDemoEvent,
   formatEventDate,
 } from '../../../../../src/events';
+import { demoMediaForEventId } from '../../../../../src/demo-media';
+import { EventBanner, EventLogo } from '../../../../../src/ui/event-media';
 
 type Props = { params: Promise<{ tenantSlug: string; eventSlug: string }> };
 export const dynamicParams = false;
@@ -32,6 +34,7 @@ export default async function EventPage({ params }: Props) {
   const { tenantSlug, eventSlug } = await params;
   const event = findDemoEvent(tenantSlug, eventSlug);
   if (!event) notFound();
+  const demoMedia = demoMediaForEventId(event.id);
   const branding = brandingFromEventBrand(event.brand, tenantSlug);
   const themeVars = {
     ...brandingToCssVars(branding),
@@ -54,6 +57,13 @@ export default async function EventPage({ params }: Props) {
           <p className="demo-label">Sự kiện demo · Fixture hư cấu</p>
           <section className="hero" aria-labelledby="event-title">
             <div>
+              <EventLogo
+                eventId={event.id}
+                tenantSlug={event.tenantSlug}
+                className="event-logo event-logo-hero"
+                testId="event-hero-logo"
+                alt={`Logo ${event.brand.organizationName}`}
+              />
               <p className="eyebrow">{event.category}</p>
               <h1 id="event-title">{event.name}</h1>
               <p className="intro">{event.description}</p>
@@ -61,16 +71,28 @@ export default async function EventPage({ params }: Props) {
                 Xem chi tiết ngày <span aria-hidden="true">↓</span>
               </a>
             </div>
-            <div className="poster" aria-hidden="true">
-              <span className="poster-orbit" />
-              <span className="poster-word">
-                {event.theme === 'festival'
-                  ? 'CẢM NHẬN VUI.'
-                  : 'GÓC NHÌN MỚI.'}
-              </span>
-              <span className="poster-caption">
-                {event.brand.organizationName} / 2026
-              </span>
+            <div className="poster poster-media" data-testid="event-hero-media">
+              {demoMedia ? (
+                <EventBanner
+                  eventId={event.id}
+                  tenantSlug={event.tenantSlug}
+                  className="event-banner event-banner-hero"
+                  testId="event-hero-banner"
+                  alt={`Banner ${event.name}`}
+                />
+              ) : (
+                <>
+                  <span className="poster-orbit" aria-hidden="true" />
+                  <span className="poster-word" aria-hidden="true">
+                    {event.theme === 'festival'
+                      ? 'CẢM NHẬN VUI.'
+                      : 'GÓC NHÌN MỚI.'}
+                  </span>
+                  <span className="poster-caption" aria-hidden="true">
+                    {event.brand.organizationName} / 2026
+                  </span>
+                </>
+              )}
             </div>
           </section>
           <section
