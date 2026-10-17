@@ -38,10 +38,14 @@ services:
       - internal
 
   # Durable S3-compatible object store (ADR-14). Internal only — do not publish 9000/9001 on edge.
+  # Official minio/minio + minio/mc anonymous pull closed (2026-09). O1: cleanstart pin + aws-cli init.
+  # See docs/architecture/object-store-minio-replacement.md
   minio:
-    image: minio/minio:RELEASE.2025-04-22T22-12-26Z
+    image: cleanstart/minio@sha256:4febd64f632c221b48e0fbf435ac534df822aa5b06805540c03973939e4cc82a
+    user: '0:0'
     restart: unless-stopped
-    command: ['server', '/data', '--console-address', ':9001']
+    command:
+      ['server', '/data', '--address', ':9000', '--console-address', ':9001']
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
@@ -50,19 +54,29 @@ services:
     networks:
       - internal
     healthcheck:
-      test: ['CMD', 'curl', '-f', 'http://127.0.0.1:9000/minio/health/live']
+      test:
+        [
+          'CMD',
+          'wget',
+          '-q',
+          '-O',
+          '/dev/null',
+          'http://127.0.0.1:9000/minio/health/live',
+        ]
       interval: 5s
       timeout: 5s
       retries: 10
       start_period: 10s
 
-  # One-shot bucket bootstrap (idempotent). Uses root creds from .env — never commit secrets.
+  # One-shot bucket bootstrap (idempotent). aws-cli replaces minio/mc (also unpullable).
+  # Buckets are private by default — no anonymous ACL step required.
   minio-init:
-    image: minio/mc:RELEASE.2025-04-16T18-13-26Z
+    image: amazon/aws-cli:2.17.50@sha256:ac68e76ae4bbb804b0c36d56c6fdc8e6800adb46d29867ac2b73280225a7b719
     restart: 'no'
     environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER}
+      AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD}
+      AWS_DEFAULT_REGION: ${MINIO_REGION:-us-east-1}
       MINIO_BUCKET_ASSETS: ${MINIO_BUCKET_ASSETS:-vemoki-assets}
       MINIO_BUCKET_EXPORTS: ${MINIO_BUCKET_EXPORTS:-vemoki-exports}
       MINIO_BUCKET_IMPORTS: ${MINIO_BUCKET_IMPORTS:-vemoki-imports}
@@ -70,13 +84,11 @@ services:
     command:
       - |
         set -e
-        mc alias set local http://minio:9000 "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD"
-        mc mb --ignore-existing "local/$$MINIO_BUCKET_ASSETS"
-        mc mb --ignore-existing "local/$$MINIO_BUCKET_EXPORTS"
-        mc mb --ignore-existing "local/$$MINIO_BUCKET_IMPORTS"
-        mc anonymous set none "local/$$MINIO_BUCKET_ASSETS"
-        mc anonymous set none "local/$$MINIO_BUCKET_EXPORTS"
-        mc anonymous set none "local/$$MINIO_BUCKET_IMPORTS"
+        EP=http://minio:9000
+        for b in "$$MINIO_BUCKET_ASSETS" "$$MINIO_BUCKET_EXPORTS" "$$MINIO_BUCKET_IMPORTS"; do
+          aws --endpoint-url "$$EP" s3 mb "s3://$$b" 2>/dev/null || true
+          aws --endpoint-url "$$EP" s3api head-bucket --bucket "$$b"
+        done
     depends_on:
       minio:
         condition: service_healthy
