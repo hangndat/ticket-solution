@@ -11,7 +11,7 @@ runs:
   using: composite
   steps:
     - name: Upload Turbo shard
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: turbo-shard-${{ inputs.turbo-job }}
         path: .turbo
