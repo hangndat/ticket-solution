@@ -7,7 +7,16 @@ import {
   REDEMPTION_COMMAND,
   REDEMPTION_APPROVE_COMMAND,
   EVENT_CLONE_COMMAND,
+  OFFLINE_SYNC_COMMAND,
 } from '../commands';
+import type {
+  OfflineSyncRequestBody,
+  OfflineSyncResponse,
+} from '../offline-sync';
+import {
+  OFFLINE_SYNC_MAX_CLOCK_SKEW_SECONDS,
+  OFFLINE_SYNC_PAYLOAD_VERSION,
+} from '../offline-sync';
 import type {
   CancelEventBody,
   CloneEventBody,
@@ -46,7 +55,38 @@ export const fixtureCommands = {
   redeem: REDEMPTION_COMMAND,
   approve: REDEMPTION_APPROVE_COMMAND,
   clone: EVENT_CLONE_COMMAND,
+  offlineSync: OFFLINE_SYNC_COMMAND,
 } as const;
+
+export const fixtureOfflineSyncRequest: OfflineSyncRequestBody = {
+  tenantId: '22222222-2222-4222-8222-222222222222',
+  staffSessionId: '33333333-3333-4333-8333-333333333333',
+  deviceId: '44444444-4444-4444-8444-444444444444',
+  clientClockAt: '2026-11-01T09:05:00.000Z',
+  events: [
+    {
+      clientEventId: '55555555-5555-4555-8555-555555555555',
+      type: 'CHECKIN_OFFLINE',
+      eventId: '11111111-1111-4111-8111-111111111111',
+      ticketId: '99999999-9999-4999-8999-999999999999',
+      clientOccurredAt: '2026-11-01T09:04:30.000Z',
+      clientSeq: 0,
+      payloadVersion: OFFLINE_SYNC_PAYLOAD_VERSION,
+    },
+  ],
+};
+
+export const fixtureOfflineSyncResponse: OfflineSyncResponse = {
+  serverTime: '2026-11-01T09:05:01.000Z',
+  maxClockSkewSeconds: OFFLINE_SYNC_MAX_CLOCK_SKEW_SECONDS,
+  results: [
+    {
+      clientEventId: '55555555-5555-4555-8555-555555555555',
+      status: 'APPLIED',
+      checkinId: '66666666-6666-4666-8666-666666666666',
+    },
+  ],
+};
 
 export const fixtureEventDetail: EventDetail = {
   eventId: '11111111-1111-4111-8111-111111111111',
@@ -374,4 +414,11 @@ export function assertRedemptionCommandFrozen(): typeof REDEMPTION_COMMAND {
     throw new Error('REDEMPTION_COMMAND drift');
   }
   return REDEMPTION_COMMAND;
+}
+
+export function assertOfflineSyncCommandFrozen(): typeof OFFLINE_SYNC_COMMAND {
+  if (OFFLINE_SYNC_COMMAND !== 'gate.offline_sync') {
+    throw new Error('OFFLINE_SYNC_COMMAND drift');
+  }
+  return OFFLINE_SYNC_COMMAND;
 }

@@ -24,8 +24,9 @@ Các quyết định trong tài liệu là đề xuất kỹ thuật, không t�
 | ADR-03 | Prisma cho CRUD; SQL tham số hóa cho hot transaction và policy | Không ép ORM biểu diễn toàn bộ locking/RLS                                 |
 | ADR-04 | PostgreSQL outbox → BullMQ → worker idempotent                 | Chấp nhận giao việc ít nhất một lần; không hứa gửi email exactly-once. **MVP thực tế: [ADR-17](./ops/ADR-17-OUTBOX-PG-DIRECT.md)** — leased outbox + poll trực tiếp, chưa BullMQ |
 | ADR-05 | Quota dùng counter transaction, lock nhất quán                 | Ưu tiên tính đúng; event counter có thể thành điểm tranh khóa              |
-| ADR-06 | Check-in online reserve/confirm                                | Không cam kết chống trùng toàn hệ thống khi các cổng mất kết nối           |
+| ADR-06 | Check-in online reserve/confirm                                | Đường online giữ reserve/confirm; offline có kiểm soát → **[ADR-18](./ops/ADR-18-OFFLINE-GATE-SYNC.md)** (D7) |
 | ADR-07 | App chung có hai chế độ; white-label cấu hình = D8 (O10)       | Không fork per-tenant; Android native ngoài MVP                            |
+| ADR-18 | Offline Gate sync batch (`CHECKIN_OFFLINE`)                    | Idempotency `clientEventId`; skew ±300s; replay order; O05 một vé một vào — chi tiết ADR-18 |
 | ADR-08 | Cấu hình có schema/version, template giới hạn                  | Bảo trì được qua nhiều event và nhiều phiên bản app                        |
 | ADR-09 | Self-hosted Keycloak OIDC, Authorization Code + PKCE cho iOS   | Không tự xây protocol; **cấm** IdP SaaS (Clerk/Auth0/…); Compose/VPS       |
 | ADR-10 | Admission control trước khi cần sharding quota                 | Hạn chế contention và bảo vệ DB; không cam kết FIFO tuyệt đối              |
@@ -325,7 +326,9 @@ Supervisor có quyền và lý do; khóa ticket rồi check-in, đặt undone_at
 
 ### 9.5 Mạng yếu
 
-Không queue confirm offline để tự đẩy sau. Khi hết TTL: scan lại; khi confirm chưa rõ kết quả: reconcile trước. Backoff có jitter, tách timeout kết nối và timeout response. Tại cổng có mạng chính/dự phòng và thiết bị dự phòng; web Gate cũng cần mạng backend, không phải phương án offline.
+**Online path (ADR-06):** Khi hết TTL reservation: scan lại; khi confirm chưa rõ kết quả: reconcile trước. Backoff có jitter, tách timeout kết nối và timeout response. Ưu tiên mạng chính/dự phòng tại venue.
+
+**Offline path (D7 / [ADR-18](./ops/ADR-18-OFFLINE-GATE-SYNC.md)):** Staff được queue `CHECKIN_OFFLINE` trên thiết bị và replay qua `POST /gate/events/{e}/offline-sync`. Server apply theo replay order; vé đã USED → conflict codes ổn định; clock skew ngoài ±300s bị từ chối. Undo/revoke vẫn online-only. Client không được tự coi scan offline là USED cho đến khi server `APPLIED`/`DUPLICATE`.
 
 ## 10. API contract sơ bộ
 
@@ -346,6 +349,7 @@ Base `/v1`; OpenAPI là contract sinh client. DTO public không lộ ORM. Pagina
 | CS        | GET .../{e}/tickets; POST .../tickets/{id}/resend           | CS scope                                    |
 | Gate      | POST /gate/events/{e}/sessions; POST .../reservations       | Assigned staff                              |
 | Confirm   | POST /gate/events/{e}/reservations/{id}/confirm             | Holder + active permission                  |
+| Offline   | POST /gate/events/{e}/offline-sync (ADR-18)                 | Assigned staff + active session             |
 | Undo      | POST /gate/events/{e}/checkins/{id}/undo                    | Supervisor                                  |
 | Export    | POST .../{e}/exports; GET .../exports/{id}/download         | Export permission                           |
 | Webhook   | POST /integrations/email/{provider}/events                  | Provider signature, replay control          |
@@ -486,7 +490,7 @@ Migration theo expand → backfill → switch → contract; chạy job đơn v�
 | Client timeout sau commit            | Retry cùng key / tra operation, không tạo transaction nghiệp vụ mới                                                                                            |
 | Worker chết                          | Lease hết hạn, reconcile/requeue; effects idempotent                                                                                                           |
 | Dashboard quá tải                    | Giảm tần suất/tạm ngưng reporting trước Gate                                                                                                                   |
-| Mạng venue đứt                       | Chuyển đường truyền dự phòng; không tự bật offline confirm                                                                                                     |
+| Mạng venue đứt                       | Ưu tiên đường dự phòng; nếu vẫn mất mạng → queue `CHECKIN_OFFLINE` (ADR-18) rồi sync; không nới O05                                                                 |
 | Auth provider gián đoạn              | Token/phiên hiện tại có thể tiếp tục trong thời hạn hợp lệ với DB revocation; login/refresh mới có thể lỗi, không bỏ qua xác thực                              |
 
 Gate critical path không được phụ thuộc Redis cache/rate limiter theo cách bắt buộc fail khi Redis lỗi; dùng per-process protective cap + ingress controls và DB authz. Nếu implementation chọn phụ thuộc Redis cho Gate thì phải cập nhật failure matrix, không mặc định claim Gate hoạt động.

@@ -12,10 +12,18 @@ import {
   ApiBearerAuth,
   ApiOkResponse,
   ApiProperty,
+  ApiResponse,
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
-import { type ApiError } from '@ticket/contracts';
+import {
+  OFFLINE_SYNC_ERROR_CODES,
+  OFFLINE_SYNC_EVENT_TYPES,
+  OFFLINE_SYNC_MAX_CLOCK_SKEW_SECONDS,
+  OFFLINE_SYNC_PAYLOAD_VERSION,
+  type ApiError,
+  type OfflineSyncResponse,
+} from '@ticket/contracts';
 import {
   AuthzError,
   GateError,
@@ -23,6 +31,7 @@ import {
   IdentityError,
   IDENTITY_ERROR_CODES,
   confirmCheckin,
+  applyOfflineSyncBatch,
   openStaffSession,
   reserveCheckin,
   revokeStaffSession,
@@ -86,6 +95,58 @@ class ConfirmResponseDto {
   @ApiProperty({ enum: ['USED'] }) state!: 'USED';
 }
 
+class OfflineSyncEventDto {
+  @ApiProperty({ format: 'uuid' }) clientEventId!: string;
+  @ApiProperty({ enum: OFFLINE_SYNC_EVENT_TYPES }) type!: 'CHECKIN_OFFLINE';
+  @ApiProperty({ format: 'uuid' }) eventId!: string;
+  @ApiProperty({ format: 'uuid' }) ticketId!: string;
+  @ApiProperty({
+    description: 'ISO-8601 UTC when the scan was accepted on-device',
+  })
+  clientOccurredAt!: string;
+  @ApiProperty({
+    minimum: 0,
+    description: 'Monotonic per device+staffSession queue sequence',
+  })
+  clientSeq!: number;
+  @ApiProperty({ enum: [OFFLINE_SYNC_PAYLOAD_VERSION] })
+  payloadVersion!: typeof OFFLINE_SYNC_PAYLOAD_VERSION;
+}
+
+class OfflineSyncBodyDto {
+  @ApiProperty({ format: 'uuid' }) tenantId!: string;
+  @ApiProperty({ format: 'uuid' }) staffSessionId!: string;
+  @ApiProperty({ format: 'uuid' }) deviceId!: string;
+  @ApiProperty({
+    description: 'ISO-8601 UTC client wall clock when the batch was assembled',
+  })
+  clientClockAt!: string;
+  @ApiProperty({ type: [OfflineSyncEventDto] }) events!: OfflineSyncEventDto[];
+}
+
+class OfflineSyncItemResultDto {
+  @ApiProperty({ format: 'uuid' }) clientEventId!: string;
+  @ApiProperty({ enum: ['APPLIED', 'DUPLICATE', 'REJECTED', 'CONFLICT'] })
+  status!: 'APPLIED' | 'DUPLICATE' | 'REJECTED' | 'CONFLICT';
+  @ApiProperty({ required: false, format: 'uuid' }) checkinId?: string;
+  @ApiProperty({
+    required: false,
+    enum: Object.values(OFFLINE_SYNC_ERROR_CODES),
+  })
+  code?: string;
+  @ApiProperty({ required: false }) message?: string;
+  @ApiProperty({ required: false, format: 'uuid' }) winningCheckinId?: string;
+  @ApiProperty({ required: false, format: 'uuid' }) winningDeviceId?: string;
+}
+
+class OfflineSyncResponseDto {
+  @ApiProperty() serverTime!: string;
+  @ApiProperty({ enum: [OFFLINE_SYNC_MAX_CLOCK_SKEW_SECONDS] })
+  maxClockSkewSeconds!: typeof OFFLINE_SYNC_MAX_CLOCK_SKEW_SECONDS;
+  @ApiProperty({ type: [OfflineSyncItemResultDto] })
+  results!: OfflineSyncItemResultDto[];
+}
+
 type GateDeps = {
   db: PrismaClient | null;
   verifier: OidcVerifier | null;
@@ -120,6 +181,16 @@ function gateHttpException(error: GateError): HttpException {
     requestId: randomUUID(),
     retryable: false,
   };
+  if (
+    error.code === GATE_ERROR_CODES.OFFLINE_SYNC_BATCH_TOO_LARGE ||
+    error.code === GATE_ERROR_CODES.OFFLINE_SYNC_CLOCK_SKEW_EXCEEDED ||
+    error.code === GATE_ERROR_CODES.OFFLINE_SYNC_EVENT_TYPE_UNSUPPORTED ||
+    error.code === GATE_ERROR_CODES.OFFLINE_SYNC_PAYLOAD_VERSION_UNSUPPORTED ||
+    error.code === GATE_ERROR_CODES.OFFLINE_SYNC_REPLAY_ORDER_INVALID ||
+    error.code === GATE_ERROR_CODES.OFFLINE_SYNC_IDEMPOTENCY_CONFLICT
+  ) {
+    return new HttpException(body, 422);
+  }
   const status =
     error.code === GATE_ERROR_CODES.TICKET_NOT_FOUND ||
     error.code === GATE_ERROR_CODES.RESERVATION_NOT_FOUND ||
@@ -271,6 +342,24 @@ export class GateService {
       }),
     );
   }
+
+  /**
+   * D7 offline queue replay (#106/#107): auth + validate + durable idempotent apply.
+   */
+  async offlineSync(
+    authorization: string | undefined,
+    eventId: string,
+    body: OfflineSyncBodyDto,
+  ): Promise<OfflineSyncResponse> {
+    const user = await this.actor(authorization);
+    return withTenant(this.deps.db!, body.tenantId, (tx) =>
+      applyOfflineSyncBatch(tx, {
+        pathEventId: eventId,
+        body,
+        actorUserId: user.userId,
+      }),
+    );
+  }
 }
 
 @ApiTags('gate')
@@ -384,5 +473,20 @@ export class GateController {
       await this.gate.revoke(authorization, event, ticket, body);
       return { status: 'REVOKED' as const, ticketId: ticket };
     });
+  }
+
+  @Post('gate/events/:eventId/offline-sync')
+  @ApiBearerAuth()
+  @ApiOkResponse({ type: OfflineSyncResponseDto })
+  @ApiResponse({ status: 422, type: ApiErrorDto })
+  @ApiResponse({ status: 409, type: ApiErrorDto })
+  @ApiUnauthorizedResponse({ type: ApiErrorDto })
+  offlineSync(
+    @Headers('authorization') authorization: string | undefined,
+    @Param('eventId') eventId: string,
+    @Body() body: OfflineSyncBodyDto,
+  ) {
+    const event = requireUuid(eventId, 'eventId');
+    return this.run(() => this.gate.offlineSync(authorization, event, body));
   }
 }
