@@ -165,6 +165,12 @@ test(
           'utf8',
         ),
       );
+      await admin.query(
+        readFileSync(
+          'prisma/migrations/202610170012_f_be_form_consent/migration.sql',
+          'utf8',
+        ),
+      );
       await admin.query('RESET ROLE');
       await admin.query(
         "CREATE ROLE w0_login LOGIN PASSWORD '" +
