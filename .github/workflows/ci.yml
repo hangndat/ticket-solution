@@ -2,7 +2,8 @@
 # Không dùng Turbo Remote Cache / SaaS cache (ADR-11). Chỉ cache local Actions `.turbo`.
 #
 # Layout: changes → parallel scopes (web/mobile/backend + db matrix + d5×3) → `ci`.
-# PR chỉ đụng docs/** hoặc meta → gần như chỉ chạy `changes` + `ci`.
+# PR nhẹ (web/mobile/docs/CI/apps-only, không đụng DB/infra) → skip Docker (database-isolation + d5*).
+# Force Docker trên PR: label `ci:docker`. Push `main` luôn full.
 # Turbo: restore chung theo lockfile; web/mobile/backend upload shard → turbo-persist merge.
 name: CI
 on:
@@ -80,13 +81,11 @@ jobs:
               - '.npmrc'
               - '.github/workflows/ci.yml'
               - '.github/actions/**'
+            # Docker Postgres / drills — chỉ khi đụng DB layer hoặc infra.
+            # Root tooling (package.json/turbo/lockfile) không kích Docker trên PR.
             db:
               - 'packages/backend/**'
               - 'packages/contracts/**'
-              - 'pnpm-lock.yaml'
-              - 'pnpm-workspace.yaml'
-              - 'package.json'
-              - 'turbo.json'
             hardening:
               - 'scripts/d5-**'
               - 'scripts/rint-**'
@@ -123,6 +122,14 @@ jobs:
             echo "docs_only=true" >> "$GITHUB_OUTPUT"
             # Docs/meta-only: không chạy scope jobs.
             web=false; mobile=false; backend=false; db=false; hardening=false
+          fi
+
+          # Label `ci:docker` → bắt buộc Docker jobs trên PR (kể cả PR nhẹ).
+          labels='${{ join(github.event.pull_request.labels.*.name, ',') }}'
+          if [[ ",${labels}," == *",ci:docker,"* ]]; then
+            db=true
+            hardening=true
+            echo "force_docker=ci:docker label"
           fi
 
           echo "web=${web}" >> "$GITHUB_OUTPUT"
