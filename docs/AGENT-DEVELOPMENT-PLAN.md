@@ -1,6 +1,9 @@
 # Kế hoạch phát triển song song bằng Orca agents
 
-Trạng thái: kế hoạch đã được dùng để thực thi W0; kết quả tại [W0 report](./W0-FOUNDATION-REPORT.md). Các wave tiếp theo vẫn là đề xuất.  
+**Vai trò tài liệu:** kế hoạch ownership / wave / contract-first / DoD vận hành agent — **không** phải nguồn Status live.  
+**Status động:** [GitHub Project #3](https://github.com/users/hangndat/projects/3). **Phạm vi & gate hiện tại:** [ROADMAP.md](./ROADMAP.md).
+
+Trạng thái kế hoạch: đã dùng để thực thi **W0** ([W0 report](./W0-FOUNDATION-REPORT.md)); các wave W1–W4 bên dưới là **khung lịch sử** đã được ánh xạ sang đợt D1–D5 trên Project (D0–D3 parent Hoàn thành; D4/D5 Đang làm tại sync 2026-10-17). Không đọc “Chưa triển khai W1” ở cuối file như trạng thái hiện tại.  
 Nguồn: [PRD](./PRD.md), [Technical Design](./TECHNICAL-DESIGN.md).  
 Mục tiêu: build web + iOS + NestJS bằng các wave nhỏ, tích hợp sớm và kiểm chứng invariants trước mở rộng.
 
@@ -21,7 +24,7 @@ Các module bảo mật quan trọng cần review độc lập sau khi implement
 
 ## 2. Ranh giới file và các file dễ conflict
 
-Cấu trúc mục tiêu kế thừa technical design; hiện chưa scaffold code.
+Cấu trúc mục tiêu kế thừa technical design. **Lịch sử:** tại thời điểm viết kế hoạch (trước W0) chưa scaffold; monorepo + apps đã có trên `main` sau D0. Ownership bảng dưới vẫn áp dụng.
 
 | Khu vực                                                | Writer chính                                                            |
 | ------------------------------------------------------ | ----------------------------------------------------------------------- |
@@ -42,7 +45,7 @@ Việc API bootstrap/import module phải có owner cụ thể trong task. Worke
 
 ## 3. Workspace và Git strategy
 
-Tại thời điểm lập kế hoạch, thư mục chỉ có tài liệu/PDF, chưa là Git repository. Hiện baseline Git và repo private đã được tạo; xem W0 report. Điều này không ngăn Orca chạy agents trong folder; nhưng khi phát triển song song có package manifests, lockfile và schema, worktree isolation là lựa chọn đề xuất.
+**Lịch sử mở đầu:** tại thời điểm lập kế hoạch, thư mục chỉ có tài liệu/PDF, chưa là Git repository. Baseline Git và repo private đã có từ W0 trở đi; xem W0 report. Khi phát triển song song có package manifests, lockfile và schema, worktree isolation vẫn là lựa chọn đề xuất. GitHub Flow hiện tại: feature branch → PR → Cursor DoD review → CI → merge `main` (xem `.cursor/rules/git-workflow.mdc`).
 
 Trước khi launch implementation:
 
@@ -76,7 +79,9 @@ Nếu contract đổi: coordinator chốt thay đổi → publish snapshot mới
 
 ## 5. Flow phát triển theo wave
 
-### W0 — Bootstrap và nền móng
+Ánh xạ nhanh (kế hoạch → đợt Project): W0→D0, W1→D2 (+ D1 identity gate trước đó), W2→D3, W3→D4, W4→D5. Chi tiết Status/checkbox: [ROADMAP.md](./ROADMAP.md). Phân biệt **code complete** / **acceptance complete** / **pilot ready** như ROADMAP §1.1. UAT thiết bị thật và proof limits: ROADMAP §1.2.
+
+### W0 — Bootstrap và nền móng *(đã thực thi → D0)*
 
 Một bước serial ngắn do coordinator sở hữu:
 
@@ -96,7 +101,7 @@ Chọn identity provider bằng spike với acceptance criteria trong technical 
 
 Gate W0: foundation integrated, scripts chạy được từ clean checkout, RLS test đạt, identity direction và minimal API contract rõ.
 
-### W1 — Một luồng nhận vé xuyên web và app
+### W1 — Một luồng nhận vé xuyên web và app *(khung → D2; board D2 Hoàn thành)*
 
 Giới hạn scope để có lát cắt end-to-end sớm: một event, một nguồn mã, một loại vé, auto-approve. Multi-tenant isolation có từ đầu, không retrofit sau.
 
@@ -110,7 +115,7 @@ Có fixture cho pending review nhưng chưa triển khai toàn bộ approval UX 
 
 Gate W1: demo web đổi vé → email/sandbox notification → cùng user mở vé trên app; kiểm thử độc lập lại quota/idempotency trước W2.
 
-### W2 — Check-in xuyên app và web
+### W2 — Check-in xuyên app và web *(khung → D3; board D3 Hoàn thành; camera device → D5 #26)*
 
 | Worker | Task                                                                        | Bằng chứng hoàn tất                                                                        |
 | ------ | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
@@ -122,7 +127,7 @@ Gate W2: hai thiết bị thật hoặc môi trường thiết bị kiểm chứ
 
 Đến đây phải chứng minh được phần rủi ro cốt lõi trước khi mở rộng admin/template.
 
-### W3 — Hoàn thiện platform
+### W3 — Hoàn thiện platform *(khung → D4; board Đang làm)*
 
 Chia thành các task nhỏ nối tiếp, không giao một worker “làm toàn bộ admin”. Ba slot tiếp tục song song theo contract từng đợt:
 
@@ -134,7 +139,7 @@ Mỗi nhóm có backend contract trước, consumer có mock, rồi integration 
 
 Gate W3: tenant thứ hai tự tạo event và brand qua admin, không sửa code; không hardcode FUN FEST/VIP/Brand/Fandom; đủ release scope PRD.
 
-### W4 — Hardening và pilot readiness
+### W4 — Hardening và pilot readiness *(khung → D5; board Đang làm; chưa pilot ready)*
 
 Đổi phân công theo workload thay vì giữ ba vai trò cố định:
 
@@ -237,11 +242,20 @@ Theo dõi thời gian chờ contract/review, conflicts, broken builds, bug reope
 
 Không ước lượng tốc độ tăng tuyến tính theo số agent. Bắt đầu 1+3, đo một wave end-to-end rồi quyết định.
 
-## 11. Việc tiếp theo khi bắt đầu implementation
+## 11. Việc tiếp theo — lịch sử khởi động & hướng dẫn hiện tại
+
+### 11.1 Lịch sử (trước/trong W0 — không phải backlog hiện tại)
 
 1. Chốt app baseline và identity spike criteria, lập decision log cho các mục mở.
 2. Khởi tạo baseline Git/scaffold chung theo technical design.
 3. Tạo Run W0 và ba task foundation với ownership cụ thể.
 4. Launch workers trong Orca-managed workspaces đã xác minh; coordinator theo dõi đến settlement và integration gate.
 
-W0 đã được chạy bằng Orca supervised orchestration; xem W0 report cho evidence. Chưa triển khai W1 trở đi. Native iOS build bắt buộc local Xcode/xcodebuild/fastlane trên Mac/runner macOS tự quản lý; tuyệt đối không dùng Expo/EAS Cloud Build, workflow EAS-hosted hoặc fallback cloud.
+W0 đã chạy bằng Orca supervised orchestration; xem W0 report. Các wave W1–W4 đã được thực thi một phần hoặc toàn phần dưới đợt D1–D5 trên Project — câu “chưa làm W1+” trong bản kế hoạch cũ **không còn đúng**.
+
+### 11.2 Hiện tại (đọc Project + ROADMAP trước khi dispatch)
+
+1. Lấy Status từ [Project #3](https://github.com/users/hangndat/projects/3); không tin checkbox docs nếu lệch board.
+2. Trọng tâm còn mở: D4 (#5, #22, #23, #56) và D5 (#6, #25, #26) — workers `vemoki-*-complete` / review đang sở hữu implementation; không trùng checkout.
+3. Chỉ gọi **pilot ready** khi gate D5 + UAT thiết bị thật đạt và chỉ số thiếu được nêu rõ (ROADMAP §1.1–§1.2).
+4. Native iOS build bắt buộc local Xcode/xcodebuild/fastlane trên Mac/runner macOS tự quản lý; tuyệt đối không dùng Expo/EAS Cloud Build, workflow EAS-hosted hoặc fallback cloud.

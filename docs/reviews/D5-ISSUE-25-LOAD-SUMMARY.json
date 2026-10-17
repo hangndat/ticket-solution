@@ -1,0 +1,136 @@
+{
+  "scenario": "TD S3 sustained issue+confirm concurrent + S1 volume SQL seed",
+  "ticketsPerEventTarget": 20000,
+  "events": 2,
+  "scannersPerEvent": 50,
+  "scannersTotal": 100,
+  "sessionsByEvent": {
+    "9aa33c05-f07f-4079-abe0-fefa339e6b63": 50,
+    "2737318a-cde5-4a2c-978a-5e42cd7c9509": 50
+  },
+  "volumeSeedMs": 130803,
+  "volumeSeedNote": "ACTIVE tickets bulk-inserted in SQL for S1 volume; NOT counted as HTTP issue RPS. HTTP issue path measured separately via k6 S3.",
+  "httpIssuePoolSize": 3000,
+  "s3": {
+    "issueRateTarget": 50,
+    "confirmRateTarget": 20,
+    "sustainSecTarget": 60,
+    "elapsedSec": 60.735,
+    "ok": true,
+    "error": null,
+    "metrics": {
+      "issueOk": 3001,
+      "confirmOk": 1201,
+      "issueRpsAchieved": 50.016666666666666,
+      "confirmRpsAchieved": 20.016666666666666,
+      "issueP95Ms": 33,
+      "confirmP95Ms": 19,
+      "issueErrorRate": 0,
+      "confirmErrorRate": 0
+    },
+    "rateOk": true,
+    "p95Ok": true,
+    "errOk": true,
+    "artifact": "/var/folders/mk/xr3y6rhx0jq6hrk8pvcj5yg00000gp/T/d5-issue25/k6-s3-44419fd8.json",
+    "summaryArtifact": "/var/folders/mk/xr3y6rhx0jq6hrk8pvcj5yg00000gp/T/d5-issue25/k6-s3-summary-44419fd8.json"
+  },
+  "admissionLayer": {
+    "implemented": true,
+    "measuredInThisHarness": false,
+    "adr": "ADR-15",
+    "note": "Run ./scripts/d5-admission-s4.sh for isolated ADR-15 edge; not inlined in API load path",
+    "script": "./scripts/d5-admission-s4.sh"
+  },
+  "hardware": {
+    "ncpu": "14",
+    "memGb": "36"
+  },
+  "healthK6": {
+    "ok": true,
+    "artifact": "/var/folders/mk/xr3y6rhx0jq6hrk8pvcj5yg00000gp/T/d5-issue25/k6-health-44419fd8.json"
+  },
+  "gateK6ByEvent": [
+    {
+      "eventId": "9aa33c05-f07f-4079-abe0-fefa339e6b63",
+      "ok": true,
+      "error": null,
+      "artifact": "/var/folders/mk/xr3y6rhx0jq6hrk8pvcj5yg00000gp/T/d5-issue25/k6-gate-9aa33c05.json",
+      "sessions": 50
+    },
+    {
+      "eventId": "2737318a-cde5-4a2c-978a-5e42cd7c9509",
+      "ok": true,
+      "error": null,
+      "artifact": "/var/folders/mk/xr3y6rhx0jq6hrk8pvcj5yg00000gp/T/d5-issue25/k6-gate-2737318a.json",
+      "sessions": 50
+    }
+  ],
+  "invariants": {
+    "9aa33c05-f07f-4079-abe0-fefa339e6b63": {
+      "tickets": 20000,
+      "allocatedEvent": 20000,
+      "allocatedType": 20000,
+      "allocatedSource": 20000,
+      "credentialsWithKid": 20000,
+      "currentCheckins": 750,
+      "usedTickets": 750,
+      "outboxRowsTenant": 3000,
+      "auditLogsTenant": 4501,
+      "confirmedReservations": 750,
+      "distinctCheckinTickets": 750,
+      "sampleDecryptOk": true,
+      "ticketsMatchAllocated": true,
+      "quotaScopesAligned": true,
+      "everyTicketHasKid": true,
+      "checkinsMatchUsed": true,
+      "noDoubleConfirm": true,
+      "checkinsMeetExpected": true,
+      "ok": true
+    },
+    "2737318a-cde5-4a2c-978a-5e42cd7c9509": {
+      "tickets": 20000,
+      "allocatedEvent": 20000,
+      "allocatedType": 20000,
+      "allocatedSource": 20000,
+      "credentialsWithKid": 20000,
+      "currentCheckins": 651,
+      "usedTickets": 651,
+      "outboxRowsTenant": 3000,
+      "auditLogsTenant": 4501,
+      "confirmedReservations": 651,
+      "distinctCheckinTickets": 651,
+      "sampleDecryptOk": true,
+      "ticketsMatchAllocated": true,
+      "quotaScopesAligned": true,
+      "everyTicketHasKid": true,
+      "checkinsMatchUsed": true,
+      "noDoubleConfirm": true,
+      "checkinsMeetExpected": true,
+      "ok": true
+    }
+  },
+  "invariantsOk": true,
+  "reportApiStatus": 200,
+  "reportSample": {
+    "eventId": "9aa33c05-f07f-4079-abe0-fefa339e6b63",
+    "ticketsByState": {
+      "ACTIVE": 19250,
+      "REVOKED": 0,
+      "CANCELLED": 0,
+      "USED": 750
+    },
+    "quota": {
+      "capacity": 20000,
+      "allocated": 20000
+    },
+    "pendingApprovalCount": 0
+  },
+  "apiLog": "/var/folders/mk/xr3y6rhx0jq6hrk8pvcj5yg00000gp/T/d5-issue25/api-44419fd8.log",
+  "db": {
+    "container": "d5-load-pg-44419fd8",
+    "port": 55452
+  },
+  "productionClaim": false,
+  "meetsPrdPilotWithoutCaveat": true,
+  "pass": true
+}

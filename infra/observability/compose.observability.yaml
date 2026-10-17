@@ -1,0 +1,42 @@
+# Optional overlay — Issue #25 observability stack (local only).
+# Usage (does not replace app compose project name):
+#   COMPOSE_PROJECT_NAME=d5-obs \
+#   docker compose -f compose.yaml -f infra/observability/compose.observability.yaml \
+#     up -d postgres redis prometheus postgres-exporter redis-exporter
+#
+# Prometheus UI: http://127.0.0.1:19090
+# Does not claim production monitoring or TECHNICAL-DESIGN §16 metric completeness.
+# BE /metrics: mount secrets/metrics_bearer and uncomment job in prometheus.yml.
+
+services:
+  prometheus:
+    image: prom/prometheus:v3.2.1
+    ports:
+      - '127.0.0.1:${D5_PROM_PORT:-19090}:9090'
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./secrets:/etc/prometheus/secrets:ro
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    labels:
+      ticket.task: d5-observability
+
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.17.1
+    environment:
+      DATA_SOURCE_NAME: postgresql://${POSTGRES_USER:-ticket_dev}:${POSTGRES_PASSWORD:-local_dev_only}@postgres:5432/${POSTGRES_DB:-ticket_solution}?sslmode=disable
+    depends_on:
+      postgres:
+        condition: service_healthy
+    labels:
+      ticket.task: d5-observability
+
+  redis-exporter:
+    image: oliver006/redis_exporter:v1.67.0
+    environment:
+      REDIS_ADDR: redis://redis:6379
+    depends_on:
+      redis:
+        condition: service_healthy
+    labels:
+      ticket.task: d5-observability
