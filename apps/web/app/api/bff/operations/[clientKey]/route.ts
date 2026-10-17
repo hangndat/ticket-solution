@@ -1,3 +1,4 @@
+import { REDEMPTION_COMMAND } from '@ticket/contracts';
 import { bffApiError, forwardWithBearer, isUuid } from '../../../../../src/bff/upstream';
 
 type Params = { params: Promise<{ clientKey: string }> };
@@ -13,7 +14,8 @@ export async function GET(request: Request, { params }: Params) {
   const url = new URL(request.url);
   const tenantId = url.searchParams.get('tenantId')?.trim() ?? '';
   const eventId = url.searchParams.get('eventId')?.trim() ?? '';
-  const command = url.searchParams.get('command')?.trim() || 'redeem';
+  const command =
+    url.searchParams.get('command')?.trim() || REDEMPTION_COMMAND;
 
   if (!isUuid(tenantId) || !isUuid(eventId)) {
     return bffApiError(
