@@ -1,0 +1,13 @@
+#!/bin/sh
+set -eu
+
+psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<SQL
+CREATE ROLE ticket_runtime NOLOGIN NOSUPERUSER NOBYPASSRLS;
+CREATE ROLE ticket_app LOGIN NOSUPERUSER NOBYPASSRLS INHERIT PASSWORD '${TICKET_APP_PASSWORD}';
+GRANT ticket_runtime TO ticket_app;
+SQL
+
+psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname postgres <<SQL
+CREATE ROLE keycloak LOGIN PASSWORD '${KEYCLOAK_DB_PASSWORD}';
+CREATE DATABASE keycloak OWNER keycloak;
+SQL

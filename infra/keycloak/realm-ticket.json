@@ -1,5 +1,6 @@
 {
   "realm": "ticket",
+  "displayName": "Vemoki",
   "enabled": true,
   "registrationAllowed": true,
   "registrationEmailAsUsername": true,
@@ -18,7 +19,7 @@
   "clients": [
     {
       "clientId": "ticket-api",
-      "name": "Ticket API (resource / audience)",
+      "name": "Vemoki API (resource / audience)",
       "enabled": true,
       "publicClient": true,
       "standardFlowEnabled": false,
@@ -28,7 +29,7 @@
     },
     {
       "clientId": "ticket-web",
-      "name": "Ticket Web BFF",
+      "name": "Vemoki Web BFF",
       "enabled": true,
       "publicClient": false,
       "secret": "dev-web-secret-change-me",
@@ -40,13 +41,15 @@
         "http://127.0.0.1:3000/api/auth/callback",
         "http://localhost:3000/api/auth/callback",
         "http://127.0.0.1:3010/api/auth/callback",
-        "http://localhost:3010/api/auth/callback"
+        "http://localhost:3010/api/auth/callback",
+        "https://vemoki.com/api/auth/callback"
       ],
       "webOrigins": [
         "http://127.0.0.1:3000",
         "http://localhost:3000",
         "http://127.0.0.1:3010",
-        "http://localhost:3010"
+        "http://localhost:3010",
+        "https://vemoki.com"
       ],
       "attributes": {
         "pkce.code.challenge.method": "S256"
@@ -95,7 +98,7 @@
     },
     {
       "clientId": "ticket-mobile",
-      "name": "Ticket iOS (public + PKCE)",
+      "name": "Vemoki iOS (public + PKCE)",
       "enabled": true,
       "publicClient": true,
       "standardFlowEnabled": true,
@@ -103,7 +106,10 @@
       "serviceAccountsEnabled": false,
       "protocol": "openid-connect",
       "redirectUris": [
+        "vemoki://oauth/callback",
+        "vemoki://oauth/logout",
         "ticketsolution://oauth/callback",
+        "ticketsolution://oauth/logout",
         "exp://127.0.0.1:8081/--/oauth",
         "exp://localhost:8081/--/oauth",
         "exp://127.0.0.1:8083/--/oauth",
@@ -113,7 +119,8 @@
       ],
       "webOrigins": ["+"],
       "attributes": {
-        "pkce.code.challenge.method": "S256"
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "vemoki://oauth/logout##ticketsolution://oauth/logout"
       },
       "protocolMappers": [
         {
@@ -193,8 +200,8 @@
   "smtpServer": {
     "host": "mailpit",
     "port": "1025",
-    "from": "noreply@ticket.local",
-    "fromDisplayName": "Ticket Solution",
+    "from": "noreply@vemoki.com",
+    "fromDisplayName": "Vemoki",
     "ssl": "false",
     "starttls": "false",
     "auth": "false"

@@ -1,6 +1,6 @@
 # Decision log — sản phẩm & kỹ thuật
 
-Ngày cập nhật: 2026-10-16  
+Ngày cập nhật: 2026-10-17  
 Nguồn: [PRD](./PRD.md) mục 15, [Technical Design](./TECHNICAL-DESIGN.md) mục 2 & 18, [ROADMAP](./ROADMAP.md)  
 Tracking: Issues [#10](https://github.com/hangndat/ticket-solution/issues/10), [#11](https://github.com/hangndat/ticket-solution/issues/11)
 
@@ -18,6 +18,7 @@ Tracking: Issues [#10](https://github.com/hangndat/ticket-solution/issues/10), [
 | O06 | Retention, vùng dữ liệu, SLA hỗ trợ? | Retention/anonymize **bắt buộc có policy trước dữ liệu user thật**; giá trị ngày/region/SLA **chưa chốt số** | Giữ mở (chốt trước production data) | Hạ tầng, DPA, support access |
 | O07 | Custom domain / sender ngay release đầu? | **Không** — subdomain platform + sender platform trên DNS user mua; custom domain/sender **sau MVP** | Đã chốt (MVP) | DNS, deliverability |
 | O08 | Database riêng theo tổ chức? | **Shared PostgreSQL schema + RLS** (+ authz app); không DB-per-tenant | Đã chốt (MVP) | Deployment, isolation tier |
+| O09 | Tên thương hiệu và domain platform? | **Vemoki**, domain `vemoki.com` | Đã chốt (MVP) | Tên hiển thị store/web, sender `noreply@vemoki.com`, deep link `vemoki://`; repo `ticket-solution` và bundle `com.hangndat.ticket` giữ nguyên |
 
 ## ADR — Quyết định kỹ thuật liên quan D1
 
@@ -31,6 +32,7 @@ Tracking: Issues [#10](https://github.com/hangndat/ticket-solution/issues/10), [
 | ADR-13 | Email qua **SMTP adapter** | Dev: Mailpit; prod: Postal hoặc Postfix trên VPS | Không transactional SaaS |
 | ADR-14 | Object storage **MinIO** (S3-compatible) | Compose local; cùng image trên VPS | Signed URL ngắn hạn |
 | ADR-15 | Admission / waiting room trên **Caddy hoặc nginx** | Rate-limit + token admission ký; Gate không đi qua layer này | Không Cloudflare Waiting Room |
+| ADR-16 | VPS đầu: nginx có sẵn + image runtime mỏng, app mount từ đĩa host | pnpm store cùng mount với source để hard link. Redirect web dùng `PUBLIC_WEB_ORIGIN` / Host do nginx ghi đè — không tin client `X-Forwarded-*` thô; không bind `0.0.0.0` trong Location | Xem [infra/deploy/README.md](../infra/deploy/README.md). SMTP prod (ADR-13) vẫn để sau |
 
 ## Điều kiện mở business endpoints
 
@@ -47,3 +49,5 @@ Chỉ mở redemption / Gate / admin tenant **sau khi**:
 | 2026-10-16 | User duyệt roadmap/D0. Chốt O01–O05, O07–O08 theo baseline PRD. O06 giữ mở. Đề xuất Clerk cho ADR-09. |
 | 2026-10-16 | User xác nhận **Clerk ok**. ADR-09 chốt Clerk. Dispatch POC song song BE/web/iOS (Orca `--agent cursor`). |
 | 2026-10-16 | User đổi: **không dùng SaaS**; App Store + DNS tự mua được phép. **ADR-09 → Keycloak self-host**; thêm ADR-11…15 (MinIO, SMTP, APNs direct, Caddy admission). Gỡ Clerk SDK. |
+| 2026-10-17 | User chốt thương hiệu **Vemoki** và domain `vemoki.com` (O09). |
+| 2026-10-17 | VPS `vemoki.com`: ADR-16 — runtime image + bind mount, nginx proxy web/api/auth; PR #42 root assets port vào #53. |

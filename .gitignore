@@ -21,3 +21,4 @@ apps/mobile/.uat-artifacts/
 # Local Cursor MCP / machine-specific agent config (rules live in .cursor/rules/)
 .cursor/mcp.json
 .cursorrules
+infra/observability/secrets/metrics_bearer

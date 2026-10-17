@@ -1,0 +1,34 @@
+# ADR-15 admission edge — local measurable config (Issue #25).
+# Gate paths bypass waiting-room / rate limits (direct upstream).
+# Conservative overload: 429 + Retry-After. NOT production deploy.
+#
+# Upstream mock (admission-upstream) serves public sale + gate paths for S4.
+
+{
+	admin off
+	auto_https off
+}
+
+:18080 {
+	# Gate — never through waiting room / sale rate limit
+	@gate path /v1/gate/*
+	handle @gate {
+		reverse_proxy admission-upstream:18081
+	}
+
+	# Public sale / redeem paths — conservative rate limit
+	@sale path /events/* /api/public/* /v1/tenants/*/events/*/redemptions /v1/health-sale
+	handle @sale {
+		rate_limit {
+			zone sale
+			key {remote_host}
+			events {$ADMISSION_EVENTS_PER_SEC:5}
+			window 1s
+		}
+		reverse_proxy admission-upstream:18081
+	}
+
+	handle {
+		respond "admission edge — use /events/* or /v1/gate/*" 404
+	}
+}
