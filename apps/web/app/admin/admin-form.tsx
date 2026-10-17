@@ -14,6 +14,7 @@ import {
 import type { MeTenantItem } from '../../src/platform/contracts';
 import { interpretMeTenants } from '../../src/platform/shape';
 import { ImportPanel } from './import-panel';
+import { NotificationsPanel } from './notifications-panel';
 import { TenantStaffPanel } from './tenant-staff';
 import {
   csViewLabel,
@@ -1576,6 +1577,13 @@ export function AdminForm({
           </p>
         ) : null}
       </section>
+      <NotificationsPanel
+        tenantId={tenantId}
+        eventId={eventId}
+        eventRevision={currentEvent?.revision ?? null}
+        busy={busy}
+        onBusy={setBusy}
+      />
       <ConfigBrandPanel
         editor={configEditor}
         onEditorChange={setConfigEditor}
