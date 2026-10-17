@@ -266,6 +266,55 @@ h2 {
   text-decoration: none;
   transition: padding-left 0.2s ease, color 0.2s ease;
 }
+.event-banner {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: cover;
+  background: transparent;
+}
+.event-banner-card {
+  max-height: 140px;
+  border-radius: var(--radius-sm, 8px);
+  aspect-ratio: 1200 / 630;
+  object-fit: cover;
+}
+.event-banner-hero {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.event-logo {
+  display: block;
+  height: auto;
+  max-width: 100%;
+  object-fit: contain;
+  background: transparent;
+}
+.event-logo-card {
+  max-height: 36px;
+  width: auto;
+  max-width: 180px;
+}
+.event-logo-hero {
+  max-height: 48px;
+  width: auto;
+  max-width: 220px;
+  margin-bottom: var(--space-3);
+}
+.event-media {
+  display: grid;
+  gap: var(--space-3);
+}
+.poster-media {
+  padding: 0;
+  background: #1a1a1a;
+}
+.poster-media .event-banner-hero {
+  position: absolute;
+}
 .event-row:hover {
   padding-left: var(--space-3);
 }
@@ -383,6 +432,10 @@ h2 {
   flex-direction: column;
   justify-content: flex-end;
   padding: 28px;
+}
+.poster.poster-media {
+  background: #1c1917;
+  padding: 0;
 }
 .poster-orbit {
   position: absolute;
