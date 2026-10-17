@@ -9,7 +9,8 @@ import type {
   EventConfigPayload,
 } from '@ticket/contracts';
 import { ASSET_LIMITS } from '@ticket/contracts';
-import { bffApiError, isUuid } from '../bff/upstream';
+import { bffApiError } from '../bff/api-error';
+import { isUuid } from '../bff/ids';
 import { buildRollbackBody } from './config-api';
 import { isAllowedAssetMime, validateAssetFile } from './config-assets';
 import { parseConfigPayload } from './config-schema';
