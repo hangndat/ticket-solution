@@ -16,6 +16,7 @@ Epic-level work: coordinator gốc spawn/reuse **một Epic planner** (`orca-epi
    - Web → `apps/web` — Role `web`
    - iOS → `apps/mobile` — Role `ios`
    - Coordinator-only → root tooling, lockfile, CI, shared contracts / OpenAPI
+   - Kiến trúc / ADR / contract handoff → Role `architect`, docs được giao; chỉ consumer thiếu quyết định thật phải chờ, không thay quyền sửa shared contract của coordinator
    - Discovery / design docs → Role `product-ba` / `product-design` (có thể song song với nhau và với coding slice không đụng path)
    - DoD / security → Role `reviewer-dod` (± `reviewer-security`); **nhiều PR/Issue độc lập = nhiều reviewer cùng wave**
 2. Trước `check --wait`: liệt kê mọi Task ready (deps thật đã xong, dưới WIP), rồi **`worker-start` hết trong cùng một wave**. Không code các slice đó serially trong terminal coordinator. Mỗi Task Spec gắn Role ID theo [docs/agents/README.md](../../docs/agents/README.md) (agent vẫn `--agent cursor`).
