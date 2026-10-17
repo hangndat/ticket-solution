@@ -62,16 +62,24 @@ export function unwrapReserveOutcome(outcome: ReserveOutcome): ReserveResult {
   if (!outcome.ok) {
     throw new GateError(outcome.code, outcome.message);
   }
-  const { ok: _ok, ...result } = outcome;
-  return result;
+  return {
+    reservationId: outcome.reservationId,
+    token: outcome.token,
+    expiresAt: outcome.expiresAt,
+    ticketId: outcome.ticketId,
+  };
 }
 
 export function unwrapConfirmOutcome(outcome: ConfirmOutcome): ConfirmResult {
   if (!outcome.ok) {
     throw new GateError(outcome.code, outcome.message);
   }
-  const { ok: _ok, ...result } = outcome;
-  return result;
+  return {
+    checkinId: outcome.checkinId,
+    ticketId: outcome.ticketId,
+    reservationId: outcome.reservationId,
+    state: outcome.state,
+  };
 }
 
 export type UndoResult = {
