@@ -120,7 +120,7 @@
       "webOrigins": ["+"],
       "attributes": {
         "pkce.code.challenge.method": "S256",
-        "post.logout.redirect.uris": "vemoki://oauth/logout##ticketsolution://oauth/logout"
+        "post.logout.redirect.uris": "vemoki://oauth/logout##vemoki://oauth/callback##ticketsolution://oauth/logout"
       },
       "protocolMappers": [
         {

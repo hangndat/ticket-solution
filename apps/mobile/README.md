@@ -97,6 +97,8 @@ Uses the owner's **personal** Apple Developer team only — not company Apple ID
 
 Do **not** use Xcode account `eschmeler5431@icloud.com` / team SCHMELER ERUNG (`3WHS6JDYV2`) for this app.
 
+**TestFlight:** `0.1.0 (6)` — OIDC `prompt=login` on Sign in + `vemoki://oauth/logout` post-logout redirect (Keycloak allowlist) so Log out → Sign in can switch accounts.
+
 Local binary (no EAS Cloud, no TestFlight upload from this worker unless authorized):
 
 ```bash
