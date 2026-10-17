@@ -2,9 +2,10 @@ import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { Text, View } from 'react-native';
 import type { TicketSummary } from '@ticket/contracts';
-import { Notice, Page } from '@/components/page';
+import { BrandWordmark, Notice, Page } from '@/components/page';
 import { QrCode } from '@/components/qr-code';
-import { colors } from '@/theme/colors';
+import { brand, colors } from '@/theme/colors';
+import { typography } from '@/theme/typography';
 import { getTenantId } from '@/identity/config';
 import { session } from '@/identity/session';
 import { buildDisplayQrPayload } from '@/tickets/display-payload';
@@ -160,9 +161,9 @@ export function TicketDetailScreen() {
   if (!displayMode || !owner) {
     return (
       <Page>
-        <Notice title="Sign in required">
-          Ticket detail requires a verified SessionBoundary (GET /v1/me) or a
-          prior offline-display binding on this device.
+        <Notice title="Cần đăng nhập">
+          Chi tiết vé cần phiên đã xác minh hoặc liên kết hiển thị offline trên
+          thiết bị này.
         </Notice>
       </Page>
     );
@@ -171,8 +172,8 @@ export function TicketDetailScreen() {
   if (visibleLoad.status === 'idle') {
     return (
       <Page>
-        <Notice title="Loading ticket">
-          Reading session memory or offline display cache…
+        <Notice title="Đang tải vé">
+          Đọc bộ nhớ phiên hoặc bộ đệm hiển thị offline…
         </Notice>
       </Page>
     );
@@ -181,9 +182,9 @@ export function TicketDetailScreen() {
   if (visibleLoad.status === 'missing') {
     return (
       <Page>
-        <Notice title="Ticket not found">
-          No cached or loaded ticket matches this id for the current identity.
-          Pull to refresh My Tickets while online.
+        <Notice title="Không tìm thấy vé">
+          Không có vé khớp id này cho danh tính hiện tại. Kéo để làm mới Vé của
+          tôi khi online.
         </Notice>
       </Page>
     );
@@ -193,58 +194,92 @@ export function TicketDetailScreen() {
 
   return (
     <Page>
-      <Notice title="Ticket">
-        ID: {ticket.ticketId}
-        {'\n'}
-        State: {ticket.state}
-        {'\n'}
-        Event: {ticket.eventId}
-        {'\n'}
-        Type: {ticket.ticketTypeId}
-        {'\n'}
-        Credential version: {ticket.credentialVersion}
-        {'\n'}
-        Created: {ticket.createdAt}
-      </Notice>
-
       <View
         style={{
-          padding: 20,
-          gap: 12,
-          backgroundColor: colors.card,
-          borderRadius: 16,
+          backgroundColor: colors.ticketCanvas,
+          borderRadius: 20,
           borderCurve: 'continuous',
-          alignItems: 'center',
+          overflow: 'hidden',
+          borderWidth: 1,
+          borderColor: brand.signal,
         }}
       >
-        <Text style={{ color: colors.label, fontSize: 22, fontWeight: '600' }}>
-          Display QR
-        </Text>
-        {qrValue ? <QrCode value={qrValue} /> : null}
-        <Text
+        <View
           style={{
-            color: colors.secondary,
-            fontSize: 15,
-            lineHeight: 22,
-            textAlign: 'center',
+            height: 6,
+            backgroundColor: brand.signal,
           }}
-        >
-          Offline display of TicketSummary fields only — not a signed Gate
-          credential and not offline check-in. Server Gate still decides
-          revoked/used when a JWS credential API exists.
-        </Text>
+        />
+        <View style={{ padding: 20, gap: 16, alignItems: 'center' }}>
+          <BrandWordmark compact />
+          <Text
+            style={{
+              color: brand.ink,
+              ...typography.display,
+              textAlign: 'center',
+            }}
+          >
+            Vé của bạn
+          </Text>
+          <Text
+            selectable
+            style={{
+              color: brand.ink,
+              ...typography.callout,
+              textAlign: 'center',
+            }}
+          >
+            {ticket.state} · v{ticket.credentialVersion}
+          </Text>
+          {qrValue ? (
+            <QrCode
+              value={qrValue}
+              inkColor={brand.ink}
+              paperColor="#ffffff"
+            />
+          ) : null}
+          <Text
+            selectable
+            style={{
+              color: colors.secondary,
+              ...typography.caption,
+              textAlign: 'center',
+            }}
+          >
+            {ticket.ticketId}
+          </Text>
+          <Text
+            style={{
+              color: colors.secondary,
+              fontSize: 15,
+              lineHeight: 22,
+              textAlign: 'center',
+            }}
+          >
+            Chỉ hiển thị TicketSummary — không phải credential Gate đã ký và
+            không phải check-in offline. Máy chủ vẫn quyết định thu hồi/đã dùng.
+          </Text>
+        </View>
       </View>
 
-      <Notice title="Sync">
+      <Notice title="Thông tin vé">
+        Sự kiện: {ticket.eventId}
+        {'\n'}
+        Loại: {ticket.ticketTypeId}
+        {'\n'}
+        Tạo lúc: {ticket.createdAt}
+      </Notice>
+
+      <Notice title="Đồng bộ">
         {mode === 'offline-display'
-          ? 'Mode: offline-display binding (not SessionBoundary verified)'
+          ? 'Chế độ: hiển thị offline (chưa xác minh SessionBoundary)'
           : fromCache
-            ? 'Source: durable offline display cache'
-            : 'Source: session memory / last fetch'}
+            ? 'Nguồn: bộ đệm hiển thị offline'
+            : 'Nguồn: bộ nhớ phiên / lần tải gần nhất'}
         {'\n'}
-        Last synced: {syncedAt ?? 'unknown'}
+        Đồng bộ lần cuối: {syncedAt ?? 'không rõ'}
         {'\n'}
-        Status may have changed since sync.
+        Trạng thái có thể đã đổi kể từ lần đồng bộ.
       </Notice>
     </Page>
   );

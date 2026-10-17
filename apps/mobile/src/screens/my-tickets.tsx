@@ -9,8 +9,8 @@ import {
   View,
 } from 'react-native';
 import type { TicketSummary } from '@ticket/contracts';
-import { Notice } from '@/components/page';
-import { colors } from '@/theme/colors';
+import { BrandWordmark, Notice } from '@/components/page';
+import { brand, colors } from '@/theme/colors';
 import { isOidcConfigured, getTenantId } from '@/identity/config';
 import { verifyViaMe } from '@/identity/fetch-me';
 import {
@@ -61,7 +61,7 @@ function ActionButton({
     >
       <Text
         style={{
-          color: '#fff',
+          color: colors.onAccent,
           fontSize: 17,
           fontWeight: '600',
           textAlign: 'center',
@@ -78,23 +78,26 @@ function TicketRow({ ticket }: { ticket: TicketSummary }) {
     <Link href={`/my-tickets/${ticket.ticketId}`} asChild>
       <Pressable
         accessibilityRole="button"
+        accessibilityLabel={`Vé ${ticket.state}`}
         style={({ pressed }) => ({
           padding: 16,
           borderRadius: 14,
           borderCurve: 'continuous',
-          backgroundColor: colors.card,
+          backgroundColor: colors.ticketCanvas,
+          borderLeftWidth: 4,
+          borderLeftColor: brand.signal,
           opacity: pressed ? 0.85 : 1,
           gap: 6,
         })}
       >
-        <Text style={{ color: colors.label, fontSize: 17, fontWeight: '600' }}>
+        <Text style={{ color: brand.ink, fontSize: 17, fontWeight: '600' }}>
           {ticket.state} · v{ticket.credentialVersion}
         </Text>
         <Text style={{ color: colors.secondary, fontSize: 15 }} selectable>
           {ticket.ticketId}
         </Text>
         <Text style={{ color: colors.secondary, fontSize: 13 }}>
-          Event {ticket.eventId.slice(0, 8)}…
+          Sự kiện {ticket.eventId.slice(0, 8)}…
         </Text>
       </Pressable>
     </Link>
@@ -121,11 +124,6 @@ export function MyTicketsScreen() {
         style={{ backgroundColor: colors.background }}
         contentContainerStyle={{ padding: 20, paddingBottom: 48, gap: 20 }}
       >
-        <Notice title="OIDC is not configured">
-          Set EXPO_PUBLIC_OIDC_ISSUER and EXPO_PUBLIC_OIDC_CLIENT_ID (see
-          .env.example). Without Keycloak this build stays signed out and never
-          stubs a verified user or tickets.
-        </Notice>
         <AccountScreen />
       </ScrollView>
     );
@@ -185,7 +183,9 @@ function SignedOutWallet() {
         });
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Keycloak sign-in failed.');
+      setError(
+        err instanceof Error ? err.message : 'Đăng nhập Keycloak thất bại.',
+      );
     } finally {
       setBusy(false);
     }
@@ -197,21 +197,21 @@ function SignedOutWallet() {
       style={{ backgroundColor: colors.background }}
       contentContainerStyle={{ padding: 20, paddingBottom: 48, gap: 20 }}
     >
-      <Notice title="My Tickets">
-        Sign in with the same Keycloak identity as web. SessionBoundary becomes
-        verified only after GET /v1/me — tickets then load from GET
-        /v1/me/tickets.
+      <BrandWordmark />
+      <Notice title="Vé của tôi">
+        Đăng nhập cùng danh tính Keycloak với web. Phiên chỉ được xác minh sau
+        GET /v1/me — sau đó tải vé từ GET /v1/me/tickets.
       </Notice>
-      <Notice title="Session">
-        SessionBoundary: {identity.status}
-      </Notice>
+      <Text style={{ color: colors.secondary, fontSize: 15 }}>
+        Phiên: {identity.status}
+      </Text>
       <ActionButton
-        label="Sign in"
+        label="Đăng nhập"
         onPress={() => void onSignIn()}
         disabled={busy}
       />
       {busy ? <ActivityIndicator /> : null}
-      {error ? <Notice title="Sign-in failed">{error}</Notice> : null}
+      {error ? <Notice title="Đăng nhập thất bại">{error}</Notice> : null}
     </ScrollView>
   );
 }
@@ -287,16 +287,16 @@ function OfflineDisplayWallet({
       style={{ backgroundColor: colors.background }}
       contentContainerStyle={{ padding: 20, paddingBottom: 48, gap: 16 }}
     >
-      <Notice title="Offline display">
-        Showing saved tickets for a previously online-verified account on this
-        device. This is not SessionBoundary verified and does not authorize API
-        calls or Gate check-in.
+      <Notice title="Hiển thị offline">
+        Đang xem vé đã lưu từ tài khoản từng xác minh online trên thiết bị này.
+        Đây không phải SessionBoundary verified và không ủy quyền API hay
+        check-in cổng.
         {'\n'}
-        Bound user: {userId}
+        User: {userId}
         {'\n'}
         Tenant: {tenantId}
         {'\n'}
-        Last synced: {syncedAt ?? '—'}
+        Đồng bộ lần cuối: {syncedAt ?? '—'}
       </Notice>
 
       {busy && tickets.length === 0 ? (
@@ -305,12 +305,11 @@ function OfflineDisplayWallet({
         </View>
       ) : null}
 
-      {error ? <Notice title="Notice">{error}</Notice> : null}
+      {error ? <Notice title="Thông báo">{error}</Notice> : null}
 
       {tickets.length === 0 && !busy ? (
-        <Notice title="No cached tickets">
-          Pull to refresh after signing in online to populate offline display
-          cache.
+        <Notice title="Chưa có vé trong bộ đệm">
+          Đăng nhập online rồi kéo để làm mới nhằm đổ bộ đệm hiển thị offline.
         </Notice>
       ) : (
         <View style={{ gap: 12 }}>
@@ -321,7 +320,7 @@ function OfflineDisplayWallet({
       )}
 
       <ActionButton
-        label="Log out"
+        label="Đăng xuất"
         onPress={() => void onLogout()}
         disabled={busy}
       />
@@ -360,7 +359,7 @@ function VerifiedWallet({ userId }: { userId: string }) {
   const refresh = useCallback(async () => {
     if (!tenantId) {
       setError(
-        'EXPO_PUBLIC_TENANT_ID is required for GET /v1/me/tickets?tenantId=.',
+        'Cần EXPO_PUBLIC_TENANT_ID cho GET /v1/me/tickets?tenantId=.',
       );
       return;
     }
@@ -371,7 +370,7 @@ function VerifiedWallet({ userId }: { userId: string }) {
     const bearer = await session.getCredential();
     if (!session.isEpochCurrent(epoch)) return;
     if (!bearer) {
-      setError('No verified bearer in SecureStore. Sign in again.');
+      setError('Không có bearer đã xác minh trong SecureStore. Đăng nhập lại.');
       return;
     }
 
@@ -402,7 +401,7 @@ function VerifiedWallet({ userId }: { userId: string }) {
 
       if (decision.action === 'unauthorized') {
         setError(
-          'GET /v1/me/tickets returned 401/403. Session is no longer authorized — sign in again. Offline cache was not used.',
+          'GET /v1/me/tickets trả 401/403. Phiên không còn được phép — đăng nhập lại. Không dùng bộ đệm offline.',
         );
         try {
           await logoutAndClearWalletArtifacts({ userId, tenantId });
@@ -519,16 +518,15 @@ function VerifiedWallet({ userId }: { userId: string }) {
         <RefreshControl refreshing={refreshing} onRefresh={() => void onRefresh()} />
       }
     >
-      <Notice title="Identity">
-        SessionBoundary: verified ({userId})
+      <BrandWordmark compact />
+      <Text style={{ color: colors.secondary, fontSize: 15, lineHeight: 22 }}>
+        Đã xác minh · {userId}
         {'\n'}
-        Same OIDC subject path as web — verified only via GET /v1/me.
+        Tenant: {tenantId ?? '(đặt EXPO_PUBLIC_TENANT_ID)'}
         {'\n'}
-        Tenant: {tenantId ?? '(set EXPO_PUBLIC_TENANT_ID)'}
-        {'\n'}
-        Last synced: {syncedAt ?? '—'}
-        {offline ? ' · offline cache' : ''}
-      </Notice>
+        Đồng bộ: {syncedAt ?? '—'}
+        {offline ? ' · bộ đệm offline' : ''}
+      </Text>
 
       {busy && tickets.length === 0 ? (
         <View style={{ padding: 16, alignItems: 'center' }}>
@@ -536,13 +534,12 @@ function VerifiedWallet({ userId }: { userId: string }) {
         </View>
       ) : null}
 
-      {error ? <Notice title="Notice">{error}</Notice> : null}
+      {error ? <Notice title="Thông báo">{error}</Notice> : null}
 
       {tickets.length === 0 && !busy ? (
-        <Notice title="No tickets yet">
-          Redeem a code on web with this same Keycloak account, then pull to
-          refresh. Empty list means the API returned zero owner tickets — not a
-          mock wallet.
+        <Notice title="Chưa có vé">
+          Đổi mã trên web bằng cùng tài khoản Keycloak, rồi kéo để làm mới. Danh
+          sách trống nghĩa là API trả về không có vé — không phải ví giả.
         </Notice>
       ) : (
         <View style={{ gap: 12 }}>
@@ -553,20 +550,20 @@ function VerifiedWallet({ userId }: { userId: string }) {
       )}
 
       <ActionButton
-        label="Refresh tickets"
+        label="Làm mới vé"
         onPress={() => void onRefresh()}
         disabled={busy || refreshing}
       />
       <ActionButton
-        label="Log out"
+        label="Đăng xuất"
         onPress={() => void onLogout()}
         disabled={busy}
       />
 
-      <Notice title="Offline display">
-        Cached TicketSummary rows open without network for display only. This is
-        not offline check-in; Gate still decides admission on the server.
-      </Notice>
+      <Text style={{ color: colors.secondary, fontSize: 13, lineHeight: 18 }}>
+        Vé đã cache mở được khi mất mạng chỉ để xem. Không phải check-in offline;
+        cổng vẫn quyết định trên máy chủ.
+      </Text>
     </ScrollView>
   );
 }

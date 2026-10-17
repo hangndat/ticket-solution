@@ -1,19 +1,29 @@
 import { useMemo } from 'react';
 import { View } from 'react-native';
 import { encodeQrModules } from '@/tickets/qr-matrix';
+import { brand } from '@/theme/colors';
 
 type Props = {
   value: string;
   size?: number;
   /** Quiet-zone modules around the code (default 2). */
   quietZone?: number;
+  /** Module / background colors — defaults to Vemoki ink on paper. */
+  inkColor?: string;
+  paperColor?: string;
 };
 
 /**
  * Pure View QR matrix — works offline, no native SVG / lockfile deps.
  * Not a Gate credential renderer; callers supply display payload strings.
  */
-export function QrCode({ value, size = 220, quietZone = 2 }: Props) {
+export function QrCode({
+  value,
+  size = 220,
+  quietZone = 2,
+  inkColor = brand.ink,
+  paperColor = '#ffffff',
+}: Props) {
   const modules = useMemo(() => encodeQrModules(value), [value]);
   const dim = modules.length;
   const total = dim + quietZone * 2;
@@ -22,11 +32,11 @@ export function QrCode({ value, size = 220, quietZone = 2 }: Props) {
   return (
     <View
       accessibilityRole="image"
-      accessibilityLabel="Ticket display QR code"
+      accessibilityLabel="Mã QR hiển thị vé"
       style={{
         width: size,
         height: size,
-        backgroundColor: '#fff',
+        backgroundColor: paperColor,
         alignSelf: 'center',
       }}
     >
@@ -41,7 +51,7 @@ export function QrCode({ value, size = 220, quietZone = 2 }: Props) {
                 top: (y + quietZone) * cell,
                 width: cell,
                 height: cell,
-                backgroundColor: '#000',
+                backgroundColor: inkColor,
               }}
             />
           ) : null,

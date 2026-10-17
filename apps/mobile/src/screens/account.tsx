@@ -48,7 +48,7 @@ function ActionButton({
     >
       <Text
         style={{
-          color: '#fff',
+          color: colors.onAccent,
           fontSize: 17,
           fontWeight: '600',
           textAlign: 'center',
@@ -71,15 +71,14 @@ export function AccountScreen() {
   if (!configured) {
     return (
       <Page>
-        <Notice title="OIDC is not configured">
-          Set EXPO_PUBLIC_OIDC_ISSUER and EXPO_PUBLIC_OIDC_CLIENT_ID in a local
-          .env (see apps/mobile/.env.example). Without Keycloak config this
-          build stays signed out and never stubs a verified user.
+        <Notice title="Chưa cấu hình OIDC">
+          Đặt EXPO_PUBLIC_OIDC_ISSUER và EXPO_PUBLIC_OIDC_CLIENT_ID (xem
+          .env.example). Không có Keycloak thì build giữ đăng xuất và không giả
+          lập user.
         </Notice>
-        <Notice title="Identity status">
-          Current SessionBoundary status: {identity.status}. No staff
-          authorization is implied.
-        </Notice>
+        <Text style={{ color: colors.secondary, fontSize: 15 }}>
+          Phiên: {identity.status}
+        </Text>
         <SessionScopedPushStatus />
       </Page>
     );
@@ -218,41 +217,39 @@ function ConfiguredAccount() {
 
   return (
     <Page>
-      <Notice title="D1 identity POC (Keycloak)">
-        Authorization Code + PKCE via expo-auth-session against self-hosted
-        Keycloak. Tokens use SecureStore (WHEN_UNLOCKED_THIS_DEVICE_ONLY).
-        Verified app identity only after GET /v1/me — not from local JWT claims
-        alone. No Clerk / SaaS IdP.
+      <Notice title="Tài khoản">
+        Đăng nhập Keycloak (PKCE). Danh tính app chỉ xác minh sau GET /v1/me —
+        không chỉ từ JWT local.
       </Notice>
 
-      <Notice title="Session">
-        Local bearer: {accessToken ? 'present' : 'none'}
+      <Text style={{ color: colors.secondary, fontSize: 15, lineHeight: 22 }}>
+        Bearer: {accessToken ? 'có' : 'không'}
         {'\n'}
-        SessionBoundary: {identity.status}
+        Phiên: {identity.status}
         {verifiedUserId ? ` (${verifiedUserId})` : ''}
         {'\n'}
-        Offline display:{' '}
+        Offline:{' '}
         {offline.status === 'bound'
-          ? `bound (${offline.userId})`
+          ? `đã liên kết (${offline.userId})`
           : offline.status}
-      </Notice>
+      </Text>
 
       <View style={{ gap: 12 }}>
         {!isSignedIn ? (
           <ActionButton
-            label="Sign in"
+            label="Đăng nhập"
             onPress={() => void onSignIn()}
             disabled={busy}
           />
         ) : (
           <>
             <ActionButton
-              label="Refresh GET /v1/me"
+              label="Làm mới GET /v1/me"
               onPress={() => void refreshMe()}
               disabled={busy || identity.status !== 'verified'}
             />
             <ActionButton
-              label="Log out"
+              label="Đăng xuất"
               onPress={() => void onLogout()}
               disabled={busy}
             />
@@ -260,7 +257,7 @@ function ConfiguredAccount() {
         )}
         {!isSignedIn && offline.status === 'bound' ? (
           <ActionButton
-            label="Log out (clear offline display)"
+            label="Đăng xuất (xoá hiển thị offline)"
             onPress={() => void onLogout()}
             disabled={busy}
           />
@@ -273,7 +270,7 @@ function ConfiguredAccount() {
         </View>
       ) : null}
 
-      {meError ? <Notice title="Request failed">{meError}</Notice> : null}
+      {meError ? <Notice title="Yêu cầu thất bại">{meError}</Notice> : null}
 
       {visibleMe ? (
         <Notice title="GET /v1/me">
@@ -295,10 +292,9 @@ function ConfiguredAccount() {
         <SessionScopedAccountDeletionPanel />
       ) : null}
 
-      <Notice title="Not staff authorization">
-        A verified SessionBoundary identity does not grant staff tools, tenant
-        membership, or event permissions. Those come from PostgreSQL membership
-        checks on the API.
+      <Notice title="Không phải quyền nhân viên">
+        Phiên đã xác minh không cấp quyền staff, membership tenant hay sự kiện.
+        Các quyền đó đến từ kiểm tra membership trên API.
       </Notice>
     </Page>
   );

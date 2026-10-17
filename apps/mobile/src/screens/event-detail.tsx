@@ -36,19 +36,17 @@ function FixtureDemoDetail({
   if (!event) {
     return (
       <Page>
-        <Notice title="Fixture not in catalog">
-          No fixture in the demo catalog matches this event id. This link does
-          not load a live published event and must not be treated as M04 shared
-          content.
+        <Notice title="Không có trong catalog demo">
+          Id này không khớp sự kiện mẫu. Liên kết không tải sự kiện đã xuất bản
+          và không phải nội dung M04 chung.
         </Notice>
       </Page>
     );
   }
   return (
     <Page>
-      <Notice title="Demo fixture (not published)">
-        Explicit W0/demo catalog only. Not server-published M04 content. Brand /
-        FAQ / terms here are sample strings, not a publishedConfigVersion.
+      <Notice title="Demo · chưa xuất bản">
+        Catalog mẫu — không phải nội dung M04 đã xuất bản trên server.
       </Notice>
       <Notice title={event.name}>{event.brand.organizationName}</Notice>
       <Text selectable style={{ color: colors.label, fontSize: 19 }}>
@@ -60,9 +58,8 @@ function FixtureDemoDetail({
       <Text selectable style={{ color: colors.label, fontSize: 19 }}>
         {event.location}
       </Text>
-      <Notice title="Registration">
-        Sample event information only. Ticket registration is not available from
-        fixtures.
+      <Notice title="Đăng ký">
+        Chỉ thông tin mẫu. Không đăng ký vé từ fixture.
       </Notice>
     </Page>
   );
@@ -109,8 +106,8 @@ function PublishedEventDetailView({
         kind: 'error',
         message:
           result.status === 'unreachable'
-            ? 'Published content API unreachable. Fail-closed — demo fixtures are not used as a fallback.'
-            : 'Published content response invalid. Fail-closed.',
+            ? 'API nội dung đã xuất bản không tới được. Không dùng demo thay thế.'
+            : 'Phản hồi nội dung đã xuất bản không hợp lệ.',
       });
     })();
     return () => {
@@ -125,7 +122,7 @@ function PublishedEventDetailView({
         <View style={{ padding: 16, alignItems: 'center' }}>
           <ActivityIndicator />
           <Text style={{ color: colors.secondary, marginTop: 8 }}>
-            Loading published event…
+            Đang tải sự kiện đã xuất bản…
           </Text>
         </View>
       </Page>
@@ -135,10 +132,10 @@ function PublishedEventDetailView({
   if (phase.kind === 'misconfigured') {
     return (
       <Page>
-        <Notice title="Published API not configured">
-          Set EXPO_PUBLIC_API_BASE_URL to load GET
-          /v1/public/tenants/…/events/…. Demo fixtures stay on the fixture route
-          only — they are not substituted here.
+        <Notice title="Chưa cấu hình API">
+          Đặt EXPO_PUBLIC_API_BASE_URL để tải GET
+          /v1/public/tenants/…/events/…. Demo chỉ trên route fixture — không
+          thay thế ở đây.
         </Notice>
       </Page>
     );
@@ -147,9 +144,9 @@ function PublishedEventDetailView({
   if (phase.kind === 'not-found') {
     return (
       <Page>
-        <Notice title="Event unavailable">
-          No published projection for this organization/event (404). Drafts are
-          never shown. This is not a demo fixture.
+        <Notice title="Sự kiện không khả dụng">
+          Không có projection đã xuất bản cho tổ chức/sự kiện này (404). Bản
+          nháp không hiện. Đây không phải demo.
         </Notice>
       </Page>
     );
@@ -158,7 +155,7 @@ function PublishedEventDetailView({
   if (phase.kind === 'error') {
     return (
       <Page>
-        <Notice title="Published content error">{phase.message}</Notice>
+        <Notice title="Lỗi nội dung đã xuất bản">{phase.message}</Notice>
       </Page>
     );
   }
@@ -168,10 +165,10 @@ function PublishedEventDetailView({
 
   return (
     <Page>
-      <Notice title="Published content">
-        Server projection · config v{event.publishedConfigVersion} · schema v
-        {event.schemaVersion}. Not a demo fixture.
-      </Notice>
+      <Text style={{ color: colors.secondary, fontSize: 13 }}>
+        Đã xuất bản · config v{event.publishedConfigVersion} · schema v
+        {event.schemaVersion}
+      </Text>
       <View
         style={{
           padding: 16,

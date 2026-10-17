@@ -105,7 +105,7 @@ export function canReconcile(op: GateOp): boolean {
 }
 
 export const SUPERVISOR_NOT_ADMISSION =
-  'Not an admission. Unknown results, timeouts, and server errors never admit.';
+  'Không phải lượt vào. Kết quả chưa rõ, hết giờ và lỗi máy chủ không bao giờ cho vào.';
 
 export type SupervisorClass = 'admission' | 'not-admission';
 

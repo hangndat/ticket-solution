@@ -7,7 +7,7 @@ import {
   supervisorListAnnouncement,
   supervisorUnknownItemAnnouncement,
 } from '@/a11y/announcements';
-import { Notice, Page } from '@/components/page';
+import { BrandWordmark, Notice, Page } from '@/components/page';
 import {
   SUPERVISOR_NOT_ADMISSION,
   canReconcile,
@@ -23,10 +23,19 @@ import { session } from '@/identity/session';
 import { colors } from '@/theme/colors';
 
 function outcomeTitle(op: GateOp | null): string {
-  if (!op) return 'Waiting for a code';
-  if (op.phase === 'admitted') return 'Admit';
-  if (op.phase === 'unknown') return 'Unknown — do not admit';
-  return 'Do not admit';
+  if (!op) return 'Chờ mã';
+  if (op.phase === 'admitted') return 'Cho vào';
+  if (op.phase === 'unknown') return 'Chưa rõ — không cho vào';
+  return 'Không cho vào';
+}
+
+function outcomeTone(
+  phase: GateOp['phase'] | undefined,
+): 'admit' | 'deny' | 'unknown' | 'default' {
+  if (phase === 'admitted') return 'admit';
+  if (phase === 'unknown') return 'unknown';
+  if (phase === 'denied') return 'deny';
+  return 'default';
 }
 
 export function StaffScreen() {
@@ -71,7 +80,7 @@ export function StaffScreen() {
         eventId: '',
         staffSessionId: '',
         phase: 'denied',
-        message: 'Sign in and set the API base before scanning. Do not admit.',
+        message: 'Đăng nhập và cấu hình API trước khi quét. Không cho vào.',
       });
       lock.current = false;
       return;
@@ -111,15 +120,16 @@ export function StaffScreen() {
 
   return (
     <Page>
-      <Notice title="Gate scan">
-        Scan or paste a ticket display QR. Admit only after the API records a
-        check-in. A lost response stays unknown after restart.
+      <BrandWordmark compact />
+      <Notice title="Quét cổng">
+        Quét hoặc dán QR hiển thị trên vé. Chỉ cho vào sau khi API ghi nhận
+        check-in. Phản hồi mất vẫn giữ “chưa rõ” sau khi mở lại app.
       </Notice>
       <GateCamera disabled={busy || !ready} onScan={(data) => void submitScan(data)} />
       <TextInput
         value={raw}
         onChangeText={setRaw}
-        placeholder="Paste QR JSON or ticket id"
+        placeholder="Dán JSON QR hoặc ticket id"
         autoCapitalize="none"
         autoCorrect={false}
         multiline
@@ -143,8 +153,15 @@ export function StaffScreen() {
           backgroundColor: colors.accent,
         }}
       >
-        <Text style={{ color: 'white', fontSize: 17, fontWeight: '600', textAlign: 'center' }}>
-          {busy ? 'Checking…' : 'Check in'}
+        <Text
+          style={{
+            color: colors.onAccent,
+            fontSize: 17,
+            fontWeight: '600',
+            textAlign: 'center',
+          }}
+        >
+          {busy ? 'Đang kiểm tra…' : 'Check-in'}
         </Text>
       </Pressable>
       {current ? (
@@ -156,7 +173,9 @@ export function StaffScreen() {
           })}
           accessibilityLiveRegion={current.phase === 'unknown' ? 'assertive' : 'polite'}
         >
-          <Notice title={outcomeTitle(current)}>{current.message}</Notice>
+          <Notice title={outcomeTitle(current)} tone={outcomeTone(current.phase)}>
+            {current.message}
+          </Notice>
           {current.checkinId ? (
             <Text selectable style={{ color: colors.secondary }}>
               Check-in {current.checkinId}
@@ -173,18 +192,18 @@ export function StaffScreen() {
           style={{ padding: 14, borderRadius: 12, backgroundColor: colors.card }}
         >
           <Text style={{ color: colors.label, fontSize: 17, textAlign: 'center' }}>
-            Reconcile unknown result
+            Đối soát kết quả chưa rõ
           </Text>
         </Pressable>
       ) : null}
       <View {...supervisorListAnnouncement(SUPERVISOR_NOT_ADMISSION)}>
-        <Notice title="Supervisor — unknown operations">
-          {SUPERVISOR_NOT_ADMISSION} Persisted unknown gate operations are listed
-          here and are not admissions.
+        <Notice title="Giám sát — thao tác chưa rõ" tone="unknown">
+          {SUPERVISOR_NOT_ADMISSION} Các thao tác cổng chưa rõ được lưu ở đây và
+          không phải lượt vào.
         </Notice>
         {listUnknownGateOps(ops).length === 0 ? (
           <Text selectable style={{ color: colors.secondary, fontSize: 17 }}>
-            No persisted unknown operations.
+            Không có thao tác chưa rõ đã lưu.
           </Text>
         ) : (
           listUnknownGateOps(ops).map((op) => (
@@ -197,7 +216,7 @@ export function StaffScreen() {
               })}
               style={{ color: colors.label, fontSize: 17, lineHeight: 24 }}
             >
-              {op.ticketId || op.id}: {op.message} Not an admission.
+              {op.ticketId || op.id}: {op.message} Không phải lượt vào.
             </Text>
           ))
         )}
