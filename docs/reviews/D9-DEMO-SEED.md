@@ -51,4 +51,5 @@ pnpm --filter @ticket/backend exec node --test test/demo-seed-unit.test.cjs
 
 ## Commit SHA
 
-`8d33cfb084b637abb801d88e5705bd90540d7466`
+- Implementation: `8d33cfb084b637abb801d88e5705bd90540d7466`
+- DoD review tip on `hangndat/d9-be-seed`: use `git rev-parse HEAD` after the evidence commit that lands this section (recorded in Issue/PR comment).
