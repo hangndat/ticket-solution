@@ -1,7 +1,9 @@
 import { createWorker } from './index';
 void createWorker()
   .then((app) => {
-    console.info('D2 worker: outbox relay polling (TicketIssued → email)');
+    console.info(
+      'D4 worker: outbox email relay + MinIO export jobs (provider accept ≠ delivered)',
+    );
     const keepAlive = setInterval(() => {}, 60_000);
     const clear = () => clearInterval(keepAlive);
     process.once('SIGINT', clear);

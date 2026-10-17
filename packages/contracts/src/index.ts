@@ -1,4 +1,6 @@
 /** Public transport contracts only. Do not import database models here. */
+import type { NotificationProviderStatus } from './notifications';
+
 export const API_VERSION = 'v1' as const;
 export interface HealthResponse {
   status: 'ok';
@@ -277,3 +279,173 @@ export {
   type NotificationRetryBody,
   type NotificationErrorCode,
 } from './notifications';
+
+/* —— CS / export / event-admin / device-token (PR54) —— */
+/* NotificationProviderStatus: from C-N (PR54 values + UNKNOWN). */
+
+export const CS_ERROR_CODES = {
+  EVENT_NOT_FOUND: 'EVENT_NOT_FOUND',
+  TICKET_NOT_FOUND: 'TICKET_NOT_FOUND',
+  QUERY_TOO_LONG: 'QUERY_TOO_LONG',
+  RESEND_COOLDOWN: 'RESEND_COOLDOWN',
+  RESEND_LIMIT: 'RESEND_LIMIT',
+  IDEMPOTENCY_KEY_REQUIRED: 'IDEMPOTENCY_KEY_REQUIRED',
+  IDEMPOTENCY_CONFLICT: 'IDEMPOTENCY_CONFLICT',
+} as const;
+
+export type CsErrorCode = (typeof CS_ERROR_CODES)[keyof typeof CS_ERROR_CODES];
+
+export interface CsNotificationSummary {
+  channel: string;
+  state: string;
+  providerStatus: NotificationProviderStatus;
+  providerRef: string | null;
+  attempts: number;
+  /** Always null in API responses — never expose raw provider errors. */
+  lastError: null;
+}
+
+export interface CsTicketSummary {
+  ticketId: string;
+  state: string;
+  ticketTypeId: string;
+  sourceId: string;
+  createdAt: string;
+  ownerEmailMasked: string | null;
+  lastCheckInAt: string | null;
+  notification: CsNotificationSummary | null;
+}
+
+export interface CsTimelineItem {
+  at: string;
+  kind: string;
+  summary: string;
+}
+
+export interface CsTicketDetail extends CsTicketSummary {
+  timeline: CsTimelineItem[];
+}
+
+export interface CsTicketListResponse {
+  items: CsTicketSummary[];
+  nextCursor: string | null;
+}
+
+export interface CsResendResponse {
+  operationId: string;
+  notificationId: string;
+  providerStatus: 'PENDING';
+  replayed: boolean;
+}
+
+export const EXPORT_ERROR_CODES = {
+  EVENT_NOT_FOUND: 'EVENT_NOT_FOUND',
+  EXPORT_NOT_FOUND: 'EXPORT_NOT_FOUND',
+  EXPORT_NOT_READY: 'EXPORT_NOT_READY',
+  EXPORT_EXPIRED: 'EXPORT_EXPIRED',
+  MINIO_MISCONFIGURED: 'MINIO_MISCONFIGURED',
+  IDEMPOTENCY_KEY_REQUIRED: 'IDEMPOTENCY_KEY_REQUIRED',
+  IDEMPOTENCY_CONFLICT: 'IDEMPOTENCY_CONFLICT',
+  INVALID_FILTER: 'INVALID_FILTER',
+} as const;
+
+export type ExportErrorCode =
+  (typeof EXPORT_ERROR_CODES)[keyof typeof EXPORT_ERROR_CODES];
+
+export interface ExportCreateBody {
+  format: 'csv';
+  filter?: {
+    states?: string[];
+    from?: string;
+    to?: string;
+  };
+}
+
+export interface ExportJob {
+  exportId: string;
+  status: 'PENDING' | 'PROCESSING' | 'READY' | 'FAILED';
+  rowCount: number | null;
+  expiresAt: string | null;
+  error: string | null;
+  replayed?: boolean;
+}
+
+export const EVENT_ADMIN_ERROR_CODES = {
+  EVENT_NOT_FOUND: 'EVENT_NOT_FOUND',
+  SLUG_TAKEN: 'SLUG_TAKEN',
+  INVALID_SLUG: 'INVALID_SLUG',
+  INVALID_TIMEZONE: 'INVALID_TIMEZONE',
+  INVALID_WINDOW: 'INVALID_WINDOW',
+  TICKET_TYPE_NOT_FOUND: 'TICKET_TYPE_NOT_FOUND',
+  INVALID_APPROVAL_MODE: 'INVALID_APPROVAL_MODE',
+  IDEMPOTENCY_KEY_REQUIRED: 'IDEMPOTENCY_KEY_REQUIRED',
+  IDEMPOTENCY_CONFLICT: 'IDEMPOTENCY_CONFLICT',
+} as const;
+
+export type EventAdminErrorCode =
+  (typeof EVENT_ADMIN_ERROR_CODES)[keyof typeof EVENT_ADMIN_ERROR_CODES];
+
+export interface CreateEventBody {
+  slug: string;
+  name: string;
+  timezone?: string;
+  redemptionOpensAt?: string;
+  redemptionClosesAt?: string;
+}
+
+export interface EventSummary {
+  eventId: string;
+  slug: string;
+  name: string;
+  status: string;
+  timezone: string;
+}
+
+export interface EventListResponse {
+  items: EventSummary[];
+}
+
+export interface CreateTicketTypeBody {
+  label: string;
+  entitlementSnapshot?: Record<string, unknown>;
+}
+
+export interface TicketTypeCreated {
+  ticketTypeId: string;
+  label: string;
+}
+
+export interface CreateSourceBody {
+  name: string;
+  approvalMode: 'AUTO' | 'MANUAL';
+  ticketTypeId: string;
+}
+
+export interface SourceCreated {
+  sourceId: string;
+  name: string;
+  approvalMode: 'AUTO' | 'MANUAL';
+  ticketTypeId: string;
+}
+
+export const DEVICE_TOKEN_ERROR_CODES = {
+  TOKEN_REQUIRED: 'TOKEN_REQUIRED',
+  INVALID_ENVIRONMENT: 'INVALID_ENVIRONMENT',
+  REGISTRATION_NOT_FOUND: 'REGISTRATION_NOT_FOUND',
+  APNS_MISCONFIGURED: 'APNS_MISCONFIGURED',
+} as const;
+
+export type DeviceTokenErrorCode =
+  (typeof DEVICE_TOKEN_ERROR_CODES)[keyof typeof DEVICE_TOKEN_ERROR_CODES];
+
+export interface DeviceTokenRegisterBody {
+  token: string;
+  environment: 'sandbox' | 'production';
+}
+
+export interface DeviceTokenRegistration {
+  registrationId: string;
+  environment: 'sandbox' | 'production';
+  /** ISO timestamp when the registration became active. */
+  registeredAt: string;
+}

@@ -3,13 +3,17 @@ import { randomUUID } from 'node:crypto';
 import { Module, type OnModuleDestroy } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import {
+  createApnsAdapter,
   createDatabase,
   createSmtpEmailAdapter,
   readCredentialKeyEnvironment,
   readEmailEnvironment,
+  readMinioEnvironment,
   readProcessEnvironment,
   reconcileDuePendingRedemptions,
+  relayExportsOnce,
   relayOutboxOnce,
+  type ApnsAdapter,
   type EmailAdapter,
   type PrismaClient,
 } from '@ticket/backend';
@@ -19,6 +23,7 @@ export type CreateWorkerOptions = {
   logging?: boolean;
   database?: PrismaClient;
   emailAdapter?: EmailAdapter;
+  apnsAdapter?: ApnsAdapter;
   relayOnceOnStart?: boolean;
   leaseOwner?: string;
   /** Poll interval; 0 disables background polling. */
@@ -32,6 +37,7 @@ class WorkerRelay implements OnModuleDestroy {
   constructor(
     private readonly db: PrismaClient | null,
     private readonly email: EmailAdapter,
+    private readonly apns: ApnsAdapter,
     private readonly leaseOwner: string,
     private readonly ownsDb: boolean,
     private readonly intervalMs: number,
@@ -61,10 +67,17 @@ class WorkerRelay implements OnModuleDestroy {
           this.email,
           this.leaseOwner,
           10,
-          this.relayOpts(),
+          { ...this.relayOpts(), apns: this.apns },
         );
       } catch {
         // Keep looping; outbox remains source of truth.
+      }
+      if (readMinioEnvironment(this.env)) {
+        try {
+          await relayExportsOnce(this.db, this.env, this.leaseOwner, 5);
+        } catch {
+          // Export jobs stay PENDING/PROCESSING until success.
+        }
       }
     };
     void tick();
@@ -73,13 +86,17 @@ class WorkerRelay implements OnModuleDestroy {
 
   async relayOnce() {
     if (!this.db) return { claimed: 0, completed: 0, failed: 0 };
-    return relayOutboxOnce(
+    const outbox = await relayOutboxOnce(
       this.db,
       this.email,
       this.leaseOwner,
       10,
-      this.relayOpts(),
+      { ...this.relayOpts(), apns: this.apns },
     );
+    if (readMinioEnvironment(this.env)) {
+      await relayExportsOnce(this.db, this.env, this.leaseOwner, 5);
+    }
+    return outbox;
   }
 
   async onModuleDestroy() {
@@ -94,6 +111,7 @@ function isOptionsObject(value: unknown): value is CreateWorkerOptions {
   return (
     'database' in value ||
     'emailAdapter' in value ||
+    'apnsAdapter' in value ||
     'relayOnceOnStart' in value ||
     'leaseOwner' in value ||
     'pollMs' in value ||
@@ -124,6 +142,7 @@ export async function createWorker(
   const email =
     options.emailAdapter ??
     createSmtpEmailAdapter(readEmailEnvironment(env));
+  const apns = options.apnsAdapter ?? createApnsAdapter(env);
   const leaseOwner = options.leaseOwner ?? `worker-${randomUUID()}`;
   const intervalMs =
     options.pollMs ??
@@ -140,6 +159,7 @@ export async function createWorker(
   const relay = new WorkerRelay(
     db,
     email,
+    apns,
     leaseOwner,
     ownsDb,
     intervalMs,

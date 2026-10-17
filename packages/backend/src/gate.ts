@@ -3,6 +3,7 @@ import type { Prisma } from './generated/prisma/client';
 import { GateError, GATE_ERROR_CODES } from './gate-error';
 import { assertOpenForGate } from './event-policy';
 import { requireTenantPermission } from './membership';
+import { metricsInc, metricsObserveSeconds } from './metrics-registry';
 
 const PERMISSION_CONFIRM = 'gate.confirm';
 const PERMISSION_UNDO = 'gate.undo';
@@ -371,6 +372,7 @@ export async function confirmCheckin(
     actorUserId: string;
   },
 ): Promise<ConfirmResult> {
+  const __confirmStart = process.hrtime.bigint();
   await requireTenantPermission(tx, {
     tenantId: input.tenantId,
     userId: input.actorUserId,
@@ -507,6 +509,8 @@ export async function confirmCheckin(
     resourceType: 'checkin',
     resourceId: checkinId,
   });
+  metricsInc('gate_confirm_total', { result: 'ok' });
+  metricsObserveSeconds('gate_confirm_seconds', Number(process.hrtime.bigint() - __confirmStart) / 1e9, {});
   return {
     checkinId,
     ticketId: reservation.ticket_id,
@@ -578,6 +582,7 @@ export async function undoCheckin(
     resourceId: checkin.id,
     reason,
   });
+  metricsInc('gate_recovery_total', { kind: 'undo' });
   return { checkinId: checkin.id, ticketId: checkin.ticket_id, state: 'ACTIVE' };
 }
 
