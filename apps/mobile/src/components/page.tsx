@@ -1,7 +1,7 @@
 import type { PropsWithChildren } from 'react';
 import { ScrollView, Text, View } from 'react-native';
-import { brand, colors } from '@/theme/colors';
-import { typography } from '@/theme/typography';
+import { colors } from '@/theme/colors';
+import { TenantLogo } from '@/theme/TenantLogo';
 
 export function Page({ children }: PropsWithChildren) {
   return (
@@ -15,21 +15,12 @@ export function Page({ children }: PropsWithChildren) {
   );
 }
 
-/** Platform wordmark — brand-first chrome (`vemoki↗`). */
+/**
+ * Platform wordmark / tenant logo — brand-first chrome.
+ * Uses ThemeProvider when present; logo URL falls back to text wordmark.
+ */
 export function BrandWordmark({ compact = false }: { compact?: boolean } = {}) {
-  return (
-    <Text
-      accessibilityRole="header"
-      accessibilityLabel={`${brand.wordmark}${brand.signalMark}`}
-      style={{
-        ...(compact ? typography.callout : typography.wordmark),
-        color: brand.ink,
-      }}
-    >
-      {brand.wordmark}
-      <Text style={{ color: brand.signal }}>{brand.signalMark}</Text>
-    </Text>
-  );
+  return <TenantLogo compact={compact} />;
 }
 
 export function Notice({
