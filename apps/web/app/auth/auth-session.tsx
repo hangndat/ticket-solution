@@ -8,10 +8,10 @@ type MeCallResult = {
 };
 
 /**
- * D1 identity POC — Keycloak OIDC via BFF cookies.
+ * Identity session — Keycloak OIDC via BFF cookies.
  * Session lives in HttpOnly cookies; /api/bff/me uses the server cookie.
  */
-export function AuthPoc() {
+export function AuthSession() {
   const [meResult, setMeResult] = useState<MeCallResult | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -29,7 +29,7 @@ export function AuthPoc() {
   }
 
   return (
-    <div className="auth-poc">
+    <div className="auth-session">
       <section className="auth-status" aria-live="polite">
         <h2>Session status</h2>
         <p className="intro">

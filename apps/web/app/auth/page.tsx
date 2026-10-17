@@ -4,7 +4,7 @@ import {
   resolveWebAuthState,
 } from '../../src/oidc/config';
 import { SiteNav } from '../../src/site-chrome';
-import { AuthPoc } from './auth-poc';
+import { AuthSession } from './auth-session';
 
 /** OIDC env is runtime-only — never SSG the fail-closed / configured branch. */
 export const dynamic = 'force-dynamic';
@@ -15,7 +15,7 @@ export const metadata = {
     'Đăng nhập Keycloak + BFF cookie (OIDC). Không phải cổng kiểm soát vé production.',
 };
 
-export default function AuthPocPage() {
+export default function AuthPage() {
   const configured = isOidcConfigured();
   const state = resolveWebAuthState({ configured, subject: null });
 
@@ -51,7 +51,7 @@ export default function AuthPocPage() {
           </p>
         </aside>
       ) : (
-        <AuthPoc />
+        <AuthSession />
       )}
 
       <p>
