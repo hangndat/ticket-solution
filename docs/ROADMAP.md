@@ -18,7 +18,7 @@ Tracking lâu dài: GitHub Issues + Project (tiếng Việt). Orca Task/Dispatch
 
 **Roadmap đã được user duyệt lần đầu (2026-10-16)** — đóng D0 và mở D1. Các đoạn “đợt tiếp theo = D1 / chưa mở business endpoints” bên dưới §10 là **lịch sử**; không còn mô tả hiện tại.
 
-**Trọng tâm hiện tại (Project #3, 2026-10-17):** Parent **D0–D3 (#1–#4)** và **D6 UX/UI (#81)** đã **Hoàn thành**/closed trên board. D6 coding S1–S6 + S7: web PR [#92](https://github.com/hangndat/ticket-solution/pull/92), iOS PR [#93](https://github.com/hangndat/ticket-solution/pull/93), docs PR [#94](https://github.com/hangndat/ticket-solution/pull/94); Issues #82–#85/#87–#89 closed; Milestone #8 closed. Status **D4 (#5)** / **D5 (#6)** lấy từ board live (không suy từ docs cũ). Sau MVP (#7) **Chưa lên lịch**. D6 acceptance ≠ pilot ready / store / production.
+**Trọng tâm hiện tại (Project #3, 2026-10-17):** parent **D5 (#6)** đang **Đang làm** (Gate camera staff + push DELIVERED; MinIO/APNs prod). Parent **D0–D4 (#1–#5)** và **D6 UX/UI (#81)** đã **Hoàn thành**/closed — Tenant 2 prod UAT: [D4-TENANT2-PROD-UAT.md](./reviews/D4-TENANT2-PROD-UAT.md); D6 web [#92](https://github.com/hangndat/ticket-solution/pull/92) / iOS [#93](https://github.com/hangndat/ticket-solution/pull/93) / docs [#94](https://github.com/hangndat/ticket-solution/pull/94). Sau MVP (#7) **Chưa lên lịch**. Không tuyên bố pilot production sẵn sàng.
 
 ## 1. Trạng thái hiện tại (tóm tắt theo Project + main)
 
@@ -30,8 +30,8 @@ Cột **Board** = Status parent Issue trên Project #3 tại thời điểm đ�
 | Identity / OIDC (D1) | **Hoàn thành** (#2) | Nghiệm thu đợt | Keycloak self-host; gỡ Clerk. Live P4 smoke: [D1-P4-KEYCLOAK-SMOKE](./reviews/D1-P4-KEYCLOAK-SMOKE.md). O06 retention vẫn mở |
 | Nhận vé (D2) | **Hoàn thành** (#3) | Nghiệm thu đợt | Mã/quota/issue/outbox + web redeem + iOS ví đã có trên `main` (PRs #30–#32…) |
 | Check-in (D3) | **Hoàn thành** (#4) | Nghiệm thu đợt (có ngoại lệ UAT) | Gate + web Gate + iOS scan/recovery trên `main`. **Camera thiết bị thật** hoãn sang D5 (#26) — không ghi là UAT camera physical đã PASS |
-| Admin & Platform (D4) | **Đang làm** (#5) | Một phần code trên `main`; đợt chưa nghiệm thu | #21 Hoàn thành (PRs #38/#43/#48). #22/#23/#56 **Đang làm** (CS/export/APNs/tenant2 — PR mở #54/#55…). Tenant 2 E2E UI chưa Hoàn thành |
-| Hardening / UAT / phát hành (D5) | **Đang làm** (#6) | Một phần code/drill trên `main`; đợt chưa nghiệm thu | #24 Hoàn thành (PR #47). #25 **Đang làm** (obs/load + drill cục bộ). #26 **Chờ duyệt** (UAT TestFlight / thiết bị thật). Build native **chỉ** local Xcode; **cấm** Expo/EAS Cloud Build |
+| Admin & Platform (D4) | **Hoàn thành** (#5) | Nghiệm thu đợt (PASS with known gap) | Tenant 2 prod: [D4-TENANT2-PROD-UAT.md](./reviews/D4-TENANT2-PROD-UAT.md). Gap CSRF invite UI / MinIO export / invite email → theo dõi D5 ops |
+| Hardening / UAT / phát hành (D5) | **Đang làm** (#6) | Child #24/#25/#26/#56 **Hoàn thành** trên board; parent chưa đóng | Còn Gate camera staff + push **DELIVERED** trên thiết bị (TF 0.1.0 (7)); APNs/MinIO chưa gắn prod. Build native **chỉ** local Xcode; **cấm** Expo/EAS Cloud Build |
 | UX/UI polish (D6) | **Hoàn thành** (#81) | Nghiệm thu đợt (acceptance) | Web [#92](https://github.com/hangndat/ticket-solution/pull/92) · iOS [#93](https://github.com/hangndat/ticket-solution/pull/93) · docs S7 [#94](https://github.com/hangndat/ticket-solution/pull/94). #82–#85/#87–#89 + parent #81 closed; Milestone #8 closed. Plan [`D6-UX-UI-PLAN.md`](./plans/D6-UX-UI-PLAN.md). **Proof limits:** D6 ≠ pilot ready / store / production |
 | Android / payment / seat map / white-label | **Chưa lên lịch** (#7) | Ngoài MVP | Theo PRD — không gắn D2–D6 |
 
@@ -84,7 +84,7 @@ Gợi ý từ kế hoạch agent; cổng identity trước business đã **đi q
 | D1 | Quyết định & Identity | O01–O08 liên quan, OIDC, membership/revocation proof | Identity spike đạt criteria trước khi mở business endpoints | Hoàn thành |
 | D2 | Nhận vé xuyên web/app | Mã/quota/issue/outbox + web redeem + iOS ví API thật | Demo đổi vé web → thông báo → cùng user mở vé trên app; concurrency quota/idempotency | Hoàn thành |
 | D3 | Check-in | Gate reserve/confirm/recovery + web Gate + iOS scan | Hai thiết bị / race / recovery; camera physical có thể tách D5 nếu ghi rõ | Hoàn thành (UAT camera device → #26) |
-| D4 | Admin & Platform | Permissions, import, approval, config publish, CS, reporting, app feature còn lại | Tenant thứ hai tự tạo event/brand qua admin, không hardcode pilot | Đang làm |
+| D4 | Admin & Platform | Permissions, import, approval, config publish, CS, reporting, app feature còn lại | Tenant thứ hai tự tạo event/brand qua admin, không hardcode pilot | Hoàn thành |
 | D5 | Hardening & phát hành | Security review, capacity, restore, device UAT, local signed iOS / TestFlight | Evidence đạt technical design; publish/store là task riêng → **pilot ready** | Đang làm |
 | D6 | Hoàn thiện UX/UI | Polish brand Vemoki + IA/states/a11y trên web & iOS đã có chức năng | Brand test + headless/sim screenshots; không gộp D5 hardening | Hoàn thành (#81 closed; PRs #92/#93/#94) |
 
@@ -140,23 +140,21 @@ Mỗi nhóm tương ứng parent Issue trên GitHub; sub-issues mang tiêu chí 
 - [x] iOS: dedupe và recovery sau restart/mạng — #20. **Camera thiết bị thật → D5 #26**
 - [x] Race / timeout recovery theo test Postgres; unknown trên web/iOS theo quyết định sản phẩm
 
-### D4 — Admin & Platform (board: Đang làm)
+### D4 — Admin & Platform (board: Hoàn thành)
 
-- [x] Backend platform (permissions, import, approval, config publish, reporting) — #21; PRs #38/#43/#48 — **code + acceptance Issue #21**
-- [ ] Web admin đầy đủ (#22) — một phần trên `main` (PRs #40/#49/#50); CS/export/tenant2 **Đang làm** (theo dõi PR #55 và board)
-- [ ] iOS hoàn thiện (#23) — một phần trên `main` (PRs #39/#44/#46/#52); APNs client đã merge #52; TestFlight/device vẫn #26
-- [ ] Backend D4/D5 còn lại (#56) — CS/export, APNs worker, metrics, vận hành tenant — **Đang làm** (PR #54…)
-- [ ] Tenant thứ hai tự vận hành E2E qua UI, không hardcode FUN FEST — chưa Hoàn thành trên board
+- [x] Backend platform (permissions, import, approval, config publish, reporting) — #21; PRs #38/#43/#48
+- [x] Web admin đầy đủ (#22) — board Hoàn thành
+- [x] iOS hoàn thiện (#23) — board Hoàn thành; APNs client trên `main`; device UAT theo dõi #26/#6
+- [x] Backend D4/D5 còn lại (#56) — board Hoàn thành
+- [x] Tenant thứ hai self-serve trên prod — PASS with known gap: [D4-TENANT2-PROD-UAT.md](./reviews/D4-TENANT2-PROD-UAT.md) (tenant `26c16ee9…` / event `5295ef1a…` / ticket `7d8c18df…`). Gap CSRF invite / MinIO export / invite email → D5 ops
 
 ### D5 — Hardening & phát hành (board: Đang làm)
 
-- [x] Review/test độc lập RLS, authorization, transaction races — Issue #24; PR #47 (+ test:db gate/issue/approval)
-- [x] Backup/restore drill cục bộ — Issue #25. Lệnh đúng: `./scripts/d5-backup-drill.sh` (hai container Postgres vứt bỏ, không đụng `ticket_dev`). Pass chỉ chứng minh một dòng fixture đánh dấu còn sau `pg_dump` và restore. Không phải backup production và không phải SLO.
-- [ ] Business/key restore drill — `./scripts/d5-business-restore-drill.sh` (AES-GCM decrypt + API reconnect + RPO dump-point). **Chưa tick Done:** continuous RPO ≤15 phút / RTO prod ≤2h chưa đo trên hạ tầng đích. Evidence: [D5-ISSUE-25-EVIDENCE.md](./reviews/D5-ISSUE-25-EVIDENCE.md)
-- [ ] Observability (hạ tầng local) — overlay Prometheus + exporters (`infra/observability/`, `./scripts/d5-observability-smoke.sh`). **Chưa đạt §16 / chưa Done:** API Prometheus `/metrics` text là BE follow-up; scrape Bearer file đã chuẩn bị.
-- [ ] Load/admission — harness `./scripts/d5-load-baseline.sh` (S3 sustained) + `./scripts/d5-admission-s4.sh` (nginx edge isolated). **Chưa tick Done** tới khi evidence đạt 50 issue/s + 20 confirm/s ≥60s, 50 scanner/event × 2, và không claim SLO prod. Chi tiết: evidence #25.
-- [ ] UAT thiết bị thật / TestFlight (camera, deep link, push, offline ví, revoke) — #26 Chờ duyệt; build **local** signed; **không** EAS Cloud
-- [x] Runbook, release checklist, O06 options (chưa chốt số) — `docs/ops/RUNBOOK.md`, `RELEASE-CHECKLIST.md`, `O06-OPTIONS.md`. Store submitted/approved/available vẫn theo dõi ở #26.
+- [x] Review/test độc lập RLS, authorization, transaction races — Issue #24; PR #47
+- [x] Backup/restore + obs/load drills (board #25 Hoàn thành) — evidence [D5-ISSUE-25-EVIDENCE.md](./reviews/D5-ISSUE-25-EVIDENCE.md). **Proof limits:** continuous RPO/RTO prod và SLO prod **chưa** claim.
+- [x] UAT thiết bị / TestFlight partial (#26 closed trên board) — ví/offline/deep link PASS; **Gate camera staff + push DELIVERED còn mở trên parent #6** (TF `0.1.0 (7)`; Part C từng BLOCKED session signed-out trên build 5)
+- [x] Runbook, release checklist, O06 options — `docs/ops/RUNBOOK.md`, `RELEASE-CHECKLIST.md`, `O06-OPTIONS.md`
+- [ ] **Parent #6 còn lại:** Gate camera admit trên thiết bị thật (staff session) + push **DELIVERED** (APNs key chưa gắn VPS) + MinIO export prod; không tuyên bố pilot ready
 
 ### D6 — Hoàn thiện UX/UI (board: Hoàn thành)
 
