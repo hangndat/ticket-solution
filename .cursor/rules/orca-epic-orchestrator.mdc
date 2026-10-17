@@ -1,63 +1,43 @@
 ---
-description: Mỗi Epic (parent Issue đợt/module) spawn một Orca orchestrator Cursor — phân Story/Task, spawn worker theo ownership
+description: Epic planner phân Story/Task; coordinator gốc trực tiếp spawn workers và quản lý tích hợp
 alwaysApply: true
 ---
 
-# Orca — epic orchestrator (một orchestrator / Epic)
+# Orca — Epic planner (một planner / Epic)
 
-Khi mở hoặc resume một **Epic** (parent Issue đợt/module trên [Project #3](https://github.com/users/hangndat/projects/3)), **spawn đúng một** Orca orchestrator worker với `--agent cursor`. Orchestrator đó sở hữu decomposition và dispatch — không tự implement hết serial trong một terminal.
+## Mô hình đã chọn
 
-## Hierarchy
-
-```text
-Epic (parent Issue đợt/module)
-  └── Story (capability / user-facing slice)
-        └── Task (ownership-scoped work unit: BE | web | iOS | coordinator)
-```
-
-- Board comments / titles user-facing: **Tiếng Việt**.
-- IDs, commands, SHAs, agent flags: giữ nguyên (English OK trong rule technical).
-
-## Orchestrator responsibilities
-
-1. **Một orchestrator / Epic** — `worker-start --agent cursor` với scope = orchestrate only (decompose + dispatch + Project sync). Không code apps/* trừ khi Epic chỉ còn một Task coordinator-only nhỏ.
-2. **Phân Story → Task** theo ownership:
-   - Backend → `apps/api`, `apps/worker`, `packages/backend` (+ DB tests/migrations)
-   - Web → `apps/web`
-   - iOS → `apps/mobile`
-   - Coordinator → root tooling, lockfile, CI, shared contracts / OpenAPI, docs/rules
-3. **Spawn worker con** theo ownership slice; dùng parallel-first (`orca-parallel-workers.mdc`) khi Task độc lập. Agent = Cursor only (tạm thời — xem `orca-agent-routing.mdc`).
-4. **Sync GitHub Project Status mỗi Task** (Đang làm → Chờ duyệt → Hoàn thành / Bị chặn) — xem `github-project-tracking.mdc`. Không chờ user duyệt board.
-5. **`worker_done` ≠ Hoàn thành.** Orchestrator chỉ đánh `Hoàn thành` sau DoD (review exact-SHA + milestone gates khi áp dụng).
-
-## Anti-patterns
+Coordinator gốc (depth 0) trực tiếp spawn **một Epic planner** cho mỗi Epic đang triển khai và các ownership workers/reviewers. Reuse planner đang active, không tạo planner trùng Epic. Agent cho mọi dispatch theo `orca-agent-routing.mdc`.
 
 ```text
-❌ Một agent code tuần tự toàn bộ Epic (BE rồi web rồi iOS) trong một session
-❌ Nhiều orchestrator cùng một Epic parent (duplicate dispatch / Status thrash)
-❌ Đánh Hoàn thành chỉ vì worker_done / “làm xong”
-❌ Bỏ qua hierarchy — Task không gắn Story/Epic trên Project
-
-✅ 1× Cursor epic orchestrator → Stories → parallel Cursor workers theo ownership
-✅ Mỗi Task cập nhật Project #3; DoD + milestone gates trước Hoàn thành Epic
+Coordinator gốc (depth 0): dispatch, lifecycle, integration
+  ├── Epic planner (depth 1): phân Story/Task, phụ thuộc, chuẩn bị nghiệm thu
+  ├── Backend / web / iOS / coordinator workers (depth 1): thực hiện Task
+  └── Reviewer độc lập (depth 1): DoD / security review exact SHA
 ```
 
-## Related
+Đây là mô hình vận hành mặc định, không phải fallback theo giới hạn host. Planner và workers không spawn worker con, kể cả khi host cho phép nested depth lớn hơn. Không yêu cầu tăng `nested_worker_depth`; nếu host chặn cả worker depth 1, coordinator báo giới hạn thay vì tự triển khai serial toàn Epic.
 
-- Agent routing (Cursor-only tạm thời): `orca-agent-routing.mdc`
-- Parallel spawn: `orca-parallel-workers.mdc`
-- Idle fill: `orca-idle-worker-fill.mdc`
-- Project Status + milestone DoD: `github-project-tracking.mdc`
+## Phân công
 
-## Nested depth (Orca constraint)
+1. **Epic planner:** phân Epic → Story → Task theo ownership: backend (`apps/api`, `apps/worker`, `packages/backend`, DB tests/migrations), web (`apps/web`), iOS (`apps/mobile`), coordinator (root tooling, lockfile, CI, shared contracts, docs/rules).
+2. Planner chuẩn bị spec mỗi Task: parent Epic/Story, scope/paths, dependencies thật, acceptance/DoD, checks và evidence cần thu. Gửi danh sách Task sẵn sàng và đề xuất wave cho coordinator; không dispatch hoặc tự code thay ownership workers.
+3. Planner theo dõi tiến độ/phụ thuộc, báo blocker và cập nhật đề xuất ready queue; chuẩn bị spec reviewer exact SHA, checklist milestone gates và index evidence nghiệm thu. Planner báo dữ kiện cho coordinator cập nhật Project; không tự đóng Task/Epic hoặc merge.
+4. **Coordinator gốc:** sở hữu dispatch, sync Project theo sự kiện mỗi Task, WIP/backpressure, mailbox, settlement, cleanup và integration trong phạm vi đã ủy quyền. Spawn các Task độc lập cùng wave theo `orca-parallel-workers.mdc`; nhận ready queue từ planner và chủ động idle fill.
+5. **Ownership workers:** chỉ thực hiện Task được giao trong scope; báo checks, SHA, evidence và blocker. **Reviewer độc lập:** khác session implementer, review exact SHA theo `github-project-tracking.mdc`.
+6. `worker_done` ≠ **Hoàn thành**. Coordinator chỉ đóng Task/Epic sau đủ DoD, CI, evidence và milestone gates; planner chuẩn bị nghiệm thu không thay reviewer độc lập.
 
-Orca enforces `nested_worker_depth` (current host max **1**). An epic orchestrator Dispatch is already depth≥1, so **`worker-start` of child workers fails** with `nested_worker_depth_exceeded`.
+## Quy ước và giới hạn
 
-**Required pattern while max=1:**
+- Titles, comments và báo cáo user-facing: **Tiếng Việt**; giữ nguyên IDs, commands, SHAs.
+- Hierarchy sản phẩm vẫn là Epic → Story → Task; cây worker là phẳng dưới coordinator, không mô phỏng hierarchy sản phẩm bằng nested workers.
+- Không spawn trùng Task, nhiều planner cùng Epic, tự mở rộng scope hoặc code serial toàn Epic để né giới hạn host.
+- Planner cũng tính vào giới hạn worker/WIP của host; coordinator chỉ launch wave trong capacity còn lại và release planner/worker đã hết việc sau khi bảo toàn handoff.
 
-1. Epic orchestrator: Project Status sync, break Stories/Tasks, create Orca Tasks with specs, ask coordinator if spawn blocked.
-2. **Coordinator (depth 0)** spawns story/task coding workers (`worker-start --agent cursor`) for that Epic.
-3. Epic orchestrator may still track progress, prepare DoD reviewer specs, and milestone-gate checklists — but must not assume it can launch nested workers until Nested worker depth ≥2 in Orca Settings.
+## Liên quan
 
-Do **not** fall back to serial solo implementation in the epic terminal unless the user explicitly authorizes it.
-
+- Agent: `orca-agent-routing.mdc`
+- Parallel dispatch: `orca-parallel-workers.mdc`
+- Ready queue / idle fill: `orca-idle-worker-fill.mdc`
+- Project / DoD: `github-project-tracking.mdc`
+- Lifecycle / cleanup: `orca-coordinator-mailbox.mdc`
