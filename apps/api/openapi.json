@@ -2599,6 +2599,84 @@
           "platform"
         ]
       }
+    },
+    "/v1/tenants/{tenantId}/branding": {
+      "get": {
+        "operationId": "BrandingController_getBranding",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantBrandingDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "branding"
+        ]
+      },
+      "put": {
+        "operationId": "BrandingController_putBranding",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TenantBrandingUpdateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantBrandingDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "branding"
+        ]
+      }
     }
   },
   "info": {
@@ -4009,6 +4087,73 @@
         },
         "required": [
           "reason"
+        ]
+      },
+      "TenantBrandingDto": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "primaryColor": {
+            "type": "string",
+            "example": "#0B3D2E"
+          },
+          "secondaryColor": {
+            "type": "string",
+            "nullable": true
+          },
+          "logoAssetId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "version": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "tenantId",
+          "slug",
+          "displayName",
+          "primaryColor",
+          "secondaryColor",
+          "logoAssetId",
+          "version"
+        ]
+      },
+      "TenantBrandingUpdateDto": {
+        "type": "object",
+        "properties": {
+          "displayName": {
+            "type": "string"
+          },
+          "primaryColor": {
+            "type": "string",
+            "example": "#0B3D2E"
+          },
+          "secondaryColor": {
+            "type": "string",
+            "nullable": true
+          },
+          "logoAssetId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "expectedVersion": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "expectedVersion"
         ]
       }
     }
