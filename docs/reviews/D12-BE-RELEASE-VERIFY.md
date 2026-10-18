@@ -4,7 +4,7 @@
 | --- | --- |
 | Issue | #295 (Epic #293) |
 | Branch | `hangndat/d12-backend-o06-anonymize` |
-| Tip SHA (điền sau commit) | _(see PR tip / `git rev-parse HEAD`)_ |
+| Tip SHA (điền sau commit) | `2b7b46b5d5d13e38489ecddc360cc87fea5f1e1a` (impl `0f6deb78863cb6ca8c7ac5b04383ccea2f6e56fd`) |
 | Base `origin/main` (lúc verify) | `d7fba8bbcc7d082ed9287e5c2966e72cd2700cba` |
 | Reviewer session | _(DoD reviewer độc lập — chưa)_ |
 | productionClaim | **false** (local Compose + isolated Docker Postgres) |
