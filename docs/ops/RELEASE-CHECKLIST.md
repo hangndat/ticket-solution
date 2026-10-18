@@ -25,9 +25,9 @@ Theo dõi trạng thái store **riêng**: submitted · approved · available. Bu
 
 ## iOS / store (Issue #26 — ngoài scope #25)
 
-- [ ] Archive **local** Xcode team `BLUA62D52G` — **không** Expo/EAS Cloud Build
-- [ ] TestFlight: submitted / approved / available ghi riêng
-- [ ] Device UAT: camera, deep link, push, offline ví, revoke
+- [x] Archive **local** Xcode team `BLUA62D52G` — **không** Expo/EAS Cloud Build (2026-10-18 · `Vemoki.xcarchive` + IPA)
+- [x] TestFlight: **submitted** upload 2026-10-18 (Delivery UUID `feb92136-…`) — Processing/available ghi ASC; Internal group khi build xanh
+- [ ] Device UAT: camera, deep link, push, offline ví, revoke (push ACCEPTED/DELIVERED đã có evidence riêng)
 
 ## Sau deploy VPS
 

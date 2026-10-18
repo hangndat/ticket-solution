@@ -13,7 +13,7 @@ User: **"làm hết đi"** (sau deploy D12 + ops credential fix).
 | Postfix trên VPS | **Installed** | `postfix-3.5.8` active · `inet_interfaces=loopback-only` |
 | Compose `SMTP_URL` override | **Patched on VPS** | `${SMTP_URL:-smtp://mailpit:1025}` trong `/opt/vemoki/src/infra/deploy/compose.yaml` |
 | SMTP internet (Porkbun 587) | **BLOCKED** | Outbound :25 timeout; :587 tới `smtp.porkbun.com` mở; **không có** `SMTP_USER`/`SMTP_PASS` trên host/local secret files → không auth relay. SPF hiện `include:_spf.porkbun.com` |
-| TestFlight upload | **IN PROGRESS / gap** | ASC API OK (app id `6823694490`); Issuer+Key env có; local `expo prebuild` + `pod install` chạy; **không** EAS Cloud |
+| TestFlight upload | **PASS (uploaded)** | Local archive + export + `altool` upload · Delivery UUID `feb92136-c86e-431e-a1f8-94b3996ab114` · IPA `apps/mobile/.expo/tf-prep/ipa/Vemoki.ipa` · buildNumber **10** · team `BLUA62D52G` · **không** EAS Cloud · chờ ASC Processing → Internal Testing |
 
 ## SMTP — bước còn lại (cần secret operator)
 
