@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# Git pre-push hook — delegates to scripts/pre-push-check.sh (CI-parity scopes).
+# Install: pnpm hooks:install  (sets core.hooksPath=.githooks)
+# Escape: SKIP_PREPUSH=1 or TICKET_SKIP_PREPUSH=1
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+exec "$ROOT/scripts/pre-push-check.sh"
