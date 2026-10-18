@@ -100,6 +100,27 @@ function PublishedEventDetailView({
   tenantSlug: string;
   slug: string;
 }) {
+  const [reloadKey, setReloadKey] = useState(0);
+  // Remount fetch tree on retry so loading resets without setState-in-effect.
+  return (
+    <PublishedEventDetailFetch
+      key={`pub-fetch:${tenantSlug}:${slug}:${reloadKey}`}
+      tenantSlug={tenantSlug}
+      slug={slug}
+      onRetry={() => setReloadKey((k) => k + 1)}
+    />
+  );
+}
+
+function PublishedEventDetailFetch({
+  tenantSlug,
+  slug,
+  onRetry,
+}: {
+  tenantSlug: string;
+  slug: string;
+  onRetry: () => void;
+}) {
   const [phase, setPhase] = useState<
     | { kind: 'loading' }
     | { kind: 'ready'; event: PublishedEventDetail }
@@ -180,7 +201,11 @@ function PublishedEventDetailView({
   if (phase.kind === 'error') {
     return (
       <Page>
-        <ErrorState title={eventsCopy.errorDetail.title}>
+        <ErrorState
+          title={eventsCopy.errorDetail.title}
+          onRetry={onRetry}
+          retryLabel="Tải lại"
+        >
           {phase.message}
         </ErrorState>
       </Page>
