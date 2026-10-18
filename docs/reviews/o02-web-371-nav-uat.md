@@ -42,4 +42,6 @@ node apps/web/tests/nav-o02-uat.mjs http://127.0.0.1:3462
 
 ## Tip SHA
 
-Điền SHA tip branch sau commit PR (revalidate nếu push thêm).
+`8f32333dc12001159e3cdc384808d7710b191236` (feat impl)
+
+Branch tip tại PR: xem `git rev-parse HEAD` / PR tip SHA.
