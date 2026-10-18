@@ -18,6 +18,10 @@ export function defaultLedgerPath(root = repoRoot()) {
   return path.join(root, '.orca-metrics', 'role-dispatch.jsonl');
 }
 
+export function activeDispatchPath(root = repoRoot()) {
+  return path.join(root, '.orca-metrics', 'active-dispatch.json');
+}
+
 export const SCHEMA_VERSION = 1;
 
 /** Events that are idempotent on (dispatch_id, event). */
@@ -88,6 +92,42 @@ export function resolveJoinForHook(events, hookPayload) {
     }
   }
   return null;
+}
+
+/**
+ * Fallback attribution from `.orca-metrics/active-dispatch.json` (gitignored).
+ * Used when hook fires before record-join — removes IDE race.
+ * @param {string} [root]
+ * @returns {object|null} join-shaped row
+ */
+export function loadActiveDispatchJoin(root = repoRoot()) {
+  const activePath = path.join(root, '.orca-metrics', 'active-dispatch.json');
+  if (!fs.existsSync(activePath)) return null;
+  let active;
+  try {
+    active = JSON.parse(fs.readFileSync(activePath, 'utf8'));
+  } catch {
+    return null;
+  }
+  if (!active || typeof active !== 'object') return null;
+  const dispatchId = pickStr(active, ['dispatch_id', 'dispatchId']);
+  const roleId = pickStr(active, ['role_id', 'roleId']);
+  if (!dispatchId || !roleId) return null;
+  return {
+    v: SCHEMA_VERSION,
+    ts: new Date().toISOString(),
+    event: 'join.conversation',
+    run_id: pickStr(active, ['run_id', 'runId']) || null,
+    task_id: pickStr(active, ['task_id', 'taskId']) || null,
+    dispatch_id: dispatchId,
+    role_id: roleId,
+    agent: pickStr(active, ['agent']) || 'cursor',
+    issue: active.issue != null ? Number(active.issue) : null,
+    attrs: {
+      conversation_id: null,
+      source: 'active-dispatch',
+    },
+  };
 }
 
 export function buildJoinEvent(opts) {
