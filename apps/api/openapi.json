@@ -717,6 +717,49 @@
         ]
       }
     },
+    "/v1/me/tickets/{ticketId}": {
+      "get": {
+        "operationId": "TicketIssueController_meTicketById",
+        "parameters": [
+          {
+            "name": "ticketId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketSummaryDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "redemptions"
+        ]
+      }
+    },
     "/v1/operations/{clientOperationId}": {
       "get": {
         "operationId": "TicketIssueController_operation",

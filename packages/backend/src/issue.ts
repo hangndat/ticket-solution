@@ -941,6 +941,52 @@ export async function listTicketsForOwner(
   }));
 }
 
+/**
+ * Owner ticket-by-id inside withTenant.
+ * Fail-closed: missing ticket or wrong owner → TICKET_NOT_FOUND (404).
+ */
+export async function getTicketForOwner(
+  tx: Prisma.TransactionClient,
+  tenantId: string,
+  ownerUserId: string,
+  ticketId: string,
+): Promise<ListedTicket> {
+  const rows = await tx.$queryRaw<
+    {
+      id: string;
+      event_id: string;
+      ticket_type_id: string;
+      source_id: string;
+      state: string;
+      credential_version: number;
+      created_at: Date;
+    }[]
+  >`
+    SELECT id, event_id, ticket_type_id, source_id, state,
+           credential_version, created_at
+    FROM tickets
+    WHERE tenant_id = ${tenantId}::uuid
+      AND owner_user_id = ${ownerUserId}::uuid
+      AND id = ${ticketId}::uuid
+  `;
+  const row = rows[0];
+  if (!row) {
+    throw new IssueError(
+      ISSUE_ERROR_CODES.TICKET_NOT_FOUND,
+      'Ticket was not found',
+    );
+  }
+  return {
+    ticketId: row.id,
+    eventId: row.event_id,
+    ticketTypeId: row.ticket_type_id,
+    sourceId: row.source_id,
+    state: row.state,
+    credentialVersion: row.credential_version,
+    createdAt: row.created_at,
+  };
+}
+
 export async function getOperationForActor(
   tx: Prisma.TransactionClient,
   input: {
