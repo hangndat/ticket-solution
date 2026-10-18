@@ -1,0 +1,16 @@
+---
+description: "How to invoke lean-ctx MCP tools in Cursor (CallDynamicTool). Prevents Tool ctx_call was not found."
+alwaysApply: true
+---
+
+# lean-ctx on Cursor (dynamic MCP)
+
+When Grep/Glob/Read are denied or lean-ctx is required, call MCP tools correctly:
+
+1. Discover if needed: `GetDynamicTools` with `namespace: "lean-ctx"`.
+2. Invoke: `CallDynamicTool` with `namespace: "lean-ctx"` and `toolName` like `ctx_search` / `ctx_read` / `ctx_compose` / `ctx_expand`.
+3. Non-core tools: `toolName: "ctx_call"` and `arguments: { name: "<tool>", arguments: { … } }`.
+
+Never call a top-level tool named `ctx_call` or `lean-ctx ctx_call` — that yields `Tool ctx_call was not found`.
+
+Prefer code-review-graph (`code-review-graph-ticket`) for symbol/impact first; use lean-ctx for file content / unknown-location compose.
