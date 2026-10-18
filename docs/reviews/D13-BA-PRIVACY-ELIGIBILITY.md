@@ -9,7 +9,7 @@
 | Architecture impact | **Không** — reconcile docs vs source; không đổi telemetry/contract |
 | Ownership paths | Chỉ `docs/asc/**` + file này |
 | Source tip đọc apps/O06 (exact SHA) | `f551b6d2bdc06742f74a49a0970cb2bfae2f4e0e` (`origin/main` lúc BA) |
-| Docs PR tip (exact SHA DoD) | `3b6a540e05cfeb89f614c9ec6e24c1ff5f60a1ad` · [PR #308](https://github.com/hangndat/ticket-solution/pull/308) |
+| Docs PR tip (exact SHA DoD) | Verify on [PR #308](https://github.com/hangndat/ticket-solution/pull/308) tip / `git rev-parse` branch `hangndat/d13-ba-store-privacy` — worker_done báo SHA đầy đủ |
 | Ngày đối chiếu | **2026-10-18** (UTC) |
 | Plan | `docs/plans/D13-APP-STORE-RELEASE-PLAN.md` (main worktree) |
 
