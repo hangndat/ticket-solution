@@ -3,6 +3,7 @@
 | Trường | Giá trị |
 | --- | --- |
 | Scope | `apps/web` only · Issue [#256](https://github.com/hangndat/ticket-solution/issues/256) · Epic [#254](https://github.com/hangndat/ticket-solution/issues/254) |
+| PR | [#268](https://github.com/hangndat/ticket-solution/pull/268) |
 | Branch | `hangndat/d254-web-public-events` |
 | Tip SHA | `d2e58c0f11d6af74596967f849796cd673b4b430` |
 | Hard dep | PR #261 merge SHA `b099ce43caea0a51e095e675b3bfbbde47bcb8fa` |
