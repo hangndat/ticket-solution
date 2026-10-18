@@ -11,6 +11,8 @@ type Props = {
   /** Module / background colors — defaults to Vemoki ink on paper. */
   inkColor?: string;
   paperColor?: string;
+  /** AC-T1 — prefer «Mã QR vé [sự kiện]»; default generic label. */
+  accessibilityLabel?: string;
 };
 
 /**
@@ -23,6 +25,7 @@ export function QrCode({
   quietZone = 2,
   inkColor = brand.ink,
   paperColor = '#ffffff',
+  accessibilityLabel = 'Mã QR hiển thị vé',
 }: Props) {
   const modules = useMemo(() => encodeQrModules(value), [value]);
   const dim = modules.length;
@@ -32,7 +35,7 @@ export function QrCode({
   return (
     <View
       accessibilityRole="image"
-      accessibilityLabel="Mã QR hiển thị vé"
+      accessibilityLabel={accessibilityLabel}
       style={{
         width: size,
         height: size,

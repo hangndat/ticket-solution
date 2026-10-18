@@ -1,7 +1,15 @@
-import { useEffect, useState } from 'react';
-import { FlatList, Pressable, Text, View } from 'react-native';
-import { Link } from 'expo-router';
+import { useEffect, useState, useSyncExternalStore } from 'react';
+import {
+  AccessibilityInfo,
+  Animated,
+  FlatList,
+  Pressable,
+  Text,
+  View,
+} from 'react-native';
+import { Link, router } from 'expo-router';
 import { demoTenants, eventDate, listDemoEvents } from '@/data/demo-events';
+import { AttendeeCta } from '@/components/attendee-cta';
 import { EventMediaHeader } from '@/components/event-media';
 import { BrandWordmark } from '@/components/page';
 import {
@@ -10,6 +18,7 @@ import {
   LoadingState,
 } from '@/components/screen-state';
 import { eventsCopy } from '@/components/screen-state-copy';
+import { useAttendeeSignIn } from '@/attendee/use-attendee-sign-in';
 import { fetchPublishedEventList } from '@/published/published-event-api';
 import {
   DEMO_PUBLISHED_TENANTS,
@@ -20,7 +29,9 @@ import {
 } from '@/published/events-home';
 import type { PublishedEventSummary } from '@/published/types';
 import { getApiBaseUrl, showDemoEventCatalog } from '@/identity/config';
-import { colors } from '@/theme/colors';
+import { session } from '@/identity/session';
+import { brand, colors } from '@/theme/colors';
+import { fontFamilies } from '@/theme/fonts';
 import { useTheme } from '@/theme/ThemeProvider';
 import { typography } from '@/theme/typography';
 
@@ -37,13 +48,19 @@ function formatListDate(startsAt: string, timezone: string): string {
 }
 
 /**
- * Events home (ADR-19 / #257): published list is the FlatList SoT after load.
+ * Events home (ADR-19 / #257 / UX-UI #475): published list is FlatList SoT.
  * Fixture catalog is footer-only with explicit Demo labels — never API fallback.
- * Production / TestFlight (`showDemoEventCatalog() === false`) hides the W0
- * demo footer so home is redeem + published only.
+ * Brand hero + states per PD visual-notes priority screen 1.
  */
 export function EventsScreen() {
   const { applyBranding, theme } = useTheme();
+  const identity = useSyncExternalStore(
+    session.subscribe,
+    session.getSnapshot,
+    session.getSnapshot,
+  );
+  const { busy: signInBusy, error: signInError, configured, signIn } =
+    useAttendeeSignIn();
   const showDemo = showDemoEventCatalog();
   const [publishedTenant, setPublishedTenant] = useState<string>(
     DEMO_PUBLISHED_TENANTS[0],
@@ -55,6 +72,32 @@ export function EventsScreen() {
   const [publishedError, setPublishedError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [demoTenant, setDemoTenant] = useState<string>(demoTenants[0]);
+  const [reduceMotionOs, setReduceMotionOs] = useState(false);
+  const [heroOpacity] = useState(() => new Animated.Value(1));
+
+  useEffect(() => {
+    let cancelled = false;
+    void AccessibilityInfo.isReduceMotionEnabled().then((enabled) => {
+      if (cancelled) return;
+      setReduceMotionOs(enabled);
+      if (!enabled) {
+        heroOpacity.setValue(0);
+        Animated.timing(heroOpacity, {
+          toValue: 1,
+          duration: 280,
+          useNativeDriver: true,
+        }).start();
+      }
+    });
+    const sub = AccessibilityInfo.addEventListener(
+      'reduceMotionChanged',
+      setReduceMotionOs,
+    );
+    return () => {
+      cancelled = true;
+      sub.remove();
+    };
+  }, [heroOpacity]);
 
   const beginPublishedReload = () => {
     setPublishedPhase('loading');
@@ -71,7 +114,6 @@ export function EventsScreen() {
     setPublishedTenant((tenant) => nextDemoPublishedTenant(tenant));
   };
 
-  // Load published list after mount / tenant / retry — setState only after await.
   useEffect(() => {
     let cancelled = false;
     const controller = new AbortController();
@@ -100,7 +142,6 @@ export function EventsScreen() {
     };
   }, [publishedTenant, reloadKey]);
 
-  // Brand chrome from first published row when list is ready — not from fixtures.
   useEffect(() => {
     if (publishedPhase !== 'ready' || published.length === 0) return;
     const first = published[0];
@@ -119,6 +160,104 @@ export function EventsScreen() {
   const demoEvents = showDemo ? listDemoEvents(demoTenant) : [];
   const listData =
     publishedPhase === 'ready' ? published : ([] as PublishedEventSummary[]);
+  const signedOut =
+    identity.status !== 'verified' && configured;
+
+  const hero = (
+    <View style={{ gap: 16 }}>
+      <BrandWordmark />
+      <Text
+        accessibilityRole="header"
+        style={{ color: brand.ink, ...typography.display }}
+      >
+        {eventsCopy.heroHeadline}
+      </Text>
+      <Text style={{ color: colors.secondary, ...typography.body }}>
+        {eventsCopy.heroSupport}
+      </Text>
+      <View style={{ gap: 10 }}>
+        <AttendeeCta
+          label={eventsCopy.redeemCta}
+          onPress={() => router.push('/redeem')}
+          testID="events-cta-redeem"
+        />
+        {signedOut ? (
+          <AttendeeCta
+            label={signInBusy ? 'Đang đăng nhập…' : eventsCopy.signInCta}
+            variant="secondary"
+            disabled={signInBusy}
+            onPress={() => void signIn()}
+            testID="events-cta-signin"
+          />
+        ) : null}
+      </View>
+      {signInError ? (
+        <ErrorState
+          title="Không đăng nhập được"
+          onRetry={() => void signIn()}
+          retryLabel="Thử lại"
+        >
+          {signInError}
+        </ErrorState>
+      ) : null}
+      <Text
+        accessibilityLabel={`Tổ chức: ${publishedTenant}`}
+        style={{ color: colors.secondary, ...typography.caption }}
+        selectable
+      >
+        Tổ chức: {publishedTenant}
+        {theme.organizationName ? ` · ${theme.organizationName}` : ''}
+      </Text>
+
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Đổi tổ chức để tải danh sách đã xuất bản"
+        onPress={switchPublishedTenant}
+        style={({ pressed }) => ({
+          minHeight: 44,
+          paddingVertical: 14,
+          paddingHorizontal: 18,
+          borderRadius: 12,
+          borderCurve: 'continuous',
+          backgroundColor: colors.card,
+          opacity: pressed ? 0.85 : 1,
+        })}
+      >
+        <Text
+          style={{
+            color: colors.label,
+            fontSize: 17,
+            fontFamily: fontFamilies.bodySemiBold,
+            fontWeight: '600',
+            textAlign: 'center',
+          }}
+        >
+          Đổi tổ chức (API)
+        </Text>
+      </Pressable>
+
+      {publishedPhase === 'loading' ? (
+        <LoadingState title={eventsCopy.loadingList.title}>
+          {eventsCopy.loadingList.body}
+        </LoadingState>
+      ) : null}
+      {publishedPhase === 'misconfigured' ? (
+        <ErrorState title="Chưa cấu hình API">
+          Đặt EXPO_PUBLIC_API_BASE_URL để tải danh sách đã xuất bản. Không
+          thay bằng catalog demo.
+        </ErrorState>
+      ) : null}
+      {publishedPhase === 'error' && publishedError ? (
+        <ErrorState
+          title={eventsCopy.errorList.title}
+          onRetry={retryPublished}
+          retryLabel="Thử lại"
+        >
+          {publishedError}
+        </ErrorState>
+      ) : null}
+    </View>
+  );
 
   return (
     <FlatList
@@ -128,72 +267,9 @@ export function EventsScreen() {
       data={listData}
       keyExtractor={(item) => `pub:${item.tenantSlug}:${item.id}`}
       ListHeaderComponent={
-        <View style={{ gap: 16 }}>
-          <BrandWordmark />
-          <Text
-            accessibilityLabel={`Tổ chức: ${publishedTenant}`}
-            style={{ color: colors.secondary, ...typography.caption }}
-            selectable
-          >
-            Tổ chức: {publishedTenant}
-            {theme.organizationName ? ` · ${theme.organizationName}` : ''}
-          </Text>
-          <Text style={{ color: colors.label, ...typography.title }}>
-            Tìm sự kiện tiếp theo
-          </Text>
-          <Text style={{ color: colors.secondary, ...typography.body }}>
-            Danh sách lấy từ sự kiện đã xuất bản trên máy chủ. Đổi mã để nhận vé.
-          </Text>
-          <Link href="/redeem" style={{ color: colors.accent, fontSize: 17 }}>
-            Đổi mã
-          </Link>
-
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Đổi tổ chức để tải danh sách đã xuất bản"
-            onPress={switchPublishedTenant}
-            style={({ pressed }) => ({
-              paddingVertical: 14,
-              paddingHorizontal: 18,
-              borderRadius: 12,
-              borderCurve: 'continuous',
-              backgroundColor: colors.card,
-              opacity: pressed ? 0.85 : 1,
-            })}
-          >
-            <Text
-              style={{
-                color: colors.label,
-                fontSize: 17,
-                fontWeight: '600',
-                textAlign: 'center',
-              }}
-            >
-              Đổi tổ chức (API)
-            </Text>
-          </Pressable>
-
-          {publishedPhase === 'loading' ? (
-            <LoadingState title={eventsCopy.loadingList.title}>
-              {eventsCopy.loadingList.body}
-            </LoadingState>
-          ) : null}
-          {publishedPhase === 'misconfigured' ? (
-            <ErrorState title="Chưa cấu hình API">
-              Đặt EXPO_PUBLIC_API_BASE_URL để tải danh sách đã xuất bản. Không
-              thay bằng catalog demo.
-            </ErrorState>
-          ) : null}
-          {publishedPhase === 'error' && publishedError ? (
-            <ErrorState
-              title={eventsCopy.errorList.title}
-              onRetry={retryPublished}
-              retryLabel="Tải lại danh sách"
-            >
-              {publishedError}
-            </ErrorState>
-          ) : null}
-        </View>
+        <Animated.View style={{ opacity: reduceMotionOs ? 1 : heroOpacity }}>
+          {hero}
+        </Animated.View>
       }
       ListEmptyComponent={
         publishedPhase === 'ready' ? (
@@ -213,13 +289,10 @@ export function EventsScreen() {
       renderItem={({ item }) => (
         <View
           style={{
-            padding: 16,
+            paddingVertical: 16,
             gap: 8,
-            backgroundColor: colors.card,
-            borderRadius: 16,
-            borderCurve: 'continuous',
-            borderTopWidth: 4,
-            borderTopColor: item.brand.primaryColor,
+            borderBottomWidth: 1,
+            borderBottomColor: colors.separator,
           }}
         >
           <EventMediaHeader
@@ -229,10 +302,10 @@ export function EventsScreen() {
             logoUrl={item.brand.logoUrl}
             testID={`pub-media-${item.id}`}
           />
-          <Text selectable style={{ color: colors.secondary, fontSize: 13 }}>
+          <Text selectable style={{ color: colors.secondary, fontSize: 13, fontFamily: fontFamilies.body }}>
             Đã xuất bản · v{item.publishedConfigVersion}
           </Text>
-          <Text selectable style={{ color: colors.secondary }}>
+          <Text selectable style={{ color: colors.secondary, fontFamily: fontFamilies.body }}>
             {item.brand.organizationName}
           </Text>
           <Link
@@ -243,19 +316,27 @@ export function EventsScreen() {
             style={{
               color: colors.accent,
               fontSize: 22,
+              fontFamily: fontFamilies.display,
               fontWeight: '600',
               paddingVertical: 4,
             }}
           >
             {item.name}
           </Link>
-          <Text selectable style={{ color: colors.label }}>
+          <Text selectable style={{ color: colors.label, fontFamily: fontFamilies.body }}>
             {item.startsAt
               ? formatListDate(item.startsAt, item.timezone)
               : 'Chưa có giờ bắt đầu'}
           </Text>
           {item.location ? (
-            <Text selectable style={{ color: colors.secondary, fontSize: 17 }}>
+            <Text
+              selectable
+              style={{
+                color: colors.secondary,
+                fontSize: 17,
+                fontFamily: fontFamilies.body,
+              }}
+            >
               {item.location}
             </Text>
           ) : null}
@@ -266,7 +347,11 @@ export function EventsScreen() {
           <View style={{ gap: 12, marginTop: 12 }}>
             <Text
               selectable
-              style={{ color: colors.secondary, fontWeight: '600' }}
+              style={{
+                color: colors.secondary,
+                fontWeight: '600',
+                fontFamily: fontFamilies.bodySemiBold,
+              }}
             >
               Demo · dữ liệu mẫu (không phải nguồn đã xuất bản)
             </Text>
@@ -285,6 +370,7 @@ export function EventsScreen() {
                 )
               }
               style={({ pressed }) => ({
+                minHeight: 44,
                 paddingVertical: 10,
                 opacity: pressed ? 0.7 : 1,
               })}
@@ -302,13 +388,10 @@ export function EventsScreen() {
                 <View
                   key={`demo:${item.tenantSlug}:${item.id}`}
                   style={{
-                    padding: 16,
+                    paddingVertical: 16,
                     gap: 8,
-                    backgroundColor: colors.card,
-                    borderRadius: 16,
-                    borderCurve: 'continuous',
-                    borderTopWidth: 4,
-                    borderTopColor: item.brand.primaryColor,
+                    borderBottomWidth: 1,
+                    borderBottomColor: colors.separator,
                     opacity: 0.92,
                   }}
                 >

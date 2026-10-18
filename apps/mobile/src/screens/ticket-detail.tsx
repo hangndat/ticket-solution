@@ -5,11 +5,13 @@ import type { TicketSummary } from '@ticket/contracts';
 import {
   attendeeWalletCopy,
   presentTicketRow,
+  ticketGateHint,
 } from '@/attendee/attendee-outcome-copy';
 import { EventBanner, EventLogo } from '@/components/event-media';
 import { BrandWordmark, Notice, Page } from '@/components/page';
 import { QrCode } from '@/components/qr-code';
 import { hasDemoMediaForEventId } from '@/data/demo-media';
+import { findDemoEventById } from '@/data/demo-events';
 import { brand, colors } from '@/theme/colors';
 import { typography } from '@/theme/typography';
 import { getTenantId } from '@/identity/config';
@@ -198,12 +200,24 @@ export function TicketDetailScreen() {
 
   const { ticket, syncedAt, fromCache, mode } = visibleLoad;
   const row = presentTicketRow(ticket);
+  const isDemo =
+    hasDemoMediaForEventId(ticket.eventId) ||
+    Boolean(findDemoEventById(ticket.eventId));
+  const gateHint = ticketGateHint(ticket.state, { demo: isDemo });
+  const qrA11y = `Mã QR vé ${row.eventTitle}`;
 
   return (
     <Page>
       {mode === 'offline-display' || fromCache ? (
         <Notice title={attendeeWalletCopy.offlineBannerTitle}>
           {attendeeWalletCopy.offlineBannerBody}
+        </Notice>
+      ) : null}
+      {gateHint ? (
+        <Notice title={gateHint} tone="deny">
+          {isDemo
+            ? 'Vé demo / fixture — không dùng để vào cổng.'
+            : 'Trạng thái vé không cho phép quét cổng.'}
         </Notice>
       ) : null}
       <View
@@ -272,17 +286,12 @@ export function TicketDetailScreen() {
             {row.statusLabel}
           </Text>
           {qrValue ? (
-            <View
-              accessible
-              accessibilityRole="image"
-              accessibilityLabel={`Mã QR vé ${row.eventTitle}`}
-            >
-              <QrCode
-                value={qrValue}
-                inkColor={brand.ink}
-                paperColor="#ffffff"
-              />
-            </View>
+            <QrCode
+              value={qrValue}
+              inkColor={brand.ink}
+              paperColor="#ffffff"
+              accessibilityLabel={qrA11y}
+            />
           ) : null}
           <Text
             selectable
