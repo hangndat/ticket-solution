@@ -224,7 +224,7 @@ services:
       - /opt/vemoki/src:/app
       # When enabling APNs: create /opt/vemoki/secrets/apns/AuthKey.p8 (mode 400),
       # set APNS_ENABLED=true + APNS_KEY_ID in /opt/vemoki/.env, then uncomment:
-      # - /opt/vemoki/secrets/apns:/run/secrets/apns:ro
+      - /opt/vemoki/secrets/apns:/run/secrets/apns:ro
     restart: unless-stopped
     environment:
       NODE_ENV: production
