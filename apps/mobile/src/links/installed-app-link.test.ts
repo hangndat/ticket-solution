@@ -94,3 +94,28 @@ test('invitation claim with short token is not routed', () => {
   );
   assert.equal(parsed.kind, 'passthrough');
 });
+
+test('staff deep link opens soft-access (O02 deny / tab gate)', () => {
+  for (const input of [
+    'vemoki://staff',
+    'ticketsolution://staff',
+    '/staff',
+    'staff',
+  ]) {
+    const parsed = parseInstalledAppLink(input);
+    assert.equal(parsed.kind, 'staff-access');
+    if (parsed.kind !== 'staff-access') return;
+    assert.equal(parsed.href, '/staff-access');
+    assert.equal(routeForInstalledAppLink(input), '/staff-access');
+  }
+});
+
+test('uat session deep link rewrites to /uat/session', () => {
+  const token = 'staff-uat-token';
+  const input = `vemoki://uat/session?access_token=${token}`;
+  const parsed = parseInstalledAppLink(input);
+  assert.equal(parsed.kind, 'uat-session');
+  if (parsed.kind !== 'uat-session') return;
+  assert.equal(parsed.href, `/uat/session?access_token=${token}`);
+  assert.equal(routeForInstalledAppLink(input), parsed.href);
+});
