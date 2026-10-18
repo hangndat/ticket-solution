@@ -85,9 +85,10 @@ export function AccountPanel() {
     <div className="redeem-form">
       <aside className="notice" role="note">
         <p>
-          Yêu cầu xóa tài khoản chỉ là ACK trạng thái{' '}
-          <strong>AWAITING_POLICY</strong>. Không tự xóa ticket, audit, device
-          hay identity khi O06 chưa chốt.
+          Gửi yêu cầu được hệ thống ghi nhận (có thể hiện trạng thái theo dõi).
+          Đây chưa phải xóa cứng ngay. Theo O06: anonymize PII liên quan trong ≤
+          30 ngày; audit có thể giữ tới 730 ngày. Chi tiết:{' '}
+          <a href="/privacy">chính sách quyền riêng tư</a>.
         </p>
       </aside>
       {loadPhase === 'loading' ? (
@@ -110,7 +111,7 @@ export function AccountPanel() {
         <SurfaceState
           kind="empty"
           title="Chưa có yêu cầu xóa"
-          detail="Bạn chưa gửi yêu cầu xóa tài khoản. Khi gửi, trạng thái chỉ là chờ chính sách — chưa phải đã xóa dữ liệu."
+          detail="Bạn chưa gửi yêu cầu xóa tài khoản. Khi gửi, hệ thống ACK yêu cầu; anonymize theo O06 ≤ 30 ngày — chưa phải đã xóa dữ liệu ngay."
           testId="account-load-empty"
         />
       ) : null}
@@ -125,7 +126,7 @@ export function AccountPanel() {
           checked={confirmed}
           onChange={(e) => setConfirmed(e.target.checked)}
         />{' '}
-        Tôi hiểu đây là yêu cầu chờ chính sách, không phải đã xóa.
+        Tôi hiểu đây là yêu cầu (ACK), không phải đã xóa ngay; O06 mục tiêu anonymize ≤ 30 ngày.
       </label>
       <button
         type="button"
@@ -156,7 +157,7 @@ export function AccountPanel() {
             <p>
               Đã ghi nhận request {view.value.requestId} · state{' '}
               {view.value.state} · policy {view.value.policyStatus}. Đây chưa
-              phải xóa dữ liệu.
+              phải xóa dữ liệu ngay; theo O06 mục tiêu anonymize ≤ 30 ngày.
             </p>
           ) : (
             <p>{viewLabel(view)}</p>

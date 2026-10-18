@@ -104,6 +104,10 @@ export type CopyKey =
   | 'privacy.s4.body'
   | 'privacy.s5.title'
   | 'privacy.s5.body'
+  | 'privacy.s6.title'
+  | 'privacy.s6.body'
+  | 'privacy.s7.title'
+  | 'privacy.s7.body'
   | 'privacy.note'
   | 'support.title'
   | 'support.lead'
@@ -227,23 +231,29 @@ const VI: Record<CopyKey, string> = {
     'Vemoki (`vemoki.com`) xử lý dữ liệu cần thiết để vận hành nền tảng sự kiện và trả lời đăng ký quan tâm. Số retention / vùng dữ liệu / SLA dưới đây khớp quyết định O06 (MVP).',
   'privacy.s1.title': 'Dữ liệu chúng tôi thu',
   'privacy.s1.body':
-    'Tài khoản tổ chức; thông tin sự kiện và mã/vé; dữ liệu check-in; form quan tâm (tên, email, tổ chức, ghi chú); nhật ký kỹ thuật cần thiết.',
+    'Tài khoản / phiên đăng nhập (email, subject OIDC / user ID); thông tin sự kiện và mã/vé / payload QR hiển thị; dữ liệu check-in; token thiết bị push (APNs) khi bật thông báo; form quan tâm hoặc form sự kiện (tên, email, tổ chức, điện thoại nếu sự kiện yêu cầu); nhật ký kỹ thuật cần thiết (IP, user-agent, thời gian). Không bán dữ liệu; MVP không dùng SDK quảng cáo / theo dõi xuyên app.',
   'privacy.s2.title': 'Mục đích',
   'privacy.s2.body':
-    'Cung cấp dịch vụ multi-tenant; gửi vé/thông báo liên quan sự kiện; hỗ trợ và follow-up GTM; bảo mật và chống lạm dụng.',
-  'privacy.s3.title': 'Lưu giữ và xóa (O06)',
+    'Xác thực và phân quyền; cấp / hiển thị / xác thực vé; gửi thông báo giao dịch (email và, nếu bật, push); hỗ trợ và follow-up GTM; bảo mật, audit và chống lạm dụng; tiếp nhận yêu cầu xóa tài khoản như mô tả bên dưới.',
+  'privacy.s3.title': 'Máy ảnh và thông báo',
   'privacy.s3.body':
-    'Khi bạn yêu cầu xóa tài khoản: anonymize trong ≤ 30 ngày (không xóa cứng ngay — giữ đối soát khiếu nại). Vé / check-in: giữ 365 ngày rồi anonymize PII, giữ aggregate/KPI. Audit log: TTL 730 ngày. Object store (QR/export): signed URL ngắn hạn và job xóa object ≤ 90 ngày sau hết hạn nghiệp vụ. Backup tôn trọng xóa trong RPO; cache client được purge khi logout / đổi user.',
-  'privacy.s4.title': 'Vùng dữ liệu',
+    'Máy ảnh (app iOS Gate): quét mã QR vé trên thiết bị tại cổng cho nhân sự được cấp quyền. Quét realtime trên thiết bị — mặc định không lưu ảnh vào thư viện và không tải ảnh quét lên máy chủ. Thông báo: tùy chọn; dùng cho cập nhật giao vé / nhắc sự kiện; có thể tắt trong Cài đặt iOS.',
+  'privacy.s4.title': 'Lưu giữ (O06)',
   'privacy.s4.body':
-    'Single-region VPS: Postgres, MinIO, Keycloak và SMTP cùng quốc gia với máy chủ. Không tách region trong MVP; quốc gia host ghi trong DPA khi có tenant thật.',
-  'privacy.s5.title': 'Liên hệ',
+    'Yêu cầu xóa tài khoản: anonymize PII liên quan trong ≤ 30 ngày (không xóa cứng ngay — giữ đối soát khiếu nại). Vé / check-in: giữ 365 ngày rồi anonymize PII, giữ aggregate/KPI. Audit log: TTL 730 ngày. Object store (QR/export): signed URL ngắn hạn; object hết hạn nghiệp vụ được xóa trong ≤ 90 ngày. Backup tôn trọng xóa trong RPO; cache client được purge khi logout / đổi user.',
+  'privacy.s5.title': 'Yêu cầu xóa tài khoản',
   'privacy.s5.body':
-    'Câu hỏi quyền riêng tư: dùng trang Hỗ trợ hoặc email liên hệ trên trang Hỗ trợ (`privacy@vemoki.com` khi alias sẵn sàng).',
+    'Người dùng đã đăng nhập: trên web mở Tài khoản (`/account`) hoặc trong app iOS mở Account → «Yêu cầu xóa tài khoản». Việc gửi yêu cầu được hệ thống ghi nhận; đó chưa phải xóa ngay. Theo O06, chúng tôi anonymize trong ≤ 30 ngày; nhật ký audit có thể giữ tới 730 ngày. Không bắt buộc gọi điện hay mở ticket hỗ trợ để khởi tạo yêu cầu.',
+  'privacy.s6.title': 'Vùng dữ liệu',
+  'privacy.s6.body':
+    'Single-region VPS: Postgres, MinIO, Keycloak và SMTP cùng quốc gia với máy chủ. Không tách region trong MVP; quốc gia host ghi trong DPA khi có tenant thật.',
+  'privacy.s7.title': 'Liên hệ',
+  'privacy.s7.body':
+    'Câu hỏi quyền riêng tư: trang Hỗ trợ (`/support`) hoặc `support@vemoki.com` / `privacy@vemoki.com` (khi alias sẵn sàng). Liên hệ tạm: hangndat@gmail.com.',
   'privacy.note':
     'Số liệu khớp DECISION-LOG O06 (18/10/2026). RPO/RTO kỹ thuật (mục tiêu PRD) không dùng làm SLA hỗ trợ cho đến khi drill trên VPS đích.',
   'support.title': 'Hỗ trợ',
-  'support.lead': 'Hỗ trợ organizer và agency dùng Vemoki.',
+  'support.lead': 'Hỗ trợ organizer và agency dùng Vemoki. Liên hệ bên dưới cũng dùng cho câu hỏi quyền riêng tư / yêu cầu xóa tài khoản nếu cần.',
   'support.email.label': 'Email',
   'support.email.value': 'support@vemoki.com',
   'support.sla':
@@ -367,23 +377,29 @@ const EN: Record<CopyKey, string> = {
     'Vemoki (`vemoki.com`) processes data needed to run the event platform and respond to interest registrations. Retention, residency, and support SLA figures below match decision O06 (MVP).',
   'privacy.s1.title': 'Data we collect',
   'privacy.s1.body':
-    'Organization accounts; event and code/ticket data; check-in records; interest-form fields (name, email, org, notes); necessary technical logs.',
+    'Account / session identifiers (email, OIDC subject / user ID); event and code/ticket data / display QR payloads; check-in records; device push tokens (APNs) when notifications are enabled; interest or event form fields (name, email, org, phone if the event requires them); necessary technical logs (IP, user-agent, timestamps). We do not sell personal data; the MVP does not use advertising SDKs or cross-app tracking.',
   'privacy.s2.title': 'Purposes',
   'privacy.s2.body':
-    'Provide multi-tenant service; send event-related tickets/notices; support and GTM follow-up; security and abuse prevention.',
-  'privacy.s3.title': 'Retention and erasure (O06)',
+    'Authenticate and authorize; issue / display / validate tickets; send transactional notices (email and, if enabled, push); support and GTM follow-up; security, audit, and abuse prevention; honor account-deletion requests as described below.',
+  'privacy.s3.title': 'Camera and notifications',
   'privacy.s3.body':
-    'Account deletion requests: anonymize within ≤ 30 days (no hard-delete immediately — keep complaint reconciliation). Tickets / check-in: keep 365 days then anonymize PII; keep aggregates/KPIs. Audit logs: TTL 730 days. Object store (QR/export): short-lived signed URLs and object-delete job ≤ 90 days after business expiry. Backups respect erasure within RPO; client caches purge on logout / user switch.',
-  'privacy.s4.title': 'Data residency',
+    'Camera (iOS Gate app): on-device scanning of ticket QR codes at the gate for authorized staff. Scanning is realtime on-device — by default we do not save photos to the library and do not upload scan images to our servers. Notifications: optional; used for ticket-delivery updates and event reminders; disable in iOS Settings.',
+  'privacy.s4.title': 'Retention (O06)',
   'privacy.s4.body':
-    'Single-region VPS: Postgres, MinIO, Keycloak, and SMTP in the same country as the host. No multi-region split in MVP; host country is recorded in the DPA when a real tenant onboard.',
-  'privacy.s5.title': 'Contact',
+    'Account deletion requests: anonymize related PII within ≤ 30 days (no hard-delete immediately — keep complaint reconciliation). Tickets / check-in: keep 365 days then anonymize PII; keep aggregates/KPIs. Audit logs: TTL 730 days. Object store (QR/export): short-lived signed URLs; objects past business expiry are removed within ≤ 90 days. Backups respect erasure within RPO; client caches purge on logout / user switch.',
+  'privacy.s5.title': 'Account deletion requests',
   'privacy.s5.body':
-    'Privacy questions: use Support or the contact email listed there (`privacy@vemoki.com` when the alias is ready).',
+    'Signed-in users: on the web open Account (`/account`), or in the iOS app open Account → “Request account deletion” / «Yêu cầu xóa tài khoản». Submitting a request is acknowledged by the system; that is not immediate erasure. Per O06 we anonymize within ≤ 30 days; audit trails may remain up to 730 days. You do not need a phone call or support ticket to start a request.',
+  'privacy.s6.title': 'Data residency',
+  'privacy.s6.body':
+    'Single-region VPS: Postgres, MinIO, Keycloak, and SMTP in the same country as the host. No multi-region split in MVP; host country is recorded in the DPA when a real tenant onboard.',
+  'privacy.s7.title': 'Contact',
+  'privacy.s7.body':
+    'Privacy questions: Support (`/support`) or `support@vemoki.com` / `privacy@vemoki.com` (when the alias is ready). Interim contact: hangndat@gmail.com.',
   'privacy.note':
     'Figures match DECISION-LOG O06 (2026-10-18). Technical RPO/RTO (PRD targets) are not published as support SLA until a drill on the target VPS.',
   'support.title': 'Support',
-  'support.lead': 'Support for organizers and agencies using Vemoki.',
+  'support.lead': 'Support for organizers and agencies using Vemoki. Use the contact below for privacy questions or account-deletion follow-up if needed.',
   'support.email.label': 'Email',
   'support.email.value': 'support@vemoki.com',
   'support.sla':
