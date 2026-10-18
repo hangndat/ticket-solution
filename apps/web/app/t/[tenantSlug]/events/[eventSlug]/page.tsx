@@ -12,7 +12,6 @@ import {
   PUBLIC_EVENT_COPY,
   formatPublishedEventDate,
   heroCopyFromSections,
-  isExplicitDemoLabel,
   loadPublishedEventDetail,
   visiblePublishedSections,
 } from '../../../../../src/published';
@@ -90,7 +89,6 @@ export default async function EventPage({ params }: Props) {
   const hero = heroCopyFromSections(event.sections);
   const sections = visiblePublishedSections(event);
   const whenLabel = formatPublishedEventDate(event.startsAt, event.timezone);
-  const demo = isExplicitDemoLabel(event.name, event.brand.organizationName);
   const infoSections = sections.filter(
     (s) => s.kind === 'info' || s.kind === 'guide',
   );
@@ -109,9 +107,6 @@ export default async function EventPage({ params }: Props) {
             <Wordmark />
             <span>{event.brand.organizationName}</span>
           </nav>
-          {demo ? (
-            <p className="demo-label">{PUBLIC_EVENT_COPY.demoLabel}</p>
-          ) : null}
           <section className="hero" aria-labelledby="event-title">
             <div>
               <EventLogo
@@ -188,17 +183,6 @@ export default async function EventPage({ params }: Props) {
                 ))}
               </ul>
             </section>
-          ) : null}
-
-          {demo ? (
-            <aside className="notice">
-              <h2>{PUBLIC_EVENT_COPY.demoNoticeTitle}</h2>
-              <p>
-                {PUBLIC_EVENT_COPY.demoNoticeBody} Đổi mã thật tại{' '}
-                <Link href="/redeem">Đổi mã lấy vé</Link> sau khi{' '}
-                <Link href="/auth">đăng nhập</Link>.
-              </p>
-            </aside>
           ) : null}
 
           {event.faq.length > 0 ? (

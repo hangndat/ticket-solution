@@ -31,7 +31,6 @@ const STAFF_LINKS: NavLink[] = [
   { href: '/admin', label: 'Sự kiện', testId: 'nav-admin' },
   { href: '/gate', label: 'Cổng', testId: 'nav-gate' },
   { href: '/account', label: 'Tài khoản', testId: 'nav-account' },
-  { href: '/auth', label: 'Đăng nhập', testId: 'nav-auth' },
 ];
 
 test('isMembershipAuthzDenial matches MEMBERSHIP_* / PERMISSION_DENIED 401/403', () => {

@@ -153,8 +153,7 @@ nav a,
   opacity: 0.55;
   cursor: wait;
 }
-.auth-buttons button:nth-child(2),
-.auth-buttons a.button-link:nth-child(3) {
+.auth-buttons a.button-link-secondary {
   background: transparent;
   color: var(--ink);
 }
@@ -202,8 +201,7 @@ nav a,
   letter-spacing: -0.03em;
   text-transform: lowercase;
 }
-.eyebrow,
-.demo-label {
+.eyebrow {
   font-size: 0.72rem;
   letter-spacing: 0.12em;
   font-weight: 700;
@@ -277,39 +275,45 @@ h2 {
   display: block;
   width: 100%;
   height: auto;
-  object-fit: cover;
+  object-fit: contain;
+  object-position: center;
   background: transparent;
 }
 .event-banner-card {
-  max-height: 140px;
+  max-height: 160px;
   border-radius: var(--radius-sm, 8px);
   aspect-ratio: 1200 / 630;
-  object-fit: cover;
+  object-fit: contain;
+  object-position: center;
+  background: var(--ink-faint, #e7e5e4);
 }
 .event-banner-hero {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
+  object-position: center;
 }
 .event-logo {
   display: block;
   height: auto;
   max-width: 100%;
   object-fit: contain;
+  object-position: left center;
   background: transparent;
 }
 .event-logo-card {
-  max-height: 36px;
+  max-height: 40px;
   width: auto;
-  max-width: 180px;
+  max-width: 200px;
 }
 .event-logo-hero {
-  max-height: 48px;
+  max-height: 56px;
   width: auto;
-  max-width: 220px;
+  max-width: 240px;
   margin-bottom: var(--space-3);
+  object-position: left center;
 }
 .event-media {
   display: grid;
@@ -318,9 +322,14 @@ h2 {
 .poster-media {
   padding: 0;
   background: #1a1a1a;
+  /* Keep full poster artwork (logo/text) visible — do not crop left edge. */
+  overflow: hidden;
 }
 .poster-media .event-banner-hero {
   position: absolute;
+  inset: 0;
+  object-fit: contain;
+  object-position: center;
 }
 .event-row:hover {
   padding-left: var(--space-3);
@@ -400,13 +409,6 @@ h2 {
 }
 .event-page .wordmark {
   font-size: 1.35rem;
-}
-.demo-label {
-  display: inline-block;
-  border: 1px solid currentColor;
-  border-radius: 30px;
-  padding: 6px 12px;
-  margin: 26px 0;
 }
 .hero {
   display: grid;
