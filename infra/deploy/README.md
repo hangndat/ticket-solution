@@ -32,7 +32,9 @@ Deploy một service khi chỉ service đó đổi. `restart` đủ sau khi buil
 
 ## MinIO (CSV export + D9 demo assets)
 
-Local demo seed (không prod): `D9_MEDIA_STACK_UP=1 ./scripts/d9-seed-media.sh` — checklist `docs/ops/MEDIA-ASSET-CHECKLIST.md`. Nếu Docker Hub chặn `minio/minio`, script fallback `cleanstart/minio` giống test `minio-real`.
+Local demo seed (không prod): `D9_MEDIA_STACK_UP=1 ./scripts/d9-seed-media.sh` — checklist `docs/ops/MEDIA-ASSET-CHECKLIST.md`.
+
+**Image pin (O1):** `cleanstart/minio@sha256:4febd64f632c221b48e0fbf435ac534df822aa5b06805540c03973939e4cc82a` — official Hub/Quay `minio/minio` đã đóng anonymous pull. Init: `amazon/aws-cli:2.17.50@sha256:ac68e76a…` (thay `minio/mc`). Chi tiết: `docs/architecture/object-store-minio-replacement.md`.
 
 Prod từng trả `MINIO_MISCONFIGURED` vì api/worker thiếu endpoint + không có container. Sau khi merge:
 
