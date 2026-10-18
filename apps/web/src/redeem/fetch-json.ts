@@ -5,6 +5,42 @@ export type FetchJsonResult = {
   networkError: boolean;
 };
 
+export type FetchJsonResultObserver = (
+  result: FetchJsonResult,
+  requestUrl: string,
+) => void;
+
+const resultObservers = new Set<FetchJsonResultObserver>();
+
+/**
+ * Subscribe to every fetchJson outcome (browser clients).
+ * Used by SEC-CACHE to clear SiteNav when BFF returns MEMBERSHIP_* 401/403.
+ */
+export function subscribeFetchJsonResult(
+  observer: FetchJsonResultObserver,
+): () => void {
+  resultObservers.add(observer);
+  return () => {
+    resultObservers.delete(observer);
+  };
+}
+
+function requestUrlOf(input: RequestInfo): string {
+  if (typeof input === 'string') return input;
+  if (input instanceof URL) return input.toString();
+  return input.url;
+}
+
+function publishResult(result: FetchJsonResult, requestUrl: string): void {
+  for (const observer of resultObservers) {
+    try {
+      observer(result, requestUrl);
+    } catch {
+      // Observers must not break callers.
+    }
+  }
+}
+
 function isAbortError(error: unknown): boolean {
   return (
     (error instanceof DOMException && error.name === 'AbortError') ||
@@ -22,6 +58,7 @@ export async function fetchJson(
   timeoutMs: number,
   fetchImpl: typeof fetch = fetch,
 ): Promise<FetchJsonResult> {
+  const requestUrl = requestUrlOf(input);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -40,12 +77,20 @@ export async function fetchJson(
         json = { code: 'INVALID_UPSTREAM_JSON', message: text.slice(0, 400) };
       }
     }
-    return { status: response.status, json, timedOut: false, networkError: false };
+    const result: FetchJsonResult = {
+      status: response.status,
+      json,
+      timedOut: false,
+      networkError: false,
+    };
+    publishResult(result, requestUrl);
+    return result;
   } catch (error) {
-    if (isAbortError(error)) {
-      return { status: 0, json: null, timedOut: true, networkError: false };
-    }
-    return { status: 0, json: null, timedOut: false, networkError: true };
+    const result: FetchJsonResult = isAbortError(error)
+      ? { status: 0, json: null, timedOut: true, networkError: false }
+      : { status: 0, json: null, timedOut: false, networkError: true };
+    publishResult(result, requestUrl);
+    return result;
   } finally {
     clearTimeout(timer);
   }
