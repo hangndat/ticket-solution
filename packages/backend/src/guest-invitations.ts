@@ -1,5 +1,6 @@
 /**
- * H-I2 guest invitations — list (masked), dispatch-preview, dispatch, claim.
+ * H-I2 guest invitations — list (masked), dispatch-preview, dispatch.
+ * H-I3 attendee claim — verified email, one-time token, issue via redeem path.
  * Dispatch never reserves quota; claim allocates via redemption.issue path.
  */
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
@@ -23,6 +24,7 @@ import {
 import type { CodeHmacConfig } from './code-hmac';
 import { hashRedemptionCode } from './code-hmac';
 import {
+  REDEEM_COMMAND,
   redeemAndIssueTicket,
   type RedeemOutcome,
 } from './issue';
@@ -537,7 +539,8 @@ export async function claimGuestInvitation(
       SELECT id, event_id, source_id, ticket_type_id, invited_email, state,
              expires_at, redemption_code_id
       FROM guest_invitations
-      WHERE token_hash = ${tokenHash}
+      WHERE tenant_id = ${input.tenantId}::uuid
+        AND token_hash = ${tokenHash}
       FOR UPDATE
     `;
     const inv = invitations[0];
@@ -575,7 +578,26 @@ export async function claimGuestInvitation(
         410,
       );
     }
-    if (inv.state !== 'DISPATCHED' && inv.state !== 'CLAIMED') {
+    if (inv.state === 'CLAIMED') {
+      // One-time token: only same Idempotency-Key may replay the issued ticket.
+      const prior = await tx.$queryRaw<Array<{ id: string }>>`
+        SELECT id FROM operations
+        WHERE tenant_id = ${input.tenantId}::uuid
+          AND event_id = ${input.eventId}::uuid
+          AND actor_user_id = ${input.actorUserId}::uuid
+          AND command = ${REDEEM_COMMAND}
+          AND client_key = ${key}
+          AND status = 'COMPLETED'
+        LIMIT 1
+      `;
+      if (!prior[0]) {
+        throw new ImportError(
+          IMPORT_ERROR_CODES.INVITATION_TOKEN_INVALID,
+          'Invitation token was already claimed',
+          410,
+        );
+      }
+    } else if (inv.state !== 'DISPATCHED') {
       throw new ImportError(
         IMPORT_ERROR_CODES.INVITATION_TOKEN_INVALID,
         'Invitation is not claimable yet',

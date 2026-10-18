@@ -2,9 +2,10 @@ import { cookies } from 'next/headers';
 import { sessionCookieOptions } from '@ticket/web-session';
 import { assertSameOrigin } from './origin';
 import { bffApiError } from './api-error';
+import { CSRF_COOKIE, CSRF_HEADER } from './csrf-constants';
 
-export const CSRF_COOKIE = 'portal_csrf';
-export const CSRF_HEADER = 'x-portal-csrf';
+export { CSRF_COOKIE, CSRF_HEADER } from './csrf-constants';
+
 
 export async function ensureCsrfCookie(): Promise<string> {
   const jar = await cookies();
