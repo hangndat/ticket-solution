@@ -98,11 +98,15 @@ export function SalesPage({ locale }: { locale: MarketingLocale }) {
           <div className="mkt-stack">
             <div className="mkt-row">
               <h3>{t(locale, 'whitelabel.point1')}</h3>
-              <p>{t(locale, 'whitelabel.point2')}</p>
+              <p>{t(locale, 'whitelabel.point1.body')}</p>
+            </div>
+            <div className="mkt-row">
+              <h3>{t(locale, 'whitelabel.point2')}</h3>
+              <p>{t(locale, 'whitelabel.point2.body')}</p>
             </div>
             <div className="mkt-row">
               <h3>{t(locale, 'whitelabel.point3')}</h3>
-              <p>{t(locale, 'whitelabel.lead')}</p>
+              <p>{t(locale, 'whitelabel.point3.body')}</p>
             </div>
           </div>
         </section>

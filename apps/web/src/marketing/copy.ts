@@ -47,8 +47,11 @@ export type CopyKey =
   | 'whitelabel.title'
   | 'whitelabel.lead'
   | 'whitelabel.point1'
+  | 'whitelabel.point1.body'
   | 'whitelabel.point2'
+  | 'whitelabel.point2.body'
   | 'whitelabel.point3'
+  | 'whitelabel.point3.body'
   | 'trust.title'
   | 'trust.lead'
   | 'trust.p1.title'
@@ -162,8 +165,14 @@ const VI: Record<CopyKey, string> = {
   'whitelabel.lead':
     'Trang sự kiện và trải nghiệm khách mang identity org/event. Vemoki xuất hiện ở marketing, tài khoản và đăng nhập.',
   'whitelabel.point1': 'Logo & màu sự kiện cấu hình được',
+  'whitelabel.point1.body':
+    'Guest surface lấy asset và palette theo event đã publish — không skin-only một màu.',
   'whitelabel.point2': 'Ba lớp brand: platform · org · event',
+  'whitelabel.point2.body':
+    'Marketing/account/IdP giữ Vemoki; org và event không lẫn chrome platform sai ngữ cảnh.',
   'whitelabel.point3': 'Agency chạy nhiều client trên cùng platform',
+  'whitelabel.point3.body':
+    'Membership nhiều tenant — không fork code per-client.',
   'trust.title': 'An toàn vận hành',
   'trust.lead': 'Thiết kế cho cổng thật — không dashboard “ảo real-time”.',
   'trust.p1.title': 'Tách tenant',
@@ -289,8 +298,14 @@ const EN: Record<CopyKey, string> = {
   'whitelabel.lead':
     'Event pages and guest flows carry org/event identity. Vemoki shows up on marketing, account, and sign-in.',
   'whitelabel.point1': 'Configurable event logo & colors',
+  'whitelabel.point1.body':
+    'Guest surfaces use published event assets and palette — not a one-color skin.',
   'whitelabel.point2': 'Three brand layers: platform · org · event',
+  'whitelabel.point2.body':
+    'Marketing/account/IdP stay Vemoki; org and event never fall back to the wrong platform chrome.',
   'whitelabel.point3': 'Agencies run many clients on one platform',
+  'whitelabel.point3.body':
+    'Multi-tenant membership — no per-client code forks.',
   'trust.title': 'Operational safety',
   'trust.lead': 'Built for real gates — not fake real-time dashboards.',
   'trust.p1.title': 'Tenant isolation',
