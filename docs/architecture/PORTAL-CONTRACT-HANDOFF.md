@@ -91,18 +91,23 @@ tenants/{tenantId}/events/{eventId}/imports/quarantine/{fileId}
 ```
 
 - Client **không** gửi `objectKey` / upload URL.
-- Bucket imports **private**; list/detail job **không** trả object key hay presigned download của CSV gốc.
-- Error report download: signed GET ngắn hạn **sau** authz, TTL kỹ thuật mặc định `IMPORT_ERROR_REPORT_TTL_HOURS_DEV` (24h) — production retention object theo O06 (90d objects) do ops/job cleanup, không mở số mới ở đây.
+- Bucket imports **private**; list/detail/`ImportJob` DTO **không** trả object key, upload URL, hay **presigned** download URL.
+- Error report: **`GET …/imports/:importId/errors` authenticated stream** (Bearer + event authz) → `text/csv` (BFF `interpretImportErrorsDownload` đã parse stream, không JSON URL). **Không** nhúng presigned URL vào list/job DTO.
+- TTL: `IMPORT_ERROR_REPORT_TTL_HOURS_DEV` (24h) = **default kỹ thuật dev/unset only** — **không** khẳng định TTL production mới. Object cleanup production neo **O06** (DECISION-LOG): object store job xóa **≤ 90 ngày** sau hết hạn nghiệp vụ; audit **730 ngày**.
 
 ### D3 — Preview không reserve; commit PG idempotent
 
 | Bước | Hành vi |
 | --- | --- |
-| Preview | Parse CSV + mapping; đếm valid/error/invitation; `estimatedQuota` **ước lượng**; **cấm** tăng `quota_buckets.allocated` / hold codes |
-| Commit | `Idempotency-Key` bắt buộc; khớp `previewRevision` + `mappingRevision` + `fileHash`; stale → `IMPORT_STALE_PREVIEW` |
-| Concurrency | `SELECT … FOR UPDATE` trên import job row (và event khi cần quota); một commit thắng; replay cùng key → `replayed: true` + cùng response |
-| Transaction | Codes HMAC insert / invitation rows / quota allocate trong **một** PG transaction; outbox mail **sau** commit (ADR-17) — không success giả nếu TX rollback |
-| Quota | Respect `tenant_limits.import_rows_per_job` ∩ `IMPORT_LIMITS.maxRows` (10_000); thiếu capacity → fail commit, không partial allocate |
+| Preview | Parse CSV + mapping; đếm valid/error/invitation; `estimatedQuota` **ước lượng chỗ trống**; **cấm** tăng `quota_buckets.allocated` / hold codes |
+| Commit CODES | Giữ semantics legacy `importRedemptionCodes`: insert `redemption_codes` `AVAILABLE` + HMAC — **không** `allocated++` (quota chỉ tăng lúc **issue** ticket — `issue.ts`) |
+| Commit GUESTS | Insert invitation rows (`PENDING`); **không** `allocated++`; **không** tạo ticket/code hold |
+| Dispatch | Gửi mail / `DISPATCHED` state only; **không** reserve/`allocated++` trước claim |
+| Claim → issue | Quota allocate + code/ticket theo path `issue` hiện có (claim bound email verified) — đây mới là chỗ SoT quota |
+| Commit mech | `Idempotency-Key` bắt buộc; khớp `previewRevision` + `mappingRevision` + `fileHash`; stale → `IMPORT_STALE_PREVIEW` |
+| Concurrency | `SELECT … FOR UPDATE` trên import job row; một commit thắng; replay cùng key → `replayed: true` + cùng response |
+| Transaction | Codes HMAC insert **hoặc** invitation rows trong **một** PG TX; outbox mail **sau** commit (ADR-17); không success giả nếu TX rollback |
+| Row caps | `tenant_limits.import_rows_per_job` ∩ `IMPORT_LIMITS.maxRows` (10_000); vượt → fail, không partial insert |
 
 ### D4 — Invitations (H-I2) + claim (H-I3 attendee)
 
@@ -155,13 +160,9 @@ export interface ImportPreviewBody {
   columnMapping: { code?: string; email?: string };
 }
 
-// Errors download (JSON envelope optional; or text/csv)
-export interface ImportErrorReportMeta {
-  importId: string;
-  expiresAt: string;           // ISO
-  rowCount: number;
-  // rows: { line, fieldId, code, message } — message must not echo full PII/raw codes
-}
+// Errors = authenticated CSV stream (not a JSON DTO with URL):
+// GET …/errors → 200 text/csv | 403 | 404 | 410 IMPORT_ERROR_REPORT_EXPIRED
+// Columns: line, fieldId, code, message — message must not echo full PII/raw codes
 ```
 
 **Validation upload (Nest):**
@@ -211,10 +212,10 @@ GET /v1/tenants/{t}/events/{e}/audit?cursor&limit&from&to&action
 | --- | --- |
 | Permission | **`report.read`** + event assignment (như reporting) |
 | Roles | Owner cần assignment; Manager allowlist; **CS / Scanner / Supervisor không** |
-| Response item | `PortalAuditEntry`: `auditId`, `actorUserId`, `action`, `resourceType`, `resourceId`, `reason`, `createdAt`, `operationId?` |
-| **Cấm** | raw email/phone/token/code/`code_hmac`; dump `sanitizedDiff`; total count giả |
+| Response item | `PortalAuditEntry`: `auditId`, `actorUserId`, `action`, `resourceType`, `resourceId`, `createdAt`, `operationId?`, optional **`reasonCode`** (stable allowlist only, vd. gate reject codes) |
+| **Cấm** | free-text `reason` (có thể chứa PII/token/raw code); raw email/phone/token/code/`code_hmac`; **mọi** dump `sanitizedDiff` / payload; total count giả |
 | Cursor | opaque `nextCursor`; limit 1..100 default 20 |
-| Retention | Tôn O06 audit 730d — list chỉ trong cửa sổ còn giữ |
+| Retention | **O06 đã chốt** (DECISION-LOG): audit TTL **730 ngày** — list chỉ hàng còn trong TTL; **không** invent TTL production mới |
 
 ### 5.2 H-C1 — Codes inventory browse
 
@@ -233,7 +234,7 @@ GET /v1/tenants/{t}/events/{e}/codes?cursor&limit&state&sourceId&q
 
 | ID | Route | Auth | Projection |
 | --- | --- | --- | --- |
-| **H-P-AUDIT** | `GET /v1/platform/audit?cursor&limit&from&to&action&tenantId?` | Platform Operator + MFA verifier (`acr`/`ACR=2`, audience platform — **không** staff `report.read`) | `PlatformAuditEntry`: `auditId`, `actorUserId`, `action`, `resourceType`, `resourceId`, `tenantId`, `createdAt` — **không** dump `sanitized_diff` |
+| **H-P-AUDIT** | `GET /v1/platform/audit?cursor&limit&from&to&action&tenantId?` | Platform Operator + MFA verifier (`acr`/`ACR=2`, audience platform — **không** staff `report.read`) | `PlatformAuditEntry`: `auditId`, `actorUserId`, `action`, `resourceType`, `resourceId`, `tenantId`, `createdAt` — **không** free-text reason, **không** dump `sanitized_diff` |
 | **H-P1** | `GET /v1/platform/tenants?cursor&limit` | same Operator+MFA | Summary: `tenantId`, `name`/`slug` đã có trên create/get, `status`, `createdAt` — **không** secrets |
 | **H-P2** | `GET /v1/platform/tenants/{id}/health` | same | Health: dependency flags / degraded reasons đã có ops shape — **không** invent “success” business status; reuse existing tenant status enum từ platform-tenant |
 
@@ -245,12 +246,12 @@ GET /v1/tenants/{t}/events/{e}/codes?cursor&limit&state&sourceId&q
 
 1. Tenant context **transaction-local**; parameterized SQL; runtime role không bypass RLS.
 2. Import commit và invitation dispatch: **PostgreSQL SoT** cho quota/codes/invitation state; Redis không quyết định.
-3. Preview/dispatch-preview: zero writes to `quota_buckets.allocated` / code holds.
+3. Preview / dispatch-preview / guest **dispatch**: zero writes to `quota_buckets.allocated`. CODES commit may insert `AVAILABLE` codes (legacy semantics) **without** `allocated++`. Guest commit/dispatch **không** allocate; allocate chỉ tại claim→issue.
 4. Idempotency unique `(actor, command, client_key)` (pattern `platform_operations` / tenant ops) — replay không double-insert codes.
 5. Concurrent commit same `importId`: one `COMPLETED`; loser gets conflict or replay envelope — never double allocate.
 6. Cross-tenant `importId` / `invitationId` → **404** (không leak).
 7. List projections fail-closed on forbidden fields (mirror web invitation parser).
-8. Quarantine keys never returned to clients; error download requires authz + TTL.
+8. Quarantine keys / presigned URLs never in list/job DTOs; errors = authz Bearer CSV stream (410 when expired per technical TTL; prod object lifecycle = O06 ≤90d).
 9. Legacy sync path behavior **unchanged** for `{ codes }` body (compatibility).
 10. Claim: token single-use; bound email must match verified attendee email.
 
@@ -262,7 +263,9 @@ GET /v1/tenants/{t}/events/{e}/codes?cursor&limit&state&sourceId&q
 | --- | --- | --- |
 | I1 | Upload >10 MiB / non-UTF8 / non-CSV | 422 `IMPORT_FILE_INVALID` \| `IMPORT_ROW_LIMIT`; no orphan job |
 | I2 | Preview sau upload | counts OK; `quota_buckets.allocated` unchanged |
-| I3 | Commit happy | codes/invitations inserted; job `COMPLETED`; quarantine policy OK |
+| I3a | Commit CODES | `AVAILABLE` codes inserted; **allocated unchanged**; job `COMPLETED` |
+| I3b | Commit GUESTS + dispatch | invitations PENDING→DISPATCHED; **allocated unchanged** until claim/issue |
+| I3c | Errors GET | 200 `text/csv` stream under Bearer; body không chứa URL/presign |
 | I4 | Commit stale revision/hash | `IMPORT_STALE_PREVIEW`; no partial rows |
 | I5 | Commit replay same Idempotency-Key | `replayed: true`; identical body; no dup HMAC rows |
 | I6 | Concurrent commits | ≤1 success allocate; other conflict/replay |
@@ -274,7 +277,7 @@ GET /v1/tenants/{t}/events/{e}/codes?cursor&limit&state&sourceId&q
 | V3 | Dispatch + replay | idempotent; revision required |
 | V4 | Claim wrong email / reused token | `INVITATION_EMAIL_MISMATCH` / `INVITATION_TOKEN_INVALID` |
 | A1 | Audit without `report.read` / Supervisor | 403 |
-| A2 | Audit item never includes `sanitizedDiff` / PII | schema assert |
+| A2 | Audit item không có free-text `reason`, không `sanitizedDiff`, không PII | schema assert |
 | C1 | Codes list without hmac/raw | schema assert; `q` not echoed |
 | C2 | Codes without `inventory.import` | 403 |
 | P1 | Platform audit/tenants/health with staff token | 401/403 |
@@ -321,9 +324,11 @@ Chỉ cần coordinator **ack khi implement contracts**:
 
 1. Đặt `upload` vào `IMPORT_ENDPOINTS` đúng path `imports/files` (khớp BFF) — **recommended**.
 2. `ImportPreviewBody.columnMapping` có land cùng PR #422 hay follow-up — nếu tách, preview v1 có thể chấp nhận mapping đã gắn lúc create (field optional `mappingRevision` trên create BFF đã có).
-3. Error report format mặc định: `text/csv` vs `application/json` — recommend **CSV masked** + `Content-Disposition` filename `import-{id}-errors.csv` (web `interpretImportErrorsDownload` đã sẵn).
+3. Error report: **đã chốt** authenticated CSV stream (không JSON+presign) — khớp BFF hiện có.
 
 Nếu coordinator chọn lệch path upload → **bắt buộc** cập nhật BFF `importsUploadPath` cùng PR contracts (ownership web), không im lặng.
+
+**Authority contracts:** root/coordinator giữ quyền chốt field names cuối trong `packages/contracts`; handoff này là design input, không tự merge OpenAPI.
 
 ---
 
