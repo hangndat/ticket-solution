@@ -429,9 +429,9 @@ export async function dispatchGuestInvitations(
           410,
         );
       }
-      // Mint a fresh dispatch token (previous mint from commit is for claim).
       // Keep claim token as the one stored at commit; dispatch only notifies.
-      // Recover raw token from InvitationTokenMinted outbox if still PENDING.
+      // Recover raw token from InvitationTokenMinted outbox payload
+      // (worker may COMPLETE the row without deleting payload).
       const minted = await tx.$queryRaw<
         Array<{ payload: { token?: string; email?: string } }>
       >`

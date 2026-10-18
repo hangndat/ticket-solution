@@ -41,6 +41,29 @@ export function buildInviteAcceptLink(input: {
 }
 
 /**
+ * Guest invitation claim URL for InvitationReady mail.
+ * Token lives in the URL fragment (#…) so it is not sent as a query Referrer
+ * (matches apps/web claim-intent: `#token=&tenantId=&eventId=`).
+ */
+export function buildGuestInvitationClaimLink(input: {
+  publicWebBaseUrl: string;
+  token: string;
+  tenantId: string;
+  eventId: string;
+  tenantSlug?: string;
+  eventSlug?: string;
+}): string {
+  const base = resolveProductWebBaseUrl(input.publicWebBaseUrl);
+  const hash = new URLSearchParams();
+  hash.set('token', input.token);
+  hash.set('tenantId', input.tenantId);
+  hash.set('eventId', input.eventId);
+  if (input.tenantSlug) hash.set('tenantSlug', input.tenantSlug);
+  if (input.eventSlug) hash.set('eventSlug', input.eventSlug);
+  return `${base}/claim#${hash.toString()}`;
+}
+
+/**
  * Canonical owner ticket URL embedded in TicketIssued email `{{ticketLink}}`
  * (see `processClaimedOutbox` → `buildOwnerTicketLink`).
  *
