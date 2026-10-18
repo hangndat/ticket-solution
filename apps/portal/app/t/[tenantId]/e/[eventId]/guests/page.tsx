@@ -99,8 +99,11 @@ export default function EventGuestsPage() {
   const canImport = permissions.includes('inventory.import');
   const canApprove = permissions.includes('redemption.approve');
   const canNotify = permissions.includes('notify.send');
+  const canExportCreate = permissions.includes('export.create');
+  const canExportDownload = permissions.includes('export.download');
+  const canExport = canExportCreate || canExportDownload;
   const canOps =
-    canImport || canApprove || canNotify || permissions.includes('report.read');
+    canImport || canApprove || canNotify || canExport;
 
   if (access.kind === 'loading') return <SurfaceState kind="loading" />;
   if (access.kind === 'error') {
@@ -116,13 +119,16 @@ export default function EventGuestsPage() {
     return (
       <SurfaceState
         kind="permission-denied"
-        description="Cần inventory.import / redemption.approve / notify.send từ máy chủ."
+        description="Cần inventory.import / redemption.approve / notify.send / export.* từ máy chủ."
         onRetry={() => {
           window.location.href = `/t/${tenantId}/e/${eventId}`;
         }}
       />
     );
   }
+
+  const catalogSources = sources;
+  const catalogTypes = types;
 
   const tabItems: { key: string; label: string; children: ReactNode }[] = [];
   if (canImport) {
@@ -139,8 +145,8 @@ export default function EventGuestsPage() {
       ),
     });
   }
-  tabItems.push(
-    {
+  if (canApprove) {
+    tabItems.push({
       key: 'pending',
       label: 'Chờ duyệt',
       children: (
@@ -148,10 +154,14 @@ export default function EventGuestsPage() {
           tenantId={tenantId}
           eventId={eventId}
           canApprove={canApprove}
+          sources={catalogSources}
+          ticketTypes={catalogTypes}
         />
       ),
-    },
-    {
+    });
+  }
+  if (canNotify) {
+    tabItems.push({
       key: 'notifications',
       label: 'Thông báo',
       children: (
@@ -161,13 +171,22 @@ export default function EventGuestsPage() {
           canNotify={canNotify}
         />
       ),
-    },
-    {
+    });
+  }
+  if (canExport) {
+    tabItems.push({
       key: 'export',
       label: 'Export',
-      children: <ExportPanel tenantId={tenantId} eventId={eventId} />,
-    },
-  );
+      children: (
+        <ExportPanel
+          tenantId={tenantId}
+          eventId={eventId}
+          canCreate={canExportCreate}
+          canDownload={canExportDownload}
+        />
+      ),
+    });
+  }
 
   return (
     <Space direction="vertical" size="large" style={{ width: '100%' }}>

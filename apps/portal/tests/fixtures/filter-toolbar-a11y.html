@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <title>Portal filter toolbar — a11y sample</title>
+  </head>
+  <body>
+    <a href="#portal-main" class="portal-skip-link">Bỏ qua tới nội dung</a>
+    <main id="portal-main">
+      <form role="search" aria-label="Bộ lọc danh sách portal">
+        <label for="filter-source">Source</label>
+        <select id="filter-source" name="sourceId">
+          <option value="">Tất cả</option>
+        </select>
+        <label for="filter-type">Ticket type</label>
+        <select id="filter-type" name="ticketTypeId">
+          <option value="">Tất cả</option>
+        </select>
+        <button type="submit" aria-label="Áp dụng bộ lọc">Lọc</button>
+      </form>
+      <div role="status" aria-live="polite">
+        Kết quả chưa biết — không coi là thành công.
+      </div>
+    </main>
+  </body>
+</html>
