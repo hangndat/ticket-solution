@@ -86,6 +86,9 @@ GRANT EXECUTE ON FUNCTION assert_can_open_staff_session(uuid) TO ticket_runtime;
 ALTER FUNCTION assert_can_open_staff_session(uuid) OWNER TO migration_owner;
 
 -- Defense-in-depth: raw INSERT cannot bypass the open-deletion check.
+-- SEC-R1: take the same advisory xact lock as revoke/assert BEFORE EXISTS so an
+-- uncommitted INSERT cannot race ACK revoke under READ COMMITTED (TOCTOU).
+-- Calling assert_can_open_staff_session keeps lock ordering identical to the app path.
 CREATE OR REPLACE FUNCTION staff_sessions_deny_if_deletion_open()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -93,15 +96,7 @@ SECURITY DEFINER
 SET search_path = pg_catalog, public
 AS $$
 BEGIN
-  IF EXISTS (
-    SELECT 1
-    FROM public.account_deletion_requests r
-    WHERE r.user_id = NEW.user_id
-      AND r.state IN ('REQUESTED', 'UNDER_REVIEW', 'AWAITING_POLICY')
-  ) THEN
-    RAISE EXCEPTION 'ACCOUNT_DELETION_OPEN'
-      USING ERRCODE = 'check_violation';
-  END IF;
+  PERFORM public.assert_can_open_staff_session(NEW.user_id);
   RETURN NEW;
 END;
 $$;
