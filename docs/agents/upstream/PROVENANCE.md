@@ -19,6 +19,7 @@ Chỉ **một tập con** agent được copy vào thư mục này. Không cài 
 | `product/product-manager.md` | Product / BA |
 | `design/design-ux-architect.md` | Product Design / UX (nền tảng + handoff) |
 | `design/design-ui-designer.md` | Product Design / UX (visual + component) |
+| `engineering/engineering-software-architect.md` | Architect (kiến trúc hệ thống/contract/ADR, bổ sung ngày 2026-10-18; cùng snapshot commit phía trên) |
 | `engineering/engineering-backend-architect.md` | Backend |
 | `engineering/engineering-frontend-developer.md` | Web |
 | `engineering/engineering-mobile-app-builder.md` | iOS |

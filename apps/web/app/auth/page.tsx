@@ -12,7 +12,7 @@ export const dynamic = 'force-dynamic';
 export const metadata = {
   title: 'Đăng nhập',
   description:
-    'Đăng nhập Keycloak + BFF cookie (OIDC). Không phải cổng kiểm soát vé production.',
+    'Đăng nhập Vemoki để đổi mã lấy vé hoặc quản lý sự kiện. Không phải cổng kiểm soát vé.',
 };
 
 export default function AuthPage() {
@@ -25,30 +25,38 @@ export default function AuthPage() {
 
       <h1>Đăng nhập</h1>
       <p className="intro">
-        Phiên web qua Keycloak tự host: cookie HttpOnly, Authorization Code +
-        PKCE, BFF same-origin cho <code>GET /v1/me</code>. Không dùng trang này
-        làm kiểm soát vé live. Không IdP SaaS.
+        Đăng nhập để đổi mã lấy vé, nhận lời mời, hoặc mở khu vực tổ chức. Đây
+        không phải cổng kiểm soát vé tại cửa.
       </p>
 
       {!configured ? (
         <aside className="notice auth-unconfigured state-error" role="status">
-          <h2>OIDC chưa cấu hình</h2>
+          <h2>Cần đăng nhập</h2>
           <p>
-            Thiếu <code>OIDC_ISSUER</code>, <code>OIDC_CLIENT_ID</code>,{' '}
-            <code>OIDC_CLIENT_SECRET</code> hoặc <code>OIDC_REDIRECT_URI</code>.
-            Fail closed — không coi là đã đăng nhập, không mock user.
+            Đăng nhập chưa sẵn sàng trên môi trường này — không coi là đã đăng
+            nhập và không dùng phiên giả.
           </p>
-          <p>
-            Auth state:{' '}
-            <strong>
-              {state.status} / authenticated={String(state.authenticated)}
-            </strong>
-          </p>
-          <p>
-            Sao chép placeholder từ <code>apps/web/.env.example</code> sang{' '}
-            <code>.env.local</code> (không commit secret). Khởi động Keycloak:{' '}
-            <code>docker compose up -d keycloak</code>.
-          </p>
+          {process.env.NODE_ENV !== 'production' ? (
+            <details className="redeem-meta">
+              <summary>Chi tiết kỹ thuật (dev)</summary>
+              <p>
+                Thiếu <code>OIDC_ISSUER</code>, <code>OIDC_CLIENT_ID</code>,{' '}
+                <code>OIDC_CLIENT_SECRET</code> hoặc{' '}
+                <code>OIDC_REDIRECT_URI</code>.
+              </p>
+              <p>
+                Auth state:{' '}
+                <strong>
+                  {state.status} / authenticated={String(state.authenticated)}
+                </strong>
+              </p>
+              <p>
+                Sao chép placeholder từ <code>apps/web/.env.example</code> sang{' '}
+                <code>.env.local</code> (không commit secret). Khởi động IdP:{' '}
+                <code>docker compose up -d keycloak</code>.
+              </p>
+            </details>
+          ) : null}
         </aside>
       ) : (
         <AuthSession />

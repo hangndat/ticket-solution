@@ -1,7 +1,11 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { FlatList, Pressable, Text, View } from 'react-native';
 import { Link } from 'expo-router';
-import { demoTenants, eventDate, listDemoEvents } from '@/data/demo-events';
+import {
+  demoTenants,
+  eventDate,
+  listDemoEvents,
+} from '@/data/demo-events';
 import { EventMediaHeader } from '@/components/event-media';
 import { BrandWordmark } from '@/components/page';
 import {
@@ -15,6 +19,7 @@ import { fetchPublishedEventList } from '@/published/published-event-api';
 import type { PublishedEventSummary } from '@/published/types';
 import { getApiBaseUrl } from '@/identity/config';
 import { colors } from '@/theme/colors';
+import { useTheme } from '@/theme/ThemeProvider';
 import { typography } from '@/theme/typography';
 
 function formatListDate(startsAt: string, timezone: string): string {
@@ -34,6 +39,7 @@ function formatListDate(startsAt: string, timezone: string): string {
  * published M04 content. Published list loads on demand (button) — fail-closed.
  */
 export function EventsScreen() {
+  const { applyBranding, theme } = useTheme();
   const [tenant, setTenant] = useState<string>(demoTenants[0]);
   const [publishedTenant, setPublishedTenant] = useState('demo-fun');
   const [published, setPublished] = useState<PublishedEventSummary[]>([]);
@@ -41,6 +47,21 @@ export function EventsScreen() {
     'idle' | 'loading' | 'ready' | 'error' | 'misconfigured'
   >(() => (getApiBaseUrl() ? 'idle' : 'misconfigured'));
   const [publishedError, setPublishedError] = useState<string | null>(null);
+
+  // S-P0-C: demo tenant switch drives event chrome (primary + org name), not skin-only.
+  useEffect(() => {
+    const demo = listDemoEvents(tenant)[0];
+    if (!demo) return;
+    applyBranding(
+      {
+        tenantSlug: demo.tenantSlug,
+        organizationName: demo.brand.organizationName,
+        primaryColor: demo.brand.primaryColor,
+        wordmark: demo.brand.organizationName,
+      },
+      'api',
+    );
+  }, [tenant, applyBranding]);
 
   const loadPublished = useCallback(async () => {
     if (!getApiBaseUrl()) {
@@ -77,6 +98,13 @@ export function EventsScreen() {
       ListHeaderComponent={
         <View style={{ gap: 16 }}>
           <BrandWordmark />
+          <Text
+            accessibilityLabel={`Tổ chức: ${tenant}`}
+            style={{ color: colors.secondary, ...typography.caption }}
+            selectable
+          >
+            Tổ chức: {tenant} · {theme.organizationName}
+          </Text>
           <Text style={{ color: colors.label, ...typography.title }}>
             Tìm sự kiện tiếp theo
           </Text>
@@ -91,7 +119,7 @@ export function EventsScreen() {
             Sự kiện đã xuất bản
           </Text>
           <Text selectable style={{ color: colors.secondary, ...typography.caption }}>
-            Tenant: {publishedTenant}
+            Tổ chức API: {publishedTenant}
           </Text>
           <Pressable
             accessibilityRole="button"

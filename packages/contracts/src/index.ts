@@ -115,8 +115,8 @@ export interface OperationStatusResponse {
 }
 
 /**
- * Lightweight public catalog projection (existing).
- * Typed published content sections live in EventConfigPayload — do not fork.
+ * Lightweight public catalog projection (legacy fixture shape).
+ * Prefer PublishedEventSummary / PublishedEventDetail (ADR-19) for Nest public APIs.
  */
 export interface PublicEvent {
   id: string;
@@ -128,6 +128,19 @@ export interface PublicEvent {
   location: string;
   brand: { primaryColor: string; organizationName: string };
 }
+
+export {
+  PUBLISHED_SECTION_KINDS,
+  PUBLISHED_EVENT_ENDPOINTS,
+  type PublishedSectionKind,
+  type PublishedSection,
+  type PublishedFaqItem,
+  type PublishedTerms,
+  type PublishedBrand,
+  type PublishedEventDetail,
+  type PublishedEventSummary,
+  type PublishedEventListResponse,
+} from './published-events';
 
 /* —— Feature freeze modules (C-E / C-B / C-I / C-F / C-N) —— */
 

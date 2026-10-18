@@ -46,7 +46,41 @@ class EventReportDto {
   @ApiProperty({ type: TicketStateCountsDto })
   ticketsByState!: TicketStateCountsDto;
   @ApiProperty({ type: EventQuotaSummaryDto }) quota!: EventQuotaSummaryDto;
+  /**
+   * Remaining seats when quotaCapacityState=FINITE.
+   * null for UNLIMITED or MISSING_BUCKET — never a fake 0.
+   */
+  @ApiProperty({ nullable: true, type: Number })
+  quotaRemaining!: number | null;
+  @ApiProperty({
+    enum: ['FINITE', 'UNLIMITED', 'MISSING_BUCKET'],
+    description:
+      'FINITE: capacity number + remaining; UNLIMITED: bucket capacity null; MISSING_BUCKET: no EVENT bucket',
+  })
+  quotaCapacityState!: 'FINITE' | 'UNLIMITED' | 'MISSING_BUCKET';
   @ApiProperty() pendingApprovalCount!: number;
+  /**
+   * Current Gate admits (checkins with undone_at IS NULL).
+   * Diverges from ticketsByState.USED after Supervisor undo.
+   */
+  @ApiProperty() checkInSuccessCount!: number;
+  /**
+   * Aggregate Gate rejects by stable reason/code (audit action gate.reject).
+   * No per-attendee PII.
+   */
+  @ApiProperty({
+    type: 'object',
+    additionalProperties: { type: 'number' },
+    example: { ALREADY_CHECKED_IN: 2, TICKET_NOT_ACTIVE: 1 },
+  })
+  rejectByReason!: Record<string, number>;
+  /**
+   * Email notifications needing CS: DEAD after delivery exhaustion.
+   * Temporary FAILED and DEAD from ticket revoke/cancel are excluded.
+   */
+  @ApiProperty() emailNeedsCsCount!: number;
+  /** Server clock watermark for this snapshot (ISO-8601). */
+  @ApiProperty({ format: 'date-time' }) asOf!: string;
 }
 
 type Deps = {

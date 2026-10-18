@@ -815,8 +815,9 @@ export function offlineBannerCopy(input: {
   if (input.connectivity === 'online') {
     return {
       title: 'Trực tuyến',
-      body: 'Kết nối ổn. Hàng đợi offline trống.',
-      tone: 'admit',
+      body: 'Kết nối ổn. Hàng đợi offline trống — chỉ cho vào khi kết quả quét ghi nhận check-in.',
+      // Not admit green: connectivity ≠ admission (PD Gate composition).
+      tone: 'default',
     };
   }
   return {

@@ -192,9 +192,15 @@ export {
   confirmCheckin,
   undoCheckin,
   revokeTicket,
+  recordGateReject,
+  unwrapReserveOutcome,
+  unwrapConfirmOutcome,
   type StaffSessionResult,
   type ReserveResult,
   type ConfirmResult,
+  type ReserveOutcome,
+  type ConfirmOutcome,
+  type GateDenyOutcome,
   type UndoResult,
 } from './gate';
 export {
@@ -246,6 +252,12 @@ export {
   type PublishedFormTerms,
 } from './published-form';
 export {
+  listPublishedEvents,
+  getPublishedEventDetail,
+  isValidPublicTenantSlug,
+  isValidPublicEventSlug,
+} from './published-events';
+export {
   expirePendingRequest,
   expireDuePendingBatch,
   type ExpirePendingResult,
@@ -266,8 +278,10 @@ export {
 } from './report-error';
 export {
   readEventReport,
+  GATE_REJECT_AUDIT_ACTION,
   type EventReport,
   type TicketStateCounts,
+  type QuotaCapacityState,
 } from './reporting';
 export {
   createNoopEmailAdapter,

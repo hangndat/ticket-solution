@@ -1,10 +1,16 @@
 /**
  * D9 multi-tenant demo seed (fixture). Idempotent upsert by stable UUIDs.
  * Marked demo — never production identities or real secrets.
+ * ADR-19: also publishes marketing config (hero/info/faq) for public catalog.
  */
 import { randomUUID } from 'node:crypto';
+import type { EventConfigPayload } from '@ticket/contracts';
 import type { PrismaClient, Prisma } from './generated/prisma/client';
 import { hashRedemptionCode, type CodeHmacConfig } from './code-hmac';
+import {
+  publishEventConfig,
+  saveEventConfigVersion,
+} from './config-publish';
 import {
   eventPermissionsForRole,
   tenantPermissionsForRole,
@@ -80,9 +86,151 @@ export type D9DemoSeedReport = {
   membershipsSkipped: number;
   assignmentsGranted: number;
   assignmentsSkipped: number;
+  /** ADR-19 marketing config publish per event. */
+  configsPublished: number;
+  configsSkipped: number;
   staffUserIds: string[];
   attendeeUserIds: string[];
 };
+
+/** Marketing copy mapped into published sections (category/description/highlights). */
+const DEMO_MARKETING = {
+  funFest: {
+    category: 'Music / Community / Discovery',
+    description:
+      'A little louder. A little brighter. A day of live music, creative encounters and moments worth sharing. · Demo',
+    highlights: [
+      'Live sounds, all afternoon',
+      'Independent makers & creative spaces',
+      'Room to meet, move and explore',
+    ],
+  },
+  studioNight: {
+    category: 'Design / Ideas / Conversation',
+    description:
+      'Make space for a different perspective. An intimate gathering for people shaping what comes next. · Demo',
+    highlights: [
+      'Conversations with working designers',
+      'Hands-on material explorations',
+      'A shared table for fresh ideas',
+    ],
+  },
+} as const;
+
+function marketingPayload(
+  eventKey: keyof typeof DEMO_MARKETING,
+  brand: { primaryColor: string; organizationName: string },
+): EventConfigPayload {
+  const copy = DEMO_MARKETING[eventKey];
+  const highlightsText = copy.highlights.map((h) => `- ${h}`).join('\n');
+  return {
+    schemaVersion: 1,
+    brand,
+    sections: [
+      {
+        kind: 'hero',
+        id: 'hero-demo',
+        visible: true,
+        order: 0,
+        body: { title: copy.category, text: copy.description },
+      },
+      {
+        kind: 'info',
+        id: 'info-demo',
+        visible: true,
+        order: 1,
+        body: { title: 'Highlights', text: highlightsText },
+      },
+      {
+        kind: 'redeem',
+        id: 'redeem-demo',
+        visible: true,
+        order: 2,
+        body: {
+          title: 'Redeem',
+          text: 'Use a demo redemption code from the D9 seed dataset.',
+        },
+      },
+      {
+        kind: 'guide',
+        id: 'guide-demo',
+        visible: false,
+        order: 3,
+        body: { title: 'Guide', text: '' },
+      },
+      {
+        kind: 'faq',
+        id: 'faq-demo',
+        visible: true,
+        order: 4,
+        body: {
+          title: 'FAQ',
+          items: [
+            {
+              question: 'Is this a real event?',
+              answer: `No — this is fixture data (${DEMO_MARKER}).`,
+            },
+            {
+              question: 'Where do I redeem?',
+              answer: 'Use the redeem flow with a DEMO-* code from the seed.',
+            },
+          ],
+        },
+      },
+      {
+        kind: 'terms',
+        id: 'terms-demo',
+        visible: true,
+        order: 5,
+        body: {
+          title: 'Terms',
+          termsVersion: 'demo-terms-v1',
+          text: `Demo terms for fixture events (${DEMO_MARKER}). Not a real contract.`,
+        },
+      },
+    ],
+    termsVersion: 'demo-terms-v1',
+  };
+}
+
+async function ensurePublishedMarketingConfig(
+  tx: Prisma.TransactionClient,
+  input: {
+    tenantId: string;
+    eventId: string;
+    actorUserId: string;
+    eventKey: keyof typeof DEMO_MARKETING;
+    brand: { primaryColor: string; organizationName: string };
+  },
+): Promise<'published' | 'skipped'> {
+  const existing = await tx.$queryRaw<
+    Array<{ published_config_version: number | null }>
+  >`
+    SELECT published_config_version
+    FROM events
+    WHERE tenant_id = ${input.tenantId}::uuid
+      AND id = ${input.eventId}::uuid
+  `;
+  if (existing[0]?.published_config_version != null) {
+    return 'skipped';
+  }
+  const saved = await saveEventConfigVersion(tx, {
+    tenantId: input.tenantId,
+    eventId: input.eventId,
+    actorUserId: input.actorUserId,
+    payload: marketingPayload(input.eventKey, input.brand) as unknown as Record<
+      string,
+      unknown
+    >,
+  });
+  await publishEventConfig(tx, {
+    tenantId: input.tenantId,
+    eventId: input.eventId,
+    actorUserId: input.actorUserId,
+    expectedVersion: saved.version,
+  });
+  return 'published';
+}
 
 export type D9DemoSeedOptions = {
   /** OIDC issuer used when creating missing identity rows. */
@@ -450,6 +598,8 @@ export async function seedD9DemoDataset(
     membershipsSkipped: 0,
     assignmentsGranted: 0,
     assignmentsSkipped: 0,
+    configsPublished: 0,
+    configsSkipped: 0,
     staffUserIds,
     attendeeUserIds,
   };
@@ -461,8 +611,15 @@ export async function seedD9DemoDataset(
     report.tenants.push({ id: tenant.id, slug: tenant.slug, created });
   }
 
+  const actorUserId = staffUserIds[0]!;
   for (const event of [D9_DEMO.events.funFest, D9_DEMO.events.studioNight]) {
     const tenant = tenantByKey(event.tenantKey);
+    const eventKey =
+      event.slug === 'fun-fest' ? ('funFest' as const) : ('studioNight' as const);
+    const brand = {
+      primaryColor: event.tenantKey === 'fun' ? '#245B47' : '#59428A',
+      organizationName: tenant.name,
+    };
     const created = await withTenant(db, tenant.id, async (tx) => {
       const eventCreated = await ensureEvent(tx, tenant.id, event);
       const codes = await ensureInventory(tx, hmac, tenant.id, event);
@@ -480,6 +637,15 @@ export async function seedD9DemoDataset(
         if (access.assignment === 'granted') report.assignmentsGranted += 1;
         else report.assignmentsSkipped += 1;
       }
+      const configResult = await ensurePublishedMarketingConfig(tx, {
+        tenantId: tenant.id,
+        eventId: event.id,
+        actorUserId,
+        eventKey,
+        brand,
+      });
+      if (configResult === 'published') report.configsPublished += 1;
+      else report.configsSkipped += 1;
       return eventCreated;
     });
     report.events.push({

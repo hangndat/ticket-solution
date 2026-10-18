@@ -54,7 +54,7 @@ export default async function EventPage({ params }: Props) {
             <Wordmark />
             <span>{event.brand.organizationName}</span>
           </nav>
-          <p className="demo-label">Sự kiện demo · Fixture hư cấu</p>
+          <p className="demo-label">Sự kiện demo · Không dùng vào cổng</p>
           <section className="hero" aria-labelledby="event-title">
             <div>
               <EventLogo
@@ -136,9 +136,9 @@ export default async function EventPage({ params }: Props) {
           <aside className="notice">
             <h2>Chỉ là bản xem trước demo</h2>
             <p>
-              Nội dung fixture hư cấu, không phải listing live. Đổi mã thật
-              (tenant/event UUID + mã) tại <Link href="/redeem">Đổi mã</Link>{' '}
-              sau khi đăng nhập Keycloak.
+              Nội dung mang nhãn Demo — không phải lịch live. Đổi mã thật tại{' '}
+              <Link href="/redeem">Đổi mã lấy vé</Link> sau khi{' '}
+              <Link href="/auth">đăng nhập</Link>.
             </p>
           </aside>
           <section className="faq" aria-labelledby="faq-title">
@@ -146,14 +146,14 @@ export default async function EventPage({ params }: Props) {
             <details>
               <summary>Tôi lấy vé ở đây được không?</summary>
               <p>
-                Không trên trang fixture này. Dùng{' '}
-                <Link href="/redeem">form đổi mã</Link> với UUID tenant/event và
-                mã đổi qua Nest API (Keycloak BFF).
+                Không trên trang demo này. Dùng{' '}
+                <Link href="/redeem">Đổi mã lấy vé</Link> với mã của sự kiện
+                thật sau khi đăng nhập.
               </p>
             </details>
             <details>
               <summary>Ngày và địa điểm đã chốt chưa?</summary>
-              <p>Chưa. Mọi chi tiết trên trang này là fixture demo hư cấu.</p>
+              <p>Chưa. Mọi chi tiết trên trang này là bản demo mang nhãn rõ.</p>
             </details>
           </section>
           <Link className="back-link" href="/">

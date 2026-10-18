@@ -19,14 +19,14 @@ function AppStack() {
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen
         name="events/[tenantSlug]/[slug]"
-        options={{ title: 'Event details' }}
+        options={{ title: 'Chi tiết sự kiện' }}
       />
       <Stack.Screen
         name="events/fixture/[eventId]"
-        options={{ title: 'Fixture event' }}
+        options={{ title: 'Sự kiện demo' }}
       />
-      <Stack.Screen name="redeem" options={{ title: 'Redeem' }} />
-      <Stack.Screen name="claim" options={{ title: 'Claim invitation' }} />
+      <Stack.Screen name="redeem" options={{ title: 'Đổi mã' }} />
+      <Stack.Screen name="claim" options={{ title: 'Nhận vé mời' }} />
     </Stack>
   );
 }

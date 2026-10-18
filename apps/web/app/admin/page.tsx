@@ -23,11 +23,10 @@ export default async function Admin({ searchParams }: Props) {
   return (
     <main id="main" className="container shell redeem-page">
       <SiteNav variant="admin" />
-      <h1>Cấu hình sự kiện</h1>
+      <h1>Không gian quản trị sự kiện</h1>
       <p className="intro">
-        Chọn tenant/event do Operator cấp, chỉnh metadata, vòng đời, loại vé,
-        nguồn, publish, import, duyệt và CS/export. Shape sai hoặc timeout/5xx
-        là chưa biết — không coi là thành công.
+        Chọn tổ chức và sự kiện, rồi làm theo việc. Kết quả chưa rõ không coi
+        là thành công.
       </p>
       {!configured ? (
         <aside className="notice auth-unconfigured state-error" role="status">
