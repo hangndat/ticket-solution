@@ -94,21 +94,23 @@ export async function createAccountDeletionRequest(
       };
     }
     const requestId = randomUUID();
-    const requestedAt = new Date();
-    await tx.$executeRaw`
+    // Use PG clock_timestamp() — JS Date can sit ahead of Docker PG and
+    // leave rows invisible to list_due (requested_at <= clock_timestamp()).
+    const inserted = await tx.$queryRaw<{ requested_at: Date }[]>`
       INSERT INTO account_deletion_requests (
         id, user_id, state, requested_at, policy_version
       ) VALUES (
         ${requestId}::uuid, ${input.userId}::uuid, 'REQUESTED',
-        ${requestedAt}::timestamptz, ${O06_ACCOUNT_ANONYMIZE_POLICY_VERSION}
+        clock_timestamp(), ${O06_ACCOUNT_ANONYMIZE_POLICY_VERSION}
       )
+      RETURNING requested_at
     `;
     // Atomic with ACK: revoke failure rolls back the REQUESTED row.
     await revokeSessionsForUserInTx(tx, input.userId);
     return {
       requestId,
       state: 'REQUESTED' as const,
-      requestedAt: requestedAt.toISOString(),
+      requestedAt: inserted[0]!.requested_at.toISOString(),
       policyStatus: 'RESOLVED' as const,
       anonymizeWithinDays: O06_ACCOUNT_ANONYMIZE_MAX_DAYS,
     };
@@ -460,7 +462,30 @@ export async function purgeExpiredAccountDeletionTombstones(
 }
 
 /**
+ * Distinct key ids still needed to verify unexpired digests (R3 dual-accept).
+ * No digests/subjects returned — safe for ops alerts / gating only.
+ */
+async function listUnexpiredTombstoneKeyIds(
+  db: PrismaClient,
+): Promise<string[]> {
+  const rows = await db.$queryRaw<{ out_key_id: string }[]>`
+    SELECT out_key_id FROM account_deletion_unexpired_tombstone_key_ids()
+  `;
+  return rows.map((r) => r.out_key_id).filter((id) => typeof id === 'string' && id.length > 0);
+}
+
+function denyUpsertForDenylist(): never {
+  throw new IdentityError(
+    IDENTITY_ERROR_CODES.UNAUTHENTICATED,
+    'Account deletion in progress',
+  );
+}
+
+/**
  * Fail-closed identity gate: open deletion request or unexpired tombstone digest.
+ * Missing/invalid keyring fails closed when any unexpired digest exists (B1 / R3).
+ * Zero live tombstones + disabled keyring may stay operational (dev placeholder).
+ * Historical keyId still referenced by live digests must not be silently skipped.
  */
 export async function assertIdentityAllowedForUpsert(
   db: PrismaClient,
@@ -476,28 +501,49 @@ export async function assertIdentityAllowedForUpsert(
     )
   `;
   if (open[0]?.account_deletion_open_for_identity) {
-    throw new IdentityError(
-      IDENTITY_ERROR_CODES.UNAUTHENTICATED,
-      'Account deletion in progress',
-    );
+    denyUpsertForDenylist();
   }
+
+  const requiredKeyIds = await listUnexpiredTombstoneKeyIds(db);
 
   let keyring: TombstoneKeyring;
   try {
     keyring = readTombstoneKeyring(env);
   } catch (err) {
     if (err instanceof TombstoneKeyringError) {
-      // Without keyring we cannot verify digests; open-request check above still applies.
+      // Sanitized alert only — never log secrets, digests, or subjects.
       console.error(
         JSON.stringify({
           alert: 'account_deletion_tombstone_keyring_missing',
           severity: 'error',
           code: err.code,
+          operational_reason: 'keyring_unavailable',
+          live_tombstone_keys: requiredKeyIds.length,
         }),
       );
+      if (requiredKeyIds.length > 0) {
+        // Cannot verify digests without keys — do not guess identity match.
+        denyUpsertForDenylist();
+      }
+      // Legitimately disabled / unset keyring with zero live tombstones.
       return;
     }
     throw err;
+  }
+
+  const ringIds = new Set(keyring.keys.map((k) => k.keyId));
+  for (const keyId of requiredKeyIds) {
+    if (!ringIds.has(keyId)) {
+      console.error(
+        JSON.stringify({
+          alert: 'account_deletion_tombstone_key_unknown',
+          severity: 'error',
+          code: 'KEY_UNKNOWN',
+          operational_reason: 'required_unexpired_key_absent',
+        }),
+      );
+      denyUpsertForDenylist();
+    }
   }
 
   for (const digest of digestsForIdentity(
@@ -513,10 +559,7 @@ export async function assertIdentityAllowedForUpsert(
       )
     `;
     if (hit[0]?.account_deletion_tombstone_blocks) {
-      throw new IdentityError(
-        IDENTITY_ERROR_CODES.UNAUTHENTICATED,
-        'Account deletion in progress',
-      );
+      denyUpsertForDenylist();
     }
   }
 }
