@@ -3,7 +3,6 @@ import type {
   InviteCreatedResponse,
   MeTenantItem,
   MeTenantsResponse,
-  MembershipRole,
   MeTenantRole,
   PlatformCreateTenantResponse,
   PlatformMeResponse,
