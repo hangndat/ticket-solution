@@ -2,11 +2,13 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
   getApiBaseUrl,
+  getApsEnvironment,
   getOidcClientId,
   getOidcIssuer,
   getTenantId,
   getTenantSlug,
   isOidcConfigured,
+  showDemoEventCatalog,
 } from './config.ts';
 
 test('missing OIDC env is fail-closed (not configured)', () => {
@@ -91,4 +93,23 @@ test('tenant slug empty is null (theme keeps Vemoki defaults)', () => {
   assert.equal(getTenantSlug(), 'mfest-demo');
   if (previous === undefined) delete process.env.EXPO_PUBLIC_TENANT_SLUG;
   else process.env.EXPO_PUBLIC_TENANT_SLUG = previous;
+});
+
+test('production APS bake hides demo event catalog (no demo-mfest on TF home)', () => {
+  const keys = [
+    'EXPO_PUBLIC_APS_ENVIRONMENT',
+    'APS_ENVIRONMENT',
+    'APP_VARIANT',
+  ] as const;
+  const prev = Object.fromEntries(keys.map((k) => [k, process.env[k]]));
+  for (const k of keys) delete process.env[k];
+  assert.equal(getApsEnvironment(), 'development');
+  assert.equal(showDemoEventCatalog(), true);
+  process.env.EXPO_PUBLIC_APS_ENVIRONMENT = 'production';
+  assert.equal(getApsEnvironment(), 'production');
+  assert.equal(showDemoEventCatalog(), false);
+  for (const k of keys) {
+    if (prev[k] === undefined) delete process.env[k];
+    else process.env[k] = prev[k];
+  }
 });
