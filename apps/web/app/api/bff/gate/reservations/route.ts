@@ -1,3 +1,4 @@
+import { assertSameOrigin } from '../../../../../src/bff/origin';
 import { bffApiError, forwardWithBearer, isUuid } from '../../../../../src/bff/upstream';
 
 type Body = {
@@ -9,6 +10,8 @@ type Body = {
 
 /** POST /api/bff/gate/reservations → hold a ticket for this staff session. */
 export async function POST(request: Request) {
+  const csrf = assertSameOrigin(request);
+  if (csrf) return csrf;
   let body: Body;
   try {
     body = (await request.json()) as Body;

@@ -35,7 +35,16 @@ test('CSRF Origin mismatch fail-closed copy is VI', () => {
   const msg = messageForInviteError('CSRF_ORIGIN_MISMATCH');
   assert.equal(msg.kind, 'auth');
   assert.match(msg.title, /từ chối/i);
-  assert.match(msg.detail, /fail-closed|Origin/i);
+  assert.match(msg.detail, /Origin|giả mạo|không nhận/i);
+  assert.equal(/CSRF_ORIGIN_MISMATCH/i.test(`${msg.title} ${msg.detail}`), false);
+});
+
+test('CSRF token invalid copy is VI and never claims success', () => {
+  const msg = messageForInviteError('CSRF_TOKEN_INVALID');
+  assert.equal(msg.kind, 'auth');
+  assert.match(msg.title, /hết hạn|bảo vệ/i);
+  assert.match(msg.detail, /không coi là đã thành công|tải lại/i);
+  assert.equal(/CSRF_TOKEN_INVALID/i.test(`${msg.title} ${msg.detail}`), false);
 });
 
 test('UNAUTHENTICATED asks for Keycloak login', () => {
