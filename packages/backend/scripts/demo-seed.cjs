@@ -30,12 +30,17 @@ async function main() {
     process.exit(2);
   }
 
+  const forceRepublishMarketing =
+    process.env.D9_DEMO_FORCE_MARKETING === '1' ||
+    process.env.D9_DEMO_FORCE_MARKETING === 'true';
+
   const db = createDatabase(url, 2);
   try {
     const report = await seedD9DemoDataset(db, hmac, {
       oidcIssuer: issuer,
       staffSubject: process.env.D9_DEMO_STAFF_SUBJECT,
       attendeeSubject: process.env.D9_DEMO_ATTENDEE_SUBJECT,
+      forceRepublishMarketing,
     });
     console.log(
       JSON.stringify(
@@ -44,6 +49,7 @@ async function main() {
           fixture: true,
           marker: D9_DEMO.marker,
           issuer,
+          forceRepublishMarketing,
           ...report,
         },
         null,
