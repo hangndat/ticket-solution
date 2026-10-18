@@ -26,5 +26,13 @@ describe('PORTAL_UPSTREAM ops paths', () => {
     assert.match(PORTAL_UPSTREAM.codes(t, e), /\/codes$/);
     assert.equal(PORTAL_UPSTREAM.platformTenants, '/v1/platform/tenants');
     assert.equal(PORTAL_UPSTREAM.platformAudit, '/v1/platform/audit');
+    assert.equal(
+      PORTAL_UPSTREAM.platformTenantHealth(t),
+      `/v1/platform/tenants/${t}/health`,
+    );
+    assert.equal(
+      PORTAL_UPSTREAM.platformSupportGrantRevoke(t),
+      `/v1/platform/support-grants/${t}/revoke`,
+    );
   });
 });
