@@ -18,6 +18,18 @@
         "command": ".cursor/hooks/crg-update.sh",
         "timeout": 10
       }
+    ],
+    "stop": [
+      {
+        "command": ".cursor/hooks/agent-metrics-cursor-turn.sh",
+        "timeout": 15
+      }
+    ],
+    "afterAgentResponse": [
+      {
+        "command": ".cursor/hooks/agent-metrics-cursor-turn.sh",
+        "timeout": 15
+      }
     ]
   }
 }

@@ -3,21 +3,26 @@
  * Agent Role Monitor — local JSONL CLI (MVP).
  *
  * Commands:
- *   ingest-settlement  Append dispatch.settled (stdin or --file); idempotent
- *   record-opened      Append dispatch.opened (role_id required)
- *   rollup             Aggregate by_role (stdout / --out)
- *   host-sample        Optional ps sample → host.sample event
+ *   ingest-settlement     Append dispatch.settled (stdin or --file); idempotent
+ *   record-opened         Append dispatch.opened (role_id required)
+ *   record-join           Append join.conversation (conversation↔dispatch)
+ *   ingest-cursor-turn    Append cursor.turn from Cursor hook JSON (stdin)
+ *   rollup                Aggregate by_role (stdout / --out)
+ *   host-sample           Optional ps sample → host.sample event
  */
 import fs from 'node:fs';
 import path from 'node:path';
 import {
   appendEvent,
+  buildCursorTurnEvent,
   buildHeartbeatEvent,
   buildHostSampleEvent,
+  buildJoinEvent,
   buildOpenedEvent,
   defaultLedgerPath,
   normalizeSettlementInput,
   readEvents,
+  resolveJoinForHook,
   rollupByRole,
 } from './lib/ledger.mjs';
 import { samplePid } from './lib/host-sample.mjs';
@@ -32,6 +37,16 @@ Commands:
 
   record-opened --dispatch-id ID --role-id ID [--task-id ID] [--run-id ID]
       [--agent cursor] [--issue N] [--worktree PATH] [--ledger PATH]
+
+  record-join --conversation-id ID --dispatch-id ID --role-id ID
+      [--task-id ID] [--run-id ID] [--ledger PATH]
+      Append join.conversation (idempotent on conversation_id+dispatch_id).
+
+  ingest-cursor-turn [--file PATH] [--ledger PATH]
+      Read Cursor stop|afterAgentResponse JSON from stdin/--file.
+      Looks up join by conversation_id (or attrs.dispatch_id); appends
+      cursor.turn with token_source=hooks. Idempotent on generation_id.
+      Missing join → skip (exit 0) + stderr; no text/prompt fields stored.
 
   rollup [--ledger PATH] [--out PATH]
       Print by_role summary JSON; optional write --out.
@@ -65,6 +80,12 @@ async function main() {
       break;
     case 'record-opened':
       cmdRecordOpened(flags, ledger);
+      break;
+    case 'record-join':
+      cmdRecordJoin(flags, ledger);
+      break;
+    case 'ingest-cursor-turn':
+      await cmdIngestCursorTurn(flags, ledger);
       break;
     case 'rollup':
       cmdRollup(flags, ledger);
@@ -124,6 +145,84 @@ function cmdRecordOpened(flags, ledger) {
     worktree: flags.worktree,
     architecture_impact: flags['architecture-impact'],
     spec_hash: flags['spec-hash'],
+  });
+  const result = appendEvent(ledger, event);
+  printJson({
+    ok: true,
+    ledger,
+    appended: result.appended,
+    reason: result.reason ?? null,
+    event: result.event,
+  });
+}
+
+function cmdRecordJoin(flags, ledger) {
+  const event = buildJoinEvent({
+    conversation_id: flags['conversation-id'],
+    dispatch_id: flags['dispatch-id'],
+    role_id: flags['role-id'],
+    task_id: flags['task-id'],
+    run_id: flags['run-id'],
+    agent: flags.agent,
+    issue: flags.issue,
+  });
+  const result = appendEvent(ledger, event);
+  printJson({
+    ok: true,
+    ledger,
+    appended: result.appended,
+    reason: result.reason ?? null,
+    event: result.event,
+  });
+}
+
+async function cmdIngestCursorTurn(flags, ledger) {
+  let raw;
+  if (flags.file) {
+    raw = fs.readFileSync(path.resolve(flags.file), 'utf8');
+  } else {
+    raw = await readStdin();
+  }
+  if (!raw.trim()) {
+    throw new Error('ingest-cursor-turn: empty input (pass JSON on stdin or --file)');
+  }
+  let input;
+  try {
+    input = JSON.parse(raw);
+  } catch (err) {
+    throw new Error(`invalid JSON: ${err.message}`);
+  }
+
+  const hookEvent = input.hook_event_name || input.hookEventName || '';
+  if (hookEvent && hookEvent !== 'stop' && hookEvent !== 'afterAgentResponse') {
+    printJson({
+      ok: true,
+      ledger,
+      appended: false,
+      reason: 'ignored_hook_event',
+      hook_event_name: hookEvent,
+    });
+    return;
+  }
+
+  const events = readEvents(ledger);
+  const resolved = resolveJoinForHook(events, input);
+  if (!resolved) {
+    const conversationId = input.conversation_id || input.conversationId || null;
+    const msg = `ingest-cursor-turn: join missing for conversation_id=${conversationId ?? 'null'} — skip (no cursor.turn)`;
+    console.error(msg);
+    printJson({
+      ok: true,
+      ledger,
+      appended: false,
+      reason: 'join_missing',
+      conversation_id: conversationId,
+    });
+    return;
+  }
+
+  const event = buildCursorTurnEvent(input, resolved.join, {
+    conversation_id: resolved.conversation_id,
   });
   const result = appendEvent(ledger, event);
   printJson({
