@@ -61,7 +61,7 @@ Bật trên VPS (operator):
 
 ## MembershipInvite / Mailpit
 
-Worker cần `PUBLIC_WEB_BASE_URL=https://vemoki.com` và `TICKET_CREDENTIAL_KEY` (cho TicketIssued QR). Invite email relay qua SMTP → Mailpit; thiếu `PUBLIC_WEB_BASE_URL` làm fail-closed link accept. Outbox type `MembershipInvite` không bị chặn chỉ vì thiếu credential key (đã tách khỏi TicketIssued).
+Worker cần `PUBLIC_WEB_BASE_URL=https://app.vemoki.com` (O13 product origin; không dùng apex marketing) và `TICKET_CREDENTIAL_KEY` (cho TicketIssued QR). Invite email relay qua SMTP → Mailpit; thiếu `PUBLIC_WEB_BASE_URL` làm fail-closed link accept. Outbox type `MembershipInvite` không bị chặn chỉ vì thiếu credential key (đã tách khỏi TicketIssued).
 
 ## Lệnh
 
