@@ -128,7 +128,7 @@ async function cmdAuthSmoke(baseUrl) {
     if (!authRes || !authRes.ok()) {
       die(`GET /auth failed: ${authRes?.status()}`);
     }
-    const signIn = page.getByRole('link', { name: /Sign in \(Keycloak\)/i });
+    const signIn = page.locator('a[href="/api/auth/login"]');
     await signIn.waitFor({ state: 'visible', timeout: 15_000 });
 
     const me = await context.request.get(`${base}/api/bff/me`);
@@ -156,7 +156,7 @@ async function cmdAuthSmoke(baseUrl) {
 /** Keycloak password login; leaves page on app base with session cookies. */
 async function loginKeycloak(page, base, user, pass) {
   await page.goto(`${base}/auth`, { waitUntil: 'networkidle' });
-  await page.getByRole('link', { name: /Sign in \(Keycloak\)/i }).click();
+  await page.locator('a[href="/api/auth/login"]').click();
   await page.waitForURL(/openid-connect\/auth|login-actions/, { timeout: 30_000 });
 
   // Pin Keycloak to its advertised frontend host for the whole login so
