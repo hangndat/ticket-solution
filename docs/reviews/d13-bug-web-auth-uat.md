@@ -4,8 +4,8 @@
 | ------ | ------- |
 | Ngày | 2026-10-18 |
 | Scope | `apps/web` + `scripts/web-uat.*` |
-| Base / tip (trước PR) | `63535b48e2f17c65778246e5c44fc162f0dd9f26` |
-| Tip SHA (PR) | _(điền sau commit)_ |
+| Base / tip (trước PR) | `a6f6cd2e08c5f8e774397e008d9a8fa475e7303b` (main + #405/#400/#395) |
+| Tip SHA (PR) | `c2476df0bf2c10937a778bed76a4113e3d68c3b4` (rebased; proxy = O13 host-first + owner-ticket soft-redirect) |
 | Host | `https://app.vemoki.com` |
 | Architecture impact | Không (fix/UAT + proxy order / logout hint) |
 
