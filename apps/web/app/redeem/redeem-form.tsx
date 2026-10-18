@@ -48,6 +48,7 @@ import {
   REQUEST_TIMEOUT_MS,
 } from '../../src/redeem/poll-operation';
 import { loadPublishedRedeemSchema } from '../../src/redeem/published-schema';
+import { liveRegionForStatus } from '../../src/ui/live-region';
 import { SurfaceState } from '../../src/ui/surface-state';
 
 type Props = {
@@ -473,6 +474,11 @@ export function RedeemForm({
     return `redeem-status redeem-status--${ux.kind}`;
   }, [ux]);
 
+  const statusLive = useMemo(
+    () => (ux ? liveRegionForStatus(ux.kind) : null),
+    [ux],
+  );
+
   return (
     <div className="redeem-form">
       <form onSubmit={onSubmit} aria-labelledby="redeem-form-title" noValidate>
@@ -662,11 +668,12 @@ export function RedeemForm({
         </div>
       </form>
 
-      {ux ? (
+      {ux && statusLive ? (
         <section
           className={statusClass}
-          aria-live={ux.kind === 'unknown' ? 'assertive' : 'polite'}
-          role="status"
+          role={statusLive.role}
+          aria-live={statusLive.ariaLive}
+          aria-atomic={statusLive.ariaAtomic}
           data-testid={`redeem-ux-${ux.kind}`}
         >
           <h3>{ux.title}</h3>

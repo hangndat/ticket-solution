@@ -25,6 +25,7 @@ import {
 } from '../../src/gate/offline-messages';
 import { fetchJson } from '../../src/redeem/fetch-json';
 import { REQUEST_TIMEOUT_MS } from '../../src/redeem/poll-operation';
+import { liveRegionForStatus } from '../../src/ui/live-region';
 import { GateOfflineBanner } from './offline-banner';
 
 type Props = {
@@ -55,6 +56,9 @@ export function GateForm({ initialTenantId = '', initialEventId = '' }: Props) {
   /** Fail-closed: block mutate while offline or API unreachable (AC-G4). */
   const actionsBlocked = link !== 'online';
   const outcome = presentGateDecision(decision);
+  const outcomeLive = liveRegionForStatus(
+    outcome.assertive || outcome.kind === 'unknown' ? 'unknown' : 'idle',
+  );
 
   useEffect(() => {
     function syncBrowser() {
@@ -329,8 +333,9 @@ export function GateForm({ initialTenantId = '', initialEventId = '' }: Props) {
 
       {decision ? (
         <aside
-          role={outcome.assertive ? 'alert' : 'status'}
-          aria-live={outcome.assertive ? 'assertive' : 'polite'}
+          role={outcomeLive.role}
+          aria-live={outcomeLive.ariaLive}
+          aria-atomic={outcomeLive.ariaAtomic}
           data-outcome={decision.kind}
           data-outcome-view={outcome.kind}
           data-tone={outcome.tone}
@@ -365,6 +370,7 @@ export function GateForm({ initialTenantId = '', initialEventId = '' }: Props) {
         <aside
           role="status"
           aria-live="polite"
+          aria-atomic="true"
           data-testid="gate-decision-idle"
           className="redeem-status state-empty"
         >
