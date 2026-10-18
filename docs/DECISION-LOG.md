@@ -90,6 +90,21 @@ Chỉ mở redemption / Gate / admin tenant **sau khi**:
 | 2026-10-18 | O13 bổ sung: marketing **VI+EN**; ủy quyền **code web ngay sau PD** (không hỏi lại); vẫn PR/DoD; không tự deploy/store. |
 | 2026-10-18 | User duyệt **O15 / ADR-19** — published projection SoT (Epic #254); dispatch BE public Nest + seed (#255). |
 | 2026-10-18 | User **duyệt O06** — retention/region/SLA theo gói MVP (anonymize 30d; vé 365d; audit 730d; object 90d; single-region VPS; SLA support tách business-hours vs on-call cửa sổ Gate). Nguồn: `docs/ops/O06-OPTIONS.md`. |
+| 2026-10-18 | **UX-11 chốt Option A** — MVP đổi mã guest = Keycloak verified email / UI «Cần đăng nhập»; OTP/magic link = sau MVP. Issue [#372](https://github.com/hangndat/ticket-solution/issues/372). |
+
+## UX-11 — Guest redeem auth MVP (18/10/2026)
+
+Gap audit [PRODUCTION-READINESS-UX §6 UX-11](./plans/PRODUCTION-READINESS-UX.md): PRD §2/M02 mô tả OTP/magic link, runtime/PD pin D1 = Keycloak login + `email_verified`. **Chốt Option A** (khớp tip D11 / AC-A3) — không mở Task OTP/IdP mới trong MVP.
+
+| # | Quyết định | Chi tiết MVP |
+| - | ---------- | ------------ |
+| 1 | Đường auth đổi mã (web + cùng contract) | **Keycloak** session + **verified email** trước issue vé (`UNAUTHENTICATED` / `EMAIL_NOT_VERIFIED`). Không anonymous redeem. |
+| 2 | Copy UI bắt buộc (khớp tip PD) | Thiếu auth → title **«Cần đăng nhập»** (detail: đăng nhập rồi quay lại đổi mã). Email chưa verified → **«Xác minh email»** / tương đương messages hiện tại — **không** invent OTP/magic-link UI mới. |
+| 3 | Option B (OTP / magic link guest) | **Sau MVP.** Chỉ mở Task IdP/contract khi user chọn B tường minh; coordinator **không** spawn OTP từ gap này. |
+| 4 | PRD M02 | Wording OTP/magic link giữ tầm nhìn dài hạn; **MVP nghiệm thu** theo Option A + copy trên — không coi thiếu OTP guest là blocker DoD redeem. |
+| 5 | Non-goals | Không code IdP mới; không đổi contract issue ngoài pin hiện tại; không mở anonymous by design (O11). |
+
+**Hệ quả:** Coding/DoD redeem giữ pin fail-closed hiện tại; unit `redeem-messages` + UAT auth «Cần đăng nhập» đủ AC auth MVP. Nguồn tip: [`docs/design/D11-PRODUCTION-UX-UI.md`](./design/D11-PRODUCTION-UX-UI.md) §2.1 auth row / AC-A3.
 
 ## O06 — Retention / vùng dữ liệu / SLA hỗ trợ (18/10/2026)
 
