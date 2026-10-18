@@ -3,7 +3,8 @@
 **Epic:** [#301](https://github.com/hangndat/ticket-solution/issues/301)  
 **Tasks:** [#321](https://github.com/hangndat/ticket-solution/issues/321) (S2-T3), [#330](https://github.com/hangndat/ticket-solution/issues/330) (S5-T3)  
 **Role:** `web` · Architecture impact: **Không**  
-**Worker tip SHA:** `bce8fd17de89c84cf6c28db008d7fd99d5a6173b` (docs cite); implementation commit `8dc9abbfb6434ef7960e4ad5a6ee2e108073239e`  
+**Implementation SHA:** `8dc9abbfb6434ef7960e4ad5a6ee2e108073239e`  
+**Review tip SHA:** `5eafcb0998db6088d83df79628fb40dc82b9555e`
 **Local UAT ≠ production deploy.** Prod ASC URLs checked HTTP-only; enriched copy lands after merge+deploy.
 
 ---
