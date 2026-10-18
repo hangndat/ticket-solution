@@ -6,7 +6,7 @@
 | Ngày đối chiếu | **2026-10-18** |
 | Role | `ios` (toolchain xác nhận) |
 | Agent / session | Cursor worker `task_309e6a5978a2` / `ctx_284cb2cea2d7` |
-| Worktree tip khi viết | 01463c29c8e8362c8d37485fe678b773f95161e2 |
+| Worktree tip khi viết |  (behavior ) |
 
 ## 1. Nguồn Apple (live ngày chạy)
 
