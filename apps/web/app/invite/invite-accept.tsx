@@ -21,9 +21,9 @@ import { SurfaceState } from '../../src/ui/surface-state';
 const STORAGE_KEY = 'vemoki_invite_token';
 
 /**
- * Pure snapshot: invite token from URL fragment (#token=…) then sessionStorage.
- * Never put raw token in query (Referrer / server logs). Side effects (persist /
- * clear hash/query) run in an effect — not here.
+ * Pure snapshot: invite token from URL fragment (#token=…), then ?token= (legacy
+ * email links), then sessionStorage. Never put raw token in query long-term —
+ * side effects (persist / clear hash/query) run in an effect, not here.
  */
 function getInviteTokenSnapshot(): string {
   const hash = window.location.hash.replace(/^#/, '');
@@ -33,6 +33,13 @@ function getInviteTokenSnapshot(): string {
       params.get('token')?.trim() ||
       (hash.includes('=') ? '' : hash.trim());
     if (fromHash) return fromHash;
+  }
+  try {
+    const fromQuery =
+      new URLSearchParams(window.location.search).get('token')?.trim() ?? '';
+    if (fromQuery) return fromQuery;
+  } catch {
+    /* ignore */
   }
   try {
     return sessionStorage.getItem(STORAGE_KEY)?.trim() ?? '';
@@ -55,19 +62,6 @@ function persistInviteToken(token: string): void {
   // Clear fragment/query from address bar without reload (avoid Referrer/logs).
   if (window.location.hash || window.location.search) {
     history.replaceState(null, '', window.location.pathname);
-  }
-}
-
-/** Email links may still use ?token= — park into sessionStorage then strip query. */
-function parkQueryTokenIfPresent(): string {
-  try {
-    const params = new URLSearchParams(window.location.search);
-    const fromQuery = params.get('token')?.trim() ?? '';
-    if (!fromQuery) return '';
-    persistInviteToken(fromQuery);
-    return fromQuery;
-  } catch {
-    return '';
   }
 }
 
@@ -106,12 +100,10 @@ export function InviteAcceptForm() {
     })();
   }, []);
 
+  // Park fragment/query into sessionStorage and strip URL — no setState here
+  // (react-hooks/set-state-in-effect). Snapshot already reads ?token / #token /
+  // sessionStorage; after strip, sessionStorage keeps the value for re-renders.
   useEffect(() => {
-    const parked = parkQueryTokenIfPresent();
-    if (parked) {
-      setTokenOverride(parked);
-      return;
-    }
     if (!locationToken) return;
     persistInviteToken(locationToken);
   }, [locationToken]);
