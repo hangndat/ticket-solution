@@ -43,6 +43,45 @@ export type ConfirmResult = {
   state: 'USED';
 };
 
+/** Business deny that must commit (audit) — unwrap to GateError outside withTenant. */
+export type GateDenyOutcome = {
+  ok: false;
+  code: (typeof GATE_ERROR_CODES)[keyof typeof GATE_ERROR_CODES];
+  message: string;
+};
+
+export type ReserveOutcome =
+  | ({ ok: true } & ReserveResult)
+  | GateDenyOutcome;
+
+export type ConfirmOutcome =
+  | ({ ok: true } & ConfirmResult)
+  | GateDenyOutcome;
+
+export function unwrapReserveOutcome(outcome: ReserveOutcome): ReserveResult {
+  if (!outcome.ok) {
+    throw new GateError(outcome.code, outcome.message);
+  }
+  return {
+    reservationId: outcome.reservationId,
+    token: outcome.token,
+    expiresAt: outcome.expiresAt,
+    ticketId: outcome.ticketId,
+  };
+}
+
+export function unwrapConfirmOutcome(outcome: ConfirmOutcome): ConfirmResult {
+  if (!outcome.ok) {
+    throw new GateError(outcome.code, outcome.message);
+  }
+  return {
+    checkinId: outcome.checkinId,
+    ticketId: outcome.ticketId,
+    reservationId: outcome.reservationId,
+    state: outcome.state,
+  };
+}
+
 export type UndoResult = {
   checkinId: string;
   ticketId: string;
@@ -179,7 +218,11 @@ async function writeAudit(
   `;
 }
 
-/** Persist a Gate reject for EventReport.rejectByReason (O12 / audit `gate.reject`). */
+/**
+ * Persist a Gate reject for EventReport.rejectByReason (O12 / audit `gate.reject`).
+ * When `idempotent` is true, skip insert if the same tenant/event/reason/resource
+ * already has a `gate.reject` row (cheap offline CONFLICT/REJECTED replay).
+ */
 export async function recordGateReject(
   tx: Prisma.TransactionClient,
   input: {
@@ -189,18 +232,64 @@ export async function recordGateReject(
     reason: string;
     resourceType?: string;
     resourceId?: string;
+    /** Skip duplicate audit for the same resource+reason (offline replay). */
+    idempotent?: boolean;
   },
 ): Promise<void> {
   const reason = input.reason.trim() || 'UNKNOWN';
+  const resourceType = input.resourceType ?? 'gate';
+  const resourceId = input.resourceId ?? input.eventId;
+  if (input.idempotent) {
+    const existing = await tx.$queryRaw<Array<{ ok: number }>>`
+      SELECT 1 AS ok
+      FROM audit_logs
+      WHERE tenant_id = ${input.tenantId}::uuid
+        AND event_id = ${input.eventId}::uuid
+        AND action = 'gate.reject'
+        AND resource_id = ${resourceId}::uuid
+        AND COALESCE(NULLIF(TRIM(reason), ''), 'UNKNOWN') = ${reason}
+      LIMIT 1
+    `;
+    if (existing[0]) {
+      return;
+    }
+  }
   await writeAudit(tx, {
     tenantId: input.tenantId,
     eventId: input.eventId,
     actorUserId: input.actorUserId,
     action: 'gate.reject',
-    resourceType: input.resourceType ?? 'gate',
-    resourceId: input.resourceId ?? input.eventId,
+    resourceType,
+    resourceId,
     reason,
   });
+}
+
+/**
+ * Record `gate.reject` and return a deny outcome (do not throw) so withTenant
+ * can commit the audit before the API maps to GateError/HTTP.
+ */
+async function denyGate(
+  tx: Prisma.TransactionClient,
+  input: {
+    tenantId: string;
+    eventId: string;
+    actorUserId: string;
+    code: (typeof GATE_ERROR_CODES)[keyof typeof GATE_ERROR_CODES];
+    message: string;
+    resourceType?: string;
+    resourceId?: string;
+  },
+): Promise<GateDenyOutcome> {
+  await recordGateReject(tx, {
+    tenantId: input.tenantId,
+    eventId: input.eventId,
+    actorUserId: input.actorUserId,
+    reason: input.code,
+    resourceType: input.resourceType,
+    resourceId: input.resourceId,
+  });
+  return { ok: false, code: input.code, message: input.message };
 }
 
 export async function openStaffSession(
@@ -283,7 +372,7 @@ export async function reserveCheckin(
     staffSessionId: string;
     actorUserId: string;
   },
-): Promise<ReserveResult> {
+): Promise<ReserveOutcome> {
   await requireTenantPermission(tx, {
     tenantId: input.tenantId,
     userId: input.actorUserId,
@@ -298,31 +387,65 @@ export async function reserveCheckin(
     input.staffSessionId,
     input.actorUserId,
   );
-  const ticket = await lockTicket(
-    tx,
-    input.tenantId,
-    input.eventId,
-    input.ticketId,
-  );
-  if (ticket.state !== 'ACTIVE') {
-    throw new GateError(
-      GATE_ERROR_CODES.TICKET_NOT_ACTIVE,
-      'Ticket is not active',
+  let ticket: TicketLock;
+  try {
+    ticket = await lockTicket(
+      tx,
+      input.tenantId,
+      input.eventId,
+      input.ticketId,
     );
+  } catch (err) {
+    if (
+      err instanceof GateError &&
+      err.code === GATE_ERROR_CODES.TICKET_NOT_FOUND
+    ) {
+      return denyGate(tx, {
+        tenantId: input.tenantId,
+        eventId: input.eventId,
+        actorUserId: input.actorUserId,
+        code: GATE_ERROR_CODES.TICKET_NOT_FOUND,
+        message: err.message,
+        resourceType: 'ticket',
+        resourceId: input.ticketId,
+      });
+    }
+    throw err;
+  }
+  if (ticket.state !== 'ACTIVE') {
+    return denyGate(tx, {
+      tenantId: input.tenantId,
+      eventId: input.eventId,
+      actorUserId: input.actorUserId,
+      code: GATE_ERROR_CODES.TICKET_NOT_ACTIVE,
+      message: 'Ticket is not active',
+      resourceType: 'ticket',
+      resourceId: input.ticketId,
+    });
   }
   if (await currentCheckinId(tx, input.tenantId, input.ticketId)) {
-    throw new GateError(
-      GATE_ERROR_CODES.ALREADY_CHECKED_IN,
-      'Ticket already has a current check-in',
-    );
+    return denyGate(tx, {
+      tenantId: input.tenantId,
+      eventId: input.eventId,
+      actorUserId: input.actorUserId,
+      code: GATE_ERROR_CODES.ALREADY_CHECKED_IN,
+      message: 'Ticket already has a current check-in',
+      resourceType: 'ticket',
+      resourceId: input.ticketId,
+    });
   }
   await expireHeld(tx, input.tenantId, input.ticketId);
   const held = await currentHold(tx, input.tenantId, input.ticketId);
   if (held && held.staff_session_id !== input.staffSessionId) {
-    throw new GateError(
-      GATE_ERROR_CODES.HELD_BY_OTHER_SESSION,
-      'Ticket is held by another staff session',
-    );
+    return denyGate(tx, {
+      tenantId: input.tenantId,
+      eventId: input.eventId,
+      actorUserId: input.actorUserId,
+      code: GATE_ERROR_CODES.HELD_BY_OTHER_SESSION,
+      message: 'Ticket is held by another staff session',
+      resourceType: 'ticket',
+      resourceId: input.ticketId,
+    });
   }
 
   const token = newToken();
@@ -347,6 +470,7 @@ export async function reserveCheckin(
       );
     }
     return {
+      ok: true,
       reservationId: held.id,
       token,
       expiresAt,
@@ -378,6 +502,7 @@ export async function reserveCheckin(
     );
   }
   return {
+    ok: true,
     reservationId,
     token,
     expiresAt,
@@ -395,7 +520,7 @@ export async function confirmCheckin(
     staffSessionId: string;
     actorUserId: string;
   },
-): Promise<ConfirmResult> {
+): Promise<ConfirmOutcome> {
   const __confirmStart = process.hrtime.bigint();
   await requireTenantPermission(tx, {
     tenantId: input.tenantId,
@@ -420,17 +545,23 @@ export async function confirmCheckin(
     WHERE tenant_id = ${input.tenantId}::uuid
       AND id = ${input.reservationId}::uuid
   `;
-  if (!peeked[0] || peeked[0].event_id !== input.eventId) {
-    throw new GateError(
-      GATE_ERROR_CODES.RESERVATION_NOT_FOUND,
-      'Reservation not found',
-    );
+  const peekedRow = peeked[0];
+  if (!peekedRow || peekedRow.event_id !== input.eventId) {
+    return denyGate(tx, {
+      tenantId: input.tenantId,
+      eventId: input.eventId,
+      actorUserId: input.actorUserId,
+      code: GATE_ERROR_CODES.RESERVATION_NOT_FOUND,
+      message: 'Reservation not found',
+      resourceType: 'checkin_reservation',
+      resourceId: input.reservationId,
+    });
   }
   const ticket = await lockTicket(
     tx,
     input.tenantId,
     input.eventId,
-    peeked[0].ticket_id,
+    peekedRow.ticket_id,
   );
   const reservations = await tx.$queryRaw<Array<{ id: string }>>`
     SELECT id
@@ -440,13 +571,19 @@ export async function confirmCheckin(
       AND ticket_id = ${ticket.id}::uuid
     FOR UPDATE
   `;
-  if (!reservations[0]) {
-    throw new GateError(
-      GATE_ERROR_CODES.RESERVATION_NOT_FOUND,
-      'Reservation not found',
-    );
+  const reservationRow = reservations[0];
+  if (!reservationRow) {
+    return denyGate(tx, {
+      tenantId: input.tenantId,
+      eventId: input.eventId,
+      actorUserId: input.actorUserId,
+      code: GATE_ERROR_CODES.RESERVATION_NOT_FOUND,
+      message: 'Reservation not found',
+      resourceType: 'ticket',
+      resourceId: ticket.id,
+    });
   }
-  const reservation = { id: reservations[0].id, ticket_id: ticket.id };
+  const reservation = { id: reservationRow.id, ticket_id: ticket.id };
   const decision = await tx.$queryRaw<
     Array<{ status: string; live: boolean; staff_session_id: string; token_hash: string }>
   >`
@@ -469,36 +606,62 @@ export async function confirmCheckin(
           AND status = 'HELD'
       `;
     }
-    throw new GateError(
-      now?.status === 'CONFIRMED'
-        ? GATE_ERROR_CODES.ALREADY_CHECKED_IN
-        : GATE_ERROR_CODES.RESERVATION_EXPIRED,
-      'Reservation is not a live hold',
-    );
+    return denyGate(tx, {
+      tenantId: input.tenantId,
+      eventId: input.eventId,
+      actorUserId: input.actorUserId,
+      code:
+        now?.status === 'CONFIRMED'
+          ? GATE_ERROR_CODES.ALREADY_CHECKED_IN
+          : GATE_ERROR_CODES.RESERVATION_EXPIRED,
+      message: 'Reservation is not a live hold',
+      resourceType: 'ticket',
+      resourceId: reservation.ticket_id,
+    });
   }
   if (now.staff_session_id !== input.staffSessionId) {
-    throw new GateError(
-      GATE_ERROR_CODES.HELD_BY_OTHER_SESSION,
-      'Reservation belongs to another session',
-    );
+    return denyGate(tx, {
+      tenantId: input.tenantId,
+      eventId: input.eventId,
+      actorUserId: input.actorUserId,
+      code: GATE_ERROR_CODES.HELD_BY_OTHER_SESSION,
+      message: 'Reservation belongs to another session',
+      resourceType: 'ticket',
+      resourceId: reservation.ticket_id,
+    });
   }
   if (now.token_hash !== tokenHash(input.token)) {
-    throw new GateError(
-      GATE_ERROR_CODES.RESERVATION_TOKEN_MISMATCH,
-      'Reservation token does not match',
-    );
+    return denyGate(tx, {
+      tenantId: input.tenantId,
+      eventId: input.eventId,
+      actorUserId: input.actorUserId,
+      code: GATE_ERROR_CODES.RESERVATION_TOKEN_MISMATCH,
+      message: 'Reservation token does not match',
+      resourceType: 'ticket',
+      resourceId: reservation.ticket_id,
+    });
   }
   if (ticket.state !== 'ACTIVE') {
-    throw new GateError(
-      GATE_ERROR_CODES.TICKET_NOT_ACTIVE,
-      'Ticket is not active',
-    );
+    return denyGate(tx, {
+      tenantId: input.tenantId,
+      eventId: input.eventId,
+      actorUserId: input.actorUserId,
+      code: GATE_ERROR_CODES.TICKET_NOT_ACTIVE,
+      message: 'Ticket is not active',
+      resourceType: 'ticket',
+      resourceId: reservation.ticket_id,
+    });
   }
   if (await currentCheckinId(tx, input.tenantId, reservation.ticket_id)) {
-    throw new GateError(
-      GATE_ERROR_CODES.ALREADY_CHECKED_IN,
-      'Ticket already has a current check-in',
-    );
+    return denyGate(tx, {
+      tenantId: input.tenantId,
+      eventId: input.eventId,
+      actorUserId: input.actorUserId,
+      code: GATE_ERROR_CODES.ALREADY_CHECKED_IN,
+      message: 'Ticket already has a current check-in',
+      resourceType: 'ticket',
+      resourceId: reservation.ticket_id,
+    });
   }
 
   const checkinId = randomUUID();
@@ -536,6 +699,7 @@ export async function confirmCheckin(
   metricsInc('gate_confirm_total', { result: 'ok' });
   metricsObserveSeconds('gate_confirm_seconds', Number(process.hrtime.bigint() - __confirmStart) / 1e9, {});
   return {
+    ok: true,
     checkinId,
     ticketId: reservation.ticket_id,
     reservationId: reservation.id,

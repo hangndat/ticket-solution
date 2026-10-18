@@ -193,9 +193,14 @@ export {
   undoCheckin,
   revokeTicket,
   recordGateReject,
+  unwrapReserveOutcome,
+  unwrapConfirmOutcome,
   type StaffSessionResult,
   type ReserveResult,
   type ConfirmResult,
+  type ReserveOutcome,
+  type ConfirmOutcome,
+  type GateDenyOutcome,
   type UndoResult,
 } from './gate';
 export {
@@ -246,6 +251,12 @@ export {
   loadPublishedFormTerms,
   type PublishedFormTerms,
 } from './published-form';
+export {
+  listPublishedEvents,
+  getPublishedEventDetail,
+  isValidPublicTenantSlug,
+  isValidPublicEventSlug,
+} from './published-events';
 export {
   expirePendingRequest,
   expireDuePendingBatch,

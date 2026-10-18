@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Vemoki — Nền tảng sự kiện trực tiếp & cổng</title>
+  <meta name="description" content="Multi-tenant cho organizer và agency: mã mời, QR, Gate có audit. Thương hiệu của bạn phía khách." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Syne:wght@600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/o13.css" />
+</head>
+<body>
+  <a class="skip" href="#main">Bỏ qua nội dung</a>
+
+  <div class="wrap">
+    <header class="top">
+      <a class="wordmark" href="index.html" aria-label="vemoki">vemoki<span aria-hidden="true">↗</span></a>
+      <nav class="nav" aria-label="Chính">
+        <span class="locale" role="group" aria-label="Ngôn ngữ">
+          <a href="index.html" aria-current="true">VI</a>
+          <span aria-hidden="true">|</span>
+          <a href="en.html">EN</a>
+        </span>
+        <a href="https://app.vemoki.com/">Xem demo</a>
+        <a href="#interest">Đăng ký quan tâm</a>
+        <a href="https://app.vemoki.com/auth">Đăng nhập</a>
+      </nav>
+    </header>
+
+    <div class="demo-banner" role="status">
+      <strong>demo:sales-pd</strong> — Prototype HTML tĩnh O13 · không phải runtime ·
+      <a href="../README.md">handoff PD</a>. Mọi demo sản phẩm = giả lập.
+    </div>
+
+    <main id="main">
+      <header class="hero" id="hero">
+        <p class="hero-brand">vemoki<span aria-hidden="true">↗</span></p>
+        <h1>Từ mã mời đến cổng — trên một nền tảng</h1>
+        <p class="support">
+          Multi-tenant cho organizer và agency. Khách thấy thương hiệu của bạn; Gate có audit, không phụ thuộc marketplace.
+        </p>
+        <div class="cta-row">
+          <a class="btn btn-primary" href="https://app.vemoki.com/">Xem demo</a>
+          <a class="btn btn-secondary" href="#interest">Đăng ký quan tâm</a>
+          <a class="btn-ghost" href="https://app.vemoki.com/auth">Đăng nhập</a>
+        </div>
+        <p class="badge">Demo giả lập — không phải khách hàng thật.</p>
+        <div class="hero-visual" aria-hidden="true">
+          <div class="label">Gate · QR · audit</div>
+          <div class="meta">Atmosphere sản phẩm — không collage thẻ</div>
+        </div>
+      </header>
+
+      <section id="audience" aria-labelledby="audience-title">
+        <h2 id="audience-title">Ai dùng Vemoki</h2>
+        <p class="lead">Trang này dành cho người mua vận hành sự kiện — không phải khách cầm vé.</p>
+        <div class="stack">
+          <div class="row">
+            <h3>Tenant Owner</h3>
+            <p>Tự chạy nhiều sự kiện trong tổ chức: phát hành mã, email vé, theo dõi cổng.</p>
+          </div>
+          <div class="row">
+            <h3>Agency</h3>
+            <p>Membership nhiều tenant — một platform, nhiều thương hiệu khách, không fork code.</p>
+          </div>
+          <div class="row">
+            <h3>Nhân sự cổng</h3>
+            <p>Quét QR trên iOS; chống trùng và audit theo sự kiện.</p>
+          </div>
+          <div class="row">
+            <h3>Khách tham dự</h3>
+            <p>Đổi mã trên web/iOS với brand sự kiện — không phải buyer của trang bán này.</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="workflow" aria-labelledby="workflow-title">
+        <h2 id="workflow-title">Luồng vận hành</h2>
+        <p class="lead">Một chuỗi ops rõ — từ chuẩn bị đến cổng.</p>
+        <ol class="steps">
+          <li>Tạo sự kiện & loại vé / nguồn mã</li>
+          <li>Phát hành invite hoặc import khách</li>
+          <li>Khách đổi mã → nhận QR</li>
+          <li>Gate quét, chống trùng, ghi audit</li>
+          <li>Xem tiến độ ops với mốc thời gian trung thực (asOf)</li>
+        </ol>
+        <p class="lead" style="margin-top:1rem">Không phải marketplace “tìm sự kiện gần bạn”.</p>
+      </section>
+
+      <section id="whitelabel" aria-labelledby="wl-title">
+        <h2 id="wl-title">Thương hiệu của bạn phía khách</h2>
+        <p class="lead">
+          Trang sự kiện và trải nghiệm khách mang identity org/event. Vemoki xuất hiện ở marketing, tài khoản và đăng nhập.
+        </p>
+        <div class="stack">
+          <div class="row"><h3>Logo & màu sự kiện cấu hình được</h3><p>Ba lớp brand: platform · org · event.</p></div>
+          <div class="row"><h3>Agency chạy nhiều client</h3><p>Cùng một platform — không fork.</p></div>
+        </div>
+      </section>
+
+      <section id="trust" aria-labelledby="trust-title">
+        <h2 id="trust-title">An toàn vận hành</h2>
+        <p class="lead">Thiết kế cho cổng thật — không dashboard “ảo real-time”.</p>
+        <div class="stack">
+          <div class="row"><h3>Tách tenant</h3><p>Dữ liệu và quyền theo tenant; deny-by-default.</p></div>
+          <div class="row"><h3>Check-in chắc</h3><p>Chống trùng vé; audit lại được sau sự kiện.</p></div>
+          <div class="row"><h3>Trung thực về độ trễ</h3><p>Số liệu ops kèm mốc asOf — không hứa “tức thì tuyệt đối”.</p></div>
+        </div>
+      </section>
+
+      <section id="demo" aria-labelledby="demo-title">
+        <h2 id="demo-title">Dùng thử bản demo giả lập</h2>
+        <p class="lead">Mọi demo hiện nay là fixture để xem sản phẩm — không phải case study khách hàng.</p>
+        <div class="demo-banner" role="status">Demo giả lập · không dùng làm bằng chứng khách thật</div>
+        <p style="margin-top:1rem">
+          <a class="btn btn-primary" href="https://app.vemoki.com/">Mở demo trên ứng dụng</a>
+        </p>
+      </section>
+
+      <section id="interest" aria-labelledby="interest-title">
+        <h2 id="interest-title">Đăng ký quan tâm</h2>
+        <p class="lead">Để lại thông tin — chúng tôi liên hệ về demo hoặc onboarding. Không thanh toán trên form này.</p>
+
+        <div id="form-banner" class="banner" hidden></div>
+
+        <form id="interest-form" novalidate>
+          <label>
+            Họ tên
+            <input id="name" name="name" autocomplete="name" required />
+            <span class="field-error" id="err-name" hidden></span>
+          </label>
+          <label>
+            Email công việc
+            <input id="email" name="email" type="email" autocomplete="email" required />
+            <span class="field-error" id="err-email" hidden></span>
+          </label>
+          <label>
+            Tổ chức
+            <input id="org" name="org" autocomplete="organization" required />
+            <span class="field-error" id="err-org" hidden></span>
+          </label>
+          <label>
+            Vai trò
+            <select id="role" name="role" required>
+              <option value="">Chọn vai trò</option>
+              <option value="owner">Tenant Owner</option>
+              <option value="agency">Agency</option>
+              <option value="other">Khác</option>
+            </select>
+            <span class="field-error" id="err-role" hidden></span>
+          </label>
+          <label>
+            Ghi chú (không bắt buộc)
+            <textarea id="note" name="note"></textarea>
+          </label>
+          <label class="consent">
+            <input id="consent" name="consent" type="checkbox" required />
+            <span>Tôi đồng ý được liên hệ về Vemoki. Xem <a href="privacy.html">Quyền riêng tư</a>.</span>
+          </label>
+          <span class="field-error" id="err-consent" hidden></span>
+          <button class="btn btn-primary" id="submit" type="submit">Gửi đăng ký</button>
+        </form>
+
+        <div class="pd-review" aria-label="PD review controls">
+          <strong>Khu Review PD</strong> — mô phỏng state form (không gửi mạng):
+          <div class="chip-row" id="review-chips">
+            <button type="button" class="chip" data-state="empty" aria-pressed="true">empty</button>
+            <button type="button" class="chip" data-state="loading" aria-pressed="false">loading</button>
+            <button type="button" class="chip" data-state="error" aria-pressed="false">error</button>
+            <button type="button" class="chip" data-state="success" aria-pressed="false">success</button>
+          </div>
+        </div>
+      </section>
+
+      <section aria-labelledby="cta-repeat-title">
+        <h2 id="cta-repeat-title">Sẵn sàng xem vận hành thật?</h2>
+        <div class="cta-row">
+          <a class="btn btn-primary" href="https://app.vemoki.com/">Xem demo</a>
+          <a class="btn btn-secondary" href="#interest">Đăng ký quan tâm</a>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div>
+        <a href="privacy.html">Quyền riêng tư</a> ·
+        <a href="support.html">Hỗ trợ</a> ·
+        <a href="https://app.vemoki.com/">Bạn có mã mời? Đổi vé trên ứng dụng</a>
+      </div>
+      <div>vemoki↗ · ops sự kiện trực tiếp · O13 PD</div>
+    </footer>
+  </div>
+
+  <script>
+    (function () {
+      const form = document.getElementById("interest-form");
+      const banner = document.getElementById("form-banner");
+      const submit = document.getElementById("submit");
+      let pendingTimer = null;
+      let submitNonce = 0;
+
+      function cancelPending() {
+        if (pendingTimer) {
+          clearTimeout(pendingTimer);
+          pendingTimer = null;
+        }
+        submitNonce += 1;
+      }
+
+      function clearErrors() {
+        ["name", "email", "org", "role", "consent"].forEach(function (id) {
+          const el = document.getElementById("err-" + id);
+          if (el) {
+            el.hidden = true;
+            el.textContent = "";
+          }
+          const field = document.getElementById(id);
+          if (field) field.removeAttribute("aria-invalid");
+        });
+        banner.hidden = true;
+        banner.textContent = "";
+        banner.className = "banner";
+      }
+
+      function setChip(state) {
+        document.querySelectorAll("#review-chips .chip").forEach(function (chip) {
+          chip.setAttribute("aria-pressed", chip.getAttribute("data-state") === state ? "true" : "false");
+        });
+      }
+
+      function setState(state) {
+        cancelPending();
+        clearErrors();
+        setChip(state);
+        submit.disabled = false;
+        submit.removeAttribute("aria-busy");
+        submit.textContent = "Gửi đăng ký";
+        form.hidden = false;
+
+        if (state === "empty") {
+          form.reset();
+          return;
+        }
+        if (state === "loading") {
+          submit.disabled = true;
+          submit.setAttribute("aria-busy", "true");
+          submit.textContent = "Đang gửi…";
+          return;
+        }
+        if (state === "error") {
+          banner.hidden = false;
+          banner.className = "banner error";
+          banner.setAttribute("role", "alert");
+          banner.textContent = "Không gửi được. Thử lại hoặc viết cho hỗ trợ.";
+          return;
+        }
+        if (state === "success") {
+          form.hidden = true;
+          banner.hidden = false;
+          banner.className = "banner success";
+          banner.setAttribute("role", "status");
+          banner.innerHTML = "<strong>Đã nhận đăng ký</strong><br/>Cảm ơn bạn. Chúng tôi sẽ liên hệ qua email — chưa phải tài khoản production.";
+        }
+      }
+
+      document.querySelectorAll("#review-chips .chip").forEach(function (chip) {
+        chip.addEventListener("click", function () {
+          setState(chip.getAttribute("data-state"));
+        });
+      });
+
+      form.addEventListener("submit", function (e) {
+        e.preventDefault();
+        cancelPending();
+        clearErrors();
+        form.hidden = false;
+
+        const name = document.getElementById("name");
+        const email = document.getElementById("email");
+        const org = document.getElementById("org");
+        const role = document.getElementById("role");
+        const consent = document.getElementById("consent");
+        let firstInvalid = null;
+
+        function fail(id, msg) {
+          const err = document.getElementById("err-" + id);
+          const field = document.getElementById(id);
+          err.hidden = false;
+          err.textContent = msg;
+          field.setAttribute("aria-invalid", "true");
+          if (!firstInvalid) firstInvalid = field;
+        }
+
+        if (!name.value.trim()) fail("name", "Nhập họ tên");
+        if (!email.value.trim()) fail("email", "Nhập email");
+        else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value.trim())) fail("email", "Email không hợp lệ");
+        if (!org.value.trim()) fail("org", "Nhập tổ chức");
+        if (!role.value) fail("role", "Chọn vai trò");
+        if (!consent.checked) fail("consent", "Cần đồng ý để chúng tôi liên hệ");
+
+        if (firstInvalid) {
+          setChip("error");
+          firstInvalid.focus();
+          return;
+        }
+
+        const nonce = submitNonce;
+        submit.disabled = true;
+        submit.setAttribute("aria-busy", "true");
+        submit.textContent = "Đang gửi…";
+        setChip("loading");
+
+        pendingTimer = setTimeout(function () {
+          if (nonce !== submitNonce) return;
+          setState("success");
+        }, 700);
+      });
+    })();
+  </script>
+</body>
+</html>

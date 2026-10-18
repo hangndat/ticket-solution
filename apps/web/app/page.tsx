@@ -69,9 +69,11 @@ export default function Home() {
         </div>
       )}
       <aside className="notice" role="note">
-        <strong>Demo có giới hạn rõ.</strong> Thư mục sự kiện là fixture hư cấu.
-        Đổi mã thật qua Nest BFF tại <Link href="/redeem">Đổi mã</Link>. Đăng
-        nhập: <Link href="/auth">/auth</Link>.
+        <strong>Demo có giới hạn rõ.</strong> Danh sách sự kiện bên dưới là bản
+        xem trước mang nhãn Demo — không phải lịch live. Đổi mã thật tại{' '}
+        <Link href="/redeem">Đổi mã lấy vé</Link>
+        {' · '}
+        <Link href="/auth">Đăng nhập</Link>.
       </aside>
     </main>
   );
