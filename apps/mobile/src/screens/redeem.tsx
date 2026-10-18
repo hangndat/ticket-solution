@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 import {
   redeemActionAnnouncement,
@@ -7,7 +7,11 @@ import {
   redeemStatusRefreshAnnouncement,
 } from '@/a11y/announcements';
 import { presentRedeemDecision } from '@/attendee/attendee-outcome-copy';
+import { useAttendeeSignIn } from '@/attendee/use-attendee-sign-in';
+import { AttendeeCta } from '@/components/attendee-cta';
 import { Notice, Page } from '@/components/page';
+import { ErrorState, LoadingState } from '@/components/screen-state';
+import { redeemCopy } from '@/components/screen-state-copy';
 import { getApiBaseUrl, getEventId, getTenantId } from '@/identity/config';
 import { session } from '@/identity/session';
 import { fetchPublishedEventDetail } from '@/published/published-event-api';
@@ -26,8 +30,24 @@ import {
 } from '@/redeem/redeem-client';
 import { RedeemFormFields } from '@/redeem/redeem-form-fields';
 import { colors } from '@/theme/colors';
+import { fontFamilies } from '@/theme/fonts';
+
+const AUTH_CODES = new Set(['UNAUTHENTICATED', 'EMAIL_NOT_VERIFIED']);
 
 export function RedeemScreen() {
+  const identity = useSyncExternalStore(
+    session.subscribe,
+    session.getSnapshot,
+    session.getSnapshot,
+  );
+  const {
+    busy: signInBusy,
+    error: signInError,
+    configured,
+    signIn,
+    clearError,
+  } = useAttendeeSignIn();
+
   const [tenantId, setTenantId] = useState(getTenantId() ?? '');
   const [eventId, setEventId] = useState(getEventId() ?? '');
   const [tenantSlug, setTenantSlug] = useState('');
@@ -44,46 +64,56 @@ export function RedeemScreen() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [schemaNotice, setSchemaNotice] = useState<string | null>(null);
   const [statusNote, setStatusNote] = useState<string | null>(null);
+  const [offlineNotice, setOfflineNotice] = useState<string | null>(null);
+
+  const verified = identity.status === 'verified';
+  const needsAuth =
+    !verified &&
+    (configured ||
+      (decision?.kind === 'denied' && AUTH_CODES.has(decision.code)));
 
   const loadPublishedSchema = useCallback(async () => {
     const t = tenantSlug.trim();
     const e = eventSlug.trim();
     if (!t || !e) {
-      setSchemaNotice(
-        'Tuỳ chọn: nhập slug tổ chức/sự kiện để tải biểu mẫu và điều khoản đã xuất bản.',
-      );
+      setSchemaNotice(redeemCopy.emptyTitle);
       return;
     }
-    setSchemaNotice('Đang tải biểu mẫu đã xuất bản…');
-    const result = await fetchPublishedEventDetail(t, e);
-    if (result.status === 'ok') {
-      setForm(result.event.form ?? null);
-      setTermsVersion(result.event.terms?.version ?? null);
-      setTermsBody(result.event.terms?.bodyMarkdown ?? null);
-      if (result.event.id) setEventId(result.event.id);
-      setSchemaNotice(
-        `Đã tải biểu mẫu cho «${result.event.name}» · ${result.event.brand.organizationName}.`,
-      );
-      setAnswers({});
-      setTermsAccepted(false);
-      setFieldErrors({});
-      return;
+    setSchemaNotice('Đang tải…');
+    setOfflineNotice(null);
+    try {
+      const result = await fetchPublishedEventDetail(t, e);
+      if (result.status === 'ok') {
+        setForm(result.event.form ?? null);
+        setTermsVersion(result.event.terms?.version ?? null);
+        setTermsBody(result.event.terms?.bodyMarkdown ?? null);
+        if (result.event.id) setEventId(result.event.id);
+        setSchemaNotice(
+          `Đã tải biểu mẫu cho «${result.event.name}» · ${result.event.brand.organizationName}.`,
+        );
+        setAnswers({});
+        setTermsAccepted(false);
+        setFieldErrors({});
+        return;
+      }
+      if (result.status === 'misconfigured') {
+        setSchemaNotice(
+          'Chưa cấu hình máy chủ. Không dùng biểu mẫu mẫu.',
+        );
+        return;
+      }
+      if (result.status === 'not-found') {
+        setSchemaNotice('Không tìm thấy sự kiện đã xuất bản. Bản nháp không hiện.');
+        return;
+      }
+      setSchemaNotice('Không tải được biểu mẫu đã xuất bản.');
+    } catch {
+      setOfflineNotice(redeemCopy.offlineBody);
+      setSchemaNotice(null);
     }
-    if (result.status === 'misconfigured') {
-      setSchemaNotice(
-        'Chưa cấu hình máy chủ. Không dùng biểu mẫu mẫu.',
-      );
-      return;
-    }
-    if (result.status === 'not-found') {
-      setSchemaNotice('Không tìm thấy sự kiện đã xuất bản. Bản nháp không hiện.');
-      return;
-    }
-    setSchemaNotice('Không tải được biểu mẫu đã xuất bản.');
   }, [tenantSlug, eventSlug]);
 
   useEffect(() => {
-    // Clear answers/PII when identity flips.
     const unsub = session.subscribe(() => {
       const snap = session.getSnapshot();
       if (snap.status !== 'verified') {
@@ -92,10 +122,15 @@ export function RedeemScreen() {
         setAttempt(null);
         setDecision(null);
         setStatusNote(null);
+        return;
       }
+      clearError();
+      setDecision((prev) =>
+        prev?.kind === 'denied' && AUTH_CODES.has(prev.code) ? null : prev,
+      );
     });
     return unsub;
-  }, []);
+  }, [clearError]);
 
   async function submit() {
     const epoch = session.captureEpoch();
@@ -138,6 +173,7 @@ export function RedeemScreen() {
     setAttempt({ key, fingerprint, unclear: true });
     setBusy(true);
     setStatusNote(null);
+    setOfflineNotice(null);
     try {
       if (!session.isEpochCurrent(epoch)) return;
       const next = await redeemCode({
@@ -162,6 +198,13 @@ export function RedeemScreen() {
       } else {
         setAttempt(null);
       }
+    } catch {
+      setOfflineNotice(redeemCopy.offlineBody);
+      setDecision({
+        kind: 'unknown',
+        idempotencyKey: key,
+        message: redeemCopy.offlineBody,
+      });
     } finally {
       if (session.isEpochCurrent(epoch)) setBusy(false);
     }
@@ -245,10 +288,19 @@ export function RedeemScreen() {
     }
   }
 
+  const onSignIn = async () => {
+    const ok = await signIn();
+    if (ok && decision?.kind === 'denied' && AUTH_CODES.has(decision.code)) {
+      setDecision(null);
+    }
+  };
+
   const outcome = presentRedeemDecision(decision, { surface: 'redeem' });
   const outcomeDetail = outcome.secondary
     ? `${outcome.detail}\n${outcome.secondary}`
     : outcome.detail;
+  const authDenied =
+    decision?.kind === 'denied' && AUTH_CODES.has(decision.code);
 
   return (
     <Page>
@@ -256,6 +308,51 @@ export function RedeemScreen() {
         Nhập mã, trả lời biểu mẫu và đồng ý điều khoản. Chờ duyệt chưa phải vé.
         Mất phản hồi thì giữ «chưa rõ» đến khi kiểm tra lại cùng lần thử.
       </Notice>
+
+      {needsAuth ? (
+        <Notice title={authDenied ? outcome.title : 'Cần đăng nhập'}>
+          {authDenied
+            ? outcome.detail
+            : 'Đăng nhập rồi quay lại đổi mã. Chưa submit cấp vé khi thiếu phiên.'}
+        </Notice>
+      ) : null}
+
+      {needsAuth ? (
+        <AttendeeCta
+          label={
+            signInBusy
+              ? 'Đang đăng nhập…'
+              : decision?.kind === 'denied' &&
+                  decision.code === 'EMAIL_NOT_VERIFIED'
+                ? 'Xác minh email / đăng nhập lại'
+                : 'Đăng nhập'
+          }
+          disabled={signInBusy}
+          onPress={() => void onSignIn()}
+          testID="redeem-cta-signin"
+        />
+      ) : null}
+
+      {signInBusy ? (
+        <LoadingState title="Đang đăng nhập">
+          Chờ xác minh — chưa đổi mã.
+        </LoadingState>
+      ) : null}
+
+      {signInError ? (
+        <ErrorState
+          title={redeemCopy.authCancelTitle}
+          onRetry={() => void onSignIn()}
+          retryLabel="Thử lại"
+        >
+          {signInError}
+        </ErrorState>
+      ) : null}
+
+      {offlineNotice ? (
+        <Notice title={redeemCopy.offlineTitle}>{offlineNotice}</Notice>
+      ) : null}
+
       {schemaNotice ? (
         <Notice title="Biểu mẫu sự kiện">{schemaNotice}</Notice>
       ) : null}
@@ -314,7 +411,7 @@ export function RedeemScreen() {
         termsBody={termsBody}
         answers={answers}
         termsAccepted={termsAccepted}
-        disabled={busy}
+        disabled={busy || !verified}
         fieldErrors={fieldErrors}
         onChangeAnswer={(fieldId, value) =>
           setAnswers((prev) => ({ ...prev, [fieldId]: value }))
@@ -323,14 +420,16 @@ export function RedeemScreen() {
       />
       <Pressable
         {...redeemActionAnnouncement()}
-        accessibilityState={{ disabled: busy || code.trim().length === 0 }}
-        disabled={busy || code.trim().length === 0}
+        accessibilityState={{
+          disabled: busy || !verified || code.trim().length === 0,
+        }}
+        disabled={busy || !verified || code.trim().length === 0}
         onPress={() => void submit()}
         style={button}
       >
         <Text style={buttonLabel}>{busy ? 'Đang xử lý…' : 'Đổi mã'}</Text>
       </Pressable>
-      {decision ? (
+      {decision && !authDenied ? (
         <View
           {...redeemDecisionAnnouncement({
             kind: decision.kind,
@@ -389,9 +488,11 @@ const field = {
   backgroundColor: colors.card,
   color: colors.label,
   fontSize: 17,
+  fontFamily: fontFamilies.body,
 };
 
 const button = {
+  minHeight: 48,
   padding: 14,
   borderRadius: 12,
   backgroundColor: colors.accent,
@@ -400,11 +501,13 @@ const button = {
 const buttonLabel = {
   color: colors.onAccent,
   fontSize: 17,
+  fontFamily: fontFamilies.bodySemiBold,
   fontWeight: '600' as const,
   textAlign: 'center' as const,
 };
 
 const buttonSecondary = {
+  minHeight: 48,
   padding: 14,
   borderRadius: 12,
   backgroundColor: colors.card,
@@ -413,6 +516,7 @@ const buttonSecondary = {
 const buttonSecondaryLabel = {
   color: colors.label,
   fontSize: 17,
+  fontFamily: fontFamilies.bodySemiBold,
   fontWeight: '600' as const,
   textAlign: 'center' as const,
 };
