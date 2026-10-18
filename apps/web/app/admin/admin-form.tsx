@@ -17,7 +17,10 @@ import { ImportPanel } from './import-panel';
 import { NotificationsPanel } from './notifications-panel';
 import { TenantStaffPanel } from './tenant-staff';
 import {
+  CS_RESEND_COOLDOWN_SECONDS,
+  csNotificationStatusText,
   csViewLabel,
+  formatCsTimelineItem,
   interpretCsDetail,
   interpretCsList,
   interpretCsResend,
@@ -151,6 +154,28 @@ export function AdminForm({
   const [resendAttempt, setResendAttempt] = useState<UnclearAttempt | null>(
     null,
   );
+  const [resendCooldownUntil, setResendCooldownUntil] = useState<number | null>(
+    null,
+  );
+  const [resendCooldownNow, setResendCooldownNow] = useState(() => Date.now());
+
+  const resendCooldownActive =
+    resendCooldownUntil !== null && resendCooldownNow < resendCooldownUntil;
+  const resendCooldownRemainingSec = resendCooldownActive
+    ? Math.max(1, Math.ceil((resendCooldownUntil! - resendCooldownNow) / 1000))
+    : 0;
+
+  useEffect(() => {
+    if (!resendCooldownUntil) return;
+    const tick = () => {
+      const now = Date.now();
+      setResendCooldownNow(now);
+      if (now >= resendCooldownUntil) setResendCooldownUntil(null);
+    };
+    tick();
+    const id = window.setInterval(tick, 1000);
+    return () => window.clearInterval(id);
+  }, [resendCooldownUntil]);
   const [exportAttempt, setExportAttempt] = useState<UnclearAttempt | null>(
     null,
   );
@@ -819,6 +844,7 @@ export function AdminForm({
     setBusy(false);
   }
 
+
   async function csSearch() {
     setBusy(true);
     setDecision(null);
@@ -911,6 +937,13 @@ export function AdminForm({
       fingerprint,
       unclear: next.kind === 'unknown',
     });
+    if (
+      next.kind === 'rejected' && next.code === 'RESEND_COOLDOWN'
+    ) {
+      setResendCooldownUntil(Date.now() + CS_RESEND_COOLDOWN_SECONDS * 1000);
+    } else if (next.kind === 'resent') {
+      setResendCooldownUntil(Date.now() + CS_RESEND_COOLDOWN_SECONDS * 1000);
+    }
     bumpNotice();
     setCsView(next);
     setBusy(false);
@@ -2041,8 +2074,10 @@ export function AdminForm({
           Hỗ trợ · tra cứu và gửi lại email
         </h2>
         <p>
-          PII mặc định đã che trên API. Trạng thái provider ACCEPTED không được
-          hiểu là đã giao email.
+          PII mặc định đã che trên API. Copy trạng thái: PENDING / FAILED / DEAD
+          / ACCEPTED (≠ đã nhận). DELIVERED chỉ khi server có bằng chứng giao —
+          không suy từ ACCEPTED. Resend tôn trọng cooldown và quyền cs.resend;
+          không tạo vé mới.
         </p>
         <label>
           Từ khóa CS
@@ -2093,42 +2128,111 @@ export function AdminForm({
           <button type="button" disabled={busy} onClick={() => void csDetail()}>
             Xem chi tiết CS
           </button>
-          <button type="button" disabled={busy} onClick={() => void csResend()}>
-            Gửi lại email
+          <button
+            type="button"
+            disabled={busy || resendCooldownActive}
+            data-testid="cs-resend-button"
+            onClick={() => void csResend()}
+          >
+            {resendCooldownActive
+              ? `Gửi lại email (chờ ${resendCooldownRemainingSec}s)`
+              : 'Gửi lại email'}
           </button>
         </div>
+        {resendCooldownActive ? (
+          <p
+            className="muted"
+            data-testid="cs-resend-cooldown"
+            role="status"
+          >
+            Đang trong cooldown gửi lại (~{resendCooldownRemainingSec}s còn lại).
+            Không tạo vé mới; ACCEPTED/PENDING ≠ đã giao tới người nhận.
+          </p>
+        ) : null}
+        {csView?.kind === 'rejected' &&
+        csView.code === 'PERMISSION_DENIED' ? (
+          <p data-testid="cs-permission-denied" role="alert">
+            Thiếu quyền CS — không tra cứu/gửi lại được trên tenant/event này.
+          </p>
+        ) : null}
         {csView?.kind === 'list' ? (
-          <pre
+          <ul
             data-testid="cs-list"
-            className="me-result"
-            tabIndex={0}
+            className="cs-ticket-list"
             aria-label="CS list"
           >
-            {JSON.stringify(csView.items, null, 2)}
-          </pre>
+            {csView.items.map((item) => (
+              <li
+                key={item.ticketId}
+                data-ticket-id={item.ticketId}
+                data-testid={`cs-list-item-${item.ticketId}`}
+              >
+                <button
+                  type="button"
+                  className="cs-ticket-list__pick"
+                  disabled={busy}
+                  onClick={() => setCsTicketId(item.ticketId)}
+                >
+                  Chọn
+                </button>
+                <span>
+                  <code>{item.ticketId}</code> · {item.state} ·{' '}
+                  {item.ownerEmailMasked ?? 'email=null'} ·{' '}
+                  {csNotificationStatusText(item.notification)}
+                </span>
+              </li>
+            ))}
+          </ul>
         ) : null}
         {csView?.kind === 'detail' ? (
           <div data-testid="cs-detail">
-            <pre className="me-result" tabIndex={0} aria-label="CS detail">
-              {JSON.stringify(
-                {
-                  ticketId: csView.ticket.ticketId,
-                  state: csView.ticket.state,
-                  ownerEmailMasked: csView.ticket.ownerEmailMasked,
-                  notification: csView.ticket.notification,
-                },
-                null,
-                2,
-              )}
-            </pre>
-            <ol data-testid="cs-timeline" aria-label="CS timeline">
-              {csView.ticket.timeline.map((item) => (
-                <li key={`${item.at}-${item.kind}-${item.summary}`}>
-                  {item.at} · {item.kind}: {item.summary}
-                </li>
-              ))}
+            <dl className="cs-detail-summary" aria-label="CS detail">
+              <div>
+                <dt>Vé</dt>
+                <dd>
+                  <code>{csView.ticket.ticketId}</code>
+                </dd>
+              </div>
+              <div>
+                <dt>Trạng thái vé</dt>
+                <dd>{csView.ticket.state}</dd>
+              </div>
+              <div>
+                <dt>Email (đã che)</dt>
+                <dd>{csView.ticket.ownerEmailMasked ?? 'null'}</dd>
+              </div>
+              <div>
+                <dt>Gửi email</dt>
+                <dd data-testid="cs-delivery-status">
+                  {csNotificationStatusText(csView.ticket.notification)}
+                </dd>
+              </div>
+            </dl>
+            <h3 className="cs-timeline-heading" id="cs-timeline-heading">
+              Timeline (thời gian · hành động · kết quả)
+            </h3>
+            <ol
+              data-testid="cs-timeline"
+              className="cs-timeline"
+              aria-labelledby="cs-timeline-heading"
+            >
+              {csView.ticket.timeline.map((item) => {
+                const row = formatCsTimelineItem(item);
+                return (
+                  <li key={`${item.at}-${item.kind}-${item.summary}`}>
+                    <time dateTime={row.time}>{row.time}</time>
+                    <span className="cs-timeline__action">{row.action}</span>
+                    <span className="cs-timeline__result">{row.result}</span>
+                  </li>
+                );
+              })}
             </ol>
           </div>
+        ) : null}
+        {csView?.kind === 'resent' ? (
+          <p data-testid="cs-resend-pending" role="status">
+            Đã xếp hàng gửi lại (PENDING). Chưa khẳng định ACCEPTED hay đã giao.
+          </p>
         ) : null}
       </section>
       <section className="admin-section" aria-labelledby="export-heading">

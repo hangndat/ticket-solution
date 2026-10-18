@@ -34,14 +34,20 @@ export function ticketResendPath(scope: EventScope, ticketId: string): string {
   return `${eventTicketsBase(scope)}/${encodeURIComponent(ticketId)}/resend`;
 }
 
+/** CS notification providerStatus from OpenAPI — never invent DELIVERED. */
+export type CsProviderStatus = 'PENDING' | 'ACCEPTED' | 'FAILED' | 'DEAD';
+
 export type CsNotification = {
   channel: string;
   state: string;
-  providerStatus: 'PENDING' | 'ACCEPTED' | 'FAILED' | 'DEAD';
+  providerStatus: CsProviderStatus;
   providerRef: string | null;
   attempts: number;
   lastError: null;
 };
+
+/** Contract default for ticket resend cooldown (seconds). */
+export const CS_RESEND_COOLDOWN_SECONDS = 60;
 
 export type CsTicketSummary = {
   ticketId: string;
@@ -261,18 +267,116 @@ export function interpretCsResend(
   return { kind: 'unknown', message: CS_UNKNOWN };
 }
 
+/**
+ * Honest VI copy for delivery/provider status.
+ * ACCEPTED never claims end-user delivery. DELIVERED only when status is
+ * literally DELIVERED (server evidence) — CS OpenAPI does not invent it.
+ */
+export function csProviderStatusLabel(status: string): string {
+  switch (status) {
+    case 'PENDING':
+      return 'PENDING (đang chờ gửi)';
+    case 'FAILED':
+      return 'FAILED (gửi lỗi — có thể thử lại theo quyền)';
+    case 'DEAD':
+      return 'DEAD (hết retry hữu ích — cần CS xử lý)';
+    case 'ACCEPTED':
+      return 'ACCEPTED (nhà cung cấp nhận — ≠ đã giao tới người nhận)';
+    case 'DELIVERED':
+      return 'DELIVERED (có bằng chứng giao từ server)';
+    case 'UNKNOWN':
+      return 'UNKNOWN (không rõ — không khẳng định đã gửi)';
+    default:
+      return `${status} (trạng thái chưa map — không khẳng định đã giao)`;
+  }
+}
+
+/** Rejected-resend VI copy: cooldown, limit, permission, pending/error clarity. */
+export function csResendRejectedLabel(code: string, message: string): string {
+  if (code === 'RESEND_COOLDOWN') {
+    return `RESEND_COOLDOWN: đang trong thời gian chờ gửi lại (~${CS_RESEND_COOLDOWN_SECONDS}s). Chưa tạo vé mới — thử lại sau.`;
+  }
+  if (code === 'RESEND_LIMIT') {
+    return 'RESEND_LIMIT: đã hết hạn mức gửi lại trong cửa sổ hiện tại. Không tạo vé mới.';
+  }
+  if (code === 'PERMISSION_DENIED') {
+    return 'PERMISSION_DENIED: thiếu quyền CS (cs.lookup / cs.resend) — không tra cứu hoặc gửi lại email.';
+  }
+  if (
+    code === 'MEMBERSHIP_REQUIRED' ||
+    code === 'TENANT_REQUIRED' ||
+    code === 'EVENT_ACCESS_DENIED'
+  ) {
+    return `${code}: không có quyền trên tenant/event này — không gửi lại email.`;
+  }
+  return `${code}: ${message}`;
+}
+
+export type CsTimelineDisplay = {
+  time: string;
+  action: string;
+  result: string;
+};
+
+/**
+ * Map timeline row → thời gian / hành động / kết quả (VI when status known).
+ * Does not invent DELIVERED from ACCEPTED.
+ */
+export function formatCsTimelineItem(item: CsTimelineItem): CsTimelineDisplay {
+  const time = item.at;
+  const kind = item.kind.trim();
+  const summary = item.summary.trim();
+
+  if (kind.startsWith('notification.')) {
+    const channel = kind.slice('notification.'.length) || 'email';
+    const statusMatch = /\b(PENDING|ACCEPTED|FAILED|DEAD|DELIVERED|UNKNOWN)\b/.exec(
+      summary,
+    );
+    const status = statusMatch?.[1] ?? null;
+    return {
+      time,
+      action: `Gửi ${channel}`,
+      result: status
+        ? csProviderStatusLabel(status)
+        : summary || 'không có kết quả từ server',
+    };
+  }
+
+  if (kind === 'checkin.confirmed') {
+    return { time, action: 'Check-in', result: 'Đã xác nhận vào cổng' };
+  }
+  if (kind === 'checkin.undone') {
+    return { time, action: 'Check-in', result: 'Đã hoàn tác check-in' };
+  }
+
+  // Audit / other: keep server kind as action, summary as result.
+  return {
+    time,
+    action: kind || 'Thao tác',
+    result: summary || '—',
+  };
+}
+
+export function csNotificationStatusText(
+  notification: CsNotification | null,
+): string {
+  if (!notification) return 'Chưa có bản ghi gửi email trên server';
+  return csProviderStatusLabel(notification.providerStatus);
+}
+
 export function csViewLabel(view: CsView): string {
   if (view.kind === 'list') {
     return `CS: ${view.items.length} kết quả${view.cursor ? ' (còn trang sau)' : ''}. PII mặc định đã che.`;
   }
   if (view.kind === 'detail') {
-    return `CS: chi tiết vé ${view.ticket.ticketId} · ${view.ticket.timeline.length} timeline · email=${view.ticket.ownerEmailMasked ?? 'null'}.`;
+    const delivery = csNotificationStatusText(view.ticket.notification);
+    return `CS: chi tiết vé ${view.ticket.ticketId} · ${view.ticket.timeline.length} timeline · email=${view.ticket.ownerEmailMasked ?? 'null'} · ${delivery}.`;
   }
   if (view.kind === 'resent') {
     return `CS: đã yêu cầu gửi lại email cho ${view.ticketId} (provider=PENDING, replayed=${view.replayed}). PENDING ≠ đã giao.`;
   }
   if (view.kind === 'rejected') {
-    return `${view.code}: ${view.message}`;
+    return csResendRejectedLabel(view.code, view.message);
   }
   return view.message;
 }
