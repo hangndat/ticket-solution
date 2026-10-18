@@ -1,8 +1,25 @@
 # Decision log — sản phẩm & kỹ thuật
 
-Ngày cập nhật: 2026-10-18
+Ngày cập nhật: 2026-10-19
 Nguồn: [PRD](./PRD.md) mục 15, [Technical Design](./TECHNICAL-DESIGN.md) mục 2 & 18, [ROADMAP](./ROADMAP.md)
 Tracking: Issues [#10](https://github.com/hangndat/ticket-solution/issues/10), [#11](https://github.com/hangndat/ticket-solution/issues/11)
+
+## O17 — P2 portal: mở lại multi-event portfolio + phạm vi roles/onboarding (19/10/2026)
+
+User ủy quyền Epic [#491](https://github.com/hangndat/ticket-solution/issues/491) gói **A+B+C** (19/10/2026). Gói **B** gồm multi-event analytics (**mở lại** OUT O12 §5 / O14 §6), saved views/automation, portal EN, custom roles / self-serve onboarding — discovery BA∥PD∥architect rồi coding. Architecture handoff: [`docs/architecture/PORTAL-P2-ADR.md`](./architecture/PORTAL-P2-ADR.md). Run: `run_d04055a8969b`.
+
+| # | Quyết định | Chi tiết |
+| - | ---------- | -------- |
+| 1 | Multi-event analytics | **Mở** portfolio Owner trên portal: tổng hợp / danh sách snapshot tái dụng dictionary KPI **O12** (check-in Gate confirm, pending, emailNeedsCs, quotaRemaining, `asOf`). **Không** mở revenue/UTM/seat/Wallet/RFID/BI doanh thu (O10). |
+| 2 | Quan hệ O12 | Dictionary và refresh thủ công / watermark **giữ**. O12 §5 «chỉ event-scoped» được **nới** cho portfolio; trang event Dashboard vẫn event-scoped. |
+| 3 | Quan hệ O14 | O14 §6 «multi-event / metrics product OUT» — **mở multi-event portfolio**; metrics product tùy tiện vẫn OUT. Validate-only / resolution desk vẫn OUT. |
+| 4 | Custom roles | Cho phép khám phá/triển khai **named server presets** (role-map versioned); **cấm** client gửi permission array tùy ý. |
+| 5 | Self-serve onboarding | Cho phép flow tenant **PENDING** + Owner invite sau verify; **ACTIVE** qua Operator (không auto-ACTIVE từ form marketing O13). |
+| 6 | Saved views / EN | Trong phạm vi P2 khi BA ưu tiên; EN portal additive, mặc định VI (O04). |
+| 7 | Non-goals / cutover | Giữ O10; cutover `portal.vemoki.com` prod chỉ Story C / [#502](https://github.com/hangndat/ticket-solution/issues/502). Không mock auth/UAT; không EAS. |
+| 8 | Ủy quyền coding | Feature coding P2 **sau** AC BA + ADR handoff (+ PD khi UI); vẫn branch/PR + DoD độc lập. |
+
+Architecture impact: **Có**. Approval phạm vi ≠ code complete ≠ acceptance complete ≠ pilot ready.
 
 ## O16 — Portal admin riêng Ant Design (18/10/2026)
 
@@ -14,7 +31,7 @@ Người dùng phản hồi **“duyệt”** sau [roadmap PORTAL](./plans/PORTA
 - `PLATFORM-PORTAL-ZONE`: Platform Operator vào khu vực portal riêng theo wave, client/audience/session và quyền tách tenant; không nâng quyền tenant Owner.
 - Đủ luồng admin hiện có trước cutover; đóng gap UI/BFF/contracts/Nest thực tế; audit/ops trong gói cần contract/RBAC/test, không fake dữ liệu hay coi UI có sẵn là API đã chạy.
 - Cho phép implementation → conventional commit/feature branch → push/PR → review độc lập exact SHA → CI → coordinator integration theo git workflow. Không tự triển khai production DNS/TLS/cutover, tạo cloud resources hoặc submit store từ approval này; P1.2 hiện chỉ chuẩn bị cấu hình/runbook và kiểm thử local/môi trường được cho phép.
-- Không mở P2/multi-event BI, enterprise SSO mới/billing/custom-domain, payment/refund/transfer, seat map, Wallet, Android hoặc validate-only desk. Keycloak IdP SSO hiện có khác chia sẻ BFF cookie; cookie host-only từng host.
+- Không mở enterprise SSO mới/billing/custom-domain, payment/refund/transfer, seat map, Wallet, Android hoặc validate-only desk trong gói P0+P1. **P2 / multi-event portfolio** được mở riêng bởi **O17** (Epic #491) — không phải BI doanh thu. Keycloak IdP SSO hiện có khác chia sẻ BFF cookie; cookie host-only từng host.
 
 Architecture impact: **Có** — topology staff, OIDC/BFF, package UI và API gaps. ADR-20 ghi chi tiết kỹ thuật và handoff; không sửa lịch sử O13, chỉ chuyển audience admin theo quyết định mới. Run triển khai: `run_34fde1e32ed1`. Approval ≠ code complete ≠ acceptance complete ≠ pilot ready.
 
@@ -34,10 +51,11 @@ Architecture impact: **Có** — topology staff, OIDC/BFF, package UI và API ga
 | O08 | Database riêng theo tổ chức? | **Shared PostgreSQL schema + RLS** (+ authz app); không DB-per-tenant | Đã chốt (MVP) | Deployment, isolation tier |
 | O09 | Tên thương hiệu và domain platform? | **Vemoki**, domain `vemoki.com` | Đã chốt (MVP) | Tên hiển thị store/web, sender `noreply@vemoki.com`, deep link `vemoki://`; repo `ticket-solution` và bundle `com.hangndat.ticket` giữ nguyên |
 | O10 | Mở rộng MVP / hủy Android·payment·seat·Wallet? | **Có mở rộng** — đưa **D7** Offline Gate multi-device, **D8** White-label, **D9** Demo seed + UX/media, **D10** App Store metadata vào MVP. **Hủy khỏi kế hoạch MVP:** Android native; payment/refund/chuyển nhượng; seat map; Apple/Google Wallet (ngoài phạm vi có chủ đích). Issue [#7](https://github.com/hangndat/ticket-solution/issues/7) rewrite đồng bộ board (worker GitHub). | Đã chốt (MVP mở rộng) 2026-10-17 | [ROADMAP](./ROADMAP.md) §1/§4/§6; [PRD](./PRD.md) §4 |
-| O12 | Dictionary KPI Dashboard M11 + pha triển khai? | Xem mục **O12** bên dưới — chốt theo tổng hợp thị trường 18/10/2026; không thay non-goals O10 | Đã chốt (MVP) 2026-10-18 | [PRD](./PRD.md) M11; [DASHBOARD-MARKET-SYNTHESIS](./plans/DASHBOARD-MARKET-SYNTHESIS.md) |
+| O12 | Dictionary KPI Dashboard M11 + pha triển khai? | Xem mục **O12** bên dưới — chốt theo tổng hợp thị trường 18/10/2026; không thay non-goals O10. **Cập nhật O17:** cho phép portfolio multi-event (tái dụng dictionary); event Dashboard vẫn event-scoped | Đã chốt (MVP) 2026-10-18; bổ sung O17 2026-10-19 | [PRD](./PRD.md) M11; [DASHBOARD-MARKET-SYNTHESIS](./plans/DASHBOARD-MARKET-SYNTHESIS.md); [PORTAL-P2-ADR](./architecture/PORTAL-P2-ADR.md) |
 | O13 | Trang bán platform GTM + tách subdomain? | Xem mục **O13** — buyer Owner+Agency; `vemoki.com`/`app.`; CTA demo+quan tâm; demo giả lập; **VI+EN**; code ngay sau PD | Đã chốt (GTM) 2026-10-18 | [VEMOKI-PLATFORM-SALES-PAGE-RESEARCH](./plans/VEMOKI-PLATFORM-SALES-PAGE-RESEARCH.md); ASC; ADR subdomain |
-| O14 | Phê duyệt mở rộng MVP sau research day-of + residual? | Xem mục **O14** bên dưới — duyệt gói [`MVP-EXPAND-MARKET-SYNTHESIS`](./plans/MVP-EXPAND-MARKET-SYNTHESIS.md) 18/10/2026 | Đã chốt (MVP) 2026-10-18 | Epic [#222](https://github.com/hangndat/ticket-solution/issues/222); O12 consumer web; BE reject audit |
+| O14 | Phê duyệt mở rộng MVP sau research day-of + residual? | Xem mục **O14** bên dưới — duyệt gói [`MVP-EXPAND-MARKET-SYNTHESIS`](./plans/MVP-EXPAND-MARKET-SYNTHESIS.md) 18/10/2026. **Cập nhật O17:** mở lại multi-event portfolio; validate-only/metrics tùy tiện vẫn OUT | Đã chốt (MVP) 2026-10-18; bổ sung O17 2026-10-19 | Epic [#222](https://github.com/hangndat/ticket-solution/issues/222); O12 consumer web; BE reject audit; Epic [#491](https://github.com/hangndat/ticket-solution/issues/491) |
 | O15 | Nguồn sự kiện public = server (bỏ fixture client SoT)? | Xem mục **O15** — Published projection SoT; Admin quản lý; Nest public GET; web SSR/ISR; iOS published-first | Đã chốt (MVP) 2026-10-18 | Epic [#254](https://github.com/hangndat/ticket-solution/issues/254); **ADR-19** |
+| O17 | P2 portal — multi-event portfolio + roles/onboarding? | Xem mục **O17** — Epic [#491](https://github.com/hangndat/ticket-solution/issues/491) A+B+C; handoff [PORTAL-P2-ADR](./architecture/PORTAL-P2-ADR.md) | Đã chốt (phạm vi P2) 2026-10-19 | Story [#493](https://github.com/hangndat/ticket-solution/issues/493); Task architect [#501](https://github.com/hangndat/ticket-solution/issues/501) |
 
 ### O11 — Định hướng mở rộng UX/UI cho vận hành production (18/10/2026)
 
@@ -105,6 +123,7 @@ Chỉ mở redemption / Gate / admin tenant **sau khi**:
 | 2026-10-18 | User duyệt **O15 / ADR-19** — published projection SoT (Epic #254); dispatch BE public Nest + seed (#255). |
 | 2026-10-18 | User **duyệt O06** — retention/region/SLA theo gói MVP (anonymize 30d; vé 365d; audit 730d; object 90d; single-region VPS; SLA support tách business-hours vs on-call cửa sổ Gate). Nguồn: `docs/ops/O06-OPTIONS.md`. |
 | 2026-10-18 | **UX-11 chốt Option A** — MVP đổi mã guest = Keycloak verified email / UI «Cần đăng nhập»; OTP/magic link = sau MVP. Issue [#372](https://github.com/hangndat/ticket-solution/issues/372). |
+| 2026-10-19 | User ủy quyền Epic [#491](https://github.com/hangndat/ticket-solution/issues/491) **A+B+C**. **O17:** mở lại multi-event portfolio (OUT O12/O14); phạm vi P2 roles/onboarding/saved views/EN; handoff [`PORTAL-P2-ADR`](./architecture/PORTAL-P2-ADR.md). Cutover prod chỉ #502. |
 
 ## UX-11 — Guest redeem auth MVP (18/10/2026)
 
@@ -155,7 +174,7 @@ User chốt theo đề xuất sau research nội bộ + BA A/B (`docs/plans/DASH
 | 2 | Thứ tự day-of trên trang event | **Manager trước:** readiness/quota/pending (dẫn `#228/#229`); **Supervisor ngay sau:** check-in success + reject theo lý do·cổng trên cùng event Dashboard. |
 | 3 | Email lỗi | Count **cần CS xử lý** (failed cuối / hết retry hữu ích), không đếm mọi lần retry tạm. Thẻ KPI chỉ deep-link CS; **không** resend từ thẻ. |
 | 4 | Độ tươi pilot | Bắt buộc **`asOf`/watermark** + copy “server đã ghi nhận”; pilot = **refresh thủ công**. Mục tiêu PRD ≤10s = độ trễ commit→UI đã đo trong tải pilot — **không** suy ra bắt buộc poll 10s. Auto-refresh chỉ xét sau khi có budget/query plan (giảm reporting trước Gate). |
-| 5 | Phạm vi đợt | **Chỉ event-scoped.** Multi-event Owner overview = pha sau. Staff “Đầy đủ” / Scanner “tóm tắt theo quyền” giữ ma trận PRD §5. |
+| 5 | Phạm vi đợt | **Event Dashboard = event-scoped.** Multi-event Owner overview = **pha sau** tại thời điểm O12; **đã mở lại** dưới **O17** (portfolio tái dụng dictionary, không BI doanh thu). Staff “Đầy đủ” / Scanner “tóm tắt theo quyền” giữ ma trận PRD §5. |
 | 6 | Quan hệ `#229` readiness | Research/O12 **chỉ bổ sung KPI/copy Dashboard**; **không** tự sửa AC readiness `#229` đã nộp trừ khi có ủy quyền riêng. Publish ≠ mở đổi vé ≠ mở check-in vẫn theo PRD M03. |
 
 **Wave sau O12 (khi được dispatch):** P1 mở rộng `EventReport` (check-in/reject + remaining quota có định nghĩa + email-cần-CS) → P2 watermark/fail-closed UI → P3 deep-link việc cần làm → hòa copy với `#229` → mới xét auto-refresh / drilldown / multi-event.
@@ -173,7 +192,7 @@ User trả lời **duyệt** cho gói [`MVP-EXPAND-MARKET-SYNTHESIS.md`](./plans
 | 3 | CS / email recovery UX | **Gộp đợt** sau/∥ khi slot `web` rảnh — timeline + copy DELIVERED≠ACCEPTED; không resend từ thẻ KPI. |
 | 4 | BE reject audit | **Ưu tiên ngay** (ownership `backend`): wire `recordGateReject` trên online deny paths — known gap DoD `#241`. |
 | 5 | Invite Owner HTTP | **Sau** `#234` attendee web (tránh 2 feature Dispatch `web`); revalidate prod CSRF/copy VI. |
-| 6 | Validate-only / resolution desk / multi-event / metrics product | **Giữ OUT / defer** đến khi user mở lại (khớp O11). |
+| 6 | Validate-only / resolution desk / multi-event / metrics product | **Lịch sử O14:** giữ OUT / defer. **Cập nhật O17:** multi-event **portfolio** được mở; validate-only / resolution desk / metrics product tùy tiện **vẫn OUT**. |
 | 7 | O06 + privacy | *(Lịch sử O14)* Tạm không ingest PII / không deploy privacy đến khi chốt O06. **Cập nhật 18/10/2026:** O06 **đã chốt** — xem mục O06; deploy `/privacy` khớp số vẫn cần **ủy quyền deploy** riêng. |
 | 8 | Non-goals | Giữ O10: Android / payment / seat / Wallet / RFID / revenue BI. |
 
