@@ -68,9 +68,9 @@ function FixtureDemoDetail({
   }
   return (
     <Page>
-      <Notice title="Demo · fixture · chưa xuất bản">
-        Route /events/fixture/* — catalog mẫu tường minh. Không phải nội dung đã
-        xuất bản trên máy chủ và không phải fallback khi API lỗi.
+      <Notice title="Demo · dữ liệu mẫu · chưa xuất bản">
+        Nội dung mẫu tường minh trên thiết bị. Không phải sự kiện đã xuất bản
+        trên máy chủ và không phải fallback khi API lỗi.
       </Notice>
       <EventMediaHeader
         eventId={event.id}
@@ -88,7 +88,7 @@ function FixtureDemoDetail({
         {event.location}
       </Text>
       <Notice title="Đăng ký">
-        Chỉ thông tin mẫu. Không đăng ký vé từ fixture.
+        Chỉ thông tin mẫu. Không đăng ký vé từ dữ liệu demo.
       </Notice>
     </Page>
   );
@@ -159,9 +159,8 @@ function PublishedEventDetailView({
     return (
       <Page>
         <ErrorState title="Chưa cấu hình API">
-          Đặt EXPO_PUBLIC_API_BASE_URL để tải GET
-          /v1/public/tenants/…/events/…. Demo chỉ trên route fixture — không
-          thay thế ở đây.
+          Bản dựng chưa có địa chỉ API để tải sự kiện đã xuất bản. Demo mẫu
+          không thay thế ở đây.
         </ErrorState>
       </Page>
     );
