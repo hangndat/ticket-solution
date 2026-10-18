@@ -1,0 +1,75 @@
+{
+  "timeUTC": "2026-10-18T09:28:17+00:00",
+  "task": 327,
+  "epic": 301,
+  "story": 307,
+  "verdict": "BLOCKED",
+  "physicalTfSmokePass": false,
+  "submittedForReview": false,
+  "released": false,
+  "cloudBuild": false,
+  "target": {
+    "version": "1.0.0",
+    "build": "10",
+    "bundleId": "com.hangndat.ticket",
+    "team": "BLUA62D52G",
+    "sourceSha": "6002d09afa9382a72ee9840c8ba1dd41c7b09065",
+    "ipaSHA256": "37c96607b99be7136ef91c9f57aa561c2461e5458122175c364553bd5b78f8c7",
+    "ascBuildId": "45c730c3-7caa-4b28-92fb-315cf07bce5d",
+    "processingState": "VALID",
+    "internalBuildState": "IN_BETA_TESTING",
+    "externalBuildState": "READY_FOR_BETA_SUBMISSION",
+    "appStoreVersionState": "PREPARE_FOR_SUBMISSION"
+  },
+  "betaGroup": {
+    "name": "James",
+    "isInternalGroup": true,
+    "hasAccessToAllBuilds": true
+  },
+  "testers": [
+    {
+      "email": "hangndat@gmail.com",
+      "state": "INSTALLED",
+      "inviteType": "EMAIL"
+    }
+  ],
+  "usbInstallDistributionIpa": {
+    "attempted": true,
+    "result": "FAIL",
+    "error": "0xe800801f Beta profile without proper entitlement"
+  },
+  "devices": {
+    "connected": [
+      {
+        "name": "Dexter\u2019s iPhone 16 Pro",
+        "coreDeviceId": "06CAC741-EB05-55B0-AAE6-14D7B49F50BB",
+        "udid": "00008140-000605803C01801C",
+        "os": "26.6.1",
+        "installedVemoki": {
+          "version": "0.1.0",
+          "build": "7"
+        },
+        "testFlightAppPresent": false,
+        "wdaPresent": true
+      },
+      {
+        "name": "DatHN iPhone",
+        "coreDeviceId": "CB22153A-C24F-547E-87FC-34EC62527838",
+        "udid": "00008130-000618E402D1001C",
+        "os": "26.6.1",
+        "installedVemoki": {
+          "version": "0.1.0",
+          "build": "10"
+        },
+        "testFlightAppPresent": false,
+        "wdaPresent": false
+      }
+    ]
+  },
+  "headlessSimUat": {
+    "ran": false,
+    "reason": "optional; sim \u2260 TF binary; does not replace camera AC"
+  },
+  "blocker": "operator install TestFlight + Vemoki 1.0.0 (10) on device for hangndat@gmail.com; report UDID then re-dispatch",
+  "apiKeyId": "KHT3SAL2FS"
+}
