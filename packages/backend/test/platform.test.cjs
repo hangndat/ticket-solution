@@ -26,6 +26,8 @@ const {
   O06_ACCOUNT_ANONYMIZE_POLICY_VERSION,
   O06_ACCOUNT_ANONYMIZE_MAX_DAYS,
   createSupportGrant,
+  revokeSupportGrant,
+  getPlatformTenantHealth,
   listSupportTickets,
   listMyTenants,
   listMyEvents,
@@ -35,6 +37,7 @@ const {
   seedEventInventory,
   readCodeHmacEnvironment,
   withTenant,
+  withPlatformRole,
   createEvent,
   grantMembership,
   grantEventAssignment,
@@ -331,6 +334,31 @@ test(
       });
       assert.ok(supportRows.length >= 1);
       assert.ok(!JSON.stringify(supportRows).includes('att@example.com'));
+
+      const revoked = await revokeSupportGrant(db, {
+        actorUserId: operator.userId,
+        grantId: grant.grantId,
+        reason: 'incident closed',
+      });
+      assert.equal(revoked.grantId, grant.grantId);
+      assert.ok(revoked.revokedAt);
+      await assert.rejects(
+        () =>
+          listSupportTickets(db, {
+            actorUserId: operator.userId,
+            grantId: grant.grantId,
+          }),
+        (e) => e.code === PLATFORM_ERROR_CODES.PERMISSION_DENIED,
+      );
+      await assert.rejects(
+        () =>
+          revokeSupportGrant(db, {
+            actorUserId: operator.userId,
+            grantId: grant.grantId,
+            reason: 'again',
+          }),
+        (e) => e.code === PLATFORM_ERROR_CODES.RESOURCE_NOT_FOUND,
+      );
 
       // Last owner cannot revoke self
       await assert.rejects(
@@ -731,6 +759,197 @@ test(
 
       const me = await getPlatformMe(db, operator.userId);
       assert.ok(me.permittedCommands.includes('platform.tenants.list'));
+      assert.ok(me.permittedCommands.includes('platform.health.read'));
+      assert.ok(me.permittedCommands.includes('platform.support.revoke'));
+    } finally {
+      if (db) await db.$disconnect().catch(() => {});
+      if (name) {
+        try {
+          docker('rm', '-f', name);
+        } catch {
+          /* ignore */
+        }
+      }
+    }
+  },
+);
+
+test(
+  'platform tenant health counters (H-P2) + support grant revoke audit',
+  { timeout: 300000 },
+  async () => {
+    let name;
+    let db;
+    try {
+      const boot = await startIsolatedPostgres();
+      name = boot.name;
+      db = createDatabase(boot.url, 3);
+      const users = createPrismaIdentityUserRepository(db);
+      const security = readPlatformSecurityConfig({ NODE_ENV: 'test' });
+
+      const operator = await users.upsertFromVerifiedIdentity({
+        issuer: 'http://localhost/realms/ticket',
+        subject: 'op-health-1',
+        email: 'op-health@example.com',
+        emailVerified: true,
+      });
+      const owner = await users.upsertFromVerifiedIdentity({
+        issuer: 'http://localhost/realms/ticket',
+        subject: 'owner-health-1',
+        email: 'owner-health@example.com',
+        emailVerified: true,
+      });
+      const stranger = await users.upsertFromVerifiedIdentity({
+        issuer: 'http://localhost/realms/ticket',
+        subject: 'stranger-health-1',
+        email: 'stranger-health@example.com',
+        emailVerified: true,
+      });
+      await bootstrapPlatformOperator(db, { userId: operator.userId });
+
+      const slug = 'health-' + randomBytes(3).toString('hex');
+      const provisioned = await provisionTenant(db, security, {
+        actorUserId: operator.userId,
+        clientKey: 'health-prov-1',
+        body: {
+          slug,
+          name: 'Health Tenant',
+          defaultTimezone: 'Asia/Ho_Chi_Minh',
+          ownerEmail: 'owner-health@example.com',
+          limits: {
+            maxEvents: 5,
+            maxStaff: 5,
+            emailPerDay: null,
+            importRowsPerJob: null,
+          },
+          flags: { importsEnabled: true, exportsEnabled: true },
+        },
+      });
+
+      await acceptMembershipInvite(db, {
+        userId: owner.userId,
+        email: 'owner-health@example.com',
+        emailVerified: true,
+        token: provisioned.rawInviteToken,
+      });
+
+      let eventId;
+      await withTenant(db, provisioned.tenantId, async (tx) => {
+        const ev = await createEvent(tx, {
+          tenantId: provisioned.tenantId,
+          actorUserId: owner.userId,
+          idempotencyKey: randomUUID(),
+          body: {
+            slug: 'health-ev',
+            name: 'Health Event',
+            timezone: 'Asia/Ho_Chi_Minh',
+          },
+        });
+        eventId = ev.event.eventId;
+      });
+
+      const nPending = randomUUID();
+      const nFailed = randomUUID();
+      const nDead = randomUUID();
+      const oPending = randomUUID();
+      const oDead = randomUUID();
+      await withTenant(db, provisioned.tenantId, async (tx) => {
+        await tx.$executeRaw`
+          INSERT INTO notifications (
+            tenant_id, event_id, id, business_key, channel, state, kind,
+            payload_version, attempts, payload, created_at, updated_at
+          ) VALUES
+            (
+              ${provisioned.tenantId}::uuid, ${eventId}::uuid, ${nPending}::uuid,
+              'health:pending', 'email', 'PENDING', 'TicketIssued', 1,
+              0, '{}'::jsonb, now(), now()
+            ),
+            (
+              ${provisioned.tenantId}::uuid, ${eventId}::uuid, ${nFailed}::uuid,
+              'health:failed', 'email', 'FAILED', 'TicketIssued', 1,
+              1, '{}'::jsonb, now(), now()
+            ),
+            (
+              ${provisioned.tenantId}::uuid, ${eventId}::uuid, ${nDead}::uuid,
+              'health:dead', 'email', 'DEAD', 'TicketIssued', 1,
+              3, '{}'::jsonb, now(), now()
+            )
+        `;
+        await tx.$executeRaw`
+          INSERT INTO outbox (
+            tenant_id, event_id, id, type, aggregate_id, payload_version,
+            payload, status, attempts, created_at, updated_at
+          ) VALUES
+            (
+              ${provisioned.tenantId}::uuid, ${eventId}::uuid, ${oPending}::uuid,
+              'TicketIssued', ${nPending}::uuid, 1, '{}'::jsonb,
+              'PENDING', 0, now(), now()
+            ),
+            (
+              ${provisioned.tenantId}::uuid, ${eventId}::uuid, ${oDead}::uuid,
+              'TicketIssued', ${nDead}::uuid, 1, '{}'::jsonb,
+              'DEAD', 3, now(), now()
+            )
+        `;
+      });
+
+      await assert.rejects(
+        () =>
+          getPlatformTenantHealth(db, stranger.userId, provisioned.tenantId),
+        (e) => e.code === PLATFORM_ERROR_CODES.PLATFORM_OPERATOR_REQUIRED,
+      );
+
+      const health = await getPlatformTenantHealth(
+        db,
+        operator.userId,
+        provisioned.tenantId,
+      );
+      assert.equal(health.tenantId, provisioned.tenantId);
+      assert.ok(health.observedAt);
+      assert.equal(health.notifications.pending, 1);
+      assert.equal(health.notifications.failed, 1);
+      assert.equal(health.notifications.dead, 1);
+      // Provision enqueues owner-invite outbox; plus one seeded PENDING.
+      assert.ok(health.outbox.pending >= 1);
+      assert.equal(health.outbox.failed, 1);
+      assert.ok(health.usage.events >= 1);
+      const healthJson = JSON.stringify(health);
+      assert.ok(!healthJson.includes('owner-health@example.com'));
+      assert.ok(!/recipient|smtp|errorMessage/i.test(healthJson));
+
+      const grant = await createSupportGrant(db, security, {
+        actorUserId: operator.userId,
+        tenantId: provisioned.tenantId,
+        eventId,
+        scopes: ['cs.read'],
+        reason: 'health-check grant',
+        expiresAt: new Date(Date.now() + 20 * 60 * 1000).toISOString(),
+      });
+      await assert.rejects(
+        () =>
+          revokeSupportGrant(db, {
+            actorUserId: operator.userId,
+            grantId: grant.grantId,
+            reason: '',
+          }),
+        (e) => e.code === PLATFORM_ERROR_CODES.INVALID_INPUT,
+      );
+      const revoked = await revokeSupportGrant(db, {
+        actorUserId: operator.userId,
+        grantId: grant.grantId,
+        reason: 'done',
+      });
+      assert.equal(revoked.grantId, grant.grantId);
+
+      const rows = await withPlatformRole(db, async (tx) =>
+        tx.$queryRaw`
+          SELECT action
+          FROM platform_audit_logs
+          WHERE resource_id = ${grant.grantId}::uuid
+            AND action = 'platform.support.revoked'
+        `,
+      );
+      assert.equal(rows.length, 1);
     } finally {
       if (db) await db.$disconnect().catch(() => {});
       if (name) {

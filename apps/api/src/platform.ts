@@ -37,6 +37,7 @@ import {
   type PortalMembershipMutationResponse,
   type PortalPlatformAuditEntry,
   type PortalPlatformAuditPage,
+  type PortalPlatformTenantHealth,
   type PortalPlatformTenantSummary,
   type PortalPlatformTenantsPage,
   type PortalReasonBody,
@@ -58,6 +59,7 @@ import {
   getCurrentAccountDeletionRequest,
   getPlatformMe,
   getPlatformTenantDetail,
+  getPlatformTenantHealth,
   listMyEvents,
   listMyTenants,
   listPlatformAudit,
@@ -72,7 +74,7 @@ import {
   resendPortalInvite,
   revokeMembershipKeepingLastOwner,
   revokePortalInvite,
-  revokeSupportGrant,
+  revokeSupportGrant as revokePlatformSupportGrant,
   setTenantStatus,
   updateTenantLimits,
   createPrismaIdentityUserRepository,
@@ -219,6 +221,40 @@ class PortalPlatformAuditPageDto implements PortalPlatformAuditPage {
   @ApiProperty({ type: [PortalPlatformAuditEntryDto] })
   items!: PortalPlatformAuditEntryDto[];
   @ApiProperty({ nullable: true, type: String }) nextCursor!: string | null;
+}
+
+class PlatformTenantUsageDto {
+  @ApiProperty() events!: number;
+  @ApiProperty() staffActive!: number;
+  @ApiProperty() staffPendingInvites!: number;
+  @ApiProperty() emailToday!: number;
+}
+
+class PlatformHealthNotificationsDto {
+  @ApiProperty() pending!: number;
+  @ApiProperty() failed!: number;
+  @ApiProperty() dead!: number;
+}
+
+class PlatformHealthOutboxDto {
+  @ApiProperty() pending!: number;
+  @ApiProperty() failed!: number;
+}
+
+class PortalPlatformTenantHealthDto implements PortalPlatformTenantHealth {
+  @ApiProperty({ format: 'uuid' }) tenantId!: string;
+  @ApiProperty({ format: 'date-time' }) observedAt!: string;
+  @ApiProperty({ type: PlatformHealthNotificationsDto })
+  notifications!: PlatformHealthNotificationsDto;
+  @ApiProperty({ type: PlatformHealthOutboxDto })
+  outbox!: PlatformHealthOutboxDto;
+  @ApiProperty({ type: PlatformTenantUsageDto })
+  usage!: PlatformTenantUsageDto;
+}
+
+class SupportGrantRevokeResponseDto {
+  @ApiProperty({ format: 'uuid' }) grantId!: string;
+  @ApiProperty({ format: 'date-time' }) revokedAt!: string;
 }
 
 type Deps = {
@@ -380,6 +416,12 @@ export class PlatformService {
   tenantDetail(authorization: string | undefined, tenantId: string) {
     return this.platformActor(authorization)
       .then((u) => getPlatformTenantDetail(this.deps.db!, u.userId, tenantId))
+      .catch(fail);
+  }
+
+  tenantHealth(authorization: string | undefined, tenantId: string) {
+    return this.platformActor(authorization)
+      .then((u) => getPlatformTenantHealth(this.deps.db!, u.userId, tenantId))
       .catch(fail);
   }
 
@@ -699,6 +741,22 @@ export class PlatformService {
       .catch(fail);
   }
 
+  revokeSupportGrant(
+    authorization: string | undefined,
+    grantId: string,
+    body: PortalReasonBody,
+  ) {
+    return this.platformActor(authorization)
+      .then((u) =>
+        revokePlatformSupportGrant(this.deps.db!, {
+          actorUserId: u.userId,
+          grantId,
+          reason: body.reason,
+        }),
+      )
+      .catch(fail);
+  }
+
   supportTickets(
     authorization: string | undefined,
     tenantId: string,
@@ -815,6 +873,16 @@ export class PlatformController {
     @Param('tenantId') tenantId: string,
   ) {
     return this.platform.tenantDetail(authorization, tenantId);
+  }
+
+  @Get('platform/tenants/:tenantId/health')
+  @ApiBearerAuth()
+  @ApiOkResponse({ type: PortalPlatformTenantHealthDto })
+  tenantHealth(
+    @Headers('authorization') authorization: string | undefined,
+    @Param('tenantId') tenantId: string,
+  ) {
+    return this.platform.tenantHealth(authorization, tenantId);
   }
 
   @Post('platform/tenants/:tenantId/status')
@@ -1017,6 +1085,18 @@ export class PlatformController {
     return this.platform.supportGrant(authorization, body);
   }
 
+  @Post('platform/support-grants/:grantId/revoke')
+  @ApiBearerAuth()
+  @ApiBody({ type: PortalReasonBodyDto })
+  @ApiOkResponse({ type: SupportGrantRevokeResponseDto })
+  revokeSupportGrant(
+    @Headers('authorization') authorization: string | undefined,
+    @Param('grantId') grantId: string,
+    @Body() body: PortalReasonBodyDto,
+  ) {
+    return this.platform.revokeSupportGrant(authorization, grantId, body);
+  }
+
   @Get('platform/support-grants/:grantId/tickets')
   @ApiBearerAuth()
   supportTickets(
@@ -1074,4 +1154,3 @@ export function buildPlatformDeps(env: NodeJS.ProcessEnv, db: PrismaClient | nul
 }
 
 void createDatabase;
-void revokeSupportGrant;
