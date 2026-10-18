@@ -87,6 +87,8 @@ Process `apps/portal` (port **3013**). Chi tiết thao tác: [`PORTAL-LOCAL-CUTO
 | `PLATFORM_OIDC_CLIENT_ID` | `ticket-platform-web` | Operator MFA trên portal |
 | `PLATFORM_OIDC_REDIRECT_URI` | `http://127.0.0.1:3013/api/auth/platform/callback` | Khớp path code |
 | `PORTAL_ORIGIN` / `PRODUCT_ORIGIN` | `https://portal.vemoki.com` / `https://app.vemoki.com` | CTA tuyệt đối; dual-run local vẫn dùng loopback redirect URI |
+| `PORTAL_ADMIN_REDIRECT` | unset / `0` (mặc định OFF) | `apps/web` proxy: GET/HEAD `/admin`\|`/platform` → `PORTAL_ORIGIN` khi `1`/`true`; **không** POST/BFF (ADR-20 §8 / #438) |
+| `PORTAL_DUAL_RUN_BANNER` | `1` khi có `PORTAL_ORIGIN` (web) / `PRODUCT_ORIGIN` (portal) | Banner dual-run; độc lập với flag redirect |
 | `API_BASE_URL` | `http://127.0.0.1:3100` | Nest từ BFF portal |
 
 Cookie staff/platform trên portal: **host-only** (omit `Domain`). Kiểm tra realm JSON: `./scripts/portal-local-dual-run-check.sh`.
