@@ -5,6 +5,7 @@ import {
   attendeeWalletCopy,
   presentRedeemDecision,
   presentTicketRow,
+  ticketGateHint,
   ticketStateLabelVi,
 } from './attendee-outcome-copy.ts';
 
@@ -109,4 +110,14 @@ test('presentRedeemDecision stale asks reload + reconsent', () => {
 test('attendeeWalletCopy avoids Keycloak / Nest on guest chrome', () => {
   assert.doesNotMatch(attendeeWalletCopy.signedOutBody, /Keycloak|Nest|BFF|\/v1\//i);
   assert.match(attendeeWalletCopy.offlineBannerTitle, /chưa kết nối/i);
+});
+
+test('ticketGateHint marks demo and non-active states (AC-T1)', () => {
+  assert.equal(
+    ticketGateHint('ACTIVE', { demo: true }),
+    attendeeWalletCopy.demoNotForGate,
+  );
+  assert.equal(ticketGateHint('REVOKED', { demo: false }), attendeeWalletCopy.revokedHint);
+  assert.equal(ticketGateHint('USED', { demo: false }), attendeeWalletCopy.usedHint);
+  assert.equal(ticketGateHint('ACTIVE', { demo: false }), null);
 });
