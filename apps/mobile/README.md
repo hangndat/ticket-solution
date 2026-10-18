@@ -21,7 +21,7 @@ See `apps/mobile/.env.example`:
 
 ## Auth + wallet
 
-1. **Sign in** — PKCE against Keycloak (`ticketsolution://oauth/callback`; brand scheme `vemoki` is also registered).
+1. **Sign in** — PKCE against Keycloak (`vemoki://oauth/callback`; legacy `ticketsolution` scheme still registered for deep links).
 2. **Session** — bearer → `SessionBoundary.establish`; verified only when
    `GET /v1/me` returns `MeResponse.userId` (same identity path as web).
 3. **My Tickets** — `GET /v1/me/tickets?tenantId=` with the verified bearer;

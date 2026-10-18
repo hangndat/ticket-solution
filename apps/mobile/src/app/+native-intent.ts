@@ -2,7 +2,7 @@ import { routeForInstalledAppLink } from '@/links/installed-app-link';
 
 /**
  * Rewrite installed-app links onto existing screens.
- * Returning null keeps ticketsolution://oauth/callback on the auth session.
+ * Returning null keeps vemoki://oauth/callback (and legacy ticketsolution) on the auth session.
  */
 export function redirectSystemPath({
   path,
