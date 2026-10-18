@@ -333,5 +333,11 @@ describe('post-login return allowlist', () => {
     assert.equal(sanitizePostLoginPath('//evil.example'), null);
     assert.equal(sanitizePostLoginPath('/claim?token=x'), '/claim');
     assert.equal(sanitizePostLoginPath('/not-allowed'), null);
+    assert.equal(
+      sanitizePostLoginPath(
+        '/t/uat-device/tickets/97f77680-4d65-4b6d-baf3-b3f699a006a6',
+      ),
+      '/t/uat-device/tickets/97f77680-4d65-4b6d-baf3-b3f699a006a6',
+    );
   });
 });
