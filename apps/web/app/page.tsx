@@ -12,8 +12,12 @@ import {
 import { SurfaceState } from '../src/ui/surface-state';
 import { EventBanner, EventLogo } from '../src/ui/event-media';
 
-/** ISR — published projection; never SSG from client fixtures. */
-export const revalidate = 60;
+/**
+ * Request-time published catalog (ADR-19).
+ * Avoid build-time SSG empty/unreachable snapshots when API is down during `next build`
+ * (CI builds before test:routes mock). Never fall back to client fixtures.
+ */
+export const dynamic = 'force-dynamic';
 
 type HomeCatalog =
   | { status: 'ok'; items: PublishedEventSummary[] }
