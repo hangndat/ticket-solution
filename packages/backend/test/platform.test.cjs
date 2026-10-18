@@ -16,6 +16,9 @@ const {
   revokeMembershipKeepingLastOwner,
   createAccountDeletionRequest,
   getCurrentAccountDeletionRequest,
+  processDueAccountAnonymizations,
+  O06_ACCOUNT_ANONYMIZE_POLICY_VERSION,
+  O06_ACCOUNT_ANONYMIZE_MAX_DAYS,
   createSupportGrant,
   listSupportTickets,
   listMyTenants,
@@ -332,13 +335,14 @@ test(
         (e) => e.code === PLATFORM_ERROR_CODES.LAST_OWNER_REQUIRED,
       );
 
-      // Account deletion ACK only
+      // Account deletion ACK → O06 REQUESTED (anonymize ≤30d); no hard erase yet
       const del = await createAccountDeletionRequest(db, {
         userId: attendee.userId,
         confirmation: true,
       });
-      assert.equal(del.state, 'AWAITING_POLICY');
-      assert.equal(del.policyStatus, 'UNRESOLVED');
+      assert.equal(del.state, 'REQUESTED');
+      assert.equal(del.policyStatus, 'RESOLVED');
+      assert.equal(del.anonymizeWithinDays, O06_ACCOUNT_ANONYMIZE_MAX_DAYS);
       const again = await createAccountDeletionRequest(db, {
         userId: attendee.userId,
         confirmation: true,
@@ -346,14 +350,48 @@ test(
       assert.equal(again.requestId, del.requestId);
       const cur = await getCurrentAccountDeletionRequest(db, attendee.userId);
       assert.equal(cur.requestId, del.requestId);
-      // User row still exists
-      const still = await users.upsertFromVerifiedIdentity({
+      assert.equal(cur.state, 'REQUESTED');
+      assert.equal(cur.policyStatus, 'RESOLVED');
+
+      // Audit rows must survive anonymize (TTL 730d — never hard-delete here)
+      const auditBefore = await withTenant(db, provisioned.tenantId, (tx) =>
+        tx.$queryRaw`SELECT count(*)::int AS n FROM audit_logs`,
+      );
+      assert.ok(auditBefore[0].n >= 1, 'expected issue/support audit before anonymize');
+
+      const processed = await processDueAccountAnonymizations(db, 50);
+      assert.equal(processed.scanned, 1);
+      assert.equal(processed.applied, 1);
+
+      const after = await getCurrentAccountDeletionRequest(db, attendee.userId);
+      assert.equal(after.state, 'COMPLETED');
+      assert.equal(after.policyStatus, 'RESOLVED');
+
+      const anonUser = await db.$queryRaw`
+        SELECT email, email_verified, subject FROM users WHERE id = ${attendee.userId}::uuid
+      `;
+      assert.equal(anonUser[0].email, null);
+      assert.equal(anonUser[0].email_verified, false);
+      assert.equal(anonUser[0].subject, 'anon:' + del.requestId);
+
+      const auditAfter = await withTenant(db, provisioned.tenantId, (tx) =>
+        tx.$queryRaw`SELECT count(*)::int AS n FROM audit_logs`,
+      );
+      assert.equal(auditAfter[0].n, auditBefore[0].n);
+
+      // Idempotent second pass
+      const againProc = await processDueAccountAnonymizations(db, 50);
+      assert.equal(againProc.applied, 0);
+
+      // Same OIDC subject can re-register as a new user row after subject rotate
+      const reReg = await users.upsertFromVerifiedIdentity({
         issuer: 'http://localhost/realms/ticket',
         subject: 'att-1',
         email: 'att@example.com',
         emailVerified: true,
       });
-      assert.equal(still.userId, attendee.userId);
+      assert.notEqual(reReg.userId, attendee.userId);
+      assert.ok(O06_ACCOUNT_ANONYMIZE_POLICY_VERSION.length > 0);
 
       // Future activated_at deny
       await withTenant(db, provisioned.tenantId, async (tx) => {

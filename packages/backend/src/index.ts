@@ -497,7 +497,22 @@ export {
 export {
   createAccountDeletionRequest,
   getCurrentAccountDeletionRequest,
+  listDueAccountAnonymizations,
+  applyAccountAnonymization,
+  processDueAccountAnonymizations,
+  type AccountDeletionAck,
+  type DueAccountAnonymization,
+  type ApplyAccountAnonymizationResult,
 } from './account-deletion';
+export {
+  O06_ACCOUNT_ANONYMIZE_MAX_DAYS,
+  O06_ACCOUNT_ANONYMIZE_POLICY_VERSION,
+  O06_TICKET_PII_RETENTION_DAYS,
+  O06_OBJECT_RETENTION_DAYS,
+  O06_AUDIT_TTL_DAYS,
+  processDueTicketPiiAnonymizations,
+  processDueObjectRetentions,
+} from './retention-o06';
 export {
   lockTenantPolicyForShare,
   lockTenantPolicyForUpdate,
