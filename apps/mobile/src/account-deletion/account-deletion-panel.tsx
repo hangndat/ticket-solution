@@ -100,7 +100,7 @@ function PrimaryButton({
 
 /**
  * Account deletion request UX (plan §7 / acceptance §8.9).
- * ACK ≠ deleted; O06 retention configured; session-scoped cancel on account switch.
+ * Recording a request is not instant erase; session-scoped cancel on account switch.
  */
 export function AccountDeletionPanel() {
   const identity = useSyncExternalStore(
@@ -160,7 +160,8 @@ export function AccountDeletionPanel() {
     if (!epoch || identity.status !== 'verified') {
       setPhase({
         kind: 'error',
-        message: 'Cần SessionBoundary verified để gửi yêu cầu.',
+        message:
+          'Cần đăng nhập đã xác minh để gửi yêu cầu. / A verified sign-in is required to submit a request.',
         retryable: false,
       });
       return;
@@ -254,8 +255,6 @@ export function AccountDeletionPanel() {
       {phase.kind === 'acknowledged' || phase.kind === 'status' ? (
         <Notice title={describeAccountDeletionRequest(phase.request).title}>
           {describeAccountDeletionRequest(phase.request).body}
-          {'\n'}
-          ackMeansDeleted: {String(phase.ackMeansDeleted)}
         </Notice>
       ) : null}
 
@@ -274,8 +273,8 @@ export function AccountDeletionPanel() {
             <PrimaryButton
               label={
                 resolveAccountDeletionRetryAction(phase) === 'resubmit'
-                  ? 'Thử lại (cùng Idempotency-Key)'
-                  : 'Thử tải lại trạng thái'
+                  ? 'Thử lại gửi yêu cầu / Retry submit'
+                  : 'Thử tải lại trạng thái / Reload status'
               }
               onPress={() => void onRetry()}
               disabled={busy}
@@ -290,7 +289,9 @@ export function AccountDeletionPanel() {
       ) : null}
 
       {phase.kind === 'unavailable' ? (
-        <Notice title="Account deletion API">{phase.message}</Notice>
+        <Notice title="Không dùng được yêu cầu xóa / Deletion unavailable">
+          {phase.message}
+        </Notice>
       ) : null}
 
       {phase.kind === 'idle' ||
