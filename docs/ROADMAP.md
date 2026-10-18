@@ -1,5 +1,9 @@
 # Roadmap — Event Ticketing Platform
 
+> **D13 được duyệt 18/10/2026:** [Epic #301](https://github.com/hangndat/ticket-solution/issues/301), [kế hoạch phát hành App Store](./plans/D13-APP-STORE-RELEASE-PLAN.md). Đích là app công khai tải được trên App Store với URL/version/territory và exact-SHA evidence. Approval này cho phép workflow end-to-end gồm PR/review/CI/integration và store upload/submit/release sau mandatory gates; không cấp quyền tạo cloud resources hay dùng EAS Cloud Build. Territory chưa chốt. Trạng thái động lấy Project #3, không suy từ các snapshot lịch sử phía dưới.
+
+> D13 tái sử dụng D10 metadata/archive prep và D12 release work theo SHA, revalidate trên binary cuối. Runtime preflight: [evidence](./reviews/D13-S2-T1-RUNTIME-PREFLIGHT.md). SMTP Mailpit không chứng minh email đến inbox thật; chưa có go/no-go phát hành. Các giới hạn “không store submit” trong scope D10/D11 vẫn là lịch sử của các đợt đó; D13 có mục tiêu publish được user giao và duyệt riêng.
+
 > **Đã duyệt triển khai ngày 18/10/2026:** user trả lời “duyệt” cho gói D11. Phạm vi thực thi: web admin theo công việc/readiness; iOS Gate feedback/offline/conflict; attendee web/iOS nhận vé/QR/recovery; brand-test đa tenant và a11y trong các bề mặt đó. Thứ tự wave: web admin ∥ iOS Gate, rồi attendee theo slot ownership. Cho phép workflow feature branch → PR → review độc lập → CI → coordinator integration theo git-workflow. Validate-only/manual lookup, metrics mới, O06 số liệu, publish privacy, production deploy và store submit **không** được tự mở từ phê duyệt này. Các phần “chưa approved” bên dưới là snapshot proposal trước phê duyệt; Task Spec cụ thể và comment approval trên #222 là authority thực thi.
 
 
