@@ -96,7 +96,7 @@ Status lấy từ Project #3 lúc ghi tracker (board thắng docs). Spec chi ti�
 | S4 | #307 | — | — | Không | Story tracking | iOS | mobile final + SDK + prod endpoints | **Bị chặn** |
 | S4-T1 | #325 | `ios` | `docs/agents/roles/ios.md` | Không | Local Distribution archive | `apps/mobile` | S1-T3 + mobile final merged/DoD/CI + prod endpoints config; credential §2. **SMTP không chặn archive** (hard gate S6) | **Bị chặn** |
 | S4-T2 | #326 | `ios` | `docs/agents/roles/ios.md` | Không | Upload ≠ publish | mobile + ASC | sau S4-T1; ASC API | **Bị chặn** |
-| S4-T3 | #327 | `ios` | `docs/agents/roles/ios.md` | Không | Device smoke | device + reviews | sau S4-T2 processing | **Bị chặn** |
+| S4-T3 | #327 | `ios` | `docs/agents/roles/ios.md` | Không | Device smoke | device + reviews | sau S4-T2 processing | **Bị chặn** — ASC `1.0.0/10` VALID + Internal TF OK; chờ operator cài TestFlight + binary lên device (`docs/reviews/D13-S4-T3-DEVICE-SMOKE.md`); ≠ PASS |
 | S5 | #309 | — | — | Không | Story tracking | iOS | — | **Đang làm** |
 | S5-T1 | #328 | `ios` | `docs/agents/roles/ios.md` | Không | In-app deletion/privacy UI | `apps/mobile` | sau/∥ S2-T2 | **Đang làm** |
 | S5-T2 | #329 | `product-ba` (+ coord ops) | `docs/agents/roles/product-ba.md` | Không | Demo reviewer prod; không commit secret | ops IdP + docs | trước S6 | **Sẵn sàng** |
