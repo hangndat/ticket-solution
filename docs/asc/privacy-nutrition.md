@@ -12,7 +12,7 @@
 | URL khai báo ASC | `https://vemoki.com/privacy` |
 | Draft nội dung | [privacy-policy-draft.md](./privacy-policy-draft.md) |
 | Trạng thái host (đối chiếu 2026-10-18) | `GET https://vemoki.com/privacy` → **HTTP 200** (`/marketing/privacy`) |
-| Việc còn lại trước submit | Khớp copy privacy với số **O06 đã chốt** (DECISION-LOG); Nutrition Labels ASC; không submit store trừ task ủy quyền |
+| Việc còn lại trước submit | Copy marketing `/privacy` + draft đã khớp số **O06** (30d/365d/730d/90d, single-region, SLA); Nutrition Labels ASC; không submit store trừ task ủy quyền |
 
 Support / data contact (trong policy): `privacy@vemoki.com` (alias dự kiến) hoặc `hangndat@gmail.com` cho đến khi alias production sẵn sàng — **không** đăng mật khẩu.
 

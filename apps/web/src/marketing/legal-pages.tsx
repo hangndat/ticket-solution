@@ -22,6 +22,10 @@ export function PrivacyPage({ locale }: { locale: MarketingLocale }) {
         <p>{t(locale, 'privacy.s2.body')}</p>
         <h2>{t(locale, 'privacy.s3.title')}</h2>
         <p>{t(locale, 'privacy.s3.body')}</p>
+        <h2>{t(locale, 'privacy.s4.title')}</h2>
+        <p>{t(locale, 'privacy.s4.body')}</p>
+        <h2>{t(locale, 'privacy.s5.title')}</h2>
+        <p>{t(locale, 'privacy.s5.body')}</p>
         <p className="mkt-lead">{t(locale, 'privacy.note')}</p>
       </main>
     </MarketingChrome>

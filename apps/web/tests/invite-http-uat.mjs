@@ -192,7 +192,7 @@ async function main() {
       /[?&#]token=/i.test(afterPark) || afterPark.includes(token);
 
     await page
-      .getByRole('button', { name: /Nhận invite/i })
+      .getByRole('button', { name: /Nhận lời mời|Nhận invite/i })
       .waitFor({ state: 'visible', timeout: 15_000 });
 
     let acceptUx = null;
