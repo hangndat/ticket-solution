@@ -3,9 +3,10 @@
 **Product:** Vemoki (`vemoki.com`) · iOS app bundle `com.hangndat.ticket`  
 **Operator:** Hang Nguyen Dat (individual Apple Developer Team `BLUA62D52G`)  
 **Effective (draft):** 2026-10-18  
-**Status:** Draft aligned with **O06** (DECISION-LOG / `docs/ops/O06-OPTIONS.md`) for hosting at `https://vemoki.com/privacy` — **not legal advice**; review before production submit.
+**Status:** Draft aligned with **O06** (DECISION-LOG / `docs/ops/O06-OPTIONS.md`) for hosting at `https://vemoki.com/privacy` — **not legal advice**; review before production submit.  
+**Live page (2026-10-18):** HTTP 200 VI/EN — retention/residency numbers khớp O06; trang marketing ngắn hơn draft này (thiếu mục camera / account deletion chi tiết) — S2-T3 có thể làm giàu copy live trước submit nếu App Review cần.
 
-This English draft is the source for the public page. A Vietnamese summary may be published alongside; if they conflict, the English page controls until counsel reviews.
+This English draft is the source for the full public policy. A Vietnamese summary may be published alongside; if they conflict, the English page controls until counsel reviews.
 
 ---
 
@@ -59,7 +60,9 @@ We do not use Expo Push or other consumer push SaaS for production delivery; pus
 
 ## 7. Account deletion requests
 
-In the iOS app: **Account → request account deletion** (wording may be localized). That creates a **request** acknowledged by our API. Acknowledgement is **not** immediate hard erasure: per O06 we **anonymize within ≤ 30 days**, while audit trails remain subject to the **730-day** audit TTL. We will communicate status of the request through the product or email contact above.
+In the iOS app: open **Account**, then **Yêu cầu xóa tài khoản** / request account deletion (wording may be localized). That creates a **request** acknowledged by our API (`POST /v1/me/account-deletion-requests`). Acknowledgement is **not** immediate hard erasure: per O06 we **anonymize within ≤ 30 days**, while audit trails remain subject to the **730-day** audit TTL. We will communicate status of the request through the product or email contact above.
+
+You may also read this policy at `https://vemoki.com/privacy`. Account creation is offered via our OIDC sign-in; account deletion initiation is available in the app for signed-in users (App Store Guideline 5.1.1(v)).
 
 ## 8. Children
 
