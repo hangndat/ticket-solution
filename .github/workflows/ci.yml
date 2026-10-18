@@ -252,6 +252,8 @@ jobs:
             files: test/branding.test.cjs
           - shard: published-events
             files: test/published-events.test.cjs
+          - shard: import-invitations
+            files: test/import-invitations.test.cjs
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup-pnpm
