@@ -344,6 +344,7 @@ async function ensureTenant(
         if (isUniqueViolation(err)) {
           throw new Error(
             `D9 demo rebrand blocked: slug ${tenant.slug} already used by another tenant; refuse to overwrite`,
+            { cause: err },
           );
         }
         throw err;
@@ -376,6 +377,7 @@ async function ensureTenant(
     if (isUniqueViolation(err)) {
       throw new Error(
         `Tenant slug ${tenant.slug} already used by another tenant; refuse to overwrite non-demo id`,
+        { cause: err },
       );
     }
     throw err;
