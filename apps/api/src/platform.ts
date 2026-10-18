@@ -2,41 +2,53 @@ import { randomUUID } from 'node:crypto';
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Headers,
   HttpException,
   Injectable,
   Param,
+  Patch,
   Post,
   Put,
+  Query,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiProperty, ApiTags } from '@nestjs/swagger';
 import {
   type ApiError,
   type MeEventItem,
   type MeEventsResponse,
+  type PortalInviteState,
   PLATFORM_ERROR_CODES,
 } from '@ticket/contracts';
 import {
+  AuthzError,
   PlatformError,
   IdentityError,
   IDENTITY_ERROR_CODES,
   acceptMembershipInvite,
+  changePortalMemberRole,
   createAccountDeletionRequest,
   createMembershipInvite,
   createOidcVerifier,
   createPlatformOidcVerifier,
   createSupportGrant,
+  deletePortalEventAssignment,
   getCurrentAccountDeletionRequest,
   getPlatformMe,
   getPlatformTenantDetail,
   listMyEvents,
   listMyTenants,
+  listPortalInvites,
+  listPortalMembers,
   listSupportTickets,
   provisionTenant,
+  putPortalEventAssignment,
   readOidcEnvironment,
   readPlatformSecurityConfig,
+  resendPortalInvite,
   revokeMembershipKeepingLastOwner,
+  revokePortalInvite,
   revokeSupportGrant,
   setTenantStatus,
   updateTenantLimits,
@@ -85,7 +97,8 @@ function fail(error: unknown): never {
         ? 401
         : error.code === PLATFORM_ERROR_CODES.PLATFORM_OPERATOR_REQUIRED ||
             error.code === PLATFORM_ERROR_CODES.PERMISSION_DENIED ||
-            error.code === PLATFORM_ERROR_CODES.MEMBERSHIP_REVOKED
+            error.code === PLATFORM_ERROR_CODES.MEMBERSHIP_REVOKED ||
+            error.code === PLATFORM_ERROR_CODES.MEMBERSHIP_REQUIRED
           ? 403
           : error.code === PLATFORM_ERROR_CODES.RESOURCE_NOT_FOUND
             ? 404
@@ -97,10 +110,12 @@ function fail(error: unknown): never {
                 error.code === PLATFORM_ERROR_CODES.TENANT_LIMIT_REACHED ||
                 error.code === PLATFORM_ERROR_CODES.INVITE_ALREADY_USED
               ? 409
-              : error.code === PLATFORM_ERROR_CODES.TENANT_SUSPENDED ||
-                  error.code === PLATFORM_ERROR_CODES.TENANT_PENDING
-                ? 503
-                : 422;
+              : error.code === PLATFORM_ERROR_CODES.RATE_LIMITED
+                ? 429
+                : error.code === PLATFORM_ERROR_CODES.TENANT_SUSPENDED ||
+                    error.code === PLATFORM_ERROR_CODES.TENANT_PENDING
+                  ? 503
+                  : 422;
     throw new HttpException(
       {
         code: error.code,
@@ -109,6 +124,17 @@ function fail(error: unknown): never {
         retryable: error.retryable,
       } satisfies ApiError,
       status,
+    );
+  }
+  if (error instanceof AuthzError) {
+    throw new HttpException(
+      {
+        code: error.code,
+        message: error.message,
+        requestId: randomUUID(),
+        retryable: false,
+      } satisfies ApiError,
+      403,
     );
   }
   if (error instanceof IdentityError) {
@@ -322,6 +348,154 @@ export class PlatformService {
       .catch(fail);
   }
 
+  listMembers(
+    authorization: string | undefined,
+    tenantId: string,
+    query: { cursor?: string; limit?: string; includeRevoked?: string },
+  ) {
+    const limit = query.limit ? Number(query.limit) : undefined;
+    return this.selfActor(authorization)
+      .then((u) =>
+        listPortalMembers(this.deps.db!, {
+          tenantId,
+          actorUserId: u.userId,
+          cursor: query.cursor,
+          limit: Number.isFinite(limit) ? limit : undefined,
+          includeRevoked:
+            query.includeRevoked === '1' || query.includeRevoked === 'true',
+        }),
+      )
+      .catch(fail);
+  }
+
+  listInvites(
+    authorization: string | undefined,
+    tenantId: string,
+    query: { cursor?: string; limit?: string; state?: string },
+  ) {
+    const limit = query.limit ? Number(query.limit) : undefined;
+    const state = query.state as PortalInviteState | undefined;
+    return this.selfActor(authorization)
+      .then((u) =>
+        listPortalInvites(this.deps.db!, {
+          tenantId,
+          actorUserId: u.userId,
+          cursor: query.cursor,
+          limit: Number.isFinite(limit) ? limit : undefined,
+          state,
+        }),
+      )
+      .catch(fail);
+  }
+
+  changeRole(
+    authorization: string | undefined,
+    tenantId: string,
+    membershipId: string,
+    body: { role: string; reason: string },
+  ) {
+    if (!isMembershipRole(body.role)) {
+      return Promise.reject(
+        new PlatformError(PLATFORM_ERROR_CODES.INVALID_INPUT, 'Invalid role'),
+      ).catch(fail);
+    }
+    const role = body.role;
+    return this.selfActor(authorization)
+      .then((u) =>
+        changePortalMemberRole(this.deps.db!, {
+          tenantId,
+          actorUserId: u.userId,
+          membershipId,
+          role,
+          reason: body.reason,
+        }),
+      )
+      .catch(fail);
+  }
+
+  putAssignment(
+    authorization: string | undefined,
+    tenantId: string,
+    membershipId: string,
+    eventId: string,
+    body: { role: string; reason: string },
+  ) {
+    if (!isMembershipRole(body.role)) {
+      return Promise.reject(
+        new PlatformError(PLATFORM_ERROR_CODES.INVALID_INPUT, 'Invalid role'),
+      ).catch(fail);
+    }
+    const role = body.role;
+    return this.selfActor(authorization)
+      .then((u) =>
+        putPortalEventAssignment(this.deps.db!, {
+          tenantId,
+          actorUserId: u.userId,
+          membershipId,
+          eventId,
+          role,
+          reason: body.reason,
+        }),
+      )
+      .catch(fail);
+  }
+
+  deleteAssignment(
+    authorization: string | undefined,
+    tenantId: string,
+    membershipId: string,
+    eventId: string,
+    body: { reason: string },
+  ) {
+    return this.selfActor(authorization)
+      .then((u) =>
+        deletePortalEventAssignment(this.deps.db!, {
+          tenantId,
+          actorUserId: u.userId,
+          membershipId,
+          eventId,
+          reason: body.reason,
+        }),
+      )
+      .catch(fail);
+  }
+
+  revokeInvite(
+    authorization: string | undefined,
+    tenantId: string,
+    inviteId: string,
+    body: { reason: string },
+  ) {
+    return this.selfActor(authorization)
+      .then((u) =>
+        revokePortalInvite(this.deps.db!, {
+          tenantId,
+          actorUserId: u.userId,
+          inviteId,
+          reason: body.reason,
+        }),
+      )
+      .catch(fail);
+  }
+
+  resendInvite(
+    authorization: string | undefined,
+    tenantId: string,
+    inviteId: string,
+    body: { reason: string },
+  ) {
+    return this.selfActor(authorization)
+      .then((u) =>
+        resendPortalInvite(this.deps.db!, this.deps.security!, {
+          tenantId,
+          actorUserId: u.userId,
+          inviteId,
+          reason: body.reason,
+        }),
+      )
+      .catch(fail);
+  }
+
   supportGrant(authorization: string | undefined, body: never) {
     return this.platformActor(authorization)
       .then((u) =>
@@ -436,6 +610,38 @@ export class PlatformController {
     return this.platform.setLimits(authorization, tenantId, body);
   }
 
+  @Get('tenants/:tenantId/members')
+  @ApiBearerAuth()
+  listMembers(
+    @Headers('authorization') authorization: string | undefined,
+    @Param('tenantId') tenantId: string,
+    @Query('cursor') cursor?: string,
+    @Query('limit') limit?: string,
+    @Query('includeRevoked') includeRevoked?: string,
+  ) {
+    return this.platform.listMembers(authorization, tenantId, {
+      cursor,
+      limit,
+      includeRevoked,
+    });
+  }
+
+  @Get('tenants/:tenantId/invites')
+  @ApiBearerAuth()
+  listInvites(
+    @Headers('authorization') authorization: string | undefined,
+    @Param('tenantId') tenantId: string,
+    @Query('cursor') cursor?: string,
+    @Query('limit') limit?: string,
+    @Query('state') state?: string,
+  ) {
+    return this.platform.listInvites(authorization, tenantId, {
+      cursor,
+      limit,
+      state,
+    });
+  }
+
   @Post('tenants/:tenantId/invites')
   @ApiBearerAuth()
   invite(
@@ -456,6 +662,58 @@ export class PlatformController {
     return this.platform.acceptInvite(authorization, body);
   }
 
+  @Patch('tenants/:tenantId/members/:membershipId/role')
+  @ApiBearerAuth()
+  changeRole(
+    @Headers('authorization') authorization: string | undefined,
+    @Param('tenantId') tenantId: string,
+    @Param('membershipId') membershipId: string,
+    @Body() body: { role: string; reason: string },
+  ) {
+    return this.platform.changeRole(
+      authorization,
+      tenantId,
+      membershipId,
+      body,
+    );
+  }
+
+  @Put('tenants/:tenantId/members/:membershipId/event-assignments/:eventId')
+  @ApiBearerAuth()
+  putAssignment(
+    @Headers('authorization') authorization: string | undefined,
+    @Param('tenantId') tenantId: string,
+    @Param('membershipId') membershipId: string,
+    @Param('eventId') eventId: string,
+    @Body() body: { role: string; reason: string },
+  ) {
+    return this.platform.putAssignment(
+      authorization,
+      tenantId,
+      membershipId,
+      eventId,
+      body,
+    );
+  }
+
+  @Delete('tenants/:tenantId/members/:membershipId/event-assignments/:eventId')
+  @ApiBearerAuth()
+  deleteAssignment(
+    @Headers('authorization') authorization: string | undefined,
+    @Param('tenantId') tenantId: string,
+    @Param('membershipId') membershipId: string,
+    @Param('eventId') eventId: string,
+    @Body() body: { reason: string },
+  ) {
+    return this.platform.deleteAssignment(
+      authorization,
+      tenantId,
+      membershipId,
+      eventId,
+      body,
+    );
+  }
+
   @Post('tenants/:tenantId/members/:membershipId/revoke')
   @ApiBearerAuth()
   revokeMember(
@@ -468,6 +726,38 @@ export class PlatformController {
       authorization,
       tenantId,
       membershipId,
+      body,
+    );
+  }
+
+  @Post('tenants/:tenantId/invites/:inviteId/revoke')
+  @ApiBearerAuth()
+  revokeInvite(
+    @Headers('authorization') authorization: string | undefined,
+    @Param('tenantId') tenantId: string,
+    @Param('inviteId') inviteId: string,
+    @Body() body: { reason: string },
+  ) {
+    return this.platform.revokeInvite(
+      authorization,
+      tenantId,
+      inviteId,
+      body,
+    );
+  }
+
+  @Post('tenants/:tenantId/invites/:inviteId/resend')
+  @ApiBearerAuth()
+  resendInvite(
+    @Headers('authorization') authorization: string | undefined,
+    @Param('tenantId') tenantId: string,
+    @Param('inviteId') inviteId: string,
+    @Body() body: { reason: string },
+  ) {
+    return this.platform.resendInvite(
+      authorization,
+      tenantId,
+      inviteId,
       body,
     );
   }
