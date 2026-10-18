@@ -1,6 +1,8 @@
 import type {
+  NotificationChannel,
   NotificationKind,
   NotificationListPage,
+  NotificationProviderStatus,
   NotificationSummary,
 } from '@ticket/contracts';
 import type { Prisma } from './generated/prisma/client';
@@ -16,6 +18,18 @@ import {
 
 const PERMISSION_NOTIFY = 'event.config';
 
+const PROVIDER_STATES = new Set<NotificationProviderStatus>([
+  'PENDING',
+  'ACCEPTED',
+  'FAILED',
+  'DEAD',
+  'UNKNOWN',
+]);
+const CHANNELS = new Set<NotificationChannel>(['email', 'push']);
+
+/**
+ * Event notification list. G-N1: optional state / channel filters (omit = legacy).
+ */
 export async function listEventNotifications(
   tx: Prisma.TransactionClient,
   input: {
@@ -24,6 +38,8 @@ export async function listEventNotifications(
     actorUserId: string;
     cursor?: string | null;
     limit?: number;
+    state?: NotificationProviderStatus;
+    channel?: NotificationChannel;
   },
 ): Promise<NotificationListPage> {
   await requireTenantPermission(tx, {
@@ -32,7 +48,22 @@ export async function listEventNotifications(
     permission: PERMISSION_NOTIFY,
     eventId: input.eventId,
   });
+  if (input.state != null && !PROVIDER_STATES.has(input.state)) {
+    throw new NotificationError(
+      NOTIFICATION_ERROR_CODES.TEMPLATE_INVALID,
+      'Invalid notification state filter',
+    );
+  }
+  if (input.channel != null && !CHANNELS.has(input.channel)) {
+    throw new NotificationError(
+      NOTIFICATION_ERROR_CODES.TEMPLATE_INVALID,
+      'Invalid notification channel filter',
+    );
+  }
   const limit = Math.min(Math.max(input.limit ?? 50, 1), 100);
+  const cursor = input.cursor?.trim() || null;
+  const state = input.state ?? null;
+  const channel = input.channel ?? null;
   const rows = await tx.$queryRaw<
     Array<{
       id: string;
@@ -50,7 +81,9 @@ export async function listEventNotifications(
     FROM notifications
     WHERE tenant_id = ${input.tenantId}::uuid
       AND event_id = ${input.eventId}::uuid
-      AND (${input.cursor ?? null}::uuid IS NULL OR id < ${input.cursor ?? null}::uuid)
+      AND (${cursor}::uuid IS NULL OR id < ${cursor}::uuid)
+      AND (${state}::text IS NULL OR state = ${state})
+      AND (${channel}::text IS NULL OR channel = ${channel})
     ORDER BY id DESC
     LIMIT ${limit + 1}::integer
   `;
