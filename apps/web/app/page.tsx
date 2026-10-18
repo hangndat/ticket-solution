@@ -1,6 +1,5 @@
 import Link from 'next/link';
 import type { PublishedEventSummary } from '@ticket/contracts';
-import { HeroWordmark } from '../src/branding/hero-wordmark';
 import { SiteNav } from '../src/site-chrome';
 import {
   PUBLIC_EVENT_COPY,
@@ -67,16 +66,59 @@ function staffDeniedCopy(notice: string | undefined): {
   return null;
 }
 
+function EventCard({ event }: { event: PublishedEventSummary }) {
+  return (
+    <Link
+      className="event-row"
+      href={publishedEventHref(event)}
+      role="listitem"
+      data-testid={`home-event-${event.id}`}
+    >
+      <EventBanner
+        eventId={event.id}
+        tenantSlug={event.tenantSlug}
+        bannerUrl={event.brand.bannerUrl}
+        className="event-banner event-banner-card"
+        testId={`home-banner-${event.id}`}
+        alt=""
+      />
+      <EventLogo
+        eventId={event.id}
+        tenantSlug={event.tenantSlug}
+        logoUrl={event.brand.logoUrl}
+        className="event-logo event-logo-card"
+        testId={`home-logo-${event.id}`}
+        alt=""
+      />
+      <span className="eyebrow">{event.brand.organizationName}</span>
+      <h2>{event.name}</h2>
+      <p>{event.location ?? event.timezone}</p>
+      <span className="card-action">
+        Xem sự kiện <span aria-hidden="true">↗</span>
+      </span>
+    </Link>
+  );
+}
+
 export default async function Home({ searchParams }: Props) {
   const params = await searchParams;
   const catalog = await loadHomeCatalog();
   const denied = staffDeniedCopy(params.notice?.trim());
+  const featured =
+    catalog.status === 'ok' && catalog.items.length > 0
+      ? catalog.items[0]
+      : null;
+  const catalogRest =
+    catalog.status === 'ok' && featured
+      ? catalog.items.slice(1)
+      : catalog.status === 'ok'
+        ? catalog.items
+        : [];
 
   return (
     <main id="main" className="container home">
       <SiteNav />
       <section className="home-hero" aria-labelledby="home-title">
-        <HeroWordmark />
         <h1 id="home-title">Điều tốt đẹp đưa chúng ta lại gần.</h1>
         <p className="intro">
           Đổi mã lấy vé, nhận lời mời, hoặc xem sự kiện đã xuất bản — một thương
@@ -88,6 +130,28 @@ export default async function Home({ searchParams }: Props) {
           </Link>
         </p>
       </section>
+
+      {featured ? (
+        <Link
+          className="home-featured"
+          href={publishedEventHref(featured)}
+          data-testid={`home-featured-${featured.id}`}
+          aria-label={`Xem sự kiện ${featured.name}`}
+        >
+          <EventBanner
+            eventId={featured.id}
+            tenantSlug={featured.tenantSlug}
+            bannerUrl={featured.brand.bannerUrl}
+            className="event-banner home-featured-banner"
+            testId={`home-featured-banner-${featured.id}`}
+            alt=""
+          />
+          <span className="home-featured-meta">
+            <span className="eyebrow">{featured.brand.organizationName}</span>
+            <span className="home-featured-name">{featured.name}</span>
+          </span>
+        </Link>
+      ) : null}
 
       {denied ? (
         <aside
@@ -129,47 +193,14 @@ export default async function Home({ searchParams }: Props) {
 
       {catalog.status === 'ok' ? (
         <div className="event-list" role="list">
-          {catalog.items.map((event) => (
-            <Link
-              className="event-row"
-              href={publishedEventHref(event)}
-              key={event.id}
-              role="listitem"
-              data-testid={`home-event-${event.id}`}
-            >
-              <EventBanner
-                eventId={event.id}
-                tenantSlug={event.tenantSlug}
-                bannerUrl={event.brand.bannerUrl}
-                className="event-banner event-banner-card"
-                testId={`home-banner-${event.id}`}
-                alt=""
-              />
-              <EventLogo
-                eventId={event.id}
-                tenantSlug={event.tenantSlug}
-                logoUrl={event.brand.logoUrl}
-                className="event-logo event-logo-card"
-                testId={`home-logo-${event.id}`}
-                alt=""
-              />
-              <span className="eyebrow">{event.brand.organizationName}</span>
-              <h2>{event.name}</h2>
-              <p>{event.location ?? event.timezone}</p>
-              <span className="card-action">
-                Xem sự kiện <span aria-hidden="true">↗</span>
-              </span>
-            </Link>
+          {featured ? (
+            <EventCard event={featured} key={featured.id} />
+          ) : null}
+          {catalogRest.map((event) => (
+            <EventCard event={event} key={event.id} />
           ))}
         </div>
       ) : null}
-
-      <aside className="notice" role="note">
-        <strong>Danh sách từ máy chủ.</strong> Chỉ sự kiện đã xuất bản công khai.
-        Đổi mã thật tại <Link href="/redeem">Đổi mã lấy vé</Link>
-        {' · '}
-        <Link href="/auth">Đăng nhập</Link>.
-      </aside>
     </main>
   );
 }
