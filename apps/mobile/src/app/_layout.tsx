@@ -27,6 +27,14 @@ function AppStack() {
       />
       <Stack.Screen name="redeem" options={{ title: 'Đổi mã' }} />
       <Stack.Screen name="claim" options={{ title: 'Nhận vé mời' }} />
+      <Stack.Screen
+        name="staff-access"
+        options={{ title: 'Nhân viên', headerLargeTitle: true }}
+      />
+      <Stack.Screen
+        name="uat/session"
+        options={{ title: 'UAT session', headerShown: false }}
+      />
     </Stack>
   );
 }

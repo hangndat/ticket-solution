@@ -18,6 +18,8 @@ export type InstalledAppLink =
       eventSlug?: string;
       href: string;
     }
+  | { kind: 'staff-access'; href: string }
+  | { kind: 'uat-session'; href: string }
   | { kind: 'oauth-callback' }
   | { kind: 'passthrough' };
 
@@ -35,13 +37,23 @@ export function parseInstalledAppLink(input: string): InstalledAppLink {
   const claim = parseInvitationClaimLink(raw);
   if (claim) return claim;
 
+  const uatSession = parseUatSessionLink(raw);
+  if (uatSession) return uatSession;
+
   const segments = linkSegments(raw);
   if (!segments) return { kind: 'passthrough' };
   if (segments.oauthCallback) return { kind: 'oauth-callback' };
 
   const [head, id, extra] = segments.parts;
   if (extra !== undefined) return { kind: 'passthrough' };
-  if (!head || !id) return { kind: 'passthrough' };
+  if (!head) return { kind: 'passthrough' };
+
+  // O02: staff deep links always land on soft-access (deny or tab), never assume tab chrome.
+  if (head.toLowerCase() === 'staff' && id === undefined) {
+    return { kind: 'staff-access', href: '/staff-access' };
+  }
+
+  if (!id) return { kind: 'passthrough' };
 
   if (head.toLowerCase() === 'tickets' && UUID.test(id)) {
     return { kind: 'ticket', ticketId: id, href: `/my-tickets/${id}` };
@@ -66,11 +78,53 @@ export function routeForInstalledAppLink(input: string): string | null {
   if (
     parsed.kind === 'ticket' ||
     parsed.kind === 'event' ||
-    parsed.kind === 'invitation-claim'
+    parsed.kind === 'invitation-claim' ||
+    parsed.kind === 'staff-access' ||
+    parsed.kind === 'uat-session'
   ) {
     return parsed.href;
   }
   return input;
+}
+
+/**
+ * __DEV__ sim-uat helper: `vemoki://uat/session?access_token=…`
+ * Route still refuse outside __DEV__ (see `app/uat/session.tsx`).
+ */
+function parseUatSessionLink(raw: string): InstalledAppLink | null {
+  let url: URL;
+  try {
+    if (/^[a-z][a-z0-9+.-]*:/i.test(raw)) {
+      url = new URL(raw);
+      if (!isAppScheme(url.protocol)) return null;
+    } else {
+      const path = raw.startsWith('/') ? raw : `/${raw}`;
+      url = new URL(`ticketsolution://host${path}`);
+    }
+  } catch {
+    return null;
+  }
+
+  const parts = [
+    url.hostname,
+    ...url.pathname.split('/').filter((p) => p.length > 0),
+  ].filter((p) => p && p !== 'host');
+
+  const uatIdx = parts.findIndex((p) => p.toLowerCase() === 'uat');
+  if (uatIdx < 0) return null;
+  const sessionPart = parts[uatIdx + 1];
+  if (!sessionPart || sessionPart.toLowerCase() !== 'session') return null;
+  if (parts[uatIdx + 2] !== undefined) return null;
+
+  const token = url.searchParams.get('access_token')?.trim() ?? '';
+  if (token.length < 8 || token.length > 8192) {
+    return { kind: 'passthrough' };
+  }
+  const qs = new URLSearchParams({ access_token: token });
+  return {
+    kind: 'uat-session',
+    href: `/uat/session?${qs.toString()}`,
+  };
 }
 
 /**
