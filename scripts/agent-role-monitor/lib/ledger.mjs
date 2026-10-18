@@ -28,6 +28,182 @@ export function isIdempotentEvent(event) {
 }
 
 /**
+ * Find join.conversation for a Cursor conversation_id (most recent wins).
+ * @param {object[]} events
+ * @param {string} conversationId
+ */
+export function findJoinByConversation(events, conversationId) {
+  if (!conversationId) return null;
+  let found = null;
+  for (const e of events) {
+    if (e?.event !== 'join.conversation') continue;
+    if (e.attrs?.conversation_id === conversationId) found = e;
+  }
+  return found;
+}
+
+/**
+ * Find join.conversation by dispatch_id (most recent wins).
+ * @param {object[]} events
+ * @param {string} dispatchId
+ */
+export function findJoinByDispatch(events, dispatchId) {
+  if (!dispatchId) return null;
+  let found = null;
+  for (const e of events) {
+    if (e?.event !== 'join.conversation') continue;
+    if (e.dispatch_id === dispatchId) found = e;
+  }
+  return found;
+}
+
+/**
+ * Resolve join row for a Cursor hook payload.
+ * Lookup: conversation_id → join; else attrs.dispatch_id / dispatch_id → join.
+ * @returns {{ join: object, conversation_id: string|null } | null}
+ */
+export function resolveJoinForHook(events, hookPayload) {
+  if (!hookPayload || typeof hookPayload !== 'object') return null;
+  const conversationId = pickStr(hookPayload, ['conversation_id', 'conversationId']) || null;
+  const attrs =
+    hookPayload.attrs && typeof hookPayload.attrs === 'object' && !Array.isArray(hookPayload.attrs)
+      ? hookPayload.attrs
+      : null;
+  const dispatchFromPayload =
+    pickStr(hookPayload, ['dispatch_id', 'dispatchId']) ||
+    (attrs ? pickStr(attrs, ['dispatch_id', 'dispatchId']) : undefined) ||
+    null;
+
+  if (conversationId) {
+    const join = findJoinByConversation(events, conversationId);
+    if (join) return { join, conversation_id: conversationId };
+  }
+  if (dispatchFromPayload) {
+    const join = findJoinByDispatch(events, dispatchFromPayload);
+    if (join) {
+      return {
+        join,
+        conversation_id: conversationId || join.attrs?.conversation_id || null,
+      };
+    }
+  }
+  return null;
+}
+
+export function buildJoinEvent(opts) {
+  const conversationId = opts.conversation_id || opts.conversationId;
+  const dispatchId = opts.dispatch_id || opts.dispatchId;
+  const roleId = opts.role_id || opts.roleId;
+  if (!conversationId) throw new Error('--conversation-id is required');
+  if (!dispatchId) throw new Error('--dispatch-id is required');
+  if (!roleId) throw new Error('--role-id is required');
+
+  return {
+    v: SCHEMA_VERSION,
+    ts: opts.ts || new Date().toISOString(),
+    event: 'join.conversation',
+    run_id: opts.run_id || opts.runId || null,
+    task_id: opts.task_id || opts.taskId || null,
+    dispatch_id: dispatchId,
+    role_id: roleId,
+    agent: opts.agent || 'cursor',
+    issue: opts.issue != null ? Number(opts.issue) : null,
+    attrs: {
+      conversation_id: String(conversationId),
+    },
+  };
+}
+
+/**
+ * Optional token field: missing/invalid → null (never coerce to 0).
+ * @param {Record<string, unknown>} obj
+ * @param {string[]} keys
+ * @returns {number|null}
+ */
+export function pickOptionalToken(obj, keys) {
+  for (const k of keys) {
+    if (obj[k] == null || obj[k] === '') continue;
+    const n = Number(obj[k]);
+    if (Number.isFinite(n)) return n;
+  }
+  return null;
+}
+
+/**
+ * Build cursor.turn from Cursor stop|afterAgentResponse hook JSON + join row.
+ * Never copies text/prompt/transcript fields (privacy).
+ * @param {Record<string, unknown>} hookPayload
+ * @param {object} join
+ * @param {{ conversation_id?: string|null }} [resolved]
+ */
+export function buildCursorTurnEvent(hookPayload, join, resolved = {}) {
+  if (!hookPayload || typeof hookPayload !== 'object') {
+    throw new Error('cursor turn input must be a JSON object');
+  }
+  if (!join?.dispatch_id) throw new Error('join.dispatch_id is required');
+
+  const hookEvent =
+    pickStr(hookPayload, ['hook_event_name', 'hookEventName']) || 'stop';
+  const conversationId =
+    resolved.conversation_id ||
+    pickStr(hookPayload, ['conversation_id', 'conversationId']) ||
+    join.attrs?.conversation_id ||
+    null;
+  const generationId = pickStr(hookPayload, ['generation_id', 'generationId']) || null;
+  if (!generationId) throw new Error('generation_id is required for cursor.turn');
+
+  const model =
+    pickStr(hookPayload, ['model_id', 'modelId', 'model']) || null;
+  const status = pickStr(hookPayload, ['status']) || null;
+
+  return {
+    v: SCHEMA_VERSION,
+    ts: pickStr(hookPayload, ['ts', 'timestamp']) || new Date().toISOString(),
+    event: 'cursor.turn',
+    run_id: join.run_id || null,
+    task_id: join.task_id || null,
+    dispatch_id: join.dispatch_id,
+    role_id: join.role_id || null,
+    agent: join.agent || 'cursor',
+    issue: join.issue ?? null,
+    attrs: {
+      conversation_id: conversationId,
+      generation_id: generationId,
+      model,
+      input_tokens: pickOptionalToken(hookPayload, ['input_tokens', 'inputTokens']),
+      output_tokens: pickOptionalToken(hookPayload, ['output_tokens', 'outputTokens']),
+      cache_read_tokens: pickOptionalToken(hookPayload, [
+        'cache_read_tokens',
+        'cacheReadTokens',
+      ]),
+      cache_write_tokens: pickOptionalToken(hookPayload, [
+        'cache_write_tokens',
+        'cacheWriteTokens',
+      ]),
+      token_source: 'hooks',
+      hook_event_name: hookEvent,
+      ...(status ? { status } : {}),
+    },
+  };
+}
+
+export function hasJoinDuplicate(events, conversationId, dispatchId) {
+  return events.some(
+    (e) =>
+      e?.event === 'join.conversation' &&
+      e.dispatch_id === dispatchId &&
+      e.attrs?.conversation_id === conversationId,
+  );
+}
+
+export function hasGenerationDuplicate(events, generationId) {
+  if (!generationId) return false;
+  return events.some(
+    (e) => e?.event === 'cursor.turn' && e.attrs?.generation_id === generationId,
+  );
+}
+
+/**
  * Normalize camelCase / snake_case worker_done-ish payload into ledger fields.
  * @param {Record<string, unknown>} input
  */
@@ -192,6 +368,18 @@ export function appendEvent(ledgerPath, event) {
   if (hasIdempotentDuplicate(existing, event.dispatch_id, event.event)) {
     return { appended: false, event, reason: 'duplicate_dispatch_event' };
   }
+  if (event.event === 'join.conversation') {
+    const cid = event.attrs?.conversation_id;
+    if (cid && hasJoinDuplicate(existing, cid, event.dispatch_id)) {
+      return { appended: false, event, reason: 'duplicate_join' };
+    }
+  }
+  if (event.event === 'cursor.turn') {
+    const gid = event.attrs?.generation_id;
+    if (gid && hasGenerationDuplicate(existing, gid)) {
+      return { appended: false, event, reason: 'duplicate_generation' };
+    }
+  }
 
   const line = `${JSON.stringify(event)}\n`;
   fs.appendFileSync(ledgerPath, line, 'utf8');
@@ -199,10 +387,11 @@ export function appendEvent(ledgerPath, event) {
 }
 
 /**
- * Aggregate by role_id from settled (+ opened for counts).
+ * Aggregate by role_id from settled (+ opened for counts) + cursor.turn tokens.
+ * Token sums stay null when every contributing turn field is null.
  */
 export function rollupByRole(events) {
-  /** @type {Map<string, { role_id: string, dispatch_ids: Set<string>, settled: number, succeeded: number, failed: number, opened: number, durations: number[], rss_peaks: number[], tokens_out_sum: number|null }>} */
+  /** @type {Map<string, { role_id: string, dispatch_ids: Set<string>, settled: number, succeeded: number, failed: number, opened: number, durations: number[], rss_peaks: number[], tokens_in_sum: number|null, tokens_out_sum: number|null, tokens_cache_read_sum: number|null, tokens_cache_write_sum: number|null }>} */
   const map = new Map();
 
   function bucket(roleId) {
@@ -217,10 +406,20 @@ export function rollupByRole(events) {
         opened: 0,
         durations: [],
         rss_peaks: [],
+        tokens_in_sum: null,
         tokens_out_sum: null,
+        tokens_cache_read_sum: null,
+        tokens_cache_write_sum: null,
       });
     }
     return map.get(key);
+  }
+
+  /** @param {ReturnType<typeof bucket>} b @param {'tokens_in_sum'|'tokens_out_sum'|'tokens_cache_read_sum'|'tokens_cache_write_sum'} field @param {unknown} value */
+  function addToken(b, field, value) {
+    if (typeof value !== 'number' || !Number.isFinite(value)) return;
+    if (b[field] == null) b[field] = 0;
+    b[field] += value;
   }
 
   /** @type {Map<string, { openedAt?: string, settledAt?: string, role_id?: string, rssPeak?: number }>} */
@@ -252,6 +451,16 @@ export function rollupByRole(events) {
       if (typeof rss === 'number' && Number.isFinite(rss)) {
         d.rssPeak = d.rssPeak == null ? rss : Math.max(d.rssPeak, rss);
       }
+    } else if (e.event === 'cursor.turn') {
+      const b = bucket(e.role_id);
+      b.dispatch_ids.add(did);
+      addToken(b, 'tokens_in_sum', e.attrs?.input_tokens);
+      addToken(b, 'tokens_out_sum', e.attrs?.output_tokens);
+      addToken(b, 'tokens_cache_read_sum', e.attrs?.cache_read_tokens);
+      addToken(b, 'tokens_cache_write_sum', e.attrs?.cache_write_tokens);
+    } else if (e.event === 'join.conversation') {
+      const b = bucket(e.role_id);
+      b.dispatch_ids.add(did);
     }
   }
 
@@ -284,7 +493,10 @@ export function rollupByRole(events) {
         mean_rss_mb_peak: b.rss_peaks.length
           ? b.rss_peaks.reduce((a, n) => a + n, 0) / b.rss_peaks.length
           : null,
+        tokens_in_sum: b.tokens_in_sum,
         tokens_out_sum: b.tokens_out_sum,
+        tokens_cache_read_sum: b.tokens_cache_read_sum,
+        tokens_cache_write_sum: b.tokens_cache_write_sum,
       };
     })
     .sort((a, b) => a.role_id.localeCompare(b.role_id));
