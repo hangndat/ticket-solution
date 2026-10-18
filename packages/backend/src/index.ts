@@ -500,10 +500,36 @@ export {
   listDueAccountAnonymizations,
   applyAccountAnonymization,
   processDueAccountAnonymizations,
+  purgeExpiredAccountDeletionTombstones,
+  assertIdentityAllowedForUpsert,
   type AccountDeletionAck,
   type DueAccountAnonymization,
   type ApplyAccountAnonymizationResult,
+  type ProcessDueAccountDeletionOptions,
+  type ProcessDueAccountDeletionResult,
 } from './account-deletion';
+export {
+  readTombstoneKeyring,
+  mintTombstoneDigest,
+  digestsForIdentity,
+  TombstoneKeyringError,
+  type TombstoneKeyring,
+} from './tombstone-keyring';
+export {
+  createKeycloakErasureAdapter,
+  createFakeKeycloakErasureAdapter,
+  readKeycloakErasureEnvironment,
+  isUuidSubject,
+  IDP_ERROR_CODES,
+  type KeycloakErasureAdapter,
+  type ErasureOutcome,
+  type KeycloakErasureConfig,
+} from './keycloak-erasure';
+export {
+  ACCESS_TOKEN_MAX_AGE_SECONDS,
+  ACCESS_TOKEN_CLOCK_TOLERANCE_SECONDS,
+  assertAccessTokenBounds,
+} from './access-token-bounds';
 export {
   O06_ACCOUNT_ANONYMIZE_MAX_DAYS,
   O06_ACCOUNT_ANONYMIZE_POLICY_VERSION,
