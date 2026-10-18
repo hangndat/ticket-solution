@@ -29,6 +29,15 @@ export const PORTAL_UPSTREAM = {
     `${eventBase(tenantId, eventId)}/config/rollback`,
   report: (tenantId: string, eventId: string) =>
     `${eventBase(tenantId, eventId)}/report`,
+  /** H-A1 event audit browser (report.read + assignment) */
+  audit: (tenantId: string, eventId: string) =>
+    `${eventBase(tenantId, eventId)}/audit`,
+  /** H-C1 codes inventory browse (inventory.import; masked, no raw/HMAC) */
+  codes: (tenantId: string, eventId: string) =>
+    `${eventBase(tenantId, eventId)}/codes`,
+  /** H-P1 / H-P-AUDIT — platform Operator MFA audience only */
+  platformTenants: '/v1/platform/tenants',
+  platformAudit: '/v1/platform/audit',
   members: (tenantId: string) => `${tenantBase(tenantId)}/members`,
   revokeMember: (tenantId: string, membershipId: string) =>
     `${tenantBase(tenantId)}/members/${encodeURIComponent(membershipId)}/revoke`,

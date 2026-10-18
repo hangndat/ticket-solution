@@ -179,6 +179,16 @@ export function buildEventMenuItems(
       permission: 'report.read',
     });
   }
+  if (
+    permissions.includes('report.read') ||
+    permissions.includes('inventory.import')
+  ) {
+    items.push({
+      key: 'audit',
+      href: `${base}/audit`,
+      label: 'Nhật ký & mã',
+    });
+  }
   if (permissions.includes('cs.lookup')) {
     items.push({
       key: 'support',
