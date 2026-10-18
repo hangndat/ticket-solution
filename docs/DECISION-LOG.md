@@ -22,6 +22,8 @@ Tracking: Issues [#10](https://github.com/hangndat/ticket-solution/issues/10), [
 | O10 | Mở rộng MVP / hủy Android·payment·seat·Wallet? | **Có mở rộng** — đưa **D7** Offline Gate multi-device, **D8** White-label, **D9** Demo seed + UX/media, **D10** App Store metadata vào MVP. **Hủy khỏi kế hoạch MVP:** Android native; payment/refund/chuyển nhượng; seat map; Apple/Google Wallet (ngoài phạm vi có chủ đích). Issue [#7](https://github.com/hangndat/ticket-solution/issues/7) rewrite đồng bộ board (worker GitHub). | Đã chốt (MVP mở rộng) 2026-10-17 | [ROADMAP](./ROADMAP.md) §1/§4/§6; [PRD](./PRD.md) §4 |
 | O12 | Dictionary KPI Dashboard M11 + pha triển khai? | Xem mục **O12** bên dưới — chốt theo tổng hợp thị trường 18/10/2026; không thay non-goals O10 | Đã chốt (MVP) 2026-10-18 | [PRD](./PRD.md) M11; [DASHBOARD-MARKET-SYNTHESIS](./plans/DASHBOARD-MARKET-SYNTHESIS.md) |
 | O13 | Trang bán platform GTM + tách subdomain? | Xem mục **O13** — buyer Owner+Agency; `vemoki.com`/`app.`; CTA demo+quan tâm; demo giả lập; **VI+EN**; code ngay sau PD | Đã chốt (GTM) 2026-10-18 | [VEMOKI-PLATFORM-SALES-PAGE-RESEARCH](./plans/VEMOKI-PLATFORM-SALES-PAGE-RESEARCH.md); ASC; ADR subdomain |
+| O14 | Phê duyệt mở rộng MVP sau research day-of + residual? | Xem mục **O14** bên dưới — duyệt gói [`MVP-EXPAND-MARKET-SYNTHESIS`](./plans/MVP-EXPAND-MARKET-SYNTHESIS.md) 18/10/2026 | Đã chốt (MVP) 2026-10-18 | Epic [#222](https://github.com/hangndat/ticket-solution/issues/222); O12 consumer web; BE reject audit |
+| O15 | Nguồn sự kiện public = server (bỏ fixture client SoT)? | Xem mục **O15** — Published projection SoT; Admin quản lý; Nest public GET; web SSR/ISR; iOS published-first | Đã chốt (MVP) 2026-10-18 | Epic [#254](https://github.com/hangndat/ticket-solution/issues/254); **ADR-19** |
 
 ### O11 — Định hướng mở rộng UX/UI cho vận hành production (18/10/2026)
 
@@ -48,6 +50,19 @@ User giao mở rộng MVP, đẩy mạnh UX/UI và yêu cầu BA (`product-ba`) 
 
 User duyệt kiến trúc Epic [#254](https://github.com/hangndat/ticket-solution/issues/254): **PostgreSQL published event + config** là nguồn chuẩn cho public/attendee; client fixture không còn SoT / không fallback khi API lỗi. Contract thống nhất `@ticket/contracts` `PublishedEvent*` (mirror iOS). Marketing `category`/`description`/`highlights` map vào sections published. BE ship public Nest + seed publish (#255) trước/cùng wave với web/iOS consumer. Chi tiết: [ADR-19](./ops/ADR-19-EVENT-SERVER-SOURCE.md), [architecture/event-server-source.md](./architecture/event-server-source.md).
 
+| # | Quyết định | Chi tiết |
+| - | ---------- | -------- |
+| 1 | SoT | PostgreSQL `events` + **published** `event_config_versions` / brand snapshot — không fixture client |
+| 2 | Contract | Nest `GET /v1/public/tenants/{tenantSlug}/events` (+ `/{eventSlug}`); DTO mirror iOS → `@ticket/contracts` + OpenAPI |
+| 3 | Fail-closed | Không fallback fixture khi API lỗi trên đường published; draft/unpublished → 404 |
+| 4 | Marketing fields | `category`/`description`/`highlights` → published sections (hero/info/faq); không schema fixture riêng |
+| 5 | Web | Bỏ SSG gắn `events.ts`; SSR/ISR từ BFF/API |
+| 6 | Seed | D9 demo-seed **giữ và mở rộng** publish config; hardcode client không thay seed |
+| 7 | Wave coding | **BE public + seed trước** → sau merge/CI: **web ∥ iOS** |
+| 8 | Non-goals | Không đổi auth/RLS; không D8 branding public hoàn chỉnh trong ADR này; không CDN SaaS |
+
+**Nguồn bổ sung:** `docs/plans/EVENT-SERVER-SOURCE-*.md`, `docs/design/event-server-source/`.
+
 ## Điều kiện mở business endpoints
 
 Chỉ mở redemption / Gate / admin tenant **sau khi**:
@@ -70,6 +85,7 @@ Chỉ mở redemption / Gate / admin tenant **sau khi**:
 | 2026-10-17 | User **mở rộng MVP (O10)**: D7–D10 vào phạm vi; hủy Android / payment·refund·chuyển nhượng / seat map / Apple·Google Wallet khỏi kế hoạch MVP. Cập nhật O01 (white-label → D8), ADR-07, ROADMAP, PRD §4. #7 rewrite trên board (không thuộc worker docs). |
 | 2026-10-17 | **ADR-18** — contract Offline Gate sync (Issue #105): payload, idempotency `clientEventId`, clock skew ±300s, conflict codes, replay order; endpoint OpenAPI stub 501 đến #106. |
 | 2026-10-18 | User **chốt O12** Dashboard M11: dictionary check-in = Gate confirm; day-of Manager→Supervisor; email = cần CS; watermark + refresh thủ công pilot; event-scoped; không tự sửa AC `#229`. Nguồn: `docs/plans/DASHBOARD-MARKET-SYNTHESIS.md`. |
+| 2026-10-18 | User **duyệt O14** gói mở rộng MVP (day-of + residual): Dashboard web O12 consumer + CS UX + BE reject-audit; invite sau attendee; giữ OUT validate-only/multi-event/metrics; O06/privacy tạm không ingest PII / không deploy privacy đến khi chốt số. Nguồn: `docs/plans/MVP-EXPAND-MARKET-SYNTHESIS.md`. |
 | 2026-10-18 | User **chốt O13** GTM sales page: buyer Owner+Agency; `vemoki.com` = marketing, `app.vemoki.com` = product; CTA Xem demo + Đăng ký quan tâm; mọi demo hiện tại = giả lập (không social proof khách). Nguồn: `docs/plans/VEMOKI-PLATFORM-SALES-PAGE-RESEARCH.md`. |
 | 2026-10-18 | O13 bổ sung: marketing **VI+EN**; ủy quyền **code web ngay sau PD** (không hỏi lại); vẫn PR/DoD; không tự deploy/store. |
 | 2026-10-18 | User duyệt **O15 / ADR-19** — published projection SoT (Epic #254); dispatch BE public Nest + seed (#255). |
@@ -92,6 +108,25 @@ User chốt theo đề xuất sau research nội bộ + BA A/B (`docs/plans/DASH
 | 6 | Quan hệ `#229` readiness | Research/O12 **chỉ bổ sung KPI/copy Dashboard**; **không** tự sửa AC readiness `#229` đã nộp trừ khi có ủy quyền riêng. Publish ≠ mở đổi vé ≠ mở check-in vẫn theo PRD M03. |
 
 **Wave sau O12 (khi được dispatch):** P1 mở rộng `EventReport` (check-in/reject + remaining quota có định nghĩa + email-cần-CS) → P2 watermark/fail-closed UI → P3 deep-link việc cần làm → hòa copy với `#229` → mới xét auto-refresh / drilldown / multi-event.
+
+**Cập nhật sau merge:** P1 `EventReport` backend **đã merge** (PR #242 / `#241`). P2/P3 web consumer được ủy quyền bởi **O14**.
+
+## O14 — Phê duyệt mở rộng MVP (day-of + residual) (18/10/2026)
+
+User trả lời **duyệt** cho gói [`MVP-EXPAND-MARKET-SYNTHESIS.md`](./plans/MVP-EXPAND-MARKET-SYNTHESIS.md) (BA A day-of + BA B residual). **Ủy quyền coding** theo bảng dưới; vẫn feature branch/PR + DoD độc lập; không deploy/store trừ task riêng.
+
+| # | Quyết định | Chi tiết |
+| - | ---------- | -------- |
+| 1 | Thứ tự đợt | Hoàn tất D11 `#230`–`#236` (attendee/Gate/UAT) trước khi tranh slot `web` với Task mới cùng slice. |
+| 2 | Dashboard web O12 | **Mở** Task consumer KPI: `asOf`/watermark, check-in/reject, quotaRemaining, emailNeedsCs, deep-link việc cần làm; **không** sửa AC readiness `#229`; refresh thủ công pilot (O12). |
+| 3 | CS / email recovery UX | **Gộp đợt** sau/∥ khi slot `web` rảnh — timeline + copy DELIVERED≠ACCEPTED; không resend từ thẻ KPI. |
+| 4 | BE reject audit | **Ưu tiên ngay** (ownership `backend`): wire `recordGateReject` trên online deny paths — known gap DoD `#241`. |
+| 5 | Invite Owner HTTP | **Sau** `#234` attendee web (tránh 2 feature Dispatch `web`); revalidate prod CSRF/copy VI. |
+| 6 | Validate-only / resolution desk / multi-event / metrics product | **Giữ OUT / defer** đến khi user mở lại (khớp O11). |
+| 7 | O06 + privacy | Tạm: **không ingest PII ngoài demo** đến khi chốt số O06; **không** deploy `/privacy` chỉ vì duyệt O14 — cần nội dung + ủy quyền deploy riêng. |
+| 8 | Non-goals | Giữ O10: Android / payment / seat / Wallet / RFID / revenue BI. |
+
+**Wave sau O14:** backend reject-audit ∥ (khi `web` free) Dashboard O12 consumer → CS UX → invite revalidate → `#232`/`#236` theo board · không validate-only.
 
 ## O13 — Trang bán platform GTM + tách subdomain (18/10/2026)
 
