@@ -164,3 +164,28 @@ test('preferOfflineQueue skips online reserve when session exists', async () => 
   assert.equal(scanned.networkUnavailable, true);
   assert.equal(scanned.parsed?.ticketId, ticketId);
 });
+
+test('MEMBERSHIP_REVOKED on open session sets membershipAuthzDenied', async () => {
+  const fetchImpl: typeof fetch = async (input) => {
+    const url = String(input);
+    if (url.endsWith('/sessions')) {
+      return jsonResponse(403, {
+        code: 'MEMBERSHIP_REVOKED',
+        message: 'Membership revoked',
+      });
+    }
+    return jsonResponse(500, { code: 'UNEXPECTED' });
+  };
+  const scanned = await runScan({
+    raw: qr,
+    bearer: 'token',
+    apiBase: 'http://127.0.0.1:3001',
+    ops: [],
+    staffSessionId: null,
+    fetchImpl,
+    createId: () => 'op-revoked',
+  });
+  assert.equal(scanned.membershipAuthzDenied, true);
+  assert.equal(scanned.current?.phase, 'denied');
+  assert.equal(scanned.staffSessionId, null);
+});
