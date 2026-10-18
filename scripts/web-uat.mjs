@@ -6,6 +6,7 @@
  * Usage:
  *   node scripts/web-uat.mjs auth-smoke [baseUrl]
  *   node scripts/web-uat.mjs bff-login [baseUrl] [email] [password]
+ *   node scripts/web-uat.mjs auth-logout [baseUrl] [email] [password]
  *   node scripts/web-uat.mjs redeem [baseUrl] [code] [tenantId] [eventId]
  *   node scripts/web-uat.mjs screenshot <url> [out.png]
  *   node scripts/web-uat.mjs goto <url>
@@ -63,6 +64,7 @@ Never uses cliclick / AppleScript / ORCA computer mouse clicks on Chrome/Safari.
 Commands:
   auth-smoke [baseUrl]                         /auth + anonymous BFF 401
   bff-login [baseUrl] [email] [password]       Keycloak login → BFF /api/bff/me
+  auth-logout [baseUrl] [email] [password]     Login → /me → logout → /auth (no Invalid redirect uri)
   redeem [baseUrl] [code] [tenantId] [eventId] Login + /redeem DEMO code (D9)
   screenshot <url> [out.png]                   PNG under apps/web/.uat-artifacts/
   goto <url>                                   Print final URL + title
@@ -258,6 +260,97 @@ async function cmdBffLogin(baseUrl, email, password) {
   });
 }
 
+/**
+ * Login → /api/bff/me → /api/auth/logout → land on {base}/auth
+ * without Keycloak «Invalid redirect uri». Also probes anonymous /admin gate.
+ */
+async function cmdAuthLogout(baseUrl, email, password) {
+  const base = (baseUrl || DEFAULT_BASE).replace(/\/$/, '');
+  const user = email || DEFAULT_USER;
+  const pass = password || DEFAULT_PASS;
+  const authUrl = `${base}/auth`;
+
+  return withBrowser(async ({ page, context }) => {
+    await loginKeycloak(page, base, user, pass);
+
+    const meRes = await page.request.get(`${base}/api/bff/me`);
+    const meStatus = meRes.status();
+    if (meStatus !== 200) {
+      die(`BFF /me before logout: HTTP ${meStatus}`);
+    }
+
+    await page.goto(`${base}/api/auth/logout`, { waitUntil: 'domcontentloaded' });
+
+    // Keycloak may show confirm («Do you want to log out?») when no id_token_hint.
+    const baseHost = new URL(base).hostname;
+    try {
+      await page.waitForURL(
+        (url) => url.hostname === baseHost && url.pathname === '/auth',
+        { timeout: 8_000 },
+      );
+    } catch {
+      const confirm = page
+        .locator('#kc-logout')
+        .or(page.getByRole('button', { name: /^Logout$/i }))
+        .or(page.getByRole('button', { name: /log out|đăng xuất/i }))
+        .first();
+      if (await confirm.isVisible({ timeout: 5_000 }).catch(() => false)) {
+        await confirm.click();
+      }
+      await page.waitForURL(
+        (url) => url.hostname === baseHost && url.pathname === '/auth',
+        { timeout: 30_000 },
+      );
+    }
+
+    const finalUrl = page.url();
+    const html = await page.content();
+    const invalidRedirect =
+      /invalid\s+redirect\s+uri/i.test(html) ||
+      /Invalid parameter:\s*redirect_uri/i.test(html);
+    const landedAuth =
+      finalUrl === authUrl ||
+      finalUrl.startsWith(`${authUrl}?`) ||
+      (new URL(finalUrl).origin === new URL(base).origin &&
+        new URL(finalUrl).pathname === '/auth');
+
+    mkdirSync(OUT_DIR, { recursive: true });
+    const shot = join(OUT_DIR, `auth-logout-${Date.now()}.png`);
+    await page.screenshot({ path: shot, fullPage: true });
+
+    // After logout, session gone → /admin soft-redirects to /auth?next=/admin
+    const adminRes = await context.request.get(`${base}/admin`, {
+      maxRedirects: 0,
+    });
+    const adminStatus = adminRes.status();
+    const adminLoc = adminRes.headers()['location'] ?? '';
+
+    const ok =
+      landedAuth &&
+      !invalidRedirect &&
+      (adminStatus === 307 || adminStatus === 302) &&
+      /\/auth/.test(adminLoc);
+
+    console.log(JSON.stringify({
+      ok,
+      base,
+      user,
+      meStatus,
+      finalUrl,
+      expectedAuth: authUrl,
+      invalidRedirect,
+      adminGate: { status: adminStatus, location: adminLoc },
+      screenshot: shot,
+    }, null, 2));
+
+    if (!ok) {
+      die(
+        `auth-logout failed (finalUrl=${finalUrl} invalidRedirect=${invalidRedirect} admin=${adminStatus} ${adminLoc})`,
+      );
+    }
+  });
+}
+
 /** D9 demo: attendee login → /redeem with DEMO-MFEST-* → ticket issued. */
 async function cmdRedeem(baseUrl, codeArg, tenantArg, eventArg) {
   const base = (baseUrl || DEFAULT_BASE).replace(/\/$/, '');
@@ -448,6 +541,9 @@ switch (cmd) {
     break;
   case 'bff-login':
     await cmdBffLogin(args[0], args[1], args[2]);
+    break;
+  case 'auth-logout':
+    await cmdAuthLogout(args[0], args[1], args[2]);
     break;
   case 'redeem':
     await cmdRedeem(args[0], args[1], args[2], args[3]);

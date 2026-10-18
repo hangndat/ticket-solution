@@ -11,14 +11,31 @@ const OIDC_ACCESS_COOKIE = 'oidc_access_token';
 /**
  * Next.js 16 proxy — O13 host-aware marketing vs product.
  * OIDC session remains HttpOnly cookies on product host only (no Domain=.vemoki.com).
- * O02: anonymous soft-redirect for staff deep-links /admin|/gate → /auth.
+ * O02: anonymous soft-redirect for staff deep-links /admin|/gate → /auth
+ * (product host only — after apex→app host redirects).
  */
 export default function proxy(request: NextRequest) {
   const hostHeader =
     request.headers.get('x-forwarded-host') ?? request.headers.get('host');
   const { pathname, search } = request.nextUrl;
 
-  // Soft-redirect anonymous staff + owner-ticket deeplinks before host routing.
+  // O13: marketing host + product path → absolute PRODUCT_ORIGIN first.
+  // Must run before O02 soft-redirect, else apex /admin|/gate bounce to
+  // relative /auth on vemoki.com (extra hop / wrong surface).
+  const decision = decideHostRouting({
+    host: hostHeader ?? '',
+    pathname,
+    search,
+    productOrigin: productOriginFromEnv(),
+    marketingOrigin: marketingOriginFromEnv(),
+    marketingHosts: marketingHostsFromEnv(),
+  });
+
+  if (decision.type === 'redirect') {
+    return NextResponse.redirect(decision.location, decision.status);
+  }
+
+  // Soft-redirect anonymous staff + owner-ticket deeplinks on product surface only.
   const ownerTicketPath =
     /^\/t\/[a-z0-9][a-z0-9-]{0,62}\/tickets\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
       pathname,
@@ -32,19 +49,6 @@ export default function proxy(request: NextRequest) {
       auth.searchParams.set('next', pathname);
       return NextResponse.redirect(auth, 307);
     }
-  }
-
-  const decision = decideHostRouting({
-    host: hostHeader ?? '',
-    pathname,
-    search,
-    productOrigin: productOriginFromEnv(),
-    marketingOrigin: marketingOriginFromEnv(),
-    marketingHosts: marketingHostsFromEnv(),
-  });
-
-  if (decision.type === 'redirect') {
-    return NextResponse.redirect(decision.location, decision.status);
   }
 
   if (decision.type === 'rewrite') {
