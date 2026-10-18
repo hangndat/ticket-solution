@@ -5,6 +5,7 @@ export {
 } from './parse';
 export { resolveOwnerTenantId } from './resolve';
 export { loadOwnerTicket } from './load';
+export { buildDisplayQrPayload } from './display-payload';
 export {
   OWNER_TICKET_COPY,
   type LoadOwnerTicketResult,

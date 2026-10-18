@@ -32,7 +32,11 @@ export type NavCapabilities = {
 export const GUEST_NAV_LINKS: NavLink[] = [
   { href: '/redeem', label: 'Đổi mã', testId: 'nav-redeem' },
   { href: '/claim', label: 'Nhận lời mời', testId: 'nav-claim' },
-  { href: '/auth', label: 'Đăng nhập', testId: 'nav-auth' },
+  {
+    href: '/api/auth/login?return=/',
+    label: 'Đăng nhập',
+    testId: 'nav-auth',
+  },
 ];
 
 function isRecord(value: unknown): value is Record<string, unknown> {

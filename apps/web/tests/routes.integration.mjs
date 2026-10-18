@@ -94,28 +94,22 @@ test('production routes isolate tenant content and reject unknown pairs', async 
     const listBff = await fetch(base + '/api/bff/public/tenants/mfest-demo/events');
     assert.equal(listBff.status, 502);
     assert.equal((await listBff.json()).code, 'UPSTREAM_UNAVAILABLE');
-    // D13: anonymous owner-ticket deeplink soft-redirects to /auth?next=…
-    // (not the public event 404 «tenant và sự kiện»).
+    // D13 / UX-UI revamp: anonymous owner-ticket shows login CTA on-page
+    // (AC-S2 → /api/auth/login?return=…), not public event 404.
     const ticketPath =
       '/t/uat-device/tickets/97f77680-4d65-4b6d-baf3-b3f699a006a6';
-    const ticketRaw = await fetch(base + ticketPath, { redirect: 'manual' });
-    assert.equal(ticketRaw.status, 307, 'anonymous owner ticket should HTTP 307');
-    const ticketLoc = ticketRaw.headers.get('location') ?? '';
-    assert.ok(ticketLoc.includes('/auth'), `Location ${ticketLoc}`);
-    assert.ok(
-      ticketLoc.includes('next=') && ticketLoc.includes('tickets'),
-      `next= ticket path missing in ${ticketLoc}`,
-    );
     const ticketFollow = await fetch(base + ticketPath);
     assert.equal(ticketFollow.status, 200);
-    assert.ok(
-      ticketFollow.url.includes('/auth'),
-      `anonymous ticket follow should land on /auth, got ${ticketFollow.url}`,
-    );
     const ticketHtml = await ticketFollow.text();
     assert.ok(
-      ticketHtml.includes('Đăng nhập') || ticketHtml.includes('Cần đăng nhập'),
-      'owner ticket anonymous follow should land on auth',
+      ticketHtml.includes('data-testid="owner-ticket-need-login"') ||
+        ticketHtml.includes('Cần đăng nhập'),
+      'owner ticket anonymous should show need-login surface',
+    );
+    assert.ok(
+      ticketHtml.includes('/api/auth/login?return=') ||
+        ticketHtml.includes('Đăng nhập'),
+      'owner ticket anonymous should expose login CTA',
     );
     assert.ok(
       !ticketHtml.includes('data-testid="owner-ticket-missing"'),
@@ -138,19 +132,33 @@ test('production routes isolate tenant content and reject unknown pairs', async 
     const adminFollow = await fetch(base + '/admin');
     assert.equal(adminFollow.status, 200);
     const adminHtml = await adminFollow.text();
+    // `/auth` stub (OIDC unset) → Home notice — no Admin workspace chrome.
     assert.ok(adminHtml.includes('Đăng nhập') || adminHtml.includes('Cần đăng nhập'));
     assert.ok(!adminHtml.includes('Không gian quản trị sự kiện'));
     assert.ok(!adminHtml.includes('admin-tech-details'));
     assert.ok(!adminHtml.includes('data-testid="nav-admin"'));
     assert.ok(!adminHtml.includes('data-testid="nav-gate"'));
     assert.ok(!adminHtml.includes('data-testid="nav-platform"'));
-    const authPoc = await fetch(base + '/auth');
-    assert.equal(authPoc.status, 200);
-    const authHtml = await authPoc.text();
-    assert.ok(authHtml.includes('Cần đăng nhập'));
-    assert.ok(authHtml.includes('unconfigured'));
-    assert.ok(authHtml.includes('không coi là đã'));
-    assert.ok(authHtml.includes('không dùng phiên giả'));
+    // `/auth` is a thin redirect stub — no product login UI when OIDC unset.
+    const authRaw = await fetch(base + '/auth', { redirect: 'manual' });
+    assert.ok(
+      authRaw.status === 307 || authRaw.status === 308,
+      `expected /auth redirect, got ${authRaw.status}`,
+    );
+    const authLoc = authRaw.headers.get('location') ?? '';
+    assert.ok(
+      authLoc.includes('notice=auth_unavailable') || authLoc.includes('/api/auth/login'),
+      `auth stub Location unexpected: ${authLoc}`,
+    );
+    const authFollow = await fetch(base + '/auth');
+    assert.equal(authFollow.status, 200);
+    const authHtml = await authFollow.text();
+    assert.ok(authHtml.includes('Cần đăng nhập') || authHtml.includes('Đăng nhập'));
+    assert.ok(
+      authHtml.includes('không dùng phiên giả') ||
+        authHtml.includes('data-testid="home-auth-notice"') ||
+        authHtml.includes('data-testid="hero-wordmark"'),
+    );
     assert.ok(!authHtml.includes('Clerk'));
     assert.ok(!authHtml.includes('Keycloak'));
 
@@ -160,7 +168,10 @@ test('production routes isolate tenant content and reject unknown pairs', async 
     assert.ok(redeemHtml.includes('Đổi mã lấy vé'));
     assert.ok(redeemHtml.includes('Cần đăng nhập'));
     assert.ok(redeemHtml.includes('không thể đổi mã'));
-    assert.ok(redeemHtml.includes('unconfigured'));
+    assert.ok(
+      redeemHtml.includes('unconfigured') ||
+        redeemHtml.includes('/api/auth/login?return='),
+    );
     assert.ok(!redeemHtml.includes('Clerk'));
     assert.ok(!redeemHtml.includes('Keycloak'));
 

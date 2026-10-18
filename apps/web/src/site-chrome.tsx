@@ -72,11 +72,17 @@ export function SiteNav({ trailing }: { trailing?: ReactNode }) {
     <nav aria-label="Điều hướng chính" data-testid="site-nav">
       <Wordmark />
       <span className="nav-links">
-        {links.map((item) => (
-          <Link key={item.href} href={item.href} data-testid={item.testId}>
-            {item.label}
-          </Link>
-        ))}
+        {links.map((item) =>
+          item.href.startsWith('/api/') ? (
+            <a key={item.href} href={item.href} data-testid={item.testId}>
+              {item.label}
+            </a>
+          ) : (
+            <Link key={item.href} href={item.href} data-testid={item.testId}>
+              {item.label}
+            </Link>
+          ),
+        )}
         {trailing}
       </span>
     </nav>

@@ -35,12 +35,10 @@ export default function proxy(request: NextRequest) {
     return NextResponse.redirect(decision.location, decision.status);
   }
 
-  // Soft-redirect anonymous staff + owner-ticket deeplinks on product surface only.
-  const ownerTicketPath =
-    /^\/t\/[a-z0-9][a-z0-9-]{0,62}\/tickets\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
-      pathname,
-    );
-  if (pathname === '/admin' || pathname === '/gate' || ownerTicketPath) {
+  // Soft-redirect anonymous staff deep-links only.
+  // Owner-ticket `/t/…/tickets/…` renders login CTA on-page (AC-S2) — do not
+  // bounce through `/auth` (stub would loop when returning to the ticket path).
+  if (pathname === '/admin' || pathname === '/gate') {
     const token = request.cookies.get(OIDC_ACCESS_COOKIE)?.value?.trim() ?? '';
     if (!token) {
       const auth = request.nextUrl.clone();
