@@ -243,6 +243,56 @@ nav a,
 .home-cta .button {
   color: var(--paper);
 }
+.home-cta.auth-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+}
+.home-cta .button-link-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0.55rem 1.1rem;
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+  font-weight: 700;
+  background: transparent;
+  color: var(--ink);
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.home-cta .button-link-secondary:hover {
+  background: var(--ink);
+  color: var(--paper);
+}
+.ticket-qr-figure {
+  margin: var(--space-5) 0;
+  padding: var(--space-4);
+  border: 1px solid var(--ink-faint);
+  border-radius: var(--radius-sm);
+  display: inline-block;
+  background: #fff;
+  animation: rise-in 0.35s ease-out both;
+}
+.ticket-qr-caption {
+  margin: var(--space-3) 0 0;
+  font-size: 0.9rem;
+  color: var(--ink-muted);
+  text-align: center;
+}
+.ticket-qr {
+  display: block;
+}
+.account-section-title {
+  margin-top: var(--space-7);
+  font-size: clamp(1.25rem, 2.5vw, 1.6rem);
+}
+.account-session .auth-buttons {
+  margin-top: var(--space-4);
+}
 .home-featured {
   display: block;
   margin: var(--space-6) 0 0;

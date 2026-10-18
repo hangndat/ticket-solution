@@ -1,13 +1,16 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { redirect } from 'next/navigation';
 import { isUuid } from '../../../../../src/bff/ids';
 import { isTenantSlug } from '../../../../../src/branding';
+import { hasDemoMediaForEventId } from '../../../../../src/demo-media';
+import { loginHref } from '../../../../../src/oidc/login-href';
 import {
   loadOwnerTicket,
   OWNER_TICKET_COPY,
 } from '../../../../../src/owner-ticket';
-import { SiteNav, Wordmark } from '../../../../../src/site-chrome';
+import { buildDisplayQrPayload } from '../../../../../src/owner-ticket/display-payload';
+import { TicketQr } from '../../../../../src/owner-ticket/ticket-qr';
+import { SiteNav } from '../../../../../src/site-chrome';
 import { SurfaceState } from '../../../../../src/ui/surface-state';
 
 type Props = {
@@ -29,6 +32,11 @@ function ownerTicketPath(tenantSlug: string, ticketId: string): string {
   return `/t/${encodeURIComponent(tenantSlug)}/tickets/${encodeURIComponent(ticketId)}`;
 }
 
+function shortTicketId(id: string): string {
+  if (id.length <= 12) return id;
+  return `${id.slice(0, 8)}…`;
+}
+
 export default async function OwnerTicketPage({ params, searchParams }: Props) {
   const { tenantSlug: rawSlug, ticketId: rawId } = await params;
   const tenantSlug = rawSlug?.trim().toLowerCase() ?? '';
@@ -36,6 +44,7 @@ export default async function OwnerTicketPage({ params, searchParams }: Props) {
   const path = ownerTicketPath(tenantSlug || 'x', ticketId || 'x');
   const query = await searchParams;
   const explicitTenantId = query.tenantId?.trim() || null;
+  const ticketLogin = loginHref(path);
 
   if (!tenantSlug || !isTenantSlug(tenantSlug) || !isUuid(ticketId)) {
     return (
@@ -68,7 +77,32 @@ export default async function OwnerTicketPage({ params, searchParams }: Props) {
   });
 
   if (result.status === 'unauthenticated') {
-    redirect(`/auth?next=${encodeURIComponent(path)}`);
+    return (
+      <main
+        id="main"
+        className="container shell"
+        data-testid="owner-ticket-need-login"
+      >
+        <SiteNav />
+        <h1>{OWNER_TICKET_COPY.title}</h1>
+        <SurfaceState
+          kind="empty"
+          title={OWNER_TICKET_COPY.needLogin.title}
+          detail={OWNER_TICKET_COPY.needLogin.detail}
+          testId="owner-ticket-need-login-state"
+          action={
+            <div className="auth-buttons">
+              <a className="button" href={ticketLogin}>
+                Đăng nhập
+              </a>
+              <Link className="button-link button-link-secondary" href="/redeem">
+                Đổi mã lấy vé
+              </Link>
+            </div>
+          }
+        />
+      </main>
+    );
   }
 
   if (result.status === 'unreachable') {
@@ -124,7 +158,6 @@ export default async function OwnerTicketPage({ params, searchParams }: Props) {
     result.status === 'forbidden' ||
     result.status === 'invalid'
   ) {
-    // Same empty UX for miss / forbidden — no PII, not the public event 404 copy.
     return (
       <main
         id="main"
@@ -149,28 +182,66 @@ export default async function OwnerTicketPage({ params, searchParams }: Props) {
   }
 
   const { ticket } = result;
+  const isDemo =
+    hasDemoMediaForEventId(ticket.eventId) ||
+    tenantSlug.includes('demo') ||
+    tenantSlug.includes('fixture');
+  const qrLabel = `Mã QR vé ${shortTicketId(ticket.ticketId)}`;
+  const qrPayload = buildDisplayQrPayload(ticket);
+  const stateBlocked =
+    ticket.state === 'REVOKED' ||
+    ticket.state === 'EXPIRED' ||
+    ticket.state === 'USED' ||
+    ticket.state === 'CHECKED_IN';
 
   return (
     <main
       id="main"
-      className="container shell"
+      className="container shell ticket-detail"
       data-testid="owner-ticket-ready"
     >
       <SiteNav />
-      <nav aria-label="Điều hướng vé">
-        <Wordmark />
-      </nav>
       <h1>{OWNER_TICKET_COPY.title}</h1>
       <p className="intro">
         Vé thuộc tổ chức{' '}
-        <code data-testid="owner-ticket-tenant">{tenantSlug}</code>. Chi tiết
-        dưới đây chỉ dành cho chủ vé đã đăng nhập.
+        <span data-testid="owner-ticket-tenant">{tenantSlug}</span>.
       </p>
+
+      {isDemo ? (
+        <aside
+          className="notice state-unknown"
+          role="status"
+          data-testid="owner-ticket-demo-label"
+        >
+          <strong>Không dùng vào cổng</strong>
+          <p>Đây là vé demo / fixture — không quét tại cổng thật.</p>
+        </aside>
+      ) : null}
+
+      {stateBlocked ? (
+        <aside
+          className="notice state-error"
+          role="status"
+          data-testid="owner-ticket-state-notice"
+        >
+          <p>
+            Vé đang ở trạng thái {ticket.state}. Không dùng mã này để vào cổng.
+          </p>
+        </aside>
+      ) : null}
+
+      <figure className="ticket-qr-figure" data-testid="owner-ticket-qr-figure">
+        <TicketQr value={qrPayload} label={qrLabel} />
+        <figcaption className="ticket-qr-caption">{qrLabel}</figcaption>
+      </figure>
+
       <dl data-testid="owner-ticket-detail">
         <div>
           <dt>Mã vé</dt>
           <dd>
-            <code data-testid="owner-ticket-id">{ticket.ticketId}</code>
+            <code data-testid="owner-ticket-id" title={ticket.ticketId}>
+              {shortTicketId(ticket.ticketId)}
+            </code>
           </dd>
         </div>
         <div>
@@ -192,6 +263,8 @@ export default async function OwnerTicketPage({ params, searchParams }: Props) {
         <Link className="back-link" href="/">
           ← Trang chủ
         </Link>
+        {' · '}
+        <Link href="/redeem">Đổi mã lấy vé</Link>
       </p>
     </main>
   );
