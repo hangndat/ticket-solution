@@ -4,7 +4,7 @@
 **Tasks:** [#321](https://github.com/hangndat/ticket-solution/issues/321) (S2-T3), [#330](https://github.com/hangndat/ticket-solution/issues/330) (S5-T3)  
 **Role:** `web` · Architecture impact: **Không**  
 **Implementation SHA:** `8dc9abbfb6434ef7960e4ad5a6ee2e108073239e`  
-**Review tip SHA:** set in PR body to branch HEAD after this commit (avoid self-referential amend loop).
+**Review tip SHA:** `15501a01dbcb988e113b32fefde85356a2d9d6ab`
 **Local UAT ≠ production deploy.** Prod ASC URLs checked HTTP-only; enriched copy lands after merge+deploy.
 
 ---
