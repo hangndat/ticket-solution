@@ -1,8 +1,10 @@
-# D10-S3-T2 — App Review notes + tài khoản demo
+# D13 — App Review notes + tài khoản demo
 
-**Issue:** [#159](https://github.com/hangndat/ticket-solution/issues/159) · Parent [#157](https://github.com/hangndat/ticket-solution/issues/157) · Epic [#150](https://github.com/hangndat/ticket-solution/issues/150)  
+**Epic:** [#301](https://github.com/hangndat/ticket-solution/issues/301) · Story S3-T3 (BA refresh sau O06)  
+**Reuse D10:** [#159](https://github.com/hangndat/ticket-solution/issues/159) — copy cũ nói “retention chưa finalize” là **stale**; bản này khớp O06  
+**Source tip đối chiếu:** `f551b6d2bdc06742f74a49a0970cb2bfae2f4e0e`  
 **Mục đích:** văn bản dán vào ASC → App Review Information.  
-**Cấm:** coi credential dưới đây là prod secret; **không** escalate demo thành owner platform; **không** submit store từ task docs này.
+**Cấm:** coi credential dưới đây là prod secret; **không** escalate demo thành owner platform; **không** submit store từ task docs này; **không** commit mật khẩu production.
 
 ---
 
@@ -34,8 +36,14 @@ Camera permission is requested only for scanning ticket QR codes at the gate
 NOTIFICATIONS
 Push uses Apple APNs directly (device token registered with our API). Declining notifications still allows ticket viewing and scan.
 
-ACCOUNT DELETION
-Account → request deletion creates an acknowledged request (not instant full erasure while retention policy is finalized). This matches our Privacy Policy.
+ACCOUNT DELETION (Guideline 5.1.1(v) / O06)
+Signed-in users: Account → “Yêu cầu xóa tài khoản” (Request account deletion).
+This creates an acknowledged API request (POST /v1/me/account-deletion-requests).
+Acknowledgement is not instant hard erasure: we anonymize associated account PII within ≤ 30 days per our published retention policy (https://vemoki.com/privacy). Audit logs may be retained up to 730 days. We do not require a phone call or email support ticket to initiate deletion.
+
+PRIVACY
+Privacy Policy URL: https://vemoki.com/privacy (also /en/privacy).
+No third-party advertising SDKs; App Tracking Transparency is not used in this MVP.
 
 OUT OF SCOPE / PLEASE IGNORE
 • Android build (iOS-only).
@@ -97,14 +105,15 @@ Checklist operator (không lưu password vào git):
 1. Launch app → **Sign in** → IdP login form.  
 2. Attendee: mở danh sách vé → mở 1 vé → hiển thị QR.  
 3. Sign out → Staff: cho phép Camera → màn hình quét → quét QR vé demo (hoặc mã test do contact cung cấp).  
-4. (Optional) Account → yêu cầu xóa tài khoản → xác nhận ACK (không kỳ vọng dữ liệu biến mất ngay).
+4. (Optional) Account → **Yêu cầu xóa tài khoản** → xác nhận → kỳ vọng ACK + thông báo anonymize ≤ 30 ngày (không kỳ vọng dữ liệu biến mất ngay).
 
 ---
 
-## Checklist nghiệm thu (#159)
+## Checklist nghiệm thu (D13 S3-T3)
 
-- [x] Notes EN sẵn sàng paste ASC  
+- [x] Notes EN sẵn sàng paste ASC — **đã xóa** ngôn ngữ “retention chưa finalize”  
+- [x] Account deletion khớp O06 ≤30d + audit 730d + Guideline 5.1.1(v)  
 - [x] Demo attendee/staff fixture ghi rõ (không phải prod secret)  
 - [x] Quy trình credential production-only-in-ASC  
 - [x] Camera / notifications / deletion / OIDC giải thích cho reviewer  
-- [ ] Operator paste credential prod-demo vào ASC khi có binary TestFlight (ngoài docs)
+- [ ] Operator paste credential prod-demo vào ASC khi có binary TestFlight (S5-T2 — ngoài docs)  
