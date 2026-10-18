@@ -1,21 +1,66 @@
 ---
-description: Nguồn chính sách chọn agent cho Orca worker — mọi Task dùng Cursor; override rõ từ user
+description: Nguồn chính sách chọn agent + Cost tier (model/effort) cho Orca worker — mọi Task dùng Cursor; override rõ từ user
 alwaysApply: true
 ---
 
 # Orca — chọn agent khi spawn worker
 
-Đây là **nguồn chính sách duy nhất** cho việc chọn agent. Các rule khác dẫn chiếu file này; nếu nội dung lặp lại bị lệch, chính sách ở đây được ưu tiên trong phạm vi rule của repo.
+Đây là **nguồn chính sách duy nhất** cho việc chọn agent **và** Cost tier (`--model` / `--effort`). Các rule khác dẫn chiếu file này; nếu nội dung lặp lại bị lệch, chính sách ở đây được ưu tiên trong phạm vi rule của repo.
 
 ## Chính sách hiện hành — mọi Task dùng Cursor
 
 Tạm thời mọi worker đều dùng `--agent cursor`: implementation, fix, tests, plan/design/spike/architecture, Epic planner, DoD/acceptance và security review. Không chọn Codex theo loại Task hoặc vì quota đã phục hồi. Chính sách này áp dụng cho dispatch mới; không tự thay agent của session đang chạy.
 
 - Chỉ **coordinator gốc (depth 0)** được `worker-start`, kể cả planner, reviewer, retry, replacement và idle fill. Epic planner và ownership workers không spawn worker con.
-- Trước mỗi spawn, đọc chính sách này và ghi agent/lý do vào dispatch evidence. Không kiểm tra quota Codex khi spawn Cursor; quota Codex không phải gate của Cursor.
+- Trước mỗi spawn, đọc chính sách này và ghi agent, **Cost tier**, model/effort (requested vs effective), lý do vào dispatch evidence. Không kiểm tra quota Codex khi spawn Cursor; quota Codex không phải gate của Cursor.
 - Chỉ dùng agent khác khi user chỉ định rõ cho Task đó và host hỗ trợ; không suy ra override từ mô tả loại Task ở file khác. Nếu override là Codex, kiểm tra quota đúng account/profile qua nguồn host hỗ trợ, dữ liệu tối đa 5 phút, ghi `available | exhausted | unknown` và reset nếu có. Không bịa lệnh hoặc launch Codex chỉ để thử quota. Khi quota hết/không rõ, dùng Cursor; nếu user yêu cầu **chỉ Codex**, báo bị chặn.
 - Lỗi launch/auth/runtime Cursor phải chẩn đoán theo lỗi thực tế; không tự chuyển sang Codex.
 - Reviewer phải khác session implementer. Không reuse session implementer để review chính Task đó.
+
+## Cost tier — tối ưu chi phí (model / effort)
+
+Ba lớp tách nhau: **agent** (vendor) · **role** (chuyên môn) · **Cost tier** (chi phí reasoning). Role **không** đổi model; Cost tier **không** đổi agent trừ khi user override vendor.
+
+Mỗi Task Spec (planner hoặc coordinator khi `task-create` / `worker-start`) **phải** ghi:
+
+```text
+Cost tier: cheap | standard | heavy
+```
+
+### Bảng mặc định theo loại Task
+
+| Cost tier | Khi dùng (mặc định) | Launch preference |
+| --------- | ------------------- | ----------------- |
+| `cheap` | Docs/rules sync, Project comment, extract/rename máy móc, CI fix hẹp, board hygiene, idle-fill nhỏ | Model nhẹ nhất **có trong catalog live** của agent + `--effort low` |
+| `standard` | Ownership feature BE/web/iOS, BA/PD thường, DoD reviewer thường, Epic planner đơn giản | Workhorse mặc định agent + `--effort low` (chỉ `medium` khi Architecture impact: Có **hoặc** scope đa-file lớn đã ghi trong spec) |
+| `heavy` | Architect/ADR, security-sensitive (authz/RLS/quota/check-in/secrets), concurrency/failure drills, Epic planner DAG rối, hoặc retry sau FAIL do reasoning | Workhorse hoặc **+1 bậc** model (không nhảy frontier trừ khi user/spec yêu cầu) + `--effort medium` hoặc `high` — **không** `xhigh`/`max`/`ultra` mặc định |
+
+Heuristic nhanh (khi planner chưa ghi): docs/mechanical → `cheap`; coding/DoD thường → `standard`; architect / `reviewer-security` / Architecture impact Có trên đường nóng bảo mật → `heavy`. Reviewer DoD thường **không** nâng `heavy` chỉ vì implementer đã `heavy`.
+
+### Quy tắc spawn (bắt buộc)
+
+1. **Ưu tiên effort thấp:** tăng effort **một bậc** trước khi đổi model lên; không tăng model *và* effort cùng lúc ở retry đầu.
+2. **`--effort` cần `--model`:** không truyền effort đơn lẻ. ID model = opaque id từ catalog live host (`ORCA` launch preferences / UI agent), **không bịa** slug. Nếu catalog Cursor chưa có / ID không chắc → **omit cả `--model` và `--effort`** (inherit default UI), ghi `Cost tier` + `launch: inherit (catalog unknown)` trong evidence — không đoán.
+3. **Fresh launch để đổi tier:** `--model`/`--effort` **không** kết hợp `--terminal` reuse. Reuse chỉ khi Task kế **cùng hoặc thấp hơn** tier của pane đang giữ; Task `cheap` sau pane `heavy` → `worker-release` rồi launch mới (tránh giữ pane đắt).
+4. **So sánh receipt:** sau `worker-start`, đối chiếu `launch.requested` vs `launch.effective`; chỉ claim model/effort theo **effective**. Effective lệch / bị từ chối → ghi limitation, không coi là đã tối ưu chi phí.
+5. **Cap `heavy` đồng thời:** trong một Run, ưu tiên ≤ **2** Dispatch `heavy` live cùng lúc; phần còn lại `cheap`/`standard`. Parallel-first vẫn áp dụng cho tier thấp — xem thêm concurrent soft caps trong `orca-parallel-workers.mdc`.
+6. **User đặt tên model** → tôn trọng model đó; vẫn gắn `Cost tier` gần đúng và không tự thêm `ultra`/`max`.
+7. **Override Codex** (khi user cho phép): mechanical → model Luna-class + `low`; coding → Sol-class + `low`/`medium`; spike/hard → Astra-class + `high` tối đa một bậc effort; không `ultra` mặc định.
+
+### Anti-patterns chi phí
+
+```text
+❌ Mọi reviewer = heavy / frontier
+❌ Reuse pane heavy cho Task docs/cheap tiếp theo
+❌ ultra / max / xhigh làm mặc định
+❌ Đổi model + tăng effort cùng lúc ở retry đầu
+❌ Bịa Cursor/Codex model id khi catalog chưa xác nhận
+❌ Bỏ Cost tier khỏi Task Spec
+
+✅ Spec có Cost tier → fresh launch map model/effort → ghi effective
+✅ cheap chiếm phần lớn volume; heavy hiếm và có ROI
+✅ FAIL reasoning → +1 effort hoặc +1 model, rồi mới cân nhắc heavy hơn
+```
 
 ## Vai trò chuyên môn (role ≠ agent)
 
