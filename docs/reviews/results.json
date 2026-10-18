@@ -1,0 +1,188 @@
+{
+  "at": "2026-10-17T16:54:59.793Z",
+  "prototypeOnly": true,
+  "hashes": {
+    "index.html": "3cede4da8e271901dda6c878a575464bb162d4ed10c73c359a214894c928a493",
+    "css/d11.css": "2aad62c121e5bfde6260d3a68c96618c68facf0250d3758ca4d6f78878d9f92e",
+    "flows/attendee-redeem.html": "a94d6a5190e737d7293d9a36afdf847f7924b3a8bcb336e2ab6ec9078c86565a",
+    "flows/admin-readiness.html": "93a255f7a37ba22d6c729158fb01c769a5e1191615de4342c82e61a53c65a5c3",
+    "flows/staff-scan.html": "6be07ecc945f4d295d21f0329ce312708e6051450011af86cfc1ea309a328272",
+    "fixtures/demo.json": "549d6a2c7626094205389347f934b0ef929963b929699e3b041bed914be6cb2a"
+  },
+  "checks": [
+    {
+      "check": "responsive",
+      "flow": "index",
+      "width": 1280,
+      "pass": true,
+      "viewport": 1280,
+      "scroll": 1280
+    },
+    {
+      "check": "state-switching",
+      "flow": "index",
+      "width": 1280,
+      "states": 0,
+      "pass": true
+    },
+    {
+      "check": "responsive",
+      "flow": "flows/attendee-redeem",
+      "width": 1280,
+      "pass": true,
+      "viewport": 1280,
+      "scroll": 1280
+    },
+    {
+      "check": "state-switching",
+      "flow": "flows/attendee-redeem",
+      "width": 1280,
+      "states": 8,
+      "pass": true
+    },
+    {
+      "check": "responsive",
+      "flow": "flows/admin-readiness",
+      "width": 1280,
+      "pass": true,
+      "viewport": 1280,
+      "scroll": 1280
+    },
+    {
+      "check": "state-switching",
+      "flow": "flows/admin-readiness",
+      "width": 1280,
+      "states": 4,
+      "pass": true
+    },
+    {
+      "check": "responsive",
+      "flow": "flows/staff-scan",
+      "width": 1280,
+      "pass": true,
+      "viewport": 1280,
+      "scroll": 1280
+    },
+    {
+      "check": "state-switching",
+      "flow": "flows/staff-scan",
+      "width": 1280,
+      "states": 10,
+      "pass": true
+    },
+    {
+      "check": "responsive",
+      "flow": "index",
+      "width": 390,
+      "pass": true,
+      "viewport": 390,
+      "scroll": 390
+    },
+    {
+      "check": "state-switching",
+      "flow": "index",
+      "width": 390,
+      "states": 0,
+      "pass": true
+    },
+    {
+      "check": "responsive",
+      "flow": "flows/attendee-redeem",
+      "width": 390,
+      "pass": true,
+      "viewport": 390,
+      "scroll": 390
+    },
+    {
+      "check": "state-switching",
+      "flow": "flows/attendee-redeem",
+      "width": 390,
+      "states": 8,
+      "pass": true
+    },
+    {
+      "check": "responsive",
+      "flow": "flows/admin-readiness",
+      "width": 390,
+      "pass": true,
+      "viewport": 390,
+      "scroll": 390
+    },
+    {
+      "check": "state-switching",
+      "flow": "flows/admin-readiness",
+      "width": 390,
+      "states": 4,
+      "pass": true
+    },
+    {
+      "check": "responsive",
+      "flow": "flows/staff-scan",
+      "width": 390,
+      "pass": true,
+      "viewport": 390,
+      "scroll": 390
+    },
+    {
+      "check": "state-switching",
+      "flow": "flows/staff-scan",
+      "width": 390,
+      "states": 10,
+      "pass": true
+    },
+    {
+      "check": "empty-code-not-issued",
+      "pass": true
+    },
+    {
+      "check": "unchecked-terms-not-issued",
+      "pass": true
+    },
+    {
+      "check": "submit-disabled-while-loading",
+      "pass": true
+    },
+    {
+      "check": "stale-timer-does-not-issue",
+      "pass": true
+    },
+    {
+      "check": "valid-demo-submit-issues",
+      "pass": true
+    },
+    {
+      "check": "admin-publish-disabled-blocked",
+      "pass": true
+    },
+    {
+      "check": "admin-publish-disabled-unclear",
+      "pass": true
+    },
+    {
+      "check": "admin-publish-disabled-offline",
+      "pass": true
+    },
+    {
+      "check": "staff-not-admitted-queued",
+      "pass": true
+    },
+    {
+      "check": "staff-not-admitted-conflict",
+      "pass": true
+    },
+    {
+      "check": "staff-not-admitted-unknown",
+      "pass": true
+    },
+    {
+      "check": "no-page-errors",
+      "pass": true,
+      "errors": []
+    },
+    {
+      "check": "source-unchanged-during-check",
+      "pass": true
+    }
+  ],
+  "pass": true
+}
