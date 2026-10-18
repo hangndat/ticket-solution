@@ -32,6 +32,7 @@ test('Fastify liveness matches contract; redeem and gate routes documented', asy
       '/v1/me/account-deletion-requests/current',
       '/v1/me/device-tokens',
       '/v1/me/device-tokens/{registrationId}',
+      '/v1/me/events',
       '/v1/me/membership-invites/accept',
       '/v1/me/redemptions/{requestId}',
       '/v1/me/tenants',
