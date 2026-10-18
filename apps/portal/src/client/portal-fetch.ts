@@ -103,3 +103,93 @@ export function apiErrorMessage(json: unknown, fallback: string): string {
     ? message.trim()
     : fallback;
 }
+
+/**
+ * Same-origin multipart mutation (CSV upload) with CSRF double-submit.
+ * Do not set Content-Type manually — browser sets multipart boundary.
+ */
+export async function portalMultipart(
+  path: string,
+  form: FormData,
+  timeoutMs = 60_000,
+): Promise<PortalFetchResult> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(path, {
+      method: 'POST',
+      credentials: 'same-origin',
+      cache: 'no-store',
+      headers: {
+        [CSRF_HEADER]: readCsrfFromDocument(),
+      },
+      body: form,
+      signal: controller.signal,
+    });
+    return {
+      status: res.status,
+      json: await parseJsonSafe(res),
+      networkError: false,
+      timedOut: false,
+    };
+  } catch (err) {
+    const timedOut = err instanceof Error && err.name === 'AbortError';
+    return { status: 0, json: null, networkError: true, timedOut };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** Binary/stream GET (error CSV / export download). */
+export async function portalDownload(
+  path: string,
+  timeoutMs = 60_000,
+): Promise<{
+  status: number;
+  blob: Blob | null;
+  contentType: string | null;
+  contentDisposition: string | null;
+  networkError: boolean;
+  timedOut: boolean;
+}> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(path, {
+      method: 'GET',
+      credentials: 'same-origin',
+      cache: 'no-store',
+      signal: controller.signal,
+    });
+    if (!res.ok) {
+      return {
+        status: res.status,
+        blob: null,
+        contentType: res.headers.get('Content-Type'),
+        contentDisposition: res.headers.get('Content-Disposition'),
+        networkError: false,
+        timedOut: false,
+      };
+    }
+    return {
+      status: res.status,
+      blob: await res.blob(),
+      contentType: res.headers.get('Content-Type'),
+      contentDisposition: res.headers.get('Content-Disposition'),
+      networkError: false,
+      timedOut: false,
+    };
+  } catch (err) {
+    const timedOut = err instanceof Error && err.name === 'AbortError';
+    return {
+      status: 0,
+      blob: null,
+      contentType: null,
+      contentDisposition: null,
+      networkError: true,
+      timedOut,
+    };
+  } finally {
+    clearTimeout(timer);
+  }
+}

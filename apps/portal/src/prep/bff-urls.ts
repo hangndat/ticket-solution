@@ -35,3 +35,47 @@ export function bffRevokeMember(tenantId: string, membershipId: string): string 
 export function bffRevokeInvite(tenantId: string, inviteId: string): string {
   return `${bffInvites(tenantId)}/${encodeURIComponent(inviteId)}/revoke`;
 }
+
+/** Ops BFF (import / pending / CS / notify / export) — route-scoped UUIDs. */
+export function bffImports(tenantId: string, eventId: string): string {
+  return bffEventAction(tenantId, eventId, 'imports');
+}
+
+export function bffImportsUpload(tenantId: string, eventId: string): string {
+  return `${bffImports(tenantId, eventId)}/upload`;
+}
+
+export function bffImportJob(
+  tenantId: string,
+  eventId: string,
+  importId: string,
+): string {
+  return `${bffImports(tenantId, eventId)}/${encodeURIComponent(importId)}`;
+}
+
+export function bffInvitations(tenantId: string, eventId: string): string {
+  return bffEventAction(tenantId, eventId, 'invitations');
+}
+
+export function bffInvitationDispatchPreview(
+  tenantId: string,
+  eventId: string,
+): string {
+  return `${bffInvitations(tenantId, eventId)}/dispatch-preview`;
+}
+
+export function bffRedemptions(tenantId: string, eventId: string): string {
+  return bffEventAction(tenantId, eventId, 'redemptions');
+}
+
+export function bffTickets(tenantId: string, eventId: string): string {
+  return bffEventAction(tenantId, eventId, 'tickets');
+}
+
+export function bffNotifications(tenantId: string, eventId: string): string {
+  return bffEventAction(tenantId, eventId, 'notifications');
+}
+
+export function bffExports(tenantId: string, eventId: string): string {
+  return bffEventAction(tenantId, eventId, 'exports');
+}
