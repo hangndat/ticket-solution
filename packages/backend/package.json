@@ -8,7 +8,7 @@
     "build": "pnpm generate && tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint src",
-    "test": "pnpm build && node --test test/env.test.cjs test/oidc.test.cjs test/membership-unit.test.cjs test/issue-unit.test.cjs test/csv-guard.test.cjs test/apns-unit.test.cjs test/notification-unit.test.cjs test/web-links-unit.test.cjs test/form-validate.test.cjs test/platform-unit.test.cjs test/demo-seed-unit.test.cjs test/offline-sync-unit.test.cjs test/branding-unit.test.cjs",
+    "test": "pnpm build && node --test test/env.test.cjs test/oidc.test.cjs test/membership-unit.test.cjs test/issue-unit.test.cjs test/csv-guard.test.cjs test/apns-unit.test.cjs test/notification-unit.test.cjs test/web-links-unit.test.cjs test/qr-ticket-link-unit.test.cjs test/form-validate.test.cjs test/platform-unit.test.cjs test/demo-seed-unit.test.cjs test/offline-sync-unit.test.cjs test/branding-unit.test.cjs",
     "generate": "prisma generate",
     "test:db": "pnpm --filter @ticket/contracts build && pnpm build && node --test test/rls.test.cjs test/rls-catalog.test.cjs test/membership.test.cjs test/issue.test.cjs test/gate.test.cjs test/account-session-revoke.test.cjs test/account-ack-session-revoke.test.cjs test/account-idp-erasure.test.cjs test/offline-sync-apply.test.cjs test/config-publish.test.cjs test/approval.test.cjs test/reporting.test.cjs test/cs-export.test.cjs test/minio-real.test.cjs test/n1-email-mime.test.cjs test/event-lifecycle.test.cjs test/form-consent.test.cjs test/platform.test.cjs test/portal-members.test.cjs test/branding.test.cjs test/published-events.test.cjs test/demo-seed-rebrand.test.cjs",
     "migrate": "prisma migrate deploy",

@@ -17,6 +17,16 @@
       "cache": false,
       "persistent": true
     },
+    "@ticket/portal#typegen": {
+      "outputs": [".next/types/**"]
+    },
+    "@ticket/portal#typecheck": {
+      "dependsOn": ["^build", "typegen"]
+    },
+    "@ticket/portal#build": {
+      "dependsOn": ["^build", "typecheck"],
+      "outputs": [".next/**", "!.next/cache/**"]
+    },
     "@ticket/web#typegen": {
       "outputs": [".next/types/**"]
     },

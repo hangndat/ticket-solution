@@ -40,6 +40,18 @@ export function buildInviteAcceptLink(input: {
   return `${base}/invite?token=${encodeURIComponent(input.token)}`;
 }
 
+/**
+ * Canonical owner ticket URL embedded in TicketIssued email `{{ticketLink}}`
+ * (see `processClaimedOutbox` → `buildOwnerTicketLink`).
+ *
+ * Contract path (locked by `test/qr-ticket-link-unit.test.cjs`):
+ *   `{resolvedPublicWebBase}/t/{tenantSlug}/tickets/{ticketId}`
+ *
+ * Base goes through `resolveProductWebBaseUrl` (O13: marketing apex → app.vemoki.com).
+ * Do **not** silently change the path segments — emails already sent keep the old URL;
+ * path cutover needs coordinator confirm. Matrix:
+ * `docs/reviews/D13-BUG-BE-TICKET-LINK-AUDIT.md`.
+ */
 export function buildOwnerTicketLink(input: {
   publicWebBaseUrl: string;
   tenantSlug: string;
