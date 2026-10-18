@@ -7,11 +7,7 @@ import type { CursorPage, FieldValidationError } from './common';
 export type ImportKind = 'CODES' | 'GUESTS';
 
 export type ImportJobStatus =
-  | 'CREATED'
-  | 'PREVIEW_READY'
-  | 'COMMITTING'
-  | 'COMPLETED'
-  | 'FAILED';
+  'CREATED' | 'PREVIEW_READY' | 'COMMITTING' | 'COMPLETED' | 'FAILED';
 
 export const IMPORT_LIMITS = {
   maxBytes: 10 * 1024 * 1024,
@@ -29,11 +25,36 @@ export interface ImportCreateBody {
   ticketTypeId: string;
   /** Server-side file ref after quarantine upload, or omit when using legacy rawCodes. */
   fileId?: string;
+  /** Defaults to 1; server rejects stale revisions. */
+  mappingRevision?: number;
+  columnMapping?: ImportColumnMapping;
   /**
    * Legacy compatibility path (≤500 codes). Not a full CSV job.
    * Prefer fileId + preview/commit for CSV.
    */
   rawCodes?: string[];
+}
+
+/** Header names selected by the user; logical fields depend on kind. */
+export interface ImportColumnMapping {
+  code?: string;
+  email?: string;
+}
+export interface ImportFileUploadResponse {
+  fileId: string;
+  /** SHA-256 hex of accepted bytes; never a storage object key. */
+  fileHash: string;
+  byteLength: number;
+}
+export interface ImportPreviewBody {
+  /** Omitted values use stored mapping/default code or email header. */
+  mappingRevision?: number;
+  columnMapping?: ImportColumnMapping;
+}
+export interface ImportErrorReportMeta {
+  importId: string;
+  expiresAt: string;
+  rowCount: number;
 }
 
 export interface ImportJob {
@@ -82,11 +103,7 @@ export interface ImportCommitResponse {
 }
 
 export type InvitationState =
-  | 'PENDING'
-  | 'DISPATCHED'
-  | 'CLAIMED'
-  | 'EXPIRED'
-  | 'REVOKED';
+  'PENDING' | 'DISPATCHED' | 'CLAIMED' | 'EXPIRED' | 'REVOKED';
 
 /** Technical default invitation TTL (may shorten to redemption close). */
 export const INVITATION_TTL_HOURS_DEFAULT = 48;
@@ -154,6 +171,7 @@ export type ImportErrorCode =
   (typeof IMPORT_ERROR_CODES)[keyof typeof IMPORT_ERROR_CODES];
 
 export const IMPORT_ENDPOINTS = {
+  upload: 'POST /tenants/:tenantId/events/:eventId/imports/files',
   create: 'POST /tenants/:tenantId/events/:eventId/imports',
   get: 'GET /tenants/:tenantId/events/:eventId/imports/:importId',
   preview: 'POST /tenants/:tenantId/events/:eventId/imports/:importId/preview',
