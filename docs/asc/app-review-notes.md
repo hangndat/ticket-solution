@@ -2,7 +2,8 @@
 
 **Epic:** [#301](https://github.com/hangndat/ticket-solution/issues/301) · Story S3-T3 (BA refresh sau O06)  
 **Reuse D10:** [#159](https://github.com/hangndat/ticket-solution/issues/159) — copy cũ nói “retention chưa finalize” là **stale**; bản này khớp O06  
-**Source tip đối chiếu:** `f551b6d2bdc06742f74a49a0970cb2bfae2f4e0e`  
+**Source tip đối chiếu (S3-T3):** `f551b6d2bdc06742f74a49a0970cb2bfae2f4e0e`  
+**S5-T2 refresh:** xem `docs/reviews/D13-S5-T2-DEMO-REVIEWER.md` (prod IdP verify; tip SHA = commit PR docs)  
 **Mục đích:** văn bản dán vào ASC → App Review Information.  
 **Cấm:** coi credential dưới đây là prod secret; **không** escalate demo thành owner platform; **không** submit store từ task docs này; **không** commit mật khẩu production.
 
@@ -72,20 +73,25 @@ Nguồn đã công bố nội bộ: `docs/reviews/D1-P4-KEYCLOAK-SMOKE.md` (`ema
 
 ### B) Production / TestFlight review (điền vào ASC UI — **không commit mật khẩu prod**)
 
-Trước khi gửi bản build production cho review, operator tạo **tenant demo** + 2 user review trên IdP production và paste **chỉ trong ASC**:
+**S5-T2 (2026-10-18):** IdP prod đã verify. Evidence: [D13-S5-T2-DEMO-REVIEWER.md](../reviews/D13-S5-T2-DEMO-REVIEWER.md).
+
+**Khuyến nghị paste ASC (end-to-end app path):** cặp fixture §A — đã ROPC OK trên prod; attendee có vé `ACTIVE`; staff có `gate.confirm` (không còn `CONFIGURE_TOTP`).
+
+**Dedicated emails (IdP đã provision):** `review-attendee@vemoki.com` / `review-staff@vemoki.com` — mật khẩu chỉ trên VPS; staff đã seed `gate.confirm`; attendee chưa có vé ACTIVE riêng → **không** ưu tiên hơn fixture cho Sign-in required cho đến khi issue vé.
 
 | Field ASC | Giá trị |
 | --- | --- |
-| User name | `[REVIEW_ATTENDEE_EMAIL — ASC only]` |
-| Password | `[REVIEW_ATTENDEE_PASSWORD — ASC only]` |
-| Notes thêm 1 dòng | “Staff scanner: `[REVIEW_STAFF_EMAIL]` / `[REVIEW_STAFF_PASSWORD]` (Camera required).” |
+| User name | `attendee@example.com` **hoặc** `[REVIEW_ATTENDEE_EMAIL — ASC only]` |
+| Password | `[từ /opt/vemoki/secrets/app-review/asc-sign-in-required.txt — ASC only]` |
+| Notes thêm 1 dòng | “Staff scanner: `staff@example.com` / `[password ASC only]` (Camera required).” |
 
 Checklist operator (không lưu password vào git):
 
-1. Tạo user review riêng, mật khẩu xoay sau mỗi đợt review.  
-2. Gán attendee có ≥1 vé ACTIVE + staff có quyền `gate.confirm` trên event demo.  
-3. Xác nhận deep link / OIDC redirect của binary khớp host production.  
-4. Paste credential vào ASC → Save; **không** mở PR chứa password.
+1. Đọc secret file VPS `asc-sign-in-required.txt` (mode 600); xoay mật khẩu sau mỗi đợt review.  
+2. ASC primary: fixture attendee (≥1 vé ACTIVE) + staff (`gate.confirm`) trên tenant demo `uat-device`.  
+3. Xác nhận deep link / OIDC redirect của binary khớp host production (`auth.vemoki.com` / `api.vemoki.com`).  
+4. Paste credential vào ASC → Save; **không** mở PR chứa password.  
+5. Paste ASC UI vẫn **chờ** binary TestFlight/Review (không làm trong S5-T2 docs-only).
 
 ---
 
@@ -116,4 +122,5 @@ Checklist operator (không lưu password vào git):
 - [x] Demo attendee/staff fixture ghi rõ (không phải prod secret)  
 - [x] Quy trình credential production-only-in-ASC  
 - [x] Camera / notifications / deletion / OIDC giải thích cho reviewer  
-- [ ] Operator paste credential prod-demo vào ASC khi có binary TestFlight (S5-T2 — ngoài docs)  
+- [x] Prod IdP demo accounts verified + secret file how-to (S5-T2) — xem `docs/reviews/D13-S5-T2-DEMO-REVIEWER.md`
+- [ ] Operator paste credential vào ASC UI khi có binary TestFlight/Review (ops ASC — ngoài docs commit)  
