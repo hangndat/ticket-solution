@@ -1,4 +1,4 @@
-import { Link } from 'expo-router';
+import { Link, router } from 'expo-router';
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import {
   Pressable,
@@ -8,6 +8,7 @@ import {
   View,
 } from 'react-native';
 import type { TicketSummary } from '@ticket/contracts';
+import { AttendeeCta } from '@/components/attendee-cta';
 import { EventLogo } from '@/components/event-media';
 import { BrandWordmark, Notice } from '@/components/page';
 import {
@@ -20,14 +21,12 @@ import {
   attendeeWalletCopy,
   presentTicketRow,
 } from '@/attendee/attendee-outcome-copy';
+import { useAttendeeSignIn } from '@/attendee/use-attendee-sign-in';
 import { hasDemoMediaForEventId } from '@/data/demo-media';
 import { brand, colors } from '@/theme/colors';
+import { fontFamilies } from '@/theme/fonts';
 import { isOidcConfigured, getTenantId } from '@/identity/config';
-import { verifyViaMe } from '@/identity/fetch-me';
-import {
-  endKeycloakSession,
-  loginWithKeycloak,
-} from '@/identity/oidc-login';
+import { endKeycloakSession } from '@/identity/oidc-login';
 import { session } from '@/identity/session';
 import {
   currentTicketDisplayWriteEpoch,
@@ -47,48 +46,6 @@ import {
 import { logoutAndClearWalletArtifacts } from '@/tickets/wallet-logout';
 import { AccountScreen } from '@/screens/account';
 import { SessionScopedPushStatus } from '@/push/push-status';
-
-function ActionButton({
-  label,
-  onPress,
-  disabled,
-}: {
-  label: string;
-  onPress: () => void;
-  disabled?: boolean;
-}) {
-  const [focused, setFocused] = useState(false);
-  return (
-    <Pressable
-      accessibilityRole="button"
-      disabled={disabled}
-      onPress={onPress}
-      onFocus={() => setFocused(true)}
-      onBlur={() => setFocused(false)}
-      style={({ pressed }) => ({
-        paddingVertical: 14,
-        paddingHorizontal: 18,
-        borderRadius: 12,
-        borderCurve: 'continuous',
-        backgroundColor: colors.accent,
-        opacity: disabled ? 0.45 : pressed ? 0.85 : 1,
-        borderWidth: focused ? 2 : 0,
-        borderColor: colors.focus,
-      })}
-    >
-      <Text
-        style={{
-          color: colors.onAccent,
-          fontSize: 17,
-          fontWeight: '600',
-          textAlign: 'center',
-        }}
-      >
-        {label}
-      </Text>
-    </Pressable>
-  );
-}
 
 function TicketRow({ ticket }: { ticket: TicketSummary }) {
   const [focused, setFocused] = useState(false);
@@ -121,16 +78,44 @@ function TicketRow({ ticket }: { ticket: TicketSummary }) {
             accessibilityLabel="Logo sự kiện demo trên vé"
           />
         ) : null}
-        <Text style={{ color: brand.ink, fontSize: 17, fontWeight: '600' }}>
+        <Text
+          style={{
+            color: brand.ink,
+            fontSize: 17,
+            fontFamily: fontFamilies.bodySemiBold,
+            fontWeight: '600',
+          }}
+        >
           {row.eventTitle}
         </Text>
-        <Text style={{ color: brand.signal, fontSize: 15, fontWeight: '600' }}>
+        <Text
+          style={{
+            color: brand.signal,
+            fontSize: 15,
+            fontFamily: fontFamilies.bodySemiBold,
+            fontWeight: '600',
+          }}
+        >
           {row.statusLabel}
         </Text>
-        <Text style={{ color: colors.secondary, fontSize: 13 }} selectable>
+        <Text
+          style={{
+            color: colors.secondary,
+            fontSize: 13,
+            fontFamily: fontFamilies.body,
+          }}
+          selectable
+        >
           {row.ticketId}
         </Text>
-        <Text style={{ color: colors.secondary, fontSize: 12 }} selectable>
+        <Text
+          style={{
+            color: colors.secondary,
+            fontSize: 12,
+            fontFamily: fontFamilies.body,
+          }}
+          selectable
+        >
           {row.credentialLine}
         </Text>
       </Pressable>
@@ -180,45 +165,7 @@ export function MyTicketsScreen() {
 }
 
 function SignedOutWallet() {
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const onSignIn = useCallback(async () => {
-    setBusy(true);
-    setError(null);
-    try {
-      // Account switch / new login: do not hydrate the previous offline user.
-      try {
-        await offlineDisplay.clear();
-      } catch {
-        /* continue sign-in; prior binding clear best-effort */
-      }
-      const bindingEpoch = captureOfflineBindingEpoch();
-      const result = await loginWithKeycloak();
-      if (!result.ok) {
-        setError(result.reason);
-        return;
-      }
-      await session.establish(result.accessToken, verifyViaMe);
-      const snap = session.getSnapshot();
-      const tenantId = getTenantId();
-      if (snap.status === 'verified' && tenantId) {
-        await bindIfStillVerified({
-          session,
-          offline: offlineDisplay,
-          userId: snap.userId,
-          tenantId,
-          bindingEpoch,
-        });
-      }
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : 'Đăng nhập thất bại.',
-      );
-    } finally {
-      setBusy(false);
-    }
-  }, []);
+  const { busy, error, signIn } = useAttendeeSignIn();
 
   return (
     <ScrollView
@@ -230,13 +177,26 @@ function SignedOutWallet() {
       <Notice title={attendeeWalletCopy.signedOutTitle}>
         {attendeeWalletCopy.signedOutBody}
       </Notice>
-      <Text style={{ color: colors.secondary, fontSize: 15 }}>
+      <Text
+        style={{
+          color: colors.secondary,
+          fontSize: 15,
+          fontFamily: fontFamilies.body,
+        }}
+      >
         Trạng thái: chưa đăng nhập
       </Text>
-      <ActionButton
+      <AttendeeCta
         label="Đăng nhập"
-        onPress={() => void onSignIn()}
+        onPress={() => void signIn()}
         disabled={busy}
+        testID="wallet-cta-signin"
+      />
+      <AttendeeCta
+        label="Đổi mã lấy vé"
+        variant="secondary"
+        onPress={() => router.push('/redeem')}
+        testID="wallet-cta-redeem"
       />
       {busy ? (
         <LoadingState title={walletCopy.signInLoading.title}>
@@ -244,7 +204,13 @@ function SignedOutWallet() {
         </LoadingState>
       ) : null}
       {error ? (
-        <ErrorState title={walletCopy.signInErrorTitle}>{error}</ErrorState>
+        <ErrorState
+          title={walletCopy.signInErrorTitle}
+          onRetry={() => void signIn()}
+          retryLabel="Thử lại"
+        >
+          {error}
+        </ErrorState>
       ) : null}
     </ScrollView>
   );
@@ -352,7 +318,7 @@ function OfflineDisplayWallet({
         </View>
       )}
 
-      <ActionButton
+      <AttendeeCta
         label="Đăng xuất"
         onPress={() => void onLogout()}
         disabled={busy}
@@ -592,12 +558,19 @@ function VerifiedWallet({ userId }: { userId: string }) {
         </View>
       )}
 
-      <ActionButton
+      {tickets.length === 0 && !busy ? (
+        <AttendeeCta
+          label="Đổi mã lấy vé"
+          variant="secondary"
+          onPress={() => router.push('/redeem')}
+        />
+      ) : null}
+      <AttendeeCta
         label="Làm mới vé"
         onPress={() => void onRefresh()}
         disabled={busy || refreshing}
       />
-      <ActionButton
+      <AttendeeCta
         label="Đăng xuất"
         onPress={() => void onLogout()}
         disabled={busy}
