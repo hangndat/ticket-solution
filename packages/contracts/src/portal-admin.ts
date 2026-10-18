@@ -65,3 +65,32 @@ export const PORTAL_MEMBER_ENDPOINTS = {
   resendInvite: (tenantId: string, inviteId: string) =>
     `${tenantBase(tenantId)}/invites/${encodeURIComponent(inviteId)}/resend`,
 } as const;
+
+/** #418: event-scoped catalog reads require event.config and assignment. */
+export interface PortalTicketTypeSummary {
+  ticketTypeId: string;
+  label: string;
+  entitlementSnapshot: Record<string, unknown>;
+}
+export interface PortalSourceSummary {
+  sourceId: string;
+  name: string;
+  approvalMode: 'AUTO' | 'MANUAL';
+  /** A source may map to several types; do not silently take the first. */
+  ticketTypeIds: string[];
+}
+export type PortalTicketTypesPage = CursorPage<PortalTicketTypeSummary>;
+export type PortalSourcesPage = CursorPage<PortalSourceSummary>;
+export interface PortalCursorQuery {
+  cursor?: string;
+  /** 1–100, default 20; invalid cursors fail with INVALID_CURSOR. */
+  limit?: number;
+}
+const eventBase = (tenantId: string, eventId: string) =>
+  `${tenantBase(tenantId)}/events/${encodeURIComponent(eventId)}`;
+export const PORTAL_CATALOG_ENDPOINTS = {
+  ticketTypes: (tenantId: string, eventId: string) =>
+    `${eventBase(tenantId, eventId)}/ticket-types`,
+  sources: (tenantId: string, eventId: string) =>
+    `${eventBase(tenantId, eventId)}/sources`,
+} as const;
