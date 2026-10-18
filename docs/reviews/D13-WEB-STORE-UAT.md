@@ -5,7 +5,7 @@
 **Role:** `web` · Architecture impact: **Không**  
 **Implementation SHA (disclosure enrich):** `8dc9abbfb6434ef7960e4ad5a6ee2e108073239e`  
 **Jargon-plain follow-up SHA:** `5ac2b436626d0abaab06ad2d17cadcf3aa9a9e57`  
-**Review tip SHA:** `4a2675a5ea58f853246e2eb2905720e6fe94711e`  
+**Review tip SHA:** `ae8ba365457995e6b58e1a1291c4b9844342327c`  
 **Local UAT ≠ production deploy.** Prod ASC URLs checked HTTP-only; enriched copy lands after merge+deploy.  
 **Note:** Prior DoD PASS-with-gap on `6c458cdc…` (`docs/reviews/D13-PR347-DOD.md`) does **not** auto-apply to this tip — coordinator must re-review exact SHA above.
 
