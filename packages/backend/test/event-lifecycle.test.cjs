@@ -23,6 +23,7 @@ const {
   redeemAndIssueTicket,
   unwrapRedeemOutcome,
   listTicketsForOwner,
+  getTicketForOwner,
   openStaffSession,
   reserveCheckin,
   confirmCheckin,
@@ -402,6 +403,11 @@ test(
           (t) => t.ticketId === issued.ticketId && t.eventId === eventId,
         ),
       );
+      const byId = await withTenant(db, tenantId, (tx) =>
+        getTicketForOwner(tx, tenantId, guest.userId, issued.ticketId),
+      );
+      assert.equal(byId.ticketId, issued.ticketId);
+      assert.equal(byId.eventId, eventId);
 
       const redeemKey = randomUUID();
       await assert.rejects(
