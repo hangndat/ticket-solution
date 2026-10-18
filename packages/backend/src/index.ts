@@ -177,6 +177,8 @@ export {
   deterministicEventId,
   createTicketType,
   createIssuanceSource,
+  listTicketTypes,
+  listIssuanceSources,
   CREATOR_EVENT_PERMISSIONS,
   type EventMutationResult,
   type EventSummary,
