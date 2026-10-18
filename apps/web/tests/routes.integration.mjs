@@ -71,6 +71,24 @@ test('production routes isolate tenant content and reject unknown pairs', async 
       assert.ok(!html.includes('event-published'), path);
     }
 
+    // Owner ticket email deep-link: route must exist (not Next 404).
+    // Guest → HTTP 200 + login CTA (documented); no credential in URL.
+    const ticketId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+    const ticketPath = `/t/uat-device/tickets/${ticketId}`;
+    const ticketRes = await fetch(base + ticketPath);
+    assert.equal(ticketRes.status, 200, ticketPath);
+    const ticketHtml = await ticketRes.text();
+    assert.ok(ticketHtml.includes('owner-ticket-page'), ticketPath);
+    assert.ok(ticketHtml.includes('owner-ticket-auth-required'), ticketPath);
+    assert.ok(ticketHtml.includes('Cần đăng nhập'), ticketPath);
+    assert.ok(ticketHtml.includes('/auth?next='), ticketPath);
+    assert.ok(!ticketHtml.includes('Không tải được trang này'), ticketPath);
+    const badTicket = await fetch(base + '/t/uat-device/tickets/not-a-uuid');
+    assert.equal(badTicket.status, 200);
+    const badHtml = await badTicket.text();
+    assert.ok(badHtml.includes('owner-ticket-invalid-params'));
+    assert.ok(badHtml.includes('Liên kết vé không hợp lệ'));
+
     const home = await (await fetch(base)).text();
     assert.ok(
       home.includes('home-events-unreachable') ||
