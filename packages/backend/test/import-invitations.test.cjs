@@ -55,7 +55,7 @@ async function startIsolatedPostgres() {
     '--name',
     name,
     '--label',
-    'ticket.task=task_1b50dd9ce2e5',
+    'ticket.task=task_35ef7a00e41e',
     '-e',
     'POSTGRES_PASSWORD=' + password,
     '-e',
@@ -140,7 +140,7 @@ async function startIsolatedPostgres() {
 }
 
 test(
-  'H-I1/H-I2 import jobs + guest invitations: preview no quota, privacy, claim',
+  'H-I1/H-I2/H-I3 import jobs + guest invitations + attendee claim',
   { timeout: 300000 },
   async () => {
     let name;
@@ -601,7 +601,24 @@ test(
       assert.ok(mintedAda.token);
       assert.ok(!JSON.stringify(listed).includes(mintedAda.token));
 
-      // V4 — wrong email
+      // H-I3 — email not verified (attendee host gate)
+      await assert.rejects(
+        () =>
+          claimGuestInvitation(db, HMAC, CRED, {
+            tenantId: tenantA,
+            eventId: eventA,
+            actorUserId: guest.userId,
+            actorEmail: 'ada@example.com',
+            emailVerified: false,
+            idempotencyKey: randomUUID(),
+            body: { token: mintedAda.token },
+          }),
+        (e) =>
+          e instanceof ImportError &&
+          e.code === IMPORT_ERROR_CODES.EMAIL_NOT_VERIFIED,
+      );
+
+      // H-I3 — wrong email
       await assert.rejects(
         () =>
           claimGuestInvitation(db, HMAC, CRED, {
@@ -618,17 +635,24 @@ test(
           e.code === IMPORT_ERROR_CODES.INVITATION_EMAIL_MISMATCH,
       );
 
+      // Attendee claim succeeds without staff membership / inventory.import.
+      const claimKey = randomUUID();
       const claimed = await claimGuestInvitation(db, HMAC, CRED, {
         tenantId: tenantA,
         eventId: eventA,
         actorUserId: guest.userId,
         actorEmail: 'ada@example.com',
         emailVerified: true,
-        idempotencyKey: randomUUID(),
+        idempotencyKey: claimKey,
         body: { token: mintedAda.token },
       });
       assert.equal(claimed.ok, true);
       assert.ok(claimed.result.ticketId);
+      assert.equal(
+        JSON.stringify(claimed).includes(mintedAda.token),
+        false,
+        'claim response must not echo raw invitation token',
+      );
 
       const allocatedAfterClaim = await withTenant(db, tenantA, async (tx) => {
         const rows = await tx.$queryRaw`
@@ -640,17 +664,47 @@ test(
       });
       assert.equal(allocatedAfterClaim, allocatedBefore + 1);
 
-      // Reused token after claim — redeem returns terminal denial (code consumed).
-      const reused = await claimGuestInvitation(db, HMAC, CRED, {
+      // Idempotent replay (same key) returns the same ticket.
+      const claimReplay = await claimGuestInvitation(db, HMAC, CRED, {
         tenantId: tenantA,
         eventId: eventA,
         actorUserId: guest.userId,
         actorEmail: 'ada@example.com',
         emailVerified: true,
-        idempotencyKey: randomUUID(),
+        idempotencyKey: claimKey,
         body: { token: mintedAda.token },
       });
-      assert.equal(reused.ok, false);
+      assert.equal(claimReplay.ok, true);
+      assert.equal(claimReplay.result.ticketId, claimed.result.ticketId);
+      assert.equal(claimReplay.result.replayed, true);
+
+      // One-time token: different Idempotency-Key after CLAIMED → 410.
+      await assert.rejects(
+        () =>
+          claimGuestInvitation(db, HMAC, CRED, {
+            tenantId: tenantA,
+            eventId: eventA,
+            actorUserId: guest.userId,
+            actorEmail: 'ada@example.com',
+            emailVerified: true,
+            idempotencyKey: randomUUID(),
+            body: { token: mintedAda.token },
+          }),
+        (e) =>
+          e instanceof ImportError &&
+          e.code === IMPORT_ERROR_CODES.INVITATION_TOKEN_INVALID,
+      );
+
+      // Quota unchanged after rejected re-claim / replay.
+      const allocatedAfterReuse = await withTenant(db, tenantA, async (tx) => {
+        const rows = await tx.$queryRaw`
+          SELECT allocated FROM quota_buckets
+          WHERE tenant_id = ${tenantA}::uuid AND event_id = ${eventA}::uuid
+            AND scope = 'EVENT'
+        `;
+        return rows[0].allocated;
+      });
+      assert.equal(allocatedAfterReuse, allocatedBefore + 1);
     } finally {
       if (db) await db.$disconnect().catch(() => {});
       if (name) {
