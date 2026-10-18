@@ -1,10 +1,24 @@
-# D10-S1-T1 — ASC listing copy VI/EN + keywords
+# D13 — ASC listing copy VI/EN + keywords (reuse D10)
 
-**Issue:** [#152](https://github.com/hangndat/ticket-solution/issues/152) · Parent [#151](https://github.com/hangndat/ticket-solution/issues/151) · Epic [#150](https://github.com/hangndat/ticket-solution/issues/150)  
-**Bundle:** `com.hangndat.ticket` · Display name: **Vemoki** · Version app: `0.1.0` (buildNumber xem `apps/mobile/app.config.ts`)  
-**Không submit store** — chỉ draft để dán vào App Store Connect.
+**Epic D13:** [#301](https://github.com/hangndat/ticket-solution/issues/301)  
+**Reuse D10:** [#152](https://github.com/hangndat/ticket-solution/issues/152) — copy dưới đây đã reconcile sau D7/D11 Gate offline queue  
+**Bundle:** `com.hangndat.ticket` · Display name: **Vemoki**  
+**Version public (coordinator chốt 2026-10-18):** **`1.0.0`** — first App Store release string cho ASC + binary tip submit.  
+**Baseline tip lúc BA đọc:** `app.config.ts` từng là `0.1.0` / build `10` — iOS đang bump config lên `1.0.0` (ngoài PR docs này); ASC draft `1.0` → chỉnh **`1.0.0`** (không tạo version trùng).  
+**Không submit / không claim upload** — chỉ draft paste.  
+**Không tự chọn territory** — Availability chờ user chốt (đề xuất VN; xem plan D13).
 
-Giới hạn ASC (nhắc): Name ≤30 · Subtitle ≤30 · Promotional Text ≤170 · Description ≤4000 · Keywords ≤100 (không khoảng sau dấu phẩy) · What’s New ≤4000.
+Giới hạn ASC (nhắc): Name ≤30 · Subtitle ≤30 · Promotional Text ≤170 · Description ≤4000 · Keywords ≤100 **bytes** (comma-separated; Apple: [platform version information](https://developer.apple.com/help/app-store-connect/reference/platform-version-information/)) · What’s New ≤4000.
+
+### Version alignment (ops / iOS — không claim đã upload)
+
+| Nguồn | Giá trị mục tiêu |
+| ----- | ---------------- |
+| Public / ASC versionString | **`1.0.0`** |
+| Binary `CFBundleShortVersionString` | Phải **`1.0.0`** trên tip archive/submit |
+| ASC existing draft | Update `1.0` → `1.0.0` (không duplicate version record) |
+
+BA docs dùng **`1.0.0`**. Nếu binary tip vẫn `0.1.0` khi archive → **blocker** iOS merge trước S4.
 
 ---
 
@@ -38,12 +52,13 @@ Vemoki is a multi-tenant event ticketing platform for organizers, agencies, and 
 FOR ATTENDEES
 • Sign in securely and open the tickets issued to you
 • Show a display QR at the gate (online check-in confirmation)
-• Keep ticket details available when the network is weak (offline display; check-in still requires the server)
+• Keep ticket details available when the network is weak (offline display; final check-in still needs the server)
 • Receive push updates about ticket delivery and event reminders when enabled
 
 FOR EVENT STAFF
 • Sign in with the roles your organizer assigned (scanner, supervisor, and related permissions)
 • Scan guest QR codes at the gate with a clear accept / reject result
+• When offline, queue a scan on this device and sync when connectivity returns—queued scans are not “admit” until the server confirms; cross-device offline dedupe is not guaranteed
 • Support lookup and resend flows according to your permissions—no improvised “override” paths
 
 FOR ORGANIZERS (web companion)
@@ -51,24 +66,24 @@ FOR ORGANIZERS (web companion)
 • Redeem codes, import guests, and operate check-in with auditability
 • Brand the guest experience per organization while sharing one secure platform
 
-Vemoki is built for real operations: deny-by-default access, tenant isolation, and retry-safe ticket and check-in flows. Free/invite issuance is the focus of the first release; paid checkout is out of scope for this listing version.
+Vemoki is built for real operations: deny-by-default access, tenant isolation, and retry-safe ticket and check-in flows. Free/invite issuance is the focus of this listing version; paid checkout is out of scope.
 
 Support: https://vemoki.com
 Privacy: https://vemoki.com/privacy
 ```
 
-### Keywords (100 max, comma-separated, no spaces after commas)
+### Keywords (≤100 bytes, comma-separated; localized field — paste into **en-US** Keywords)
 
 ```
 ticket,event,check-in,QR,gate,festival,venue,attendee,organizer,scanner,pass,redeem
 ```
 
-Count check: `ticket,event,check-in,QR,gate,festival,venue,attendee,organizer,scanner,pass,redeem` = **88** characters.
+Byte/character length (ASCII): **83** (≤100). Không đếm nhầm “88” từ bản D10.
 
-### What’s New (first release)
+### What’s New
 
 ```
-First App Store listing preparation for Vemoki 0.1. Attendee wallet, secure sign-in, gate QR scan for staff, and push registration for delivery updates. Pilot-focused; not a claim of full production capacity.
+First App Store release of Vemoki 1.0.0. Attendee ticket wallet, secure OIDC sign-in, staff gate QR scan with on-device offline queue + sync, and APNs registration for delivery updates.
 ```
 
 ### Support URL
@@ -116,12 +131,13 @@ Vemoki là nền tảng vé sự kiện multi-tenant cho nhà tổ chức, agenc
 CHO KHÁCH
 • Đăng nhập an toàn và mở các vé đã được cấp
 • Xuất trình mã QR tại cổng (check-in xác nhận online)
-• Xem thông tin vé khi mạng yếu (hiển thị offline; check-in vẫn cần máy chủ)
+• Xem thông tin vé khi mạng yếu (hiển thị offline; check-in cuối vẫn cần máy chủ)
 • Nhận thông báo đẩy về giao vé / nhắc sự kiện khi bật quyền thông báo
 
 CHO NHÂN VIÊN SỰ KIỆN
 • Đăng nhập theo vai trò BTC đã gán (scanner, supervisor, …)
 • Quét QR khách tại cổng với kết quả chấp nhận / từ chối rõ
+• Khi mất mạng: xếp hàng scan trên thiết bị này và đồng bộ khi có mạng — mục xếp hàng không được coi là “cho vào” trước khi máy chủ xác nhận; không chống trùng đa thiết bị khi còn offline
 • Tra cứu hỗ trợ theo đúng quyền—không có đường “bypass” tự ý
 
 CHO BTC (web kèm theo)
@@ -129,30 +145,34 @@ CHO BTC (web kèm theo)
 • Đổi mã, import khách mời, vận hành check-in có dấu vết
 • Nhận diện thương hiệu theo tổ chức trên một nền tảng dùng chung an toàn
 
-Vemoki hướng tới vận hành thật: quyền deny-by-default, tách dữ liệu theo tenant, luồng vé/check-in chịu được thử lại. Bản đầu tập trung vé miễn phí / khách mời; thanh toán bán vé chưa thuộc phiên bản listing này.
+Vemoki hướng tới vận hành thật: quyền deny-by-default, tách dữ liệu theo tenant, luồng vé/check-in chịu được thử lại. Bản listing này tập trung vé miễn phí / khách mời; thanh toán bán vé chưa thuộc phạm vi.
 
 Hỗ trợ: https://vemoki.com
 Quyền riêng tư: https://vemoki.com/privacy
 ```
 
-### Từ khóa (≤100)
+### Từ khóa (locale **vi** — field Keywords riêng theo localization)
 
 ```
 vé,sựkiện,check-in,QR,cổng,lễhội,khách,BTC,quétvé,đổimã,pass
 ```
 
-Lưu ý ASC: keywords **một chuỗi dùng chung** cho app (không tách theo locale trên mọi phiên bản UI). Ưu tiên dán chuỗi **English** ở trên vào field Keywords ASC; chuỗi VI chỉ là gợi ý nội địa hóa / ASO nội bộ.
+Length (UTF-8 aware ops nên đếm byte ASC): chuỗi trên ≈ **60** ký tự hiển thị; kiểm tra lại byte count trong ASC UI trước Save.
+
+**Keywords theo locale:** Apple cho phép Keywords **localize theo từng App Store localization** ([App Store version localizations](https://developer.apple.com/documentation/appstoreconnectapi/app-store-version-localizations); [Localize app information](https://developer.apple.com/help/app-store-connect/manage-app-information/localize-app-information/)). Bản D10 nói “một chuỗi dùng chung” là **sai** — dán EN vào locale en-US và VI vào locale Vietnamese riêng.
 
 ### Có gì mới
 
 ```
-Chuẩn bị listing App Store đầu tiên cho Vemoki 0.1. Ví vé khách, đăng nhập bảo mật, quét QR cổng cho nhân viên, đăng ký đẩy cho cập nhật giao vé. Tập trung pilot—không tuyên bố năng lực production đầy đủ.
+Phát hành App Store đầu tiên Vemoki 1.0.0. Ví vé khách, đăng nhập OIDC, quét QR cổng có hàng đợi offline trên thiết bị + đồng bộ, đăng ký APNs cho cập nhật giao vé.
 ```
 
 ---
 
 ## Ghi chú ASO / tuân thủ
 
-- Không dùng tên đối thủ, không mention TikTok, không claim “#1” / “50k concurrent” khi chưa có evidence.
-- Không hứa offline check-in đa thiết bị (ngoài phạm vi release đầu).
-- Tên trên Home Screen lấy từ `CFBundleDisplayName` / Expo `name: Vemoki` — khớp listing.
+- Không dùng tên đối thủ, không claim “#1” / “50k concurrent” khi chưa có evidence.
+- **Có** mô tả offline Gate queue (D7/D11 source) — **không** hứa chống trùng đa thiết bị khi offline; **không** hứa admit trước khi server confirm.
+- Không tự chọn Availability / territories trong docs này.
+- Tên trên Home Screen lấy từ Expo `name: Vemoki` — khớp listing.
+- What’s New / Version Number = **`1.0.0`** khớp binary tip submit (xem mục Version alignment).
