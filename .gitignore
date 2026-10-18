@@ -16,6 +16,9 @@ apps/mobile/ios/
 apps/mobile/android/
 apps/web/.uat-artifacts/
 apps/mobile/.uat-artifacts/
+# O13 marketing interest durable store (local/VPS path; never commit leads)
+apps/web/.data/
+.data/
 # Added by code-review-graph
 .code-review-graph/
 # Local Cursor MCP / machine-specific agent config (rules live in .cursor/rules/)

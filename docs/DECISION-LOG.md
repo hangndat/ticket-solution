@@ -20,6 +20,8 @@ Tracking: Issues [#10](https://github.com/hangndat/ticket-solution/issues/10), [
 | O08 | Database riêng theo tổ chức? | **Shared PostgreSQL schema + RLS** (+ authz app); không DB-per-tenant | Đã chốt (MVP) | Deployment, isolation tier |
 | O09 | Tên thương hiệu và domain platform? | **Vemoki**, domain `vemoki.com` | Đã chốt (MVP) | Tên hiển thị store/web, sender `noreply@vemoki.com`, deep link `vemoki://`; repo `ticket-solution` và bundle `com.hangndat.ticket` giữ nguyên |
 | O10 | Mở rộng MVP / hủy Android·payment·seat·Wallet? | **Có mở rộng** — đưa **D7** Offline Gate multi-device, **D8** White-label, **D9** Demo seed + UX/media, **D10** App Store metadata vào MVP. **Hủy khỏi kế hoạch MVP:** Android native; payment/refund/chuyển nhượng; seat map; Apple/Google Wallet (ngoài phạm vi có chủ đích). Issue [#7](https://github.com/hangndat/ticket-solution/issues/7) rewrite đồng bộ board (worker GitHub). | Đã chốt (MVP mở rộng) 2026-10-17 | [ROADMAP](./ROADMAP.md) §1/§4/§6; [PRD](./PRD.md) §4 |
+| O12 | Dictionary KPI Dashboard M11 + pha triển khai? | Xem mục **O12** bên dưới — chốt theo tổng hợp thị trường 18/10/2026; không thay non-goals O10 | Đã chốt (MVP) 2026-10-18 | [PRD](./PRD.md) M11; [DASHBOARD-MARKET-SYNTHESIS](./plans/DASHBOARD-MARKET-SYNTHESIS.md) |
+| O13 | Trang bán platform GTM + tách subdomain? | Xem mục **O13** — buyer Owner+Agency; `vemoki.com`/`app.`; CTA demo+quan tâm; demo giả lập; **VI+EN**; code ngay sau PD | Đã chốt (GTM) 2026-10-18 | [VEMOKI-PLATFORM-SALES-PAGE-RESEARCH](./plans/VEMOKI-PLATFORM-SALES-PAGE-RESEARCH.md); ASC; ADR subdomain |
 
 ### O11 — Định hướng mở rộng UX/UI cho vận hành production (18/10/2026)
 
@@ -67,8 +69,44 @@ Chỉ mở redemption / Gate / admin tenant **sau khi**:
 | 2026-10-17 | Freeze security vận hành (không O06): invite TTL 48h, support grant max 1h, MFA `auth_time` step-up 15m, ACR=`2`; platform client/audience Keycloak; O06 giữ UNRESOLVED. |
 | 2026-10-17 | User **mở rộng MVP (O10)**: D7–D10 vào phạm vi; hủy Android / payment·refund·chuyển nhượng / seat map / Apple·Google Wallet khỏi kế hoạch MVP. Cập nhật O01 (white-label → D8), ADR-07, ROADMAP, PRD §4. #7 rewrite trên board (không thuộc worker docs). |
 | 2026-10-17 | **ADR-18** — contract Offline Gate sync (Issue #105): payload, idempotency `clientEventId`, clock skew ±300s, conflict codes, replay order; endpoint OpenAPI stub 501 đến #106. |
+| 2026-10-18 | User **chốt O12** Dashboard M11: dictionary check-in = Gate confirm; day-of Manager→Supervisor; email = cần CS; watermark + refresh thủ công pilot; event-scoped; không tự sửa AC `#229`. Nguồn: `docs/plans/DASHBOARD-MARKET-SYNTHESIS.md`. |
+| 2026-10-18 | User **chốt O13** GTM sales page: buyer Owner+Agency; `vemoki.com` = marketing, `app.vemoki.com` = product; CTA Xem demo + Đăng ký quan tâm; mọi demo hiện tại = giả lập (không social proof khách). Nguồn: `docs/plans/VEMOKI-PLATFORM-SALES-PAGE-RESEARCH.md`. |
+| 2026-10-18 | O13 bổ sung: marketing **VI+EN**; ủy quyền **code web ngay sau PD** (không hỏi lại); vẫn PR/DoD; không tự deploy/store. |
 | 2026-10-18 | User duyệt **O15 / ADR-19** — published projection SoT (Epic #254); dispatch BE public Nest + seed (#255). |
 
 ## O11 — Phê duyệt thực thi 18/10/2026
 
 User duyệt gói D11 trong cuộc hội thoại: admin theo công việc/readiness, iOS Gate feedback/offline/conflict, attendee web/iOS và brand/a11y trong scope. Bắt đầu wave web admin ∥ iOS Gate, tiếp theo attendee. Dùng feature branch/PR, review độc lập, CI và coordinator integration theo git-workflow. Không tự mở validate-only/manual lookup, metrics mới, policy O06 số liệu, publish privacy, deploy production hoặc submit store. Phần discovery trước đó giữ làm lịch sử; approval không thay bằng chứng runtime/pilot.
+
+## O12 — Dashboard M11: dictionary KPI và pha triển khai (18/10/2026)
+
+User chốt theo đề xuất sau research nội bộ + BA A/B (`docs/plans/DASHBOARD-*.md`). **Giữ đích PRD M11**; không mở revenue/UTM/seat/Wallet/RFID/BI đa event (O10). O12 làm rõ định nghĩa và thứ tự wave — **chưa** tự ủy quyền coding; Wave coding vẫn cần dispatch/Epic planner theo ownership và WIP.
+
+| # | Quyết định | Chi tiết MVP |
+| - | ---------- | ------------ |
+| 1 | Mẫu số check-in trên Dashboard | Đếm **lượt Gate confirm thành công** (operation APPLIED), không lấy một mình `tickets.state=USED` khi có undo Supervisor. **Không** check-out / tách *đang trong* vs *đã từng vào* trong MVP (khớp O05 một lượt). |
+| 2 | Thứ tự day-of trên trang event | **Manager trước:** readiness/quota/pending (dẫn `#228/#229`); **Supervisor ngay sau:** check-in success + reject theo lý do·cổng trên cùng event Dashboard. |
+| 3 | Email lỗi | Count **cần CS xử lý** (failed cuối / hết retry hữu ích), không đếm mọi lần retry tạm. Thẻ KPI chỉ deep-link CS; **không** resend từ thẻ. |
+| 4 | Độ tươi pilot | Bắt buộc **`asOf`/watermark** + copy “server đã ghi nhận”; pilot = **refresh thủ công**. Mục tiêu PRD ≤10s = độ trễ commit→UI đã đo trong tải pilot — **không** suy ra bắt buộc poll 10s. Auto-refresh chỉ xét sau khi có budget/query plan (giảm reporting trước Gate). |
+| 5 | Phạm vi đợt | **Chỉ event-scoped.** Multi-event Owner overview = pha sau. Staff “Đầy đủ” / Scanner “tóm tắt theo quyền” giữ ma trận PRD §5. |
+| 6 | Quan hệ `#229` readiness | Research/O12 **chỉ bổ sung KPI/copy Dashboard**; **không** tự sửa AC readiness `#229` đã nộp trừ khi có ủy quyền riêng. Publish ≠ mở đổi vé ≠ mở check-in vẫn theo PRD M03. |
+
+**Wave sau O12 (khi được dispatch):** P1 mở rộng `EventReport` (check-in/reject + remaining quota có định nghĩa + email-cần-CS) → P2 watermark/fail-closed UI → P3 deep-link việc cần làm → hòa copy với `#229` → mới xét auto-refresh / drilldown / multi-event.
+
+## O13 — Trang bán platform GTM + tách subdomain (18/10/2026)
+
+User chốt theo research [`docs/plans/VEMOKI-PLATFORM-SALES-PAGE-RESEARCH.md`](./plans/VEMOKI-PLATFORM-SALES-PAGE-RESEARCH.md). **Không** mở payment/Android/Wallet/seat (O10). O13 khóa GTM/host — **chưa** tự ủy quyền coding/deploy; cần architect handoff subdomain rồi PD/web/coordinator theo ownership và WIP.
+
+| # | Quyết định | Chi tiết |
+| - | ---------- | -------- |
+| 1 | Primary buyer trang bán | **Tenant Owner + Agency**. Attendee không phải buyer. |
+| 2 | Root theo buyer | **`vemoki.com/` = sales** (Owner+Agency). Product/attendee/demo/redeem/admin/gate trên **`app.vemoki.com`**. |
+| 3 | CTA P1 | **Cả hai:** Xem demo (→ app, fixture) **và** Đăng ký quan tâm (form/email trên marketing). |
+| 4 | Demo / proof | **Mọi demo hiện nay = giả lập.** Không dùng demo seed làm logo/case study khách thật; UI nhãn rõ fixture. |
+| 5 | Host model | **Tách subdomain:** marketing `vemoki.com`, product `app.vemoki.com`. Architecture impact: Có (DNS/TLS/nginx, cookie, OIDC redirect, `PUBLIC_WEB_ORIGIN`) — Task `architect` trước consumer deploy. |
+| 6 | Locale marketing | **VI và EN** trên trang bán (`vemoki.com`). UI product pilot vẫn mặc định VI (O04) trừ khi task riêng mở EN app. |
+| 7 | Ủy quyền sau PD | User (18/10/2026): **sau khi PD xong → code web ngay**, không hỏi lại. Vẫn qua feature branch/PR + DoD độc lập; không tự deploy prod / submit store. |
+
+**Còn mở:** lịch host privacy/support (khuyến nghị P0 cùng sales — trước store); tách git repo marketing (không bắt buộc nếu monorepo + host routing).
+
+**Wave sau O13:** architect ADR/handoff ∥ PD wireframe sales (VI+EN) → **web coding ngay khi PD handoff sẵn** (ủy quyền #7) → coordinator DNS khi được phép deploy → form quan tâm + demo link nhãn giả lập → ASC URL + headless UAT + reviewer-dod.

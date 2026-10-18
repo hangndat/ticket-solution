@@ -1,0 +1,480 @@
+/* O13 sales prototype — tokens from brand/vemoki/tokens.json */
+:root {
+  --ink: #22241f;
+  --paper: #f7f6f1;
+  --signal: #9b3a18;
+  --focus: #235fd0;
+  --ink-muted: color-mix(in srgb, var(--ink) 68%, var(--paper));
+  --line: color-mix(in srgb, var(--ink) 12%, var(--paper));
+  --font-display: "Syne", ui-sans-serif, sans-serif;
+  --font-body: "Be Vietnam Pro", ui-sans-serif, sans-serif;
+  --space: clamp(1rem, 2.5vw, 2rem);
+  --max: 68rem;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  color: var(--ink);
+  background:
+    radial-gradient(120% 80% at 80% 0%, color-mix(in srgb, var(--signal) 10%, transparent), transparent 55%),
+    linear-gradient(165deg, #fbfaf6 0%, var(--paper) 45%, #f0eee6 100%);
+  line-height: 1.55;
+  min-height: 100vh;
+}
+
+a {
+  color: var(--focus);
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
+}
+
+.skip {
+  position: absolute;
+  left: -999px;
+  top: 0;
+  background: var(--ink);
+  color: var(--paper);
+  padding: 0.5rem 1rem;
+  z-index: 10;
+}
+
+.skip:focus {
+  left: 0.5rem;
+  top: 0.5rem;
+}
+
+.wrap {
+  width: min(100% - 2 * var(--space), var(--max));
+  margin-inline: auto;
+}
+
+.top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1.25rem;
+  padding: 1.1rem 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.wordmark {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.35rem;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.wordmark span {
+  color: var(--signal);
+}
+
+.nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem 1rem;
+  font-size: 0.95rem;
+}
+
+.nav a {
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.nav a:hover {
+  color: var(--signal);
+}
+
+.locale a[aria-current="true"] {
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.demo-banner {
+  margin: 1rem 0 0;
+  padding: 0.65rem 0.85rem;
+  border: 1px dashed color-mix(in srgb, var(--signal) 45%, var(--ink));
+  background: color-mix(in srgb, var(--signal) 8%, var(--paper));
+  font-size: 0.9rem;
+}
+
+/* —— Hero: one composition —— */
+.hero {
+  display: grid;
+  gap: 1.5rem;
+  padding: clamp(2.5rem, 8vw, 5rem) 0 clamp(2rem, 5vw, 3rem);
+  min-height: min(88vh, 52rem);
+  align-content: center;
+}
+
+.hero-brand {
+  font-family: var(--font-display);
+  font-size: clamp(2.8rem, 9vw, 5.5rem);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: 0.95;
+  margin: 0;
+}
+
+.hero-brand span {
+  color: var(--signal);
+}
+
+.hero h1 {
+  font-family: var(--font-display);
+  font-size: clamp(1.55rem, 3.6vw, 2.35rem);
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  margin: 0.35rem 0 0;
+  max-width: 22ch;
+}
+
+.hero .support {
+  margin: 0.85rem 0 0;
+  max-width: 42ch;
+  color: var(--ink-muted);
+  font-size: 1.05rem;
+}
+
+.cta-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 1.4rem;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0.7rem 1.2rem;
+  border-radius: 2px;
+  border: 1px solid transparent;
+  font: inherit;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.btn-primary {
+  background: var(--signal);
+  color: #fffaf6;
+}
+
+.btn-primary:hover {
+  filter: brightness(1.05);
+}
+
+.btn-secondary {
+  background: transparent;
+  color: var(--ink);
+  border-color: color-mix(in srgb, var(--ink) 35%, transparent);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--ink-muted);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  border: none;
+  min-height: 44px;
+  padding: 0.5rem 0.25rem;
+  font: inherit;
+  cursor: pointer;
+}
+
+.badge {
+  display: inline-block;
+  margin-top: 0.65rem;
+  font-size: 0.85rem;
+  color: var(--signal);
+  font-weight: 600;
+}
+
+.hero-visual {
+  margin-top: 1.5rem;
+  min-height: clamp(12rem, 32vw, 18rem);
+  border-radius: 0;
+  background:
+    linear-gradient(120deg, color-mix(in srgb, var(--ink) 88%, #000) 0%, #3a3d35 40%, color-mix(in srgb, var(--signal) 55%, #2a2018) 100%);
+  color: var(--paper);
+  padding: clamp(1.25rem, 3vw, 2rem);
+  display: grid;
+  align-content: end;
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-visual::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 70% 30%, color-mix(in srgb, var(--signal) 35%, transparent), transparent 50%);
+  pointer-events: none;
+  animation: glow 8s ease-in-out infinite alternate;
+}
+
+@keyframes glow {
+  from {
+    opacity: 0.55;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.hero-visual .label {
+  position: relative;
+  z-index: 1;
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  letter-spacing: -0.02em;
+}
+
+.hero-visual .meta {
+  position: relative;
+  z-index: 1;
+  opacity: 0.8;
+  font-size: 0.9rem;
+  margin-top: 0.35rem;
+}
+
+/* —— Sections —— */
+section {
+  padding: clamp(2.5rem, 6vw, 4rem) 0;
+  border-top: 1px solid var(--line);
+}
+
+section h2 {
+  font-family: var(--font-display);
+  font-size: clamp(1.45rem, 2.8vw, 1.9rem);
+  letter-spacing: -0.02em;
+  margin: 0 0 0.5rem;
+}
+
+section .lead {
+  margin: 0 0 1.25rem;
+  max-width: 48ch;
+  color: var(--ink-muted);
+}
+
+.stack {
+  display: grid;
+  gap: 1rem;
+}
+
+.row {
+  display: grid;
+  gap: 0.35rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.row:last-child {
+  border-bottom: 0;
+}
+
+.row h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-family: var(--font-display);
+}
+
+.row p {
+  margin: 0;
+  color: var(--ink-muted);
+}
+
+.steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  counter-reset: step;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.steps li {
+  counter-increment: step;
+  display: grid;
+  grid-template-columns: 2rem 1fr;
+  gap: 0.75rem;
+  align-items: start;
+}
+
+.steps li::before {
+  content: counter(step);
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--signal);
+}
+
+/* —— Form —— */
+form {
+  display: grid;
+  gap: 0.9rem;
+  max-width: 28rem;
+}
+
+label {
+  display: grid;
+  gap: 0.3rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+input,
+select,
+textarea {
+  font: inherit;
+  padding: 0.65rem 0.7rem;
+  border: 1px solid color-mix(in srgb, var(--ink) 28%, transparent);
+  background: #fff;
+  color: var(--ink);
+  min-height: 44px;
+  border-radius: 2px;
+}
+
+textarea {
+  min-height: 5.5rem;
+  resize: vertical;
+}
+
+.consent {
+  display: flex;
+  gap: 0.65rem;
+  align-items: flex-start;
+  font-weight: 400;
+}
+
+.consent input {
+  width: 1.15rem;
+  height: 1.15rem;
+  min-height: 0;
+  margin-top: 0.2rem;
+}
+
+.field-error {
+  color: var(--signal);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.banner {
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--line);
+  background: #fff;
+}
+
+.banner.error {
+  border-color: var(--signal);
+  color: var(--signal);
+}
+
+.banner.success {
+  border-color: color-mix(in srgb, var(--ink) 40%, var(--paper));
+}
+
+.pd-review {
+  margin-top: 1.5rem;
+  padding: 0.85rem;
+  border: 1px dashed var(--line);
+  font-size: 0.85rem;
+  color: var(--ink-muted);
+}
+
+.pd-review strong {
+  color: var(--ink);
+}
+
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+}
+
+.chip {
+  min-height: 36px;
+  padding: 0.35rem 0.65rem;
+  border: 1px solid var(--line);
+  background: transparent;
+  font: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+  color: var(--ink);
+}
+
+.chip[aria-pressed="true"] {
+  border-color: var(--signal);
+  color: var(--signal);
+  font-weight: 600;
+}
+
+.footer {
+  padding: 2rem 0 3rem;
+  border-top: 1px solid var(--line);
+  font-size: 0.9rem;
+  color: var(--ink-muted);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.25rem;
+  justify-content: space-between;
+}
+
+.footer a {
+  color: var(--ink);
+}
+
+.legal {
+  max-width: 48rem;
+  padding: 2.5rem 0 4rem;
+}
+
+.legal h1 {
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
+}
+
+.legal h2 {
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  margin-top: 1.75rem;
+}
