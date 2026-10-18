@@ -37,7 +37,7 @@ Cột **Board** = Status parent Issue trên Project #3 tại thời điểm đ�
 | Mục | Board (parent) | Mức hoàn thành | Ghi chú / proof limits |
 | --- | --- | --- | --- |
 | W0 Foundation | **Hoàn thành** (#1) | Nghiệm thu đợt | Prototype — **không** = production auth hay ticketing xong. Evidence: [W0-FOUNDATION-REPORT](./W0-FOUNDATION-REPORT.md) |
-| Identity / OIDC (D1) | **Hoàn thành** (#2) | Nghiệm thu đợt | Keycloak self-host; gỡ Clerk. Live P4 smoke: [D1-P4-KEYCLOAK-SMOKE](./reviews/D1-P4-KEYCLOAK-SMOKE.md). O06 retention vẫn mở |
+| Identity / OIDC (D1) | **Hoàn thành** (#2) | Nghiệm thu đợt | Keycloak self-host; gỡ Clerk. Live P4 smoke: [D1-P4-KEYCLOAK-SMOKE](./reviews/D1-P4-KEYCLOAK-SMOKE.md). O06 **đã chốt** 2026-10-18 — [DECISION-LOG](./DECISION-LOG.md) |
 | Nhận vé (D2) | **Hoàn thành** (#3) | Nghiệm thu đợt | Mã/quota/issue/outbox + web redeem + iOS ví đã có trên `main` (PRs #30–#32…) |
 | Check-in (D3) | **Hoàn thành** (#4) | Nghiệm thu đợt (có ngoại lệ UAT) | Gate + web Gate + iOS scan/recovery trên `main`. **Camera thiết bị thật** hoãn sang D5 (#26) — không ghi là UAT camera physical đã PASS |
 | Admin & Platform (D4) | **Hoàn thành** (#5) | Nghiệm thu đợt (PASS with known gap) | Tenant 2 prod: [D4-TENANT2-PROD-UAT.md](./reviews/D4-TENANT2-PROD-UAT.md). Gap CSRF invite UI / MinIO export / invite email → theo dõi D5 ops |
@@ -247,7 +247,7 @@ Vẫn **sau MVP** (không thuộc D7–D10, không bị “hủy” khỏi tầm
 | --- | --- | --- | --- |
 | O01–O05, O07–O09 | (xem DECISION-LOG) | **Đã chốt MVP** | [DECISION-LOG.md](./DECISION-LOG.md) |
 | O10 | Mở rộng MVP / hủy Android·payment·seat·Wallet | **Đã chốt** 2026-10-17 — D7–D10 trong MVP; mục hủy → §6 | [DECISION-LOG.md](./DECISION-LOG.md) |
-| O06 | Retention, vùng dữ liệu, SLA? | Chưa chốt số | Trước dữ liệu user thật |
+| O06 | Retention, vùng dữ liệu, SLA? | **Đã chốt** 2026-10-18 — xem [DECISION-LOG](./DECISION-LOG.md) O06 / [O06-OPTIONS](./ops/O06-OPTIONS.md) | Privacy copy khớp số; drill RPO/RTO trên VPS trước công bố |
 | ADR-09 | Provider OIDC cụ thể? | **Keycloak self-host đã chốt** — POC P4 local | [spikes/D1-OIDC-PROVIDER.md](./spikes/D1-OIDC-PROVIDER.md) |
 | ADR-11…15 | SaaS cấm; MinIO/SMTP/APNs/Caddy | **Đã chốt MVP** | [DECISION-LOG.md](./DECISION-LOG.md) |
 

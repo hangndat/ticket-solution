@@ -40,8 +40,8 @@ Revoke membership/support vẫn được Owner/operator thực hiện. Notificat
 
 ## 5. Account deletion request
 
-- ACK `AWAITING_POLICY` / `REQUESTED` — **không** tự erase audit/ticket/identity.
-- O06 chưa chốt → không transition `COMPLETED` xóa dữ liệu.
+- ACK `AWAITING_POLICY` / `REQUESTED` — **không** tự erase audit/ticket/identity ngay lập tức.
+- O06 **đã chốt** 2026-10-18 ([O06-OPTIONS](./O06-OPTIONS.md)): anonymize tài khoản **≤ 30 ngày** sau khi chấp nhận yêu cầu; audit TTL 730 ngày; vé/check-in theo retention event. Transition `COMPLETED` chỉ sau job anonymize đúng policy — không xóa cứng audit trong TTL.
 
 ## 6. Platform operator
 

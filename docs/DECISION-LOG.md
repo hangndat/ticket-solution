@@ -15,7 +15,7 @@ Tracking: Issues [#10](https://github.com/hangndat/ticket-solution/issues/10), [
 | O03 | Tải / số tenant / cổng thực tế? | Theo PRD §9: **2 event đồng thời**, **20.000 vé/event**, **50 thiết bị scan/event**; API p95 theo bảng PRD; **chưa** claim 50k concurrent | Đã chốt (baseline test) | Capacity S1–S4; không dùng làm SLA khách hàng đến khi benchmark |
 | O04 | Form dữ liệu và ngôn ngữ? | **Tiếng Việt** làm mặc định UI/email pilot; schema form **versioned JSON** sẵn sàng mở rộng field/locale | Đã chốt (MVP) | Nội dung, email, privacy copy |
 | O05 | Tái nhập cổng / nhiều ngày / nhiều phiên? | **Một vé → một lượt vào** toàn event; không re-entry mặc định | Đã chốt (MVP) | Gate entitlement; đổi sau phải migration + UAT lại |
-| O06 | Retention, vùng dữ liệu, SLA hỗ trợ? | Retention/anonymize **bắt buộc có policy trước dữ liệu user thật**; giá trị ngày/region/SLA **chưa chốt số** | Giữ mở (chốt trước production data) | Hạ tầng, DPA, support access |
+| O06 | Retention, vùng dữ liệu, SLA hỗ trợ? | Xem mục **O06** bên dưới — retention/region/SLA **đã chốt số** 18/10/2026 | Đã chốt (MVP) 2026-10-18 | Hạ tầng, DPA, privacy copy, support access |
 | O07 | Custom domain / sender ngay release đầu? | **Không** — subdomain platform + sender platform trên DNS user mua; custom domain/sender **sau MVP** | Đã chốt (MVP) | DNS, deliverability |
 | O08 | Database riêng theo tổ chức? | **Shared PostgreSQL schema + RLS** (+ authz app); không DB-per-tenant | Đã chốt (MVP) | Deployment, isolation tier |
 | O09 | Tên thương hiệu và domain platform? | **Vemoki**, domain `vemoki.com` | Đã chốt (MVP) | Tên hiển thị store/web, sender `noreply@vemoki.com`, deep link `vemoki://`; repo `ticket-solution` và bundle `com.hangndat.ticket` giữ nguyên |
@@ -89,6 +89,28 @@ Chỉ mở redemption / Gate / admin tenant **sau khi**:
 | 2026-10-18 | User **chốt O13** GTM sales page: buyer Owner+Agency; `vemoki.com` = marketing, `app.vemoki.com` = product; CTA Xem demo + Đăng ký quan tâm; mọi demo hiện tại = giả lập (không social proof khách). Nguồn: `docs/plans/VEMOKI-PLATFORM-SALES-PAGE-RESEARCH.md`. |
 | 2026-10-18 | O13 bổ sung: marketing **VI+EN**; ủy quyền **code web ngay sau PD** (không hỏi lại); vẫn PR/DoD; không tự deploy/store. |
 | 2026-10-18 | User duyệt **O15 / ADR-19** — published projection SoT (Epic #254); dispatch BE public Nest + seed (#255). |
+| 2026-10-18 | User **duyệt O06** — retention/region/SLA theo gói MVP (anonymize 30d; vé 365d; audit 730d; object 90d; single-region VPS; SLA support tách business-hours vs on-call cửa sổ Gate). Nguồn: `docs/ops/O06-OPTIONS.md`. |
+
+## O06 — Retention / vùng dữ liệu / SLA hỗ trợ (18/10/2026)
+
+User trả lời **duyệt** cho gói đề xuất trong hội thoại coordinator (sau research PRODUCTION-READINESS). **Đóng** trạng thái UNRESOLVED trước đây. Chi tiết vận hành: [`docs/ops/O06-OPTIONS.md`](./ops/O06-OPTIONS.md).
+
+| # | Trục | Quyết định MVP |
+| - | ---- | -------------- |
+| 1 | Tài khoản khi user yêu cầu xóa | **Anonymize ≤ 30 ngày** (không xóa cứng ngay — giữ đối soát khiếu nại) |
+| 2 | Vé / check-in sau event | **Giữ 365 ngày** rồi anonymize PII; giữ aggregate/KPI |
+| 3 | Audit log | **TTL 730 ngày** |
+| 4 | Object store (QR/export) | Signed URL ngắn hạn + **job xóa object ≤ 90 ngày** sau hết hạn nghiệp vụ |
+| 5 | Backup vs erasure | Backup **tôn trọng xóa trong RPO** (sau restore không “sống lại” PII đã xóa quá cửa sổ) |
+| 6 | Cache client | Purge khi logout / đổi user |
+| 7 | Vùng dữ liệu | **Single-region VPS** — Postgres + MinIO + Keycloak + SMTP cùng quốc gia với VPS; ghi quốc gia host trong DPA khi có tenant thật; **không** split region MVP |
+| 8 | SLA ngoài cửa sổ event | **Business hours** T2–T6 (giờ VN) |
+| 9 | SLA trong cửa sổ Gate / opening | **On-call P1 24/7 theo lịch event** |
+| 10 | P1 / P2 / P3 | P1 (cổng chết) **≤ 30 phút** trong cửa sổ; P2 **≤ 4 giờ** business / **≤ 1 giờ** trong cửa sổ; P3 **≤ 2 ngày làm việc** |
+| 11 | Kênh support | Email + chat nội bộ; **cấm** log OTP/QR/PII thô vào ticket |
+| 12 | RPO / RTO kỹ thuật | Mục tiêu PRD **RPO ≤ 15 phút, RTO ≤ 2 giờ** — chỉ công bố sau drill trên VPS đích; **không** dùng làm SLA support |
+
+**Hệ quả:** Cho phép khớp copy `/privacy` với số trên; ingest PII ngoài demo **được phép về mặt policy** sau khi privacy/copy + ops gates đủ. **Không** tự ủy quyền deploy production hay store submit từ dòng này.
 
 ## O11 — Phê duyệt thực thi 18/10/2026
 
@@ -123,7 +145,7 @@ User trả lời **duyệt** cho gói [`MVP-EXPAND-MARKET-SYNTHESIS.md`](./plans
 | 4 | BE reject audit | **Ưu tiên ngay** (ownership `backend`): wire `recordGateReject` trên online deny paths — known gap DoD `#241`. |
 | 5 | Invite Owner HTTP | **Sau** `#234` attendee web (tránh 2 feature Dispatch `web`); revalidate prod CSRF/copy VI. |
 | 6 | Validate-only / resolution desk / multi-event / metrics product | **Giữ OUT / defer** đến khi user mở lại (khớp O11). |
-| 7 | O06 + privacy | Tạm: **không ingest PII ngoài demo** đến khi chốt số O06; **không** deploy `/privacy` chỉ vì duyệt O14 — cần nội dung + ủy quyền deploy riêng. |
+| 7 | O06 + privacy | *(Lịch sử O14)* Tạm không ingest PII / không deploy privacy đến khi chốt O06. **Cập nhật 18/10/2026:** O06 **đã chốt** — xem mục O06; deploy `/privacy` khớp số vẫn cần **ủy quyền deploy** riêng. |
 | 8 | Non-goals | Giữ O10: Android / payment / seat / Wallet / RFID / revenue BI. |
 
 **Wave sau O14:** backend reject-audit ∥ (khi `web` free) Dashboard O12 consumer → CS UX → invite revalidate → `#232`/`#236` theo board · không validate-only.

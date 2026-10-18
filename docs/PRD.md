@@ -391,7 +391,7 @@ Các bước là thứ tự phụ thuộc sản phẩm, chưa phải lịch ho�
 | O03 | Tải, số tenant/event và số cổng thực tế?   | Theo baseline pilot ở mục 9            | Capacity, SLO và kế hoạch test                          |
 | O04 | Form cần dữ liệu và ngôn ngữ nào?          | Tiếng Việt; schema sẵn sàng mở rộng    | Nội dung, email và quyền riêng tư                       |
 | O05 | Có cần tái nhập cổng, nhiều ngày/phiên?    | Một vé một lượt toàn event             | Ticket entitlement và check-in model                    |
-| O06 | Retention, vị trí lưu dữ liệu, SLA hỗ trợ? | Chưa chốt                              | Hạ tầng, vận hành và lifecycle dữ liệu                  |
+| O06 | Retention, vị trí lưu dữ liệu, SLA hỗ trợ? | **Đã chốt (MVP)** 18/10/2026 — xem Decision Log O06 | Hạ tầng, vận hành và lifecycle dữ liệu                  |
 | O07 | Cần custom domain/sender ngay release đầu? | Subdomain và sender platform           | DNS, xác minh sở hữu và deliverability                  |
 | O08 | Tổ chức có cần database riêng?             | Shared database/schema có RLS          | Deployment và isolation tier                            |
 
