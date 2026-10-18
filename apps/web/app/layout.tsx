@@ -59,7 +59,7 @@ const fontBody = localFont({
 export const metadata: Metadata = {
   title: { default: 'Vemoki', template: '%s · Vemoki' },
   description:
-    'Vemoki — nền tảng sự kiện. Nội dung demo mang nhãn rõ; đổi mã và cổng dùng hệ thống thật.',
+    'Vemoki — nền tảng sự kiện. Đổi mã lấy vé và cổng kiểm soát vé trên hệ thống thật.',
   robots: { index: false, follow: false },
 };
 
@@ -81,7 +81,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           {children}
           <footer className="footer">
             <FooterBrand />
-            <span>Demo mang nhãn rõ · Đổi mã / cổng qua API thật</span>
+            <span>Đổi mã lấy vé · Cổng kiểm soát vé</span>
           </footer>
         </ThemeProvider>
       </body>
