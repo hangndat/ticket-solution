@@ -1,13 +1,13 @@
 /*
- * D6 tokens — mapped from brand/vemoki/tokens.json (O09 palette).
+ * Live Pulse v2 — mapped from brand/vemoki/tokens.json (visual-identity-v2).
  * ink / paper / signal / focus are canonical; spacing + type roles are web scale.
  */
 :root {
   color-scheme: light;
-  --ink: #22241f;
-  --paper: #f7f6f1;
-  --signal: #9b3a18;
-  --focus: #235fd0;
+  --ink: #0B1220;
+  --paper: #F4F6F8;
+  --signal: #E11D48;
+  --focus: #2563EB;
   --brand: var(--ink);
   --space-1: 4px;
   --space-2: 8px;
@@ -180,8 +180,8 @@ nav a,
 .me-result {
   margin: 0;
   padding: 16px;
-  background: #22241f0d;
-  border: 1px solid #22241f30;
+  background: color-mix(in srgb, var(--ink) 5%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ink) 19%, transparent);
   overflow: auto;
   max-height: 320px;
   font-size: 0.85rem;
@@ -193,7 +193,7 @@ nav a,
   display: inline-flex;
   align-items: center;
   gap: 0.28em;
-  font-family: var(--font-display), Syne, ui-sans-serif, sans-serif;
+  font-family: var(--font-display), Sora, ui-sans-serif, sans-serif;
   font-size: 1.85rem;
   font-weight: 800;
   letter-spacing: -0.04em;
@@ -216,7 +216,7 @@ nav a,
   margin-left: 0.06em;
 }
 .footer-brand {
-  font-family: var(--font-display), Syne, ui-sans-serif, sans-serif;
+  font-family: var(--font-display), Sora, ui-sans-serif, sans-serif;
   font-weight: 800;
   letter-spacing: -0.03em;
   text-transform: lowercase;
@@ -319,13 +319,13 @@ nav a,
   margin-top: var(--space-3);
 }
 .home-featured-name {
-  font-family: var(--font-display), Syne, ui-sans-serif, sans-serif;
+  font-family: var(--font-display), Sora, ui-sans-serif, sans-serif;
   font-weight: 800;
   letter-spacing: -0.03em;
   font-size: 1.15rem;
 }
 .home-hero .wordmark-hero {
-  font-family: var(--font-display), Syne, ui-sans-serif, sans-serif;
+  font-family: var(--font-display), Sora, ui-sans-serif, sans-serif;
   font-size: clamp(1.4rem, 3vw, 1.85rem);
   font-weight: 800;
   letter-spacing: -0.04em;
@@ -344,14 +344,14 @@ p {
   margin-top: 0;
 }
 h1 {
-  font-family: var(--font-display), Syne, ui-sans-serif, sans-serif;
+  font-family: var(--font-display), Sora, ui-sans-serif, sans-serif;
   font-size: clamp(2.4rem, 6vw, 4.6rem);
   line-height: 1.05;
   letter-spacing: -0.04em;
   margin-bottom: var(--space-5);
 }
 h2 {
-  font-family: var(--font-display), Syne, ui-sans-serif, sans-serif;
+  font-family: var(--font-display), Sora, ui-sans-serif, sans-serif;
   font-size: clamp(1.5rem, 3.5vw, 2.4rem);
   line-height: 1.15;
   letter-spacing: -0.03em;
@@ -660,7 +660,7 @@ dd small {
 }
 .highlights li {
   padding: 20px 0;
-  border-bottom: 1px solid #22241f30;
+  border-bottom: 1px solid color-mix(in srgb, var(--ink) 19%, transparent);
   display: flex;
   gap: 24px;
   font-size: 1.1rem;
@@ -818,7 +818,7 @@ details p {
 }
 .admin-event-summary__title {
   margin: 0;
-  font-family: var(--font-display), Syne, ui-sans-serif, sans-serif;
+  font-family: var(--font-display), Sora, ui-sans-serif, sans-serif;
   font-size: clamp(1.45rem, 2.4vw, 2rem);
   letter-spacing: -0.02em;
   line-height: 1.15;
@@ -955,7 +955,7 @@ details p {
   max-width: 42rem;
 }
 .surface-state__title {
-  font-family: var(--font-display), Syne, ui-sans-serif, sans-serif;
+  font-family: var(--font-display), Sora, ui-sans-serif, sans-serif;
   font-size: 1.05rem;
   font-weight: 700;
   letter-spacing: -0.02em;
@@ -1077,12 +1077,12 @@ details p {
   font: inherit;
   font-weight: 400;
   padding: 12px 14px;
-  border: 2px solid #22241f40;
+  border: 2px solid color-mix(in srgb, var(--ink) 25%, transparent);
   background: #fff;
   color: var(--ink);
 }
 .redeem-form textarea[readonly] {
-  background: #22241f0d;
+  background: color-mix(in srgb, var(--ink) 5%, transparent);
 }
 .redeem-versions {
   display: grid;
@@ -1090,8 +1090,8 @@ details p {
 }
 .redeem-status {
   padding: 18px 20px;
-  border: 2px solid #22241f40;
-  background: #22241f08;
+  border: 2px solid color-mix(in srgb, var(--ink) 25%, transparent);
+  background: color-mix(in srgb, var(--ink) 3%, transparent);
 }
 .redeem-status h3 {
   margin: 0 0 8px;
@@ -1115,7 +1115,7 @@ details p {
 .redeem-status--timeout,
 .redeem-status--polling,
 .redeem-status--verifying {
-  border-color: #235fd0;
+  border-color: var(--focus);
   background: #e8effc;
   color: #163a7a;
 }
@@ -1146,7 +1146,7 @@ details p {
   gap: 14px;
   margin: 0;
   padding: 16px;
-  border: 2px solid #22241f30;
+  border: 2px solid color-mix(in srgb, var(--ink) 19%, transparent);
 }
 .redeem-published-fields legend,
 .redeem-terms legend {
@@ -1161,7 +1161,7 @@ details p {
   font: inherit;
   font-weight: 400;
   padding: 12px 14px;
-  border: 2px solid #22241f40;
+  border: 2px solid color-mix(in srgb, var(--ink) 25%, transparent);
   background: #fff;
   color: var(--ink);
 }
@@ -1196,8 +1196,8 @@ details p {
   white-space: pre-wrap;
   font-size: 0.88rem;
   padding: 12px;
-  background: #22241f0d;
-  border: 1px solid #22241f30;
+  background: color-mix(in srgb, var(--ink) 5%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ink) 19%, transparent);
 }
 input[aria-invalid='true'],
 select[aria-invalid='true'] {
@@ -1239,8 +1239,8 @@ select[aria-invalid='true'] {
 }
 .redeem-ticket-list li {
   padding: 10px 12px;
-  background: #22241f0d;
-  border: 1px solid #22241f30;
+  background: color-mix(in srgb, var(--ink) 5%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ink) 19%, transparent);
   font-size: 0.92rem;
 }
 @media (min-width: 760px) {
@@ -1316,11 +1316,11 @@ select[aria-invalid='true'] {
 .cfg-editor {
   margin: 28px 0;
   padding-top: 12px;
-  border-top: 1px solid #22241f30;
+  border-top: 1px solid color-mix(in srgb, var(--ink) 19%, transparent);
 }
 .cfg-brand,
 .cfg-rollback {
-  border: 1px solid #22241f30;
+  border: 1px solid color-mix(in srgb, var(--ink) 19%, transparent);
   padding: 12px 16px;
   margin: 16px 0;
 }
@@ -1333,8 +1333,8 @@ select[aria-invalid='true'] {
 }
 .cfg-section-item {
   padding: 12px;
-  background: #22241f08;
-  border: 1px solid #22241f20;
+  background: color-mix(in srgb, var(--ink) 3%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ink) 12%, transparent);
 }
 .cfg-section-toolbar {
   display: flex;
@@ -1351,7 +1351,7 @@ select[aria-invalid='true'] {
   opacity: 0.8;
 }
 .cfg-error {
-  color: #9b3a18;
+  color: var(--signal);
   font-weight: 600;
 }
 .cfg-preview-wrap {
@@ -1363,8 +1363,8 @@ select[aria-invalid='true'] {
 }
 .cfg-preview {
   padding: 16px;
-  border: 1px solid #22241f30;
-  background: linear-gradient(180deg, #f7f6f2 0%, #efeee8 100%);
+  border: 1px solid color-mix(in srgb, var(--ink) 19%, transparent);
+  background: linear-gradient(180deg, var(--paper) 0%, var(--paper-deep) 100%);
   border-left: 4px solid var(--cfg-brand, #0b3d2e);
 }
 .cfg-preview-header {
@@ -1395,7 +1395,7 @@ select[aria-invalid='true'] {
 .cfg-faq-item {
   margin: 8px 0;
   padding: 8px;
-  border: 1px dashed #22241f30;
+  border: 1px dashed color-mix(in srgb, var(--ink) 19%, transparent);
 }
 
 /* —— O13 marketing surface (scoped .mkt) —— */
@@ -1418,7 +1418,7 @@ select[aria-invalid='true'] {
   border-bottom: 1px solid var(--mkt-line);
 }
 .mkt-wordmark {
-  font-family: var(--font-display), Syne, ui-sans-serif, sans-serif;
+  font-family: var(--font-display), Sora, ui-sans-serif, sans-serif;
   font-weight: 700;
   font-size: 1.35rem;
   letter-spacing: -0.03em;
@@ -1455,7 +1455,7 @@ select[aria-invalid='true'] {
   align-content: center;
 }
 .mkt-hero-brand {
-  font-family: var(--font-display), Syne, ui-sans-serif, sans-serif;
+  font-family: var(--font-display), Sora, ui-sans-serif, sans-serif;
   font-size: clamp(2.8rem, 9vw, 5.5rem);
   font-weight: 700;
   letter-spacing: -0.04em;
@@ -1466,7 +1466,7 @@ select[aria-invalid='true'] {
   color: var(--signal);
 }
 .mkt-hero h1 {
-  font-family: var(--font-display), Syne, ui-sans-serif, sans-serif;
+  font-family: var(--font-display), Sora, ui-sans-serif, sans-serif;
   font-size: clamp(1.55rem, 3.6vw, 2.35rem);
   font-weight: 650;
   letter-spacing: -0.02em;
@@ -1503,7 +1503,7 @@ select[aria-invalid='true'] {
 }
 .mkt-btn-primary {
   background: var(--signal);
-  color: #fffaf6;
+  color: #ffffff;
 }
 .mkt-btn-primary:hover {
   filter: brightness(1.05);
@@ -1537,9 +1537,9 @@ select[aria-invalid='true'] {
   background:
     linear-gradient(
       120deg,
-      color-mix(in srgb, var(--ink) 88%, #000) 0%,
-      #3a3d35 40%,
-      color-mix(in srgb, var(--signal) 55%, #2a2018) 100%
+      color-mix(in srgb, var(--ink) 92%, #000) 0%,
+      color-mix(in srgb, var(--ink) 70%, var(--focus) 30%) 42%,
+      color-mix(in srgb, var(--signal) 58%, var(--ink) 42%) 100%
     );
   color: var(--paper);
   padding: clamp(1.25rem, 3vw, 2rem);
@@ -1579,7 +1579,7 @@ select[aria-invalid='true'] {
 .mkt-hero-visual-label {
   position: relative;
   z-index: 1;
-  font-family: var(--font-display), Syne, ui-sans-serif, sans-serif;
+  font-family: var(--font-display), Sora, ui-sans-serif, sans-serif;
   font-size: 1.15rem;
   letter-spacing: -0.02em;
 }
@@ -1595,7 +1595,7 @@ select[aria-invalid='true'] {
   border-top: 1px solid var(--mkt-line);
 }
 .mkt section h2 {
-  font-family: var(--font-display), Syne, ui-sans-serif, sans-serif;
+  font-family: var(--font-display), Sora, ui-sans-serif, sans-serif;
   font-size: clamp(1.45rem, 2.8vw, 1.9rem);
   letter-spacing: -0.02em;
   margin: 0 0 0.5rem;
@@ -1624,7 +1624,7 @@ select[aria-invalid='true'] {
 .mkt-row h3 {
   margin: 0;
   font-size: 1.05rem;
-  font-family: var(--font-display), Syne, ui-sans-serif, sans-serif;
+  font-family: var(--font-display), Sora, ui-sans-serif, sans-serif;
 }
 .mkt-row p {
   margin: 0;
@@ -1647,7 +1647,7 @@ select[aria-invalid='true'] {
 }
 .mkt-steps li::before {
   content: counter(mkt-step);
-  font-family: var(--font-display), Syne, ui-sans-serif, sans-serif;
+  font-family: var(--font-display), Sora, ui-sans-serif, sans-serif;
   font-weight: 700;
   color: var(--signal);
 }
@@ -1755,11 +1755,11 @@ select[aria-invalid='true'] {
   padding: 2.5rem 0 4rem;
 }
 .mkt-legal h1 {
-  font-family: var(--font-display), Syne, ui-sans-serif, sans-serif;
+  font-family: var(--font-display), Sora, ui-sans-serif, sans-serif;
   letter-spacing: -0.02em;
 }
 .mkt-legal h2 {
-  font-family: var(--font-display), Syne, ui-sans-serif, sans-serif;
+  font-family: var(--font-display), Sora, ui-sans-serif, sans-serif;
   font-size: 1.2rem;
   margin-top: 1.75rem;
 }
