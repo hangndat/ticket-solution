@@ -369,7 +369,7 @@ export async function createApp(
       },
       {
         provide: InventoryService,
-        useValue: new InventoryService(ticketDeps),
+        useValue: new InventoryService({ ...ticketDeps, env }),
       },
       {
         provide: ApprovalService,
@@ -420,11 +420,17 @@ export async function createApp(
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
     new FastifyAdapter({
-      bodyLimit: 1048576,
+      // 11 MiB — CSV import multipart up to IMPORT_LIMITS.maxBytes (10 MiB).
+      bodyLimit: 11 * 1024 * 1024,
       trustProxy: false,
     }),
     { logger: logging ? undefined : false },
   );
+  // Multipart for H-I1 CSV quarantine upload (Nest Fastify).
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  await app.register(require('@fastify/multipart'), {
+    limits: { fileSize: 10 * 1024 * 1024, files: 1 },
+  });
   app.setGlobalPrefix(API_VERSION);
   app.enableShutdownHooks();
   registerMetricsEndpoint(app, { env, db: identity.db });
