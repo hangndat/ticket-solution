@@ -6,8 +6,8 @@
 | Issue | [#322](https://github.com/hangndat/ticket-solution/issues/322) · Epic [#301](https://github.com/hangndat/ticket-solution/issues/301) · Story [#306](https://github.com/hangndat/ticket-solution/issues/306) |
 | Role | `ios` (+ `product-ba` đọc docs) · `docs/agents/roles/ios.md` · Agent Cursor |
 | Architecture impact | **Không** — ASC metadata paste / read-back |
-| Tip SHA (evidence commit) |
-| Worktree tip (ops run) | `1ddc70d15e230efa59d8286b6bbda2973066a21a` |
+| Tip SHA (evidence artifacts) | `606631c0c5cf95f318c17a3209c34e7b19fc7aff` (md+json introduced; pins follow) |
+| Worktree tip (ops run) | `1ddc70d15e230efa59d8286b6bbda2973066a21a` (pre-evidence; ASC API ops) |
 | Listing source (reviewed) | BA SHA `2759b0a9a3e0ef30321e36367e4f10f6ca18ff4a` · [D13-ASC-METADATA-LIVE.md](./D13-ASC-METADATA-LIVE.md) |
 | Categories (#354) | Receipt `/tmp/vemoki-d13-asc-categories-live.json` · PR tip `535e64908c9ed31d3a5814dc687d69701a58f6bf` |
 | Age docs (PR #356) | DoD R2 **PASS with known gap** @ `edb6d6acf8f0d89fceaf141b54fd6d6ac10f1863` · [D13-PR356-R2-DOD.md](./D13-PR356-R2-DOD.md) |
