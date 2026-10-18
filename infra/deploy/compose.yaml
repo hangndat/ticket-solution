@@ -164,7 +164,7 @@ services:
       CODE_HMAC_PEPPER: ${CODE_HMAC_PEPPER}
       CODE_HMAC_VERSION: '1'
       TICKET_CREDENTIAL_KEY: ${TICKET_CREDENTIAL_KEY}
-      PUBLIC_WEB_BASE_URL: ${PUBLIC_WEB_BASE_URL:-https://vemoki.com}
+      PUBLIC_WEB_BASE_URL: ${PUBLIC_WEB_BASE_URL:-https://app.vemoki.com}
       # MinIO — fail-closed when unset (CSV export returns MINIO_MISCONFIGURED)
       MINIO_ENDPOINT: ${MINIO_ENDPOINT:-http://minio:9000}
       MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
@@ -201,11 +201,23 @@ services:
       OIDC_ISSUER: https://auth.vemoki.com/realms/ticket
       OIDC_CLIENT_ID: ticket-web
       OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET}
-      OIDC_REDIRECT_URI: https://vemoki.com/api/auth/callback
+      # O13 product host (dual-run: keep apex URIs on Keycloak until contract phase)
+      OIDC_REDIRECT_URI: ${OIDC_REDIRECT_URI:-https://app.vemoki.com/api/auth/callback}
       OIDC_SCOPES: openid profile email
+      # Platform operator OIDC — clientId must match realm ticket-platform-web
+      PLATFORM_OIDC_CLIENT_ID: ${PLATFORM_OIDC_CLIENT_ID:-ticket-platform-web}
+      PLATFORM_OIDC_CLIENT_SECRET: ${PLATFORM_OIDC_CLIENT_SECRET:-}
+      PLATFORM_OIDC_REDIRECT_URI: ${PLATFORM_OIDC_REDIRECT_URI:-https://app.vemoki.com/api/auth/platform/callback}
+      PLATFORM_OIDC_AUDIENCE: ${PLATFORM_OIDC_AUDIENCE:-ticket-platform-api}
+      PLATFORM_OIDC_REQUIRED_ACR: ${PLATFORM_OIDC_REQUIRED_ACR:-vemoki-mfa}
       API_BASE_URL: http://api:3001
       AUTH_COOKIE_SECURE: 'true'
-      PUBLIC_WEB_ORIGIN: ${PUBLIC_WEB_ORIGIN:-https://vemoki.com}
+      # Code reads WEB_PUBLIC_ORIGIN; keep PUBLIC_WEB_ORIGIN alias for older docs/templates
+      WEB_PUBLIC_ORIGIN: ${WEB_PUBLIC_ORIGIN:-https://app.vemoki.com}
+      PUBLIC_WEB_ORIGIN: ${PUBLIC_WEB_ORIGIN:-https://app.vemoki.com}
+      PRODUCT_ORIGIN: ${PRODUCT_ORIGIN:-https://app.vemoki.com}
+      MARKETING_ORIGIN: ${MARKETING_ORIGIN:-https://vemoki.com}
+      MARKETING_HOSTS: ${MARKETING_HOSTS:-vemoki.com,www.vemoki.com}
     command: ['pnpm', '--filter', '@ticket/web', 'exec', 'next', 'start', '--hostname', '0.0.0.0', '--port', '3000']
     extra_hosts:
       - 'auth.vemoki.com:host-gateway'
@@ -244,7 +256,7 @@ services:
       ACCOUNT_DELETION_TOMBSTONE_CURRENT_KEY_ID: ${ACCOUNT_DELETION_TOMBSTONE_CURRENT_KEY_ID:-}
       OUTBOX_POLL_MS: '2000'
       TICKET_CREDENTIAL_KEY: ${TICKET_CREDENTIAL_KEY}
-      PUBLIC_WEB_BASE_URL: ${PUBLIC_WEB_BASE_URL:-https://vemoki.com}
+      PUBLIC_WEB_BASE_URL: ${PUBLIC_WEB_BASE_URL:-https://app.vemoki.com}
       # MinIO for export job relay (keys from /opt/vemoki/.env — never commit)
       MINIO_ENDPOINT: ${MINIO_ENDPOINT:-http://minio:9000}
       MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}

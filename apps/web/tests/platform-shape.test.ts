@@ -18,7 +18,7 @@ test('platform OIDC fail closed without full PLATFORM_OIDC_*', () => {
   assert.equal(
     isPlatformOidcConfigured({
       PLATFORM_OIDC_ISSUER: 'http://127.0.0.1:8080/realms/ticket',
-      PLATFORM_OIDC_CLIENT_ID: 'ticket-platform',
+      PLATFORM_OIDC_CLIENT_ID: 'ticket-platform-web',
       PLATFORM_OIDC_CLIENT_SECRET: 'x',
       PLATFORM_OIDC_REDIRECT_URI: 'http://localhost:3000/api/auth/platform/callback',
       // missing audience + acr
@@ -28,7 +28,7 @@ test('platform OIDC fail closed without full PLATFORM_OIDC_*', () => {
   assert.equal(
     isPlatformOidcConfigured({
       PLATFORM_OIDC_ISSUER: 'http://127.0.0.1:8080/realms/ticket',
-      PLATFORM_OIDC_CLIENT_ID: 'ticket-platform',
+      PLATFORM_OIDC_CLIENT_ID: 'ticket-platform-web',
       PLATFORM_OIDC_CLIENT_SECRET: 'x',
       PLATFORM_OIDC_REDIRECT_URI: 'http://localhost:3000/api/auth/platform/callback',
       PLATFORM_OIDC_AUDIENCE: 'ticket-platform-api',
