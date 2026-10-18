@@ -19,7 +19,7 @@ export function RedeemFormFields({
 }: Props) {
   return (
     <fieldset className="redeem-published-fields" disabled={disabled}>
-      <legend>Form published ({definition.formVersion})</legend>
+      <legend>Biểu mẫu sự kiện</legend>
       {definition.fields.map((field) => {
         const error = fieldErrors[field.id];
         const errorId = error ? `field-error-${field.id}` : undefined;

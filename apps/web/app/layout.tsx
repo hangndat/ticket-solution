@@ -17,6 +17,10 @@ import './globals.css';
  * Colors stay O09 from brand/vemoki/tokens.json (ink/paper/signal/focus).
  * D8-S2: ThemeProvider applies tenant overrides when present; root = Vemoki.
  * Files + OFL notices: apps/web/fonts/
+ *
+ * O13: do NOT call headers() here — it forces all routes dynamic and breaks
+ * `dynamicParams = false` 404 isolation for /t/[tenant]/events/[event].
+ * Marketing locale/surface lives under app/marketing/layout.tsx.
  */
 const fontDisplay = localFont({
   src: '../fonts/Syne-Variable.ttf',
@@ -55,7 +59,7 @@ const fontBody = localFont({
 export const metadata: Metadata = {
   title: { default: 'Vemoki', template: '%s · Vemoki' },
   description:
-    'Vemoki — nền tảng sự kiện. Nội dung demo mang nhãn rõ; đổi mã và cổng dùng API thật qua BFF.',
+    'Vemoki — nền tảng sự kiện. Nội dung demo mang nhãn rõ; đổi mã và cổng dùng hệ thống thật.',
   robots: { index: false, follow: false },
 };
 
@@ -67,6 +71,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       className={`${fontDisplay.variable} ${fontBody.variable}`}
       style={rootVars}
       data-branding-source={VEMOKI_BRANDING.source}
+      data-surface="product"
     >
       <body>
         <ThemeProvider branding={VEMOKI_BRANDING}>

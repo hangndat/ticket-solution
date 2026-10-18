@@ -63,7 +63,7 @@ test('CS lookup admits only a recorded check-in id', () => {
       {
         ticketId: '11111111-1111-4111-8111-111111111111',
         checkinId: '22222222-2222-4222-8222-222222222222',
-        message: 'Đã xác nhận. Cho khách qua.',
+        message: 'Đã ghi nhận check-in. Cho vào.',
       },
     ],
     '11111111-1111-4111-8111-111111111111',

@@ -645,13 +645,15 @@ export async function applyOfflineSyncBatch(
       (item.status === 'REJECTED' || item.status === 'CONFLICT') &&
       item.code
     ) {
+      // Idempotent on clientEventId so safe queue replay does not inflate rejectByReason.
       await recordGateReject(tx, {
         tenantId: validated.tenantId,
         eventId: input.pathEventId,
         actorUserId: input.actorUserId,
         reason: item.code,
-        resourceType: 'ticket',
-        resourceId: event.ticketId,
+        resourceType: 'offline_client_event',
+        resourceId: event.clientEventId,
+        idempotent: true,
       });
     }
     results.push(item);
