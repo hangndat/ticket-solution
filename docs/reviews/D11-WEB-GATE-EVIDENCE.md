@@ -33,7 +33,8 @@ scripts/web-uat.sh screenshot http://localhost:3022/gate apps/web/.uat-artifacts
 
 ## SHA tip
 
-`f562728a36e5309ae3a663b9b11340c1e82098cd`
+- Behavior: `f562728a36e5309ae3a663b9b11340c1e82098cd`
+- Tip branch (docs pin): `git rev-parse HEAD` trên PR — revalidate nếu tip lệch behavior
 
 ## Headless UAT
 
