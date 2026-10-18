@@ -1,6 +1,6 @@
 'use client';
 
-import { Alert, Button, Input, Space, Table, Typography } from 'antd';
+import { Alert, Button, Input, Select, Space, Table, Typography } from 'antd';
 import { useCallback, useEffect, useState } from 'react';
 import {
   portalDownload,
@@ -9,59 +9,69 @@ import {
 } from '../../client/portal-fetch';
 import { bffExports } from '../../prep/bff-urls';
 import {
+  exportAlertType,
+  exportHistoryLabel,
   exportViewLabel,
   interpretExportCreate,
   interpretExportDownload,
+  interpretExportHistory,
   interpretExportStatus,
+  type ExportHistoryItem,
+  type ExportHistoryView,
   type ExportView,
 } from '../export-job';
-import { asRecord } from '../contract-shape';
 
 type Props = {
   tenantId: string;
   eventId: string;
+  canCreate: boolean;
+  canDownload: boolean;
 };
 
-type HistoryRow = {
-  key: string;
-  exportId: string;
-  status: string;
-  createdAt?: string;
-};
+const STATUS_OPTIONS: {
+  value: ExportHistoryItem['status'];
+  label: string;
+}[] = [
+  { value: 'PENDING', label: 'PENDING' },
+  { value: 'PROCESSING', label: 'PROCESSING' },
+  { value: 'READY', label: 'READY' },
+  { value: 'FAILED', label: 'FAILED' },
+];
 
-export function ExportPanel({ tenantId, eventId }: Props) {
+export function ExportPanel({
+  tenantId,
+  eventId,
+  canCreate,
+  canDownload,
+}: Props) {
   const [busy, setBusy] = useState(false);
   const [exportId, setExportId] = useState('');
   const [view, setView] = useState<ExportView | null>(null);
-  const [history, setHistory] = useState<HistoryRow[]>([]);
+  const [historyView, setHistoryView] = useState<ExportHistoryView | null>(
+    null,
+  );
+  const [statusFilter, setStatusFilter] = useState<
+    ExportHistoryItem['status'] | undefined
+  >();
   const [notice, setNotice] = useState<string | null>(null);
 
   const loadHistory = useCallback(async () => {
+    const params = new URLSearchParams();
+    params.set('limit', '20');
+    if (statusFilter) params.set('status', statusFilter);
     const result = await portalGet(
-      `${bffExports(tenantId, eventId)}?limit=20`,
+      `${bffExports(tenantId, eventId)}?${params.toString()}`,
     );
-    if (result.status !== 200 || result.networkError) {
-      setHistory([]);
-      return;
+    const next = interpretExportHistory(
+      result.status,
+      result.json,
+      result.networkError || result.timedOut,
+    );
+    setHistoryView(next);
+    if (next.kind !== 'list') {
+      setNotice(exportHistoryLabel(next));
     }
-    const body = asRecord(result.json);
-    const items = Array.isArray(body?.items) ? body!.items : [];
-    const rows: HistoryRow[] = [];
-    for (const raw of items) {
-      const row = asRecord(raw);
-      if (!row || typeof row.exportId !== 'string') continue;
-      // Fail closed: never treat object keys / presigned URLs as success fields.
-      if ('downloadUrl' in row || 'objectKey' in row || 'url' in row) continue;
-      rows.push({
-        key: row.exportId,
-        exportId: row.exportId,
-        status: typeof row.status === 'string' ? row.status : '?',
-        createdAt:
-          typeof row.createdAt === 'string' ? row.createdAt : undefined,
-      });
-    }
-    setHistory(rows);
-  }, [tenantId, eventId]);
+  }, [tenantId, eventId, statusFilter]);
 
   useEffect(() => {
     let cancelled = false;
@@ -74,6 +84,10 @@ export function ExportPanel({ tenantId, eventId }: Props) {
   }, [loadHistory]);
 
   async function createExport() {
+    if (!canCreate) {
+      setNotice('Cần export.create từ máy chủ.');
+      return;
+    }
     setBusy(true);
     const result = await portalMutate(bffExports(tenantId, eventId), {
       idempotencyKey: crypto.randomUUID(),
@@ -111,6 +125,10 @@ export function ExportPanel({ tenantId, eventId }: Props) {
   }
 
   async function download() {
+    if (!canDownload) {
+      setNotice('Cần export.download từ máy chủ.');
+      return;
+    }
     const id = exportId.trim();
     if (!id) return;
     setBusy(true);
@@ -152,24 +170,52 @@ export function ExportPanel({ tenantId, eventId }: Props) {
     setBusy(false);
   }
 
+  const history = historyView?.kind === 'list' ? historyView.items : [];
+
   return (
     <Space direction="vertical" size="middle" style={{ width: '100%' }}>
       <Alert
         type="info"
         showIcon
-        message="Export CSV / recovery"
-        description="Tạo job → poll status → tải stream authenticated khi READY. List không chứa object key hay URL ký sẵn."
+        message="Export CSV / recovery · G-E1 history filter"
+        description="Tạo job → poll status → tải stream authenticated khi READY. List không chứa object key hay URL ký sẵn. unknown ≠ success."
       />
-      <Space wrap>
-        <Button type="primary" loading={busy} onClick={() => void createExport()}>
-          Tạo export
+      <Space wrap role="search" aria-label="Bộ lọc lịch sử export">
+        <Select
+          allowClear
+          placeholder="Status history"
+          style={{ minWidth: 160 }}
+          value={statusFilter}
+          options={STATUS_OPTIONS}
+          onChange={(v) => setStatusFilter(v)}
+          aria-label="Lọc lịch sử theo status"
+        />
+        <Button
+          type="primary"
+          loading={busy}
+          onClick={() => void loadHistory()}
+          aria-label="Áp dụng bộ lọc lịch sử export"
+        >
+          Lọc lịch sử
         </Button>
+        {canCreate ? (
+          <Button
+            type="primary"
+            loading={busy}
+            onClick={() => void createExport()}
+          >
+            Tạo export
+          </Button>
+        ) : (
+          <Typography.Text type="secondary">Cần export.create</Typography.Text>
+        )}
         <Input
           placeholder="exportId"
           value={exportId}
           onChange={(e) => setExportId(e.target.value)}
           style={{ minWidth: 280 }}
           spellCheck={false}
+          aria-label="exportId"
         />
         <Button
           loading={busy}
@@ -180,26 +226,32 @@ export function ExportPanel({ tenantId, eventId }: Props) {
         </Button>
         <Button
           loading={busy}
-          disabled={!exportId.trim()}
+          disabled={!exportId.trim() || !canDownload}
           onClick={() => void download()}
         >
           Tải CSV
         </Button>
-        <Button loading={busy} onClick={() => void loadHistory()}>
-          Lịch sử
-        </Button>
       </Space>
+      {historyView && historyView.kind !== 'list' ? (
+        <Alert
+          type={exportAlertType(historyView)}
+          showIcon
+          message={exportHistoryLabel(historyView)}
+          role="status"
+        />
+      ) : null}
       {view ? (
         <Alert
-          type={view.kind === 'rejected' ? 'error' : 'success'}
+          type={exportAlertType(view)}
           showIcon
           message={exportViewLabel(view)}
           data-testid="export-result"
+          role="status"
         />
       ) : null}
       <Table
         size="small"
-        rowKey="key"
+        rowKey="exportId"
         dataSource={history}
         pagination={false}
         locale={{ emptyText: 'Chưa có lịch sử export (hoặc list lỗi).' }}
@@ -211,10 +263,7 @@ export function ExportPanel({ tenantId, eventId }: Props) {
             title: '',
             key: 'use',
             render: (_, row) => (
-              <Button
-                size="small"
-                onClick={() => setExportId(row.exportId)}
-              >
+              <Button size="small" onClick={() => setExportId(row.exportId)}>
                 Chọn
               </Button>
             ),
