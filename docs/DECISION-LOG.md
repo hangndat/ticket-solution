@@ -1,6 +1,6 @@
 # Decision log — sản phẩm & kỹ thuật
 
-Ngày cập nhật: 2026-10-17
+Ngày cập nhật: 2026-10-18
 Nguồn: [PRD](./PRD.md) mục 15, [Technical Design](./TECHNICAL-DESIGN.md) mục 2 & 18, [ROADMAP](./ROADMAP.md)
 Tracking: Issues [#10](https://github.com/hangndat/ticket-solution/issues/10), [#11](https://github.com/hangndat/ticket-solution/issues/11)
 
@@ -40,6 +40,11 @@ User giao mở rộng MVP, đẩy mạnh UX/UI và yêu cầu BA (`product-ba`) 
 | ADR-16 | VPS đầu: nginx có sẵn + image runtime mỏng, app mount từ đĩa host | pnpm store cùng mount với source để hard link. Redirect web dùng `PUBLIC_WEB_ORIGIN` / Host do nginx ghi đè — không tin client `X-Forwarded-*` thô; không bind `0.0.0.0` trong Location | Xem [infra/deploy/README.md](../infra/deploy/README.md). SMTP prod (ADR-13) vẫn để sau |
 | ADR-17 | **MVP queue: leased PG outbox + worker poll trực tiếp** (không BullMQ trong MVP) | Bổ sung/đối chiếu ADR-04: Redis không nguồn chuẩn job; crash reclaim bằng lease; cân nhắc BullMQ sau benchmark | Chi tiết [ops/ADR-17-OUTBOX-PG-DIRECT.md](./ops/ADR-17-OUTBOX-PG-DIRECT.md); recovery `./scripts/rint-outbox-recovery.sh` |
 | ADR-18 | **Offline Gate sync** — batch `CHECKIN_OFFLINE` + idempotency/skew/replay | Sửa ADR-06/§9.5 cho D7 (O10); contract Issue #105; apply #106 | [ops/ADR-18-OFFLINE-GATE-SYNC.md](./ops/ADR-18-OFFLINE-GATE-SYNC.md); `@ticket/contracts` `offline-sync.ts` |
+| ADR-19 | **Published projection SoT** cho public/attendee event surfaces | Nest `GET /v1/public/tenants/{slug}/events` (+ detail); fixtures không fallback SoT; D9 seed publish marketing sections | [ops/ADR-19-EVENT-SERVER-SOURCE.md](./ops/ADR-19-EVENT-SERVER-SOURCE.md); Epic [#254](https://github.com/hangndat/ticket-solution/issues/254) · Task [#255](https://github.com/hangndat/ticket-solution/issues/255) |
+
+## O15 — Nguồn sự kiện server (Epic #254) — Đã chốt 18/10/2026
+
+User duyệt kiến trúc Epic [#254](https://github.com/hangndat/ticket-solution/issues/254): **PostgreSQL published event + config** là nguồn chuẩn cho public/attendee; client fixture không còn SoT / không fallback khi API lỗi. Contract thống nhất `@ticket/contracts` `PublishedEvent*` (mirror iOS). Marketing `category`/`description`/`highlights` map vào sections published. BE ship public Nest + seed publish (#255) trước/cùng wave với web/iOS consumer. Chi tiết: [ADR-19](./ops/ADR-19-EVENT-SERVER-SOURCE.md), [architecture/event-server-source.md](./architecture/event-server-source.md).
 
 ## Điều kiện mở business endpoints
 
@@ -62,6 +67,7 @@ Chỉ mở redemption / Gate / admin tenant **sau khi**:
 | 2026-10-17 | Freeze security vận hành (không O06): invite TTL 48h, support grant max 1h, MFA `auth_time` step-up 15m, ACR=`2`; platform client/audience Keycloak; O06 giữ UNRESOLVED. |
 | 2026-10-17 | User **mở rộng MVP (O10)**: D7–D10 vào phạm vi; hủy Android / payment·refund·chuyển nhượng / seat map / Apple·Google Wallet khỏi kế hoạch MVP. Cập nhật O01 (white-label → D8), ADR-07, ROADMAP, PRD §4. #7 rewrite trên board (không thuộc worker docs). |
 | 2026-10-17 | **ADR-18** — contract Offline Gate sync (Issue #105): payload, idempotency `clientEventId`, clock skew ±300s, conflict codes, replay order; endpoint OpenAPI stub 501 đến #106. |
+| 2026-10-18 | User duyệt **O15 / ADR-19** — published projection SoT (Epic #254); dispatch BE public Nest + seed (#255). |
 
 ## O11 — Phê duyệt thực thi 18/10/2026
 
