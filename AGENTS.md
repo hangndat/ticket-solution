@@ -55,7 +55,16 @@ All user-facing roadmap, GitHub Projects, milestones, Issue titles/bodies, label
 ## MCP Tools: code-review-graph
 
 Namespace: `user-code-review-graph-ticket` (ticket-solution). Other graphs: BE=`user-code-review-graph`, FE=`user-code-review-graph-fe`, SGAMES=`user-code-review-graph-sgames`.
-Graph auto-updates via watch/hooks. Narrow with the graph, then verify in source.
+Graph auto-updates via daemon watch (alias `ticket-solution`) + session/edit hooks. Narrow with the graph, then verify in source.
+
+### Graph readiness gate (bắt buộc trước khi làm việc)
+
+1. First tool call for coding/explore/review: MCP `code-review-graph-ticket` → `list_graph_stats_tool`.
+2. If empty / stale / MCP error → `build_or_update_graph_tool`, then continue.
+3. Do not Grep/broad-scan first when CRG MCP is available. Docs-only Q&A exempt.
+4. Hooks auto-refresh on sessionStart/beforeSubmitPrompt; agent must still verify via step 1.
+5. Daemon watch alias `ticket-solution` keeps `.code-review-graph/graph.db` current; data persists across agent restarts.
+
 
 ### Preferred tool flow (when tools are available)
 
