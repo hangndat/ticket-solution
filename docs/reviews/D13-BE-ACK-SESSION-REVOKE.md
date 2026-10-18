@@ -5,10 +5,10 @@
 | Issue | #349 (Epic #301 → Story #305) |
 | Role | `backend` (`docs/agents/roles/backend.md`) |
 | Architecture impact | **Có** — atomic ACK session revoke (architect D1 / handoff §4) |
-| Exact SHA (behavior) | `5a2db727968c1f9f0dbff6b2bff9c6e08739f968` |
-| Branch tip | xem tip PR / `git rev-parse HEAD` trên branch `hangndat/d13-be-ack-session-revoke` |
+| Exact SHA (behavior) | điền sau commit SEC-R1 (`git rev-parse HEAD`) |
+| Branch tip | `hangndat/d13-be-ack-session-revoke` / PR #352 |
 | Ownership | `packages/backend` migration + ACK/Gate hooks + DB tests |
-| Related | PR #348 apply-only merge `f673a92014e501b84b2e2a8fc1372815ef597ccc`; IdP SEC-2 **chưa** |
+| Related | PR #348 apply-only merge `f673a92014e501b84b2e2a8fc1372815ef597ccc`; IdP SEC-2 **chưa**; finding `docs/reviews/D13-PR352-DOD-SECURITY.md` SEC-R1 |
 
 ## Mục tiêu đóng
 
@@ -21,7 +21,7 @@ Migration `202610180003_d13_ack_revoke_staff_sessions`:
 1. `lock_user_session_mutation` — `pg_advisory_xact_lock(872341, hashtext(user_id))`
 2. `revoke_sessions_for_user(uuid)` — SECURITY DEFINER; revoke mọi `staff_sessions` ACTIVE của user (mọi tenant)
 3. `assert_can_open_staff_session(uuid)` — cùng lock; raise `ACCOUNT_DELETION_OPEN` nếu state open
-4. Trigger `staff_sessions_deny_if_deletion_open` — defense-in-depth trên INSERT
+4. Trigger `staff_sessions_deny_if_deletion_open` — **SEC-R1:** `PERFORM assert_can_open_staff_session(NEW.user_id)` (lock **trước** EXISTS; cùng ordering với ACK) — không chỉ bare `EXISTS`
 5. `apply_account_anonymization` gọi lại `revoke_sessions_for_user` (idempotent)
 
 TS:
@@ -38,7 +38,7 @@ cd packages/backend && node --test \
   test/account-ack-session-revoke.test.cjs \
   test/account-session-revoke.test.cjs \
   test/rls-catalog.test.cjs
-→ 4/4 pass
+→ 5/5 pass (gồm SEC-R1 concurrency 40 rounds)
 ```
 
 Regression chứng minh:
@@ -50,10 +50,11 @@ Regression chứng minh:
 - `REJECTED` → session cũ vẫn `REVOKED`; được mở session **mới** (không restore id cũ)
 - Revoke failure → không còn row `account_deletion_requests` (rollback)
 - Apply path vẫn idempotent sau ACK
+- **SEC-R1:** raw `INSERT staff_sessions` uncommitted vs ACK — barrier `pg_locks` (waiter trên advisory 872341); 40/40 không còn `ACTIVE`∧`REQUESTED` (trigger cũ thiếu lock fail ~40/40)
 
 ## Limitations
 
 - SEC-2 IdP delete/disable **chưa** (architect PR #346 revision in flight).
-- Coordinator nối regression vào CI root nếu cần (worker không sửa CI wiring).
+- Coordinator nối `account-ack-session-revoke.test.cjs` vào CI shard `account-deletion` **trước** re-review (worker không sửa CI).
 - Không merge / deploy prod trong worker này.
-- Concurrent race phủ bởi advisory lock + trigger; không có stress harness multi-client riêng.
+- Deadlock: insert path và ACK đều lấy `lock_user_session_mutation` trước mutation khác trên cùng key — không đảo thứ tự lock.
