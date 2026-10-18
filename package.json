@@ -31,6 +31,8 @@
     "hooks:install": "./scripts/hooks-install.sh",
     "agent-metrics:opened": "node scripts/agent-role-monitor/cli.mjs record-opened",
     "agent-metrics:ingest": "node scripts/agent-role-monitor/cli.mjs ingest-settlement",
+    "agent-metrics:join": "node scripts/agent-role-monitor/cli.mjs record-join",
+    "agent-metrics:ingest-cursor-turn": "node scripts/agent-role-monitor/cli.mjs ingest-cursor-turn",
     "agent-metrics:rollup": "node scripts/agent-role-monitor/cli.mjs rollup",
     "agent-metrics:host-sample": "node scripts/agent-role-monitor/cli.mjs host-sample",
     "agent-metrics:test": "node --test scripts/agent-role-monitor/smoke.test.mjs"
