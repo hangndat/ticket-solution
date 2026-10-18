@@ -387,6 +387,11 @@ export {
   buildOwnerTicketLink,
 } from './qr-ticket';
 export {
+  DEFAULT_PRODUCT_WEB_ORIGIN,
+  resolveProductWebBaseUrl,
+  buildInviteAcceptLink,
+} from './web-links';
+export {
   listEventNotifications,
   retryNotificationDelivery,
 } from './notification-service';
