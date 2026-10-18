@@ -36,4 +36,55 @@ export const PORTAL_UPSTREAM = {
   revokeInvite: (tenantId: string, inviteId: string) =>
     `${tenantBase(tenantId)}/invites/${encodeURIComponent(inviteId)}/revoke`,
   branding: (tenantId: string) => `${tenantBase(tenantId)}/branding`,
+  /** C-I import job + file quarantine */
+  imports: (tenantId: string, eventId: string) =>
+    `${eventBase(tenantId, eventId)}/imports`,
+  importsUpload: (tenantId: string, eventId: string) =>
+    `${eventBase(tenantId, eventId)}/imports/files`,
+  importJob: (tenantId: string, eventId: string, importId: string) =>
+    `${eventBase(tenantId, eventId)}/imports/${encodeURIComponent(importId)}`,
+  importPreview: (tenantId: string, eventId: string, importId: string) =>
+    `${eventBase(tenantId, eventId)}/imports/${encodeURIComponent(importId)}/preview`,
+  importCommit: (tenantId: string, eventId: string, importId: string) =>
+    `${eventBase(tenantId, eventId)}/imports/${encodeURIComponent(importId)}/commit`,
+  importErrors: (tenantId: string, eventId: string, importId: string) =>
+    `${eventBase(tenantId, eventId)}/imports/${encodeURIComponent(importId)}/errors`,
+  /** Guest invitations (not tenant membership invites) */
+  invitations: (tenantId: string, eventId: string) =>
+    `${eventBase(tenantId, eventId)}/invitations`,
+  invitationDispatchPreview: (tenantId: string, eventId: string) =>
+    `${eventBase(tenantId, eventId)}/invitations/dispatch-preview`,
+  invitationDispatch: (tenantId: string, eventId: string) =>
+    `${eventBase(tenantId, eventId)}/invitations/dispatch`,
+  /** G-R2 pending list + approve/deny */
+  redemptions: (tenantId: string, eventId: string) =>
+    `${eventBase(tenantId, eventId)}/redemptions`,
+  redemptionApprove: (
+    tenantId: string,
+    eventId: string,
+    requestId: string,
+  ) =>
+    `${eventBase(tenantId, eventId)}/redemptions/${encodeURIComponent(requestId)}/approve`,
+  redemptionDeny: (tenantId: string, eventId: string, requestId: string) =>
+    `${eventBase(tenantId, eventId)}/redemptions/${encodeURIComponent(requestId)}/deny`,
+  tickets: (tenantId: string, eventId: string) =>
+    `${eventBase(tenantId, eventId)}/tickets`,
+  ticket: (tenantId: string, eventId: string, ticketId: string) =>
+    `${eventBase(tenantId, eventId)}/tickets/${encodeURIComponent(ticketId)}`,
+  ticketResend: (tenantId: string, eventId: string, ticketId: string) =>
+    `${eventBase(tenantId, eventId)}/tickets/${encodeURIComponent(ticketId)}/resend`,
+  notifications: (tenantId: string, eventId: string) =>
+    `${eventBase(tenantId, eventId)}/notifications`,
+  notificationRetry: (
+    tenantId: string,
+    eventId: string,
+    notificationId: string,
+  ) =>
+    `${eventBase(tenantId, eventId)}/notifications/${encodeURIComponent(notificationId)}/retry`,
+  exports: (tenantId: string, eventId: string) =>
+    `${eventBase(tenantId, eventId)}/exports`,
+  exportJob: (tenantId: string, eventId: string, exportId: string) =>
+    `${eventBase(tenantId, eventId)}/exports/${encodeURIComponent(exportId)}`,
+  exportDownload: (tenantId: string, eventId: string, exportId: string) =>
+    `${eventBase(tenantId, eventId)}/exports/${encodeURIComponent(exportId)}/download`,
 } as const;

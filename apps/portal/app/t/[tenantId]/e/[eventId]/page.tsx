@@ -28,24 +28,25 @@ import {
 } from '../../../../../src/prep/readiness';
 import { useEventAccess } from '../../../../../src/prep/use-event-access';
 import {
+  interpretEventReport,
+  reportEmailCsHref,
+  reportPendingApprovalHref,
+  reportShowsEmailCsCta,
+  reportShowsPendingApprovalCta,
+  type EventReportView,
+} from '../../../../../src/ops/report';
+import {
   GateDeeplinkButton,
   GateStayAppNotice,
 } from '../../../../../src/components/gate-deeplink';
 import { SurfaceState } from '../../../../../src/components/surface-state';
-
-type ReportSnapshot = {
-  asOf?: string;
-  quota?: { capacity: number | null; allocated: number };
-  pendingApprovalCount?: number;
-  checkInSuccessCount?: number;
-};
 
 export default function EventOverviewPage() {
   const params = useParams<{ tenantId: string; eventId: string }>();
   const { tenantId, eventId } = params;
   const access = useEventAccess(tenantId, eventId);
   const [detail, setDetail] = useState<EventDetail | null>(null);
-  const [report, setReport] = useState<ReportSnapshot | null>(null);
+  const [report, setReport] = useState<EventReportView | null>(null);
   const [typesCount, setTypesCount] = useState(0);
   const [sourcesCount, setSourcesCount] = useState(0);
   const [publishedVersion, setPublishedVersion] = useState<number | null>(null);
@@ -87,11 +88,13 @@ export default function EventOverviewPage() {
     }
     setDetail(d.json as EventDetail);
 
-    if (r.status === 200 && r.json && typeof r.json === 'object') {
-      setReport(r.json as ReportSnapshot);
-    } else {
-      setReport(null);
-    }
+    setReport(
+      interpretEventReport(
+        r.status,
+        r.json,
+        r.networkError || r.timedOut,
+      ),
+    );
 
     const tItems =
       t.status === 200 &&
@@ -166,18 +169,19 @@ export default function EventOverviewPage() {
     };
   }, [access.kind, load]);
 
+  const shownReport = report?.kind === 'shown' ? report : null;
   const readiness = useMemo(
     () =>
       derivePrepReadiness({
         hasEventContext: true,
         hasTicketType: typesCount > 0,
         hasSource: sourcesCount > 0,
-        quotaKnown: report?.quota !== undefined,
-        quotaCapacity: report?.quota?.capacity ?? null,
+        quotaKnown: shownReport?.quota !== undefined,
+        quotaCapacity: shownReport?.quota?.capacity ?? null,
         hasTermsOrPublished: hasTerms || publishedVersion != null,
         hasBrand,
       }),
-    [typesCount, sourcesCount, report, hasTerms, publishedVersion, hasBrand],
+    [typesCount, sourcesCount, shownReport, hasTerms, publishedVersion, hasBrand],
   );
   const canPublish =
     readinessAllOk(readiness) &&
@@ -355,41 +359,65 @@ export default function EventOverviewPage() {
         />
       </Card>
 
-      {report ? (
+      {shownReport ? (
         <Card
           size="small"
           title="Báo cáo nhanh (O12)"
           extra={
-            report.asOf ? (
-              <Typography.Text type="secondary">asOf {report.asOf}</Typography.Text>
+            shownReport.asOf ? (
+              <Typography.Text type="secondary">
+                asOf {shownReport.asOf}
+              </Typography.Text>
             ) : null
           }
         >
           <Descriptions size="small" column={2}>
             <Descriptions.Item label="Quota allocated">
-              {report.quota?.allocated ?? '—'}
+              {shownReport.quota.allocated}
             </Descriptions.Item>
             <Descriptions.Item label="Capacity">
-              {report.quota?.capacity === null
+              {shownReport.quota.capacity === null
                 ? '∞'
-                : (report.quota?.capacity ?? '—')}
+                : shownReport.quota.capacity}
             </Descriptions.Item>
             <Descriptions.Item label="Pending duyệt">
-              {report.pendingApprovalCount ?? '—'}
+              {shownReport.pendingApprovalCount}
             </Descriptions.Item>
             <Descriptions.Item label="Check-in OK">
-              {report.checkInSuccessCount ?? '—'}
+              {shownReport.checkInSuccessCount}
             </Descriptions.Item>
           </Descriptions>
-          <Button size="small" onClick={() => void load()}>
-            Làm mới
-          </Button>
+          <Space wrap style={{ marginTop: 8 }}>
+            <Button size="small" onClick={() => void load()}>
+              Làm mới
+            </Button>
+            {reportShowsPendingApprovalCta(shownReport) ? (
+              <Link href={reportPendingApprovalHref(tenantId, eventId)}>
+                <Button size="small">Đi tới chờ duyệt</Button>
+              </Link>
+            ) : null}
+            {reportShowsEmailCsCta(shownReport) ? (
+              <Link href={reportEmailCsHref(tenantId, eventId)}>
+                <Button size="small">Đi tới hỗ trợ CS</Button>
+              </Link>
+            ) : null}
+            <Link href={`/t/${tenantId}/e/${eventId}/guests`}>
+              <Button size="small">Khách & mã</Button>
+            </Link>
+          </Space>
         </Card>
       ) : canReport ? (
         <Alert
           type="warning"
           showIcon
           message="Chưa tải được báo cáo — không giả định số liệu xanh."
+          description={
+            report?.kind === 'rejected'
+              ? `${report.code}: ${report.message}`
+              : report?.kind === 'unknown'
+                ? report.message
+                : undefined
+          }
         />
       ) : null}
 
