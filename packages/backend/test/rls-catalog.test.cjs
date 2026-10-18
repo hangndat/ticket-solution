@@ -40,6 +40,8 @@ const DEFINER_OWNER_TABLES = new Set([
   'event_attendees',
   // D13 SEC-1: apply_account_anonymization revokes staff_sessions (FORCE RLS).
   'staff_sessions',
+  // O02: list_my_events / accept_membership_invite read event_assignments (FORCE RLS).
+  'event_assignments',
 ]);
 /** Platform metadata pool — USING(true) cross-tenant (NOBYPASSRLS). */
 const PLATFORM_OPEN_TABLES = new Set([

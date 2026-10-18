@@ -10,8 +10,13 @@ import {
   Post,
   Put,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { type ApiError, PLATFORM_ERROR_CODES } from '@ticket/contracts';
+import { ApiBearerAuth, ApiOkResponse, ApiProperty, ApiTags } from '@nestjs/swagger';
+import {
+  type ApiError,
+  type MeEventItem,
+  type MeEventsResponse,
+  PLATFORM_ERROR_CODES,
+} from '@ticket/contracts';
 import {
   PlatformError,
   IdentityError,
@@ -25,6 +30,7 @@ import {
   getCurrentAccountDeletionRequest,
   getPlatformMe,
   getPlatformTenantDetail,
+  listMyEvents,
   listMyTenants,
   listSupportTickets,
   provisionTenant,
@@ -43,6 +49,22 @@ import {
   type OidcVerifier,
   type IdentityUserRepository,
 } from '@ticket/backend';
+
+class MeEventItemDto implements MeEventItem {
+  @ApiProperty({ format: 'uuid' }) tenantId!: string;
+  @ApiProperty({ format: 'uuid' }) eventId!: string;
+  @ApiProperty() name!: string;
+  @ApiProperty({ type: [String] }) permissions!: string[];
+}
+
+class MeEventsDto implements MeEventsResponse {
+  @ApiProperty({
+    description:
+      'true iff active tenant membership OR active event assignment',
+  })
+  staffEligible!: boolean;
+  @ApiProperty({ type: [MeEventItemDto] }) items!: MeEventItemDto[];
+}
 
 type Deps = {
   db: PrismaClient | null;
@@ -155,6 +177,12 @@ export class PlatformService {
   myTenants(authorization: string | undefined) {
     return this.selfActor(authorization)
       .then(async (u) => ({ items: await listMyTenants(this.deps.db!, u.userId) }))
+      .catch(fail);
+  }
+
+  myEvents(authorization: string | undefined): Promise<MeEventsResponse> {
+    return this.selfActor(authorization)
+      .then((u) => listMyEvents(this.deps.db!, u.userId))
       .catch(fail);
   }
 
@@ -360,6 +388,13 @@ export class PlatformController {
   @ApiBearerAuth()
   myTenants(@Headers('authorization') authorization: string | undefined) {
     return this.platform.myTenants(authorization);
+  }
+
+  @Get('me/events')
+  @ApiBearerAuth()
+  @ApiOkResponse({ type: MeEventsDto })
+  myEvents(@Headers('authorization') authorization: string | undefined) {
+    return this.platform.myEvents(authorization);
   }
 
   @Post('platform/tenants')

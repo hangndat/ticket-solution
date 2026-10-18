@@ -558,12 +558,15 @@ export interface MeTenantsResponse {
 }
 
 export interface MeEventItem {
+  tenantId: string;
   eventId: string;
   name: string;
   permissions: string[];
 }
 
 export interface MeEventsResponse {
+  /** true iff active tenant membership OR active event assignment */
+  staffEligible: boolean;
   items: MeEventItem[];
 }
 

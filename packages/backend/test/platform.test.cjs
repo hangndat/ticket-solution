@@ -26,6 +26,7 @@ const {
   createSupportGrant,
   listSupportTickets,
   listMyTenants,
+  listMyEvents,
   readPlatformSecurityConfig,
   redeemAndIssueTicket,
   unwrapRedeemOutcome,
@@ -35,6 +36,8 @@ const {
   createEvent,
   grantMembership,
   grantEventAssignment,
+  revokeEventAssignment,
+  eventPermissionsForRole,
   PLATFORM_ERROR_CODES,
   AuthzError,
 } = require('../dist');
@@ -450,6 +453,171 @@ test(
           ),
         (e) => e instanceof AuthzError,
       );
+    } finally {
+      if (db) await db.$disconnect().catch(() => {});
+      if (name) {
+        try {
+          docker('rm', '-f', name);
+        } catch {
+          // ignore
+        }
+      }
+    }
+  },
+);
+
+test(
+  'O02 MeEvents staffEligible + revoke fail-closed discovery',
+  { timeout: 300000 },
+  async () => {
+    let name;
+    let db;
+    try {
+      const boot = await startIsolatedPostgres();
+      name = boot.name;
+      db = createDatabase(boot.url, 3);
+      const users = createPrismaIdentityUserRepository(db);
+      const security = readPlatformSecurityConfig({ NODE_ENV: 'test' });
+
+      const operator = await users.upsertFromVerifiedIdentity({
+        issuer: 'http://localhost/realms/ticket',
+        subject: 'op-me-events',
+        email: 'op-me@example.com',
+        emailVerified: true,
+      });
+      const owner = await users.upsertFromVerifiedIdentity({
+        issuer: 'http://localhost/realms/ticket',
+        subject: 'owner-me-events',
+        email: 'owner-me@example.com',
+        emailVerified: true,
+      });
+      const scanner = await users.upsertFromVerifiedIdentity({
+        issuer: 'http://localhost/realms/ticket',
+        subject: 'scanner-me-events',
+        email: 'scanner-me@example.com',
+        emailVerified: true,
+      });
+      const attendee = await users.upsertFromVerifiedIdentity({
+        issuer: 'http://localhost/realms/ticket',
+        subject: 'att-me-events',
+        email: 'att-me@example.com',
+        emailVerified: true,
+      });
+
+      await bootstrapPlatformOperator(db, { userId: operator.userId });
+      const provisioned = await provisionTenant(db, security, {
+        actorUserId: operator.userId,
+        clientKey: 'me-events-prov',
+        body: {
+          slug: 'me-events-tenant',
+          name: 'Me Events Tenant',
+          defaultTimezone: 'Asia/Ho_Chi_Minh',
+          ownerEmail: 'owner-me@example.com',
+          limits: {
+            maxEvents: 5,
+            maxStaff: 10,
+            emailPerDay: null,
+            importRowsPerJob: null,
+          },
+          flags: { importsEnabled: true, exportsEnabled: true },
+        },
+      });
+      const accepted = await acceptMembershipInvite(db, {
+        userId: owner.userId,
+        email: 'owner-me@example.com',
+        emailVerified: true,
+        token: provisioned.rawInviteToken,
+      });
+
+      // Attendee-only → not staffEligible
+      const attendeeDiscovery = await listMyEvents(db, attendee.userId);
+      assert.equal(attendeeDiscovery.staffEligible, false);
+      assert.deepEqual(attendeeDiscovery.items, []);
+
+      // Owner membership, 0 assignments → eligible, empty items
+      const ownerBeforeAssign = await listMyEvents(db, owner.userId);
+      assert.equal(ownerBeforeAssign.staffEligible, true);
+      assert.deepEqual(ownerBeforeAssign.items, []);
+
+      let eventId;
+      await withTenant(db, provisioned.tenantId, async (tx) => {
+        const ev = await createEvent(tx, {
+          tenantId: provisioned.tenantId,
+          actorUserId: owner.userId,
+          idempotencyKey: randomUUID(),
+          body: {
+            slug: 'gate-night',
+            name: 'Gate Night',
+            timezone: 'Asia/Ho_Chi_Minh',
+          },
+        });
+        eventId = ev.event.eventId;
+      });
+
+      // Invite Scanner with event assignment
+      const inv = await createMembershipInvite(db, security, {
+        tenantId: provisioned.tenantId,
+        actorUserId: owner.userId,
+        email: 'scanner-me@example.com',
+        role: 'Scanner',
+        eventAssignments: [{ eventId, role: 'Scanner' }],
+        clientKey: 'me-events-scanner',
+      });
+      const scannerAccept = await acceptMembershipInvite(db, {
+        userId: scanner.userId,
+        email: 'scanner-me@example.com',
+        emailVerified: true,
+        token: inv.rawToken,
+      });
+      assert.equal(scannerAccept.tenantId, provisioned.tenantId);
+
+      const scannerDiscovery = await listMyEvents(db, scanner.userId);
+      assert.equal(scannerDiscovery.staffEligible, true);
+      assert.equal(scannerDiscovery.items.length, 1);
+      assert.equal(scannerDiscovery.items[0].tenantId, provisioned.tenantId);
+      assert.equal(scannerDiscovery.items[0].eventId, eventId);
+      assert.equal(scannerDiscovery.items[0].name, 'Gate Night');
+      assert.ok(scannerDiscovery.items[0].permissions.includes('gate.confirm'));
+      assert.deepEqual(
+        scannerDiscovery.items[0].permissions,
+        eventPermissionsForRole('Scanner'),
+      );
+
+      // Revoke assignment → item disappears; membership still → eligible
+      let assignmentId;
+      await withTenant(db, provisioned.tenantId, async (tx) => {
+        const rows = await tx.$queryRaw`
+          SELECT id FROM event_assignments
+          WHERE tenant_id = ${provisioned.tenantId}::uuid
+            AND event_id = ${eventId}::uuid
+            AND membership_id = ${scannerAccept.membershipId}::uuid
+            AND revoked_at IS NULL
+        `;
+        assignmentId = rows[0].id;
+        await revokeEventAssignment(tx, provisioned.tenantId, assignmentId);
+      });
+      const afterAssignRevoke = await listMyEvents(db, scanner.userId);
+      assert.equal(afterAssignRevoke.staffEligible, true);
+      assert.deepEqual(afterAssignRevoke.items, []);
+
+      // Revoke membership → staffEligible false
+      await revokeMembershipKeepingLastOwner(db, {
+        tenantId: provisioned.tenantId,
+        actorUserId: owner.userId,
+        membershipId: scannerAccept.membershipId,
+        reason: 'offboard',
+      });
+      const afterMemberRevoke = await listMyEvents(db, scanner.userId);
+      assert.equal(afterMemberRevoke.staffEligible, false);
+      assert.deepEqual(afterMemberRevoke.items, []);
+
+      // Owner still eligible after creating event (assignment may exist for creator)
+      const ownerAfter = await listMyEvents(db, owner.userId);
+      assert.equal(ownerAfter.staffEligible, true);
+      // Owner keep last-owner: membership still active
+      void accepted;
+      const ownerTenants = await listMyTenants(db, owner.userId);
+      assert.ok(ownerTenants.some((t) => t.tenantId === provisioned.tenantId));
     } finally {
       if (db) await db.$disconnect().catch(() => {});
       if (name) {
