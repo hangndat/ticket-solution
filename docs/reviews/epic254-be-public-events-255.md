@@ -6,7 +6,7 @@
 | Branch | `hangndat/d254-backend-public-events` |
 | Role | `backend` |
 | Agent / session | Orca worker cursor · `task_5fc3edb85224` / `ctx_c56b54d0285c` |
-| Tip SHA | `ef488742847a11d4823793cf0249a50a23f3414b` |
+| Tip SHA | `5451f8366b15c0b7a4fe7f0a8a8a4489c1c622fd` |
 
 ## Scope đã ship
 
@@ -35,6 +35,11 @@ Kết quả: **PASS** (health OpenAPI paths gồm public; DB test: seed 200 list
 
 - Unknown tenant / draft unpublished / wrong slug → `null` → Nest **404**
 - Không lộ `contentStatus` / `revision` trên projection
+
+
+## CI database-isolation
+
+- Shard `published-events` → `test/published-events.test.cjs` trong `.github/workflows/ci.yml` matrix (fix DoD FAIL #255).
 
 ## Non-goals còn lại
 
