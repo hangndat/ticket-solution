@@ -3,9 +3,9 @@
 **Trạng thái:** đã áp dụng trên `main` (PR #195 + wiring process). Catalog này **bổ sung chuyên môn** khi spawn worker — bắt buộc gắn Role ID vào Task Spec theo `AGENTS.md` / rule Orca. Không thay thế và không được ưu tiên hơn:
 
 - [AGENTS.md](../../AGENTS.md)
-- `.cursor/rules/orca-agent-routing.mdc` (mọi worker dùng `--agent cursor`)
+- `.cursor/rules/orca-agent-routing.mdc` (mọi worker dùng `--agent cursor`; **Cost tier** `cheap|standard|heavy` cho `--model`/`--effort`)
 - `.cursor/rules/orca-epic-orchestrator.mdc` (cây worker phẳng; chỉ coordinator gốc dispatch)
-- `.cursor/rules/orca-parallel-workers.mdc`, `orca-idle-worker-fill.mdc`, `orca-coordinator-mailbox.mdc`
+- `.cursor/rules/orca-parallel-workers.mdc` (max fan-out + concurrent soft caps), `orca-idle-worker-fill.mdc`, `orca-coordinator-mailbox.mdc`
 - `.cursor/rules/github-project-tracking.mdc`, `git-workflow.mdc`, `uat-headless.mdc`
 
 **Không** cài toàn bộ [agency-agents](https://github.com/msitarzewski/agency-agents) thành `alwaysApply` rules. Chỉ gắn **một** file `roles/*.md` vào Task Spec khi cần chuyên môn đó.
@@ -32,7 +32,7 @@ docs/agents/
 | `reviewer-dod` | [roles/reviewer-dod.md](./roles/reviewer-dod.md) | DoD / acceptance trên **exact SHA** | Session **≠** implementer |
 | `reviewer-security` | [roles/reviewer-security.md](./roles/reviewer-security.md) | Review bảo mật slice nhạy cảm | Session **≠** implementer; không thay DoD nếu cần cả hai |
 
-Agent runtime: luôn Cursor (`--agent cursor`), trừ khi user override rõ. Role ≠ agent vendor.
+Agent runtime: luôn Cursor (`--agent cursor`), trừ khi user override rõ. Role **≠** agent vendor **≠** Cost tier — xem bảng Cost tier trong `orca-agent-routing.mdc`.
 
 ## Cách coordinator chọn và truyền vai trò
 
@@ -61,6 +61,7 @@ Thêm khối sau vào spec `worker-start` (tiếng Việt cho phần mô tả us
 - Đọc file role SAU AGENTS.md và rule Orca; nếu xung đột → rule dự án thắng.
 - Không mở rộng MVP / ngoài phạm vi Issue.
 - Agent: cursor (theo orca-agent-routing.mdc)
+- Cost tier: cheap | standard | heavy — theo orca-agent-routing.mdc (model/effort; không bịa model id)
 - Architecture impact: Có | Không — lý do + link thiết kế/ADR hiện hành
 - Nếu Có: quyết định còn mở, Task architect/handoff và consumer thực sự phải chờ
 ```
@@ -96,6 +97,7 @@ Khối bổ sung khi giao Task Architect (điền cùng parent/scope/AC trong sp
 - Role ID: architect
 - File: docs/agents/roles/architect.md
 - Agent: cursor (theo orca-agent-routing.mdc)
+- Cost tier: heavy
 - Mode: Thiết kế | Kiểm tra sự phù hợp
 - Architecture impact: Có — <quyết định/rủi ro cụ thể>
 - Input: <Issue/Task, PR nếu có, exact source SHA, thiết kế/ADR liên quan>
@@ -113,11 +115,12 @@ Khối bổ sung khi giao Task Architect (điền cùng parent/scope/AC trong sp
 - Không copy `roles/*.md` vào `.cursor/rules/` với `alwaysApply: true`.
 - Không cài roster upstream qua Agency Agents app / `install.sh --tool cursor` cho toàn bộ division.
 - Không đổi `--agent` theo role.
+- Không gắn `heavy` cho mọi Task chỉ vì Role “quan trọng”; DoD thường = `standard`.
 - Không để worker depth > 1; planner/worker không spawn con.
 
 ### 5. Wave tối đa song song (ownership giữ nguyên)
 
-Coordinator / Epic planner **fan-out hết** Task ready trong một wave (capacity + WIP cho phép). Chỉ xếp tuần tự khi có dependency artifact thật.
+Coordinator / Epic planner **fan-out hết** Task ready trong một wave (concurrent soft caps + WIP cho phép — xem `orca-parallel-workers.mdc`). Chỉ xếp tuần tự khi có dependency artifact thật.
 
 ```text
 Wave rộng (ví dụ — spawn cùng lúc nếu unblocked):
@@ -135,7 +138,7 @@ Wave rộng (ví dụ — spawn cùng lúc nếu unblocked):
 | Nhiều `reviewer-dod` trên PR khác nhau | Một reviewer duyệt tuần tự mọi PR khi còn room |
 | Coding slice A ∥ review/fix slice B ∥ BA/PD | Chờ cả Story đóng mới mở Task ready Story khác |
 
-Cùng ownership slice: tối đa **một** feature coding Dispatch active (tránh conflict git). Parallel vẫn theo `orca-parallel-workers.mdc` + idle fill. WIP / `Chờ duyệt` đầy → ưu tiên **song song** reviewer/fix trước feature mới.
+Cùng ownership slice: tối đa **một** feature coding Dispatch active (tránh conflict git). Soft cap: ≤**5** non-review live / Run; ≤**2** `heavy` live; reviewer/fix không chiếm bucket feature. Parallel vẫn theo `orca-parallel-workers.mdc` + idle fill. WIP / `Chờ duyệt` đầy **hoặc** soft cap đầy → ưu tiên **song song** reviewer/fix trước feature mới.
 
 ## Upstream
 
