@@ -22,6 +22,22 @@ export async function ensureCsrfCookie(): Promise<string> {
   return token;
 }
 
+async function assertCsrfDoubleSubmit(
+  request: Request,
+): Promise<Response | null> {
+  const jar = await cookies();
+  const cookieToken = jar.get(CSRF_COOKIE)?.value?.trim() ?? '';
+  const headerToken = request.headers.get(CSRF_HEADER)?.trim() ?? '';
+  if (!cookieToken || !headerToken || cookieToken !== headerToken) {
+    return bffApiError(
+      'CSRF_TOKEN_MISMATCH',
+      'CSRF token missing or mismatched.',
+      403,
+    );
+  }
+  return null;
+}
+
 /** Origin fail-closed + double-submit CSRF for mutating portal BFF. */
 export async function assertMutatingBrowser(
   request: Request,
@@ -38,15 +54,27 @@ export async function assertMutatingBrowser(
     );
   }
 
-  const jar = await cookies();
-  const cookieToken = jar.get(CSRF_COOKIE)?.value?.trim() ?? '';
-  const headerToken = request.headers.get(CSRF_HEADER)?.trim() ?? '';
-  if (!cookieToken || !headerToken || cookieToken !== headerToken) {
+  return assertCsrfDoubleSubmit(request);
+}
+
+/**
+ * Multipart mutations (CSV upload) — Origin + CSRF double-submit,
+ * Content-Type must be multipart/form-data (not JSON).
+ */
+export async function assertMutatingMultipart(
+  request: Request,
+): Promise<Response | null> {
+  const originErr = assertSameOrigin(request);
+  if (originErr) return originErr;
+
+  const contentType = request.headers.get('content-type') ?? '';
+  if (!contentType.toLowerCase().includes('multipart/form-data')) {
     return bffApiError(
-      'CSRF_TOKEN_MISMATCH',
-      'CSRF token missing or mismatched.',
-      403,
+      'UNSUPPORTED_MEDIA_TYPE',
+      'Multipart BFF requires Content-Type: multipart/form-data.',
+      415,
     );
   }
-  return null;
+
+  return assertCsrfDoubleSubmit(request);
 }
