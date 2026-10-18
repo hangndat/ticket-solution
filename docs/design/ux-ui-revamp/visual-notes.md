@@ -54,21 +54,22 @@ iOS: map cùng bốn màu ink/paper/signal/focus vào theme RN hiện có; icon/
 
 Tất cả tôn trọng `prefers-reduced-motion: reduce` (web) / Reduce Motion (iOS) → tắt transform/animation kéo dài; giữ cut opacity hoặc trạng thái tĩnh.
 
-### Priority screens (đúng 5)
+### Priority screens (đúng 4)
 
 | # | Screen | Web | iOS |
 | - | ------ | --- | --- |
-| 1 | **Home công khai** | `/` catalog + brand | Events shell tương ứng |
+| 1 | **Home công khai** | `/` catalog + brand (+ CTA đăng nhập / notice auth) | Events shell tương ứng |
 | 2 | **Đổi mã** | `/redeem` | `redeem` screen |
-| 3 | **Ví / danh sách vé** | list tickets (phụ) | `my-tickets` **primary** |
+| 3 | **Ví / danh sách vé** | list tickets (phụ) + signed-out CTA | `my-tickets` **primary** |
 | 4 | **Chi tiết vé + QR** | `/t/…/tickets/[id]` | `ticket-detail` |
-| 5 | **Shell phiên** | `/auth`, `/account` | signed-out wallet + OIDC |
 
-Không redesign trong đợt PD này: Admin, Gate/Scanner, Portal, marketing O13, invite/platform staff.
+**Gộp shell phiên (user chốt 19/10/2026):** không còn màn/product surface riêng `/auth`. Phiên = CTA trên Home / Đổi mã / Ví → `/api/auth/login?return=…` (web) hoặc OIDC sheet (iOS); quản lý phiên / đăng xuất trên `/account` (web) hoặc account trong shell iOS. Route `/auth` chỉ được giữ như **redirect mỏng** (OIDC error/logout landing → Home hoặc `return`) — không redesign, không nằm priority screens.
+
+Không redesign trong đợt PD này: Admin, Gate/Scanner, Portal, marketing O13, invite/platform staff, trang auth riêng.
 
 ### Freeze
 
-**Implementer không invent visual ngoài khối mục 0 này (tokens, type, surfaces, anti-patterns, motion, 5 priority screens). Thiếu token hoặc cần màn/IA/route mới → escalate coordinator (Architect); không tự ADR / không spawn graphic riêng.**
+**Implementer không invent visual ngoài khối mục 0 này (tokens, type, surfaces, anti-patterns, motion, 4 priority screens). Không dựng lại UI `/auth` làm màn khách. Thiếu token hoặc cần màn/IA/route mới ngoài quyết định gộp phiên → escalate coordinator (Architect); không tự ADR / không spawn graphic riêng.**
 
 ---
 
@@ -82,7 +83,7 @@ Không redesign trong đợt PD này: Admin, Gate/Scanner, Portal, marketing O13
 | Keyboard | Tab: skip → nav → nội dung → form → footer; không trap |
 | Hit target | CTA / hàng vé ≥ 44×44 CSS px / pt |
 | Labels | Mọi input có label visible; lỗi `aria-describedby` / `accessibilityHint` |
-| Live regions | Lỗi/success redeem & auth: `role="alert"` hoặc `aria-live`; iOS announce tương đương |
+| Live regions | Lỗi/success redeem & auth (trên màn gốc): `role="alert"` hoặc `aria-live`; iOS announce tương đương |
 | QR | Không chỉ hình — accessible name «Mã QR vé [sự kiện]»; demo có text status |
 | Reduced motion | Bắt buộc nếu ship motion mục 0 |
 | Lang | `<html lang="vi">` (web attendee mặc định đợt này); iOS copy VI |
@@ -108,6 +109,8 @@ Prototype / handoff **không** = a11y production pass.
 └─────────────────────────────────────────────┘
 ```
 
+**Đăng nhập** (nav + hero CTA) → `/api/auth/login?return=/` — không land UI `/auth`.
+
 Mobile: stack CTA full-width; visual dưới copy — vẫn một composition, không side-panel card.
 
 ---
@@ -118,5 +121,5 @@ Mobile: stack CTA full-width; visual dưới copy — vẫn một composition, k
 - [x] Typography + font cấm  
 - [x] Surfaces + anti-patterns  
 - [x] Motion 2–3 + reduced-motion  
-- [x] Priority screens = 5 + câu freeze  
+- [x] Priority screens = 4 + gộp `/auth` + câu freeze 
 - [x] A11y checklist mục tiêu AA  
