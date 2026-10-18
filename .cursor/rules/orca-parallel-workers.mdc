@@ -20,7 +20,7 @@ Epic-level work: coordinator gốc spawn/reuse **một Epic planner** (`orca-epi
    - Discovery / design docs → Role `product-ba` / `product-design` (có thể song song với nhau và với coding slice không đụng path)
    - DoD / security → Role `reviewer-dod` (± `reviewer-security`); **nhiều PR/Issue độc lập = nhiều reviewer cùng wave**
 2. Trước `check --wait`: liệt kê mọi Task ready (deps thật đã xong, dưới WIP), rồi **`worker-start` hết trong cùng một wave**. Không code các slice đó serially trong terminal coordinator. Mỗi Task Spec gắn Role ID theo [docs/agents/README.md](../../docs/agents/README.md) (agent vẫn `--agent cursor`).
-3. Dependencies chỉ khi ordering thật (vd. contract/API trước → web + iOS consumer song song). Prefer shallow DAG; **cấm** chuỗi giả (Story A xong mới mở Story B) nếu Task đã unblocked. Dùng `task-create --deps` + `task-list --ready` làm bộ nhớ ngoài cho fan-out.
+3. Dependencies chỉ khi ordering thật (vd. contract/API trước → web + iOS consumer song song). Prefer shallow DAG; **cấm** chuỗi giả (Story A xong mới mở Story B) nếu Task đã unblocked. **Bắt buộc** với Epic ≥2 Task: `task-create` (+ `--deps` khi có edge thật) → mỗi wave lấy `task-list --ready` rồi `worker-start --task` — không chỉ `worker-start --spec` ad-hoc. Quyết định nhánh DAG (scope cut / ADR / có-deploy): `gate-create` / `gate-resolve` (xem `orca-worktree-hygiene.mdc`); không dùng gate thay `ask` của worker.
 4. Cùng ownership slice: **một** Dispatch feature coding active / slice (tránh conflict git/worktree). Vẫn song song: coding slice A + review/fix slice B + BA/PD docs + reviewer khác PR.
 5. Each worker stays in its scope; no cross-scope edits. Task-specific ports/project names; do not control another worker's simulator or DB.
 6. Load Orca orchestration via `ORCA skills get orchestration` and use the live preamble IDs — never invent lifecycle args.
@@ -52,11 +52,13 @@ Mục tiêu: giữ throughput đa slice, giảm thời gian chờ duyệt và CI
 ❌ One mega-spec that mixes apps/api + apps/web + apps/mobile
 ❌ Spawn 3 feature workers while ≥3 Chờ duyệt / nhiều PR cùng slice chưa DoD
 ❌ Epic planner spawn worker con hoặc tự code toàn Epic
+❌ Epic ≥2 Task mà không `task-create` / `--ready` — chỉ `worker-start --spec` ad-hoc
 ❌ Serialize BA → PD → BE → web → iOS → review khi các bước không phụ thuộc nhau
 ❌ Chỉ spawn 1 reviewer trong khi ≥2 PR/Issue Chờ duyệt độc lập còn room
 ❌ Chờ cả Story đóng mới mở Task ready của Story khác cùng Epic
 
 ✅ worker-start --agent cursor cho mọi ready slice (BE + web + iOS ± BA/PD) trong một wave → check --wait
+✅ `task-create --deps` → `task-list --ready` → `worker-start --task` (Epic ≥2); gate cho nhánh quyết định
 ✅ Contract task first (if needed) → then parallel consumer workers (--agent cursor)
 ✅ Queue full → parallel DoD/security reviewers + fix trên nhiều PR; trì hoãn feature wave
 ✅ Coordinator gốc → Epic planner + ownership + reviewers cùng depth 1, fan-out tối đa capacity

@@ -105,7 +105,7 @@
         "body": "## Vai trò chuyên môn\n- Role ID: backend\n- File: docs/agents/roles/backend.md\n\nAttendee host claim; one-time token; email verified.",
         "role": "backend",
         "paths": ["apps/api", "packages/backend"],
-        "deps": ["T-COORD-CTR-I"],
+        "deps": ["T-COORD-CTR-I", "T-BE-IMPORT-INV"],
         "priority": "P0"
       },
       {
