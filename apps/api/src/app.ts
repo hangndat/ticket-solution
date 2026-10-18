@@ -286,9 +286,9 @@ function resolveIdentity(options: CreateAppOptions): {
     } else if (!db && databaseUrl) {
       db = createDatabase(databaseUrl);
       ownsDb = true;
-      users = createPrismaIdentityUserRepository(db);
+      users = createPrismaIdentityUserRepository(db, { env });
     } else if (db) {
-      users = createPrismaIdentityUserRepository(db);
+      users = createPrismaIdentityUserRepository(db, { env });
     }
   }
 

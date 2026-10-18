@@ -3,6 +3,10 @@ import type { OidcConfig } from './oidc';
 import { IdentityError } from './identity-error';
 import { PlatformError, PLATFORM_ERROR_CODES } from './platform-error';
 import type { PlatformSecurityConfig } from './platform-config';
+import {
+  assertAccessTokenBounds,
+  JOSE_ACCESS_TOKEN_VERIFY_EXTRAS,
+} from './access-token-bounds';
 
 export type PlatformVerifiedIdentity = {
   issuer: string;
@@ -61,8 +65,17 @@ export function createPlatformOidcVerifier(
           issuer: oidc.issuer,
           audience: security.platformAudience,
           algorithms: ALLOWED_ALGORITHMS,
+          maxTokenAge: JOSE_ACCESS_TOKEN_VERIFY_EXTRAS.maxTokenAge,
+          clockTolerance: JOSE_ACCESS_TOKEN_VERIFY_EXTRAS.clockTolerance,
         }));
       } catch {
+        throw new PlatformError(
+          PLATFORM_ERROR_CODES.UNAUTHENTICATED,
+          'Invalid or expired token',
+        );
+      }
+
+      if (assertAccessTokenBounds(payload) !== null) {
         throw new PlatformError(
           PLATFORM_ERROR_CODES.UNAUTHENTICATED,
           'Invalid or expired token',
