@@ -54,7 +54,7 @@ export const eventsCopy = {
   },
   emptyDemo: {
     title: 'Không có sự kiện demo',
-    body: 'Tổ chức này chưa có sự kiện mẫu trên route fixture.',
+    body: 'Tổ chức này chưa có sự kiện mẫu.',
   },
   errorList: {
     title: 'Không tải được danh sách sự kiện',
