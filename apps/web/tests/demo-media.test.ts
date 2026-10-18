@@ -11,7 +11,6 @@ import {
   hasDemoMediaForEventId,
   sanitizeMediaUrl,
 } from '../src/demo-media';
-import { demoEventRoutes, findDemoEvent } from '../src/events';
 
 const webRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -20,30 +19,24 @@ test('bundled demo logo and banner files exist under public/demo', () => {
   assert.equal(existsSync(path.join(webRoot, 'public/demo/banner.png')), true);
 });
 
-test('every web marketing fixture resolves a local media pack', () => {
-  for (const route of demoEventRoutes()) {
-    const event = findDemoEvent(route.tenantSlug, route.eventSlug)!;
-    assert.ok(hasDemoMediaForEventId(event.id));
-    const pack = demoMediaForEventId(event.id);
-    assert.deepEqual(pack, {
-      logoUrl: DEMO_LOGO_PATH,
-      bannerUrl: DEMO_BANNER_PATH,
-    });
-    assert.ok(demoMediaForTenantSlug(event.tenantSlug));
-  }
-});
-
-test('seed fixture ids and UUIDs also resolve demo media', () => {
+test('D9 seed tenant slugs and event ids resolve a local media pack', () => {
   for (const id of [
     'demo-mfest',
     'demo-studio-night',
+    'fixture-mfest',
+    'fixture-form-forum',
     '11111111-1111-4111-8111-111111111101',
     '22222222-2222-4222-8222-222222222201',
   ]) {
-    assert.ok(demoMediaForEventId(id));
+    assert.ok(hasDemoMediaForEventId(id));
+    assert.deepEqual(demoMediaForEventId(id), {
+      logoUrl: DEMO_LOGO_PATH,
+      bannerUrl: DEMO_BANNER_PATH,
+    });
   }
-  assert.ok(demoMediaForTenantSlug('mfest-demo'));
-  assert.ok(demoMediaForTenantSlug('demo-studio'));
+  for (const slug of ['mfest-demo', 'demo-studio', 'mfest', 'northline']) {
+    assert.ok(demoMediaForTenantSlug(slug));
+  }
 });
 
 test('unknown events never invent media URLs', () => {

@@ -6,7 +6,7 @@
 export const DEMO_LOGO_PATH = '/demo/logo.png';
 export const DEMO_BANNER_PATH = '/demo/banner.png';
 
-/** Web marketing fixture ids (`apps/web/src/events.ts`). */
+/** Archived web marketing fixture ids (`src/fixtures/archived-demo-events.ts`). */
 const WEB_DEMO_EVENT_IDS = new Set([
   'fixture-mfest',
   'fixture-form-forum',
