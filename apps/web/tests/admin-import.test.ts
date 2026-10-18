@@ -327,6 +327,7 @@ describe('C-I invitation dispatch interpreters', () => {
 
 describe('post-login return allowlist', () => {
   it('allows /claim and rejects open redirects', () => {
+    assert.equal(sanitizePostLoginPath('/'), '/');
     assert.equal(sanitizePostLoginPath('/claim'), '/claim');
     assert.equal(sanitizePostLoginPath('/invite'), '/invite');
     assert.equal(sanitizePostLoginPath('https://evil.example'), null);

@@ -1,5 +1,7 @@
 import Link from 'next/link';
+import { authNoticeFromParam } from '../../src/oidc/auth-notice';
 import { isOidcConfigured, resolveWebAuthState } from '../../src/oidc/config';
+import { loginHref } from '../../src/oidc/login-href';
 import { SiteNav } from '../../src/site-chrome';
 import { RedeemForm } from './redeem-form';
 
@@ -18,6 +20,7 @@ type Props = {
     eventId?: string;
     tenantSlug?: string;
     eventSlug?: string;
+    notice?: string;
   }>;
 };
 
@@ -25,8 +28,10 @@ export default async function RedeemPage({ searchParams }: Props) {
   const params = await searchParams;
   const configured = isOidcConfigured();
   const state = resolveWebAuthState({ configured, subject: null });
-  // CSRF cookie is issued by GET BFF route handlers (e.g. public published
-  // schema), not RSC render — cookies().set is illegal in Server Components.
+  const redeemLogin = loginHref('/redeem');
+  const authNotice = authNoticeFromParam(params.notice?.trim(), {
+    retryHref: redeemLogin,
+  });
 
   return (
     <main id="main" className="container shell redeem-page">
@@ -40,6 +45,25 @@ export default async function RedeemPage({ searchParams }: Props) {
         lần nữa.
       </p>
 
+      {authNotice ? (
+        <aside
+          className="notice state-error"
+          role="alert"
+          data-testid="redeem-auth-notice"
+        >
+          <h2>{authNotice.title}</h2>
+          <p>{authNotice.detail}</p>
+          <p className="auth-buttons">
+            <a className="button" href={authNotice.retryHref}>
+              Thử lại
+            </a>
+            <Link className="button-link button-link-secondary" href="/">
+              Về trang chủ
+            </Link>
+          </p>
+        </aside>
+      ) : null}
+
       {!configured ? (
         <aside className="notice auth-unconfigured state-error" role="status">
           <h2>Cần đăng nhập</h2>
@@ -52,8 +76,15 @@ export default async function RedeemPage({ searchParams }: Props) {
                 {String(state.authenticated)}; xem{' '}
                 <code>apps/web/.env.example</code>)
               </>
-            ) : null}{' '}
-            Thử lại sau hoặc vào <Link href="/auth">Đăng nhập</Link>.
+            ) : null}
+          </p>
+          <p className="auth-buttons">
+            <a className="button" href={redeemLogin}>
+              Đăng nhập
+            </a>
+            <Link className="button-link button-link-secondary" href="/">
+              Về trang chủ
+            </Link>
           </p>
         </aside>
       ) : (
@@ -69,7 +100,7 @@ export default async function RedeemPage({ searchParams }: Props) {
       <p>
         <Link href="/">← Trang chủ</Link>
         {' · '}
-        <Link href="/auth">Đăng nhập</Link>
+        <a href={redeemLogin}>Đăng nhập</a>
       </p>
     </main>
   );

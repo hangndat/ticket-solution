@@ -5,9 +5,9 @@
 
 export const PUBLIC_EVENT_COPY = {
   homeEmpty: {
-    title: 'Chưa có sự kiện đã xuất bản',
+    title: 'Chưa có sự kiện đang mở',
     detail:
-      'Tổ chức này chưa công bố sự kiện nào. Bạn vẫn có thể đổi mã nếu đã có mã.',
+      'Hiện chưa có sự kiện công khai. Bạn vẫn có thể đổi mã nếu đã có mã.',
   },
   homeUnreachable: {
     title: 'Không tải được danh sách',

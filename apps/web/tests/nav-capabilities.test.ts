@@ -58,10 +58,15 @@ test('guest / unauthenticated never gets Admin Cổng Platform', () => {
     showAccount: false,
   });
   const hrefs = buildNavLinks(caps).map((l) => l.href);
-  assert.deepEqual(hrefs, ['/redeem', '/claim', '/auth']);
+  assert.deepEqual(hrefs, [
+    '/redeem',
+    '/claim',
+    '/api/auth/login?return=/',
+  ]);
   assert.ok(!hrefs.includes('/admin'));
   assert.ok(!hrefs.includes('/gate'));
   assert.ok(!hrefs.includes('/platform'));
+  assert.ok(!hrefs.includes('/auth'), 'guest login goes to PKCE, not /auth UI');
 });
 
 test('attendee-only: staffEligible false → no staff chrome', () => {
