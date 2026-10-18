@@ -29,6 +29,19 @@ pnpm test
 pnpm build
 ```
 
+## Pre-push local checks
+
+Optional fail-fast checks before `git push` (CI parity for web/mobile/backend only — **not** `database-isolation` / d5 drills / Docker Postgres).
+
+```sh
+pnpm hooks:install   # git config core.hooksPath .githooks
+# or: git config core.hooksPath .githooks
+```
+
+- Path filters mirror `.github/workflows/ci.yml` scopes; docs/tooling-only diffs skip (exit 0).
+- Manual: `pnpm check:prepush` · dry-run: `PREPUSH_DRY_RUN=1 pnpm check:prepush`
+- Escape (not recommended): `SKIP_PREPUSH=1` or `TICKET_SKIP_PREPUSH=1`
+
 ## Workspace commands
 
 - `pnpm dev:web`: web on port 3000.
@@ -36,6 +49,7 @@ pnpm build
 - `pnpm dev:ios`: Metro/iOS development (requires local iOS tooling).
 - `pnpm --filter @ticket/backend test:db`: isolated PostgreSQL RLS test; Docker required.
 - `pnpm --filter @ticket/web test:routes`: production HTTP routing test after web build.
+- `pnpm hooks:install` / `pnpm check:prepush`: local pre-push hook (see above).
 
 Each app has its own README and environment examples. Database runtime role provisioning is documented in `packages/backend/README.md`; root Compose is development infrastructure, not a production provisioning flow.
 
