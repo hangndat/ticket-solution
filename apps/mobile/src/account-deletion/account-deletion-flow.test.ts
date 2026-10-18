@@ -6,8 +6,10 @@ import {
 } from '../identity/session-boundary.ts';
 import {
   assertsNoDeletedClaim,
+  assertsNoInternalJargon,
   describeAccountDeletionRequest,
   accountDeletionExplainer,
+  accountDeletionConfirmCopy,
 } from './account-deletion-copy.ts';
 import {
   clearAllPendingIdempotencyKeys,
@@ -48,18 +50,28 @@ const awaiting = {
   policyStatus: 'UNRESOLVED' as const,
 };
 
-test('copy never claims deleted and ACK description avoids deleted label', () => {
+test('copy is plain language: no deleted claim, no internal jargon', () => {
   const explainer = accountDeletionExplainer();
-  assert.equal(assertsNoDeletedClaim(explainer.body), true);
-  assert.match(explainer.body, /O06/);
-  assert.match(explainer.body, /anonymize|≤\s*30|30 ngày/i);
-  assert.match(explainer.body, /ACK\s*≠|không xóa ngay/i);
-
+  const confirm = accountDeletionConfirmCopy();
   const described = describeAccountDeletionRequest(awaiting);
-  assert.equal(assertsNoDeletedClaim(described.title), true);
-  assert.equal(assertsNoDeletedClaim(described.body), true);
-  assert.match(described.body, /ACK ≠|erasure|Chưa phải/i);
-  assert.equal(assertsNoDeletedClaim(described.body), true);
+
+  for (const text of [
+    explainer.title,
+    explainer.body,
+    confirm.title,
+    confirm.body,
+    confirm.confirmLabel,
+    described.title,
+    described.body,
+  ]) {
+    assert.equal(assertsNoDeletedClaim(text), true);
+    assert.equal(assertsNoInternalJargon(text), true);
+  }
+
+  assert.match(explainer.body, /30\s*ngày|30\s*days/i);
+  assert.match(explainer.body, /không bị xóa ngay|not wiped instantly/i);
+  assert.match(explainer.body, /kiểm toán|audit/i);
+  assert.match(described.body, /ghi nhận|recorded/i);
 });
 
 test('timeout keeps same Idempotency-Key for retry; success clears pending', async () => {
