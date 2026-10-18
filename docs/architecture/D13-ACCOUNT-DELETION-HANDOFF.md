@@ -5,259 +5,271 @@
 | Mode | **Thiết kế** (docs-only) — Role `architect` · `docs/agents/roles/architect.md` |
 | Issue | [#344](https://github.com/hangndat/ticket-solution/issues/344) |
 | Parent | Epic [#301](https://github.com/hangndat/ticket-solution/issues/301) · Story [#305](https://github.com/hangndat/ticket-solution/issues/305) · findings from Task [#320](https://github.com/hangndat/ticket-solution/issues/320) / PR [#342](https://github.com/hangndat/ticket-solution/pull/342) |
-| Source SHA read | **`8bc744e0c765db6e073628b35941115872d7af5b`** |
+| Source SHA read (impl baseline) | **`8bc744e0c765db6e073628b35941115872d7af5b`** |
+| Handoff tip (this doc) | **see git tip of PR [#346](https://github.com/hangndat/ticket-solution/pull/346)** — revalidate after each docs commit |
+| Prior design tip | `3271aee2c837bc885aeb9850b6d504ae545d77a6` (superseded by this revision) |
 | Review evidence | [PR comment 6247253660](https://github.com/hangndat/ticket-solution/pull/342#issuecomment-6247253660) · `docs/reviews/D13-PR342-DOD-SECURITY.md` (SEC-1 / SEC-2) |
+| Apple primary (browsed) | [Offering account deletion in your app — 5.1.1(v)](https://developer.apple.com/support/offering-account-deletion-in-your-app/) (2026-10-18) |
 | Architecture impact | **Có** — auth trust boundary + durable retry for erasure spanning PostgreSQL ↔ Keycloak |
-| O06 | **Không đổi số** (anonymize ≤30d; audit TTL 730d; ticket/object stubs out of scope) |
-| Kết luận | **Đủ để triển khai trong scope** sau khi coordinator xác nhận các mục §8 |
-| Agent | Cursor · Orca `ctx_7b2d0969ad4c` · `task_15b4e41e7e26` |
+| O06 | **Không đổi số** (anonymize / IdP erase ≤30d; audit TTL 730d; ticket/object stubs out of scope) |
+| Kết luận | **Đủ để triển khai trong scope** — §8 decisions **đã chốt** bởi coordinator |
+| Related | SEC-1 BE [#345](https://github.com/hangndat/ticket-solution/issues/345) **đang chạy**; iOS account-deletion copy tip `c70631dd46d956b3b89917a12668970732800466` (main) |
+
+## 0. Coordinator decisions (chốt — 2026-10-18)
+
+| # | Decision | Status |
+| --- | --- | --- |
+| D1 | **SEC-1** Option A + R1+R2 (revoke SECURITY DEFINER tại ACK **và** apply idempotent) — **độc lập** IdP | **Confirmed** → BE #345 |
+| D2 | **Không** thêm public `state` enum (`ANONYMIZING`, …). Giữ `REQUESTED` + **internal durable flags**; `COMPLETED` **chỉ** khi PG anonymize **và** IdP **DELETE** thành công (hoặc confirmed absence) | **Confirmed** |
+| D3 | **Không** chấp nhận **I1 disable-only** làm full account deletion / store compliance | **Confirmed** |
+| D4 | Chọn **I2 DELETE** Keycloak user trong SLA O06 **≤30d**. Disable/logout chỉ **phase tạm** fail-closed — **không** `idp_status=SUCCEEDED` / **không** `COMPLETED` chỉ vì disable | **Confirmed** |
+| D5 | Issuer cho Admin/erase = **allowlist cố định** từ server config (verified OIDC issuer). Map `sub` → Keycloak userId **chỉ** qua issuer đó; **không** lookup/delete theo email/username mơ hồ; **không** SSRF issuer từ client input | **Confirmed** |
+| D6 | JWT cũ / re-login fail-closed qua open deletion + tombstone digest; minimal retention khớp O06 — không giữ original PII vô hạn sau delete | **Confirmed** |
+
+**Ambiguity (không tự quyết legal):** Apple yêu cầu xóa account record + associated personal data trừ phần “legally required to maintain”. O06 đã chốt giữ audit 730d và anonymize app ≤30d — **không** mở lại số đó ở đây. Counsel ngoài scope; handoff neo O06 + 5.1.1(v) primary text.
 
 ## 1. Mục tiêu / non-goals
 
 ### Mục tiêu (đóng blocker store)
 
-1. **SEC-1:** Sau yêu cầu/anonymize, không còn `staff_sessions` ACTIVE cho user đó → Gate `assertSessionActive` fail-closed.
-2. **SEC-2:** Không còn đường “login Keycloak cùng subject → `upsertFromVerifiedIdentity` tạo user app mới” sau khi erasure đã chấp nhận.
+1. **SEC-1:** Sau ACK/apply, không còn `staff_sessions` ACTIVE cho user → Gate `assertSessionActive` fail-closed.
+2. **SEC-2:** Xóa user Keycloak (I2) trong ≤30d; chặn recreate app user từ cùng OIDC `(issuer, sub)` (tombstone + upsert deny); không đánh dấu xong chỉ vì disable.
 
 ### Non-goals
 
 - Không đổi số O06 / retention ticket 365d / object 90d / audit 730d.
-- Không xóa `audit_logs` / `platform_audit_logs` (PII trong audit vẫn theo TTL 730d — scrub app identity only).
+- Không `DELETE` `audit_logs` / `platform_audit_logs`.
 - Không thêm SaaS IdP; không BullMQ; không rewrite Gate/OIDC toàn hệ.
-- Không sửa `apps/**` / lockfile / shared OpenAPI trong Task architect này.
+- Không sửa `apps/**` / lockfile / shared OpenAPI trong Task architect.
 - Không deploy prod / mutate prod DB / commit secrets.
+- Không tự reviewer/merge.
 
-## 2. Hiện trạng @ SHA (facts)
+## 2. Hiện trạng @ source SHA (facts)
 
 | Fact | Location |
 | --- | --- |
-| ACK → `REQUESTED` + O06 policy | `packages/backend/src/account-deletion.ts` `createAccountDeletionRequest` |
-| Worker poll/relay → `processDueAccountAnonymizations` | `apps/worker/src/index.ts` L79 / L108 |
-| Apply SQL: clear email, rotate `subject`→`anon:<requestId>`, revoke `device_tokens`, null attendee email, `COMPLETED` | `…/202610180001_d12_o06_account_anonymize/migration.sql` |
-| **Không** revoke `staff_sessions` | same apply function |
-| Gate trusts ACTIVE session by `(tenant, event, session, user_id)` | `packages/backend/src/gate.ts` `assertSessionActive` (callers ~L383, ~L532) |
-| Manual revoke exists but requires tenant actor + `PERMISSION_UNDO` | `revokeStaffSession` — **không** dùng được cho self-delete cross-tenant bulk |
-| `staff_sessions` FORCE RLS theo `app.tenant_id` | migration `202610170005_d3_gate` |
-| Upsert identity = unique `(issuer, subject)` create-or-update | `packages/backend/src/users.ts` `upsertFromVerifiedIdentity` |
-| After subject rotate, same OIDC subject **creates new user** | platform test @ SHA; SQL comment intentional |
-| No Keycloak Admin client in worker/API | search @ SHA empty |
-| Durable side-effects pattern | ADR-17 leased PG `outbox` (tenant-scoped) — **không** khớp users global |
+| ACK → `REQUESTED` + O06 policy | `packages/backend/src/account-deletion.ts` |
+| Worker → `processDueAccountAnonymizations` | `apps/worker/src/index.ts` |
+| Apply: clear email, rotate `subject`→`anon:<requestId>`, revoke `device_tokens`, attendees email null, `COMPLETED` | migration `202610180001_d12_o06_account_anonymize` |
+| **Chưa** revoke `staff_sessions` (tại baseline; BE #345 đang sửa) | same apply |
+| Gate trusts ACTIVE `(tenant, event, session, user_id)` | `gate.ts` `assertSessionActive` |
+| Upsert identity = unique `(issuer, subject)` | `users.ts` `upsertFromVerifiedIdentity` |
+| Subject rotate → same OIDC sub **creates new user** | platform test @ baseline |
+| No Keycloak Admin in worker/API @ baseline | — |
+| Tenant `outbox` (ADR-17) | **không** dùng cho IdP user-global job |
 
 ## 3. Invariants / trust boundaries
 
-1. **PostgreSQL = source of truth** cho business deletion state; Keycloak là IdP side-effect.
-2. **Deny-by-default authz** giữ nguyên; deletion ACK chỉ qua OIDC verified bearer (`selfActor`).
-3. **Runtime `ticket_runtime` NOBYPASSRLS**; cross-tenant session revoke phải đi **SECURITY DEFINER** owned by `migration_owner` (+ owner policy nếu FORCE RLS chặn owner — cùng pattern `event_attendees_owner` trong migration O06).
-4. **Không mock auth** trên production path.
-5. **Audit retain:** apply không `DELETE` audit; không log email/OTP/token thô.
-6. **Idempotency:** re-apply PG và re-call IdP phải an toàn (404 / already-disabled = success).
+1. PostgreSQL = SoT cho deletion business state; Keycloak = IdP side-effect với durable retry trên cùng request row.
+2. Deletion ACK chỉ qua OIDC verified bearer (`selfActor`); deny-by-default.
+3. Cross-tenant session revoke = SECURITY DEFINER `migration_owner` (+ owner policy nếu FORCE RLS) — pattern `event_attendees_owner`.
+4. **Issuer allowlist:** chỉ `OIDC_ISSUER` / allowlist server config đã verify JWKS. Admin base URL + realm path **cố định config** — không lấy issuer/URL từ JWT `iss` chưa allowlist, không từ body client.
+5. **IdP identity key:** `(allowlisted_issuer, oidc_sub)` → resolve Keycloak user **by id / exact sub attribute** theo contract realm đã biết. **Cấm** search-delete by email hoặc username fuzzy.
+6. Audit retain 730d; sanitized IdP errors (no token/secret/PII).
+7. Multi-instance workers: **lease** trên request row trước IdP call (tránh concurrent DELETE).
 
-## 4. SEC-1 — Stale `staff_sessions`
+## 4. SEC-1 — Stale `staff_sessions` (**confirmed**)
 
-### 4.1 Phương án
+### 4.1 Choice
 
-| | **A — Extend `apply_account_anonymization` (đề xuất)** | **B — Soft-check trong `assertSessionActive` only** |
-| --- | --- | --- |
-| Ý | Trong cùng SECURITY DEFINER apply: `UPDATE staff_sessions SET status='REVOKED', revoked_at=now() WHERE user_id=v_user_id AND status='ACTIVE'` (+ owner policy nếu cần) | Thêm điều kiện: user subject `anon:%` hoặc open deletion → reject session |
-| Ưu | Atomic với scrub; mọi tenant một lần; khớp revoke `device_tokens`; Gate callers không đổi | Không migration session rows |
-| Nhược | Cần policy/index `user_id`; audit `gate.session.revoke` bulk optional | **Không** đóng session; offline token còn ACTIVE trên device đến khi check — **không đủ store** |
-| Phức tạp | Thấp | Thấp nhưng **không đạt mục tiêu** |
+**A + R1+R2:** helper `revoke_sessions_for_user(p_user_id)` SECURITY DEFINER; gọi tại ACK và lại trong apply (idempotent). Soft-check trong `assertSessionActive` only = **không đủ**.
 
-**Giữ hiện trạng:** không chấp nhận (SEC-1 P1).
+### 4.2 Status
 
-**Chọn A.** Option B chỉ là defense-in-depth tùy chọn sau A, không thay A.
+- Design đủ triển khai; **BE #345 đang chạy** — không block IdP design.
+- Consumers: Gate paths; store honesty về privileged access sau delete.
 
-### 4.2 Timing: revoke lúc REQUEST vs lúc apply
+### 4.3 Impl paths (BE-S1)
 
-| | **R1 — Revoke tại ACK `createAccountDeletionRequest`** | **R2 — Revoke trong apply (worker)** | **R1+R2 (đề xuất)** |
+Migration + `account-deletion.ts` ACK hook; tests `platform.test.cjs` / `gate.test.cjs` (session → ACK → `SESSION_NOT_ACTIVE`). Optional: deny `openStaffSession` khi open `REQUESTED`.
+
+## 5. SEC-2 — Keycloak DELETE (I2) + app fail-closed
+
+### 5.1 Apple 5.1.1(v) — primary (không suy diễn)
+
+Browse: https://developer.apple.com/support/offering-account-deletion-in-your-app/
+
+Trích yêu cầu (paraphrase + neo wording):
+
+- Apps hỗ trợ **account creation** phải cho phép **initiate deletion** trong app.
+- “Offer to delete the **entire account record**, along with associated personal data.”
+- “**only offering to temporarily deactivate or disable an account is insufficient.**”
+- Deletion không bắt buộc immediate nếu thông báo thời gian hợp lý + confirmation khi xong; tuân local law / counsel riêng.
+
+**Hệ quả design:** **Không** dùng câu “disable ≈ account không dùng lại” làm evidence compliance App Store. Disable/logout chỉ **tạm** để fail-closed trong cửa sổ ≤30d; **completion / SUCCEEDED / COMPLETED** đòi hỏi **DELETE** IdP user (hoặc **confirmed user absence** — xem §5.5), cộng PG anonymize.
+
+### 5.2 So sánh phương án (đã chốt)
+
+| | **I1 — Disable only** | **I2 — DELETE IdP user (chốt)** | **I3 — Tombstone app only** |
 | --- | --- | --- | --- |
-| Ý | Ngay khi user xác nhận xóa | Khi anonymize chạy (hiện due ≈ ngay) | ACK gọi helper revoke; apply revoke idempotent |
-| Ưu | Fail-closed sớm; không phụ thuộc worker tick | Một chỗ SQL | Cửa sổ nhỏ nhất |
-| Nhược | ACK path cần DEFINER helper (users global, sessions multi-tenant) | Cửa sổ đến tick worker (nhỏ) | Thêm 1 call idempotent |
+| Semantics | `enabled=false` | `DELETE …/users/{id}` trong ≤30d | Chặn upsert; IdP account còn |
+| vs 5.1.1(v) | **Insufficient** nếu chỉ vậy (Apple primary) | Khớp “delete account record” phía IdP | Insufficient một mình |
+| Role trong MVP | **Phase tạm** sau PG scrub / trước hoặc song song retry DELETE — **không** đóng job | **Đích erasure** | Defense-in-depth **cùng** I2 |
+| Recovery | Re-enable dễ | Khó (chấp nhận) | — |
 
-**Đề xuất R1+R2:** helper SQL `revoke_sessions_for_user(p_user_id uuid)` SECURITY DEFINER; gọi từ ACK + từ apply.
+**Chốt: I2.** I1 = optional immediate harden (logout + disable) **trước** DELETE trong cùng pipeline; status riêng (`idp_disable_at` optional) **≠** success terminal.
 
-### 4.3 Consumers blocked đến khi SEC-1 landed
+### 5.3 Public state vs internal flags (**confirmed**)
 
-- Gate reserve/confirm/undo paths dùng `assertSessionActive`
-- Store release gate / App Review honesty (“xóa tài khoản” vẫn check-in được)
-- **Không** block IdP design consumers — SEC-1 **có thể ship độc lập**
+**Public `state` enum giữ nguyên:** `REQUESTED` | `UNDER_REVIEW` | `AWAITING_POLICY` | `COMPLETED` | `REJECTED`.
 
-### 4.4 BE Task SEC-1 (độc lập)
+**Không** thêm `ANONYMIZING` (tránh đụng `account_deletion_one_open` + clients).
 
-| Item | Path / note |
+Internal columns trên `account_deletion_requests` (đề xuất tối thiểu):
+
+| Column | Ý |
 | --- | --- |
-| Migration | `packages/backend/prisma/migrations/<ts>_d13_revoke_sessions_on_delete/` — `REVOKE` + `CREATE POLICY staff_sessions_owner … TO migration_owner`; `CREATE OR REPLACE` apply + optional `revoke_sessions_for_user`; index `(user_id) WHERE status='ACTIVE'` |
-| TS | `packages/backend/src/account-deletion.ts` — gọi revoke helper trên ACK nếu R1 |
-| Worker | không bắt buộc đổi nếu chỉ apply SQL |
-| Tests | `packages/backend/test/platform.test.cjs` + `gate.test.cjs`: open session → delete ACK/apply → `assertSessionActive` / confirm fails; second apply idempotent; RLS catalog vẫn PASS |
-| Compatibility | Client Gate phải nhận `SESSION_NOT_ACTIVE`; không đổi OpenAPI shape bắt buộc |
+| `pg_applied_at timestamptz` | PG scrub+rotate+session revoke xong |
+| `original_issuer text` NULL | Snapshot tạm cho job IdP — **scrub sau COMPLETED** (hoặc ngay khi có tombstone digest) |
+| `original_subject text` NULL | Snapshot tạm — **scrub** như trên |
+| `subject_tombstone_digest bytea/text` | `HMAC/SHA-256(allowlisted_issuer \|\| sub \|\| server_pepper)` — **không** lưu sub plaintext dài hạn |
+| `idp_lease_owner text` / `idp_lease_expires_at` | Multi-instance lease trước Admin call |
+| `idp_status text` | `PENDING` \| `DISABLED_PENDING_DELETE` \| `DELETED` \| `NOT_FOUND` \| `FAILED` |
+| `idp_attempts int` / `idp_next_attempt_at` | Bounded backoff |
+| `idp_last_error_code text` | Sanitized enum/code only |
 
-## 5. SEC-2 — Keycloak IdP + re-login recreate
+**Terminal success:** `state=COMPLETED` **iff** `pg_applied_at IS NOT NULL` **AND** `idp_status IN ('DELETED','NOT_FOUND')`.
 
-### 5.1 Vì sao subject-rotate alone không đủ
+- `DISABLED_PENDING_DELETE` / `FAILED` / `PENDING` → **stay `REQUESTED`** (open unique vẫn giữ một open row).
+- **Không** map disable → `SUCCEEDED` / `COMPLETED`.
 
-`upsertFromVerifiedIdentity` keys trên `(issuer, subject)`. Apply đổi `subject` → `anon:<requestId>` **giải phóng** OIDC subject gốc → login lại **INSERT user mới**. IdP account còn sống = lỗ hổng identity, không chỉ “PII app”.
+### 5.4 Tombstone / PII retention (O06-aligned)
 
-### 5.2 Phương án IdP
-
-| | **I1 — Disable IdP user + logout sessions (đề xuất MVP)** | **I2 — Delete IdP user** | **I3 — App tombstone only (no IdP Admin)** |
-| --- | --- | --- | --- |
-| Semantics | `enabled=false` + invalidate Keycloak sessions; optional hard-delete later | `DELETE /users/{id}` | Bảng `identity_tombstones(issuer, subject)` chặn upsert; IdP vẫn login UI |
-| App Review | Không đăng nhập được ≈ account không dùng lại | Cứng hơn | Yếu — IdP vẫn tồn tại; rủi ro review/copy |
-| Idempotence | 404 user / already disabled → success | 404 → success; conflict nếu email reuse | Dễ |
-| Recovery | Re-enable trong cửa sổ support (ops) | Khó | N/A |
-| Phức tạp | Admin API + durable state | Cao hơn (email unique, orphan) | Thấp nhưng **không đủ** nếu policy yêu cầu IdP erase |
-
-**Chọn I1** cho MVP store. I2 = phase sau nếu counsel/ops yêu cầu hard delete. I3 chỉ bổ sung defense-in-depth **cùng** I1 (tombstone trước khi rotate), không thay I1.
-
-### 5.3 Durable state (không nhét tenant `outbox`)
-
-`outbox` hiện **tenant-scoped** (ADR-17) — không phải chỗ đúng cho user-global IdP job.
-
-**Đề xuất:** mở rộng `account_deletion_requests` (cùng bảng, tránh job framework mới):
-
-| Column (đề xuất) | Ý |
+| Data | Retention |
 | --- | --- |
-| `original_issuer text` | Snapshot trước rotate |
-| `original_subject text` | Snapshot trước rotate |
-| `idp_status text` | `PENDING` \| `SUCCEEDED` \| `NOT_FOUND` \| `FAILED` |
-| `idp_attempts int` | Bounded retry |
-| `idp_next_attempt_at timestamptz` | Backoff |
-| `idp_last_error_code text` | Sanitized (no token) |
+| `subject_tombstone_digest` | Giữ để fail-closed upsert/JWT map; **không** chứa original sub. TTL: tối thiểu đến hết nhu cầu chống recreate; **đề xuất** align cửa sổ dài hơn anonymize nếu cần chống replay — **không** tự kéo audit 730d; nếu chỉ cần chống re-login sau delete, giữ digest **đến khi** policy bảo mật hiện hành cho identity denylist (ghi rõ trong impl: pepper rotated = digest vô hiệu → chấp nhận theo ops). **Ambiguity:** exact digest TTL vs 730d — **không** tự đổi O06; đề xuất mặc định **giữ digest** trên row COMPLETED (không phải email/sub plaintext) cho đến khi có ADR riêng. |
+| `original_issuer` / `original_subject` | Chỉ phục vụ job DELETE; **NULL/scrub khi** `idp_status=DELETED|NOT_FOUND` và trước/at `COMPLETED` |
+| Audit logs | Không đụng — TTL 730d O06 |
+| Email trên `users` | Đã null sau PG scrub |
 
-**State machine (đề xuất — cần coordinator xác nhận):**
+JWT access token cũ: API verify chữ ký vẫn pass đến hết hạn nếu chỉ rotate subject — **bắt buộc** deny path: open `REQUESTED` cho `user_id` **hoặc** tombstone digest match trên `(issuer, sub)` từ token **sau** verify chữ ký + allowlist issuer. Membership/Gate đã revoke session; attendee tokens: rely existing authz + deletion checks trên `/me/*`.
+
+### 5.5 Ordering / failure matrix (I2)
 
 ```text
-REQUESTED
-  → worker: PG scrub + session revoke + snapshot issuer/subject
-     + set idp_status=PENDING (chưa COMPLETED)
-  → worker: Keycloak disable(+logout)
-     success/404 → idp_status=SUCCEEDED|NOT_FOUND; state=COMPLETED
-     retryable error → idp_status=FAILED; stay REQUESTED (or ANONYMIZING*); bump attempts/backoff
+ACK REQUESTED → revoke sessions (SEC-1)
+Worker (lease IdP row):
+  if pg_applied_at is null:
+    snapshot issuer/sub (allowlisted issuer only)
+    write tombstone digest
+    PG scrub + rotate + revoke sessions
+    set pg_applied_at
+    optional: Keycloak logout + disable → idp_status=DISABLED_PENDING_DELETE
+       (KHÔNG COMPLETED)
+  claim lease → DELETE user by Keycloak id resolved from (issuer, sub)
+  DELETE 204/404-confirmed-absence → idp_status=DELETED|NOT_FOUND
+       scrub original_* ; state=COMPLETED ; release lease
+  retryable errors → FAILED + backoff ; stay REQUESTED
 ```
 
-\*Nếu muốn tách rõ “PG xong / IdP chưa”: thêm state `ANONYMIZING` vào CHECK constraint — **cần xác nhận** vì đụng `account_deletion_one_open` partial unique và API clients.
-
-**Alternative nhỏ hơn (ít đụng state enum):** giữ `state=REQUESTED`直到 cả PG+IdP xong; dùng cột `pg_applied_at` để đánh dấu PG đã scrub (idempotent skip scrub). `COMPLETED` chỉ khi IdP xong. **Đề xuất ưu tiên alternative này** để tránh mở rộng enum nếu coordinator muốn tối thiểu.
-
-**Không** đặt `COMPLETED` khi chỉ PG xong mà IdP còn pending — API/UI sẽ nói dối store gate.
-
-### 5.4 Ordering / failure matrix
-
-| Step | Success next | Failure |
+| IdP HTTP / case | Classification | Next |
 | --- | --- | --- |
-| 1 Snapshot `original_issuer/subject` + revoke sessions (DEFINER) | 2 | Abort; stay REQUESTED; no subject rotate |
-| 2 PG scrub (email null, subject→anon:, device_tokens, attendees) + `pg_applied_at` | 3 | Abort before rotate if possible; retry whole; **never** COMPLETED |
-| 3 Keycloak: find user by username/id from subject mapping; `enabled=false`; logout-all | 4 | Retryable (5xx/timeout/network): backoff, `idp_status=FAILED`; **PG đã scrub OK** — không rollback PII (forward recovery). Non-retryable config: escalate ops |
-| 4 `idp_status=SUCCEEDED\|NOT_FOUND`; `state=COMPLETED` | done | — |
+| 204 / 200 delete | `DELETED` | COMPLETED (if PG done) |
+| 404 trên **user resource** sau resolve id thành công trước đó, hoặc GET-by-id 404 **sau** allowlisted realm path đúng | `NOT_FOUND` (confirmed absence) | COMPLETED |
+| 404 / 5xx trên **token/realm/admin base path** sai config | Config/path error — **không** `NOT_FOUND` | `FAILED`; escalate ops; **không** COMPLETED |
+| 401/403 Admin | Creds/RBAC — non-retry without fix | `FAILED`; escalate |
+| 409 / transient 5xx / timeout | Retryable | backoff |
+| Disable-only success | `DISABLED_PENDING_DELETE` | continue DELETE attempts |
 
-**404 / already disabled:** treat as success (`NOT_FOUND` or `SUCCEEDED`).  
-**Timeout:** leave PENDING/FAILED; worker retry; do not COMPLETED.  
-**IdP success then crash before COMPLETED:** retry disable is idempotent; then COMPLETED.
+### 5.6 Resolve Keycloak userId (no fuzzy identity)
 
-**Fail-closed re-login trong lúc REQUESTED / pg_applied:**
+1. Verify JWT với JWKS của **allowlisted issuer** (đã có API path).
+2. Worker đọc snapshot `(original_issuer, original_subject)` chỉ nếu `original_issuer` ∈ allowlist config.
+3. Admin API base = `KEYCLOAK_BASE_URL` + fixed realm (e.g. `ticket`) from config — **không** parse host từ issuer string tùy ý nếu khác allowlist mapping table.
+4. Resolve: `GET /admin/realms/{realm}/users/{id}` nếu sub == Keycloak id **hoặc** exact query `q=username:` **chỉ khi** realm contract đảm bảo username≡sub (ghi rõ trong ops); ưu tiên **User Federation / protocol mapper** đã pin `sub` = Keycloak user id. Nếu không chắc mapping → **blocker ops** trước prod enable erasure (báo ambiguity mapping, không đoán email).
+5. `DELETE /admin/realms/{realm}/users/{id}`.
 
-- `upsertFromVerifiedIdentity`: nếu tồn tại open deletion (`REQUESTED`/`UNDER_REVIEW`) cho user map từ `(issuer,subject)` **hoặc** tombstone/snapshot match → **reject** (IdentityError), không create user mới.
-- Sau COMPLETED: tombstone `(original_issuer, original_subject)` durable (table nhỏ hoặc unique trên request columns) → upsert reject vĩnh viễn cho subject đó; IdP disable là lớp 1.
+### 5.7 Least privilege + multi-instance
 
-### 5.5 Keycloak Admin — least privilege
-
-| Item | Recommendation |
+| Item | Spec |
 | --- | --- |
-| Client | Dedicated confidential client in realm `ticket` (e.g. `vemoki-erasure`) — **not** personal admin user in app code |
-| Roles | Tối thiểu: `view-users`, `manage-users` (disable + logout). Tránh `realm-admin` |
-| Creds | Env on worker only: `KEYCLOAK_BASE_URL`, `KEYCLOAK_ERASURE_CLIENT_ID`, `KEYCLOAK_ERASURE_CLIENT_SECRET` (or client credentials JWT). **Never** commit; `.env.example` placeholders only |
-| API | Token endpoint client_credentials → Admin REST disable user + logout. Map OIDC `sub` → Keycloak user id via API search |
-| Network | Worker → Keycloak internal Docker/VPS network; timeout bounded (e.g. 5–10s) |
+| Client | `vemoki-erasure` confidential; roles tối thiểu delete/manage-users (+ view để GET-by-id). Không `realm-admin` |
+| Secret | **Worker-only** env; never API process; never commit |
+| Lease | `UPDATE … SET idp_lease_owner, idp_lease_expires_at WHERE lease expired OR owner=self` trước Admin call; short TTL (e.g. 30–60s) reclaim |
+| Errors | Store codes like `IDP_TIMEOUT`, `IDP_HTTP_503`, `IDP_PATH_404`, `IDP_USER_404`, `IDP_FORBIDDEN` — no body dump |
 
-### 5.6 Consumers blocked on SEC-2 design confirmation
+### 5.8 Consumers
 
-- BE IdP erasure implementation Task
-- Ops Keycloak realm client provisioning
-- App Review notes / privacy honesty around “account cannot sign in again”
-- **SEC-1 không chờ** SEC-2
+| Consumer | Blocked until |
+| --- | --- |
+| Store deletion release gate | SEC-1 merged + SEC-2 I2 COMPLETED semantics live |
+| BE-S2 IdP delete Task | This handoff (now unblocked) |
+| Ops Keycloak erasure client | Before prod enable |
+| SEC-1 / BE #345 | **Not** blocked on SEC-2 |
 
-## 6. Recommended end-to-end sequence (MVP)
+## 6. End-to-end sequence (MVP chốt)
 
 ```text
-POST /v1/me/account-deletion-requests (OIDC)
-  → insert/upgrade REQUESTED + policy O06
-  → revoke_sessions_for_user(userId)           # SEC-1 R1
-  → (optional) reject new Gate openStaffSession if open deletion
+POST /v1/me/account-deletion-requests
+  → REQUESTED + O06 policy
+  → revoke_sessions_for_user
+  → deny openStaffSession if open deletion (recommended)
 
-Worker tick processDueAccountAnonymizations
-  → list_due (REQUESTED & policy set & due)
-  → FOR UPDATE request
-  → if pg_applied_at is null:
-       snapshot issuer/subject; scrub+rotate; revoke sessions again; set pg_applied_at
-  → attempt Keycloak disable+logout (I1)
-  → on success/404: idp_status=…; state=COMPLETED
-  → on retryable fail: idp_status=FAILED; backoff; leave REQUESTED
+Worker due list: state=REQUESTED AND policy set AND due
+  → lease + PG apply flags (no public enum change)
+  → optional disable/logout (non-terminal)
+  → DELETE IdP user (terminal IdP success)
+  → scrub original_*; COMPLETED
 
-upsertFromVerifiedIdentity
-  → deny if tombstone / open deletion matches issuer+subject
+upsertFromVerifiedIdentity / API after JWT verify
+  → reject if open REQUESTED for user OR tombstone digest hit
 ```
 
-Audit: existing platform/gate audit actions only; **no** new PII fields; optional `account_deletion.idp_disabled` with request id only.
-
-## 7. Regression test matrix (BE)
+## 7. Regression test matrix (BE-S2 + SEC-1 overlap)
 
 | # | Case | Expect |
 | --- | --- | --- |
-| T1 | Open staff session → ACK deletion | Sessions REVOKED; Gate confirm → `SESSION_NOT_ACTIVE` |
-| T2 | Apply anonymize twice | Second `applied=0`; sessions remain REVOKED |
-| T3 | Apply clears email/subject; audit count unchanged | O06 retain |
-| T4 | IdP disable success → COMPLETED | `idp_status=SUCCEEDED` |
-| T5 | IdP 404 → COMPLETED | `idp_status=NOT_FOUND` |
-| T6 | IdP 503 then success | Stays non-COMPLETED until retry succeeds; no new user on login attempt |
-| T7 | After pg scrub, same subject login before IdP done | upsert **rejected** |
-| T8 | After COMPLETED, same subject login | upsert **rejected** (tombstone) + IdP disabled |
-| T9 | RLS catalog / NOBYPASSRLS | Still PASS |
-| T10 | No Keycloak creds in test | Fake IdP adapter inject in unit/db test |
+| T1–T3 | Session revoke ACK/apply; audit retained; idempotent apply | SEC-1 (BE #345) |
+| T4 | IdP DELETE success → `DELETED` + `COMPLETED` | |
+| T5 | Confirmed user 404 → `NOT_FOUND` + `COMPLETED` | |
+| T6 | Admin/realm path 404 → `FAILED`, **not** COMPLETED | |
+| T7 | Disable-only → `DISABLED_PENDING_DELETE`, state stays `REQUESTED` | |
+| T8 | 503 then DELETE | stays open until DELETE/NOT_FOUND |
+| T9 | Re-login / upsert same sub while REQUESTED or after COMPLETED | reject |
+| T10 | Expired JWT still signed | reject via tombstone/open deletion after verify |
+| T11 | Two workers | only one holds lease; no double DELETE panic (second 404 OK) |
+| T12 | Fuzzy email delete attempted | **not implemented** / test asserts API helper rejects |
+| T13 | Issuer not on allowlist | no Admin call |
+| T14 | `original_*` scrubbed after COMPLETED | plaintext absent |
+| T15 | Fake IdP adapter in tests | no real Keycloak required |
 
-UAT headless (sau impl, session khác): request deletion → Gate session dead; login again fails or cannot recreate privileged access.
+## 8. Quyết định — trạng thái
 
-## 8. Quyết định cần coordinator xác nhận
+| # | Was open | Now |
+| --- | --- | --- |
+| SEC-1 A+R1+R2 | Đề xuất | **Confirmed** (BE #345) |
+| No new public enum; flags + COMPLETED=both | Đề xuất | **Confirmed** |
+| I1 vs I2 | Đề xuất I1 | **Rejected I1-as-done; chốt I2 DELETE** |
+| Tombstone | columns vs table | **Digest column + scrub `original_*`** (confirmed direction) |
+| openStaffSession deny | Đề xuất | **Recommended** with SEC-1 |
 
-1. **SEC-1:** Chốt **A + R1+R2** (revoke DEFINER + ACK và apply idempotent)? → **Đề xuất: Có** (có thể dispatch BE ngay).
-2. **SEC-2 semantics:** MVP **disable** (I1) vs hard **delete** (I2)? → **Đề xuất: I1**.
-3. **COMPLETED meaning:** chỉ khi PG+IdP xong (dùng `pg_applied_at`, giữ enum)? vs thêm state `ANONYMIZING`? → **Đề xuất: `pg_applied_at` + COMPLETED = both**.
-4. Tombstone table riêng vs columns trên `account_deletion_requests`? → **Đề xuất: columns + unique index `(original_issuer, original_subject)` where not null** (đủ MVP).
-5. Có bắt buộc deny `openStaffSession` khi đang REQUESTED? → **Đề xuất: Có** (hardening nhỏ, cùng SEC-1 Task).
+## 9. Handoff ownership
 
-Ngoài các mục trên: **không** cần user đổi O06.
+| Task | Ownership | Deps |
+| --- | --- | --- |
+| **BE-S1** session revoke | `backend` #345 | Running |
+| **BE-S2** IdP DELETE + flags + upsert/JWT deny + lease | `backend` · `packages/backend` · `apps/worker` | This doc tip |
+| **Ops** Keycloak client + sub↔userId contract | coordinator/ops | Before prod erasure |
+| **BA/ASC** (optional) | `product-ba` | After BE-S2 — copy must not claim disable-only |
+| DoD/security | independent sessions | After impl SHAs |
 
-## 9. Handoff ownership / tasks
+### Paths (impl SEC-2)
 
-| Task | Ownership | Deps | Notes |
-| --- | --- | --- | --- |
-| **BE-S1** Session revoke | `backend` · `apps/api`? minimal · `packages/backend` migration+tests · worker unchanged nếu SQL-only | Coordinator xác nhận §8.1 | Unblocks Gate safety; **parallel** với IdP |
-| **BE-S2** IdP disable + durable columns + upsert deny | `backend` · `packages/backend` · `apps/worker` IdP adapter · env example | §8.2–8.4; ops client | Blocked on this handoff confirm |
-| **Ops** Keycloak client `vemoki-erasure` + secret trên worker host | coordinator/ops | After §8.2 | No SaaS |
-| **BA/docs ASC** (optional follow) | `product-ba` | After BE-S2 | Refresh review notes: cannot re-auth |
-| DoD/security revalidation | `reviewer-dod` + `reviewer-security` | After merge SHAs | Exact SHA mới; **không** tự review bởi author design |
-
-### Paths đụng (impl)
-
-- `packages/backend/prisma/migrations/*`
+- `packages/backend/prisma/migrations/*` (columns + lease; no public enum widen unless required for CHECK on `idp_status` only)
 - `packages/backend/src/account-deletion.ts`
-- `packages/backend/src/users.ts` (deny upsert)
-- `packages/backend/src/gate.ts` (optional open deny)
-- `packages/backend/src/keycloak-erasure.ts` (**new**, worker-facing)
-- `apps/worker/src/index.ts` (wire erasure after/near anonymize)
-- `packages/backend/test/platform.test.cjs`, `gate.test.cjs`, fake IdP tests
-- `.env.example` placeholders only
+- `packages/backend/src/users.ts` (+ API identity gate)
+- `packages/backend/src/keycloak-erasure.ts` (new)
+- `apps/worker/src/index.ts`
+- tests + `.env.example` placeholders
 
 ## 10. Kết luận
 
 | Hạng mục | Status |
 | --- | --- |
-| SEC-1 design | **Đủ để triển khai** — Option A + R1+R2; độc lập IdP |
-| SEC-2 design | **Đủ để triển khai** sau xác nhận disable + COMPLETED semantics (§8) |
-| ADR mới? | Không bắt buộc nếu follow ADR-09/11/17 + O06; optional short ADR chỉ khi coordinator muốn ghi nhận IdP disable contract |
-| Verdict | **Đề xuất** chấp nhận handoff → spawn BE-S1 ngay; BE-S2 sau confirm §8 |
+| SEC-1 | **Confirmed / implementing** (#345) |
+| SEC-2 | **Đủ để triển khai** — I2 DELETE ≤30d; disable non-terminal; no public enum; allowlist issuer; tombstone digest; lease |
+| Compliance evidence | Neo Apple primary “disable insufficient”; **không** dùng “≈ không dùng lại” |
+| Verdict | **Đủ để triển khai trong scope** — spawn/continue BE-S2; DoD độc lập sau |
 
-**Blocked consumers:** store deletion release gate; Gate staff after self-delete; IdP re-login recreate.  
-**Unblocked by SEC-1 alone:** stale session exploit path.  
-**Still blocked until SEC-2:** full identity erasure / App Review “cannot use account again”.
+**Blocked until SEC-2:** store full account-deletion release gate (IdP record still exists).  
+**Unblocked:** BE-S2 coding từ tip handoff này; SEC-1 parallel.
