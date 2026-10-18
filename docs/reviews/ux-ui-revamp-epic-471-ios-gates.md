@@ -6,7 +6,8 @@
 | Role | `ios` (`docs/agents/roles/ios.md`) · Agent cursor · Cost tier standard |
 | Worker session | `term_50a7eb14-f8f0-4e16-927b-0ba41cf1a60e` · task `task_574d80c7fd35` · dispatch `ctx_1f1ea8ece207` |
 | Architecture impact | **Không** |
-| Source tip SHA (exact) | `65b49e252003436e055a0b8a2e904675eb4fe559` |
+| Source tip SHA (exact, binary/UAT) | `65b49e252003436e055a0b8a2e904675eb4fe559` |
+| Evidence docs commit | tip of this PR branch (see `git log -1` on merge) |
 | Branch | `hangndat/ux-ui-revamp-ios-gates-471` |
 | Bundle | `com.hangndat.ticket` · app `Vemoki` · buildNumber `10` |
 | Team | `BLUA62D52G` (personal) |
