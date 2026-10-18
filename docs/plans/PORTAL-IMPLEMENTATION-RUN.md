@@ -29,3 +29,34 @@ Root tooling/CI/lockfile/shared contracts: coordinator; `apps/portal` và `apps/
 - `pnpm install --frozen-lockfile` trong checkout coordinator PASS; không thay lockfile.
 - Node `v26.11.0`, pnpm `10.32.1` lúc thiết lập. Chưa có evidence runtime portal từ bước docs/handoff.
 - `worker_done` không tự đóng Task hoặc Epic; cần DoD độc lập, CI/evidence theo Task, integration SHA khi required. Code complete / acceptance complete / pilot ready phân biệt.
+
+## Checkpoint tích hợp 18/10/2026 (không thay Project #3)
+
+- PR #411: DoD + security revalidation PASS trên `176670d93fa25f4fe4829490f51a691653a4abf8`; merge `75b366fd1b39383e989c865e8081ecb1fff91934`; CI main `39133825296` SUCCESS. Tasks #408/#409/#410 và Story #407 nghiệm thu **tài liệu**.
+- PR #444: workspace AntD bootstrap, pure `@ticket/web-session`, CI/Turbo/pre-push và contract nhân sự. DoD + security PASS trên `477d3c71e5eaa324d8141a73032e107fca763968`; merge `ba33dcd250f41cf797e249dca7af607f01522503`; CI main `39134227804` SUCCESS. Tasks #413/#414 nghiệm thu phạm vi nền tảng/contract, không runtime OIDC.
+- PR #447: contract danh mục/import/filters/audit/Platform và architect handoff. DoD + security revalidation PASS trên `d203653b9b547cc480e103667bcf7caeef9b39d4`; merge `ef83adf46b29ade75e41b01fff14e6c0869fa70d`; CI main `39135176374` SUCCESS. Tasks #418/#422/#427/#431 nghiệm thu contract; OpenAPI và runtime thuộc backend consumers.
+- PR #446 / Task #415: tip đầu `77c4c252c15d0538ad105dc163a4102c0a8530ca` DoD FAIL vì CI thiếu suite `portal-members.test.cjs`; security PASS với gap. Coordinator thêm shard trong commit `07389544dded9105169dfef0b81288839a11fb15`; worker fix delivery-state/OpenAPI và co-owner race trước revalidation. Chưa nghiệm thu.
+- PR #449 / Task #416: tip `59b5440b2f1da53093a99cd00b8f057732e7ae95`, CI xanh; DoD/security đang duyệt. Chưa nghiệm thu auth/UI từ chỉ 18 unit tests và HTTP smoke.
+- Task #419 catalog có worker riêng; coordinator thêm CI shard `portal-catalog` trong `f26e4e7` trước khi mở PR. Feature backend catalog và fix #446 là hai việc khác nhau; không hai feature backend Dispatch cùng lúc.
+
+### Lifecycle và evidence
+
+| Phạm vi | Task / Dispatch | Evidence |
+| --- | --- | --- |
+| PR #411 security revalidation | `task_955e00468165` / `ctx_9274dac0cbc6` | PR comment + `/tmp/portal-pr411-reviewer-security-revalidation.md` |
+| PR #411 DoD revalidation | `task_30a28b2c2a8a` / `ctx_d6722c79b4d1` | PR comment + `/tmp/portal-pr411-reviewer-dod-revalidation.md` |
+| PR #444 DoD / security | `ctx_4945a5c4acc4` / `ctx_426e5e28edeb` | PR comments + `/tmp/portal-pr444-reviewer-*.md` |
+| #415 implement | `task_ff01b9ec8fe2` / `ctx_846cc7218f25` | PR #446; Docker DB tests; đã release |
+| #416 implement | `task_f5e661f1ba9a` / `ctx_bda0341291f4` | PR #449; đã release |
+| Architect import/privacy | `task_e7c7cd713a1a` / `ctx_57cfceac8c9e` | `docs/architecture/PORTAL-CONTRACT-HANDOFF.md`; đã release |
+| PR #447 DoD / security | `ctx_0c15b9e1f3a2` / `ctx_172c9b2e800a` | PR comments trên d203653; đã release |
+| #419 catalog | `task_8cee52c4f852` / `ctx_45c79aea21a1` | Checkout `portal-backend-catalog` |
+| PR #446 first DoD / security | `ctx_199cddd755a4` / `ctx_7af16ab79375` | PR comments + `/tmp/portal-pr446-reviewer-*.md`; đã release |
+| PR #446 fix | `task_9463581fc893` / `ctx_863978a814b7` | Checkout `portal-backend-members` |
+| PR #449 DoD / security | `ctx_3c854ff96bc5` / `ctx_3cde56938f89` | Checkout `portal-web-foundation` |
+
+Backpressure: ưu tiên review/fix/integration các PR đang mở. Không suy acceptance từ worker_done hoặc build. Bản ghi này là checkpoint, trạng thái động tiếp tục lấy Project #3.
+
+### Làm rõ dependency thật
+
+Task #424 attendee claim cần bảng và lifecycle invitation từ #423; ngoài contract #422, phải chờ #423. Không phát triển hai định nghĩa invitation song song. Các API Platform/audit/catalog không phải chờ toàn Story khác khi contract đã chốt và backend slice rảnh.
