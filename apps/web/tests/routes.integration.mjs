@@ -184,6 +184,44 @@ test('production routes isolate tenant content and reject unknown pairs', async 
     assert.equal(redeemCsrfBlocked.status, 403);
     assert.equal((await redeemCsrfBlocked.json()).code, 'CSRF_ORIGIN_REQUIRED');
 
+    // Invite accept BFF: Origin missing must fail-closed before OIDC/upstream.
+    const inviteCsrfBlocked = await fetch(
+      base + '/api/bff/me/membership-invites/accept',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          token: 'fixture-not-logged',
+          idempotencyKey: '11111111-1111-4111-8111-111111111111',
+        }),
+      },
+    );
+    assert.equal(inviteCsrfBlocked.status, 403);
+    assert.equal(
+      (await inviteCsrfBlocked.json()).code,
+      'CSRF_ORIGIN_REQUIRED',
+    );
+
+    const inviteEvilOrigin = await fetch(
+      base + '/api/bff/me/membership-invites/accept',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Origin: 'https://evil.example',
+        },
+        body: JSON.stringify({
+          token: 'fixture-not-logged',
+          idempotencyKey: '11111111-1111-4111-8111-111111111111',
+        }),
+      },
+    );
+    assert.equal(inviteEvilOrigin.status, 403);
+    assert.equal(
+      (await inviteEvilOrigin.json()).code,
+      'CSRF_ORIGIN_MISMATCH',
+    );
+
     const csrfToken = 'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
     const redeemBff = await fetch(base + '/api/bff/redeem', {
       method: 'POST',
