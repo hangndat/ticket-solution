@@ -153,17 +153,42 @@ export interface ImportFileUploadResponse {
   byteLength: number;  // 1..IMPORT_LIMITS.maxBytes
 }
 
-// Preview body (additive — mapping may bump revision)
-export interface ImportPreviewBody {
-  mappingRevision: number;
-  /** Header name → logical field */
-  columnMapping: { code?: string; email?: string };
+/** Additive on create — all optional for legacy BFF compatibility. */
+export interface ImportCreateBody {
+  kind: ImportKind;
+  sourceId: string;
+  ticketTypeId: string;
+  fileId?: string;
+  rawCodes?: string[];
+  mappingRevision?: number;                 // omit → server default 1
+  columnMapping?: { code?: string; email?: string }; // omit → header defaults
 }
 
-// Errors = authenticated CSV stream (not a JSON DTO with URL):
+/**
+ * Preview body — land cùng PR contracts #422.
+ * Web BFF hiện chỉ forward mappingRevision?; omitted → stored mapping
+ * hoặc default header `code` (CODES) / `email` (GUESTS).
+ */
+export interface ImportPreviewBody {
+  mappingRevision?: number;
+  columnMapping?: { code?: string; email?: string };
+}
+
+// Errors = authenticated CSV stream (NOT JSON envelope / NOT presigned URL):
 // GET …/errors → 200 text/csv | 403 | 404 | 410 IMPORT_ERROR_REPORT_EXPIRED
 // Columns: line, fieldId, code, message — message must not echo full PII/raw codes
 ```
+
+**Mapping theo kind (một file / một logical field):**
+
+| kind | Logical field bắt buộc | Cấm |
+| --- | --- | --- |
+| `CODES` | `code` (header default `code`) | map `email` trên cùng file |
+| `GUESTS` | `email` (header default `email`) | map `code` trên cùng file |
+
+- Đổi `columnMapping` (hoặc logical header) → server **tăng** `mappingRevision` (hoặc reject stale client revision).
+- Preview + commit: validate `mappingRevision` + `fileHash` (+ `previewRevision` trên commit).
+- **Không** ép `ImportPreviewBody` required — omit giữ consumer web hiện tại.
 
 **Validation upload (Nest):**
 
@@ -180,6 +205,9 @@ export interface ImportPreviewBody {
 Không thêm `SUCCESS` / `PARTIAL_SUCCESS`.
 
 **Commit response:** giữ `status: 'COMPLETED'` literal hiện có (không synonym).
+
+**`IMPORT_ENDPOINTS.upload` (chốt):**  
+`'POST /tenants/:tenantId/events/:eventId/imports/files'` — khớp BFF `importsUploadPath`.
 
 ### 4.3 Lifecycle file / job
 
@@ -235,8 +263,34 @@ GET /v1/tenants/{t}/events/{e}/codes?cursor&limit&state&sourceId&q
 | ID | Route | Auth | Projection |
 | --- | --- | --- | --- |
 | **H-P-AUDIT** | `GET /v1/platform/audit?cursor&limit&from&to&action&tenantId?` | Platform Operator + MFA verifier (`acr`/`ACR=2`, audience platform — **không** staff `report.read`) | `PlatformAuditEntry`: `auditId`, `actorUserId`, `action`, `resourceType`, `resourceId`, `tenantId`, `createdAt` — **không** free-text reason, **không** dump `sanitized_diff` |
-| **H-P1** | `GET /v1/platform/tenants?cursor&limit` | same Operator+MFA | Summary: `tenantId`, `name`/`slug` đã có trên create/get, `status`, `createdAt` — **không** secrets |
-| **H-P2** | `GET /v1/platform/tenants/{id}/health` | same | Health: dependency flags / degraded reasons đã có ops shape — **không** invent “success” business status; reuse existing tenant status enum từ platform-tenant |
+| **H-P1** | `GET /v1/platform/tenants?cursor&limit` | same Operator+MFA | `PortalPlatformTenantSummary`: `tenantId`, `slug`, `name`, `status` (`PENDING`\|`ACTIVE`\|`SUSPENDED`), `version`; thêm `createdAt` **chỉ nếu** cột nguồn có — **không** secrets/contact dump mặc định trên list |
+| **H-P2** | `GET /v1/platform/tenants/{id}/health` | same Operator+MFA | Xem DTO dưới — counts only |
+
+```ts
+/** H-P2 — không fake Redis/SMTP/DB global per-tenant */
+export interface PortalPlatformTenantHealth {
+  tenantId: string;
+  observedAt: string; // ISO server clock
+  /** Mirror PlatformTenantDetail.usage — counts only */
+  usage: {
+    events: number;
+    staffActive: number;
+    staffPendingInvites: number;
+    emailToday: number;
+  };
+  notifications: {
+    pending: number;
+    failed: number;
+    dead: number; // providerStatus DEAD
+  };
+  outbox: {
+    pending: number;
+    failed: number;
+  };
+}
+```
+
+**Cấm trên health:** recipient/provider payload, raw error strings, SMTP/Redis/DB “up” boolean giả per-tenant, SLA/`success` status bịa. Đây là **counter observability**, không chẩn đoán infra toàn cục.
 
 `PLATFORM_OIDC_REQUIRED_ACR=2` khớp `PLATFORM_MFA_ACR_VALUES=2` — không copy ví dụ `vemoki-mfa` web vào portal.
 
@@ -316,19 +370,21 @@ Security-sensitive slices → `reviewer-dod` + `reviewer-security` trên exact S
 
 ---
 
-## 10. Unresolved → hỏi coordinator (không user)
+## 10. Coordinator confirmations (đã nhận qua mailbox — không mở thêm SP)
 
-Không có blocker sản phẩm mở cho handoff này (#422 đã chọn multi-step; §7.1 đã chốt perm).
+| # | Chốt | Status |
+| --- | --- | --- |
+| C1 | `IMPORT_ENDPOINTS.upload` = `POST …/imports/files` khớp BFF | **Confirmed** |
+| C2 | `ImportPreviewBody` (+ optional create mapping) land cùng contracts #422 | **Confirmed** |
+| C3 | Errors = authenticated masked CSV stream; không JSON envelope / presign mặc định | **Confirmed** |
+| C4 | Preview/create mapping fields **optional** — omit → stored/default header; không vỡ web BFF | **Confirmed** |
+| C5 | Free-text `reason` khỏi audit list DTO | **Confirmed** |
+| C6 | Platform health = sanitized counts (`PortalPlatformTenantHealth` §5.3); list = id/slug/name/status/version | **Confirmed** |
+| C7 | Root/coordinator authority chốt contracts cuối | **Confirmed** |
 
-Chỉ cần coordinator **ack khi implement contracts**:
+**Unresolved còn lại:** không — đủ để coordinator implement contracts; lệch path upload chỉ được nếu đồng bộ BFF cùng PR.
 
-1. Đặt `upload` vào `IMPORT_ENDPOINTS` đúng path `imports/files` (khớp BFF) — **recommended**.
-2. `ImportPreviewBody.columnMapping` có land cùng PR #422 hay follow-up — nếu tách, preview v1 có thể chấp nhận mapping đã gắn lúc create (field optional `mappingRevision` trên create BFF đã có).
-3. Error report: **đã chốt** authenticated CSV stream (không JSON+presign) — khớp BFF hiện có.
-
-Nếu coordinator chọn lệch path upload → **bắt buộc** cập nhật BFF `importsUploadPath` cùng PR contracts (ownership web), không im lặng.
-
-**Authority contracts:** root/coordinator giữ quyền chốt field names cuối trong `packages/contracts`; handoff này là design input, không tự merge OpenAPI.
+**Authority contracts:** handoff = design input; không tự merge OpenAPI.
 
 ---
 
