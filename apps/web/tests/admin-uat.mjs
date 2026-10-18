@@ -95,6 +95,16 @@ try {
   });
   if (!response?.ok())
     throw new Error(`GET /admin status ${response?.status()}`);
+  // O02 (#371): anonymous soft-redirect → /auth; form UAT requires staff session.
+  if (page.url().includes('/auth')) {
+    const shot = join(OUT, 'admin-soft-redirect-auth.png');
+    await page.screenshot({ path: shot, fullPage: true });
+    console.log(
+      'admin-uat: O02 soft-redirect anonymous /admin → /auth (skip form ops — needs staff session)',
+    );
+    console.log(`admin-uat: screenshot ${shot}`);
+    process.exit(0);
+  }
   const html = await page.content();
   if (/mfest|MFest/i.test(html))
     throw new Error('admin page hardcoded a demo festival');

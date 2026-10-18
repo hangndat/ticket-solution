@@ -76,12 +76,15 @@ export interface MeTenantsResponse {
 }
 
 export interface MeEventItem {
+  tenantId: string;
   eventId: string;
   name: string;
   permissions: string[];
 }
 
 export interface MeEventsResponse {
+  /** true iff active tenant membership OR active event assignment */
+  staffEligible: boolean;
   items: MeEventItem[];
 }
 
@@ -215,8 +218,8 @@ export const PLATFORM_PATHS = {
   supportGrantTickets: (grantId: string) =>
     `/v1/platform/support-grants/${encodeURIComponent(grantId)}/tickets`,
   meTenants: '/v1/me/tenants',
-  meEvents: (tenantId: string) =>
-    `/v1/tenants/${encodeURIComponent(tenantId)}/me/events`,
+  /** O02 discovery — staffEligible + event assignments (not tenant-scoped). */
+  meEvents: '/v1/me/events',
   tenantProfile: (tenantId: string) =>
     `/v1/tenants/${encodeURIComponent(tenantId)}`,
   members: (tenantId: string) =>

@@ -21,7 +21,7 @@ export default function AuthPage() {
 
   return (
     <main id="main" className="container shell auth-page">
-      <SiteNav variant="guest" />
+      <SiteNav />
 
       <h1>Đăng nhập</h1>
       <p className="intro">

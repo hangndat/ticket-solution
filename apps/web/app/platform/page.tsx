@@ -22,7 +22,7 @@ export default async function PlatformPage({ searchParams }: Props) {
 
   return (
     <main id="main" className="container shell redeem-page">
-      <SiteNav variant="platform" />
+      <SiteNav />
       <h1>Platform console</h1>
       <p className="intro">
         Console Operator sau xác minh /platform/me và MFA. Không dùng ô UUID

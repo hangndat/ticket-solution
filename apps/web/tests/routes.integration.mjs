@@ -84,38 +84,34 @@ test('production routes isolate tenant content and reject unknown pairs', async 
     assert.ok(!home.includes('Sunburst Collective'));
     assert.ok(!home.includes('MFest'));
     assert.ok(!home.includes('Northline Studio'));
+    // O02 guest chrome: deny-by-default — no Admin/Cổng/Platform as if entitled.
+    assert.ok(home.includes('data-testid="nav-redeem"') || home.includes('/redeem'));
+    assert.ok(!home.includes('data-testid="nav-admin"'));
+    assert.ok(!home.includes('data-testid="nav-gate"'));
+    assert.ok(!home.includes('data-testid="nav-platform"'));
 
     // BFF list proxy exists; Nest down → 502 UPSTREAM_UNAVAILABLE.
     const listBff = await fetch(base + '/api/bff/public/tenants/mfest-demo/events');
     assert.equal(listBff.status, 502);
     assert.equal((await listBff.json()).code, 'UPSTREAM_UNAVAILABLE');
-    const admin = await fetch(base + '/admin');
-    assert.equal(admin.status, 200);
-    const adminHtml = await admin.text();
-    assert.ok(adminHtml.includes('Không gian quản trị sự kiện'));
-    assert.ok(adminHtml.includes('OIDC chưa cấu hình'));
-    assert.ok(adminHtml.includes('không coi là thành công'));
-    assert.ok(adminHtml.includes('Xem trước'));
-    assert.ok(adminHtml.includes('Lưu phiên bản'));
-    assert.ok(adminHtml.includes('Nhập mã'));
-    assert.ok(adminHtml.includes('Đọc quota'));
-    assert.ok(adminHtml.includes('Cổng · báo cáo sự kiện'));
-    assert.ok(adminHtml.includes('Tải lại báo cáo'));
-    assert.ok(adminHtml.includes('Duyệt'));
-    assert.ok(adminHtml.includes('Từ chối'));
-    assert.ok(adminHtml.includes('Lý do từ chối'));
-    assert.ok(adminHtml.includes('Tạo event'));
-    assert.ok(adminHtml.includes('Tìm vé CS'));
-    assert.ok(adminHtml.includes('Gửi lại email'));
-    assert.ok(adminHtml.includes('Tạo export CSV'));
-    assert.ok(adminHtml.includes('Tải CSV'));
-    assert.ok(adminHtml.includes('Hỗ trợ · tra cứu và gửi lại email'));
-    assert.ok(adminHtml.includes('Chuẩn bị'));
-    assert.ok(adminHtml.includes('Xuất bản'));
-    assert.ok(adminHtml.includes('admin-tech-details'));
-    assert.ok(!adminHtml.includes('ticket↗'));
-    assert.ok(adminHtml.includes('vemoki'));
-    assert.equal(/FUN FEST|fun-fest/i.test(adminHtml), false);
+    // O02: anonymous /admin soft-redirects (proxy 307) to /auth?next=/admin.
+    const adminRaw = await fetch(base + '/admin', { redirect: 'manual' });
+    assert.equal(adminRaw.status, 307, 'anonymous /admin should HTTP 307');
+    const adminLoc = adminRaw.headers.get('location') ?? '';
+    assert.ok(adminLoc.includes('/auth'), `Location ${adminLoc}`);
+    assert.ok(
+      adminLoc.includes('next=') && adminLoc.includes('admin'),
+      `next=/admin missing in ${adminLoc}`,
+    );
+    const adminFollow = await fetch(base + '/admin');
+    assert.equal(adminFollow.status, 200);
+    const adminHtml = await adminFollow.text();
+    assert.ok(adminHtml.includes('Đăng nhập') || adminHtml.includes('Cần đăng nhập'));
+    assert.ok(!adminHtml.includes('Không gian quản trị sự kiện'));
+    assert.ok(!adminHtml.includes('admin-tech-details'));
+    assert.ok(!adminHtml.includes('data-testid="nav-admin"'));
+    assert.ok(!adminHtml.includes('data-testid="nav-gate"'));
+    assert.ok(!adminHtml.includes('data-testid="nav-platform"'));
     const authPoc = await fetch(base + '/auth');
     assert.equal(authPoc.status, 200);
     const authHtml = await authPoc.text();
@@ -150,12 +146,21 @@ test('production routes isolate tenant content and reject unknown pairs', async 
     assert.ok(!claimHtml.includes('Keycloak'));
     assert.ok(!claimHtml.includes('Không tải được trang này'));
 
-    const gate = await fetch(base + '/gate');
-    assert.equal(gate.status, 200);
-    const gateHtml = await gate.text();
-    assert.ok(gateHtml.includes('Cổng check-in'));
-    assert.ok(gateHtml.includes('Không cho khách qua'));
-    assert.ok(gateHtml.includes('OIDC chưa cấu hình'));
+    // O02: anonymous /gate soft-redirects (proxy 307) to /auth?next=/gate.
+    const gateRaw = await fetch(base + '/gate', { redirect: 'manual' });
+    assert.equal(gateRaw.status, 307, 'anonymous /gate should HTTP 307');
+    const gateLoc = gateRaw.headers.get('location') ?? '';
+    assert.ok(gateLoc.includes('/auth'), `Location ${gateLoc}`);
+    assert.ok(
+      gateLoc.includes('next=') && gateLoc.includes('gate'),
+      `next=/gate missing in ${gateLoc}`,
+    );
+    const gateFollow = await fetch(base + '/gate');
+    assert.equal(gateFollow.status, 200);
+    const gateHtml = await gateFollow.text();
+    assert.ok(gateHtml.includes('Đăng nhập') || gateHtml.includes('Cần đăng nhập'));
+    assert.ok(!gateHtml.includes('data-testid="gate-offline-shell"'));
+    assert.ok(!gateHtml.includes('gate-confirm-submit'));
 
     // Gate BFF: Origin missing must fail-closed before OIDC/upstream (admin pattern).
     const gateCsrfBlocked = await fetch(base + '/api/bff/gate/confirm', {

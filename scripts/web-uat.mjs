@@ -67,6 +67,7 @@ Commands:
   screenshot <url> [out.png]                   PNG under apps/web/.uat-artifacts/
   goto <url>                                   Print final URL + title
   o13-sales [baseUrl]                          O13 marketing screenshots → docs/reviews/o13-pr-247-uat/
+  nav-o02 [baseUrl]                            O02 SiteNav guest chrome + soft-redirect /admin|/gate
 
 Env:
   WEB_BASE_URL     default http://127.0.0.1:3000
@@ -435,6 +436,16 @@ switch (cmd) {
   case 'o13-sales':
     await cmdO13Sales(args[0]);
     break;
+  case 'nav-o02': {
+    const { spawnSync } = await import('node:child_process');
+    const script = join(ROOT, 'apps/web/tests/nav-o02-uat.mjs');
+    const r = spawnSync(process.execPath, [script, args[0] || DEFAULT_BASE].filter(Boolean), {
+      stdio: 'inherit',
+      env: process.env,
+    });
+    process.exit(r.status ?? 1);
+    break;
+  }
   case 'goto':
     await cmdGoto(args[0]);
     break;
