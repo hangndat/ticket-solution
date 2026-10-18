@@ -4,6 +4,20 @@ Ngày cập nhật: 2026-10-18
 Nguồn: [PRD](./PRD.md) mục 15, [Technical Design](./TECHNICAL-DESIGN.md) mục 2 & 18, [ROADMAP](./ROADMAP.md)
 Tracking: Issues [#10](https://github.com/hangndat/ticket-solution/issues/10), [#11](https://github.com/hangndat/ticket-solution/issues/11)
 
+## O16 — Portal admin riêng Ant Design (18/10/2026)
+
+Người dùng phản hồi **“duyệt”** sau [roadmap PORTAL](./plans/PORTAL-ROADMAP.md) và planning review độc lập PASS. Chấp nhận gói **P0 + P1**, Epic [#406](https://github.com/hangndat/ticket-solution/issues/406):
+
+- `PORTAL-SEPARATE-APP`: `portal.vemoki.com`, Next `apps/portal` riêng trong monorepo; mở rộng ownership web cho `apps/portal` qua Task Spec; root tooling/CI/lockfile/contracts vẫn coordinator.
+- `ANTD-CORE-FIRST`: Ant Design thuần, tiếng Việt, theme Vemoki; không đổi sang Umi/Ant Design Pro; ProComponents không mặc định.
+- `GATE-STAY-APP`: Web Gate và iOS giữ nguyên trong đợt đầu; attendee/public vẫn `app.vemoki.com`, marketing vẫn `vemoki.com`.
+- `PLATFORM-PORTAL-ZONE`: Platform Operator vào khu vực portal riêng theo wave, client/audience/session và quyền tách tenant; không nâng quyền tenant Owner.
+- Đủ luồng admin hiện có trước cutover; đóng gap UI/BFF/contracts/Nest thực tế; audit/ops trong gói cần contract/RBAC/test, không fake dữ liệu hay coi UI có sẵn là API đã chạy.
+- Cho phép implementation → conventional commit/feature branch → push/PR → review độc lập exact SHA → CI → coordinator integration theo git workflow. Không tự triển khai production DNS/TLS/cutover, tạo cloud resources hoặc submit store từ approval này; P1.2 hiện chỉ chuẩn bị cấu hình/runbook và kiểm thử local/môi trường được cho phép.
+- Không mở P2/multi-event BI, enterprise SSO mới/billing/custom-domain, payment/refund/transfer, seat map, Wallet, Android hoặc validate-only desk. Keycloak IdP SSO hiện có khác chia sẻ BFF cookie; cookie host-only từng host.
+
+Architecture impact: **Có** — topology staff, OIDC/BFF, package UI và API gaps. ADR-20 ghi chi tiết kỹ thuật và handoff; không sửa lịch sử O13, chỉ chuyển audience admin theo quyết định mới. Run triển khai: `run_34fde1e32ed1`. Approval ≠ code complete ≠ acceptance complete ≠ pilot ready.
+
 **Quy ước:** `Đã chốt (MVP)` = áp dụng cho release đầu / pilot. `Giữ mở` = chưa khóa số liệu hoặc chính sách dài hạn. Đổi quyết định phải ghi dòng mới, không sửa im lặng.
 
 ## O — Quyết định sản phẩm (PRD)
