@@ -206,7 +206,7 @@ jobs:
           - shard: issue-gate
             files: test/issue.test.cjs test/gate.test.cjs
           - shard: account-deletion
-            files: test/platform.test.cjs test/account-session-revoke.test.cjs test/account-ack-session-revoke.test.cjs
+            files: test/platform.test.cjs test/account-session-revoke.test.cjs test/account-ack-session-revoke.test.cjs test/account-idp-erasure.test.cjs
           - shard: approval-config-lifecycle
             files: test/approval.test.cjs test/config-publish.test.cjs test/event-lifecycle.test.cjs test/form-consent.test.cjs
           - shard: n1-email
