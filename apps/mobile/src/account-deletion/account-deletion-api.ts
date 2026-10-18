@@ -91,7 +91,7 @@ export async function postAccountDeletionRequest(
     if (!isAccountDeletionRequest(json)) {
       return { status: 'invalid', httpStatus: response.status };
     }
-    // ACK must not be treated as COMPLETED erasure (O06 unsettled).
+    // ACK must not be treated as COMPLETED erasure.
     if (json.state === 'COMPLETED') {
       return { status: 'invalid', httpStatus: response.status };
     }
