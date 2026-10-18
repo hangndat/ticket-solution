@@ -6,7 +6,21 @@ import {
   readPortalOidcConfig,
   type PortalOidcConfig,
 } from './config';
-import { clearStaffSessionCookies } from './cookies';
+import { clearStaffSessionCookies, readStaffSubject } from './cookies';
+import { PORTAL_AUTH_COOKIES } from './local-cookies';
+import {
+  clearStaffRefreshFlightCache,
+  singleFlightStaffRefresh,
+  staffRefreshFlightKey,
+  type RefreshFlightGrant,
+  type RefreshFlightResult,
+} from './refresh-flight';
+import {
+  acceptOidcTokenGrant,
+  getRemoteJwks,
+  TokenVerifyError,
+} from './verify-tokens';
+import type { JWTVerifyGetKey } from 'jose';
 
 export type TokenGrantResponse = {
   access_token?: string;
@@ -21,7 +35,12 @@ export type RefreshOutcome =
   | { ok: true; accessToken: string }
   | { ok: false; reason: 'misconfigured' | 'missing_refresh' | 'rejected' | 'network' };
 
-async function exchangeRefresh(
+export type ExchangeRefreshFn = (
+  config: PortalOidcConfig,
+  refreshToken: string,
+) => Promise<{ status: number; body: TokenGrantResponse } | null>;
+
+export async function exchangeRefresh(
   config: PortalOidcConfig,
   refreshToken: string,
 ): Promise<{ status: number; body: TokenGrantResponse } | null> {
@@ -46,12 +65,89 @@ async function exchangeRefresh(
   }
 }
 
+async function applyStaffGrant(
+  grant: RefreshFlightGrant,
+): Promise<void> {
+  const jar = await cookies();
+  const maxAge = grant.expiresIn;
+  jar.set(
+    SESSION_COOKIES.access,
+    grant.accessToken,
+    sessionCookieOptions(maxAge),
+  );
+  if (grant.refreshToken) {
+    jar.set(
+      SESSION_COOKIES.refresh,
+      grant.refreshToken,
+      sessionCookieOptions(60 * 60 * 24 * 30),
+    );
+  }
+  if (grant.idToken) {
+    jar.set(
+      SESSION_COOKIES.idToken,
+      grant.idToken,
+      sessionCookieOptions(maxAge),
+    );
+  }
+  jar.set(
+    PORTAL_AUTH_COOKIES.subject,
+    grant.subject,
+    sessionCookieOptions(60 * 60 * 24 * 30),
+  );
+}
+
+/**
+ * Production refresh path used by single-flight workers.
+ * Injectable exchange + JWKS for route/HTTP tests with local fixtures.
+ */
+export async function performStaffRefreshFlight(input: {
+  refreshToken: string;
+  config: PortalOidcConfig;
+  expectedSubject?: string | null;
+  exchange?: ExchangeRefreshFn;
+  jwks?: JWTVerifyGetKey;
+}): Promise<RefreshFlightResult> {
+  const exchange = input.exchange ?? exchangeRefresh;
+  const result = await exchange(input.config, input.refreshToken);
+  if (!result) return { ok: false, reason: 'network' };
+  if (
+    result.status < 200 ||
+    result.status >= 300 ||
+    !result.body.access_token
+  ) {
+    return { ok: false, reason: 'rejected' };
+  }
+
+  try {
+    const grant = await acceptOidcTokenGrant({
+      accessToken: result.body.access_token,
+      idToken: result.body.id_token,
+      refreshToken: result.body.refresh_token,
+      expiresIn: result.body.expires_in,
+      issuer: input.config.issuer,
+      clientId: input.config.clientId,
+      accessAudience: input.config.audience,
+      jwks: input.jwks ?? getRemoteJwks(input.config.jwksUrl),
+      expectedSubject: input.expectedSubject,
+    });
+    return { ok: true, grant };
+  } catch (error) {
+    if (error instanceof TokenVerifyError) {
+      return { ok: false, reason: 'rejected' };
+    }
+    return { ok: false, reason: 'rejected' };
+  }
+}
+
 /**
  * Rotate staff access (and refresh when IdP returns a new one).
- * On any failure: clear staff jar fail-closed — never keep a half-dead session.
+ * Single-flight keyed by hash(refresh+issuer+client). Verify JWTs before
+ * setting cookies. On shared failure every waiter clears fail-closed; on
+ * success every waiter applies the same grant to its own jar.
  */
 export async function refreshStaffAccessToken(): Promise<RefreshOutcome> {
   if (!isPortalOidcConfigured()) {
+    clearStaffRefreshFlightCache();
     await clearStaffSessionCookies();
     return { ok: false, reason: 'misconfigured' };
   }
@@ -59,64 +155,27 @@ export async function refreshStaffAccessToken(): Promise<RefreshOutcome> {
   const jar = await cookies();
   const refresh = jar.get(SESSION_COOKIES.refresh)?.value?.trim() ?? '';
   if (!refresh) {
+    clearStaffRefreshFlightCache();
     await clearStaffSessionCookies();
     return { ok: false, reason: 'missing_refresh' };
   }
 
-  const result = await exchangeRefresh(config, refresh);
-  if (!result) {
-    await clearStaffSessionCookies();
-    return { ok: false, reason: 'network' };
-  }
-  if (
-    result.status < 200 ||
-    result.status >= 300 ||
-    !result.body.access_token
-  ) {
-    await clearStaffSessionCookies();
-    return { ok: false, reason: 'rejected' };
-  }
-
-  const maxAge = Math.max(60, result.body.expires_in ?? 300);
-  jar.set(
-    SESSION_COOKIES.access,
-    result.body.access_token,
-    sessionCookieOptions(maxAge),
+  const expectedSubject = await readStaffSubject();
+  const key = staffRefreshFlightKey(refresh, config.issuer, config.clientId);
+  const shared = await singleFlightStaffRefresh(key, () =>
+    performStaffRefreshFlight({
+      refreshToken: refresh,
+      config,
+      expectedSubject,
+    }),
   );
-  if (result.body.refresh_token) {
-    jar.set(
-      SESSION_COOKIES.refresh,
-      result.body.refresh_token,
-      sessionCookieOptions(60 * 60 * 24 * 30),
-    );
-  }
-  if (result.body.id_token) {
-    jar.set(
-      SESSION_COOKIES.idToken,
-      result.body.id_token,
-      sessionCookieOptions(maxAge),
-    );
-  }
-  return { ok: true, accessToken: result.body.access_token };
-}
 
-/** Pure helper for unit tests — does not touch cookies. */
-export function classifyRefreshFailure(input: {
-  configured: boolean;
-  hasRefresh: boolean;
-  httpStatus: number | null;
-  accessToken?: string;
-}): Extract<RefreshOutcome, { ok: false }> {
-  if (!input.configured) return { ok: false, reason: 'misconfigured' };
-  if (!input.hasRefresh) return { ok: false, reason: 'missing_refresh' };
-  if (input.httpStatus === null) return { ok: false, reason: 'network' };
-  if (
-    input.httpStatus < 200 ||
-    input.httpStatus >= 300 ||
-    !input.accessToken
-  ) {
-    return { ok: false, reason: 'rejected' };
+  if (!shared.ok) {
+    clearStaffRefreshFlightCache();
+    await clearStaffSessionCookies();
+    return shared;
   }
-  // Successful HTTP+token is not a failure; tests only cover fail paths.
-  return { ok: false, reason: 'rejected' };
+
+  await applyStaffGrant(shared.grant);
+  return { ok: true, accessToken: shared.grant.accessToken };
 }

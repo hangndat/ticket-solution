@@ -11,6 +11,9 @@ export type PortalOidcConfig = {
   clientSecret: string;
   redirectUri: string;
   scopes: string;
+  /** Access-token audience — staff API (`ticket-api`). */
+  audience: string;
+  jwksUrl: string;
 };
 
 export function readPortalOidcConfig(
@@ -20,11 +23,36 @@ export function readPortalOidcConfig(
   const clientId = env.OIDC_CLIENT_ID?.trim() ?? '';
   const clientSecret = env.OIDC_CLIENT_SECRET?.trim() ?? '';
   const redirectUri = env.OIDC_REDIRECT_URI?.trim() ?? '';
+  const audience = env.OIDC_AUDIENCE?.trim() ?? '';
+  const jwksUrl = env.OIDC_JWKS_URL?.trim() ?? '';
   const scopes = env.OIDC_SCOPES?.trim() || 'openid profile email offline_access';
-  if (!issuer || !clientId || !clientSecret || !redirectUri) {
+  if (
+    !issuer ||
+    !clientId ||
+    !clientSecret ||
+    !redirectUri ||
+    !audience ||
+    !jwksUrl
+  ) {
     return null;
   }
-  return { issuer, clientId, clientSecret, redirectUri, scopes };
+  try {
+    const url = new URL(jwksUrl);
+    if (url.protocol !== 'https:' && url.protocol !== 'http:') {
+      return null;
+    }
+  } catch {
+    return null;
+  }
+  return {
+    issuer,
+    clientId,
+    clientSecret,
+    redirectUri,
+    scopes,
+    audience,
+    jwksUrl,
+  };
 }
 
 export function isPortalOidcConfigured(env: OidcEnvBag = process.env): boolean {
@@ -66,11 +94,29 @@ export function productOrigin(env: OidcEnvBag = process.env): string {
   return 'http://127.0.0.1:3000';
 }
 
+/** Path-only segment for Gate deeplink query allowlist (tenantId / eventId). */
+export function isGateDeeplinkId(raw: string | null | undefined): boolean {
+  if (!raw) return false;
+  return /^[A-Za-z0-9_-]{1,128}$/.test(raw);
+}
+
+/**
+ * GATE-STAY-APP deeplink to product `/gate`.
+ * Optional tenantId/eventId query only when they match the allowlist pattern.
+ */
 export function gateDeeplinkUrl(
   env: OidcEnvBag = process.env,
   path = '/gate',
+  query?: { tenantId?: string; eventId?: string },
 ): string {
   const origin = productOrigin(env);
   const safePath = path.startsWith('/') && !path.startsWith('//') ? path : '/gate';
-  return `${origin}${safePath}`;
+  const url = new URL(`${origin}${safePath}`);
+  if (query?.tenantId && isGateDeeplinkId(query.tenantId)) {
+    url.searchParams.set('tenantId', query.tenantId);
+  }
+  if (query?.eventId && isGateDeeplinkId(query.eventId)) {
+    url.searchParams.set('eventId', query.eventId);
+  }
+  return url.toString();
 }
