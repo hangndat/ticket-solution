@@ -5,7 +5,8 @@
 | Issue | #349 (Epic #301 → Story #305) |
 | Role | `backend` (`docs/agents/roles/backend.md`) |
 | Architecture impact | **Có** — atomic ACK session revoke (architect D1 / handoff §4) |
-| Exact SHA (behavior) | _(filled after commit)_ |
+| Exact SHA (behavior) | `5a2db727968c1f9f0dbff6b2bff9c6e08739f968` |
+| Branch tip | xem tip PR / `git rev-parse HEAD` trên branch `hangndat/d13-be-ack-session-revoke` |
 | Ownership | `packages/backend` migration + ACK/Gate hooks + DB tests |
 | Related | PR #348 apply-only merge `f673a92014e501b84b2e2a8fc1372815ef597ccc`; IdP SEC-2 **chưa** |
 
