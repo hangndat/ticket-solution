@@ -32,7 +32,6 @@ const LINKS: Record<NavVariant, { href: string; label: string }[]> = {
   guest: [
     { href: '/redeem', label: 'Đổi mã' },
     { href: '/claim', label: 'Nhận lời mời' },
-    { href: '/invite', label: 'Invite thành viên' },
     { href: '/auth', label: 'Đăng nhập' },
   ],
   staff: [

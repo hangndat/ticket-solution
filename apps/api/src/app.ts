@@ -63,6 +63,10 @@ import {
 import { registerMetricsEndpoint } from './metrics';
 import { PlatformController, PlatformService, buildPlatformDeps } from './platform';
 import { BrandingController, BrandingService } from './branding';
+import {
+  PublishedEventsController,
+  PublishedEventsService,
+} from './published-events';
 
 class HealthDto implements HealthResponse {
   @ApiProperty({ enum: ['ok'] }) status!: 'ok';
@@ -336,6 +340,7 @@ export async function createApp(
       NotificationController,
       PlatformController,
       BrandingController,
+      PublishedEventsController,
     ],
     providers: [
       {
@@ -399,6 +404,10 @@ export async function createApp(
       {
         provide: BrandingService,
         useValue: new BrandingService(ticketDeps),
+      },
+      {
+        provide: PublishedEventsService,
+        useValue: new PublishedEventsService({ db: identity.db }),
       },
       {
         provide: DatabaseShutdown,

@@ -61,9 +61,18 @@ import {
   type TicketTypeView,
 } from '../../src/admin/event-setup';
 import {
+  REPORT_EMAIL_CS_CTA_LABEL,
+  REPORT_EMAIL_CS_SECTION_ID,
+  REPORT_PENDING_APPROVAL_CTA_LABEL,
+  REPORT_PENDING_APPROVAL_SECTION_ID,
   TICKET_STATES,
+  formatQuotaCapacityState,
+  formatQuotaRemaining,
+  formatReportAsOf,
   interpretEventReport,
+  reportShowsEmailCsCta,
   reportShowsNumbers,
+  reportShowsPendingApprovalCta,
   type EventReportView,
 } from '../../src/admin/report';
 import {
@@ -75,8 +84,22 @@ import { fetchJson } from '../../src/redeem/fetch-json';
 import { REQUEST_TIMEOUT_MS } from '../../src/redeem/poll-operation';
 import { ConfigBrandPanel } from './config-brand-panel';
 import { SurfaceState } from '../../src/ui/surface-state';
+import {
+  deriveAdminReadiness,
+  readinessAllOk,
+  readinessSummary,
+} from '../../src/admin/readiness';
 
 type Props = { initialTenantId?: string; initialEventId?: string };
+
+type AdminJob = 'setup' | 'guests' | 'gate' | 'support';
+
+const ADMIN_JOBS: { id: AdminJob; label: string }[] = [
+  { id: 'setup', label: 'Chuẩn bị' },
+  { id: 'guests', label: 'Khách & mã' },
+  { id: 'gate', label: 'Cổng' },
+  { id: 'support', label: 'Hỗ trợ' },
+];
 
 type UnclearAttempt = { key: string; fingerprint: string; unclear: boolean };
 
@@ -148,6 +171,10 @@ export function AdminForm({
   const [tenantsLoadError, setTenantsLoadError] = useState<string | null>(null);
   const [tenantsPhase, setTenantsPhase] = useState<'loading' | 'ready'>('loading');
   const [decision, setDecision] = useState<AdminDecision | null>(null);
+  const [lastQuotaDecision, setLastQuotaDecision] = useState<Extract<
+    AdminDecision,
+    { kind: 'quota' }
+  > | null>(null);
   const [createView, setCreateView] = useState<CreateEventView | null>(null);
   const [listView, setListView] = useState<EventListView | null>(null);
   const [detailView, setDetailView] = useState<EventDetailView | null>(null);
@@ -179,11 +206,58 @@ export function AdminForm({
   const [sourceView, setSourceView] = useState<SourceView | null>(null);
   const [csView, setCsView] = useState<CsView | null>(null);
   const [exportView, setExportView] = useState<ExportView | null>(null);
-  const [report, setReport] = useState<EventReportView | null>(null);
+  const [reportHold, setReportHold] = useState<{
+    tenantId: string;
+    eventId: string;
+    view: EventReportView;
+  } | null>(null);
+  const [activeJob, setActiveJob] = useState<AdminJob>('setup');
+  const [browserOnline, setBrowserOnline] = useState(true);
+  // Fail-closed O12: only surface numbers for the current tenant/event scope.
+  const report =
+    reportHold !== null &&
+    reportHold.tenantId === tenantId.trim() &&
+    reportHold.eventId === eventId.trim()
+      ? reportHold.view
+      : null;
+
+  /** Switch job panel then scroll/focus the target section (O12 P3 deep-link). */
+  function goToAdminSection(job: AdminJob, sectionId: string) {
+    setActiveJob(job);
+    window.setTimeout(() => {
+      const el = document.getElementById(sectionId);
+      if (!el) return;
+      if (window.location.hash !== `#${sectionId}`) {
+        window.history.replaceState(null, '', `#${sectionId}`);
+      }
+      el.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      el.focus({ preventScroll: true });
+    }, 0);
+  }
   const currentEvent: EventDetail | null =
     detailView?.kind === 'detail' ? detailView.event : null;
   const selectedTenant = tenantChoices.find((t) => t.tenantId === tenantId.trim());
   const tenantSuspended = selectedTenant?.status === 'SUSPENDED';
+  const readinessItems = deriveAdminReadiness({
+    ticketTypeId,
+    sourceId,
+    quotaDecision: lastQuotaDecision,
+    report,
+    eventQuotaInput: eventQuota,
+    configPayload: configEditor.payload,
+    configPublished: configEditor.publishedSnapshot != null,
+    hasEventContext: Boolean(eventId.trim() || currentEvent),
+  });
+  const publishReady = readinessAllOk(readinessItems);
+  const eventTitle =
+    (currentEvent?.name || eventName.trim() || '').trim() ||
+    (currentEvent?.slug || eventSlug.trim() || '').trim() ||
+    null;
+  const orgTitle =
+    (selectedTenant?.name || '').trim() ||
+    (selectedTenant?.slug || '').trim() ||
+    (configEditor.payload.brand.organizationName || '').trim() ||
+    null;
 
   useEffect(() => {
     void (async () => {
@@ -211,6 +285,17 @@ export function AdminForm({
       setTenantsPhase('ready');
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- load once on mount
+  }, []);
+
+  useEffect(() => {
+    const sync = () => setBrowserOnline(navigator.onLine);
+    sync();
+    window.addEventListener('online', sync);
+    window.addEventListener('offline', sync);
+    return () => {
+      window.removeEventListener('online', sync);
+      window.removeEventListener('offline', sync);
+    };
   }, []);
 
   function clearSpecialViews() {
@@ -269,6 +354,7 @@ export function AdminForm({
       setConfigEditor((prev) => lockPublishedConfig(prev));
       setExpectedVersion(String(next.version));
     }
+    if (next.kind === 'quota') setLastQuotaDecision(next);
     bumpNotice();
     setDecision(next);
     setBusy(false);
@@ -303,24 +389,27 @@ export function AdminForm({
   }
 
   async function loadReport() {
+    const requestScope = scope();
     setBusy(true);
-    setReport(null);
+    setReportHold(null);
     setDecision(null);
     clearSpecialViews();
-    const params = new URLSearchParams(scope());
+    const params = new URLSearchParams(requestScope);
     const result = await fetchJson(
       `/api/bff/admin/report?${params.toString()}`,
       { method: 'GET' },
       REQUEST_TIMEOUT_MS,
     );
     bumpNotice();
-    setReport(
-      interpretEventReport(
+    setReportHold({
+      tenantId: requestScope.tenantId,
+      eventId: requestScope.eventId,
+      view: interpretEventReport(
         result.status,
         result.json,
         result.networkError || result.timedOut,
       ),
-    );
+    });
     setBusy(false);
   }
 
@@ -1047,51 +1136,36 @@ export function AdminForm({
   }
 
   return (
-    <div className="redeem-form">
-      <div className="redeem-fields">
-        <label>
-          Tenant (từ /me/tenants)
-          <select
-            name="tenantSelector"
-            data-testid="tenant-selector"
-            value={
-              tenantChoices.some((t) => t.tenantId === tenantId.trim())
-                ? tenantId.trim()
-                : ''
-            }
-            onChange={(e) => setTenantId(e.target.value)}
-          >
-            <option value="">— chọn tenant —</option>
-            {tenantChoices.map((t) => (
-              <option key={t.tenantId} value={t.tenantId}>
-                {t.slug} · {t.name} ({t.status}/{t.role})
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Tenant ID (fallback / UAT)
-          <input
-            name="tenantId"
-            value={tenantId}
-            onChange={(e) => setTenantId(e.target.value)}
-            autoComplete="off"
-            spellCheck={false}
-            placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-          />
-        </label>
-        <label>
-          Event ID
-          <input
-            name="eventId"
-            value={eventId}
-            onChange={(e) => setEventId(e.target.value)}
-            autoComplete="off"
-            spellCheck={false}
-            placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-          />
-        </label>
-      </div>
+    <div className="redeem-form admin-workspace" data-testid="admin-workspace">
+      {!browserOnline ? (
+        <aside
+          className="notice state-error"
+          role="alert"
+          data-testid="admin-offline-banner"
+        >
+          <strong>Mất kết nối mạng</strong>
+          <p>
+            Thao tác quản trị có thể chưa rõ kết quả — không đánh dấu đã lưu /
+            đã xuất bản khi request chưa xác nhận.
+          </p>
+        </aside>
+      ) : null}
+      <header className="admin-event-summary" data-testid="admin-event-summary">
+        <p className="admin-event-summary__eyebrow">
+          {orgTitle ? `Tổ chức · ${orgTitle}` : 'Tổ chức · chưa chọn'}
+        </p>
+        <h2 className="admin-event-summary__title">
+          {eventTitle ?? 'Chưa chọn sự kiện'}
+        </h2>
+        <p className="admin-event-summary__meta muted" data-testid="current-event-context">
+          {currentEvent
+            ? `Trạng thái: ${currentEvent.contentStatus}/${currentEvent.businessStatus}`
+            : eventId.trim()
+              ? 'Đã chọn sự kiện — tải metadata nếu tên chưa hiện.'
+              : 'Chọn tổ chức và sự kiện để làm việc.'}
+          {selectedTenant ? ` · ${selectedTenant.role}` : ''}
+        </p>
+      </header>
       {tenantsPhase === 'loading' ? (
         <SurfaceState
           kind="loading"
@@ -1115,10 +1189,56 @@ export function AdminForm({
         />
       ) : (
         <p className="intro">
-          Tenant discovery qua selector (không coi ô UUID là đường vận hành
-          chính). Event, ticket type và source tạo qua API/UI thật.
+          Chọn tổ chức bằng tên/slug. UUID nội bộ nằm trong «Chi tiết kỹ thuật».
         </p>
       )}
+      <label>
+        Tổ chức
+        <select
+          name="tenantSelector"
+          data-testid="tenant-selector"
+          value={
+            tenantChoices.some((t) => t.tenantId === tenantId.trim())
+              ? tenantId.trim()
+              : ''
+          }
+          onChange={(e) => setTenantId(e.target.value)}
+        >
+          <option value="">— chọn tổ chức —</option>
+          {tenantChoices.map((t) => (
+            <option key={t.tenantId} value={t.tenantId}>
+              {t.name} · {t.slug} ({t.status}/{t.role})
+            </option>
+          ))}
+        </select>
+      </label>
+      <details className="admin-tech-details" data-testid="admin-tech-details">
+        <summary>Chi tiết kỹ thuật (ID)</summary>
+        <div className="redeem-fields">
+          <label>
+            Tenant ID
+            <input
+              name="tenantId"
+              value={tenantId}
+              onChange={(e) => setTenantId(e.target.value)}
+              autoComplete="off"
+              spellCheck={false}
+              placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+            />
+          </label>
+          <label>
+            Event ID
+            <input
+              name="eventId"
+              value={eventId}
+              onChange={(e) => setEventId(e.target.value)}
+              autoComplete="off"
+              spellCheck={false}
+              placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+            />
+          </label>
+        </div>
+      </details>
       {tenantSuspended ? (
         <aside className="notice" role="status" data-testid="suspend-banner">
           <strong>Tenant SUSPENDED</strong>
@@ -1128,20 +1248,44 @@ export function AdminForm({
           </p>
         </aside>
       ) : null}
-      <TenantStaffPanel tenantId={tenantId} />
-      <section className="admin-section" aria-labelledby="create-event-heading">
-        <h2 id="create-event-heading">Tạo / liệt kê event trong tenant</h2>
+      <div className="admin-layout">
+        <nav
+          className="admin-job-nav"
+          aria-label="Việc quản trị"
+          data-testid="admin-job-nav"
+        >
+          {ADMIN_JOBS.map((job) => (
+            <button
+              key={job.id}
+              type="button"
+              className="admin-job-nav__btn"
+              data-testid={`admin-job-${job.id}`}
+              aria-current={activeJob === job.id ? 'true' : 'false'}
+              onClick={() => setActiveJob(job.id)}
+            >
+              {job.label}
+            </button>
+          ))}
+        </nav>
+        <div className="admin-job-panels">
+      <section
+        className="admin-section admin-job-panel"
+        data-job="setup"
+        hidden={activeJob !== 'setup'}
+        aria-labelledby="create-event-heading"
+      >
+        <h2 id="create-event-heading">Chuẩn bị · sự kiện</h2>
         <p>
-          Context hiện tại: tenant + event đã chọn. POST create kèm
-          Idempotency-Key và CSRF. Shape sai → chưa biết, không coi là đã tạo.
+          Tạo hoặc liệt kê sự kiện trong tổ chức. Kết quả chưa rõ (timeout/5xx)
+          không coi là đã tạo.
         </p>
-        <p data-testid="current-event-context" className="intro">
-          Context: tenant={tenantId.trim() || '—'} · event=
-          {eventId.trim() || '—'}
-          {currentEvent
-            ? ` · ${currentEvent.contentStatus}/${currentEvent.businessStatus} · rev ${currentEvent.revision}`
-            : ''}
-        </p>
+        <details className="admin-tech-details">
+          <summary>Chi tiết kỹ thuật · tạo sự kiện</summary>
+          <p className="muted">
+            POST create qua BFF kèm Idempotency-Key và CSRF. Shape sai → chưa
+            biết, không coi là đã tạo.
+          </p>
+        </details>
         <label>
           Event slug
           <input
@@ -1236,13 +1380,26 @@ export function AdminForm({
           )
         ) : null}
       </section>
-      <section className="admin-section" aria-labelledby="event-lifecycle-heading">
-        <h2 id="event-lifecycle-heading">Metadata &amp; lifecycle (C-E)</h2>
+      <section
+        className="admin-section admin-job-panel"
+        data-job="setup"
+        hidden={activeJob !== 'setup'}
+        aria-labelledby="event-lifecycle-heading"
+      >
+        <h2 id="event-lifecycle-heading">Metadata &amp; vòng đời</h2>
         <p>
-          PATCH dùng expectedRevision; đổi startsAt/venue sau khi đã có vé cần
-          impact preview + confirmIssuedImpact. Clone chỉ DRAFT allowlist —
-          không sao staff/mã/vé. Cancel/archive tách business/content status.
+          Cập nhật thời gian, địa điểm và liên hệ. Đổi lịch/địa điểm sau khi đã
+          có vé cần xem trước tác động và xác nhận. Clone chỉ bản nháp — không
+          sao staff/mã/vé. Hủy và lưu trữ tách trạng thái vận hành / nội dung.
         </p>
+        <details className="admin-tech-details">
+          <summary>Chi tiết kỹ thuật · metadata</summary>
+          <p className="muted">
+            Lưu metadata dùng PATCH + expectedRevision. Impact preview +
+            confirmIssuedImpact khi đổi startsAt/venue sau khi đã có vé.
+            Cancel/archive tách business/content status.
+          </p>
+        </details>
         <label>
           startsAt (UTC ISO)
           <input
@@ -1373,7 +1530,7 @@ export function AdminForm({
             disabled={busy || !currentEvent}
             onClick={() => void saveEventMetadata()}
           >
-            Lưu metadata (PATCH)
+            Lưu metadata
           </button>
         </div>
         {impactView?.kind === 'preview' ? (
@@ -1459,8 +1616,13 @@ export function AdminForm({
           </button>
         </div>
       </section>
-      <section className="admin-section" aria-labelledby="type-source-heading">
-        <h2 id="type-source-heading">Ticket type &amp; source</h2>
+      <section
+        className="admin-section admin-job-panel"
+        data-job="setup"
+        hidden={activeJob !== 'setup'}
+        aria-labelledby="type-source-heading"
+      >
+        <h2 id="type-source-heading">Loại vé &amp; nguồn mã</h2>
         <p>
           Mapping type → source bắt buộc trước import. Không seed SQL cho
           type/source.
@@ -1484,17 +1646,20 @@ export function AdminForm({
             Tạo ticket type
           </button>
         </div>
-        <label>
-          Ticket type ID
-          <input
-            name="ticketTypeId"
-            value={ticketTypeId}
-            onChange={(e) => setTicketTypeId(e.target.value)}
-            autoComplete="off"
-            spellCheck={false}
-            placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-          />
-        </label>
+        <details className="admin-tech-details">
+          <summary>Chi tiết kỹ thuật · ticket type ID</summary>
+          <label>
+            Ticket type ID
+            <input
+              name="ticketTypeId"
+              value={ticketTypeId}
+              onChange={(e) => setTicketTypeId(e.target.value)}
+              autoComplete="off"
+              spellCheck={false}
+              placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+            />
+          </label>
+        </details>
         <label>
           Source name
           <input
@@ -1527,91 +1692,27 @@ export function AdminForm({
             Tạo source
           </button>
         </div>
-        <label>
-          Source ID
-          <input
-            name="sourceId"
-            value={sourceId}
-            onChange={(e) => setSourceId(e.target.value)}
-            autoComplete="off"
-            spellCheck={false}
-            placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-          />
-        </label>
+        <details className="admin-tech-details">
+          <summary>Chi tiết kỹ thuật · source ID</summary>
+          <label>
+            Source ID
+            <input
+              name="sourceId"
+              value={sourceId}
+              onChange={(e) => setSourceId(e.target.value)}
+              autoComplete="off"
+              spellCheck={false}
+              placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+            />
+          </label>
+        </details>
       </section>
-      <ImportPanel
-        tenantId={tenantId}
-        eventId={eventId}
-        sourceId={sourceId}
-        ticketTypeId={ticketTypeId}
-        busy={busy}
-        setBusy={setBusy}
-        onNotice={(message) => {
-          bumpNotice();
-          setDecision({
-            kind: 'rejected',
-            code: 'IMPORT_NOTICE',
-            message,
-          });
-        }}
-      />
-      <section className="admin-section" aria-labelledby="event-report-heading">
-        <h2 id="event-report-heading">Báo cáo sự kiện</h2>
-        <p>
-          Chỉ đọc: số vé theo trạng thái, quota capacity/allocated, và số yêu
-          cầu chờ duyệt. Lỗi máy chủ, timeout hoặc mất mạng là chưa biết — các
-          số đó không được hiện.
-        </p>
-        <div className="auth-buttons">
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => void loadReport()}
-          >
-            Tải báo cáo
-          </button>
-        </div>
-        {report && reportShowsNumbers(report) ? (
-          <dl data-testid="event-report-numbers">
-            {TICKET_STATES.map((state) => (
-              <div key={state}>
-                <dt>{state}</dt>
-                <dd>{report.ticketsByState[state]}</dd>
-              </div>
-            ))}
-            <div>
-              <dt>Quota capacity</dt>
-              <dd>
-                {report.quota.capacity === null
-                  ? 'null'
-                  : report.quota.capacity}
-              </dd>
-            </div>
-            <div>
-              <dt>Quota allocated</dt>
-              <dd>{report.quota.allocated}</dd>
-            </div>
-            <div>
-              <dt>Chờ duyệt</dt>
-              <dd>{report.pendingApprovalCount}</dd>
-            </div>
-          </dl>
-        ) : null}
-        {report && !reportShowsNumbers(report) ? (
-          <p data-testid="event-report-unknown" role="status">
-            {report.kind === 'rejected'
-              ? `${report.code}: ${report.message}`
-              : report.message}
-          </p>
-        ) : null}
-      </section>
-      <NotificationsPanel
-        tenantId={tenantId}
-        eventId={eventId}
-        eventRevision={currentEvent?.revision ?? null}
-        busy={busy}
-        onBusy={setBusy}
-      />
+      <div
+        className="admin-job-panel"
+        data-job="setup"
+        hidden={activeJob !== 'setup'}
+        data-testid="admin-setup-config"
+      >
       <ConfigBrandPanel
         editor={configEditor}
         onEditorChange={setConfigEditor}
@@ -1620,6 +1721,7 @@ export function AdminForm({
         expectedVersion={expectedVersion}
         onExpectedVersion={setExpectedVersion}
         eventRevision={currentEvent?.revision ?? null}
+        publishReady={publishReady}
         onSavedVersion={(version) => {
           setExpectedVersion(String(version));
           setDecision({ kind: 'saved', version });
@@ -1650,79 +1752,294 @@ export function AdminForm({
           {configNotice}
         </p>
       ) : null}
-      <label>
-        Mã mời, mỗi dòng một mã
-        <textarea
-          id="admin-codes"
-          value={codesText}
-          onChange={(e) => setCodesText(e.target.value)}
-          rows={5}
-          spellCheck={false}
-          autoComplete="off"
-        />
-      </label>
-      <label>
-        Quota event (lần nhập đầu)
-        <input
-          name="eventQuota"
-          value={eventQuota}
-          onChange={(e) => setEventQuota(e.target.value)}
-          inputMode="numeric"
-        />
-      </label>
-      <div className="auth-buttons">
-        <button
-          type="button"
-          disabled={busy}
-          onClick={() => void importCodes()}
-        >
-          Nhập mã
-        </button>
-        <button type="button" disabled={busy} onClick={() => void loadQuota()}>
-          Đọc quota
-        </button>
+      <p className="intro" data-testid="admin-publish-gate" role="status">
+        {publishReady
+          ? 'Checklist đủ — nút xuất bản hiện trong phần nội dung & brand. Backend vẫn enforce; chưa rõ ≠ đã xuất bản.'
+          : readinessSummary(readinessItems)}
+      </p>
       </div>
-      <h2>Duyệt yêu cầu đổi mã</h2>
-      <label>
-        Request ID đang chờ
-        <input
-          name="requestId"
-          value={requestId}
-          onChange={(e) => setRequestId(e.target.value)}
-          autoComplete="off"
-          spellCheck={false}
-          placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-        />
-      </label>
-      <label>
-        Lý do từ chối
-        <textarea
-          id="admin-deny-reason"
-          value={denyReason}
-          onChange={(e) => setDenyReason(e.target.value)}
-          rows={3}
-          maxLength={500}
-          required
-        />
-      </label>
-      <div className="auth-buttons">
-        <button
-          type="button"
-          disabled={busy}
-          onClick={() => void decideRedemption('approve')}
-        >
-          Duyệt
-        </button>
-        <button
-          type="button"
-          disabled={busy}
-          onClick={() => void decideRedemption('deny')}
-        >
-          Từ chối
-        </button>
+      <div
+        className="admin-job-panel"
+        data-job="guests"
+        hidden={activeJob !== 'guests'}
+        data-testid="admin-guests-panel"
+      >
+      <ImportPanel
+        tenantId={tenantId}
+        eventId={eventId}
+        sourceId={sourceId}
+        ticketTypeId={ticketTypeId}
+        busy={busy}
+        setBusy={setBusy}
+        onNotice={(message) => {
+          bumpNotice();
+          setDecision({
+            kind: 'rejected',
+            code: 'IMPORT_NOTICE',
+            message,
+          });
+        }}
+      />
+      <section
+        className="admin-section"
+        aria-labelledby="guests-codes-heading"
+      >
+         <h2 id="guests-codes-heading" tabIndex={-1}>
+           Khách &amp; mã · nhập và duyệt
+         </h2>
+        <label>
+          Mã mời, mỗi dòng một mã
+          <textarea
+            id="admin-codes"
+            value={codesText}
+            onChange={(e) => setCodesText(e.target.value)}
+            rows={5}
+            spellCheck={false}
+            autoComplete="off"
+          />
+        </label>
+        <label>
+          Quota event (lần nhập đầu)
+          <input
+            name="eventQuota"
+            value={eventQuota}
+            onChange={(e) => setEventQuota(e.target.value)}
+            inputMode="numeric"
+          />
+        </label>
+        <div className="auth-buttons">
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void importCodes()}
+          >
+            Nhập mã
+          </button>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void loadQuota()}
+          >
+            Đọc quota
+          </button>
+        </div>
+        <h3>Duyệt yêu cầu đổi mã</h3>
+        <label>
+          Request ID đang chờ
+          <input
+            name="requestId"
+            value={requestId}
+            onChange={(e) => setRequestId(e.target.value)}
+            autoComplete="off"
+            spellCheck={false}
+            placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+          />
+        </label>
+        <label>
+          Lý do từ chối
+          <textarea
+            id="admin-deny-reason"
+            value={denyReason}
+            onChange={(e) => setDenyReason(e.target.value)}
+            rows={3}
+            maxLength={500}
+            required
+          />
+        </label>
+        <div className="auth-buttons">
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void decideRedemption('approve')}
+          >
+            Duyệt
+          </button>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void decideRedemption('deny')}
+          >
+            Từ chối
+          </button>
+        </div>
+      </section>
+      <NotificationsPanel
+        tenantId={tenantId}
+        eventId={eventId}
+        eventRevision={currentEvent?.revision ?? null}
+        busy={busy}
+        onBusy={setBusy}
+      />
       </div>
+      <section
+        className="admin-section admin-job-panel"
+        data-job="gate"
+        hidden={activeJob !== 'gate'}
+        aria-labelledby="event-report-heading"
+        data-testid="admin-gate-panel"
+      >
+        <h2 id="event-report-heading">Cổng · báo cáo sự kiện</h2>
+        <p>
+          Chỉ đọc theo snapshot máy chủ (không tự làm mới). Manager xem quota và
+          chờ duyệt trước; Supervisor xem check-in thành công và từ chối theo lý
+          do. Lỗi máy chủ, timeout hoặc mất mạng là chưa biết — các số đó không
+          được hiện. Scan chính trên app Nhân viên; cổng web không xếp hàng
+          offline.
+        </p>
+        <p className="intro">
+          <a href="/gate">Mở cổng web (dự phòng)</a>
+        </p>
+        <div className="auth-buttons">
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void loadReport()}
+            data-testid="event-report-reload"
+          >
+            Tải lại báo cáo
+          </button>
+        </div>
+        {report && reportShowsNumbers(report) ? (
+          <div data-testid="event-report-numbers">
+            <p
+              className="intro"
+              data-testid="event-report-asof"
+              role="status"
+              title={report.asOf}
+            >
+              Số liệu tại thời điểm: {formatReportAsOf(report.asOf)} (
+              {report.asOf})
+            </p>
+            <h3>Manager · quota &amp; chờ duyệt</h3>
+            <dl>
+              <div>
+                <dt>Trạng thái sức chứa</dt>
+                <dd>
+                  {formatQuotaCapacityState(report.quotaCapacityState)}
+                </dd>
+              </div>
+              <div>
+                <dt>Dung lượng quota</dt>
+                <dd>
+                  {report.quota.capacity === null
+                    ? 'không giới hạn / chưa có'
+                    : report.quota.capacity}
+                </dd>
+              </div>
+              <div>
+                <dt>Đã cấp phát</dt>
+                <dd>{report.quota.allocated}</dd>
+              </div>
+              <div>
+                <dt>Còn lại</dt>
+                <dd>
+                  {formatQuotaRemaining(
+                    report.quotaRemaining,
+                    report.quotaCapacityState,
+                  )}
+                </dd>
+              </div>
+              <div>
+                <dt>Chờ duyệt</dt>
+                <dd data-testid="event-report-pending-approval">
+                  {report.pendingApprovalCount}
+                </dd>
+              </div>
+            </dl>
+            {reportShowsPendingApprovalCta(report) ? (
+              <p className="intro">
+                <a
+                  href={`#${REPORT_PENDING_APPROVAL_SECTION_ID}`}
+                  data-testid="event-report-cta-pending-approval"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    goToAdminSection(
+                      'guests',
+                      REPORT_PENDING_APPROVAL_SECTION_ID,
+                    );
+                  }}
+                >
+                  {REPORT_PENDING_APPROVAL_CTA_LABEL}
+                </a>
+              </p>
+            ) : null}
+            <h3>Vé theo trạng thái</h3>
+            <dl>
+              {TICKET_STATES.map((state) => (
+                <div key={state}>
+                  <dt>{state}</dt>
+                  <dd>{report.ticketsByState[state]}</dd>
+                </div>
+              ))}
+            </dl>
+            <h3>Supervisor · check-in &amp; từ chối</h3>
+            <dl>
+              <div>
+                <dt>Check-in thành công</dt>
+                <dd>{report.checkInSuccessCount}</dd>
+              </div>
+            </dl>
+            <h4>Từ chối theo lý do</h4>
+            {Object.keys(report.rejectByReason).length === 0 ? (
+              <p data-testid="event-report-rejects-empty" role="status">
+                Chưa có lần từ chối cổng nào.
+              </p>
+            ) : (
+              <dl data-testid="event-report-rejects">
+                {Object.entries(report.rejectByReason)
+                  .sort(([a], [b]) => a.localeCompare(b))
+                  .map(([reason, count]) => (
+                    <div key={reason}>
+                      <dt>{reason}</dt>
+                      <dd>{count}</dd>
+                    </div>
+                  ))}
+              </dl>
+            )}
+            <h3>Email cần CS</h3>
+            <dl>
+              <div>
+                <dt>Email cần hỗ trợ CS</dt>
+                <dd data-testid="event-report-email-cs">
+                  {report.emailNeedsCsCount}
+                </dd>
+              </div>
+            </dl>
+            {reportShowsEmailCsCta(report) ? (
+              <p className="intro">
+                <a
+                  href={`#${REPORT_EMAIL_CS_SECTION_ID}`}
+                  data-testid="event-report-cta-email-cs"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    goToAdminSection('support', REPORT_EMAIL_CS_SECTION_ID);
+                  }}
+                >
+                  {REPORT_EMAIL_CS_CTA_LABEL}
+                </a>
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+        {report && !reportShowsNumbers(report) ? (
+          <p data-testid="event-report-unknown" role="status">
+            {report.kind === 'rejected'
+              ? `${report.code}: ${report.message}`
+              : report.message}
+          </p>
+        ) : null}
+      </section>
+      <div
+        className="admin-job-panel"
+        data-job="support"
+        hidden={activeJob !== 'support'}
+        data-testid="admin-support-panel"
+      >
+      <TenantStaffPanel tenantId={tenantId} />
       <section className="admin-section" aria-labelledby="cs-heading">
-        <h2 id="cs-heading">CS — tra cứu và gửi lại email</h2>
+        <h2 id="cs-heading" tabIndex={-1}>
+          Hỗ trợ · tra cứu và gửi lại email
+        </h2>
         <p>
           PII mặc định đã che trên API. Trạng thái provider ACCEPTED không được
           hiểu là đã giao email.
@@ -1857,6 +2174,45 @@ export function AdminForm({
           </button>
         </div>
       </section>
+      </div>
+        </div>
+        <aside
+          className="admin-readiness"
+          aria-labelledby="admin-ready-title"
+          data-testid="admin-readiness"
+        >
+          <h2 id="admin-ready-title">Sẵn sàng xuất bản</h2>
+          <ul className="admin-readiness__list">
+            {readinessItems.map((item) => (
+              <li
+                key={item.key}
+                data-key={item.key}
+                data-status={item.status}
+                data-testid={`admin-ready-${item.key}`}
+              >
+                <span className="admin-readiness__mark" aria-hidden="true">
+                  {item.status === 'ok'
+                    ? '✓'
+                    : item.status === 'missing'
+                      ? '!'
+                      : '?'}
+                </span>
+                <span>
+                  <strong>{item.label}</strong>
+                  <span className="muted"> — {item.detail}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+          <p
+            className="muted"
+            data-testid="admin-readiness-summary"
+            role="status"
+          >
+            {readinessSummary(readinessItems)}
+          </p>
+        </aside>
+      </div>
       {(() => {
         const notice = createView
           ? {

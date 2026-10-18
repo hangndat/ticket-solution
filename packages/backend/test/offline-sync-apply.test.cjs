@@ -20,6 +20,8 @@ const {
   openStaffSession,
   confirmCheckin,
   reserveCheckin,
+  unwrapReserveOutcome,
+  unwrapConfirmOutcome,
   applyOfflineSyncBatch,
   GATE_ERROR_CODES,
 } = require('../dist');
@@ -325,27 +327,19 @@ test(
         GATE_ERROR_CODES.OFFLINE_SYNC_IDEMPOTENCY_CONFLICT,
       );
 
-      const hold = await withTenant(db, tenantId, (tx) =>
-        reserveCheckin(tx, {
-          tenantId,
-          eventId,
-          ticketId: ticketIds[2],
-          staffSessionId: session.sessionId,
-          actorUserId: staff.userId,
-        }),
+      const rejectAfterPayload = await withTenant(db, tenantId, (tx) =>
+        tx.$queryRaw`
+          SELECT COUNT(*)::int AS n
+          FROM audit_logs
+          WHERE tenant_id = ${tenantId}::uuid
+            AND event_id = ${eventId}::uuid
+            AND action = 'gate.reject'
+        `,
       );
-      await withTenant(db, tenantId, (tx) =>
-        confirmCheckin(tx, {
-          tenantId,
-          eventId,
-          reservationId: hold.reservationId,
-          token: hold.token,
-          staffSessionId: session.sessionId,
-          actorUserId: staff.userId,
-        }),
-      );
+      assert.equal(rejectAfterPayload[0].n, 1);
 
-      const lost = await withTenant(db, tenantId, (tx) =>
+      // Replay same REJECTED payload — idempotent audit must not inflate rejectByReason.
+      const conflictPayloadReplay = await withTenant(db, tenantId, (tx) =>
         applyOfflineSyncBatch(tx, {
           pathEventId: eventId,
           actorUserId: staff.userId,
@@ -357,21 +351,113 @@ test(
             clientClockAt,
             events: [
               {
-                clientEventId: clientEventC,
+                clientEventId: clientEventA,
                 type: 'CHECKIN_OFFLINE',
                 eventId,
                 ticketId: ticketIds[2],
                 clientOccurredAt: occurred,
-                clientSeq: 2,
+                clientSeq: 0,
                 payloadVersion: 1,
               },
             ],
           },
         }),
       );
+      assert.equal(conflictPayloadReplay.results[0].status, 'REJECTED');
+      const rejectAfterReplay = await withTenant(db, tenantId, (tx) =>
+        tx.$queryRaw`
+          SELECT COUNT(*)::int AS n
+          FROM audit_logs
+          WHERE tenant_id = ${tenantId}::uuid
+            AND event_id = ${eventId}::uuid
+            AND action = 'gate.reject'
+        `,
+      );
+      assert.equal(rejectAfterReplay[0].n, 1);
+
+      const hold = unwrapReserveOutcome(
+        await withTenant(db, tenantId, (tx) =>
+          reserveCheckin(tx, {
+            tenantId,
+            eventId,
+            ticketId: ticketIds[2],
+            staffSessionId: session.sessionId,
+            actorUserId: staff.userId,
+          }),
+        ),
+      );
+      unwrapConfirmOutcome(
+        await withTenant(db, tenantId, (tx) =>
+          confirmCheckin(tx, {
+            tenantId,
+            eventId,
+            reservationId: hold.reservationId,
+            token: hold.token,
+            staffSessionId: session.sessionId,
+            actorUserId: staff.userId,
+          }),
+        ),
+      );
+
+      const lostBody = {
+        tenantId,
+        staffSessionId: session.sessionId,
+        deviceId,
+        clientClockAt,
+        events: [
+          {
+            clientEventId: clientEventC,
+            type: 'CHECKIN_OFFLINE',
+            eventId,
+            ticketId: ticketIds[2],
+            clientOccurredAt: occurred,
+            clientSeq: 2,
+            payloadVersion: 1,
+          },
+        ],
+      };
+      const lost = await withTenant(db, tenantId, (tx) =>
+        applyOfflineSyncBatch(tx, {
+          pathEventId: eventId,
+          actorUserId: staff.userId,
+          serverEpochMs: now,
+          body: lostBody,
+        }),
+      );
       assert.equal(lost.results[0].status, 'CONFLICT');
       assert.equal(lost.results[0].code, GATE_ERROR_CODES.ALREADY_CHECKED_IN);
       assert.ok(lost.results[0].winningCheckinId);
+
+      const rejectAfterConflict = await withTenant(db, tenantId, (tx) =>
+        tx.$queryRaw`
+          SELECT COUNT(*)::int AS n
+          FROM audit_logs
+          WHERE tenant_id = ${tenantId}::uuid
+            AND event_id = ${eventId}::uuid
+            AND action = 'gate.reject'
+        `,
+      );
+      assert.equal(rejectAfterConflict[0].n, 2);
+
+      const lostReplay = await withTenant(db, tenantId, (tx) =>
+        applyOfflineSyncBatch(tx, {
+          pathEventId: eventId,
+          actorUserId: staff.userId,
+          serverEpochMs: now,
+          body: lostBody,
+        }),
+      );
+      assert.equal(lostReplay.results[0].status, 'CONFLICT');
+      const rejectAfterConflictReplay = await withTenant(db, tenantId, (tx) =>
+        tx.$queryRaw`
+          SELECT COUNT(*)::int AS n
+          FROM audit_logs
+          WHERE tenant_id = ${tenantId}::uuid
+            AND event_id = ${eventId}::uuid
+            AND action = 'gate.reject'
+        `,
+      );
+      assert.equal(rejectAfterConflictReplay[0].n, 2);
 
       const counts = await withTenant(db, tenantId, (tx) =>
         tx.$queryRaw`

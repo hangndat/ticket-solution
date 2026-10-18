@@ -2,6 +2,10 @@ import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { Text, View } from 'react-native';
 import type { TicketSummary } from '@ticket/contracts';
+import {
+  attendeeWalletCopy,
+  presentTicketRow,
+} from '@/attendee/attendee-outcome-copy';
 import { EventBanner, EventLogo } from '@/components/event-media';
 import { BrandWordmark, Notice, Page } from '@/components/page';
 import { QrCode } from '@/components/qr-code';
@@ -193,9 +197,15 @@ export function TicketDetailScreen() {
   }
 
   const { ticket, syncedAt, fromCache, mode } = visibleLoad;
+  const row = presentTicketRow(ticket);
 
   return (
     <Page>
+      {mode === 'offline-display' || fromCache ? (
+        <Notice title={attendeeWalletCopy.offlineBannerTitle}>
+          {attendeeWalletCopy.offlineBannerBody}
+        </Notice>
+      ) : null}
       <View
         style={{
           backgroundColor: colors.ticketCanvas,
@@ -242,21 +252,37 @@ export function TicketDetailScreen() {
             Vé của bạn
           </Text>
           <Text
-            selectable
             style={{
               color: brand.ink,
-              ...typography.callout,
+              fontSize: 20,
+              fontWeight: '600',
               textAlign: 'center',
             }}
           >
-            {ticket.state} · v{ticket.credentialVersion}
+            {row.eventTitle}
+          </Text>
+          <Text
+            style={{
+              color: brand.signal,
+              ...typography.callout,
+              textAlign: 'center',
+              fontWeight: '600',
+            }}
+          >
+            {row.statusLabel}
           </Text>
           {qrValue ? (
-            <QrCode
-              value={qrValue}
-              inkColor={brand.ink}
-              paperColor="#ffffff"
-            />
+            <View
+              accessible
+              accessibilityRole="image"
+              accessibilityLabel={`Mã QR vé ${row.eventTitle}`}
+            >
+              <QrCode
+                value={qrValue}
+                inkColor={brand.ink}
+                paperColor="#ffffff"
+              />
+            </View>
           ) : null}
           <Text
             selectable
@@ -266,7 +292,17 @@ export function TicketDetailScreen() {
               textAlign: 'center',
             }}
           >
-            {ticket.ticketId}
+            {row.ticketId}
+          </Text>
+          <Text
+            selectable
+            style={{
+              color: colors.secondary,
+              fontSize: 12,
+              textAlign: 'center',
+            }}
+          >
+            {row.credentialLine}
           </Text>
           <Text
             style={{
@@ -276,26 +312,25 @@ export function TicketDetailScreen() {
               textAlign: 'center',
             }}
           >
-            Chỉ hiển thị TicketSummary — không phải credential Gate đã ký và
-            không phải check-in offline. Máy chủ vẫn quyết định thu hồi/đã dùng.
+            {attendeeWalletCopy.detailOnlyDisplay}
           </Text>
         </View>
       </View>
 
-      <Notice title="Thông tin vé">
-        Sự kiện: {ticket.eventId}
+      <Notice title="Chi tiết kỹ thuật">
+        {row.eventIdLine}
         {'\n'}
-        Loại: {ticket.ticketTypeId}
+        Loại vé · {ticket.ticketTypeId}
         {'\n'}
-        Tạo lúc: {ticket.createdAt}
+        Tạo lúc · {ticket.createdAt}
       </Notice>
 
       <Notice title="Đồng bộ">
         {mode === 'offline-display'
-          ? 'Chế độ: hiển thị offline (chưa xác minh SessionBoundary)'
+          ? 'Chế độ: xem vé đã lưu (chưa xác minh phiên)'
           : fromCache
             ? 'Nguồn: bộ đệm hiển thị offline'
-            : 'Nguồn: bộ nhớ phiên / lần tải gần nhất'}
+            : 'Nguồn: lần tải gần nhất'}
         {'\n'}
         Đồng bộ lần cuối: {syncedAt ?? 'không rõ'}
         {'\n'}

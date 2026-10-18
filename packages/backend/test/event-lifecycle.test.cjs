@@ -26,6 +26,8 @@ const {
   openStaffSession,
   reserveCheckin,
   confirmCheckin,
+  unwrapReserveOutcome,
+  unwrapConfirmOutcome,
   readCodeHmacEnvironment,
   EventError,
   EVENT_ERROR_CODES,
@@ -604,21 +606,25 @@ test(
           eventId: archiveEventId,
           userId: staff.userId,
         });
-        const reserved = await reserveCheckin(tx, {
-          tenantId,
-          eventId: archiveEventId,
-          ticketId: issuedArch.ticketId,
-          staffSessionId: session.sessionId,
-          actorUserId: staff.userId,
-        });
-        const confirmed = await confirmCheckin(tx, {
-          tenantId,
-          eventId: archiveEventId,
-          reservationId: reserved.reservationId,
-          token: reserved.token,
-          staffSessionId: session.sessionId,
-          actorUserId: staff.userId,
-        });
+        const reserved = unwrapReserveOutcome(
+          await reserveCheckin(tx, {
+            tenantId,
+            eventId: archiveEventId,
+            ticketId: issuedArch.ticketId,
+            staffSessionId: session.sessionId,
+            actorUserId: staff.userId,
+          }),
+        );
+        const confirmed = unwrapConfirmOutcome(
+          await confirmCheckin(tx, {
+            tenantId,
+            eventId: archiveEventId,
+            reservationId: reserved.reservationId,
+            token: reserved.token,
+            staffSessionId: session.sessionId,
+            actorUserId: staff.userId,
+          }),
+        );
         assert.equal(confirmed.state, 'USED');
       });
 

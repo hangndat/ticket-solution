@@ -98,28 +98,54 @@ try {
   const html = await page.content();
   if (/fun-fest|FUN FEST/i.test(html))
     throw new Error('admin page hardcoded a demo festival');
-  await page.getByLabel('Tenant ID').fill(TENANT);
-  await page.getByLabel('Event ID').fill(EVENT);
-  await page.getByRole('button', { name: 'Xem trước', exact: true }).click();
-  await page.locator('#config-preview').waitFor();
+  await page.locator('[data-testid="admin-workspace"]').waitFor();
+  await page.getByTestId('admin-tech-details').locator('summary').click();
+  await page.getByLabel('Tenant ID', { exact: true }).fill(TENANT);
+  await page.getByLabel('Event ID', { exact: true }).fill(EVENT);
+  await page.getByTestId('admin-job-setup').click();
+  const orgInput = page.getByLabel(/Tên tổ chức|organizationName|Organization/i).first();
+  if (await orgInput.count()) {
+    await orgInput.fill('UAT Org');
+  }
+  await page.getByRole('button', { name: /Xem trước/ }).click();
+  await Promise.race([
+    page.getByTestId('config-rendered-preview').waitFor({ state: 'visible' }),
+    page.getByTestId('config-validation-error').waitFor({ state: 'visible' }),
+    page.getByTestId('admin-notice').waitFor({ state: 'visible' }),
+  ]);
   // Fail-closed: OIDC unset → OIDC_MISCONFIGURED; signed-out → UNAUTHENTICATED;
   // OIDC set but API down → unknown (never claim saved/published/imported).
   const failClosed =
-    /OIDC_MISCONFIGURED|UNAUTHENTICATED|chưa biết|EVENT_CREATE|CONFIG_VERSION|QUOTA_REQUIRED|CS:|Export |Đã lưu|Đã publish|Đã nhập|Đã tạo event|Quota event/;
+    /OIDC_MISCONFIGURED|UNAUTHENTICATED|chưa biết|EVENT_CREATE|CONFIG_VERSION|QUOTA_REQUIRED|CS:|Export |Đã lưu|Đã publish|Đã nhập|Đã tạo event|Quota event|Payload không hợp lệ|CONFIG_EDITOR/;
   const saveText = await clickAndNotice(page, 'Lưu phiên bản', failClosed);
-  await page.getByLabel('Phiên bản cần publish').fill('1');
-  const publishText = await clickAndNotice(page, 'Publish', failClosed);
+  await page.getByLabel(/Phiên bản cần xuất bản|Phiên bản cần publish/).fill('1');
+  const publishBtn = page.getByTestId('config-publish-button');
+  const publishDisabled = await publishBtn.isDisabled();
+  let publishText;
+  if (publishDisabled) {
+    publishText =
+      'Publish UI gated (checklist chưa đủ) — không coi đã xuất bản; backend vẫn fail-closed.';
+    console.log('admin-uat: publish gated disabled=true (PD AC-M1)');
+  } else {
+    publishText = await clickAndNotice(page, 'Xuất bản', failClosed);
+  }
+  await page.getByTestId('admin-job-guests').click();
   await page.locator('#admin-codes').fill('CODE-A\nCODE-B');
   const importText = await clickAndNotice(page, 'Nhập mã', failClosed);
   const quotaText = await clickAndNotice(page, 'Đọc quota', failClosed);
+  await page.getByTestId('admin-job-setup').click();
   await page.getByLabel('Event slug').fill('aurora-night');
   await page.getByLabel('Event name').fill('Aurora Night');
   const createText = await clickAndNotice(page, 'Tạo event', failClosed);
+  await page.getByTestId('admin-job-support').click();
   await page.getByLabel('Từ khóa CS').fill('lookup');
   const csText = await clickAndNotice(page, 'Tìm vé CS', failClosed);
   const exportText = await clickAndNotice(page, 'Tạo export CSV', failClosed);
-  if (await page.locator('#admin-payload').getAttribute('readonly')) {
-    throw new Error('unpublished payload was locked');
+  await page.getByTestId('admin-job-setup').click();
+  const saveBtn = page.getByRole('button', { name: 'Lưu phiên bản', exact: true });
+  // Fail-closed publish must not lock draft as if published succeeded.
+  if (await saveBtn.isDisabled()) {
+    throw new Error('unpublished config editor was locked after fail-closed flow');
   }
   const shot = join(OUT, 'admin-event-ops.png');
   await page.screenshot({ path: shot, fullPage: true });
