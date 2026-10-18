@@ -1,0 +1,28 @@
+{
+  "timeUTC": "2026-10-18T08:32:09.022585+00:00",
+  "sourceSha": "6002d09afa9382a72ee9840c8ba1dd41c7b09065",
+  "version": "1.0.0",
+  "build": "10",
+  "bundleId": "com.hangndat.ticket",
+  "minimumOSVersion": "16.4",
+  "sdk": "iphoneos26.5",
+  "team": "BLUA62D52G",
+  "signing": "Apple Distribution",
+  "apsEnvironment": "production",
+  "debugEntitlement": false,
+  "provisioning": "App Store (no device list)",
+  "profileName": "iOS Team Store Provisioning Profile: com.hangndat.ticket",
+  "codesignVerified": true,
+  "compiledPublicConfigStrings": {
+    "https://api.vemoki.com": true,
+    "https://auth.vemoki.com/realms/ticket": true,
+    "ticket-mobile": true
+  },
+  "ipaSHA256": "37c96607b99be7136ef91c9f57aa561c2461e5458122175c364553bd5b78f8c7",
+  "ipaBytes": 11722935,
+  "ipaPath": "/Users/admin/orca/workspaces/ticket-solution/d13-ios-release/apps/mobile/.expo/d13-release/export/Vemoki.ipa",
+  "archivePath": "/Users/admin/orca/workspaces/ticket-solution/d13-ios-release/apps/mobile/.expo/d13-release/Vemoki-1.0.0-10-auto.xcarchive",
+  "uploaded": false,
+  "submitted": false,
+  "cloudBuild": false
+}
