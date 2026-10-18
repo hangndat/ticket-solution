@@ -37,6 +37,8 @@ import {
   createTicketType,
   getEvent,
   listEvents,
+  listIssuanceSources,
+  listTicketTypes,
   previewEventImpact,
   updateEvent,
   withTenant,
@@ -152,6 +154,32 @@ class SourceCreatedDto {
   @ApiProperty() name!: string;
   @ApiProperty({ enum: ['AUTO', 'MANUAL'] }) approvalMode!: 'AUTO' | 'MANUAL';
   @ApiProperty({ format: 'uuid' }) ticketTypeId!: string;
+}
+
+class PortalTicketTypeSummaryDto {
+  @ApiProperty({ format: 'uuid' }) ticketTypeId!: string;
+  @ApiProperty() label!: string;
+  @ApiProperty({ type: 'object', additionalProperties: true })
+  entitlementSnapshot!: Record<string, unknown>;
+}
+
+class PortalTicketTypesPageDto {
+  @ApiProperty({ type: [PortalTicketTypeSummaryDto] })
+  items!: PortalTicketTypeSummaryDto[];
+  @ApiProperty({ nullable: true, type: String }) nextCursor!: string | null;
+}
+
+class PortalSourceSummaryDto {
+  @ApiProperty({ format: 'uuid' }) sourceId!: string;
+  @ApiProperty() name!: string;
+  @ApiProperty({ enum: ['AUTO', 'MANUAL'] }) approvalMode!: 'AUTO' | 'MANUAL';
+  @ApiProperty({ type: [String], format: 'uuid' }) ticketTypeIds!: string[];
+}
+
+class PortalSourcesPageDto {
+  @ApiProperty({ type: [PortalSourceSummaryDto] })
+  items!: PortalSourceSummaryDto[];
+  @ApiProperty({ nullable: true, type: String }) nextCursor!: string | null;
 }
 
 type Deps = {
@@ -366,6 +394,25 @@ export class EventAdminService {
     );
   }
 
+  async listTicketTypes(
+    authorization: string | undefined,
+    tenantId: string,
+    eventId: string,
+    cursor?: string,
+    limit?: number,
+  ) {
+    const user = await this.actor(authorization);
+    return withTenant(this.deps.db!, tenantId, (tx) =>
+      listTicketTypes(tx, {
+        tenantId,
+        eventId,
+        actorUserId: user.userId,
+        cursor,
+        limit,
+      }),
+    );
+  }
+
   async source(
     authorization: string | undefined,
     tenantId: string,
@@ -381,6 +428,25 @@ export class EventAdminService {
         name: body.name,
         approvalMode: body.approvalMode,
         ticketTypeId: body.ticketTypeId,
+      }),
+    );
+  }
+
+  async listSources(
+    authorization: string | undefined,
+    tenantId: string,
+    eventId: string,
+    cursor?: string,
+    limit?: number,
+  ) {
+    const user = await this.actor(authorization);
+    return withTenant(this.deps.db!, tenantId, (tx) =>
+      listIssuanceSources(tx, {
+        tenantId,
+        eventId,
+        actorUserId: user.userId,
+        cursor,
+        limit,
       }),
     );
   }
@@ -420,7 +486,9 @@ export class EventAdminController {
           ? 404
           : error.code === EVENT_ADMIN_ERROR_CODES.SLUG_TAKEN
             ? 409
-            : 422;
+            : error.code === EVENT_ADMIN_ERROR_CODES.INVALID_CURSOR
+              ? 400
+              : 422;
       throw new HttpException(
         {
           code: error.code,
@@ -567,6 +635,24 @@ export class EventAdminController {
       .catch((error) => this.fail(error));
   }
 
+  @Get('tenants/:tenantId/events/:eventId/ticket-types')
+  @ApiBearerAuth()
+  @ApiOkResponse({ type: PortalTicketTypesPageDto })
+  listTicketTypes(
+    @Headers('authorization') authorization: string | undefined,
+    @Param('tenantId') tenantId: string,
+    @Param('eventId') eventId: string,
+    @Query('cursor') cursor?: string,
+    @Query('limit') limit?: string,
+  ) {
+    const tenant = requireUuid(tenantId, 'tenantId');
+    const event = requireUuid(eventId, 'eventId');
+    const parsedLimit = limit ? Number(limit) : undefined;
+    return this.events
+      .listTicketTypes(authorization, tenant, event, cursor, parsedLimit)
+      .catch((error) => this.fail(error));
+  }
+
   @Post('tenants/:tenantId/events/:eventId/ticket-types')
   @ApiBearerAuth()
   @ApiOkResponse({ type: TicketTypeCreatedDto })
@@ -580,6 +666,24 @@ export class EventAdminController {
     const event = requireUuid(eventId, 'eventId');
     return this.events
       .ticketType(authorization, tenant, event, body)
+      .catch((error) => this.fail(error));
+  }
+
+  @Get('tenants/:tenantId/events/:eventId/sources')
+  @ApiBearerAuth()
+  @ApiOkResponse({ type: PortalSourcesPageDto })
+  listSources(
+    @Headers('authorization') authorization: string | undefined,
+    @Param('tenantId') tenantId: string,
+    @Param('eventId') eventId: string,
+    @Query('cursor') cursor?: string,
+    @Query('limit') limit?: string,
+  ) {
+    const tenant = requireUuid(tenantId, 'tenantId');
+    const event = requireUuid(eventId, 'eventId');
+    const parsedLimit = limit ? Number(limit) : undefined;
+    return this.events
+      .listSources(authorization, tenant, event, cursor, parsedLimit)
       .catch((error) => this.fail(error));
   }
 
