@@ -138,3 +138,39 @@ test('acceptInvite fail-closed when identityVerifier missing', async () => {
       err?.getResponse?.()?.code === IDENTITY_ERROR_CODES.OIDC_MISCONFIGURED,
   );
 });
+
+test('listTenants keeps platform MFA verifier (does not use identityVerifier)', async () => {
+  let used = null;
+  const service = new PlatformService(
+    baseDeps({
+      platformVerifier: {
+        async verifyBearerToken() {
+          used = 'platform';
+          throw new PlatformError(
+            PLATFORM_ERROR_CODES.MFA_REQUIRED,
+            'MFA assurance required',
+          );
+        },
+      },
+      identityVerifier: {
+        async verifyBearerToken() {
+          used = 'identity';
+          return {
+            issuer: 'http://issuer.test/realms/ticket',
+            subject: 'staff-1',
+            email: 'staff@example.com',
+            emailVerified: true,
+          };
+        },
+      },
+    }),
+  );
+
+  await assert.rejects(
+    () => service.listTenants('Bearer staff-ticket-web-token', { limit: '20' }),
+    (err) =>
+      err?.response?.code === PLATFORM_ERROR_CODES.MFA_REQUIRED ||
+      err?.getResponse?.()?.code === PLATFORM_ERROR_CODES.MFA_REQUIRED,
+  );
+  assert.equal(used, 'platform');
+});
