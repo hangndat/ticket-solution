@@ -94,6 +94,38 @@ test('production routes isolate tenant content and reject unknown pairs', async 
     const listBff = await fetch(base + '/api/bff/public/tenants/mfest-demo/events');
     assert.equal(listBff.status, 502);
     assert.equal((await listBff.json()).code, 'UPSTREAM_UNAVAILABLE');
+    // D13: anonymous owner-ticket deeplink soft-redirects to /auth?next=…
+    // (not the public event 404 «tenant và sự kiện»).
+    const ticketPath =
+      '/t/uat-device/tickets/97f77680-4d65-4b6d-baf3-b3f699a006a6';
+    const ticketRaw = await fetch(base + ticketPath, { redirect: 'manual' });
+    assert.equal(ticketRaw.status, 307, 'anonymous owner ticket should HTTP 307');
+    const ticketLoc = ticketRaw.headers.get('location') ?? '';
+    assert.ok(ticketLoc.includes('/auth'), `Location ${ticketLoc}`);
+    assert.ok(
+      ticketLoc.includes('next=') && ticketLoc.includes('tickets'),
+      `next= ticket path missing in ${ticketLoc}`,
+    );
+    const ticketFollow = await fetch(base + ticketPath);
+    assert.equal(ticketFollow.status, 200);
+    assert.ok(
+      ticketFollow.url.includes('/auth'),
+      `anonymous ticket follow should land on /auth, got ${ticketFollow.url}`,
+    );
+    const ticketHtml = await ticketFollow.text();
+    assert.ok(
+      ticketHtml.includes('Đăng nhập') || ticketHtml.includes('Cần đăng nhập'),
+      'owner ticket anonymous follow should land on auth',
+    );
+    assert.ok(
+      !ticketHtml.includes('data-testid="owner-ticket-missing"'),
+      'anonymous deeplink must not render owner-ticket missing state',
+    );
+    assert.ok(
+      !ticketHtml.includes('data-testid="owner-ticket-ready"'),
+      'anonymous deeplink must not render owner-ticket ready state',
+    );
+
     // O02: anonymous /admin soft-redirects (proxy 307) to /auth?next=/admin.
     const adminRaw = await fetch(base + '/admin', { redirect: 'manual' });
     assert.equal(adminRaw.status, 307, 'anonymous /admin should HTTP 307');

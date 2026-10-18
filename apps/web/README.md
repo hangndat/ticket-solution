@@ -37,6 +37,8 @@ No Clerk / SaaS IdP.
 | --- | --- |
 | `POST /api/bff/redeem` | `POST /v1/tenants/{tenantId}/events/{eventId}/redemptions` + `idempotency-key` |
 | `GET /api/bff/tickets?tenantId=` | `GET /v1/me/tickets?tenantId=` |
+| `GET /api/bff/tickets/{ticketId}?tenantId=` | `GET /v1/me/tickets/{ticketId}?tenantId=` (owner deeplink; UUID) |
+| `/t/{tenantSlug}/tickets/{ticketId}` | Owner-auth ticket view (email `buildOwnerTicketLink`; slug→tenantId via me/tenants) |
 | `GET /api/bff/operations/{key}?tenantId=&eventId=` | `GET /v1/operations/{clientOperationId}` |
 | `GET /api/bff/me` | `GET /v1/me` |
 
