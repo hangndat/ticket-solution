@@ -68,7 +68,7 @@ Localization: thêm **Vietnamese** với copy VI trong listing-metadata.
 | Contact name | Hang Nguyen Dat | ☐ |
 | Contact phone | *[điền số thật trong ASC UI — không commit vào git]* | ☐ |
 | Contact email | `hangndat@gmail.com` (Apple ID developer) hoặc alias support khi có | ☐ |
-| Demo account | Xem [app-review-notes.md](./app-review-notes.md) — paste vào ASC, không coi là prod secret | ☐ |
+| Demo account | Prod IdP verified S5-T2 — [app-review-notes.md](./app-review-notes.md) + [D13-S5-T2-DEMO-REVIEWER.md](../reviews/D13-S5-T2-DEMO-REVIEWER.md); paste ASC khi có binary | ☐ paste ASC |
 | Notes | Dán nội dung App Review notes | ☐ |
 | Attachment | Optional: PDF short walkthrough nếu cần | ☐ |
 | Sign-in required | **Yes** | ☐ |
