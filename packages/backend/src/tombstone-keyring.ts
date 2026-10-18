@@ -52,12 +52,29 @@ export function readTombstoneKeyring(
   try {
     parsed = JSON.parse(raw);
   } catch {
+    console.error(
+      JSON.stringify({
+        alert: 'account_deletion_tombstone_keyring_invalid',
+        severity: 'error',
+        code: 'KEYRING_INVALID',
+        operational_reason: 'json_parse_failed',
+      }),
+    );
+    // Never coerce invalid JSON into an empty usable ring.
     throw new TombstoneKeyringError(
       'KEYRING_INVALID',
       'ACCOUNT_DELETION_TOMBSTONE_KEYRING_JSON must be JSON',
     );
   }
   if (!Array.isArray(parsed) || parsed.length < 1) {
+    console.error(
+      JSON.stringify({
+        alert: 'account_deletion_tombstone_keyring_invalid',
+        severity: 'error',
+        code: 'KEYRING_INVALID',
+        operational_reason: 'empty_or_non_array',
+      }),
+    );
     throw new TombstoneKeyringError(
       'KEYRING_INVALID',
       'tombstone keyring must be a non-empty array',
@@ -96,6 +113,8 @@ export function readTombstoneKeyring(
       JSON.stringify({
         alert: 'account_deletion_tombstone_current_key_missing',
         severity: 'error',
+        code: 'KEY_UNKNOWN',
+        operational_reason: 'current_key_absent',
       }),
     );
     throw new TombstoneKeyringError(

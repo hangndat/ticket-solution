@@ -617,3 +617,163 @@ test(
     }
   },
 );
+
+test('SEC-2 B1 keyring parse: invalid JSON / empty ring throw KEYRING_INVALID', () => {
+  const { TombstoneKeyringError } = require('../dist');
+  assert.throws(
+    () =>
+      readTombstoneKeyring({
+        ACCOUNT_DELETION_TOMBSTONE_CURRENT_KEY_ID: 'k1',
+        ACCOUNT_DELETION_TOMBSTONE_KEYRING_JSON: '{not-json',
+      }),
+    (e) => e instanceof TombstoneKeyringError && e.code === 'KEYRING_INVALID',
+  );
+  assert.throws(
+    () =>
+      readTombstoneKeyring({
+        ACCOUNT_DELETION_TOMBSTONE_CURRENT_KEY_ID: 'k1',
+        ACCOUNT_DELETION_TOMBSTONE_KEYRING_JSON: '[]',
+      }),
+    (e) => e instanceof TombstoneKeyringError && e.code === 'KEYRING_INVALID',
+  );
+  assert.throws(
+    () =>
+      readTombstoneKeyring({
+        ACCOUNT_DELETION_TOMBSTONE_CURRENT_KEY_ID: 'missing',
+        ACCOUNT_DELETION_TOMBSTONE_KEYRING_JSON: JSON.stringify([
+          {
+            keyId: 'k1',
+            secretBase64: Buffer.alloc(32, 11).toString('base64'),
+          },
+        ]),
+      }),
+    (e) => e instanceof TombstoneKeyringError && e.code === 'KEY_UNKNOWN',
+  );
+});
+
+test(
+  'SEC-2 B1: completed → unset/invalid/old-key-missing keyring denies upsert; retained old key denies',
+  { timeout: 240000 },
+  async () => {
+    let name;
+    let db;
+    try {
+      const boot = await startIsolatedPostgres();
+      name = boot.name;
+      db = createDatabase(boot.url, 4);
+      const sub = randomUUID();
+      const user = await seedUser(db, sub);
+      const del = await createAccountDeletionRequest(db, {
+        userId: user.userId,
+        confirmation: true,
+      });
+      const processed = await processDueAccountAnonymizations(
+        db,
+        50,
+        opts(async () => ({ kind: 'DELETED' })),
+      );
+      assert.equal(processed.applied, 1);
+      assert.equal(processed.completed, 1);
+      const completed = await db.$queryRaw`
+        SELECT out_state AS state, out_idp_status AS idp_status
+        FROM get_account_deletion_idp_row(${del.requestId}::uuid)
+      `;
+      assert.equal(completed[0].state, 'COMPLETED');
+      assert.equal(completed[0].idp_status, 'DELETED');
+
+      const identity = {
+        issuer: ISSUER,
+        subject: sub,
+        email: 'recreate@example.com',
+        emailVerified: true,
+      };
+      const denyUnauth = (e) =>
+        e instanceof IdentityError &&
+        e.code === IDENTITY_ERROR_CODES.UNAUTHENTICATED;
+
+      // Unset / placeholder keyring after COMPLETED (live digest) → deny
+      await assert.rejects(
+        () =>
+          createPrismaIdentityUserRepository(db, {
+            env: {
+              OIDC_ISSUER: ISSUER,
+              ACCOUNT_DELETION_TOMBSTONE_KEYRING_JSON: '[]',
+              ACCOUNT_DELETION_TOMBSTONE_CURRENT_KEY_ID: '',
+            },
+          }).upsertFromVerifiedIdentity(identity),
+        denyUnauth,
+      );
+
+      // Invalid JSON keyring → deny (not empty-ring allow)
+      await assert.rejects(
+        () =>
+          createPrismaIdentityUserRepository(db, {
+            env: {
+              OIDC_ISSUER: ISSUER,
+              ACCOUNT_DELETION_TOMBSTONE_KEYRING_JSON: '{broken',
+              ACCOUNT_DELETION_TOMBSTONE_CURRENT_KEY_ID: 'k1',
+            },
+          }).upsertFromVerifiedIdentity(identity),
+        denyUnauth,
+      );
+
+      // Mint key absent from ring (only unrelated key) → deny, no silent skip
+      await assert.rejects(
+        () =>
+          createPrismaIdentityUserRepository(db, {
+            env: {
+              OIDC_ISSUER: ISSUER,
+              ACCOUNT_DELETION_TOMBSTONE_CURRENT_KEY_ID: 'k9',
+              ACCOUNT_DELETION_TOMBSTONE_KEYRING_JSON: JSON.stringify([
+                {
+                  keyId: 'k9',
+                  secretBase64: Buffer.alloc(32, 99).toString('base64'),
+                },
+              ]),
+            },
+          }).upsertFromVerifiedIdentity(identity),
+        denyUnauth,
+      );
+
+      // Retained mint key still in ring → digest hit denies recreate
+      await assert.rejects(
+        () =>
+          createPrismaIdentityUserRepository(db, {
+            env: tombstoneEnv(),
+          }).upsertFromVerifiedIdentity(identity),
+        denyUnauth,
+      );
+
+      // Zero live tombstones + unset keyring may stay operational
+      const admin = new Client({ connectionString: boot.adminUrl });
+      await admin.connect();
+      await admin.query(
+        `UPDATE account_deletion_requests
+         SET subject_tombstone_expires_at = clock_timestamp() - interval '1 minute',
+             subject_tombstone_digest = NULL,
+             subject_tombstone_key_id = NULL
+         WHERE subject_tombstone_digest IS NOT NULL
+            OR subject_tombstone_key_id IS NOT NULL`,
+      );
+      await admin.end();
+      const freshSub = randomUUID();
+      const allowed = await createPrismaIdentityUserRepository(db, {
+        env: {
+          OIDC_ISSUER: ISSUER,
+          ACCOUNT_DELETION_TOMBSTONE_KEYRING_JSON: '[]',
+          ACCOUNT_DELETION_TOMBSTONE_CURRENT_KEY_ID: '',
+        },
+      }).upsertFromVerifiedIdentity({
+        issuer: ISSUER,
+        subject: freshSub,
+        email: 'fresh@example.com',
+        emailVerified: true,
+      });
+      assert.ok(allowed.userId);
+      assert.notEqual(allowed.userId, user.userId);
+    } finally {
+      if (db) await db.$disconnect().catch(() => {});
+      if (name) docker('rm', '-f', name);
+    }
+  },
+);
