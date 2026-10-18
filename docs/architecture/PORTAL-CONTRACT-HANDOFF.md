@@ -6,7 +6,7 @@
 | Epic / Issues | Epic [#406](https://github.com/hangndat/ticket-solution/issues/406) · Task [#422](https://github.com/hangndat/ticket-solution/issues/422) (H-I1/H-I2) · Task [#431](https://github.com/hangndat/ticket-solution/issues/431) (H-A1/H-C1/H-P1/H-P2) |
 | Story parents | #421 (import/invitations) · #430 (audit/codes/platform) |
 | Architecture impact | **Có** — shared Nest routes + MinIO quarantine + PG import/invitation jobs + privacy allowlists |
-| Base SHA đã đọc | **`b63556e1698ca2f60a87aade890d257d5d0a832a`** (import/inventory/BFF); tip branch khi ghi handoff **`448a225aacff2235c0d842c6645a5b60ec5ec3cb`** (chỉ thêm `revokeMember` — không đổi H-I/H-A) |
+| Base SHA đã đọc | inventory/BFF @ `b63556e…`; contracts privacy tip **`8c0be84e4bec68fda1388333c799a06511b6d679`**; import upload/mapping tip **`a76c539`** (verify khớp handoff) |
 | Authority | ADR-20 §7.1 · `packages/contracts/src/import-invite.ts` · `PORTAL-BACKEND-GAPS` H-I*/H-A1/H-C1/H-P* · Decision Log O06 |
 | Kết luận | **Đủ để triển khai trong scope** — coordinator chốt `packages/contracts` theo bảng dưới; BE consume; **không** cắt BFF về sync legacy |
 | Non-goals | Không sửa shared contracts / root lock / feature code trong Task này; không permission mới; không enterprise / multi-event BI; không prod/DNS/store |
@@ -200,14 +200,16 @@ export interface ImportPreviewBody {
 | Row count ≤ min(`IMPORT_LIMITS.maxRows`, tenant `import_rows_per_job`) khi preview | `IMPORT_ROW_LIMIT` |
 | Formula-injection risk on export path only; import store raw then sanitize **messages** in error report | — |
 
-**ImportJobStatus (không mở rộng):**  
-`CREATED` → `PREVIEW_READY` → `COMMITTING` → `COMPLETED` \| `FAILED`.  
+**ImportJobStatus (không mở rộng):**
+`CREATED` → `PREVIEW_READY` → `COMMITTING` → `COMPLETED` | `FAILED`.
 Không thêm `SUCCESS` / `PARTIAL_SUCCESS`.
 
 **Commit response:** giữ `status: 'COMPLETED'` literal hiện có (không synonym).
 
-**`IMPORT_ENDPOINTS.upload` (chốt):**  
-`'POST /tenants/:tenantId/events/:eventId/imports/files'` — khớp BFF `importsUploadPath`.
+**`IMPORT_ENDPOINTS.upload` (đã land @ `a76c539`):**
+`POST /tenants/:tenantId/events/:eventId/imports/files` — khớp BFF `importsUploadPath`.
+
+`ImportErrorReportMeta` có trong CTR cho metadata nội bộ/header; **GET errors** vẫn trả **CSV stream**, không JSON envelope mặc định.
 
 ### 4.3 Lifecycle file / job
 
@@ -240,8 +242,8 @@ GET /v1/tenants/{t}/events/{e}/audit?cursor&limit&from&to&action
 | --- | --- |
 | Permission | **`report.read`** + event assignment (như reporting) |
 | Roles | Owner cần assignment; Manager allowlist; **CS / Scanner / Supervisor không** |
-| Response item | `PortalAuditEntry`: `auditId`, `actorUserId`, `action`, `resourceType`, `resourceId`, `createdAt`, `operationId?`, optional **`reasonCode`** (stable allowlist only, vd. gate reject codes) |
-| **Cấm** | free-text `reason` (có thể chứa PII/token/raw code); raw email/phone/token/code/`code_hmac`; **mọi** dump `sanitizedDiff` / payload; total count giả |
+| Response item | **Landed** `PortalAuditEntry`: `auditId`, `actorUserId`, `action`, `resourceType`, `resourceId`, `operationId`, `createdAt` — **không** `reason` / `reasonCode` |
+| **Cấm** | free-text `reason`; raw email/phone/token/code/`code_hmac`; **mọi** dump `sanitizedDiff` / payload; total count giả |
 | Cursor | opaque `nextCursor`; limit 1..100 default 20 |
 | Retention | **O06 đã chốt** (DECISION-LOG): audit TTL **730 ngày** — list chỉ hàng còn trong TTL; **không** invent TTL production mới |
 
@@ -254,43 +256,21 @@ GET /v1/tenants/{t}/events/{e}/codes?cursor&limit&state&sourceId&q
 | | Chốt |
 | --- | --- |
 | Permission | **`inventory.import`** + event assignment |
-| Item | `PortalCodeSummary`: `codeId`, `state` (`AVAILABLE`\|`HELD`\|`CONSUMED` only — mirror DB), `sourceId`, `ticketTypeId`, `codeSuffixMasked?` (optional, chỉ nếu derive **không** từ hmac reverse) |
-| **Cấm** | raw code, `code_hmac`, pepper version |
+| Item | **Landed** `PortalCodeSummary`: `codeId`, `state` (`AVAILABLE`\|`HELD`\|`CONSUMED`), `sourceId`, `ticketTypeId` — **không** suffix (DB chỉ HMAC; không bịa recoverable mask) |
+| **Cấm** | raw code, `code_hmac`, pepper, fabricated suffix |
 | `q` | CS-style: hash input server-side (`hashRedemptionCode`); **không** echo `q` raw trong response |
 
 ### 5.3 H-P-AUDIT / H-P1 / H-P2 — Platform
 
 | ID | Route | Auth | Projection |
 | --- | --- | --- | --- |
-| **H-P-AUDIT** | `GET /v1/platform/audit?cursor&limit&from&to&action&tenantId?` | Platform Operator + MFA verifier (`acr`/`ACR=2`, audience platform — **không** staff `report.read`) | `PlatformAuditEntry`: `auditId`, `actorUserId`, `action`, `resourceType`, `resourceId`, `tenantId`, `createdAt` — **không** free-text reason, **không** dump `sanitized_diff` |
-| **H-P1** | `GET /v1/platform/tenants?cursor&limit` | same Operator+MFA | `PortalPlatformTenantSummary`: `tenantId`, `slug`, `name`, `status` (`PENDING`\|`ACTIVE`\|`SUSPENDED`), `version`; thêm `createdAt` **chỉ nếu** cột nguồn có — **không** secrets/contact dump mặc định trên list |
-| **H-P2** | `GET /v1/platform/tenants/{id}/health` | same Operator+MFA | Xem DTO dưới — counts only |
+| **H-P-AUDIT** | `GET /v1/platform/audit?…` | Operator + MFA / platform audience | **Landed** `PortalPlatformAuditEntry` (= audit fields + `tenantId`, no `operationId`) — không reason/diff |
+| **H-P1** | `GET /v1/platform/tenants?cursor&limit` | same | **Landed** `PortalPlatformTenantSummary`: `tenantId`, `slug`, `name`, `status`, `version`, `createdAt` |
+| **H-P2** | `GET /v1/platform/tenants/{id}/health` | same | **Landed** `PortalPlatformTenantHealth`: `tenantId`, `observedAt`, `notifications{pending,failed,dead}`, `outbox{pending,failed}`, `usage` (= `PlatformTenantDetail['usage']`) |
 
-```ts
-/** H-P2 — không fake Redis/SMTP/DB global per-tenant */
-export interface PortalPlatformTenantHealth {
-  tenantId: string;
-  observedAt: string; // ISO server clock
-  /** Mirror PlatformTenantDetail.usage — counts only */
-  usage: {
-    events: number;
-    staffActive: number;
-    staffPendingInvites: number;
-    emailToday: number;
-  };
-  notifications: {
-    pending: number;
-    failed: number;
-    dead: number; // providerStatus DEAD
-  };
-  outbox: {
-    pending: number;
-    failed: number;
-  };
-}
-```
+Routes helper: `PORTAL_AUDIT_ENDPOINTS` trong `portal-admin.ts`.
 
-**Cấm trên health:** recipient/provider payload, raw error strings, SMTP/Redis/DB “up” boolean giả per-tenant, SLA/`success` status bịa. Đây là **counter observability**, không chẩn đoán infra toàn cục.
+**Cấm trên health:** recipient/provider payload, raw errors, Redis/SMTP/DB “up” giả, SLA/`success` bịa — chỉ counter observability.
 
 `PLATFORM_OIDC_REQUIRED_ACR=2` khớp `PLATFORM_MFA_ACR_VALUES=2` — không copy ví dụ `vemoki-mfa` web vào portal.
 
