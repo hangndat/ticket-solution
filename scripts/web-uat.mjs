@@ -10,6 +10,7 @@
  *   node scripts/web-uat.mjs redeem [baseUrl] [code] [tenantId] [eventId]
  *   node scripts/web-uat.mjs screenshot <url> [out.png]
  *   node scripts/web-uat.mjs goto <url>
+ *   node scripts/web-uat.mjs portal-smoke [portalBase] [appBase]
  */
 import { existsSync, mkdirSync, readdirSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
@@ -70,9 +71,11 @@ Commands:
   goto <url>                                   Print final URL + title
   o13-sales [baseUrl]                          O13 marketing screenshots → docs/reviews/o13-issue-381-uat/
   nav-o02 [baseUrl]                            O02 SiteNav guest chrome + soft-redirect /admin|/gate
+  portal-smoke [portalBase] [appBase]          Portal headless + GATE-STAY-APP / dual-run regression
 
 Env:
-  WEB_BASE_URL     default http://127.0.0.1:3000
+  WEB_BASE_URL     default http://127.0.0.1:3000 (app. attendee/Gate)
+  PORTAL_BASE_URL  default http://127.0.0.1:3013 (apps/portal)
   WEB_UAT_USER     default attendee@example.com
   WEB_UAT_PASS     default attendee-demo
   WEB_UAT_OUT_DIR  screenshot directory
@@ -612,6 +615,209 @@ async function cmdGoto(url) {
   });
 }
 
+/**
+ * Issue #439 / T-UAT-PORTAL — portal headless smoke + attendee/Gate regression.
+ * No mock auth. OIDC unset → fail-closed 503 on portal login (accepted).
+ * Checklist maps to docs/ops/PORTAL-LOCAL-CUTOVER-PREP.md §4.3 L3–L6 (+ L1 fail-closed).
+ */
+async function cmdPortalSmoke(portalBaseUrl, appBaseUrl) {
+  const portal = (
+    portalBaseUrl ||
+    process.env.PORTAL_BASE_URL ||
+    'http://127.0.0.1:3013'
+  ).replace(/\/$/, '');
+  const app = (
+    appBaseUrl ||
+    process.env.WEB_BASE_URL ||
+    DEFAULT_BASE
+  ).replace(/\/$/, '');
+  const outDir =
+    process.env.WEB_UAT_OUT_DIR ||
+    join(ROOT, 'apps/portal/.uat-artifacts/issue-439');
+  mkdirSync(outDir, { recursive: true });
+  const demoTenant = 'd9d9f001-0001-4000-8000-000000000001';
+
+  return withBrowser(async ({ page, context }) => {
+    // --- Portal: shell loads (no mock session) ---
+    const homeRes = await page.goto(`${portal}/`, { waitUntil: 'networkidle' });
+    const homeStatus = homeRes?.status() ?? null;
+    if (homeStatus !== 200) {
+      die(`portal home HTTP ${homeStatus}`);
+    }
+    const portalHomeShot = join(outDir, 'portal-home.png');
+    await page.screenshot({ path: portalHomeShot, fullPage: true });
+
+    const authPageRes = await page.goto(`${portal}/auth`, {
+      waitUntil: 'networkidle',
+    });
+    const authPageStatus = authPageRes?.status() ?? null;
+    if (authPageStatus !== 200) {
+      die(`portal /auth HTTP ${authPageStatus}`);
+    }
+    const portalAuthShot = join(outDir, 'portal-auth.png');
+    await page.screenshot({ path: portalAuthShot, fullPage: true });
+
+    // L1 fail-closed: login without full OIDC → 503 (or 302 to IdP when configured)
+    const loginRes = await context.request.get(
+      `${portal}/api/auth/login?return=/`,
+      { maxRedirects: 0 },
+    );
+    const loginStatus = loginRes.status();
+    const loginLoc = loginRes.headers()['location'] ?? '';
+    const loginBody = await loginRes.text();
+    let loginMode = 'unknown';
+    if (loginStatus === 503) {
+      loginMode = 'oidc_fail_closed';
+      if (!/OIDC_MISCONFIGURED|OIDC/i.test(loginBody)) {
+        die(`portal login 503 body missing OIDC hint: ${loginBody.slice(0, 200)}`);
+      }
+    } else if (loginStatus === 302 || loginStatus === 307) {
+      loginMode = 'oidc_authorize_redirect';
+      if (!/openid-connect\/auth|protocol\/openid-connect/i.test(loginLoc)) {
+        die(`portal login redirect not to IdP: ${loginLoc}`);
+      }
+    } else {
+      die(`portal /api/auth/login unexpected HTTP ${loginStatus}`);
+    }
+
+    // Platform login same fail-closed / IdP contract
+    const platLogin = await context.request.get(
+      `${portal}/api/auth/platform/login?return=/platform`,
+      { maxRedirects: 0 },
+    );
+    const platStatus = platLogin.status();
+    if (platStatus !== 503 && platStatus !== 302 && platStatus !== 307) {
+      die(`platform login unexpected HTTP ${platStatus}`);
+    }
+
+    // L6 open-redirect reject: evil return must not become Location
+    const evilLogin = await context.request.get(
+      `${portal}/api/auth/login?return=${encodeURIComponent('https://evil.example')}`,
+      { maxRedirects: 0 },
+    );
+    const evilStatus = evilLogin.status();
+    const evilLoc = evilLogin.headers()['location'] ?? '';
+    if (/evil\.example/i.test(evilLoc)) {
+      die(`open redirect leaked evil Location: ${evilLoc}`);
+    }
+    if (evilStatus !== 503 && evilStatus !== 302 && evilStatus !== 307) {
+      die(`evil-return login unexpected HTTP ${evilStatus}`);
+    }
+
+    // L5 CSRF: Origin from app. mutate portal BFF → 403
+    const csrfRes = await context.request.fetch(
+      `${portal}/api/bff/tenants/${demoTenant}/branding`,
+      {
+        method: 'PUT',
+        headers: {
+          Origin: app,
+          'Content-Type': 'application/json',
+        },
+        data: JSON.stringify({ expectedVersion: 1 }),
+        maxRedirects: 0,
+      },
+    );
+    const csrfStatus = csrfRes.status();
+    const csrfBody = await csrfRes.text();
+    // 403 = Origin mismatch (WEB_PUBLIC_ORIGIN set). 503 = ORIGIN_NOT_CONFIGURED (fail-closed).
+    if (csrfStatus !== 403 && csrfStatus !== 503) {
+      die(
+        `expected CSRF/origin 403|503 from app Origin, got ${csrfStatus}: ${csrfBody.slice(0, 200)}`,
+      );
+    }
+    if (!/CSRF_ORIGIN|ORIGIN_NOT_CONFIGURED|Origin/i.test(csrfBody)) {
+      die(`CSRF body missing origin code: ${csrfBody.slice(0, 200)}`);
+    }
+
+    // L3/L4 GATE-STAY-APP + legacy admin: stay on app host (soft /auth), never portal
+    const softPaths = ['/gate', '/admin'];
+    const softResults = [];
+    for (const path of softPaths) {
+      const res = await context.request.get(`${app}${path}`, {
+        maxRedirects: 0,
+      });
+      const status = res.status();
+      const location = res.headers()['location'] ?? '';
+      let locUrl;
+      try {
+        locUrl = new URL(location, app);
+      } catch {
+        die(`${path} invalid Location: ${location}`);
+      }
+      const sameHost = locUrl.origin === new URL(app).origin;
+      const softAuth =
+        (status === 307 || status === 302) &&
+        locUrl.pathname === '/auth' &&
+        (locUrl.searchParams.get('next') === path ||
+          locUrl.searchParams.get('return') === path);
+      const leakedPortal =
+        /3013|portal\./i.test(location) ||
+        locUrl.origin === new URL(portal).origin;
+      if (!sameHost || !softAuth || leakedPortal) {
+        die(
+          `GATE-STAY-APP fail ${path}: status=${status} loc=${location} sameHost=${sameHost} softAuth=${softAuth} leakedPortal=${leakedPortal}`,
+        );
+      }
+      softResults.push({ path, status, location });
+    }
+
+    // Attendee regression screenshots on app.
+    await page.goto(`${app}/`, { waitUntil: 'networkidle' });
+    const appHomeShot = join(outDir, 'app-home.png');
+    await page.screenshot({ path: appHomeShot, fullPage: true });
+
+    await page.goto(`${app}/redeem`, { waitUntil: 'networkidle' });
+    const appRedeemShot = join(outDir, 'app-redeem.png');
+    await page.screenshot({ path: appRedeemShot, fullPage: true });
+
+    // Follow /gate soft-redirect for visual evidence.
+    // Chain when OIDC unset: /gate → /auth?next=/gate → /?notice=auth_unavailable
+    // (127.0.0.1 vs localhost are both loopback product — reject only portal origin.)
+    await page.goto(`${app}/gate`, { waitUntil: 'networkidle' });
+    const afterGate = new URL(page.url());
+    const portalOrigin = new URL(portal).origin;
+    const appPort = new URL(app).port;
+    const loopback =
+      afterGate.hostname === '127.0.0.1' || afterGate.hostname === 'localhost';
+    if (afterGate.origin === portalOrigin) {
+      die(`followed /gate landed on portal: ${page.url()}`);
+    }
+    if (!loopback || (appPort && afterGate.port && afterGate.port !== appPort)) {
+      die(`followed /gate left app loopback/port: ${page.url()}`);
+    }
+    const gateLandingOk =
+      afterGate.pathname === '/auth' ||
+      afterGate.pathname === '/gate' ||
+      (afterGate.pathname === '/' &&
+        afterGate.searchParams.get('notice') === 'auth_unavailable');
+    if (!gateLandingOk) {
+      die(`unexpected /gate landing path: ${page.url()}`);
+    }
+    const appGateShot = join(outDir, 'app-gate-auth.png');
+    await page.screenshot({ path: appGateShot, fullPage: true });
+
+    const result = {
+      ok: true,
+      portal,
+      app,
+      loginMode,
+      loginStatus,
+      platformLoginStatus: platStatus,
+      evilReturnStatus: evilStatus,
+      csrfStatus,
+      softRedirects: softResults,
+      screenshots: {
+        portalHome: portalHomeShot,
+        portalAuth: portalAuthShot,
+        appHome: appHomeShot,
+        appRedeem: appRedeemShot,
+        appGateAuth: appGateShot,
+      },
+    };
+    console.log(JSON.stringify(result, null, 2));
+  });
+}
+
 const [cmd, ...args] = process.argv.slice(2);
 switch (cmd) {
   case 'auth-smoke':
@@ -631,6 +837,9 @@ switch (cmd) {
     break;
   case 'o13-sales':
     await cmdO13Sales(args[0]);
+    break;
+  case 'portal-smoke':
+    await cmdPortalSmoke(args[0], args[1]);
     break;
   case 'nav-o02': {
     const { spawnSync } = await import('node:child_process');
