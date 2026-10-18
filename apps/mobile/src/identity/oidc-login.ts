@@ -5,7 +5,7 @@ import {
   getOidcIssuer,
   getOidcScopes,
 } from './config';
-import { OIDC_REDIRECT_SCHEME } from './app-schemes';
+import { OIDC_POST_LOGOUT_URI, OIDC_REDIRECT_SCHEME } from './app-schemes';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -90,7 +90,7 @@ export async function endKeycloakSession(): Promise<void> {
     // Fixed brand URI (must match Keycloak ticket-mobile allowlist). Do not use
     // AuthSession.makeRedirectUri here — Expo Go / proxy variants were rejected
     // as "Invalid redirect uri" and left the SSO cookie intact.
-    const postLogout = 'vemoki://oauth/logout';
+    const postLogout = OIDC_POST_LOGOUT_URI;
     const url = new URL(discovery.endSessionEndpoint);
     url.searchParams.set('client_id', clientId);
     url.searchParams.set('post_logout_redirect_uri', postLogout);
