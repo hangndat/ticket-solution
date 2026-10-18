@@ -20,4 +20,11 @@ describe('PORTAL_UPSTREAM ops paths', () => {
       /\/download$/,
     );
   });
+
+  it('covers audit / codes / platform zone upstreams', () => {
+    assert.match(PORTAL_UPSTREAM.audit(t, e), /\/audit$/);
+    assert.match(PORTAL_UPSTREAM.codes(t, e), /\/codes$/);
+    assert.equal(PORTAL_UPSTREAM.platformTenants, '/v1/platform/tenants');
+    assert.equal(PORTAL_UPSTREAM.platformAudit, '/v1/platform/audit');
+  });
 });

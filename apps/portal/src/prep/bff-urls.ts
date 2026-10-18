@@ -79,3 +79,21 @@ export function bffNotifications(tenantId: string, eventId: string): string {
 export function bffExports(tenantId: string, eventId: string): string {
   return bffEventAction(tenantId, eventId, 'exports');
 }
+
+/** H-A1 / H-C1 event-scoped reads. */
+export function bffAudit(tenantId: string, eventId: string): string {
+  return bffEventAction(tenantId, eventId, 'audit');
+}
+
+export function bffCodes(tenantId: string, eventId: string): string {
+  return bffEventAction(tenantId, eventId, 'codes');
+}
+
+/** Platform Operator BFF — never call with staff cookie. */
+export function bffPlatformTenants(): string {
+  return '/api/bff/platform/tenants';
+}
+
+export function bffPlatformAudit(): string {
+  return '/api/bff/platform/audit';
+}
