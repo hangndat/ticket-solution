@@ -107,7 +107,7 @@ export function AuthSession() {
 
   if (summary?.kind === 'signed-in') {
     return (
-      <div className="auth-session">
+      <div className="auth-session" data-testid="auth-session-signed-in">
         <section className="auth-status" aria-live="polite">
           <h1>Đã đăng nhập</h1>
           <p className="intro">
@@ -118,7 +118,6 @@ export function AuthSession() {
         </section>
 
         <section className="auth-actions">
-          <h2>Tiếp theo</h2>
           <div className="auth-buttons">
             <Link className="button-link" href="/redeem">
               Đổi mã lấy vé
@@ -133,16 +132,6 @@ export function AuthSession() {
               Đăng xuất
             </a>
           </div>
-          <SurfaceState
-            kind="empty"
-            title="Phiên đang hoạt động"
-            detail={
-              summary.subjectHint
-                ? `Tóm tắt: ${summary.subjectHint}`
-                : 'Phiên hợp lệ trên thiết bị này.'
-            }
-            testId="auth-session-signed-in"
-          />
         </section>
       </div>
     );
@@ -177,7 +166,7 @@ export function AuthSession() {
   }
 
   return (
-    <div className="auth-session">
+    <div className="auth-session" data-testid="auth-session-signed-out">
       <section className="auth-status" aria-live="polite">
         <h1>Đăng nhập</h1>
         <p className="intro">
@@ -187,7 +176,6 @@ export function AuthSession() {
       </section>
 
       <section className="auth-actions">
-        <h2>Thao tác</h2>
         <div className="auth-buttons">
           <a className="button-link" href={loginHref}>
             Đăng nhập
@@ -196,12 +184,6 @@ export function AuthSession() {
             Đổi mã lấy vé
           </Link>
         </div>
-        <SurfaceState
-          kind="empty"
-          title="Chưa đăng nhập"
-          detail="Không có phiên hợp lệ. Bấm «Đăng nhập» để tiếp tục."
-          testId="auth-session-signed-out"
-        />
       </section>
     </div>
   );

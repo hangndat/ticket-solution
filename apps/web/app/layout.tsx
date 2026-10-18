@@ -6,8 +6,14 @@ import {
   VEMOKI_BRANDING,
   brandingToCssVars,
 } from '../src/branding';
+import { configuredPublicOrigin } from '../src/oidc/public-origin';
 import { FooterBrand } from '../src/site-chrome';
 import './globals.css';
+
+/** Prod default so OG/Twitter never fall back to request-host localhost. */
+const METADATA_BASE = new URL(
+  configuredPublicOrigin() ?? 'https://app.vemoki.com',
+);
 
 /**
  * Brand fonts (D6 #82) — self-hosted via next/font/local so `next build`
@@ -57,9 +63,10 @@ const fontBody = localFont({
 });
 
 export const metadata: Metadata = {
+  metadataBase: METADATA_BASE,
   title: { default: 'Vemoki', template: '%s · Vemoki' },
   description:
-    'Vemoki — nền tảng sự kiện. Đổi mã lấy vé và cổng kiểm soát vé trên hệ thống thật.',
+    'Vemoki — nền tảng sự kiện & vé. Đổi mã lấy vé, nhận lời mời, xem sự kiện đã xuất bản.',
   robots: { index: false, follow: false },
 };
 
@@ -81,7 +88,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           {children}
           <footer className="footer">
             <FooterBrand />
-            <span>Đổi mã lấy vé · Cổng kiểm soát vé</span>
+            <span>Sự kiện & vé</span>
           </footer>
         </ThemeProvider>
       </body>

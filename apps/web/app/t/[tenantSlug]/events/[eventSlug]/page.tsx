@@ -92,6 +92,8 @@ export default async function EventPage({ params }: Props) {
   const infoSections = sections.filter(
     (s) => s.kind === 'info' || s.kind === 'guide',
   );
+  const redeemHref = `/redeem?tenantSlug=${encodeURIComponent(event.tenantSlug)}&eventSlug=${encodeURIComponent(event.slug)}`;
+
 
   return (
     <ThemeProvider branding={branding} applyCssVars>
@@ -107,8 +109,18 @@ export default async function EventPage({ params }: Props) {
             <Wordmark />
             <span>{event.brand.organizationName}</span>
           </nav>
-          <section className="hero" aria-labelledby="event-title">
-            <div>
+          <section className="hero hero-atmosphere" aria-labelledby="event-title">
+            <div className="poster poster-media" data-testid="event-hero-media">
+              <EventBanner
+                eventId={event.id}
+                tenantSlug={event.tenantSlug}
+                bannerUrl={event.brand.bannerUrl}
+                className="event-banner event-banner-hero"
+                testId="event-hero-banner"
+                alt={`Banner ${event.name}`}
+              />
+            </div>
+            <div className="hero-copy">
               <EventLogo
                 eventId={event.id}
                 tenantSlug={event.tenantSlug}
@@ -120,19 +132,17 @@ export default async function EventPage({ params }: Props) {
               {hero.eyebrow ? <p className="eyebrow">{hero.eyebrow}</p> : null}
               <h1 id="event-title">{event.name}</h1>
               {hero.intro ? <p className="intro">{hero.intro}</p> : null}
-              <a className="button" href="#event-details">
-                Xem chi tiết ngày <span aria-hidden="true">↓</span>
-              </a>
-            </div>
-            <div className="poster poster-media" data-testid="event-hero-media">
-              <EventBanner
-                eventId={event.id}
-                tenantSlug={event.tenantSlug}
-                bannerUrl={event.brand.bannerUrl}
-                className="event-banner event-banner-hero"
-                testId="event-hero-banner"
-                alt={`Banner ${event.name}`}
-              />
+              <div className="hero-cta">
+                <Link className="button" href={redeemHref}>
+                  Đổi mã lấy vé
+                </Link>
+                <Link className="button-link button-link-secondary" href="/claim">
+                  Nhận lời mời
+                </Link>
+                <a className="button-link button-link-secondary" href="#event-details">
+                  Xem chi tiết ngày <span aria-hidden="true">↓</span>
+                </a>
+              </div>
             </div>
           </section>
           <section
@@ -170,7 +180,6 @@ export default async function EventPage({ params }: Props) {
 
           {infoSections.length > 0 ? (
             <section className="highlights" aria-labelledby="content-title">
-              <p className="eyebrow">Nội dung đã xuất bản</p>
               <h2 id="content-title">Chi tiết từ ban tổ chức</h2>
               <ul>
                 {infoSections.map((section) => (
