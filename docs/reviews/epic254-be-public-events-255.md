@@ -36,6 +36,11 @@ Kết quả: **PASS** (health OpenAPI paths gồm public; DB test: seed 200 list
 - Unknown tenant / draft unpublished / wrong slug → `null` → Nest **404**
 - Không lộ `contentStatus` / `revision` trên projection
 
+
+## CI database-isolation
+
+- Shard `published-events` → `test/published-events.test.cjs` trong `.github/workflows/ci.yml` matrix (fix DoD FAIL #255).
+
 ## Non-goals còn lại
 
 - Consumer web/iOS rewrite, deploy prod, CDN
