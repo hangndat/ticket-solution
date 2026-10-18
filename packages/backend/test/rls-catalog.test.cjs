@@ -38,6 +38,8 @@ const DEFINER_OWNER_TABLES = new Set([
   'account_deletion_requests',
   // O06 apply_account_anonymization clears canonical_email (FORCE RLS).
   'event_attendees',
+  // D13 SEC-1: apply_account_anonymization revokes staff_sessions (FORCE RLS).
+  'staff_sessions',
 ]);
 /** Platform metadata pool — USING(true) cross-tenant (NOBYPASSRLS). */
 const PLATFORM_OPEN_TABLES = new Set([
