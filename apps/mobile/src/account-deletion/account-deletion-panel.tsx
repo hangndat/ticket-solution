@@ -160,8 +160,7 @@ export function AccountDeletionPanel() {
     if (!epoch || identity.status !== 'verified') {
       setPhase({
         kind: 'error',
-        message:
-          'Cần đăng nhập đã xác minh để gửi yêu cầu. / A verified sign-in is required to submit a request.',
+        message: 'Cần đăng nhập đã xác minh để gửi yêu cầu.',
         retryable: false,
       });
       return;
@@ -214,7 +213,7 @@ export function AccountDeletionPanel() {
     <View
       style={{ gap: 10 }}
       accessibilityRole="summary"
-      accessibilityLabel="Account deletion request"
+      accessibilityLabel="Yêu cầu xóa tài khoản"
     >
       <Notice title={explainer.title}>{explainer.body}</Notice>
 
@@ -247,7 +246,7 @@ export function AccountDeletionPanel() {
         <View style={{ padding: 8, alignItems: 'center' }}>
           <ActivityIndicator />
           <Text style={{ color: colors.secondary, marginTop: 8 }}>
-            Đang gửi / tải yêu cầu…
+            Đang gửi hoặc tải yêu cầu…
           </Text>
         </View>
       ) : null}
@@ -273,8 +272,8 @@ export function AccountDeletionPanel() {
             <PrimaryButton
               label={
                 resolveAccountDeletionRetryAction(phase) === 'resubmit'
-                  ? 'Thử lại gửi yêu cầu / Retry submit'
-                  : 'Thử tải lại trạng thái / Reload status'
+                  ? 'Thử lại gửi yêu cầu'
+                  : 'Thử tải lại trạng thái'
               }
               onPress={() => void onRetry()}
               disabled={busy}
@@ -289,7 +288,7 @@ export function AccountDeletionPanel() {
       ) : null}
 
       {phase.kind === 'unavailable' ? (
-        <Notice title="Không dùng được yêu cầu xóa / Deletion unavailable">
+        <Notice title="Không dùng được yêu cầu xóa">
           {phase.message}
         </Notice>
       ) : null}

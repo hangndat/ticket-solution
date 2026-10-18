@@ -90,7 +90,7 @@ export function mapPostResult(
     return {
       kind: 'error',
       message:
-        'Không xác định được kết quả do mạng chậm hoặc mất kết nối. Bạn có thể thử lại — hệ thống sẽ không tạo yêu cầu trùng. / Could not confirm the result (network). You can retry — we will not create a duplicate request.',
+        'Không xác định được kết quả do mạng chậm hoặc mất kết nối. Bạn có thể thử lại — hệ thống sẽ không tạo yêu cầu trùng.',
       retryable: true,
       retryAction: 'resubmit',
       idempotencyKey,
@@ -99,32 +99,28 @@ export function mapPostResult(
   if (result.status === 'unauthorized') {
     return {
       kind: 'error',
-      message:
-        'Phiên đăng nhập không còn hợp lệ. Vui lòng đăng nhập lại. / Your session is no longer valid. Please sign in again.',
+      message: 'Phiên đăng nhập không còn hợp lệ. Vui lòng đăng nhập lại.',
       retryable: false,
     };
   }
   if (result.status === 'confirmation-required') {
     return {
       kind: 'error',
-      message:
-        'Máy chủ cần bạn xác nhận lại trước khi gửi yêu cầu. / The server needs you to confirm again before sending the request.',
+      message: 'Máy chủ cần bạn xác nhận lại trước khi gửi yêu cầu.',
       retryable: false,
     };
   }
   if (result.status === 'idempotency-key-required') {
     return {
       kind: 'error',
-      message:
-        'Thiếu khóa an toàn để gửi yêu cầu. Hãy thử lại từ đầu. / A safety key is missing. Please start the request again.',
+      message: 'Thiếu khóa an toàn để gửi yêu cầu. Hãy thử lại từ đầu.',
       retryable: false,
     };
   }
   if (result.status === 'idempotency-conflict') {
     return {
       kind: 'error',
-      message:
-        'Yêu cầu trùng khóa nhưng nội dung khác. Hãy thử lại từ đầu. / A conflicting retry was blocked. Please start the request again.',
+      message: 'Yêu cầu trùng khóa nhưng nội dung khác. Hãy thử lại từ đầu.',
       retryable: false,
       idempotencyKey,
     };
@@ -132,7 +128,7 @@ export function mapPostResult(
   return {
     kind: 'unavailable',
     message:
-      'Không dùng được dịch vụ yêu cầu xóa lúc này. Ứng dụng không giả định tài khoản đã bị xóa. / Account deletion is unavailable right now. The app does not assume your account was wiped.',
+      'Không dùng được dịch vụ yêu cầu xóa lúc này. Ứng dụng không giả định tài khoản đã bị xóa.',
   };
 }
 
@@ -151,7 +147,7 @@ export function mapGetResult(
     return {
       kind: 'error',
       message:
-        'Không tải được trạng thái yêu cầu (mạng chậm hoặc mất kết nối). / Could not load request status (network).',
+        'Không tải được trạng thái yêu cầu (mạng chậm hoặc mất kết nối).',
       retryable: true,
       retryAction: 'refresh',
     };
@@ -159,15 +155,14 @@ export function mapGetResult(
   if (result.status === 'unauthorized') {
     return {
       kind: 'error',
-      message:
-        'Phiên đăng nhập không hợp lệ khi đọc yêu cầu xóa. / Your session is not valid for reading the deletion request.',
+      message: 'Phiên đăng nhập không hợp lệ khi đọc yêu cầu xóa.',
       retryable: false,
     };
   }
   return {
     kind: 'unavailable',
     message:
-      'Không đọc được trạng thái yêu cầu xóa lúc này. Ứng dụng không bịa trạng thái đã xóa. / Deletion status is unavailable. The app will not invent a wiped state.',
+      'Không đọc được trạng thái yêu cầu xóa lúc này. Ứng dụng không bịa trạng thái đã xóa.',
   };
 }
 
