@@ -98,6 +98,21 @@ describe('decideHostRouting', () => {
     });
   });
 
+  it('redirects apex /admin and /gate to product origin (before soft-redirect)', () => {
+    for (const pathname of ['/admin', '/gate'] as const) {
+      const d = decideHostRouting({
+        ...base,
+        host: 'vemoki.com',
+        pathname,
+      });
+      assert.deepEqual(d, {
+        type: 'redirect',
+        location: `https://app.vemoki.com${pathname}`,
+        status: 302,
+      });
+    }
+  });
+
   it('301 www to apex marketing origin', () => {
     const d = decideHostRouting({
       ...base,
