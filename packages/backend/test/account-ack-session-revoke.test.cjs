@@ -464,6 +464,136 @@ test(
   },
 );
 
+/**
+ * Wait until another backend is blocked on the session-mutation advisory lock
+ * for this user (barrier — not sleep-as-sync).
+ */
+async function waitForSessionLockWaiter(admin, userId, timeoutMs = 15000) {
+  const started = Date.now();
+  while (Date.now() - started < timeoutMs) {
+    const r = await admin.query(
+      `SELECT count(*)::int AS n
+       FROM pg_locks
+       WHERE locktype = 'advisory'
+         AND classid = 872341
+         AND objid = hashtext($1::text)
+         AND objsubid = 2
+         AND NOT granted`,
+      [userId],
+    );
+    if (r.rows[0].n > 0) return;
+    await new Promise((res) => setTimeout(res, 10));
+  }
+  throw new Error(
+    'timed out waiting for advisory lock waiter on lock_user_session_mutation',
+  );
+}
+
+test(
+  'SEC-R1: uncommitted raw INSERT cannot race ACK into ACTIVE+REQUESTED',
+  { timeout: 300000 },
+  async () => {
+    let name;
+    let db;
+    let admin;
+    let insertClient;
+    try {
+      const boot = await startIsolatedPostgres();
+      name = boot.name;
+      db = createDatabase(boot.url, 4);
+      admin = new Client({ connectionString: boot.adminUrl });
+      await admin.connect();
+      // Match production default; race is READ COMMITTED visibility.
+      await admin.query('SHOW transaction_isolation');
+
+      const users = createPrismaIdentityUserRepository(db);
+      const ctx = await seedTwoTenantStaff(db, users);
+      const { staff, tenantId, eventId } = ctx;
+
+      insertClient = new Client({ connectionString: boot.url });
+      await insertClient.connect();
+
+      const ROUNDS = 40;
+      let violations = 0;
+      for (let round = 0; round < ROUNDS; round++) {
+        await admin.query(
+          `UPDATE account_deletion_requests
+           SET state = 'REJECTED', updated_at = clock_timestamp()
+           WHERE user_id = $1
+             AND state IN ('REQUESTED', 'UNDER_REVIEW', 'AWAITING_POLICY')`,
+          [staff.userId],
+        );
+
+        const sessionId = randomUUID();
+        await insertClient.query('BEGIN ISOLATION LEVEL READ COMMITTED');
+        await insertClient.query(
+          `SELECT set_config('app.tenant_id', $1, true)`,
+          [tenantId],
+        );
+        // Trigger takes lock_user_session_mutation via assert before EXISTS.
+        await insertClient.query(
+          `INSERT INTO staff_sessions (tenant_id, event_id, id, user_id, status)
+           VALUES ($1::uuid, $2::uuid, $3::uuid, $4::uuid, 'ACTIVE')`,
+          [tenantId, eventId, sessionId, staff.userId],
+        );
+
+        // ACK blocks on the same advisory lock until INSERT commits.
+        const ackPromise = createAccountDeletionRequest(db, {
+          userId: staff.userId,
+          confirmation: true,
+        });
+        await waitForSessionLockWaiter(admin, staff.userId);
+        await insertClient.query('COMMIT');
+        const del = await ackPromise;
+        assert.equal(del.state, 'REQUESTED');
+
+        const check = await admin.query(
+          `SELECT
+             (SELECT count(*)::int FROM staff_sessions
+              WHERE user_id = $1 AND status = 'ACTIVE') AS active_n,
+             (SELECT count(*)::int FROM account_deletion_requests
+              WHERE user_id = $1
+                AND state IN ('REQUESTED', 'UNDER_REVIEW', 'AWAITING_POLICY')) AS open_n,
+             (SELECT status FROM staff_sessions WHERE id = $2::uuid) AS sess_status`,
+          [staff.userId, sessionId],
+        );
+        const { active_n: activeN, open_n: openN, sess_status: sessStatus } =
+          check.rows[0];
+        if (activeN > 0 && openN > 0) {
+          violations += 1;
+        }
+        assert.equal(
+          sessStatus,
+          'REVOKED',
+          `round ${round}: raw INSERT session must be revoked after ACK`,
+        );
+        assert.equal(
+          activeN,
+          0,
+          `round ${round}: no ACTIVE staff_sessions while deletion open`,
+        );
+        assert.equal(openN, 1, `round ${round}: exactly one open deletion request`);
+      }
+      assert.equal(
+        violations,
+        0,
+        'ACTIVE+REQUESTED must never co-exist (old trigger without lock fails ~40/40)',
+      );
+    } finally {
+      if (insertClient) await insertClient.end().catch(() => {});
+      if (db) await db.$disconnect().catch(() => {});
+      if (admin) await admin.end().catch(() => {});
+      if (name) {
+        try {
+          docker('rm', '-f', name);
+        } catch {
+          // ignore
+        }
+      }
+    }
+  },
+);
+
 test(
   'SEC-1 ACK: revoke failure rolls back REQUESTED insert',
   { timeout: 240000 },
