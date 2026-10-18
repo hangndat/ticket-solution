@@ -16,11 +16,11 @@ const METADATA_BASE = new URL(
 );
 
 /**
- * Brand fonts (D6 #82) — self-hosted via next/font/local so `next build`
- * does not fetch Google Fonts (CI / offline-safe).
- * - Display: Syne — geometric, expressive; used for wordmark / hero.
+ * Brand fonts (Live Pulse v2 / #488) — self-hosted via next/font/local so
+ * `next build` does not fetch Google Fonts (CI / offline-safe).
+ * - Display: Sora — geometric, expressive; used for wordmark / hero.
  * - Body: Be Vietnam Pro — readable VI + Latin; not Inter/Arial/system.
- * Colors stay O09 from brand/vemoki/tokens.json (ink/paper/signal/focus).
+ * Colors from brand/vemoki/tokens.json (ink/paper/signal/focus).
  * D8-S2: ThemeProvider applies tenant overrides when present; root = Vemoki.
  * Files + OFL notices: apps/web/fonts/
  *
@@ -29,7 +29,7 @@ const METADATA_BASE = new URL(
  * Marketing locale/surface lives under app/marketing/layout.tsx.
  */
 const fontDisplay = localFont({
-  src: '../fonts/Syne-Variable.ttf',
+  src: '../fonts/Sora-Variable.ttf',
   variable: '--font-display',
   display: 'swap',
   weight: '600 800',

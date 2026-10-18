@@ -2,7 +2,7 @@
 
 import { useBranding } from './branding';
 
-/** Vemoki mark — two strokes as V; rust dot = admission punch (tokens.signal). */
+/** Vemoki mark — two strokes as V; signal punch = Live Pulse accent (tokens.signal). */
 export function BrandMark({
   logoUrl: logoUrlProp,
 }: {
@@ -51,7 +51,7 @@ export function BrandMark({
           transform="rotate(24 32 52)"
         />
       </g>
-      <circle cx="49" cy="14" r="4.2" fill="var(--signal, #9b3a18)" />
+      <circle cx="49" cy="14" r="4.2" fill="var(--signal, #E11D48)" />
     </svg>
   );
 }

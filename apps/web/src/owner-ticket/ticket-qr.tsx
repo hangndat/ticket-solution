@@ -48,7 +48,7 @@ export function TicketQr({
               y={(y + quietZone) * cell}
               width={cell}
               height={cell}
-              fill="#22241f"
+              fill="#0B1220"
             />
           ) : null,
         ),
