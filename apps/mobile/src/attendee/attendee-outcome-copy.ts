@@ -188,4 +188,24 @@ export const attendeeWalletCopy = {
   verifiedCaption: 'Vé đã xác minh',
   detailOnlyDisplay:
     'Chỉ để xem trên máy. Máy chủ vẫn quyết định thu hồi hoặc đã dùng tại cổng.',
+  /** AC-T1 — fixture / demo ticket must not suggest gate scan. */
+  demoNotForGate: 'Không dùng vào cổng',
+  revokedHint: 'Vé không còn hiệu lực — không quét cổng.',
+  usedHint: 'Vé đã dùng — không quét cổng lại.',
+  expiredHint: 'Vé hết hạn — không quét cổng.',
 } as const;
+
+/**
+ * Gate-scan discouragement copy for ticket detail (AC-T1 / PD §1.4).
+ */
+export function ticketGateHint(
+  state: string,
+  opts: { demo: boolean },
+): string | null {
+  if (opts.demo) return attendeeWalletCopy.demoNotForGate;
+  const normalized = state.trim().toUpperCase();
+  if (normalized === 'REVOKED') return attendeeWalletCopy.revokedHint;
+  if (normalized === 'USED') return attendeeWalletCopy.usedHint;
+  if (normalized === 'EXPIRED') return attendeeWalletCopy.expiredHint;
+  return null;
+}

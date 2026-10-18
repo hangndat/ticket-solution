@@ -4,10 +4,11 @@ import { brand } from './tokens.ts';
 export { brand };
 
 export const colors = {
-  /** System semantics adapt to light/dark; product accent is Vemoki signal. */
+  /** Attendee screens use brand paper (AC-V1); system labels stay adaptive. */
   label: Color.ios.label,
   secondary: Color.ios.secondaryLabel,
-  background: Color.ios.systemGroupedBackground,
+  /** Screen fill — ink/paper budget, not flat system grey alone. */
+  background: brand.paper,
   card: Color.ios.secondarySystemGroupedBackground,
   separator: Color.ios.separator,
   /** Replaces systemBlue on product CTAs / links. */
