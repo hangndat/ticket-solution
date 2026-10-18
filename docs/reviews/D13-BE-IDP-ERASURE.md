@@ -6,7 +6,7 @@
 | Role | `backend` (`docs/agents/roles/backend.md`) |
 | Architecture impact | **Có** — auth identity + durable IdP erasure (handoff D13 §5) |
 | Handoff | `docs/architecture/D13-ACCOUNT-DELETION-HANDOFF.md` @ `723d46dd218e10f988772509c0ca4a85cfca8929` + R2 `6247455038` |
-| Exact SHA (behavior) | _(fill after commit)_ |
+| Exact SHA (behavior) | `0533cb1385ba47d9d5c255438a01c3f8c7925ae8` |
 | Ownership | `packages/backend`, `apps/api` (verifier + identity upsert gate), `apps/worker` |
 | Related | ACK PR #352 tip `e12d68e7…` **chưa** trên main — SEC-2 branch từ `origin/main`; coordinator integrate ACK rồi reconcile |
 | Ordering note | Không giả ACK đã merge; apply-path SEC-1 (#348) vẫn revoke sessions trong PG scrub |
