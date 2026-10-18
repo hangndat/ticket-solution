@@ -25,6 +25,7 @@ import {
   loadShellContext,
   type ShellLoadState,
 } from '../nav/load-shell-context';
+import { PortalDualRunBanner } from './dual-run-banner';
 import { GateDeeplinkButton } from './gate-deeplink';
 import { SurfaceState } from './surface-state';
 
@@ -319,6 +320,7 @@ export function PortalShell({ children }: { children: ReactNode }) {
                 : []),
             ]}
           />
+          <PortalDualRunBanner />
           {activeTenant?.status === 'SUSPENDED' ? (
             <SurfaceState kind="suspended" />
           ) : null}
