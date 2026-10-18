@@ -1,21 +1,21 @@
 import type { TenantBranding } from './types';
 
 /**
- * Canonical Vemoki defaults from brand/vemoki/tokens.json (O09).
- * Keep in sync with apps/web/app/globals.css :root — D6 brand test.
+ * Canonical Vemoki defaults from brand/vemoki/tokens.json (Live Pulse v2).
+ * Keep in sync with apps/web/app/globals.css :root — branding-theme test.
  */
 export const VEMOKI_BRANDING: TenantBranding = {
   wordmark: 'vemoki',
   displayName: 'Vemoki',
   signalGlyph: '↗',
   colors: {
-    ink: '#22241f',
-    paper: '#f7f6f1',
-    signal: '#9b3a18',
-    focus: '#235fd0',
+    ink: '#0B1220',
+    paper: '#F4F6F8',
+    signal: '#E11D48',
+    focus: '#2563EB',
   },
-  primaryColor: '#9b3a18',
-  secondaryColor: '#235fd0',
+  primaryColor: '#E11D48',
+  secondaryColor: '#2563EB',
   logoUrl: null,
   logoAssetId: null,
   source: 'vemoki-default',
