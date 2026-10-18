@@ -8,7 +8,7 @@
 | Role | `web` · `docs/agents/roles/web.md` |
 | Architecture impact | Có (dual-run / GATE-STAY-APP evidence) |
 | Agent / session | Orca Cursor worker · `task_4337f3438e60` |
-| Tip SHA (exact) | `ee81e3bfb02eede62238e6b6895593b8bae1396c` |
+| Tip SHA (exact) | `4ccc1439842168876f786d62c6b98b1495dbff85` (harness `ee81e3bfb02eede62238e6b6895593b8bae1396c`) |
 | Verdict | **PASS** (portal-smoke + auth-smoke + unit dual-run; không mock auth; không DNS/deploy prod) |
 
 ## Mục tiêu
