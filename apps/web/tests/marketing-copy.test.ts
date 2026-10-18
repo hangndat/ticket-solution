@@ -23,6 +23,20 @@ describe('marketing copy VI/EN', () => {
       }
     }
   });
+
+  it('D13 privacy disclosures: camera on-device, deletion path, ≤30d', () => {
+    for (const locale of ['vi', 'en'] as const) {
+      const camera = t(locale, 'privacy.s3.body');
+      const deletion = t(locale, 'privacy.s5.body');
+      const retention = t(locale, 'privacy.s4.body');
+      assert.match(camera, /on-device|trên thiết bị/i);
+      assert.match(camera, /do not upload|không tải ảnh/i);
+      assert.match(retention, /30/);
+      assert.match(deletion, /\/account/);
+      assert.match(deletion, /30/);
+      assert.doesNotMatch(deletion, /\bjob\b|NO_JOB|scheduler/i);
+    }
+  });
 });
 
 describe('interest validation', () => {
