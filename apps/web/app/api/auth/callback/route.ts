@@ -104,6 +104,6 @@ export async function GET(request: NextRequest) {
   jar.delete(POST_LOGIN_COOKIE);
 
   return NextResponse.redirect(
-    new URL(postLogin ?? '/auth', publicOrigin(request)),
+    new URL(postLogin ?? '/', publicOrigin(request)),
   );
 }

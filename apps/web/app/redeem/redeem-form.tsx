@@ -48,8 +48,11 @@ import {
   REQUEST_TIMEOUT_MS,
 } from '../../src/redeem/poll-operation';
 import { loadPublishedRedeemSchema } from '../../src/redeem/published-schema';
+import { loginHref } from '../../src/oidc/login-href';
 import { liveRegionForStatus } from '../../src/ui/live-region';
 import { SurfaceState } from '../../src/ui/surface-state';
+
+const REDEEM_LOGIN_HREF = loginHref('/redeem');
 
 type Props = {
   initialTenantId?: string;
@@ -662,7 +665,7 @@ export function RedeemForm({
           >
             Xem vé của tôi
           </button>
-          <a className="button-link" href="/api/auth/login">
+          <a className="button-link" href={REDEEM_LOGIN_HREF}>
             Đăng nhập
           </a>
         </div>
@@ -687,7 +690,7 @@ export function RedeemForm({
           ) : null}
           {ux.kind === 'auth' ? (
             <p>
-              <a className="button" href="/api/auth/login">
+              <a className="button" href={REDEEM_LOGIN_HREF}>
                 Cần đăng nhập
               </a>
             </p>
