@@ -1,5 +1,5 @@
 /**
- * Headless UAT — Gate offline/degraded banner + fail-closed (#113/#114).
+ * Headless UAT — Gate offline/degraded banner + fail-closed (D11 #232 / AC-G4).
  * Usage: node apps/web/tests/gate-offline-uat.mjs [baseUrl]
  *
  * Uses Playwright offline mode — never steals the macOS mouse.
@@ -74,11 +74,15 @@ try {
 
   await page.getByTestId('gate-offline-shell').waitFor({ state: 'visible', timeout: 15_000 });
 
-  // Online baseline: no offline banner
+  // Online baseline: no offline banner; context shows Trực tuyến when form is present
   const bannerOnline = page.getByTestId('gate-offline-banner');
   if (await bannerOnline.count()) {
     die('expected no offline banner while online');
   }
+
+  mkdirSync(OUT, { recursive: true });
+  const onlineShot = join(OUT, 'd11-gate-online.png');
+  await page.screenshot({ path: onlineShot, fullPage: true });
 
   await context.setOffline(true);
   const banner = page.getByTestId('gate-offline-banner');
@@ -86,8 +90,11 @@ try {
   const link = await banner.getAttribute('data-link');
   if (link !== 'offline') die(`expected data-link=offline, got ${link}`);
   const text = await banner.innerText();
-  if (!/CHECKIN_OFFLINE/i.test(text) || !/iOS/i.test(text)) {
-    die(`banner missing iOS/CHECKIN_OFFLINE guide: ${text.slice(0, 200)}`);
+  if (!/Cổng web offline/i.test(text) || !/Không xếp hàng trên web/i.test(text)) {
+    die(`banner missing PD offline copy: ${text.slice(0, 200)}`);
+  }
+  if (/CHECKIN_OFFLINE|ADR-18|#105/.test(text)) {
+    die(`banner still has technical jargon: ${text.slice(0, 200)}`);
   }
 
   const confirmBtn = page.getByTestId('gate-confirm-submit');
@@ -96,12 +103,21 @@ try {
     if (!disabled) die('confirm submit should be disabled while offline');
   }
 
-  mkdirSync(OUT, { recursive: true });
-  const shot = join(OUT, `d7-gate-offline-${Date.now()}.png`);
-  await page.screenshot({ path: shot, fullPage: true });
+  const sessionBtn = page.getByTestId('gate-session-submit');
+  if (await sessionBtn.count()) {
+    const disabled = await sessionBtn.isDisabled();
+    if (!disabled) die('session submit should be disabled while offline');
+  }
 
-  // Also capture via scripts/web-uat path-compatible name
-  const curated = join(OUT, 'd7-gate-offline.png');
+  // No fake iOS queue UI on web
+  const bodyText = await page.locator('body').innerText();
+  if (/Đã xếp hàng — chờ đồng bộ|CHECKIN_OFFLINE queue/i.test(bodyText)) {
+    die('web Gate must not fake iOS offline queue UI');
+  }
+
+  const shot = join(OUT, `d11-gate-offline-${Date.now()}.png`);
+  await page.screenshot({ path: shot, fullPage: true });
+  const curated = join(OUT, 'd11-gate-offline.png');
   await page.screenshot({ path: curated, fullPage: true });
 
   console.log(
@@ -112,9 +128,9 @@ try {
         gateStatus: res.status(),
         offlineBanner: true,
         link,
-        guideMentionsCheckinOffline: true,
-        screenshot: shot,
-        curated,
+        plainViCopy: true,
+        noFakeQueue: true,
+        screenshots: { online: onlineShot, offline: curated, stamped: shot },
       },
       null,
       2,
