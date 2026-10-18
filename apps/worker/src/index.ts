@@ -76,9 +76,12 @@ class WorkerRelay implements OnModuleDestroy {
         // Keep looping; pending expiry is lazy-reconciled on read/decide too.
       }
       try {
-        await processDueAccountAnonymizations(this.db, 50);
+        await processDueAccountAnonymizations(this.db, 50, {
+          env: this.env,
+          leaseOwner: this.leaseOwner,
+        });
       } catch {
-        // Keep looping; account_deletion_requests remain REQUESTED until applied.
+        // Keep looping; stay REQUESTED until PG+IdP terminal COMPLETED.
       }
       try {
         await relayOutboxOnce(
@@ -105,7 +108,10 @@ class WorkerRelay implements OnModuleDestroy {
 
   async relayOnce() {
     if (!this.db) return { claimed: 0, completed: 0, failed: 0 };
-    await processDueAccountAnonymizations(this.db, 50);
+    await processDueAccountAnonymizations(this.db, 50, {
+      env: this.env,
+      leaseOwner: this.leaseOwner,
+    });
     const outbox = await relayOutboxOnce(
       this.db,
       this.email,

@@ -17,6 +17,10 @@ const {
   createAccountDeletionRequest,
   getCurrentAccountDeletionRequest,
   processDueAccountAnonymizations,
+  createFakeKeycloakErasureAdapter,
+  readTombstoneKeyring,
+  IdentityError,
+  IDENTITY_ERROR_CODES,
   O06_ACCOUNT_ANONYMIZE_POLICY_VERSION,
   O06_ACCOUNT_ANONYMIZE_MAX_DAYS,
   createSupportGrant,
@@ -359,9 +363,30 @@ test(
       );
       assert.ok(auditBefore[0].n >= 1, 'expected issue/support audit before anonymize');
 
-      const processed = await processDueAccountAnonymizations(db, 50);
+      const delEnv = {
+        OIDC_ISSUER: 'http://localhost/realms/ticket',
+        ACCOUNT_DELETION_TOMBSTONE_CURRENT_KEY_ID: 'k1',
+        ACCOUNT_DELETION_TOMBSTONE_KEYRING_JSON: JSON.stringify([
+          {
+            keyId: 'k1',
+            secretBase64: Buffer.alloc(32, 9).toString('base64'),
+          },
+        ]),
+      };
+      const delOpts = {
+        env: delEnv,
+        leaseOwner: 'platform-test',
+        keyring: readTombstoneKeyring(delEnv),
+        idp: createFakeKeycloakErasureAdapter({
+          async deleteUserBySubject() {
+            return { kind: 'DELETED' };
+          },
+        }),
+      };
+      const processed = await processDueAccountAnonymizations(db, 50, delOpts);
       assert.equal(processed.scanned, 1);
       assert.equal(processed.applied, 1);
+      assert.equal(processed.completed, 1);
 
       const after = await getCurrentAccountDeletionRequest(db, attendee.userId);
       assert.equal(after.state, 'COMPLETED');
@@ -380,17 +405,24 @@ test(
       assert.equal(auditAfter[0].n, auditBefore[0].n);
 
       // Idempotent second pass
-      const againProc = await processDueAccountAnonymizations(db, 50);
+      const againProc = await processDueAccountAnonymizations(db, 50, delOpts);
       assert.equal(againProc.applied, 0);
+      assert.equal(againProc.completed, 0);
 
-      // Same OIDC subject can re-register as a new user row after subject rotate
-      const reReg = await users.upsertFromVerifiedIdentity({
-        issuer: 'http://localhost/realms/ticket',
-        subject: 'att-1',
-        email: 'att@example.com',
-        emailVerified: true,
-      });
-      assert.notEqual(reReg.userId, attendee.userId);
+      // SEC-2: same OIDC (issuer,sub) blocked by tombstone digest within TTL
+      const usersDenied = createPrismaIdentityUserRepository(db, { env: delEnv });
+      await assert.rejects(
+        () =>
+          usersDenied.upsertFromVerifiedIdentity({
+            issuer: 'http://localhost/realms/ticket',
+            subject: 'att-1',
+            email: 'att@example.com',
+            emailVerified: true,
+          }),
+        (e) =>
+          e instanceof IdentityError &&
+          e.code === IDENTITY_ERROR_CODES.UNAUTHENTICATED,
+      );
       assert.ok(O06_ACCOUNT_ANONYMIZE_POLICY_VERSION.length > 0);
 
       // Future activated_at deny
