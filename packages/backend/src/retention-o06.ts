@@ -14,19 +14,25 @@ export const O06_OBJECT_RETENTION_DAYS = 90 as const;
 export const O06_AUDIT_TTL_DAYS = 730 as const;
 
 /** Placeholder until event-end → +365d anonymize has a claim table / outbox type. */
-export async function processDueTicketPiiAnonymizations(_limit = 50): Promise<{
+export async function processDueTicketPiiAnonymizations(
+  limit = 50,
+): Promise<{
   scanned: number;
   applied: number;
   skippedReason: 'NO_JOB_FRAMEWORK';
 }> {
+  void limit;
   return { scanned: 0, applied: 0, skippedReason: 'NO_JOB_FRAMEWORK' };
 }
 
 /** Placeholder until export/QR object expiry has a purge claim beyond export lease. */
-export async function processDueObjectRetentions(_limit = 50): Promise<{
+export async function processDueObjectRetentions(
+  limit = 50,
+): Promise<{
   scanned: number;
   applied: number;
   skippedReason: 'NO_JOB_FRAMEWORK';
 }> {
+  void limit;
   return { scanned: 0, applied: 0, skippedReason: 'NO_JOB_FRAMEWORK' };
 }
