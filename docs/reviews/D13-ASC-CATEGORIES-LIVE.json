@@ -1,0 +1,50 @@
+{
+  "timeUTC": "2026-10-18T08:08:46.569184+00:00",
+  "appId": "6823694490",
+  "sourceSha": "2759b0a9a3e0ef30321e36367e4f10f6ca18ff4a",
+  "source": "docs/asc/asc-fields-checklist.md §3",
+  "before": {
+    "primaryCategory": null,
+    "secondaryCategory": null
+  },
+  "after": {
+    "primaryCategory": {
+      "type": "appCategories",
+      "id": "ENTERTAINMENT"
+    },
+    "secondaryCategory": {
+      "type": "appCategories",
+      "id": "BUSINESS"
+    }
+  },
+  "operations": [
+    {
+      "method": "GET",
+      "path": "/apps/6823694490/appInfos",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/appCategories?limit=200",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/appInfos/d67d05a9-a4da-4d14-abd4-b17b8e5aa0e4?include=primaryCategory,secondaryCategory",
+      "status": 200
+    },
+    {
+      "method": "PATCH",
+      "path": "/appInfos/d67d05a9-a4da-4d14-abd4-b17b8e5aa0e4",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/appInfos/d67d05a9-a4da-4d14-abd4-b17b8e5aa0e4?include=primaryCategory,secondaryCategory",
+      "status": 200
+    }
+  ],
+  "verified": true,
+  "availabilityChanged": false,
+  "submitted": false
+}
