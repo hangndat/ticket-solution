@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { DualRunBanner } from '../../src/portal/dual-run-banner';
 import { isPlatformOidcConfigured } from '../../src/platform/oidc';
 import { SiteNav } from '../../src/site-chrome';
 import { PlatformConsole } from './platform-console';
@@ -23,6 +24,7 @@ export default async function PlatformPage({ searchParams }: Props) {
   return (
     <main id="main" className="container shell redeem-page">
       <SiteNav />
+      <DualRunBanner surface="platform" />
       <h1>Platform console</h1>
       <p className="intro">
         Console Operator sau xác minh /platform/me và MFA. Không dùng ô UUID
