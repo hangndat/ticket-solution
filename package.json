@@ -28,7 +28,12 @@
     "demo:seed": "./scripts/d9-demo-seed.sh",
     "demo:seed-smoke": "./scripts/d9-demo-seed-smoke.sh",
     "check:prepush": "./scripts/pre-push-check.sh",
-    "hooks:install": "./scripts/hooks-install.sh"
+    "hooks:install": "./scripts/hooks-install.sh",
+    "agent-metrics:opened": "node scripts/agent-role-monitor/cli.mjs record-opened",
+    "agent-metrics:ingest": "node scripts/agent-role-monitor/cli.mjs ingest-settlement",
+    "agent-metrics:rollup": "node scripts/agent-role-monitor/cli.mjs rollup",
+    "agent-metrics:host-sample": "node scripts/agent-role-monitor/cli.mjs host-sample",
+    "agent-metrics:test": "node --test scripts/agent-role-monitor/smoke.test.mjs"
   },
   "devDependencies": {
     "playwright": "1.56.1",
