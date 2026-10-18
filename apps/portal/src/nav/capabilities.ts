@@ -148,12 +148,21 @@ export function buildEventMenuItems(
   const items: EventMenuItem[] = [
     { key: 'overview', href: base, label: 'Tổng quan' },
   ];
-  if (
-    permissions.some((p) =>
-      ['event.update', 'config.publish', 'inventory.import'].includes(p),
-    )
-  ) {
+  const canSetup = permissions.some((p) =>
+    ['event.update', 'config.publish', 'inventory.import', 'event.config'].includes(
+      p,
+    ),
+  );
+  if (canSetup) {
     items.push({ key: 'setup', href: `${base}/setup`, label: 'Chuẩn bị' });
+    items.push({ key: 'types', href: `${base}/types`, label: 'Loại vé' });
+    items.push({ key: 'sources', href: `${base}/sources`, label: 'Nguồn mã' });
+    items.push({ key: 'quota', href: `${base}/quota`, label: 'Hạn mức' });
+    items.push({
+      key: 'config',
+      href: `${base}/config`,
+      label: 'Cấu hình / xuất bản',
+    });
   }
   if (
     permissions.some((p) =>
