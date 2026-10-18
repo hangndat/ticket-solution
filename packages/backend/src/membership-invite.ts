@@ -12,7 +12,10 @@ import {
   lockTenantPolicyForUpdate,
 } from './tenant-policy';
 import { withTenant } from './tenant-context';
-import { requireTenantPermission } from './membership';
+import {
+  assertLockedMembershipPermission,
+  requireTenantPermission,
+} from './membership';
 
 function canonicalizeEmail(email: string): string {
   return email.trim().toLowerCase();
@@ -276,25 +279,30 @@ export async function revokeMembershipKeepingLastOwner(
   },
 ): Promise<{ revokedAt: string }> {
   return withTenant(db, input.tenantId, async (tx) => {
-    await requireTenantPermission(tx, {
-      tenantId: input.tenantId,
-      userId: input.actorUserId,
-      permission: 'members.manage',
-    });
+    // Lock order matches changePortalMemberRole: tenant_policies → memberships (id ASC)
+    // → authz on locked rows (no FOR SHARE upgrade deadlock).
+    await lockTenantPolicyForUpdate(tx, input.tenantId);
 
-    // Lock actor + target memberships sorted to avoid deadlock with last-owner races.
-    const ids = [input.actorUserId, input.membershipId].sort();
-    void ids;
     const members = await tx.$queryRaw<
-      { id: string; user_id: string; role: string; revoked_at: Date | null }[]
+      {
+        id: string;
+        user_id: string;
+        role: string;
+        permissions: string[];
+        revoked_at: Date | null;
+        activated_at: Date | null;
+      }[]
     >`
-      SELECT id, user_id, role, revoked_at FROM memberships
+      SELECT id, user_id, role, permissions, revoked_at, activated_at FROM memberships
       WHERE tenant_id = ${input.tenantId}::uuid
       ORDER BY id
       FOR UPDATE
     `;
-
-    await lockTenantPolicyForUpdate(tx, input.tenantId);
+    assertLockedMembershipPermission(
+      members,
+      input.actorUserId,
+      'members.manage',
+    );
 
     const target = members.find((m) => m.id === input.membershipId);
     if (!target || target.revoked_at) {
