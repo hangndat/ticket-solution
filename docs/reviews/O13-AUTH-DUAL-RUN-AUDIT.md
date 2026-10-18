@@ -6,7 +6,7 @@
 | Role | coordinator tooling |
 | Architecture impact | Có — đối chiếu handoff O13 vs prod config (docs + realm + deploy templates); **không** đổi IdP provider |
 | Base SHA (trước patch) | `63535b48e2f17c65778246e5c44fc162f0dd9f26` |
-| Artifact SHA | _(điền sau commit — xem tip branch / PR)_ |
+| Artifact SHA | `b71a3f3431753486ff42a095b03facb57e63d30e` (commit chứa artifact + patches) |
 | Live host | `113.161.116.5` (SSH `dexter@…`; alias `conanphong` không resolve từ máy agent) |
 | Handoff | `docs/architecture/o13-marketing-app-subdomain.md` |
 
