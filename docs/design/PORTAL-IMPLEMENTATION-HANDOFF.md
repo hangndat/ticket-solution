@@ -39,8 +39,8 @@ Discovery PD (`PORTAL-ANTD-UX.md`) còn option. **Sau duyệt roadmap, chỉ dù
 | Owner / Manager | Org overview, events, members, setup/publish, guests, report (nếu perm) | Marketing GTM; scan cổng |
 | Event ops | Types/sources/quota, import, duyệt, brand/config | Platform provisioning |
 | CS | Tra cứu vé, timeline, resend (cooldown) | Support-grant xuyên tenant |
-| Supervisor | Báo cáo event (nếu `report.read`); deep-link Gate trên `app.` | Full admin nếu thiếu tenant perms |
-| Scanner | — | **Không** shell portal; chỉ Gate `app.` / iOS khi `gate.confirm` |
+| Supervisor | Deep-link Gate trên `app.` khi có `gate.*` / `ticket.revoke` | **Không** Cổng report / Nhật ký audit trên portal — `role-map.ts` Supervisor **không** có `report.read`; không suy quyền từ tên role |
+| Scanner | — | **Không** shell portal; chỉ Gate `app.` / iOS khi `gate.confirm`; **không** `report.read` / audit |
 | Platform Operator | `/platform/*` (P1.1): tenant list/provision/status/limits/grant | Tenant staff menu |
 
 ### 2.2 Flow chính
@@ -106,7 +106,7 @@ portal.vemoki.com
   /t/[tenantId]/e/[eventId]/gate      Report only — mount nav iff report.read
   /t/[tenantId]/e/[eventId]/support   CS
   /t/[tenantId]/e/[eventId]/export
-  /t/[tenantId]/e/[eventId]/audit     P1.1 — khi H-A1
+  /t/[tenantId]/e/[eventId]/audit     P1.1 — H-A1; nav iff report.read + assignment (ADR-20 §7.1)
   /platform/*                     PLATFORM-PORTAL-ZONE (Operator only)
   /account/security               Phiên / logout semantics (P0 nền; P1 mở rộng MFA UI nếu API)
 ```
@@ -132,7 +132,7 @@ Nguồn: [`o02-permission-nav/contract.md`](./o02-permission-nav/contract.md). C
 | · Cổng | `…/gate` | **`report.read` trên server** — không suy từ `gate.confirm` / Scanner |
 | · Hỗ trợ | `…/support` | `cs.lookup` (resend riêng `cs.resend`) |
 | · Export | `…/export` | `export.*` |
-| · Nhật ký | `…/audit` | `audit.read` (sau H-A1) — P1.1 |
+| · Nhật ký | `…/audit` | **`report.read` + event assignment** (H-A1 / ADR-20 §7.1) — P1.1; **không** `audit.read`; Owner/Manager only theo role-map (Supervisor/CS/Scanner ẩn) |
 | Platform | `/platform` | Operator audience — **không** tenant role |
 
 Deep-link thiếu quyền → `Result` 403 VI + CTA về overview được phép. Soft-redirect O02 giữ.
@@ -248,7 +248,7 @@ Nguồn: `brand/vemoki/tokens.json`.
 | Màn | Route | AntD | States | Source reuse | API |
 | --- | --- | --- | --- | --- | --- |
 | Export job | `…/export` | Form filters, Progress, Download | async, unknown | support export | create/status/download READY; **history list G-E1** optional P1 |
-| Codes inventory browse | optional sub guests | Table masked | empty | — | **G-C1 GAP** — không raw code; chỉ sau H-C1 |
+| Codes inventory browse | optional sub guests | Table masked | empty, denied | — | **G-C1 / H-C1** — perm **`inventory.import`** + assignment (ADR-20 §7.1); response id/state/source/type (+ masked suffix nếu có); **không** raw/`code_hmac`; **không** `inventory.read` |
 | A11y / perf / keyboard pass | toàn portal | — | focus order | — | — |
 | Parity matrix đóng | §10 | — | — | — | Mọi READY+WIRE+GAP P0 đã chọn |
 
@@ -256,7 +256,7 @@ Nguồn: `brand/vemoki/tokens.json`.
 
 | Màn | Route | AntD | States | Source reuse | API |
 | --- | --- | --- | --- | --- | --- |
-| Audit browser | `…/audit` | Table filter action/from/to | empty, denied, no PII payload | — | **G-A1 / H-A1 NEW** |
+| Audit browser | `…/audit` | Table filter action/from/to | empty, denied, no PII/HMAC/raw | — | **G-A1 / H-A1** — GET mới; perm **`report.read` hiện có** + assignment (không perm mới); Platform audit = `/platform` zone riêng |
 | Job history filter | import/export drawers | Table | — | — | G-E1 / G-I1 khi duyệt |
 | Security settings | `/account/security` | Descriptions | — | — | Chỉ field API cho phép |
 | Platform home | `/platform` | Layout riêng Operator | denied tenant user | `apps/web/app/platform/*` | Audience riêng |
@@ -302,8 +302,8 @@ Một feature coding Dispatch web tại một thời điểm (`apps/portal` cùn
 P0.1  Shell apps/portal + auth + org/event context + O02 menu + org overview
 P0.2  Events list/wizard + setup/types/sources/quota/config/publish + members (khi H-M*)
 P0.3  Import/guests/approvals/notifications + CS + report gate + dashboard deep-links
-P0.4  Export + inventory browse (nếu H-C1) + a11y/perf + đóng parity matrix
-P1.1  Audit (H-A1) + Platform zone + job history filters
+P0.4  Export + inventory browse (H-C1 = inventory.import masked) + a11y/perf + đóng parity matrix
+P1.1  Audit (H-A1 = report.read + assignment) + Platform zone + job history filters
 P1.2  Dual-run deep-link / redirect UI (deploy = Task riêng)
 ```
 
@@ -322,8 +322,8 @@ P1.2  Dual-run deep-link / redirect UI (deploy = Task riêng)
 | G-T1 | Types/sources browse | P0.2 | Tạo vẫn được |
 | G-N1 | Notif filter | P0.3/P0.4 | |
 | G-E1 | Export history | P0.4/P1.1 | |
-| G-C1 / H-C1 | Codes browse | P0.4/P1 | No raw code |
-| G-A1 / H-A1 | Audit | P1.1 | New perm |
+| G-C1 / H-C1 | Codes browse | P0.4/P1 | `inventory.import` + assignment; no raw/`code_hmac`; **không** `inventory.read` |
+| G-A1 / H-A1 | Audit | P1.1 | `report.read` + assignment; **không** `audit.read` / role migration |
 | G-P1 / G-P2 | Platform list/health | P1.1 | Operator only |
 | G-D1 | Multi-event dash | **OUT** | Không thiết kế |
 | Bulk approve | RowSelection bulk | — | Chỉ sau contract bulk |
@@ -354,7 +354,7 @@ Trước tuyên bố «portal thay admin» / cutover: **mọi hàng P0 = Pass** 
 | P14 | Deep-link Gate scan | CTA | — | — | `gate.confirm` trên app | Mở `app./gate` đúng event; portal không camera | P0.3 |
 | P15 | Export | Progress/Download | | READY | `export.*` | Job READY→download; cross-tenant 404 | P0.4 |
 | P16 | Cross-tenant deny | Mọi list | | RLS | — | ID tenant B → 403/404 policy | P0.4 |
-| P17 | Audit browser | Table | | H-A1 | `audit.read` | No full PII payload | P1.1 |
+| P17 | Audit browser | Table | | H-A1 | `report.read` + assignment | Actor/action/time/result allowlist; no PII/HMAC/raw; Supervisor/CS/Scanner denied | P1.1 |
 | P18 | Platform tenants | `/platform` | | H-P1 | Operator+MFA | Tenant user 403 toàn zone | P1.1 |
 | P19 | Support grant | Form | | READY | Operator | Reason+TTL; audit | P1.1 |
 

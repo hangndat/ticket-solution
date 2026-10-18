@@ -11,7 +11,7 @@
 | OpenAPI audit | `apps/api/openapi.json` title *Ticket API — D4 CS/export/events* **v0.4.0** (61 paths) |
 | Non-goals | Feature code · commit/push/PR · GitHub board · deploy/DNS · cài package · spawn worker · đụng `apps/mobile` / `infra` dirty của Run khác · mở Android/payment/refund/transfer/seat/Wallet/SSO/billing/custom-domain |
 
-> **Kết luận ngắn:** API Nest hiện đủ **mutate + vài list cursor event-scoped** (events, pending redemptions, CS tickets, notifications, config-versions, report snapshot) để vận hành MVP trên cùng host product. **Portal chuyên nghiệp Ant Design không được bịa API tùy ý** — phần lớn “thiếu list/search” đã có **contract/BFF kỳ vọng** (`packages/contracts`, `apps/web` BFF) nhưng **chưa có trong OpenAPI/controller**. `portal.vemoki.com` và **dashboard multi-event** là **đề xuất cần Gate/user duyệt**; không mặc định chuyển quyền từ O13 (`app.` chứa admin) hay O12/O14 (multi-event OUT).
+> **Kết luận ngắn:** API Nest hiện đủ **mutate + vài list cursor event-scoped** (events, pending redemptions, CS tickets, notifications, config-versions, report snapshot) để vận hành MVP trên cùng host product. **Portal chuyên nghiệp Ant Design không được bịa API tùy ý** — phần lớn “thiếu list/search” đã có **contract/BFF kỳ vọng** (`packages/contracts`, `apps/web` BFF) nhưng **chưa có trong OpenAPI/controller**. Topology portal/Gate/Platform đã chốt O16/ADR-20 (`portal.vemoki.com`, `GATE-STAY-APP`, `/platform`); **dashboard multi-event** vẫn OUT (O12/O14) — cần user duyệt riêng. H-A1/H-C1: tái dụng **`report.read` / `inventory.import`** theo ADR-20 §7.1 — **không** `audit.read`/`inventory.read` mới.
 
 ---
 
@@ -46,7 +46,7 @@ UI Ant Design = **consumer web** (Task khác). File này chỉ nêu **hệ quả
 
 ---
 
-## 2. Host / session / Gate boundary (đề xuất — chưa chốt)
+## 2. Host / session / Gate boundary
 
 ### 2.1 Hiện trạng đã chốt (O13)
 
@@ -57,23 +57,21 @@ UI Ant Design = **consumer web** (Task khác). File này chỉ nêu **hệ quả
 
 Nguồn: DECISION-LOG **O13**; [VEMOKI-PLATFORM-SALES-PAGE-RESEARCH §8](./VEMOKI-PLATFORM-SALES-PAGE-RESEARCH.md).
 
-### 2.2 Đề xuất Run này (chưa = quyết định)
+### 2.2 Topology portal (đã chốt O16 / ADR-20 — không reopen)
 
-| Host | Vai trò đề xuất |
+| Host | Vai trò |
 | --- | --- |
 | `vemoki.com` | Marketing (giữ O13) |
-| `app.vemoki.com` | Attendee / guest product (redeem, vé, public event) |
-| `portal.vemoki.com` | Staff admin (Ant Design) |
+| `app.vemoki.com` | Attendee / guest + **Gate day-of** (`GATE-STAY-APP`) + admin legacy dual-run |
+| `portal.vemoki.com` | Staff admin Ant Design; Platform Operator zone **`/platform`** (`PLATFORM-PORTAL-ZONE`) |
 
-**Gate bắt buộc trước coding/deploy DNS:**
+> **Superseded:** các dòng discovery cũ «Gate surface … cần chốt» / «Platform host riêng … mở» **không** còn là alternate deploy. Authority: ADR-20 + `PORTAL-IMPLEMENTATION-HANDOFF` (`GATE-STAY-APP`, `PLATFORM-PORTAL-ZONE`). Deploy/DNS/cutover production vẫn cần Task ủy quyền riêng.
 
-1. User/coordinator **chốt** tách admin khỏi `app.` hay giữ O13 (admin trên `app.`).
-2. Task **architect**: cookie/`PUBLIC_WEB_ORIGIN`/CORS/Keycloak redirect URI/BFF origin allowlist — **không** coi subdomain là bằng chứng quyền (TD: subdomain ≠ authz).
-3. **Session boundary:** cookie portal vs attendee — SameSite/Domain; staff MFA audience (`ticket-platform-api` vs attendee) giữ fail-closed như hiện tại.
-4. **Gate surface:** màn Gate day-of ở `app.` (kiosk) hay `portal.`? Đề xuất mặc định nghiên cứu: **Gate giữ trên product/kiosk host**; portal = setup/CS/report — **cần chốt**, không mặc định chuyển.
-5. Platform operator console: cùng `portal.` path `/platform` hay host riêng — **mở**, không tự cấp.
+**Vẫn bắt buộc trước coding/deploy DNS (không đổi):**
 
-**Không** mặc định chuyển quyền O13; không deploy/DNS trong Task này.
+1. Cookie/`PUBLIC_WEB_ORIGIN`/CORS/Keycloak redirect URI/BFF origin allowlist theo ADR-20 — **không** coi subdomain là bằng chứng quyền.
+2. **Session boundary:** cookie portal vs attendee host-only; Platform audience/MFA tách (`ticket-platform-api`).
+3. Không deploy/DNS trong discovery Task này.
 
 ---
 
@@ -120,8 +118,8 @@ Ký hiệu: **API** = có trong `openapi.json` + controller · **BE** = logic `p
 | **G-I1** Import job lifecycle | CTR `IMPORT_ENDPOINTS`: get/preview/commit/errors + BFF `/admin/imports/*` | Chỉ `POST …/imports` sync codes | API extension **hoặc** cắt BFF về sync | MinIO upload; worker; quota |
 | **G-I2** Guest invitations list/dispatch | CTR `listInvitations` + dispatch(-preview) + BFF `/admin/invitations` | **Không** path nào | API extension | privacy: không raw email/token trong list |
 | **G-I3** Invitation claim | CTR `POST …/invitations/claim` | **Không** | API extension | attendee path — có thể `app.` |
-| **G-C1** List/search redemption **codes** | UI portal cần browse inventory | Chỉ import + quota | API extension | **không** trả raw code; mask/HMAC lookup như CS |
-| **G-A1** Staff audit log browser | `audit_logs` / `platform_audit_logs` **write** nhiều nơi | **Không** GET list staff | API extension / business | retention O06; filter action/from/to; no PII leak |
+| **G-C1** List/search redemption **codes** | UI portal cần browse inventory | Chỉ import + quota | API extension | H-C1 / ADR-20 §7.1: perm `inventory.import`; response id/state/source/type; **không** raw/`code_hmac`; **không** `inventory.read` |
+| **G-A1** Staff audit log browser | `audit_logs` write nhiều nơi | **Không** GET list staff | API extension / business | H-A1 / ADR-20 §7.1: perm `report.read`+assignment; no PII/HMAC; platform = `/v1/platform/audit` riêng; **không** `audit.read` |
 | **G-R1** Pending filter nâng cao | — | Chỉ status cố định + cursor | API extension nhỏ | q/sourceId/ticketTypeId optional |
 | **G-R2** BFF list pending | Approve/deny BFF có; **không** thấy list route đối xứng | API list đã có | **UX / BFF wire** | forward GET đã có |
 | **G-T1** List ticket-types / sources | — | Chỉ POST | API extension nhỏ | event-scoped |
@@ -150,7 +148,7 @@ Neo: [PLATFORM-POLICY](../ops/PLATFORM-POLICY.md) + `requireTenantPermission` (t
 | Owner | profile, members, event.create/list | Cần **assignment** để mutate event như Manager | Members/invites (khi G-M*), events list | Bypass event checks; arbitrary permissions API |
 | Manager | discovery assigned-only | config, publish, inventory, approve, report, export | Pending, import, report, config | CS resend nếu không có perm; platform tenants |
 | CS | — | `cs.lookup` / `cs.resend` | Ticket search masked + timeline | Quota change; approve; export* (trừ khi grant riêng — hiện không) |
-| Supervisor | — | Gate + undo + revoke ticket | Gate ops; không full report trừ perm | Export/import mặc định |
+| Supervisor | — | Gate + undo + revoke ticket (`role-map`: **không** `report.read`) | Gate ops trên `app.` only; **không** portal report/audit | Export/import/report/audit |
 | Scanner | — | `gate.confirm` | Gate confirm only | Admin workbench (O02) |
 | Platform operator | `/platform/*` | support grant **event-scoped** read | Tenant limits/status; grant tickets | Impersonate; audience mobile attendee |
 | Attendee | — | own redemptions/tickets | `/me/*` | Staff lists |
@@ -188,12 +186,14 @@ Coordinator sở hữu root `packages/contracts` + regen OpenAPI. Backend chỉ 
 | **H-I2** | `GET …/invitations` + dispatch-preview + dispatch | List = `InvitationSummary` masked; previewRevision bắt buộc commit; concurrent dispatch → conflict ổn định; **không** raw token |
 | **H-I3** | `POST …/invitations/claim` (attendee host) | Email verified; token one-time; quota/issue invariants D2 |
 
-### 5.3 P1 — inventory codes & audit
+### 5.3 P1 — inventory codes & audit (**ADR-20 §7.1 đã chốt**)
 
-| ID | Contract | AC |
+> **Superseded:** mọi AC cũ đề xuất `inventory.read` mới / `audit.read` mới / «Supervisor map» / «cần chốt perm» — **không** triển khai. Không alternate OpenAPI option.
+
+| ID | Contract | AC (đã chốt) |
 | --- | --- | --- |
-| **H-C1** | `GET …/codes?cursor&limit&state&sourceId&q` | `q` chỉ HMAC/lookup như CS — **không** list raw secrets; states HELD/AVAILABLE/…; permission `inventory.import` hoặc `inventory.read` mới (role-map — **cần chốt** thêm perm vs tái dụng import) |
-| **H-A1** | `GET …/events/{e}/audit?cursor&from&to&action` | `audit.read` mới hoặc Supervisor/Manager map; **không** payload PII đầy đủ; O06 TTL; platform_audit tách `/platform/audit` |
+| **H-C1** | `GET …/codes?cursor&limit&state&sourceId&q` | Perm **`inventory.import` hiện có** + event assignment (Owner vẫn assignment; Manager allowlist). **Không** tạo `inventory.read`. Response: code **id**, `status`/state, `sourceId`, `ticketTypeId` (+ masked suffix nếu derive an toàn); **không** raw code, **không** `code_hmac`/pepper. `q` = lookup kiểu CS (hash server-side), không echo raw. States theo enum hiện có (AVAILABLE/HELD/…). |
+| **H-A1** | `GET …/events/{e}/audit?cursor&from&to&action` | Perm **`report.read` hiện có** + event assignment (như reporting). **Không** tạo `audit.read`; **không** map Supervisor/CS/Scanner từ tên role. Response allowlist: actor/action/time/result/resource ids + metadata không nhạy cảm; **không** PII/token/code/HMAC/dump `sanitizedDiff`. O06 TTL. Platform audit = **`GET /v1/platform/audit`** Operator + MFA/verifier — tách khỏi staff. |
 
 ### 5.4 P2 — convenience filters (sau P0)
 

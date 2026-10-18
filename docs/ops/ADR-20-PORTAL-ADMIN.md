@@ -192,26 +192,27 @@ Mở rộng `sanitizePostLoginPath` allowlist portal: `/`, `/admin`, `/auth`, `/
 
 ---
 
-## 7. DTO / audit / cursor / privacy / permission — **đề xuất minh bạch (coordinator confirm)**
+## 7. DTO / audit / cursor / privacy / permission — **policy đã chốt (§7.1)**
 
-Các mục dưới đây **không** tự mở Nest schema trong ADR; là contract đề xuất để coordinator + BE chốt trước consumer P1 (và gap P0 đã ghi `PORTAL-BACKEND-GAPS`).
+Authority cho consumer BE/web = **§7.1** + `packages/backend/src/role-map.ts` hiện tại. **Không** tạo permission mới (`audit.read` / `inventory.read`) và **không** role-map migration trong đợt O16/P1.
 
-| ID | Đề xuất | Permission / privacy | Cursor |
+> **Superseded (không phải alternate deploy):** trước §7.1 từng có bảng «đề xuất» + câu hỏi coordinator confirm (`audit.read` mới / Supervisor map / `inventory.read` mới). Các option đó **đã bị thay** bởi §7.1 — **không** mở OpenAPI hay nav theo proposal cũ.
+
+| ID | Contract | Permission / privacy (**đã chốt**) | Cursor |
 | --- | --- | --- | --- |
-| **H-A1** | `GET /v1/tenants/{t}/events/{e}/audit?cursor&from&to&action` | Capability mới `audit.read` (map Owner/Manager/Supervisor — **confirm role-map**); **không** trả payload PII đầy đủ; mask email/phone theo CS; tôn O06 retention | Opaque `nextCursor`; **không** bịa `total` |
-| **H-P-AUDIT** | `GET /v1/platform/audit?…` tách hẳn staff audit | Operator + MFA ACR; audience platform | Cùng cursor policy |
+| **H-A1** | `GET /v1/tenants/{t}/events/{e}/audit?cursor&from&to&action` | **`report.read` hiện có** + event assignment (như `readEventReport`). Owner vẫn cần assignment; Manager theo allowlist `MANAGER_EVENT`. CS / Scanner / Supervisor **không** tự có audit/report từ tên role (`eventPermissionsForRole('Supervisor')` = `gate.confirm`/`gate.undo`/`ticket.revoke` only). Response allowlist: `actorUserId`, `action`, `resourceType`/`resourceId`, `reason`/result, `createdAt`, `operationId` khi cần — **không** raw email/phone/token/code/HMAC; **không** dump tùy ý `sanitizedDiff` / payload secret. `report.read` ≠ quyền export audit. Tôn O06 retention. | Opaque `nextCursor`; **không** bịa `total` |
+| **H-P-AUDIT** | `GET /v1/platform/audit?…` tách hẳn staff audit | Operator + MFA/verifier platform; audience `ticket-platform-api` — **không** staff `report.read` / support-grant `cs.read` | Cùng cursor policy |
+| **H-C1** | `GET …/codes?cursor&limit&state&sourceId&q` (gap G-C1) | **`inventory.import` hiện có** + event assignment. **Không** `inventory.read` mới. Response: code **id** (identifier), `status`/state, `sourceId`, `ticketTypeId`; masked suffix chỉ nếu derive an toàn ở layer response — schema `RedemptionCode` lưu `code_hmac`/pepper **không** được list ra client; raw code không tồn tại trên row list. `q` = lookup kiểu CS (hash input server-side), không echo raw. | cursor+limit |
 | **H-M1/M2** | Members / invites list (gap G-M*) | `members.manage`; cross-tenant → 404/403 không leak; email masked | cursor+limit |
 | **List chung** | Mọi list portal Table | Server authz; UI filter ≠ bypass | Cursor-first; cấm offset giả toàn bộ |
 
-**Privacy mặc định đề xuất:** list/detail CS-like masking; export giữ cooldown/quyền hiện có; audit browser P1 không trở thành dump secret/HMAC raw.
-
-Coordinator **confirm** trước khi mở OpenAPI: (1) tên permission `audit.read` vs tái dụng Supervisor-only; (2) có/không platform audit path tách; (3) inventory codes browse permission (`inventory.read` mới vs tái dụng import) — xem H-C1 gaps.
+**Privacy mặc định (bắt buộc):** list/detail CS-like masking; export giữ cooldown/quyền hiện có; audit/codes browser không trở thành dump secret/HMAC raw.
 
 ### 7.1 Coordinator xác nhận trong phạm vi O16 (18/10/2026)
 
 - Staff event audit dùng **`report.read` hiện có**, yêu cầu event assignment như reporting; không tạo `audit.read`/migration quyền hàng loạt ở đợt này. Owner vẫn cần assignment, Manager theo allowlist; CS/Scanner/Supervisor không tự có quyền audit từ tên role. Audit response chỉ actor ID/action/time/result và metadata allowlist không nhạy cảm; không raw email/phone/token/code/HMAC/payload dump. Quyền đọc báo cáo không mặc nhiên quyền export audit.
 - Platform audit là endpoint riêng dưới `/v1/platform/audit`, chỉ Operator với verifier platform/MFA; không đi qua staff `report.read` hoặc support grant `cs.read`.
-- Inventory codes browse dùng **`inventory.import` hiện có**, event-scoped; chỉ code identifier/masked suffix và state/source/type, không list raw code hoặc hash secret. Không tạo `inventory.read` mới.
+- Inventory codes browse dùng **`inventory.import` hiện có**, event-scoped; chỉ code identifier/masked suffix và state/source/type, không list raw code hoặc hash secret (`code_hmac`). Không tạo `inventory.read` mới.
 - `PLATFORM_OIDC_REQUIRED_ACR=2` khớp default `PLATFORM_MFA_ACR_VALUES=2` trong `packages/backend/src/platform-config.ts` và quyết định MFA hiện hành; không sao chép ví dụ `vemoki-mfa` của web vào portal rồi gây mismatch. Backend verifier là nguồn enforce, cấu hình realm local phải được kiểm chứng.
 - `@ticket/web-session` được coordinator chấp nhận làm thin pure helper package. Có thể copy-lock một PR foundation nếu shared package chưa sẵn, nhưng phải có source fingerprint và security regression; không thêm framework hay extract whole BFF.
 
