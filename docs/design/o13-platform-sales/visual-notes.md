@@ -4,22 +4,22 @@
 
 ## 1. Brand & tokens
 
-Nguồn: [`brand/vemoki/tokens.json`](../../../brand/vemoki/tokens.json)
+Nguồn chốt **Live Pulse v2:** [`brand/vemoki/tokens.json`](../../../brand/vemoki/tokens.json) · handoff [`docs/design/visual-identity-v2/`](../visual-identity-v2/) (Issue [#487](https://github.com/hangndat/ticket-solution/issues/487)).
 
 | Token | Value | Dùng |
 | ----- | ----- | ---- |
-| `--ink` | `#22241f` | Text chính, wordmark |
-| `--paper` | `#f7f6f1` | Nền page (có texture/gradient nhẹ — không flat-only nếu có thể) |
-| `--signal` | `#9b3a18` | CTA primary fill / accent punch |
-| `--focus` | `#235fd0` | Focus ring, links nhấn |
+| `--ink` | `#0B1220` | Text chính, wordmark |
+| `--paper` | `#F4F6F8` | Nền page (có texture/gradient nhẹ — không flat-only nếu có thể) |
+| `--signal` | `#E11D48` | CTA primary fill / accent punch |
+| `--focus` | `#2563EB` | Focus ring, links nhấn |
 
-Assets: `mark.svg`, `lockup.png`, `og.png`. Signal chữ `↗` khớp wordmark.
+Assets: `mark.svg` (punch = signal), `lockup.png`, `og.png`. Signal chữ `↗` khớp wordmark. Prototype `prototype/css/o13.css` cập nhật hex ở Task web — không invent ngoài bảng trên.
 
-### Typography (khớp `apps/web` hiện có)
+### Typography
 
 | Role | Font | Tránh |
 | ---- | ---- | ----- |
-| Display / wordmark / H1 | **Syne** (`--font-display`) | Inter, Roboto, Arial, system-only hero |
+| Display / wordmark / H1 | **Sora** (`--font-display`) | Inter, Roboto, Arial, system-only hero, Syne (v1) |
 | Body | **Be Vietnam Pro** (`--font-body`) | Default stack làm hero |
 
 ### Anti-patterns (user frontend design rules)
