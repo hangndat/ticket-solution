@@ -85,9 +85,11 @@ export function AccountPanel() {
     <div className="redeem-form">
       <aside className="notice" role="note">
         <p>
-          Yêu cầu xóa tài khoản chỉ là ACK trạng thái{' '}
-          <strong>AWAITING_POLICY</strong>. Không tự xóa ticket, audit, device
-          hay identity khi O06 chưa chốt.
+          Gửi yêu cầu được hệ thống ghi nhận (có thể hiện trạng thái theo dõi).
+          Đây chưa phải xóa ngay. Chúng tôi xử lý xóa hoặc ẩn danh dữ liệu cá
+          nhân liên quan trong ≤ 30 ngày; nhật ký kiểm toán có thể giữ tới 730
+          ngày theo chính sách. Chi tiết:{' '}
+          <a href="/privacy">chính sách quyền riêng tư</a>.
         </p>
       </aside>
       {loadPhase === 'loading' ? (
@@ -110,7 +112,7 @@ export function AccountPanel() {
         <SurfaceState
           kind="empty"
           title="Chưa có yêu cầu xóa"
-          detail="Bạn chưa gửi yêu cầu xóa tài khoản. Khi gửi, trạng thái chỉ là chờ chính sách — chưa phải đã xóa dữ liệu."
+          detail="Bạn chưa gửi yêu cầu xóa tài khoản. Khi gửi, yêu cầu đã được tiếp nhận; chúng tôi xử lý xóa hoặc ẩn danh trong ≤ 30 ngày — chưa phải đã xóa dữ liệu ngay."
           testId="account-load-empty"
         />
       ) : null}
@@ -125,7 +127,8 @@ export function AccountPanel() {
           checked={confirmed}
           onChange={(e) => setConfirmed(e.target.checked)}
         />{' '}
-        Tôi hiểu đây là yêu cầu chờ chính sách, không phải đã xóa.
+        Tôi hiểu đây là yêu cầu đã được tiếp nhận, không phải đã xóa ngay; mục
+        tiêu xử lý xóa hoặc ẩn danh trong ≤ 30 ngày.
       </label>
       <button
         type="button"
@@ -138,7 +141,7 @@ export function AccountPanel() {
         <SurfaceState
           kind="loading"
           title="Đang gửi yêu cầu…"
-          detail="Chưa khẳng định đã xóa dữ liệu cho đến khi có ACK rõ."
+          detail="Chưa khẳng định đã xóa dữ liệu cho đến khi yêu cầu được tiếp nhận rõ."
           testId="account-submit-loading"
         />
       ) : null}
@@ -154,9 +157,9 @@ export function AccountPanel() {
         >
           {view.kind === 'ok' ? (
             <p>
-              Đã ghi nhận request {view.value.requestId} · state{' '}
-              {view.value.state} · policy {view.value.policyStatus}. Đây chưa
-              phải xóa dữ liệu.
+              Đã tiếp nhận yêu cầu {view.value.requestId}. Đây chưa phải xóa dữ
+              liệu ngay; chúng tôi xử lý xóa hoặc ẩn danh trong ≤ 30 ngày theo
+              chính sách.
             </p>
           ) : (
             <p>{viewLabel(view)}</p>
