@@ -46,11 +46,11 @@ export const scanCopy = {
 export const eventsCopy = {
   loadingList: {
     title: 'Đang tải sự kiện',
-    body: 'Đang tải danh sách đã xuất bản. Demo bên dưới vẫn chỉ là mẫu.',
+    body: 'Đang tải danh sách đã xuất bản từ máy chủ. Catalog DEMO không thay thế khi lỗi.',
   },
   emptyPublished: {
     title: 'Chưa có sự kiện đã xuất bản',
-    body: 'Tổ chức này chưa có sự kiện công khai.',
+    body: 'Tổ chức này chưa có sự kiện công khai. Không hiển thị demo thay thế.',
   },
   emptyDemo: {
     title: 'Không có sự kiện demo',
