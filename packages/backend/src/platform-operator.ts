@@ -64,6 +64,7 @@ export async function getPlatformMe(
       operator,
       permittedCommands: operator
         ? [
+            'platform.tenants.list',
             'platform.tenants.create',
             'platform.tenants.status',
             'platform.tenants.limits',

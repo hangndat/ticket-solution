@@ -35,6 +35,8 @@ import {
   type PortalMemberSummary,
   type PortalMembersPage,
   type PortalMembershipMutationResponse,
+  type PortalPlatformTenantSummary,
+  type PortalPlatformTenantsPage,
   type PortalReasonBody,
   PLATFORM_ERROR_CODES,
 } from '@ticket/contracts';
@@ -56,6 +58,7 @@ import {
   getPlatformTenantDetail,
   listMyEvents,
   listMyTenants,
+  listPlatformTenants,
   listPortalInvites,
   listPortalMembers,
   listSupportTickets,
@@ -179,6 +182,23 @@ class PortalInviteResendResponseDto {
   @ApiProperty() expiresAt!: string;
   @ApiProperty({ enum: ['PENDING'] }) deliveryState!: 'PENDING';
 }
+
+class PortalPlatformTenantSummaryDto implements PortalPlatformTenantSummary {
+  @ApiProperty({ format: 'uuid' }) tenantId!: string;
+  @ApiProperty() slug!: string;
+  @ApiProperty() name!: string;
+  @ApiProperty({ enum: ['PENDING', 'ACTIVE', 'SUSPENDED'] })
+  status!: PortalPlatformTenantSummary['status'];
+  @ApiProperty() version!: number;
+  @ApiProperty() createdAt!: string;
+}
+
+class PortalPlatformTenantsPageDto implements PortalPlatformTenantsPage {
+  @ApiProperty({ type: [PortalPlatformTenantSummaryDto] })
+  items!: PortalPlatformTenantSummaryDto[];
+  @ApiProperty({ nullable: true, type: String }) nextCursor!: string | null;
+}
+
 
 type Deps = {
   db: PrismaClient | null;
@@ -339,6 +359,22 @@ export class PlatformService {
   tenantDetail(authorization: string | undefined, tenantId: string) {
     return this.platformActor(authorization)
       .then((u) => getPlatformTenantDetail(this.deps.db!, u.userId, tenantId))
+      .catch(fail);
+  }
+
+  listTenants(
+    authorization: string | undefined,
+    query: { cursor?: string; limit?: string },
+  ) {
+    const limit = query.limit ? Number(query.limit) : undefined;
+    return this.platformActor(authorization)
+      .then((u) =>
+        listPlatformTenants(this.deps.db!, {
+          actorUserId: u.userId,
+          cursor: query.cursor,
+          limit: Number.isFinite(limit) ? limit : undefined,
+        }),
+      )
       .catch(fail);
   }
 
@@ -671,6 +707,19 @@ export class PlatformController {
   @ApiOkResponse({ type: MeEventsDto })
   myEvents(@Headers('authorization') authorization: string | undefined) {
     return this.platform.myEvents(authorization);
+  }
+
+  @Get('platform/tenants')
+  @ApiBearerAuth()
+  @ApiOkResponse({ type: PortalPlatformTenantsPageDto })
+  @ApiQuery({ name: 'cursor', required: false })
+  @ApiQuery({ name: 'limit', required: false })
+  listTenants(
+    @Headers('authorization') authorization: string | undefined,
+    @Query('cursor') cursor?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.platform.listTenants(authorization, { cursor, limit });
   }
 
   @Post('platform/tenants')
