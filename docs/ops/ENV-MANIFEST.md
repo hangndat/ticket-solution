@@ -58,15 +58,21 @@ Thiếu key/env khi `APNS_ENABLED=true` → worker fail-closed (không silent su
 
 Redis: `REDIS_PORT` / URL chỉ cache/admission — **không** durable outbox.
 
-## 5. Tenant host (O07 / TD §12.1)
+## 5. Tenant host + O13 product origin (O07 / TD §12.1 / O13)
 
-| Biến | Ví dụ | Ý nghĩa |
+| Biến | Ví dụ (sau cutover O13) | Ý nghĩa |
 | --- | --- | --- |
-| `PLATFORM_ROOT_DOMAIN` | `vemoki.com` | Apex + wildcard `*.vemoki.com` |
+| `PLATFORM_ROOT_DOMAIN` | `vemoki.com` | Apex + wildcard `*.vemoki.com` (tenant hosts) |
 | `TENANT_HOST_ALLOWLIST` | JSON/file path | Canonical host → tenantSlug (không tin Host thô) |
-| `PUBLIC_WEB_ORIGIN` | `https://vemoki.com` | Redirect/BFF allowlist |
+| `WEB_PUBLIC_ORIGIN` | `https://app.vemoki.com` | **Canonical** CSRF/origin allowlist (code web đọc tên này) |
+| `PUBLIC_WEB_ORIGIN` | `https://app.vemoki.com` | Alias/docs/compose; đồng bộ với `WEB_PUBLIC_ORIGIN` |
+| `PUBLIC_WEB_BASE_URL` | `https://app.vemoki.com` | Worker invite/email deep links product |
+| `OIDC_REDIRECT_URI` | `https://app.vemoki.com/api/auth/callback` | Attendee BFF callback |
+| `PLATFORM_OIDC_CLIENT_ID` | `ticket-platform-web` | Phải khớp Keycloak clientId (không dùng `ticket-platform`) |
+| `PLATFORM_OIDC_REDIRECT_URI` | `https://app.vemoki.com/api/auth/platform/callback` | Path **code** (`/api/auth/platform/…`), không `/api/platform/auth/…` |
+| `PRODUCT_ORIGIN` / `MARKETING_ORIGIN` | `app.` / apex | CTA marketing → product; host-aware Next |
 
-Cookie session: **host-only** (không `Domain=.vemoki.com`). Xem `scripts/lib/tenant-host.mjs`.
+Cookie session: **host-only** trên `app.vemoki.com` (không `Domain=.vemoki.com`). Xem `scripts/lib/tenant-host.mjs` và `docs/architecture/o13-marketing-app-subdomain.md`.
 
 ## Cấm
 
