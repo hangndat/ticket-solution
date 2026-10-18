@@ -4,11 +4,9 @@ import Link from 'next/link';
 import { useEffect, useState, type ReactNode } from 'react';
 import { BrandMark } from './brand-mark';
 import { useBranding } from './branding';
-import {
-  GUEST_NAV_LINKS,
-  type NavLink,
-} from './nav/capabilities';
-import { loadNavCapabilities } from './nav/load-nav-capabilities';
+import type { NavLink } from './nav/capabilities';
+import { bindNavCapabilitiesAuthzObserver } from './nav/bind-fetch-authz-observer';
+import { navCapabilitiesStore } from './nav/nav-capabilities-store';
 
 /** Platform / tenant wordmark — defaults to Vemoki lockup from ThemeProvider. */
 export function Wordmark({ href = '/' }: { href?: string }) {
@@ -34,22 +32,39 @@ export function Wordmark({ href = '/' }: { href?: string }) {
 /**
  * SiteNav — links from server capabilities (MeEvents / MeTenants / PlatformMe).
  * Starts deny-by-default (guest); never hardcodes Admin/Cổng/Platform by route.
+ * SEC-CACHE: clears staff links on MEMBERSHIP_* 401/403; refetches on focus/visibility.
  */
 export function SiteNav({ trailing }: { trailing?: ReactNode }) {
-  const [links, setLinks] = useState<NavLink[]>(GUEST_NAV_LINKS);
+  const [links, setLinks] = useState<NavLink[]>(
+    () => navCapabilitiesStore.getSnapshot().links,
+  );
 
   useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      try {
-        const { links: next } = await loadNavCapabilities();
-        if (!cancelled) setLinks(next);
-      } catch {
-        if (!cancelled) setLinks(GUEST_NAV_LINKS);
+    bindNavCapabilitiesAuthzObserver();
+    const unsub = navCapabilitiesStore.subscribe(() => {
+      setLinks(navCapabilitiesStore.getSnapshot().links);
+    });
+    void navCapabilitiesStore.refresh();
+
+    /** Session refresh / tab foreground — revalidate discovery (O02 §6). */
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') {
+        void navCapabilitiesStore.refresh();
       }
-    })();
+    };
+    const onPageShow = (event: PageTransitionEvent) => {
+      // bfcache restore or soft navigation back — treat as session refresh.
+      if (event.persisted) {
+        void navCapabilitiesStore.refresh();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('pageshow', onPageShow);
+
     return () => {
-      cancelled = true;
+      unsub();
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('pageshow', onPageShow);
     };
   }, []);
 
