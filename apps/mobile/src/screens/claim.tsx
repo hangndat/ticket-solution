@@ -17,7 +17,6 @@ import {
   dropGuestClaimIntentIfStale,
   parkGuestClaimIntent,
   peekGuestClaimIntent,
-  redactGuestClaimIntent,
   resumeGuestClaimIntent,
 } from '@/redeem/claim-intent';
 import { requireTermsConsent, validateFormAnswers } from '@/redeem/form-validate';
@@ -153,7 +152,7 @@ export function ClaimScreen() {
         setNotice('Chưa cấu hình API — chưa tải form nhận vé.');
         return;
       }
-      setNotice('Form đã xuất bản không khả dụng. Không dùng fixture.');
+      setNotice('Form đã xuất bản không khả dụng. Không dùng dữ liệu mẫu.');
     })();
     return () => {
       cancelled = true;
@@ -218,8 +217,6 @@ export function ClaimScreen() {
       if (next.kind === 'issued' || next.kind === 'pending' || next.kind === 'denied') {
         clearGuestClaimIntent();
       }
-      // Never log token — redacted only for local UI debug.
-      void redactGuestClaimIntent(peekGuestClaimIntent());
     } finally {
       if (session.isEpochCurrent(epoch)) setBusy(false);
     }
