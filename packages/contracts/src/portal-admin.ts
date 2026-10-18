@@ -24,7 +24,8 @@ export interface PortalInviteSummary {
   role: MembershipRole;
   state: PortalInviteState;
   expiresAt: string;
-  deliveryState: 'PENDING' | 'FAILED';
+  /** ACCEPTED = processing completed; never proof of inbox delivery. */
+  deliveryState: 'PENDING' | 'ACCEPTED' | 'FAILED' | 'UNKNOWN';
 }
 export type PortalMembersPage = CursorPage<PortalMemberSummary>;
 export type PortalInvitesPage = CursorPage<PortalInviteSummary>;
