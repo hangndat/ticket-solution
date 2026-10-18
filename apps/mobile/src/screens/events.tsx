@@ -1,21 +1,23 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { FlatList, Pressable, Text, View } from 'react-native';
 import { Link } from 'expo-router';
-import {
-  demoTenants,
-  eventDate,
-  listDemoEvents,
-} from '@/data/demo-events';
+import { demoTenants, eventDate, listDemoEvents } from '@/data/demo-events';
 import { EventMediaHeader } from '@/components/event-media';
 import { BrandWordmark } from '@/components/page';
 import {
   EmptyState,
   ErrorState,
   LoadingState,
-  StateCaption,
 } from '@/components/screen-state';
 import { eventsCopy } from '@/components/screen-state-copy';
 import { fetchPublishedEventList } from '@/published/published-event-api';
+import {
+  DEMO_PUBLISHED_TENANTS,
+  initialPublishedListPhase,
+  nextDemoPublishedTenant,
+  publishedListStateFromResult,
+  type PublishedListPhase,
+} from '@/published/events-home';
 import type { PublishedEventSummary } from '@/published/types';
 import { getApiBaseUrl } from '@/identity/config';
 import { colors } from '@/theme/colors';
@@ -35,205 +37,118 @@ function formatListDate(startsAt: string, timezone: string): string {
 }
 
 /**
- * Events home: demo fixtures are explicitly labeled and never claimed as
- * published M04 content. Published list loads on demand (button) — fail-closed.
+ * Events home (ADR-19 / #257): published list is the FlatList SoT after load.
+ * Fixture catalog is footer-only with explicit Demo labels — never API fallback.
  */
 export function EventsScreen() {
   const { applyBranding, theme } = useTheme();
-  const [tenant, setTenant] = useState<string>(demoTenants[0]);
-  const [publishedTenant, setPublishedTenant] = useState('demo-fun');
+  const [publishedTenant, setPublishedTenant] = useState<string>(
+    DEMO_PUBLISHED_TENANTS[0],
+  );
   const [published, setPublished] = useState<PublishedEventSummary[]>([]);
-  const [publishedPhase, setPublishedPhase] = useState<
-    'idle' | 'loading' | 'ready' | 'error' | 'misconfigured'
-  >(() => (getApiBaseUrl() ? 'idle' : 'misconfigured'));
+  const [publishedPhase, setPublishedPhase] = useState<PublishedListPhase>(() =>
+    initialPublishedListPhase(Boolean(getApiBaseUrl())),
+  );
   const [publishedError, setPublishedError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
+  const [demoTenant, setDemoTenant] = useState<string>(demoTenants[0]);
 
-  // S-P0-C: demo tenant switch drives event chrome (primary + org name), not skin-only.
+  const beginPublishedReload = () => {
+    setPublishedPhase('loading');
+    setPublishedError(null);
+  };
+
+  const retryPublished = () => {
+    beginPublishedReload();
+    setReloadKey((key) => key + 1);
+  };
+
+  const switchPublishedTenant = () => {
+    beginPublishedReload();
+    setPublishedTenant((tenant) => nextDemoPublishedTenant(tenant));
+  };
+
+  // Load published list after mount / tenant / retry — setState only after await.
   useEffect(() => {
-    const demo = listDemoEvents(tenant)[0];
-    if (!demo) return;
+    let cancelled = false;
+    const controller = new AbortController();
+    void (async () => {
+      if (!getApiBaseUrl()) {
+        if (cancelled) return;
+        setPublished([]);
+        setPublishedPhase('misconfigured');
+        setPublishedError('Thiếu URL API');
+        return;
+      }
+      const result = await fetchPublishedEventList(
+        publishedTenant,
+        { limit: 20 },
+        controller.signal,
+      );
+      if (cancelled) return;
+      const next = publishedListStateFromResult(result);
+      setPublished(next.items);
+      setPublishedPhase(next.phase);
+      setPublishedError(next.errorMessage);
+    })();
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [publishedTenant, reloadKey]);
+
+  // Brand chrome from first published row when list is ready — not from fixtures.
+  useEffect(() => {
+    if (publishedPhase !== 'ready' || published.length === 0) return;
+    const first = published[0];
     applyBranding(
       {
-        tenantSlug: demo.tenantSlug,
-        organizationName: demo.brand.organizationName,
-        primaryColor: demo.brand.primaryColor,
-        wordmark: demo.brand.organizationName,
+        tenantSlug: first.tenantSlug,
+        organizationName: first.brand.organizationName,
+        primaryColor: first.brand.primaryColor,
+        logoUrl: first.brand.logoUrl,
+        wordmark: first.brand.organizationName,
       },
       'api',
     );
-  }, [tenant, applyBranding]);
+  }, [applyBranding, published, publishedPhase]);
 
-  const loadPublished = useCallback(async () => {
-    if (!getApiBaseUrl()) {
-      setPublishedPhase('misconfigured');
-      setPublished([]);
-      return;
-    }
-    setPublishedPhase('loading');
-    setPublishedError(null);
-    const result = await fetchPublishedEventList(publishedTenant, { limit: 20 });
-    if (result.status === 'ok') {
-      setPublished(result.body.items);
-      setPublishedPhase('ready');
-      return;
-    }
-    setPublished([]);
-    setPublishedPhase('error');
-    setPublishedError(
-      result.status === 'misconfigured'
-        ? 'Thiếu URL API'
-        : 'Không tải được danh sách đã xuất bản — không dùng demo thay thế.',
-    );
-  }, [publishedTenant]);
-
-  const demoEvents = listDemoEvents(tenant);
+  const demoEvents = listDemoEvents(demoTenant);
+  const listData =
+    publishedPhase === 'ready' ? published : ([] as PublishedEventSummary[]);
 
   return (
     <FlatList
       contentInsetAdjustmentBehavior="automatic"
       style={{ backgroundColor: colors.background }}
       contentContainerStyle={{ padding: 20, paddingBottom: 48, gap: 20 }}
-      data={demoEvents}
-      keyExtractor={(item) => `demo:${item.tenantSlug}:${item.id}`}
+      data={listData}
+      keyExtractor={(item) => `pub:${item.tenantSlug}:${item.id}`}
       ListHeaderComponent={
         <View style={{ gap: 16 }}>
           <BrandWordmark />
           <Text
-            accessibilityLabel={`Tổ chức: ${tenant}`}
+            accessibilityLabel={`Tổ chức: ${publishedTenant}`}
             style={{ color: colors.secondary, ...typography.caption }}
             selectable
           >
-            Tổ chức: {tenant} · {theme.organizationName}
+            Tổ chức: {publishedTenant}
+            {theme.organizationName ? ` · ${theme.organizationName}` : ''}
           </Text>
           <Text style={{ color: colors.label, ...typography.title }}>
             Tìm sự kiện tiếp theo
           </Text>
           <Text style={{ color: colors.secondary, ...typography.body }}>
-            Đổi mã để nhận vé. Mục demo bên dưới chỉ là dữ liệu mẫu.
+            Danh sách lấy từ sự kiện đã xuất bản trên máy chủ. Đổi mã để nhận vé.
           </Text>
           <Link href="/redeem" style={{ color: colors.accent, fontSize: 17 }}>
             Đổi mã
           </Link>
 
-          <Text style={{ color: colors.secondary, fontWeight: '600', marginTop: 4 }}>
-            Sự kiện đã xuất bản
-          </Text>
-          <Text selectable style={{ color: colors.secondary, ...typography.caption }}>
-            Tổ chức API: {publishedTenant}
-          </Text>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Tải danh sách sự kiện đã xuất bản"
-            onPress={() => void loadPublished()}
-            style={({ pressed }) => ({
-              paddingVertical: 12,
-              paddingHorizontal: 16,
-              borderRadius: 12,
-              backgroundColor: colors.accent,
-              opacity: pressed ? 0.85 : 1,
-            })}
-          >
-            <Text
-              style={{
-                color: colors.onAccent,
-                fontSize: 16,
-                fontWeight: '600',
-                textAlign: 'center',
-              }}
-            >
-              {publishedPhase === 'loading'
-                ? 'Đang tải…'
-                : 'Tải danh sách đã xuất bản'}
-            </Text>
-          </Pressable>
-          {publishedPhase === 'loading' ? (
-            <LoadingState title={eventsCopy.loadingList.title}>
-              {eventsCopy.loadingList.body}
-            </LoadingState>
-          ) : null}
-          {publishedPhase === 'misconfigured' ? (
-            <ErrorState title="Chưa cấu hình API">
-              Đặt EXPO_PUBLIC_API_BASE_URL. Demo vẫn chỉ là mẫu.
-            </ErrorState>
-          ) : null}
-          {publishedPhase === 'idle' ? (
-            <StateCaption>Chạm nút trên để gọi API công khai.</StateCaption>
-          ) : null}
-          {publishedPhase === 'error' && publishedError ? (
-            <ErrorState
-              title={eventsCopy.errorList.title}
-              onRetry={() => void loadPublished()}
-              retryLabel="Tải lại danh sách"
-            >
-              {publishedError}
-            </ErrorState>
-          ) : null}
-          {publishedPhase === 'ready' && published.length === 0 ? (
-            <EmptyState title={eventsCopy.emptyPublished.title}>
-              {eventsCopy.emptyPublished.body}
-            </EmptyState>
-          ) : null}
-          {published.map((item) => (
-            <View
-              key={`pub:${item.id}`}
-              style={{
-                padding: 16,
-                gap: 8,
-                backgroundColor: colors.card,
-                borderRadius: 16,
-                borderTopWidth: 4,
-                borderTopColor: item.brand.primaryColor,
-              }}
-            >
-              <EventMediaHeader
-                eventId={item.id}
-                tenantSlug={item.tenantSlug}
-                bannerUrl={item.brand.bannerUrl}
-                logoUrl={item.brand.logoUrl}
-                testID={`pub-media-${item.id}`}
-              />
-              <Text selectable style={{ color: colors.secondary, fontSize: 13 }}>
-                Đã xuất bản · v{item.publishedConfigVersion}
-              </Text>
-              <Text selectable style={{ color: colors.secondary }}>
-                {item.brand.organizationName}
-              </Text>
-              <Link
-                href={{
-                  pathname: '/events/[tenantSlug]/[slug]',
-                  params: { tenantSlug: item.tenantSlug, slug: item.slug },
-                }}
-                style={{
-                  color: colors.accent,
-                  fontSize: 22,
-                  fontWeight: '600',
-                  paddingVertical: 4,
-                }}
-              >
-                {item.name}
-              </Link>
-              <Text selectable style={{ color: colors.label }}>
-                {item.startsAt
-                  ? formatListDate(item.startsAt, item.timezone)
-                  : 'Chưa có giờ bắt đầu'}
-              </Text>
-            </View>
-          ))}
-
-          <Text
-            selectable
-            style={{ color: colors.secondary, marginTop: 8, fontWeight: '600' }}
-          >
-            Demo · Tổ chức: {tenant}
-          </Text>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Đổi tổ chức demo"
-            onPress={() =>
-              setTenant(
-                tenant === demoTenants[0] ? demoTenants[1] : demoTenants[0],
-              )
-            }
+            accessibilityLabel="Đổi tổ chức để tải danh sách đã xuất bản"
+            onPress={switchPublishedTenant}
             style={({ pressed }) => ({
               paddingVertical: 14,
               paddingHorizontal: 18,
@@ -251,38 +166,52 @@ export function EventsScreen() {
                 textAlign: 'center',
               }}
             >
-              Đổi tổ chức demo
+              Đổi tổ chức (API)
             </Text>
           </Pressable>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Đổi tenant slug để thử API đã xuất bản"
-            onPress={() =>
-              setPublishedTenant((t) =>
-                t === 'demo-fun' ? 'demo-studio' : 'demo-fun',
-              )
-            }
-            style={({ pressed }) => ({
-              paddingVertical: 10,
-              opacity: pressed ? 0.7 : 1,
-            })}
-          >
-            <Text style={{ color: colors.accent, textAlign: 'center' }}>
-              Đổi tenant slug (thử API)
-            </Text>
-          </Pressable>
+
+          {publishedPhase === 'loading' ? (
+            <LoadingState title={eventsCopy.loadingList.title}>
+              {eventsCopy.loadingList.body}
+            </LoadingState>
+          ) : null}
+          {publishedPhase === 'misconfigured' ? (
+            <ErrorState title="Chưa cấu hình API">
+              Đặt EXPO_PUBLIC_API_BASE_URL để tải danh sách đã xuất bản. Không
+              thay bằng catalog demo.
+            </ErrorState>
+          ) : null}
+          {publishedPhase === 'error' && publishedError ? (
+            <ErrorState
+              title={eventsCopy.errorList.title}
+              onRetry={retryPublished}
+              retryLabel="Tải lại danh sách"
+            >
+              {publishedError}
+            </ErrorState>
+          ) : null}
         </View>
       }
       ListEmptyComponent={
-        <EmptyState title={eventsCopy.emptyDemo.title}>
-          {eventsCopy.emptyDemo.body}
-        </EmptyState>
+        publishedPhase === 'ready' ? (
+          <EmptyState title={eventsCopy.emptyPublished.title}>
+            {eventsCopy.emptyPublished.body}
+          </EmptyState>
+        ) : publishedPhase === 'loading' ||
+          publishedPhase === 'error' ||
+          publishedPhase === 'misconfigured' ? (
+          <View />
+        ) : (
+          <EmptyState title={eventsCopy.emptyPublished.title}>
+            {eventsCopy.emptyPublished.body}
+          </EmptyState>
+        )
       }
       renderItem={({ item }) => (
         <View
           style={{
-            padding: 20,
-            gap: 12,
+            padding: 16,
+            gap: 8,
             backgroundColor: colors.card,
             borderRadius: 16,
             borderCurve: 'continuous',
@@ -293,36 +222,128 @@ export function EventsScreen() {
           <EventMediaHeader
             eventId={item.id}
             tenantSlug={item.tenantSlug}
-            testID={`demo-media-${item.id}`}
+            bannerUrl={item.brand.bannerUrl}
+            logoUrl={item.brand.logoUrl}
+            testID={`pub-media-${item.id}`}
           />
           <Text selectable style={{ color: colors.secondary, fontSize: 13 }}>
-            Demo · chưa xuất bản
+            Đã xuất bản · v{item.publishedConfigVersion}
           </Text>
           <Text selectable style={{ color: colors.secondary }}>
             {item.brand.organizationName}
           </Text>
           <Link
             href={{
-              pathname: '/events/fixture/[eventId]',
-              params: { eventId: item.id },
+              pathname: '/events/[tenantSlug]/[slug]',
+              params: { tenantSlug: item.tenantSlug, slug: item.slug },
             }}
             style={{
               color: colors.accent,
-              fontSize: 24,
+              fontSize: 22,
               fontWeight: '600',
-              paddingVertical: 8,
+              paddingVertical: 4,
             }}
           >
             {item.name}
           </Link>
-          <Text selectable style={{ color: colors.label, fontSize: 17 }}>
-            {eventDate(item)}
+          <Text selectable style={{ color: colors.label }}>
+            {item.startsAt
+              ? formatListDate(item.startsAt, item.timezone)
+              : 'Chưa có giờ bắt đầu'}
           </Text>
-          <Text selectable style={{ color: colors.secondary, fontSize: 17 }}>
-            {item.location}
-          </Text>
+          {item.location ? (
+            <Text selectable style={{ color: colors.secondary, fontSize: 17 }}>
+              {item.location}
+            </Text>
+          ) : null}
         </View>
       )}
+      ListFooterComponent={
+        <View style={{ gap: 12, marginTop: 12 }}>
+          <Text
+            selectable
+            style={{ color: colors.secondary, fontWeight: '600' }}
+          >
+            Demo · dữ liệu mẫu (không phải nguồn đã xuất bản)
+          </Text>
+          <Text style={{ color: colors.secondary, ...typography.caption }}>
+            Chỉ xem trên route /events/fixture/*. Không thay danh sách API khi
+            lỗi hoặc trống.
+          </Text>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Đổi tổ chức demo"
+            onPress={() =>
+              setDemoTenant(
+                demoTenant === demoTenants[0]
+                  ? demoTenants[1]
+                  : demoTenants[0],
+              )
+            }
+            style={({ pressed }) => ({
+              paddingVertical: 10,
+              opacity: pressed ? 0.7 : 1,
+            })}
+          >
+            <Text style={{ color: colors.accent, textAlign: 'center' }}>
+              Đổi tổ chức demo · {demoTenant}
+            </Text>
+          </Pressable>
+          {demoEvents.length === 0 ? (
+            <EmptyState title={eventsCopy.emptyDemo.title}>
+              {eventsCopy.emptyDemo.body}
+            </EmptyState>
+          ) : (
+            demoEvents.map((item) => (
+              <View
+                key={`demo:${item.tenantSlug}:${item.id}`}
+                style={{
+                  padding: 16,
+                  gap: 8,
+                  backgroundColor: colors.card,
+                  borderRadius: 16,
+                  borderCurve: 'continuous',
+                  borderTopWidth: 4,
+                  borderTopColor: item.brand.primaryColor,
+                  opacity: 0.92,
+                }}
+              >
+                <EventMediaHeader
+                  eventId={item.id}
+                  tenantSlug={item.tenantSlug}
+                  testID={`demo-media-${item.id}`}
+                />
+                <Text selectable style={{ color: colors.secondary, fontSize: 13 }}>
+                  Demo · chưa xuất bản · fixture
+                </Text>
+                <Text selectable style={{ color: colors.secondary }}>
+                  {item.brand.organizationName}
+                </Text>
+                <Link
+                  href={{
+                    pathname: '/events/fixture/[eventId]',
+                    params: { eventId: item.id },
+                  }}
+                  style={{
+                    color: colors.accent,
+                    fontSize: 20,
+                    fontWeight: '600',
+                    paddingVertical: 4,
+                  }}
+                >
+                  {item.name}
+                </Link>
+                <Text selectable style={{ color: colors.label, fontSize: 17 }}>
+                  {eventDate(item)}
+                </Text>
+                <Text selectable style={{ color: colors.secondary, fontSize: 17 }}>
+                  {item.location}
+                </Text>
+              </View>
+            ))
+          )}
+        </View>
+      }
     />
   );
 }
