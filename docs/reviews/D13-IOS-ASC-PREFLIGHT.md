@@ -3,7 +3,7 @@
 | Trường | Giá trị |
 | ------ | ------- |
 | Ngày | **2026-10-18** |
-| Tip SHA | `01c06105436d572cac1401b9720dc12a2610581a` |
+| Tip SHA | `01463c29c8e8362c8d37485fe678b773f95161e2` |
 | Scope | Read-only status — **không** in key/token/issuer/private key material |
 | Bundle | `com.hangndat.ticket` |
 | Team | `BLUA62D52G` |
