@@ -9,6 +9,8 @@
 | Ủy quyền | Nghiên cứu production readiness — **không** coding / commit / push / PR / merge / deploy / store / EAS Cloud |
 | Ngôn ngữ | Tiếng Việt (giữ ID, SHA, URL, lệnh nguyên bản) |
 
+> **Errata (2026-10-18, [#373](https://github.com/hangndat/ticket-solution/issues/373)):** Snapshot research này **stale một phần**. Nguồn quyết định hiện tại: [`GAP-AUDIT-2026-10-18-INDEX.md`](../reviews/GAP-AUDIT-2026-10-18-INDEX.md) (+ BA/ARCH/DOD/PD/SECURITY cùng đợt). **Không còn mở như claim cũ:** D11 / [#254](https://github.com/hangndat/ticket-solution/issues/254) (và UX-01…07 fixture SoT liên quan) **đã đóng board**; O06 **đã chốt**; `GET https://vemoki.com/privacy` → **HTTP 200**. **Còn mở:** Navigation O02 theo permission — [#368](https://github.com/hangndat/ticket-solution/issues/368)–[#371](https://github.com/hangndat/ticket-solution/issues/371). Không spawn lại gap stale-as-open.
+
 ---
 
 ## 0. Baseline bằng chứng (bắt buộc)
@@ -166,7 +168,7 @@ Nguồn: `gh project item-list 3 --owner hangndat --limit 300 --format json` →
 | Privacy / legal | `vemoki.com/privacy` **404** (baseline D11 18/10); không route app | P0 ops + content — ngoài coding PD trừ link/copy |
 | A11y | Pattern SurfaceState + skip/focus tokens D6; PD checklist A1–A10 | Residual a11y Task chưa đóng trên board; không claim WCAG AA |
 | Responsive | Admin mobile screenshot từng có trong UAT artifacts | **Chưa xác minh** trên tip tích hợp |
-| Navigation | Guest Invite lẫn chrome (PD audit trước); staff mode theo permission O02 | Kiểm lại sau attendee PRs |
+| Navigation | Guest Invite lẫn chrome (PD audit trước); staff mode theo permission O02 | **Còn mở (O02)** — [#368](https://github.com/hangndat/ticket-solution/issues/368)–[#371](https://github.com/hangndat/ticket-solution/issues/371); xem [`GAP-AUDIT-2026-10-18-INDEX.md`](../reviews/GAP-AUDIT-2026-10-18-INDEX.md) GAP-O02-NAV (không còn «chỉ kiểm lại sau attendee») |
 | Offline / conflict | Gate covered; redeem conflict messages | Ví offline empty vs error clarity OK source; sync conflict UI depth |
 | Email recovery | O14 mở CS UX | Chưa code trên board Sẵn sàng |
 | Day-of ops | BA day-of research; validate-only **OUT** (O11/O14) | Không mở resolution desk trong audit này |

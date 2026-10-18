@@ -28,6 +28,8 @@ Mỗi report ghi gap, nguồn/bằng chứng và SHA, rủi ro, ưu tiên P0/P1/
 
 O06 retention/vùng dữ liệu/SLA vẫn là quyết định mở, không được tự chốt số hoặc ingest dữ liệu người dùng thật chỉ vì đợt nghiên cứu này được giao.
 
+> **Errata (2026-10-18, [#373](https://github.com/hangndat/ticket-solution/issues/373)):** Đợt research trên **stale một phần**. Nguồn gap hiện hành: [`docs/reviews/GAP-AUDIT-2026-10-18-INDEX.md`](../reviews/GAP-AUDIT-2026-10-18-INDEX.md). **Đã đóng / chốt:** privacy live **HTTP 200**; Epic D11 / [#254](https://github.com/hangndat/ticket-solution/issues/254) **đóng board**; **O06 đã chốt**. **Còn mở:** Navigation O02 — [#368](https://github.com/hangndat/ticket-solution/issues/368)–[#371](https://github.com/hangndat/ticket-solution/issues/371).
+
 ## Trạng thái lúc giao
 
 5 Dispatch đã được Orca nhận input và báo `ready`; sau đó cả 5 có quan sát agent `live` / activity `working`. `worker_done` chỉ là settlement thực thi, không phải nghiệm thu sản phẩm. Báo cáo và cleanup cuối đợt được coordinator đối chiếu riêng.

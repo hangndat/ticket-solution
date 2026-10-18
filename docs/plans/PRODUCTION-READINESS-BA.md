@@ -10,6 +10,8 @@
 | Ngôn ngữ | Tiếng Việt (giữ ID, path, SHA, URL nguyên bản) |
 | Trạng thái | **Đề xuất** — không claim PASS / pilot ready / production ready |
 
+> **Errata (2026-10-18, [#373](https://github.com/hangndat/ticket-solution/issues/373)):** Snapshot research này **stale một phần**. Nguồn quyết định hiện tại: [`GAP-AUDIT-2026-10-18-INDEX.md`](../reviews/GAP-AUDIT-2026-10-18-INDEX.md) (+ BA/ARCH/DOD/PD/SECURITY cùng đợt). **Không còn mở như claim cũ:** D11 / [#254](https://github.com/hangndat/ticket-solution/issues/254) **đã đóng**; O06 **đã chốt**; `GET https://vemoki.com/privacy` → **HTTP 200** (PR-02 stale-as-open). **Còn mở:** Navigation O02 — [#368](https://github.com/hangndat/ticket-solution/issues/368)–[#371](https://github.com/hangndat/ticket-solution/issues/371). Không spawn lại PR-01…03 / UX fixture SoT như feature mới.
+
 ### Ranh giới tuyên bố
 
 | Được | Không được |
