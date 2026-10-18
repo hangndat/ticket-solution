@@ -66,6 +66,7 @@ Commands:
   redeem [baseUrl] [code] [tenantId] [eventId] Login + /redeem DEMO code (D9)
   screenshot <url> [out.png]                   PNG under apps/web/.uat-artifacts/
   goto <url>                                   Print final URL + title
+  o13-sales [baseUrl]                          O13 marketing screenshots → docs/reviews/o13-pr-247-uat/
 
 Env:
   WEB_BASE_URL     default http://127.0.0.1:3000
@@ -74,6 +75,7 @@ Env:
   WEB_UAT_OUT_DIR  screenshot directory
   WEB_UAT_HEADED=1 optional visible browser (only if user asks to watch)
   WEB_UAT_REDEEM_CODE / TENANT_ID / EVENT_ID   redeem defaults (D9 mfest-demo)
+  WEB_UAT_HOST     optional Host header (e.g. vemoki.com) for apex routing smoke
 
 Browsers: uses Playwright Chromium if installed, else system Chrome (headless).
 Optional: WEB_UAT_CHANNEL=chrome|chromium|msedge
@@ -343,6 +345,10 @@ async function cmdRedeem(baseUrl, codeArg, tenantArg, eventArg) {
 async function cmdScreenshot(url, out) {
   if (!url) die('usage: web-uat screenshot <url> [out.png]');
   return withBrowser(async ({ page }) => {
+    const host = process.env.WEB_UAT_HOST?.trim();
+    if (host) {
+      await page.setExtraHTTPHeaders({ host });
+    }
     const res = await page.goto(url, { waitUntil: 'networkidle' });
     mkdirSync(OUT_DIR, { recursive: true });
     const shot = resolve(out || join(OUT_DIR, `shot-${Date.now()}.png`));
@@ -354,7 +360,48 @@ async function cmdScreenshot(url, out) {
       url: page.url(),
       title: await page.title(),
       screenshot: shot,
+      host: host || null,
     }, null, 2));
+  });
+}
+
+/** O13 sales page evidence — tracked under docs/reviews/o13-pr-247-uat/ */
+async function cmdO13Sales(baseUrl) {
+  const base = (baseUrl || DEFAULT_BASE).replace(/\/$/, '');
+  const outDir = join(ROOT, 'docs/reviews/o13-pr-247-uat');
+  mkdirSync(outDir, { recursive: true });
+  const host = process.env.WEB_UAT_HOST?.trim() || null;
+
+  const shots = [
+    { path: '/marketing', file: 'o13-sales-vi.png', label: 'sales-vi' },
+    { path: '/marketing/en', file: 'o13-sales-en.png', label: 'sales-en' },
+    { path: '/marketing/privacy', file: 'o13-privacy.png', label: 'privacy' },
+    { path: '/marketing/support', file: 'o13-support.png', label: 'support' },
+  ];
+
+  return withBrowser(async ({ page }) => {
+    if (host) {
+      await page.setExtraHTTPHeaders({ host });
+    }
+    const results = [];
+    for (const s of shots) {
+      const url = `${base}${s.path}`;
+      const res = await page.goto(url, { waitUntil: 'networkidle' });
+      const status = res?.status() ?? null;
+      const out = join(outDir, s.file);
+      await page.screenshot({ path: out, fullPage: true });
+      results.push({
+        label: s.label,
+        url,
+        status,
+        screenshot: out,
+        ok: status === 200,
+      });
+      if (status !== 200) {
+        die(`o13-sales ${s.label} HTTP ${status} at ${url}`);
+      }
+    }
+    console.log(JSON.stringify({ ok: true, host, base, results }, null, 2));
   });
 }
 
@@ -384,6 +431,9 @@ switch (cmd) {
     break;
   case 'screenshot':
     await cmdScreenshot(args[0], args[1]);
+    break;
+  case 'o13-sales':
+    await cmdO13Sales(args[0]);
     break;
   case 'goto':
     await cmdGoto(args[0]);

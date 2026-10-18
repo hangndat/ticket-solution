@@ -2677,6 +2677,90 @@
           "branding"
         ]
       }
+    },
+    "/v1/public/tenants/{tenantSlug}/events": {
+      "get": {
+        "operationId": "PublishedEventsController_list",
+        "parameters": [
+          {
+            "name": "tenantSlug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublishedEventListResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "public-events"
+        ]
+      }
+    },
+    "/v1/public/tenants/{tenantSlug}/events/{eventSlug}": {
+      "get": {
+        "operationId": "PublishedEventsController_detail",
+        "parameters": [
+          {
+            "name": "tenantSlug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "eventSlug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublishedEventDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "public-events"
+        ]
+      }
     }
   },
   "info": {
@@ -4193,6 +4277,245 @@
         },
         "required": [
           "expectedVersion"
+        ]
+      },
+      "PublishedBrandDto": {
+        "type": "object",
+        "properties": {
+          "primaryColor": {
+            "type": "string",
+            "example": "#245B47"
+          },
+          "organizationName": {
+            "type": "string"
+          },
+          "logoUrl": {
+            "type": "string"
+          },
+          "bannerUrl": {
+            "type": "string"
+          },
+          "contact": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "primaryColor",
+          "organizationName"
+        ]
+      },
+      "PublishedEventSummaryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tenantSlug": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "timezone": {
+            "type": "string"
+          },
+          "startsAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "location": {
+            "type": "string",
+            "nullable": true
+          },
+          "publishedConfigVersion": {
+            "type": "number"
+          },
+          "schemaVersion": {
+            "type": "number"
+          },
+          "brand": {
+            "$ref": "#/components/schemas/PublishedBrandDto"
+          }
+        },
+        "required": [
+          "id",
+          "tenantSlug",
+          "slug",
+          "name",
+          "timezone",
+          "startsAt",
+          "location",
+          "publishedConfigVersion",
+          "schemaVersion",
+          "brand"
+        ]
+      },
+      "PublishedEventListResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublishedEventSummaryDto"
+            }
+          },
+          "nextCursor": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor"
+        ]
+      },
+      "PublishedSectionDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "hero",
+              "info",
+              "redeem",
+              "guide",
+              "faq",
+              "terms"
+            ]
+          },
+          "visible": {
+            "type": "boolean"
+          },
+          "order": {
+            "type": "number"
+          },
+          "title": {
+            "type": "string"
+          },
+          "bodyMarkdown": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "visible",
+          "order"
+        ]
+      },
+      "PublishedFaqItemDto": {
+        "type": "object",
+        "properties": {
+          "q": {
+            "type": "string"
+          },
+          "a": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "q",
+          "a"
+        ]
+      },
+      "PublishedTermsDto": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "string"
+          },
+          "bodyMarkdown": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "version",
+          "bodyMarkdown"
+        ]
+      },
+      "PublishedEventDetailDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tenantSlug": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "timezone": {
+            "type": "string"
+          },
+          "startsAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "location": {
+            "type": "string",
+            "nullable": true
+          },
+          "publishedConfigVersion": {
+            "type": "number"
+          },
+          "schemaVersion": {
+            "type": "number"
+          },
+          "brand": {
+            "$ref": "#/components/schemas/PublishedBrandDto"
+          },
+          "sections": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublishedSectionDto"
+            }
+          },
+          "faq": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublishedFaqItemDto"
+            }
+          },
+          "terms": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PublishedTermsDto"
+              }
+            ]
+          },
+          "form": {
+            "type": "object",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "tenantSlug",
+          "slug",
+          "name",
+          "timezone",
+          "startsAt",
+          "location",
+          "publishedConfigVersion",
+          "schemaVersion",
+          "brand",
+          "sections",
+          "faq",
+          "terms"
         ]
       }
     }

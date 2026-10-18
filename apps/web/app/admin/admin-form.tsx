@@ -61,9 +61,18 @@ import {
   type TicketTypeView,
 } from '../../src/admin/event-setup';
 import {
+  REPORT_EMAIL_CS_CTA_LABEL,
+  REPORT_EMAIL_CS_SECTION_ID,
+  REPORT_PENDING_APPROVAL_CTA_LABEL,
+  REPORT_PENDING_APPROVAL_SECTION_ID,
   TICKET_STATES,
+  formatQuotaCapacityState,
+  formatQuotaRemaining,
+  formatReportAsOf,
   interpretEventReport,
+  reportShowsEmailCsCta,
   reportShowsNumbers,
+  reportShowsPendingApprovalCta,
   type EventReportView,
 } from '../../src/admin/report';
 import {
@@ -197,9 +206,34 @@ export function AdminForm({
   const [sourceView, setSourceView] = useState<SourceView | null>(null);
   const [csView, setCsView] = useState<CsView | null>(null);
   const [exportView, setExportView] = useState<ExportView | null>(null);
-  const [report, setReport] = useState<EventReportView | null>(null);
+  const [reportHold, setReportHold] = useState<{
+    tenantId: string;
+    eventId: string;
+    view: EventReportView;
+  } | null>(null);
   const [activeJob, setActiveJob] = useState<AdminJob>('setup');
   const [browserOnline, setBrowserOnline] = useState(true);
+  // Fail-closed O12: only surface numbers for the current tenant/event scope.
+  const report =
+    reportHold !== null &&
+    reportHold.tenantId === tenantId.trim() &&
+    reportHold.eventId === eventId.trim()
+      ? reportHold.view
+      : null;
+
+  /** Switch job panel then scroll/focus the target section (O12 P3 deep-link). */
+  function goToAdminSection(job: AdminJob, sectionId: string) {
+    setActiveJob(job);
+    window.setTimeout(() => {
+      const el = document.getElementById(sectionId);
+      if (!el) return;
+      if (window.location.hash !== `#${sectionId}`) {
+        window.history.replaceState(null, '', `#${sectionId}`);
+      }
+      el.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      el.focus({ preventScroll: true });
+    }, 0);
+  }
   const currentEvent: EventDetail | null =
     detailView?.kind === 'detail' ? detailView.event : null;
   const selectedTenant = tenantChoices.find((t) => t.tenantId === tenantId.trim());
@@ -355,24 +389,27 @@ export function AdminForm({
   }
 
   async function loadReport() {
+    const requestScope = scope();
     setBusy(true);
-    setReport(null);
+    setReportHold(null);
     setDecision(null);
     clearSpecialViews();
-    const params = new URLSearchParams(scope());
+    const params = new URLSearchParams(requestScope);
     const result = await fetchJson(
       `/api/bff/admin/report?${params.toString()}`,
       { method: 'GET' },
       REQUEST_TIMEOUT_MS,
     );
     bumpNotice();
-    setReport(
-      interpretEventReport(
+    setReportHold({
+      tenantId: requestScope.tenantId,
+      eventId: requestScope.eventId,
+      view: interpretEventReport(
         result.status,
         result.json,
         result.networkError || result.timedOut,
       ),
-    );
+    });
     setBusy(false);
   }
 
@@ -1747,7 +1784,9 @@ export function AdminForm({
         className="admin-section"
         aria-labelledby="guests-codes-heading"
       >
-        <h2 id="guests-codes-heading">Khách &amp; mã · nhập và duyệt</h2>
+         <h2 id="guests-codes-heading" tabIndex={-1}>
+           Khách &amp; mã · nhập và duyệt
+         </h2>
         <label>
           Mã mời, mỗi dòng một mã
           <textarea
@@ -1841,10 +1880,11 @@ export function AdminForm({
       >
         <h2 id="event-report-heading">Cổng · báo cáo sự kiện</h2>
         <p>
-          Chỉ đọc: số vé theo trạng thái, quota capacity/allocated, và số yêu
-          cầu chờ duyệt. Lỗi máy chủ, timeout hoặc mất mạng là chưa biết — các
-          số đó không được hiện. Scan chính trên app Nhân viên; cổng web không
-          xếp hàng offline.
+          Chỉ đọc theo snapshot máy chủ (không tự làm mới). Manager xem quota và
+          chờ duyệt trước; Supervisor xem check-in thành công và từ chối theo lý
+          do. Lỗi máy chủ, timeout hoặc mất mạng là chưa biết — các số đó không
+          được hiện. Scan chính trên app Nhân viên; cổng web không xếp hàng
+          offline.
         </p>
         <p className="intro">
           <a href="/gate">Mở cổng web (dự phòng)</a>
@@ -1854,35 +1894,132 @@ export function AdminForm({
             type="button"
             disabled={busy}
             onClick={() => void loadReport()}
+            data-testid="event-report-reload"
           >
-            Tải báo cáo
+            Tải lại báo cáo
           </button>
         </div>
         {report && reportShowsNumbers(report) ? (
-          <dl data-testid="event-report-numbers">
-            {TICKET_STATES.map((state) => (
-              <div key={state}>
-                <dt>{state}</dt>
-                <dd>{report.ticketsByState[state]}</dd>
+          <div data-testid="event-report-numbers">
+            <p
+              className="intro"
+              data-testid="event-report-asof"
+              role="status"
+              title={report.asOf}
+            >
+              Số liệu tại thời điểm: {formatReportAsOf(report.asOf)} (
+              {report.asOf})
+            </p>
+            <h3>Manager · quota &amp; chờ duyệt</h3>
+            <dl>
+              <div>
+                <dt>Trạng thái sức chứa</dt>
+                <dd>
+                  {formatQuotaCapacityState(report.quotaCapacityState)}
+                </dd>
               </div>
-            ))}
-            <div>
-              <dt>Quota capacity</dt>
-              <dd>
-                {report.quota.capacity === null
-                  ? 'null (không giới hạn)'
-                  : report.quota.capacity}
-              </dd>
-            </div>
-            <div>
-              <dt>Quota allocated</dt>
-              <dd>{report.quota.allocated}</dd>
-            </div>
-            <div>
-              <dt>Chờ duyệt</dt>
-              <dd>{report.pendingApprovalCount}</dd>
-            </div>
-          </dl>
+              <div>
+                <dt>Dung lượng quota</dt>
+                <dd>
+                  {report.quota.capacity === null
+                    ? 'không giới hạn / chưa có'
+                    : report.quota.capacity}
+                </dd>
+              </div>
+              <div>
+                <dt>Đã cấp phát</dt>
+                <dd>{report.quota.allocated}</dd>
+              </div>
+              <div>
+                <dt>Còn lại</dt>
+                <dd>
+                  {formatQuotaRemaining(
+                    report.quotaRemaining,
+                    report.quotaCapacityState,
+                  )}
+                </dd>
+              </div>
+              <div>
+                <dt>Chờ duyệt</dt>
+                <dd data-testid="event-report-pending-approval">
+                  {report.pendingApprovalCount}
+                </dd>
+              </div>
+            </dl>
+            {reportShowsPendingApprovalCta(report) ? (
+              <p className="intro">
+                <a
+                  href={`#${REPORT_PENDING_APPROVAL_SECTION_ID}`}
+                  data-testid="event-report-cta-pending-approval"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    goToAdminSection(
+                      'guests',
+                      REPORT_PENDING_APPROVAL_SECTION_ID,
+                    );
+                  }}
+                >
+                  {REPORT_PENDING_APPROVAL_CTA_LABEL}
+                </a>
+              </p>
+            ) : null}
+            <h3>Vé theo trạng thái</h3>
+            <dl>
+              {TICKET_STATES.map((state) => (
+                <div key={state}>
+                  <dt>{state}</dt>
+                  <dd>{report.ticketsByState[state]}</dd>
+                </div>
+              ))}
+            </dl>
+            <h3>Supervisor · check-in &amp; từ chối</h3>
+            <dl>
+              <div>
+                <dt>Check-in thành công</dt>
+                <dd>{report.checkInSuccessCount}</dd>
+              </div>
+            </dl>
+            <h4>Từ chối theo lý do</h4>
+            {Object.keys(report.rejectByReason).length === 0 ? (
+              <p data-testid="event-report-rejects-empty" role="status">
+                Chưa có lần từ chối cổng nào.
+              </p>
+            ) : (
+              <dl data-testid="event-report-rejects">
+                {Object.entries(report.rejectByReason)
+                  .sort(([a], [b]) => a.localeCompare(b))
+                  .map(([reason, count]) => (
+                    <div key={reason}>
+                      <dt>{reason}</dt>
+                      <dd>{count}</dd>
+                    </div>
+                  ))}
+              </dl>
+            )}
+            <h3>Email cần CS</h3>
+            <dl>
+              <div>
+                <dt>Email cần hỗ trợ CS</dt>
+                <dd data-testid="event-report-email-cs">
+                  {report.emailNeedsCsCount}
+                </dd>
+              </div>
+            </dl>
+            {reportShowsEmailCsCta(report) ? (
+              <p className="intro">
+                <a
+                  href={`#${REPORT_EMAIL_CS_SECTION_ID}`}
+                  data-testid="event-report-cta-email-cs"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    goToAdminSection('support', REPORT_EMAIL_CS_SECTION_ID);
+                  }}
+                >
+                  {REPORT_EMAIL_CS_CTA_LABEL}
+                </a>
+              </p>
+            ) : null}
+          </div>
         ) : null}
         {report && !reportShowsNumbers(report) ? (
           <p data-testid="event-report-unknown" role="status">
@@ -1900,7 +2037,9 @@ export function AdminForm({
       >
       <TenantStaffPanel tenantId={tenantId} />
       <section className="admin-section" aria-labelledby="cs-heading">
-        <h2 id="cs-heading">Hỗ trợ · tra cứu và gửi lại email</h2>
+        <h2 id="cs-heading" tabIndex={-1}>
+          Hỗ trợ · tra cứu và gửi lại email
+        </h2>
         <p>
           PII mặc định đã che trên API. Trạng thái provider ACCEPTED không được
           hiểu là đã giao email.
