@@ -1,13 +1,135 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { createServer } from 'node:net';
+import { createServer as createHttpServer } from 'node:http';
+import { createServer as createNetServer } from 'node:net';
 import { setTimeout } from 'node:timers/promises';
 import { once } from 'node:events';
 import test from 'node:test';
 
+/**
+ * Mock Nest published projection for production route isolation (ADR-19).
+ * Guest pages load server SoT via API_BASE_URL — never client fixtures.
+ */
+function publishedSummary(event) {
+  const {
+    sections: _sections,
+    faq: _faq,
+    terms: _terms,
+    ...summary
+  } = event;
+  return summary;
+}
+
+const PUBLISHED_EVENTS = [
+  {
+    id: '11111111-1111-4111-8111-111111111101',
+    tenantSlug: 'demo-fun',
+    slug: 'fun-fest-2026',
+    name: 'FUN FEST 2026 · Demo',
+    timezone: 'Asia/Ho_Chi_Minh',
+    startsAt: '2026-12-12T09:00:00+07:00',
+    location: 'Riverside Park · Ho Chi Minh City',
+    publishedConfigVersion: 1,
+    schemaVersion: 1,
+    brand: {
+      primaryColor: '#783013',
+      organizationName: 'Sunburst Collective · Demo',
+    },
+    sections: [
+      {
+        id: 'sec-hero',
+        kind: 'hero',
+        visible: true,
+        order: 0,
+        title: 'Music / Community',
+        bodyMarkdown: 'A little louder.',
+      },
+    ],
+    faq: [],
+    terms: null,
+  },
+  {
+    id: '22222222-2222-4222-8222-222222222202',
+    tenantSlug: 'demo-studio',
+    slug: 'form-forum-2026',
+    name: 'Form & Forum · Demo',
+    timezone: 'Asia/Singapore',
+    startsAt: '2026-12-18T10:00:00+08:00',
+    location: 'The Assembly Studio · Singapore',
+    publishedConfigVersion: 1,
+    schemaVersion: 1,
+    brand: {
+      primaryColor: '#154c42',
+      organizationName: 'Northline Studio · Demo',
+    },
+    sections: [
+      {
+        id: 'sec-hero',
+        kind: 'hero',
+        visible: true,
+        order: 0,
+        title: 'Design / Ideas',
+        bodyMarkdown: 'Make space for a different perspective.',
+      },
+    ],
+    faq: [],
+    terms: null,
+  },
+];
+
+async function listenPublishedMock() {
+  const byTenant = new Map();
+  for (const event of PUBLISHED_EVENTS) {
+    const list = byTenant.get(event.tenantSlug) ?? [];
+    list.push(event);
+    byTenant.set(event.tenantSlug, list);
+  }
+
+  const server = createHttpServer((req, res) => {
+    const url = new URL(req.url ?? '/', 'http://127.0.0.1');
+    const match = url.pathname.match(
+      /^\/v1\/public\/tenants\/([^/]+)\/events(?:\/([^/]+))?\/?$/,
+    );
+    if (!match || req.method !== 'GET') {
+      res.writeHead(404, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ code: 'NOT_FOUND' }));
+      return;
+    }
+    const tenantSlug = decodeURIComponent(match[1]);
+    const eventSlug = match[2] ? decodeURIComponent(match[2]) : null;
+    const events = byTenant.get(tenantSlug) ?? [];
+
+    if (!eventSlug) {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(
+        JSON.stringify({
+          items: events.map(publishedSummary),
+          nextCursor: null,
+        }),
+      );
+      return;
+    }
+
+    const found = events.find((e) => e.slug === eventSlug);
+    if (!found) {
+      res.writeHead(404, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ code: 'NOT_FOUND' }));
+      return;
+    }
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(found));
+  });
+
+  server.listen(0, '127.0.0.1');
+  await once(server, 'listening');
+  const { port } = server.address();
+  return { server, baseUrl: `http://127.0.0.1:${port}` };
+}
+
 // Run against a production build, using an OS-assigned app-local test port.
 test('production routes isolate tenant content and reject unknown pairs', async () => {
-  const reservation = createServer();
+  const mock = await listenPublishedMock();
+  const reservation = createNetServer();
   reservation.listen(0, '127.0.0.1');
   await once(reservation, 'listening');
   const port = reservation.address().port;
@@ -22,7 +144,14 @@ test('production routes isolate tenant content and reject unknown pairs', async 
       '--port',
       String(port),
     ],
-    { stdio: ['ignore', 'pipe', 'pipe'] },
+    {
+      stdio: ['ignore', 'pipe', 'pipe'],
+      env: {
+        ...process.env,
+        API_BASE_URL: mock.baseUrl,
+        PUBLIC_HOME_TENANT_SLUGS: 'demo-fun,demo-studio',
+      },
+    },
   );
   let output = '';
   child.stdout.on('data', (data) => {
@@ -49,43 +178,59 @@ test('production routes isolate tenant content and reject unknown pairs', async 
     assert.ok(ready, output);
     for (const [path, own, foreign] of [
       [
-        '/t/sunburst/events/fun-fest-2026',
-        'Sunburst Collective',
-        'Northline Studio',
+        '/t/demo-fun/events/fun-fest-2026',
+        'Sunburst Collective · Demo',
+        'Northline Studio · Demo',
       ],
       [
-        '/t/northline/events/form-forum-2026',
-        'Northline Studio',
-        'Sunburst Collective',
+        '/t/demo-studio/events/form-forum-2026',
+        'Northline Studio · Demo',
+        'Sunburst Collective · Demo',
       ],
       [
-        '/t/sunburst/events/fun-fest-2026',
-        'Sunburst Collective',
-        'Northline Studio',
+        '/t/demo-fun/events/fun-fest-2026',
+        'Sunburst Collective · Demo',
+        'Northline Studio · Demo',
       ],
     ]) {
       const response = await fetch(base + path);
       assert.equal(response.status, 200);
       const html = await response.text();
-      assert.ok(html.includes(own));
-      assert.ok(!html.includes(foreign));
+      assert.ok(html.includes(own), `missing own brand on ${path}`);
+      assert.ok(!html.includes(foreign), `leaked foreign brand on ${path}`);
       assert.ok(html.includes('Sự kiện demo · Không dùng vào cổng'));
+      assert.ok(html.includes('data-testid="event-published"'));
     }
+    // Unknown tenant/event pairs: published SoT returns not-found UI (no brand leak).
+    // Matched dynamic segments may soft-404 (HTTP 200 + not-found.js) under Next 16;
+    // unmatched paths stay hard 404. Isolation matter is content, not status code alone.
     for (const path of [
-      '/t/sunburst/events/form-forum-2026',
-      '/t/northline/events/fun-fest-2026',
+      '/t/demo-fun/events/form-forum-2026',
+      '/t/demo-studio/events/fun-fest-2026',
       '/t/unknown/events/fun-fest-2026',
-      '/t/sunburst/events/unknown',
+      '/t/demo-fun/events/unknown',
     ]) {
       const response = await fetch(base + path);
-      assert.equal(response.status, 404, path);
+      assert.ok(
+        response.status === 404 || response.status === 200,
+        `${path} unexpected status ${response.status}`,
+      );
       const html = await response.text();
-      assert.ok(!html.includes('Sunburst Collective'));
-      assert.ok(!html.includes('Northline Studio'));
+      assert.ok(
+        html.includes('Chưa có gì ở đây') ||
+          html.includes('Không tìm thấy tổ hợp tenant và sự kiện này'),
+        `missing not-found copy on ${path}`,
+      );
+      assert.ok(!html.includes('data-testid="event-published"'), path);
+      assert.ok(!html.includes('Sunburst Collective · Demo'), path);
+      assert.ok(!html.includes('Northline Studio · Demo'), path);
     }
     const home = await (await fetch(base)).text();
-    assert.ok(home.includes('/t/sunburst/events/fun-fest-2026'));
-    assert.ok(home.includes('/t/northline/events/form-forum-2026'));
+    assert.ok(home.includes('/t/demo-fun/events/fun-fest-2026'));
+    assert.ok(home.includes('/t/demo-studio/events/form-forum-2026'));
+    assert.ok(home.includes('Sunburst Collective · Demo'));
+    assert.ok(home.includes('Northline Studio · Demo'));
+    assert.ok(home.includes('Danh sách từ máy chủ'));
     const admin = await fetch(base + '/admin');
     assert.equal(admin.status, 200);
     const adminHtml = await admin.text();
@@ -328,5 +473,6 @@ test('production routes isolate tenant content and reject unknown pairs', async 
     const stopped = once(child, 'exit');
     child.kill('SIGTERM');
     await stopped;
+    await new Promise((resolve) => mock.server.close(resolve));
   }
 });
