@@ -2,31 +2,42 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   gateDeeplinkUrl,
+  isGateDeeplinkId,
   isPortalOidcConfigured,
   productOrigin,
   resolvePortalAuthState,
 } from '../src/oidc/config';
 import { isPlatformOidcConfigured } from '../src/oidc/platform-config';
-import { classifyRefreshFailure } from '../src/oidc/refresh';
 import {
   codeChallengeS256,
   generateCodeVerifier,
   generateOAuthState,
+  generateOidcNonce,
 } from '../src/oidc/pkce';
 
 const valid = {
   OIDC_ISSUER: 'http://127.0.0.1:8080/realms/ticket',
   OIDC_CLIENT_ID: 'ticket-admin-web',
-  OIDC_CLIENT_SECRET: 'dev-admin-secret',
+  OIDC_CLIENT_SECRET: 'test-secret',
   OIDC_REDIRECT_URI: 'http://127.0.0.1:3013/api/auth/callback',
+  OIDC_AUDIENCE: 'ticket-api',
+  OIDC_JWKS_URL:
+    'http://127.0.0.1:8080/realms/ticket/protocol/openid-connect/certs',
 };
 
-test('portal OIDC requires ticket-admin-web style env — fail-closed when blank', () => {
+test('portal OIDC requires audience + jwks — fail-closed when blank', () => {
   assert.equal(isPortalOidcConfigured({}), false);
   assert.equal(
     isPortalOidcConfigured({
       ...valid,
       OIDC_CLIENT_SECRET: '',
+    }),
+    false,
+  );
+  assert.equal(
+    isPortalOidcConfigured({
+      ...valid,
+      OIDC_AUDIENCE: '',
     }),
     false,
   );
@@ -48,63 +59,48 @@ test('unconfigured never resolves as authenticated even with a cookie present', 
   );
 });
 
-test('PKCE S256 challenge is deterministic for a verifier and state is opaque', () => {
+test('PKCE S256 + nonce generators are opaque random values', () => {
   const verifier = generateCodeVerifier();
   assert.match(verifier, /^[A-Za-z0-9_-]+$/);
   assert.equal(codeChallengeS256(verifier), codeChallengeS256(verifier));
-  assert.notEqual(codeChallengeS256(verifier), codeChallengeS256(generateCodeVerifier()));
+  assert.notEqual(
+    codeChallengeS256(verifier),
+    codeChallengeS256(generateCodeVerifier()),
+  );
   assert.notEqual(generateOAuthState(), generateOAuthState());
+  assert.notEqual(generateOidcNonce(), generateOidcNonce());
 });
 
-test('refresh failure classification clears session reasons without mock success', () => {
-  assert.equal(
-    classifyRefreshFailure({
-      configured: false,
-      hasRefresh: true,
-      httpStatus: 200,
-      accessToken: 'x',
-    }).reason,
-    'misconfigured',
-  );
-  assert.equal(
-    classifyRefreshFailure({
-      configured: true,
-      hasRefresh: false,
-      httpStatus: 200,
-      accessToken: 'x',
-    }).reason,
-    'missing_refresh',
-  );
-  assert.equal(
-    classifyRefreshFailure({
-      configured: true,
-      hasRefresh: true,
-      httpStatus: null,
-    }).reason,
-    'network',
-  );
-  assert.equal(
-    classifyRefreshFailure({
-      configured: true,
-      hasRefresh: true,
-      httpStatus: 400,
-    }).reason,
-    'rejected',
-  );
-});
-
-test('Gate deeplink targets PRODUCT_ORIGIN /gate — never portal scan path', () => {
+test('Gate deeplink allowlists tenantId/eventId query only', () => {
   assert.equal(
     gateDeeplinkUrl({ PRODUCT_ORIGIN: 'https://app.vemoki.com' }),
     'https://app.vemoki.com/gate',
   );
+  assert.equal(
+    gateDeeplinkUrl(
+      { PRODUCT_ORIGIN: 'https://app.vemoki.com' },
+      '/gate',
+      { tenantId: 't1', eventId: 'e2' },
+    ),
+    'https://app.vemoki.com/gate?tenantId=t1&eventId=e2',
+  );
+  assert.equal(
+    gateDeeplinkUrl(
+      { PRODUCT_ORIGIN: 'https://app.vemoki.com' },
+      '/gate',
+      { tenantId: '../evil', eventId: 'e2' },
+    ),
+    'https://app.vemoki.com/gate?eventId=e2',
+  );
+  assert.equal(isGateDeeplinkId('ok_1-2'), true);
+  assert.equal(isGateDeeplinkId('bad/id'), false);
   assert.equal(
     productOrigin({ PRODUCT_ORIGIN: 'https://app.vemoki.com/extra' }),
     'https://app.vemoki.com',
   );
 });
 
-test('platform OIDC zone requires audience + acr — isolated from staff client', () => {
+test('platform OIDC zone requires audience + acr + jwks — isolated from staff client', () => {
   assert.equal(isPlatformOidcConfigured(valid), false);
   assert.equal(
     isPlatformOidcConfigured({

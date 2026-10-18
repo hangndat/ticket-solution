@@ -1,7 +1,9 @@
 import { IDENTITY_ERROR_CODES } from '@ticket/contracts';
 import { isPortalOidcConfigured } from '../oidc/config';
 import {
+  clearPlatformSessionCookies,
   clearStaffSessionCookies,
+  readPlatformAccessToken,
   readStaffAccessToken,
 } from '../oidc/cookies';
 import {
@@ -9,7 +11,7 @@ import {
   readPlatformOidcConfig,
 } from '../oidc/platform-config';
 import { refreshStaffAccessToken } from '../oidc/refresh';
-import { readPlatformAccessToken } from '../oidc/cookies';
+import { getRemoteJwks, verifyAccessToken } from '../oidc/verify-tokens';
 import { bffApiError } from './api-error';
 
 export { bffApiError } from './api-error';
@@ -114,17 +116,35 @@ export async function forwardPlatformBearer(
   if (!isPlatformOidcConfigured()) {
     return bffApiError(
       'PLATFORM_MISCONFIGURED',
-      'Platform OIDC chưa cấu hình (PLATFORM_OIDC_CLIENT_ID/SECRET/REDIRECT_URI/AUDIENCE/REQUIRED_ACR).',
+      'Platform OIDC chưa cấu hình (PLATFORM_OIDC_CLIENT_ID/SECRET/REDIRECT_URI/AUDIENCE/REQUIRED_ACR/JWKS).',
       503,
     );
   }
-  // Touch config so audience/acr remain required for zone enablement.
-  void readPlatformOidcConfig();
+  const config = readPlatformOidcConfig()!;
   const token = await readPlatformAccessToken();
   if (!token) {
     return bffApiError(
       IDENTITY_ERROR_CODES.UNAUTHENTICATED,
       'Platform session missing — sign in via /api/auth/platform/login.',
+      401,
+    );
+  }
+  try {
+    await verifyAccessToken(token, {
+      issuer: config.issuer,
+      audience: config.audience,
+      clientId: config.clientId,
+      jwks: getRemoteJwks(config.jwksUrl),
+      platform: {
+        requiredAcr: config.requiredAcr,
+        maxAuthAgeSeconds: config.maxAuthAgeSeconds,
+      },
+    });
+  } catch {
+    await clearPlatformSessionCookies();
+    return bffApiError(
+      IDENTITY_ERROR_CODES.UNAUTHENTICATED,
+      'Platform token invalid — sign in again.',
       401,
     );
   }
