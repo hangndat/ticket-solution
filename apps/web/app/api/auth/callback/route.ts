@@ -7,6 +7,7 @@ import {
 } from '../../../../src/oidc/config';
 import {
   ACCESS_COOKIE,
+  ID_TOKEN_COOKIE,
   PKCE_COOKIE,
   REFRESH_COOKIE,
   STATE_COOKIE,
@@ -21,6 +22,7 @@ import {
 type TokenResponse = {
   access_token?: string;
   refresh_token?: string;
+  id_token?: string;
   expires_in?: number;
   error?: string;
   error_description?: string;
@@ -91,6 +93,9 @@ export async function GET(request: NextRequest) {
       tokens.refresh_token,
       sessionCookieOptions(60 * 60 * 24 * 30),
     );
+  }
+  if (tokens.id_token) {
+    jar.set(ID_TOKEN_COOKIE, tokens.id_token, sessionCookieOptions(maxAge));
   }
   jar.delete(PKCE_COOKIE);
   jar.delete(STATE_COOKIE);
