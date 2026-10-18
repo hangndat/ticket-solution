@@ -1,3 +1,5 @@
+import { isMembershipAuthzDenial } from '../identity/staff-eligibility.ts';
+
 const UUID =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -234,6 +236,11 @@ export type RunScanResult = {
   /** True when the first network hop failed — caller may enqueue offline. */
   networkUnavailable?: boolean;
   parsed?: ParsedScan;
+  /**
+   * True when a Gate hop returned MEMBERSHIP_* / PERMISSION_DENIED 401/403.
+   * Caller must `staffEligibility.reset()` + refresh MeEvents (SEC-CACHE).
+   */
+  membershipAuthzDenied?: boolean;
 };
 
 export async function runScan(input: {
@@ -274,6 +281,7 @@ export async function runScan(input: {
 
   const base = input.apiBase.replace(/\/$/, '');
   let staffSessionId = input.staffSessionId;
+  let membershipAuthzDenied = false;
   if (!staffSessionId) {
     const opened = await readJson(
       fetchImpl,
@@ -300,6 +308,7 @@ export async function runScan(input: {
           parsed,
         };
       }
+      membershipAuthzDenied = isMembershipAuthzDenial(opened.status, opened.json);
       const current: GateOp = {
         id: createId(),
         ...parsed,
@@ -316,6 +325,7 @@ export async function runScan(input: {
         ops: [current, ...input.ops],
         staffSessionId: null,
         current,
+        membershipAuthzDenied: membershipAuthzDenied || undefined,
       };
     }
     staffSessionId = body.sessionId;
@@ -357,6 +367,9 @@ export async function runScan(input: {
         parsed,
       };
     }
+    membershipAuthzDenied =
+      membershipAuthzDenied ||
+      isMembershipAuthzDenial(reserved.status, reserved.json);
     const failed = applyConfirm(
       {
         id: createId(),
@@ -371,6 +384,7 @@ export async function runScan(input: {
       ops: [failed, ...input.ops],
       staffSessionId,
       current: failed,
+      membershipAuthzDenied: membershipAuthzDenied || undefined,
     };
   }
 
@@ -404,8 +418,16 @@ export async function runScan(input: {
       parsed,
     };
   }
+  membershipAuthzDenied =
+    membershipAuthzDenied ||
+    isMembershipAuthzDenial(confirmed.status, confirmed.json);
   const current = applyConfirm(confirming, confirmed);
-  return { ops: [current, ...input.ops], staffSessionId, current };
+  return {
+    ops: [current, ...input.ops],
+    staffSessionId,
+    current,
+    membershipAuthzDenied: membershipAuthzDenied || undefined,
+  };
 }
 
 /** Build a non-admission GateOp after a successful local enqueue. */
@@ -432,13 +454,18 @@ export function gateOpFromQueued(input: {
   };
 }
 
+export type ReconcileOpResult = {
+  op: GateOp;
+  membershipAuthzDenied?: boolean;
+};
+
 export async function reconcileOp(input: {
   op: GateOp;
   bearer: string;
   apiBase: string;
   fetchImpl?: typeof fetch;
-}): Promise<GateOp> {
-  if (!canReconcile(input.op)) return input.op;
+}): Promise<ReconcileOpResult> {
+  if (!canReconcile(input.op)) return { op: input.op };
   const fetchImpl = input.fetchImpl ?? fetch;
   const base = input.apiBase.replace(/\/$/, '');
   const confirmed = await readJson(
@@ -451,5 +478,9 @@ export async function reconcileOp(input: {
       token: input.op.token,
     },
   );
-  return applyConfirm(input.op, confirmed);
+  return {
+    op: applyConfirm(input.op, confirmed),
+    membershipAuthzDenied:
+      isMembershipAuthzDenial(confirmed.status, confirmed.json) || undefined,
+  };
 }
