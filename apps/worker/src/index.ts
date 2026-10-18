@@ -12,6 +12,7 @@ import {
   readMinioEnvironment,
   readProcessEnvironment,
   reconcileDuePendingRedemptions,
+  processDueAccountAnonymizations,
   relayExportsOnce,
   relayOutboxOnce,
   type ApnsAdapter,
@@ -75,6 +76,11 @@ class WorkerRelay implements OnModuleDestroy {
         // Keep looping; pending expiry is lazy-reconciled on read/decide too.
       }
       try {
+        await processDueAccountAnonymizations(this.db, 50);
+      } catch {
+        // Keep looping; account_deletion_requests remain REQUESTED until applied.
+      }
+      try {
         await relayOutboxOnce(
           this.db,
           this.email,
@@ -99,6 +105,7 @@ class WorkerRelay implements OnModuleDestroy {
 
   async relayOnce() {
     if (!this.db) return { claimed: 0, completed: 0, failed: 0 };
+    await processDueAccountAnonymizations(this.db, 50);
     const outbox = await relayOutboxOnce(
       this.db,
       this.email,
