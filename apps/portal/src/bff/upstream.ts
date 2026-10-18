@@ -155,4 +155,6 @@ export const PORTAL_API_PATHS = {
   meTenants: '/v1/me/tenants',
   meEvents: '/v1/me/events',
   platformMe: '/v1/platform/me',
+  platformTenants: '/v1/platform/tenants',
+  platformAudit: '/v1/platform/audit',
 } as const;

@@ -71,6 +71,22 @@ test('Gate report nav requires report.read — gate.confirm only unlocks deeplin
     withReport.some((m) => m.key === 'gate'),
     true,
   );
+  assert.equal(
+    withReport.some((m) => m.key === 'audit'),
+    true,
+  );
+  assert.equal(
+    buildEventMenuItems('t1', 'e1', ['inventory.import']).some(
+      (m) => m.key === 'audit',
+    ),
+    true,
+  );
+  assert.equal(
+    buildEventMenuItems('t1', 'e1', ['gate.confirm']).some(
+      (m) => m.key === 'audit',
+    ),
+    false,
+  );
 
   const withSetup = buildEventMenuItems('t1', 'e1', [
     'event.update',
