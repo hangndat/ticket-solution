@@ -5,7 +5,7 @@
 | Scope | `apps/web` only · Issue [#256](https://github.com/hangndat/ticket-solution/issues/256) · Epic [#254](https://github.com/hangndat/ticket-solution/issues/254) |
 | PR | [#268](https://github.com/hangndat/ticket-solution/pull/268) |
 | Branch | `hangndat/d254-web-public-events` |
-| Tip SHA | `d2e58c0f11d6af74596967f849796cd673b4b430` |
+| Tip SHA | `83b40f3afc11529f1c93c5458ddf4c49f4869400` (branch tip / PR #268) |
 | Hard dep | PR #261 merge SHA `b099ce43caea0a51e095e675b3bfbbde47bcb8fa` |
 | Implementer | Orca web worker · Role `web` · Dispatch `ctx_dec187b56576` |
 | Architecture impact | Có — consumer ADR-19 |
