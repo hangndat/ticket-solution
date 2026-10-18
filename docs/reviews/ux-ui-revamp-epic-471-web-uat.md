@@ -4,7 +4,7 @@
 | ------ | ------- |
 | Epic | [#471](https://github.com/hangndat/ticket-solution/issues/471) |
 | Scope | `scripts/web-uat.*` + evidence; tip `apps/web` auth IA (đã merge) |
-| Tip SHA (exact) | `1e61fab453b4ec8926e24dff48ff3c13fa74b9b1` |
+| Tip SHA (exact) | `80640cd6bff92347cfb2b2f80876d414c456341d` (harness + evidence; PR tip may include SHA-fix commit) |
 | Base URL (UAT) | `http://127.0.0.1:3471` (`next start`, OIDC unset → fail-closed) |
 | Architecture impact | Không |
 | Role | web (+ coordinator scripts) |
