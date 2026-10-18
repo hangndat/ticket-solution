@@ -6,7 +6,7 @@
 | Role | `ios` · `docs/agents/roles/ios.md` |
 | Architecture impact | **Không** — dùng API O06 hiện hữu (`POST/GET /v1/me/account-deletion-requests`) |
 | Agent | Cursor · `task_309e6a5978a2` / `ctx_284cb2cea2d7` |
-| Tip SHA | *(điền sau commit PR)* |
+| Tip SHA | 639cde6a8179b3383195fb9d12db85a140307bfc |
 
 ## 1. Source verify (trước sửa)
 
@@ -45,6 +45,6 @@ Typecheck đầy đủ cần `pnpm install` (worktree thiếu `node_modules`) �
 
 ## 5. Còn lại (ngoài scope / gates)
 
-- Headless sim UAT + physical-device smoke: mandatory trước archive/submit (S4/S5 gates) — **chưa** chạy trong Task này.  
+- Headless sim UAT: **skipped** — sim đang Booted thuộc worker khác (iPhone 17 Pro / D11-236); task cấm dùng sim worker khác. Physical-device + dedicated sim UAT vẫn mandatory trước S4 archive/submit.  
 - ASC paste Privacy URL + Nutrition: S3.  
 - DoD reviewer độc lập exact SHA trên PR.
