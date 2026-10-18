@@ -6,6 +6,7 @@
 | Issue | [#322](https://github.com/hangndat/ticket-solution/issues/322) · Epic [#301](https://github.com/hangndat/ticket-solution/issues/301) · Story [#306](https://github.com/hangndat/ticket-solution/issues/306) |
 | Role | `ios` (+ `product-ba` đọc docs) · `docs/agents/roles/ios.md` · Agent Cursor |
 | Architecture impact | **Không** — ASC metadata paste / read-back |
+| Tip SHA (evidence commit) |
 | Worktree tip (ops run) | `1ddc70d15e230efa59d8286b6bbda2973066a21a` |
 | Listing source (reviewed) | BA SHA `2759b0a9a3e0ef30321e36367e4f10f6ca18ff4a` · [D13-ASC-METADATA-LIVE.md](./D13-ASC-METADATA-LIVE.md) |
 | Categories (#354) | Receipt `/tmp/vemoki-d13-asc-categories-live.json` · PR tip `535e64908c9ed31d3a5814dc687d69701a58f6bf` |
