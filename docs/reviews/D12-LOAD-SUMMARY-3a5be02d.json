@@ -1,0 +1,161 @@
+{
+  "scenario": "TD S3 sustained issue+confirm concurrent + S1 volume SQL seed",
+  "ticketsPerEventTarget": 20000,
+  "events": 2,
+  "scannersPerEvent": 50,
+  "scannersTotal": 100,
+  "sessionsByEvent": {
+    "34d3359f-b7b8-4923-93b9-50d9ba89d9c1": 50,
+    "6c13c4a6-e786-49e0-9cc0-64e370d4138f": 50
+  },
+  "volumeSeedMs": 147045,
+  "volumeSeedNote": "ACTIVE tickets bulk-inserted in SQL for S1 volume; NOT counted as HTTP issue RPS. HTTP issue path measured separately via k6 S3.",
+  "httpIssuePoolSize": 3000,
+  "s3": {
+    "issueRateTarget": 50,
+    "confirmRateTarget": 20,
+    "sustainSecTarget": 60,
+    "elapsedSec": 61.035,
+    "ok": true,
+    "error": null,
+    "metrics": {
+      "issueOk": 3000,
+      "confirmOk": 1201,
+      "issueRpsAchieved": 50,
+      "confirmRpsAchieved": 20.016666666666666,
+      "issueP95Ms": 34.04999999999987,
+      "confirmP95Ms": 20,
+      "issueErrorRate": 0,
+      "confirmErrorRate": 0
+    },
+    "rateOk": true,
+    "p95Ok": true,
+    "errOk": true,
+    "artifact": "/tmp/d5-issue25-d12/k6-s3-3a5be02d.json",
+    "summaryArtifact": "/tmp/d5-issue25-d12/k6-s3-summary-3a5be02d.json"
+  },
+  "admissionLayer": {
+    "implemented": true,
+    "measuredInThisHarness": false,
+    "adr": "ADR-15",
+    "note": "Run ./scripts/d5-admission-s4.sh for isolated ADR-15 edge; not inlined in API load path",
+    "script": "./scripts/d5-admission-s4.sh"
+  },
+  "hardware": {
+    "ncpu": "14",
+    "memGb": "36",
+    "model": "Mac16,5",
+    "cpu": "Apple M4 Max",
+    "memBytes": 38654705664,
+    "os": "macOS 26.5.1 (25F80)"
+  },
+  "healthK6": {
+    "ok": true,
+    "artifact": "/tmp/d5-issue25-d12/k6-health-3a5be02d.json"
+  },
+  "gateK6ByEvent": [
+    {
+      "eventId": "34d3359f-b7b8-4923-93b9-50d9ba89d9c1",
+      "ok": true,
+      "error": null,
+      "artifact": "/tmp/d5-issue25-d12/k6-gate-34d3359f.json",
+      "sessions": 50
+    },
+    {
+      "eventId": "6c13c4a6-e786-49e0-9cc0-64e370d4138f",
+      "ok": true,
+      "error": null,
+      "artifact": "/tmp/d5-issue25-d12/k6-gate-6c13c4a6.json",
+      "sessions": 50
+    }
+  ],
+  "invariants": {
+    "34d3359f-b7b8-4923-93b9-50d9ba89d9c1": {
+      "tickets": 20000,
+      "allocatedEvent": 20000,
+      "allocatedType": 20000,
+      "allocatedSource": 20000,
+      "credentialsWithKid": 20000,
+      "currentCheckins": 750,
+      "usedTickets": 750,
+      "outboxRowsTenant": 3000,
+      "auditLogsTenant": 4501,
+      "confirmedReservations": 750,
+      "distinctCheckinTickets": 750,
+      "sampleDecryptOk": true,
+      "allSampleOk": true,
+      "hmacUnique": true,
+      "pepperConsistent": true,
+      "allAesCredentials": true,
+      "codeCount": 20000,
+      "distinctHmac": 20000,
+      "ticketsMatchAllocated": true,
+      "quotaScopesAligned": true,
+      "everyTicketHasKid": true,
+      "checkinsMatchUsed": true,
+      "noDoubleConfirm": true,
+      "checkinsMeetExpected": true,
+      "ok": true
+    },
+    "6c13c4a6-e786-49e0-9cc0-64e370d4138f": {
+      "tickets": 20000,
+      "allocatedEvent": 20000,
+      "allocatedType": 20000,
+      "allocatedSource": 20000,
+      "credentialsWithKid": 20000,
+      "currentCheckins": 651,
+      "usedTickets": 651,
+      "outboxRowsTenant": 3000,
+      "auditLogsTenant": 4501,
+      "confirmedReservations": 651,
+      "distinctCheckinTickets": 651,
+      "sampleDecryptOk": true,
+      "allSampleOk": true,
+      "hmacUnique": true,
+      "pepperConsistent": true,
+      "allAesCredentials": true,
+      "codeCount": 20000,
+      "distinctHmac": 20000,
+      "ticketsMatchAllocated": true,
+      "quotaScopesAligned": true,
+      "everyTicketHasKid": true,
+      "checkinsMatchUsed": true,
+      "noDoubleConfirm": true,
+      "checkinsMeetExpected": true,
+      "ok": true
+    }
+  },
+  "invariantsOk": true,
+  "reportApiStatus": 200,
+  "reportSample": {
+    "eventId": "34d3359f-b7b8-4923-93b9-50d9ba89d9c1",
+    "ticketsByState": {
+      "ACTIVE": 19250,
+      "REVOKED": 0,
+      "CANCELLED": 0,
+      "USED": 750
+    },
+    "quota": {
+      "capacity": 20000,
+      "allocated": 20000
+    },
+    "quotaRemaining": 0,
+    "quotaCapacityState": "FINITE",
+    "pendingApprovalCount": 0,
+    "checkInSuccessCount": 750,
+    "rejectByReason": {},
+    "emailNeedsCsCount": 0,
+    "asOf": "2026-10-18T06:22:20.730Z"
+  },
+  "apiLog": "/tmp/d5-issue25-d12/api-3a5be02d.log",
+  "db": {
+    "container": "d5-load-pg-3a5be02d",
+    "port": 55452
+  },
+  "productionClaim": false,
+  "meetsPrdPilotWithoutCaveat": true,
+  "pass": true,
+  "tipShaAtRun": "d7fba8bbcc7d082ed9287e5c2966e72cd2700cba",
+  "runId": "run_f4516ebdd968",
+  "issue": 296
+}
