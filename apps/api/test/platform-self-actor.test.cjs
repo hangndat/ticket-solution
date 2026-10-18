@@ -174,3 +174,84 @@ test('listTenants keeps platform MFA verifier (does not use identityVerifier)', 
   );
   assert.equal(used, 'platform');
 });
+
+test('tenantHealth keeps platform MFA verifier (H-P2)', async () => {
+  let used = null;
+  const service = new PlatformService(
+    baseDeps({
+      platformVerifier: {
+        async verifyBearerToken() {
+          used = 'platform';
+          throw new PlatformError(
+            PLATFORM_ERROR_CODES.MFA_REQUIRED,
+            'MFA assurance required',
+          );
+        },
+      },
+      identityVerifier: {
+        async verifyBearerToken() {
+          used = 'identity';
+          return {
+            issuer: 'http://issuer.test/realms/ticket',
+            subject: 'staff-1',
+            email: 'staff@example.com',
+            emailVerified: true,
+          };
+        },
+      },
+    }),
+  );
+
+  await assert.rejects(
+    () =>
+      service.tenantHealth(
+        'Bearer staff-ticket-web-token',
+        '11111111-1111-4111-8111-111111111111',
+      ),
+    (err) =>
+      err?.response?.code === PLATFORM_ERROR_CODES.MFA_REQUIRED ||
+      err?.getResponse?.()?.code === PLATFORM_ERROR_CODES.MFA_REQUIRED,
+  );
+  assert.equal(used, 'platform');
+});
+
+test('revokeSupportGrant keeps platform MFA verifier', async () => {
+  let used = null;
+  const service = new PlatformService(
+    baseDeps({
+      platformVerifier: {
+        async verifyBearerToken() {
+          used = 'platform';
+          throw new PlatformError(
+            PLATFORM_ERROR_CODES.MFA_REQUIRED,
+            'MFA assurance required',
+          );
+        },
+      },
+      identityVerifier: {
+        async verifyBearerToken() {
+          used = 'identity';
+          return {
+            issuer: 'http://issuer.test/realms/ticket',
+            subject: 'staff-1',
+            email: 'staff@example.com',
+            emailVerified: true,
+          };
+        },
+      },
+    }),
+  );
+
+  await assert.rejects(
+    () =>
+      service.revokeSupportGrant(
+        'Bearer staff-ticket-web-token',
+        '22222222-2222-4222-8222-222222222222',
+        { reason: 'done' },
+      ),
+    (err) =>
+      err?.response?.code === PLATFORM_ERROR_CODES.MFA_REQUIRED ||
+      err?.getResponse?.()?.code === PLATFORM_ERROR_CODES.MFA_REQUIRED,
+  );
+  assert.equal(used, 'platform');
+});
