@@ -34,14 +34,23 @@ export default async function GatePage({ searchParams }: Props) {
       <GateOfflineShell suppressBanner={configured}>
         {!configured ? (
           <aside className="notice auth-unconfigured state-error" role="status">
-            <h2>OIDC chưa cấu hình</h2>
+            <h2>Cần đăng nhập nhân viên</h2>
             <p>
-              Cổng fail closed khi thiếu OIDC — không mock session. Auth state:{' '}
-              <strong>
-                {state.status} / authenticated={String(state.authenticated)}
-              </strong>
-              . Đăng nhập tại <Link href="/auth">/auth</Link>.
+              Cổng chưa sẵn sàng trên môi trường này — không giả lập phiên. Đăng
+              nhập tại <Link href="/auth">trang đăng nhập</Link> sau khi cấu hình
+              xong.
             </p>
+            <details className="redeem-meta">
+              <summary>Chi tiết kỹ thuật</summary>
+              <p>
+                OIDC chưa cấu hình — cổng fail closed, không mock session. Auth
+                state:{' '}
+                <strong>
+                  {state.status} / authenticated={String(state.authenticated)}
+                </strong>
+                .
+              </p>
+            </details>
           </aside>
         ) : (
           <GateForm
