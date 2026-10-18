@@ -25,6 +25,93 @@ import { SurfaceState } from '../../src/ui/surface-state';
 
 type Props = { misconfigured: boolean; initialError?: string };
 
+type HealthSummary = {
+  ok: boolean;
+  title: string;
+  detail: string;
+  rawJson: string | null;
+};
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  return value as Record<string, unknown>;
+}
+
+function summarizeHealth(
+  status: number,
+  json: unknown,
+  networkError: boolean,
+  timedOut: boolean,
+): HealthSummary {
+  const rawJson =
+    json === null || json === undefined
+      ? null
+      : (() => {
+          try {
+            return JSON.stringify(json, null, 2);
+          } catch {
+            return null;
+          }
+        })();
+  if (networkError || timedOut || status === 0) {
+    return {
+      ok: false,
+      title: 'Không đọc được sức khỏe tenant',
+      detail: 'Mạng lỗi hoặc hết thời gian chờ — chưa khẳng định trạng thái.',
+      rawJson,
+    };
+  }
+  if (status < 200 || status >= 300) {
+    const body = asRecord(json);
+    const code = typeof body?.code === 'string' ? body.code : null;
+    return {
+      ok: false,
+      title: 'Không đọc được sức khỏe tenant',
+      detail: code
+        ? `Máy chủ từ chối hoặc lỗi (${code}).`
+        : 'Máy chủ không trả kết quả hợp lệ. Thử lại sau.',
+      rawJson,
+    };
+  }
+  const body = asRecord(json);
+  const counts: string[] = [];
+  if (body) {
+    for (const [key, value] of Object.entries(body)) {
+      if (typeof value === 'number' && Number.isFinite(value)) {
+        counts.push(`${key}: ${value}`);
+      }
+    }
+  }
+  return {
+    ok: true,
+    title: 'Sức khỏe tenant',
+    detail:
+      counts.length > 0
+        ? `Các chỉ số đã sanitize: ${counts.slice(0, 6).join(' · ')}.`
+        : 'Máy chủ trả phản hồi OK (chỉ số đã được sanitize).',
+    rawJson,
+  };
+}
+
+function noticeOkCopy(value: unknown): string {
+  const body = asRecord(value);
+  if (!body) return 'Thao tác platform đã thành công.';
+  if (typeof body.tenantId === 'string' && typeof body.ownerInviteId === 'string') {
+    return `Đã tạo tenant ${body.tenantId} (PENDING) — lời mời owner ${body.ownerInviteId}.`;
+  }
+  if (typeof body.grantId === 'string') {
+    return `Đã cấp support grant ${body.grantId}${
+      typeof body.expiresAt === 'string' ? ` · hết hạn ${body.expiresAt}` : ''
+    }.`;
+  }
+  if (typeof body.operator === 'boolean') {
+    return body.operator
+      ? 'Phiên operator hợp lệ.'
+      : 'Phiên không phải operator platform.';
+  }
+  return 'Thao tác platform đã thành công.';
+}
+
 export function PlatformConsole({ misconfigured, initialError }: Props) {
   const router = useRouter();
   const [me, setMe] = useState<ViewResult<PlatformMeResponse> | null>(null);
@@ -45,7 +132,7 @@ export function PlatformConsole({ misconfigured, initialError }: Props) {
   const [detail, setDetail] = useState<ViewResult<PlatformTenantDetail> | null>(
     null,
   );
-  const [healthJson, setHealthJson] = useState<string | null>(null);
+  const [health, setHealth] = useState<HealthSummary | null>(null);
   const [statusReason, setStatusReason] = useState('ops');
   const [manageNotice, setManageNotice] = useState<string | null>(null);
   const [mePhase, setMePhase] = useState<'idle' | 'loading' | 'ready'>(
@@ -136,9 +223,16 @@ export function PlatformConsole({ misconfigured, initialError }: Props) {
       <aside className="notice auth-unconfigured" role="status">
         <h2>Platform OIDC chưa cấu hình</h2>
         <p>
-          Fail closed — thiếu PLATFORM_OIDC_CLIENT_ID / SECRET / REDIRECT_URI /
-          AUDIENCE / REQUIRED_ACR. Không mock MFA hay operator claim.
+          Đăng nhập platform chưa sẵn sàng — console đóng an toàn, không giả lập
+          MFA hay quyền operator.
         </p>
+        <details className="redeem-meta">
+          <summary>Chi tiết kỹ thuật</summary>
+          <p>
+            Fail closed — thiếu PLATFORM_OIDC_CLIENT_ID / SECRET / REDIRECT_URI /
+            AUDIENCE / REQUIRED_ACR.
+          </p>
+        </details>
       </aside>
     );
   }
@@ -216,7 +310,8 @@ export function PlatformConsole({ misconfigured, initialError }: Props) {
       ) : null}
       {me?.kind === 'ok' && me.value.assurance === 'missing' ? (
         <p className="redeem-status redeem-status--error" role="status">
-          MFA_REQUIRED — phiên thiếu assurance. Backend sẽ từ chối lệnh operator.
+          Cần xác thực đa yếu tố — phiên chưa đủ bảo đảm. Máy chủ sẽ từ chối lệnh
+          operator cho đến khi đăng nhập lại với MFA.
         </p>
       ) : null}
 
@@ -320,11 +415,12 @@ export function PlatformConsole({ misconfigured, initialError }: Props) {
                   `/api/bff/platform/tenants/${encodeURIComponent(manageTenantId.trim())}/health`,
                   REQUEST_TIMEOUT_MS,
                 );
-                setHealthJson(
-                  JSON.stringify(
-                    { status: result.status, body: result.json },
-                    null,
-                    2,
+                setHealth(
+                  summarizeHealth(
+                    result.status,
+                    result.json,
+                    result.networkError,
+                    result.timedOut,
                   ),
                 );
                 setBusy(false);
@@ -353,8 +449,8 @@ export function PlatformConsole({ misconfigured, initialError }: Props) {
                 );
                 setManageNotice(
                   result.status >= 200 && result.status < 300
-                    ? 'Đã SUSPENDED (vé/Gate/recovery vẫn dùng).'
-                    : `status HTTP ${result.status}`,
+                    ? 'Đã tạm ngưng tenant (vé/cổng/recovery vẫn dùng được).'
+                    : 'Không đổi trạng thái sang tạm ngưng. Thử lại hoặc tải lại detail.',
                 );
                 setBusy(false);
               })();
@@ -382,8 +478,8 @@ export function PlatformConsole({ misconfigured, initialError }: Props) {
                 );
                 setManageNotice(
                   result.status >= 200 && result.status < 300
-                    ? 'Đã ACTIVE.'
-                    : `status HTTP ${result.status}`,
+                    ? 'Đã kích hoạt tenant.'
+                    : 'Không kích hoạt được tenant. Thử lại hoặc tải lại detail.',
                 );
                 setBusy(false);
               })();
@@ -413,8 +509,8 @@ export function PlatformConsole({ misconfigured, initialError }: Props) {
                 );
                 setManageNotice(
                   result.status >= 200 && result.status < 300
-                    ? 'Limits/flags đã cập nhật (null = unlimited).'
-                    : `limits HTTP ${result.status}`,
+                    ? 'Hạn mức / cờ đã cập nhật (null = không giới hạn).'
+                    : 'Không cập nhật được hạn mức. Thử lại hoặc tải lại detail.',
                 );
                 setBusy(false);
               })();
@@ -455,10 +551,25 @@ export function PlatformConsole({ misconfigured, initialError }: Props) {
         ) : detail ? (
           <p>{viewLabel(detail)}</p>
         ) : null}
-        {healthJson ? (
-          <pre className="me-result" data-testid="platform-health">
-            {healthJson}
-          </pre>
+        {health ? (
+          <section
+            className={
+              health.ok ? 'notice' : 'redeem-status redeem-status--error'
+            }
+            role="status"
+            data-testid="platform-health"
+          >
+            <h3>{health.title}</h3>
+            <p>{health.detail}</p>
+            {health.rawJson ? (
+              <details className="redeem-meta">
+                <summary>JSON kỹ thuật (operator)</summary>
+                <pre className="me-result" tabIndex={0} aria-label="Health JSON">
+                  {health.rawJson}
+                </pre>
+              </details>
+            ) : null}
+          </section>
         ) : null}
         {manageNotice ? <p role="status">{manageNotice}</p> : null}
       </section>
@@ -538,7 +649,7 @@ export function PlatformConsole({ misconfigured, initialError }: Props) {
         >
           <p>
             {notice.kind === 'ok'
-              ? JSON.stringify(notice.value)
+              ? noticeOkCopy(notice.value)
               : viewLabel(notice)}
           </p>
         </section>

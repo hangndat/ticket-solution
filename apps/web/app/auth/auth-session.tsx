@@ -1,30 +1,79 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import { SurfaceState } from '../../src/ui/surface-state';
 
-type MeCallResult = {
-  status: number;
-  body: string;
-};
+type SessionSummary =
+  | { kind: 'signed-in'; subjectHint: string | null }
+  | { kind: 'signed-out' }
+  | { kind: 'error'; detail: string };
+
+function summarizeMe(status: number, body: string): SessionSummary {
+  if (status === 401 || status === 403) {
+    return { kind: 'signed-out' };
+  }
+  if (status >= 200 && status < 300) {
+    let subjectHint: string | null = null;
+    try {
+      const parsed = JSON.parse(body) as Record<string, unknown>;
+      const subject =
+        typeof parsed.sub === 'string'
+          ? parsed.sub
+          : typeof parsed.email === 'string'
+            ? parsed.email
+            : typeof parsed.subject === 'string'
+              ? parsed.subject
+              : null;
+      if (subject && subject.trim()) {
+        const s = subject.trim();
+        subjectHint = s.includes('@')
+          ? s
+          : s.length > 12
+            ? `${s.slice(0, 8)}…`
+            : s;
+      }
+    } catch {
+      subjectHint = null;
+    }
+    return { kind: 'signed-in', subjectHint };
+  }
+  if (status === 0) {
+    return {
+      kind: 'error',
+      detail: 'Không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.',
+    };
+  }
+  return {
+    kind: 'error',
+    detail: 'Không kiểm tra được phiên lúc này. Thử lại sau.',
+  };
+}
 
 /**
- * Identity session — OIDC via same-origin cookies.
- * Session lives in HttpOnly cookies; /api/bff/me uses the server cookie.
+ * Identity session — same-origin cookies (HttpOnly).
+ * Session lives in cookies; /api/bff/me uses the server cookie.
  */
 export function AuthSession() {
-  const [meResult, setMeResult] = useState<MeCallResult | null>(null);
+  const [summary, setSummary] = useState<SessionSummary | null>(null);
   const [pending, startTransition] = useTransition();
 
   function callMe() {
     startTransition(async () => {
-      setMeResult(null);
-      const response = await fetch('/api/bff/me', {
-        method: 'GET',
-        credentials: 'same-origin',
-        cache: 'no-store',
-      });
-      const body = await response.text();
-      setMeResult({ status: response.status, body });
+      setSummary(null);
+      try {
+        const response = await fetch('/api/bff/me', {
+          method: 'GET',
+          credentials: 'same-origin',
+          cache: 'no-store',
+        });
+        const body = await response.text();
+        setSummary(summarizeMe(response.status, body));
+      } catch {
+        setSummary({
+          kind: 'error',
+          detail: 'Không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.',
+        });
+      }
     });
   }
 
@@ -51,15 +100,41 @@ export function AuthSession() {
             Đăng xuất
           </a>
         </div>
-        {meResult ? (
-          <details className="redeem-meta" open>
-            <summary>Kết quả kiểm tra phiên</summary>
-            <pre className="me-result" tabIndex={0}>
-              HTTP {meResult.status}
-              {'\n'}
-              {meResult.body}
-            </pre>
-          </details>
+        {pending ? (
+          <SurfaceState
+            kind="loading"
+            title="Đang kiểm tra phiên…"
+            detail="Chưa khẳng định đã đăng nhập cho đến khi có kết quả."
+            testId="auth-session-loading"
+          />
+        ) : null}
+        {summary?.kind === 'signed-in' ? (
+          <SurfaceState
+            kind="empty"
+            title="Đã đăng nhập"
+            detail={
+              summary.subjectHint
+                ? `Phiên đang hoạt động (${summary.subjectHint}).`
+                : 'Phiên đang hoạt động trên thiết bị này.'
+            }
+            testId="auth-session-signed-in"
+          />
+        ) : null}
+        {summary?.kind === 'signed-out' ? (
+          <SurfaceState
+            kind="empty"
+            title="Chưa đăng nhập"
+            detail="Không có phiên hợp lệ. Bấm «Đăng nhập» để tiếp tục."
+            testId="auth-session-signed-out"
+          />
+        ) : null}
+        {summary?.kind === 'error' ? (
+          <SurfaceState
+            kind="error"
+            title="Không kiểm tra được phiên"
+            detail={summary.detail}
+            testId="auth-session-error"
+          />
         ) : null}
       </section>
     </div>
