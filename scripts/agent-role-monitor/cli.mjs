@@ -23,7 +23,9 @@ import {
   normalizeSettlementInput,
   readEvents,
   resolveJoinForHook,
+  loadActiveDispatchJoin,
   rollupByRole,
+  repoRoot,
 } from './lib/ledger.mjs';
 import { samplePid } from './lib/host-sample.mjs';
 
@@ -206,7 +208,39 @@ async function cmdIngestCursorTurn(flags, ledger) {
   }
 
   const events = readEvents(ledger);
-  const resolved = resolveJoinForHook(events, input);
+  let resolved = resolveJoinForHook(events, input);
+  let attribution = 'join';
+  if (!resolved) {
+    const activeJoin = loadActiveDispatchJoin(repoRoot());
+    if (activeJoin) {
+      const conversationId = input.conversation_id || input.conversationId || null;
+      // Persist join so later turns / rollup stay attributed.
+      if (conversationId) {
+        appendEvent(
+          ledger,
+          buildJoinEvent({
+            conversation_id: conversationId,
+            dispatch_id: activeJoin.dispatch_id,
+            role_id: activeJoin.role_id,
+            task_id: activeJoin.task_id,
+            run_id: activeJoin.run_id,
+            agent: activeJoin.agent,
+          }),
+        );
+      }
+      resolved = {
+        join: {
+          ...activeJoin,
+          attrs: {
+            ...(activeJoin.attrs || {}),
+            conversation_id: conversationId,
+          },
+        },
+        conversation_id: conversationId,
+      };
+      attribution = 'active-dispatch';
+    }
+  }
   if (!resolved) {
     const conversationId = input.conversation_id || input.conversationId || null;
     const msg = `ingest-cursor-turn: join missing for conversation_id=${conversationId ?? 'null'} — skip (no cursor.turn)`;
@@ -230,6 +264,7 @@ async function cmdIngestCursorTurn(flags, ledger) {
     ledger,
     appended: result.appended,
     reason: result.reason ?? null,
+    attribution,
     event: result.event,
   });
 }

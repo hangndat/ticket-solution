@@ -11,6 +11,10 @@
       {
         "command": ".cursor/hooks/crg-before-prompt.sh",
         "timeout": 60
+      },
+      {
+        "command": ".cursor/hooks/agent-metrics-auto-join.sh",
+        "timeout": 10
       }
     ],
     "afterFileEdit": [
