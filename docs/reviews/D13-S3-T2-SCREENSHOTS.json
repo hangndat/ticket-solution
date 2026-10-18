@@ -1,0 +1,154 @@
+{
+  "verified": true,
+  "timeUTC": "2026-10-18T09:10:51.463915+00:00",
+  "appId": "6823694490",
+  "version": {
+    "id": "7c5ac05b-f543-4f71-8af3-a7b40073de7a",
+    "versionString": "1.0.0",
+    "state": "PREPARE_FOR_SUBMISSION"
+  },
+  "localization": {
+    "id": "04ddd4b2-9a1e-4e43-89ec-2e4d6d2503cf",
+    "locale": "en-US"
+  },
+  "note": "ASC API enum APP_IPHONE_67 (no APP_IPHONE_69); pixels 1320x2868 = Dynamic Island large. Used create-response uploadOperations (GET returns empty ops).",
+  "submitted": false,
+  "sets": {
+    "APP_IPHONE_67": {
+      "id": "e605accf-1bc5-4f34-a4de-95b623d494ff",
+      "created": false,
+      "count": 5,
+      "states": [
+        [
+          "01-events.png",
+          "COMPLETE"
+        ],
+        [
+          "02-my-tickets.png",
+          "COMPLETE"
+        ],
+        [
+          "03-redeem.png",
+          "COMPLETE"
+        ],
+        [
+          "04-event-detail.png",
+          "COMPLETE"
+        ],
+        [
+          "05-staff.png",
+          "COMPLETE"
+        ]
+      ]
+    },
+    "APP_IPAD_PRO_3GEN_129": {
+      "id": "828098b7-df75-4606-bd5a-94604c36303c",
+      "created": true,
+      "count": 5,
+      "states": [
+        [
+          "01-events.png",
+          "COMPLETE"
+        ],
+        [
+          "02-my-tickets.png",
+          "COMPLETE"
+        ],
+        [
+          "03-redeem.png",
+          "COMPLETE"
+        ],
+        [
+          "04-event-detail.png",
+          "COMPLETE"
+        ],
+        [
+          "05-staff.png",
+          "COMPLETE"
+        ]
+      ]
+    }
+  },
+  "screenshots": [
+    {
+      "id": "a2000019-6b95-809a-8033-658ae5a94a26",
+      "file": "01-events.png",
+      "md5": "731d47046a6e08afcc60ea9ca975f6a9",
+      "displayType": "APP_IPHONE_67",
+      "bytes": 363135,
+      "deliveryState": "COMPLETE"
+    },
+    {
+      "id": "e7c00019-6b95-809a-8025-5358ee3d53d5",
+      "file": "02-my-tickets.png",
+      "md5": "d077e17e2f6faf7d7a3b57ce25a69356",
+      "displayType": "APP_IPHONE_67",
+      "bytes": 213479,
+      "deliveryState": "COMPLETE"
+    },
+    {
+      "id": "db800019-6b95-809a-8016-f8ac6e6714f8",
+      "file": "03-redeem.png",
+      "md5": "3a6f4fca1c8ccc079cac1502a517642e",
+      "displayType": "APP_IPHONE_67",
+      "bytes": 219267,
+      "deliveryState": "COMPLETE"
+    },
+    {
+      "id": "95800019-6b95-809a-800b-c0ffa6b08943",
+      "file": "04-event-detail.png",
+      "md5": "a26c30f79148e024a069a7fb9e72278c",
+      "displayType": "APP_IPHONE_67",
+      "bytes": 225436,
+      "deliveryState": "COMPLETE"
+    },
+    {
+      "id": "85800019-6b95-809a-803a-d95c4805bdba",
+      "file": "05-staff.png",
+      "md5": "ccc2d738f479b9ad57eb11f617dc1779",
+      "displayType": "APP_IPHONE_67",
+      "bytes": 380813,
+      "deliveryState": "COMPLETE"
+    },
+    {
+      "id": "6fc00019-6b95-809a-803f-4dc5ffb67c97",
+      "file": "01-events.png",
+      "md5": "a8f44b3a648fc98eb41dfd546f16a090",
+      "displayType": "APP_IPAD_PRO_3GEN_129",
+      "bytes": 256919,
+      "deliveryState": "COMPLETE"
+    },
+    {
+      "id": "9ac00019-6b95-809a-803c-14a5cb8ea457",
+      "file": "02-my-tickets.png",
+      "md5": "2327bc644f97146957ccd66e61575a49",
+      "displayType": "APP_IPAD_PRO_3GEN_129",
+      "bytes": 194381,
+      "deliveryState": "COMPLETE"
+    },
+    {
+      "id": "79800019-6b95-809a-8026-02098008fb13",
+      "file": "03-redeem.png",
+      "md5": "f19fa90ae41a3cbfe1d3836b4d1ddeff",
+      "displayType": "APP_IPAD_PRO_3GEN_129",
+      "bytes": 202417,
+      "deliveryState": "COMPLETE"
+    },
+    {
+      "id": "36000019-6b95-809a-8020-376ab918cdf0",
+      "file": "04-event-detail.png",
+      "md5": "4b4bbbb2afbfeddf606e529a3256cb91",
+      "displayType": "APP_IPAD_PRO_3GEN_129",
+      "bytes": 215409,
+      "deliveryState": "COMPLETE"
+    },
+    {
+      "id": "88400019-6b95-809a-8012-3b405430e6a9",
+      "file": "05-staff.png",
+      "md5": "e738b73a0b65fd6af4a8fb47a7f64ced",
+      "displayType": "APP_IPAD_PRO_3GEN_129",
+      "bytes": 256015,
+      "deliveryState": "COMPLETE"
+    }
+  ]
+}

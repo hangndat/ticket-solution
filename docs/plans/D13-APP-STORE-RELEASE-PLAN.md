@@ -93,8 +93,8 @@ Snapshot bảng ROADMAP ngày 17/10 (D10 “Chưa lên lịch”) là **lịch s
 | -- | ------- | ------------------------------ | -------- |
 | G1 | `vemoki.com/privacy` 404 | **Đóng phần URL** (200 sau D12 deploy) — vẫn cần khớp Privacy Nutrition + in-app | S2-T1, S3-T* |
 | G2 | ASC UI chưa điền / chưa screenshot | **Còn mở** | S3-T1 |
-| G3 | Screenshots chưa upload ASC | **Còn mở** | S3-T2 |
-| G4 | iPad media chất lượng | **Còn mở** (retake nếu cần) | S3-T2 |
+| G3 | Screenshots chưa upload ASC | **Đóng phần en-US** (2026-10-18: 10 COMPLETE; xem `D13-S3-T2-SCREENSHOTS.md`) — chưa submit | S3-T2 |
+| G4 | iPad media chất lượng | **Retake + upload COMPLETE** (2026-10-18) | S3-T2 |
 | G5 | TestFlight chưa upload IPA | **Còn mở** (prep ≠ upload) | S4-T2 |
 | G6 | Archive Development, chưa Distribution IPA | **Còn mở** | S4-T1 |
 | G7 | Demo credential chỉ paste ASC | **Ops** — không vào git | S5-T2 |
