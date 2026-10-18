@@ -2,7 +2,8 @@
 
 **Role:** `web` · `docs/agents/roles/web.md`  
 **Architecture impact:** Không  
-**Exact HEAD (branch tip at evidence):** `0c1e84064a1adc34d911c52db2600d0de4973a8a` (+ follow-up docs SHA commit if present)  
+**Exact code SHA (fix):** `0c1e84064a1adc34d911c52db2600d0de4973a8a`  
+**Exact tip SHA (incl. this evidence pin):** `8fe71f83a2414e123c83222011ec33309aa573d0`  
 **Base reproduce SHA:** `39ecbd01266ccb9990d3f1b41c6f8b53685fb4f8` (main at dispatch)  
 **Parent:** Epic #222 → Story #272 → Task #271
 
