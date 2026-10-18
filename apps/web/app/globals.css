@@ -59,7 +59,9 @@ button:focus-visible,
 summary:focus-visible,
 input:focus-visible,
 select:focus-visible,
-textarea:focus-visible {
+textarea:focus-visible,
+[tabindex]:focus-visible,
+.skip-link:focus-visible {
   outline: 3px solid var(--focus);
   outline-offset: 4px;
 }
@@ -138,9 +140,14 @@ nav a,
   font: inherit;
   font-weight: 700;
   padding: 12px 18px;
+  min-height: 44px;
+  min-width: 44px;
+  box-sizing: border-box;
   cursor: pointer;
   text-decoration: none;
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 .auth-buttons button:disabled {
   opacity: 0.55;
@@ -567,8 +574,42 @@ details p {
   z-index: 10;
   text-decoration: none;
 }
-.skip-link:focus {
+.skip-link:focus,
+.skip-link:focus-visible {
   top: 16px;
+}
+
+/* UX-10 A3 — redeem / gate / admin primary controls ≥44×44 CSS px */
+.redeem-page form button,
+.redeem-page .auth-buttons button,
+.redeem-page .auth-buttons a.button-link,
+.redeem-page a.button,
+.redeem-form button,
+.redeem-status button {
+  min-height: 44px;
+  min-width: 44px;
+  box-sizing: border-box;
+}
+.redeem-page form input:not([type='checkbox']):not([type='radio']),
+.redeem-page form select,
+.redeem-page form textarea,
+.redeem-form input:not([type='checkbox']):not([type='radio']),
+.redeem-form select,
+.redeem-form textarea {
+  min-height: 44px;
+  box-sizing: border-box;
+}
+.redeem-checkbox {
+  min-height: 44px;
+  align-items: center;
+}
+.redeem-checkbox input[type='checkbox'] {
+  width: 1.25rem;
+  height: 1.25rem;
+  min-width: 1.25rem;
+  min-height: 1.25rem;
+  margin: 0;
+  flex: none;
 }
 @keyframes rise-in {
   from {
@@ -654,7 +695,8 @@ details p {
   border: 1px solid var(--ink-faint);
   background: color-mix(in srgb, var(--paper) 94%, var(--ink) 6%);
 }
-.admin-tech-details > summary {
+.admin-tech-details > summary,
+.redeem-meta > summary {
   cursor: pointer;
   min-height: 44px;
   display: flex;
@@ -987,13 +1029,16 @@ details p {
 }
 .redeem-checkbox {
   display: flex !important;
-  align-items: flex-start;
+  align-items: center;
   gap: 10px;
   font-weight: 600;
+  min-height: 44px;
 }
 .redeem-checkbox input {
-  margin-top: 4px;
-  width: auto;
+  margin: 0;
+  width: 1.25rem;
+  height: 1.25rem;
+  flex: none;
 }
 .redeem-field-error {
   margin: 0;
@@ -1108,7 +1153,10 @@ select[aria-invalid='true'] {
   .gate-status--admit,
   .gate-status--deny,
   .redeem-status--denied,
-  .redeem-status--error {
+  .redeem-status--error,
+  .gate-offline-banner,
+  .gate-context,
+  .state-loading {
     animation: none !important;
     transition: none;
   }
