@@ -15,7 +15,9 @@ import {
 import {
   ApiBearerAuth,
   ApiConsumes,
+  ApiOkResponse,
   ApiProperty,
+  ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
 import { type ApiError, type ImportKind } from '@ticket/contracts';
@@ -37,6 +39,7 @@ import {
   downloadImportErrors,
   getImportJob,
   importRedemptionCodes,
+  listEventCodes,
   listGuestInvitations,
   previewImportJob,
   previewInvitationDispatch,
@@ -116,6 +119,19 @@ class InvitationClaimBodyDto {
   @ApiProperty({ required: false }) termsVersion?: string;
   @ApiProperty({ required: false }) answers?: Record<string, string | boolean>;
   @ApiProperty({ required: false }) termsAccepted?: true;
+}
+
+class PortalCodeSummaryDto {
+  @ApiProperty({ format: 'uuid' }) codeId!: string;
+  @ApiProperty({ enum: ['AVAILABLE', 'HELD', 'CONSUMED'] })
+  state!: 'AVAILABLE' | 'HELD' | 'CONSUMED';
+  @ApiProperty({ format: 'uuid' }) sourceId!: string;
+  @ApiProperty({ format: 'uuid' }) ticketTypeId!: string;
+}
+
+class PortalCodesPageDto {
+  @ApiProperty({ type: [PortalCodeSummaryDto] }) items!: PortalCodeSummaryDto[];
+  @ApiProperty({ nullable: true, type: String }) nextCursor!: string | null;
 }
 
 type Deps = {
@@ -411,6 +427,36 @@ export class InventoryService {
       readEventQuota(tx, { tenantId, eventId, actorUserId: user.userId }),
     );
   }
+
+  async listCodes(
+    authorization: string | undefined,
+    tenantId: string,
+    eventId: string,
+    query: {
+      cursor?: string;
+      limit?: string;
+      state?: string;
+      sourceId?: string;
+      ticketTypeId?: string;
+      q?: string;
+    },
+  ) {
+    const user = await this.actor(authorization);
+    const limit = query.limit ? Number(query.limit) : undefined;
+    return withTenant(this.deps.db!, tenantId, (tx) =>
+      listEventCodes(tx, this.deps.hmac!, {
+        tenantId,
+        eventId,
+        actorUserId: user.userId,
+        cursor: query.cursor,
+        limit: Number.isFinite(limit) ? limit : undefined,
+        state: query.state as 'AVAILABLE' | 'HELD' | 'CONSUMED' | undefined,
+        sourceId: query.sourceId,
+        ticketTypeId: query.ticketTypeId,
+        q: query.q,
+      }),
+    );
+  }
 }
 
 @ApiTags('inventory')
@@ -699,6 +745,40 @@ export class InventoryController {
     const tenant = requireUuid(tenantId, 'tenantId');
     const event = requireUuid(eventId, 'eventId');
     return this.inventory.quota(authorization, tenant, event).catch((error) => this.fail(error));
+  }
+
+  @Get('tenants/:tenantId/events/:eventId/codes')
+  @ApiBearerAuth()
+  @ApiOkResponse({ type: PortalCodesPageDto })
+  @ApiQuery({ name: 'cursor', required: false })
+  @ApiQuery({ name: 'limit', required: false })
+  @ApiQuery({
+    name: 'state',
+    required: false,
+    enum: ['AVAILABLE', 'HELD', 'CONSUMED'],
+  })
+  @ApiQuery({ name: 'sourceId', required: false })
+  @ApiQuery({ name: 'ticketTypeId', required: false })
+  @ApiQuery({ name: 'q', required: false })
+  listCodes(
+    @Headers('authorization') authorization: string | undefined,
+    @Param('tenantId') tenantId: string,
+    @Param('eventId') eventId: string,
+    @Query()
+    query: {
+      cursor?: string;
+      limit?: string;
+      state?: string;
+      sourceId?: string;
+      ticketTypeId?: string;
+      q?: string;
+    },
+  ) {
+    const tenant = requireUuid(tenantId, 'tenantId');
+    const event = requireUuid(eventId, 'eventId');
+    return this.inventory
+      .listCodes(authorization, tenant, event, query ?? {})
+      .catch((error) => this.fail(error));
   }
 }
 

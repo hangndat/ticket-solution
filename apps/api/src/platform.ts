@@ -35,6 +35,8 @@ import {
   type PortalMemberSummary,
   type PortalMembersPage,
   type PortalMembershipMutationResponse,
+  type PortalPlatformAuditEntry,
+  type PortalPlatformAuditPage,
   type PortalPlatformTenantSummary,
   type PortalPlatformTenantsPage,
   type PortalReasonBody,
@@ -58,6 +60,7 @@ import {
   getPlatformTenantDetail,
   listMyEvents,
   listMyTenants,
+  listPlatformAudit,
   listPlatformTenants,
   listPortalInvites,
   listPortalMembers,
@@ -199,6 +202,24 @@ class PortalPlatformTenantsPageDto implements PortalPlatformTenantsPage {
   @ApiProperty({ nullable: true, type: String }) nextCursor!: string | null;
 }
 
+class PortalPlatformAuditEntryDto implements PortalPlatformAuditEntry {
+  @ApiProperty({ format: 'uuid' }) auditId!: string;
+  @ApiProperty({ nullable: true, type: String, format: 'uuid' })
+  actorUserId!: string | null;
+  @ApiProperty() action!: string;
+  @ApiProperty() resourceType!: string;
+  @ApiProperty({ nullable: true, type: String, format: 'uuid' })
+  resourceId!: string | null;
+  @ApiProperty({ nullable: true, type: String, format: 'uuid' })
+  tenantId!: string | null;
+  @ApiProperty({ format: 'date-time' }) createdAt!: string;
+}
+
+class PortalPlatformAuditPageDto implements PortalPlatformAuditPage {
+  @ApiProperty({ type: [PortalPlatformAuditEntryDto] })
+  items!: PortalPlatformAuditEntryDto[];
+  @ApiProperty({ nullable: true, type: String }) nextCursor!: string | null;
+}
 
 type Deps = {
   db: PrismaClient | null;
@@ -373,6 +394,33 @@ export class PlatformService {
           actorUserId: u.userId,
           cursor: query.cursor,
           limit: Number.isFinite(limit) ? limit : undefined,
+        }),
+      )
+      .catch(fail);
+  }
+
+  listAudit(
+    authorization: string | undefined,
+    query: {
+      cursor?: string;
+      limit?: string;
+      from?: string;
+      to?: string;
+      action?: string;
+      tenantId?: string;
+    },
+  ) {
+    const limit = query.limit ? Number(query.limit) : undefined;
+    return this.platformActor(authorization)
+      .then((u) =>
+        listPlatformAudit(this.deps.db!, {
+          actorUserId: u.userId,
+          cursor: query.cursor,
+          limit: Number.isFinite(limit) ? limit : undefined,
+          from: query.from,
+          to: query.to,
+          action: query.action,
+          tenantId: query.tenantId,
         }),
       )
       .catch(fail);
@@ -707,6 +755,34 @@ export class PlatformController {
   @ApiOkResponse({ type: MeEventsDto })
   myEvents(@Headers('authorization') authorization: string | undefined) {
     return this.platform.myEvents(authorization);
+  }
+
+  @Get('platform/audit')
+  @ApiBearerAuth()
+  @ApiOkResponse({ type: PortalPlatformAuditPageDto })
+  @ApiQuery({ name: 'cursor', required: false })
+  @ApiQuery({ name: 'limit', required: false })
+  @ApiQuery({ name: 'from', required: false })
+  @ApiQuery({ name: 'to', required: false })
+  @ApiQuery({ name: 'action', required: false })
+  @ApiQuery({ name: 'tenantId', required: false })
+  listAudit(
+    @Headers('authorization') authorization: string | undefined,
+    @Query('cursor') cursor?: string,
+    @Query('limit') limit?: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+    @Query('action') action?: string,
+    @Query('tenantId') tenantId?: string,
+  ) {
+    return this.platform.listAudit(authorization, {
+      cursor,
+      limit,
+      from,
+      to,
+      action,
+      tenantId,
+    });
   }
 
   @Get('platform/tenants')
