@@ -27,7 +27,10 @@ import {
   lockTenantPolicyForUpdate,
 } from './tenant-policy';
 import { withTenant } from './tenant-context';
-import { requireTenantPermission } from './membership';
+import {
+  assertLockedMembershipPermission,
+  requireTenantPermission,
+} from './membership';
 import { maskEmail } from './notification-status';
 
 const INVITE_RESEND_COOLDOWN_SECONDS = 60;
@@ -53,10 +56,20 @@ function inviteState(row: {
   return 'PENDING';
 }
 
+/** Map outbox row status → portal invite deliveryState (ACCEPTED ≠ inbox proof). */
 function deliveryStateFromOutbox(
   status: string | null,
 ): PortalInviteSummary['deliveryState'] {
-  return status === 'DEAD' ? 'FAILED' : 'PENDING';
+  if (status === 'COMPLETE') return 'ACCEPTED';
+  if (status === 'DEAD') return 'FAILED';
+  if (
+    status === 'PENDING' ||
+    status === 'LEASED' ||
+    status === 'PROCESSING'
+  ) {
+    return 'PENDING';
+  }
+  return 'UNKNOWN';
 }
 
 async function writeMembershipAudit(
@@ -388,11 +401,8 @@ export async function changePortalMemberRole(
   }
 
   return withTenant(db, input.tenantId, async (tx) => {
-    await requireTenantPermission(tx, {
-      tenantId: input.tenantId,
-      userId: input.actorUserId,
-      permission: 'members.manage',
-    });
+    // Lock order: tenant_policies → memberships (id ASC) → authz on locked rows.
+    // Do not FOR SHARE actor first — concurrent demote/revoke deadlocks on upgrade.
     const policy = await lockTenantPolicyForUpdate(tx, input.tenantId);
     assertTenantAllowsAdminMutation(policy.status);
 
@@ -401,15 +411,21 @@ export async function changePortalMemberRole(
         id: string;
         user_id: string;
         role: string;
+        permissions: string[];
         revoked_at: Date | null;
         activated_at: Date | null;
       }[]
     >`
-      SELECT id, user_id, role, revoked_at, activated_at FROM memberships
+      SELECT id, user_id, role, permissions, revoked_at, activated_at FROM memberships
       WHERE tenant_id = ${input.tenantId}::uuid
       ORDER BY id
       FOR UPDATE
     `;
+    assertLockedMembershipPermission(
+      members,
+      input.actorUserId,
+      'members.manage',
+    );
 
     const target = members.find((m) => m.id === input.membershipId);
     if (!target || target.revoked_at || !target.activated_at) {

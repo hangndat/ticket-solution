@@ -13,12 +13,29 @@ import {
   Put,
   Query,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOkResponse, ApiProperty, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiOkResponse,
+  ApiProperty,
+  ApiQuery,
+  ApiTags,
+} from '@nestjs/swagger';
 import {
   type ApiError,
   type MeEventItem,
   type MeEventsResponse,
+  type PortalAssignmentBody,
+  type PortalInviteRevokeResponse,
   type PortalInviteState,
+  type PortalInviteSummary,
+  type PortalInvitesPage,
+  type PortalMemberAssignment,
+  type PortalMemberRoleBody,
+  type PortalMemberSummary,
+  type PortalMembersPage,
+  type PortalMembershipMutationResponse,
+  type PortalReasonBody,
   PLATFORM_ERROR_CODES,
 } from '@ticket/contracts';
 import {
@@ -76,6 +93,91 @@ class MeEventsDto implements MeEventsResponse {
   })
   staffEligible!: boolean;
   @ApiProperty({ type: [MeEventItemDto] }) items!: MeEventItemDto[];
+}
+
+const MEMBERSHIP_ROLES = [
+  'Owner',
+  'Manager',
+  'CS',
+  'Supervisor',
+  'Scanner',
+] as const;
+
+class PortalMemberAssignmentDto implements PortalMemberAssignment {
+  @ApiProperty({ format: 'uuid' }) eventId!: string;
+  @ApiProperty({ type: [String] }) permissions!: string[];
+  @ApiProperty({ nullable: true, type: String }) activatedAt!: string | null;
+  @ApiProperty({ nullable: true, type: String }) revokedAt!: string | null;
+}
+
+class PortalMemberSummaryDto implements PortalMemberSummary {
+  @ApiProperty({ format: 'uuid' }) membershipId!: string;
+  @ApiProperty({ format: 'uuid' }) userId!: string;
+  @ApiProperty({ nullable: true, type: String }) emailMasked!: string | null;
+  @ApiProperty({ enum: MEMBERSHIP_ROLES }) role!: PortalMemberSummary['role'];
+  @ApiProperty({ nullable: true, type: String }) activatedAt!: string | null;
+  @ApiProperty({ nullable: true, type: String }) revokedAt!: string | null;
+  @ApiProperty({ type: [PortalMemberAssignmentDto] })
+  eventAssignments!: PortalMemberAssignmentDto[];
+}
+
+class PortalMembersPageDto implements PortalMembersPage {
+  @ApiProperty({ type: [PortalMemberSummaryDto] })
+  items!: PortalMemberSummaryDto[];
+  @ApiProperty({ nullable: true, type: String }) nextCursor!: string | null;
+}
+
+class PortalInviteSummaryDto implements PortalInviteSummary {
+  @ApiProperty({ format: 'uuid' }) inviteId!: string;
+  @ApiProperty() emailMasked!: string;
+  @ApiProperty({ enum: MEMBERSHIP_ROLES }) role!: PortalInviteSummary['role'];
+  @ApiProperty({ enum: ['PENDING', 'USED', 'REVOKED', 'EXPIRED'] })
+  state!: PortalInviteState;
+  @ApiProperty() expiresAt!: string;
+  @ApiProperty({
+    enum: ['PENDING', 'ACCEPTED', 'FAILED', 'UNKNOWN'],
+    description:
+      'ACCEPTED = outbox processing completed; never proof of inbox delivery',
+  })
+  deliveryState!: PortalInviteSummary['deliveryState'];
+}
+
+class PortalInvitesPageDto implements PortalInvitesPage {
+  @ApiProperty({ type: [PortalInviteSummaryDto] })
+  items!: PortalInviteSummaryDto[];
+  @ApiProperty({ nullable: true, type: String }) nextCursor!: string | null;
+}
+
+class PortalMemberRoleBodyDto implements PortalMemberRoleBody {
+  @ApiProperty({ enum: MEMBERSHIP_ROLES }) role!: PortalMemberRoleBody['role'];
+  @ApiProperty() reason!: string;
+}
+
+class PortalAssignmentBodyDto implements PortalAssignmentBody {
+  @ApiProperty({ enum: MEMBERSHIP_ROLES }) role!: PortalAssignmentBody['role'];
+  @ApiProperty() reason!: string;
+}
+
+class PortalReasonBodyDto implements PortalReasonBody {
+  @ApiProperty() reason!: string;
+}
+
+class PortalMembershipMutationResponseDto
+  implements PortalMembershipMutationResponse
+{
+  @ApiProperty({ format: 'uuid' }) membershipId!: string;
+}
+
+class PortalInviteRevokeResponseDto implements PortalInviteRevokeResponse {
+  @ApiProperty({ format: 'uuid' }) inviteId!: string;
+  @ApiProperty({ enum: ['REVOKED'] }) state!: 'REVOKED';
+}
+
+class PortalInviteResendResponseDto {
+  @ApiProperty({ format: 'uuid' }) inviteId!: string;
+  @ApiProperty({ enum: ['PENDING'] }) state!: 'PENDING';
+  @ApiProperty() expiresAt!: string;
+  @ApiProperty({ enum: ['PENDING'] }) deliveryState!: 'PENDING';
 }
 
 type Deps = {
@@ -612,6 +714,10 @@ export class PlatformController {
 
   @Get('tenants/:tenantId/members')
   @ApiBearerAuth()
+  @ApiOkResponse({ type: PortalMembersPageDto })
+  @ApiQuery({ name: 'cursor', required: false })
+  @ApiQuery({ name: 'limit', required: false })
+  @ApiQuery({ name: 'includeRevoked', required: false })
   listMembers(
     @Headers('authorization') authorization: string | undefined,
     @Param('tenantId') tenantId: string,
@@ -628,6 +734,10 @@ export class PlatformController {
 
   @Get('tenants/:tenantId/invites')
   @ApiBearerAuth()
+  @ApiOkResponse({ type: PortalInvitesPageDto })
+  @ApiQuery({ name: 'cursor', required: false })
+  @ApiQuery({ name: 'limit', required: false })
+  @ApiQuery({ name: 'state', required: false, enum: ['PENDING', 'USED', 'REVOKED', 'EXPIRED'] })
   listInvites(
     @Headers('authorization') authorization: string | undefined,
     @Param('tenantId') tenantId: string,
@@ -664,11 +774,13 @@ export class PlatformController {
 
   @Patch('tenants/:tenantId/members/:membershipId/role')
   @ApiBearerAuth()
+  @ApiBody({ type: PortalMemberRoleBodyDto })
+  @ApiOkResponse({ type: PortalMembershipMutationResponseDto })
   changeRole(
     @Headers('authorization') authorization: string | undefined,
     @Param('tenantId') tenantId: string,
     @Param('membershipId') membershipId: string,
-    @Body() body: { role: string; reason: string },
+    @Body() body: PortalMemberRoleBodyDto,
   ) {
     return this.platform.changeRole(
       authorization,
@@ -680,12 +792,14 @@ export class PlatformController {
 
   @Put('tenants/:tenantId/members/:membershipId/event-assignments/:eventId')
   @ApiBearerAuth()
+  @ApiBody({ type: PortalAssignmentBodyDto })
+  @ApiOkResponse({ type: PortalMembershipMutationResponseDto })
   putAssignment(
     @Headers('authorization') authorization: string | undefined,
     @Param('tenantId') tenantId: string,
     @Param('membershipId') membershipId: string,
     @Param('eventId') eventId: string,
-    @Body() body: { role: string; reason: string },
+    @Body() body: PortalAssignmentBodyDto,
   ) {
     return this.platform.putAssignment(
       authorization,
@@ -698,12 +812,14 @@ export class PlatformController {
 
   @Delete('tenants/:tenantId/members/:membershipId/event-assignments/:eventId')
   @ApiBearerAuth()
+  @ApiBody({ type: PortalReasonBodyDto })
+  @ApiOkResponse({ type: PortalMembershipMutationResponseDto })
   deleteAssignment(
     @Headers('authorization') authorization: string | undefined,
     @Param('tenantId') tenantId: string,
     @Param('membershipId') membershipId: string,
     @Param('eventId') eventId: string,
-    @Body() body: { reason: string },
+    @Body() body: PortalReasonBodyDto,
   ) {
     return this.platform.deleteAssignment(
       authorization,
@@ -716,11 +832,12 @@ export class PlatformController {
 
   @Post('tenants/:tenantId/members/:membershipId/revoke')
   @ApiBearerAuth()
+  @ApiBody({ type: PortalReasonBodyDto })
   revokeMember(
     @Headers('authorization') authorization: string | undefined,
     @Param('tenantId') tenantId: string,
     @Param('membershipId') membershipId: string,
-    @Body() body: { reason: string },
+    @Body() body: PortalReasonBodyDto,
   ) {
     return this.platform.revokeMember(
       authorization,
@@ -732,11 +849,13 @@ export class PlatformController {
 
   @Post('tenants/:tenantId/invites/:inviteId/revoke')
   @ApiBearerAuth()
+  @ApiBody({ type: PortalReasonBodyDto })
+  @ApiOkResponse({ type: PortalInviteRevokeResponseDto })
   revokeInvite(
     @Headers('authorization') authorization: string | undefined,
     @Param('tenantId') tenantId: string,
     @Param('inviteId') inviteId: string,
-    @Body() body: { reason: string },
+    @Body() body: PortalReasonBodyDto,
   ) {
     return this.platform.revokeInvite(
       authorization,
@@ -748,11 +867,13 @@ export class PlatformController {
 
   @Post('tenants/:tenantId/invites/:inviteId/resend')
   @ApiBearerAuth()
+  @ApiBody({ type: PortalReasonBodyDto })
+  @ApiOkResponse({ type: PortalInviteResendResponseDto })
   resendInvite(
     @Headers('authorization') authorization: string | undefined,
     @Param('tenantId') tenantId: string,
     @Param('inviteId') inviteId: string,
-    @Body() body: { reason: string },
+    @Body() body: PortalReasonBodyDto,
   ) {
     return this.platform.resendInvite(
       authorization,
