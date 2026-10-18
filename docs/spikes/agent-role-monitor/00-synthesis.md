@@ -129,10 +129,24 @@ Claim “role X hơn Y” chỉ PASS khi: cùng class Task, cùng cửa sổ, sa
 
 | Artifact | Status | Ghi chú |
 | -------- | ------ | ------- |
-| Runbook ops | **Đã có** | [`docs/ops/AGENT-ROLE-MONITOR.md`](../../ops/AGENT-ROLE-MONITOR.md) — khi nào gọi `record-opened` / `ingest-settlement` / `rollup` trong mailbox loop; map Role ID; privacy; known gaps (token Cursor **null**); link `scripts/agent-role-monitor/` |
-| Ledger lib | **Đã có** | `scripts/agent-role-monitor/lib/ledger.mjs` (+ `host-sample.mjs`) — schema v1, opened/settled/rollup helpers |
-| CLI entry | **Đã có** | `scripts/agent-role-monitor/cli.mjs` + `pnpm agent-metrics:*` (opened / ingest / rollup / host-sample / test) |
+| Runbook ops | **Đã cập nhật** | [`docs/ops/AGENT-ROLE-MONITOR.md`](../../ops/AGENT-ROLE-MONITOR.md) — `record-opened` → **`record-join`** → settle `ingest-settlement` → `rollup`; hook `stop` → `cursor.turn`; privacy; gaps (subagent, CLI/terminal fire); pointer probe **09** |
+| Ledger lib | **Đã có** | `scripts/agent-role-monitor/lib/ledger.mjs` (+ `host-sample.mjs`) — schema v1: opened / settled / **`join.conversation`** / **`cursor.turn`** / rollup token sums |
+| CLI entry | **Đã có** | `scripts/agent-role-monitor/cli.mjs` + `pnpm agent-metrics:*` (opened / **join** / ingest / **ingest-cursor-turn** / rollup / host-sample / test) |
 | Surface | CLI + MD | Portal hoãn (`07`) |
-| Meter token | Gap | Cursor tokens chưa join Dispatch → rollup để `null`, không `0` |
+| Meter token | Partial | Có path hooks → `cursor.turn` khi join sẵn; thiếu join / hook chưa fire / subagent → rollup `tokens_*` = **null**, không `0` |
 
-**Pointer cho coordinator:** ingest theo runbook [`docs/ops/AGENT-ROLE-MONITOR.md`](../../ops/AGENT-ROLE-MONITOR.md) + README CLI; research `01`–`07` vẫn là nguồn taxonomy / privacy / DoD chống vanity.
+### Hooks status
+
+| Hạng mục | Status | Chi tiết |
+| -------- | ------ | -------- |
+| Project hooks wired | **Đã có** | `.cursor/hooks.json` → `stop` + `afterAgentResponse` → `.cursor/hooks/agent-metrics-cursor-turn.sh` (không đụng `~/.cursor/hooks.json`) |
+| SoT turn tokens | **`stop`** | `afterAgentResponse` accepted, dedupe theo `generation_id` |
+| Join trước ingest | **Bắt buộc process** | `pnpm agent-metrics:join` (`record-join`) map `conversation_id` ↔ `dispatch_id` + `role_id`; thiếu join → skip `join_missing` (exit 0) |
+| Rollup tokens | **Đã có** | `rollup` cộng `tokens_in/out/cache_*_sum` từ `cursor.turn`; field null nếu mọi turn thiếu số |
+| Privacy | **Fail-open + strip** | Hook không lưu text/prompt/transcript; log local `.orca-metrics/cursor-hooks.log`; ledger gitignored |
+| Subagent | **Gap** | `subagentStop` không có token; reasoning tokens chưa expose qua hooks |
+| CLI / terminal fire? | **Chưa chứng minh** | Orca CLI / terminal-only worker có fire `stop` + lấy `conversation_id` ổn định không — **xem `09` khi probe xong** |
+| Probe 09 | **Chưa có** | Artifact `09-*` chưa tồn tại trong spike; runbook chỉ pointer “xem 09 khi probe xong” |
+| agent-top (08) | **Host only** | CPU/MEM hữu dụng; Cursor tokens qua agent-top vẫn 0 / `$0.00` |
+
+**Pointer cho coordinator:** copy-paste theo runbook [`docs/ops/AGENT-ROLE-MONITOR.md`](../../ops/AGENT-ROLE-MONITOR.md) + README CLI; research `01`–`08` vẫn là nguồn taxonomy / privacy / DoD / host trial; **đợi probe 09** trước khi claim token path cho CLI/terminal worker.
