@@ -70,9 +70,16 @@ emit_tips() {
 # Path filters mirror .github/workflows/ci.yml (web/mobile/backend only — no db/hardening).
 path_is_web() {
   case "$1" in
-    apps/web/*|packages/contracts/*|pnpm-lock.yaml|pnpm-workspace.yaml|package.json|turbo.json|.npmrc|.github/workflows/ci.yml|.github/actions/*)
+    apps/web/*|packages/web-session/*|packages/contracts/*|pnpm-lock.yaml|pnpm-workspace.yaml|package.json|turbo.json|.npmrc|.github/workflows/ci.yml|.github/actions/*)
       return 0
       ;;
+    *) return 1 ;;
+  esac
+}
+
+path_is_portal() {
+  case "$1" in
+    apps/portal/*|packages/web-session/*|packages/contracts/*|pnpm-lock.yaml|pnpm-workspace.yaml|package.json|turbo.json|.npmrc|.github/workflows/ci.yml|.github/actions/*) return 0 ;;
     *) return 1 ;;
   esac
 }
@@ -110,6 +117,11 @@ run_web() {
   run_cmd 'pnpm --filter @ticket/web test:routes'
 }
 
+run_portal() {
+  log "scope=portal"
+  run_cmd 'pnpm exec turbo run lint typecheck test build --filter=@ticket/portal...'
+}
+
 run_mobile() {
   log "scope=mobile"
   run_cmd 'pnpm exec turbo run lint typecheck test build --filter=@ticket/mobile...'
@@ -129,7 +141,7 @@ run_backend() {
 
 main() {
   local tip f
-  local need_web=0 need_mobile=0 need_backend=0
+  local need_web=0 need_portal=0 need_mobile=0 need_backend=0
   local file_count=0
   local tmp
 
@@ -162,21 +174,25 @@ main() {
     printf '  %s\n' "$f" >&2
     file_count=$((file_count + 1))
     path_is_web "$f" && need_web=1
+    path_is_portal "$f" && need_portal=1
     path_is_mobile "$f" && need_mobile=1
     path_is_backend "$f" && need_backend=1
   done <"$tmp"
 
   log "file_count=$file_count"
 
-  if [[ "$need_web" -eq 0 && "$need_mobile" -eq 0 && "$need_backend" -eq 0 ]]; then
+  if [[ "$need_web" -eq 0 && "$need_portal" -eq 0 && "$need_mobile" -eq 0 && "$need_backend" -eq 0 ]]; then
     log "docs/tooling-only (no web/mobile/backend scopes) — skip"
     exit 0
   fi
 
-  log "scopes: web=$need_web mobile=$need_mobile backend=$need_backend (no database-isolation)"
+  log "scopes: web=$need_web portal=$need_portal mobile=$need_mobile backend=$need_backend (no database-isolation)"
 
   if [[ "$need_web" -eq 1 ]]; then
     run_web
+  fi
+  if [[ "$need_portal" -eq 1 ]]; then
+    run_portal
   fi
   if [[ "$need_mobile" -eq 1 ]]; then
     run_mobile
