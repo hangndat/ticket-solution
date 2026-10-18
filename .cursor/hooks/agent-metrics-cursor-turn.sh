@@ -18,10 +18,26 @@ if [[ -z "${INPUT//[[:space:]]/}" ]]; then
 fi
 
 # Best-effort ingest; stderr goes to local log (join_missing, etc.)
+# Retry briefly so a parallel record-join can win the race before stop returns.
 mkdir -p "$REPO_ROOT/.orca-metrics" 2>/dev/null || true
 LOG="$REPO_ROOT/.orca-metrics/cursor-hooks.log"
-printf '%s' "$INPUT" | node "$REPO_ROOT/scripts/agent-role-monitor/cli.mjs" ingest-cursor-turn \
-  >>"$LOG" 2>&1 || true
+TMP="$(mktemp -t agent-metrics-hook.XXXXXX 2>/dev/null || mktemp)"
+printf '%s' "$INPUT" >"$TMP"
+attempt=1
+while [ "$attempt" -le 6 ]; do
+  out="$(node "$REPO_ROOT/scripts/agent-role-monitor/cli.mjs" ingest-cursor-turn --stdin <"$TMP" 2>>"$LOG" || true)"
+  printf '%s\n' "$out" >>"$LOG"
+  case "$out" in
+    *'"appended": true'*|*'"appended":true'*) break ;;
+    *'"reason": "duplicate_generation"'*|*'"reason":"duplicate_generation"'*) break ;;
+    *'"reason": "join_missing"'*|*'"reason":"join_missing"'*)
+      sleep 0.2
+      ;;
+    *) break ;;
+  esac
+  attempt=$((attempt + 1))
+done
+rm -f "$TMP" 2>/dev/null || true
 
 printf '%s\n' '{}'
 exit 0
