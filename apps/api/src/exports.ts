@@ -8,6 +8,7 @@ import {
   Injectable,
   Param,
   Post,
+  Query,
   Res,
 } from '@nestjs/common';
 import {
@@ -32,10 +33,12 @@ import {
   createExportJob,
   downloadExport,
   getExportJob,
+  listExportJobs,
   parseTtlSeconds,
   readMinioEnvironment,
   requireMinioConfig,
   withTenant,
+  type ExportJob,
   type IdentityUserRepository,
   type OidcVerifier,
   type PrismaClient,
@@ -57,6 +60,10 @@ class ExportJobDto {
   @ApiProperty({ nullable: true, type: String }) expiresAt!: string | null;
   @ApiProperty({ nullable: true, type: String }) error!: string | null;
   @ApiProperty({ required: false }) replayed?: boolean;
+}
+
+class ExportJobSummaryDto extends ExportJobDto {
+  @ApiProperty({ format: 'date-time' }) createdAt!: string;
 }
 
 type Deps = {
@@ -149,6 +156,27 @@ export class ExportApiService {
     );
   }
 
+  async list(
+    authorization: string | undefined,
+    tenantId: string,
+    eventId: string,
+    cursor?: string,
+    limit?: number,
+    status?: ExportJob['status'],
+  ) {
+    const user = await this.actor(authorization);
+    return withTenant(this.deps.db!, tenantId, (tx) =>
+      listExportJobs(tx, {
+        tenantId,
+        eventId,
+        actorUserId: user.userId,
+        cursor,
+        limit,
+        status,
+      }),
+    );
+  }
+
   async download(
     authorization: string | undefined,
     tenantId: string,
@@ -215,6 +243,44 @@ export class ExportController {
       );
     }
     throw error;
+  }
+
+  @Get('tenants/:tenantId/events/:eventId/exports')
+  @ApiBearerAuth()
+  @ApiOkResponse({ type: ExportJobSummaryDto, isArray: true })
+  list(
+    @Headers('authorization') authorization: string | undefined,
+    @Param('tenantId') tenantId: string,
+    @Param('eventId') eventId: string,
+    @Query('cursor') cursor?: string,
+    @Query('limit') limitRaw?: string,
+    @Query('status') statusRaw?: string,
+  ) {
+    const limit =
+      limitRaw != null && limitRaw !== ''
+        ? Number(limitRaw)
+        : undefined;
+    if (limit != null && (!Number.isFinite(limit) || limit < 1)) {
+      throw scopeError('limit must be a positive integer');
+    }
+    const allowed = new Set(['PENDING', 'PROCESSING', 'READY', 'FAILED']);
+    let status: ExportJob['status'] | undefined;
+    if (statusRaw != null && statusRaw !== '') {
+      if (!allowed.has(statusRaw)) {
+        throw scopeError('status must be PENDING|PROCESSING|READY|FAILED');
+      }
+      status = statusRaw as ExportJob['status'];
+    }
+    return this.exports
+      .list(
+        authorization,
+        requireUuid(tenantId, 'tenantId'),
+        requireUuid(eventId, 'eventId'),
+        cursor,
+        limit,
+        status,
+      )
+      .catch((e) => this.fail(e));
   }
 
   @Post('tenants/:tenantId/events/:eventId/exports')

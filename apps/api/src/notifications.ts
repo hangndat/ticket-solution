@@ -15,7 +15,9 @@ import {
   NOTIFICATION_ERROR_CODES,
   NOTIFICATION_KINDS,
   type ApiError,
+  type NotificationChannel,
   type NotificationKind,
+  type NotificationProviderStatus,
 } from '@ticket/contracts';
 import {
   AuthzError,
@@ -95,6 +97,8 @@ export class NotificationService {
     tenantId: string,
     eventId: string,
     cursor?: string,
+    state?: NotificationProviderStatus,
+    channel?: NotificationChannel,
   ) {
     const user = await this.actor(authorization);
     return withTenant(this.deps.db!, tenantId, (tx) =>
@@ -103,6 +107,8 @@ export class NotificationService {
         eventId,
         actorUserId: user.userId,
         cursor: cursor ?? null,
+        state,
+        channel,
       }),
     );
   }
@@ -225,11 +231,38 @@ export class NotificationController {
     @Param('tenantId') tenantId: string,
     @Param('eventId') eventId: string,
     @Query('cursor') cursor?: string,
+    @Query('state') stateRaw?: string,
+    @Query('channel') channelRaw?: string,
   ) {
     const tenant = requireUuid(tenantId, 'tenantId');
     const event = requireUuid(eventId, 'eventId');
+    const states = new Set([
+      'PENDING',
+      'ACCEPTED',
+      'FAILED',
+      'DEAD',
+      'UNKNOWN',
+    ]);
+    const channels = new Set(['email', 'push']);
+    let state: NotificationProviderStatus | undefined;
+    let channel: NotificationChannel | undefined;
+    if (stateRaw != null && stateRaw !== '') {
+      if (!states.has(stateRaw)) {
+        throw scopeError('state must be a NotificationProviderStatus');
+      }
+      state = stateRaw as NotificationProviderStatus;
+    }
+    if (channelRaw != null && channelRaw !== '') {
+      if (!channels.has(channelRaw)) {
+        throw scopeError('channel must be email or push');
+      }
+      channel = channelRaw as NotificationChannel;
+    }
+    if (cursor != null && cursor !== '') {
+      requireUuid(cursor, 'cursor');
+    }
     return this.notifications
-      .list(authorization, tenant, event, cursor)
+      .list(authorization, tenant, event, cursor, state, channel)
       .catch((error) => this.fail(error));
   }
 

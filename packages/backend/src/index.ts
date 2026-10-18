@@ -339,12 +339,15 @@ export {
 export {
   createExportJob,
   getExportJob,
+  listExportJobs,
   downloadExport,
   processExportJob,
   relayExportsOnce,
   parseTtlSeconds,
   type ExportFilter,
   type ExportJob,
+  type ExportJobSummary,
+  type ExportJobsPage,
 } from './export';
 export { escapeCsvCell, toCsvRow } from './csv-guard';
 export {

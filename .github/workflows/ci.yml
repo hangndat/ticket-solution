@@ -236,6 +236,8 @@ jobs:
             files: test/portal-members.test.cjs
           - shard: portal-catalog
             files: test/portal-catalog.test.cjs
+          - shard: portal-filters
+            files: test/portal-filters.test.cjs
           - shard: membership-report
             files: test/membership.test.cjs test/reporting.test.cjs
           - shard: issue-gate

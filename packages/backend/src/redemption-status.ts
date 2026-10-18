@@ -175,6 +175,7 @@ export async function getOwnerRedemptionStatus(
 
 /**
  * Staff pending list — requires redemption.approve. Masked actor email only.
+ * G-R1: optional sourceId / ticketTypeId / q (exact requestId). Omitted = legacy list.
  */
 export async function listStaffPendingRedemptions(
   tx: Prisma.TransactionClient,
@@ -184,6 +185,10 @@ export async function listStaffPendingRedemptions(
     actorUserId: string;
     cursor?: string;
     limit?: number;
+    sourceId?: string;
+    ticketTypeId?: string;
+    /** Exact opaque request ID only — never fuzzy email/phone search. */
+    q?: string;
   },
 ): Promise<StaffPendingRedemptionPage> {
   await requireTenantPermission(tx, {
@@ -198,58 +203,46 @@ export async function listStaffPendingRedemptions(
     CURSOR_PAGE_LIMIT.max,
   );
   const cursor = decodeCursor(input.cursor);
+  const sourceId = input.sourceId?.trim() || null;
+  const ticketTypeId = input.ticketTypeId?.trim() || null;
+  const q = input.q?.trim() || null;
+  const cursorCreatedAt = cursor?.createdAt ?? null;
+  const cursorId = cursor?.id ?? null;
 
-  const rows = cursor
-    ? await tx.$queryRaw<
-        Array<{
-          id: string;
-          event_id: string;
-          expires_at: Date | null;
-          created_at: Date;
-          ticket_type_id: string;
-          source_id: string;
-          email: string | null;
-        }>
-      >`
-        SELECT r.id, r.event_id, r.expires_at, r.created_at,
-               c.ticket_type_id, c.source_id, u.email
-        FROM redemption_requests r
-        JOIN redemption_codes c
-          ON c.tenant_id = r.tenant_id AND c.id = r.redemption_code_id
-        JOIN users u ON u.id = r.actor_user_id
-        WHERE r.tenant_id = ${input.tenantId}::uuid
-          AND r.event_id = ${input.eventId}::uuid
-          AND r.status = 'PENDING_REVIEW'
-          AND (
-            r.created_at > ${cursor.createdAt}::timestamptz
-            OR (r.created_at = ${cursor.createdAt}::timestamptz AND r.id > ${cursor.id}::uuid)
-          )
-        ORDER BY r.created_at ASC, r.id ASC
-        LIMIT ${limit + 1}
-      `
-    : await tx.$queryRaw<
-        Array<{
-          id: string;
-          event_id: string;
-          expires_at: Date | null;
-          created_at: Date;
-          ticket_type_id: string;
-          source_id: string;
-          email: string | null;
-        }>
-      >`
-        SELECT r.id, r.event_id, r.expires_at, r.created_at,
-               c.ticket_type_id, c.source_id, u.email
-        FROM redemption_requests r
-        JOIN redemption_codes c
-          ON c.tenant_id = r.tenant_id AND c.id = r.redemption_code_id
-        JOIN users u ON u.id = r.actor_user_id
-        WHERE r.tenant_id = ${input.tenantId}::uuid
-          AND r.event_id = ${input.eventId}::uuid
-          AND r.status = 'PENDING_REVIEW'
-        ORDER BY r.created_at ASC, r.id ASC
-        LIMIT ${limit + 1}
-      `;
+  const rows = await tx.$queryRaw<
+    Array<{
+      id: string;
+      event_id: string;
+      expires_at: Date | null;
+      created_at: Date;
+      ticket_type_id: string;
+      source_id: string;
+      email: string | null;
+    }>
+  >`
+    SELECT r.id, r.event_id, r.expires_at, r.created_at,
+           c.ticket_type_id, c.source_id, u.email
+    FROM redemption_requests r
+    JOIN redemption_codes c
+      ON c.tenant_id = r.tenant_id AND c.id = r.redemption_code_id
+    JOIN users u ON u.id = r.actor_user_id
+    WHERE r.tenant_id = ${input.tenantId}::uuid
+      AND r.event_id = ${input.eventId}::uuid
+      AND r.status = 'PENDING_REVIEW'
+      AND (${sourceId}::uuid IS NULL OR c.source_id = ${sourceId}::uuid)
+      AND (${ticketTypeId}::uuid IS NULL OR c.ticket_type_id = ${ticketTypeId}::uuid)
+      AND (${q}::uuid IS NULL OR r.id = ${q}::uuid)
+      AND (
+        ${cursorCreatedAt}::timestamptz IS NULL
+        OR r.created_at > ${cursorCreatedAt}::timestamptz
+        OR (
+          r.created_at = ${cursorCreatedAt}::timestamptz
+          AND r.id > ${cursorId}::uuid
+        )
+      )
+    ORDER BY r.created_at ASC, r.id ASC
+    LIMIT ${limit + 1}
+  `;
 
   const page = rows.slice(0, limit);
   const items: StaffPendingRedemptionItem[] = page.map((row) => ({
