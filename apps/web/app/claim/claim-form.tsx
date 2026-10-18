@@ -439,9 +439,16 @@ export function GuestClaimForm() {
             <span>Tôi đồng ý với điều khoản</span>
           </label>
           {termsBody ? (
-            <pre className="me-result" tabIndex={0}>
-              {termsBody}
-            </pre>
+            <details className="redeem-meta" open>
+              <summary>Điều khoản sự kiện</summary>
+              <pre
+                className="me-result"
+                tabIndex={0}
+                aria-label="Nội dung điều khoản sự kiện"
+              >
+                {termsBody}
+              </pre>
+            </details>
           ) : null}
         </>
       ) : null}

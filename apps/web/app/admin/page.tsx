@@ -30,15 +30,22 @@ export default async function Admin({ searchParams }: Props) {
       </p>
       {!configured ? (
         <aside className="notice auth-unconfigured state-error" role="status">
-          <h2>OIDC chưa cấu hình</h2>
+          <h2>Cần cấu hình đăng nhập</h2>
           <p>
-            Quản trị fail closed khi thiếu OIDC — không mock session. Auth
-            state:{' '}
-            <strong>
-              {state.status} / authenticated={String(state.authenticated)}
-            </strong>
-            . Đăng nhập tại <Link href="/auth">/auth</Link>.
+            Quản trị chưa sẵn sàng — không giả lập phiên. Đăng nhập tại{' '}
+            <Link href="/auth">trang đăng nhập</Link> sau khi cấu hình xong.
           </p>
+          <details className="redeem-meta">
+            <summary>Chi tiết kỹ thuật</summary>
+            <p>
+              OIDC chưa cấu hình — quản trị fail closed, không mock session. Auth
+              state:{' '}
+              <strong>
+                {state.status} / authenticated={String(state.authenticated)}
+              </strong>
+              .
+            </p>
+          </details>
         </aside>
       ) : null}
       <div className="admin-sections">
