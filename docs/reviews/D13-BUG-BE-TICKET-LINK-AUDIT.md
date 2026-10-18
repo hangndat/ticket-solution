@@ -5,7 +5,7 @@
 **Architecture impact:** Không — giữ path email hiện tại; không đổi contract URL path.  
 **Run / Task:** `run_1d13e6e391a0` / rebase `task_2b0bb2005677`  
 **Exact SHA (behavior / under review):** `e5b09a14d16c87dc57cc65befd8574735f132aea`  
-**Branch tip at handoff:** `f0e1215484119c0e47ad84dbd40d79aa99c37ebf`
+**Branch tip at handoff:** `4e1fb85de62940d5ab1ed2a42d0808a9e94ed818`
 
 ## Trace — BE email ticket link
 
