@@ -2329,6 +2329,32 @@
         ]
       }
     },
+    "/v1/me/events": {
+      "get": {
+        "operationId": "PlatformController_myEvents",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeEventsDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "platform"
+        ]
+      }
+    },
     "/v1/platform/tenants": {
       "post": {
         "operationId": "PlatformController_createTenant",
@@ -4210,6 +4236,53 @@
         },
         "required": [
           "reason"
+        ]
+      },
+      "MeEventItemDto": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "eventId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "tenantId",
+          "eventId",
+          "name",
+          "permissions"
+        ]
+      },
+      "MeEventsDto": {
+        "type": "object",
+        "properties": {
+          "staffEligible": {
+            "type": "boolean",
+            "description": "true iff active tenant membership OR active event assignment"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MeEventItemDto"
+            }
+          }
+        },
+        "required": [
+          "staffEligible",
+          "items"
         ]
       },
       "TenantBrandingDto": {

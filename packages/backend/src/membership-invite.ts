@@ -58,6 +58,44 @@ export async function listMyTenants(
   });
 }
 
+/** O02 staff discovery: active event assignments + server-computed staffEligible. */
+export async function listMyEvents(
+  db: PrismaClient,
+  userId: string,
+): Promise<{
+  staffEligible: boolean;
+  items: {
+    tenantId: string;
+    eventId: string;
+    name: string;
+    permissions: string[];
+  }[];
+}> {
+  return db.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT set_config('app.actor_id', ${userId}, true)`;
+    const rows = await tx.$queryRaw<
+      {
+        tenant_id: string;
+        event_id: string;
+        name: string;
+        permissions: string[];
+      }[]
+    >`SELECT * FROM list_my_events()`;
+    const eligibleRows = await tx.$queryRaw<{ my_staff_eligible: boolean }[]>`
+      SELECT my_staff_eligible()
+    `;
+    return {
+      staffEligible: Boolean(eligibleRows[0]?.my_staff_eligible),
+      items: rows.map((r) => ({
+        tenantId: r.tenant_id,
+        eventId: r.event_id,
+        name: r.name,
+        permissions: r.permissions ?? [],
+      })),
+    };
+  });
+}
+
 export async function createMembershipInvite(
   db: PrismaClient,
   security: PlatformSecurityConfig,
