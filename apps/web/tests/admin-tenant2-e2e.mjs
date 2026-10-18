@@ -324,19 +324,13 @@ COMMIT;
     throw new Error(`cs list failed: ${csText}`);
   }
 
-  const listJson = await page
-    .locator('[data-testid="cs-list"]')
-    .textContent()
-    .catch(() => null);
-  if (!listJson) {
-    throw new Error('cs-list empty after redeem — expected ticket rows');
+  const firstItem = page.locator('[data-testid="cs-list"] [data-ticket-id]').first();
+  await firstItem.waitFor({ timeout: 10000 }).catch(() => null);
+  const ticketId = await firstItem.getAttribute('data-ticket-id').catch(() => null);
+  if (!ticketId) {
+    throw new Error('cs-list empty after redeem — expected ticket rows with data-ticket-id');
   }
-  const parsed = JSON.parse(listJson);
-  const first = Array.isArray(parsed) ? parsed[0] : null;
-  if (!first?.ticketId) {
-    throw new Error(`cs-list missing ticketId after redeem: ${listJson.slice(0, 200)}`);
-  }
-  await page.getByLabel('Ticket ID').fill(first.ticketId);
+  await page.getByLabel('Ticket ID').fill(ticketId);
   const detailText = await clickAndNotice(
     page,
     'Xem chi tiết CS',
