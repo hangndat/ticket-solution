@@ -356,7 +356,7 @@ export function EventsScreen() {
               ))
             )}
           </View>
-        ) : null
+        ) : undefined
       }
     />
   );
