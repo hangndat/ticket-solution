@@ -60,6 +60,8 @@ export const PORTAL_MEMBER_ENDPOINTS = {
     `${memberBase(tenantId, membershipId)}/role`,
   assignment: (tenantId: string, membershipId: string, eventId: string) =>
     `${memberBase(tenantId, membershipId)}/event-assignments/${encodeURIComponent(eventId)}`,
+  revokeMember: (tenantId: string, membershipId: string) =>
+    `${memberBase(tenantId, membershipId)}/revoke`,
   revokeInvite: (tenantId: string, inviteId: string) =>
     `${tenantBase(tenantId)}/invites/${encodeURIComponent(inviteId)}/revoke`,
   resendInvite: (tenantId: string, inviteId: string) =>
