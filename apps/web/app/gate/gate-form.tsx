@@ -14,6 +14,11 @@ import {
   type KnownCheckin,
 } from '../../src/gate/decide';
 import {
+  connectivityLabel,
+  presentGateDecision,
+  shortId,
+} from '../../src/gate/gate-outcome-copy';
+import {
   BLOCKED_DEGRADED_DECISION,
   BLOCKED_OFFLINE_DECISION,
   UNREACHABLE_CONFIRM,
@@ -33,12 +38,6 @@ type Hold = {
   ticketId: string;
 };
 
-function outcomeLabel(decision: GateDecision): string {
-  if (decision.kind === 'admit') return 'Cho qua';
-  if (decision.kind === 'deny') return 'Không cho qua';
-  return 'Chưa biết — không cho qua';
-}
-
 export function GateForm({ initialTenantId = '', initialEventId = '' }: Props) {
   const [tenantId, setTenantId] = useState(initialTenantId);
   const [eventId, setEventId] = useState(initialEventId);
@@ -53,7 +52,9 @@ export function GateForm({ initialTenantId = '', initialEventId = '' }: Props) {
   const [apiUnreachable, setApiUnreachable] = useState(false);
 
   const link: GateLinkState = resolveGateLinkState({ browserOnline, apiUnreachable });
+  /** Fail-closed: block mutate while offline or API unreachable (AC-G4). */
   const actionsBlocked = link !== 'online';
+  const outcome = presentGateDecision(decision);
 
   useEffect(() => {
     function syncBrowser() {
@@ -113,6 +114,11 @@ export function GateForm({ initialTenantId = '', initialEventId = '' }: Props) {
     return true;
   }
 
+  function clearUnreachable() {
+    setApiUnreachable(false);
+    setDecision(null);
+  }
+
   async function openSession(event: FormEvent) {
     event.preventDefault();
     if (!guardBeforeMutate()) return;
@@ -129,11 +135,8 @@ export function GateForm({ initialTenantId = '', initialEventId = '' }: Props) {
       const body = result.json as { sessionId?: string; code?: string; message?: string } | null;
       if (result.status === 200 && body?.sessionId) {
         setSessionId(body.sessionId);
-        setDecision({
-          kind: 'deny',
-          code: 'SESSION_OPEN',
-          message: 'Đã mở phiên cổng. Chưa check-in vé nào.',
-        });
+        // Session ready ≠ admit/deny — keep idle outcome («Chờ mã vé»).
+        setDecision(null);
         return;
       }
       setSessionId('');
@@ -149,7 +152,7 @@ export function GateForm({ initialTenantId = '', initialEventId = '' }: Props) {
       setDecision({
         kind: 'deny',
         code: 'SESSION_REQUIRED',
-        message: 'Mở phiên cổng trước. Không cho qua.',
+        message: 'Mở phiên cổng trước. Không cho vào.',
       });
       return;
     }
@@ -216,6 +219,54 @@ export function GateForm({ initialTenantId = '', initialEventId = '' }: Props) {
     <>
       <GateOfflineBanner link={link} />
 
+      <section
+        className="gate-context"
+        data-testid="gate-context"
+        data-link={link}
+        aria-label="Ngữ cảnh cổng"
+      >
+        <p className="gate-context__eyebrow">Ngữ cảnh cổng</p>
+        <dl className="gate-context__meta">
+          <div>
+            <dt>Kết nối</dt>
+            <dd data-testid="gate-connectivity">{connectivityLabel(link)}</dd>
+          </div>
+          <div>
+            <dt>Sự kiện</dt>
+            <dd>
+              <code title={eventId || undefined}>{shortId(eventId)}</code>
+            </dd>
+          </div>
+          <div>
+            <dt>Tenant</dt>
+            <dd>
+              <code title={tenantId || undefined}>{shortId(tenantId)}</code>
+            </dd>
+          </div>
+          <div>
+            <dt>Phiên</dt>
+            <dd>
+              <code title={sessionId || undefined}>
+                {sessionId ? shortId(sessionId) : 'Chưa mở'}
+              </code>
+            </dd>
+          </div>
+        </dl>
+        <p className="gate-context__note">
+          Cổng web không xếp hàng offline. Khi mất mạng hãy dùng app Nhân viên.
+        </p>
+        {link === 'degraded' ? (
+          <button
+            type="button"
+            className="gate-retry-link"
+            data-testid="gate-retry-link"
+            onClick={clearUnreachable}
+          >
+            Thử lại kết nối
+          </button>
+        ) : null}
+      </section>
+
       <form onSubmit={openSession}>
         <label>
           Tenant ID
@@ -225,7 +276,11 @@ export function GateForm({ initialTenantId = '', initialEventId = '' }: Props) {
           Event ID
           <input value={eventId} onChange={(e) => setEventId(e.target.value)} required />
         </label>
-        <button type="submit" disabled={busy || !browserOnline} data-testid="gate-session-submit">
+        <button
+          type="submit"
+          disabled={busy || actionsBlocked}
+          data-testid="gate-session-submit"
+        >
           Mở phiên cổng
         </button>
         {sessionId ? (
@@ -242,11 +297,11 @@ export function GateForm({ initialTenantId = '', initialEventId = '' }: Props) {
         </label>
         <button
           type="submit"
-          disabled={busy || !sessionId || !browserOnline}
+          disabled={busy || !sessionId || actionsBlocked}
           data-testid="gate-confirm-submit"
           title={
             actionsBlocked
-              ? 'Cổng offline/degraded — không check-in giả thành công trên web'
+              ? 'Cổng offline/suy giảm — không check-in trên web'
               : undefined
           }
         >
@@ -260,32 +315,36 @@ export function GateForm({ initialTenantId = '', initialEventId = '' }: Props) {
       </form>
 
       <form onSubmit={lookup}>
-        <h2>Tra cứu CS</h2>
+        <h2>Đối soát trên máy này</h2>
         <p>
-          Chỉ hiện check-in API đã trả mã trên trình duyệt này. Không có mã thì không cho qua.
+          Chỉ hiện check-in API đã trả trên trình duyệt này. Không có mã thì không
+          cho qua — không phải hàng đợi offline.
         </p>
         <label>
           Ticket ID cần tra
           <input value={lookupId} onChange={(e) => setLookupId(e.target.value)} required />
         </label>
-        <button type="submit">Tra cứu</button>
+        <button type="submit">Đối soát</button>
       </form>
 
       {decision ? (
         <aside
-          role="status"
+          role={outcome.assertive ? 'alert' : 'status'}
+          aria-live={outcome.assertive ? 'assertive' : 'polite'}
           data-outcome={decision.kind}
+          data-outcome-view={outcome.kind}
+          data-tone={outcome.tone}
           data-testid="gate-decision"
           className={
-            decision.kind === 'admit'
+            outcome.tone === 'admit'
               ? 'redeem-status redeem-status--success gate-status--admit'
-              : decision.kind === 'deny'
+              : outcome.tone === 'deny'
                 ? 'redeem-status redeem-status--denied gate-status--deny'
                 : 'redeem-status redeem-status--unknown state-unknown'
           }
         >
-          <h2>{outcomeLabel(decision)}</h2>
-          <p>{decision.message}</p>
+          <h2>{outcome.title}</h2>
+          <p>{outcome.detail}</p>
           {decision.kind === 'admit' && decision.checkinId ? (
             <p>
               Check-in <code>{decision.checkinId}</code>
@@ -296,11 +355,23 @@ export function GateForm({ initialTenantId = '', initialEventId = '' }: Props) {
               Mã lỗi: <code>{decision.code}</code>
             </p>
           ) : null}
-          {decision.kind !== 'admit' && decision.kind !== 'deny' ? (
-            <p>Kết quả chưa biết — không cho khách qua.</p>
+          {outcome.kind === 'unknown' ? (
+            <p data-testid="gate-reconcile-hint">
+              Kết quả chưa rõ — không cho khách qua. Đối soát trước khi quyết định.
+            </p>
           ) : null}
         </aside>
-      ) : null}
+      ) : (
+        <aside
+          role="status"
+          aria-live="polite"
+          data-testid="gate-decision-idle"
+          className="redeem-status state-empty"
+        >
+          <h2>{outcome.title}</h2>
+          <p>{outcome.detail}</p>
+        </aside>
+      )}
     </>
   );
 }

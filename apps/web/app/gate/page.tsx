@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 export const metadata = {
   title: 'Cổng check-in dự phòng',
   description:
-    'Cổng web — giữ chỗ và xác nhận qua API. Không cho khách qua khi kết quả chưa biết.',
+    'Cổng web — giữ chỗ và xác nhận qua API. Không xếp hàng offline; không cho khách qua khi kết quả chưa biết.',
 };
 
 type Props = {
@@ -26,11 +26,10 @@ export default async function GatePage({ searchParams }: Props) {
       <SiteNav variant="staff" />
       <h1>Cổng check-in</h1>
       <p className="intro">
-        Nhân viên đã được gán event mở phiên, giữ chỗ, rồi xác nhận. Chỉ dòng
-        trạng thái «Cho qua» sau phản hồi API mới được cho khách vào. Timeout,
-        mất mạng và lỗi 5xx là chưa biết — không cho khách qua. Cổng web không
-        queue CHECKIN_OFFLINE; khi offline/degraded hãy dùng app iOS staff
-        (ADR-18 / contract #105).
+        Nhân viên đã gán event mở phiên, giữ chỗ, rồi xác nhận. Chỉ trạng thái
+        «Cho vào» sau phản hồi hệ thống mới được cho khách qua. Timeout, mất mạng
+        và lỗi máy chủ là «Chưa rõ» — không cho vào. Cổng web không xếp hàng
+        offline; khi mất mạng hãy dùng app Nhân viên.
       </p>
       <GateOfflineShell suppressBanner={configured}>
         {!configured ? (
