@@ -1,6 +1,7 @@
-# D10-S1-T2 — Checklist field App Store Connect
+# D13 — Checklist field App Store Connect (reuse D10)
 
-**Issue:** [#153](https://github.com/hangndat/ticket-solution/issues/153) · Parent [#151](https://github.com/hangndat/ticket-solution/issues/151) · Epic [#150](https://github.com/hangndat/ticket-solution/issues/150)  
+**Epic D13:** [#301](https://github.com/hangndat/ticket-solution/issues/301) · Story S3-T1 (ops điền UI)  
+**Reuse D10:** [#153](https://github.com/hangndat/ticket-solution/issues/153) / Epic [#150](https://github.com/hangndat/ticket-solution/issues/150) — ☐ dưới đây = **ASC UI chưa có evidence điền**; docs ≠ đã paste  
 **Mục đích:** checklist điền ASC cho bundle `com.hangndat.ticket` — **prep only**, không submit.  
 **Evidence screenshot:** chụp màn hình ASC sau khi điền (che API key / signing); gắn comment Issue khi có. Docs này là nguồn giá trị field.
 
@@ -15,7 +16,7 @@
 | SKU (ASC, một lần) | `vemoki-ios` (gợi ý; đổi nếu ASC đã tạo SKU khác) | Chọn khi tạo app record | ☐ |
 | Primary language | English (U.S.) | Listing EN primary; VI thêm localization | ☐ |
 | App name (ASC) | Vemoki | [listing-metadata.md](./listing-metadata.md) | ☐ |
-| Privacy Policy URL | `https://vemoki.com/privacy` | **Gap:** URL phải 200 trước submit — xem [privacy-nutrition.md](./privacy-nutrition.md) | ☐ |
+| Privacy Policy URL | `https://vemoki.com/privacy` | Host **HTTP 200** (đối chiếu 2026-10-18) — xem [privacy-nutrition.md](./privacy-nutrition.md); ☐ = ASC chưa paste | ☐ |
 | Subtitle | Event tickets & gate check-in | listing-metadata | ☐ |
 
 **Cấm:** dùng team công ty khác trên máy (`3WHS6JDYV2` / SCHMELER ERUNG).
@@ -27,7 +28,7 @@
 | Field | Giá trị đề xuất | Điền ASC |
 | --- | --- | --- |
 | Price | Free | ☐ |
-| Availability | All countries/regions (hoặc chỉ VN nếu pilot hẹp — **chốt trước submit**) | ☐ |
+| Availability | **Chưa chốt** — đề xuất D13: chỉ **Việt Nam** lần publish đầu; **không** chọn All cho đến khi user xác nhận (S7-T1) | ☐ |
 | Pre-order | No | ☐ |
 | Apple Arcade | No | ☐ |
 
@@ -49,7 +50,7 @@
 
 | Field | Giá trị | Điền ASC |
 | --- | --- | --- |
-| Version | `0.1.0` (khớp `app.config.ts` `version`) | ☐ |
+| Version | **`1.0.0`** (coordinator chốt public đầu); ASC draft `1.0` → đổi thành `1.0.0` (không duplicate); binary tip phải khớp trước archive | ☐ |
 | Copyright (version) | `2026 Hang Nguyen Dat` | ☐ |
 | Description / Keywords / URLs / What’s New | Copy từ [listing-metadata.md](./listing-metadata.md) | ☐ |
 | Support URL | `https://vemoki.com` | ☐ |
