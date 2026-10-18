@@ -30,8 +30,4 @@ export const PUBLIC_EVENT_COPY = {
       'Phản hồi sự kiện không đúng định dạng.',
   },
   noStartsAt: 'Chưa có giờ bắt đầu',
-  demoLabel: 'Sự kiện demo · Không dùng vào cổng',
-  demoNoticeTitle: 'Bản demo có nhãn rõ',
-  demoNoticeBody:
-    'Nội dung mang nhãn · Demo từ seed máy chủ — không phải lịch production ẩn.',
 } as const;

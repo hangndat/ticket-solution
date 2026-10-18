@@ -212,6 +212,6 @@ export function buildNavLinks(caps: NavCapabilities): NavLink[] {
   if (caps.showAccount) {
     links.push({ href: '/account', label: 'Tài khoản', testId: 'nav-account' });
   }
-  links.push({ href: '/auth', label: 'Đăng nhập', testId: 'nav-auth' });
+  // Logged-in chrome: Tài khoản replaces «Đăng nhập» — avoid duplicate login CTA.
   return links;
 }

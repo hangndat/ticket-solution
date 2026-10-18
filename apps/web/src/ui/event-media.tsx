@@ -24,7 +24,7 @@ export function EventBanner({
   bannerUrl,
   className = 'event-banner',
   testId = 'event-banner',
-  alt = 'Ảnh banner sự kiện demo',
+  alt = 'Ảnh banner sự kiện',
 }: SharedLookup & {
   bannerUrl?: string | null;
   className?: string;
@@ -56,7 +56,7 @@ export function EventLogo({
   logoUrl,
   className = 'event-logo',
   testId = 'event-logo',
-  alt = 'Logo sự kiện demo',
+  alt = 'Logo sự kiện',
 }: SharedLookup & {
   logoUrl?: string | null;
   className?: string;
