@@ -1,6 +1,6 @@
 # Pack thương hiệu Vemoki
 
-Canonical tokens: `tokens.json`. Raster/SVG dưới đây là nguồn platform (không thay bằng CDN SaaS — ADR-14 MinIO self-host).
+Canonical tokens: `tokens.json` (**Live Pulse v2** — ink `#0B1220` · paper `#F4F6F8` · signal `#E11D48` · focus `#2563EB`; display **Sora** · body **Be Vietnam Pro**). PD freeze: `docs/design/visual-identity-v2/`. Raster/SVG dưới đây là nguồn platform (không thay bằng CDN SaaS — ADR-14 MinIO self-host).
 
 | File | Vai trò | Kích thước |
 | --- | --- | --- |
