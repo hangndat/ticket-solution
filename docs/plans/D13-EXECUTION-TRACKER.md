@@ -91,7 +91,7 @@ Status lấy từ Project #3 lúc ghi tracker (board thắng docs). Spec chi ti�
 | S2-T3 | #321 | `web` | `docs/agents/roles/web.md` | Không | Verify privacy/deep-link URLs | `apps/web` | Wave 1 verify | **Sẵn sàng** |
 | S3 | #306 | — | — | Không | Story tracking | iOS | — | **Đang làm** |
 | S3-T1 | #322 | `ios` | `docs/agents/roles/ios.md` | Không | ASC metadata paste | ASC + `docs/reviews` | G1 URL live; sau S1 privacy OK | **Sẵn sàng** |
-| S3-T2 | #323 | `ios` | `docs/agents/roles/ios.md` | Không | Screenshots ASC; cấm EAS | mobile artifacts + ASC | ∥ S3-T1 | **Sẵn sàng** |
+| S3-T2 | #323 | `ios` | `docs/agents/roles/ios.md` | Không | Screenshots ASC; cấm EAS | mobile artifacts + ASC | ∥ S3-T1 | **Chờ duyệt** (evidence `docs/reviews/D13-S3-T2-SCREENSHOTS.md`) |
 | S3-T3 | #324 | `product-ba` | `docs/agents/roles/product-ba.md` | Không | Refresh review notes sau O06 | `docs/asc` | soft dep S1-T1 | **Chờ duyệt** (PR #308) |
 | S4 | #307 | — | — | Không | Story tracking | iOS | mobile final + SDK + prod endpoints | **Bị chặn** |
 | S4-T1 | #325 | `ios` | `docs/agents/roles/ios.md` | Không | Local Distribution archive | `apps/mobile` | S1-T3 + mobile final merged/DoD/CI + prod endpoints config; credential §2. **SMTP không chặn archive** (hard gate S6) | **Bị chặn** |
