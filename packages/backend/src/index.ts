@@ -521,6 +521,7 @@ export {
   setTenantStatus,
   updateTenantLimits,
   getPlatformTenantDetail,
+  getPlatformTenantHealth,
   listPlatformTenants,
   type ProvisionResult,
 } from './platform-tenant';

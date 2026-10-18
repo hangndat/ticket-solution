@@ -74,16 +74,39 @@ export async function createSupportGrant(
 
 export async function revokeSupportGrant(
   db: PrismaClient,
-  input: { actorUserId: string; tenantId: string; grantId: string; reason: string },
-): Promise<{ revokedAt: string }> {
+  input: { actorUserId: string; grantId: string; reason: string },
+): Promise<{ grantId: string; revokedAt: string }> {
+  if (!input.reason?.trim() || input.reason.length > 500) {
+    throw new PlatformError(
+      PLATFORM_ERROR_CODES.INVALID_INPUT,
+      'reason required',
+    );
+  }
   return withPlatformRole(db, async (tx) => {
     await tx.$queryRaw`SELECT set_config('app.actor_id', ${input.actorUserId}, true)`;
     await requireActivePlatformOperator(tx, input.actorUserId);
+
+    const grants = await tx.$queryRaw<
+      { tenant_id: string; revoked_at: Date | null }[]
+    >`
+      SELECT tenant_id, revoked_at
+      FROM support_grants
+      WHERE id = ${input.grantId}::uuid
+      FOR UPDATE
+    `;
+    const g = grants[0];
+    if (!g || g.revoked_at !== null) {
+      throw new PlatformError(
+        PLATFORM_ERROR_CODES.RESOURCE_NOT_FOUND,
+        'Grant not found',
+      );
+    }
+
     const revokedAt = new Date();
     const n = await tx.$executeRaw`
       UPDATE support_grants
       SET revoked_at = ${revokedAt}::timestamptz, updated_at = now()
-      WHERE tenant_id = ${input.tenantId}::uuid
+      WHERE tenant_id = ${g.tenant_id}::uuid
         AND id = ${input.grantId}::uuid
         AND revoked_at IS NULL
     `;
@@ -93,8 +116,19 @@ export async function revokeSupportGrant(
         'Grant not found',
       );
     }
-    void input.reason;
-    return { revokedAt: revokedAt.toISOString() };
+
+    await tx.$executeRaw`
+      INSERT INTO platform_audit_logs (
+        id, actor_user_id, action, resource_type, resource_id, tenant_id, sanitized_diff
+      ) VALUES (
+        ${randomUUID()}::uuid, ${input.actorUserId}::uuid,
+        'platform.support.revoked', 'support_grant', ${input.grantId}::uuid,
+        ${g.tenant_id}::uuid,
+        ${JSON.stringify({ reasonLen: input.reason.trim().length })}::jsonb
+      )
+    `;
+
+    return { grantId: input.grantId, revokedAt: revokedAt.toISOString() };
   });
 }
 
