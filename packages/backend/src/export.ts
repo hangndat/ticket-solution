@@ -1,4 +1,6 @@
 import { randomUUID } from 'node:crypto';
+import type { CursorPage } from '@ticket/contracts';
+import { CURSOR_PAGE_LIMIT } from '@ticket/contracts';
 import type { Prisma, PrismaClient } from './generated/prisma/client';
 import { requireTenantPermission } from './membership';
 import { ExportError, EXPORT_ERROR_CODES } from './export-error';
@@ -15,6 +17,7 @@ import { maskEmail } from './notification-status';
 const PERMISSION_CREATE = 'export.create';
 const PERMISSION_DOWNLOAD = 'export.download';
 const ALLOWED_STATES = new Set(['ACTIVE', 'REVOKED', 'CANCELLED', 'USED']);
+const JOB_STATUSES = new Set(['PENDING', 'PROCESSING', 'READY', 'FAILED']);
 const DEFAULT_TTL_SECONDS = 86400;
 const STATEMENT_TIMEOUT_MS = 15_000;
 const MAX_ROWS = 20_000;
@@ -33,6 +36,44 @@ export type ExportJob = {
   error: string | null;
   replayed?: boolean;
 };
+
+/** List projection — never includes object keys or download URLs (G-E1). */
+export type ExportJobSummary = ExportJob & { createdAt: string };
+
+export type ExportJobsPage = CursorPage<ExportJobSummary>;
+
+function decodeExportCursor(cursor: string | undefined): {
+  createdAt: string;
+  id: string;
+} | null {
+  if (cursor === undefined || cursor === null || cursor.trim() === '') {
+    return null;
+  }
+  try {
+    const raw = Buffer.from(cursor, 'base64url').toString('utf8');
+    const parsed = JSON.parse(raw) as { createdAt?: unknown; id?: unknown };
+    if (typeof parsed.createdAt !== 'string' || typeof parsed.id !== 'string') {
+      throw new ExportError(
+        EXPORT_ERROR_CODES.INVALID_CURSOR,
+        'Invalid cursor',
+      );
+    }
+    return { createdAt: parsed.createdAt, id: parsed.id };
+  } catch (err) {
+    if (err instanceof ExportError) throw err;
+    throw new ExportError(
+      EXPORT_ERROR_CODES.INVALID_CURSOR,
+      'Invalid cursor',
+    );
+  }
+}
+
+function encodeExportCursor(createdAt: Date, id: string): string {
+  return Buffer.from(
+    JSON.stringify({ createdAt: createdAt.toISOString(), id }),
+    'utf8',
+  ).toString('base64url');
+}
 
 function parseTtlSeconds(env: NodeJS.ProcessEnv): number {
   const raw = Number(env['EXPORT_TTL_SECONDS'] ?? DEFAULT_TTL_SECONDS);
@@ -220,6 +261,94 @@ export async function getExportJob(
     );
   }
   return mapJob(rows[0]);
+}
+
+/**
+ * G-E1 — export history list (cursor + optional status). No object keys / URLs.
+ */
+export async function listExportJobs(
+  tx: Prisma.TransactionClient,
+  input: {
+    tenantId: string;
+    eventId: string;
+    actorUserId: string;
+    cursor?: string;
+    limit?: number;
+    status?: ExportJob['status'];
+  },
+): Promise<ExportJobsPage> {
+  await requireTenantPermission(tx, {
+    tenantId: input.tenantId,
+    userId: input.actorUserId,
+    permission: PERMISSION_CREATE,
+    eventId: input.eventId,
+  });
+
+  const events = await tx.$queryRaw<{ id: string }[]>`
+    SELECT id FROM events
+    WHERE tenant_id = ${input.tenantId}::uuid AND id = ${input.eventId}::uuid
+  `;
+  if (!events[0]) {
+    throw new ExportError(
+      EXPORT_ERROR_CODES.EVENT_NOT_FOUND,
+      'Event not found',
+    );
+  }
+
+  if (input.status != null && !JOB_STATUSES.has(input.status)) {
+    throw new ExportError(
+      EXPORT_ERROR_CODES.INVALID_FILTER,
+      'Invalid export status filter',
+    );
+  }
+
+  const limit = Math.min(
+    Math.max(input.limit ?? CURSOR_PAGE_LIMIT.default, CURSOR_PAGE_LIMIT.min),
+    CURSOR_PAGE_LIMIT.max,
+  );
+  const cursor = decodeExportCursor(input.cursor);
+  const status = input.status ?? null;
+  const cursorCreatedAt = cursor?.createdAt ?? null;
+  const cursorId = cursor?.id ?? null;
+
+  const rows = await tx.$queryRaw<
+    {
+      id: string;
+      status: string;
+      row_count: number | null;
+      expires_at: Date | null;
+      error_code: string | null;
+      created_at: Date;
+    }[]
+  >`
+    SELECT id, status, row_count, expires_at, error_code, created_at
+    FROM exports
+    WHERE tenant_id = ${input.tenantId}::uuid
+      AND event_id = ${input.eventId}::uuid
+      AND (${status}::text IS NULL OR status = ${status})
+      AND (
+        ${cursorCreatedAt}::timestamptz IS NULL
+        OR created_at < ${cursorCreatedAt}::timestamptz
+        OR (
+          created_at = ${cursorCreatedAt}::timestamptz
+          AND id < ${cursorId}::uuid
+        )
+      )
+    ORDER BY created_at DESC, id DESC
+    LIMIT ${limit + 1}
+  `;
+
+  const page = rows.slice(0, limit);
+  const items: ExportJobSummary[] = page.map((row) => ({
+    ...mapJob(row),
+    createdAt: row.created_at.toISOString(),
+  }));
+  const last = page[page.length - 1];
+  const nextCursor =
+    rows.length > limit && last
+      ? encodeExportCursor(last.created_at, last.id)
+      : null;
+  return { items, nextCursor };
 }
 
 /**
