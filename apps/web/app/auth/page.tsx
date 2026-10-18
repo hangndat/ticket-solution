@@ -1,9 +1,11 @@
 import Link from 'next/link';
+import { Suspense } from 'react';
 import {
   isOidcConfigured,
   resolveWebAuthState,
 } from '../../src/oidc/config';
 import { SiteNav } from '../../src/site-chrome';
+import { SurfaceState } from '../../src/ui/surface-state';
 import { AuthSession } from './auth-session';
 
 /** OIDC env is runtime-only — never SSG the fail-closed / configured branch. */
@@ -60,7 +62,18 @@ export default function AuthPage() {
           </aside>
         </>
       ) : (
-        <AuthSession />
+        <Suspense
+          fallback={
+            <SurfaceState
+              kind="loading"
+              title="Đang tải phiên…"
+              detail="Đang xác nhận trạng thái đăng nhập."
+              testId="auth-session-loading"
+            />
+          }
+        >
+          <AuthSession />
+        </Suspense>
       )}
 
       <p>
