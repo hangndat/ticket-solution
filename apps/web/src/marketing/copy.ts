@@ -104,6 +104,10 @@ export type CopyKey =
   | 'privacy.s4.body'
   | 'privacy.s5.title'
   | 'privacy.s5.body'
+  | 'privacy.s6.title'
+  | 'privacy.s6.body'
+  | 'privacy.s7.title'
+  | 'privacy.s7.body'
   | 'privacy.note'
   | 'support.title'
   | 'support.lead'
@@ -222,28 +226,34 @@ const VI: Record<CopyKey, string> = {
   'cta.repeat.demo': 'Xem demo',
   'cta.repeat.interest': 'Đăng ký quan tâm',
   'privacy.title': 'Quyền riêng tư',
-  'privacy.updated': 'Cập nhật: 2026-10-18 (O06)',
+  'privacy.updated': 'Cập nhật: 2026-10-18',
   'privacy.intro':
-    'Vemoki (`vemoki.com`) xử lý dữ liệu cần thiết để vận hành nền tảng sự kiện và trả lời đăng ký quan tâm. Số retention / vùng dữ liệu / SLA dưới đây khớp quyết định O06 (MVP).',
+    'Vemoki (`vemoki.com`) xử lý dữ liệu cần thiết để vận hành nền tảng sự kiện và trả lời đăng ký quan tâm. Thời gian lưu giữ, vùng dữ liệu và mức hỗ trợ dưới đây là chính sách hiện hành cho bản MVP.',
   'privacy.s1.title': 'Dữ liệu chúng tôi thu',
   'privacy.s1.body':
-    'Tài khoản tổ chức; thông tin sự kiện và mã/vé; dữ liệu check-in; form quan tâm (tên, email, tổ chức, ghi chú); nhật ký kỹ thuật cần thiết.',
+    'Tài khoản / phiên đăng nhập (email, mã định danh từ nhà cung cấp đăng nhập Keycloak / user ID); thông tin sự kiện và mã/vé / nội dung QR hiển thị; dữ liệu check-in; mã thiết bị nhận thông báo đẩy (Apple Push) khi bật thông báo; form quan tâm hoặc form sự kiện (tên, email, tổ chức, điện thoại nếu sự kiện yêu cầu); nhật ký kỹ thuật cần thiết (IP, trình duyệt, thời gian). Không bán dữ liệu; MVP không dùng SDK quảng cáo / theo dõi xuyên app.',
   'privacy.s2.title': 'Mục đích',
   'privacy.s2.body':
-    'Cung cấp dịch vụ multi-tenant; gửi vé/thông báo liên quan sự kiện; hỗ trợ và follow-up GTM; bảo mật và chống lạm dụng.',
-  'privacy.s3.title': 'Lưu giữ và xóa (O06)',
+    'Xác thực và phân quyền; cấp / hiển thị / xác thực vé; gửi thông báo giao dịch (email và, nếu bật, thông báo đẩy); hỗ trợ và theo dõi bán hàng; bảo mật, nhật ký kiểm toán và chống lạm dụng; tiếp nhận yêu cầu xóa tài khoản như mô tả bên dưới.',
+  'privacy.s3.title': 'Máy ảnh và thông báo',
   'privacy.s3.body':
-    'Khi bạn yêu cầu xóa tài khoản: anonymize trong ≤ 30 ngày (không xóa cứng ngay — giữ đối soát khiếu nại). Vé / check-in: giữ 365 ngày rồi anonymize PII, giữ aggregate/KPI. Audit log: TTL 730 ngày. Object store (QR/export): signed URL ngắn hạn và job xóa object ≤ 90 ngày sau hết hạn nghiệp vụ. Backup tôn trọng xóa trong RPO; cache client được purge khi logout / đổi user.',
-  'privacy.s4.title': 'Vùng dữ liệu',
+    'Máy ảnh (app iOS Gate): quét mã QR vé trên thiết bị tại cổng cho nhân sự được cấp quyền. Quét realtime trên thiết bị — mặc định không lưu ảnh vào thư viện và không tải ảnh quét lên máy chủ. Thông báo: tùy chọn; dùng cho cập nhật giao vé / nhắc sự kiện; có thể tắt trong Cài đặt iOS.',
+  'privacy.s4.title': 'Lưu giữ',
   'privacy.s4.body':
-    'Single-region VPS: Postgres, MinIO, Keycloak và SMTP cùng quốc gia với máy chủ. Không tách region trong MVP; quốc gia host ghi trong DPA khi có tenant thật.',
-  'privacy.s5.title': 'Liên hệ',
+    'Yêu cầu xóa tài khoản: xử lý xóa hoặc ẩn danh dữ liệu cá nhân liên quan trong ≤ 30 ngày (không xóa ngay lập tức — giữ đối soát khiếu nại theo chính sách). Vé / check-in: giữ 365 ngày rồi xóa hoặc ẩn danh dữ liệu cá nhân, giữ số liệu tổng hợp. Nhật ký kiểm toán: giữ tới 730 ngày. Tệp QR/export: liên kết tải ngắn hạn; tệp hết hạn nghiệp vụ được gỡ trong ≤ 90 ngày. Sao lưu tôn trọng yêu cầu xóa trong cửa sổ phục hồi đã công bố; bộ nhớ tạm trên thiết bị được xóa khi đăng xuất / đổi người dùng.',
+  'privacy.s5.title': 'Yêu cầu xóa tài khoản',
   'privacy.s5.body':
-    'Câu hỏi quyền riêng tư: dùng trang Hỗ trợ hoặc email liên hệ trên trang Hỗ trợ (`privacy@vemoki.com` khi alias sẵn sàng).',
+    'Người dùng đã đăng nhập: trên web mở Tài khoản (`/account`) hoặc trong app iOS mở Account → «Yêu cầu xóa tài khoản». Khi gửi, yêu cầu đã được tiếp nhận — chưa phải xóa ngay. Chúng tôi xử lý xóa hoặc ẩn danh trong ≤ 30 ngày; nhật ký kiểm toán có thể giữ tới 730 ngày theo chính sách. Không bắt buộc gọi điện hay mở ticket hỗ trợ để khởi tạo yêu cầu.',
+  'privacy.s6.title': 'Vùng dữ liệu',
+  'privacy.s6.body':
+    'Một vùng máy chủ: cơ sở dữ liệu, lưu trữ tệp, Keycloak và email cùng quốc gia với máy chủ. Không tách nhiều vùng trong MVP; quốc gia host ghi trong thỏa thuận xử lý dữ liệu khi có tenant thật.',
+  'privacy.s7.title': 'Liên hệ',
+  'privacy.s7.body':
+    'Câu hỏi quyền riêng tư: trang Hỗ trợ (`/support`) hoặc `support@vemoki.com` / `privacy@vemoki.com` (khi alias sẵn sàng). Liên hệ tạm: hangndat@gmail.com.',
   'privacy.note':
-    'Số liệu khớp DECISION-LOG O06 (18/10/2026). RPO/RTO kỹ thuật (mục tiêu PRD) không dùng làm SLA hỗ trợ cho đến khi drill trên VPS đích.',
+    'Các số liệu trên khớp chính sách hiện hành (18/10/2026). Mục tiêu phục hồi kỹ thuật nội bộ chưa dùng làm cam kết hỗ trợ cho đến khi kiểm tra trên máy chủ đích.',
   'support.title': 'Hỗ trợ',
-  'support.lead': 'Hỗ trợ organizer và agency dùng Vemoki.',
+  'support.lead': 'Hỗ trợ organizer và agency dùng Vemoki. Liên hệ bên dưới cũng dùng cho câu hỏi quyền riêng tư / yêu cầu xóa tài khoản nếu cần.',
   'support.email.label': 'Email',
   'support.email.value': 'support@vemoki.com',
   'support.sla':
@@ -362,28 +372,34 @@ const EN: Record<CopyKey, string> = {
   'cta.repeat.demo': 'View demo',
   'cta.repeat.interest': 'Register interest',
   'privacy.title': 'Privacy',
-  'privacy.updated': 'Updated: 2026-10-18 (O06)',
+  'privacy.updated': 'Updated: 2026-10-18',
   'privacy.intro':
-    'Vemoki (`vemoki.com`) processes data needed to run the event platform and respond to interest registrations. Retention, residency, and support SLA figures below match decision O06 (MVP).',
+    'Vemoki (`vemoki.com`) processes data needed to run the event platform and respond to interest registrations. Retention, residency, and support figures below are the current MVP policy.',
   'privacy.s1.title': 'Data we collect',
   'privacy.s1.body':
-    'Organization accounts; event and code/ticket data; check-in records; interest-form fields (name, email, org, notes); necessary technical logs.',
+    'Account / session identifiers (email, login provider Keycloak identifier / user ID); event and code/ticket data / display QR contents; check-in records; device push tokens (Apple Push) when notifications are enabled; interest or event form fields (name, email, org, phone if the event requires them); necessary technical logs (IP, browser, timestamps). We do not sell personal data; the MVP does not use advertising SDKs or cross-app tracking.',
   'privacy.s2.title': 'Purposes',
   'privacy.s2.body':
-    'Provide multi-tenant service; send event-related tickets/notices; support and GTM follow-up; security and abuse prevention.',
-  'privacy.s3.title': 'Retention and erasure (O06)',
+    'Authenticate and authorize; issue / display / validate tickets; send transactional notices (email and, if enabled, push notifications); support and sales follow-up; security, audit logs, and abuse prevention; honor account-deletion requests as described below.',
+  'privacy.s3.title': 'Camera and notifications',
   'privacy.s3.body':
-    'Account deletion requests: anonymize within ≤ 30 days (no hard-delete immediately — keep complaint reconciliation). Tickets / check-in: keep 365 days then anonymize PII; keep aggregates/KPIs. Audit logs: TTL 730 days. Object store (QR/export): short-lived signed URLs and object-delete job ≤ 90 days after business expiry. Backups respect erasure within RPO; client caches purge on logout / user switch.',
-  'privacy.s4.title': 'Data residency',
+    'Camera (iOS Gate app): on-device scanning of ticket QR codes at the gate for authorized staff. Scanning is realtime on-device — by default we do not save photos to the library and do not upload scan images to our servers. Notifications: optional; used for ticket-delivery updates and event reminders; disable in iOS Settings.',
+  'privacy.s4.title': 'Retention',
   'privacy.s4.body':
-    'Single-region VPS: Postgres, MinIO, Keycloak, and SMTP in the same country as the host. No multi-region split in MVP; host country is recorded in the DPA when a real tenant onboard.',
-  'privacy.s5.title': 'Contact',
+    'Account deletion requests: we delete or de-identify related personal data within ≤ 30 days (not immediate erasure — we keep records needed for complaint handling under policy). Tickets / check-in: keep 365 days then delete or de-identify personal data; keep aggregates. Audit logs: retained up to 730 days. QR/export files: short-lived download links; files past business expiry are removed within ≤ 90 days. Backups respect deletion within the published recovery window; on-device caches clear on logout / user switch.',
+  'privacy.s5.title': 'Account deletion requests',
   'privacy.s5.body':
-    'Privacy questions: use Support or the contact email listed there (`privacy@vemoki.com` when the alias is ready).',
+    'Signed-in users: on the web open Account (`/account`), or in the iOS app open Account → “Request account deletion” / «Yêu cầu xóa tài khoản». When you submit, the request has been received — that is not immediate erasure. We process deletion or de-identification within ≤ 30 days; audit logs may remain up to 730 days under policy. You do not need a phone call or support ticket to start a request.',
+  'privacy.s6.title': 'Data residency',
+  'privacy.s6.body':
+    'Single-region hosting: database, file storage, Keycloak, and email in the same country as the host. No multi-region split in MVP; host country is recorded in the data processing agreement when a real tenant onboard.',
+  'privacy.s7.title': 'Contact',
+  'privacy.s7.body':
+    'Privacy questions: Support (`/support`) or `support@vemoki.com` / `privacy@vemoki.com` (when the alias is ready). Interim contact: hangndat@gmail.com.',
   'privacy.note':
-    'Figures match DECISION-LOG O06 (2026-10-18). Technical RPO/RTO (PRD targets) are not published as support SLA until a drill on the target VPS.',
+    'Figures match current policy (2026-10-18). Internal technical recovery targets are not published as support commitments until verified on the target host.',
   'support.title': 'Support',
-  'support.lead': 'Support for organizers and agencies using Vemoki.',
+  'support.lead': 'Support for organizers and agencies using Vemoki. Use the contact below for privacy questions or account-deletion follow-up if needed.',
   'support.email.label': 'Email',
   'support.email.value': 'support@vemoki.com',
   'support.sla':
