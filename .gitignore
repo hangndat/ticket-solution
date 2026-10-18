@@ -15,6 +15,7 @@ coverage/
 apps/mobile/ios/
 apps/mobile/android/
 apps/web/.uat-artifacts/
+apps/portal/.uat-artifacts/
 apps/mobile/.uat-artifacts/
 # O13 marketing interest durable store (local/VPS path; never commit leads)
 apps/web/.data/
