@@ -181,6 +181,50 @@ async function lockActiveEventAssignmentForShare(
  * Deny-by-default tenant authorization. Must run inside withTenant after identity.
  * Takes shared locks so a concurrent revoke waits until this transaction ends.
  */
+/**
+ * After `memberships … FOR UPDATE`, assert actor permission without FOR SHARE
+ * (avoids SHARE→UPDATE upgrade deadlocks when the same actor races mutations).
+ */
+export function assertLockedMembershipPermission(
+  members: Array<{
+    user_id: string;
+    permissions: string[];
+    activated_at: Date | null;
+    revoked_at: Date | null;
+  }>,
+  actorUserId: string,
+  permission: string,
+): void {
+  const actor = members.find((m) => m.user_id === actorUserId);
+  if (!actor) {
+    throw new AuthzError(
+      AUTHZ_ERROR_CODES.MEMBERSHIP_REQUIRED,
+      'No tenant membership for actor',
+    );
+  }
+  if (actor.revoked_at !== null) {
+    throw new AuthzError(
+      AUTHZ_ERROR_CODES.MEMBERSHIP_REVOKED,
+      'Tenant membership has been revoked',
+    );
+  }
+  if (
+    actor.activated_at === null ||
+    actor.activated_at.getTime() > Date.now()
+  ) {
+    throw new AuthzError(
+      AUTHZ_ERROR_CODES.MEMBERSHIP_REQUIRED,
+      'Tenant membership is not active',
+    );
+  }
+  if (!actor.permissions.includes(permission)) {
+    throw new AuthzError(
+      AUTHZ_ERROR_CODES.PERMISSION_DENIED,
+      `Missing tenant permission: ${permission}`,
+    );
+  }
+}
+
 export async function requireTenantPermission(
   tx: Prisma.TransactionClient,
   input: RequireTenantPermissionInput,
