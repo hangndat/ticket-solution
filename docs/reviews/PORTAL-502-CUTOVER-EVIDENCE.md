@@ -3,7 +3,7 @@
 Ngày: 2026-10-19  
 Issue: [#502](https://github.com/hangndat/ticket-solution/issues/502) · Epic [#491](https://github.com/hangndat/ticket-solution/issues/491)  
 Run: `run_d04055a8969b` · Dispatch: `ctx_8e5b0801c001`  
-Base (pre-PR tip when drafted): `3c108886436e6f8d9bfe6807021cbfdade59dd6a` — **revalidate exact tip SHA after commit/PR**.
+Commit tip (branch): `3e668ad486d4697bbdf182594831079180913d71` — **revalidate exact tip SHA after commit/PR**.
 
 Architecture impact: **Có** (host/OIDC/nginx/dual-run).
 
