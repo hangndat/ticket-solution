@@ -4,7 +4,7 @@
 | --- | --- |
 | Implementer | Cursor worker `term_6d4159d9-703a-4b7e-be4c-a9505d545fd2` / dispatch `ctx_c2a55cfd5861` |
 | Scope | `apps/api`, `packages/backend` — G-R1/G-N1/G-E1 |
-| Commit SHA | `6b5a24bba9d518b992a7dff787325638cc11a3d2` |
+| Commit SHA | `8c1431bc8ab59087aba79d4d43cfbca7a8145b5f` |
 | Checks | `node --test test/portal-filters.test.cjs` PASS; backend+api build; openapi regen |
 | Findings / limitations | Implementer handoff — **chờ DoD reviewer độc lập** ghi verdict PASS/FAIL trên exact SHA |
 | Revalidation | Bắt buộc nếu có commit hành vi mới sau review |
