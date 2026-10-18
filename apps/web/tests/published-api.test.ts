@@ -7,15 +7,15 @@ import {
 
 const summary = {
   id: '11111111-1111-4111-8111-111111111101',
-  tenantSlug: 'demo-fun',
-  slug: 'fun-fest',
-  name: 'FUN FEST · Demo',
+  tenantSlug: 'mfest-demo',
+  slug: 'mfest',
+  name: 'MFest · Demo',
   timezone: 'Asia/Ho_Chi_Minh',
   startsAt: '2027-03-20T10:00:00+07:00',
   location: 'Demo riverside',
   publishedConfigVersion: 1,
   schemaVersion: 1,
-  brand: { primaryColor: '#783013', organizationName: 'FUN Collective · Demo' },
+  brand: { primaryColor: '#783013', organizationName: 'MFest · Demo' },
 };
 
 const detail = {
@@ -33,7 +33,7 @@ function jsonResponse(status: number, body: unknown): Response {
 }
 
 test('loadPublishedEventList maps ok / unreachable / invalid', async () => {
-  const ok = await loadPublishedEventList('demo-fun', {
+  const ok = await loadPublishedEventList('mfest-demo', {
     revalidateSeconds: 0,
     fetchImpl: async () =>
       jsonResponse(200, { items: [summary], nextCursor: null }),
@@ -41,13 +41,13 @@ test('loadPublishedEventList maps ok / unreachable / invalid', async () => {
   assert.equal(ok.status, 'ok');
   if (ok.status === 'ok') assert.equal(ok.body.items.length, 1);
 
-  const down = await loadPublishedEventList('demo-fun', {
+  const down = await loadPublishedEventList('mfest-demo', {
     revalidateSeconds: 0,
     fetchImpl: async () => jsonResponse(502, { code: 'UPSTREAM' }),
   });
   assert.equal(down.status, 'unreachable');
 
-  const bad = await loadPublishedEventList('demo-fun', {
+  const bad = await loadPublishedEventList('mfest-demo', {
     revalidateSeconds: 0,
     fetchImpl: async () => jsonResponse(200, { items: [{ nope: true }] }),
   });
@@ -55,19 +55,19 @@ test('loadPublishedEventList maps ok / unreachable / invalid', async () => {
 });
 
 test('loadPublishedEventDetail never invents fixture on 404 / network', async () => {
-  const missing = await loadPublishedEventDetail('demo-fun', 'missing', {
+  const missing = await loadPublishedEventDetail('mfest-demo', 'missing', {
     revalidateSeconds: 0,
     fetchImpl: async () => jsonResponse(404, { code: 'NOT_FOUND' }),
   });
   assert.equal(missing.status, 'not-found');
 
-  const ok = await loadPublishedEventDetail('demo-fun', 'fun-fest', {
+  const ok = await loadPublishedEventDetail('mfest-demo', 'mfest', {
     revalidateSeconds: 0,
     fetchImpl: async () => jsonResponse(200, detail),
   });
   assert.equal(ok.status, 'ok');
 
-  const boom = await loadPublishedEventDetail('demo-fun', 'fun-fest', {
+  const boom = await loadPublishedEventDetail('mfest-demo', 'mfest', {
     revalidateSeconds: 0,
     fetchImpl: async () => {
       throw new Error('ECONNREFUSED');

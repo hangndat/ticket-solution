@@ -13,9 +13,9 @@ import {
 
 const validSummary = {
   id: '11111111-1111-4111-8111-111111111101',
-  tenantSlug: 'demo-fun',
-  slug: 'fun-fest',
-  name: 'FUN FEST · Demo',
+  tenantSlug: 'mfest-demo',
+  slug: 'mfest',
+  name: 'MFest · Demo',
   timezone: 'Asia/Ho_Chi_Minh',
   startsAt: '2027-03-20T10:00:00+07:00',
   location: 'Demo riverside venue',
@@ -23,7 +23,7 @@ const validSummary = {
   schemaVersion: 1,
   brand: {
     primaryColor: '#783013',
-    organizationName: 'FUN Collective · Demo',
+    organizationName: 'MFest · Demo',
   },
 };
 
@@ -52,7 +52,7 @@ const validDetail = {
 };
 
 test('homeTenantSlugs defaults to D9 seed tenants', () => {
-  assert.deepEqual(homeTenantSlugs({}), ['demo-fun', 'demo-studio']);
+  assert.deepEqual(homeTenantSlugs({}), ['mfest-demo', 'demo-studio']);
 });
 
 test('homeTenantSlugs parses PUBLIC_HOME_TENANT_SLUGS and drops junk', () => {
@@ -62,14 +62,14 @@ test('homeTenantSlugs parses PUBLIC_HOME_TENANT_SLUGS and drops junk', () => {
   );
   assert.deepEqual(
     homeTenantSlugs({ PUBLIC_HOME_TENANT_SLUGS: ',,, ' }),
-    ['demo-fun', 'demo-studio'],
+    ['mfest-demo', 'demo-studio'],
   );
 });
 
 test('publishedEventHref encodes tenant and event slug', () => {
   assert.equal(
-    publishedEventHref({ tenantSlug: 'demo-fun', slug: 'fun-fest' }),
-    '/t/demo-fun/events/fun-fest',
+    publishedEventHref({ tenantSlug: 'mfest-demo', slug: 'mfest' }),
+    '/t/mfest-demo/events/mfest',
   );
 });
 
@@ -100,7 +100,7 @@ test('heroCopyFromSections reads visible hero only', () => {
 });
 
 test('isExplicitDemoLabel detects D9 marker', () => {
-  assert.equal(isExplicitDemoLabel('FUN Collective · Demo'), true);
+  assert.equal(isExplicitDemoLabel('MFest · Demo'), true);
   assert.equal(isExplicitDemoLabel('Live Org'), false);
 });
 

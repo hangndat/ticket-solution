@@ -6,7 +6,7 @@
 
 /** Fixture event ids that ship local logo+banner. */
 const DEMO_MEDIA_EVENT_IDS = new Set([
-  'demo-fun-fest',
+  'demo-mfest',
   'demo-studio-night',
 ]);
 
@@ -16,7 +16,7 @@ const DEMO_MEDIA_EVENT_UUIDS = new Set([
   '22222222-2222-4222-8222-222222222201',
 ]);
 
-const DEMO_MEDIA_TENANT_SLUGS = new Set(['demo-fun', 'demo-studio']);
+const DEMO_MEDIA_TENANT_SLUGS = new Set(['mfest-demo', 'demo-studio']);
 
 export function hasDemoMediaForEventId(eventId: string | null | undefined): boolean {
   if (!eventId) return false;

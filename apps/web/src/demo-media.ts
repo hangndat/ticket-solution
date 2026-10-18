@@ -8,13 +8,13 @@ export const DEMO_BANNER_PATH = '/demo/banner.png';
 
 /** Archived web marketing fixture ids (`src/fixtures/archived-demo-events.ts`). */
 const WEB_DEMO_EVENT_IDS = new Set([
-  'fixture-fun-fest',
+  'fixture-mfest',
   'fixture-form-forum',
 ]);
 
 /** Mobile / seed fixture ids (brand/demo/manifest.json + demo-events). */
 const SEED_DEMO_EVENT_IDS = new Set([
-  'demo-fun-fest',
+  'demo-mfest',
   'demo-studio-night',
 ]);
 
@@ -25,9 +25,9 @@ const DEMO_MEDIA_EVENT_UUIDS = new Set([
 ]);
 
 const DEMO_MEDIA_TENANT_SLUGS = new Set([
-  'sunburst',
+  'mfest',
   'northline',
-  'demo-fun',
+  'mfest-demo',
   'demo-studio',
 ]);
 

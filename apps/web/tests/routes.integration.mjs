@@ -51,6 +51,8 @@ test('production routes isolate tenant content and reject unknown pairs', async 
     // ADR-19: public event pages fetch Nest. Without API → unreachable UI
     // (fail-closed). Never serve archived fixture catalog as published.
     for (const path of [
+      '/t/mfest-demo/events/mfest',
+      '/t/mfest/events/mfest-2026',
       '/t/demo-fun/events/fun-fest',
       '/t/sunburst/events/fun-fest-2026',
       '/t/unknown/events/unknown',
@@ -64,6 +66,7 @@ test('production routes isolate tenant content and reject unknown pairs', async 
         path,
       );
       assert.ok(!html.includes('Sunburst Collective'), path);
+      assert.ok(!html.includes('MFest'), path);
       assert.ok(!html.includes('Northline Studio'), path);
       assert.ok(!html.includes('event-published'), path);
     }
@@ -76,12 +79,14 @@ test('production routes isolate tenant content and reject unknown pairs', async 
         home.includes('Chưa có sự kiện đã xuất bản'),
     );
     assert.ok(!home.includes('/t/sunburst/events/fun-fest-2026'));
+    assert.ok(!home.includes('/t/mfest/events/mfest-2026'));
     assert.ok(!home.includes('/t/northline/events/form-forum-2026'));
     assert.ok(!home.includes('Sunburst Collective'));
+    assert.ok(!home.includes('MFest'));
     assert.ok(!home.includes('Northline Studio'));
 
     // BFF list proxy exists; Nest down → 502 UPSTREAM_UNAVAILABLE.
-    const listBff = await fetch(base + '/api/bff/public/tenants/demo-fun/events');
+    const listBff = await fetch(base + '/api/bff/public/tenants/mfest-demo/events');
     assert.equal(listBff.status, 502);
     assert.equal((await listBff.json()).code, 'UPSTREAM_UNAVAILABLE');
     const admin = await fetch(base + '/admin');

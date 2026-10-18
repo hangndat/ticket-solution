@@ -202,7 +202,7 @@ COMMIT;
 
   await page.goto(`${base}/admin`, { waitUntil: 'domcontentloaded' });
   const html = await page.content();
-  if (/fun-fest|FUN FEST/i.test(html)) {
+  if (/mfest|MFest/i.test(html)) {
     throw new Error('admin page hardcoded a demo festival');
   }
 

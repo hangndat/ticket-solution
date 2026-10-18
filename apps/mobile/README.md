@@ -39,11 +39,11 @@ See `apps/mobile/.env.example`:
 
 Installed-app schemes: **`vemoki`** (brand) and **`ticketsolution`** (legacy / OIDC).
 
-- `vemoki://events/demo-fun-fest` / `ticketsolution://events/demo-fun-fest` → fixture event
+- `vemoki://events/demo-mfest` / `ticketsolution://events/demo-mfest` → fixture event
 - `…://tickets/<uuid>` → My Tickets detail
 - `…://oauth/callback` → left for AuthSession (not rewritten)
 
-Fixture id `demo-fun-fest` / slug `fun-fest` stays on main; do not rename to hide test failures.
+Fixture id `demo-mfest` / slug `mfest` stays on main; do not rename to hide test failures.
 
 ## Push (APNs client)
 

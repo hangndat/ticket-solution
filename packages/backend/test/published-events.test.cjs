@@ -195,21 +195,21 @@ test(
       assert.ok(second.configsSkipped >= 1);
 
       const list = await listPublishedEvents(db, {
-        tenantSlug: D9_DEMO.tenants.fun.slug,
+        tenantSlug: D9_DEMO.tenants.mfest.slug,
       });
       assert.ok(list);
       assert.equal(list.items.length, 1);
-      assert.equal(list.items[0].slug, 'fun-fest');
-      assert.equal(list.items[0].tenantSlug, 'demo-fun');
+      assert.equal(list.items[0].slug, 'mfest');
+      assert.equal(list.items[0].tenantSlug, 'mfest-demo');
       assert.ok(list.items[0].publishedConfigVersion >= 1);
       assert.equal(list.nextCursor, null);
 
       const detail = await getPublishedEventDetail(db, {
-        tenantSlug: 'demo-fun',
-        eventSlug: 'fun-fest',
+        tenantSlug: 'mfest-demo',
+        eventSlug: 'mfest',
       });
       assert.ok(detail);
-      assert.equal(detail.slug, 'fun-fest');
+      assert.equal(detail.slug, 'mfest');
       assert.ok(detail.sections.some((s) => s.kind === 'hero'));
       assert.ok(detail.faq.length >= 1);
       assert.ok(detail.terms);
@@ -220,7 +220,7 @@ test(
 
       assert.equal(
         await getPublishedEventDetail(db, {
-          tenantSlug: 'demo-fun',
+          tenantSlug: 'mfest-demo',
           eventSlug: 'no-such-event',
         }),
         null,
@@ -239,31 +239,31 @@ test(
         email: 'pub-manager@example.com',
         emailVerified: true,
       });
-      await withTenant(db, D9_DEMO.tenants.fun.id, async (tx) => {
+      await withTenant(db, D9_DEMO.tenants.mfest.id, async (tx) => {
         await tx.$executeRaw`
           INSERT INTO events (
             tenant_id, id, slug, name, status, content_status, business_status,
             visibility, timezone, revision
           ) VALUES (
-            ${D9_DEMO.tenants.fun.id}::uuid, ${draftId}::uuid, 'draft-only',
+            ${D9_DEMO.tenants.mfest.id}::uuid, ${draftId}::uuid, 'draft-only',
             'Draft Only', 'DRAFT', 'DRAFT', 'ACTIVE', 'PUBLIC',
             'Asia/Ho_Chi_Minh', 1
           )
         `;
         const membership = await grantMembership(tx, {
-          tenantId: D9_DEMO.tenants.fun.id,
+          tenantId: D9_DEMO.tenants.mfest.id,
           userId: manager.userId,
           role: 'MANAGER',
           permissions: ['event.config', 'event.publish'],
         });
         await grantEventAssignment(tx, {
-          tenantId: D9_DEMO.tenants.fun.id,
+          tenantId: D9_DEMO.tenants.mfest.id,
           eventId: draftId,
           membershipId: membership.membershipId,
           permissions: ['event.config', 'event.publish'],
         });
         await saveEventConfigVersion(tx, {
-          tenantId: D9_DEMO.tenants.fun.id,
+          tenantId: D9_DEMO.tenants.mfest.id,
           eventId: draftId,
           actorUserId: manager.userId,
           payload: typedPayload({ title: 'Draft Hero' }),
@@ -273,29 +273,29 @@ test(
 
       assert.equal(
         await getPublishedEventDetail(db, {
-          tenantSlug: 'demo-fun',
+          tenantSlug: 'mfest-demo',
           eventSlug: 'draft-only',
         }),
         null,
       );
 
       // Publish draft then visible
-      await withTenant(db, D9_DEMO.tenants.fun.id, async (tx) => {
+      await withTenant(db, D9_DEMO.tenants.mfest.id, async (tx) => {
         await publishEventConfig(tx, {
-          tenantId: D9_DEMO.tenants.fun.id,
+          tenantId: D9_DEMO.tenants.mfest.id,
           eventId: draftId,
           actorUserId: manager.userId,
           expectedVersion: 1,
         });
       });
       const publishedDraft = await getPublishedEventDetail(db, {
-        tenantSlug: 'demo-fun',
+        tenantSlug: 'mfest-demo',
         eventSlug: 'draft-only',
       });
       assert.ok(publishedDraft);
       assert.equal(publishedDraft.name, 'Draft Only');
       const list2 = await listPublishedEvents(db, {
-        tenantSlug: 'demo-fun',
+        tenantSlug: 'mfest-demo',
         limit: 10,
       });
       assert.ok(list2);

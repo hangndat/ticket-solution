@@ -96,7 +96,7 @@ try {
   if (!response?.ok())
     throw new Error(`GET /admin status ${response?.status()}`);
   const html = await page.content();
-  if (/fun-fest|FUN FEST/i.test(html))
+  if (/mfest|MFest/i.test(html))
     throw new Error('admin page hardcoded a demo festival');
   await page.locator('[data-testid="admin-workspace"]').waitFor();
   await page.getByTestId('admin-tech-details').locator('summary').click();

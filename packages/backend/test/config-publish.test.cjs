@@ -45,12 +45,12 @@ function typedPayload(overrides = {}) {
     schemaVersion: 1,
     brand: {
       primaryColor: '#0B3D2E',
-      organizationName: overrides.orgName ?? 'Sunburst',
+      organizationName: overrides.orgName ?? 'MFest',
       ...(overrides.logoAssetId ? { logoAssetId: overrides.logoAssetId } : {}),
       ...(overrides.bannerAssetId ? { bannerAssetId: overrides.bannerAssetId } : {}),
     },
     sections: [
-      { kind: 'hero', id: 'hero-1', visible: true, order: 0, body: { title: overrides.title ?? 'Fun Fest', text: 'Hello' } },
+      { kind: 'hero', id: 'hero-1', visible: true, order: 0, body: { title: overrides.title ?? 'MFest', text: 'Hello' } },
       { kind: 'info', id: 'info-1', visible: true, order: 1, body: { title: 'Info', text: 'Details' } },
       { kind: 'redeem', id: 'redeem-1', visible: true, order: 2, body: { title: 'Redeem', text: 'Code' } },
       { kind: 'guide', id: 'guide-1', visible: false, order: 3, body: { title: 'Guide', text: '' } },
@@ -172,7 +172,7 @@ test('config publish is versioned, immutable, and does not rewrite tickets', { t
         tenantId,
         eventId,
         actorUserId: manager.userId,
-        payload: typedPayload({ title: 'Fun Fest', orgName: 'Sunburst' }),
+        payload: typedPayload({ title: 'MFest', orgName: 'MFest' }),
       }),
     );
     assert.equal(first.version, 1);
@@ -181,7 +181,7 @@ test('config publish is versioned, immutable, and does not rewrite tickets', { t
         tenantId,
         eventId,
         actorUserId: manager.userId,
-        payload: typedPayload({ title: 'Fun Fest', orgName: 'Northline' }),
+        payload: typedPayload({ title: 'MFest', orgName: 'Northline' }),
       }),
     );
     assert.equal(second.version, 2);
@@ -250,7 +250,7 @@ test('config publish is versioned, immutable, and does not rewrite tickets', { t
       }),
     );
     assert.equal(preview.cacheControl, 'no-store');
-    assert.equal(preview.payload.brand.organizationName, 'Sunburst');
+    assert.equal(preview.payload.brand.organizationName, 'MFest');
     // Draft version 1 must not change live pointer.
     const live = await withTenant(db, tenantId, (tx) =>
       tx.$queryRaw`SELECT published_config_version FROM events WHERE id = ${eventId}::uuid`,
@@ -299,7 +299,7 @@ test('config publish is versioned, immutable, and does not rewrite tickets', { t
       tx.$queryRaw`SELECT published_config_version, published_brand_snapshot, revision FROM events WHERE id = ${eventId}::uuid`,
     );
     assert.equal(after[0].published_config_version, 3);
-    assert.equal(after[0].published_brand_snapshot.organizationName, 'Sunburst');
+    assert.equal(after[0].published_brand_snapshot.organizationName, 'MFest');
     assert.equal(after[0].revision, 3);
 
     const quotaAfter = await withTenant(db, tenantId, (tx) =>

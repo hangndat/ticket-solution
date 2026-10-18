@@ -25,7 +25,7 @@ export type InstalledAppLink =
  * Classify an installed-app URL before Expo Router sees it.
  * `vemoki://oauth/callback` and `ticketsolution://oauth/callback` stay auth
  * redirects (router must not navigate). Ticket and event links rewrite onto
- * existing screens. Fixture event ids (e.g. `demo-fun-fest`) are preserved.
+ * existing screens. Fixture event ids (e.g. `demo-mfest`) are preserved.
  * Invitation claim links never fall back to fixture routes.
  */
 export function parseInstalledAppLink(input: string): InstalledAppLink {
