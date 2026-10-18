@@ -6,6 +6,7 @@ type TicketPublicExtra = {
   tenantId?: string;
   eventId?: string;
   pushProvider?: string;
+  apsEnvironment?: 'development' | 'production';
 };
 
 /**
@@ -99,4 +100,27 @@ export function getEventId(): string | null {
 
 export function isOidcConfigured(): boolean {
   return getOidcIssuer() !== null && getOidcClientId() !== null;
+}
+
+/**
+ * APS / bake environment for this binary. Prefer Metro-inlined
+ * EXPO_PUBLIC_APS_ENVIRONMENT, then baked extra from app.config.ts.
+ */
+export function getApsEnvironment(): 'development' | 'production' {
+  const fromEnv =
+    process.env.EXPO_PUBLIC_APS_ENVIRONMENT?.trim() ||
+    process.env.APS_ENVIRONMENT?.trim() ||
+    process.env.APP_VARIANT?.trim() ||
+    '';
+  if (fromEnv === 'production') return 'production';
+  const fromExtra = readTicketPublicExtra().apsEnvironment;
+  return fromExtra === 'production' ? 'production' : 'development';
+}
+
+/**
+ * W0 demo fixtures (demo-mfest / Studio Night) stay for local/dev deep links.
+ * Release / TestFlight must not surface them on the home Events list.
+ */
+export function showDemoEventCatalog(): boolean {
+  return getApsEnvironment() !== 'production';
 }
