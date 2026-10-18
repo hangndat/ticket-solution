@@ -206,7 +206,7 @@ Nguồn: `gh project item-list 3 --owner hangndat --limit 300 --format json` →
 | UX-08 | Gate iOS conflict/queue depth | Source `staff.tsx` queued≠admit; PR `#240` merged; venue **chưa xác minh** | Nhầm queued = cho vào; conflict đa TB | **P1** | GIVEN phase queued/CONFLICT WHEN hiện outcome THEN tone ≠ admit; text «không phải lượt vào» | sim-uat staff; device camera = chưa xác minh | `ios` | Soft ADR-18 | Không |
 | UX-09 | Attendee vé/QR evidence brand + Xcode | PR `#243/#248` merged; reviews local **untracked** có FAIL tip cũ — không kế thừa | Pilot/store thiếu build evidence | **P1** | GIVEN tip `main` WHEN brand ≥2 tenant + local xcodebuild Team `BLUA62D52G` THEN BUILD SUCCEEDED + sim artifacts | sim-uat + xcodebuild log | `ios` (+ web brand) | Revalidate SHA mới | Không |
 | UX-10 | A11y residual surface D11 | PD A1–A10; WCAG 2.2; không axe suite trên tip tích hợp | Keyboard/SR fail ngày event | **P1** | GIVEN redeem/admin/gate WHEN tab + axe THEN focus visible; live region unknown/queued; hit ≥44px | Playwright axe + manual VO sample | web ∥ ios | Sau merge surfaces | Không |
-| UX-11 | Auth đổi mã Keycloak vs PRD OTP | `redeem/messages.ts` UNAUTHENTICATED / EMAIL_NOT_VERIFIED; PRD §2; PD pin D1 | Kỳ vọng guest lệch | **P1** product | **Option A** giữ pin hiện tại (AC: «Cần đăng nhập»). **Option B** mở Task OTP — cần IdP/contract | Unit messages + UAT auth | Product (± BE) | Contract nếu B | **Có** |
+| UX-11 | Auth đổi mã Keycloak vs PRD OTP | `redeem/messages.ts` UNAUTHENTICATED / EMAIL_NOT_VERIFIED; PRD §2; PD pin D1; [#372](https://github.com/hangndat/ticket-solution/issues/372) | Kỳ vọng guest lệch | **P1** product | **Đã chốt Option A** (18/10/2026): giữ pin Keycloak verified email; AC UI «Cần đăng nhập» / «Xác minh email». Option B OTP/magic link = **sau MVP** — không mở Task trừ user chọn B. [DECISION-LOG UX-11](../DECISION-LOG.md) | Unit messages + UAT auth | Product (± BE) | Contract nếu B | **Đã chốt A** |
 | UX-12 | O06 retention/region/SLA — gói lựa chọn | DECISION-LOG O06; O14 tạm không ingest PII | PII thật không có policy | **P0 policy** | Xem **§6.1** — **không** chặn UX-01…10 độc lập (demo-label, Gate, CS copy) | N/A research | Product/ops | Trước ingest PII / privacy số | **Có** — chọn option |
 
 ### 6.1 O06 — gói lựa chọn (không blocker UX độc lập)
@@ -271,7 +271,8 @@ Wave UX độc lập (không chờ O06 số):
   UX-06/#246 CS  ∥  UX-10 a11y residual  ∥  UX-07 reconcile #245
 
 Song song user:
-  UX-03 privacy nội dung  ·  UX-12 O06 chọn A/B/C  ·  UX-11 OTP vs Keycloak
+  UX-03 privacy nội dung  ·  UX-12 O06 chọn A/B/C
+  UX-11 — **đã chốt Option A** (Keycloak / «Cần đăng nhập»; OTP sau MVP)
 
 Cổng nghiệm thu:
   UX-04/#236 + UX-09 build/brand evidence trên SHA tích hợp
@@ -287,7 +288,7 @@ Cổng nghiệm thu:
 | - | ------- | -------- | -------------- |
 | Q1 | Publish `/privacy` + nội dung VI khi nào? | Trước store / PII thật | ASC + trust kém |
 | Q2 | O06 chọn A / B / C (§6.1)? | A hoặc C ngay; B trước PII số | Không chặn UX-01…10; chỉ chặn ingest PII |
-| Q3 | Keycloak pin vs OTP guest (UX-11)? | Giữ A đến task IdP riêng | Kỳ vọng PRD lệch |
+| Q3 | Keycloak pin vs OTP guest (UX-11)? | **Đã chốt A** 18/10/2026 — [DECISION-LOG UX-11](../DECISION-LOG.md) / [#372](https://github.com/hangndat/ticket-solution/issues/372) | OTP/magic link sau MVP; không blocker DoD redeem |
 | Q4 | `#245` còn coding hay chỉ Status lệch? | Reconcile board | Trùng / sót UAT |
 | Q5 | Mở validate-only desk? | Giữ OUT | Scope creep |
 | Q6 | Production UX ready cần UX-01+03+04 (+ O06 B nếu PII)? | **Có** | Tránh tuyên bố sớm |
