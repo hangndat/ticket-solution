@@ -100,7 +100,7 @@ function PrimaryButton({
 
 /**
  * Account deletion request UX (plan §7 / acceptance §8.9).
- * ACK ≠ deleted; O06 unsettled; session-scoped cancel on account switch.
+ * ACK ≠ deleted; O06 retention configured; session-scoped cancel on account switch.
  */
 export function AccountDeletionPanel() {
   const identity = useSyncExternalStore(
