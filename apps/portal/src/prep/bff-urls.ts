@@ -97,3 +97,11 @@ export function bffPlatformTenants(): string {
 export function bffPlatformAudit(): string {
   return '/api/bff/platform/audit';
 }
+
+export function bffPlatformTenantHealth(tenantId: string): string {
+  return `/api/bff/platform/tenants/${encodeURIComponent(tenantId)}/health`;
+}
+
+export function bffPlatformSupportGrantRevoke(grantId: string): string {
+  return `/api/bff/platform/support-grants/${encodeURIComponent(grantId)}/revoke`;
+}

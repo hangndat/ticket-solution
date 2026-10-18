@@ -35,9 +35,13 @@ export const PORTAL_UPSTREAM = {
   /** H-C1 codes inventory browse (inventory.import; masked, no raw/HMAC) */
   codes: (tenantId: string, eventId: string) =>
     `${eventBase(tenantId, eventId)}/codes`,
-  /** H-P1 / H-P-AUDIT — platform Operator MFA audience only */
+  /** H-P1 / H-P-AUDIT / H-P2 — platform Operator MFA audience only */
   platformTenants: '/v1/platform/tenants',
   platformAudit: '/v1/platform/audit',
+  platformTenantHealth: (tenantId: string) =>
+    `/v1/platform/tenants/${encodeURIComponent(tenantId)}/health`,
+  platformSupportGrantRevoke: (grantId: string) =>
+    `/v1/platform/support-grants/${encodeURIComponent(grantId)}/revoke`,
   members: (tenantId: string) => `${tenantBase(tenantId)}/members`,
   revokeMember: (tenantId: string, membershipId: string) =>
     `${tenantBase(tenantId)}/members/${encodeURIComponent(membershipId)}/revoke`,
