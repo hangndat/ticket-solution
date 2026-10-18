@@ -1,0 +1,135 @@
+{
+  "appInfoId": "d67d05a9-a4da-4d14-abd4-b17b8e5aa0e4",
+  "version": {
+    "id": "7c5ac05b-f543-4f71-8af3-a7b40073de7a",
+    "versionString": "1.0.0",
+    "state": "PREPARE_FOR_SUBMISSION",
+    "releaseType": "MANUAL"
+  },
+  "categories": {
+    "primary": "ENTERTAINMENT",
+    "secondary": "BUSINESS"
+  },
+  "appInfoLocalizations": [
+    {
+      "locale": "en-US",
+      "name": "Vemoki",
+      "subtitle": "Event tickets & gate check-in",
+      "privacyPolicyUrl": "https://vemoki.com/privacy",
+      "id": "fccdc058-ca7c-4cf8-9d79-9ea872ce9c4a"
+    },
+    {
+      "locale": "vi",
+      "name": "Vemoki",
+      "subtitle": "Vé sự kiện & check-in cổng",
+      "privacyPolicyUrl": "https://vemoki.com/privacy",
+      "id": "f801edb0-468a-4dac-ae71-9094655fbf2a"
+    }
+  ],
+  "versionLocalizations": [
+    {
+      "locale": "vi",
+      "description": "[omitted — see listing-metadata.md; len=1252]",
+      "keywords": "vé,sựkiện,check-in,QR,cổng,lễhội,khách,BTC,quétvé,đổimã,pass",
+      "supportUrl": "https://vemoki.com/support",
+      "marketingUrl": "https://vemoki.com",
+      "promotionalText": "[omitted]",
+      "whatsNew": null,
+      "id": "7048568b-61b1-4123-be2b-c4f8b0621ac2",
+      "descLen": 1252,
+      "kwLen": 78,
+      "descriptionSha256": "e87df74ff958b294e0a8862b344eeefb5fa634cd6dceab72b3672f7f609e877c",
+      "promotionalTextSha256": "b406cd01435ca868cadb071fcd355c004bfae689746d4be5b1fdae14532cb3bf",
+      "keywordsSha256": "c3f65c74392151fcb38891f6bb1749b0173d80801a0702932b95474f2a70da4d"
+    },
+    {
+      "locale": "en-US",
+      "description": "[omitted — see listing-metadata.md; len=1419]",
+      "keywords": "ticket,event,check-in,QR,gate,festival,venue,attendee,organizer,scanner,pass,redeem",
+      "supportUrl": "https://vemoki.com/support",
+      "marketingUrl": "https://vemoki.com",
+      "promotionalText": "[omitted]",
+      "whatsNew": null,
+      "id": "04ddd4b2-9a1e-4e43-89ec-2e4d6d2503cf",
+      "descLen": 1419,
+      "kwLen": 83,
+      "descriptionSha256": "2ef923ff5c380db8b6853695cb8526723b8b51709cef2c81cb1aa8830c760226",
+      "promotionalTextSha256": "87179365f10e5b1d7b454920e43d49f429ebc78df76a3aac0564d0823b7132c3",
+      "keywordsSha256": "0e0a772e66bdb47121a2323c11b713d4983c441420419ebe48f9e24f8b96e0b1"
+    }
+  ],
+  "ageRatingIncluded": {
+    "type": "ageRatingDeclarations",
+    "id": "d67d05a9-a4da-4d14-abd4-b17b8e5aa0e4",
+    "attributes": {
+      "messagingAndChat": null,
+      "sexualContentGraphicAndNudity": null,
+      "gambling": null,
+      "horrorOrFearThemes": null,
+      "parentalControls": null,
+      "advertising": null,
+      "ageRatingOverride": "NONE",
+      "ageRatingOverrideV2": "NONE",
+      "violenceRealisticProlongedGraphicOrSadistic": null,
+      "matureOrSuggestiveThemes": null,
+      "healthOrWellnessTopics": null,
+      "unrestrictedWebAccess": null,
+      "violenceCartoonOrFantasy": null,
+      "kidsAgeBand": null,
+      "medicalOrTreatmentInformation": null,
+      "lootBox": null,
+      "alcoholTobaccoOrDrugUseOrReferences": null,
+      "gamblingSimulated": null,
+      "violenceRealistic": null,
+      "profanityOrCrudeHumor": null,
+      "socialMedia": null,
+      "contests": null,
+      "koreaAgeRatingOverride": "NONE",
+      "ageAssurance": null,
+      "userGeneratedContent": null,
+      "gunsOrOtherWeapons": null,
+      "socialMediaAgeRestricted": null,
+      "gracRatingClassificationNumber": null,
+      "developerAgeRatingInfoUrl": null,
+      "sexualContentOrNudity": null
+    },
+    "links": {
+      "self": "https://api.appstoreconnect.apple.com/v1/ageRatingDeclarations/d67d05a9-a4da-4d14-abd4-b17b8e5aa0e4"
+    }
+  },
+  "ageRatingFetch": {
+    "id": "d67d05a9-a4da-4d14-abd4-b17b8e5aa0e4",
+    "attributes": {
+      "advertising": null,
+      "alcoholTobaccoOrDrugUseOrReferences": null,
+      "contests": null,
+      "gambling": null,
+      "gamblingSimulated": null,
+      "gunsOrOtherWeapons": null,
+      "healthOrWellnessTopics": null,
+      "kidsAgeBand": null,
+      "lootBox": null,
+      "medicalOrTreatmentInformation": null,
+      "messagingAndChat": null,
+      "parentalControls": null,
+      "profanityOrCrudeHumor": null,
+      "ageAssurance": null,
+      "sexualContentGraphicAndNudity": null,
+      "sexualContentOrNudity": null,
+      "socialMedia": null,
+      "socialMediaAgeRestricted": null,
+      "horrorOrFearThemes": null,
+      "matureOrSuggestiveThemes": null,
+      "unrestrictedWebAccess": null,
+      "userGeneratedContent": null,
+      "violenceCartoonOrFantasy": null,
+      "violenceRealisticProlongedGraphicOrSadistic": null,
+      "violenceRealistic": null,
+      "ageRatingOverride": "NONE",
+      "ageRatingOverrideV2": "NONE",
+      "koreaAgeRatingOverride": "NONE",
+      "gracRatingClassificationNumber": null,
+      "developerAgeRatingInfoUrl": null
+    }
+  }
+}

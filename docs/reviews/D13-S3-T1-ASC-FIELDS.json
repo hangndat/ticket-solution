@@ -1,0 +1,196 @@
+{
+  "timeUTC": "2026-10-18T09:26:08.801104+00:00",
+  "appId": "6823694490",
+  "sourceDocs": [
+    "docs/asc/listing-metadata.md",
+    "docs/asc/age-rating-questionnaire.md §6A",
+    "docs/reviews/D13-ASC-METADATA-LIVE.md",
+    "docs/reviews/D13-BA-AGE-RATING.md",
+    "docs/reviews/D13-PR356-R2-DOD.md"
+  ],
+  "authorization": "Task #322 S3-T1 ops: fill remaining ASC draft fields; age rating apply §6A when authorized (DoD docs PASS with known gap @ edb6d6…)",
+  "submitted": false,
+  "availabilityChanged": false,
+  "operations": [
+    {
+      "method": "GET",
+      "path": "/appStoreVersionLocalizations/04ddd4b2-9a1e-4e43-89ec-2e4d6d2503cf",
+      "status": 200
+    },
+    {
+      "method": "PATCH",
+      "path": "/appStoreVersionLocalizations/04ddd4b2-9a1e-4e43-89ec-2e4d6d2503cf",
+      "status": 409,
+      "field": "whatsNew"
+    },
+    {
+      "method": "GET",
+      "path": "/appStoreVersionLocalizations/04ddd4b2-9a1e-4e43-89ec-2e4d6d2503cf",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/appStoreVersionLocalizations/7048568b-61b1-4123-be2b-c4f8b0621ac2",
+      "status": 200
+    },
+    {
+      "method": "PATCH",
+      "path": "/appStoreVersionLocalizations/7048568b-61b1-4123-be2b-c4f8b0621ac2",
+      "status": 409,
+      "field": "whatsNew"
+    },
+    {
+      "method": "GET",
+      "path": "/appStoreVersionLocalizations/7048568b-61b1-4123-be2b-c4f8b0621ac2",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/ageRatingDeclarations/d67d05a9-a4da-4d14-abd4-b17b8e5aa0e4",
+      "status": 403
+    },
+    {
+      "method": "PATCH",
+      "path": "/ageRatingDeclarations/d67d05a9-a4da-4d14-abd4-b17b8e5aa0e4",
+      "status": 409,
+      "payload": "§6A HIGH-only"
+    },
+    {
+      "method": "GET",
+      "path": "/ageRatingDeclarations/d67d05a9-a4da-4d14-abd4-b17b8e5aa0e4",
+      "status": 403
+    },
+    {
+      "method": "GET",
+      "path": "/appInfos/d67d05a9-a4da-4d14-abd4-b17b8e5aa0e4?include=primaryCategory,secondaryCategory",
+      "status": 200
+    }
+  ],
+  "versionId": "7c5ac05b-f543-4f71-8af3-a7b40073de7a",
+  "versionString": "1.0.0",
+  "state": "PREPARE_FOR_SUBMISSION",
+  "whatsNew": {
+    "en-US": {
+      "id": "04ddd4b2-9a1e-4e43-89ec-2e4d6d2503cf",
+      "before": null,
+      "afterSha256": null,
+      "matched": false,
+      "patchStatus": 409,
+      "error": {
+        "errors": [
+          {
+            "id": "be6f398a-fb44-4a0e-9ac9-7c32f7c83162",
+            "status": "409",
+            "code": "STATE_ERROR",
+            "title": "The request cannot be fulfilled because of the state of another resource.",
+            "detail": "Attribute 'whatsNew' cannot be edited at this time"
+          }
+        ]
+      }
+    },
+    "vi": {
+      "id": "7048568b-61b1-4123-be2b-c4f8b0621ac2",
+      "before": null,
+      "afterSha256": null,
+      "matched": false,
+      "patchStatus": 409,
+      "error": {
+        "errors": [
+          {
+            "id": "5f799566-c76d-44bd-93a6-eded5f68fd0f",
+            "status": "409",
+            "code": "STATE_ERROR",
+            "title": "The request cannot be fulfilled because of the state of another resource.",
+            "detail": "Attribute 'whatsNew' cannot be edited at this time"
+          }
+        ]
+      }
+    }
+  },
+  "ageRating": {
+    "id": "d67d05a9-a4da-4d14-abd4-b17b8e5aa0e4",
+    "patchStatus": 409,
+    "verifiedHigh": false,
+    "medOmittedStillNull": true,
+    "medState": {
+      "alcoholTobaccoOrDrugUseOrReferences": null,
+      "matureOrSuggestiveThemes": null,
+      "sexualContentOrNudity": null,
+      "sexualContentGraphicAndNudity": null
+    },
+    "errorSummary": [
+      {
+        "code": "ENTITY_ERROR.ATTRIBUTE.REQUIRED",
+        "detail": "You must provide a value for the attribute 'sexualContentGraphicAndNudity' with this request",
+        "pointer": "/data/attributes/sexualContentGraphicAndNudity"
+      },
+      {
+        "code": "ENTITY_ERROR.ATTRIBUTE.REQUIRED",
+        "detail": "You must provide a value for the attribute 'sexualContentOrNudity' with this request",
+        "pointer": "/data/attributes/sexualContentOrNudity"
+      },
+      {
+        "code": "ENTITY_ERROR.ATTRIBUTE.REQUIRED",
+        "detail": "You must provide a value for the attribute 'alcoholTobaccoOrDrugUseOrReferences' with this request",
+        "pointer": "/data/attributes/alcoholTobaccoOrDrugUseOrReferences"
+      },
+      {
+        "code": "ENTITY_ERROR.ATTRIBUTE.REQUIRED",
+        "detail": "You must provide a value for the attribute 'matureOrSuggestiveThemes' with this request",
+        "pointer": "/data/attributes/matureOrSuggestiveThemes"
+      }
+    ],
+    "highKeyCount": 0,
+    "highKeysAllOk": false,
+    "highKeysExpected": {}
+  },
+  "categories": {
+    "primary": "ENTERTAINMENT",
+    "secondary": "BUSINESS"
+  },
+  "listingSpotCheck": {
+    "en-US": {
+      "supportUrl": "https://vemoki.com/support",
+      "marketingUrl": "https://vemoki.com",
+      "keywordsPresent": true,
+      "keywordsByteLen": 83,
+      "descriptionPresent": true,
+      "descriptionLen": 1419,
+      "whatsNewPresent": false,
+      "privacyPolicyUrl": "https://vemoki.com/privacy",
+      "name": "Vemoki",
+      "subtitle": "Event tickets & gate check-in"
+    },
+    "vi": {
+      "supportUrl": "https://vemoki.com/support",
+      "marketingUrl": "https://vemoki.com",
+      "keywordsPresent": true,
+      "keywordsByteLen": 78,
+      "descriptionPresent": true,
+      "descriptionLen": 1252,
+      "whatsNewPresent": false,
+      "privacyPolicyUrl": "https://vemoki.com/privacy",
+      "name": "Vemoki",
+      "subtitle": "Vé sự kiện & check-in cổng"
+    }
+  },
+  "verified": false,
+  "whatsNewErrors": {
+    "en-US": {
+      "status": 409,
+      "code": "STATE_ERROR",
+      "detail": "Attribute 'whatsNew' cannot be edited at this time"
+    },
+    "vi": {
+      "status": 409,
+      "code": "STATE_ERROR",
+      "detail": "Attribute 'whatsNew' cannot be edited at this time"
+    },
+    "likelyCause": "No build selected for App Store version (build relationship null)"
+  },
+  "coordinatorDecision": {
+    "askOption": "C",
+    "summary": "Skip age PATCH; document blocker only. Do not authorize MED=NONE while U2 open."
+  },
+  "verifiedListing": true
+}
