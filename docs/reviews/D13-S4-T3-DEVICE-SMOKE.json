@@ -71,5 +71,6 @@
     "reason": "optional; sim \u2260 TF binary; does not replace camera AC"
   },
   "blocker": "operator install TestFlight + Vemoki 1.0.0 (10) on device for hangndat@gmail.com; report UDID then re-dispatch",
-  "apiKeyId": "KHT3SAL2FS"
+  "apiKeyId": "KHT3SAL2FS",
+  "evidenceTipSha": "a524e510a3aa351804782aa3194a502532efa90a"
 }

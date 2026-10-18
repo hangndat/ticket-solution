@@ -74,4 +74,4 @@ Coordinator chỉ định **A — operator install TestFlight**:
 
 ## Tip SHA
 
-Exact tip của PR chứa artifact này — điền sau commit (`git rev-parse HEAD`). Evidence ASC/device ở trên không phụ thuộc tip docs.
+Exact tip evidence (docs): `a524e510a3aa351804782aa3194a502532efa90a` (và mọi commit docs follow-up trên cùng PR). Evidence ASC/device ở trên không phụ thuộc tip docs.
