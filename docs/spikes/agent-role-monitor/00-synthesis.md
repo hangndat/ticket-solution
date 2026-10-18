@@ -130,9 +130,9 @@ Claim “role X hơn Y” chỉ PASS khi: cùng class Task, cùng cửa sổ, sa
 | Artifact | Status | Ghi chú |
 | -------- | ------ | ------- |
 | Runbook ops | **Đã có** | [`docs/ops/AGENT-ROLE-MONITOR.md`](../../ops/AGENT-ROLE-MONITOR.md) — khi nào gọi `record-opened` / `ingest-settlement` / `rollup` trong mailbox loop; map Role ID; privacy; known gaps (token Cursor **null**); link `scripts/agent-role-monitor/` |
-| Ledger lib | **Partial** | `scripts/agent-role-monitor/lib/ledger.mjs` (+ `host-sample.mjs`) — schema v1, opened/settled/rollup helpers |
-| CLI entry | **Chờ BE** | `record-opened.mjs`, `ingest-settlement.mjs`, `rollup.mjs` — ownership worker backend; architect Task **không** sửa `scripts/**` |
+| Ledger lib | **Đã có** | `scripts/agent-role-monitor/lib/ledger.mjs` (+ `host-sample.mjs`) — schema v1, opened/settled/rollup helpers |
+| CLI entry | **Đã có** | `scripts/agent-role-monitor/cli.mjs` + `pnpm agent-metrics:*` (opened / ingest / rollup / host-sample / test) |
 | Surface | CLI + MD | Portal hoãn (`07`) |
 | Meter token | Gap | Cursor tokens chưa join Dispatch → rollup để `null`, không `0` |
 
-**Pointer cho coordinator:** bắt đầu ingest theo runbook ngay khi CLI sẵn; research `01`–`07` vẫn là nguồn taxonomy / privacy / DoD chống vanity.
+**Pointer cho coordinator:** ingest theo runbook [`docs/ops/AGENT-ROLE-MONITOR.md`](../../ops/AGENT-ROLE-MONITOR.md) + README CLI; research `01`–`07` vẫn là nguồn taxonomy / privacy / DoD chống vanity.

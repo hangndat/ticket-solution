@@ -84,18 +84,20 @@ worker-start (max fan-out ready)
 
 ## 4. Lệnh CLI (copy-paste)
 
-Chạy từ **repo root** trên máy coordinator (cùng host ghi ledger). Entry scripts dưới `scripts/agent-role-monitor/` — nếu file chưa có trên branch, dùng `node --input-type=module` gọi lib hoặc đợi Task BE merge; **không** viết Nest/API.
+Chạy từ **repo root** trên máy coordinator (cùng host ghi ledger). Entry thống nhất: `scripts/agent-role-monitor/cli.mjs` (hoặc `pnpm agent-metrics:*`). **Không** viết Nest/API / product DB.
 
 Biến môi trường optional:
 
 ```bash
-export ARM_LEDGER="${ARM_LEDGER:-.orca-metrics/role-dispatch.jsonl}"
+export ORCA_METRICS_LEDGER="${ORCA_METRICS_LEDGER:-.orca-metrics/role-dispatch.jsonl}"
 ```
+
+Chi tiết flags: [`scripts/agent-role-monitor/README.md`](../../scripts/agent-role-monitor/README.md).
 
 ### 4.1 `record-opened` — sau `worker-start`
 
 ```bash
-node scripts/agent-role-monitor/record-opened.mjs \
+pnpm agent-metrics:opened -- \
   --dispatch-id "<dispatchId>" \
   --task-id "<taskId>" \
   --run-id "<runId>" \
@@ -106,25 +108,14 @@ node scripts/agent-role-monitor/record-opened.mjs \
   --architecture-impact "Có|Không"
 ```
 
+Tương đương: `node scripts/agent-role-monitor/cli.mjs record-opened …`
+
 **Bắt buộc:** `--dispatch-id`, `--role-id`.  
 Event ghi: `dispatch.opened`.
 
 ### 4.2 `ingest-settlement` — sau `worker_done` (và fail/cancel)
 
-```bash
-node scripts/agent-role-monitor/ingest-settlement.mjs \
-  --dispatch-id "<dispatchId>" \
-  --task-id "<taskId>" \
-  --run-id "<runId>" \
-  --role-id "<cùng Role ID lúc opened>" \
-  --outcome "succeeded|failed|cancelled|unknown" \
-  --subject "<subject worker_done>" \
-  --agent cursor \
-  --files-modified "<count hoặc bỏ>" \
-  --report-path "<relative path hoặc bỏ>"
-```
-
-Hoặc pipe JSON (camelCase / snake_case đều được — lib `normalizeSettlementInput`):
+Pipe JSON (camelCase / snake_case đều được — lib `normalizeSettlementInput`):
 
 ```bash
 printf '%s\n' '{
@@ -136,24 +127,26 @@ printf '%s\n' '{
   "subject":"runbook done",
   "agent":"cursor",
   "source":"mailbox.worker_done"
-}' | node scripts/agent-role-monitor/ingest-settlement.mjs --stdin
+}' | pnpm agent-metrics:ingest
 ```
 
+Hoặc `--file PATH` / `--role-id` khi JSON thiếu role. Tương đương: `node scripts/agent-role-monitor/cli.mjs ingest-settlement …`
+
 **Privacy:** chỉ subject ngắn + hash/length body nếu có — **không** pipe full transcript / secrets vào stdin.  
-Event ghi: `dispatch.settled`. Token fields **không** điền → để `null` (xem §6).
+Event ghi: `dispatch.settled`. Token fields **không** điền → rollup giữ `tokens_out_sum: null` (xem §6).
 
 ### 4.3 `rollup` — aggregate theo Role
 
 ```bash
-# Bảng terminal
-node scripts/agent-role-monitor/rollup.mjs --format table
+# JSON stdout
+pnpm agent-metrics:rollup
 
-# Markdown durable (ví dụ artifact đợt)
-node scripts/agent-role-monitor/rollup.mjs --format md \
-  > "docs/spikes/agent-role-monitor/reports/$(date -u +%Y%m%dT%H%M%SZ).md"
+# Durable file
+pnpm agent-metrics:rollup -- --out ".orca-metrics/by_role.json"
+# hoặc copy JSON đã format vào docs/spikes/agent-role-monitor/reports/ khi cần artifact đợt
 ```
 
-Output kỳ vọng: theo `role_id` — opened/settled counts, success/fail, p50 duration (khi có opened+settled), RSS peak nếu có `host.sample`, **tokens = null** khi chưa meter.
+Output kỳ vọng: theo `role_id` — opened/settled counts, success/fail, p50 duration (khi có opened+settled), RSS peak nếu có `host.sample`, **tokens_out_sum = null** khi chưa meter.
 
 Surface MVP: CLI + markdown — **không** `apps/web` ([`07-web-surfaces.md`](../spikes/agent-role-monitor/07-web-surfaces.md)).
 
