@@ -1,21 +1,21 @@
-import { Color } from 'expo-router';
 import { brand } from './tokens.ts';
 
 export { brand };
 
 export const colors = {
-  /** Attendee screens use brand paper (AC-V1); system labels stay adaptive. */
-  label: Color.ios.label,
-  secondary: Color.ios.secondaryLabel,
-  /** Screen fill — ink/paper budget, not flat system grey alone. */
+  /** Primary text — Live Pulse ink (not adaptive system label on attendee paper). */
+  label: brand.ink,
+  secondary: brand.inkMuted,
+  /** Screen fill — paper; atmosphere wash layers on top via ScreenAtmosphere. */
   background: brand.paper,
-  card: Color.ios.secondarySystemGroupedBackground,
-  separator: Color.ios.separator,
+  card: brand.paperDeep,
+  separator: brand.inkFaint,
   /** Replaces systemBlue on product CTAs / links. */
   accent: brand.signal,
   onAccent: '#ffffff',
   ink: brand.ink,
   paper: brand.paper,
+  paperDeep: brand.paperDeep,
   signal: brand.signal,
   focus: brand.focus,
   /** Ticket QR canvas (brand paper/ink). */
