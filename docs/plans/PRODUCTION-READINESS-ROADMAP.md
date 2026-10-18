@@ -14,6 +14,8 @@
 
 **Ủy quyền đợt này:** nghiên cứu local + đề xuất. **Chưa** authorize deploy production, store submit, cloud resource, commit/push/PR/merge, hay cập nhật GitHub từ worker này. **Không sửa** `docs/ROADMAP.md`.
 
+> **Errata (2026-10-18, [#373](https://github.com/hangndat/ticket-solution/issues/373)):** Snapshot research này **stale một phần**. Nguồn quyết định hiện tại: [`GAP-AUDIT-2026-10-18-INDEX.md`](../reviews/GAP-AUDIT-2026-10-18-INDEX.md). **Không còn mở như claim cũ:** D11 / [#254](https://github.com/hangndat/ticket-solution/issues/254) **đã đóng**; O06 **đã chốt**; `GET https://vemoki.com/privacy` → **HTTP 200**. **Còn mở:** Navigation O02 — [#368](https://github.com/hangndat/ticket-solution/issues/368)–[#371](https://github.com/hangndat/ticket-solution/issues/371). Ready queue / wave tiếp theo theo INDEX §5, không theo bảng PR-*/UX-* stale-as-open trong file này.
+
 **Verdict điều phối (recommendation):** **Chưa pilot ready · chưa production ready.** Nhiều Issue D0–D10 (+ nhiều slice D11) **acceptance complete** trên board; còn gap policy/ops/security/public-SoT. Mục tiêu user = hướng production — **không** đồng nghĩa đã được phép deploy.
 
 ---

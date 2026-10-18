@@ -10,6 +10,8 @@
 | Runtime destructive / prod auth | **Không** (chỉ HEAD công khai `/` và `/privacy` lúc audit gốc) |
 | Phạm vi sửa | Chỉ file này |
 
+> **Errata (2026-10-18, [#373](https://github.com/hangndat/ticket-solution/issues/373)):** Snapshot research này **stale một phần**. Nguồn quyết định hiện tại: [`GAP-AUDIT-2026-10-18-INDEX.md`](../reviews/GAP-AUDIT-2026-10-18-INDEX.md) (+ [`GAP-AUDIT-2026-10-18-SECURITY.md`](../reviews/GAP-AUDIT-2026-10-18-SECURITY.md)). **Không còn mở như claim cũ:** O06 **đã chốt**; `GET https://vemoki.com/privacy` → **HTTP 200**; D11 / [#254](https://github.com/hangndat/ticket-solution/issues/254) **đã đóng**. **Còn mở:** Navigation O02 / privilege signaling — [#368](https://github.com/hangndat/ticket-solution/issues/368)–[#371](https://github.com/hangndat/ticket-solution/issues/371). Không coi privacy 404 / O06 mở là P0 hiện tại.
+
 **Verdict:** **Chưa pilot / production ready.** P0 còn lại đã chứng minh: **O06 mở**, **`/privacy` 404**. S03 Gate BFF thiếu Origin/CSRF guard trên `origin/main` là **fact code**; **không** nâng thành confirmed CSRF exploit (xem §3 S03). MFA/platform step-up là **gate bắt buộc đã approved** — chỉ còn việc chứng minh IdP runtime, không hỏi lại user.
 
 Audit readiness độc lập — **không thay** exact-SHA DoD/security từng PR.
