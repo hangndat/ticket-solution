@@ -37,7 +37,7 @@ User giao mở rộng MVP, đẩy mạnh UX/UI và yêu cầu BA (`product-ba`) 
 | ADR-11 | **Cấm SaaS runtime**; self-host stack | Postgres/Redis/Keycloak/MinIO/SMTP trên Compose → VPS; **không** Clerk/Auth0/SendGrid/Resend/Expo Push/CDN SaaS/managed DB | Ngoại lệ: Apple App Store / APNs; registrar DNS + Let's Encrypt; GitHub tooling (không runtime) |
 | ADR-12 | Push qua **APNs trực tiếp** từ worker | Không Expo Push Service (`exp.host`) | Device token lưu DB; adapter tách transport |
 | ADR-13 | Email qua **SMTP adapter** | Dev: Mailpit; prod: Postal hoặc Postfix trên VPS | Không transactional SaaS |
-| ADR-14 | Object storage **MinIO** (S3-compatible) | Compose local; cùng image trên VPS | Signed URL ngắn hạn |
+| ADR-14 | Object storage **S3-compatible self-host** (MinIO API) | Image: `cleanstart/minio@sha256:4febd64f…` (O1 2026-10-18; official Hub/Quay unpullable) | Signed URL ngắn hạn; init `amazon/aws-cli` |
 | ADR-15 | Admission / waiting room trên **Caddy hoặc nginx** | Rate-limit + token admission ký; Gate không đi qua layer này | Không Cloudflare Waiting Room |
 | ADR-16 | VPS đầu: nginx có sẵn + image runtime mỏng, app mount từ đĩa host | pnpm store cùng mount với source để hard link. Redirect web dùng `PUBLIC_WEB_ORIGIN` / Host do nginx ghi đè — không tin client `X-Forwarded-*` thô; không bind `0.0.0.0` trong Location | Xem [infra/deploy/README.md](../infra/deploy/README.md). SMTP prod (ADR-13) vẫn để sau |
 | ADR-17 | **MVP queue: leased PG outbox + worker poll trực tiếp** (không BullMQ trong MVP) | Bổ sung/đối chiếu ADR-04: Redis không nguồn chuẩn job; crash reclaim bằng lease; cân nhắc BullMQ sau benchmark | Chi tiết [ops/ADR-17-OUTBOX-PG-DIRECT.md](./ops/ADR-17-OUTBOX-PG-DIRECT.md); recovery `./scripts/rint-outbox-recovery.sh` |

@@ -29,6 +29,8 @@ Production thiếu SMTP → notification FAILED/PENDING/misconfigured rõ (N-BE)
 
 Buckets private; không public anonymous. Signed URL ngắn hạn do app cấp.
 
+**Image (O1, 2026-10-18):** Compose pin `cleanstart/minio@sha256:4febd64f…` (official `minio/minio` / `minio/mc` không còn anonymous pull). Init bucket: `amazon/aws-cli` one-shot — xem `docs/architecture/object-store-minio-replacement.md`.
+
 Demo media seed (D9-S2): `./scripts/d9-seed-media.sh` — checklist `MEDIA-ASSET-CHECKLIST.md`, manifest `brand/demo/manifest.json`.
 
 ## 3. APNs (ADR-12)
