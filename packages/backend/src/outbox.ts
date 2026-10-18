@@ -21,6 +21,7 @@ import {
   renderCredentialQrPng,
 } from './qr-ticket';
 import {
+  buildGuestInvitationClaimLink,
   buildInviteAcceptLink,
   buildOwnerTicketLink,
 } from './web-links';
@@ -140,6 +141,109 @@ export async function processClaimedOutbox(
         });
         metricsInc('notification_provider_total', {
           channel: 'email_invite',
+          result: 'accepted',
+        });
+        completed += 1;
+        metricsInc('outbox_jobs_total', { result: 'completed' });
+        continue;
+      }
+
+      // Token storage only — claim recovery reads payload regardless of status.
+      // Do not send mail here; InvitationReady is the dispatch/mail event.
+      if (row.type === 'InvitationTokenMinted') {
+        await withTenant(db, row.tenant_id, async (tx) => {
+          await tx.$executeRaw`
+            UPDATE outbox
+            SET status = 'PROCESSING', updated_at = now()
+            WHERE tenant_id = ${row.tenant_id}::uuid
+              AND id = ${row.outbox_id}::uuid
+              AND status = 'LEASED'
+          `;
+          await markOutboxCompleteFenced(tx, row, options.leaseOwner);
+        });
+        completed += 1;
+        metricsInc('outbox_jobs_total', { result: 'completed' });
+        continue;
+      }
+
+      if (row.type === 'InvitationReady') {
+        await withTenant(db, row.tenant_id, async (tx) => {
+          await tx.$executeRaw`
+            UPDATE outbox
+            SET status = 'PROCESSING', updated_at = now()
+            WHERE tenant_id = ${row.tenant_id}::uuid
+              AND id = ${row.outbox_id}::uuid
+              AND status = 'LEASED'
+          `;
+        });
+        const readyRows = await withTenant(db, row.tenant_id, async (tx) =>
+          tx.$queryRaw<
+            Array<{
+              payload: Prisma.JsonValue;
+              event_id: string | null;
+            }>
+          >`
+            SELECT payload, event_id FROM outbox
+            WHERE tenant_id = ${row.tenant_id}::uuid
+              AND id = ${row.outbox_id}::uuid
+          `,
+        );
+        const readyPayload = (readyRows[0]?.payload ?? {}) as {
+          invitationId?: string;
+          email?: string;
+          token?: string;
+          ttlHours?: number;
+        };
+        const eventId = readyRows[0]?.event_id ?? row.event_id ?? '';
+        if (!email.sendGuestInvitation) {
+          throw new Error('guest_invitation_email_unsupported');
+        }
+        const claimToken = readyPayload.token ?? '';
+        if (!claimToken || !(readyPayload.email ?? '').trim() || !eventId) {
+          throw new Error('guest_invitation_payload_incomplete');
+        }
+
+        const meta = await withTenant(db, row.tenant_id, async (tx) => {
+          const events = await tx.$queryRaw<
+            Array<{ name: string; slug: string }>
+          >`
+            SELECT name, slug FROM events
+            WHERE tenant_id = ${row.tenant_id}::uuid
+              AND id = ${eventId}::uuid
+          `;
+          const tenants = await tx.$queryRaw<Array<{ slug: string }>>`
+            SELECT slug FROM tenants WHERE id = ${row.tenant_id}::uuid
+          `;
+          return {
+            eventName: events[0]?.name ?? '',
+            eventSlug: events[0]?.slug ?? '',
+            tenantSlug: tenants[0]?.slug ?? '',
+          };
+        });
+
+        const claimUrl = buildGuestInvitationClaimLink({
+          publicWebBaseUrl,
+          token: claimToken,
+          tenantId: row.tenant_id,
+          eventId,
+          tenantSlug: meta.tenantSlug || undefined,
+          eventSlug: meta.eventSlug || undefined,
+        });
+        await email.sendGuestInvitation({
+          tenantId: row.tenant_id,
+          eventId,
+          invitationId: readyPayload.invitationId ?? row.aggregate_id,
+          toEmail: readyPayload.email ?? '',
+          token: claimToken,
+          claimUrl,
+          eventName: meta.eventName || undefined,
+          ttlHours: readyPayload.ttlHours,
+        });
+        await withTenant(db, row.tenant_id, async (tx) => {
+          await markOutboxCompleteFenced(tx, row, options.leaseOwner);
+        });
+        metricsInc('notification_provider_total', {
+          channel: 'email_guest_invite',
           result: 'accepted',
         });
         completed += 1;
@@ -813,7 +917,7 @@ export async function relayOutboxOnce(
     options?.credentialKeyMaterial?.trim() ||
     process.env['TICKET_CREDENTIAL_KEY']?.trim() ||
     '';
-  // TicketIssued needs credential key for QR; MembershipInvite must not stall on it.
+  // TicketIssued needs credential key for QR; invite types must not stall on it.
   if (credentialKeyMaterial.length < 16) {
     const needsCredential = claimed.filter((r) => r.type === 'TicketIssued');
     const invitesOnly = claimed.filter((r) => r.type !== 'TicketIssued');
@@ -843,7 +947,8 @@ export async function relayOutboxOnce(
         failed: needsCredential.length,
       };
     }
-    // Process non-TicketIssued (e.g. MembershipInvite) without credential key.
+    // Process non-TicketIssued (MembershipInvite / InvitationReady / TokenMinted)
+    // without credential key.
     const inviteOpts: ProcessOutboxOptions = {
       credentialKeyMaterial: '',
       leaseOwner,

@@ -31,6 +31,8 @@ const {
   IMPORT_ERROR_CODES,
   AuthzError,
   importRedemptionCodes,
+  relayOutboxOnce,
+  createNoopEmailAdapter,
 } = require('../dist');
 
 const docker = (...args) =>
@@ -600,6 +602,81 @@ test(
       });
       assert.ok(mintedAda.token);
       assert.ok(!JSON.stringify(listed).includes(mintedAda.token));
+
+      // Issue #495 — worker mail: InvitationTokenMinted COMPLETE (no-op);
+      // InvitationReady sends guest invitation email (not dead-letter).
+      const sentGuest = [];
+      const email = createNoopEmailAdapter();
+      email.sendGuestInvitation = async (payload) => {
+        sentGuest.push({
+          invitationId: payload.invitationId,
+          toEmail: payload.toEmail,
+          claimUrl: payload.claimUrl,
+          hasToken: Boolean(payload.token),
+        });
+        return {
+          providerRef: `test-guest:${payload.invitationId}`,
+          providerStatus: 'ACCEPTED',
+        };
+      };
+      let relayed = { claimed: 0, completed: 0, failed: 0 };
+      for (let i = 0; i < 5; i++) {
+        const tick = await relayOutboxOnce(
+          db,
+          email,
+          `import-inv-relay-${i}`,
+          20,
+          {
+            credentialKeyMaterial: CRED,
+            publicWebBaseUrl: 'https://app.vemoki.com',
+            env: { NODE_ENV: 'test', PUBLIC_WEB_BASE_URL: 'https://app.vemoki.com' },
+          },
+        );
+        relayed = {
+          claimed: relayed.claimed + tick.claimed,
+          completed: relayed.completed + tick.completed,
+          failed: relayed.failed + tick.failed,
+        };
+        if (tick.claimed === 0) break;
+      }
+      assert.ok(relayed.completed >= 4, 'minted + ready rows should complete');
+      assert.equal(relayed.failed, 0);
+      assert.equal(sentGuest.length, 2);
+      for (const sent of sentGuest) {
+        assert.equal(sent.hasToken, true);
+        assert.match(sent.claimUrl, /^https:\/\/app\.vemoki\.com\/claim#/);
+        assert.match(sent.claimUrl, /token=/);
+        assert.match(sent.claimUrl, /tenantId=/);
+        assert.match(sent.claimUrl, /eventId=/);
+        assert.ok(!sent.claimUrl.includes('?'));
+      }
+      const outboxAfterRelay = await withTenant(db, tenantA, async (tx) => {
+        const rows = await tx.$queryRaw`
+          SELECT type, status, payload->>'email' AS email
+          FROM outbox
+          WHERE tenant_id = ${tenantA}::uuid
+            AND type IN ('InvitationTokenMinted', 'InvitationReady')
+          ORDER BY type, email
+        `;
+        return rows;
+      });
+      assert.equal(outboxAfterRelay.length, 4);
+      for (const row of outboxAfterRelay) {
+        assert.equal(row.status, 'COMPLETE');
+      }
+      // Payload retained after COMPLETE so claim can still use minted token.
+      const mintedAfterRelay = await withTenant(db, tenantA, async (tx) => {
+        const rows = await tx.$queryRaw`
+          SELECT payload FROM outbox
+          WHERE tenant_id = ${tenantA}::uuid
+            AND type = 'InvitationTokenMinted'
+            AND payload->>'email' = 'ada@example.com'
+          ORDER BY created_at
+          LIMIT 1
+        `;
+        return rows[0].payload;
+      });
+      assert.equal(mintedAfterRelay.token, mintedAda.token);
 
       // H-I3 — email not verified (attendee host gate)
       await assert.rejects(

@@ -44,12 +44,28 @@ export type MembershipInviteEmailPayload = {
   acceptUrl?: string;
 };
 
+export type GuestInvitationEmailPayload = {
+  tenantId: string;
+  eventId: string;
+  invitationId: string;
+  toEmail: string;
+  /** Raw claim token — encrypted delivery only; never log. */
+  token: string;
+  /** Absolute claim URL (token in fragment). Never log. */
+  claimUrl: string;
+  eventName?: string;
+  ttlHours?: number;
+};
+
 export type EmailAdapter = {
   sendTicketIssued(
     payload: TicketIssuedEmailPayload,
   ): Promise<EmailSendResult>;
   sendMembershipInvite?(
     payload: MembershipInviteEmailPayload,
+  ): Promise<EmailSendResult>;
+  sendGuestInvitation?(
+    payload: GuestInvitationEmailPayload,
   ): Promise<EmailSendResult>;
 };
 
@@ -68,6 +84,12 @@ export function createNoopEmailAdapter(): EmailAdapter {
         providerStatus: 'ACCEPTED',
       };
     },
+    async sendGuestInvitation(payload) {
+      return {
+        providerRef: `noop-guest-invite:${payload.invitationId}`,
+        providerStatus: 'ACCEPTED',
+      };
+    },
   };
 }
 
@@ -80,6 +102,9 @@ export function createFailingEmailAdapter(
       throw new Error(message);
     },
     async sendMembershipInvite() {
+      throw new Error(message);
+    },
+    async sendGuestInvitation() {
       throw new Error(message);
     },
   };
@@ -183,6 +208,39 @@ export function createSmtpEmailAdapter(
           ? `Mở liên kết để chấp nhận: ${acceptUrl}`
           : 'Thiếu PUBLIC_WEB_BASE_URL — không tạo được link accept (worker misconfigured).',
       ].join('\n');
+      const providerRef = await sendMailViaSmtp({
+        smtpUrl,
+        from,
+        to: payload.toEmail.trim(),
+        subject,
+        body,
+      });
+      return { providerRef, providerStatus: 'ACCEPTED' };
+    },
+    async sendGuestInvitation(payload) {
+      if (!payload.toEmail?.trim()) {
+        throw new Error('guest invitation recipient email is missing');
+      }
+      const from = options.fromAddress ?? 'tickets@localhost';
+      const eventLabel = payload.eventName?.trim() || 'sự kiện';
+      const subject = `Lời mời tham dự — ${eventLabel}`;
+      const claimUrl = payload.claimUrl?.trim() ?? '';
+      const bodyLines = [
+        `Bạn được mời tham dự ${eventLabel}.`,
+        `Invitation: ${payload.invitationId}`,
+      ];
+      if (payload.ttlHours != null) {
+        bodyLines.push(
+          `Liên kết có hiệu lực khoảng ${payload.ttlHours} giờ kể từ khi tạo.`,
+        );
+      }
+      bodyLines.push(
+        '',
+        claimUrl.startsWith('http')
+          ? `Mở liên kết để nhận vé (đăng nhập bằng email đã mời): ${claimUrl}`
+          : 'Thiếu PUBLIC_WEB_BASE_URL — không tạo được link claim (worker misconfigured).',
+      );
+      const body = bodyLines.join('\n');
       const providerRef = await sendMailViaSmtp({
         smtpUrl,
         from,
