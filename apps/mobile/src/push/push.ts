@@ -1,5 +1,5 @@
 /** Shown when no push provider is configured. Never a delivery receipt. */
-export const PUSH_NOT_CONFIGURED = 'Push is not configured';
+export const PUSH_NOT_CONFIGURED = 'Chưa cấu hình thông báo';
 
 export type PushNotification = {
   id: string;
@@ -64,22 +64,22 @@ export function pushUiCopy(provider: string | null): {
   if (!provider) {
     return {
       title: PUSH_NOT_CONFIGURED,
-      body: 'No push provider is configured. Notifications are not delivered.',
-      announcement: `${PUSH_NOT_CONFIGURED}. Notifications are not delivered.`,
+      body: 'Ứng dụng chưa bật kênh thông báo. Bạn sẽ không nhận nhắc trên thiết bị.',
+      announcement: `${PUSH_NOT_CONFIGURED}. Không nhận thông báo trên thiết bị.`,
     };
   }
   if (isApnsProvider(provider)) {
     return {
-      title: 'APNs client configured',
-      body: 'This build registers a native APNs device token only. Delivery is via the self-hosted worker (not Expo Push). A token is not a delivery receipt.',
+      title: 'Thông báo trên thiết bị',
+      body: 'Bạn có thể bật nhận thông báo trên máy này sau khi đăng nhập. Bật thông báo không đồng nghĩa đã gửi tin thành công.',
       announcement:
-        'APNs client configured. Device token registration only. Not delivered.',
+        'Thông báo trên thiết bị. Chỉ đăng ký nhận tin — chưa phải xác nhận đã gửi.',
     };
   }
   return {
-    title: 'Push is not delivered',
-    body: 'A provider name is set, but this build does not send notifications.',
-    announcement: 'Push is not delivered.',
+    title: 'Không gửi thông báo',
+    body: 'Bản dựng này chưa gửi thông báo tới thiết bị.',
+    announcement: 'Không gửi thông báo.',
   };
 }
 

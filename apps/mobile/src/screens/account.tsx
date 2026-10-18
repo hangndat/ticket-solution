@@ -70,22 +70,16 @@ function ActionButton({
 
 export function AccountScreen() {
   const configured = isOidcConfigured();
-  const identity = useSyncExternalStore(
-    session.subscribe,
-    session.getSnapshot,
-    session.getSnapshot,
-  );
 
   if (!configured) {
     return (
       <Page>
-        <Notice title="Chưa cấu hình OIDC">
-          Đặt EXPO_PUBLIC_OIDC_ISSUER và EXPO_PUBLIC_OIDC_CLIENT_ID (xem
-          .env.example). Không có Keycloak thì build giữ đăng xuất và không giả
-          lập user.
+        <Notice title="Chưa cấu hình đăng nhập">
+          Thiếu cấu hình đăng nhập trên bản dựng này. Ứng dụng giữ trạng thái
+          đăng xuất và không giả lập tài khoản.
         </Notice>
         <Text style={{ color: colors.secondary, fontSize: 15 }}>
-          Phiên: {identity.status}
+          Trạng thái: chưa đăng nhập
         </Text>
         <SessionScopedPushStatus />
         <PrivacyPolicyLink />
@@ -100,7 +94,6 @@ function ConfiguredAccount() {
   const [me, setMe] = useState<MeResponse | null>(null);
   const [meError, setMeError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [accessToken, setAccessToken] = useState<string | null>(null);
   const identity = useSyncExternalStore(
     session.subscribe,
     session.getSnapshot,
@@ -133,7 +126,7 @@ function ConfiguredAccount() {
       if (!token || !epoch) {
         setMe(null);
         setMeError(
-          'Không có bearer đã xác minh trong SessionBoundary. Hiển thị offline không được gọi GET /v1/me.',
+          'Chưa có phiên đã xác minh. Đăng nhập lại khi có mạng — chế độ xem offline không tải hồ sơ.',
         );
         return;
       }
@@ -142,12 +135,11 @@ function ConfiguredAccount() {
       if (!result || result.userId !== epoch.userId) {
         setMe(null);
         setMeError(
-          'GET /v1/me thất bại hoặc body không hợp lệ. Kiểm tra EXPO_PUBLIC_API_BASE_URL và Nest JWT verifier.',
+          'Không tải được hồ sơ tài khoản. Kiểm tra kết nối rồi thử lại.',
         );
         return;
       }
       setMe(result);
-      setAccessToken(token);
     } finally {
       setBusy(false);
     }
@@ -175,7 +167,6 @@ function ConfiguredAccount() {
       const bindingEpoch = captureOfflineBindingEpoch();
       const result = await loginWithKeycloak();
       if (!result.ok) {
-        setAccessToken(null);
         setMeError(result.reason);
         return;
       }
@@ -183,15 +174,13 @@ function ConfiguredAccount() {
       const snap = session.getSnapshot();
       if (snap.status !== 'verified') {
         // Unreachable establish still persists the bearer; do not pretend signed-in.
-        setAccessToken(null);
         setMeError(
           getApiBaseUrl()
-            ? 'OIDC ok nhưng GET /v1/me chưa xác minh (mạng/API). Thử lại khi online — token đã giữ trong SecureStore.'
-            : 'OIDC ok nhưng thiếu EXPO_PUBLIC_API_BASE_URL (bake Release). Không xác minh được phiên.',
+            ? 'Đăng nhập xong nhưng chưa xác minh hồ sơ (mạng hoặc máy chủ). Thử lại khi có mạng.'
+            : 'Đăng nhập xong nhưng bản dựng thiếu địa chỉ API. Không xác minh được phiên.',
         );
         return;
       }
-      setAccessToken(result.accessToken);
       const tenantId = getTenantId();
       if (tenantId) {
         await bindIfStillVerified({
@@ -204,7 +193,7 @@ function ConfiguredAccount() {
       }
     } catch (error) {
       setMeError(
-        error instanceof Error ? error.message : 'Đăng nhập Keycloak thất bại.',
+        error instanceof Error ? error.message : 'Đăng nhập thất bại.',
       );
     } finally {
       setBusy(false);
@@ -223,36 +212,37 @@ function ConfiguredAccount() {
       (offline.status === 'bound' ? offline.tenantId : null);
     try {
       await logoutAndClearWalletArtifacts({ userId, tenantId });
-      setAccessToken(null);
       await endKeycloakSession();
     } catch (error) {
       setMeError(
         error instanceof Error
           ? error.message
-          : 'Đăng xuất thất bại khi xóa SecureStore / bộ đệm vé.',
+          : 'Đăng xuất thất bại khi xóa dữ liệu cục bộ.',
       );
     } finally {
       setBusy(false);
     }
   }, [offline, verifiedUserId]);
 
+  const sessionLabel = isSignedIn
+    ? 'Đã đăng nhập'
+    : offline.status === 'bound'
+      ? 'Xem offline (chưa xác minh phiên)'
+      : 'Chưa đăng nhập';
+
   return (
     <Page>
       <Notice title="Tài khoản">
-        Đăng nhập Keycloak (PKCE). Danh tính app chỉ xác minh sau GET /v1/me —
-        không chỉ từ JWT local.
+        Đăng nhập để xem vé và bật thông báo. Danh tính chỉ xác minh sau khi máy
+        chủ xác nhận hồ sơ — không chỉ từ token lưu trên máy.
       </Notice>
 
       <Text style={{ color: colors.secondary, fontSize: 15, lineHeight: 22 }}>
-        Bearer: {accessToken ? 'có' : 'không'}
-        {'\n'}
-        Phiên: {identity.status}
-        {verifiedUserId ? ` (${verifiedUserId})` : ''}
-        {'\n'}
-        Offline:{' '}
-        {offline.status === 'bound'
-          ? `đã liên kết (${offline.userId})`
-          : offline.status}
+        Trạng thái: {sessionLabel}
+        {visibleMe?.email ? `\nEmail: ${visibleMe.email}` : ''}
+        {visibleMe
+          ? `\nEmail đã xác minh: ${visibleMe.emailVerified ? 'có' : 'chưa'}`
+          : ''}
       </Text>
 
       <View style={{ gap: 12 }}>
@@ -265,7 +255,7 @@ function ConfiguredAccount() {
         ) : (
           <>
             <ActionButton
-              label="Làm mới GET /v1/me"
+              label="Làm mới hồ sơ"
               onPress={() => void refreshMe()}
               disabled={busy || identity.status !== 'verified'}
             />
@@ -293,20 +283,6 @@ function ConfiguredAccount() {
 
       {meError ? <Notice title="Yêu cầu thất bại">{meError}</Notice> : null}
 
-      {visibleMe ? (
-        <Notice title="GET /v1/me">
-          userId: {visibleMe.userId}
-          {'\n'}
-          subject: {visibleMe.subject}
-          {'\n'}
-          issuer: {visibleMe.issuer}
-          {'\n'}
-          email: {visibleMe.email ?? '(none)'}
-          {'\n'}
-          emailVerified: {visibleMe.emailVerified ? 'true' : 'false'}
-        </Notice>
-      ) : null}
-
       <SessionScopedPushStatus />
 
       <PrivacyPolicyLink />
@@ -316,8 +292,8 @@ function ConfiguredAccount() {
       ) : null}
 
       <Notice title="Không phải quyền nhân viên">
-        Phiên đã xác minh không cấp quyền staff, membership tenant hay sự kiện.
-        Các quyền đó đến từ kiểm tra membership trên API.
+        Đăng nhập không tự cấp quyền nhân viên hay quản lý tổ chức. Các quyền đó
+        do máy chủ kiểm tra riêng.
       </Notice>
     </Page>
   );
@@ -351,9 +327,7 @@ function PrivacyPolicyLink() {
         onPress={() => void onOpen()}
       />
       <Text style={{ color: colors.secondary, fontSize: 13, lineHeight: 18 }}>
-        Mở trang Chính sách quyền riêng tư công khai (VI/EN). / Opens the public
-        Privacy Policy page.{'\n'}
-        {PRIVACY_POLICY_URL}
+        Mở trang Chính sách quyền riêng tư công khai.
       </Text>
       {error ? <Notice title="Không mở được liên kết">{error}</Notice> : null}
     </View>
