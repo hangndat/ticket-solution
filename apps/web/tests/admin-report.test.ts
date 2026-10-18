@@ -5,9 +5,17 @@ import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import {
   EVENT_REPORT_OPENAPI_PATH,
+  REPORT_EMAIL_CS_CTA_LABEL,
+  REPORT_EMAIL_CS_SECTION_ID,
+  REPORT_PENDING_APPROVAL_CTA_LABEL,
+  REPORT_PENDING_APPROVAL_SECTION_ID,
   REPORT_UNKNOWN,
+  formatQuotaCapacityState,
+  formatQuotaRemaining,
   interpretEventReport,
+  reportShowsEmailCsCta,
   reportShowsNumbers,
+  reportShowsPendingApprovalCta,
   reportUpstreamPath,
 } from '../src/admin/report';
 
@@ -15,31 +23,94 @@ const current = {
   eventId: '22222222-2222-4222-8222-222222222222',
   ticketsByState: { ACTIVE: 4, REVOKED: 1, CANCELLED: 0, USED: 2 },
   quota: { capacity: 10, allocated: 7 },
+  quotaRemaining: 3,
+  quotaCapacityState: 'FINITE' as const,
   pendingApprovalCount: 3,
+  checkInSuccessCount: 2,
+  rejectByReason: { ALREADY_CHECKED_IN: 1, TICKET_NOT_ACTIVE: 2 },
+  emailNeedsCsCount: 1,
+  asOf: '2026-10-18T01:00:00.000Z',
 };
 
 describe('interpretEventReport', () => {
-  it('shows ticket, quota, and pending counts only for a complete 200', () => {
+  it('shows O12 counts only for a complete 200', () => {
     const shown = interpretEventReport(200, current, false);
     assert.equal(reportShowsNumbers(shown), true);
     assert.deepEqual(shown, {
       kind: 'shown',
       ticketsByState: { ACTIVE: 4, REVOKED: 1, CANCELLED: 0, USED: 2 },
       quota: { capacity: 10, allocated: 7 },
+      quotaRemaining: 3,
+      quotaCapacityState: 'FINITE',
       pendingApprovalCount: 3,
+      checkInSuccessCount: 2,
+      rejectByReason: { ALREADY_CHECKED_IN: 1, TICKET_NOT_ACTIVE: 2 },
+      emailNeedsCsCount: 1,
+      asOf: '2026-10-18T01:00:00.000Z',
     });
     assert.deepEqual(
       interpretEventReport(
         200,
-        { ...current, quota: { capacity: null, allocated: 0 } },
+        {
+          ...current,
+          quota: { capacity: null, allocated: 0 },
+          quotaRemaining: null,
+          quotaCapacityState: 'UNLIMITED',
+          rejectByReason: {},
+          emailNeedsCsCount: 0,
+          checkInSuccessCount: 0,
+        },
         false,
       ),
       {
         kind: 'shown',
         ticketsByState: current.ticketsByState,
         quota: { capacity: null, allocated: 0 },
+        quotaRemaining: null,
+        quotaCapacityState: 'UNLIMITED',
         pendingApprovalCount: 3,
+        checkInSuccessCount: 0,
+        rejectByReason: {},
+        emailNeedsCsCount: 0,
+        asOf: current.asOf,
       },
+    );
+    assert.equal(
+      interpretEventReport(
+        200,
+        {
+          ...current,
+          quota: { capacity: null, allocated: 0 },
+          quotaRemaining: null,
+          quotaCapacityState: 'MISSING_BUCKET',
+        },
+        false,
+      ).kind,
+      'shown',
+    );
+  });
+
+  it('rejects FINITE without remaining and non-null remaining for UNLIMITED', () => {
+    assert.equal(
+      interpretEventReport(
+        200,
+        { ...current, quotaRemaining: null, quotaCapacityState: 'FINITE' },
+        false,
+      ).kind,
+      'unknown',
+    );
+    assert.equal(
+      interpretEventReport(
+        200,
+        {
+          ...current,
+          quota: { capacity: null, allocated: 0 },
+          quotaRemaining: 0,
+          quotaCapacityState: 'UNLIMITED',
+        },
+        false,
+      ).kind,
+      'unknown',
     );
   });
 
@@ -48,7 +119,10 @@ describe('interpretEventReport', () => {
       ...current,
       ticketsByState: { ACTIVE: 917, REVOKED: 918, CANCELLED: 919, USED: 920 },
       quota: { capacity: 921, allocated: 922 },
+      quotaRemaining: 924,
       pendingApprovalCount: 923,
+      checkInSuccessCount: 925,
+      emailNeedsCsCount: 926,
       attendeeEmail: 'guest@example.test',
     };
     for (const view of [
@@ -63,6 +137,7 @@ describe('interpretEventReport', () => {
       const encoded = JSON.stringify(view);
       assert.equal(encoded.includes('917'), false);
       assert.equal(encoded.includes('923'), false);
+      assert.equal(encoded.includes('925'), false);
       assert.equal(encoded.includes('guest@example.test'), false);
     }
   });
@@ -76,6 +151,18 @@ describe('interpretEventReport', () => {
     assert.equal(partial.kind, 'unknown');
     assert.equal(JSON.stringify(partial).includes('4'), false);
 
+    const missingO12 = interpretEventReport(
+      200,
+      {
+        eventId: current.eventId,
+        ticketsByState: current.ticketsByState,
+        quota: current.quota,
+        pendingApprovalCount: 3,
+      },
+      false,
+    );
+    assert.equal(missingO12.kind, 'unknown');
+
     const rejected = interpretEventReport(
       404,
       {
@@ -83,6 +170,7 @@ describe('interpretEventReport', () => {
         message: 'Event not found',
         ticketsByState: current.ticketsByState,
         pendingApprovalCount: 88,
+        checkInSuccessCount: 77,
         attendeeEmail: 'guest@example.test',
       },
       false,
@@ -94,21 +182,119 @@ describe('interpretEventReport', () => {
     });
     assert.equal(reportShowsNumbers(rejected), false);
     assert.equal(JSON.stringify(rejected).includes('88'), false);
+    assert.equal(JSON.stringify(rejected).includes('77'), false);
     assert.equal(
       JSON.stringify(rejected).includes('guest@example.test'),
       false,
     );
   });
 
-  it('forwards the OpenAPI report path', () => {
+  it('formats VI quota labels without inventing remaining 0', () => {
+    assert.equal(formatQuotaCapacityState('FINITE'), 'Hữu hạn');
+    assert.equal(formatQuotaCapacityState('UNLIMITED'), 'Không giới hạn');
+    assert.equal(formatQuotaCapacityState('MISSING_BUCKET'), 'Chưa có bucket');
+    assert.equal(formatQuotaRemaining(3, 'FINITE'), '3');
+    assert.equal(formatQuotaRemaining(null, 'UNLIMITED'), 'không áp dụng');
+    assert.equal(formatQuotaRemaining(null, 'MISSING_BUCKET'), 'không áp dụng');
+  });
+
+  it('shows P3 deep-link CTAs only when shown and count > 0', () => {
+    const shown = interpretEventReport(200, current, false);
+    assert.equal(reportShowsPendingApprovalCta(shown), true);
+    assert.equal(reportShowsEmailCsCta(shown), true);
+
+    const zeroPending = interpretEventReport(
+      200,
+      { ...current, pendingApprovalCount: 0, emailNeedsCsCount: 0 },
+      false,
+    );
+    assert.equal(reportShowsPendingApprovalCta(zeroPending), false);
+    assert.equal(reportShowsEmailCsCta(zeroPending), false);
+
+    const unknown = interpretEventReport(500, current, false);
+    assert.equal(reportShowsPendingApprovalCta(unknown), false);
+    assert.equal(reportShowsEmailCsCta(unknown), false);
+
+    const rejected = interpretEventReport(
+      403,
+      { code: 'FORBIDDEN', message: 'denied' },
+      false,
+    );
+    assert.equal(reportShowsPendingApprovalCta(rejected), false);
+    assert.equal(reportShowsEmailCsCta(rejected), false);
+  });
+
+  it('wires EventReport KPI deep-links to existing admin sections (no KPI approve/resend)', () => {
+    const root = join(dirname(fileURLToPath(import.meta.url)), '..');
+    const form = readFileSync(join(root, 'app/admin/admin-form.tsx'), 'utf8');
+    const numbersStart = form.indexOf('data-testid="event-report-numbers"');
+    const numbersEnd = form.indexOf('data-testid="event-report-unknown"');
+    assert.ok(numbersStart > 0 && numbersEnd > numbersStart);
+    const kpiBlock = form.slice(numbersStart, numbersEnd);
+
+    assert.ok(kpiBlock.includes('event-report-cta-pending-approval'));
+    assert.ok(kpiBlock.includes('REPORT_PENDING_APPROVAL_SECTION_ID'));
+    assert.ok(kpiBlock.includes('REPORT_PENDING_APPROVAL_CTA_LABEL'));
+    assert.ok(kpiBlock.includes('event-report-cta-email-cs'));
+    assert.ok(kpiBlock.includes('REPORT_EMAIL_CS_SECTION_ID'));
+    assert.ok(kpiBlock.includes('REPORT_EMAIL_CS_CTA_LABEL'));
+    assert.ok(kpiBlock.includes('reportShowsPendingApprovalCta'));
+    assert.ok(kpiBlock.includes('reportShowsEmailCsCta'));
+    // P3: deep-link only — no approve/deny/resend actions on the KPI card.
+    assert.equal(kpiBlock.includes('approveInvitation'), false);
+    assert.equal(kpiBlock.includes('denyInvitation'), false);
+    assert.equal(kpiBlock.includes('resendTicketEmail'), false);
+    assert.equal(kpiBlock.includes('/approve'), false);
+    assert.equal(kpiBlock.includes('/deny'), false);
+    assert.equal(kpiBlock.includes('/resend'), false);
+
+    assert.equal(REPORT_PENDING_APPROVAL_SECTION_ID, 'guests-codes-heading');
+    assert.equal(REPORT_EMAIL_CS_SECTION_ID, 'cs-heading');
+    assert.equal(
+      REPORT_PENDING_APPROVAL_CTA_LABEL,
+      'Đi tới duyệt khách và mã đang chờ',
+    );
+    assert.equal(
+      REPORT_EMAIL_CS_CTA_LABEL,
+      'Đi tới hỗ trợ tra cứu và gửi lại email',
+    );
+    assert.ok(
+      form.includes(`id="${REPORT_PENDING_APPROVAL_SECTION_ID}"`),
+    );
+    assert.ok(form.includes(`id="${REPORT_EMAIL_CS_SECTION_ID}"`));
+    assert.ok(form.includes('tabIndex={-1}'));
+    assert.ok(form.includes('goToAdminSection'));
+  });
+
+  it('forwards the OpenAPI report path and required O12 fields', () => {
     const root = join(dirname(fileURLToPath(import.meta.url)), '../../..');
     const openapi = JSON.parse(
       readFileSync(join(root, 'apps/api/openapi.json'), 'utf8'),
-    ) as { paths: Record<string, { get?: { operationId?: string } }> };
+    ) as {
+      paths: Record<string, { get?: { operationId?: string } }>;
+      components: {
+        schemas: {
+          EventReportDto: { required?: string[] };
+        };
+      };
+    };
     assert.equal(
       openapi.paths[EVENT_REPORT_OPENAPI_PATH]?.get?.operationId,
       'ReportController_report',
     );
+    for (const field of [
+      'quotaRemaining',
+      'quotaCapacityState',
+      'checkInSuccessCount',
+      'rejectByReason',
+      'emailNeedsCsCount',
+      'asOf',
+    ]) {
+      assert.ok(
+        openapi.components.schemas.EventReportDto.required?.includes(field),
+        `OpenAPI EventReportDto must require ${field}`,
+      );
+    }
     assert.equal(
       reportUpstreamPath({
         tenantId: '11111111-1111-4111-8111-111111111111',

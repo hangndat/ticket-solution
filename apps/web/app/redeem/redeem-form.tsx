@@ -103,6 +103,49 @@ export function RedeemForm({
     [],
   );
 
+  const loadSchema = useCallback(() => {
+    const generation = generationRef.current;
+    const slugTenant = tenantSlug.trim();
+    const slugEvent = eventSlug.trim();
+    startTransition(async () => {
+      setSchemaNotice('Đang tải biểu mẫu và điều khoản…');
+      const result = await loadPublishedRedeemSchema(slugTenant, slugEvent);
+      if (isStale(generation)) return;
+      if (result.status === 'ok') {
+        setFormDefinition(result.schema.form);
+        setTermsVersion(result.schema.terms?.version ?? null);
+        setTermsBody(result.schema.terms?.bodyMarkdown ?? null);
+        if (result.schema.eventId) setEventId(result.schema.eventId);
+        // AC-A4: never keep prior answers / silent terms accept after reload.
+        setAnswers({});
+        setTermsAccepted(false);
+        setFieldErrors({});
+        setSchemaNotice(
+          'Đã tải biểu mẫu mới. Điền lại và đồng ý điều khoản trước khi gửi.',
+        );
+        return;
+      }
+      setFormDefinition(null);
+      setTermsVersion(null);
+      setTermsBody(null);
+      setTermsAccepted(false);
+      setAnswers({});
+      if (result.status === 'not-found') {
+        setSchemaNotice(
+          'Không tìm thấy sự kiện đã xuất bản. Không dùng biểu mẫu demo.',
+        );
+        return;
+      }
+      if (result.status === 'unreachable') {
+        setSchemaNotice(
+          'Không tải được biểu mẫu sự kiện. Thử lại sau — không dùng bản demo.',
+        );
+        return;
+      }
+      setSchemaNotice('Biểu mẫu không hợp lệ hoặc thiếu mã sự kiện.');
+    });
+  }, [tenantSlug, eventSlug, isStale]);
+
   const applyDecision = useCallback(
     (next: RedeemDecision, generation: number, fingerprint?: string) => {
       if (isStale(generation)) return;
@@ -142,11 +185,27 @@ export function RedeemForm({
         return;
       }
       if (next.kind === 'stale') {
+        // AC-A4: clear prior consent/answers; soft-reload published form.
         setTicket(null);
         setAttempt(null);
-        setSchemaNotice(
-          'Form/terms đã đổi trên server — tải lại schema published và đồng ý lại.',
-        );
+        setTermsAccepted(false);
+        setAnswers({});
+        setFieldErrors({});
+        setFormDefinition(null);
+        setTermsVersion(null);
+        setTermsBody(null);
+        if (tenantSlug.trim() && eventSlug.trim()) {
+          setSchemaNotice(
+            'Biểu mẫu hoặc điều khoản đã đổi — đang tải lại. Bạn cần đồng ý lại trước khi gửi.',
+          );
+          queueMicrotask(() => {
+            loadSchema();
+          });
+        } else {
+          setSchemaNotice(
+            'Biểu mẫu hoặc điều khoản đã đổi — nhập đường dẫn tổ chức/sự kiện rồi bấm «Tải biểu mẫu» và đồng ý lại.',
+          );
+        }
         return;
       }
       if (next.kind === 'field_errors') {
@@ -162,7 +221,7 @@ export function RedeemForm({
       setTicket(null);
       setAttempt(null);
     },
-    [eventId, isStale],
+    [eventId, eventSlug, isStale, loadSchema, tenantSlug],
   );
 
   const runPoll = useCallback(
@@ -183,8 +242,9 @@ export function RedeemForm({
             setPolling(true);
             setUx({
               kind: 'polling',
-              title: 'Đang dò trạng thái thao tác…',
-              detail: `GET /api/bff/operations/${key} (command=redemption.redeem).`,
+              title: 'Đang kiểm tra lại…',
+              detail:
+                'Đang xác nhận kết quả đổi mã. Chưa phải vé cho đến khi có xác nhận.',
               retryable: true,
             });
           },
@@ -213,42 +273,6 @@ export function RedeemForm({
     },
     [applyDecision, isStale],
   );
-
-  function loadSchema() {
-    const generation = generationRef.current;
-    startTransition(async () => {
-      setSchemaNotice('Đang tải form/terms published…');
-      const result = await loadPublishedRedeemSchema(tenantSlug, eventSlug);
-      if (isStale(generation)) return;
-      if (result.status === 'ok') {
-        setFormDefinition(result.schema.form);
-        setTermsVersion(result.schema.terms?.version ?? null);
-        setTermsBody(result.schema.terms?.bodyMarkdown ?? null);
-        if (result.schema.eventId) setEventId(result.schema.eventId);
-        setAnswers({});
-        setTermsAccepted(false);
-        setFieldErrors({});
-        setSchemaNotice(
-          `Đã tải schema published v${result.schema.schemaVersion} / config v${result.schema.publishedConfigVersion}. Không nhập formVersion/termsVersion thủ công.`,
-        );
-        return;
-      }
-      setFormDefinition(null);
-      setTermsVersion(null);
-      setTermsBody(null);
-      if (result.status === 'not-found') {
-        setSchemaNotice('Không tìm thấy event published. Draft không được hiện.');
-        return;
-      }
-      if (result.status === 'unreachable') {
-        setSchemaNotice(
-          'Published API không tới được (live F-BE/public sau). Fail-closed — không dùng form demo.',
-        );
-        return;
-      }
-      setSchemaNotice('Published schema không hợp lệ hoặc thiếu slug.');
-    });
-  }
 
   function onSubmit(event: FormEvent) {
     event.preventDefault();
@@ -426,8 +450,8 @@ export function RedeemForm({
         setTickets(result.json as MeTicketsResponse);
         setUx({
           kind: 'success',
-          title: 'Danh sách vé (API thật)',
-          detail: `GET /v1/me/tickets?tenantId=… — ${(result.json as MeTicketsResponse)?.tickets?.length ?? 0} vé.`,
+          title: 'Vé của bạn',
+          detail: `Có ${(result.json as MeTicketsResponse)?.tickets?.length ?? 0} vé trong tổ chức đã chọn.`,
           retryable: false,
         });
       } else if (isApiError(result.json)) {
@@ -454,13 +478,13 @@ export function RedeemForm({
       <form onSubmit={onSubmit} aria-labelledby="redeem-form-title" noValidate>
         <h2 id="redeem-form-title">Đổi mã lấy vé</h2>
         <p className="intro">
-          Form/terms lấy từ projection published (không nhập version thủ công).
-          Pending ≠ vé; timeout giữ cùng idempotency-key.
+          Tải biểu mẫu sự kiện đã xuất bản, nhập mã và đồng ý điều khoản. Đang
+          chờ duyệt chưa phải vé; nếu chưa rõ kết quả, bấm «Kiểm tra lại».
         </p>
 
         <div className="redeem-fields">
           <label>
-            Tenant ID (UUID — scope mutation)
+            Mã tổ chức
             <input
               name="tenantId"
               required
@@ -472,7 +496,7 @@ export function RedeemForm({
             />
           </label>
           <label>
-            Event ID (UUID — tự điền khi tải published)
+            Mã sự kiện (tự điền khi tải biểu mẫu)
             <input
               name="eventId"
               required
@@ -485,7 +509,7 @@ export function RedeemForm({
           </label>
           <div className="redeem-versions">
             <label>
-              Tenant slug (published)
+              Đường dẫn tổ chức
               <input
                 name="tenantSlug"
                 value={tenantSlug}
@@ -495,7 +519,7 @@ export function RedeemForm({
               />
             </label>
             <label>
-              Event slug (published)
+              Đường dẫn sự kiện
               <input
                 name="eventSlug"
                 value={eventSlug}
@@ -510,7 +534,7 @@ export function RedeemForm({
             onClick={loadSchema}
             disabled={busy || !tenantSlug.trim() || !eventSlug.trim()}
           >
-            Tải form/terms published
+            Tải biểu mẫu
           </button>
           {schemaNotice ? (
             <SurfaceState
@@ -518,16 +542,16 @@ export function RedeemForm({
                 schemaNotice.startsWith('Đang tải')
                   ? 'loading'
                   : schemaNotice.startsWith('Không') ||
-                      schemaNotice.startsWith('Published')
+                      schemaNotice.startsWith('Biểu mẫu không')
                     ? 'error'
                     : 'empty'
               }
               title={
                 schemaNotice.startsWith('Đang tải')
-                  ? 'Đang tải form/terms…'
+                  ? 'Đang tải biểu mẫu…'
                   : schemaNotice.startsWith('Đã tải')
-                    ? 'Schema đã sẵn sàng'
-                    : 'Trạng thái schema'
+                    ? 'Biểu mẫu sẵn sàng'
+                    : 'Trạng thái biểu mẫu'
               }
               detail={schemaNotice}
               testId="redeem-schema-notice"
@@ -566,15 +590,15 @@ export function RedeemForm({
           ) : (
             <SurfaceState
               kind="empty"
-              title="Chưa có form published"
-              detail="Tải schema bằng slug tenant/event, hoặc sự kiện không yêu cầu field (chỉ mã + terms nếu có)."
+              title="Chưa có biểu mẫu"
+              detail="Tải biểu mẫu bằng đường dẫn tổ chức/sự kiện, hoặc sự kiện chỉ cần mã và điều khoản."
               testId="redeem-schema-empty"
             />
           )}
 
           {termsVersion ? (
             <fieldset className="redeem-terms">
-              <legend>Điều khoản ({termsVersion})</legend>
+              <legend>Điều khoản</legend>
               {termsBody ? (
                 <pre className="redeem-terms-body" tabIndex={0}>
                   {termsBody}
@@ -600,7 +624,7 @@ export function RedeemForm({
                     });
                   }}
                 />
-                <span>Tôi đồng ý với điều khoản published</span>
+                <span>Tôi đồng ý với điều khoản</span>
               </label>
               {fieldErrors.terms ? (
                 <p id="field-error-terms" className="redeem-field-error" role="alert">
@@ -613,10 +637,10 @@ export function RedeemForm({
 
         <div className="auth-buttons">
           <button type="submit" disabled={busy}>
-            {busy ? 'Đang xử lý…' : 'Đổi mã (API thật)'}
+            {busy ? 'Đang xử lý…' : 'Đổi mã lấy vé'}
           </button>
           <button type="button" onClick={pollAgain} disabled={!canRepoll}>
-            Dò lại trạng thái
+            Kiểm tra lại
           </button>
           <button
             type="button"
@@ -633,59 +657,85 @@ export function RedeemForm({
             Xem vé của tôi
           </button>
           <a className="button-link" href="/api/auth/login">
-            Đăng nhập Keycloak
+            Đăng nhập
           </a>
         </div>
       </form>
 
       {ux ? (
-        <section className={statusClass} aria-live="polite" role="status">
+        <section
+          className={statusClass}
+          aria-live={ux.kind === 'unknown' ? 'assertive' : 'polite'}
+          role="status"
+          data-testid={`redeem-ux-${ux.kind}`}
+        >
           <h3>{ux.title}</h3>
           <p>{ux.detail}</p>
-          {idempotencyKey ? (
-            <p className="redeem-meta">
-              idempotency-key: <code>{idempotencyKey}</code>
+          {ux.kind === 'unknown' && canRepoll ? (
+            <p>
+              <button type="button" onClick={pollAgain} disabled={!canRepoll}>
+                Kiểm tra lại
+              </button>
             </p>
           ) : null}
-          {decision?.kind === 'pending' ? (
-            <p className="redeem-meta">
-              pending requestId: <code>{decision.requestId}</code>
+          {ux.kind === 'auth' ? (
+            <p>
+              <a className="button" href="/api/auth/login">
+                Cần đăng nhập
+              </a>
             </p>
           ) : null}
+          {(idempotencyKey || decision?.kind === 'pending') && (
+            <details className="redeem-meta">
+              <summary>Chi tiết kỹ thuật</summary>
+              {idempotencyKey ? (
+                <p>
+                  Khóa thao tác: <code>{idempotencyKey}</code>
+                </p>
+              ) : null}
+              {decision?.kind === 'pending' ? (
+                <p>
+                  Mã yêu cầu: <code>{decision.requestId}</code>
+                </p>
+              ) : null}
+            </details>
+          )}
         </section>
       ) : null}
 
       {ticket?.ticketId ? (
-        <section className="redeem-ticket" aria-labelledby="ticket-title">
-          <h3 id="ticket-title">Vé từ API</h3>
+        <section
+          className="redeem-ticket"
+          aria-labelledby="ticket-title"
+          data-testid="redeem-ticket-card"
+        >
+          <h3 id="ticket-title">Vé của bạn</h3>
           <dl>
             <div>
-              <dt>ticketId</dt>
+              <dt>Mã vé</dt>
               <dd>{ticket.ticketId}</dd>
             </div>
             <div>
-              <dt>state</dt>
+              <dt>Trạng thái</dt>
               <dd>{ticket.state}</dd>
             </div>
-            <div>
-              <dt>requestId</dt>
-              <dd>{ticket.requestId}</dd>
-            </div>
-            <div>
-              <dt>replayed</dt>
-              <dd>{String(ticket.replayed)}</dd>
-            </div>
+            {ticket.requestId ? (
+              <div>
+                <dt>Mã yêu cầu</dt>
+                <dd>{ticket.requestId}</dd>
+              </div>
+            ) : null}
           </dl>
         </section>
       ) : null}
 
       {tickets?.tickets?.length ? (
         <section className="redeem-ticket-list" aria-labelledby="tickets-title">
-          <h3 id="tickets-title">Vé của tôi (tenant)</h3>
+          <h3 id="tickets-title">Vé của tôi</h3>
           <ul>
             {tickets.tickets.map((t) => (
               <li key={t.ticketId}>
-                <code>{t.ticketId}</code> · {t.state} · event {t.eventId}
+                <code>{t.ticketId}</code> · {t.state}
               </li>
             ))}
           </ul>
@@ -693,9 +743,12 @@ export function RedeemForm({
       ) : null}
 
       {raw ? (
-        <pre className="me-result" tabIndex={0}>
-          {raw}
-        </pre>
+        <details className="redeem-meta">
+          <summary>Phản hồi máy chủ (kỹ thuật)</summary>
+          <pre className="me-result" tabIndex={0}>
+            {raw}
+          </pre>
+        </details>
       ) : null}
     </div>
   );

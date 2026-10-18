@@ -24,6 +24,14 @@ import {
 } from '@/gate/gate-scan';
 import { GateCamera } from '@/gate/gate-camera';
 import {
+  announcementPhaseFor,
+  connectivityLabel,
+  presentGateOutcome,
+  presentQueueStatus,
+  sessionLabel,
+  shortId,
+} from '@/gate/gate-outcome-copy';
+import {
   offlineBannerCopy,
   probeConnectivity,
   type ConnectivityState,
@@ -48,7 +56,7 @@ async function resolveGateAuth(): Promise<
     return {
       ok: false,
       message:
-        'Thiếu EXPO_PUBLIC_API_BASE_URL (bake Release/TestFlight). Không cho vào.',
+        'Thiếu địa chỉ API (EXPO_PUBLIC_API_BASE_URL). Không cho vào.',
     };
   }
 
@@ -60,28 +68,72 @@ async function resolveGateAuth(): Promise<
   if (!bearer) {
     return {
       ok: false,
-      message: 'Đăng nhập staff (Account → Đăng nhập) trước khi quét. Không cho vào.',
+      message: 'Đăng nhập staff (Tài khoản → Đăng nhập) trước khi quét. Không cho vào.',
     };
   }
   return { ok: true, bearer, apiBase };
 }
 
-function outcomeTitle(op: GateOp | null): string {
-  if (!op) return 'Chờ mã';
-  if (op.phase === 'admitted') return 'Cho vào';
-  if (op.phase === 'queued') return 'Đã xếp hàng offline';
-  if (op.phase === 'unknown') return 'Chưa rõ — không cho vào';
-  return 'Không cho vào';
-}
+function OutcomeCanvas({
+  title,
+  detail,
+  tone,
+  checkinId,
+}: {
+  title: string;
+  detail: string;
+  tone: 'admit' | 'deny' | 'unknown' | 'default';
+  checkinId?: string;
+}) {
+  const accent =
+    tone === 'admit'
+      ? colors.admit
+      : tone === 'deny'
+        ? colors.deny
+        : tone === 'unknown'
+          ? colors.unknown
+          : colors.separator;
 
-function outcomeTone(
-  phase: GateOp['phase'] | undefined,
-): 'admit' | 'deny' | 'unknown' | 'default' {
-  if (phase === 'admitted') return 'admit';
-  if (phase === 'queued') return 'unknown';
-  if (phase === 'unknown') return 'unknown';
-  if (phase === 'denied') return 'deny';
-  return 'default';
+  return (
+    <View
+      style={{
+        minHeight: 168,
+        paddingVertical: 28,
+        paddingHorizontal: 20,
+        gap: 12,
+        backgroundColor: colors.card,
+        borderRadius: 16,
+        borderCurve: 'continuous',
+        borderLeftWidth: 6,
+        borderLeftColor: accent,
+        justifyContent: 'center',
+      }}
+    >
+      <Text
+        selectable
+        accessibilityRole="header"
+        style={{
+          color: colors.label,
+          fontSize: 34,
+          fontWeight: '700',
+          letterSpacing: -0.4,
+        }}
+      >
+        {title}
+      </Text>
+      <Text
+        selectable
+        style={{ color: colors.secondary, fontSize: 18, lineHeight: 26 }}
+      >
+        {detail}
+      </Text>
+      {checkinId ? (
+        <Text selectable style={{ color: colors.secondary, fontSize: 15 }}>
+          Mã check-in {shortId(checkinId, 12)}
+        </Text>
+      ) : null}
+    </View>
+  );
 }
 
 export function StaffScreen() {
@@ -187,7 +239,7 @@ export function StaffScreen() {
           staffSessionId: '',
           phase: 'denied',
           message:
-            'Phiên staff chưa verified — đăng nhập lại trước khi quét. Không cho vào.',
+            'Phiên staff chưa xác minh — đăng nhập lại trước khi quét. Không cho vào.',
         });
         return;
       }
@@ -289,31 +341,80 @@ export function StaffScreen() {
   });
 
   const recentQueue = queueSnap.items.slice(0, 8);
+  const outcome = presentGateOutcome(busy ? null : current);
+  const outcomeView = busy
+    ? {
+        kind: 'confirming' as const,
+        title: scanCopy.checking.title,
+        detail: scanCopy.checking.body,
+        tone: 'default' as const,
+        assertive: false,
+      }
+    : outcome;
+
+  const eventId = getEventId();
+  const tenantId = getTenantId();
+  const gateSessionLabel = sessionId
+    ? `Phiên cổng ${shortId(sessionId)}`
+    : 'Chưa mở phiên cổng';
 
   return (
     <Page>
       <BrandWordmark compact />
+
       <Notice title={banner.title} tone={banner.tone}>
         {banner.body}
       </Notice>
-      <Notice title="Quét cổng">
-        Quét hoặc dán QR hiển thị trên vé. Chỉ cho vào sau khi API ghi nhận
-        check-in. Offline: xếp hàng trên máy, đồng bộ khi có mạng — không cho vào
-        sớm. Phản hồi mất vẫn giữ “chưa rõ” sau khi mở lại app.
-        {'\n'}
-        API: {getApiBaseUrl() ?? 'chưa bake'} · Phiên: {session.getSnapshot().status}
-      </Notice>
+
+      <View
+        accessibilityRole="summary"
+        accessibilityLabel={`${scanCopy.contextHint.title}. ${connectivityLabel(connectivity)}. ${sessionLabel(identity.status)}. ${gateSessionLabel}.`}
+        style={{
+          padding: 16,
+          gap: 6,
+          backgroundColor: colors.card,
+          borderRadius: 14,
+          borderCurve: 'continuous',
+        }}
+      >
+        <Text style={{ color: colors.secondary, fontSize: 13, fontWeight: '600' }}>
+          {scanCopy.contextHint.title}
+        </Text>
+        <Text style={{ color: colors.label, fontSize: 17, fontWeight: '600' }}>
+          Sự kiện {shortId(eventId)} · Tổ chức {shortId(tenantId)}
+        </Text>
+        <Text style={{ color: colors.secondary, fontSize: 15, lineHeight: 22 }}>
+          {connectivityLabel(connectivity)} · {sessionLabel(identity.status)}
+          {'\n'}
+          {gateSessionLabel}
+          {sessionId ? '' : ' (cần online một lần trước khi xếp hàng offline)'}
+        </Text>
+      </View>
+
       {!ready ? (
         <LoadingState title={scanCopy.loadingStore.title}>
           {scanCopy.loadingStore.body}
         </LoadingState>
       ) : null}
-      <GateCamera disabled={busy || !ready} onScan={(data) => void submitScan(data)} />
+
+      <View style={{ gap: 8 }}>
+        <Text style={{ color: colors.secondary, fontSize: 13, fontWeight: '600' }}>
+          Vùng quét
+        </Text>
+        <GateCamera disabled={busy || !ready} onScan={(data) => void submitScan(data)} />
+        <Text style={{ color: colors.secondary, fontSize: 15, lineHeight: 22 }}>
+          Đưa mã QR vào khung hoặc dán mã bên dưới. Khi ngoại tuyến: xếp hàng trên
+          máy — chưa cho vào; không cam kết chống trùng giữa nhiều thiết bị trước
+          khi đồng bộ.
+        </Text>
+      </View>
+
       <TextInput
         testID="gate-scan-input"
         value={raw}
         onChangeText={setRaw}
-        placeholder="Dán JSON QR hoặc ticket id"
+        placeholder="Dán JSON QR hoặc mã vé"
+        accessibilityLabel="Mã vé hoặc JSON QR"
         autoCapitalize="none"
         autoCorrect={false}
         multiline
@@ -344,11 +445,13 @@ export function StaffScreen() {
         onFocus={() => setCheckInFocused(true)}
         onBlur={() => setCheckInFocused(false)}
         style={{
+          minHeight: 48,
           padding: 14,
           borderRadius: 12,
           backgroundColor: colors.accent,
           borderWidth: checkInFocused ? 2 : 0,
           borderColor: colors.focus,
+          justifyContent: 'center',
         }}
       >
         <Text
@@ -362,14 +465,29 @@ export function StaffScreen() {
           {busy ? 'Đang kiểm tra…' : 'Check-in'}
         </Text>
       </Pressable>
-      {busy ? (
-        <LoadingState title={scanCopy.checking.title}>
-          {scanCopy.checking.body}
-        </LoadingState>
-      ) : null}
-      {!busy && ready && !current ? (
-        <EmptyState title={scanCopy.idle.title}>{scanCopy.idle.body}</EmptyState>
-      ) : null}
+
+      <View
+        {...gateOutcomeAnnouncement({
+          phase: announcementPhaseFor(
+            busy ? 'confirming' : current?.phase,
+          ),
+          title: outcomeView.title,
+          message: outcomeView.detail,
+        })}
+        accessibilityLiveRegion={outcomeView.assertive ? 'assertive' : 'polite'}
+      >
+        {!busy && ready && !current ? (
+          <EmptyState title={scanCopy.idle.title}>{scanCopy.idle.body}</EmptyState>
+        ) : (
+          <OutcomeCanvas
+            title={outcomeView.title}
+            detail={outcomeView.detail}
+            tone={outcomeView.tone}
+            checkinId={busy ? undefined : current?.checkinId}
+          />
+        )}
+      </View>
+
       {queueSnap.pendingCount > 0 || queueSnap.conflictCount > 0 ? (
         <Pressable
           accessibilityRole="button"
@@ -377,65 +495,82 @@ export function StaffScreen() {
           accessibilityState={{ disabled: busy || queueSnap.syncing }}
           disabled={busy || queueSnap.syncing}
           onPress={() => void syncNow()}
-          style={{ padding: 14, borderRadius: 12, backgroundColor: colors.card }}
+          style={{
+            minHeight: 48,
+            padding: 14,
+            borderRadius: 12,
+            backgroundColor: colors.card,
+            justifyContent: 'center',
+          }}
         >
           <Text style={{ color: colors.label, fontSize: 17, textAlign: 'center' }}>
             {queueSnap.syncing ? 'Đang đồng bộ…' : 'Đồng bộ hàng đợi ngay'}
           </Text>
         </Pressable>
       ) : null}
-      {current ? (
-        <View
-          {...gateOutcomeAnnouncement({
-            phase: current.phase === 'queued' ? 'unknown' : current.phase,
-            title: outcomeTitle(current),
-            message: current.message,
-          })}
-          accessibilityLiveRegion={
-            current.phase === 'unknown' || current.phase === 'queued'
-              ? 'assertive'
-              : 'polite'
-          }
-        >
-          <Notice title={outcomeTitle(current)} tone={outcomeTone(current.phase)}>
-            {current.message}
-          </Notice>
-          {current.checkinId ? (
-            <Text selectable style={{ color: colors.secondary }}>
-              Check-in {current.checkinId}
-            </Text>
-          ) : null}
-        </View>
-      ) : null}
+
       {current && canReconcile(current) ? (
         <Pressable
           {...gateReconcileAnnouncement()}
           accessibilityState={{ disabled: busy }}
           disabled={busy}
           onPress={() => void reconcile()}
-          style={{ padding: 14, borderRadius: 12, backgroundColor: colors.card }}
+          style={{
+            minHeight: 48,
+            padding: 14,
+            borderRadius: 12,
+            backgroundColor: colors.card,
+            justifyContent: 'center',
+          }}
         >
           <Text style={{ color: colors.label, fontSize: 17, textAlign: 'center' }}>
             Đối soát kết quả chưa rõ
           </Text>
         </Pressable>
       ) : null}
+
       {recentQueue.length > 0 ? (
-        <Notice title="Hàng đợi offline / đồng bộ" tone="default">
-          Các mục dưới đây lưu trên máy (SecureStore). Trạng thái máy chủ quyết định
-          cho vào — bản thua xung đột không phải lượt vào.
-        </Notice>
+        <View style={{ gap: 12 }}>
+          <Notice title="Hàng đợi đồng bộ" tone="default">
+            Mục lưu trên máy. Trạng thái máy chủ quyết định cho vào —
+            DUPLICATE / CONFLICT / REJECTED không phải lượt vào mới.
+          </Notice>
+          {recentQueue.map((item) => {
+            const statusView = presentQueueStatus(item.localStatus);
+            const accent =
+              statusView.tone === 'admit'
+                ? colors.admit
+                : statusView.tone === 'deny'
+                  ? colors.deny
+                  : statusView.tone === 'unknown'
+                    ? colors.unknown
+                    : colors.separator;
+            return (
+              <View
+                key={item.clientEventId}
+                accessibilityRole="text"
+                accessibilityLabel={`${statusView.label}. ${statusView.detail}. Vé ${shortId(item.ticketId)}.`}
+                style={{
+                  padding: 14,
+                  gap: 6,
+                  backgroundColor: colors.card,
+                  borderRadius: 12,
+                  borderLeftWidth: 4,
+                  borderLeftColor: accent,
+                }}
+              >
+                <Text style={{ color: colors.label, fontSize: 17, fontWeight: '600' }}>
+                  [{statusView.serverToken}] {statusView.label}
+                </Text>
+                <Text selectable style={{ color: colors.secondary, fontSize: 15, lineHeight: 22 }}>
+                  Vé {shortId(item.ticketId)} — {item.lastMessage ?? statusView.detail}
+                </Text>
+              </View>
+            );
+          })}
+        </View>
       ) : null}
-      {recentQueue.map((item) => (
-        <Text
-          key={item.clientEventId}
-          selectable
-          style={{ color: colors.label, fontSize: 15, lineHeight: 22 }}
-        >
-          [{item.localStatus}] {item.ticketId.slice(0, 8)}… —{' '}
-          {item.lastMessage ?? 'Chờ đồng bộ'}
-        </Text>
-      ))}
+
       <View {...supervisorListAnnouncement(SUPERVISOR_NOT_ADMISSION)}>
         <Notice title="Giám sát — thao tác chưa rõ" tone="unknown">
           {SUPERVISOR_NOT_ADMISSION} Các thao tác cổng chưa rõ được lưu ở đây và
@@ -456,11 +591,16 @@ export function StaffScreen() {
               })}
               style={{ color: colors.label, fontSize: 17, lineHeight: 24 }}
             >
-              {op.ticketId || op.id}: {op.message} Không phải lượt vào.
+              {shortId(op.ticketId || op.id)}: {op.message} Không phải lượt vào.
             </Text>
           ))
         )}
       </View>
+
+      <Text selectable style={{ color: colors.secondary, fontSize: 13, lineHeight: 18 }}>
+        Chi tiết kỹ thuật: API {getApiBaseUrl() ?? 'chưa cấu hình'} · phiên app{' '}
+        {identity.status}
+      </Text>
     </Page>
   );
 }

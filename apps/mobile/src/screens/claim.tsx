@@ -5,6 +5,7 @@ import {
   redeemDecisionAnnouncement,
   redeemStatusRefreshAnnouncement,
 } from '@/a11y/announcements';
+import { presentRedeemDecision } from '@/attendee/attendee-outcome-copy';
 import { Notice, Page } from '@/components/page';
 import { getApiBaseUrl } from '@/identity/config';
 import { session } from '@/identity/session';
@@ -30,15 +31,6 @@ function firstParam(
 ): string {
   if (Array.isArray(value)) return value[0] ?? '';
   return value ?? '';
-}
-
-function titleFor(decision: RedeemDecision | null): string {
-  if (!decision) return 'Nhận vé mời';
-  if (decision.kind === 'issued') return 'Đã phát hành vé từ lời mời';
-  if (decision.kind === 'pending') return 'Lời mời đang chờ duyệt — chưa phải vé';
-  if (decision.kind === 'unknown') return 'Kết quả nhận vé chưa rõ';
-  if (decision.kind === 'stale') return 'Form hoặc điều khoản đã đổi';
-  return 'Từ chối lời mời';
 }
 
 /**
@@ -276,11 +268,16 @@ export function ClaimScreen() {
     }
   }
 
+  const outcome = presentRedeemDecision(decision, { surface: 'claim' });
+  const outcomeDetail = outcome.secondary
+    ? `${outcome.detail}\n${outcome.secondary}`
+    : outcome.detail;
+
   return (
     <Page>
       <Notice title="Nhận vé mời">
-        Chỉ email đã được mời và xác minh. Token giữ trong bộ nhớ để quay lại
-        sau đăng nhập; xoá khi đăng xuất hoặc đổi tài khoản.
+        Chỉ email đã được mời và xác minh. Sau đăng nhập quay lại đây để hoàn tất;
+        dữ liệu tạm xoá khi đăng xuất hoặc đổi tài khoản.
       </Notice>
       {loginHint ? <Notice title="Cần đăng nhập">{loginHint}</Notice> : null}
       {notice ? <Notice title="Trạng thái">{notice}</Notice> : null}
@@ -315,36 +312,19 @@ export function ClaimScreen() {
         onPress={() => void submitClaim()}
         style={button}
       >
-        <Text style={buttonLabel}>{busy ? 'Đang nhận…' : 'Nhận vé mời'}</Text>
+        <Text style={buttonLabel}>{busy ? 'Đang xử lý…' : 'Nhận vé mời'}</Text>
       </Pressable>
       {decision ? (
         <View
           {...redeemDecisionAnnouncement({
             kind: decision.kind,
-            title: titleFor(decision),
-            detail:
-              decision.kind === 'issued'
-                ? decision.ticketId
-                : decision.kind === 'pending'
-                  ? decision.message
-                  : decision.message,
+            title: outcome.title,
+            detail: outcomeDetail,
           })}
+          accessibilityLiveRegion={outcome.assertive ? 'assertive' : 'polite'}
         >
-          <Notice
-            title={titleFor(decision)}
-            tone={
-              decision.kind === 'issued'
-                ? 'admit'
-                : decision.kind === 'unknown' || decision.kind === 'pending'
-                  ? 'unknown'
-                  : 'deny'
-            }
-          >
-            {decision.kind === 'issued'
-              ? decision.ticketId
-              : decision.kind === 'pending'
-                ? `${decision.message} (${decision.requestId})`
-                : decision.message}
+          <Notice title={outcome.title} tone={outcome.tone}>
+            {outcomeDetail}
           </Notice>
         </View>
       ) : null}
@@ -355,7 +335,7 @@ export function ClaimScreen() {
           onPress={() => void refreshStatus()}
           style={button}
         >
-          <Text style={buttonLabel}>Làm mới trạng thái</Text>
+          <Text style={buttonLabel}>Kiểm tra lại</Text>
         </Pressable>
       ) : null}
     </Page>

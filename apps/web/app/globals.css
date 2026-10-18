@@ -620,6 +620,131 @@ details p {
   gap: var(--space-6);
   margin: var(--space-6) 0;
 }
+.admin-workspace {
+  display: grid;
+  gap: var(--space-5);
+}
+.admin-event-summary {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-5) 0 var(--space-3);
+  border-bottom: 1px solid var(--ink-faint);
+}
+.admin-event-summary__eyebrow {
+  margin: 0;
+  font-size: 0.85rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+.admin-event-summary__title {
+  margin: 0;
+  font-family: var(--font-display), Syne, ui-sans-serif, sans-serif;
+  font-size: clamp(1.45rem, 2.4vw, 2rem);
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+.admin-event-summary__meta {
+  margin: 0;
+  max-width: 42rem;
+}
+.admin-tech-details {
+  margin: var(--space-3) 0;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--ink-faint);
+  background: color-mix(in srgb, var(--paper) 94%, var(--ink) 6%);
+}
+.admin-tech-details > summary {
+  cursor: pointer;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  font-weight: 600;
+}
+.admin-tech-details[open] > summary {
+  margin-bottom: var(--space-3);
+}
+.admin-layout {
+  display: grid;
+  gap: var(--space-5);
+  align-items: start;
+}
+@media (min-width: 1280px) {
+  .admin-layout {
+    grid-template-columns: minmax(10rem, 12rem) minmax(0, 1fr) minmax(14rem, 18rem);
+  }
+}
+.admin-job-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+@media (min-width: 1280px) {
+  .admin-job-nav {
+    flex-direction: column;
+    position: sticky;
+    top: var(--space-4);
+  }
+}
+.admin-job-nav__btn {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0.55rem 0.9rem;
+  border: 1px solid var(--ink-faint);
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.admin-job-nav__btn[aria-current='true'] {
+  border-color: var(--ink);
+  background: color-mix(in srgb, var(--paper) 88%, var(--ink) 12%);
+}
+.admin-job-nav__btn:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.admin-job-panels {
+  min-width: 0;
+  display: grid;
+  gap: var(--space-4);
+}
+.admin-readiness {
+  padding: var(--space-4);
+  border: 1px solid var(--ink-faint);
+  background: color-mix(in srgb, var(--paper) 92%, var(--ink) 8%);
+}
+.admin-readiness > h2 {
+  margin: 0 0 var(--space-3);
+  font-size: 1.15rem;
+}
+.admin-readiness__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-3);
+}
+.admin-readiness__list li {
+  display: grid;
+  grid-template-columns: 1.5rem 1fr;
+  gap: var(--space-2);
+  align-items: start;
+}
+.admin-readiness__mark {
+  font-weight: 700;
+}
+.admin-readiness__list li[data-status='ok'] .admin-readiness__mark {
+  color: var(--signal, #0b3d2e);
+}
+.admin-readiness__list li[data-status='missing'] .admin-readiness__mark {
+  color: #8a1f1f;
+}
+.admin-readiness__list li[data-status='unknown'] .admin-readiness__mark {
+  color: #4a4a4a;
+}
 .admin-section {
   padding-top: var(--space-5);
   border-top: 1px solid var(--ink-faint);

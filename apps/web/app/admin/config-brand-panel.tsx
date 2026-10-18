@@ -53,6 +53,8 @@ type Props = {
   expectedVersion: string;
   onExpectedVersion: (value: string) => void;
   eventRevision: number | null;
+  /** Checklist readiness — Publish UI only when true; backend still enforces. */
+  publishReady: boolean;
   onSavedVersion: (version: number) => void;
   onPublished: (version: number) => void;
   onNotice: (message: string, kind?: 'ok' | 'error' | 'unknown') => void;
@@ -75,6 +77,7 @@ export function ConfigBrandPanel({
   expectedVersion,
   onExpectedVersion,
   eventRevision,
+  publishReady,
   onSavedVersion,
   onPublished,
   onNotice,
@@ -183,6 +186,13 @@ export function ConfigBrandPanel({
   }
 
   async function publish() {
+    if (!publishReady) {
+      onNotice(
+        'Checklist chưa đủ — chưa cho xuất bản từ UI. Backend vẫn enforce.',
+        'error',
+      );
+      return;
+    }
     const version = Number(expectedVersion);
     const result = await fetchJson(
       '/api/bff/admin/publish',
@@ -609,22 +619,46 @@ export function ConfigBrandPanel({
       </div>
 
       <label>
-        Phiên bản cần publish / expectedPublishedVersion
+        Phiên bản cần xuất bản
         <input
           value={expectedVersion}
           onChange={(e) => onExpectedVersion(e.target.value)}
           inputMode="numeric"
           readOnly={locked}
+          aria-describedby={`${baseId}-publish-hint`}
         />
       </label>
+      <p
+        id={`${baseId}-publish-hint`}
+        className="muted"
+        data-testid="config-publish-hint"
+        role="status"
+      >
+        {publishReady
+          ? 'Checklist đủ theo form — xuất bản vẫn do backend enforce; timeout/chưa rõ ≠ đã xuất bản.'
+          : 'Nút xuất bản ẩn/tắt đến khi checklist sẵn sàng đủ.'}
+      </p>
       <div className="auth-buttons">
-        <button
-          type="button"
-          disabled={busy || locked}
-          onClick={() => void publish()}
-        >
-          Publish
-        </button>
+        {publishReady ? (
+          <button
+            type="button"
+            data-testid="config-publish-button"
+            disabled={busy || locked}
+            onClick={() => void publish()}
+          >
+            Xuất bản
+          </button>
+        ) : (
+          <button
+            type="button"
+            data-testid="config-publish-button"
+            disabled
+            aria-disabled="true"
+            title="Checklist chưa đủ — không xuất bản từ UI"
+          >
+            Xuất bản (chưa sẵn sàng)
+          </button>
+        )}
         {locked ? (
           <button
             type="button"
@@ -636,6 +670,13 @@ export function ConfigBrandPanel({
           </button>
         ) : null}
       </div>
+      <details className="admin-tech-details">
+        <summary>Chi tiết kỹ thuật · publish</summary>
+        <p className="muted">
+          BFF POST publish kèm expectedVersion / expectedPublishedVersion;
+          CSRF và Idempotency do BFF. unknown ≠ PUBLISHED.
+        </p>
+      </details>
 
       {rendered ? (
         <div

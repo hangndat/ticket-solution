@@ -6,6 +6,7 @@ import {
   redeemReconcileAnnouncement,
   redeemStatusRefreshAnnouncement,
 } from '@/a11y/announcements';
+import { presentRedeemDecision } from '@/attendee/attendee-outcome-copy';
 import { Notice, Page } from '@/components/page';
 import { getApiBaseUrl, getEventId, getTenantId } from '@/identity/config';
 import { session } from '@/identity/session';
@@ -25,25 +26,6 @@ import {
 } from '@/redeem/redeem-client';
 import { RedeemFormFields } from '@/redeem/redeem-form-fields';
 import { colors } from '@/theme/colors';
-
-function titleFor(decision: RedeemDecision | null): string {
-  if (!decision) return 'Đổi mã';
-  if (decision.kind === 'issued') {
-    return decision.replayed ? 'Vé đã được phát hành' : 'Đã phát hành vé';
-  }
-  if (decision.kind === 'pending') return 'Chờ duyệt — chưa phải vé';
-  if (decision.kind === 'unknown') return 'Chưa rõ — chưa phải vé';
-  if (decision.kind === 'stale') return 'Form hoặc điều khoản đã đổi';
-  return 'Chưa phát hành';
-}
-
-function detailFor(decision: RedeemDecision): string {
-  if (decision.kind === 'issued') return decision.ticketId;
-  if (decision.kind === 'pending') {
-    return `${decision.message} Request ${decision.requestId}`;
-  }
-  return decision.message;
-}
 
 export function RedeemScreen() {
   const [tenantId, setTenantId] = useState(getTenantId() ?? '');
@@ -68,11 +50,11 @@ export function RedeemScreen() {
     const e = eventSlug.trim();
     if (!t || !e) {
       setSchemaNotice(
-        'Tuỳ chọn: nhập slug tenant/sự kiện để tải form và điều khoản đã xuất bản. Không dùng fixture.',
+        'Tuỳ chọn: nhập slug tổ chức/sự kiện để tải biểu mẫu và điều khoản đã xuất bản.',
       );
       return;
     }
-    setSchemaNotice('Đang tải form đã xuất bản…');
+    setSchemaNotice('Đang tải biểu mẫu đã xuất bản…');
     const result = await fetchPublishedEventDetail(t, e);
     if (result.status === 'ok') {
       setForm(result.event.form ?? null);
@@ -80,7 +62,7 @@ export function RedeemScreen() {
       setTermsBody(result.event.terms?.bodyMarkdown ?? null);
       if (result.event.id) setEventId(result.event.id);
       setSchemaNotice(
-        `Đã tải schema v${result.event.schemaVersion} / config v${result.event.publishedConfigVersion}.`,
+        `Đã tải biểu mẫu cho «${result.event.name}» · ${result.event.brand.organizationName}.`,
       );
       setAnswers({});
       setTermsAccepted(false);
@@ -89,7 +71,7 @@ export function RedeemScreen() {
     }
     if (result.status === 'misconfigured') {
       setSchemaNotice(
-        'Chưa cấu hình API (EXPO_PUBLIC_API_BASE_URL). Không dùng form demo.',
+        'Chưa cấu hình máy chủ. Không dùng biểu mẫu mẫu.',
       );
       return;
     }
@@ -97,7 +79,7 @@ export function RedeemScreen() {
       setSchemaNotice('Không tìm thấy sự kiện đã xuất bản. Bản nháp không hiện.');
       return;
     }
-    setSchemaNotice('Không tải được form đã xuất bản.');
+    setSchemaNotice('Không tải được biểu mẫu đã xuất bản.');
   }, [tenantSlug, eventSlug]);
 
   useEffect(() => {
@@ -123,7 +105,7 @@ export function RedeemScreen() {
       setDecision({
         kind: 'denied',
         code: 'UNAUTHENTICATED',
-        message: 'Đăng nhập và cấu hình API trước khi đổi mã.',
+        message: 'Đăng nhập rồi quay lại đổi mã.',
       });
       return;
     }
@@ -176,7 +158,7 @@ export function RedeemScreen() {
         setAttempt({ key, fingerprint, unclear: true });
       } else if (next.kind === 'pending') {
         setAttempt(null);
-        setStatusNote('Đang chờ — làm mới sau khi nhân viên duyệt. Chưa phải vé.');
+        setStatusNote('Đang chờ duyệt — làm mới sau. Chưa phải vé.');
       } else {
         setAttempt(null);
       }
@@ -231,10 +213,10 @@ export function RedeemScreen() {
             requestId: body.requestId,
             replayed: true,
           });
-          setStatusNote('Trạng thái ISSUED — vé đã sẵn sàng.');
+          setStatusNote('Vé đã sẵn sàng — mở tab Vé của tôi.');
         } else if (body.status === 'PENDING_REVIEW') {
           setStatusNote(
-            `Vẫn chờ duyệt${body.expiresAt ? ` · hết hạn ${body.expiresAt}` : ''}. Không đảm bảo chỗ.`,
+            `Vẫn chờ duyệt${body.expiresAt ? ` · hết hạn ${body.expiresAt}` : ''}. Chưa phải vé.`,
           );
         } else if (body.status === 'REJECTED') {
           setDecision({
@@ -254,65 +236,68 @@ export function RedeemScreen() {
         return;
       }
       if (result.status === 'not-found') {
-        setStatusNote(
-          'API trạng thái trả 404. Đang chờ vẫn chưa phải vé.',
-        );
+        setStatusNote('Không tìm thấy yêu cầu. Đang chờ vẫn chưa phải vé.');
         return;
       }
-      setStatusNote('Không làm mới được trạng thái (mạng/auth). Giữ kết quả chờ.');
+      setStatusNote('Không làm mới được trạng thái. Giữ kết quả chờ — chưa phải vé.');
     } finally {
       if (session.isEpochCurrent(epoch)) setBusy(false);
     }
   }
 
+  const outcome = presentRedeemDecision(decision, { surface: 'redeem' });
+  const outcomeDetail = outcome.secondary
+    ? `${outcome.detail}\n${outcome.secondary}`
+    : outcome.detail;
+
   return (
     <Page>
-      <Notice title="Đổi mã">
-        Nhập mã để nhận vé. Đang chờ duyệt chưa phải vé. Phản hồi mất vẫn giữ
-        trạng thái chưa rõ đến khi đối soát cùng lần thử.
+      <Notice title="Đổi mã lấy vé">
+        Nhập mã, trả lời biểu mẫu và đồng ý điều khoản. Chờ duyệt chưa phải vé.
+        Mất phản hồi thì giữ «chưa rõ» đến khi kiểm tra lại cùng lần thử.
       </Notice>
       {schemaNotice ? (
-        <Notice title="Form đã xuất bản">{schemaNotice}</Notice>
+        <Notice title="Biểu mẫu sự kiện">{schemaNotice}</Notice>
       ) : null}
       <TextInput
         value={tenantSlug}
         onChangeText={setTenantSlug}
-        placeholder="Slug tenant (form đã xuất bản)"
+        placeholder="Slug tổ chức (biểu mẫu đã xuất bản)"
         autoCapitalize="none"
-        accessibilityLabel="Slug tenant cho form đã xuất bản"
+        accessibilityLabel="Slug tổ chức cho biểu mẫu đã xuất bản"
         style={field}
       />
       <TextInput
         value={eventSlug}
         onChangeText={setEventSlug}
-        placeholder="Slug sự kiện (form đã xuất bản)"
+        placeholder="Slug sự kiện (biểu mẫu đã xuất bản)"
         autoCapitalize="none"
-        accessibilityLabel="Slug sự kiện cho form đã xuất bản"
+        accessibilityLabel="Slug sự kiện cho biểu mẫu đã xuất bản"
         style={field}
       />
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="Tải form và điều khoản đã xuất bản"
+        accessibilityLabel="Tải biểu mẫu và điều khoản đã xuất bản"
         disabled={busy}
         onPress={() => void loadPublishedSchema()}
         style={buttonSecondary}
       >
-        <Text style={buttonSecondaryLabel}>Tải form / điều khoản</Text>
+        <Text style={buttonSecondaryLabel}>Tải biểu mẫu / điều khoản</Text>
       </Pressable>
       <TextInput
         value={tenantId}
         onChangeText={setTenantId}
-        placeholder="Tenant ID"
+        placeholder="ID tổ chức"
         autoCapitalize="none"
-        accessibilityLabel="Tenant ID"
+        accessibilityLabel="ID tổ chức"
         style={field}
       />
       <TextInput
         value={eventId}
         onChangeText={setEventId}
-        placeholder="Event ID"
+        placeholder="ID sự kiện"
         autoCapitalize="none"
-        accessibilityLabel="Event ID"
+        accessibilityLabel="ID sự kiện"
         style={field}
       />
       <TextInput
@@ -343,32 +328,19 @@ export function RedeemScreen() {
         onPress={() => void submit()}
         style={button}
       >
-        <Text style={buttonLabel}>{busy ? 'Đang kiểm tra…' : 'Đổi mã'}</Text>
+        <Text style={buttonLabel}>{busy ? 'Đang xử lý…' : 'Đổi mã'}</Text>
       </Pressable>
       {decision ? (
         <View
           {...redeemDecisionAnnouncement({
             kind: decision.kind,
-            title: titleFor(decision),
-            detail: detailFor(decision),
+            title: outcome.title,
+            detail: outcomeDetail,
           })}
-          accessibilityLiveRegion={
-            decision.kind === 'unknown' || decision.kind === 'pending'
-              ? 'assertive'
-              : 'polite'
-          }
+          accessibilityLiveRegion={outcome.assertive ? 'assertive' : 'polite'}
         >
-          <Notice
-            title={titleFor(decision)}
-            tone={
-              decision.kind === 'issued'
-                ? 'admit'
-                : decision.kind === 'unknown' || decision.kind === 'pending'
-                  ? 'unknown'
-                  : 'deny'
-            }
-          >
-            {detailFor(decision)}
+          <Notice title={outcome.title} tone={outcome.tone}>
+            {outcomeDetail}
           </Notice>
         </View>
       ) : null}
@@ -381,7 +353,7 @@ export function RedeemScreen() {
           onPress={() => void refreshStatus()}
           style={button}
         >
-          <Text style={buttonLabel}>Làm mới trạng thái</Text>
+          <Text style={buttonLabel}>Kiểm tra lại</Text>
         </Pressable>
       ) : null}
       {decision?.kind === 'issued' ? null : attempt?.key ? (
@@ -392,7 +364,18 @@ export function RedeemScreen() {
           onPress={() => void reconcile()}
           style={button}
         >
-          <Text style={buttonLabel}>Đối soát cùng lần thử</Text>
+          <Text style={buttonLabel}>Kiểm tra lại cùng lần thử</Text>
+        </Pressable>
+      ) : null}
+      {decision?.kind === 'stale' ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Tải lại biểu mẫu và điều khoản"
+          disabled={busy}
+          onPress={() => void loadPublishedSchema()}
+          style={buttonSecondary}
+        >
+          <Text style={buttonSecondaryLabel}>Tải lại biểu mẫu</Text>
         </Pressable>
       ) : null}
     </Page>

@@ -21,10 +21,11 @@ Tạm thời mọi worker đều dùng `--agent cursor`: implementation, fix, te
 
 **Agent** (`--agent cursor` / override) và **role** (catalog `docs/agents/`) là hai lớp khác nhau. Role không đổi vendor agent.
 
-- Catalog áp dụng: [docs/agents/README.md](../../docs/agents/README.md) — `product-ba`, `product-design`, `backend`, `web`, `ios`, `reviewer-dod`, `reviewer-security`.
-- Trước mỗi `worker-start` cho ownership hoặc reviewer Task: chọn Role ID theo bảng trong README; nhúng khối «Vai trò chuyên môn» + path `docs/agents/roles/<id>.md` vào Task Spec; ghi Role ID trong dispatch evidence cùng agent.
+- Catalog áp dụng: [docs/agents/README.md](../../docs/agents/README.md) — `product-ba`, `product-design`, `architect`, `backend`, `web`, `ios`, `reviewer-dod`, `reviewer-security`.
+- Trước mỗi `worker-start` cho architecture, ownership hoặc reviewer Task: chọn Role ID theo bảng trong README; nhúng khối «Vai trò chuyên môn» + path `docs/agents/roles/<id>.md` vào Task Spec; ghi Role ID trong dispatch evidence cùng agent.
 - Role chỉ bổ sung chuyên môn. Xung đột với `AGENTS.md` / rule Orca / Project → rule dự án thắng.
 - **Không** copy `docs/agents/roles/*.md` vào `.cursor/rules/` với `alwaysApply: true`. Không cài toàn bộ roster upstream agency-agents.
+- Architect: dùng Role ID `architect`, scope docs/handoff hoặc kiểm tra sự phù hợp trên exact SHA theo `docs/agents/roles/architect.md`; không thay coordinator/planner hoặc reviewer DoD/security.
 - Epic planner: không gắn role coding catalog; vẫn Cursor theo chính sách trên.
 
 ## Codex hết quota giữa task có override hoặc dispatch cũ — coordinator tiếp quản
