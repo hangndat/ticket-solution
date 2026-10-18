@@ -25,6 +25,8 @@ test('events copy separates published empty from demo empty', () => {
     eventsCopy.emptyPublished.title,
     eventsCopy.emptyDemo.title,
   );
-  assert.match(eventsCopy.loadingList.body, /Demo/);
+  assert.match(eventsCopy.loadingList.body, /đã xuất bản|máy chủ/i);
+  assert.doesNotMatch(eventsCopy.loadingList.body, /Demo bên dưới/i);
+  assert.match(eventsCopy.emptyPublished.body, /Không thay bằng/);
   assert.match(eventsCopy.errorList.title, /Không tải|Lỗi/i);
 });
