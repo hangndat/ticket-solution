@@ -3,9 +3,12 @@ import type { Prisma, PrismaClient } from './generated/prisma/client';
 import type {
   PlatformCreateTenantBody,
   PlatformTenantDetail,
+  PortalPlatformTenantSummary,
+  PortalPlatformTenantsPage,
   TenantFlagsDto,
   TenantLimitsDto,
 } from '@ticket/contracts';
+import { CURSOR_PAGE_LIMIT } from '@ticket/contracts';
 import { PlatformError, PLATFORM_ERROR_CODES } from './platform-error';
 import { requireActivePlatformOperator } from './platform-operator';
 import type { PlatformSecurityConfig } from './platform-config';
@@ -16,8 +19,19 @@ import {
 import { withPlatformRole } from './platform-context';
 import { withTenant } from './tenant-context';
 
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 function canonicalizeEmail(email: string): string {
   return email.trim().toLowerCase();
+}
+
+function parseTenantListLimit(raw: number | undefined): number {
+  if (raw === undefined || Number.isNaN(raw)) return CURSOR_PAGE_LIMIT.default;
+  return Math.min(
+    CURSOR_PAGE_LIMIT.max,
+    Math.max(CURSOR_PAGE_LIMIT.min, Math.floor(raw)),
+  );
 }
 
 function hashToken(raw: string): string {
@@ -403,5 +417,69 @@ export async function getPlatformTenantDetail(
         emailToday: u.email_today,
       },
     };
+  });
+}
+
+type PlatformTenantListRow = {
+  id: string;
+  slug: string;
+  name: string;
+  status: string;
+  version: number;
+  created_at: Date;
+};
+
+/**
+ * H-P1 / ADR-20: operator + MFA platform audience lists tenant metadata only.
+ * Cursor is the prior page's last tenantId (uuid); invalid cursors → INVALID_INPUT.
+ */
+export async function listPlatformTenants(
+  db: PrismaClient,
+  input: {
+    actorUserId: string;
+    cursor?: string | null;
+    limit?: number;
+  },
+): Promise<PortalPlatformTenantsPage> {
+  return withPlatformRole(db, async (tx) => {
+    await tx.$queryRaw`SELECT set_config('app.actor_id', ${input.actorUserId}, true)`;
+    await requireActivePlatformOperator(tx, input.actorUserId);
+
+    const limit = parseTenantListLimit(input.limit);
+    const cursor = input.cursor?.trim() || null;
+    if (cursor && !UUID_RE.test(cursor)) {
+      throw new PlatformError(
+        PLATFORM_ERROR_CODES.INVALID_INPUT,
+        'Invalid cursor',
+      );
+    }
+
+    const rows = cursor
+      ? await tx.$queryRaw<PlatformTenantListRow[]>`
+          SELECT id, slug, name, status, version, created_at
+          FROM tenants
+          WHERE id > ${cursor}::uuid
+          ORDER BY id ASC
+          LIMIT ${limit + 1}
+        `
+      : await tx.$queryRaw<PlatformTenantListRow[]>`
+          SELECT id, slug, name, status, version, created_at
+          FROM tenants
+          ORDER BY id ASC
+          LIMIT ${limit + 1}
+        `;
+
+    const page = rows.slice(0, limit);
+    const items: PortalPlatformTenantSummary[] = page.map((r) => ({
+      tenantId: r.id,
+      slug: r.slug,
+      name: r.name,
+      status: r.status as PortalPlatformTenantSummary['status'],
+      version: r.version,
+      createdAt: r.created_at.toISOString(),
+    }));
+    const nextCursor =
+      rows.length > limit ? page[page.length - 1]!.id : null;
+    return { items, nextCursor };
   });
 }

@@ -9,7 +9,9 @@ const {
   createDatabase,
   createPrismaIdentityUserRepository,
   bootstrapPlatformOperator,
+  getPlatformMe,
   provisionTenant,
+  listPlatformTenants,
   acceptMembershipInvite,
   setTenantStatus,
   createMembershipInvite,
@@ -625,6 +627,117 @@ test(
           docker('rm', '-f', name);
         } catch {
           // ignore
+        }
+      }
+    }
+  },
+);
+
+test(
+  'platform tenants list cursor pagination (H-P1)',
+  { timeout: 300000 },
+  async () => {
+    let name;
+    let db;
+    try {
+      const boot = await startIsolatedPostgres();
+      name = boot.name;
+      db = createDatabase(boot.url, 3);
+      const users = createPrismaIdentityUserRepository(db);
+      const security = readPlatformSecurityConfig({ NODE_ENV: 'test' });
+
+      const operator = await users.upsertFromVerifiedIdentity({
+        issuer: 'http://localhost/realms/ticket',
+        subject: 'op-list-1',
+        email: 'op-list@example.com',
+        emailVerified: true,
+      });
+      const stranger = await users.upsertFromVerifiedIdentity({
+        issuer: 'http://localhost/realms/ticket',
+        subject: 'stranger-list-1',
+        email: 'stranger-list@example.com',
+        emailVerified: true,
+      });
+      await bootstrapPlatformOperator(db, { userId: operator.userId });
+
+      const tenantIds = [];
+      for (let i = 0; i < 3; i++) {
+        const slug = 'list-t' + i + '-' + randomBytes(2).toString('hex');
+        const prov = await provisionTenant(db, security, {
+          actorUserId: operator.userId,
+          clientKey: 'list-prov-' + i,
+          body: {
+            slug,
+            name: 'List Tenant ' + i,
+            defaultTimezone: 'Asia/Ho_Chi_Minh',
+            ownerEmail: 'owner-list-' + i + '@example.com',
+            limits: {
+              maxEvents: 1,
+              maxStaff: 2,
+              emailPerDay: null,
+              importRowsPerJob: null,
+            },
+            flags: { importsEnabled: true, exportsEnabled: true },
+          },
+        });
+        tenantIds.push(prov.tenantId);
+      }
+      tenantIds.sort();
+
+      await assert.rejects(
+        () =>
+          listPlatformTenants(db, {
+            actorUserId: stranger.userId,
+            limit: 20,
+          }),
+        (e) => e.code === PLATFORM_ERROR_CODES.PLATFORM_OPERATOR_REQUIRED,
+      );
+
+      await assert.rejects(
+        () =>
+          listPlatformTenants(db, {
+            actorUserId: operator.userId,
+            cursor: 'not-a-uuid',
+          }),
+        (e) => e.code === PLATFORM_ERROR_CODES.INVALID_INPUT,
+      );
+
+      const page1 = await listPlatformTenants(db, {
+        actorUserId: operator.userId,
+        limit: 2,
+      });
+      assert.equal(page1.items.length, 2);
+      assert.ok(page1.nextCursor);
+      assert.deepEqual(
+        page1.items.map((t) => t.tenantId),
+        tenantIds.slice(0, 2),
+      );
+      for (const item of page1.items) {
+        assert.ok(item.slug);
+        assert.ok(item.name);
+        assert.ok(['PENDING', 'ACTIVE', 'SUSPENDED'].includes(item.status));
+        assert.equal(typeof item.version, 'number');
+        assert.ok(item.createdAt);
+      }
+
+      const page2 = await listPlatformTenants(db, {
+        actorUserId: operator.userId,
+        cursor: page1.nextCursor,
+        limit: 2,
+      });
+      assert.equal(page2.items.length, 1);
+      assert.equal(page2.nextCursor, null);
+      assert.equal(page2.items[0].tenantId, tenantIds[2]);
+
+      const me = await getPlatformMe(db, operator.userId);
+      assert.ok(me.permittedCommands.includes('platform.tenants.list'));
+    } finally {
+      if (db) await db.$disconnect().catch(() => {});
+      if (name) {
+        try {
+          docker('rm', '-f', name);
+        } catch {
+          /* ignore */
         }
       }
     }
