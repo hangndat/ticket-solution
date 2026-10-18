@@ -62,9 +62,9 @@ function usage() {
 Never uses cliclick / AppleScript / ORCA computer mouse clicks on Chrome/Safari.
 
 Commands:
-  auth-smoke [baseUrl]                         /auth + anonymous BFF 401
+  auth-smoke [baseUrl]                         /auth thin redirect + Home login?return= + anonymous BFF
   bff-login [baseUrl] [email] [password]       Keycloak login → BFF /api/bff/me
-  auth-logout [baseUrl] [email] [password]     Login → /me → logout → /auth (no Invalid redirect uri)
+  auth-logout [baseUrl] [email] [password]     Login → /me → logout → /auth stub → / (no Invalid redirect uri)
   redeem [baseUrl] [code] [tenantId] [eventId] Login + /redeem DEMO code (D9)
   screenshot <url> [out.png]                   PNG under apps/web/.uat-artifacts/
   goto <url>                                   Print final URL + title
@@ -127,18 +127,73 @@ async function withBrowser(fn) {
 async function cmdAuthSmoke(baseUrl) {
   const base = (baseUrl || DEFAULT_BASE).replace(/\/$/, '');
   return withBrowser(async ({ page, context }) => {
-    const authRes = await page.goto(`${base}/auth`, { waitUntil: 'networkidle' });
-    if (!authRes || !authRes.ok()) {
-      die(`GET /auth failed: ${authRes?.status()}`);
+    // `/auth` is a thin redirect stub — no product auth UI (AC-S1).
+    const authRaw = await context.request.get(`${base}/auth`, {
+      maxRedirects: 0,
+    });
+    const authStatus = authRaw.status();
+    const authLocation = authRaw.headers()['location'] ?? '';
+    if (authStatus !== 307 && authStatus !== 308) {
+      die(`expected /auth HTTP 307/308, got ${authStatus} location=${authLocation}`);
     }
-    const signIn = page.locator('a[href="/api/auth/login"]');
+    {
+      let locPath = '';
+      try {
+        locPath = new URL(authLocation, base).pathname;
+      } catch {
+        die(`invalid /auth Location: ${authLocation}`);
+      }
+      const okLoc =
+        locPath === '/' ||
+        locPath.startsWith('/api/auth/login') ||
+        authLocation.includes('notice=');
+      if (!okLoc) {
+        die(`unexpected /auth Location: ${authLocation}`);
+      }
+    }
+
+    // Follow Location on the same host as `base` (avoid 127.0.0.1→localhost→::1 mismatch).
+    const landing = new URL(authLocation, base);
+    const landUrl = `${base}${landing.pathname}${landing.search}`;
+    const authFollow = await page.goto(landUrl, { waitUntil: 'networkidle' });
+    if (!authFollow || !authFollow.ok()) {
+      die(`GET /auth landing failed: ${authFollow?.status()} url=${landUrl}`);
+    }
+    const afterAuth = new URL(page.url());
+    if (afterAuth.pathname === '/auth') {
+      die(`expected /auth to redirect away, stayed on ${page.url()}`);
+    }
+    // No product auth shell on the stub target.
+    const authShell = await page
+      .locator('[data-testid="auth-session"], .auth-session')
+      .count();
+    if (authShell > 0) {
+      die('product auth UI still rendered after /auth redirect');
+    }
+
+    // Login CTA lives on Home (and guest chrome): /api/auth/login?return=…
+    await page.goto(`${base}/`, { waitUntil: 'networkidle' });
+    const signIn = page.locator('a[href^="/api/auth/login?return="]').first();
     await signIn.waitFor({ state: 'visible', timeout: 15_000 });
+    const signInHref = (await signIn.getAttribute('href')) || '';
+    if (!signInHref.includes('return=')) {
+      die(`login CTA missing return=: ${signInHref}`);
+    }
+    const loginCtaCount = await page
+      .locator('a[href^="/api/auth/login?return="]')
+      .count();
+    if (loginCtaCount < 1) {
+      die('no login CTA with /api/auth/login?return= on Home');
+    }
 
     const me = await context.request.get(`${base}/api/bff/me`);
     const meStatus = me.status();
     const meBody = await me.text();
-    if (meStatus !== 401) {
-      die(`expected anonymous /api/bff/me 401, got ${meStatus}: ${meBody.slice(0, 200)}`);
+    // 401 = OIDC configured, anonymous. 503 = OIDC unset (fail-closed).
+    if (meStatus !== 401 && meStatus !== 503) {
+      die(
+        `expected anonymous /api/bff/me 401|503, got ${meStatus}: ${meBody.slice(0, 200)}`,
+      );
     }
 
     mkdirSync(OUT_DIR, { recursive: true });
@@ -148,8 +203,12 @@ async function cmdAuthSmoke(baseUrl) {
     console.log(JSON.stringify({
       ok: true,
       base,
-      authStatus: authRes.status(),
+      authStatus,
+      authLocation,
+      afterAuthUrl: page.url(),
+      signInHref,
       signInVisible: true,
+      loginCtaCount,
       bffMeStatus: meStatus,
       screenshot: shot,
     }, null, 2));
@@ -158,8 +217,10 @@ async function cmdAuthSmoke(baseUrl) {
 
 /** Keycloak password login; leaves page on app base with session cookies. */
 async function loginKeycloak(page, base, user, pass) {
-  await page.goto(`${base}/auth`, { waitUntil: 'networkidle' });
-  await page.locator('a[href="/api/auth/login"]').click();
+  // AC-S2: start PKCE directly — `/auth` is redirect-only (no product login UI).
+  await page.goto(`${base}/api/auth/login?return=/`, {
+    waitUntil: 'domcontentloaded',
+  });
   await page.waitForURL(/openid-connect\/auth|login-actions/, { timeout: 30_000 });
 
   // Pin Keycloak to its advertised frontend host for the whole login so
@@ -203,7 +264,8 @@ async function loginKeycloak(page, base, user, pass) {
       return (
         appHosts.has(url.hostname) &&
         url.port === baseUrl.port &&
-        !url.pathname.startsWith('/api/auth/login')
+        !url.pathname.startsWith('/api/auth/login') &&
+        url.pathname !== '/auth'
       );
     }, { timeout: 45_000 });
   } catch (err) {
@@ -216,13 +278,6 @@ async function loginKeycloak(page, base, user, pass) {
   const landed = new URL(page.url());
   const err = landed.searchParams.get('error');
   if (err) die(`callback returned error=${err} url=${page.url()}`);
-  const onBase =
-    landed.hostname === new URL(base).hostname &&
-    landed.port === new URL(base).port &&
-    landed.pathname.startsWith('/auth');
-  if (!onBase) {
-    await page.goto(`${base}/auth`, { waitUntil: 'networkidle' });
-  }
 }
 
 async function cmdBffLogin(baseUrl, email, password) {
@@ -261,7 +316,7 @@ async function cmdBffLogin(baseUrl, email, password) {
 }
 
 /**
- * Login → /api/bff/me → /api/auth/logout → land on {base}/auth
+ * Login → /api/bff/me → /api/auth/logout → KC post_logout → /auth stub → /
  * without Keycloak «Invalid redirect uri». Also probes anonymous /admin gate.
  */
 async function cmdAuthLogout(baseUrl, email, password) {
@@ -279,15 +334,32 @@ async function cmdAuthLogout(baseUrl, email, password) {
       die(`BFF /me before logout: HTTP ${meStatus}`);
     }
 
+    let sawAuthStub = false;
+    page.on('response', (res) => {
+      try {
+        const u = new URL(res.url());
+        if (
+          u.origin === new URL(base).origin &&
+          u.pathname === '/auth' &&
+          (res.status() === 307 || res.status() === 308 || res.status() === 200)
+        ) {
+          sawAuthStub = true;
+        }
+      } catch {
+        /* ignore */
+      }
+    });
+
     await page.goto(`${base}/api/auth/logout`, { waitUntil: 'domcontentloaded' });
 
     // Keycloak may show confirm («Do you want to log out?») when no id_token_hint.
     const baseHost = new URL(base).hostname;
+    const backOnApp = (url) =>
+      url.hostname === baseHost &&
+      (url.pathname === '/' || url.pathname === '/auth');
+
     try {
-      await page.waitForURL(
-        (url) => url.hostname === baseHost && url.pathname === '/auth',
-        { timeout: 8_000 },
-      );
+      await page.waitForURL(backOnApp, { timeout: 8_000 });
     } catch {
       const confirm = page
         .locator('#kc-logout')
@@ -297,9 +369,14 @@ async function cmdAuthLogout(baseUrl, email, password) {
       if (await confirm.isVisible({ timeout: 5_000 }).catch(() => false)) {
         await confirm.click();
       }
+      await page.waitForURL(backOnApp, { timeout: 30_000 });
+    }
+
+    // Thin stub: if we briefly landed on /auth, follow should leave it.
+    if (new URL(page.url()).pathname === '/auth') {
       await page.waitForURL(
-        (url) => url.hostname === baseHost && url.pathname === '/auth',
-        { timeout: 30_000 },
+        (url) => url.hostname === baseHost && url.pathname !== '/auth',
+        { timeout: 10_000 },
       );
     }
 
@@ -308,11 +385,11 @@ async function cmdAuthLogout(baseUrl, email, password) {
     const invalidRedirect =
       /invalid\s+redirect\s+uri/i.test(html) ||
       /Invalid parameter:\s*redirect_uri/i.test(html);
-    const landedAuth =
-      finalUrl === authUrl ||
-      finalUrl.startsWith(`${authUrl}?`) ||
-      (new URL(finalUrl).origin === new URL(base).origin &&
-        new URL(finalUrl).pathname === '/auth');
+    const finalPath = new URL(finalUrl).pathname;
+    const landedAfterLogout =
+      new URL(finalUrl).origin === new URL(base).origin &&
+      finalPath !== '/auth' &&
+      (finalPath === '/' || sawAuthStub);
 
     mkdirSync(OUT_DIR, { recursive: true });
     const shot = join(OUT_DIR, `auth-logout-${Date.now()}.png`);
@@ -326,7 +403,7 @@ async function cmdAuthLogout(baseUrl, email, password) {
     const adminLoc = adminRes.headers()['location'] ?? '';
 
     const ok =
-      landedAuth &&
+      landedAfterLogout &&
       !invalidRedirect &&
       (adminStatus === 307 || adminStatus === 302) &&
       /\/auth/.test(adminLoc);
@@ -337,7 +414,8 @@ async function cmdAuthLogout(baseUrl, email, password) {
       user,
       meStatus,
       finalUrl,
-      expectedAuth: authUrl,
+      postLogoutViaAuth: sawAuthStub || finalUrl.startsWith(authUrl),
+      expectedPostLogoutChain: `${authUrl} → /`,
       invalidRedirect,
       adminGate: { status: adminStatus, location: adminLoc },
       screenshot: shot,
@@ -345,7 +423,7 @@ async function cmdAuthLogout(baseUrl, email, password) {
 
     if (!ok) {
       die(
-        `auth-logout failed (finalUrl=${finalUrl} invalidRedirect=${invalidRedirect} admin=${adminStatus} ${adminLoc})`,
+        `auth-logout failed (finalUrl=${finalUrl} sawAuthStub=${sawAuthStub} invalidRedirect=${invalidRedirect} admin=${adminStatus} ${adminLoc})`,
       );
     }
   });
