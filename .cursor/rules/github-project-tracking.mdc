@@ -101,9 +101,11 @@ Song song với parallel-first (`orca-parallel-workers.mdc`), coordinator gốc 
 
 - ≥ **3** item Project Status `Chờ duyệt` (toàn board), **hoặc**
 - ≥ **2** PR mở cùng ownership slice (BE / web / iOS / coordinator) đang chờ DoD / CI xanh / merge, **hoặc**
-- ≥ **5** PR mở vào `main` chưa merge mà thiếu DoD pass + CI xanh.
+- ≥ **4** PR mở vào `main` chưa merge mà thiếu DoD pass + CI xanh.
 
 Khi đầy: **ưu tiên** (1) DoD / security review đang mở → (2) sửa theo findings → (3) CI đỏ / re-run có lý do → (4) merge/integration đã pass → **rồi mới** dispatch feature `Sẵn sàng` mới. Vẫn được spawn song song **reviewer** và **fix** trên nhiều slice; chỉ hạn chế **feature coding mới** làm phình `Chờ duyệt`.
+
+**Concurrent soft caps** (số Dispatch live / Run — RAM/session, không thay WIP ở trên): xem `orca-parallel-workers.mdc` — ≤5 non-review live, ≤1 feature/slice, ≤2 `heavy`. Hàng đợi chưa đầy nhưng soft cap đã đầy → vẫn trì hoãn feature mới; reviewer/fix vẫn được fill.
 
 Chi tiết fill idle khi có/không backpressure: `orca-idle-worker-fill.mdc`.
 
