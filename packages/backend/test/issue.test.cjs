@@ -13,6 +13,7 @@ const {
   redeemAndIssueTicket,
   unwrapRedeemOutcome,
   getOperationForActor,
+  getTicketForOwner,
   readCodeHmacEnvironment,
   IssueError,
   ISSUE_ERROR_CODES,
@@ -293,6 +294,37 @@ test(
         winActor.userId === alice.userId
           ? { userId: bob.userId, email: bob.email, key: keyBob }
           : { userId: alice.userId, email: alice.email, key: keyAlice };
+
+      // Owner ticket-by-id: owned → summary; non-owner / unknown → TICKET_NOT_FOUND.
+      const owned = await withTenant(db, A, (tx) =>
+        getTicketForOwner(tx, A, winActor.userId, winner.ticketId),
+      );
+      assert.equal(owned.ticketId, winner.ticketId);
+      assert.equal(owned.eventId, eventA);
+      assert.equal(owned.state, 'ACTIVE');
+      await assert.rejects(
+        () =>
+          withTenant(db, A, (tx) =>
+            getTicketForOwner(tx, A, loseActor.userId, winner.ticketId),
+          ),
+        (error) =>
+          error instanceof IssueError &&
+          error.code === ISSUE_ERROR_CODES.TICKET_NOT_FOUND,
+      );
+      await assert.rejects(
+        () =>
+          withTenant(db, A, (tx) =>
+            getTicketForOwner(
+              tx,
+              A,
+              winActor.userId,
+              '99999999-9999-4999-8999-999999999999',
+            ),
+          ),
+        (error) =>
+          error instanceof IssueError &&
+          error.code === ISSUE_ERROR_CODES.TICKET_NOT_FOUND,
+      );
 
       // Post-race reconcile: counters / tickets / code / ops / outbox (TD §8.1).
       const reconcile = await withTenant(db, A, async (tx) => {

@@ -34,6 +34,7 @@ import {
   REDEEM_COMMAND,
   createDatabase,
   getOperationForActor,
+  getTicketForOwner,
   listTicketsForOwner,
   readCodeHmacEnvironment,
   readCredentialKeyEnvironment,
@@ -109,7 +110,8 @@ function issueHttpException(error: IssueError, operationId?: string): HttpExcept
   const status =
     error.code === ISSUE_ERROR_CODES.EMAIL_NOT_VERIFIED
       ? 403
-      : error.code === ISSUE_ERROR_CODES.REDEMPTION_NOT_FOUND
+      : error.code === ISSUE_ERROR_CODES.REDEMPTION_NOT_FOUND ||
+          error.code === ISSUE_ERROR_CODES.TICKET_NOT_FOUND
         ? 404
         : error.code === ISSUE_ERROR_CODES.FORM_VERSION_STALE ||
             error.code === ISSUE_ERROR_CODES.TERMS_VERSION_STALE ||
@@ -261,6 +263,33 @@ export class TicketIssueService {
     };
   }
 
+  async getMine(
+    authorization: string | undefined,
+    tenantId: string,
+    ticketId: string,
+  ): Promise<TicketSummary> {
+    if (!this.deps.db) {
+      throw new IdentityError(
+        IDENTITY_ERROR_CODES.OIDC_MISCONFIGURED,
+        'Database is not configured',
+      );
+    }
+    const user = await this.requireUser(authorization);
+    const ticket = await withTenant(this.deps.db, tenantId, (tx) =>
+      getTicketForOwner(tx, tenantId, user.userId, ticketId),
+    );
+    return {
+      ticketId: ticket.ticketId,
+      tenantId,
+      eventId: ticket.eventId,
+      ticketTypeId: ticket.ticketTypeId,
+      sourceId: ticket.sourceId,
+      state: ticket.state,
+      credentialVersion: ticket.credentialVersion,
+      createdAt: ticket.createdAt.toISOString(),
+    };
+  }
+
   async operationStatus(
     authorization: string | undefined,
     clientKey: string,
@@ -408,6 +437,34 @@ export class TicketIssueController {
       return await this.tickets.listMine(authorization, tenantId);
     } catch (error) {
       if (error instanceof IdentityError) throw identityHttpException(error);
+      throw error;
+    }
+  }
+
+  @Get('me/tickets/:ticketId')
+  @ApiBearerAuth()
+  @ApiOkResponse({ type: TicketSummaryDto })
+  async meTicketById(
+    @Headers('authorization') authorization: string | undefined,
+    @Param('ticketId') ticketId: string,
+    @Query('tenantId') tenantId: string,
+  ): Promise<TicketSummary> {
+    if (!tenantId) {
+      throw new HttpException(
+        {
+          code: 'TENANT_REQUIRED',
+          message: 'tenantId query parameter is required',
+          requestId: randomUUID(),
+          retryable: false,
+        } satisfies ApiError,
+        422,
+      );
+    }
+    try {
+      return await this.tickets.getMine(authorization, tenantId, ticketId);
+    } catch (error) {
+      if (error instanceof IdentityError) throw identityHttpException(error);
+      if (error instanceof IssueError) throw issueHttpException(error);
       throw error;
     }
   }
