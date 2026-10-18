@@ -4,6 +4,7 @@ import {
   requireAdminCapabilityOrHome,
   requireSessionOrAuth,
 } from '../../src/nav/staff-route-guard';
+import { DualRunBanner } from '../../src/portal/dual-run-banner';
 import { SiteNav } from '../../src/site-chrome';
 import { AdminForm } from './admin-form';
 
@@ -27,9 +28,18 @@ export default async function Admin({ searchParams }: Props) {
   // CSRF cookie is issued by GET /api/bff/me/tenants (Route Handler) when
   // AdminForm mounts — cookies().set() is illegal in RSC render (Next 15+/16 → 500).
 
+  const bannerSearch = new URLSearchParams();
+  if (params.tenantId?.trim()) bannerSearch.set('tenantId', params.tenantId.trim());
+  if (params.eventId?.trim()) bannerSearch.set('eventId', params.eventId.trim());
+  const bannerQs = bannerSearch.toString();
+
   return (
     <main id="main" className="container shell redeem-page">
       <SiteNav />
+      <DualRunBanner
+        surface="admin"
+        search={bannerQs ? `?${bannerQs}` : undefined}
+      />
       <h1>Không gian quản trị sự kiện</h1>
       <p className="intro">
         Chọn tổ chức và sự kiện, rồi làm theo việc. Kết quả chưa rõ không coi

@@ -5,6 +5,7 @@ import {
   marketingOriginFromEnv,
   productOriginFromEnv,
 } from './src/marketing/hosts';
+import { decideAdminToPortalRedirect } from './src/portal/dual-run';
 /** Keep literal — avoid importing next/headers via oidc/cookies in Edge proxy. */
 const OIDC_ACCESS_COOKIE = 'oidc_access_token';
 
@@ -13,6 +14,7 @@ const OIDC_ACCESS_COOKIE = 'oidc_access_token';
  * OIDC session remains HttpOnly cookies on product host only (no Domain=.vemoki.com).
  * O02: anonymous soft-redirect for staff deep-links /admin|/gate → /auth
  * (product host only — after apex→app host redirects).
+ * ADR-20 §8: optional GET/HEAD /admin|/platform → PORTAL_ORIGIN (flag default OFF).
  */
 export default function proxy(request: NextRequest) {
   const hostHeader =
@@ -33,6 +35,18 @@ export default function proxy(request: NextRequest) {
 
   if (decision.type === 'redirect') {
     return NextResponse.redirect(decision.location, decision.status);
+  }
+
+  // ADR-20 dual-run: GET/HEAD admin|platform → portal when flag ON.
+  // Before O02 /auth soft-redirect so navigation lands on portal login.
+  // Never mutates POST/PUT/PATCH or /api/bff (pure helper enforces).
+  const portalNav = decideAdminToPortalRedirect({
+    method: request.method,
+    pathname,
+    search,
+  });
+  if (portalNav.type === 'redirect') {
+    return NextResponse.redirect(portalNav.location, portalNav.status);
   }
 
   // Soft-redirect anonymous staff deep-links only.
