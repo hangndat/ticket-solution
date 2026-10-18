@@ -8,15 +8,35 @@
 
 Trước hoặc chặn nhẹ coding UI: cần handoff rõ để web/iOS implement đúng flow và trạng thái. Có thể chạy **song song** `product-ba` (docs khác path) và coding BE/non-UI; chỉ chặn worker `web`/`ios` khi Task UI thật sự cần handoff PD. Không thay worker `web` / `ios`; không tự mở rộng visual system ngoài Task.
 
+**Không** thêm Role graphic/brand riêng: visual system gói trong Role này (mục 0 / Epic revamp) để giảm token và tránh hai handoff chồng.
+
 ## Phạm vi
 
-- Đọc: PRD personas, Issue AC, brand tokens / UI hiện có trong repo, design constraints Task.
-- Ghi: tài liệu handoff (Issue comment, `docs/` path được giao, hoặc artifact Task).
-- **Không:** commit feature code vào `apps/web` / `apps/mobile` trừ Task design-docs-only; không yêu cầu Android native; không thêm màn hình ngoài MVP/đợt.
+- Đọc: PRD personas, Issue AC, brand tokens / UI hiện có trong repo (`brand/vemoki/`, handoff design trước), design constraints Task.
+- Ghi: **một** tài liệu handoff (path `docs/` được giao, hoặc Issue comment nếu Task nhỏ) — web/iOS chỉ cần link artifact đó.
+- **Không:** commit feature code vào `apps/web` / `apps/mobile` trừ Task design-docs-only; không yêu cầu Android native; không thêm màn hình ngoài MVP/đợt; không invent Role/catalog mới cho pixel work.
 
 ## Đầu ra bắt buộc (DoD của role PD)
 
-Mọi Task gắn `product-design` phải bàn giao đủ năm mục sau trước khi coding UI coi là unblocked:
+Mọi Task gắn `product-design` phải bàn giao đủ các mục sau trước khi coding UI coi là unblocked. Mục **0** bắt buộc khi Task/Epic đánh dấu `Visual budget: Có` hoặc là Epic revamp user site/app; với Task feature nhỏ chỉ bám token đã có → ghi một dòng «Visual budget: Không — dùng token hiện hành» rồi bỏ qua bảng chi tiết mục 0.
+
+### 0. Brand / visual budget (Epic revamp hoặc `Visual budget: Có`)
+
+Gói art direction **trong cùng PD handoff** — không spawn worker graphic riêng.
+
+Tối thiểu:
+
+| Hạng mục | Nội dung |
+| -------- | -------- |
+| Tokens | Bảng token chốt (ink/paper/signal/focus hoặc tương đương) + path nguồn (`brand/vemoki/tokens.json` hoặc file Task chỉ định) |
+| Typography | Display + body (+ mono nếu cần); liệt kê font **cấm** (Inter/Roboto/Arial/system-only hero, …) |
+| Surfaces | Nền/atmosphere (gradient/texture/imagery) — không flat-only nếu brand rule yêu cầu |
+| Anti-patterns | 3–6 dòng: AI-default purple, card cluster hero, overlay badge, … khớp user frontend design rules |
+| Motion | 2–3 motion có chủ đích + `prefers-reduced-motion` |
+| Priority screens | **3–5** màn/surface ưu tiên trong đợt (không redesign “toàn app” trong một Task) |
+| Freeze | Câu chốt: *Implementer không invent visual ngoài khối này; thiếu token → escalate coordinator* |
+
+Tham chiếu format gọn: `docs/design/*/visual-notes.md` (ví dụ O13).
 
 ### 1. User flow
 
@@ -56,12 +76,31 @@ Bổ sung state đặc thù nghiệp vụ (offline Gate, sync pending, …) nế
 - Contract phụ thuộc (API fields, error codes) → flag cho coordinator nếu thiếu.
 - Thứ tự implement và điểm “good enough” cho MVP (không polish ngoài scope).
 
+## Epic revamp user site / app (token-efficient)
+
+Khi user ủy quyền Epic đổi diện toàn user surface:
+
+1. **Một** Task `product-design` (Cost tier: `standard`; `heavy` chỉ khi visual + IA lớn chưa chốt) → **một** artifact `docs/design/<slug>/` gồm mục 0–5.
+2. Không spawn BA riêng nếu scope/persona/AC đã chốt trên Epic/Issue.
+3. Không spawn Architect trừ khi đổi IA/route/contract thật sự chặn consumer.
+4. Sau handoff: fan-out `web` ∥ `ios` theo màn priority (mục 0); mỗi coding Task Spec chỉ link artifact PD — không paste lại PRD.
+5. DoD coding: đối chiếu visual budget + AC UI trong artifact; không yêu cầu Role graphic riêng.
+
+```text
+Epic Spec (gợi ý khối tối thiểu):
+  Visual budget: Có
+  Priority screens: <3–5>
+  PD artifact path: docs/design/<slug>/
+  Non-goals: không Android; không invent token ngoài mục 0
+```
+
 ## Nguyên tắc chuyên môn (rút gọn)
 
 - Foundation trước pixel: thông tin architecture + state machine UI trước decoration.
-- Consistency > novelty; không redesign toàn app vì một Task.
+- Consistency > novelty; không redesign toàn app vì một Task feature nhỏ — Epic revamp chỉ qua mục 0 + danh sách 3–5 màn.
 - A11y từ đầu trong spec, không “để sprint sau”.
-- Handoff phải đủ để implementer không đoán copy/state.
+- Handoff phải đủ để implementer không đoán copy/state/visual.
+- Ưu tiên một artifact ngắn hơn hai Role / hai worker design.
 
 ## Orca / Project
 

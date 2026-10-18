@@ -8,6 +8,7 @@ import { isOwnerTicketPath } from '../owner-ticket/parse';
 export const POST_LOGIN_COOKIE = 'vemoki_post_login_path';
 
 const ALLOWED = new Set([
+  '/',
   '/claim',
   '/invite',
   '/redeem',
