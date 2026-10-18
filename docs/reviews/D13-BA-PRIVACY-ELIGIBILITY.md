@@ -98,7 +98,7 @@ Inventory direct deps: xem bảng trong [privacy-nutrition.md](../asc/privacy-nu
 ## 7. Findings còn mở (handoff coordinator)
 
 1. **S5-T1:** Fix copy O06 in-app (`account-deletion-copy.ts`) — bắt buộc trước submit.  
-2. **Version mismatch blocker:** source `0.1.0` (build 10) vs ASC reportedly `1.0` PREPARE_FOR_SUBMISSION — iOS/coordinator khớp trước archive/submit; BA không bump apps.  
+2. **Version `1.0.0`:** coordinator chốt public đầu; docs listing/checklist dùng `1.0.0` + “First App Store release”; iOS bump binary + ASC `1.0`→`1.0.0` (không duplicate) — BA không claim upload / không sửa apps.  
 3. **S3-T1:** Paste Nutrition + listing + fields ASC + screenshot (G2).  
 4. **S2-T3 (optional but recommended):** Làm giàu `/privacy` live với camera + deletion path từ draft.  
 5. **S5-T2:** Demo reviewer prod — ASC only.  

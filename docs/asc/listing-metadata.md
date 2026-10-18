@@ -3,20 +3,22 @@
 **Epic D13:** [#301](https://github.com/hangndat/ticket-solution/issues/301)  
 **Reuse D10:** [#152](https://github.com/hangndat/ticket-solution/issues/152) — copy dưới đây đã reconcile sau D7/D11 Gate offline queue  
 **Bundle:** `com.hangndat.ticket` · Display name: **Vemoki**  
-**Version trong source tip `f551b6d2bdc0…` / PR tip:** Expo `version` **`0.1.0`**, `ios.buildNumber` **`10`** (`apps/mobile/app.config.ts`)  
-**Không submit store** — chỉ draft để dán vào App Store Connect.  
+**Version public (coordinator chốt 2026-10-18):** **`1.0.0`** — first App Store release string cho ASC + binary tip submit.  
+**Baseline tip lúc BA đọc:** `app.config.ts` từng là `0.1.0` / build `10` — iOS đang bump config lên `1.0.0` (ngoài PR docs này); ASC draft `1.0` → chỉnh **`1.0.0`** (không tạo version trùng).  
+**Không submit / không claim upload** — chỉ draft paste.  
 **Không tự chọn territory** — Availability chờ user chốt (đề xuất VN; xem plan D13).
 
 Giới hạn ASC (nhắc): Name ≤30 · Subtitle ≤30 · Promotional Text ≤170 · Description ≤4000 · Keywords ≤100 **bytes** (comma-separated; Apple: [platform version information](https://developer.apple.com/help/app-store-connect/reference/platform-version-information/)) · What’s New ≤4000.
 
-### Blocker — version ASC vs binary (iOS / coordinator quyết)
+### Version alignment (ops / iOS — không claim đã upload)
 
-| Nguồn | Giá trị quan sát |
+| Nguồn | Giá trị mục tiêu |
 | ----- | ---------------- |
-| Source `app.config.ts` | `0.1.0` (build `10`) |
-| ASC (theo coordinator status 2026-10-18) | Version **`1.0`** · state **PREPARE_FOR_SUBMISSION** (không chứng minh từ worker này) |
+| Public / ASC versionString | **`1.0.0`** |
+| Binary `CFBundleShortVersionString` | Phải **`1.0.0`** trên tip archive/submit |
+| ASC existing draft | Update `1.0` → `1.0.0` (không duplicate version record) |
 
-**BA không bump `apps/mobile`.** Trước archive/submit: iOS hoặc coordinator phải **khớp** CFBundleShortVersionString với ASC version (đổi ASC về `0.1.0` **hoặc** bump binary + What’s New) — lệch = rủi ro App Review / What’s New sai binary.
+BA docs dùng **`1.0.0`**. Nếu binary tip vẫn `0.1.0` khi archive → **blocker** iOS merge trước S4.
 
 ---
 
@@ -81,7 +83,7 @@ Byte/character length (ASCII): **83** (≤100). Không đếm nhầm “88” t�
 ### What’s New
 
 ```
-App Store listing for Vemoki. Attendee ticket wallet, secure OIDC sign-in, staff gate QR scan with on-device offline queue + sync, and APNs registration for delivery updates. Align version string with the binary you upload before submit.
+First App Store release of Vemoki 1.0.0. Attendee ticket wallet, secure OIDC sign-in, staff gate QR scan with on-device offline queue + sync, and APNs registration for delivery updates.
 ```
 
 ### Support URL
@@ -162,7 +164,7 @@ Length (UTF-8 aware ops nên đếm byte ASC): chuỗi trên ≈ **60** ký tự
 ### Có gì mới
 
 ```
-Listing App Store cho Vemoki. Ví vé khách, đăng nhập OIDC, quét QR cổng có hàng đợi offline trên thiết bị + đồng bộ, đăng ký APNs cho cập nhật giao vé. Khớp chuỗi version với binary trước khi submit.
+Phát hành App Store đầu tiên Vemoki 1.0.0. Ví vé khách, đăng nhập OIDC, quét QR cổng có hàng đợi offline trên thiết bị + đồng bộ, đăng ký APNs cho cập nhật giao vé.
 ```
 
 ---
@@ -173,4 +175,4 @@ Listing App Store cho Vemoki. Ví vé khách, đăng nhập OIDC, quét QR cổn
 - **Có** mô tả offline Gate queue (D7/D11 source) — **không** hứa chống trùng đa thiết bị khi offline; **không** hứa admit trước khi server confirm.
 - Không tự chọn Availability / territories trong docs này.
 - Tên trên Home Screen lấy từ Expo `name: Vemoki` — khớp listing.
-- What’s New / Version Number phải khớp binary tip submit (xem blocker phiên bản ở đầu file).
+- What’s New / Version Number = **`1.0.0`** khớp binary tip submit (xem mục Version alignment).

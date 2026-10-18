@@ -50,7 +50,7 @@
 
 | Field | Giá trị | Điền ASC |
 | --- | --- | --- |
-| Version | Source tip: `0.1.0` (`app.config.ts`); ASC có thể đang `1.0` PREPARE_FOR_SUBMISSION — **khớp trước submit** (blocker iOS/coordinator; BA không bump binary) | ☐ |
+| Version | **`1.0.0`** (coordinator chốt public đầu); ASC draft `1.0` → đổi thành `1.0.0` (không duplicate); binary tip phải khớp trước archive | ☐ |
 | Copyright (version) | `2026 Hang Nguyen Dat` | ☐ |
 | Description / Keywords / URLs / What’s New | Copy từ [listing-metadata.md](./listing-metadata.md) | ☐ |
 | Support URL | `https://vemoki.com` | ☐ |
