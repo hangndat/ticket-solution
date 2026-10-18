@@ -3,31 +3,33 @@
 **Epic:** [#301](https://github.com/hangndat/ticket-solution/issues/301)  
 **Tasks:** [#321](https://github.com/hangndat/ticket-solution/issues/321) (S2-T3), [#330](https://github.com/hangndat/ticket-solution/issues/330) (S5-T3)  
 **Role:** `web` · Architecture impact: **Không**  
-**Implementation SHA:** `8dc9abbfb6434ef7960e4ad5a6ee2e108073239e`  
-**Review tip SHA:** `15501a01dbcb988e113b32fefde85356a2d9d6ab`
-**Local UAT ≠ production deploy.** Prod ASC URLs checked HTTP-only; enriched copy lands after merge+deploy.
+**Implementation SHA (disclosure enrich):** `8dc9abbfb6434ef7960e4ad5a6ee2e108073239e`  
+**Jargon-plain follow-up SHA:** `5ac2b436626d0abaab06ad2d17cadcf3aa9a9e57`  
+**Review tip SHA:** `5ac2b436626d0abaab06ad2d17cadcf3aa9a9e57`  
+**Local UAT ≠ production deploy.** Prod ASC URLs checked HTTP-only; enriched copy lands after merge+deploy.  
+**Note:** Prior DoD PASS-with-gap on `6c458cdc…` (`docs/reviews/D13-PR347-DOD.md`) does **not** auto-apply to this tip — coordinator must re-review exact SHA above.
 
 ---
 
 ## Scope done
 
-1. Enrich public privacy VI/EN: session/ticket/device-push collection, camera **on-device** (no photo upload), retention O06, account-deletion path (`/account` + iOS Account), contact; **no job/scheduler/enforce claims** on the page (coordinator: `policy-only-no-enforce-claim`).
-2. Support VI/EN: contact `support@vemoki.com` + SLA O06 (already present; lead clarifies privacy follow-up).
-3. Account web path: remove stale “O06 chưa chốt”; align copy to O06 ≤30d anonymize / not immediate erase.
-4. Headless UAT via `scripts/web-uat.sh screenshot` (Playwright headless) + HTTP matrix on local `next start --port 3013`.
+1. Enrich public privacy VI/EN: session/ticket/device-push collection, camera **on-device** (no photo upload), retention policy numbers, account-deletion path (`/account` + iOS Account), contact; **no job/scheduler/enforce claims** on the page (coordinator: `policy-only-no-enforce-claim`).
+2. Support VI/EN: contact `support@vemoki.com` + SLA (already present; lead clarifies privacy follow-up).
+3. Account web path: plain-language request-received / ≤30d delete-or-de-identify / audit kept under policy — not immediate erase; no O06/ACK/OIDC jargon in user copy (`5ac2b436…`).
+4. Headless UAT via `scripts/web-uat.sh screenshot` (Playwright headless) + HTTP matrix on local `next start --port 3013` (layout unchanged by jargon-only follow-up; no new UAT run required).
 
 ---
 
-## Disclosure map (O06 / nutrition)
+## Disclosure map (policy / nutrition)
 
 | Topic | Where | Notes |
 | --- | --- | --- |
 | Data: session / ticket / device push | `privacy.s1` | Matches nutrition categories; no ads tracking claim |
 | Camera on-device, no upload | `privacy.s3` | Policy disclosure only (iOS Gate) |
-| Retention ≤30d / 365d / 730d / 90d | `privacy.s4` | O06 numbers |
-| Account deletion in-app/web path | `privacy.s5` + `/account` | User language; ACK ≠ immediate erase |
+| Retention ≤30d / 365d / 730d / 90d | `privacy.s4` | Policy numbers (plain language) |
+| Account deletion in-app/web path | `privacy.s5` + `/account` | Request received ≠ immediate erase |
 | Contact | `privacy.s7` + `/support` | `support@vemoki.com` / privacy alias when ready |
-| Enforce / prod anonymize E2E | **Not claimed** | BE PR342 `8bc744e0c765…` has local worker anonymize tests; security review still open (Keycloak account / staff_sessions). No prod deletion E2E |
+| Enforce / prod deletion E2E | **Not claimed** | BE PR342 `8bc744e0c765…` has local worker tests; security review still open (Keycloak account / staff_sessions). No prod deletion E2E |
 
 ---
 
