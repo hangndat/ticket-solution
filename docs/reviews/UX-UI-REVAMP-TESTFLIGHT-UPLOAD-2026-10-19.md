@@ -15,6 +15,8 @@
 
 `xcrun altool --upload-app` **UPLOAD SUCCEEDED**. Delivery UUID `a3fb1af9-3af6-42df-9dd1-5651e3b0fa4d`.
 
+ASC read-back (API): build **12** `processingState=VALID`, `internalBuildState=IN_BETA_TESTING`, `externalBuildState=READY_FOR_BETA_SUBMISSION`.
+
 | Artifact | Value |
 | -------- | ----- |
 | IPA (local, gitignored) | `apps/mobile/.expo/tf-upload-12/export/Vemoki.ipa` |
