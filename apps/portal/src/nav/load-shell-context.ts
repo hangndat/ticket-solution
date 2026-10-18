@@ -1,0 +1,129 @@
+'use client';
+
+import type {
+  MeEventsResponse,
+  MeTenantsResponse,
+  PlatformMeResponse,
+} from '@ticket/contracts';
+import {
+  parseMeEventsResponse,
+  parseMeTenantsResponse,
+  parsePlatformMeResponse,
+} from '../discovery/me';
+import {
+  derivePortalShellCapabilities,
+  type PortalShellCapabilities,
+} from './capabilities';
+
+const REQUEST_TIMEOUT_MS = 8_000;
+
+export type ShellLoadState =
+  | { status: 'loading' }
+  | {
+      status: 'ready';
+      caps: PortalShellCapabilities;
+      meTenants: MeTenantsResponse | null;
+      meEvents: MeEventsResponse | null;
+      platformMe: PlatformMeResponse | null;
+      http: { tenants: number; events: number; platform: number };
+    }
+  | { status: 'error'; message: string }
+  | { status: 'unauthenticated' };
+
+async function getJson(
+  path: string,
+): Promise<{ status: number; json: unknown }> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  try {
+    const res = await fetch(path, {
+      method: 'GET',
+      credentials: 'same-origin',
+      cache: 'no-store',
+      signal: controller.signal,
+      headers: { Accept: 'application/json' },
+    });
+    let json: unknown = null;
+    try {
+      json = await res.json();
+    } catch {
+      json = null;
+    }
+    return { status: res.status, json };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
+ * Client discovery for portal shell — deny-by-default until server payloads parse.
+ * Platform me uses a separate cookie; 401 there does not imply staff signed out.
+ */
+export async function loadShellContext(): Promise<ShellLoadState> {
+  try {
+    const [tenantsResult, eventsResult, platformResult] = await Promise.all([
+      getJson('/api/bff/me/tenants'),
+      getJson('/api/bff/me/events'),
+      getJson('/api/bff/platform/me'),
+    ]);
+
+    if (tenantsResult.status === 401 && eventsResult.status === 401) {
+      return { status: 'unauthenticated' };
+    }
+
+    const meTenants = parseMeTenantsResponse(
+      tenantsResult.status,
+      tenantsResult.json,
+    );
+    const meEvents = parseMeEventsResponse(
+      eventsResult.status,
+      eventsResult.json,
+    );
+    const platformMe = parsePlatformMeResponse(
+      platformResult.status,
+      platformResult.json,
+    );
+
+    const authenticated =
+      meTenants !== null || meEvents !== null || platformMe !== null;
+
+    if (!authenticated) {
+      if (
+        tenantsResult.status >= 500 ||
+        eventsResult.status >= 500 ||
+        (tenantsResult.status === 0 && eventsResult.status === 0)
+      ) {
+        return {
+          status: 'error',
+          message: 'Không kết nối được máy chủ. Thử lại sau.',
+        };
+      }
+      return { status: 'unauthenticated' };
+    }
+
+    const caps = derivePortalShellCapabilities({
+      authenticated: true,
+      meEvents,
+      meTenants,
+      platformMe,
+    });
+
+    return {
+      status: 'ready',
+      caps,
+      meTenants,
+      meEvents,
+      platformMe,
+      http: {
+        tenants: tenantsResult.status,
+        events: eventsResult.status,
+        platform: platformResult.status,
+      },
+    };
+  } catch {
+    return {
+      status: 'error',
+      message: 'Chưa rõ kết quả — kiểm tra lại kết nối.',
+    };
+  }
+}
