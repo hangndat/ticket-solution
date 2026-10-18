@@ -7,7 +7,7 @@
 | Architecture impact | **Không** — dùng API O06 hiện hữu (`POST/GET /v1/me/account-deletion-requests`) |
 | Agent | Cursor · `task_309e6a5978a2` / `ctx_284cb2cea2d7` |
 | Behavior SHA |  |
-| Tip SHA | 01463c29c8e8362c8d37485fe678b773f95161e2 |
+| Tip SHA |  |
 
 ## 1. Source verify (trước sửa)
 
