@@ -6,11 +6,13 @@ import {
   HttpException,
   Injectable,
   Param,
+  Query,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOkResponse,
   ApiProperty,
+  ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
 import { type ApiError } from '@ticket/contracts';
@@ -20,6 +22,7 @@ import {
   IDENTITY_ERROR_CODES,
   ReportError,
   REPORT_ERROR_CODES,
+  listEventAudit,
   readEventReport,
   withTenant,
   type IdentityUserRepository,
@@ -83,6 +86,25 @@ class EventReportDto {
   @ApiProperty({ format: 'date-time' }) asOf!: string;
 }
 
+
+class PortalAuditEntryDto {
+  @ApiProperty({ format: 'uuid' }) auditId!: string;
+  @ApiProperty({ nullable: true, type: String, format: 'uuid' })
+  actorUserId!: string | null;
+  @ApiProperty() action!: string;
+  @ApiProperty() resourceType!: string;
+  @ApiProperty({ nullable: true, type: String, format: 'uuid' })
+  resourceId!: string | null;
+  @ApiProperty({ nullable: true, type: String, format: 'uuid' })
+  operationId!: string | null;
+  @ApiProperty({ format: 'date-time' }) createdAt!: string;
+}
+
+class PortalAuditPageDto {
+  @ApiProperty({ type: [PortalAuditEntryDto] }) items!: PortalAuditEntryDto[];
+  @ApiProperty({ nullable: true, type: String }) nextCursor!: string | null;
+}
+
 type Deps = {
   db: PrismaClient | null;
   verifier: OidcVerifier | null;
@@ -139,6 +161,34 @@ export class ReportService {
       readEventReport(tx, { tenantId, eventId, actorUserId: user.userId }),
     );
   }
+
+  async eventAudit(
+    authorization: string | undefined,
+    tenantId: string,
+    eventId: string,
+    query: {
+      cursor?: string;
+      limit?: string;
+      from?: string;
+      to?: string;
+      action?: string;
+    },
+  ) {
+    const user = await this.actor(authorization);
+    const limit = query.limit ? Number(query.limit) : undefined;
+    return withTenant(this.deps.db!, tenantId, (tx) =>
+      listEventAudit(tx, {
+        tenantId,
+        eventId,
+        actorUserId: user.userId,
+        cursor: query.cursor,
+        limit: Number.isFinite(limit) ? limit : undefined,
+        from: query.from,
+        to: query.to,
+        action: query.action,
+      }),
+    );
+  }
 }
 
 @ApiTags('reporting')
@@ -170,6 +220,12 @@ export class ReportController {
       );
     }
     if (error instanceof ReportError) {
+      const status =
+        error.code === REPORT_ERROR_CODES.EVENT_NOT_FOUND
+          ? 404
+          : error.code === REPORT_ERROR_CODES.INVALID_CURSOR
+            ? 422
+            : 422;
       throw new HttpException(
         {
           code: error.code,
@@ -177,7 +233,7 @@ export class ReportController {
           requestId: randomUUID(),
           retryable: false,
         } satisfies ApiError,
-        error.code === REPORT_ERROR_CODES.EVENT_NOT_FOUND ? 404 : 422,
+        status,
       );
     }
     throw error;
@@ -195,6 +251,34 @@ export class ReportController {
     const event = requireUuid(eventId, 'eventId');
     return this.reports
       .eventReport(authorization, tenant, event)
+      .catch((error) => this.fail(error));
+  }
+
+  @Get('tenants/:tenantId/events/:eventId/audit')
+  @ApiBearerAuth()
+  @ApiOkResponse({ type: PortalAuditPageDto })
+  @ApiQuery({ name: 'cursor', required: false })
+  @ApiQuery({ name: 'limit', required: false })
+  @ApiQuery({ name: 'from', required: false })
+  @ApiQuery({ name: 'to', required: false })
+  @ApiQuery({ name: 'action', required: false })
+  audit(
+    @Headers('authorization') authorization: string | undefined,
+    @Param('tenantId') tenantId: string,
+    @Param('eventId') eventId: string,
+    @Query()
+    query: {
+      cursor?: string;
+      limit?: string;
+      from?: string;
+      to?: string;
+      action?: string;
+    },
+  ) {
+    const tenant = requireUuid(tenantId, 'tenantId');
+    const event = requireUuid(eventId, 'eventId');
+    return this.reports
+      .eventAudit(authorization, tenant, event, query ?? {})
       .catch((error) => this.fail(error));
   }
 }
