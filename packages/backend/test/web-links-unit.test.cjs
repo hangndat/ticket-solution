@@ -4,6 +4,7 @@ const {
   DEFAULT_PRODUCT_WEB_ORIGIN,
   resolveProductWebBaseUrl,
   buildInviteAcceptLink,
+  buildGuestInvitationClaimLink,
   buildOwnerTicketLink,
   readPublicWebBaseUrl,
 } = require('../dist');
@@ -53,6 +54,26 @@ test('buildInviteAcceptLink uses product origin and encodes token', () => {
     }),
     'https://app.vemoki.com/invite?token=tok',
   );
+});
+
+test('buildGuestInvitationClaimLink puts token in fragment not query', () => {
+  const link = buildGuestInvitationClaimLink({
+    publicWebBaseUrl: 'https://vemoki.com',
+    token: 'tok+1',
+    tenantId: '11111111-1111-4111-8111-111111111111',
+    eventId: '22222222-2222-4222-8222-222222222222',
+    tenantSlug: 'acme',
+    eventSlug: 'spring',
+  });
+  assert.equal(link.includes('?'), false);
+  assert.match(link, new RegExp(`^${DEFAULT_PRODUCT_WEB_ORIGIN}/claim#`));
+  const hash = link.slice(link.indexOf('#') + 1);
+  const params = new URLSearchParams(hash);
+  assert.equal(params.get('token'), 'tok+1');
+  assert.equal(params.get('tenantId'), '11111111-1111-4111-8111-111111111111');
+  assert.equal(params.get('eventId'), '22222222-2222-4222-8222-222222222222');
+  assert.equal(params.get('tenantSlug'), 'acme');
+  assert.equal(params.get('eventSlug'), 'spring');
 });
 
 test('buildOwnerTicketLink encodes path segments and prefers product origin', () => {

@@ -325,6 +325,8 @@ export {
   readPublicWebBaseUrl,
   type EmailAdapter,
   type TicketIssuedEmailPayload,
+  type MembershipInviteEmailPayload,
+  type GuestInvitationEmailPayload,
   type EmailSendResult,
   type SmtpAdapterOptions,
 } from './email-adapter';
@@ -425,6 +427,7 @@ export {
   DEFAULT_PRODUCT_WEB_ORIGIN,
   resolveProductWebBaseUrl,
   buildInviteAcceptLink,
+  buildGuestInvitationClaimLink,
 } from './web-links';
 export {
   listEventNotifications,
