@@ -29,3 +29,6 @@ infra/observability/secrets/metrics_bearer
 # Apple APNs auth keys — never commit
 AuthKey_*.p8
 *.p8
+
+# Local Orca Role × Dispatch metrics ledger (agent-role-monitor MVP)
+.orca-metrics/
