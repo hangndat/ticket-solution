@@ -7,7 +7,8 @@
 | Architecture impact | Không — copy + evidence |
 | Ngày | **2026-10-18** |
 | Base | `origin/main` @ `723d46dd218e10f988772509c0ca4a85cfca8929` (PR #313 merged `c70631dd46d956b3b89917a12668970732800466`) |
-| Behavior SHA | xem tip commit trên PR (cập nhật sau push) |
+| Behavior SHA (code) | `e72514bd5a0bedee8fa809801bd2a70914a8c72e` |
+| Review tip | Exact SHA = PR HEAD lúc mở/review (không self-embed trong commit docs) |
 
 ## Mục tiêu
 

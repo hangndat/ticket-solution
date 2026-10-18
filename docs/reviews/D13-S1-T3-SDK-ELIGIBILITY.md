@@ -6,7 +6,8 @@
 | Ngày đối chiếu | **2026-10-18** |
 | Role | `ios` |
 | Agent / session | Cursor worker `task_9f3d64a5a2da` / `ctx_cf9f7aacafed` |
-| Worktree tip khi viết | xem tip commit trên PR (cập nhật sau push) |
+| Behavior SHA (mobile code) | `e72514bd5a0bedee8fa809801bd2a70914a8c72e` |
+| Review tip | Exact SHA = PR HEAD lúc mở/review |
 | Nguồn PRIMARY | Apple Upcoming Requirements — SDK minimum |
 
 ## 1. Nguồn Apple (live 2026-10-18)
