@@ -2,7 +2,7 @@
 
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { D9_DEMO } = require('../dist/demo-seed');
+const { D9_DEMO, D9_LEGACY_TENANT_SLUGS } = require('../dist/demo-seed');
 
 test('D9_DEMO dataset has ≥2 tenants, events, codes, and demo markers', () => {
   assert.equal(D9_DEMO.tenants.mfest.slug, 'mfest-demo');
@@ -17,4 +17,9 @@ test('D9_DEMO dataset has ≥2 tenants, events, codes, and demo markers', () => 
   // Stable UUIDs (fixture contract)
   assert.match(D9_DEMO.tenants.mfest.id, /^d9d9f001-/);
   assert.match(D9_DEMO.events.mfest.id, /^d9d9f001-/);
+  // Known Fun Fest → MFest rebrand only (not arbitrary slug overwrite)
+  assert.deepEqual(D9_LEGACY_TENANT_SLUGS[D9_DEMO.tenants.mfest.id], [
+    'demo-fun',
+  ]);
+  assert.equal(D9_LEGACY_TENANT_SLUGS[D9_DEMO.tenants.studio.id], undefined);
 });
