@@ -59,6 +59,8 @@ export const ISSUE_ERROR_CODES = {
   PENDING_EXPIRED: 'PENDING_EXPIRED',
   PENDING_LIMIT: 'PENDING_LIMIT',
   REDEMPTION_NOT_FOUND: 'REDEMPTION_NOT_FOUND',
+  /** Owner ticket read — missing or not owned (fail-closed 404). */
+  TICKET_NOT_FOUND: 'TICKET_NOT_FOUND',
 } as const;
 
 export type IssueErrorCode =

@@ -71,6 +71,7 @@ export {
   APPROVAL_PENDING,
   redeemAndIssueTicket,
   listTicketsForOwner,
+  getTicketForOwner,
   getOperationForActor,
   storedRejectionFromResponse,
   throwIfStoredRejection,
