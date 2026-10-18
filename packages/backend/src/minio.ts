@@ -47,6 +47,17 @@ export function readMinioEnvironment(env: NodeJS.ProcessEnv): MinioConfig | null
   return { endpoint, accessKey, secretKey, bucket, region };
 }
 
+/** Prefer `MINIO_BUCKET_IMPORTS` for CSV quarantine (falls back to shared MinIO cfg). */
+export function readMinioImportsEnvironment(
+  env: NodeJS.ProcessEnv,
+): MinioConfig | null {
+  const base = readMinioEnvironment(env);
+  if (!base) return null;
+  const importsBucket = env['MINIO_BUCKET_IMPORTS']?.trim();
+  if (importsBucket) return { ...base, bucket: importsBucket };
+  return base;
+}
+
 export function requireMinioConfig(env: NodeJS.ProcessEnv): MinioConfig {
   const cfg = readMinioEnvironment(env);
   if (!cfg) {

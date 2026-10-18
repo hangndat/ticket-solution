@@ -1632,9 +1632,45 @@
         ]
       }
     },
+    "/v1/tenants/{tenantId}/events/{eventId}/imports/files": {
+      "post": {
+        "operationId": "InventoryController_uploadFile",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "eventId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "inventory"
+        ]
+      }
+    },
     "/v1/tenants/{tenantId}/events/{eventId}/imports": {
       "post": {
-        "operationId": "InventoryController_importCodes",
+        "operationId": "InventoryController_importOrCreate",
         "parameters": [
           {
             "name": "tenantId",
@@ -1659,6 +1695,400 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/ImportBodyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "inventory"
+        ]
+      }
+    },
+    "/v1/tenants/{tenantId}/events/{eventId}/imports/{importId}": {
+      "get": {
+        "operationId": "InventoryController_getJob",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "eventId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "importId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "inventory"
+        ]
+      }
+    },
+    "/v1/tenants/{tenantId}/events/{eventId}/imports/{importId}/preview": {
+      "post": {
+        "operationId": "InventoryController_preview",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "eventId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "importId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportPreviewBodyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "inventory"
+        ]
+      }
+    },
+    "/v1/tenants/{tenantId}/events/{eventId}/imports/{importId}/commit": {
+      "post": {
+        "operationId": "InventoryController_commit",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "eventId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "importId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportCommitBodyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "inventory"
+        ]
+      }
+    },
+    "/v1/tenants/{tenantId}/events/{eventId}/imports/{importId}/errors": {
+      "get": {
+        "operationId": "InventoryController_errors",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "eventId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "importId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "inventory"
+        ]
+      }
+    },
+    "/v1/tenants/{tenantId}/events/{eventId}/invitations": {
+      "get": {
+        "operationId": "InventoryController_listInvitations",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "eventId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "state",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "inventory"
+        ]
+      }
+    },
+    "/v1/tenants/{tenantId}/events/{eventId}/invitations/dispatch-preview": {
+      "post": {
+        "operationId": "InventoryController_dispatchPreview",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "eventId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InvitationDispatchPreviewBodyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "inventory"
+        ]
+      }
+    },
+    "/v1/tenants/{tenantId}/events/{eventId}/invitations/dispatch": {
+      "post": {
+        "operationId": "InventoryController_dispatch",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "eventId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InvitationDispatchBodyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "inventory"
+        ]
+      }
+    },
+    "/v1/tenants/{tenantId}/events/{eventId}/invitations/claim": {
+      "post": {
+        "operationId": "InventoryController_claim",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "eventId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InvitationClaimBodyDto"
               }
             }
           }
@@ -4487,10 +4917,120 @@
           },
           "eventQuota": {
             "type": "number"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "CODES",
+              "GUESTS"
+            ]
+          },
+          "sourceId": {
+            "type": "string"
+          },
+          "ticketTypeId": {
+            "type": "string"
+          },
+          "fileId": {
+            "type": "string"
+          },
+          "rawCodes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "mappingRevision": {
+            "type": "number"
+          },
+          "columnMapping": {
+            "type": "object"
+          }
+        }
+      },
+      "ImportPreviewBodyDto": {
+        "type": "object",
+        "properties": {
+          "mappingRevision": {
+            "type": "number"
+          },
+          "columnMapping": {
+            "type": "object"
+          }
+        }
+      },
+      "ImportCommitBodyDto": {
+        "type": "object",
+        "properties": {
+          "previewRevision": {
+            "type": "number"
+          },
+          "mappingRevision": {
+            "type": "number"
+          },
+          "fileHash": {
+            "type": "string"
           }
         },
         "required": [
-          "codes"
+          "previewRevision",
+          "mappingRevision",
+          "fileHash"
+        ]
+      },
+      "InvitationDispatchPreviewBodyDto": {
+        "type": "object",
+        "properties": {
+          "invitationIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "invitationIds"
+        ]
+      },
+      "InvitationDispatchBodyDto": {
+        "type": "object",
+        "properties": {
+          "invitationIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "previewRevision": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "invitationIds",
+          "previewRevision"
+        ]
+      },
+      "InvitationClaimBodyDto": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string"
+          },
+          "formVersion": {
+            "type": "string"
+          },
+          "termsVersion": {
+            "type": "string"
+          },
+          "answers": {
+            "type": "object"
+          },
+          "termsAccepted": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "token"
         ]
       },
       "ApprovalResponseDto": {
