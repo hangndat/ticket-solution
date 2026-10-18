@@ -6,7 +6,7 @@
 | Role | `product-ba` (+ coordinator ops IdP) · `docs/agents/roles/product-ba.md` |
 | Architecture impact | **Không** — ops IdP demo account + BA copy |
 | Ngày (UTC) | 2026-10-18 |
-| Docs tip SHA | `9959e04e66a1d3e2d078fbada3ac95f0ce1d3641` (branch tip tại commit cite) |
+| Docs tip SHA |  |
 | Deploy marker VPS (đọc) | `0a65f3c2f2d51357ee1a6270151d279758188fb7` (`/opt/vemoki/deployed-sha.txt` — không suy = tip binary store) |
 | Cấm | Commit mật khẩu / client secret; EAS Cloud; submit/store mutate; deploy dịch vụ ngoài IdP user provision |
 
