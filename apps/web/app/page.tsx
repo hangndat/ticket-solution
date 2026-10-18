@@ -5,7 +5,6 @@ import { SiteNav } from '../src/site-chrome';
 import {
   PUBLIC_EVENT_COPY,
   homeTenantSlugs,
-  isExplicitDemoLabel,
   loadPublishedEventList,
   publishedEventHref,
 } from '../src/published';
@@ -130,47 +129,38 @@ export default async function Home({ searchParams }: Props) {
 
       {catalog.status === 'ok' ? (
         <div className="event-list" role="list">
-          {catalog.items.map((event) => {
-            const demo = isExplicitDemoLabel(
-              event.name,
-              event.brand.organizationName,
-            );
-            return (
-              <Link
-                className="event-row"
-                href={publishedEventHref(event)}
-                key={event.id}
-                role="listitem"
-                data-testid={`home-event-${event.id}`}
-              >
-                <EventBanner
-                  eventId={event.id}
-                  tenantSlug={event.tenantSlug}
-                  bannerUrl={event.brand.bannerUrl}
-                  className="event-banner event-banner-card"
-                  testId={`home-banner-${event.id}`}
-                  alt=""
-                />
-                <EventLogo
-                  eventId={event.id}
-                  tenantSlug={event.tenantSlug}
-                  logoUrl={event.brand.logoUrl}
-                  className="event-logo event-logo-card"
-                  testId={`home-logo-${event.id}`}
-                  alt=""
-                />
-                <span className="eyebrow">
-                  {event.brand.organizationName}
-                  {demo ? ' · Demo' : ''}
-                </span>
-                <h2>{event.name}</h2>
-                <p>{event.location ?? event.timezone}</p>
-                <span className="card-action">
-                  Xem sự kiện <span aria-hidden="true">↗</span>
-                </span>
-              </Link>
-            );
-          })}
+          {catalog.items.map((event) => (
+            <Link
+              className="event-row"
+              href={publishedEventHref(event)}
+              key={event.id}
+              role="listitem"
+              data-testid={`home-event-${event.id}`}
+            >
+              <EventBanner
+                eventId={event.id}
+                tenantSlug={event.tenantSlug}
+                bannerUrl={event.brand.bannerUrl}
+                className="event-banner event-banner-card"
+                testId={`home-banner-${event.id}`}
+                alt=""
+              />
+              <EventLogo
+                eventId={event.id}
+                tenantSlug={event.tenantSlug}
+                logoUrl={event.brand.logoUrl}
+                className="event-logo event-logo-card"
+                testId={`home-logo-${event.id}`}
+                alt=""
+              />
+              <span className="eyebrow">{event.brand.organizationName}</span>
+              <h2>{event.name}</h2>
+              <p>{event.location ?? event.timezone}</p>
+              <span className="card-action">
+                Xem sự kiện <span aria-hidden="true">↗</span>
+              </span>
+            </Link>
+          ))}
         </div>
       ) : null}
 

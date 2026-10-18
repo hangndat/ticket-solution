@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import Link from 'next/link';
+import { useEffect, useState, useTransition } from 'react';
 import { SurfaceState } from '../../src/ui/surface-state';
 
 type SessionSummary =
@@ -45,21 +46,21 @@ function summarizeMe(status: number, body: string): SessionSummary {
   }
   return {
     kind: 'error',
-    detail: 'Không kiểm tra được phiên lúc này. Thử lại sau.',
+    detail: 'Không tải được trạng thái phiên lúc này. Thử lại sau.',
   };
 }
 
 /**
- * Identity session — same-origin cookies (HttpOnly).
- * Session lives in cookies; /api/bff/me uses the server cookie.
+ * Identity session — same-origin cookies via /api/bff/me.
+ * Auto-resolves on mount; no debug “Kiểm tra phiên” chrome.
  */
 export function AuthSession() {
   const [summary, setSummary] = useState<SessionSummary | null>(null);
   const [pending, startTransition] = useTransition();
 
-  function callMe() {
+  useEffect(() => {
+    let cancelled = false;
     startTransition(async () => {
-      setSummary(null);
       try {
         const response = await fetch('/api/bff/me', {
           method: 'GET',
@@ -67,23 +68,114 @@ export function AuthSession() {
           cache: 'no-store',
         });
         const body = await response.text();
-        setSummary(summarizeMe(response.status, body));
+        if (!cancelled) {
+          setSummary(summarizeMe(response.status, body));
+        }
       } catch {
-        setSummary({
-          kind: 'error',
-          detail: 'Không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.',
-        });
+        if (!cancelled) {
+          setSummary({
+            kind: 'error',
+            detail: 'Không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.',
+          });
+        }
       }
     });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (pending && summary === null) {
+    return (
+      <div className="auth-session">
+        <SurfaceState
+          kind="loading"
+          title="Đang tải phiên…"
+          detail="Đang xác nhận trạng thái đăng nhập."
+          testId="auth-session-loading"
+        />
+      </div>
+    );
+  }
+
+  if (summary?.kind === 'signed-in') {
+    return (
+      <div className="auth-session">
+        <section className="auth-status" aria-live="polite">
+          <h1>Đã đăng nhập</h1>
+          <p className="intro">
+            {summary.subjectHint
+              ? `Bạn đang đăng nhập với ${summary.subjectHint}.`
+              : 'Bạn đang có phiên đăng nhập trên thiết bị này.'}
+          </p>
+        </section>
+
+        <section className="auth-actions">
+          <h2>Tiếp theo</h2>
+          <div className="auth-buttons">
+            <Link className="button-link" href="/redeem">
+              Đổi mã lấy vé
+            </Link>
+            <Link className="button-link" href="/account">
+              Tài khoản
+            </Link>
+            <Link className="button-link" href="/">
+              Về trang chủ
+            </Link>
+            <a className="button-link button-link-secondary" href="/api/auth/logout">
+              Đăng xuất
+            </a>
+          </div>
+          <SurfaceState
+            kind="empty"
+            title="Phiên đang hoạt động"
+            detail={
+              summary.subjectHint
+                ? `Tóm tắt: ${summary.subjectHint}`
+                : 'Phiên hợp lệ trên thiết bị này.'
+            }
+            testId="auth-session-signed-in"
+          />
+        </section>
+      </div>
+    );
+  }
+
+  if (summary?.kind === 'error') {
+    return (
+      <div className="auth-session">
+        <h1>Đăng nhập</h1>
+        <p className="intro">
+          Đăng nhập để đổi mã lấy vé, nhận lời mời, hoặc mở khu vực tổ chức. Đây
+          không phải cổng kiểm soát vé tại cửa.
+        </p>
+        <SurfaceState
+          kind="error"
+          title="Không tải được phiên"
+          detail={summary.detail}
+          testId="auth-session-error"
+          action={
+            <div className="auth-buttons">
+              <a className="button-link" href="/api/auth/login">
+                Đăng nhập
+              </a>
+              <Link className="button-link button-link-secondary" href="/">
+                Về trang chủ
+              </Link>
+            </div>
+          }
+        />
+      </div>
+    );
   }
 
   return (
     <div className="auth-session">
       <section className="auth-status" aria-live="polite">
-        <h2>Trạng thái phiên</h2>
+        <h1>Đăng nhập</h1>
         <p className="intro">
-          Phiên đăng nhập được lưu an toàn trên máy chủ (cookie HttpOnly). Trình
-          duyệt không giữ token trong localStorage.
+          Đăng nhập để đổi mã lấy vé, nhận lời mời, hoặc mở khu vực tổ chức. Đây
+          không phải cổng kiểm soát vé tại cửa.
         </p>
       </section>
 
@@ -93,49 +185,16 @@ export function AuthSession() {
           <a className="button-link" href="/api/auth/login">
             Đăng nhập
           </a>
-          <button type="button" onClick={callMe} disabled={pending}>
-            {pending ? 'Đang kiểm tra phiên…' : 'Kiểm tra phiên'}
-          </button>
-          <a className="button-link" href="/api/auth/logout">
-            Đăng xuất
-          </a>
+          <Link className="button-link button-link-secondary" href="/redeem">
+            Đổi mã lấy vé
+          </Link>
         </div>
-        {pending ? (
-          <SurfaceState
-            kind="loading"
-            title="Đang kiểm tra phiên…"
-            detail="Chưa khẳng định đã đăng nhập cho đến khi có kết quả."
-            testId="auth-session-loading"
-          />
-        ) : null}
-        {summary?.kind === 'signed-in' ? (
-          <SurfaceState
-            kind="empty"
-            title="Đã đăng nhập"
-            detail={
-              summary.subjectHint
-                ? `Phiên đang hoạt động (${summary.subjectHint}).`
-                : 'Phiên đang hoạt động trên thiết bị này.'
-            }
-            testId="auth-session-signed-in"
-          />
-        ) : null}
-        {summary?.kind === 'signed-out' ? (
-          <SurfaceState
-            kind="empty"
-            title="Chưa đăng nhập"
-            detail="Không có phiên hợp lệ. Bấm «Đăng nhập» để tiếp tục."
-            testId="auth-session-signed-out"
-          />
-        ) : null}
-        {summary?.kind === 'error' ? (
-          <SurfaceState
-            kind="error"
-            title="Không kiểm tra được phiên"
-            detail={summary.detail}
-            testId="auth-session-error"
-          />
-        ) : null}
+        <SurfaceState
+          kind="empty"
+          title="Chưa đăng nhập"
+          detail="Không có phiên hợp lệ. Bấm «Đăng nhập» để tiếp tục."
+          testId="auth-session-signed-out"
+        />
       </section>
     </div>
   );

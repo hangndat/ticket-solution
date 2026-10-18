@@ -75,6 +75,10 @@ test('attendee-only: staffEligible false → no staff chrome', () => {
   assert.equal(caps.showGate, false);
   assert.equal(caps.showPlatform, false);
   assert.equal(caps.showAccount, true);
+  const links = buildNavLinks(caps);
+  const hrefs = links.map((l) => l.href);
+  assert.ok(hrefs.includes('/account'));
+  assert.ok(!hrefs.includes('/auth'), 'logged-in nav uses Tài khoản, not Đăng nhập');
 });
 
 test('Scanner with gate.confirm shows Gate, not Admin without tenant perms', () => {
