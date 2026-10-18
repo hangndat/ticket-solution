@@ -4,6 +4,7 @@ import {
   Alert,
   Button,
   Card,
+  Descriptions,
   Input,
   Result,
   Space,
@@ -15,13 +16,16 @@ import { useCallback, useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import type {
   PortalPlatformAuditEntry,
+  PortalPlatformTenantHealth,
   PortalPlatformTenantSummary,
 } from '@ticket/contracts';
 import { loadShellContext } from '../../src/nav/load-shell-context';
 import { SurfaceState } from '../../src/components/surface-state';
-import { portalGet } from '../../src/client/portal-fetch';
+import { portalGet, portalMutate } from '../../src/client/portal-fetch';
 import {
   bffPlatformAudit,
+  bffPlatformSupportGrantRevoke,
+  bffPlatformTenantHealth,
   bffPlatformTenants,
 } from '../../src/prep/bff-urls';
 import {
@@ -31,7 +35,11 @@ import {
 } from '../../src/ops/audit';
 import {
   buildPlatformListQuery,
+  interpretPlatformTenantHealth,
   interpretPlatformTenantsPage,
+  interpretSupportGrantRevoke,
+  type PlatformHealthView,
+  type PlatformRevokeView,
   type PlatformTenantsView,
 } from '../../src/ops/platform-zone';
 
@@ -61,6 +69,22 @@ function PlatformInner() {
   const [filterTenantId, setFilterTenantId] = useState('');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
+
+  const [healthBusy, setHealthBusy] = useState(false);
+  const [healthTenantId, setHealthTenantId] = useState('');
+  const [healthView, setHealthView] = useState<PlatformHealthView | null>(
+    null,
+  );
+  const [health, setHealth] = useState<PortalPlatformTenantHealth | null>(
+    null,
+  );
+
+  const [revokeBusy, setRevokeBusy] = useState(false);
+  const [revokeGrantId, setRevokeGrantId] = useState('');
+  const [revokeReason, setRevokeReason] = useState('');
+  const [revokeView, setRevokeView] = useState<PlatformRevokeView | null>(
+    null,
+  );
 
   useEffect(() => {
     void loadShellContext().then((shell) => {
@@ -138,6 +162,57 @@ function PlatformInner() {
     },
     [action, filterTenantId, from, to],
   );
+
+  const loadHealth = useCallback(async (tenantId: string) => {
+    const id = tenantId.trim();
+    setHealthTenantId(id);
+    setHealthBusy(true);
+    setHealth(null);
+    if (!id) {
+      setHealthView({
+        kind: 'rejected',
+        code: 'INVALID_INPUT',
+        message: 'Chọn tenant hoặc nhập tenantId (UUID).',
+      });
+      setHealthBusy(false);
+      return;
+    }
+    const res = await portalGet(bffPlatformTenantHealth(id));
+    const next = interpretPlatformTenantHealth(
+      res.status,
+      res.json,
+      res.networkError || res.timedOut,
+    );
+    setHealthView(next);
+    setHealth(next.kind === 'ok' ? next.health : null);
+    setHealthBusy(false);
+  }, []);
+
+  const submitRevoke = useCallback(async () => {
+    const grantId = revokeGrantId.trim();
+    const reason = revokeReason.trim();
+    setRevokeBusy(true);
+    setRevokeView(null);
+    if (!grantId || !reason) {
+      setRevokeView({
+        kind: 'rejected',
+        code: 'INVALID_INPUT',
+        message: 'grantId (UUID) và reason bắt buộc.',
+      });
+      setRevokeBusy(false);
+      return;
+    }
+    const res = await portalMutate(bffPlatformSupportGrantRevoke(grantId), {
+      reason,
+    });
+    const next = interpretSupportGrantRevoke(
+      res.status,
+      res.json,
+      res.networkError || res.timedOut,
+    );
+    setRevokeView(next);
+    setRevokeBusy(false);
+  }, [revokeGrantId, revokeReason]);
 
   useEffect(() => {
     if (kind !== 'ready') return;
@@ -221,7 +296,7 @@ function PlatformInner() {
         type="info"
         showIcon
         message={`PLATFORM-PORTAL-ZONE · Operator · assurance=${assurance}`}
-        description="Client/cookie/audience tách khỏi staff. Owner ≠ Operator. Health chi tiết (H-P2) chờ BE riêng — không bịa SLA."
+        description="Client/cookie/audience tách khỏi staff. Owner ≠ Operator. Health = counter sanitize (H-P2) — không SLA / payload / Redis-up giả."
       />
       <Tabs
         items={[
@@ -259,15 +334,28 @@ function PlatformInner() {
                     },
                     {
                       title: '',
-                      key: 'filter',
-                      width: 100,
+                      key: 'actions',
+                      width: 200,
                       render: (_, row) => (
-                        <Button
-                          size="small"
-                          onClick={() => setFilterTenantId(row.tenantId)}
-                        >
-                          Lọc audit
-                        </Button>
+                        <Space size="small">
+                          <Button
+                            size="small"
+                            onClick={() => setFilterTenantId(row.tenantId)}
+                          >
+                            Lọc audit
+                          </Button>
+                          <Button
+                            size="small"
+                            type="primary"
+                            loading={
+                              healthBusy && healthTenantId === row.tenantId
+                            }
+                            onClick={() => void loadHealth(row.tenantId)}
+                            data-testid={`platform-health-btn-${row.tenantId}`}
+                          >
+                            Health
+                          </Button>
+                        </Space>
                       ),
                     },
                   ]}
@@ -279,6 +367,137 @@ function PlatformInner() {
                   >
                     Trang tiếp
                   </Button>
+                ) : null}
+              </Space>
+            ),
+          },
+          {
+            key: 'health',
+            label: 'Tenant health',
+            children: (
+              <Space direction="vertical" style={{ width: '100%' }} size="middle">
+                <Alert
+                  type="info"
+                  showIcon
+                  message="H-P2"
+                  description="Chỉ counter notifications/outbox/usage đã sanitize. Không payload email, raw error, hay trạng thái Redis/SMTP."
+                />
+                <Space wrap>
+                  <Input
+                    placeholder="tenantId (UUID)"
+                    value={healthTenantId}
+                    onChange={(e) => setHealthTenantId(e.target.value)}
+                    style={{ minWidth: 320 }}
+                    spellCheck={false}
+                    allowClear
+                    data-testid="platform-health-tenant-input"
+                  />
+                  <Button
+                    type="primary"
+                    loading={healthBusy}
+                    onClick={() => void loadHealth(healthTenantId)}
+                    data-testid="platform-health-load"
+                  >
+                    Đọc health
+                  </Button>
+                </Space>
+                {healthView?.kind === 'rejected' ||
+                healthView?.kind === 'unknown' ? (
+                  <Alert
+                    type="warning"
+                    showIcon
+                    message={healthView.message}
+                    data-testid="platform-health-status"
+                  />
+                ) : null}
+                {health ? (
+                  <Card size="small" data-testid="platform-health">
+                    <Descriptions
+                      size="small"
+                      column={1}
+                      title="Counters (sanitize)"
+                      items={[
+                        {
+                          key: 'ids',
+                          label: 'tenant / observedAt',
+                          children: `${health.tenantId} · ${health.observedAt}`,
+                        },
+                        {
+                          key: 'notif',
+                          label: 'notifications',
+                          children: `pending=${health.notifications.pending} · failed=${health.notifications.failed} · dead=${health.notifications.dead}`,
+                        },
+                        {
+                          key: 'outbox',
+                          label: 'outbox',
+                          children: `pending=${health.outbox.pending} · failed=${health.outbox.failed}`,
+                        },
+                        {
+                          key: 'usage',
+                          label: 'usage',
+                          children: `events=${health.usage.events} · staffActive=${health.usage.staffActive} · staffPendingInvites=${health.usage.staffPendingInvites} · emailToday=${health.usage.emailToday}`,
+                        },
+                      ]}
+                    />
+                  </Card>
+                ) : null}
+              </Space>
+            ),
+          },
+          {
+            key: 'revoke',
+            label: 'Revoke support grant',
+            children: (
+              <Space direction="vertical" style={{ width: '100%' }} size="middle">
+                <Alert
+                  type="warning"
+                  showIcon
+                  message="Thu hồi support grant"
+                  description="Chỉ Operator MFA. Reason bắt buộc (audit platform.support.revoked). Không dùng token staff."
+                />
+                <Input
+                  placeholder="grantId (UUID)"
+                  value={revokeGrantId}
+                  onChange={(e) => setRevokeGrantId(e.target.value)}
+                  spellCheck={false}
+                  allowClear
+                  data-testid="platform-revoke-grant-input"
+                />
+                <Input.TextArea
+                  placeholder="reason (bắt buộc, ≤500)"
+                  value={revokeReason}
+                  onChange={(e) => setRevokeReason(e.target.value)}
+                  rows={3}
+                  maxLength={500}
+                  showCount
+                  data-testid="platform-revoke-reason-input"
+                />
+                <Button
+                  danger
+                  type="primary"
+                  loading={revokeBusy}
+                  onClick={() => void submitRevoke()}
+                  data-testid="platform-revoke-submit"
+                >
+                  Thu hồi grant
+                </Button>
+                {revokeView?.kind === 'ok' ? (
+                  <Alert
+                    type="success"
+                    showIcon
+                    message={`Đã thu hồi ${revokeView.result.grantId}`}
+                    description={`revokedAt=${revokeView.result.revokedAt}`}
+                    data-testid="platform-revoke-status"
+                  />
+                ) : null}
+                {revokeView?.kind === 'rejected' ||
+                revokeView?.kind === 'unknown' ? (
+                  <Alert
+                    type="error"
+                    showIcon
+                    message={revokeView.message}
+                    data-testid="platform-revoke-status"
+                  />
                 ) : null}
               </Space>
             ),

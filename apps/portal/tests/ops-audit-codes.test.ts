@@ -8,7 +8,9 @@ import {
 import { buildCodesQuery, interpretCodesPage } from '../src/ops/codes';
 import {
   buildPlatformListQuery,
+  interpretPlatformTenantHealth,
   interpretPlatformTenantsPage,
+  interpretSupportGrantRevoke,
 } from '../src/ops/platform-zone';
 
 const entry = {
@@ -204,5 +206,69 @@ describe('platform tenants (H-P1)', () => {
 
   it('buildPlatformListQuery supports cursor', () => {
     assert.match(buildPlatformListQuery({ cursor: 'x', limit: 10 }), /cursor=x/);
+  });
+});
+
+const SAMPLE_HEALTH = {
+  tenantId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+  observedAt: '2026-10-19T00:00:00.000Z',
+  notifications: { pending: 1, failed: 2, dead: 0 },
+  outbox: { pending: 3, failed: 0 },
+  usage: {
+    events: 4,
+    staffActive: 5,
+    staffPendingInvites: 1,
+    emailToday: 9,
+  },
+};
+
+describe('platform tenant health (H-P2)', () => {
+  it('accepts sanitized counters', () => {
+    const view = interpretPlatformTenantHealth(200, SAMPLE_HEALTH, false);
+    assert.equal(view.kind, 'ok');
+    if (view.kind === 'ok') {
+      assert.equal(view.health.notifications.failed, 2);
+      assert.equal(view.health.usage.emailToday, 9);
+    }
+  });
+
+  it('rejects payload / SLA leakage', () => {
+    const view = interpretPlatformTenantHealth(
+      200,
+      { ...SAMPLE_HEALTH, success: true, payload: { email: 'a@b.c' } },
+      false,
+    );
+    assert.equal(view.kind, 'unknown');
+  });
+
+  it('fail-closed for staff/MFA deny', () => {
+    const view = interpretPlatformTenantHealth(
+      403,
+      { code: 'PLATFORM_OPERATOR_REQUIRED', message: 'no' },
+      false,
+    );
+    assert.equal(view.kind, 'rejected');
+    if (view.kind === 'rejected') {
+      assert.match(view.message, /Operator MFA|no/i);
+    }
+  });
+});
+
+describe('support grant revoke', () => {
+  it('accepts revoke envelope', () => {
+    const view = interpretSupportGrantRevoke(
+      200,
+      {
+        grantId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+        revokedAt: '2026-10-19T01:00:00.000Z',
+      },
+      false,
+    );
+    assert.equal(view.kind, 'ok');
+  });
+
+  it('fail-closed without platform MFA', () => {
+    const view = interpretSupportGrantRevoke(401, { code: 'UNAUTHENTICATED' }, false);
+    assert.equal(view.kind, 'rejected');
   });
 });
