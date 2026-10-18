@@ -128,6 +128,9 @@ export class ApprovalService {
     eventId: string,
     cursor?: string,
     limit?: number,
+    sourceId?: string,
+    ticketTypeId?: string,
+    q?: string,
   ) {
     const user = await this.actor(authorization);
     return withTenant(this.deps.db!, tenantId, (tx) =>
@@ -137,6 +140,9 @@ export class ApprovalService {
         actorUserId: user.userId,
         cursor,
         limit,
+        sourceId,
+        ticketTypeId,
+        q,
       }),
     );
   }
@@ -205,6 +211,9 @@ export class ApprovalController {
     @Query('status') status?: string,
     @Query('cursor') cursor?: string,
     @Query('limit') limitRaw?: string,
+    @Query('sourceId') sourceId?: string,
+    @Query('ticketTypeId') ticketTypeId?: string,
+    @Query('q') q?: string,
   ) {
     if (status && status !== 'PENDING_REVIEW') {
       throw scopeError('status must be PENDING_REVIEW when provided');
@@ -216,6 +225,16 @@ export class ApprovalController {
     if (limit != null && (!Number.isFinite(limit) || limit < 1)) {
       throw scopeError('limit must be a positive integer');
     }
+    const source =
+      sourceId != null && sourceId !== ''
+        ? requireUuid(sourceId, 'sourceId')
+        : undefined;
+    const ticketType =
+      ticketTypeId != null && ticketTypeId !== ''
+        ? requireUuid(ticketTypeId, 'ticketTypeId')
+        : undefined;
+    const requestQ =
+      q != null && q !== '' ? requireUuid(q, 'q') : undefined;
     return this.approvals
       .listPending(
         authorization,
@@ -223,6 +242,9 @@ export class ApprovalController {
         requireUuid(eventId, 'eventId'),
         cursor,
         limit,
+        source,
+        ticketType,
+        requestQ,
       )
       .catch((error) => this.fail(error));
   }
