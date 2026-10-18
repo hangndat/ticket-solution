@@ -19,6 +19,16 @@ import { withTenant } from './tenant-context';
 
 const DEMO_MARKER = '· Demo';
 
+/**
+ * Known pre-rebrand D9 tenant slugs (Fun Fest → MFest).
+ * Migration is fail-closed: only these UUID + old-slug pairs may rename.
+ * Arbitrary slug drift on the same UUID still throws.
+ */
+export const D9_LEGACY_TENANT_SLUGS: Readonly<Record<string, readonly string[]>> =
+  {
+    'd9d9f001-0001-4000-8000-000000000001': ['demo-fun'],
+  };
+
 /** Stable fixture UUIDs — see docs/demo/D9-DEMO-DATASET.md */
 export const D9_DEMO = {
   marker: DEMO_MARKER,
@@ -290,6 +300,14 @@ async function usersByEmail(
   return rows.map((r) => r.id);
 }
 
+function isUniqueViolation(err: unknown): boolean {
+  if (typeof err !== 'object' || err === null) return false;
+  const code = 'code' in err ? String((err as { code: unknown }).code) : '';
+  if (code === 'P2002' || code === '23505') return true;
+  const message = err instanceof Error ? err.message : String(err);
+  return /unique|duplicate key/i.test(message);
+}
+
 async function ensureTenant(
   tx: Prisma.TransactionClient,
   tenant: { id: string; slug: string; name: string },
@@ -297,9 +315,40 @@ async function ensureTenant(
   const byId = await tx.tenant.findUnique({ where: { id: tenant.id } });
   if (byId) {
     if (byId.slug !== tenant.slug) {
-      throw new Error(
-        `D9 demo tenant id ${tenant.id} exists with slug=${byId.slug}, expected ${tenant.slug}`,
-      );
+      const legacySlugs = D9_LEGACY_TENANT_SLUGS[tenant.id] ?? [];
+      const isKnownRebrand = legacySlugs.includes(byId.slug);
+      if (!isKnownRebrand) {
+        throw new Error(
+          `D9 demo tenant id ${tenant.id} exists with slug=${byId.slug}, expected ${tenant.slug}`,
+        );
+      }
+      // Best-effort under RLS (may not see other tenants); UNIQUE(slug) is the hard gate.
+      const slugOwner = await tx.tenant.findUnique({
+        where: { slug: tenant.slug },
+      });
+      if (slugOwner && slugOwner.id !== tenant.id) {
+        throw new Error(
+          `D9 demo rebrand blocked: slug ${tenant.slug} already used by id=${slugOwner.id}; refuse to overwrite`,
+        );
+      }
+      try {
+        await tx.tenant.update({
+          where: { id: tenant.id },
+          data: {
+            slug: tenant.slug,
+            name: tenant.name,
+            status: 'ACTIVE',
+          },
+        });
+      } catch (err) {
+        if (isUniqueViolation(err)) {
+          throw new Error(
+            `D9 demo rebrand blocked: slug ${tenant.slug} already used by another tenant; refuse to overwrite`,
+          );
+        }
+        throw err;
+      }
+      return false;
     }
     await tx.tenant.update({
       where: { id: tenant.id },
@@ -313,15 +362,24 @@ async function ensureTenant(
       `Tenant slug ${tenant.slug} already used by id=${bySlug.id}; refuse to overwrite non-demo id`,
     );
   }
-  await tx.tenant.create({
-    data: {
-      id: tenant.id,
-      slug: tenant.slug,
-      name: tenant.name,
-      status: 'ACTIVE',
-      defaultTimezone: 'Asia/Ho_Chi_Minh',
-    },
-  });
+  try {
+    await tx.tenant.create({
+      data: {
+        id: tenant.id,
+        slug: tenant.slug,
+        name: tenant.name,
+        status: 'ACTIVE',
+        defaultTimezone: 'Asia/Ho_Chi_Minh',
+      },
+    });
+  } catch (err) {
+    if (isUniqueViolation(err)) {
+      throw new Error(
+        `Tenant slug ${tenant.slug} already used by another tenant; refuse to overwrite non-demo id`,
+      );
+    }
+    throw err;
+  }
   return true;
 }
 
