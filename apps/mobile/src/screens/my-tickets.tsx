@@ -11,6 +11,7 @@ import type { TicketSummary } from '@ticket/contracts';
 import { AttendeeCta } from '@/components/attendee-cta';
 import { EventLogo } from '@/components/event-media';
 import { BrandWordmark, Notice } from '@/components/page';
+import { ScreenAtmosphere } from '@/components/screen-atmosphere';
 import {
   EmptyState,
   ErrorState,
@@ -138,13 +139,15 @@ export function MyTicketsScreen() {
 
   if (!configured) {
     return (
-      <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
-        style={{ backgroundColor: colors.background }}
-        contentContainerStyle={{ padding: 20, paddingBottom: 48, gap: 20 }}
-      >
-        <AccountScreen />
-      </ScrollView>
+      <ScreenAtmosphere>
+        <ScrollView
+          contentInsetAdjustmentBehavior="automatic"
+          style={{ backgroundColor: 'transparent' }}
+          contentContainerStyle={{ padding: 20, paddingBottom: 48, gap: 20 }}
+        >
+          <AccountScreen />
+        </ScrollView>
+      </ScreenAtmosphere>
     );
   }
 
@@ -168,9 +171,10 @@ function SignedOutWallet() {
   const { busy, error, signIn } = useAttendeeSignIn();
 
   return (
+    <ScreenAtmosphere>
     <ScrollView
       contentInsetAdjustmentBehavior="automatic"
-      style={{ backgroundColor: colors.background }}
+      style={{ backgroundColor: 'transparent' }}
       contentContainerStyle={{ padding: 20, paddingBottom: 48, gap: 20 }}
     >
       <BrandWordmark />
@@ -213,6 +217,7 @@ function SignedOutWallet() {
         </ErrorState>
       ) : null}
     </ScrollView>
+    </ScreenAtmosphere>
   );
 }
 
@@ -282,9 +287,10 @@ function OfflineDisplayWallet({
   }, [userId, tenantId]);
 
   return (
+    <ScreenAtmosphere>
     <ScrollView
       contentInsetAdjustmentBehavior="automatic"
-      style={{ backgroundColor: colors.background }}
+      style={{ backgroundColor: 'transparent' }}
       contentContainerStyle={{ padding: 20, paddingBottom: 48, gap: 16 }}
     >
       <Notice title={attendeeWalletCopy.offlineBannerTitle}>
@@ -324,6 +330,7 @@ function OfflineDisplayWallet({
         disabled={busy}
       />
     </ScrollView>
+    </ScreenAtmosphere>
   );
 }
 
@@ -507,16 +514,24 @@ function VerifiedWallet({ userId }: { userId: string }) {
   }, [tenantId, userId]);
 
   return (
+    <ScreenAtmosphere>
     <ScrollView
       contentInsetAdjustmentBehavior="automatic"
-      style={{ backgroundColor: colors.background }}
+      style={{ backgroundColor: 'transparent' }}
       contentContainerStyle={{ padding: 20, paddingBottom: 48, gap: 16 }}
       refreshControl={
         <RefreshControl refreshing={refreshing} onRefresh={() => void onRefresh()} />
       }
     >
       <BrandWordmark compact />
-      <Text style={{ color: brand.ink, fontSize: 17, fontWeight: '600' }}>
+      <Text
+        style={{
+          color: brand.ink,
+          fontSize: 17,
+          fontWeight: '600',
+          fontFamily: fontFamilies.bodySemiBold,
+        }}
+      >
         {attendeeWalletCopy.verifiedCaption}
       </Text>
       {offline ? (
@@ -583,5 +598,6 @@ function VerifiedWallet({ userId }: { userId: string }) {
         cổng vẫn quyết định trên máy chủ.
       </Text>
     </ScrollView>
+    </ScreenAtmosphere>
   );
 }

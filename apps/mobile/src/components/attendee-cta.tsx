@@ -13,7 +13,7 @@ type Props = {
   testID?: string;
 };
 
-/** Shared attendee CTA — signal fill, ≥44pt hit, focus ring (AC-V1 / a11y). */
+/** Shared attendee CTA — Live Pulse signal fill, ≥44pt hit, focus ring. */
 export function AttendeeCta({
   label,
   onPress,

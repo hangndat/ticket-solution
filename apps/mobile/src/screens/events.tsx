@@ -12,6 +12,7 @@ import { demoTenants, eventDate, listDemoEvents } from '@/data/demo-events';
 import { AttendeeCta } from '@/components/attendee-cta';
 import { EventMediaHeader } from '@/components/event-media';
 import { BrandWordmark } from '@/components/page';
+import { ScreenAtmosphere } from '@/components/screen-atmosphere';
 import {
   EmptyState,
   ErrorState,
@@ -260,9 +261,10 @@ export function EventsScreen() {
   );
 
   return (
+    <ScreenAtmosphere>
     <FlatList
       contentInsetAdjustmentBehavior="automatic"
-      style={{ backgroundColor: colors.background }}
+      style={{ backgroundColor: 'transparent' }}
       contentContainerStyle={{ padding: 20, paddingBottom: 48, gap: 20 }}
       data={listData}
       keyExtractor={(item) => `pub:${item.tenantSlug}:${item.id}`}
@@ -442,5 +444,6 @@ export function EventsScreen() {
         ) : undefined
       }
     />
+    </ScreenAtmosphere>
   );
 }
