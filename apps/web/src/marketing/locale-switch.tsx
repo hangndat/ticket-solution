@@ -1,10 +1,23 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useSyncExternalStore } from 'react';
 import { t } from './copy';
 import type { MarketingLocale } from './hosts';
 import { localeSwitchHref } from './links';
+
+function subscribeHash(onStoreChange: () => void): () => void {
+  window.addEventListener('hashchange', onStoreChange);
+  return () => window.removeEventListener('hashchange', onStoreChange);
+}
+
+function getHashSnapshot(): string {
+  return window.location.hash || '';
+}
+
+function getServerHashSnapshot(): string {
+  return '';
+}
 
 /**
  * VI|EN switcher — preserves current hash (e.g. #interest) per PD F3.
@@ -16,14 +29,11 @@ export function LocaleSwitch({
   locale: MarketingLocale;
   pageKind: 'sales' | 'privacy' | 'support';
 }) {
-  const [hash, setHash] = useState('');
-
-  useEffect(() => {
-    setHash(window.location.hash || '');
-    const onHash = () => setHash(window.location.hash || '');
-    window.addEventListener('hashchange', onHash);
-    return () => window.removeEventListener('hashchange', onHash);
-  }, []);
+  const hash = useSyncExternalStore(
+    subscribeHash,
+    getHashSnapshot,
+    getServerHashSnapshot,
+  );
 
   return (
     <span
