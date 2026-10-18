@@ -9,90 +9,135 @@ import {
 } from '../../../../../src/branding';
 import { Wordmark } from '../../../../../src/site-chrome';
 import {
-  demoEventRoutes,
-  findDemoEvent,
-  formatEventDate,
-} from '../../../../../src/events';
-import { demoMediaForEventId } from '../../../../../src/demo-media';
+  PUBLIC_EVENT_COPY,
+  formatPublishedEventDate,
+  heroCopyFromSections,
+  isExplicitDemoLabel,
+  loadPublishedEventDetail,
+  visiblePublishedSections,
+} from '../../../../../src/published';
+import { SurfaceState } from '../../../../../src/ui/surface-state';
 import { EventBanner, EventLogo } from '../../../../../src/ui/event-media';
 
 type Props = { params: Promise<{ tenantSlug: string; eventSlug: string }> };
-export const dynamicParams = false;
-export function generateStaticParams() {
-  return demoEventRoutes();
-}
+
+/** ISR from published projection — no fixture generateStaticParams. */
+export const revalidate = 60;
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { tenantSlug, eventSlug } = await params;
-  const event = findDemoEvent(tenantSlug, eventSlug);
-  if (!event) notFound();
+  const result = await loadPublishedEventDetail(tenantSlug, eventSlug);
+  if (result.status !== 'ok') {
+    return { title: 'Sự kiện' };
+  }
+  const { event } = result;
   return {
     title: `${event.name} — ${event.brand.organizationName}`,
-    description: `Sự kiện demo hư cấu của ${event.brand.organizationName}. ${event.description}`,
+    description:
+      heroCopyFromSections(event.sections).intro ??
+      `${event.name} · ${event.brand.organizationName}`,
   };
 }
+
 export default async function EventPage({ params }: Props) {
   const { tenantSlug, eventSlug } = await params;
-  const event = findDemoEvent(tenantSlug, eventSlug);
-  if (!event) notFound();
-  const demoMedia = demoMediaForEventId(event.id);
+  const result = await loadPublishedEventDetail(tenantSlug, eventSlug);
+
+  if (result.status === 'not-found') notFound();
+
+  if (result.status === 'unreachable') {
+    return (
+      <main id="main" className="container shell">
+        <SurfaceState
+          kind="error"
+          title={PUBLIC_EVENT_COPY.detailUnreachable.title}
+          detail={PUBLIC_EVENT_COPY.detailUnreachable.detail}
+          testId="event-unreachable"
+          action={
+            <Link className="button" href="/">
+              Về trang chủ
+            </Link>
+          }
+        />
+      </main>
+    );
+  }
+
+  if (result.status === 'invalid') {
+    return (
+      <main id="main" className="container shell">
+        <SurfaceState
+          kind="error"
+          title={PUBLIC_EVENT_COPY.detailInvalid.title}
+          detail={PUBLIC_EVENT_COPY.detailInvalid.detail}
+          testId="event-invalid"
+          action={
+            <Link className="button" href="/">
+              Về trang chủ
+            </Link>
+          }
+        />
+      </main>
+    );
+  }
+
+  const { event } = result;
   const branding = brandingFromEventBrand(event.brand, tenantSlug);
   const themeVars = {
     ...brandingToCssVars(branding),
     ['--brand' as string]: event.brand.primaryColor,
   } as CSSProperties;
+  const hero = heroCopyFromSections(event.sections);
+  const sections = visiblePublishedSections(event);
+  const whenLabel = formatPublishedEventDate(event.startsAt, event.timezone);
+  const demo = isExplicitDemoLabel(event.name, event.brand.organizationName);
+  const infoSections = sections.filter(
+    (s) => s.kind === 'info' || s.kind === 'guide',
+  );
 
   return (
     <ThemeProvider branding={branding} applyCssVars>
       <main
         id="main"
-        className={`event-page ${event.theme}`}
+        className="event-page"
         style={themeVars}
         data-branding-source={branding.source}
+        data-testid="event-published"
       >
         <div className="container">
           <nav aria-label="Điều hướng sự kiện">
             <Wordmark />
             <span>{event.brand.organizationName}</span>
           </nav>
-          <p className="demo-label">Sự kiện demo · Không dùng vào cổng</p>
+          {demo ? (
+            <p className="demo-label">{PUBLIC_EVENT_COPY.demoLabel}</p>
+          ) : null}
           <section className="hero" aria-labelledby="event-title">
             <div>
               <EventLogo
                 eventId={event.id}
                 tenantSlug={event.tenantSlug}
+                logoUrl={event.brand.logoUrl}
                 className="event-logo event-logo-hero"
                 testId="event-hero-logo"
                 alt={`Logo ${event.brand.organizationName}`}
               />
-              <p className="eyebrow">{event.category}</p>
+              {hero.eyebrow ? <p className="eyebrow">{hero.eyebrow}</p> : null}
               <h1 id="event-title">{event.name}</h1>
-              <p className="intro">{event.description}</p>
+              {hero.intro ? <p className="intro">{hero.intro}</p> : null}
               <a className="button" href="#event-details">
                 Xem chi tiết ngày <span aria-hidden="true">↓</span>
               </a>
             </div>
             <div className="poster poster-media" data-testid="event-hero-media">
-              {demoMedia ? (
-                <EventBanner
-                  eventId={event.id}
-                  tenantSlug={event.tenantSlug}
-                  className="event-banner event-banner-hero"
-                  testId="event-hero-banner"
-                  alt={`Banner ${event.name}`}
-                />
-              ) : (
-                <>
-                  <span className="poster-orbit" aria-hidden="true" />
-                  <span className="poster-word" aria-hidden="true">
-                    {event.theme === 'festival'
-                      ? 'CẢM NHẬN VUI.'
-                      : 'GÓC NHÌN MỚI.'}
-                  </span>
-                  <span className="poster-caption" aria-hidden="true">
-                    {event.brand.organizationName} / 2026
-                  </span>
-                </>
-              )}
+              <EventBanner
+                eventId={event.id}
+                tenantSlug={event.tenantSlug}
+                bannerUrl={event.brand.bannerUrl}
+                className="event-banner event-banner-hero"
+                testId="event-hero-banner"
+                alt={`Banner ${event.name}`}
+              />
             </div>
           </section>
           <section
@@ -100,20 +145,24 @@ export default async function EventPage({ params }: Props) {
             className="details"
             aria-labelledby="details-title"
           >
-            <h2 id="details-title">Lên kế hoạch cho ngày.</h2>
+            <h2 id="details-title">Thông tin sự kiện</h2>
             <dl>
               <div>
                 <dt>Khi nào</dt>
                 <dd>
-                  <time dateTime={event.startsAt}>
-                    {formatEventDate(event)}
-                  </time>
-                  <small>{event.timezone}</small>
+                  {whenLabel && event.startsAt ? (
+                    <>
+                      <time dateTime={event.startsAt}>{whenLabel}</time>
+                      <small>{event.timezone}</small>
+                    </>
+                  ) : (
+                    <span>Chưa công bố thời gian</span>
+                  )}
                 </dd>
               </div>
               <div>
                 <dt>Ở đâu</dt>
-                <dd>{event.location}</dd>
+                <dd>{event.location ?? 'Chưa công bố địa điểm'}</dd>
               </div>
               <div>
                 <dt>Tổ chức bởi</dt>
@@ -121,43 +170,49 @@ export default async function EventPage({ params }: Props) {
               </div>
             </dl>
           </section>
-          <section className="highlights" aria-labelledby="highlights-title">
-            <p className="eyebrow">Gợi ý trước khi đến</p>
-            <h2 id="highlights-title">Đến với sự tò mò.</h2>
-            <ul>
-              {event.highlights.map((highlight, index) => (
-                <li key={highlight}>
-                  <span aria-hidden="true">0{index + 1}</span>
-                  {highlight}
-                </li>
-              ))}
-            </ul>
-          </section>
-          <aside className="notice">
-            <h2>Chỉ là bản xem trước demo</h2>
-            <p>
-              Nội dung mang nhãn Demo — không phải lịch live. Đổi mã thật tại{' '}
-              <Link href="/redeem">Đổi mã lấy vé</Link> sau khi{' '}
-              <Link href="/auth">đăng nhập</Link>.
-            </p>
-          </aside>
-          <section className="faq" aria-labelledby="faq-title">
-            <h2 id="faq-title">Trước khi đi</h2>
-            <details>
-              <summary>Tôi lấy vé ở đây được không?</summary>
+
+          {infoSections.length > 0 ? (
+            <section className="highlights" aria-labelledby="content-title">
+              <p className="eyebrow">Nội dung đã xuất bản</p>
+              <h2 id="content-title">Chi tiết từ ban tổ chức</h2>
+              <ul>
+                {infoSections.map((section) => (
+                  <li key={section.id}>
+                    <strong>{section.title?.trim() || section.kind}</strong>
+                    {section.bodyMarkdown ? (
+                      <p>{section.bodyMarkdown}</p>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
+
+          {demo ? (
+            <aside className="notice">
+              <h2>{PUBLIC_EVENT_COPY.demoNoticeTitle}</h2>
               <p>
-                Không trên trang demo này. Dùng{' '}
-                <Link href="/redeem">Đổi mã lấy vé</Link> với mã của sự kiện
-                thật sau khi đăng nhập.
+                {PUBLIC_EVENT_COPY.demoNoticeBody} Đổi mã thật tại{' '}
+                <Link href="/redeem">Đổi mã lấy vé</Link> sau khi{' '}
+                <Link href="/auth">đăng nhập</Link>.
               </p>
-            </details>
-            <details>
-              <summary>Ngày và địa điểm đã chốt chưa?</summary>
-              <p>Chưa. Mọi chi tiết trên trang này là bản demo mang nhãn rõ.</p>
-            </details>
-          </section>
+            </aside>
+          ) : null}
+
+          {event.faq.length > 0 ? (
+            <section className="faq" aria-labelledby="faq-title">
+              <h2 id="faq-title">Câu hỏi thường gặp</h2>
+              {event.faq.map((item, index) => (
+                <details key={`faq-${index}`}>
+                  <summary>{item.q}</summary>
+                  <p>{item.a}</p>
+                </details>
+              ))}
+            </section>
+          ) : null}
+
           <Link className="back-link" href="/">
-            ← Tất cả sự kiện demo
+            ← Tất cả sự kiện
           </Link>
         </div>
       </main>
