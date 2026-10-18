@@ -46,15 +46,15 @@ export const scanCopy = {
 export const eventsCopy = {
   loadingList: {
     title: 'Đang tải sự kiện',
-    body: 'Đang tải danh sách đã xuất bản. Demo bên dưới vẫn chỉ là mẫu.',
+    body: 'Đang tải danh sách đã xuất bản từ máy chủ.',
   },
   emptyPublished: {
     title: 'Chưa có sự kiện đã xuất bản',
-    body: 'Tổ chức này chưa có sự kiện công khai.',
+    body: 'Tổ chức này chưa có sự kiện công khai. Không thay bằng dữ liệu demo.',
   },
   emptyDemo: {
     title: 'Không có sự kiện demo',
-    body: 'Tổ chức này chưa có sự kiện mẫu.',
+    body: 'Tổ chức này chưa có sự kiện mẫu trên route fixture.',
   },
   errorList: {
     title: 'Không tải được danh sách sự kiện',
