@@ -57,4 +57,7 @@ pnpm --filter @ticket/portal test
 pnpm --filter @ticket/portal typecheck
 ```
 
-Tip SHA ghi trên PR / Project comment sau commit.
+| Tip SHA (behavior) | `4c9599198d1e31cf09016a0197d4fa522386aedc` |
+| Local checks | `pnpm --filter @ticket/portal test` → 69/69 PASS; typecheck PASS; lint PASS |
+
+Revalidation bắt buộc nếu có commit hành vi mới sau SHA này.
