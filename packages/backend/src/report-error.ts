@@ -1,5 +1,7 @@
 export const REPORT_ERROR_CODES = {
   EVENT_NOT_FOUND: 'EVENT_NOT_FOUND',
+  INVALID_CURSOR: 'INVALID_CURSOR',
+  INVALID_INPUT: 'INVALID_INPUT',
 } as const;
 
 export type ReportErrorCode =

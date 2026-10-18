@@ -310,6 +310,13 @@ export {
   type QuotaCapacityState,
 } from './reporting';
 export {
+  listEventAudit,
+  listEventAuditForTenant,
+  listEventCodes,
+  listEventCodesForTenant,
+  listPlatformAudit,
+} from './portal-audit-codes';
+export {
   createNoopEmailAdapter,
   createFailingEmailAdapter,
   createMisconfiguredEmailAdapter,
