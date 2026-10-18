@@ -546,13 +546,16 @@ export interface TenantFlagsDto {
   exportsEnabled: boolean;
 }
 
+/** Role on me/tenants — membership roles plus synthetic Attendee (ticket owner, no membership). */
+export type MeTenantRole = MembershipRole | 'Attendee';
+
 export interface MeTenantItem {
   tenantId: string;
   slug: string;
   name: string;
   status: TenantStatus;
   tenantPermissions: string[];
-  role: MembershipRole;
+  role: MeTenantRole;
 }
 
 export interface MeTenantsResponse {
