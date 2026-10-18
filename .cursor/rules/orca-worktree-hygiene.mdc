@@ -1,0 +1,99 @@
+---
+description: Orca worktree link/comment, task DAG + decision gates, fleet hygiene, automations — ROI cao bắt buộc khi coordinate
+alwaysApply: true
+---
+
+# Orca — worktree hygiene + DAG/gates (ROI cao)
+
+Áp dụng cho **coordinator gốc** và mọi worker khi tạo/đụng worktree hoặc lập wave Epic. Bổ sung (không thay) `orca-parallel-workers.mdc`, `orca-epic-orchestrator.mdc`, `orca-coordinator-mailbox.mdc`.
+
+## 1. Worktree phải có link + comment sống
+
+Mỗi Orca worktree phục vụ một Issue/PR **bắt buộc** gắn metadata trước khi coding sâu:
+
+```text
+# Khi tạo
+ORCA worktree create --name <slug> --issue <N> --pr <N> --comment "<1 dòng trạng thái>" --json
+# hoặc
+ORCA worktree create --name <slug> --reference https://github.com/hangndat/ticket-solution/issues/<N> --comment "…" --json
+
+# Khi đã có wt
+ORCA worktree set --worktree path:<abs> --issue <N> --pr <N> --comment "<status>" --json
+ORCA reference add https://github.com/hangndat/ticket-solution/issues/<N> --worktree path:<abs> --json
+```
+
+| Sự kiện | Cập nhật |
+| --- | --- |
+| Dispatch / bắt đầu code | `--issue` (và `--pr` nếu đã mở) + comment `Đang làm: …` |
+| Mở PR | `--pr <n>` + `reference add` URL PR |
+| Checkpoint / blocker | `--comment` ngắn (VI): đang test / chờ CI / bị chặn X |
+| `worker_done` → Chờ duyệt | comment `Chờ duyệt DoD · SHA <short>` |
+| Merge + DoD xong | comment `Merged · dọn wt` rồi archive/`worktree rm` khi an toàn |
+
+**Cấm** để wt feature lâu dài với `linkedIssue`/`linkedPR` trống khi đã biết số Issue/PR.
+
+Tìm agent/wt theo Issue/PR: `ORCA reference find <N|URL> --json` — không đoán từ tên folder.
+
+## 2. Epic wave = `task-create --deps` rồi `--ready`
+
+Không chỉ `worker-start --spec` ad-hoc khi Epic có ≥2 Task hoặc có dependency thật:
+
+```text
+ORCA orchestration task-create --task-title "…" --spec "…" --deps '["task_aaa","task_bbb"]' --json
+ORCA orchestration task-list --ready --json   # hoặc filter Run đang bind
+ORCA orchestration worker-start --task <task_id> --worktree … --agent cursor --json
+```
+
+`--deps` phải là **JSON array** các task id (không phải CSV).
+
+1. Planner/coordinator **ghi DAG** vào Orca Tasks (deps chỉ artifact/contract/path conflict thật).
+2. Mỗi wave: lấy **toàn bộ** `--ready` dưới WIP → `worker-start` hết → `check --wait`.
+3. Sau settlement: lại `task-list --ready` rồi idle-fill — bộ nhớ ngoài, không giữ DAG chỉ trong chat.
+
+## 3. Decision gates (không thay `ask`)
+
+Dùng **gate** khi coordinator cần **chọn nhánh DAG** (scope cut, merge strategy, có/không deploy, chọn ADR):
+
+```text
+ORCA orchestration gate-create --task <task_id> --question "<quyết định>" --options '["A","B"]' --json
+ORCA orchestration gate-resolve --id <gate_id> --resolution "<choice>" --json
+```
+
+- Worker hỏi blocking → `ask` / coordinator `reply`.
+- **Không** `gate-create` chỉ để trả lời `ask`.
+- Task bị gate block không vào `--ready` cho đến khi resolve.
+
+## 4. Fleet hygiene (`worktree ps` + dọn)
+
+Mỗi checkpoint Epic / cuối Run / automation:
+
+1. `ORCA worktree ps --json` (và/hoặc `worktree list` scoped ticket-solution).
+2. Ứng viên dọn: PR **merged**, không agent live, không reviewer đang dùng path, working tree đã bàn giao hoặc sạch theo DoD.
+3. Trước `worktree rm`: xác nhận evidence/SHA đã lưu; không `reset --hard` / force-clean để “dọn”.
+4. Giữ `main` / integration wt; không xóa wt đang `Đang làm` / `Chờ duyệt` còn open PR.
+
+`worker-release` (Dispatch settled) **≠** xóa worktree — làm cả hai lớp khi scope cho phép.
+
+## 5. Automations (ticket-solution)
+
+Host nên có automation **Cursor** trên workspace ticket-solution (existing), ví dụ:
+
+- Weekday: đếm Project `Chờ duyệt` / PR mở thiếu DoD → báo + đề xuất review wave (không merge/deploy).
+- Weekly: liệt kê wt thiếu link / PR merged dư → đề xuất `worktree rm` an toàn.
+
+Coordinator tạo/sửa qua `ORCA automations …`; không để automation tự merge `main` hoặc deploy prod.
+
+## Anti-patterns
+
+```text
+❌ Spawn worker trên wt không gắn Issue/PR khi số đã biết
+❌ Epic ≥3 Task mà không task-create / deps — chỉ nhớ trong transcript
+❌ Dùng gate thay ask (hoặc ngược lại)
+❌ Để hàng chục wt merged tồn vô hạn không comment / không dọn
+❌ Automation merge/deploy/store ngoài ủy quyền
+
+✅ create/set --issue/--pr/--comment trước coding
+✅ task-create --deps → task-list --ready → worker-start wave
+✅ gate cho quyết định nhánh; ask cho câu worker
+✅ worktree ps + rm khi merged và không còn consumer
+```
