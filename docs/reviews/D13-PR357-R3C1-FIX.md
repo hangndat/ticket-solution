@@ -8,7 +8,7 @@
 | Prior tip (R3 FAIL) | `1dd2308e1387c3a7d7feb2baeb77f3a20cdb3dfe` |
 | Prior review | R3 FAIL @ tip — blocker **R3-C1** (PR comment 2026-10-18) · artifact cited `docs/reviews/D13-PR357-R3-DOD-SECURITY.md` |
 | Behavior / fix SHA | `c59a6c9c32994bed27c06e0e3a308fe733f89530` |
-| **Exact tip SHA** | `975435260dc015e663d2d8530b355040adcc1017` |
+| **Exact tip SHA** | `4576f9b5c39a2dd32c706b2a6498487059549cd1` |
 
 ## Blocker R3-C1
 
@@ -55,6 +55,9 @@ Includes B1 regression + ACK apply `applied=1` + IdP matrix.
 
 ```text
 git rev-parse HEAD
+→ 4576f9b5c39a2dd32c706b2a6498487059549cd1
+
+# evidence blob @ 9754352
 → 975435260dc015e663d2d8530b355040adcc1017
 
 # behavior (ACK keyring inject)
