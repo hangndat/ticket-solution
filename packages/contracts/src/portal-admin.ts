@@ -94,3 +94,33 @@ export const PORTAL_CATALOG_ENDPOINTS = {
   sources: (tenantId: string, eventId: string) =>
     `${eventBase(tenantId, eventId)}/sources`,
 } as const;
+
+/** #427: additive filters; omitted values retain legacy list behavior. */
+export interface PortalPendingQuery extends PortalCursorQuery {
+  status?: 'PENDING_REVIEW';
+  sourceId?: string;
+  ticketTypeId?: string;
+  /** Exact opaque request ID only. Never fuzzy-search attendee email/phone. */
+  q?: string;
+}
+export interface PortalNotificationQuery extends PortalCursorQuery {
+  state?: import('./notifications').NotificationProviderStatus;
+  channel?: import('./notifications').NotificationChannel;
+}
+export interface PortalExportQuery extends PortalCursorQuery {
+  status?: import('./index').ExportJob['status'];
+}
+/** List projection never contains object keys or presigned download URLs. */
+export interface PortalExportSummary extends PortalExportJob {
+  createdAt: string;
+}
+type PortalExportJob = import('./index').ExportJob;
+export type PortalExportsPage = CursorPage<PortalExportSummary>;
+export const PORTAL_FILTER_ENDPOINTS = {
+  pending: (tenantId: string, eventId: string) =>
+    `${eventBase(tenantId, eventId)}/redemptions`,
+  notifications: (tenantId: string, eventId: string) =>
+    `${eventBase(tenantId, eventId)}/notifications`,
+  exports: (tenantId: string, eventId: string) =>
+    `${eventBase(tenantId, eventId)}/exports`,
+} as const;
