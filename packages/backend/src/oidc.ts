@@ -1,6 +1,10 @@
 import * as jose from 'jose';
 import { IDENTITY_ERROR_CODES } from '@ticket/contracts';
 import { IdentityError } from './identity-error';
+import {
+  assertAccessTokenBounds,
+  JOSE_ACCESS_TOKEN_VERIFY_EXTRAS,
+} from './access-token-bounds';
 
 export type OidcConfig = {
   issuer: string;
@@ -88,8 +92,17 @@ export function createOidcVerifier(
           issuer: config.issuer,
           audience: config.audience,
           algorithms: ALLOWED_ALGORITHMS,
+          maxTokenAge: JOSE_ACCESS_TOKEN_VERIFY_EXTRAS.maxTokenAge,
+          clockTolerance: JOSE_ACCESS_TOKEN_VERIFY_EXTRAS.clockTolerance,
         }));
       } catch {
+        throw new IdentityError(
+          IDENTITY_ERROR_CODES.UNAUTHENTICATED,
+          'Invalid or expired token',
+        );
+      }
+
+      if (assertAccessTokenBounds(payload) !== null) {
         throw new IdentityError(
           IDENTITY_ERROR_CODES.UNAUTHENTICATED,
           'Invalid or expired token',
