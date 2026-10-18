@@ -111,10 +111,10 @@ Nguồn số: [`O06-OPTIONS.md`](./O06-OPTIONS.md) §3 · [DECISION-LOG](../DECI
 
 | Vai | Họ tên | Liên hệ | Kênh chính | Ghi chú |
 | --- | --- | --- | --- | --- |
-| Primary on-call (P1) | _điền_ | _điền_ | _email / chat_ | Trực trong cửa sổ Gate |
-| Secondary / escalation | _điền_ | _điền_ | _email / chat_ | Khi primary không ack ≤30m |
-| Owner kỹ thuật (hotfix) | _điền_ | _điền_ | _email / chat_ | Chỉ hotfix có rollback trong freeze |
-| Kênh event-day | — | — | _điền URL/alias_ | Không dùng kênh công khai cho OTP/QR |
+| Primary on-call (P1) | Hang Nguyen Dat | hangndat@gmail.com | email | MVP sole operator — trực cửa sổ Gate |
+| Secondary / escalation | Hang Nguyen Dat | hangndat@gmail.com | email + phone | Cùng người (MVP); ack miss ≤30m → gọi trực tiếp |
+| Owner kỹ thuật (hotfix) | Hang Nguyen Dat | hangndat@gmail.com | email | Hotfix có rollback trong freeze |
+| Kênh event-day | — | hangndat@gmail.com | email | Không dùng kênh công khai cho OTP/QR |
 
 Trước claim pilot cửa sổ: xác nhận bảng đã có người thật + kênh reachable; freeze §6 vẫn áp dụng.
 
