@@ -1,9 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import type { ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { BrandMark } from './brand-mark';
 import { useBranding } from './branding';
+import {
+  GUEST_NAV_LINKS,
+  type NavLink,
+} from './nav/capabilities';
+import { loadNavCapabilities } from './nav/load-nav-capabilities';
 
 /** Platform / tenant wordmark — defaults to Vemoki lockup from ThemeProvider. */
 export function Wordmark({ href = '/' }: { href?: string }) {
@@ -26,47 +31,34 @@ export function Wordmark({ href = '/' }: { href?: string }) {
   );
 }
 
-type NavVariant = 'guest' | 'staff' | 'admin' | 'platform';
+/**
+ * SiteNav — links from server capabilities (MeEvents / MeTenants / PlatformMe).
+ * Starts deny-by-default (guest); never hardcodes Admin/Cổng/Platform by route.
+ */
+export function SiteNav({ trailing }: { trailing?: ReactNode }) {
+  const [links, setLinks] = useState<NavLink[]>(GUEST_NAV_LINKS);
 
-const LINKS: Record<NavVariant, { href: string; label: string }[]> = {
-  guest: [
-    { href: '/redeem', label: 'Đổi mã' },
-    { href: '/claim', label: 'Nhận lời mời' },
-    { href: '/auth', label: 'Đăng nhập' },
-  ],
-  staff: [
-    { href: '/redeem', label: 'Đổi mã' },
-    { href: '/gate', label: 'Cổng' },
-    { href: '/auth', label: 'Đăng nhập' },
-  ],
-  admin: [
-    { href: '/admin', label: 'Sự kiện' },
-    { href: '/platform', label: 'Platform' },
-    { href: '/gate', label: 'Cổng' },
-    { href: '/account', label: 'Tài khoản' },
-    { href: '/auth', label: 'Đăng nhập' },
-  ],
-  platform: [
-    { href: '/admin', label: 'Admin tenant' },
-    { href: '/platform', label: 'Platform' },
-    { href: '/account', label: 'Tài khoản' },
-    { href: '/auth', label: 'Đăng nhập' },
-  ],
-};
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const { links: next } = await loadNavCapabilities();
+        if (!cancelled) setLinks(next);
+      } catch {
+        if (!cancelled) setLinks(GUEST_NAV_LINKS);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
-export function SiteNav({
-  variant,
-  trailing,
-}: {
-  variant: NavVariant;
-  trailing?: ReactNode;
-}) {
   return (
-    <nav aria-label="Điều hướng chính">
+    <nav aria-label="Điều hướng chính" data-testid="site-nav">
       <Wordmark />
       <span className="nav-links">
-        {LINKS[variant].map((item) => (
-          <Link key={item.href} href={item.href}>
+        {links.map((item) => (
+          <Link key={item.href} href={item.href} data-testid={item.testId}>
             {item.label}
           </Link>
         ))}

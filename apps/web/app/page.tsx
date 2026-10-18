@@ -12,8 +12,12 @@ import {
 import { SurfaceState } from '../src/ui/surface-state';
 import { EventBanner, EventLogo } from '../src/ui/event-media';
 
-/** ISR — published projection; never SSG from client fixtures. */
-export const revalidate = 60;
+/** Soft-redirect landing notices from staff routes (O02). */
+export const dynamic = 'force-dynamic';
+
+type Props = {
+  searchParams: Promise<{ notice?: string }>;
+};
 
 type HomeCatalog =
   | { status: 'ok'; items: PublishedEventSummary[] }
@@ -43,12 +47,35 @@ async function loadHomeCatalog(): Promise<HomeCatalog> {
   return { status: 'empty' };
 }
 
-export default async function Home() {
+function staffDeniedCopy(notice: string | undefined): {
+  title: string;
+  detail: string;
+} | null {
+  if (notice === 'admin_denied') {
+    return {
+      title: 'Không đủ quyền quản trị',
+      detail:
+        'Tài khoản hiện tại không có quyền mở không gian quản trị sự kiện. Liên hệ chủ tổ chức nếu bạn cần quyền này.',
+    };
+  }
+  if (notice === 'gate_denied') {
+    return {
+      title: 'Không đủ quyền cổng',
+      detail:
+        'Tài khoản hiện tại không được gán quyền check-in. Liên hệ chủ tổ chức nếu bạn cần vào cổng.',
+    };
+  }
+  return null;
+}
+
+export default async function Home({ searchParams }: Props) {
+  const params = await searchParams;
   const catalog = await loadHomeCatalog();
+  const denied = staffDeniedCopy(params.notice?.trim());
 
   return (
     <main id="main" className="container home">
-      <SiteNav variant="guest" />
+      <SiteNav />
       <section className="home-hero" aria-labelledby="home-title">
         <HeroWordmark />
         <h1 id="home-title">Điều tốt đẹp đưa chúng ta lại gần.</h1>
@@ -62,6 +89,17 @@ export default async function Home() {
           </Link>
         </p>
       </section>
+
+      {denied ? (
+        <aside
+          className="notice state-error"
+          role="status"
+          data-testid="staff-denied-notice"
+        >
+          <h2>{denied.title}</h2>
+          <p>{denied.detail}</p>
+        </aside>
+      ) : null}
 
       {catalog.status === 'empty' ? (
         <SurfaceState

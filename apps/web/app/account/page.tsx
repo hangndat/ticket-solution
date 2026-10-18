@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 export default function AccountPage() {
   return (
     <main id="main" className="container shell redeem-page">
-      <SiteNav variant="admin" />
+      <SiteNav />
       <h1>Tài khoản</h1>
       <p className="intro">
         Gửi yêu cầu xóa tài khoản có trạng thái theo dõi. Khi gửi, yêu cầu đã

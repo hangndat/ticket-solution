@@ -1,0 +1,14 @@
+import { ensureCsrfCookie } from '../../../../../src/bff/csrf';
+import { PLATFORM_PATHS } from '../../../../../src/platform/contracts';
+import { forwardTenantBearer } from '../../../../../src/platform/forward';
+
+/** GET /api/bff/me/events — O02 MeEvents discovery (staffEligible + items). */
+export async function GET() {
+  await ensureCsrfCookie();
+  const res = await forwardTenantBearer(PLATFORM_PATHS.meEvents, {
+    method: 'GET',
+  });
+  const headers = new Headers(res.headers);
+  headers.set('Cache-Control', 'private, no-store');
+  return new Response(res.body, { status: res.status, headers });
+}

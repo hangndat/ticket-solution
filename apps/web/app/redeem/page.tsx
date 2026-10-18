@@ -30,7 +30,7 @@ export default async function RedeemPage({ searchParams }: Props) {
 
   return (
     <main id="main" className="container shell redeem-page">
-      <SiteNav variant="guest" />
+      <SiteNav />
 
       <h1>Đổi mã lấy vé</h1>
       <p className="intro">

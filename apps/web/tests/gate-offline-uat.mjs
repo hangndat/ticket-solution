@@ -71,6 +71,17 @@ try {
   if (!res || res.status() >= 500) {
     die(`GET /gate failed: ${res?.status()}`);
   }
+  // O02 (#371): anonymous soft-redirect → /auth; offline shell needs staff session.
+  if (page.url().includes('/auth')) {
+    mkdirSync(OUT, { recursive: true });
+    const shot = join(OUT, 'd11-gate-soft-redirect-auth.png');
+    await page.screenshot({ path: shot, fullPage: true });
+    console.log(
+      'gate-offline-uat: O02 soft-redirect anonymous /gate → /auth (skip offline shell — needs staff session)',
+    );
+    console.log(`gate-offline-uat: screenshot ${shot}`);
+    process.exit(0);
+  }
 
   await page.getByTestId('gate-offline-shell').waitFor({ state: 'visible', timeout: 15_000 });
 

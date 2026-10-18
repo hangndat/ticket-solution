@@ -1,5 +1,9 @@
 import Link from 'next/link';
 import { isOidcConfigured, resolveWebAuthState } from '../../src/oidc/config';
+import {
+  requireGateCapabilityOrHome,
+  requireSessionOrAuth,
+} from '../../src/nav/staff-route-guard';
 import { SiteNav } from '../../src/site-chrome';
 import { GateForm } from './gate-form';
 import { GateOfflineShell } from './gate-offline-shell';
@@ -18,12 +22,15 @@ type Props = {
 
 export default async function GatePage({ searchParams }: Props) {
   const params = await searchParams;
+  const token = await requireSessionOrAuth('/gate');
+  await requireGateCapabilityOrHome(token);
+
   const configured = isOidcConfigured();
   const state = resolveWebAuthState({ configured, subject: null });
 
   return (
     <main id="main" className="container shell redeem-page">
-      <SiteNav variant="staff" />
+      <SiteNav />
       <h1>Cổng check-in</h1>
       <p className="intro">
         Nhân viên đã gán event mở phiên, giữ chỗ, rồi xác nhận. Chỉ trạng thái

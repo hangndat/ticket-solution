@@ -5,15 +5,30 @@ import {
   marketingOriginFromEnv,
   productOriginFromEnv,
 } from './src/marketing/hosts';
+/** Keep literal — avoid importing next/headers via oidc/cookies in Edge proxy. */
+const OIDC_ACCESS_COOKIE = 'oidc_access_token';
 
 /**
  * Next.js 16 proxy — O13 host-aware marketing vs product.
  * OIDC session remains HttpOnly cookies on product host only (no Domain=.vemoki.com).
+ * O02: anonymous soft-redirect for staff deep-links /admin|/gate → /auth.
  */
 export default function proxy(request: NextRequest) {
   const hostHeader =
     request.headers.get('x-forwarded-host') ?? request.headers.get('host');
   const { pathname, search } = request.nextUrl;
+
+  // Soft-redirect anonymous staff routes before host routing (product surface).
+  if (pathname === '/admin' || pathname === '/gate') {
+    const token = request.cookies.get(OIDC_ACCESS_COOKIE)?.value?.trim() ?? '';
+    if (!token) {
+      const auth = request.nextUrl.clone();
+      auth.pathname = '/auth';
+      auth.search = '';
+      auth.searchParams.set('next', pathname);
+      return NextResponse.redirect(auth, 307);
+    }
+  }
 
   const decision = decideHostRouting({
     host: hostHeader ?? '',
