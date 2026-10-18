@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { PrismaClient } from './generated/prisma/client';
+import type { Prisma, PrismaClient } from './generated/prisma/client';
 import { PlatformError, PLATFORM_ERROR_CODES } from './platform-error';
 import { withActor } from './tenant-context';
 import {
@@ -15,6 +15,19 @@ export type AccountDeletionAck = {
   /** O06 SLA: anonymize must complete within this many days of request. */
   anonymizeWithinDays: typeof O06_ACCOUNT_ANONYMIZE_MAX_DAYS;
 };
+
+/**
+ * SEC-1: revoke all ACTIVE staff_sessions for the user in the current transaction.
+ * SECURITY DEFINER helper; failure rolls back the ACK (request insert/update).
+ */
+async function revokeSessionsForUserInTx(
+  tx: Prisma.TransactionClient,
+  userId: string,
+): Promise<void> {
+  await tx.$executeRaw`
+    SELECT revoke_sessions_for_user(${userId}::uuid)
+  `;
+}
 
 /** ACK accepted under O06 — schedules anonymize pipeline (≤30 days). Never erases audit. */
 export async function createAccountDeletionRequest(
@@ -55,6 +68,8 @@ export async function createAccountDeletionRequest(
           WHERE id = ${open[0].id}::uuid
         `;
       }
+      // Idempotent re-ACK: revoke again (no-op if already REVOKED).
+      await revokeSessionsForUserInTx(tx, input.userId);
       return {
         requestId: open[0].id,
         state: 'REQUESTED' as const,
@@ -73,6 +88,8 @@ export async function createAccountDeletionRequest(
         ${requestedAt}::timestamptz, ${O06_ACCOUNT_ANONYMIZE_POLICY_VERSION}
       )
     `;
+    // Atomic with ACK: revoke failure rolls back the REQUESTED row.
+    await revokeSessionsForUserInTx(tx, input.userId);
     return {
       requestId,
       state: 'REQUESTED' as const,

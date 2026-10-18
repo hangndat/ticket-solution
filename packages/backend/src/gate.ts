@@ -302,17 +302,43 @@ export async function openStaffSession(
     permission: PERMISSION_CONFIRM,
     eventId: input.eventId,
   });
+  // SEC-1: serialize with ACK revoke; deny while deletion request is open.
+  try {
+    await tx.$executeRaw`
+      SELECT assert_can_open_staff_session(${input.userId}::uuid)
+    `;
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (message.includes('ACCOUNT_DELETION_OPEN')) {
+      throw new GateError(
+        GATE_ERROR_CODES.ACCOUNT_DELETION_OPEN,
+        'Cannot open staff session while account deletion request is open',
+      );
+    }
+    throw err;
+  }
   const sessionId = randomUUID();
-  await tx.$executeRaw`
-    INSERT INTO staff_sessions (tenant_id, event_id, id, user_id, status)
-    VALUES (
-      ${input.tenantId}::uuid,
-      ${input.eventId}::uuid,
-      ${sessionId}::uuid,
-      ${input.userId}::uuid,
-      'ACTIVE'
-    )
-  `;
+  try {
+    await tx.$executeRaw`
+      INSERT INTO staff_sessions (tenant_id, event_id, id, user_id, status)
+      VALUES (
+        ${input.tenantId}::uuid,
+        ${input.eventId}::uuid,
+        ${sessionId}::uuid,
+        ${input.userId}::uuid,
+        'ACTIVE'
+      )
+    `;
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (message.includes('ACCOUNT_DELETION_OPEN')) {
+      throw new GateError(
+        GATE_ERROR_CODES.ACCOUNT_DELETION_OPEN,
+        'Cannot open staff session while account deletion request is open',
+      );
+    }
+    throw err;
+  }
   await writeAudit(tx, {
     tenantId: input.tenantId,
     eventId: input.eventId,
