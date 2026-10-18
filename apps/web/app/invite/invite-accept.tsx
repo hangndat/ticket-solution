@@ -143,32 +143,32 @@ export function InviteAcceptForm() {
   return (
     <div className="redeem-form">
       <p>
-        Đăng nhập đúng email đã được mời (OIDC verified). Backend kiểm tra
-        expiry / single-use / email match — UI không tự cấp quyền.
+        Đăng nhập bằng đúng email đã được mời. Máy chủ kiểm tra hết hạn, dùng
+        một lần và khớp email — giao diện không tự cấp quyền Owner.
       </p>
       <div className="auth-buttons">
         <a
           className="button-link"
           href="/api/auth/login?return=/invite"
         >
-          Đăng nhập Keycloak
+          Đăng nhập
         </a>
       </div>
       <label>
-        Token invite (tự lấy từ #fragment — không dán vào query)
+        Mã lời mời (tự lấy từ phần #token trên link — tránh dán vào thanh địa chỉ dạng ?token=)
         <input
           value={token}
           onChange={(e) => setTokenOverride(e.target.value)}
           autoComplete="off"
           spellCheck={false}
-          aria-label="Invite token"
+          aria-label="Mã lời mời"
         />
       </label>
       {!token.trim() ? (
         <SurfaceState
           kind="empty"
-          title="Chưa có token invite"
-          detail="Mở link mời (token trong #fragment) hoặc dán token vào ô trên sau khi đăng nhập đúng email."
+          title="Chưa có mã lời mời"
+          detail="Mở link mời (mã nằm sau # trên URL) hoặc dán mã vào ô trên sau khi đăng nhập đúng email."
           testId="invite-token-empty"
         />
       ) : null}
@@ -178,13 +178,13 @@ export function InviteAcceptForm() {
         onClick={() => void accept()}
         data-testid="invite-accept-submit"
       >
-        {busy ? 'Đang nhận…' : 'Nhận invite'}
+        {busy ? 'Đang nhận…' : csrfReady ? 'Nhận lời mời' : 'Đang chuẩn bị…'}
       </button>
       {busy ? (
         <SurfaceState
           kind="loading"
-          title="Đang nhận invite…"
-          detail="Backend kiểm tra expiry / single-use / email — UI không tự cấp quyền."
+          title="Đang nhận lời mời…"
+          detail="Máy chủ đang kiểm tra hết hạn, dùng một lần và khớp email — chưa coi là thành công."
           testId="invite-accept-loading"
         />
       ) : null}
