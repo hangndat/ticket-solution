@@ -184,7 +184,7 @@ Dependencies ở Task-level chỉ diễn tả ordering thật; không bắt iOS 
 Dùng supervised orchestration cho kế hoạch này: một Run cho milestone, Tasks là các phần việc, Dispatch là từng lần giao thực hiện. Không dùng terminal send làm cơ chế theo dõi task chính.
 
 1. Coordinator tạo self-contained task spec, ownership, base commit, dependencies và acceptance.
-2. Launch toàn bộ task ready trong wave trước khi chờ. Chọn agent theo `orca-agent-routing.mdc`; giữ model/effort mặc định nếu task không chỉ định.
+2. Launch toàn bộ task ready trong wave trước khi chờ. Chọn agent + **Cost tier** (`cheap|standard|heavy`) theo `orca-agent-routing.mdc`; map `--model`/`--effort` trên fresh launch (không bịa model id; so sánh `launch.effective`). Không reuse pane `heavy` cho Task `cheap` kế tiếp.
 3. Worker check follow-ups ở checkpoint; câu hỏi blocking gửi qua orchestration ask để coordinator trả lời.
 4. Coordinator xử lý thay đổi contract và questions, không để worker tự đoán các quyết định nghiệp vụ lớn.
 5. Worker báo `worker_done` với outcome và evidence; điều này chứng minh worker báo xong, chưa tự chứng minh branch đã integrated.
@@ -206,6 +206,9 @@ Change: implement verified-user auto-issue theo technical design mục 8
 Ownership: backend files được liệt kê; migration cần owner A quản lý sequence
 Do not touch: web/mobile/root tooling/generated client bằng tay
 Contract: <snapshot path + version/commit>
+Agent: cursor
+Cost tier: standard
+Architecture impact: Không — không đổi contract/boundary
 Constraints:
 - Một mã tối đa một vé; quota không vượt; transaction có audit + outbox.
 - Tenant context trong transaction; không provider call trong transaction.
@@ -218,6 +221,7 @@ Handoff:
 - Commit SHA, files changed, migration order, test report path.
 - Known risks và task downstream cần unblock.
 - Không merge integration hoặc deploy ngoài task.
+- Dispatch evidence: Cost tier + launch.requested vs launch.effective (nếu có override model/effort).
 ```
 
 Task phải đủ nhỏ để review một hành vi rõ ràng; tránh ôm cả module nhiều state machines trong một dispatch. Không dùng duration estimate như acceptance criterion.
