@@ -1,7 +1,10 @@
 /**
  * D9 multi-tenant demo seed (fixture). Idempotent upsert by stable UUIDs.
- * Marked demo — never production identities or real secrets.
+ * Demo marker `· Demo` is only on event.name; org/venue/source/marketing copy
+ * look production-like. Never production identities or real secrets.
  * ADR-19: also publishes marketing config (hero/info/faq) for public catalog.
+ * Re-seed skips published marketing unless forceRepublishMarketing /
+ * D9_DEMO_FORCE_MARKETING=1.
  */
 import { randomUUID } from 'node:crypto';
 import type { EventConfigPayload } from '@ticket/contracts';
@@ -36,12 +39,13 @@ export const D9_DEMO = {
     mfest: {
       id: 'd9d9f001-0001-4000-8000-000000000001',
       slug: 'mfest-demo',
-      name: `MFest ${DEMO_MARKER}`,
+      // Org name has no · Demo — event.name alone carries the marker (avoids «MFest · Demo · Demo» in UI).
+      name: 'MFest',
     },
     studio: {
       id: 'd9d9f001-0001-4000-8000-000000000002',
       slug: 'demo-studio',
-      name: `Studio Organization ${DEMO_MARKER}`,
+      name: 'Studio Organization',
     },
   },
   events: {
@@ -50,11 +54,11 @@ export const D9_DEMO = {
       tenantKey: 'mfest' as const,
       slug: 'mfest',
       name: `MFest ${DEMO_MARKER}`,
-      venueName: 'Demo riverside venue, Ho Chi Minh City (fixture)',
+      venueName: 'Bến Bạch Đằng, TP. Hồ Chí Minh',
       startsAt: new Date('2027-03-20T10:00:00+07:00'),
       ticketTypeId: 'd9d9f001-0003-4000-8000-000000000001',
       sourceId: 'd9d9f001-0004-4000-8000-000000000001',
-      sourceName: 'Demo VIP (fixture)',
+      sourceName: 'VIP Pass',
       eventBucketId: 'd9d9f001-0005-4000-8000-000000000001',
       typeBucketId: 'd9d9f001-0005-4000-8000-000000000011',
       sourceBucketId: 'd9d9f001-0005-4000-8000-000000000021',
@@ -68,11 +72,11 @@ export const D9_DEMO = {
       tenantKey: 'studio' as const,
       slug: 'studio-night',
       name: `Studio Night ${DEMO_MARKER}`,
-      venueName: 'Demo studio, Ho Chi Minh City (fixture)',
+      venueName: 'The Factory Contemporary Arts Centre, TP. Hồ Chí Minh',
       startsAt: new Date('2027-04-10T18:00:00+07:00'),
       ticketTypeId: 'd9d9f001-0003-4000-8000-000000000002',
       sourceId: 'd9d9f001-0004-4000-8000-000000000002',
-      sourceName: 'Demo GA (fixture)',
+      sourceName: 'General Admission',
       eventBucketId: 'd9d9f001-0005-4000-8000-000000000002',
       typeBucketId: 'd9d9f001-0005-4000-8000-000000000012',
       sourceBucketId: 'd9d9f001-0005-4000-8000-000000000022',
@@ -108,22 +112,28 @@ const DEMO_MARKETING = {
   mfest: {
     category: 'Music / Community / Discovery',
     description:
-      'A little louder. A little brighter. A day of live music, creative encounters and moments worth sharing. · Demo',
+      'A little louder. A little brighter. A day of live music, creative encounters and moments worth sharing along the Saigon riverfront.',
     highlights: [
       'Live sounds, all afternoon',
       'Independent makers & creative spaces',
       'Room to meet, move and explore',
     ],
+    doors: 'Doors open at 10:00. Last entry 30 minutes before closing.',
+    redeemHint:
+      'Enter the redemption code from your confirmation email or ticket purchase on the Redeem page, then sign in to add the ticket to your wallet.',
   },
   studioNight: {
     category: 'Design / Ideas / Conversation',
     description:
-      'Make space for a different perspective. An intimate gathering for people shaping what comes next. · Demo',
+      'Make space for a different perspective. An intimate gathering for people shaping what comes next in design and making.',
     highlights: [
       'Conversations with working designers',
       'Hands-on material explorations',
       'A shared table for fresh ideas',
     ],
+    doors: 'Doors open at 18:00. Please arrive 15 minutes early for check-in.',
+    redeemHint:
+      'Use the code on your invitation or purchase receipt in the Redeem flow. After redeeming, your ticket appears under My Tickets.',
   },
 } as const;
 
@@ -139,67 +149,67 @@ function marketingPayload(
     sections: [
       {
         kind: 'hero',
-        id: 'hero-demo',
+        id: 'hero',
         visible: true,
         order: 0,
         body: { title: copy.category, text: copy.description },
       },
       {
         kind: 'info',
-        id: 'info-demo',
+        id: 'info',
         visible: true,
         order: 1,
         body: { title: 'Highlights', text: highlightsText },
       },
       {
         kind: 'redeem',
-        id: 'redeem-demo',
+        id: 'redeem',
         visible: true,
         order: 2,
         body: {
           title: 'Redeem',
-          text: 'Use a demo redemption code from the D9 seed dataset.',
+          text: copy.redeemHint,
         },
       },
       {
         kind: 'guide',
-        id: 'guide-demo',
+        id: 'guide',
         visible: false,
         order: 3,
         body: { title: 'Guide', text: '' },
       },
       {
         kind: 'faq',
-        id: 'faq-demo',
+        id: 'faq',
         visible: true,
         order: 4,
         body: {
           title: 'FAQ',
           items: [
             {
-              question: 'Is this a real event?',
-              answer: `No — this is fixture data (${DEMO_MARKER}).`,
+              question: 'What are the door times?',
+              answer: copy.doors,
             },
             {
-              question: 'Where do I redeem?',
-              answer: 'Use the redeem flow with a DEMO-* code from the seed.',
+              question: 'How do I redeem my code?',
+              answer: copy.redeemHint,
             },
           ],
         },
       },
       {
         kind: 'terms',
-        id: 'terms-demo',
+        id: 'terms',
         visible: true,
         order: 5,
         body: {
           title: 'Terms',
-          termsVersion: 'demo-terms-v1',
-          text: `Demo terms for fixture events (${DEMO_MARKER}). Not a real contract.`,
+          termsVersion: 'terms-v1',
+          text: 'By attending you agree to venue house rules, age and safety policies, and the organizer’s ticketing terms. Tickets are non-transferable except where the organizer permits. Photography for personal use is welcome; commercial filming requires prior approval.',
         },
       },
     ],
-    termsVersion: 'demo-terms-v1',
+    termsVersion: 'terms-v1',
   };
 }
 
@@ -211,6 +221,8 @@ async function ensurePublishedMarketingConfig(
     actorUserId: string;
     eventKey: keyof typeof DEMO_MARKETING;
     brand: { primaryColor: string; organizationName: string };
+    /** When true, save a new config version and publish even if one already exists. */
+    forceRepublish: boolean;
   },
 ): Promise<'published' | 'skipped'> {
   const existing = await tx.$queryRaw<
@@ -221,7 +233,10 @@ async function ensurePublishedMarketingConfig(
     WHERE tenant_id = ${input.tenantId}::uuid
       AND id = ${input.eventId}::uuid
   `;
-  if (existing[0]?.published_config_version != null) {
+  if (
+    existing[0]?.published_config_version != null &&
+    !input.forceRepublish
+  ) {
     return 'skipped';
   }
   const saved = await saveEventConfigVersion(tx, {
@@ -248,6 +263,12 @@ export type D9DemoSeedOptions = {
   /** Optional Keycloak subjects when creating missing users. */
   staffSubject?: string;
   attendeeSubject?: string;
+  /**
+   * When true, re-seed saves + publishes a new marketing config version even if
+   * `published_config_version` is already set (needed after copy/venue updates).
+   * CLI: `D9_DEMO_FORCE_MARKETING=1`.
+   */
+  forceRepublishMarketing?: boolean;
 };
 
 function tenantByKey(key: 'mfest' | 'studio') {
@@ -468,7 +489,9 @@ async function ensureInventory(
       ${tenantId}::uuid, ${event.id}::uuid, ${event.sourceId}::uuid,
       ${event.sourceName}, 'AUTO', now(), now()
     )
-    ON CONFLICT DO NOTHING
+    ON CONFLICT (tenant_id, id) DO UPDATE SET
+      name = EXCLUDED.name,
+      updated_at = now()
   `;
   await tx.$executeRaw`
     INSERT INTO source_ticket_types (tenant_id, event_id, source_id, ticket_type_id)
@@ -619,6 +642,9 @@ async function ensureStaffAccess(
 
 /**
  * Idempotent D9 demo seed. Safe to re-run. Marks all rows as fixture/demo.
+ * Venue / event / tenant fields always upsert. Published marketing config is
+ * skipped when already present unless `forceRepublishMarketing` is set
+ * (ops: `D9_DEMO_FORCE_MARKETING=1 ./scripts/d9-demo-seed.sh`).
  */
 export async function seedD9DemoDataset(
   db: PrismaClient,
@@ -626,6 +652,7 @@ export async function seedD9DemoDataset(
   options: D9DemoSeedOptions,
 ): Promise<D9DemoSeedReport> {
   const issuer = options.oidcIssuer.replace(/\/$/, '');
+  const forceRepublishMarketing = options.forceRepublishMarketing === true;
   const staffSubject =
     options.staffSubject ?? 'd9-demo-staff-subject-fixture';
   const attendeeSubject =
@@ -703,6 +730,7 @@ export async function seedD9DemoDataset(
         actorUserId,
         eventKey,
         brand,
+        forceRepublish: forceRepublishMarketing,
       });
       if (configResult === 'published') report.configsPublished += 1;
       else report.configsSkipped += 1;
