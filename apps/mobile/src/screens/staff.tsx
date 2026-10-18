@@ -41,7 +41,16 @@ import { loadGateOps, saveGateOps } from '@/gate/gate-store';
 import { getApiBaseUrl, getEventId, getTenantId } from '@/identity/config';
 import { verifyViaMe } from '@/identity/fetch-me';
 import { session } from '@/identity/session';
+import { staffEligibility } from '@/identity/staff-eligibility';
 import { colors } from '@/theme/colors';
+
+/** SEC-CACHE: clear Nhân viên chrome immediately after MEMBERSHIP_* / 401/403. */
+function clearStaffChromeAfterAuthzDenial() {
+  staffEligibility.reset();
+  if (session.getSnapshot().status === 'verified') {
+    void staffEligibility.refresh(session);
+  }
+}
 
 /**
  * Gate needs a verified bearer + baked API base. If cold-start left the
@@ -255,6 +264,9 @@ export function StaffScreen() {
         preferOfflineQueue: preferOffline,
       });
       setSessionId(result.staffSessionId);
+      if (result.membershipAuthzDenied) {
+        clearStaffChromeAfterAuthzDenial();
+      }
 
       if (result.networkUnavailable && result.parsed && result.staffSessionId) {
         const queued = await offlineScanQueue.enqueue({
@@ -302,11 +314,15 @@ export function StaffScreen() {
     if (!auth.ok) return;
     setBusy(true);
     try {
-      const next = await reconcileOp({
+      const reconciled = await reconcileOp({
         op: current,
         bearer: auth.bearer,
         apiBase: auth.apiBase,
       });
+      if (reconciled.membershipAuthzDenied) {
+        clearStaffChromeAfterAuthzDenial();
+      }
+      const next = reconciled.op;
       const rest = ops.filter((op) => op.id !== current.id);
       await persist([next, ...rest], next);
     } finally {
