@@ -1,4 +1,5 @@
 /** Public transport contracts only. Do not import database models here. */
+export * from './portal-admin';
 import type { NotificationProviderStatus } from './notifications';
 
 export const API_VERSION = 'v1' as const;
@@ -519,20 +520,12 @@ export type PlatformErrorCode =
 export type TenantStatus = 'PENDING' | 'ACTIVE' | 'SUSPENDED';
 
 export type MembershipRole =
-  | 'Owner'
-  | 'Manager'
-  | 'CS'
-  | 'Supervisor'
-  | 'Scanner';
+  'Owner' | 'Manager' | 'CS' | 'Supervisor' | 'Scanner';
 
 export type SupportScope = 'cs.read';
 
 export type AccountDeletionState =
-  | 'REQUESTED'
-  | 'UNDER_REVIEW'
-  | 'AWAITING_POLICY'
-  | 'COMPLETED'
-  | 'REJECTED';
+  'REQUESTED' | 'UNDER_REVIEW' | 'AWAITING_POLICY' | 'COMPLETED' | 'REJECTED';
 
 export interface TenantLimitsDto {
   maxEvents: number | null;
