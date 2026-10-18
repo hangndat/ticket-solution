@@ -47,12 +47,27 @@ Ghi `docs/reviews/<slug>.md` hoặc comment Issue/PR tương đương:
 | Findings / limitations | Có |
 | Verdict | PASS / FAIL / PASS with known gap |
 
+## Checklist O02 / PD §6.1 (chrome theo permission)
+
+Bắt buộc khi Spec/Issue đụng `apps/mobile` tabs, web guest/staff/admin chrome, SiteNav, hoặc IA guest↔staff. Cite decision log **O02** + [`docs/design/D11-PRODUCTION-UX-UI.md`](../../design/D11-PRODUCTION-UX-UI.md) §6.1. Gap audit: [`docs/reviews/GAP-AUDIT-2026-10-18-DOD.md`](../../reviews/GAP-AUDIT-2026-10-18-DOD.md) · INDEX [`GAP-AUDIT-2026-10-18-INDEX.md`](../../reviews/GAP-AUDIT-2026-10-18-INDEX.md). Coding còn mở: [#368](https://github.com/hangndat/ticket-solution/issues/368)–[#371](https://github.com/hangndat/ticket-solution/issues/371).
+
+| # | Gate | PASS khi | FAIL khi |
+| --- | --- | --- | --- |
+| D-O02 | Decision log O02 | Artifact cite O02 + chứng minh nav **theo permission server**; đổi tab không tự cấp quyền | Chỉ «có tab staff» / «scan fail-closed» mà vẫn luôn hiện tab |
+| D-PD-6.1 | PD IA §6.1 | iOS: Staff **ẩn hoặc disabled** khi không quyền (screenshot/UAT guest + staff); web guest nav không lẫn Invite Owner vào chrome khách nếu PD cấm | Prototype PASS kế thừa không runtime evidence trên exact SHA |
+| D-PERM-UAT | Headless/sim dual persona | ≥1 UAT guest (không membership staff) + ≥1 UAT staff assigned; so sánh tab/chrome | Chỉ UAT staff signed-in |
+| D-READY-NAV | PRODUCTION-READINESS Navigation | Đóng dòng Navigation bằng artifact exact-SHA sau impl O02 (không để «Kiểm lại sau attendee» vô hạn) | Coi attendee/Gate PASS cũ = chrome permission đã xong |
+| D-DECISION-ROW | Decision/ADR liên quan | Checklist DoD có cột «Decision IDs áp dụng» (O*/ADR-*) khi Architecture impact hoặc IA chrome | PASS chỉ theo Issue AC hẹp, bỏ O02/§6.1 |
+
+**Lưu ý:** UI hide ≠ security — API authz fail-closed vẫn bắt buộc; thiếu chrome permission → **FAIL** nếu Task tuyên bố khớp O02/PD §6.1, hoặc `PASS with known gap` chỉ khi AC surface hẹp và gap đã ghi rõ (không nuốt O02).
+
 ## Không làm
 
 - Merge `main` trừ khi Task/coordinator ủy quyền **và** đủ gate.
 - Đánh Hoàn thành Project (coordinator sau đủ DoD).
 - Bỏ qua thiếu SHA / thiếu independence.
 - Fantasy score (98/100) thay evidence.
+- Coi PASS Gate/attendee cũ là bằng chứng O02 / PD §6.1 chrome đã ship.
 
 ## Orca
 
