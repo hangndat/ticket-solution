@@ -11,12 +11,12 @@
 | --- | --- |
 | URL khai báo ASC | `https://vemoki.com/privacy` |
 | Draft nội dung | [privacy-policy-draft.md](./privacy-policy-draft.md) |
-| Trạng thái host (kiểm tra 2026-10-17) | `GET https://vemoki.com/privacy` → **HTTP 404** |
-| Việc còn lại trước submit | Publish HTML/route privacy (coordinator/web) trỏ nội dung draft hoặc bản pháp lý đã duyệt; xác nhận **200** công khai |
+| Trạng thái host (đối chiếu 2026-10-18) | `GET https://vemoki.com/privacy` → **HTTP 200** (`/marketing/privacy`) |
+| Việc còn lại trước submit | Khớp copy privacy với số **O06 đã chốt** (DECISION-LOG); Nutrition Labels ASC; không submit store trừ task ủy quyền |
 
 Support / data contact (trong policy): `privacy@vemoki.com` (alias dự kiến) hoặc `hangndat@gmail.com` cho đến khi alias production sẵn sàng — **không** đăng mật khẩu.
 
-Account deletion: in-app **Yêu cầu xóa tài khoản** → `POST /v1/me/account-deletion-requests` (ACK `AWAITING_POLICY` / O06 chưa chốt erase). Policy phải mô tả request-only, không hứa xóa ngay.
+Account deletion: in-app **Yêu cầu xóa tài khoản** → `POST /v1/me/account-deletion-requests`. O06 **đã chốt**: anonymize ≤ 30 ngày sau chấp nhận — policy **không** hứa xóa ngay / không hứa xóa cứng audit trong TTL 730 ngày.
 
 ---
 
