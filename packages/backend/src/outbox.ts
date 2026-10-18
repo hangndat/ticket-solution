@@ -17,10 +17,13 @@ import {
   resolveTicketIssuedTemplate,
 } from './notification-templates';
 import {
-  buildOwnerTicketLink,
   openCurrentCredentialForQr,
   renderCredentialQrPng,
 } from './qr-ticket';
+import {
+  buildInviteAcceptLink,
+  buildOwnerTicketLink,
+} from './web-links';
 import { metricsInc } from './metrics-registry';
 
 export type ClaimedOutboxRow = {
@@ -119,7 +122,10 @@ export async function processClaimedOutbox(
         if (!inviteToken || !(invitePayload.email ?? '').trim()) {
           throw new Error('invite_payload_incomplete');
         }
-        const acceptUrl = `${publicWebBaseUrl.replace(/\/$/, '')}/invite?token=${encodeURIComponent(inviteToken)}`;
+        const acceptUrl = buildInviteAcceptLink({
+          publicWebBaseUrl,
+          token: inviteToken,
+        });
         await email.sendMembershipInvite({
           tenantId: row.tenant_id,
           inviteId: invitePayload.inviteId ?? row.aggregate_id,

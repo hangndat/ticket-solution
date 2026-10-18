@@ -58,12 +58,5 @@ export function openCurrentCredentialForQr(input: {
   return { token, tokenHash };
 }
 
-export function buildOwnerTicketLink(input: {
-  publicWebBaseUrl: string;
-  tenantSlug: string;
-  ticketId: string;
-}): string {
-  const base = input.publicWebBaseUrl.replace(/\/+$/, '');
-  // Owner-auth ticket view — no credential/token query params.
-  return `${base}/t/${encodeURIComponent(input.tenantSlug)}/tickets/${encodeURIComponent(input.ticketId)}`;
-}
+/** @deprecated Import from `./web-links` — re-exported for existing callers. */
+export { buildOwnerTicketLink } from './web-links';

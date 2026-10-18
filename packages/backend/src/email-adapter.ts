@@ -8,6 +8,7 @@ import {
   NotificationError,
   NOTIFICATION_ERROR_CODES,
 } from './notification-error';
+import { resolveProductWebBaseUrl } from './web-links';
 
 export type TicketIssuedEmailPayload = {
   tenantId: string;
@@ -216,7 +217,8 @@ export function readPublicWebBaseUrl(env: NodeJS.ProcessEnv): string {
         'PUBLIC_WEB_BASE_URL must be https in production',
       );
     }
-    return value.replace(/\/+$/, '');
+    // O13: marketing apex must not be the invite/ticket deep-link base.
+    return resolveProductWebBaseUrl(value);
   }
   if (env['NODE_ENV'] === 'production') {
     throw new NotificationError(
