@@ -42,6 +42,8 @@ const DEFINER_OWNER_TABLES = new Set([
   'staff_sessions',
   // O02: list_my_events / accept_membership_invite read event_assignments (FORCE RLS).
   'event_assignments',
+  // H-P2: platform_tenant_health_counts COUNT on notifications (FORCE RLS).
+  'notifications',
 ]);
 /** Platform metadata pool — USING(true) cross-tenant (NOBYPASSRLS). */
 const PLATFORM_OPEN_TABLES = new Set([

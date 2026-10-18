@@ -3,6 +3,7 @@ import type { Prisma, PrismaClient } from './generated/prisma/client';
 import type {
   PlatformCreateTenantBody,
   PlatformTenantDetail,
+  PortalPlatformTenantHealth,
   PortalPlatformTenantSummary,
   PortalPlatformTenantsPage,
   TenantFlagsDto,
@@ -428,6 +429,79 @@ type PlatformTenantListRow = {
   version: number;
   created_at: Date;
 };
+
+/**
+ * H-P2 / ADR-20: sanitized operational counters only — no payloads, recipients, or SLA.
+ */
+export async function getPlatformTenantHealth(
+  db: PrismaClient,
+  actorUserId: string,
+  tenantId: string,
+): Promise<PortalPlatformTenantHealth> {
+  if (!UUID_RE.test(tenantId)) {
+    throw new PlatformError(
+      PLATFORM_ERROR_CODES.INVALID_INPUT,
+      'Invalid tenantId',
+    );
+  }
+  return withPlatformRole(db, async (tx) => {
+    await tx.$queryRaw`SELECT set_config('app.actor_id', ${actorUserId}, true)`;
+    await requireActivePlatformOperator(tx, actorUserId);
+    await lockTenantPolicyForShare(tx, tenantId);
+
+    const health = await tx.$queryRaw<
+      {
+        notifications_pending: number;
+        notifications_failed: number;
+        notifications_dead: number;
+        outbox_pending: number;
+        outbox_failed: number;
+      }[]
+    >`
+      SELECT
+        notifications_pending,
+        notifications_failed,
+        notifications_dead,
+        outbox_pending,
+        outbox_failed
+      FROM platform_tenant_health_counts(${tenantId}::uuid)
+    `;
+    const h = health[0]!;
+
+    const usage = await tx.$queryRaw<
+      {
+        events: number;
+        staff_active: number;
+        staff_pending: number;
+        email_today: number;
+      }[]
+    >`
+      SELECT events, staff_active, staff_pending, email_today
+      FROM platform_tenant_usage_counts(${tenantId}::uuid)
+    `;
+    const u = usage[0]!;
+
+    return {
+      tenantId,
+      observedAt: new Date().toISOString(),
+      notifications: {
+        pending: h.notifications_pending,
+        failed: h.notifications_failed,
+        dead: h.notifications_dead,
+      },
+      outbox: {
+        pending: h.outbox_pending,
+        failed: h.outbox_failed,
+      },
+      usage: {
+        events: u.events,
+        staffActive: u.staff_active,
+        staffPendingInvites: u.staff_pending,
+        emailToday: u.email_today,
+      },
+    };
+  });
+}
 
 /**
  * H-P1 / ADR-20: operator + MFA platform audience lists tenant metadata only.

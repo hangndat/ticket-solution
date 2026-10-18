@@ -69,6 +69,7 @@ export async function getPlatformMe(
             'platform.tenants.status',
             'platform.tenants.limits',
             'platform.support.grant',
+            'platform.support.revoke',
             'platform.health.read',
           ]
         : [],

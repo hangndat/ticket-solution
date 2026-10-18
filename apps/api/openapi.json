@@ -3372,6 +3372,41 @@
         ]
       }
     },
+    "/v1/platform/tenants/{tenantId}/health": {
+      "get": {
+        "operationId": "PlatformController_tenantHealth",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortalPlatformTenantHealthDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "platform"
+        ]
+      }
+    },
     "/v1/platform/tenants/{tenantId}/status": {
       "post": {
         "operationId": "PlatformController_setStatus",
@@ -3929,6 +3964,51 @@
         "responses": {
           "201": {
             "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "platform"
+        ]
+      }
+    },
+    "/v1/platform/support-grants/{grantId}/revoke": {
+      "post": {
+        "operationId": "PlatformController_revokeSupportGrant",
+        "parameters": [
+          {
+            "name": "grantId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PortalReasonBodyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SupportGrantRevokeResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -6142,6 +6222,92 @@
           "nextCursor"
         ]
       },
+      "PlatformHealthNotificationsDto": {
+        "type": "object",
+        "properties": {
+          "pending": {
+            "type": "number"
+          },
+          "failed": {
+            "type": "number"
+          },
+          "dead": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "pending",
+          "failed",
+          "dead"
+        ]
+      },
+      "PlatformHealthOutboxDto": {
+        "type": "object",
+        "properties": {
+          "pending": {
+            "type": "number"
+          },
+          "failed": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "pending",
+          "failed"
+        ]
+      },
+      "PlatformTenantUsageDto": {
+        "type": "object",
+        "properties": {
+          "events": {
+            "type": "number"
+          },
+          "staffActive": {
+            "type": "number"
+          },
+          "staffPendingInvites": {
+            "type": "number"
+          },
+          "emailToday": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "events",
+          "staffActive",
+          "staffPendingInvites",
+          "emailToday"
+        ]
+      },
+      "PortalPlatformTenantHealthDto": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "observedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "notifications": {
+            "$ref": "#/components/schemas/PlatformHealthNotificationsDto"
+          },
+          "outbox": {
+            "$ref": "#/components/schemas/PlatformHealthOutboxDto"
+          },
+          "usage": {
+            "$ref": "#/components/schemas/PlatformTenantUsageDto"
+          }
+        },
+        "required": [
+          "tenantId",
+          "observedAt",
+          "notifications",
+          "outbox",
+          "usage"
+        ]
+      },
       "PortalMemberAssignmentDto": {
         "type": "object",
         "properties": {
@@ -6425,6 +6591,23 @@
           "state",
           "expiresAt",
           "deliveryState"
+        ]
+      },
+      "SupportGrantRevokeResponseDto": {
+        "type": "object",
+        "properties": {
+          "grantId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "revokedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "grantId",
+          "revokedAt"
         ]
       },
       "TenantBrandingDto": {
