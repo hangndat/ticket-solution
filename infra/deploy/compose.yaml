@@ -158,6 +158,9 @@ services:
       OIDC_ISSUER: https://auth.vemoki.com/realms/ticket
       OIDC_AUDIENCE: ticket-api
       OIDC_JWKS_URL: https://auth.vemoki.com/realms/ticket/protocol/openid-connect/certs
+      # Shared denylist keyring only; IdP admin credentials stay worker-only.
+      ACCOUNT_DELETION_TOMBSTONE_KEYRING_JSON: ${ACCOUNT_DELETION_TOMBSTONE_KEYRING_JSON:-[]}
+      ACCOUNT_DELETION_TOMBSTONE_CURRENT_KEY_ID: ${ACCOUNT_DELETION_TOMBSTONE_CURRENT_KEY_ID:-}
       CODE_HMAC_PEPPER: ${CODE_HMAC_PEPPER}
       CODE_HMAC_VERSION: '1'
       TICKET_CREDENTIAL_KEY: ${TICKET_CREDENTIAL_KEY}
@@ -229,8 +232,16 @@ services:
     environment:
       NODE_ENV: production
       DATABASE_URL: postgresql://ticket_app:${TICKET_APP_PASSWORD}@postgres:5432/${POSTGRES_DB}
-      SMTP_URL: smtp://mailpit:1025
+      SMTP_URL: ${SMTP_URL:-smtp://mailpit:1025}
       SMTP_FROM: ${SMTP_FROM:-noreply@vemoki.com}
+      OIDC_ISSUER: https://auth.vemoki.com/realms/ticket
+      KEYCLOAK_ERASURE_ENABLED: ${KEYCLOAK_ERASURE_ENABLED:-0}
+      KEYCLOAK_BASE_URL: ${KEYCLOAK_BASE_URL:-https://auth.vemoki.com}
+      KEYCLOAK_REALM: ${KEYCLOAK_REALM:-ticket}
+      KEYCLOAK_ERASURE_CLIENT_ID: ${KEYCLOAK_ERASURE_CLIENT_ID:-vemoki-erasure}
+      KEYCLOAK_ERASURE_CLIENT_SECRET: ${KEYCLOAK_ERASURE_CLIENT_SECRET:-}
+      ACCOUNT_DELETION_TOMBSTONE_KEYRING_JSON: ${ACCOUNT_DELETION_TOMBSTONE_KEYRING_JSON:-[]}
+      ACCOUNT_DELETION_TOMBSTONE_CURRENT_KEY_ID: ${ACCOUNT_DELETION_TOMBSTONE_CURRENT_KEY_ID:-}
       OUTBOX_POLL_MS: '2000'
       TICKET_CREDENTIAL_KEY: ${TICKET_CREDENTIAL_KEY}
       PUBLIC_WEB_BASE_URL: ${PUBLIC_WEB_BASE_URL:-https://vemoki.com}
