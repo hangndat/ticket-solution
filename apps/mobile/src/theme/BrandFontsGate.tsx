@@ -5,12 +5,12 @@ import { brand } from './tokens.ts';
 import { fontFamilies } from './fonts.ts';
 
 /**
- * Load self-hosted Syne / Be Vietnam Pro once at root.
+ * Load self-hosted Sora / Be Vietnam Pro once at root.
  * On failure, children still render (system fallback) — never block wallet.
  */
 export function BrandFontsGate({ children }: PropsWithChildren) {
   const [loaded, error] = useFonts({
-    [fontFamilies.display]: require('../../assets/fonts/Syne-Variable.ttf'),
+    [fontFamilies.display]: require('../../assets/fonts/Sora-Variable.ttf'),
     [fontFamilies.body]: require('../../assets/fonts/BeVietnamPro-Regular.ttf'),
     [fontFamilies.bodyMedium]: require('../../assets/fonts/BeVietnamPro-Medium.ttf'),
     [fontFamilies.bodySemiBold]: require('../../assets/fonts/BeVietnamPro-SemiBold.ttf'),

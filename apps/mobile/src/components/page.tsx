@@ -1,18 +1,23 @@
 import type { PropsWithChildren } from 'react';
 import { ScrollView, Text, View } from 'react-native';
+import { AtmosphereWash } from '@/components/screen-atmosphere';
 import { colors } from '@/theme/colors';
+import { fontFamilies } from '@/theme/fonts';
 import { TenantLogo } from '@/theme/TenantLogo';
 
 export function Page({ children }: PropsWithChildren) {
   return (
-    <ScrollView
-      contentInsetAdjustmentBehavior="automatic"
-      keyboardShouldPersistTaps="handled"
-      style={{ backgroundColor: colors.background }}
-      contentContainerStyle={{ padding: 20, paddingBottom: 48, gap: 20 }}
-    >
-      {children}
-    </ScrollView>
+    <View style={{ flex: 1, backgroundColor: colors.paper }}>
+      <AtmosphereWash />
+      <ScrollView
+        contentInsetAdjustmentBehavior="automatic"
+        keyboardShouldPersistTaps="handled"
+        style={{ backgroundColor: 'transparent' }}
+        contentContainerStyle={{ padding: 20, paddingBottom: 48, gap: 20 }}
+      >
+        {children}
+      </ScrollView>
+    </View>
   );
 }
 
@@ -55,14 +60,24 @@ export function Notice({
     >
       <Text
         selectable
-        style={{ color: colors.label, fontSize: 22, fontWeight: '600' }}
+        style={{
+          color: colors.label,
+          fontSize: 22,
+          fontFamily: fontFamilies.display,
+          fontWeight: '600',
+        }}
       >
         {title}
       </Text>
       {children != null && children !== '' ? (
         <Text
           selectable
-          style={{ color: colors.secondary, fontSize: 17, lineHeight: 25 }}
+          style={{
+            color: colors.secondary,
+            fontSize: 17,
+            lineHeight: 25,
+            fontFamily: fontFamilies.body,
+          }}
         >
           {children}
         </Text>

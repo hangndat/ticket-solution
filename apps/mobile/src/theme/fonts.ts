@@ -1,10 +1,10 @@
 /**
- * Brand font family names (AC-V1) — Syne display + Be Vietnam Pro body.
+ * Brand font family names (Live Pulse v2) — Sora display + Be Vietnam Pro body.
  * Assets live in `apps/mobile/assets/fonts/`; load via `BrandFontsGate`.
  */
 
 export const fontFamilies = {
-  display: 'Syne',
+  display: 'Sora',
   body: 'BeVietnamPro',
   bodyMedium: 'BeVietnamPro-Medium',
   bodySemiBold: 'BeVietnamPro-SemiBold',
