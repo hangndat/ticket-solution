@@ -41,6 +41,8 @@ export type MembershipRole =
   | 'Supervisor'
   | 'Scanner';
 
+export type MeTenantRole = MembershipRole | 'Attendee';
+
 export type SupportScope = 'cs.read';
 
 export type AccountDeletionState =
@@ -68,7 +70,7 @@ export interface MeTenantItem {
   name: string;
   status: TenantStatus;
   tenantPermissions: string[];
-  role: MembershipRole;
+  role: MeTenantRole;
 }
 
 export interface MeTenantsResponse {
