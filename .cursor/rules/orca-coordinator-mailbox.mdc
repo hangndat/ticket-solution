@@ -1,42 +1,75 @@
 ---
-description: Orca coordinator always drains mailbox — check/ack/reply/release without waiting for "You have N messages"
+description: Orca coordinator continuous listen loop — check --wait forever while Dispatch live; drain/reply/release/idle-fill immediately; never end turn early
 alwaysApply: true
 ---
 
-# Orca — coordinator mailbox (auto drain)
+# Orca — coordinator mailbox (auto drain + continuous listen)
 
 As coordinator (or any agent supervising an Orca Run): **always drive the mailbox yourself.** Do not wait for the user (or UI copy like “You have N messages”) to remind you to check, ack, reply, or release.
 
+## Continuous listen loop (bắt buộc khi đang supervise)
+
+Sau wave `worker-start` đầu tiên trong Run được ủy quyền, coordinator **giữ vòng lặp lắng nghe** cho đến khi scope settle — không “dispatch xong rồi báo user rồi idle”:
+
+```text
+worker-start (max fan-out ready)
+  → check --wait --types "worker_done,escalation,question" --timeout-ms <long>
+  → process batch (reply / validate worker_done / escalation)
+  → reuse | retain | worker-release
+  → check --ack <delivery_id>
+  → idle-fill mọi slot free (orca-idle-worker-fill.mdc)
+  → nếu còn Dispatch live / reclaimable / task ready trong scope → lặp check --wait
+  → chỉ thoát khi positive proof scope xong (xem Exit conditions)
+```
+
+1. **`check --wait` là foreground** của session coordinator khi còn worker đang chạy. Timeout hoặc inbox rỗng = checkpoint, **không** phải lý do dừng Run: chạy `worker-list --include-remote --json`, xử lý `projection.nextAction` / `attention`, rồi `check --wait` lại ngay.
+2. **`worker_done` → làm tiếp ngay trong cùng turn:** validate → reuse terminal cho task kế (nếu có) hoặc release → idle-fill slot free → quay lại `check --wait`. Không chờ user “làm tiếp đi”.
+3. **Heartbeat ≠ xong.** Chỉ `worker_done` / settlement (hoặc recovery với positive proof `exited`) mới cho phép release/reuse/retry theo lifecycle.
+4. **Báo cáo user không thay vòng lặp:** có thể gửi progress ngắn giữa các checkpoint, nhưng **không kết thúc turn** nếu vẫn còn Dispatch live, delivery chưa ack, question chưa reply, hoặc reclaimable chờ release trong scope.
+
+### Exit conditions (chỉ được dừng listen khi)
+
+- Mọi Dispatch expected trong Run/scope đã settle **và** `worker-list … --terminal-state reclaimable` (scope Run) trả về không còn mục cần quyết định, **và** không còn task ready được ủy quyền cần fill; hoặc
+- User / ủy quyền rõ ràng: dừng / pause / hủy Run; hoặc
+- Blocker cứng đã escalate và không thể tiếp tục an toàn (ghi rõ, retain/release đúng lifecycle).
+
+Ba lần `check --wait` rỗng liên tiếp → **không** thoát mù: enumerate `worker-list`, rồi chờ tiếp hoặc recovery theo `ORCA skills get orchestration` (positive proof exit trước khi stop/abandon).
+
 ## Always do — every coordinator turn / checkpoint
 
-1. **`check`** — consume the bound Run inbox (`ORCA orchestration check … --json`, or `check --wait` while supervising). Process every delivered message before ending the turn.
+1. **`check`** — consume the bound Run inbox (`ORCA orchestration check … --json`, hoặc `check --wait` khi đang supervise). Process every delivered message before ending the turn.
 2. **`reply`** — answer every `question` / blocking ask with `ORCA orchestration reply --id <message_id> --body "…" --json`. Never leave a worker blocked on the coordinator.
 3. **Validate + decide** — for each `worker_done` / `escalation`, validate against the expected active Dispatch, record outcome, then choose next owner: reuse, retain (with reason), or release.
 4. **`ack`** — acknowledge the delivery only after the batch is fully processed (`check --ack <delivery_id> …`). Do not ack then ignore remaining work in that batch.
 5. **`worker-release`** — when settlement authorizes cleanup and you are not reusing/retaining the terminal, run `ORCA orchestration worker-release --dispatch <dispatch_id> --json` in the same wave. Do not leave `reclaimable` / `nextAction.kind=release` sitting until someone pings you.
+6. **Idle-fill ngay** sau settlement (cùng checkpoint) — xem `orca-idle-worker-fill.mdc`; rồi tiếp tục `check --wait` nếu còn Dispatch live.
 
 ## Triggers (proactive — no user nudge)
 
 Run the drain loop when any of these happen, **without** waiting for a “You have N messages” prompt:
 
-- After `worker-start` / wave dispatch
+- After `worker-start` / wave dispatch → **ngay lập tức** vào `check --wait` (không end turn)
 - After `check --wait` returns (or timeout with pending attention)
 - On any `worker_done`, `escalation`, or `question`
 - When `worker-list` shows `nextAction.kind` of `release` / reply / ack
-- At natural coordinator checkpoints (before reporting to the user, before idle fill, before ending a turn)
+- At natural coordinator checkpoints (before reporting to the user, before idle fill)
 - When the UI or session shows an unread mailbox count — treat it as **already overdue**, not as the first signal to act
 
 ## Do not
 
 ```text
+❌ End a coordinator turn while any in-scope Dispatch is still live / unsettled
 ❌ End a coordinator turn with unacked deliveries or unanswered questions
-❌ Wait for the user to say “check messages” / “You have N messages”
+❌ Dispatch wave rồi báo “đang chạy” rồi dừng — bỏ check --wait
+❌ Wait for the user to say “check messages” / “You have N messages” / “làm tiếp”
+❌ Treat timeout / empty check as “workers done” without worker-list + positive proof
 ❌ Ack a batch before reply + settlement decisions for every message
 ❌ Leave settled reclaimable terminals unreleased when nextAction is release
 ❌ Treat UI attention badges as optional / “later”
 
-✅ check → process (reply / validate worker_done) → release|reuse|retain → ack → idle-fill
-✅ Same turn: drain mailbox fully, then report to user
+✅ Continuous: check --wait → process → release|reuse|retain → ack → idle-fill → check --wait
+✅ worker_done → fill/reuse ngay trong cùng turn, rồi listen tiếp
+✅ Same supervising session: drain + fill + re-wait until Exit conditions
 ✅ Proactive check even when count might be 0 (cheap; proves empty)
 ```
 
