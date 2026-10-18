@@ -88,26 +88,30 @@ const BY_CODE: Record<
   },
   CSRF_TOKEN_INVALID: {
     kind: 'auth',
-    title: 'Phiên trang hết hạn',
-    detail: 'Tải lại trang /invite rồi thử nhận invite lại.',
+    title: 'Phiên bảo vệ trang hết hạn',
+    detail:
+      'Cookie CSRF chưa sẵn sàng hoặc không khớp. Tải lại trang nhận lời mời rồi bấm nhận lại — không coi là đã thành công.',
     retryable: false,
   },
   CSRF_ORIGIN_REQUIRED: {
     kind: 'auth',
     title: 'Yêu cầu bị từ chối',
-    detail: 'Gửi lại từ cùng trang nhận invite (cùng nguồn Origin).',
+    detail:
+      'Thiếu nguồn Origin hợp lệ. Chỉ nhận lời mời từ đúng trang /invite trên cùng máy chủ — không coi là đã thành công.',
     retryable: false,
   },
   CSRF_ORIGIN_MISMATCH: {
     kind: 'auth',
     title: 'Yêu cầu bị từ chối',
-    detail: 'Origin không khớp — fail-closed, không nhận invite.',
+    detail:
+      'Origin không khớp máy chủ hiện tại. Hệ thống từ chối để chống giả mạo — không nhận lời mời.',
     retryable: false,
   },
   CSRF_ORIGIN_NOT_ALLOWED: {
     kind: 'auth',
     title: 'Yêu cầu bị từ chối',
-    detail: 'Origin không nằm trong danh sách cho phép.',
+    detail:
+      'Origin không nằm trong danh sách máy chủ được phép. Không nhận lời mời từ nguồn này.',
     retryable: false,
   },
   UPSTREAM_UNAVAILABLE: {
@@ -125,7 +129,7 @@ const BY_CODE: Record<
 };
 
 export const INVITE_UNKNOWN =
-  'Kết quả nhận invite chưa rõ. Không coi là đã thành công — kiểm tra lại hoặc thử lại sau.';
+  'Kết quả nhận lời mời chưa rõ. Không coi là đã thành công — kiểm tra lại hoặc thử lại sau.';
 
 export function messageForInviteError(
   code: string | undefined,
@@ -143,7 +147,7 @@ export function messageForInviteError(
   }
   return {
     kind: 'error',
-    title: 'Không nhận được invite',
+    title: 'Không nhận được lời mời',
     detail:
       fallbackMessage?.trim() ||
       'Đã xảy ra lỗi. Thử lại hoặc nhờ Owner gửi lời mời mới.',
@@ -157,8 +161,8 @@ export function messageForInviteView(
   if (view.kind === 'ok') {
     return {
       kind: 'success',
-      title: 'Đã nhận membership',
-      detail: `membership ${view.value.membershipId} · tenant ${view.value.tenantId} · status ${view.value.status}.`,
+      title: 'Đã nhận lời mời',
+      detail: `Thành viên ${view.value.membershipId} · tổ chức ${view.value.tenantId} · trạng thái ${view.value.status}.`,
       retryable: false,
     };
   }

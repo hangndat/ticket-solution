@@ -2,8 +2,8 @@
 
 **Product:** Vemoki (`vemoki.com`) · iOS app bundle `com.hangndat.ticket`  
 **Operator:** Hang Nguyen Dat (individual Apple Developer Team `BLUA62D52G`)  
-**Effective (draft):** 2026-10-17  
-**Status:** Draft for hosting at `https://vemoki.com/privacy` — **not legal advice**; review before production submit.
+**Effective (draft):** 2026-10-18  
+**Status:** Draft aligned with **O06** (DECISION-LOG / `docs/ops/O06-OPTIONS.md`) for hosting at `https://vemoki.com/privacy` — **not legal advice**; review before production submit.
 
 This English draft is the source for the public page. A Vietnamese summary may be published alongside; if they conflict, the English page controls until counsel reviews.
 
@@ -46,26 +46,40 @@ We process data on infrastructure we operate (or that a hosting provider operate
 
 We do not use Expo Push or other consumer push SaaS for production delivery; push uses Apple APNs with tokens stored in our systems.
 
-## 6. Retention
+## 6. Retention (O06)
 
-Retention for tickets, audit logs, and identity is governed by operational and legal needs and by policies still being finalized for the pilot (including regional/retention choices). We will not claim a fixed erasure SLA until that policy is closed.
+| Category | MVP policy |
+| --- | --- |
+| Account deletion request | **Anonymize ≤ 30 days** (no immediate hard-delete — keep complaint reconciliation) |
+| Tickets / check-in after event | Keep **365 days**, then anonymize PII; keep aggregates/KPIs |
+| Audit logs | TTL **730 days** |
+| Object store (QR / export) | Short-lived signed URLs + object-delete job **≤ 90 days** after business expiry |
+| Backups vs erasure | Backups **respect erasure within RPO** (restored PII already past the erasure window does not “come back”) |
+| Client caches | Purge on logout / user switch |
 
 ## 7. Account deletion requests
 
-In the iOS app: **Account → request account deletion** (wording may be localized). That creates a **request** acknowledged by our API. Acknowledgement is **not** immediate erasure of tickets, audit trails, or identity while deletion policy (including legal holds) remains unresolved. We will communicate status of the request through the product or email contact above.
+In the iOS app: **Account → request account deletion** (wording may be localized). That creates a **request** acknowledged by our API. Acknowledgement is **not** immediate hard erasure: per O06 we **anonymize within ≤ 30 days**, while audit trails remain subject to the **730-day** audit TTL. We will communicate status of the request through the product or email contact above.
 
 ## 8. Children
 
 Vemoki is not directed at children under 13. Do not use the service if you are under the age required by your jurisdiction without appropriate consent.
 
-## 9. International processing
+## 9. International processing / residency (O06)
 
-Servers may be located in the region chosen for the deployment you use (pilot deployments are documented operationally). By using the service you understand data may be processed in that hosting region.
+**Single-region VPS:** Postgres, MinIO, Keycloak, and SMTP run in the **same country** as the deployment host. We do not split regions in MVP. The host country is recorded in the DPA when a real tenant onboards. By using the service you understand data is processed in that hosting region.
 
-## 10. Changes
+## 10. Support SLA (O06) — not RPO/RTO
+
+- Outside event windows: **business hours Mon–Fri (Vietnam time)**.
+- During Gate / opening windows: **on-call P1 24/7** per event schedule (P1 ≤ 30 minutes; P2 ≤ 4 hours business / ≤ 1 hour in-window; P3 ≤ 2 business days).
+- Channels: email + internal chat; **do not** log raw OTP / QR / PII in tickets.
+- Technical RPO ≤ 15 minutes / RTO ≤ 2 hours are **PRD recovery targets** and are **not** published as customer support SLA until a drill on the target VPS.
+
+## 11. Changes
 
 We may update this policy and will post the new version at `https://vemoki.com/privacy` with an updated effective date.
 
-## 11. App Store privacy summary
+## 12. App Store privacy summary
 
 A machine-readable summary of categories collected by the iOS app is maintained for App Store Connect Nutrition Labels in the project docs (`docs/asc/privacy-nutrition.md`). The public URL above is the canonical human-readable policy.
