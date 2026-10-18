@@ -3,7 +3,8 @@
 | Field | Value |
 | --- | --- |
 | PR | [#302](https://github.com/hangndat/ticket-solution/pull/302) |
-| Exact SHA | `0fdc64a7…` → `git rev-parse` tip `0fdc64a` (full below) |
+| Exact SHA (branch tip before merge) | `0fdc64aa92c15b125e3c81f22c3185ff679de1f6` |
+| Merge commit | `2c6a73ab08789b7ba6acf588f0e5149da9761e8f` |
 | Scope | `docs/ops/RUNBOOK.md`, `docs/ops/RELEASE-CHECKLIST.md`, `docs/reviews/PILOT-GATES-2026-10-18.md` |
 | Role | `reviewer-dod` (docs-only; no runtime behavior) |
 | Verdict | **PASS** |
@@ -23,7 +24,7 @@
 ## Exact SHA
 
 ```text
-0fdc64a
+0fdc64aa92c15b125e3c81f22c3185ff679de1f6
 ```
 
-Full: run `git rev-parse 0fdc64a` on merge tip / branch `hangndat/ops-pilot-gates-close`.
+Merge: `2c6a73ab08789b7ba6acf588f0e5149da9761e8f`
