@@ -1,8 +1,15 @@
 import { useCallback, useMemo, useState, useSyncExternalStore } from 'react';
-import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Linking,
+  Pressable,
+  Text,
+  View,
+} from 'react-native';
 import type { MeResponse } from '@ticket/contracts';
 import { Notice, Page } from '@/components/page';
 import { SessionScopedAccountDeletionPanel } from '@/account-deletion/account-deletion-panel';
+import { PRIVACY_POLICY_URL } from '@/account-deletion/privacy-policy';
 import { SessionScopedPushStatus } from '@/push/push-status';
 import { colors } from '@/theme/colors';
 import { getApiBaseUrl, getTenantId, isOidcConfigured } from '@/identity/config';
@@ -81,6 +88,7 @@ export function AccountScreen() {
           Phiên: {identity.status}
         </Text>
         <SessionScopedPushStatus />
+        <PrivacyPolicyLink />
       </Page>
     );
   }
@@ -301,6 +309,8 @@ function ConfiguredAccount() {
 
       <SessionScopedPushStatus />
 
+      <PrivacyPolicyLink />
+
       {identity.status === 'verified' ? (
         <SessionScopedAccountDeletionPanel />
       ) : null}
@@ -310,5 +320,40 @@ function ConfiguredAccount() {
         Các quyền đó đến từ kiểm tra membership trên API.
       </Notice>
     </Page>
+  );
+}
+
+/** In-app entry to the public Privacy Policy (Guideline 5.1.1 companion). */
+function PrivacyPolicyLink() {
+  const [error, setError] = useState<string | null>(null);
+  const onOpen = useCallback(async () => {
+    setError(null);
+    try {
+      const supported = await Linking.canOpenURL(PRIVACY_POLICY_URL);
+      if (!supported) {
+        setError(`Không mở được ${PRIVACY_POLICY_URL}`);
+        return;
+      }
+      await Linking.openURL(PRIVACY_POLICY_URL);
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Không mở được Chính sách quyền riêng tư.',
+      );
+    }
+  }, []);
+
+  return (
+    <View style={{ gap: 8 }}>
+      <ActionButton
+        label="Chính sách quyền riêng tư"
+        onPress={() => void onOpen()}
+      />
+      <Text style={{ color: colors.secondary, fontSize: 13, lineHeight: 18 }}>
+        {PRIVACY_POLICY_URL}
+      </Text>
+      {error ? <Notice title="Không mở được liên kết">{error}</Notice> : null}
+    </View>
   );
 }

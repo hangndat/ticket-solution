@@ -52,7 +52,8 @@ test('copy never claims deleted and ACK description avoids deleted label', () =>
   const explainer = accountDeletionExplainer();
   assert.equal(assertsNoDeletedClaim(explainer.body), true);
   assert.match(explainer.body, /O06/);
-  assert.match(explainer.body, /không đủ|App Store/i);
+  assert.match(explainer.body, /anonymize|≤\s*30|30 ngày/i);
+  assert.match(explainer.body, /ACK\s*≠|không xóa ngay/i);
 
   const described = describeAccountDeletionRequest(awaiting);
   assert.equal(assertsNoDeletedClaim(described.title), true);

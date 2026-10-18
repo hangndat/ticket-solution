@@ -83,7 +83,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     ...config,
     name: 'Vemoki',
     slug: 'vemoki',
-    version: '0.1.0',
+    version: '1.0.0',
     icon: './assets/icon.png',
     platforms: ['ios'],
     orientation: 'default',
