@@ -1,6 +1,6 @@
 # Runbook vận hành (MVP / pilot)
 
-Ngày: 2026-10-17 · Issue #25 · Không thay thế playbook production đầy đủ.
+Ngày: 2026-10-18 · Issue #25 / #296 · Không thay thế playbook production đầy đủ.
 
 ## 1. Phạm vi
 
@@ -74,6 +74,39 @@ Admission edge (Caddy) chưa deploy — xem `infra/admission/Caddyfile.example`.
 
 - Không deploy/migration/config rủi ro trong giờ Gate mở, trừ hotfix có chủ sở hữu + rollback.
 - Dashboard quá tải: giảm polling/reporting trước khi đụng Gate.
+
+## 6.1 On-call Gate (O06)
+
+Nguồn số: [`O06-OPTIONS.md`](./O06-OPTIONS.md) §3 · [DECISION-LOG](../DECISION-LOG.md) O06. **Không** claim pilot cửa sổ event khi bảng dưới còn trống người/kênh.
+
+### Cửa sổ vs ngoài cửa sổ
+
+| Ngữ cảnh | Mức hỗ trợ | Phản hồi mục tiêu |
+| --- | --- | --- |
+| **Ngoài** cửa sổ Gate / opening | Business hours T2–T6 (giờ VN) | Theo severity bên dưới |
+| **Trong** cửa sổ Gate / opening | On-call P1 **24/7 theo lịch event** | P1 ≤ **30 phút** |
+
+| Severity | Ví dụ | Ngoài cửa sổ | Trong cửa sổ |
+| --- | --- | --- | --- |
+| **P1** | Cổng chết / không check-in | BH (xem O06) | ≤ **30 phút** |
+| **P2** | Email/redeem lỗi, không chặn cổng | ≤ 4 giờ BH | ≤ 1 giờ |
+| **P3** | Cải tiến, copy | ≤ 2 ngày làm việc | ≤ 2 ngày làm việc |
+
+### Kênh
+
+- **Cho phép:** email + chat nội bộ (điền URL/alias thật trước event — không bịa).
+- **Cấm:** log OTP / QR plaintext / PII thô vào ticket hỗ trợ.
+
+### Template điền người (điền trước mỗi event — để trống nếu chưa có)
+
+| Vai | Họ tên | Liên hệ | Kênh chính | Ghi chú |
+| --- | --- | --- | --- | --- |
+| Primary on-call (P1) | _điền_ | _điền_ | _email / chat_ | Trực trong cửa sổ Gate |
+| Secondary / escalation | _điền_ | _điền_ | _email / chat_ | Khi primary không ack ≤30m |
+| Owner kỹ thuật (hotfix) | _điền_ | _điền_ | _email / chat_ | Chỉ hotfix có rollback trong freeze |
+| Kênh event-day | — | — | _điền URL/alias_ | Không dùng kênh công khai cho OTP/QR |
+
+Trước claim pilot cửa sổ: xác nhận bảng đã có người thật + kênh reachable; freeze §6 vẫn áp dụng.
 
 ## 7. Platform operator bootstrap / recovery (M12)
 

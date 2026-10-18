@@ -157,9 +157,27 @@ test('production routes isolate tenant content and reject unknown pairs', async 
     assert.ok(gateHtml.includes('Không cho khách qua'));
     assert.ok(gateHtml.includes('OIDC chưa cấu hình'));
 
-    const gateBff = await fetch(base + '/api/bff/gate/confirm', {
+    // Gate BFF: Origin missing must fail-closed before OIDC/upstream (admin pattern).
+    const gateCsrfBlocked = await fetch(base + '/api/bff/gate/confirm', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        tenantId: '11111111-1111-4111-8111-111111111111',
+        eventId: '22222222-2222-4222-8222-222222222222',
+        reservationId: '33333333-3333-4333-8333-333333333333',
+        staffSessionId: '44444444-4444-4444-8444-444444444444',
+        token: 'hold-token',
+      }),
+    });
+    assert.equal(gateCsrfBlocked.status, 403);
+    assert.equal((await gateCsrfBlocked.json()).code, 'CSRF_ORIGIN_REQUIRED');
+
+    const gateBff = await fetch(base + '/api/bff/gate/confirm', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Origin: base,
+      },
       body: JSON.stringify({
         tenantId: '11111111-1111-4111-8111-111111111111',
         eventId: '22222222-2222-4222-8222-222222222222',

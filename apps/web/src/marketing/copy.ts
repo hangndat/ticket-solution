@@ -100,6 +100,10 @@ export type CopyKey =
   | 'privacy.s2.body'
   | 'privacy.s3.title'
   | 'privacy.s3.body'
+  | 'privacy.s4.title'
+  | 'privacy.s4.body'
+  | 'privacy.s5.title'
+  | 'privacy.s5.body'
   | 'privacy.note'
   | 'support.title'
   | 'support.lead'
@@ -218,26 +222,32 @@ const VI: Record<CopyKey, string> = {
   'cta.repeat.demo': 'Xem demo',
   'cta.repeat.interest': 'Đăng ký quan tâm',
   'privacy.title': 'Quyền riêng tư',
-  'privacy.updated': 'Cập nhật: 2026-10-18',
+  'privacy.updated': 'Cập nhật: 2026-10-18 (O06)',
   'privacy.intro':
-    'Vemoki (`vemoki.com`) xử lý dữ liệu cần thiết để vận hành nền tảng sự kiện và trả lời đăng ký quan tâm.',
+    'Vemoki (`vemoki.com`) xử lý dữ liệu cần thiết để vận hành nền tảng sự kiện và trả lời đăng ký quan tâm. Số retention / vùng dữ liệu / SLA dưới đây khớp quyết định O06 (MVP).',
   'privacy.s1.title': 'Dữ liệu chúng tôi thu',
   'privacy.s1.body':
     'Tài khoản tổ chức; thông tin sự kiện và mã/vé; dữ liệu check-in; form quan tâm (tên, email, tổ chức, ghi chú); nhật ký kỹ thuật cần thiết.',
   'privacy.s2.title': 'Mục đích',
   'privacy.s2.body':
     'Cung cấp dịch vụ multi-tenant; gửi vé/thông báo liên quan sự kiện; hỗ trợ và follow-up GTM; bảo mật và chống lạm dụng.',
-  'privacy.s3.title': 'Liên hệ',
+  'privacy.s3.title': 'Lưu giữ và xóa (O06)',
   'privacy.s3.body':
-    'Câu hỏi quyền riêng tư: dùng trang Hỗ trợ hoặc email liên hệ trên trang Hỗ trợ.',
+    'Khi bạn yêu cầu xóa tài khoản: anonymize trong ≤ 30 ngày (không xóa cứng ngay — giữ đối soát khiếu nại). Vé / check-in: giữ 365 ngày rồi anonymize PII, giữ aggregate/KPI. Audit log: TTL 730 ngày. Object store (QR/export): signed URL ngắn hạn và job xóa object ≤ 90 ngày sau hết hạn nghiệp vụ. Backup tôn trọng xóa trong RPO; cache client được purge khi logout / đổi user.',
+  'privacy.s4.title': 'Vùng dữ liệu',
+  'privacy.s4.body':
+    'Single-region VPS: Postgres, MinIO, Keycloak và SMTP cùng quốc gia với máy chủ. Không tách region trong MVP; quốc gia host ghi trong DPA khi có tenant thật.',
+  'privacy.s5.title': 'Liên hệ',
+  'privacy.s5.body':
+    'Câu hỏi quyền riêng tư: dùng trang Hỗ trợ hoặc email liên hệ trên trang Hỗ trợ (`privacy@vemoki.com` khi alias sẵn sàng).',
   'privacy.note':
-    'Bản tối thiểu cho ASC/trust — pháp lý chi tiết có thể mở rộng sau; không chặn ship stub P0.',
+    'Số liệu khớp DECISION-LOG O06 (18/10/2026). RPO/RTO kỹ thuật (mục tiêu PRD) không dùng làm SLA hỗ trợ cho đến khi drill trên VPS đích.',
   'support.title': 'Hỗ trợ',
   'support.lead': 'Hỗ trợ organizer và agency dùng Vemoki.',
   'support.email.label': 'Email',
   'support.email.value': 'support@vemoki.com',
   'support.sla':
-    'Phản hồi trong giờ làm việc (UTC+7), thường trong 1–2 ngày làm việc.',
+    'Ngoài cửa sổ sự kiện: giờ hành chính T2–T6 (giờ VN). Trong cửa sổ Gate/opening: on-call P1 24/7 theo lịch event (P1 ≤ 30 phút; P2 ≤ 4 giờ business / ≤ 1 giờ trong cửa sổ; P3 ≤ 2 ngày làm việc). Không ghi OTP/QR/PII thô vào ticket.',
   'support.app': 'Đăng nhập sản phẩm',
   'support.sales': 'Về trang bán',
   'support.guest': 'Khách có mã mời: đổi vé trên ứng dụng',
@@ -352,26 +362,32 @@ const EN: Record<CopyKey, string> = {
   'cta.repeat.demo': 'View demo',
   'cta.repeat.interest': 'Register interest',
   'privacy.title': 'Privacy',
-  'privacy.updated': 'Updated: 2026-10-18',
+  'privacy.updated': 'Updated: 2026-10-18 (O06)',
   'privacy.intro':
-    'Vemoki (`vemoki.com`) processes data needed to run the event platform and respond to interest registrations.',
+    'Vemoki (`vemoki.com`) processes data needed to run the event platform and respond to interest registrations. Retention, residency, and support SLA figures below match decision O06 (MVP).',
   'privacy.s1.title': 'Data we collect',
   'privacy.s1.body':
     'Organization accounts; event and code/ticket data; check-in records; interest-form fields (name, email, org, notes); necessary technical logs.',
   'privacy.s2.title': 'Purposes',
   'privacy.s2.body':
     'Provide multi-tenant service; send event-related tickets/notices; support and GTM follow-up; security and abuse prevention.',
-  'privacy.s3.title': 'Contact',
+  'privacy.s3.title': 'Retention and erasure (O06)',
   'privacy.s3.body':
-    'Privacy questions: use Support or the contact email listed there.',
+    'Account deletion requests: anonymize within ≤ 30 days (no hard-delete immediately — keep complaint reconciliation). Tickets / check-in: keep 365 days then anonymize PII; keep aggregates/KPIs. Audit logs: TTL 730 days. Object store (QR/export): short-lived signed URLs and object-delete job ≤ 90 days after business expiry. Backups respect erasure within RPO; client caches purge on logout / user switch.',
+  'privacy.s4.title': 'Data residency',
+  'privacy.s4.body':
+    'Single-region VPS: Postgres, MinIO, Keycloak, and SMTP in the same country as the host. No multi-region split in MVP; host country is recorded in the DPA when a real tenant onboard.',
+  'privacy.s5.title': 'Contact',
+  'privacy.s5.body':
+    'Privacy questions: use Support or the contact email listed there (`privacy@vemoki.com` when the alias is ready).',
   'privacy.note':
-    'Minimum for ASC/trust — fuller legal text may follow; must not block P0 stub ship.',
+    'Figures match DECISION-LOG O06 (2026-10-18). Technical RPO/RTO (PRD targets) are not published as support SLA until a drill on the target VPS.',
   'support.title': 'Support',
   'support.lead': 'Support for organizers and agencies using Vemoki.',
   'support.email.label': 'Email',
   'support.email.value': 'support@vemoki.com',
   'support.sla':
-    'We reply on business days (UTC+7), typically within 1–2 business days.',
+    'Outside event windows: business hours Mon–Fri (Vietnam time). During Gate/opening windows: on-call P1 24/7 per event schedule (P1 ≤ 30 minutes; P2 ≤ 4 hours business / ≤ 1 hour in-window; P3 ≤ 2 business days). Do not log raw OTP/QR/PII in tickets.',
   'support.app': 'Product sign-in',
   'support.sales': 'Back to sales',
   'support.guest': 'Guests with invite codes: redeem in the app',
