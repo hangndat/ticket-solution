@@ -126,3 +126,73 @@ export const PORTAL_FILTER_ENDPOINTS = {
   exports: (tenantId: string, eventId: string) =>
     `${eventBase(tenantId, eventId)}/exports`,
 } as const;
+
+/** #431: allowlisted audit projection. No reason, diff, payload or raw PII. */
+export interface PortalAuditEntry {
+  auditId: string;
+  actorUserId: string | null;
+  action: string;
+  resourceType: string;
+  resourceId: string | null;
+  operationId: string | null;
+  createdAt: string;
+}
+export interface PortalAuditQuery extends PortalCursorQuery {
+  from?: string;
+  to?: string;
+  action?: string;
+}
+export type PortalAuditPage = CursorPage<PortalAuditEntry>;
+export type PortalCodeState = 'AVAILABLE' | 'HELD' | 'CONSUMED';
+/** Stored inventory has only HMACs; do not fabricate recoverable suffixes. */
+export interface PortalCodeSummary {
+  codeId: string;
+  state: PortalCodeState;
+  sourceId: string;
+  ticketTypeId: string;
+}
+export interface PortalCodesQuery extends PortalCursorQuery {
+  state?: PortalCodeState;
+  sourceId?: string;
+  ticketTypeId?: string;
+  /** Exact code lookup, hashed server-side; never echoed or logged. */
+  q?: string;
+}
+export type PortalCodesPage = CursorPage<PortalCodeSummary>;
+export interface PortalPlatformAuditEntry extends Omit<
+  PortalAuditEntry,
+  'operationId'
+> {
+  tenantId: string | null;
+}
+export interface PortalPlatformAuditQuery extends PortalAuditQuery {
+  tenantId?: string;
+}
+export type PortalPlatformAuditPage = CursorPage<PortalPlatformAuditEntry>;
+export interface PortalPlatformTenantSummary {
+  tenantId: string;
+  slug: string;
+  name: string;
+  status: import('./index').TenantStatus;
+  version: number;
+  createdAt: string;
+}
+export type PortalPlatformTenantsPage = CursorPage<PortalPlatformTenantSummary>;
+/** Operational counters observed now; not delivery confirmation or an SLA. */
+export interface PortalPlatformTenantHealth {
+  tenantId: string;
+  observedAt: string;
+  notifications: { pending: number; failed: number; dead: number };
+  outbox: { pending: number; failed: number };
+  usage: import('./index').PlatformTenantDetail['usage'];
+}
+export const PORTAL_AUDIT_ENDPOINTS = {
+  eventAudit: (tenantId: string, eventId: string) =>
+    `${eventBase(tenantId, eventId)}/audit`,
+  codes: (tenantId: string, eventId: string) =>
+    `${eventBase(tenantId, eventId)}/codes`,
+  platformAudit: '/v1/platform/audit',
+  platformTenants: '/v1/platform/tenants',
+  platformTenantHealth: (tenantId: string) =>
+    `/v1/platform/tenants/${encodeURIComponent(tenantId)}/health`,
+} as const;
