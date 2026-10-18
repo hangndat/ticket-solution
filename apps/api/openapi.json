@@ -2144,6 +2144,92 @@
         ]
       }
     },
+    "/v1/tenants/{tenantId}/events/{eventId}/codes": {
+      "get": {
+        "operationId": "InventoryController_listCodes",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "eventId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "schema": {}
+          },
+          {
+            "name": "ticketTypeId",
+            "required": false,
+            "in": "query",
+            "schema": {}
+          },
+          {
+            "name": "sourceId",
+            "required": false,
+            "in": "query",
+            "schema": {}
+          },
+          {
+            "name": "state",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "AVAILABLE",
+                "HELD",
+                "CONSUMED"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {}
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortalCodesPageDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "inventory"
+        ]
+      }
+    },
     "/v1/tenants/{tenantId}/events/{eventId}/redemptions/{requestId}/approve": {
       "post": {
         "operationId": "ApprovalController_approve",
@@ -2300,6 +2386,79 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/EventReportDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "reporting"
+        ]
+      }
+    },
+    "/v1/tenants/{tenantId}/events/{eventId}/audit": {
+      "get": {
+        "operationId": "ReportController_audit",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "eventId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "action",
+            "required": false,
+            "in": "query",
+            "schema": {}
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "schema": {}
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "schema": {}
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {}
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortalAuditPageDto"
                 }
               }
             }
@@ -3035,6 +3194,81 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/MeEventsDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "platform"
+        ]
+      }
+    },
+    "/v1/platform/audit": {
+      "get": {
+        "operationId": "PlatformController_listAudit",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "action",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortalPlatformAuditPageDto"
                 }
               }
             }
@@ -5074,6 +5308,56 @@
           "token"
         ]
       },
+      "PortalCodeSummaryDto": {
+        "type": "object",
+        "properties": {
+          "codeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "AVAILABLE",
+              "HELD",
+              "CONSUMED"
+            ]
+          },
+          "sourceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "ticketTypeId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "codeId",
+          "state",
+          "sourceId",
+          "ticketTypeId"
+        ]
+      },
+      "PortalCodesPageDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PortalCodeSummaryDto"
+            }
+          },
+          "nextCursor": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor"
+        ]
+      },
       "ApprovalResponseDto": {
         "type": "object",
         "properties": {
@@ -5226,6 +5510,68 @@
           "rejectByReason",
           "emailNeedsCsCount",
           "asOf"
+        ]
+      },
+      "PortalAuditEntryDto": {
+        "type": "object",
+        "properties": {
+          "auditId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "actorUserId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "action": {
+            "type": "string"
+          },
+          "resourceType": {
+            "type": "string"
+          },
+          "resourceId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "operationId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "auditId",
+          "actorUserId",
+          "action",
+          "resourceType",
+          "resourceId",
+          "operationId",
+          "createdAt"
+        ]
+      },
+      "PortalAuditPageDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PortalAuditEntryDto"
+            }
+          },
+          "nextCursor": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor"
         ]
       },
       "CsNotificationDto": {
@@ -5676,6 +6022,68 @@
         "required": [
           "staffEligible",
           "items"
+        ]
+      },
+      "PortalPlatformAuditEntryDto": {
+        "type": "object",
+        "properties": {
+          "auditId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "actorUserId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "action": {
+            "type": "string"
+          },
+          "resourceType": {
+            "type": "string"
+          },
+          "resourceId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "tenantId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "auditId",
+          "actorUserId",
+          "action",
+          "resourceType",
+          "resourceId",
+          "tenantId",
+          "createdAt"
+        ]
+      },
+      "PortalPlatformAuditPageDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PortalPlatformAuditEntryDto"
+            }
+          },
+          "nextCursor": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor"
         ]
       },
       "PortalPlatformTenantSummaryDto": {
