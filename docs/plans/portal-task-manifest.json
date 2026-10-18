@@ -1,0 +1,242 @@
+[
+  {
+    "id": "PORTAL-S1",
+    "title": "[PORTAL][S1][P0.1] Nền tảng apps/portal + web-session + members API",
+    "body": "Parent Epic #406. ADR-20 đã accept (#409) — không tạo lại architect Task. Client ticket-admin-web confidential+PKCE, callback /api/auth/callback. Thin packages/web-session + apps/portal do coordinator. Cap ≤1 web + ≤1 BE. Architecture impact: Có. Không DNS/deploy prod. Không trùng D13 PRs.",
+    "tasks": [
+      {
+        "id": "T-COORD-WS",
+        "title": "[PORTAL] Coordinator: apps/portal + @ticket/web-session + CI/lockfile",
+        "body": "Role: coordinator. Stub Next apps/portal; extract thin packages/web-session (origin/CSRF/cookie factories/sanitizePostLoginPath) per ADR-20 §4; pin exact antd + @ant-design/nextjs-registry sau spike; CI path filter; interim copy-lock chỉ nếu bị chặn. Không antd trên attendee apps/web. Architecture impact: Có.",
+        "role": "coordinator",
+        "paths": ["apps/portal", "packages/web-session", "pnpm-lock.yaml", "turbo.json", ".github/workflows"],
+        "deps": [],
+        "priority": "P0"
+      },
+      {
+        "id": "T-COORD-CTR-M",
+        "title": "[PORTAL] Coordinator: contract H-M1…H-M4 members/invites",
+        "body": "Role: coordinator. Handoff packages/contracts + OpenAPI process (BACKEND-GAPS §5.1). AC denied/cross-tenant/cursor/email mask. Không chờ ADR. Architecture impact: Có.",
+        "role": "coordinator",
+        "paths": ["packages/contracts", "apps/api/openapi.json"],
+        "deps": [],
+        "priority": "P0"
+      },
+      {
+        "id": "T-BE-MEMBERS",
+        "title": "[PORTAL] Backend: members/invites list + role/assignment gaps",
+        "body": "## Vai trò chuyên môn\n- Role ID: backend\n- File: docs/agents/roles/backend.md\n- Architecture impact: Có — API extension\n\nImplement H-M1…H-M4. RLS/last-Owner/rate-limit. DB isolation tests. Deps: T-COORD-CTR-M only.",
+        "role": "backend",
+        "paths": ["apps/api", "packages/backend"],
+        "deps": ["T-COORD-CTR-M"],
+        "priority": "P0"
+      },
+      {
+        "id": "T-WEB-FOUND",
+        "title": "[PORTAL] Web: portal AntD foundation + staff OIDC BFF + Gate link",
+        "body": "## Vai trò chuyên môn\n- Role ID: web\n- File: docs/agents/roles/web.md\n- Ownership: apps/portal (đã duyệt)\n- Architecture impact: Có\n\nConsume ADR-20 (#409) + T-COORD-WS. AntdRegistry VI; ANTD-CORE-FIRST; login ticket-admin-web PKCE; /api/auth/callback; host-only cookie; CSRF fail-closed; đóng refresh_token grant trên portal BFF; GATE-STAY-APP deep-link/report tới app./gate trong shell (không Task Gate riêng). Evidence request/Playwright — không document.cookie.",
+        "role": "web",
+        "paths": ["apps/portal"],
+        "deps": ["T-COORD-WS"],
+        "priority": "P0"
+      }
+    ]
+  },
+  {
+    "id": "PORTAL-S2",
+    "title": "[PORTAL][S2][P0.2] Chuẩn bị sự kiện — events/types/content/staff",
+    "body": "Parent Epic #406. Một Task web gộp module prep (tránh overfragment). BE types song song khi slot trống. Architecture impact: Có.",
+    "tasks": [
+      {
+        "id": "T-COORD-CTR-T",
+        "title": "[PORTAL] Coordinator: contract GET ticket-types + sources (G-T1)",
+        "body": "Role: coordinator. Cursor list event-scoped. Architecture impact: Có.",
+        "role": "coordinator",
+        "paths": ["packages/contracts", "apps/api/openapi.json"],
+        "deps": [],
+        "priority": "P0"
+      },
+      {
+        "id": "T-BE-TYPES",
+        "title": "[PORTAL] Backend: list ticket-types + sources",
+        "body": "## Vai trò chuyên môn\n- Role ID: backend\n- File: docs/agents/roles/backend.md\n\nImplement G-T1. Không raw secrets.",
+        "role": "backend",
+        "paths": ["apps/api", "packages/backend"],
+        "deps": ["T-COORD-CTR-T"],
+        "priority": "P0"
+      },
+      {
+        "id": "T-WEB-PREP",
+        "title": "[PORTAL] Web: overview + events + types/quota + content + staff",
+        "body": "## Vai trò chuyên môn\n- Role ID: web\n- File: docs/agents/roles/web.md\n\nMột Task: org/event shell O12 asOf; events CRUD/wizard/clone/archive; types/sources/quota; brand/config/publish/rollback; staff directory consume H-M*. Không UUID tay; publish≠redeem≠Gate.",
+        "role": "web",
+        "paths": ["apps/portal"],
+        "deps": ["T-WEB-FOUND", "T-BE-TYPES", "T-BE-MEMBERS"],
+        "priority": "P0"
+      }
+    ]
+  },
+  {
+    "id": "PORTAL-S3",
+    "title": "[PORTAL][S3][P0.3] Khách/vé/day-of — import multi-step + pending + CS",
+    "body": "Parent Epic #406. H-I1 implement multi-step CTR (không cắt sync mất parity). G-R2 pending GET trên portal BFF. Architecture impact: Có.",
+    "tasks": [
+      {
+        "id": "T-COORD-CTR-I",
+        "title": "[PORTAL] Coordinator: contract import jobs + invitations (H-I1/H-I2)",
+        "body": "Role: coordinator. Chốt implement IMPORT_ENDPOINTS multi-step + invitations list/dispatch-preview/dispatch masked. Không chọn cắt BFF sync làm mặc định. Architecture impact: Có.",
+        "role": "coordinator",
+        "paths": ["packages/contracts", "packages/contracts/src/import-invite.ts"],
+        "deps": [],
+        "priority": "P0"
+      },
+      {
+        "id": "T-BE-IMPORT-INV",
+        "title": "[PORTAL] Backend: import job lifecycle + guest invitations",
+        "body": "## Vai trò chuyên môn\n- Role ID: backend\n- File: docs/agents/roles/backend.md\n\nH-I1 + H-I2 trên API/worker thật (MinIO). Preview không reserve quota; no raw token. Không mock UAT.",
+        "role": "backend",
+        "paths": ["apps/api", "apps/worker", "packages/backend"],
+        "deps": ["T-COORD-CTR-I"],
+        "priority": "P0"
+      },
+      {
+        "id": "T-BE-INV-CLAIM",
+        "title": "[PORTAL] Backend: invitation claim trên app. (H-I3)",
+        "body": "## Vai trò chuyên môn\n- Role ID: backend\n- File: docs/agents/roles/backend.md\n\nAttendee host claim; one-time token; email verified.",
+        "role": "backend",
+        "paths": ["apps/api", "packages/backend"],
+        "deps": ["T-COORD-CTR-I"],
+        "priority": "P0"
+      },
+      {
+        "id": "T-WEB-OPS",
+        "title": "[PORTAL] Web: import/invitations + pending BFF + CS/notify/report/export",
+        "body": "## Vai trò chuyên môn\n- Role ID: web\n- File: docs/agents/roles/web.md\n\nCSV/job UI; invitations; GET pending (G-R2); approve/deny; CS timeline/resend; notifications (ACCEPTED≠DELIVERED); O12 report; export recovery.",
+        "role": "web",
+        "paths": ["apps/portal"],
+        "deps": ["T-WEB-FOUND", "T-BE-IMPORT-INV"],
+        "priority": "P0"
+      }
+    ]
+  },
+  {
+    "id": "PORTAL-S4",
+    "title": "[PORTAL][S4][P0.4] Parity hardening + list filters",
+    "body": "Parent Epic #406. Parity 100% admin hiện có trước dual-run. Reviewer DoD/security JIT trên PR — không Issue T-REV giả. Architecture impact: Không (filters additive) trừ perm mới.",
+    "tasks": [
+      {
+        "id": "T-COORD-CTR-F",
+        "title": "[PORTAL] Coordinator: contract pending/notify/export filters",
+        "body": "Role: coordinator. G-R1, G-N1, G-E1. Architecture impact: Không.",
+        "role": "coordinator",
+        "paths": ["packages/contracts", "apps/api/openapi.json"],
+        "deps": [],
+        "priority": "P0"
+      },
+      {
+        "id": "T-BE-FILTERS",
+        "title": "[PORTAL] Backend: pending/notify/export history filters",
+        "body": "## Vai trò chuyên môn\n- Role ID: backend\n- File: docs/agents/roles/backend.md\n\nG-R1/G-N1/G-E1; cursor trung thực.",
+        "role": "backend",
+        "paths": ["apps/api", "packages/backend"],
+        "deps": ["T-COORD-CTR-F"],
+        "priority": "P0"
+      },
+      {
+        "id": "T-WEB-HARDEN",
+        "title": "[PORTAL] Web: parity matrix 100% + a11y/perf + filter UI",
+        "body": "## Vai trò chuyên môn\n- Role ID: web\n- File: docs/agents/roles/web.md\n\nBA checklist đủ CS/export/import/staff/notify/report/config; keyboard/axe sample; unknown≠success. Thiếu Nest route → không mock PASS.",
+        "role": "web",
+        "paths": ["apps/portal"],
+        "deps": ["T-WEB-PREP", "T-WEB-OPS"],
+        "priority": "P0"
+      }
+    ]
+  },
+  {
+    "id": "PORTAL-S5",
+    "title": "[PORTAL][S5][P1.1] Audit + codes + Platform zone",
+    "body": "Parent Epic #406. PLATFORM-PORTAL-ZONE. T-BE-PLATFORM-LIST có thể kéo sớm sau members nếu BE slot trống (cùng CTR-A hoặc CTR-P sớm). Architecture impact: Có.",
+    "tasks": [
+      {
+        "id": "T-COORD-CTR-A",
+        "title": "[PORTAL] Coordinator: contract audit + codes + platform list/health",
+        "body": "Role: coordinator. H-A1/H-C1/H-P1/H-P2 per ADR-20 §7.1: event audit = report.read + assignment (không audit.read mới); codes = inventory.import masked; platform audit /v1/platform/audit Operator MFA; ACR=2. Không task permission migration. Architecture impact: Có.",
+        "role": "coordinator",
+        "paths": ["packages/contracts", "apps/api/openapi.json"],
+        "deps": [],
+        "priority": "P1"
+      },
+      {
+        "id": "T-BE-PLATFORM-LIST",
+        "title": "[PORTAL] Backend: GET /platform/tenants",
+        "body": "## Vai trò chuyên môn\n- Role ID: backend\n- File: docs/agents/roles/backend.md\n\nH-P1 cursor; operator+MFA; không attendee audience.",
+        "role": "backend",
+        "paths": ["apps/api", "packages/backend"],
+        "deps": ["T-COORD-CTR-A"],
+        "priority": "P1"
+      },
+      {
+        "id": "T-BE-AUDIT-CODES",
+        "title": "[PORTAL] Backend: audit GET + codes browse masked",
+        "body": "## Vai trò chuyên môn\n- Role ID: backend\n- File: docs/agents/roles/backend.md\n\nH-A1 + H-C1 per ADR-20 §7.1: report.read (event) + inventory.import (codes metadata masked); platform audit riêng Operator MFA; O06 retention; no raw/HMAC leak; không new-role migration.",
+        "role": "backend",
+        "paths": ["apps/api", "packages/backend"],
+        "deps": ["T-COORD-CTR-A"],
+        "priority": "P1"
+      },
+      {
+        "id": "T-BE-P-HEALTH",
+        "title": "[PORTAL] Backend: platform health + support grant revoke",
+        "body": "## Vai trò chuyên môn\n- Role ID: backend\n- File: docs/agents/roles/backend.md\n\nH-P2; audit mỗi read nhạy cảm.",
+        "role": "backend",
+        "paths": ["apps/api", "packages/backend"],
+        "deps": ["T-COORD-CTR-A"],
+        "priority": "P1"
+      },
+      {
+        "id": "T-WEB-ADV",
+        "title": "[PORTAL] Web: audit browser + Platform zone /platform",
+        "body": "## Vai trò chuyên môn\n- Role ID: web\n- File: docs/agents/roles/web.md\n\nAudit UI + job history; PLATFORM-PORTAL-ZONE với client/cookie/audience Operator tách; Owner ≠ Operator.",
+        "role": "web",
+        "paths": ["apps/portal"],
+        "deps": ["T-WEB-FOUND", "T-BE-AUDIT-CODES", "T-BE-PLATFORM-LIST"],
+        "priority": "P1"
+      }
+    ]
+  },
+  {
+    "id": "PORTAL-S6",
+    "title": "[PORTAL][S6][P1.2] Cutover prep local — không deploy/DNS prod",
+    "body": "Parent Epic #406. Chỉ local/staging được phép. Production DNS/TLS/deploy = Task ủy quyền riêng. Không trùng D13 ops #397. Architecture impact: Có.",
+    "tasks": [
+      {
+        "id": "T-COORD-LOCAL-CUT",
+        "title": "[PORTAL] Coordinator: runbook dual-run local + Keycloak URI local",
+        "body": "Role: coordinator. Portal redirect URI local trên ticket-admin-web; dual-run/rollback runbook. CẤM cloud DNS/TLS/prod cutover. Dep ADR-20 + P0 parity evidence.",
+        "role": "coordinator",
+        "paths": ["docs/ops", "infra/keycloak"],
+        "deps": ["T-WEB-HARDEN"],
+        "priority": "P1"
+      },
+      {
+        "id": "T-WEB-DUALRUN",
+        "title": "[PORTAL] Web: dual-run banner + deep-link allowlist prep",
+        "body": "## Vai trò chuyên môn\n- Role ID: web\n- File: docs/agents/roles/web.md\n\nBanner; GET navigation prep; không redirect POST BFF mù; giữ legacy admin đến deploy ủy quyền riêng. ≤1 web coding với portal.",
+        "role": "web",
+        "paths": ["apps/portal", "apps/web"],
+        "deps": ["T-WEB-HARDEN"],
+        "priority": "P1"
+      },
+      {
+        "id": "T-UAT-PORTAL",
+        "title": "[PORTAL] Headless UAT portal + regression app./gate",
+        "body": "Role: web. scripts/web-uat + artifacts; regression attendee/Gate; exact SHA. Không headed Computer Use. Milestone DoD/security reviewer JIT sau UAT.",
+        "role": "web",
+        "paths": ["scripts", "apps/portal"],
+        "deps": ["T-WEB-DUALRUN"],
+        "priority": "P1"
+      }
+    ]
+  }
+]

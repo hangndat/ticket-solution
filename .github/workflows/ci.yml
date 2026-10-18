@@ -17,7 +17,7 @@ concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 env:
-  TURBO_TELEMETRY_DISABLED: "1"
+  TURBO_TELEMETRY_DISABLED: '1'
   TURBO_CACHE_DIR: .turbo
 
 jobs:
@@ -26,6 +26,7 @@ jobs:
     outputs:
       docs_only: ${{ steps.set.outputs.docs_only }}
       web: ${{ steps.set.outputs.web }}
+      portal: ${{ steps.set.outputs.portal }}
       mobile: ${{ steps.set.outputs.mobile }}
       backend: ${{ steps.set.outputs.backend }}
       db: ${{ steps.set.outputs.db }}
@@ -51,6 +52,18 @@ jobs:
               - '!**/.gitkeep'
             web:
               - 'apps/web/**'
+              - 'packages/contracts/**'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - 'package.json'
+              - 'turbo.json'
+              - '.npmrc'
+              - '.github/workflows/ci.yml'
+              - '.github/actions/**'
+              - 'packages/web-session/**'
+            portal:
+              - 'apps/portal/**'
+              - 'packages/web-session/**'
               - 'packages/contracts/**'
               - 'pnpm-lock.yaml'
               - 'pnpm-workspace.yaml'
@@ -102,6 +115,7 @@ jobs:
           if [[ "${{ github.event_name }}" == "push" ]]; then
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
             echo "web=true" >> "$GITHUB_OUTPUT"
+            echo "portal=true" >> "$GITHUB_OUTPUT"
             echo "mobile=true" >> "$GITHUB_OUTPUT"
             echo "backend=true" >> "$GITHUB_OUTPUT"
             echo "db=true" >> "$GITHUB_OUTPUT"
@@ -112,6 +126,7 @@ jobs:
 
           code="${{ steps.filter.outputs.code }}"
           web="${{ steps.filter.outputs.web }}"
+          portal="${{ steps.filter.outputs.portal }}"
           mobile="${{ steps.filter.outputs.mobile }}"
           backend="${{ steps.filter.outputs.backend }}"
           db="${{ steps.filter.outputs.db }}"
@@ -123,6 +138,7 @@ jobs:
             echo "docs_only=true" >> "$GITHUB_OUTPUT"
             # Docs/meta-only: không chạy scope jobs.
             web=false; mobile=false; backend=false; db=false; hardening=false
+            portal=false
           fi
 
           # Label `ci:docker` → bắt buộc Docker jobs trên PR (kể cả PR nhẹ).
@@ -136,6 +152,7 @@ jobs:
           fi
 
           echo "web=${web}" >> "$GITHUB_OUTPUT"
+          echo "portal=${portal}" >> "$GITHUB_OUTPUT"
           echo "mobile=${mobile}" >> "$GITHUB_OUTPUT"
           echo "backend=${backend}" >> "$GITHUB_OUTPUT"
           echo "db=${db}" >> "$GITHUB_OUTPUT"
@@ -157,6 +174,20 @@ jobs:
         if: success()
         with:
           turbo-job: web
+
+  portal:
+    needs: changes
+    if: needs.changes.outputs.portal == 'true'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-pnpm
+      - run: pnpm --filter @ticket/portal run typegen
+      - run: pnpm exec turbo run lint typecheck test build --filter=@ticket/portal...
+      - uses: ./.github/actions/save-turbo
+        if: success()
+        with:
+          turbo-job: portal
 
   mobile:
     needs: changes
@@ -334,8 +365,8 @@ jobs:
 
   # Merge turbo shards from scope jobs into one Actions cache (content-addressed).
   turbo-persist:
-    needs: [web, mobile, backend]
-    if: always() && (needs.web.result == 'success' || needs.mobile.result == 'success' || needs.backend.result == 'success')
+    needs: [web, portal, mobile, backend]
+    if: always() && (needs.web.result == 'success' || needs.portal.result == 'success' || needs.mobile.result == 'success' || needs.backend.result == 'success')
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
@@ -387,6 +418,7 @@ jobs:
     needs:
       - changes
       - web
+      - portal
       - mobile
       - backend
       - database-isolation
@@ -409,6 +441,7 @@ jobs:
           fail=0
           for pair in \
             "web:${{ needs.web.result }}" \
+            "portal:${{ needs.portal.result }}" \
             "mobile:${{ needs.mobile.result }}" \
             "backend:${{ needs.backend.result }}" \
             "database-isolation:${{ needs.database-isolation.result }}" \
