@@ -52,7 +52,7 @@ export function publishedListStateFromResult(
   };
 }
 
-export const DEMO_PUBLISHED_TENANTS = ['demo-fun', 'demo-studio'] as const;
+export const DEMO_PUBLISHED_TENANTS = ['mfest-demo', 'demo-studio'] as const;
 
 export function nextDemoPublishedTenant(
   current: string,

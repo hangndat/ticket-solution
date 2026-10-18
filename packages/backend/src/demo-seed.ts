@@ -19,14 +19,24 @@ import { withTenant } from './tenant-context';
 
 const DEMO_MARKER = '· Demo';
 
+/**
+ * Known pre-rebrand D9 tenant slugs (Fun Fest → MFest).
+ * Migration is fail-closed: only these UUID + old-slug pairs may rename.
+ * Arbitrary slug drift on the same UUID still throws.
+ */
+export const D9_LEGACY_TENANT_SLUGS: Readonly<Record<string, readonly string[]>> =
+  {
+    'd9d9f001-0001-4000-8000-000000000001': ['demo-fun'],
+  };
+
 /** Stable fixture UUIDs — see docs/demo/D9-DEMO-DATASET.md */
 export const D9_DEMO = {
   marker: DEMO_MARKER,
   tenants: {
-    fun: {
+    mfest: {
       id: 'd9d9f001-0001-4000-8000-000000000001',
-      slug: 'demo-fun',
-      name: `FUN Collective ${DEMO_MARKER}`,
+      slug: 'mfest-demo',
+      name: `MFest ${DEMO_MARKER}`,
     },
     studio: {
       id: 'd9d9f001-0001-4000-8000-000000000002',
@@ -35,11 +45,11 @@ export const D9_DEMO = {
     },
   },
   events: {
-    funFest: {
+    mfest: {
       id: 'd9d9f001-0002-4000-8000-000000000001',
-      tenantKey: 'fun' as const,
-      slug: 'fun-fest',
-      name: `FUN FEST ${DEMO_MARKER}`,
+      tenantKey: 'mfest' as const,
+      slug: 'mfest',
+      name: `MFest ${DEMO_MARKER}`,
       venueName: 'Demo riverside venue, Ho Chi Minh City (fixture)',
       startsAt: new Date('2027-03-20T10:00:00+07:00'),
       ticketTypeId: 'd9d9f001-0003-4000-8000-000000000001',
@@ -50,7 +60,7 @@ export const D9_DEMO = {
       sourceBucketId: 'd9d9f001-0005-4000-8000-000000000021',
       eventQuota: 50,
       rawCodes: Array.from({ length: 10 }, (_, i) =>
-        `DEMO-FUN-${String(i + 1).padStart(3, '0')}`,
+        `DEMO-MFEST-${String(i + 1).padStart(3, '0')}`,
       ),
     },
     studioNight: {
@@ -95,7 +105,7 @@ export type D9DemoSeedReport = {
 
 /** Marketing copy mapped into published sections (category/description/highlights). */
 const DEMO_MARKETING = {
-  funFest: {
+  mfest: {
     category: 'Music / Community / Discovery',
     description:
       'A little louder. A little brighter. A day of live music, creative encounters and moments worth sharing. · Demo',
@@ -240,7 +250,7 @@ export type D9DemoSeedOptions = {
   attendeeSubject?: string;
 };
 
-function tenantByKey(key: 'fun' | 'studio') {
+function tenantByKey(key: 'mfest' | 'studio') {
   return D9_DEMO.tenants[key];
 }
 
@@ -290,6 +300,14 @@ async function usersByEmail(
   return rows.map((r) => r.id);
 }
 
+function isUniqueViolation(err: unknown): boolean {
+  if (typeof err !== 'object' || err === null) return false;
+  const code = 'code' in err ? String((err as { code: unknown }).code) : '';
+  if (code === 'P2002' || code === '23505') return true;
+  const message = err instanceof Error ? err.message : String(err);
+  return /unique|duplicate key/i.test(message);
+}
+
 async function ensureTenant(
   tx: Prisma.TransactionClient,
   tenant: { id: string; slug: string; name: string },
@@ -297,9 +315,41 @@ async function ensureTenant(
   const byId = await tx.tenant.findUnique({ where: { id: tenant.id } });
   if (byId) {
     if (byId.slug !== tenant.slug) {
-      throw new Error(
-        `D9 demo tenant id ${tenant.id} exists with slug=${byId.slug}, expected ${tenant.slug}`,
-      );
+      const legacySlugs = D9_LEGACY_TENANT_SLUGS[tenant.id] ?? [];
+      const isKnownRebrand = legacySlugs.includes(byId.slug);
+      if (!isKnownRebrand) {
+        throw new Error(
+          `D9 demo tenant id ${tenant.id} exists with slug=${byId.slug}, expected ${tenant.slug}`,
+        );
+      }
+      // Best-effort under RLS (may not see other tenants); UNIQUE(slug) is the hard gate.
+      const slugOwner = await tx.tenant.findUnique({
+        where: { slug: tenant.slug },
+      });
+      if (slugOwner && slugOwner.id !== tenant.id) {
+        throw new Error(
+          `D9 demo rebrand blocked: slug ${tenant.slug} already used by id=${slugOwner.id}; refuse to overwrite`,
+        );
+      }
+      try {
+        await tx.tenant.update({
+          where: { id: tenant.id },
+          data: {
+            slug: tenant.slug,
+            name: tenant.name,
+            status: 'ACTIVE',
+          },
+        });
+      } catch (err) {
+        if (isUniqueViolation(err)) {
+          throw new Error(
+            `D9 demo rebrand blocked: slug ${tenant.slug} already used by another tenant; refuse to overwrite`,
+            { cause: err },
+          );
+        }
+        throw err;
+      }
+      return false;
     }
     await tx.tenant.update({
       where: { id: tenant.id },
@@ -313,15 +363,25 @@ async function ensureTenant(
       `Tenant slug ${tenant.slug} already used by id=${bySlug.id}; refuse to overwrite non-demo id`,
     );
   }
-  await tx.tenant.create({
-    data: {
-      id: tenant.id,
-      slug: tenant.slug,
-      name: tenant.name,
-      status: 'ACTIVE',
-      defaultTimezone: 'Asia/Ho_Chi_Minh',
-    },
-  });
+  try {
+    await tx.tenant.create({
+      data: {
+        id: tenant.id,
+        slug: tenant.slug,
+        name: tenant.name,
+        status: 'ACTIVE',
+        defaultTimezone: 'Asia/Ho_Chi_Minh',
+      },
+    });
+  } catch (err) {
+    if (isUniqueViolation(err)) {
+      throw new Error(
+        `Tenant slug ${tenant.slug} already used by another tenant; refuse to overwrite non-demo id`,
+        { cause: err },
+      );
+    }
+    throw err;
+  }
   return true;
 }
 
@@ -334,7 +394,7 @@ async function ensureEvent(
     where: { tenantId_id: { tenantId, id: event.id } },
   });
   const brand = {
-    primaryColor: event.tenantKey === 'fun' ? '#245B47' : '#59428A',
+    primaryColor: event.tenantKey === 'mfest' ? '#245B47' : '#59428A',
     organizationName: tenantByKey(event.tenantKey).name,
     fixture: true,
   };
@@ -604,7 +664,7 @@ export async function seedD9DemoDataset(
     attendeeUserIds,
   };
 
-  for (const tenant of [D9_DEMO.tenants.fun, D9_DEMO.tenants.studio]) {
+  for (const tenant of [D9_DEMO.tenants.mfest, D9_DEMO.tenants.studio]) {
     const created = await withTenant(db, tenant.id, (tx) =>
       ensureTenant(tx, tenant),
     );
@@ -612,12 +672,12 @@ export async function seedD9DemoDataset(
   }
 
   const actorUserId = staffUserIds[0]!;
-  for (const event of [D9_DEMO.events.funFest, D9_DEMO.events.studioNight]) {
+  for (const event of [D9_DEMO.events.mfest, D9_DEMO.events.studioNight]) {
     const tenant = tenantByKey(event.tenantKey);
     const eventKey =
-      event.slug === 'fun-fest' ? ('funFest' as const) : ('studioNight' as const);
+      event.slug === 'mfest' ? ('mfest' as const) : ('studioNight' as const);
     const brand = {
-      primaryColor: event.tenantKey === 'fun' ? '#245B47' : '#59428A',
+      primaryColor: event.tenantKey === 'mfest' ? '#245B47' : '#59428A',
       organizationName: tenant.name,
     };
     const created = await withTenant(db, tenant.id, async (tx) => {

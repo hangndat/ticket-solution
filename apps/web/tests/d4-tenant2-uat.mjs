@@ -3,7 +3,7 @@
  * D4 Tenant-2 gate — headless Playwright only (chrome-headless-shell).
  *
  * Proves:
- *   1) /admin does not hardcode FUN FEST for the create-event flow
+ *   1) /admin does not hardcode MFest for the create-event flow
  *   2) create-event for a non-pilot tenant when OIDC+API+DB are up,
  *      OR fail-closed notices when OIDC/API down (never claims success)
  *   3) /platform "Tạo tenant" UI smoke (fail-closed OK if PLATFORM_OIDC unset)
@@ -250,22 +250,22 @@ try {
     }
   }
 
-  // --- 2) /admin: no FUN FEST hardcode ---
+  // --- 2) /admin: no MFest hardcode ---
   {
     const res = await page.goto(`${base}/admin`, {
       waitUntil: 'domcontentloaded',
     });
     if (!res?.ok()) throw new Error(`GET /admin status ${res?.status()}`);
     const html = await page.content();
-    if (/fun-fest|FUN FEST/i.test(html)) {
-      throw new Error('admin page hardcoded a demo festival (FUN FEST)');
+    if (/mfest|MFest/i.test(html)) {
+      throw new Error('admin page hardcoded a demo festival (MFest)');
     }
     const createBtn = await page
       .getByRole('button', { name: 'Tạo event', exact: true })
       .isVisible();
     if (!createBtn) throw new Error('admin missing Tạo event button');
-    log('admin: no FUN FEST hardcode; create-event UI present');
-    evidence.checks.noFunFest = 'PASS';
+    log('admin: no MFest hardcode; create-event UI present');
+    evidence.checks.noMFest = 'PASS';
   }
 
   // Decide full vs fail-closed for create-event
@@ -305,7 +305,7 @@ try {
       createText = await clickAndNotice(page, 'Tạo event', FAIL_CLOSED);
     } catch (err) {
       // If client notice never appears, static OIDC fail-closed banner still
-      // proves the admin create path does not hardcode success / FUN FEST.
+      // proves the admin create path does not hardcode success / MFest.
       if (oidcUnconfigured) {
         createText = `OIDC_MISCONFIGURED (banner): ${oidcBanner.slice(0, 120)}`;
         log(
@@ -417,8 +417,8 @@ COMMIT;
 
       await page.goto(`${base}/admin`, { waitUntil: 'domcontentloaded' });
       const html = await page.content();
-      if (/fun-fest|FUN FEST/i.test(html)) {
-        throw new Error('admin hardcoded FUN FEST after login');
+      if (/mfest|MFest/i.test(html)) {
+        throw new Error('admin hardcoded MFest after login');
       }
       await page.getByLabel('Tenant ID').fill(TENANT2);
       const slug = `aurora-${Date.now().toString(36)}`;
@@ -475,7 +475,7 @@ COMMIT;
     (evidence.checks.createEvent.startsWith('PASS') ||
       evidence.checks.createEvent.startsWith('DEGRADED'));
   const coreOk =
-    evidence.checks.noFunFest === 'PASS' &&
+    evidence.checks.noMFest === 'PASS' &&
     typeof evidence.checks.platform === 'string' &&
     evidence.checks.platform.startsWith('PASS') &&
     createOk;

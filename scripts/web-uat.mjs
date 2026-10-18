@@ -74,7 +74,7 @@ Env:
   WEB_UAT_PASS     default attendee-demo
   WEB_UAT_OUT_DIR  screenshot directory
   WEB_UAT_HEADED=1 optional visible browser (only if user asks to watch)
-  WEB_UAT_REDEEM_CODE / TENANT_ID / EVENT_ID   redeem defaults (D9 demo-fun)
+  WEB_UAT_REDEEM_CODE / TENANT_ID / EVENT_ID   redeem defaults (D9 mfest-demo)
   WEB_UAT_HOST     optional Host header (e.g. vemoki.com) for apex routing smoke
 
 Browsers: uses Playwright Chromium if installed, else system Chrome (headless).
@@ -257,7 +257,7 @@ async function cmdBffLogin(baseUrl, email, password) {
   });
 }
 
-/** D9 demo: attendee login → /redeem with DEMO-FUN-* → ticket issued. */
+/** D9 demo: attendee login → /redeem with DEMO-MFEST-* → ticket issued. */
 async function cmdRedeem(baseUrl, codeArg, tenantArg, eventArg) {
   const base = (baseUrl || DEFAULT_BASE).replace(/\/$/, '');
   const user = DEFAULT_USER;
@@ -265,7 +265,7 @@ async function cmdRedeem(baseUrl, codeArg, tenantArg, eventArg) {
   const code =
     codeArg ||
     process.env.WEB_UAT_REDEEM_CODE ||
-    'DEMO-FUN-006';
+    'DEMO-MFEST-006';
   const tenantId =
     tenantArg ||
     process.env.WEB_UAT_TENANT_ID ||
@@ -286,7 +286,7 @@ async function cmdRedeem(baseUrl, codeArg, tenantArg, eventArg) {
     const redeemUrl =
       `${base}/redeem?tenantId=${encodeURIComponent(tenantId)}` +
       `&eventId=${encodeURIComponent(eventId)}` +
-      `&tenantSlug=demo-fun&eventSlug=fun-fest`;
+      `&tenantSlug=mfest-demo&eventSlug=mfest`;
     await page.goto(redeemUrl, { waitUntil: 'networkidle' });
 
     await page.locator('input[name="code"]').fill(code);
