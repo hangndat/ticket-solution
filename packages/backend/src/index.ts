@@ -497,6 +497,15 @@ export {
   revokeMembershipKeepingLastOwner,
 } from './membership-invite';
 export {
+  listPortalMembers,
+  listPortalInvites,
+  changePortalMemberRole,
+  putPortalEventAssignment,
+  deletePortalEventAssignment,
+  revokePortalInvite,
+  resendPortalInvite,
+} from './portal-members';
+export {
   createSupportGrant,
   revokeSupportGrant,
   listSupportTickets,
