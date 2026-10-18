@@ -2,12 +2,10 @@
 -- Platform runtime must not SELECT notifications/outbox rows (PII/payloads);
 -- aggregate through SECURITY DEFINER like platform_tenant_usage_counts.
 -- notifications is FORCE RLS: migration_owner policy required for definer reads.
--- outbox is ENABLE-only (no FORCE); owner policy kept for consistency.
+-- outbox is ENABLE-only (no FORCE): table owner (migration_owner) already bypasses
+-- RLS, so no outbox_owner policy (rls-catalog DEFINER_OWNER_TABLES invariant).
 
 CREATE POLICY notifications_owner ON notifications TO migration_owner
-  USING (true) WITH CHECK (true);
-
-CREATE POLICY outbox_owner ON outbox TO migration_owner
   USING (true) WITH CHECK (true);
 
 CREATE OR REPLACE FUNCTION platform_tenant_health_counts(p_tenant_id uuid)
