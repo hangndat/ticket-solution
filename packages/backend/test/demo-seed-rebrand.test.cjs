@@ -166,6 +166,7 @@ async function insertLegacyFunFestFixture(db, hmac) {
         'General', '{"fixture":true}'::jsonb, now(), now()
       )
     `;
+    // Legacy source label; re-seed UPDATEs name to D9_DEMO.events.mfest.sourceName.
     await tx.$executeRaw`
       INSERT INTO issuance_sources (
         tenant_id, event_id, id, name, approval_mode, created_at, updated_at
@@ -228,6 +229,18 @@ test(
       assert.ok(eventRow);
       assert.equal(eventRow.slug, 'mfest');
       assert.match(eventRow.name, /MFest/);
+      assert.equal(eventRow.venueName, D9_DEMO.events.mfest.venueName);
+      assert.equal(tenantRow.name, 'MFest');
+      assert.ok(!/· Demo/.test(tenantRow.name));
+
+      const sourceRows = await withTenant(db, MFEST_ID, async (tx) =>
+        tx.$queryRaw`
+          SELECT name FROM issuance_sources
+          WHERE tenant_id = ${MFEST_ID}::uuid
+            AND id = ${D9_DEMO.events.mfest.sourceId}::uuid
+        `,
+      );
+      assert.equal(sourceRows[0].name, D9_DEMO.events.mfest.sourceName);
 
       const oldCodeStillThere = await withTenant(db, MFEST_ID, async (tx) =>
         tx.$queryRaw`
