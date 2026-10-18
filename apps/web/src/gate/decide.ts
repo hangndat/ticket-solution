@@ -12,7 +12,7 @@ export type GateDecision =
   | { kind: 'unknown'; message: string };
 
 const UNKNOWN_MESSAGE =
-  `Kết quả check-in chưa biết. Không cho khách qua. Giữ khách lại và thử đối soát lại; không đoán là đã vào. ${IOS_OFFLINE_QUEUE_GUIDE}`;
+  `Kết quả check-in chưa biết. Không cho khách qua. Giữ khách lại và đối soát lại; không đoán là đã vào. ${IOS_OFFLINE_QUEUE_GUIDE}`;
 
 function record(value: unknown): Record<string, unknown> | null {
   if (!value || typeof value !== 'object') return null;
@@ -50,7 +50,7 @@ export function decideGateConfirm(result: FetchJsonResult): GateDecision {
       kind: 'admit',
       ticketId: body.ticketId,
       checkinId: body.checkinId,
-      message: 'Đã xác nhận. Cho khách qua.',
+      message: 'Đã ghi nhận check-in. Cho vào.',
     };
   }
 
@@ -60,7 +60,7 @@ export function decideGateConfirm(result: FetchJsonResult): GateDecision {
       ticketId: text(body.ticketId, ''),
       checkinId: text(body.checkinId, ''),
       message:
-        'Vé đã có check-in hiện hành. Kết quả đã biết — cho qua, không tạo lượt mới.',
+        'Vé đã có check-in hiện hành. Cho qua theo kết quả đã có — không tạo lượt mới.',
     };
   }
 
@@ -68,7 +68,7 @@ export function decideGateConfirm(result: FetchJsonResult): GateDecision {
     return {
       kind: 'deny',
       code: body.code,
-      message: text(body.message, 'Không cho qua.'),
+      message: text(body.message, 'Không cho vào.'),
     };
   }
 

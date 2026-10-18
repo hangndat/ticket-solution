@@ -9,6 +9,11 @@ import {
   BLOCKED_OFFLINE_DECISION,
   IOS_OFFLINE_QUEUE_GUIDE,
 } from '../src/gate/offline-messages';
+import {
+  connectivityLabel,
+  presentGateDecision,
+  shortId,
+} from '../src/gate/gate-outcome-copy';
 import { decideGateConfirm } from '../src/gate/decide';
 
 test('resolveGateLinkState: offline wins over degraded', () => {
@@ -34,17 +39,19 @@ test('isApiUnreachableResult covers timeout, network, 0, 5xx', () => {
   assert.equal(isApiUnreachableResult({ timedOut: false, networkError: false, status: 409 }), false);
 });
 
-test('banner copy is VI and guides to iOS CHECKIN_OFFLINE', () => {
+test('banner copy is plain VI and guides to staff app (no web queue)', () => {
   const offline = bannerCopyForLink('offline');
   assert.ok(offline);
-  assert.match(offline!.title, /offline/i);
-  assert.match(offline!.body, /CHECKIN_OFFLINE/);
-  assert.match(offline!.body, /iOS/);
+  assert.match(offline!.title, /Cổng web offline/i);
+  assert.match(offline!.body, /Không xếp hàng trên web/);
+  assert.match(offline!.body, /app Nhân viên/);
+  assert.doesNotMatch(offline!.body, /CHECKIN_OFFLINE|ADR-18|#105/);
 
   const degraded = bannerCopyForLink('degraded');
   assert.ok(degraded);
   assert.match(degraded!.body, /không giả nhận|Không cho khách qua/i);
-  assert.match(degraded!.body, /#105|ADR-18/);
+  assert.match(degraded!.body, /app Nhân viên/);
+  assert.doesNotMatch(degraded!.body, /CHECKIN_OFFLINE|ADR-18|#105/);
 
   assert.equal(bannerCopyForLink('online'), null);
 });
@@ -52,10 +59,10 @@ test('banner copy is VI and guides to iOS CHECKIN_OFFLINE', () => {
 test('blocked offline decision never admits', () => {
   assert.equal(BLOCKED_OFFLINE_DECISION.kind, 'deny');
   assert.equal(BLOCKED_OFFLINE_DECISION.code, 'GATE_OFFLINE');
-  assert.match(BLOCKED_OFFLINE_DECISION.message, /CHECKIN_OFFLINE/);
+  assert.match(BLOCKED_OFFLINE_DECISION.message, /Không xếp hàng trên web/);
 });
 
-test('unknown API path mentions iOS queue guide (contract #105)', () => {
+test('unknown API path mentions staff app guide (no fake queue)', () => {
   const decision = decideGateConfirm({
     status: 0,
     json: null,
@@ -69,7 +76,7 @@ test('unknown API path mentions iOS queue guide (contract #105)', () => {
   }
 });
 
-test('ALREADY_CHECKED_IN still admits (aligned with #105 conflict code)', () => {
+test('ALREADY_CHECKED_IN still admits (known result, not new check-in)', () => {
   const again = decideGateConfirm({
     status: 409,
     json: { code: 'ALREADY_CHECKED_IN', message: 'Đã vào.', ticketId: 't1', checkinId: 'c1' },
@@ -77,4 +84,42 @@ test('ALREADY_CHECKED_IN still admits (aligned with #105 conflict code)', () => 
     networkError: false,
   });
   assert.equal(again.kind, 'admit');
+});
+
+test('presentGateDecision titles match PD §2.4 (no queued on web)', () => {
+  assert.equal(presentGateDecision(null).title, 'Chờ mã vé');
+  assert.equal(
+    presentGateDecision({ kind: 'admit', ticketId: 't', checkinId: 'c', message: 'Đã ghi nhận check-in. Cho vào.' })
+      .title,
+    'Cho vào',
+  );
+  assert.equal(
+    presentGateDecision({
+      kind: 'admit',
+      ticketId: 't',
+      checkinId: 'c',
+      message: 'Vé đã có check-in hiện hành. Cho qua theo kết quả đã có — không tạo lượt mới.',
+    }).kind,
+    'already-checked-in',
+  );
+  assert.equal(
+    presentGateDecision({ kind: 'deny', code: 'REVOKED', message: 'Thu hồi.' }).title,
+    'Không cho vào',
+  );
+  const unknown = presentGateDecision({ kind: 'unknown', message: 'Chưa rõ.' });
+  assert.equal(unknown.title, 'Chưa rõ — không cho vào');
+  assert.equal(unknown.assertive, true);
+  assert.equal(unknown.tone, 'unknown');
+
+  const blocked = presentGateDecision(BLOCKED_OFFLINE_DECISION);
+  assert.equal(blocked.kind, 'offline-blocked');
+  assert.equal(blocked.title, 'Cổng web offline');
+});
+
+test('connectivityLabel and shortId helpers', () => {
+  assert.equal(connectivityLabel('online'), 'Trực tuyến');
+  assert.equal(connectivityLabel('offline'), 'Web · offline');
+  assert.equal(connectivityLabel('degraded'), 'Web · API suy giảm');
+  assert.equal(shortId(''), '—');
+  assert.equal(shortId('abcdefghij'), 'abcdefgh…');
 });

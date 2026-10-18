@@ -1,38 +1,38 @@
 /**
- * VI copy for Gate offline / degraded / unreachable (D7-S3 #113/#114).
- * Aligns operator messaging with ADR-18 / contract #105 (CHECKIN_OFFLINE on iOS).
+ * VI copy for Gate offline / degraded / unreachable (D11 AC-G4 · PD §2.4).
+ * Web Gate does not enqueue offline check-in — guide staff to iOS app.
  */
 
 import type { GateLinkState } from './connectivity';
 
-/** Guide staff to iOS offline queue — web Gate does not enqueue CHECKIN_OFFLINE. */
+/** Staff guide — plain VI; no ADR / contract IDs in chrome. */
 export const IOS_OFFLINE_QUEUE_GUIDE =
-  'Cổng web không xếp hàng check-in offline. Dùng app iOS staff để queue CHECKIN_OFFLINE (ADR-18 / contract #105), rồi sync khi có mạng. Không cho khách qua nếu API chưa xác nhận.';
+  'Không xếp hàng trên web. Dùng app Nhân viên để xếp hàng khi mất mạng, rồi đồng bộ khi có mạng. Không cho khách qua nếu hệ thống chưa xác nhận.';
 
 export const OFFLINE_BANNER = {
-  title: 'Mất mạng — cổng offline',
+  title: 'Cổng web offline',
   body: `Trình duyệt không có mạng. Không giữ chỗ / xác nhận trên cổng web. ${IOS_OFFLINE_QUEUE_GUIDE}`,
 } as const;
 
 export const DEGRADED_BANNER = {
-  title: 'API không tới được — cổng suy giảm',
-  body: `Máy có mạng nhưng API Gate không phản hồi (timeout / mất kết nối / 5xx). Kết quả check-in chưa biết — không cho khách qua, không giả nhận đã vào. ${IOS_OFFLINE_QUEUE_GUIDE}`,
+  title: 'API cổng không tới được',
+  body: `Máy có mạng nhưng cổng không phản hồi. Kết quả check-in chưa biết — không cho khách qua, không giả nhận đã vào. ${IOS_OFFLINE_QUEUE_GUIDE}`,
 } as const;
 
 export const BLOCKED_OFFLINE_DECISION = {
   kind: 'deny' as const,
   code: 'GATE_OFFLINE',
-  message: `Cổng đang offline. Không gửi check-in. ${IOS_OFFLINE_QUEUE_GUIDE}`,
+  message: `Cổng web offline. Không gửi check-in. ${IOS_OFFLINE_QUEUE_GUIDE}`,
 };
 
 export const BLOCKED_DEGRADED_DECISION = {
   kind: 'unknown' as const,
-  message: `API Gate không tới được. Không cho khách qua. ${IOS_OFFLINE_QUEUE_GUIDE}`,
+  message: `API cổng không tới được. Không cho khách qua. ${IOS_OFFLINE_QUEUE_GUIDE}`,
 };
 
 /** Confirm dialog when staff retries while API still unreachable (fail-closed default = Cancel). */
 export const UNREACHABLE_CONFIRM =
-  'API Gate vẫn không tới được. Nếu tiếp tục, kết quả có thể chưa biết và khách sẽ KHÔNG được cho qua. Huỷ để dùng queue iOS (CHECKIN_OFFLINE / #105), hoặc OK để thử lại một lần.';
+  'API cổng vẫn không tới được. Nếu tiếp tục, kết quả có thể chưa biết và khách sẽ KHÔNG được cho qua. Huỷ để dùng app Nhân viên, hoặc OK để thử lại một lần.';
 
 export function bannerCopyForLink(link: GateLinkState): {
   title: string;

@@ -829,6 +829,50 @@ details p {
   border-width: 2px;
   border-style: dashed;
 }
+.gate-context {
+  display: grid;
+  gap: var(--space-3);
+  margin: var(--space-4) 0;
+  padding: var(--space-4);
+  border: 1px solid var(--ink-faint);
+  background: color-mix(in srgb, var(--paper) 94%, var(--ink) 6%);
+  animation: rise-in 0.35s ease-out both;
+}
+.gate-context__eyebrow {
+  margin: 0;
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+.gate-context__meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+}
+.gate-context__meta dt {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--ink-muted);
+}
+.gate-context__meta dd {
+  margin: 0.15rem 0 0;
+  font-weight: 600;
+}
+.gate-context__note {
+  margin: 0;
+  font-size: 0.92rem;
+  color: var(--ink-muted);
+}
+.gate-retry-link {
+  justify-self: start;
+  font: inherit;
+  font-weight: 600;
+  padding: 0.55rem 0.9rem;
+  min-height: 44px;
+  cursor: pointer;
+}
 .redeem-form {
   display: grid;
   gap: 28px;
