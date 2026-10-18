@@ -19,7 +19,7 @@ import {
   type PublishedListPhase,
 } from '@/published/events-home';
 import type { PublishedEventSummary } from '@/published/types';
-import { getApiBaseUrl } from '@/identity/config';
+import { getApiBaseUrl, showDemoEventCatalog } from '@/identity/config';
 import { colors } from '@/theme/colors';
 import { useTheme } from '@/theme/ThemeProvider';
 import { typography } from '@/theme/typography';
@@ -39,9 +39,12 @@ function formatListDate(startsAt: string, timezone: string): string {
 /**
  * Events home (ADR-19 / #257): published list is the FlatList SoT after load.
  * Fixture catalog is footer-only with explicit Demo labels — never API fallback.
+ * Production / TestFlight (`showDemoEventCatalog() === false`) hides the W0
+ * demo footer so home is redeem + published only.
  */
 export function EventsScreen() {
   const { applyBranding, theme } = useTheme();
+  const showDemo = showDemoEventCatalog();
   const [publishedTenant, setPublishedTenant] = useState<string>(
     DEMO_PUBLISHED_TENANTS[0],
   );
@@ -113,7 +116,7 @@ export function EventsScreen() {
     );
   }, [applyBranding, published, publishedPhase]);
 
-  const demoEvents = listDemoEvents(demoTenant);
+  const demoEvents = showDemo ? listDemoEvents(demoTenant) : [];
   const listData =
     publishedPhase === 'ready' ? published : ([] as PublishedEventSummary[]);
 
@@ -259,90 +262,101 @@ export function EventsScreen() {
         </View>
       )}
       ListFooterComponent={
-        <View style={{ gap: 12, marginTop: 12 }}>
-          <Text
-            selectable
-            style={{ color: colors.secondary, fontWeight: '600' }}
-          >
-            Demo · dữ liệu mẫu (không phải nguồn đã xuất bản)
-          </Text>
-          <Text style={{ color: colors.secondary, ...typography.caption }}>
-            Chỉ xem trên route /events/fixture/*. Không thay danh sách API khi
-            lỗi hoặc trống.
-          </Text>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Đổi tổ chức demo"
-            onPress={() =>
-              setDemoTenant(
-                demoTenant === demoTenants[0]
-                  ? demoTenants[1]
-                  : demoTenants[0],
-              )
-            }
-            style={({ pressed }) => ({
-              paddingVertical: 10,
-              opacity: pressed ? 0.7 : 1,
-            })}
-          >
-            <Text style={{ color: colors.accent, textAlign: 'center' }}>
-              Đổi tổ chức demo · {demoTenant}
+        showDemo ? (
+          <View style={{ gap: 12, marginTop: 12 }}>
+            <Text
+              selectable
+              style={{ color: colors.secondary, fontWeight: '600' }}
+            >
+              Demo · dữ liệu mẫu (không phải nguồn đã xuất bản)
             </Text>
-          </Pressable>
-          {demoEvents.length === 0 ? (
-            <EmptyState title={eventsCopy.emptyDemo.title}>
-              {eventsCopy.emptyDemo.body}
-            </EmptyState>
-          ) : (
-            demoEvents.map((item) => (
-              <View
-                key={`demo:${item.tenantSlug}:${item.id}`}
-                style={{
-                  padding: 16,
-                  gap: 8,
-                  backgroundColor: colors.card,
-                  borderRadius: 16,
-                  borderCurve: 'continuous',
-                  borderTopWidth: 4,
-                  borderTopColor: item.brand.primaryColor,
-                  opacity: 0.92,
-                }}
-              >
-                <EventMediaHeader
-                  eventId={item.id}
-                  tenantSlug={item.tenantSlug}
-                  testID={`demo-media-${item.id}`}
-                />
-                <Text selectable style={{ color: colors.secondary, fontSize: 13 }}>
-                  Demo · chưa xuất bản · fixture
-                </Text>
-                <Text selectable style={{ color: colors.secondary }}>
-                  {item.brand.organizationName}
-                </Text>
-                <Link
-                  href={{
-                    pathname: '/events/fixture/[eventId]',
-                    params: { eventId: item.id },
-                  }}
+            <Text style={{ color: colors.secondary, ...typography.caption }}>
+              Chỉ xem trên route /events/fixture/*. Không thay danh sách API khi
+              lỗi hoặc trống.
+            </Text>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Đổi tổ chức demo"
+              onPress={() =>
+                setDemoTenant(
+                  demoTenant === demoTenants[0]
+                    ? demoTenants[1]
+                    : demoTenants[0],
+                )
+              }
+              style={({ pressed }) => ({
+                paddingVertical: 10,
+                opacity: pressed ? 0.7 : 1,
+              })}
+            >
+              <Text style={{ color: colors.accent, textAlign: 'center' }}>
+                Đổi tổ chức demo · {demoTenant}
+              </Text>
+            </Pressable>
+            {demoEvents.length === 0 ? (
+              <EmptyState title={eventsCopy.emptyDemo.title}>
+                {eventsCopy.emptyDemo.body}
+              </EmptyState>
+            ) : (
+              demoEvents.map((item) => (
+                <View
+                  key={`demo:${item.tenantSlug}:${item.id}`}
                   style={{
-                    color: colors.accent,
-                    fontSize: 20,
-                    fontWeight: '600',
-                    paddingVertical: 4,
+                    padding: 16,
+                    gap: 8,
+                    backgroundColor: colors.card,
+                    borderRadius: 16,
+                    borderCurve: 'continuous',
+                    borderTopWidth: 4,
+                    borderTopColor: item.brand.primaryColor,
+                    opacity: 0.92,
                   }}
                 >
-                  {item.name}
-                </Link>
-                <Text selectable style={{ color: colors.label, fontSize: 17 }}>
-                  {eventDate(item)}
-                </Text>
-                <Text selectable style={{ color: colors.secondary, fontSize: 17 }}>
-                  {item.location}
-                </Text>
-              </View>
-            ))
-          )}
-        </View>
+                  <EventMediaHeader
+                    eventId={item.id}
+                    tenantSlug={item.tenantSlug}
+                    testID={`demo-media-${item.id}`}
+                  />
+                  <Text
+                    selectable
+                    style={{ color: colors.secondary, fontSize: 13 }}
+                  >
+                    Demo · chưa xuất bản · fixture
+                  </Text>
+                  <Text selectable style={{ color: colors.secondary }}>
+                    {item.brand.organizationName}
+                  </Text>
+                  <Link
+                    href={{
+                      pathname: '/events/fixture/[eventId]',
+                      params: { eventId: item.id },
+                    }}
+                    style={{
+                      color: colors.accent,
+                      fontSize: 20,
+                      fontWeight: '600',
+                      paddingVertical: 4,
+                    }}
+                  >
+                    {item.name}
+                  </Link>
+                  <Text
+                    selectable
+                    style={{ color: colors.label, fontSize: 17 }}
+                  >
+                    {eventDate(item)}
+                  </Text>
+                  <Text
+                    selectable
+                    style={{ color: colors.secondary, fontSize: 17 }}
+                  >
+                    {item.location}
+                  </Text>
+                </View>
+              ))
+            )}
+          </View>
+        ) : null
       }
     />
   );
