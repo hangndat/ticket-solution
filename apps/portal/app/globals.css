@@ -1,0 +1,46 @@
+:root {
+  --vemoki-ink: #22241f;
+  --vemoki-paper: #f7f6f1;
+  --vemoki-signal: #9b3a18;
+  --vemoki-focus: #235fd0;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  background: var(--vemoki-paper);
+  color: var(--vemoki-ink);
+  font-family:
+    'Be Vietnam Pro',
+    'IBM Plex Sans',
+    ui-sans-serif,
+    system-ui,
+    sans-serif;
+}
+
+.portal-skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 1000;
+  padding: 8px 12px;
+  background: #fff;
+  color: var(--vemoki-ink);
+}
+
+.portal-skip-link:focus {
+  left: 8px;
+  top: 8px;
+  outline: 2px solid var(--vemoki-focus);
+  outline-offset: 2px;
+}
+
+a {
+  color: inherit;
+}
+
+*:focus-visible {
+  outline: 2px solid var(--vemoki-focus);
+  outline-offset: 2px;
+}
