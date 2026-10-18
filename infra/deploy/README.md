@@ -79,15 +79,18 @@ docker compose --env-file /opt/vemoki/.env up -d
 
 ## Nginx
 
-Proxy:
+Proxy (O13 dual-run / cutover):
 
-- `vemoki.com` → `vemoki-web:3000`
+- `vemoki.com` → `vemoki-web:3000` (marketing / host-aware; product paths 302 → `app.`)
+- `app.vemoki.com` → `vemoki-web:3000` (product BFF + UI)
 - `api.vemoki.com` → `vemoki-api:3001`
 - `auth.vemoki.com` → `vemoki-keycloak:8080`
 
-Giữ `Host`, `X-Forwarded-For`, `X-Forwarded-Proto`. **Bắt buộc** ghi đè `X-Forwarded-Host $host` (không chuyển tiếp header client). Web nên dùng `PUBLIC_WEB_ORIGIN=https://vemoki.com` (allowlist) thay vì tin forwarded host thô.
+Giữ `Host`, `X-Forwarded-For`, `X-Forwarded-Proto`. **Bắt buộc** ghi đè `X-Forwarded-Host $host` (không chuyển tiếp header client). Web allowlist: `WEB_PUBLIC_ORIGIN` / `PUBLIC_WEB_ORIGIN` = `https://app.vemoki.com` (không tin forwarded host thô).
 
-Next bind `0.0.0.0` nên `request.url` có thể thành `https://0.0.0.0:3000/...`. Callback và logout dùng `publicOrigin` (forwarded host do nginx ghi đè). Nginx đổi `Location` còn trỏ `0.0.0.0:3000` về `https://vemoki.com`.
+Next bind `0.0.0.0` nên `request.url` có thể thành `https://0.0.0.0:3000/...`. Callback và logout dùng `publicOrigin` (forwarded host do nginx ghi đè). Nginx `proxy_redirect` `0.0.0.0:3000` → host đang phục vụ (`https://app.vemoki.com/` trên product vhost; apex vhost → `https://vemoki.com/`).
+
+Keycloak clients (`ticket-web` / `ticket-admin-web` / `ticket-platform-web`): dual-run giữ apex **và** `app.` trong `redirectUris` / `webOrigins` / `post.logout.redirect.uris` (xem `infra/keycloak/realm-ticket.json`). Platform callback path code = `/api/auth/platform/callback`.
 
 ## Đã kiểm tra
 
