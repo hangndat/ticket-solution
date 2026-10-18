@@ -98,6 +98,7 @@ export {
 } from './inventory';
 export {
   D9_DEMO,
+  D9_LEGACY_TENANT_SLUGS,
   seedD9DemoDataset,
   type D9DemoSeedOptions,
   type D9DemoSeedReport,
