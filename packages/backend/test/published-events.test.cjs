@@ -183,14 +183,11 @@ test(
         CODE_HMAC_VERSION: '1',
       });
 
-      const first = await seedD9DemoDataset(db, hmac, {
-        oidcIssuer: 'http://127.0.0.1:8080/realms/ticket',
-      });
+      const oidc = 'http://127.0.0.1:8080/realms/ticket';
+      const first = await seedD9DemoDataset(db, hmac, { oidcIssuer: oidc });
       assert.equal(first.fixture, true);
       assert.ok(first.configsPublished >= 1);
-      const second = await seedD9DemoDataset(db, hmac, {
-        oidcIssuer: 'http://127.0.0.1:8080/realms/ticket',
-      });
+      const second = await seedD9DemoDataset(db, hmac, { oidcIssuer: oidc });
       assert.equal(second.configsPublished, 0);
       assert.ok(second.configsSkipped >= 1);
 
@@ -212,11 +209,36 @@ test(
       assert.equal(detail.slug, 'mfest');
       assert.ok(detail.sections.some((s) => s.kind === 'hero'));
       assert.ok(detail.faq.length >= 1);
+      assert.ok(
+        detail.faq.every(
+          (item) =>
+            !/fixture|not a real|DEMO-\*/i.test(`${item.q} ${item.a}`),
+        ),
+      );
       assert.ok(detail.terms);
-      assert.equal(detail.terms.version, 'demo-terms-v1');
+      assert.equal(detail.terms.version, 'terms-v1');
+      assert.ok(
+        !/fixture|not a real contract/i.test(detail.terms.bodyMarkdown || ''),
+      );
       // No admin / lifecycle fields on projection
       assert.equal('contentStatus' in detail, false);
       assert.equal('revision' in detail, false);
+
+      // Force republish bumps published config version and refreshes marketing.
+      const beforeForce = detail.publishedConfigVersion;
+      const forced = await seedD9DemoDataset(db, hmac, {
+        oidcIssuer: oidc,
+        forceRepublishMarketing: true,
+      });
+      assert.ok(forced.configsPublished >= 1);
+      assert.equal(forced.configsSkipped, 0);
+      const afterForce = await getPublishedEventDetail(db, {
+        tenantSlug: 'mfest-demo',
+        eventSlug: 'mfest',
+      });
+      assert.ok(afterForce);
+      assert.ok(afterForce.publishedConfigVersion > beforeForce);
+      assert.equal(afterForce.terms.version, 'terms-v1');
 
       assert.equal(
         await getPublishedEventDetail(db, {
