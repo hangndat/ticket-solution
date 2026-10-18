@@ -6,7 +6,7 @@
 | Issue | [#323](https://github.com/hangndat/ticket-solution/issues/323) · Epic [#301](https://github.com/hangndat/ticket-solution/issues/301) · Story [#306](https://github.com/hangndat/ticket-solution/issues/306) |
 | Role | `ios` · `docs/agents/roles/ios.md` · Agent Cursor |
 | Architecture impact | **Không** — ASC media ops |
-| Tip SHA (evidence commit) | *(điền sau commit PR — `git rev-parse HEAD`)* |
+| Tip SHA (evidence commit) | `283518b50f9966106736a20cf2a48de84b309180` |
 | Base `main` lúc bắt đầu | `0899f879e7fe714ba98af7764116e5792ddf8c98` |
 | Receipt JSON | [D13-S3-T2-SCREENSHOTS.json](./D13-S3-T2-SCREENSHOTS.json) |
 | Cấm | EAS Cloud · submit/release · secrets trong git |
