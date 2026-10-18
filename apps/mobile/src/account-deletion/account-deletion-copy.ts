@@ -1,6 +1,6 @@
 import type { AccountDeletionRequest } from './types.ts';
 
-/** UI never claims ACK means the account or tickets were deleted (O06 open). */
+/** UI never claims ACK means the account or tickets were deleted. */
 const DELETED_CLAIM_PATTERN =
   /\b(đã\s*xóa|da\s*xoa|deleted|erased|purged|removed\s+account)\b/i;
 
@@ -11,7 +11,7 @@ export function accountDeletionExplainer(): {
   return {
     title: 'Yêu cầu xóa tài khoản',
     body:
-      'Gửi yêu cầu chỉ ghi nhận trên máy chủ. Chính sách giữ/xóa dữ liệu (O06) chưa chốt — không có ngày xóa hẹn trước, vé/audit/identity không bị xóa tự động vì bước này. Luồng request-only không đủ để tuyên bố đạt App Store approval.',
+      'Gửi yêu cầu chỉ ghi nhận trên máy chủ. O06 đã chốt: tài khoản được anonymize trong ≤30 ngày sau khi yêu cầu được xử lý — bước này không xóa ngay identity/vé/audit. ACK ≠ erasure hoàn tất.',
   };
 }
 
@@ -39,8 +39,8 @@ export function describeAccountDeletionRequest(
 ): { title: string; body: string } {
   const policyNote =
     request.policyStatus === 'UNRESOLVED'
-      ? 'PolicyStatus UNRESOLVED — O06 retention/anonymize chưa cấu hình.'
-      : 'PolicyStatus CONFIGURED — vẫn cần quy trình xóa thật trước production/store.';
+      ? 'PolicyStatus UNRESOLVED — retention/anonymize chưa cấu hình trên máy chủ.'
+      : 'PolicyStatus CONFIGURED — O06: anonymize ≤30 ngày; ACK vẫn ≠ xóa ngay.';
 
   switch (request.state) {
     case 'AWAITING_POLICY':
