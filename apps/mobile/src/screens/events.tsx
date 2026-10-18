@@ -271,7 +271,7 @@ export function EventsScreen() {
               Demo · dữ liệu mẫu (không phải nguồn đã xuất bản)
             </Text>
             <Text style={{ color: colors.secondary, ...typography.caption }}>
-              Chỉ xem trên route /events/fixture/*. Không thay danh sách API khi
+              Chỉ xem nội dung mẫu cục bộ. Không thay danh sách đã xuất bản khi
               lỗi hoặc trống.
             </Text>
             <Pressable
@@ -321,7 +321,7 @@ export function EventsScreen() {
                     selectable
                     style={{ color: colors.secondary, fontSize: 13 }}
                   >
-                    Demo · chưa xuất bản · fixture
+                    Demo · chưa xuất bản · dữ liệu mẫu
                   </Text>
                   <Text selectable style={{ color: colors.secondary }}>
                     {item.brand.organizationName}

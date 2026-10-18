@@ -68,10 +68,10 @@ test('copy is plain language: no deleted claim, no internal jargon', () => {
     assert.equal(assertsNoInternalJargon(text), true);
   }
 
-  assert.match(explainer.body, /30\s*ngày|30\s*days/i);
-  assert.match(explainer.body, /không bị xóa ngay|not wiped instantly/i);
-  assert.match(explainer.body, /kiểm toán|audit/i);
-  assert.match(described.body, /ghi nhận|recorded/i);
+  assert.match(explainer.body, /30\s*ngày/i);
+  assert.match(explainer.body, /không bị xóa ngay/i);
+  assert.match(explainer.body, /kiểm toán/i);
+  assert.match(described.body, /ghi nhận/i);
 });
 
 test('timeout keeps same Idempotency-Key for retry; success clears pending', async () => {

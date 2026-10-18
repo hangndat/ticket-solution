@@ -14,24 +14,21 @@ import {
   pushUiCopy,
 } from '@/push/push';
 
-function summarizeToken(result: ApnsDeviceTokenResult): string {
+/** Attendee-facing status — never token hint, length, or APNs operator jargon. */
+function summarizeRegistration(result: ApnsDeviceTokenResult): string {
   if (result.status !== 'ready') {
-    return `${result.status}: ${result.reason}`;
+    return 'Chưa bật được thông báo. Kiểm tra quyền thông báo trên thiết bị rồi thử lại.';
   }
-  // Never surface the full device token in UI copy.
-  const hint =
-    result.token.length > 8
-      ? `${result.token.slice(0, 4)}…${result.token.slice(-4)} (${result.token.length} chars)`
-      : `(${result.token.length} chars)`;
-  const backend =
-    result.backend === 'registered'
-      ? ' Backend registration saved.'
-      : result.backend === 'failed'
-        ? ' Backend register failed (token local only).'
-        : result.backend === 'skipped-unsigned'
-          ? ' Sign in to register with the API.'
-          : '';
-  return `Native APNs token ready ${hint}.${backend} Not a delivery receipt.`;
+  if (result.backend === 'registered') {
+    return 'Đã bật thông báo trên thiết bị này.';
+  }
+  if (result.backend === 'skipped-unsigned') {
+    return 'Đăng nhập để lưu thiết bị nhận thông báo.';
+  }
+  if (result.backend === 'failed') {
+    return 'Đã xin quyền trên máy, nhưng chưa lưu lên máy chủ. Thử lại sau.';
+  }
+  return 'Đã xin quyền thông báo trên thiết bị này.';
 }
 
 /** Session key so parents can remount and drop prior-account token UI. */
@@ -47,14 +44,14 @@ export function pushSessionKey(
 export function PushStatus() {
   const provider = pushProviderName();
   const copy = pushUiCopy(provider);
-  const [tokenSummary, setTokenSummary] = useState<string | null>(null);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   const onRegister = useCallback(() => {
     const gen = currentApnsRegistrationGeneration();
     const epoch = session.captureEpoch();
     setBusy(true);
-    setTokenSummary('Registering native APNs device token…');
+    setStatusMessage('Đang bật thông báo…');
 
     let settled = false;
     const finish = (result: ApnsDeviceTokenResult) => {
@@ -63,18 +60,16 @@ export function PushStatus() {
       if (currentApnsRegistrationGeneration() !== gen) return;
       if (epoch && !session.isEpochCurrent(epoch)) return;
       if (session.getSnapshot().status === 'signed-out') return;
-      setTokenSummary(summarizeToken(result));
+      setStatusMessage(summarizeRegistration(result));
       setBusy(false);
     };
 
-    // UI watchdog: native APNs callbacks can stall under WDA/iOS 26 without
-    // rejecting the JS promise; still unblock the Register affordance.
+    // UI watchdog: native callbacks can stall without rejecting the JS promise.
     const watchdog = setTimeout(() => {
       finish({
         status: 'unavailable',
         transport: 'apns',
-        reason:
-          'APNs device token watchdog timed out (no native callback). Check Push capability / provisioning, then retry.',
+        reason: 'registration-timeout',
       });
     }, 12_000);
 
@@ -83,18 +78,12 @@ export function PushStatus() {
         clearTimeout(watchdog);
         finish(result);
       })
-      .catch((err: unknown) => {
+      .catch(() => {
         clearTimeout(watchdog);
-        const message =
-          err instanceof Error
-            ? err.message
-            : typeof err === 'string'
-              ? err
-              : 'APNs device token registration failed unexpectedly.';
         finish({
           status: 'unavailable',
           transport: 'apns',
-          reason: message,
+          reason: 'registration-failed',
         });
       });
   }, []);
@@ -107,9 +96,7 @@ export function PushStatus() {
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={
-              busy
-                ? 'Registering APNs device token'
-                : 'Register APNs device token'
+              busy ? 'Đang bật thông báo' : 'Bật thông báo trên thiết bị này'
             }
             testID="register-apns-device-token"
             disabled={busy}
@@ -131,11 +118,11 @@ export function PushStatus() {
                 textAlign: 'center',
               }}
             >
-              {busy ? 'Registering…' : 'Register APNs device token'}
+              {busy ? 'Đang bật…' : 'Bật thông báo'}
             </Text>
           </Pressable>
-          {tokenSummary ? (
-            <Notice title="Device token">{tokenSummary}</Notice>
+          {statusMessage ? (
+            <Notice title="Thông báo">{statusMessage}</Notice>
           ) : null}
         </View>
       ) : null}
@@ -143,7 +130,7 @@ export function PushStatus() {
   );
 }
 
-/** PushStatus remounted on identity change so tokenSummary cannot survive logout. */
+/** PushStatus remounted on identity change so statusMessage cannot survive logout. */
 export function SessionScopedPushStatus() {
   const identity = useSyncExternalStore(
     session.subscribe,

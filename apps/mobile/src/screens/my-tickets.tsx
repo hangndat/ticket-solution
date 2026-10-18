@@ -182,11 +182,6 @@ export function MyTicketsScreen() {
 function SignedOutWallet() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const identity = useSyncExternalStore(
-    session.subscribe,
-    session.getSnapshot,
-    session.getSnapshot,
-  );
 
   const onSignIn = useCallback(async () => {
     setBusy(true);
@@ -236,7 +231,7 @@ function SignedOutWallet() {
         {attendeeWalletCopy.signedOutBody}
       </Notice>
       <Text style={{ color: colors.secondary, fontSize: 15 }}>
-        Phiên: {identity.status === 'verified' ? 'đã xác minh' : identity.status}
+        Trạng thái: chưa đăng nhập
       </Text>
       <ActionButton
         label="Đăng nhập"
@@ -331,10 +326,8 @@ function OfflineDisplayWallet({
         {'\n'}
         Đồng bộ lần cuối: {syncedAt ?? '—'}
       </Notice>
-      <Text selectable style={{ color: colors.secondary, fontSize: 12 }}>
-        Tài khoản · {userId}
-        {'\n'}
-        Tổ chức · {tenantId}
+      <Text style={{ color: colors.secondary, fontSize: 13 }}>
+        Đang xem vé đã lưu trên thiết bị này.
       </Text>
 
       {busy && tickets.length === 0 ? (
@@ -398,9 +391,7 @@ function VerifiedWallet({ userId }: { userId: string }) {
 
   const refresh = useCallback(async () => {
     if (!tenantId) {
-      setError(
-        'Cần EXPO_PUBLIC_TENANT_ID cho GET /v1/me/tickets?tenantId=.',
-      );
+      setError('Thiếu cấu hình tổ chức trên bản dựng. Không tải được vé.');
       return;
     }
     const epoch = session.captureEpoch();
@@ -410,7 +401,7 @@ function VerifiedWallet({ userId }: { userId: string }) {
     const bearer = await session.getCredential();
     if (!session.isEpochCurrent(epoch)) return;
     if (!bearer) {
-      setError('Không có bearer đã xác minh trong SecureStore. Đăng nhập lại.');
+      setError('Phiên đăng nhập không còn hiệu lực. Đăng nhập lại.');
       return;
     }
 
@@ -441,7 +432,7 @@ function VerifiedWallet({ userId }: { userId: string }) {
 
       if (decision.action === 'unauthorized') {
         setError(
-          'GET /v1/me/tickets trả 401/403. Phiên không còn được phép — đăng nhập lại. Không dùng bộ đệm offline.',
+          'Phiên không còn được phép xem vé. Đăng nhập lại. Không dùng bộ đệm offline.',
         );
         try {
           await logoutAndClearWalletArtifacts({ userId, tenantId });
@@ -567,16 +558,10 @@ function VerifiedWallet({ userId }: { userId: string }) {
           {attendeeWalletCopy.offlineBannerBody}
         </Notice>
       ) : null}
-      <Text
-        selectable
-        style={{ color: colors.secondary, fontSize: 13, lineHeight: 20 }}
-      >
+      <Text style={{ color: colors.secondary, fontSize: 13, lineHeight: 20 }}>
         Đồng bộ: {syncedAt ?? '—'}
         {offline ? ' · bộ đệm offline' : ''}
-        {'\n'}
-        Tài khoản · {userId}
-        {'\n'}
-        Tổ chức · {tenantId ?? '(chưa cấu hình)'}
+        {!tenantId ? '\nChưa cấu hình tổ chức trên bản dựng này.' : ''}
       </Text>
 
       {busy && tickets.length === 0 ? (

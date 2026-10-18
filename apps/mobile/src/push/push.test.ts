@@ -50,7 +50,7 @@ test('apns provider is client-only and never marks delivered', () => {
   );
   assert.equal(sent.delivered, false);
   assert.equal(sent.status, 'client-only');
-  assert.match(pushUiCopy('apns').body, /native APNs device token/i);
+  assert.match(pushUiCopy('apns').body, /thông báo|đăng nhập/i);
   assert.throws(
     () => acceptDeliveredClaim({ delivered: true }, 'apns'),
     (error: unknown) => {
