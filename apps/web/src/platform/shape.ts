@@ -3,7 +3,7 @@ import type {
   InviteCreatedResponse,
   MeTenantItem,
   MeTenantsResponse,
-  MembershipRole,
+  MeTenantRole,
   PlatformCreateTenantResponse,
   PlatformMeResponse,
   PlatformTenantDetail,
@@ -41,13 +41,14 @@ function isStatus(value: unknown): value is TenantStatus {
   return value === 'PENDING' || value === 'ACTIVE' || value === 'SUSPENDED';
 }
 
-function isRole(value: unknown): value is MembershipRole {
+function isRole(value: unknown): value is MeTenantRole {
   return (
     value === 'Owner' ||
     value === 'Manager' ||
     value === 'CS' ||
     value === 'Supervisor' ||
-    value === 'Scanner'
+    value === 'Scanner' ||
+    value === 'Attendee'
   );
 }
 

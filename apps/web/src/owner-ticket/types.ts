@@ -32,12 +32,12 @@ export const OWNER_TICKET_COPY = {
   missing: {
     title: 'Không tìm thấy vé',
     detail:
-      'Không có vé khớp đường dẫn này cho tài khoản hiện tại, hoặc liên kết không còn hiệu lực.',
+      'Không có vé khớp đường dẫn này cho tài khoản hiện tại. Đăng xuất rồi đăng nhập đúng email chủ vé (trong thư xác nhận), hoặc kiểm tra lại liên kết.',
   },
   tenantUnresolved: {
     title: 'Không xác định được tổ chức',
     detail:
-      'Tài khoản đã đăng nhập nhưng chưa gắn tổ chức khớp slug trên liên kết. Không suy đoán tenantId công khai — thử đổi mã lấy vé hoặc mở app với cùng tài khoản.',
+      'Tài khoản đã đăng nhập nhưng chưa gắn tổ chức khớp slug trên liên kết. Đăng nhập đúng email chủ vé trong thư, hoặc thử đổi mã lấy vé.',
   },
   unreachable: {
     title: 'Không tải được vé',
