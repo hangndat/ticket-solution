@@ -24,7 +24,7 @@ docs/agents/
 | ID | File | Khi dùng | Ownership / ghi chú |
 | -- | ---- | -------- | ------------------- |
 | `product-ba` | [roles/product-ba.md](./roles/product-ba.md) | Làm rõ bài toán, non-goals, AC, ưu tiên trong MVP đã chốt | Docs/Issue; không mở rộng MVP |
-| `product-design` | [roles/product-design.md](./roles/product-design.md) | User flow, trạng thái UI, a11y, AC UI, hướng dẫn triển khai | Docs/design handoff; không code ownership slice khác |
+| `product-design` | [roles/product-design.md](./roles/product-design.md) | User flow, trạng thái UI, a11y, AC UI, hướng dẫn triển khai; **brand/visual budget** khi Epic revamp (`Visual budget: Có`) — không Role graphic riêng | Docs/design handoff (một artifact); không code ownership slice khác |
 | `architect` | [roles/architect.md](./roles/architect.md) | Quyết định kiến trúc, contract, ADR, failure/recovery và kiểm tra sự phù hợp khi cần | Docs/handoff trong scope; không sở hữu code đa slice hoặc thay reviewer độc lập |
 | `backend` | [roles/backend.md](./roles/backend.md) | Implement NestJS / DB / worker | `apps/api`, `apps/worker`, `packages/backend` |
 | `web` | [roles/web.md](./roles/web.md) | Implement Next.js | `apps/web` only |
@@ -40,10 +40,11 @@ Agent runtime: luôn Cursor (`--agent cursor`), trừ khi user override rõ. Rol
 
 | Loại Task | Role chính | Role phụ (tùy chọn) |
 | --------- | ---------- | ------------------- |
-| Discovery / AC / phân Story | `product-ba` | `product-design` nếu cần flow UI |
+| Discovery / AC / phân Story | `product-ba` | `product-design` nếu cần flow UI (revamp: gộp visual vào PD, bỏ BA nếu AC đã chốt) |
 | Thiết kế kỹ thuật có architecture impact | `architect` | BA/PD là Task riêng khi cần |
 | Kiểm tra sự phù hợp kiến trúc trên exact SHA khi cần | `architect` (session độc lập) | Không thay DoD/security |
 | Design trước coding UI | `product-design` | — |
+| Epic revamp user site/app (visual + UX) | `product-design` (một Task, mục 0–5) | Không thêm Role graphic; BA/Architect chỉ khi scope/IA chưa chốt |
 | Coding BE / web / iOS | `backend` / `web` / `ios` | — |
 | DoD sau `Chờ duyệt` | `reviewer-dod` | `reviewer-security` nếu slice authz/RLS/quota/check-in/secrets |
 | Epic planner | Không gắn role catalog này | Planner theo `orca-epic-orchestrator.mdc` |
