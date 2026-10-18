@@ -395,6 +395,71 @@ test(
       const invBlob = JSON.stringify(invites);
       assert.ok(!invBlob.includes('pending-staff@example.com'));
       assert.ok(!invBlob.includes(pendingInvite.rawToken));
+      assert.equal(
+        invites.items.find((i) => i.inviteId === pendingInvite.inviteId)
+          .deliveryState,
+        'PENDING',
+      );
+
+      // deliveryStateFromOutbox: COMPLETE→ACCEPTED, DEAD→FAILED,
+      // LEASED/PROCESSING→PENDING, missing→UNKNOWN; list stays masked.
+      async function setOutboxStatus(status) {
+        await withTenant(db, tenantA.tenantId, async (tx) => {
+          await tx.$executeRaw`
+            UPDATE outbox SET status = ${status}, updated_at = now()
+            WHERE tenant_id = ${tenantA.tenantId}::uuid
+              AND type = 'MembershipInvite'
+              AND aggregate_id = ${pendingInvite.inviteId}::uuid
+          `;
+        });
+      }
+      async function deliveryOf(inviteId) {
+        const page = await listPortalInvites(db, {
+          tenantId: tenantA.tenantId,
+          actorUserId: ownerA.userId,
+          state: 'PENDING',
+        });
+        const row = page.items.find((i) => i.inviteId === inviteId);
+        assert.ok(row);
+        const blob = JSON.stringify(page);
+        assert.ok(!blob.includes('pending-staff@example.com'));
+        assert.ok(!blob.includes(pendingInvite.rawToken));
+        return row.deliveryState;
+      }
+      await setOutboxStatus('COMPLETE');
+      assert.equal(await deliveryOf(pendingInvite.inviteId), 'ACCEPTED');
+      await setOutboxStatus('DEAD');
+      assert.equal(await deliveryOf(pendingInvite.inviteId), 'FAILED');
+      await setOutboxStatus('LEASED');
+      assert.equal(await deliveryOf(pendingInvite.inviteId), 'PENDING');
+      await setOutboxStatus('PROCESSING');
+      assert.equal(await deliveryOf(pendingInvite.inviteId), 'PENDING');
+      await setOutboxStatus('PENDING');
+      assert.equal(await deliveryOf(pendingInvite.inviteId), 'PENDING');
+      await withTenant(db, tenantA.tenantId, async (tx) => {
+        await tx.$executeRaw`
+          DELETE FROM outbox
+          WHERE tenant_id = ${tenantA.tenantId}::uuid
+            AND type = 'MembershipInvite'
+            AND aggregate_id = ${pendingInvite.inviteId}::uuid
+        `;
+      });
+      assert.equal(await deliveryOf(pendingInvite.inviteId), 'UNKNOWN');
+      // Restore a PENDING outbox so later resend/revoke paths remain valid.
+      const restoredOutboxId = randomUUID();
+      await withTenant(db, tenantA.tenantId, async (tx) => {
+        await tx.$executeRaw`
+          INSERT INTO outbox (
+            tenant_id, event_id, id, type, aggregate_id, payload_version,
+            payload, status, attempts, created_at, updated_at
+          ) VALUES (
+            ${tenantA.tenantId}::uuid, NULL, ${restoredOutboxId}::uuid,
+            'MembershipInvite', ${pendingInvite.inviteId}::uuid, 1,
+            ${JSON.stringify({})}::jsonb, 'PENDING', 0, now(), now()
+          )
+        `;
+      });
+      assert.equal(await deliveryOf(pendingInvite.inviteId), 'PENDING');
 
       const resent = await resendPortalInvite(db, security, {
         tenantId: tenantA.tenantId,
@@ -452,13 +517,6 @@ test(
       );
 
       // Last-owner race on concurrent demotions of sole Owner
-      const raceInvite = await createMembershipInvite(db, security, {
-        tenantId: tenantA.tenantId,
-        actorUserId: ownerA.userId,
-        email: 'coowner-race@example.com',
-        role: 'Owner',
-        clientKey: 'pm-inv-race',
-      });
       // Keep only ownerA as Owner for race: manager is Manager already.
       const results = await Promise.allSettled([
         changePortalMemberRole(db, {
@@ -498,7 +556,75 @@ test(
         (e) => e.code === PLATFORM_ERROR_CODES.LAST_OWNER_REQUIRED,
       );
 
-      void raceInvite;
+      // Co-owner demote vs revoke cross-race under shared lock order:
+      // third Owner acts so neither RPC loses members.manage mid-flight.
+      await changePortalMemberRole(db, {
+        tenantId: tenantA.tenantId,
+        actorUserId: ownerA.userId,
+        membershipId: mgrAccepted.membershipId,
+        role: 'Owner',
+        reason: 'promote for cross-race',
+      });
+      const crossActorInvite = await createMembershipInvite(db, security, {
+        tenantId: tenantA.tenantId,
+        actorUserId: ownerA.userId,
+        email: 'owner-b@example.com',
+        role: 'Owner',
+        clientKey: 'pm-inv-cross-actor',
+      });
+      const crossActor = await acceptMembershipInvite(db, {
+        userId: ownerB.userId,
+        email: 'owner-b@example.com',
+        emailVerified: true,
+        token: crossActorInvite.rawToken,
+      });
+      void crossActor;
+      const cross = await Promise.allSettled([
+        changePortalMemberRole(db, {
+          tenantId: tenantA.tenantId,
+          actorUserId: ownerB.userId,
+          membershipId: acceptedA.membershipId,
+          role: 'Manager',
+          reason: 'cross-demote-owner-a',
+        }),
+        revokeMembershipKeepingLastOwner(db, {
+          tenantId: tenantA.tenantId,
+          actorUserId: ownerB.userId,
+          membershipId: mgrAccepted.membershipId,
+          reason: 'cross-revoke-co-owner',
+        }),
+      ]);
+      const crossFulfilled = cross.filter((r) => r.status === 'fulfilled');
+      const crossRejected = cross.filter((r) => r.status === 'rejected');
+      assert.equal(crossFulfilled.length + crossRejected.length, 2);
+      assert.equal(
+        crossRejected.length,
+        0,
+        'stable actor should complete demote+revoke without deadlock/errors: ' +
+          JSON.stringify(
+            crossRejected.map((r) => ({
+              code: r.reason?.code,
+              message: r.reason?.message,
+            })),
+          ),
+      );
+      assert.equal(crossFulfilled.length, 2);
+      const ownerCountRows = await withTenant(
+        db,
+        tenantA.tenantId,
+        async (tx) =>
+          tx.$queryRaw`
+            SELECT count(*)::int AS n FROM memberships
+            WHERE tenant_id = ${tenantA.tenantId}::uuid
+              AND role = 'Owner'
+              AND revoked_at IS NULL
+              AND activated_at IS NOT NULL
+          `,
+      );
+      assert.ok(
+        (ownerCountRows[0]?.n ?? 0) >= 1,
+        'co-owner demote/revoke race must leave ≥1 active Owner',
+      );
     } finally {
       if (db) await db.$disconnect();
       if (name) {
