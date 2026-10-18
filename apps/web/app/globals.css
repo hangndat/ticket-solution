@@ -1570,3 +1570,66 @@ select[aria-invalid='true'] {
   font-size: 1.2rem;
   margin-top: 1.75rem;
 }
+
+
+/* CS / email recovery — timeline + list (Issue #246) */
+.cs-ticket-list {
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+.cs-ticket-list > li {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+.cs-ticket-list__pick {
+  flex: 0 0 auto;
+}
+.cs-detail-summary {
+  display: grid;
+  gap: 0.35rem 1rem;
+  margin: 0.75rem 0;
+  grid-template-columns: auto 1fr;
+}
+.cs-detail-summary > div {
+  display: contents;
+}
+.cs-detail-summary dt {
+  margin: 0;
+  font-weight: 600;
+}
+.cs-detail-summary dd {
+  margin: 0;
+}
+.cs-timeline-heading {
+  font-size: 1rem;
+  margin: 1rem 0 0.5rem;
+}
+.cs-timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+.cs-timeline > li {
+  display: grid;
+  gap: 0.15rem 0.75rem;
+  grid-template-columns: minmax(10rem, auto) minmax(6rem, 1fr) minmax(8rem, 2fr);
+  align-items: baseline;
+}
+.cs-timeline__action {
+  font-weight: 600;
+}
+.cs-timeline__result {
+  color: var(--muted, #555);
+}
+@media (max-width: 640px) {
+  .cs-timeline > li {
+    grid-template-columns: 1fr;
+  }
+}
