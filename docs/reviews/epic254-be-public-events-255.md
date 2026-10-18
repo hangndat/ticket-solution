@@ -6,7 +6,7 @@
 | Branch | `hangndat/d254-backend-public-events` |
 | Role | `backend` |
 | Agent / session | Orca worker cursor · `task_5fc3edb85224` / `ctx_c56b54d0285c` |
-| Tip SHA | `ea6b9eb2c34cee706dfdfe619a53795c34c88198` |
+| Tip SHA | `5451f8366b15c0b7a4fe7f0a8a8a4489c1c622fd` |
 
 ## Scope đã ship
 
