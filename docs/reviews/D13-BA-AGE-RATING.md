@@ -10,7 +10,7 @@
 | Ownership paths | `docs/asc/age-rating-questionnaire.md` + file này |
 | Source tip đọc (exact SHA) | `a932cd51544ae26fb9126f8ac73faa9adbeabf3c` (`origin/main` lúc BA ban đầu) |
 | Docs PR tip trước FAIL DoD | `a7258534ac4116bf961b6975ae159d1bb9bf3419` (DoD answers-ready **FAIL** — [D13-PR356-DOD.md](./D13-PR356-DOD.md)) |
-| Docs PR tip sau BA fix (exact SHA) | *điền sau `git rev-parse` / push — xem §10* |
+| Docs PR tip sau BA fix (exact SHA) | `3279a0f0b3beebd6c9a60ab38d92089a0c97f091` |
 | Ngày đối chiếu | **2026-10-18** (UTC) |
 | Expo | Đã đọc `expo-overview` skill trước khi trace `apps/mobile` (read-only) |
 
@@ -137,11 +137,13 @@ Reviewer DoD độc lập: exact SHA tip PR sau push (§10); không reuse verdic
 
 ---
 
-## 10. Exact SHA tip (điền sau commit + push)
+## 10. Exact SHA tip
 
 | Bước | Giá trị |
 | ---- | ------- |
 | Branch | `hangndat/d13-ba-age-rating` |
 | PR | [#356](https://github.com/hangndat/ticket-solution/pull/356) |
-| Tip SHA (`git rev-parse HEAD` sau push) | `REPLACE_AFTER_PUSH` |
+| BA fix SHA (questionnaire + verdict tách cổng) | `3279a0f0b3beebd6c9a60ab38d92089a0c97f091` |
 | Prior FAIL SHA | `a7258534ac4116bf961b6975ae159d1bb9bf3419` |
+
+DoD revalidation: exact tip PR (`git rev-parse` / `gh pr view 356 --json headRefOid`) phải **≥** BA fix SHA trên (cùng ancestry). Không reuse verdict FAIL `a7258534…`.
