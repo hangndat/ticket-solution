@@ -9,7 +9,7 @@
 
 | File | Scope | Nội dung |
 | --- | --- | --- |
-| [listing-metadata.md](./listing-metadata.md) | D10 #152 | Copy listing VI/EN + keywords |
+| [listing-metadata.md](./listing-metadata.md) | D13 (#301) reuse D10 #152 | Copy listing VI/EN + keywords; Gate offline queue; version mismatch note |
 | [asc-fields-checklist.md](./asc-fields-checklist.md) | D13 S3-T1 | Checklist field ASC (bundle / category / URLs / rating) |
 | [privacy-nutrition.md](./privacy-nutrition.md) | D13 S1-T1/T2 | Privacy Nutrition Labels + SDK inventory + policy URL |
 | [privacy-policy-draft.md](./privacy-policy-draft.md) | D13 S1-T1 | Bản draft privacy policy (canonical dài) |

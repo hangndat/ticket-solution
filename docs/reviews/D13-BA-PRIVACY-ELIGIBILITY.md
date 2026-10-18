@@ -75,10 +75,11 @@ Inventory direct deps: xem bảng trong [privacy-nutrition.md](../asc/privacy-nu
 | `docs/asc/privacy-nutrition.md` | D13 header; URL 200; SDK inventory; checklist |
 | `docs/asc/privacy-policy-draft.md` | Account deletion path + 5.1.1(v); ghi live page thinner |
 | `docs/asc/app-review-notes.md` | Xóa “retention chưa finalize”; O06 ≤30d / 730d |
-| `docs/asc/asc-fields-checklist.md` | Privacy URL 200; territory **chưa chốt** (đề xuất VN) |
+| `docs/asc/listing-metadata.md` | Reconcile Gate offline queue (D7/D11); keywords **per locale**; đếm keyword EN=83; version mismatch blocker |
+| `docs/asc/asc-fields-checklist.md` | Privacy URL 200; territory **chưa chốt** (đề xuất VN); version ASC vs `0.1.0` source |
 | `docs/asc/README.md` | D13 status + remaining work |
 
-**Non-goals giữ:** không sửa `apps/**`; không EAS Cloud; không claim ASC đã điền; không commit prod password; không legal counsel claim.
+**Non-goals giữ:** không sửa `apps/**`; không EAS Cloud; không claim ASC đã điền; không commit prod password; không legal counsel claim; không tự chọn territories.
 
 ---
 
@@ -97,13 +98,14 @@ Inventory direct deps: xem bảng trong [privacy-nutrition.md](../asc/privacy-nu
 ## 7. Findings còn mở (handoff coordinator)
 
 1. **S5-T1:** Fix copy O06 in-app (`account-deletion-copy.ts`) — bắt buộc trước submit.  
-2. **S3-T1:** Paste Nutrition + fields ASC + screenshot (G2).  
-3. **S2-T3 (optional but recommended):** Làm giàu `/privacy` live với camera + deletion path từ draft.  
-4. **S5-T2:** Demo reviewer prod — ASC only.  
-5. **S7-T1:** User chốt territory (đề xuất VN).  
-6. **S4:** Privacy Report sau local prebuild (Hermes / required-reason APIs).  
-7. **BE limitation:** ticket/object retention jobs còn stub — không chặn Nutrition Labels; có thể hỏi App Review nếu reviewer đòi proof job (escalate khi cần).  
-8. Board: tạo Story/Task Issues S1-T1/T2, S3-T3 gắn #301 nếu chưa có.
+2. **Version mismatch blocker:** source `0.1.0` (build 10) vs ASC reportedly `1.0` PREPARE_FOR_SUBMISSION — iOS/coordinator khớp trước archive/submit; BA không bump apps.  
+3. **S3-T1:** Paste Nutrition + listing + fields ASC + screenshot (G2).  
+4. **S2-T3 (optional but recommended):** Làm giàu `/privacy` live với camera + deletion path từ draft.  
+5. **S5-T2:** Demo reviewer prod — ASC only.  
+6. **S7-T1:** User chốt territory (đề xuất VN) — BA không chọn All.  
+7. **S4:** Privacy Report sau local prebuild (Hermes / required-reason APIs).  
+8. **BE limitation:** ticket/object retention jobs còn stub — không chặn Nutrition Labels.  
+9. Board: tạo Story/Task Issues S1-T1/T2, S3-T3 gắn #301 nếu chưa có.
 
 ---
 
