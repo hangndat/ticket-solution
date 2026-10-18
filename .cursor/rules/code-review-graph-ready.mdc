@@ -1,0 +1,19 @@
+---
+description: Bắt buộc sẵn sàng code-review-graph trước khi agent coding/explore/review
+alwaysApply: true
+---
+
+# Code-review-graph — readiness gate (bắt buộc)
+
+Trước mọi việc **coding / explore / impact / review** trong repo này:
+
+1. Gọi MCP namespace `code-review-graph-ticket` (Cursor có thể hiện `user-code-review-graph-ticket`): **`list_graph_stats_tool`**.
+2. Nếu graph trống, MCP lỗi, hoặc `head_matches_build`/status stale → **`build_or_update_graph_tool`** (incremental; `full_rebuild` chỉ khi thiếu node rõ ràng).
+3. Chỉ sau khi graph ready mới dùng `semantic_search_nodes_tool` / `query_graph_tool` / `get_impact_radius_tool` / `detect_changes_tool`.
+4. **Không** bắt đầu Grep/broad scan thay graph khi MCP đang available.
+
+**Exempt:** câu hỏi docs/rules thuần, hoặc MCP CRG thật sự unavailable (ghi rõ limitation rồi mới fallback `rg`/source).
+
+Hooks `sessionStart` + `beforeSubmitPrompt` đã auto `update`/`build` khi HEAD lệch; agent vẫn phải **verify bằng tool** ở bước 1 — không giả định hook đã đủ.
+
+Daemon watch: alias `ticket-solution` trong `~/.code-review-graph/watch.toml`. Graph DB: `.code-review-graph/graph.db` (gitignored, persistent across agent restarts).
