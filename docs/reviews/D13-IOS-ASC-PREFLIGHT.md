@@ -35,7 +35,8 @@
 | Bundle | `com.hangndat.ticket` |
 | SKU | `hangndat-ticket` |
 | Primary locale | `en-US` |
-| App Store version | `1.0` · state **PREPARE_FOR_SUBMISSION** · id `7c5ac05b-f543-4f71-8af3-a7b40073de7a` |
+| App Store version (ASC record) | `1.0` · state **PREPARE_FOR_SUBMISSION** · id `7c5ac05b-f543-4f71-8af3-a7b40073de7a` — ops có thể đổi versionString → `1.0.0` sau review; **không** tạo duplicate app |
+| Source `CFBundleShortVersionString` (this PR) | **`1.0.0`** (`apps/mobile/app.config.ts`); `buildNumber` remains **`10`** until S4 archive picks unique > ASC latest |
 | Version ↔ build | **null** (chưa chọn build cho version) |
 | Builds (filter app) | **9** builds; processing **VALID**; build strings **2…10** (latest **10**, uploaded 2026-10-17) |
 | Localization en-US description / keywords / whatsNew | **missing** |
