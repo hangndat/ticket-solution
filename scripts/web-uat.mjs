@@ -10,7 +10,7 @@
  *   node scripts/web-uat.mjs screenshot <url> [out.png]
  *   node scripts/web-uat.mjs goto <url>
  */
-import { existsSync, mkdirSync, readdirSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -66,7 +66,7 @@ Commands:
   redeem [baseUrl] [code] [tenantId] [eventId] Login + /redeem DEMO code (D9)
   screenshot <url> [out.png]                   PNG under apps/web/.uat-artifacts/
   goto <url>                                   Print final URL + title
-  o13-sales [baseUrl]                          O13 marketing screenshots → docs/reviews/o13-pr-247-uat/
+  o13-sales [baseUrl]                          O13 marketing screenshots → docs/reviews/o13-issue-381-uat/
   nav-o02 [baseUrl]                            O02 SiteNav guest chrome + soft-redirect /admin|/gate
 
 Env:
@@ -366,10 +366,10 @@ async function cmdScreenshot(url, out) {
   });
 }
 
-/** O13 sales page evidence — tracked under docs/reviews/o13-pr-247-uat/ */
+/** O13 sales page evidence — tracked under docs/reviews/o13-issue-381-uat/ */
 async function cmdO13Sales(baseUrl) {
   const base = (baseUrl || DEFAULT_BASE).replace(/\/$/, '');
-  const outDir = join(ROOT, 'docs/reviews/o13-pr-247-uat');
+  const outDir = join(ROOT, 'docs/reviews/o13-issue-381-uat');
   mkdirSync(outDir, { recursive: true });
   const host = process.env.WEB_UAT_HOST?.trim() || null;
 
@@ -402,7 +402,29 @@ async function cmdO13Sales(baseUrl) {
         die(`o13-sales ${s.label} HTTP ${status} at ${url}`);
       }
     }
-    console.log(JSON.stringify({ ok: true, host, base, results }, null, 2));
+    const evidence = join(outDir, 'EVIDENCE.md');
+    const tip = process.env.WEB_UAT_SHA?.trim() || 'local';
+    writeFileSync(
+      evidence,
+      [
+        '# O13 Issue #381 — headless UAT evidence',
+        '',
+        `- Issue: https://github.com/hangndat/ticket-solution/issues/381`,
+        `- Command: \`scripts/web-uat.sh o13-sales ${base}\``,
+        `- Base URL: \`${base}\``,
+        `- Host header: \`${host || '(none — /marketing paths)'}\``,
+        `- SHA: \`${tip}\``,
+        `- Captured: ${new Date().toISOString()}`,
+        '',
+        '| Shot | Path | File |',
+        '| ---- | ---- | ---- |',
+        ...shots.map(
+          (s) => `| ${s.label} | \`${s.path}\` | \`${s.file}\` |`,
+        ),
+        '',
+      ].join('\n'),
+    );
+    console.log(JSON.stringify({ ok: true, host, base, evidence, results }, null, 2));
   });
 }
 

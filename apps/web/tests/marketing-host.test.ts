@@ -8,6 +8,7 @@ import {
   loginHref,
   publicMarketingPathToInternal,
 } from '../src/marketing/hosts';
+import { localeSwitchHref } from '../src/marketing/links';
 
 describe('marketing host helpers', () => {
   it('recognizes apex marketing hosts', () => {
@@ -38,6 +39,15 @@ describe('marketing host helpers', () => {
       internal: '/marketing/privacy',
       locale: 'vi',
     });
+  });
+
+  it('locale switch preserves hash (PD F3)', () => {
+    assert.equal(localeSwitchHref('en', 'sales', '#interest'), '/en#interest');
+    assert.equal(localeSwitchHref('vi', 'sales', 'interest'), '/#interest');
+    assert.equal(
+      localeSwitchHref('en', 'privacy', '#top'),
+      '/en/privacy#top',
+    );
   });
 
   it('CTA hrefs point at product origin', () => {
