@@ -47,45 +47,43 @@ test('production routes isolate tenant content and reject unknown pairs', async 
       await setTimeout(100);
     }
     assert.ok(ready, output);
-    for (const [path, own, foreign] of [
-      [
-        '/t/sunburst/events/fun-fest-2026',
-        'Sunburst Collective',
-        'Northline Studio',
-      ],
-      [
-        '/t/northline/events/form-forum-2026',
-        'Northline Studio',
-        'Sunburst Collective',
-      ],
-      [
-        '/t/sunburst/events/fun-fest-2026',
-        'Sunburst Collective',
-        'Northline Studio',
-      ],
-    ]) {
-      const response = await fetch(base + path);
-      assert.equal(response.status, 200);
-      const html = await response.text();
-      assert.ok(html.includes(own));
-      assert.ok(!html.includes(foreign));
-      assert.ok(html.includes('Sự kiện demo · Không dùng vào cổng'));
-    }
+
+    // ADR-19: public event pages fetch Nest. Without API → unreachable UI
+    // (fail-closed). Never serve archived fixture catalog as published.
     for (const path of [
-      '/t/sunburst/events/form-forum-2026',
-      '/t/northline/events/fun-fest-2026',
-      '/t/unknown/events/fun-fest-2026',
-      '/t/sunburst/events/unknown',
+      '/t/demo-fun/events/fun-fest',
+      '/t/sunburst/events/fun-fest-2026',
+      '/t/unknown/events/unknown',
     ]) {
       const response = await fetch(base + path);
-      assert.equal(response.status, 404, path);
+      assert.equal(response.status, 200, path);
       const html = await response.text();
-      assert.ok(!html.includes('Sunburst Collective'));
-      assert.ok(!html.includes('Northline Studio'));
+      assert.ok(
+        html.includes('event-unreachable') ||
+          html.includes('Không tải được sự kiện'),
+        path,
+      );
+      assert.ok(!html.includes('Sunburst Collective'), path);
+      assert.ok(!html.includes('Northline Studio'), path);
+      assert.ok(!html.includes('event-published'), path);
     }
+
     const home = await (await fetch(base)).text();
-    assert.ok(home.includes('/t/sunburst/events/fun-fest-2026'));
-    assert.ok(home.includes('/t/northline/events/form-forum-2026'));
+    assert.ok(
+      home.includes('home-events-unreachable') ||
+        home.includes('Không tải được danh sách') ||
+        home.includes('home-events-empty') ||
+        home.includes('Chưa có sự kiện đã xuất bản'),
+    );
+    assert.ok(!home.includes('/t/sunburst/events/fun-fest-2026'));
+    assert.ok(!home.includes('/t/northline/events/form-forum-2026'));
+    assert.ok(!home.includes('Sunburst Collective'));
+    assert.ok(!home.includes('Northline Studio'));
+
+    // BFF list proxy exists; Nest down → 502 UPSTREAM_UNAVAILABLE.
+    const listBff = await fetch(base + '/api/bff/public/tenants/demo-fun/events');
+    assert.equal(listBff.status, 502);
+    assert.equal((await listBff.json()).code, 'UPSTREAM_UNAVAILABLE');
     const admin = await fetch(base + '/admin');
     assert.equal(admin.status, 200);
     const adminHtml = await admin.text();
