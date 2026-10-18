@@ -4,6 +4,7 @@
 - Command: `scripts/web-uat.sh o13-sales http://127.0.0.1:3810`
 - Base URL: `http://127.0.0.1:3810`
 - Host header: `(none — /marketing paths)`
+- SHA: `622be6ec48e7762c2d98586e1ad806ffc136767c`
 - Captured: 2026-10-18 (local Next.js; host-aware apex rewrite also smoke-tested `Host: vemoki.com` → 200)
 
 ## AC spot-check (VI `/marketing`)
