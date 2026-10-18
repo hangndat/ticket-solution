@@ -1,7 +1,9 @@
 'use client';
 
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { useEffect, useState, useTransition } from 'react';
+import { sanitizePostLoginPath } from '../../src/oidc/post-login';
 import { SurfaceState } from '../../src/ui/surface-state';
 
 type SessionSummary =
@@ -57,6 +59,11 @@ function summarizeMe(status: number, body: string): SessionSummary {
 export function AuthSession() {
   const [summary, setSummary] = useState<SessionSummary | null>(null);
   const [pending, startTransition] = useTransition();
+  const searchParams = useSearchParams();
+  const returnPath = sanitizePostLoginPath(searchParams.get('next'));
+  const loginHref = returnPath
+    ? `/api/auth/login?return=${encodeURIComponent(returnPath)}`
+    : '/api/auth/login';
 
   useEffect(() => {
     let cancelled = false;
@@ -156,7 +163,7 @@ export function AuthSession() {
           testId="auth-session-error"
           action={
             <div className="auth-buttons">
-              <a className="button-link" href="/api/auth/login">
+              <a className="button-link" href={loginHref}>
                 Đăng nhập
               </a>
               <Link className="button-link button-link-secondary" href="/">
@@ -182,7 +189,7 @@ export function AuthSession() {
       <section className="auth-actions">
         <h2>Thao tác</h2>
         <div className="auth-buttons">
-          <a className="button-link" href="/api/auth/login">
+          <a className="button-link" href={loginHref}>
             Đăng nhập
           </a>
           <Link className="button-link button-link-secondary" href="/redeem">
