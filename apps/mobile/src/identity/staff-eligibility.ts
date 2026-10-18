@@ -27,11 +27,28 @@ export const staffDenyCopy = {
     'Không có quyền Nhân viên. Tab Nhân viên đã ẩn. Không cho vào khu vực staff.',
 } as const;
 
+/**
+ * Authz codes that must clear staff chrome immediately (SEC-CACHE / O02 §5–6).
+ * Does not invent eligibility — only decides when to fail-closed the tab.
+ */
+export function isMembershipAuthzDenial(
+  status: number,
+  body: unknown,
+): boolean {
+  if (status === 401) return true;
+  if (status !== 403) return false;
+  if (!body || typeof body !== 'object') return false;
+  const code = (body as Record<string, unknown>).code;
+  if (typeof code !== 'string') return false;
+  return code.startsWith('MEMBERSHIP_') || code === 'PERMISSION_DENIED';
+}
+
 type Listener = () => void;
 
 /**
  * In-memory eligibility for tab chrome + soft-deny.
  * Signed-out / unknown / probe failure → not eligible (fail-closed).
+ * Never persists `staffEligible: true` — revoke must not leave a sticky tab.
  */
 export class StaffEligibilityStore {
   private snapshot: StaffEligibilitySnapshot = { ...DEFAULT_SNAPSHOT };
@@ -53,7 +70,10 @@ export class StaffEligibilityStore {
     for (const listener of this.listeners) listener();
   }
 
-  /** Immediate fail-closed chrome (logout / unsigned). */
+  /**
+   * Immediate fail-closed chrome (logout / unsigned / MEMBERSHIP_* 401/403).
+   * Aborts in-flight MeEvents so a late 200 cannot restore a revoked tab.
+   */
   reset() {
     this.requestId += 1;
     this.inFlight?.abort();
@@ -63,7 +83,7 @@ export class StaffEligibilityStore {
 
   /**
    * Revalidate from GET /v1/me/events for the current verified session.
-   * Unreachable / invalid / unauthorized → hide staff (safer O02).
+   * Unauthorized / unreachable / invalid → hide staff (safer O02 + SEC-CACHE).
    */
   async refresh(session: SessionBoundary): Promise<StaffEligibilitySnapshot> {
     const epoch = session.captureEpoch();
@@ -76,6 +96,7 @@ export class StaffEligibilityStore {
     this.inFlight?.abort();
     const controller = session.beginRequest();
     this.inFlight = controller;
+    // Fail-closed while probing — never keep a prior staffEligible=true sticky.
     this.publish({
       staffEligible: false,
       resolved: false,
@@ -86,17 +107,18 @@ export class StaffEligibilityStore {
       const bearer = await session.getCredential();
       if (requestId !== this.requestId) return this.snapshot;
       if (!session.isEpochCurrent(epoch) || !bearer) {
-        this.publish({
-          staffEligible: false,
-          resolved: true,
-          loading: false,
-        });
+        this.reset();
         return this.snapshot;
       }
 
       const result = await probeMeEvents(bearer, controller.signal);
       if (requestId !== this.requestId) return this.snapshot;
       if (!session.isEpochCurrent(epoch)) {
+        this.reset();
+        return this.snapshot;
+      }
+
+      if (result.status === 'unauthorized') {
         this.reset();
         return this.snapshot;
       }
