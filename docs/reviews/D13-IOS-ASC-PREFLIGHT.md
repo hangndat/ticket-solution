@@ -3,7 +3,7 @@
 | Trường | Giá trị |
 | ------ | ------- |
 | Ngày | **2026-10-18** |
-| Tip SHA |  |
+| Tip SHA | PR HEAD (see PR / worker_done); preflight run 2026-10-18 |
 | Scope | Read-only status — **không** in key/token/issuer/private key material |
 | Bundle | `com.hangndat.ticket` |
 | Team | `BLUA62D52G` |

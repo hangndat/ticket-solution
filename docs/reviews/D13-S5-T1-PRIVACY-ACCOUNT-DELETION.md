@@ -6,8 +6,8 @@
 | Role | `ios` · `docs/agents/roles/ios.md` |
 | Architecture impact | **Không** — dùng API O06 hiện hữu (`POST/GET /v1/me/account-deletion-requests`) |
 | Agent | Cursor · `task_309e6a5978a2` / `ctx_284cb2cea2d7` |
-| Behavior SHA |  |
-| Tip SHA |  |
+| Behavior SHA | `639cde6a8179b3383195fb9d12db85a140307bfc` |
+| Tip SHA | `7da8b9a55f55c3f2b65ca810d4e4f71f9443d91d` (+ docs stamp commits; PR HEAD wins) |
 
 ## 1. Source verify (trước sửa)
 
