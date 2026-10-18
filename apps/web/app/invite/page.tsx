@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 export default function InvitePage() {
   return (
     <main id="main" className="container shell redeem-page">
-      <SiteNav variant="guest" />
+      <SiteNav />
       <h1>Nhận lời mời thành viên</h1>
       <p className="intro">
         Token chỉ qua fragment / bộ nhớ tạm; Referrer-Policy no-referrer. Không
