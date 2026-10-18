@@ -351,6 +351,8 @@ function PrivacyPolicyLink() {
         onPress={() => void onOpen()}
       />
       <Text style={{ color: colors.secondary, fontSize: 13, lineHeight: 18 }}>
+        Mở trang Chính sách quyền riêng tư công khai (VI/EN). / Opens the public
+        Privacy Policy page.{'\n'}
         {PRIVACY_POLICY_URL}
       </Text>
       {error ? <Notice title="Không mở được liên kết">{error}</Notice> : null}
