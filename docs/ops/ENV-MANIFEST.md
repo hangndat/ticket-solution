@@ -74,7 +74,25 @@ Redis: `REDIS_PORT` / URL chỉ cache/admission — **không** durable outbox.
 
 Cookie session: **host-only** trên `app.vemoki.com` (không `Domain=.vemoki.com`). Xem `scripts/lib/tenant-host.mjs` và `docs/architecture/o13-marketing-app-subdomain.md`.
 
+## 6. Portal admin local dual-run (ADR-20 / P1.2)
+
+Process `apps/portal` (port **3013**). Chi tiết thao tác: [`PORTAL-LOCAL-CUTOVER-PREP.md`](./PORTAL-LOCAL-CUTOVER-PREP.md).  
+**Không** ghi production DNS/TLS ở đây — Task deploy riêng.
+
+| Biến | Ví dụ local | Ý nghĩa |
+| --- | --- | --- |
+| `WEB_PUBLIC_ORIGIN` | `http://127.0.0.1:3013` | CSRF/origin allowlist **process portal** |
+| `OIDC_CLIENT_ID` | `ticket-admin-web` | Staff portal (không dùng `ticket-web`) |
+| `OIDC_REDIRECT_URI` | `http://127.0.0.1:3013/api/auth/callback` | Path code `/api/auth/callback` — **không** `/api/admin/auth/*` |
+| `PLATFORM_OIDC_CLIENT_ID` | `ticket-platform-web` | Operator MFA trên portal |
+| `PLATFORM_OIDC_REDIRECT_URI` | `http://127.0.0.1:3013/api/auth/platform/callback` | Khớp path code |
+| `PORTAL_ORIGIN` / `PRODUCT_ORIGIN` | `https://portal.vemoki.com` / `https://app.vemoki.com` | CTA tuyệt đối; dual-run local vẫn dùng loopback redirect URI |
+| `API_BASE_URL` | `http://127.0.0.1:3100` | Nest từ BFF portal |
+
+Cookie staff/platform trên portal: **host-only** (omit `Domain`). Kiểm tra realm JSON: `./scripts/portal-local-dual-run-check.sh`.
+
 ## Cấm
 
 - Commit `.env` thật, `.p8`, MinIO root production, SMTP password.
 - SaaS SMTP/push/object runtime (ADR-11).
+- Production DNS/TLS/`portal.vemoki.com` cutover trong Task prep local (P1.2).
