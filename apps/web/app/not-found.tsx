@@ -16,7 +16,7 @@ export default function NotFound() {
       <SurfaceState
         kind="empty"
         title="Không tìm thấy trang"
-        detail="Kiểm tra lại đường dẫn, hoặc quay về trang chủ để chọn sự kiện demo."
+        detail="Kiểm tra lại đường dẫn, hoặc quay về trang chủ để xem sự kiện đã xuất bản."
         testId="route-not-found"
         action={
           <Link className="button" href="/">
