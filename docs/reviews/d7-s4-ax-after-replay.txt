@@ -1,0 +1,9 @@
+Trực tuyến
+Kết nối ổn. Hàng đợi offline trống.
+Quét hoặc dán QR hiển thị trên vé. Chỉ cho vào sau khi API ghi nhận check-in. Offline: xếp hàng trên máy, đồng bộ khi có mạng — không cho vào sớm. Phản hồi mất vẫn giữ “chưa rõ” sau khi mở lại app.\nAPI: http:\/\/192.168.86.8:3001 · Phiên: verified
+Check-in vé
+Đã xếp hàng offline
+Đã xếp hàng offline. Chưa cho vào — chờ đồng bộ khi có mạng.
+Hàng đợi offline \/ đồng bộ
+[applied] ace74a71… — Đã đồng bộ. Check-in được máy chủ ghi nhận.
+Không có thao tác chưa rõ đã lưu.
