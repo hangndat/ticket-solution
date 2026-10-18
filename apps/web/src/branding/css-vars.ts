@@ -3,7 +3,7 @@ import type { TenantBranding } from './types';
 
 /**
  * Map branding → CSS custom properties used by globals.css.
- * Preserves D6 token names (--ink/--paper/--signal/--focus/--brand).
+ * Preserves Live Pulse token names (--ink/--paper/--signal/--focus/--brand).
  */
 export function brandingToCssVars(branding: TenantBranding): CSSProperties {
   return {

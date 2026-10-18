@@ -10,12 +10,12 @@ import {
 } from '../src/branding/parse';
 import { VEMOKI_BRANDING } from '../src/branding/vemoki';
 
-test('Vemoki defaults match D6 O09 tokens', () => {
+test('Vemoki defaults match Live Pulse v2 tokens', () => {
   assert.equal(VEMOKI_BRANDING.wordmark, 'vemoki');
-  assert.equal(VEMOKI_BRANDING.colors.ink, '#22241f');
-  assert.equal(VEMOKI_BRANDING.colors.paper, '#f7f6f1');
-  assert.equal(VEMOKI_BRANDING.colors.signal, '#9b3a18');
-  assert.equal(VEMOKI_BRANDING.colors.focus, '#235fd0');
+  assert.equal(VEMOKI_BRANDING.colors.ink, '#0B1220');
+  assert.equal(VEMOKI_BRANDING.colors.paper, '#F4F6F8');
+  assert.equal(VEMOKI_BRANDING.colors.signal, '#E11D48');
+  assert.equal(VEMOKI_BRANDING.colors.focus, '#2563EB');
   assert.equal(VEMOKI_BRANDING.source, 'vemoki-default');
   assert.equal(VEMOKI_BRANDING.logoUrl, null);
 });
@@ -61,13 +61,13 @@ test('sanitizeLogoUrl allowlists https and root-relative only', () => {
   assert.equal(sanitizeLogoUrl('data:image/png;base64,xxx'), null);
 });
 
-test('brandingCssVarEntries expose D6 token names', () => {
+test('brandingCssVarEntries expose Live Pulse token names', () => {
   const entries = Object.fromEntries(brandingCssVarEntries(VEMOKI_BRANDING));
-  assert.equal(entries['--ink'], '#22241f');
-  assert.equal(entries['--paper'], '#f7f6f1');
-  assert.equal(entries['--signal'], '#9b3a18');
-  assert.equal(entries['--focus'], '#235fd0');
-  assert.equal(entries['--brand'], '#9b3a18');
+  assert.equal(entries['--ink'], '#0B1220');
+  assert.equal(entries['--paper'], '#F4F6F8');
+  assert.equal(entries['--signal'], '#E11D48');
+  assert.equal(entries['--focus'], '#2563EB');
+  assert.equal(entries['--brand'], '#E11D48');
 });
 
 test('brandingFromEventBrand scopes demo event chrome', () => {
@@ -85,6 +85,6 @@ test('brandingFromEventBrand scopes demo event chrome', () => {
 test('toBrandingDto is JSON-safe for BFF responses', () => {
   const dto = toBrandingDto(VEMOKI_BRANDING);
   assert.equal(dto.wordmark, 'vemoki');
-  assert.equal(dto.primaryColor, '#9b3a18');
+  assert.equal(dto.primaryColor, '#E11D48');
   assert.equal(dto.logoUrl, null);
 });
