@@ -12,9 +12,9 @@ import { PUBLISHED_SECTION_KINDS } from './types.ts';
 
 const sampleSummary = {
   id: '11111111-1111-1111-1111-111111111111',
-  tenantSlug: 'demo-fun',
-  slug: 'fun-fest',
-  name: 'FUN FEST',
+  tenantSlug: 'mfest-demo',
+  slug: 'mfest',
+  name: 'MFest',
   timezone: 'Asia/Ho_Chi_Minh',
   startsAt: '2027-03-20T10:00:00+07:00',
   location: 'Park',
@@ -22,7 +22,7 @@ const sampleSummary = {
   schemaVersion: 1,
   brand: {
     primaryColor: '#245B47',
-    organizationName: 'Demo FUN Collective',
+    organizationName: 'MFest · Demo',
   },
 };
 
@@ -39,7 +39,7 @@ test('ok result populates items without inventing demo rows', () => {
   const state = publishedListStateFromResult(result);
   assert.equal(state.phase, 'ready');
   assert.equal(state.items.length, 1);
-  assert.equal(state.items[0]?.slug, 'fun-fest');
+  assert.equal(state.items[0]?.slug, 'mfest');
   assert.equal(state.errorMessage, null);
 });
 
@@ -70,9 +70,9 @@ test('misconfigured clears items', () => {
 });
 
 test('tenant toggle cycles seed demo published tenants', () => {
-  assert.equal(nextDemoPublishedTenant('demo-fun'), 'demo-studio');
-  assert.equal(nextDemoPublishedTenant('demo-studio'), 'demo-fun');
-  assert.deepEqual([...DEMO_PUBLISHED_TENANTS], ['demo-fun', 'demo-studio']);
+  assert.equal(nextDemoPublishedTenant('mfest-demo'), 'demo-studio');
+  assert.equal(nextDemoPublishedTenant('demo-studio'), 'mfest-demo');
+  assert.deepEqual([...DEMO_PUBLISHED_TENANTS], ['mfest-demo', 'demo-studio']);
 });
 
 test('local PUBLISHED_SECTION_KINDS matches ADR-19 contract kinds', () => {

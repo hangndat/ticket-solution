@@ -21,9 +21,9 @@ test('bundled demo logo and banner files exist under public/demo', () => {
 
 test('D9 seed tenant slugs and event ids resolve a local media pack', () => {
   for (const id of [
-    'demo-fun-fest',
+    'demo-mfest',
     'demo-studio-night',
-    'fixture-fun-fest',
+    'fixture-mfest',
     'fixture-form-forum',
     '11111111-1111-4111-8111-111111111101',
     '22222222-2222-4222-8222-222222222201',
@@ -34,7 +34,7 @@ test('D9 seed tenant slugs and event ids resolve a local media pack', () => {
       bannerUrl: DEMO_BANNER_PATH,
     });
   }
-  for (const slug of ['demo-fun', 'demo-studio', 'sunburst', 'northline']) {
+  for (const slug of ['mfest-demo', 'demo-studio', 'mfest', 'northline']) {
     assert.ok(demoMediaForTenantSlug(slug));
   }
 });

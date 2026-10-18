@@ -1,6 +1,6 @@
 {
   "rootDomain": "vemoki.com",
-  "tenantSlugs": ["sunburst", "northline"],
+  "tenantSlugs": ["mfest", "northline"],
   "extraBindings": [],
   "notes": "Example only — not production DNS. Resolve with scripts/lib/tenant-host.mjs buildTenantHostAllowlist."
 }

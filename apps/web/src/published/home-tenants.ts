@@ -5,7 +5,7 @@
 
 const SLUG_RE = /^[a-z0-9][a-z0-9-]{0,62}$/;
 
-const DEFAULT_HOME_TENANT_SLUGS = ['demo-fun', 'demo-studio'] as const;
+const DEFAULT_HOME_TENANT_SLUGS = ['mfest-demo', 'demo-studio'] as const;
 
 /**
  * Parse PUBLIC_HOME_TENANT_SLUGS (comma-separated).

@@ -283,7 +283,7 @@ describe('C-B keyboard / a11y contracts (helpers)', () => {
 
     // DEFAULT JSON path still typed — not prettyJSON-only acceptance.
     assert.equal(previewConfigJson(DEFAULT_CONFIG_PAYLOAD).ok, true);
-    assert.equal(DEFAULT_CONFIG_PAYLOAD.includes('FUN FEST'), false);
+    assert.equal(DEFAULT_CONFIG_PAYLOAD.includes('MFest'), false);
     assert.equal(previewConfigJson('{"title":"only"}').ok, false);
   });
 });

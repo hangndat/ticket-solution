@@ -284,20 +284,20 @@ async function main() {
       status: tenants.status,
       pass:
         tenants.status === 200 &&
-        slugs.includes('demo-fun') &&
+        slugs.includes('mfest-demo') &&
         slugs.includes('demo-studio'),
       slugs,
     });
 
-    const tenantId = first.tenants.find((t) => t.slug === 'demo-fun').id;
-    const eventId = first.events.find((e) => e.slug === 'fun-fest').id;
+    const tenantId = first.tenants.find((t) => t.slug === 'mfest-demo').id;
+    const eventId = first.events.find((e) => e.slug === 'mfest').id;
     const redeem = await api(
       base,
       attendeeToken,
       'POST',
       `/v1/tenants/${tenantId}/events/${eventId}/redemptions`,
       {
-        code: 'DEMO-FUN-001',
+        code: 'DEMO-MFEST-001',
         idempotencyKey: cryptoRandom(),
       },
     );

@@ -16,8 +16,8 @@ test('demo directory partitions organizations and rejects cross-tenant event lin
   assert.deepEqual(listDemoEvents('unknown-tenant'), []);
 });
 test('fixture catalog resolves an event id used by installed-app links', () => {
-  const event = findDemoEventById('demo-fun-fest');
-  assert.equal(event?.slug, 'fun-fest');
+  const event = findDemoEventById('demo-mfest');
+  assert.equal(event?.slug, 'mfest');
   assert.match(event?.name ?? '', /demo/i);
   assert.equal(findDemoEventById('missing-event'), undefined);
 });
