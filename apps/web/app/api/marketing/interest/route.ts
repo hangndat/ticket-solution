@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
+import { persistInterestSubmission } from '../../../../src/marketing/interest-store';
 import {
   validateInterest,
   type InterestPayload,
 } from '../../../../src/marketing/interest-validate';
 
-/** In-process MVP store (no Nest / no payment). Ops can wire email later. */
-const submissions: Array<InterestPayload & { at: string }> = [];
+/** Recent submissions for tests only (durable store is source of truth). */
+const recent: Array<InterestPayload & { at: string }> = [];
 
 const RATE_WINDOW_MS = 60_000;
 const RATE_MAX = 8;
@@ -62,14 +63,24 @@ export async function POST(request: Request) {
     );
   }
 
-  submissions.push({ ...result.value, at: new Date().toISOString() });
-  // Cap memory in long-lived processes
-  if (submissions.length > 500) submissions.splice(0, submissions.length - 500);
+  try {
+    const record = await persistInterestSubmission(result.value, {
+      clientKey: clientKey(request),
+    });
+    recent.push({ ...result.value, at: record.at });
+    if (recent.length > 50) recent.splice(0, recent.length - 50);
+  } catch (err) {
+    console.error('[marketing-interest] persist failed', err);
+    return NextResponse.json(
+      { ok: false, code: 'STORE_FAILED' },
+      { status: 503 },
+    );
+  }
 
   return NextResponse.json({ ok: true });
 }
 
 /** Test/helper — not exposed as public list. */
 export function __interestSubmissionsForTests() {
-  return submissions;
+  return recent;
 }
