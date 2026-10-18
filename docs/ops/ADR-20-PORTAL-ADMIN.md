@@ -232,6 +232,8 @@ Authority cho consumer BE/web = **§7.1** + `packages/backend/src/role-map.ts` h
 
 Legacy admin UI/BFF trên `app.` **không** gỡ cho đến hết cửa sổ dual-run đã thống nhất.
 
+**Prep local (P1.2):** thao tác loopback + Keycloak URI port `3013` + rollback giấy — [`PORTAL-LOCAL-CUTOVER-PREP.md`](./PORTAL-LOCAL-CUTOVER-PREP.md). Không thay thế Task deploy prod.
+
 ---
 
 ## 9. Test matrix (evidence khi implement — chạy trên exact SHA)
