@@ -44,6 +44,7 @@ TD §10: `GET /me/tickets/{id}` Owner. Nest **chưa** có endpoint trên `main` 
 
 ## SHA
 
-Tip branch (web PR): `730e9dfc557b04a4a400ce3261f1dc67739bd578`
+Tip branch (web PR): `7df0afe2f30fcea83b25e756e8ba6a8aa23e24bb`  
+Impl commit: `730e9dfc557b04a4a400ce3261f1dc67739bd578`
 
 Issue: [#398](https://github.com/hangndat/ticket-solution/issues/398)
