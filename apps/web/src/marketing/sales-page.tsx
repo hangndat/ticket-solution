@@ -33,7 +33,7 @@ export function SalesPage({ locale }: { locale: MarketingLocale }) {
               {t(locale, 'hero.cta.demo')}
             </a>
             <Link
-              className="mkt-btn mkt-btn-secondary"
+              className="mkt-btn mkt-btn-primary"
               href="#interest"
               data-testid="cta-interest"
             >
@@ -156,7 +156,7 @@ export function SalesPage({ locale }: { locale: MarketingLocale }) {
               {t(locale, 'cta.repeat.demo')}
             </a>
             <Link
-              className="mkt-btn mkt-btn-secondary"
+              className="mkt-btn mkt-btn-primary"
               href={`${salesHref(locale)}#interest`}
             >
               {t(locale, 'cta.repeat.interest')}
