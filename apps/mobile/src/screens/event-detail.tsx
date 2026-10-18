@@ -68,8 +68,9 @@ function FixtureDemoDetail({
   }
   return (
     <Page>
-      <Notice title="Demo · chưa xuất bản">
-        Catalog mẫu — không phải nội dung đã xuất bản trên máy chủ.
+      <Notice title="Demo · fixture · chưa xuất bản">
+        Route /events/fixture/* — catalog mẫu tường minh. Không phải nội dung đã
+        xuất bản trên máy chủ và không phải fallback khi API lỗi.
       </Notice>
       <EventMediaHeader
         eventId={event.id}
