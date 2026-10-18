@@ -2,41 +2,70 @@ import { randomUUID } from 'node:crypto';
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Headers,
   HttpException,
   Injectable,
   Param,
+  Patch,
   Post,
   Put,
+  Query,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOkResponse, ApiProperty, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiOkResponse,
+  ApiProperty,
+  ApiQuery,
+  ApiTags,
+} from '@nestjs/swagger';
 import {
   type ApiError,
   type MeEventItem,
   type MeEventsResponse,
+  type PortalAssignmentBody,
+  type PortalInviteRevokeResponse,
+  type PortalInviteState,
+  type PortalInviteSummary,
+  type PortalInvitesPage,
+  type PortalMemberAssignment,
+  type PortalMemberRoleBody,
+  type PortalMemberSummary,
+  type PortalMembersPage,
+  type PortalMembershipMutationResponse,
+  type PortalReasonBody,
   PLATFORM_ERROR_CODES,
 } from '@ticket/contracts';
 import {
+  AuthzError,
   PlatformError,
   IdentityError,
   IDENTITY_ERROR_CODES,
   acceptMembershipInvite,
+  changePortalMemberRole,
   createAccountDeletionRequest,
   createMembershipInvite,
   createOidcVerifier,
   createPlatformOidcVerifier,
   createSupportGrant,
+  deletePortalEventAssignment,
   getCurrentAccountDeletionRequest,
   getPlatformMe,
   getPlatformTenantDetail,
   listMyEvents,
   listMyTenants,
+  listPortalInvites,
+  listPortalMembers,
   listSupportTickets,
   provisionTenant,
+  putPortalEventAssignment,
   readOidcEnvironment,
   readPlatformSecurityConfig,
+  resendPortalInvite,
   revokeMembershipKeepingLastOwner,
+  revokePortalInvite,
   revokeSupportGrant,
   setTenantStatus,
   updateTenantLimits,
@@ -66,6 +95,91 @@ class MeEventsDto implements MeEventsResponse {
   @ApiProperty({ type: [MeEventItemDto] }) items!: MeEventItemDto[];
 }
 
+const MEMBERSHIP_ROLES = [
+  'Owner',
+  'Manager',
+  'CS',
+  'Supervisor',
+  'Scanner',
+] as const;
+
+class PortalMemberAssignmentDto implements PortalMemberAssignment {
+  @ApiProperty({ format: 'uuid' }) eventId!: string;
+  @ApiProperty({ type: [String] }) permissions!: string[];
+  @ApiProperty({ nullable: true, type: String }) activatedAt!: string | null;
+  @ApiProperty({ nullable: true, type: String }) revokedAt!: string | null;
+}
+
+class PortalMemberSummaryDto implements PortalMemberSummary {
+  @ApiProperty({ format: 'uuid' }) membershipId!: string;
+  @ApiProperty({ format: 'uuid' }) userId!: string;
+  @ApiProperty({ nullable: true, type: String }) emailMasked!: string | null;
+  @ApiProperty({ enum: MEMBERSHIP_ROLES }) role!: PortalMemberSummary['role'];
+  @ApiProperty({ nullable: true, type: String }) activatedAt!: string | null;
+  @ApiProperty({ nullable: true, type: String }) revokedAt!: string | null;
+  @ApiProperty({ type: [PortalMemberAssignmentDto] })
+  eventAssignments!: PortalMemberAssignmentDto[];
+}
+
+class PortalMembersPageDto implements PortalMembersPage {
+  @ApiProperty({ type: [PortalMemberSummaryDto] })
+  items!: PortalMemberSummaryDto[];
+  @ApiProperty({ nullable: true, type: String }) nextCursor!: string | null;
+}
+
+class PortalInviteSummaryDto implements PortalInviteSummary {
+  @ApiProperty({ format: 'uuid' }) inviteId!: string;
+  @ApiProperty() emailMasked!: string;
+  @ApiProperty({ enum: MEMBERSHIP_ROLES }) role!: PortalInviteSummary['role'];
+  @ApiProperty({ enum: ['PENDING', 'USED', 'REVOKED', 'EXPIRED'] })
+  state!: PortalInviteState;
+  @ApiProperty() expiresAt!: string;
+  @ApiProperty({
+    enum: ['PENDING', 'ACCEPTED', 'FAILED', 'UNKNOWN'],
+    description:
+      'ACCEPTED = outbox processing completed; never proof of inbox delivery',
+  })
+  deliveryState!: PortalInviteSummary['deliveryState'];
+}
+
+class PortalInvitesPageDto implements PortalInvitesPage {
+  @ApiProperty({ type: [PortalInviteSummaryDto] })
+  items!: PortalInviteSummaryDto[];
+  @ApiProperty({ nullable: true, type: String }) nextCursor!: string | null;
+}
+
+class PortalMemberRoleBodyDto implements PortalMemberRoleBody {
+  @ApiProperty({ enum: MEMBERSHIP_ROLES }) role!: PortalMemberRoleBody['role'];
+  @ApiProperty() reason!: string;
+}
+
+class PortalAssignmentBodyDto implements PortalAssignmentBody {
+  @ApiProperty({ enum: MEMBERSHIP_ROLES }) role!: PortalAssignmentBody['role'];
+  @ApiProperty() reason!: string;
+}
+
+class PortalReasonBodyDto implements PortalReasonBody {
+  @ApiProperty() reason!: string;
+}
+
+class PortalMembershipMutationResponseDto
+  implements PortalMembershipMutationResponse
+{
+  @ApiProperty({ format: 'uuid' }) membershipId!: string;
+}
+
+class PortalInviteRevokeResponseDto implements PortalInviteRevokeResponse {
+  @ApiProperty({ format: 'uuid' }) inviteId!: string;
+  @ApiProperty({ enum: ['REVOKED'] }) state!: 'REVOKED';
+}
+
+class PortalInviteResendResponseDto {
+  @ApiProperty({ format: 'uuid' }) inviteId!: string;
+  @ApiProperty({ enum: ['PENDING'] }) state!: 'PENDING';
+  @ApiProperty() expiresAt!: string;
+  @ApiProperty({ enum: ['PENDING'] }) deliveryState!: 'PENDING';
+}
+
 type Deps = {
   db: PrismaClient | null;
   /** MFA / platform audience — /platform/* only. */
@@ -85,7 +199,8 @@ function fail(error: unknown): never {
         ? 401
         : error.code === PLATFORM_ERROR_CODES.PLATFORM_OPERATOR_REQUIRED ||
             error.code === PLATFORM_ERROR_CODES.PERMISSION_DENIED ||
-            error.code === PLATFORM_ERROR_CODES.MEMBERSHIP_REVOKED
+            error.code === PLATFORM_ERROR_CODES.MEMBERSHIP_REVOKED ||
+            error.code === PLATFORM_ERROR_CODES.MEMBERSHIP_REQUIRED
           ? 403
           : error.code === PLATFORM_ERROR_CODES.RESOURCE_NOT_FOUND
             ? 404
@@ -97,10 +212,12 @@ function fail(error: unknown): never {
                 error.code === PLATFORM_ERROR_CODES.TENANT_LIMIT_REACHED ||
                 error.code === PLATFORM_ERROR_CODES.INVITE_ALREADY_USED
               ? 409
-              : error.code === PLATFORM_ERROR_CODES.TENANT_SUSPENDED ||
-                  error.code === PLATFORM_ERROR_CODES.TENANT_PENDING
-                ? 503
-                : 422;
+              : error.code === PLATFORM_ERROR_CODES.RATE_LIMITED
+                ? 429
+                : error.code === PLATFORM_ERROR_CODES.TENANT_SUSPENDED ||
+                    error.code === PLATFORM_ERROR_CODES.TENANT_PENDING
+                  ? 503
+                  : 422;
     throw new HttpException(
       {
         code: error.code,
@@ -109,6 +226,17 @@ function fail(error: unknown): never {
         retryable: error.retryable,
       } satisfies ApiError,
       status,
+    );
+  }
+  if (error instanceof AuthzError) {
+    throw new HttpException(
+      {
+        code: error.code,
+        message: error.message,
+        requestId: randomUUID(),
+        retryable: false,
+      } satisfies ApiError,
+      403,
     );
   }
   if (error instanceof IdentityError) {
@@ -322,6 +450,154 @@ export class PlatformService {
       .catch(fail);
   }
 
+  listMembers(
+    authorization: string | undefined,
+    tenantId: string,
+    query: { cursor?: string; limit?: string; includeRevoked?: string },
+  ) {
+    const limit = query.limit ? Number(query.limit) : undefined;
+    return this.selfActor(authorization)
+      .then((u) =>
+        listPortalMembers(this.deps.db!, {
+          tenantId,
+          actorUserId: u.userId,
+          cursor: query.cursor,
+          limit: Number.isFinite(limit) ? limit : undefined,
+          includeRevoked:
+            query.includeRevoked === '1' || query.includeRevoked === 'true',
+        }),
+      )
+      .catch(fail);
+  }
+
+  listInvites(
+    authorization: string | undefined,
+    tenantId: string,
+    query: { cursor?: string; limit?: string; state?: string },
+  ) {
+    const limit = query.limit ? Number(query.limit) : undefined;
+    const state = query.state as PortalInviteState | undefined;
+    return this.selfActor(authorization)
+      .then((u) =>
+        listPortalInvites(this.deps.db!, {
+          tenantId,
+          actorUserId: u.userId,
+          cursor: query.cursor,
+          limit: Number.isFinite(limit) ? limit : undefined,
+          state,
+        }),
+      )
+      .catch(fail);
+  }
+
+  changeRole(
+    authorization: string | undefined,
+    tenantId: string,
+    membershipId: string,
+    body: { role: string; reason: string },
+  ) {
+    if (!isMembershipRole(body.role)) {
+      return Promise.reject(
+        new PlatformError(PLATFORM_ERROR_CODES.INVALID_INPUT, 'Invalid role'),
+      ).catch(fail);
+    }
+    const role = body.role;
+    return this.selfActor(authorization)
+      .then((u) =>
+        changePortalMemberRole(this.deps.db!, {
+          tenantId,
+          actorUserId: u.userId,
+          membershipId,
+          role,
+          reason: body.reason,
+        }),
+      )
+      .catch(fail);
+  }
+
+  putAssignment(
+    authorization: string | undefined,
+    tenantId: string,
+    membershipId: string,
+    eventId: string,
+    body: { role: string; reason: string },
+  ) {
+    if (!isMembershipRole(body.role)) {
+      return Promise.reject(
+        new PlatformError(PLATFORM_ERROR_CODES.INVALID_INPUT, 'Invalid role'),
+      ).catch(fail);
+    }
+    const role = body.role;
+    return this.selfActor(authorization)
+      .then((u) =>
+        putPortalEventAssignment(this.deps.db!, {
+          tenantId,
+          actorUserId: u.userId,
+          membershipId,
+          eventId,
+          role,
+          reason: body.reason,
+        }),
+      )
+      .catch(fail);
+  }
+
+  deleteAssignment(
+    authorization: string | undefined,
+    tenantId: string,
+    membershipId: string,
+    eventId: string,
+    body: { reason: string },
+  ) {
+    return this.selfActor(authorization)
+      .then((u) =>
+        deletePortalEventAssignment(this.deps.db!, {
+          tenantId,
+          actorUserId: u.userId,
+          membershipId,
+          eventId,
+          reason: body.reason,
+        }),
+      )
+      .catch(fail);
+  }
+
+  revokeInvite(
+    authorization: string | undefined,
+    tenantId: string,
+    inviteId: string,
+    body: { reason: string },
+  ) {
+    return this.selfActor(authorization)
+      .then((u) =>
+        revokePortalInvite(this.deps.db!, {
+          tenantId,
+          actorUserId: u.userId,
+          inviteId,
+          reason: body.reason,
+        }),
+      )
+      .catch(fail);
+  }
+
+  resendInvite(
+    authorization: string | undefined,
+    tenantId: string,
+    inviteId: string,
+    body: { reason: string },
+  ) {
+    return this.selfActor(authorization)
+      .then((u) =>
+        resendPortalInvite(this.deps.db!, this.deps.security!, {
+          tenantId,
+          actorUserId: u.userId,
+          inviteId,
+          reason: body.reason,
+        }),
+      )
+      .catch(fail);
+  }
+
   supportGrant(authorization: string | undefined, body: never) {
     return this.platformActor(authorization)
       .then((u) =>
@@ -436,6 +712,46 @@ export class PlatformController {
     return this.platform.setLimits(authorization, tenantId, body);
   }
 
+  @Get('tenants/:tenantId/members')
+  @ApiBearerAuth()
+  @ApiOkResponse({ type: PortalMembersPageDto })
+  @ApiQuery({ name: 'cursor', required: false })
+  @ApiQuery({ name: 'limit', required: false })
+  @ApiQuery({ name: 'includeRevoked', required: false })
+  listMembers(
+    @Headers('authorization') authorization: string | undefined,
+    @Param('tenantId') tenantId: string,
+    @Query('cursor') cursor?: string,
+    @Query('limit') limit?: string,
+    @Query('includeRevoked') includeRevoked?: string,
+  ) {
+    return this.platform.listMembers(authorization, tenantId, {
+      cursor,
+      limit,
+      includeRevoked,
+    });
+  }
+
+  @Get('tenants/:tenantId/invites')
+  @ApiBearerAuth()
+  @ApiOkResponse({ type: PortalInvitesPageDto })
+  @ApiQuery({ name: 'cursor', required: false })
+  @ApiQuery({ name: 'limit', required: false })
+  @ApiQuery({ name: 'state', required: false, enum: ['PENDING', 'USED', 'REVOKED', 'EXPIRED'] })
+  listInvites(
+    @Headers('authorization') authorization: string | undefined,
+    @Param('tenantId') tenantId: string,
+    @Query('cursor') cursor?: string,
+    @Query('limit') limit?: string,
+    @Query('state') state?: string,
+  ) {
+    return this.platform.listInvites(authorization, tenantId, {
+      cursor,
+      limit,
+      state,
+    });
+  }
+
   @Post('tenants/:tenantId/invites')
   @ApiBearerAuth()
   invite(
@@ -456,18 +772,113 @@ export class PlatformController {
     return this.platform.acceptInvite(authorization, body);
   }
 
+  @Patch('tenants/:tenantId/members/:membershipId/role')
+  @ApiBearerAuth()
+  @ApiBody({ type: PortalMemberRoleBodyDto })
+  @ApiOkResponse({ type: PortalMembershipMutationResponseDto })
+  changeRole(
+    @Headers('authorization') authorization: string | undefined,
+    @Param('tenantId') tenantId: string,
+    @Param('membershipId') membershipId: string,
+    @Body() body: PortalMemberRoleBodyDto,
+  ) {
+    return this.platform.changeRole(
+      authorization,
+      tenantId,
+      membershipId,
+      body,
+    );
+  }
+
+  @Put('tenants/:tenantId/members/:membershipId/event-assignments/:eventId')
+  @ApiBearerAuth()
+  @ApiBody({ type: PortalAssignmentBodyDto })
+  @ApiOkResponse({ type: PortalMembershipMutationResponseDto })
+  putAssignment(
+    @Headers('authorization') authorization: string | undefined,
+    @Param('tenantId') tenantId: string,
+    @Param('membershipId') membershipId: string,
+    @Param('eventId') eventId: string,
+    @Body() body: PortalAssignmentBodyDto,
+  ) {
+    return this.platform.putAssignment(
+      authorization,
+      tenantId,
+      membershipId,
+      eventId,
+      body,
+    );
+  }
+
+  @Delete('tenants/:tenantId/members/:membershipId/event-assignments/:eventId')
+  @ApiBearerAuth()
+  @ApiBody({ type: PortalReasonBodyDto })
+  @ApiOkResponse({ type: PortalMembershipMutationResponseDto })
+  deleteAssignment(
+    @Headers('authorization') authorization: string | undefined,
+    @Param('tenantId') tenantId: string,
+    @Param('membershipId') membershipId: string,
+    @Param('eventId') eventId: string,
+    @Body() body: PortalReasonBodyDto,
+  ) {
+    return this.platform.deleteAssignment(
+      authorization,
+      tenantId,
+      membershipId,
+      eventId,
+      body,
+    );
+  }
+
   @Post('tenants/:tenantId/members/:membershipId/revoke')
   @ApiBearerAuth()
+  @ApiBody({ type: PortalReasonBodyDto })
   revokeMember(
     @Headers('authorization') authorization: string | undefined,
     @Param('tenantId') tenantId: string,
     @Param('membershipId') membershipId: string,
-    @Body() body: { reason: string },
+    @Body() body: PortalReasonBodyDto,
   ) {
     return this.platform.revokeMember(
       authorization,
       tenantId,
       membershipId,
+      body,
+    );
+  }
+
+  @Post('tenants/:tenantId/invites/:inviteId/revoke')
+  @ApiBearerAuth()
+  @ApiBody({ type: PortalReasonBodyDto })
+  @ApiOkResponse({ type: PortalInviteRevokeResponseDto })
+  revokeInvite(
+    @Headers('authorization') authorization: string | undefined,
+    @Param('tenantId') tenantId: string,
+    @Param('inviteId') inviteId: string,
+    @Body() body: PortalReasonBodyDto,
+  ) {
+    return this.platform.revokeInvite(
+      authorization,
+      tenantId,
+      inviteId,
+      body,
+    );
+  }
+
+  @Post('tenants/:tenantId/invites/:inviteId/resend')
+  @ApiBearerAuth()
+  @ApiBody({ type: PortalReasonBodyDto })
+  @ApiOkResponse({ type: PortalInviteResendResponseDto })
+  resendInvite(
+    @Headers('authorization') authorization: string | undefined,
+    @Param('tenantId') tenantId: string,
+    @Param('inviteId') inviteId: string,
+    @Body() body: PortalReasonBodyDto,
+  ) {
+    return this.platform.resendInvite(
+      authorization,
+      tenantId,
+      inviteId,
       body,
     );
   }
