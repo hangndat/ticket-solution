@@ -22,7 +22,10 @@ export default function EventAuditPage() {
   );
   const canAudit = permissions.includes('report.read');
   const canCodes = permissions.includes('inventory.import');
-  const canJobs = canAudit || canCodes;
+  const canExportCreate = permissions.includes('export.create');
+  const canExportDownload = permissions.includes('export.download');
+  const canExport = canExportCreate || canExportDownload;
+  const canJobs = canAudit || canCodes || canExport;
 
   useEffect(() => {
     queueMicrotask(() => {
@@ -47,7 +50,7 @@ export default function EventAuditPage() {
     return (
       <SurfaceState
         kind="permission-denied"
-        description="Cần report.read (nhật ký/export) hoặc inventory.import (mã tồn kho) từ máy chủ — không suy từ tên role."
+        description="Cần report.read / inventory.import / export.* từ máy chủ — không suy từ tên role."
         onRetry={() => {
           window.location.href = `/t/${tenantId}/e/${eventId}`;
         }}
@@ -70,11 +73,18 @@ export default function EventAuditPage() {
       children: <CodesPanel tenantId={tenantId} eventId={eventId} />,
     });
   }
-  if (canAudit) {
+  if (canExport) {
     tabItems.push({
       key: 'jobs',
       label: 'Lịch sử export',
-      children: <ExportPanel tenantId={tenantId} eventId={eventId} />,
+      children: (
+        <ExportPanel
+          tenantId={tenantId}
+          eventId={eventId}
+          canCreate={canExportCreate}
+          canDownload={canExportDownload}
+        />
+      ),
     });
   }
 
