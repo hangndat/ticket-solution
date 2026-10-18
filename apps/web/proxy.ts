@@ -18,8 +18,12 @@ export default function proxy(request: NextRequest) {
     request.headers.get('x-forwarded-host') ?? request.headers.get('host');
   const { pathname, search } = request.nextUrl;
 
-  // Soft-redirect anonymous staff routes before host routing (product surface).
-  if (pathname === '/admin' || pathname === '/gate') {
+  // Soft-redirect anonymous staff + owner-ticket deeplinks before host routing.
+  const ownerTicketPath =
+    /^\/t\/[a-z0-9][a-z0-9-]{0,62}\/tickets\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+      pathname,
+    );
+  if (pathname === '/admin' || pathname === '/gate' || ownerTicketPath) {
     const token = request.cookies.get(OIDC_ACCESS_COOKIE)?.value?.trim() ?? '';
     if (!token) {
       const auth = request.nextUrl.clone();
