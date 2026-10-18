@@ -252,6 +252,7 @@ Vẫn **sau MVP** (không thuộc D7–D10, không bị “hủy” khỏi tầm
 | O01–O05, O07–O09 | (xem DECISION-LOG) | **Đã chốt MVP** | [DECISION-LOG.md](./DECISION-LOG.md) |
 | O10 | Mở rộng MVP / hủy Android·payment·seat·Wallet | **Đã chốt** 2026-10-17 — D7–D10 trong MVP; mục hủy → §6 | [DECISION-LOG.md](./DECISION-LOG.md) |
 | O06 | Retention, vùng dữ liệu, SLA? | **Đã chốt** 2026-10-18 — xem [DECISION-LOG](./DECISION-LOG.md) O06 / [O06-OPTIONS](./ops/O06-OPTIONS.md) | Privacy copy khớp số; drill RPO/RTO trên VPS trước công bố |
+| UX-11 | Auth đổi mã: Keycloak vs OTP/magic link PRD? | **Đã chốt Option A** 2026-10-18 — MVP = Keycloak verified email / UI «Cần đăng nhập»; OTP/magic link = sau MVP ([#372](https://github.com/hangndat/ticket-solution/issues/372)) | [DECISION-LOG.md](./DECISION-LOG.md) UX-11; không mở Task OTP trừ khi user chọn B |
 | ADR-09 | Provider OIDC cụ thể? | **Keycloak self-host đã chốt** — POC P4 local | [spikes/D1-OIDC-PROVIDER.md](./spikes/D1-OIDC-PROVIDER.md) |
 | ADR-11…15 | SaaS cấm; MinIO/SMTP/APNs/Caddy | **Đã chốt MVP** | [DECISION-LOG.md](./DECISION-LOG.md) |
 
