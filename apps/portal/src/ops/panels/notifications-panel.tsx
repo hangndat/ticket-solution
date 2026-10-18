@@ -1,6 +1,7 @@
 'use client';
 
-import { Alert, Button, Space, Table, Typography } from 'antd';
+import { Alert, Button, Select, Space, Table, Typography } from 'antd';
+import type { NotificationChannel, NotificationProviderStatus } from '@ticket/contracts';
 import { useCallback, useEffect, useState } from 'react';
 import { portalGet, portalMutate } from '../../client/portal-fetch';
 import { bffNotifications } from '../../prep/bff-urls';
@@ -19,6 +20,19 @@ type Props = {
   canNotify: boolean;
 };
 
+const STATE_OPTIONS: { value: NotificationProviderStatus; label: string }[] = [
+  { value: 'PENDING', label: 'PENDING' },
+  { value: 'ACCEPTED', label: 'ACCEPTED (≠ delivered)' },
+  { value: 'FAILED', label: 'FAILED' },
+  { value: 'DEAD', label: 'DEAD' },
+  { value: 'UNKNOWN', label: 'UNKNOWN' },
+];
+
+const CHANNEL_OPTIONS: { value: NotificationChannel; label: string }[] = [
+  { value: 'email', label: 'email' },
+  { value: 'push', label: 'push' },
+];
+
 export function NotificationsOpsPanel({
   tenantId,
   eventId,
@@ -27,11 +41,17 @@ export function NotificationsOpsPanel({
   const [busy, setBusy] = useState(false);
   const [view, setView] = useState<NotificationListView | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [state, setState] = useState<NotificationProviderStatus | undefined>();
+  const [channel, setChannel] = useState<NotificationChannel | undefined>();
 
   const load = useCallback(async () => {
     setBusy(true);
+    const params = new URLSearchParams();
+    params.set('limit', '50');
+    if (state) params.set('state', state);
+    if (channel) params.set('channel', channel);
     const result = await portalGet(
-      `${bffNotifications(tenantId, eventId)}?limit=50`,
+      `${bffNotifications(tenantId, eventId)}?${params.toString()}`,
     );
     const next = interpretNotificationList(
       result.status,
@@ -41,7 +61,7 @@ export function NotificationsOpsPanel({
     setView(next);
     setNotice(notificationListLabel(next));
     setBusy(false);
-  }, [tenantId, eventId]);
+  }, [tenantId, eventId, state, channel]);
 
   useEffect(() => {
     let cancelled = false;
@@ -71,20 +91,59 @@ export function NotificationsOpsPanel({
   }
 
   const items = view?.kind === 'list' ? view.items : [];
+  const alertType =
+    view?.kind === 'rejected'
+      ? 'error'
+      : view?.kind === 'unknown'
+        ? 'warning'
+        : undefined;
 
   return (
     <Space direction="vertical" size="middle" style={{ width: '100%' }}>
       <Alert
         type="warning"
         showIcon
-        message="ACCEPTED ≠ DELIVERED"
-        description="ACCEPTED chỉ nghĩa nhà cung cấp đã nhận — không chứng minh đã giao tới người nhận. Không map ACCEPTED thành «đã giao»."
+        message="ACCEPTED ≠ DELIVERED · G-N1 filters"
+        description="ACCEPTED chỉ nghĩa nhà cung cấp đã nhận — không chứng minh đã giao tới người nhận. Lọc state/channel optional (omit = legacy)."
       />
-      <Button loading={busy} onClick={() => void load()}>
-        Làm mới
-      </Button>
-      {view?.kind === 'unknown' || view?.kind === 'rejected' ? (
-        <Alert type="warning" showIcon message={notificationListLabel(view)} />
+      <Space wrap role="search" aria-label="Bộ lọc thông báo">
+        <Select
+          allowClear
+          placeholder="Provider state"
+          style={{ minWidth: 220 }}
+          value={state}
+          options={STATE_OPTIONS}
+          onChange={(v) => setState(v)}
+          aria-label="Lọc theo provider state"
+        />
+        <Select
+          allowClear
+          placeholder="Channel"
+          style={{ minWidth: 140 }}
+          value={channel}
+          options={CHANNEL_OPTIONS}
+          onChange={(v) => setChannel(v)}
+          aria-label="Lọc theo channel"
+        />
+        <Button
+          type="primary"
+          loading={busy}
+          onClick={() => void load()}
+          aria-label="Áp dụng bộ lọc thông báo"
+        >
+          Lọc
+        </Button>
+        <Button loading={busy} onClick={() => void load()}>
+          Làm mới
+        </Button>
+      </Space>
+      {alertType ? (
+        <Alert
+          type={alertType}
+          showIcon
+          message={notificationListLabel(view!)}
+          role="status"
+        />
       ) : null}
       <Table
         size="small"

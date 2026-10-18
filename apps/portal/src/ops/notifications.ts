@@ -84,15 +84,24 @@ const PII_KEYS = [
   'password',
 ] as const;
 
+/** G-N1 — optional state/channel; omit keeps legacy list behavior. */
 export function notificationsListUpstreamPath(
   scope: AdminScope,
-  cursor?: string | null,
+  query?: {
+    cursor?: string | null;
+    limit?: number;
+    state?: NotificationProviderStatus;
+    channel?: NotificationChannel;
+  },
 ): string {
   const base = eventPath(scope, 'notifications');
-  if (cursor?.trim()) {
-    return `${base}?cursor=${encodeURIComponent(cursor.trim())}`;
-  }
-  return base;
+  const params = new URLSearchParams();
+  if (query?.cursor?.trim()) params.set('cursor', query.cursor.trim());
+  if (query?.limit !== undefined) params.set('limit', String(query.limit));
+  if (query?.state) params.set('state', query.state);
+  if (query?.channel) params.set('channel', query.channel);
+  const qs = params.toString();
+  return qs ? `${base}?${qs}` : base;
 }
 
 export function notificationRetryUpstreamPath(
