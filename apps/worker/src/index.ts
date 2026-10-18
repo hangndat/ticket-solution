@@ -9,7 +9,10 @@ import {
   isApnsEnabled,
   readCredentialKeyEnvironment,
   readEmailEnvironment,
+  cleanupExpiredImportFiles,
+  createMinioObjectStore,
   readMinioEnvironment,
+  readMinioImportsEnvironment,
   readProcessEnvironment,
   reconcileDuePendingRedemptions,
   processDueAccountAnonymizations,
@@ -99,6 +102,18 @@ class WorkerRelay implements OnModuleDestroy {
           await relayExportsOnce(this.db, this.env, this.leaseOwner, 5);
         } catch {
           // Export jobs stay PENDING/PROCESSING until success.
+        }
+      }
+      const importsCfg = readMinioImportsEnvironment(this.env);
+      if (importsCfg) {
+        try {
+          await cleanupExpiredImportFiles(
+            this.db,
+            createMinioObjectStore(importsCfg),
+            20,
+          );
+        } catch {
+          // Quarantine TTL cleanup is best-effort; O06 retains objects.
         }
       }
     };
