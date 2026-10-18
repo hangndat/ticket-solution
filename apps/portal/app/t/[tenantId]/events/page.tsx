@@ -1,0 +1,204 @@
+'use client';
+
+import { Alert, Button, Space, Table, Typography } from 'antd';
+import Link from 'next/link';
+import { useParams } from 'next/navigation';
+import { useCallback, useEffect, useState } from 'react';
+import type { EventDetail } from '@ticket/contracts';
+import { portalGet } from '../../../../src/client/portal-fetch';
+import { bffEvents } from '../../../../src/prep/bff-urls';
+import { useTenantAccess } from '../../../../src/prep/use-event-access';
+import { SurfaceState } from '../../../../src/components/surface-state';
+
+type ListState =
+  | { kind: 'loading' }
+  | { kind: 'ready'; items: EventDetail[]; nextCursor: string | null }
+  | { kind: 'empty' }
+  | { kind: 'error'; message: string }
+  | { kind: 'unknown'; message: string };
+
+function parseList(json: unknown): {
+  items: EventDetail[];
+  nextCursor: string | null;
+} | null {
+  if (!json || typeof json !== 'object') return null;
+  const items = (json as { items?: unknown }).items;
+  if (!Array.isArray(items)) return null;
+  const nextCursor =
+    typeof (json as { nextCursor?: unknown }).nextCursor === 'string'
+      ? ((json as { nextCursor: string }).nextCursor as string)
+      : null;
+  return { items: items as EventDetail[], nextCursor };
+}
+
+export default function EventsListPage() {
+  const params = useParams<{ tenantId: string }>();
+  const tenantId = params.tenantId;
+  const access = useTenantAccess(tenantId);
+  const [list, setList] = useState<ListState>({ kind: 'loading' });
+  const [cursor, setCursor] = useState<string | null>(null);
+
+  const load = useCallback(
+    async (next?: string | null) => {
+      await Promise.resolve();
+      setList({ kind: 'loading' });
+      const qs = new URLSearchParams({ limit: '20' });
+      if (next) qs.set('cursor', next);
+      const res = await portalGet(`${bffEvents(tenantId)}?${qs}`);
+      if (res.networkError || res.timedOut || res.status === 0 || res.status >= 500) {
+        setList({
+          kind: 'unknown',
+          message:
+            'Chưa rõ kết quả tải danh sách sự kiện. Không giả định danh sách trống.',
+        });
+        return;
+      }
+      if (res.status === 403 || res.status === 401) {
+        setList({ kind: 'error', message: 'Không có quyền xem danh sách sự kiện.' });
+        return;
+      }
+      if (res.status !== 200) {
+        setList({
+          kind: 'error',
+          message: `Không tải được danh sách (HTTP ${res.status}).`,
+        });
+        return;
+      }
+      const parsed = parseList(res.json);
+      if (!parsed) {
+        setList({
+          kind: 'unknown',
+          message: 'Phản hồi danh sách không đúng schema — chưa rõ.',
+        });
+        return;
+      }
+      setCursor(parsed.nextCursor);
+      setList(
+        parsed.items.length === 0
+          ? { kind: 'empty' }
+          : { kind: 'ready', items: parsed.items, nextCursor: parsed.nextCursor },
+      );
+    },
+    [tenantId],
+  );
+
+  useEffect(() => {
+    if (access.kind !== 'ready') return;
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (!cancelled) void load(null);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [access.kind, load]);
+
+  if (access.kind === 'loading' || list.kind === 'loading') {
+    return <SurfaceState kind="loading" />;
+  }
+  if (access.kind === 'error') {
+    return (
+      <SurfaceState
+        kind="error"
+        description={access.message}
+        onRetry={() => window.location.reload()}
+      />
+    );
+  }
+  if (access.kind === 'permission-denied') {
+    return (
+      <SurfaceState
+        kind="permission-denied"
+        description="Thiếu quyền xem sự kiện của tổ chức này."
+        onRetry={() => {
+          window.location.href = `/t/${tenantId}`;
+        }}
+      />
+    );
+  }
+
+  const canCreate = access.tenant.tenantPermissions.includes('event.create');
+
+  return (
+    <Space direction="vertical" size="large" style={{ width: '100%' }}>
+      <Space style={{ width: '100%', justifyContent: 'space-between' }}>
+        <Typography.Title level={3} style={{ margin: 0 }}>
+          Sự kiện
+        </Typography.Title>
+        {canCreate ? (
+          <Link href={`/t/${tenantId}/events/new`}>
+            <Button type="primary">Tạo sự kiện</Button>
+          </Link>
+        ) : null}
+      </Space>
+
+      {list.kind === 'unknown' ? (
+        <Alert
+          type="warning"
+          showIcon
+          message="Chưa rõ kết quả"
+          description={list.message}
+          action={
+            <Button size="small" onClick={() => void load(null)}>
+              Kiểm tra lại
+            </Button>
+          }
+        />
+      ) : null}
+      {list.kind === 'error' ? (
+        <SurfaceState
+          kind="error"
+          description={list.message}
+          onRetry={() => void load(null)}
+        />
+      ) : null}
+      {list.kind === 'empty' ? (
+        <SurfaceState
+          kind="empty"
+          description="Chưa có sự kiện."
+          emptyAction={
+            canCreate ? (
+              <Link href={`/t/${tenantId}/events/new`}>
+                <Button type="primary">Tạo sự kiện</Button>
+              </Link>
+            ) : undefined
+          }
+        />
+      ) : null}
+      {list.kind === 'ready' ? (
+        <>
+          <Table
+            rowKey="eventId"
+            dataSource={list.items}
+            pagination={false}
+            columns={[
+              {
+                title: 'Tên',
+                dataIndex: 'name',
+                render: (name: string, row: EventDetail) => (
+                  <Link href={`/t/${tenantId}/e/${row.eventId}`}>{name}</Link>
+                ),
+              },
+              { title: 'Slug', dataIndex: 'slug' },
+              {
+                title: 'Nội dung',
+                dataIndex: 'contentStatus',
+              },
+              {
+                title: 'Nghiệp vụ',
+                dataIndex: 'businessStatus',
+              },
+              {
+                title: 'Hiển thị',
+                dataIndex: 'visibility',
+              },
+            ]}
+          />
+          {cursor ? (
+            <Button onClick={() => void load(cursor)}>Tải thêm</Button>
+          ) : null}
+        </>
+      ) : null}
+    </Space>
+  );
+}

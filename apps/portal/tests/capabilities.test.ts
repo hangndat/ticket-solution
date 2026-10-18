@@ -71,6 +71,18 @@ test('Gate report nav requires report.read — gate.confirm only unlocks deeplin
     withReport.some((m) => m.key === 'gate'),
     true,
   );
+
+  const withSetup = buildEventMenuItems('t1', 'e1', [
+    'event.update',
+    'config.publish',
+  ]);
+  for (const key of ['setup', 'types', 'sources', 'quota', 'config']) {
+    assert.equal(
+      withSetup.some((m) => m.key === key),
+      true,
+      `expected event menu key ${key}`,
+    );
+  }
 });
 
 test('platform operator chrome is isolated from staff tenant role', () => {
