@@ -485,6 +485,7 @@ export {
 } from './platform-tenant';
 export {
   listMyTenants,
+  listMyEvents,
   createMembershipInvite,
   acceptMembershipInvite,
   revokeMembershipKeepingLastOwner,
