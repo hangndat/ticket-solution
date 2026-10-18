@@ -4,7 +4,8 @@
 **Role:** `backend` · Ownership: `packages/backend/**`  
 **Architecture impact:** Không — giữ path email hiện tại; không đổi contract URL path.  
 **Run / Task:** `run_1d13e6e391a0` / rebase `task_2b0bb2005677`  
-**Exact SHA:** _(điền sau commit tip branch)_
+**Exact SHA (behavior / under review):** `e5b09a14d16c87dc57cc65befd8574735f132aea`  
+**Branch tip at handoff:** _(điền sau docs tip commit)_
 
 ## Trace — BE email ticket link
 
