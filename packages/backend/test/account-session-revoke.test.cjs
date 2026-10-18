@@ -28,7 +28,34 @@ const {
   createAccountDeletionRequest,
   processDueAccountAnonymizations,
   applyAccountAnonymization,
+  createFakeKeycloakErasureAdapter,
+  readTombstoneKeyring,
 } = require('../dist');
+
+const ISSUER = 'http://127.0.0.1:8080/realms/ticket';
+const TOMBSTONE_ENV = {
+  OIDC_ISSUER: ISSUER,
+  ACCOUNT_DELETION_TOMBSTONE_CURRENT_KEY_ID: 'k1',
+  ACCOUNT_DELETION_TOMBSTONE_KEYRING_JSON: JSON.stringify([
+    {
+      keyId: 'k1',
+      secretBase64: Buffer.alloc(32, 7).toString('base64'),
+    },
+  ]),
+};
+
+function sec1ProcessOpts() {
+  return {
+    env: TOMBSTONE_ENV,
+    leaseOwner: 'test-sec1',
+    keyring: readTombstoneKeyring(TOMBSTONE_ENV),
+    idp: createFakeKeycloakErasureAdapter({
+      async deleteUserBySubject() {
+        return { kind: 'DELETED' };
+      },
+    }),
+  };
+}
 
 const docker = (...args) =>
   execFileSync('docker', args, {
@@ -295,16 +322,26 @@ test(
       });
       assert.equal(del.state, 'REQUESTED');
 
-      // Concurrent-ish second apply after first should be idempotent.
-      const processed = await processDueAccountAnonymizations(db, 50);
+      // SEC-2: PG apply + fake IdP DELETE → COMPLETED; retry idempotent.
+      const processed = await processDueAccountAnonymizations(
+        db,
+        50,
+        sec1ProcessOpts(),
+      );
       assert.equal(processed.scanned, 1);
       assert.equal(processed.applied, 1);
+      assert.equal(processed.completed, 1);
 
       const retry = await applyAccountAnonymization(db, del.requestId);
       assert.equal(retry.applied, false);
 
-      const againProc = await processDueAccountAnonymizations(db, 50);
+      const againProc = await processDueAccountAnonymizations(
+        db,
+        50,
+        sec1ProcessOpts(),
+      );
       assert.equal(againProc.applied, 0);
+      assert.equal(againProc.completed, 0);
 
       const auditAfter = await withTenant(db, tenantId, (tx) =>
         tx.$queryRaw`SELECT count(*)::int AS n FROM audit_logs`,

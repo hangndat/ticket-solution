@@ -481,7 +481,7 @@ export function buildPlatformDeps(env: NodeJS.ProcessEnv, db: PrismaClient | nul
     const platformVerifier = createPlatformOidcVerifier(platformOidc, security);
     // Attendee/staff audience from env OIDC_AUDIENCE (ticket-api) — no MFA step-up.
     const identityVerifier = createOidcVerifier(readOidcEnvironment(env));
-    const users = db ? createPrismaIdentityUserRepository(db) : null;
+    const users = db ? createPrismaIdentityUserRepository(db, { env }) : null;
     return {
       db,
       platformVerifier,
