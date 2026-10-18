@@ -12,6 +12,11 @@ export function generateOAuthState(): string {
   return base64Url(randomBytes(16));
 }
 
+/** Cryptographically random OIDC nonce (same entropy as state). */
+export function generateOidcNonce(): string {
+  return base64Url(randomBytes(16));
+}
+
 function base64Url(buf: Buffer): string {
   return buf
     .toString('base64')

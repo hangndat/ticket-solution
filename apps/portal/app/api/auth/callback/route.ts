@@ -1,7 +1,6 @@
 import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
 import {
-  resolvePublicOrigin,
   SESSION_COOKIES,
   sessionCookieOptions,
 } from '@ticket/web-session';
@@ -10,21 +9,24 @@ import {
   isPortalOidcConfigured,
   readPortalOidcConfig,
 } from '../../../../src/oidc/config';
+import { PORTAL_AUTH_COOKIES } from '../../../../src/oidc/local-cookies';
+import { requirePublicOrigin } from '../../../../src/oidc/public-origin';
 import type { TokenGrantResponse } from '../../../../src/oidc/refresh';
 import { sanitizePortalReturnPath } from '../../../../src/oidc/return-path';
+import {
+  acceptOidcTokenGrant,
+  getRemoteJwks,
+  TokenVerifyError,
+} from '../../../../src/oidc/verify-tokens';
 
-function publicOrigin(request: NextRequest): string {
-  return (
-    resolvePublicOrigin({ url: request.url }) ?? new URL(request.url).origin
-  );
-}
-
-/** Exchange authorization code; store host-only HttpOnly cookies. */
+/** Exchange authorization code; verify JWTs; store host-only HttpOnly cookies. */
 export async function GET(request: NextRequest) {
+  const originResult = requirePublicOrigin(request);
+  if (!originResult.ok) return originResult.response;
+  const origin = originResult.origin;
+
   if (!isPortalOidcConfigured()) {
-    return NextResponse.redirect(
-      new URL('/auth?error=misconfigured', publicOrigin(request)),
-    );
+    return NextResponse.redirect(new URL('/auth?error=misconfigured', origin));
   }
 
   const config = readPortalOidcConfig()!;
@@ -35,27 +37,24 @@ export async function GET(request: NextRequest) {
 
   if (oauthError) {
     return NextResponse.redirect(
-      new URL(
-        `/auth?error=${encodeURIComponent(oauthError)}`,
-        publicOrigin(request),
-      ),
+      new URL(`/auth?error=${encodeURIComponent(oauthError)}`, origin),
     );
   }
 
   const jar = await cookies();
   const expectedState = jar.get(SESSION_COOKIES.state)?.value;
   const verifier = jar.get(SESSION_COOKIES.pkce)?.value;
+  const nonce = jar.get(PORTAL_AUTH_COOKIES.nonce)?.value;
 
   if (
     !code ||
     !state ||
     !expectedState ||
     state !== expectedState ||
-    !verifier
+    !verifier ||
+    !nonce
   ) {
-    return NextResponse.redirect(
-      new URL('/auth?error=invalid_state', publicOrigin(request)),
-    );
+    return NextResponse.redirect(new URL('/auth?error=invalid_state', origin));
   }
 
   const tokenUrl = `${discoveryBase(config.issuer)}/protocol/openid-connect/token`;
@@ -81,45 +80,71 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(
         new URL(
           `/auth?error=${encodeURIComponent(tokens.error ?? 'token_exchange')}`,
-          publicOrigin(request),
+          origin,
         ),
       );
     }
   } catch {
+    return NextResponse.redirect(new URL('/auth?error=token_exchange', origin));
+  }
+
+  let grant;
+  try {
+    grant = await acceptOidcTokenGrant({
+      accessToken: tokens.access_token,
+      idToken: tokens.id_token,
+      refreshToken: tokens.refresh_token,
+      expiresIn: tokens.expires_in,
+      issuer: config.issuer,
+      clientId: config.clientId,
+      accessAudience: config.audience,
+      jwks: getRemoteJwks(config.jwksUrl),
+      nonce,
+    });
+  } catch (error) {
+    jar.delete(SESSION_COOKIES.pkce);
+    jar.delete(SESSION_COOKIES.state);
+    jar.delete(PORTAL_AUTH_COOKIES.nonce);
+    const reason =
+      error instanceof TokenVerifyError ? error.reason : 'token_verify';
     return NextResponse.redirect(
-      new URL('/auth?error=token_exchange', publicOrigin(request)),
+      new URL(`/auth?error=${encodeURIComponent(reason)}`, origin),
     );
   }
 
-  const maxAge = Math.max(60, tokens.expires_in ?? 300);
+  const maxAge = grant.expiresIn;
   jar.set(
     SESSION_COOKIES.access,
-    tokens.access_token,
+    grant.accessToken,
     sessionCookieOptions(maxAge),
   );
-  if (tokens.refresh_token) {
+  if (grant.refreshToken) {
     jar.set(
       SESSION_COOKIES.refresh,
-      tokens.refresh_token,
+      grant.refreshToken,
       sessionCookieOptions(60 * 60 * 24 * 30),
     );
   }
-  if (tokens.id_token) {
+  if (grant.idToken) {
     jar.set(
       SESSION_COOKIES.idToken,
-      tokens.id_token,
+      grant.idToken,
       sessionCookieOptions(maxAge),
     );
   }
+  jar.set(
+    PORTAL_AUTH_COOKIES.subject,
+    grant.subject,
+    sessionCookieOptions(60 * 60 * 24 * 30),
+  );
   jar.delete(SESSION_COOKIES.pkce);
   jar.delete(SESSION_COOKIES.state);
+  jar.delete(PORTAL_AUTH_COOKIES.nonce);
 
   const postLogin = sanitizePortalReturnPath(
     jar.get(SESSION_COOKIES.returnPath)?.value,
   );
   jar.delete(SESSION_COOKIES.returnPath);
 
-  return NextResponse.redirect(
-    new URL(postLogin ?? '/', publicOrigin(request)),
-  );
+  return NextResponse.redirect(new URL(postLogin ?? '/', origin));
 }

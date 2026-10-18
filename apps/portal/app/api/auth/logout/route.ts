@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { resolvePublicOrigin } from '@ticket/web-session';
 import {
   discoveryBase,
   isPortalOidcConfigured,
@@ -10,12 +9,8 @@ import {
   readStaffIdToken,
   readStaffRefreshToken,
 } from '../../../../src/oidc/cookies';
-
-function publicOrigin(request: NextRequest): string {
-  return (
-    resolvePublicOrigin({ url: request.url }) ?? new URL(request.url).origin
-  );
-}
+import { requirePublicOrigin } from '../../../../src/oidc/public-origin';
+import { clearStaffRefreshFlightCache } from '../../../../src/oidc/refresh-flight';
 
 async function bestEffortRevokeRefresh(
   issuer: string,
@@ -43,6 +38,10 @@ async function bestEffortRevokeRefresh(
 
 /** Clear staff portal cookies only; RP-initiated end-session for ticket-admin-web. */
 export async function GET(request: NextRequest) {
+  const originResult = requirePublicOrigin(request);
+  if (!originResult.ok) return originResult.response;
+  const origin = originResult.origin;
+
   const idToken = (await readStaffIdToken()) ?? '';
   const refresh = (await readStaffRefreshToken()) ?? '';
 
@@ -56,14 +55,15 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  clearStaffRefreshFlightCache();
   await clearStaffSessionCookies();
 
   if (!isPortalOidcConfigured()) {
-    return NextResponse.redirect(new URL('/auth', publicOrigin(request)));
+    return NextResponse.redirect(new URL('/auth', origin));
   }
 
   const config = readPortalOidcConfig()!;
-  const postLogout = new URL('/auth', publicOrigin(request)).toString();
+  const postLogout = new URL('/auth', origin).toString();
   const endSession = new URL(
     `${discoveryBase(config.issuer)}/protocol/openid-connect/logout`,
   );

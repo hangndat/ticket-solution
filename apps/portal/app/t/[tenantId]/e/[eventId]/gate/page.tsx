@@ -75,7 +75,12 @@ export default function EventGateReportPage() {
         Bảng số liệu report gắn API sẵn có sẽ nối ở sóng tiếp. Quét vé chỉ trên
         app.
       </Typography.Paragraph>
-      <GateDeeplinkButton href={gateDeeplinkUrl()} />
+      <GateDeeplinkButton
+        href={gateDeeplinkUrl(process.env, '/gate', {
+          tenantId: params.tenantId,
+          eventId: params.eventId,
+        })}
+      />
     </Card>
   );
 }

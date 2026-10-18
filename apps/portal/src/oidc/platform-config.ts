@@ -1,5 +1,8 @@
 type EnvBag = Record<string, string | undefined>;
 
+/** Default matches backend PLATFORM_MFA_AUTH_TIME_MAX (15m) / security policy. */
+export const DEFAULT_PLATFORM_MFA_AUTH_TIME_MAX_SECONDS = 900;
+
 export type PlatformOidcConfig = {
   issuer: string;
   clientId: string;
@@ -8,6 +11,8 @@ export type PlatformOidcConfig = {
   scopes: string;
   audience: string;
   requiredAcr: string;
+  jwksUrl: string;
+  maxAuthAgeSeconds: number;
 };
 
 export function readPlatformOidcConfig(
@@ -20,16 +25,34 @@ export function readPlatformOidcConfig(
   const redirectUri = env.PLATFORM_OIDC_REDIRECT_URI?.trim() ?? '';
   const audience = env.PLATFORM_OIDC_AUDIENCE?.trim() ?? '';
   const requiredAcr = env.PLATFORM_OIDC_REQUIRED_ACR?.trim() ?? '';
+  const jwksUrl =
+    env.PLATFORM_OIDC_JWKS_URL?.trim() || env.OIDC_JWKS_URL?.trim() || '';
   const scopes =
     env.PLATFORM_OIDC_SCOPES?.trim() || 'openid profile email offline_access';
+  const maxAuthRaw =
+    env.PLATFORM_MFA_AUTH_TIME_MAX_SECONDS?.trim() ||
+    String(DEFAULT_PLATFORM_MFA_AUTH_TIME_MAX_SECONDS);
+  const maxAuthAgeSeconds = Number(maxAuthRaw);
   if (
     !issuer ||
     !clientId ||
     !clientSecret ||
     !redirectUri ||
     !audience ||
-    !requiredAcr
+    !requiredAcr ||
+    !jwksUrl ||
+    !Number.isFinite(maxAuthAgeSeconds) ||
+    maxAuthAgeSeconds < 60 ||
+    maxAuthAgeSeconds > 3600
   ) {
+    return null;
+  }
+  try {
+    const url = new URL(jwksUrl);
+    if (url.protocol !== 'https:' && url.protocol !== 'http:') {
+      return null;
+    }
+  } catch {
     return null;
   }
   return {
@@ -40,6 +63,8 @@ export function readPlatformOidcConfig(
     scopes,
     audience,
     requiredAcr,
+    jwksUrl,
+    maxAuthAgeSeconds: Math.floor(maxAuthAgeSeconds),
   };
 }
 
