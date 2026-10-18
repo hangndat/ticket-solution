@@ -5,7 +5,7 @@
 | Issue | #345 (Epic #301 → Story #305) |
 | Role | `backend` (`docs/agents/roles/backend.md`) |
 | Architecture impact | **Không** — invariant O06 hiện hữu; không IdP / SEC-2 (#344) |
-| Exact SHA | _(điền sau commit tip branch)_ |
+| Exact SHA | `496824b1def73e140a8010ef857f48972bd30717` |
 | Ownership | `packages/backend` migration + DB test; worker path đã gọi `processDueAccountAnonymizations` |
 
 ## Finding đóng (SEC-1)
