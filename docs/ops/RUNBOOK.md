@@ -44,6 +44,16 @@ Alert gợi ý (khi có metric): Gate error tăng, queue age tăng, DB pool wait
 
 - Retry cùng idempotency-key / tra operation; không tạo giao dịch mới.
 
+### 3.5 TicketIssued email `DEAD` / `TICKET_CREDENTIAL_KEY misconfigured`
+
+Triệu chứng: `notifications.state=DEAD`, `last_error` chứa credential key; worker/api `printenv` key **len 0** dù `/opt/vemoki/.env` có giá trị.
+
+1. Trên VPS: `set -a; . /opt/vemoki/.env; set +a` rồi  
+   `cd /opt/vemoki/src/infra/deploy && docker compose --env-file /opt/vemoki/.env up -d --no-deps --force-recreate api worker`.
+2. Verify: `docker exec vemoki-worker-1 sh -c 'echo ${#TICKET_CREDENTIAL_KEY}'` → >0 (không in giá trị).
+3. Resend vé/email DEAD qua CS (không tự “reopen” DEAD im lặng).
+4. Không commit secrets; không `docker compose` recreate api/worker trong shell sạch mà không source `.env` nếu interpolate trống.
+
 ## 4. Backup / restore
 
 ```bash
