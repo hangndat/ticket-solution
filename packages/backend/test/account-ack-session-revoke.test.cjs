@@ -28,7 +28,37 @@ const {
   createAccountDeletionRequest,
   applyAccountAnonymization,
   processDueAccountAnonymizations,
+  createFakeKeycloakErasureAdapter,
+  readTombstoneKeyring,
 } = require('../dist');
+
+/** SEC-2: PG apply mints tombstone before scrub — inject synthetic keyring (same as session-revoke). */
+const ISSUER = 'http://127.0.0.1:8080/realms/ticket';
+const TOMBSTONE_ENV = {
+  OIDC_ISSUER: ISSUER,
+  ACCOUNT_DELETION_TOMBSTONE_CURRENT_KEY_ID: 'k1',
+  ACCOUNT_DELETION_TOMBSTONE_KEYRING_JSON: JSON.stringify([
+    {
+      keyId: 'k1',
+      secretBase64: Buffer.alloc(32, 9).toString('base64'),
+    },
+  ]),
+};
+
+function ackProcessOpts() {
+  return {
+    env: TOMBSTONE_ENV,
+    leaseOwner: 'test-sec1-ack',
+    keyring: readTombstoneKeyring(TOMBSTONE_ENV),
+    // Fake IdP so due-worker can reach applied without IDP_KEYRING_MISSING skip;
+    // COMPLETED is not asserted here (ACK focus = revoke + apply idempotent).
+    idp: createFakeKeycloakErasureAdapter({
+      async deleteUserBySubject() {
+        return { kind: 'DELETED' };
+      },
+    }),
+  };
+}
 
 const docker = (...args) =>
   execFileSync('docker', args, {
@@ -432,7 +462,11 @@ test(
       );
       assert.equal(afterAck2[0].status, 'REVOKED');
 
-      const processed = await processDueAccountAnonymizations(db, 50);
+      const processed = await processDueAccountAnonymizations(
+        db,
+        50,
+        ackProcessOpts(),
+      );
       assert.equal(processed.applied, 1);
       const retry = await applyAccountAnonymization(db, del2.requestId);
       assert.equal(retry.applied, false);
