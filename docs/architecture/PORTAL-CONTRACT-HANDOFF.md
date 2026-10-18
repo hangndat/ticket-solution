@@ -370,8 +370,8 @@ Security-sensitive slices → `reviewer-dod` + `reviewer-security` trên exact S
 
 ## 11. Kết luận
 
-**Đủ để triển khai trong scope** cho coordinator shared-contracts Tasks #422 và #431.
+**Đủ để triển khai trong scope** — design handoff + **verify** contracts đã land (`import-invite` upload/mapping + `portal-admin` privacy DTOs) khớp quyết định dưới.
 
-- Import: multi-step + **multipart quarantine upload** + legacy sync tương thích.
-- Privacy: ADR-20 §7.1 projections xác minh khớp source (perm + schema).
-- Không phải security/UAT PASS; BE/tests/reviewer exact SHA vẫn bắt buộc trước Hoàn thành.
+- Import: multi-step + multipart quarantine + legacy sync; quota allocate chỉ tại issue/claim.
+- Privacy: không reason/diff/suffix; platform health = counts; O06 730d/90d neo DECISION-LOG.
+- Còn lại cho BE/OpenAPI/web consumers + reviewer exact SHA — không phải UAT/security PASS từ docs này.
