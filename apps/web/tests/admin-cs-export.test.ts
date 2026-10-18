@@ -7,7 +7,12 @@ import {
   interpretEventList,
 } from '../src/admin/create-event';
 import {
+  CS_RESEND_COOLDOWN_SECONDS,
   CS_UNKNOWN,
+  csProviderStatusLabel,
+  csResendRejectedLabel,
+  csViewLabel,
+  formatCsTimelineItem,
   interpretCsDetail,
   interpretCsList,
   interpretCsResend,
@@ -133,6 +138,116 @@ describe('CS paths and interpreters', () => {
       ).kind,
       'unknown',
     );
+  });
+});
+
+describe('CS status / timeline / cooldown copy', () => {
+  it('maps PENDING/FAILED/DEAD/ACCEPTED honestly; DELIVERED only when literal', () => {
+    assert.match(csProviderStatusLabel('PENDING'), /PENDING/);
+    assert.match(csProviderStatusLabel('FAILED'), /FAILED/);
+    assert.match(csProviderStatusLabel('DEAD'), /DEAD/);
+    const accepted = csProviderStatusLabel('ACCEPTED');
+    assert.match(accepted, /ACCEPTED/);
+    assert.equal(/đã giao tới người nhận/.test(accepted), true);
+    assert.equal(/^ACCEPTED \(delivered\)$/i.test(accepted), false);
+    assert.equal(/DELIVERED/.test(accepted), false);
+    const delivered = csProviderStatusLabel('DELIVERED');
+    assert.match(delivered, /^DELIVERED/);
+    assert.match(delivered, /bằng chứng giao/);
+  });
+
+  it('formats timeline as time / action / result without inventing DELIVERED', () => {
+    const row = formatCsTimelineItem({
+      at: '2026-10-18T01:00:00.000Z',
+      kind: 'notification.email',
+      summary: 'notification ACCEPTED',
+    });
+    assert.equal(row.time, '2026-10-18T01:00:00.000Z');
+    assert.match(row.action, /email/i);
+    assert.match(row.result, /ACCEPTED/);
+    assert.equal(/DELIVERED/.test(row.result), false);
+    const checkin = formatCsTimelineItem({
+      at: '2026-10-18T02:00:00.000Z',
+      kind: 'checkin.confirmed',
+      summary: 'check-in confirmed',
+    });
+    assert.match(checkin.action, /Check-in/i);
+    assert.match(checkin.result, /xác nhận/i);
+  });
+
+  it('surfaces cooldown, limit, and permission denied for resend', () => {
+    assert.equal(CS_RESEND_COOLDOWN_SECONDS, 60);
+    assert.match(
+      csResendRejectedLabel('RESEND_COOLDOWN', 'Resend cooldown active'),
+      /RESEND_COOLDOWN/,
+    );
+    assert.match(
+      csResendRejectedLabel('RESEND_COOLDOWN', 'x'),
+      /60s/,
+    );
+    assert.match(csResendRejectedLabel('RESEND_LIMIT', 'x'), /RESEND_LIMIT/);
+    assert.match(
+      csResendRejectedLabel('PERMISSION_DENIED', 'no'),
+      /PERMISSION_DENIED/,
+    );
+    assert.match(
+      csResendRejectedLabel('PERMISSION_DENIED', 'no'),
+      /cs\.lookup|cs\.resend/,
+    );
+    const view = interpretCsResend(
+      429,
+      { code: 'RESEND_COOLDOWN', message: 'Resend cooldown active' },
+      false,
+      summary.ticketId,
+    );
+    assert.equal(view.kind, 'rejected');
+    if (view.kind === 'rejected') {
+      assert.match(csViewLabel(view), /RESEND_COOLDOWN/);
+      assert.match(csViewLabel(view), /chưa tạo vé mới/i);
+    }
+    const denied = interpretCsResend(
+      403,
+      { code: 'PERMISSION_DENIED', message: 'missing cs.resend' },
+      false,
+      summary.ticketId,
+    );
+    assert.equal(denied.kind, 'rejected');
+    if (denied.kind === 'rejected') {
+      assert.match(csViewLabel(denied), /PERMISSION_DENIED/);
+    }
+  });
+
+  it('detail label includes delivery status without claiming DELIVERED from ACCEPTED', () => {
+    const detail = interpretCsDetail(
+      200,
+      {
+        ...summary,
+        notification: {
+          channel: 'email',
+          state: 'ACCEPTED',
+          providerStatus: 'ACCEPTED',
+          providerRef: null,
+          attempts: 1,
+          lastError: null,
+        },
+        timeline: [
+          {
+            at: '2026-10-18T01:00:00.000Z',
+            kind: 'notification.email',
+            summary: 'notification ACCEPTED',
+          },
+        ],
+      },
+      false,
+      summary.ticketId,
+    );
+    assert.equal(detail.kind, 'detail');
+    if (detail.kind === 'detail') {
+      const label = csViewLabel(detail);
+      assert.match(label, /CS: chi tiết/);
+      assert.match(label, /ACCEPTED/);
+      assert.equal(/DELIVERED/.test(label), false);
+    }
   });
 });
 
