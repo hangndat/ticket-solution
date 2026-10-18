@@ -11,7 +11,7 @@
 | Source integration refs | `f551b6d2bdc06742f74a49a0970cb2bfae2f4e0e` · docs merge PR #308 `24ac8d9e1cca7985dea17d85862b1395cade3e4c` |
 | Deploy tip marker (D12) | `0a65f3c2f2d51357ee1a6270151d279758188fb7` — **ancestor** of tip; chứaize migration + worker poll landed in #297 |
 | Impl SHA (anonymize code) | `0a65f3c2f2d51357ee1a6270151d279758188fb7` (unchanged on tip; this PR = verification artifact only) |
-| Tip SHA (this artifact commit) | 428251c3036b6c1ee74943aa1386deb0e4ea800f |
+| Tip SHA | **`de2952d33db1ffdd2c7268d5759f08eb51a6f145`** (artifact content) — nếu có commit docs-only sau đó, DoD lấy **PR HEAD** exact SHA |
 | productionClaim | **false** — local isolated Docker Postgres tests only; **không** claim local tests = prod |
 
 ## 1. Verdict (implementer)
