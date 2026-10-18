@@ -492,7 +492,7 @@ export function RedeemForm({
               onChange={(e) => setTenantId(e.target.value)}
               autoComplete="off"
               spellCheck={false}
-              placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+              placeholder="UUID tổ chức"
             />
           </label>
           <label>
@@ -504,7 +504,7 @@ export function RedeemForm({
               onChange={(e) => setEventId(e.target.value)}
               autoComplete="off"
               spellCheck={false}
-              placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+              placeholder="UUID sự kiện"
             />
           </label>
           <div className="redeem-versions">
@@ -744,8 +744,12 @@ export function RedeemForm({
 
       {raw ? (
         <details className="redeem-meta">
-          <summary>Phản hồi máy chủ (kỹ thuật)</summary>
-          <pre className="me-result" tabIndex={0}>
+          <summary>Chi tiết kỹ thuật (đóng mặc định)</summary>
+          <pre
+            className="me-result"
+            tabIndex={0}
+            aria-label="Phản hồi máy chủ dạng JSON — chỉ dành cho hỗ trợ kỹ thuật"
+          >
             {raw}
           </pre>
         </details>

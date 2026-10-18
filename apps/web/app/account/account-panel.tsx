@@ -14,8 +14,53 @@ import {
 import { REQUEST_TIMEOUT_MS } from '../../src/redeem/poll-operation';
 import { SurfaceState } from '../../src/ui/surface-state';
 
+type DeletionCurrent = {
+  requestId: string;
+  state: string;
+  requestedAt: string;
+};
+
+function asDeletionCurrent(json: unknown): DeletionCurrent | null {
+  if (!json || typeof json !== 'object' || Array.isArray(json)) return null;
+  const body = json as Record<string, unknown>;
+  if (typeof body.requestId !== 'string' || !body.requestId.trim()) {
+    return null;
+  }
+  return {
+    requestId: body.requestId.trim(),
+    state:
+      typeof body.state === 'string' && body.state.trim()
+        ? body.state.trim()
+        : 'AWAITING_POLICY',
+    requestedAt:
+      typeof body.requestedAt === 'string' ? body.requestedAt : '',
+  };
+}
+
+function shortId(id: string): string {
+  if (id.length <= 12) return id;
+  return `${id.slice(0, 8)}…`;
+}
+
+function stateLabel(state: string): string {
+  switch (state) {
+    case 'REQUESTED':
+      return 'Đã gửi yêu cầu';
+    case 'UNDER_REVIEW':
+      return 'Đang xem xét';
+    case 'AWAITING_POLICY':
+      return 'Đang chờ xử lý theo chính sách';
+    case 'COMPLETED':
+      return 'Đã hoàn tất';
+    case 'REJECTED':
+      return 'Đã từ chối';
+    default:
+      return 'Đang theo dõi';
+  }
+}
+
 export function AccountPanel() {
-  const [current, setCurrent] = useState<unknown>(null);
+  const [current, setCurrent] = useState<DeletionCurrent | null>(null);
   const [loadPhase, setLoadPhase] = useState<'loading' | 'ready' | 'error'>(
     'loading',
   );
@@ -43,7 +88,7 @@ export function AccountPanel() {
         return;
       }
       if (result.status >= 200 && result.status < 300) {
-        setCurrent(result.json);
+        setCurrent(asDeletionCurrent(result.json));
         setLoadPhase('ready');
         return;
       }
@@ -58,7 +103,9 @@ export function AccountPanel() {
         return;
       }
       setLoadPhase('error');
-      setLoadError(`Không tải được trạng thái tài khoản (HTTP ${result.status}).`);
+      setLoadError(
+        'Không tải được trạng thái tài khoản. Thử lại sau vài phút.',
+      );
     })();
   }, []);
 
@@ -117,9 +164,41 @@ export function AccountPanel() {
         />
       ) : null}
       {current ? (
-        <pre className="me-result" data-testid="account-deletion-current">
-          {JSON.stringify(current, null, 2)}
-        </pre>
+        <section
+          className="notice"
+          role="status"
+          data-testid="account-deletion-current"
+        >
+          <h2>Yêu cầu xóa đang mở</h2>
+          <dl>
+            <div>
+              <dt>Trạng thái</dt>
+              <dd>{stateLabel(current.state)}</dd>
+            </div>
+            <div>
+              <dt>Mã theo dõi</dt>
+              <dd>
+                <code title={current.requestId}>
+                  {shortId(current.requestId)}
+                </code>
+              </dd>
+            </div>
+            {current.requestedAt ? (
+              <div>
+                <dt>Thời điểm gửi</dt>
+                <dd>
+                  <time dateTime={current.requestedAt}>
+                    {current.requestedAt}
+                  </time>
+                </dd>
+              </div>
+            ) : null}
+          </dl>
+          <p>
+            Đây chưa phải đã xóa dữ liệu. Hệ thống vẫn đang xử lý theo chính
+            sách (mục tiêu ≤ 30 ngày).
+          </p>
+        </section>
       ) : null}
       <label>
         <input
@@ -157,9 +236,9 @@ export function AccountPanel() {
         >
           {view.kind === 'ok' ? (
             <p>
-              Đã tiếp nhận yêu cầu {view.value.requestId}. Đây chưa phải xóa dữ
-              liệu ngay; chúng tôi xử lý xóa hoặc ẩn danh trong ≤ 30 ngày theo
-              chính sách.
+              Đã tiếp nhận yêu cầu {shortId(view.value.requestId)}. Đây chưa
+              phải xóa dữ liệu ngay; chúng tôi xử lý xóa hoặc ẩn danh trong ≤ 30
+              ngày theo chính sách.
             </p>
           ) : (
             <p>{viewLabel(view)}</p>
