@@ -23,8 +23,11 @@ function resolveApsEnvironment(
   return raw === 'production' ? 'production' : 'development';
 }
 
-/** Public (non-secret) production defaults for Release / TestFlight bake. */
-const VEMOKI_PROD_PUBLIC = {
+/**
+ * Public (non-secret) production defaults for Release / TestFlight bake.
+ * Issuer stays on auth.vemoki.com — independent of O13 web apex vs app.vemoki.com.
+ */
+export const VEMOKI_PROD_PUBLIC = {
   apiBaseUrl: 'https://api.vemoki.com',
   oidcIssuer: 'https://auth.vemoki.com/realms/ticket',
   oidcClientId: 'ticket-mobile',
