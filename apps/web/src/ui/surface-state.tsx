@@ -36,12 +36,19 @@ export function SurfaceState({
   testId,
 }: SurfaceStateProps) {
   const role = kind === 'error' || kind === 'unknown' ? 'alert' : 'status';
+  const ariaLive =
+    kind === 'loading'
+      ? 'polite'
+      : kind === 'error' || kind === 'unknown'
+        ? 'assertive'
+        : undefined;
   return (
     <aside
       className={surfaceStateClass(kind)}
       role={role}
       aria-busy={kind === 'loading' ? true : undefined}
-      aria-live={kind === 'loading' ? 'polite' : undefined}
+      aria-live={ariaLive}
+      aria-atomic={ariaLive ? true : undefined}
       data-testid={testId}
       data-surface-state={kind}
     >
