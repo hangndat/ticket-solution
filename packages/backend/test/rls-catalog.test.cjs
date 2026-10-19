@@ -46,6 +46,8 @@ const DEFINER_OWNER_TABLES = new Set([
   'notifications',
   // P2-ONBOARD: register_pending_tenant INSERT (FORCE RLS + owner policy).
   'tenant_registrations',
+  // P2-ROLES-PRESET: accept_membership_invite resolves role_presets (FORCE RLS).
+  'role_presets',
 ]);
 /** Platform metadata pool — USING(true) cross-tenant (NOBYPASSRLS). */
 const PLATFORM_OPEN_TABLES = new Set([
@@ -259,6 +261,8 @@ test(
         'platform_operations',
         'tenant_admin_operations',
         'membership_invites',
+        'tenant_registrations',
+        'role_presets',
         'support_grants',
         'account_deletion_requests',
         'tenant_email_usage',

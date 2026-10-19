@@ -515,8 +515,23 @@ export {
   tenantPermissionsForRole,
   eventPermissionsForRole,
   isMembershipRole,
+  isPresetId,
+  isMembershipRoleOrPresetId,
+  parseInviteRole,
+  inviteRoleStorageKey,
+  assertCatalogPermissions,
+  isCatalogPermission,
+  PERMISSION_CATALOG,
   ROLE_SCHEMA_VERSION,
+  type InviteRoleRef,
 } from './role-map';
+export {
+  createRolePreset,
+  listRolePresets,
+  getRolePreset,
+  loadPresetInTenant,
+  type RolePresetRecord,
+} from './role-presets';
 export {
   bootstrapPlatformOperator,
   requireActivePlatformOperator,

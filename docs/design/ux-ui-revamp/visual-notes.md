@@ -3,11 +3,13 @@
 Epic [#471](https://github.com/hangndat/ticket-solution/issues/471) · Issue [#472](https://github.com/hangndat/ticket-solution/issues/472)  
 Flow / states / AC / triển khai: [`README.md`](./README.md)
 
+> **Lịch sử Phase 1.** Tokens/type dưới đây phản ánh freeze Epic #471 (Syne / palette v1). **Coding sau Visual Identity v2 + Phase 2** dùng Live Pulse tại [`../visual-identity-v2/`](../visual-identity-v2/) và [`phase-2/visual-notes.md`](./phase-2/visual-notes.md) — không invent token mới ngoài các freeze đó.
+
 ---
 
 ## 0. Brand / visual budget
 
-Nguồn chốt: [`brand/vemoki/tokens.json`](../../../brand/vemoki/tokens.json)  
+Nguồn chốt lúc Phase 1: [`brand/vemoki/tokens.json`](../../../brand/vemoki/tokens.json) *(đã supersede bởi Live Pulse v2 — xem note trên)*  
 Wordmark: `vemoki` + signal `↗` · Assets: `mark.svg`, `lockup.png`, `og.png`, `app-icon.png`
 
 ### Tokens

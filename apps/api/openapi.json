@@ -3646,9 +3646,140 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateInviteBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "platform"
+        ]
+      }
+    },
+    "/v1/tenants/{tenantId}/role-presets": {
+      "get": {
+        "operationId": "PlatformController_listRolePresets",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RolePresetsListDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "platform"
+        ]
+      },
+      "post": {
+        "operationId": "PlatformController_createRolePreset",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRolePresetBodyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RolePresetDtoSchema"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "platform"
+        ]
+      }
+    },
+    "/v1/tenants/{tenantId}/role-presets/{presetId}": {
+      "get": {
+        "operationId": "PlatformController_getRolePreset",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "presetId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RolePresetDtoSchema"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -6232,6 +6363,94 @@
           "reason"
         ]
       },
+      "InviteRolePresetDto": {
+        "type": "object",
+        "properties": {
+          "presetId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "presetId"
+        ]
+      },
+      "CreateInviteBodyDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "role": {
+            "oneOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "Owner",
+                  "Manager",
+                  "CS",
+                  "Supervisor",
+                  "Scanner"
+                ]
+              },
+              {
+                "$ref": "#/components/schemas/InviteRolePresetDto"
+              }
+            ],
+            "description": "MembershipRole enum or { presetId } — never client permission arrays"
+          }
+        },
+        "required": [
+          "email",
+          "role"
+        ]
+      },
+      "RolePresetDtoSchema": {
+        "type": "object",
+        "properties": {
+          "presetId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tenantId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "schemaVersion": {
+            "type": "number"
+          },
+          "tenantPermissions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "eventPermissions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "presetId",
+          "tenantId",
+          "name",
+          "schemaVersion",
+          "tenantPermissions",
+          "eventPermissions",
+          "createdAt"
+        ]
+      },
       "MeEventItemDto": {
         "type": "object",
         "properties": {
@@ -6529,13 +6748,7 @@
           },
           "role": {
             "type": "string",
-            "enum": [
-              "Owner",
-              "Manager",
-              "CS",
-              "Supervisor",
-              "Scanner"
-            ]
+            "description": "Built-in MembershipRole or role_presets.id"
           },
           "activatedAt": {
             "type": "string",
@@ -6593,13 +6806,7 @@
           },
           "role": {
             "type": "string",
-            "enum": [
-              "Owner",
-              "Manager",
-              "CS",
-              "Supervisor",
-              "Scanner"
-            ]
+            "description": "Built-in MembershipRole or role_presets.id"
           },
           "state": {
             "type": "string",
@@ -6650,6 +6857,43 @@
         "required": [
           "items",
           "nextCursor"
+        ]
+      },
+      "RolePresetsListDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RolePresetDtoSchema"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "CreateRolePresetBodyDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "tenantPermissions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "eventPermissions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "name"
         ]
       },
       "PortalMemberRoleBodyDto": {

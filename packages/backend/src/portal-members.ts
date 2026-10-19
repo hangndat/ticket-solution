@@ -208,7 +208,7 @@ export async function listPortalMembers(
       membershipId: r.id,
       userId: r.user_id,
       emailMasked: maskEmail(r.email),
-      role: r.role as MembershipRole,
+      role: r.role,
       activatedAt: r.activated_at ? r.activated_at.toISOString() : null,
       revokedAt: r.revoked_at ? r.revoked_at.toISOString() : null,
       eventAssignments: (byMembership.get(r.id) ?? []).map((a) => ({
@@ -368,7 +368,7 @@ export async function listPortalInvites(
     const items: PortalInviteSummary[] = page.map((r) => ({
       inviteId: r.id,
       emailMasked: maskEmail(r.email) ?? '***',
-      role: r.role as MembershipRole,
+      role: r.role,
       state: r.derived_state,
       expiresAt: r.expires_at.toISOString(),
       deliveryState: deliveryStateFromOutbox(r.outbox_status),
