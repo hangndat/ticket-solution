@@ -1,65 +1,72 @@
 {
-  "timeUTC": "2026-10-19T08:16:00+00:00",
+  "timeUTC": "2026-10-19T08:45:00+00:00",
   "task": 327,
   "epic": 301,
   "story": 307,
   "verdict": "FAIL",
   "physicalTfSmokePass": false,
+  "tfBinaryOnDevice": false,
   "submittedForReview": false,
   "released": false,
   "cloudBuild": false,
   "target": {
-    "version": "1.0.0",
-    "build": "13",
+    "marketingVersion": "1.0.0",
+    "build": "14",
+    "ascDeliveryUuid": "fc3a28b8-c0d3-4358-a481-de3a2ab835c8",
     "bundleId": "com.hangndat.ticket",
     "team": "BLUA62D52G",
-    "ascBuild10DeliveryId": "45c730c3-7caa-4b28-92fb-315cf07bce5d",
-    "note": "Device on build 13; S4-T2 ASC evidence was build 10"
+    "ipaSHA256": "84de550b34c09b07e847ab38eea6880a684b85fd30e27b8ee1bb005c03ab4279",
+    "ipaPath": "apps/mobile/.expo/tf-upload-14/export/Vemoki.ipa",
+    "processingState": "VALID",
+    "prodBakeVerified": true,
+    "priorFailBuild": "13",
+    "priorFailReason": "missing prod EXPO_PUBLIC bake on TF binary"
   },
-  "device": {
-    "name": "DatHN iPhone",
-    "coreDeviceId": "CB22153A-C24F-547E-87FC-34EC62527838",
-    "udid": "00008130-000618E402D1001C",
-    "os": "26.6.1",
-    "lockState": {
-      "passcodeRequired": false,
-      "unlockedSinceBoot": true
+  "betaGroup": {
+    "name": "James",
+    "isInternalGroup": true
+  },
+  "testers": [
+    {
+      "email": "hangndat@gmail.com",
+      "inviteType": "EMAIL"
+    }
+  ],
+  "devices": {
+    "primary": {
+      "name": "Dexter\u2019s iPhone 16 Pro",
+      "coreDeviceId": "06CAC741-EB05-55B0-AAE6-14D7B49F50BB",
+      "udid": "00008140-000605803C01801C",
+      "installedVemoki": {
+        "version": "0.1.0",
+        "build": "7"
+      },
+      "testFlightAppInstalled": false,
+      "tfSmokeEligible": false,
+      "usbInstallDistributionIpa": {
+        "attempted": true,
+        "result": "FAIL",
+        "error": "0xe800801f Beta profile entitlement"
+      }
     },
-    "installedVemoki": {
-      "version": "1.0.0",
-      "build": "13"
+    "outOfScope": {
+      "name": "DatHN iPhone",
+      "note": "had TF 1.0.0 (13); session prioritized Dexter per dispatch"
     }
   },
-  "smoke": {
-    "devicectlLaunch": true,
-    "prodApiBaked": false,
-    "demoCatalogVisible": true,
-    "misconfiguredApiBanner": true,
-    "attendeeQrProd": false,
-    "staffGateCameraProd": false,
-    "deepLinksAttempted": [
-      "vemoki://staff",
-      "ticketsolution://staff",
-      "vemoki://my-tickets",
-      "vemoki://events/demo-mfest"
-    ]
+  "smokeChecklist": {
+    "launchTf14": "FAIL",
+    "attendeeQrProd": "FAIL",
+    "staffGateCameraProd": "FAIL",
+    "push": "SKIP"
   },
-  "artifacts": {
-    "screenshotDir": "apps/mobile/.uat-artifacts/s4-t3",
-    "files": [
-      "01-launch.png",
-      "05-my-tickets-tab.png",
-      "07-fixture-event.png"
-    ],
-    "gitignored": true
+  "uatArtifactsDir": "apps/mobile/.uat-artifacts/s4-t3-dexter",
+  "coordinatorAsk": {
+    "messageId": "msg_2b770c6e332f",
+    "question": "Install TF 1.0.0 (14) on Dexter",
+    "result": "timeout_600s_no_reply"
   },
-  "automation": {
-    "screenshotTool": "pymobiledevice3 developer dvt screenshot",
-    "idevicescreenshot": "FAIL screenshotr Invalid service",
-    "accessibilityPerformPress": "partial \u2014 tab bar unreliable",
-    "wdaOnDevice": false,
-    "wdaInstallBlocked": "DatHN not in provisioning profile"
-  },
-  "blocker": "TF 1.0.0 (13) on device lacks production public config bake; re-archive with APS_ENVIRONMENT=production then re-run prod smoke",
-  "evidenceTipSha": "e528b87f6d9bc8e466a05b5d50777b24f0b573a8"
+  "blocker": "Dexter missing TestFlight app + TF binary 14; operator install required",
+  "apiKeyId": "KHT3SAL2FS",
+  "evidenceTipSha": "f54006938235dbbd4b159af686f4517378ac004a"
 }
