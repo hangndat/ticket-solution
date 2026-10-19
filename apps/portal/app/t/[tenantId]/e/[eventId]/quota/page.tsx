@@ -1,6 +1,8 @@
 'use client';
 
-import { Alert, Button, Descriptions, Progress, Space, Typography } from 'antd';
+import { StatisticCard } from '@ant-design/pro-components';
+import { Alert, Button, Progress } from 'antd';
+import { PortalPage } from '../../../../../../src/components/portal-page';
 import { useParams } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import {
@@ -99,14 +101,11 @@ export default function QuotaPage() {
       : undefined;
 
   return (
-    <Space direction="vertical" size="large" style={{ width: '100%' }}>
-      <Space style={{ width: '100%', justifyContent: 'space-between' }}>
-        <Typography.Title level={3} style={{ margin: 0 }}>
-          {t('nav.event.quota')}
-        </Typography.Title>
-        <Button onClick={() => void load()}>{t('gate.h_3keb7')}</Button>
-      </Space>
-
+    <PortalPage
+      title={t('nav.event.quota')}
+      extra={<Button onClick={() => void load()}>{t('gate.h_3keb7')}</Button>}
+      loading={kind === 'loading'}
+    >
       {kind === 'loading' ? <SurfaceState kind="loading" /> : null}
       {kind === 'unknown' ? (
         <Alert
@@ -130,25 +129,33 @@ export default function QuotaPage() {
       ) : null}
       {kind === 'ready' && quota ? (
         <>
-          <Descriptions bordered size="small" column={1}>
-            <Descriptions.Item label={t('quota.h_1h6b62d')}>
-              {quota.allocated}
-            </Descriptions.Item>
-            <Descriptions.Item label="Capacity">
-              {quota.capacity === null ? t('quota.h_1tnoz3k') : quota.capacity}
-            </Descriptions.Item>
-          </Descriptions>
+          <StatisticCard.Group>
+            <StatisticCard
+              statistic={{
+                title: t('quota.h_1h6b62d'),
+                value: quota.allocated,
+              }}
+            />
+            <StatisticCard
+              statistic={{
+                title: 'Capacity',
+                value:
+                  quota.capacity === null ? t('quota.h_1tnoz3k') : quota.capacity,
+              }}
+            />
+          </StatisticCard.Group>
           {percent !== undefined ? (
-            <Progress percent={percent} status="active" />
+            <Progress percent={percent} status="active" style={{ marginTop: 16 }} />
           ) : (
             <Alert
               type="info"
               showIcon
               message={t('quota.capacityUnlimited')}
+              style={{ marginTop: 16 }}
             />
           )}
         </>
       ) : null}
-    </Space>
+    </PortalPage>
   );
 }

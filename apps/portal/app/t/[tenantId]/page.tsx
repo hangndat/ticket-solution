@@ -1,6 +1,8 @@
 'use client';
 
-import { Button, Card, List, Typography } from 'antd';
+import { ProList, StatisticCard } from '@ant-design/pro-components';
+import { Button } from 'antd';
+import { PortalPage } from '../../../src/components/portal-page';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useTenantAccess } from '../../../src/prep/use-event-access';
@@ -61,15 +63,11 @@ export default function TenantOverviewPage() {
   const canList = tenant.tenantPermissions.includes('event.list');
 
   return (
-    <Card>
-      <Typography.Title level={3} style={{ marginTop: 0 }}>
-        {tenant.name}
-      </Typography.Title>
-      <Typography.Paragraph type="secondary">
-        {t('tenant.home.meta', { slug: tenant.slug, role: tenant.role, status: tenant.status })}
-      </Typography.Paragraph>
-
-      <div style={{ marginBottom: 16, display: 'flex', gap: 8 }}>
+    <PortalPage
+      title={tenant.name}
+      subTitle={t('tenant.home.meta', { slug: tenant.slug, role: tenant.role, status: tenant.status })}
+      extra={
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         {canList ? (
           <Link href={`/t/${tenantId}/events`}>
             <Button>{t('common.h_8mpr7p')}</Button>
@@ -85,7 +83,12 @@ export default function TenantOverviewPage() {
             <Button>{t('nav.org.members')}</Button>
           </Link>
         ) : null}
-      </div>
+        </div>
+      }
+    >
+      <StatisticCard.Group style={{ marginBottom: 16 }}>
+        <StatisticCard statistic={{ title: t('nav.org.events'), value: events.length }} />
+      </StatisticCard.Group>
 
       {events.length === 0 ? (
         <SurfaceState
@@ -100,26 +103,25 @@ export default function TenantOverviewPage() {
           }
         />
       ) : (
-        <List
-          header={<Typography.Text strong>{t('common.h_6izk0k')}</Typography.Text>}
+        <ProList
+          headerTitle={t('common.h_6izk0k')}
           dataSource={events}
-          renderItem={(item) => (
-            <List.Item
-              actions={[
-                <Link
-                  key="open"
-                  href={`/t/${item.tenantId}/e/${item.eventId}`}
-                >{t('common.mo')}</Link>,
-              ]}
-            >
-              <List.Item.Meta
-                title={item.name}
-                description={t('common.serverPermissions', { count: item.permissions.length })}
-              />
-            </List.Item>
-          )}
+          metas={{
+            title: { dataIndex: 'name' },
+            description: {
+              render: (_, row) =>
+                t('common.serverPermissions', { count: row.permissions.length }),
+            },
+            actions: {
+              render: (_, row) => [
+                <Link key="open" href={`/t/${row.tenantId}/e/${row.eventId}`}>
+                  {t('common.mo')}
+                </Link>,
+              ],
+            },
+          }}
         />
       )}
-    </Card>
+    </PortalPage>
   );
 }

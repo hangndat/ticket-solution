@@ -1,5 +1,7 @@
 'use client';
 
+import { ProCard, ProTable } from '@ant-design/pro-components';
+import type { ProColumns } from '@ant-design/pro-components';
 import {
   Alert,
   Button,
@@ -8,10 +10,9 @@ import {
   Input,
   Result,
   Space,
-  Table,
-  Tabs,
   Typography,
 } from 'antd';
+import { PortalPage } from '../../src/components/portal-page';
 import { useCallback, useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import type {
@@ -274,25 +275,50 @@ function PlatformInner() {
     );
   }
 
+  const tenantColumns: ProColumns<PortalPlatformTenantSummary>[] = [
+    { title: 'Slug', dataIndex: 'slug', width: 140 },
+    { title: 'Name', dataIndex: 'name', ellipsis: true },
+    { title: 'Status', dataIndex: 'status', width: 120 },
+    { title: 'Version', dataIndex: 'version', width: 90 },
+    { title: 'Created', dataIndex: 'createdAt', ellipsis: true },
+    {
+      title: '',
+      key: 'actions',
+      width: 200,
+      render: (_, row) => (
+        <Space size="small">
+          <Button size="small" onClick={() => setFilterTenantId(row.tenantId)}>
+            {t('platform.h_1sthjos')}
+          </Button>
+          <Button
+            size="small"
+            type="primary"
+            loading={healthBusy && healthTenantId === row.tenantId}
+            onClick={() => void loadHealth(row.tenantId)}
+            data-testid={`platform-health-btn-${row.tenantId}`}
+          >
+            Health
+          </Button>
+        </Space>
+      ),
+    },
+  ];
+
   return (
-    <Space direction="vertical" size="large" style={{ width: '100%' }}>
-      <Space
-        style={{ width: '100%', justifyContent: 'space-between' }}
-        wrap
-      >
-        <Typography.Title level={3} style={{ margin: 0 }}>
-          Platform
-        </Typography.Title>
-        <Button danger href="/api/auth/platform/logout">{t('account.h_21w6fq')}</Button>
-      </Space>
+    <PortalPage
+      title="Platform"
+      subTitle={t('platform.h_ed3cdu')}
+      extra={<Button danger href="/api/auth/platform/logout">{t('account.h_21w6fq')}</Button>}
+    >
       <Alert
         type="info"
         showIcon
         message={t('platform.zoneLabel', { assurance })}
-        description={t('platform.h_ed3cdu')}
+        style={{ marginBottom: 16 }}
       />
-      <Tabs
-        items={[
+      <ProCard
+        tabs={{
+          items: [
           {
             key: 'tenants',
             label: 'Tenants',
@@ -307,49 +333,17 @@ function PlatformInner() {
                     data-testid="platform-tenants-status"
                   />
                 ) : null}
-                <Table
+                <ProTable<PortalPlatformTenantSummary>
                   size="small"
                   rowKey="tenantId"
                   loading={tenantsBusy}
                   dataSource={tenants}
+                  search={false}
+                  options={false}
                   pagination={false}
                   data-testid="platform-tenants-table"
                   locale={{ emptyText: t('platform.h_1vlqd43') }}
-                  columns={[
-                    { title: 'Slug', dataIndex: 'slug', width: 140 },
-                    { title: 'Name', dataIndex: 'name', ellipsis: true },
-                    { title: 'Status', dataIndex: 'status', width: 120 },
-                    { title: 'Version', dataIndex: 'version', width: 90 },
-                    {
-                      title: 'Created',
-                      dataIndex: 'createdAt',
-                      ellipsis: true,
-                    },
-                    {
-                      title: '',
-                      key: 'actions',
-                      width: 200,
-                      render: (_, row) => (
-                        <Space size="small">
-                          <Button
-                            size="small"
-                            onClick={() => setFilterTenantId(row.tenantId)}
-                          >{t('platform.h_1sthjos')}</Button>
-                          <Button
-                            size="small"
-                            type="primary"
-                            loading={
-                              healthBusy && healthTenantId === row.tenantId
-                            }
-                            onClick={() => void loadHealth(row.tenantId)}
-                            data-testid={`platform-health-btn-${row.tenantId}`}
-                          >
-                            Health
-                          </Button>
-                        </Space>
-                      ),
-                    },
-                  ]}
+                  columns={tenantColumns}
                 />
                 {tenantsCursor ? (
                   <Button
@@ -545,11 +539,13 @@ function PlatformInner() {
                     data-testid="platform-audit-status"
                   />
                 ) : null}
-                <Table
+                <ProTable<PortalPlatformAuditEntry>
                   size="small"
                   rowKey="auditId"
                   loading={auditBusy}
                   dataSource={auditItems}
+                  search={false}
+                  options={false}
                   pagination={false}
                   data-testid="platform-audit-table"
                   locale={{ emptyText: t('platform.h_5wjoae') }}
@@ -584,9 +580,10 @@ function PlatformInner() {
               </Space>
             ),
           },
-        ]}
+          ],
+        }}
       />
-    </Space>
+    </PortalPage>
   );
 }
 
