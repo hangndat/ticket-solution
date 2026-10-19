@@ -28,6 +28,14 @@ describe('PORTAL_UPSTREAM ops paths', () => {
       PORTAL_UPSTREAM.portfolio(t),
       `/v1/tenants/${t}/reports/portfolio`,
     );
+    assert.equal(
+      PORTAL_UPSTREAM.tenantRegistrations,
+      '/v1/public/tenant-registrations',
+    );
+    assert.equal(
+      PORTAL_UPSTREAM.rolePresets(t),
+      `/v1/tenants/${t}/role-presets`,
+    );
     assert.equal(PORTAL_UPSTREAM.platformTenants, '/v1/platform/tenants');
     assert.equal(PORTAL_UPSTREAM.platformAudit, '/v1/platform/audit');
     assert.equal(

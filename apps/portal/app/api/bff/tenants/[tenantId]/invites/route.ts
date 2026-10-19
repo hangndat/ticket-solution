@@ -1,4 +1,4 @@
-import type { MembershipRole } from '@ticket/contracts';
+import type { InviteRoleRef, MembershipRole } from '@ticket/contracts';
 import { assertMutatingBrowser } from '../../../../../../src/bff/csrf';
 import { isUuid } from '../../../../../../src/bff/ids';
 import { PORTAL_UPSTREAM } from '../../../../../../src/bff/paths';
@@ -13,6 +13,19 @@ const ROLES = new Set<MembershipRole>([
   'Supervisor',
   'Scanner',
 ]);
+
+function parseInviteRole(raw: unknown): InviteRoleRef | null {
+  if (typeof raw === 'string' && ROLES.has(raw as MembershipRole)) {
+    return raw as MembershipRole;
+  }
+  if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+    const presetId = (raw as { presetId?: unknown }).presetId;
+    if (typeof presetId === 'string' && isUuid(presetId.trim())) {
+      return { presetId: presetId.trim() };
+    }
+  }
+  return null;
+}
 
 export async function GET(request: Request, { params }: Props) {
   const { tenantId: raw } = await params;
@@ -42,7 +55,11 @@ export async function POST(request: Request, { params }: Props) {
   }
   let body: {
     email?: string;
-    role?: MembershipRole;
+    role?: unknown;
+    /** Forbidden client permission arrays — rejected if present. */
+    permissions?: unknown;
+    tenantPermissions?: unknown;
+    eventPermissions?: unknown;
     eventAssignments?: Array<{ eventId: string; role: MembershipRole }>;
     idempotencyKey?: string;
   };
@@ -50,6 +67,17 @@ export async function POST(request: Request, { params }: Props) {
     body = (await request.json()) as typeof body;
   } catch {
     return bffApiError('INVALID_JSON', 'Request body must be JSON.', 400);
+  }
+  if (
+    body.permissions !== undefined ||
+    body.tenantPermissions !== undefined ||
+    body.eventPermissions !== undefined
+  ) {
+    return bffApiError(
+      'INVALID_INPUT',
+      'Client permission arrays are not accepted — use role or { presetId }.',
+      422,
+    );
   }
   const idempotencyKey = body.idempotencyKey?.trim() ?? '';
   if (!isUuid(idempotencyKey)) {
@@ -60,11 +88,11 @@ export async function POST(request: Request, { params }: Props) {
     );
   }
   const email = body.email?.trim() ?? '';
-  const role = body.role;
-  if (!email || !role || !ROLES.has(role)) {
+  const role = parseInviteRole(body.role);
+  if (!email || !role) {
     return bffApiError(
       'INVALID_INPUT',
-      'email and role (Owner|Manager|CS|Supervisor|Scanner) required.',
+      'email and role (Owner|Manager|CS|Supervisor|Scanner|{presetId}) required.',
       422,
     );
   }

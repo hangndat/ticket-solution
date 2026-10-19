@@ -6,6 +6,7 @@ import { useParams } from 'next/navigation';
 import { useTenantAccess } from '../../../src/prep/use-event-access';
 import { SurfaceState } from '../../../src/components/surface-state';
 import { usePortalLocale } from '../../../src/i18n';
+import { isPendingActivationStatus } from '../../../src/onboarding';
 
 export default function TenantOverviewPage() {
   const { t } = usePortalLocale();
@@ -36,6 +37,26 @@ export default function TenantOverviewPage() {
   }
 
   const { tenant, events } = access;
+
+  // PENDING: no admin chrome mutations — send Owner to wait Result (AC-PS5).
+  if (isPendingActivationStatus(tenant.status)) {
+    return (
+      <SurfaceState
+        kind="pending-activation"
+        title={t('onboarding.pending.title')}
+        description={t('onboarding.pending.body', {
+          name: tenant.name,
+          slug: tenant.slug,
+        })}
+        emptyAction={
+          <Link href={`/onboarding/${tenantId}`}>
+            <Button type="primary">{t('onboarding.pending.openWait')}</Button>
+          </Link>
+        }
+      />
+    );
+  }
+
   const canCreate = tenant.tenantPermissions.includes('event.create');
   const canList = tenant.tenantPermissions.includes('event.list');
 
