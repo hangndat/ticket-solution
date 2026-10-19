@@ -3,7 +3,7 @@
 **Trạng thái:** đã áp dụng trên `main` (PR #195 + wiring process). Catalog này **bổ sung chuyên môn** khi spawn worker — bắt buộc gắn Role ID vào Task Spec theo `AGENTS.md` / rule Orca. Không thay thế và không được ưu tiên hơn:
 
 - [AGENTS.md](../../AGENTS.md)
-- `.cursor/rules/orca-agent-routing.mdc` (mọi worker dùng `--agent cursor`; **Cost tier** `cheap|standard|heavy`; pin `--model` từ [cost-catalog.md](./cost-catalog.md) — **cấm inherit UI mặc định**)
+- `.cursor/rules/orca-agent-routing.mdc` (mọi worker dùng `--agent cursor`; **Cost tier** `cheap|standard|heavy`; pin `--model` từ [cost-catalog.md](./cost-catalog.md) — **cấm inherit UI mặc định**; Wave E: `scripts/orca-spawn-model-preflight.mjs` trước spawn; `cost-wave` từ receipt)
 - `.cursor/rules/orca-epic-orchestrator.mdc` · `orca-parallel-workers.mdc` · `orca-idle-worker-fill.mdc` · `orca-coordinator-mailbox.mdc` — **coordinator-only** (`alwaysApply: false`; leader Read khi kích hoạt — Wave B)
 - `.cursor/rules/github-project-tracking.mdc`, `git-workflow.mdc`, `uat-headless.mdc`
 
@@ -14,7 +14,7 @@
 ```text
 docs/agents/
   README.md                 ← file này
-  cost-catalog.md           ← pin Cursor --model theo Cost tier (refresh: agent models)
+  cost-catalog.md           ← pin Cursor --model theo Cost tier + Wave D/E (receipt / preflight)
   upstream/                 ← nguồn MIT + provenance (không chỉnh để “fit” Vemoki)
   roles/                    ← hướng dẫn đã điều chỉnh cho Vemoki + Orca
 ```
