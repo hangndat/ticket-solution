@@ -302,7 +302,7 @@ function ConfiguredAccount() {
           <AttendeeCta
             label="Đổi mã lấy vé"
             variant="secondary"
-            onPress={() => router.push('/redeem')}
+            onPress={() => router.push('/redeem-global')}
             testID="account-cta-redeem"
           />
         </View>
