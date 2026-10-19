@@ -40,14 +40,15 @@ Không EAS Cloud Build. Không commit `.p8` / IPA / signing.
 
 - `devicectl device info apps` không liệt kê bundle TestFlight (`com.apple.TestFlight`); TF build cài trực tiếp dưới `com.hangndat.ticket` (bình thường sau cài từ TestFlight).
 - USB install IPA Distribution → **FAIL** `0xe800801f` (kỳ vọng; không sideload store IPA).
-- `devicectl device process launch` **DatHN** → **FAIL** locked (`FBSOpenApplicationErrorDomain` 7) — 2026-10-19 session.
+- `devicectl device process launch` **DatHN** → **FAIL** locked (`FBSOpenApplicationErrorDomain` 7) — lần 1 session 2026-10-19.
+- Sau coordinator `unlocked-retry`: launch **OK**; `device info processes` thấy `Vemoki.app` (pid ~8304) — **chưa** xác minh attendee QR / staff camera (không device screenshot API trên iOS 26 RSD).
 - `devicectl` launch **Dexter** → OK nhưng binary **sai** (0.1.0 dev) — không dùng cho AC TF smoke.
 
 ## Smoke checklist (chưa PASS trên TF 1.0.0)
 
 | # | Scenario | Yêu cầu AC | Status |
 | - | -------- | ---------- | ------ |
-| 1 | Launch TF build; Settings/About = `1.0.0` + build đã upload | Device thật + binary TF | **PARTIAL** — build **13** trên DatHN; chưa xác minh UI About (locked) |
+| 1 | Launch TF build; Settings/About = `1.0.0` + build đã upload | Device thật + binary TF | **PARTIAL** — build **13** trên DatHN; launch OK sau unlock; About chưa capture |
 | 2 | Attendee: mở vé / QR display (prod endpoints) | Device thật | **BLOCKED** |
 | 3 | Staff/Gate: `GateCamera` — camera + preview quét QR | Camera hardware | **BLOCKED** |
 | 4 | Optional push smoke (production APNs) | Device thật | **BLOCKED** / ngoài tối thiểu |

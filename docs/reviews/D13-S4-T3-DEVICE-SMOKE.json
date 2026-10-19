@@ -58,7 +58,8 @@
         "os": "26.6.1",
         "installedVemoki": { "version": "1.0.0", "build": "13" },
         "tfSmokeEligible": true,
-        "devicectlLaunch": "FAIL locked"
+        "devicectlLaunch": "OK after unlock",
+        "processRunningAfterLaunch": true
       }
     ]
   },
@@ -68,8 +69,8 @@
   },
   "coordinatorAsk": {
     "unlockRequested": true,
-    "reply": "blocked",
-    "note": "evidence-only update this dispatch"
+    "reply": "blocked then unlocked-retry",
+    "postUnlockLaunchUtc": "2026-10-19T07:21:21+00:00"
   },
   "blocker": "unlock DatHN iPhone + run attendee/staff camera checklist on TF 1.0.0 (13); re-dispatch for PASS",
   "apiKeyId": "KHT3SAL2FS",
