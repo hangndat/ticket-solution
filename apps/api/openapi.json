@@ -2401,6 +2401,54 @@
         ]
       }
     },
+    "/v1/tenants/{tenantId}/reports/portfolio": {
+      "get": {
+        "operationId": "ReportController_portfolio",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Default 20; hard max 50 (clamped server-side)",
+            "schema": {}
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortfolioReportDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "reporting"
+        ]
+      }
+    },
     "/v1/tenants/{tenantId}/events/{eventId}/audit": {
       "get": {
         "operationId": "ReportController_audit",
@@ -5590,6 +5638,88 @@
           "rejectByReason",
           "emailNeedsCsCount",
           "asOf"
+        ]
+      },
+      "PortfolioReportItemDto": {
+        "type": "object",
+        "properties": {
+          "eventId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string",
+            "description": "Event display name (events.name)"
+          },
+          "checkInSuccessCount": {
+            "type": "number"
+          },
+          "pendingApprovalCount": {
+            "type": "number"
+          },
+          "emailNeedsCsCount": {
+            "type": "number"
+          },
+          "quotaRemaining": {
+            "type": "number",
+            "nullable": true
+          },
+          "quotaCapacityState": {
+            "type": "string",
+            "enum": [
+              "FINITE",
+              "UNLIMITED",
+              "MISSING_BUCKET"
+            ]
+          },
+          "rejectByReason": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "number"
+            },
+            "example": {
+              "ALREADY_CHECKED_IN": 2
+            },
+            "description": "Gate rejects by stable reason — no attendee PII"
+          }
+        },
+        "required": [
+          "eventId",
+          "title",
+          "checkInSuccessCount",
+          "pendingApprovalCount",
+          "emailNeedsCsCount",
+          "quotaRemaining",
+          "quotaCapacityState",
+          "rejectByReason"
+        ]
+      },
+      "PortfolioReportDto": {
+        "type": "object",
+        "properties": {
+          "asOf": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PortfolioReportItemDto"
+            }
+          },
+          "nextCursor": {
+            "type": "string",
+            "nullable": true
+          },
+          "limit": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "asOf",
+          "items",
+          "nextCursor",
+          "limit"
         ]
       },
       "PortalAuditEntryDto": {
