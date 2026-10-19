@@ -1,12 +1,19 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import {
+  AccessibilityInfo,
+  Animated,
+  Text,
+  View,
+} from 'react-native';
 import {
   redeemDecisionAnnouncement,
   redeemStatusRefreshAnnouncement,
 } from '@/a11y/announcements';
 import { presentRedeemDecision } from '@/attendee/attendee-outcome-copy';
-import { Notice, Page } from '@/components/page';
+import { useAttendeeSignIn } from '@/attendee/use-attendee-sign-in';
+import { AttendeeCta } from '@/components/attendee-cta';
+import { BrandWordmark, Notice, Page } from '@/components/page';
 import { getApiBaseUrl } from '@/identity/config';
 import { session } from '@/identity/session';
 import { fetchPublishedEventDetail } from '@/published/published-event-api';
@@ -23,7 +30,9 @@ import { requireTermsConsent, validateFormAnswers } from '@/redeem/form-validate
 import { fetchOwnerRedemptionStatus } from '@/redeem/owner-status';
 import type { RedeemDecision } from '@/redeem/redeem-client';
 import { RedeemFormFields } from '@/redeem/redeem-form-fields';
-import { colors } from '@/theme/colors';
+import { brand, colors } from '@/theme/colors';
+import { fontFamilies } from '@/theme/fonts';
+import { typography } from '@/theme/typography';
 
 function firstParam(
   value: string | string[] | undefined,
@@ -34,7 +43,7 @@ function firstParam(
 
 /**
  * Guest claim + login-return (C-I). Token never logged; answers cleared on switch.
- * No fixture production fallback.
+ * Phase 2: Live Pulse visual + outcome fade-in. No fixture production fallback.
  */
 export function ClaimScreen() {
   const params = useLocalSearchParams<{
@@ -45,6 +54,12 @@ export function ClaimScreen() {
     eventSlug?: string | string[];
   }>();
   const router = useRouter();
+  const {
+    busy: signInBusy,
+    error: signInError,
+    configured,
+    signIn,
+  } = useAttendeeSignIn();
 
   const linkToken = firstParam(params.token);
   const linkTenantId = firstParam(params.tenantId);
@@ -61,6 +76,8 @@ export function ClaimScreen() {
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [notice, setNotice] = useState<string | null>(null);
+  const [reduceMotionOs, setReduceMotionOs] = useState(false);
+  const [outcomeOpacity] = useState(() => new Animated.Value(1));
 
   const identity = useSyncExternalStore(
     session.subscribe,
@@ -86,6 +103,40 @@ export function ClaimScreen() {
     linkTenantSlug,
     linkEventSlug,
   ]);
+
+  const missingInvite =
+    !activeScope.token.trim() ||
+    !activeScope.tenantId.trim() ||
+    !activeScope.eventId.trim();
+
+  useEffect(() => {
+    let cancelled = false;
+    void AccessibilityInfo.isReduceMotionEnabled().then((enabled) => {
+      if (!cancelled) setReduceMotionOs(enabled);
+    });
+    const sub = AccessibilityInfo.addEventListener(
+      'reduceMotionChanged',
+      setReduceMotionOs,
+    );
+    return () => {
+      cancelled = true;
+      sub.remove();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!decision) return;
+    if (reduceMotionOs) {
+      outcomeOpacity.setValue(1);
+      return;
+    }
+    outcomeOpacity.setValue(0);
+    Animated.timing(outcomeOpacity, {
+      toValue: 1,
+      duration: 240,
+      useNativeDriver: true,
+    }).start();
+  }, [decision, outcomeOpacity, reduceMotionOs]);
 
   useEffect(() => {
     // Park link params for login-return; clear on identity flip.
@@ -152,16 +203,12 @@ export function ClaimScreen() {
         setNotice('Chưa cấu hình API — chưa tải form nhận vé.');
         return;
       }
-      setNotice('Form đã xuất bản không khả dụng. Không dùng dữ liệu mẫu.');
+      setNotice('Không tải được biểu mẫu. Không dùng dữ liệu mẫu.');
     })();
     return () => {
       cancelled = true;
     };
   }, [activeScope.tenantSlug, activeScope.eventSlug]);
-
-  const loginHint = needsLogin
-    ? 'Đăng nhập bằng email đã được mời, rồi quay lại đây.'
-    : null;
 
   async function submitClaim() {
     const epoch = session.captureEpoch();
@@ -272,47 +319,93 @@ export function ClaimScreen() {
 
   return (
     <Page>
-      <Notice title="Nhận vé mời">
-        Chỉ email đã được mời và xác minh. Sau đăng nhập quay lại đây để hoàn tất;
-        dữ liệu tạm xoá khi đăng xuất hoặc đổi tài khoản.
-      </Notice>
-      {loginHint ? <Notice title="Cần đăng nhập">{loginHint}</Notice> : null}
-      {notice ? <Notice title="Trạng thái">{notice}</Notice> : null}
-      {needsLogin ? (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Đến tài khoản để đăng nhập"
-          onPress={() => router.push('/my-tickets')}
-          style={button}
-        >
-          <Text style={buttonLabel}>Đăng nhập để nhận vé</Text>
-        </Pressable>
+      <BrandWordmark compact />
+      <Text
+        accessibilityRole="header"
+        style={{ color: brand.ink, ...typography.display }}
+      >
+        Nhận vé mời
+      </Text>
+      <Text style={{ color: colors.secondary, ...typography.body }}>
+        Chỉ email đã được mời và xác minh. Sau đăng nhập quay lại đây để hoàn
+        tất; dữ liệu tạm xoá khi đăng xuất hoặc đổi tài khoản.
+      </Text>
+
+      {missingInvite ? (
+        <Notice title="Thiếu liên kết lời mời">
+          Mở đúng liên kết nhận vé (có token lời mời). Không nhập tay token —
+          dùng liên kết từ thư mời.
+        </Notice>
       ) : null}
+
+      {needsLogin ? (
+        <Notice title="Cần đăng nhập">
+          Đăng nhập bằng email đã được mời, rồi quay lại đây với cùng lời mời.
+        </Notice>
+      ) : null}
+
+      {notice ? (
+        <Text
+          style={{
+            color: colors.secondary,
+            fontFamily: fontFamilies.body,
+            fontSize: 15,
+            lineHeight: 22,
+          }}
+          accessibilityLiveRegion="polite"
+        >
+          {notice}
+        </Text>
+      ) : null}
+
+      {needsLogin ? (
+        <View style={{ gap: 10 }}>
+          {configured ? (
+            <AttendeeCta
+              label={signInBusy ? 'Đang đăng nhập…' : 'Đăng nhập để nhận vé'}
+              onPress={() => void signIn()}
+              disabled={signInBusy}
+              testID="claim-cta-signin"
+            />
+          ) : (
+            <AttendeeCta
+              label="Đến tài khoản để đăng nhập"
+              onPress={() => router.push('/my-tickets')}
+              testID="claim-cta-account"
+            />
+          )}
+          {signInError ? (
+            <Notice title="Không đăng nhập được" tone="deny">
+              {signInError}
+            </Notice>
+          ) : null}
+        </View>
+      ) : null}
+
       <RedeemFormFields
         form={form}
         termsVersion={termsVersion}
         termsBody={termsBody}
         answers={answers}
         termsAccepted={termsAccepted}
-        disabled={busy || needsLogin}
+        disabled={busy || needsLogin || missingInvite}
         fieldErrors={fieldErrors}
         onChangeAnswer={(fieldId, value) =>
           setAnswers((prev) => ({ ...prev, [fieldId]: value }))
         }
         onTermsAcceptedChange={setTermsAccepted}
       />
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="Gửi nhận vé mời"
-        accessibilityState={{ disabled: busy || needsLogin || !activeScope.token }}
-        disabled={busy || needsLogin || !activeScope.token}
+
+      <AttendeeCta
+        label={busy ? 'Đang xử lý…' : 'Nhận vé mời'}
         onPress={() => void submitClaim()}
-        style={button}
-      >
-        <Text style={buttonLabel}>{busy ? 'Đang xử lý…' : 'Nhận vé mời'}</Text>
-      </Pressable>
+        disabled={busy || needsLogin || missingInvite}
+        testID="claim-cta-submit"
+      />
+
       {decision ? (
-        <View
+        <Animated.View
+          style={{ opacity: reduceMotionOs ? 1 : outcomeOpacity }}
           {...redeemDecisionAnnouncement({
             kind: decision.kind,
             title: outcome.title,
@@ -323,31 +416,31 @@ export function ClaimScreen() {
           <Notice title={outcome.title} tone={outcome.tone}>
             {outcomeDetail}
           </Notice>
-        </View>
+          {decision.kind === 'issued' ? (
+            <View style={{ marginTop: 12 }}>
+              <AttendeeCta
+                label="Xem vé của tôi"
+                variant="secondary"
+                onPress={() => router.push('/my-tickets')}
+                testID="claim-cta-wallet"
+              />
+            </View>
+          ) : null}
+        </Animated.View>
       ) : null}
+
       {decision?.kind === 'pending' ? (
-        <Pressable
-          {...redeemStatusRefreshAnnouncement()}
+        <AttendeeCta
+          label="Kiểm tra lại"
+          variant="secondary"
           disabled={busy}
           onPress={() => void refreshStatus()}
-          style={button}
-        >
-          <Text style={buttonLabel}>Kiểm tra lại</Text>
-        </Pressable>
+          accessibilityLabel={
+            redeemStatusRefreshAnnouncement().accessibilityLabel
+          }
+          testID="claim-cta-refresh"
+        />
       ) : null}
     </Page>
   );
 }
-
-const button = {
-  padding: 14,
-  borderRadius: 12,
-  backgroundColor: colors.accent,
-};
-
-const buttonLabel = {
-  color: colors.onAccent,
-  fontSize: 17,
-  fontWeight: '600' as const,
-  textAlign: 'center' as const,
-};
