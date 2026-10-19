@@ -102,7 +102,9 @@ export function RedeemForm({
   const [globalPhase, setGlobalPhase] = useState<'enter-code' | 'confirm'>(
     globalEntry ? 'enter-code' : 'confirm',
   );
-  const [resolveToken, setResolveToken] = useState<string | null>(null);
+  const [resolveToken, setResolveToken] = useState<string | null>(() =>
+    globalEntry ? readStoredResolveToken() : null,
+  );
   const [globalContext, setGlobalContext] = useState<{
     tenantDisplayName: string;
     eventTitle: string;
@@ -115,12 +117,6 @@ export function RedeemForm({
       generationRef.current += 1;
     };
   }, []);
-
-  useEffect(() => {
-    if (!globalEntry) return;
-    const stored = readStoredResolveToken();
-    if (stored) setResolveToken(stored);
-  }, [globalEntry]);
 
   const busy = pending || polling;
   const canRepoll = Boolean(attempt?.unclear && attempt.key && !busy);

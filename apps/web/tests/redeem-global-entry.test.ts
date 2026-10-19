@@ -3,7 +3,7 @@ import test from 'node:test';
 import {
   isGlobalRedeemEntryEnabled,
   isTenantBoundRedeemQuery,
-  useGlobalRedeemEntry,
+  globalRedeemEntryEnabled,
 } from '../src/redeem/global-entry';
 
 test('global entry flag is off unless NEXT_PUBLIC_SINGLE_CODE_RESOLVE=1', () => {
@@ -24,9 +24,9 @@ test('tenant-bound query disables global entry', () => {
     true,
   );
   assert.equal(
-    useGlobalRedeemEntry({ tenantSlug: 'org' }),
+    globalRedeemEntryEnabled({ tenantSlug: 'org' }),
     false,
   );
-  assert.equal(useGlobalRedeemEntry({}), true);
+  assert.equal(globalRedeemEntryEnabled({}), true);
   delete process.env.NEXT_PUBLIC_SINGLE_CODE_RESOLVE;
 });
