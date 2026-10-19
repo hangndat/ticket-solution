@@ -74,10 +74,10 @@ Redis: `REDIS_PORT` / URL chỉ cache/admission — **không** durable outbox.
 
 Cookie session: **host-only** trên `app.vemoki.com` (không `Domain=.vemoki.com`). Xem `scripts/lib/tenant-host.mjs` và `docs/architecture/o13-marketing-app-subdomain.md`.
 
-## 6. Portal admin local dual-run (ADR-20 / P1.2)
+## 6. Portal admin dual-run (ADR-20 / P1.2 local + #502 prod)
 
-Process `apps/portal` (port **3013**). Chi tiết thao tác: [`PORTAL-LOCAL-CUTOVER-PREP.md`](./PORTAL-LOCAL-CUTOVER-PREP.md).  
-**Không** ghi production DNS/TLS ở đây — Task deploy riêng.
+Process `apps/portal` (local port **3013**; prod host **`portal.vemoki.com`**).  
+Local: [`PORTAL-LOCAL-CUTOVER-PREP.md`](./PORTAL-LOCAL-CUTOVER-PREP.md). Prod cutover: [`PORTAL-PROD-CUTOVER.md`](./PORTAL-PROD-CUTOVER.md) (Issue #502).
 
 | Biến | Ví dụ local | Ý nghĩa |
 | --- | --- | --- |
@@ -90,6 +90,10 @@ Process `apps/portal` (port **3013**). Chi tiết thao tác: [`PORTAL-LOCAL-CUTO
 | `PORTAL_ADMIN_REDIRECT` | unset / `0` (mặc định OFF) | `apps/web` proxy: GET/HEAD `/admin`\|`/platform` → `PORTAL_ORIGIN` khi `1`/`true`; **không** POST/BFF (ADR-20 §8 / #438) |
 | `PORTAL_DUAL_RUN_BANNER` | `1` khi có `PORTAL_ORIGIN` (web) / `PRODUCT_ORIGIN` (portal) | Banner dual-run; độc lập với flag redirect |
 | `API_BASE_URL` | `http://127.0.0.1:3100` | Nest từ BFF portal |
+| `OIDC_ADMIN_CLIENT_SECRET` | (prod `/opt/vemoki/.env` only) | Compose portal → `OIDC_CLIENT_SECRET` cho `ticket-admin-web` |
+| `PORTAL_WEB_PUBLIC_ORIGIN` | `https://portal.vemoki.com` | Compose portal `WEB_PUBLIC_ORIGIN` prod |
+| `PORTAL_OIDC_REDIRECT_URI` | `https://portal.vemoki.com/api/auth/callback` | Staff callback prod |
+| `PORTAL_PLATFORM_OIDC_REDIRECT_URI` | `https://portal.vemoki.com/api/auth/platform/callback` | Platform callback trên portal prod |
 
 Cookie staff/platform trên portal: **host-only** (omit `Domain`). Kiểm tra realm JSON: `./scripts/portal-local-dual-run-check.sh`.
 
@@ -97,4 +101,4 @@ Cookie staff/platform trên portal: **host-only** (omit `Domain`). Kiểm tra re
 
 - Commit `.env` thật, `.p8`, MinIO root production, SMTP password.
 - SaaS SMTP/push/object runtime (ADR-11).
-- Production DNS/TLS/`portal.vemoki.com` cutover trong Task prep local (P1.2).
+- Production DNS/TLS/`portal.vemoki.com` cutover — chỉ Issue #502 / `PORTAL-PROD-CUTOVER.md` (không trong P1.2 local prep).
