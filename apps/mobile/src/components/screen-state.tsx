@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { Notice } from '@/components/page';
 import { colors } from '@/theme/colors';
+import { fontFamilies } from '@/theme/fonts';
 import { typography } from '@/theme/typography';
 
 type PanelProps = PropsWithChildren<{
@@ -41,6 +42,7 @@ export function LoadingState({
         style={{
           color: colors.label,
           fontSize: 22,
+          fontFamily: fontFamilies.display,
           fontWeight: '600',
           textAlign: 'center',
         }}
@@ -53,6 +55,7 @@ export function LoadingState({
             color: colors.secondary,
             fontSize: 17,
             lineHeight: 25,
+            fontFamily: fontFamilies.body,
             textAlign: 'center',
           }}
         >
