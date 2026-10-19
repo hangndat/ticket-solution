@@ -283,6 +283,31 @@ test(
         void membership;
       });
 
+      const staffView = await withTenant(db, tenantId, (tx) =>
+        getEvent(tx, {
+          tenantId,
+          eventId,
+          actorUserId: staff.userId,
+        }),
+      );
+      assert.equal(staffView.eventId, eventId);
+      await assert.rejects(
+        () =>
+          withTenant(db, tenantId, (tx) =>
+            updateEvent(tx, {
+              tenantId,
+              eventId,
+              actorUserId: staff.userId,
+              idempotencyKey: randomUUID(),
+              body: {
+                expectedRevision: 1,
+                name: 'Staff cannot rename',
+              },
+            }),
+          ),
+        (err) => err.name === 'AuthzError',
+      );
+
       const issued = unwrapRedeemOutcome(
         await withTenant(db, tenantId, (tx) =>
           redeemAndIssueTicket(tx, HMAC, CRED_KEY, {
