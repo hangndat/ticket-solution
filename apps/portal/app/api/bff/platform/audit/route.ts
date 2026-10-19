@@ -1,5 +1,6 @@
 import { ensureCsrfCookie } from '../../../../../src/bff/csrf';
 import { pickSearchParams } from '../../../../../src/bff/event-params';
+import { withPrivateNoStore } from '../../../../../src/bff/cache-control';
 import { PORTAL_UPSTREAM } from '../../../../../src/bff/paths';
 import { forwardPlatformBearer } from '../../../../../src/bff/upstream';
 
@@ -18,7 +19,5 @@ export async function GET(request: Request) {
     `${PORTAL_UPSTREAM.platformAudit}${qs}`,
     { method: 'GET' },
   );
-  const headers = new Headers(res.headers);
-  headers.set('Cache-Control', 'private, no-store');
-  return new Response(res.body, { status: res.status, headers });
+  return withPrivateNoStore(res);
 }
