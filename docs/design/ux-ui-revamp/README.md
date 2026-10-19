@@ -11,7 +11,7 @@
 | Trạng thái | **Handoff PD** — chưa claim pilot / production ready |
 
 > **Phase 2 (Epic [#527](https://github.com/hangndat/ticket-solution/issues/527) / Issue [#528](https://github.com/hangndat/ticket-solution/issues/528)):** handoff mở rộng tại [`phase-2/`](./phase-2/) — event detail · account full visual · claim · Home Live Pulse polish. Tokens coding hiện hành = **Live Pulse** ([`../visual-identity-v2/`](../visual-identity-v2/)); mục 0 Phase 1 bên dưới giữ lịch sử Epic #471.  
-> **Phase 3 (Epic [#546](https://github.com/hangndat/ticket-solution/issues/546) / Issue [#547](https://github.com/hangndat/ticket-solution/issues/547)):** handoff tại [`phase-3/`](./phase-3/) — membership invite · staff thin · marketing token · redeem residual. OUT: portal · Gate scanner redesign · O13 redesign · Android.
+> **Phase 3 (Epic [#546](https://github.com/hangndat/ticket-solution/issues/546) / Issue [#547](https://github.com/hangndat/ticket-solution/issues/547)):** handoff tại [`phase-3/`](./phase-3/) — membership invite · staff thin · marketing token · redeem residual. Triage đóng epic + polish invite/staff: [`phase-3/EPIC-TRIAGE-546.md`](./phase-3/EPIC-TRIAGE-546.md) · [`phase-3/invite-staff-polish-handoff.md`](./phase-3/invite-staff-polish-handoff.md). OUT: portal · Gate scanner redesign · O13 redesign · Android.
 
 **Baseline (tham chiếu, không copy nguyên):** [`docs/design/D11-PRODUCTION-UX-UI.md`](../D11-PRODUCTION-UX-UI.md)  
 **Brand nguồn:** [`brand/vemoki/`](../../../brand/vemoki/)  

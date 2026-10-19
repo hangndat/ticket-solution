@@ -9,7 +9,7 @@
 | Cost tier | `standard` |
 | Architecture impact | **Không** — giữ route/IA đã có; escalate Architect chỉ nếu cần route mới |
 | Ownership artifact | `docs/design/ux-ui-revamp/phase-3/**` (+ đọc brand / Phase 1–2) |
-| Trạng thái | **Handoff PD** — chưa claim pilot / production ready |
+| Trạng thái | **Handoff PD** — coding wave #554/#555 merged; epic triage [`EPIC-TRIAGE-546.md`](./EPIC-TRIAGE-546.md) |
 
 **Baseline:** Phase 1 [`../README.md`](../README.md) · Phase 2 [`../phase-2/`](../phase-2/) · Epic [#471](https://github.com/hangndat/ticket-solution/issues/471) / [#527](https://github.com/hangndat/ticket-solution/issues/527)  
 **Brand / tokens:** Live Pulse — [`brand/vemoki/`](../../../../brand/vemoki/) · freeze [`../../visual-identity-v2/`](../../visual-identity-v2/)
@@ -20,6 +20,8 @@
 | ---- | -------- |
 | [README.md](./README.md) | Mục 1–5: flow, states, a11y tóm tắt, UI AC + UAT, triển khai |
 | [visual-notes.md](./visual-notes.md) | Mục 0: brand/visual budget + freeze + **4** priority screens |
+| [EPIC-TRIAGE-546.md](./EPIC-TRIAGE-546.md) | Đóng Epic #546 vs child Task; pointer ops residual |
+| [invite-staff-polish-handoff.md](./invite-staff-polish-handoff.md) | **5** polish priorities invite + staff thin (post-wave) |
 
 ### DoD role product-design (checklist)
 
