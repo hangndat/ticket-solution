@@ -66,35 +66,41 @@ Cost tier: cheap | standard | heavy
 
 ### Bảng mặc định theo loại Task
 
-| Cost tier | Khi dùng (mặc định) | Launch preference |
-| --------- | ------------------- | ----------------- |
-| `cheap` | Docs/rules sync, Project comment, extract/rename máy móc, CI fix hẹp, board hygiene, idle-fill nhỏ | Model nhẹ nhất **có trong catalog live** của agent + `--effort low` |
-| `standard` | Ownership feature BE/web/iOS, BA/PD thường, DoD reviewer thường, Epic planner đơn giản | Workhorse mặc định agent + `--effort low` (chỉ `medium` khi Architecture impact: Có **hoặc** scope đa-file lớn đã ghi trong spec) |
-| `heavy` | Architect/ADR, security-sensitive (authz/RLS/quota/check-in/secrets), concurrency/failure drills, Epic planner DAG rối, hoặc retry sau FAIL do reasoning | Workhorse hoặc **+1 bậc** model (không nhảy frontier trừ khi user/spec yêu cầu) + `--effort medium` hoặc `high` — **không** `xhigh`/`max`/`ultra` mặc định |
+Pin `--model` từ [docs/agents/cost-catalog.md](../../docs/agents/cost-catalog.md) (refresh bằng `agent models`). **Cấm inherit UI làm mặc định.**
 
-Heuristic nhanh (khi planner chưa ghi): docs/mechanical → `cheap`; coding/DoD thường → `standard`; architect / `reviewer-security` / Architecture impact Có trên đường nóng bảo mật → `heavy`. Reviewer DoD thường **không** nâng `heavy` chỉ vì implementer đã `heavy`.
+| Cost tier | Khi dùng (mặc định) | Launch preference (Cursor pin) |
+| --------- | ------------------- | ------------------------------ |
+| `cheap` | Docs/rules, Project comment, extract/rename, CI fix hẹp, board hygiene, DoD docs-only/revalidate hẹp, Epic planner DAG đơn (&lt;~8 Task, không ADR), idle-fill nhỏ | `composer-2.5-fast` (fallback trong cost-catalog) |
+| `standard` | Ownership feature BE/web/iOS, BA/PD thường, DoD có runtime/checks, `reviewer-security` thường | `composer-2.5`; Architecture impact Có **hoặc** scope đa-file lớn → `claude-sonnet-5-thinking-medium` |
+| `heavy` | Architect/ADR; security authz/RLS/quota/check-in/secrets; concurrency/failure drills; Epic planner DAG rối; retry sau FAIL reasoning | `claude-sonnet-5-thinking-high` (fallback `gpt-5.6-sol-high`) — **không** `xhigh`/`max`/`ultra`/`opus` mặc định |
+
+Heuristic nhanh (khi planner chưa ghi): docs/mechanical / DoD hẹp / planner đơn → `cheap`; coding/DoD runtime / BA/PD / security thường → `standard`; architect / security hot path / DAG rối → `heavy`. Reviewer DoD **không** nâng `heavy` chỉ vì implementer đã `heavy`. Hygiene &lt;~15 phút → ưu tiên coordinator **inline** (không spawn).
 
 ### Quy tắc spawn (bắt buộc)
 
-1. **Ưu tiên effort thấp:** tăng effort **một bậc** trước khi đổi model lên; không tăng model *và* effort cùng lúc ở retry đầu.
-2. **`--effort` cần `--model`:** không truyền effort đơn lẻ. ID model = opaque id từ catalog live host (`ORCA` launch preferences / UI agent), **không bịa** slug. Nếu catalog Cursor chưa có / ID không chắc → **omit cả `--model` và `--effort`** (inherit default UI), ghi `Cost tier` + `launch: inherit (catalog unknown)` trong evidence — không đoán.
-3. **Fresh launch để đổi tier:** `--model`/`--effort` **không** kết hợp `--terminal` reuse. Reuse chỉ khi Task kế **cùng hoặc thấp hơn** tier của pane đang giữ; Task `cheap` sau pane `heavy` → `worker-release` rồi launch mới (tránh giữ pane đắt).
-4. **So sánh receipt:** sau `worker-start`, đối chiếu `launch.requested` vs `launch.effective`; chỉ claim model/effort theo **effective**. Effective lệch / bị từ chối → ghi limitation, không coi là đã tối ưu chi phí.
-5. **Cap `heavy` đồng thời:** trong một Run, ưu tiên ≤ **2** Dispatch `heavy` live cùng lúc; phần còn lại `cheap`/`standard`. Parallel-first vẫn áp dụng cho tier thấp — xem thêm concurrent soft caps trong `orca-parallel-workers.mdc`.
-6. **User đặt tên model** → tôn trọng model đó; vẫn gắn `Cost tier` gần đúng và không tự thêm `ultra`/`max`.
-7. **Override Codex** (khi user cho phép): mechanical → model Luna-class + `low`; coding → Sol-class + `low`/`medium`; spike/hard → Astra-class + `high` tối đa một bậc effort; không `ultra` mặc định.
+1. **Đọc cost-catalog** rồi truyền `--model <pin>` theo Cost tier. Cursor pin thường **đã mã hóa effort trong id** → không thêm `--effort` trừ catalog/host yêu cầu. `--effort` đơn lẻ (không `--model`) **cấm**.
+2. **Cấm inherit mặc định:** không omit `--model` “cho UI chọn”. Chỉ được inherit sau khi primary + fallback cùng band bị host reject — ghi `launch: inherit (host rejected pins)` + limitation; refresh catalog khi pin stale.
+3. **Không bịa** slug ngoài cost-catalog / output `agent models` mới hơn pin.
+4. **Ưu tiên effort/model thấp khi retry:** +1 bậc effort **hoặc** +1 model (không cùng lúc ở retry đầu); không nhảy frontier.
+5. **Fresh launch để đổi tier:** `--model`/`--effort` **không** kết hợp `--terminal` reuse. Reuse chỉ khi Task kế **cùng hoặc thấp hơn** tier pane; Task `cheap` sau pane `heavy` → `worker-release` rồi launch mới.
+6. **So sánh receipt:** `launch.requested` vs `launch.effective`; chỉ claim theo **effective**. Reject → fallback cùng tier rồi mới inherit có limitation.
+7. **Cap `heavy`:** ≤ **2** Dispatch `heavy` live / Run. **Cap reviewer:** ≤ **3** live `reviewer-dod`+`reviewer-security` / Run (`orca-parallel-workers.mdc`). Parallel-first vẫn cho tier thấp dưới soft cap feature.
+8. **User đặt tên model** → tôn trọng; vẫn gắn Cost tier gần đúng; không tự thêm `ultra`/`max`/`xhigh`.
+9. **Override Codex** (khi user cho phép): mechanical → Luna-class + `low`; coding → Sol-class + `low`/`medium`; spike/hard → Astra-class + `high` tối đa một bậc effort; không `ultra` mặc định.
 
 ### Anti-patterns chi phí
 
 ```text
-❌ Mọi reviewer = heavy / frontier
+❌ Inherit UI / --model auto làm mặc định
+❌ Mọi reviewer = heavy / frontier / >3 reviewer live
 ❌ Reuse pane heavy cho Task docs/cheap tiếp theo
-❌ ultra / max / xhigh làm mặc định
+❌ ultra / max / xhigh / opus làm mặc định
 ❌ Đổi model + tăng effort cùng lúc ở retry đầu
-❌ Bịa Cursor/Codex model id khi catalog chưa xác nhận
+❌ Bịa Cursor model id ngoài cost-catalog / agent models
 ❌ Bỏ Cost tier khỏi Task Spec
+❌ Spawn worker cho hygiene <~15 phút (làm inline)
 
-✅ Spec có Cost tier → fresh launch map model/effort → ghi effective
+✅ Spec có Cost tier → --model từ cost-catalog → ghi effective
 ✅ cheap chiếm phần lớn volume; heavy hiếm và có ROI
 ✅ FAIL reasoning → +1 effort hoặc +1 model, rồi mới cân nhắc heavy hơn
 ```
