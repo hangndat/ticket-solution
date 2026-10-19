@@ -12,7 +12,8 @@ export interface PortalMemberSummary {
   membershipId: string;
   userId: string;
   emailMasked: string | null;
-  role: MembershipRole;
+  /** Built-in MembershipRole or role_presets.id (P2-ROLES-PRESET). */
+  role: string;
   activatedAt: string | null;
   revokedAt: string | null;
   eventAssignments: PortalMemberAssignment[];
@@ -21,7 +22,8 @@ export type PortalInviteState = 'PENDING' | 'USED' | 'REVOKED' | 'EXPIRED';
 export interface PortalInviteSummary {
   inviteId: string;
   emailMasked: string;
-  role: MembershipRole;
+  /** Built-in MembershipRole or role_presets.id (P2-ROLES-PRESET). */
+  role: string;
   state: PortalInviteState;
   expiresAt: string;
   /** ACCEPTED = processing completed; never proof of inbox delivery. */
@@ -57,6 +59,9 @@ const memberBase = (tenantId: string, membershipId: string) =>
 export const PORTAL_MEMBER_ENDPOINTS = {
   members: (tenantId: string) => `${tenantBase(tenantId)}/members`,
   invites: (tenantId: string) => `${tenantBase(tenantId)}/invites`,
+  rolePresets: (tenantId: string) => `${tenantBase(tenantId)}/role-presets`,
+  rolePreset: (tenantId: string, presetId: string) =>
+    `${tenantBase(tenantId)}/role-presets/${encodeURIComponent(presetId)}`,
   role: (tenantId: string, membershipId: string) =>
     `${memberBase(tenantId, membershipId)}/role`,
   assignment: (tenantId: string, membershipId: string, eventId: string) =>
