@@ -20,7 +20,7 @@ Override Codex chỉ khi user cho phép; kiểm tra quota ≤5 phút; quota hế
 3. Fresh spawn đổi tier: không reuse `--terminal` nếu pane pin cao hơn task cheap.
 4. **Wave D:** sau wave `node scripts/orca-cost-wave-evidence.mjs` — `inherit%` > 20% → refresh pin, dừng spawn.
 5. **Wave E:** trước `worker-start` fresh: `node scripts/orca-spawn-model-preflight.mjs -- --agent cursor --model <pin> …`
-6. Cap reviewer ≤ **3** live/Run (`orca-parallel-workers.mdc`).
+6. Cap reviewer ≤ **3** live/Run (`orca-parallel-workers.mdc`). CI evidence: `./scripts/gh-dod-evidence.sh` — stagger nếu ≥2 reviewer cùng gọi `gh` (`github-api-hygiene.mdc`).
 7. Hygiene <~15 phút → coordinator inline, không spawn.
 
 ## Codex quota exhaustion (coordinator)

@@ -38,8 +38,19 @@ Thời gian chờ duyệt, CI re-run, reopen, `inherit%` (cost-wave) — ghi com
 
 ## `gh` sketch
 
+**Project list (cache — không gọi lặp mỗi spawn):**
+
 ```bash
-gh project item-list 3 --owner hangndat --format json
+CACHE="${TMPDIR:-/tmp}/ticket-project3-items.json"
+if [[ ! -f "$CACHE" || -z "${TICKET_PROJECT3_REFRESH:-}" ]]; then
+  gh project item-list 3 --owner hangndat --limit 120 --format json >"$CACHE"
+fi
+# Chỉ refresh: TICKET_PROJECT3_REFRESH=1 hoặc xóa $CACHE
+```
+
+**PR CI evidence (DoD / reviewer spec):** `./scripts/gh-dod-evidence.sh <pr>` — xem `github-api-hygiene.mdc`. Nhiều reviewer live: coordinator prefetch hoặc stagger 30s giữa các lần gọi.
+
+```bash
 gh project item-edit --project-id PVT_kwHOAGoDWs4BnWaN \
   --id <ITEM_ID> --field-id PVTSSF_lAHOAGoDWs4BnWaNzhl7cPk \
   --single-select-option-id <OPTION_ID>
@@ -47,4 +58,4 @@ gh project item-edit --project-id PVT_kwHOAGoDWs4BnWaN \
 
 Status ids: Đang làm `8c0ed3f4` · Chờ duyệt `0544c261` · Bị chặn `e6e061c9` · Hoàn thành `98236657` · Sẵn sàng `47fc9ee4` · Chưa lên lịch `f75ad846`.
 
-Re-fetch `gh project field-list 3 --owner hangndat --format json` nếu edit fail.
+Re-fetch `gh project field-list 3 --owner hangndat --format json` **chỉ khi** `item-edit` fail (không mỗi wave).
