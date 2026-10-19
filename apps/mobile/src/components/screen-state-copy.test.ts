@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
+  accountCopy,
   eventsCopy,
   scanCopy,
   walletCopy,
@@ -21,14 +22,24 @@ test('scan copy idle and checking are fail-closed Vietnamese', () => {
   assert.doesNotMatch(scanCopy.idle.title, /POC/i);
 });
 
-test('events copy separates published empty from demo empty', () => {
-  assert.notEqual(
-    eventsCopy.emptyPublished.title,
-    eventsCopy.emptyDemo.title,
-  );
+test('account copy avoids session jargon and matches PD sections', () => {
+  assert.equal(accountCopy.sections.you, 'Bạn');
+  assert.equal(accountCopy.sections.notifications, 'Thông báo');
+  assert.match(accountCopy.sections.privacy, /Quyền riêng tư/);
+  assert.equal(accountCopy.logoutCta, 'Đăng xuất');
+  assert.doesNotMatch(accountCopy.guest.body, /phiên|token|verified/i);
+  assert.doesNotMatch(accountCopy.guest.title, /RBAC|nhân viên/i);
+});
+
+test('wallet first-ticket push card copy has dismiss', () => {
+  assert.equal(walletCopy.firstTicketPush.dismissCta, 'Để sau');
+  assert.match(walletCopy.firstTicketPush.title, /nhắc/i);
+});
+
+test('events copy is production-facing without demo fallback language', () => {
   assert.equal(eventsCopy.emptyPublished.title, 'Chưa có sự kiện đang mở');
   assert.equal(eventsCopy.errorList.title, 'Không tải được danh sách');
   assert.match(eventsCopy.loadingList.body, /đã xuất bản|máy chủ/i);
-  assert.doesNotMatch(eventsCopy.loadingList.body, /Demo bên dưới/i);
-  assert.match(eventsCopy.emptyPublished.body, /Không thay bằng/);
+  assert.doesNotMatch(eventsCopy.emptyPublished.body, /demo/i);
+  assert.match(eventsCopy.misconfiguredTitle, /sẵn sàng/i);
 });
