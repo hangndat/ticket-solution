@@ -5,7 +5,8 @@
 - [AGENTS.md](../../AGENTS.md)
 - `.cursor/rules/orca-agent-routing.mdc` (mọi worker dùng `--agent cursor`; **Cost tier** `cheap|standard|heavy`; pin `--model` từ [cost-catalog.md](./cost-catalog.md) — **cấm inherit UI mặc định**; Wave E: `scripts/orca-spawn-model-preflight.mjs` trước spawn; `cost-wave` từ receipt)
 - `.cursor/rules/orca-epic-orchestrator.mdc` · `orca-parallel-workers.mdc` · `orca-idle-worker-fill.mdc` · `orca-coordinator-mailbox.mdc` — **coordinator-only** (`alwaysApply: false`; leader Read khi kích hoạt — Wave B)
-- `.cursor/rules/github-project-tracking.mdc`, `git-workflow.mdc`, `uat-headless.mdc`
+- `.cursor/rules/github-project-tracking.mdc`, `git-workflow.mdc`
+- `.cursor/rules/uat-headless.mdc` — **Wave G:** không `alwaysApply`; globs UAT/artifacts; Task UAT/milestone → Read nếu cần
 
 **Không** cài toàn bộ [agency-agents](https://github.com/msitarzewski/agency-agents) thành `alwaysApply` rules. Chỉ gắn **một** file `roles/*.md` vào Task Spec khi cần chuyên môn đó.
 
@@ -109,23 +110,52 @@ Không spawn PD/BA để “làm luôn” code BE+web+iOS. Không reuse session 
 
 ### 2. Task Spec tối thiểu (Wave C) + khối role
 
-Ưu tiên spec ngắn — đủ AC/paths/Role/Persona/Cost/model/SHA; **không** paste nguyên `roles/*.md`.
+  Ưu tiên spec ngắn — đủ AC/paths/Role/Persona/Cost/model/SHA; **không** paste nguyên `roles/*.md`.
 
-```markdown
-## Task
-- Issue/PR: #<n> / PR #<n>
-- Paths: <ownership>
-- AC: <3–7 gạch đầu dòng>
-- Architecture impact: Có | Không — <1 câu>
-- Cost tier: cheap | standard | heavy
-- --model: <pin từ docs/agents/cost-catalog.md>
-- --display-name: "<Persona> · <ui-label>"
+  ```markdown
+  ## Task
+  - Issue/PR: #<n> / PR #<n>
+  - Paths: <ownership>
+  - AC: <3–7 gạch đầu dòng>
+  - Architecture impact: Có | Không — <1 câu>
+  - Cost tier: cheap | standard | heavy
+  - --model: <pin từ docs/agents/cost-catalog.md>
+  - --display-name: "<Persona> · <ui-label>"
 
-## Vai trò chuyên môn
-- Role ID: <id>[, reviewer-security nếu gộp dod+sec]
-- Persona: <Name>
-- File: docs/agents/roles/<id>.md  (đọc sau AGENTS.md; rule dự án thắng)
+  ## Vai trò chuyên môn
+  - Role ID: <id>[, reviewer-security nếu gộp dod+sec]
+  - Persona: <Name>
+  - File: docs/agents/roles/<id>.md  (đọc sau AGENTS.md; rule dự án thắng)
+  ```
+
+### 2b. Spawn snippet (Wave E+G) — copy-paste
+
+Preflight **trước** `worker-start` (fresh launch; bỏ qua khi `--terminal` reuse):
+
+```text
+node scripts/orca-spawn-model-preflight.mjs -- \
+  --agent cursor \
+  --model <pin> \
+  --display-name "<Persona> · <ui-label>"
+
+ORCA orchestration worker-start \
+  --task <task_id> \
+  --worktree path:<abs> \
+  --agent cursor \
+  --model <pin> \
+  --display-name "<Persona> · <ui-label>" \
+  --json
 ```
+
+| Tier | `--model` pin (cost-catalog) |
+| ---- | ---------------------------- |
+| cheap | `composer-2.5-fast` |
+| standard | `composer-2.5` |
+| heavy | `claude-sonnet-5-thinking-high` |
+
+Sau wave: `node scripts/orca-cost-wave-evidence.mjs` → ghi dòng `cost-wave` (`source=receipt`). Comment wt `Cost … · model …` **không** thay `--model` argv.
+
+UAT / milestone gate (a): Read `.cursor/rules/uat-headless.mdc` (Wave G — không alwaysApply).
 
 Reviewer (thêm):
 
