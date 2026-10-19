@@ -119,8 +119,9 @@ Theo dõi thủ công / comment đợt (đủ để cải tiến quy trình):
 | Thời gian chờ duyệt | Timestamp Status → `Chờ duyệt` đến comment DoD có SHA + verdict | Hàng đợi đầy → ưu tiên reviewer trước feature |
 | CI re-run | Số lần re-run / push sửa CI trên cùng PR trước khi xanh | >2 re-run không rõ nguyên nhân → dừng feature cùng slice, sửa CI |
 | Acceptance reopen | `Hoàn thành` hoặc `Chờ duyệt` → lại `Đang làm` sau FAIL / gap mới | Ghi SHA fail + SHA fix; bắt buộc revalidation |
+| **inherit%** (Wave D) | Dòng `cost-wave` sau mỗi wave; hoặc `node scripts/orca-cost-wave-evidence.mjs`; weekday automation | >20% → refresh `agent models` / pin; không tăng heavy |
 
-Không cần dashboard SaaS; ghi 1 dòng trong báo cáo coordinator khi đợt có áp lực.
+Không cần dashboard SaaS; ghi 1 dòng coordinator khi đợt có áp lực **và** 1 dòng `cost-wave` mỗi wave spawn.
 
 ## `gh` sketch (adapt IDs from live field list)
 

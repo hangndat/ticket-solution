@@ -61,4 +61,4 @@ Nếu không còn task sẵn sàng trong phạm vi: release worker đã settle, 
 
 ## Đo nhẹ khi fill
 
-Khi áp dụng backpressure, ghi 1 dòng coordinator: số `Chờ duyệt`, số PR mở chờ DoD/CI, và việc đã ưu tiên (review / fix / feature). Chỉ số chi tiết: `github-project-tracking.mdc` § đo lường.
+Khi áp dụng backpressure, ghi 1 dòng coordinator: số `Chờ duyệt`, số PR mở chờ DoD/CI, và việc đã ưu tiên (review / fix / feature). Sau fill có spawn mới: thêm dòng **`cost-wave`** (Wave D — inherit%/tier; `docs/agents/cost-catalog.md`). Chỉ số chi tiết: `github-project-tracking.mdc` § đo lường.
