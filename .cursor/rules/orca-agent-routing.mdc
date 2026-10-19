@@ -84,29 +84,32 @@ Heuristic nhanh (khi planner chưa ghi): docs/mechanical / DoD hẹp / planner �
 4. **Ưu tiên effort/model thấp khi retry:** +1 bậc effort **hoặc** +1 model (không cùng lúc ở retry đầu); không nhảy frontier.
 5. **Fresh launch để đổi tier:** `--model`/`--effort` **không** kết hợp `--terminal` reuse. Reuse chỉ khi Task kế **cùng hoặc thấp hơn** tier pane; Task `cheap` sau pane `heavy` → `worker-release` rồi launch mới.
 6. **So sánh receipt:** `launch.requested` vs `launch.effective`; chỉ claim theo **effective**. Reject → fallback cùng tier rồi mới inherit có limitation.
-7. **Wave D — 1 dòng evidence / wave:** sau wave spawn ghi `cost-wave | run=… | n=… | cheap=… standard=… heavy=… | pinned=… inherit=… | inherit%=… | models=…` (format [cost-catalog](../../docs/agents/cost-catalog.md) § Wave D). `inherit%` > **20%** → refresh pin, hạn chế heavy. Helper ước lượng: `node scripts/orca-cost-wave-evidence.mjs`.
-8. **Cap `heavy`:** ≤ **2** Dispatch `heavy` live / Run. **Cap reviewer:** ≤ **3** live `reviewer-dod`+`reviewer-security` / Run (`orca-parallel-workers.mdc`). Parallel-first vẫn cho tier thấp dưới soft cap feature.
-9. **User đặt tên model** → tôn trọng; vẫn gắn Cost tier gần đúng; không tự thêm `ultra`/`max`/`xhigh`.
-10. **Override Codex** (khi user cho phép): mechanical → Luna-class + `low`; coding → Sol-class + `low`/`medium`; spike/hard → Astra-class + `high` tối đa một bậc effort; không `ultra` mặc định.
+  7. **Wave D — 1 dòng evidence / wave:** sau wave spawn ghi `cost-wave | run=… | n=… | cheap=… standard=… heavy=… | pinned=… inherit=… | inherit%=… | models=… | source=…` (format [cost-catalog](../../docs/agents/cost-catalog.md) § Wave D). `inherit%` > **20%** → refresh pin, **dừng spawn** đến khi pin ổn. Helper: `node scripts/orca-cost-wave-evidence.mjs` (mặc định **receipt**; `--comments-only` = ước lượng cũ).
+  8. **Wave E — preflight bắt buộc:** trước mỗi `worker-start` fresh (không `--terminal` reuse), chạy `node scripts/orca-spawn-model-preflight.mjs -- --agent cursor --model <pin> …`. Exit ≠ 0 → **không** spawn. Comment wt `Cost … · model …` **không** thay `--model` trên argv / receipt.
+  9. **Cap `heavy`:** ≤ **2** Dispatch `heavy` live / Run. **Cap reviewer:** ≤ **3** live `reviewer-dod`+`reviewer-security` / Run (`orca-parallel-workers.mdc`). Parallel-first vẫn cho tier thấp dưới soft cap feature.
+  10. **User đặt tên model** → tôn trọng; vẫn gắn Cost tier gần đúng; không tự thêm `ultra`/`max`/`xhigh`.
+  11. **Override Codex** (khi user cho phép): mechanical → Luna-class + `low`; coding → Sol-class + `low`/`medium`; spike/hard → Astra-class + `high` tối đa một bậc effort; không `ultra` mặc định.
 
 ### Anti-patterns chi phí
 
 ```text
-❌ Inherit UI / --model auto làm mặc định
-❌ Mọi reviewer = heavy / frontier / >3 reviewer live
-❌ Reuse pane heavy cho Task docs/cheap tiếp theo
-❌ ultra / max / xhigh / opus làm mặc định
-❌ Đổi model + tăng effort cùng lúc ở retry đầu
-❌ Bịa Cursor model id ngoài cost-catalog / agent models
-❌ Bỏ Cost tier khỏi Task Spec
-❌ Spawn worker cho hygiene <~15 phút (làm inline)
+  ❌ Inherit UI / --model auto làm mặc định
+  ❌ Spawn fresh mà bỏ qua orca-spawn-model-preflight (Wave E)
+  ❌ Claim pinned chỉ vì comment wt có `model …` khi receipt effective=null
+  ❌ Mọi reviewer = heavy / frontier / >3 reviewer live
+  ❌ Reuse pane heavy cho Task docs/cheap tiếp theo
+  ❌ ultra / max / xhigh / opus làm mặc định
+  ❌ Đổi model + tăng effort cùng lúc ở retry đầu
+  ❌ Bịa Cursor model id ngoài cost-catalog / agent models
+  ❌ Bỏ Cost tier khỏi Task Spec
+  ❌ Spawn worker cho hygiene <~15 phút (làm inline)
 
-✅ Spec có Cost tier → --model từ cost-catalog → ghi effective
-✅ Mỗi wave: dòng cost-wave + inherit% (Wave D)
-✅ cheap chiếm phần lớn volume; heavy hiếm và có ROI
-✅ FAIL reasoning → +1 effort hoặc +1 model, rồi mới cân nhắc heavy hơn
-❌ Spawn wave rồi quên đo inherit% / không đối chiếu launch.effective
-```
+  ✅ Spec có Cost tier → preflight → --model từ cost-catalog → ghi effective
+  ✅ Mỗi wave: dòng cost-wave + inherit% từ receipt (Wave D+E)
+  ✅ cheap chiếm phần lớn volume; heavy hiếm và có ROI
+  ✅ FAIL reasoning → +1 effort hoặc +1 model, rồi mới cân nhắc heavy hơn
+  ❌ Spawn wave rồi quên đo inherit% / không đối chiếu launch.effective
+  ```
 
 ## Vai trò chuyên môn (role ≠ agent)
 

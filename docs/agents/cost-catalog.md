@@ -63,24 +63,53 @@ DoD thường **không** nâng `heavy` chỉ vì implementer đã `heavy`.
 Sau mỗi wave `worker-start` (hoặc cuối checkpoint idle-fill), coordinator ghi **một dòng evidence** (Issue comment / Run note / chat leader):
 
 ```text
-cost-wave | run=<id> | n=<spawned> | cheap=<c> standard=<s> heavy=<h> | pinned=<p> inherit=<i> | inherit%=<i*100/n> | models=<effective ids>
+cost-wave | run=<id> | n=<spawned> | cheap=<c> standard=<s> heavy=<h> | pinned=<p> inherit=<i> | inherit%=<i*100/n> | models=<effective ids> | source=receipt|receipt+mixed|wt-comment-estimate
 ```
 
 | Trường | Nguồn |
 | ------ | ----- |
-| `cheap/standard/heavy` | Cost tier trong Spec / task-title |
-| `pinned` | `worker-start` có `--model` khớp cost-catalog **và** `launch.effective` ≈ requested (hoặc comment wt `Cost … · model <pin>`) |
-| `inherit` | omit `--model`, `--model auto`, hoặc receipt `launch: inherit` / effective null khi đã request pin |
-| `models` | `launch.effective.model` (ưu tiên) hoặc pin trong comment |
+| `cheap/standard/heavy` | Cost tier trong Spec / task-title / displayName |
+| `pinned` | `launch.effective.model` (hoặc `requested`) khác null và không `auto` |
+| `inherit` | omit `--model`, `--model auto`, hoặc receipt `effective.model` **null** |
+| `models` | `launch.effective.model` (ưu tiên). Comment wt chỉ là soft signal (`source=mixed` / `wt-comment-estimate`) |
+| `source` | `receipt` = chỉ worker-show; `receipt+mixed` = null effective nhưng comment có pin; `wt-comment-estimate` = `--comments-only` hoặc không live |
 
-**Ngưỡng hành động:** `inherit%` > **20%** trong một đợt → refresh `agent models`, sửa pin stale, không spawn thêm heavy cho đến khi pinned ổn.
+**Ngưỡng hành động:** `inherit%` > **20%** trong một đợt → refresh `agent models`, sửa pin stale, **không spawn thêm** cho đến khi wave kế có `--model` (Wave E). Comment wt **không** đủ để hạ `inherit%`.
 
-Helper (ước lượng từ wt comment + live list, không thay receipt):
+Helper:
 
 ```text
-pnpm exec -- node scripts/orca-cost-wave-evidence.mjs
-# hoặc
-node scripts/orca-cost-wave-evidence.mjs
+node scripts/orca-cost-wave-evidence.mjs              # Wave E: receipts trước
+node scripts/orca-cost-wave-evidence.mjs --comments-only  # ước lượng cũ (Wave D)
 ```
 
-Weekday automation ticket-solution cũng báo `inherit%` gần đúng từ comment wt live.
+Weekday automation ticket-solution báo `inherit%` (comment) — leader vẫn chạy helper receipt sau mỗi wave spawn.
+
+## Wave E — enforce `--model` trước spawn
+
+Coordinator **không** gọi `worker-start` nếu argv thiếu pin:
+
+```text
+node scripts/orca-spawn-model-preflight.mjs -- \
+  --agent cursor --model composer-2.5-fast --display-name "…" …
+# exit 0 → mới worker-start với cùng flags
+# exit 2 → thiếu/invalid --model → dừng wave
+```
+
+| Gate | Hành vi |
+| ---- | ------- |
+| Thiếu `--model` / `--model auto` | **Reject** wave (trừ `--terminal` reuse) |
+| `--model` ngoài cost-catalog pin set | **Reject** — refresh `agent models` rồi cập nhật catalog |
+| Receipt `effective.model` null sau spawn dù đã request | Ghi limitation; đếm **inherit** trên cost-wave; không claim pinned |
+
+Snippet spawn tối thiểu:
+
+```text
+ORCA orchestration worker-start \
+  --task <id> --worktree path:<abs> --agent cursor \
+  --model <pin-from-cost-catalog> \
+  --display-name "<Persona> · <ui-label>" \
+  --json
+```
+
+Sau `worker-start`: đối chiếu `launch.requested` vs `launch.effective` trên receipt JSON; ghi dòng `cost-wave` với `source=receipt`.
