@@ -2,8 +2,10 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   buildEventMenuItems,
+  buildOrgMenuItems,
   derivePortalShellCapabilities,
   tenantHasAdminChrome,
+  tenantHasAnalytics,
 } from '../src/nav/capabilities';
 import {
   parseMeEventsResponse,
@@ -115,6 +117,78 @@ test('platform operator chrome is isolated from staff tenant role', () => {
   });
   assert.equal(caps.showPlatform, true);
   assert.equal(caps.showOrgChrome, false);
+});
+
+test('Phân tích org nav requires report.read assignment — not role name', () => {
+  const tenant = {
+    tenantId: 't1',
+    slug: 'demo',
+    name: 'Demo Org',
+    status: 'ACTIVE' as const,
+    role: 'Owner' as const,
+    tenantPermissions: ['event.list', 'event.create'],
+  };
+  assert.equal(
+    tenantHasAnalytics('t1', [
+      {
+        tenantId: 't1',
+        eventId: 'e1',
+        name: 'Demo',
+        permissions: ['gate.confirm'],
+      },
+    ]),
+    false,
+  );
+  assert.equal(
+    buildOrgMenuItems('t1', tenant, [
+      {
+        tenantId: 't1',
+        eventId: 'e1',
+        name: 'Demo',
+        permissions: ['gate.confirm'],
+      },
+    ]).some((m) => m.key === 'analytics'),
+    false,
+  );
+  assert.equal(
+    tenantHasAnalytics('t1', [
+      {
+        tenantId: 't1',
+        eventId: 'e1',
+        name: 'Demo',
+        permissions: ['report.read'],
+      },
+    ]),
+    true,
+  );
+  const withReport = buildOrgMenuItems('t1', tenant, [
+    {
+      tenantId: 't1',
+      eventId: 'e1',
+      name: 'Demo',
+      permissions: ['report.read'],
+    },
+  ]);
+  assert.equal(
+    withReport.some((m) => m.key === 'analytics' && m.label === 'Phân tích'),
+    true,
+  );
+  assert.equal(
+    withReport.find((m) => m.key === 'analytics')?.href,
+    '/t/t1/analytics',
+  );
+  // Cross-tenant report.read must not unlock this org's Analytics nav.
+  assert.equal(
+    tenantHasAnalytics('t1', [
+      {
+        tenantId: 't2',
+        eventId: 'e9',
+        name: 'Other',
+        permissions: ['report.read'],
+      },
+    ]),
+    false,
+  );
 });
 
 test('invalid discovery payloads never unlock admin chrome', () => {
