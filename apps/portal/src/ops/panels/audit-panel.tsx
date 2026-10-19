@@ -10,6 +10,7 @@ import {
   interpretAuditPage,
   type AuditListView,
 } from '../audit';
+import { usePortalLocale } from '../../i18n';
 
 type Props = {
   tenantId: string;
@@ -17,6 +18,7 @@ type Props = {
 };
 
 export function AuditPanel({ tenantId, eventId }: Props) {
+  const { t, locale } = usePortalLocale();
   const [busy, setBusy] = useState(false);
   const [view, setView] = useState<AuditListView | null>(null);
   const [items, setItems] = useState<PortalAuditEntry[]>([]);
@@ -39,7 +41,7 @@ export function AuditPanel({ tenantId, eventId }: Props) {
       const next = interpretAuditPage(
         res.status,
         res.json,
-        res.networkError || res.timedOut,
+        res.networkError || res.timedOut, locale,
       );
       setView(next);
       if (next.kind === 'page') {
@@ -53,7 +55,7 @@ export function AuditPanel({ tenantId, eventId }: Props) {
       }
       setBusy(false);
     },
-    [tenantId, eventId, action, from, to],
+    [tenantId, eventId, action, from, to, locale],
   );
 
   useEffect(() => {
@@ -71,12 +73,12 @@ export function AuditPanel({ tenantId, eventId }: Props) {
       <Alert
         type="info"
         showIcon
-        message="Nhật ký sự kiện (H-A1)"
-        description="Cần report.read + phân công. Không hiển thị reason / sanitizedDiff / PII. Instant from/to phải có timezone (Z hoặc ±offset)."
+        message={t('ops.h_1seddb9')}
+        description={t('ops.audit.filterHint')}
       />
       <Space wrap>
         <Input
-          placeholder="action (tuỳ chọn)"
+          placeholder={t('audit.filter.actionOptional')}
           value={action}
           onChange={(e) => setAction(e.target.value)}
           style={{ minWidth: 180 }}
@@ -96,9 +98,7 @@ export function AuditPanel({ tenantId, eventId }: Props) {
           style={{ minWidth: 220 }}
           spellCheck={false}
         />
-        <Button type="primary" loading={busy} onClick={() => void load(null, false)}>
-          Lọc
-        </Button>
+        <Button type="primary" loading={busy} onClick={() => void load(null, false)}>{t('platform.loc')}</Button>
       </Space>
       {view?.kind === 'rejected' || view?.kind === 'unknown' ? (
         <Alert
@@ -114,10 +114,10 @@ export function AuditPanel({ tenantId, eventId }: Props) {
         loading={busy}
         dataSource={items}
         pagination={false}
-        locale={{ emptyText: 'Chưa có bản ghi trong bộ lọc / TTL.' }}
+        locale={{ emptyText: t('ops.h_cgehle') }}
         data-testid="audit-table"
         columns={[
-          { title: 'Thời điểm', dataIndex: 'createdAt', width: 200, ellipsis: true },
+          { title: t('platform.h_zdynbv'), dataIndex: 'createdAt', width: 200, ellipsis: true },
           { title: 'Action', dataIndex: 'action', width: 160, ellipsis: true },
           { title: 'Actor', dataIndex: 'actorUserId', ellipsis: true },
           { title: 'Resource', dataIndex: 'resourceType', width: 120 },
@@ -126,9 +126,7 @@ export function AuditPanel({ tenantId, eventId }: Props) {
         ]}
       />
       {nextCursor ? (
-        <Button loading={busy} onClick={() => void load(nextCursor, true)}>
-          Trang tiếp
-        </Button>
+        <Button loading={busy} onClick={() => void load(nextCursor, true)}>{t('platform.h_4cj11z')}</Button>
       ) : null}
     </Space>
   );

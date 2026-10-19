@@ -12,10 +12,12 @@ import { PendingPanel } from '../../../../../../src/ops/panels/pending-panel';
 import { bffEventAction } from '../../../../../../src/prep/bff-urls';
 import { useEventAccess } from '../../../../../../src/prep/use-event-access';
 import { SurfaceState } from '../../../../../../src/components/surface-state';
+import { usePortalLocale } from '../../../../../../src/i18n';
 
 type CatalogItem = { id: string; label: string };
 
 export default function EventGuestsPage() {
+  const { t } = usePortalLocale();
   const params = useParams<{ tenantId: string; eventId: string }>();
   const { tenantId, eventId } = params;
   const access = useEventAccess(tenantId, eventId);
@@ -44,7 +46,7 @@ export default function EventGuestsPage() {
     if (access.kind !== 'ready') return;
     let cancelled = false;
     void (async () => {
-      const [s, t] = await Promise.all([
+      const [s, ty] = await Promise.all([
         portalGet(
           `${bffEventAction(tenantId, eventId, 'sources')}?limit=50`,
         ),
@@ -67,12 +69,12 @@ export default function EventGuestsPage() {
         setSources(mapped);
         if (mapped[0]) setSourceId(mapped[0].id);
       } else {
-        setCatalogError('Không tải được sources — không gõ UUID tay.');
+        setCatalogError(t('guests.h_me551x'));
       }
-      if (t.status === 200 && t.json && typeof t.json === 'object') {
-        const items = Array.isArray((t.json as { items?: unknown }).items)
+      if (ty.status === 200 && ty.json && typeof ty.json === 'object') {
+        const items = Array.isArray((ty.json as { items?: unknown }).items)
           ? ((
-              t.json as {
+              ty.json as {
                 items: Array<{ ticketTypeId?: string; label?: string }>;
               }
             ).items)
@@ -90,7 +92,7 @@ export default function EventGuestsPage() {
     return () => {
       cancelled = true;
     };
-  }, [access.kind, tenantId, eventId]);
+  }, [access.kind, tenantId, eventId, t]);
 
   const permissions = useMemo(
     () => (access.kind === 'ready' ? access.permissions : []),
@@ -110,7 +112,7 @@ export default function EventGuestsPage() {
     return (
       <SurfaceState
         kind="error"
-        description={access.message}
+        description={access.messageKey ? t(access.messageKey) : undefined}
         onRetry={() => window.location.reload()}
       />
     );
@@ -119,7 +121,7 @@ export default function EventGuestsPage() {
     return (
       <SurfaceState
         kind="permission-denied"
-        description="Cần inventory.import / redemption.approve / notify.send / export.* từ máy chủ."
+        description={t('ops.guests.needPermissions')}
         onRetry={() => {
           window.location.href = `/t/${tenantId}/e/${eventId}`;
         }}
@@ -148,7 +150,7 @@ export default function EventGuestsPage() {
   if (canApprove) {
     tabItems.push({
       key: 'pending',
-      label: 'Chờ duyệt',
+      label: t('guests.pendingTitle'),
       children: (
         <PendingPanel
           tenantId={tenantId}
@@ -163,7 +165,7 @@ export default function EventGuestsPage() {
   if (canNotify) {
     tabItems.push({
       key: 'notifications',
-      label: 'Thông báo',
+      label: t('guests.h_1avy3de'),
       children: (
         <NotificationsOpsPanel
           tenantId={tenantId}
@@ -190,33 +192,31 @@ export default function EventGuestsPage() {
 
   return (
     <Space direction="vertical" size="large" style={{ width: '100%' }}>
-      <Typography.Title level={3} style={{ margin: 0 }}>
-        Khách & mã
-      </Typography.Title>
+      <Typography.Title level={3} style={{ margin: 0 }}>{t('nav.event.guests')}</Typography.Title>
       <Alert
         type="info"
         showIcon
         message="Import / invitations / pending / notify / export"
-        description="Preview không giữ quota. ACCEPTED ≠ DELIVERED. Source/type chọn từ catalog — không nhập UUID tay."
+        description={t('guests.h_1tkjxlx')}
       />
       {catalogError ? (
         <Alert type="warning" showIcon message={catalogError} />
       ) : null}
       {canImport ? (
         <Space wrap>
-          <span>Nguồn mã</span>
+          <span>{t('nav.event.sources')}</span>
           <Select
             style={{ minWidth: 220 }}
             value={sourceId || undefined}
-            placeholder="Chọn source"
+            placeholder={t('ops.import.chooseSource')}
             options={sources.map((s) => ({ value: s.id, label: s.label }))}
             onChange={setSourceId}
           />
-          <span>Loại vé</span>
+          <span>{t('nav.event.types')}</span>
           <Select
             style={{ minWidth: 220 }}
             value={ticketTypeId || undefined}
-            placeholder="Chọn ticket type"
+            placeholder={t('ops.import.chooseTicketType')}
             options={types.map((t) => ({ value: t.id, label: t.label }))}
             onChange={setTicketTypeId}
           />

@@ -26,8 +26,10 @@ import {
 import { bffEvent, bffEventAction } from '../../../../../../src/prep/bff-urls';
 import { useEventAccess } from '../../../../../../src/prep/use-event-access';
 import { SurfaceState } from '../../../../../../src/components/surface-state';
+import { usePortalLocale } from '../../../../../../src/i18n';
 
 export default function ConfigBrandPage() {
+  const { t } = usePortalLocale();
   const params = useParams<{ tenantId: string; eventId: string }>();
   const { tenantId, eventId } = params;
   const access = useEventAccess(tenantId, eventId);
@@ -54,12 +56,12 @@ export default function ConfigBrandPage() {
     ]);
     if (c.networkError || c.timedOut || c.status >= 500) {
       setKind('unknown');
-      setMessage('Chưa rõ kết quả tải lịch sử cấu hình.');
+      setMessage(t('config.h_194o8da'));
       return;
     }
     if (c.status !== 200 || !c.json || typeof c.json !== 'object') {
       setKind('error');
-      setMessage(apiErrorMessage(c.json, `HTTP ${c.status}`));
+      setMessage(apiErrorMessage(c.json, t('common.httpStatus', { status: c.status })));
       return;
     }
     const items = Array.isArray((c.json as { items?: unknown }).items)
@@ -112,7 +114,7 @@ export default function ConfigBrandPage() {
       });
     }
     setKind('ready');
-  }, [tenantId, eventId, form]);
+  }, [tenantId, eventId, form, t]);
 
   useEffect(() => {
     if (access.kind !== 'ready') return;
@@ -130,7 +132,7 @@ export default function ConfigBrandPage() {
     return (
       <SurfaceState
         kind="error"
-        description={access.message}
+        description={access.messageKey ? t(access.messageKey) : undefined}
         onRetry={() => window.location.reload()}
       />
     );
@@ -139,7 +141,7 @@ export default function ConfigBrandPage() {
     return (
       <SurfaceState
         kind="permission-denied"
-        description="Không có quyền sự kiện này."
+        description={t('config.h_g7fjbz')}
         onRetry={() => {
           window.location.href = `/t/${tenantId}`;
         }}
@@ -164,7 +166,7 @@ export default function ConfigBrandPage() {
         termsText: values.termsText,
       });
       if (!isMinimalBrandOk(payload) || !hasTermsContent(payload)) {
-        setNotice('Thiếu brand tối thiểu hoặc điều khoản.');
+        setNotice(t('config.h_ve7ob6'));
         return;
       }
       const res = await portalMutate(
@@ -172,15 +174,15 @@ export default function ConfigBrandPage() {
         { payload, schemaVersion: 1 },
       );
       if (res.networkError || res.timedOut || res.status >= 500) {
-        setNotice('Chưa rõ kết quả lưu draft — không coi là đã lưu.');
+        setNotice(t('config.h_1irt9z3'));
         return;
       }
       if (res.status >= 200 && res.status < 300) {
-        setNotice('Đã lưu bản nháp cấu hình (chưa publish).');
+        setNotice(t('config.h_1qavkda'));
         void load();
         return;
       }
-      setNotice(apiErrorMessage(res.json, 'Không lưu được draft.'));
+      setNotice(apiErrorMessage(res.json, t('config.h_13x41d8')));
     } finally {
       setBusy(false);
     }
@@ -189,52 +191,52 @@ export default function ConfigBrandPage() {
   async function publishTip() {
     const tip = versions[0];
     if (!tip) {
-      setNotice('Chưa có phiên bản để xuất bản — lưu draft trước.');
+      setNotice(t('config.h_1ylm4kq'));
       return;
     }
     Modal.confirm({
-      title: 'Xuất bản cấu hình?',
+      title: t('config.h_14ib82o'),
       content: (
         <Alert
           type="warning"
           showIcon
-          message="Publish ≠ mở redeem ≠ mở Gate"
-          description={`Sẽ publish version ${tip.version}. Không tự mở redeem/Gate.`}
+          message={t('config.h_1hh7j6r')}
+          description={t('config.publishConfirm', { version: tip.version })}
         />
       ),
-      okText: 'Xuất bản',
-      cancelText: 'Huỷ',
+      okText: t('config.h_lofnqs'),
+      cancelText: t('config.huy'),
       onOk: async () => {
         const res = await portalMutate(
           bffEventAction(tenantId, eventId, 'publish'),
           { expectedVersion: tip.version },
         );
         if (res.networkError || res.status >= 500) {
-          setNotice('Chưa rõ kết quả publish.');
+          setNotice(t('config.h_1b1xmvu'));
           return;
         }
         if (res.status >= 200 && res.status < 300) {
-          setNotice('Đã publish cấu hình.');
+          setNotice(t('config.h_1ec27qs'));
           void load();
           return;
         }
-        setNotice(apiErrorMessage(res.json, 'Publish thất bại.'));
+        setNotice(apiErrorMessage(res.json, t('config.h_ez5uf1')));
       },
     });
   }
 
   function rollbackTo(targetVersion: number) {
     if (!detail || publishedVersion == null) {
-      setNotice('Thiếu revision hoặc published version để rollback.');
+      setNotice(t('config.h_1eg9ac0'));
       return;
     }
     Modal.confirm({
-      title: `Rollback về version ${targetVersion}?`,
+      title: t('config.rollbackConfirm', { targetVersion }),
       content:
-        'Rollback tạo version mới (append-only), không rewind lịch sử. Cần xác nhận.',
+        t('config.h_1djtg5w'),
       okText: 'Rollback',
       okButtonProps: { danger: true },
-      cancelText: 'Huỷ',
+      cancelText: t('config.huy'),
       onOk: async () => {
         const res = await portalMutate(
           `${bffEventAction(tenantId, eventId, 'config')}/rollback`,
@@ -245,29 +247,27 @@ export default function ConfigBrandPage() {
           },
         );
         if (res.networkError || res.status >= 500) {
-          setNotice('Chưa rõ kết quả rollback.');
+          setNotice(t('config.h_1xteu8h'));
           return;
         }
         if (res.status >= 200 && res.status < 300) {
-          setNotice('Đã rollback (version mới đã publish).');
+          setNotice(t('config.h_145079h'));
           void load();
           return;
         }
-        setNotice(apiErrorMessage(res.json, 'Rollback thất bại.'));
+        setNotice(apiErrorMessage(res.json, t('config.h_14tzacc')));
       },
     });
   }
 
   return (
     <Space direction="vertical" size="large" style={{ width: '100%' }}>
-      <Typography.Title level={3} style={{ margin: 0 }}>
-        Cấu hình / brand / xuất bản
-      </Typography.Title>
+      <Typography.Title level={3} style={{ margin: 0 }}>{t('settings.brandPublishTitle')}</Typography.Title>
       <Alert
         type="info"
         showIcon
-        message="Publish ≠ redeem ≠ Gate"
-        description="Lưu draft và publish khóa nội dung sự kiện. Không mở cửa sổ redeem khách và không bật cổng quét trên portal."
+        message={t('config.h_gyyhq3')}
+        description={t('config.h_bji8yr')}
       />
 
       {kind === 'loading' ? <SurfaceState kind="loading" /> : null}
@@ -275,12 +275,10 @@ export default function ConfigBrandPage() {
         <Alert
           type="warning"
           showIcon
-          message="Chưa rõ kết quả"
+          message={t('surface.unknown.title')}
           description={message}
           action={
-            <Button size="small" onClick={() => void load()}>
-              Kiểm tra lại
-            </Button>
+            <Button size="small" onClick={() => void load()}>{t('surface.action.recheck')}</Button>
           }
         />
       ) : null}
@@ -297,21 +295,21 @@ export default function ConfigBrandPage() {
           <Form form={form} layout="vertical" style={{ maxWidth: 480 }} disabled={!canConfig}>
             <Form.Item
               name="organizationName"
-              label="Tên tổ chức (brand)"
+              label={t('config.h_15mcx85')}
               rules={[{ required: true }]}
             >
               <Input />
             </Form.Item>
             <Form.Item
               name="primaryColor"
-              label="Màu chính"
+              label={t('config.h_1fbsj7r')}
               rules={[{ required: true }]}
             >
               <Input placeholder="#9b3a18" />
             </Form.Item>
             <Form.Item
               name="termsText"
-              label="Điều khoản (plain text)"
+              label={t('config.h_6ccvfx')}
               rules={[{ required: true }]}
             >
               <Input.TextArea rows={4} />
@@ -322,19 +320,15 @@ export default function ConfigBrandPage() {
                 loading={busy}
                 disabled={!canConfig}
                 onClick={() => void saveDraft()}
-              >
-                Lưu draft
-              </Button>
+              >{t('config.h_q8yg9j')}</Button>
               <Button
                 disabled={!canConfig || !access.permissions.includes('config.publish')}
                 onClick={() => void publishTip()}
-              >
-                Xuất bản tip
-              </Button>
+              >{t('config.h_19gwi7d')}</Button>
             </Space>
           </Form>
 
-          <Typography.Title level={5}>Lịch sử phiên bản</Typography.Title>
+          <Typography.Title level={5}>{t('config.h_qavzgt')}</Typography.Title>
           <Table
             rowKey="version"
             dataSource={versions}
@@ -346,7 +340,7 @@ export default function ConfigBrandPage() {
                 dataIndex: 'published',
                 render: (v: boolean) => (v ? 'yes' : 'no'),
               },
-              { title: 'Tạo lúc', dataIndex: 'createdAt' },
+              { title: t('config.h_1c1wh3g'), dataIndex: 'createdAt' },
               {
                 title: '',
                 render: (_: unknown, row: ConfigVersionSummary) =>
@@ -356,9 +350,7 @@ export default function ConfigBrandPage() {
                       danger
                       disabled={!canConfig}
                       onClick={() => rollbackTo(row.version)}
-                    >
-                      Rollback về đây
-                    </Button>
+                    >{t('config.h_wotjs8')}</Button>
                   ) : null,
               },
             ]}

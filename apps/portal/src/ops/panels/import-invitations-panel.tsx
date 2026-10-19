@@ -14,7 +14,6 @@ import {
 import type { ImportKind } from '@ticket/contracts';
 import { useState, type Key } from 'react';
 import {
-  apiErrorMessage,
   portalDownload,
   portalGet,
   portalMultipart,
@@ -47,6 +46,7 @@ import {
   invitationViewLabel,
   type InvitationView,
 } from '../invitation';
+import { usePortalLocale } from '../../i18n';
 
 type Props = {
   tenantId: string;
@@ -61,6 +61,7 @@ export function ImportInvitationsPanel({
   sourceId,
   ticketTypeId,
 }: Props) {
+  const { t, locale } = usePortalLocale();
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [kind, setKind] = useState<ImportKind>('CODES');
@@ -90,7 +91,7 @@ export function ImportInvitationsPanel({
     a.download = csvTemplateFilename(kind);
     a.click();
     URL.revokeObjectURL(url);
-    setNotice(`Đã tải template ${csvTemplateFilename(kind)}.`);
+    setNotice(t('ops.import.templateDownloaded', { filename: csvTemplateFilename(kind) }));
   }
 
   async function onFileChosen(file: File) {
@@ -102,19 +103,19 @@ export function ImportInvitationsPanel({
       text,
       mapping: { code: codeColumn, email: emailColumn },
       mappingRevision,
-    });
+    }, locale);
     if (!parsed.ok) {
       setImportView({
         kind: 'rejected',
         code: parsed.code,
         message: parsed.message,
       });
-      setNotice(`${parsed.code}: ${parsed.message}`);
+      setNotice(t('ops.export.apiRejected', { code: parsed.code, message: parsed.message }));
       return false;
     }
     setMappingRevision(parsed.mappingRevision);
     setNotice(
-      `CSV cục bộ: ${parsed.rowCount} dòng · ${parsed.byteLength} bytes · chưa ghi backend.`,
+      t('ops.import.localCsvSummary', { rowCount: parsed.rowCount, byteLength: parsed.byteLength }),
     );
     return false;
   }
@@ -127,7 +128,7 @@ export function ImportInvitationsPanel({
       text: csvText,
       mapping: { code: codeColumn, email: emailColumn },
       mappingRevision,
-    });
+    }, locale);
     if (!parsed.ok) {
       const rejected: ImportView = {
         kind: 'rejected',
@@ -135,7 +136,7 @@ export function ImportInvitationsPanel({
         message: parsed.message,
       };
       setImportView(rejected);
-      setNotice(importViewLabel(rejected));
+      setNotice(importViewLabel(rejected, locale));
       setBusy(false);
       return;
     }
@@ -154,11 +155,11 @@ export function ImportInvitationsPanel({
     const uploadView = interpretImportUpload(
       upload.status,
       upload.json,
-      upload.networkError || upload.timedOut,
+      upload.networkError || upload.timedOut, locale,
     );
     if (uploadView.kind !== 'upload') {
       setImportView(uploadView);
-      setNotice(importViewLabel(uploadView));
+      setNotice(importViewLabel(uploadView, locale));
       setBusy(false);
       return;
     }
@@ -178,14 +179,14 @@ export function ImportInvitationsPanel({
     const next = interpretImportCreate(
       create.status,
       create.json,
-      create.networkError || create.timedOut,
+      create.networkError || create.timedOut, locale,
     );
     setImportView(next);
     if (next.kind === 'job') {
       setImportId(next.job.importId);
       if (next.job.fileHash) setFileHash(next.job.fileHash);
     }
-    setNotice(importViewLabel(next));
+    setNotice(importViewLabel(next, locale));
     setBusy(false);
   }
 
@@ -203,7 +204,7 @@ export function ImportInvitationsPanel({
     const next = interpretImportPreview(
       result.status,
       result.json,
-      result.networkError || result.timedOut,
+      result.networkError || result.timedOut, locale,
     );
     setImportView(next);
     if (next.kind === 'preview') {
@@ -211,7 +212,7 @@ export function ImportInvitationsPanel({
       setFileHash(next.preview.fileHash);
       setMappingRevision(next.preview.mappingRevision);
     }
-    setNotice(importViewLabel(next));
+    setNotice(importViewLabel(next, locale));
     setBusy(false);
   }
 
@@ -230,10 +231,10 @@ export function ImportInvitationsPanel({
     const next = interpretImportCommit(
       result.status,
       result.json,
-      result.networkError || result.timedOut,
+      result.networkError || result.timedOut, locale,
     );
     setImportView(next);
-    setNotice(importViewLabel(next));
+    setNotice(importViewLabel(next, locale));
     setBusy(false);
   }
 
@@ -246,10 +247,10 @@ export function ImportInvitationsPanel({
     const next = interpretImportStatus(
       result.status,
       result.json,
-      result.networkError || result.timedOut,
+      result.networkError || result.timedOut, locale,
     );
     setImportView(next);
-    setNotice(importViewLabel(next));
+    setNotice(importViewLabel(next, locale));
     setBusy(false);
   }
 
@@ -270,7 +271,7 @@ export function ImportInvitationsPanel({
         importId.trim(),
         res.contentType,
         res.blob.size,
-        filename,
+        filename, locale,
       );
       setImportView(next);
       const url = URL.createObjectURL(res.blob);
@@ -279,17 +280,17 @@ export function ImportInvitationsPanel({
       a.download = filename;
       a.click();
       URL.revokeObjectURL(url);
-      setNotice(importViewLabel(next));
+      setNotice(importViewLabel(next, locale));
     } else {
       const next = interpretImportErrorsDownload(
         res.status,
         null,
         res.networkError || res.timedOut,
         importId.trim(),
-        res.contentType,
+        res.contentType, undefined, undefined, locale,
       );
       setImportView(next);
-      setNotice(importViewLabel(next));
+      setNotice(importViewLabel(next, locale));
     }
     setBusy(false);
   }
@@ -303,13 +304,13 @@ export function ImportInvitationsPanel({
     const next = interpretInvitationList(
       result.status,
       result.json,
-      result.networkError || result.timedOut,
+      result.networkError || result.timedOut, locale,
     );
     setInviteView(next);
     if (next.kind === 'list') {
       setSelectedRowKeys(next.items.map((i) => i.invitationId));
     }
-    setNotice(invitationViewLabel(next));
+    setNotice(invitationViewLabel(next, locale));
     setBusy(false);
   }
 
@@ -324,13 +325,13 @@ export function ImportInvitationsPanel({
     const next = interpretDispatchPreview(
       result.status,
       result.json,
-      result.networkError || result.timedOut,
+      result.networkError || result.timedOut, locale,
     );
     setInviteView(next);
     if (next.kind === 'dispatch_preview') {
       setDispatchPreviewRevision(next.preview.previewRevision);
     }
-    setNotice(invitationViewLabel(next));
+    setNotice(invitationViewLabel(next, locale));
     setBusy(false);
   }
 
@@ -346,10 +347,10 @@ export function ImportInvitationsPanel({
     const next = interpretDispatch(
       result.status,
       result.json,
-      result.networkError || result.timedOut,
+      result.networkError || result.timedOut, locale,
     );
     setInviteView(next);
-    setNotice(invitationViewLabel(next));
+    setNotice(invitationViewLabel(next, locale));
     setBusy(false);
   }
 
@@ -363,12 +364,12 @@ export function ImportInvitationsPanel({
       <Alert
         type="info"
         showIcon
-        message="Import CSV đa bước (C-I)"
-        description="Upload → tạo job → preview (không giữ quota) → commit idempotent. Báo cáo lỗi là stream authenticated, không URL tạm."
+        message={t('ops.import.panelTitle')}
+        description={t('ops.import.panelDescription')}
       />
 
       <Form layout="vertical">
-        <Form.Item label="Loại job">
+        <Form.Item label={t('ops.import.jobType')}>
           <Select
             value={kind}
             onChange={(v) => setKind(v)}
@@ -380,7 +381,7 @@ export function ImportInvitationsPanel({
           />
         </Form.Item>
         <Space wrap>
-          <Button onClick={downloadTemplate}>Tải template CSV</Button>
+          <Button onClick={downloadTemplate}>{t('ops.h_15064q7')}</Button>
           <Upload
             accept=".csv,text/csv"
             showUploadList={false}
@@ -389,14 +390,14 @@ export function ImportInvitationsPanel({
               return false;
             }}
           >
-            <Button>Chọn file CSV</Button>
+            <Button>{t('ops.import.chooseCsv')}</Button>
           </Upload>
           {fileName ? (
             <Typography.Text type="secondary">{fileName}</Typography.Text>
           ) : null}
         </Space>
         {kind === 'CODES' ? (
-          <Form.Item label="Cột code" style={{ marginTop: 16, maxWidth: 320 }}>
+          <Form.Item label={t('ops.import.codeColumn')} style={{ marginTop: 16, maxWidth: 320 }}>
             <Input
               value={codeColumn}
               onChange={(e) => {
@@ -406,7 +407,7 @@ export function ImportInvitationsPanel({
             />
           </Form.Item>
         ) : (
-          <Form.Item label="Cột email" style={{ marginTop: 16, maxWidth: 320 }}>
+          <Form.Item label={t('ops.import.emailColumn')} style={{ marginTop: 16, maxWidth: 320 }}>
             <Input
               value={emailColumn}
               onChange={(e) => {
@@ -417,8 +418,7 @@ export function ImportInvitationsPanel({
           </Form.Item>
         )}
         <Typography.Paragraph type="secondary">
-          sourceId / ticketTypeId lấy từ catalog sự kiện (không gõ UUID tay).
-          Mapping revision: {mappingRevision}
+          {t('ops.import.catalogHint')}{mappingRevision}
           {fileId ? ` · fileId ${fileId.slice(0, 8)}…` : ''}
         </Typography.Paragraph>
         <Form.Item label="Import ID">
@@ -436,9 +436,7 @@ export function ImportInvitationsPanel({
               !csvText.trim() || !sourceId.trim() || !ticketTypeId.trim()
             }
             onClick={() => void uploadAndCreate()}
-          >
-            Upload + tạo job
-          </Button>
+          >{t('ops.import.uploadJob')}</Button>
           <Button
             loading={busy}
             disabled={!importId.trim()}
@@ -466,9 +464,7 @@ export function ImportInvitationsPanel({
             loading={busy}
             disabled={!importId.trim()}
             onClick={() => void downloadErrors()}
-          >
-            Tải lỗi
-          </Button>
+          >{t('ops.h_1h6fj17')}</Button>
         </Space>
       </Form>
 
@@ -476,7 +472,7 @@ export function ImportInvitationsPanel({
         <Alert
           type={importView.kind === 'rejected' ? 'error' : 'success'}
           showIcon
-          message={importViewLabel(importView)}
+          message={importViewLabel(importView, locale)}
           data-testid="import-job-result"
         />
       ) : null}
@@ -485,12 +481,10 @@ export function ImportInvitationsPanel({
       <Alert
         type="warning"
         showIcon
-        message="Dispatch preview không reserve quota và không gửi mail."
+        message={t('ops.import.dispatchPreviewNotice')}
       />
       <Space wrap>
-        <Button loading={busy} onClick={() => void listInvitations()}>
-          Liệt kê invitations
-        </Button>
+        <Button loading={busy} onClick={() => void listInvitations()}>{t('ops.import.listInvitations')}</Button>
         <Button
           loading={busy}
           disabled={selectedRowKeys.length === 0}
@@ -530,15 +524,13 @@ export function ImportInvitationsPanel({
         <Alert
           type={inviteView.kind === 'rejected' ? 'error' : 'info'}
           showIcon
-          message={invitationViewLabel(inviteView)}
+          message={invitationViewLabel(inviteView, locale)}
           data-testid="invitation-dispatch-result"
         />
       ) : null}
       {notice ? (
         <Typography.Text type="secondary">
-          {notice.includes('HTTP') || notice.includes('thất')
-            ? notice
-            : apiErrorMessage(null, notice)}
+          {notice}
         </Typography.Text>
       ) : null}
     </Space>

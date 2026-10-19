@@ -4,10 +4,11 @@ import { useEffect, useState } from 'react';
 import type { MeEventItem, MeTenantItem } from '@ticket/contracts';
 import { loadShellContext } from '../nav/load-shell-context';
 import { tenantHasAdminChrome } from '../nav/capabilities';
+import type { MessageKey } from '../i18n/messages';
 
 export type EventAccessState =
   | { kind: 'loading' }
-  | { kind: 'error'; message?: string }
+  | { kind: 'error'; messageKey?: MessageKey }
   | { kind: 'permission-denied' }
   | {
       kind: 'ready';
@@ -31,12 +32,13 @@ export function useEventAccess(
         return;
       }
       if (shell.status === 'error') {
-        setState({ kind: 'error', message: shell.message });
+        setState({ kind: 'error', messageKey: shell.messageKey });
         return;
       }
       if (shell.status !== 'ready') return;
       const tenant =
-        shell.meTenants?.items.find((t) => t.tenantId === tenantId) ?? null;
+        shell.meTenants?.items.find((tenant) => tenant.tenantId === tenantId) ??
+        null;
       const event =
         shell.meEvents?.items.find(
           (e) => e.tenantId === tenantId && e.eventId === eventId,
@@ -62,7 +64,7 @@ export function useEventAccess(
 
 export type TenantAccessState =
   | { kind: 'loading' }
-  | { kind: 'error'; message?: string }
+  | { kind: 'error'; messageKey?: MessageKey }
   | { kind: 'permission-denied' }
   | {
       kind: 'ready';
@@ -82,12 +84,13 @@ export function useTenantAccess(tenantId: string): TenantAccessState {
         return;
       }
       if (shell.status === 'error') {
-        setState({ kind: 'error', message: shell.message });
+        setState({ kind: 'error', messageKey: shell.messageKey });
         return;
       }
       if (shell.status !== 'ready') return;
       const tenant =
-        shell.meTenants?.items.find((t) => t.tenantId === tenantId) ?? null;
+        shell.meTenants?.items.find((tenant) => tenant.tenantId === tenantId) ??
+        null;
       if (!tenant || !tenantHasAdminChrome(tenant)) {
         setState({ kind: 'permission-denied' });
         return;
