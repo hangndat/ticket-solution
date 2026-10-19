@@ -16,13 +16,19 @@ import {
 import {
   ApiBearerAuth,
   ApiBody,
+  ApiCreatedResponse,
+  ApiExtraModels,
   ApiOkResponse,
   ApiProperty,
   ApiQuery,
   ApiTags,
+  getSchemaPath,
 } from '@nestjs/swagger';
 import {
   type ApiError,
+  type CreateInviteBody,
+  type CreateRolePresetBody,
+  type InviteRoleRef,
   type MeEventItem,
   type MeEventsResponse,
   type PortalAssignmentBody,
@@ -41,6 +47,8 @@ import {
   type PortalPlatformTenantSummary,
   type PortalPlatformTenantsPage,
   type PortalReasonBody,
+  type RolePresetDto,
+  type RolePresetsListResponse,
   PLATFORM_ERROR_CODES,
 } from '@ticket/contracts';
 import {
@@ -54,19 +62,23 @@ import {
   createMembershipInvite,
   createOidcVerifier,
   createPlatformOidcVerifier,
+  createRolePreset,
   createSupportGrant,
   deletePortalEventAssignment,
   getCurrentAccountDeletionRequest,
   getPlatformMe,
   getPlatformTenantDetail,
   getPlatformTenantHealth,
+  getRolePreset,
   listMyEvents,
   listMyTenants,
   listPlatformAudit,
   listPlatformTenants,
   listPortalInvites,
   listPortalMembers,
+  listRolePresets,
   listSupportTickets,
+  parseInviteRole,
   provisionTenant,
   putPortalEventAssignment,
   readOidcEnvironment,
@@ -122,7 +134,10 @@ class PortalMemberSummaryDto implements PortalMemberSummary {
   @ApiProperty({ format: 'uuid' }) membershipId!: string;
   @ApiProperty({ format: 'uuid' }) userId!: string;
   @ApiProperty({ nullable: true, type: String }) emailMasked!: string | null;
-  @ApiProperty({ enum: MEMBERSHIP_ROLES }) role!: PortalMemberSummary['role'];
+  @ApiProperty({
+    description: 'Built-in MembershipRole or role_presets.id',
+  })
+  role!: string;
   @ApiProperty({ nullable: true, type: String }) activatedAt!: string | null;
   @ApiProperty({ nullable: true, type: String }) revokedAt!: string | null;
   @ApiProperty({ type: [PortalMemberAssignmentDto] })
@@ -138,7 +153,10 @@ class PortalMembersPageDto implements PortalMembersPage {
 class PortalInviteSummaryDto implements PortalInviteSummary {
   @ApiProperty({ format: 'uuid' }) inviteId!: string;
   @ApiProperty() emailMasked!: string;
-  @ApiProperty({ enum: MEMBERSHIP_ROLES }) role!: PortalInviteSummary['role'];
+  @ApiProperty({
+    description: 'Built-in MembershipRole or role_presets.id',
+  })
+  role!: string;
   @ApiProperty({ enum: ['PENDING', 'USED', 'REVOKED', 'EXPIRED'] })
   state!: PortalInviteState;
   @ApiProperty() expiresAt!: string;
@@ -148,6 +166,46 @@ class PortalInviteSummaryDto implements PortalInviteSummary {
       'ACCEPTED = outbox processing completed; never proof of inbox delivery',
   })
   deliveryState!: PortalInviteSummary['deliveryState'];
+}
+
+class InviteRolePresetDto {
+  @ApiProperty({ format: 'uuid' }) presetId!: string;
+}
+
+class CreateInviteBodyDto implements CreateInviteBody {
+  @ApiProperty({ format: 'email' }) email!: string;
+  @ApiProperty({
+    oneOf: [
+      { type: 'string', enum: [...MEMBERSHIP_ROLES] },
+      { $ref: getSchemaPath(InviteRolePresetDto) },
+    ],
+    description:
+      'MembershipRole enum or { presetId } — never client permission arrays',
+  })
+  role!: InviteRoleRef;
+}
+
+class RolePresetDtoSchema implements RolePresetDto {
+  @ApiProperty({ format: 'uuid' }) presetId!: string;
+  @ApiProperty({ nullable: true, format: 'uuid', type: String })
+  tenantId!: string | null;
+  @ApiProperty() name!: string;
+  @ApiProperty() schemaVersion!: number;
+  @ApiProperty({ type: [String] }) tenantPermissions!: string[];
+  @ApiProperty({ type: [String] }) eventPermissions!: string[];
+  @ApiProperty({ format: 'date-time' }) createdAt!: string;
+}
+
+class RolePresetsListDto implements RolePresetsListResponse {
+  @ApiProperty({ type: [RolePresetDtoSchema] }) items!: RolePresetDto[];
+}
+
+class CreateRolePresetBodyDto implements CreateRolePresetBody {
+  @ApiProperty() name!: string;
+  @ApiProperty({ type: [String], required: false })
+  tenantPermissions?: string[];
+  @ApiProperty({ type: [String], required: false })
+  eventPermissions?: string[];
 }
 
 class PortalInvitesPageDto implements PortalInvitesPage {
@@ -514,14 +572,16 @@ export class PlatformService {
     authorization: string | undefined,
     tenantId: string,
     idempotencyKey: string | undefined,
-    body: { email: string; role: string; eventAssignments?: never[] },
+    body: CreateInviteBody & Record<string, unknown>,
   ) {
-    if (!isMembershipRole(body.role)) {
+    const role = parseInviteRole(body.role);
+    if (!role) {
       return Promise.reject(
         new PlatformError(PLATFORM_ERROR_CODES.INVALID_INPUT, 'Invalid role'),
       ).catch(fail);
     }
-    const role = body.role;
+    const forged =
+      body.permissions ?? body.tenantPermissions ?? body.eventPermissions;
     return this.selfActor(authorization)
       .then((u) =>
         createMembershipInvite(this.deps.db!, this.deps.security!, {
@@ -529,8 +589,9 @@ export class PlatformService {
           actorUserId: u.userId,
           email: body.email,
           role,
-          eventAssignments: body.eventAssignments as never,
+          eventAssignments: body.eventAssignments,
           clientKey: idempotencyKey ?? '',
+          forgedPermissions: forged,
         }),
       )
       .then((r) => ({
@@ -539,6 +600,52 @@ export class PlatformService {
         expiresAt: r.expiresAt,
         deliveryState: r.deliveryState,
       }))
+      .catch(fail);
+  }
+
+  createPreset(
+    authorization: string | undefined,
+    tenantId: string,
+    body: CreateRolePresetBody,
+  ) {
+    return this.selfActor(authorization)
+      .then((u) =>
+        createRolePreset(this.deps.db!, {
+          tenantId,
+          actorUserId: u.userId,
+          name: body.name,
+          tenantPermissions: body.tenantPermissions,
+          eventPermissions: body.eventPermissions,
+        }),
+      )
+      .catch(fail);
+  }
+
+  listPresets(authorization: string | undefined, tenantId: string) {
+    return this.selfActor(authorization)
+      .then((u) =>
+        listRolePresets(this.deps.db!, {
+          tenantId,
+          actorUserId: u.userId,
+        }),
+      )
+      .then((items) => ({ items }))
+      .catch(fail);
+  }
+
+  getPreset(
+    authorization: string | undefined,
+    tenantId: string,
+    presetId: string,
+  ) {
+    return this.selfActor(authorization)
+      .then((u) =>
+        getRolePreset(this.deps.db!, {
+          tenantId,
+          actorUserId: u.userId,
+          presetId,
+        }),
+      )
       .catch(fail);
   }
 
@@ -792,6 +899,7 @@ export class PlatformService {
 }
 
 @ApiTags('platform')
+@ApiExtraModels(InviteRolePresetDto, CreateInviteBodyDto, RolePresetDtoSchema)
 @Controller()
 export class PlatformController {
   constructor(private readonly platform: PlatformService) {}
@@ -947,13 +1055,47 @@ export class PlatformController {
 
   @Post('tenants/:tenantId/invites')
   @ApiBearerAuth()
+  @ApiBody({ type: CreateInviteBodyDto })
   invite(
     @Headers('authorization') authorization: string | undefined,
     @Headers('idempotency-key') idempotencyKey: string | undefined,
     @Param('tenantId') tenantId: string,
-    @Body() body: { email: string; role: string },
+    @Body() body: CreateInviteBodyDto & Record<string, unknown>,
   ) {
     return this.platform.invite(authorization, tenantId, idempotencyKey, body);
+  }
+
+  @Get('tenants/:tenantId/role-presets')
+  @ApiBearerAuth()
+  @ApiOkResponse({ type: RolePresetsListDto })
+  listRolePresets(
+    @Headers('authorization') authorization: string | undefined,
+    @Param('tenantId') tenantId: string,
+  ) {
+    return this.platform.listPresets(authorization, tenantId);
+  }
+
+  @Post('tenants/:tenantId/role-presets')
+  @ApiBearerAuth()
+  @ApiBody({ type: CreateRolePresetBodyDto })
+  @ApiCreatedResponse({ type: RolePresetDtoSchema })
+  createRolePreset(
+    @Headers('authorization') authorization: string | undefined,
+    @Param('tenantId') tenantId: string,
+    @Body() body: CreateRolePresetBodyDto,
+  ) {
+    return this.platform.createPreset(authorization, tenantId, body);
+  }
+
+  @Get('tenants/:tenantId/role-presets/:presetId')
+  @ApiBearerAuth()
+  @ApiOkResponse({ type: RolePresetDtoSchema })
+  getRolePreset(
+    @Headers('authorization') authorization: string | undefined,
+    @Param('tenantId') tenantId: string,
+    @Param('presetId') presetId: string,
+  ) {
+    return this.platform.getPreset(authorization, tenantId, presetId);
   }
 
   @Post('me/membership-invites/accept')
