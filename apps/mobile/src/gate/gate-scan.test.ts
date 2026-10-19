@@ -85,6 +85,38 @@ test('duplicate scan does not confirm twice', async () => {
   assert.equal(classifyScan(second.ops, ticketId).action, 'show');
 });
 
+test('Nest 201 session and hold still admit', async () => {
+  const fetchImpl: typeof fetch = async (input) => {
+    const url = String(input);
+    if (url.endsWith('/sessions')) {
+      return jsonResponse(201, { sessionId: '44444444-4444-4444-8444-444444444444' });
+    }
+    if (url.endsWith('/reservations')) {
+      return jsonResponse(201, {
+        reservationId: '55555555-5555-4555-8555-555555555555',
+        token: 'hold-token',
+        ticketId,
+      });
+    }
+    return jsonResponse(201, {
+      state: 'USED',
+      ticketId,
+      checkinId: '66666666-6666-4666-8666-666666666666',
+    });
+  };
+  const scanned = await runScan({
+    raw: qr,
+    bearer: 'token',
+    apiBase: 'http://127.0.0.1:3001',
+    ops: [],
+    staffSessionId: null,
+    fetchImpl,
+    createId: () => 'op-201',
+  });
+  assert.equal(scanned.current?.phase, 'admitted');
+  assert.equal(scanned.staffSessionId, '44444444-4444-4444-8444-444444444444');
+});
+
 test('lost confirm stays unknown across restart and blocks a second scan', async () => {
   const fetchImpl: typeof fetch = async (input) => {
     const url = String(input);
