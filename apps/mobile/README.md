@@ -58,21 +58,21 @@ Fixture id `demo-mfest` / slug `mfest` stays on main; do not rename to hide test
 - `sendPush` / `acceptDeliveredClaim` stay fail-closed: a device token is **not**
   a delivery receipt. Worker APNs HTTP/2 + `.p8` keys are outside this app.
 
-## Simulator UAT (headless — no macOS mouse)
+## Simulator UAT (Orca emulator — agent sessions)
 
-Do **not** drive Simulator with `cliclick`, AppleScript, or Orca computer-use clicks.
-Use AXe HID via the repo helper (install once: `brew install cameroncooke/axe/axe`):
+Trong Orca/agent: **chỉ** `orca emulator` — attach device, `ax`, `tap`/`type`/`gesture`, `exec` serve-sim. Không `axe` trực tiếp, không Computer Use trên Simulator.app user. Skill: `orca-emulator`; rule: `.cursor/rules/uat-headless.mdc`.
 
 ```bash
-export SIM_DEVICE='iPhone 17 Pro'   # or SIM_UDID=…
-./scripts/sim-uat.sh boot "$SIM_DEVICE"          # no Simulator.app window
-./scripts/sim-uat.sh launch com.hangndat.ticket  # or legacy foundation id
-./scripts/sim-uat.sh describe
-./scripts/sim-uat.sh tap --label 'Sign in'
-./scripts/sim-uat.sh screenshot
+orca emulator attach "iPhone 17 Pro" --worktree active --json
+orca emulator ax --json
+orca emulator tap 0.5 0.8 --json
+# screenshots → apps/mobile/.uat-artifacts/ (gitignored)
+orca emulator kill --json
 ```
 
-Screenshots land in `apps/mobile/.uat-artifacts/` (gitignored).
+Boot/install app vẫn qua `simctl` / local build trước attach. Mỗi Task: UDID/device riêng — không chiếm sim worker khác.
+
+**CI / local fallback:** `./scripts/sim-uat.sh …` (AXe + simctl — không dùng từ agent UAT khi Orca emulator sẵn sàng).
 
 ## Local
 

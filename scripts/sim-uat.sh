@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Headless iOS Simulator UAT helpers.
-# Injects HID / accessibility events via AXe + simctl — never moves the macOS mouse.
+# Legacy/local helper — AXe HID + simctl (CI or non-Orca shells).
+# Agent UAT sessions: use `orca emulator` per `.cursor/rules/uat-headless.mdc`.
+# Never moves the macOS mouse via cliclick / AppleScript / Computer Use.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

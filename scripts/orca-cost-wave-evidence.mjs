@@ -24,14 +24,12 @@ const CATALOG_PINS = new Set([
   "composer-2.5",
   "claude-sonnet-5-thinking-low",
   "claude-sonnet-5-thinking-medium",
-  "claude-sonnet-5-thinking-high",
-  "gpt-5.6-sol-high",
   "grok-4.7-low",
   "gemini-3.7-flash-low",
 ]);
 
 const PIN_RE =
-  /\bmodel\s+(composer-2\.5(?:-fast)?|claude-sonnet-5-thinking-(?:low|medium|high)|gpt-5\.6-sol-high|grok-4\.7-low|gemini-3\.7-flash-low)\b/i;
+  /\bmodel\s+(composer-2\.5(?:-fast)?|claude-sonnet-5-thinking-(?:low|medium)|grok-4\.7-low|gemini-3\.7-flash-low)\b/i;
 const TIER_RE = /\bCost\s+(cheap|standard|heavy)\b/i;
 const TIER_DN_RE = /\b(cheap|standard|heavy)\b/i;
 const INHERIT_RE = /\binherit\b|\bmodel\s+auto\b/i;
@@ -62,7 +60,6 @@ for (const w of list.result?.worktrees ?? []) {
 
 let cheap = 0,
   standard = 0,
-  heavy = 0,
   unknown = 0,
   pinned = 0,
   inherit = 0;
@@ -73,8 +70,7 @@ let mixedRows = 0;
 
 function bumpTier(tier) {
   if (tier === "cheap") cheap++;
-  else if (tier === "standard") standard++;
-  else if (tier === "heavy") heavy++;
+  else if (tier === "standard" || tier === "heavy") standard++;
   else unknown++;
 }
 
@@ -172,7 +168,7 @@ if (commentsOnly || live.length === 0) {
   }
 }
 
-const n = cheap + standard + heavy + unknown;
+const n = cheap + standard + unknown;
 const inheritPct = n ? Math.round((inherit * 1000) / n) / 10 : 0;
 const run = live[0]?.runId ?? workers[0]?.runId ?? "run_?";
 
@@ -183,7 +179,7 @@ if (!commentsOnly && live.length) {
   else source = "wt-comment-estimate";
 }
 
-const line = `cost-wave | run=${run} | n=${n} live | cheap=${cheap} standard=${standard} heavy=${heavy} unknown=${unknown} | pinned=${pinned} inherit=${inherit} | inherit%=${inheritPct} | models=${[...new Set(models)].join(",") || "-"} | source=${source}`;
+const line = `cost-wave | run=${run} | n=${n} live | cheap=${cheap} standard=${standard} unknown=${unknown} | pinned=${pinned} inherit=${inherit} | inherit%=${inheritPct} | models=${[...new Set(models)].join(",") || "-"} | source=${source}`;
 
 console.log(line);
 if (inheritPct > 20) {
