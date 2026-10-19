@@ -14,7 +14,9 @@
 | `orca tab create --url http://127.0.0.1:3272/invite --worktree path:…/ux-ui-p3-web-554` | Returned `browserPageId`; `orca tab list` empty immediately after |
 | `orca exec --command snapshot` / `screenshot` | `browser_tab_not_found` / `browser_no_tab` |
 
-**Limitation:** Orca browser tab did not stay attachable in this session. Evidence below uses HTTP UAT + SSR smoke per `uat-headless.mdc` § HTTP-only (no Playwright/agent fallback).
+**Limitation (wave leader inline):** Orca browser tab did not stay attachable in that session.
+
+**Worker UAT (post-merge):** `task_eaf97198c33a` / `ctx_7f80a2c453ab` (Higo · web) — `@ticket/web` on `:3272`, Orca tab `b984322c` on main worktree; snapshot/screenshot `/invite`, `/marketing/privacy`, `/redeem` (worker_done: `docs/reviews/ux-ui-p3-web-pr558-uat/p558-*.png`). Invite HTTP UAT + SSR smoke unchanged; `acceptOk: false` = Nest ops gap. Integrated `main` @ `c02a563`.
 
 ## Local server (review worktree)
 
