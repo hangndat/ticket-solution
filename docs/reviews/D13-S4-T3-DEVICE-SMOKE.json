@@ -1,79 +1,52 @@
 {
-  "timeUTC": "2026-10-19T07:18:33+00:00",
+  "timeUTC": "2026-10-19T08:54:00+00:00",
   "task": 327,
   "epic": 301,
   "story": 307,
-  "verdict": "BLOCKED",
+  "verdict": "FAIL",
   "physicalTfSmokePass": false,
-  "tfBinaryOnDevice": true,
+  "prodBakeOnDevice": true,
+  "tfBinaryOnDevice": false,
+  "usbDevInstall14": true,
   "submittedForReview": false,
   "released": false,
   "cloudBuild": false,
   "target": {
     "marketingVersion": "1.0.0",
-    "s4t2Build": "10",
-    "s4t2AscBuildId": "45c730c3-7caa-4b28-92fb-315cf07bce5d",
-    "deviceBuild": "13",
-    "deviceAscBuildId": "fa4f322d-6a18-4a62-b5a9-e2133a055f8f",
+    "build": "14",
+    "ascDeliveryUuid": "fc3a28b8-c0d3-4358-a481-de3a2ab835c8",
+    "processingState": "VALID",
     "bundleId": "com.hangndat.ticket",
     "team": "BLUA62D52G",
-    "sourceSha": "6002d09afa9382a72ee9840c8ba1dd41c7b09065",
-    "ipaSHA256Build10": "37c96607b99be7136ef91c9f57aa561c2461e5458122175c364553bd5b78f8c7",
-    "processingState": "VALID",
-    "internalBuildState": "IN_BETA_TESTING",
-    "externalBuildState": "READY_FOR_BETA_SUBMISSION",
-    "appStoreVersionState": "PREPARE_FOR_SUBMISSION"
-  },
-  "betaGroup": {
-    "name": "James",
-    "isInternalGroup": true,
-    "hasAccessToAllBuilds": true
-  },
-  "testers": [
-    {
-      "email": "hangndat@gmail.com",
-      "inviteType": "EMAIL"
-    }
-  ],
-  "usbInstallDistributionIpa": {
-    "attempted": false,
-    "result": "SKIP",
-    "note": "prior session FAIL 0xe800801f; unchanged"
+    "ipaSHA256": "84de550b34c09b07e847ab38eea6880a684b85fd30e27b8ee1bb005c03ab4279",
+    "prodBakeVerifiedIpa": true
   },
   "devices": {
-    "connected": [
-      {
-        "name": "Dexter\u2019s iPhone 16 Pro",
-        "coreDeviceId": "06CAC741-EB05-55B0-AAE6-14D7B49F50BB",
-        "udid": "00008140-000605803C01801C",
-        "os": "26.6.1",
-        "installedVemoki": { "version": "0.1.0", "build": "7" },
-        "tfSmokeEligible": false,
-        "devicectlLaunch": "OK (wrong binary)"
-      },
-      {
-        "name": "DatHN iPhone",
-        "coreDeviceId": "CB22153A-C24F-547E-87FC-34EC62527838",
-        "udid": "00008130-000618E402D1001C",
-        "os": "26.6.1",
-        "installedVemoki": { "version": "1.0.0", "build": "13" },
-        "tfSmokeEligible": true,
-        "devicectlLaunch": "OK after unlock",
-        "processRunningAfterLaunch": true
+    "primary": {
+      "name": "Dexter\u2019s iPhone 16 Pro",
+      "coreDeviceId": "06CAC741-EB05-55B0-AAE6-14D7B49F50BB",
+      "udid": "00008140-000605803C01801C",
+      "installedVemoki": {
+        "version": "1.0.0",
+        "build": "14",
+        "installMethod": "usb-development"
       }
-    ]
+    }
   },
-  "headlessSimUat": {
-    "ran": false,
-    "reason": "optional; sim \u2260 TF binary; does not replace camera AC"
+  "smokeChecklist": {
+    "launchProdBake": "PASS",
+    "oidcProdSignIn": "FAIL",
+    "attendeeQr": "FAIL",
+    "staffGateCamera": "FAIL",
+    "push": "SKIP"
   },
-  "coordinatorAsk": {
-    "unlockRequested": true,
-    "reply": "blocked then unlocked-retry",
-    "postUnlockLaunchUtc": "2026-10-19T07:21:21+00:00"
-  },
-  "blocker": "unlock DatHN iPhone + run attendee/staff camera checklist on TF 1.0.0 (13); re-dispatch for PASS",
+  "automationLimits": [
+    "accessibility perform_press did not open OIDC sheet",
+    "WDA XCTest passcode gate on device",
+    "tab bar deep links did not navigate to staff"
+  ],
+  "uatArtifactsDir": "apps/mobile/.uat-artifacts/s4-t3-dexter",
+  "coordinatorRedirect": "usb install prod bake 14 on Dexter (no TF wait)",
   "apiKeyId": "KHT3SAL2FS",
-  "evidenceTipSha": "e6198af2ba793a1f3ee6d5562d48f9cc246ecddc",
-  "waveB332Readiness": "docs/reviews/d13-s6-t1-332-readiness.md"
+  "evidenceTipSha": "a4c1501da5c3ffe7249094d33f665c988c296c2e"
 }
