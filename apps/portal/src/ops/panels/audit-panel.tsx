@@ -11,6 +11,7 @@ import {
   type AuditListView,
 } from '../audit';
 import { usePortalLocale } from '../../i18n';
+import { SavedViewsToolbar } from '../../views';
 
 type Props = {
   tenantId: string;
@@ -75,6 +76,21 @@ export function AuditPanel({ tenantId, eventId }: Props) {
         showIcon
         message={t('ops.h_1seddb9')}
         description={t('ops.audit.filterHint')}
+      />
+      <SavedViewsToolbar
+        tenantId={tenantId}
+        eventId={eventId}
+        surface="audit"
+        filters={{
+          action: action.trim() || undefined,
+          from: from.trim() || undefined,
+          to: to.trim() || undefined,
+        }}
+        onApply={(next) => {
+          setAction(next.filters.action ?? '');
+          setFrom(next.filters.from ?? '');
+          setTo(next.filters.to ?? '');
+        }}
       />
       <Space wrap>
         <Input
