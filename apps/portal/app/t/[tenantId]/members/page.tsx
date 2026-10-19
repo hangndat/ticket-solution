@@ -10,6 +10,7 @@ import {
   Space,
   Table,
   Tabs,
+  Tag,
   Typography,
 } from 'antd';
 import { useParams } from 'next/navigation';
@@ -18,6 +19,7 @@ import type {
   MembershipRole,
   PortalInviteSummary,
   PortalMemberSummary,
+  RolePresetDto,
 } from '@ticket/contracts';
 import {
   apiErrorCode,
@@ -27,22 +29,25 @@ import {
 } from '../../../../src/client/portal-fetch';
 import {
   bffInvites,
+  bffMemberRole,
   bffMembers,
   bffRevokeInvite,
   bffRevokeMember,
+  bffRolePresets,
 } from '../../../../src/prep/bff-urls';
 import { useTenantAccess } from '../../../../src/prep/use-event-access';
 import { SurfaceState } from '../../../../src/components/surface-state';
 import { usePortalLocale } from '../../../../src/i18n';
 import { SavedViewsToolbar } from '../../../../src/views';
-
-const ROLES: MembershipRole[] = [
-  'Owner',
-  'Manager',
-  'CS',
-  'Supervisor',
-  'Scanner',
-];
+import {
+  SYSTEM_MEMBERSHIP_ROLES,
+  asRolePresetItems,
+  buildRoleCatalogRows,
+  isSystemMembershipRole,
+  parseRoleSelectValue,
+  roleLabel,
+  roleSelectValue,
+} from '../../../../src/ops/role-presets';
 
 function asItems<T>(json: unknown): T[] {
   if (!json || typeof json !== 'object') return [];
@@ -57,6 +62,7 @@ export default function MembersPage() {
   const access = useTenantAccess(tenantId);
   const [members, setMembers] = useState<PortalMemberSummary[]>([]);
   const [invites, setInvites] = useState<PortalInviteSummary[]>([]);
+  const [presets, setPresets] = useState<RolePresetDto[]>([]);
   const [loadKind, setLoadKind] = useState<
     'loading' | 'ready' | 'error' | 'unknown'
   >('loading');
@@ -67,9 +73,15 @@ export default function MembersPage() {
   const [statusFilter, setStatusFilter] = useState<
     'ACTIVE' | 'REVOKED' | undefined
   >();
+  const [assignOpen, setAssignOpen] = useState(false);
+  const [assignTarget, setAssignTarget] = useState<PortalMemberSummary | null>(
+    null,
+  );
+  const [assignRole, setAssignRole] = useState<MembershipRole>('Manager');
+  const [assignBusy, setAssignBusy] = useState(false);
   const [form] = Form.useForm<{
     email: string;
-    role: MembershipRole;
+    roleKey: string;
     eventId?: string;
     eventRole?: MembershipRole;
   }>();
@@ -83,39 +95,83 @@ export default function MembersPage() {
     });
   }, [members, roleFilter, statusFilter]);
 
+  const roleOptions = useMemo(() => {
+    const system = {
+      label: t('members.roles.groupSystem'),
+      options: SYSTEM_MEMBERSHIP_ROLES.map((r) => ({ value: r, label: r })),
+    };
+    const presetGroup = {
+      label: t('members.roles.groupPreset'),
+      options: presets.map((p) => ({
+        value: roleSelectValue({ presetId: p.presetId }),
+        label: p.name,
+      })),
+    };
+    return presetGroup.options.length > 0 ? [system, presetGroup] : [system];
+  }, [presets, t]);
+
+  const catalogRows = useMemo(
+    () =>
+      buildRoleCatalogRows(
+        presets,
+        members.filter((m) => !m.revokedAt).map((m) => m.role),
+      ),
+    [presets, members],
+  );
+
+  const selectedInviteDesc = Form.useWatch('roleKey', form);
+  const selectedPreset = useMemo(() => {
+    const parsed = parseRoleSelectValue(selectedInviteDesc ?? '');
+    if (!parsed || typeof parsed === 'string') return null;
+    return presets.find((p) => p.presetId === parsed.presetId) ?? null;
+  }, [selectedInviteDesc, presets]);
+
   const reload = useCallback(async () => {
     await Promise.resolve();
     setLoadKind('loading');
-    const [m, i] = await Promise.all([
+    const [m, i, p] = await Promise.all([
       portalGet(bffMembers(tenantId)),
       portalGet(bffInvites(tenantId)),
+      portalGet(bffRolePresets(tenantId)),
     ]);
     if (
       m.networkError ||
       i.networkError ||
+      p.networkError ||
       m.timedOut ||
       i.timedOut ||
+      p.timedOut ||
       m.status >= 500 ||
-      i.status >= 500
+      i.status >= 500 ||
+      p.status >= 500
     ) {
       setLoadKind('unknown');
-      setMessage(
-        t('members.h_oiatvx'),
-      );
+      setMessage(t('members.h_oiatvx'));
       return;
     }
-    if (m.status === 403 || i.status === 403) {
+    if (m.status === 403 || i.status === 403 || p.status === 403) {
       setLoadKind('error');
       setMessage(t('members.h_5ptlts'));
       return;
     }
     if (m.status !== 200 || i.status !== 200) {
       setLoadKind('error');
-      setMessage(t('members.loadFailedStatus', { members: m.status, invites: i.status }));
+      setMessage(
+        t('members.loadFailedStatus', {
+          members: m.status,
+          invites: i.status,
+        }),
+      );
       return;
     }
     setMembers(asItems<PortalMemberSummary>(m.json));
     setInvites(asItems<PortalInviteSummary>(i.json));
+    // Presets are additive — empty / soft-fail still allows system role-map UI.
+    if (p.status === 200) {
+      setPresets(asRolePresetItems(p.json));
+    } else {
+      setPresets([]);
+    }
     setLoadKind('ready');
   }, [tenantId, t]);
 
@@ -129,6 +185,17 @@ export default function MembersPage() {
       cancelled = true;
     };
   }, [access.kind, reload]);
+
+  function showLastOwnerGuard(code: string | null, fallback: string) {
+    if (code === 'LAST_OWNER_REQUIRED') {
+      Modal.error({
+        title: t('members.roles.lastOwnerTitle'),
+        content: t('members.roles.lastOwnerBody'),
+      });
+      return;
+    }
+    setNotice(fallback);
+  }
 
   if (access.kind === 'loading') return <SurfaceState kind="loading" />;
   if (access.kind === 'error') {
@@ -168,23 +235,25 @@ export default function MembersPage() {
     setNotice(null);
     try {
       const values = await form.validateFields();
+      const role = parseRoleSelectValue(values.roleKey);
+      if (!role) {
+        setNotice(t('members.roles.invalidRole'));
+        return;
+      }
       const body: Record<string, unknown> = {
         email: values.email.trim(),
-        role: values.role,
+        role,
         idempotencyKey: crypto.randomUUID(),
       };
       const eventId = values.eventId?.trim();
       if (eventId) {
-        // Event comes from org switcher/list — paste only if assignment needed.
         body.eventAssignments = [
           { eventId, role: values.eventRole ?? 'Manager' },
         ];
       }
       const res = await portalMutate(bffInvites(tenantId), body);
       if (res.networkError || res.timedOut || res.status >= 500) {
-        setNotice(
-          t('members.h_aa8wpg'),
-        );
+        setNotice(t('members.h_aa8wpg'));
         return;
       }
       if (res.status === 200 || res.status === 201) {
@@ -193,22 +262,69 @@ export default function MembersPage() {
         void reload();
         return;
       }
+      const code = apiErrorCode(res.json);
+      if (code === 'RESOURCE_NOT_FOUND') {
+        Modal.error({
+          title: t('members.roles.presetMissingTitle'),
+          content: t('members.roles.presetMissingBody'),
+        });
+        return;
+      }
       setNotice(
-        t('ops.export.apiRejected', { code: apiErrorCode(res.json) ?? res.status, message: apiErrorMessage(
-          res.json,
-          t('members.h_1qjqtw'),
-        ) }),
+        t('ops.export.apiRejected', {
+          code: code ?? res.status,
+          message: apiErrorMessage(res.json, t('members.h_1qjqtw')),
+        }),
       );
     } finally {
       setBusy(false);
     }
   }
 
+  function openAssign(row: PortalMemberSummary) {
+    setAssignTarget(row);
+    setAssignRole(
+      isSystemMembershipRole(row.role) ? row.role : ('Manager' as MembershipRole),
+    );
+    setAssignOpen(true);
+  }
+
+  async function submitAssign() {
+    if (!assignTarget) return;
+    setAssignBusy(true);
+    try {
+      const res = await portalMutate(
+        bffMemberRole(tenantId, assignTarget.membershipId),
+        {
+          role: assignRole,
+          reason: t('members.roles.changeReason'),
+        },
+        'PATCH',
+      );
+      if (res.networkError || res.timedOut || res.status >= 500) {
+        setNotice(t('members.roles.changeUnknown'));
+        return;
+      }
+      if (res.status >= 200 && res.status < 300) {
+        setNotice(t('members.roles.changeOk'));
+        setAssignOpen(false);
+        setAssignTarget(null);
+        void reload();
+        return;
+      }
+      showLastOwnerGuard(
+        apiErrorCode(res.json),
+        apiErrorMessage(res.json, t('members.roles.changeFailed')),
+      );
+    } finally {
+      setAssignBusy(false);
+    }
+  }
+
   function confirmRevokeMember(membershipId: string) {
     Modal.confirm({
       title: t('members.h_1uecsno'),
-      content:
-        t('members.h_ltgqwp'),
+      content: t('members.h_ltgqwp'),
       okText: t('members.h_1w0agno'),
       okButtonProps: { danger: true },
       cancelText: t('config.huy'),
@@ -223,7 +339,8 @@ export default function MembersPage() {
         } else if (res.networkError || res.status >= 500) {
           setNotice(t('members.h_suvvlr'));
         } else {
-          setNotice(
+          showLastOwnerGuard(
+            apiErrorCode(res.json),
             apiErrorMessage(res.json, t('members.h_7tkx6u')),
           );
         }
@@ -254,23 +371,46 @@ export default function MembersPage() {
 
   return (
     <Space direction="vertical" size="large" style={{ width: '100%' }}>
-      <Typography.Title level={3} style={{ margin: 0 }}>{t('members.h_i0adgn')}</Typography.Title>
-      <Typography.Paragraph type="secondary">{t('members.inviteEventsHint')}</Typography.Paragraph>
+      <Typography.Title level={3} style={{ margin: 0 }}>
+        {t('members.h_i0adgn')}
+      </Typography.Title>
+      <Typography.Paragraph type="secondary">
+        {t('members.inviteEventsHint')}
+      </Typography.Paragraph>
+
+      <Alert
+        type="info"
+        showIcon
+        message={t('members.roles.serverDefinedAlert')}
+      />
 
       <Form
         form={form}
         layout="inline"
-        initialValues={{ role: 'Manager', eventRole: 'Manager' }}
+        initialValues={{
+          roleKey: 'Manager',
+          eventRole: 'Manager',
+        }}
         style={{ rowGap: 12 }}
       >
         <Form.Item
           name="email"
-          rules={[{ required: true, type: 'email', message: t('members.h_1rjw0n9') }]}
+          rules={[
+            { required: true, type: 'email', message: t('members.h_1rjw0n9') },
+          ]}
         >
           <Input placeholder="email@example.com" style={{ width: 220 }} />
         </Form.Item>
-        <Form.Item name="role" rules={[{ required: true }]}>
-          <Select style={{ width: 140 }} options={ROLES.map((r) => ({ value: r, label: r }))} />
+        <Form.Item
+          name="roleKey"
+          rules={[{ required: true, message: t('members.roles.pickRequired') }]}
+        >
+          <Select
+            style={{ width: 220 }}
+            options={roleOptions}
+            placeholder={t('members.roles.pickPlaceholder')}
+            aria-label={t('members.h_1mkpx3r')}
+          />
         </Form.Item>
         <Form.Item name="eventId">
           <Select
@@ -286,14 +426,27 @@ export default function MembersPage() {
         <Form.Item name="eventRole">
           <Select
             style={{ width: 140 }}
-            options={ROLES.filter((r) => r !== 'Owner').map((r) => ({
-              value: r,
-              label: r,
-            }))}
+            options={SYSTEM_MEMBERSHIP_ROLES.filter((r) => r !== 'Owner').map(
+              (r) => ({
+                value: r,
+                label: r,
+              }),
+            )}
           />
         </Form.Item>
-        <Button type="primary" loading={busy} onClick={() => void invite()}>{t('members.h_47dn03')}</Button>
+        <Button type="primary" loading={busy} onClick={() => void invite()}>
+          {t('members.h_47dn03')}
+        </Button>
       </Form>
+
+      {selectedPreset ? (
+        <Typography.Paragraph type="secondary" style={{ marginTop: 0 }}>
+          {t('members.roles.presetReadonly', {
+            name: selectedPreset.name,
+            version: selectedPreset.schemaVersion,
+          })}
+        </Typography.Paragraph>
+      ) : null}
 
       {notice ? <Alert type="info" showIcon message={notice} /> : null}
 
@@ -315,7 +468,7 @@ export default function MembersPage() {
           placeholder={t('views.members.roleFilter')}
           style={{ minWidth: 160 }}
           value={roleFilter}
-          options={ROLES.map((r) => ({ value: r, label: r }))}
+          options={SYSTEM_MEMBERSHIP_ROLES.map((r) => ({ value: r, label: r }))}
           onChange={(v) => setRoleFilter(v)}
         />
         <Select
@@ -339,7 +492,9 @@ export default function MembersPage() {
           message={t('surface.unknown.title')}
           description={message}
           action={
-            <Button size="small" onClick={() => void reload()}>{t('surface.action.recheck')}</Button>
+            <Button size="small" onClick={() => void reload()}>
+              {t('surface.action.recheck')}
+            </Button>
           }
         />
       ) : null}
@@ -355,7 +510,7 @@ export default function MembersPage() {
           items={[
             {
               key: 'members',
-              label: t('members.membersCount', { count: members.length }),
+              label: t('members.tabUsers', { count: members.length }),
               children: (
                 <Table
                   rowKey="membershipId"
@@ -363,7 +518,11 @@ export default function MembersPage() {
                   pagination={false}
                   columns={[
                     { title: 'Email', dataIndex: 'emailMasked' },
-                    { title: t('members.h_1mkpx3r'), dataIndex: 'role' },
+                    {
+                      title: t('members.h_1mkpx3r'),
+                      render: (_: unknown, row: PortalMemberSummary) =>
+                        roleLabel(row.role, presets),
+                    },
                     {
                       title: t('ops.export.statusButton'),
                       render: (_: unknown, row: PortalMemberSummary) =>
@@ -387,11 +546,23 @@ export default function MembersPage() {
                       title: '',
                       render: (_: unknown, row: PortalMemberSummary) =>
                         row.revokedAt ? null : (
-                          <Button
-                            danger
-                            size="small"
-                            onClick={() => confirmRevokeMember(row.membershipId)}
-                          >{t('members.h_1w0agno')}</Button>
+                          <Space>
+                            <Button
+                              size="small"
+                              onClick={() => openAssign(row)}
+                            >
+                              {t('members.roles.assignCta')}
+                            </Button>
+                            <Button
+                              danger
+                              size="small"
+                              onClick={() =>
+                                confirmRevokeMember(row.membershipId)
+                              }
+                            >
+                              {t('members.h_1w0agno')}
+                            </Button>
+                          </Space>
                         ),
                     },
                   ]}
@@ -400,7 +571,7 @@ export default function MembersPage() {
             },
             {
               key: 'invites',
-              label: t('members.invitesCount', { count: invites.length }),
+              label: t('members.tabInvites', { count: invites.length }),
               children: (
                 <Table
                   rowKey="inviteId"
@@ -408,8 +579,15 @@ export default function MembersPage() {
                   pagination={false}
                   columns={[
                     { title: 'Email', dataIndex: 'emailMasked' },
-                    { title: t('members.h_1mkpx3r'), dataIndex: 'role' },
-                    { title: t('ops.export.statusButton'), dataIndex: 'state' },
+                    {
+                      title: t('members.h_1mkpx3r'),
+                      render: (_: unknown, row: PortalInviteSummary) =>
+                        roleLabel(row.role, presets),
+                    },
+                    {
+                      title: t('ops.export.statusButton'),
+                      dataIndex: 'state',
+                    },
                     { title: 'Giao', dataIndex: 'deliveryState' },
                     { title: t('members.h_ov3797'), dataIndex: 'expiresAt' },
                     {
@@ -420,16 +598,123 @@ export default function MembersPage() {
                             danger
                             size="small"
                             onClick={() => confirmRevokeInvite(row.inviteId)}
-                          >{t('members.h_1w0agno')}</Button>
+                          >
+                            {t('members.h_1w0agno')}
+                          </Button>
                         ) : null,
                     },
                   ]}
                 />
               ),
             },
+            {
+              key: 'roles',
+              label: t('members.tabRoles'),
+              children: (
+                <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+                  <Alert
+                    type="info"
+                    showIcon
+                    message={t('members.roles.catalogHint')}
+                  />
+                  <Table
+                    rowKey="key"
+                    dataSource={catalogRows}
+                    pagination={false}
+                    expandable={{
+                      expandedRowRender: (row) =>
+                        row.kind === 'preset' ? (
+                          <Space wrap size={[4, 4]}>
+                            {row.tenantPermissions.map((p) => (
+                              <Tag key={`t-${p}`}>{p}</Tag>
+                            ))}
+                            {row.eventPermissions.map((p) => (
+                              <Tag key={`e-${p}`} color="blue">
+                                {p}
+                              </Tag>
+                            ))}
+                            {row.tenantPermissions.length === 0 &&
+                            row.eventPermissions.length === 0 ? (
+                              <Typography.Text type="secondary">
+                                {t('members.roles.noPermList')}
+                              </Typography.Text>
+                            ) : null}
+                          </Space>
+                        ) : (
+                          <Typography.Text type="secondary">
+                            {t('members.roles.systemMapHint')}
+                          </Typography.Text>
+                        ),
+                      rowExpandable: () => true,
+                    }}
+                    columns={[
+                      { title: t('members.roles.colName'), dataIndex: 'name' },
+                      {
+                        title: t('members.roles.colKind'),
+                        render: (_: unknown, row) =>
+                          row.kind === 'system'
+                            ? t('members.roles.kindSystem')
+                            : t('members.roles.kindPreset'),
+                      },
+                      {
+                        title: t('members.roles.colMembers'),
+                        dataIndex: 'memberCount',
+                      },
+                      {
+                        title: t('members.roles.colSchema'),
+                        render: (_: unknown, row) =>
+                          row.schemaVersion ?? '—',
+                      },
+                      {
+                        title: t('members.roles.colUpdated'),
+                        render: (_: unknown, row) => row.updatedAt ?? '—',
+                      },
+                    ]}
+                  />
+                </Space>
+              ),
+            },
           ]}
         />
       ) : null}
+
+      <Modal
+        title={t('members.roles.assignTitle')}
+        open={assignOpen}
+        onCancel={() => {
+          setAssignOpen(false);
+          setAssignTarget(null);
+        }}
+        onOk={() => void submitAssign()}
+        confirmLoading={assignBusy}
+        okText={t('members.roles.save')}
+        cancelText={t('config.huy')}
+        destroyOnHidden
+      >
+        <Space direction="vertical" style={{ width: '100%' }}>
+          <Alert
+            type="info"
+            showIcon
+            message={t('members.roles.serverDefinedAlert')}
+          />
+          <Typography.Text type="secondary">
+            {assignTarget?.emailMasked ?? '—'}
+          </Typography.Text>
+          <Select
+            style={{ width: '100%' }}
+            value={assignRole}
+            onChange={(v) => setAssignRole(v)}
+            options={SYSTEM_MEMBERSHIP_ROLES.map((r) => ({
+              value: r,
+              label: r,
+            }))}
+            aria-label={t('members.h_1mkpx3r')}
+          />
+          <Typography.Paragraph type="secondary" style={{ marginBottom: 0 }}>
+            {t('members.roles.assignBuiltInOnly')}
+          </Typography.Paragraph>
+        </Space>
+      </Modal>
     </Space>
   );
 }

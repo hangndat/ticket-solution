@@ -39,4 +39,18 @@ describe('PORTAL_UPSTREAM ops paths', () => {
       `/v1/platform/support-grants/${t}/revoke`,
     );
   });
+
+  it('covers role-presets + member role PATCH (P2-ROLES-PRESET)', () => {
+    const m = '33333333-3333-4333-8333-333333333333';
+    const p = '44444444-4444-4444-8444-444444444444';
+    assert.equal(PORTAL_UPSTREAM.rolePresets(t), `/v1/tenants/${t}/role-presets`);
+    assert.equal(
+      PORTAL_UPSTREAM.rolePreset(t, p),
+      `/v1/tenants/${t}/role-presets/${p}`,
+    );
+    assert.equal(
+      PORTAL_UPSTREAM.memberRole(t, m),
+      `/v1/tenants/${t}/members/${m}/role`,
+    );
+  });
 });
