@@ -3,7 +3,7 @@
 Ngày: 2026-10-19  
 Issue: [#502](https://github.com/hangndat/ticket-solution/issues/502) · Story [#494](https://github.com/hangndat/ticket-solution/issues/494) · Epic [#491](https://github.com/hangndat/ticket-solution/issues/491)  
 Run: `run_d04055a8969b` · Dispatch: `ctx_a94660582bfd`  
-Commit tip (branch): **revalidate after this commit** (`git rev-parse HEAD` trên tip PR #512).
+Commit tip (branch): `1641ef6334c50d397dca48c4383525260885d7fc` — PR #512 tip; revalidate if further commits land.
 
 Architecture impact: **Có** (host/OIDC/nginx/dual-run — ADR-20 §8).
 
