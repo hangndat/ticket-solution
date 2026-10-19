@@ -5,7 +5,7 @@ import { bffApiError, forwardStaffBearer } from '../../../../../../src/bff/upstr
 
 type Props = { params: Promise<{ tenantId: string }> };
 
-/** P2-ROLES-PRESET — list named server presets (no client permission composer). */
+/** GET /api/bff/tenants/{tenantId}/role-presets — server catalog (no permission matrix). */
 export async function GET(_request: Request, { params }: Props) {
   const { tenantId: raw } = await params;
   const tenantId = raw?.trim() ?? '';

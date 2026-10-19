@@ -11,7 +11,8 @@ export type SurfaceKind =
   | 'error'
   | 'unknown'
   | 'permission-denied'
-  | 'suspended';
+  | 'suspended'
+  | 'pending-activation';
 
 export function SurfaceState(props: {
   kind: SurfaceKind;
@@ -103,6 +104,17 @@ export function SurfaceState(props: {
           banner
           message={props.title ?? t('surface.suspended.title')}
           description={props.description ?? t('surface.suspended.description')}
+        />
+      );
+    case 'pending-activation':
+      return (
+        <Result
+          status="info"
+          title={props.title ?? t('surface.pendingActivation.title')}
+          subTitle={
+            props.description ?? t('surface.pendingActivation.description')
+          }
+          extra={props.emptyAction}
         />
       );
     case 'ready':
