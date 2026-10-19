@@ -111,7 +111,35 @@ test('Gate report nav requires report.read — gate.confirm only unlocks deeplin
       true,
       `expected event menu key ${key}`,
     );
+    assert.equal(
+      withSetup.find((m) => m.key === key)?.group,
+      'setup',
+    );
   }
+  assert.equal(withSetup.find((m) => m.key === 'overview')?.group, 'run');
+});
+
+test('event menu splits live ops from setup', () => {
+  const menu = buildEventMenuItems(
+    't1',
+    'e1',
+    [
+      'event.update',
+      'config.publish',
+      'inventory.import',
+      'report.read',
+      'cs.lookup',
+    ],
+    keyStub,
+  );
+  assert.deepEqual(
+    menu.filter((item) => item.group === 'run').map((item) => item.key),
+    ['overview', 'gate', 'audit', 'support'],
+  );
+  assert.deepEqual(
+    menu.filter((item) => item.group === 'setup').map((item) => item.key),
+    ['setup', 'types', 'sources', 'quota', 'config', 'guests'],
+  );
 });
 
 test('platform operator chrome is isolated from staff tenant role', () => {

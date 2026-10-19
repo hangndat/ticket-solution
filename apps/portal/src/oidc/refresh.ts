@@ -57,6 +57,7 @@ export async function exchangeRefresh(
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body,
       cache: 'no-store',
+      signal: AbortSignal.timeout(15_000),
     });
     const json = (await response.json()) as TokenGrantResponse;
     return { status: response.status, body: json };

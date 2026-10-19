@@ -37,10 +37,14 @@ export type OrgMenuItem = {
   permission?: string;
 };
 
+export type EventMenuGroup = 'run' | 'setup';
+
 export type EventMenuItem = {
   key: string;
   href: string;
   label: string;
+  /** Live ops sit under the event name; setup sits in its own group. */
+  group: EventMenuGroup;
   /** Server permission required; omit = visible when event in MeEvents. */
   permission?: string;
 };
@@ -189,7 +193,12 @@ export function buildEventMenuItems(
 ): EventMenuItem[] {
   const base = `/t/${tenantId}/e/${eventId}`;
   const items: EventMenuItem[] = [
-    { key: 'overview', href: base, label: translate('nav.event.overview') },
+    {
+      key: 'overview',
+      href: base,
+      label: translate('nav.event.overview'),
+      group: 'run',
+    },
   ];
   const canSetup = permissions.some((p) =>
     ['event.update', 'config.publish', 'inventory.import', 'event.config'].includes(
@@ -197,14 +206,35 @@ export function buildEventMenuItems(
     ),
   );
   if (canSetup) {
-    items.push({ key: 'setup', href: `${base}/setup`, label: translate('nav.event.setup') });
-    items.push({ key: 'types', href: `${base}/types`, label: translate('nav.event.types') });
-    items.push({ key: 'sources', href: `${base}/sources`, label: translate('nav.event.sources') });
-    items.push({ key: 'quota', href: `${base}/quota`, label: translate('nav.event.quota') });
+    items.push({
+      key: 'setup',
+      href: `${base}/setup`,
+      label: translate('nav.event.setup'),
+      group: 'setup',
+    });
+    items.push({
+      key: 'types',
+      href: `${base}/types`,
+      label: translate('nav.event.types'),
+      group: 'setup',
+    });
+    items.push({
+      key: 'sources',
+      href: `${base}/sources`,
+      label: translate('nav.event.sources'),
+      group: 'setup',
+    });
+    items.push({
+      key: 'quota',
+      href: `${base}/quota`,
+      label: translate('nav.event.quota'),
+      group: 'setup',
+    });
     items.push({
       key: 'config',
       href: `${base}/config`,
       label: translate('nav.event.configPublish'),
+      group: 'setup',
     });
   }
   if (
@@ -212,13 +242,19 @@ export function buildEventMenuItems(
       ['inventory.import', 'redemption.approve', 'notify.send'].includes(p),
     )
   ) {
-    items.push({ key: 'guests', href: `${base}/guests`, label: translate('nav.event.guests') });
+    items.push({
+      key: 'guests',
+      href: `${base}/guests`,
+      label: translate('nav.event.guests'),
+      group: 'setup',
+    });
   }
   if (permissions.includes('report.read')) {
     items.push({
       key: 'gate',
       href: `${base}/gate`,
       label: translate('nav.event.gate'),
+      group: 'run',
       permission: 'report.read',
     });
   }
@@ -230,6 +266,7 @@ export function buildEventMenuItems(
       key: 'audit',
       href: `${base}/audit`,
       label: translate('nav.event.auditCodes'),
+      group: 'run',
     });
   }
   if (permissions.includes('cs.lookup')) {
@@ -237,6 +274,7 @@ export function buildEventMenuItems(
       key: 'support',
       href: `${base}/support`,
       label: translate('nav.event.support'),
+      group: 'run',
       permission: 'cs.lookup',
     });
   }
