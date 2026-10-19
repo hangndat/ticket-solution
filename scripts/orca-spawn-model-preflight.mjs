@@ -19,23 +19,32 @@ const FALLBACK_PINS = [
   "composer-2.5",
   "claude-sonnet-5-thinking-low",
   "claude-sonnet-5-thinking-medium",
-  "claude-sonnet-5-thinking-high",
-  "gpt-5.6-sol-high",
   "grok-4.7-low",
   "gemini-3.7-flash-low",
 ];
+
+/** Trần standard — reject pins above cost-catalog band (Wave E). */
+function isAllowedPin(id) {
+  if (!/^(composer-|claude-sonnet-5-thinking-|grok-4\.7-low|gemini-3\.7-flash-low)/.test(id)) {
+    return false;
+  }
+  if (
+    id.includes("xhigh") ||
+    id.includes("ultra") ||
+    id.includes("max") ||
+    id.includes("thinking-high") ||
+    id.startsWith("gpt-")
+  ) {
+    return false;
+  }
+  return true;
+}
 
 function loadPins() {
   try {
     const md = readFileSync(join(ROOT, "docs/agents/cost-catalog.md"), "utf8");
     const found = [...md.matchAll(/`([a-z0-9][a-z0-9._-]*)`/gi)].map((m) => m[1]);
-    const pins = found.filter(
-      (id) =>
-        /^(composer-|claude-|gpt-|grok-|gemini-)/.test(id) &&
-        !id.includes("xhigh") &&
-        !id.includes("ultra") &&
-        !id.includes("max"),
-    );
+    const pins = found.filter(isAllowedPin);
     return new Set(pins.length ? pins : FALLBACK_PINS);
   } catch {
     return new Set(FALLBACK_PINS);
@@ -85,9 +94,9 @@ if (!parsed.model || parsed.auto) {
   process.exit(2);
 }
 
-if (!pins.has(parsed.model)) {
+if (!isAllowedPin(parsed.model) || !pins.has(parsed.model)) {
   console.error(
-    `FAIL Wave E: --model ${parsed.model} không nằm trong cost-catalog pin set. Refresh agent models / cập nhật cost-catalog.`,
+    `FAIL Wave E: --model ${parsed.model} không hợp lệ (trần standard / cost-catalog). Refresh agent models / cập nhật cost-catalog.`,
   );
   process.exit(2);
 }
