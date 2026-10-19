@@ -230,17 +230,27 @@ nav a,
 }
 .home-hero {
   margin-top: var(--space-7);
-  max-width: 38rem;
-  animation: rise-in 0.45s ease-out both;
+  max-width: 40rem;
+  animation: fade-rise 0.5s ease-out both;
 }
 .home-hero h1 {
   font-size: clamp(2rem, 5vw, 3.2rem);
   margin-bottom: var(--space-4);
+  font-family: var(--font-display), Sora, ui-sans-serif, sans-serif;
 }
 .home-cta {
   margin: var(--space-5) 0 0;
 }
-.home-cta .button {
+.home-cta .button,
+.home-cta-primary {
+  color: var(--paper);
+  background: var(--signal);
+  min-height: 44px;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.home-cta .button:hover,
+.home-cta-primary:hover {
+  background: var(--ink);
   color: var(--paper);
 }
 .home-cta.auth-buttons {
@@ -290,8 +300,83 @@ nav a,
   margin-top: var(--space-7);
   font-size: clamp(1.25rem, 2.5vw, 1.6rem);
 }
+.account-page {
+  --brand: var(--signal);
+}
+.account-page .account-header {
+  margin-top: var(--space-6);
+  max-width: 40rem;
+  animation: fade-rise 0.4s ease-out both;
+}
+.account-page .account-header h1 {
+  margin-bottom: var(--space-3);
+}
+.account-session {
+  margin: var(--space-6) 0 0;
+  padding: var(--space-5) 0;
+  border-top: 1px solid var(--ink-faint);
+  border-bottom: 1px solid var(--ink-faint);
+  max-width: 36rem;
+  animation: fade-rise 0.4s ease-out 0.04s both;
+}
+.account-session h2 {
+  font-size: clamp(1.35rem, 2.8vw, 1.85rem);
+  margin-bottom: var(--space-2);
+}
+.account-session__email {
+  color: var(--ink-muted);
+  margin-bottom: 0;
+  font-size: 1.05rem;
+}
+.account-session__actions,
 .account-session .auth-buttons {
   margin-top: var(--space-4);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+}
+.account-cta-primary {
+  min-height: 44px;
+  background: var(--signal);
+  color: var(--paper);
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.account-cta-primary:hover {
+  background: var(--ink);
+  color: var(--paper);
+}
+.account-cta-logout {
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.account-cta-logout:hover {
+  background: var(--signal);
+  border-color: var(--signal);
+  color: var(--paper);
+}
+.account-deletion {
+  margin-top: var(--space-2);
+}
+.account-deletion-note {
+  max-width: 40rem;
+}
+.account-outcome {
+  animation: fade-rise 0.35s ease-out both;
+}
+.account-back {
+  margin-top: var(--space-7);
+}
+.claim-page {
+  --brand: var(--signal);
+}
+.claim-header {
+  max-width: 40rem;
+}
+.claim-outcome {
+  animation: fade-rise 0.35s ease-out both;
+}
+.claim-submit {
+  min-height: 44px;
 }
 .home-featured {
   display: block;
@@ -521,6 +606,30 @@ h2 {
 .event-page .wordmark {
   font-size: 1.35rem;
 }
+.event-chrome {
+  padding-bottom: 0;
+}
+.event-hero-bleed {
+  width: 100vw;
+  max-width: 100vw;
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+  border-radius: 0;
+  min-height: clamp(220px, 38vw, 420px);
+  animation: fade-in 0.5s ease-out both;
+}
+.event-hero-copy {
+  padding-top: var(--space-5);
+  padding-bottom: var(--space-6);
+  animation: fade-in 0.45s ease-out 0.06s both;
+}
+.hero-support {
+  margin: 0 0 var(--space-4);
+  max-width: 36rem;
+  font-size: 1.1rem;
+  color: var(--ink-muted);
+  line-height: 1.45;
+}
 .hero {
   display: grid;
   gap: var(--space-6);
@@ -528,9 +637,12 @@ h2 {
 }
 .hero.hero-atmosphere {
   grid-template-columns: 1fr;
+  gap: 0;
+  padding: 0 0 var(--space-6);
 }
 .hero h1 {
   max-width: 700px;
+  margin-bottom: var(--space-3);
 }
 .hero-cta {
   display: flex;
@@ -753,6 +865,24 @@ details p {
   from {
     opacity: 0;
     transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes fade-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
   }
   to {
     opacity: 1;
@@ -1290,6 +1420,12 @@ select[aria-invalid='true'] {
   .event-row,
   .home-hero,
   .event-list,
+  .event-hero-bleed,
+  .event-hero-copy,
+  .account-page .account-header,
+  .account-session,
+  .account-outcome,
+  .claim-outcome,
   .shell > h1,
   .shell > .intro,
   .redeem-page > h1,

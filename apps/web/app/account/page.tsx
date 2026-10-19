@@ -10,20 +10,30 @@ export const metadata: Metadata = {
     'Phiên đăng nhập và yêu cầu xóa tài khoản Vemoki.',
 };
 
+/** Phase 2 full visual — hierarchy + Live Pulse, not redeem utility chrome. */
 export default function AccountPage() {
   return (
-    <main id="main" className="container shell redeem-page">
+    <main id="main" className="container shell account-page">
       <SiteNav />
-      <h1>Tài khoản</h1>
-      <p className="intro">
-        Xem phiên đăng nhập hoặc đăng xuất. Bên dưới là yêu cầu xóa tài khoản
-        (đã tiếp nhận — xử lý trong ≤ 30 ngày, không xóa ngay). Chi tiết:{' '}
-        <Link href="/privacy">Quyền riêng tư</Link>.
-      </p>
+      <header className="account-header">
+        <h1>Tài khoản</h1>
+        <p className="intro">
+          Xem phiên đăng nhập, đăng xuất, hoặc gửi yêu cầu xóa tài khoản. Chi
+          tiết:{' '}
+          <Link href="/privacy">Quyền riêng tư</Link>.
+        </p>
+      </header>
       <SessionPanel />
-      <h2 className="account-section-title">Yêu cầu xóa tài khoản</h2>
-      <AccountPanel />
-      <p>
+      <section
+        className="account-deletion"
+        aria-labelledby="account-deletion-title"
+      >
+        <h2 id="account-deletion-title" className="account-section-title">
+          Yêu cầu xóa tài khoản
+        </h2>
+        <AccountPanel />
+      </section>
+      <p className="account-back">
         <Link href="/">← Trang chủ</Link>
       </p>
     </main>
