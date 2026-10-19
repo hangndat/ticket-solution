@@ -1,7 +1,14 @@
 import { useEffect, useState } from 'react';
-import { Text, View } from 'react-native';
-import { EventMediaHeader } from '@/components/event-media';
-import { Page, Notice } from '@/components/page';
+import {
+  AccessibilityInfo,
+  Animated,
+  Text,
+  View,
+} from 'react-native';
+import { router } from 'expo-router';
+import { AttendeeCta } from '@/components/attendee-cta';
+import { EventBanner, EventLogo } from '@/components/event-media';
+import { BrandWordmark, Notice, Page } from '@/components/page';
 import {
   EmptyState,
   ErrorState,
@@ -14,8 +21,10 @@ import {
   visibleSectionsInOrder,
 } from '@/published/published-event-api';
 import type { PublishedEventDetail } from '@/published/types';
-import { colors } from '@/theme/colors';
+import { brand, colors } from '@/theme/colors';
+import { fontFamilies } from '@/theme/fonts';
 import { useTheme } from '@/theme/ThemeProvider';
+import { typography } from '@/theme/typography';
 
 export function EventDetailScreen({
   tenantSlug,
@@ -33,6 +42,37 @@ export function EventDetailScreen({
   return <PublishedEventDetailView tenantSlug={tenantSlug} slug={slug} />;
 }
 
+function useHeroFade() {
+  const [reduceMotionOs, setReduceMotionOs] = useState(false);
+  const [heroOpacity] = useState(() => new Animated.Value(1));
+
+  useEffect(() => {
+    let cancelled = false;
+    void AccessibilityInfo.isReduceMotionEnabled().then((enabled) => {
+      if (cancelled) return;
+      setReduceMotionOs(enabled);
+      if (!enabled) {
+        heroOpacity.setValue(0);
+        Animated.timing(heroOpacity, {
+          toValue: 1,
+          duration: 280,
+          useNativeDriver: true,
+        }).start();
+      }
+    });
+    const sub = AccessibilityInfo.addEventListener(
+      'reduceMotionChanged',
+      setReduceMotionOs,
+    );
+    return () => {
+      cancelled = true;
+      sub.remove();
+    };
+  }, [heroOpacity]);
+
+  return { heroOpacity, reduceMotionOs };
+}
+
 function FixtureDemoDetail({
   tenantSlug,
   slug,
@@ -41,6 +81,7 @@ function FixtureDemoDetail({
   slug: string;
 }) {
   const { applyBranding } = useTheme();
+  const { heroOpacity, reduceMotionOs } = useHeroFade();
   const event = findDemoEvent(tenantSlug, slug);
 
   useEffect(() => {
@@ -68,28 +109,47 @@ function FixtureDemoDetail({
   }
   return (
     <Page>
-      <Notice title="Demo · dữ liệu mẫu · chưa xuất bản">
-        Nội dung mẫu tường minh trên thiết bị. Không phải sự kiện đã xuất bản
-        trên máy chủ và không phải fallback khi API lỗi.
-      </Notice>
-      <EventMediaHeader
-        eventId={event.id}
-        tenantSlug={event.tenantSlug}
-        testID={`fixture-media-${event.id}`}
-      />
-      <Notice title={event.name}>{event.brand.organizationName}</Notice>
-      <Text selectable style={{ color: colors.label, fontSize: 19 }}>
-        {eventDate(event)}
-      </Text>
-      <Text selectable style={{ color: colors.secondary, fontSize: 17 }}>
-        {event.timezone}
-      </Text>
-      <Text selectable style={{ color: colors.label, fontSize: 19 }}>
-        {event.location}
-      </Text>
-      <Notice title="Đăng ký">
-        Chỉ thông tin mẫu. Không đăng ký vé từ dữ liệu demo.
-      </Notice>
+      <Animated.View
+        style={{
+          opacity: reduceMotionOs ? 1 : heroOpacity,
+          gap: 16,
+        }}
+      >
+        <Text
+          style={{
+            color: brand.signal,
+            fontFamily: fontFamilies.bodySemiBold,
+            fontSize: 13,
+            fontWeight: '600',
+          }}
+        >
+          Demo · dữ liệu mẫu · chưa xuất bản
+        </Text>
+        <BrandWordmark compact />
+        <EventBanner
+          eventId={event.id}
+          tenantSlug={event.tenantSlug}
+          height={200}
+          style={{ marginHorizontal: -20, borderRadius: 0, width: undefined }}
+          testID={`fixture-banner-${event.id}`}
+        />
+        <Text
+          accessibilityRole="header"
+          selectable
+          style={{ color: brand.ink, ...typography.display }}
+        >
+          {event.name}
+        </Text>
+        <Text
+          selectable
+          style={{ color: colors.secondary, ...typography.body }}
+        >
+          {[eventDate(event), event.location].filter(Boolean).join(' · ')}
+        </Text>
+        <Notice title="Đăng ký">
+          Chỉ thông tin mẫu. Không đăng ký vé từ dữ liệu demo.
+        </Notice>
+      </Animated.View>
     </Page>
   );
 }
@@ -108,11 +168,13 @@ function PublishedEventDetailView({
     | { kind: 'error'; message: string }
     | { kind: 'misconfigured' }
   >({ kind: 'loading' });
+  const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
     const controller = new AbortController();
     void (async () => {
+      setPhase({ kind: 'loading' });
       const result = await fetchPublishedEventDetail(
         tenantSlug,
         slug,
@@ -135,15 +197,15 @@ function PublishedEventDetailView({
         kind: 'error',
         message:
           result.status === 'unreachable'
-            ? 'API nội dung đã xuất bản không tới được. Không dùng demo thay thế.'
-            : 'Phản hồi nội dung đã xuất bản không hợp lệ.',
+            ? 'Không tải được sự kiện. Kiểm tra kết nối rồi thử lại.'
+            : 'Không tải được sự kiện. Phản hồi không hợp lệ.',
       });
     })();
     return () => {
       cancelled = true;
       controller.abort();
     };
-  }, [tenantSlug, slug]);
+  }, [tenantSlug, slug, retryKey]);
 
   if (phase.kind === 'loading') {
     return (
@@ -170,9 +232,15 @@ function PublishedEventDetailView({
     return (
       <Page>
         <EmptyState title="Sự kiện không khả dụng">
-          Không có projection đã xuất bản cho tổ chức/sự kiện này (404). Bản
-          nháp không hiện. Đây không phải demo.
+          Sự kiện này không khả dụng hoặc chưa được xuất bản. Đây không phải
+          nội dung demo.
         </EmptyState>
+        <AttendeeCta
+          label="Về danh sách sự kiện"
+          variant="secondary"
+          onPress={() => router.replace('/')}
+          testID="event-detail-home"
+        />
       </Page>
     );
   }
@@ -180,24 +248,37 @@ function PublishedEventDetailView({
   if (phase.kind === 'error') {
     return (
       <Page>
-        <ErrorState title={eventsCopy.errorDetail.title}>
+        <ErrorState
+          title={eventsCopy.errorDetail.title}
+          onRetry={() => setRetryKey((k) => k + 1)}
+          retryLabel="Thử lại"
+        >
           {phase.message}
         </ErrorState>
       </Page>
     );
   }
 
-  return <PublishedEventBrandSync event={phase.event} />;
+  return <PublishedEventComposition event={phase.event} />;
 }
 
-/** Apply published event brand into ThemeProvider (S-P0-C) then render chrome. */
-function PublishedEventBrandSync({
+/** Live Pulse composition — media plane + typography stack; no thick floating card. */
+function PublishedEventComposition({
   event,
 }: {
   event: PublishedEventDetail;
 }) {
   const { applyBranding } = useTheme();
+  const { heroOpacity, reduceMotionOs } = useHeroFade();
   const sections = visibleSectionsInOrder(event);
+  const supportLine = [
+    event.startsAt
+      ? formatPublishedDate(event.startsAt, event.timezone)
+      : null,
+    event.location?.trim() || null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
 
   useEffect(() => {
     applyBranding(
@@ -214,55 +295,114 @@ function PublishedEventBrandSync({
 
   return (
     <Page>
-      <Text style={{ color: colors.secondary, fontSize: 13 }}>
-        Đã xuất bản · {event.brand.organizationName}
-      </Text>
-      <View
+      <Animated.View
         style={{
-          padding: 16,
-          borderRadius: 16,
-          backgroundColor: colors.card,
-          borderTopWidth: 4,
-          borderTopColor: event.brand.primaryColor,
-          gap: 8,
+          opacity: reduceMotionOs ? 1 : heroOpacity,
+          gap: 16,
         }}
       >
-        <EventMediaHeader
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 10,
+            flexWrap: 'wrap',
+          }}
+        >
+          <BrandWordmark compact />
+          <Text
+            selectable
+            style={{
+              color: colors.secondary,
+              ...typography.caption,
+              flexShrink: 1,
+            }}
+          >
+            {event.brand.organizationName}
+          </Text>
+        </View>
+
+        <EventBanner
           eventId={event.id}
           tenantSlug={event.tenantSlug}
           bannerUrl={event.brand.bannerUrl}
-          logoUrl={event.brand.logoUrl}
-          testID={`pub-detail-media-${event.id}`}
+          height={220}
+          style={{ marginHorizontal: -20, borderRadius: 0, width: undefined }}
+          testID={`pub-detail-banner-${event.id}`}
         />
-        <Text selectable style={{ color: colors.secondary }}>
-          {event.brand.organizationName}
-        </Text>
+
+        {event.brand.logoUrl || event.brand.organizationName ? (
+          <EventLogo
+            eventId={event.id}
+            tenantSlug={event.tenantSlug}
+            logoUrl={event.brand.logoUrl}
+            testID={`pub-detail-logo-${event.id}`}
+          />
+        ) : null}
+
         <Text
+          accessibilityRole="header"
           selectable
-          style={{ color: colors.label, fontSize: 24, fontWeight: '600' }}
+          style={{ color: brand.ink, ...typography.display }}
         >
           {event.name}
         </Text>
-        {event.startsAt ? (
-          <Text selectable style={{ color: colors.label, fontSize: 17 }}>
-            {formatPublishedDate(event.startsAt, event.timezone)}
+
+        {supportLine ? (
+          <Text
+            selectable
+            style={{ color: colors.secondary, ...typography.body }}
+          >
+            {supportLine}
           </Text>
         ) : (
-          <Text selectable style={{ color: colors.secondary, fontSize: 17 }}>
+          <Text
+            selectable
+            style={{ color: colors.secondary, ...typography.body }}
+          >
             Chưa có giờ bắt đầu trên nội dung đã xuất bản
           </Text>
         )}
-        {event.location ? (
-          <Text selectable style={{ color: colors.label, fontSize: 17 }}>
-            {event.location}
-          </Text>
-        ) : null}
-        {event.brand.contact ? (
-          <Text selectable style={{ color: colors.secondary, fontSize: 15 }}>
-            {event.brand.contact}
-          </Text>
-        ) : null}
-      </View>
+
+        <View style={{ gap: 10 }}>
+          <AttendeeCta
+            label="Đổi mã lấy vé"
+            onPress={() =>
+              router.push({
+                pathname: '/redeem',
+                params: {
+                  tenantSlug: event.tenantSlug,
+                  eventSlug: event.slug,
+                },
+              })
+            }
+            testID="event-detail-cta-redeem"
+          />
+          <AttendeeCta
+            label="Nhận lời mời"
+            variant="secondary"
+            onPress={() =>
+              router.push({
+                pathname: '/claim',
+                params: {
+                  tenantSlug: event.tenantSlug,
+                  eventSlug: event.slug,
+                },
+              })
+            }
+            testID="event-detail-cta-claim"
+          />
+        </View>
+      </Animated.View>
+
+      {event.brand.contact ? (
+        <Text
+          selectable
+          style={{ color: colors.secondary, ...typography.callout }}
+        >
+          {event.brand.contact}
+        </Text>
+      ) : null}
 
       {sections.map((section) => (
         <Notice key={section.id} title={section.title ?? section.kind}>
@@ -276,7 +416,13 @@ function PublishedEventBrandSync({
             <Text
               key={`${item.q}-${index}`}
               selectable
-              style={{ marginBottom: 8, color: colors.label }}
+              style={{
+                marginBottom: 8,
+                color: colors.label,
+                fontFamily: fontFamilies.body,
+                fontSize: 17,
+                lineHeight: 25,
+              }}
             >
               H: {item.q}
               {'\n'}
@@ -291,6 +437,13 @@ function PublishedEventBrandSync({
           {event.terms.bodyMarkdown}
         </Notice>
       ) : null}
+
+      <AttendeeCta
+        label="Tất cả sự kiện"
+        variant="secondary"
+        onPress={() => router.replace('/')}
+        testID="event-detail-all-events"
+      />
     </Page>
   );
 }

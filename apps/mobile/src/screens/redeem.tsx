@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
+import { useLocalSearchParams } from 'expo-router';
 import {
   redeemActionAnnouncement,
   redeemDecisionAnnouncement,
@@ -34,7 +35,16 @@ import { fontFamilies } from '@/theme/fonts';
 
 const AUTH_CODES = new Set(['UNAUTHENTICATED', 'EMAIL_NOT_VERIFIED']);
 
+function firstParam(value: string | string[] | undefined): string {
+  if (Array.isArray(value)) return value[0] ?? '';
+  return value ?? '';
+}
+
 export function RedeemScreen() {
+  const routeParams = useLocalSearchParams<{
+    tenantSlug?: string | string[];
+    eventSlug?: string | string[];
+  }>();
   const identity = useSyncExternalStore(
     session.subscribe,
     session.getSnapshot,
@@ -50,8 +60,15 @@ export function RedeemScreen() {
 
   const [tenantId, setTenantId] = useState(getTenantId() ?? '');
   const [eventId, setEventId] = useState(getEventId() ?? '');
-  const [tenantSlug, setTenantSlug] = useState('');
-  const [eventSlug, setEventSlug] = useState('');
+  // Route params from event-detail CTA (AC-E3); local edit overrides until remount.
+  const routeTenantSlug = firstParam(routeParams.tenantSlug).trim();
+  const routeEventSlug = firstParam(routeParams.eventSlug).trim();
+  const [tenantSlugEdit, setTenantSlugEdit] = useState<string | null>(null);
+  const [eventSlugEdit, setEventSlugEdit] = useState<string | null>(null);
+  const tenantSlug = tenantSlugEdit ?? routeTenantSlug;
+  const eventSlug = eventSlugEdit ?? routeEventSlug;
+  const setTenantSlug = setTenantSlugEdit;
+  const setEventSlug = setEventSlugEdit;
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
   const [decision, setDecision] = useState<RedeemDecision | null>(null);

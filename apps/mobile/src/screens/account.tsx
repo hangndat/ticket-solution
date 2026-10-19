@@ -2,16 +2,19 @@ import { useCallback, useMemo, useState, useSyncExternalStore } from 'react';
 import {
   ActivityIndicator,
   Linking,
-  Pressable,
   Text,
   View,
 } from 'react-native';
+import { router } from 'expo-router';
 import type { MeResponse } from '@ticket/contracts';
-import { Notice, Page } from '@/components/page';
+import { AttendeeCta } from '@/components/attendee-cta';
+import { BrandWordmark, Notice, Page } from '@/components/page';
 import { SessionScopedAccountDeletionPanel } from '@/account-deletion/account-deletion-panel';
 import { PRIVACY_POLICY_URL } from '@/account-deletion/privacy-policy';
 import { SessionScopedPushStatus } from '@/push/push-status';
-import { colors } from '@/theme/colors';
+import { brand, colors } from '@/theme/colors';
+import { fontFamilies } from '@/theme/fonts';
+import { typography } from '@/theme/typography';
 import { getApiBaseUrl, getTenantId, isOidcConfigured } from '@/identity/config';
 import { fetchMe, verifyViaMe } from '@/identity/fetch-me';
 import {
@@ -26,59 +29,37 @@ import {
 import { offlineDisplay } from '@/tickets/offline-display-session';
 import { logoutAndClearWalletArtifacts } from '@/tickets/wallet-logout';
 
-function ActionButton({
-  label,
-  onPress,
-  disabled,
-}: {
-  label: string;
-  onPress: () => void;
-  disabled?: boolean;
-}) {
-  const [focused, setFocused] = useState(false);
-  return (
-    <Pressable
-      accessibilityRole="button"
-      disabled={disabled}
-      onPress={onPress}
-      onFocus={() => setFocused(true)}
-      onBlur={() => setFocused(false)}
-      style={({ pressed }) => ({
-        paddingVertical: 14,
-        paddingHorizontal: 18,
-        borderRadius: 12,
-        borderCurve: 'continuous',
-        backgroundColor: disabled ? colors.card : colors.accent,
-        opacity: disabled ? 0.45 : pressed ? 0.85 : 1,
-        borderWidth: focused ? 2 : 0,
-        borderColor: colors.focus,
-      })}
-    >
-      <Text
-        style={{
-          color: colors.onAccent,
-          fontSize: 17,
-          fontWeight: '600',
-          textAlign: 'center',
-        }}
-      >
-        {label}
-      </Text>
-    </Pressable>
-  );
-}
-
+/**
+ * Account — Phase 2 full visual (Live Pulse).
+ * Session status, login/logout, redeem deep-link, push, privacy, deletion.
+ */
 export function AccountScreen() {
   const configured = isOidcConfigured();
 
   if (!configured) {
     return (
       <Page>
+        <BrandWordmark />
+        <Text
+          accessibilityRole="header"
+          style={{ color: brand.ink, ...typography.display }}
+        >
+          Tài khoản
+        </Text>
+        <Text style={{ color: colors.secondary, ...typography.body }}>
+          Phiên đăng nhập · chính sách quyền riêng tư
+        </Text>
         <Notice title="Chưa cấu hình đăng nhập">
           Thiếu cấu hình đăng nhập trên bản dựng này. Ứng dụng giữ trạng thái
           đăng xuất và không giả lập tài khoản.
         </Notice>
-        <Text style={{ color: colors.secondary, fontSize: 15 }}>
+        <Text
+          style={{
+            color: colors.secondary,
+            fontFamily: fontFamilies.body,
+            fontSize: 15,
+          }}
+        >
           Trạng thái: chưa đăng nhập
         </Text>
         <SessionScopedPushStatus />
@@ -225,76 +206,163 @@ function ConfiguredAccount() {
   }, [offline, verifiedUserId]);
 
   const sessionLabel = isSignedIn
-    ? 'Đã đăng nhập'
+    ? 'Bạn đang đăng nhập'
     : offline.status === 'bound'
       ? 'Xem offline (chưa xác minh phiên)'
       : 'Chưa đăng nhập';
 
+  const sessionSupport = isSignedIn
+    ? 'Phiên đã xác minh trên máy chủ — không chỉ từ token lưu máy.'
+    : offline.status === 'bound'
+      ? 'Có bộ đệm vé offline; chưa phải phiên đăng nhập đã xác minh.'
+      : 'Đăng nhập để xem vé và quản lý tài khoản.';
+
   return (
     <Page>
-      <Notice title="Tài khoản">
-        Đăng nhập để xem vé và bật thông báo. Danh tính chỉ xác minh sau khi máy
-        chủ xác nhận hồ sơ — không chỉ từ token lưu trên máy.
-      </Notice>
-
-      <Text style={{ color: colors.secondary, fontSize: 15, lineHeight: 22 }}>
-        Trạng thái: {sessionLabel}
-        {visibleMe?.email ? `\nEmail: ${visibleMe.email}` : ''}
-        {visibleMe
-          ? `\nEmail đã xác minh: ${visibleMe.emailVerified ? 'có' : 'chưa'}`
-          : ''}
+      <BrandWordmark />
+      <Text
+        accessibilityRole="header"
+        style={{ color: brand.ink, ...typography.display }}
+      >
+        Tài khoản
+      </Text>
+      <Text style={{ color: colors.secondary, ...typography.body }}>
+        {sessionSupport}
       </Text>
 
-      <View style={{ gap: 12 }}>
-        {!isSignedIn ? (
-          <ActionButton
-            label="Đăng nhập"
-            onPress={() => void onSignIn()}
-            disabled={busy}
-          />
-        ) : (
-          <>
-            <ActionButton
-              label="Làm mới hồ sơ"
-              onPress={() => void refreshMe()}
-              disabled={busy || identity.status !== 'verified'}
+      <View
+        style={{
+          gap: 14,
+          borderTopWidth: 1,
+          borderBottomWidth: 1,
+          borderColor: colors.separator,
+          paddingVertical: 16,
+        }}
+      >
+        <Text
+          style={{
+            color: brand.ink,
+            fontFamily: fontFamilies.display,
+            fontSize: 18,
+            fontWeight: '600',
+          }}
+        >
+          Phiên
+        </Text>
+        <Text
+          style={{
+            color: colors.secondary,
+            fontFamily: fontFamilies.body,
+            fontSize: 15,
+            lineHeight: 22,
+          }}
+          accessibilityLiveRegion="polite"
+        >
+          {sessionLabel}
+          {visibleMe?.email ? `\n${visibleMe.email}` : ''}
+          {visibleMe
+            ? `\nEmail đã xác minh: ${visibleMe.emailVerified ? 'có' : 'chưa'}`
+            : ''}
+        </Text>
+
+        <View style={{ gap: 10 }}>
+          {!isSignedIn ? (
+            <AttendeeCta
+              label="Đăng nhập"
+              onPress={() => void onSignIn()}
+              disabled={busy}
+              testID="account-cta-signin"
             />
-            <ActionButton
-              label="Đăng xuất"
+          ) : (
+            <>
+              <AttendeeCta
+                label="Làm mới hồ sơ"
+                variant="secondary"
+                onPress={() => void refreshMe()}
+                disabled={busy || identity.status !== 'verified'}
+                testID="account-cta-refresh"
+              />
+              <AttendeeCta
+                label="Đăng xuất"
+                onPress={() => void onLogout()}
+                disabled={busy}
+                testID="account-cta-logout"
+              />
+            </>
+          )}
+          {!isSignedIn && offline.status === 'bound' ? (
+            <AttendeeCta
+              label="Đăng xuất (xoá hiển thị offline)"
+              variant="secondary"
               onPress={() => void onLogout()}
               disabled={busy}
+              testID="account-cta-logout-offline"
             />
-          </>
-        )}
-        {!isSignedIn && offline.status === 'bound' ? (
-          <ActionButton
-            label="Đăng xuất (xoá hiển thị offline)"
-            onPress={() => void onLogout()}
-            disabled={busy}
+          ) : null}
+          <AttendeeCta
+            label="Đổi mã lấy vé"
+            variant="secondary"
+            onPress={() => router.push('/redeem')}
+            testID="account-cta-redeem"
           />
-        ) : null}
+        </View>
       </View>
 
       {busy ? (
         <View style={{ padding: 8, alignItems: 'center' }}>
-          <ActivityIndicator />
+          <ActivityIndicator color={brand.signal} />
+          <Text
+            style={{
+              marginTop: 8,
+              color: colors.secondary,
+              ...typography.caption,
+            }}
+          >
+            Đang xử lý…
+          </Text>
         </View>
       ) : null}
 
-      {meError ? <Notice title="Yêu cầu thất bại">{meError}</Notice> : null}
+      {meError ? (
+        <View accessibilityLiveRegion="assertive" accessibilityRole="alert">
+          <Notice title="Không tải được phiên" tone="deny">
+            {meError}
+          </Notice>
+        </View>
+      ) : null}
 
       <SessionScopedPushStatus />
 
       <PrivacyPolicyLink />
 
       {identity.status === 'verified' ? (
-        <SessionScopedAccountDeletionPanel />
+        <View style={{ gap: 12 }}>
+          <Text
+            accessibilityRole="header"
+            style={{
+              color: brand.ink,
+              fontFamily: fontFamilies.display,
+              fontSize: 20,
+              fontWeight: '600',
+            }}
+          >
+            Yêu cầu xóa tài khoản
+          </Text>
+          <SessionScopedAccountDeletionPanel />
+        </View>
       ) : null}
 
-      <Notice title="Không phải quyền nhân viên">
+      <Text
+        style={{
+          color: colors.secondary,
+          fontSize: 13,
+          lineHeight: 18,
+          fontFamily: fontFamilies.body,
+        }}
+      >
         Đăng nhập không tự cấp quyền nhân viên hay quản lý tổ chức. Các quyền đó
         do máy chủ kiểm tra riêng.
-      </Notice>
+      </Text>
     </Page>
   );
 }
@@ -322,14 +390,19 @@ function PrivacyPolicyLink() {
 
   return (
     <View style={{ gap: 8 }}>
-      <ActionButton
+      <AttendeeCta
         label="Chính sách quyền riêng tư"
+        variant="secondary"
         onPress={() => void onOpen()}
+        testID="account-cta-privacy"
       />
-      <Text style={{ color: colors.secondary, fontSize: 13, lineHeight: 18 }}>
+      <Text style={{ color: colors.secondary, ...typography.caption }}>
         Mở trang Chính sách quyền riêng tư công khai.
       </Text>
       {error ? <Notice title="Không mở được liên kết">{error}</Notice> : null}
     </View>
   );
 }
+
+/** Re-export for wallet surfaces that need privacy without full account chrome. */
+export { PrivacyPolicyLink as AccountPrivacyPolicyLink };
