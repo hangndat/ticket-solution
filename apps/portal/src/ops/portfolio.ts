@@ -4,6 +4,8 @@ import {
   type QuotaCapacityState,
   QUOTA_CAPACITY_STATES,
 } from './report';
+import { DEFAULT_PORTAL_LOCALE, type PortalLocale } from '../i18n/locale';
+import { t } from '../i18n/t';
 
 /** GET path — ReportController_portfolio (ADR P2-PORTFOLIO-REOPEN). */
 export const PORTFOLIO_OPENAPI_PATH =
@@ -51,13 +53,21 @@ export type PortfolioView =
   | { kind: 'unknown'; message: string }
   | { kind: 'rejected'; code: string; message: string };
 
-export const PORTFOLIO_UNKNOWN =
-  'Chưa tải được phân tích tổ chức. Không hiện số check-in / pending / quota như thể chúng đang đúng.';
+/** VI default — tests / callers without locale. Prefer t(locale, key). */
+export const PORTFOLIO_UNKNOWN = t(
+  DEFAULT_PORTAL_LOCALE,
+  'ops.portfolio.unknown',
+);
 
-export const PORTFOLIO_PARTIAL_ALERT =
-  'Một số sự kiện chưa tải được — không dùng số 0 giả.';
+export const PORTFOLIO_PARTIAL_ALERT = t(
+  DEFAULT_PORTAL_LOCALE,
+  'ops.portfolio.partial',
+);
 
-export const PORTFOLIO_ITEM_UNKNOWN = 'Không tải được';
+export const PORTFOLIO_ITEM_UNKNOWN = t(
+  DEFAULT_PORTAL_LOCALE,
+  'ops.portfolio.itemUnknown',
+);
 
 export { formatQuotaRemaining, formatReportAsOf };
 
@@ -100,25 +110,28 @@ function parseAsOf(value: unknown): string | null {
 
 function parseUuid(value: unknown): string | null {
   if (typeof value !== 'string') return null;
-  const t = value.trim();
+  const trimmed = value.trim();
   if (
     !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-      t,
+      trimmed,
     )
   ) {
     return null;
   }
-  return t;
+  return trimmed;
 }
 
-function parseItem(raw: unknown): PortfolioItemView {
+function parseItem(
+  raw: unknown,
+  locale: PortalLocale,
+): PortfolioItemView {
   const body = record(raw);
   if (!body) {
     return {
       kind: 'unknown',
       eventId: null,
       title: null,
-      message: PORTFOLIO_ITEM_UNKNOWN,
+      message: t(locale, 'ops.portfolio.itemUnknown'),
     };
   }
 
@@ -166,7 +179,7 @@ function parseItem(raw: unknown): PortfolioItemView {
       kind: 'unknown',
       eventId,
       title,
-      message: PORTFOLIO_ITEM_UNKNOWN,
+      message: t(locale, 'ops.portfolio.itemUnknown'),
     };
   }
 
@@ -192,23 +205,24 @@ export function interpretPortfolio(
   status: number,
   json: unknown,
   networkError: boolean,
+  locale: PortalLocale = DEFAULT_PORTAL_LOCALE,
 ): PortfolioView {
   if (networkError || status === 0 || status >= 500) {
-    return { kind: 'unknown', message: PORTFOLIO_UNKNOWN };
+    return { kind: 'unknown', message: t(locale, 'ops.portfolio.unknown') };
   }
 
   const body = record(json);
   if (status === 200) {
     if (!body) {
-      return { kind: 'unknown', message: PORTFOLIO_UNKNOWN };
+      return { kind: 'unknown', message: t(locale, 'ops.portfolio.unknown') };
     }
     const asOf = parseAsOf(body.asOf);
     if (asOf === null || !Array.isArray(body.items)) {
-      return { kind: 'unknown', message: PORTFOLIO_UNKNOWN };
+      return { kind: 'unknown', message: t(locale, 'ops.portfolio.unknown') };
     }
     const limit = finiteNumber(body.limit);
     if (limit === null) {
-      return { kind: 'unknown', message: PORTFOLIO_UNKNOWN };
+      return { kind: 'unknown', message: t(locale, 'ops.portfolio.unknown') };
     }
     const nextCursor =
       body.nextCursor === null
@@ -217,10 +231,10 @@ export function interpretPortfolio(
           ? body.nextCursor
           : null;
     if (body.nextCursor !== null && typeof body.nextCursor !== 'string') {
-      return { kind: 'unknown', message: PORTFOLIO_UNKNOWN };
+      return { kind: 'unknown', message: t(locale, 'ops.portfolio.unknown') };
     }
 
-    const items = body.items.map(parseItem);
+    const items = body.items.map((item) => parseItem(item, locale));
     return {
       kind: 'shown',
       asOf,
@@ -239,7 +253,7 @@ export function interpretPortfolio(
     return { kind: 'rejected', code: body.code, message };
   }
 
-  return { kind: 'unknown', message: PORTFOLIO_UNKNOWN };
+  return { kind: 'unknown', message: t(locale, 'ops.portfolio.unknown') };
 }
 
 export function portfolioEventHref(

@@ -12,8 +12,10 @@ import {
 import { bffEventAction } from '../../../../../../src/prep/bff-urls';
 import { useEventAccess } from '../../../../../../src/prep/use-event-access';
 import { SurfaceState } from '../../../../../../src/components/surface-state';
+import { usePortalLocale } from '../../../../../../src/i18n';
 
 export default function TicketTypesPage() {
+  const { t } = usePortalLocale();
   const params = useParams<{ tenantId: string; eventId: string }>();
   const { tenantId, eventId } = params;
   const access = useEventAccess(tenantId, eventId);
@@ -39,12 +41,12 @@ export default function TicketTypesPage() {
       );
       if (res.networkError || res.timedOut || res.status >= 500) {
         setKind('unknown');
-        setMessage('Chưa rõ kết quả tải loại vé.');
+        setMessage(t('types.h_1j8nzaz'));
         return;
       }
       if (res.status !== 200 || !res.json || typeof res.json !== 'object') {
         setKind('error');
-        setMessage(apiErrorMessage(res.json, `HTTP ${res.status}`));
+        setMessage(apiErrorMessage(res.json, t('common.httpStatus', { status: res.status })));
         return;
       }
       const list = Array.isArray((res.json as { items?: unknown }).items)
@@ -58,7 +60,7 @@ export default function TicketTypesPage() {
       setItems(list);
       setKind(list.length === 0 ? 'empty' : 'ready');
     },
-    [tenantId, eventId],
+    [tenantId, eventId, t],
   );
 
   useEffect(() => {
@@ -77,7 +79,7 @@ export default function TicketTypesPage() {
     return (
       <SurfaceState
         kind="error"
-        description={access.message}
+        description={access.messageKey ? t(access.messageKey) : undefined}
         onRetry={() => window.location.reload()}
       />
     );
@@ -86,7 +88,7 @@ export default function TicketTypesPage() {
     return (
       <SurfaceState
         kind="permission-denied"
-        description="Không có quyền sự kiện này."
+        description={t('config.h_g7fjbz')}
         onRetry={() => {
           window.location.href = `/t/${tenantId}`;
         }}
@@ -104,17 +106,17 @@ export default function TicketTypesPage() {
         { label: values.label.trim(), entitlementSnapshot: {} },
       );
       if (res.networkError || res.timedOut || res.status >= 500) {
-        setNotice('Chưa rõ kết quả tạo loại vé — không coi là đã tạo.');
+        setNotice(t('types.h_1ic6dze'));
         return;
       }
       if (res.status === 200 || res.status === 201) {
-        setNotice('Đã tạo loại vé.');
+        setNotice(t('types.h_13e0npu'));
         setOpen(false);
         form.resetFields();
         void load(null);
         return;
       }
-      setNotice(apiErrorMessage(res.json, 'Không tạo được loại vé.'));
+      setNotice(apiErrorMessage(res.json, t('types.h_1cxyxe')));
     } finally {
       setBusy(false);
     }
@@ -123,12 +125,8 @@ export default function TicketTypesPage() {
   return (
     <Space direction="vertical" size="large" style={{ width: '100%' }}>
       <Space style={{ width: '100%', justifyContent: 'space-between' }}>
-        <Typography.Title level={3} style={{ margin: 0 }}>
-          Loại vé
-        </Typography.Title>
-        <Button type="primary" onClick={() => setOpen(true)}>
-          Tạo loại vé
-        </Button>
+        <Typography.Title level={3} style={{ margin: 0 }}>{t('nav.event.types')}</Typography.Title>
+        <Button type="primary" onClick={() => setOpen(true)}>{t('types.h_1caa9m7')}</Button>
       </Space>
 
       {kind === 'loading' ? <SurfaceState kind="loading" /> : null}
@@ -136,12 +134,10 @@ export default function TicketTypesPage() {
         <Alert
           type="warning"
           showIcon
-          message="Chưa rõ kết quả"
+          message={t('surface.unknown.title')}
           description={message}
           action={
-            <Button size="small" onClick={() => void load(null)}>
-              Kiểm tra lại
-            </Button>
+            <Button size="small" onClick={() => void load(null)}>{t('surface.action.recheck')}</Button>
           }
         />
       ) : null}
@@ -155,11 +151,9 @@ export default function TicketTypesPage() {
       {kind === 'empty' ? (
         <SurfaceState
           kind="empty"
-          description="Chưa có loại vé."
+          description={t('types.h_xnio89')}
           emptyAction={
-            <Button type="primary" onClick={() => setOpen(true)}>
-              Tạo loại vé
-            </Button>
+            <Button type="primary" onClick={() => setOpen(true)}>{t('types.h_1caa9m7')}</Button>
           }
         />
       ) : null}
@@ -170,7 +164,7 @@ export default function TicketTypesPage() {
             dataSource={items}
             pagination={false}
             columns={[
-              { title: 'Nhãn', dataIndex: 'label' },
+              { title: t('types.nhan'), dataIndex: 'label' },
               {
                 title: 'ID',
                 dataIndex: 'ticketTypeId',
@@ -183,7 +177,7 @@ export default function TicketTypesPage() {
             ]}
           />
           {cursor ? (
-            <Button onClick={() => void load(cursor)}>Tải thêm</Button>
+            <Button onClick={() => void load(cursor)}>{t('sources.h_1w8bpuo')}</Button>
           ) : null}
         </>
       ) : null}
@@ -191,18 +185,16 @@ export default function TicketTypesPage() {
       {notice ? <Alert type="info" showIcon message={notice} /> : null}
 
       <Drawer
-        title="Tạo loại vé"
+        title={t('types.h_1caa9m7')}
         open={open}
         onClose={() => setOpen(false)}
         destroyOnHidden
       >
         <Form form={form} layout="vertical">
-          <Form.Item name="label" label="Nhãn" rules={[{ required: true }]}>
+          <Form.Item name="label" label={t('types.nhan')} rules={[{ required: true }]}>
             <Input maxLength={80} />
           </Form.Item>
-          <Button type="primary" loading={busy} onClick={() => void createType()}>
-            Tạo
-          </Button>
+          <Button type="primary" loading={busy} onClick={() => void createType()}>{t('sources.tao')}</Button>
         </Form>
       </Drawer>
     </Space>

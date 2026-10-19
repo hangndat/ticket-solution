@@ -13,6 +13,7 @@ import {
   providerStatusLabel,
   type NotificationListView,
 } from '../notifications';
+import { usePortalLocale, type MessageKey } from '../../i18n';
 
 type Props = {
   tenantId: string;
@@ -20,13 +21,17 @@ type Props = {
   canNotify: boolean;
 };
 
-const STATE_OPTIONS: { value: NotificationProviderStatus; label: string }[] = [
-  { value: 'PENDING', label: 'PENDING' },
-  { value: 'ACCEPTED', label: 'ACCEPTED (≠ delivered)' },
-  { value: 'FAILED', label: 'FAILED' },
-  { value: 'DEAD', label: 'DEAD' },
-  { value: 'UNKNOWN', label: 'UNKNOWN' },
-];
+function buildStateOptions(
+  translate: (key: MessageKey) => string,
+): { value: NotificationProviderStatus; label: string }[] {
+  return [
+    { value: 'PENDING', label: 'PENDING' },
+    { value: 'ACCEPTED', label: translate('notify.acceptedNotDelivered') },
+    { value: 'FAILED', label: 'FAILED' },
+    { value: 'DEAD', label: 'DEAD' },
+    { value: 'UNKNOWN', label: 'UNKNOWN' },
+  ];
+}
 
 const CHANNEL_OPTIONS: { value: NotificationChannel; label: string }[] = [
   { value: 'email', label: 'email' },
@@ -38,6 +43,7 @@ export function NotificationsOpsPanel({
   eventId,
   canNotify,
 }: Props) {
+  const { t, locale } = usePortalLocale();
   const [busy, setBusy] = useState(false);
   const [view, setView] = useState<NotificationListView | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -56,12 +62,12 @@ export function NotificationsOpsPanel({
     const next = interpretNotificationList(
       result.status,
       result.json,
-      result.networkError || result.timedOut,
+      result.networkError || result.timedOut, locale,
     );
     setView(next);
-    setNotice(notificationListLabel(next));
+    setNotice(notificationListLabel(next, locale));
     setBusy(false);
-  }, [tenantId, eventId, state, channel]);
+  }, [tenantId, eventId, state, channel, locale]);
 
   useEffect(() => {
     let cancelled = false;
@@ -83,9 +89,9 @@ export function NotificationsOpsPanel({
     const next = interpretNotificationRetry(
       result.status,
       result.json,
-      result.networkError || result.timedOut,
+      result.networkError || result.timedOut, locale,
     );
-    setNotice(notificationRetryLabel(next));
+    setNotice(notificationRetryLabel(next, locale));
     if (next.kind === 'requeued') void load();
     else setBusy(false);
   }
@@ -103,18 +109,18 @@ export function NotificationsOpsPanel({
       <Alert
         type="warning"
         showIcon
-        message="ACCEPTED ≠ DELIVERED · G-N1 filters"
-        description="ACCEPTED chỉ nghĩa nhà cung cấp đã nhận — không chứng minh đã giao tới người nhận. Lọc state/channel optional (omit = legacy)."
+        message={t('notify.acceptedDelimitedFilters')}
+        description={t('notify.acceptedLegend')}
       />
-      <Space wrap role="search" aria-label="Bộ lọc thông báo">
+      <Space wrap role="search" aria-label={t('ops.notifications.filtersTitle')}>
         <Select
           allowClear
           placeholder="Provider state"
           style={{ minWidth: 220 }}
           value={state}
-          options={STATE_OPTIONS}
+          options={buildStateOptions(t)}
           onChange={(v) => setState(v)}
-          aria-label="Lọc theo provider state"
+          aria-label={t('ops.h_70gxgv')}
         />
         <Select
           allowClear
@@ -123,25 +129,21 @@ export function NotificationsOpsPanel({
           value={channel}
           options={CHANNEL_OPTIONS}
           onChange={(v) => setChannel(v)}
-          aria-label="Lọc theo channel"
+          aria-label={t('ops.h_1je2q3y')}
         />
         <Button
           type="primary"
           loading={busy}
           onClick={() => void load()}
-          aria-label="Áp dụng bộ lọc thông báo"
-        >
-          Lọc
-        </Button>
-        <Button loading={busy} onClick={() => void load()}>
-          Làm mới
-        </Button>
+          aria-label={t('ops.notifications.applyFilters')}
+        >{t('platform.loc')}</Button>
+        <Button loading={busy} onClick={() => void load()}>{t('gate.h_3keb7')}</Button>
       </Space>
       {alertType ? (
         <Alert
           type={alertType}
           showIcon
-          message={notificationListLabel(view!)}
+          message={notificationListLabel(view!, locale)}
           role="status"
         />
       ) : null}
@@ -159,12 +161,12 @@ export function NotificationsOpsPanel({
             dataIndex: 'providerStatus',
             render: (status: string) =>
               providerStatusLabel(
-                status as Parameters<typeof providerStatusLabel>[0],
+                status as Parameters<typeof providerStatusLabel>[0], locale,
               ),
           },
           { title: 'Kind', dataIndex: 'kind', ellipsis: true },
           {
-            title: 'Thao tác',
+            title: t('ops.h_1pbxt75'),
             key: 'actions',
             render: (_, row) =>
               canNotify &&

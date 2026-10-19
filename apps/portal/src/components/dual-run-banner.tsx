@@ -5,12 +5,14 @@ import {
   isPortalDualRunBannerEnabled,
   productOriginFromEnv,
 } from '../dual-run/allowlist';
+import { usePortalLocale } from '../i18n';
 
 /**
  * Portal-side dual-run notice — legacy admin still on product origin until
  * an authorized deploy switches traffic (ADR-20 §8).
  */
 export function PortalDualRunBanner() {
+  const { t } = usePortalLocale();
   if (!isPortalDualRunBannerEnabled()) return null;
   const product = productOriginFromEnv();
   const legacyAdmin = `${product}/admin`;
@@ -22,11 +24,10 @@ export function PortalDualRunBanner() {
       banner
       data-testid="portal-dual-run-banner"
       style={{ marginBottom: 16 }}
-      message="Chế độ dual-run (local / prep)"
+      message={t('dualRun.h_ekkubx')}
       description={
         <>
-          Portal và legacy admin trên app đang chạy song song. Redirect
-          app→portal mặc định tắt. Cổng quét giữ trên app (
+          {t('dualRun.h_16lfg67_2')}
           <a href={`${product}/gate`} rel="noopener noreferrer">
             {product}/gate
           </a>
@@ -34,7 +35,7 @@ export function PortalDualRunBanner() {
           <a href={legacyAdmin} rel="noopener noreferrer">
             {legacyAdmin}
           </a>
-          . Không DNS/deploy prod từ banner này.
+          {t('dualRun.h_l9n5m3')}
         </>
       }
     />

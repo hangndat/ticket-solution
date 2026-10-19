@@ -14,6 +14,7 @@ import {
   type CsTicketSummary,
   type CsView,
 } from '../cs';
+import { usePortalLocale } from '../../i18n';
 
 type Props = {
   tenantId: string;
@@ -22,6 +23,7 @@ type Props = {
 };
 
 export function CsPanel({ tenantId, eventId, canCs }: Props) {
+  const { t, locale } = usePortalLocale();
   const [busy, setBusy] = useState(false);
   const [q, setQ] = useState('');
   const [list, setList] = useState<CsTicketSummary[]>([]);
@@ -31,22 +33,22 @@ export function CsPanel({ tenantId, eventId, canCs }: Props) {
   function applyView(view: CsView) {
     if (view.kind === 'list') {
       setList(view.items);
-      setNotice(`CS: ${view.items.length} vé.`);
+      setNotice(t('ops.cs.ticketCount', { count: view.items.length }));
       return;
     }
     if (view.kind === 'detail') {
       setDetail(view.ticket);
-      setNotice(`Chi tiết vé ${view.ticket.ticketId}.`);
+      setNotice(t('events.ticketDetailTitle', { ticketId: view.ticket.ticketId }));
       return;
     }
     if (view.kind === 'resent') {
       setNotice(
-        `Resend queued · providerStatus ${csProviderStatusLabel(view.providerStatus)}${view.replayed ? ' · replay' : ''}. ACCEPTED ≠ delivered.`,
+        `Resend queued · providerStatus ${csProviderStatusLabel(view.providerStatus, locale)}${view.replayed ? t('ops.import.replaySuffix') : ''}. ACCEPTED ≠ delivered.`,
       );
       return;
     }
     if (view.kind === 'rejected') {
-      setNotice(csResendRejectedLabel(view.code, view.message));
+      setNotice(csResendRejectedLabel(view.code, view.message, locale));
       return;
     }
     setNotice(view.message);
@@ -64,7 +66,7 @@ export function CsPanel({ tenantId, eventId, canCs }: Props) {
     const view = interpretCsList(
       result.status,
       result.json,
-      result.networkError || result.timedOut,
+      result.networkError || result.timedOut, locale,
     );
     applyView(view);
     setBusy(false);
@@ -79,7 +81,7 @@ export function CsPanel({ tenantId, eventId, canCs }: Props) {
       result.status,
       result.json,
       result.networkError || result.timedOut,
-      ticketId,
+      ticketId, locale,
     );
     applyView(view);
     setBusy(false);
@@ -95,7 +97,7 @@ export function CsPanel({ tenantId, eventId, canCs }: Props) {
       result.status,
       result.json,
       result.networkError || result.timedOut,
-      ticketId,
+      ticketId, locale,
     );
     applyView(view);
     if (view.kind === 'resent') void openDetail(ticketId);
@@ -108,27 +110,25 @@ export function CsPanel({ tenantId, eventId, canCs }: Props) {
         <Alert
           type="info"
           showIcon
-          message="Hỗ trợ CS — tra cứu / timeline / resend"
-          description="q chỉ nhận opaque ID chính xác. ACCEPTED từ nhà cung cấp ≠ đã giao email tới khách."
+          message={t('ops.h_1v4ywod')}
+          description={t('ops.h_6lgtz')}
         />
         {!canCs ? (
           <Alert
             type="warning"
             showIcon
-            message="Cần quyền cs.lookup từ máy chủ."
+            message={t('ops.cs.needLookup')}
           />
         ) : (
           <Space wrap>
             <Input
-              placeholder="ticketId / requestId (UUID exact)"
+              placeholder={t('ops.h_1ehht5k')}
               value={q}
               onChange={(e) => setQ(e.target.value)}
               style={{ minWidth: 320 }}
               spellCheck={false}
             />
-            <Button type="primary" loading={busy} onClick={() => void search()}>
-              Tra cứu
-            </Button>
+            <Button type="primary" loading={busy} onClick={() => void search()}>{t('ops.h_n3x4mp')}</Button>
           </Space>
         )}
         <Table
@@ -137,7 +137,7 @@ export function CsPanel({ tenantId, eventId, canCs }: Props) {
           rowKey="ticketId"
           dataSource={list}
           pagination={false}
-          locale={{ emptyText: 'Chưa có kết quả.' }}
+          locale={{ emptyText: t('ops.h_142nqqm') }}
           columns={[
             { title: 'Ticket', dataIndex: 'ticketId', ellipsis: true },
             { title: 'State', dataIndex: 'state', width: 100 },
@@ -181,13 +181,8 @@ export function CsPanel({ tenantId, eventId, canCs }: Props) {
             <Button
               loading={busy}
               onClick={() => void resend(detail.ticketId)}
-            >
-              Resend email
-            </Button>
-            <Typography.Paragraph type="secondary" data-testid="cs-resend-pending">
-              Resend thành công chỉ nghĩa queue/ACCEPTED phía nhà cung cấp — không
-              khẳng định DELIVERED.
-            </Typography.Paragraph>
+            >{t('ops.h_e1ks86')}</Button>
+            <Typography.Paragraph type="secondary" data-testid="cs-resend-pending">{t('ops.h_mag360')}</Typography.Paragraph>
           </Space>
         ) : null}
         {notice ? (

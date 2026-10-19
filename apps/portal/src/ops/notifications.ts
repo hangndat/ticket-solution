@@ -26,6 +26,8 @@ import {
   isNonEmptyString,
   optionalString,
 } from './contract-shape';
+import { t } from '../i18n/t';
+import { DEFAULT_PORTAL_LOCALE, type PortalLocale } from '../i18n/locale';
 
 /** Allowlisted template variables — mirrors BE KIND_VARIABLES (server validates). */
 export const TEMPLATE_VARIABLES_BY_KIND: Record<
@@ -68,7 +70,7 @@ export const DEFAULT_TICKET_ISSUED_DRAFT = {
 };
 
 export const NOTIFICATION_UNKNOWN =
-  'Kết quả thông báo chưa biết. Không coi là đã gửi, đã lên lịch, hoặc đã huỷ.';
+  t(DEFAULT_PORTAL_LOCALE, 'ops.notifications.unknown');
 
 const PII_KEYS = [
   'email',
@@ -189,18 +191,19 @@ export function isNotificationChannel(
 /** Honest status label — never maps ACCEPTED to "đã giao / delivered". */
 export function providerStatusLabel(
   status: NotificationProviderStatus,
+  locale: PortalLocale = DEFAULT_PORTAL_LOCALE,
 ): string {
   switch (status) {
     case 'PENDING':
-      return 'PENDING (chờ gửi)';
+      return t(locale, 'ops.h_mfwl9g');
     case 'ACCEPTED':
-      return 'ACCEPTED (nhà cung cấp nhận — ≠ đã giao tới người nhận)';
+      return t(locale, 'notify.acceptedProviderHint');
     case 'FAILED':
       return 'FAILED';
     case 'DEAD':
-      return 'DEAD (hết retry)';
+      return t(locale, 'ops.h_lygmrv');
     case 'UNKNOWN':
-      return 'UNKNOWN (timeout/không rõ — không khẳng định đã gửi)';
+      return t(locale, 'ops.h_fzjokh');
     default:
       return String(status);
   }
@@ -340,60 +343,63 @@ function rejectionOrUnknown(
   status: number,
   json: unknown,
   networkError: boolean,
+  locale: PortalLocale = DEFAULT_PORTAL_LOCALE,
 ): { kind: 'rejected'; code: string; message: string } | {
   kind: 'unknown';
   message: string;
 } {
   if (networkError || status === 0 || status >= 500) {
-    return { kind: 'unknown', message: NOTIFICATION_UNKNOWN };
+    return { kind: 'unknown', message: t(locale, 'ops.notifications.unknown') };
   }
   const err = apiErrorFrom(asRecord(json));
   if (err) return { kind: 'rejected', ...err };
-  return { kind: 'unknown', message: NOTIFICATION_UNKNOWN };
+  return { kind: 'unknown', message: t(locale, 'ops.notifications.unknown') };
 }
 
 export function interpretNotificationList(
   status: number,
   json: unknown,
   networkError: boolean,
+  locale: PortalLocale = DEFAULT_PORTAL_LOCALE,
 ): NotificationListView {
   if (networkError || status === 0 || status >= 500) {
-    return { kind: 'unknown', message: NOTIFICATION_UNKNOWN };
+    return { kind: 'unknown', message: t(locale, 'ops.notifications.unknown') };
   }
   const body = asRecord(json);
   if (status === 200 && body && Array.isArray(body.items)) {
     if (!('nextCursor' in body)) {
-      return { kind: 'unknown', message: NOTIFICATION_UNKNOWN };
+      return { kind: 'unknown', message: t(locale, 'ops.notifications.unknown') };
     }
     if (body.nextCursor !== null && typeof body.nextCursor !== 'string') {
-      return { kind: 'unknown', message: NOTIFICATION_UNKNOWN };
+      return { kind: 'unknown', message: t(locale, 'ops.notifications.unknown') };
     }
     if (hasForbiddenPii(body)) {
-      return { kind: 'unknown', message: NOTIFICATION_UNKNOWN };
+      return { kind: 'unknown', message: t(locale, 'ops.notifications.unknown') };
     }
     const items: NotificationSummary[] = [];
     for (const row of body.items) {
       const item = parseNotificationSummary(row);
-      if (!item) return { kind: 'unknown', message: NOTIFICATION_UNKNOWN };
+      if (!item) return { kind: 'unknown', message: t(locale, 'ops.notifications.unknown') };
       items.push(item);
     }
     return { kind: 'list', items, cursor: body.nextCursor };
   }
-  return rejectionOrUnknown(status, json, false);
+  return rejectionOrUnknown(status, json, false, locale);
 }
 
 export function interpretTemplatePreview(
   status: number,
   json: unknown,
   networkError: boolean,
+  locale: PortalLocale = DEFAULT_PORTAL_LOCALE,
 ): TemplatePreviewView {
   if (networkError || status === 0 || status >= 500) {
-    return { kind: 'unknown', message: NOTIFICATION_UNKNOWN };
+    return { kind: 'unknown', message: t(locale, 'ops.notifications.unknown') };
   }
   const body = asRecord(json);
   if (status === 200 && body) {
     if (hasForbiddenPii(body)) {
-      return { kind: 'unknown', message: NOTIFICATION_UNKNOWN };
+      return { kind: 'unknown', message: t(locale, 'ops.notifications.unknown') };
     }
     if (
       isNonEmptyString(body.subject) &&
@@ -409,23 +415,24 @@ export function interpretTemplatePreview(
       };
       return { kind: 'preview', ...preview };
     }
-    return { kind: 'unknown', message: NOTIFICATION_UNKNOWN };
+    return { kind: 'unknown', message: t(locale, 'ops.notifications.unknown') };
   }
-  return rejectionOrUnknown(status, json, false);
+  return rejectionOrUnknown(status, json, false, locale);
 }
 
 export function interpretTemplatePublish(
   status: number,
   json: unknown,
   networkError: boolean,
+  locale: PortalLocale = DEFAULT_PORTAL_LOCALE,
 ): TemplatePublishView {
   if (networkError || status === 0 || status >= 500) {
-    return { kind: 'unknown', message: NOTIFICATION_UNKNOWN };
+    return { kind: 'unknown', message: t(locale, 'ops.notifications.unknown') };
   }
   const body = asRecord(json);
   if ((status === 200 || status === 201) && body) {
     if (hasForbiddenPii(body)) {
-      return { kind: 'unknown', message: NOTIFICATION_UNKNOWN };
+      return { kind: 'unknown', message: t(locale, 'ops.notifications.unknown') };
     }
     if (
       isNonEmptyString(body.templateId) &&
@@ -439,23 +446,24 @@ export function interpretTemplatePublish(
         version: body.version,
       };
     }
-    return { kind: 'unknown', message: NOTIFICATION_UNKNOWN };
+    return { kind: 'unknown', message: t(locale, 'ops.notifications.unknown') };
   }
-  return rejectionOrUnknown(status, json, false);
+  return rejectionOrUnknown(status, json, false, locale);
 }
 
 export function interpretReminderPreview(
   status: number,
   json: unknown,
   networkError: boolean,
+  locale: PortalLocale = DEFAULT_PORTAL_LOCALE,
 ): ReminderPreviewView {
   if (networkError || status === 0 || status >= 500) {
-    return { kind: 'unknown', message: NOTIFICATION_UNKNOWN };
+    return { kind: 'unknown', message: t(locale, 'ops.notifications.unknown') };
   }
   const body = asRecord(json);
   if (status === 200 && body) {
     if (hasForbiddenPii(body)) {
-      return { kind: 'unknown', message: NOTIFICATION_UNKNOWN };
+      return { kind: 'unknown', message: t(locale, 'ops.notifications.unknown') };
     }
     // recipientCount only — never a list of emails/ids
     if (
@@ -476,9 +484,9 @@ export function interpretReminderPreview(
       };
       return { kind: 'preview', ...preview };
     }
-    return { kind: 'unknown', message: NOTIFICATION_UNKNOWN };
+    return { kind: 'unknown', message: t(locale, 'ops.notifications.unknown') };
   }
-  return rejectionOrUnknown(status, json, false);
+  return rejectionOrUnknown(status, json, false, locale);
 }
 
 function parseReminderSummary(value: unknown): ReminderSummary | null {
@@ -510,9 +518,10 @@ export function interpretReminderCreate(
   status: number,
   json: unknown,
   networkError: boolean,
+  locale: PortalLocale = DEFAULT_PORTAL_LOCALE,
 ): ReminderCreateView {
   if (networkError || status === 0 || status >= 500) {
-    return { kind: 'unknown', message: NOTIFICATION_UNKNOWN };
+    return { kind: 'unknown', message: t(locale, 'ops.notifications.unknown') };
   }
   const body = asRecord(json);
   if ((status === 200 || status === 201) && body) {
@@ -523,18 +532,19 @@ export function interpretReminderCreate(
     if (reminder && reminder.status === 'SCHEDULED') {
       return { kind: 'created', reminder };
     }
-    return { kind: 'unknown', message: NOTIFICATION_UNKNOWN };
+    return { kind: 'unknown', message: t(locale, 'ops.notifications.unknown') };
   }
-  return rejectionOrUnknown(status, json, false);
+  return rejectionOrUnknown(status, json, false, locale);
 }
 
 export function interpretReminderCancel(
   status: number,
   json: unknown,
   networkError: boolean,
+  locale: PortalLocale = DEFAULT_PORTAL_LOCALE,
 ): ReminderCancelView {
   if (networkError || status === 0 || status >= 500) {
-    return { kind: 'unknown', message: NOTIFICATION_UNKNOWN };
+    return { kind: 'unknown', message: t(locale, 'ops.notifications.unknown') };
   }
   const body = asRecord(json);
   if ((status === 200 || status === 201) && body) {
@@ -544,23 +554,24 @@ export function interpretReminderCancel(
     if (reminder && reminder.status === 'CANCELLED') {
       return { kind: 'cancelled', reminder };
     }
-    return { kind: 'unknown', message: NOTIFICATION_UNKNOWN };
+    return { kind: 'unknown', message: t(locale, 'ops.notifications.unknown') };
   }
-  return rejectionOrUnknown(status, json, false);
+  return rejectionOrUnknown(status, json, false, locale);
 }
 
 export function interpretNotificationRetry(
   status: number,
   json: unknown,
   networkError: boolean,
+  locale: PortalLocale = DEFAULT_PORTAL_LOCALE,
 ): NotificationRetryView {
   if (networkError || status === 0 || status >= 500) {
-    return { kind: 'unknown', message: NOTIFICATION_UNKNOWN };
+    return { kind: 'unknown', message: t(locale, 'ops.notifications.unknown') };
   }
   const body = asRecord(json);
   if ((status === 200 || status === 201) && body) {
     if (hasForbiddenPii(body)) {
-      return { kind: 'unknown', message: NOTIFICATION_UNKNOWN };
+      return { kind: 'unknown', message: t(locale, 'ops.notifications.unknown') };
     }
     // Requeue starts PENDING — ACCEPTED alone is not proof of delivery or success.
     if (
@@ -573,64 +584,64 @@ export function interpretNotificationRetry(
         providerStatus: 'PENDING',
       };
     }
-    return { kind: 'unknown', message: NOTIFICATION_UNKNOWN };
+    return { kind: 'unknown', message: t(locale, 'ops.notifications.unknown') };
   }
-  return rejectionOrUnknown(status, json, false);
+  return rejectionOrUnknown(status, json, false, locale);
 }
 
-export function notificationListLabel(view: NotificationListView): string {
+export function notificationListLabel(view: NotificationListView, locale: PortalLocale = DEFAULT_PORTAL_LOCALE): string {
   if (view.kind === 'list') {
-    return `Thông báo: ${view.items.length} mục${view.cursor ? ' (còn trang)' : ''}. ACCEPTED ≠ delivered.`;
+    return t(locale, 'ops.notifications.listSummary', { count: view.items.length, pageSuffix: view.cursor ? t(locale, 'common.pagination.pageSuffix') : '' });
   }
-  if (view.kind === 'rejected') return `${view.code}: ${view.message}`;
+  if (view.kind === 'rejected') return t(locale, 'ops.export.apiRejected', { code: view.code, message: view.message });
   return view.message;
 }
 
-export function templatePreviewLabel(view: TemplatePreviewView): string {
+export function templatePreviewLabel(view: TemplatePreviewView, locale: PortalLocale = DEFAULT_PORTAL_LOCALE): string {
   if (view.kind === 'preview') {
     return `Preview (escaped): ${view.subject.slice(0, 80)}`;
   }
-  if (view.kind === 'rejected') return `${view.code}: ${view.message}`;
+  if (view.kind === 'rejected') return t(locale, 'ops.export.apiRejected', { code: view.code, message: view.message });
   return view.message;
 }
 
-export function templatePublishLabel(view: TemplatePublishView): string {
+export function templatePublishLabel(view: TemplatePublishView, locale: PortalLocale = DEFAULT_PORTAL_LOCALE): string {
   if (view.kind === 'published') {
-    return `Đã publish template ${view.templateId} · version ${view.version}.`;
+    return t(locale, 'ops.notifications.publishTemplate', { templateId: view.templateId, version: view.version });
   }
-  if (view.kind === 'rejected') return `${view.code}: ${view.message}`;
+  if (view.kind === 'rejected') return t(locale, 'ops.export.apiRejected', { code: view.code, message: view.message });
   return view.message;
 }
 
-export function reminderPreviewLabel(view: ReminderPreviewView): string {
+export function reminderPreviewLabel(view: ReminderPreviewView, locale: PortalLocale = DEFAULT_PORTAL_LOCALE): string {
   if (view.kind === 'preview') {
-    return `Preview nhắc: ${view.recipientCount} chủ vé · UTC ${view.scheduledAt} · rev ${view.eventRevision}. Không lộ PII.`;
+    return t(locale, 'ops.notifications.previewReminder', { recipientCount: view.recipientCount, scheduledAt: view.scheduledAt, eventRevision: view.eventRevision });
   }
-  if (view.kind === 'rejected') return `${view.code}: ${view.message}`;
+  if (view.kind === 'rejected') return t(locale, 'ops.export.apiRejected', { code: view.code, message: view.message });
   return view.message;
 }
 
-export function reminderCreateLabel(view: ReminderCreateView): string {
+export function reminderCreateLabel(view: ReminderCreateView, locale: PortalLocale = DEFAULT_PORTAL_LOCALE): string {
   if (view.kind === 'created') {
-    return `Đã tạo nhắc ${view.reminder.reminderId} · ${view.reminder.status} · rev ${view.reminder.eventRevision}.`;
+    return t(locale, 'ops.notifications.reminderCreated', { reminderId: view.reminder.reminderId, status: view.reminder.status, eventRevision: view.reminder.eventRevision });
   }
-  if (view.kind === 'rejected') return `${view.code}: ${view.message}`;
+  if (view.kind === 'rejected') return t(locale, 'ops.export.apiRejected', { code: view.code, message: view.message });
   return view.message;
 }
 
-export function reminderCancelLabel(view: ReminderCancelView): string {
+export function reminderCancelLabel(view: ReminderCancelView, locale: PortalLocale = DEFAULT_PORTAL_LOCALE): string {
   if (view.kind === 'cancelled') {
-    return `Đã huỷ nhắc ${view.reminder.reminderId}.`;
+    return t(locale, 'ops.notifications.reminderCancelled', { reminderId: view.reminder.reminderId });
   }
-  if (view.kind === 'rejected') return `${view.code}: ${view.message}`;
+  if (view.kind === 'rejected') return t(locale, 'ops.export.apiRejected', { code: view.code, message: view.message });
   return view.message;
 }
 
-export function notificationRetryLabel(view: NotificationRetryView): string {
+export function notificationRetryLabel(view: NotificationRetryView, locale: PortalLocale = DEFAULT_PORTAL_LOCALE): string {
   if (view.kind === 'requeued') {
-    return `Đã xếp lại gửi ${view.notificationId} (PENDING — ≠ delivered).`;
+    return t(locale, 'ops.notifications.requeued', { notificationId: view.notificationId });
   }
-  if (view.kind === 'rejected') return `${view.code}: ${view.message}`;
+  if (view.kind === 'rejected') return t(locale, 'ops.export.apiRejected', { code: view.code, message: view.message });
   return view.message;
 }
 

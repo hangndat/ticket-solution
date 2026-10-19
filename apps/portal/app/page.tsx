@@ -6,16 +6,18 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { loadShellContext } from '../src/nav/load-shell-context';
 import { SurfaceState } from '../src/components/surface-state';
+import { usePortalLocale, type MessageKey } from '../src/i18n';
 
 /**
  * Home: redirect to first tenant when discovery returns one; else empty org.
  */
 export default function PortalHomePage() {
+  const { t } = usePortalLocale();
   const router = useRouter();
   const [state, setState] = useState<
     'loading' | 'empty' | 'error' | 'redirecting'
   >('loading');
-  const [message, setMessage] = useState<string | undefined>();
+  const [messageKey, setMessageKey] = useState<MessageKey | undefined>();
 
   useEffect(() => {
     let cancelled = false;
@@ -27,7 +29,7 @@ export default function PortalHomePage() {
       }
       if (shell.status === 'error') {
         setState('error');
-        setMessage(shell.message);
+        setMessageKey(shell.messageKey);
         return;
       }
       if (shell.status !== 'ready') {
@@ -54,7 +56,7 @@ export default function PortalHomePage() {
     return (
       <SurfaceState
         kind="unknown"
-        description={message}
+        description={messageKey ? t(messageKey) : undefined}
         onRetry={() => window.location.reload()}
       />
     );
@@ -62,14 +64,10 @@ export default function PortalHomePage() {
 
   return (
     <Card>
-      <Typography.Title level={3}>Chưa có tổ chức</Typography.Title>
-      <Typography.Paragraph>
-        Tài khoản đã đăng nhập nhưng chưa được gán vào tổ chức nào. Liên hệ chủ
-        tổ chức để nhận lời mời nhân sự (portal), không dùng luồng khách trên
-        app.
-      </Typography.Paragraph>
+      <Typography.Title level={3}>{t('shell.tenant.empty')}</Typography.Title>
+      <Typography.Paragraph>{t('home.noOrgBody')}</Typography.Paragraph>
       <Button type="primary">
-        <Link href="/account/security">Xem phiên đăng nhập</Link>
+        <Link href="/account/security">{t('home.h_cb3p8s')}</Link>
       </Button>
     </Card>
   );

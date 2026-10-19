@@ -1,3 +1,6 @@
+import { t } from '../i18n/t';
+import { DEFAULT_PORTAL_LOCALE, type PortalLocale } from '../i18n/locale';
+
 export type AdminAction =
   | 'save'
   | 'publish'
@@ -17,7 +20,7 @@ export type AdminDecision =
   | { kind: 'unknown'; message: string };
 
 export const ADMIN_UNKNOWN =
-  'Kết quả chưa biết. Không coi là đã lưu, đã publish, đã nhập mã, đã duyệt, hoặc đã từ chối.';
+  t(DEFAULT_PORTAL_LOCALE, 'ops.decide.unknown');
 
 function record(json: unknown): Record<string, unknown> | null {
   if (!json || typeof json !== 'object' || Array.isArray(json)) return null;
@@ -29,9 +32,10 @@ export function decideAdmin(
   status: number,
   json: unknown,
   networkError: boolean,
+  locale: PortalLocale = DEFAULT_PORTAL_LOCALE,
 ): AdminDecision {
   if (networkError || status === 0 || status >= 500) {
-    return { kind: 'unknown', message: ADMIN_UNKNOWN };
+    return { kind: 'unknown', message: t(locale, 'ops.decide.unknown') };
   }
   const body = record(json);
   if (
@@ -74,7 +78,7 @@ export function decideAdmin(
     (action === 'approve' || action === 'deny') &&
     (body?.decision === 'approve' || body?.decision === 'deny')
   ) {
-    return { kind: 'unknown', message: ADMIN_UNKNOWN };
+    return { kind: 'unknown', message: t(locale, 'ops.decide.unknown') };
   }
   if (body && typeof body.code === 'string' && !secretField(body, body.code)) {
     return {
@@ -86,7 +90,7 @@ export function decideAdmin(
         : {}),
     };
   }
-  return { kind: 'unknown', message: ADMIN_UNKNOWN };
+  return { kind: 'unknown', message: t(locale, 'ops.decide.unknown') };
 }
 
 const SECRET_FIELDS = [
@@ -138,30 +142,30 @@ function approvalDecision(
 }
 
 /** Page status text. Never echoes redemption-code fields from the API body. */
-export function adminDecisionLabel(decision: AdminDecision): string {
+export function adminDecisionLabel(decision: AdminDecision, locale: PortalLocale = DEFAULT_PORTAL_LOCALE): string {
   if (decision.kind === 'saved') {
-    return `Đã lưu phiên bản ${decision.version}. Chưa publish.`;
+    return t(locale, 'ops.decide.savedVersion', { version: decision.version });
   }
   if (decision.kind === 'published') {
-    return `Đã publish phiên bản ${decision.version}. Payload này không sửa được.`;
+    return t(locale, 'ops.decide.publishedVersion', { version: decision.version });
   }
   if (decision.kind === 'imported') {
-    return `Đã nhập ${decision.count} mã. Mã gốc không được lưu.`;
+    return t(locale, 'ops.decide.importedCount', { count: decision.count });
   }
   if (decision.kind === 'quota') {
-    return `Quota event: ${decision.allocated} / ${decision.capacity ?? 'null'}.`;
+    return t(locale, 'ops.decide.quotaSummary', { allocated: decision.allocated, capacity: decision.capacity ?? 'null' });
   }
   if (decision.kind === 'approved') {
-    const replay = decision.replayed ? ' Kết quả lặp lại.' : '';
-    return `Đã duyệt yêu cầu ${decision.requestId}.${replay}`;
+    const replay = decision.replayed ? t(locale, 'ops.decide.replaySuffix') : '';
+    return t(locale, 'ops.decide.approvedRequest', { requestId: decision.requestId, replaySuffix: replay });
   }
   if (decision.kind === 'denied') {
-    const replay = decision.replayed ? ' Kết quả lặp lại.' : '';
-    return `Đã từ chối yêu cầu ${decision.requestId}.${replay}`;
+    const replay = decision.replayed ? t(locale, 'ops.decide.replaySuffix') : '';
+    return t(locale, 'ops.decide.deniedRequest', { requestId: decision.requestId, replaySuffix: replay });
   }
   if (decision.kind === 'rejected') {
-    const id = decision.requestId ? ` · requestId ${decision.requestId}` : '';
-    return `${decision.code}: ${decision.message}${id}`;
+    const id = decision.requestId ? t(locale, 'ops.decide.requestIdSuffix', { requestId: decision.requestId }) : '';
+    return t(locale, 'ops.decide.rejectedApi', { code: decision.code, message: decision.message, requestIdSuffix: id });
   }
   return decision.message;
 }
