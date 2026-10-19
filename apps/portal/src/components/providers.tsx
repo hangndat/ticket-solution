@@ -1,5 +1,6 @@
 'use client';
 
+import { ProConfigProvider } from '@ant-design/pro-components';
 import { App, ConfigProvider } from 'antd';
 import enUS from 'antd/locale/en_US';
 import viVN from 'antd/locale/vi_VN';
@@ -40,7 +41,9 @@ function AntdLocaleBridge({ children }: { children: ReactNode }) {
         },
       }}
     >
-      <App>{children}</App>
+      <ProConfigProvider hashed={false}>
+        <App>{children}</App>
+      </ProConfigProvider>
     </ConfigProvider>
   );
 }

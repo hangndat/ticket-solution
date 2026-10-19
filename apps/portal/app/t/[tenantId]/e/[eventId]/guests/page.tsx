@@ -1,6 +1,8 @@
 'use client';
 
-import { Alert, Select, Space, Tabs, Typography } from 'antd';
+import { ProCard } from '@ant-design/pro-components';
+import { Alert, Select, Space } from 'antd';
+import { PortalPage } from '../../../../../../src/components/portal-page';
 import type { ReactNode } from 'react';
 import { useParams } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
@@ -136,7 +138,7 @@ export default function EventGuestsPage() {
   if (canImport) {
     tabItems.push({
       key: 'import',
-      label: 'Import & invitations',
+      label: t('ops.import.panelTitle'),
       children: (
         <ImportInvitationsPanel
           tenantId={tenantId}
@@ -178,7 +180,7 @@ export default function EventGuestsPage() {
   if (canExport) {
     tabItems.push({
       key: 'export',
-      label: 'Export',
+      label: t('ops.export.panelInfo'),
       children: (
         <ExportPanel
           tenantId={tenantId}
@@ -191,14 +193,7 @@ export default function EventGuestsPage() {
   }
 
   return (
-    <Space direction="vertical" size="large" style={{ width: '100%' }}>
-      <Typography.Title level={3} style={{ margin: 0 }}>{t('nav.event.guests')}</Typography.Title>
-      <Alert
-        type="info"
-        showIcon
-        message="Import / invitations / pending / notify / export"
-        description={t('guests.h_1tkjxlx')}
-      />
+    <PortalPage title={t('nav.event.guests')} subTitle={t('guests.h_1tkjxlx')}>
       {catalogError ? (
         <Alert type="warning" showIcon message={catalogError} />
       ) : null}
@@ -222,13 +217,16 @@ export default function EventGuestsPage() {
           />
         </Space>
       ) : null}
-      <Tabs
-        activeKey={
-          tabItems.some((t) => t.key === activeTab) ? activeTab : tabItems[0]?.key
-        }
-        onChange={setActiveTab}
-        items={tabItems}
+      <ProCard
+        tabs={{
+          activeKey:
+            tabItems.some((tab) => tab.key === activeTab)
+              ? activeTab
+              : tabItems[0]?.key,
+          onChange: setActiveTab,
+          items: tabItems,
+        }}
       />
-    </Space>
+    </PortalPage>
   );
 }

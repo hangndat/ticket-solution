@@ -1,6 +1,8 @@
 'use client';
 
-import { Alert, Button, Form, Input, Space, Typography } from 'antd';
+import { ProForm, ProFormText } from '@ant-design/pro-components';
+import { Alert, Button, Form, Typography } from 'antd';
+import { PortalPage } from '../../../../src/components/portal-page';
 import { useParams } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import {
@@ -151,8 +153,7 @@ export default function OrgSettingsPage() {
   }
 
   return (
-    <Space direction="vertical" size="large" style={{ width: '100%' }}>
-      <Typography.Title level={3} style={{ margin: 0 }}>{t('settings.orgTitle')}</Typography.Title>
+    <PortalPage title={t('settings.orgTitle')} loading={kind === 'loading'}>
       {kind === 'loading' ? <SurfaceState kind="loading" /> : null}
       {kind === 'unknown' ? (
         <Alert
@@ -174,32 +175,35 @@ export default function OrgSettingsPage() {
       ) : null}
       {kind === 'ready' ? (
         <>
-          <Form form={form} layout="vertical" style={{ maxWidth: 480 }}>
-            <Form.Item
+          <ProForm
+            form={form}
+            layout="vertical"
+            style={{ maxWidth: 480 }}
+            submitter={{
+              searchConfig: { submitText: t('setup.luu') },
+              submitButtonProps: { loading: busy },
+            }}
+            onFinish={() => void save()}
+          >
+            <ProFormText
               name="displayName"
               label={t('settings.h_448wq6')}
               rules={[{ required: true }]}
-            >
-              <Input />
-            </Form.Item>
-            <Form.Item
+            />
+            <ProFormText
               name="primaryColor"
               label={t('config.h_1fbsj7r')}
               rules={[{ required: true }]}
-            >
-              <Input placeholder="#9b3a18" />
-            </Form.Item>
-            <Form.Item name="secondaryColor" label={t('settings.h_me7m5c')}>
-              <Input />
-            </Form.Item>
+              fieldProps={{ placeholder: '#9b3a18' }}
+            />
+            <ProFormText name="secondaryColor" label={t('settings.h_me7m5c')} />
             <Typography.Text type="secondary">
               {t('settings.currentVersion')}{branding?.version ?? '—'}
             </Typography.Text>
-          </Form>
+          </ProForm>
           {notice ? <Alert type="info" showIcon message={notice} /> : null}
-          <Button type="primary" loading={busy} onClick={() => void save()}>{t('setup.luu')}</Button>
         </>
       ) : null}
-    </Space>
+    </PortalPage>
   );
 }

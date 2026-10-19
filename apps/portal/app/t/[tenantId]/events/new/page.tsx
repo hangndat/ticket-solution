@@ -8,8 +8,8 @@ import {
   Select,
   Space,
   Steps,
-  Typography,
 } from 'antd';
+import { PortalPage } from '../../../../../src/components/portal-page';
 import { useParams, useRouter } from 'next/navigation';
 import { useState } from 'react';
 import {
@@ -129,9 +129,7 @@ export default function CreateEventWizardPage() {
   }
 
   return (
-    <Space direction="vertical" size="large" style={{ width: '100%' }}>
-      <Typography.Title level={3} style={{ margin: 0 }}>{t('events.h_ek93o2')}</Typography.Title>
-      <Typography.Paragraph type="secondary">{t('events.h_5zs7cf')}</Typography.Paragraph>
+    <PortalPage title={t('events.h_ek93o2')} subTitle={t('events.h_5zs7cf')}>
       <Steps
         current={step}
         items={[
@@ -230,6 +228,6 @@ export default function CreateEventWizardPage() {
           <Button type="primary" loading={busy} onClick={() => void submit()}>{t('events.h_ek93o2')}</Button>
         )}
       </Space>
-    </Space>
+    </PortalPage>
   );
 }

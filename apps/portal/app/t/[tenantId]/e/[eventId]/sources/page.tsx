@@ -1,16 +1,14 @@
 'use client';
 
 import {
-  Alert,
-  Button,
-  Drawer,
-  Form,
-  Input,
-  Select,
-  Space,
-  Table,
-  Typography,
-} from 'antd';
+  ModalForm,
+  ProFormSelect,
+  ProFormText,
+  ProTable,
+} from '@ant-design/pro-components';
+import type { ProColumns } from '@ant-design/pro-components';
+import { Alert, Button, Form } from 'antd';
+import { PortalPage } from '../../../../../../src/components/portal-page';
 import { useParams } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import type {
@@ -156,13 +154,28 @@ export default function SourcesPage() {
     }
   }
 
-  return (
-    <Space direction="vertical" size="large" style={{ width: '100%' }}>
-      <Space style={{ width: '100%', justifyContent: 'space-between' }}>
-        <Typography.Title level={3} style={{ margin: 0 }}>{t('nav.event.sources')}</Typography.Title>
-        <Button type="primary" onClick={() => setOpen(true)}>{t('sources.h_1hplg8o')}</Button>
-      </Space>
+  const columns: ProColumns<PortalSourceSummary>[] = [
+    { title: t('sources.ten'), dataIndex: 'name' },
+    { title: t('sources.duyet'), dataIndex: 'approvalMode' },
+    {
+      title: t('nav.event.types'),
+      dataIndex: 'ticketTypeIds',
+      render: (_, row) =>
+        (row.ticketTypeIds ?? [])
+          .map((id) => {
+            const ty = types.find((x) => x.ticketTypeId === id);
+            return ty?.label ?? id.slice(0, 8);
+          })
+          .join(', ') || '—',
+    },
+  ];
 
+  return (
+    <PortalPage
+      title={t('nav.event.sources')}
+      extra={<Button type="primary" onClick={() => setOpen(true)}>{t('sources.h_1hplg8o')}</Button>}
+      loading={kind === 'loading'}
+    >
       {kind === 'loading' ? <SurfaceState kind="loading" /> : null}
       {kind === 'unknown' ? (
         <Alert
@@ -193,25 +206,13 @@ export default function SourcesPage() {
       ) : null}
       {kind === 'ready' ? (
         <>
-          <Table
+          <ProTable<PortalSourceSummary>
             rowKey="sourceId"
+            columns={columns}
             dataSource={items}
+            search={false}
+            options={false}
             pagination={false}
-            columns={[
-              { title: t('sources.ten'), dataIndex: 'name' },
-              { title: t('sources.duyet'), dataIndex: 'approvalMode' },
-              {
-                title: t('nav.event.types'),
-                dataIndex: 'ticketTypeIds',
-                render: (ids: string[]) =>
-                  (ids ?? [])
-                    .map((id) => {
-                      const t = types.find((x) => x.ticketTypeId === id);
-                      return t?.label ?? id.slice(0, 8);
-                    })
-                    .join(', ') || '—',
-              },
-            ]}
           />
           {cursor ? (
             <Button onClick={() => void load(cursor)}>{t('sources.h_1w8bpuo')}</Button>
@@ -219,51 +220,45 @@ export default function SourcesPage() {
         </>
       ) : null}
 
-      {notice ? <Alert type="info" showIcon message={notice} /> : null}
+      {notice ? <Alert type="info" showIcon message={notice} style={{ marginTop: 16 }} /> : null}
 
-      <Drawer
+      <ModalForm
         title={t('sources.h_8t861g')}
         open={open}
-        onClose={() => setOpen(false)}
-        destroyOnHidden
+        onOpenChange={setOpen}
+        form={form}
+        initialValues={{ approvalMode: 'MANUAL' }}
+        modalProps={{ destroyOnHidden: true }}
+        submitter={{ submitButtonProps: { loading: busy } }}
+        onFinish={async () => {
+          await createSource();
+          return true;
+        }}
       >
-        <Form
-          form={form}
-          layout="vertical"
-          initialValues={{ approvalMode: 'MANUAL' }}
-        >
-          <Form.Item name="name" label={t('sources.ten')} rules={[{ required: true }]}>
-            <Input maxLength={80} />
-          </Form.Item>
-          <Form.Item
-            name="approvalMode"
-            label={t('guests.approvalMode')}
-            rules={[{ required: true }]}
-          >
-            <Select
-              options={[
-                { value: 'AUTO', label: 'AUTO' },
-                { value: 'MANUAL', label: 'MANUAL' },
-              ]}
-            />
-          </Form.Item>
-          <Form.Item
-            name="ticketTypeId"
-            label={t('nav.event.types')}
-            rules={[{ required: true, message: t('ops.import.chooseTicketTypeCatalog') }]}
-          >
-            <Select
-              placeholder={t('ops.import.chooseTicketTypeCreated')}
-              options={types.map((t) => ({
-                value: t.ticketTypeId,
-                label: t.label,
-              }))}
-              notFoundContent={t('sources.h_1pcprzj')}
-            />
-          </Form.Item>
-          <Button type="primary" loading={busy} onClick={() => void createSource()}>{t('sources.tao')}</Button>
-        </Form>
-      </Drawer>
-    </Space>
+        <ProFormText name="name" label={t('sources.ten')} rules={[{ required: true }]} fieldProps={{ maxLength: 80 }} />
+        <ProFormSelect
+          name="approvalMode"
+          label={t('guests.approvalMode')}
+          rules={[{ required: true }]}
+          options={[
+            { value: 'AUTO', label: 'AUTO' },
+            { value: 'MANUAL', label: 'MANUAL' },
+          ]}
+        />
+        <ProFormSelect
+          name="ticketTypeId"
+          label={t('nav.event.types')}
+          rules={[{ required: true, message: t('ops.import.chooseTicketTypeCatalog') }]}
+          options={types.map((ty) => ({
+            value: ty.ticketTypeId,
+            label: ty.label,
+          }))}
+          fieldProps={{
+            placeholder: t('ops.import.chooseTicketTypeCreated'),
+            notFoundContent: t('sources.h_1pcprzj'),
+          }}
+        />
+      </ModalForm>
+    </PortalPage>
   );
 }
