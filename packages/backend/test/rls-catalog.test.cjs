@@ -44,6 +44,8 @@ const DEFINER_OWNER_TABLES = new Set([
   'event_assignments',
   // H-P2: platform_tenant_health_counts COUNT on notifications (FORCE RLS).
   'notifications',
+  // P2-ONBOARD: register_pending_tenant INSERT (FORCE RLS + owner policy).
+  'tenant_registrations',
   // P2-ROLES-PRESET: accept_membership_invite resolves role_presets (FORCE RLS).
   'role_presets',
 ]);
@@ -259,6 +261,7 @@ test(
         'platform_operations',
         'tenant_admin_operations',
         'membership_invites',
+        'tenant_registrations',
         'role_presets',
         'support_grants',
         'account_deletion_requests',

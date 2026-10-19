@@ -591,6 +591,20 @@ export interface PlatformCreateTenantResponse {
   ownerInviteId: string;
 }
 
+/** P2-ONBOARD-PENDING — authenticated self-serve signup (no secrets in response). */
+export interface PublicTenantRegistrationBody {
+  slug: string;
+  name: string;
+  defaultTimezone?: string;
+  contact?: string | null;
+}
+
+export interface PublicTenantRegistrationResponse {
+  registrationId: string;
+  tenantId: string;
+  status: 'PENDING';
+}
+
 export interface PlatformTenantDetail {
   tenantId: string;
   slug: string;
