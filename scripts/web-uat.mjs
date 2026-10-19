@@ -729,10 +729,14 @@ async function cmdPortalSmoke(portalBaseUrl, appBaseUrl) {
       die(`CSRF body missing origin code: ${csrfBody.slice(0, 200)}`);
     }
 
-    // L3/L4 GATE-STAY-APP + legacy admin: stay on app host (soft /auth), never portal
-    const softPaths = ['/gate', '/admin'];
+    // L3 GATE-STAY-APP: staff/attendee gate stays on app host (soft /auth), never portal.
+    // L4 dual-run ON (ADR-20): GET /admin may 30x → portal origin; dual-run OFF → soft /auth on app.
+    const portalOriginExpect = new URL(portal).origin;
+    const appOrigin = new URL(app).origin;
     const softResults = [];
-    for (const path of softPaths) {
+
+    {
+      const path = '/gate';
       const res = await context.request.get(`${app}${path}`, {
         maxRedirects: 0,
       });
@@ -744,21 +748,56 @@ async function cmdPortalSmoke(portalBaseUrl, appBaseUrl) {
       } catch {
         die(`${path} invalid Location: ${location}`);
       }
-      const sameHost = locUrl.origin === new URL(app).origin;
+      const sameHost = locUrl.origin === appOrigin;
       const softAuth =
         (status === 307 || status === 302) &&
         locUrl.pathname === '/auth' &&
         (locUrl.searchParams.get('next') === path ||
           locUrl.searchParams.get('return') === path);
       const leakedPortal =
-        /3013|portal\./i.test(location) ||
-        locUrl.origin === new URL(portal).origin;
+        /3013|portal\./i.test(location) || locUrl.origin === portalOriginExpect;
       if (!sameHost || !softAuth || leakedPortal) {
         die(
           `GATE-STAY-APP fail ${path}: status=${status} loc=${location} sameHost=${sameHost} softAuth=${softAuth} leakedPortal=${leakedPortal}`,
         );
       }
-      softResults.push({ path, status, location });
+      softResults.push({ path, status, location, mode: 'gate_stay' });
+    }
+
+    {
+      const path = '/admin';
+      const res = await context.request.get(`${app}${path}`, {
+        maxRedirects: 0,
+      });
+      const status = res.status();
+      const location = res.headers()['location'] ?? '';
+      let locUrl;
+      try {
+        locUrl = new URL(location, app);
+      } catch {
+        die(`${path} invalid Location: ${location}`);
+      }
+      const toPortal =
+        (status === 302 || status === 301 || status === 307 || status === 308) &&
+        locUrl.origin === portalOriginExpect &&
+        (locUrl.pathname === '/admin' || locUrl.pathname.startsWith('/admin/'));
+      const softAuthOnApp =
+        (status === 307 || status === 302) &&
+        locUrl.origin === appOrigin &&
+        locUrl.pathname === '/auth' &&
+        (locUrl.searchParams.get('next') === path ||
+          locUrl.searchParams.get('return') === path);
+      if (!toPortal && !softAuthOnApp) {
+        die(
+          `dual-run/admin fail ${path}: status=${status} loc=${location} (expect portal /admin when dual-run ON, or soft /auth on app when OFF)`,
+        );
+      }
+      softResults.push({
+        path,
+        status,
+        location,
+        mode: toPortal ? 'dual_run_portal' : 'gate_stay_legacy',
+      });
     }
 
     // Attendee regression screenshots on app.
@@ -771,25 +810,51 @@ async function cmdPortalSmoke(portalBaseUrl, appBaseUrl) {
     await page.screenshot({ path: appRedeemShot, fullPage: true });
 
     // Follow /gate soft-redirect for visual evidence.
-    // Chain when OIDC unset: /gate → /auth?next=/gate → /?notice=auth_unavailable
-    // (127.0.0.1 vs localhost are both loopback product — reject only portal origin.)
+    // Local OIDC unset: /gate → /auth?next=/gate → /?notice=auth_unavailable
+    // Prod OIDC on: /gate → /auth → IdP authorize (redirect_uri must be app, never portal).
     await page.goto(`${app}/gate`, { waitUntil: 'networkidle' });
     const afterGate = new URL(page.url());
     const portalOrigin = new URL(portal).origin;
     const appPort = new URL(app).port;
+    const appHost = new URL(app).hostname;
     const loopback =
       afterGate.hostname === '127.0.0.1' || afterGate.hostname === 'localhost';
     if (afterGate.origin === portalOrigin) {
       die(`followed /gate landed on portal: ${page.url()}`);
     }
-    if (!loopback || (appPort && afterGate.port && afterGate.port !== appPort)) {
+    const idpAuthorize =
+      /\/protocol\/openid-connect\/auth/i.test(afterGate.pathname) ||
+      /openid-connect\/auth/i.test(afterGate.href);
+    let idpRedirectOk = false;
+    if (idpAuthorize) {
+      const ru = afterGate.searchParams.get('redirect_uri') || '';
+      try {
+        const ruUrl = new URL(ru);
+        idpRedirectOk = ruUrl.origin === appOrigin;
+      } catch {
+        idpRedirectOk = false;
+      }
+      if (!idpRedirectOk) {
+        die(
+          `followed /gate IdP redirect_uri not app origin: ${ru || '(missing)'}`,
+        );
+      }
+    }
+    const sameAppOrigin = afterGate.origin === appOrigin;
+    if (
+      (appHost === '127.0.0.1' || appHost === 'localhost') &&
+      sameAppOrigin &&
+      (!loopback || (appPort && afterGate.port && afterGate.port !== appPort))
+    ) {
       die(`followed /gate left app loopback/port: ${page.url()}`);
     }
     const gateLandingOk =
-      afterGate.pathname === '/auth' ||
-      afterGate.pathname === '/gate' ||
-      (afterGate.pathname === '/' &&
-        afterGate.searchParams.get('notice') === 'auth_unavailable');
+      idpRedirectOk ||
+      (sameAppOrigin &&
+        (afterGate.pathname === '/auth' ||
+          afterGate.pathname === '/gate' ||
+          (afterGate.pathname === '/' &&
+            afterGate.searchParams.get('notice') === 'auth_unavailable')));
     if (!gateLandingOk) {
       die(`unexpected /gate landing path: ${page.url()}`);
     }
