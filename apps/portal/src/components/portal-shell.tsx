@@ -15,6 +15,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { MeEventItem, MeTenantItem } from '@ticket/contracts';
+import { isStaffPortalTenant } from '../onboarding';
 import { gateDeeplinkUrl } from '../oidc/config';
 import {
   buildEventMenuItems,
@@ -82,10 +83,20 @@ export function PortalShell({
   const ready = shell.status === 'ready' ? shell : null;
   const caps: PortalShellCapabilities | null = ready?.caps ?? null;
 
-  const tenants: MeTenantItem[] = useMemo(
+  const discoveredTenants: MeTenantItem[] = useMemo(
     () => ready?.meTenants?.items ?? [],
     [ready],
   );
+  const tenants: MeTenantItem[] = useMemo(
+    () => discoveredTenants.filter(isStaffPortalTenant),
+    [discoveredTenants],
+  );
+  const attendeeOnly =
+    shell.status === 'ready' &&
+    caps?.staffEligible !== true &&
+    caps?.showPlatform !== true &&
+    tenants.length === 0 &&
+    discoveredTenants.some((tenant) => tenant.role === 'Attendee');
   const events: MeEventItem[] = useMemo(
     () => ready?.meEvents?.items ?? [],
     [ready],
@@ -170,6 +181,21 @@ export function PortalShell({
         kind="unknown"
         description={t(shell.messageKey)}
         onRetry={reload}
+      />
+    );
+  }
+
+  if (attendeeOnly) {
+    return (
+      <SurfaceState
+        kind="permission-denied"
+        title={t('shell.auth.attendeeDeniedTitle')}
+        description={t('shell.auth.attendeeDeniedBody')}
+        emptyAction={
+          <Button type="primary" href={productOrigin}>
+            {t('shell.auth.openCustomerApp')}
+          </Button>
+        }
       />
     );
   }
