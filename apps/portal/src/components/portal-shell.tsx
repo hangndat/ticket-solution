@@ -365,6 +365,16 @@ export function PortalShell({ children }: { children: ReactNode }) {
           {activeTenant?.status === 'SUSPENDED' ? (
             <SurfaceState kind="suspended" />
           ) : null}
+          {activeTenant?.status === 'PENDING' ? (
+            <SurfaceState
+              kind="pending-activation"
+              emptyAction={
+                <Link href={`/onboarding/${activeTenant.tenantId}`}>
+                  <Button type="link">{t('onboarding.pending.openWait')}</Button>
+                </Link>
+              }
+            />
+          ) : null}
           {children}
         </Content>
       </Layout>

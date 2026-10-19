@@ -7,13 +7,16 @@ import { useRouter } from 'next/navigation';
 import { loadShellContext } from '../src/nav/load-shell-context';
 import { SurfaceState } from '../src/components/surface-state';
 import { usePortalLocale, type MessageKey } from '../src/i18n';
+import { resolveOnboardingSurface } from '../src/onboarding';
+import { usePortalUserId } from '../src/views/use-portal-user-id';
 
 /**
- * Home: redirect to first tenant when discovery returns one; else empty org.
+ * Home: redirect to PENDING wait / first-run / first tenant; else empty + signup CTA.
  */
 export default function PortalHomePage() {
   const { t } = usePortalLocale();
   const router = useRouter();
+  const identity = usePortalUserId();
   const [state, setState] = useState<
     'loading' | 'empty' | 'error' | 'redirecting'
   >('loading');
@@ -36,18 +39,29 @@ export default function PortalHomePage() {
         setState('loading');
         return;
       }
-      const first = shell.meTenants?.items[0];
-      if (first) {
-        setState('redirecting');
-        router.replace(`/t/${first.tenantId}`);
+      const userId = identity.status === 'ready' ? identity.userId : null;
+      const surface = resolveOnboardingSurface({
+        tenants: shell.meTenants?.items,
+        userId,
+        eventCountForTenant: (tenantId) =>
+          shell.meEvents?.items.filter((e) => e.tenantId === tenantId).length ??
+          0,
+      });
+      if (surface.kind === 'signup') {
+        setState('empty');
         return;
       }
-      setState('empty');
+      setState('redirecting');
+      if (surface.kind === 'pending-activation' || surface.kind === 'first-run') {
+        router.replace(`/onboarding/${surface.tenant.tenantId}`);
+        return;
+      }
+      router.replace(`/t/${surface.tenant.tenantId}`);
     });
     return () => {
       cancelled = true;
     };
-  }, [router]);
+  }, [router, identity]);
 
   if (state === 'loading' || state === 'redirecting') {
     return <SurfaceState kind="loading" />;
@@ -66,9 +80,14 @@ export default function PortalHomePage() {
     <Card>
       <Typography.Title level={3}>{t('shell.tenant.empty')}</Typography.Title>
       <Typography.Paragraph>{t('home.noOrgBody')}</Typography.Paragraph>
-      <Button type="primary">
-        <Link href="/account/security">{t('home.h_cb3p8s')}</Link>
-      </Button>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <Link href="/onboarding">
+          <Button type="primary">{t('home.startOnboarding')}</Button>
+        </Link>
+        <Link href="/account/security">
+          <Button>{t('home.h_cb3p8s')}</Button>
+        </Link>
+      </div>
     </Card>
   );
 }
