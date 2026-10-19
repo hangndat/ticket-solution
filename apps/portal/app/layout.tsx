@@ -3,6 +3,7 @@ import { Be_Vietnam_Pro } from 'next/font/google';
 import { AntdRegistry } from '@ant-design/nextjs-registry';
 import { PortalProviders } from '../src/components/providers';
 import { PortalShell } from '../src/components/portal-shell';
+import { readPortalLocaleFromServerCookies } from '../src/i18n/locale-server';
 import './globals.css';
 
 const beVietnam = Be_Vietnam_Pro({
@@ -15,14 +16,16 @@ const beVietnam = Be_Vietnam_Pro({
 export const metadata: Metadata = {
   title: 'Vemoki Portal',
   description: 'Cổng quản trị nhân sự Vemoki',
+  // TODO(P1): localized title/description when cookie locale is EN (out of scope #566 P0-1).
   robots: { index: false, follow: false },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  const locale = await readPortalLocaleFromServerCookies();
   return (
-    <html lang="vi" className={beVietnam.variable}>
+    <html lang={locale} className={beVietnam.variable}>
       <body style={{ fontFamily: 'var(--font-portal), sans-serif' }}>
         <AntdRegistry>
           <PortalProviders>
