@@ -18,6 +18,8 @@ const {
   redeemAndIssueTicket,
   unwrapRedeemOutcome,
   readEventReport,
+  readPortfolioReport,
+  PORTFOLIO_PAGE_LIMIT,
   AuthzError,
   AUTHZ_ERROR_CODES,
   claimOutboxBatch,
@@ -693,6 +695,227 @@ test(
         }),
       );
       assert.equal(deadReport.emailNeedsCsCount, 1);
+    } finally {
+      if (db) await db.$disconnect().catch(() => {});
+      if (name) {
+        try {
+          docker('rm', '-f', name);
+        } catch {
+          /* ignore */
+        }
+      }
+    }
+  },
+);
+
+test(
+  'portfolio report filters by report.read assignment, clamps limit, one asOf; cross-tenant denied',
+  { timeout: 180000 },
+  async () => {
+    let name;
+    let db;
+    try {
+      const boot = await startIsolatedPostgres();
+      name = boot.name;
+      db = createDatabase(boot.url, 2);
+      const users = createPrismaIdentityUserRepository(db);
+      const issuer = 'http://127.0.0.1:8080/realms/ticket';
+      const owner = await users.upsertFromVerifiedIdentity({
+        issuer,
+        subject: 'portfolio-owner',
+        email: 'portfolio-owner@example.com',
+        emailVerified: true,
+      });
+      const stranger = await users.upsertFromVerifiedIdentity({
+        issuer,
+        subject: 'portfolio-stranger',
+        email: 'portfolio-stranger@example.com',
+        emailVerified: true,
+      });
+
+      const tenantA = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+      const tenantB = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+      // Lexicographic order: eventA < eventB < eventC
+      const eventA = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa01';
+      const eventB = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbb02';
+      const eventC = 'cccccccc-cccc-4ccc-8ccc-cccccccccc03';
+
+      await withTenant(db, tenantA, async (tx) => {
+        await tx.tenant.create({
+          data: { id: tenantA, slug: 'portfolio-a', name: 'Portfolio A' },
+        });
+        await tx.event.create({
+          data: {
+            tenantId: tenantA,
+            id: eventA,
+            slug: 'alpha',
+            name: 'Alpha',
+            status: 'DRAFT',
+          },
+        });
+        await tx.event.create({
+          data: {
+            tenantId: tenantA,
+            id: eventB,
+            slug: 'bravo',
+            name: 'Bravo',
+            status: 'DRAFT',
+          },
+        });
+        await tx.event.create({
+          data: {
+            tenantId: tenantA,
+            id: eventC,
+            slug: 'charlie',
+            name: 'Charlie',
+            status: 'DRAFT',
+          },
+        });
+        const membership = await grantMembership(tx, {
+          tenantId: tenantA,
+          userId: owner.userId,
+          role: 'OWNER',
+          permissions: ['event.create', 'report.read'],
+        });
+        // T1: report.read on A+C only — B must be omitted (not 403).
+        await grantEventAssignment(tx, {
+          tenantId: tenantA,
+          eventId: eventA,
+          membershipId: membership.membershipId,
+          permissions: ['report.read'],
+        });
+        await grantEventAssignment(tx, {
+          tenantId: tenantA,
+          eventId: eventB,
+          membershipId: membership.membershipId,
+          permissions: ['inventory.import'],
+        });
+        await grantEventAssignment(tx, {
+          tenantId: tenantA,
+          eventId: eventC,
+          membershipId: membership.membershipId,
+          permissions: ['report.read'],
+        });
+        await seedEventInventory(tx, HMAC, {
+          tenantId: tenantA,
+          eventId: eventA,
+          eventQuota: 5,
+          rawCodes: ['PF-A-1'],
+        });
+        await seedEventInventory(tx, HMAC, {
+          tenantId: tenantA,
+          eventId: eventC,
+          eventQuota: 3,
+          rawCodes: ['PF-C-1'],
+        });
+      });
+
+      await withTenant(db, tenantB, async (tx) => {
+        await tx.tenant.create({
+          data: { id: tenantB, slug: 'portfolio-b', name: 'Portfolio B' },
+        });
+        await grantMembership(tx, {
+          tenantId: tenantB,
+          userId: stranger.userId,
+          role: 'OWNER',
+          permissions: ['report.read'],
+        });
+      });
+
+      // T1 + T4: assignment filter + single asOf watermark
+      const portfolio = await withTenant(db, tenantA, (tx) =>
+        readPortfolioReport(tx, {
+          tenantId: tenantA,
+          actorUserId: owner.userId,
+        }),
+      );
+      assert.equal(portfolio.limit, PORTFOLIO_PAGE_LIMIT.default);
+      assert.ok(typeof portfolio.asOf === 'string' && portfolio.asOf.length > 0);
+      assert.equal(portfolio.items.length, 2);
+      assert.deepEqual(
+        portfolio.items.map((item) => item.eventId),
+        [eventA, eventC],
+      );
+      assert.equal(
+        portfolio.items.some((item) => item.eventId === eventB),
+        false,
+      );
+      assert.equal(portfolio.items[0].title, 'Alpha');
+      assert.equal(portfolio.items[0].quotaCapacityState, 'FINITE');
+      assert.equal(portfolio.items[0].quotaRemaining, 5);
+      assert.equal(portfolio.nextCursor, null);
+      // No attendee PII keys on items (emailNeedsCsCount is an aggregate field name)
+      for (const item of portfolio.items) {
+        const keys = Object.keys(item);
+        assert.equal(keys.includes('email'), false);
+        assert.equal(keys.includes('attendeeEmail'), false);
+        assert.equal(keys.includes('rawCode'), false);
+        assert.equal(JSON.stringify(item).includes('@'), false);
+      }
+
+      // T3: limit > hard max is clamped (not full-scan)
+      const clamped = await withTenant(db, tenantA, (tx) =>
+        readPortfolioReport(tx, {
+          tenantId: tenantA,
+          actorUserId: owner.userId,
+          limit: 999,
+        }),
+      );
+      assert.equal(clamped.limit, PORTFOLIO_PAGE_LIMIT.max);
+      assert.equal(clamped.items.length, 2);
+
+      // Cursor pagination with limit=1
+      const page1 = await withTenant(db, tenantA, (tx) =>
+        readPortfolioReport(tx, {
+          tenantId: tenantA,
+          actorUserId: owner.userId,
+          limit: 1,
+        }),
+      );
+      assert.equal(page1.limit, 1);
+      assert.equal(page1.items.length, 1);
+      assert.equal(page1.items[0].eventId, eventA);
+      assert.ok(page1.nextCursor);
+      assert.equal(page1.asOf, page1.asOf); // watermark present
+      const page2 = await withTenant(db, tenantA, (tx) =>
+        readPortfolioReport(tx, {
+          tenantId: tenantA,
+          actorUserId: owner.userId,
+          limit: 1,
+          cursor: page1.nextCursor,
+        }),
+      );
+      assert.equal(page2.items.length, 1);
+      assert.equal(page2.items[0].eventId, eventC);
+      assert.equal(page2.nextCursor, null);
+
+      // T2: cross-tenant — stranger has no membership on tenantA → AuthzError
+      await assert.rejects(
+        () =>
+          withTenant(db, tenantA, (tx) =>
+            readPortfolioReport(tx, {
+              tenantId: tenantA,
+              actorUserId: stranger.userId,
+            }),
+          ),
+        (error) =>
+          error instanceof AuthzError &&
+          error.code === AUTHZ_ERROR_CODES.MEMBERSHIP_REQUIRED,
+      );
+
+      // Owner of A cannot read portfolio of B
+      await assert.rejects(
+        () =>
+          withTenant(db, tenantB, (tx) =>
+            readPortfolioReport(tx, {
+              tenantId: tenantB,
+              actorUserId: owner.userId,
+            }),
+          ),
+        (error) =>
+          error instanceof AuthzError &&
+          error.code === AUTHZ_ERROR_CODES.MEMBERSHIP_REQUIRED,
+      );
     } finally {
       if (db) await db.$disconnect().catch(() => {});
       if (name) {

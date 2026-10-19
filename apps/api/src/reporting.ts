@@ -24,6 +24,7 @@ import {
   REPORT_ERROR_CODES,
   listEventAudit,
   readEventReport,
+  readPortfolioReport,
   withTenant,
   type IdentityUserRepository,
   type OidcVerifier,
@@ -86,6 +87,36 @@ class EventReportDto {
   @ApiProperty({ format: 'date-time' }) asOf!: string;
 }
 
+class PortfolioReportItemDto {
+  @ApiProperty({ format: 'uuid' }) eventId!: string;
+  @ApiProperty({ description: 'Event display name (events.name)' })
+  title!: string;
+  @ApiProperty() checkInSuccessCount!: number;
+  @ApiProperty() pendingApprovalCount!: number;
+  @ApiProperty() emailNeedsCsCount!: number;
+  @ApiProperty({ nullable: true, type: Number })
+  quotaRemaining!: number | null;
+  @ApiProperty({ enum: ['FINITE', 'UNLIMITED', 'MISSING_BUCKET'] })
+  quotaCapacityState!: 'FINITE' | 'UNLIMITED' | 'MISSING_BUCKET';
+  @ApiProperty({
+    type: 'object',
+    additionalProperties: { type: 'number' },
+    example: { ALREADY_CHECKED_IN: 2 },
+    description: 'Gate rejects by stable reason — no attendee PII',
+  })
+  rejectByReason!: Record<string, number>;
+}
+
+class PortfolioReportDto {
+  /** Single server watermark for the whole response (ISO-8601). */
+  @ApiProperty({ format: 'date-time' }) asOf!: string;
+  @ApiProperty({ type: [PortfolioReportItemDto] })
+  items!: PortfolioReportItemDto[];
+  @ApiProperty({ nullable: true, type: String })
+  nextCursor!: string | null;
+  /** Effective limit after clamp (default 20, hard max 50). */
+  @ApiProperty() limit!: number;
+}
 
 class PortalAuditEntryDto {
   @ApiProperty({ format: 'uuid' }) auditId!: string;
@@ -159,6 +190,23 @@ export class ReportService {
     const user = await this.actor(authorization);
     return withTenant(this.deps.db!, tenantId, (tx) =>
       readEventReport(tx, { tenantId, eventId, actorUserId: user.userId }),
+    );
+  }
+
+  async portfolioReport(
+    authorization: string | undefined,
+    tenantId: string,
+    query: { cursor?: string; limit?: string },
+  ) {
+    const user = await this.actor(authorization);
+    const limit = query.limit ? Number(query.limit) : undefined;
+    return withTenant(this.deps.db!, tenantId, (tx) =>
+      readPortfolioReport(tx, {
+        tenantId,
+        actorUserId: user.userId,
+        cursor: query.cursor,
+        limit: Number.isFinite(limit) ? limit : undefined,
+      }),
     );
   }
 
@@ -251,6 +299,26 @@ export class ReportController {
     const event = requireUuid(eventId, 'eventId');
     return this.reports
       .eventReport(authorization, tenant, event)
+      .catch((error) => this.fail(error));
+  }
+
+  @Get('tenants/:tenantId/reports/portfolio')
+  @ApiBearerAuth()
+  @ApiOkResponse({ type: PortfolioReportDto })
+  @ApiQuery({ name: 'cursor', required: false })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'Default 20; hard max 50 (clamped server-side)',
+  })
+  portfolio(
+    @Headers('authorization') authorization: string | undefined,
+    @Param('tenantId') tenantId: string,
+    @Query() query: { cursor?: string; limit?: string },
+  ) {
+    const tenant = requireUuid(tenantId, 'tenantId');
+    return this.reports
+      .portfolioReport(authorization, tenant, query ?? {})
       .catch((error) => this.fail(error));
   }
 
