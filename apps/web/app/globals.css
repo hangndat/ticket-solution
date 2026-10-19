@@ -378,6 +378,84 @@ nav a,
 .claim-submit {
   min-height: 44px;
 }
+.invite-page {
+  --brand: var(--signal);
+}
+.invite-header {
+  max-width: 40rem;
+}
+.invite-form-panel {
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  border: 2px solid var(--ink-faint);
+  background: color-mix(in srgb, var(--paper) 94%, var(--ink) 6%);
+  max-width: 36rem;
+}
+.invite-form-panel label {
+  display: grid;
+  gap: var(--space-2);
+  font-weight: 700;
+  font-size: 0.88rem;
+}
+.invite-form-panel input {
+  font: inherit;
+  font-weight: 400;
+  padding: 12px 14px;
+  border: 2px solid color-mix(in srgb, var(--ink) 25%, transparent);
+  background: #fff;
+  color: var(--ink);
+  min-height: 44px;
+}
+.invite-field-hint {
+  font-size: 0.88rem;
+  color: var(--ink-muted);
+  line-height: 1.45;
+}
+.invite-support {
+  max-width: 36rem;
+  color: var(--ink-muted);
+}
+.invite-submit,
+.redeem-submit {
+  min-height: 44px;
+  appearance: none;
+  border: 2px solid var(--signal);
+  background: var(--signal);
+  color: var(--paper);
+  font: inherit;
+  font-weight: 700;
+  padding: 12px 18px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.invite-submit:hover:not(:disabled),
+.redeem-submit:hover:not(:disabled) {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--paper);
+}
+.invite-submit:disabled,
+.redeem-submit:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+.invite-outcome {
+  animation: fade-rise 0.35s ease-out both;
+  max-width: 36rem;
+}
+.invite-admin-cta {
+  background: var(--signal);
+  color: var(--paper);
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.invite-admin-cta:hover {
+  background: var(--ink);
+  color: var(--paper);
+}
+.redeem-page {
+  --brand: var(--signal);
+}
 .home-featured {
   display: block;
   margin: var(--space-6) 0 0;
@@ -1231,16 +1309,16 @@ details p {
   margin: 0;
 }
 .redeem-status--success {
-  border-color: #154c42;
-  background: #e0ebe4;
-  color: #154c42;
+  border-color: color-mix(in srgb, var(--ink) 55%, var(--focus) 45%);
+  background: color-mix(in srgb, var(--paper) 88%, var(--focus) 12%);
+  color: var(--ink);
 }
 .redeem-status--exhausted,
 .redeem-status--used,
 .redeem-status--closed {
-  border-color: #783013;
-  background: #f7dfb9;
-  color: #783013;
+  border-color: color-mix(in srgb, var(--signal) 45%, var(--ink));
+  background: color-mix(in srgb, var(--signal) 10%, var(--paper));
+  color: var(--ink);
 }
 .redeem-status--timeout,
 .redeem-status--polling,
@@ -1260,9 +1338,9 @@ details p {
   color: #8a1f1f;
 }
 .redeem-status--pending {
-  border-color: #6a4a12;
-  background: #f6eed8;
-  color: #6a4a12;
+  border-color: color-mix(in srgb, var(--focus) 50%, var(--ink));
+  background: color-mix(in srgb, var(--focus) 12%, var(--paper));
+  color: var(--ink);
 }
 .redeem-status--expired,
 .redeem-status--unknown {
@@ -1426,6 +1504,10 @@ select[aria-invalid='true'] {
   .account-session,
   .account-outcome,
   .claim-outcome,
+  .invite-outcome,
+  .invite-submit,
+  .redeem-submit,
+  .invite-admin-cta,
   .shell > h1,
   .shell > .intro,
   .redeem-page > h1,
@@ -1642,7 +1724,8 @@ select[aria-invalid='true'] {
   color: #ffffff;
 }
 .mkt-btn-primary:hover {
-  filter: brightness(1.05);
+  background: var(--ink);
+  color: var(--paper);
 }
 .mkt-btn-secondary {
   background: transparent;
@@ -1660,12 +1743,12 @@ select[aria-invalid='true'] {
   font: inherit;
   cursor: pointer;
 }
-.mkt-badge {
-  display: inline-block;
-  margin-top: 0.65rem;
-  font-size: 0.85rem;
-  color: var(--signal);
-  font-weight: 600;
+.mkt-hero-note {
+  margin: 0.85rem 0 0;
+  max-width: 48ch;
+  font-size: 0.92rem;
+  color: var(--ink-muted);
+  line-height: 1.45;
 }
 .mkt-hero-visual {
   margin-top: 1.5rem;
