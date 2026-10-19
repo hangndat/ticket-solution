@@ -22,6 +22,8 @@ apps/web/.data/
 .data/
 # Added by code-review-graph
 .code-review-graph/
+.context-budget-before.json
+.context-budget-after.json
 # Local Cursor MCP / machine-specific agent config (rules live in .cursor/rules/)
 .cursor/mcp.json
 .cursorrules

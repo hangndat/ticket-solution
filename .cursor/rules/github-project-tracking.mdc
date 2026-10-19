@@ -1,138 +1,48 @@
 ---
-description: Sync GitHub Project #3 Epic→Story→Task status; Cursor reviewer; milestone DoD gates + exact-SHA
+description: GitHub Project #3 — status + DoD worker (luôn nạp)
 alwaysApply: true
 ---
 
-# GitHub Project tracking (ticket-solution)
+# GitHub Project tracking (worker)
 
-**Project:** https://github.com/users/hangndat/projects/3 (`hangndat`, number `3`)  
-**Board language:** Vietnamese (titles, status, progress comments). Keep IDs/commands/logs as-is.  
-**Orca ≠ board:** `worker_done` / Dispatch settled does **not** mean Project **Hoàn thành**.  
-**Nguồn trạng thái động:** Project #3 là authority cho Status hiện tại; roadmap/docs chỉ ghi scope, cổng và evidence lịch sử.
+**Project:** https://github.com/users/hangndat/projects/3 (`hangndat`, `3`). Board: Tiếng Việt. `worker_done` ≠ **Hoàn thành**. Authority: Project #3.
 
-## Hierarchy — Epic → Story → Task
+## Hierarchy
 
-| Level | Meaning | Phân công |
-| ----- | ------- | ----------------- |
-| **Epic** | Parent Issue đợt/module | Coordinator gốc dispatch; một **Epic planner** (`orca-epic-orchestrator.mdc`) |
-| **Story** | Capability / user-facing slice under Epic | Planner phân Story/Task và theo dõi phụ thuộc; coordinator dispatch |
-| **Task** | Ownership-scoped work unit (BE / web / iOS / coordinator) | Coding/review workers; Status updated **per Task** |
+Epic → Story → Task. Cập nhật Status **mỗi Task**.
 
-Cập nhật Project #3 **mỗi Task** (không chỉ lúc đóng Epic). Comments board: Tiếng Việt.
-
-## Status values (Status field)
+## Status
 
 `Chưa lên lịch` · `Sẵn sàng` · `Đang làm` · `Chờ duyệt` · `Bị chặn` · `Hoàn thành`
 
-| Event | Set Status to | Who |
-| ----- | ------------- | --- |
-| Coordinator gốc dispatch / worker starts coding | `Đang làm` | Coordinator gốc hoặc coding worker |
-| Blocked on real dependency / external wait | `Bị chặn` (+ comment why) | Whoever discovers it |
-| Unblocked and ready to resume | `Sẵn sàng` or `Đang làm` | Coordinator gốc |
-| Impl done + evidence posted; awaiting review | `Chờ duyệt` | Coding worker before/at `worker_done` |
-| DoD met (below) | `Hoàn thành` + close Issue if appropriate | Coordinator gốc sau reviewer **pass** và đủ gates |
+| Event | Status | Who |
+| ----- | ------ | --- |
+| Bắt đầu code / dispatch | `Đang làm` | Worker hoặc coordinator |
+| Blocked | `Bị chặn` + comment | Ai phát hiện |
+| Impl xong, chờ review | `Chờ duyệt` | Coding worker |
+| DoD đủ | `Hoàn thành` | Coordinator sau review pass |
 
-## Do not wait for the user
+Không chờ user duyệt board; không `Hoàn thành` chỉ vì user nói xong. Comment Issue (VI) khi `Chờ duyệt` / `Hoàn thành`.
 
-- Advance Status on the events above **without** asking the user to approve board moves.
-- Do **not** set `Hoàn thành` only because the user said “làm xong” or because Orca settled — require DoD.
-- Comment on the Issue (VI) with evidence links/commands when moving to `Chờ duyệt` or `Hoàn thành`.
+## DoD per Task → `Hoàn thành`
 
-## Definition of Done → `Hoàn thành`
+1. Review pass (reviewer ≠ implementer)
+2. Merge `main` khi task cần integration (`git-workflow.mdc`)
+3. CI xanh trên integrated commit
+4. Evidence khớp Issue AC
+5. Artifact `docs/reviews/*` + **exact SHA** + verdict
 
-### Per Task
+Phân biệt: code complete ≠ acceptance complete ≠ pilot ready.
 
-All of:
-
-1. Review **pass** (see Reviewer + Evidence below) — security-sensitive: reviewer ≠ implementer agent/session.
-2. Merged to integration branch (`main`) when the task requires integration (via PR — see `git-workflow.mdc`).
-3. CI green on the integrated commit (incl. database-isolation when relevant).
-4. Acceptance evidence matching the Issue criteria (commands/logs/tests — not only `worker_done`).
-5. Artifact under `docs/reviews/*` (or Issue/PR comment equivalent) citing **exact SHA** + verdict.
-
-### Milestone / Epic DoD (bắt buộc khi đóng milestone hoặc Epic)
-
-Ngoài per-Task DoD, milestone/Epic **Hoàn thành** cần đủ evidence:
-
-| Gate | Yêu cầu |
-| ---- | ------- |
-| (a) UAT (Orca) | Evidence UAT web/iOS theo scope — **Orca** `tab`/`exec` (browser) và `emulator` (iOS); xem `uat-headless.mdc`; artifact paths + lệnh Orca trong comment hoặc `docs/reviews/*` |
-| (b) Local iOS build | Evidence local Expo prebuild + Xcode/xcodebuild (hoặc fastlane) khi milestone chạm `apps/mobile` — **không** EAS Cloud Build |
-| (c) Deploy prod | Evidence deploy prod **chỉ khi** task/Epic **authorize** explicitly — không deploy mặc định |
-| (d) Review artifact | `docs/reviews/*` + **exact SHA** cho các Task then-chốt (hoặc index review liên kết SHA) |
-
-Phân biệt (không gộp): **code complete** (impl + PR) ≠ **acceptance complete** (DoD pass + evidence) ≠ **pilot ready** (device/UAT/ops gates riêng).
-
-## Reviewer (theo chính sách agent — không thêm user gate)
-
-When a coding Task moves to `Chờ duyệt` (or DoD review is required):
-
-1. Coordinator gốc spawn **một reviewer độc lập / Task (hoặc PR)** — scope = review only (no drive-by refactors). Nhiều Task/PR `Chờ duyệt` độc lập → spawn **nhiều reviewer cùng wave** (cap ≤3 live; xem `orca-parallel-workers.mdc`). Chọn agent theo `orca-agent-routing.mdc`.
-2. **Wave C — gộp DoD∥security cùng PR/SHA:** nếu slice cần cả DoD và security → **một** session James (`--display-name "James · dod+sec"`), Spec ghi cả hai Role ID + checklist gộp; **không** spawn `dod` và `sec` song song trên cùng exact SHA. Tách hai session chỉ khi hot path (authz/RLS/quota/check-in/secrets) **và** coordinator ghi lý do tách trong evidence.
-3. Spec must name the Issue #, diff/PR/paths, **exact commit SHA(s)** under review, Role ID(s), and DoD (± security) checklist; outcome `succeeded` only on pass.
-4. `PASS with known gap` chỉ được tính pass theo điều kiện gap trong `orca-agent-routing.mdc`; thiếu acceptance/security gate bắt buộc không được Hoàn thành.
-5. On pass → coordinator gốc may set `Hoàn thành` once merge+CI+evidence (và milestone gates nếu áp dụng) are done.
-6. On fail → Status stays `Chờ duyệt` or back to `Đang làm`; comment findings; re-dispatch coding worker.
-
-Task có `Architecture impact: Có`: checklist DoD phải đối chiếu implementation với handoff/ADR được xác nhận. Design drift đáng kể hoặc rủi ro kiến trúc chưa giải quyết → coordinator giao role `architect` kiểm tra độc lập trên exact SHA theo [architect.md](../../docs/agents/roles/architect.md), có thể song song session DoD(+sec). Review kiến trúc không thay gate DoD/security; blocker còn mở không được Hoàn thành. Không yêu cầu Architect cho mọi PR.
-
-**Acceptance / DoD** và **security checklist**: luôn reviewer khác session implementer; khi gộp `dod+sec`, security gate vẫn phải có trong artifact (không bỏ qua vì đã “có DoD”).
-
-### Evidence bắt buộc (exact SHA)
-
-Comment / artifact nghiệm thu khi `Chờ duyệt` hoặc sau DoD **phải** ghi rõ:
+## Evidence (exact SHA)
 
 | Trường | Yêu cầu |
 | ------ | ------- |
-| Reviewer / session | Agent theo `orca-agent-routing.mdc`, DoD/security **khác** session implementer; ghi nhận cách spawn (Orca worker / worktree) |
-| Scope | Issue #, PR # (nếu có), đường dẫn / ownership slice; Epic/Story parent nếu có |
-| Commit SHA | **Exact SHA** (full 40 hoặc rút gọn unambiguous từ `git rev-parse`) của commit đang duyệt — không “HEAD lúc nào đó”, không chỉ tên branch |
-| Checks | Lệnh/test/CI đã chạy trên SHA đó (hoặc ghi rõ “docs-only / không chạy runtime”) |
-| Findings / limitations | PASS / FAIL / PASS with known gap; liệt kê gap có chủ đích |
-| Revalidation | Nếu có commit hành vi mới **sau** review trước → bắt buộc review lại trên SHA mới; không tái dùng verdict cũ |
-| Artifact path | Ưu tiên `docs/reviews/<slug>.md` (hoặc tương đương) + link Issue/PR |
+| Reviewer | Khác implementer; `orca-agent-routing-core.mdc` |
+| Scope | Issue #, PR #, paths |
+| SHA | Exact từ `git rev-parse` |
+| Checks | Lệnh/CI trên SHA đó |
+| Verdict | PASS / FAIL / PASS with known gap |
+| Revalidation | Commit mới sau review → review lại SHA mới |
 
-**Thiếu GitHub PR review / approval UI không chứng minh thiếu Orca DoD review theo chính sách agent.** Ngược lại: có approve GitHub mà không có evidence exact-SHA + reviewer độc lập cũng **không** đủ DoD.
-
-## WIP / hàng đợi duyệt (backpressure nhẹ)
-
-Song song với parallel-first (`orca-parallel-workers.mdc`), coordinator gốc **không** dispatch feature mới không giới hạn khi hàng đợi duyệt đầy.
-
-**Tín hiệu hàng đợi đầy (mềm — chọn cái chặt hơn đang đúng):**
-
-- ≥ **3** item Project Status `Chờ duyệt` (toàn board), **hoặc**
-- ≥ **2** PR mở cùng ownership slice (BE / web / iOS / coordinator) đang chờ DoD / CI xanh / merge, **hoặc**
-- ≥ **4** PR mở vào `main` chưa merge mà thiếu DoD pass + CI xanh.
-
-Khi đầy: **ưu tiên** (1) DoD / security review đang mở → (2) sửa theo findings → (3) CI đỏ / re-run có lý do → (4) merge/integration đã pass → **rồi mới** dispatch feature `Sẵn sàng` mới. Vẫn được spawn song song **reviewer** và **fix** trên nhiều slice; chỉ hạn chế **feature coding mới** làm phình `Chờ duyệt`.
-
-**Concurrent soft caps** (số Dispatch live / Run — RAM/session, không thay WIP ở trên): xem `orca-parallel-workers.mdc` — ≤5 non-review live, ≤1 feature/slice (Cost tier trần **standard**). Hàng đợi chưa đầy nhưng soft cap đã đầy → vẫn trì hoãn feature mới; reviewer/fix vẫn được fill.
-
-Chi tiết fill idle khi có/không backpressure: `orca-idle-worker-fill.mdc`.
-
-## Đo lường nhẹ (không bắt buộc tool)
-
-Theo dõi thủ công / comment đợt (đủ để cải tiến quy trình):
-
-| Chỉ số | Cách lấy gần đúng | Gợi ý hành động |
-| ------ | ----------------- | ---------------- |
-| Thời gian chờ duyệt | Timestamp Status → `Chờ duyệt` đến comment DoD có SHA + verdict | Hàng đợi đầy → ưu tiên reviewer trước feature |
-| CI re-run | Số lần re-run / push sửa CI trên cùng PR trước khi xanh | >2 re-run không rõ nguyên nhân → dừng feature cùng slice, sửa CI |
-| Acceptance reopen | `Hoàn thành` hoặc `Chờ duyệt` → lại `Đang làm` sau FAIL / gap mới | Ghi SHA fail + SHA fix; bắt buộc revalidation |
-| **inherit%** (Wave D) | Dòng `cost-wave` sau mỗi wave; hoặc `node scripts/orca-cost-wave-evidence.mjs`; weekday automation | >20% → refresh `agent models` / pin; giữ trần standard |
-
-Không cần dashboard SaaS; ghi 1 dòng coordinator khi đợt có áp lực **và** 1 dòng `cost-wave` mỗi wave spawn.
-
-## `gh` sketch (adapt IDs from live field list)
-
-```bash
-# Resolve item for Issue N, then set Status (use option name or id from field-list)
-gh project item-list 3 --owner hangndat --format json
-gh project item-edit --project-id PVT_kwHOAGoDWs4BnWaN \
-  --id <ITEM_ID> --field-id PVTSSF_lAHOAGoDWs4BnWaNzhl7cPk \
-  --single-select-option-id <OPTION_ID>
-```
-
-Status option ids (Project #3): Đang làm `8c0ed3f4` · Chờ duyệt `0544c261` · Bị chặn `e6e061c9` · Hoàn thành `98236657` · Sẵn sàng `47fc9ee4` · Chưa lên lịch `f75ad846`.
-
-Re-fetch `gh project field-list 3 --owner hangndat --format json` if edits fail (ids can change).
+Coordinator: spawn reviewer, WIP, milestone, `gh` → `github-project-tracking-coordinator.mdc`.

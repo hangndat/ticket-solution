@@ -1,0 +1,87 @@
+---
+description: "[coordinator-only] Mỗi wave 1 Wave Leader — fan-out tối đa worker song song; coordinator gốc giữ Run"
+alwaysApply: false
+---
+
+> **Coordinator-only:** leader **Read** khi kích hoạt (`orca-leader-activation.mdc`). Ownership worker đọc file này **chỉ** khi Task Spec ghi `Wave leader authority: có`.
+
+# Orca — Wave Leader (1 leader / wave, fan-out tối đa)
+
+Mô hình vận hành **mặc định** khi user yêu cầu “mỗi wave một leader điều phối và start tối đa worker song song”.
+
+## Phân vai
+
+| Vai | Depth | `worker-start` | Vòng đời |
+| --- | ----- | -------------- | -------- |
+| **Coordinator gốc** | 0 | Chỉ spawn **Wave Leader** (± Epic planner / gate) cho wave kế | Giữ Run, mailbox giữa các wave, merge/integration khi ủy quyền |
+| **Wave Leader** | 1 | **Có** — trong phạm vi wave (Run + `wave_id` / task set) | Fan-out → `check --wait` → `worker_done` báo wave settle |
+| **Epic planner** | 1 | **Không** | DAG / ready queue — không thay Wave Leader |
+| **Ownership / reviewer** | 1 | **Không** | Làm Task; không spawn con |
+
+```text
+Coordinator gốc (Run owner)
+  Wave N: worker-start → 1× Leader · wave
+            Leader: task-list --ready (wave N) → worker-start HẾT slot (soft cap + WIP)
+                    → check --wait → ack/release → worker_done (evidence wave)
+  Wave N+1: chỉ sau worker_done / settle wave N (trừ user override)
+```
+
+## Coordinator gốc — mỗi wave
+
+1. `task-create` (hoặc planner đã gắn) Task set wave N + deps thật (`orca-worktree-hygiene.mdc`).
+2. **Spawn đúng một** Wave Leader cho wave N — không tự fan-out ownership/reviewer thay Leader (trừ wave Leader failed / replacement).
+3. `check --wait` tới `worker_done` / escalation từ Leader; xử lý mailbox (`orca-coordinator-mailbox.mdc`).
+4. Wave settle → idle-fill **không** thay wave kế nếu wave kế cần Leader mới; mở wave N+1 bằng Leader tiếp theo.
+
+## Wave Leader — bắt buộc trong Spec
+
+```markdown
+## Wave leader
+- Wave leader authority: có
+- Run: <run_id>
+- Wave: <n> — <mô tả ngắn VI>
+- Task scope: <task_id…> hoặc `task-list --ready` lọc theo wave tag trong Run
+- Fan-out: tối đa theo orca-parallel-workers.mdc (≤5 non-review, ≤1 feature/slice, ≤3 reviewer)
+- Không spawn Wave Leader con, không spawn Epic planner
+```
+
+**Spawn:**
+
+```text
+--display-name "Leader · wave"
+--task-title "Leader · wave — Wave <n>: <slug>"
+--agent cursor
+--model <pin Cost tier cheap nếu chỉ điều phối; standard nếu wave có reasoning nặng>
+```
+
+Wave Leader **Read** (trong session dispatch): `orca-parallel-workers.mdc`, `orca-idle-worker-fill.mdc`, `orca-coordinator-mailbox.mdc`, `orca-agent-routing-coordinator.mdc` (spawn evidence, Wave D+E).
+
+## Fan-out trong wave (Leader)
+
+1. `task-list --ready` (Run bound) — chỉ Task thuộc wave N và deps đã xong.
+2. Trước `check --wait`: `worker-start` **tất cả** Task ready còn capacity (reviewer ∥ fix ∥ coding slice khác nhau — xem parallel rule).
+3. Một dòng **`cost-wave`** sau batch spawn (Wave D).
+4. `check --wait` foreground đến khi mọi dispatch wave N settle hoặc escalation.
+5. `worker_done` gửi coordinator gốc: verdict wave, SHAs, PRs, reviewer artifacts, blocker, `cost-wave`.
+
+## WIP / backpressure
+
+Wave Leader **tuân** `github-project-tracking.mdc` / `orca-parallel-workers.mdc`: hàng đợi `Chờ duyệt` đầy → wave ưu tiên reviewer/fix trước feature mới; vẫn fan-out tối đa trong bucket còn trống.
+
+## Anti-patterns
+
+```text
+❌ Coordinator gốc fan-out cả wave mà không spawn Leader · wave (khi user đã chọn mô hình này)
+❌ Nhiều Leader · wave live cùng wave N
+❌ Leader spawn Leader hoặc Epic planner
+❌ Serialize 1 worker/wave khi còn slot + Task ready độc lập (trái fan-out tối đa)
+❌ worker_done wave khi còn Dispatch live / question chưa reply
+
+✅ 1 Leader · wave → fan-out tối đa → check --wait → worker_done
+✅ Coordinator gốc: wave tuần tự, worker trong wave song song
+```
+
+## Liên quan
+
+- `orca-leader-activation.mdc` · `orca-parallel-workers.mdc` · `orca-coordinator-mailbox.mdc`
+- Persona roster: `Leader · wave` — [docs/agents/README.md](../../docs/agents/README.md) § Wave Leader
