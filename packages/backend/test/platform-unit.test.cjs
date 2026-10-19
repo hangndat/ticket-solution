@@ -5,6 +5,9 @@ const {
   tenantPermissionsForRole,
   eventPermissionsForRole,
   isMembershipRole,
+  parseInviteRole,
+  assertCatalogPermissions,
+  ROLE_SCHEMA_VERSION,
   PLATFORM_ERROR_CODES,
   createPlatformOidcVerifier,
   createLocalJwks,
@@ -28,8 +31,26 @@ test('role map is server allowlist without arbitrary permissions', () => {
   assert.ok(tenantPermissionsForRole('Owner').includes('members.manage'));
   assert.ok(eventPermissionsForRole('CS').includes('cs.lookup'));
   assert.ok(!eventPermissionsForRole('CS').includes('export.download'));
+  assert.ok(!eventPermissionsForRole('Scanner').includes('export.create'));
   assert.equal(isMembershipRole('Owner'), true);
   assert.equal(isMembershipRole('SuperAdmin'), false);
+  assert.equal(ROLE_SCHEMA_VERSION, 2);
+  assert.equal(parseInviteRole('Manager'), 'Manager');
+  assert.deepEqual(
+    parseInviteRole({ presetId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' }),
+    { presetId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' },
+  );
+  assert.equal(parseInviteRole({ presetId: 'not-a-uuid' }), null);
+  assert.equal(
+    parseInviteRole({
+      presetId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      permissions: ['export.download'],
+    }),
+    null,
+  );
+  assert.throws(() => assertCatalogPermissions(['inventory.read']));
+  assert.throws(() => assertCatalogPermissions(['audit.read']));
+  assert.doesNotThrow(() => assertCatalogPermissions(['gate.confirm']));
 });
 
 test('platform MFA verifier requires acr + fresh auth_time', async () => {

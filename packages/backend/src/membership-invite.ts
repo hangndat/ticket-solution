@@ -3,8 +3,11 @@ import type { PrismaClient } from './generated/prisma/client';
 import type { MembershipRole } from '@ticket/contracts';
 import { PlatformError, PLATFORM_ERROR_CODES } from './platform-error';
 import {
+  inviteRoleStorageKey,
   isMembershipRole,
+  parseInviteRole,
   ROLE_SCHEMA_VERSION,
+  type InviteRoleRef,
 } from './role-map';
 import type { PlatformSecurityConfig } from './platform-config';
 import {
@@ -16,6 +19,7 @@ import {
   assertLockedMembershipPermission,
   requireTenantPermission,
 } from './membership';
+import { loadPresetInTenant } from './role-presets';
 
 function canonicalizeEmail(email: string): string {
   return email.trim().toLowerCase();
@@ -106,9 +110,11 @@ export async function createMembershipInvite(
     tenantId: string;
     actorUserId: string;
     email: string;
-    role: MembershipRole;
+    role: InviteRoleRef;
     eventAssignments?: Array<{ eventId: string; role: MembershipRole }>;
     clientKey: string;
+    /** Reject forged client permission arrays (ADR §7). */
+    forgedPermissions?: unknown;
   },
 ): Promise<{
   inviteId: string;
@@ -117,13 +123,32 @@ export async function createMembershipInvite(
   deliveryState: 'PENDING';
   rawToken: string;
 }> {
-  if (!isMembershipRole(input.role)) {
+  if (
+    input.forgedPermissions !== undefined &&
+    input.forgedPermissions !== null
+  ) {
+    throw new PlatformError(
+      PLATFORM_ERROR_CODES.INVALID_INPUT,
+      'Client permission arrays are not allowed',
+    );
+  }
+  const parsedRole = parseInviteRole(input.role);
+  if (!parsedRole) {
     throw new PlatformError(
       PLATFORM_ERROR_CODES.INVALID_INPUT,
       'Invalid role',
     );
   }
+  for (const a of input.eventAssignments ?? []) {
+    if (!isMembershipRole(a.role)) {
+      throw new PlatformError(
+        PLATFORM_ERROR_CODES.INVALID_INPUT,
+        'Invalid event assignment role',
+      );
+    }
+  }
   const email = canonicalizeEmail(input.email);
+  const roleKey = inviteRoleStorageKey(parsedRole);
   return withTenant(db, input.tenantId, async (tx) => {
     await requireTenantPermission(tx, {
       tenantId: input.tenantId,
@@ -132,6 +157,11 @@ export async function createMembershipInvite(
     });
     const policy = await lockTenantPolicyForUpdate(tx, input.tenantId);
     assertTenantAllowsAdminMutation(policy.status);
+
+    if (typeof parsedRole !== 'string') {
+      // Unknown / cross-tenant preset → 404 (RLS + explicit load).
+      await loadPresetInTenant(tx, parsedRole.presetId);
+    }
 
     const limits = await tx.$queryRaw<{ max_staff: number | null }[]>`
       SELECT max_staff FROM tenant_limits
@@ -173,7 +203,7 @@ export async function createMembershipInvite(
         tenant_id, id, email, role, token_hash, expires_at, created_by,
         role_schema_version, assignment_intentions
       ) VALUES (
-        ${input.tenantId}::uuid, ${inviteId}::uuid, ${email}, ${input.role},
+        ${input.tenantId}::uuid, ${inviteId}::uuid, ${email}, ${roleKey},
         ${hashToken(rawToken)}, ${expiresAt}::timestamptz, ${input.actorUserId}::uuid,
         ${ROLE_SCHEMA_VERSION}, ${JSON.stringify(intentions)}::jsonb
       )
@@ -189,7 +219,7 @@ export async function createMembershipInvite(
         ${JSON.stringify({
           inviteId,
           email,
-          role: input.role,
+          role: roleKey,
           token: rawToken,
           expiresAt: expiresAt.toISOString(),
         })}::jsonb,

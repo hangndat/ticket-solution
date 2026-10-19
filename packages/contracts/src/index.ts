@@ -649,10 +649,37 @@ export interface TenantBrandingUpdateBody {
   expectedVersion: number;
 }
 
+/** Built-in enum or named server preset (P2-ROLES-PRESET / ADR §7.3). */
+export type InviteRoleRef = MembershipRole | { presetId: string };
+
 export interface CreateInviteBody {
   email: string;
-  role: MembershipRole;
+  role: InviteRoleRef;
   eventAssignments?: Array<{ eventId: string; role: MembershipRole }>;
+  /** Forbidden — server rejects if present (ADR §7). */
+  permissions?: never;
+  tenantPermissions?: never;
+  eventPermissions?: never;
+}
+
+export interface RolePresetDto {
+  presetId: string;
+  tenantId: string | null;
+  name: string;
+  schemaVersion: number;
+  tenantPermissions: string[];
+  eventPermissions: string[];
+  createdAt: string;
+}
+
+export interface CreateRolePresetBody {
+  name: string;
+  tenantPermissions?: string[];
+  eventPermissions?: string[];
+}
+
+export interface RolePresetsListResponse {
+  items: RolePresetDto[];
 }
 
 export interface InviteCreatedResponse {
