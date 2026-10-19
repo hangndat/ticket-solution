@@ -27,6 +27,9 @@ export const ISSUE_ERROR_CODES = {
   REDEMPTION_NOT_FOUND: 'REDEMPTION_NOT_FOUND',
   /** Owner ticket read — missing or not owned (fail-closed 404). */
   TICKET_NOT_FOUND: 'TICKET_NOT_FOUND',
+  RESOLVE_TOKEN_REQUIRED: 'RESOLVE_TOKEN_REQUIRED',
+  RESOLVE_TOKEN_STALE: 'RESOLVE_TOKEN_STALE',
+  RESOLVE_DISABLED: 'RESOLVE_DISABLED',
 } as const;
 
 export type IssueErrorCode =
