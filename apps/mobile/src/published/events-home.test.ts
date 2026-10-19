@@ -1,10 +1,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
-  DEMO_PUBLISHED_TENANTS,
   PUBLISHED_LIST_FAIL_CLOSED_MESSAGE,
   initialPublishedListPhase,
-  nextDemoPublishedTenant,
   publishedListStateFromResult,
 } from './events-home.ts';
 import type { FetchPublishedListResult } from './published-event-api.ts';
@@ -67,12 +65,6 @@ test('misconfigured clears items', () => {
   const state = publishedListStateFromResult({ status: 'misconfigured' });
   assert.equal(state.phase, 'misconfigured');
   assert.deepEqual(state.items, []);
-});
-
-test('tenant toggle cycles seed demo published tenants', () => {
-  assert.equal(nextDemoPublishedTenant('mfest-demo'), 'demo-studio');
-  assert.equal(nextDemoPublishedTenant('demo-studio'), 'mfest-demo');
-  assert.deepEqual([...DEMO_PUBLISHED_TENANTS], ['mfest-demo', 'demo-studio']);
 });
 
 test('local PUBLISHED_SECTION_KINDS matches ADR-19 contract kinds', () => {
