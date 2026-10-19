@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { useRouter, useSegments } from 'expo-router';
+import { type Href, useRouter, useSegments } from 'expo-router';
 import {
   STAFF_DEFAULT_SCAN_HREF,
   shouldReplaceWithStaffScanTab,
@@ -28,7 +28,7 @@ export function StaffDefaultTabRedirect() {
         enteringStaff,
       })
     ) {
-      router.replace(STAFF_DEFAULT_SCAN_HREF);
+      router.replace(STAFF_DEFAULT_SCAN_HREF as Href);
     }
   }, [staffWorkspace, segments, router]);
 
