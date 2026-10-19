@@ -304,8 +304,12 @@ export {
 } from './report-error';
 export {
   readEventReport,
+  readPortfolioReport,
   GATE_REJECT_AUDIT_ACTION,
+  PORTFOLIO_PAGE_LIMIT,
   type EventReport,
+  type PortfolioReport,
+  type PortfolioReportItem,
   type TicketStateCounts,
   type QuotaCapacityState,
 } from './reporting';

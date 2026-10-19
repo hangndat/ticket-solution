@@ -101,3 +101,54 @@ test('GET event report requires a bearer before reading tenant data', async () =
     await app.close();
   }
 });
+
+test('GET portfolio report rejects a non-uuid tenant and requires bearer', async () => {
+  const { privateKey, verifier } = await localVerifier();
+  const app = await createApp({
+    logging: false,
+    oidcVerifier: verifier,
+    users: memoryUsers(),
+  });
+  try {
+    await app.init();
+    await app.getHttpAdapter().getInstance().ready();
+    const badScope = await app.inject({
+      method: 'GET',
+      url: '/v1/tenants/not-a-uuid/reports/portfolio',
+    });
+    assert.equal(badScope.statusCode, 422);
+    assert.equal(badScope.json().code, 'SCOPE_REQUIRED');
+
+    const missing = await app.inject({
+      method: 'GET',
+      url: '/v1/tenants/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/reports/portfolio',
+    });
+    assert.equal(missing.statusCode, 401);
+    assert.equal(missing.json().code, IDENTITY_ERROR_CODES.UNAUTHENTICATED);
+
+    const token = await new jose.SignJWT({
+      email: 'staff@example.com',
+      email_verified: true,
+    })
+      .setProtectedHeader({ alg: 'RS256', kid: 'test-kid' })
+      .setIssuer(ISSUER)
+      .setAudience(AUDIENCE)
+      .setSubject('staff')
+      .setIssuedAt()
+      .setExpirationTime('5m')
+      .sign(privateKey);
+    const authed = await app.inject({
+      method: 'GET',
+      url: '/v1/tenants/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/reports/portfolio',
+      headers: { authorization: 'Bearer ' + token },
+    });
+    assert.equal(authed.statusCode, 503);
+    assert.equal(authed.json().code, IDENTITY_ERROR_CODES.OIDC_MISCONFIGURED);
+    assert.equal(
+      JSON.stringify(authed.json()).includes('staff@example.com'),
+      false,
+    );
+  } finally {
+    await app.close();
+  }
+});
