@@ -71,4 +71,4 @@ Headless `scripts/sim-uat.sh`: **không chạy** (optional; sim ≠ TF binary; k
 
 ## Tip SHA
 
-Exact tip evidence (docs): `04ade4cff35ffbda1034fdac8e6c19c084be3850` (branch `hangndat/d13-s4-t3-327` tại cập nhật session). ASC/device facts không phụ thuộc tip docs.
+Exact tip evidence (docs): `e6198af2ba793a1f3ee6d5562d48f9cc246ecddc` (`git rev-parse HEAD` trên branch PR). ASC/device facts không phụ thuộc tip docs.

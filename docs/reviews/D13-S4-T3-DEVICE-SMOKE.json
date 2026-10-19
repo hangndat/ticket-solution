@@ -73,6 +73,6 @@
   },
   "blocker": "unlock DatHN iPhone + run attendee/staff camera checklist on TF 1.0.0 (13); re-dispatch for PASS",
   "apiKeyId": "KHT3SAL2FS",
-  "evidenceTipSha": "04ade4cff35ffbda1034fdac8e6c19c084be3850",
+  "evidenceTipSha": "e6198af2ba793a1f3ee6d5562d48f9cc246ecddc",
   "waveB332Readiness": "docs/reviews/d13-s6-t1-332-readiness.md"
 }
