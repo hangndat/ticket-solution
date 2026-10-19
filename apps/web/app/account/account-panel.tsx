@@ -12,6 +12,7 @@ import {
   platformMutate,
 } from '../../src/platform/client-fetch';
 import { REQUEST_TIMEOUT_MS } from '../../src/redeem/poll-operation';
+import { liveRegionForStatus } from '../../src/ui/live-region';
 import { SurfaceState } from '../../src/ui/surface-state';
 
 type DeletionCurrent = {
@@ -128,9 +129,16 @@ export function AccountPanel() {
     setBusy(false);
   }
 
+  const resultLive =
+    view?.kind === 'rejected' || view?.kind === 'unknown'
+      ? liveRegionForStatus(view.kind === 'unknown' ? 'unknown' : 'error')
+      : view?.kind === 'ok'
+        ? liveRegionForStatus('success')
+        : null;
+
   return (
-    <div className="redeem-form">
-      <aside className="notice" role="note">
+    <div className="redeem-form account-deletion-form">
+      <aside className="notice account-deletion-note" role="note">
         <p>
           Gửi yêu cầu được hệ thống ghi nhận (có thể hiện trạng thái theo dõi).
           Đây chưa phải xóa ngay. Chúng tôi xử lý xóa hoặc ẩn danh dữ liệu cá
@@ -224,14 +232,16 @@ export function AccountPanel() {
           testId="account-submit-loading"
         />
       ) : null}
-      {view ? (
+      {view && resultLive ? (
         <section
           className={
             view.kind === 'rejected'
-              ? 'redeem-status redeem-status--error'
-              : 'notice'
+              ? 'redeem-status redeem-status--error account-outcome'
+              : 'notice account-outcome'
           }
-          role="status"
+          role={resultLive.role}
+          aria-live={resultLive.ariaLive}
+          aria-atomic={resultLive.ariaAtomic}
           data-testid="account-deletion-result"
         >
           {view.kind === 'ok' ? (
