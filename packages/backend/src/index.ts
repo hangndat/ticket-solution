@@ -533,6 +533,13 @@ export {
   type ProvisionResult,
 } from './platform-tenant';
 export {
+  registerPendingTenant,
+  readSelfServeRegistrationConfig,
+  SELF_SERVE_DEFAULT_LIMITS,
+  SELF_SERVE_DEFAULT_FLAGS,
+  type SelfServeRegistrationConfig,
+} from './tenant-registration';
+export {
   listMyTenants,
   listMyEvents,
   createMembershipInvite,
