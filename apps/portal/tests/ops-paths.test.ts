@@ -21,9 +21,13 @@ describe('PORTAL_UPSTREAM ops paths', () => {
     );
   });
 
-  it('covers audit / codes / platform zone upstreams', () => {
+  it('covers audit / codes / portfolio / platform zone upstreams', () => {
     assert.match(PORTAL_UPSTREAM.audit(t, e), /\/audit$/);
     assert.match(PORTAL_UPSTREAM.codes(t, e), /\/codes$/);
+    assert.equal(
+      PORTAL_UPSTREAM.portfolio(t),
+      `/v1/tenants/${t}/reports/portfolio`,
+    );
     assert.equal(PORTAL_UPSTREAM.platformTenants, '/v1/platform/tenants');
     assert.equal(PORTAL_UPSTREAM.platformAudit, '/v1/platform/audit');
     assert.equal(
