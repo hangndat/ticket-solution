@@ -35,9 +35,6 @@ import {
   tryConsumeRateLimit,
   withTenant,
   type CodeHmacConfig,
-  type IdentityUserRepository,
-  type OidcVerifier,
-  type PrismaClient,
 } from '@ticket/backend';
 import { issueHttpException, identityHttpException } from './tickets';
 import type { TicketServices } from './tickets';
