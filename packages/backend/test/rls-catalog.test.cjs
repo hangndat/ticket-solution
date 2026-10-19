@@ -18,7 +18,12 @@ const { migrationFiles } = require('./migration-files.cjs');
 // so the migration-owned SECURITY DEFINER claim can see every tenant.
 // device_tokens is actor-scoped (app.actor_id), not tenant-scoped.
 // exports keeps FORCE RLS; migration_owner policy enables claim_exports_batch.
-const GLOBAL_TABLES = new Set(['users']);
+const GLOBAL_TABLES = new Set([
+  'users',
+  // SCR: global digest lookup + routing groups (no tenant_id column).
+  'code_routing_groups',
+  'code_routing_digest_aliases',
+]);
 const ACTOR_TABLES = new Set(['device_tokens', 'account_deletion_requests']);
 const UNFORCED_TABLES = new Set(['outbox']);
 const DEFINER_OWNER_TABLES = new Set([
