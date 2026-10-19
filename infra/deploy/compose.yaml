@@ -157,6 +157,11 @@ services:
       OIDC_PROVIDER: keycloak
       OIDC_ISSUER: https://auth.vemoki.com/realms/ticket
       OIDC_AUDIENCE: ticket-api
+      PLATFORM_INVITE_TTL_SECONDS: "172800"
+      PLATFORM_SUPPORT_TTL_MAX_SECONDS: "3600"
+      PLATFORM_MFA_AUTH_TIME_MAX_SECONDS: "900"
+      PLATFORM_MFA_ACR_VALUES: "2"
+      PLATFORM_OIDC_AUDIENCE: ticket-platform-api
       OIDC_JWKS_URL: https://auth.vemoki.com/realms/ticket/protocol/openid-connect/certs
       # Shared denylist keyring only; IdP admin credentials stay worker-only.
       ACCOUNT_DELETION_TOMBSTONE_KEYRING_JSON: ${ACCOUNT_DELETION_TOMBSTONE_KEYRING_JSON:-[]}
@@ -249,7 +254,7 @@ services:
       # Staff portal secret — set OIDC_ADMIN_CLIENT_SECRET in /opt/vemoki/.env (from Keycloak ticket-admin-web)
       OIDC_CLIENT_SECRET: ${OIDC_ADMIN_CLIENT_SECRET}
       OIDC_REDIRECT_URI: ${PORTAL_OIDC_REDIRECT_URI:-https://portal.vemoki.com/api/auth/callback}
-      OIDC_SCOPES: openid profile email offline_access
+      OIDC_SCOPES: openid profile email
       OIDC_AUDIENCE: ${OIDC_AUDIENCE:-ticket-api}
       OIDC_JWKS_URL: ${OIDC_JWKS_URL:-https://auth.vemoki.com/realms/ticket/protocol/openid-connect/certs}
       PLATFORM_OIDC_JWKS_URL: ${PLATFORM_OIDC_JWKS_URL:-https://auth.vemoki.com/realms/ticket/protocol/openid-connect/certs}

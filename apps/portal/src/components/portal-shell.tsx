@@ -43,7 +43,13 @@ function eventFromPath(pathname: string): string | null {
   return m?.[1] ?? null;
 }
 
-export function PortalShell({ children }: { children: ReactNode }) {
+export function PortalShell({
+  children,
+  productOrigin,
+}: {
+  children: ReactNode;
+  productOrigin: string;
+}) {
   const { t, locale, setLocale } = usePortalLocale();
   const pathname = usePathname();
   const router = useRouter();
@@ -287,7 +293,9 @@ export function PortalShell({ children }: { children: ReactNode }) {
 
         <Space>
           {caps?.showGateDeeplink ? (
-            <GateDeeplinkButton href={gateDeeplinkUrl()} />
+            <GateDeeplinkButton
+              href={gateDeeplinkUrl({ PRODUCT_ORIGIN: productOrigin })}
+            />
           ) : null}
           <Dropdown menu={accountMenu} trigger={['click']}>
             <Button type="text" data-testid="account-menu">{t('shell.account.menu')}</Button>
@@ -361,7 +369,7 @@ export function PortalShell({ children }: { children: ReactNode }) {
                 : []),
             ]}
           />
-          <PortalDualRunBanner />
+          <PortalDualRunBanner productOrigin={productOrigin} />
           {activeTenant?.status === 'SUSPENDED' ? (
             <SurfaceState kind="suspended" />
           ) : null}

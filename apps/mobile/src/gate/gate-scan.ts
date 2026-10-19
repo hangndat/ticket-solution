@@ -162,7 +162,7 @@ export function applyConfirm(op: GateOp, result: FetchResult): GateOp {
   }
   const body = asRecord(result.json);
   if (
-    result.status === 200 &&
+    (result.status === 200 || result.status === 201) &&
     body?.state === 'USED' &&
     typeof body.checkinId === 'string'
   ) {
@@ -290,7 +290,11 @@ export async function runScan(input: {
       { tenantId: parsed.tenantId },
     );
     const body = asRecord(opened.json);
-    if (opened.networkError || opened.status !== 200 || typeof body?.sessionId !== 'string') {
+    if (
+      opened.networkError ||
+      (opened.status !== 200 && opened.status !== 201) ||
+      typeof body?.sessionId !== 'string'
+    ) {
       if (opened.networkError) {
         const current: GateOp = {
           id: createId(),
@@ -354,7 +358,7 @@ export async function runScan(input: {
   const hold = asRecord(reserved.json);
   if (
     reserved.networkError ||
-    reserved.status !== 200 ||
+    (reserved.status !== 200 && reserved.status !== 201) ||
     typeof hold?.reservationId !== 'string' ||
     typeof hold.token !== 'string'
   ) {
