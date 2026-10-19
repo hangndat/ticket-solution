@@ -34,6 +34,8 @@ ORCA reference add https://github.com/hangndat/ticket-solution/issues/<N> --work
 
 Tìm agent/wt theo Issue/PR: `ORCA reference find <N|URL> --json` — không đoán từ tên folder.
 
+**Persona vs label Shell:** node con `worker-task_<task_id>` trên cây worktree **không** hiển thị Higo/Kazu — Persona nằm ở `orchestration task-list` (`display_name`, `title`). Tuỳ chọn nhận slice trên card: `ORCA worktree set --worktree path:<abs> --display-name "<Persona> · <ui-label> — #<issue>" --json` (không thay `worker-task_*`).
+
 ## 2. Epic wave = `task-create --deps` rồi `--ready`
 
 Không chỉ `worker-start --spec` ad-hoc khi Epic có ≥2 Task hoặc có dependency thật:
