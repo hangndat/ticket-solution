@@ -1,9 +1,12 @@
 ---
-description: Web + iOS UAT must be headless — never steal the user's macOS mouse
-alwaysApply: true
+description: Web + iOS UAT must be headless — never steal the user's macOS mouse (Wave G: glob-scoped, not alwaysApply)
+globs: scripts/**/*uat*,apps/web/.uat-artifacts/**,apps/mobile/.uat-artifacts/**,docs/reviews/**/*uat*,docs/reviews/**/*UAT*
+alwaysApply: false
 ---
 
 # UAT / nghiệm thu e2e — headless only
+
+> **Wave G:** rule này **không** `alwaysApply`. Cursor nạp khi mở file khớp `globs` (scripts UAT, `.uat-artifacts`, reviews UAT). Task UAT / milestone gate (a) trên path khác → agent **Read** file này trước khi chạy UAT.
 
 Never drive the user's visible desktop mouse or focus for UAT. Prefer HTTP scripts, Playwright headless, AXe HID, or Orca's **embedded** browser — not Computer Use on Chrome/Safari/Simulator.
 
