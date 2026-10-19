@@ -26,28 +26,28 @@ const BY_CODE: Record<
     kind: 'used',
     title: 'Lời mời đã được dùng',
     detail:
-      'Token này đã được nhận trước đó và không thể dùng lại. Nếu bạn đã là thành viên, mở Admin; nếu không, nhờ Owner gửi lời mời mới.',
+      'Mã này đã được nhận trước đó và không thể dùng lại. Nếu bạn đã là thành viên, mở Admin; nếu không, nhờ quản trị gửi lời mời mới.',
     retryable: false,
   },
   [PLATFORM_ERROR_CODES.INVITE_INVALID_OR_EXPIRED]: {
     kind: 'invalid',
     title: 'Lời mời không hợp lệ hoặc đã hết hạn',
     detail:
-      'Token sai, đã hết hạn, hoặc email đăng nhập không khớp email được mời. Đăng nhập đúng tài khoản rồi thử lại, hoặc nhờ gửi lời mời mới.',
+      'Mã sai, đã hết hạn, hoặc email đăng nhập không khớp email được mời. Đăng nhập đúng tài khoản rồi thử lại, hoặc nhờ gửi lời mời mới.',
     retryable: false,
   },
   [PLATFORM_ERROR_CODES.UNAUTHENTICATED]: {
     kind: 'auth',
     title: 'Cần đăng nhập',
     detail:
-      'Đăng nhập Keycloak bằng đúng email đã được mời trước khi nhận invite.',
+      'Đăng nhập bằng đúng email đã được mời trước khi nhận lời mời.',
     retryable: false,
   },
   [PLATFORM_ERROR_CODES.INVALID_INPUT]: {
     kind: 'denied',
     title: 'Thiếu email đã xác minh',
     detail:
-      'Tài khoản cần email đã xác minh trên Keycloak. Xác minh email rồi đăng nhập lại.',
+      'Tài khoản cần email đã xác minh. Xác minh email rồi đăng nhập lại.',
     retryable: false,
   },
   [PLATFORM_ERROR_CODES.PERMISSION_DENIED]: {
@@ -123,7 +123,8 @@ const BY_CODE: Record<
   OIDC_MISCONFIGURED: {
     kind: 'auth',
     title: 'Đăng nhập chưa sẵn sàng',
-    detail: 'OIDC chưa cấu hình — không mock session. Liên hệ vận hành.',
+    detail:
+      'Đăng nhập chưa sẵn sàng trên môi trường này — không thể nhận lời mời. Liên hệ vận hành.',
     retryable: false,
   },
 };
@@ -162,7 +163,8 @@ export function messageForInviteView(
     return {
       kind: 'success',
       title: 'Đã nhận lời mời',
-      detail: `Thành viên ${view.value.membershipId} · tổ chức ${view.value.tenantId} · trạng thái ${view.value.status}.`,
+      detail:
+        'Bạn đã tham gia tổ chức. Mở Admin để tiếp tục — không tự cấp quyền Owner.',
       retryable: false,
     };
   }
@@ -182,7 +184,7 @@ export function inviteNetworkMessage(): InviteUxMessage {
     kind: 'network',
     title: 'Mất kết nối mạng',
     detail:
-      'Không gọi được dịch vụ. Không coi là đã nhận invite — thử lại khi có mạng.',
+      'Không gọi được dịch vụ. Không coi là đã nhận lời mời — thử lại khi có mạng.',
     retryable: true,
   };
 }

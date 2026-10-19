@@ -47,10 +47,11 @@ test('CSRF token invalid copy is VI and never claims success', () => {
   assert.equal(/CSRF_TOKEN_INVALID/i.test(`${msg.title} ${msg.detail}`), false);
 });
 
-test('UNAUTHENTICATED asks for Keycloak login', () => {
+test('UNAUTHENTICATED asks for login without IdP jargon', () => {
   const msg = messageForInviteError(PLATFORM_ERROR_CODES.UNAUTHENTICATED);
   assert.equal(msg.kind, 'auth');
   assert.equal(msg.title, 'Cần đăng nhập');
+  assert.equal(/Keycloak|OIDC|Nest|BFF/i.test(`${msg.title} ${msg.detail}`), false);
 });
 
 test('network message never claims success', () => {
@@ -75,7 +76,7 @@ test('messageForInviteView maps interpretAcceptInvite reject', () => {
   assert.match(ux.title, /đã được dùng/i);
 });
 
-test('ok accept view is success with membership ids', () => {
+test('ok accept view is success with guest-safe copy', () => {
   const view = interpretAcceptInvite(
     200,
     {
@@ -88,5 +89,11 @@ test('ok accept view is success with membership ids', () => {
   assert.equal(view.kind, 'ok');
   const ux = messageForInviteView(view);
   assert.equal(ux.kind, 'success');
-  assert.match(ux.detail, /22222222-2222-4222-8222-222222222222/);
+  assert.match(ux.title, /Đã nhận lời mời/i);
+  assert.equal(
+    /Keycloak|Nest|BFF|22222222-2222-4222-8222-222222222222/i.test(
+      `${ux.title} ${ux.detail}`,
+    ),
+    false,
+  );
 });
