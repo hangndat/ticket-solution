@@ -10,6 +10,7 @@
 | Architecture impact | Không (evidence + align harness dual-run) |
 | Agent / session | Orca Cursor worker · terminal `term_aadd35c1-1c8b-4c62-9c89-3ace4739d349` |
 | `origin/main` SHA tại lúc UAT (exact) | `acec09257ccd3c455f0575c35e79b7c7128a1924` |
+| Tip branch evidence SHA (exact) | `25bcbc492b5a5149f53f79b8449401c2f0dc84f8` (`hangndat/portal-epic-491-uat`) |
 | Captured (UTC) | `2026-10-19T04:52:48Z` |
 | Verdict | **PASS** — cutover-check + portal-smoke prod; BFF deny-by-default 401 |
 
