@@ -2,8 +2,15 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { liveRegionForStatus } from '../src/ui/live-region';
 
-test('unknown and queued use assertive alert', () => {
-  for (const kind of ['unknown', 'queued'] as const) {
+test('unknown / queued / error outcomes use assertive alert', () => {
+  for (const kind of [
+    'unknown',
+    'queued',
+    'error',
+    'denied',
+    'expired',
+    'auth',
+  ] as const) {
     const live = liveRegionForStatus(kind);
     assert.equal(live.role, 'alert');
     assert.equal(live.ariaLive, 'assertive');

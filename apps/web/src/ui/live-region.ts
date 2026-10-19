@@ -22,7 +22,14 @@ export type LiveRegionAttrs = {
 
 /** Map UX status kind → role + aria-live for screen readers. */
 export function liveRegionForStatus(kind: LiveRegionKind): LiveRegionAttrs {
-  if (kind === 'unknown' || kind === 'queued') {
+  if (
+    kind === 'unknown' ||
+    kind === 'queued' ||
+    kind === 'error' ||
+    kind === 'denied' ||
+    kind === 'expired' ||
+    kind === 'auth'
+  ) {
     return { role: 'alert', ariaLive: 'assertive', ariaAtomic: true };
   }
   return { role: 'status', ariaLive: 'polite', ariaAtomic: true };
