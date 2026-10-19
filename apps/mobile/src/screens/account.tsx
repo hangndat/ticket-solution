@@ -1,19 +1,22 @@
 import { useCallback, useMemo, useState, useSyncExternalStore } from 'react';
 import {
   ActivityIndicator,
-  Linking,
+  ScrollView,
   Text,
   View,
 } from 'react-native';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import type { MeResponse } from '@ticket/contracts';
 import { AttendeeCta } from '@/components/attendee-cta';
-import { BrandWordmark, Notice, Page } from '@/components/page';
-import { SessionScopedAccountDeletionPanel } from '@/account-deletion/account-deletion-panel';
-import { PRIVACY_POLICY_URL } from '@/account-deletion/privacy-policy';
-import { SessionScopedPushStatus } from '@/push/push-status';
+import {
+  AccountGroupedDivider,
+  AccountGroupedRow,
+  AccountGroupedSection,
+  AccountSectionFooter,
+} from '@/components/account-grouped-section';
+import { Notice, Page } from '@/components/page';
+import { accountCopy } from '@/components/screen-state-copy';
 import { brand, colors } from '@/theme/colors';
-import { fontFamilies } from '@/theme/fonts';
 import { typography } from '@/theme/typography';
 import { getApiBaseUrl, getTenantId, isOidcConfigured } from '@/identity/config';
 import { fetchMe, verifyViaMe } from '@/identity/fetch-me';
@@ -28,50 +31,78 @@ import {
 } from '@/tickets/bind-after-verify';
 import { offlineDisplay } from '@/tickets/offline-display-session';
 import { logoutAndClearWalletArtifacts } from '@/tickets/wallet-logout';
+import { consumePendingImmediateSignIn } from '@/navigation/attendee-auth-gate';
+import { consumeSignInReturn } from '@/navigation/sign-in-return-intent';
+import { useStaffWorkspace } from '@/navigation/use-staff-workspace';
+import { TabStackTitle } from '@/navigation/tab-stack-title';
+import { PushAccountSection } from '@/push/push-account-section';
 
-/**
- * Account — Phase 2 full visual (Live Pulse).
- * Session status, login/logout, redeem deep-link, push, privacy, deletion.
- */
-export function AccountScreen() {
+export type AccountPresentation = 'tab' | 'stack';
+
+export function AccountScreen({
+  presentation = 'tab',
+}: {
+  presentation?: AccountPresentation;
+}) {
   const configured = isOidcConfigured();
 
   if (!configured) {
     return (
-      <Page>
-        <BrandWordmark />
-        <Text
-          accessibilityRole="header"
-          style={{ color: brand.ink, ...typography.display }}
-        >
-          Tài khoản
-        </Text>
-        <Text style={{ color: colors.secondary, ...typography.body }}>
-          Phiên đăng nhập · chính sách quyền riêng tư
-        </Text>
-        <Notice title="Chưa cấu hình đăng nhập">
-          Thiếu cấu hình đăng nhập trên bản dựng này. Ứng dụng giữ trạng thái
-          đăng xuất và không giả lập tài khoản.
-        </Notice>
-        <Text
-          style={{
-            color: colors.secondary,
-            fontFamily: fontFamilies.body,
-            fontSize: 15,
-          }}
-        >
-          Trạng thái: chưa đăng nhập
-        </Text>
-        <SessionScopedPushStatus />
-        <PrivacyPolicyLink />
-      </Page>
+      <>
+        <MisconfiguredAccount presentation={presentation} />
+        {presentation === 'tab' ? (
+          <TabStackTitle title={accountCopy.screenTitle} />
+        ) : null}
+      </>
     );
   }
 
-  return <ConfiguredAccount />;
+  return <ConfiguredAccount presentation={presentation} />;
 }
 
-function ConfiguredAccount() {
+function MisconfiguredAccount({
+  presentation,
+}: {
+  presentation: AccountPresentation;
+}) {
+  return (
+    <Page>
+      <Notice title={accountCopy.misconfiguredTitle}>
+        {accountCopy.misconfiguredBody}
+      </Notice>
+      <PushAccountSection identityKind="guest" />
+      <AccountGroupedSection title={accountCopy.sections.privacy}>
+        <AccountGroupedRow
+          label={accountCopy.privacyRow}
+          showChevron
+          onPress={() => router.push('/(tabs)/account/privacy')}
+          testID="account-cta-privacy"
+        />
+      </AccountGroupedSection>
+      {presentation === 'tab' ? null : (
+        <TabStackTitle title={accountCopy.screenTitle} />
+      )}
+    </Page>
+  );
+}
+
+function navigateAfterSignIn(presentation: AccountPresentation) {
+  const target = consumeSignInReturn();
+  if (target?.pathname) {
+    router.replace(target.pathname as never);
+    return;
+  }
+  if (presentation === 'stack') {
+    router.back();
+  }
+}
+
+function ConfiguredAccount({
+  presentation,
+}: {
+  presentation: AccountPresentation;
+}) {
+  const staffWorkspace = useStaffWorkspace();
   const [me, setMe] = useState<MeResponse | null>(null);
   const [meError, setMeError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -87,10 +118,8 @@ function ConfiguredAccount() {
   );
   const verifiedUserId =
     identity.status === 'verified' ? identity.userId : null;
-  // Only SessionBoundary verified counts — local OIDC token alone is not signed-in.
   const isSignedIn = identity.status === 'verified';
 
-  // Refuse stale /v1/me UI immediately on identity switch (no effect delay).
   const visibleMe = useMemo(() => {
     if (identity.status !== 'verified' || !me) return null;
     return me.userId === identity.userId ? me : null;
@@ -101,13 +130,12 @@ function ConfiguredAccount() {
     setMeError(null);
     const epoch = session.captureEpoch();
     try {
-      // Online verified path only — never call API with offline-display auth.
       const token = await session.getCredential();
       if (!session.isEpochCurrent(epoch)) return;
       if (!token || !epoch) {
         setMe(null);
         setMeError(
-          'Chưa có phiên đã xác minh. Đăng nhập lại khi có mạng — chế độ xem offline không tải hồ sơ.',
+          'Không tải được hồ sơ. Đăng nhập lại khi có mạng.',
         );
         return;
       }
@@ -131,7 +159,6 @@ function ConfiguredAccount() {
     setMe(null);
     setMeError(null);
     try {
-      // Account switch: detach prior push + clear offline before hydrating a new user.
       try {
         const { clearApnsRegistrationState } = await import(
           '@/push/apns-device-token'
@@ -148,17 +175,20 @@ function ConfiguredAccount() {
       const bindingEpoch = captureOfflineBindingEpoch();
       const result = await loginWithKeycloak();
       if (!result.ok) {
-        setMeError(result.reason);
+        setMeError(
+          result.reason === 'Đã hủy đăng nhập.'
+            ? accountCopy.signInCancelHint
+            : result.reason,
+        );
         return;
       }
       await session.establish(result.accessToken, verifyViaMe);
       const snap = session.getSnapshot();
       if (snap.status !== 'verified') {
-        // Unreachable establish still persists the bearer; do not pretend signed-in.
         setMeError(
           getApiBaseUrl()
-            ? 'Đăng nhập xong nhưng chưa xác minh hồ sơ (mạng hoặc máy chủ). Thử lại khi có mạng.'
-            : 'Đăng nhập xong nhưng bản dựng thiếu địa chỉ API. Không xác minh được phiên.',
+            ? 'Đăng nhập xong nhưng chưa tải được hồ sơ. Thử lại khi có mạng.'
+            : 'Đăng nhập xong nhưng bản dựng thiếu địa chỉ API.',
         );
         return;
       }
@@ -172,6 +202,8 @@ function ConfiguredAccount() {
           bindingEpoch,
         });
       }
+      void refreshMe();
+      navigateAfterSignIn(presentation);
     } catch (error) {
       setMeError(
         error instanceof Error ? error.message : 'Đăng nhập thất bại.',
@@ -179,7 +211,7 @@ function ConfiguredAccount() {
     } finally {
       setBusy(false);
     }
-  }, []);
+  }, [presentation, refreshMe]);
 
   const onLogout = useCallback(async () => {
     setBusy(true);
@@ -194,6 +226,9 @@ function ConfiguredAccount() {
     try {
       await logoutAndClearWalletArtifacts({ userId, tenantId });
       await endKeycloakSession();
+      if (staffWorkspace) {
+        router.replace('/(tabs)/(events)');
+      }
     } catch (error) {
       setMeError(
         error instanceof Error
@@ -203,206 +238,156 @@ function ConfiguredAccount() {
     } finally {
       setBusy(false);
     }
-  }, [offline, verifiedUserId]);
+  }, [offline, verifiedUserId, staffWorkspace]);
 
-  const sessionLabel = isSignedIn
-    ? 'Bạn đang đăng nhập'
-    : offline.status === 'bound'
-      ? 'Xem offline (chưa xác minh phiên)'
-      : 'Chưa đăng nhập';
-
-  const sessionSupport = isSignedIn
-    ? 'Phiên đã xác minh trên máy chủ — không chỉ từ token lưu máy.'
-    : offline.status === 'bound'
-      ? 'Có bộ đệm vé offline; chưa phải phiên đăng nhập đã xác minh.'
-      : 'Đăng nhập để xem vé và quản lý tài khoản.';
-
-  return (
-    <Page>
-      <BrandWordmark />
-      <Text
-        accessibilityRole="header"
-        style={{ color: brand.ink, ...typography.display }}
-      >
-        Tài khoản
-      </Text>
-      <Text style={{ color: colors.secondary, ...typography.body }}>
-        {sessionSupport}
-      </Text>
-
-      <View
-        style={{
-          gap: 14,
-          borderTopWidth: 1,
-          borderBottomWidth: 1,
-          borderColor: colors.separator,
-          paddingVertical: 16,
-        }}
-      >
-        <Text
-          style={{
-            color: brand.ink,
-            fontFamily: fontFamilies.display,
-            fontSize: 18,
-            fontWeight: '600',
-          }}
-        >
-          Phiên
-        </Text>
-        <Text
-          style={{
-            color: colors.secondary,
-            fontFamily: fontFamilies.body,
-            fontSize: 15,
-            lineHeight: 22,
-          }}
-          accessibilityLiveRegion="polite"
-        >
-          {sessionLabel}
-          {visibleMe?.email ? `\n${visibleMe.email}` : ''}
-          {visibleMe
-            ? `\nEmail đã xác minh: ${visibleMe.emailVerified ? 'có' : 'chưa'}`
-            : ''}
-        </Text>
-
-        <View style={{ gap: 10 }}>
-          {!isSignedIn ? (
-            <AttendeeCta
-              label="Đăng nhập"
-              onPress={() => void onSignIn()}
-              disabled={busy}
-              testID="account-cta-signin"
-            />
-          ) : (
-            <>
-              <AttendeeCta
-                label="Làm mới hồ sơ"
-                variant="secondary"
-                onPress={() => void refreshMe()}
-                disabled={busy || identity.status !== 'verified'}
-                testID="account-cta-refresh"
-              />
-              <AttendeeCta
-                label="Đăng xuất"
-                onPress={() => void onLogout()}
-                disabled={busy}
-                testID="account-cta-logout"
-              />
-            </>
-          )}
-          {!isSignedIn && offline.status === 'bound' ? (
-            <AttendeeCta
-              label="Đăng xuất (xoá hiển thị offline)"
-              variant="secondary"
-              onPress={() => void onLogout()}
-              disabled={busy}
-              testID="account-cta-logout-offline"
-            />
-          ) : null}
-          <AttendeeCta
-            label="Đổi mã lấy vé"
-            variant="secondary"
-            onPress={() => router.push('/redeem-global')}
-            testID="account-cta-redeem"
-          />
-        </View>
-      </View>
-
-      {busy ? (
-        <View style={{ padding: 8, alignItems: 'center' }}>
-          <ActivityIndicator color={brand.signal} />
-          <Text
-            style={{
-              marginTop: 8,
-              color: colors.secondary,
-              ...typography.caption,
-            }}
-          >
-            Đang xử lý…
-          </Text>
-        </View>
-      ) : null}
-
-      {meError ? (
-        <View accessibilityLiveRegion="assertive" accessibilityRole="alert">
-          <Notice title="Không tải được phiên" tone="deny">
-            {meError}
-          </Notice>
-        </View>
-      ) : null}
-
-      <SessionScopedPushStatus />
-
-      <PrivacyPolicyLink />
-
-      {identity.status === 'verified' ? (
-        <View style={{ gap: 12 }}>
-          <Text
-            accessibilityRole="header"
-            style={{
-              color: brand.ink,
-              fontFamily: fontFamilies.display,
-              fontSize: 20,
-              fontWeight: '600',
-            }}
-          >
-            Yêu cầu xóa tài khoản
-          </Text>
-          <SessionScopedAccountDeletionPanel />
-        </View>
-      ) : null}
-
-      <Text
-        style={{
-          color: colors.secondary,
-          fontSize: 13,
-          lineHeight: 18,
-          fontFamily: fontFamilies.body,
-        }}
-      >
-        Đăng nhập không tự cấp quyền nhân viên hay quản lý tổ chức. Các quyền đó
-        do máy chủ kiểm tra riêng.
-      </Text>
-    </Page>
-  );
-}
-
-/** In-app entry to the public Privacy Policy (Guideline 5.1.1 companion). */
-function PrivacyPolicyLink() {
-  const [error, setError] = useState<string | null>(null);
-  const onOpen = useCallback(async () => {
-    setError(null);
+  const onClearOfflineDisplay = useCallback(async () => {
+    setBusy(true);
     try {
-      const supported = await Linking.canOpenURL(PRIVACY_POLICY_URL);
-      if (!supported) {
-        setError(`Không mở được ${PRIVACY_POLICY_URL}`);
-        return;
-      }
-      await Linking.openURL(PRIVACY_POLICY_URL);
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : 'Không mở được Chính sách quyền riêng tư.',
+      await offlineDisplay.clear();
+    } catch (error) {
+      setMeError(
+        error instanceof Error
+          ? error.message
+          : 'Không xóa được dữ liệu xem offline.',
       );
+    } finally {
+      setBusy(false);
     }
   }, []);
 
+  useFocusEffect(
+    useCallback(() => {
+      if (isSignedIn) {
+        void refreshMe();
+        return;
+      }
+      if (!consumePendingImmediateSignIn()) return;
+      void onSignIn();
+    }, [isSignedIn, onSignIn, refreshMe]),
+  );
+
+  const identityKind = isSignedIn ? 'verified' : 'guest';
+  const showLogout = isSignedIn;
+  const showDeleteRow = isSignedIn && !meError;
+
+  const youTitle = isSignedIn
+    ? visibleMe?.email ?? accountCopy.verified.body
+    : accountCopy.guest.title;
+  const youBody = isSignedIn
+    ? accountCopy.verified.body
+    : accountCopy.guest.body;
+
   return (
-    <View style={{ gap: 8 }}>
-      <AttendeeCta
-        label="Chính sách quyền riêng tư"
-        variant="secondary"
-        onPress={() => void onOpen()}
-        testID="account-cta-privacy"
-      />
-      <Text style={{ color: colors.secondary, ...typography.caption }}>
-        Mở trang Chính sách quyền riêng tư công khai.
-      </Text>
-      {error ? <Notice title="Không mở được liên kết">{error}</Notice> : null}
-    </View>
+    <>
+      <ScrollView
+        contentInsetAdjustmentBehavior="automatic"
+        style={{ flex: 1, backgroundColor: brand.paper }}
+        contentContainerStyle={{ padding: 20, paddingBottom: 48, gap: 20 }}
+      >
+        <AccountGroupedSection title={accountCopy.sections.you}>
+          <AccountGroupedRow label={youTitle} value={youBody} disabled={busy} />
+          {!isSignedIn ? (
+            <>
+              <AccountGroupedDivider />
+              <AccountGroupedRow
+                label={accountCopy.guest.signInCta}
+                onPress={() => void onSignIn()}
+                disabled={busy}
+                testID="account-cta-signin"
+              />
+            </>
+          ) : null}
+          {!isSignedIn && offline.status === 'bound' ? (
+            <>
+              <AccountGroupedDivider />
+              <AccountGroupedRow
+                label={accountCopy.offlineCache.body}
+                disabled={busy}
+              />
+              <AccountGroupedDivider />
+              <AccountGroupedRow
+                label={accountCopy.offlineCache.clearRow}
+                onPress={() => void onClearOfflineDisplay()}
+                disabled={busy}
+                destructive
+                testID="account-clear-offline"
+              />
+            </>
+          ) : null}
+        </AccountGroupedSection>
+
+        <PushAccountSection identityKind={identityKind} disabled={busy} />
+
+        <AccountGroupedSection title={accountCopy.sections.privacy}>
+          <AccountGroupedRow
+            label={accountCopy.privacyRow}
+            showChevron
+            onPress={() => router.push('/(tabs)/account/privacy')}
+            disabled={busy}
+            testID="account-cta-privacy"
+          />
+          {showDeleteRow ? (
+            <>
+              <AccountGroupedDivider />
+              <AccountGroupedRow
+                label={accountCopy.deleteAccountRow}
+                showChevron
+                onPress={() => router.push('/(tabs)/account/delete')}
+                disabled={busy}
+                testID="account-delete-row"
+              />
+            </>
+          ) : null}
+        </AccountGroupedSection>
+
+        {staffWorkspace ? (
+          <AttendeeCta
+            label={accountCopy.staffBackToGate}
+            variant="secondary"
+            onPress={() => router.replace('/(tabs)/staff-scan')}
+            disabled={busy}
+            testID="account-cta-staff-back"
+          />
+        ) : null}
+
+        {busy ? (
+          <View style={{ padding: 8, alignItems: 'center' }}>
+            <ActivityIndicator color={brand.signal} />
+            <Text
+              style={{
+                marginTop: 8,
+                color: colors.secondary,
+                ...typography.caption,
+              }}
+              accessibilityLiveRegion="polite"
+            >
+              {accountCopy.busyLabel}
+            </Text>
+          </View>
+        ) : null}
+
+        {meError ? (
+          <View accessibilityLiveRegion="assertive" accessibilityRole="alert">
+            <Notice title={accountCopy.meErrorTitle} tone="deny">
+              {meError}
+            </Notice>
+          </View>
+        ) : null}
+
+        {showLogout ? (
+          <AttendeeCta
+            label={accountCopy.logoutCta}
+            variant="destructive"
+            onPress={() => void onLogout()}
+            disabled={busy}
+            accessibilityLabel={accountCopy.logoutAccessibility}
+            testID="account-cta-logout"
+          />
+        ) : null}
+      </ScrollView>
+      {presentation === 'tab' ? (
+        <TabStackTitle title={accountCopy.screenTitle} />
+      ) : null}
+    </>
   );
 }
-
-/** Re-export for wallet surfaces that need privacy without full account chrome. */
-export { PrivacyPolicyLink as AccountPrivacyPolicyLink };
