@@ -24,6 +24,19 @@ test('confirm 200 with check-in admits', () => {
   }
 });
 
+test('confirm 201 with check-in admits', () => {
+  const decision = decideGateConfirm({
+    ...base,
+    status: 201,
+    json: {
+      state: 'USED',
+      ticketId: '11111111-1111-4111-8111-111111111111',
+      checkinId: '22222222-2222-4222-8222-222222222222',
+    },
+  });
+  assert.equal(decision.kind, 'admit');
+});
+
 test('timeout, network, and 502 stay unknown and do not admit', () => {
   for (const result of [
     { ...base, status: 0, timedOut: true },
