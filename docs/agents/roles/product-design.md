@@ -80,7 +80,7 @@ Bổ sung state đặc thù nghiệp vụ (offline Gate, sync pending, …) nế
 
 Khi user ủy quyền Epic đổi diện toàn user surface:
 
-1. **Một** Task `product-design` (Cost tier: `standard`; `claude-sonnet-5-thinking-medium` chỉ khi visual + IA lớn chưa chốt) → **một** artifact `docs/design/<slug>/` gồm mục 0–5.
+1. **Một** Task `product-design` (Cost tier: `standard`; pin `composer-2.5`) → **một** artifact `docs/design/<slug>/` gồm mục 0–5.
 2. Không spawn BA riêng nếu scope/persona/AC đã chốt trên Epic/Issue.
 3. Không spawn Architect trừ khi đổi IA/route/contract thật sự chặn consumer.
 4. Sau handoff: fan-out `web` ∥ `ios` theo màn priority (mục 0); mỗi coding Task Spec chỉ link artifact PD — không paste lại PRD.

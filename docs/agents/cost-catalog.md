@@ -4,7 +4,9 @@ Nguồn **pin** `--model` theo Cost tier khi spawn `--agent cursor`. Rule: `.cur
 
 **Không** dùng `auto` / omit flags làm mặc định (inherit UI thường đắt). Chỉ fallback inherit khi host **reject** mọi ID trong band và đã ghi limitation.
 
-**Trần tier (2026-10-19):** chỉ **`cheap`** và **`standard`**. Cấm Cost tier `heavy` và mọi `--model` vượt band standard (vd. `…-thinking-high`, `gpt-5.6-sol-high`, `claude-opus-*`, `…-xhigh`/`max`/`ultra`). Task trước đây gắn `heavy` → **`standard`**; ưu tiên `claude-sonnet-5-thinking-medium` khi architecture impact / scope rộng, còn lại `composer-2.5`.
+**Trần tier (2026-10-19):** chỉ **`cheap`** và **`standard`**. Cấm Cost tier `heavy` và mọi `--model` vượt band standard (vd. `…-thinking-high`, `claude-sonnet-5-thinking-medium`, `gpt-5.6-sol-high`, `claude-opus-*`, `…-xhigh`/`max`/`ultra`). Task trước đây gắn `heavy` → **`standard`** + pin `composer-2.5` (mọi feature / architect / security).
+
+**Composer (2026-10-19):** chỉ **Composer Standard** (`composer-2.5`). **Cấm** `composer-2.5-fast` (Composer Fast) trên mọi spawn Orca / preflight.
 
 ## Refresh catalog (bắt buộc khi pin fail / account đổi)
 
@@ -24,17 +26,17 @@ Nguồn: `agent models` trên máy này. Effort nằm **trong** model id Cursor 
 
 | Cost tier | `--model` (primary) | Fallback cùng band | Ghi chú |
 | --------- | ------------------- | ------------------ | ------- |
-| `cheap` | `composer-2.5-fast` | `composer-2.5`, `grok-4.7-low`, `gemini-3.7-flash-low` | Docs, hygiene, DoD hẹp, planner đơn |
-| `standard` | `composer-2.5` | `claude-sonnet-5-thinking-medium`, `claude-sonnet-5-thinking-low` | Mọi việc còn lại (feature, architect, security hot path, planner DAG rối, retry reasoning) |
+| `cheap` | `composer-2.5` | `grok-4.7-low`, `gemini-3.7-flash-low` | Docs, hygiene, DoD hẹp, planner đơn |
+| `standard` | `composer-2.5` | `claude-sonnet-5-thinking-low` | Mọi việc còn lại (feature, architect, security hot path, planner DAG rối, retry reasoning) |
 
-**Cấm:** tier/model vượt standard — `heavy`, `…-thinking-high`, `gpt-5.6-sol-high`, `…-xhigh`, `…-max`, `…-ultra`, `claude-opus-*` (kể cả user override trừ khi coordinator ghi ngoại lệ ngoài Orca spawn).
+**Cấm:** `composer-2.5-fast`; `claude-sonnet-5-thinking-medium`; tier/model vượt standard — `heavy`, `…-thinking-high`, `gpt-5.6-sol-high`, `…-xhigh`, `…-max`, `…-ultra`, `claude-opus-*` (kể cả user override trừ khi coordinator ghi ngoại lệ ngoài Orca spawn).
 
 ## Map spawn
 
 ```text
 ORCA orchestration worker-start \
   --task <id> --worktree … --agent cursor \
-  --model composer-2.5-fast \
+  --model composer-2.5 \
   --display-name "James · dod+sec" \
   --json
 ```
@@ -49,7 +51,7 @@ Sau launch: so `launch.requested` vs `launch.effective`. Reject primary → th�
 | DoD docs-only / revalidate tip SHA / checklist cũ (≤ ~15 file, không runtime) | `cheap` |
 | Epic planner DAG đơn (&lt; ~8 Task, không ADR mở) | `cheap` |
 | Feature coding, BA/PD, DoD runtime, reviewer-security (mọi hot path) | `standard` |
-| Architect/ADR; planner DAG rối; retry sau FAIL reasoning | `standard` (`claude-sonnet-5-thinking-medium` khi architecture impact / scope đa-file lớn) |
+| Architect/ADR; planner DAG rối; retry sau FAIL reasoning | `standard` (`composer-2.5`; fallback `claude-sonnet-5-thinking-low` nếu host reject primary) |
 
 Không tier cao hơn `standard`; không nâng model chỉ vì role “quan trọng”.
 
@@ -90,7 +92,7 @@ Coordinator **không** gọi `worker-start` nếu argv thiếu pin:
 
 ```text
 node scripts/orca-spawn-model-preflight.mjs -- \
-  --agent cursor --model composer-2.5-fast --display-name "…" …
+  --agent cursor --model composer-2.5 --display-name "…" …
 # exit 0 → mới worker-start với cùng flags
 # exit 2 → thiếu/invalid --model → dừng wave
 ```
