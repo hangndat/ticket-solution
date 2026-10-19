@@ -18,7 +18,7 @@ export default function PortalHomePage() {
   const router = useRouter();
   const identity = usePortalUserId();
   const [state, setState] = useState<
-    'loading' | 'empty' | 'error' | 'redirecting'
+    'loading' | 'empty' | 'error' | 'redirecting' | 'customer'
   >('loading');
   const [messageKey, setMessageKey] = useState<MessageKey | undefined>();
 
@@ -47,6 +47,10 @@ export default function PortalHomePage() {
           shell.meEvents?.items.filter((e) => e.tenantId === tenantId).length ??
           0,
       });
+      if (surface.kind === 'customer') {
+        setState('customer');
+        return;
+      }
       if (surface.kind === 'signup') {
         setState('empty');
         return;
@@ -65,6 +69,15 @@ export default function PortalHomePage() {
 
   if (state === 'loading' || state === 'redirecting') {
     return <SurfaceState kind="loading" />;
+  }
+  if (state === 'customer') {
+    return (
+      <SurfaceState
+        kind="permission-denied"
+        title={t('shell.auth.attendeeDeniedTitle')}
+        description={t('shell.auth.attendeeDeniedBody')}
+      />
+    );
   }
   if (state === 'error') {
     return (
