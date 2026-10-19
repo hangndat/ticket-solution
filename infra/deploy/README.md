@@ -19,6 +19,7 @@ Deploy một service khi chỉ service đó đổi. `restart` đủ sau khi buil
 | Service | Việc | Khởi động lại |
 | --- | --- | --- |
 | web | build `@ticket/web` | `restart web` |
+| portal | build `@ticket/portal` | `restart portal` |
 | api | build backend rồi `@ticket/api` | `restart api` |
 | worker | build backend rồi `@ticket/worker` | `restart worker` |
 | migrate | schema Prisma | `up -d migrate`, đợi exit 0 |
@@ -71,7 +72,7 @@ Từ `infra/deploy`, với env file ngoài git:
 docker build -f Dockerfile.runtime -t vemoki-runtime:local .
 docker run --rm --env-file /opt/vemoki/.env -v /opt/vemoki/src:/app -w /app \
   vemoki-runtime:local \
-  sh -c 'pnpm config set store-dir /app/.pnpm-store && pnpm config set package-import-method hardlink && pnpm install --frozen-lockfile --filter @ticket/api... --filter @ticket/web... --filter @ticket/worker... && pnpm --filter @ticket/api exec tsc -p ../../packages/contracts/tsconfig.json && pnpm --filter @ticket/backend build && pnpm --filter @ticket/api build && pnpm --filter @ticket/web build && pnpm --filter @ticket/worker build'
+  sh -c 'pnpm config set store-dir /app/.pnpm-store && pnpm config set package-import-method hardlink && pnpm install --frozen-lockfile --filter @ticket/api... --filter @ticket/web... --filter @ticket/portal... --filter @ticket/worker... && pnpm --filter @ticket/api exec tsc -p ../../packages/contracts/tsconfig.json && pnpm --filter @ticket/backend build && pnpm --filter @ticket/api build && pnpm --filter @ticket/web build && pnpm --filter @ticket/portal build && pnpm --filter @ticket/worker build'
 docker compose --env-file /opt/vemoki/.env up -d
 ```
 
@@ -85,6 +86,7 @@ Proxy (O13 dual-run / cutover):
 - `app.vemoki.com` → `vemoki-web:3000` (product BFF + UI)
 - `api.vemoki.com` → `vemoki-api:3001`
 - `auth.vemoki.com` → `vemoki-keycloak:8080`
+- `portal.vemoki.com` → `vemoki-portal:3013` (Issue #502 / ADR-20; snippet `nginx-portal.snippet.conf`)
 
 Giữ `Host`, `X-Forwarded-For`, `X-Forwarded-Proto`. **Bắt buộc** ghi đè `X-Forwarded-Host $host` (không chuyển tiếp header client). Web allowlist: `WEB_PUBLIC_ORIGIN` / `PUBLIC_WEB_ORIGIN` = `https://app.vemoki.com` (không tin forwarded host thô).
 

@@ -73,7 +73,7 @@ Giữ URI app (`3000`/`3010`/`app.`) đến hết dual-run Platform.
 ./scripts/portal-local-dual-run-check.sh
 ```
 
-**OUT Task này:** thêm `https://portal.vemoki.com/...` vào realm / DNS / TLS — chỉ khi có Task deploy được ủy quyền riêng.
+**OUT Task prep local:** production DNS/TLS — xem Task #502 / [`PORTAL-PROD-CUTOVER.md`](./PORTAL-PROD-CUTOVER.md).
 
 ---
 

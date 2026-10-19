@@ -22,13 +22,19 @@ Layout: [infra/deploy/README.md](../../../infra/deploy/README.md). Do not build 
 - Rsync must exclude `node_modules`, `.git`, `.next`, `dist`, `.turbo`, `apps/mobile/ios`, `apps/mobile/android`, `.uat-artifacts`. Never delete `/opt/vemoki/src/.pnpm-store` or `/opt/vemoki/src/node_modules`.
 - pnpm runs in `vemoki-runtime:local` with a single mount `-v /opt/vemoki/src:/app`, store `/app/.pnpm-store`, `package-import-method=hardlink`. Do not install `@ticket/mobile`.
 - Rebuild `vemoki-runtime:local` from `Dockerfile.runtime` only when that file changes or the image is missing.
-- Run `pnpm install --frozen-lockfile --filter @ticket/api... --filter @ticket/web... --filter @ticket/worker...` only when a lockfile or `package.json` changed.
+- Run `pnpm install --frozen-lockfile --filter @ticket/api... --filter @ticket/web... --filter @ticket/portal... --filter @ticket/worker...` only when a lockfile or `package.json` changed.
 
 Compile contracts, when api, web, or worker need them:
 
 ```bash
 pnpm --filter @ticket/api exec tsc -p ../../packages/contracts/tsconfig.json
 ```
+
+## portal
+
+Sync `apps/portal` and shared packages as needed. Build `@ticket/portal`. `docker compose restart portal` (or `up -d --no-deps portal`).
+
+Verify: `https://portal.vemoki.com/` is 200/307; `/api/bff/me` without session is 401. Dual-run + nginx: `docs/ops/PORTAL-PROD-CUTOVER.md`. Gate stays on `app.vemoki.com`.
 
 ## web
 
@@ -64,9 +70,9 @@ Verify: health becomes healthy, and `https://auth.vemoki.com/realms/ticket/.well
 
 Edit only `data/nginx/vemoki.conf`. `nginx -t` then reload inside `nginx-letencrypt-nginx-1`. Do not compose-up that stack.
 
-Targets: `vemoki.com` → `vemoki-web:3000`, `api.vemoki.com` → `vemoki-api:3001`, `auth.vemoki.com` → `vemoki-keycloak:8080`. Set `Host`, `X-Forwarded-For`, `X-Forwarded-Proto`, and **overwrite** `X-Forwarded-Host $host` (strip client-supplied value). Prefer app `PUBLIC_WEB_ORIGIN=https://vemoki.com` over trusting raw forwarded headers. Rewrite `Location` values `http://0.0.0.0:3000/` and `https://0.0.0.0:3000/` to `https://vemoki.com/`.
+Targets: `vemoki.com` → `vemoki-web:3000`, `app.vemoki.com` → `vemoki-web:3000`, `portal.vemoki.com` → `vemoki-portal:3013`, `api.vemoki.com` → `vemoki-api:3001`, `auth.vemoki.com` → `vemoki-keycloak:8080`. Set `Host`, `X-Forwarded-For`, `X-Forwarded-Proto`, and **overwrite** `X-Forwarded-Host $host` (strip client-supplied value). Prefer app `PUBLIC_WEB_ORIGIN=https://vemoki.com` over trusting raw forwarded headers. Rewrite `Location` values `http://0.0.0.0:3000/` and `https://0.0.0.0:3000/` to `https://vemoki.com/`.
 
-Verify the three hosts above plus `https://ancafe.anphong.vn/` still 200.
+Verify apex/app/portal/api/auth plus `https://ancafe.anphong.vn/` still 200.
 
 ## postgres
 
