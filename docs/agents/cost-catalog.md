@@ -38,6 +38,7 @@ ORCA orchestration worker-start \
   --task <id> --worktree … --agent cursor \
   --model composer-2.5 \
   --display-name "James · dod+sec" \
+  --task-title "James · dod+sec — PR #<n> exact SHA" \
   --json
 ```
 
@@ -110,6 +111,7 @@ ORCA orchestration worker-start \
   --task <id> --worktree path:<abs> --agent cursor \
   --model <pin-from-cost-catalog> \
   --display-name "<Persona> · <ui-label>" \
+  --task-title "<Persona> · <ui-label> — #<issue> <tóm tắt>" \
   --json
 ```
 

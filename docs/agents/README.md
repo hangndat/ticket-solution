@@ -36,9 +36,26 @@ docs/agents/
 
 Agent runtime: luôn Cursor (`--agent cursor`), trừ khi user override rõ. Role **≠** agent vendor **≠** Cost tier **≠** Persona — xem `orca-agent-routing-core.mdc`.
 
-## Persona roster (Orca `--display-name`)
+## Persona roster (`--display-name` + `--task-title`)
 
-Nguồn sự thật cho label UI trên hàng Dispatch. Coordinator **bắt buộc** truyền `--display-name` khi `task-create` / `worker-start` (dispatch mới; không rename worker đang live).
+Coordinator **bắt buộc cả hai** khi `task-create` / `worker-start` (dispatch mới; không rename worker đang live):
+
+| Flag | Format | Orchestration field |
+| ---- | ------ | ------------------- |
+| `--display-name` | `"<Persona> · <ui-label>"` | `display_name` |
+| `--task-title` | `"<Persona> · <ui-label> — #<issue> <tóm tắt>"` | `title` |
+
+Cùng prefix Persona; `display-name` ngắn, `task-title` có Issue + tóm tắt scope.
+
+### Ba surface UI (không trùng)
+
+| Surface | Label bạn thấy | Persona? |
+| ------- | -------------- | -------- |
+| `orchestration task-list` / Dispatch | `display_name`, `title` | **Có** — nguồn kiểm tra sau spawn |
+| Cây worktree → node con `Shell` | `worker-task_<task_id>` | **Không** — id nội bộ Orca; không thay bằng `--display-name` |
+| Card worktree (folder) | `--name` lúc `worktree create`; tuỳ chọn `worktree set --display-name` | Tuỳ chọn — đặt nếu cần nhận slice trên sidebar |
+
+**Không** suy Persona từ `worker-task_*`. Sau wave: `orca orchestration run-use --id <run> --json` rồi `task-list --json` — mỗi task phải có `display_name` **và** `title` khác null.
 
 | Role ID / vai | Persona pool | Ghi chú |
 | ------------- | ------------ | ------- |
@@ -125,6 +142,7 @@ Không spawn PD/BA để “làm luôn” code BE+web+iOS. Không reuse session 
   - Cost tier: cheap | standard
   - --model: <pin từ docs/agents/cost-catalog.md>
   - --display-name: "<Persona> · <ui-label>"
+  - --task-title: "<Persona> · <ui-label> — #<issue> <tóm tắt>"
 
   ## Vai trò chuyên môn
   - Role ID: <id>[, reviewer-security nếu gộp dod+sec]
@@ -148,6 +166,7 @@ ORCA orchestration worker-start \
   --agent cursor \
   --model <pin> \
   --display-name "<Persona> · <ui-label>" \
+  --task-title "<Persona> · <ui-label> — #<issue> <tóm tắt>" \
   --json
 ```
 
@@ -230,7 +249,7 @@ Khối bổ sung khi giao Task Architect (điền cùng parent/scope/AC trong sp
 - Không đổi `--agent` theo role hoặc theo Persona.
 - Không gắn model vượt standard cho Task “quan trọng”; trần tier = `standard`.
 - Không để worker depth > 1 (Wave Leader depth 1 chỉ spawn ownership/reviewer trong wave — không spawn Leader/planner con).
-- Không bỏ `--display-name` / Persona khỏi spawn mới (xem roster ở trên).
+- Không bỏ `--display-name` / `--task-title` / Persona khỏi spawn mới (xem roster ở trên).
 
 ### 5. Wave tối đa song song (ownership giữ nguyên)
 
