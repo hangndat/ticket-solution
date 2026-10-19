@@ -56,7 +56,7 @@ Ngoài per-Task DoD, milestone/Epic **Hoàn thành** cần đủ evidence:
 
 | Gate | Yêu cầu |
 | ---- | ------- |
-| (a) Headless UAT | Evidence UAT headless (web và/hoặc iOS theo scope) — xem `uat-headless.mdc`; artifact paths/commands trong comment hoặc `docs/reviews/*` |
+| (a) UAT (Orca) | Evidence UAT web/iOS theo scope — **Orca** `tab`/`exec` (browser) và `emulator` (iOS); xem `uat-headless.mdc`; artifact paths + lệnh Orca trong comment hoặc `docs/reviews/*` |
 | (b) Local iOS build | Evidence local Expo prebuild + Xcode/xcodebuild (hoặc fastlane) khi milestone chạm `apps/mobile` — **không** EAS Cloud Build |
 | (c) Deploy prod | Evidence deploy prod **chỉ khi** task/Epic **authorize** explicitly — không deploy mặc định |
 | (d) Review artifact | `docs/reviews/*` + **exact SHA** cho các Task then-chốt (hoặc index review liên kết SHA) |
@@ -106,7 +106,7 @@ Song song với parallel-first (`orca-parallel-workers.mdc`), coordinator gốc 
 
 Khi đầy: **ưu tiên** (1) DoD / security review đang mở → (2) sửa theo findings → (3) CI đỏ / re-run có lý do → (4) merge/integration đã pass → **rồi mới** dispatch feature `Sẵn sàng` mới. Vẫn được spawn song song **reviewer** và **fix** trên nhiều slice; chỉ hạn chế **feature coding mới** làm phình `Chờ duyệt`.
 
-**Concurrent soft caps** (số Dispatch live / Run — RAM/session, không thay WIP ở trên): xem `orca-parallel-workers.mdc` — ≤5 non-review live, ≤1 feature/slice, ≤2 `heavy`. Hàng đợi chưa đầy nhưng soft cap đã đầy → vẫn trì hoãn feature mới; reviewer/fix vẫn được fill.
+**Concurrent soft caps** (số Dispatch live / Run — RAM/session, không thay WIP ở trên): xem `orca-parallel-workers.mdc` — ≤5 non-review live, ≤1 feature/slice (Cost tier trần **standard**). Hàng đợi chưa đầy nhưng soft cap đã đầy → vẫn trì hoãn feature mới; reviewer/fix vẫn được fill.
 
 Chi tiết fill idle khi có/không backpressure: `orca-idle-worker-fill.mdc`.
 
@@ -119,7 +119,7 @@ Theo dõi thủ công / comment đợt (đủ để cải tiến quy trình):
 | Thời gian chờ duyệt | Timestamp Status → `Chờ duyệt` đến comment DoD có SHA + verdict | Hàng đợi đầy → ưu tiên reviewer trước feature |
 | CI re-run | Số lần re-run / push sửa CI trên cùng PR trước khi xanh | >2 re-run không rõ nguyên nhân → dừng feature cùng slice, sửa CI |
 | Acceptance reopen | `Hoàn thành` hoặc `Chờ duyệt` → lại `Đang làm` sau FAIL / gap mới | Ghi SHA fail + SHA fix; bắt buộc revalidation |
-| **inherit%** (Wave D) | Dòng `cost-wave` sau mỗi wave; hoặc `node scripts/orca-cost-wave-evidence.mjs`; weekday automation | >20% → refresh `agent models` / pin; không tăng heavy |
+| **inherit%** (Wave D) | Dòng `cost-wave` sau mỗi wave; hoặc `node scripts/orca-cost-wave-evidence.mjs`; weekday automation | >20% → refresh `agent models` / pin; giữ trần standard |
 
 Không cần dashboard SaaS; ghi 1 dòng coordinator khi đợt có áp lực **và** 1 dòng `cost-wave` mỗi wave spawn.
 

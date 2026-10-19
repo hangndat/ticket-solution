@@ -56,12 +56,12 @@ Roster nguồn sự thật: [docs/agents/README.md](../../docs/agents/README.md)
 
 ## Cost tier — tối ưu chi phí (model / effort)
 
-Ba lớp tách nhau với Persona: **agent** (vendor) · **role** (chuyên môn) · **Cost tier** (chi phí reasoning). Role **không** đổi model; Cost tier **không** đổi agent trừ khi user override vendor.
+Hai band Cost tier (trần **standard**): **agent** (vendor) · **role** (chuyên môn) · **Cost tier** (chi phí reasoning). Role **không** đổi model; Cost tier **không** đổi agent trừ khi user override vendor.
 
 Mỗi Task Spec (planner hoặc coordinator khi `task-create` / `worker-start`) **phải** ghi:
 
 ```text
-Cost tier: cheap | standard | heavy
+Cost tier: cheap | standard
 ```
 
 ### Bảng mặc định theo loại Task
@@ -71,10 +71,9 @@ Pin `--model` từ [docs/agents/cost-catalog.md](../../docs/agents/cost-catalog.
 | Cost tier | Khi dùng (mặc định) | Launch preference (Cursor pin) |
 | --------- | ------------------- | ------------------------------ |
 | `cheap` | Docs/rules, Project comment, extract/rename, CI fix hẹp, board hygiene, DoD docs-only/revalidate hẹp, Epic planner DAG đơn (&lt;~8 Task, không ADR), idle-fill nhỏ | `composer-2.5-fast` (fallback trong cost-catalog) |
-| `standard` | Ownership feature BE/web/iOS, BA/PD thường, DoD có runtime/checks, `reviewer-security` thường | `composer-2.5`; Architecture impact Có **hoặc** scope đa-file lớn → `claude-sonnet-5-thinking-medium` |
-| `heavy` | Architect/ADR; security authz/RLS/quota/check-in/secrets; concurrency/failure drills; Epic planner DAG rối; retry sau FAIL reasoning | `claude-sonnet-5-thinking-high` (fallback `gpt-5.6-sol-high`) — **không** `xhigh`/`max`/`ultra`/`opus` mặc định |
+| `standard` | Mọi việc còn lại: feature BE/web/iOS, BA/PD, architect/ADR, security (kể cả hot path), DoD runtime, planner DAG rối, retry reasoning | `composer-2.5`; Architecture impact Có **hoặc** scope đa-file lớn → `claude-sonnet-5-thinking-medium` |
 
-Heuristic nhanh (khi planner chưa ghi): docs/mechanical / DoD hẹp / planner đơn → `cheap`; coding/DoD runtime / BA/PD / security thường → `standard`; architect / security hot path / DAG rối → `heavy`. Reviewer DoD **không** nâng `heavy` chỉ vì implementer đã `heavy`. Hygiene &lt;~15 phút → ưu tiên coordinator **inline** (không spawn).
+**Trần:** cấm tier `heavy` và mọi model vượt band standard (xem [cost-catalog](../../docs/agents/cost-catalog.md)). Heuristic: docs/mechanical / DoD hẹp / planner đơn → `cheap`; còn lại → `standard`. Hygiene &lt;~15 phút → ưu tiên coordinator **inline** (không spawn).
 
 ### Quy tắc spawn (bắt buộc)
 
@@ -82,11 +81,11 @@ Heuristic nhanh (khi planner chưa ghi): docs/mechanical / DoD hẹp / planner �
 2. **Cấm inherit mặc định:** không omit `--model` “cho UI chọn”. Chỉ được inherit sau khi primary + fallback cùng band bị host reject — ghi `launch: inherit (host rejected pins)` + limitation; refresh catalog khi pin stale.
 3. **Không bịa** slug ngoài cost-catalog / output `agent models` mới hơn pin.
 4. **Ưu tiên effort/model thấp khi retry:** +1 bậc effort **hoặc** +1 model (không cùng lúc ở retry đầu); không nhảy frontier.
-5. **Fresh launch để đổi tier:** `--model`/`--effort` **không** kết hợp `--terminal` reuse. Reuse chỉ khi Task kế **cùng hoặc thấp hơn** tier pane; Task `cheap` sau pane `heavy` → `worker-release` rồi launch mới.
+5. **Fresh launch để đổi tier:** `--model`/`--effort` **không** kết hợp `--terminal` reuse. Reuse chỉ khi Task kế **cùng hoặc thấp hơn** tier pane; Task `cheap` sau pane `standard` → `worker-release` rồi launch mới nếu host giữ model đắt hơn pin cheap.
 6. **So sánh receipt:** `launch.requested` vs `launch.effective`; chỉ claim theo **effective**. Reject → fallback cùng tier rồi mới inherit có limitation.
-  7. **Wave D — 1 dòng evidence / wave:** sau wave spawn ghi `cost-wave | run=… | n=… | cheap=… standard=… heavy=… | pinned=… inherit=… | inherit%=… | models=… | source=…` (format [cost-catalog](../../docs/agents/cost-catalog.md) § Wave D). `inherit%` > **20%** → refresh pin, **dừng spawn** đến khi pin ổn. Helper: `node scripts/orca-cost-wave-evidence.mjs` (mặc định **receipt**; `--comments-only` = ước lượng cũ).
+  7. **Wave D — 1 dòng evidence / wave:** sau wave spawn ghi `cost-wave | run=… | n=… | cheap=… standard=… | pinned=… inherit=… | inherit%=… | models=… | source=…` (format [cost-catalog](../../docs/agents/cost-catalog.md) § Wave D). `inherit%` > **20%** → refresh pin, **dừng spawn** đến khi pin ổn. Helper: `node scripts/orca-cost-wave-evidence.mjs` (mặc định **receipt**; `--comments-only` = ước lượng cũ).
   8. **Wave E — preflight bắt buộc:** trước mỗi `worker-start` fresh (không `--terminal` reuse), chạy `node scripts/orca-spawn-model-preflight.mjs -- --agent cursor --model <pin> …`. Exit ≠ 0 → **không** spawn. Comment wt `Cost … · model …` **không** thay `--model` trên argv / receipt.
-  9. **Cap `heavy`:** ≤ **2** Dispatch `heavy` live / Run. **Cap reviewer:** ≤ **3** live `reviewer-dod`+`reviewer-security` / Run (`orca-parallel-workers.mdc`). Parallel-first vẫn cho tier thấp dưới soft cap feature.
+  9. **Cap reviewer:** ≤ **3** live `reviewer-dod`+`reviewer-security` / Run (`orca-parallel-workers.mdc`). Parallel-first vẫn cho tier thấp dưới soft cap feature.
   10. **User đặt tên model** → tôn trọng; vẫn gắn Cost tier gần đúng; không tự thêm `ultra`/`max`/`xhigh`.
   11. **Override Codex** (khi user cho phép): mechanical → Luna-class + `low`; coding → Sol-class + `low`/`medium`; spike/hard → Astra-class + `high` tối đa một bậc effort; không `ultra` mặc định.
 
@@ -96,8 +95,9 @@ Heuristic nhanh (khi planner chưa ghi): docs/mechanical / DoD hẹp / planner �
   ❌ Inherit UI / --model auto làm mặc định
   ❌ Spawn fresh mà bỏ qua orca-spawn-model-preflight (Wave E)
   ❌ Claim pinned chỉ vì comment wt có `model …` khi receipt effective=null
-  ❌ Mọi reviewer = heavy / frontier / >3 reviewer live
-  ❌ Reuse pane heavy cho Task docs/cheap tiếp theo
+  ❌ Mọi reviewer = frontier model / >3 reviewer live
+  ❌ Reuse pane standard cho Task docs/cheap tiếp theo (không hạ pin)
+  ❌ Spawn `--model` vượt standard (thinking-high, sol-high, opus, xhigh/max)
   ❌ ultra / max / xhigh / opus làm mặc định
   ❌ Đổi model + tăng effort cùng lúc ở retry đầu
   ❌ Bịa Cursor model id ngoài cost-catalog / agent models
@@ -106,8 +106,8 @@ Heuristic nhanh (khi planner chưa ghi): docs/mechanical / DoD hẹp / planner �
 
   ✅ Spec có Cost tier → preflight → --model từ cost-catalog → ghi effective
   ✅ Mỗi wave: dòng cost-wave + inherit% từ receipt (Wave D+E)
-  ✅ cheap chiếm phần lớn volume; heavy hiếm và có ROI
-  ✅ FAIL reasoning → +1 effort hoặc +1 model, rồi mới cân nhắc heavy hơn
+  ✅ cheap chiếm phần lớn volume; trần standard — không tier cao hơn
+  ✅ FAIL reasoning → fallback cùng band standard (medium → low → composer) trước inherit
   ❌ Spawn wave rồi quên đo inherit% / không đối chiếu launch.effective
   ```
 
