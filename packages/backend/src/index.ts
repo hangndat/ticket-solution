@@ -67,6 +67,30 @@ export {
   type CodeHmacConfig,
 } from './code-hmac';
 export {
+  readSupportedPepperConfigs,
+  readRoutingFingerprintSecret,
+  readResolveTokenSecret,
+  isSingleCodeResolveGlobalEnabled,
+} from './code-routing-config';
+export {
+  attachCodeRoutingOnInsert,
+  lookupRoutableTarget,
+  buildRedemptionResolveResponse,
+  backfillCodeRoutingFromRedemptionCodes,
+  countAmbiguousRoutingGroups,
+  verifyResolveTokenForIssue,
+  normalizeRedemptionCodeInput,
+  routingFingerprint,
+  routingKeyFromFingerprint,
+  digestAliasesForCode,
+  type RoutableTarget,
+} from './code-routing';
+export {
+  signResolveToken,
+  verifyResolveToken,
+  type ResolveTokenClaims,
+} from './resolve-token';
+export {
   REDEEM_COMMAND,
   APPROVAL_PENDING,
   redeemAndIssueTicket,

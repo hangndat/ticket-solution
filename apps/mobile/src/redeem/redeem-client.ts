@@ -1,3 +1,4 @@
+import { REDEMPTION_RESOLVE_HEADER } from '@ticket/contracts';
 import {
   APPROVAL_PENDING,
   REDEEM_COMMAND,
@@ -215,10 +216,13 @@ export async function redeemCode(input: {
   termsVersion?: string;
   answers?: Record<string, FormAnswerValue>;
   termsAccepted?: boolean;
+  /** Required for global resolve flow — binds issue to resolve token. */
+  resolveToken?: string;
   fetchImpl?: typeof fetch;
 }): Promise<RedeemDecision> {
   const fetchImpl = input.fetchImpl ?? fetch;
   const base = input.apiBase.replace(/\/$/, '');
+  const resolveToken = input.resolveToken?.trim();
   const posted = await readJson(
     fetchImpl,
     `${base}/v1/tenants/${input.tenantId}/events/${input.eventId}/redemptions`,
@@ -229,6 +233,9 @@ export async function redeemCode(input: {
         Authorization: `Bearer ${input.bearer}`,
         'Content-Type': 'application/json',
         'idempotency-key': input.idempotencyKey,
+        ...(resolveToken
+          ? { [REDEMPTION_RESOLVE_HEADER]: resolveToken }
+          : {}),
       },
       body: JSON.stringify(
         buildRedeemBody({
