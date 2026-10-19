@@ -19,6 +19,6 @@ export function isTenantBoundRedeemQuery(scope: RedeemQueryScope): boolean {
   );
 }
 
-export function useGlobalRedeemEntry(scope: RedeemQueryScope): boolean {
+export function globalRedeemEntryEnabled(scope: RedeemQueryScope): boolean {
   return isGlobalRedeemEntryEnabled() && !isTenantBoundRedeemQuery(scope);
 }
