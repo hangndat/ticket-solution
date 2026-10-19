@@ -3,9 +3,10 @@
 **Trạng thái:** đã áp dụng trên `main` (PR #195 + wiring process). Catalog này **bổ sung chuyên môn** khi spawn worker — bắt buộc gắn Role ID vào Task Spec theo `AGENTS.md` / rule Orca. Không thay thế và không được ưu tiên hơn:
 
 - [AGENTS.md](../../AGENTS.md)
-- `.cursor/rules/orca-agent-routing.mdc` (mọi worker dùng `--agent cursor`; **Cost tier** `cheap|standard` — trần standard; pin `--model` từ [cost-catalog.md](./cost-catalog.md) — **cấm inherit UI mặc định**; Wave E: `scripts/orca-spawn-model-preflight.mjs` trước spawn; `cost-wave` từ receipt)
+- `.cursor/rules/orca-agent-routing-core.mdc` (worker/reviewer) · `orca-agent-routing-coordinator.mdc` (leader Read) — Cursor, Cost tier, Wave E/D: [cost-catalog.md](./cost-catalog.md)
 - `.cursor/rules/orca-epic-orchestrator.mdc` · `orca-parallel-workers.mdc` · `orca-idle-worker-fill.mdc` · `orca-coordinator-mailbox.mdc` — **coordinator-only** (`alwaysApply: false`; leader Read khi kích hoạt — Wave B)
-- `.cursor/rules/github-project-tracking.mdc`, `git-workflow.mdc`
+- `.cursor/rules/github-project-tracking.mdc` (+ `github-project-tracking-coordinator.mdc` leader), `git-workflow.mdc`
+- [context-budget.md](./context-budget.md) — đo rules/token
 - `.cursor/rules/uat-headless.mdc` — **Wave G:** không `alwaysApply`; globs UAT/artifacts; Task UAT/milestone → Read nếu cần
 
 **Không** cài toàn bộ [agency-agents](https://github.com/msitarzewski/agency-agents) thành `alwaysApply` rules. Chỉ gắn **một** file `roles/*.md` vào Task Spec khi cần chuyên môn đó.
@@ -33,7 +34,7 @@ docs/agents/
 | `reviewer-dod` | [roles/reviewer-dod.md](./roles/reviewer-dod.md) | DoD / acceptance trên **exact SHA** | Session **≠** implementer |
 | `reviewer-security` | [roles/reviewer-security.md](./roles/reviewer-security.md) | Review bảo mật slice nhạy cảm | Session **≠** implementer; không thay DoD nếu cần cả hai |
 
-Agent runtime: luôn Cursor (`--agent cursor`), trừ khi user override rõ. Role **≠** agent vendor **≠** Cost tier **≠** Persona — xem bảng Cost tier và Persona trong `orca-agent-routing.mdc`.
+Agent runtime: luôn Cursor (`--agent cursor`), trừ khi user override rõ. Role **≠** agent vendor **≠** Cost tier **≠** Persona — xem `orca-agent-routing-core.mdc`.
 
 ## Persona roster (Orca `--display-name`)
 
@@ -50,6 +51,7 @@ Nguồn sự thật cho label UI trên hàng Dispatch. Coordinator **bắt buộ
 | `reviewer-dod` | James | UI label: **`dod`** (không ghi `reviewer-dod`) |
 | `reviewer-security` | James | UI label: **`sec`**; gộp cùng DoD → **`dod+sec`** (Wave C) |
 | Epic planner (không Role catalog) | Dexter | `--display-name "Dexter · planner"` |
+| Wave Leader (điều phối 1 wave + fan-out worker) | *(không Persona roster)* | `--display-name "Leader · wave"` — Spec bắt buộc `Wave leader authority: có`; xem `orca-wave-leader.mdc` |
 
 **Format:** `--display-name "<Persona> · <ui-label>"` — Role ID trong Spec vẫn đầy đủ; **ui-label** ngắn trên Orca:
 
@@ -65,8 +67,9 @@ Nguồn sự thật cho label UI trên hàng Dispatch. Coordinator **bắt buộ
 | `reviewer-security` | `sec` |
 | DoD+security cùng PR/SHA (Wave C) | `dod+sec` |
 | Epic planner | `planner` |
+| Wave Leader | `wave` |
 
-Ví dụ: `Higo · web`, `James · dod`, `James · dod+sec`, `Gonic · be`, `Dexter · planner`.
+Ví dụ: `Higo · web`, `James · dod`, `James · dod+sec`, `Gonic · be`, `Dexter · planner`, `Leader · wave`.
 
 **Chọn persona (pool):**
 
@@ -225,7 +228,7 @@ Khối bổ sung khi giao Task Architect (điền cùng parent/scope/AC trong sp
 - Không cài roster upstream qua Agency Agents app / `install.sh --tool cursor` cho toàn bộ division.
 - Không đổi `--agent` theo role hoặc theo Persona.
 - Không gắn model vượt standard cho Task “quan trọng”; trần tier = `standard`.
-- Không để worker depth > 1; planner/worker không spawn con.
+- Không để worker depth > 1 (Wave Leader depth 1 chỉ spawn ownership/reviewer trong wave — không spawn Leader/planner con).
 - Không bỏ `--display-name` / Persona khỏi spawn mới (xem roster ở trên).
 
 ### 5. Wave tối đa song song (ownership giữ nguyên)
