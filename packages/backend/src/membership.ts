@@ -260,6 +260,31 @@ export async function requireTenantPermission(
   return { membership };
 }
 
+/** Event detail read: any active assignment. Named permissions stay on mutations. */
+export async function requireEventAssignment(
+  tx: Prisma.TransactionClient,
+  input: { tenantId: string; userId: string; eventId: string },
+): Promise<{ membership: MembershipRecord; assignment: EventAssignmentRecord }> {
+  const membership = await lockActiveMembershipForShare(
+    tx,
+    input.tenantId,
+    input.userId,
+  );
+  const assignment = await lockActiveEventAssignmentForShare(
+    tx,
+    input.tenantId,
+    input.eventId,
+    membership.membershipId,
+  );
+  if (assignment.permissions.length === 0) {
+    throw new AuthzError(
+      AUTHZ_ERROR_CODES.PERMISSION_DENIED,
+      'Missing event permission',
+    );
+  }
+  return { membership, assignment };
+}
+
 /** Test-only helper. Production must use role-map invite/accept — never expose arbitrary permissions via API. */
 export async function grantMembership(
   tx: Prisma.TransactionClient,
