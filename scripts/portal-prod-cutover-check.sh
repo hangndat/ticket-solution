@@ -30,11 +30,15 @@ else
   pass "DNS portal.vemoki.com A=$ips"
 fi
 
-# --- TLS SAN ---
-san="$(
+# --- TLS SAN (LibreSSL/macOS lacks `x509 -ext`; fall back to -text) ---
+cert_pem="$(
   echo | openssl s_client -connect portal.vemoki.com:443 -servername portal.vemoki.com 2>/dev/null \
-    | openssl x509 -noout -ext subjectAltName 2>/dev/null || true
+    | openssl x509 2>/dev/null || true
 )"
+san="$(printf '%s\n' "$cert_pem" | openssl x509 -noout -ext subjectAltName 2>/dev/null || true)"
+if [[ -z "$san" ]]; then
+  san="$(printf '%s\n' "$cert_pem" | openssl x509 -noout -text 2>/dev/null || true)"
+fi
 if echo "$san" | grep -q 'DNS:portal.vemoki.com'; then
   pass "TLS SAN includes portal.vemoki.com"
 else
