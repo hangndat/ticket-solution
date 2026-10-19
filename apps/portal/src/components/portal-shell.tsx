@@ -28,6 +28,7 @@ import {
 import { PortalDualRunBanner } from './dual-run-banner';
 import { GateDeeplinkButton } from './gate-deeplink';
 import { SurfaceState } from './surface-state';
+import { usePortalLocale } from '../i18n';
 
 const { Header, Sider, Content } = Layout;
 
@@ -42,6 +43,7 @@ function eventFromPath(pathname: string): string | null {
 }
 
 export function PortalShell({ children }: { children: ReactNode }) {
+  const { t, locale, setLocale } = usePortalLocale();
   const pathname = usePathname();
   const router = useRouter();
   const { token } = theme.useToken();
@@ -87,7 +89,7 @@ export function PortalShell({ children }: { children: ReactNode }) {
     (tenants.length === 1 ? tenants[0]!.tenantId : null);
 
   const activeTenant =
-    tenants.find((t) => t.tenantId === resolvedTenantId) ?? null;
+    tenants.find((tenant) => tenant.tenantId === resolvedTenantId) ?? null;
   const tenantEvents = useMemo(
     () => events.filter((e) => e.tenantId === resolvedTenantId),
     [events, resolvedTenantId],
@@ -97,8 +99,8 @@ export function PortalShell({ children }: { children: ReactNode }) {
 
   const orgMenu = useMemo(() => {
     if (!resolvedTenantId || !activeTenant) return [];
-    return buildOrgMenuItems(resolvedTenantId, activeTenant);
-  }, [resolvedTenantId, activeTenant]);
+    return buildOrgMenuItems(resolvedTenantId, activeTenant, t);
+  }, [resolvedTenantId, activeTenant, t]);
 
   const activeEventId = activeEvent?.eventId ?? null;
   const activeEventPermKey = activeEvent?.permissions.join('\0') ?? '';
@@ -107,8 +109,8 @@ export function PortalShell({ children }: { children: ReactNode }) {
     const permissions = activeEventPermKey
       ? activeEventPermKey.split('\0')
       : [];
-    return buildEventMenuItems(resolvedTenantId, activeEventId, permissions);
-  }, [resolvedTenantId, activeEventId, activeEventPermKey]);
+    return buildEventMenuItems(resolvedTenantId, activeEventId, permissions, t);
+  }, [resolvedTenantId, activeEventId, activeEventPermKey, t]);
 
   const siderItems = useMemo(() => {
     const items = orgMenu.map((item) => ({
@@ -142,8 +144,8 @@ export function PortalShell({ children }: { children: ReactNode }) {
     return (
       <SurfaceState
         kind="permission-denied"
-        title="Cần đăng nhập"
-        description="Đăng nhập nhân sự để mở portal quản trị."
+        title={t('shell.auth.requiredTitle')}
+        description={t('shell.auth.staffDescription')}
         onRetry={() => {
           window.location.assign('/api/auth/login?return=/');
         }}
@@ -155,21 +157,48 @@ export function PortalShell({ children }: { children: ReactNode }) {
     return (
       <SurfaceState
         kind="unknown"
-        description={shell.message}
+        description={t(shell.messageKey)}
         onRetry={reload}
       />
     );
   }
 
   const accountMenu = {
+    selectable: true,
+    selectedKeys: [`locale-${locale}`],
     items: [
       {
         key: 'security',
-        label: <Link href="/account/security">Bảo mật phiên</Link>,
+        label: <Link href="/account/security">{t('shell.account.security')}</Link>,
+      },
+      {
+        // PD PS3 / AC-C1: Language submenu under account ▾ (VI | EN).
+        key: 'language',
+        label: t('locale.label'),
+        children: [
+          {
+            key: 'locale-vi',
+            label: (
+              <span data-testid="portal-locale-vi">
+                {`${locale === 'vi' ? '✓ ' : ''}${t('locale.vi')}`}
+              </span>
+            ),
+            onClick: () => setLocale('vi'),
+          },
+          {
+            key: 'locale-en',
+            label: (
+              <span data-testid="portal-locale-en">
+                {`${locale === 'en' ? '✓ ' : ''}${t('locale.en')}`}
+              </span>
+            ),
+            onClick: () => setLocale('en'),
+          },
+        ],
       },
       {
         key: 'logout',
-        label: 'Đăng xuất portal',
+        label: t('shell.account.logout'),
         onClick: () => {
           window.location.assign('/api/auth/logout');
         },
@@ -179,9 +208,7 @@ export function PortalShell({ children }: { children: ReactNode }) {
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
-      <a href="#portal-main" className="portal-skip-link">
-        Bỏ qua điều hướng
-      </a>
+      <a href="#portal-main" className="portal-skip-link">{t('shell.skipNav')}</a>
       <Header
         style={{
           display: 'flex',
@@ -207,15 +234,15 @@ export function PortalShell({ children }: { children: ReactNode }) {
 
         <Space wrap size="middle" style={{ flex: 1 }}>
           <Select
-            aria-label="Tổ chức"
+            aria-label={t('shell.tenant.label')}
             placeholder={
-              tenants.length === 0 ? 'Chưa có tổ chức' : 'Chọn tổ chức'
+              tenants.length === 0 ? t('shell.tenant.empty') : t('shell.tenant.placeholder')
             }
             style={{ minWidth: 200 }}
             value={resolvedTenantId ?? undefined}
-            options={tenants.map((t) => ({
-              value: t.tenantId,
-              label: `${t.name} (${t.slug})`,
+            options={tenants.map((tenant) => ({
+              value: tenant.tenantId,
+              label: `${tenant.name} (${tenant.slug})`,
             }))}
             onChange={(value) => {
               setSelectedTenantId(value);
@@ -226,13 +253,13 @@ export function PortalShell({ children }: { children: ReactNode }) {
             data-testid="tenant-switcher"
           />
           <Select
-            aria-label="Sự kiện"
+            aria-label={t('nav.org.events')}
             placeholder={
               !resolvedTenantId
-                ? 'Chọn tổ chức trước'
+                ? t('shell.event.selectTenantFirst')
                 : tenantEvents.length === 0
-                  ? 'Chưa có sự kiện'
-                  : 'Chọn sự kiện'
+                  ? t('shell.event.empty')
+                  : t('shell.event.placeholder')
             }
             style={{ minWidth: 200 }}
             value={effectiveEventId ?? undefined}
@@ -258,9 +285,7 @@ export function PortalShell({ children }: { children: ReactNode }) {
             <GateDeeplinkButton href={gateDeeplinkUrl()} />
           ) : null}
           <Dropdown menu={accountMenu} trigger={['click']}>
-            <Button type="text" data-testid="account-menu">
-              Tài khoản ▾
-            </Button>
+            <Button type="text" data-testid="account-menu">{t('shell.account.menu')}</Button>
           </Dropdown>
         </Space>
       </Header>

@@ -10,6 +10,8 @@ import type {
   PortalPlatformAuditPage,
 } from '@ticket/contracts';
 import { asRecord, isNonEmptyString, apiErrorFrom } from './contract-shape';
+import { t } from '../i18n/t';
+import { DEFAULT_PORTAL_LOCALE, type PortalLocale } from '../i18n/locale';
 
 const AUDIT_FORBIDDEN = [
   'reason',
@@ -27,7 +29,7 @@ const AUDIT_FORBIDDEN = [
 ] as const;
 
 export const AUDIT_UNKNOWN =
-  'Không đọc được nhật ký. Không coi danh sách đã tải thành công.';
+  t(DEFAULT_PORTAL_LOCALE, 'ops.h_1plfzsb');
 
 export type AuditListView =
   | { kind: 'page'; page: PortalAuditPage }
@@ -125,14 +127,15 @@ export function interpretAuditPage(
   status: number,
   json: unknown,
   networkError: boolean,
+  locale: PortalLocale = DEFAULT_PORTAL_LOCALE,
 ): AuditListView {
   if (networkError || status === 0 || status >= 500) {
-    return { kind: 'unknown', message: AUDIT_UNKNOWN };
+    return { kind: 'unknown', message: t(locale, 'ops.h_1plfzsb') };
   }
   if (status === 200) {
     const page = parseCursorPage(json, parseAuditEntry);
     if (page) return { kind: 'page', page };
-    return { kind: 'unknown', message: AUDIT_UNKNOWN };
+    return { kind: 'unknown', message: t(locale, 'ops.h_1plfzsb') };
   }
   if (status === 401 || status === 403) {
     const err = apiErrorFrom(asRecord(json));
@@ -141,26 +144,27 @@ export function interpretAuditPage(
       code: err?.code ?? 'FORBIDDEN',
       message:
         err?.message ??
-        'Cần report.read + phân công sự kiện — không suy từ tên role.',
+        t(locale, 'ops.audit.needReportReadAssignment'),
     };
   }
   const err = apiErrorFrom(asRecord(json));
   if (err) return { kind: 'rejected', ...err };
-  return { kind: 'unknown', message: AUDIT_UNKNOWN };
+  return { kind: 'unknown', message: t(locale, 'ops.h_1plfzsb') };
 }
 
 export function interpretPlatformAuditPage(
   status: number,
   json: unknown,
   networkError: boolean,
+  locale: PortalLocale = DEFAULT_PORTAL_LOCALE,
 ): PlatformAuditListView {
   if (networkError || status === 0 || status >= 500) {
-    return { kind: 'unknown', message: AUDIT_UNKNOWN };
+    return { kind: 'unknown', message: t(locale, 'ops.h_1plfzsb') };
   }
   if (status === 200) {
     const page = parseCursorPage(json, parsePlatformAuditEntry);
     if (page) return { kind: 'page', page };
-    return { kind: 'unknown', message: AUDIT_UNKNOWN };
+    return { kind: 'unknown', message: t(locale, 'ops.h_1plfzsb') };
   }
   if (status === 401 || status === 403) {
     const err = apiErrorFrom(asRecord(json));
@@ -169,12 +173,12 @@ export function interpretPlatformAuditPage(
       code: err?.code ?? 'FORBIDDEN',
       message:
         err?.message ??
-        'Chỉ Platform Operator (MFA / audience platform) — không dùng token nhân sự.',
+        t(locale, 'platform.staffTokenRejected'),
     };
   }
   const err = apiErrorFrom(asRecord(json));
   if (err) return { kind: 'rejected', ...err };
-  return { kind: 'unknown', message: AUDIT_UNKNOWN };
+  return { kind: 'unknown', message: t(locale, 'ops.h_1plfzsb') };
 }
 
 export function buildAuditQuery(input: {

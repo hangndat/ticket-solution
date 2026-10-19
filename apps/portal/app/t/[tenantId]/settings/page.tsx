@@ -11,6 +11,7 @@ import {
 import { bffBranding } from '../../../../src/prep/bff-urls';
 import { useTenantAccess } from '../../../../src/prep/use-event-access';
 import { SurfaceState } from '../../../../src/components/surface-state';
+import { usePortalLocale } from '../../../../src/i18n';
 
 type Branding = {
   displayName: string;
@@ -20,6 +21,7 @@ type Branding = {
 };
 
 export default function OrgSettingsPage() {
+  const { t } = usePortalLocale();
   const params = useParams<{ tenantId: string }>();
   const tenantId = params.tenantId;
   const access = useTenantAccess(tenantId);
@@ -45,12 +47,12 @@ export default function OrgSettingsPage() {
     const res = await portalGet(bffBranding(tenantId));
     if (res.networkError || res.timedOut || res.status >= 500) {
       setKind('unknown');
-      setMessage('Chưa rõ kết quả tải branding.');
+      setMessage(t('settings.h_k2xz80'));
       return;
     }
     if (res.status !== 200 || !res.json || typeof res.json !== 'object') {
       setKind('error');
-      setMessage(apiErrorMessage(res.json, `HTTP ${res.status}`));
+      setMessage(apiErrorMessage(res.json, t('common.httpStatus', { status: res.status })));
       return;
     }
     const b = res.json as Branding;
@@ -61,7 +63,7 @@ export default function OrgSettingsPage() {
       secondaryColor: b.secondaryColor ?? undefined,
     });
     setKind('ready');
-  }, [tenantId, form]);
+  }, [tenantId, form, t]);
 
   useEffect(() => {
     if (access.kind !== 'ready' || suspended) return;
@@ -79,7 +81,7 @@ export default function OrgSettingsPage() {
     return (
       <SurfaceState
         kind="error"
-        description={access.message}
+        description={access.messageKey ? t(access.messageKey) : undefined}
         onRetry={() => window.location.reload()}
       />
     );
@@ -88,7 +90,7 @@ export default function OrgSettingsPage() {
     return (
       <SurfaceState
         kind="permission-denied"
-        description="Thiếu quyền tổ chức."
+        description={t('events.h_ekk31m')}
         onRetry={() => {
           window.location.href = `/t/${tenantId}`;
         }}
@@ -99,7 +101,7 @@ export default function OrgSettingsPage() {
     return (
       <SurfaceState
         kind="permission-denied"
-        description="Thiếu quyền cấu hình tổ chức (tenant.profile)."
+        description={t('settings.h_ch34ez')}
         onRetry={() => {
           window.location.href = `/t/${tenantId}`;
         }}
@@ -111,8 +113,8 @@ export default function OrgSettingsPage() {
       <Alert
         type="error"
         showIcon
-        message="Tổ chức bị tạm ngưng"
-        description="Mọi thay đổi branding bị chặn (fail-closed)."
+        message={t('settings.h_6boshw')}
+        description={t('settings.h_i7x4fp')}
       />
     );
   }
@@ -134,15 +136,15 @@ export default function OrgSettingsPage() {
         'PUT',
       );
       if (res.networkError || res.timedOut || res.status >= 500) {
-        setNotice('Chưa rõ kết quả lưu branding — kiểm tra lại.');
+        setNotice(t('settings.h_1rjs2jo'));
         return;
       }
       if (res.status === 200) {
-        setNotice('Đã cập nhật branding tổ chức.');
+        setNotice(t('settings.h_17g3cj6'));
         void load();
         return;
       }
-      setNotice(apiErrorMessage(res.json, `Không lưu được (HTTP ${res.status}).`));
+      setNotice(apiErrorMessage(res.json, t('settings.saveFailedHttp', { status: res.status })));
     } finally {
       setBusy(false);
     }
@@ -150,20 +152,16 @@ export default function OrgSettingsPage() {
 
   return (
     <Space direction="vertical" size="large" style={{ width: '100%' }}>
-      <Typography.Title level={3} style={{ margin: 0 }}>
-        Cấu hình tổ chức
-      </Typography.Title>
+      <Typography.Title level={3} style={{ margin: 0 }}>{t('settings.orgTitle')}</Typography.Title>
       {kind === 'loading' ? <SurfaceState kind="loading" /> : null}
       {kind === 'unknown' ? (
         <Alert
           type="warning"
           showIcon
-          message="Chưa rõ kết quả"
+          message={t('surface.unknown.title')}
           description={message}
           action={
-            <Button size="small" onClick={() => void load()}>
-              Kiểm tra lại
-            </Button>
+            <Button size="small" onClick={() => void load()}>{t('surface.action.recheck')}</Button>
           }
         />
       ) : null}
@@ -179,29 +177,27 @@ export default function OrgSettingsPage() {
           <Form form={form} layout="vertical" style={{ maxWidth: 480 }}>
             <Form.Item
               name="displayName"
-              label="Tên hiển thị"
+              label={t('settings.h_448wq6')}
               rules={[{ required: true }]}
             >
               <Input />
             </Form.Item>
             <Form.Item
               name="primaryColor"
-              label="Màu chính"
+              label={t('config.h_1fbsj7r')}
               rules={[{ required: true }]}
             >
               <Input placeholder="#9b3a18" />
             </Form.Item>
-            <Form.Item name="secondaryColor" label="Màu phụ">
+            <Form.Item name="secondaryColor" label={t('settings.h_me7m5c')}>
               <Input />
             </Form.Item>
             <Typography.Text type="secondary">
-              Phiên bản hiện tại: {branding?.version ?? '—'}
+              {t('settings.currentVersion')}{branding?.version ?? '—'}
             </Typography.Text>
           </Form>
           {notice ? <Alert type="info" showIcon message={notice} /> : null}
-          <Button type="primary" loading={busy} onClick={() => void save()}>
-            Lưu
-          </Button>
+          <Button type="primary" loading={busy} onClick={() => void save()}>{t('setup.luu')}</Button>
         </>
       ) : null}
     </Space>

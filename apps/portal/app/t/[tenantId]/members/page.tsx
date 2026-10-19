@@ -33,6 +33,7 @@ import {
 } from '../../../../src/prep/bff-urls';
 import { useTenantAccess } from '../../../../src/prep/use-event-access';
 import { SurfaceState } from '../../../../src/components/surface-state';
+import { usePortalLocale } from '../../../../src/i18n';
 
 const ROLES: MembershipRole[] = [
   'Owner',
@@ -49,6 +50,7 @@ function asItems<T>(json: unknown): T[] {
 }
 
 export default function MembersPage() {
+  const { t } = usePortalLocale();
   const params = useParams<{ tenantId: string }>();
   const tenantId = params.tenantId;
   const access = useTenantAccess(tenantId);
@@ -84,24 +86,24 @@ export default function MembersPage() {
     ) {
       setLoadKind('unknown');
       setMessage(
-        'Chưa rõ kết quả tải thành viên/lời mời. Không giả định danh sách trống.',
+        t('members.h_oiatvx'),
       );
       return;
     }
     if (m.status === 403 || i.status === 403) {
       setLoadKind('error');
-      setMessage('Thiếu quyền members.manage.');
+      setMessage(t('members.h_5ptlts'));
       return;
     }
     if (m.status !== 200 || i.status !== 200) {
       setLoadKind('error');
-      setMessage(`Không tải được danh sách (members ${m.status}, invites ${i.status}).`);
+      setMessage(t('members.loadFailedStatus', { members: m.status, invites: i.status }));
       return;
     }
     setMembers(asItems<PortalMemberSummary>(m.json));
     setInvites(asItems<PortalInviteSummary>(i.json));
     setLoadKind('ready');
-  }, [tenantId]);
+  }, [tenantId, t]);
 
   useEffect(() => {
     if (access.kind !== 'ready') return;
@@ -119,7 +121,7 @@ export default function MembersPage() {
     return (
       <SurfaceState
         kind="error"
-        description={access.message}
+        description={access.messageKey ? t(access.messageKey) : undefined}
         onRetry={() => window.location.reload()}
       />
     );
@@ -128,7 +130,7 @@ export default function MembersPage() {
     return (
       <SurfaceState
         kind="permission-denied"
-        description="Thiếu quyền tổ chức."
+        description={t('events.h_ekk31m')}
         onRetry={() => {
           window.location.href = `/t/${tenantId}`;
         }}
@@ -139,7 +141,7 @@ export default function MembersPage() {
     return (
       <SurfaceState
         kind="permission-denied"
-        description="Thiếu quyền quản lý thành viên (members.manage)."
+        description={t('members.h_d390z8')}
         onRetry={() => {
           window.location.href = `/t/${tenantId}`;
         }}
@@ -167,21 +169,21 @@ export default function MembersPage() {
       const res = await portalMutate(bffInvites(tenantId), body);
       if (res.networkError || res.timedOut || res.status >= 500) {
         setNotice(
-          'Chưa rõ kết quả gửi lời mời. Không coi là đã gửi — kiểm tra lại.',
+          t('members.h_aa8wpg'),
         );
         return;
       }
       if (res.status === 200 || res.status === 201) {
-        setNotice('Đã tạo lời mời (ACCEPTED ≠ đã giao email).');
+        setNotice(t('members.h_xg2gwp'));
         form.resetFields(['email']);
         void reload();
         return;
       }
       setNotice(
-        `${apiErrorCode(res.json) ?? res.status}: ${apiErrorMessage(
+        t('ops.export.apiRejected', { code: apiErrorCode(res.json) ?? res.status, message: apiErrorMessage(
           res.json,
-          'Không gửi được lời mời.',
-        )}`,
+          t('members.h_1qjqtw'),
+        ) }),
       );
     } finally {
       setBusy(false);
@@ -190,25 +192,25 @@ export default function MembersPage() {
 
   function confirmRevokeMember(membershipId: string) {
     Modal.confirm({
-      title: 'Thu hồi thành viên?',
+      title: t('members.h_1uecsno'),
       content:
-        'Yêu cầu tiếp theo của thành viên sẽ bị chặn. Không khẳng định đã xóa phiên trên mọi thiết bị.',
-      okText: 'Thu hồi',
+        t('members.h_ltgqwp'),
+      okText: t('members.h_1w0agno'),
       okButtonProps: { danger: true },
-      cancelText: 'Huỷ',
+      cancelText: t('config.huy'),
       onOk: async () => {
         const res = await portalMutate(bffRevokeMember(tenantId, membershipId), {
-          reason: 'Owner revoke từ portal staff directory',
+          reason: t('members.h_tzdfji'),
           idempotencyKey: crypto.randomUUID(),
         });
         if (res.status >= 200 && res.status < 300) {
-          setNotice('Đã thu hồi thành viên.');
+          setNotice(t('members.h_o8fp08'));
           void reload();
         } else if (res.networkError || res.status >= 500) {
-          setNotice('Chưa rõ kết quả thu hồi — kiểm tra lại.');
+          setNotice(t('members.h_suvvlr'));
         } else {
           setNotice(
-            apiErrorMessage(res.json, 'Không thu hồi được thành viên.'),
+            apiErrorMessage(res.json, t('members.h_7tkx6u')),
           );
         }
       },
@@ -217,20 +219,20 @@ export default function MembersPage() {
 
   function confirmRevokeInvite(inviteId: string) {
     Modal.confirm({
-      title: 'Thu hồi lời mời?',
-      okText: 'Thu hồi',
+      title: t('members.h_aeura8'),
+      okText: t('members.h_1w0agno'),
       okButtonProps: { danger: true },
-      cancelText: 'Huỷ',
+      cancelText: t('config.huy'),
       onOk: async () => {
         const res = await portalMutate(bffRevokeInvite(tenantId, inviteId), {
-          reason: 'Revoke invite từ portal',
+          reason: t('members.h_1p47lt5'),
           idempotencyKey: crypto.randomUUID(),
         });
         if (res.status >= 200 && res.status < 300) {
-          setNotice('Đã thu hồi lời mời.');
+          setNotice(t('members.h_2cjh4e'));
           void reload();
         } else {
-          setNotice(apiErrorMessage(res.json, 'Không thu hồi được lời mời.'));
+          setNotice(apiErrorMessage(res.json, t('members.h_1tmqlzc')));
         }
       },
     });
@@ -238,13 +240,8 @@ export default function MembersPage() {
 
   return (
     <Space direction="vertical" size="large" style={{ width: '100%' }}>
-      <Typography.Title level={3} style={{ margin: 0 }}>
-        Thành viên & lời mời
-      </Typography.Title>
-      <Typography.Paragraph type="secondary">
-        Email được che (masked). Vai trò theo allowlist máy chủ — không gửi quyền
-        tùy ý. Gán sự kiện: chọn từ danh sách đã khám phá, tránh dán UUID tay.
-      </Typography.Paragraph>
+      <Typography.Title level={3} style={{ margin: 0 }}>{t('members.h_i0adgn')}</Typography.Title>
+      <Typography.Paragraph type="secondary">{t('members.inviteEventsHint')}</Typography.Paragraph>
 
       <Form
         form={form}
@@ -254,7 +251,7 @@ export default function MembersPage() {
       >
         <Form.Item
           name="email"
-          rules={[{ required: true, type: 'email', message: 'Email hợp lệ' }]}
+          rules={[{ required: true, type: 'email', message: t('members.h_1rjw0n9') }]}
         >
           <Input placeholder="email@example.com" style={{ width: 220 }} />
         </Form.Item>
@@ -264,7 +261,7 @@ export default function MembersPage() {
         <Form.Item name="eventId">
           <Select
             allowClear
-            placeholder="Gán sự kiện (tuỳ chọn)"
+            placeholder={t('members.h_1fi9vwv')}
             style={{ width: 220 }}
             options={access.events.map((e) => ({
               value: e.eventId,
@@ -281,9 +278,7 @@ export default function MembersPage() {
             }))}
           />
         </Form.Item>
-        <Button type="primary" loading={busy} onClick={() => void invite()}>
-          Gửi lời mời
-        </Button>
+        <Button type="primary" loading={busy} onClick={() => void invite()}>{t('members.h_47dn03')}</Button>
       </Form>
 
       {notice ? <Alert type="info" showIcon message={notice} /> : null}
@@ -293,12 +288,10 @@ export default function MembersPage() {
         <Alert
           type="warning"
           showIcon
-          message="Chưa rõ kết quả"
+          message={t('surface.unknown.title')}
           description={message}
           action={
-            <Button size="small" onClick={() => void reload()}>
-              Kiểm tra lại
-            </Button>
+            <Button size="small" onClick={() => void reload()}>{t('surface.action.recheck')}</Button>
           }
         />
       ) : null}
@@ -314,7 +307,7 @@ export default function MembersPage() {
           items={[
             {
               key: 'members',
-              label: `Thành viên (${members.length})`,
+              label: t('members.membersCount', { count: members.length }),
               children: (
                 <Table
                   rowKey="membershipId"
@@ -322,14 +315,14 @@ export default function MembersPage() {
                   pagination={false}
                   columns={[
                     { title: 'Email', dataIndex: 'emailMasked' },
-                    { title: 'Vai trò', dataIndex: 'role' },
+                    { title: t('members.h_1mkpx3r'), dataIndex: 'role' },
                     {
-                      title: 'Trạng thái',
+                      title: t('ops.export.statusButton'),
                       render: (_: unknown, row: PortalMemberSummary) =>
                         row.revokedAt ? 'REVOKED' : 'ACTIVE',
                     },
                     {
-                      title: 'Sự kiện gán',
+                      title: t('members.h_r0iic4'),
                       render: (_: unknown, row: PortalMemberSummary) =>
                         row.eventAssignments.length
                           ? row.eventAssignments
@@ -350,9 +343,7 @@ export default function MembersPage() {
                             danger
                             size="small"
                             onClick={() => confirmRevokeMember(row.membershipId)}
-                          >
-                            Thu hồi
-                          </Button>
+                          >{t('members.h_1w0agno')}</Button>
                         ),
                     },
                   ]}
@@ -361,7 +352,7 @@ export default function MembersPage() {
             },
             {
               key: 'invites',
-              label: `Lời mời (${invites.length})`,
+              label: t('members.invitesCount', { count: invites.length }),
               children: (
                 <Table
                   rowKey="inviteId"
@@ -369,10 +360,10 @@ export default function MembersPage() {
                   pagination={false}
                   columns={[
                     { title: 'Email', dataIndex: 'emailMasked' },
-                    { title: 'Vai trò', dataIndex: 'role' },
-                    { title: 'Trạng thái', dataIndex: 'state' },
+                    { title: t('members.h_1mkpx3r'), dataIndex: 'role' },
+                    { title: t('ops.export.statusButton'), dataIndex: 'state' },
                     { title: 'Giao', dataIndex: 'deliveryState' },
-                    { title: 'Hết hạn', dataIndex: 'expiresAt' },
+                    { title: t('members.h_ov3797'), dataIndex: 'expiresAt' },
                     {
                       title: '',
                       render: (_: unknown, row: PortalInviteSummary) =>
@@ -381,9 +372,7 @@ export default function MembersPage() {
                             danger
                             size="small"
                             onClick={() => confirmRevokeInvite(row.inviteId)}
-                          >
-                            Thu hồi
-                          </Button>
+                          >{t('members.h_1w0agno')}</Button>
                         ) : null,
                     },
                   ]}

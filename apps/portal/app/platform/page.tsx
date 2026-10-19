@@ -42,15 +42,17 @@ import {
   type PlatformRevokeView,
   type PlatformTenantsView,
 } from '../../src/ops/platform-zone';
+import { usePortalLocale, type MessageKey } from '../../src/i18n';
 
 function PlatformInner() {
+  const { t, locale } = usePortalLocale();
   const params = useSearchParams();
   const error = params.get('error');
   const [kind, setKind] = useState<
     'loading' | 'ready' | 'denied' | 'error' | 'unsigned'
   >('loading');
   const [assurance, setAssurance] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | undefined>();
+  const [messageKey, setMessageKey] = useState<MessageKey | undefined>();
 
   const [tenantsBusy, setTenantsBusy] = useState(false);
   const [tenantsView, setTenantsView] = useState<PlatformTenantsView | null>(
@@ -90,7 +92,7 @@ function PlatformInner() {
     void loadShellContext().then((shell) => {
       if (shell.status === 'error') {
         setKind('error');
-        setMessage(shell.message);
+        setMessageKey(shell.messageKey);
         return;
       }
       if (shell.status !== 'ready') {
@@ -114,7 +116,7 @@ function PlatformInner() {
       const next = interpretPlatformTenantsPage(
         res.status,
         res.json,
-        res.networkError || res.timedOut,
+        res.networkError || res.timedOut, locale,
       );
       setTenantsView(next);
       if (next.kind === 'page') {
@@ -128,7 +130,7 @@ function PlatformInner() {
       }
       setTenantsBusy(false);
     },
-    [],
+    [locale],
   );
 
   const loadAudit = useCallback(
@@ -146,7 +148,7 @@ function PlatformInner() {
       const next = interpretPlatformAuditPage(
         res.status,
         res.json,
-        res.networkError || res.timedOut,
+        res.networkError || res.timedOut, locale,
       );
       setAuditView(next);
       if (next.kind === 'page') {
@@ -160,7 +162,7 @@ function PlatformInner() {
       }
       setAuditBusy(false);
     },
-    [action, filterTenantId, from, to],
+    [action, filterTenantId, from, to, locale],
   );
 
   const loadHealth = useCallback(async (tenantId: string) => {
@@ -172,7 +174,7 @@ function PlatformInner() {
       setHealthView({
         kind: 'rejected',
         code: 'INVALID_INPUT',
-        message: 'Chọn tenant hoặc nhập tenantId (UUID).',
+        message: t('platform.pickTenant'),
       });
       setHealthBusy(false);
       return;
@@ -181,12 +183,12 @@ function PlatformInner() {
     const next = interpretPlatformTenantHealth(
       res.status,
       res.json,
-      res.networkError || res.timedOut,
+      res.networkError || res.timedOut, locale,
     );
     setHealthView(next);
     setHealth(next.kind === 'ok' ? next.health : null);
     setHealthBusy(false);
-  }, []);
+  }, [locale, t]);
 
   const submitRevoke = useCallback(async () => {
     const grantId = revokeGrantId.trim();
@@ -197,7 +199,7 @@ function PlatformInner() {
       setRevokeView({
         kind: 'rejected',
         code: 'INVALID_INPUT',
-        message: 'grantId (UUID) và reason bắt buộc.',
+        message: t('platform.h_1bkeue4'),
       });
       setRevokeBusy(false);
       return;
@@ -208,11 +210,11 @@ function PlatformInner() {
     const next = interpretSupportGrantRevoke(
       res.status,
       res.json,
-      res.networkError || res.timedOut,
+      res.networkError || res.timedOut, locale,
     );
     setRevokeView(next);
     setRevokeBusy(false);
-  }, [revokeGrantId, revokeReason]);
+  }, [revokeGrantId, revokeReason, locale, t]);
 
   useEffect(() => {
     if (kind !== 'ready') return;
@@ -231,12 +233,10 @@ function PlatformInner() {
     return (
       <Result
         status="error"
-        title="Đăng nhập Platform thất bại"
+        title={t('platform.h_1rlo1g2')}
         subTitle={error}
         extra={
-          <Button type="primary" href="/api/auth/platform/login">
-            Thử lại Platform login
-          </Button>
+          <Button type="primary" href="/api/auth/platform/login">{t('platform.h_hcpyf4')}</Button>
         }
       />
     );
@@ -247,7 +247,7 @@ function PlatformInner() {
     return (
       <SurfaceState
         kind="unknown"
-        description={message}
+        description={messageKey ? t(messageKey) : undefined}
         onRetry={() => window.location.reload()}
       />
     );
@@ -255,14 +255,9 @@ function PlatformInner() {
   if (kind === 'unsigned') {
     return (
       <Card>
-        <Typography.Title level={3}>Platform Operator</Typography.Title>
-        <Typography.Paragraph>
-          Vùng Platform dùng client/audience/cookie riêng (`platform_oidc_*`) —
-          không dùng token nhân sự / Owner.
-        </Typography.Paragraph>
-        <Button type="primary" href="/api/auth/platform/login">
-          Đăng nhập Platform
-        </Button>
+        <Typography.Title level={3}>{t('platform.h_3nfdgm')}</Typography.Title>
+        <Typography.Paragraph>{t('platform.h_9c63t5')}</Typography.Paragraph>
+        <Button type="primary" href="/api/auth/platform/login">{t('platform.h_1sfcojp')}</Button>
       </Card>
     );
   }
@@ -270,8 +265,8 @@ function PlatformInner() {
     return (
       <SurfaceState
         kind="permission-denied"
-        title="Không phải Platform Operator"
-        description="Tài khoản staff tenant (kể cả Owner) không thấy dữ liệu Platform. Cần phiên Operator MFA riêng."
+        title={t('platform.h_1xkaqi6')}
+        description={t('platform.h_rvf1a3')}
         onRetry={() => {
           window.location.href = '/';
         }}
@@ -288,15 +283,13 @@ function PlatformInner() {
         <Typography.Title level={3} style={{ margin: 0 }}>
           Platform
         </Typography.Title>
-        <Button danger href="/api/auth/platform/logout">
-          Đăng xuất Platform
-        </Button>
+        <Button danger href="/api/auth/platform/logout">{t('account.h_21w6fq')}</Button>
       </Space>
       <Alert
         type="info"
         showIcon
-        message={`PLATFORM-PORTAL-ZONE · Operator · assurance=${assurance}`}
-        description="Client/cookie/audience tách khỏi staff. Owner ≠ Operator. Health = counter sanitize (H-P2) — không SLA / payload / Redis-up giả."
+        message={t('platform.zoneLabel', { assurance })}
+        description={t('platform.h_ed3cdu')}
       />
       <Tabs
         items={[
@@ -321,7 +314,7 @@ function PlatformInner() {
                   dataSource={tenants}
                   pagination={false}
                   data-testid="platform-tenants-table"
-                  locale={{ emptyText: 'Chưa có tenant (hoặc list lỗi).' }}
+                  locale={{ emptyText: t('platform.h_1vlqd43') }}
                   columns={[
                     { title: 'Slug', dataIndex: 'slug', width: 140 },
                     { title: 'Name', dataIndex: 'name', ellipsis: true },
@@ -341,9 +334,7 @@ function PlatformInner() {
                           <Button
                             size="small"
                             onClick={() => setFilterTenantId(row.tenantId)}
-                          >
-                            Lọc audit
-                          </Button>
+                          >{t('platform.h_1sthjos')}</Button>
                           <Button
                             size="small"
                             type="primary"
@@ -364,9 +355,7 @@ function PlatformInner() {
                   <Button
                     loading={tenantsBusy}
                     onClick={() => void loadTenants(tenantsCursor, true)}
-                  >
-                    Trang tiếp
-                  </Button>
+                  >{t('platform.h_4cj11z')}</Button>
                 ) : null}
               </Space>
             ),
@@ -380,11 +369,11 @@ function PlatformInner() {
                   type="info"
                   showIcon
                   message="H-P2"
-                  description="Chỉ counter notifications/outbox/usage đã sanitize. Không payload email, raw error, hay trạng thái Redis/SMTP."
+                  description={t('platform.health.hint')}
                 />
                 <Space wrap>
                   <Input
-                    placeholder="tenantId (UUID)"
+                    placeholder={t('platform.h_ggf21i')}
                     value={healthTenantId}
                     onChange={(e) => setHealthTenantId(e.target.value)}
                     style={{ minWidth: 320 }}
@@ -398,7 +387,7 @@ function PlatformInner() {
                     onClick={() => void loadHealth(healthTenantId)}
                     data-testid="platform-health-load"
                   >
-                    Đọc health
+                    {t('platform.readHealth')}
                   </Button>
                 </Space>
                 {healthView?.kind === 'rejected' ||
@@ -446,17 +435,17 @@ function PlatformInner() {
           },
           {
             key: 'revoke',
-            label: 'Revoke support grant',
+            label: t('platform.h_19s5r5m'),
             children: (
               <Space direction="vertical" style={{ width: '100%' }} size="middle">
                 <Alert
                   type="warning"
                   showIcon
-                  message="Thu hồi support grant"
-                  description="Chỉ Operator MFA. Reason bắt buộc (audit platform.support.revoked). Không dùng token staff."
+                  message={t('platform.h_1541rk1')}
+                  description={t('platform.revokeGrantHint')}
                 />
                 <Input
-                  placeholder="grantId (UUID)"
+                  placeholder={t('platform.h_1ke65pq')}
                   value={revokeGrantId}
                   onChange={(e) => setRevokeGrantId(e.target.value)}
                   spellCheck={false}
@@ -464,7 +453,7 @@ function PlatformInner() {
                   data-testid="platform-revoke-grant-input"
                 />
                 <Input.TextArea
-                  placeholder="reason (bắt buộc, ≤500)"
+                  placeholder={t('platform.h_1jyd8b')}
                   value={revokeReason}
                   onChange={(e) => setRevokeReason(e.target.value)}
                   rows={3}
@@ -478,14 +467,12 @@ function PlatformInner() {
                   loading={revokeBusy}
                   onClick={() => void submitRevoke()}
                   data-testid="platform-revoke-submit"
-                >
-                  Thu hồi grant
-                </Button>
+                >{t('platform.h_11v4ibm')}</Button>
                 {revokeView?.kind === 'ok' ? (
                   <Alert
                     type="success"
                     showIcon
-                    message={`Đã thu hồi ${revokeView.result.grantId}`}
+                    message={t('ops.notifications.revokeGrantDone', { grantId: revokeView.result.grantId })}
                     description={`revokedAt=${revokeView.result.revokedAt}`}
                     data-testid="platform-revoke-status"
                   />
@@ -511,7 +498,7 @@ function PlatformInner() {
                   type="info"
                   showIcon
                   message="H-P-AUDIT"
-                  description="Không reason/diff. Tách khỏi staff report.read."
+                  description={t('platform.h_qo8t9w')}
                 />
                 <Space wrap>
                   <Input
@@ -547,9 +534,7 @@ function PlatformInner() {
                     type="primary"
                     loading={auditBusy}
                     onClick={() => void loadAudit(null, false)}
-                  >
-                    Lọc
-                  </Button>
+                  >{t('platform.loc')}</Button>
                 </Space>
                 {auditView?.kind === 'rejected' ||
                 auditView?.kind === 'unknown' ? (
@@ -567,10 +552,10 @@ function PlatformInner() {
                   dataSource={auditItems}
                   pagination={false}
                   data-testid="platform-audit-table"
-                  locale={{ emptyText: 'Chưa có bản ghi platform audit.' }}
+                  locale={{ emptyText: t('platform.h_5wjoae') }}
                   columns={[
                     {
-                      title: 'Thời điểm',
+                      title: t('platform.h_zdynbv'),
                       dataIndex: 'createdAt',
                       width: 200,
                       ellipsis: true,
@@ -594,9 +579,7 @@ function PlatformInner() {
                   <Button
                     loading={auditBusy}
                     onClick={() => void loadAudit(auditCursor, true)}
-                  >
-                    Trang tiếp
-                  </Button>
+                  >{t('platform.h_4cj11z')}</Button>
                 ) : null}
               </Space>
             ),
