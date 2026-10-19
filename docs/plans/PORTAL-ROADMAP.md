@@ -41,7 +41,7 @@ Footnote này cũng giải nghĩa dòng security đối chiếu lựa chọn PD:
 
 | Module / màn | Phạm vi đề xuất | Hiện trạng và công việc thật | Ưu tiên |
 | --- | --- | --- | --- |
-| **Không gian làm việc** | Org/event switcher, breadcrumb, menu theo quyền, hồ sơ và ngữ cảnh sự kiện rõ ràng | Có discovery/capability; cần shell, route và xử lý chuyển tổ chức/xóa cache | P0 |
+| **Không gian làm việc** | Org/event switcher, breadcrumb, menu theo quyền, hồ sơ và ngữ cảnh sự kiện rõ ràng | **Prod (2026-10-19):** sider nhóm org / event run / event setup trên `portal.vemoki.com` — UAT P1–P3 [PORTAL-PROD-UAT-NAV-2026-10-19.md](../reviews/PORTAL-PROD-UAT-NAV-2026-10-19.md); DoD spinner/home [PORTAL-NAV-SPINNER-WIP-DOD-2026-10-19.md](../reviews/PORTAL-NAV-SPINNER-WIP-DOD-2026-10-19.md). WIP `52bc54e3fdcb` chưa merge `main`. Còn: cache khi đổi org, parity đầy đủ | P0 |
 | **Tổng quan & việc cần làm** | Readiness, quota, chờ duyệt, check-in/reject, email cần CS; deep-link đến thao tác | EventReport/copy O12 đã có; tái dùng, có `asOf`, refresh thủ công; không tự thêm KPI đa event | P0 |
 | **Sự kiện** | Danh sách, tìm/lọc theo contract, tạo theo bước, chi tiết, sửa, clone, archive/cancel có impact preview | Có nhiều API; cần wiring pagination/filter đúng khả năng server và form antd | P0 |
 | **Loại vé, nguồn mã & quota** | Danh sách/chi tiết, tạo, xem quota và trạng thái sử dụng | Tạo/quota có; browse/list và filter phải xác minh/hoàn thiện contract | P0 |

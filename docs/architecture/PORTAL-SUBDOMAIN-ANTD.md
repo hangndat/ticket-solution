@@ -19,6 +19,8 @@
 
 **Architecture impact:** Có — subdomain/session/UI migration; consumer coding chỉ sau khi coordinator đóng gói duyệt §3–§4 (và user chấp nhận ADR).
 
+**Sync IA shell (2026-10-19):** Trên production `portal.vemoki.com`, staff shell `apps/portal` dùng sider Ant Design **nhóm** (org · tên sự kiện / vận hành · thiết lập) — không flat list; permission vẫn O02 qua `capabilities.ts`. Deploy 2026-10-19; code WIP nhánh `hangndat/d1-portal-nav-groups` base `52bc54e3fdcb`, **chưa merge `main`**. Evidence: [PORTAL-PROD-UAT-NAV-2026-10-19.md](../reviews/PORTAL-PROD-UAT-NAV-2026-10-19.md), [PORTAL-NAV-SPINNER-WIP-DOD-2026-10-19.md](../reviews/PORTAL-NAV-SPINNER-WIP-DOD-2026-10-19.md). Không đổi host model §3 — chỉ ghi trạng thái UI đã quan sát.
+
 ---
 
 ## Checklist đầu ra architect
