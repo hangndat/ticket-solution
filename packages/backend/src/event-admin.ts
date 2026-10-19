@@ -25,6 +25,7 @@ import {
 import { canEnqueueOutboxKind, dbClock } from './event-policy';
 import {
   grantEventAssignment,
+  requireEventAssignment,
   requireTenantPermission,
 } from './membership';
 import { assertTenantAllowsAdminMutation, lockTenantPolicyForShare } from './tenant-policy';
@@ -457,10 +458,9 @@ export async function getEvent(
   tx: Prisma.TransactionClient,
   input: { tenantId: string; eventId: string; actorUserId: string },
 ): Promise<EventDetail> {
-  await requireTenantPermission(tx, {
+  await requireEventAssignment(tx, {
     tenantId: input.tenantId,
     userId: input.actorUserId,
-    permission: PERMISSION_UPDATE,
     eventId: input.eventId,
   });
   const row = await selectEvent(tx, input.tenantId, input.eventId);
