@@ -2,7 +2,7 @@
 
 | Field | Value |
 | --- | --- |
-| Reviewer / session | Orca `term_006360ac-97b9-4d20-9c2f-7516be474207` · dispatch `ctx_7331db064566` · roles `reviewer-dod` + `reviewer-security` · ≠ implementer (`d13-be-idp-erasure` / B1 `term_e0de8959…`) · ≠ R2 `term_8508afe6…` |
+| Reviewer / session | James · Orca `term_f09395ac-d949-4605-802d-e674ce3ada41` · dispatch `ctx_1ed52f90e346` · task `task_92b69e9a6674` · roles `reviewer-dod` + `reviewer-security` · ≠ implementer (`d13-be-idp-erasure`) · prior R3 `term_006360ac…` (same verdict, revalidated) |
 | Scope | Issue **#351** · PR **#357** · BE `packages/backend` (+ API upsert gate, worker IdP pipeline, CI account-deletion shard) |
 | Architecture impact | **Có** — SEC-2 Keycloak erase + fail-closed tombstone denylist; đối chiếu `docs/architecture/D13-ACCOUNT-DELETION-HANDOFF.md` §5 (D2/D4/D6, R3) + coexistence với SEC-1 ACK (PR **#352** đã merge `a0a4c99a…`) |
 | Prior review | R2 **PASS** @ `f8c17c730016f1dca07aed00bd0cd4127ef2f1d8` — **VOID** sau rebase (SHA mới) |
@@ -76,9 +76,12 @@ cd packages/backend && node --test --test-concurrency=1 \
 → 14 pass / 1 fail (ACK apply idempotent / processDue.applied)
 
 CI Actions 39113576095 @ 1dd2308e1387c3a7d7feb2baeb77f3a20cdb3dfe → account-deletion FAIL / ci FAIL
+
+Independent re-run 2026-10-19 (worktree @ `1dd2308…`, `pnpm install` + build):
+→ same 14 pass / 1 fail (`account-ack-session-revoke.test.cjs` L436 `applied` 0≠1); B1 suite green.
 ```
 
-CRG: `list_graph_stats` + incremental build @ tip `1dd2308e…` (`head_matches_build`); `detect_changes` vs `origin/main` risk ~0.60 — source + tests authoritative.
+CRG: MCP unavailable in detached worktree path; source + local tests + GitHub check-runs authoritative @ `1dd2308e…`.
 
 ## Findings
 
