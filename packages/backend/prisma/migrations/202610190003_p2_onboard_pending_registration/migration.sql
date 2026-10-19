@@ -89,6 +89,10 @@ BEGIN
     RAISE EXCEPTION 'invalid_input';
   END IF;
 
+  -- SEC-526-1: serialize per-actor before rate / max-PENDING counts (and idempotency).
+  -- Namespace 872350 = self-serve tenant registration caps (int4 + hashtext(actor)).
+  PERFORM pg_advisory_xact_lock(872350, hashtext(p_actor_user_id::text));
+
   -- Idempotency (actor-scoped)
   SELECT id, tenant_id, request_hash
     INTO existing

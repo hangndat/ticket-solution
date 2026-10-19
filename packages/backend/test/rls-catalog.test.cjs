@@ -44,6 +44,8 @@ const DEFINER_OWNER_TABLES = new Set([
   'event_assignments',
   // H-P2: platform_tenant_health_counts COUNT on notifications (FORCE RLS).
   'notifications',
+  // P2-ONBOARD: register_pending_tenant INSERT (FORCE RLS + owner policy).
+  'tenant_registrations',
 ]);
 /** Platform metadata pool — USING(true) cross-tenant (NOBYPASSRLS). */
 const PLATFORM_OPEN_TABLES = new Set([

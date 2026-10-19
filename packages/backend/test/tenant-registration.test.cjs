@@ -128,7 +128,7 @@ test(
     try {
       const boot = await startIsolatedPostgres();
       name = boot.name;
-      db = createDatabase(boot.url, 3);
+      db = createDatabase(boot.url, 6);
       const users = createPrismaIdentityUserRepository(db);
 
       const lead = await users.upsertFromVerifiedIdentity({
@@ -318,6 +318,55 @@ test(
             },
           }),
         (e) => e.code === PLATFORM_ERROR_CODES.RATE_LIMITED,
+      );
+
+      // SEC-526-1: concurrent registrations must not exceed rateMax / maxPendingOwned.
+      const leadRace = await users.upsertFromVerifiedIdentity({
+        issuer: 'http://localhost/realms/ticket',
+        subject: 'lead-race',
+        email: 'leadrace@example.com',
+        emailVerified: true,
+      });
+      const raceConfig = {
+        rateWindowSeconds: 3600,
+        rateMax: 1,
+        maxPendingOwned: 1,
+      };
+      const raced = await Promise.allSettled(
+        [0, 1, 2, 3, 4].map((i) =>
+          registerPendingTenant(db, {
+            actorUserId: leadRace.userId,
+            email: 'leadrace@example.com',
+            emailVerified: true,
+            clientKey: 'idem-race-' + i + '-' + randomUUID(),
+            body: {
+              slug: 'race-' + i + '-' + randomBytes(3).toString('hex'),
+              name: 'Race ' + i,
+            },
+            config: raceConfig,
+          }),
+        ),
+      );
+      const raceWins = raced.filter((r) => r.status === 'fulfilled');
+      const raceLosses = raced.filter((r) => r.status === 'rejected');
+      assert.equal(
+        raceWins.length,
+        1,
+        'exactly one concurrent registration wins under caps',
+      );
+      assert.equal(raceLosses.length, 4);
+      for (const loss of raceLosses) {
+        assert.equal(
+          loss.reason && loss.reason.code,
+          PLATFORM_ERROR_CODES.RATE_LIMITED,
+          'losers must be rate_limited',
+        );
+      }
+      const mineRace = await listMyTenants(db, leadRace.userId);
+      assert.equal(
+        mineRace.filter((t) => t.status === 'PENDING').length,
+        1,
+        'at most one PENDING owned after race',
       );
 
       assert.equal(SELF_SERVE_DEFAULT_LIMITS.maxEvents, 2);
