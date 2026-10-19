@@ -20,6 +20,10 @@ function isTrustedPrivacyUrl(url: string): boolean {
   }
 }
 
+function shouldAllowPrivacyNavigation(url: string): boolean {
+  return isTrustedPrivacyUrl(url);
+}
+
 export function PrivacyPolicyWebViewScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -56,6 +60,9 @@ export function PrivacyPolicyWebViewScreen() {
         <WebView
           key={reloadKey}
           source={{ uri: PRIVACY_POLICY_URL }}
+          onShouldStartLoadWithRequest={(request) =>
+            shouldAllowPrivacyNavigation(request.url)
+          }
           onLoadStart={() => {
             setLoading(true);
             setError(null);
