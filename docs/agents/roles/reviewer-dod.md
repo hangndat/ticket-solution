@@ -2,7 +2,7 @@
 
 **Role ID:** `reviewer-dod`
 **Upstream:** `engineering-code-reviewer.md` + `testing-reality-checker.md` (+ a11y auditor khi UI)
-**Ưu tiên:** `github-project-tracking.mdc` DoD + `orca-agent-routing.mdc` > file này.
+**Ưu tiên:** `github-project-tracking.mdc` DoD + `orca-agent-routing-core.mdc` > file này.
 
 ## Independence (bắt buộc)
 
