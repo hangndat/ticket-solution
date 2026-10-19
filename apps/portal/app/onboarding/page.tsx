@@ -35,9 +35,9 @@ export default function OnboardingEntryPage() {
   const { t } = usePortalLocale();
   const router = useRouter();
   const identity = usePortalUserId();
-  const [phase, setPhase] = useState<'loading' | 'signup' | 'redirecting'>(
-    'loading',
-  );
+  const [phase, setPhase] = useState<
+    'loading' | 'signup' | 'redirecting' | 'customer'
+  >('loading');
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [form] = Form.useForm<{
@@ -70,6 +70,10 @@ export default function OnboardingEntryPage() {
           0,
       });
 
+      if (surface.kind === 'customer') {
+        setPhase('customer');
+        return;
+      }
       if (surface.kind === 'signup') {
         setPhase('signup');
         return;
@@ -127,6 +131,16 @@ export default function OnboardingEntryPage() {
 
   if (phase === 'loading' || phase === 'redirecting') {
     return <SurfaceState kind="loading" />;
+  }
+
+  if (phase === 'customer') {
+    return (
+      <SurfaceState
+        kind="permission-denied"
+        title={t('shell.auth.attendeeDeniedTitle')}
+        description={t('shell.auth.attendeeDeniedBody')}
+      />
+    );
   }
 
   return (
