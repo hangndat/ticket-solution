@@ -1,0 +1,40 @@
+---
+description: GitHub CLI — tránh rate limit khi DoD / coordinator / autopilot (hangndat)
+alwaysApply: true
+---
+
+# GitHub API hygiene (ticket-solution)
+
+SideProject: `gh auth switch --user hangndat` trước mọi `gh` mutation hoặc evidence.
+
+## Polling dày vs một lần
+
+| Tránh | Dùng thay |
+| ----- | --------- |
+| `while …; do gh pr checks N; sleep 5; done` | `gh pr checks N --watch` (chờ CI xong, backoff có sẵn) hoặc `gh run watch` một run id |
+| Mỗi vòng autopilot/DoD gọi lại `gh pr checks` + `gh pr view` + `gh api …` riêng | **Một** lần: `./scripts/gh-dod-evidence.sh <pr>` hoặc một `gh pr view <pr> --json headRefOid,statusCheckRollup,mergeable` |
+| Lặp `gh pr checks` khi GraphQL đã 403/rate limit | REST: `gh api repos/hangndat/ticket-solution/commits/<sha>/check-runs` (đã dùng trong `docs/reviews/D13-PR342-*`) |
+| SHA tip từ `gh api …/pulls/N` khi đã checkout PR branch | `git rev-parse HEAD` (0 API) |
+
+## SHA & CI evidence (DoD)
+
+1. **SHA:** `git rev-parse HEAD` trên worktree đang review (khớp tip thì cite SHA đó).
+2. **CI trên SHA:** `./scripts/gh-dod-evidence.sh <pr>` — không gọi `gh pr checks` trừ khi script fail và cần debug.
+3. Ghi evidence vào `docs/reviews/*` / PR table: paste output script hoặc `--json`, không spawn thêm `gh` chỉ để “xác nhận lại”.
+
+## Coordinator / Project #3
+
+- `gh project item-list` / `field-list`: **tối đa một lần** mỗi phiên điều phối (cache JSON local); không `--limit 300` lặp mỗi spawn worker.
+- Khi ≥2 PR `Chờ duyệt`: reviewer lấy CI **tuần tự** hoặc stagger 30s giữa các `./scripts/gh-dod-evidence.sh` — tránh 3 reviewer cùng lúc bắn GraphQL (`orca-parallel-workers` cap reviewer ≤3).
+
+## Autopilot / CI loop
+
+Theo skill autopilot: refresh state **đầu mỗi pass**, không tight loop. CI đang chạy → `gh pr checks --watch` **hoặc** chờ webhook/user; không poll &lt; 60s bằng `gh api` rời.
+
+## Khi đã chạm limit
+
+```bash
+gh api rate_limit --jq '.resources | {core, graphql, search}'
+```
+
+Chờ `reset` của bucket đỏ (thường **graphql** hoặc **search**), tiếp tục bằng REST + `git` như trên.

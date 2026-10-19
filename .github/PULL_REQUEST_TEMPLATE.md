@@ -25,7 +25,7 @@
 | Reviewer / session | <!-- Cursor DoD / Orca worktree — khác implementer --> |
 | Scope | <!-- paths / Issue / PR --> |
 | Commit SHA đã duyệt | <!-- exact SHA --> |
-| Checks | <!-- lệnh / CI / “docs-only” --> |
+| Checks | <!-- `./scripts/gh-dod-evidence.sh <pr>` hoặc docs-only; tránh lặp `gh pr checks` --> |
 | Findings / limitations | <!-- PASS \| FAIL \| PASS with known gap --> |
 | Revalidation | <!-- N/A hoặc SHA mới cần duyệt lại --> |
 
