@@ -11,6 +11,7 @@ const ERROR_COPY_KEYS: Record<string, MessageKey> = {
   invalid_state: 'auth.h_1tfddzd',
   token_exchange: 'auth.h_179sno0',
   access_denied: 'auth.error.accessDenied',
+  not_allowed: 'auth.error.notAllowed',
 };
 
 function AuthInner() {
