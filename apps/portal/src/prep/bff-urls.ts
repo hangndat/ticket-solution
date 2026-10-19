@@ -28,6 +28,11 @@ export function bffBranding(tenantId: string): string {
   return `/api/bff/tenants/${encodeURIComponent(tenantId)}/branding`;
 }
 
+/** P2-A portfolio analytics (report.read per event; server filters items). */
+export function bffPortfolio(tenantId: string): string {
+  return `/api/bff/tenants/${encodeURIComponent(tenantId)}/reports/portfolio`;
+}
+
 export function bffRevokeMember(tenantId: string, membershipId: string): string {
   return `${bffMembers(tenantId)}/${encodeURIComponent(membershipId)}/revoke`;
 }

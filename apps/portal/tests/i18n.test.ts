@@ -149,6 +149,7 @@ test('shell + nav keys required for AC-PS3 / AC-C1 exist in both locales', () =>
     'locale.en',
     'nav.org.overview',
     'nav.org.events',
+    'nav.org.analytics',
     'nav.org.members',
     'nav.org.settings',
     'nav.event.overview',

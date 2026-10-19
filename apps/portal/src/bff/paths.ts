@@ -29,6 +29,9 @@ export const PORTAL_UPSTREAM = {
     `${eventBase(tenantId, eventId)}/config/rollback`,
   report: (tenantId: string, eventId: string) =>
     `${eventBase(tenantId, eventId)}/report`,
+  /** P2 portfolio — O17 / GET …/reports/portfolio (not report-summary) */
+  portfolio: (tenantId: string) =>
+    `${tenantBase(tenantId)}/reports/portfolio`,
   /** H-A1 event audit browser (report.read + assignment) */
   audit: (tenantId: string, eventId: string) =>
     `${eventBase(tenantId, eventId)}/audit`,

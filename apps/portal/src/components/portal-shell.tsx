@@ -19,6 +19,7 @@ import { gateDeeplinkUrl } from '../oidc/config';
 import {
   buildEventMenuItems,
   buildOrgMenuItems,
+  tenantHasAnalytics,
   type PortalShellCapabilities,
 } from '../nav/capabilities';
 import {
@@ -99,8 +100,12 @@ export function PortalShell({ children }: { children: ReactNode }) {
 
   const orgMenu = useMemo(() => {
     if (!resolvedTenantId || !activeTenant) return [];
-    return buildOrgMenuItems(resolvedTenantId, activeTenant, t);
-  }, [resolvedTenantId, activeTenant, t]);
+    return buildOrgMenuItems(resolvedTenantId, activeTenant, events, t);
+  }, [resolvedTenantId, activeTenant, events, t]);
+
+  const showAnalyticsNav = Boolean(
+    resolvedTenantId && tenantHasAnalytics(resolvedTenantId, events),
+  );
 
   const activeEventId = activeEvent?.eventId ?? null;
   const activeEventPermKey = activeEvent?.permissions.join('\0') ?? '';
@@ -291,7 +296,7 @@ export function PortalShell({ children }: { children: ReactNode }) {
       </Header>
 
       <Layout>
-        {caps?.showOrgChrome || caps?.showPlatform ? (
+        {caps?.showOrgChrome || caps?.showPlatform || showAnalyticsNav ? (
           <Sider
             collapsible
             collapsed={collapsed}
@@ -325,6 +330,17 @@ export function PortalShell({ children }: { children: ReactNode }) {
                       title: (
                         <Link href={`/t/${activeTenant.tenantId}`}>
                           {activeTenant.name}
+                        </Link>
+                      ),
+                    },
+                  ]
+                : []),
+              ...(pathname.includes('/analytics') && activeTenant
+                ? [
+                    {
+                      title: (
+                        <Link href={`/t/${activeTenant.tenantId}/analytics`}>
+                          {t('nav.org.analytics')}
                         </Link>
                       ),
                     },

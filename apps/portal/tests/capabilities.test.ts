@@ -5,6 +5,7 @@ import {
   buildOrgMenuItems,
   derivePortalShellCapabilities,
   tenantHasAdminChrome,
+  tenantHasAnalytics,
 } from '../src/nav/capabilities';
 import {
   parseMeEventsResponse,
@@ -129,6 +130,104 @@ test('platform operator chrome is isolated from staff tenant role', () => {
   assert.equal(caps.showOrgChrome, false);
 });
 
+test('Phân tích org nav requires report.read assignment — not role name', () => {
+  const tenant = {
+    tenantId: 't1',
+    slug: 'demo',
+    name: 'Demo Org',
+    status: 'ACTIVE' as const,
+    role: 'Owner' as const,
+    tenantPermissions: ['event.list', 'event.create'],
+  };
+  assert.equal(
+    tenantHasAnalytics('t1', [
+      {
+        tenantId: 't1',
+        eventId: 'e1',
+        name: 'Demo',
+        permissions: ['gate.confirm'],
+      },
+    ]),
+    false,
+  );
+  assert.equal(
+    buildOrgMenuItems(
+      't1',
+      tenant,
+      [
+        {
+          tenantId: 't1',
+          eventId: 'e1',
+          name: 'Demo',
+          permissions: ['gate.confirm'],
+        },
+      ],
+      keyStub,
+    ).some((m) => m.key === 'analytics'),
+    false,
+  );
+  assert.equal(
+    tenantHasAnalytics('t1', [
+      {
+        tenantId: 't1',
+        eventId: 'e1',
+        name: 'Demo',
+        permissions: ['report.read'],
+      },
+    ]),
+    true,
+  );
+  const withReport = buildOrgMenuItems(
+    't1',
+    tenant,
+    [
+      {
+        tenantId: 't1',
+        eventId: 'e1',
+        name: 'Demo',
+        permissions: ['report.read'],
+      },
+    ],
+    viT,
+  );
+  assert.equal(
+    withReport.some((m) => m.key === 'analytics' && m.label === 'Phân tích'),
+    true,
+  );
+  assert.equal(
+    buildOrgMenuItems(
+      't1',
+      tenant,
+      [
+        {
+          tenantId: 't1',
+          eventId: 'e1',
+          name: 'Demo',
+          permissions: ['report.read'],
+        },
+      ],
+      enT,
+    ).find((m) => m.key === 'analytics')?.label,
+    'Analytics',
+  );
+  assert.equal(
+    withReport.find((m) => m.key === 'analytics')?.href,
+    '/t/t1/analytics',
+  );
+  // Cross-tenant report.read must not unlock this org's Analytics nav.
+  assert.equal(
+    tenantHasAnalytics('t1', [
+      {
+        tenantId: 't2',
+        eventId: 'e9',
+        name: 'Other',
+        permissions: ['report.read'],
+      },
+    ]),
+    false,
+  );
+});
+
 test('invalid discovery payloads never unlock admin chrome', () => {
   assert.equal(parseMeTenantsResponse(200, { items: [{ tenantId: 1 }] }), null);
   assert.equal(parseMeEventsResponse(200, { staffEligible: true }), null);
@@ -161,6 +260,7 @@ test('menu labels come from the injected translator (VI default / EN switch)', (
   const keys = buildOrgMenuItems(
     't1',
     { ...tenant, tenantPermissions: [...tenant.tenantPermissions] },
+    null,
     keyStub,
   );
   assert.deepEqual(
@@ -175,11 +275,13 @@ test('menu labels come from the injected translator (VI default / EN switch)', (
   const vi = buildOrgMenuItems(
     't1',
     { ...tenant, tenantPermissions: [...tenant.tenantPermissions] },
+    null,
     viT,
   );
   const en = buildOrgMenuItems(
     't1',
     { ...tenant, tenantPermissions: [...tenant.tenantPermissions] },
+    null,
     enT,
   );
   assert.equal(vi[0]!.label, 'Tổng quan tổ chức');
