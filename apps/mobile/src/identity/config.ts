@@ -4,6 +4,7 @@ type TicketPublicExtra = {
   oidcClientId?: string;
   oidcScopes?: string;
   tenantId?: string;
+  tenantSlug?: string;
   eventId?: string;
   pushProvider?: string;
   apsEnvironment?: 'development' | 'production';
@@ -61,13 +62,12 @@ export function getOidcScopes(): string {
   );
 }
 
-/** Nest API base URL for GET /v1/me (no trailing slash). */
-export function getApiBaseUrl(): string | null {
-  const url = pickPublic(
-    process.env.EXPO_PUBLIC_API_BASE_URL,
-    readTicketPublicExtra().apiBaseUrl,
-  );
-  return url ? url.replace(/\/+$/, '') : null;
+/** Production API origin (O18 / K-API-02). Ignores legacy EXPO_PUBLIC_* and baked extra. */
+export const VEMOKI_PROD_API_BASE_URL = 'https://api.vemoki.com';
+
+/** Nest API base URL (no trailing slash). Always production origin at runtime. */
+export function getApiBaseUrl(): string {
+  return VEMOKI_PROD_API_BASE_URL;
 }
 
 /**
@@ -82,12 +82,16 @@ export function getTenantId(): string | null {
 }
 
 /**
- * Public tenant slug for branding / published catalog.
- * Empty → ThemeProvider keeps Vemoki defaults (no invented tenant).
+ * App catalog + branding tenant slug (ADR-19 path param).
+ * Env at Metro time, else baked `extra.ticketPublic.tenantSlug` on device builds.
+ * Empty → Events fail-closed; ThemeProvider keeps Vemoki defaults.
+ * Not interchangeable with `getTenantId()` (wallet UUID).
  */
 export function getTenantSlug(): string | null {
-  const slug = process.env.EXPO_PUBLIC_TENANT_SLUG?.trim() ?? '';
-  return slug.length > 0 ? slug : null;
+  return pickPublic(
+    process.env.EXPO_PUBLIC_TENANT_SLUG,
+    readTicketPublicExtra().tenantSlug,
+  );
 }
 
 /** Event UUID used when a scan is a bare ticket id. QR display payloads carry their own. */
