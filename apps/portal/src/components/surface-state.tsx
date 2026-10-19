@@ -88,11 +88,12 @@ export function SurfaceState(props: {
             props.description ?? t('surface.permission.defaultDescription')
           }
           extra={
-            props.onRetry ? (
+            props.emptyAction ??
+            (props.onRetry ? (
               <Button type="primary" onClick={props.onRetry}>
                 {t('surface.permission.goAllowed')}
               </Button>
-            ) : undefined
+            ) : undefined)
           }
         />
       );

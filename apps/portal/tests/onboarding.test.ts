@@ -7,6 +7,7 @@ import {
   isValidRegistrationSlug,
   normalizeRegistrationBody,
   parseRegistrationResponse,
+  isStaffPortalTenant,
   pickPrimaryTenant,
   resolveOnboardingSurface,
   shouldShowFirstRun,
@@ -120,6 +121,52 @@ test('first-run Steps advance org → team → event → ready', () => {
     }),
     3,
   );
+});
+
+test('ticket-owner Attendee stays off the admin first-run', () => {
+  const attendee: MeTenantItem = {
+    tenantId: 'a1111111-1111-4111-8111-111111111111',
+    slug: 'uat-device',
+    name: 'UAT Device Tenant',
+    status: 'ACTIVE',
+    role: 'Attendee',
+    tenantPermissions: [],
+  };
+  assert.equal(isStaffPortalTenant(attendee), false);
+  const surface = resolveOnboardingSurface({
+    tenants: [attendee],
+    userId: 'attendee-user',
+    eventCountForTenant: () => 1,
+  });
+  assert.equal(surface.kind, 'customer');
+});
+
+test('staff Owner is chosen when a ticket-owner row is also present', () => {
+  const attendee: MeTenantItem = {
+    tenantId: 'a1111111-1111-4111-8111-111111111111',
+    slug: 'uat-device',
+    name: 'UAT Device Tenant',
+    status: 'ACTIVE',
+    role: 'Attendee',
+    tenantPermissions: [],
+  };
+  const owner: MeTenantItem = {
+    tenantId: '22222222-2222-4222-8222-222222222222',
+    slug: 'active',
+    name: 'Active',
+    status: 'ACTIVE',
+    role: 'Owner',
+    tenantPermissions: ['tenant.profile', 'event.create', 'members.manage'],
+  };
+  const surface = resolveOnboardingSurface({
+    tenants: [attendee, owner],
+    userId: 'staff-user',
+    eventCountForTenant: () => 1,
+  });
+  assert.notEqual(surface.kind, 'customer');
+  assert.notEqual(surface.kind, 'signup');
+  if (surface.kind === 'customer' || surface.kind === 'signup') return;
+  assert.equal(surface.tenant.role, 'Owner');
 });
 
 test('pickPrimaryTenant prefers PENDING over ACTIVE', () => {

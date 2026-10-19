@@ -15,6 +15,7 @@ export {
   type OnboardingProgress,
 } from './progress';
 export {
+  isStaffPortalTenant,
   pickPrimaryTenant,
   resolveOnboardingSurface,
   onboardingPathForTenant,
