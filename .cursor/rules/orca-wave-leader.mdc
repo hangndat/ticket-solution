@@ -23,7 +23,8 @@ Coordinator gốc (Run owner)
   Wave N: worker-start → 1× Leader · wave
             Leader: task-list --ready (wave N) → worker-start HẾT slot (soft cap + WIP)
                     → check --wait → ack/release → worker_done (evidence wave)
-  Wave N+1: chỉ sau worker_done / settle wave N (trừ user override)
+  Wave N+1 (cùng dependency chain): sau worker_done wave N
+  Wave B ∥ Wave C: khi **không** phụ thuộc artifact/merge — coordinator spawn **nhiều** Leader · wave cùng checkpoint (vẫn tôn soft cap tổng)
 ```
 
 ## Coordinator gốc — mỗi wave
