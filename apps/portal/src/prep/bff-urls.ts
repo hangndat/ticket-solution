@@ -28,6 +28,16 @@ export function bffBranding(tenantId: string): string {
   return `/api/bff/tenants/${encodeURIComponent(tenantId)}/branding`;
 }
 
+/** P2-ONBOARD-PENDING self-serve signup (Bearer via BFF; no secrets in response). */
+export function bffTenantRegistrations(): string {
+  return '/api/bff/public/tenant-registrations';
+}
+
+/** P2-ROLES-PRESET catalog for invite / first-run Manager picker. */
+export function bffRolePresets(tenantId: string): string {
+  return `/api/bff/tenants/${encodeURIComponent(tenantId)}/role-presets`;
+}
+
 /** P2-A portfolio analytics (report.read per event; server filters items). */
 export function bffPortfolio(tenantId: string): string {
   return `/api/bff/tenants/${encodeURIComponent(tenantId)}/reports/portfolio`;
