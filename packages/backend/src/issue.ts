@@ -11,6 +11,7 @@ import {
   hashRedemptionCode,
   type CodeHmacConfig,
 } from './code-hmac';
+import { verifyResolveTokenForIssue } from './code-routing';
 import {
   IssueError,
   ISSUE_ERROR_CODES,
@@ -47,6 +48,10 @@ export type RedeemInput = {
   answers?: Record<string, FormAnswerValue>;
   /** Explicit consent; must be true when published terms require it. */
   termsAccepted?: boolean;
+  /** Global single-code flow — verified when present (tenant-bound omits). */
+  resolveToken?: string;
+  resolveTokenSecret?: string;
+  routingPeppers?: CodeHmacConfig[];
 };
 
 export type IssuedTicketResult = {
@@ -396,6 +401,24 @@ async function runIssueBusiness(
     input.eventId,
     input,
   );
+
+  if (input.resolveToken?.trim()) {
+    if (!input.resolveTokenSecret || !input.routingPeppers?.length) {
+      throw new IssueError(
+        ISSUE_ERROR_CODES.CODE_HMAC_MISCONFIGURED,
+        'Resolve token verification is not configured',
+      );
+    }
+    await verifyResolveTokenForIssue(tx, {
+      peppers: input.routingPeppers,
+      resolveTokenSecret: input.resolveTokenSecret,
+      token: input.resolveToken.trim(),
+      actorUserId: input.actorUserId,
+      tenantId: input.tenantId,
+      eventId: input.eventId,
+      rawCode: input.rawCode,
+    });
+  }
 
   // 3) Lock code FOR UPDATE
   const codeHmac = hashRedemptionCode(hmac, input.rawCode);

@@ -38,6 +38,8 @@ import {
   listTicketsForOwner,
   readCodeHmacEnvironment,
   readCredentialKeyEnvironment,
+  readResolveTokenSecret,
+  readSupportedPepperConfigs,
   redeemAndIssueTicket,
   getOwnerRedemptionStatus,
   throwIfStoredRejection,
@@ -97,7 +99,7 @@ class MeTicketsDto implements MeTicketsResponse {
   @ApiProperty({ type: [TicketSummaryDto] }) tickets!: TicketSummaryDto[];
 }
 
-function issueHttpException(error: IssueError, operationId?: string): HttpException {
+export function issueHttpException(error: IssueError, operationId?: string): HttpException {
   const requestId = randomUUID();
   const body: ApiError & { fields?: IssueError['fields'] } = {
     code: error.code,
@@ -127,13 +129,15 @@ function issueHttpException(error: IssueError, operationId?: string): HttpExcept
                 error.code === ISSUE_ERROR_CODES.CODE_INVALID ||
                 error.code === ISSUE_ERROR_CODES.FORM_REQUIRED ||
                 error.code === ISSUE_ERROR_CODES.FORM_INVALID ||
-                error.code === ISSUE_ERROR_CODES.TERMS_REQUIRED
+                error.code === ISSUE_ERROR_CODES.TERMS_REQUIRED ||
+                error.code === ISSUE_ERROR_CODES.RESOLVE_TOKEN_REQUIRED ||
+                error.code === ISSUE_ERROR_CODES.RESOLVE_TOKEN_STALE
               ? 422
               : 409;
   return new HttpException(body, status);
 }
 
-function identityHttpException(error: IdentityError): HttpException {
+export function identityHttpException(error: IdentityError): HttpException {
   const requestId = randomUUID();
   const body: ApiError = {
     code: error.code,
@@ -159,6 +163,8 @@ export type TicketServices = {
   bootError: IdentityError | null;
   hmac: CodeHmacConfig | null;
   credentialKey: string | null;
+  routingPeppers?: CodeHmacConfig[] | null;
+  resolveTokenSecret?: string | null;
 };
 
 @Injectable()
@@ -183,6 +189,7 @@ export class TicketIssueService {
     eventId: string,
     idempotencyKey: string | undefined,
     body: RedeemRequestBody,
+    resolveTokenHeader?: string,
   ): Promise<RedeemResponse | PendingApprovalResult> {
     if (!this.deps.db || !this.deps.hmac || !this.deps.credentialKey) {
       throw new IssueError(
@@ -206,6 +213,9 @@ export class TicketIssueService {
         termsVersion: body.termsVersion,
         answers: body.answers,
         termsAccepted: body.termsAccepted,
+        resolveToken: resolveTokenHeader?.trim() || undefined,
+        resolveTokenSecret: this.deps.resolveTokenSecret ?? undefined,
+        routingPeppers: this.deps.routingPeppers ?? undefined,
       }),
     );
     if (outcome.ok === 'pending') return outcome.result;
@@ -365,6 +375,7 @@ export class TicketIssueController {
   async redeem(
     @Headers('authorization') authorization: string | undefined,
     @Headers('idempotency-key') idempotencyKey: string | undefined,
+    @Headers('x-redemption-resolve-token') resolveToken: string | undefined,
     @Param('tenantId') tenantId: string,
     @Param('eventId') eventId: string,
     @Body() body: RedeemBodyDto,
@@ -376,6 +387,7 @@ export class TicketIssueController {
         eventId,
         idempotencyKey,
         body,
+        resolveToken,
       );
     } catch (error) {
       if (error instanceof IdentityError) throw identityHttpException(error);
@@ -509,12 +521,27 @@ export function resolveIssueDeps(env: NodeJS.ProcessEnv): {
   hmac: CodeHmacConfig | null;
   credentialKey: string | null;
   issueBootError: IdentityError | null;
+  routingPeppers: CodeHmacConfig[] | null;
+  resolveTokenSecret: string | null;
 } {
   try {
+    const hmac = readCodeHmacEnvironment(env);
+    const credentialKey = readCredentialKeyEnvironment(env);
+    let routingPeppers: CodeHmacConfig[] | null = null;
+    let resolveTokenSecret: string | null = null;
+    try {
+      routingPeppers = readSupportedPepperConfigs(env);
+      resolveTokenSecret = readResolveTokenSecret(env);
+    } catch {
+      routingPeppers = null;
+      resolveTokenSecret = null;
+    }
     return {
-      hmac: readCodeHmacEnvironment(env),
-      credentialKey: readCredentialKeyEnvironment(env),
+      hmac,
+      credentialKey,
       issueBootError: null,
+      routingPeppers,
+      resolveTokenSecret,
     };
   } catch (error) {
     return {
@@ -524,6 +551,8 @@ export function resolveIssueDeps(env: NodeJS.ProcessEnv): {
         IDENTITY_ERROR_CODES.OIDC_MISCONFIGURED,
         error instanceof Error ? error.message : 'Issue config missing',
       ),
+      routingPeppers: null,
+      resolveTokenSecret: null,
     };
   }
 }

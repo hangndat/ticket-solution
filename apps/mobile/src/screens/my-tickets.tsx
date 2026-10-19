@@ -194,7 +194,7 @@ function SignedOutWallet() {
       <AttendeeCta
         label="Đổi mã lấy vé"
         variant="secondary"
-        onPress={() => router.push('/redeem')}
+        onPress={() => router.push('/redeem-global')}
         testID="wallet-cta-redeem"
       />
       {busy ? (
@@ -572,7 +572,7 @@ function VerifiedWallet({ userId }: { userId: string }) {
         <AttendeeCta
           label="Đổi mã lấy vé"
           variant="secondary"
-          onPress={() => router.push('/redeem')}
+          onPress={() => router.push('/redeem-global')}
         />
       ) : null}
       <AttendeeCta
