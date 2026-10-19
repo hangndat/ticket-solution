@@ -69,6 +69,7 @@ import { registerMetricsEndpoint } from './metrics';
 import { PlatformController, PlatformService, buildPlatformDeps } from './platform';
 import { BrandingController, BrandingService } from './branding';
 import {
+  PlatformPublishedEventsController,
   PublishedEventsController,
   PublishedEventsService,
 } from './published-events';
@@ -359,6 +360,7 @@ export async function createApp(
       NotificationController,
       PlatformController,
       BrandingController,
+      PlatformPublishedEventsController,
       PublishedEventsController,
       TenantRegistrationController,
     ],
