@@ -1,31 +1,14 @@
-import type { InviteRoleRef, MembershipRole } from '@ticket/contracts';
+import type { MembershipRole } from '@ticket/contracts';
 import { assertMutatingBrowser } from '../../../../../../src/bff/csrf';
 import { isUuid } from '../../../../../../src/bff/ids';
 import { PORTAL_UPSTREAM } from '../../../../../../src/bff/paths';
 import { bffApiError, forwardStaffBearer } from '../../../../../../src/bff/upstream';
+import {
+  inviteRoleFromUnknown,
+  isSystemMembershipRole,
+} from '../../../../../../src/ops/role-presets';
 
 type Props = { params: Promise<{ tenantId: string }> };
-
-const ROLES = new Set<MembershipRole>([
-  'Owner',
-  'Manager',
-  'CS',
-  'Supervisor',
-  'Scanner',
-]);
-
-function parseInviteRole(raw: unknown): InviteRoleRef | null {
-  if (typeof raw === 'string' && ROLES.has(raw as MembershipRole)) {
-    return raw as MembershipRole;
-  }
-  if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
-    const presetId = (raw as { presetId?: unknown }).presetId;
-    if (typeof presetId === 'string' && isUuid(presetId.trim())) {
-      return { presetId: presetId.trim() };
-    }
-  }
-  return null;
-}
 
 export async function GET(request: Request, { params }: Props) {
   const { tenantId: raw } = await params;
@@ -56,12 +39,11 @@ export async function POST(request: Request, { params }: Props) {
   let body: {
     email?: string;
     role?: unknown;
-    /** Forbidden client permission arrays — rejected if present. */
+    eventAssignments?: Array<{ eventId: string; role: MembershipRole }>;
+    idempotencyKey?: string;
     permissions?: unknown;
     tenantPermissions?: unknown;
     eventPermissions?: unknown;
-    eventAssignments?: Array<{ eventId: string; role: MembershipRole }>;
-    idempotencyKey?: string;
   };
   try {
     body = (await request.json()) as typeof body;
@@ -75,7 +57,7 @@ export async function POST(request: Request, { params }: Props) {
   ) {
     return bffApiError(
       'INVALID_INPUT',
-      'Client permission arrays are not accepted — use role or { presetId }.',
+      'Client permission arrays are not allowed.',
       422,
     );
   }
@@ -88,20 +70,24 @@ export async function POST(request: Request, { params }: Props) {
     );
   }
   const email = body.email?.trim() ?? '';
-  const role = parseInviteRole(body.role);
+  const role = inviteRoleFromUnknown(body.role);
   if (!email || !role) {
     return bffApiError(
       'INVALID_INPUT',
-      'email and role (Owner|Manager|CS|Supervisor|Scanner|{presetId}) required.',
+      'email and role (MembershipRole or { presetId }) required — no permission arrays.',
       422,
     );
   }
   const assignments = body.eventAssignments ?? [];
   for (const a of assignments) {
-    if (!isUuid(a.eventId) || !ROLES.has(a.role) || a.role === 'Owner') {
+    if (
+      !isUuid(a.eventId) ||
+      !isSystemMembershipRole(a.role) ||
+      a.role === 'Owner'
+    ) {
       return bffApiError(
         'INVALID_ASSIGNMENT',
-        'eventAssignments require eventId UUID and non-Owner role.',
+        'eventAssignments require eventId UUID and non-Owner built-in role.',
         422,
       );
     }

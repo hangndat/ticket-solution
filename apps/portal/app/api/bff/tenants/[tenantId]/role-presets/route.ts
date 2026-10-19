@@ -1,4 +1,5 @@
 import { isUuid } from '../../../../../../src/bff/ids';
+import { withPrivateNoStore } from '../../../../../../src/bff/cache-control';
 import { PORTAL_UPSTREAM } from '../../../../../../src/bff/paths';
 import { bffApiError, forwardStaffBearer } from '../../../../../../src/bff/upstream';
 
@@ -11,7 +12,8 @@ export async function GET(_request: Request, { params }: Props) {
   if (!isUuid(tenantId)) {
     return bffApiError('INVALID_INPUT', 'tenantId must be a UUID.', 422);
   }
-  return forwardStaffBearer(PORTAL_UPSTREAM.rolePresets(tenantId), {
+  const res = await forwardStaffBearer(PORTAL_UPSTREAM.rolePresets(tenantId), {
     method: 'GET',
   });
+  return withPrivateNoStore(res);
 }
