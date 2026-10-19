@@ -3,38 +3,35 @@ import {
   AccessibilityInfo,
   Animated,
   FlatList,
-  Pressable,
   Text,
   View,
 } from 'react-native';
 import { Link, router } from 'expo-router';
-import { demoTenants, eventDate, listDemoEvents } from '@/data/demo-events';
 import { AttendeeCta } from '@/components/attendee-cta';
 import { EventMediaHeader } from '@/components/event-media';
 import { BrandWordmark } from '@/components/page';
-import { ScreenAtmosphere } from '@/components/screen-atmosphere';
 import {
   EmptyState,
   ErrorState,
   LoadingState,
 } from '@/components/screen-state';
 import { eventsCopy } from '@/components/screen-state-copy';
-import { useAttendeeSignIn } from '@/attendee/use-attendee-sign-in';
-import { fetchPublishedEventList } from '@/published/published-event-api';
+import { fetchPlatformPublishedEventList } from '@/published/published-event-api';
 import {
-  DEMO_PUBLISHED_TENANTS,
   initialPublishedListPhase,
-  nextDemoPublishedTenant,
   publishedListStateFromResult,
   type PublishedListPhase,
 } from '@/published/events-home';
 import type { PublishedEventSummary } from '@/published/types';
-import { getApiBaseUrl, showDemoEventCatalog } from '@/identity/config';
+import { isAppCatalogConfigured } from '@/identity/catalog-context';
 import { session } from '@/identity/session';
+import { requestAttendeeAuthGate } from '@/navigation/attendee-auth-gate';
 import { brand, colors } from '@/theme/colors';
 import { fontFamilies } from '@/theme/fonts';
 import { useTheme } from '@/theme/ThemeProvider';
 import { typography } from '@/theme/typography';
+import { TabStackTitle } from '@/navigation/tab-stack-title';
+import { useShowAttendeeTabs } from '@/navigation/use-staff-workspace';
 
 function formatListDate(startsAt: string, timezone: string): string {
   try {
@@ -49,30 +46,23 @@ function formatListDate(startsAt: string, timezone: string): string {
 }
 
 /**
- * Events home (ADR-19 / #257 / UX-UI #475): published list is FlatList SoT.
- * Fixture catalog is footer-only with explicit Demo labels — never API fallback.
- * Brand hero + states per PD visual-notes priority screen 1.
+ * Events home: platform published catalog (`GET /v1/public/events`).
  */
 export function EventsScreen() {
+  const showAttendeeChrome = useShowAttendeeTabs();
   const { applyBranding, theme } = useTheme();
   const identity = useSyncExternalStore(
     session.subscribe,
     session.getSnapshot,
     session.getSnapshot,
   );
-  const { busy: signInBusy, error: signInError, configured, signIn } =
-    useAttendeeSignIn();
-  const showDemo = showDemoEventCatalog();
-  const [publishedTenant, setPublishedTenant] = useState<string>(
-    DEMO_PUBLISHED_TENANTS[0],
-  );
+
   const [published, setPublished] = useState<PublishedEventSummary[]>([]);
   const [publishedPhase, setPublishedPhase] = useState<PublishedListPhase>(() =>
-    initialPublishedListPhase(Boolean(getApiBaseUrl())),
+    initialPublishedListPhase(isAppCatalogConfigured()),
   );
   const [publishedError, setPublishedError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
-  const [demoTenant, setDemoTenant] = useState<string>(demoTenants[0]);
   const [reduceMotionOs, setReduceMotionOs] = useState(false);
   const [heroOpacity] = useState(() => new Animated.Value(1));
 
@@ -100,34 +90,24 @@ export function EventsScreen() {
     };
   }, [heroOpacity]);
 
-  const beginPublishedReload = () => {
+  const retryPublished = () => {
     setPublishedPhase('loading');
     setPublishedError(null);
-  };
-
-  const retryPublished = () => {
-    beginPublishedReload();
     setReloadKey((key) => key + 1);
-  };
-
-  const switchPublishedTenant = () => {
-    beginPublishedReload();
-    setPublishedTenant((tenant) => nextDemoPublishedTenant(tenant));
   };
 
   useEffect(() => {
     let cancelled = false;
     const controller = new AbortController();
     void (async () => {
-      if (!getApiBaseUrl()) {
+      if (!isAppCatalogConfigured()) {
         if (cancelled) return;
         setPublished([]);
         setPublishedPhase('misconfigured');
-        setPublishedError('Thiếu URL API');
+        setPublishedError(eventsCopy.misconfiguredBody);
         return;
       }
-      const result = await fetchPublishedEventList(
-        publishedTenant,
+      const result = await fetchPlatformPublishedEventList(
         { limit: 20 },
         controller.signal,
       );
@@ -141,7 +121,7 @@ export function EventsScreen() {
       cancelled = true;
       controller.abort();
     };
-  }, [publishedTenant, reloadKey]);
+  }, [reloadKey]);
 
   useEffect(() => {
     if (publishedPhase !== 'ready' || published.length === 0) return;
@@ -158,11 +138,8 @@ export function EventsScreen() {
     );
   }, [applyBranding, published, publishedPhase]);
 
-  const demoEvents = showDemo ? listDemoEvents(demoTenant) : [];
   const listData =
     publishedPhase === 'ready' ? published : ([] as PublishedEventSummary[]);
-  const signedOut =
-    identity.status !== 'verified' && configured;
 
   const hero = (
     <View style={{ gap: 16 }}>
@@ -176,66 +153,27 @@ export function EventsScreen() {
       <Text style={{ color: colors.secondary, ...typography.body }}>
         {eventsCopy.heroSupport}
       </Text>
-      <View style={{ gap: 10 }}>
+      {showAttendeeChrome ? (
         <AttendeeCta
           label={eventsCopy.redeemCta}
-          onPress={() => router.push('/redeem')}
+          onPress={() => {
+            if (identity.status !== 'verified') {
+              requestAttendeeAuthGate('/redeem');
+              return;
+            }
+            router.push('/redeem');
+          }}
           testID="events-cta-redeem"
         />
-        {signedOut ? (
-          <AttendeeCta
-            label={signInBusy ? 'Đang đăng nhập…' : eventsCopy.signInCta}
-            variant="secondary"
-            disabled={signInBusy}
-            onPress={() => void signIn()}
-            testID="events-cta-signin"
-          />
-        ) : null}
-      </View>
-      {signInError ? (
-        <ErrorState
-          title="Không đăng nhập được"
-          onRetry={() => void signIn()}
-          retryLabel="Thử lại"
-        >
-          {signInError}
-        </ErrorState>
       ) : null}
-      <Text
-        accessibilityLabel={`Tổ chức: ${publishedTenant}`}
-        style={{ color: colors.secondary, ...typography.caption }}
-        selectable
-      >
-        Tổ chức: {publishedTenant}
-        {theme.organizationName ? ` · ${theme.organizationName}` : ''}
-      </Text>
-
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="Đổi tổ chức để tải danh sách đã xuất bản"
-        onPress={switchPublishedTenant}
-        style={({ pressed }) => ({
-          minHeight: 44,
-          paddingVertical: 14,
-          paddingHorizontal: 18,
-          borderRadius: 12,
-          borderCurve: 'continuous',
-          backgroundColor: colors.card,
-          opacity: pressed ? 0.85 : 1,
-        })}
-      >
+      {theme.organizationName ? (
         <Text
-          style={{
-            color: colors.label,
-            fontSize: 17,
-            fontFamily: fontFamilies.bodySemiBold,
-            fontWeight: '600',
-            textAlign: 'center',
-          }}
+          accessibilityLabel={`Tổ chức: ${theme.organizationName}`}
+          style={{ color: colors.secondary, ...typography.caption }}
         >
-          Đổi tổ chức (API)
+          {theme.organizationName}
         </Text>
-      </Pressable>
+      ) : null}
 
       {publishedPhase === 'loading' ? (
         <LoadingState title={eventsCopy.loadingList.title}>
@@ -243,9 +181,8 @@ export function EventsScreen() {
         </LoadingState>
       ) : null}
       {publishedPhase === 'misconfigured' ? (
-        <ErrorState title="Chưa cấu hình API">
-          Đặt EXPO_PUBLIC_API_BASE_URL để tải danh sách đã xuất bản. Không
-          thay bằng catalog demo.
+        <ErrorState title={eventsCopy.misconfiguredTitle}>
+          {publishedError ?? eventsCopy.misconfiguredBody}
         </ErrorState>
       ) : null}
       {publishedPhase === 'error' && publishedError ? (
@@ -261,189 +198,98 @@ export function EventsScreen() {
   );
 
   return (
-    <ScreenAtmosphere>
-    <FlatList
-      contentInsetAdjustmentBehavior="automatic"
-      style={{ backgroundColor: 'transparent' }}
-      contentContainerStyle={{ padding: 20, paddingBottom: 48, gap: 20 }}
-      data={listData}
-      keyExtractor={(item) => `pub:${item.tenantSlug}:${item.id}`}
-      ListHeaderComponent={
-        <Animated.View style={{ opacity: reduceMotionOs ? 1 : heroOpacity }}>
-          {hero}
-        </Animated.View>
-      }
-      ListEmptyComponent={
-        publishedPhase === 'ready' ? (
-          <EmptyState title={eventsCopy.emptyPublished.title}>
-            {eventsCopy.emptyPublished.body}
-          </EmptyState>
-        ) : publishedPhase === 'loading' ||
-          publishedPhase === 'error' ||
-          publishedPhase === 'misconfigured' ? (
-          <View />
-        ) : (
-          <EmptyState title={eventsCopy.emptyPublished.title}>
-            {eventsCopy.emptyPublished.body}
-          </EmptyState>
-        )
-      }
-      renderItem={({ item }) => (
-        <View
-          style={{
-            paddingVertical: 16,
-            gap: 8,
-            borderBottomWidth: 1,
-            borderBottomColor: colors.separator,
-          }}
-        >
-          <EventMediaHeader
-            eventId={item.id}
-            tenantSlug={item.tenantSlug}
-            bannerUrl={item.brand.bannerUrl}
-            logoUrl={item.brand.logoUrl}
-            testID={`pub-media-${item.id}`}
-          />
-          <Text selectable style={{ color: colors.secondary, fontSize: 13, fontFamily: fontFamilies.body }}>
-            Đã xuất bản · v{item.publishedConfigVersion}
-          </Text>
-          <Text selectable style={{ color: colors.secondary, fontFamily: fontFamilies.body }}>
-            {item.brand.organizationName}
-          </Text>
-          <Link
-            href={{
-              pathname: '/events/[tenantSlug]/[slug]',
-              params: { tenantSlug: item.tenantSlug, slug: item.slug },
-            }}
+    <>
+      <FlatList
+        contentInsetAdjustmentBehavior="automatic"
+        style={{ flex: 1, backgroundColor: brand.paper }}
+        contentContainerStyle={{ padding: 20, paddingBottom: 48, gap: 20 }}
+        data={listData}
+        keyExtractor={(item) => `pub:${item.tenantSlug}:${item.id}`}
+        ListHeaderComponent={
+          <Animated.View style={{ opacity: reduceMotionOs ? 1 : heroOpacity }}>
+            {hero}
+          </Animated.View>
+        }
+        ListEmptyComponent={
+          publishedPhase === 'ready' ? (
+            <EmptyState title={eventsCopy.emptyPublished.title}>
+              {eventsCopy.emptyPublished.body}
+            </EmptyState>
+          ) : publishedPhase === 'loading' ||
+            publishedPhase === 'error' ||
+            publishedPhase === 'misconfigured' ? (
+            <View />
+          ) : (
+            <EmptyState title={eventsCopy.emptyPublished.title}>
+              {eventsCopy.emptyPublished.body}
+            </EmptyState>
+          )
+        }
+        renderItem={({ item }) => (
+          <View
             style={{
-              color: colors.accent,
-              fontSize: 22,
-              fontFamily: fontFamilies.display,
-              fontWeight: '600',
-              paddingVertical: 4,
+              paddingVertical: 16,
+              gap: 8,
+              borderBottomWidth: 1,
+              borderBottomColor: colors.separator,
             }}
           >
-            {item.name}
-          </Link>
-          <Text selectable style={{ color: colors.label, fontFamily: fontFamilies.body }}>
-            {item.startsAt
-              ? formatListDate(item.startsAt, item.timezone)
-              : 'Chưa có giờ bắt đầu'}
-          </Text>
-          {item.location ? (
+            <EventMediaHeader
+              eventId={item.id}
+              tenantSlug={item.tenantSlug}
+              bannerUrl={item.brand.bannerUrl}
+              logoUrl={item.brand.logoUrl}
+              testID={`pub-media-${item.id}`}
+            />
             <Text
               selectable
               style={{
                 color: colors.secondary,
-                fontSize: 17,
+                fontSize: 13,
                 fontFamily: fontFamilies.body,
               }}
             >
-              {item.location}
+              {item.brand.organizationName}
             </Text>
-          ) : null}
-        </View>
-      )}
-      ListFooterComponent={
-        showDemo ? (
-          <View style={{ gap: 12, marginTop: 12 }}>
-            <Text
-              selectable
+            <Link
+              href={{
+                pathname: '/events/[tenantSlug]/[slug]',
+                params: { tenantSlug: item.tenantSlug, slug: item.slug },
+              }}
               style={{
-                color: colors.secondary,
+                color: colors.accent,
+                fontSize: 22,
+                fontFamily: fontFamilies.display,
                 fontWeight: '600',
-                fontFamily: fontFamilies.bodySemiBold,
+                paddingVertical: 4,
               }}
             >
-              Demo · dữ liệu mẫu (không phải nguồn đã xuất bản)
-            </Text>
-            <Text style={{ color: colors.secondary, ...typography.caption }}>
-              Chỉ xem nội dung mẫu cục bộ. Không thay danh sách đã xuất bản khi
-              lỗi hoặc trống.
-            </Text>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Đổi tổ chức demo"
-              onPress={() =>
-                setDemoTenant(
-                  demoTenant === demoTenants[0]
-                    ? demoTenants[1]
-                    : demoTenants[0],
-                )
-              }
-              style={({ pressed }) => ({
-                minHeight: 44,
-                paddingVertical: 10,
-                opacity: pressed ? 0.7 : 1,
-              })}
+              {item.name}
+            </Link>
+            <Text
+              selectable
+              style={{ color: colors.label, fontFamily: fontFamilies.body }}
             >
-              <Text style={{ color: colors.accent, textAlign: 'center' }}>
-                Đổi tổ chức demo · {demoTenant}
+              {item.startsAt
+                ? formatListDate(item.startsAt, item.timezone)
+                : 'Chưa có giờ bắt đầu'}
+            </Text>
+            {item.location ? (
+              <Text
+                selectable
+                style={{
+                  color: colors.secondary,
+                  fontSize: 17,
+                  fontFamily: fontFamilies.body,
+                }}
+              >
+                {item.location}
               </Text>
-            </Pressable>
-            {demoEvents.length === 0 ? (
-              <EmptyState title={eventsCopy.emptyDemo.title}>
-                {eventsCopy.emptyDemo.body}
-              </EmptyState>
-            ) : (
-              demoEvents.map((item) => (
-                <View
-                  key={`demo:${item.tenantSlug}:${item.id}`}
-                  style={{
-                    paddingVertical: 16,
-                    gap: 8,
-                    borderBottomWidth: 1,
-                    borderBottomColor: colors.separator,
-                    opacity: 0.92,
-                  }}
-                >
-                  <EventMediaHeader
-                    eventId={item.id}
-                    tenantSlug={item.tenantSlug}
-                    testID={`demo-media-${item.id}`}
-                  />
-                  <Text
-                    selectable
-                    style={{ color: colors.secondary, fontSize: 13 }}
-                  >
-                    Demo · chưa xuất bản · dữ liệu mẫu
-                  </Text>
-                  <Text selectable style={{ color: colors.secondary }}>
-                    {item.brand.organizationName}
-                  </Text>
-                  <Link
-                    href={{
-                      pathname: '/events/fixture/[eventId]',
-                      params: { eventId: item.id },
-                    }}
-                    style={{
-                      color: colors.accent,
-                      fontSize: 20,
-                      fontWeight: '600',
-                      paddingVertical: 4,
-                    }}
-                  >
-                    {item.name}
-                  </Link>
-                  <Text
-                    selectable
-                    style={{ color: colors.label, fontSize: 17 }}
-                  >
-                    {eventDate(item)}
-                  </Text>
-                  <Text
-                    selectable
-                    style={{ color: colors.secondary, fontSize: 17 }}
-                  >
-                    {item.location}
-                  </Text>
-                </View>
-              ))
-            )}
+            ) : null}
           </View>
-        ) : undefined
-      }
-    />
-    </ScreenAtmosphere>
+        )}
+      />
+      <TabStackTitle title="Sự kiện" />
+    </>
   );
 }
