@@ -159,7 +159,7 @@ export function PendingPanel({
         <Space wrap role="search" aria-label={t('ops.pending.filtersTitle')}>
           <Select
             allowClear
-            placeholder="Source (catalog)"
+            placeholder={t('ops.import.chooseSource')}
             style={{ minWidth: 200 }}
             value={sourceId}
             options={sources.map((s) => ({ value: s.id, label: s.label }))}
@@ -168,7 +168,7 @@ export function PendingPanel({
           />
           <Select
             allowClear
-            placeholder="Ticket type (catalog)"
+            placeholder={t('ops.import.chooseTicketTypeCatalog')}
             style={{ minWidth: 200 }}
             value={ticketTypeId}
             options={ticketTypes.map((tt) => ({ value: tt.id, label: tt.label }))}
@@ -220,10 +220,26 @@ export function PendingPanel({
           pagination={false}
           locale={{ emptyText: t('ops.h_2gkw85') }}
           columns={[
-            { title: 'Request', dataIndex: 'requestId', ellipsis: true },
-            { title: 'Source', dataIndex: 'sourceId', ellipsis: true },
-            { title: 'Type', dataIndex: 'ticketTypeId', ellipsis: true },
-            { title: 'Created', dataIndex: 'createdAt', ellipsis: true },
+            {
+              title: t('ops.pending.col.request'),
+              dataIndex: 'requestId',
+              ellipsis: true,
+            },
+            {
+              title: t('ops.pending.col.source'),
+              dataIndex: 'sourceId',
+              ellipsis: true,
+            },
+            {
+              title: t('ops.pending.col.type'),
+              dataIndex: 'ticketTypeId',
+              ellipsis: true,
+            },
+            {
+              title: t('ops.pending.col.created'),
+              dataIndex: 'createdAt',
+              ellipsis: true,
+            },
             {
               title: t('ops.h_1pbxt75'),
               key: 'actions',
@@ -236,7 +252,7 @@ export function PendingPanel({
                       disabled={busy}
                       onClick={() => void approve(row.requestId)}
                     >
-                      Approve
+                      {t('ops.pending.approve')}
                     </Button>
                     <Button
                       size="small"
@@ -244,7 +260,7 @@ export function PendingPanel({
                       disabled={busy}
                       onClick={() => void deny(row.requestId)}
                     >
-                      Deny
+                      {t('ops.pending.deny')}
                     </Button>
                   </Space>
                 ) : (

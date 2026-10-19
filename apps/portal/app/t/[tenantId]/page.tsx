@@ -7,11 +7,15 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useTenantAccess } from '../../../src/prep/use-event-access';
 import { SurfaceState } from '../../../src/components/surface-state';
-import { usePortalLocale } from '../../../src/i18n';
+import {
+  formatTenantRole,
+  formatTenantStatus,
+  usePortalLocale,
+} from '../../../src/i18n';
 import { isPendingActivationStatus } from '../../../src/onboarding';
 
 export default function TenantOverviewPage() {
-  const { t } = usePortalLocale();
+  const { t, locale } = usePortalLocale();
   const params = useParams<{ tenantId: string }>();
   const tenantId = params.tenantId;
   const access = useTenantAccess(tenantId);
@@ -65,7 +69,11 @@ export default function TenantOverviewPage() {
   return (
     <PortalPage
       title={tenant.name}
-      subTitle={t('tenant.home.meta', { slug: tenant.slug, role: tenant.role, status: tenant.status })}
+      subTitle={t('tenant.home.meta', {
+        slug: tenant.slug,
+        role: formatTenantRole(locale, tenant.role),
+        status: formatTenantStatus(locale, tenant.status),
+      })}
       extra={
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         {canList ? (
@@ -110,7 +118,7 @@ export default function TenantOverviewPage() {
             title: { dataIndex: 'name' },
             description: {
               render: (_, row) =>
-                t('common.serverPermissions', { count: row.permissions.length }),
+                t('common.eventPermissions', { count: row.permissions.length }),
             },
             actions: {
               render: (_, row) => [
