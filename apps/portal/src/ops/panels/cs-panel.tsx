@@ -15,6 +15,7 @@ import {
   type CsView,
 } from '../cs';
 import { usePortalLocale } from '../../i18n';
+import { SavedViewsToolbar } from '../../views';
 
 type Props = {
   tenantId: string;
@@ -120,16 +121,27 @@ export function CsPanel({ tenantId, eventId, canCs }: Props) {
             message={t('ops.cs.needLookup')}
           />
         ) : (
-          <Space wrap>
-            <Input
-              placeholder={t('ops.h_1ehht5k')}
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              style={{ minWidth: 320 }}
-              spellCheck={false}
+          <>
+            <SavedViewsToolbar
+              tenantId={tenantId}
+              eventId={eventId}
+              surface="cs"
+              filters={{ q: q.trim() || undefined }}
+              onApply={(next) => {
+                setQ(next.filters.q ?? '');
+              }}
             />
-            <Button type="primary" loading={busy} onClick={() => void search()}>{t('ops.h_n3x4mp')}</Button>
-          </Space>
+            <Space wrap>
+              <Input
+                placeholder={t('ops.h_1ehht5k')}
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                style={{ minWidth: 320 }}
+                spellCheck={false}
+              />
+              <Button type="primary" loading={busy} onClick={() => void search()}>{t('ops.h_n3x4mp')}</Button>
+            </Space>
+          </>
         )}
         <Table
           size="small"

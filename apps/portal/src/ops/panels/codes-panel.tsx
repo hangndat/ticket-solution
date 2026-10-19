@@ -11,6 +11,7 @@ import {
   type CodesListView,
 } from '../codes';
 import { usePortalLocale } from '../../i18n';
+import { SavedViewsToolbar } from '../../views';
 
 type Props = {
   tenantId: string;
@@ -83,6 +84,23 @@ export function CodesPanel({ tenantId, eventId }: Props) {
         showIcon
         message={t('ops.h_1bq4c1u')}
         description={t('ops.codes.lookupHint')}
+      />
+      <SavedViewsToolbar
+        tenantId={tenantId}
+        eventId={eventId}
+        surface="codes"
+        filters={{
+          state: state || undefined,
+          sourceId: sourceId.trim() || undefined,
+          ticketTypeId: ticketTypeId.trim() || undefined,
+        }}
+        onApply={(next) => {
+          setState((next.filters.state as PortalCodeState | undefined) ?? '');
+          setSourceId(next.filters.sourceId ?? '');
+          setTicketTypeId(next.filters.ticketTypeId ?? '');
+          // Raw code lookup is never restored from saved views (allowlist).
+          setLookup('');
+        }}
       />
       <Space wrap>
         <Select
