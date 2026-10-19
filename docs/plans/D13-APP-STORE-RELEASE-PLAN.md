@@ -17,7 +17,7 @@
 
 **Architecture impact (bước lập kế hoạch này):** **Không** — chỉ phân Story/Task. Mỗi Task dưới đây tự đánh giá; giao Role `architect` khi còn quyết định kỹ thuật chưa giải quyết (xem cột AI).
 
-**Territory (chưa chốt):** User được hỏi async VN vs toàn bộ storefront — **chưa trả lời**. Đề xuất mặc định plan: **chỉ Việt Nam** cho lần publish đầu; ghi **chưa chốt** đến khi user xác nhận. S7-T1 không được giả định “All countries”.
+**Territory (BA khuyến nghị — chờ user chốt):** So sánh VN vs All: [D13-TERRITORY-GATE-DECISION.md](../reviews/D13-TERRITORY-GATE-DECISION.md) (2026-10-19). **Mặc định đề xuất:** Availability **chỉ Việt Nam** lần Ready for Sale đầu (Price vẫn **Free**; không IAP). **Chưa** thao tác ASC — user phải xác nhận một dòng trước S3 Availability / S7-T1. **Không** chọn All countries cho đến khi user chọn leo thang §Territory gate bên dưới. S3 pricing/availability và S7 evidence territory **phải khớp** cùng một lựa chọn.
 
 **Không phải:** code complete · acceptance complete · pilot ready · App Store public. Upload IPA / TestFlight / “Waiting for Review” / “Pending Developer Release” **không** = publish.
 
@@ -115,9 +115,20 @@ Snapshot bảng ROADMAP ngày 17/10 (D10 “Chưa lên lịch”) là **lịch s
 | Export compliance / encryption answers | Docs prep (`ITSAppUsesNonExemptEncryption` pattern) — điền lại trên bản ASC version | iOS/coordinator | S3 / S6 |
 | Legal privacy policy “đã duyệt luật sư” | **Unknown** — chỉ có draft + page live O06 | User | Không bịa; nếu cần counsel thì escalate |
 | Mục tiêu publish + duyệt roadmap | User đã nêu publish; sau duyệt roadmap **không** xin lại quyền submit mang tính nghi thức | Coordinator theo roadmap | S4+ / S6 / S7 khi credential + territory + runtime gates đủ |
-| Territory VN vs All | **Chưa chốt** (đề xuất VN) | User | S3 pricing/availability · S7-T1 · evidence territory |
+| Territory VN vs All | **Chưa chốt** — BA khuyến nghị **VN only** ([memo](../reviews/D13-TERRITORY-GATE-DECISION.md)); leo thang thêm quốc gia sau E0 | User (E0) → ops ASC | S3 §Pricing & Availability · S7-T1 · S7-T3 evidence |
 
 **Cấm:** Expo/EAS Cloud Build; upload source/signing lên EAS; tạo cloud SaaS runtime; in hoặc commit secret. Credential chỉ được sử dụng qua cơ chế local được ủy quyền, không đưa vào log/evidence.
+
+### 2.1 Territory gate (VN vs All) — BA 2026-10-19
+
+Artifact đầy đủ: [D13-TERRITORY-GATE-DECISION.md](../reviews/D13-TERRITORY-GATE-DECISION.md).
+
+| Lựa chọn | S3 (Pricing & Availability) | S7 (release + evidence) |
+| --- | --- | --- |
+| **A — VN only (đề xuất)** | Free; Availability **Vietnam** | Manual release; S7-T3 ghi rõ **Vietnam** + screenshot Availability |
+| **B — All storefront** | Free; Availability **All** (hoặc danh sách rộng) | S7-T3 ghi All/danh sách; ops/support ngầm toàn cầu — **không** khuyến nghị lần đầu |
+
+**Leo thang (sau publish VN):** user + BA memo ngắn → coordinator thêm quốc gia trên ASC (thường không cần binary mới) → cập nhật `D13-PUBLISH-EVIDENCE.md`. **Cấm** worker tự đổi ASC Availability; **cấm** S3 chọn All khi S7 vẫn “chờ user”.
 
 ---
 
@@ -247,7 +258,7 @@ Mục tiêu: chứng minh binary sẽ nói chuyện với prod thật; không d�
 
 | Task | Ownership | Role ID | Path role | AI | Acceptance |
 | ---- | --------- | ------- | --------- | -- | ---------- |
-| **S7-T1** Chọn mô hình release (Automatic vs Manual) + territory | ASC | coordinator | — | Không | Theo [ASC release option](https://developer.apple.com/help/app-store-connect/manage-your-apps-availability/select-an-app-store-version-release-option/); territory **chỉ sau user chốt** (đề xuất VN; chưa chốt = không chọn All); screenshot Availability |
+| **S7-T1** Chọn mô hình release (Automatic vs Manual) + territory | ASC | coordinator | — | Không | Theo [ASC release option](https://developer.apple.com/help/app-store-connect/manage-your-apps-availability/select-an-app-store-version-release-option/); territory **chỉ sau user E0** ([territory memo](../reviews/D13-TERRITORY-GATE-DECISION.md) — đề xuất **VN only**); screenshot Availability khớp S3 |
 | **S7-T2** Bấm release / confirm Ready for Sale khi Approved | ASC | coordinator | — | Không | State bán công khai; **đây mới là publish path** |
 | **S7-T3** Thu evidence URL + version + territory | `docs/reviews` | `product-ba` hoặc coordinator | `product-ba.md` | Không | Artifact `docs/reviews/D13-PUBLISH-EVIDENCE.md` đủ §0 |
 | **S7-T4** Milestone DoD Epic | review | `reviewer-dod` | `reviewer-dod.md` | Không | PASS trên tip; headless UAT + local archive evidence + publish evidence; **không** yêu cầu deploy prod mới trừ khi binary phụ thuộc tip chưa deploy |
@@ -372,6 +383,7 @@ Chi tiết AC từng Task: bảng §4. Coordinator gắn Status `Sẵn sàng` ch
 | Chủ đề | Path |
 | ------ | ---- |
 | Plan này | `docs/plans/D13-APP-STORE-RELEASE-PLAN.md` |
+| Territory gate (VN vs All) | `docs/reviews/D13-TERRITORY-GATE-DECISION.md` |
 | ASC docs | `docs/asc/*` |
 | D10 checklist gaps | `docs/reviews/D10-S5-T1-ASC-CHECKLIST.md` |
 | D10 archive | `docs/reviews/D10-S4-T1-ARCHIVE.md`, `D10-S5-T2-IOS-ARCHIVE.md` |
@@ -399,6 +411,6 @@ Chi tiết AC từng Task: bảng §4. Coordinator gắn Status `Sẵn sàng` ch
 1. Tạo Epic/Story/Task trên Project #3 từ §7; Status ban đầu `Sẵn sàng` cho Wave 1 docs/verify.  
 2. Sau duyệt roadmap: **không** xin lại quyền submit mang tính nghi thức — chỉ chặn khi thiếu dữ kiện §2 / territory / S2 go-no-go / Apple processing.  
 3. Trước Wave 2 iOS: operator đóng credential gaps §2 (Issuer, distribution profile).  
-4. Chốt territory với user (đề xuất VN). Giữ D12 #293 tách; các luồng email bắt buộc phải có delivery thật trước submit.  
+4. Chốt territory với user **E0** (đề xuất VN — [memo](../reviews/D13-TERRITORY-GATE-DECISION.md)); sau đó S3 Availability ∥ S7-T1. Giữ D12 #293 tách; các luồng email bắt buộc phải có delivery thật trước submit.  
 5. Spawn max fan-out theo §6; reviewer ≠ implementer; mọi claim publish chỉ sau S7-T3.  
 6. Parent Epic D13 trên GitHub: `Chưa lên lịch` / chờ review roadmap — chưa coding dispatch.
