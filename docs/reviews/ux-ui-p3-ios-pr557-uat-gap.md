@@ -18,7 +18,7 @@ DoD reviewer re-ran sim-uat on attendee persona → `vemoki://staff` deny UI. Ev
 
 Device: `Epic527-iOS-Gates` (`4AD7F2DC-5533-4C66-875C-A430DF3C734C`). Stub: `node scripts/o02-me-events-stub.mjs` (port 4370).
 
-**Wave leader note:** Orca `emulator attach` not re-run this pass; prior DoD sim-uat + artifacts satisfy AC «staff-access deny gap» for #557. Policy: local sim only, no EAS cloud.
+**Worker UAT (post-merge):** `task_934fbd3f0b85` / `ctx_2761d82a5b2c` (Zico · ios) — Orca `emulator attach` on `Epic527-iOS-Gates`, `o02-me-events-stub`, `vemoki://uat/session` + `vemoki://staff`; AX «Không có quyền Nhân viên», CTA «Về trang Sự kiện»; screenshot `apps/mobile/.uat-artifacts/ux-ui-p3-555-dod/staff-access-deny.png` refreshed @ DoD SHA `f67cf35`. Integrated `main` @ `c02a563`.
 
 ## Membership-invite deep link — still open
 
