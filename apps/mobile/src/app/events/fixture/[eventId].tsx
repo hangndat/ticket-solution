@@ -5,6 +5,8 @@ import { fixtureEventRouteAllowed } from '@/navigation/dev-only-routes';
 import { EventDetailScreen } from '@/screens/event-detail';
 
 export default function FixtureEventRoute() {
+  const { eventId } = useLocalSearchParams<{ eventId: string }>();
+
   if (!fixtureEventRouteAllowed()) {
     return (
       <Page>
@@ -15,8 +17,6 @@ export default function FixtureEventRoute() {
       </Page>
     );
   }
-
-  const { eventId } = useLocalSearchParams<{ eventId: string }>();
   const id = typeof eventId === 'string' ? eventId : '';
   const event = findDemoEventById(id);
   if (!event) {
