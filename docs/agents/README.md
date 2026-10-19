@@ -47,7 +47,7 @@ Nguồn sự thật cho label UI trên hàng Dispatch. Coordinator **bắt buộ
 | `product-design` | Liv | |
 | `product-ba` | Kazu | |
 | `reviewer-dod` | James | UI label: **`dod`** (không ghi `reviewer-dod`) |
-| `reviewer-security` | James | UI label: **`sec`**; session vẫn ≠ implementer |
+| `reviewer-security` | James | UI label: **`sec`**; gộp cùng DoD → **`dod+sec`** (Wave C) |
 | Epic planner (không Role catalog) | Dexter | `--display-name "Dexter · planner"` |
 
 **Format:** `--display-name "<Persona> · <ui-label>"` — Role ID trong Spec vẫn đầy đủ; **ui-label** ngắn trên Orca:
@@ -62,9 +62,10 @@ Nguồn sự thật cho label UI trên hàng Dispatch. Coordinator **bắt buộ
 | `product-design` | `pd` |
 | `reviewer-dod` | `dod` |
 | `reviewer-security` | `sec` |
+| DoD+security cùng PR/SHA (Wave C) | `dod+sec` |
 | Epic planner | `planner` |
 
-Ví dụ: `Higo · web`, `James · dod`, `James · sec`, `Gonic · be`, `Dexter · planner`.
+Ví dụ: `Higo · web`, `James · dod`, `James · dod+sec`, `Gonic · be`, `Dexter · planner`.
 
 **Chọn persona (pool):**
 
@@ -101,14 +102,42 @@ Chi tiết spawn: `.cursor/rules/orca-agent-routing.mdc` § Persona.
 | Design trước coding UI | `product-design` | — |
 | Epic revamp user site/app (visual + UX) | `product-design` (một Task, mục 0–5) | Không thêm Role graphic; BA/Architect chỉ khi scope/IA chưa chốt |
 | Coding BE / web / iOS | `backend` / `web` / `ios` | — |
-| DoD sau `Chờ duyệt` | `reviewer-dod` | `reviewer-security` nếu slice authz/RLS/quota/check-in/secrets |
+| DoD sau `Chờ duyệt` | `reviewer-dod` | + `reviewer-security` trên **cùng session** (`dod+sec`) nếu slice nhạy cảm — Wave C |
 | Epic planner | Không gắn role catalog này | Planner theo `orca-epic-orchestrator.mdc` |
 
-Không spawn PD/BA để “làm luôn” code BE+web+iOS. Không reuse session implementer làm reviewer.
+Không spawn PD/BA để “làm luôn” code BE+web+iOS. Không reuse session implementer làm reviewer. **Không** spawn `James · dod` và `James · sec` song song trên cùng PR/SHA.
 
-### 2. Nhúng vào Task Spec (bắt buộc khi dùng role)
+### 2. Task Spec tối thiểu (Wave C) + khối role
 
-Thêm khối sau vào spec `worker-start` (tiếng Việt cho phần mô tả user-facing; giữ path/SHA/command tiếng Anh kỹ thuật):
+Ưu tiên spec ngắn — đủ AC/paths/Role/Persona/Cost/model/SHA; **không** paste nguyên `roles/*.md`.
+
+```markdown
+## Task
+- Issue/PR: #<n> / PR #<n>
+- Paths: <ownership>
+- AC: <3–7 gạch đầu dòng>
+- Architecture impact: Có | Không — <1 câu>
+- Cost tier: cheap | standard | heavy
+- --model: <pin từ docs/agents/cost-catalog.md>
+- --display-name: "<Persona> · <ui-label>"
+
+## Vai trò chuyên môn
+- Role ID: <id>[, reviewer-security nếu gộp dod+sec]
+- Persona: <Name>
+- File: docs/agents/roles/<id>.md  (đọc sau AGENTS.md; rule dự án thắng)
+```
+
+Reviewer (thêm):
+
+```markdown
+## Review independence
+- Implementer dispatch: <id>
+- Exact SHA: <sha>
+- Artifact: docs/reviews/<slug>.md
+- Checklist: DoD [| security]  # gộp khi dod+sec
+```
+
+Khối mở rộng (khi cần) — giữ tương thích:
 
 ```markdown
 ## Vai trò chuyên môn (bổ sung)
@@ -121,17 +150,7 @@ Thêm khối sau vào spec `worker-start` (tiếng Việt cho phần mô tả us
 - Cost tier: cheap | standard | heavy — pin --model từ docs/agents/cost-catalog.md (cấm inherit mặc định)
 - Architecture impact: Có | Không — lý do + link thiết kế/ADR hiện hành
 - Nếu Có: quyết định còn mở, Task architect/handoff và consumer thực sự phải chờ
-- Orca: --display-name "<Persona> · <ui-label>" (bắt buộc khi spawn; vd. James · dod)
-```
-
-Với reviewer, thêm:
-
-```markdown
-## Review independence
-- Implementer session/dispatch: <id>
-- Reviewer session phải khác implementer
-- Exact SHA: <40-char hoặc unambiguous>
-- Artifact: docs/reviews/<slug>.md
+- Orca: --display-name "<Persona> · <ui-label>" (vd. James · dod+sec)
 ```
 
 ### 3. Architect trong quy trình
@@ -141,8 +160,8 @@ Coordinator + Epic planner: xác định scope, xét architecture impact
   BA ∥ PD ∥ Architect (khi có quyết định kỹ thuật còn mở) ∥ planner
                        ↓ handoff/ADR được coordinator xác nhận trong thẩm quyền
   BE ∥ web ∥ iOS (chỉ consumer phụ thuộc phải chờ; Task độc lập chạy ngay)
-                       ↓ PR / exact SHA
-  DoD ∥ security khi cần ∥ kiểm tra kiến trúc độc lập khi cần
+                        ↓ PR / exact SHA
+  DoD(+sec gộp cùng SHA) ∥ kiểm tra kiến trúc độc lập khi cần
                        ↓ CI + evidence + coordinator integration đã được ủy quyền
 ```
 
@@ -190,14 +209,14 @@ Wave rộng (ví dụ — spawn cùng lúc nếu unblocked):
        │              │              │
        └──────────────┴── contract / PD handoff chỉ khi thật sự chặn ──┘
                                       ↓
-              reviewer-dod (± reviewer-security)  ×  N PR/Issue độc lập
+              reviewer (dod hoặc dod+sec)  ×  N PR độc lập (cap ≤3 live)
 ```
 
 | Được song song | Không gom serial |
 | -------------- | ---------------- |
 | BA ∥ PD (docs khác path) | BA xong mới PD nếu PD không cần AC BA |
 | BE ∥ web ∥ iOS sau contract (hoặc ngay nếu không đụng contract) | Một mega-worker làm cả ba slice |
-| Nhiều `reviewer-dod` trên PR khác nhau | Một reviewer duyệt tuần tự mọi PR khi còn room |
+| Nhiều reviewer trên **PR khác nhau** | `dod` ∥ `sec` trên **cùng** PR/SHA (dùng `dod+sec`) |
 | Coding slice A ∥ review/fix slice B ∥ BA/PD | Chờ cả Story đóng mới mở Task ready Story khác |
 
 Cùng ownership slice: tối đa **một** feature coding Dispatch active (tránh conflict git). Soft cap: ≤**5** non-review live / Run; ≤**2** `heavy` live; reviewer/fix không chiếm bucket feature. Parallel vẫn theo `orca-parallel-workers.mdc` + idle fill. WIP / `Chờ duyệt` đầy **hoặc** soft cap đầy → ưu tiên **song song** reviewer/fix trước feature mới.

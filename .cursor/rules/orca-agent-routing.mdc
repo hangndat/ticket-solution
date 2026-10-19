@@ -128,7 +128,7 @@ Heuristic nhanh (khi planner chưa ghi): docs/mechanical / DoD hẹp / planner �
 
 ## Review và integration
 
-Spec review phải có Issue/PR/paths, exact SHA, checklist DoD/security, và Role ID `reviewer-dod` (thêm `reviewer-security` khi slice nhạy cảm — xem `docs/agents/roles/`). Artifact ghi reviewer/session, checks, findings, limitations và verdict `PASS|FAIL|PASS with known gap`.
+Spec review phải có Issue/PR/paths, exact SHA, checklist DoD (± security), Role ID(s). **Cùng PR/exact SHA cần cả DoD và security → một session** (`James · dod+sec`, cả hai Role ID trong Spec) trừ hot path tách có lý do (xem `github-project-tracking.mdc` Wave C). Artifact ghi reviewer/session, checks, findings, limitations và verdict `PASS|FAIL|PASS with known gap` (security findings tách mục nếu gộp).
 
 - `PASS`: coordinator chỉ merge khi đã được ủy quyền integration, CI xanh và các acceptance/gate bắt buộc đủ evidence. Hoàn thành còn cần CI trên integrated commit theo `github-project-tracking.mdc`.
 - `PASS with known gap`: chỉ được coi là pass nếu gap không vi phạm acceptance/gate bắt buộc hoặc bảo mật; artifact phải có lý do, issue theo dõi và coordinator có thẩm quyền chấp nhận. Coordinator không tự miễn yêu cầu bắt buộc; thay đổi scope cần user cho phép.
