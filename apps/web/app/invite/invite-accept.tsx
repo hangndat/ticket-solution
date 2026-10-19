@@ -200,12 +200,14 @@ export function InviteAcceptForm() {
         </button>
       </div>
       {busy ? (
-        <SurfaceState
-          kind="loading"
-          title="Đang nhận lời mời…"
-          detail="Máy chủ đang kiểm tra hết hạn, dùng một lần và khớp email — chưa coi là thành công."
-          testId="invite-accept-loading"
-        />
+        <div className="invite-outcome">
+          <SurfaceState
+            kind="loading"
+            title="Đang nhận lời mời…"
+            detail="Máy chủ đang kiểm tra hết hạn, dùng một lần và khớp email — chưa coi là thành công."
+            testId="invite-accept-loading"
+          />
+        </div>
       ) : null}
       {ux && ux.kind === 'success' && view?.kind === 'ok' ? (
         <section
@@ -228,12 +230,14 @@ export function InviteAcceptForm() {
         </section>
       ) : null}
       {ux && ux.kind !== 'success' ? (
-        <SurfaceState
-          kind={surfaceKind(ux)}
-          title={ux.title}
-          detail={ux.detail}
-          testId="invite-accept-result"
-        />
+        <div className="invite-outcome">
+          <SurfaceState
+            kind={surfaceKind(ux)}
+            title={ux.title}
+            detail={ux.detail}
+            testId="invite-accept-result"
+          />
+        </div>
       ) : null}
     </div>
   );

@@ -1,0 +1,23 @@
+{
+  "timeUTC": "2026-10-19T07:18:33+00:00",
+  "task": 332,
+  "epic": 301,
+  "story": 310,
+  "purpose": "S6-T1 submit readiness prep — not submit",
+  "submittedForReview": false,
+  "released": false,
+  "overallGoNoGo": "NO-GO",
+  "deps": {
+    "S3": { "status": "CONDITIONAL", "note": "S3-T2/T3 Chờ duyệt" },
+    "S4-T3": { "status": "NO-GO", "issue": 327, "artifact": "docs/reviews/D13-S4-T3-DEVICE-SMOKE.md" },
+    "S5-T2": { "status": "GO", "issue": 329, "artifact": "docs/reviews/D13-S5-T2-DEMO-REVIEWER.md" },
+    "S5-T4": { "status": "GO", "issue": 331, "verdict": "PASS with known gap", "sha": "9910173dc1c4f016448e2bc230ab6843c419b315" },
+    "runtimeGoNoGo": { "status": "NO-GO", "artifact": "docs/reviews/D12-RELEASE-GO-NO-GO.md", "note": "SMTP Mailpit" }
+  },
+  "ascSnapshot": {
+    "appStoreVersion": "1.0.0",
+    "appStoreState": "PREPARE_FOR_SUBMISSION",
+    "releaseType": "MANUAL",
+    "latestTfBuild": { "version": "13", "id": "fa4f322d-6a18-4a62-b5a9-e2133a055f8f", "processingState": "VALID" }
+  }
+}
