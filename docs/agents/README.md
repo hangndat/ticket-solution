@@ -51,7 +51,8 @@ Nguồn sự thật cho label UI trên hàng Dispatch. Coordinator **bắt buộ
 | `reviewer-dod` | James | UI label: **`dod`** (không ghi `reviewer-dod`) |
 | `reviewer-security` | James | UI label: **`sec`**; gộp cùng DoD → **`dod+sec`** (Wave C) |
 | Epic planner (không Role catalog) | Dexter | `--display-name "Dexter · planner"` |
-| Wave Leader (điều phối 1 wave + fan-out worker) | *(không Persona roster)* | `--display-name "Leader · wave"` — Spec bắt buộc `Wave leader authority: có`; xem `orca-wave-leader.mdc` |
+| Wave leader (logic) | Coordinator gốc depth 0 | Fan-out `worker-start` trong wave — **không** spawn depth 1 (Orca `nested_worker_depth`) |
+| `Leader · wave` (tuỳ chọn, plan-only) | *(không Persona roster)* | Worker depth 1 chỉ lập kế hoạch / `ask`; coordinator gốc spawn thật — `orca-wave-leader.mdc` |
 
 **Format:** `--display-name "<Persona> · <ui-label>"` — Role ID trong Spec vẫn đầy đủ; **ui-label** ngắn trên Orca:
 
