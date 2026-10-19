@@ -1,5 +1,6 @@
 import {
   ISSUE_ERROR_CODES,
+  REDEMPTION_RESOLVE_HEADER,
   type FormAnswerValue,
   type RedeemRequestBody,
 } from '@ticket/contracts';
@@ -15,6 +16,7 @@ type RedeemBffBody = {
   termsVersion?: string;
   answers?: Record<string, FormAnswerValue>;
   termsAccepted?: boolean;
+  resolveToken?: string;
 };
 
 const ALLOWED_KEYS = new Set([
@@ -26,6 +28,7 @@ const ALLOWED_KEYS = new Set([
   'termsVersion',
   'answers',
   'termsAccepted',
+  'resolveToken',
 ]);
 
 function sanitizeAnswers(
@@ -113,13 +116,19 @@ export async function POST(request: Request) {
     ...(body.termsAccepted === true ? { termsAccepted: true as const } : {}),
   };
 
+  const resolveToken = body.resolveToken?.trim() ?? '';
+  const upstreamHeaders: Record<string, string> = {
+    'Content-Type': 'application/json',
+    'idempotency-key': idempotencyKey,
+  };
+  if (resolveToken) {
+    upstreamHeaders[REDEMPTION_RESOLVE_HEADER] = resolveToken;
+  }
+
   const path = `/v1/tenants/${encodeURIComponent(tenantId)}/events/${encodeURIComponent(eventId)}/redemptions`;
   return forwardWithBearer(path, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'idempotency-key': idempotencyKey,
-    },
+    headers: upstreamHeaders,
     body: JSON.stringify(payload),
   });
 }
