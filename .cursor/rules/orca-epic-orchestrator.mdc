@@ -1,7 +1,9 @@
 ---
-description: Epic planner phân Story/Task; coordinator gốc trực tiếp spawn workers và quản lý tích hợp
-alwaysApply: true
+description: "[coordinator-only] Epic planner phân Story/Task; coordinator gốc trực tiếp spawn workers và quản lý tích hợp"
+alwaysApply: false
 ---
+
+> **Coordinator-only (Wave B):** không `alwaysApply` cho ownership/reviewer workers. Leader/orchestrator **phải Read** file này khi kích hoạt (xem `orca-leader-activation.mdc`).
 
 # Orca — Epic planner (một planner / Epic)
 
