@@ -37,7 +37,7 @@ Roster nguồn sự thật: [docs/agents/README.md](../../docs/agents/README.md)
 ### Quy tắc spawn Persona (bắt buộc)
 
 1. Trước mỗi `task-create` / `worker-start`: chọn Persona từ roster theo Role ID (planner → Dexter).
-2. Truyền `--display-name "<Persona> · <roleId|planner>"` — ví dụ `Higo · web`, `James · reviewer-dod`, `Dexter · planner`.
+2. Truyền `--display-name "<Persona> · <ui-label>"` — ui-label ngắn (Role ID Spec vẫn đầy đủ): `web`/`be`/`ios`/`arch`/`ba`/`pd`/`dod`/`sec`/`planner`. Ví dụ `Higo · web`, `James · dod`, `James · sec`, `Gonic · be`, `Dexter · planner`.
 3. `--task-title` nên bắt đầu bằng cùng prefix: `Higo · web — #123 membership UI`.
 4. Spec «Vai trò chuyên môn» ghi `- Persona: <Name>`; Epic planner spec ghi Persona Dexter + display-name `Dexter · planner`.
 5. Dispatch evidence ghi Persona cùng Role ID / Cost tier.
@@ -110,7 +110,7 @@ Heuristic nhanh (khi planner chưa ghi): docs/mechanical / DoD hẹp / planner �
 **Agent** (`--agent cursor` / override) và **role** (catalog `docs/agents/`) là hai lớp khác nhau. Role không đổi vendor agent.
 
 - Catalog áp dụng: [docs/agents/README.md](../../docs/agents/README.md) — `product-ba`, `product-design`, `architect`, `backend`, `web`, `ios`, `reviewer-dod`, `reviewer-security`.
-- Trước mỗi `worker-start` cho architecture, ownership hoặc reviewer Task: chọn Role ID theo bảng trong README; chọn **Persona** từ roster; nhúng khối «Vai trò chuyên môn» (+ `- Persona: <Name>`) + path `docs/agents/roles/<id>.md` vào Task Spec; truyền `--display-name "<Persona> · <roleId>"`; ghi Role ID + Persona trong dispatch evidence cùng agent.
+- Trước mỗi `worker-start` cho architecture, ownership hoặc reviewer Task: chọn Role ID theo bảng trong README; chọn **Persona** từ roster; nhúng khối «Vai trò chuyên môn» (+ `- Persona: <Name>`) + path `docs/agents/roles/<id>.md` vào Task Spec; truyền `--display-name "<Persona> · <ui-label>"` (`dod` không phải `reviewer-dod`); ghi Role ID + Persona trong dispatch evidence cùng agent.
 - Role chỉ bổ sung chuyên môn. Xung đột với `AGENTS.md` / rule Orca / Project → rule dự án thắng.
 - **Không** copy `docs/agents/roles/*.md` vào `.cursor/rules/` với `alwaysApply: true`. Không cài toàn bộ roster upstream agency-agents.
 - Architect: dùng Role ID `architect`, Persona **Dexter**, scope docs/handoff hoặc kiểm tra sự phù hợp trên exact SHA theo `docs/agents/roles/architect.md`; không thay coordinator/planner hoặc reviewer DoD/security.
