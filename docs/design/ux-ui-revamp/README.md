@@ -10,6 +10,8 @@
 | Ownership artifact | Chỉ `docs/design/ux-ui-revamp/**` |
 | Trạng thái | **Handoff PD** — chưa claim pilot / production ready |
 
+> **Phase 2 (Epic [#527](https://github.com/hangndat/ticket-solution/issues/527) / Issue [#528](https://github.com/hangndat/ticket-solution/issues/528)):** handoff mở rộng tại [`phase-2/`](./phase-2/) — event detail · account full visual · claim · Home Live Pulse polish. Tokens coding hiện hành = **Live Pulse** ([`../visual-identity-v2/`](../visual-identity-v2/)); mục 0 Phase 1 bên dưới giữ lịch sử Epic #471.
+
 **Baseline (tham chiếu, không copy nguyên):** [`docs/design/D11-PRODUCTION-UX-UI.md`](../D11-PRODUCTION-UX-UI.md)  
 **Brand nguồn:** [`brand/vemoki/`](../../../brand/vemoki/)  
 **Mẫu format:** [`docs/design/o13-platform-sales/visual-notes.md`](../o13-platform-sales/visual-notes.md)
@@ -18,8 +20,9 @@
 
 | File | Nội dung |
 | ---- | -------- |
-| [README.md](./README.md) | Mục 1–5: flow, states, a11y tóm tắt, UI AC + UAT, triển khai |
-| [visual-notes.md](./visual-notes.md) | Mục 0: brand/visual budget + freeze + priority screens |
+| [README.md](./README.md) | Mục 1–5 Phase 1: flow, states, a11y tóm tắt, UI AC + UAT, triển khai |
+| [visual-notes.md](./visual-notes.md) | Mục 0 Phase 1: brand/visual budget + freeze + priority screens |
+| [phase-2/](./phase-2/) | Phase 2 — mục 0–5 cho event · account · claim (+ Home polish) |
 
 ### DoD role product-design (checklist)
 
