@@ -1,7 +1,9 @@
 ---
-description: Orca max fan-out — spawn mọi Task độc lập cùng wave; concurrent soft caps + WIP; Cost tier; agent routing
-alwaysApply: true
+description: "[coordinator-only] Orca max fan-out — spawn mọi Task độc lập cùng wave; concurrent soft caps + WIP; Cost tier; agent routing"
+alwaysApply: false
 ---
+
+> **Coordinator-only (Wave B):** không `alwaysApply` cho ownership/reviewer workers. Leader/orchestrator **phải Read** file này khi kích hoạt (xem `orca-leader-activation.mdc`).
 
 # Orca — parallel coding workers (default)
 
@@ -86,4 +88,3 @@ Mục tiêu: giữ throughput đa slice, giảm thời gian chờ duyệt, CI re
 
 **Trước mỗi spawn, coordinator gốc áp dụng `orca-agent-routing.mdc`: mọi Task dùng Cursor + Cost tier, trừ override rõ từ user. Không kiểm tra quota Codex khi spawn Cursor.**
 When a worker becomes free and unblocked, fill it from the ready backlog immediately: see `orca-idle-worker-fill.mdc`.
-
