@@ -2,7 +2,7 @@
 
 **Role ID:** `reviewer-security`
 **Upstream:** `docs/agents/upstream/security/security-appsec-engineer.md`
-**Ưu tiên:** `AGENTS.md` Safety + RLS/tenant invariants + `orca-agent-routing.mdc` > file này.
+**Ưu tiên:** `AGENTS.md` Safety + RLS/tenant invariants + `orca-agent-routing-core.mdc` > file này.
 
 ## Independence (bắt buộc)
 

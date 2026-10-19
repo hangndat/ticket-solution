@@ -9,7 +9,9 @@ alwaysApply: false
 
 When the user asks for coding work that Orca should run (or when you are the coordinator gốc), **prefer parallel worker spawn over serial solo coding**. Mục tiêu: **mỗi wave spawn tối đa** mọi Task độc lập còn capacity — không để slot rảnh vì chờ việc không liên quan.
 
-Epic-level work: coordinator gốc spawn/reuse **một Epic planner** (`orca-epic-orchestrator.mdc`). Planner phân Story/Task và đề xuất **wave bề rộng tối đa**; coordinator gốc trực tiếp spawn ownership workers/reviewers cùng cấp với planner. Chỉ coordinator gốc được dispatch; planner/workers không spawn worker con.
+**Mô hình Wave Leader (user mặc định khi yêu cầu):** mỗi wave coordinator gốc spawn **đúng một** `Leader · wave`; Leader fan-out `worker-start` tối đa trong wave rồi `check --wait` — chi tiết `orca-wave-leader.mdc`. Coordinator gốc **không** thay Leader fan-out trong cùng wave (trừ replacement).
+
+Epic-level work: coordinator gốc spawn/reuse **một Epic planner** (`orca-epic-orchestrator.mdc`). Planner phân Story/Task và đề xuất **wave bề rộng tối đa**; **Wave Leader** (hoặc coordinator gốc nếu chưa bật mô hình Leader) spawn ownership workers/reviewers. Planner không `worker-start`; ownership/reviewer không spawn con.
 
 ## Default — max fan-out
 

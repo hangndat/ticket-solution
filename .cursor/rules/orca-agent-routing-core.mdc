@@ -1,0 +1,38 @@
+---
+description: Orca worker/reviewer — Cursor, Persona, Cost tier, role, review (luôn nạp)
+alwaysApply: true
+---
+
+# Orca — routing (worker / reviewer)
+
+Nguồn chính sách chọn agent + Cost tier. Chi tiết spawn coordinator → `orca-agent-routing-coordinator.mdc` (leader Read).
+
+## Mọi Task dùng Cursor
+
+`--agent cursor` cho impl, plan, review. Chỉ đổi agent khi user chỉ định rõ. **`worker-start`:** coordinator gốc (depth 0) **hoặc** Wave Leader (depth 1) khi Task Spec ghi `Wave leader authority: có` — xem `orca-wave-leader.mdc`. Epic planner, ownership, reviewer **không** spawn con (không gồm Wave Leader đã được ủy quyền).
+
+- Task Spec ghi **Cost tier** `cheap|standard` (trần standard), pin `--model` từ [cost-catalog.md](../../docs/agents/cost-catalog.md) — **cấm inherit UI**.
+- Reviewer **≠** session implementer.
+
+## Persona (`--display-name`)
+
+Roster: [docs/agents/README.md](../../docs/agents/README.md). Format `"<Persona> · <ui-label>"` (`web`/`be`/`ios`/`dod`/`sec`/`planner`…). Task title prefix cùng Persona. Pool `web`/`backend`: chọn persona chưa live cùng role.
+
+## Cost tier (worker)
+
+| Tier | Mặc định | Pin |
+| ---- | -------- | --- |
+| `cheap` | docs, CI hẹp, DoD docs-only | `composer-2.5` |
+| `standard` | feature, security, DoD runtime | `composer-2.5` (fallback catalog) |
+
+**Cấm** `composer-2.5-fast`, tier `heavy`, model > standard. Worker: follow Cost tier trong Spec; không spawn.
+
+## Role (chuyên môn)
+
+Role ≠ agent. Gắn `docs/agents/roles/<id>.md` trong Spec khi spawn architecture/ownership/reviewer. **Không** copy roles vào `alwaysApply` rules.
+
+## Review (reviewer session)
+
+Spec: Issue #, paths, **exact SHA**, DoD (± security). Verdict `PASS|FAIL|PASS with known gap`. Cùng SHA cần DoD+security → một session `James · dod+sec` (Wave C). Commit sau review → revalidate SHA mới.
+
+Artifact exact-SHA trong `docs/reviews/*` hoặc Issue/PR — thiếu GitHub Approve UI không thay Orca DoD.

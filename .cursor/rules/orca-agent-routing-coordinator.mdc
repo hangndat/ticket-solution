@@ -1,0 +1,32 @@
+---
+description: Orca coordinator — spawn, Wave D+E, Codex fallback, parallel caps (leader Read)
+alwaysApply: false
+---
+
+# Orca — routing (coordinator gốc)
+
+Bổ sung [orca-agent-routing-core.mdc](./orca-agent-routing-core.mdc). Leader **Read** khi kích hoạt (`orca-leader-activation.mdc`).
+
+## Spawn evidence
+
+Trước mỗi spawn: ghi agent, Cost tier, Persona, model requested/effective, lý do. Codex quota không gate Cursor spawn.
+
+Override Codex chỉ khi user cho phép; kiểm tra quota ≤5 phút; quota hết → Cursor replacement (checkpoint, không mất wt).
+
+## Cost tier — spawn rules
+
+1. Đọc cost-catalog → `--model <pin>`; không `--effort` đơn lẻ.
+2. Cấm inherit UI; inherit chỉ sau reject pin cùng band — ghi limitation.
+3. Fresh spawn đổi tier: không reuse `--terminal` nếu pane pin cao hơn task cheap.
+4. **Wave D:** sau wave `node scripts/orca-cost-wave-evidence.mjs` — `inherit%` > 20% → refresh pin, dừng spawn.
+5. **Wave E:** trước `worker-start` fresh: `node scripts/orca-spawn-model-preflight.mjs -- --agent cursor --model <pin> …`
+6. Cap reviewer ≤ **3** live/Run (`orca-parallel-workers.mdc`).
+7. Hygiene <~15 phút → coordinator inline, không spawn.
+
+## Codex quota exhaustion (coordinator)
+
+Ngừng dispatch Codex; thu checkpoint (git/diff/logs); spawn Cursor replacement cùng Task; không reset wt; Project giữ `Đang làm`/`Chờ duyệt`.
+
+## Review + merge
+
+`PASS` → merge khi ủy quyền + CI + gates. `FAIL` → `Đang làm` hoặc giữ `Chờ duyệt`. WIP backpressure: `github-project-tracking-coordinator.mdc`.
