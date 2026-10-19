@@ -3,6 +3,7 @@ import {
   pickSearchParams,
   requireEventParams,
 } from '../../../../../../../../src/bff/event-params';
+import { withPrivateNoStore } from '../../../../../../../../src/bff/cache-control';
 import { PORTAL_UPSTREAM } from '../../../../../../../../src/bff/paths';
 import { forwardStaffBearer } from '../../../../../../../../src/bff/upstream';
 
@@ -19,8 +20,9 @@ export async function GET(request: Request, { params }: Props) {
     'to',
     'action',
   ]);
-  return forwardStaffBearer(
+  const res = await forwardStaffBearer(
     `${PORTAL_UPSTREAM.audit(scope.tenantId, scope.eventId)}${qs}`,
     { method: 'GET' },
   );
+  return withPrivateNoStore(res);
 }
