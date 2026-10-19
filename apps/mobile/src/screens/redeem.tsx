@@ -8,11 +8,14 @@ import {
   redeemStatusRefreshAnnouncement,
 } from '@/a11y/announcements';
 import { presentRedeemDecision } from '@/attendee/attendee-outcome-copy';
-import { useAttendeeSignIn } from '@/attendee/use-attendee-sign-in';
 import { AttendeeCta } from '@/components/attendee-cta';
 import { Notice, Page } from '@/components/page';
-import { ErrorState, LoadingState } from '@/components/screen-state';
 import { redeemCopy } from '@/components/screen-state-copy';
+import { requestAttendeeAuthGate } from '@/navigation/attendee-auth-gate';
+import {
+  clearSignInReturnIfPath,
+  parkSignInReturn,
+} from '@/navigation/sign-in-return-intent';
 import { getApiBaseUrl, getEventId, getTenantId } from '@/identity/config';
 import { session } from '@/identity/session';
 import { fetchPublishedEventDetail } from '@/published/published-event-api';
@@ -29,6 +32,13 @@ import {
   reconcileRedeem,
   type RedeemDecision,
 } from '@/redeem/redeem-client';
+import {
+  clearRedeemDraftIntent,
+  dropRedeemDraftIntentIfStale,
+  parkRedeemDraftIntent,
+  resumeRedeemDraftIntent,
+  type RedeemDraftIntent,
+} from '@/redeem/redeem-draft-intent';
 import { RedeemFormFields } from '@/redeem/redeem-form-fields';
 import { useFadeInOnMount } from '@/hooks/use-fade-in-on-mount';
 import { colors } from '@/theme/colors';
@@ -51,14 +61,6 @@ export function RedeemScreen() {
     session.getSnapshot,
     session.getSnapshot,
   );
-  const {
-    busy: signInBusy,
-    error: signInError,
-    configured,
-    signIn,
-    clearError,
-  } = useAttendeeSignIn();
-
   const [tenantId, setTenantId] = useState(getTenantId() ?? '');
   const [eventId, setEventId] = useState(getEventId() ?? '');
   // Route params from event-detail CTA (AC-E3); local edit overrides until remount.
@@ -86,9 +88,58 @@ export function RedeemScreen() {
 
   const verified = identity.status === 'verified';
   const needsAuth =
-    !verified &&
-    (configured ||
-      (decision?.kind === 'denied' && AUTH_CODES.has(decision.code)));
+    !verified ||
+    (decision?.kind === 'denied' && AUTH_CODES.has(decision.code));
+
+  const applyRedeemDraft = useCallback(
+    (draft: { intent: RedeemDraftIntent }) => {
+      setTenantId(draft.intent.tenantId);
+      setEventId(draft.intent.eventId);
+      setTenantSlugEdit(draft.intent.tenantSlug);
+      setEventSlugEdit(draft.intent.eventSlug);
+      setCode(draft.intent.code);
+      setAnswers(draft.intent.answers);
+      setTermsAccepted(draft.intent.termsAccepted);
+      setSchemaNotice('Đã đăng nhập — tiếp tục đổi mã với dữ liệu đã nhập.');
+    },
+    [],
+  );
+
+  const syncRedeemDraft = useCallback(() => {
+    if (verified) return;
+    const epoch = session.captureEpoch();
+    parkRedeemDraftIntent({
+      tenantId,
+      eventId,
+      tenantSlug,
+      eventSlug,
+      code,
+      answers,
+      termsAccepted,
+      formVersion: form?.formVersion,
+      termsVersion: termsVersion ?? undefined,
+      parkedUserId: epoch?.userId ?? null,
+      parkedGeneration: epoch?.generation ?? null,
+    });
+  }, [
+    verified,
+    tenantId,
+    eventId,
+    tenantSlug,
+    eventSlug,
+    code,
+    answers,
+    termsAccepted,
+    form?.formVersion,
+    termsVersion,
+  ]);
+
+  useEffect(() => {
+    if (verified) return;
+    parkSignInReturn({ pathname: '/redeem' });
+    syncRedeemDraft();
+    return () => clearSignInReturnIfPath('/redeem');
+  }, [verified, syncRedeemDraft]);
 
   const loadPublishedSchema = useCallback(async () => {
     const t = tenantSlug.trim();
@@ -132,7 +183,23 @@ export function RedeemScreen() {
   }, [tenantSlug, eventSlug]);
 
   useEffect(() => {
+    const tryResumeDraft = () => {
+      const epoch = session.captureEpoch();
+      const resumed = resumeRedeemDraftIntent({
+        epoch,
+        isEpochCurrent: (e) => session.isEpochCurrent(e),
+      });
+      if (resumed.ok) {
+        applyRedeemDraft(resumed);
+      }
+    };
+    tryResumeDraft();
     const unsub = session.subscribe(() => {
+      const epoch = session.captureEpoch();
+      dropRedeemDraftIntentIfStale({
+        epoch,
+        isEpochCurrent: (e) => session.isEpochCurrent(e),
+      });
       const snap = session.getSnapshot();
       if (snap.status !== 'verified') {
         setAnswers({});
@@ -142,13 +209,13 @@ export function RedeemScreen() {
         setStatusNote(null);
         return;
       }
-      clearError();
       setDecision((prev) =>
         prev?.kind === 'denied' && AUTH_CODES.has(prev.code) ? null : prev,
       );
+      tryResumeDraft();
     });
     return unsub;
-  }, [clearError]);
+  }, [applyRedeemDraft]);
 
   async function submit() {
     const epoch = session.captureEpoch();
@@ -213,8 +280,10 @@ export function RedeemScreen() {
       } else if (next.kind === 'pending') {
         setAttempt(null);
         setStatusNote('Đang chờ duyệt — làm mới sau. Chưa phải vé.');
+        clearRedeemDraftIntent();
       } else {
         setAttempt(null);
+        clearRedeemDraftIntent();
       }
     } catch {
       setOfflineNotice(redeemCopy.offlineBody);
@@ -306,13 +375,6 @@ export function RedeemScreen() {
     }
   }
 
-  const onSignIn = async () => {
-    const ok = await signIn();
-    if (ok && decision?.kind === 'denied' && AUTH_CODES.has(decision.code)) {
-      setDecision(null);
-    }
-  };
-
   const outcome = presentRedeemDecision(decision, { surface: 'redeem' });
   const outcomeDetail = outcome.secondary
     ? `${outcome.detail}\n${outcome.secondary}`
@@ -334,40 +396,19 @@ export function RedeemScreen() {
         <Notice title={authDenied ? outcome.title : 'Cần đăng nhập'}>
           {authDenied
             ? outcome.detail
-            : 'Đăng nhập rồi quay lại đổi mã. Chưa submit cấp vé khi thiếu phiên.'}
+            : redeemCopy.authRequiredBody}
         </Notice>
       ) : null}
 
       {needsAuth ? (
         <AttendeeCta
-          label={
-            signInBusy
-              ? 'Đang đăng nhập…'
-              : decision?.kind === 'denied' &&
-                  decision.code === 'EMAIL_NOT_VERIFIED'
-                ? 'Xác minh email / đăng nhập lại'
-                : 'Đăng nhập'
-          }
-          disabled={signInBusy}
-          onPress={() => void onSignIn()}
-          testID="redeem-cta-signin"
+          label={redeemCopy.authGateCta}
+          onPress={() => {
+            syncRedeemDraft();
+            requestAttendeeAuthGate('/redeem');
+          }}
+          testID="redeem-cta-auth-gate"
         />
-      ) : null}
-
-      {signInBusy ? (
-        <LoadingState title="Đang đăng nhập">
-          Chờ xác minh — chưa đổi mã.
-        </LoadingState>
-      ) : null}
-
-      {signInError ? (
-        <ErrorState
-          title={redeemCopy.authCancelTitle}
-          onRetry={() => void onSignIn()}
-          retryLabel="Thử lại"
-        >
-          {signInError}
-        </ErrorState>
       ) : null}
 
       {offlineNotice ? (
