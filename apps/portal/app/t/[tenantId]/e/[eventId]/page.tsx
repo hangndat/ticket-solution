@@ -41,7 +41,14 @@ import {
   GateStayAppNotice,
 } from '../../../../../src/components/gate-deeplink';
 import { SurfaceState } from '../../../../../src/components/surface-state';
-import { usePortalLocale } from '../../../../../src/i18n';
+import {
+  formatEventBusinessStatus,
+  formatEventContentStatus,
+  formatEventVisibility,
+  formatReadinessStatus,
+  usePortalLocale,
+} from '../../../../../src/i18n';
+import { formatReportAsOf } from '../../../../../src/ops/report';
 
 export default function EventOverviewPage() {
   const { t, locale } = usePortalLocale();
@@ -315,17 +322,21 @@ export default function EventOverviewPage() {
     >
       <ProCard size="small" title={t('ops.export.statusButton')} style={{ marginBottom: 16 }}>
         <Descriptions bordered size="small" column={1}>
-          <Descriptions.Item label="Slug">{detail.slug}</Descriptions.Item>
+          <Descriptions.Item label={t('common.label.slug')}>
+            {detail.slug}
+          </Descriptions.Item>
           <Descriptions.Item label={t('common.h_fe18yl')}>
-            {detail.contentStatus}
+            {formatEventContentStatus(locale, detail.contentStatus)}
           </Descriptions.Item>
           <Descriptions.Item label={t('common.h_1t15e7z')}>
-            {detail.businessStatus}
+            {formatEventBusinessStatus(locale, detail.businessStatus)}
           </Descriptions.Item>
           <Descriptions.Item label={t('common.h_wqd4fq')}>
-            {detail.visibility}
+            {formatEventVisibility(locale, detail.visibility)}
           </Descriptions.Item>
-          <Descriptions.Item label="Revision">{detail.revision}</Descriptions.Item>
+          <Descriptions.Item label={t('common.label.revision')}>
+            {detail.revision}
+          </Descriptions.Item>
           <Descriptions.Item label={t('common.h_qqix4u')}>
             {publishedVersion ?? '—'}
           </Descriptions.Item>
@@ -342,7 +353,7 @@ export default function EventOverviewPage() {
           renderItem={(item) => (
             <List.Item>
               <List.Item.Meta
-                title={t('ops.export.apiRejected', { code: item.label, message: item.status })}
+                title={`${item.label} — ${formatReadinessStatus(locale, item.status)}`}
                 description={item.detail}
               />
             </List.Item>
@@ -355,20 +366,24 @@ export default function EventOverviewPage() {
           size="small"
           title={t('gate.reportQuickTitle')}
           subTitle={
-            shownReport.asOf ? `asOf ${shownReport.asOf}` : undefined
+            shownReport.asOf
+              ? t('analytics.asOfTag', {
+                  asOf: formatReportAsOf(shownReport.asOf),
+                })
+              : undefined
           }
           style={{ marginBottom: 16 }}
         >
           <StatisticCard.Group>
             <StatisticCard
               statistic={{
-                title: 'Quota allocated',
+                title: t('gate.stat.quotaAllocated'),
                 value: shownReport.quota.allocated,
               }}
             />
             <StatisticCard
               statistic={{
-                title: 'Capacity',
+                title: t('gate.stat.capacity'),
                 value:
                   shownReport.quota.capacity === null
                     ? '∞'
@@ -383,7 +398,7 @@ export default function EventOverviewPage() {
             />
             <StatisticCard
               statistic={{
-                title: 'Check-in OK',
+                title: t('gate.stat.checkInOk'),
                 value: shownReport.checkInSuccessCount,
               }}
             />

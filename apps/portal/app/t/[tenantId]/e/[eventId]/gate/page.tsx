@@ -26,7 +26,10 @@ import {
   GateStayAppNotice,
 } from '../../../../../../src/components/gate-deeplink';
 import { SurfaceState } from '../../../../../../src/components/surface-state';
-import { usePortalLocale } from '../../../../../../src/i18n';
+import {
+  formatTicketStateCountLabel,
+  usePortalLocale,
+} from '../../../../../../src/i18n';
 
 /**
  * GATE-STAY-APP: O12 report surface only — never mount scanner on portal.
@@ -117,13 +120,20 @@ export default function EventGateReportPage() {
       {shown ? (
         <>
           <StatisticCard.Group
-            title="Snapshot"
-            subTitle={`asOf ${formatReportAsOf(shown.asOf)} UTC`}
+            title={t('gate.report.snapshotTitle')}
+            subTitle={t('analytics.asOfTag', {
+              asOf: `${formatReportAsOf(shown.asOf)} UTC`,
+            })}
           >
-            <StatisticCard statistic={{ title: 'Quota allocated', value: shown.quota.allocated }} />
             <StatisticCard
               statistic={{
-                title: 'Capacity',
+                title: t('gate.stat.quotaAllocated'),
+                value: shown.quota.allocated,
+              }}
+            />
+            <StatisticCard
+              statistic={{
+                title: t('gate.stat.capacity'),
                 value: shown.quota.capacity === null ? '∞' : shown.quota.capacity,
               }}
             />
@@ -134,14 +144,17 @@ export default function EventGateReportPage() {
               }}
             />
             <StatisticCard
-              statistic={{ title: 'Check-in OK', value: shown.checkInSuccessCount }}
+              statistic={{
+                title: t('gate.stat.checkInOk'),
+                value: shown.checkInSuccessCount,
+              }}
             />
           </StatisticCard.Group>
           <Descriptions bordered size="small" column={2} style={{ marginTop: 16 }}>
-            <Descriptions.Item label="Capacity state">
+            <Descriptions.Item label={t('gate.report.capacityState')}>
               {formatQuotaCapacityState(shown.quotaCapacityState, locale)}
             </Descriptions.Item>
-            <Descriptions.Item label="Remaining">
+            <Descriptions.Item label={t('gate.report.remaining')}>
               {formatQuotaRemaining(
                 shown.quotaRemaining,
                 shown.quotaCapacityState,
@@ -151,7 +164,9 @@ export default function EventGateReportPage() {
             <Descriptions.Item label={t('gate.h_icax5j')}>
               {shown.emailNeedsCsCount}
             </Descriptions.Item>
-            <Descriptions.Item label={t('gate.h_1swn6cq')}>
+            <Descriptions.Item
+              label={formatTicketStateCountLabel(locale, 'ACTIVE')}
+            >
               {shown.ticketsByState.ACTIVE}
             </Descriptions.Item>
           </Descriptions>
