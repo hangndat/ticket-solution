@@ -329,13 +329,17 @@ export async function createApp(
     db: identity.db,
     verifier: identity.verifier,
     users: identity.users,
-    bootError: identity.bootError ?? issueDeps.issueBootError,
+    bootError: identity.bootError,
     hmac: identity.hmac ?? issueDeps.hmac,
     credentialKey: identity.credentialKey ?? issueDeps.credentialKey,
     routingPeppers: issueDeps.routingPeppers,
     resolveTokenSecret: issueDeps.resolveTokenSecret,
   };
-  const resolveDeps = buildResolveDeps(env, ticketDeps);
+  const ticketIssueDeps: TicketServices = {
+    ...ticketDeps,
+    bootError: identity.bootError ?? issueDeps.issueBootError,
+  };
+  const resolveDeps = buildResolveDeps(env, ticketIssueDeps);
 
   @Module({
     controllers: [
@@ -373,7 +377,7 @@ export async function createApp(
       },
       {
         provide: TicketIssueService,
-        useValue: new TicketIssueService(ticketDeps),
+        useValue: new TicketIssueService(ticketIssueDeps),
       },
       {
         provide: RedemptionResolveService,
