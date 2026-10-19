@@ -70,8 +70,10 @@ Pin `--model` từ [docs/agents/cost-catalog.md](../../docs/agents/cost-catalog.
 
 | Cost tier | Khi dùng (mặc định) | Launch preference (Cursor pin) |
 | --------- | ------------------- | ------------------------------ |
-| `cheap` | Docs/rules, Project comment, extract/rename, CI fix hẹp, board hygiene, DoD docs-only/revalidate hẹp, Epic planner DAG đơn (&lt;~8 Task, không ADR), idle-fill nhỏ | `composer-2.5-fast` (fallback trong cost-catalog) |
-| `standard` | Mọi việc còn lại: feature BE/web/iOS, BA/PD, architect/ADR, security (kể cả hot path), DoD runtime, planner DAG rối, retry reasoning | `composer-2.5`; Architecture impact Có **hoặc** scope đa-file lớn → `claude-sonnet-5-thinking-medium` |
+| `cheap` | Docs/rules, Project comment, extract/rename, CI fix hẹp, board hygiene, DoD docs-only/revalidate hẹp, Epic planner DAG đơn (&lt;~8 Task, không ADR), idle-fill nhỏ | `composer-2.5` (Composer Standard; fallback trong cost-catalog) |
+| `standard` | Mọi việc còn lại: feature BE/web/iOS, BA/PD, architect/ADR, security (kể cả hot path), DoD runtime, planner DAG rối, retry reasoning | `composer-2.5` (fallback `claude-sonnet-5-thinking-low` nếu host reject; **cấm** `claude-sonnet-5-thinking-medium`) |
+
+**Cấm** `composer-2.5-fast` (Composer Fast) — xem [cost-catalog](../../docs/agents/cost-catalog.md).
 
 **Trần:** cấm tier `heavy` và mọi model vượt band standard (xem [cost-catalog](../../docs/agents/cost-catalog.md)). Heuristic: docs/mechanical / DoD hẹp / planner đơn → `cheap`; còn lại → `standard`. Hygiene &lt;~15 phút → ưu tiên coordinator **inline** (không spawn).
 
@@ -98,6 +100,7 @@ Pin `--model` từ [docs/agents/cost-catalog.md](../../docs/agents/cost-catalog.
   ❌ Mọi reviewer = frontier model / >3 reviewer live
   ❌ Reuse pane standard cho Task docs/cheap tiếp theo (không hạ pin)
   ❌ Spawn `--model` vượt standard (thinking-high, sol-high, opus, xhigh/max)
+  ❌ `--model composer-2.5-fast` (Composer Fast) — chỉ `composer-2.5`
   ❌ ultra / max / xhigh / opus làm mặc định
   ❌ Đổi model + tăng effort cùng lúc ở retry đầu
   ❌ Bịa Cursor model id ngoài cost-catalog / agent models

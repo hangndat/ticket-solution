@@ -149,8 +149,8 @@ ORCA orchestration worker-start \
 
 | Tier | `--model` pin (cost-catalog) |
 | ---- | ---------------------------- |
-| cheap | `composer-2.5-fast` |
-| standard | `composer-2.5` (hoặc `claude-sonnet-5-thinking-medium` khi architecture impact / scope lớn) |
+| cheap | `composer-2.5` (Composer Standard; cấm `composer-2.5-fast`) |
+| standard | `composer-2.5` (fallback `claude-sonnet-5-thinking-low`; cấm `claude-sonnet-5-thinking-medium`) |
 
 Sau wave: `node scripts/orca-cost-wave-evidence.mjs` → ghi dòng `cost-wave` (`source=receipt`). Comment wt `Cost … · model …` **không** thay `--model` argv.
 
@@ -204,7 +204,7 @@ Khối bổ sung khi giao Task Architect (điền cùng parent/scope/AC trong sp
 - Persona: Dexter
 - File: docs/agents/roles/architect.md
 - Agent: cursor (theo orca-agent-routing.mdc)
-- Cost tier: standard (`claude-sonnet-5-thinking-medium` khi scope/ADR phức tạp)
+- Cost tier: standard (`composer-2.5`)
 - Mode: Thiết kế | Kiểm tra sự phù hợp
 - Architecture impact: Có — <quyết định/rủi ro cụ thể>
 - Orca: --display-name "Dexter · architect"
