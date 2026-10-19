@@ -1,0 +1,50 @@
+---
+description: Project #3 — reviewer spawn, WIP, milestone gates, gh (leader Read)
+alwaysApply: false
+---
+
+# GitHub Project tracking (coordinator)
+
+Bổ sung [github-project-tracking.mdc](./github-project-tracking.mdc). Leader Read khi orchestrate.
+
+## Reviewer spawn
+
+Task `Chờ duyệt` → một reviewer độc lập/Task (review only). Nhiều PR → nhiều reviewer (cap ≤3 live; `orca-parallel-workers.mdc`). Agent: `orca-agent-routing-coordinator.mdc`.
+
+**Wave C:** DoD+security cùng SHA → một `James · dod+sec`; tách chỉ hot path + lý do evidence.
+
+Architecture impact `Có`: DoD đối chiếu ADR; drift → `architect` trên exact SHA (song song DoD OK).
+
+## Milestone / Epic DoD
+
+| Gate | Yêu cầu |
+| ---- | ------- |
+| (a) UAT | Orca tab/emulator — `uat-headless.mdc` |
+| (b) iOS local | prebuild + xcodebuild khi chạm mobile — không EAS cloud |
+| (c) Deploy prod | Chỉ khi authorize |
+| (d) Reviews | `docs/reviews/*` + exact SHA |
+
+## WIP / backpressure
+
+Đầy khi: ≥3 `Chờ duyệt` board, hoặc ≥2 PR/slice chờ merge, hoặc ≥4 PR mở thiếu DoD+CI.
+
+Ưu tiên: review → fix → CI → merge → feature mới. Soft caps: `orca-parallel-workers.mdc` (≤5 non-review, ≤1 feature/slice).
+
+Idle fill: `orca-idle-worker-fill.mdc`.
+
+## Đo lường nhẹ
+
+Thời gian chờ duyệt, CI re-run, reopen, `inherit%` (cost-wave) — ghi comment đợt.
+
+## `gh` sketch
+
+```bash
+gh project item-list 3 --owner hangndat --format json
+gh project item-edit --project-id PVT_kwHOAGoDWs4BnWaN \
+  --id <ITEM_ID> --field-id PVTSSF_lAHOAGoDWs4BnWaNzhl7cPk \
+  --single-select-option-id <OPTION_ID>
+```
+
+Status ids: Đang làm `8c0ed3f4` · Chờ duyệt `0544c261` · Bị chặn `e6e061c9` · Hoàn thành `98236657` · Sẵn sàng `47fc9ee4` · Chưa lên lịch `f75ad846`.
+
+Re-fetch `gh project field-list 3 --owner hangndat --format json` nếu edit fail.

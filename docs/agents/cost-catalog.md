@@ -1,6 +1,6 @@
 # Cost catalog — Cursor model pins (Vemoki / Orca)
 
-Nguồn **pin** `--model` theo Cost tier khi spawn `--agent cursor`. Rule: `.cursor/rules/orca-agent-routing.mdc`.
+Nguồn **pin** `--model` theo Cost tier khi spawn `--agent cursor`. Rules: `orca-agent-routing-core.mdc` · coordinator spawn: `orca-agent-routing-coordinator.mdc`.
 
 **Không** dùng `auto` / omit flags làm mặc định (inherit UI thường đắt). Chỉ fallback inherit khi host **reject** mọi ID trong band và đã ghi limitation.
 

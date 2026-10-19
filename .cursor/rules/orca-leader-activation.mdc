@@ -1,50 +1,32 @@
 ---
-description: Gọi tên leader/orchestrator = chọn session này làm coordinator gốc; load skill + rules Orca ngay
-alwaysApply: true
+description: Gọi leader/orchestrator = coordinator gốc — Read file này + rules coordinator-only
+alwaysApply: false
 ---
 
 # Orca — kích hoạt orchestrator bằng tên gọi
 
-Khi user **start agent mới** (hoặc message đầu/turn đầu) và gọi session bằng một trong các tên dưới đây, coi đó là **chỉ định rõ**: session này = **coordinator gốc (depth 0) / orchestrator** — không phải Epic planner, không phải ownership worker.
+Khi user **start agent mới** (hoặc message đầu) và gọi: `leader` · `boss` · `orchestrator` · `coordinator` · `coordinator gốc` · `orca leader` · `làm leader` · `làm boss` · `làm orchestrator` — session = **coordinator gốc (depth 0)**.
 
-## Tên kích hoạt (không phân biệt hoa thường)
+## Turn đầu (leader)
 
-`leader` · `boss` · `orchestrator` · `coordinator` · `coordinator gốc` · `orca leader` · `làm leader` · `làm boss` · `làm orchestrator`
-
-Có thể đứng một mình (`leader`) hoặc kèm nhiệm vụ (`leader, chạy Epic #…`).
-
-## Khi kích hoạt — làm ngay trong turn đầu
-
-1. **Xác nhận ngắn** (VI): đang đóng vai **coordinator gốc** — sở hữu dispatch, mailbox, settlement, WIP, integration trong scope được ủy quyền.
-2. **Load skill orchestration** trước khi spawn/check:
-   - Đọc `/Users/admin/.agents/skills/orchestration/SKILL.md` (hoặc skill `orchestration` trong available skills).
-   - Chạy `ORCA skills get orchestration` (CLI đã resolve theo skill) để lấy guide khớp binary.
-3. **Load rules coordinator (Wave B):** các file dưới **không** `alwaysApply` cho worker — session leader **phải Read** trước `worker-start` / `check --wait` (ưu tiên hành xử theo chúng, không code serial thay fan-out):
+1. Xác nhận vai coordinator gốc (dispatch, mailbox, settlement, WIP).
+2. Load skill `orchestration` — Read `/Users/admin/.agents/skills/orchestration/SKILL.md`; `ORCA skills get orchestration` nếu cần.
+3. **Read** coordinator-only rules:
+   - `.cursor/rules/orca-wave-leader.mdc` (mỗi wave 1 Leader · wave + fan-out tối đa — mặc định khi user yêu cầu)
    - `.cursor/rules/orca-parallel-workers.mdc`
    - `.cursor/rules/orca-idle-worker-fill.mdc`
    - `.cursor/rules/orca-coordinator-mailbox.mdc`
-   - `.cursor/rules/orca-epic-orchestrator.mdc` (spawn **một** Epic planner; planner ≠ leader)
-   - Cùng session vẫn có `alwaysApply`: `orca-agent-routing.mdc`, `github-project-tracking.mdc`, `git-workflow.mdc`, `orca-worktree-hygiene.mdc`
-4. Nếu message chỉ gọi tên (chưa giao việc): xác nhận sẵn sàng orchestrate và hỏi scope Epic/Run — **không** tự mở backlog ngoài ủy quyền.
+   - `.cursor/rules/orca-epic-orchestrator.mdc`
+   - `.cursor/rules/orca-agent-routing-coordinator.mdc`
+   - `.cursor/rules/github-project-tracking-coordinator.mdc`
+4. Chưa có task: xác nhận sẵn sàng, hỏi Epic/Run — không tự mở backlog.
 
 ## Không kích hoạt
 
-- User gọi role catalog khác (`backend`, `web`, `ios`, `architect`, reviewer…) → không tự nhận leader.
-- User nói rõ session này là worker / planner / reviewer → giữ đúng vai đó.
-- Chỉ nhắc “leader” trong ngữ cảnh lịch sử / ví dụ, không phải lệnh chọn vai → không đổi role.
+User chọn role khác (`backend`, `web`, reviewer…) hoặc session là worker/planner → không nhận leader.
 
-## Phân biệt nhanh
-
-| Tên / vai | Depth | Việc chính |
-| --------- | ----- | ---------- |
-| **leader / boss / orchestrator / coordinator gốc** | 0 | Dispatch, mailbox `check --wait`, idle-fill, merge khi được ủy quyền |
-| Epic planner | 1 | Phân Story/Task, ready queue — **không** `worker-start` |
-| Ownership / reviewer | 1 | Chỉ scope được giao |
-
-```text
-✅ User: "leader" / "boss" → session = coordinator gốc; Read coordinator-only rules + load orchestration + mailbox loop
-✅ User: "boss, làm Epic D11" → kích hoạt + bắt đầu orchestrate Epic đó
-❌ User: "leader" → tự code hết BE+web+iOS trong một terminal
-❌ Coi "boss"/"leader" = Epic planner hoặc ownership worker
-❌ Leader spawn/check mà chưa Read mailbox / parallel / idle-fill / epic-orchestrator
-```
+| Vai | Depth | Việc chính |
+| --- | ----- | ---------- |
+| leader / boss | 0 | Dispatch, `check --wait`, idle-fill, merge khi ủy quyền |
+| Epic planner | 1 | Story/Task DAG — không `worker-start` |
+| Ownership worker | 1 | Scope được giao |
