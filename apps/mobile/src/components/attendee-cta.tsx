@@ -7,8 +7,8 @@ type Props = {
   label: string;
   onPress: () => void;
   disabled?: boolean;
-  /** signal fill (primary) vs paper/ink outline secondary */
-  variant?: 'primary' | 'secondary';
+  /** signal fill (primary) vs paper/ink outline secondary vs destructive logout */
+  variant?: 'primary' | 'secondary' | 'destructive';
   accessibilityLabel?: string;
   testID?: string;
 };
@@ -24,6 +24,7 @@ export function AttendeeCta({
 }: Props) {
   const [focused, setFocused] = useState(false);
   const primary = variant === 'primary';
+  const destructive = variant === 'destructive';
   return (
     <Pressable
       testID={testID}
@@ -39,15 +40,23 @@ export function AttendeeCta({
         paddingHorizontal: 18,
         borderRadius: 12,
         borderCurve: 'continuous',
-        backgroundColor: primary ? colors.accent : colors.card,
+        backgroundColor: destructive
+          ? 'transparent'
+          : primary
+            ? colors.accent
+            : colors.card,
         opacity: disabled ? 0.45 : pressed ? 0.85 : 1,
         borderWidth: focused ? 2 : primary ? 0 : 1,
-        borderColor: focused ? colors.focus : colors.ink,
+        borderColor: focused
+          ? colors.focus
+          : destructive
+            ? colors.accent
+            : colors.ink,
       })}
     >
       <Text
         style={{
-          color: primary ? colors.onAccent : colors.ink,
+          color: destructive ? colors.accent : primary ? colors.onAccent : colors.ink,
           fontSize: 17,
           fontFamily: fontFamilies.bodySemiBold,
           fontWeight: '600',
