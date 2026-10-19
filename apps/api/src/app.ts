@@ -67,6 +67,11 @@ import {
   PublishedEventsController,
   PublishedEventsService,
 } from './published-events';
+import {
+  TenantRegistrationController,
+  TenantRegistrationService,
+  buildTenantRegistrationDeps,
+} from './tenant-registrations';
 
 class HealthDto implements HealthResponse {
   @ApiProperty({ enum: ['ok'] }) status!: 'ok';
@@ -341,6 +346,7 @@ export async function createApp(
       PlatformController,
       BrandingController,
       PublishedEventsController,
+      TenantRegistrationController,
     ],
     providers: [
       {
@@ -408,6 +414,18 @@ export async function createApp(
       {
         provide: PublishedEventsService,
         useValue: new PublishedEventsService({ db: identity.db }),
+      },
+      {
+        provide: TenantRegistrationService,
+        useValue: new TenantRegistrationService(
+          buildTenantRegistrationDeps({
+            env,
+            db: identity.db,
+            verifier: identity.verifier,
+            users: identity.users,
+            bootError: identity.bootError,
+          }),
+        ),
       },
       {
         provide: DatabaseShutdown,

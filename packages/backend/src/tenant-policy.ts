@@ -67,7 +67,7 @@ export function assertTenantAllowsIssue(status: string): void {
   if (status === 'PENDING') {
     throw new PlatformError(
       PLATFORM_ERROR_CODES.TENANT_PENDING,
-      'Tenant is pending owner accept',
+      'Tenant is pending activation',
       false,
     );
   }

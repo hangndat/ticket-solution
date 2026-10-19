@@ -4427,6 +4427,51 @@
           "public-events"
         ]
       }
+    },
+    "/v1/public/tenant-registrations": {
+      "post": {
+        "operationId": "TenantRegistrationController_create",
+        "parameters": [
+          {
+            "name": "idempotency-key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublicTenantRegistrationBodyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicTenantRegistrationResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "public-tenant-registrations"
+        ]
+      }
     }
   },
   "info": {
@@ -7288,6 +7333,55 @@
           "sections",
           "faq",
           "terms"
+        ]
+      },
+      "PublicTenantRegistrationBodyDto": {
+        "type": "object",
+        "properties": {
+          "slug": {
+            "type": "string",
+            "example": "acme-events"
+          },
+          "name": {
+            "type": "string",
+            "example": "Acme Events"
+          },
+          "defaultTimezone": {
+            "type": "string",
+            "example": "Asia/Ho_Chi_Minh"
+          },
+          "contact": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "slug",
+          "name"
+        ]
+      },
+      "PublicTenantRegistrationResponseDto": {
+        "type": "object",
+        "properties": {
+          "registrationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tenantId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING"
+            ]
+          }
+        },
+        "required": [
+          "registrationId",
+          "tenantId",
+          "status"
         ]
       }
     }
