@@ -34,7 +34,7 @@ Nguồn: `agent models` trên máy này. Effort nằm **trong** model id Cursor 
 ORCA orchestration worker-start \
   --task <id> --worktree … --agent cursor \
   --model composer-2.5-fast \
-  --display-name "James · dod" \
+  --display-name "James · dod+sec" \
   --json
 ```
 
