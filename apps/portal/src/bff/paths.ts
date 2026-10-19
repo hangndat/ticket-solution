@@ -58,6 +58,8 @@ export const PORTAL_UPSTREAM = {
   revokeInvite: (tenantId: string, inviteId: string) =>
     `${tenantBase(tenantId)}/invites/${encodeURIComponent(inviteId)}/revoke`,
   branding: (tenantId: string) => `${tenantBase(tenantId)}/branding`,
+  /** P2-ONBOARD-PENDING — authenticated self-serve (Bearer + Idempotency-Key) */
+  tenantRegistrations: '/v1/public/tenant-registrations',
   /** C-I import job + file quarantine */
   imports: (tenantId: string, eventId: string) =>
     `${eventBase(tenantId, eventId)}/imports`,
