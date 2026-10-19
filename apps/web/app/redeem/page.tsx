@@ -3,6 +3,7 @@ import { authNoticeFromParam } from '../../src/oidc/auth-notice';
 import { isOidcConfigured, resolveWebAuthState } from '../../src/oidc/config';
 import { loginHref } from '../../src/oidc/login-href';
 import { SiteNav } from '../../src/site-chrome';
+import { globalRedeemEntryEnabled } from '../../src/redeem/global-entry';
 import { RedeemForm } from './redeem-form';
 
 /** OIDC + redeem are runtime — never SSG the fail-closed branch. */
@@ -31,6 +32,12 @@ export default async function RedeemPage({ searchParams }: Props) {
   const redeemLogin = loginHref('/redeem');
   const authNotice = authNoticeFromParam(params.notice?.trim(), {
     retryHref: redeemLogin,
+  });
+  const globalEntry = globalRedeemEntryEnabled({
+    tenantId: params.tenantId,
+    eventId: params.eventId,
+    tenantSlug: params.tenantSlug,
+    eventSlug: params.eventSlug,
   });
 
   return (
@@ -89,7 +96,8 @@ export default async function RedeemPage({ searchParams }: Props) {
         </aside>
       ) : (
         <RedeemForm
-          key={`${params.tenantId ?? ''}:${params.eventId ?? ''}:${params.tenantSlug ?? ''}:${params.eventSlug ?? ''}`}
+          key={`${globalEntry ? 'global' : ''}:${params.tenantId ?? ''}:${params.eventId ?? ''}:${params.tenantSlug ?? ''}:${params.eventSlug ?? ''}`}
+          globalEntry={globalEntry}
           initialTenantId={params.tenantId?.trim() ?? ''}
           initialEventId={params.eventId?.trim() ?? ''}
           initialTenantSlug={params.tenantSlug?.trim() ?? ''}

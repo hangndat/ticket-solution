@@ -5,6 +5,7 @@ import {
   resolveIdempotencyKey,
 } from './attempt-key.ts';
 import { APPROVAL_PENDING, REDEEM_COMMAND } from './contract.ts';
+import { REDEMPTION_RESOLVE_HEADER } from '@ticket/contracts';
 import {
   PENDING_NOT_TICKET,
   REDEEM_UNKNOWN,
@@ -190,6 +191,32 @@ test('attempt fingerprint includes answers and consent; changed answers get new 
   );
   assert.equal(fresh.reused, false);
   assert.equal(fresh.key, 'new-key');
+});
+
+test('redeem POST sends resolve token header when provided', async () => {
+  let headers: Record<string, string> = {};
+  const fetchImpl: typeof fetch = async (_input, init) => {
+    headers = init?.headers as Record<string, string>;
+    return new Response(
+      JSON.stringify({
+        ticketId: '11111111-1111-4111-8111-111111111111',
+        state: 'ACTIVE',
+        replayed: false,
+      }),
+      { status: 201 },
+    );
+  };
+  await redeemCode({
+    apiBase: 'http://127.0.0.1:3001',
+    bearer: 'token',
+    tenantId: '22222222-2222-4222-8222-222222222222',
+    eventId: '33333333-3333-4333-8333-333333333333',
+    code: 'INVITE-1',
+    idempotencyKey: key,
+    resolveToken: 'resolve-tok',
+    fetchImpl,
+  });
+  assert.equal(headers[REDEMPTION_RESOLVE_HEADER], 'resolve-tok');
 });
 
 test('redeem POST body carries form/terms/answers/consent', async () => {

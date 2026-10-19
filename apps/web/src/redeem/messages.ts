@@ -2,6 +2,7 @@ import {
   FORM_ERROR_CODES,
   IDENTITY_ERROR_CODES,
   ISSUE_ERROR_CODES,
+  RESOLVE_ERROR_CODES,
 } from '@ticket/contracts';
 import type { RedeemDecision } from './decide';
 import type { OwnerRedemptionStatus } from '@ticket/contracts';
@@ -59,6 +60,31 @@ const BY_CODE: Record<
     title: 'Mã không hợp lệ',
     detail: 'Không tìm thấy mã cho sự kiện đã chọn.',
     retryable: false,
+  },
+  [RESOLVE_ERROR_CODES.RESOLVE_DISABLED]: {
+    kind: 'closed',
+    title: 'Chưa hỗ trợ đổi mã một ô',
+    detail:
+      'Tính năng tra mã toàn hệ thống chưa bật trên môi trường này. Thử lại sau hoặc dùng liên kết sự kiện.',
+    retryable: false,
+  },
+  [RESOLVE_ERROR_CODES.RESOLVE_TOKEN_REQUIRED]: {
+    kind: 'stale',
+    title: 'Phiên tra mã hết hạn',
+    detail: 'Nhập mã và tra lại trước khi đổi vé.',
+    retryable: true,
+  },
+  [RESOLVE_ERROR_CODES.RESOLVE_TOKEN_STALE]: {
+    kind: 'stale',
+    title: 'Phiên tra mã hết hạn',
+    detail: 'Mã hoặc biểu mẫu đã đổi — nhập mã và bấm «Tiếp tục» để tải lại.',
+    retryable: true,
+  },
+  [RESOLVE_ERROR_CODES.RATE_LIMITED]: {
+    kind: 'denied',
+    title: 'Thử lại sau',
+    detail: 'Quá nhiều lần tra mã. Đợi vài phút rồi thử lại.',
+    retryable: true,
   },
   [ISSUE_ERROR_CODES.EVENT_CLOSED]: {
     kind: 'closed',

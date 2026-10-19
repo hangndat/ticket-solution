@@ -26,7 +26,11 @@ function AppStack() {
         name="events/fixture/[eventId]"
         options={{ title: 'Sự kiện demo' }}
       />
-      <Stack.Screen name="redeem" options={{ title: 'Đổi mã' }} />
+      <Stack.Screen name="redeem" options={{ title: 'Đổi mã (sự kiện)' }} />
+      <Stack.Screen
+        name="redeem-global"
+        options={{ title: 'Đổi mã lấy vé' }}
+      />
       <Stack.Screen name="claim" options={{ title: 'Nhận vé mời' }} />
       <Stack.Screen
         name="membership-invite"
