@@ -9,6 +9,7 @@ import {
   getTenantSlug,
   isOidcConfigured,
   showDemoEventCatalog,
+  VEMOKI_PROD_API_BASE_URL,
 } from './config.ts';
 
 test('missing OIDC env is fail-closed (not configured)', () => {
@@ -52,20 +53,11 @@ test('issuer + client id is configured', () => {
   else process.env.EXPO_PUBLIC_OIDC_CLIENT_ID = prevClient;
 });
 
-test('API base URL trims trailing slashes', () => {
+test('API base URL is always production (K-API-02 / HOST-1)', () => {
   const previous = process.env.EXPO_PUBLIC_API_BASE_URL;
   process.env.EXPO_PUBLIC_API_BASE_URL = 'http://127.0.0.1:3001/';
-  assert.equal(getApiBaseUrl(), 'http://127.0.0.1:3001');
-  if (previous === undefined) delete process.env.EXPO_PUBLIC_API_BASE_URL;
-  else process.env.EXPO_PUBLIC_API_BASE_URL = previous;
-});
-
-test('API base URL prefers env over empty extra (no invented URL in unit env)', () => {
-  const previous = process.env.EXPO_PUBLIC_API_BASE_URL;
+  assert.equal(getApiBaseUrl(), VEMOKI_PROD_API_BASE_URL);
   delete process.env.EXPO_PUBLIC_API_BASE_URL;
-  // Without Metro bake / expo-constants extra in node:test, missing env → null.
-  assert.equal(getApiBaseUrl(), null);
-  process.env.EXPO_PUBLIC_API_BASE_URL = 'https://api.vemoki.com/';
   assert.equal(getApiBaseUrl(), 'https://api.vemoki.com');
   if (previous === undefined) delete process.env.EXPO_PUBLIC_API_BASE_URL;
   else process.env.EXPO_PUBLIC_API_BASE_URL = previous;

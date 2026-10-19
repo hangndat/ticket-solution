@@ -23,13 +23,17 @@ const beBody = {
   version: 3,
 };
 
-test('fetchTenantBranding misconfigured without API base', async () => {
-  const prev = process.env.EXPO_PUBLIC_API_BASE_URL;
+test('fetchTenantBranding uses production API origin (K-API-02)', async () => {
   delete process.env.EXPO_PUBLIC_API_BASE_URL;
-  const result = await fetchTenantBranding({ tenantSlug: 'acme' });
-  assert.equal(result.status, 'misconfigured');
-  if (prev === undefined) delete process.env.EXPO_PUBLIC_API_BASE_URL;
-  else process.env.EXPO_PUBLIC_API_BASE_URL = prev;
+  const fetchImpl = mockFetch(async (url) => {
+    assert.match(url, /^https:\/\/api\.vemoki\.com\/v1\/public\/tenants\/acme\/branding$/);
+    return new Response(JSON.stringify(beBody), { status: 200 });
+  });
+  const result = await fetchTenantBranding({
+    tenantSlug: 'acme',
+    fetchImpl,
+  });
+  assert.equal(result.status, 'ok');
 });
 
 test('fetchTenantBrandingById uses Bearer auth path', async () => {
