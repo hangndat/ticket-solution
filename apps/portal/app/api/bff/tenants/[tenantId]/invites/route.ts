@@ -3,16 +3,12 @@ import { assertMutatingBrowser } from '../../../../../../src/bff/csrf';
 import { isUuid } from '../../../../../../src/bff/ids';
 import { PORTAL_UPSTREAM } from '../../../../../../src/bff/paths';
 import { bffApiError, forwardStaffBearer } from '../../../../../../src/bff/upstream';
+import {
+  inviteRoleFromUnknown,
+  isSystemMembershipRole,
+} from '../../../../../../src/ops/role-presets';
 
 type Props = { params: Promise<{ tenantId: string }> };
-
-const ROLES = new Set<MembershipRole>([
-  'Owner',
-  'Manager',
-  'CS',
-  'Supervisor',
-  'Scanner',
-]);
 
 export async function GET(request: Request, { params }: Props) {
   const { tenantId: raw } = await params;
@@ -42,14 +38,28 @@ export async function POST(request: Request, { params }: Props) {
   }
   let body: {
     email?: string;
-    role?: MembershipRole;
+    role?: unknown;
     eventAssignments?: Array<{ eventId: string; role: MembershipRole }>;
     idempotencyKey?: string;
+    permissions?: unknown;
+    tenantPermissions?: unknown;
+    eventPermissions?: unknown;
   };
   try {
     body = (await request.json()) as typeof body;
   } catch {
     return bffApiError('INVALID_JSON', 'Request body must be JSON.', 400);
+  }
+  if (
+    body.permissions !== undefined ||
+    body.tenantPermissions !== undefined ||
+    body.eventPermissions !== undefined
+  ) {
+    return bffApiError(
+      'INVALID_INPUT',
+      'Client permission arrays are not allowed.',
+      422,
+    );
   }
   const idempotencyKey = body.idempotencyKey?.trim() ?? '';
   if (!isUuid(idempotencyKey)) {
@@ -60,20 +70,24 @@ export async function POST(request: Request, { params }: Props) {
     );
   }
   const email = body.email?.trim() ?? '';
-  const role = body.role;
-  if (!email || !role || !ROLES.has(role)) {
+  const role = inviteRoleFromUnknown(body.role);
+  if (!email || !role) {
     return bffApiError(
       'INVALID_INPUT',
-      'email and role (Owner|Manager|CS|Supervisor|Scanner) required.',
+      'email and role (MembershipRole or { presetId }) required — no permission arrays.',
       422,
     );
   }
   const assignments = body.eventAssignments ?? [];
   for (const a of assignments) {
-    if (!isUuid(a.eventId) || !ROLES.has(a.role) || a.role === 'Owner') {
+    if (
+      !isUuid(a.eventId) ||
+      !isSystemMembershipRole(a.role) ||
+      a.role === 'Owner'
+    ) {
       return bffApiError(
         'INVALID_ASSIGNMENT',
-        'eventAssignments require eventId UUID and non-Owner role.',
+        'eventAssignments require eventId UUID and non-Owner built-in role.',
         422,
       );
     }
