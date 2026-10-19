@@ -3,9 +3,9 @@
 **Trạng thái:** đã áp dụng trên `main` (PR #195 + wiring process). Catalog này **bổ sung chuyên môn** khi spawn worker — bắt buộc gắn Role ID vào Task Spec theo `AGENTS.md` / rule Orca. Không thay thế và không được ưu tiên hơn:
 
 - [AGENTS.md](../../AGENTS.md)
-- `.cursor/rules/orca-agent-routing.mdc` (mọi worker dùng `--agent cursor`; **Cost tier** `cheap|standard|heavy` cho `--model`/`--effort`)
+- `.cursor/rules/orca-agent-routing.mdc` (mọi worker dùng `--agent cursor`; **Cost tier** `cheap|standard|heavy`; pin `--model` từ [cost-catalog.md](./cost-catalog.md) — **cấm inherit UI mặc định**)
 - `.cursor/rules/orca-epic-orchestrator.mdc` (cây worker phẳng; chỉ coordinator gốc dispatch)
-- `.cursor/rules/orca-parallel-workers.mdc` (max fan-out + concurrent soft caps), `orca-idle-worker-fill.mdc`, `orca-coordinator-mailbox.mdc`
+- `.cursor/rules/orca-parallel-workers.mdc` (max fan-out + soft caps: ≤5 non-review, ≤2 heavy, ≤3 reviewer), `orca-idle-worker-fill.mdc`, `orca-coordinator-mailbox.mdc`
 - `.cursor/rules/github-project-tracking.mdc`, `git-workflow.mdc`, `uat-headless.mdc`
 
 **Không** cài toàn bộ [agency-agents](https://github.com/msitarzewski/agency-agents) thành `alwaysApply` rules. Chỉ gắn **một** file `roles/*.md` vào Task Spec khi cần chuyên môn đó.
@@ -15,6 +15,7 @@
 ```text
 docs/agents/
   README.md                 ← file này
+  cost-catalog.md           ← pin Cursor --model theo Cost tier (refresh: agent models)
   upstream/                 ← nguồn MIT + provenance (không chỉnh để “fit” Vemoki)
   roles/                    ← hướng dẫn đã điều chỉnh cho Vemoki + Orca
 ```
@@ -46,11 +47,25 @@ Nguồn sự thật cho label UI trên hàng Dispatch. Coordinator **bắt buộ
 | `architect` | Dexter | |
 | `product-design` | Liv | |
 | `product-ba` | Kazu | |
-| `reviewer-dod` | James | |
-| `reviewer-security` | James | cùng persona; session vẫn ≠ implementer |
+| `reviewer-dod` | James | UI label: **`dod`** (không ghi `reviewer-dod`) |
+| `reviewer-security` | James | UI label: **`sec`**; session vẫn ≠ implementer |
 | Epic planner (không Role catalog) | Dexter | `--display-name "Dexter · planner"` |
 
-**Format:** `--display-name "<Persona> · <roleId|planner>"` — ví dụ `Higo · web`, `James · reviewer-dod`, `Dexter · planner`.
+**Format:** `--display-name "<Persona> · <ui-label>"` — Role ID trong Spec vẫn đầy đủ; **ui-label** ngắn trên Orca:
+
+| Role ID | ui-label |
+| ------- | -------- |
+| `web` | `web` |
+| `backend` | `be` |
+| `ios` | `ios` |
+| `architect` | `arch` |
+| `product-ba` | `ba` |
+| `product-design` | `pd` |
+| `reviewer-dod` | `dod` |
+| `reviewer-security` | `sec` |
+| Epic planner | `planner` |
+
+Ví dụ: `Higo · web`, `James · dod`, `James · sec`, `Gonic · be`, `Dexter · planner`.
 
 **Chọn persona (pool):**
 
@@ -104,10 +119,10 @@ Thêm khối sau vào spec `worker-start` (tiếng Việt cho phần mô tả us
 - Đọc file role SAU AGENTS.md và rule Orca; nếu xung đột → rule dự án thắng.
 - Không mở rộng MVP / ngoài phạm vi Issue.
 - Agent: cursor (theo orca-agent-routing.mdc)
-- Cost tier: cheap | standard | heavy — theo orca-agent-routing.mdc (model/effort; không bịa model id)
+- Cost tier: cheap | standard | heavy — pin --model từ docs/agents/cost-catalog.md (cấm inherit mặc định)
 - Architecture impact: Có | Không — lý do + link thiết kế/ADR hiện hành
 - Nếu Có: quyết định còn mở, Task architect/handoff và consumer thực sự phải chờ
-- Orca: --display-name "<Persona> · <Role ID>" (bắt buộc khi spawn)
+- Orca: --display-name "<Persona> · <ui-label>" (bắt buộc khi spawn; vd. James · dod)
 ```
 
 Với reviewer, thêm:

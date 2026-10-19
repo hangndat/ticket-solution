@@ -48,6 +48,12 @@ export const PORTAL_UPSTREAM = {
   members: (tenantId: string) => `${tenantBase(tenantId)}/members`,
   revokeMember: (tenantId: string, membershipId: string) =>
     `${tenantBase(tenantId)}/members/${encodeURIComponent(membershipId)}/revoke`,
+  memberRole: (tenantId: string, membershipId: string) =>
+    `${tenantBase(tenantId)}/members/${encodeURIComponent(membershipId)}/role`,
+  /** P2-ROLES-PRESET — named server presets (not permission checkbox composer). */
+  rolePresets: (tenantId: string) => `${tenantBase(tenantId)}/role-presets`,
+  rolePreset: (tenantId: string, presetId: string) =>
+    `${tenantBase(tenantId)}/role-presets/${encodeURIComponent(presetId)}`,
   invites: (tenantId: string) => `${tenantBase(tenantId)}/invites`,
   revokeInvite: (tenantId: string, inviteId: string) =>
     `${tenantBase(tenantId)}/invites/${encodeURIComponent(inviteId)}/revoke`,

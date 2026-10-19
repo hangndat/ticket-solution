@@ -24,6 +24,16 @@ export function bffInvites(tenantId: string): string {
   return `/api/bff/tenants/${encodeURIComponent(tenantId)}/invites`;
 }
 
+/** P2-ROLES-PRESET catalog (GET). */
+export function bffRolePresets(tenantId: string): string {
+  return `/api/bff/tenants/${encodeURIComponent(tenantId)}/role-presets`;
+}
+
+/** PATCH built-in MembershipRole (last-Owner enforced upstream). */
+export function bffMemberRole(tenantId: string, membershipId: string): string {
+  return `${bffMembers(tenantId)}/${encodeURIComponent(membershipId)}/role`;
+}
+
 export function bffBranding(tenantId: string): string {
   return `/api/bff/tenants/${encodeURIComponent(tenantId)}/branding`;
 }
