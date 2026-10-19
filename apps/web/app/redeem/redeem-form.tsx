@@ -48,6 +48,12 @@ import {
   REQUEST_TIMEOUT_MS,
 } from '../../src/redeem/poll-operation';
 import { loadPublishedRedeemSchema } from '../../src/redeem/published-schema';
+import { resolveRedemptionCodeGlobal } from '../../src/redeem/global-resolve';
+import {
+  clearStoredResolveToken,
+  readStoredResolveToken,
+  writeStoredResolveToken,
+} from '../../src/redeem/resolve-session';
 import { loginHref } from '../../src/oidc/login-href';
 import { liveRegionForStatus } from '../../src/ui/live-region';
 import { SurfaceState } from '../../src/ui/surface-state';
@@ -55,6 +61,7 @@ import { SurfaceState } from '../../src/ui/surface-state';
 const REDEEM_LOGIN_HREF = loginHref('/redeem');
 
 type Props = {
+  globalEntry?: boolean;
   initialTenantId?: string;
   initialEventId?: string;
   initialTenantSlug?: string;
@@ -62,6 +69,7 @@ type Props = {
 };
 
 export function RedeemForm({
+  globalEntry = false,
   initialTenantId = '',
   initialEventId = '',
   initialTenantSlug = '',
@@ -91,6 +99,15 @@ export function RedeemForm({
   const [pendingRequestId, setPendingRequestId] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const [polling, setPolling] = useState(false);
+  const [globalPhase, setGlobalPhase] = useState<'enter-code' | 'confirm'>(
+    globalEntry ? 'enter-code' : 'confirm',
+  );
+  const [resolveToken, setResolveToken] = useState<string | null>(null);
+  const [globalContext, setGlobalContext] = useState<{
+    tenantDisplayName: string;
+    eventTitle: string;
+    ticketTypeLabel: string;
+  } | null>(null);
   const generationRef = useRef(0);
 
   useEffect(() => {
@@ -98,6 +115,12 @@ export function RedeemForm({
       generationRef.current += 1;
     };
   }, []);
+
+  useEffect(() => {
+    if (!globalEntry) return;
+    const stored = readStoredResolveToken();
+    if (stored) setResolveToken(stored);
+  }, [globalEntry]);
 
   const busy = pending || polling;
   const canRepoll = Boolean(attempt?.unclear && attempt.key && !busy);
@@ -278,8 +301,95 @@ export function RedeemForm({
     [applyDecision, isStale],
   );
 
+  function resetGlobalResolveSession() {
+    setGlobalPhase('enter-code');
+    setResolveToken(null);
+    setGlobalContext(null);
+    clearStoredResolveToken();
+    setFormDefinition(null);
+    setTermsVersion(null);
+    setTermsBody(null);
+    setAnswers({});
+    setTermsAccepted(false);
+    setTenantId('');
+    setEventId('');
+    setSchemaNotice(null);
+  }
+
+  function onGlobalResolve() {
+    if (!globalEntry || busy) return;
+    const trimmed = code.trim();
+    if (!trimmed) {
+      setUx(
+        messageForApiError(
+          'CODE_INVALID',
+          'Mã đổi vé là bắt buộc.',
+        ),
+      );
+      return;
+    }
+    const generation = generationRef.current;
+    setUx(verifyingMessage());
+    setSchemaNotice('Đang tra mã…');
+    startTransition(async () => {
+      const result = await resolveRedemptionCodeGlobal(trimmed);
+      if (isStale(generation)) return;
+      if (result.status === 'network') {
+        setUx(networkMessage());
+        setSchemaNotice(null);
+        return;
+      }
+      if (result.status === 'error') {
+        setUx(
+          messageForApiError(
+            result.code,
+            result.message,
+            result.httpStatus >= 500,
+          ),
+        );
+        setSchemaNotice(null);
+        return;
+      }
+      const body = result.body;
+      if (!body.redemptionWindow.open) {
+        setUx(
+          messageForApiError(
+            'REDEMPTION_WINDOW_CLOSED',
+            'Thời gian đổi mã chưa mở hoặc đã kết thúc.',
+          ),
+        );
+        setSchemaNotice(null);
+        return;
+      }
+      setTenantId(body.tenantId);
+      setEventId(body.eventId);
+      setGlobalContext({
+        tenantDisplayName: body.tenantDisplayName,
+        eventTitle: body.eventTitle,
+        ticketTypeLabel: body.ticketTypeLabel,
+      });
+      setFormDefinition(body.published.form);
+      setTermsVersion(body.published.terms?.version ?? null);
+      setTermsBody(body.published.terms?.bodyMarkdown ?? null);
+      setAnswers({});
+      setTermsAccepted(false);
+      setFieldErrors({});
+      setResolveToken(body.resolveToken);
+      writeStoredResolveToken(body.resolveToken);
+      setGlobalPhase('confirm');
+      setSchemaNotice(
+        `Đã xác định: ${body.eventTitle} · ${body.ticketTypeLabel}. Điền biểu mẫu và đồng ý điều khoản trước khi đổi vé.`,
+      );
+      setUx(null);
+    });
+  }
+
   function onSubmit(event: FormEvent) {
     event.preventDefault();
+    if (globalEntry && globalPhase === 'enter-code') {
+      onGlobalResolve();
+      return;
+    }
     const validated = validateFormAnswers(formDefinition, answers);
     const termsIssue = requireTermsConsent({ termsVersion, termsAccepted });
     const nextErrors: Record<string, string> = {};
@@ -318,6 +428,9 @@ export function RedeemForm({
     setRaw(null);
     setUx(verifyingMessage());
 
+    const tokenForIssue =
+      resolveToken?.trim() || readStoredResolveToken() || undefined;
+
     startTransition(async () => {
       const result = await redeemMutate(
         '/api/bff/redeem',
@@ -330,6 +443,9 @@ export function RedeemForm({
           answers: validated.answers,
           termsAccepted: termsAccepted === true ? true : undefined,
           idempotencyKey: key,
+          ...(globalEntry && tokenForIssue
+            ? { resolveToken: tokenForIssue }
+            : {}),
         },
         REQUEST_TIMEOUT_MS,
       );
@@ -374,6 +490,19 @@ export function RedeemForm({
           fingerprint,
         );
         return;
+      }
+
+      if (
+        globalEntry &&
+        isApiError(result.json) &&
+        (result.json.code === 'RESOLVE_TOKEN_STALE' ||
+          result.json.code === 'RESOLVE_TOKEN_REQUIRED')
+      ) {
+        resetGlobalResolveSession();
+      }
+
+      if (next.kind === 'issued') {
+        clearStoredResolveToken();
       }
 
       applyDecision(next, generation, fingerprint);
@@ -487,11 +616,48 @@ export function RedeemForm({
       <form onSubmit={onSubmit} aria-labelledby="redeem-form-title" noValidate>
         <h2 id="redeem-form-title">Đổi mã lấy vé</h2>
         <p className="intro">
-          Tải biểu mẫu sự kiện đã xuất bản, nhập mã và đồng ý điều khoản. Đang
-          chờ duyệt chưa phải vé; nếu chưa rõ kết quả, bấm «Kiểm tra lại».
+          {globalEntry
+            ? globalPhase === 'enter-code'
+              ? 'Nhập mã đổi vé — hệ thống sẽ xác định sự kiện và loại vé. Sau đó điền biểu mẫu và đồng ý điều khoản.'
+              : 'Xác nhận thông tin sự kiện, hoàn thành biểu mẫu và đồng ý điều khoản trước khi đổi vé.'
+            : 'Tải biểu mẫu sự kiện đã xuất bản, nhập mã và đồng ý điều khoản. Đang chờ duyệt chưa phải vé; nếu chưa rõ kết quả, bấm «Kiểm tra lại».'}
         </p>
 
         <div className="redeem-fields">
+          {globalEntry && globalPhase === 'confirm' && globalContext ? (
+            <section
+              className="redeem-global-context"
+              aria-labelledby="redeem-global-context-title"
+              data-testid="redeem-global-context"
+            >
+              <h3 id="redeem-global-context-title">Sự kiện từ mã của bạn</h3>
+              <dl>
+                <div>
+                  <dt>Tổ chức</dt>
+                  <dd>{globalContext.tenantDisplayName}</dd>
+                </div>
+                <div>
+                  <dt>Sự kiện</dt>
+                  <dd>{globalContext.eventTitle}</dd>
+                </div>
+                <div>
+                  <dt>Loại vé</dt>
+                  <dd>{globalContext.ticketTypeLabel}</dd>
+                </div>
+              </dl>
+              <button
+                type="button"
+                className="button-link"
+                onClick={resetGlobalResolveSession}
+                disabled={busy}
+              >
+                Nhập mã khác
+              </button>
+            </section>
+          ) : null}
+
+          {!globalEntry ? (
+          <>
           <label>
             Mã tổ chức
             <input
@@ -566,7 +732,48 @@ export function RedeemForm({
               testId="redeem-schema-notice"
             />
           ) : null}
+          </>
+          ) : null}
 
+          {globalEntry && schemaNotice ? (
+            <SurfaceState
+              kind={
+                schemaNotice.startsWith('Đang')
+                  ? 'loading'
+                  : schemaNotice.startsWith('Không') ||
+                      schemaNotice.startsWith('Biểu mẫu không')
+                    ? 'error'
+                    : 'empty'
+              }
+              title={
+                schemaNotice.startsWith('Đang')
+                  ? 'Đang tra mã…'
+                  : schemaNotice.startsWith('Đã xác định')
+                    ? 'Đã xác định sự kiện'
+                    : 'Trạng thái tra mã'
+              }
+              detail={schemaNotice}
+              testId="redeem-global-schema-notice"
+            />
+          ) : null}
+
+          {globalEntry && globalPhase === 'enter-code' ? (
+            <label>
+              Mã đổi vé
+              <input
+                name="code"
+                required
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                autoComplete="off"
+                spellCheck={false}
+                placeholder="REDEMPTION-CODE"
+                data-testid="redeem-global-code"
+              />
+            </label>
+          ) : null}
+
+          {!globalEntry || globalPhase === 'confirm' ? (
           <label>
             Mã đổi vé
             <input
@@ -577,8 +784,11 @@ export function RedeemForm({
               autoComplete="off"
               spellCheck={false}
               placeholder="REDEMPTION-CODE"
+              readOnly={globalEntry && globalPhase === 'confirm'}
+              aria-readonly={globalEntry && globalPhase === 'confirm' ? true : undefined}
             />
           </label>
+          ) : null}
 
           {formDefinition ? (
             <RedeemFormFields
@@ -596,11 +806,15 @@ export function RedeemForm({
                 });
               }}
             />
-          ) : (
+          ) : globalEntry && globalPhase === 'enter-code' ? null : (
             <SurfaceState
               kind="empty"
               title="Chưa có biểu mẫu"
-              detail="Tải biểu mẫu bằng đường dẫn tổ chức/sự kiện, hoặc sự kiện chỉ cần mã và điều khoản."
+              detail={
+                globalEntry
+                  ? 'Tra mã thành công sẽ hiển thị biểu mẫu tại đây.'
+                  : 'Tải biểu mẫu bằng đường dẫn tổ chức/sự kiện, hoặc sự kiện chỉ cần mã và điều khoản.'
+              }
               testId="redeem-schema-empty"
             />
           )}
@@ -645,9 +859,20 @@ export function RedeemForm({
         </div>
 
         <div className="auth-buttons">
+          {globalEntry && globalPhase === 'enter-code' ? (
+            <button
+              type="submit"
+              className="redeem-submit"
+              disabled={busy}
+              data-testid="redeem-global-resolve"
+            >
+              {busy ? 'Đang tra mã…' : 'Tiếp tục'}
+            </button>
+          ) : (
           <button type="submit" className="redeem-submit" disabled={busy}>
             {busy ? 'Đang xử lý…' : 'Đổi mã lấy vé'}
           </button>
+          )}
           <button type="button" onClick={pollAgain} disabled={!canRepoll}>
             Kiểm tra lại
           </button>
