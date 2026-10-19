@@ -39,6 +39,8 @@ import {
   downloadImportErrors,
   getImportJob,
   importRedemptionCodes,
+  readRoutingFingerprintSecret,
+  readSupportedPepperConfigs,
   listEventCodes,
   listGuestInvitations,
   previewImportJob,
@@ -198,6 +200,16 @@ export class InventoryService {
     body: ImportBodyDto,
   ) {
     const user = await this.actor(authorization);
+    let routingRegistry: { peppers: CodeHmacConfig[]; fpSecret: string } | undefined;
+    try {
+      const env = this.deps.env ?? process.env;
+      routingRegistry = {
+        peppers: readSupportedPepperConfigs(env),
+        fpSecret: readRoutingFingerprintSecret(env),
+      };
+    } catch {
+      routingRegistry = undefined;
+    }
     return withTenant(this.deps.db!, tenantId, (tx) =>
       importRedemptionCodes(tx, this.deps.hmac!, {
         tenantId,
@@ -205,6 +217,7 @@ export class InventoryService {
         actorUserId: user.userId,
         rawCodes: body.codes ?? [],
         eventQuota: body.eventQuota,
+        routingRegistry,
       }),
     );
   }

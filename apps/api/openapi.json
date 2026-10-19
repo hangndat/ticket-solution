@@ -950,6 +950,52 @@
         ]
       }
     },
+    "/v1/redemptions/resolve": {
+      "post": {
+        "operationId": "RedemptionResolveController_resolve",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResolveBodyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResolveResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "redemptions"
+        ]
+      }
+    },
     "/v1/gate/events/{eventId}/sessions": {
       "post": {
         "operationId": "GateController_openSession",
@@ -4344,6 +4390,44 @@
         ]
       }
     },
+    "/v1/public/events": {
+      "get": {
+        "operationId": "PlatformPublishedEventsController_list",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublishedEventListResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "public-events"
+        ]
+      }
+    },
     "/v1/public/tenants/{tenantSlug}/events": {
       "get": {
         "operationId": "PublishedEventsController_list",
@@ -5075,6 +5159,83 @@
         },
         "required": [
           "tickets"
+        ]
+      },
+      "ResolveBodyDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code"
+        ]
+      },
+      "ResolveResponseDto": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string"
+          },
+          "eventId": {
+            "type": "string"
+          },
+          "ticketTypeId": {
+            "type": "string"
+          },
+          "sourceId": {
+            "type": "string"
+          },
+          "tenantDisplayName": {
+            "type": "string"
+          },
+          "eventTitle": {
+            "type": "string"
+          },
+          "ticketTypeLabel": {
+            "type": "string"
+          },
+          "approvalMode": {
+            "type": "string",
+            "enum": [
+              "AUTO",
+              "MANUAL"
+            ]
+          },
+          "redemptionWindow": {
+            "type": "object"
+          },
+          "published": {
+            "type": "object"
+          },
+          "resolveToken": {
+            "type": "string"
+          },
+          "resolveExpiresAt": {
+            "type": "string"
+          },
+          "redemptionFlow": {
+            "type": "string",
+            "enum": [
+              "global"
+            ]
+          }
+        },
+        "required": [
+          "tenantId",
+          "eventId",
+          "ticketTypeId",
+          "sourceId",
+          "tenantDisplayName",
+          "eventTitle",
+          "ticketTypeLabel",
+          "approvalMode",
+          "redemptionWindow",
+          "published",
+          "resolveToken",
+          "resolveExpiresAt",
+          "redemptionFlow"
         ]
       },
       "TenantBodyDto": {

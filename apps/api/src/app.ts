@@ -60,10 +60,16 @@ import {
   resolveIssueDeps,
   type TicketServices,
 } from './tickets';
+import {
+  RedemptionResolveController,
+  RedemptionResolveService,
+  buildResolveDeps,
+} from './redemptions-resolve';
 import { registerMetricsEndpoint } from './metrics';
 import { PlatformController, PlatformService, buildPlatformDeps } from './platform';
 import { BrandingController, BrandingService } from './branding';
 import {
+  PlatformPublishedEventsController,
   PublishedEventsController,
   PublishedEventsService,
 } from './published-events';
@@ -317,16 +323,24 @@ export async function createApp(
     typeof options === 'boolean' ? { logging: options } : options;
   const logging = normalized.logging ?? true;
   const identity = resolveIdentity(normalized);
+  const env = normalized.env ?? process.env;
 
+  const issueDeps = resolveIssueDeps(env);
   const ticketDeps: TicketServices = {
     db: identity.db,
     verifier: identity.verifier,
     users: identity.users,
     bootError: identity.bootError,
-    hmac: identity.hmac,
-    credentialKey: identity.credentialKey,
+    hmac: identity.hmac ?? issueDeps.hmac,
+    credentialKey: identity.credentialKey ?? issueDeps.credentialKey,
+    routingPeppers: issueDeps.routingPeppers,
+    resolveTokenSecret: issueDeps.resolveTokenSecret,
   };
-  const env = normalized.env ?? process.env;
+  const ticketIssueDeps: TicketServices = {
+    ...ticketDeps,
+    bootError: identity.bootError ?? issueDeps.issueBootError,
+  };
+  const resolveDeps = buildResolveDeps(env, ticketIssueDeps);
 
   @Module({
     controllers: [
@@ -334,6 +348,7 @@ export async function createApp(
       MeController,
       EventAdminController,
       TicketIssueController,
+      RedemptionResolveController,
       GateController,
       ConfigPublishController,
       InventoryController,
@@ -345,6 +360,7 @@ export async function createApp(
       NotificationController,
       PlatformController,
       BrandingController,
+      PlatformPublishedEventsController,
       PublishedEventsController,
       TenantRegistrationController,
     ],
@@ -363,7 +379,11 @@ export async function createApp(
       },
       {
         provide: TicketIssueService,
-        useValue: new TicketIssueService(ticketDeps),
+        useValue: new TicketIssueService(ticketIssueDeps),
+      },
+      {
+        provide: RedemptionResolveService,
+        useValue: new RedemptionResolveService(resolveDeps),
       },
       {
         provide: GateService,
