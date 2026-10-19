@@ -5,6 +5,10 @@ import type {
   MeTenantsResponse,
   PlatformMeResponse,
 } from '@ticket/contracts';
+import type { MessageKey } from '../i18n/messages';
+
+/** Message translator injected by UI (`usePortalLocale().t`) or tests. */
+export type PortalTranslate = (key: MessageKey) => string;
 
 /** Tenant permissions that unlock org chrome (O02 / handoff §3.3). */
 export const ADMIN_TENANT_PERMISSIONS = [
@@ -126,7 +130,8 @@ export function tenantHasAnalytics(
 export function buildOrgMenuItems(
   tenantId: string,
   tenant: MeTenantItem | null,
-  meEvents?: MeEventsResponse | null | readonly MeEventItem[],
+  meEvents: MeEventsResponse | null | readonly MeEventItem[] | undefined,
+  translate: PortalTranslate,
 ): OrgMenuItem[] {
   if (!tenant) return [];
   const hasAdmin = tenantHasAdminChrome(tenant);
@@ -135,13 +140,13 @@ export function buildOrgMenuItems(
 
   const base = `/t/${tenantId}`;
   const items: OrgMenuItem[] = [
-    { key: 'overview', href: base, label: 'Tổng quan tổ chức' },
+    { key: 'overview', href: base, label: translate('nav.org.overview') },
   ];
   if (hasAdmin && tenant.tenantPermissions.includes('event.list')) {
     items.push({
       key: 'events',
       href: `${base}/events`,
-      label: 'Sự kiện',
+      label: translate('nav.org.events'),
       permission: 'event.list',
     });
   }
@@ -149,7 +154,7 @@ export function buildOrgMenuItems(
     items.push({
       key: 'analytics',
       href: `${base}/analytics`,
-      label: 'Phân tích',
+      label: translate('nav.org.analytics'),
       permission: 'report.read',
     });
   }
@@ -157,7 +162,7 @@ export function buildOrgMenuItems(
     items.push({
       key: 'members',
       href: `${base}/members`,
-      label: 'Thành viên',
+      label: translate('nav.org.members'),
       permission: 'members.manage',
     });
   }
@@ -165,7 +170,7 @@ export function buildOrgMenuItems(
     items.push({
       key: 'settings',
       href: `${base}/settings`,
-      label: 'Cấu hình',
+      label: translate('nav.org.settings'),
       permission: 'tenant.profile',
     });
   }
@@ -180,10 +185,11 @@ export function buildEventMenuItems(
   tenantId: string,
   eventId: string,
   permissions: readonly string[],
+  translate: PortalTranslate,
 ): EventMenuItem[] {
   const base = `/t/${tenantId}/e/${eventId}`;
   const items: EventMenuItem[] = [
-    { key: 'overview', href: base, label: 'Tổng quan' },
+    { key: 'overview', href: base, label: translate('nav.event.overview') },
   ];
   const canSetup = permissions.some((p) =>
     ['event.update', 'config.publish', 'inventory.import', 'event.config'].includes(
@@ -191,14 +197,14 @@ export function buildEventMenuItems(
     ),
   );
   if (canSetup) {
-    items.push({ key: 'setup', href: `${base}/setup`, label: 'Chuẩn bị' });
-    items.push({ key: 'types', href: `${base}/types`, label: 'Loại vé' });
-    items.push({ key: 'sources', href: `${base}/sources`, label: 'Nguồn mã' });
-    items.push({ key: 'quota', href: `${base}/quota`, label: 'Hạn mức' });
+    items.push({ key: 'setup', href: `${base}/setup`, label: translate('nav.event.setup') });
+    items.push({ key: 'types', href: `${base}/types`, label: translate('nav.event.types') });
+    items.push({ key: 'sources', href: `${base}/sources`, label: translate('nav.event.sources') });
+    items.push({ key: 'quota', href: `${base}/quota`, label: translate('nav.event.quota') });
     items.push({
       key: 'config',
       href: `${base}/config`,
-      label: 'Cấu hình / xuất bản',
+      label: translate('nav.event.configPublish'),
     });
   }
   if (
@@ -206,13 +212,13 @@ export function buildEventMenuItems(
       ['inventory.import', 'redemption.approve', 'notify.send'].includes(p),
     )
   ) {
-    items.push({ key: 'guests', href: `${base}/guests`, label: 'Khách & mã' });
+    items.push({ key: 'guests', href: `${base}/guests`, label: translate('nav.event.guests') });
   }
   if (permissions.includes('report.read')) {
     items.push({
       key: 'gate',
       href: `${base}/gate`,
-      label: 'Cổng',
+      label: translate('nav.event.gate'),
       permission: 'report.read',
     });
   }
@@ -223,14 +229,14 @@ export function buildEventMenuItems(
     items.push({
       key: 'audit',
       href: `${base}/audit`,
-      label: 'Nhật ký & mã',
+      label: translate('nav.event.auditCodes'),
     });
   }
   if (permissions.includes('cs.lookup')) {
     items.push({
       key: 'support',
       href: `${base}/support`,
-      label: 'Hỗ trợ',
+      label: translate('nav.event.support'),
       permission: 'cs.lookup',
     });
   }

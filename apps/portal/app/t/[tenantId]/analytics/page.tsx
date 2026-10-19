@@ -6,8 +6,8 @@ import { useParams } from 'next/navigation';
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { portalGet } from '../../../../src/client/portal-fetch';
 import { SurfaceState } from '../../../../src/components/surface-state';
+import { usePortalLocale } from '../../../../src/i18n';
 import {
-  PORTFOLIO_PARTIAL_ALERT,
   formatPortfolioMetric,
   formatQuotaRemaining,
   formatReportAsOf,
@@ -52,6 +52,7 @@ function rowKey(row: PortfolioItemView, index?: number): string {
 }
 
 export default function AnalyticsPortfolioPage() {
+  const { t, locale } = usePortalLocale();
   const params = useParams<{ tenantId: string }>();
   const tenantId = params.tenantId;
   const access = useAnalyticsAccess(tenantId);
@@ -68,6 +69,7 @@ export default function AnalyticsPortfolioPage() {
         res.status,
         res.json,
         res.networkError || res.timedOut,
+        locale,
       );
 
       if (view.kind === 'unknown') {
@@ -78,8 +80,7 @@ export default function AnalyticsPortfolioPage() {
         if (res.status === 401 || res.status === 403 || res.status === 404) {
           setPage({
             kind: 'rejected',
-            message:
-              'Không có quyền xem phân tích tổ chức — cần report.read và phân công sự kiện.',
+            message: t('analytics.deniedBff'),
           });
           return;
         }
@@ -118,7 +119,7 @@ export default function AnalyticsPortfolioPage() {
         hasPartial: view.hasPartial,
       });
     },
-    [tenantId],
+    [tenantId, locale, t],
   );
 
   useEffect(() => {
@@ -139,7 +140,7 @@ export default function AnalyticsPortfolioPage() {
     return (
       <SurfaceState
         kind="error"
-        description={access.message}
+        description={access.messageKey ? t(access.messageKey) : undefined}
         onRetry={() => window.location.reload()}
       />
     );
@@ -150,9 +151,7 @@ export default function AnalyticsPortfolioPage() {
         kind="permission-denied"
         title="403"
         description={
-          page.kind === 'rejected'
-            ? page.message
-            : 'Cần report.read và phân công ít nhất một sự kiện — không suy từ tên role.'
+          page.kind === 'rejected' ? page.message : t('analytics.deniedAccess')
         }
         onRetry={() => {
           window.location.href = `/t/${tenantId}`;
@@ -174,11 +173,11 @@ export default function AnalyticsPortfolioPage() {
       >
         <Space direction="vertical" size={4}>
           <Typography.Title level={3} style={{ margin: 0 }}>
-            Phân tích
+            {t('nav.org.analytics')}
           </Typography.Title>
           {asOf ? (
             <Tag data-testid="portfolio-asof">
-              Server ghi nhận {formatReportAsOf(asOf)}
+              {t('analytics.asOfTag', { asOf: formatReportAsOf(asOf) })}
             </Tag>
           ) : null}
         </Space>
@@ -187,7 +186,7 @@ export default function AnalyticsPortfolioPage() {
           onClick={() => void load(null, false)}
           data-testid="portfolio-refresh"
         >
-          Làm mới
+          {t('gate.h_3keb7')}
         </Button>
       </Space>
 
@@ -195,7 +194,7 @@ export default function AnalyticsPortfolioPage() {
         <Alert
           type="warning"
           showIcon
-          message={PORTFOLIO_PARTIAL_ALERT}
+          message={t('ops.portfolio.partial')}
           data-testid="portfolio-partial-alert"
         />
       ) : null}
@@ -204,11 +203,11 @@ export default function AnalyticsPortfolioPage() {
         <Alert
           type="warning"
           showIcon
-          message="Chưa rõ kết quả"
+          message={t('analytics.unknownTitle')}
           description={page.message}
           action={
             <Button size="small" onClick={() => void load(null, false)}>
-              Kiểm tra lại
+              {t('surface.action.recheck')}
             </Button>
           }
         />
@@ -225,11 +224,11 @@ export default function AnalyticsPortfolioPage() {
       {page.kind === 'empty' ? (
         <SurfaceState
           kind="empty"
-          description="Chưa có sự kiện được gán quyền báo cáo"
+          description={t('analytics.empty')}
           emptyAction={
             canListEvents ? (
               <Link href={`/t/${tenantId}/events`}>
-                <Button type="primary">Xem sự kiện</Button>
+                <Button type="primary">{t('analytics.viewEvents')}</Button>
               </Link>
             ) : undefined
           }
@@ -254,7 +253,7 @@ export default function AnalyticsPortfolioPage() {
             })}
             columns={[
               {
-                title: 'Sự kiện',
+                title: t('analytics.col.event'),
                 key: 'title',
                 render: (_: unknown, row) => {
                   const label = row.title ?? '—';
@@ -280,16 +279,16 @@ export default function AnalyticsPortfolioPage() {
                 },
               },
               {
-                title: 'Trạng thái',
+                title: t('analytics.col.status'),
                 key: 'status',
                 render: () => (
-                  <Tooltip title="Trạng thái nội dung không có trên portfolio API — không bịa.">
+                  <Tooltip title={t('analytics.col.statusTip')}>
                     <span>—</span>
                   </Tooltip>
                 ),
               },
               {
-                title: 'Check-in',
+                title: t('analytics.col.checkIn'),
                 key: 'checkIn',
                 render: (_: unknown, row) =>
                   metricCell(
@@ -298,7 +297,7 @@ export default function AnalyticsPortfolioPage() {
                   ),
               },
               {
-                title: 'Pending',
+                title: t('analytics.col.pending'),
                 key: 'pending',
                 render: (_: unknown, row) =>
                   metricCell(
@@ -307,7 +306,7 @@ export default function AnalyticsPortfolioPage() {
                   ),
               },
               {
-                title: 'Email cần CS',
+                title: t('analytics.col.emailCs'),
                 key: 'emailCs',
                 render: (_: unknown, row) =>
                   metricCell(
@@ -316,7 +315,7 @@ export default function AnalyticsPortfolioPage() {
                   ),
               },
               {
-                title: 'Quota còn',
+                title: t('analytics.col.quota'),
                 key: 'quota',
                 render: (_: unknown, row) => {
                   if (row.kind === 'unknown') {
@@ -329,6 +328,7 @@ export default function AnalyticsPortfolioPage() {
                   return formatQuotaRemaining(
                     row.quotaRemaining,
                     row.quotaCapacityState,
+                    locale,
                   );
                 },
               },
@@ -336,7 +336,7 @@ export default function AnalyticsPortfolioPage() {
           />
           {page.nextCursor ? (
             <Button onClick={() => void load(page.nextCursor, true)}>
-              Tải thêm
+              {t('sources.h_1w8bpuo')}
             </Button>
           ) : null}
         </>

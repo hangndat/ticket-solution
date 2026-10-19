@@ -100,6 +100,7 @@ test('Fastify liveness matches contract; redeem and gate routes documented', asy
       '/v1/tenants/{tenantId}/members/{membershipId}/event-assignments/{eventId}',
       '/v1/tenants/{tenantId}/members/{membershipId}/revoke',
       '/v1/tenants/{tenantId}/members/{membershipId}/role',
+      '/v1/tenants/{tenantId}/reports/portfolio',
     ]);
     // /metrics is Fastify-native outside OpenAPI /v1 prefix.
     assert.equal(

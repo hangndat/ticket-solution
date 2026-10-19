@@ -1,11 +1,17 @@
 'use client';
 
 import { App, ConfigProvider } from 'antd';
+import enUS from 'antd/locale/en_US';
 import viVN from 'antd/locale/vi_VN';
 import { useEffect, useState, type ReactNode } from 'react';
+import {
+  PortalLocaleProvider,
+  usePortalLocale,
+} from '../i18n';
 import { vemokiTheme } from '../theme/vemoki';
 
-export function PortalProviders({ children }: { children: ReactNode }) {
+function AntdLocaleBridge({ children }: { children: ReactNode }) {
+  const { locale } = usePortalLocale();
   const [reducedMotion, setReducedMotion] = useState(false);
 
   useEffect(() => {
@@ -18,7 +24,7 @@ export function PortalProviders({ children }: { children: ReactNode }) {
 
   return (
     <ConfigProvider
-      locale={viVN}
+      locale={locale === 'en' ? enUS : viVN}
       theme={{
         ...vemokiTheme,
         token: {
@@ -35,5 +41,13 @@ export function PortalProviders({ children }: { children: ReactNode }) {
     >
       <App>{children}</App>
     </ConfigProvider>
+  );
+}
+
+export function PortalProviders({ children }: { children: ReactNode }) {
+  return (
+    <PortalLocaleProvider>
+      <AntdLocaleBridge>{children}</AntdLocaleBridge>
+    </PortalLocaleProvider>
   );
 }

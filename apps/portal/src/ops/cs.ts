@@ -5,6 +5,8 @@ import {
   isProviderStatus,
   optionalString,
 } from './contract-shape';
+import { t } from '../i18n/t';
+import { DEFAULT_PORTAL_LOCALE, type PortalLocale } from '../i18n/locale';
 
 type EventScope = { tenantId: string; eventId: string };
 
@@ -89,7 +91,7 @@ export type CsView =
   | { kind: 'unknown'; message: string };
 
 export const CS_UNKNOWN =
-  'Kết quả CS chưa biết. Không coi là đã tìm thấy hoặc đã gửi lại email.';
+  t(DEFAULT_PORTAL_LOCALE, 'ops.h_gafwuk');
 
 function parseNotification(value: unknown): CsNotification | null | false {
   if (value === null) return null;
@@ -186,29 +188,30 @@ export function interpretCsList(
   status: number,
   json: unknown,
   networkError: boolean,
+  locale: PortalLocale = DEFAULT_PORTAL_LOCALE,
 ): CsView {
   if (networkError || status === 0 || status >= 500) {
-    return { kind: 'unknown', message: CS_UNKNOWN };
+    return { kind: 'unknown', message: t(locale, 'ops.h_gafwuk') };
   }
   const body = asRecord(json);
   if (status === 200 && body && Array.isArray(body.items)) {
     if (!('nextCursor' in body)) {
-      return { kind: 'unknown', message: CS_UNKNOWN };
+      return { kind: 'unknown', message: t(locale, 'ops.h_gafwuk') };
     }
     if (body.nextCursor !== null && typeof body.nextCursor !== 'string') {
-      return { kind: 'unknown', message: CS_UNKNOWN };
+      return { kind: 'unknown', message: t(locale, 'ops.h_gafwuk') };
     }
     const items: CsTicketSummary[] = [];
     for (const row of body.items) {
       const item = parseTicketSummary(row);
-      if (!item) return { kind: 'unknown', message: CS_UNKNOWN };
+      if (!item) return { kind: 'unknown', message: t(locale, 'ops.h_gafwuk') };
       items.push(item);
     }
     return { kind: 'list', items, cursor: body.nextCursor };
   }
   const err = apiErrorFrom(body);
   if (err) return { kind: 'rejected', ...err };
-  return { kind: 'unknown', message: CS_UNKNOWN };
+  return { kind: 'unknown', message: t(locale, 'ops.h_gafwuk') };
 }
 
 export function interpretCsDetail(
@@ -216,20 +219,21 @@ export function interpretCsDetail(
   json: unknown,
   networkError: boolean,
   ticketId: string,
+  locale: PortalLocale = DEFAULT_PORTAL_LOCALE,
 ): CsView {
   void ticketId;
   if (networkError || status === 0 || status >= 500) {
-    return { kind: 'unknown', message: CS_UNKNOWN };
+    return { kind: 'unknown', message: t(locale, 'ops.h_gafwuk') };
   }
   const body = asRecord(json);
   if (status === 200) {
     const ticket = parseTicketDetail(json);
     if (ticket) return { kind: 'detail', ticket };
-    return { kind: 'unknown', message: CS_UNKNOWN };
+    return { kind: 'unknown', message: t(locale, 'ops.h_gafwuk') };
   }
   const err = apiErrorFrom(body);
   if (err) return { kind: 'rejected', ...err };
-  return { kind: 'unknown', message: CS_UNKNOWN };
+  return { kind: 'unknown', message: t(locale, 'ops.h_gafwuk') };
 }
 
 /** Strict CsResendDto — providerStatus must be PENDING; ACCEPTED alone is invalid. */
@@ -238,9 +242,10 @@ export function interpretCsResend(
   json: unknown,
   networkError: boolean,
   ticketId: string,
+  locale: PortalLocale = DEFAULT_PORTAL_LOCALE,
 ): CsView {
   if (networkError || status === 0 || status >= 500) {
-    return { kind: 'unknown', message: CS_UNKNOWN };
+    return { kind: 'unknown', message: t(locale, 'ops.h_gafwuk') };
   }
   const body = asRecord(json);
   if (status === 200 || status === 201) {
@@ -260,11 +265,11 @@ export function interpretCsResend(
         replayed: body.replayed,
       };
     }
-    return { kind: 'unknown', message: CS_UNKNOWN };
+    return { kind: 'unknown', message: t(locale, 'ops.h_gafwuk') };
   }
   const err = apiErrorFrom(body);
   if (err) return { kind: 'rejected', ...err };
-  return { kind: 'unknown', message: CS_UNKNOWN };
+  return { kind: 'unknown', message: t(locale, 'ops.h_gafwuk') };
 }
 
 /**
@@ -272,44 +277,44 @@ export function interpretCsResend(
  * ACCEPTED never claims end-user delivery. DELIVERED only when status is
  * literally DELIVERED (server evidence) — CS OpenAPI does not invent it.
  */
-export function csProviderStatusLabel(status: string): string {
+export function csProviderStatusLabel(status: string, locale: PortalLocale = DEFAULT_PORTAL_LOCALE): string {
   switch (status) {
     case 'PENDING':
-      return 'PENDING (đang chờ gửi)';
+      return t(locale, 'ops.h_1rulq3');
     case 'FAILED':
-      return 'FAILED (gửi lỗi — có thể thử lại theo quyền)';
+      return t(locale, 'ops.h_705wl6');
     case 'DEAD':
-      return 'DEAD (hết retry hữu ích — cần CS xử lý)';
+      return t(locale, 'ops.h_tn7vf3');
     case 'ACCEPTED':
-      return 'ACCEPTED (nhà cung cấp nhận — ≠ đã giao tới người nhận)';
+      return t(locale, 'notify.acceptedProviderHint');
     case 'DELIVERED':
-      return 'DELIVERED (có bằng chứng giao từ server)';
+      return t(locale, 'ops.h_1kyhcv');
     case 'UNKNOWN':
-      return 'UNKNOWN (không rõ — không khẳng định đã gửi)';
+      return t(locale, 'ops.h_r3tltl');
     default:
-      return `${status} (trạng thái chưa map — không khẳng định đã giao)`;
+      return t(locale, 'common.mappedStatus', { status });
   }
 }
 
 /** Rejected-resend VI copy: cooldown, limit, permission, pending/error clarity. */
-export function csResendRejectedLabel(code: string, message: string): string {
+export function csResendRejectedLabel(code: string, message: string, locale: PortalLocale = DEFAULT_PORTAL_LOCALE): string {
   if (code === 'RESEND_COOLDOWN') {
-    return `RESEND_COOLDOWN: đang trong thời gian chờ gửi lại (~${CS_RESEND_COOLDOWN_SECONDS}s). Chưa tạo vé mới — thử lại sau.`;
+    return t(locale, 'ops.notifications.resendCooldown', { seconds: CS_RESEND_COOLDOWN_SECONDS });
   }
   if (code === 'RESEND_LIMIT') {
-    return 'RESEND_LIMIT: đã hết hạn mức gửi lại trong cửa sổ hiện tại. Không tạo vé mới.';
+    return t(locale, 'ops.h_11ovicf');
   }
   if (code === 'PERMISSION_DENIED') {
-    return 'PERMISSION_DENIED: thiếu quyền CS (cs.lookup / cs.resend) — không tra cứu hoặc gửi lại email.';
+    return t(locale, 'ops.h_r6ag2k');
   }
   if (
     code === 'MEMBERSHIP_REQUIRED' ||
     code === 'TENANT_REQUIRED' ||
     code === 'EVENT_ACCESS_DENIED'
   ) {
-    return `${code}: không có quyền trên tenant/event này — không gửi lại email.`;
+    return t(locale, 'common.apiForbiddenResend', { code });
   }
-  return `${code}: ${message}`;
+  return t(locale, 'ops.export.apiRejected', { code, message });
 }
 
 export type CsTimelineDisplay = {
@@ -322,7 +327,7 @@ export type CsTimelineDisplay = {
  * Map timeline row → thời gian / hành động / kết quả (VI when status known).
  * Does not invent DELIVERED from ACCEPTED.
  */
-export function formatCsTimelineItem(item: CsTimelineItem): CsTimelineDisplay {
+export function formatCsTimelineItem(item: CsTimelineItem, locale: PortalLocale = DEFAULT_PORTAL_LOCALE): CsTimelineDisplay {
   const time = item.at;
   const kind = item.kind.trim();
   const summary = item.summary.trim();
@@ -335,48 +340,49 @@ export function formatCsTimelineItem(item: CsTimelineItem): CsTimelineDisplay {
     const status = statusMatch?.[1] ?? null;
     return {
       time,
-      action: `Gửi ${channel}`,
+      action: t(locale, 'ops.notifications.sendChannel', { channel }),
       result: status
-        ? csProviderStatusLabel(status)
-        : summary || 'không có kết quả từ server',
+        ? csProviderStatusLabel(status, locale)
+        : summary || t(locale, 'ops.h_1oi6f3o'),
     };
   }
 
   if (kind === 'checkin.confirmed') {
-    return { time, action: 'Check-in', result: 'Đã xác nhận vào cổng' };
+    return { time, action: 'Check-in', result: t(locale, 'ops.h_1oi8zqp') };
   }
   if (kind === 'checkin.undone') {
-    return { time, action: 'Check-in', result: 'Đã hoàn tác check-in' };
+    return { time, action: 'Check-in', result: t(locale, 'ops.h_c242jl') };
   }
 
   // Audit / other: keep server kind as action, summary as result.
   return {
     time,
-    action: kind || 'Thao tác',
+    action: kind || t(locale, 'ops.h_1pbxt75'),
     result: summary || '—',
   };
 }
 
 export function csNotificationStatusText(
   notification: CsNotification | null,
+  locale: PortalLocale = DEFAULT_PORTAL_LOCALE,
 ): string {
-  if (!notification) return 'Chưa có bản ghi gửi email trên server';
-  return csProviderStatusLabel(notification.providerStatus);
+  if (!notification) return t(locale, 'ops.h_m88eni');
+  return csProviderStatusLabel(notification.providerStatus, locale);
 }
 
-export function csViewLabel(view: CsView): string {
+export function csViewLabel(view: CsView, locale: PortalLocale = DEFAULT_PORTAL_LOCALE): string {
   if (view.kind === 'list') {
-    return `CS: ${view.items.length} kết quả${view.cursor ? ' (còn trang sau)' : ''}. PII mặc định đã che.`;
+    return t(locale, 'ops.cs.listSummary', { count: view.items.length, pageSuffix: view.cursor ? t(locale, 'common.pagination.pageSuffixAfter') : '' });
   }
   if (view.kind === 'detail') {
-    const delivery = csNotificationStatusText(view.ticket.notification);
-    return `CS: chi tiết vé ${view.ticket.ticketId} · ${view.ticket.timeline.length} timeline · email=${view.ticket.ownerEmailMasked ?? 'null'} · ${delivery}.`;
+    const delivery = csNotificationStatusText(view.ticket.notification, locale);
+    return t(locale, 'ops.cs.ticketDetail', { ticketId: view.ticket.ticketId, timelineCount: view.ticket.timeline.length, ownerEmailMasked: view.ticket.ownerEmailMasked ?? 'null', delivery });
   }
   if (view.kind === 'resent') {
-    return `CS: đã yêu cầu gửi lại email cho ${view.ticketId} (provider=PENDING, replayed=${view.replayed}). PENDING ≠ đã giao.`;
+    return t(locale, 'ops.cs.resendLabel', { ticketId: view.ticketId, replayed: view.replayed });
   }
   if (view.kind === 'rejected') {
-    return csResendRejectedLabel(view.code, view.message);
+    return csResendRejectedLabel(view.code, view.message, locale);
   }
   return view.message;
 }

@@ -1,4 +1,6 @@
 import type { AdminScope } from './scope';
+import { t } from '../i18n/t';
+import { DEFAULT_PORTAL_LOCALE, type PortalLocale } from '../i18n/locale';
 
 /** GET path from apps/api/openapi.json — ReportController_report. */
 export const EVENT_REPORT_OPENAPI_PATH =
@@ -52,7 +54,7 @@ export type EventReportView =
   | { kind: 'rejected'; code: string; message: string };
 
 export const REPORT_UNKNOWN =
-  'Báo cáo chưa biết. Không hiện số vé, quota, hoặc số chờ duyệt như thể chúng đang đúng.';
+  t(DEFAULT_PORTAL_LOCALE, 'ops.report.unknown');
 
 export function reportShowsNumbers(
   view: EventReportView,
@@ -76,9 +78,9 @@ export function reportEmailCsHref(tenantId: string, eventId: string): string {
 }
 
 export const REPORT_PENDING_APPROVAL_CTA_LABEL =
-  'Đi tới duyệt khách và mã đang chờ';
+  t(DEFAULT_PORTAL_LOCALE, 'gate.h_1n09r0f');
 export const REPORT_EMAIL_CS_CTA_LABEL =
-  'Đi tới hỗ trợ tra cứu và gửi lại email';
+  t(DEFAULT_PORTAL_LOCALE, 'gate.h_4twiex');
 
 /** CTA only when shown + count > 0; never for unknown/rejected. */
 export function reportShowsPendingApprovalCta(
@@ -94,14 +96,14 @@ export function reportShowsEmailCsCta(
   return reportShowsNumbers(view) && view.emailNeedsCsCount > 0;
 }
 
-export function formatQuotaCapacityState(state: QuotaCapacityState): string {
+export function formatQuotaCapacityState(state: QuotaCapacityState, locale: PortalLocale = DEFAULT_PORTAL_LOCALE): string {
   switch (state) {
     case 'FINITE':
-      return 'Hữu hạn';
+      return t(locale, 'ops.h_106x23o');
     case 'UNLIMITED':
-      return 'Không giới hạn';
+      return t(locale, 'quota.h_1tnoz3k');
     case 'MISSING_BUCKET':
-      return 'Chưa có bucket';
+      return t(locale, 'ops.h_1f4t581');
   }
 }
 
@@ -109,9 +111,10 @@ export function formatQuotaCapacityState(state: QuotaCapacityState): string {
 export function formatQuotaRemaining(
   remaining: number | null,
   state: QuotaCapacityState,
+  locale: PortalLocale = DEFAULT_PORTAL_LOCALE,
 ): string {
   if (state === 'FINITE' && remaining !== null) return String(remaining);
-  return 'không áp dụng';
+  return t(locale, 'ops.h_1lsqc1u');
 }
 
 export function formatReportAsOf(asOf: string): string {
@@ -237,14 +240,15 @@ export function interpretEventReport(
   status: number,
   json: unknown,
   networkError: boolean,
+  locale: PortalLocale = DEFAULT_PORTAL_LOCALE,
 ): EventReportView {
   if (networkError || status === 0 || status >= 500) {
-    return { kind: 'unknown', message: REPORT_UNKNOWN };
+    return { kind: 'unknown', message: t(locale, 'ops.report.unknown') };
   }
 
   const body = record(json);
   if (status === 200) {
-    return parseShown(body) ?? { kind: 'unknown', message: REPORT_UNKNOWN };
+    return parseShown(body) ?? { kind: 'unknown', message: t(locale, 'ops.report.unknown') };
   }
 
   if (body && typeof body.code === 'string' && body.code.length > 0) {
@@ -255,5 +259,5 @@ export function interpretEventReport(
     return { kind: 'rejected', code: body.code, message };
   }
 
-  return { kind: 'unknown', message: REPORT_UNKNOWN };
+  return { kind: 'unknown', message: t(locale, 'ops.report.unknown') };
 }

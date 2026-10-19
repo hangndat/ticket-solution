@@ -6,6 +6,8 @@ import {
   optionalNumber,
   optionalString,
 } from './contract-shape';
+import { t } from '../i18n/t';
+import { DEFAULT_PORTAL_LOCALE, type PortalLocale } from '../i18n/locale';
 
 type EventScope = { tenantId: string; eventId: string };
 
@@ -78,7 +80,7 @@ export type ExportView =
   | { kind: 'unknown'; message: string };
 
 export const EXPORT_UNKNOWN =
-  'Kết quả export chưa biết. Không coi là đã tạo hoặc đã tải xong.';
+  t(DEFAULT_PORTAL_LOCALE, 'ops.export.unknown');
 
 function parseExportJob(json: unknown): ExportJobFields | null {
   const body = asRecord(json);
@@ -107,18 +109,19 @@ export function interpretExportCreate(
   status: number,
   json: unknown,
   networkError: boolean,
+  locale: PortalLocale = DEFAULT_PORTAL_LOCALE,
 ): ExportView {
   if (networkError || status === 0 || status >= 500) {
-    return { kind: 'unknown', message: EXPORT_UNKNOWN };
+    return { kind: 'unknown', message: t(locale, 'ops.export.unknown') };
   }
   if (status === 200 || status === 201) {
     const job = parseExportJob(json);
     if (job) return { kind: 'created', job };
-    return { kind: 'unknown', message: EXPORT_UNKNOWN };
+    return { kind: 'unknown', message: t(locale, 'ops.export.unknown') };
   }
   const err = apiErrorFrom(asRecord(json));
   if (err) return { kind: 'rejected', ...err };
-  return { kind: 'unknown', message: EXPORT_UNKNOWN };
+  return { kind: 'unknown', message: t(locale, 'ops.export.unknown') };
 }
 
 export function interpretExportStatus(
@@ -126,19 +129,20 @@ export function interpretExportStatus(
   json: unknown,
   networkError: boolean,
   exportId: string,
+  locale: PortalLocale = DEFAULT_PORTAL_LOCALE,
 ): ExportView {
   void exportId;
   if (networkError || status === 0 || status >= 500) {
-    return { kind: 'unknown', message: EXPORT_UNKNOWN };
+    return { kind: 'unknown', message: t(locale, 'ops.export.unknown') };
   }
   if (status === 200) {
     const job = parseExportJob(json);
     if (job) return { kind: 'status', job };
-    return { kind: 'unknown', message: EXPORT_UNKNOWN };
+    return { kind: 'unknown', message: t(locale, 'ops.export.unknown') };
   }
   const err = apiErrorFrom(asRecord(json));
   if (err) return { kind: 'rejected', ...err };
-  return { kind: 'unknown', message: EXPORT_UNKNOWN };
+  return { kind: 'unknown', message: t(locale, 'ops.export.unknown') };
 }
 
 /**
@@ -153,9 +157,10 @@ export function interpretExportDownload(
   contentType: string | null,
   byteLength = 0,
   filename: string | null = null,
+  locale: PortalLocale = DEFAULT_PORTAL_LOCALE,
 ): ExportView {
   if (networkError || status === 0 || status >= 500) {
-    return { kind: 'unknown', message: EXPORT_UNKNOWN };
+    return { kind: 'unknown', message: t(locale, 'ops.export.unknown') };
   }
   const body = asRecord(json);
   if (status === 200) {
@@ -170,35 +175,36 @@ export function interpretExportDownload(
       };
     }
     // Fail closed: JSON with url/downloadUrl is not the contract.
-    return { kind: 'unknown', message: EXPORT_UNKNOWN };
+    return { kind: 'unknown', message: t(locale, 'ops.export.unknown') };
   }
   const err = apiErrorFrom(body);
   if (err) return { kind: 'rejected', ...err };
-  return { kind: 'unknown', message: EXPORT_UNKNOWN };
+  return { kind: 'unknown', message: t(locale, 'ops.export.unknown') };
 }
 
 export function interpretExportHistory(
   status: number,
   json: unknown,
   networkError: boolean,
+  locale: PortalLocale = DEFAULT_PORTAL_LOCALE,
 ): ExportHistoryView {
   if (networkError || status === 0 || status >= 500) {
-    return { kind: 'unknown', message: EXPORT_UNKNOWN };
+    return { kind: 'unknown', message: t(locale, 'ops.export.unknown') };
   }
   if (status === 200) {
     const body = asRecord(json);
     if (!body || !Array.isArray(body.items)) {
-      return { kind: 'unknown', message: EXPORT_UNKNOWN };
+      return { kind: 'unknown', message: t(locale, 'ops.export.unknown') };
     }
     const items: ExportHistoryItem[] = [];
     for (const raw of body.items) {
       const row = asRecord(raw);
       if (!row || !isNonEmptyString(row.exportId) || !isExportStatus(row.status)) {
-        return { kind: 'unknown', message: EXPORT_UNKNOWN };
+        return { kind: 'unknown', message: t(locale, 'ops.export.unknown') };
       }
       // Fail closed: object keys / presigned URLs are never success fields.
       if ('downloadUrl' in row || 'objectKey' in row || 'url' in row) {
-        return { kind: 'unknown', message: EXPORT_UNKNOWN };
+        return { kind: 'unknown', message: t(locale, 'ops.export.unknown') };
       }
       items.push({
         exportId: row.exportId.trim(),
@@ -215,15 +221,15 @@ export function interpretExportHistory(
   }
   const err = apiErrorFrom(asRecord(json));
   if (err) return { kind: 'rejected', ...err };
-  return { kind: 'unknown', message: EXPORT_UNKNOWN };
+  return { kind: 'unknown', message: t(locale, 'ops.export.unknown') };
 }
 
-export function exportHistoryLabel(view: ExportHistoryView): string {
+export function exportHistoryLabel(view: ExportHistoryView, locale: PortalLocale = DEFAULT_PORTAL_LOCALE): string {
   if (view.kind === 'list') {
-    return `Lịch sử export: ${view.items.length} job${view.nextCursor ? ' (còn trang)' : ''}.`;
+    return t(locale, 'ops.export.historyLabel', { count: view.items.length, pageSuffix: view.nextCursor ? t(locale, 'common.pagination.pageSuffix') : '' });
   }
   if (view.kind === 'rejected') {
-    return `${view.code}: ${view.message}`;
+    return t(locale, 'ops.export.apiRejected', { code: view.code, message: view.message });
   }
   return view.message;
 }
@@ -237,20 +243,20 @@ export function exportAlertType(
   return 'success';
 }
 
-export function exportViewLabel(view: ExportView): string {
+export function exportViewLabel(view: ExportView, locale: PortalLocale = DEFAULT_PORTAL_LOCALE): string {
   if (view.kind === 'created' || view.kind === 'status') {
     const { job } = view;
-    const expires = job.expiresAt ? ` · hết hạn ${job.expiresAt}` : '';
+    const expires = job.expiresAt ? t(locale, 'ops.export.expiresSuffix', { expiresAt: job.expiresAt }) : '';
     const rows =
-      job.rowCount === null ? '' : ` · ${job.rowCount} dòng`;
-    return `Export ${job.exportId}: ${job.status}${rows}${expires}. Link tải có hạn; READY mới tải được.`;
+      job.rowCount === null ? '' : t(locale, 'ops.export.rowsSuffix', { rowCount: job.rowCount });
+    return t(locale, 'ops.export.jobLabel', { exportId: job.exportId, status: job.status, rowsSuffix: rows, expiresSuffix: expires });
   }
   if (view.kind === 'download') {
     const name = view.filename ? ` · ${view.filename}` : '';
-    return `Export ${view.exportId}: đã tải CSV xuống máy (${view.contentType}, ${view.byteLength} bytes)${name}. Không lưu URL dài hạn.`;
+    return t(locale, 'ops.export.downloadLabel', { exportId: view.exportId, contentType: view.contentType, byteLength: view.byteLength, filenameSuffix: name });
   }
   if (view.kind === 'rejected') {
-    return `${view.code}: ${view.message}`;
+    return t(locale, 'ops.export.apiRejected', { code: view.code, message: view.message });
   }
   return view.message;
 }

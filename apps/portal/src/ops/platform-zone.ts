@@ -10,6 +10,8 @@ import type {
   TenantStatus,
 } from '@ticket/contracts';
 import { asRecord, isNonEmptyString, apiErrorFrom } from './contract-shape';
+import { t } from '../i18n/t';
+import { DEFAULT_PORTAL_LOCALE, type PortalLocale } from '../i18n/locale';
 
 const TENANT_STATUSES = new Set<TenantStatus>([
   'ACTIVE',
@@ -26,8 +28,10 @@ const TENANT_FORBIDDEN = [
   'token',
 ] as const;
 
-export const PLATFORM_TENANTS_UNKNOWN =
-  'Không đọc được danh sách tenant platform. Không coi list đã tải thành công.';
+export const PLATFORM_TENANTS_UNKNOWN = t(
+  DEFAULT_PORTAL_LOCALE,
+  'platform.h_usltan',
+);
 
 export type PlatformTenantsView =
   | { kind: 'page'; page: PortalPlatformTenantsPage }
@@ -71,19 +75,21 @@ export function interpretPlatformTenantsPage(
   status: number,
   json: unknown,
   networkError: boolean,
+  locale: PortalLocale = DEFAULT_PORTAL_LOCALE,
 ): PlatformTenantsView {
   if (networkError || status === 0 || status >= 500) {
-    return { kind: 'unknown', message: PLATFORM_TENANTS_UNKNOWN };
+    return { kind: 'unknown', message: t(locale, 'platform.h_usltan') };
   }
   if (status === 200) {
     const body = asRecord(json);
     if (!body || !Array.isArray(body.items)) {
-      return { kind: 'unknown', message: PLATFORM_TENANTS_UNKNOWN };
+      return { kind: 'unknown', message: t(locale, 'platform.h_usltan') };
     }
     const items: PortalPlatformTenantSummary[] = [];
     for (const raw of body.items) {
       const item = parseTenant(raw);
-      if (!item) return { kind: 'unknown', message: PLATFORM_TENANTS_UNKNOWN };
+      if (!item)
+        return { kind: 'unknown', message: t(locale, 'platform.h_usltan') };
       items.push(item);
     }
     const nextCursor =
@@ -97,7 +103,7 @@ export function interpretPlatformTenantsPage(
       body.nextCursor !== undefined &&
       typeof body.nextCursor !== 'string'
     ) {
-      return { kind: 'unknown', message: PLATFORM_TENANTS_UNKNOWN };
+      return { kind: 'unknown', message: t(locale, 'platform.h_usltan') };
     }
     return { kind: 'page', page: { items, nextCursor } };
   }
@@ -106,14 +112,12 @@ export function interpretPlatformTenantsPage(
     return {
       kind: 'rejected',
       code: err?.code ?? 'FORBIDDEN',
-      message:
-        err?.message ??
-        'Chỉ Operator MFA (ticket-platform-api) — Owner/staff token bị từ chối.',
+      message: err?.message ?? t(locale, 'platform.operatorMfaOnly'),
     };
   }
   const err = apiErrorFrom(asRecord(json));
   if (err) return { kind: 'rejected', ...err };
-  return { kind: 'unknown', message: PLATFORM_TENANTS_UNKNOWN };
+  return { kind: 'unknown', message: t(locale, 'platform.h_usltan') };
 }
 
 export function buildPlatformListQuery(input: {
@@ -146,8 +150,10 @@ const HEALTH_FORBIDDEN = [
   'token',
 ] as const;
 
-export const PLATFORM_HEALTH_UNKNOWN =
-  'Không đọc được sức khỏe tenant. Không bịa SLA / delivery confirmation.';
+export const PLATFORM_HEALTH_UNKNOWN = t(
+  DEFAULT_PORTAL_LOCALE,
+  'platform.h_de965r',
+);
 
 export type PlatformHealthView =
   | { kind: 'ok'; health: PortalPlatformTenantHealth }
@@ -219,14 +225,15 @@ export function interpretPlatformTenantHealth(
   status: number,
   json: unknown,
   networkError: boolean,
+  locale: PortalLocale = DEFAULT_PORTAL_LOCALE,
 ): PlatformHealthView {
   if (networkError || status === 0 || status >= 500) {
-    return { kind: 'unknown', message: PLATFORM_HEALTH_UNKNOWN };
+    return { kind: 'unknown', message: t(locale, 'platform.h_de965r') };
   }
   if (status === 200) {
     const health = parseHealth(json);
     if (!health) {
-      return { kind: 'unknown', message: PLATFORM_HEALTH_UNKNOWN };
+      return { kind: 'unknown', message: t(locale, 'platform.h_de965r') };
     }
     return { kind: 'ok', health };
   }
@@ -235,14 +242,12 @@ export function interpretPlatformTenantHealth(
     return {
       kind: 'rejected',
       code: err?.code ?? 'FORBIDDEN',
-      message:
-        err?.message ??
-        'Chỉ Operator MFA (ticket-platform-api) — Owner/staff token bị từ chối.',
+      message: err?.message ?? t(locale, 'platform.operatorMfaOnly'),
     };
   }
   const err = apiErrorFrom(asRecord(json));
   if (err) return { kind: 'rejected', ...err };
-  return { kind: 'unknown', message: PLATFORM_HEALTH_UNKNOWN };
+  return { kind: 'unknown', message: t(locale, 'platform.h_de965r') };
 }
 
 export type SupportGrantRevokeResult = {
@@ -250,8 +255,10 @@ export type SupportGrantRevokeResult = {
   revokedAt: string;
 };
 
-export const PLATFORM_REVOKE_UNKNOWN =
-  'Không thu hồi được support grant. Không coi revoke đã thành công.';
+export const PLATFORM_REVOKE_UNKNOWN = t(
+  DEFAULT_PORTAL_LOCALE,
+  'platform.h_1vi2x57',
+);
 
 export type PlatformRevokeView =
   | { kind: 'ok'; result: SupportGrantRevokeResult }
@@ -262,9 +269,10 @@ export function interpretSupportGrantRevoke(
   status: number,
   json: unknown,
   networkError: boolean,
+  locale: PortalLocale = DEFAULT_PORTAL_LOCALE,
 ): PlatformRevokeView {
   if (networkError || status === 0 || status >= 500) {
-    return { kind: 'unknown', message: PLATFORM_REVOKE_UNKNOWN };
+    return { kind: 'unknown', message: t(locale, 'platform.h_1vi2x57') };
   }
   if (status === 200 || status === 201) {
     const body = asRecord(json);
@@ -273,7 +281,7 @@ export function interpretSupportGrantRevoke(
       !isNonEmptyString(body.grantId) ||
       !isNonEmptyString(body.revokedAt)
     ) {
-      return { kind: 'unknown', message: PLATFORM_REVOKE_UNKNOWN };
+      return { kind: 'unknown', message: t(locale, 'platform.h_1vi2x57') };
     }
     return {
       kind: 'ok',
@@ -288,12 +296,10 @@ export function interpretSupportGrantRevoke(
     return {
       kind: 'rejected',
       code: err?.code ?? 'FORBIDDEN',
-      message:
-        err?.message ??
-        'Chỉ Operator MFA (ticket-platform-api) — Owner/staff token bị từ chối.',
+      message: err?.message ?? t(locale, 'platform.operatorMfaOnly'),
     };
   }
   const err = apiErrorFrom(asRecord(json));
   if (err) return { kind: 'rejected', ...err };
-  return { kind: 'unknown', message: PLATFORM_REVOKE_UNKNOWN };
+  return { kind: 'unknown', message: t(locale, 'platform.h_1vi2x57') };
 }

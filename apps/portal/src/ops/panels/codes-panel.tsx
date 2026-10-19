@@ -10,6 +10,7 @@ import {
   interpretCodesPage,
   type CodesListView,
 } from '../codes';
+import { usePortalLocale } from '../../i18n';
 
 type Props = {
   tenantId: string;
@@ -23,6 +24,7 @@ const STATE_OPTIONS: { value: PortalCodeState; label: string }[] = [
 ];
 
 export function CodesPanel({ tenantId, eventId }: Props) {
+  const { t, locale } = usePortalLocale();
   const [busy, setBusy] = useState(false);
   const [view, setView] = useState<CodesListView | null>(null);
   const [items, setItems] = useState<PortalCodeSummary[]>([]);
@@ -47,7 +49,7 @@ export function CodesPanel({ tenantId, eventId }: Props) {
       const next = interpretCodesPage(
         res.status,
         res.json,
-        res.networkError || res.timedOut,
+        res.networkError || res.timedOut, locale,
       );
       setView(next);
       if (next.kind === 'page') {
@@ -61,7 +63,7 @@ export function CodesPanel({ tenantId, eventId }: Props) {
       }
       setBusy(false);
     },
-    [tenantId, eventId, state, sourceId, ticketTypeId, lookup],
+    [tenantId, eventId, state, sourceId, ticketTypeId, lookup, locale],
   );
 
   useEffect(() => {
@@ -79,8 +81,8 @@ export function CodesPanel({ tenantId, eventId }: Props) {
       <Alert
         type="info"
         showIcon
-        message="Mã tồn kho (H-C1)"
-        description="Chỉ codeId/state/sourceId/ticketTypeId. Không raw code, HMAC hay suffix bịa. Tra cứu exact hash phía server — không echo q trong kết quả."
+        message={t('ops.h_1bq4c1u')}
+        description={t('ops.codes.lookupHint')}
       />
       <Space wrap>
         <Select
@@ -92,30 +94,28 @@ export function CodesPanel({ tenantId, eventId }: Props) {
           onChange={(v) => setState((v as PortalCodeState | undefined) ?? '')}
         />
         <Input
-          placeholder="sourceId (UUID catalog)"
+          placeholder={t('ops.h_gelxe4')}
           value={sourceId}
           onChange={(e) => setSourceId(e.target.value)}
           style={{ minWidth: 220 }}
           spellCheck={false}
         />
         <Input
-          placeholder="ticketTypeId (UUID catalog)"
+          placeholder={t('ops.h_1wzddxz')}
           value={ticketTypeId}
           onChange={(e) => setTicketTypeId(e.target.value)}
           style={{ minWidth: 220 }}
           spellCheck={false}
         />
         <Input.Password
-          placeholder="Tra cứu mã exact (không lưu)"
+          placeholder={t('ops.h_uf5xhg')}
           value={lookup}
           onChange={(e) => setLookup(e.target.value)}
           style={{ minWidth: 220 }}
           visibilityToggle={false}
           autoComplete="off"
         />
-        <Button type="primary" loading={busy} onClick={() => void load(null, false)}>
-          Lọc
-        </Button>
+        <Button type="primary" loading={busy} onClick={() => void load(null, false)}>{t('platform.loc')}</Button>
       </Space>
       {view?.kind === 'rejected' || view?.kind === 'unknown' ? (
         <Alert
@@ -131,7 +131,7 @@ export function CodesPanel({ tenantId, eventId }: Props) {
         loading={busy}
         dataSource={items}
         pagination={false}
-        locale={{ emptyText: 'Không có mã khớp bộ lọc.' }}
+        locale={{ emptyText: t('ops.h_16do87c') }}
         data-testid="codes-table"
         columns={[
           { title: 'Code ID', dataIndex: 'codeId', ellipsis: true },
@@ -141,9 +141,7 @@ export function CodesPanel({ tenantId, eventId }: Props) {
         ]}
       />
       {nextCursor ? (
-        <Button loading={busy} onClick={() => void load(nextCursor, true)}>
-          Trang tiếp
-        </Button>
+        <Button loading={busy} onClick={() => void load(nextCursor, true)}>{t('platform.h_4cj11z')}</Button>
       ) : null}
     </Space>
   );

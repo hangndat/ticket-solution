@@ -9,6 +9,7 @@ import { portalGet } from '../../../../src/client/portal-fetch';
 import { bffEvents } from '../../../../src/prep/bff-urls';
 import { useTenantAccess } from '../../../../src/prep/use-event-access';
 import { SurfaceState } from '../../../../src/components/surface-state';
+import { usePortalLocale } from '../../../../src/i18n';
 
 type ListState =
   | { kind: 'loading' }
@@ -32,6 +33,7 @@ function parseList(json: unknown): {
 }
 
 export default function EventsListPage() {
+  const { t } = usePortalLocale();
   const params = useParams<{ tenantId: string }>();
   const tenantId = params.tenantId;
   const access = useTenantAccess(tenantId);
@@ -49,18 +51,18 @@ export default function EventsListPage() {
         setList({
           kind: 'unknown',
           message:
-            'Chưa rõ kết quả tải danh sách sự kiện. Không giả định danh sách trống.',
+            t('events.h_byq509'),
         });
         return;
       }
       if (res.status === 403 || res.status === 401) {
-        setList({ kind: 'error', message: 'Không có quyền xem danh sách sự kiện.' });
+        setList({ kind: 'error', message: t('events.h_o2hfl2') });
         return;
       }
       if (res.status !== 200) {
         setList({
           kind: 'error',
-          message: `Không tải được danh sách (HTTP ${res.status}).`,
+          message: t('events.loadFailedHttp', { status: res.status }),
         });
         return;
       }
@@ -68,7 +70,7 @@ export default function EventsListPage() {
       if (!parsed) {
         setList({
           kind: 'unknown',
-          message: 'Phản hồi danh sách không đúng schema — chưa rõ.',
+          message: t('events.h_j7agy6'),
         });
         return;
       }
@@ -79,7 +81,7 @@ export default function EventsListPage() {
           : { kind: 'ready', items: parsed.items, nextCursor: parsed.nextCursor },
       );
     },
-    [tenantId],
+    [tenantId, t],
   );
 
   useEffect(() => {
@@ -100,7 +102,7 @@ export default function EventsListPage() {
     return (
       <SurfaceState
         kind="error"
-        description={access.message}
+        description={access.messageKey ? t(access.messageKey) : undefined}
         onRetry={() => window.location.reload()}
       />
     );
@@ -109,7 +111,7 @@ export default function EventsListPage() {
     return (
       <SurfaceState
         kind="permission-denied"
-        description="Thiếu quyền xem sự kiện của tổ chức này."
+        description={t('events.h_1xuhi5j')}
         onRetry={() => {
           window.location.href = `/t/${tenantId}`;
         }}
@@ -122,12 +124,10 @@ export default function EventsListPage() {
   return (
     <Space direction="vertical" size="large" style={{ width: '100%' }}>
       <Space style={{ width: '100%', justifyContent: 'space-between' }}>
-        <Typography.Title level={3} style={{ margin: 0 }}>
-          Sự kiện
-        </Typography.Title>
+        <Typography.Title level={3} style={{ margin: 0 }}>{t('nav.org.events')}</Typography.Title>
         {canCreate ? (
           <Link href={`/t/${tenantId}/events/new`}>
-            <Button type="primary">Tạo sự kiện</Button>
+            <Button type="primary">{t('events.h_ek93o2')}</Button>
           </Link>
         ) : null}
       </Space>
@@ -136,12 +136,10 @@ export default function EventsListPage() {
         <Alert
           type="warning"
           showIcon
-          message="Chưa rõ kết quả"
+          message={t('surface.unknown.title')}
           description={list.message}
           action={
-            <Button size="small" onClick={() => void load(null)}>
-              Kiểm tra lại
-            </Button>
+            <Button size="small" onClick={() => void load(null)}>{t('surface.action.recheck')}</Button>
           }
         />
       ) : null}
@@ -155,11 +153,11 @@ export default function EventsListPage() {
       {list.kind === 'empty' ? (
         <SurfaceState
           kind="empty"
-          description="Chưa có sự kiện."
+          description={t('events.h_ssqyjm')}
           emptyAction={
             canCreate ? (
               <Link href={`/t/${tenantId}/events/new`}>
-                <Button type="primary">Tạo sự kiện</Button>
+                <Button type="primary">{t('events.h_ek93o2')}</Button>
               </Link>
             ) : undefined
           }
@@ -173,7 +171,7 @@ export default function EventsListPage() {
             pagination={false}
             columns={[
               {
-                title: 'Tên',
+                title: t('sources.ten'),
                 dataIndex: 'name',
                 render: (name: string, row: EventDetail) => (
                   <Link href={`/t/${tenantId}/e/${row.eventId}`}>{name}</Link>
@@ -181,21 +179,21 @@ export default function EventsListPage() {
               },
               { title: 'Slug', dataIndex: 'slug' },
               {
-                title: 'Nội dung',
+                title: t('common.h_fe18yl'),
                 dataIndex: 'contentStatus',
               },
               {
-                title: 'Nghiệp vụ',
+                title: t('common.h_1t15e7z'),
                 dataIndex: 'businessStatus',
               },
               {
-                title: 'Hiển thị',
+                title: t('common.h_wqd4fq'),
                 dataIndex: 'visibility',
               },
             ]}
           />
           {cursor ? (
-            <Button onClick={() => void load(cursor)}>Tải thêm</Button>
+            <Button onClick={() => void load(cursor)}>{t('sources.h_1w8bpuo')}</Button>
           ) : null}
         </>
       ) : null}

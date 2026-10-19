@@ -40,8 +40,10 @@ import {
   GateStayAppNotice,
 } from '../../../../../src/components/gate-deeplink';
 import { SurfaceState } from '../../../../../src/components/surface-state';
+import { usePortalLocale } from '../../../../../src/i18n';
 
 export default function EventOverviewPage() {
+  const { t, locale } = usePortalLocale();
   const params = useParams<{ tenantId: string; eventId: string }>();
   const { tenantId, eventId } = params;
   const access = useEventAccess(tenantId, eventId);
@@ -63,7 +65,7 @@ export default function EventOverviewPage() {
   const load = useCallback(async () => {
     await Promise.resolve();
     setLoadKind('loading');
-    const [d, r, t, s, c] = await Promise.all([
+    const [d, r, ty, s, c] = await Promise.all([
       portalGet(bffEvent(tenantId, eventId)),
       portalGet(bffEventAction(tenantId, eventId, 'report')),
       portalGet(`${bffEventAction(tenantId, eventId, 'ticket-types')}?limit=20`),
@@ -78,12 +80,12 @@ export default function EventOverviewPage() {
       d.status === 0
     ) {
       setLoadKind('unknown');
-      setMessage('Chưa rõ kết quả tải sự kiện.');
+      setMessage(t('common.h_1hj59zg'));
       return;
     }
     if (d.status !== 200 || !d.json || typeof d.json !== 'object') {
       setLoadKind('error');
-      setMessage(apiErrorMessage(d.json, `HTTP ${d.status}`));
+      setMessage(apiErrorMessage(d.json, t('common.httpStatus', { status: d.status })));
       return;
     }
     setDetail(d.json as EventDetail);
@@ -92,16 +94,16 @@ export default function EventOverviewPage() {
       interpretEventReport(
         r.status,
         r.json,
-        r.networkError || r.timedOut,
+        r.networkError || r.timedOut, locale,
       ),
     );
 
     const tItems =
-      t.status === 200 &&
-      t.json &&
-      typeof t.json === 'object' &&
-      Array.isArray((t.json as { items?: unknown }).items)
-        ? ((t.json as { items: unknown[] }).items as unknown[])
+      ty.status === 200 &&
+      ty.json &&
+      typeof ty.json === 'object' &&
+      Array.isArray((ty.json as { items?: unknown }).items)
+        ? ((ty.json as { items: unknown[] }).items as unknown[])
         : [];
     const sItems =
       s.status === 200 &&
@@ -156,7 +158,7 @@ export default function EventOverviewPage() {
     }
 
     setLoadKind('ready');
-  }, [tenantId, eventId]);
+  }, [tenantId, eventId, locale, t]);
 
   useEffect(() => {
     if (access.kind !== 'ready') return;
@@ -180,8 +182,8 @@ export default function EventOverviewPage() {
         quotaCapacity: shownReport?.quota?.capacity ?? null,
         hasTermsOrPublished: hasTerms || publishedVersion != null,
         hasBrand,
-      }),
-    [typesCount, sourcesCount, shownReport, hasTerms, publishedVersion, hasBrand],
+      }, locale),
+    [typesCount, sourcesCount, shownReport, hasTerms, publishedVersion, hasBrand, locale],
   );
   const canPublish =
     readinessAllOk(readiness) &&
@@ -192,22 +194,22 @@ export default function EventOverviewPage() {
   async function publish() {
     if (draftVersion == null) return;
     Modal.confirm({
-      title: 'Xuất bản cấu hình sự kiện?',
+      title: t('common.h_cdxaaj'),
       content: (
         <Space direction="vertical">
           <Typography.Text>
-            Publish khóa phiên bản cấu hình (expectedVersion {draftVersion}).
+            {t('event.home.publishLockVersion', { version: draftVersion })}
           </Typography.Text>
           <Alert
             type="warning"
             showIcon
-            message="Publish ≠ mở redeem ≠ mở Gate"
-            description="Xuất bản nội dung không tự mở cửa sổ redeem cho khách và không bật cổng quét. Gate scan vẫn trên app.vemoki.com."
+            message={t('config.h_1hh7j6r')}
+            description={t('common.h_1lb5yey')}
           />
         </Space>
       ),
-      okText: 'Xuất bản',
-      cancelText: 'Huỷ',
+      okText: t('config.h_lofnqs'),
+      cancelText: t('config.huy'),
       onOk: async () => {
         setBusy(true);
         setNotice(null);
@@ -218,16 +220,16 @@ export default function EventOverviewPage() {
           );
           if (res.networkError || res.timedOut || res.status >= 500) {
             setNotice(
-              'Chưa rõ kết quả xuất bản — không đánh dấu thành công. Kiểm tra lại.',
+              t('common.h_1d5xf37'),
             );
             return;
           }
           if (res.status >= 200 && res.status < 300) {
-            setNotice('Đã xuất bản cấu hình (publish content).');
+            setNotice(t('common.h_5q8fa1'));
             void load();
             return;
           }
-          setNotice(apiErrorMessage(res.json, `Publish thất bại (${res.status}).`));
+          setNotice(apiErrorMessage(res.json, t('config.publishFailedStatus', { status: res.status })));
         } finally {
           setBusy(false);
         }
@@ -242,7 +244,7 @@ export default function EventOverviewPage() {
     return (
       <SurfaceState
         kind="error"
-        description={access.message}
+        description={access.messageKey ? t(access.messageKey) : undefined}
         onRetry={() => window.location.reload()}
       />
     );
@@ -251,7 +253,7 @@ export default function EventOverviewPage() {
     return (
       <SurfaceState
         kind="permission-denied"
-        description="Sự kiện không nằm trong khám phá máy chủ của bạn."
+        description={t('common.h_1rsax7j')}
         onRetry={() => {
           window.location.href = `/t/${tenantId}`;
         }}
@@ -263,12 +265,10 @@ export default function EventOverviewPage() {
       <Alert
         type="warning"
         showIcon
-        message="Chưa rõ kết quả"
+        message={t('surface.unknown.title')}
         description={message}
         action={
-          <Button size="small" onClick={() => void load()}>
-            Kiểm tra lại
-          </Button>
+          <Button size="small" onClick={() => void load()}>{t('surface.action.recheck')}</Button>
         }
       />
     );
@@ -294,10 +294,10 @@ export default function EventOverviewPage() {
         </Typography.Title>
         <Space>
           <Link href={`/t/${tenantId}/e/${eventId}/setup`}>
-            <Button>Chuẩn bị</Button>
+            <Button>{t('nav.event.setup')}</Button>
           </Link>
           <Link href={`/t/${tenantId}/e/${eventId}/config`}>
-            <Button>Cấu hình</Button>
+            <Button>{t('nav.org.settings')}</Button>
           </Link>
           <Button
             type="primary"
@@ -307,43 +307,41 @@ export default function EventOverviewPage() {
             title={
               canPublish
                 ? undefined
-                : readinessSummary(readiness)
+                : readinessSummary(readiness, locale)
             }
-          >
-            Xuất bản
-          </Button>
+          >{t('config.h_lofnqs')}</Button>
         </Space>
       </Space>
 
       <Alert
         type="info"
         showIcon
-        message="Publish ≠ redeem ≠ Gate"
-        description="Xuất bản cấu hình không mở redeem cho khách và không thay cổng quét. Gate scan: app.vemoki.com/gate."
+        message={t('config.h_gyyhq3')}
+        description={t('common.h_1nl7gld')}
       />
 
-      <Card size="small" title="Trạng thái">
+      <Card size="small" title={t('ops.export.statusButton')}>
         <Descriptions bordered size="small" column={1}>
           <Descriptions.Item label="Slug">{detail.slug}</Descriptions.Item>
-          <Descriptions.Item label="Nội dung">
+          <Descriptions.Item label={t('common.h_fe18yl')}>
             {detail.contentStatus}
           </Descriptions.Item>
-          <Descriptions.Item label="Nghiệp vụ">
+          <Descriptions.Item label={t('common.h_1t15e7z')}>
             {detail.businessStatus}
           </Descriptions.Item>
-          <Descriptions.Item label="Hiển thị">
+          <Descriptions.Item label={t('common.h_wqd4fq')}>
             {detail.visibility}
           </Descriptions.Item>
           <Descriptions.Item label="Revision">{detail.revision}</Descriptions.Item>
-          <Descriptions.Item label="Config đã publish">
+          <Descriptions.Item label={t('common.h_qqix4u')}>
             {publishedVersion ?? '—'}
           </Descriptions.Item>
         </Descriptions>
       </Card>
 
-      <Card size="small" title="Sẵn sàng xuất bản">
+      <Card size="small" title={t('common.h_4nfgg4')}>
         <Typography.Paragraph type="secondary">
-          {readinessSummary(readiness)}
+          {readinessSummary(readiness, locale)}
         </Typography.Paragraph>
         <List
           size="small"
@@ -351,7 +349,7 @@ export default function EventOverviewPage() {
           renderItem={(item) => (
             <List.Item>
               <List.Item.Meta
-                title={`${item.label}: ${item.status}`}
+                title={t('ops.export.apiRejected', { code: item.label, message: item.status })}
                 description={item.detail}
               />
             </List.Item>
@@ -362,7 +360,7 @@ export default function EventOverviewPage() {
       {shownReport ? (
         <Card
           size="small"
-          title="Báo cáo nhanh (O12)"
+          title={t('gate.reportQuickTitle')}
           extra={
             shownReport.asOf ? (
               <Typography.Text type="secondary">
@@ -380,7 +378,7 @@ export default function EventOverviewPage() {
                 ? '∞'
                 : shownReport.quota.capacity}
             </Descriptions.Item>
-            <Descriptions.Item label="Pending duyệt">
+            <Descriptions.Item label={t('gate.h_1nc3sip')}>
               {shownReport.pendingApprovalCount}
             </Descriptions.Item>
             <Descriptions.Item label="Check-in OK">
@@ -388,21 +386,19 @@ export default function EventOverviewPage() {
             </Descriptions.Item>
           </Descriptions>
           <Space wrap style={{ marginTop: 8 }}>
-            <Button size="small" onClick={() => void load()}>
-              Làm mới
-            </Button>
+            <Button size="small" onClick={() => void load()}>{t('gate.h_3keb7')}</Button>
             {reportShowsPendingApprovalCta(shownReport) ? (
               <Link href={reportPendingApprovalHref(tenantId, eventId)}>
-                <Button size="small">Đi tới chờ duyệt</Button>
+                <Button size="small">{t('common.h_wa3fk5')}</Button>
               </Link>
             ) : null}
             {reportShowsEmailCsCta(shownReport) ? (
               <Link href={reportEmailCsHref(tenantId, eventId)}>
-                <Button size="small">Đi tới hỗ trợ CS</Button>
+                <Button size="small">{t('common.h_1pfzepi')}</Button>
               </Link>
             ) : null}
             <Link href={`/t/${tenantId}/e/${eventId}/guests`}>
-              <Button size="small">Khách & mã</Button>
+              <Button size="small">{t('nav.event.guests')}</Button>
             </Link>
           </Space>
         </Card>
@@ -410,10 +406,10 @@ export default function EventOverviewPage() {
         <Alert
           type="warning"
           showIcon
-          message="Chưa tải được báo cáo — không giả định số liệu xanh."
+          message={t('common.h_1cdrhuc')}
           description={
             report?.kind === 'rejected'
-              ? `${report.code}: ${report.message}`
+              ? t('ops.export.apiRejected', { code: report.code, message: report.message })
               : report?.kind === 'unknown'
                 ? report.message
                 : undefined
@@ -434,10 +430,8 @@ export default function EventOverviewPage() {
 
       {canReport ? (
         <Typography.Paragraph>
-          Báo cáo cổng chi tiết:{' '}
-          <Link href={`/t/${tenantId}/e/${eventId}/gate`}>mở Cổng (report)</Link>
-          — không gắn camera trên portal.
-        </Typography.Paragraph>
+          {t('event.home.gateReportDetail')}{' '}
+          <Link href={`/t/${tenantId}/e/${eventId}/gate`}>{t('common.h_1iov4lt')}</Link>{t('gateDeeplink.h_k7571i')}</Typography.Paragraph>
       ) : null}
     </Space>
   );

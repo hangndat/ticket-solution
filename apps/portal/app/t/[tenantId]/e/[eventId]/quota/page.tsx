@@ -10,6 +10,7 @@ import {
 import { bffEventAction } from '../../../../../../src/prep/bff-urls';
 import { useEventAccess } from '../../../../../../src/prep/use-event-access';
 import { SurfaceState } from '../../../../../../src/components/surface-state';
+import { usePortalLocale } from '../../../../../../src/i18n';
 
 type QuotaView = {
   capacity: number | null;
@@ -17,6 +18,7 @@ type QuotaView = {
 };
 
 export default function QuotaPage() {
+  const { t } = usePortalLocale();
   const params = useParams<{ tenantId: string; eventId: string }>();
   const { tenantId, eventId } = params;
   const access = useEventAccess(tenantId, eventId);
@@ -32,18 +34,23 @@ export default function QuotaPage() {
     const res = await portalGet(bffEventAction(tenantId, eventId, 'quota'));
     if (res.networkError || res.timedOut || res.status >= 500) {
       setKind('unknown');
-      setMessage('Chưa rõ kết quả tải hạn mức.');
+      setMessage(t('quota.h_ti22hj'));
       return;
     }
     if (res.status !== 200 || !res.json || typeof res.json !== 'object') {
       setKind('error');
-      setMessage(apiErrorMessage(res.json, `HTTP ${res.status}`));
+      setMessage(
+        apiErrorMessage(
+          res.json,
+          t('common.httpStatus', { status: res.status }),
+        ),
+      );
       return;
     }
     const body = res.json as Partial<QuotaView>;
     if (typeof body.allocated !== 'number') {
       setKind('unknown');
-      setMessage('Phản hồi quota thiếu allocated — không giả định số.');
+      setMessage(t('quota.h_dn1nvv'));
       return;
     }
     setQuota({
@@ -51,7 +58,7 @@ export default function QuotaPage() {
       allocated: body.allocated,
     });
     setKind('ready');
-  }, [tenantId, eventId]);
+  }, [tenantId, eventId, t]);
 
   useEffect(() => {
     if (access.kind !== 'ready') return;
@@ -69,7 +76,7 @@ export default function QuotaPage() {
     return (
       <SurfaceState
         kind="error"
-        description={access.message}
+        description={access.messageKey ? t(access.messageKey) : undefined}
         onRetry={() => window.location.reload()}
       />
     );
@@ -78,7 +85,7 @@ export default function QuotaPage() {
     return (
       <SurfaceState
         kind="permission-denied"
-        description="Không có quyền sự kiện này."
+        description={t('config.h_g7fjbz')}
         onRetry={() => {
           window.location.href = `/t/${tenantId}`;
         }}
@@ -95,9 +102,9 @@ export default function QuotaPage() {
     <Space direction="vertical" size="large" style={{ width: '100%' }}>
       <Space style={{ width: '100%', justifyContent: 'space-between' }}>
         <Typography.Title level={3} style={{ margin: 0 }}>
-          Hạn mức
+          {t('nav.event.quota')}
         </Typography.Title>
-        <Button onClick={() => void load()}>Làm mới</Button>
+        <Button onClick={() => void load()}>{t('gate.h_3keb7')}</Button>
       </Space>
 
       {kind === 'loading' ? <SurfaceState kind="loading" /> : null}
@@ -105,11 +112,11 @@ export default function QuotaPage() {
         <Alert
           type="warning"
           showIcon
-          message="Chưa rõ kết quả"
+          message={t('surface.unknown.title')}
           description={message}
           action={
             <Button size="small" onClick={() => void load()}>
-              Kiểm tra lại
+              {t('surface.action.recheck')}
             </Button>
           }
         />
@@ -124,11 +131,11 @@ export default function QuotaPage() {
       {kind === 'ready' && quota ? (
         <>
           <Descriptions bordered size="small" column={1}>
-            <Descriptions.Item label="Đã cấp phát">
+            <Descriptions.Item label={t('quota.h_1h6b62d')}>
               {quota.allocated}
             </Descriptions.Item>
             <Descriptions.Item label="Capacity">
-              {quota.capacity === null ? 'Không giới hạn' : quota.capacity}
+              {quota.capacity === null ? t('quota.h_1tnoz3k') : quota.capacity}
             </Descriptions.Item>
           </Descriptions>
           {percent !== undefined ? (
@@ -137,7 +144,7 @@ export default function QuotaPage() {
             <Alert
               type="info"
               showIcon
-              message="Capacity không giới hạn hoặc chưa xác định phần trăm."
+              message={t('quota.capacityUnlimited')}
             />
           )}
         </>
