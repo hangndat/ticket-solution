@@ -1,18 +1,19 @@
 'use client';
 
+import { ProForm, ProFormSelect, ProFormText, ProTable } from '@ant-design/pro-components';
+import type { ProColumns } from '@ant-design/pro-components';
 import {
   Alert,
   Button,
   Form,
-  Input,
   Modal,
   Select,
   Space,
-  Table,
   Tabs,
   Tag,
   Typography,
 } from 'antd';
+import { PortalPage } from '../../../../src/components/portal-page';
 import { useParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type {
@@ -369,14 +370,32 @@ export default function MembersPage() {
     });
   }
 
+  const memberColumns: ProColumns<PortalMemberSummary>[] = [
+    { title: 'Email', dataIndex: 'emailMasked' },
+    {
+      title: t('members.h_1mkpx3r'),
+      render: (_, row) => roleLabel(row.role, presets),
+    },
+    {
+      title: t('ops.export.statusButton'),
+      render: (_, row) => (row.revokedAt ? 'REVOKED' : 'ACTIVE'),
+    },
+    {
+      title: t('members.h_r0iic4'),
+      render: (_, row) =>
+        row.eventAssignments.length
+          ? row.eventAssignments
+              .map((a) => {
+                const ev = access.events.find((e) => e.eventId === a.eventId);
+                return ev?.name ?? a.eventId.slice(0, 8);
+              })
+              .join(', ')
+          : '—',
+    },
+  ];
+
   return (
-    <Space direction="vertical" size="large" style={{ width: '100%' }}>
-      <Typography.Title level={3} style={{ margin: 0 }}>
-        {t('members.h_i0adgn')}
-      </Typography.Title>
-      <Typography.Paragraph type="secondary">
-        {t('members.inviteEventsHint')}
-      </Typography.Paragraph>
+    <PortalPage title={t('members.h_i0adgn')} subTitle={t('members.inviteEventsHint')}>
 
       <Alert
         type="info"
@@ -384,7 +403,7 @@ export default function MembersPage() {
         message={t('members.roles.serverDefinedAlert')}
       />
 
-      <Form
+      <ProForm
         form={form}
         layout="inline"
         initialValues={{
@@ -392,52 +411,51 @@ export default function MembersPage() {
           eventRole: 'Manager',
         }}
         style={{ rowGap: 12 }}
+        submitter={{
+          searchConfig: { submitText: t('members.h_47dn03') },
+          submitButtonProps: { loading: busy },
+        }}
+        onFinish={() => void invite()}
       >
-        <Form.Item
+        <ProFormText
           name="email"
           rules={[
             { required: true, type: 'email', message: t('members.h_1rjw0n9') },
           ]}
-        >
-          <Input placeholder="email@example.com" style={{ width: 220 }} />
-        </Form.Item>
-        <Form.Item
+          fieldProps={{ placeholder: 'email@example.com', style: { width: 220 } }}
+        />
+        <ProFormSelect
           name="roleKey"
           rules={[{ required: true, message: t('members.roles.pickRequired') }]}
-        >
-          <Select
-            style={{ width: 220 }}
-            options={roleOptions}
-            placeholder={t('members.roles.pickPlaceholder')}
-            aria-label={t('members.h_1mkpx3r')}
-          />
-        </Form.Item>
-        <Form.Item name="eventId">
-          <Select
-            allowClear
-            placeholder={t('members.h_1fi9vwv')}
-            style={{ width: 220 }}
-            options={access.events.map((e) => ({
+          fieldProps={{
+            style: { width: 220 },
+            options: roleOptions,
+            placeholder: t('members.roles.pickPlaceholder'),
+            'aria-label': t('members.h_1mkpx3r'),
+          }}
+        />
+        <ProFormSelect
+          name="eventId"
+          fieldProps={{
+            allowClear: true,
+            placeholder: t('members.h_1fi9vwv'),
+            style: { width: 220 },
+            options: access.events.map((e) => ({
               value: e.eventId,
               label: e.name,
-            }))}
-          />
-        </Form.Item>
-        <Form.Item name="eventRole">
-          <Select
-            style={{ width: 140 }}
-            options={SYSTEM_MEMBERSHIP_ROLES.filter((r) => r !== 'Owner').map(
-              (r) => ({
-                value: r,
-                label: r,
-              }),
-            )}
-          />
-        </Form.Item>
-        <Button type="primary" loading={busy} onClick={() => void invite()}>
-          {t('members.h_47dn03')}
-        </Button>
-      </Form>
+            })),
+          }}
+        />
+        <ProFormSelect
+          name="eventRole"
+          fieldProps={{
+            style: { width: 140 },
+            options: SYSTEM_MEMBERSHIP_ROLES.filter((r) => r !== 'Owner').map(
+              (r) => ({ value: r, label: r }),
+            ),
+          }}
+        />
+      </ProForm>
 
       {selectedPreset ? (
         <Typography.Paragraph type="secondary" style={{ marginTop: 0 }}>
@@ -512,53 +530,26 @@ export default function MembersPage() {
               key: 'members',
               label: t('members.tabUsers', { count: members.length }),
               children: (
-                <Table
+                <ProTable<PortalMemberSummary>
                   rowKey="membershipId"
                   dataSource={filteredMembers}
+                  search={false}
+                  options={false}
                   pagination={false}
                   columns={[
-                    { title: 'Email', dataIndex: 'emailMasked' },
-                    {
-                      title: t('members.h_1mkpx3r'),
-                      render: (_: unknown, row: PortalMemberSummary) =>
-                        roleLabel(row.role, presets),
-                    },
-                    {
-                      title: t('ops.export.statusButton'),
-                      render: (_: unknown, row: PortalMemberSummary) =>
-                        row.revokedAt ? 'REVOKED' : 'ACTIVE',
-                    },
-                    {
-                      title: t('members.h_r0iic4'),
-                      render: (_: unknown, row: PortalMemberSummary) =>
-                        row.eventAssignments.length
-                          ? row.eventAssignments
-                              .map((a) => {
-                                const ev = access.events.find(
-                                  (e) => e.eventId === a.eventId,
-                                );
-                                return ev?.name ?? a.eventId.slice(0, 8);
-                              })
-                              .join(', ')
-                          : '—',
-                    },
+                    ...memberColumns,
                     {
                       title: '',
-                      render: (_: unknown, row: PortalMemberSummary) =>
+                      render: (_, row) =>
                         row.revokedAt ? null : (
                           <Space>
-                            <Button
-                              size="small"
-                              onClick={() => openAssign(row)}
-                            >
+                            <Button size="small" onClick={() => openAssign(row)}>
                               {t('members.roles.assignCta')}
                             </Button>
                             <Button
                               danger
                               size="small"
-                              onClick={() =>
-                                confirmRevokeMember(row.membershipId)
-                              }
+                              onClick={() => confirmRevokeMember(row.membershipId)}
                             >
                               {t('members.h_1w0agno')}
                             </Button>
@@ -573,9 +564,11 @@ export default function MembersPage() {
               key: 'invites',
               label: t('members.tabInvites', { count: invites.length }),
               children: (
-                <Table
+                <ProTable<PortalInviteSummary>
                   rowKey="inviteId"
                   dataSource={invites}
+                  search={false}
+                  options={false}
                   pagination={false}
                   columns={[
                     { title: 'Email', dataIndex: 'emailMasked' },
@@ -617,9 +610,11 @@ export default function MembersPage() {
                     showIcon
                     message={t('members.roles.catalogHint')}
                   />
-                  <Table
+                  <ProTable
                     rowKey="key"
                     dataSource={catalogRows}
+                    search={false}
+                    options={false}
                     pagination={false}
                     expandable={{
                       expandedRowRender: (row) =>
@@ -715,6 +710,6 @@ export default function MembersPage() {
           </Typography.Paragraph>
         </Space>
       </Modal>
-    </Space>
+    </PortalPage>
   );
 }
