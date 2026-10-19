@@ -40,7 +40,7 @@ export function decideGateConfirm(result: FetchJsonResult): GateDecision {
 
   const body = record(result.json);
   if (
-    result.status === 200 &&
+    (result.status === 200 || result.status === 201) &&
     body &&
     body.state === 'USED' &&
     typeof body.ticketId === 'string' &&

@@ -4,6 +4,7 @@ import { AntdRegistry } from '@ant-design/nextjs-registry';
 import { PortalProviders } from '../src/components/providers';
 import { PortalShell } from '../src/components/portal-shell';
 import { readPortalLocaleFromServerCookies } from '../src/i18n/locale-server';
+import { productOrigin } from '../src/oidc/config';
 import './globals.css';
 
 const beVietnam = Be_Vietnam_Pro({
@@ -29,7 +30,7 @@ export default async function RootLayout({
       <body style={{ fontFamily: 'var(--font-portal), sans-serif' }}>
         <AntdRegistry>
           <PortalProviders>
-            <PortalShell>{children}</PortalShell>
+            <PortalShell productOrigin={productOrigin()}>{children}</PortalShell>
           </PortalProviders>
         </AntdRegistry>
       </body>

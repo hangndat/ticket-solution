@@ -137,7 +137,7 @@ export function GateForm({ initialTenantId = '', initialEventId = '' }: Props) {
         return;
       }
       const body = result.json as { sessionId?: string; code?: string; message?: string } | null;
-      if (result.status === 200 && body?.sessionId) {
+      if ((result.status === 200 || result.status === 201) && body?.sessionId) {
         setSessionId(body.sessionId);
         // Session ready ≠ admit/deny — keep idle outcome («Chờ mã vé»).
         setDecision(null);
@@ -179,7 +179,11 @@ export function GateForm({ initialTenantId = '', initialEventId = '' }: Props) {
         token?: string;
         ticketId?: string;
       } | null;
-      if (reserved.status !== 200 || !holdBody?.reservationId || !holdBody.token) {
+      if (
+        (reserved.status !== 200 && reserved.status !== 201) ||
+        !holdBody?.reservationId ||
+        !holdBody.token
+      ) {
         setHold(null);
         setDecision(decideGateConfirm(reserved));
         return;

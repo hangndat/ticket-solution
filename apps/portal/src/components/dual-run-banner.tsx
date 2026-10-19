@@ -1,20 +1,21 @@
 'use client';
 
 import { Alert } from 'antd';
-import {
-  isPortalDualRunBannerEnabled,
-  productOriginFromEnv,
-} from '../dual-run/allowlist';
+import { isPortalDualRunBannerEnabled } from '../dual-run/allowlist';
 import { usePortalLocale } from '../i18n';
 
 /**
  * Portal-side dual-run notice — legacy admin still on product origin until
  * an authorized deploy switches traffic (ADR-20 §8).
  */
-export function PortalDualRunBanner() {
+export function PortalDualRunBanner({
+  productOrigin,
+}: {
+  productOrigin: string;
+}) {
   const { t } = usePortalLocale();
   if (!isPortalDualRunBannerEnabled()) return null;
-  const product = productOriginFromEnv();
+  const product = productOrigin;
   const legacyAdmin = `${product}/admin`;
 
   return (
