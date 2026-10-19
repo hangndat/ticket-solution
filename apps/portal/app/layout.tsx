@@ -26,10 +26,13 @@ export default async function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   const locale = await readPortalLocaleFromServerCookies();
   return (
-    <html lang={locale} className={beVietnam.variable}>
-      <body style={{ fontFamily: 'var(--font-portal), sans-serif' }}>
+    <html lang={locale} className={beVietnam.variable} suppressHydrationWarning>
+      <body
+        style={{ fontFamily: 'var(--font-portal), sans-serif' }}
+        suppressHydrationWarning
+      >
         <AntdRegistry>
-          <PortalProviders>
+          <PortalProviders initialLocale={locale}>
             <PortalShell productOrigin={productOrigin()}>{children}</PortalShell>
           </PortalProviders>
         </AntdRegistry>

@@ -13,6 +13,8 @@
 
 **Mục đích:** đủ để worker `web` implement shell + màn hình portal mà **không đoán** route, state, permission, copy VI, hoặc API. Neo contract gap: [`PORTAL-BACKEND-GAPS.md`](../plans/PORTAL-BACKEND-GAPS.md). Discovery UX trước: [`PORTAL-ANTD-UX.md`](./PORTAL-ANTD-UX.md) — **supersede** các option lệch primary (xem §1).
 
+**Sync triển khai (2026-10-19):** Production `portal.vemoki.com` khớp §3.3–§3.6 (sider nhóm + home/auth). WIP nhánh `hangndat/d1-portal-nav-groups`, base `52bc54e3fdcb` — **chưa merge `main`**. UAT/DoD: [PORTAL-PROD-UAT-NAV-2026-10-19.md](../reviews/PORTAL-PROD-UAT-NAV-2026-10-19.md), [PORTAL-LOCAL-UAT-NAV-2026-10-19.md](../reviews/PORTAL-LOCAL-UAT-NAV-2026-10-19.md), [PORTAL-NAV-SPINNER-WIP-DOD-2026-10-19.md](../reviews/PORTAL-NAV-SPINNER-WIP-DOD-2026-10-19.md).
+
 ---
 
 ## 1. Reconcile PD discovery → primary đã duyệt
@@ -116,24 +118,25 @@ portal.vemoki.com
 - UUID kỹ thuật: Drawer «Chi tiết kỹ thuật» — không bắt paste UUID khi đã có context.
 - Pretty slug admin = chỉ khi BE có contract resolve riêng (hiện **không** có trong gaps → **không** implement).
 
-### 3.3 Menu permission (O02)
+### 3.3 Menu permission (O02) — nhóm sider
 
-Nguồn: [`o02-permission-nav/contract.md`](./o02-permission-nav/contract.md). Client **chỉ** đọc allowlist server; ẩn item thiếu perm (không disabled giả quyền).
+Nguồn: [`o02-permission-nav/contract.md`](./o02-permission-nav/contract.md). Client **chỉ** đọc allowlist server; ẩn item thiếu perm (không disabled giả quyền). `portal-shell.tsx` render Ant Design `Menu` theo **ba nhóm** (keys i18n `nav.group.org` / tên event / `nav.group.eventSetup`); logic item: `apps/portal/src/nav/capabilities.ts` (`EventMenuGroup`: `run` | `setup`).
 
-| Menu | Route | Hiện khi |
-| --- | --- | --- |
-| Tổng quan tổ chức | `/t/[tenantId]` | `tenantPermissions` giao admin rule ≠ ∅ |
-| Sự kiện | `…/events` | `event.list` |
-| Thành viên | `…/members` | `members.manage` |
-| Cấu hình org | `…/settings` | `tenant.profile` (hoặc perm brand tương đương server) |
-| Event · Tổng quan | `…/e/[eventId]` | Event trong MeEvents hoặc list được phép |
-| · Chuẩn bị | `…/setup` (+ types/sources/quota/config) | Setup/config/publish perms sự kiện |
-| · Khách & mã | `…/guests` / import / approvals / notifs | import / approve / notify perms tương ứng |
-| · Cổng | `…/gate` | **`report.read` trên server** — không suy từ `gate.confirm` / Scanner |
-| · Hỗ trợ | `…/support` | `cs.lookup` (resend riêng `cs.resend`) |
-| · Export | `…/export` | `export.*` |
-| · Nhật ký | `…/audit` | **`report.read` + event assignment** (H-A1 / ADR-20 §7.1) — P1.1; **không** `audit.read`; Owner/Manager only theo role-map (Supervisor/CS/Scanner ẩn) |
-| Platform | `/platform` | Operator audience — **không** tenant role |
+| Nhóm sider | Menu | Route | Hiện khi |
+| --- | --- | --- | --- |
+| **Tổ chức này** | Tổng quan tổ chức | `/t/[tenantId]` | `tenantPermissions` giao admin rule ≠ ∅ hoặc analytics |
+| | Sự kiện | `…/events` | `event.list` |
+| | Phân tích (P2) | `…/analytics` | ≥1 assigned event `report.read` (tenant) |
+| | Thành viên | `…/members` | `members.manage` |
+| | Cấu hình org | `…/settings` | `tenant.profile` (hoặc perm brand tương đương server) |
+| **{eventName}** (`run`) | Tổng quan | `…/e/[eventId]` | Event trong MeEvents hoặc list được phép |
+| | Cổng | `…/gate` | **`report.read` trên server** — không suy từ `gate.confirm` / Scanner |
+| | Nhật ký | `…/audit` | `report.read` hoặc `inventory.import` (H-A1 / ADR-20 §7.1 khi bật) |
+| | Hỗ trợ | `…/support` | `cs.lookup` (resend riêng `cs.resend`) |
+| | Export | `…/export` | `export.*` (route riêng; có thể không trong sider tùy wave) |
+| **Thiết lập sự kiện** (`setup`) | Chuẩn bị | `…/setup` (+ types/sources/quota/config sub-routes) | Setup/config/publish perms sự kiện |
+| | Khách & mã | `…/guests` / import / approvals / notifs | import / approve / notify perms tương ứng |
+| Platform (Operator) | Platform | `/platform` | Operator audience — **không** tenant role; nav riêng zone |
 
 Deep-link thiếu quyền → `Result` 403 VI + CTA về overview được phép. Soft-redirect O02 giữ.
 
@@ -146,12 +149,28 @@ Deep-link thiếu quyền → `Result` 403 VI + CTA về overview được phép
 ```text
 ┌ Header: [Vemoki] Portal │ Org ▾ │ Event ▾ │ Tài khoản ▾ ┐
 ├ Sider (perm) ─┬ Content: Breadcrumb · PageHeader · Alert ┤
-│ Org items     │ Table | Form | Steps | Descriptions       │
-│ Event items   │ Drawer detail · Modal confirm · Progress  │
+│ ▾ Tổ chức này │ Table | Form | Steps | Descriptions       │
+│   overview…   │ Drawer detail · Modal confirm · Progress  │
+│ ▾ {Event name}│                                         │
+│   overview,   │                                         │
+│   gate, audit │                                         │
+│ ▾ Thiết lập   │                                         │
+│   setup, types│                                         │
 └───────────────┴───────────────────────────────────────────┘
 ```
 
 Tablet: sider collapsible; hit target ≥ 44px; Table horizontal scroll; Drawer full-width trên breakpoint nhỏ.
+
+### 3.6 Home, onboarding và auth entry (đã ship prod 2026-10-19)
+
+| Hành vi | Quy định |
+| --- | --- |
+| `/` chưa đăng nhập | Không kẹt `LoadingSurface` / spinner vô hạn; sau discovery → **`window.location.replace`** sang login Keycloak (`/api/auth/login`) khi chưa có session staff |
+| Identity gate | Trang home/onboarding chờ `identity.status !== 'loading'` trước redirect; effect deps ổn định |
+| Shell context | `loadShellContext` dedupe inflight; timeout BFF/OIDC (8–20s) → error/unauth, fail-closed |
+| Đã đăng nhập | Redirect tenant đầu tiên (`tenantId`) hoặc onboarding theo staff eligibility |
+
+Chi tiết review: [PORTAL-NAV-SPINNER-WIP-DOD-2026-10-19.md](../reviews/PORTAL-NAV-SPINNER-WIP-DOD-2026-10-19.md). **Không** claim merge `main`.
 
 ---
 

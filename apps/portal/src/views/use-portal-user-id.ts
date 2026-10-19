@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react';
 
+const SUBJECT_REQUEST_TIMEOUT_MS = 8_000;
+
 type SubjectState =
   | { status: 'loading' }
   | { status: 'ready'; userId: string }
@@ -17,11 +19,17 @@ export function usePortalUserId(): SubjectState {
   useEffect(() => {
     let cancelled = false;
     void (async () => {
+      const controller = new AbortController();
+      const timer = setTimeout(
+        () => controller.abort(),
+        SUBJECT_REQUEST_TIMEOUT_MS,
+      );
       try {
         const res = await fetch('/api/bff/me/subject', {
           method: 'GET',
           credentials: 'same-origin',
           cache: 'no-store',
+          signal: controller.signal,
           headers: { Accept: 'application/json' },
         });
         if (cancelled) return;
@@ -47,6 +55,8 @@ export function usePortalUserId(): SubjectState {
         setState({ status: 'ready', userId });
       } catch {
         if (!cancelled) setState({ status: 'error' });
+      } finally {
+        clearTimeout(timer);
       }
     })();
     return () => {

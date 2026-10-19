@@ -137,12 +137,12 @@ export default function TenantOnboardingPage() {
       })
     ) {
       setMode({ kind: 'done', tenantId });
-      router.replace(`/t/${tenantId}`);
+      window.location.replace(`/t/${tenantId}`);
       return;
     }
 
     setMode({ kind: 'first-run', tenant, progress, events });
-  }, [tenantId, userId, t, router]);
+  }, [tenantId, userId, t]);
 
   useEffect(() => {
     let cancelled = false;

@@ -50,6 +50,7 @@ async function fetchWithBearer(
       ...init,
       headers,
       cache: 'no-store',
+      signal: AbortSignal.timeout(20_000),
     });
     const body = await upstream.arrayBuffer();
     return passthroughUpstream(upstream, body);

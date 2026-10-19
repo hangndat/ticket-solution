@@ -47,12 +47,23 @@ export default function OnboardingEntryPage() {
     contact?: string;
   }>();
 
+  const identityUserId =
+    identity.status === 'ready' ? identity.userId : null;
+
   useEffect(() => {
+    if (identity.status === 'loading') {
+      return;
+    }
+    if (identity.status === 'unauthenticated') {
+      window.location.replace('/api/auth/login?return=/onboarding');
+      return;
+    }
+
     let cancelled = false;
     void loadShellContext().then((shell) => {
       if (cancelled) return;
       if (shell.status === 'unauthenticated') {
-        window.location.href = '/api/auth/login?return=/onboarding';
+        window.location.replace('/api/auth/login?return=/onboarding');
         return;
       }
       if (shell.status === 'error') {
@@ -61,10 +72,9 @@ export default function OnboardingEntryPage() {
       }
       if (shell.status !== 'ready') return;
 
-      const userId = identity.status === 'ready' ? identity.userId : null;
       const surface = resolveOnboardingSurface({
         tenants: shell.meTenants?.items,
-        userId,
+        userId: identityUserId,
         eventCountForTenant: (tenantId) =>
           shell.meEvents?.items.filter((e) => e.tenantId === tenantId).length ??
           0,
@@ -80,15 +90,15 @@ export default function OnboardingEntryPage() {
       }
       setPhase('redirecting');
       if (surface.kind === 'pending-activation' || surface.kind === 'first-run') {
-        router.replace(`/onboarding/${surface.tenant.tenantId}`);
+        window.location.replace(`/onboarding/${surface.tenant.tenantId}`);
         return;
       }
-      router.replace(`/t/${surface.tenant.tenantId}`);
+      window.location.replace(`/t/${surface.tenant.tenantId}`);
     });
     return () => {
       cancelled = true;
     };
-  }, [router, identity]);
+  }, [identity.status, identityUserId]);
 
   async function submit() {
     setBusy(true);

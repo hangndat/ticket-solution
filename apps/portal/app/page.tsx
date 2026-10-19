@@ -3,31 +3,44 @@
 import { Button, Card, Typography } from 'antd';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { loadShellContext } from '../src/nav/load-shell-context';
 import { SurfaceState } from '../src/components/surface-state';
 import { usePortalLocale, type MessageKey } from '../src/i18n';
 import { resolveOnboardingSurface } from '../src/onboarding';
 import { usePortalUserId } from '../src/views/use-portal-user-id';
 
+function redirectFromHome(path: string) {
+  window.location.replace(path);
+}
+
 /**
  * Home: redirect to PENDING wait / first-run / first tenant; else empty + signup CTA.
  */
 export default function PortalHomePage() {
   const { t } = usePortalLocale();
-  const router = useRouter();
   const identity = usePortalUserId();
   const [state, setState] = useState<
     'loading' | 'empty' | 'error' | 'redirecting' | 'customer'
   >('loading');
   const [messageKey, setMessageKey] = useState<MessageKey | undefined>();
 
+  const identityUserId =
+    identity.status === 'ready' ? identity.userId : null;
+
   useEffect(() => {
+    if (identity.status === 'loading') {
+      return;
+    }
+    if (identity.status === 'unauthenticated') {
+      redirectFromHome('/api/auth/login?return=/');
+      return;
+    }
+
     let cancelled = false;
     void loadShellContext().then((shell) => {
       if (cancelled) return;
       if (shell.status === 'unauthenticated') {
-        window.location.href = '/api/auth/login?return=/';
+        redirectFromHome('/api/auth/login?return=/');
         return;
       }
       if (shell.status === 'error') {
@@ -39,10 +52,9 @@ export default function PortalHomePage() {
         setState('loading');
         return;
       }
-      const userId = identity.status === 'ready' ? identity.userId : null;
       const surface = resolveOnboardingSurface({
         tenants: shell.meTenants?.items,
-        userId,
+        userId: identityUserId,
         eventCountForTenant: (tenantId) =>
           shell.meEvents?.items.filter((e) => e.tenantId === tenantId).length ??
           0,
@@ -57,15 +69,15 @@ export default function PortalHomePage() {
       }
       setState('redirecting');
       if (surface.kind === 'pending-activation' || surface.kind === 'first-run') {
-        router.replace(`/onboarding/${surface.tenant.tenantId}`);
+        redirectFromHome(`/onboarding/${surface.tenant.tenantId}`);
         return;
       }
-      router.replace(`/t/${surface.tenant.tenantId}`);
+      redirectFromHome(`/t/${surface.tenant.tenantId}`);
     });
     return () => {
       cancelled = true;
     };
-  }, [router, identity]);
+  }, [identity.status, identityUserId]);
 
   if (state === 'loading' || state === 'redirecting') {
     return <SurfaceState kind="loading" />;

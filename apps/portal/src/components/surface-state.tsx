@@ -1,8 +1,23 @@
 'use client';
 
-import { Alert, Button, Empty, Result, Spin } from 'antd';
+import { Alert, Button, Empty, Result } from 'antd';
 import type { ReactNode } from 'react';
 import { usePortalLocale } from '../i18n';
+
+function LoadingSurface({ label }: { label: string }) {
+  return (
+    <div
+      role="status"
+      aria-busy="true"
+      aria-label={label}
+      className="portal-surface-loading"
+      suppressHydrationWarning
+    >
+      <div className="portal-surface-loading__spinner" aria-hidden />
+      <p className="portal-surface-loading__label">{label}</p>
+    </div>
+  );
+}
 
 export type SurfaceKind =
   | 'loading'
@@ -25,15 +40,7 @@ export function SurfaceState(props: {
   const { t } = usePortalLocale();
   switch (props.kind) {
     case 'loading':
-      return (
-        <div
-          role="status"
-          aria-busy="true"
-          style={{ padding: 48, textAlign: 'center' }}
-        >
-          <Spin tip={t('surface.loading')} size="large" />
-        </div>
-      );
+      return <LoadingSurface label={t('surface.loading')} />;
     case 'empty':
       return (
         <Empty

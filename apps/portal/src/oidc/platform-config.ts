@@ -28,7 +28,7 @@ export function readPlatformOidcConfig(
   const jwksUrl =
     env.PLATFORM_OIDC_JWKS_URL?.trim() || env.OIDC_JWKS_URL?.trim() || '';
   const scopes =
-    env.PLATFORM_OIDC_SCOPES?.trim() || 'openid profile email offline_access';
+    env.PLATFORM_OIDC_SCOPES?.trim() || 'openid profile email';
   const maxAuthRaw =
     env.PLATFORM_MFA_AUTH_TIME_MAX_SECONDS?.trim() ||
     String(DEFAULT_PLATFORM_MFA_AUTH_TIME_MAX_SECONDS);
