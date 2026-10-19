@@ -57,3 +57,30 @@ DoD thường **không** nâng `heavy` chỉ vì implementer đã `heavy`.
 
 - ≤ **2** `heavy` live / Run (`orca-agent-routing` / `orca-parallel-workers`)
 - ≤ **3** reviewer (`reviewer-dod` + `reviewer-security`) live / Run — xem `orca-parallel-workers.mdc`
+
+## Wave D — đo cost (bắt buộc 1 dòng / wave)
+
+Sau mỗi wave `worker-start` (hoặc cuối checkpoint idle-fill), coordinator ghi **một dòng evidence** (Issue comment / Run note / chat leader):
+
+```text
+cost-wave | run=<id> | n=<spawned> | cheap=<c> standard=<s> heavy=<h> | pinned=<p> inherit=<i> | inherit%=<i*100/n> | models=<effective ids>
+```
+
+| Trường | Nguồn |
+| ------ | ----- |
+| `cheap/standard/heavy` | Cost tier trong Spec / task-title |
+| `pinned` | `worker-start` có `--model` khớp cost-catalog **và** `launch.effective` ≈ requested (hoặc comment wt `Cost … · model <pin>`) |
+| `inherit` | omit `--model`, `--model auto`, hoặc receipt `launch: inherit` / effective null khi đã request pin |
+| `models` | `launch.effective.model` (ưu tiên) hoặc pin trong comment |
+
+**Ngưỡng hành động:** `inherit%` > **20%** trong một đợt → refresh `agent models`, sửa pin stale, không spawn thêm heavy cho đến khi pinned ổn.
+
+Helper (ước lượng từ wt comment + live list, không thay receipt):
+
+```text
+pnpm exec -- node scripts/orca-cost-wave-evidence.mjs
+# hoặc
+node scripts/orca-cost-wave-evidence.mjs
+```
+
+Weekday automation ticket-solution cũng báo `inherit%` gần đúng từ comment wt live.
