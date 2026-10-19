@@ -23,6 +23,7 @@ import {
 } from '../../src/redeem/messages';
 import { loadPublishedRedeemSchema } from '../../src/redeem/published-schema';
 import { REQUEST_TIMEOUT_MS } from '../../src/redeem/poll-operation';
+import { liveRegionForStatus } from '../../src/ui/live-region';
 import { SurfaceState } from '../../src/ui/surface-state';
 
 type ClaimLocation = {
@@ -293,6 +294,23 @@ export function GuestClaimForm() {
       REQUEST_TIMEOUT_MS,
     );
 
+    if (
+      !result.networkError &&
+      !result.timedOut &&
+      (result.status === 401 || result.status === 403)
+    ) {
+      setDecision(null);
+      setUx({
+        kind: 'auth',
+        title: 'Cần đăng nhập',
+        detail:
+          'Đăng nhập bằng email đã được mời rồi quay lại nhận lời mời — intent được giữ trên thiết bị này.',
+        retryable: false,
+      });
+      setBusy(false);
+      return;
+    }
+
     const next = decideClaimBody(
       result.status,
       result.json,
@@ -317,6 +335,16 @@ export function GuestClaimForm() {
   }
 
   const loginHref = `/api/auth/login?return=${encodeURIComponent('/claim')}`;
+  const outcomeLive = ux
+    ? liveRegionForStatus(
+        ux.kind === 'denied' ||
+          ux.kind === 'expired' ||
+          ux.kind === 'error' ||
+          ux.kind === 'auth'
+          ? 'error'
+          : ux.kind,
+      )
+    : null;
 
   return (
     <div className="redeem-form">
@@ -455,28 +483,54 @@ export function GuestClaimForm() {
 
       <button
         type="button"
+        className="claim-submit"
         disabled={busy || !token.trim()}
         onClick={() => void submitClaim()}
       >
-        {busy ? 'Đang gửi…' : 'Nhận lời mời'}
+        {busy ? 'Đang gửi…' : 'Nhận vé mời'}
       </button>
 
-      {ux ? (
+      {ux && outcomeLive ? (
         <section
           className={
-            ux.kind === 'error' || ux.kind === 'denied' || ux.kind === 'expired'
-              ? 'redeem-status redeem-status--error'
+            ux.kind === 'error' ||
+            ux.kind === 'denied' ||
+            ux.kind === 'expired' ||
+            ux.kind === 'auth'
+              ? 'redeem-status redeem-status--error claim-outcome'
               : ux.kind === 'pending'
-                ? 'redeem-status redeem-status--pending'
-                : 'notice'
+                ? 'redeem-status redeem-status--pending claim-outcome'
+                : ux.kind === 'success'
+                  ? 'redeem-status redeem-status--success claim-outcome'
+                  : 'notice claim-outcome'
           }
-          role="status"
+          role={outcomeLive.role}
+          aria-live={outcomeLive.ariaLive}
+          aria-atomic={outcomeLive.ariaAtomic}
           data-testid="guest-claim-result"
         >
           <h2>{ux.title}</h2>
           <p>{ux.detail}</p>
           {decision?.kind === 'pending' ? (
-            <p>Đang chờ duyệt — chưa coi là vé đã cấp.</p>
+            <p>Chưa phải vé — kiểm tra lại khi có cập nhật.</p>
+          ) : null}
+          {ux.kind === 'auth' ? (
+            <p className="auth-buttons">
+              <a className="button" href={loginHref}>
+                Đăng nhập bằng email đã được mời
+              </a>
+            </p>
+          ) : null}
+          {decision?.kind === 'pending' || ux.kind === 'unknown' ? (
+            <p>
+              <button
+                type="button"
+                disabled={busy || !token.trim()}
+                onClick={() => void submitClaim()}
+              >
+                Kiểm tra lại
+              </button>
+            </p>
           ) : null}
         </section>
       ) : null}

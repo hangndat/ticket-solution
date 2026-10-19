@@ -129,10 +129,10 @@ export default async function Home({ searchParams }: Props) {
         <HeroWordmark />
         <h1 id="home-title">Điều tốt đẹp đưa chúng ta lại gần.</h1>
         <p className="intro">
-          Đổi mã lấy vé, nhận lời mời, hoặc xem sự kiện đã xuất bản.
+          Đổi mã lấy vé hoặc xem sự kiện đã xuất bản.
         </p>
         <p className="home-cta auth-buttons">
-          <Link className="button" href="/redeem">
+          <Link className="button home-cta-primary" href="/redeem">
             Đổi mã lấy vé
           </Link>
           <a className="button-link button-link-secondary" href={homeLogin}>

@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState, useTransition } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
+import { clearGuestClaimIntent } from '../../src/guest/claim-intent';
 import { loginHref } from '../../src/oidc/login-href';
 import { SurfaceState } from '../../src/ui/surface-state';
 
@@ -53,10 +54,15 @@ function summarizeMe(status: number, body: string): SessionSummary {
 
 const ACCOUNT_LOGIN = loginHref('/account');
 
-/** Minimal session chrome (AC-S1) — login / logout on `/account`. */
+function clearParkedClaimOnSessionEnd() {
+  clearGuestClaimIntent();
+}
+
+/** Account session chrome — Live Pulse full visual (AC-A1 / AC-A2 / AC-C3). */
 export function SessionPanel() {
   const [summary, setSummary] = useState<SessionSummary | null>(null);
   const [pending, startTransition] = useTransition();
+  const wasSignedIn = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -69,7 +75,14 @@ export function SessionPanel() {
         });
         const body = await response.text();
         if (!cancelled) {
-          setSummary(summarizeMe(response.status, body));
+          const next = summarizeMe(response.status, body);
+          if (wasSignedIn.current && next.kind === 'signed-out') {
+            clearParkedClaimOnSessionEnd();
+          }
+          if (next.kind === 'signed-in') {
+            wasSignedIn.current = true;
+          }
+          setSummary(next);
         }
       } catch {
         if (!cancelled) {
@@ -99,21 +112,27 @@ export function SessionPanel() {
   if (summary?.kind === 'signed-in') {
     return (
       <section
-        className="notice account-session"
+        className="account-session account-session--ready"
         role="status"
+        aria-live="polite"
         data-testid="account-session-signed-in"
       >
-        <h2>Phiên đăng nhập</h2>
-        <p>
+        <p className="eyebrow">Phiên</p>
+        <h2>Bạn đang đăng nhập</h2>
+        <p className="account-session__email">
           {summary.subjectHint
-            ? `Bạn đang đăng nhập với ${summary.subjectHint}.`
-            : 'Bạn đang có phiên đăng nhập trên thiết bị này.'}
+            ? summary.subjectHint
+            : 'Phiên đã xác minh trên thiết bị này.'}
         </p>
-        <p className="auth-buttons">
-          <a className="button-link button-link-secondary" href="/api/auth/logout">
+        <p className="auth-buttons account-session__actions">
+          <a
+            className="button-link button-link-secondary account-cta-logout"
+            href="/api/auth/logout"
+            onClick={() => clearParkedClaimOnSessionEnd()}
+          >
             Đăng xuất
           </a>
-          <Link className="button-link" href="/redeem">
+          <Link className="button account-cta-primary" href="/redeem">
             Đổi mã lấy vé
           </Link>
         </p>
@@ -130,7 +149,7 @@ export function SessionPanel() {
         testId="account-session-error"
         action={
           <div className="auth-buttons">
-            <a className="button" href={ACCOUNT_LOGIN}>
+            <a className="button account-cta-primary" href={ACCOUNT_LOGIN}>
               Đăng nhập
             </a>
             <Link className="button-link button-link-secondary" href="/">
@@ -144,14 +163,16 @@ export function SessionPanel() {
 
   return (
     <section
-      className="notice account-session"
+      className="account-session account-session--signed-out"
       role="status"
+      aria-live="polite"
       data-testid="account-session-signed-out"
     >
+      <p className="eyebrow">Phiên</p>
       <h2>Chưa đăng nhập</h2>
       <p>Đăng nhập để quản lý phiên hoặc gửi yêu cầu liên quan tài khoản.</p>
-      <p className="auth-buttons">
-        <a className="button" href={ACCOUNT_LOGIN}>
+      <p className="auth-buttons account-session__actions">
+        <a className="button account-cta-primary" href={ACCOUNT_LOGIN}>
           Đăng nhập
         </a>
         <Link className="button-link button-link-secondary" href="/">

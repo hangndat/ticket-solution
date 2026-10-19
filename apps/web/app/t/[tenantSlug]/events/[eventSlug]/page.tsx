@@ -16,7 +16,7 @@ import {
   visiblePublishedSections,
 } from '../../../../../src/published';
 import { SurfaceState } from '../../../../../src/ui/surface-state';
-import { EventBanner, EventLogo } from '../../../../../src/ui/event-media';
+import { EventBanner } from '../../../../../src/ui/event-media';
 
 type Props = { params: Promise<{ tenantSlug: string; eventSlug: string }> };
 
@@ -86,14 +86,19 @@ export default async function EventPage({ params }: Props) {
     ...brandingToCssVars(branding),
     ['--brand' as string]: event.brand.primaryColor,
   } as CSSProperties;
-  const hero = heroCopyFromSections(event.sections);
   const sections = visiblePublishedSections(event);
   const whenLabel = formatPublishedEventDate(event.startsAt, event.timezone);
   const infoSections = sections.filter(
     (s) => s.kind === 'info' || s.kind === 'guide',
   );
   const redeemHref = `/redeem?tenantSlug=${encodeURIComponent(event.tenantSlug)}&eventSlug=${encodeURIComponent(event.slug)}`;
-
+  const supportParts = [whenLabel, event.location?.trim()].filter(
+    (part): part is string => Boolean(part && part.trim()),
+  );
+  const heroSupport =
+    supportParts.length > 0
+      ? supportParts.join(' · ')
+      : PUBLIC_EVENT_COPY.noStartsAt;
 
   return (
     <ThemeProvider branding={branding} applyCssVars>
@@ -104,47 +109,45 @@ export default async function EventPage({ params }: Props) {
         data-branding-source={branding.source}
         data-testid="event-published"
       >
-        <div className="container">
+        <div className="container event-chrome">
           <nav aria-label="Điều hướng sự kiện">
             <Wordmark />
             <span>{event.brand.organizationName}</span>
           </nav>
-          <section className="hero hero-atmosphere" aria-labelledby="event-title">
-            <div className="poster poster-media" data-testid="event-hero-media">
-              <EventBanner
-                eventId={event.id}
-                tenantSlug={event.tenantSlug}
-                bannerUrl={event.brand.bannerUrl}
-                className="event-banner event-banner-hero"
-                testId="event-hero-banner"
-                alt={`Banner ${event.name}`}
-              />
+        </div>
+        <section className="hero hero-atmosphere" aria-labelledby="event-title">
+          <div
+            className="poster poster-media event-hero-bleed"
+            data-testid="event-hero-media"
+          >
+            <EventBanner
+              eventId={event.id}
+              tenantSlug={event.tenantSlug}
+              bannerUrl={event.brand.bannerUrl}
+              className="event-banner event-banner-hero"
+              testId="event-hero-banner"
+              alt={`Banner ${event.name}`}
+            />
+          </div>
+          <div className="container hero-copy event-hero-copy">
+            <h1 id="event-title">{event.name}</h1>
+            <p className="hero-support" data-testid="event-hero-support">
+              {heroSupport}
+            </p>
+            <div className="hero-cta">
+              <Link className="button" href={redeemHref}>
+                Đổi mã lấy vé
+              </Link>
+              <Link className="button-link button-link-secondary" href="/claim">
+                Nhận lời mời
+              </Link>
+              <a className="button-link button-link-secondary" href="#event-details">
+                Chi tiết <span aria-hidden="true">↓</span>
+              </a>
             </div>
-            <div className="hero-copy">
-              <EventLogo
-                eventId={event.id}
-                tenantSlug={event.tenantSlug}
-                logoUrl={event.brand.logoUrl}
-                className="event-logo event-logo-hero"
-                testId="event-hero-logo"
-                alt={`Logo ${event.brand.organizationName}`}
-              />
-              {hero.eyebrow ? <p className="eyebrow">{hero.eyebrow}</p> : null}
-              <h1 id="event-title">{event.name}</h1>
-              {hero.intro ? <p className="intro">{hero.intro}</p> : null}
-              <div className="hero-cta">
-                <Link className="button" href={redeemHref}>
-                  Đổi mã lấy vé
-                </Link>
-                <Link className="button-link button-link-secondary" href="/claim">
-                  Nhận lời mời
-                </Link>
-                <a className="button-link button-link-secondary" href="#event-details">
-                  Xem chi tiết ngày <span aria-hidden="true">↓</span>
-                </a>
-              </div>
-            </div>
-          </section>
+          </div>
+        </section>
+        <div className="container">
           <section
             id="event-details"
             className="details"
