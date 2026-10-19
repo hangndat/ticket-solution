@@ -1,72 +1,72 @@
 import type { SessionEpoch } from '../identity/session-boundary.ts';
+import type { FormAnswerValue } from './contract.ts';
 
 /**
- * Global single-code redeem: park plaintext code in memory only (no URL/deep link).
- * Cleared on logout, account switch, or successful issue.
+ * Redeem form draft for login-return (memory only — code/answers never in URL).
+ * Cleared on logout or successful redeem submit.
  */
 
-export type GlobalRedeemDraftIntent = {
-  /** Redemption code — never log. */
+export type RedeemDraftIntent = {
+  tenantId: string;
+  eventId: string;
+  tenantSlug: string;
+  eventSlug: string;
   code: string;
+  answers: Record<string, FormAnswerValue>;
+  termsAccepted: boolean;
+  formVersion?: string;
+  termsVersion?: string;
   parkedUserId: string | null;
   parkedGeneration: number | null;
   createdAt: number;
 };
 
-let activeIntent: GlobalRedeemDraftIntent | null = null;
+let activeDraft: RedeemDraftIntent | null = null;
 
-export function peekGlobalRedeemDraftIntent(): GlobalRedeemDraftIntent | null {
-  return activeIntent;
+export function peekRedeemDraftIntent(): RedeemDraftIntent | null {
+  return activeDraft;
 }
 
-export function clearGlobalRedeemDraftIntent(): void {
-  activeIntent = null;
+export function clearRedeemDraftIntent(): void {
+  activeDraft = null;
 }
 
-export function parkGlobalRedeemDraftIntent(
-  intent: Omit<GlobalRedeemDraftIntent, 'createdAt'>,
-): GlobalRedeemDraftIntent {
-  const next: GlobalRedeemDraftIntent = { ...intent, createdAt: Date.now() };
-  activeIntent = next;
+export function parkRedeemDraftIntent(
+  intent: Omit<RedeemDraftIntent, 'createdAt'>,
+): RedeemDraftIntent {
+  const next: RedeemDraftIntent = { ...intent, createdAt: Date.now() };
+  activeDraft = next;
   return next;
 }
 
 export type RedeemDraftResume =
-  | { ok: true; intent: GlobalRedeemDraftIntent }
+  | { ok: true; intent: RedeemDraftIntent }
   | {
       ok: false;
-      reason:
-        | 'none'
-        | 'epoch-stale'
-        | 'user-mismatch'
-        | 'missing-code';
+      reason: 'none' | 'epoch-stale' | 'user-mismatch';
     };
 
-export function resumeGlobalRedeemDraftIntent(input: {
+export function resumeRedeemDraftIntent(input: {
   epoch: SessionEpoch | null;
   isEpochCurrent: (epoch: SessionEpoch | null) => boolean;
 }): RedeemDraftResume {
-  const intent = activeIntent;
+  const intent = activeDraft;
   if (!intent) return { ok: false, reason: 'none' };
-  if (!intent.code.trim()) {
-    clearGlobalRedeemDraftIntent();
-    return { ok: false, reason: 'missing-code' };
-  }
 
   if (intent.parkedUserId !== null) {
     if (!input.epoch || input.epoch.userId !== intent.parkedUserId) {
-      clearGlobalRedeemDraftIntent();
+      clearRedeemDraftIntent();
       return { ok: false, reason: 'user-mismatch' };
     }
     if (
       intent.parkedGeneration !== null &&
       intent.parkedGeneration !== input.epoch.generation
     ) {
-      clearGlobalRedeemDraftIntent();
+      clearRedeemDraftIntent();
       return { ok: false, reason: 'epoch-stale' };
     }
     if (!input.isEpochCurrent(input.epoch)) {
-      clearGlobalRedeemDraftIntent();
+      clearRedeemDraftIntent();
       return { ok: false, reason: 'epoch-stale' };
     }
     return { ok: true, intent };
@@ -78,31 +78,44 @@ export function resumeGlobalRedeemDraftIntent(input: {
   return { ok: true, intent };
 }
 
-export function dropGlobalRedeemDraftIntentIfStale(input: {
+/** Drop draft when the verified identity flips or logs out. */
+export function dropRedeemDraftIntentIfStale(input: {
   epoch: SessionEpoch | null;
   isEpochCurrent: (epoch: SessionEpoch | null) => boolean;
 }): void {
-  const intent = activeIntent;
+  const intent = activeDraft;
   if (!intent) return;
-  if (intent.parkedUserId === null) return;
+  if (intent.parkedUserId === null) {
+    return;
+  }
   if (!input.epoch || input.epoch.userId !== intent.parkedUserId) {
-    clearGlobalRedeemDraftIntent();
+    clearRedeemDraftIntent();
     return;
   }
   if (
     intent.parkedGeneration !== null &&
     intent.parkedGeneration !== input.epoch.generation
   ) {
-    clearGlobalRedeemDraftIntent();
+    clearRedeemDraftIntent();
   }
 }
 
-/** Redacted debug view — never includes code plaintext. */
-export function redactGlobalRedeemDraftIntent(
-  intent: GlobalRedeemDraftIntent | null,
+/** Redacted debug view — never includes redeem code. */
+export function redactRedeemDraftIntent(
+  intent: RedeemDraftIntent | null,
 ): Record<string, unknown> | null {
   if (!intent) return null;
   return {
+    tenantId: intent.tenantId,
+    eventId: intent.eventId,
+    tenantSlug: intent.tenantSlug,
+    eventSlug: intent.eventSlug,
+    formVersion: intent.formVersion ?? null,
+    termsVersion: intent.termsVersion ?? null,
+    hasAnswers: Boolean(
+      intent.answers && Object.keys(intent.answers).length > 0,
+    ),
+    termsAccepted: intent.termsAccepted === true,
     parkedUserId: intent.parkedUserId,
     parkedGeneration: intent.parkedGeneration,
     hasCode: intent.code.length > 0,
