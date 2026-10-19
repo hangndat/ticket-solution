@@ -4,15 +4,17 @@ import { Alert, Button, Card, Result, Space, Typography } from 'antd';
 import { useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
 import { SurfaceState } from '../../src/components/surface-state';
+import { usePortalLocale, type MessageKey } from '../../src/i18n';
 
-const ERROR_COPY: Record<string, string> = {
-  misconfigured: 'OIDC chưa cấu hình trên portal — không thể đăng nhập.',
-  invalid_state: 'Phiên đăng nhập không hợp lệ (state/PKCE). Thử lại.',
-  token_exchange: 'Không đổi được mã ủy quyền. Thử đăng nhập lại.',
-  access_denied: 'Bạn đã từ chối ủy quyền tại nhà cung cấp danh tính.',
+const ERROR_COPY_KEYS: Record<string, MessageKey> = {
+  misconfigured: 'auth.h_1l6yc4c',
+  invalid_state: 'auth.h_1tfddzd',
+  token_exchange: 'auth.h_179sno0',
+  access_denied: 'auth.error.accessDenied',
 };
 
 function AuthInner() {
+  const { t } = usePortalLocale();
   const params = useSearchParams();
   const error = params.get('error');
 
@@ -20,11 +22,15 @@ function AuthInner() {
     return (
       <Result
         status="error"
-        title="Đăng nhập không thành công"
-        subTitle={ERROR_COPY[error] ?? `Lỗi: ${error}`}
+        title={t('auth.h_85v7iu')}
+        subTitle={
+          ERROR_COPY_KEYS[error]
+            ? t(ERROR_COPY_KEYS[error])
+            : t('auth.error.generic', { error })
+        }
         extra={
           <Button type="primary" href="/api/auth/login?return=/">
-            Thử đăng nhập lại
+            {t('auth.h_18eyu7o')}
           </Button>
         }
       />
@@ -36,19 +42,16 @@ function AuthInner() {
       <Typography.Title level={2} style={{ marginTop: 0 }}>
         Vemoki Portal
       </Typography.Title>
-      <Typography.Paragraph>
-        Đăng nhập nhân sự qua nhà cung cấp danh tính. Không dùng phiên khách
-        (app) trên portal.
-      </Typography.Paragraph>
+      <Typography.Paragraph>{t('auth.h_1dyukbi')}</Typography.Paragraph>
       <Alert
         type="info"
         showIcon
         style={{ marginBottom: 16 }}
-        message="Cookie phiên chỉ thuộc portal — không chia sẻ với app."
+        message={t('auth.h_w7m30b')}
       />
       <Space>
         <Button type="primary" size="large" href="/api/auth/login?return=/">
-          Đăng nhập nhân sự
+          {t('auth.h_1g2rg2o')}
         </Button>
       </Space>
     </Card>

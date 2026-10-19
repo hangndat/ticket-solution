@@ -20,8 +20,10 @@ import {
 import { bffEvent, bffEventAction } from '../../../../../../src/prep/bff-urls';
 import { useEventAccess } from '../../../../../../src/prep/use-event-access';
 import { SurfaceState } from '../../../../../../src/components/surface-state';
+import { usePortalLocale } from '../../../../../../src/i18n';
 
 export default function EventSetupPage() {
+  const { t } = usePortalLocale();
   const params = useParams<{ tenantId: string; eventId: string }>();
   const { tenantId, eventId } = params;
   const router = useRouter();
@@ -42,12 +44,12 @@ export default function EventSetupPage() {
     const res = await portalGet(bffEvent(tenantId, eventId));
     if (res.networkError || res.timedOut || res.status >= 500) {
       setKind('unknown');
-      setMessage('Chưa rõ kết quả tải metadata sự kiện.');
+      setMessage(t('setup.h_1ygq73d'));
       return;
     }
     if (res.status !== 200 || !res.json || typeof res.json !== 'object') {
       setKind('error');
-      setMessage(apiErrorMessage(res.json, `HTTP ${res.status}`));
+      setMessage(apiErrorMessage(res.json, t('common.httpStatus', { status: res.status })));
       return;
     }
     const event = res.json as EventDetail;
@@ -55,10 +57,10 @@ export default function EventSetupPage() {
     metaForm.setFieldsValue({ name: event.name });
     cloneForm.setFieldsValue({
       slug: `${event.slug}-copy`,
-      name: `${event.name} (bản sao)`,
+      name: t('common.cloneName', { name: event.name }),
     });
     setKind('ready');
-  }, [tenantId, eventId, metaForm, cloneForm]);
+  }, [tenantId, eventId, metaForm, cloneForm, t]);
 
   useEffect(() => {
     if (access.kind !== 'ready') return;
@@ -76,7 +78,7 @@ export default function EventSetupPage() {
     return (
       <SurfaceState
         kind="error"
-        description={access.message}
+        description={access.messageKey ? t(access.messageKey) : undefined}
         onRetry={() => window.location.reload()}
       />
     );
@@ -85,7 +87,7 @@ export default function EventSetupPage() {
     return (
       <SurfaceState
         kind="permission-denied"
-        description="Không có quyền sự kiện này."
+        description={t('config.h_g7fjbz')}
         onRetry={() => {
           window.location.href = `/t/${tenantId}`;
         }}
@@ -110,15 +112,15 @@ export default function EventSetupPage() {
         'PATCH',
       );
       if (res.networkError || res.timedOut || res.status >= 500) {
-        setNotice('Chưa rõ kết quả cập nhật metadata.');
+        setNotice(t('setup.h_197dgrj'));
         return;
       }
       if (res.status >= 200 && res.status < 300) {
-        setNotice('Đã cập nhật tên sự kiện.');
+        setNotice(t('setup.h_1s3ht28'));
         void load();
         return;
       }
-      setNotice(apiErrorMessage(res.json, 'Không cập nhật được.'));
+      setNotice(apiErrorMessage(res.json, t('setup.h_rezx8n')));
     } finally {
       setBusy(false);
     }
@@ -139,7 +141,7 @@ export default function EventSetupPage() {
         },
       );
       if (res.networkError || res.timedOut || res.status >= 500) {
-        setNotice('Chưa rõ kết quả clone — không coi là đã tạo bản sao.');
+        setNotice(t('setup.h_mfkouj'));
         return;
       }
       if (res.status >= 200 && res.status < 300) {
@@ -150,14 +152,14 @@ export default function EventSetupPage() {
             ? ((res.json as { eventId: string }).eventId as string)
             : null;
         if (newId) {
-          setNotice('Đã clone sự kiện.');
+          setNotice(t('setup.h_1sj85ay'));
           router.push(`/t/${tenantId}/e/${newId}`);
           return;
         }
-        setNotice('Clone OK nhưng thiếu eventId — kiểm tra danh sách.');
+        setNotice(t('setup.h_1okp02m'));
         return;
       }
-      setNotice(apiErrorMessage(res.json, 'Clone thất bại.'));
+      setNotice(apiErrorMessage(res.json, t('setup.h_1mfbkiv')));
     } finally {
       setBusy(false);
     }
@@ -166,12 +168,12 @@ export default function EventSetupPage() {
   function archiveEvent() {
     if (!detail) return;
     Modal.confirm({
-      title: 'Lưu trữ sự kiện?',
+      title: t('setup.h_4dggx3'),
       content:
-        'Archive đổi contentStatus — không mở/đóng Gate và không thu hồi vé đã phát.',
-      okText: 'Lưu trữ',
+        t('events.archive.hint'),
+      okText: t('setup.h_1fmwr17'),
       okButtonProps: { danger: true },
-      cancelText: 'Huỷ',
+      cancelText: t('config.huy'),
       onOk: async () => {
         const res = await portalMutate(
           bffEventAction(tenantId, eventId, 'archive'),
@@ -181,26 +183,24 @@ export default function EventSetupPage() {
           },
         );
         if (res.networkError || res.status >= 500) {
-          setNotice('Chưa rõ kết quả archive.');
+          setNotice(t('setup.h_uafnux'));
           return;
         }
         if (res.status >= 200 && res.status < 300) {
-          setNotice('Đã lưu trữ sự kiện.');
+          setNotice(t('setup.h_1dze9ux'));
           void load();
           return;
         }
-        setNotice(apiErrorMessage(res.json, 'Archive thất bại.'));
+        setNotice(apiErrorMessage(res.json, t('events.archive.failed')));
       },
     });
   }
 
   return (
     <Space direction="vertical" size="large" style={{ width: '100%' }}>
-      <Typography.Title level={3} style={{ margin: 0 }}>
-        Chuẩn bị sự kiện
-      </Typography.Title>
+      <Typography.Title level={3} style={{ margin: 0 }}>{t('setup.title')}</Typography.Title>
       <Typography.Paragraph type="secondary">
-        Metadata / clone / archive. UUID lấy từ route — không dán tay.
+        {t('setup.metadataHint')}
       </Typography.Paragraph>
 
       {kind === 'loading' ? <SurfaceState kind="loading" /> : null}
@@ -208,12 +208,10 @@ export default function EventSetupPage() {
         <Alert
           type="warning"
           showIcon
-          message="Chưa rõ kết quả"
+          message={t('surface.unknown.title')}
           description={message}
           action={
-            <Button size="small" onClick={() => void load()}>
-              Kiểm tra lại
-            </Button>
+            <Button size="small" onClick={() => void load()}>{t('surface.action.recheck')}</Button>
           }
         />
       ) : null}
@@ -233,7 +231,7 @@ export default function EventSetupPage() {
             message={`contentStatus=${detail.contentStatus} · businessStatus=${detail.businessStatus} · revision=${detail.revision}`}
           />
 
-          <Typography.Title level={5}>Sửa tên</Typography.Title>
+          <Typography.Title level={5}>{t('setup.h_y3j37s')}</Typography.Title>
           <Form form={metaForm} layout="inline" disabled={!canUpdate || busy}>
             <Form.Item name="name" rules={[{ required: true }]}>
               <Input style={{ width: 320 }} />
@@ -243,29 +241,25 @@ export default function EventSetupPage() {
               disabled={!canUpdate}
               loading={busy}
               onClick={() => void saveMeta()}
-            >
-              Lưu
-            </Button>
+            >{t('setup.luu')}</Button>
           </Form>
 
           <Typography.Title level={5}>Clone</Typography.Title>
           <Form form={cloneForm} layout="vertical" style={{ maxWidth: 420 }}>
-            <Form.Item name="name" label="Tên bản sao" rules={[{ required: true }]}>
+            <Form.Item name="name" label={t('setup.h_1ps26zd')} rules={[{ required: true }]}>
               <Input />
             </Form.Item>
-            <Form.Item name="slug" label="Slug bản sao" rules={[{ required: true }]}>
+            <Form.Item name="slug" label={t('setup.h_1mbcc7c')} rules={[{ required: true }]}>
               <Input />
             </Form.Item>
             <Button
               disabled={!canUpdate}
               loading={busy}
               onClick={() => void cloneEvent()}
-            >
-              Clone sự kiện
-            </Button>
+            >{t('setup.h_1iam0zn')}</Button>
           </Form>
 
-          <Typography.Title level={5}>Lưu trữ</Typography.Title>
+          <Typography.Title level={5}>{t('setup.h_1fmwr17')}</Typography.Title>
           <Button
             danger
             disabled={!canUpdate || detail.contentStatus === 'ARCHIVED'}

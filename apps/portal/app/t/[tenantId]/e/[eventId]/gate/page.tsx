@@ -32,11 +32,13 @@ import {
   GateStayAppNotice,
 } from '../../../../../../src/components/gate-deeplink';
 import { SurfaceState } from '../../../../../../src/components/surface-state';
+import { usePortalLocale } from '../../../../../../src/i18n';
 
 /**
  * GATE-STAY-APP: O12 report surface only — never mount scanner on portal.
  */
 export default function EventGateReportPage() {
+  const { t, locale } = usePortalLocale();
   const params = useParams<{ tenantId: string; eventId: string }>();
   const { tenantId, eventId } = params;
   const access = useEventAccess(tenantId, eventId);
@@ -51,10 +53,11 @@ export default function EventGateReportPage() {
         result.status,
         result.json,
         result.networkError || result.timedOut,
+        locale,
       ),
     );
     setBusy(false);
-  }, [tenantId, eventId]);
+  }, [tenantId, eventId, locale]);
 
   useEffect(() => {
     if (access.kind !== 'ready') return;
@@ -73,7 +76,7 @@ export default function EventGateReportPage() {
     return (
       <SurfaceState
         kind="error"
-        description={access.message}
+        description={access.messageKey ? t(access.messageKey) : undefined}
         onRetry={() => window.location.reload()}
       />
     );
@@ -85,8 +88,8 @@ export default function EventGateReportPage() {
     return (
       <Result
         status="403"
-        title="Không có quyền báo cáo cổng"
-        subTitle="Cần report.read từ máy chủ — không suy từ gate.confirm / Scanner."
+        title={t('gate.h_iosgib')}
+        subTitle={t('gate.needReportRead')}
       />
     );
   }
@@ -96,7 +99,7 @@ export default function EventGateReportPage() {
   return (
     <Space direction="vertical" size="large" style={{ width: '100%' }}>
       <Typography.Title level={3} style={{ margin: 0 }}>
-        Cổng — báo cáo (O12)
+        {t('gate.h_1klnels')}
       </Typography.Title>
       <GateStayAppNotice />
 
@@ -106,12 +109,15 @@ export default function EventGateReportPage() {
           showIcon
           message={
             report.kind === 'rejected'
-              ? `${report.code}: ${report.message}`
+              ? t('ops.export.apiRejected', {
+                  code: report.code,
+                  message: report.message,
+                })
               : report.message
           }
           action={
             <Button size="small" loading={busy} onClick={() => void load()}>
-              Thử lại
+              {t('surface.action.retry')}
             </Button>
           }
         />
@@ -135,44 +141,45 @@ export default function EventGateReportPage() {
               {shown.quota.capacity === null ? '∞' : shown.quota.capacity}
             </Descriptions.Item>
             <Descriptions.Item label="Capacity state">
-              {formatQuotaCapacityState(shown.quotaCapacityState)}
+              {formatQuotaCapacityState(shown.quotaCapacityState, locale)}
             </Descriptions.Item>
             <Descriptions.Item label="Remaining">
               {formatQuotaRemaining(
                 shown.quotaRemaining,
                 shown.quotaCapacityState,
+                locale,
               )}
             </Descriptions.Item>
-            <Descriptions.Item label="Pending duyệt">
+            <Descriptions.Item label={t('gate.h_1nc3sip')}>
               <span data-testid="event-report-pending-approval">
                 {shown.pendingApprovalCount}
               </span>
             </Descriptions.Item>
-            <Descriptions.Item label="Email cần CS">
+            <Descriptions.Item label={t('gate.h_icax5j')}>
               {shown.emailNeedsCsCount}
             </Descriptions.Item>
             <Descriptions.Item label="Check-in OK">
               {shown.checkInSuccessCount}
             </Descriptions.Item>
-            <Descriptions.Item label="Vé ACTIVE">
+            <Descriptions.Item label={t('gate.h_1swn6cq')}>
               {shown.ticketsByState.ACTIVE}
             </Descriptions.Item>
           </Descriptions>
           <Space style={{ marginTop: 16 }} wrap>
             <Button loading={busy} onClick={() => void load()}>
-              Làm mới
+              {t('gate.h_3keb7')}
             </Button>
             {reportShowsPendingApprovalCta(shown) ? (
               <Link href={reportPendingApprovalHref(tenantId, eventId)}>
                 <Button data-testid="event-report-cta-pending-approval">
-                  Đi tới duyệt khách và mã đang chờ
+                  {t('gate.h_1n09r0f')}
                 </Button>
               </Link>
             ) : null}
             {reportShowsEmailCsCta(shown) ? (
               <Link href={reportEmailCsHref(tenantId, eventId)}>
                 <Button data-testid="event-report-cta-email-cs">
-                  Đi tới hỗ trợ tra cứu và gửi lại email
+                  {t('gate.h_4twiex')}
                 </Button>
               </Link>
             ) : null}
@@ -184,9 +191,7 @@ export default function EventGateReportPage() {
 
       {access.permissions.includes('gate.confirm') ? (
         <div>
-          <Typography.Paragraph>
-            Quét vé chỉ trên app — không gắn camera trên portal.
-          </Typography.Paragraph>
+          <Typography.Paragraph>{t('gate.h_cq4fvf')}</Typography.Paragraph>
           <GateDeeplinkButton
             href={gateDeeplinkUrl(process.env, '/gate', {
               tenantId,

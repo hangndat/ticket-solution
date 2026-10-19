@@ -20,6 +20,7 @@ import {
 import { bffEvents } from '../../../../../src/prep/bff-urls';
 import { useTenantAccess } from '../../../../../src/prep/use-event-access';
 import { SurfaceState } from '../../../../../src/components/surface-state';
+import { usePortalLocale } from '../../../../../src/i18n';
 
 type WizardValues = {
   slug: string;
@@ -32,6 +33,7 @@ type WizardValues = {
 };
 
 export default function CreateEventWizardPage() {
+  const { t } = usePortalLocale();
   const params = useParams<{ tenantId: string }>();
   const tenantId = params.tenantId;
   const router = useRouter();
@@ -49,7 +51,7 @@ export default function CreateEventWizardPage() {
     return (
       <SurfaceState
         kind="error"
-        description={access.message}
+        description={access.messageKey ? t(access.messageKey) : undefined}
         onRetry={() => window.location.reload()}
       />
     );
@@ -58,7 +60,7 @@ export default function CreateEventWizardPage() {
     return (
       <SurfaceState
         kind="permission-denied"
-        description="Thiếu quyền tổ chức."
+        description={t('events.h_ekk31m')}
         onRetry={() => {
           window.location.href = `/t/${tenantId}`;
         }}
@@ -69,7 +71,7 @@ export default function CreateEventWizardPage() {
     return (
       <SurfaceState
         kind="permission-denied"
-        description="Thiếu quyền tạo sự kiện (event.create)."
+        description={t('events.h_1ognyxu')}
         onRetry={() => {
           window.location.href = `/t/${tenantId}/events`;
         }}
@@ -89,7 +91,7 @@ export default function CreateEventWizardPage() {
       if (res.networkError || res.timedOut || res.status === 0 || res.status >= 500) {
         setNotice({
           type: 'warning',
-          text: 'Chưa rõ kết quả tạo sự kiện. Không coi là đã tạo — kiểm tra lại danh sách.',
+          text: t('events.h_npdcvo'),
         });
         return;
       }
@@ -103,23 +105,23 @@ export default function CreateEventWizardPage() {
         if (!eventId) {
           setNotice({
             type: 'warning',
-            text: 'Máy chủ trả về thành công nhưng thiếu eventId — chưa rõ sự kiện mới.',
+            text: t('events.h_74jvni'),
           });
           return;
         }
         setNotice({
           type: 'success',
-          text: 'Đã tạo sự kiện. Đang chuyển tới tổng quan…',
+          text: t('events.h_rpomry'),
         });
         router.push(`/t/${tenantId}/e/${eventId}`);
         return;
       }
       setNotice({
         type: 'error',
-        text: `${apiErrorCode(res.json) ?? `HTTP ${res.status}`}: ${apiErrorMessage(
+        text: t('ops.export.apiRejected', { code: apiErrorCode(res.json) ?? `HTTP ${res.status}`, message: apiErrorMessage(
           res.json,
-          'Không tạo được sự kiện.',
-        )}`,
+          t('events.h_hnm91l'),
+        ) }),
       });
     } finally {
       setBusy(false);
@@ -128,18 +130,14 @@ export default function CreateEventWizardPage() {
 
   return (
     <Space direction="vertical" size="large" style={{ width: '100%' }}>
-      <Typography.Title level={3} style={{ margin: 0 }}>
-        Tạo sự kiện
-      </Typography.Title>
-      <Typography.Paragraph type="secondary">
-        Tổ chức đã chọn từ ngữ cảnh route — không cần dán UUID tenant.
-      </Typography.Paragraph>
+      <Typography.Title level={3} style={{ margin: 0 }}>{t('events.h_ek93o2')}</Typography.Title>
+      <Typography.Paragraph type="secondary">{t('events.h_5zs7cf')}</Typography.Paragraph>
       <Steps
         current={step}
         items={[
-          { title: 'Cơ bản' },
-          { title: 'Địa điểm / liên hệ' },
-          { title: 'Xác nhận' },
+          { title: t('events.h_1y0cdxe') },
+          { title: t('events.h_1gq5nm') },
+          { title: t('events.h_1q9os0g') },
         ]}
       />
       <Form
@@ -155,8 +153,8 @@ export default function CreateEventWizardPage() {
           <>
             <Form.Item
               name="name"
-              label="Tên sự kiện"
-              rules={[{ required: true, message: 'Nhập tên sự kiện' }]}
+              label={t('events.h_1x97hc6')}
+              rules={[{ required: true, message: t('events.h_jq4yo3') }]}
             >
               <Input maxLength={120} />
             </Form.Item>
@@ -164,19 +162,19 @@ export default function CreateEventWizardPage() {
               name="slug"
               label="Slug"
               rules={[
-                { required: true, message: 'Nhập slug' },
+                { required: true, message: t('events.h_1xl1825') },
                 {
                   pattern: /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
-                  message: 'Slug chỉ gồm a-z, 0-9 và dấu gạch ngang',
+                  message: t('events.h_13e7ycb'),
                 },
               ]}
             >
               <Input maxLength={64} autoComplete="off" spellCheck={false} />
             </Form.Item>
-            <Form.Item name="timezone" label="Múi giờ" rules={[{ required: true }]}>
+            <Form.Item name="timezone" label={t('events.h_8g8c9u')} rules={[{ required: true }]}>
               <Input />
             </Form.Item>
-            <Form.Item name="visibility" label="Hiển thị" rules={[{ required: true }]}>
+            <Form.Item name="visibility" label={t('common.h_wqd4fq')} rules={[{ required: true }]}>
               <Select
                 options={[
                   { value: 'UNLISTED', label: 'UNLISTED' },
@@ -188,13 +186,13 @@ export default function CreateEventWizardPage() {
         ) : null}
         {step === 1 ? (
           <>
-            <Form.Item name="venueName" label="Tên địa điểm">
+            <Form.Item name="venueName" label={t('events.h_b8z0sy')}>
               <Input />
             </Form.Item>
-            <Form.Item name="venueAddress" label="Địa chỉ">
+            <Form.Item name="venueAddress" label={t('events.h_1dipstx')}>
               <Input />
             </Form.Item>
-            <Form.Item name="contactEmail" label="Email liên hệ">
+            <Form.Item name="contactEmail" label={t('events.h_1xm22zn')}>
               <Input type="email" />
             </Form.Item>
           </>
@@ -203,8 +201,8 @@ export default function CreateEventWizardPage() {
           <Alert
             type="info"
             showIcon
-            message="Xác nhận tạo"
-            description="Sự kiện mới ở trạng thái DRAFT. Publish cấu hình ≠ mở redeem ≠ mở Gate quét."
+            message={t('events.h_1o08rig')}
+            description={t('events.h_1qeuedv')}
           />
         ) : null}
       </Form>
@@ -212,9 +210,7 @@ export default function CreateEventWizardPage() {
         <Alert type={notice.type} showIcon message={notice.text} />
       ) : null}
       <Space>
-        <Button disabled={step === 0 || busy} onClick={() => setStep((s) => s - 1)}>
-          Quay lại
-        </Button>
+        <Button disabled={step === 0 || busy} onClick={() => setStep((s) => s - 1)}>{t('events.h_rft49v')}</Button>
         {step < 2 ? (
           <Button
             type="primary"
@@ -229,13 +225,9 @@ export default function CreateEventWizardPage() {
                 /* field errors shown */
               }
             }}
-          >
-            Tiếp
-          </Button>
+          >{t('events.new.tiep')}</Button>
         ) : (
-          <Button type="primary" loading={busy} onClick={() => void submit()}>
-            Tạo sự kiện
-          </Button>
+          <Button type="primary" loading={busy} onClick={() => void submit()}>{t('events.h_ek93o2')}</Button>
         )}
       </Space>
     </Space>

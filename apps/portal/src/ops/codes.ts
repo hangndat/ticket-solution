@@ -9,6 +9,8 @@ import type {
   PortalCodesPage,
 } from '@ticket/contracts';
 import { asRecord, isNonEmptyString, apiErrorFrom } from './contract-shape';
+import { t } from '../i18n/t';
+import { DEFAULT_PORTAL_LOCALE, type PortalLocale } from '../i18n/locale';
 
 const CODE_FORBIDDEN = [
   'code_hmac',
@@ -29,7 +31,7 @@ const CODE_STATES = new Set<PortalCodeState>([
 ]);
 
 export const CODES_UNKNOWN =
-  'Không đọc được danh sách mã. Không coi inventory đã tải thành công.';
+  t(DEFAULT_PORTAL_LOCALE, 'ops.h_1rrwe0k');
 
 export type CodesListView =
   | { kind: 'page'; page: PortalCodesPage }
@@ -64,9 +66,10 @@ export function interpretCodesPage(
   status: number,
   json: unknown,
   networkError: boolean,
+  locale: PortalLocale = DEFAULT_PORTAL_LOCALE,
 ): CodesListView {
   if (networkError || status === 0 || status >= 500) {
-    return { kind: 'unknown', message: CODES_UNKNOWN };
+    return { kind: 'unknown', message: t(locale, 'ops.h_1rrwe0k') };
   }
   if (status === 200) {
     const body = asRecord(json);
@@ -75,16 +78,16 @@ export function interpretCodesPage(
       !Array.isArray(body.items) ||
       ('total' in body && body.total != null)
     ) {
-      return { kind: 'unknown', message: CODES_UNKNOWN };
+      return { kind: 'unknown', message: t(locale, 'ops.h_1rrwe0k') };
     }
     // Response must never echo lookup query.
     if ('q' in body) {
-      return { kind: 'unknown', message: CODES_UNKNOWN };
+      return { kind: 'unknown', message: t(locale, 'ops.h_1rrwe0k') };
     }
     const items: PortalCodeSummary[] = [];
     for (const raw of body.items) {
       const item = parseCodeSummary(raw);
-      if (!item) return { kind: 'unknown', message: CODES_UNKNOWN };
+      if (!item) return { kind: 'unknown', message: t(locale, 'ops.h_1rrwe0k') };
       items.push(item);
     }
     const nextCursor =
@@ -98,7 +101,7 @@ export function interpretCodesPage(
       body.nextCursor !== undefined &&
       typeof body.nextCursor !== 'string'
     ) {
-      return { kind: 'unknown', message: CODES_UNKNOWN };
+      return { kind: 'unknown', message: t(locale, 'ops.h_1rrwe0k') };
     }
     return { kind: 'page', page: { items, nextCursor } };
   }
@@ -109,12 +112,12 @@ export function interpretCodesPage(
       code: err?.code ?? 'FORBIDDEN',
       message:
         err?.message ??
-        'Cần inventory.import + phân công sự kiện — không suy từ tên role.',
+        t(locale, 'ops.codes.needImport'),
     };
   }
   const err = apiErrorFrom(asRecord(json));
   if (err) return { kind: 'rejected', ...err };
-  return { kind: 'unknown', message: CODES_UNKNOWN };
+  return { kind: 'unknown', message: t(locale, 'ops.h_1rrwe0k') };
 }
 
 export function buildCodesQuery(input: {

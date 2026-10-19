@@ -2,6 +2,7 @@
 
 import { Alert, Button, Empty, Result, Spin } from 'antd';
 import type { ReactNode } from 'react';
+import { usePortalLocale } from '../i18n';
 
 export type SurfaceKind =
   | 'loading'
@@ -20,6 +21,7 @@ export function SurfaceState(props: {
   emptyAction?: ReactNode;
   children?: ReactNode;
 }) {
+  const { t } = usePortalLocale();
   switch (props.kind) {
     case 'loading':
       return (
@@ -28,13 +30,13 @@ export function SurfaceState(props: {
           aria-busy="true"
           style={{ padding: 48, textAlign: 'center' }}
         >
-          <Spin tip="Đang tải…" size="large" />
+          <Spin tip={t('surface.loading')} size="large" />
         </div>
       );
     case 'empty':
       return (
         <Empty
-          description={props.description ?? 'Chưa có dữ liệu'}
+          description={props.description ?? t('surface.empty.default')}
           style={{ padding: 48 }}
         >
           {props.emptyAction}
@@ -45,12 +47,12 @@ export function SurfaceState(props: {
         <Alert
           type="error"
           showIcon
-          message={props.title ?? 'Không tải được dữ liệu'}
+          message={props.title ?? t('surface.error.loadFailed')}
           description={props.description}
           action={
             props.onRetry ? (
               <Button size="small" onClick={props.onRetry}>
-                Thử lại
+                {t('surface.action.retry')}
               </Button>
             ) : undefined
           }
@@ -62,15 +64,14 @@ export function SurfaceState(props: {
         <Alert
           type="warning"
           showIcon
-          message={props.title ?? 'Chưa rõ kết quả'}
+          message={props.title ?? t('surface.unknown.title')}
           description={
-            props.description ??
-            'Phản hồi không xác định — kiểm tra lại trước khi coi là thành công.'
+            props.description ?? t('surface.unknown.defaultDescription')
           }
           action={
             props.onRetry ? (
               <Button size="small" onClick={props.onRetry}>
-                Kiểm tra lại
+                {t('surface.action.recheck')}
               </Button>
             ) : undefined
           }
@@ -81,15 +82,14 @@ export function SurfaceState(props: {
       return (
         <Result
           status="403"
-          title={props.title ?? 'Không có quyền'}
+          title={props.title ?? t('surface.permission.title')}
           subTitle={
-            props.description ??
-            'Bạn không có quyền xem nội dung này. Quyền do máy chủ quyết định.'
+            props.description ?? t('surface.permission.defaultDescription')
           }
           extra={
             props.onRetry ? (
               <Button type="primary" onClick={props.onRetry}>
-                Về trang được phép
+                {t('surface.permission.goAllowed')}
               </Button>
             ) : undefined
           }
@@ -101,11 +101,8 @@ export function SurfaceState(props: {
           type="error"
           showIcon
           banner
-          message={props.title ?? 'Tổ chức đã tạm ngưng'}
-          description={
-            props.description ??
-            'Không thể thao tác khi tổ chức ở trạng thái SUSPENDED.'
-          }
+          message={props.title ?? t('surface.suspended.title')}
+          description={props.description ?? t('surface.suspended.description')}
         />
       );
     case 'ready':

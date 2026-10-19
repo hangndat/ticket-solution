@@ -11,6 +11,7 @@ import {
   type PendingItem,
   type PendingView,
 } from '../pending';
+import { usePortalLocale } from '../../i18n';
 
 type CatalogItem = { id: string; label: string };
 
@@ -43,6 +44,7 @@ export function PendingPanel({
   sources = [],
   ticketTypes = [],
 }: Props) {
+  const { t, locale } = usePortalLocale();
   const [busy, setBusy] = useState(false);
   const [view, setView] = useState<PendingView | null>(null);
   const [denyReason, setDenyReason] = useState('');
@@ -65,11 +67,12 @@ export function PendingPanel({
       result.status,
       result.json,
       result.networkError || result.timedOut,
+      locale,
     );
     setView(next);
-    setNotice(pendingListLabel(next));
+    setNotice(pendingListLabel(next, locale));
     setBusy(false);
-  }, [tenantId, eventId, sourceId, ticketTypeId, q]);
+  }, [tenantId, eventId, sourceId, ticketTypeId, q, locale]);
 
   useEffect(() => {
     let cancelled = false;
@@ -92,8 +95,9 @@ export function PendingPanel({
       result.status,
       result.json,
       result.networkError || result.timedOut,
+      locale,
     );
-    setNotice(adminDecisionLabel(decision));
+    setNotice(adminDecisionLabel(decision, locale));
     if (decision.kind === 'approved') void load();
     else setBusy(false);
   }
@@ -101,7 +105,7 @@ export function PendingPanel({
   async function deny(requestId: string) {
     const reason = denyReason.trim();
     if (!reason) {
-      setNotice('REASON_REQUIRED: Cần lý do từ chối.');
+      setNotice(t('ops.h_qdkb51'));
       return;
     }
     setBusy(true);
@@ -114,8 +118,9 @@ export function PendingPanel({
       result.status,
       result.json,
       result.networkError || result.timedOut,
+      locale,
     );
-    setNotice(adminDecisionLabel(decision));
+    setNotice(adminDecisionLabel(decision, locale));
     if (decision.kind === 'denied') {
       setDenyReason('');
       void load();
@@ -136,10 +141,10 @@ export function PendingPanel({
         <Alert
           type="info"
           showIcon
-          message="G-R1/G-R2 — danh sách chờ duyệt + bộ lọc source/type/q"
-          description="q chỉ là requestId exact (UUID). Không tìm email/phone. Approve/deny idempotent. unknown ≠ success."
+          message={t('ops.h_1lp1xu6')}
+          description={t('ops.h_1tlh7rr')}
         />
-        <Space wrap role="search" aria-label="Bộ lọc chờ duyệt">
+        <Space wrap role="search" aria-label={t('ops.pending.filtersTitle')}>
           <Select
             allowClear
             placeholder="Source (catalog)"
@@ -147,7 +152,7 @@ export function PendingPanel({
             value={sourceId}
             options={sources.map((s) => ({ value: s.id, label: s.label }))}
             onChange={(v) => setSourceId(v)}
-            aria-label="Lọc theo source"
+            aria-label={t('ops.h_1u6lt1m')}
           />
           <Select
             allowClear
@@ -156,42 +161,42 @@ export function PendingPanel({
             value={ticketTypeId}
             options={ticketTypes.map((t) => ({ value: t.id, label: t.label }))}
             onChange={(v) => setTicketTypeId(v)}
-            aria-label="Lọc theo ticket type"
+            aria-label={t('ops.h_1wib0ad')}
           />
           <Input
-            placeholder="q = requestId (UUID exact)"
+            placeholder={t('ops.h_k67vfi')}
             value={q}
             onChange={(e) => setQ(e.target.value)}
             style={{ minWidth: 280 }}
             spellCheck={false}
             maxLength={64}
-            aria-label="Lọc theo requestId exact"
+            aria-label={t('ops.h_1syu2ee')}
           />
           <Button
             type="primary"
             loading={busy}
             onClick={() => void load()}
-            aria-label="Áp dụng bộ lọc chờ duyệt"
+            aria-label={t('ops.pending.applyFilters')}
           >
-            Lọc
+            {t('platform.loc')}
           </Button>
           <Button loading={busy} onClick={() => void load()}>
-            Làm mới
+            {t('gate.h_3keb7')}
           </Button>
           <Input
-            placeholder="Lý do từ chối (bắt buộc khi Deny)"
+            placeholder={t('ops.h_1ga5au4')}
             value={denyReason}
             onChange={(e) => setDenyReason(e.target.value)}
             style={{ minWidth: 280 }}
             maxLength={500}
-            aria-label="Lý do từ chối"
+            aria-label={t('ops.h_1qz57kh')}
           />
         </Space>
         {alertType ? (
           <Alert
             type={alertType}
             showIcon
-            message={pendingListLabel(view!)}
+            message={pendingListLabel(view!, locale)}
             role="status"
           />
         ) : null}
@@ -201,14 +206,14 @@ export function PendingPanel({
           rowKey="requestId"
           dataSource={items}
           pagination={false}
-          locale={{ emptyText: 'Không có yêu cầu chờ duyệt.' }}
+          locale={{ emptyText: t('ops.h_2gkw85') }}
           columns={[
             { title: 'Request', dataIndex: 'requestId', ellipsis: true },
             { title: 'Source', dataIndex: 'sourceId', ellipsis: true },
             { title: 'Type', dataIndex: 'ticketTypeId', ellipsis: true },
             { title: 'Created', dataIndex: 'createdAt', ellipsis: true },
             {
-              title: 'Thao tác',
+              title: t('ops.h_1pbxt75'),
               key: 'actions',
               render: (_, row) =>
                 canApprove ? (
@@ -232,7 +237,7 @@ export function PendingPanel({
                   </Space>
                 ) : (
                   <Typography.Text type="secondary">
-                    Cần redemption.approve
+                    {t('guests.needRedemptionApprove')}
                   </Typography.Text>
                 ),
             },
