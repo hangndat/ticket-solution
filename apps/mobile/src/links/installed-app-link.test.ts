@@ -95,6 +95,31 @@ test('invitation claim with short token is not routed', () => {
   assert.equal(parsed.kind, 'passthrough');
 });
 
+test('membership invite opens web bridge (not native claim)', () => {
+  const token = 'a'.repeat(32);
+  for (const input of [
+    `vemoki://invite?token=${token}`,
+    `/invite?token=${token}`,
+    `https://app.vemoki.com/invite#token=${encodeURIComponent(token)}`,
+  ]) {
+    const parsed = parseInstalledAppLink(input);
+    assert.equal(parsed.kind, 'membership-invite');
+    if (parsed.kind !== 'membership-invite') return;
+    assert.equal(parsed.token, token);
+    assert.match(parsed.href, /^\/membership-invite\?token=/);
+    assert.doesNotMatch(parsed.href, /^\/claim/);
+    assert.equal(routeForInstalledAppLink(input), parsed.href);
+  }
+});
+
+test('membership invite without token still routes to bridge', () => {
+  const parsed = parseInstalledAppLink('vemoki://invite');
+  assert.equal(parsed.kind, 'membership-invite');
+  if (parsed.kind !== 'membership-invite') return;
+  assert.equal(parsed.token, '');
+  assert.equal(parsed.href, '/membership-invite');
+});
+
 test('staff deep link opens soft-access (O02 deny / tab gate)', () => {
   for (const input of [
     'vemoki://staff',

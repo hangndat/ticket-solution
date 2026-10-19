@@ -330,6 +330,10 @@ export function ClaimScreen() {
         Chỉ email đã được mời và xác minh. Sau đăng nhập quay lại đây để hoàn
         tất; dữ liệu tạm xoá khi đăng xuất hoặc đổi tài khoản.
       </Text>
+      <Text style={{ color: colors.secondary, ...typography.caption }}>
+        Lời mời thành viên tổ chức (membership) mở trên web — không phải màn
+        nhận vé sự kiện này.
+      </Text>
 
       {missingInvite ? (
         <Notice title="Thiếu liên kết lời mời">
