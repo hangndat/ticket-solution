@@ -9,8 +9,10 @@ import { CodesPanel } from '../../../../../../src/ops/panels/codes-panel';
 import { ExportPanel } from '../../../../../../src/ops/panels/export-panel';
 import { useEventAccess } from '../../../../../../src/prep/use-event-access';
 import { SurfaceState } from '../../../../../../src/components/surface-state';
+import { usePortalLocale } from '../../../../../../src/i18n';
 
 export default function EventAuditPage() {
+  const { t } = usePortalLocale();
   const params = useParams<{ tenantId: string; eventId: string }>();
   const { tenantId, eventId } = params;
   const access = useEventAccess(tenantId, eventId);
@@ -41,7 +43,7 @@ export default function EventAuditPage() {
     return (
       <SurfaceState
         kind="error"
-        description={access.message}
+        description={access.messageKey ? t(access.messageKey) : undefined}
         onRetry={() => window.location.reload()}
       />
     );
@@ -50,7 +52,7 @@ export default function EventAuditPage() {
     return (
       <SurfaceState
         kind="permission-denied"
-        description="Cần report.read / inventory.import / export.* từ máy chủ — không suy từ tên role."
+        description={t('ops.report.needPermissions')}
         onRetry={() => {
           window.location.href = `/t/${tenantId}/e/${eventId}`;
         }}
@@ -62,21 +64,21 @@ export default function EventAuditPage() {
   if (canAudit) {
     tabItems.push({
       key: 'audit',
-      label: 'Nhật ký',
+      label: t('audit.h_pug8u'),
       children: <AuditPanel tenantId={tenantId} eventId={eventId} />,
     });
   }
   if (canCodes) {
     tabItems.push({
       key: 'codes',
-      label: 'Mã tồn kho',
+      label: t('audit.h_1psplgo'),
       children: <CodesPanel tenantId={tenantId} eventId={eventId} />,
     });
   }
   if (canExport) {
     tabItems.push({
       key: 'jobs',
-      label: 'Lịch sử export',
+      label: t('audit.tab.exportHistory'),
       children: (
         <ExportPanel
           tenantId={tenantId}
@@ -91,13 +93,13 @@ export default function EventAuditPage() {
   return (
     <Space direction="vertical" size="large" style={{ width: '100%' }}>
       <Typography.Title level={3} style={{ margin: 0 }}>
-        Nhật ký & mã
+        {t('nav.event.auditCodes')}
       </Typography.Title>
       <Alert
         type="info"
         showIcon
         message="P1.1 audit browser + job history"
-        description="Audit = report.read. Codes = inventory.import (masked). Export history không chứa object key / URL ký sẵn. Platform audit nằm ở /platform (Operator riêng)."
+        description={t('ops.audit.capabilityHint')}
       />
       <Tabs
         activeKey={

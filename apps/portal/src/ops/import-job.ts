@@ -21,9 +21,11 @@ import {
 } from './contract-shape';
 import type { AdminScope } from './scope';
 import { eventPath } from './scope';
+import { t } from '../i18n/t';
+import { DEFAULT_PORTAL_LOCALE, type PortalLocale } from '../i18n/locale';
 
 export const IMPORT_UNKNOWN =
-  'Kết quả import chưa biết. Không coi là đã preview hoặc đã commit.';
+  t(DEFAULT_PORTAL_LOCALE, 'ops.import.unknown');
 
 /** Allowlisted CSV columns (UTF-8 templates). */
 export const CSV_COLUMN_CODES = ['code'] as const;
@@ -153,20 +155,20 @@ export function parseCsvForImport(input: {
   text: string;
   mapping?: CsvColumnMapping;
   mappingRevision?: number;
-}): CsvParseResult {
+}, locale: PortalLocale = DEFAULT_PORTAL_LOCALE): CsvParseResult {
   const byteLength = new TextEncoder().encode(input.text).byteLength;
   if (byteLength > IMPORT_LIMITS.maxBytes) {
     return {
       ok: false,
       code: IMPORT_ERROR_CODES.IMPORT_ROW_LIMIT,
-      message: `CSV vượt ${IMPORT_LIMITS.maxBytes} bytes.`,
+      message: t(locale, 'ops.import.csvMaxBytes', { maxBytes: IMPORT_LIMITS.maxBytes }),
     };
   }
   if (input.text.includes('\u0000')) {
     return {
       ok: false,
       code: IMPORT_ERROR_CODES.IMPORT_FILE_INVALID,
-      message: 'CSV phải là UTF-8 text, không chứa null byte.',
+      message: t(locale, 'ops.h_jr40gu'),
     };
   }
 
@@ -176,7 +178,7 @@ export function parseCsvForImport(input: {
     return {
       ok: false,
       code: IMPORT_ERROR_CODES.IMPORT_FILE_INVALID,
-      message: 'CSV trống.',
+      message: t(locale, 'ops.h_1v0wxpt'),
     };
   }
 
@@ -186,7 +188,7 @@ export function parseCsvForImport(input: {
     return {
       ok: false,
       code: IMPORT_ERROR_CODES.IMPORT_ROW_LIMIT,
-      message: `CSV vượt ${IMPORT_LIMITS.maxRows} dòng.`,
+      message: t(locale, 'ops.import.csvMaxRows', { maxRows: IMPORT_LIMITS.maxRows }),
     };
   }
 
@@ -207,7 +209,7 @@ export function parseCsvForImport(input: {
       return {
         ok: false,
         code: IMPORT_ERROR_CODES.IMPORT_FILE_INVALID,
-        message: `Thiếu cột bắt buộc «${field}» (template/mapping).`,
+        message: t(locale, 'ops.import.missingColumn', { field }),
       };
     }
   }
@@ -252,17 +254,17 @@ function splitCsvLine(line: string): string[] {
 export function extractRawCodesFromCsv(
   text: string,
   codeHeader: string,
-  max = 500,
+  max = 500, locale: PortalLocale = DEFAULT_PORTAL_LOCALE,
 ): string[] | { code: string; message: string } {
   const lines = text.replace(/^\uFEFF/, '').split(/\r?\n/);
   const nonEmpty = lines.filter((line) => line.trim().length > 0);
   if (nonEmpty.length < 2) {
-    return { code: 'CODES_REQUIRED', message: 'CSV cần ít nhất một dòng mã.' };
+    return { code: 'CODES_REQUIRED', message: t(locale, 'ops.h_17ccgto') };
   }
   const headers = splitCsvLine(nonEmpty[0] ?? '');
   const idx = headers.indexOf(codeHeader);
   if (idx < 0) {
-    return { code: 'CODES_REQUIRED', message: 'Không tìm thấy cột code.' };
+    return { code: 'CODES_REQUIRED', message: t(locale, 'ops.h_y208dx') };
   }
   const codes: string[] = [];
   for (let r = 1; r < nonEmpty.length; r += 1) {
@@ -271,12 +273,12 @@ export function extractRawCodesFromCsv(
     if (code) codes.push(code);
   }
   if (codes.length === 0) {
-    return { code: 'CODES_REQUIRED', message: 'Không có mã hợp lệ.' };
+    return { code: 'CODES_REQUIRED', message: t(locale, 'ops.h_2a3kdd') };
   }
   if (codes.length > max) {
     return {
       code: IMPORT_ERROR_CODES.IMPORT_ROW_LIMIT,
-      message: `Legacy rawCodes tối đa ${max}; dùng CSV job + fileId.`,
+      message: t(locale, 'ops.import.legacyRawCodesMax', { max }),
     };
   }
   return codes;
@@ -392,80 +394,85 @@ export function interpretImportCreate(
   status: number,
   json: unknown,
   networkError: boolean,
+  locale: PortalLocale = DEFAULT_PORTAL_LOCALE,
 ): ImportView {
   if (networkError || status === 0 || status >= 500) {
-    return { kind: 'unknown', message: IMPORT_UNKNOWN };
+    return { kind: 'unknown', message: t(locale, 'ops.import.unknown') };
   }
   if (status === 200 || status === 201) {
     const job = parseImportJob(json);
     if (job) return { kind: 'job', job };
-    return { kind: 'unknown', message: IMPORT_UNKNOWN };
+    return { kind: 'unknown', message: t(locale, 'ops.import.unknown') };
   }
   const err = apiErrorFrom(asRecord(json));
   if (err) return { kind: 'rejected', ...err };
-  return { kind: 'unknown', message: IMPORT_UNKNOWN };
+  return { kind: 'unknown', message: t(locale, 'ops.import.unknown') };
 }
 
 export function interpretImportStatus(
   status: number,
   json: unknown,
   networkError: boolean,
+  locale: PortalLocale = DEFAULT_PORTAL_LOCALE,
 ): ImportView {
-  return interpretImportCreate(status, json, networkError);
+  return interpretImportCreate(status, json, networkError, locale);
 }
 
 export function interpretImportPreview(
   status: number,
   json: unknown,
   networkError: boolean,
+  locale: PortalLocale = DEFAULT_PORTAL_LOCALE,
 ): ImportView {
   if (networkError || status === 0 || status >= 500) {
-    return { kind: 'unknown', message: IMPORT_UNKNOWN };
+    return { kind: 'unknown', message: t(locale, 'ops.import.unknown') };
   }
   if (status === 200) {
     const preview = parsePreview(json);
     if (preview) return { kind: 'preview', preview };
-    return { kind: 'unknown', message: IMPORT_UNKNOWN };
+    return { kind: 'unknown', message: t(locale, 'ops.import.unknown') };
   }
   const err = apiErrorFrom(asRecord(json));
   if (err) return { kind: 'rejected', ...err };
-  return { kind: 'unknown', message: IMPORT_UNKNOWN };
+  return { kind: 'unknown', message: t(locale, 'ops.import.unknown') };
 }
 
 export function interpretImportCommit(
   status: number,
   json: unknown,
   networkError: boolean,
+  locale: PortalLocale = DEFAULT_PORTAL_LOCALE,
 ): ImportView {
   if (networkError || status === 0 || status >= 500) {
-    return { kind: 'unknown', message: IMPORT_UNKNOWN };
+    return { kind: 'unknown', message: t(locale, 'ops.import.unknown') };
   }
   if (status === 200 || status === 201) {
     const commit = parseCommit(json);
     if (commit) return { kind: 'commit', commit };
-    return { kind: 'unknown', message: IMPORT_UNKNOWN };
+    return { kind: 'unknown', message: t(locale, 'ops.import.unknown') };
   }
   const err = apiErrorFrom(asRecord(json));
   if (err) return { kind: 'rejected', ...err };
-  return { kind: 'unknown', message: IMPORT_UNKNOWN };
+  return { kind: 'unknown', message: t(locale, 'ops.import.unknown') };
 }
 
 export function interpretImportUpload(
   status: number,
   json: unknown,
   networkError: boolean,
+  locale: PortalLocale = DEFAULT_PORTAL_LOCALE,
 ): ImportView {
   if (networkError || status === 0 || status >= 500) {
-    return { kind: 'unknown', message: IMPORT_UNKNOWN };
+    return { kind: 'unknown', message: t(locale, 'ops.import.unknown') };
   }
   if (status === 200 || status === 201) {
     const file = parseUpload(json);
     if (file) return { kind: 'upload', file };
-    return { kind: 'unknown', message: IMPORT_UNKNOWN };
+    return { kind: 'unknown', message: t(locale, 'ops.import.unknown') };
   }
   const err = apiErrorFrom(asRecord(json));
   if (err) return { kind: 'rejected', ...err };
-  return { kind: 'unknown', message: IMPORT_UNKNOWN };
+  return { kind: 'unknown', message: t(locale, 'ops.import.unknown') };
 }
 
 /**
@@ -479,9 +486,10 @@ export function interpretImportErrorsDownload(
   contentType: string | null,
   byteLength = 0,
   filename: string | null = null,
+  locale: PortalLocale = DEFAULT_PORTAL_LOCALE,
 ): ImportView {
   if (networkError || status === 0 || status >= 500) {
-    return { kind: 'unknown', message: IMPORT_UNKNOWN };
+    return { kind: 'unknown', message: t(locale, 'ops.import.unknown') };
   }
   if (status === 200) {
     const ct = (contentType ?? '').toLowerCase();
@@ -498,7 +506,7 @@ export function interpretImportErrorsDownload(
         filename,
       };
     }
-    return { kind: 'unknown', message: IMPORT_UNKNOWN };
+    return { kind: 'unknown', message: t(locale, 'ops.import.unknown') };
   }
   if (status === 403 || status === 404 || status === 410) {
     const err = apiErrorFrom(asRecord(json));
@@ -513,45 +521,45 @@ export function interpretImportErrorsDownload(
             : IMPORT_ERROR_CODES.IMPORT_NOT_FOUND,
       message:
         status === 410
-          ? 'Báo cáo lỗi đã hết hạn.'
+          ? t(locale, 'ops.import.errorsExpired')
           : status === 403
-            ? 'Không có quyền tải báo cáo lỗi (tenant/event).'
-            : 'Không tìm thấy job/báo cáo lỗi.',
+            ? t(locale, 'ops.h_1dgs34w')
+            : t(locale, 'ops.h_ern79n'),
     };
   }
   const err = apiErrorFrom(asRecord(json));
   if (err) return { kind: 'rejected', ...err };
-  return { kind: 'unknown', message: IMPORT_UNKNOWN };
+  return { kind: 'unknown', message: t(locale, 'ops.import.unknown') };
 }
 
-export function importViewLabel(view: ImportView): string {
+export function importViewLabel(view: ImportView, locale: PortalLocale = DEFAULT_PORTAL_LOCALE): string {
   if (view.kind === 'job') {
     const j = view.job;
     const quota =
       j.estimatedQuota === null || j.estimatedQuota === undefined
         ? ''
-        : ` · ước tính quota ${j.estimatedQuota} (không giữ suất)`;
-    const replay = j.replayed ? ' · replay' : '';
-    return `Import ${j.importId}: ${j.status}${quota}${replay}. Preview không ghi dữ liệu nghiệp vụ.`;
+        : t(locale, 'ops.import.quotaEstimateSuffix', { estimatedQuota: j.estimatedQuota });
+    const replay = j.replayed ? t(locale, 'ops.import.replaySuffix') : '';
+    return t(locale, 'ops.import.jobLabel', { importId: j.importId, status: j.status, quotaSuffix: quota, replaySuffix: replay });
   }
   if (view.kind === 'preview') {
     const p = view.preview;
-    return `Preview rev ${p.previewRevision}: ${p.validRowCount} hợp lệ · ${p.errorRowCount} lỗi · invitation ${p.invitationCount} · ước tính quota ${p.estimatedQuota} (không reserve).`;
+    return t(locale, 'ops.import.previewLabel', { previewRevision: p.previewRevision, validRowCount: p.validRowCount, errorRowCount: p.errorRowCount, invitationCount: p.invitationCount, estimatedQuota: p.estimatedQuota });
   }
   if (view.kind === 'commit') {
     const c = view.commit;
     const replay = c.replayed ? ' · idempotent replay' : '';
-    return `Commit xong: ${c.committedRowCount} dòng · bỏ qua ${c.skippedRowCount} · lỗi ${c.errorRowCount} · invitation ${c.invitationCount}${replay}.`;
+    return t(locale, 'ops.import.commitLabel', { committedRowCount: c.committedRowCount, skippedRowCount: c.skippedRowCount, errorRowCount: c.errorRowCount, invitationCount: c.invitationCount, replaySuffix: replay });
   }
   if (view.kind === 'errors') {
     const name = view.filename ? ` · ${view.filename}` : '';
-    return `Đã tải báo cáo lỗi private (${view.contentType}, ${view.byteLength} bytes)${name}. Không lưu URL dài hạn.`;
+    return t(locale, 'ops.import.errorsDownloadLabel', { contentType: view.contentType, byteLength: view.byteLength, filenameSuffix: name });
   }
   if (view.kind === 'upload') {
-    return `File quarantine sẵn sàng · fileId ${view.file.fileId} · ${view.file.byteLength} bytes.`;
+    return t(locale, 'ops.import.quarantineReady', { fileId: view.file.fileId, byteLength: view.file.byteLength });
   }
   if (view.kind === 'rejected') {
-    return `${view.code}: ${view.message}`;
+    return t(locale, 'ops.export.apiRejected', { code: view.code, message: view.message });
   }
   return view.message;
 }

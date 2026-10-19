@@ -20,6 +20,7 @@ import {
   type ExportHistoryView,
   type ExportView,
 } from '../export-job';
+import { usePortalLocale } from '../../i18n';
 
 type Props = {
   tenantId: string;
@@ -44,6 +45,7 @@ export function ExportPanel({
   canCreate,
   canDownload,
 }: Props) {
+  const { t, locale } = usePortalLocale();
   const [busy, setBusy] = useState(false);
   const [exportId, setExportId] = useState('');
   const [view, setView] = useState<ExportView | null>(null);
@@ -66,12 +68,13 @@ export function ExportPanel({
       result.status,
       result.json,
       result.networkError || result.timedOut,
+      locale,
     );
     setHistoryView(next);
     if (next.kind !== 'list') {
-      setNotice(exportHistoryLabel(next));
+      setNotice(exportHistoryLabel(next, locale));
     }
-  }, [tenantId, eventId, statusFilter]);
+  }, [tenantId, eventId, statusFilter, locale]);
 
   useEffect(() => {
     let cancelled = false;
@@ -85,7 +88,7 @@ export function ExportPanel({
 
   async function createExport() {
     if (!canCreate) {
-      setNotice('Cần export.create từ máy chủ.');
+      setNotice(t('ops.export.needCreateServer'));
       return;
     }
     setBusy(true);
@@ -96,9 +99,10 @@ export function ExportPanel({
       result.status,
       result.json,
       result.networkError || result.timedOut,
+      locale,
     );
     setView(next);
-    setNotice(exportViewLabel(next));
+    setNotice(exportViewLabel(next, locale));
     if (next.kind === 'created') {
       setExportId(next.job.exportId);
       void loadHistory();
@@ -118,15 +122,16 @@ export function ExportPanel({
       result.json,
       result.networkError || result.timedOut,
       id,
+      locale,
     );
     setView(next);
-    setNotice(exportViewLabel(next));
+    setNotice(exportViewLabel(next, locale));
     setBusy(false);
   }
 
   async function download() {
     if (!canDownload) {
-      setNotice('Cần export.download từ máy chủ.');
+      setNotice(t('ops.export.needDownloadServer'));
       return;
     }
     const id = exportId.trim();
@@ -147,6 +152,7 @@ export function ExportPanel({
         res.contentType,
         res.blob.size,
         filename,
+        locale,
       );
       setView(next);
       const url = URL.createObjectURL(res.blob);
@@ -155,7 +161,7 @@ export function ExportPanel({
       a.download = filename;
       a.click();
       URL.revokeObjectURL(url);
-      setNotice(exportViewLabel(next));
+      setNotice(exportViewLabel(next, locale));
     } else {
       const next = interpretExportDownload(
         res.status,
@@ -163,9 +169,12 @@ export function ExportPanel({
         res.networkError || res.timedOut,
         id,
         res.contentType,
+        undefined,
+        undefined,
+        locale,
       );
       setView(next);
-      setNotice(exportViewLabel(next));
+      setNotice(exportViewLabel(next, locale));
     }
     setBusy(false);
   }
@@ -177,10 +186,10 @@ export function ExportPanel({
       <Alert
         type="info"
         showIcon
-        message="Export CSV / recovery · G-E1 history filter"
-        description="Tạo job → poll status → tải stream authenticated khi READY. List không chứa object key hay URL ký sẵn. unknown ≠ success."
+        message={t('ops.export.panelInfo')}
+        description={t('ops.export.panelDescription')}
       />
-      <Space wrap role="search" aria-label="Bộ lọc lịch sử export">
+      <Space wrap role="search" aria-label={t('ops.export.filterHistoryAria')}>
         <Select
           allowClear
           placeholder="Status history"
@@ -188,15 +197,15 @@ export function ExportPanel({
           value={statusFilter}
           options={STATUS_OPTIONS}
           onChange={(v) => setStatusFilter(v)}
-          aria-label="Lọc lịch sử theo status"
+          aria-label={t('ops.export.filterStatusAria')}
         />
         <Button
           type="primary"
           loading={busy}
           onClick={() => void loadHistory()}
-          aria-label="Áp dụng bộ lọc lịch sử export"
+          aria-label={t('ops.export.filterHistoryApply')}
         >
-          Lọc lịch sử
+          {t('ops.h_1wgnyat')}
         </Button>
         {canCreate ? (
           <Button
@@ -204,10 +213,12 @@ export function ExportPanel({
             loading={busy}
             onClick={() => void createExport()}
           >
-            Tạo export
+            {t('ops.export.createButton')}
           </Button>
         ) : (
-          <Typography.Text type="secondary">Cần export.create</Typography.Text>
+          <Typography.Text type="secondary">
+            {t('ops.export.needCreate')}
+          </Typography.Text>
         )}
         <Input
           placeholder="exportId"
@@ -222,21 +233,21 @@ export function ExportPanel({
           disabled={!exportId.trim()}
           onClick={() => void checkStatus()}
         >
-          Trạng thái
+          {t('ops.export.statusButton')}
         </Button>
         <Button
           loading={busy}
           disabled={!exportId.trim() || !canDownload}
           onClick={() => void download()}
         >
-          Tải CSV
+          {t('ops.h_bitcvf')}
         </Button>
       </Space>
       {historyView && historyView.kind !== 'list' ? (
         <Alert
           type={exportAlertType(historyView)}
           showIcon
-          message={exportHistoryLabel(historyView)}
+          message={exportHistoryLabel(historyView, locale)}
           role="status"
         />
       ) : null}
@@ -244,7 +255,7 @@ export function ExportPanel({
         <Alert
           type={exportAlertType(view)}
           showIcon
-          message={exportViewLabel(view)}
+          message={exportViewLabel(view, locale)}
           data-testid="export-result"
           role="status"
         />
@@ -254,7 +265,7 @@ export function ExportPanel({
         rowKey="exportId"
         dataSource={history}
         pagination={false}
-        locale={{ emptyText: 'Chưa có lịch sử export (hoặc list lỗi).' }}
+        locale={{ emptyText: t('ops.export.historyEmpty') }}
         columns={[
           { title: 'Export ID', dataIndex: 'exportId', ellipsis: true },
           { title: 'Status', dataIndex: 'status', width: 120 },
@@ -264,7 +275,7 @@ export function ExportPanel({
             key: 'use',
             render: (_, row) => (
               <Button size="small" onClick={() => setExportId(row.exportId)}>
-                Chọn
+                {t('common.select')}
               </Button>
             ),
           },

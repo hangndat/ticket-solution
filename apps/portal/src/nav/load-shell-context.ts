@@ -5,6 +5,7 @@ import type {
   MeTenantsResponse,
   PlatformMeResponse,
 } from '@ticket/contracts';
+import type { MessageKey } from '../i18n/messages';
 import {
   parseMeEventsResponse,
   parseMeTenantsResponse,
@@ -27,7 +28,8 @@ export type ShellLoadState =
       platformMe: PlatformMeResponse | null;
       http: { tenants: number; events: number; platform: number };
     }
-  | { status: 'error'; message: string }
+  /** UI translates `messageKey` so locale switch does not need a reload. */
+  | { status: 'error'; messageKey: MessageKey }
   | { status: 'unauthenticated' };
 
 async function getJson(
@@ -95,7 +97,7 @@ export async function loadShellContext(): Promise<ShellLoadState> {
       ) {
         return {
           status: 'error',
-          message: 'Không kết nối được máy chủ. Thử lại sau.',
+          messageKey: 'shell.load.serverUnreachable',
         };
       }
       return { status: 'unauthenticated' };
@@ -123,7 +125,7 @@ export async function loadShellContext(): Promise<ShellLoadState> {
   } catch {
     return {
       status: 'error',
-      message: 'Chưa rõ kết quả — kiểm tra lại kết nối.',
+      messageKey: 'shell.load.unknownConnection',
     };
   }
 }

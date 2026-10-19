@@ -25,8 +25,10 @@ import {
 import { bffEventAction } from '../../../../../../src/prep/bff-urls';
 import { useEventAccess } from '../../../../../../src/prep/use-event-access';
 import { SurfaceState } from '../../../../../../src/components/surface-state';
+import { usePortalLocale } from '../../../../../../src/i18n';
 
 export default function SourcesPage() {
+  const { t } = usePortalLocale();
   const params = useParams<{ tenantId: string; eventId: string }>();
   const { tenantId, eventId } = params;
   const access = useEventAccess(tenantId, eventId);
@@ -58,12 +60,12 @@ export default function SourcesPage() {
       ]);
       if (res.networkError || res.timedOut || res.status >= 500) {
         setKind('unknown');
-        setMessage('Chưa rõ kết quả tải nguồn mã.');
+        setMessage(t('sources.h_67axiu'));
         return;
       }
       if (res.status !== 200 || !res.json || typeof res.json !== 'object') {
         setKind('error');
-        setMessage(apiErrorMessage(res.json, `HTTP ${res.status}`));
+        setMessage(apiErrorMessage(res.json, t('common.httpStatus', { status: res.status })));
         return;
       }
       const list = Array.isArray((res.json as { items?: unknown }).items)
@@ -88,7 +90,7 @@ export default function SourcesPage() {
       }
       setKind(list.length === 0 ? 'empty' : 'ready');
     },
-    [tenantId, eventId],
+    [tenantId, eventId, t],
   );
 
   useEffect(() => {
@@ -107,7 +109,7 @@ export default function SourcesPage() {
     return (
       <SurfaceState
         kind="error"
-        description={access.message}
+        description={access.messageKey ? t(access.messageKey) : undefined}
         onRetry={() => window.location.reload()}
       />
     );
@@ -116,7 +118,7 @@ export default function SourcesPage() {
     return (
       <SurfaceState
         kind="permission-denied"
-        description="Không có quyền sự kiện này."
+        description={t('config.h_g7fjbz')}
         onRetry={() => {
           window.location.href = `/t/${tenantId}`;
         }}
@@ -138,17 +140,17 @@ export default function SourcesPage() {
         },
       );
       if (res.networkError || res.timedOut || res.status >= 500) {
-        setNotice('Chưa rõ kết quả tạo nguồn — không coi là đã tạo.');
+        setNotice(t('sources.h_duauzj'));
         return;
       }
       if (res.status === 200 || res.status === 201) {
-        setNotice('Đã tạo nguồn mã.');
+        setNotice(t('sources.h_1p3knph'));
         setOpen(false);
         form.resetFields();
         void load(null);
         return;
       }
-      setNotice(apiErrorMessage(res.json, 'Không tạo được nguồn.'));
+      setNotice(apiErrorMessage(res.json, t('sources.h_q0wodv')));
     } finally {
       setBusy(false);
     }
@@ -157,12 +159,8 @@ export default function SourcesPage() {
   return (
     <Space direction="vertical" size="large" style={{ width: '100%' }}>
       <Space style={{ width: '100%', justifyContent: 'space-between' }}>
-        <Typography.Title level={3} style={{ margin: 0 }}>
-          Nguồn mã
-        </Typography.Title>
-        <Button type="primary" onClick={() => setOpen(true)}>
-          Tạo nguồn
-        </Button>
+        <Typography.Title level={3} style={{ margin: 0 }}>{t('nav.event.sources')}</Typography.Title>
+        <Button type="primary" onClick={() => setOpen(true)}>{t('sources.h_1hplg8o')}</Button>
       </Space>
 
       {kind === 'loading' ? <SurfaceState kind="loading" /> : null}
@@ -170,12 +168,10 @@ export default function SourcesPage() {
         <Alert
           type="warning"
           showIcon
-          message="Chưa rõ kết quả"
+          message={t('surface.unknown.title')}
           description={message}
           action={
-            <Button size="small" onClick={() => void load(null)}>
-              Kiểm tra lại
-            </Button>
+            <Button size="small" onClick={() => void load(null)}>{t('surface.action.recheck')}</Button>
           }
         />
       ) : null}
@@ -189,11 +185,9 @@ export default function SourcesPage() {
       {kind === 'empty' ? (
         <SurfaceState
           kind="empty"
-          description="Chưa có nguồn mã."
+          description={t('sources.h_1850hrg')}
           emptyAction={
-            <Button type="primary" onClick={() => setOpen(true)}>
-              Tạo nguồn
-            </Button>
+            <Button type="primary" onClick={() => setOpen(true)}>{t('sources.h_1hplg8o')}</Button>
           }
         />
       ) : null}
@@ -204,10 +198,10 @@ export default function SourcesPage() {
             dataSource={items}
             pagination={false}
             columns={[
-              { title: 'Tên', dataIndex: 'name' },
-              { title: 'Duyệt', dataIndex: 'approvalMode' },
+              { title: t('sources.ten'), dataIndex: 'name' },
+              { title: t('sources.duyet'), dataIndex: 'approvalMode' },
               {
-                title: 'Loại vé',
+                title: t('nav.event.types'),
                 dataIndex: 'ticketTypeIds',
                 render: (ids: string[]) =>
                   (ids ?? [])
@@ -220,7 +214,7 @@ export default function SourcesPage() {
             ]}
           />
           {cursor ? (
-            <Button onClick={() => void load(cursor)}>Tải thêm</Button>
+            <Button onClick={() => void load(cursor)}>{t('sources.h_1w8bpuo')}</Button>
           ) : null}
         </>
       ) : null}
@@ -228,7 +222,7 @@ export default function SourcesPage() {
       {notice ? <Alert type="info" showIcon message={notice} /> : null}
 
       <Drawer
-        title="Tạo nguồn mã"
+        title={t('sources.h_8t861g')}
         open={open}
         onClose={() => setOpen(false)}
         destroyOnHidden
@@ -238,12 +232,12 @@ export default function SourcesPage() {
           layout="vertical"
           initialValues={{ approvalMode: 'MANUAL' }}
         >
-          <Form.Item name="name" label="Tên" rules={[{ required: true }]}>
+          <Form.Item name="name" label={t('sources.ten')} rules={[{ required: true }]}>
             <Input maxLength={80} />
           </Form.Item>
           <Form.Item
             name="approvalMode"
-            label="Chế độ duyệt"
+            label={t('guests.approvalMode')}
             rules={[{ required: true }]}
           >
             <Select
@@ -255,21 +249,19 @@ export default function SourcesPage() {
           </Form.Item>
           <Form.Item
             name="ticketTypeId"
-            label="Loại vé"
-            rules={[{ required: true, message: 'Chọn loại vé từ danh mục' }]}
+            label={t('nav.event.types')}
+            rules={[{ required: true, message: t('ops.import.chooseTicketTypeCatalog') }]}
           >
             <Select
-              placeholder="Chọn loại vé đã tạo"
+              placeholder={t('ops.import.chooseTicketTypeCreated')}
               options={types.map((t) => ({
                 value: t.ticketTypeId,
                 label: t.label,
               }))}
-              notFoundContent="Chưa có loại vé — tạo ở mục Loại vé trước"
+              notFoundContent={t('sources.h_1pcprzj')}
             />
           </Form.Item>
-          <Button type="primary" loading={busy} onClick={() => void createSource()}>
-            Tạo
-          </Button>
+          <Button type="primary" loading={busy} onClick={() => void createSource()}>{t('sources.tao')}</Button>
         </Form>
       </Drawer>
     </Space>

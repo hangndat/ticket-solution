@@ -10,9 +10,10 @@ import {
 } from './contract-shape';
 import type { AdminScope } from './scope';
 import { eventPath } from './scope';
+import { t } from '../i18n/t';
+import { DEFAULT_PORTAL_LOCALE, type PortalLocale } from '../i18n/locale';
 
-export const PENDING_UNKNOWN =
-  'Kết quả danh sách chờ duyệt chưa biết. Không coi là đã tải.';
+export const PENDING_UNKNOWN = t(DEFAULT_PORTAL_LOCALE, 'ops.pending.unknown');
 
 export type PendingItem = {
   requestId: string;
@@ -82,20 +83,21 @@ export function interpretPendingList(
   status: number,
   json: unknown,
   networkError: boolean,
+  locale: PortalLocale = DEFAULT_PORTAL_LOCALE,
 ): PendingView {
   if (networkError || status === 0 || status >= 500) {
-    return { kind: 'unknown', message: PENDING_UNKNOWN };
+    return { kind: 'unknown', message: t(locale, 'ops.pending.unknown') };
   }
   if (status === 200) {
     const body = asRecord(json);
     if (!body || !Array.isArray(body.items)) {
-      return { kind: 'unknown', message: PENDING_UNKNOWN };
+      return { kind: 'unknown', message: t(locale, 'ops.pending.unknown') };
     }
     const items: PendingItem[] = [];
     for (const row of body.items) {
       const item = parseItem(row);
       if (!item) {
-        return { kind: 'unknown', message: PENDING_UNKNOWN };
+        return { kind: 'unknown', message: t(locale, 'ops.pending.unknown') };
       }
       items.push(item);
     }
@@ -107,15 +109,26 @@ export function interpretPendingList(
   }
   const err = apiErrorFrom(asRecord(json));
   if (err) return { kind: 'rejected', ...err };
-  return { kind: 'unknown', message: PENDING_UNKNOWN };
+  return { kind: 'unknown', message: t(locale, 'ops.pending.unknown') };
 }
 
-export function pendingListLabel(view: PendingView): string {
+export function pendingListLabel(
+  view: PendingView,
+  locale: PortalLocale = DEFAULT_PORTAL_LOCALE,
+): string {
   if (view.kind === 'list') {
-    return `Chờ duyệt: ${view.items.length} yêu cầu${view.nextCursor ? ' (còn trang)' : ''}.`;
+    return t(locale, 'ops.pending.listSummary', {
+      count: view.items.length,
+      pageSuffix: view.nextCursor
+        ? t(locale, 'common.pagination.pageSuffix')
+        : '',
+    });
   }
   if (view.kind === 'rejected') {
-    return `${view.code}: ${view.message}`;
+    return t(locale, 'ops.export.apiRejected', {
+      code: view.code,
+      message: view.message,
+    });
   }
   return view.message;
 }
