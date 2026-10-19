@@ -11,6 +11,7 @@ import {
   Typography,
   theme,
 } from 'antd';
+import type { MenuProps } from 'antd';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
@@ -42,6 +43,16 @@ function tenantFromPath(pathname: string): string | null {
 function eventFromPath(pathname: string): string | null {
   const m = pathname.match(/^\/t\/[^/]+\/e\/([^/]+)/);
   return m?.[1] ?? null;
+}
+
+/** Entry routes that should start staff OIDC immediately when discovery is unauthenticated. */
+function staffLoginUrlForPath(pathname: string): string | null {
+  if (pathname === '/') return '/api/auth/login?return=/';
+  if (pathname === '/onboarding') return '/api/auth/login?return=/onboarding';
+  if (pathname.startsWith('/onboarding/')) {
+    return `/api/auth/login?return=${encodeURIComponent(pathname)}`;
+  }
+  return null;
 }
 
 export function PortalShell({
@@ -79,6 +90,14 @@ export function PortalShell({
   useEffect(() => {
     void loadShellContext().then(setShell);
   }, []);
+
+  const staffLoginUrl =
+    shell.status === 'unauthenticated' ? staffLoginUrlForPath(pathname) : null;
+
+  useEffect(() => {
+    if (!staffLoginUrl) return;
+    window.location.replace(staffLoginUrl);
+  }, [staffLoginUrl]);
 
   const ready = shell.status === 'ready' ? shell : null;
   const caps: PortalShellCapabilities | null = ready?.caps ?? null;
@@ -135,24 +154,47 @@ export function PortalShell({
   }, [resolvedTenantId, activeEventId, activeEventPermKey, t]);
 
   const siderItems = useMemo(() => {
-    const items = orgMenu.map((item) => ({
-      key: item.href,
-      label: <Link href={item.href}>{item.label}</Link>,
-    }));
-    for (const item of eventMenu) {
+    const link = (href: string, label: string) => ({
+      key: href,
+      label: <Link href={href}>{label}</Link>,
+    });
+    const items: NonNullable<MenuProps['items']> = [];
+    if (orgMenu.length > 0) {
       items.push({
-        key: item.href,
-        label: <Link href={item.href}>{item.label}</Link>,
+        type: 'group',
+        key: 'nav-org',
+        label: t('nav.group.org'),
+        children: orgMenu.map((item) => link(item.href, item.label)),
+      });
+    }
+    const run = eventMenu.filter((item) => item.group === 'run');
+    const setup = eventMenu.filter((item) => item.group === 'setup');
+    if (run.length > 0 && activeEvent) {
+      items.push({
+        type: 'group',
+        key: 'nav-event-run',
+        label: activeEvent.name,
+        children: run.map((item) => link(item.href, item.label)),
+      });
+    }
+    if (setup.length > 0) {
+      items.push({
+        type: 'group',
+        key: 'nav-event-setup',
+        label: t('nav.group.eventSetup'),
+        children: setup.map((item) => link(item.href, item.label)),
       });
     }
     if (caps?.showPlatform) {
       items.push({
-        key: '/platform',
-        label: <Link href="/platform">Platform</Link>,
+        type: 'group',
+        key: 'nav-platform',
+        label: t('nav.group.platform'),
+        children: [link('/platform', 'Platform')],
       });
     }
     return items;
-  }, [orgMenu, eventMenu, caps?.showPlatform]);
+  }, [orgMenu, eventMenu, activeEvent, caps?.showPlatform, t]);
 
   if (pathname.startsWith('/auth')) {
     return <>{children}</>;
@@ -163,6 +205,9 @@ export function PortalShell({
   }
 
   if (shell.status === 'unauthenticated') {
+    if (staffLoginUrl) {
+      return <SurfaceState kind="loading" />;
+    }
     return (
       <SurfaceState
         kind="permission-denied"

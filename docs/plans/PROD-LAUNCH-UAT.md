@@ -200,6 +200,7 @@ Các mục sau đã vá trên VPS trong phiên 2026-10-19. Chúng **chưa** đư
 | API `PLATFORM_*` | C01, I02, J03 |
 | Nút cổng lấy origin từ server, không `127.0.0.1` | C03, E01 |
 | Portal `lang` từ cookie | B10, C08 |
+| Portal sider nhóm + home unauth → Keycloak (spinner) | B01, B08; **bổ sung** catalog nav P1–P3 [PORTAL-PROD-UAT-NAV-2026-10-19.md](../reviews/PORTAL-PROD-UAT-NAV-2026-10-19.md) và DoD [PORTAL-NAV-SPINNER-WIP-DOD-2026-10-19.md](../reviews/PORTAL-NAV-SPINNER-WIP-DOD-2026-10-19.md) — **không** thay case B06 (attendee từ chối portal) |
 
 ## 16. Thứ tự chạy (khi được lệnh thực thi)
 

@@ -25,7 +25,7 @@ export function readPortalOidcConfig(
   const redirectUri = env.OIDC_REDIRECT_URI?.trim() ?? '';
   const audience = env.OIDC_AUDIENCE?.trim() ?? '';
   const jwksUrl = env.OIDC_JWKS_URL?.trim() ?? '';
-  const scopes = env.OIDC_SCOPES?.trim() || 'openid profile email offline_access';
+  const scopes = env.OIDC_SCOPES?.trim() || 'openid profile email';
   if (
     !issuer ||
     !clientId ||

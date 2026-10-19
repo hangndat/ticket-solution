@@ -7,6 +7,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import {
   PortalLocaleProvider,
   usePortalLocale,
+  type PortalLocale,
 } from '../i18n';
 import { vemokiTheme } from '../theme/vemoki';
 
@@ -44,9 +45,15 @@ function AntdLocaleBridge({ children }: { children: ReactNode }) {
   );
 }
 
-export function PortalProviders({ children }: { children: ReactNode }) {
+export function PortalProviders({
+  children,
+  initialLocale,
+}: {
+  children: ReactNode;
+  initialLocale: PortalLocale;
+}) {
   return (
-    <PortalLocaleProvider>
+    <PortalLocaleProvider initialLocale={initialLocale}>
       <AntdLocaleBridge>{children}</AntdLocaleBridge>
     </PortalLocaleProvider>
   );

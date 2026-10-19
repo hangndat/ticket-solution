@@ -61,7 +61,9 @@ async function getJson(
  * Client discovery for portal shell — deny-by-default until server payloads parse.
  * Platform me uses a separate cookie; 401 there does not imply staff signed out.
  */
-export async function loadShellContext(): Promise<ShellLoadState> {
+let shellContextInflight: Promise<ShellLoadState> | null = null;
+
+async function loadShellContextOnce(): Promise<ShellLoadState> {
   try {
     const [tenantsResult, eventsResult, platformResult] = await Promise.all([
       getJson('/api/bff/me/tenants'),
@@ -128,4 +130,14 @@ export async function loadShellContext(): Promise<ShellLoadState> {
       messageKey: 'shell.load.unknownConnection',
     };
   }
+}
+
+/** Dedupe parallel discovery calls (shell + route guards share one flight). */
+export function loadShellContext(): Promise<ShellLoadState> {
+  if (!shellContextInflight) {
+    shellContextInflight = loadShellContextOnce().finally(() => {
+      shellContextInflight = null;
+    });
+  }
+  return shellContextInflight;
 }

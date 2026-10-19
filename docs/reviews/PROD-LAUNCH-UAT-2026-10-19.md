@@ -15,6 +15,8 @@
 
 **NO-GO** còn lại: B06 (portal attendee chưa chứng minh từ chối), H03 (không có hộp thư), J04 (`979483083f5f` chưa lên `main`). Máy thật (G01–G06, H01) vẫn hoãn, không chặn đợt này. E04, D02–D04, F02–F04 đã chạy lại trong cùng ngày.
 
+**Portal nav (bổ sung, không đổi verdict launch):** Sau deploy 2026-10-19, UAT riêng grouped sider + home spinner — [PORTAL-PROD-UAT-NAV-2026-10-19.md](./PORTAL-PROD-UAT-NAV-2026-10-19.md) (P1–P3 **PASS**, P4 **BLOCKED**); DoD WIP [PORTAL-NAV-SPINNER-WIP-DOD-2026-10-19.md](./PORTAL-NAV-SPINNER-WIP-DOD-2026-10-19.md) (**PASS with known gap**, base `52bc54e3fdcb`, chưa merge `main`). B06 trong bảng dưới vẫn độc lập với P4.
+
 ## P0
 
 | ID | Kết quả | Evidence |

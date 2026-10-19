@@ -6,6 +6,7 @@ import type { NextConfig } from 'next';
  * scripts stay strict (no unsafe-eval).
  */
 function contentSecurityPolicy(): string {
+  const dev = process.env.NODE_ENV === 'development';
   const api = process.env.API_BASE_URL?.trim();
   const issuer = process.env.OIDC_ISSUER?.trim();
   const connect: string[] = ["'self'"];
@@ -17,6 +18,13 @@ function contentSecurityPolicy(): string {
       /* ignore malformed env at build */
     }
   }
+  if (dev) {
+    // Next.js / React dev + Turbopack HMR (ws same-origin).
+    connect.push('ws:', 'wss:');
+  }
+  const scriptSrc = dev
+    ? "script-src 'self' 'unsafe-inline' 'unsafe-eval'"
+    : "script-src 'self' 'unsafe-inline'";
   return [
     "default-src 'self'",
     "base-uri 'self'",
@@ -25,7 +33,7 @@ function contentSecurityPolicy(): string {
     "img-src 'self' data:",
     "font-src 'self' data:",
     "style-src 'self' 'unsafe-inline'",
-    "script-src 'self' 'unsafe-inline'",
+    scriptSrc,
     `connect-src ${connect.join(' ')}`,
     "form-action 'self'",
   ].join('; ');
@@ -33,6 +41,8 @@ function contentSecurityPolicy(): string {
 
 const config: NextConfig = {
   poweredByHeader: false,
+  // Next 16 blocks dev assets/HMR from 127.0.0.1 unless explicitly allowed.
+  allowedDevOrigins: ['127.0.0.1', 'localhost'],
   async headers() {
     return [
       {
