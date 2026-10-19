@@ -14,9 +14,9 @@ Nguồn chính sách chọn agent + Cost tier. Chi tiết spawn coordinator → 
 - Task Spec ghi **Cost tier** `cheap|standard` (trần standard), pin `--model` từ [cost-catalog.md](../../docs/agents/cost-catalog.md) — **cấm inherit UI**.
 - Reviewer **≠** session implementer.
 
-## Persona (`--display-name`)
+## Persona (`--display-name` + `--task-title`)
 
-Roster: [docs/agents/README.md](../../docs/agents/README.md). Format `"<Persona> · <ui-label>"` (`web`/`be`/`ios`/`dod`/`sec`/`planner`…). Task title prefix cùng Persona. Pool `web`/`backend`: chọn persona chưa live cùng role.
+Roster + **ba surface UI** (Dispatch vs `worker-task_*` vs worktree card): [docs/agents/README.md](../../docs/agents/README.md). Coordinator spawn mới: **cả hai** flag — `display-name` `"<Persona> · <ui-label>"`, `task-title` `"<Persona> · <ui-label> — #<issue> …"`. Cây worktree vẫn có thể hiện `worker-task_<id>`; kiểm tra Persona qua `task-list`, không suy từ node Shell. Pool `web`/`backend`: chọn persona chưa live cùng role.
 
 ## Cost tier (worker)
 
