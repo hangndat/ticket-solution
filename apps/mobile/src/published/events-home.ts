@@ -22,9 +22,9 @@ export const PUBLISHED_LIST_FAIL_CLOSED_MESSAGE =
   'Không tải được danh sách đã xuất bản — không dùng demo thay thế.';
 
 export function initialPublishedListPhase(
-  hasApiBaseUrl: boolean,
+  catalogConfigured: boolean,
 ): PublishedListPhase {
-  return hasApiBaseUrl ? 'loading' : 'misconfigured';
+  return catalogConfigured ? 'loading' : 'misconfigured';
 }
 
 /** Map fetchPublishedEventList result → UI state (no fixture fallback). */
@@ -42,7 +42,7 @@ export function publishedListStateFromResult(
     return {
       phase: 'misconfigured',
       items: [],
-      errorMessage: 'Thiếu URL API',
+      errorMessage: 'Không thể tải danh sách sự kiện',
     };
   }
   return {
@@ -52,12 +52,3 @@ export function publishedListStateFromResult(
   };
 }
 
-export const DEMO_PUBLISHED_TENANTS = ['mfest-demo', 'demo-studio'] as const;
-
-export function nextDemoPublishedTenant(
-  current: string,
-): (typeof DEMO_PUBLISHED_TENANTS)[number] {
-  return current === DEMO_PUBLISHED_TENANTS[0]
-    ? DEMO_PUBLISHED_TENANTS[1]
-    : DEMO_PUBLISHED_TENANTS[0];
-}
