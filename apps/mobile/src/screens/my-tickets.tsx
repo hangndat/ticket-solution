@@ -520,7 +520,7 @@ function VerifiedWallet({ userId }: { userId: string }) {
         <AttendeeCta
           label="Đổi mã lấy vé"
           variant="secondary"
-          onPress={() => router.push('/redeem')}
+          onPress={() => router.push('/redeem-global')}
         />
       ) : null}
       <AttendeeCta
