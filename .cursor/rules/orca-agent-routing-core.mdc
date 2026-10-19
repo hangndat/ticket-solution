@@ -9,7 +9,7 @@ Nguồn chính sách chọn agent + Cost tier. Chi tiết spawn coordinator → 
 
 ## Mọi Task dùng Cursor
 
-`--agent cursor` cho impl, plan, review. Chỉ đổi agent khi user chỉ định rõ. **`worker-start`:** coordinator gốc (depth 0) **hoặc** Wave Leader (depth 1) khi Task Spec ghi `Wave leader authority: có` — xem `orca-wave-leader.mdc`. Epic planner, ownership, reviewer **không** spawn con (không gồm Wave Leader đã được ủy quyền).
+`--agent cursor` cho impl, plan, review. Chỉ đổi agent khi user chỉ định rõ. **`worker-start`:** chỉ **coordinator gốc (depth 0)** — Orca `nested_worker_depth` mặc định chặn spawn từ worker depth 1 (`nested_worker_depth_exceeded`); xem `orca-wave-leader.mdc`. Epic planner, ownership, reviewer **không** spawn con.
 
 - Task Spec ghi **Cost tier** `cheap|standard` (trần standard), pin `--model` từ [cost-catalog.md](../../docs/agents/cost-catalog.md) — **cấm inherit UI**.
 - Reviewer **≠** session implementer.
