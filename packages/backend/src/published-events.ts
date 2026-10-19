@@ -22,6 +22,23 @@ import type { Prisma, PrismaClient } from './generated/prisma/client';
 import { withPlatformRole } from './platform-context';
 import { withTenant } from './tenant-context';
 
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+export const PUBLISHED_EVENTS_ERROR_CODES = {
+  INVALID_CURSOR: 'INVALID_CURSOR',
+} as const;
+
+export class PublishedEventsError extends Error {
+  constructor(
+    readonly code: (typeof PUBLISHED_EVENTS_ERROR_CODES)[keyof typeof PUBLISHED_EVENTS_ERROR_CODES],
+    message: string,
+  ) {
+    super(message);
+    this.name = 'PublishedEventsError';
+  }
+}
+
 const TENANT_SLUG_RE = /^[a-z0-9]([a-z0-9-]{0,62}[a-z0-9])?$/;
 const EVENT_SLUG_RE = /^[a-z0-9]([a-z0-9-]{0,62}[a-z0-9])?$/;
 const KIND_SET = new Set<string>(EVENT_CONTENT_SECTION_KINDS);
@@ -48,6 +65,53 @@ type EventProjectionRow = {
   schema_version: number;
   payload: EventConfigPayload | Prisma.JsonValue;
 };
+
+type PlatformEventProjectionRow = EventProjectionRow & {
+  tenant_id: string;
+  tenant_slug: string;
+};
+
+type PlatformListCursor = {
+  startsAt: Date | null;
+  tenantId: string;
+  eventId: string;
+};
+
+function encodePlatformListCursor(row: {
+  starts_at: Date | null;
+  tenant_id: string;
+  id: string;
+}): string {
+  const starts = row.starts_at ? row.starts_at.toISOString() : '';
+  return Buffer.from(
+    `${starts}|${row.tenant_id}|${row.id}`,
+    'utf8',
+  ).toString('base64url');
+}
+
+function decodePlatformListCursor(raw: string): PlatformListCursor {
+  try {
+    const decoded = Buffer.from(raw, 'base64url').toString('utf8');
+    const [startsRaw, tenantId, eventId] = decoded.split('|');
+    if (tenantId === undefined || eventId === undefined) {
+      throw new Error('malformed');
+    }
+    if (!UUID_RE.test(tenantId) || !UUID_RE.test(eventId)) {
+      throw new Error('malformed');
+    }
+    const startsAt =
+      startsRaw && startsRaw.length > 0 ? new Date(startsRaw) : null;
+    if (startsAt && Number.isNaN(startsAt.getTime())) {
+      throw new Error('malformed');
+    }
+    return { startsAt, tenantId, eventId };
+  } catch {
+    throw new PublishedEventsError(
+      PUBLISHED_EVENTS_ERROR_CODES.INVALID_CURSOR,
+      'Invalid cursor',
+    );
+  }
+}
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
@@ -292,6 +356,137 @@ export async function listPublishedEvents(
       rows.length > limit ? page[page.length - 1]!.id : null;
     return {
       items: page.map((row) => mapSummary(tenant.slug, row)),
+      nextCursor,
+    };
+  });
+}
+
+/**
+ * GET platform catalog — PUBLIC published events across ACTIVE tenants (O18 / K-API-01).
+ * Uses ticket_platform_runtime RLS (published-only). Invalid cursor → PublishedEventsError.
+ */
+export async function listPlatformPublishedEvents(
+  db: PrismaClient,
+  input: {
+    cursor?: string | null;
+    limit?: number;
+  },
+): Promise<PublishedEventListResponse> {
+  const limit = Math.min(
+    Math.max(input.limit ?? CURSOR_PAGE_LIMIT.default, CURSOR_PAGE_LIMIT.min),
+    CURSOR_PAGE_LIMIT.max,
+  );
+  const cursorRaw =
+    typeof input.cursor === 'string' && input.cursor.trim().length > 0
+      ? input.cursor.trim()
+      : null;
+  const cursor = cursorRaw ? decodePlatformListCursor(cursorRaw) : null;
+
+  return withPlatformRole(db, async (tx) => {
+    const take = limit + 1;
+    const rows = cursor
+      ? cursor.startsAt
+        ? await tx.$queryRaw<PlatformEventProjectionRow[]>`
+          SELECT
+            e.id, e.tenant_id, t.slug AS tenant_slug,
+            e.slug, e.name, e.timezone, e.starts_at, e.venue_name,
+            e.published_config_version, e.published_brand_snapshot,
+            v.schema_version, v.payload
+          FROM events e
+          INNER JOIN tenants t
+            ON t.id = e.tenant_id
+           AND t.status = 'ACTIVE'
+          INNER JOIN event_config_versions v
+            ON v.tenant_id = e.tenant_id
+           AND v.event_id = e.id
+           AND v.version = e.published_config_version
+           AND v.published_at IS NOT NULL
+          WHERE e.visibility = 'PUBLIC'
+            AND e.content_status = 'PUBLISHED'
+            AND e.business_status = 'ACTIVE'
+            AND e.published_config_version IS NOT NULL
+            AND (
+              e.starts_at > ${cursor.startsAt}::timestamptz
+              OR (
+                e.starts_at = ${cursor.startsAt}::timestamptz
+                AND (
+                  e.tenant_id > ${cursor.tenantId}::uuid
+                  OR (
+                    e.tenant_id = ${cursor.tenantId}::uuid
+                    AND e.id > ${cursor.eventId}::uuid
+                  )
+                )
+              )
+              OR e.starts_at IS NULL
+            )
+          ORDER BY e.starts_at ASC NULLS LAST, e.tenant_id ASC, e.id ASC
+          LIMIT ${take}
+        `
+        : await tx.$queryRaw<PlatformEventProjectionRow[]>`
+          SELECT
+            e.id, e.tenant_id, t.slug AS tenant_slug,
+            e.slug, e.name, e.timezone, e.starts_at, e.venue_name,
+            e.published_config_version, e.published_brand_snapshot,
+            v.schema_version, v.payload
+          FROM events e
+          INNER JOIN tenants t
+            ON t.id = e.tenant_id
+           AND t.status = 'ACTIVE'
+          INNER JOIN event_config_versions v
+            ON v.tenant_id = e.tenant_id
+           AND v.event_id = e.id
+           AND v.version = e.published_config_version
+           AND v.published_at IS NOT NULL
+          WHERE e.visibility = 'PUBLIC'
+            AND e.content_status = 'PUBLISHED'
+            AND e.business_status = 'ACTIVE'
+            AND e.published_config_version IS NOT NULL
+            AND e.starts_at IS NULL
+            AND (
+              e.tenant_id > ${cursor.tenantId}::uuid
+              OR (
+                e.tenant_id = ${cursor.tenantId}::uuid
+                AND e.id > ${cursor.eventId}::uuid
+              )
+            )
+          ORDER BY e.tenant_id ASC, e.id ASC
+          LIMIT ${take}
+        `
+      : await tx.$queryRaw<PlatformEventProjectionRow[]>`
+          SELECT
+            e.id, e.tenant_id, t.slug AS tenant_slug,
+            e.slug, e.name, e.timezone, e.starts_at, e.venue_name,
+            e.published_config_version, e.published_brand_snapshot,
+            v.schema_version, v.payload
+          FROM events e
+          INNER JOIN tenants t
+            ON t.id = e.tenant_id
+           AND t.status = 'ACTIVE'
+          INNER JOIN event_config_versions v
+            ON v.tenant_id = e.tenant_id
+           AND v.event_id = e.id
+           AND v.version = e.published_config_version
+           AND v.published_at IS NOT NULL
+          WHERE e.visibility = 'PUBLIC'
+            AND e.content_status = 'PUBLISHED'
+            AND e.business_status = 'ACTIVE'
+            AND e.published_config_version IS NOT NULL
+          ORDER BY e.starts_at ASC NULLS LAST, e.tenant_id ASC, e.id ASC
+          LIMIT ${take}
+        `;
+
+    const page = rows.slice(0, limit);
+    const last = page[page.length - 1];
+    const nextCursor =
+      rows.length > limit && last
+        ? encodePlatformListCursor({
+            starts_at: last.starts_at,
+            tenant_id: last.tenant_id,
+            id: last.id,
+          })
+        : null;
+    return {
+      items: page.map((row) => mapSummary(row.tenant_slug, row)),
       nextCursor,
     };
   });
