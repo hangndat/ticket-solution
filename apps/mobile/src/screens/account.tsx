@@ -343,7 +343,7 @@ function ConfiguredAccount({
           <AttendeeCta
             label={accountCopy.staffBackToGate}
             variant="secondary"
-            onPress={() => router.replace('/(tabs)/staff-scan')}
+            onPress={() => router.replace('/(tabs)/staff')}
             disabled={busy}
             testID="account-cta-staff-back"
           />
