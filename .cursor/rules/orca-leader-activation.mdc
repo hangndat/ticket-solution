@@ -19,13 +19,12 @@ Có thể đứng một mình (`leader`) hoặc kèm nhiệm vụ (`leader, ch�
 2. **Load skill orchestration** trước khi spawn/check:
    - Đọc `/Users/admin/.agents/skills/orchestration/SKILL.md` (hoặc skill `orchestration` trong available skills).
    - Chạy `ORCA skills get orchestration` (CLI đã resolve theo skill) để lấy guide khớp binary.
-3. **Áp dụng đủ rules coordinator** (đã `alwaysApply`; ưu tiên hành xử theo chúng, không code serial thay fan-out):
-   - `orca-parallel-workers.mdc`
-   - `orca-idle-worker-fill.mdc`
-   - `orca-coordinator-mailbox.mdc`
-   - `orca-epic-orchestrator.mdc` (spawn **một** Epic planner; planner ≠ leader)
-   - `orca-agent-routing.mdc`
-   - `github-project-tracking.mdc`, `git-workflow.mdc`
+3. **Load rules coordinator (Wave B):** các file dưới **không** `alwaysApply` cho worker — session leader **phải Read** trước `worker-start` / `check --wait` (ưu tiên hành xử theo chúng, không code serial thay fan-out):
+   - `.cursor/rules/orca-parallel-workers.mdc`
+   - `.cursor/rules/orca-idle-worker-fill.mdc`
+   - `.cursor/rules/orca-coordinator-mailbox.mdc`
+   - `.cursor/rules/orca-epic-orchestrator.mdc` (spawn **một** Epic planner; planner ≠ leader)
+   - Cùng session vẫn có `alwaysApply`: `orca-agent-routing.mdc`, `github-project-tracking.mdc`, `git-workflow.mdc`, `orca-worktree-hygiene.mdc`
 4. Nếu message chỉ gọi tên (chưa giao việc): xác nhận sẵn sàng orchestrate và hỏi scope Epic/Run — **không** tự mở backlog ngoài ủy quyền.
 
 ## Không kích hoạt
@@ -43,8 +42,9 @@ Có thể đứng một mình (`leader`) hoặc kèm nhiệm vụ (`leader, ch�
 | Ownership / reviewer | 1 | Chỉ scope được giao |
 
 ```text
-✅ User: "leader" / "boss" → session = coordinator gốc; load orchestration + chạy vòng mailbox
+✅ User: "leader" / "boss" → session = coordinator gốc; Read coordinator-only rules + load orchestration + mailbox loop
 ✅ User: "boss, làm Epic D11" → kích hoạt + bắt đầu orchestrate Epic đó
 ❌ User: "leader" → tự code hết BE+web+iOS trong một terminal
 ❌ Coi "boss"/"leader" = Epic planner hoặc ownership worker
+❌ Leader spawn/check mà chưa Read mailbox / parallel / idle-fill / epic-orchestrator
 ```

@@ -11,7 +11,7 @@ alwaysApply: true
 
 Tạm thời mọi worker đều dùng `--agent cursor`: implementation, fix, tests, plan/design/spike/architecture, Epic planner, DoD/acceptance và security review. Không chọn Codex theo loại Task hoặc vì quota đã phục hồi. Chính sách này áp dụng cho dispatch mới; không tự thay agent của session đang chạy.
 
-- Chỉ **coordinator gốc (depth 0)** được `worker-start`, kể cả planner, reviewer, retry, replacement và idle fill. Epic planner và ownership workers không spawn worker con.
+- Chỉ **coordinator gốc (depth 0)** được `worker-start`, kể cả planner, reviewer, retry, replacement và idle fill. Epic planner và ownership workers không spawn worker con. Soft caps / mailbox / idle-fill / epic planner: file **coordinator-only** (không `alwaysApply` trên worker) — leader Read khi kích hoạt (`orca-leader-activation.mdc`).
 - Trước mỗi spawn, đọc chính sách này và ghi agent, **Cost tier**, **Persona** (`--display-name`), model/effort (requested vs effective), lý do vào dispatch evidence. Không kiểm tra quota Codex khi spawn Cursor; quota Codex không phải gate của Cursor.
 - Chỉ dùng agent khác khi user chỉ định rõ cho Task đó và host hỗ trợ; không suy ra override từ mô tả loại Task ở file khác. Nếu override là Codex, kiểm tra quota đúng account/profile qua nguồn host hỗ trợ, dữ liệu tối đa 5 phút, ghi `available | exhausted | unknown` và reset nếu có. Không bịa lệnh hoặc launch Codex chỉ để thử quota. Khi quota hết/không rõ, dùng Cursor; nếu user yêu cầu **chỉ Codex**, báo bị chặn.
 - Lỗi launch/auth/runtime Cursor phải chẩn đoán theo lỗi thực tế; không tự chuyển sang Codex.

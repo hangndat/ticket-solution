@@ -4,8 +4,7 @@
 
 - [AGENTS.md](../../AGENTS.md)
 - `.cursor/rules/orca-agent-routing.mdc` (mọi worker dùng `--agent cursor`; **Cost tier** `cheap|standard|heavy`; pin `--model` từ [cost-catalog.md](./cost-catalog.md) — **cấm inherit UI mặc định**)
-- `.cursor/rules/orca-epic-orchestrator.mdc` (cây worker phẳng; chỉ coordinator gốc dispatch)
-- `.cursor/rules/orca-parallel-workers.mdc` (max fan-out + soft caps: ≤5 non-review, ≤2 heavy, ≤3 reviewer), `orca-idle-worker-fill.mdc`, `orca-coordinator-mailbox.mdc`
+- `.cursor/rules/orca-epic-orchestrator.mdc` · `orca-parallel-workers.mdc` · `orca-idle-worker-fill.mdc` · `orca-coordinator-mailbox.mdc` — **coordinator-only** (`alwaysApply: false`; leader Read khi kích hoạt — Wave B)
 - `.cursor/rules/github-project-tracking.mdc`, `git-workflow.mdc`, `uat-headless.mdc`
 
 **Không** cài toàn bộ [agency-agents](https://github.com/msitarzewski/agency-agents) thành `alwaysApply` rules. Chỉ gắn **một** file `roles/*.md` vào Task Spec khi cần chuyên môn đó.

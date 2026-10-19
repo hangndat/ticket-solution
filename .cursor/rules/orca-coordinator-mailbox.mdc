@@ -1,7 +1,9 @@
 ---
-description: Orca coordinator continuous listen loop — check --wait forever while Dispatch live; drain/reply/release/idle-fill immediately; never end turn early
-alwaysApply: true
+description: "[coordinator-only] Orca coordinator continuous listen loop — check --wait forever while Dispatch live; drain/reply/release/idle-fill immediately; never end turn early"
+alwaysApply: false
 ---
+
+> **Coordinator-only (Wave B):** không `alwaysApply` cho ownership/reviewer workers. Leader/orchestrator **phải Read** file này khi kích hoạt (xem `orca-leader-activation.mdc`).
 
 # Orca — coordinator mailbox (auto drain + continuous listen)
 
