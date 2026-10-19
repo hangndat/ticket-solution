@@ -12,7 +12,6 @@ import {
   AccountGroupedDivider,
   AccountGroupedRow,
   AccountGroupedSection,
-  AccountSectionFooter,
 } from '@/components/account-grouped-section';
 import { Notice, Page } from '@/components/page';
 import { accountCopy } from '@/components/screen-state-copy';
