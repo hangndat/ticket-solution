@@ -5,8 +5,9 @@
 | Issue | [#329](https://github.com/hangndat/ticket-solution/issues/329) · Parent Epic [#301](https://github.com/hangndat/ticket-solution/issues/301) / Story [#309](https://github.com/hangndat/ticket-solution/issues/309) |
 | Role | `product-ba` (+ coordinator ops IdP) · `docs/agents/roles/product-ba.md` |
 | Architecture impact | **Không** — ops IdP demo account + BA copy |
-| Ngày (UTC) | 2026-10-18 |
-| Docs tip SHA | `eff4b0ed4af1c34c2f36b758d99687b51fe9db29` (evidence) · branch tip at PR: run `git rev-parse HEAD` on `hangndat/d13-s5-t2-demo-reviewer` |
+| Ngày (UTC) | 2026-10-19 (revalidation ops + docs refresh) |
+| Docs tip SHA | `git rev-parse HEAD` trên branch PR docs (không commit secret) |
+| Ops revalidation | 2026-10-19 — ROPC + kcadm + DB read-only trên VPS (không in password/token) |
 | Deploy marker VPS (đọc) | `0a65f3c2f2d51357ee1a6270151d279758188fb7` (`/opt/vemoki/deployed-sha.txt` — không suy = tip binary store) |
 | Cấm | Commit mật khẩu / client secret; EAS Cloud; submit/store mutate; deploy dịch vụ ngoài IdP user provision |
 
@@ -44,26 +45,32 @@ Fixture password values vẫn là các giá trị đã công bố nội bộ tro
    - Password = tương ứng từ file
    - Notes thêm 1 dòng staff: `Staff scanner: <email> / <password> (Camera required).`
 3. Sau mỗi vòng App Review: xoay mật khẩu (`kcadm.sh set-password`) + cập nhật file secret + ASC; **không** mở PR chứa password.
-4. Cấm escalate demo thành platform owner / `ticket-platform-*` audience.
+4. Smoke ROPC (operator): `client_id=ticket-web`, secret = `OIDC_CLIENT_SECRET` trong `/opt/vemoki/.env`, gọi token endpoint nội bộ docker network — chỉ in HTTP status, không log body token.
+5. Cấm escalate demo thành platform owner / `ticket-platform-*` audience.
 
 ## IdP verify commands (đã chạy — không in token/secret)
 
 ```text
-# Trong network Keycloak container: ROPC ticket-web → 200 access_token
-review_attendee ROPC_OK
-review_staff    ROPC_OK
-fixture_attendee ROPC_OK
-fixture_staff    ROPC_OK
+# 2026-10-19 — trên VPS: docker network → vemoki-keycloak-1:8080
+# ROPC client_id=ticket-web + client_secret từ /opt/vemoki/.env key OIDC_CLIENT_SECRET (KHÔNG dùng tên env giả TICKET_WEB_CLIENT_SECRET)
+fixture_attendee ROPC_HTTP=200
+fixture_staff    ROPC_HTTP=200
+review_attendee  ROPC_HTTP=200
+review_staff     ROPC_HTTP=200
 
-# kcadm (session admin trên container): users enabled, emailVerified, requiredActions=[]
+# Trước re-sync: cùng lệnh trả 401 (password IdP lệch file asc-sign-in-required.txt) → kcadm set-password
+#   từ secret file + clear requiredActions[] cho 4 user; ROPC lại 200.
+
+# kcadm: attendee@example.com, staff@example.com, review-*@vemoki.com — enabled, emailVerified, requiredActions=[]
+# Prod DB: attendee@example.com → 1 ticket ACTIVE tenant uat-device; staff + review-staff → STAFF uat-device
 # Realm issuer live: https://auth.vemoki.com/realms/ticket
 ```
 
-OIDC discovery HTTP **200** (quan sát worker): `https://auth.vemoki.com/realms/ticket/.well-known/openid-configuration`.
+OIDC discovery HTTP **200** (worker 2026-10-19): `https://auth.vemoki.com/realms/ticket/.well-known/openid-configuration`. API health **200** `https://api.vemoki.com/v1/health`. Privacy **200** `/privacy` + `/en/privacy`.
 
 ## Cross-check App Review notes (`docs/asc/app-review-notes.md`)
 
-| Claim trong notes | Đối chiếu 2026-10-18 | Verdict |
+| Claim trong notes | Đối chiếu 2026-10-19 | Verdict |
 | ----------------- | -------------------- | ------- |
 | OIDC Keycloak + PKCE; không Sign in with Apple bắt buộc | Issuer prod khớp; client `ticket-mobile` public+PKCE trong realm | OK |
 | Account deletion ≤30d anonymize + audit 730d + Guideline 5.1.1(v) | `https://vemoki.com/privacy` HTTP 200; copy O06 «anonymize ≤ 30 ngày» / «Audit log: TTL 730 ngày» | OK |
