@@ -3,7 +3,7 @@
  * Wave E — reject spawn argv without a cost-catalog --model pin.
  *
  * Usage (coordinator, before worker-start):
- *   node scripts/orca-spawn-model-preflight.mjs -- --model composer-2.5-fast ...
+ *   node scripts/orca-spawn-model-preflight.mjs -- --model composer-2.5 ...
  *   node scripts/orca-spawn-model-preflight.mjs --check-args '--agent' 'cursor' '--model' 'composer-2.5'
  *
  * Exit 0 = ok; 2 = missing/invalid model; 1 = usage error.
@@ -15,17 +15,22 @@ import { fileURLToPath } from "node:url";
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 
 const FALLBACK_PINS = [
-  "composer-2.5-fast",
   "composer-2.5",
   "claude-sonnet-5-thinking-low",
-  "claude-sonnet-5-thinking-medium",
   "grok-4.7-low",
   "gemini-3.7-flash-low",
 ];
 
 /** Trần standard — reject pins above cost-catalog band (Wave E). */
 function isAllowedPin(id) {
-  if (!/^(composer-|claude-sonnet-5-thinking-|grok-4\.7-low|gemini-3\.7-flash-low)/.test(id)) {
+  if (id === "composer-2.5-fast" || id === "claude-sonnet-5-thinking-medium") {
+    return false;
+  }
+  if (
+    !/^(composer-2\.5$|claude-sonnet-5-thinking-low$|grok-4\.7-low$|gemini-3\.7-flash-low$)/.test(
+      id,
+    )
+  ) {
     return false;
   }
   if (
