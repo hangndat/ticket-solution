@@ -45,7 +45,11 @@ import {
   decideTicketSyncApply,
 } from '@/tickets/ticket-sync-guard';
 import { logoutAndClearWalletArtifacts } from '@/tickets/wallet-logout';
-import { AccountScreen } from '@/screens/account';
+import { SessionScopedAccountDeletionPanel } from '@/account-deletion/account-deletion-panel';
+import {
+  AccountPrivacyPolicyLink,
+  AccountScreen,
+} from '@/screens/account';
 import { SessionScopedPushStatus } from '@/push/push-status';
 
 function TicketRow({ ticket }: { ticket: TicketSummary }) {
@@ -138,17 +142,8 @@ export function MyTicketsScreen() {
   );
 
   if (!configured) {
-    return (
-      <ScreenAtmosphere>
-        <ScrollView
-          contentInsetAdjustmentBehavior="automatic"
-          style={{ backgroundColor: 'transparent' }}
-          contentContainerStyle={{ padding: 20, paddingBottom: 48, gap: 20 }}
-        >
-          <AccountScreen />
-        </ScrollView>
-      </ScreenAtmosphere>
-    );
+    // AccountScreen owns Page + atmosphere — avoid nested ScrollView.
+    return <AccountScreen />;
   }
 
   if (identity.status === 'verified') {
@@ -592,6 +587,23 @@ function VerifiedWallet({ userId }: { userId: string }) {
       />
 
       <SessionScopedPushStatus />
+
+      <AccountPrivacyPolicyLink />
+
+      <View style={{ gap: 12 }}>
+        <Text
+          accessibilityRole="header"
+          style={{
+            color: brand.ink,
+            fontFamily: fontFamilies.display,
+            fontSize: 20,
+            fontWeight: '600',
+          }}
+        >
+          Yêu cầu xóa tài khoản
+        </Text>
+        <SessionScopedAccountDeletionPanel />
+      </View>
 
       <Text style={{ color: colors.secondary, fontSize: 13, lineHeight: 18 }}>
         Vé đã cache mở được khi mất mạng chỉ để xem. Không phải check-in offline;
