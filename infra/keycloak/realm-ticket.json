@@ -139,7 +139,8 @@
         "https://vemoki.com/api/admin/auth/callback",
         "https://app.vemoki.com/api/admin/auth/callback",
         "http://127.0.0.1:3013/api/auth/callback",
-        "http://localhost:3013/api/auth/callback"
+        "http://localhost:3013/api/auth/callback",
+        "https://portal.vemoki.com/api/auth/callback"
       ],
       "webOrigins": [
         "http://127.0.0.1:3000",
@@ -149,11 +150,12 @@
         "https://vemoki.com",
         "https://app.vemoki.com",
         "http://127.0.0.1:3013",
-        "http://localhost:3013"
+        "http://localhost:3013",
+        "https://portal.vemoki.com"
       ],
       "attributes": {
         "pkce.code.challenge.method": "S256",
-        "post.logout.redirect.uris": "https://app.vemoki.com/auth##https://vemoki.com/auth##http://localhost:3000/auth##http://127.0.0.1:3000/auth##http://localhost:3010/auth##http://127.0.0.1:3010/auth##http://127.0.0.1:3013/auth##http://localhost:3013/auth"
+        "post.logout.redirect.uris": "https://app.vemoki.com/auth##https://vemoki.com/auth##http://localhost:3000/auth##http://127.0.0.1:3000/auth##http://localhost:3010/auth##http://127.0.0.1:3010/auth##http://127.0.0.1:3013/auth##http://localhost:3013/auth##https://portal.vemoki.com/auth"
       },
       "protocolMappers": [
         {
@@ -249,7 +251,8 @@
         "https://app.vemoki.com/api/auth/platform/callback",
         "https://app.vemoki.com/api/platform/auth/callback",
         "http://127.0.0.1:3013/api/auth/platform/callback",
-        "http://localhost:3013/api/auth/platform/callback"
+        "http://localhost:3013/api/auth/platform/callback",
+        "https://portal.vemoki.com/api/auth/platform/callback"
       ],
       "webOrigins": [
         "http://127.0.0.1:3000",
@@ -259,11 +262,12 @@
         "https://vemoki.com",
         "https://app.vemoki.com",
         "http://127.0.0.1:3013",
-        "http://localhost:3013"
+        "http://localhost:3013",
+        "https://portal.vemoki.com"
       ],
       "attributes": {
         "pkce.code.challenge.method": "S256",
-        "post.logout.redirect.uris": "https://app.vemoki.com/auth##https://vemoki.com/auth##http://localhost:3000/auth##http://127.0.0.1:3000/auth##http://localhost:3010/auth##http://127.0.0.1:3010/auth##http://127.0.0.1:3013/auth##http://localhost:3013/auth"
+        "post.logout.redirect.uris": "https://app.vemoki.com/auth##https://vemoki.com/auth##http://localhost:3000/auth##http://127.0.0.1:3000/auth##http://localhost:3010/auth##http://127.0.0.1:3010/auth##http://127.0.0.1:3013/auth##http://localhost:3013/auth##https://portal.vemoki.com/auth"
       },
       "protocolMappers": [
         {

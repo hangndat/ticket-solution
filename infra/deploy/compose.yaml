@@ -218,6 +218,10 @@ services:
       PRODUCT_ORIGIN: ${PRODUCT_ORIGIN:-https://app.vemoki.com}
       MARKETING_ORIGIN: ${MARKETING_ORIGIN:-https://vemoki.com}
       MARKETING_HOSTS: ${MARKETING_HOSTS:-vemoki.com,www.vemoki.com}
+      # ADR-20 / Issue #502 dual-run: GET/HEAD /admin|/platform → portal (default OFF until cutover)
+      PORTAL_ORIGIN: ${PORTAL_ORIGIN:-https://portal.vemoki.com}
+      PORTAL_ADMIN_REDIRECT: ${PORTAL_ADMIN_REDIRECT:-0}
+      PORTAL_DUAL_RUN_BANNER: ${PORTAL_DUAL_RUN_BANNER:-1}
     command: ['pnpm', '--filter', '@ticket/web', 'exec', 'next', 'start', '--hostname', '0.0.0.0', '--port', '3000']
     extra_hosts:
       - 'auth.vemoki.com:host-gateway'
@@ -226,6 +230,50 @@ services:
       edge:
         aliases:
           - vemoki-web
+    depends_on:
+      api:
+        condition: service_started
+      keycloak:
+        condition: service_healthy
+
+  portal:
+    image: vemoki-runtime:local
+    working_dir: /app
+    volumes:
+      - /opt/vemoki/src:/app
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      OIDC_ISSUER: https://auth.vemoki.com/realms/ticket
+      OIDC_CLIENT_ID: ticket-admin-web
+      # Staff portal secret — set OIDC_ADMIN_CLIENT_SECRET in /opt/vemoki/.env (from Keycloak ticket-admin-web)
+      OIDC_CLIENT_SECRET: ${OIDC_ADMIN_CLIENT_SECRET}
+      OIDC_REDIRECT_URI: ${PORTAL_OIDC_REDIRECT_URI:-https://portal.vemoki.com/api/auth/callback}
+      OIDC_SCOPES: openid profile email offline_access
+      OIDC_AUDIENCE: ${OIDC_AUDIENCE:-ticket-api}
+      OIDC_JWKS_URL: ${OIDC_JWKS_URL:-https://auth.vemoki.com/realms/ticket/protocol/openid-connect/certs}
+      PLATFORM_OIDC_JWKS_URL: ${PLATFORM_OIDC_JWKS_URL:-https://auth.vemoki.com/realms/ticket/protocol/openid-connect/certs}
+      PLATFORM_OIDC_CLIENT_ID: ${PLATFORM_OIDC_CLIENT_ID:-ticket-platform-web}
+      PLATFORM_OIDC_CLIENT_SECRET: ${PLATFORM_OIDC_CLIENT_SECRET:-}
+      PLATFORM_OIDC_REDIRECT_URI: ${PORTAL_PLATFORM_OIDC_REDIRECT_URI:-https://portal.vemoki.com/api/auth/platform/callback}
+      PLATFORM_OIDC_AUDIENCE: ${PLATFORM_OIDC_AUDIENCE:-ticket-platform-api}
+      PLATFORM_OIDC_REQUIRED_ACR: ${PLATFORM_OIDC_REQUIRED_ACR:-vemoki-mfa}
+      API_BASE_URL: http://api:3001
+      AUTH_COOKIE_SECURE: 'true'
+      WEB_PUBLIC_ORIGIN: ${PORTAL_WEB_PUBLIC_ORIGIN:-https://portal.vemoki.com}
+      PUBLIC_WEB_ORIGIN: ${PORTAL_WEB_PUBLIC_ORIGIN:-https://portal.vemoki.com}
+      PORTAL_ORIGIN: ${PORTAL_ORIGIN:-https://portal.vemoki.com}
+      PRODUCT_ORIGIN: ${PRODUCT_ORIGIN:-https://app.vemoki.com}
+      MARKETING_ORIGIN: ${MARKETING_ORIGIN:-https://vemoki.com}
+      PORTAL_DUAL_RUN_BANNER: ${PORTAL_DUAL_RUN_BANNER:-1}
+    command: ['pnpm', '--filter', '@ticket/portal', 'exec', 'next', 'start', '--hostname', '0.0.0.0', '--port', '3013']
+    extra_hosts:
+      - 'auth.vemoki.com:host-gateway'
+    networks:
+      internal: {}
+      edge:
+        aliases:
+          - vemoki-portal
     depends_on:
       api:
         condition: service_started
