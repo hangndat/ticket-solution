@@ -47,11 +47,25 @@ Nguồn sự thật cho label UI trên hàng Dispatch. Coordinator **bắt buộ
 | `architect` | Dexter | |
 | `product-design` | Liv | |
 | `product-ba` | Kazu | |
-| `reviewer-dod` | James | |
-| `reviewer-security` | James | cùng persona; session vẫn ≠ implementer |
+| `reviewer-dod` | James | UI label: **`dod`** (không ghi `reviewer-dod`) |
+| `reviewer-security` | James | UI label: **`sec`**; session vẫn ≠ implementer |
 | Epic planner (không Role catalog) | Dexter | `--display-name "Dexter · planner"` |
 
-**Format:** `--display-name "<Persona> · <roleId|planner>"` — ví dụ `Higo · web`, `James · reviewer-dod`, `Dexter · planner`.
+**Format:** `--display-name "<Persona> · <ui-label>"` — Role ID trong Spec vẫn đầy đủ; **ui-label** ngắn trên Orca:
+
+| Role ID | ui-label |
+| ------- | -------- |
+| `web` | `web` |
+| `backend` | `be` |
+| `ios` | `ios` |
+| `architect` | `arch` |
+| `product-ba` | `ba` |
+| `product-design` | `pd` |
+| `reviewer-dod` | `dod` |
+| `reviewer-security` | `sec` |
+| Epic planner | `planner` |
+
+Ví dụ: `Higo · web`, `James · dod`, `James · sec`, `Gonic · be`, `Dexter · planner`.
 
 **Chọn persona (pool):**
 
@@ -108,7 +122,7 @@ Thêm khối sau vào spec `worker-start` (tiếng Việt cho phần mô tả us
 - Cost tier: cheap | standard | heavy — pin --model từ docs/agents/cost-catalog.md (cấm inherit mặc định)
 - Architecture impact: Có | Không — lý do + link thiết kế/ADR hiện hành
 - Nếu Có: quyết định còn mở, Task architect/handoff và consumer thực sự phải chờ
-- Orca: --display-name "<Persona> · <Role ID>" (bắt buộc khi spawn)
+- Orca: --display-name "<Persona> · <ui-label>" (bắt buộc khi spawn; vd. James · dod)
 ```
 
 Với reviewer, thêm:
