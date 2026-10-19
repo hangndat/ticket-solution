@@ -1,4 +1,8 @@
 import { isAppScheme } from '../identity/app-schemes.ts';
+import {
+  extractMembershipInviteTokenFromUrl,
+  isMembershipInviteToken,
+} from './membership-invite-url.ts';
 
 const UUID =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -19,6 +23,11 @@ export type InstalledAppLink =
       href: string;
     }
   | { kind: 'staff-access'; href: string }
+  | {
+      kind: 'membership-invite';
+      token: string;
+      href: string;
+    }
   | { kind: 'uat-session'; href: string }
   | { kind: 'oauth-callback' }
   | { kind: 'passthrough' };
@@ -36,6 +45,9 @@ export function parseInstalledAppLink(input: string): InstalledAppLink {
 
   const claim = parseInvitationClaimLink(raw);
   if (claim) return claim;
+
+  const membershipInvite = parseMembershipInviteLink(raw);
+  if (membershipInvite) return membershipInvite;
 
   const uatSession = parseUatSessionLink(raw);
   if (uatSession) return uatSession;
@@ -80,6 +92,7 @@ export function routeForInstalledAppLink(input: string): string | null {
     parsed.kind === 'event' ||
     parsed.kind === 'invitation-claim' ||
     parsed.kind === 'staff-access' ||
+    parsed.kind === 'membership-invite' ||
     parsed.kind === 'uat-session'
   ) {
     return parsed.href;
@@ -125,6 +138,60 @@ function parseUatSessionLink(raw: string): InstalledAppLink | null {
     kind: 'uat-session',
     href: `/uat/session?${qs.toString()}`,
   };
+}
+
+/**
+ * Organization membership invite (Phase 3) — web `/invite` only, not native claim.
+ * - `https://app.vemoki.com/invite#token=…`
+ * - `vemoki://invite?token=…` or `/invite?token=`
+ */
+function parseMembershipInviteLink(raw: string): InstalledAppLink | null {
+  let url: URL;
+  try {
+    if (/^https?:\/\//i.test(raw)) {
+      url = new URL(raw);
+      const path = url.pathname.replace(/\/+$/, '') || '/';
+      if (path !== '/invite') return null;
+      const token = extractMembershipInviteTokenFromUrl(url);
+      return {
+        kind: 'membership-invite',
+        token,
+        href: membershipInviteRouteHref(token),
+      };
+    }
+    if (/^[a-z][a-z0-9+.-]*:/i.test(raw)) {
+      url = new URL(raw);
+      if (!isAppScheme(url.protocol)) return null;
+    } else {
+      const pathOnly = raw.startsWith('/') ? raw : `/${raw}`;
+      url = new URL(`ticketsolution://host${pathOnly}`);
+    }
+  } catch {
+    return null;
+  }
+
+  const parts = [
+    url.hostname,
+    ...url.pathname.split('/').filter((p) => p.length > 0),
+  ].filter((p) => p && p !== 'host');
+
+  const inviteHead = parts[0]?.toLowerCase();
+  if (inviteHead !== 'invite') return null;
+  if (parts.length > 1) return null;
+
+  const token = extractMembershipInviteTokenFromUrl(url);
+  return {
+    kind: 'membership-invite',
+    token,
+    href: membershipInviteRouteHref(token),
+  };
+}
+
+function membershipInviteRouteHref(token: string): string {
+  if (token && isMembershipInviteToken(token)) {
+    return `/membership-invite?token=${encodeURIComponent(token)}`;
+  }
+  return '/membership-invite';
 }
 
 /**

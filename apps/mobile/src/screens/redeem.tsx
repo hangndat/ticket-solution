@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
-import { Pressable, Text, TextInput, View } from 'react-native';
+import { Animated, Pressable, Text, TextInput, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import {
   redeemActionAnnouncement,
@@ -30,6 +30,7 @@ import {
   type RedeemDecision,
 } from '@/redeem/redeem-client';
 import { RedeemFormFields } from '@/redeem/redeem-form-fields';
+import { useFadeInOnMount } from '@/hooks/use-fade-in-on-mount';
 import { colors } from '@/theme/colors';
 import { fontFamilies } from '@/theme/fonts';
 
@@ -318,6 +319,9 @@ export function RedeemScreen() {
     : outcome.detail;
   const authDenied =
     decision?.kind === 'denied' && AUTH_CODES.has(decision.code);
+  const showOutcome = Boolean(decision && !authDenied);
+  const { opacity: outcomeOpacity, reduceMotionOs } =
+    useFadeInOnMount(showOutcome);
 
   return (
     <Page>
@@ -435,19 +439,17 @@ export function RedeemScreen() {
         }
         onTermsAcceptedChange={setTermsAccepted}
       />
-      <Pressable
-        {...redeemActionAnnouncement()}
-        accessibilityState={{
-          disabled: busy || !verified || code.trim().length === 0,
-        }}
-        disabled={busy || !verified || code.trim().length === 0}
-        onPress={() => void submit()}
-        style={button}
-      >
-        <Text style={buttonLabel}>{busy ? 'Đang xử lý…' : 'Đổi mã'}</Text>
-      </Pressable>
-      {decision && !authDenied ? (
-        <View
+      <View {...redeemActionAnnouncement()}>
+        <AttendeeCta
+          label={busy ? 'Đang xử lý…' : 'Đổi mã'}
+          disabled={busy || !verified || code.trim().length === 0}
+          onPress={() => void submit()}
+          testID="redeem-cta-submit"
+        />
+      </View>
+      {showOutcome && decision ? (
+        <Animated.View
+          style={{ opacity: reduceMotionOs ? 1 : outcomeOpacity }}
           {...redeemDecisionAnnouncement({
             kind: decision.kind,
             title: outcome.title,
@@ -458,41 +460,37 @@ export function RedeemScreen() {
           <Notice title={outcome.title} tone={outcome.tone}>
             {outcomeDetail}
           </Notice>
-        </View>
+        </Animated.View>
       ) : null}
       {statusNote ? <Notice title="Trạng thái">{statusNote}</Notice> : null}
       {decision?.kind === 'pending' ? (
-        <Pressable
-          {...redeemStatusRefreshAnnouncement()}
-          accessibilityState={{ disabled: busy }}
-          disabled={busy}
-          onPress={() => void refreshStatus()}
-          style={button}
-        >
-          <Text style={buttonLabel}>Kiểm tra lại</Text>
-        </Pressable>
+        <View {...redeemStatusRefreshAnnouncement()}>
+          <AttendeeCta
+            label="Kiểm tra lại"
+            disabled={busy}
+            onPress={() => void refreshStatus()}
+            testID="redeem-cta-refresh-status"
+          />
+        </View>
       ) : null}
       {decision?.kind === 'issued' ? null : attempt?.key ? (
-        <Pressable
-          {...redeemReconcileAnnouncement()}
-          accessibilityState={{ disabled: busy }}
-          disabled={busy}
-          onPress={() => void reconcile()}
-          style={button}
-        >
-          <Text style={buttonLabel}>Kiểm tra lại cùng lần thử</Text>
-        </Pressable>
+        <View {...redeemReconcileAnnouncement()}>
+          <AttendeeCta
+            label="Kiểm tra lại cùng lần thử"
+            disabled={busy}
+            onPress={() => void reconcile()}
+            testID="redeem-cta-reconcile"
+          />
+        </View>
       ) : null}
       {decision?.kind === 'stale' ? (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Tải lại biểu mẫu và điều khoản"
+        <AttendeeCta
+          label="Tải lại biểu mẫu"
+          variant="secondary"
           disabled={busy}
           onPress={() => void loadPublishedSchema()}
-          style={buttonSecondary}
-        >
-          <Text style={buttonSecondaryLabel}>Tải lại biểu mẫu</Text>
-        </Pressable>
+          testID="redeem-cta-reload-schema"
+        />
       ) : null}
     </Page>
   );
@@ -506,21 +504,6 @@ const field = {
   color: colors.label,
   fontSize: 17,
   fontFamily: fontFamilies.body,
-};
-
-const button = {
-  minHeight: 48,
-  padding: 14,
-  borderRadius: 12,
-  backgroundColor: colors.accent,
-};
-
-const buttonLabel = {
-  color: colors.onAccent,
-  fontSize: 17,
-  fontFamily: fontFamilies.bodySemiBold,
-  fontWeight: '600' as const,
-  textAlign: 'center' as const,
 };
 
 const buttonSecondary = {
