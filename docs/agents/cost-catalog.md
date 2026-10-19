@@ -4,6 +4,8 @@ Nguồn **pin** `--model` theo Cost tier khi spawn `--agent cursor`. Rule: `.cur
 
 **Không** dùng `auto` / omit flags làm mặc định (inherit UI thường đắt). Chỉ fallback inherit khi host **reject** mọi ID trong band và đã ghi limitation.
 
+**Trần tier (2026-10-19):** chỉ **`cheap`** và **`standard`**. Cấm Cost tier `heavy` và mọi `--model` vượt band standard (vd. `…-thinking-high`, `gpt-5.6-sol-high`, `claude-opus-*`, `…-xhigh`/`max`/`ultra`). Task trước đây gắn `heavy` → **`standard`**; ưu tiên `claude-sonnet-5-thinking-medium` khi architecture impact / scope rộng, còn lại `composer-2.5`.
+
 ## Refresh catalog (bắt buộc khi pin fail / account đổi)
 
 ```text
@@ -23,10 +25,9 @@ Nguồn: `agent models` trên máy này. Effort nằm **trong** model id Cursor 
 | Cost tier | `--model` (primary) | Fallback cùng band | Ghi chú |
 | --------- | ------------------- | ------------------ | ------- |
 | `cheap` | `composer-2.5-fast` | `composer-2.5`, `grok-4.7-low`, `gemini-3.7-flash-low` | Docs, hygiene, DoD hẹp, planner đơn |
-| `standard` | `composer-2.5` | `claude-sonnet-5-thinking-medium`, `claude-sonnet-5-thinking-low` | Feature BE/web/iOS, BA/PD, DoD thường |
-| `heavy` | `claude-sonnet-5-thinking-high` | `gpt-5.6-sol-high` | Architect/ADR, security hot path, DAG rối, retry reasoning |
+| `standard` | `composer-2.5` | `claude-sonnet-5-thinking-medium`, `claude-sonnet-5-thinking-low` | Mọi việc còn lại (feature, architect, security hot path, planner DAG rối, retry reasoning) |
 
-**Cấm mặc định:** `…-xhigh`, `…-max`, `…-ultra`, `claude-opus-*` (trừ user/spec yêu cầu rõ).
+**Cấm:** tier/model vượt standard — `heavy`, `…-thinking-high`, `gpt-5.6-sol-high`, `…-xhigh`, `…-max`, `…-ultra`, `claude-opus-*` (kể cả user override trừ khi coordinator ghi ngoại lệ ngoài Orca spawn).
 
 ## Map spawn
 
@@ -47,15 +48,13 @@ Sau launch: so `launch.requested` vs `launch.effective`. Reject primary → th�
 | Docs/rules, Project comment, rename, board hygiene, CI fix hẹp | `cheap` (ưu tiên coordinator **inline** nếu &lt; ~15 phút) |
 | DoD docs-only / revalidate tip SHA / checklist cũ (≤ ~15 file, không runtime) | `cheap` |
 | Epic planner DAG đơn (&lt; ~8 Task, không ADR mở) | `cheap` |
-| Feature coding, BA/PD thường, DoD có runtime/checks | `standard` |
-| `reviewer-security` thường | `standard` |
-| Architect/ADR; security authz/RLS/quota/check-in/secrets; planner DAG rối; retry sau FAIL reasoning | `heavy` |
+| Feature coding, BA/PD, DoD runtime, reviewer-security (mọi hot path) | `standard` |
+| Architect/ADR; planner DAG rối; retry sau FAIL reasoning | `standard` (`claude-sonnet-5-thinking-medium` khi architecture impact / scope đa-file lớn) |
 
-DoD thường **không** nâng `heavy` chỉ vì implementer đã `heavy`.
+Không tier cao hơn `standard`; không nâng model chỉ vì role “quan trọng”.
 
 ## Soft caps liên quan
 
-- ≤ **2** `heavy` live / Run (`orca-agent-routing` / `orca-parallel-workers`)
 - ≤ **3** reviewer (`reviewer-dod` + `reviewer-security`) live / Run — xem `orca-parallel-workers.mdc`
 
 ## Wave D — đo cost (bắt buộc 1 dòng / wave)
@@ -63,12 +62,12 @@ DoD thường **không** nâng `heavy` chỉ vì implementer đã `heavy`.
 Sau mỗi wave `worker-start` (hoặc cuối checkpoint idle-fill), coordinator ghi **một dòng evidence** (Issue comment / Run note / chat leader):
 
 ```text
-cost-wave | run=<id> | n=<spawned> | cheap=<c> standard=<s> heavy=<h> | pinned=<p> inherit=<i> | inherit%=<i*100/n> | models=<effective ids> | source=receipt|receipt+mixed|wt-comment-estimate
+cost-wave | run=<id> | n=<spawned> | cheap=<c> standard=<s> | pinned=<p> inherit=<i> | inherit%=<i*100/n> | models=<effective ids> | source=receipt|receipt+mixed|wt-comment-estimate
 ```
 
 | Trường | Nguồn |
 | ------ | ----- |
-| `cheap/standard/heavy` | Cost tier trong Spec / task-title / displayName |
+| `cheap/standard` | Cost tier trong Spec / task-title / displayName (`heavy` legacy → đếm `standard`) |
 | `pinned` | `launch.effective.model` (hoặc `requested`) khác null và không `auto` |
 | `inherit` | omit `--model`, `--model auto`, hoặc receipt `effective.model` **null** |
 | `models` | `launch.effective.model` (ưu tiên). Comment wt chỉ là soft signal (`source=mixed` / `wt-comment-estimate`) |

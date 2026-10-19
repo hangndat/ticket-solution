@@ -1,48 +1,93 @@
 ---
-description: Web + iOS UAT must be headless — never steal the user's macOS mouse (Wave G: glob-scoped, not alwaysApply)
+description: Web + iOS UAT via Orca browser/emulator — never steal the user's macOS mouse (Wave G)
 globs: scripts/**/*uat*,apps/web/.uat-artifacts/**,apps/mobile/.uat-artifacts/**,docs/reviews/**/*uat*,docs/reviews/**/*UAT*
 alwaysApply: false
 ---
 
-# UAT / nghiệm thu e2e — headless only
+# UAT / nghiệm thu e2e — Orca browser + emulator (headless-safe)
 
-> **Wave G:** rule này **không** `alwaysApply`. Cursor nạp khi mở file khớp `globs` (scripts UAT, `.uat-artifacts`, reviews UAT). Task UAT / milestone gate (a) trên path khác → agent **Read** file này trước khi chạy UAT.
+> **Wave G:** rule này **không** `alwaysApply`. Cursor nạp khi mở file khớp `globs`. Task UAT / milestone gate (a) → **Read** file này trước khi chạy UAT.
 
-Never drive the user's visible desktop mouse or focus for UAT. Prefer HTTP scripts, Playwright headless, AXe HID, or Orca's **embedded** browser — not Computer Use on Chrome/Safari/Simulator.
+**Chính sách (2026-10-19):** UAT web và iOS trong Orca/agent session dùng **100% surface Orca** — embedded **browser** (`orca tab …`, `orca exec …`) và **emulator** (`orca emulator …`). Không tự chạy Playwright trực tiếp, không `axe`/AXe HID trực tiếp, không Computer Use trên Chrome/Safari/Simulator.app của user.
+
+Vẫn **không** cướp chuột macOS: Orca browser tab và emulator pane là headless-safe (khác `orca computer click` trên app ngoài).
+
+Load skill trước khi drive:
+
+```text
+ORCA skills get orca-cli          # browser / worktree / tabs
+ORCA skills get orca-emulator     # iOS Simulator trong Orca
+```
+
+(`ORCA` = executable Orca đã resolve — xem stub `orca-cli` / `computer-use`.)
 
 ## Milestone gate
 
-Closing a **milestone / Epic** on Project #3 requires **headless UAT evidence** (web and/or iOS per scope) as part of Milestone DoD — see `github-project-tracking.mdc` § Milestone / Epic DoD gate (a). Record commands, artifact paths (`apps/web/.uat-artifacts/`, `apps/mobile/.uat-artifacts/`), and exact SHA in `docs/reviews/*` or the Issue comment. Headed UAT does **not** satisfy the gate unless the user explicitly waived headless for that milestone.
+Closing a **milestone / Epic** on Project #3 requires **UAT evidence** (web and/or iOS per scope) — gate (a) in `github-project-tracking.mdc`. Ghi **lệnh Orca**, artifact paths, exact SHA trong `docs/reviews/*` hoặc Issue comment. Headed desktop browser / `open -a Simulator` **không** đủ gate trừ khi user miễn headless cho milestone đó.
 
-## Web
+## Web — Orca embedded browser (bắt buộc cho agent UAT)
 
-1. Prefer `scripts/web-uat.sh` / `node scripts/web-uat.mjs` (Playwright **headless** Chromium).
-2. Prefer HTTP/cookie scripts when enough (`pnpm uat:p4-oidc`, curl to `/api/auth/*` + `/api/bff/me`).
-3. Orca **embedded** browser (`orca-cli` browser refs) is OK — it is not the user's Chrome/Safari window.
-4. Default launcher is cached `chrome-headless-shell` (no Chrome.app window). System Chrome only as fallback. `WEB_UAT_HEADED=1` only if the user explicitly asks to watch.
-5. Optional: `pnpm exec playwright install chromium` for a bundled browser.
+1. Scope worktree: `--worktree path:<abs>` hoặc `active` (UAT chạy trên wt Issue/Epic).
+2. Mở tab: `orca tab create --url <baseUrl> --worktree … --json` → lấy `browserPageId` / `--page`.
+3. Drive tab: `orca exec --command "<agent-browser …>" --page <id> --json`  
+   Ví dụ: `goto`, `snapshot`, `click`, `fill`, `wait`, `screenshot`.
+4. Liệt kê / đổi tab: `orca tab list`, `orca tab switch`, `orca reload`, `back` / `forward`.
+5. **HTTP-only** smoke (OIDC/BFF parity, không cần DOM): vẫn được `pnpm uat:p4-oidc`, curl `/api/auth/*` — không thay browser UAT khi AC yêu cầu UI.
+
+### Web artifacts
+
+- Copy screenshot từ output `orca exec --command "screenshot"` (path JSON) vào `apps/web/.uat-artifacts/` (gitignored) hoặc path review được giao.
+- Ghi trong evidence: `--page`, URL cuối, lệnh Orca đã chạy.
 
 ### Forbidden (web)
 
-- `cliclick` / AppleScript clicks on Chrome, Safari, Arc, Edge, etc.
-- `ORCA computer click` (or any computer-use mouse path) targeting an external browser
-- Opening a headed Playwright/Chrome window unless the user asked to watch
+- `scripts/web-uat.mjs` / Playwright **trực tiếp** từ agent session (legacy/CI wrapper — xem mục Fallback).
+- `cliclick` / AppleScript trên Chrome, Safari, Arc, Edge.
+- `orca computer click` (Computer Use) trên browser **ngoài** Orca embedded tab.
+- Headed Playwright / `WEB_UAT_HEADED=1` trừ khi user yêu cầu xem.
 
-## iOS Simulator
+## iOS Simulator — Orca emulator (bắt buộc cho agent UAT)
 
-1. Prefer `scripts/sim-uat.sh` (AXe HID + `xcrun simctl`).
-2. Boot with `sim-uat boot` / `simctl boot` — do **not** `open -a Simulator` unless the user asks to watch.
-3. Interact with `sim-uat tap|type|describe|screenshot` or `axe … --udid <UDID>`.
+1. Boot/install app: `xcrun simctl` / Metro / local build **trước** (policy EAS cloud build vẫn cấm).
+2. Attach: `orca emulator attach "<device name|udid>" --worktree … --json` (có thể boot qua attach; **không** `open -a Simulator` trừ khi user xem).
+3. Cây a11y: `orca emulator ax --json` — tọa độ **0..1**, tap tại tâm frame: `x + width/2`, `y + height/2`.
+4. Tương tác: `orca emulator tap <x> <y>`, `type "ascii"`, `gesture`, `button home`, `rotate …`.
+5. Passthrough: `orca emulator exec --command "<serve-sim subcommand>" --json` khi cần lệnh chưa wrap.
+6. Xong: `orca emulator kill` (helper); `shutdown` nếu cần tắt device.
+
+Per-worktree device: không chiếm simulator của worker khác — `SIM_DEVICE` / UDID riêng trong Task Spec (giữ `AGENTS.md`).
+
+### iOS artifacts
+
+- Screenshot/evidence: dùng output từ lệnh Orca/serve-sim hợp lệ hoặc `xcrun simctl io <udid> screenshot …` **sau** attach Orca (không AXe trực tiếp). Lưu dưới `apps/mobile/.uat-artifacts/` (gitignored).
 
 ### Forbidden (iOS)
 
-- `cliclick` / AppleScript `System Events` clicks on Simulator
-- `ORCA computer click` targeting Simulator.app
-- CGEvent / Quartz mouse injection at the Simulator window
+- `scripts/sim-uat.sh` / **axe** trực tiếp từ agent session (legacy helper — Fallback).
+- `cliclick` / AppleScript `System Events` trên Simulator.app.
+- `orca computer click` nhắm Simulator.app window.
+- CGEvent / Quartz mouse injection at Simulator window.
 
-## Artifacts
+## Fallback (CI, human local, không phải agent session Orca)
 
-- Web screenshots: `apps/web/.uat-artifacts/` (gitignored)
-- Sim screenshots: `apps/mobile/.uat-artifacts/` (gitignored)
+Repo giữ wrapper cũ cho pipeline hoặc dev không có Orca runtime:
+
+- Web: `scripts/web-uat.sh` → Playwright headless shell.
+- iOS: `scripts/sim-uat.sh` → AXe + simctl.
+
+Agent/coordinator **không** chọn fallback khi Orca `tab` / `emulator` khả dụng; nếu Orca lỗi → báo limitation + log lỗi, không tự chuyển Computer Use.
+
+## Anti-patterns
+
+```text
+❌ Agent UAT web bằng Playwright import / web-uat.mjs trực tiếp
+❌ Agent UAT iOS bằng axe CLI / sim-uat.sh trực tiếp
+❌ Computer Use trên Chrome/Safari/Simulator.app của user
+❌ Bỏ evidence (lệnh Orca, --page/--device, artifact path, SHA)
+
+✅ orca tab create → exec snapshot/click/screenshot (--page)
+✅ orca emulator attach → ax → tap/type → artifact dưới .uat-artifacts/
+✅ HTTP smoke bổ sung khi AC không cần DOM
+```
 
 Still never use Expo/EAS Cloud Build for this project.

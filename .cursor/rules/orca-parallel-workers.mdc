@@ -35,7 +35,6 @@ Orca CLI **không** expose hard `max concurrent workers` (chỉ nested depth). �
 | ------ | -------- | ------- |
 | Feature coding + Epic planner + architect + BA/PD (non-review) | ≤ **5** live / Run | Planner và BA/PD đếm vào bucket này |
 | Cùng ownership slice | ≤ **1** feature coding | Giữ nguyên — tránh conflict git/worktree |
-| Cost tier `heavy` | ≤ **2** live / Run | Pin model: `docs/agents/cost-catalog.md` + `orca-agent-routing.mdc` |
 | Reviewer DoD + security live | ≤ **3** live / Run | Không vào bucket feature; ưu tiên PR blocking merge; có thể gộp DoD∥security cùng PR/SHA một session |
 | Fix CI hẹp | Ngoài cap feature | Vẫn tôn Cost tier `cheap` khi máy móc |
 
@@ -49,7 +48,7 @@ Parallel-first **không** có nghĩa dispatch feature không giới hạn. Trư�
 2. Nếu đầy: wave ưu tiên **review + fix + integration** (có thể song song nhiều slice) thay vì wave feature mới.
 3. Nếu một slice dưới ngưỡng còn slice khác đầy: vẫn spawn parallel cho slice còn room; slice đầy chỉ nhận review/fix.
 4. Idle fill tuân `orca-idle-worker-fill.mdc` (cùng thứ tự ưu tiên).
-5. Map Cost tier → `--model`/`--effort` trên fresh launch; không reuse pane `heavy` cho Task `cheap` (xem `orca-agent-routing.mdc`).
+5. Map Cost tier → `--model` trên fresh launch (trần **standard**); không reuse pane `standard` cho Task `cheap` (xem `orca-agent-routing.mdc`).
 
 Mục tiêu: giữ throughput đa slice, giảm thời gian chờ duyệt, CI re-run và bão session/RAM do quá nhiều Dispatch live.
 
@@ -69,7 +68,7 @@ Mục tiêu: giữ throughput đa slice, giảm thời gian chờ duyệt, CI re
 ❌ One mega-spec that mixes apps/api + apps/web + apps/mobile
 ❌ Spawn 3 feature workers while ≥3 Chờ duyệt / nhiều PR cùng slice chưa DoD
 ❌ Spawn thêm feature khi ≥5 Dispatch non-review live (bỏ qua concurrent soft cap)
-❌ Mọi Task = heavy / >2 heavy live cùng lúc
+❌ Spawn model vượt standard (thinking-high, sol-high, opus, xhigh/max)
 ❌ Spawn không `--model` (inherit UI) hoặc `--model auto` làm mặc định
 ❌ >3 reviewer DoD/security live cùng lúc
 ❌ Epic planner spawn worker con hoặc tự code toàn Epic

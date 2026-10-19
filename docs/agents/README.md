@@ -3,7 +3,7 @@
 **Trạng thái:** đã áp dụng trên `main` (PR #195 + wiring process). Catalog này **bổ sung chuyên môn** khi spawn worker — bắt buộc gắn Role ID vào Task Spec theo `AGENTS.md` / rule Orca. Không thay thế và không được ưu tiên hơn:
 
 - [AGENTS.md](../../AGENTS.md)
-- `.cursor/rules/orca-agent-routing.mdc` (mọi worker dùng `--agent cursor`; **Cost tier** `cheap|standard|heavy`; pin `--model` từ [cost-catalog.md](./cost-catalog.md) — **cấm inherit UI mặc định**; Wave E: `scripts/orca-spawn-model-preflight.mjs` trước spawn; `cost-wave` từ receipt)
+- `.cursor/rules/orca-agent-routing.mdc` (mọi worker dùng `--agent cursor`; **Cost tier** `cheap|standard` — trần standard; pin `--model` từ [cost-catalog.md](./cost-catalog.md) — **cấm inherit UI mặc định**; Wave E: `scripts/orca-spawn-model-preflight.mjs` trước spawn; `cost-wave` từ receipt)
 - `.cursor/rules/orca-epic-orchestrator.mdc` · `orca-parallel-workers.mdc` · `orca-idle-worker-fill.mdc` · `orca-coordinator-mailbox.mdc` — **coordinator-only** (`alwaysApply: false`; leader Read khi kích hoạt — Wave B)
 - `.cursor/rules/github-project-tracking.mdc`, `git-workflow.mdc`
 - `.cursor/rules/uat-headless.mdc` — **Wave G:** không `alwaysApply`; globs UAT/artifacts; Task UAT/milestone → Read nếu cần
@@ -118,7 +118,7 @@ Không spawn PD/BA để “làm luôn” code BE+web+iOS. Không reuse session 
   - Paths: <ownership>
   - AC: <3–7 gạch đầu dòng>
   - Architecture impact: Có | Không — <1 câu>
-  - Cost tier: cheap | standard | heavy
+  - Cost tier: cheap | standard
   - --model: <pin từ docs/agents/cost-catalog.md>
   - --display-name: "<Persona> · <ui-label>"
 
@@ -150,8 +150,7 @@ ORCA orchestration worker-start \
 | Tier | `--model` pin (cost-catalog) |
 | ---- | ---------------------------- |
 | cheap | `composer-2.5-fast` |
-| standard | `composer-2.5` |
-| heavy | `claude-sonnet-5-thinking-high` |
+| standard | `composer-2.5` (hoặc `claude-sonnet-5-thinking-medium` khi architecture impact / scope lớn) |
 
 Sau wave: `node scripts/orca-cost-wave-evidence.mjs` → ghi dòng `cost-wave` (`source=receipt`). Comment wt `Cost … · model …` **không** thay `--model` argv.
 
@@ -177,7 +176,7 @@ Khối mở rộng (khi cần) — giữ tương thích:
 - Đọc file role SAU AGENTS.md và rule Orca; nếu xung đột → rule dự án thắng.
 - Không mở rộng MVP / ngoài phạm vi Issue.
 - Agent: cursor (theo orca-agent-routing.mdc)
-- Cost tier: cheap | standard | heavy — pin --model từ docs/agents/cost-catalog.md (cấm inherit mặc định)
+- Cost tier: cheap | standard — pin --model từ docs/agents/cost-catalog.md (cấm inherit mặc định; trần standard)
 - Architecture impact: Có | Không — lý do + link thiết kế/ADR hiện hành
 - Nếu Có: quyết định còn mở, Task architect/handoff và consumer thực sự phải chờ
 - Orca: --display-name "<Persona> · <ui-label>" (vd. James · dod+sec)
@@ -205,7 +204,7 @@ Khối bổ sung khi giao Task Architect (điền cùng parent/scope/AC trong sp
 - Persona: Dexter
 - File: docs/agents/roles/architect.md
 - Agent: cursor (theo orca-agent-routing.mdc)
-- Cost tier: heavy
+- Cost tier: standard (`claude-sonnet-5-thinking-medium` khi scope/ADR phức tạp)
 - Mode: Thiết kế | Kiểm tra sự phù hợp
 - Architecture impact: Có — <quyết định/rủi ro cụ thể>
 - Orca: --display-name "Dexter · architect"
@@ -225,7 +224,7 @@ Khối bổ sung khi giao Task Architect (điền cùng parent/scope/AC trong sp
 - Không copy `roles/*.md` vào `.cursor/rules/` với `alwaysApply: true`.
 - Không cài roster upstream qua Agency Agents app / `install.sh --tool cursor` cho toàn bộ division.
 - Không đổi `--agent` theo role hoặc theo Persona.
-- Không gắn `heavy` cho mọi Task chỉ vì Role “quan trọng”; DoD thường = `standard`.
+- Không gắn model vượt standard cho Task “quan trọng”; trần tier = `standard`.
 - Không để worker depth > 1; planner/worker không spawn con.
 - Không bỏ `--display-name` / Persona khỏi spawn mới (xem roster ở trên).
 
@@ -249,7 +248,7 @@ Wave rộng (ví dụ — spawn cùng lúc nếu unblocked):
 | Nhiều reviewer trên **PR khác nhau** | `dod` ∥ `sec` trên **cùng** PR/SHA (dùng `dod+sec`) |
 | Coding slice A ∥ review/fix slice B ∥ BA/PD | Chờ cả Story đóng mới mở Task ready Story khác |
 
-Cùng ownership slice: tối đa **một** feature coding Dispatch active (tránh conflict git). Soft cap: ≤**5** non-review live / Run; ≤**2** `heavy` live; reviewer/fix không chiếm bucket feature. Parallel vẫn theo `orca-parallel-workers.mdc` + idle fill. WIP / `Chờ duyệt` đầy **hoặc** soft cap đầy → ưu tiên **song song** reviewer/fix trước feature mới.
+Cùng ownership slice: tối đa **một** feature coding Dispatch active (tránh conflict git). Soft cap: ≤**5** non-review live / Run; reviewer/fix không chiếm bucket feature. Parallel vẫn theo `orca-parallel-workers.mdc` + idle fill. WIP / `Chờ duyệt` đầy **hoặc** soft cap đầy → ưu tiên **song song** reviewer/fix trước feature mới.
 
 ## Upstream
 

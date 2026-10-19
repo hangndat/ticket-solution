@@ -10,6 +10,6 @@ Before changing APIs, read expo-overview and react-native-best-practices, detect
 
 Keep src/app routes-only and screen bodies outside routes. Label demo content explicitly and preserve tenant scoping. Private identity/cache loads must preserve user partitioning and generation guards; credential presence alone never proves identity.
 
-Run typecheck, lint, meaningful identity tests, Expo config/doctor and iOS JS export. The build script validates JS, not a native binary or App Store release. Follow the live Orca dispatch for checkpoints/heartbeats/completion; do not delegate unless authorized.
+Run typecheck, lint, meaningful identity tests, Expo config/doctor and iOS JS export. The build script validates JS, not a native binary or App Store release. Simulator UAT from agents: `orca emulator` only (see root `.cursor/rules/uat-headless.mdc`). Follow the live Orca dispatch for checkpoints/heartbeats/completion; do not delegate unless authorized.
 
 Roadmap, Issues, task tracking and user-facing progress reports must be in Vietnamese, except technical terms, IDs, commands and raw verification logs. Do not begin new feature implementation before the roadmap is prepared for user review.

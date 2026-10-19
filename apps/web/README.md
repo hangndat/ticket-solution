@@ -59,18 +59,17 @@ Redeem needs real tenant/event UUIDs and a seeded redemption code from the API
 inventory (not the fictional demo event fixture IDs). Optional query prefills:
 `/redeem?tenantId=<uuid>&eventId=<uuid>`.
 
-## Web UAT (headless — no macOS mouse)
+## Web UAT (Orca browser — agent sessions)
 
-Do **not** drive Chrome/Safari with `cliclick`, AppleScript, or Orca computer-use clicks.
-Use Playwright headless (or HTTP scripts when enough):
+Trong Orca/agent: **chỉ** embedded browser — `orca tab create`, `orca exec --command "…"` (agent-browser: `goto`, `snapshot`, `click`, `screenshot`, …). Không Playwright trực tiếp, không Computer Use trên Chrome/Safari user. Chi tiết: `.cursor/rules/uat-headless.mdc`, skill `orca-cli`.
 
 ```bash
-pnpm exec playwright install chromium
-
-./scripts/web-uat.sh auth-smoke http://127.0.0.1:3000
-./scripts/web-uat.sh bff-login http://127.0.0.1:3000
-./scripts/web-uat.sh screenshot http://127.0.0.1:3000/auth
+orca tab create --url http://127.0.0.1:3000 --worktree active --json
+orca exec --command "goto http://127.0.0.1:3000/auth" --page <browserPageId> --json
+orca exec --command "screenshot" --page <browserPageId> --json
+# copy PNG path → apps/web/.uat-artifacts/
 ```
 
-Also: `pnpm uat:p4-oidc` (OIDC/BFF parity over HTTP, no browser).
-Screenshots: `apps/web/.uat-artifacts/` (gitignored). Uses cached `chrome-headless-shell` (no Chrome window). `WEB_UAT_HEADED=1` only if you ask to watch.
+HTTP-only: `pnpm uat:p4-oidc` (OIDC/BFF parity, no DOM).
+
+**CI / local fallback:** `./scripts/web-uat.sh …` (Playwright headless wrapper — không dùng từ agent UAT khi Orca browser sẵn sàng).
