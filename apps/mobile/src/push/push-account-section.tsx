@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
+import { useCallback, useState, useSyncExternalStore } from 'react';
+import { useFocusEffect } from 'expo-router';
 import { ActivityIndicator, View } from 'react-native';
 import {
   AccountGroupedDivider,
@@ -74,9 +75,11 @@ export function PushAccountSection({
     }
   }, [provider]);
 
-  useEffect(() => {
-    void refreshPermission();
-  }, [refreshPermission, identity.status]);
+  useFocusEffect(
+    useCallback(() => {
+      void refreshPermission();
+    }, [refreshPermission, identity.status]),
+  );
 
   const model = derivePushAccountUi({
     provider,

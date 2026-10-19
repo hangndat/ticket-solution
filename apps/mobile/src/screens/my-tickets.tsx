@@ -411,7 +411,6 @@ function VerifiedWallet({ userId }: { userId: string }) {
 
   useEffect(() => {
     if (tickets.length < 1) {
-      setShowPushPrompt(false);
       return;
     }
     let cancelled = false;
@@ -491,7 +490,7 @@ function VerifiedWallet({ userId }: { userId: string }) {
         </LoadingState>
       ) : null}
 
-      {showPushPrompt ? (
+      {showPushPrompt && tickets.length > 0 ? (
         <WalletPushPromptCard onDismiss={() => setShowPushPrompt(false)} />
       ) : null}
 
