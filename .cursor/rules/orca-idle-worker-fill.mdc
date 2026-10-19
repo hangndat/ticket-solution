@@ -1,7 +1,9 @@
 ---
-description: Coordinator gốc keeps idle workers busy — review-queue backpressure; agent routing theo chính sách hiện hành
-alwaysApply: true
+description: "[coordinator-only] Coordinator gốc keeps idle workers busy — review-queue backpressure; agent routing theo chính sách hiện hành"
+alwaysApply: false
 ---
+
+> **Coordinator-only (Wave B):** không `alwaysApply` cho ownership/reviewer workers. Leader/orchestrator **phải Read** file này khi kích hoạt (xem `orca-leader-activation.mdc`).
 
 # Orca — never leave an unblocked worker idle
 
