@@ -67,15 +67,16 @@ Phân biệt (không gộp): **code complete** (impl + PR) ≠ **acceptance comp
 
 When a coding Task moves to `Chờ duyệt` (or DoD review is required):
 
-1. Coordinator gốc spawn **một reviewer độc lập / Task (hoặc PR)** — scope = review only (no drive-by refactors). Nhiều Task/PR `Chờ duyệt` độc lập → spawn **nhiều reviewer cùng wave** (max fan-out; xem `orca-parallel-workers.mdc`). Chọn agent/override theo `orca-agent-routing.mdc`; gắn Role `reviewer-dod` (và `reviewer-security` khi slice nhạy cảm) theo [docs/agents/README.md](../../docs/agents/README.md).
-2. Spec must name the Issue #, diff/PR/paths, **exact commit SHA(s)** under review, Role ID(s), and DoD checklist; outcome `succeeded` only on pass.
-3. `PASS with known gap` chỉ được tính pass theo điều kiện gap trong `orca-agent-routing.mdc`; thiếu acceptance/security gate bắt buộc không được Hoàn thành.
-4. On pass → coordinator gốc may set `Hoàn thành` once merge+CI+evidence (và milestone gates nếu áp dụng) are done.
-5. On fail → Status stays `Chờ duyệt` or back to `Đang làm`; comment findings; re-dispatch coding worker.
+1. Coordinator gốc spawn **một reviewer độc lập / Task (hoặc PR)** — scope = review only (no drive-by refactors). Nhiều Task/PR `Chờ duyệt` độc lập → spawn **nhiều reviewer cùng wave** (cap ≤3 live; xem `orca-parallel-workers.mdc`). Chọn agent theo `orca-agent-routing.mdc`.
+2. **Wave C — gộp DoD∥security cùng PR/SHA:** nếu slice cần cả DoD và security → **một** session James (`--display-name "James · dod+sec"`), Spec ghi cả hai Role ID + checklist gộp; **không** spawn `dod` và `sec` song song trên cùng exact SHA. Tách hai session chỉ khi hot path (authz/RLS/quota/check-in/secrets) **và** coordinator ghi lý do tách trong evidence.
+3. Spec must name the Issue #, diff/PR/paths, **exact commit SHA(s)** under review, Role ID(s), and DoD (± security) checklist; outcome `succeeded` only on pass.
+4. `PASS with known gap` chỉ được tính pass theo điều kiện gap trong `orca-agent-routing.mdc`; thiếu acceptance/security gate bắt buộc không được Hoàn thành.
+5. On pass → coordinator gốc may set `Hoàn thành` once merge+CI+evidence (và milestone gates nếu áp dụng) are done.
+6. On fail → Status stays `Chờ duyệt` or back to `Đang làm`; comment findings; re-dispatch coding worker.
 
-Task có `Architecture impact: Có`: checklist DoD phải đối chiếu implementation với handoff/ADR được xác nhận. Design drift đáng kể hoặc rủi ro kiến trúc chưa giải quyết → coordinator giao role `architect` kiểm tra độc lập trên exact SHA theo [architect.md](../../docs/agents/roles/architect.md), có thể song song DoD/security. Review kiến trúc không thay hai gate này; blocker còn mở không được Hoàn thành. Không yêu cầu Architect cho mọi PR.
+Task có `Architecture impact: Có`: checklist DoD phải đối chiếu implementation với handoff/ADR được xác nhận. Design drift đáng kể hoặc rủi ro kiến trúc chưa giải quyết → coordinator giao role `architect` kiểm tra độc lập trên exact SHA theo [architect.md](../../docs/agents/roles/architect.md), có thể song song session DoD(+sec). Review kiến trúc không thay gate DoD/security; blocker còn mở không được Hoàn thành. Không yêu cầu Architect cho mọi PR.
 
-**Acceptance / DoD review** và **security-sensitive** slices: luôn reviewer khác session implementer (agent theo `orca-agent-routing.mdc`); DoD không thay security gate độc lập khi slice nhạy cảm.
+**Acceptance / DoD** và **security checklist**: luôn reviewer khác session implementer; khi gộp `dod+sec`, security gate vẫn phải có trong artifact (không bỏ qua vì đã “có DoD”).
 
 ### Evidence bắt buộc (exact SHA)
 
