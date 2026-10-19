@@ -7,7 +7,7 @@
 | Worker session | `term_66d444e5-4b5d-48cb-a3c7-339a22d0bc87` · task `task_3c4fc4740f00` · dispatch `ctx_6c7e5d06982c` |
 | Architecture impact | **Không** |
 | Source tip SHA (exact, binary/UAT) | `ee95f0ee3f0da32cfaad0d4e741b54dd1685d6ae` |
-| Evidence docs commit (exact) | *(filled after docs commit — see git tip of this file)* |
+| Evidence docs commit (exact) |  |
 | Branch | `hangndat/ux-ui-p2-gates-ios-527` |
 | Phase 2 iOS merge | PR [#535](https://github.com/hangndat/ticket-solution/pull/535) merge `be97ff5337d1ca6ca8af18ba90a695c03ecf4066` (headRefOid DoD `6dcd6998ed32a3648536421170ed8c033888db3c`) — on tip ancestry |
 | Bundle | `com.hangndat.ticket` · app `Vemoki` · version `1.0.0` · buildNumber `12` |
