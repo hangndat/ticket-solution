@@ -17,7 +17,10 @@ const {
   publishEventConfig,
   seedD9DemoDataset,
   listPublishedEvents,
+  listPlatformPublishedEvents,
   getPublishedEventDetail,
+  PublishedEventsError,
+  PUBLISHED_EVENTS_ERROR_CODES,
   D9_DEMO,
   readCodeHmacEnvironment,
 } = require('../dist');
@@ -191,6 +194,18 @@ test(
       assert.equal(second.configsPublished, 0);
       assert.ok(second.configsSkipped >= 1);
 
+      const platformList = await listPlatformPublishedEvents(db, { limit: 20 });
+      assert.ok(platformList.items.length >= 1);
+      assert.ok(
+        platformList.items.some(
+          (row) =>
+            row.tenantSlug === 'mfest-demo' && row.slug === 'mfest',
+        ),
+      );
+      for (const row of platformList.items) {
+        assert.equal('contentStatus' in row, false);
+      }
+
       const list = await listPublishedEvents(db, {
         tenantSlug: D9_DEMO.tenants.mfest.slug,
       });
@@ -250,6 +265,13 @@ test(
       assert.equal(
         await listPublishedEvents(db, { tenantSlug: 'unknown-tenant' }),
         null,
+      );
+
+      await assert.rejects(
+        () => listPlatformPublishedEvents(db, { cursor: 'not-opaque' }),
+        (error) =>
+          error instanceof PublishedEventsError &&
+          error.code === PUBLISHED_EVENTS_ERROR_CODES.INVALID_CURSOR,
       );
 
       // Unpublished draft under same tenant → 404
@@ -322,6 +344,21 @@ test(
       });
       assert.ok(list2);
       assert.equal(list2.items.length, 2);
+
+      const platformAfterDraft = await listPlatformPublishedEvents(db, {
+        limit: 50,
+      });
+      assert.ok(
+        platformAfterDraft.items.some((row) => row.slug === 'draft-only'),
+      );
+      const page1 = await listPlatformPublishedEvents(db, { limit: 1 });
+      if (page1.nextCursor) {
+        const page2 = await listPlatformPublishedEvents(db, {
+          cursor: page1.nextCursor,
+          limit: 1,
+        });
+        assert.notEqual(page2.items[0]?.id, page1.items[0]?.id);
+      }
     } finally {
       if (db) await db.$disconnect().catch(() => {});
       if (name) {

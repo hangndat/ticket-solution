@@ -61,6 +61,8 @@ const PLATFORM_OPEN_TABLES = new Set([
   'support_grants',
   'tenant_email_usage',
 ]);
+/** ADR-19 platform catalog — published public rows only (MPR-T1). */
+const PLATFORM_PUBLISHED_TABLES = new Set(['events', 'event_config_versions']);
 
 async function startIsolatedPostgres() {
   const name = 'ticket-rls-cat-' + randomBytes(4).toString('hex');
@@ -293,6 +295,11 @@ test(
           continue;
         }
         if (policy.role_name === 'ticket_platform_runtime') {
+          if (PLATFORM_PUBLISHED_TABLES.has(policy.relname)) {
+            assert.match(policy.using_expr, /PUBLIC/);
+            assert.match(policy.using_expr, /PUBLISHED/);
+            continue;
+          }
           assert.ok(
             PLATFORM_OPEN_TABLES.has(policy.relname),
             'unexpected platform policy on ' + policy.relname,

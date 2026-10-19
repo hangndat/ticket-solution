@@ -4344,6 +4344,44 @@
         ]
       }
     },
+    "/v1/public/events": {
+      "get": {
+        "operationId": "PlatformPublishedEventsController_list",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublishedEventListResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "public-events"
+        ]
+      }
+    },
     "/v1/public/tenants/{tenantSlug}/events": {
       "get": {
         "operationId": "PublishedEventsController_list",
