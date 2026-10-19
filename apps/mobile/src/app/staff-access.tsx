@@ -1,18 +1,21 @@
 import { useEffect, useSyncExternalStore } from 'react';
-import { Pressable, Text } from 'react-native';
+import { Animated, Text, View } from 'react-native';
 import { Redirect, router } from 'expo-router';
+import { AttendeeCta } from '@/components/attendee-cta';
 import { Notice, Page } from '@/components/page';
 import { LoadingState } from '@/components/screen-state';
+import { useFadeInOnMount } from '@/hooks/use-fade-in-on-mount';
 import { session } from '@/identity/session';
 import {
   staffDenyCopy,
   staffEligibility,
 } from '@/identity/staff-eligibility';
 import { colors } from '@/theme/colors';
+import { fontFamilies } from '@/theme/fonts';
 
 /**
  * Deep-link / soft-entry for staff when tab may be hidden (O02).
- * Eligible → replace into tab staff. Otherwise VI fail-closed deny (no empty shell).
+ * Eligible → replace into tab staff. Otherwise VI fail-closed deny (no scanner preview).
  */
 export default function StaffAccessScreen() {
   const identity = useSyncExternalStore(
@@ -48,38 +51,41 @@ export default function StaffAccessScreen() {
     return <Redirect href="/(tabs)/staff" />;
   }
 
+  return <StaffAccessDeny />;
+}
+
+function StaffAccessDeny() {
+  const { opacity, reduceMotionOs } = useFadeInOnMount(true);
+
   return (
     <Page>
-      <Notice title={staffDenyCopy.title} tone="deny">
-        {staffDenyCopy.body}
-      </Notice>
-      <Text
+      <Animated.View
+        style={{ gap: 20, opacity: reduceMotionOs ? 1 : opacity }}
         accessibilityLiveRegion="assertive"
-        accessibilityRole="text"
-        style={{ color: colors.secondary, fontSize: 15, lineHeight: 22 }}
       >
-        {staffDenyCopy.announcement}
-      </Text>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="Về trang Sự kiện"
-        onPress={() => {
-          router.replace('/(tabs)/(events)');
-        }}
-        style={{
-          marginTop: 8,
-          paddingVertical: 14,
-          paddingHorizontal: 16,
-          borderRadius: 12,
-          borderCurve: 'continuous',
-          backgroundColor: colors.signal,
-          alignItems: 'center',
-        }}
-      >
-        <Text style={{ color: colors.onAccent, fontSize: 17, fontWeight: '600' }}>
-          Về Sự kiện
+        <Notice title={staffDenyCopy.title} tone="deny">
+          {staffDenyCopy.body}
+        </Notice>
+        <Text
+          accessibilityRole="text"
+          style={{
+            color: colors.secondary,
+            fontSize: 15,
+            lineHeight: 22,
+            fontFamily: fontFamilies.body,
+          }}
+        >
+          {staffDenyCopy.announcement}
         </Text>
-      </Pressable>
+        <View>
+          <AttendeeCta
+            label="Về Sự kiện"
+            accessibilityLabel="Về trang Sự kiện"
+            onPress={() => router.replace('/(tabs)/(events)')}
+            testID="staff-access-cta-events"
+          />
+        </View>
+      </Animated.View>
     </Page>
   );
 }
