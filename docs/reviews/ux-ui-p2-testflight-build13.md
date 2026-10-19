@@ -4,7 +4,7 @@
 | ----- | ----- |
 | Issue | [#545](https://github.com/hangndat/ticket-solution/issues/545) |
 | Authorization | Orca Dispatch `ctx_35948f44a3c5` / Task `task_74780f8e6f4e` (coordinator Epic follow-up after UX-UI P2) |
-| Source tip (git) | `_TIP_SHA_` (branch `hangndat/ux-ui-p2-tf-545` — `buildNumber` 12→13 + this evidence) |
+| Source tip (git) | `e630d0b655631345b2168117a87c499edbb2ef08` (branch `hangndat/ux-ui-p2-tf-545` — `buildNumber` 12→13 + this evidence) |
 | Base `main` | `0b42515e4ad940a45ecd5c08341a26af0e68e621` |
 | Bundle | `com.hangndat.ticket` · Team `BLUA62D52G` |
 | Marketing version | `1.0.0` |
