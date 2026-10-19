@@ -21,6 +21,7 @@ import {
   type ExportView,
 } from '../export-job';
 import { usePortalLocale } from '../../i18n';
+import { SavedViewsToolbar } from '../../views';
 
 type Props = {
   tenantId: string;
@@ -188,6 +189,17 @@ export function ExportPanel({
         showIcon
         message={t('ops.export.panelInfo')}
         description={t('ops.export.panelDescription')}
+      />
+      <SavedViewsToolbar
+        tenantId={tenantId}
+        eventId={eventId}
+        surface="exports"
+        filters={{ status: statusFilter }}
+        onApply={(next) => {
+          setStatusFilter(
+            next.filters.status as ExportHistoryItem['status'] | undefined,
+          );
+        }}
       />
       <Space wrap role="search" aria-label={t('ops.export.filterHistoryAria')}>
         <Select

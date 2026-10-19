@@ -14,6 +14,7 @@ import {
   type NotificationListView,
 } from '../notifications';
 import { usePortalLocale, type MessageKey } from '../../i18n';
+import { SavedViewsToolbar } from '../../views';
 
 type Props = {
   tenantId: string;
@@ -111,6 +112,18 @@ export function NotificationsOpsPanel({
         showIcon
         message={t('notify.acceptedDelimitedFilters')}
         description={t('notify.acceptedLegend')}
+      />
+      <SavedViewsToolbar
+        tenantId={tenantId}
+        eventId={eventId}
+        surface="notifications"
+        filters={{ state, channel }}
+        onApply={(next) => {
+          setState(
+            next.filters.state as NotificationProviderStatus | undefined,
+          );
+          setChannel(next.filters.channel as NotificationChannel | undefined);
+        }}
       />
       <Space wrap role="search" aria-label={t('ops.notifications.filtersTitle')}>
         <Select

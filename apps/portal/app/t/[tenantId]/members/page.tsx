@@ -13,7 +13,7 @@ import {
   Typography,
 } from 'antd';
 import { useParams } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type {
   MembershipRole,
   PortalInviteSummary,
@@ -34,6 +34,7 @@ import {
 import { useTenantAccess } from '../../../../src/prep/use-event-access';
 import { SurfaceState } from '../../../../src/components/surface-state';
 import { usePortalLocale } from '../../../../src/i18n';
+import { SavedViewsToolbar } from '../../../../src/views';
 
 const ROLES: MembershipRole[] = [
   'Owner',
@@ -62,12 +63,25 @@ export default function MembersPage() {
   const [message, setMessage] = useState<string | undefined>();
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [roleFilter, setRoleFilter] = useState<MembershipRole | undefined>();
+  const [statusFilter, setStatusFilter] = useState<
+    'ACTIVE' | 'REVOKED' | undefined
+  >();
   const [form] = Form.useForm<{
     email: string;
     role: MembershipRole;
     eventId?: string;
     eventRole?: MembershipRole;
   }>();
+
+  const filteredMembers = useMemo(() => {
+    return members.filter((row) => {
+      if (roleFilter && row.role !== roleFilter) return false;
+      if (statusFilter === 'ACTIVE' && row.revokedAt) return false;
+      if (statusFilter === 'REVOKED' && !row.revokedAt) return false;
+      return true;
+    });
+  }, [members, roleFilter, statusFilter]);
 
   const reload = useCallback(async () => {
     await Promise.resolve();
@@ -283,6 +297,40 @@ export default function MembersPage() {
 
       {notice ? <Alert type="info" showIcon message={notice} /> : null}
 
+      <SavedViewsToolbar
+        tenantId={tenantId}
+        eventId={null}
+        surface="members"
+        filters={{ role: roleFilter, status: statusFilter }}
+        onApply={(next) => {
+          setRoleFilter(next.filters.role as MembershipRole | undefined);
+          setStatusFilter(
+            next.filters.status as 'ACTIVE' | 'REVOKED' | undefined,
+          );
+        }}
+      />
+      <Space wrap role="search" aria-label={t('views.members.roleFilter')}>
+        <Select
+          allowClear
+          placeholder={t('views.members.roleFilter')}
+          style={{ minWidth: 160 }}
+          value={roleFilter}
+          options={ROLES.map((r) => ({ value: r, label: r }))}
+          onChange={(v) => setRoleFilter(v)}
+        />
+        <Select
+          allowClear
+          placeholder={t('views.members.statusFilter')}
+          style={{ minWidth: 160 }}
+          value={statusFilter}
+          options={[
+            { value: 'ACTIVE', label: 'ACTIVE' },
+            { value: 'REVOKED', label: 'REVOKED' },
+          ]}
+          onChange={(v) => setStatusFilter(v)}
+        />
+      </Space>
+
       {loadKind === 'loading' ? <SurfaceState kind="loading" /> : null}
       {loadKind === 'unknown' ? (
         <Alert
@@ -311,7 +359,7 @@ export default function MembersPage() {
               children: (
                 <Table
                   rowKey="membershipId"
-                  dataSource={members}
+                  dataSource={filteredMembers}
                   pagination={false}
                   columns={[
                     { title: 'Email', dataIndex: 'emailMasked' },

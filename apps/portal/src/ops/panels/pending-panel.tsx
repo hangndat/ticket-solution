@@ -12,6 +12,7 @@ import {
   type PendingView,
 } from '../pending';
 import { usePortalLocale } from '../../i18n';
+import { SavedViewsToolbar } from '../../views';
 
 type CatalogItem = { id: string; label: string };
 
@@ -144,6 +145,17 @@ export function PendingPanel({
           message={t('ops.h_1lp1xu6')}
           description={t('ops.h_1tlh7rr')}
         />
+        <SavedViewsToolbar
+          tenantId={tenantId}
+          eventId={eventId}
+          surface="pending"
+          filters={{ sourceId, ticketTypeId, q: q.trim() || undefined }}
+          onApply={(next) => {
+            setSourceId(next.filters.sourceId);
+            setTicketTypeId(next.filters.ticketTypeId);
+            setQ(next.filters.q ?? '');
+          }}
+        />
         <Space wrap role="search" aria-label={t('ops.pending.filtersTitle')}>
           <Select
             allowClear
@@ -159,7 +171,7 @@ export function PendingPanel({
             placeholder="Ticket type (catalog)"
             style={{ minWidth: 200 }}
             value={ticketTypeId}
-            options={ticketTypes.map((t) => ({ value: t.id, label: t.label }))}
+            options={ticketTypes.map((tt) => ({ value: tt.id, label: tt.label }))}
             onChange={(v) => setTicketTypeId(v)}
             aria-label={t('ops.h_1wib0ad')}
           />
