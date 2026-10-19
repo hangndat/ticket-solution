@@ -39,7 +39,7 @@ Orca CLI **không** expose hard `max concurrent workers` (chỉ nested depth). �
 | Reviewer DoD + security live | ≤ **3** live / Run | Không vào bucket feature; ưu tiên PR blocking merge; có thể gộp DoD∥security cùng PR/SHA một session |
 | Fix CI hẹp | Ngoài cap feature | Vẫn tôn Cost tier `cheap` khi máy móc |
 
-Khi bucket feature+planner+BA/PD đã ≥ **5** live: **không** spawn thêm feature / BA / PD / architect; vẫn được spawn **reviewer/fix** nếu hàng đợi duyệt ưu tiên **và** reviewer live &lt; 3. Không hard-code fan-out = số slice (3). Ghi 1 dòng evidence khi trì hoãn vì cap (số live + bucket + tier/inherit).
+Khi bucket feature+planner+BA/PD đã ≥ **5** live: **không** spawn thêm feature / BA / PD / architect; vẫn được spawn **reviewer/fix** nếu hàng đợi duyệt ưu tiên **và** reviewer live &lt; 3. Không hard-code fan-out = số slice (3). Ghi 1 dòng evidence khi trì hoãn vì cap (số live + bucket + tier/inherit). Sau mỗi wave spawn: **1 dòng `cost-wave`** (Wave D — `docs/agents/cost-catalog.md`).
 
 ## WIP / backpressure (không phá parallel-first)
 
