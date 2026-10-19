@@ -20,16 +20,14 @@ function orcaJson(args) {
 }
 
 const CATALOG_PINS = new Set([
-  "composer-2.5-fast",
   "composer-2.5",
   "claude-sonnet-5-thinking-low",
-  "claude-sonnet-5-thinking-medium",
   "grok-4.7-low",
   "gemini-3.7-flash-low",
 ]);
 
 const PIN_RE =
-  /\bmodel\s+(composer-2\.5(?:-fast)?|claude-sonnet-5-thinking-(?:low|medium)|grok-4\.7-low|gemini-3\.7-flash-low)\b/i;
+  /\bmodel\s+(composer-2\.5|claude-sonnet-5-thinking-low|grok-4\.7-low|gemini-3\.7-flash-low)\b/i;
 const TIER_RE = /\bCost\s+(cheap|standard|heavy)\b/i;
 const TIER_DN_RE = /\b(cheap|standard|heavy)\b/i;
 const INHERIT_RE = /\binherit\b|\bmodel\s+auto\b/i;
