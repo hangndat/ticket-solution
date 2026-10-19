@@ -6,7 +6,8 @@ import { Button, Dropdown, Select, Space, theme } from 'antd';
 import type { MenuProps } from 'antd';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import type { ReactNode } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
+import { resolvePortalMenuKeys } from '../nav/portal-menu-keys';
 import type { MeTenantItem } from '@ticket/contracts';
 import { gateDeeplinkUrl } from '../oidc/config';
 import type { PortalShellCapabilities } from '../nav/capabilities';
@@ -44,6 +45,17 @@ export function PortalProLayout({
   const pathname = usePathname();
   const router = useRouter();
   const { token } = theme.useToken();
+
+  const { selectedKeys, openKeys: pathOpenKeys } = useMemo(
+    () => resolvePortalMenuKeys(pathname, menuData),
+    [pathname, menuData],
+  );
+  const [userOpenKeys, setUserOpenKeys] = useState<string[]>([]);
+  const openKeys = useMemo(() => {
+    const merged = new Set(userOpenKeys);
+    for (const key of pathOpenKeys) merged.add(key);
+    return [...merged];
+  }, [userOpenKeys, pathOpenKeys]);
 
   const accountMenu: MenuProps = {
     selectable: true,
@@ -101,7 +113,7 @@ export function PortalProLayout({
         }
         return dom;
       }}
-      selectedKeys={[pathname]}
+      selectedKeys={selectedKeys}
       menuRender={showSider ? undefined : false}
       fixSiderbar
       logo={
@@ -180,8 +192,12 @@ export function PortalProLayout({
       contentStyle={{ padding: 24 }}
       menuProps={
         {
+          openKeys,
+          onOpenChange: (keys: string[]) => {
+            setUserOpenKeys(keys);
+          },
           'data-testid': 'portal-sider',
-        } as Record<string, unknown>
+        } as MenuProps & { 'data-testid': string }
       }
     >
       <a href="#portal-main" className="portal-skip-link">{t('shell.skipNav')}</a>
