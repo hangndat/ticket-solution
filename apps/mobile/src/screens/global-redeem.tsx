@@ -1,5 +1,12 @@
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
-import { Animated, Text, TextInput, View } from 'react-native';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  startTransition,
+} from 'react';
+import { Animated, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import type { RedemptionResolveResponse } from '@ticket/contracts';
 import {
@@ -188,8 +195,10 @@ export function GlobalRedeemScreen() {
       isEpochCurrent: (e) => session.isEpochCurrent(e),
     });
     if (resumed.ok) {
-      setCode(resumed.intent.code);
-      void runResolve(resumed.intent.code);
+      startTransition(() => {
+        setCode(resumed.intent.code);
+        void runResolve(resumed.intent.code);
+      });
     }
   }, [identity.status, runResolve]);
 
