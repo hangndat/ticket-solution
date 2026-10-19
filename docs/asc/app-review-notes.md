@@ -73,7 +73,7 @@ Nguồn đã công bố nội bộ: `docs/reviews/D1-P4-KEYCLOAK-SMOKE.md` (`ema
 
 ### B) Production / TestFlight review (điền vào ASC UI — **không commit mật khẩu prod**)
 
-**S5-T2 (2026-10-18):** IdP prod đã verify. Evidence: [D13-S5-T2-DEMO-REVIEWER.md](../reviews/D13-S5-T2-DEMO-REVIEWER.md).
+**S5-T2 (revalidation 2026-10-19):** IdP prod + ROPC re-sync từ VPS secret file. Evidence: [D13-S5-T2-DEMO-REVIEWER.md](../reviews/D13-S5-T2-DEMO-REVIEWER.md).
 
 **Khuyến nghị paste ASC (end-to-end app path):** cặp fixture §A — đã ROPC OK trên prod; attendee có vé `ACTIVE`; staff có `gate.confirm` (không còn `CONFIGURE_TOTP`).
 
