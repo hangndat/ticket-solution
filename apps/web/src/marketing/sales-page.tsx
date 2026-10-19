@@ -43,7 +43,7 @@ export function SalesPage({ locale }: { locale: MarketingLocale }) {
               {t(locale, 'hero.cta.login')}
             </a>
           </div>
-          <p className="mkt-badge" data-testid="demo-badge">
+          <p className="mkt-hero-note" data-testid="demo-badge">
             {t(locale, 'badge.demo')} — {t(locale, 'hero.demo_note')}
           </p>
           <div className="mkt-hero-visual" aria-hidden="true">

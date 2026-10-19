@@ -16,6 +16,7 @@ import {
   type InviteUxMessage,
 } from '../../src/platform/invite-messages';
 import { REQUEST_TIMEOUT_MS } from '../../src/redeem/poll-operation';
+import { liveRegionForStatus } from '../../src/ui/live-region';
 import { SurfaceState } from '../../src/ui/surface-state';
 
 const STORAGE_KEY = 'vemoki_invite_token';
@@ -140,46 +141,64 @@ export function InviteAcceptForm() {
     setBusy(false);
   }
 
+  const loginHref = '/api/auth/login?return=/invite';
+  const outcomeLive =
+    ux && ux.kind !== 'success'
+      ? liveRegionForStatus(
+          ux.kind === 'network' || ux.kind === 'unknown'
+            ? 'unknown'
+            : ux.kind === 'auth' || ux.kind === 'denied'
+              ? 'error'
+              : ux.kind,
+        )
+      : ux?.kind === 'success'
+        ? liveRegionForStatus('success')
+        : null;
+
   return (
-    <div className="redeem-form">
-      <p>
+    <div className="redeem-form invite-form">
+      <p className="invite-support">
         Đăng nhập bằng đúng email đã được mời. Máy chủ kiểm tra hết hạn, dùng
         một lần và khớp email — giao diện không tự cấp quyền Owner.
       </p>
       <div className="auth-buttons">
-        <a
-          className="button-link"
-          href="/api/auth/login?return=/invite"
-        >
+        <a className="button-link invite-login-cta" href={loginHref}>
           Đăng nhập
         </a>
       </div>
-      <label>
-        Mã lời mời (tự lấy từ phần #token trên link — tránh dán vào thanh địa chỉ dạng ?token=)
-        <input
-          value={token}
-          onChange={(e) => setTokenOverride(e.target.value)}
-          autoComplete="off"
-          spellCheck={false}
-          aria-label="Mã lời mời"
-        />
-      </label>
-      {!token.trim() ? (
-        <SurfaceState
-          kind="empty"
-          title="Chưa có mã lời mời"
-          detail="Mở link mời (mã nằm sau # trên URL) hoặc dán mã vào ô trên sau khi đăng nhập đúng email."
-          testId="invite-token-empty"
-        />
-      ) : null}
-      <button
-        type="button"
-        disabled={busy || !token.trim() || !csrfReady}
-        onClick={() => void accept()}
-        data-testid="invite-accept-submit"
-      >
-        {busy ? 'Đang nhận…' : csrfReady ? 'Nhận lời mời' : 'Đang chuẩn bị…'}
-      </button>
+      <div className="invite-form-panel">
+        <label>
+          Mã lời mời
+          <input
+            value={token}
+            onChange={(e) => setTokenOverride(e.target.value)}
+            autoComplete="off"
+            spellCheck={false}
+            aria-label="Mã lời mời"
+          />
+        </label>
+        <span className="invite-field-hint">
+          Mở link mời (mã nằm sau # trên URL) — tránh dán mã dạng ?token= trên
+          thanh địa chỉ.
+        </span>
+        {!token.trim() ? (
+          <SurfaceState
+            kind="empty"
+            title="Chưa có mã lời mời"
+            detail="Mở link mời hoặc dán mã vào ô trên sau khi đăng nhập đúng email."
+            testId="invite-token-empty"
+          />
+        ) : null}
+        <button
+          type="button"
+          className="invite-submit"
+          disabled={busy || !token.trim() || !csrfReady}
+          onClick={() => void accept()}
+          data-testid="invite-accept-submit"
+        >
+          {busy ? 'Đang nhận…' : csrfReady ? 'Nhận lời mời' : 'Đang chuẩn bị…'}
+        </button>
+      </div>
       {busy ? (
         <SurfaceState
           kind="loading"
@@ -189,15 +208,22 @@ export function InviteAcceptForm() {
         />
       ) : null}
       {ux && ux.kind === 'success' && view?.kind === 'ok' ? (
-        <section className="notice" role="status" data-testid="invite-accept-result">
-          <p>
-            {ux.title}: {ux.detail} Mở{' '}
+        <section
+          className="redeem-status redeem-status--success invite-outcome"
+          role={outcomeLive?.role ?? 'status'}
+          aria-live={outcomeLive?.ariaLive}
+          aria-atomic={outcomeLive?.ariaAtomic}
+          data-testid="invite-accept-result"
+        >
+          <h2>{ux.title}</h2>
+          <p>{ux.detail}</p>
+          <p className="auth-buttons">
             <a
+              className="button invite-admin-cta"
               href={`/admin?tenantId=${encodeURIComponent(view.value.tenantId)}`}
             >
-              Admin
+              Mở Admin
             </a>
-            .
           </p>
         </section>
       ) : null}
