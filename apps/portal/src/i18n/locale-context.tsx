@@ -27,17 +27,25 @@ type LocaleContextValue = {
 
 const LocaleContext = createContext<LocaleContextValue | null>(null);
 
-export function PortalLocaleProvider({ children }: { children: ReactNode }) {
-  const [locale, setLocaleState] = useState<PortalLocale>(DEFAULT_PORTAL_LOCALE);
+export function PortalLocaleProvider({
+  children,
+  initialLocale = DEFAULT_PORTAL_LOCALE,
+}: {
+  children: ReactNode;
+  /** Must match `readPortalLocaleFromServerCookies()` on the server. */
+  initialLocale?: PortalLocale;
+}) {
+  const [locale, setLocaleState] = useState<PortalLocale>(initialLocale);
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
     const stored = readStoredPortalLocale();
-    // Hydration-safe: SSR/first paint use default VI, then apply stored pref.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setLocaleState(stored);
+    if (stored !== initialLocale) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setLocaleState(stored);
+    }
     setHydrated(true);
-  }, []);
+  }, [initialLocale]);
 
   useEffect(() => {
     if (!hydrated) return;

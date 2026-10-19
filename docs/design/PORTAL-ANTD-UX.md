@@ -16,6 +16,8 @@
 
 **Baseline liên quan (không thay file này):** [`D11-PRODUCTION-UX-UI.md`](./D11-PRODUCTION-UX-UI.md) (job IA admin), [`o02-permission-nav/contract.md`](./o02-permission-nav/contract.md), [`o13-marketing-app-subdomain.md`](../architecture/o13-marketing-app-subdomain.md), API gaps BE [`PORTAL-BACKEND-GAPS.md`](../plans/PORTAL-BACKEND-GAPS.md).
 
+**Sync triển khai (2026-10-19):** Production `portal.vemoki.com` đã chạy **sider nhóm** (org · tên sự kiện · thiết lập) và luồng `/` chưa đăng nhập → Keycloak (không kẹt spinner vô hạn). Code trên nhánh `hangndat/d1-portal-nav-groups`, base review `52bc54e3fdcb` — **WIP chưa merge `main`**. Evidence: [PORTAL-PROD-UAT-NAV-2026-10-19.md](../reviews/PORTAL-PROD-UAT-NAV-2026-10-19.md), [PORTAL-LOCAL-UAT-NAV-2026-10-19.md](../reviews/PORTAL-LOCAL-UAT-NAV-2026-10-19.md), DoD [PORTAL-NAV-SPINNER-WIP-DOD-2026-10-19.md](../reviews/PORTAL-NAV-SPINNER-WIP-DOD-2026-10-19.md). Implementation: `apps/portal/src/nav/capabilities.ts`, `apps/portal/src/components/portal-shell.tsx`.
+
 ---
 
 ## 0. Mục tiêu & ranh giới
@@ -179,21 +181,29 @@ O13 từng đặt admin trên `app.vemoki.com`. Yêu cầu hiện tại: staff a
 
 ## 5. Information architecture & routes
 
-### 5.1 Menu (permission-aware)
+### 5.1 Menu (permission-aware, nhóm sider)
 
-Chrome: sider + header context **Tổ chức · Sự kiện** — **nhãn** `name` (và slug nếu discovery trả về) từ `GET /me/tenants` / event list; **đường dẫn** dùng **id** (`tenantId` / `eventId`). UUID có thể mở Drawer «Chi tiết kỹ thuật» — không bắt user paste UUID khi đã chọn context.
+Chrome: sider Ant Design `Menu` với **`type: 'group'`** — **không** một danh sách phẳng org + event. Header giữ org/event switcher; **nhãn** `name` (và slug nếu discovery trả về) từ `GET /me/tenants` / event list; **đường dẫn** dùng **id** (`tenantId` / `eventId`). UUID có thể mở Drawer «Chi tiết kỹ thuật» — không bắt user paste UUID khi đã chọn context.
 
-| Menu | Route đề xuất (id-params) | Hiện khi | Map job hiện có |
+| Nhóm sider (VI mặc định · EN khi locale EN) | Mục (route id-params) | Hiện khi | Map job / ghi chú |
 | --- | --- | --- | --- |
-| Tổng quan tổ chức | `/t/[tenantId]` | `tenantPermissions` ≠ rỗng (O02 admin rule) | — (mới) |
-| Sự kiện | `/t/[tenantId]/events` | `event.list` | list trong setup |
-| Thành viên | `/t/[tenantId]/members` | `members.manage` | `tenant-staff.tsx` |
-| *(Event workspace)* | `/t/[tenantId]/e/[eventId]` | event context đã chọn | summary |
-| · Tổng quan | `…/` | cùng | readiness strip |
-| · Chuẩn bị | `…/setup` | setup perms | job `setup` |
-| · Khách & mã | `…/guests` | guests/import/approve | job `guests` |
-| · Cổng | `…/gate` | **`report.read` trên server** — không suy từ role Scanner / `gate.confirm` | job `gate` (report) |
-| · Hỗ trợ | `…/support` | `cs.lookup` / `export.*` (theo perm từng action) | job `support` |
+| **Tổ chức này** / This organization | Tổng quan `/t/[tenantId]` | O02 admin chrome | — |
+| | Sự kiện `…/events` | `event.list` | list trong setup |
+| | Phân tích `…/analytics` | ≥1 event `report.read` (tenant) | P2 portfolio khi bật |
+| | Thành viên `…/members` | `members.manage` | `tenant-staff.tsx` |
+| | Cấu hình `…/settings` | `tenant.profile` | org brand/profile |
+| **{tên sự kiện}** — vận hành (`group: run`) | Tổng quan `…/e/[eventId]` | event trong MeEvents | readiness strip |
+| | Cổng `…/gate` | **`report.read`** — không suy Scanner / `gate.confirm` | job `gate` (report) |
+| | Nhật ký & mã `…/audit` | `report.read` hoặc `inventory.import` | audit browser |
+| | Hỗ trợ `…/support` | `cs.lookup` | job `support` |
+| **Thiết lập sự kiện** / Event setup (`group: setup`) | Chuẩn bị `…/setup` | setup/config perms | job `setup` |
+| | Loại vé `…/types` | cùng nhóm setup | |
+| | Nguồn mã `…/sources` | cùng | |
+| | Hạn mức `…/quota` | cùng | |
+| | Cấu hình & publish `…/config` | cùng | |
+| | Khách & mã `…/guests` | import / approve / notify perms | job `guests` |
+
+Nguồn nhóm và permission: `buildOrgMenuItems` / `buildEventMenuItems` trong `apps/portal/src/nav/capabilities.ts` — grouping **không** bypass O02; chỉ sắp xếp UI.
 
 Ẩn item thiếu permission — **không** hiện disabled giả quyền. Deep-link thiếu quyền → `Result` 403 VI + CTA về overview được phép.
 
