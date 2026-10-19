@@ -32,7 +32,48 @@ docs/agents/
 | `reviewer-dod` | [roles/reviewer-dod.md](./roles/reviewer-dod.md) | DoD / acceptance trên **exact SHA** | Session **≠** implementer |
 | `reviewer-security` | [roles/reviewer-security.md](./roles/reviewer-security.md) | Review bảo mật slice nhạy cảm | Session **≠** implementer; không thay DoD nếu cần cả hai |
 
-Agent runtime: luôn Cursor (`--agent cursor`), trừ khi user override rõ. Role **≠** agent vendor **≠** Cost tier — xem bảng Cost tier trong `orca-agent-routing.mdc`.
+Agent runtime: luôn Cursor (`--agent cursor`), trừ khi user override rõ. Role **≠** agent vendor **≠** Cost tier **≠** Persona — xem bảng Cost tier và Persona trong `orca-agent-routing.mdc`.
+
+## Persona roster (Orca `--display-name`)
+
+Nguồn sự thật cho label UI trên hàng Dispatch. Coordinator **bắt buộc** truyền `--display-name` khi `task-create` / `worker-start` (dispatch mới; không rename worker đang live).
+
+| Role ID / vai | Persona pool | Ghi chú |
+| ------------- | ------------ | ------- |
+| `web` | Higo, Enton | FE — pick free khi song song |
+| `backend` | Gonic, Colin, Remy, Monica | pick free khi song song |
+| `ios` | Zico | 1 người |
+| `architect` | Dexter | |
+| `product-design` | Liv | |
+| `product-ba` | Kazu | |
+| `reviewer-dod` | James | |
+| `reviewer-security` | James | cùng persona; session vẫn ≠ implementer |
+| Epic planner (không Role catalog) | Dexter | `--display-name "Dexter · planner"` |
+
+**Format:** `--display-name "<Persona> · <roleId|planner>"` — ví dụ `Higo · web`, `James · reviewer-dod`, `Dexter · planner`.
+
+**Chọn persona (pool):**
+
+- Pool 1 người → luôn tên đó.
+- Pool nhiều (`web`, `backend`): trước spawn, đọc `worker-list --include-remote --json` trong Run; lấy persona **chưa** xuất hiện trong `displayName` / task title của Dispatch **live** cùng role; round-robin theo thứ tự bảng nếu tất cả free hoặc tất cả busy.
+- Reuse terminal: giữ persona của pane đang giữ (không đổi tên giữa Task nếu reuse cùng slice).
+
+Ví dụ spawn:
+
+```text
+ORCA orchestration task-create \
+  --task-title "Higo · web — #123 membership UI" \
+  --display-name "Higo · web" \
+  --spec "…" --json
+
+ORCA orchestration worker-start \
+  --task <task_id> --worktree … --agent cursor \
+  --display-name "Higo · web" \
+  --task-title "Higo · web — #123 membership UI" \
+  --json
+```
+
+Chi tiết spawn: `.cursor/rules/orca-agent-routing.mdc` § Persona.
 
 ## Cách coordinator chọn và truyền vai trò
 
@@ -58,6 +99,7 @@ Thêm khối sau vào spec `worker-start` (tiếng Việt cho phần mô tả us
 ```markdown
 ## Vai trò chuyên môn (bổ sung)
 - Role ID: <product-ba|product-design|architect|backend|web|ios|reviewer-dod|reviewer-security>
+- Persona: <Name từ Persona roster — vd. Higo, Gonic, James>
 - File: docs/agents/roles/<id>.md
 - Đọc file role SAU AGENTS.md và rule Orca; nếu xung đột → rule dự án thắng.
 - Không mở rộng MVP / ngoài phạm vi Issue.
@@ -65,6 +107,7 @@ Thêm khối sau vào spec `worker-start` (tiếng Việt cho phần mô tả us
 - Cost tier: cheap | standard | heavy — theo orca-agent-routing.mdc (model/effort; không bịa model id)
 - Architecture impact: Có | Không — lý do + link thiết kế/ADR hiện hành
 - Nếu Có: quyết định còn mở, Task architect/handoff và consumer thực sự phải chờ
+- Orca: --display-name "<Persona> · <Role ID>" (bắt buộc khi spawn)
 ```
 
 Với reviewer, thêm:
@@ -96,11 +139,14 @@ Khối bổ sung khi giao Task Architect (điền cùng parent/scope/AC trong sp
 ```markdown
 ## Vai trò chuyên môn (bổ sung)
 - Role ID: architect
+- Persona: Dexter
 - File: docs/agents/roles/architect.md
 - Agent: cursor (theo orca-agent-routing.mdc)
 - Cost tier: heavy
 - Mode: Thiết kế | Kiểm tra sự phù hợp
 - Architecture impact: Có — <quyết định/rủi ro cụ thể>
+- Orca: --display-name "Dexter · architect"
+
 - Input: <Issue/Task, PR nếu có, exact source SHA, thiết kế/ADR liên quan>
 - Output/paths được sửa: <docs/architecture/<slug>.md hoặc docs/reviews/<slug>-architecture.md>
 - Quyết định cần giải: <câu hỏi + constraints đã chốt>
@@ -115,9 +161,10 @@ Khối bổ sung khi giao Task Architect (điền cùng parent/scope/AC trong sp
 
 - Không copy `roles/*.md` vào `.cursor/rules/` với `alwaysApply: true`.
 - Không cài roster upstream qua Agency Agents app / `install.sh --tool cursor` cho toàn bộ division.
-- Không đổi `--agent` theo role.
+- Không đổi `--agent` theo role hoặc theo Persona.
 - Không gắn `heavy` cho mọi Task chỉ vì Role “quan trọng”; DoD thường = `standard`.
 - Không để worker depth > 1; planner/worker không spawn con.
+- Không bỏ `--display-name` / Persona khỏi spawn mới (xem roster ở trên).
 
 ### 5. Wave tối đa song song (ownership giữ nguyên)
 
