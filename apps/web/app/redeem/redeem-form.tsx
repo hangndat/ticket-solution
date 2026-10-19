@@ -645,7 +645,7 @@ export function RedeemForm({
         </div>
 
         <div className="auth-buttons">
-          <button type="submit" disabled={busy}>
+          <button type="submit" className="redeem-submit" disabled={busy}>
             {busy ? 'Đang xử lý…' : 'Đổi mã lấy vé'}
           </button>
           <button type="button" onClick={pollAgain} disabled={!canRepoll}>
