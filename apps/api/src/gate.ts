@@ -3,6 +3,7 @@ import {
   Body,
   Controller,
   Headers,
+  HttpCode,
   HttpException,
   Injectable,
   Param,
@@ -386,6 +387,7 @@ export class GateController {
   }
 
   @Post('gate/events/:eventId/sessions')
+  @HttpCode(200)
   @ApiBearerAuth()
   @ApiOkResponse({ type: SessionResponseDto })
   @ApiUnauthorizedResponse({ type: ApiErrorDto })
@@ -416,6 +418,7 @@ export class GateController {
   }
 
   @Post('gate/events/:eventId/reservations')
+  @HttpCode(200)
   @ApiBearerAuth()
   @ApiOkResponse({ type: ReserveResponseDto })
   reserve(
@@ -431,6 +434,7 @@ export class GateController {
   }
 
   @Post('gate/events/:eventId/reservations/:reservationId/confirm')
+  @HttpCode(200)
   @ApiBearerAuth()
   @ApiOkResponse({ type: ConfirmResponseDto })
   confirm(
