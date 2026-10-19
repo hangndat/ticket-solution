@@ -303,9 +303,12 @@ export {
 } from './published-form';
 export {
   listPublishedEvents,
+  listPlatformPublishedEvents,
   getPublishedEventDetail,
   isValidPublicTenantSlug,
   isValidPublicEventSlug,
+  PublishedEventsError,
+  PUBLISHED_EVENTS_ERROR_CODES,
 } from './published-events';
 export {
   expirePendingRequest,

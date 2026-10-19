@@ -138,6 +138,9 @@ export interface PublicEvent {
 export {
   PUBLISHED_SECTION_KINDS,
   PUBLISHED_EVENT_ENDPOINTS,
+  PLATFORM_PUBLISHED_EVENT_LIST_ORDER,
+  PLATFORM_PUBLISHED_EVENTS_OPENAPI_PATH,
+  PLATFORM_PUBLISHED_EVENTS_OPERATION_ID,
   type PublishedSectionKind,
   type PublishedSection,
   type PublishedFaqItem,
@@ -146,6 +149,8 @@ export {
   type PublishedEventDetail,
   type PublishedEventSummary,
   type PublishedEventListResponse,
+  type PublishedEventListPage,
+  type PublishedEventListQuery,
 } from './published-events';
 
 /* —— Feature freeze modules (C-E / C-B / C-I / C-F / C-N) —— */

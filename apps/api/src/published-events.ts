@@ -27,7 +27,10 @@ import {
 } from '@ticket/contracts';
 import {
   getPublishedEventDetail,
+  listPlatformPublishedEvents,
   listPublishedEvents,
+  PublishedEventsError,
+  PUBLISHED_EVENTS_ERROR_CODES,
   type PrismaClient,
 } from '@ticket/backend';
 
@@ -120,6 +123,18 @@ function unavailable(): HttpException {
   );
 }
 
+function badRequest(code: string, message: string): HttpException {
+  return new HttpException(
+    {
+      code,
+      message,
+      requestId: randomUUID(),
+      retryable: false,
+    } satisfies ApiError,
+    400,
+  );
+}
+
 @Injectable()
 export class PublishedEventsService {
   constructor(private readonly deps: Deps) {}
@@ -157,6 +172,49 @@ export class PublishedEventsService {
     });
     if (!result) throw notFound();
     return result;
+  }
+
+  async listPlatform(
+    cursor?: string,
+    limit?: string,
+  ): Promise<PublishedEventListResponse> {
+    if (!this.deps.db) throw unavailable();
+    const parsedLimit =
+      limit !== undefined && limit !== ''
+        ? Number.parseInt(limit, 10)
+        : undefined;
+    try {
+      return await listPlatformPublishedEvents(this.deps.db, {
+        cursor: cursor ?? null,
+        limit:
+          parsedLimit !== undefined && Number.isFinite(parsedLimit)
+            ? parsedLimit
+            : undefined,
+      });
+    } catch (error) {
+      if (
+        error instanceof PublishedEventsError &&
+        error.code === PUBLISHED_EVENTS_ERROR_CODES.INVALID_CURSOR
+      ) {
+        throw badRequest(error.code, error.message);
+      }
+      throw error;
+    }
+  }
+}
+
+@ApiTags('public-events')
+@Controller('public/events')
+export class PlatformPublishedEventsController {
+  constructor(private readonly published: PublishedEventsService) {}
+
+  @Get()
+  @ApiOkResponse({ type: PublishedEventListResponseDto })
+  async list(
+    @Query('cursor') cursor?: string,
+    @Query('limit') limit?: string,
+  ): Promise<PublishedEventListResponse> {
+    return this.published.listPlatform(cursor, limit);
   }
 }
 
