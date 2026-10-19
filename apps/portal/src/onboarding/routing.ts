@@ -12,6 +12,8 @@ import {
 
 export type OnboardingSurface =
   | { kind: 'signup' }
+  /** Ticket owner only — not a staff membership. Stay out of the admin shell. */
+  | { kind: 'customer' }
   | { kind: 'pending-activation'; tenant: MeTenantItem }
   | {
       kind: 'first-run';
@@ -20,6 +22,11 @@ export type OnboardingSurface =
       hasEvent: boolean;
     }
   | { kind: 'portal'; tenant: MeTenantItem };
+
+/** Synthetic role from list_my_tenants() for ticket owners. Not a membership. */
+export function isStaffPortalTenant(tenant: MeTenantItem): boolean {
+  return tenant.role !== 'Attendee';
+}
 
 export function pickPrimaryTenant(
   items: readonly MeTenantItem[] | null | undefined,
@@ -40,8 +47,15 @@ export function resolveOnboardingSurface(input: {
   userId: string | null;
   eventCountForTenant: (tenantId: string) => number;
 }): OnboardingSurface {
-  const tenant = pickPrimaryTenant(input.tenants);
-  if (!tenant) return { kind: 'signup' };
+  const discovered = input.tenants ?? [];
+  const staff = discovered.filter(isStaffPortalTenant);
+  const tenant = pickPrimaryTenant(staff);
+  if (!tenant) {
+    if (discovered.some((item) => item.role === 'Attendee')) {
+      return { kind: 'customer' };
+    }
+    return { kind: 'signup' };
+  }
 
   if (isPendingActivationStatus(tenant.status)) {
     return { kind: 'pending-activation', tenant };

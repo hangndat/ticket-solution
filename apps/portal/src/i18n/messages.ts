@@ -485,6 +485,10 @@ export const VI = {
   'shell.account.security': 'Bảo mật phiên',
   'shell.auth.requiredTitle': 'Cần đăng nhập',
   'shell.auth.staffDescription': 'Đăng nhập nhân sự để mở portal quản trị.',
+  'shell.auth.attendeeDeniedTitle': 'Portal quản trị chỉ dành cho nhân sự',
+  'shell.auth.attendeeDeniedBody':
+    'Tài khoản khách không được vào shell quản trị. Tiếp tục trên bề mặt khách.',
+  'shell.auth.openCustomerApp': 'Mở bề mặt khách',
   'shell.event.empty': 'Chưa có sự kiện',
   'shell.event.placeholder': 'Chọn sự kiện',
   'shell.event.selectTenantFirst': 'Chọn tổ chức trước',
@@ -1131,6 +1135,10 @@ export const EN: { [K in MessageKey]: string } = {
   'shell.account.security': 'Session security',
   'shell.auth.requiredTitle': 'Sign-in required',
   'shell.auth.staffDescription': 'Sign in as staff to open the admin portal.',
+  'shell.auth.attendeeDeniedTitle': 'Admin portal is for staff',
+  'shell.auth.attendeeDeniedBody':
+    'Guest accounts cannot open the admin shell. Continue on the customer app.',
+  'shell.auth.openCustomerApp': 'Open customer app',
   'shell.event.empty': 'No events yet',
   'shell.event.placeholder': 'Select event',
   'shell.event.selectTenantFirst': 'Select an organization first',
@@ -1343,6 +1351,10 @@ export const VI_TO_KEY: Record<string, MessageKey> = {
   'Bộ lọc thông báo': 'ops.notifications.filtersTitle',
   'Bỏ qua điều hướng': 'shell.skipNav',
   'Cần đăng nhập': 'shell.auth.requiredTitle',
+  'Mở bề mặt khách': 'shell.auth.openCustomerApp',
+  'Portal quản trị chỉ dành cho nhân sự': 'shell.auth.attendeeDeniedTitle',
+  'Tài khoản khách không được vào shell quản trị. Tiếp tục trên bề mặt khách.':
+    'shell.auth.attendeeDeniedBody',
   'Cần export.create': 'ops.export.needCreate',
   'Cần export.create từ máy chủ.': 'ops.export.needCreateServer',
   'Cần export.download từ máy chủ.': 'ops.export.needDownloadServer',

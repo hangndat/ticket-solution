@@ -50,7 +50,7 @@ type Branding = {
 type PageMode =
   | { kind: 'loading' }
   | { kind: 'error'; message?: string }
-  | { kind: 'denied' }
+  | { kind: 'denied'; reason?: 'attendee' }
   | { kind: 'pending'; tenant: MeTenantItem }
   | {
       kind: 'first-run';
@@ -105,6 +105,10 @@ export default function TenantOnboardingPage() {
       shell.meTenants?.items.find((item) => item.tenantId === tenantId) ?? null;
     if (!tenant) {
       setMode({ kind: 'denied' });
+      return;
+    }
+    if (tenant.role === 'Attendee') {
+      setMode({ kind: 'denied', reason: 'attendee' });
       return;
     }
 
@@ -314,7 +318,11 @@ export default function TenantOnboardingPage() {
     return (
       <SurfaceState
         kind="permission-denied"
-        description={t('onboarding.denied')}
+        description={
+          mode.reason === 'attendee'
+            ? t('shell.auth.attendeeDeniedBody')
+            : t('onboarding.denied')
+        }
         onRetry={() => {
           window.location.href = '/onboarding';
         }}

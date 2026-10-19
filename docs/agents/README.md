@@ -33,6 +33,7 @@ docs/agents/
 | `ios` | [roles/ios.md](./roles/ios.md) | Implement Expo/RN iOS | `apps/mobile` only; local build, không EAS Cloud |
 | `reviewer-dod` | [roles/reviewer-dod.md](./roles/reviewer-dod.md) | DoD / acceptance trên **exact SHA** | Session **≠** implementer |
 | `reviewer-security` | [roles/reviewer-security.md](./roles/reviewer-security.md) | Review bảo mật slice nhạy cảm | Session **≠** implementer; không thay DoD nếu cần cả hai |
+| `launch-uat` | [roles/launch-uat.md](./roles/launch-uat.md) | Hành trình thật trên production cho go/no-go launch | Không thay `reviewer-dod`; catalog [`PROD-LAUNCH-UAT.md`](../plans/PROD-LAUNCH-UAT.md) |
 
 Agent runtime: luôn Cursor (`--agent cursor`), trừ khi user override rõ. Role **≠** agent vendor **≠** Cost tier **≠** Persona — xem `orca-agent-routing-core.mdc`.
 
@@ -67,6 +68,7 @@ Cùng prefix Persona; `display-name` ngắn, `task-title` có Issue + tóm tắt
 | `product-ba` | Kazu | |
 | `reviewer-dod` | James | UI label: **`dod`** (không ghi `reviewer-dod`) |
 | `reviewer-security` | James | UI label: **`sec`**; gộp cùng DoD → **`dod+sec`** (Wave C) |
+| `launch-uat` | Sora | UI label: **`uat`**. Không dùng James (James là DoD/security) |
 | Epic planner (không Role catalog) | Dexter | `--display-name "Dexter · planner"` |
 | Wave leader (logic) | Coordinator gốc depth 0 | Fan-out `worker-start` trong wave — **không** spawn depth 1 (Orca `nested_worker_depth`) |
 | `Leader · wave` (tuỳ chọn, plan-only) | *(không Persona roster)* | Worker depth 1 chỉ lập kế hoạch / `ask`; coordinator gốc spawn thật — `orca-wave-leader.mdc` |
@@ -83,6 +85,7 @@ Cùng prefix Persona; `display-name` ngắn, `task-title` có Issue + tóm tắt
 | `product-design` | `pd` |
 | `reviewer-dod` | `dod` |
 | `reviewer-security` | `sec` |
+| `launch-uat` | `uat` |
 | DoD+security cùng PR/SHA (Wave C) | `dod+sec` |
 | Epic planner | `planner` |
 | Wave Leader | `wave` |
@@ -125,6 +128,7 @@ Chi tiết spawn: `.cursor/rules/orca-agent-routing.mdc` § Persona.
 | Epic revamp user site/app (visual + UX) | `product-design` (một Task, mục 0–5) | Không thêm Role graphic; BA/Architect chỉ khi scope/IA chưa chốt |
 | Coding BE / web / iOS | `backend` / `web` / `ios` | — |
 | DoD sau `Chờ duyệt` | `reviewer-dod` | + `reviewer-security` trên **cùng session** (`dod+sec`) nếu slice nhạy cảm — Wave C |
+| UAT production / go-no-go launch | `launch-uat` | Sóng cuối: `reviewer-dod`+`reviewer-security` chỉ đọc artifact, không tự chạy lại |
 | Epic planner | Không gắn role catalog này | Planner theo `orca-epic-orchestrator.mdc` |
 
 Không spawn PD/BA để “làm luôn” code BE+web+iOS. Không reuse session implementer làm reviewer. **Không** spawn `James · dod` và `James · sec` song song trên cùng PR/SHA.
