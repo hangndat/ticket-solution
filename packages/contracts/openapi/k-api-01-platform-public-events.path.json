@@ -1,0 +1,55 @@
+{
+  "/v1/public/events": {
+    "get": {
+      "operationId": "PlatformPublishedEventsController_list",
+      "summary": "List published events across the platform (O18 / K-API-01)",
+      "description": "Unauthenticated catalog of PUBLIC, PUBLISHED, ACTIVE events for ACTIVE tenants. Response rows are `PublishedEventSummary` only (no sections, FAQ, terms, or admin fields). Pagination: ORDER BY starts_at ASC NULLS LAST, tenant_id ASC, id ASC; `nextCursor` is opaque.",
+      "parameters": [
+        {
+          "name": "cursor",
+          "required": false,
+          "in": "query",
+          "description": "Opaque cursor from a previous page `nextCursor`.",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "limit",
+          "required": false,
+          "in": "query",
+          "description": "Page size (1–100, default 20).",
+          "schema": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "default": 20
+          }
+        }
+      ],
+      "responses": {
+        "200": {
+          "description": "",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishedEventListResponseDto"
+              }
+            }
+          }
+        },
+        "503": {
+          "description": "Dependency unavailable (e.g. database not configured).",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiErrorDto"
+              }
+            }
+          }
+        }
+      },
+      "tags": ["public-events"]
+    }
+  }
+}

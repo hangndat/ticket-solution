@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { Prisma } from './generated/prisma/client';
 import { hashRedemptionCode, type CodeHmacConfig } from './code-hmac';
+import { attachCodeRoutingOnInsert } from './code-routing';
 import { InventoryError, INVENTORY_ERROR_CODES } from './inventory-error';
 import { requireTenantPermission } from './membership';
 
@@ -145,6 +146,11 @@ export async function importRedemptionCodes(
     actorUserId: string;
     rawCodes: string[];
     eventQuota?: number;
+    /** When set, reserve global routing namespace for each inserted code. */
+    routingRegistry?: {
+      peppers: CodeHmacConfig[];
+      fpSecret: string;
+    };
   },
 ): Promise<ImportCodesResult> {
   const codes = input.rawCodes.map((code) => code.trim()).filter((code) => code.length > 0);
@@ -247,6 +253,19 @@ export async function importRedemptionCodes(
           'AVAILABLE', now(), now()
         )
       `;
+      if (input.routingRegistry) {
+        await attachCodeRoutingOnInsert(tx, {
+          peppers: input.routingRegistry.peppers,
+          fpSecret: input.routingRegistry.fpSecret,
+          tenantId: input.tenantId,
+          eventId: input.eventId,
+          redemptionCodeId: id,
+          rawCode: raw,
+          codeStatus: 'AVAILABLE',
+          insertPepperVersion: hmac.version,
+          insertHmac: codeHmac,
+        });
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : '';
       if (message.includes('redemption_codes_hmac_unique')) {

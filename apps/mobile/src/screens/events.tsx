@@ -179,7 +179,7 @@ export function EventsScreen() {
       <View style={{ gap: 10 }}>
         <AttendeeCta
           label={eventsCopy.redeemCta}
-          onPress={() => router.push('/redeem')}
+          onPress={() => router.push('/redeem-global')}
           testID="events-cta-redeem"
         />
         {signedOut ? (

@@ -18,7 +18,12 @@ const { migrationFiles } = require('./migration-files.cjs');
 // so the migration-owned SECURITY DEFINER claim can see every tenant.
 // device_tokens is actor-scoped (app.actor_id), not tenant-scoped.
 // exports keeps FORCE RLS; migration_owner policy enables claim_exports_batch.
-const GLOBAL_TABLES = new Set(['users']);
+const GLOBAL_TABLES = new Set([
+  'users',
+  // SCR: global digest lookup + routing groups (no tenant_id column).
+  'code_routing_groups',
+  'code_routing_digest_aliases',
+]);
 const ACTOR_TABLES = new Set(['device_tokens', 'account_deletion_requests']);
 const UNFORCED_TABLES = new Set(['outbox']);
 const DEFINER_OWNER_TABLES = new Set([
@@ -61,6 +66,8 @@ const PLATFORM_OPEN_TABLES = new Set([
   'support_grants',
   'tenant_email_usage',
 ]);
+/** ADR-19 platform catalog — published public rows only (MPR-T1). */
+const PLATFORM_PUBLISHED_TABLES = new Set(['events', 'event_config_versions']);
 
 async function startIsolatedPostgres() {
   const name = 'ticket-rls-cat-' + randomBytes(4).toString('hex');
@@ -293,6 +300,11 @@ test(
           continue;
         }
         if (policy.role_name === 'ticket_platform_runtime') {
+          if (PLATFORM_PUBLISHED_TABLES.has(policy.relname)) {
+            assert.match(policy.using_expr, /PUBLIC/);
+            assert.match(policy.using_expr, /PUBLISHED/);
+            continue;
+          }
           assert.ok(
             PLATFORM_OPEN_TABLES.has(policy.relname),
             'unexpected platform policy on ' + policy.relname,
