@@ -42,6 +42,8 @@ pnpm hooks:install   # git config core.hooksPath .githooks
 - Manual: `pnpm check:prepush` · dry-run: `PREPUSH_DRY_RUN=1 pnpm check:prepush`
 - Escape (not recommended): `SKIP_PREPUSH=1` or `TICKET_SKIP_PREPUSH=1`
 
+DoD / CI evidence on a PR (minimize GitHub API rate limit): `gh auth switch --user hangndat` then `./scripts/gh-dod-evidence.sh <pr>`. See `.cursor/rules/github-api-hygiene.mdc`.
+
 ## Workspace commands
 
 - `pnpm dev:web`: web on port 3000.
