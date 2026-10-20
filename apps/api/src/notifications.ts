@@ -33,6 +33,7 @@ import {
   type OidcVerifier,
   type PrismaClient,
 } from '@ticket/backend';
+import { identityErrorHttpStatus } from './identity-http-status';
 
 const UUID =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -188,7 +189,7 @@ export class NotificationController {
           requestId: randomUUID(),
           retryable: error.retryable,
         } satisfies ApiError,
-        error.code === IDENTITY_ERROR_CODES.OIDC_MISCONFIGURED ? 503 : 401,
+        identityErrorHttpStatus(error.code),
       );
     }
     if (error instanceof AuthzError) {
