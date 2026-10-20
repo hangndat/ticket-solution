@@ -68,6 +68,7 @@ import { endKeycloakSession } from '@/identity/oidc-login';
 import { session } from '@/identity/session';
 import { staffEligibility } from '@/identity/staff-eligibility';
 import { logoutAndClearWalletArtifacts } from '@/tickets/wallet-logout';
+import { INACTIVE_STAFF_GATE_WORKSPACE } from './staff-gate-inactive-workspace.ts';
 
 /** SEC-CACHE: clear Nhân viên chrome immediately after MEMBERSHIP_* / 401/403. */
 function clearStaffChromeAfterAuthzDenial() {
@@ -710,7 +711,9 @@ export function StaffGateWorkspaceProvider({
   );
 
   return (
-    <StaffGateWorkspaceContext.Provider value={active ? value : null}>
+    <StaffGateWorkspaceContext.Provider
+      value={active ? value : INACTIVE_STAFF_GATE_WORKSPACE}
+    >
       {children}
     </StaffGateWorkspaceContext.Provider>
   );
