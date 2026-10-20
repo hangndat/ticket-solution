@@ -46,6 +46,9 @@ import {
 } from '@/redeem/redeem-client';
 import { RedeemFormFields } from '@/redeem/redeem-form-fields';
 import { useFadeInOnMount } from '@/hooks/use-fade-in-on-mount';
+import {
+  parkSignInReturn,
+} from '@/navigation/sign-in-return-intent';
 import { colors } from '@/theme/colors';
 import { fontFamilies } from '@/theme/fonts';
 
@@ -215,6 +218,7 @@ export function GlobalRedeemScreen() {
         parkedUserId: epoch?.userId ?? null,
         parkedGeneration: epoch?.generation ?? null,
       });
+      parkSignInReturn({ pathname: '/redeem-global' });
       const ok = await signIn();
       if (ok) setResolveError(null);
       return;
@@ -390,6 +394,7 @@ export function GlobalRedeemScreen() {
         parkedGeneration: epoch?.generation ?? null,
       });
     }
+    parkSignInReturn({ pathname: '/redeem-global' });
     const ok = await signIn();
     if (ok && decision?.kind === 'denied' && AUTH_CODES.has(decision.code)) {
       setDecision(null);
