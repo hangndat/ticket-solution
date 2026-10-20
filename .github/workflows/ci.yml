@@ -231,7 +231,7 @@ jobs:
         include:
           # Mỗi file tự Docker. n1 (Mailpit) tách riêng — tránh kéo critical path.
           - shard: rls
-            files: test/rls.test.cjs test/rls-catalog.test.cjs
+            files: test/rls.test.cjs test/rls-catalog.test.cjs test/me-tickets-aggregate.test.cjs
           - shard: portal-members
             files: test/portal-members.test.cjs
           - shard: portal-catalog

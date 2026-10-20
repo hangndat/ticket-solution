@@ -25,6 +25,8 @@ const GLOBAL_TABLES = new Set([
   'code_routing_digest_aliases',
 ]);
 const ACTOR_TABLES = new Set(['device_tokens', 'account_deletion_requests']);
+/** W1: supplemental SELECT on tickets — owner aggregate via app.actor_id (not tenant-wide). */
+const TICKETS_OWNER_ACTOR_SELECT = 'tickets_owner_actor_select';
 const UNFORCED_TABLES = new Set(['outbox']);
 const DEFINER_OWNER_TABLES = new Set([
   'device_tokens',
@@ -279,6 +281,8 @@ test(
 
       const policies = await db.$queryRaw`
         SELECT c.relname,
+               p.polname,
+               p.polcmd::text AS polcmd,
                pg_get_expr(p.polqual, p.polrelid) AS using_expr,
                pg_get_expr(p.polwithcheck, p.polrelid) AS check_expr,
                pg_get_userbyid(p.polroles[1]) AS role_name
@@ -288,6 +292,8 @@ test(
         WHERE n.nspname = 'public' AND c.relkind = 'r'
       `;
       const covered = new Set();
+      let ticketsOwnerActorSelect;
+      let ticketsIsolation;
       for (const policy of policies) {
         covered.add(policy.relname);
         if (policy.role_name === 'migration_owner') {
@@ -314,6 +320,18 @@ test(
           continue;
         }
         assert.equal(policy.role_name, 'ticket_runtime', policy.relname + ' policy role');
+        if (policy.polname === TICKETS_OWNER_ACTOR_SELECT) {
+          assert.equal(policy.relname, 'tickets', TICKETS_OWNER_ACTOR_SELECT + ' table');
+          assert.equal(policy.polcmd, 'r', TICKETS_OWNER_ACTOR_SELECT + ' SELECT-only');
+          assert.match(policy.using_expr, /owner_user_id/);
+          assert.match(policy.using_expr, /app\.actor_id/);
+          assert.equal(policy.check_expr, null, TICKETS_OWNER_ACTOR_SELECT + ' no write widening');
+          ticketsOwnerActorSelect = policy;
+          continue;
+        }
+        if (policy.relname === 'tickets' && policy.polname === 'tickets_isolation') {
+          ticketsIsolation = policy;
+        }
         if (GLOBAL_TABLES.has(policy.relname)) {
           assert.equal(policy.using_expr, 'true');
           assert.equal(policy.check_expr, 'true');
@@ -329,6 +347,10 @@ test(
         assert.match(policy.check_expr, /app\.tenant_id/);
         assert.notEqual(policy.using_expr, 'true', policy.relname + ' policy');
       }
+      assert.ok(ticketsOwnerActorSelect, TICKETS_OWNER_ACTOR_SELECT + ' must exist');
+      assert.ok(ticketsIsolation, 'tickets_isolation must exist');
+      assert.match(ticketsIsolation.using_expr, /app\.tenant_id/);
+      assert.match(ticketsIsolation.check_expr, /app\.tenant_id/);
       for (const table of tables) {
         assert.ok(covered.has(table.relname), table.relname + ' has no policy');
       }
