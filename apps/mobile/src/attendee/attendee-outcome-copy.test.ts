@@ -45,6 +45,15 @@ test('presentTicketRow falls back when event not in demo catalog', () => {
   assert.match(row.eventIdLine, /aaaaaaaa/);
 });
 
+test('presentTicketRow prefers API eventName over demo catalog', () => {
+  const row = presentTicketRow({
+    ...sampleTicket,
+    eventId: 'demo-mfest',
+    eventName: 'Tên từ máy chủ',
+  });
+  assert.equal(row.eventTitle, 'Tên từ máy chủ');
+});
+
 test('presentRedeemDecision issued never leads with raw ticket UUID only', () => {
   const view = presentRedeemDecision({
     kind: 'issued',

@@ -30,6 +30,7 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { TabStackTitle } from '@/navigation/tab-stack-title';
 import { useAttendeeTabBarInset } from '@/navigation/use-attendee-tab-bar-inset';
 import { useShowAttendeeTabs } from '@/navigation/use-staff-workspace';
+import { WalletOwnedTicketsLink } from '@/components/wallet-owned-tickets-link';
 
 function formatListDate(startsAt: string, timezone: string): string {
   try {
@@ -49,86 +50,97 @@ function PublishedEventCard({ item }: { item: PublishedEventSummary }) {
     : 'Chưa có giờ bắt đầu';
 
   return (
-    <Link
-      href={{
-        pathname: '/events/[tenantSlug]/[slug]',
-        params: { tenantSlug: item.tenantSlug, slug: item.slug },
+    <View
+      style={{
+        backgroundColor: '#ffffff',
+        borderRadius: 16,
+        borderCurve: 'continuous',
+        overflow: 'hidden',
+        marginBottom: 18,
       }}
-      asChild
     >
-      <Pressable
-        accessibilityRole="link"
-        style={({ pressed }) => ({
-          opacity: pressed ? 0.92 : 1,
-          backgroundColor: '#ffffff',
-          borderRadius: 16,
-          borderCurve: 'continuous',
-          overflow: 'hidden',
-          marginBottom: 18,
-        })}
+      <Link
+        href={{
+          pathname: '/events/[tenantSlug]/[slug]',
+          params: { tenantSlug: item.tenantSlug, slug: item.slug },
+        }}
+        asChild
       >
-        <EventBanner
-          eventId={item.id}
-          tenantSlug={item.tenantSlug}
-          bannerUrl={item.brand.bannerUrl}
-          height={142}
-          style={{ borderRadius: 0 }}
-          testID={`pub-media-${item.id}-banner`}
-        />
-        <View style={{ padding: 15, gap: 8 }}>
-          <Text
-            style={{
-              color: colors.secondary,
-              fontSize: 13,
-              fontFamily: fontFamilies.body,
-            }}
-          >
-            {item.brand.organizationName}
-          </Text>
-          <Text
-            accessibilityRole="header"
-            style={{
-              color: brand.ink,
-              fontSize: 22,
-              fontFamily: fontFamilies.display,
-              fontWeight: '600',
-            }}
-          >
-            {item.name}
-          </Text>
-          <Text
-            style={{
-              color: colors.secondary,
-              fontSize: 15,
-              fontFamily: fontFamilies.body,
-            }}
-          >
-            {dateLine}
-            {item.location ? ` · ${item.location}` : ''}
-          </Text>
-          <View
-            style={{
-              alignSelf: 'flex-start',
-              backgroundColor: '#edf5ef',
-              borderRadius: 6,
-              paddingHorizontal: 8,
-              paddingVertical: 5,
-            }}
-          >
+        <Pressable
+          accessibilityRole="link"
+          style={({ pressed }) => ({
+            opacity: pressed ? 0.92 : 1,
+          })}
+        >
+          <EventBanner
+            eventId={item.id}
+            tenantSlug={item.tenantSlug}
+            bannerUrl={item.brand.bannerUrl}
+            height={142}
+            style={{ borderRadius: 0 }}
+            testID={`pub-media-${item.id}-banner`}
+          />
+          <View style={{ padding: 15, gap: 8 }}>
             <Text
               style={{
-                color: '#26734c',
-                fontSize: 11,
+                color: colors.secondary,
+                fontSize: 13,
                 fontFamily: fontFamilies.body,
+              }}
+            >
+              {item.brand.organizationName}
+            </Text>
+            <Text
+              accessibilityRole="header"
+              style={{
+                color: brand.ink,
+                fontSize: 22,
+                fontFamily: fontFamilies.display,
                 fontWeight: '600',
               }}
             >
-              {eventsCopy.publishedStatusPill}
+              {item.name}
             </Text>
+            <Text
+              style={{
+                color: colors.secondary,
+                fontSize: 15,
+                fontFamily: fontFamilies.body,
+              }}
+            >
+              {dateLine}
+              {item.location ? ` · ${item.location}` : ''}
+            </Text>
+            <View
+              style={{
+                alignSelf: 'flex-start',
+                backgroundColor: '#edf5ef',
+                borderRadius: 6,
+                paddingHorizontal: 8,
+                paddingVertical: 5,
+              }}
+            >
+              <Text
+                style={{
+                  color: '#26734c',
+                  fontSize: 11,
+                  fontFamily: fontFamilies.body,
+                  fontWeight: '600',
+                }}
+              >
+                {eventsCopy.publishedStatusPill}
+              </Text>
+            </View>
           </View>
-        </View>
-      </Pressable>
-    </Link>
+        </Pressable>
+      </Link>
+      <View style={{ paddingHorizontal: 15, paddingBottom: 14 }}>
+        <WalletOwnedTicketsLink
+          eventId={item.id}
+          testID={`pub-owned-tickets-${item.id}`}
+        />
+      </View>
+    </View>
   );
 }
 
