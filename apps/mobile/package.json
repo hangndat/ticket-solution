@@ -41,7 +41,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint src",
     "test": "node --experimental-strip-types --test src/identity/*.test.ts src/data/*.test.ts src/tickets/*.test.ts src/gate/*.test.ts src/redeem/*.test.ts src/navigation/*.test.ts src/links/*.test.ts src/push/*.test.ts src/account-deletion/*.test.ts src/published/*.test.ts src/theme/*.test.ts src/components/*.test.ts src/attendee/*.test.ts",
-    "build": "expo export --platform ios --output-dir dist"
+    "build": "expo export --platform ios --output-dir dist",
+    "sync-ios-build": "node scripts/sync-ios-build-number.mjs"
   },
   "private": true,
   "type": "module"

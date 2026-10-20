@@ -28,10 +28,8 @@ import { brand, colors } from '@/theme/colors';
 import { fontFamilies } from '@/theme/fonts';
 import { useTheme } from '@/theme/ThemeProvider';
 import { TabStackTitle } from '@/navigation/tab-stack-title';
+import { useAttendeeTabBarInset } from '@/navigation/use-attendee-tab-bar-inset';
 import { useShowAttendeeTabs } from '@/navigation/use-staff-workspace';
-
-/** Native tab bar + home indicator — keep list footer/cards above chrome. */
-const TAB_BAR_CLEARANCE = 132;
 
 function formatListDate(startsAt: string, timezone: string): string {
   try {
@@ -140,6 +138,7 @@ function PublishedEventCard({ item }: { item: PublishedEventSummary }) {
  */
 export function EventsScreen() {
   const showAttendeeChrome = useShowAttendeeTabs();
+  const tabBarInset = useAttendeeTabBarInset(56);
   const insets = useSafeAreaInsets();
   const { applyBranding } = useTheme();
   const [published, setPublished] = useState<PublishedEventSummary[]>([]);
@@ -266,7 +265,7 @@ export function EventsScreen() {
 
   const listFooter =
     showAttendeeChrome && publishedPhase === 'ready' ? (
-      <View style={{ paddingTop: 8, paddingBottom: 20 }}>
+      <View style={{ paddingTop: 8, paddingBottom: 32 }}>
         <AttendeeCta
           label={eventsCopy.redeemCta}
           variant="secondary"
@@ -276,13 +275,14 @@ export function EventsScreen() {
       </View>
     ) : undefined;
 
-  const bottomInset = insets.bottom + TAB_BAR_CLEARANCE;
+  const bottomInset = tabBarInset;
 
   return (
     <>
       <FlatList
         contentInsetAdjustmentBehavior="never"
         keyboardShouldPersistTaps="handled"
+        scrollIndicatorInsets={{ bottom: tabBarInset - insets.bottom }}
         style={{ flex: 1, backgroundColor: brand.paper }}
         contentContainerStyle={{
           paddingHorizontal: 20,

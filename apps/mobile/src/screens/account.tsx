@@ -34,6 +34,7 @@ import { consumePendingImmediateSignIn } from '@/navigation/attendee-auth-gate';
 import { consumeSignInReturn } from '@/navigation/sign-in-return-intent';
 import { useStaffWorkspace } from '@/navigation/use-staff-workspace';
 import { TabStackTitle } from '@/navigation/tab-stack-title';
+import { useAttendeeTabBarInset } from '@/navigation/use-attendee-tab-bar-inset';
 import { PushAccountSection } from '@/push/push-account-section';
 
 export type AccountPresentation = 'tab' | 'stack';
@@ -266,6 +267,7 @@ function ConfiguredAccount({
   );
 
   const identityKind = isSignedIn ? 'verified' : 'guest';
+  const tabBarInset = useAttendeeTabBarInset(24);
   const showLogout = isSignedIn;
   const showDeleteRow = isSignedIn && !meError;
 
@@ -281,7 +283,7 @@ function ConfiguredAccount({
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
         style={{ flex: 1, backgroundColor: brand.paper }}
-        contentContainerStyle={{ padding: 20, paddingBottom: 48, gap: 20 }}
+        contentContainerStyle={{ padding: 20, paddingBottom: tabBarInset, gap: 20 }}
       >
         <AccountGroupedSection title={accountCopy.sections.you}>
           <AccountGroupedRow label={youTitle} value={youBody} disabled={busy} />
