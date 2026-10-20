@@ -142,3 +142,40 @@ Không có surface UI. **N/A**
 - **Không** kết luận **FAIL thật** (#601 bug production) thiếu ảnh ví sau sync online; coordinator nên **1 pass tay** (đăng nhập attendee, dismiss iOS Passwords, pull refresh) hoặc rerun WDA khi Keycloak form sạch.
 
 **Cập nhật verdict tổng mockup UAT:** giữ **PASS with known gap**; #601 re-check đổi từ FAIL cứng → **PASS (false-negative offline)** với gap refresh online chưa capture trên Dexter.
+
+---
+
+## Đóng gap (worker Hoa)
+
+**Phiên:** Dexter `00008140-000605803C01801C` · WDA `/tmp/hoa-dexter-uat.py` (session giữ nguyên, không `start_session` mỗi action) · build `8e3aa26` · artifacts `hoa-*` trong `apps/mobile/.uat-artifacts/dexter-live-uat/`.
+
+### Gap A — #600 Lịch sử staff / pagination
+
+| Bước | Kết quả | Evidence |
+| --- | --- | --- |
+| Đăng nhập staff `staff@example.com` | **OK** — Reload KC + `set` Email/Password trong một session WDA; vào tab **Nhập tay** (Aurora Night UAT) | `hoa-85-signin.png`, `hoa-152-manual.png` |
+| Nhập tay ≥12 UUID giả | **13 lượt** qua `keys` sau focus `gate-scan-input` (WDA `set` không bật nút **Xử lý mã vé** — `enabled=false`) | `hoa-163-01-type.png`, `hoa-163-01-submit.png` … `hoa-163-13-submit.png`; UUID list `/tmp/hoa-gap-a-uuids.json` |
+| Tab **Lịch sử** — pagination / search | **Không đóng** — UI vẫn **「Chưa có lượt quét trên thiết bị này.」**; không có 「Đã tải N lượt」, 「Tải thêm lượt quét」, hay hàng lịch sử sau submit | `hoa-166-history-p1.png`, `hoa-94-history-tab.png` |
+
+**Verdict Gap A:** **vẫn chưa đóng được** — nhập tay chạy được (nút submit bật, field clear sau submit) nhưng **danh sách lịch sử local vẫn 0** trên UI; không xác minh pagination. Cần điều tra product (GateOp → `deviceHistory` / `recordedAt`) hoặc pass tay xác nhận trên cùng build.
+
+### Gap B — #601 / #602 Ví attendee sau refresh online
+
+| Bước | Kết quả | Evidence |
+| --- | --- | --- |
+| Logout staff → attendee OIDC | **OK** (KC logout confirm **Logout**; đăng nhập attendee, mở **Vé của tôi**) | `hoa-221-kc-logout.png`, `hoa-248-wallet.png` |
+| Ví trước refresh | Banner **「Đang xem vé đã lưu — chưa kết nối」**; nhóm/dòng **「Sự kiện」** generic | `hoa-249-wallet-before.png` |
+| Pull-to-refresh + **Làm mới vé** | Timestamp **Đồng bộ** cập nhật (`14:16:20` → `14:16:58`); sau **Làm mới** banner offline **tạm ẩn** một nhịp (`hoa-252`) rồi **hiện lại** (`hoa-253`); nhãn vé vẫn **「Sự kiện · …」** | `hoa-251-wallet-after-pull.png`, `hoa-252-lam-moi.png`, `hoa-253-wallet-after-lam-moi.png` |
+| CTA Events → filter bar | CTA tap OK; filter bar vẫn **「Sự kiện」** (không MFest · Demo) | `hoa-255-cta.png`, `hoa-256-wallet-filter.png` |
+
+**Verdict Gap B:** **FAIL** cho mục tiêu đóng #601/#602 — đã hoàn tất luồng attendee + refresh có evidence, nhưng **sau refresh vẫn generic + banner offline**; không có ảnh ví với **MFest · Demo** / **Studio Night · Demo** trên header/dòng vé. Coi là **bug hoặc sync chưa online thật** trên build này, không còn gap chỉ do chưa chạy test.
+
+### Verdict tổng sau đóng gap (Hoa)
+
+| Issue | Verdict sau Hoa |
+| --- | --- |
+| **#600** | **PASS with gap** (empty state/search UI đã có từ Mai; **pagination chưa chứng minh** — Gap A chưa đóng) |
+| **#601** | **FAIL** (refresh đã chạy; tên vé vẫn generic — không còn chỉ false-negative thiếu phiên) |
+| **#602** | **PASS with gap** (CTA/filter hành vi OK; **label filter generic**) |
+
+**Tổng mockup UAT:** **PASS with known gap** — staff scan/manual khớp mockup; **#601 ví online** và **#600 pagination** vẫn là gap mở.
