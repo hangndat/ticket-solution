@@ -67,8 +67,8 @@ export function decideTicketSyncApply(input: {
     action: 'error',
     message:
       input.probe.status === 'unreachable'
-        ? 'GET /v1/me/tickets không tới được. Không có bộ đệm hiển thị offline cho tài khoản này.'
-        : 'GET /v1/me/tickets thất bại. Kiểm tra API base URL, tenantId và Nest đang chạy.',
+        ? 'Không tải được vé từ máy chủ. Kiểm tra mạng hoặc thử lại sau.'
+        : 'Không tải được danh sách vé. Máy chủ chưa hỗ trợ hoặc phản hồi không hợp lệ.',
   };
 }
 

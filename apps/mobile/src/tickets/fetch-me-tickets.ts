@@ -1,5 +1,9 @@
 import type { MeTicketsResponse, TicketSummary } from '@ticket/contracts';
 import { getApiBaseUrl } from '../identity/config.ts';
+import {
+  type MeTicketsFetchScope,
+  normalizeMeTicketsFetchScope,
+} from './wallet-fetch-scope.ts';
 
 function isTicketSummary(value: unknown): value is TicketSummary {
   if (!value || typeof value !== 'object') return false;
@@ -56,16 +60,19 @@ function withTimeoutSignal(
  */
 export async function probeMeTickets(
   bearer: string,
-  tenantId: string,
+  scope: MeTicketsFetchScope | string,
   signal?: AbortSignal,
   timeoutMs: number = ME_TICKETS_PROBE_TIMEOUT_MS,
 ): Promise<MeTicketsProbeResult> {
   const base = getApiBaseUrl();
-  if (!base || !bearer || !tenantId) return { status: 'invalid' };
+  const fetchScope = normalizeMeTicketsFetchScope(scope);
+  if (!base || !bearer || !fetchScope) return { status: 'invalid' };
   const timed = withTimeoutSignal(signal, timeoutMs);
   try {
     const url = new URL(`${base}/v1/me/tickets`);
-    url.searchParams.set('tenantId', tenantId);
+    if (fetchScope.kind === 'tenant') {
+      url.searchParams.set('tenantId', fetchScope.tenantId);
+    }
     const response = await fetch(url.toString(), {
       method: 'GET',
       headers: {
@@ -103,9 +110,9 @@ export async function probeMeTickets(
  */
 export async function fetchMeTickets(
   bearer: string,
-  tenantId: string,
+  scope: MeTicketsFetchScope | string,
   signal?: AbortSignal,
 ): Promise<MeTicketsResponse | null> {
-  const result = await probeMeTickets(bearer, tenantId, signal);
+  const result = await probeMeTickets(bearer, scope, signal);
   return result.status === 'ok' ? result.body : null;
 }
