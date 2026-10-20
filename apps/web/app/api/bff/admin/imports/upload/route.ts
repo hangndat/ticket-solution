@@ -1,4 +1,8 @@
 import { IMPORT_LIMITS } from '@ticket/contracts';
+import {
+  isAcceptedImportCsvFile,
+  oversizedUploadContentLength,
+} from '../../../../../../src/admin/import-upload-guard';
 import { importsUploadPath } from '../../../../../../src/admin/import-job';
 import { isScope, scopeError } from '../../../../../../src/admin/scope';
 import { assertSameOrigin } from '../../../../../../src/bff/origin';
@@ -14,6 +18,14 @@ import {
 export async function POST(request: Request) {
   const csrf = assertSameOrigin(request);
   if (csrf) return csrf;
+
+  if (oversizedUploadContentLength(request.headers.get('content-length'))) {
+    return bffApiError(
+      'IMPORT_ROW_LIMIT',
+      `CSV must be 1..${IMPORT_LIMITS.maxBytes} bytes.`,
+      422,
+    );
+  }
 
   let form: FormData;
   try {
@@ -48,8 +60,7 @@ export async function POST(request: Request) {
       422,
     );
   }
-  const name = file.name.toLowerCase();
-  if (!name.endsWith('.csv') && file.type && !file.type.includes('csv') && !file.type.includes('text')) {
+  if (!isAcceptedImportCsvFile(file)) {
     return bffApiError(
       'IMPORT_FILE_INVALID',
       'Only UTF-8 CSV files are accepted.',
