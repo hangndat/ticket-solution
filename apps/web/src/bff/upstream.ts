@@ -1,6 +1,7 @@
 import { IDENTITY_ERROR_CODES } from '@ticket/contracts';
 import { isOidcConfigured } from '../oidc/config';
-import { readAccessToken } from '../oidc/cookies';
+import { clearSessionCookies, readAccessToken } from '../oidc/cookies';
+import { refreshWebAccessToken } from '../oidc/refresh';
 import { bffApiError } from './api-error';
 
 export { bffApiError } from './api-error';
@@ -28,6 +29,58 @@ function passthroughUpstream(
     status: upstream.status,
     headers: outHeaders,
   });
+}
+
+async function fetchWithBearer(
+  pathAndQuery: string,
+  token: string,
+  init: RequestInit = {},
+): Promise<Response> {
+  const base = apiBaseUrl();
+  const url = `${base}${pathAndQuery.startsWith('/') ? pathAndQuery : `/${pathAndQuery}`}`;
+  const headers = new Headers(init.headers);
+  headers.set('Authorization', `Bearer ${token}`);
+  if (!headers.has('Accept')) {
+    headers.set('Accept', 'application/json');
+  }
+
+  try {
+    const upstream = await fetch(url, {
+      ...init,
+      headers,
+      cache: 'no-store',
+      signal: AbortSignal.timeout(20_000),
+    });
+    const body = await upstream.arrayBuffer();
+    return passthroughUpstream(upstream, body);
+  } catch {
+    return bffApiError(
+      'UPSTREAM_UNAVAILABLE',
+      `Cannot reach API ${init.method ?? 'GET'} ${url}.`,
+      502,
+      true,
+    );
+  }
+}
+
+function refreshFailureResponse(
+  reason: 'misconfigured' | 'missing_refresh' | 'rejected' | 'network',
+): Response {
+  if (reason === 'network') {
+    return bffApiError(
+      'IDENTITY_UNAVAILABLE',
+      'Identity provider unreachable — try again shortly.',
+      503,
+      true,
+    );
+  }
+  return bffApiError(
+    IDENTITY_ERROR_CODES.UNAUTHENTICATED,
+    reason === 'rejected'
+      ? 'Session expired — sign in again.'
+      : 'Not signed in.',
+    401,
+  );
 }
 
 /**
@@ -66,7 +119,8 @@ export async function forwardPublic(
 
 /**
  * Read HttpOnly OIDC access cookie and forward to Nest with Bearer.
- * Returns a Response (error or upstream passthrough). Never exposes the token.
+ * Refreshes on missing access (when refresh cookie present) and retries once on 401.
+ * Never exposes the token. IdP outage does not clear cookies.
  */
 export async function forwardWithBearer(
   pathAndQuery: string,
@@ -80,37 +134,26 @@ export async function forwardWithBearer(
     );
   }
 
-  const token = await readAccessToken();
+  let token = await readAccessToken();
   if (!token) {
-    return bffApiError(
-      IDENTITY_ERROR_CODES.UNAUTHENTICATED,
-      'Not signed in.',
-      401,
-    );
+    const refreshed = await refreshWebAccessToken();
+    if (!refreshed.ok) {
+      return refreshFailureResponse(refreshed.reason);
+    }
+    token = refreshed.accessToken;
   }
 
-  const base = apiBaseUrl();
-  const url = `${base}${pathAndQuery.startsWith('/') ? pathAndQuery : `/${pathAndQuery}`}`;
-  const headers = new Headers(init.headers);
-  headers.set('Authorization', `Bearer ${token}`);
-  if (!headers.has('Accept')) {
-    headers.set('Accept', 'application/json');
-  }
+  let response = await fetchWithBearer(pathAndQuery, token, init);
+  if (response.status !== 401) return response;
 
-  try {
-    const upstream = await fetch(url, {
-      ...init,
-      headers,
-      cache: 'no-store',
-    });
-    const body = await upstream.arrayBuffer();
-    return passthroughUpstream(upstream, body);
-  } catch {
-    return bffApiError(
-      'UPSTREAM_UNAVAILABLE',
-      `Cannot reach API ${init.method ?? 'GET'} ${url}.`,
-      502,
-      true,
-    );
+  const refreshed = await refreshWebAccessToken();
+  if (!refreshed.ok) {
+    if (refreshed.reason === 'network') {
+      return refreshFailureResponse('network');
+    }
+    await clearSessionCookies();
+    return refreshFailureResponse(refreshed.reason);
   }
+  response = await fetchWithBearer(pathAndQuery, refreshed.accessToken, init);
+  return response;
 }

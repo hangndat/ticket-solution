@@ -10,6 +10,9 @@ const valid = {
   OIDC_CLIENT_ID: 'ticket-web',
   OIDC_CLIENT_SECRET: 'dev-web-secret-change-me',
   OIDC_REDIRECT_URI: 'http://127.0.0.1:3000/api/auth/callback',
+  OIDC_AUDIENCE: 'ticket-api',
+  OIDC_JWKS_URL:
+    'http://127.0.0.1:8080/realms/ticket/protocol/openid-connect/certs',
 };
 
 test('missing or blank OIDC env is unconfigured', () => {
