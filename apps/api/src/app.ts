@@ -78,6 +78,11 @@ import {
   TenantRegistrationService,
   buildTenantRegistrationDeps,
 } from './tenant-registrations';
+import { identityErrorHttpStatus } from './identity-http-status';
+import {
+  DEFAULT_JSON_BODY_LIMIT_BYTES,
+  IMPORT_UPLOAD_BODY_LIMIT_BYTES,
+} from './http-limits';
 
 class HealthDto implements HealthResponse {
   @ApiProperty({ enum: ['ok'] }) status!: 'ok';
@@ -109,15 +114,7 @@ function toHttpException(error: IdentityError): HttpException {
     requestId,
     retryable: error.retryable,
   };
-  const status =
-    error.code === IDENTITY_ERROR_CODES.UNAUTHENTICATED
-      ? 401
-      : error.code === IDENTITY_ERROR_CODES.OIDC_MISCONFIGURED
-        ? 503
-        : error.code === IDENTITY_ERROR_CODES.EMAIL_NOT_VERIFIED
-          ? 403
-          : 401;
-  return new HttpException(body, status);
+  return new HttpException(body, identityErrorHttpStatus(error.code));
 }
 
 @Injectable()
@@ -292,7 +289,7 @@ function resolveIdentity(options: CreateAppOptions): {
         bootError ??
         new IdentityError(
           IDENTITY_ERROR_CODES.OIDC_MISCONFIGURED,
-          'DATABASE_URL is required for identity persistence',
+          'Database is not configured for identity persistence',
         );
     } else if (!db && databaseUrl) {
       db = createDatabase(databaseUrl);
@@ -458,12 +455,17 @@ export async function createApp(
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
     new FastifyAdapter({
-      // 11 MiB — CSV import multipart up to IMPORT_LIMITS.maxBytes (10 MiB).
-      bodyLimit: 11 * 1024 * 1024,
+      bodyLimit: DEFAULT_JSON_BODY_LIMIT_BYTES,
       trustProxy: false,
     }),
     { logger: logging ? undefined : false },
   );
+  app.getHttpAdapter().getInstance().addHook('onRoute', (routeOptions) => {
+    const url = routeOptions.url ?? '';
+    if (url.includes('/imports/files')) {
+      routeOptions.bodyLimit = IMPORT_UPLOAD_BODY_LIMIT_BYTES;
+    }
+  });
   // Multipart for H-I1 CSV quarantine upload (Nest Fastify).
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   await app.register(require('@fastify/multipart'), {
