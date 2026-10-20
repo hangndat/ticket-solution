@@ -1,6 +1,8 @@
 'use client';
 
-import { Alert, Button, Space, Table, Tag, Tooltip, Typography } from 'antd';
+import { ProTable } from '@ant-design/pro-components';
+import { Alert, Button, Tag, Tooltip } from 'antd';
+import { PortalPage } from '../../../../src/components/portal-page';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
@@ -165,22 +167,16 @@ export default function AnalyticsPortfolioPage() {
     page.kind === 'ready' || page.kind === 'empty' ? page.asOf : null;
 
   return (
-    <Space direction="vertical" size="large" style={{ width: '100%' }}>
-      <Space
-        style={{ width: '100%', justifyContent: 'space-between' }}
-        wrap
-        align="start"
-      >
-        <Space direction="vertical" size={4}>
-          <Typography.Title level={3} style={{ margin: 0 }}>
-            {t('nav.org.analytics')}
-          </Typography.Title>
-          {asOf ? (
-            <Tag data-testid="portfolio-asof">
-              {t('analytics.asOfTag', { asOf: formatReportAsOf(asOf) })}
-            </Tag>
-          ) : null}
-        </Space>
+    <PortalPage
+      title={t('nav.org.analytics')}
+      subTitle={
+        asOf ? (
+          <Tag data-testid="portfolio-asof">
+            {t('analytics.asOfTag', { asOf: formatReportAsOf(asOf) })}
+          </Tag>
+        ) : undefined
+      }
+      extra={
         <Button
           type="primary"
           onClick={() => void load(null, false)}
@@ -188,7 +184,8 @@ export default function AnalyticsPortfolioPage() {
         >
           {t('gate.h_3keb7')}
         </Button>
-      </Space>
+      }
+    >
 
       {page.kind === 'ready' && page.hasPartial ? (
         <Alert
@@ -237,9 +234,11 @@ export default function AnalyticsPortfolioPage() {
 
       {page.kind === 'ready' ? (
         <>
-          <Table<PortfolioItemView>
+          <ProTable<PortfolioItemView>
             rowKey={rowKey}
             dataSource={page.items}
+            search={false}
+            options={false}
             pagination={false}
             data-testid="portfolio-table"
             onRow={(row) => ({
@@ -341,6 +340,6 @@ export default function AnalyticsPortfolioPage() {
           ) : null}
         </>
       ) : null}
-    </Space>
+    </PortalPage>
   );
 }

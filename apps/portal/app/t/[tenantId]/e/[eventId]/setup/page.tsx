@@ -1,14 +1,13 @@
 'use client';
 
+import { ProCard, ProForm, ProFormText } from '@ant-design/pro-components';
 import {
   Alert,
   Button,
   Form,
-  Input,
   Modal,
-  Space,
-  Typography,
 } from 'antd';
+import { PortalPage } from '../../../../../../src/components/portal-page';
 import { useParams, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import type { EventDetail } from '@ticket/contracts';
@@ -197,12 +196,7 @@ export default function EventSetupPage() {
   }
 
   return (
-    <Space direction="vertical" size="large" style={{ width: '100%' }}>
-      <Typography.Title level={3} style={{ margin: 0 }}>{t('setup.title')}</Typography.Title>
-      <Typography.Paragraph type="secondary">
-        {t('setup.metadataHint')}
-      </Typography.Paragraph>
-
+    <PortalPage title={t('setup.title')} subTitle={t('setup.metadataHint')} loading={kind === 'loading'}>
       {kind === 'loading' ? <SurfaceState kind="loading" /> : null}
       {kind === 'unknown' ? (
         <Alert
@@ -231,46 +225,50 @@ export default function EventSetupPage() {
             message={`contentStatus=${detail.contentStatus} · businessStatus=${detail.businessStatus} · revision=${detail.revision}`}
           />
 
-          <Typography.Title level={5}>{t('setup.h_y3j37s')}</Typography.Title>
-          <Form form={metaForm} layout="inline" disabled={!canUpdate || busy}>
-            <Form.Item name="name" rules={[{ required: true }]}>
-              <Input style={{ width: 320 }} />
-            </Form.Item>
-            <Button
-              type="primary"
-              disabled={!canUpdate}
-              loading={busy}
-              onClick={() => void saveMeta()}
-            >{t('setup.luu')}</Button>
-          </Form>
+          <ProCard title={t('setup.h_y3j37s')} style={{ marginBottom: 16 }}>
+            <ProForm
+              form={metaForm}
+              layout="inline"
+              disabled={!canUpdate || busy}
+              submitter={{
+                searchConfig: { submitText: t('setup.luu') },
+                submitButtonProps: { disabled: !canUpdate, loading: busy },
+              }}
+              onFinish={() => void saveMeta()}
+            >
+              <ProFormText name="name" rules={[{ required: true }]} width={320} />
+            </ProForm>
+          </ProCard>
 
-          <Typography.Title level={5}>Clone</Typography.Title>
-          <Form form={cloneForm} layout="vertical" style={{ maxWidth: 420 }}>
-            <Form.Item name="name" label={t('setup.h_1ps26zd')} rules={[{ required: true }]}>
-              <Input />
-            </Form.Item>
-            <Form.Item name="slug" label={t('setup.h_1mbcc7c')} rules={[{ required: true }]}>
-              <Input />
-            </Form.Item>
-            <Button
-              disabled={!canUpdate}
-              loading={busy}
-              onClick={() => void cloneEvent()}
-            >{t('setup.h_1iam0zn')}</Button>
-          </Form>
+          <ProCard title="Clone" style={{ marginBottom: 16 }}>
+            <ProForm
+              form={cloneForm}
+              layout="vertical"
+              style={{ maxWidth: 420 }}
+              submitter={{
+                searchConfig: { submitText: t('setup.h_1iam0zn') },
+                submitButtonProps: { disabled: !canUpdate, loading: busy },
+              }}
+              onFinish={() => void cloneEvent()}
+            >
+              <ProFormText name="name" label={t('setup.h_1ps26zd')} rules={[{ required: true }]} />
+              <ProFormText name="slug" label={t('setup.h_1mbcc7c')} rules={[{ required: true }]} />
+            </ProForm>
+          </ProCard>
 
-          <Typography.Title level={5}>{t('setup.h_1fmwr17')}</Typography.Title>
-          <Button
-            danger
-            disabled={!canUpdate || detail.contentStatus === 'ARCHIVED'}
-            onClick={() => archiveEvent()}
-          >
-            Archive
-          </Button>
+          <ProCard title={t('setup.h_1fmwr17')}>
+            <Button
+              danger
+              disabled={!canUpdate || detail.contentStatus === 'ARCHIVED'}
+              onClick={() => archiveEvent()}
+            >
+              Archive
+            </Button>
+          </ProCard>
         </>
       ) : null}
 
       {notice ? <Alert type="info" showIcon message={notice} /> : null}
-    </Space>
+    </PortalPage>
   );
 }
