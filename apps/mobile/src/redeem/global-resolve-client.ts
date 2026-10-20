@@ -2,6 +2,7 @@ import {
   ISSUE_ERROR_CODES,
   type RedemptionResolveResponse,
 } from '@ticket/contracts';
+import { userMessageForGlobalResolveError } from './global-resolve-errors.ts';
 
 export type GlobalResolveResult =
   | { status: 'ok'; body: RedemptionResolveResponse }
@@ -60,14 +61,14 @@ export async function resolveRedemptionCodeGlobal(input: {
       return {
         status: 'error',
         code: json.code,
-        message: json.message,
+        message: userMessageForGlobalResolveError(json.code),
         httpStatus: response.status,
       };
     }
     return {
       status: 'error',
       code: 'UNKNOWN',
-      message: `HTTP ${response.status}`,
+      message: userMessageForGlobalResolveError('UNKNOWN'),
       httpStatus: response.status,
     };
   } catch {
