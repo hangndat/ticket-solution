@@ -1,27 +1,17 @@
 import { cookies } from 'next/headers';
+import {
+  SESSION_COOKIES,
+  sessionCookieOptions,
+} from '@ticket/web-session';
 
-export const ACCESS_COOKIE = 'oidc_access_token';
-export const REFRESH_COOKIE = 'oidc_refresh_token';
+export const ACCESS_COOKIE = SESSION_COOKIES.access;
+export const REFRESH_COOKIE = SESSION_COOKIES.refresh;
 /** Stored for RP-initiated logout `id_token_hint` (silent end-session). */
-export const ID_TOKEN_COOKIE = 'oidc_id_token';
-export const PKCE_COOKIE = 'oidc_pkce_verifier';
-export const STATE_COOKIE = 'oidc_oauth_state';
+export const ID_TOKEN_COOKIE = SESSION_COOKIES.idToken;
+export const PKCE_COOKIE = SESSION_COOKIES.pkce;
+export const STATE_COOKIE = SESSION_COOKIES.state;
 
-export function authCookieSecure(
-  env: NodeJS.ProcessEnv = process.env,
-): boolean {
-  return env.AUTH_COOKIE_SECURE === 'true';
-}
-
-export function sessionCookieOptions(maxAgeSeconds: number) {
-  return {
-    httpOnly: true,
-    secure: authCookieSecure(),
-    sameSite: 'lax' as const,
-    path: '/',
-    maxAge: maxAgeSeconds,
-  };
-}
+export { sessionCookieOptions } from '@ticket/web-session';
 
 export async function readAccessToken(): Promise<string | null> {
   const jar = await cookies();
