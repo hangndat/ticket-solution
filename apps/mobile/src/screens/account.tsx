@@ -5,7 +5,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import { router, useFocusEffect } from 'expo-router';
+import { router, useFocusEffect, useSegments } from 'expo-router';
 import type { MeResponse } from '@ticket/contracts';
 import { AttendeeCta } from '@/components/attendee-cta';
 import {
@@ -33,7 +33,11 @@ import { logoutAndClearWalletArtifacts } from '@/tickets/wallet-logout';
 import { consumePendingImmediateSignIn } from '@/navigation/attendee-auth-gate';
 import { consumeSignInReturn } from '@/navigation/sign-in-return-intent';
 import { STAFF_ACCOUNT_HREF } from '@/navigation/staff-account-route';
-import { STAFF_DEFAULT_SCAN_HREF } from '@/navigation/staff-default-tab-target';
+import {
+  planPostLogoutNavigation,
+  runPostLogoutNavigation,
+} from '@/navigation/post-logout-navigation';
+import { returnToStaffGateScanTab } from '@/navigation/staff-scan-tab-navigation';
 import { useStaffWorkspace } from '@/navigation/use-staff-workspace';
 import { TabStackTitle } from '@/navigation/tab-stack-title';
 import { useAttendeeTabBarInset } from '@/navigation/use-attendee-tab-bar-inset';
@@ -105,6 +109,7 @@ function ConfiguredAccount({
   presentation: AccountPresentation;
 }) {
   const staffWorkspace = useStaffWorkspace();
+  const segments = useSegments();
   const [me, setMe] = useState<MeResponse | null>(null);
   const [meError, setMeError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -225,12 +230,11 @@ function ConfiguredAccount({
     const tenantId =
       getTenantId() ??
       (offline.status === 'bound' ? offline.tenantId : null);
+    const logoutPlan = planPostLogoutNavigation({ segments, staffWorkspace });
     try {
       await logoutAndClearWalletArtifacts({ userId, tenantId });
       await endKeycloakSession();
-      if (staffWorkspace) {
-        router.replace('/(tabs)/(events)');
-      }
+      runPostLogoutNavigation(logoutPlan);
     } catch (error) {
       setMeError(
         error instanceof Error
@@ -240,7 +244,7 @@ function ConfiguredAccount({
     } finally {
       setBusy(false);
     }
-  }, [offline, verifiedUserId, staffWorkspace]);
+  }, [offline, segments, verifiedUserId, staffWorkspace]);
 
   const onClearOfflineDisplay = useCallback(async () => {
     setBusy(true);
@@ -353,7 +357,7 @@ function ConfiguredAccount({
           <AttendeeCta
             label={accountCopy.staffBackToGate}
             variant="secondary"
-            onPress={() => router.replace(STAFF_DEFAULT_SCAN_HREF)}
+            onPress={() => returnToStaffGateScanTab()}
             disabled={busy}
             testID="account-cta-staff-back"
           />
