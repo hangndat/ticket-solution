@@ -13,6 +13,11 @@ const {
   createEvent,
   updateEvent,
   cloneEvent,
+  archiveEvent,
+  cancelEvent,
+  createTicketType,
+  createIssuanceSource,
+  changePortalMemberRole,
   PlatformError,
   PLATFORM_ERROR_CODES,
 } = require('../dist');
@@ -179,6 +184,17 @@ test(
           err.code === PLATFORM_ERROR_CODES.TENANT_LIMIT_REACHED,
       );
 
+      let ticketTypeId;
+      await withTenant(db, tenantId, async (tx) => {
+        const tt = await createTicketType(tx, {
+          tenantId,
+          eventId: created.event.eventId,
+          actorUserId: manager.userId,
+          label: 'Pre-suspend GA',
+        });
+        ticketTypeId = tt.ticketTypeId;
+      });
+
       await withTenant(db, tenantId, async (tx) => {
         await tx.$executeRaw`
           UPDATE tenants SET status = 'SUSPENDED' WHERE id = ${tenantId}::uuid
@@ -216,6 +232,269 @@ test(
           err instanceof PlatformError &&
           err.code === PLATFORM_ERROR_CODES.TENANT_SUSPENDED,
       );
+
+      await assert.rejects(
+        () =>
+          withTenant(db, tenantId, (tx) =>
+            archiveEvent(tx, {
+              tenantId,
+              eventId: created.event.eventId,
+              actorUserId: manager.userId,
+              idempotencyKey: randomUUID(),
+              body: { expectedRevision: created.event.revision },
+            }),
+          ),
+        (err) =>
+          err instanceof PlatformError &&
+          err.code === PLATFORM_ERROR_CODES.TENANT_SUSPENDED,
+      );
+
+      await assert.rejects(
+        () =>
+          withTenant(db, tenantId, (tx) =>
+            cancelEvent(tx, {
+              tenantId,
+              eventId: created.event.eventId,
+              actorUserId: manager.userId,
+              idempotencyKey: randomUUID(),
+              body: {
+                expectedRevision: created.event.revision,
+                reason: 'should not cancel while suspended',
+              },
+            }),
+          ),
+        (err) =>
+          err instanceof PlatformError &&
+          err.code === PLATFORM_ERROR_CODES.TENANT_SUSPENDED,
+      );
+
+      await assert.rejects(
+        () =>
+          withTenant(db, tenantId, (tx) =>
+            createTicketType(tx, {
+              tenantId,
+              eventId: created.event.eventId,
+              actorUserId: manager.userId,
+              label: 'GA',
+            }),
+          ),
+        (err) =>
+          err instanceof PlatformError &&
+          err.code === PLATFORM_ERROR_CODES.TENANT_SUSPENDED,
+      );
+
+      await assert.rejects(
+        () =>
+          withTenant(db, tenantId, (tx) =>
+            createIssuanceSource(tx, {
+              tenantId,
+              eventId: created.event.eventId,
+              actorUserId: manager.userId,
+              name: 'Door',
+              approvalMode: 'AUTO',
+              ticketTypeId,
+            }),
+          ),
+        (err) =>
+          err instanceof PlatformError &&
+          err.code === PLATFORM_ERROR_CODES.TENANT_SUSPENDED,
+      );
+    } finally {
+      if (db) await db.$disconnect().catch(() => {});
+      if (name) {
+        try {
+          docker('rm', '-f', name);
+        } catch {
+          /* ignore */
+        }
+      }
+    }
+  },
+);
+
+test(
+  '#632 concurrent createEvent at max_events — one winner, one TENANT_LIMIT_REACHED',
+  { timeout: 180000 },
+  async () => {
+    let name;
+    let db;
+    try {
+      const boot = await startIsolatedPostgres();
+      name = boot.name;
+      db = createDatabase(boot.url, 4);
+      const users = createPrismaIdentityUserRepository(db);
+      const manager = await users.upsertFromVerifiedIdentity({
+        issuer: 'http://127.0.0.1:8080/realms/ticket',
+        subject: 'mgr-632-race',
+        email: 'mgr632race@example.com',
+        emailVerified: true,
+      });
+
+      const tenantId = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
+      await withTenant(db, tenantId, async (tx) => {
+        await tx.tenant.create({
+          data: { id: tenantId, slug: 'quota-race-632', name: 'Quota Race 632' },
+        });
+        await tx.$executeRaw`
+          INSERT INTO tenant_limits (tenant_id, max_events)
+          VALUES (${tenantId}::uuid, 1)
+          ON CONFLICT (tenant_id) DO UPDATE SET max_events = 1
+        `;
+        await grantMembership(tx, {
+          tenantId,
+          userId: manager.userId,
+          role: 'MANAGER',
+          permissions: ['event.create', 'event.update', 'event.config'],
+        });
+      });
+
+      const bodyA = {
+        slug: 'race-a',
+        name: 'Race A',
+        timezone: 'Asia/Ho_Chi_Minh',
+        visibility: 'UNLISTED',
+      };
+      const bodyB = {
+        slug: 'race-b',
+        name: 'Race B',
+        timezone: 'Asia/Ho_Chi_Minh',
+        visibility: 'UNLISTED',
+      };
+
+      const results = await Promise.allSettled([
+        withTenant(db, tenantId, (tx) =>
+          createEvent(tx, {
+            tenantId,
+            actorUserId: manager.userId,
+            idempotencyKey: randomUUID(),
+            body: bodyA,
+          }),
+        ),
+        withTenant(db, tenantId, (tx) =>
+          createEvent(tx, {
+            tenantId,
+            actorUserId: manager.userId,
+            idempotencyKey: randomUUID(),
+            body: bodyB,
+          }),
+        ),
+      ]);
+
+      const fulfilled = results.filter((r) => r.status === 'fulfilled');
+      const rejected = results.filter((r) => r.status === 'rejected');
+      assert.equal(fulfilled.length, 1);
+      assert.equal(rejected.length, 1);
+      assert.ok(
+        rejected[0].reason instanceof PlatformError &&
+          rejected[0].reason.code === PLATFORM_ERROR_CODES.TENANT_LIMIT_REACHED,
+      );
+
+      const countRows = await withTenant(db, tenantId, (tx) =>
+        tx.$queryRaw`
+          SELECT COUNT(*)::int AS n FROM events WHERE tenant_id = ${tenantId}::uuid
+        `,
+      );
+      assert.equal(Number(countRows[0].n), 1);
+    } finally {
+      if (db) await db.$disconnect().catch(() => {});
+      if (name) {
+        try {
+          docker('rm', '-f', name);
+        } catch {
+          /* ignore */
+        }
+      }
+    }
+  },
+);
+
+test(
+  '#632 createEvent vs changePortalMemberRole — no deadlock (portal-members lock order)',
+  { timeout: 240000 },
+  async () => {
+    let name;
+    let db;
+    try {
+      const boot = await startIsolatedPostgres();
+      name = boot.name;
+      db = createDatabase(boot.url, 4);
+      const users = createPrismaIdentityUserRepository(db);
+      const ownerA = await users.upsertFromVerifiedIdentity({
+        issuer: 'http://127.0.0.1:8080/realms/ticket',
+        subject: 'own-632a',
+        email: 'own632a@example.com',
+        emailVerified: true,
+      });
+      const ownerB = await users.upsertFromVerifiedIdentity({
+        issuer: 'http://127.0.0.1:8080/realms/ticket',
+        subject: 'own-632b',
+        email: 'own632b@example.com',
+        emailVerified: true,
+      });
+
+      const tenantId = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee';
+      let membershipB;
+      await withTenant(db, tenantId, async (tx) => {
+        await tx.tenant.create({
+          data: { id: tenantId, slug: 'lock-632', name: 'Lock 632' },
+        });
+        await tx.$executeRaw`
+          INSERT INTO tenant_limits (tenant_id, max_events)
+          VALUES (${tenantId}::uuid, 5)
+          ON CONFLICT (tenant_id) DO UPDATE SET max_events = 5
+        `;
+        await grantMembership(tx, {
+          tenantId,
+          userId: ownerA.userId,
+          role: 'OWNER',
+          permissions: ['event.create', 'event.update', 'members.manage'],
+        });
+        membershipB = (
+          await grantMembership(tx, {
+            tenantId,
+            userId: ownerB.userId,
+            role: 'MANAGER',
+            permissions: ['event.create'],
+          })
+        ).membershipId;
+      });
+
+      const cross = await Promise.allSettled([
+        changePortalMemberRole(db, {
+          tenantId,
+          actorUserId: ownerA.userId,
+          membershipId: membershipB,
+          role: 'Owner',
+          reason: 'promote during createEvent',
+        }),
+        withTenant(db, tenantId, (tx) =>
+          createEvent(tx, {
+            tenantId,
+            actorUserId: ownerA.userId,
+            idempotencyKey: randomUUID(),
+            body: {
+              slug: 'lock-order-ev',
+              name: 'Lock Order Event',
+              timezone: 'Asia/Ho_Chi_Minh',
+              visibility: 'UNLISTED',
+            },
+          }),
+        ),
+      ]);
+
+      assert.equal(
+        cross.filter((r) => r.status === 'rejected').length,
+        0,
+        'createEvent + changePortalMemberRole must not deadlock: ' +
+          JSON.stringify(
+            cross.map((r) =>
+              r.status === 'rejected'
+                ? { message: r.reason?.message, code: r.reason?.code }
+                : 'ok',
+            ),
+          ),
+      );
+      assert.equal(cross.filter((r) => r.status === 'fulfilled').length, 2);
     } finally {
       if (db) await db.$disconnect().catch(() => {});
       if (name) {
