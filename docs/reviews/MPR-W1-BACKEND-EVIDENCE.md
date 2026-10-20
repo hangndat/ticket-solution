@@ -35,7 +35,7 @@ apps/api: pnpm test  (PASS, incl. test/me-tickets.test.cjs)
 
 ## Exact SHA
 
-`d5accb97eb27ae77047cf5445f3d8de45a0097c5`
+`5fdf13edc21e19ac41c1fc6bbb948637c4596c28`
 
 ## CI
 
