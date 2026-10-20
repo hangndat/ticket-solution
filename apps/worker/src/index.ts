@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import { randomUUID } from 'node:crypto';
-import { Module, type OnModuleDestroy } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import {
   createApnsAdapter,
@@ -9,25 +9,26 @@ import {
   isApnsEnabled,
   readCredentialKeyEnvironment,
   readEmailEnvironment,
-  cleanupExpiredImportFiles,
-  createMinioObjectStore,
-  readMinioEnvironment,
-  readMinioImportsEnvironment,
   readProcessEnvironment,
-  reconcileDuePendingRedemptions,
-  processDueAccountAnonymizations,
-  relayExportsOnce,
-  relayOutboxOnce,
   type ApnsAdapter,
   type EmailAdapter,
   type PrismaClient,
 } from '@ticket/backend';
+import { WorkerRelay } from './worker-relay';
+import { logCredentialKeyMisconfigured } from './worker-tick-log';
 
 export {
   replayOfflineSyncBatch,
   applyOfflineSyncBatch,
   type ReplayOfflineSyncBatchInput,
 } from './offline-sync-replay';
+
+export { WorkerRelay, DEFAULT_SHUTDOWN_TICK_TIMEOUT_MS } from './worker-relay';
+export {
+  createTickGuard,
+  waitForInflightTick,
+  type TickGuardResult,
+} from './worker-tick-guard';
 
 export type CreateWorkerOptions = {
   env?: NodeJS.ProcessEnv;
@@ -39,113 +40,9 @@ export type CreateWorkerOptions = {
   leaseOwner?: string;
   /** Poll interval; 0 disables background polling. */
   pollMs?: number;
+  /** Max wait for an in-flight poll cycle during shutdown (ms). */
+  shutdownTickTimeoutMs?: number;
 };
-
-class WorkerRelay implements OnModuleDestroy {
-  private timer: NodeJS.Timeout | null = null;
-  private stopped = false;
-
-  constructor(
-    private readonly db: PrismaClient | null,
-    private readonly email: EmailAdapter,
-    /** Undefined = APNs disabled (omit options.apns → skip push). Null = fail-closed. */
-    private readonly apns: ApnsAdapter | null | undefined,
-    private readonly leaseOwner: string,
-    private readonly ownsDb: boolean,
-    private readonly intervalMs: number,
-    private readonly credentialKeyMaterial: string,
-    private readonly env: NodeJS.ProcessEnv,
-  ) {}
-
-  private relayOpts() {
-    const base = {
-      credentialKeyMaterial: this.credentialKeyMaterial,
-      env: this.env,
-    };
-    // Only opt into APNs when enabled (or test injects adapter/null).
-    if (this.apns !== undefined) {
-      return { ...base, apns: this.apns };
-    }
-    return base;
-  }
-
-  start() {
-    if (!this.db || this.intervalMs <= 0) return;
-    const tick = async () => {
-      if (this.stopped || !this.db) return;
-      try {
-        await reconcileDuePendingRedemptions(this.db, 50);
-      } catch {
-        // Keep looping; pending expiry is lazy-reconciled on read/decide too.
-      }
-      try {
-        await processDueAccountAnonymizations(this.db, 50, {
-          env: this.env,
-          leaseOwner: this.leaseOwner,
-        });
-      } catch {
-        // Keep looping; stay REQUESTED until PG+IdP terminal COMPLETED.
-      }
-      try {
-        await relayOutboxOnce(
-          this.db,
-          this.email,
-          this.leaseOwner,
-          10,
-          this.relayOpts(),
-        );
-      } catch {
-        // Keep looping; outbox remains source of truth.
-      }
-      if (readMinioEnvironment(this.env)) {
-        try {
-          await relayExportsOnce(this.db, this.env, this.leaseOwner, 5);
-        } catch {
-          // Export jobs stay PENDING/PROCESSING until success.
-        }
-      }
-      const importsCfg = readMinioImportsEnvironment(this.env);
-      if (importsCfg) {
-        try {
-          await cleanupExpiredImportFiles(
-            this.db,
-            createMinioObjectStore(importsCfg),
-            20,
-          );
-        } catch {
-          // Quarantine TTL cleanup is best-effort; O06 retains objects.
-        }
-      }
-    };
-    void tick();
-    this.timer = setInterval(() => void tick(), this.intervalMs);
-  }
-
-  async relayOnce() {
-    if (!this.db) return { claimed: 0, completed: 0, failed: 0 };
-    await processDueAccountAnonymizations(this.db, 50, {
-      env: this.env,
-      leaseOwner: this.leaseOwner,
-    });
-    const outbox = await relayOutboxOnce(
-      this.db,
-      this.email,
-      this.leaseOwner,
-      10,
-      this.relayOpts(),
-    );
-    if (readMinioEnvironment(this.env)) {
-      await relayExportsOnce(this.db, this.env, this.leaseOwner, 5);
-    }
-    return outbox;
-  }
-
-  async onModuleDestroy() {
-    this.stopped = true;
-    if (this.timer) clearInterval(this.timer);
-    if (this.ownsDb && this.db) await this.db.$disconnect();
-  }
-}
 
 function isOptionsObject(value: unknown): value is CreateWorkerOptions {
   if (typeof value !== 'object' || value === null) return false;
@@ -156,6 +53,7 @@ function isOptionsObject(value: unknown): value is CreateWorkerOptions {
     'relayOnceOnStart' in value ||
     'leaseOwner' in value ||
     'pollMs' in value ||
+    'shutdownTickTimeoutMs' in value ||
     'env' in value ||
     ('logging' in value && !('PATH' in value))
   );
@@ -183,7 +81,6 @@ export async function createWorker(
   const email =
     options.emailAdapter ??
     createSmtpEmailAdapter(readEmailEnvironment(env));
-  // APNS_ENABLED=false → omit adapter (skip push). Enabled without key → fail-closed at construct.
   const apns: ApnsAdapter | null | undefined =
     options.apnsAdapter !== undefined
       ? options.apnsAdapter
@@ -196,12 +93,22 @@ export async function createWorker(
     (Number.isFinite(Number(env['OUTBOX_POLL_MS']))
       ? Number(env['OUTBOX_POLL_MS'])
       : 2000);
+
   let credentialKeyMaterial = '';
   try {
     credentialKeyMaterial = readCredentialKeyEnvironment(env);
-  } catch {
-    // Misconfigured key → relay marks FAILED/retry; tickets remain committed.
+  } catch (error) {
+    logCredentialKeyMisconfigured(
+      error instanceof Error ? error.message : 'TICKET_CREDENTIAL_KEY invalid',
+    );
   }
+
+  const shutdownFromEnv = Number(env['WORKER_SHUTDOWN_TICK_TIMEOUT_MS']);
+  const shutdownTickTimeoutMs =
+    options.shutdownTickTimeoutMs ??
+    (Number.isFinite(shutdownFromEnv) && shutdownFromEnv > 0
+      ? shutdownFromEnv
+      : undefined);
 
   const relay = new WorkerRelay(
     db,
@@ -212,6 +119,7 @@ export async function createWorker(
     intervalMs,
     credentialKeyMaterial,
     env,
+    { shutdownTickTimeoutMs },
   );
 
   @Module({
