@@ -123,11 +123,11 @@ test('K-STAFF-01: staff default tab is Scan when entering workspace or on attend
   assert.equal(
     shouldReplaceWithStaffScanTab({
       staffWorkspace: true,
-      segments: ['(tabs)', 'staff-account'],
+      segments: ['staff-account'],
       enteringStaff: false,
     }),
     false,
-    'staff-account hidden tab from toolbar must not bounce to Scan',
+    'root /staff-account from gate toolbar must not bounce to Scan',
   );
 
   assert.equal(

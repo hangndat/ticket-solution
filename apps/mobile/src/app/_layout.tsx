@@ -74,6 +74,10 @@ function AppStack() {
         options={{ title: 'Nhân viên', headerLargeTitle: true }}
       />
       <Stack.Screen
+        name="staff-account"
+        options={{ headerShown: false, title: 'Tài khoản' }}
+      />
+      <Stack.Screen
         name="uat/session"
         options={{ title: 'UAT session', headerShown: false }}
       />

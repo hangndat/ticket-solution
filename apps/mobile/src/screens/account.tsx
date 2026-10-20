@@ -33,6 +33,7 @@ import { logoutAndClearWalletArtifacts } from '@/tickets/wallet-logout';
 import { consumePendingImmediateSignIn } from '@/navigation/attendee-auth-gate';
 import { consumeSignInReturn } from '@/navigation/sign-in-return-intent';
 import { STAFF_ACCOUNT_HREF } from '@/navigation/staff-account-route';
+import { STAFF_DEFAULT_SCAN_HREF } from '@/navigation/staff-default-tab-target';
 import { useStaffWorkspace } from '@/navigation/use-staff-workspace';
 import { TabStackTitle } from '@/navigation/tab-stack-title';
 import { useAttendeeTabBarInset } from '@/navigation/use-attendee-tab-bar-inset';
@@ -352,7 +353,7 @@ function ConfiguredAccount({
           <AttendeeCta
             label={accountCopy.staffBackToGate}
             variant="secondary"
-            onPress={() => router.replace('/(tabs)/staff-scan')}
+            onPress={() => router.replace(STAFF_DEFAULT_SCAN_HREF)}
             disabled={busy}
             testID="account-cta-staff-back"
           />
