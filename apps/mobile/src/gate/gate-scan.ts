@@ -1,4 +1,5 @@
 import { isMembershipAuthzDenial } from '../identity/staff-eligibility.ts';
+import { randomId } from '../lib/random-id.ts';
 
 const UUID =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -263,7 +264,10 @@ export async function runScan(input: {
   preferOfflineQueue?: boolean;
 }): Promise<RunScanResult> {
   const fetchImpl = input.fetchImpl ?? fetch;
-  const createId = input.createId ?? (() => crypto.randomUUID());
+  // Hermes has no global `crypto` — never call crypto.randomUUID() here.
+  // Use randomId() (expo-crypto fallback). Bare crypto.randomUUID throws AFTER
+  // /sessions+/reservations succeed, wiping toast/history/sessionId (#608).
+  const createId = input.createId ?? randomId;
   const parsed = parseScan(input.raw, input.fallback);
   if (!parsed) {
     const current: GateOp = {

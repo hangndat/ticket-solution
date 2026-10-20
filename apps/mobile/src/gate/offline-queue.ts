@@ -11,6 +11,7 @@ import {
   type OfflineSyncResponse,
 } from './offline-sync-contract.ts';
 import type { OfflineQueueStore } from './offline-queue-types.ts';
+import { randomId } from '../lib/random-id.ts';
 
 export type OfflineLocalStatus =
   | 'pending'
@@ -166,7 +167,8 @@ export class OfflineScanQueue {
     opts?: { createId?: () => string; nowIso?: () => string },
   ) {
     this.store = store;
-    this.createId = opts?.createId ?? (() => crypto.randomUUID());
+    // Hermes: no global crypto — same #608 footgun as runScan default createId.
+    this.createId = opts?.createId ?? randomId;
     this.nowIso = opts?.nowIso ?? (() => new Date().toISOString());
   }
 
