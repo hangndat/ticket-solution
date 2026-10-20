@@ -14,7 +14,15 @@ export type DeviceScanHistoryRow = {
   source: 'scan' | 'offline-queue';
 };
 
-const MAX_ROWS = 12;
+/** Default page size for “Tải thêm” — not a hard cap on stored history. */
+export const DEVICE_HISTORY_PAGE_SIZE = 12;
+
+export type DeviceHistoryPageView = {
+  rows: DeviceScanHistoryRow[];
+  loadedCount: number;
+  totalAvailable: number;
+  hasMore: boolean;
+};
 
 export function buildDeviceScanHistory(
   scope: StaffGateScope | null,
@@ -72,8 +80,36 @@ export function buildDeviceScanHistory(
 
   return rows
     .filter((row) => row.at)
-    .sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0))
-    .slice(0, MAX_ROWS);
+    .sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0));
+}
+
+export function filterLoadedDeviceHistoryRows(
+  loadedRows: readonly DeviceScanHistoryRow[],
+  filterQuery: string,
+): DeviceScanHistoryRow[] {
+  const q = filterQuery.trim().toLowerCase();
+  if (!q) return [...loadedRows];
+  return loadedRows.filter(
+    (row) =>
+      row.ticketLabel.toLowerCase().includes(q) ||
+      row.statusLabel.toLowerCase().includes(q),
+  );
+}
+
+export function computeDeviceHistoryPageView(
+  allRows: readonly DeviceScanHistoryRow[],
+  visibleCount: number,
+  filterQuery: string,
+): DeviceHistoryPageView {
+  const limit = Math.max(0, visibleCount);
+  const loaded = allRows.slice(0, limit);
+  const rows = filterLoadedDeviceHistoryRows(loaded, filterQuery);
+  return {
+    rows,
+    loadedCount: loaded.length,
+    totalAvailable: allRows.length,
+    hasMore: limit < allRows.length,
+  };
 }
 
 export function formatDeviceHistoryTime(iso: string): string {
