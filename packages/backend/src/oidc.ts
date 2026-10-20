@@ -30,6 +30,31 @@ const ALLOWED_ALGORITHMS: jose.JWTVerifyOptions['algorithms'] = [
   'ES256',
 ];
 
+const INFRA_ERRNO = new Set([
+  'ECONNREFUSED',
+  'ENOTFOUND',
+  'ETIMEDOUT',
+  'ECONNRESET',
+  'EAI_AGAIN',
+  'ERR_HTTP_ERROR',
+  'ERR_HTTP_HEADERS_TIMEOUT',
+  'ERR_HTTP_BODY_TIMEOUT',
+  'ERR_SOCKET_CLOSED',
+]);
+
+function isOidcInfrastructureError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  const code = (error as NodeJS.ErrnoException).code;
+  if (code && INFRA_ERRNO.has(code)) return true;
+  const msg = error.message.toLowerCase();
+  return (
+    msg.includes('fetch failed') ||
+    msg.includes('network') ||
+    msg.includes('timed out') ||
+    msg.includes('socket hang up')
+  );
+}
+
 /** Fail closed when OIDC env is incomplete or invalid. */
 export function readOidcEnvironment(env: NodeJS.ProcessEnv): OidcConfig {
   const issuer = env['OIDC_ISSUER']?.trim() ?? '';
@@ -95,7 +120,14 @@ export function createOidcVerifier(
           maxTokenAge: JOSE_ACCESS_TOKEN_VERIFY_EXTRAS.maxTokenAge,
           clockTolerance: JOSE_ACCESS_TOKEN_VERIFY_EXTRAS.clockTolerance,
         }));
-      } catch {
+      } catch (error) {
+        if (isOidcInfrastructureError(error)) {
+          throw new IdentityError(
+            IDENTITY_ERROR_CODES.OIDC_UNAVAILABLE,
+            'Identity provider is temporarily unavailable',
+            true,
+          );
+        }
         throw new IdentityError(
           IDENTITY_ERROR_CODES.UNAUTHENTICATED,
           'Invalid or expired token',
