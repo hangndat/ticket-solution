@@ -30,6 +30,8 @@ export const IDENTITY_ERROR_CODES = {
   UNAUTHENTICATED: 'UNAUTHENTICATED',
   EMAIL_NOT_VERIFIED: 'EMAIL_NOT_VERIFIED',
   OIDC_MISCONFIGURED: 'OIDC_MISCONFIGURED',
+  /** JWKS / IdP temporarily unreachable — clients should retry. */
+  OIDC_UNAVAILABLE: 'OIDC_UNAVAILABLE',
 } as const;
 
 /**

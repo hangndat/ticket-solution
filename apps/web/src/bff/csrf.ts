@@ -1,5 +1,5 @@
 import { cookies } from 'next/headers';
-import { authCookieSecure, sessionCookieOptions } from '../oidc/cookies';
+import { sessionCookieOptions } from '../oidc/cookies';
 import { bffApiError } from './upstream';
 import { assertSameOrigin } from './origin';
 import { CSRF_COOKIE, CSRF_HEADER } from './csrf-constants';
@@ -15,8 +15,6 @@ export async function ensureCsrfCookie(): Promise<string> {
   jar.set(CSRF_COOKIE, token, {
     ...sessionCookieOptions(60 * 60 * 8),
     httpOnly: false, // readable by same-origin JS for header echo
-    secure: authCookieSecure(),
-    sameSite: 'lax',
   });
   return token;
 }
