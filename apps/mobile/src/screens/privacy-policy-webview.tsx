@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useState, type ReactNode } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { AttendeeCta } from '@/components/attendee-cta';
@@ -27,6 +27,44 @@ function shouldAllowPrivacyNavigation(url: string): boolean {
   return isTrustedPrivacyUrl(url);
 }
 
+function PrivacyRootCloseChrome() {
+  return (
+    <View
+      style={{
+        paddingHorizontal: 20,
+        paddingTop: 8,
+        paddingBottom: 4,
+        backgroundColor: brand.paper,
+      }}
+    >
+      <AttendeeCta
+        label="Quay lại"
+        variant="secondary"
+        onPress={closePrivacyPolicy}
+        testID="privacy-cta-close"
+      />
+    </View>
+  );
+}
+
+function PrivacyScreenShell({
+  presentation,
+  children,
+}: {
+  presentation: PrivacyPresentation;
+  children: ReactNode;
+}) {
+  return (
+    <>
+      {presentation === 'root' ? <PrivacyRootCloseChrome /> : null}
+      {children}
+      {presentation === 'tab' ? (
+        <TabStackTitle title="Chính sách quyền riêng tư" large={false} />
+      ) : null}
+    </>
+  );
+}
+
 export function PrivacyPolicyWebViewScreen({
   presentation = 'tab',
 }: {
@@ -44,54 +82,23 @@ export function PrivacyPolicyWebViewScreen({
 
   if (!isTrustedPrivacyUrl(PRIVACY_POLICY_URL)) {
     return (
-      <>
+      <PrivacyScreenShell presentation={presentation}>
         <View style={{ flex: 1, padding: 20, backgroundColor: brand.paper }}>
           <Notice title="Không mở được chính sách">
             Liên kết chính sách không hợp lệ trên bản dựng này.
           </Notice>
         </View>
-        {presentation === 'tab' ? (
-          <TabStackTitle title="Chính sách quyền riêng tư" large={false} />
-        ) : null}
-      </>
+      </PrivacyScreenShell>
     );
   }
 
-  const rootChrome =
-    presentation === 'root' ? (
-      <View
-        style={{
-          paddingHorizontal: 20,
-          paddingTop: 8,
-          paddingBottom: 4,
-          backgroundColor: brand.paper,
-        }}
-      >
-        <AttendeeCta
-          label="Quay lại"
-          variant="secondary"
-          onPress={closePrivacyPolicy}
-          testID="privacy-cta-close"
-        />
-      </View>
-    ) : null;
-
   return (
-    <>
-      {rootChrome}
+    <PrivacyScreenShell presentation={presentation}>
       <View style={{ flex: 1, backgroundColor: brand.paper }}>
         {error ? (
           <View style={{ padding: 20, gap: 12 }}>
             <Notice title="Không tải được trang">{error}</Notice>
             <AttendeeCta label="Thử lại" onPress={onRetry} />
-            {presentation === 'root' ? (
-              <AttendeeCta
-                label="Quay lại"
-                variant="secondary"
-                onPress={closePrivacyPolicy}
-                testID="privacy-cta-close"
-              />
-            ) : null}
           </View>
         ) : null}
         <WebView
@@ -134,9 +141,6 @@ export function PrivacyPolicyWebViewScreen({
           </View>
         ) : null}
       </View>
-      {presentation === 'tab' ? (
-        <TabStackTitle title="Chính sách quyền riêng tư" large={false} />
-      ) : null}
-    </>
+    </PrivacyScreenShell>
   );
 }
