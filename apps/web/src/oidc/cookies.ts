@@ -1,8 +1,5 @@
 import { cookies } from 'next/headers';
-import {
-  SESSION_COOKIES,
-  sessionCookieOptions,
-} from '@ticket/web-session';
+import { SESSION_COOKIES } from '@ticket/web-session';
 
 export const ACCESS_COOKIE = SESSION_COOKIES.access;
 export const REFRESH_COOKIE = SESSION_COOKIES.refresh;
