@@ -45,6 +45,12 @@ import {
   type OidcVerifier,
   type PrismaClient,
 } from '@ticket/backend';
+import { identityErrorHttpStatus } from './identity-http-status';
+import {
+  API_RATE_BUCKETS,
+  API_RATE_LIMITS,
+} from './http-limits';
+import { consumeUserRateLimit } from './http-rate-limit';
 
 const UUID =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -216,8 +222,6 @@ function authzHttpException(error: AuthzError): HttpException {
 }
 
 function identityHttpException(error: IdentityError): HttpException {
-  const status =
-    error.code === IDENTITY_ERROR_CODES.OIDC_MISCONFIGURED ? 503 : 401;
   return new HttpException(
     {
       code: error.code,
@@ -225,7 +229,7 @@ function identityHttpException(error: IdentityError): HttpException {
       requestId: randomUUID(),
       retryable: error.retryable,
     } satisfies ApiError,
-    status,
+    identityErrorHttpStatus(error.code),
   );
 }
 
@@ -279,6 +283,12 @@ export class GateService {
     body: ReserveBodyDto,
   ) {
     const user = await this.actor(authorization);
+    await consumeUserRateLimit(
+      this.deps.db,
+      user.userId,
+      API_RATE_BUCKETS.gateReserve,
+      API_RATE_LIMITS.gateReservePerUser,
+    );
     // Unwrap after withTenant so gate.reject audit commits on business deny.
     const hold = unwrapReserveOutcome(
       await withTenant(this.deps.db!, body.tenantId, (tx) =>
@@ -301,6 +311,12 @@ export class GateService {
     body: ConfirmBodyDto,
   ) {
     const user = await this.actor(authorization);
+    await consumeUserRateLimit(
+      this.deps.db,
+      user.userId,
+      API_RATE_BUCKETS.gateConfirm,
+      API_RATE_LIMITS.gateConfirmPerUser,
+    );
     return unwrapConfirmOutcome(
       await withTenant(this.deps.db!, body.tenantId, (tx) =>
         confirmCheckin(tx, {
@@ -360,6 +376,12 @@ export class GateService {
     body: OfflineSyncBodyDto,
   ): Promise<OfflineSyncResponse> {
     const user = await this.actor(authorization);
+    await consumeUserRateLimit(
+      this.deps.db,
+      user.userId,
+      API_RATE_BUCKETS.gateOfflineSync,
+      API_RATE_LIMITS.gateOfflineSyncPerUser,
+    );
     return withTenant(this.deps.db!, body.tenantId, (tx) =>
       applyOfflineSyncBatch(tx, {
         pathEventId: eventId,
@@ -379,6 +401,7 @@ export class GateController {
     try {
       return await work();
     } catch (error) {
+      if (error instanceof HttpException) throw error;
       if (error instanceof IdentityError) throw identityHttpException(error);
       if (error instanceof AuthzError) throw authzHttpException(error);
       if (error instanceof GateError) throw gateHttpException(error);
@@ -498,6 +521,13 @@ export class GateController {
     @Body() body: OfflineSyncBodyDto,
   ) {
     const event = requireUuid(eventId, 'eventId');
+    if (!body) throw scopeError('request body is required');
+    requireUuid(body.tenantId, 'tenantId');
+    requireUuid(body.staffSessionId, 'staffSessionId');
+    requireUuid(body.deviceId, 'deviceId');
+    if (!Array.isArray(body.events)) {
+      throw scopeError('events must be an array');
+    }
     return this.run(() => this.gate.offlineSync(authorization, event, body));
   }
 }
