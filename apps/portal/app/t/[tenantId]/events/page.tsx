@@ -1,11 +1,14 @@
 'use client';
 
-import { Alert, Button, Space, Table, Typography } from 'antd';
+import { ProTable } from '@ant-design/pro-components';
+import type { ProColumns } from '@ant-design/pro-components';
+import { Alert, Button } from 'antd';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import type { EventDetail } from '@ticket/contracts';
 import { portalGet } from '../../../../src/client/portal-fetch';
+import { PortalPage } from '../../../../src/components/portal-page';
 import { bffEvents } from '../../../../src/prep/bff-urls';
 import { useTenantAccess } from '../../../../src/prep/use-event-access';
 import { SurfaceState } from '../../../../src/components/surface-state';
@@ -50,8 +53,7 @@ export default function EventsListPage() {
       if (res.networkError || res.timedOut || res.status === 0 || res.status >= 500) {
         setList({
           kind: 'unknown',
-          message:
-            t('events.h_byq509'),
+          message: t('events.h_byq509'),
         });
         return;
       }
@@ -121,17 +123,31 @@ export default function EventsListPage() {
 
   const canCreate = access.tenant.tenantPermissions.includes('event.create');
 
+  const columns: ProColumns<EventDetail>[] = [
+    {
+      title: t('sources.ten'),
+      dataIndex: 'name',
+      render: (_, row) => (
+        <Link href={`/t/${tenantId}/e/${row.eventId}`}>{row.name}</Link>
+      ),
+    },
+    { title: 'Slug', dataIndex: 'slug' },
+    { title: t('common.h_fe18yl'), dataIndex: 'contentStatus' },
+    { title: t('common.h_1t15e7z'), dataIndex: 'businessStatus' },
+    { title: t('common.h_wqd4fq'), dataIndex: 'visibility' },
+  ];
+
   return (
-    <Space direction="vertical" size="large" style={{ width: '100%' }}>
-      <Space style={{ width: '100%', justifyContent: 'space-between' }}>
-        <Typography.Title level={3} style={{ margin: 0 }}>{t('nav.org.events')}</Typography.Title>
-        {canCreate ? (
+    <PortalPage
+      title={t('nav.org.events')}
+      extra={
+        canCreate ? (
           <Link href={`/t/${tenantId}/events/new`}>
             <Button type="primary">{t('events.h_ek93o2')}</Button>
           </Link>
-        ) : null}
-      </Space>
-
+        ) : undefined
+      }
+    >
       {list.kind === 'unknown' ? (
         <Alert
           type="warning"
@@ -165,38 +181,28 @@ export default function EventsListPage() {
       ) : null}
       {list.kind === 'ready' ? (
         <>
-          <Table
+          <ProTable<EventDetail>
             rowKey="eventId"
+            columns={columns}
             dataSource={list.items}
+            search={false}
+            options={false}
             pagination={false}
-            columns={[
-              {
-                title: t('sources.ten'),
-                dataIndex: 'name',
-                render: (name: string, row: EventDetail) => (
-                  <Link href={`/t/${tenantId}/e/${row.eventId}`}>{name}</Link>
-                ),
-              },
-              { title: 'Slug', dataIndex: 'slug' },
-              {
-                title: t('common.h_fe18yl'),
-                dataIndex: 'contentStatus',
-              },
-              {
-                title: t('common.h_1t15e7z'),
-                dataIndex: 'businessStatus',
-              },
-              {
-                title: t('common.h_wqd4fq'),
-                dataIndex: 'visibility',
-              },
-            ]}
+            toolBarRender={
+              canCreate
+                ? () => [
+                    <Link key="new" href={`/t/${tenantId}/events/new`}>
+                      <Button type="primary">{t('events.h_ek93o2')}</Button>
+                    </Link>,
+                  ]
+                : false
+            }
           />
           {cursor ? (
             <Button onClick={() => void load(cursor)}>{t('sources.h_1w8bpuo')}</Button>
           ) : null}
         </>
       ) : null}
-    </Space>
+    </PortalPage>
   );
 }
