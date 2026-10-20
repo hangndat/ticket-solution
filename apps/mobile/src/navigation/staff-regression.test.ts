@@ -136,7 +136,27 @@ test('K-STAFF-01: staff default tab is Scan when entering workspace or on attend
       segments: ['(tabs)', 'staff-manual'],
       enteringStaff: true,
     }),
+    true,
+    'first staff entry: NativeTabs opens Manual first → one-shot replace Scan',
+  );
+
+  assert.equal(
+    shouldReplaceWithStaffScanTab({
+      staffWorkspace: true,
+      segments: ['(tabs)', 'staff-manual'],
+      enteringStaff: false,
+    }),
     false,
-    'eligibility resolving while already on Manual must not force Scan',
+    'after entry, intentional Manual tab must not bounce to Scan',
+  );
+
+  assert.equal(
+    shouldReplaceWithStaffScanTab({
+      staffWorkspace: true,
+      segments: ['(tabs)', 'staff-scan'],
+      enteringStaff: true,
+    }),
+    false,
+    'staff entry already on Scan must not replace again',
   );
 });

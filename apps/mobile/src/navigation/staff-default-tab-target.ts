@@ -7,8 +7,6 @@ export const STAFF_TAB_SEGMENT_NAMES = [
   'staff-history',
 ] as const;
 
-const STAFF_TAB_SEGMENT_SET = new Set<string>(STAFF_TAB_SEGMENT_NAMES);
-
 /** Attendee tabs staff must leave when gate workspace is active. */
 const ATTENDEE_ONLY_TAB_SEGMENTS = new Set(['(events)', 'my-tickets']);
 
@@ -32,12 +30,21 @@ export function shouldReplaceWithStaffScanTab(input: {
     return false;
   }
 
-  const onStaffTab = input.segments.some((s) => STAFF_TAB_SEGMENT_SET.has(s));
   const onAttendeeTab = input.segments.some((s) =>
     ATTENDEE_ONLY_TAB_SEGMENTS.has(s),
   );
 
   if (onAttendeeTab) return true;
-  if (onStaffTab) return false;
-  return input.enteringStaff;
+
+  if (!input.enteringStaff) {
+    return false;
+  }
+
+  // One-shot workspace entry → Scan (K-STAFF-01). Tab trigger order is Manual first,
+  // so NativeTabs often opens staff-manual before redirect; do not treat that as intent.
+  if (input.segments.some((s) => s === 'staff-scan')) {
+    return false;
+  }
+
+  return true;
 }
