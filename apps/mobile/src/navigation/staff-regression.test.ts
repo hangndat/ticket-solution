@@ -159,4 +159,15 @@ test('K-STAFF-01: staff default tab is Scan when entering workspace or on attend
     false,
     'staff entry already on Scan must not replace again',
   );
+
+  assert.equal(
+    shouldReplaceWithStaffScanTab({
+      staffWorkspace: true,
+      segments: ['(tabs)', 'staff-manual'],
+      enteringStaff: false,
+      pendingScanLanding: true,
+    }),
+    true,
+    'return from staff-account must select Scan not Manual',
+  );
 });

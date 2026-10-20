@@ -23,10 +23,15 @@ export function shouldReplaceWithStaffScanTab(input: {
   staffWorkspace: boolean;
   segments: readonly string[];
   enteringStaff: boolean;
+  pendingScanLanding?: boolean;
 }): boolean {
   if (!input.staffWorkspace) return false;
 
   if (input.segments.some((s) => STAFF_ACCOUNT_SEGMENTS.has(s))) {
+    return false;
+  }
+
+  if (input.segments.some((s) => s === 'staff-scan')) {
     return false;
   }
 
@@ -36,15 +41,14 @@ export function shouldReplaceWithStaffScanTab(input: {
 
   if (onAttendeeTab) return true;
 
+  if (input.pendingScanLanding) {
+    return true;
+  }
+
   if (!input.enteringStaff) {
     return false;
   }
 
-  // One-shot workspace entry → Scan (K-STAFF-01). Tab trigger order is Manual first,
-  // so NativeTabs often opens staff-manual before redirect; do not treat that as intent.
-  if (input.segments.some((s) => s === 'staff-scan')) {
-    return false;
-  }
-
+  // One-shot workspace entry → Scan (K-STAFF-01). Tab trigger order is Manual first.
   return true;
 }

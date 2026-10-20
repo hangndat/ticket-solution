@@ -127,3 +127,21 @@ Privacy build 22 có **một** actual visible button `privacy-cta-close`; `heade
 | Scan toolbar Tài khoản (tọa độ nút đã xác nhận) | FAIL — trở về Manual | `118-build23-reactivate`, `119-build23-scan-account-tap` |
 
 Zico nhận fix tiếp: thay hidden NativeTabs staff-account bằng root stack `/staff-account`. Build 23 **chưa đạt acceptance**; chưa nghiệm thu ví production khi API W1 chưa triển khai. Không claim pilot ready, QR admit hay APNs delivery từ các kiểm tra trên.
+
+### Root build 24 — source `916c56b8b69f4e23e3c90cd3c495d67609a1b928`
+
+`devicectl` xác nhận **1.0.0 (24)**. Executable SHA-256 `a6102c6cc0201d78ba44e32d63603544417e8495e705de61b82d3449fa1327e8`; bundle SHA-256 `6026ac393895f1a3a94ec2ba7e930a58e60a868b318a22d2bec2f84e2f48457a`.
+
+| Luồng | Kết quả | Evidence |
+| --- | --- | --- |
+| Guest catalog → chi tiết MFest → đổi mã global | PASS | `120`–`125`: một ô mã, không slug/UUID, nhãn back đúng |
+| Guest Account + privacy mở/đóng | PASS chức năng | `126`–`128`: một nút đóng, không tabs trong privacy |
+| Guest Account tiêu đề gọn | FAIL | `126`: `TabStackTitle` mặc định large ghi đè layout compact; sửa sau tại `97cb087` |
+| Staff OIDC login UI | PASS | `129`–`138`; đóng accessory AutoFill rồi tap Sign In (không lỗi app) |
+| Staff toolbar mở Account root | PASS | `139`, `141`: email fixture, các nhóm dữ liệu, Quay lại quét, Đăng xuất; không tabs |
+| Quay lại quét | FAIL | `140`: trở về Manual thay vì Scan |
+| Staff logout | FAIL — crash xác nhận | `142`: về Springboard; `143`: relaunch PID mới, guest 2 tabs |
+
+Crash report iOS xác nhận `com.hangndat.ticket` build **24**, PID **3259**, `2026-10-20 16:58:28 +0800`, `EXC_CRASH/SIGABRT`. Log process Vemoki cùng thời điểm: `Unhandled JS Exception: Error: useStaffGateWorkspace requires StaffGateWorkspaceProvider`, từ `StaffManualEntryScreen` qua `StaffGateTabGuard`. Khi logout, identity mất verified trước khi effect reset eligibility; guard vẫn cho child dùng context đã inactive. Zico nhận sửa guard đồng bộ fail-closed, kèm regression signed-out + stale eligibility. Log archive/IPS giữ local, không commit.
+
+Build 24 **chưa acceptance complete**. Root đang kiểm tra tiếp bản sửa; không thay FAIL lịch sử bằng PASS từ source/unit tests.
