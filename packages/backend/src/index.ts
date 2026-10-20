@@ -1,7 +1,5 @@
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient, Prisma } from './generated/prisma/client';
-import { withTenant } from './tenant-context';
-
 export { PrismaClient, Prisma };
 export { withTenant, withActor } from './tenant-context';
 export {
