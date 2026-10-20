@@ -87,6 +87,8 @@ export const eventsCopy = {
   },
   heroHeadline: 'Sự kiện đang mở',
   heroSupport: 'Chọn sự kiện hoặc đổi mã để nhận vé vào ví.',
+  searchPlaceholder: 'Tìm tên sự kiện',
+  searchAccessibilityLabel: 'Tìm tên sự kiện',
   redeemCta: 'Đổi mã lấy vé',
   signInCta: 'Đăng nhập',
   accountCta: 'Tài khoản',

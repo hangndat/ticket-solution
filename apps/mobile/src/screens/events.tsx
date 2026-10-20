@@ -4,6 +4,7 @@ import {
   Animated,
   FlatList,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 import { Link, router } from 'expo-router';
@@ -55,6 +56,7 @@ export function EventsScreen() {
   );
   const [publishedError, setPublishedError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  const [searchQuery, setSearchQuery] = useState('');
   const [reduceMotionOs, setReduceMotionOs] = useState(false);
   const [heroOpacity] = useState(() => new Animated.Value(1));
 
@@ -130,8 +132,21 @@ export function EventsScreen() {
     );
   }, [applyBranding, published, publishedPhase]);
 
+  const normalizedQuery = searchQuery.trim().toLocaleLowerCase('vi');
   const listData =
-    publishedPhase === 'ready' ? published : ([] as PublishedEventSummary[]);
+    publishedPhase === 'ready'
+      ? published.filter((item) => {
+          if (!normalizedQuery) return true;
+          const haystack = [
+            item.name,
+            item.brand.organizationName,
+            item.location ?? '',
+          ]
+            .join(' ')
+            .toLocaleLowerCase('vi');
+          return haystack.includes(normalizedQuery);
+        })
+      : ([] as PublishedEventSummary[]);
 
   const hero = (
     <View style={{ gap: 16 }}>
@@ -145,6 +160,27 @@ export function EventsScreen() {
       <Text style={{ color: colors.secondary, ...typography.body }}>
         {eventsCopy.heroSupport}
       </Text>
+      {publishedPhase === 'ready' && published.length > 0 ? (
+        <TextInput
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          placeholder={eventsCopy.searchPlaceholder}
+          accessibilityLabel={eventsCopy.searchAccessibilityLabel}
+          autoCorrect={false}
+          clearButtonMode="while-editing"
+          style={{
+            backgroundColor: colors.card,
+            borderRadius: 11,
+            paddingHorizontal: 14,
+            paddingVertical: 12,
+            minHeight: 48,
+            fontFamily: fontFamilies.body,
+            fontSize: 17,
+            color: brand.ink,
+          }}
+          testID="events-search"
+        />
+      ) : null}
       {showAttendeeChrome ? (
         <AttendeeCta
           label={eventsCopy.redeemCta}
@@ -198,9 +234,15 @@ export function EventsScreen() {
         }
         ListEmptyComponent={
           publishedPhase === 'ready' ? (
-            <EmptyState title={eventsCopy.emptyPublished.title}>
-              {eventsCopy.emptyPublished.body}
-            </EmptyState>
+            normalizedQuery ? (
+              <EmptyState title="Không có kết quả">
+                Thử từ khóa khác hoặc xóa ô tìm kiếm.
+              </EmptyState>
+            ) : (
+              <EmptyState title={eventsCopy.emptyPublished.title}>
+                {eventsCopy.emptyPublished.body}
+              </EmptyState>
+            )
           ) : publishedPhase === 'loading' ||
             publishedPhase === 'error' ||
             publishedPhase === 'misconfigured' ? (
