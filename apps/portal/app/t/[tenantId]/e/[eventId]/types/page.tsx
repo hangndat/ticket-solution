@@ -1,6 +1,8 @@
 'use client';
 
-import { Alert, Button, Drawer, Form, Input, Space, Table, Typography } from 'antd';
+import { ModalForm, ProFormText, ProTable } from '@ant-design/pro-components';
+import type { ProColumns } from '@ant-design/pro-components';
+import { Alert, Button, Typography } from 'antd';
 import { useParams } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import type { PortalTicketTypeSummary } from '@ticket/contracts';
@@ -9,6 +11,7 @@ import {
   portalGet,
   portalMutate,
 } from '../../../../../../src/client/portal-fetch';
+import { PortalPage } from '../../../../../../src/components/portal-page';
 import { bffEventAction } from '../../../../../../src/prep/bff-urls';
 import { useEventAccess } from '../../../../../../src/prep/use-event-access';
 import { SurfaceState } from '../../../../../../src/components/surface-state';
@@ -28,7 +31,6 @@ export default function TicketTypesPage() {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
-  const [form] = Form.useForm<{ label: string }>();
 
   const load = useCallback(
     async (next?: string | null) => {
@@ -96,40 +98,27 @@ export default function TicketTypesPage() {
     );
   }
 
-  async function createType() {
-    setBusy(true);
-    setNotice(null);
-    try {
-      const values = await form.validateFields();
-      const res = await portalMutate(
-        bffEventAction(tenantId, eventId, 'ticket-types'),
-        { label: values.label.trim(), entitlementSnapshot: {} },
-      );
-      if (res.networkError || res.timedOut || res.status >= 500) {
-        setNotice(t('types.h_1ic6dze'));
-        return;
-      }
-      if (res.status === 200 || res.status === 201) {
-        setNotice(t('types.h_13e0npu'));
-        setOpen(false);
-        form.resetFields();
-        void load(null);
-        return;
-      }
-      setNotice(apiErrorMessage(res.json, t('types.h_1cxyxe')));
-    } finally {
-      setBusy(false);
-    }
-  }
+  const columns: ProColumns<PortalTicketTypeSummary>[] = [
+    { title: t('types.nhan'), dataIndex: 'label' },
+    {
+      title: 'ID',
+      dataIndex: 'ticketTypeId',
+      render: (_, row) => (
+        <Typography.Text type="secondary" copyable={{ text: row.ticketTypeId }}>
+          {row.ticketTypeId.slice(0, 8)}…
+        </Typography.Text>
+      ),
+    },
+  ];
 
   return (
-    <Space direction="vertical" size="large" style={{ width: '100%' }}>
-      <Space style={{ width: '100%', justifyContent: 'space-between' }}>
-        <Typography.Title level={3} style={{ margin: 0 }}>{t('nav.event.types')}</Typography.Title>
+    <PortalPage
+      title={t('nav.event.types')}
+      extra={
         <Button type="primary" onClick={() => setOpen(true)}>{t('types.h_1caa9m7')}</Button>
-      </Space>
-
-      {kind === 'loading' ? <SurfaceState kind="loading" /> : null}
+      }
+      loading={kind === 'loading'}
+    >
       {kind === 'unknown' ? (
         <Alert
           type="warning"
@@ -159,22 +148,13 @@ export default function TicketTypesPage() {
       ) : null}
       {kind === 'ready' ? (
         <>
-          <Table
+          <ProTable<PortalTicketTypeSummary>
             rowKey="ticketTypeId"
+            columns={columns}
             dataSource={items}
+            search={false}
+            options={false}
             pagination={false}
-            columns={[
-              { title: t('types.nhan'), dataIndex: 'label' },
-              {
-                title: 'ID',
-                dataIndex: 'ticketTypeId',
-                render: (id: string) => (
-                  <Typography.Text type="secondary" copyable={{ text: id }}>
-                    {id.slice(0, 8)}…
-                  </Typography.Text>
-                ),
-              },
-            ]}
           />
           {cursor ? (
             <Button onClick={() => void load(cursor)}>{t('sources.h_1w8bpuo')}</Button>
@@ -182,21 +162,45 @@ export default function TicketTypesPage() {
         </>
       ) : null}
 
-      {notice ? <Alert type="info" showIcon message={notice} /> : null}
+      {notice ? <Alert type="info" showIcon message={notice} style={{ marginTop: 16 }} /> : null}
 
-      <Drawer
+      <ModalForm<{ label: string }>
         title={t('types.h_1caa9m7')}
         open={open}
-        onClose={() => setOpen(false)}
-        destroyOnHidden
+        onOpenChange={setOpen}
+        modalProps={{ destroyOnHidden: true }}
+        submitter={{ submitButtonProps: { loading: busy } }}
+        onFinish={async (values) => {
+          setBusy(true);
+          setNotice(null);
+          try {
+            const res = await portalMutate(
+              bffEventAction(tenantId, eventId, 'ticket-types'),
+              { label: values.label.trim(), entitlementSnapshot: {} },
+            );
+            if (res.networkError || res.timedOut || res.status >= 500) {
+              setNotice(t('types.h_1ic6dze'));
+              return false;
+            }
+            if (res.status === 200 || res.status === 201) {
+              setNotice(t('types.h_13e0npu'));
+              void load(null);
+              return true;
+            }
+            setNotice(apiErrorMessage(res.json, t('types.h_1cxyxe')));
+            return false;
+          } finally {
+            setBusy(false);
+          }
+        }}
       >
-        <Form form={form} layout="vertical">
-          <Form.Item name="label" label={t('types.nhan')} rules={[{ required: true }]}>
-            <Input maxLength={80} />
-          </Form.Item>
-          <Button type="primary" loading={busy} onClick={() => void createType()}>{t('sources.tao')}</Button>
-        </Form>
-      </Drawer>
-    </Space>
+        <ProFormText
+          name="label"
+          label={t('types.nhan')}
+          rules={[{ required: true }]}
+          fieldProps={{ maxLength: 80 }}
+        />
+      </ModalForm>
+    </PortalPage>
   );
 }

@@ -46,7 +46,7 @@ import {
   invitationViewLabel,
   type InvitationView,
 } from '../invitation';
-import { usePortalLocale } from '../../i18n';
+import { formatImportKind, usePortalLocale } from '../../i18n';
 
 type Props = {
   tenantId: string;
@@ -374,8 +374,8 @@ export function ImportInvitationsPanel({
             value={kind}
             onChange={(v) => setKind(v)}
             options={[
-              { value: 'CODES', label: 'CODES' },
-              { value: 'GUESTS', label: 'GUESTS' },
+              { value: 'CODES', label: formatImportKind(locale, 'CODES') },
+              { value: 'GUESTS', label: formatImportKind(locale, 'GUESTS') },
             ]}
             style={{ maxWidth: 240 }}
           />
@@ -421,7 +421,7 @@ export function ImportInvitationsPanel({
           {t('ops.import.catalogHint')}{mappingRevision}
           {fileId ? ` · fileId ${fileId.slice(0, 8)}…` : ''}
         </Typography.Paragraph>
-        <Form.Item label="Import ID">
+        <Form.Item label={t('ops.import.importIdLabel')}>
           <Input
             value={importId}
             onChange={(e) => setImportId(e.target.value)}
@@ -442,7 +442,7 @@ export function ImportInvitationsPanel({
             disabled={!importId.trim()}
             onClick={() => void runPreview()}
           >
-            Preview
+            {t('ops.import.action.preview')}
           </Button>
           <Button
             loading={busy}
@@ -451,14 +451,14 @@ export function ImportInvitationsPanel({
             }
             onClick={() => void runCommit()}
           >
-            Commit
+            {t('ops.import.action.commit')}
           </Button>
           <Button
             loading={busy}
             disabled={!importId.trim()}
             onClick={() => void refreshStatus()}
           >
-            Status
+            {t('ops.import.action.status')}
           </Button>
           <Button
             loading={busy}
@@ -477,7 +477,9 @@ export function ImportInvitationsPanel({
         />
       ) : null}
 
-      <Typography.Title level={4}>Guest invitations — dispatch</Typography.Title>
+      <Typography.Title level={4}>
+        {t('ops.invitation.sectionTitle')}
+      </Typography.Title>
       <Alert
         type="warning"
         showIcon
@@ -490,7 +492,7 @@ export function ImportInvitationsPanel({
           disabled={selectedRowKeys.length === 0}
           onClick={() => void previewDispatch()}
         >
-          Dispatch preview
+          {t('ops.invitation.dispatchPreview')}
         </Button>
         <Button
           type="primary"
@@ -500,7 +502,7 @@ export function ImportInvitationsPanel({
           }
           onClick={() => void commitDispatch()}
         >
-          Dispatch
+          {t('ops.invitation.dispatchCommit')}
         </Button>
       </Space>
       {inviteRows.length > 0 ? (
@@ -513,10 +515,21 @@ export function ImportInvitationsPanel({
           pagination={false}
           dataSource={inviteRows}
           columns={[
-            { title: 'ID', dataIndex: 'invitationId', ellipsis: true },
-            { title: 'Email (masked)', dataIndex: 'invitedEmailMasked' },
-            { title: 'State', dataIndex: 'state', width: 120 },
-            { title: 'Expires', dataIndex: 'expiresAt', ellipsis: true },
+            {
+              title: t('ops.table.invitationId'),
+              dataIndex: 'invitationId',
+              ellipsis: true,
+            },
+            {
+              title: t('ops.table.emailMasked'),
+              dataIndex: 'invitedEmailMasked',
+            },
+            { title: t('ops.table.state'), dataIndex: 'state', width: 120 },
+            {
+              title: t('ops.table.expires'),
+              dataIndex: 'expiresAt',
+              ellipsis: true,
+            },
           ]}
         />
       ) : null}

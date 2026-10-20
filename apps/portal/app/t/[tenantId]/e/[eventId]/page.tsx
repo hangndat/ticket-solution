@@ -1,15 +1,16 @@
 'use client';
 
+import { ProCard, StatisticCard } from '@ant-design/pro-components';
 import {
   Alert,
   Button,
-  Card,
   Descriptions,
   List,
   Modal,
   Space,
   Typography,
 } from 'antd';
+import { PortalPage } from '../../../../../src/components/portal-page';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -40,7 +41,14 @@ import {
   GateStayAppNotice,
 } from '../../../../../src/components/gate-deeplink';
 import { SurfaceState } from '../../../../../src/components/surface-state';
-import { usePortalLocale } from '../../../../../src/i18n';
+import {
+  formatEventBusinessStatus,
+  formatEventContentStatus,
+  formatEventVisibility,
+  formatReadinessStatus,
+  usePortalLocale,
+} from '../../../../../src/i18n';
+import { formatReportAsOf } from '../../../../../src/ops/report';
 
 export default function EventOverviewPage() {
   const { t, locale } = usePortalLocale();
@@ -287,11 +295,10 @@ export default function EventOverviewPage() {
   const canReport = access.permissions.includes('report.read');
 
   return (
-    <Space direction="vertical" size="large" style={{ width: '100%' }}>
-      <Space style={{ width: '100%', justifyContent: 'space-between' }}>
-        <Typography.Title level={3} style={{ margin: 0 }}>
-          {detail.name}
-        </Typography.Title>
+    <PortalPage
+      title={detail.name}
+      subTitle={t('common.h_1nl7gld')}
+      extra={
         <Space>
           <Link href={`/t/${tenantId}/e/${eventId}/setup`}>
             <Button>{t('nav.event.setup')}</Button>
@@ -311,35 +318,32 @@ export default function EventOverviewPage() {
             }
           >{t('config.h_lofnqs')}</Button>
         </Space>
-      </Space>
-
-      <Alert
-        type="info"
-        showIcon
-        message={t('config.h_gyyhq3')}
-        description={t('common.h_1nl7gld')}
-      />
-
-      <Card size="small" title={t('ops.export.statusButton')}>
+      }
+    >
+      <ProCard size="small" title={t('ops.export.statusButton')} style={{ marginBottom: 16 }}>
         <Descriptions bordered size="small" column={1}>
-          <Descriptions.Item label="Slug">{detail.slug}</Descriptions.Item>
+          <Descriptions.Item label={t('common.label.slug')}>
+            {detail.slug}
+          </Descriptions.Item>
           <Descriptions.Item label={t('common.h_fe18yl')}>
-            {detail.contentStatus}
+            {formatEventContentStatus(locale, detail.contentStatus)}
           </Descriptions.Item>
           <Descriptions.Item label={t('common.h_1t15e7z')}>
-            {detail.businessStatus}
+            {formatEventBusinessStatus(locale, detail.businessStatus)}
           </Descriptions.Item>
           <Descriptions.Item label={t('common.h_wqd4fq')}>
-            {detail.visibility}
+            {formatEventVisibility(locale, detail.visibility)}
           </Descriptions.Item>
-          <Descriptions.Item label="Revision">{detail.revision}</Descriptions.Item>
+          <Descriptions.Item label={t('common.label.revision')}>
+            {detail.revision}
+          </Descriptions.Item>
           <Descriptions.Item label={t('common.h_qqix4u')}>
             {publishedVersion ?? '—'}
           </Descriptions.Item>
         </Descriptions>
-      </Card>
+      </ProCard>
 
-      <Card size="small" title={t('common.h_4nfgg4')}>
+      <ProCard size="small" title={t('common.h_4nfgg4')} style={{ marginBottom: 16 }}>
         <Typography.Paragraph type="secondary">
           {readinessSummary(readiness, locale)}
         </Typography.Paragraph>
@@ -349,42 +353,56 @@ export default function EventOverviewPage() {
           renderItem={(item) => (
             <List.Item>
               <List.Item.Meta
-                title={t('ops.export.apiRejected', { code: item.label, message: item.status })}
+                title={`${item.label} — ${formatReadinessStatus(locale, item.status)}`}
                 description={item.detail}
               />
             </List.Item>
           )}
         />
-      </Card>
+      </ProCard>
 
       {shownReport ? (
-        <Card
+        <ProCard
           size="small"
           title={t('gate.reportQuickTitle')}
-          extra={
-            shownReport.asOf ? (
-              <Typography.Text type="secondary">
-                asOf {shownReport.asOf}
-              </Typography.Text>
-            ) : null
+          subTitle={
+            shownReport.asOf
+              ? t('analytics.asOfTag', {
+                  asOf: formatReportAsOf(shownReport.asOf),
+                })
+              : undefined
           }
+          style={{ marginBottom: 16 }}
         >
-          <Descriptions size="small" column={2}>
-            <Descriptions.Item label="Quota allocated">
-              {shownReport.quota.allocated}
-            </Descriptions.Item>
-            <Descriptions.Item label="Capacity">
-              {shownReport.quota.capacity === null
-                ? '∞'
-                : shownReport.quota.capacity}
-            </Descriptions.Item>
-            <Descriptions.Item label={t('gate.h_1nc3sip')}>
-              {shownReport.pendingApprovalCount}
-            </Descriptions.Item>
-            <Descriptions.Item label="Check-in OK">
-              {shownReport.checkInSuccessCount}
-            </Descriptions.Item>
-          </Descriptions>
+          <StatisticCard.Group>
+            <StatisticCard
+              statistic={{
+                title: t('gate.stat.quotaAllocated'),
+                value: shownReport.quota.allocated,
+              }}
+            />
+            <StatisticCard
+              statistic={{
+                title: t('gate.stat.capacity'),
+                value:
+                  shownReport.quota.capacity === null
+                    ? '∞'
+                    : shownReport.quota.capacity,
+              }}
+            />
+            <StatisticCard
+              statistic={{
+                title: t('gate.h_1nc3sip'),
+                value: shownReport.pendingApprovalCount,
+              }}
+            />
+            <StatisticCard
+              statistic={{
+                title: t('gate.stat.checkInOk'),
+                value: shownReport.checkInSuccessCount,
+              }}
+            />
+          </StatisticCard.Group>
           <Space wrap style={{ marginTop: 8 }}>
             <Button size="small" onClick={() => void load()}>{t('gate.h_3keb7')}</Button>
             {reportShowsPendingApprovalCta(shownReport) ? (
@@ -401,7 +419,7 @@ export default function EventOverviewPage() {
               <Button size="small">{t('nav.event.guests')}</Button>
             </Link>
           </Space>
-        </Card>
+        </ProCard>
       ) : canReport ? (
         <Alert
           type="warning"
@@ -433,6 +451,6 @@ export default function EventOverviewPage() {
           {t('event.home.gateReportDetail')}{' '}
           <Link href={`/t/${tenantId}/e/${eventId}/gate`}>{t('common.h_1iov4lt')}</Link>{t('gateDeeplink.h_k7571i')}</Typography.Paragraph>
       ) : null}
-    </Space>
+    </PortalPage>
   );
 }

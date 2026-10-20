@@ -1,6 +1,7 @@
 'use client';
 
-import { Alert, Space, Tabs, Typography } from 'antd';
+import { ProCard } from '@ant-design/pro-components';
+import { PortalPage } from '../../../../../../src/components/portal-page';
 import type { ReactNode } from 'react';
 import { useParams } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
@@ -91,28 +92,23 @@ export default function EventAuditPage() {
   }
 
   return (
-    <Space direction="vertical" size="large" style={{ width: '100%' }}>
-      <Typography.Title level={3} style={{ margin: 0 }}>
-        {t('nav.event.auditCodes')}
-      </Typography.Title>
-      <Alert
-        type="info"
-        showIcon
-        message="P1.1 audit browser + job history"
-        description={t('ops.audit.capabilityHint')}
-      />
-      <Tabs
-        activeKey={
-          tabItems.some((t) => t.key === activeTab)
-            ? activeTab
-            : tabItems[0]?.key
-        }
-        onChange={(key) => {
-          setActiveTab(key);
-          window.location.hash = key;
+    <PortalPage
+      title={t('nav.event.auditCodes')}
+      subTitle={t('ops.audit.capabilityHint')}
+    >
+      <ProCard
+        tabs={{
+          activeKey:
+            tabItems.some((tab) => tab.key === activeTab)
+              ? activeTab
+              : tabItems[0]?.key,
+          onChange: (key) => {
+            setActiveTab(key);
+            window.location.hash = key;
+          },
+          items: tabItems,
         }}
-        items={tabItems}
       />
-    </Space>
+    </PortalPage>
   );
 }

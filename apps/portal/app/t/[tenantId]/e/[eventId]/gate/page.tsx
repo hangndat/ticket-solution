@@ -1,14 +1,8 @@
 'use client';
 
-import {
-  Alert,
-  Button,
-  Card,
-  Descriptions,
-  Result,
-  Space,
-  Typography,
-} from 'antd';
+import { StatisticCard } from '@ant-design/pro-components';
+import { Alert, Button, Descriptions, Result, Space } from 'antd';
+import { PortalPage } from '../../../../../../src/components/portal-page';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
@@ -32,7 +26,10 @@ import {
   GateStayAppNotice,
 } from '../../../../../../src/components/gate-deeplink';
 import { SurfaceState } from '../../../../../../src/components/surface-state';
-import { usePortalLocale } from '../../../../../../src/i18n';
+import {
+  formatTicketStateCountLabel,
+  usePortalLocale,
+} from '../../../../../../src/i18n';
 
 /**
  * GATE-STAY-APP: O12 report surface only — never mount scanner on portal.
@@ -97,10 +94,7 @@ export default function EventGateReportPage() {
   const shown = report?.kind === 'shown' ? report : null;
 
   return (
-    <Space direction="vertical" size="large" style={{ width: '100%' }}>
-      <Typography.Title level={3} style={{ margin: 0 }}>
-        {t('gate.h_1klnels')}
-      </Typography.Title>
+    <PortalPage title={t('gate.h_1klnels')}>
       <GateStayAppNotice />
 
       {report?.kind === 'unknown' || report?.kind === 'rejected' ? (
@@ -124,44 +118,55 @@ export default function EventGateReportPage() {
       ) : null}
 
       {shown ? (
-        <Card
-          size="small"
-          title="Snapshot"
-          extra={
-            <Typography.Text type="secondary">
-              asOf {formatReportAsOf(shown.asOf)} UTC
-            </Typography.Text>
-          }
-        >
-          <Descriptions bordered size="small" column={2}>
-            <Descriptions.Item label="Quota allocated">
-              {shown.quota.allocated}
-            </Descriptions.Item>
-            <Descriptions.Item label="Capacity">
-              {shown.quota.capacity === null ? '∞' : shown.quota.capacity}
-            </Descriptions.Item>
-            <Descriptions.Item label="Capacity state">
+        <>
+          <StatisticCard.Group
+            title={t('gate.report.snapshotTitle')}
+            subTitle={t('analytics.asOfTag', {
+              asOf: `${formatReportAsOf(shown.asOf)} UTC`,
+            })}
+          >
+            <StatisticCard
+              statistic={{
+                title: t('gate.stat.quotaAllocated'),
+                value: shown.quota.allocated,
+              }}
+            />
+            <StatisticCard
+              statistic={{
+                title: t('gate.stat.capacity'),
+                value: shown.quota.capacity === null ? '∞' : shown.quota.capacity,
+              }}
+            />
+            <StatisticCard
+              statistic={{
+                title: t('gate.h_1nc3sip'),
+                value: shown.pendingApprovalCount,
+              }}
+            />
+            <StatisticCard
+              statistic={{
+                title: t('gate.stat.checkInOk'),
+                value: shown.checkInSuccessCount,
+              }}
+            />
+          </StatisticCard.Group>
+          <Descriptions bordered size="small" column={2} style={{ marginTop: 16 }}>
+            <Descriptions.Item label={t('gate.report.capacityState')}>
               {formatQuotaCapacityState(shown.quotaCapacityState, locale)}
             </Descriptions.Item>
-            <Descriptions.Item label="Remaining">
+            <Descriptions.Item label={t('gate.report.remaining')}>
               {formatQuotaRemaining(
                 shown.quotaRemaining,
                 shown.quotaCapacityState,
                 locale,
               )}
             </Descriptions.Item>
-            <Descriptions.Item label={t('gate.h_1nc3sip')}>
-              <span data-testid="event-report-pending-approval">
-                {shown.pendingApprovalCount}
-              </span>
-            </Descriptions.Item>
             <Descriptions.Item label={t('gate.h_icax5j')}>
               {shown.emailNeedsCsCount}
             </Descriptions.Item>
-            <Descriptions.Item label="Check-in OK">
-              {shown.checkInSuccessCount}
-            </Descriptions.Item>
-            <Descriptions.Item label={t('gate.h_1swn6cq')}>
+            <Descriptions.Item
+              label={formatTicketStateCountLabel(locale, 'ACTIVE')}
+            >
               {shown.ticketsByState.ACTIVE}
             </Descriptions.Item>
           </Descriptions>
@@ -184,14 +189,14 @@ export default function EventGateReportPage() {
               </Link>
             ) : null}
           </Space>
-        </Card>
+        </>
       ) : report === null ? (
         <SurfaceState kind="loading" />
       ) : null}
 
       {access.permissions.includes('gate.confirm') ? (
-        <div>
-          <Typography.Paragraph>{t('gate.h_cq4fvf')}</Typography.Paragraph>
+        <div style={{ marginTop: 16 }}>
+          <p>{t('gate.h_cq4fvf')}</p>
           <GateDeeplinkButton
             href={gateDeeplinkUrl(process.env, '/gate', {
               tenantId,
@@ -200,6 +205,6 @@ export default function EventGateReportPage() {
           />
         </div>
       ) : null}
-    </Space>
+    </PortalPage>
   );
 }

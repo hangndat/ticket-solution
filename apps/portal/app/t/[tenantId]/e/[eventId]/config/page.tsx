@@ -1,15 +1,15 @@
 'use client';
 
+import { ProForm, ProFormText, ProFormTextArea, ProTable } from '@ant-design/pro-components';
 import {
   Alert,
   Button,
   Form,
-  Input,
   Modal,
   Space,
-  Table,
   Typography,
 } from 'antd';
+import { PortalPage } from '../../../../../../src/components/portal-page';
 import { useParams } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import type { ConfigVersionSummary, EventDetail } from '@ticket/contracts';
@@ -261,13 +261,15 @@ export default function ConfigBrandPage() {
   }
 
   return (
-    <Space direction="vertical" size="large" style={{ width: '100%' }}>
-      <Typography.Title level={3} style={{ margin: 0 }}>{t('settings.brandPublishTitle')}</Typography.Title>
+    <PortalPage
+      title={t('settings.brandPublishTitle')}
+      subTitle={t('config.h_bji8yr')}
+    >
       <Alert
         type="info"
         showIcon
         message={t('config.h_gyyhq3')}
-        description={t('config.h_bji8yr')}
+        style={{ marginBottom: 16 }}
       />
 
       {kind === 'loading' ? <SurfaceState kind="loading" /> : null}
@@ -292,28 +294,30 @@ export default function ConfigBrandPage() {
 
       {kind === 'ready' ? (
         <>
-          <Form form={form} layout="vertical" style={{ maxWidth: 480 }} disabled={!canConfig}>
-            <Form.Item
+          <ProForm
+            form={form}
+            layout="vertical"
+            style={{ maxWidth: 480 }}
+            disabled={!canConfig}
+            submitter={false}
+          >
+            <ProFormText
               name="organizationName"
               label={t('config.h_15mcx85')}
               rules={[{ required: true }]}
-            >
-              <Input />
-            </Form.Item>
-            <Form.Item
+            />
+            <ProFormText
               name="primaryColor"
               label={t('config.h_1fbsj7r')}
               rules={[{ required: true }]}
-            >
-              <Input placeholder="#9b3a18" />
-            </Form.Item>
-            <Form.Item
+              fieldProps={{ placeholder: '#9b3a18' }}
+            />
+            <ProFormTextArea
               name="termsText"
               label={t('config.h_6ccvfx')}
               rules={[{ required: true }]}
-            >
-              <Input.TextArea rows={4} />
-            </Form.Item>
+              fieldProps={{ rows: 4 }}
+            />
             <Space>
               <Button
                 type="primary"
@@ -326,19 +330,21 @@ export default function ConfigBrandPage() {
                 onClick={() => void publishTip()}
               >{t('config.h_19gwi7d')}</Button>
             </Space>
-          </Form>
+          </ProForm>
 
           <Typography.Title level={5}>{t('config.h_qavzgt')}</Typography.Title>
-          <Table
+          <ProTable<ConfigVersionSummary>
             rowKey="version"
             dataSource={versions}
+            search={false}
+            options={false}
             pagination={false}
             columns={[
               { title: 'Version', dataIndex: 'version' },
               {
                 title: 'Published',
                 dataIndex: 'published',
-                render: (v: boolean) => (v ? 'yes' : 'no'),
+                render: (_, row) => (row.published ? 'yes' : 'no'),
               },
               { title: t('config.h_1c1wh3g'), dataIndex: 'createdAt' },
               {
@@ -359,6 +365,6 @@ export default function ConfigBrandPage() {
       ) : null}
 
       {notice ? <Alert type="info" showIcon message={notice} /> : null}
-    </Space>
+    </PortalPage>
   );
 }

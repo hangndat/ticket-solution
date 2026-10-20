@@ -1,6 +1,6 @@
 'use client';
 
-import { Space, Typography } from 'antd';
+import { PortalPage } from '../../../../../../src/components/portal-page';
 import { useParams } from 'next/navigation';
 import { CsPanel } from '../../../../../../src/ops/panels/cs-panel';
 import { useEventAccess } from '../../../../../../src/prep/use-event-access';
@@ -38,11 +38,8 @@ export default function EventSupportPage() {
   const canCs = access.permissions.includes('cs.lookup');
 
   return (
-    <Space direction="vertical" size="large" style={{ width: '100%' }}>
-      <Typography.Title level={3} style={{ margin: 0 }}>
-        {t('nav.event.support')}
-      </Typography.Title>
+    <PortalPage title={t('nav.event.support')}>
       <CsPanel tenantId={tenantId} eventId={eventId} canCs={canCs} />
-    </Space>
+    </PortalPage>
   );
 }

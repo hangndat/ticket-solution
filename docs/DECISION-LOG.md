@@ -1,8 +1,14 @@
 # Decision log — sản phẩm & kỹ thuật
 
-Ngày cập nhật: 2026-10-19
+Ngày cập nhật: 2026-10-20
 Nguồn: [PRD](./PRD.md) mục 15, [Technical Design](./TECHNICAL-DESIGN.md) mục 2 & 18, [ROADMAP](./ROADMAP.md)
 Tracking: Issues [#10](https://github.com/hangndat/ticket-solution/issues/10), [#11](https://github.com/hangndat/ticket-solution/issues/11)
+
+## O18 — Portal: Ant Design Pro Components trên Next App Router (20/10/2026)
+
+Coordinator chốt bổ sung **`@ant-design/pro-components@3.1.15-7`** (peer antd ^6; pin exact; cấm 2.8.x và cấm Umi/Pro scaffold) trên stack portal hiện tại **Next 16 + antd 6.6.6 + `@ant-design/nextjs-registry`**. **ProLayout** thay sider tự viết; **PageContainer / ProTable / ProForm / StatisticCard** cho màn vận hành. Ownership chỉ `apps/portal` (+ lockfile khi cài dep); không `apps/web`, API, Gate. Chi tiết: [`docs/architecture/ADR-PORTAL-PRO-COMPONENTS.md`](./architecture/ADR-PORTAL-PRO-COMPONENTS.md). Bổ sung O16 «ProComponents không mặc định» — không đảo `GATE-STAY-APP` hay OIDC BFF.
+
+Architecture impact: **Có**. Approval ≠ code complete ≠ acceptance complete.
 
 ## O17 — P2 portal: mở lại multi-event portfolio + phạm vi roles/onboarding (19/10/2026)
 
@@ -124,6 +130,7 @@ Chỉ mở redemption / Gate / admin tenant **sau khi**:
 | 2026-10-18 | User **duyệt O06** — retention/region/SLA theo gói MVP (anonymize 30d; vé 365d; audit 730d; object 90d; single-region VPS; SLA support tách business-hours vs on-call cửa sổ Gate). Nguồn: `docs/ops/O06-OPTIONS.md`. |
 | 2026-10-18 | **UX-11 chốt Option A** — MVP đổi mã guest = Keycloak verified email / UI «Cần đăng nhập»; OTP/magic link = sau MVP. Issue [#372](https://github.com/hangndat/ticket-solution/issues/372). |
 | 2026-10-19 | User ủy quyền Epic [#491](https://github.com/hangndat/ticket-solution/issues/491) **A+B+C**. **O17:** mở lại multi-event portfolio (OUT O12/O14); phạm vi P2 roles/onboarding/saved views/EN; handoff [`PORTAL-P2-ADR`](./architecture/PORTAL-P2-ADR.md). Cutover prod chỉ #502. |
+| 2026-10-20 | **O18** — Portal Pro Components `3.1.15-7` trên Next 16 + antd 6; ProLayout + Pro* ops screens; cấm Umi/2.8.x. ADR [`ADR-PORTAL-PRO-COMPONENTS`](./architecture/ADR-PORTAL-PRO-COMPONENTS.md). |
 
 ## UX-11 — Guest redeem auth MVP (18/10/2026)
 
