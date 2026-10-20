@@ -454,6 +454,37 @@ function replayDetail(op: OperationRow): EventMutationResult {
   return { event: body.event, operationId: op.id, replayed: true };
 }
 
+/** After event row insert — allows count === max_events when this create/clone owns the slot. */
+async function assertTenantEventCountWithinLimit(
+  tx: Prisma.TransactionClient,
+  tenantId: string,
+): Promise<void> {
+  const lim = await tx.$queryRaw<{ max_events: number | null }[]>`
+    SELECT max_events FROM tenant_limits
+    WHERE tenant_id = ${tenantId}::uuid
+    FOR UPDATE
+  `;
+  const maxEvents = lim[0]?.max_events ?? null;
+  if (maxEvents === null) return;
+  const cnt = await tx.$queryRaw<{ n: number }[]>`
+    SELECT COUNT(*)::int AS n FROM events WHERE tenant_id = ${tenantId}::uuid
+  `;
+  if ((cnt[0]?.n ?? 0) > maxEvents) {
+    throw new PlatformError(
+      PLATFORM_ERROR_CODES.TENANT_LIMIT_REACHED,
+      'Event limit reached',
+    );
+  }
+}
+
+async function assertTenantAllowsAdminMutationForShare(
+  tx: Prisma.TransactionClient,
+  tenantId: string,
+): Promise<void> {
+  const policy = await lockTenantPolicyForShare(tx, tenantId);
+  assertTenantAllowsAdminMutation(policy.status);
+}
+
 export async function getEvent(
   tx: Prisma.TransactionClient,
   input: { tenantId: string; eventId: string; actorUserId: string },
@@ -532,26 +563,6 @@ export async function createEvent(
     userId: input.actorUserId,
     permission: PERMISSION_CREATE,
   });
-  const policy = await lockTenantPolicyForShare(tx, input.tenantId);
-  assertTenantAllowsAdminMutation(policy.status);
-  const lim = await tx.$queryRaw<{ max_events: number | null }[]>`
-    SELECT max_events FROM tenant_limits
-    WHERE tenant_id = ${input.tenantId}::uuid
-    FOR UPDATE
-  `;
-  const maxEvents = lim[0]?.max_events ?? null;
-  if (maxEvents !== null) {
-    const cnt = await tx.$queryRaw<{ n: number }[]>`
-      SELECT COUNT(*)::int AS n FROM events WHERE tenant_id = ${input.tenantId}::uuid
-    `;
-    if ((cnt[0]?.n ?? 0) >= maxEvents) {
-      throw new PlatformError(
-        PLATFORM_ERROR_CODES.TENANT_LIMIT_REACHED,
-        'Event limit reached',
-      );
-    }
-  }
-
   const slug = assertValidSlug(input.body.slug);
   const name = input.body.name?.trim() ?? '';
   if (!name || name.length > MAX_NAME) {
@@ -664,6 +675,9 @@ export async function createEvent(
     requestHash,
   });
   if (!claimed) return replayDetail(op);
+
+  await assertTenantAllowsAdminMutationForShare(tx, input.tenantId);
+  await assertTenantEventCountWithinLimit(tx, input.tenantId);
 
   const membership = await requireTenantPermission(tx, {
     tenantId: input.tenantId,
@@ -833,6 +847,8 @@ export async function updateEvent(
     requestHash,
   });
   if (!claimed) return replayDetail(op);
+
+  await assertTenantAllowsAdminMutationForShare(tx, input.tenantId);
 
   const row = await selectEvent(tx, input.tenantId, input.eventId, true);
   if (!row) {
@@ -1075,6 +1091,9 @@ export async function cloneEvent(
   });
   if (!claimed) return replayDetail(op);
 
+  await assertTenantAllowsAdminMutationForShare(tx, input.tenantId);
+  await assertTenantEventCountWithinLimit(tx, input.tenantId);
+
   if (copyConfig) {
     await tx.$executeRaw`
       INSERT INTO event_config_versions (
@@ -1183,6 +1202,8 @@ export async function archiveEvent(
   });
   if (!claimed) return replayDetail(op);
 
+  await assertTenantAllowsAdminMutationForShare(tx, input.tenantId);
+
   const row = await selectEvent(tx, input.tenantId, input.eventId, true);
   if (!row) {
     throw new EventError(EVENT_ERROR_CODES.EVENT_NOT_FOUND, 'Event not found');
@@ -1265,6 +1286,8 @@ export async function cancelEvent(
     requestHash,
   });
   if (!claimed) return replayDetail(op);
+
+  await assertTenantAllowsAdminMutationForShare(tx, input.tenantId);
 
   const row = await selectEvent(tx, input.tenantId, input.eventId, true);
   if (!row) {
@@ -1585,6 +1608,7 @@ export async function createTicketType(
     permission: PERMISSION_CONFIG,
     eventId: input.eventId,
   });
+  await assertTenantAllowsAdminMutationForShare(tx, input.tenantId);
   const events = await tx.$queryRaw<{ id: string }[]>`
     SELECT id FROM events
     WHERE tenant_id = ${input.tenantId}::uuid AND id = ${input.eventId}::uuid
@@ -1637,6 +1661,7 @@ export async function createIssuanceSource(
     permission: PERMISSION_CONFIG,
     eventId: input.eventId,
   });
+  await assertTenantAllowsAdminMutationForShare(tx, input.tenantId);
   if (!APPROVAL_MODES.has(input.approvalMode)) {
     throw new EventAdminError(
       EVENT_ADMIN_ERROR_CODES.INVALID_APPROVAL_MODE,
