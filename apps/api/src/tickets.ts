@@ -53,6 +53,13 @@ import {
   type OidcVerifier,
   type PrismaClient,
 } from '@ticket/backend';
+import { identityErrorHttpStatus } from './identity-http-status';
+import {
+  API_RATE_BUCKETS,
+  API_RATE_LIMITS,
+} from './http-limits';
+import { consumeUserRateLimit } from './http-rate-limit';
+import { requireUuidParam, validationError } from './http-validation';
 
 class ApiErrorDto implements ApiError {
   @ApiProperty() code!: string;
@@ -127,6 +134,9 @@ export function issueHttpException(error: IssueError, operationId?: string): Htt
     retryable: error.retryable,
   };
   if (error.fields?.length) body.fields = error.fields;
+  if (error.code === ISSUE_ERROR_CODES.CODE_HMAC_MISCONFIGURED) {
+    body.message = 'Issue services are not configured';
+  }
   const status =
     error.code === ISSUE_ERROR_CODES.EMAIL_NOT_VERIFIED
       ? 403
@@ -163,15 +173,7 @@ export function identityHttpException(error: IdentityError): HttpException {
     requestId,
     retryable: error.retryable,
   };
-  const status =
-    error.code === IDENTITY_ERROR_CODES.UNAUTHENTICATED
-      ? 401
-      : error.code === IDENTITY_ERROR_CODES.OIDC_MISCONFIGURED
-        ? 503
-        : error.code === IDENTITY_ERROR_CODES.EMAIL_NOT_VERIFIED
-          ? 403
-          : 401;
-  return new HttpException(body, status);
+  return new HttpException(body, identityErrorHttpStatus(error.code));
 }
 
 export type TicketServices = {
@@ -216,6 +218,12 @@ export class TicketIssueService {
       );
     }
     const user = await this.requireUser(authorization);
+    await consumeUserRateLimit(
+      this.deps.db,
+      user.userId,
+      API_RATE_BUCKETS.redeem,
+      API_RATE_LIMITS.redeemPerUser,
+    );
     // Commit terminal rejection inside withTenant, then map to IssueError outside
     // so operations COMPLETED+rejection is durable (TD §8.1).
     const outcome = await withTenant(this.deps.db, tenantId, (tx) =>
@@ -430,16 +438,20 @@ export class TicketIssueController {
     @Param('eventId') eventId: string,
     @Body() body: RedeemBodyDto,
   ): Promise<RedeemResponse | PendingApprovalResult> {
+    if (!body?.code || typeof body.code !== 'string') {
+      throw validationError('INVALID_BODY', 'code is required');
+    }
     try {
       return await this.tickets.redeem(
         authorization,
-        tenantId,
-        eventId,
+        requireUuidParam(tenantId, 'tenantId'),
+        requireUuidParam(eventId, 'eventId'),
         idempotencyKey,
         body,
         resolveToken,
       );
     } catch (error) {
+      if (error instanceof HttpException) throw error;
       if (error instanceof IdentityError) throw identityHttpException(error);
       if (error instanceof IssueError) throw issueHttpException(error);
       throw error;
@@ -467,8 +479,8 @@ export class TicketIssueController {
     try {
       return await this.tickets.ownerRedemptionStatus(
         authorization,
-        tenantId,
-        requestId,
+        requireUuidParam(tenantId, 'tenantId'),
+        requireUuidParam(requestId, 'requestId'),
       );
     } catch (error) {
       if (error instanceof IdentityError) throw identityHttpException(error);
@@ -528,7 +540,11 @@ export class TicketIssueController {
       );
     }
     try {
-      return await this.tickets.getMine(authorization, tenantId, ticketId);
+      return await this.tickets.getMine(
+        authorization,
+        requireUuidParam(tenantId, 'tenantId'),
+        requireUuidParam(ticketId, 'ticketId'),
+      );
     } catch (error) {
       if (error instanceof IdentityError) throw identityHttpException(error);
       if (error instanceof IssueError) throw issueHttpException(error);
@@ -560,8 +576,8 @@ export class TicketIssueController {
       return await this.tickets.operationStatus(
         authorization,
         clientOperationId,
-        tenantId,
-        eventId,
+        requireUuidParam(tenantId, 'tenantId'),
+        requireUuidParam(eventId, 'eventId'),
         command ?? REDEEM_COMMAND,
       );
     } catch (error) {
@@ -598,13 +614,13 @@ export function resolveIssueDeps(env: NodeJS.ProcessEnv): {
       routingPeppers,
       resolveTokenSecret,
     };
-  } catch (error) {
+  } catch {
     return {
       hmac: null,
       credentialKey: null,
       issueBootError: new IdentityError(
         IDENTITY_ERROR_CODES.OIDC_MISCONFIGURED,
-        error instanceof Error ? error.message : 'Issue config missing',
+        'Issue services are not configured',
       ),
       routingPeppers: null,
       resolveTokenSecret: null,
