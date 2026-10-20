@@ -11,7 +11,7 @@
 | # | Issue | Verdict | Ghi chú ngắn |
 |---|-------|---------|----------------|
 | 1 | #598 Scan-line viewfinder | **PASS** | Khung ~220×220, viền trắng bo góc; scan-line hồng `#fb7391`; animation qua 2 ảnh cách ~2s |
-| 2 | #600 Lịch sử staff | **PASS with gap** | Empty state + search khớp mockup; không test Tải thêm / footer pagination (0 lượt local) |
+| 2 | #600 Lịch sử staff | **PASS** (Van sau #608) | Empty+search OK; sau rebuild `c55b07a`: ≥13 lượt + 「Tải thêm」/「Đã tải N」/「Đã xem hết」 (`van608-91/92`) |
 | 3 | #601 eventName trên vé | **PASS** (Yen sau deploy) | Sau redeploy API `14:26:41Z`: ví + filter CTA hiện **MFest · Demo** / **Device UAT Event** — hết generic 「Sự kiện」 |
 | 4 | #602 Ví + CTA Events | **PASS with gap** | Subtitle, nhóm, CTA, lọc + Xem tất cả hoạt động; filter bar hiện "Sự kiện" thay tên sự kiện |
 | 5 | #606 Network dedupe | **N/A** | Không quan sát qua UI |
@@ -272,4 +272,54 @@ Ghi chú product (đối chiếu code, không sửa): toast `StaffGateScanToast`
 - Sau ≥1 (và thêm) UUID giả: Lịch sử vẫn empty; Scan báo **Trực tuyến** nhưng **Chưa mở phiên cổng**, không toast, không pagination.
 - Cần **Issue riêng** (điều tra: `submitScan` / mở phiên `/sessions` / `persist`+`buildDeviceScanHistory` khi Manual clear sớm; toast không hiện trên tab Nhập tay). **Chưa mở Issue trong worker này** (chỉ report qua orchestration).
 
-**Cập nhật bảng tóm tắt:** #600 → **FAIL** (verify Thanh; Gap A vẫn mở — bug thật, không phải mạng).
+**Cập nhật bảng tóm tắt:** #600 → **FAIL** tại thời điểm Thanh (trên build cũ / trước #608). **Đã PASS** sau rebuild Van — xem mục Verify #608 bên dưới.
+
+---
+
+## Verify #608 fix trên Dexter (worker Van)
+
+**Phiên:** 2026-10-20 ~23:14–23:26 ICT · Dexter `00008140-000605803C01801C` · Release rebuild **sau** merge PR #609 · WDA `/tmp/van-608-uat.py` (+ oneshot 13th UUID) · artifacts `van608-*` trong `apps/mobile/.uat-artifacts/dexter-live-uat/` (worktree `main`). **Không sửa code / không commit.**
+
+### Build provenance
+
+| Trường | Giá trị |
+| --- | --- |
+| Worktree build | `/Users/admin/orca/workspaces/main/uat-608-postfix` @ `c55b07a3fa9406e5a8c0d814e32e462d89bcc957` (merge PR #609) |
+| Script | `apps/mobile/scripts/release-ios-dexter.sh` → CFBundleVersion **26**, team `BLUA62D52G`, install Dexter **Complete 100%** |
+| Embedded | `extra.gitCommitSha` = `c55b07a3fa9406e5a8c0d814e32e462d89bcc957` trong `EXConstants.bundle/app.config` |
+| Khác build cũ | Các phiên UAT trước dùng `8e3aa26` (chưa có fix Hermes `randomUUID`) — phiên này **rebuild** với SHA merge |
+
+### 1) Staff login + scope
+
+| Bước | Kết quả | Evidence |
+| --- | --- | --- |
+| Guest → KC `staff@example.com` / `staff-demo` (Return trên Password) | **OK** — staff tabs | `van608-32-filled.png`, `van608-33-after-login.png` (`staff_login_ok: true`) |
+| Scope | **MFest · Demo** (đã scoped sẵn sau login) | `van608-50-manual.png` |
+
+### 2) Nhập tay 1 UUID giả → phản hồi (#608)
+
+| Bước | Kết quả | Evidence |
+| --- | --- | --- |
+| Nhập UUID `dbfd30d3-2793-4941-b659-84051405af05` + `gate-manual-submit` | Submit **enabled=true**; field clear sau press | `van608-601-type.png` |
+| Tab **Scan** ngay sau submit | Chrome **「Sẵn sàng quét」** + **「Trực tuyến」** — **không** còn 「Chưa mở phiên cổng」 (khác FAIL Thanh trên build cũ) | `van608-601-scan-1s.png`, `van608-601-scan-3s.png` |
+| Tab **Lịch sử** ngay sau 1 lượt | **≥1 bản ghi**: 「Không cho vào」 + `dbfd30d3-2…` + 「Đã tải 1 lượt」 + 「Đã xem hết…」 | `van608-70-history-after-1.png` |
+
+→ Gate session + persist history **không** còn im lặng trống sau Hermes `crypto.randomUUID()` footgun.
+
+### 3) Seed ≥12 + pagination #600
+
+| Bước | Kết quả | Evidence |
+| --- | --- | --- |
+| Submit thêm tới **12** UUID giả (page size = 12) | Footer 「Đã tải 12 lượt」 + 「Đã xem hết…」; **không** hiện 「Tải thêm」 (đúng khi `total == PAGE_SIZE`) | `van608-80-history-final.png` |
+| Submit UUID thứ **13** | Hiện nút **「Tải thêm lượt quét」** + vẫn 「Đã tải 12 lượt」 (page 1) | `van608-91-history-13.png` (+ XML `has_load_more: true`) |
+| Bấm 「Tải thêm lượt quét」 | 「Đã tải 13 lượt」 + 「Đã xem hết lịch sử lưu trên máy này」; hết nút Tải thêm | `van608-92-after-load-more.png` |
+
+### Verdict
+
+| Issue | Verdict | Ghi chú |
+| --- | --- | --- |
+| **#608** (gate session / history im lặng) | **PASS** | Rebuild `c55b07a` trên Dexter: session mở (「Sẵn sàng quét」), deny ghi lịch sử ≥1 ngay sau manual UUID |
+| **#600** pagination (Gap A) | **PASS** | 「Đã tải N lượt」 + 「Tải thêm」 (tại N=13) + 「Đã xem hết」 sau load-more — đóng gap trước đây không test được vì history luôn 0 |
+
+**Cập nhật bảng tóm tắt:** #600 → **PASS** (verify Van sau #608 fix); #608 live Dexter → **PASS**.
+
