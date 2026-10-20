@@ -103,6 +103,8 @@ export interface TicketSummary {
   state: string;
   credentialVersion: number;
   createdAt: string;
+  /** Present when the event row still exists; omitted if deleted. */
+  eventName?: string;
 }
 
 export interface MeTicketsResponse {
