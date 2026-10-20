@@ -1,9 +1,9 @@
 import { Stack } from 'expo-router';
-import { tabRootStackScreenOptions } from '@/navigation/tab-stack-options';
+import { tabAttendeeCompactStackScreenOptions } from '@/navigation/tab-stack-options';
 
 export default function AccountTabLayout() {
   return (
-    <Stack screenOptions={tabRootStackScreenOptions}>
+    <Stack screenOptions={tabAttendeeCompactStackScreenOptions}>
       <Stack.Screen name="index" options={{ title: 'Tài khoản' }} />
       <Stack.Screen
         name="delete"
