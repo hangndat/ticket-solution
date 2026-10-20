@@ -321,7 +321,7 @@ function ConfiguredAccount({
           <AccountGroupedRow
             label={accountCopy.privacyRow}
             showChevron
-            onPress={() => router.push('/(tabs)/account/privacy')}
+            onPress={() => router.push('/privacy-policy')}
             disabled={busy}
             testID="account-cta-privacy"
           />

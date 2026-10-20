@@ -1,5 +1,6 @@
-import { PrivacyPolicyWebViewScreen } from '@/screens/privacy-policy-webview';
+import { Redirect } from 'expo-router';
 
-export default function AccountPrivacyRoute() {
-  return <PrivacyPolicyWebViewScreen />;
+/** Legacy tab path → root modal without tab bar. */
+export default function AccountPrivacyRedirect() {
+  return <Redirect href="/privacy-policy" />;
 }

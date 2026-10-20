@@ -13,25 +13,54 @@ import {
   captureOfflineBindingEpoch,
 } from '@/tickets/bind-after-verify';
 import { offlineDisplay } from '@/tickets/offline-display-session';
+import { tabDetailStackScreenOptions } from '@/navigation/tab-stack-options';
+
+const stackBackFromTabs = {
+  ...tabDetailStackScreenOptions,
+  headerBackButtonDisplayMode: 'minimal' as const,
+};
 
 function AppStack() {
   return (
     <Stack>
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen
+        name="(tabs)"
+        options={{ headerShown: false, title: 'Sự kiện' }}
+      />
       <Stack.Screen
         name="events/[tenantSlug]/[slug]"
-        options={{ title: 'Chi tiết sự kiện' }}
+        options={{
+          ...stackBackFromTabs,
+          title: 'Chi tiết sự kiện',
+        }}
       />
       <Stack.Screen
         name="events/fixture/[eventId]"
-        options={{ title: 'Sự kiện demo' }}
+        options={{
+          ...stackBackFromTabs,
+          title: 'Sự kiện demo',
+        }}
       />
-      <Stack.Screen name="redeem" options={{ title: 'Đổi mã (sự kiện)' }} />
+      <Stack.Screen
+        name="redeem"
+        options={{ ...stackBackFromTabs, title: 'Đổi mã (sự kiện)' }}
+      />
       <Stack.Screen
         name="redeem-global"
-        options={{ title: 'Đổi mã lấy vé' }}
+        options={{ ...stackBackFromTabs, title: 'Đổi mã lấy vé' }}
       />
-      <Stack.Screen name="claim" options={{ title: 'Nhận vé mời' }} />
+      <Stack.Screen
+        name="privacy-policy"
+        options={{
+          ...stackBackFromTabs,
+          title: 'Chính sách quyền riêng tư',
+          presentation: 'fullScreenModal',
+        }}
+      />
+      <Stack.Screen
+        name="claim"
+        options={{ ...stackBackFromTabs, title: 'Nhận vé mời' }}
+      />
       <Stack.Screen
         name="membership-invite"
         options={{ title: 'Lời mời thành viên' }}
