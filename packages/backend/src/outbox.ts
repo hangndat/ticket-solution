@@ -757,6 +757,10 @@ async function deliverTicketIssuedApns(
     return pending;
   });
 
+  if (jobs.length === 0) {
+    return;
+  }
+
   const apns = options.apns;
   if (!apns) {
     throw new Error('apns_misconfigured');
