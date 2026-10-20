@@ -150,7 +150,6 @@ export async function fetchPublishedEventDetail(
   fetchImpl: typeof fetch = fetch,
 ): Promise<FetchPublishedDetailResult> {
   const base = getApiBaseUrl();
-  if (!base) return { status: 'misconfigured' };
   if (!tenantSlug || !eventSlug) return { status: 'invalid' };
   try {
     const response = await fetchImpl(
@@ -176,25 +175,13 @@ export async function fetchPublishedEventDetail(
   }
 }
 
-/**
- * GET /v1/public/tenants/{tenantSlug}/events?cursor=&limit=
- */
-export async function fetchPublishedEventList(
-  tenantSlug: string,
-  opts: { cursor?: string | null; limit?: number } = {},
+async function fetchPublishedListAtUrl(
+  listUrl: URL,
   signal?: AbortSignal,
   fetchImpl: typeof fetch = fetch,
 ): Promise<FetchPublishedListResult> {
-  const base = getApiBaseUrl();
-  if (!base) return { status: 'misconfigured' };
-  if (!tenantSlug) return { status: 'invalid' };
   try {
-    const url = new URL(
-      `${base}/v1/public/tenants/${encodeURIComponent(tenantSlug)}/events`,
-    );
-    if (opts.cursor) url.searchParams.set('cursor', opts.cursor);
-    if (opts.limit != null) url.searchParams.set('limit', String(opts.limit));
-    const response = await fetchImpl(url.toString(), {
+    const response = await fetchImpl(listUrl.toString(), {
       method: 'GET',
       headers: { Accept: 'application/json' },
       signal,
@@ -221,6 +208,40 @@ export async function fetchPublishedEventList(
     }
     return { status: 'unreachable' };
   }
+}
+
+/**
+ * GET /v1/public/events?cursor=&limit= — platform published catalog (O18).
+ */
+export async function fetchPlatformPublishedEventList(
+  opts: { cursor?: string | null; limit?: number } = {},
+  signal?: AbortSignal,
+  fetchImpl: typeof fetch = fetch,
+): Promise<FetchPublishedListResult> {
+  const base = getApiBaseUrl();
+  const url = new URL(`${base}/v1/public/events`);
+  if (opts.cursor) url.searchParams.set('cursor', opts.cursor);
+  if (opts.limit != null) url.searchParams.set('limit', String(opts.limit));
+  return fetchPublishedListAtUrl(url, signal, fetchImpl);
+}
+
+/**
+ * GET /v1/public/tenants/{tenantSlug}/events?cursor=&limit=
+ */
+export async function fetchPublishedEventList(
+  tenantSlug: string,
+  opts: { cursor?: string | null; limit?: number } = {},
+  signal?: AbortSignal,
+  fetchImpl: typeof fetch = fetch,
+): Promise<FetchPublishedListResult> {
+  if (!tenantSlug) return { status: 'invalid' };
+  const base = getApiBaseUrl();
+  const url = new URL(
+    `${base}/v1/public/tenants/${encodeURIComponent(tenantSlug)}/events`,
+  );
+  if (opts.cursor) url.searchParams.set('cursor', opts.cursor);
+  if (opts.limit != null) url.searchParams.set('limit', String(opts.limit));
+  return fetchPublishedListAtUrl(url, signal, fetchImpl);
 }
 
 export function visibleSectionsInOrder(
