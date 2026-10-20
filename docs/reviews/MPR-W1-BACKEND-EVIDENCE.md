@@ -50,3 +50,20 @@ _(coordinator: `./scripts/gh-dod-evidence.sh <pr>` after PR open)_
 ## ADR
 
 No new trust boundary beyond existing `withActor` + OIDC mapping (TD §5.3 / ARCHITECTURE §6). No ADR draft required unless coordinator wants explicit W1 amendment entry.
+
+## Prod deploy — closes R-API-597
+
+Deployed by coordinator (`gh-dod-evidence` + CI đã xanh trên PR #596 trước khi deploy, không phải trigger riêng cho #597 — xem history trên).
+
+| Field | Value |
+| --- | --- |
+| Date | 2026-10-20 |
+| Prod SHA (main tip) | `c4057c6861a265d3d63e935739d01bdc34f38bb9` |
+| Services | `migrate` (áp `202610201200_mpr_w1_owner_tickets_aggregate` + 1 migration tồn đọng `202610200001_mpr_platform_published_catalog`), `api` (rebuild + restart), `worker` (restart — dùng chung `packages/backend` dist) |
+| Migrate | `docker logs vemoki-migrate-1` → "All migrations have been successfully applied" (exit 0) |
+| Verify | `GET https://api.vemoki.com/v1/health` → `{"status":"ok"}`; `GET /v1/me/tickets` không auth → `401` (không `500`/misconfig) |
+| Containers sau deploy | api/worker/web/portal/keycloak/postgres/mailpit/minio đều `Up`/`healthy` |
+
+**Known gap không liên quan #597 (không fix trong lượt này):** worker log lặp `account_deletion_tombstone_keyring_missing` — thiếu keyring env cho tombstone feature khác, tồn tại từ trước, không phải regression của #597.
+
+Sau deploy này: **R-API-597 đóng** — owner wallet aggregate API đã sống trên prod. Pilot-ready tổng thể #596/#597 không còn blocker đã biết từ phía backend; UAT ví owner trên device vẫn cần một lượt riêng nếu muốn claim.
