@@ -74,7 +74,7 @@ export default function TabLayout() {
           <NativeTabs.Trigger.Icon sf="clock.arrow.circlepath" />
           <NativeTabs.Trigger.Label>{STAFF_TAB_TITLES.history}</NativeTabs.Trigger.Label>
         </NativeTabs.Trigger>
-        <NativeTabs.Trigger name="account">
+        <NativeTabs.Trigger name="account" hidden={showStaffTabs}>
           <NativeTabs.Trigger.Icon sf="person.circle" />
           <NativeTabs.Trigger.Label>Tài khoản</NativeTabs.Trigger.Label>
         </NativeTabs.Trigger>

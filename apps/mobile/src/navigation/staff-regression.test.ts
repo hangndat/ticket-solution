@@ -99,4 +99,14 @@ test('K-STAFF-01: staff default tab is Scan when entering workspace or on attend
     }),
     true,
   );
+
+  assert.equal(
+    shouldReplaceWithStaffScanTab({
+      staffWorkspace: true,
+      segments: ['(tabs)', 'account'],
+      enteringStaff: false,
+    }),
+    true,
+    'account tab segment is attendee-only; staff uses stack /account from toolbar',
+  );
 });
