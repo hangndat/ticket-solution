@@ -117,6 +117,26 @@ test('K-STAFF-01: staff default tab is Scan when entering workspace or on attend
       enteringStaff: false,
     }),
     false,
-    'staff account screen keeps gate tab chrome (no fourth tab)',
+    'attendee account tab segment must not bounce to Scan',
+  );
+
+  assert.equal(
+    shouldReplaceWithStaffScanTab({
+      staffWorkspace: true,
+      segments: ['(tabs)', 'staff-account'],
+      enteringStaff: false,
+    }),
+    false,
+    'staff-account hidden tab from toolbar must not bounce to Scan',
+  );
+
+  assert.equal(
+    shouldReplaceWithStaffScanTab({
+      staffWorkspace: true,
+      segments: ['(tabs)', 'staff-manual'],
+      enteringStaff: true,
+    }),
+    false,
+    'eligibility resolving while already on Manual must not force Scan',
   );
 });

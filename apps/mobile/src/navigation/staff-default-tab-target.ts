@@ -1,3 +1,5 @@
+import { STAFF_ACCOUNT_SEGMENT } from './staff-account-route.ts';
+
 /** Expo Router segment names for the staff 3-tab workspace (K-STAFF-01). */
 export const STAFF_TAB_SEGMENT_NAMES = [
   'staff-manual',
@@ -11,10 +13,10 @@ const STAFF_TAB_SEGMENT_SET = new Set<string>(STAFF_TAB_SEGMENT_NAMES);
 const ATTENDEE_ONLY_TAB_SEGMENTS = new Set(['(events)', 'my-tickets']);
 
 /**
- * Account routes staff may open without replacing to Scan (PD-HANDOFF §1 — toolbar
- * stack `/account` or tab segment; native tab bar stays 3 gate tabs).
+ * Account routes staff may open without replacing to Scan (toolbar / hidden tab).
+ * Legacy root `/account` kept for deep links; staff UI uses `staff-account`.
  */
-const STAFF_ACCOUNT_SEGMENTS = new Set(['account']);
+const STAFF_ACCOUNT_SEGMENTS = new Set(['account', STAFF_ACCOUNT_SEGMENT]);
 
 export const STAFF_DEFAULT_SCAN_HREF = '/(tabs)/staff-scan' as const;
 
@@ -35,5 +37,7 @@ export function shouldReplaceWithStaffScanTab(input: {
     ATTENDEE_ONLY_TAB_SEGMENTS.has(s),
   );
 
-  return onAttendeeTab || !onStaffTab || input.enteringStaff;
+  if (onAttendeeTab) return true;
+  if (onStaffTab) return false;
+  return input.enteringStaff;
 }
