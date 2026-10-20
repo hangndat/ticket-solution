@@ -433,6 +433,64 @@ test(
       assert.equal(allocatedAfterCommit.allocated, allocatedBefore);
       assert.equal(allocatedAfterCommit.codes, 2);
 
+      // #621 — CODES commit skips DB duplicates without aborting the batch
+      await withTenant(db, tenantA, (tx) =>
+        importRedemptionCodes(tx, HMAC, {
+          tenantId: tenantA,
+          eventId: eventA,
+          actorUserId: manager.userId,
+          rawCodes: ['DUP-621-CODE'],
+        }),
+      );
+      const dupCodesCsv = Buffer.from(
+        'code\nNEW-621-A\nNEW-621-A\nDUP-621-CODE\n',
+        'utf8',
+      );
+      const dupCodesUpload = await uploadImportFile(db, store, {
+        tenantId: tenantA,
+        eventId: eventA,
+        actorUserId: manager.userId,
+        kind: 'CODES',
+        filename: 'dup-codes-621.csv',
+        contentType: 'text/csv',
+        body: dupCodesCsv,
+      });
+      const dupCodesJob = await createImportJob(db, {
+        tenantId: tenantA,
+        eventId: eventA,
+        actorUserId: manager.userId,
+        idempotencyKey: randomUUID(),
+        body: {
+          kind: 'CODES',
+          sourceId,
+          ticketTypeId,
+          fileId: dupCodesUpload.fileId,
+        },
+      });
+      const dupCodesPreview = await previewImportJob(db, store, {
+        tenantId: tenantA,
+        eventId: eventA,
+        actorUserId: manager.userId,
+        importId: dupCodesJob.importId,
+      });
+      assert.equal(dupCodesPreview.validRowCount, 2);
+      assert.equal(dupCodesPreview.errorRowCount, 1);
+      const dupCodesCommit = await commitImportJob(db, store, HMAC, {
+        tenantId: tenantA,
+        eventId: eventA,
+        actorUserId: manager.userId,
+        importId: dupCodesJob.importId,
+        idempotencyKey: randomUUID(),
+        body: {
+          previewRevision: dupCodesPreview.previewRevision,
+          mappingRevision: dupCodesPreview.mappingRevision,
+          fileHash: dupCodesPreview.fileHash,
+        },
+      });
+      assert.equal(dupCodesCommit.committedRowCount, 1);
+      assert.equal(dupCodesCommit.skippedRowCount, 1);
+      assert.equal(dupCodesCommit.errorRowCount, 1);
+
       // I7 — legacy sync path still works
       const legacy = await withTenant(db, tenantA, (tx) =>
         importRedemptionCodes(tx, HMAC, {
@@ -771,6 +829,97 @@ test(
           e instanceof ImportError &&
           e.code === IMPORT_ERROR_CODES.INVITATION_TOKEN_INVALID,
       );
+
+      // #621 — GUESTS commit skips DB duplicates without aborting the batch
+      const dupGuestEmail = 'dup621guest@example.com';
+      const seedGuestCsv = Buffer.from(`email\n${dupGuestEmail}\n`, 'utf8');
+      const seedGuestUpload = await uploadImportFile(db, store, {
+        tenantId: tenantA,
+        eventId: eventA,
+        actorUserId: manager.userId,
+        kind: 'GUESTS',
+        filename: 'seed-guest-621.csv',
+        contentType: 'text/csv',
+        body: seedGuestCsv,
+      });
+      const seedGuestJob = await createImportJob(db, {
+        tenantId: tenantA,
+        eventId: eventA,
+        actorUserId: manager.userId,
+        idempotencyKey: randomUUID(),
+        body: {
+          kind: 'GUESTS',
+          sourceId,
+          ticketTypeId,
+          fileId: seedGuestUpload.fileId,
+        },
+      });
+      const seedGuestPreview = await previewImportJob(db, store, {
+        tenantId: tenantA,
+        eventId: eventA,
+        actorUserId: manager.userId,
+        importId: seedGuestJob.importId,
+      });
+      await commitImportJob(db, store, HMAC, {
+        tenantId: tenantA,
+        eventId: eventA,
+        actorUserId: manager.userId,
+        importId: seedGuestJob.importId,
+        idempotencyKey: randomUUID(),
+        body: {
+          previewRevision: seedGuestPreview.previewRevision,
+          mappingRevision: seedGuestPreview.mappingRevision,
+          fileHash: seedGuestPreview.fileHash,
+        },
+      });
+      const dupGuestsCsv = Buffer.from(
+        `email\nnew621guest@example.com\nnew621guest@example.com\n${dupGuestEmail}\n`,
+        'utf8',
+      );
+      const dupGuestsUpload = await uploadImportFile(db, store, {
+        tenantId: tenantA,
+        eventId: eventA,
+        actorUserId: manager.userId,
+        kind: 'GUESTS',
+        filename: 'dup-guests-621.csv',
+        contentType: 'text/csv',
+        body: dupGuestsCsv,
+      });
+      const dupGuestsJob = await createImportJob(db, {
+        tenantId: tenantA,
+        eventId: eventA,
+        actorUserId: manager.userId,
+        idempotencyKey: randomUUID(),
+        body: {
+          kind: 'GUESTS',
+          sourceId,
+          ticketTypeId,
+          fileId: dupGuestsUpload.fileId,
+        },
+      });
+      const dupGuestsPreview = await previewImportJob(db, store, {
+        tenantId: tenantA,
+        eventId: eventA,
+        actorUserId: manager.userId,
+        importId: dupGuestsJob.importId,
+      });
+      assert.equal(dupGuestsPreview.validRowCount, 1);
+      assert.equal(dupGuestsPreview.errorRowCount, 2);
+      const dupGuestsCommit = await commitImportJob(db, store, HMAC, {
+        tenantId: tenantA,
+        eventId: eventA,
+        actorUserId: manager.userId,
+        importId: dupGuestsJob.importId,
+        idempotencyKey: randomUUID(),
+        body: {
+          previewRevision: dupGuestsPreview.previewRevision,
+          mappingRevision: dupGuestsPreview.mappingRevision,
+          fileHash: dupGuestsPreview.fileHash,
+        },
+      });
+      assert.equal(dupGuestsCommit.committedRowCount, 1);
+      assert.equal(dupGuestsCommit.skippedRowCount, 1);
+      assert.equal(dupGuestsCommit.errorRowCount, 1);
 
       // Quota unchanged after rejected re-claim / replay.
       const allocatedAfterReuse = await withTenant(db, tenantA, async (tx) => {
