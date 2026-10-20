@@ -55,6 +55,33 @@ export async function logoutAndClearWalletArtifacts(
     errors.push(asError(error, 'Xóa intent claim khách thất bại'));
   }
 
+  try {
+    const { clearRedeemDraftIntent } = await import(
+      '../redeem/redeem-draft-intent.ts'
+    );
+    clearRedeemDraftIntent();
+  } catch (error) {
+    errors.push(asError(error, 'Xóa draft đổi mã thất bại'));
+  }
+
+  try {
+    const { clearSignInReturn } = await import(
+      '../navigation/sign-in-return-intent.ts'
+    );
+    clearSignInReturn();
+  } catch (error) {
+    errors.push(asError(error, 'Xóa lộ trình quay lại sau đăng nhập thất bại'));
+  }
+
+  try {
+    const { clearPendingImmediateSignIn } = await import(
+      '../navigation/attendee-auth-gate.ts'
+    );
+    clearPendingImmediateSignIn();
+  } catch (error) {
+    errors.push(asError(error, 'Xóa cổng đăng nhập ngữ cảnh thất bại'));
+  }
+
   // Drop push tap login-return intent (C-N) so late resolve cannot route prior user.
   try {
     const { clearNotificationTapIntent } = await import(

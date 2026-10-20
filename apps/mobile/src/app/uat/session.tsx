@@ -6,16 +6,13 @@ import { LoadingState } from '@/components/screen-state';
 import { verifyViaMe } from '@/identity/fetch-me';
 import { session } from '@/identity/session';
 import { staffEligibility } from '@/identity/staff-eligibility';
+import { uatSessionRouteAllowed } from '@/navigation/dev-only-routes';
 import { colors } from '@/theme/colors';
 
 /**
  * Local UAT session injector for headless sim-uat (O02 dual persona).
  * Allowed only when `__DEV__` or `EXPO_PUBLIC_ALLOW_UAT_SESSION=1` (never on prod bake).
  */
-function uatSessionAllowed(): boolean {
-  if (__DEV__) return true;
-  return process.env.EXPO_PUBLIC_ALLOW_UAT_SESSION === '1';
-}
 
 export default function UatSessionScreen() {
   const params = useLocalSearchParams<{ access_token?: string }>();
@@ -25,7 +22,7 @@ export default function UatSessionScreen() {
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      if (!uatSessionAllowed()) {
+      if (!uatSessionRouteAllowed()) {
         if (!cancelled) {
           setDetail('Đường dẫn UAT chỉ dùng khi phát triển / UAT local. Không cho vào.');
           setPhase('deny');
