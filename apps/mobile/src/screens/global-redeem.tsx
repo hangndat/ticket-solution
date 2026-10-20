@@ -46,6 +46,9 @@ import {
 } from '@/redeem/redeem-client';
 import { RedeemFormFields } from '@/redeem/redeem-form-fields';
 import { useFadeInOnMount } from '@/hooks/use-fade-in-on-mount';
+import {
+  parkSignInReturn,
+} from '@/navigation/sign-in-return-intent';
 import { colors } from '@/theme/colors';
 import { fontFamilies } from '@/theme/fonts';
 
@@ -100,7 +103,7 @@ export function GlobalRedeemScreen() {
   const [offlineNotice, setOfflineNotice] = useState<string | null>(null);
 
   const verified = identity.status === 'verified';
-  const needsAuth = !verified && configured;
+  const guestGate = !verified;
   const resolved = resolveContext !== null;
 
   const applyResolveBody = useCallback((body: RedemptionResolveResponse) => {
@@ -215,6 +218,7 @@ export function GlobalRedeemScreen() {
         parkedUserId: epoch?.userId ?? null,
         parkedGeneration: epoch?.generation ?? null,
       });
+      parkSignInReturn({ pathname: '/redeem-global' });
       const ok = await signIn();
       if (ok) setResolveError(null);
       return;
@@ -390,6 +394,7 @@ export function GlobalRedeemScreen() {
         parkedGeneration: epoch?.generation ?? null,
       });
     }
+    parkSignInReturn({ pathname: '/redeem-global' });
     const ok = await signIn();
     if (ok && decision?.kind === 'denied' && AUTH_CODES.has(decision.code)) {
       setDecision(null);
@@ -406,48 +411,59 @@ export function GlobalRedeemScreen() {
   const { opacity: outcomeOpacity, reduceMotionOs } =
     useFadeInOnMount(showOutcome);
 
-  return (
-    <Page>
-      <Notice title="Đổi mã lấy vé">
-        Nhập mã đổi vé — không cần chọn sự kiện. Đăng nhập trước khi tra cứu;
-        mã được giữ tạm trong bộ nhớ (không ghi URL). Chờ duyệt chưa phải vé.
-      </Notice>
-
-      {needsAuth ? (
-        <Notice title="Cần đăng nhập">
-          Nhập mã rồi đăng nhập — sau đó app tra cứu và hiển thị sự kiện tương
-          ứng. Chưa gọi máy chủ khi chưa có phiên.
+  if (!configured) {
+    return (
+      <Page>
+        <Notice title="Chưa sẵn sàng đổi mã">
+          Bản dựng chưa bật đăng nhập. Bạn vẫn có thể xem sự kiện công khai.
         </Notice>
-      ) : null}
+      </Page>
+    );
+  }
 
-      {needsAuth ? (
+  if (guestGate) {
+    return (
+      <Page>
+        <Notice title="Đổi mã lấy vé">{redeemCopy.globalGuestBody}</Notice>
+        <TextInput
+          value={code}
+          onChangeText={setCode}
+          placeholder="Mã đổi vé"
+          autoCapitalize="characters"
+          accessibilityLabel="Mã đổi vé"
+          editable={!busy && !signInBusy}
+          style={field}
+          testID="global-redeem-code"
+        />
         <AttendeeCta
           label={
-            signInBusy
-              ? 'Đang đăng nhập…'
-              : 'Đăng nhập để tra cứu mã'
+            signInBusy ? 'Đang đăng nhập…' : redeemCopy.authGateCta
           }
-          disabled={signInBusy || code.trim().length === 0}
-          onPress={() => void onSignIn()}
-          testID="global-redeem-cta-signin"
+          disabled={busy || signInBusy || code.trim().length === 0}
+          onPress={() => void onContinueOrResolve()}
+          testID="global-redeem-cta-continue"
         />
-      ) : null}
+        {signInBusy ? (
+          <LoadingState title="Đang đăng nhập">
+            Chờ xác minh — chưa tra cứu mã.
+          </LoadingState>
+        ) : null}
+        {signInError ? (
+          <ErrorState
+            title={redeemCopy.authCancelTitle}
+            onRetry={() => void onSignIn()}
+            retryLabel="Thử lại"
+          >
+            {signInError}
+          </ErrorState>
+        ) : null}
+      </Page>
+    );
+  }
 
-      {signInBusy ? (
-        <LoadingState title="Đang đăng nhập">
-          Chờ xác minh — chưa tra cứu mã.
-        </LoadingState>
-      ) : null}
-
-      {signInError ? (
-        <ErrorState
-          title={redeemCopy.authCancelTitle}
-          onRetry={() => void onSignIn()}
-          retryLabel="Thử lại"
-        >
-          {signInError}
-        </ErrorState>
-      ) : null}
+  return (
+    <Page>
+      <Notice title="Đổi mã lấy vé">{redeemCopy.globalVerifiedIntro}</Notice>
 
       {offlineNotice ? (
         <Notice title={redeemCopy.offlineTitle}>{offlineNotice}</Notice>
@@ -477,47 +493,43 @@ export function GlobalRedeemScreen() {
         accessibilityLabel="Mã đổi vé"
         editable={!busy}
         style={field}
+        testID="global-redeem-code"
       />
 
-      {!needsAuth ? (
-        <AttendeeCta
-          label={busy ? 'Đang tra cứu…' : resolved ? 'Tra cứu lại' : 'Tra cứu mã'}
-          variant="secondary"
-          disabled={busy || code.trim().length === 0}
-          onPress={() => void onContinueOrResolve()}
-          testID="global-redeem-cta-resolve"
-        />
-      ) : (
-        <AttendeeCta
-          label="Tiếp tục"
-          disabled={busy || signInBusy || code.trim().length === 0}
-          onPress={() => void onContinueOrResolve()}
-          testID="global-redeem-cta-continue"
-        />
-      )}
-
-      <RedeemFormFields
-        form={form}
-        termsVersion={termsVersion}
-        termsBody={termsBody}
-        answers={answers}
-        termsAccepted={termsAccepted}
-        disabled={busy || !verified || !resolved}
-        fieldErrors={fieldErrors}
-        onChangeAnswer={(fieldId, value) =>
-          setAnswers((prev) => ({ ...prev, [fieldId]: value }))
-        }
-        onTermsAcceptedChange={setTermsAccepted}
+      <AttendeeCta
+        label={busy ? 'Đang tra cứu…' : resolved ? 'Tra cứu lại' : 'Tra cứu mã'}
+        variant="secondary"
+        disabled={busy || code.trim().length === 0}
+        onPress={() => void onContinueOrResolve()}
+        testID="global-redeem-cta-resolve"
       />
 
-      <View {...redeemActionAnnouncement()}>
-        <AttendeeCta
-          label={busy ? 'Đang xử lý…' : 'Xác nhận đổi mã'}
-          disabled={busy || !verified || !resolved || code.trim().length === 0}
-          onPress={() => void submit()}
-          testID="global-redeem-cta-submit"
-        />
-      </View>
+      {resolved ? (
+        <>
+          <RedeemFormFields
+            form={form}
+            termsVersion={termsVersion}
+            termsBody={termsBody}
+            answers={answers}
+            termsAccepted={termsAccepted}
+            disabled={busy}
+            fieldErrors={fieldErrors}
+            onChangeAnswer={(fieldId, value) =>
+              setAnswers((prev) => ({ ...prev, [fieldId]: value }))
+            }
+            onTermsAcceptedChange={setTermsAccepted}
+          />
+
+          <View {...redeemActionAnnouncement()}>
+            <AttendeeCta
+              label={busy ? 'Đang xử lý…' : 'Xác nhận đổi mã'}
+              disabled={busy || code.trim().length === 0}
+              onPress={() => void submit()}
+              testID="global-redeem-cta-submit"
+            />
+          </View>
+        </>
+      ) : null}
 
       {showOutcome && decision ? (
         <Animated.View

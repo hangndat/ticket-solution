@@ -5,7 +5,6 @@ import {
   AccountGroupedDivider,
   AccountGroupedRow,
   AccountGroupedSection,
-  AccountSectionFooter,
 } from '@/components/account-grouped-section';
 import { accountCopy } from '@/components/screen-state-copy';
 import { session } from '@/identity/session';
@@ -154,9 +153,6 @@ export function PushAccountSection({
         <View style={{ padding: 12, alignItems: 'center' }}>
           <ActivityIndicator />
         </View>
-      ) : null}
-      {identityKind === 'guest' ? (
-        <AccountSectionFooter>{accountCopy.push.guestHint}</AccountSectionFooter>
       ) : null}
     </AccountGroupedSection>
   );

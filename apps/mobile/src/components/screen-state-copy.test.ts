@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import {
   accountCopy,
   eventsCopy,
+  redeemCopy,
   scanCopy,
   walletCopy,
 } from './screen-state-copy.ts';
@@ -34,6 +35,12 @@ test('account copy avoids session jargon and matches PD sections', () => {
 test('wallet first-ticket push card copy has dismiss', () => {
   assert.equal(walletCopy.firstTicketPush.dismissCta, 'Để sau');
   assert.match(walletCopy.firstTicketPush.title, /nhắc/i);
+});
+
+test('redeem global guest copy avoids internal session/memory jargon', () => {
+  assert.match(redeemCopy.globalGuestBody, /mã/i);
+  assert.doesNotMatch(redeemCopy.globalGuestBody, /bộ nhớ|URL|phiên|slug|UUID/i);
+  assert.doesNotMatch(redeemCopy.authRequiredBody, /phiên/i);
 });
 
 test('events copy is production-facing without demo fallback language', () => {

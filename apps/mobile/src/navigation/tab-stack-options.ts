@@ -12,6 +12,20 @@ const tabCompactTitleStyle = {
  * Native large title + NativeTabs. Scroll root first, then `<TabStackTitle>`.
  * Blur material on the collapsed bar so content does not read through the title.
  */
+/** Guest attendee roots (Sự kiện, …): compact bar like full-prototype.html — no large-title dead zone. */
+export const tabAttendeeCompactStackScreenOptions: NativeStackNavigationOptions =
+  {
+    headerLargeTitleEnabled: false,
+    headerTransparent: false,
+    headerTitleAlign: 'left',
+    headerShadowVisible: true,
+    headerBackButtonDisplayMode: 'default',
+    headerTintColor: brand.ink,
+    headerStyle: { backgroundColor: brand.paper },
+    headerTitleStyle: tabCompactTitleStyle,
+    contentStyle: { backgroundColor: brand.paper },
+  };
+
 export const tabRootStackScreenOptions: NativeStackNavigationOptions = {
   headerLargeTitleEnabled: true,
   headerTransparent: true,

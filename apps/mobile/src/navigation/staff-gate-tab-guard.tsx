@@ -4,6 +4,7 @@ import { Page } from '@/components/page';
 import { LoadingState } from '@/components/screen-state';
 import { session } from '@/identity/session';
 import { staffEligibility } from '@/identity/staff-eligibility';
+import { resolveStaffGateTabPhase } from './staff-gate-tab-guard-policy';
 
 /** Fail-closed entry for staff-only tab routes (Scan / Nhập tay / Lịch sử). */
 export function StaffGateTabGuard({ children }: PropsWithChildren) {
@@ -28,7 +29,13 @@ export function StaffGateTabGuard({ children }: PropsWithChildren) {
     }
   }, [identity, eligibility.resolved, eligibility.loading]);
 
-  if (identity.status === 'verified' && (!eligibility.resolved || eligibility.loading)) {
+  const phase = resolveStaffGateTabPhase(identity.status, eligibility);
+
+  if (phase === 'redirect-guest') {
+    return <Redirect href="/(tabs)/(events)" />;
+  }
+
+  if (phase === 'loading') {
     return (
       <Page>
         <LoadingState title="Đang kiểm tra quyền nhân viên">
@@ -38,7 +45,7 @@ export function StaffGateTabGuard({ children }: PropsWithChildren) {
     );
   }
 
-  if (!eligibility.staffEligible) {
+  if (phase === 'redirect-deny') {
     return <Redirect href="/staff-access" />;
   }
 
