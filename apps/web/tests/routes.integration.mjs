@@ -12,6 +12,7 @@ test('production routes isolate tenant content and reject unknown pairs', async 
   await once(reservation, 'listening');
   const port = reservation.address().port;
   await new Promise((resolve) => reservation.close(resolve));
+  const base = `http://127.0.0.1:${port}`;
   const child = spawn(
     process.execPath,
     [
@@ -22,7 +23,14 @@ test('production routes isolate tenant content and reject unknown pairs', async 
       '--port',
       String(port),
     ],
-    { stdio: ['ignore', 'pipe', 'pipe'] },
+    {
+      stdio: ['ignore', 'pipe', 'pipe'],
+      env: {
+        ...process.env,
+        // Production origin policy requires WEB_PUBLIC_ORIGIN (no Host/forwarded fallback).
+        WEB_PUBLIC_ORIGIN: base,
+      },
+    },
   );
   let output = '';
   child.stdout.on('data', (data) => {
@@ -31,7 +39,6 @@ test('production routes isolate tenant content and reject unknown pairs', async 
   child.stderr.on('data', (data) => {
     output += data;
   });
-  const base = `http://127.0.0.1:${port}`;
   try {
     let ready = false;
     for (let attempt = 0; attempt < 100; attempt++) {
