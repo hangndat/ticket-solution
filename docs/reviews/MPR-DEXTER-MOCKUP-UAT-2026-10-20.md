@@ -12,7 +12,7 @@
 |---|-------|---------|----------------|
 | 1 | #598 Scan-line viewfinder | **PASS** | Khung ~220×220, viền trắng bo góc; scan-line hồng `#fb7391`; animation qua 2 ảnh cách ~2s |
 | 2 | #600 Lịch sử staff | **PASS with gap** | Empty state + search khớp mockup; không test Tải thêm / footer pagination (0 lượt local) |
-| 3 | #601 eventName trên vé | **FAIL** | Danh sách Sự kiện/chi tiết/staff header đúng tên; **vé trong Ví vẫn hiển thị "Sự kiện"** (cache offline) |
+| 3 | #601 eventName trên vé | **PASS** (Yen sau deploy) | Sau redeploy API `14:26:41Z`: ví + filter CTA hiện **MFest · Demo** / **Device UAT Event** — hết generic 「Sự kiện」 |
 | 4 | #602 Ví + CTA Events | **PASS with gap** | Subtitle, nhóm, CTA, lọc + Xem tất cả hoạt động; filter bar hiện "Sự kiện" thay tên sự kiện |
 | 5 | #606 Network dedupe | **N/A** | Không quan sát qua UI |
 
@@ -179,3 +179,42 @@ Không có surface UI. **N/A**
 | **#602** | **PASS with gap** (CTA/filter hành vi OK; **label filter generic**) |
 
 **Tổng mockup UAT:** **PASS with known gap** — staff scan/manual khớp mockup; **#601 ví online** và **#600 pagination** vẫn là gap mở.
+
+
+---
+
+## Verify #601 sau deploy (worker Yen)
+
+**Phiên:** 2026-10-20 ~22:34–22:43 ICT · Dexter `00008140-000605803C01801C` · WDA session-stable (`/tmp/hoa-dexter-uat.py` + login helper Return-submit; oneshot restart-session gãy OIDC/Passwords) · artifacts `yen-*` trong `apps/mobile/.uat-artifacts/dexter-live-uat/` (worktree `main`).
+
+**Bối cảnh API:** production `vemoki-api-1` redeploy StartedAt `2026-10-20T14:26:41Z` (PR #604 `eventName` trên `GET /v1/me/tickets`). So sánh với Hoa Gap B **FAIL** (generic 「Sự kiện」sau refresh).
+
+### Login
+
+| Bước | Kết quả | Evidence |
+| --- | --- | --- |
+| Session ban đầu | **Chưa đăng nhập** (chỉ tab Sự kiện / Tài khoản) | `yen-02-account.png` |
+| OIDC attendee | **OK** — Cancel Passwords sheet + `Restart login` + set Email/Password + **Return** trên Password (tap/click Sign In liên tục mở iOS Passwords sheet) | `yen-74-after-return.png`, `yen-78-final.png` |
+
+### Ví attendee — sau deploy
+
+| Bước | Kết quả | Evidence |
+| --- | --- | --- |
+| Mở **Vé của tôi** (trước / cùng lúc refresh) | Header/dòng vé **không còn** 「Sự kiện · …」generic. Nhóm/title: **Device UAT Event · 1 vé** / **Device UAT Event · Còn hiệu lực**; **MFest · Demo · 1 vé** / **MFest · Demo · Đã dùng**. Banner offline vẫn hiện (đồng bộ `14:42:08Z`) | `yen-81-wallet.png`, `yen-83-wallet-before.png` |
+| Pull-to-refresh | Timestamp Đồng bộ cập nhật (`14:42:08Z` → `14:42:29Z`); tên sự kiện **giữ** MFest / Device UAT Event | `yen-84-pull-refresh.png`, `yen-85-wallet-after-pull.png` |
+| **Làm mới vé** | Đồng bộ `14:42:46–47Z` (sau API deploy); banner 「chưa kết nối」vẫn có trên full list; **tên vé đúng** — không regress về 「Sự kiện」 | `yen-87-wallet-after-lam-moi.png` |
+| CTA Events 「Bạn có 1 vé」→ filter bar | Filter **「MFest · Demo」** + **「Xem tất cả」** (đỏ); dòng vé **MFest · Demo · Đã dùng** — **không** generic 「Sự kiện」 | `yen-88-events.png`, `yen-90-cta.png`, `yen-91-wallet-filter.png` |
+
+### Ghi chú dữ liệu
+
+- Ví attendee hiện **2 sự kiện**: **Device UAT Event** + **MFest · Demo** (không còn cặp Studio Night trên ví trong phiên này; tab Sự kiện vẫn list **Studio Night · Demo**). Chấp nhận #601 = **eventName thật**, không label generic.
+- Banner offline / `bộ đệm offline` vẫn xuất hiện sau Làm mới trên full list; filter CTA snapshot (`yen-91`) không hiện banner — **không** đảo verdict #601 (tên đã đúng).
+
+### Verdict #601 sau deploy
+
+**PASS thật.**
+
+- Trước deploy (Hoa): refresh online vẫn 「Sự kiện」generic → FAIL.
+- Sau deploy PR #604: header nhóm + title dòng vé + filter bar CTA hiện **MFest · Demo** / **Device UAT Event** (tên sự kiện thật). Không cần Issue bug code mới cho #601 trên surface này.
+
+**Cập nhật bảng tóm tắt:** #601 → **PASS** (verify Yen sau redeploy API).
