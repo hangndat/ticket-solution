@@ -79,4 +79,4 @@ Thư mục ảnh và cây UI: `apps/mobile/.uat-artifacts/dexter-live-uat/` (git
 
 **Verdict guest fold:** **PASS with known gap** — CTA đổi mã không cùng viewport với search khi có ≥2 sự kiện prod (chấp nhận prototype scroll-order hoặc follow-up sticky footer nếu PD bắt CTA luôn thấy).
 
-**SHA:** ghi sau `git push` (branch `hangndat/mpr-dexter-uat-install`, PR #596).
+**SHA (code + evidence doc):** `037753fee98217ca705d7fc1e9f50ba68580956e` · PR #596 · branch `hangndat/mpr-dexter-uat-install`.
