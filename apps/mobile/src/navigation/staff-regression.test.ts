@@ -103,10 +103,20 @@ test('K-STAFF-01: staff default tab is Scan when entering workspace or on attend
   assert.equal(
     shouldReplaceWithStaffScanTab({
       staffWorkspace: true,
+      segments: ['account'],
+      enteringStaff: false,
+    }),
+    false,
+    'stack /account from gate toolbar must not bounce to Scan',
+  );
+
+  assert.equal(
+    shouldReplaceWithStaffScanTab({
+      staffWorkspace: true,
       segments: ['(tabs)', 'account'],
       enteringStaff: false,
     }),
-    true,
-    'account tab segment is attendee-only; staff uses stack /account from toolbar',
+    false,
+    'staff account screen keeps gate tab chrome (no fourth tab)',
   );
 });

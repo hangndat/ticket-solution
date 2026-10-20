@@ -7,11 +7,14 @@ export const STAFF_TAB_SEGMENT_NAMES = [
 
 const STAFF_TAB_SEGMENT_SET = new Set<string>(STAFF_TAB_SEGMENT_NAMES);
 
-const ATTENDEE_ONLY_TAB_SEGMENTS = new Set([
-  '(events)',
-  'my-tickets',
-  'account',
-]);
+/** Attendee tabs staff must leave when gate workspace is active. */
+const ATTENDEE_ONLY_TAB_SEGMENTS = new Set(['(events)', 'my-tickets']);
+
+/**
+ * Account routes staff may open without replacing to Scan (PD-HANDOFF §1 — toolbar
+ * stack `/account` or tab segment; native tab bar stays 3 gate tabs).
+ */
+const STAFF_ACCOUNT_SEGMENTS = new Set(['account']);
 
 export const STAFF_DEFAULT_SCAN_HREF = '/(tabs)/staff-scan' as const;
 
@@ -22,6 +25,10 @@ export function shouldReplaceWithStaffScanTab(input: {
   enteringStaff: boolean;
 }): boolean {
   if (!input.staffWorkspace) return false;
+
+  if (input.segments.some((s) => STAFF_ACCOUNT_SEGMENTS.has(s))) {
+    return false;
+  }
 
   const onStaffTab = input.segments.some((s) => STAFF_TAB_SEGMENT_SET.has(s));
   const onAttendeeTab = input.segments.some((s) =>
