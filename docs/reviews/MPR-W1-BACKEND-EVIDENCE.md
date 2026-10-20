@@ -35,7 +35,7 @@ apps/api: pnpm test  (PASS, incl. test/me-tickets.test.cjs)
 
 ## Exact SHA
 
-_(filled after push — `git rev-parse HEAD` on PR branch tip)_
+`d5accb97eb27ae77047cf5445f3d8de45a0097c5`
 
 ## CI
 
