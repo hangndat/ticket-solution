@@ -56,10 +56,10 @@ export async function logoutAndClearWalletArtifacts(
   }
 
   try {
-    const { clearRedeemDraftIntent } = await import(
-      '../redeem/redeem-draft-intent.ts'
-    );
+    const { clearRedeemDraftIntent, clearGlobalRedeemDraftIntent } =
+      await import('../redeem/redeem-draft-intent.ts');
     clearRedeemDraftIntent();
+    clearGlobalRedeemDraftIntent();
   } catch (error) {
     errors.push(asError(error, 'Xóa draft đổi mã thất bại'));
   }
