@@ -323,3 +323,50 @@ Ghi chú product (đối chiếu code, không sửa): toast `StaffGateScanToast`
 
 **Cập nhật bảng tóm tắt:** #600 → **PASS** (verify Van sau #608 fix); #608 live Dexter → **PASS**.
 
+---
+
+## Verify #610 fix (wallet refresh loop) trên Dexter (worker Van)
+
+**Phiên:** 2026-10-20 ~23:56–00:00 ICT · Dexter `00008140-000605803C01801C` · Release install qua `apps/mobile/scripts/release-ios-dexter.sh` · WDA session-stable (`/tmp/van-610-uat.py`) · **Không sửa code / không commit.**
+
+**Build:** source SHA `ca818ac270309a42e3a2011c9af526d2d8d6e885` (PR #611 `useMemo` `fetchScope` — khớp `origin/main` tại lúc build) · CFBundleVersion **26** · artifacts `van610-*` trong `apps/mobile/.uat-artifacts/dexter-live-uat/` (worktree `main`).
+
+### Preflight
+
+| Kiểm tra | Kết quả |
+| --- | --- |
+| Worktree tip | `ca818ac` = merge PR #611 |
+| `expo prebuild` + Release → Dexter | **OK** (`Build Succeeded`, install Complete 100%) |
+| Session | Đã **verified** attendee trên máy (`Vé đã xác minh`); tab **Vé của tôi** mở được |
+
+### Quan sát ổn định UI (≥10s idle)
+
+Proxy chống nháy/loop: hash SHA-12 của accessibility XML mỗi ~1–2s khi idle trên tab ví (không tương tác).
+
+| Cửa sổ | Samples | Unique XML | Đồng bộ | Evidence |
+| --- | --- | --- | --- | --- |
+| Idle sau mount | 6 | **1** (`b3cf82b29ed6`) | `2026-10-20T15:58:57.029Z` cố định | `van610-idle-t00.png` … `van610-idle-t05.png` (+ XML cùng hash) |
+| Sau pull-to-refresh | 3 | **1** (`957eb4c23303`) | `…15:59:51.623Z` (đã cập nhật) | `van610-after-pull.png`, `van610-postpull-t00..t02.png` |
+| Sau **Làm mới vé** + idle ≥10s | 6 | **1** (`71b0993feddc`) | ổn định sau 1 lần refresh | `van610-fu-03-refresh.png`, `van610-fu-idle-t00..t05.png` |
+
+→ **Không** còn pattern nháy/reset liên tục (unique XML ≫1 mỗi giây). JSON tóm tắt: `van610-summary.json` / `van610-observe.json`.
+
+### Pull-to-refresh
+
+| Bước | Kết quả | Evidence |
+| --- | --- | --- |
+| Swipe pull trên ví | Timestamp **Đồng bộ** `15:58:57Z` → `15:59:51Z`; UI không gãy | `van610-idle-t00.png` vs `van610-after-pull.png` |
+| Tap **Làm mới vé** | Refresh chạy; sau đó idle lại **1** unique XML | `van610-fu-03-refresh.png` |
+
+### Network / `probeMeTickets`
+
+Không bắt được đếm HTTP `/me/tickets` trên phiên này (syslog `OsTraceService` lỗi khởi tạo; không Safari Web Inspector). Proxy UI ở trên là evidence chính chống infinite remount/refresh loop.
+
+### Gap dữ liệu (không đảo verdict #610)
+
+Ví hiện **「Chưa có vé trong ví」** (empty state) dù session verified + chip `MFest↗`. #610 là bug **VerifiedWallet refresh loop** — empty state vẫn mount cùng code path và đã ổn định; không chứng minh được danh sách có vé, nhưng **không** cần vé để bác bỏ vòng `fetchScope` object-literal.
+
+### Verdict #610
+
+**PASS** — sau fix `ca818ac` / PR #611 trên Dexter Release build 26: tab **Vé của tôi** idle ≥10s không nháy; pull-to-refresh + **Làm mới vé** cập nhật Đồng bộ bình thường; không có dấu hiệu remount/API-loop UI.
+
