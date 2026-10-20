@@ -48,7 +48,7 @@ export default function StaffAccessScreen() {
   }
 
   if (eligibility.staffEligible) {
-    return <Redirect href="/(tabs)/staff" />;
+    return <Redirect href="/(tabs)/staff-scan" />;
   }
 
   return <StaffAccessDeny />;
