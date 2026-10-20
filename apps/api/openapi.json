@@ -5135,6 +5135,9 @@
           },
           "createdAt": {
             "type": "string"
+          },
+          "eventName": {
+            "type": "string"
           }
         },
         "required": [
