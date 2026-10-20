@@ -52,9 +52,13 @@ function AppStack() {
       <Stack.Screen
         name="privacy-policy"
         options={{
-          ...stackBackFromTabs,
+          ...tabDetailStackScreenOptions,
           title: 'Chính sách quyền riêng tư',
           presentation: 'fullScreenModal',
+          headerShown: true,
+          headerBackButtonDisplayMode: 'default',
+          headerBackTitle: 'Quay lại',
+          gestureEnabled: true,
         }}
       />
       <Stack.Screen

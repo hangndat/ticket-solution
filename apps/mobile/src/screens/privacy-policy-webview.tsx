@@ -5,8 +5,8 @@ import { AttendeeCta } from '@/components/attendee-cta';
 import { Notice } from '@/components/page';
 import { PRIVACY_POLICY_URL } from '@/account-deletion/privacy-policy';
 import { brand, colors } from '@/theme/colors';
-import { Stack } from 'expo-router';
 import { TabStackTitle } from '@/navigation/tab-stack-title';
+import { closePrivacyPolicy } from '@/navigation/close-privacy-policy';
 
 type PrivacyPresentation = 'tab' | 'root';
 
@@ -52,20 +52,46 @@ export function PrivacyPolicyWebViewScreen({
         </View>
         {presentation === 'tab' ? (
           <TabStackTitle title="Chính sách quyền riêng tư" large={false} />
-        ) : (
-          <Stack.Screen options={{ title: 'Chính sách quyền riêng tư' }} />
-        )}
+        ) : null}
       </>
     );
   }
 
+  const rootChrome =
+    presentation === 'root' ? (
+      <View
+        style={{
+          paddingHorizontal: 20,
+          paddingTop: 8,
+          paddingBottom: 4,
+          backgroundColor: brand.paper,
+        }}
+      >
+        <AttendeeCta
+          label="Quay lại"
+          variant="secondary"
+          onPress={closePrivacyPolicy}
+          testID="privacy-cta-close"
+        />
+      </View>
+    ) : null;
+
   return (
     <>
+      {rootChrome}
       <View style={{ flex: 1, backgroundColor: brand.paper }}>
         {error ? (
           <View style={{ padding: 20, gap: 12 }}>
             <Notice title="Không tải được trang">{error}</Notice>
             <AttendeeCta label="Thử lại" onPress={onRetry} />
+            {presentation === 'root' ? (
+              <AttendeeCta
+                label="Quay lại"
+                variant="secondary"
+                onPress={closePrivacyPolicy}
+                testID="privacy-cta-close"
+              />
+            ) : null}
           </View>
         ) : null}
         <WebView
@@ -110,9 +136,7 @@ export function PrivacyPolicyWebViewScreen({
       </View>
       {presentation === 'tab' ? (
         <TabStackTitle title="Chính sách quyền riêng tư" large={false} />
-      ) : (
-        <Stack.Screen options={{ title: 'Chính sách quyền riêng tư' }} />
-      )}
+      ) : null}
     </>
   );
 }
