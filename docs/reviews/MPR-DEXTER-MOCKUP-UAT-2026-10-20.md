@@ -218,3 +218,58 @@ Không có surface UI. **N/A**
 - Sau deploy PR #604: header nhóm + title dòng vé + filter bar CTA hiện **MFest · Demo** / **Device UAT Event** (tên sự kiện thật). Không cần Issue bug code mới cho #601 trên surface này.
 
 **Cập nhật bảng tóm tắt:** #601 → **PASS** (verify Yen sau redeploy API).
+
+---
+
+## Verify #600 cuối (worker Thanh)
+
+**Phiên:** 2026-10-20 ~22:49–22:58 ICT · Dexter `00008140-000605803C01801C` · WDA session-stable (`/tmp/thanh-600-uat.py` + oneshot probes) · artifacts `thanh-*` trong `apps/mobile/.uat-artifacts/dexter-live-uat/` (worktree `main`). **Không sửa code / không commit.**
+
+### 1) Preflight mạng (trước khi test Gap A)
+
+| Kiểm tra | Kết quả | Evidence |
+| --- | --- | --- |
+| Status bar Wi-Fi | **Full bars** + cellular | `thanh-02-ticket-launch.png`, `thanh-04-events.png`, `thanh-91-toast-0.png` |
+| Safari `example.com` | **OK** — trang Example Domain load | `thanh-11-safari-example.png` (`safari_network_ok: true`) |
+| Tab Sự kiện online | **OK** — list **MFest · Demo** + **Studio Night · Demo** | `thanh-12-events-online.png` / `thanh-04-events.png` |
+
+→ Loại giả thuyết “mạng chập chờn / `networkUnavailable` early-exit” cho phiên này.
+
+### 2) Staff login + scope
+
+| Bước | Kết quả | Evidence |
+| --- | --- | --- |
+| Logout attendee → KC Logout confirm | **OK** | `thanh-19-boot.png` → `thanh-30-account-guest.png` (「Chưa đăng nhập」) |
+| Login `staff@example.com` / `staff-demo` (Return trên Password) | **OK** — vào staff tabs | `thanh-32-filled.png`, `thanh-33-after-login.png` (`staff_login_ok: true`) |
+| Scope | **Aurora Night UAT** rồi đổi **MFest · Demo** | `thanh-50-manual.png`, `thanh-102-picker.png`, `thanh-103-scoped.png` |
+
+### 3) Step-1: 1 UUID giả → Lịch sử ngay
+
+| Bước | Kết quả | Evidence |
+| --- | --- | --- |
+| Nhập tay UUID giả + `gate-manual-submit` | Submit **enabled=true** lúc bấm; field clear sau press (`setRaw('')`) | `thanh-601-type.png` / XML (`enabled=true`); UUID `a088c4f7-6048-49b2-995d-981521c81dae` |
+| Lịch sử ngay sau 1 lượt | **FAIL** — 「Chưa có lượt quét trên thiết bị này.」; không 「Đã tải N lượt」 | `thanh-70-history-after-1.png` |
+| Diag: Scan → Lịch sử (stale UI?) | Vẫn **0** bản ghi | `thanh-72-scan-tab.png`, `thanh-73-history-after-scan.png` |
+
+Không chạy ≥12 UUID / pagination vì step-1 đã fail có mạng ổn định.
+
+### 4) Repro bổ sung (cùng phiên online)
+
+| Bước | Kết quả | Evidence |
+| --- | --- | --- |
+| Scope **MFest · Demo**, submit UUID giả, chờ **15s** | Không toast trên Manual; History vẫn empty | `thanh-104-typed.png` … `thanh-105-wait-15s.png`, `thanh-107-history.png` |
+| Mở **Scan ngay** sau submit | Chrome: **「Trực tuyến」** + **「Chưa mở phiên cổng」**; **không** có toast kết quả (0.3s / 1s / 3s) | `thanh-110-scan-immediate.png` … `thanh-112-scan-3s.png` |
+| Lịch sử sau đó | Vẫn empty | `thanh-113-history.png` |
+
+Ghi chú product (đối chiếu code, không sửa): toast `StaffGateScanToast` chỉ mount trên tab Scan; Manual clear input ngay khi press dù `submitScan` chưa xong. Dù vậy, với **Trực tuyến** + submit enabled, vẫn **0** hàng lịch sử → không phải gap do mạng phiên Hoa.
+
+### Verdict #600
+
+**FAIL thật** (bug code / gate pipeline — **không** đóng Gap A bằng “mạng chập chờn lần trước”).
+
+- Preflight mạng **PASS** (Wi-Fi + Safari + Events online).
+- Staff + scope OK; `gate-manual-submit` **enabled** khi submit.
+- Sau ≥1 (và thêm) UUID giả: Lịch sử vẫn empty; Scan báo **Trực tuyến** nhưng **Chưa mở phiên cổng**, không toast, không pagination.
+- Cần **Issue riêng** (điều tra: `submitScan` / mở phiên `/sessions` / `persist`+`buildDeviceScanHistory` khi Manual clear sớm; toast không hiện trên tab Nhập tay). **Chưa mở Issue trong worker này** (chỉ report qua orchestration).
+
+**Cập nhật bảng tóm tắt:** #600 → **FAIL** (verify Thanh; Gap A vẫn mở — bug thật, không phải mạng).
