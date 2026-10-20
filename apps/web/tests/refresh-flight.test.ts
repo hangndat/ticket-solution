@@ -116,6 +116,40 @@ test('refresh IdP network failure is network, not rejected', async () => {
   clearWebRefreshFlightCache();
 });
 
+test('refresh IdP HTTP 5xx keeps session (network), not rejected', async () => {
+  clearWebRefreshFlightCache();
+  for (const status of [500, 502, 503]) {
+    const result = await performWebRefreshFlight({
+      refreshToken: 'rt-5xx',
+      config: baseConfig,
+      exchange: async () => ({
+        status,
+        body: { error: 'server_error' },
+      }),
+      jwks: createLocalJwks([]),
+    });
+    assert.equal(result.ok, false);
+    if (!result.ok) assert.equal(result.reason, 'network');
+  }
+  clearWebRefreshFlightCache();
+});
+
+test('refresh IdP timeout (exchange null) is network like transport failure', async () => {
+  clearWebRefreshFlightCache();
+  const result = await performWebRefreshFlight({
+    refreshToken: 'rt-timeout',
+    config: baseConfig,
+    exchange: async () => {
+      await new Promise((r) => setTimeout(r, 5));
+      return null;
+    },
+    jwks: createLocalJwks([]),
+  });
+  assert.equal(result.ok, false);
+  if (!result.ok) assert.equal(result.reason, 'network');
+  clearWebRefreshFlightCache();
+});
+
 test('refresh failure clears flight cache and does not reuse forever', async () => {
   clearWebRefreshFlightCache();
   let exchangeCalls = 0;

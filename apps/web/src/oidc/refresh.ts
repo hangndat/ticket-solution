@@ -113,6 +113,10 @@ export async function performWebRefreshFlight(input: {
   const exchange = input.exchange ?? exchangeRefresh;
   const result = await exchange(input.config, input.refreshToken);
   if (!result) return { ok: false, reason: 'network' };
+  // IdP 5xx / gateway errors are transient — keep session cookies (Issue #630 AC).
+  if (result.status >= 500) {
+    return { ok: false, reason: 'network' };
+  }
   if (
     result.status < 200 ||
     result.status >= 300 ||
