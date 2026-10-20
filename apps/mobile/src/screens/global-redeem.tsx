@@ -504,28 +504,32 @@ export function GlobalRedeemScreen() {
         testID="global-redeem-cta-resolve"
       />
 
-      <RedeemFormFields
-        form={form}
-        termsVersion={termsVersion}
-        termsBody={termsBody}
-        answers={answers}
-        termsAccepted={termsAccepted}
-        disabled={busy || !verified || !resolved}
-        fieldErrors={fieldErrors}
-        onChangeAnswer={(fieldId, value) =>
-          setAnswers((prev) => ({ ...prev, [fieldId]: value }))
-        }
-        onTermsAcceptedChange={setTermsAccepted}
-      />
+      {resolved ? (
+        <>
+          <RedeemFormFields
+            form={form}
+            termsVersion={termsVersion}
+            termsBody={termsBody}
+            answers={answers}
+            termsAccepted={termsAccepted}
+            disabled={busy}
+            fieldErrors={fieldErrors}
+            onChangeAnswer={(fieldId, value) =>
+              setAnswers((prev) => ({ ...prev, [fieldId]: value }))
+            }
+            onTermsAcceptedChange={setTermsAccepted}
+          />
 
-      <View {...redeemActionAnnouncement()}>
-        <AttendeeCta
-          label={busy ? 'Đang xử lý…' : 'Xác nhận đổi mã'}
-          disabled={busy || !verified || !resolved || code.trim().length === 0}
-          onPress={() => void submit()}
-          testID="global-redeem-cta-submit"
-        />
-      </View>
+          <View {...redeemActionAnnouncement()}>
+            <AttendeeCta
+              label={busy ? 'Đang xử lý…' : 'Xác nhận đổi mã'}
+              disabled={busy || code.trim().length === 0}
+              onPress={() => void submit()}
+              testID="global-redeem-cta-submit"
+            />
+          </View>
+        </>
+      ) : null}
 
       {showOutcome && decision ? (
         <Animated.View
