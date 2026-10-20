@@ -92,6 +92,8 @@ import {
   readinessAllOk,
   readinessSummary,
 } from '../../src/admin/readiness';
+import { useAdminScope } from '../../src/admin/use-admin-scope';
+import { useIdempotentAction } from '../../src/admin/use-idempotent-action';
 
 type Props = { initialTenantId?: string; initialEventId?: string };
 
@@ -104,28 +106,14 @@ const ADMIN_JOBS: { id: AdminJob; label: string }[] = [
   { id: 'support', label: 'Hỗ trợ' },
 ];
 
-type UnclearAttempt = { key: string; fingerprint: string; unclear: boolean };
-
-function reuseUnclearKey(
-  existing: UnclearAttempt | null,
-  fingerprint: string,
-): string {
-  if (
-    existing?.unclear &&
-    existing.fingerprint === fingerprint &&
-    existing.key
-  ) {
-    return existing.key;
-  }
-  return crypto.randomUUID();
-}
-
 export function AdminForm({
   initialTenantId = '',
   initialEventId = '',
 }: Props) {
-  const [tenantId, setTenantId] = useState(initialTenantId);
-  const [eventId, setEventId] = useState(initialEventId);
+  const { tenantId, setTenantId, eventId, setEventId, scope } = useAdminScope({
+    tenantId: initialTenantId,
+    eventId: initialEventId,
+  });
   const [eventSlug, setEventSlug] = useState('');
   const [eventName, setEventName] = useState('');
   const [eventTimezone, setEventTimezone] = useState('Asia/Ho_Chi_Minh');
@@ -147,13 +135,9 @@ export function AdminForm({
   const [sourceId, setSourceId] = useState('');
   const [sourceName, setSourceName] = useState('Invite');
   const [approvalMode, setApprovalMode] = useState<'AUTO' | 'MANUAL'>('AUTO');
-  const [approveAttempt, setApproveAttempt] = useState<UnclearAttempt | null>(
-    null,
-  );
-  const [denyAttempt, setDenyAttempt] = useState<UnclearAttempt | null>(null);
-  const [resendAttempt, setResendAttempt] = useState<UnclearAttempt | null>(
-    null,
-  );
+  const approveIdempotency = useIdempotentAction();
+  const denyIdempotency = useIdempotentAction();
+  const resendIdempotency = useIdempotentAction();
   const [resendCooldownUntil, setResendCooldownUntil] = useState<number | null>(
     null,
   );
@@ -176,20 +160,12 @@ export function AdminForm({
     const id = window.setInterval(tick, 1000);
     return () => window.clearInterval(id);
   }, [resendCooldownUntil]);
-  const [exportAttempt, setExportAttempt] = useState<UnclearAttempt | null>(
-    null,
-  );
-  const [createAttempt, setCreateAttempt] = useState<UnclearAttempt | null>(
-    null,
-  );
-  const [patchAttempt, setPatchAttempt] = useState<UnclearAttempt | null>(null);
-  const [cloneAttempt, setCloneAttempt] = useState<UnclearAttempt | null>(null);
-  const [cancelAttempt, setCancelAttempt] = useState<UnclearAttempt | null>(
-    null,
-  );
-  const [archiveAttempt, setArchiveAttempt] = useState<UnclearAttempt | null>(
-    null,
-  );
+  const exportIdempotency = useIdempotentAction();
+  const createIdempotency = useIdempotentAction();
+  const patchIdempotency = useIdempotentAction();
+  const cloneIdempotency = useIdempotentAction();
+  const cancelIdempotency = useIdempotentAction();
+  const archiveIdempotency = useIdempotentAction();
   const [busy, setBusy] = useState(false);
   const [noticeSeq, setNoticeSeq] = useState(0);
   const [tenantChoices, setTenantChoices] = useState<MeTenantItem[]>([]);
@@ -385,10 +361,6 @@ export function AdminForm({
     setBusy(false);
   }
 
-  function scope() {
-    return { tenantId: tenantId.trim(), eventId: eventId.trim() };
-  }
-
   async function importCodes() {
     const codes = codesText
       .split(/\r?\n/)
@@ -466,7 +438,7 @@ export function AdminForm({
       timezone: eventTimezone.trim() || undefined,
       visibility: metaVisibility,
     });
-    const idempotencyKey = reuseUnclearKey(createAttempt, fingerprint);
+    const idempotencyKey = createIdempotency.keyFor(fingerprint);
     setBusy(true);
     setDecision(null);
     clearSpecialViews();
@@ -500,11 +472,11 @@ export function AdminForm({
       result.json,
       result.networkError || result.timedOut,
     );
-    setCreateAttempt({
-      key: idempotencyKey,
+    createIdempotency.remember(
+      idempotencyKey,
       fingerprint,
-      unclear: next.kind === 'unknown',
-    });
+      next.kind === 'unknown',
+    );
     if (next.kind === 'ok') {
       setEventId(next.event.eventId);
       applyEventToEditor(next.event);
@@ -623,7 +595,7 @@ export function AdminForm({
       eventId: eventId.trim(),
       patch,
     });
-    const idempotencyKey = reuseUnclearKey(patchAttempt, fingerprint);
+    const idempotencyKey = patchIdempotency.keyFor(fingerprint);
     setBusy(true);
     setDecision(null);
     setCreateView(null);
@@ -639,11 +611,11 @@ export function AdminForm({
       result.json,
       result.networkError || result.timedOut,
     );
-    setPatchAttempt({
-      key: idempotencyKey,
+    patchIdempotency.remember(
+      idempotencyKey,
       fingerprint,
-      unclear: next.kind === 'unknown',
-    });
+      next.kind === 'unknown',
+    );
     if (next.kind === 'ok') {
       applyEventToEditor(next.event);
       setDetailView({
@@ -669,7 +641,7 @@ export function AdminForm({
       eventId: eventId.trim(),
       ...body,
     });
-    const idempotencyKey = reuseUnclearKey(cloneAttempt, fingerprint);
+    const idempotencyKey = cloneIdempotency.keyFor(fingerprint);
     setBusy(true);
     setDecision(null);
     setCreateView(null);
@@ -684,11 +656,11 @@ export function AdminForm({
       result.json,
       result.networkError || result.timedOut,
     );
-    setCloneAttempt({
-      key: idempotencyKey,
+    cloneIdempotency.remember(
+      idempotencyKey,
       fingerprint,
-      unclear: next.kind === 'unknown',
-    });
+      next.kind === 'unknown',
+    );
     if (next.kind === 'ok') {
       applyEventToEditor(next.event);
       setDetailView({
@@ -710,7 +682,7 @@ export function AdminForm({
       expectedRevision: currentEvent.revision,
       op: 'archive',
     });
-    const idempotencyKey = reuseUnclearKey(archiveAttempt, fingerprint);
+    const idempotencyKey = archiveIdempotency.keyFor(fingerprint);
     setBusy(true);
     setDecision(null);
     const result = await adminMutate(
@@ -727,11 +699,11 @@ export function AdminForm({
       result.json,
       result.networkError || result.timedOut,
     );
-    setArchiveAttempt({
-      key: idempotencyKey,
+    archiveIdempotency.remember(
+      idempotencyKey,
       fingerprint,
-      unclear: next.kind === 'unknown',
-    });
+      next.kind === 'unknown',
+    );
     if (next.kind === 'ok') {
       applyEventToEditor(next.event);
       setDetailView({
@@ -757,7 +729,7 @@ export function AdminForm({
       eventId: eventId.trim(),
       ...body,
     });
-    const idempotencyKey = reuseUnclearKey(cancelAttempt, fingerprint);
+    const idempotencyKey = cancelIdempotency.keyFor(fingerprint);
     setBusy(true);
     setDecision(null);
     const result = await adminMutate(
@@ -770,11 +742,11 @@ export function AdminForm({
       result.json,
       result.networkError || result.timedOut,
     );
-    setCancelAttempt({
-      key: idempotencyKey,
+    cancelIdempotency.remember(
+      idempotencyKey,
       fingerprint,
-      unclear: next.kind === 'unknown',
-    });
+      next.kind === 'unknown',
+    );
     if (next.kind === 'ok') {
       applyEventToEditor(next.event);
       setDetailView({
@@ -913,7 +885,7 @@ export function AdminForm({
       return;
     }
     const fingerprint = JSON.stringify({ ...scope(), ticketId: id });
-    const idempotencyKey = reuseUnclearKey(resendAttempt, fingerprint);
+    const idempotencyKey = resendIdempotency.keyFor(fingerprint);
     setBusy(true);
     setDecision(null);
     clearSpecialViews();
@@ -932,11 +904,11 @@ export function AdminForm({
       result.networkError || result.timedOut,
       id,
     );
-    setResendAttempt({
-      key: idempotencyKey,
+    resendIdempotency.remember(
+      idempotencyKey,
       fingerprint,
-      unclear: next.kind === 'unknown',
-    });
+      next.kind === 'unknown',
+    );
     if (
       next.kind === 'rejected' && next.code === 'RESEND_COOLDOWN'
     ) {
@@ -951,7 +923,7 @@ export function AdminForm({
 
   async function createExport() {
     const fingerprint = JSON.stringify({ ...scope(), format: 'csv' });
-    const idempotencyKey = reuseUnclearKey(exportAttempt, fingerprint);
+    const idempotencyKey = exportIdempotency.keyFor(fingerprint);
     setBusy(true);
     setDecision(null);
     clearSpecialViews();
@@ -973,11 +945,11 @@ export function AdminForm({
       result.json,
       result.networkError || result.timedOut,
     );
-    setExportAttempt({
-      key: idempotencyKey,
+    exportIdempotency.remember(
+      idempotencyKey,
       fingerprint,
-      unclear: next.kind === 'unknown',
-    });
+      next.kind === 'unknown',
+    );
     if (next.kind === 'created') setExportId(next.job.exportId);
     bumpNotice();
     setExportView(next);
@@ -1128,13 +1100,9 @@ export function AdminForm({
       requestId: id,
       reason: action === 'deny' ? reason : '',
     });
-    const existing = action === 'approve' ? approveAttempt : denyAttempt;
-    const idempotencyKey = reuseUnclearKey(existing, fingerprint);
-    const remember = (unclear: boolean) => {
-      const next = { key: idempotencyKey, fingerprint, unclear };
-      if (action === 'approve') setApproveAttempt(next);
-      else setDenyAttempt(next);
-    };
+    const idempotency =
+      action === 'approve' ? approveIdempotency : denyIdempotency;
+    const idempotencyKey = idempotency.keyFor(fingerprint);
     setBusy(true);
     setDecision(null);
     setCreateView(null);
@@ -1162,7 +1130,7 @@ export function AdminForm({
       result.json,
       result.networkError || result.timedOut,
     );
-    remember(next.kind === 'unknown');
+    idempotency.remember(idempotencyKey, fingerprint, next.kind === 'unknown');
     bumpNotice();
     setDecision(next);
     setBusy(false);
