@@ -161,3 +161,20 @@ Build 24 **chưa acceptance complete**. Root đang kiểm tra tiếp bản sửa
 **Phân tích nguồn (không tự kết luận code, chỉ ghi quan sát):** commit `860bd51` thêm `requestStaffScanTabLanding()` vào `onPress` của nút Account (`staff-gate-screen-chrome.tsx`) **trước** `router.push(STAFF_ACCOUNT_HREF)`. `shouldReplaceWithStaffScanTab()` (`staff-default-tab-target.ts`) trả `true` khi `pendingScanLanding` bật và segments hiện tại **chưa** phải `staff-account`/`account` — tức tại thời điểm bấm nút (đang ở `staff-manual`/`staff-scan`), set cờ này có thể khiến listener tab-landing replace về Scan **trước khi** push Account kịp chạy, khớp với hiện tượng nút bấm "không làm gì" quan sát được. Build 24 (không có dòng `requestStaffScanTabLanding()` này) mở Account bình thường (xem mục build 24 trên). Cần Zico/mobile xác nhận lại bằng source, không suy diễn từ UAT đơn thuần.
 
 Build 25 **regression mới, chưa acceptance complete** — chặn cả 2 mục còn lại trong checklist #596 (Quay lại quét, staff logout crash) vì không vào được Account. Compact header guest đã PASS trên build 25.
+
+### Coordinator build 26 — source `924d01d4597dc91c341d6801c2aa9dcd6eb58885`
+
+Fix (Zico, `task_65ab08412d4c`): xoá `requestStaffScanTabLanding()` khỏi `onPress` toolbar Account trong `staff-gate-screen-chrome.tsx` (chỉ `returnToStaffGateScanTab()` mới set cờ này); build bump 25→26. Review độc lập (James, `task_fd3c194e228c`): code/security **PASS with known gap**, unit 22/22 pass, `./scripts/gh-dod-evidence.sh 596` mobile/ci/changes/turbo-persist success trên SHA này. Merged + pushed vào `hangndat/mpr-dexter-uat-install` (fast-forward, không rebase). Coordinator build local (`release-ios-dexter.sh`, team `BLUA62D52G`) + cài qua `expo run:ios --device --configuration Release`; `devicectl` xác nhận **Vemoki 1.0.0 (26)** trên Dexter. UAT lái qua WDA (`/tmp/dexter-uat-oneshot.py`, artifacts `200`–`222` tại `apps/mobile/.uat-artifacts/dexter-live-uat/`).
+
+| Luồng | Kết quả | Evidence |
+| --- | --- | --- |
+| Fresh install, guest Events 2 tabs | PASS | `200-build26-launch` |
+| Guest Account compact header (kế thừa build 25) | PASS | `202-guest-account-tab` |
+| Staff OIDC login (`staff@example.com`/`staff-demo`) | PASS | `203`–`214`: dismiss OIDC consent, điền password, dismiss AutoFill picker 2 lần (picker che nút Sign In do overlap keyboard accessory), dismiss keyboard trước khi tap Sign In → vào workspace 3 tabs |
+| **Staff mở Account từ toolbar (regression build 25)** | **PASS — fix xác nhận** | `215-staff-account-tap`: mở đúng Account screen (email, Quay lại quét, Đăng xuất) |
+| Quay lại quét → về Scan (không phải Manual) | **PASS** | `216-quay-lai-quet`: tab `Scan` `value="1"`, label "Sẵn sàng quét" |
+| Staff logout (không crash, kế thừa build 24 crash) | **PASS** | `219`–`222`: Đăng xuất → IdP consent → "Do you want to log out?" → Logout → về guest Events 2 tabs sạch, process `com.hangndat.ticket` không crash, không SIGABRT |
+
+**Kết luận #596:** cả 3 mục chặn trước đó (Account toolbar build 25, Quay lại quét, staff logout crash build 24) đều **PASS** trên build 26 / SHA `924d01d`. Guest batch (global resolve API tắt, ví owner không tenant env) **ngoài scope #596** — phụ thuộc deploy PR #597, chưa chạy lại trong phiên này.
+
+**Acceptance #596: PASS** (navigation + logout). **Pilot ready:** vẫn chưa — PR #597 (owner wallet aggregate) chỉ code complete + CI green, **chưa deploy prod**; ngoài phạm vi review này.
