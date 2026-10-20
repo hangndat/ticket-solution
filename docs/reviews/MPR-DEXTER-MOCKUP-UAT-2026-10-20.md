@@ -370,3 +370,45 @@ Ví hiện **「Chưa có vé trong ví」** (empty state) dù session verified 
 
 **PASS** — sau fix `ca818ac` / PR #611 trên Dexter Release build 26: tab **Vé của tôi** idle ≥10s không nháy; pull-to-refresh + **Làm mới vé** cập nhật Đồng bộ bình thường; không có dấu hiệu remount/API-loop UI.
 
+
+---
+
+## Verify #612 fix (token refresh) trên Dexter (worker Van)
+
+**Phiên:** 2026-10-21 ~00:32–00:43 ICT · Dexter `00008140-000605803C01801C` · Release rebuild sau merge PR #613 · WDA `/tmp/van-612-uat.py` · artifacts `van612-*` trong `apps/mobile/.uat-artifacts/dexter-live-uat/` (worktree `main`). **Không sửa code / không commit.**
+
+### Build provenance
+
+| Trường | Giá trị |
+| --- | --- |
+| Worktree build | `/Users/admin/orca/workspaces/main/uat-612-postfix` @ `cbec5cff337ce01fd0eab2b3fe2feecc52d6d7f7` (merge PR #613) |
+| Script | `apps/mobile/scripts/release-ios-dexter.sh` → CFBundleVersion **26**, team `BLUA62D52G`, install Dexter **Complete 100%** |
+| Embedded | `extra.gitCommitSha` = `cbec5cff337ce01fd0eab2b3fe2feecc52d6d7f7` trong `EXConstants.bundle/app.config` |
+| Tài khoản UAT | `attendee@example.com` / `attendee-demo` (**không** dùng `u1@gmail.com`) |
+
+### Timeline chờ TTL (access token 300s)
+
+| Mốc | Thời gian (ICT) | Ghi chú |
+| --- | --- | --- |
+| Login + Account pre OK | `2026-10-21T00:36:27+08:00` | `attendee@` + **Đăng xuất**; **không** 「Không tải được hồ sơ」 |
+| Wallet pre OK | `2026-10-21T00:36:32+08:00` | **Vé của tôi** + Đồng bộ + 2 vé |
+| Background app (Home) | `2026-10-21T00:36:34+08:00` | bắt đầu chờ |
+| Hết chờ | `2026-10-21T00:42:44+08:00` | **370s** thực tế (≥6 phút; > TTL 300s) |
+| Account post | `2026-10-21T00:42:51+08:00` | vẫn `attendee@` + **Đăng xuất** |
+| Wallet post | `2026-10-21T00:42:56+08:00` | vẫn **Vé của tôi** (không guest) |
+
+### Kết quả UI
+
+| Bước | Kết quả | Evidence |
+| --- | --- | --- |
+| Pre — tab **Tài khoản** | Hồ sơ tải OK (`attendee@example.com`); không lỗi tải hồ sơ; không guest | `van612-10-account-pre.png` / `.xml` |
+| Pre — tab **Vé của tôi** | Đã đăng nhập; Đồng bộ + danh sách vé | `van612-11-wallet-pre.png` / `.xml` |
+| Sau ≥370s background → mở lại **Tài khoản** | Hồ sơ **tự tải lại OK**; **không** 「Không tải được hồ sơ」; **không** bị đăng xuất guest | `van612-20-account-post.png` / `.xml` |
+| Sau chờ — **Vé của tôi** | Vẫn session attendee; không văng logout | `van612-21-wallet-post.png` / `.xml` |
+
+JSON tóm tắt: `van612-summary.json` (`verdict: PASS`, `wait_seconds_actual: 370`).
+
+### Verdict #612
+
+**PASS** — trên Dexter Release build SHA `cbec5cf` (PR #613): sau **370s** background vượt TTL access token 300s, tab **Tài khoản** vẫn hiện `attendee@example.com` + Đăng xuất (transparent refresh), không lỗi 「Không tải được hồ sơ」, không về guest; tab **Vé của tôi** cũng giữ session.
+
