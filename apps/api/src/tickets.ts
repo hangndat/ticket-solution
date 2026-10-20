@@ -15,6 +15,7 @@ import {
   ApiHeader,
   ApiOkResponse,
   ApiProperty,
+  ApiQuery,
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
@@ -35,6 +36,7 @@ import {
   createDatabase,
   getOperationForActor,
   getTicketForOwner,
+  listOwnerTicketsAggregated,
   listTicketsForOwner,
   readCodeHmacEnvironment,
   readCredentialKeyEnvironment,
@@ -97,6 +99,21 @@ class TicketSummaryDto implements TicketSummary {
 
 class MeTicketsDto implements MeTicketsResponse {
   @ApiProperty({ type: [TicketSummaryDto] }) tickets!: TicketSummaryDto[];
+}
+
+const TENANT_UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function tenantIdQueryError(): HttpException {
+  return new HttpException(
+    {
+      code: 'INVALID_TENANT',
+      message: 'tenantId must be a valid UUID when provided',
+      requestId: randomUUID(),
+      retryable: false,
+    } satisfies ApiError,
+    422,
+  );
 }
 
 export function issueHttpException(error: IssueError, operationId?: string): HttpException {
@@ -247,13 +264,13 @@ export class TicketIssueService {
     authorization: string | undefined,
     tenantId: string,
   ): Promise<MeTicketsResponse> {
+    const user = await this.requireUser(authorization);
     if (!this.deps.db) {
       throw new IdentityError(
         IDENTITY_ERROR_CODES.OIDC_MISCONFIGURED,
         'Database is not configured',
       );
     }
-    const user = await this.requireUser(authorization);
     const tickets = await withTenant(this.deps.db, tenantId, (tx) =>
       listTicketsForOwner(tx, tenantId, user.userId),
     );
@@ -262,6 +279,36 @@ export class TicketIssueService {
         (t): TicketSummary => ({
           ticketId: t.ticketId,
           tenantId,
+          eventId: t.eventId,
+          ticketTypeId: t.ticketTypeId,
+          sourceId: t.sourceId,
+          state: t.state,
+          credentialVersion: t.credentialVersion,
+          createdAt: t.createdAt.toISOString(),
+        }),
+      ),
+    };
+  }
+
+  async listMineAll(
+    authorization: string | undefined,
+  ): Promise<MeTicketsResponse> {
+    const user = await this.requireUser(authorization);
+    if (!this.deps.db) {
+      throw new IdentityError(
+        IDENTITY_ERROR_CODES.OIDC_MISCONFIGURED,
+        'Database is not configured',
+      );
+    }
+    const tickets = await listOwnerTicketsAggregated(
+      this.deps.db,
+      user.userId,
+    );
+    return {
+      tickets: tickets.map(
+        (t): TicketSummary => ({
+          ticketId: t.ticketId,
+          tenantId: t.tenantId,
           eventId: t.eventId,
           ticketTypeId: t.ticketTypeId,
           sourceId: t.sourceId,
@@ -429,26 +476,31 @@ export class TicketIssueController {
 
   @Get('me/tickets')
   @ApiBearerAuth()
+  @ApiQuery({
+    name: 'tenantId',
+    required: false,
+    description:
+      'Optional tenant UUID; omit to list all owner tickets across tenants (W1 aggregate).',
+  })
   @ApiOkResponse({ type: MeTicketsDto })
   async meTickets(
     @Headers('authorization') authorization: string | undefined,
-    @Query('tenantId') tenantId: string,
+    @Query('tenantId') tenantId?: string,
   ): Promise<MeTicketsResponse> {
-    if (!tenantId) {
-      throw new HttpException(
-        {
-          code: 'TENANT_REQUIRED',
-          message: 'tenantId query parameter is required',
-          requestId: randomUUID(),
-          retryable: false,
-        } satisfies ApiError,
-        422,
-      );
+    const scoped = tenantId?.trim();
+    if (scoped && !TENANT_UUID_RE.test(scoped)) {
+      throw tenantIdQueryError();
     }
     try {
-      return await this.tickets.listMine(authorization, tenantId);
+      if (!scoped) {
+        return await this.tickets.listMineAll(authorization);
+      }
+      return await this.tickets.listMine(authorization, scoped);
     } catch (error) {
       if (error instanceof IdentityError) throw identityHttpException(error);
+      if (error instanceof Error && error.message === 'Invalid tenant ID') {
+        throw tenantIdQueryError();
+      }
       throw error;
     }
   }
