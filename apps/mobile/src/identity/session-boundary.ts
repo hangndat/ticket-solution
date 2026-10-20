@@ -1,3 +1,15 @@
+import {
+  accessTokenFromStored,
+  accessTokenNeedsRefresh,
+  encodeStoredCredential,
+  parseStoredCredential,
+  type SessionTokenParts,
+} from './credential-envelope.ts';
+import {
+  refreshOidcTokens,
+  type RefreshOidcTokens,
+} from './oidc-refresh.ts';
+
 export interface CredentialStore {
   read(): Promise<string | null>;
   write(credential: string): Promise<void>;
@@ -34,6 +46,12 @@ export type SessionEpoch = {
   userId: string;
 };
 
+type FreshAccessOutcome =
+  | { status: 'token'; accessToken: string }
+  | { status: 'missing' }
+  | { status: 'signed-out' }
+  | { status: 'unreachable' };
+
 export class SessionBoundary {
   private identity: Identity = { status: 'unknown' };
   private generation = 0;
@@ -41,10 +59,16 @@ export class SessionBoundary {
   private requests = new Set<AbortController>();
   private listeners = new Set<() => void>();
   private storageQueue: Promise<unknown> = Promise.resolve();
+  private refreshInFlight: Promise<FreshAccessOutcome> | null = null;
 
   private store: CredentialStore;
-  constructor(store: CredentialStore) {
+  private refreshTokens: RefreshOidcTokens;
+  constructor(
+    store: CredentialStore,
+    refreshTokens: RefreshOidcTokens = refreshOidcTokens,
+  ) {
     this.store = store;
+    this.refreshTokens = refreshTokens;
   }
   getSnapshot = (): Identity => this.identity;
   subscribe = (listener: () => void) => {
@@ -104,12 +128,83 @@ export class SessionBoundary {
     this.requests.delete(controller);
   }
 
+  /**
+   * Read SecureStore, refresh when the access token is near expiry, return a
+   * usable bearer. Coalesces concurrent refresh attempts.
+   */
+  private async ensureFreshAccessToken(): Promise<FreshAccessOutcome> {
+    if (this.refreshInFlight) return this.refreshInFlight;
+    this.refreshInFlight = this.runEnsureFreshAccessToken().finally(() => {
+      this.refreshInFlight = null;
+    });
+    return this.refreshInFlight;
+  }
+
+  private async runEnsureFreshAccessToken(): Promise<FreshAccessOutcome> {
+    const generation = this.generation;
+    const raw = await this.storage(() => this.store.read());
+    if (!raw) return { status: 'missing' };
+    const envelope = parseStoredCredential(raw);
+    if (!accessTokenNeedsRefresh(envelope)) {
+      return { status: 'token', accessToken: envelope.accessToken };
+    }
+
+    const refreshToken = envelope.refreshToken;
+    if (!refreshToken) {
+      return { status: 'token', accessToken: envelope.accessToken };
+    }
+
+    const refreshed = await this.refreshTokens(refreshToken);
+    if (generation !== this.generation) return { status: 'missing' };
+
+    if (refreshed.ok) {
+      const stored = encodeStoredCredential({
+        accessToken: refreshed.accessToken,
+        refreshToken: refreshed.refreshToken,
+        expiresIn: refreshed.expiresIn,
+      });
+      await this.storage(() => this.store.write(stored));
+      if (generation !== this.generation) return { status: 'missing' };
+      return { status: 'token', accessToken: refreshed.accessToken };
+    }
+
+    if (refreshed.reason === 'network') {
+      // Keep prior credential; callers may still attempt the API or treat as unreachable.
+      return { status: 'unreachable' };
+    }
+
+    // auth / config: clear and drop verified identity — UI must sign in again.
+    this.invalidate({ status: 'signed-out' });
+    await this.storage(() => this.store.clear());
+    return { status: 'signed-out' };
+  }
+
   /** Keychain restoration alone never establishes identity. */
   async restore(verify?: VerifyCredential): Promise<RestoreOutcome> {
     const generation = this.invalidate({ status: 'unknown' });
     try {
-      const credential = await this.storage(() => this.store.read());
-      const verified = credential && verify ? await verify(credential) : null;
+      const fresh = await this.ensureFreshAccessToken();
+      // Refresh auth-failure invalidates (bumps generation) — treat before mismatch.
+      if (fresh.status === 'signed-out') {
+        this.publish({ status: 'signed-out' });
+        return 'signed-out';
+      }
+      if (generation !== this.generation) return 'unknown';
+      if (fresh.status === 'unreachable') {
+        // Network refresh failure: keep SecureStore credential, never elevate.
+        this.publish({ status: 'signed-out' });
+        return 'unreachable';
+      }
+      if (fresh.status === 'missing') {
+        await this.storage(() => this.store.clear());
+        if (generation === this.generation) {
+          this.publish({ status: 'signed-out' });
+          return 'signed-out';
+        }
+        return 'unknown';
+      }
+
+      const verified = verify ? await verify(fresh.accessToken) : null;
       if (generation !== this.generation) return 'unknown';
       if (verified === CREDENTIAL_UNREACHABLE) {
         // Network/unreachable: keep credential for a later online probe.
@@ -132,17 +227,29 @@ export class SessionBoundary {
       throw error;
     }
   }
-  /** Integration seam, not a login implementation. Never accept a user ID from UI. */
-  async establish(credential: string, verify: VerifyCredential) {
+  /**
+   * Integration seam, not a login implementation. Never accept a user ID from UI.
+   * Optional `tokens` persists refresh + expiry beside the access token (JSON envelope).
+   */
+  async establish(
+    accessToken: string,
+    verify: VerifyCredential,
+    tokens?: Omit<SessionTokenParts, 'accessToken'>,
+  ) {
     const generation = this.invalidate({ status: 'unknown' });
     // Remove the preceding account's credential even if verification fails.
     await this.storage(() => this.store.clear());
-    const verified = await verify(credential);
+    const verified = await verify(accessToken);
     if (generation !== this.generation) return;
+    const stored = encodeStoredCredential({
+      accessToken,
+      refreshToken: tokens?.refreshToken,
+      expiresIn: tokens?.expiresIn,
+    });
     if (verified === CREDENTIAL_UNREACHABLE) {
       // OIDC succeeded but /v1/me unreachable (missing API bake, brief outage).
       // Keep the new bearer for a later online restore — never elevate offline.
-      await this.storage(() => this.store.write(credential));
+      await this.storage(() => this.store.write(stored));
       if (generation === this.generation) {
         this.publish({ status: 'signed-out' });
       }
@@ -152,7 +259,7 @@ export class SessionBoundary {
       this.publish({ status: 'signed-out' });
       return;
     }
-    await this.storage(() => this.store.write(credential));
+    await this.storage(() => this.store.write(stored));
     if (generation === this.generation)
       this.publish({ status: 'verified', userId: verified.userId });
   }
@@ -164,10 +271,19 @@ export class SessionBoundary {
   /**
    * Short-lived bearer for authenticated API calls. Only available while
    * SessionBoundary is verified — never invents a token from UI state.
+   * Transparently refreshes when the stored access token is near expiry.
    */
   async getCredential(): Promise<string | null> {
     if (this.identity.status !== 'verified') return null;
-    return this.storage(() => this.store.read());
+    const fresh = await this.ensureFreshAccessToken();
+    if (this.identity.status !== 'verified') return null;
+    if (fresh.status === 'token') return fresh.accessToken;
+    if (fresh.status === 'unreachable') {
+      // Network blip: hand back the prior access token; do not self-logout.
+      const raw = await this.storage(() => this.store.read());
+      return raw ? accessTokenFromStored(raw) : null;
+    }
+    return null;
   }
   private key(tenantSlug: string, resource: string) {
     if (this.identity.status !== 'verified') return null;
