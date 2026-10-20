@@ -30,7 +30,7 @@ import {
 } from './event-policy';
 import { metricsInc } from './metrics-registry';
 import { assertTenantAllowsIssue, lockTenantPolicyForShare } from './tenant-policy';
-import { withActor } from './tenant-context';
+import { withActor, withTenant } from './tenant-context';
 import type { PrismaClient } from './generated/prisma/client';
 
 export const REDEEM_COMMAND = 'redemption.redeem' as const;
@@ -929,7 +929,32 @@ export type ListedTicket = {
   state: string;
   credentialVersion: number;
   createdAt: Date;
+  eventName?: string;
 };
+
+type OwnerTicketListRow = {
+  id: string;
+  event_id: string;
+  ticket_type_id: string;
+  source_id: string;
+  state: string;
+  credential_version: number;
+  created_at: Date;
+  event_name: string | null;
+};
+
+function mapOwnerTicketListRow(row: OwnerTicketListRow): ListedTicket {
+  return {
+    ticketId: row.id,
+    eventId: row.event_id,
+    ticketTypeId: row.ticket_type_id,
+    sourceId: row.source_id,
+    state: row.state,
+    credentialVersion: row.credential_version,
+    createdAt: row.created_at,
+    ...(row.event_name != null ? { eventName: row.event_name } : {}),
+  };
+}
 
 export type ListedTicketWithTenant = ListedTicket & { tenantId: string };
 
@@ -939,33 +964,17 @@ export async function listTicketsForOwner(
   tenantId: string,
   ownerUserId: string,
 ): Promise<ListedTicket[]> {
-  const rows = await tx.$queryRaw<
-    {
-      id: string;
-      event_id: string;
-      ticket_type_id: string;
-      source_id: string;
-      state: string;
-      credential_version: number;
-      created_at: Date;
-    }[]
-  >`
-    SELECT id, event_id, ticket_type_id, source_id, state,
-           credential_version, created_at
-    FROM tickets
-    WHERE tenant_id = ${tenantId}::uuid
-      AND owner_user_id = ${ownerUserId}::uuid
-    ORDER BY created_at DESC
+  const rows = await tx.$queryRaw<OwnerTicketListRow[]>`
+    SELECT t.id, t.event_id, t.ticket_type_id, t.source_id, t.state,
+           t.credential_version, t.created_at, e.name AS event_name
+    FROM tickets t
+    LEFT JOIN events e
+      ON e.tenant_id = t.tenant_id AND e.id = t.event_id
+    WHERE t.tenant_id = ${tenantId}::uuid
+      AND t.owner_user_id = ${ownerUserId}::uuid
+    ORDER BY t.created_at DESC
   `;
-  return rows.map((row) => ({
-    ticketId: row.id,
-    eventId: row.event_id,
-    ticketTypeId: row.ticket_type_id,
-    sourceId: row.source_id,
-    state: row.state,
-    credentialVersion: row.credential_version,
-    createdAt: row.created_at,
-  }));
+  return rows.map(mapOwnerTicketListRow);
 }
 
 /**
@@ -1006,14 +1015,49 @@ export async function listAllTicketsForOwner(
   }));
 }
 
+/** Batch event names per tenant (RLS needs app.tenant_id on events). */
+async function enrichOwnerTicketsWithEventNames(
+  db: PrismaClient,
+  tickets: ListedTicketWithTenant[],
+): Promise<ListedTicketWithTenant[]> {
+  if (tickets.length === 0) return tickets;
+  const eventIdsByTenant = new Map<string, string[]>();
+  for (const ticket of tickets) {
+    const list = eventIdsByTenant.get(ticket.tenantId) ?? [];
+    if (!list.includes(ticket.eventId)) list.push(ticket.eventId);
+    eventIdsByTenant.set(ticket.tenantId, list);
+  }
+  const nameByTenantEvent = new Map<string, string>();
+  for (const [tenantId, eventIds] of eventIdsByTenant) {
+    await withTenant(db, tenantId, async (tx) => {
+      const rows = await tx.$queryRaw<{ id: string; name: string }[]>`
+        SELECT id, name
+        FROM events
+        WHERE tenant_id = ${tenantId}::uuid
+          AND id = ANY(${eventIds}::uuid[])
+      `;
+      for (const row of rows) {
+        nameByTenantEvent.set(`${tenantId}:${row.id}`, row.name);
+      }
+    });
+  }
+  return tickets.map((ticket) => {
+    const eventName = nameByTenantEvent.get(
+      `${ticket.tenantId}:${ticket.eventId}`,
+    );
+    return eventName != null ? { ...ticket, eventName } : ticket;
+  });
+}
+
 /** Verified owner aggregate (no tenant context). */
 export async function listOwnerTicketsAggregated(
   db: PrismaClient,
   ownerUserId: string,
 ): Promise<ListedTicketWithTenant[]> {
-  return withActor(db, ownerUserId, (tx) =>
+  const tickets = await withActor(db, ownerUserId, (tx) =>
     listAllTicketsForOwner(tx, ownerUserId),
   );
+  return enrichOwnerTicketsWithEventNames(db, tickets);
 }
 
 /**
