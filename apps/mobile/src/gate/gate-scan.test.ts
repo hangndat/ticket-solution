@@ -221,3 +221,33 @@ test('MEMBERSHIP_REVOKED on open session sets membershipAuthzDenied', async () =
   assert.equal(scanned.current?.phase, 'denied');
   assert.equal(scanned.staffSessionId, null);
 });
+
+/** #608: default createId must not throw after /sessions+/reservations (Hermes). */
+test('default createId persists deny after session open without injected createId', async () => {
+  const sessionId = '44444444-4444-4444-8444-444444444444';
+  const fetchImpl: typeof fetch = async (input) => {
+    const url = String(input);
+    if (url.endsWith('/sessions')) {
+      return jsonResponse(200, { sessionId });
+    }
+    if (url.endsWith('/reservations')) {
+      return jsonResponse(404, {
+        code: 'TICKET_NOT_FOUND',
+        message: 'Ticket not found',
+      });
+    }
+    return jsonResponse(500, { code: 'UNEXPECTED' });
+  };
+  const scanned = await runScan({
+    raw: qr,
+    bearer: 'token',
+    apiBase: 'http://127.0.0.1:3001',
+    ops: [],
+    staffSessionId: null,
+    fetchImpl,
+  });
+  assert.equal(scanned.staffSessionId, sessionId);
+  assert.equal(scanned.current?.phase, 'denied');
+  assert.ok(scanned.current?.id);
+  assert.equal(scanned.ops[0]?.id, scanned.current?.id);
+});
