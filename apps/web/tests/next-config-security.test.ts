@@ -3,22 +3,23 @@ import { afterEach, describe, it } from 'node:test';
 import config from '../next.config';
 import { contentSecurityPolicy } from '../next.config';
 
-const originalNodeEnv = process.env.NODE_ENV;
-const originalApi = process.env.API_BASE_URL;
-const originalIssuer = process.env.OIDC_ISSUER;
+const env = process.env as Record<string, string | undefined>;
+const originalNodeEnv = env.NODE_ENV;
+const originalApi = env.API_BASE_URL;
+const originalIssuer = env.OIDC_ISSUER;
 
 afterEach(() => {
-  if (originalNodeEnv === undefined) delete process.env.NODE_ENV;
-  else process.env.NODE_ENV = originalNodeEnv;
-  if (originalApi === undefined) delete process.env.API_BASE_URL;
-  else process.env.API_BASE_URL = originalApi;
-  if (originalIssuer === undefined) delete process.env.OIDC_ISSUER;
-  else process.env.OIDC_ISSUER = originalIssuer;
+  if (originalNodeEnv === undefined) delete env.NODE_ENV;
+  else env.NODE_ENV = originalNodeEnv;
+  if (originalApi === undefined) delete env.API_BASE_URL;
+  else env.API_BASE_URL = originalApi;
+  if (originalIssuer === undefined) delete env.OIDC_ISSUER;
+  else env.OIDC_ISSUER = originalIssuer;
 });
 
 describe('contentSecurityPolicy', () => {
   it('includes frame-ancestors none and nosniff-related directives', () => {
-    process.env.NODE_ENV = 'production';
+    env.NODE_ENV = 'production';
     const csp = contentSecurityPolicy();
     assert.match(csp, /frame-ancestors 'none'/);
     assert.match(csp, /default-src 'self'/);
@@ -27,14 +28,14 @@ describe('contentSecurityPolicy', () => {
   });
 
   it('allows unsafe-eval only in development', () => {
-    process.env.NODE_ENV = 'development';
+    env.NODE_ENV = 'development';
     assert.match(contentSecurityPolicy(), /unsafe-eval/);
   });
 
   it('adds API and OIDC origins to connect-src when configured', () => {
-    process.env.NODE_ENV = 'production';
-    process.env.API_BASE_URL = 'https://api.vemoki.com/v1';
-    process.env.OIDC_ISSUER = 'https://auth.vemoki.com/realms/vemoki';
+    env.NODE_ENV = 'production';
+    env.API_BASE_URL = 'https://api.vemoki.com/v1';
+    env.OIDC_ISSUER = 'https://auth.vemoki.com/realms/vemoki';
     const csp = contentSecurityPolicy();
     assert.match(csp, /connect-src[^;]*https:\/\/api\.vemoki\.com/);
     assert.match(csp, /connect-src[^;]*https:\/\/auth\.vemoki\.com/);
