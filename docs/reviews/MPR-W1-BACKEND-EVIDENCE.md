@@ -66,4 +66,15 @@ Deployed by coordinator (`gh-dod-evidence` + CI đã xanh trên PR #596 trước
 
 **Known gap không liên quan #597 (không fix trong lượt này):** worker log lặp `account_deletion_tombstone_keyring_missing` — thiếu keyring env cho tombstone feature khác, tồn tại từ trước, không phải regression của #597.
 
-Sau deploy này: **R-API-597 đóng** — owner wallet aggregate API đã sống trên prod. Pilot-ready tổng thể #596/#597 không còn blocker đã biết từ phía backend; UAT ví owner trên device vẫn cần một lượt riêng nếu muốn claim.
+Sau deploy này: **R-API-597 đóng** — owner wallet aggregate API đã sống trên prod. Pilot-ready tổng thể #596/#597 không còn blocker đã biết từ phía backend.
+
+## Physical UAT — ví owner trên Dexter (2026-10-20, build 26 @ `924d01d`)
+
+Coordinator lái trực tiếp qua WDA (`/tmp/dexter-uat-oneshot.py`), artifacts `300`–`310` tại `apps/mobile/.uat-artifacts/dexter-live-uat/`.
+
+| Bước | Kết quả |
+| --- | --- |
+| Đăng nhập `attendee@example.com` / `attendee-demo` (OIDC) | PASS — vào workspace attendee verified, tab "Vé của tôi" xuất hiện |
+| Mở "Vé của tôi" (owner aggregate, **không** `EXPO_PUBLIC_TENANT_ID`) | **PASS** — hiển thị đúng vé thật: nhóm "MFest" (Vé đã xác minh) + 1 thẻ "Sự kiện · Đã dùng"; không lỗi, không rỗng, không `MISCONFIGURED` |
+
+**R-API-597 đóng hoàn toàn** — cả API deploy lẫn UAT vật lý PASS. Không còn known gap backend cho #596/#597.
