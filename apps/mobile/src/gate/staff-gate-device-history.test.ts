@@ -4,13 +4,32 @@ import type { GateOp } from './gate-scan.ts';
 import type { QueuedOfflineScan } from './offline-queue.ts';
 import type { StaffGateScope } from './staff-gate-events.ts';
 import { OFFLINE_SYNC_PAYLOAD_VERSION } from './offline-sync-contract.ts';
-import { buildDeviceScanHistory } from './staff-gate-device-history.ts';
+import {
+  buildDeviceScanHistory,
+  computeDeviceHistoryPageView,
+  DEVICE_HISTORY_PAGE_SIZE,
+  filterLoadedDeviceHistoryRows,
+} from './staff-gate-device-history.ts';
 
 const scope: StaffGateScope = {
   tenantId: '11111111-2222-3333-4444-555555555555',
   eventId: '66666666-7777-8888-9999-aaaaaaaaaaaa',
   name: 'Demo',
 };
+
+function makeOp(id: string, recordedAt: string): GateOp {
+  return {
+    id,
+    ticketId: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
+    tenantId: scope.tenantId,
+    eventId: scope.eventId,
+    staffSessionId: 's',
+    phase: 'admitted',
+    checkinId: 'c',
+    message: 'ok',
+    recordedAt,
+  };
+}
 
 test('buildDeviceScanHistory scopes ops to tenant/event', () => {
   const op: GateOp = {
@@ -53,22 +72,67 @@ test('buildDeviceScanHistory merges queue rows', () => {
 });
 
 test('buildDeviceScanHistory sorts newest first', () => {
-  const older: GateOp = {
-    id: 'old',
-    ticketId: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
-    tenantId: scope.tenantId,
-    eventId: scope.eventId,
-    staffSessionId: 's',
-    phase: 'admitted',
-    checkinId: 'c',
-    message: 'ok',
-    recordedAt: '2026-10-19T09:00:00.000Z',
-  };
-  const newer: GateOp = {
-    ...older,
-    id: 'new',
-    recordedAt: '2026-10-19T12:00:00.000Z',
-  };
+  const older = makeOp('old', '2026-10-19T09:00:00.000Z');
+  const newer = makeOp('new', '2026-10-19T12:00:00.000Z');
   const rows = buildDeviceScanHistory(scope, [older, newer], []);
   assert.equal(rows[0].id, 'new');
+});
+
+test('buildDeviceScanHistory returns all rows without hard cap', () => {
+  const ops = Array.from({ length: 20 }, (_, i) =>
+    makeOp(`op-${i}`, `2026-10-19T${String(10 + i).padStart(2, '0')}:00:00.000Z`),
+  );
+  const rows = buildDeviceScanHistory(scope, ops, []);
+  assert.equal(rows.length, 20);
+});
+
+test('computeDeviceHistoryPageView paginates and reports hasMore', () => {
+  const all = Array.from({ length: 15 }, (_, i) => ({
+    id: String(i),
+    at: `2026-10-19T${String(10 + i).padStart(2, '0')}:00:00.000Z`,
+    ticketLabel: `ticket-${i}`,
+    statusLabel: 'Vào',
+    hint: '',
+    tone: 'admit' as const,
+    source: 'scan' as const,
+  }));
+  const first = computeDeviceHistoryPageView(
+    all,
+    DEVICE_HISTORY_PAGE_SIZE,
+    '',
+  );
+  assert.equal(first.loadedCount, DEVICE_HISTORY_PAGE_SIZE);
+  assert.equal(first.rows.length, DEVICE_HISTORY_PAGE_SIZE);
+  assert.equal(first.totalAvailable, 15);
+  assert.equal(first.hasMore, true);
+
+  const full = computeDeviceHistoryPageView(all, 30, '');
+  assert.equal(full.hasMore, false);
+  assert.equal(full.rows.length, 15);
+});
+
+test('filterLoadedDeviceHistoryRows matches ticket or status labels', () => {
+  const rows = [
+    {
+      id: '1',
+      at: '2026-10-19T10:00:00.000Z',
+      ticketLabel: 'abcd-1234',
+      statusLabel: 'Từ chối',
+      hint: '',
+      tone: 'deny' as const,
+      source: 'scan' as const,
+    },
+    {
+      id: '2',
+      at: '2026-10-19T11:00:00.000Z',
+      ticketLabel: 'wxyz-5678',
+      statusLabel: 'Cho vào',
+      hint: '',
+      tone: 'admit' as const,
+      source: 'scan' as const,
+    },
+  ];
+  assert.equal(filterLoadedDeviceHistoryRows(rows, 'abcd').length, 1);
+  assert.equal(filterLoadedDeviceHistoryRows(rows, 'cho vào').length, 1);
+  assert.equal(filterLoadedDeviceHistoryRows(rows, '').length, 2);
 });
