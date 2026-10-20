@@ -30,6 +30,8 @@ import {
 } from './event-policy';
 import { metricsInc } from './metrics-registry';
 import { assertTenantAllowsIssue, lockTenantPolicyForShare } from './tenant-policy';
+import { withActor } from './tenant-context';
+import type { PrismaClient } from './generated/prisma/client';
 
 export const REDEEM_COMMAND = 'redemption.redeem' as const;
 export const APPROVAL_PENDING = 'APPROVAL_PENDING' as const;
@@ -929,6 +931,8 @@ export type ListedTicket = {
   createdAt: Date;
 };
 
+export type ListedTicketWithTenant = ListedTicket & { tenantId: string };
+
 /** Owner My Tickets listing inside withTenant. */
 export async function listTicketsForOwner(
   tx: Prisma.TransactionClient,
@@ -962,6 +966,54 @@ export async function listTicketsForOwner(
     credentialVersion: row.credential_version,
     createdAt: row.created_at,
   }));
+}
+
+/**
+ * Owner tickets across all tenants inside withActor (app.actor_id GUC).
+ * RLS: tickets_owner_actor_select; query still filters owner_user_id.
+ */
+export async function listAllTicketsForOwner(
+  tx: Prisma.TransactionClient,
+  ownerUserId: string,
+): Promise<ListedTicketWithTenant[]> {
+  const rows = await tx.$queryRaw<
+    {
+      tenant_id: string;
+      id: string;
+      event_id: string;
+      ticket_type_id: string;
+      source_id: string;
+      state: string;
+      credential_version: number;
+      created_at: Date;
+    }[]
+  >`
+    SELECT tenant_id, id, event_id, ticket_type_id, source_id, state,
+           credential_version, created_at
+    FROM tickets
+    WHERE owner_user_id = ${ownerUserId}::uuid
+    ORDER BY created_at DESC
+  `;
+  return rows.map((row) => ({
+    tenantId: row.tenant_id,
+    ticketId: row.id,
+    eventId: row.event_id,
+    ticketTypeId: row.ticket_type_id,
+    sourceId: row.source_id,
+    state: row.state,
+    credentialVersion: row.credential_version,
+    createdAt: row.created_at,
+  }));
+}
+
+/** Verified owner aggregate (no tenant context). */
+export async function listOwnerTicketsAggregated(
+  db: PrismaClient,
+  ownerUserId: string,
+): Promise<ListedTicketWithTenant[]> {
+  return withActor(db, ownerUserId, (tx) =>
+    listAllTicketsForOwner(tx, ownerUserId),
+  );
 }
 
 /**

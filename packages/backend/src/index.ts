@@ -3,7 +3,7 @@ import { PrismaClient, Prisma } from './generated/prisma/client';
 import { withTenant } from './tenant-context';
 
 export { PrismaClient, Prisma };
-export { withTenant };
+export { withTenant, withActor } from './tenant-context';
 export {
   IdentityError,
   IDENTITY_ERROR_CODES,
@@ -95,6 +95,8 @@ export {
   APPROVAL_PENDING,
   redeemAndIssueTicket,
   listTicketsForOwner,
+  listAllTicketsForOwner,
+  listOwnerTicketsAggregated,
   getTicketForOwner,
   getOperationForActor,
   storedRejectionFromResponse,
@@ -106,6 +108,7 @@ export {
   type RedeemOutcome,
   type PendingApprovalResult,
   type ListedTicket,
+  type ListedTicketWithTenant,
 } from './issue';
 export {
   InventoryError,

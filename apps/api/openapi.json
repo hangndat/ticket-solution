@@ -826,8 +826,9 @@
         "parameters": [
           {
             "name": "tenantId",
-            "required": true,
+            "required": false,
             "in": "query",
+            "description": "Optional tenant UUID; omit to list all owner tickets across tenants (W1 aggregate).",
             "schema": {
               "type": "string"
             }
