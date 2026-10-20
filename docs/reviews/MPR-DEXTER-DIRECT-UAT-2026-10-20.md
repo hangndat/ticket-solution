@@ -41,3 +41,20 @@ Thư mục ảnh và cây UI: `apps/mobile/.uat-artifacts/dexter-live-uat/` (git
 3. **Giới hạn:** preview camera không chứng minh quét/admit vé; screen mở được không chứng minh API check-in hoặc push delivery.
 
 Đã báo Zico qua terminal để sửa trong PR #596, build lại local rồi UAT lại trên cùng máy. Không thay đổi trạng thái Project sang Hoàn thành từ kết quả này.
+
+---
+
+## Zico re-UAT sau fix navigation (build 18, SHA `ce7c972` + toolbar `testID`)
+
+**Device:** cùng Dexter · `com.hangndat.ticket` **1.0.0 (18)** · Release embedded bundle · phiên staff fixture **giữ nguyên** (không logout/wipe).
+
+| Luồng | Kết quả | Evidence |
+| --- | --- | --- |
+| Staff tab bar = 3 (không tab Tài khoản) | **PASS** | `dexter-live-uat/zico-23-scan-tab.png` — Nhập tay · Scan · Lịch sử |
+| Camera preview trên Scan | **PASS** | `zico-23-scan-tab.png` |
+| Header toolbar → Account stack (không bounce Scan) | **NOT RUN** (WDA session flake sau rebuild; logic fix `STAFF_ACCOUNT_SEGMENTS` + unit tests) | — |
+| Đăng xuất / Quay lại quét | **NOT RUN** (phụ thuộc mở Account) | — |
+
+**Code:** `staff-default-tab-target.ts` — bỏ `account` khỏi attendee-only redirect; cho phép segment `account` (stack `/account` + PD). Tab `account` `hidden={showStaffTabs}`. Toolbar `testID=staff-toolbar-account`.
+
+**Verdict phiên Zico:** **PARTIAL PASS** — regression 4 tab **đã hết** trên build 18; blocker redirect Account cần xác nhận thao tác header trên máy (user/root) hoặc WDA ổn định lại.
