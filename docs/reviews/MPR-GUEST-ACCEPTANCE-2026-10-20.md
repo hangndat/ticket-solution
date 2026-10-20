@@ -93,3 +93,37 @@
 | Provenance | `app.config` + `sync-ios-build` → CFBundleVersion **22** |
 
 **SHA batch 3:** _ghi sau push/install._
+
+## Root revalidation trực tiếp — build 22 và 23
+
+Giữ nguyên các FAIL lịch sử ở trên. Root thao tác trên iPhone vật lý Dexter qua WDA, không dùng kết quả unit test thay cho thao tác trên máy. Artifacts riêng tư/local: `apps/mobile/.uat-artifacts/dexter-live-uat/` (PNG + XML, không commit).
+
+### Build 22 — source `436838eb7826a78579fa87175b357fa3f64a777c`
+
+| Luồng | Kết quả | Evidence |
+| --- | --- | --- |
+| Guest catalog, search, 2 tabs | PASS | `70-build22-start` |
+| Scroll tới CTA đổi mã, bấm được phía trên tab bar | PASS | `71-build22-events-footer`, `72-build22-global` |
+| Global guest chỉ nhập mã, không slug/UUID/jargon; back đúng nhãn | PASS | `72-build22-global` |
+| Account 3 nhóm, bỏ câu push lặp | PASS | `74-build22-account` |
+| Privacy ẩn tabs, đúng một nút đóng, quay lại được | PASS | `75-build22-privacy`, `76-build22-privacy-return` |
+| Hủy đăng nhập giữ mã đang nhập | PASS | `77`–`82` |
+| Đăng nhập attendee qua UI OIDC trở về mã đang nhập | PASS | `83`–`89` |
+| API global đang tắt, UI lộ lỗi tiếng Anh | FAIL | `89-attendee-return`; sửa nguồn tại `3d2d236`, cần re-UAT binary mới |
+| Ví owner không có tenant env | FAIL | `91-attendee-wallet`; phụ thuộc API W1 PR #597 + mobile `84868b0` |
+| Đăng xuất attendee, hoàn tất Keycloak logout, về guest 2 tabs | PASS | `92`–`99` |
+
+Privacy build 22 có **một** actual visible button `privacy-cta-close`; `headerBackTitle` trong source không chứng minh có nút đóng thứ hai trên màn hình.
+
+### Build 23 — source `0f17517c0d77b81cd5874611c088beffb6f014f3`
+
+`devicectl device info apps` xác nhận Vemoki `com.hangndat.ticket` **1.0.0 (23)**. Binary Release trên đĩa do Zico cài: executable SHA-256 `1c9ad82c614a8f76e90a84658c755d4017e09d6e0194c53e7f655eeb0f335126`; JS bundle SHA-256 `0c4a6c494cc594829073fa5f42903bd41bc8e5f523ed5f32c2447d25e10eb99a`.
+
+| Luồng | Kết quả | Evidence |
+| --- | --- | --- |
+| Staff giữ phiên, 3 tabs | PASS | `114-build23-start` |
+| Manual toolbar Tài khoản | FAIL — vẫn Manual | `115-build23-staff-account` (root đã xem PNG và XML) |
+| Scan camera screen | PASS mở màn | `116-build23-scan` |
+| Scan toolbar Tài khoản (tọa độ nút đã xác nhận) | FAIL — trở về Manual | `118-build23-reactivate`, `119-build23-scan-account-tap` |
+
+Zico nhận fix tiếp: thay hidden NativeTabs staff-account bằng root stack `/staff-account`. Build 23 **chưa đạt acceptance**; chưa nghiệm thu ví production khi API W1 chưa triển khai. Không claim pilot ready, QR admit hay APNs delivery từ các kiểm tra trên.
