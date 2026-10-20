@@ -6,6 +6,7 @@ import {
   readOidcWebConfig,
 } from '../../../../src/oidc/config';
 import { ID_TOKEN_COOKIE, clearSessionCookies } from '../../../../src/oidc/cookies';
+import { clearWebRefreshFlightCache } from '../../../../src/oidc/refresh-flight';
 import { requirePublicOrigin } from '../../../../src/oidc/public-origin';
 
 /** Clear BFF cookies and redirect to Keycloak end-session when configured. */
@@ -16,6 +17,7 @@ export async function GET(request: NextRequest) {
 
   const jar = await cookies();
   const idToken = jar.get(ID_TOKEN_COOKIE)?.value?.trim() ?? '';
+  clearWebRefreshFlightCache();
   await clearSessionCookies();
 
   if (!isOidcConfigured()) {
