@@ -1119,25 +1119,22 @@ export async function commitImportJob(
       for (const row of parsed.valid) {
         const codeHmac = hashRedemptionCode(hmac, row.value);
         const id = randomUUID();
-        try {
-          await tx.$executeRaw`
-            INSERT INTO redemption_codes (
-              tenant_id, event_id, id, code_hmac, code_pepper_version,
-              source_id, ticket_type_id, status, created_at, updated_at
-            ) VALUES (
-              ${input.tenantId}::uuid, ${input.eventId}::uuid, ${id}::uuid,
-              ${codeHmac}, ${hmac.version}, ${job.source_id}::uuid,
-              ${job.ticket_type_id}::uuid, 'AVAILABLE', now(), now()
-            )
-          `;
+        const inserted = await tx.$queryRaw<Array<{ id: string }>>`
+          INSERT INTO redemption_codes (
+            tenant_id, event_id, id, code_hmac, code_pepper_version,
+            source_id, ticket_type_id, status, created_at, updated_at
+          ) VALUES (
+            ${input.tenantId}::uuid, ${input.eventId}::uuid, ${id}::uuid,
+            ${codeHmac}, ${hmac.version}, ${job.source_id}::uuid,
+            ${job.ticket_type_id}::uuid, 'AVAILABLE', now(), now()
+          )
+          ON CONFLICT (tenant_id, event_id, code_hmac) DO NOTHING
+          RETURNING id
+        `;
+        if (inserted[0]) {
           committed += 1;
-        } catch (error) {
-          const message = error instanceof Error ? error.message : '';
-          if (message.includes('redemption_codes_hmac_unique')) {
-            skipped += 1;
-            continue;
-          }
-          throw error;
+        } else {
+          skipped += 1;
         }
       }
     } else {
@@ -1148,43 +1145,40 @@ export async function commitImportJob(
         const tokenHash = createHash('sha256')
           .update(rawToken, 'utf8')
           .digest('hex');
-        try {
-          await tx.$executeRaw`
-            INSERT INTO guest_invitations (
-              tenant_id, event_id, id, import_job_id, source_id, ticket_type_id,
-              invited_email, token_hash, state, expires_at
-            ) VALUES (
-              ${input.tenantId}::uuid, ${input.eventId}::uuid, ${invitationId}::uuid,
-              ${job.id}::uuid, ${job.source_id}::uuid, ${job.ticket_type_id}::uuid,
-              ${row.value}, ${tokenHash}, 'PENDING', ${expiresAt}::timestamptz
-            )
-          `;
-          // Store raw token only in outbox payload for later dispatch — never return it.
-          await tx.$executeRaw`
-            INSERT INTO outbox (
-              tenant_id, event_id, id, type, aggregate_id, payload_version,
-              payload, status, attempts, created_at, updated_at
-            ) VALUES (
-              ${input.tenantId}::uuid, ${input.eventId}::uuid, ${randomUUID()}::uuid,
-              'InvitationTokenMinted', ${invitationId}::uuid, 1,
-              ${JSON.stringify({
-                invitationId,
-                token: rawToken,
-                email: row.value,
-              })}::jsonb,
-              'PENDING', 0, now(), now()
-            )
-          `;
-          committed += 1;
-          invitationCount += 1;
-        } catch (error) {
-          const message = error instanceof Error ? error.message : '';
-          if (message.includes('guest_invitations_email_event_uq')) {
-            skipped += 1;
-            continue;
-          }
-          throw error;
+        const inserted = await tx.$queryRaw<Array<{ id: string }>>`
+          INSERT INTO guest_invitations (
+            tenant_id, event_id, id, import_job_id, source_id, ticket_type_id,
+            invited_email, token_hash, state, expires_at
+          ) VALUES (
+            ${input.tenantId}::uuid, ${input.eventId}::uuid, ${invitationId}::uuid,
+            ${job.id}::uuid, ${job.source_id}::uuid, ${job.ticket_type_id}::uuid,
+            ${row.value}, ${tokenHash}, 'PENDING', ${expiresAt}::timestamptz
+          )
+          ON CONFLICT (tenant_id, event_id, invited_email) DO NOTHING
+          RETURNING id
+        `;
+        if (!inserted[0]) {
+          skipped += 1;
+          continue;
         }
+        // Store raw token only in outbox payload for later dispatch — never return it.
+        await tx.$executeRaw`
+          INSERT INTO outbox (
+            tenant_id, event_id, id, type, aggregate_id, payload_version,
+            payload, status, attempts, created_at, updated_at
+          ) VALUES (
+            ${input.tenantId}::uuid, ${input.eventId}::uuid, ${randomUUID()}::uuid,
+            'InvitationTokenMinted', ${invitationId}::uuid, 1,
+            ${JSON.stringify({
+              invitationId,
+              token: rawToken,
+              email: row.value,
+            })}::jsonb,
+            'PENDING', 0, now(), now()
+          )
+        `;
+        committed += 1;
+        invitationCount += 1;
       }
     }
 
