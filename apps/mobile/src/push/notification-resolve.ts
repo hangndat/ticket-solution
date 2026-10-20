@@ -2,6 +2,7 @@ import { getTenantId } from '../identity/config.ts';
 import type { SessionBoundary } from '../identity/session-boundary.ts';
 import { fetchPublishedEventDetail } from '../published/published-event-api.ts';
 import { probeMeTickets } from '../tickets/fetch-me-tickets.ts';
+import type { MeTicketsFetchScope } from '../tickets/wallet-fetch-scope.ts';
 import type { NotificationKind } from './notification-contract.ts';
 
 export type NotificationRouteTarget =
@@ -72,14 +73,20 @@ export async function resolveNotificationRoute(
     const ticketId = input.ticketId?.trim() ?? '';
     if (!ticketId) return { status: 'invalid' };
 
-    const tenantId = (input.tenantId?.trim() || resolveTenantId() || '').trim();
-    if (!tenantId) return { status: 'misconfigured' };
+    const configuredTenant = (
+      input.tenantId?.trim() ||
+      resolveTenantId() ||
+      ''
+    ).trim();
+    const probeScope: MeTicketsFetchScope = configuredTenant
+      ? { kind: 'tenant', tenantId: configuredTenant }
+      : { kind: 'owner' };
 
     const bearer = await deps.session.getCredential();
     if (!deps.session.isEpochCurrent(epoch)) return { status: 'epoch-stale' };
     if (!bearer) return { status: 'unsigned' };
 
-    const probe = await probeTickets(bearer, tenantId, deps.signal);
+    const probe = await probeTickets(bearer, probeScope, deps.signal);
     if (!deps.session.isEpochCurrent(epoch)) return { status: 'epoch-stale' };
 
     if (probe.status === 'unauthorized') return { status: 'unauthorized' };

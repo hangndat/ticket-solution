@@ -12,6 +12,7 @@ let parked: SignInReturnTarget | null = null;
 
 const ALLOWED_EXACT = new Set([
   '/redeem',
+  '/redeem-global',
   '/claim',
   '/(tabs)/my-tickets',
   '/(tabs)/(events)',
