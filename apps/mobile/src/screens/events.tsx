@@ -31,7 +31,7 @@ import { TabStackTitle } from '@/navigation/tab-stack-title';
 import { useShowAttendeeTabs } from '@/navigation/use-staff-workspace';
 
 /** Native tab bar + home indicator — keep list footer/cards above chrome. */
-const TAB_BAR_CLEARANCE = 100;
+const TAB_BAR_CLEARANCE = 132;
 
 function formatListDate(startsAt: string, timezone: string): string {
   try {
@@ -266,7 +266,7 @@ export function EventsScreen() {
 
   const listFooter =
     showAttendeeChrome && publishedPhase === 'ready' ? (
-      <View style={{ paddingTop: 4, paddingBottom: 8 }}>
+      <View style={{ paddingTop: 8, paddingBottom: 20 }}>
         <AttendeeCta
           label={eventsCopy.redeemCta}
           variant="secondary"

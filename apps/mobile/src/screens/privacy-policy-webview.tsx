@@ -5,7 +5,10 @@ import { AttendeeCta } from '@/components/attendee-cta';
 import { Notice } from '@/components/page';
 import { PRIVACY_POLICY_URL } from '@/account-deletion/privacy-policy';
 import { brand, colors } from '@/theme/colors';
+import { Stack } from 'expo-router';
 import { TabStackTitle } from '@/navigation/tab-stack-title';
+
+type PrivacyPresentation = 'tab' | 'root';
 
 function isTrustedPrivacyUrl(url: string): boolean {
   try {
@@ -24,7 +27,11 @@ function shouldAllowPrivacyNavigation(url: string): boolean {
   return isTrustedPrivacyUrl(url);
 }
 
-export function PrivacyPolicyWebViewScreen() {
+export function PrivacyPolicyWebViewScreen({
+  presentation = 'tab',
+}: {
+  presentation?: PrivacyPresentation;
+}) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
@@ -43,7 +50,11 @@ export function PrivacyPolicyWebViewScreen() {
             Liên kết chính sách không hợp lệ trên bản dựng này.
           </Notice>
         </View>
-        <TabStackTitle title="Chính sách quyền riêng tư" />
+        {presentation === 'tab' ? (
+          <TabStackTitle title="Chính sách quyền riêng tư" large={false} />
+        ) : (
+          <Stack.Screen options={{ title: 'Chính sách quyền riêng tư' }} />
+        )}
       </>
     );
   }
@@ -97,7 +108,11 @@ export function PrivacyPolicyWebViewScreen() {
           </View>
         ) : null}
       </View>
-      <TabStackTitle title="Chính sách quyền riêng tư" />
+      {presentation === 'tab' ? (
+        <TabStackTitle title="Chính sách quyền riêng tư" large={false} />
+      ) : (
+        <Stack.Screen options={{ title: 'Chính sách quyền riêng tư' }} />
+      )}
     </>
   );
 }
