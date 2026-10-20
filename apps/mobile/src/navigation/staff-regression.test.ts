@@ -99,4 +99,75 @@ test('K-STAFF-01: staff default tab is Scan when entering workspace or on attend
     }),
     true,
   );
+
+  assert.equal(
+    shouldReplaceWithStaffScanTab({
+      staffWorkspace: true,
+      segments: ['account'],
+      enteringStaff: false,
+    }),
+    false,
+    'stack /account from gate toolbar must not bounce to Scan',
+  );
+
+  assert.equal(
+    shouldReplaceWithStaffScanTab({
+      staffWorkspace: true,
+      segments: ['(tabs)', 'account'],
+      enteringStaff: false,
+    }),
+    false,
+    'attendee account tab segment must not bounce to Scan',
+  );
+
+  assert.equal(
+    shouldReplaceWithStaffScanTab({
+      staffWorkspace: true,
+      segments: ['staff-account'],
+      enteringStaff: false,
+    }),
+    false,
+    'root /staff-account from gate toolbar must not bounce to Scan',
+  );
+
+  assert.equal(
+    shouldReplaceWithStaffScanTab({
+      staffWorkspace: true,
+      segments: ['(tabs)', 'staff-manual'],
+      enteringStaff: true,
+    }),
+    true,
+    'first staff entry: NativeTabs opens Manual first → one-shot replace Scan',
+  );
+
+  assert.equal(
+    shouldReplaceWithStaffScanTab({
+      staffWorkspace: true,
+      segments: ['(tabs)', 'staff-manual'],
+      enteringStaff: false,
+    }),
+    false,
+    'after entry, intentional Manual tab must not bounce to Scan',
+  );
+
+  assert.equal(
+    shouldReplaceWithStaffScanTab({
+      staffWorkspace: true,
+      segments: ['(tabs)', 'staff-scan'],
+      enteringStaff: true,
+    }),
+    false,
+    'staff entry already on Scan must not replace again',
+  );
+
+  assert.equal(
+    shouldReplaceWithStaffScanTab({
+      staffWorkspace: true,
+      segments: ['(tabs)', 'staff-manual'],
+      enteringStaff: false,
+      pendingScanLanding: true,
+    }),
+    true,
+    'return from staff-account must select Scan not Manual',
+  );
 });

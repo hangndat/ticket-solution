@@ -27,14 +27,18 @@ import { TabStackTitle } from '@/navigation/tab-stack-title';
 import { hasDemoMediaForEventId } from '@/data/demo-media';
 import { brand, colors } from '@/theme/colors';
 import { fontFamilies } from '@/theme/fonts';
-import { getTenantId } from '@/identity/config';
 import { session } from '@/identity/session';
 import {
   currentTicketDisplayWriteEpoch,
   readTicketDisplayCache,
-  writeTicketDisplayCache,
 } from '@/tickets/display-cache';
 import { probeMeTickets } from '@/tickets/fetch-me-tickets';
+import { persistWalletTicketCaches } from '@/tickets/wallet-display-persist';
+import {
+  walletDisplayCacheScope,
+  walletFetchScopeFromEnv,
+  walletSessionScope,
+} from '@/tickets/wallet-fetch-scope';
 import {
   bindIfStillVerified,
   captureOfflineBindingEpoch,
@@ -259,7 +263,9 @@ function OfflineDisplayWallet({
 }
 
 function VerifiedWallet({ userId }: { userId: string }) {
-  const tenantId = getTenantId();
+  const fetchScope = walletFetchScopeFromEnv();
+  const sessionScope = walletSessionScope(fetchScope);
+  const cacheScope = walletDisplayCacheScope(fetchScope);
   const [tickets, setTickets] = useState<TicketSummary[]>([]);
   const [syncedAt, setSyncedAt] = useState<string | null>(null);
   const [offline, setOffline] = useState(false);
@@ -269,10 +275,9 @@ function VerifiedWallet({ userId }: { userId: string }) {
   const [showPushPrompt, setShowPushPrompt] = useState(false);
 
   const hydrateFromCache = useCallback(async () => {
-    if (!tenantId) return;
     const epoch = session.captureEpoch();
     if (!epoch || epoch.userId !== userId) return;
-    const cache = await readTicketDisplayCache(userId, tenantId);
+    const cache = await readTicketDisplayCache(userId, cacheScope);
     const decision = decideCacheHydrate({
       epoch,
       isEpochCurrent: (e) => session.isEpochCurrent(e),
@@ -284,14 +289,10 @@ function VerifiedWallet({ userId }: { userId: string }) {
     setSyncedAt(decision.syncedAt);
     setOffline(true);
     if (!session.isEpochCurrent(epoch)) return;
-    await session.load(tenantId, 'me-tickets', async () => decision.tickets);
-  }, [tenantId, userId]);
+    await session.load(sessionScope, 'me-tickets', async () => decision.tickets);
+  }, [cacheScope, sessionScope, userId]);
 
   const refresh = useCallback(async () => {
-    if (!tenantId) {
-      setError('Thiếu cấu hình tổ chức trên bản dựng. Không tải được vé.');
-      return;
-    }
     const epoch = session.captureEpoch();
     if (!epoch || epoch.userId !== userId) return;
 
@@ -309,13 +310,13 @@ function VerifiedWallet({ userId }: { userId: string }) {
     const writeEpoch = currentTicketDisplayWriteEpoch();
     const bindingEpoch = captureOfflineBindingEpoch();
     try {
-      const probe = await probeMeTickets(bearer, tenantId, controller.signal);
+      const probe = await probeMeTickets(bearer, fetchScope, controller.signal);
       if (!session.isEpochCurrent(epoch)) return;
 
       const cached =
         probe.status === 'ok'
           ? null
-          : await readTicketDisplayCache(userId, tenantId);
+          : await readTicketDisplayCache(userId, cacheScope);
       if (!session.isEpochCurrent(epoch)) return;
 
       const decision = decideTicketSyncApply({
@@ -333,7 +334,11 @@ function VerifiedWallet({ userId }: { userId: string }) {
           'Phiên không còn được phép xem vé. Đăng nhập lại. Không dùng bộ đệm offline.',
         );
         try {
-          await logoutAndClearWalletArtifacts({ userId, tenantId });
+          await logoutAndClearWalletArtifacts({
+            userId,
+            tenantId: sessionScope,
+            walletScope: fetchScope,
+          });
         } catch (err) {
           setError(
             err instanceof Error
@@ -361,37 +366,48 @@ function VerifiedWallet({ userId }: { userId: string }) {
 
       if (decision.action === 'apply') {
         if (!session.isEpochCurrent(epoch)) return;
-        await writeTicketDisplayCache(
-          {
-            userId,
-            tenantId,
-            syncedAt: decision.syncedAt,
-            tickets: decision.tickets,
-          },
+        await persistWalletTicketCaches(
+          userId,
+          fetchScope,
+          decision.tickets,
+          decision.syncedAt,
           writeEpoch,
         );
         if (!session.isEpochCurrent(epoch)) return;
         const loaded = await session.load(
-          tenantId,
+          sessionScope,
           'me-tickets',
           async () => decision.tickets,
         );
         if (!loaded || !session.isEpochCurrent(epoch)) return;
-        await bindIfStillVerified({
-          session,
-          offline: offlineDisplay,
-          userId,
-          tenantId,
-          bindingEpoch,
-        });
+        const tenantIds = [
+          ...new Set(
+            decision.tickets
+              .map((row) => row.tenantId?.trim())
+              .filter((id): id is string => Boolean(id)),
+          ),
+        ];
+        for (const tenantId of tenantIds) {
+          await bindIfStillVerified({
+            session,
+            offline: offlineDisplay,
+            userId,
+            tenantId,
+            bindingEpoch,
+          });
+        }
       } else if (decision.action === 'offline-cache') {
         if (!session.isEpochCurrent(epoch)) return;
-        await session.load(tenantId, 'me-tickets', async () => decision.tickets);
+        await session.load(
+          sessionScope,
+          'me-tickets',
+          async () => decision.tickets,
+        );
       }
     } finally {
       session.endRequest(controller);
     }
-  }, [tenantId, userId]);
+  }, [cacheScope, fetchScope, sessionScope, userId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -481,7 +497,6 @@ function VerifiedWallet({ userId }: { userId: string }) {
       <Text style={{ color: colors.secondary, fontSize: 13, lineHeight: 20 }}>
         Đồng bộ: {syncedAt ?? '—'}
         {offline ? ' · bộ đệm offline' : ''}
-        {!tenantId ? '\nChưa cấu hình tổ chức trên bản dựng này.' : ''}
       </Text>
 
       {busy && tickets.length === 0 ? (

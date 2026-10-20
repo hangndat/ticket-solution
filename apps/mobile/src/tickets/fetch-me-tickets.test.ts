@@ -58,6 +58,32 @@ test('fetchMeTickets accepts MeTicketsResponse and rejects invalid bodies', asyn
   }
 });
 
+test('probeMeTickets owner aggregate omits tenantId query param', async () => {
+  const previous = process.env.EXPO_PUBLIC_API_BASE_URL;
+  process.env.EXPO_PUBLIC_API_BASE_URL = 'http://127.0.0.1:39999';
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (input) => {
+    const url = String(input);
+    assert.doesNotMatch(url, /tenantId=/);
+    assert.match(url, /\/v1\/me\/tickets$/);
+    return new Response(JSON.stringify({ tickets: [sampleTicket] }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  };
+  try {
+    const result = await probeMeTickets('tok', { kind: 'owner' });
+    assert.equal(result.status, 'ok');
+    if (result.status === 'ok') {
+      assert.equal(result.body.tickets.length, 1);
+    }
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (previous === undefined) delete process.env.EXPO_PUBLIC_API_BASE_URL;
+    else process.env.EXPO_PUBLIC_API_BASE_URL = previous;
+  }
+});
+
 test('probeMeTickets marks network failure unreachable (not unauthorized)', async () => {
   const previous = process.env.EXPO_PUBLIC_API_BASE_URL;
   process.env.EXPO_PUBLIC_API_BASE_URL = 'http://127.0.0.1:39999';

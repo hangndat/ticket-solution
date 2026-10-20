@@ -5,7 +5,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import { router, useFocusEffect } from 'expo-router';
+import { router, useFocusEffect, useSegments } from 'expo-router';
 import type { MeResponse } from '@ticket/contracts';
 import { AttendeeCta } from '@/components/attendee-cta';
 import {
@@ -32,8 +32,15 @@ import { offlineDisplay } from '@/tickets/offline-display-session';
 import { logoutAndClearWalletArtifacts } from '@/tickets/wallet-logout';
 import { consumePendingImmediateSignIn } from '@/navigation/attendee-auth-gate';
 import { consumeSignInReturn } from '@/navigation/sign-in-return-intent';
+import { STAFF_ACCOUNT_HREF } from '@/navigation/staff-account-route';
+import {
+  planPostLogoutNavigation,
+  runPostLogoutNavigation,
+} from '@/navigation/post-logout-navigation';
+import { returnToStaffGateScanTab } from '@/navigation/staff-scan-tab-navigation';
 import { useStaffWorkspace } from '@/navigation/use-staff-workspace';
 import { TabStackTitle } from '@/navigation/tab-stack-title';
+import { useAttendeeTabBarInset } from '@/navigation/use-attendee-tab-bar-inset';
 import { PushAccountSection } from '@/push/push-account-section';
 
 export type AccountPresentation = 'tab' | 'stack';
@@ -50,7 +57,7 @@ export function AccountScreen({
       <>
         <MisconfiguredAccount presentation={presentation} />
         {presentation === 'tab' ? (
-          <TabStackTitle title={accountCopy.screenTitle} />
+          <TabStackTitle title={accountCopy.screenTitle} large={false} />
         ) : null}
       </>
     );
@@ -79,7 +86,7 @@ function MisconfiguredAccount({
         />
       </AccountGroupedSection>
       {presentation === 'tab' ? null : (
-        <TabStackTitle title={accountCopy.screenTitle} />
+        <TabStackTitle title={accountCopy.screenTitle} large={false} />
       )}
     </Page>
   );
@@ -102,6 +109,7 @@ function ConfiguredAccount({
   presentation: AccountPresentation;
 }) {
   const staffWorkspace = useStaffWorkspace();
+  const segments = useSegments();
   const [me, setMe] = useState<MeResponse | null>(null);
   const [meError, setMeError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -222,12 +230,11 @@ function ConfiguredAccount({
     const tenantId =
       getTenantId() ??
       (offline.status === 'bound' ? offline.tenantId : null);
+    const logoutPlan = planPostLogoutNavigation({ segments, staffWorkspace });
     try {
       await logoutAndClearWalletArtifacts({ userId, tenantId });
       await endKeycloakSession();
-      if (staffWorkspace) {
-        router.replace('/(tabs)/(events)');
-      }
+      runPostLogoutNavigation(logoutPlan);
     } catch (error) {
       setMeError(
         error instanceof Error
@@ -237,7 +244,7 @@ function ConfiguredAccount({
     } finally {
       setBusy(false);
     }
-  }, [offline, verifiedUserId, staffWorkspace]);
+  }, [offline, segments, verifiedUserId, staffWorkspace]);
 
   const onClearOfflineDisplay = useCallback(async () => {
     setBusy(true);
@@ -266,6 +273,7 @@ function ConfiguredAccount({
   );
 
   const identityKind = isSignedIn ? 'verified' : 'guest';
+  const tabBarInset = useAttendeeTabBarInset(24);
   const showLogout = isSignedIn;
   const showDeleteRow = isSignedIn && !meError;
 
@@ -281,7 +289,7 @@ function ConfiguredAccount({
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
         style={{ flex: 1, backgroundColor: brand.paper }}
-        contentContainerStyle={{ padding: 20, paddingBottom: 48, gap: 20 }}
+        contentContainerStyle={{ padding: 20, paddingBottom: tabBarInset, gap: 20 }}
       >
         <AccountGroupedSection title={accountCopy.sections.you}>
           <AccountGroupedRow label={youTitle} value={youBody} disabled={busy} />
@@ -321,7 +329,7 @@ function ConfiguredAccount({
           <AccountGroupedRow
             label={accountCopy.privacyRow}
             showChevron
-            onPress={() => router.push('/(tabs)/account/privacy')}
+            onPress={() => router.push('/privacy-policy')}
             disabled={busy}
             testID="account-cta-privacy"
           />
@@ -331,7 +339,13 @@ function ConfiguredAccount({
               <AccountGroupedRow
                 label={accountCopy.deleteAccountRow}
                 showChevron
-                onPress={() => router.push('/(tabs)/account/delete')}
+                onPress={() =>
+                  router.push(
+                    staffWorkspace
+                      ? `${STAFF_ACCOUNT_HREF}/delete`
+                      : '/(tabs)/account/delete',
+                  )
+                }
                 disabled={busy}
                 testID="account-delete-row"
               />
@@ -343,7 +357,7 @@ function ConfiguredAccount({
           <AttendeeCta
             label={accountCopy.staffBackToGate}
             variant="secondary"
-            onPress={() => router.replace('/(tabs)/staff-scan')}
+            onPress={() => returnToStaffGateScanTab()}
             disabled={busy}
             testID="account-cta-staff-back"
           />
@@ -385,7 +399,7 @@ function ConfiguredAccount({
         ) : null}
       </ScrollView>
       {presentation === 'tab' ? (
-        <TabStackTitle title={accountCopy.screenTitle} />
+        <TabStackTitle title={accountCopy.screenTitle} large={false} />
       ) : null}
     </>
   );

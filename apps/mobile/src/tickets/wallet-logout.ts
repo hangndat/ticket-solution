@@ -1,17 +1,24 @@
 import { getTenantId, getTenantSlug } from '../identity/config.ts';
+import { staffEligibility } from '../identity/staff-eligibility.ts';
 import { session } from '../identity/session.ts';
 import { clearCachedBranding } from '../theme/branding-cache.ts';
 import {
   clearTicketDisplayCache,
   invalidateTicketDisplayWrites,
 } from './display-cache.ts';
+import { clearWalletDisplayCaches } from './wallet-display-persist.ts';
+import type { MeTicketsFetchScope } from './wallet-fetch-scope.ts';
 import { invalidateOfflineBindingWrites } from './offline-display.ts';
 import { offlineDisplay } from './offline-display-session.ts';
 import { offlineScanQueue } from '../gate/offline-queue-session.ts';
 
 export type WalletLogoutInput = {
   userId: string | null;
+  /** Session / branding scope key (tenant UUID or owner sentinel). */
   tenantId: string | null;
+  walletScope?: MeTicketsFetchScope | null;
+  /** Distinct row.tenantId values from the last wallet list (for cache purge). */
+  ticketTenantIds?: string[];
 };
 
 function asError(value: unknown, fallback: string): Error {
@@ -30,6 +37,7 @@ function asError(value: unknown, fallback: string): Error {
 export async function logoutAndClearWalletArtifacts(
   input: WalletLogoutInput,
 ): Promise<void> {
+  staffEligibility.reset();
   invalidateTicketDisplayWrites();
   invalidateOfflineBindingWrites();
   offlineDisplay.invalidateMemory();
@@ -112,9 +120,17 @@ export async function logoutAndClearWalletArtifacts(
     }
   }
 
-  if (input.userId && input.tenantId) {
+  if (input.userId) {
     try {
-      await clearTicketDisplayCache(input.userId, input.tenantId);
+      if (input.walletScope) {
+        await clearWalletDisplayCaches(
+          input.userId,
+          input.walletScope,
+          input.ticketTenantIds ?? [],
+        );
+      } else if (input.tenantId) {
+        await clearTicketDisplayCache(input.userId, input.tenantId);
+      }
     } catch (error) {
       errors.push(asError(error, 'Xóa bộ đệm hiển thị vé thất bại'));
     }

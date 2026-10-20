@@ -2,6 +2,7 @@ import { Stack, router } from 'expo-router';
 import { sameStaffGateScope } from '@/gate/staff-gate-events';
 import { staffGateNavTitle } from '@/gate/staff-gate-nav-title';
 import { useStaffGateWorkspace } from '@/gate/staff-gate-workspace-context';
+import { STAFF_ACCOUNT_HREF } from '@/navigation/staff-account-route';
 import { TabStackTitle } from '@/navigation/tab-stack-title';
 
 type StaffGateScreenChromeProps = {
@@ -35,7 +36,9 @@ export function StaffGateScreenChrome({
         <Stack.Toolbar.Button
           icon="person.circle"
           accessibilityLabel="Tài khoản"
-          onPress={() => router.push('/account')}
+          onPress={() => {
+            router.push(STAFF_ACCOUNT_HREF);
+          }}
         />
         {canSwitch ? (
           <Stack.Toolbar.Menu>

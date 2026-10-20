@@ -96,7 +96,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       supportsTablet: true,
       bundleIdentifier: 'com.hangndat.ticket',
       appleTeamId: 'BLUA62D52G',
-      buildNumber: '14',
+      buildNumber: '26',
       infoPlist: {
         ITSAppUsesNonExemptEncryption: false,
         UIBackgroundModes: ['remote-notification'],
@@ -108,6 +108,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     extra: {
       ...(typeof config.extra === 'object' && config.extra ? config.extra : {}),
       ticketPublic,
+      /** Set at Release install: EXPO_PUBLIC_BUILD_GIT_SHA=$(git rev-parse HEAD) */
+      gitCommitSha: trimEnv(process.env.EXPO_PUBLIC_BUILD_GIT_SHA) || undefined,
     },
     plugins: [
       'expo-router',
