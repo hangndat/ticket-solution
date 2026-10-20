@@ -39,7 +39,14 @@ export type GateOp = {
    * Does not affect classifyScan / reconcile / supervisor admission class.
    */
   admissionKind?: 'fresh' | 'already';
+  /** Device-local history ordering; stamped via stampGateOpsRecordedAt. */
+  recordedAt?: string;
 };
+
+/** Strip zero-width / BOM from camera or paste payloads before parseScan. */
+export function normalizeGatePasteInput(raw: string): string {
+  return raw.replace(/[\u200B-\u200D\uFEFF]/g, '');
+}
 
 export function parseScan(
   raw: string,
