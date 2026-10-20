@@ -1,5 +1,6 @@
 import { cookies } from 'next/headers';
 import { SESSION_COOKIES } from '@ticket/web-session';
+import { WEB_AUTH_COOKIES } from './local-cookies';
 
 export const ACCESS_COOKIE = SESSION_COOKIES.access;
 export const REFRESH_COOKIE = SESSION_COOKIES.refresh;
@@ -16,6 +17,18 @@ export async function readAccessToken(): Promise<string | null> {
   return value.length > 0 ? value : null;
 }
 
+export async function readRefreshToken(): Promise<string | null> {
+  const jar = await cookies();
+  const value = jar.get(REFRESH_COOKIE)?.value?.trim() ?? '';
+  return value.length > 0 ? value : null;
+}
+
+export async function readSubject(): Promise<string | null> {
+  const jar = await cookies();
+  const value = jar.get(WEB_AUTH_COOKIES.subject)?.value?.trim() ?? '';
+  return value.length > 0 ? value : null;
+}
+
 export async function clearSessionCookies(): Promise<void> {
   const jar = await cookies();
   jar.delete(ACCESS_COOKIE);
@@ -23,4 +36,5 @@ export async function clearSessionCookies(): Promise<void> {
   jar.delete(ID_TOKEN_COOKIE);
   jar.delete(PKCE_COOKIE);
   jar.delete(STATE_COOKIE);
+  jar.delete(WEB_AUTH_COOKIES.subject);
 }
