@@ -53,4 +53,22 @@
 | Privacy + tab bar | `/privacy-policy` root `fullScreenModal` |
 | Build 19 vs claim 20 | `ios/Info.plist` + `app.config` **21**; install sau commit SHA |
 
-**Kết quả revalidation:** _chờ WDA sau cài build 21 — ghi PASS/FAIL riêng từng màn; không đổi bảng §Kết quả thao tác root FAIL._
+**Binary provenance (Zico cài sau commit):**
+
+| Trường | Giá trị |
+| --- | --- |
+| Git SHA (build-time `EXPO_PUBLIC_BUILD_GIT_SHA`) | `f3c0588ab3142cf98c9d5b4f9939f0aade9fa969` |
+| `devicectl` / DerivedData `CFBundleVersion` | **21** (`1.0.0`) |
+| Cài sau commit | Có — `expo run:ios --configuration Release` với SHA env; `ios/Vemoki/Info.plist` sync **21** |
+
+**Kết quả revalidation (WDA — một phần, build 21):**
+
+| Màn | Kết quả | Evidence |
+| --- | --- | --- |
+| Global redeem guest copy/back | **PASS** (mẫu) | `51-global-redeem.xml` — Back «Sự kiện» (không `(tabs)`); không thấy slug/UUID/bộ nhớ/phiên trong tree |
+| Events CTA vs tab bar | **NOT RUN** (session flake) | Cần scroll tới footer + đo y; script `50-guest-events` |
+| Detail → redeem | **NOT RUN** | Cần `53-detail-redeem` |
+| Account push dup | **NOT RUN** | Cần `54-guest-account` |
+| Privacy no tabs | **NOT RUN** | Cần `55-guest-privacy` |
+
+**Kết quả revalidation tổng:** _PARTIAL — chờ pass WDA đầy đủ `50-*`…`55-*`; không đổi bảng §Kết quả thao tác root FAIL._
