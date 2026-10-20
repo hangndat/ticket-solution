@@ -31,18 +31,25 @@ export function decideTicketSyncApply(input: {
   probe: MeTicketsProbeResult;
   cached: TicketDisplayCache | null;
   expectedUserId: string;
+  /** When true, 401 from API is not treated as session revoke (IdP refresh unreachable). */
+  credentialRefreshUnreachable?: boolean;
 }): TicketSyncApplyResult {
   if (!input.isEpochCurrent(input.epoch)) {
     return { action: 'stale' };
   }
-  if (input.probe.status === 'unauthorized') {
+  const probe: MeTicketsProbeResult =
+    input.probe.status === 'unauthorized' &&
+    input.credentialRefreshUnreachable
+      ? { status: 'unreachable' }
+      : input.probe;
+  if (probe.status === 'unauthorized') {
     return { action: 'unauthorized' };
   }
-  if (input.probe.status === 'ok') {
+  if (probe.status === 'ok') {
     if (!input.isEpochCurrent(input.epoch)) return { action: 'stale' };
     return {
       action: 'apply',
-      tickets: input.probe.body.tickets,
+      tickets: probe.body.tickets,
       syncedAt: new Date().toISOString(),
       offline: false,
     };
@@ -66,7 +73,7 @@ export function decideTicketSyncApply(input: {
   return {
     action: 'error',
     message:
-      input.probe.status === 'unreachable'
+      probe.status === 'unreachable'
         ? 'Không tải được vé từ máy chủ. Kiểm tra mạng hoặc thử lại sau.'
         : 'Không tải được danh sách vé. Máy chủ chưa hỗ trợ hoặc phản hồi không hợp lệ.',
   };
