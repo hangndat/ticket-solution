@@ -1,4 +1,5 @@
 import { getTenantId, getTenantSlug } from '../identity/config.ts';
+import { staffEligibility } from '../identity/staff-eligibility.ts';
 import { session } from '../identity/session.ts';
 import { clearCachedBranding } from '../theme/branding-cache.ts';
 import {
@@ -36,6 +37,7 @@ function asError(value: unknown, fallback: string): Error {
 export async function logoutAndClearWalletArtifacts(
   input: WalletLogoutInput,
 ): Promise<void> {
+  staffEligibility.reset();
   invalidateTicketDisplayWrites();
   invalidateOfflineBindingWrites();
   offlineDisplay.invalidateMemory();
