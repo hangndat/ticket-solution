@@ -100,7 +100,7 @@ export function GlobalRedeemScreen() {
   const [offlineNotice, setOfflineNotice] = useState<string | null>(null);
 
   const verified = identity.status === 'verified';
-  const needsAuth = !verified && configured;
+  const guestGate = !verified;
   const resolved = resolveContext !== null;
 
   const applyResolveBody = useCallback((body: RedemptionResolveResponse) => {
@@ -406,48 +406,59 @@ export function GlobalRedeemScreen() {
   const { opacity: outcomeOpacity, reduceMotionOs } =
     useFadeInOnMount(showOutcome);
 
-  return (
-    <Page>
-      <Notice title="Đổi mã lấy vé">
-        Nhập mã đổi vé — không cần chọn sự kiện. Đăng nhập trước khi tra cứu;
-        mã được giữ tạm trong bộ nhớ (không ghi URL). Chờ duyệt chưa phải vé.
-      </Notice>
-
-      {needsAuth ? (
-        <Notice title="Cần đăng nhập">
-          Nhập mã rồi đăng nhập — sau đó app tra cứu và hiển thị sự kiện tương
-          ứng. Chưa gọi máy chủ khi chưa có phiên.
+  if (!configured) {
+    return (
+      <Page>
+        <Notice title="Chưa sẵn sàng đổi mã">
+          Bản dựng chưa bật đăng nhập. Bạn vẫn có thể xem sự kiện công khai.
         </Notice>
-      ) : null}
+      </Page>
+    );
+  }
 
-      {needsAuth ? (
+  if (guestGate) {
+    return (
+      <Page>
+        <Notice title="Đổi mã lấy vé">{redeemCopy.globalGuestBody}</Notice>
+        <TextInput
+          value={code}
+          onChangeText={setCode}
+          placeholder="Mã đổi vé"
+          autoCapitalize="characters"
+          accessibilityLabel="Mã đổi vé"
+          editable={!busy && !signInBusy}
+          style={field}
+          testID="global-redeem-code"
+        />
         <AttendeeCta
           label={
-            signInBusy
-              ? 'Đang đăng nhập…'
-              : 'Đăng nhập để tra cứu mã'
+            signInBusy ? 'Đang đăng nhập…' : redeemCopy.authGateCta
           }
-          disabled={signInBusy || code.trim().length === 0}
-          onPress={() => void onSignIn()}
-          testID="global-redeem-cta-signin"
+          disabled={busy || signInBusy || code.trim().length === 0}
+          onPress={() => void onContinueOrResolve()}
+          testID="global-redeem-cta-continue"
         />
-      ) : null}
+        {signInBusy ? (
+          <LoadingState title="Đang đăng nhập">
+            Chờ xác minh — chưa tra cứu mã.
+          </LoadingState>
+        ) : null}
+        {signInError ? (
+          <ErrorState
+            title={redeemCopy.authCancelTitle}
+            onRetry={() => void onSignIn()}
+            retryLabel="Thử lại"
+          >
+            {signInError}
+          </ErrorState>
+        ) : null}
+      </Page>
+    );
+  }
 
-      {signInBusy ? (
-        <LoadingState title="Đang đăng nhập">
-          Chờ xác minh — chưa tra cứu mã.
-        </LoadingState>
-      ) : null}
-
-      {signInError ? (
-        <ErrorState
-          title={redeemCopy.authCancelTitle}
-          onRetry={() => void onSignIn()}
-          retryLabel="Thử lại"
-        >
-          {signInError}
-        </ErrorState>
-      ) : null}
+  return (
+    <Page>
+      <Notice title="Đổi mã lấy vé">{redeemCopy.globalVerifiedIntro}</Notice>
 
       {offlineNotice ? (
         <Notice title={redeemCopy.offlineTitle}>{offlineNotice}</Notice>
@@ -477,24 +488,16 @@ export function GlobalRedeemScreen() {
         accessibilityLabel="Mã đổi vé"
         editable={!busy}
         style={field}
+        testID="global-redeem-code"
       />
 
-      {!needsAuth ? (
-        <AttendeeCta
-          label={busy ? 'Đang tra cứu…' : resolved ? 'Tra cứu lại' : 'Tra cứu mã'}
-          variant="secondary"
-          disabled={busy || code.trim().length === 0}
-          onPress={() => void onContinueOrResolve()}
-          testID="global-redeem-cta-resolve"
-        />
-      ) : (
-        <AttendeeCta
-          label="Tiếp tục"
-          disabled={busy || signInBusy || code.trim().length === 0}
-          onPress={() => void onContinueOrResolve()}
-          testID="global-redeem-cta-continue"
-        />
-      )}
+      <AttendeeCta
+        label={busy ? 'Đang tra cứu…' : resolved ? 'Tra cứu lại' : 'Tra cứu mã'}
+        variant="secondary"
+        disabled={busy || code.trim().length === 0}
+        onPress={() => void onContinueOrResolve()}
+        testID="global-redeem-cta-resolve"
+      />
 
       <RedeemFormFields
         form={form}

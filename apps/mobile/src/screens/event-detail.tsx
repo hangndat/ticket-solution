@@ -367,15 +367,7 @@ function PublishedEventComposition({
         <View style={{ gap: 10 }}>
           <AttendeeCta
             label="Đổi mã lấy vé"
-            onPress={() =>
-              router.push({
-                pathname: '/redeem',
-                params: {
-                  tenantSlug: event.tenantSlug,
-                  eventSlug: event.slug,
-                },
-              })
-            }
+            onPress={() => router.push('/redeem-global')}
             testID="event-detail-cta-redeem"
           />
           <AttendeeCta

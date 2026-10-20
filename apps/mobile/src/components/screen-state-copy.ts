@@ -140,6 +140,10 @@ export const redeemCopy = {
   authCancelTitle: 'Không đăng nhập được',
   emptyTitle: 'Chọn sự kiện hoặc thử lại',
   authRequiredBody:
-    'Cần đăng nhập để tiếp tục. Chưa gửi đổi mã khi thiếu phiên.',
+    'Cần đăng nhập để tiếp tục đổi mã.',
   authGateCta: 'Đăng nhập để tiếp tục',
+  globalGuestBody:
+    'Nhập mã nhận vé. Sau khi đăng nhập, app sẽ nhận diện sự kiện và hướng dẫn các bước tiếp theo.',
+  globalVerifiedIntro:
+    'Nhập mã đổi vé. Tra cứu trước khi xác nhận; chờ duyệt chưa phải vé.',
 } as const;
