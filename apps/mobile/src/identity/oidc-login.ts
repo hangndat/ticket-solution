@@ -10,7 +10,13 @@ import { OIDC_POST_LOGOUT_URI, OIDC_REDIRECT_SCHEME } from './app-schemes';
 WebBrowser.maybeCompleteAuthSession();
 
 export type OidcLoginResult =
-  | { ok: true; accessToken: string; refreshToken: string | null }
+  | {
+      ok: true;
+      accessToken: string;
+      refreshToken: string | null;
+      /** OIDC expires_in (seconds); null when provider omits it. */
+      expiresIn: number | null;
+    }
   | { ok: false; reason: string };
 
 /**
@@ -76,6 +82,10 @@ export async function loginWithKeycloak(): Promise<OidcLoginResult> {
     ok: true,
     accessToken: token.accessToken,
     refreshToken: token.refreshToken ?? null,
+    expiresIn:
+      typeof token.expiresIn === 'number' && Number.isFinite(token.expiresIn)
+        ? token.expiresIn
+        : null,
   };
 }
 

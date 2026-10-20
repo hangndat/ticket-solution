@@ -189,7 +189,10 @@ function ConfiguredAccount({
         );
         return;
       }
-      await session.establish(result.accessToken, verifyViaMe);
+      await session.establish(result.accessToken, verifyViaMe, {
+        refreshToken: result.refreshToken,
+        expiresIn: result.expiresIn,
+      });
       const snap = session.getSnapshot();
       if (snap.status !== 'verified') {
         setMeError(

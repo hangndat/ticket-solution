@@ -51,7 +51,10 @@ export function useAttendeeSignIn(): AttendeeSignInState {
         );
         return false;
       }
-      await session.establish(result.accessToken, verifyViaMe);
+      await session.establish(result.accessToken, verifyViaMe, {
+        refreshToken: result.refreshToken,
+        expiresIn: result.expiresIn,
+      });
       const snap = session.getSnapshot();
       const tenantId = getTenantId();
       if (snap.status === 'verified' && tenantId) {
