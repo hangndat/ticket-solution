@@ -68,3 +68,6 @@ node --experimental-strip-types --test apps/mobile/src/published/events-home.tes
 **PASS** (DoD) — prior blockers (tests, mergeability, CI) resolved on `0f5b9ad`.
 
 **PASS** (security) — WebView navigation allowlist implemented; no remaining known gap from prior review.
+## Post-merge note (2026-10-20)
+
+Primary file `MPR-PR587-REVIEW-2026-10-20.md` updated to **PASS** @ `0f5b9ad` (docs PR #590); merge commit `453bcdc`.
