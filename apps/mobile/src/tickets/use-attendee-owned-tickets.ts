@@ -1,6 +1,7 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import type { TicketSummary } from '@ticket/contracts';
 import { session } from '@/identity/session';
+import { dedupedAttendeeProbeMeTickets } from '@/tickets/attendee-probe-inflight';
 import { probeMeTickets } from '@/tickets/fetch-me-tickets';
 import {
   walletFetchScopeFromEnv,
@@ -43,7 +44,13 @@ export function useAttendeeOwnedTickets(): {
       try {
         const bearer = await session.getCredential();
         if (!bearer || cancelled) return;
-        const probe = await probeMeTickets(bearer, fetchScope);
+        const probe = await dedupedAttendeeProbeMeTickets(
+          userId,
+          sessionScope,
+          bearer,
+          fetchScope,
+          probeMeTickets,
+        );
         if (cancelled) return;
         if (probe.status === 'ok') {
           const rows = probe.body.tickets;
