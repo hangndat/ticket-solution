@@ -1,5 +1,11 @@
 import { Link, router, useLocalSearchParams } from 'expo-router';
-import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  useSyncExternalStore,
+} from 'react';
 import {
   Pressable,
   RefreshControl,
@@ -327,7 +333,10 @@ function OfflineDisplayWallet({
 function VerifiedWallet({ userId }: { userId: string }) {
   const { eventId: eventIdParam } = useLocalSearchParams<{ eventId?: string }>();
   const filterEventId = parseWalletEventIdFilter(eventIdParam);
-  const fetchScope = walletFetchScopeFromEnv();
+  // Memoize: walletFetchScopeFromEnv() returns a fresh object each call. Putting
+  // that object in refresh deps without useMemo re-creates refresh every render
+  // and re-fires the mount effect (infinite probeMeTickets / UI flicker) — #610.
+  const fetchScope = useMemo(() => walletFetchScopeFromEnv(), []);
   const sessionScope = walletSessionScope(fetchScope);
   const cacheScope = walletDisplayCacheScope(fetchScope);
   const [tickets, setTickets] = useState<TicketSummary[]>([]);
