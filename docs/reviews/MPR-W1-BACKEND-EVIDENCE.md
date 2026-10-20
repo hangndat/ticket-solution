@@ -30,12 +30,13 @@
 
 ```text
 packages/backend: node --test test/me-tickets-aggregate.test.cjs  (PASS)
+packages/backend: node --test test/rls-catalog.test.cjs  (PASS — tickets_owner_actor_select SELECT-only + tickets_isolation tenant)
 apps/api: pnpm test  (PASS, incl. test/me-tickets.test.cjs)
 ```
 
 ## Exact SHA
 
-`5fdf13edc21e19ac41c1fc6bbb948637c4596c28`
+`4606e64bd0f22758d581817fa498efc970adc4aa`
 
 ## CI
 
