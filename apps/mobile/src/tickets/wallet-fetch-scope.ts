@@ -19,6 +19,16 @@ export function walletFetchScopeFromEnv(): MeTicketsFetchScope {
   return { kind: 'owner' };
 }
 
+/**
+ * Value identity for React deps. Prefer this (or useMemo of
+ * {@link walletFetchScopeFromEnv}) over the object itself — each call to
+ * walletFetchScopeFromEnv allocates a new object, which would thrash
+ * useCallback/useEffect deps (#610).
+ */
+export function meTicketsFetchScopeKey(scope: MeTicketsFetchScope): string {
+  return scope.kind === 'tenant' ? `tenant:${scope.tenantId}` : 'owner';
+}
+
 export function walletSessionScope(scope: MeTicketsFetchScope): string {
   return scope.kind === 'tenant' ? scope.tenantId : WALLET_OWNER_SESSION_SCOPE;
 }
