@@ -84,3 +84,12 @@
 | Account scroll | `paddingBottom` theo tab inset |
 
 **SHA batch 2:** `31b91857c7c3005ee0b896e457af2fcfa65e69a8` — root cài: `apps/mobile/scripts/release-ios-dexter.sh` (hoặc `EXPO_PUBLIC_BUILD_GIT_SHA=31b9185…` + `pnpm sync-ios-build` + `expo run:ios` Release); xác `devicectl` CFBundleVersion **21**.
+
+### Zico batch 3 — privacy modal blocker (build **22**)
+
+| Root finding | Fix |
+| --- | --- |
+| `68-build21-privacy.xml` không có Button — guest kẹt | `headerBackTitle` + `headerBackButtonDisplayMode: default`; in-screen `privacy-cta-close` → `closePrivacyPolicy()` |
+| Provenance | `app.config` + `sync-ios-build` → CFBundleVersion **22** |
+
+**SHA batch 3:** _ghi sau push/install._
