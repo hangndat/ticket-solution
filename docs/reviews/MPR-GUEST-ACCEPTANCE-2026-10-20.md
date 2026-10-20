@@ -145,3 +145,19 @@ Zico nhận fix tiếp: thay hidden NativeTabs staff-account bằng root stack `
 Crash report iOS xác nhận `com.hangndat.ticket` build **24**, PID **3259**, `2026-10-20 16:58:28 +0800`, `EXC_CRASH/SIGABRT`. Log process Vemoki cùng thời điểm: `Unhandled JS Exception: Error: useStaffGateWorkspace requires StaffGateWorkspaceProvider`, từ `StaffManualEntryScreen` qua `StaffGateTabGuard`. Khi logout, identity mất verified trước khi effect reset eligibility; guard vẫn cho child dùng context đã inactive. Zico nhận sửa guard đồng bộ fail-closed, kèm regression signed-out + stale eligibility. Log archive/IPS giữ local, không commit.
 
 Build 24 **chưa acceptance complete**. Root đang kiểm tra tiếp bản sửa; không thay FAIL lịch sử bằng PASS từ source/unit tests.
+
+### Root build 25 — source `860bd51bebd174fb91bc0d06554027a322b18300`
+
+`devicectl` xác nhận **1.0.0 (25)**. Executable SHA-256 `90ec6bf3cfd85ba2f4edbc0a54c9338b899cd7ede612db946e738879b9198b59`; JS bundle SHA-256 `205035c174c98744f669379425ec65869357d021849694df9ac6f52ba3d69da5`. Driven qua WDA (`pymobiledevice3`) sau khi coordinator nhận bàn giao Run từ tab trước (artifacts `144`–`172` tại `apps/mobile/.uat-artifacts/dexter-live-uat/`).
+
+| Luồng | Kết quả | Evidence |
+| --- | --- | --- |
+| Guest catalog mở app build 25 | PASS | `144-build25-start`, `146-relaunch-app` |
+| Guest Account tiêu đề gọn (compact header) | PASS | `147-guest-account-header`: tiêu đề "Tài khoản" đơn, BẠN/THÔNG BÁO/QUYỀN RIÊNG TƯ gọn, không hero/profile lớn |
+| Staff OIDC login (`staff@example.com`/`staff-demo`) | PASS | `154`–`160`: email+password điền đúng, Sign In vào workspace 3 tabs (Nhập tay/Scan/Lịch sử) |
+| Staff mở Account từ toolbar (`person.circle`) | **FAIL — regression mới, không mở được** | `166`–`172`: click + raw tap (nhiều lần, đã loại trừ banner thông báo che nút) trên element `Tài khoản` (`enabled=true accessible=true`, toạ độ đúng) không điều hướng; control test nút `More` cùng toolbar hoạt động bình thường (`170-control-more-click` mở menu) → xác nhận không phải lỗi WDA/toạ độ |
+| Quay lại quét / Staff logout | **BLOCKED** | Không reproduce được — không vào được Account screen để bấm "Quay lại quét" hay "Đăng xuất" |
+
+**Phân tích nguồn (không tự kết luận code, chỉ ghi quan sát):** commit `860bd51` thêm `requestStaffScanTabLanding()` vào `onPress` của nút Account (`staff-gate-screen-chrome.tsx`) **trước** `router.push(STAFF_ACCOUNT_HREF)`. `shouldReplaceWithStaffScanTab()` (`staff-default-tab-target.ts`) trả `true` khi `pendingScanLanding` bật và segments hiện tại **chưa** phải `staff-account`/`account` — tức tại thời điểm bấm nút (đang ở `staff-manual`/`staff-scan`), set cờ này có thể khiến listener tab-landing replace về Scan **trước khi** push Account kịp chạy, khớp với hiện tượng nút bấm "không làm gì" quan sát được. Build 24 (không có dòng `requestStaffScanTabLanding()` này) mở Account bình thường (xem mục build 24 trên). Cần Zico/mobile xác nhận lại bằng source, không suy diễn từ UAT đơn thuần.
+
+Build 25 **regression mới, chưa acceptance complete** — chặn cả 2 mục còn lại trong checklist #596 (Quay lại quét, staff logout crash) vì không vào được Account. Compact header guest đã PASS trên build 25.
