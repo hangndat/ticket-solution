@@ -1,11 +1,13 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
+  fetchPlatformPublishedEventList,
   fetchPublishedEventDetail,
   fetchPublishedEventList,
   isPublishedEventDetail,
   visibleSectionsInOrder,
 } from './published-event-api.ts';
+import { VEMOKI_PROD_API_BASE_URL } from '../identity/config.ts';
 import type { PublishedEventDetail } from './types.ts';
 
 function mockFetch(
@@ -82,12 +84,8 @@ test('visibleSectionsInOrder filters and sorts', () => {
   );
 });
 
-test('fetchPublishedEventDetail maps 200/404/misconfigured and never invents demo', async () => {
+test('fetchPublishedEventDetail maps 200/404 and never invents demo', async () => {
   delete process.env.EXPO_PUBLIC_API_BASE_URL;
-  const missing = await fetchPublishedEventDetail('acme', 'spring-fest');
-  assert.equal(missing.status, 'misconfigured');
-
-  process.env.EXPO_PUBLIC_API_BASE_URL = 'http://api.test';
   const ok = await fetchPublishedEventDetail(
     'acme',
     'spring-fest',
@@ -108,8 +106,42 @@ test('fetchPublishedEventDetail maps 200/404/misconfigured and never invents dem
   assert.equal(notFound.status, 'not-found');
 });
 
+test('fetchPlatformPublishedEventList hits /v1/public/events', async () => {
+  const result = await fetchPlatformPublishedEventList(
+    { limit: 5 },
+    undefined,
+    mockFetch(async (url) => {
+      assert.match(url, new RegExp(`^${VEMOKI_PROD_API_BASE_URL}/v1/public/events\\?`));
+      return new Response(
+        JSON.stringify({
+          items: [
+            {
+              id: sampleDetail.id,
+              tenantSlug: sampleDetail.tenantSlug,
+              slug: sampleDetail.slug,
+              name: sampleDetail.name,
+              timezone: sampleDetail.timezone,
+              startsAt: sampleDetail.startsAt,
+              location: sampleDetail.location,
+              publishedConfigVersion: 3,
+              schemaVersion: 1,
+              brand: sampleDetail.brand,
+            },
+          ],
+          nextCursor: 'opaque-cursor',
+        }),
+        { status: 200 },
+      );
+    }),
+  );
+  assert.equal(result.status, 'ok');
+  if (result.status === 'ok') {
+    assert.equal(result.body.items.length, 1);
+    assert.equal(result.body.nextCursor, 'opaque-cursor');
+  }
+});
+
 test('fetchPublishedEventList validates items and nextCursor', async () => {
-  process.env.EXPO_PUBLIC_API_BASE_URL = 'http://api.test';
   const result = await fetchPublishedEventList(
     'acme',
     { limit: 10 },
@@ -146,7 +178,6 @@ test('fetchPublishedEventList validates items and nextCursor', async () => {
 });
 
 test('demo fixtures are not used when published fetch fails (caller contract)', async () => {
-  process.env.EXPO_PUBLIC_API_BASE_URL = 'http://api.test';
   const down = await fetchPublishedEventDetail(
     'acme',
     'spring-fest',
