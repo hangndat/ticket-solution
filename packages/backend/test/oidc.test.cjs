@@ -115,3 +115,28 @@ test('OIDC verifier accepts local JWKS fixture and rejects bad tokens', async ()
   const verified = await verifier.verifyBearerToken('Bearer ' + verifiedToken);
   assert.equal(verified.emailVerified, true);
 });
+
+test('OIDC verifier maps JWKS infrastructure errors to OIDC_UNAVAILABLE', async () => {
+  const failingJwks = async () => {
+    const err = new Error('connect ETIMEDOUT');
+    err.code = 'ETIMEDOUT';
+    throw err;
+  };
+  const verifier = createOidcVerifier(
+    {
+      issuer: ISSUER,
+      audience: AUDIENCE,
+      jwksUrl: 'https://jwks.test.local/jwks.json',
+    },
+    { jwks: failingJwks },
+  );
+  const { privateKey } = await fixtureKeys();
+  const token = await signToken(privateKey);
+  await assert.rejects(
+    () => verifier.verifyBearerToken(`Bearer ${token}`),
+    (error) =>
+      error instanceof IdentityError &&
+      error.code === IDENTITY_ERROR_CODES.OIDC_UNAVAILABLE &&
+      error.retryable === true,
+  );
+});
