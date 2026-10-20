@@ -1,6 +1,11 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
+  encodeCredentialEnvelope,
+  parseStoredCredential,
+} from './credential-envelope.ts';
+import type { RefreshOidcTokens } from './oidc-refresh.ts';
+import {
   CREDENTIAL_UNREACHABLE,
   SessionBoundary,
   type CredentialStore,
@@ -13,7 +18,10 @@ function deferred<T>() {
   });
   return { promise, resolve };
 }
-function fixture(initial: string | null = null) {
+function fixture(
+  initial: string | null = null,
+  refreshTokens?: RefreshOidcTokens,
+) {
   let credential = initial;
   const store: CredentialStore = {
     read: async () => credential,
@@ -25,7 +33,7 @@ function fixture(initial: string | null = null) {
     },
   };
   return {
-    boundary: new SessionBoundary(store),
+    boundary: new SessionBoundary(store, refreshTokens),
     store,
     credential: () => credential,
   };
@@ -179,3 +187,127 @@ test('beginRequest aborts on account switch so fetch outside load is cancelled',
   assert.equal(controller.signal.aborted, true);
   boundary.endRequest(controller);
 });
+
+test('getCredential refreshes expired access token transparently', async () => {
+  let refreshCalls = 0;
+  const refresh: RefreshOidcTokens = async () => {
+    refreshCalls += 1;
+    return {
+      ok: true,
+      accessToken: 'new-access',
+      refreshToken: 'new-refresh',
+      expiresIn: 300,
+    };
+  };
+  const f = fixture(null, refresh);
+  await f.boundary.establish('old-access', verify, {
+    refreshToken: 'old-refresh',
+    expiresIn: 300,
+  });
+  // Force near-expiry without waiting for wall clock.
+  await f.store.write(
+    encodeCredentialEnvelope({
+      accessToken: 'old-access',
+      refreshToken: 'old-refresh',
+      expiresIn: 0,
+    }),
+  );
+  assert.equal(await f.boundary.getCredential(), 'new-access');
+  assert.equal(refreshCalls, 1);
+  assert.equal(parseStoredCredential(f.credential()!).accessToken, 'new-access');
+  assert.equal(f.boundary.getSnapshot().status, 'verified');
+});
+
+test('refresh auth failure signs out and clears credential', async () => {
+  const refresh: RefreshOidcTokens = async () => ({
+    ok: false,
+    reason: 'auth',
+  });
+  const f = fixture(null, refresh);
+  await f.boundary.establish('old-access', verify, {
+    refreshToken: 'revoked-refresh',
+    expiresIn: 300,
+  });
+  await f.store.write(
+    encodeCredentialEnvelope({
+      accessToken: 'old-access',
+      refreshToken: 'revoked-refresh',
+      expiresIn: 0,
+    }),
+  );
+  assert.equal(await f.boundary.getCredential(), null);
+  assert.equal(f.boundary.getSnapshot().status, 'signed-out');
+  assert.equal(f.credential(), null);
+});
+
+test('refresh network failure does not logout; returns prior access token', async () => {
+  const refresh: RefreshOidcTokens = async () => ({
+    ok: false,
+    reason: 'network',
+  });
+  const f = fixture(null, refresh);
+  await f.boundary.establish('old-access', verify, {
+    refreshToken: 'rt',
+    expiresIn: 300,
+  });
+  await f.store.write(
+    encodeCredentialEnvelope({
+      accessToken: 'old-access',
+      refreshToken: 'rt',
+      expiresIn: 0,
+    }),
+  );
+  assert.equal(await f.boundary.getCredential(), 'old-access');
+  assert.equal(f.boundary.getSnapshot().status, 'verified');
+  assert.ok(f.credential());
+});
+
+test('restore refresh auth failure returns signed-out without verified identity', async () => {
+  const refresh: RefreshOidcTokens = async () => ({
+    ok: false,
+    reason: 'auth',
+  });
+  const expired = encodeCredentialEnvelope({
+    accessToken: 'stale',
+    refreshToken: 'bad-rt',
+    expiresIn: 0,
+  });
+  const f = fixture(expired, refresh);
+  const outcome = await f.boundary.restore(async () => ({ userId: 'should-not-run' }));
+  assert.equal(outcome, 'signed-out');
+  assert.equal(f.boundary.getSnapshot().status, 'signed-out');
+  assert.equal(f.credential(), null);
+});
+
+test('restore refresh network failure keeps credential as unreachable', async () => {
+  const refresh: RefreshOidcTokens = async () => ({
+    ok: false,
+    reason: 'network',
+  });
+  const expired = encodeCredentialEnvelope({
+    accessToken: 'stale',
+    refreshToken: 'rt',
+    expiresIn: 0,
+  });
+  const f = fixture(expired, refresh);
+  const outcome = await f.boundary.restore(async () => ({ userId: 'should-not-run' }));
+  assert.equal(outcome, 'unreachable');
+  assert.equal(f.boundary.getSnapshot().status, 'signed-out');
+  assert.ok(f.credential());
+});
+
+test('establish with refreshToken persists envelope; getCredential returns access token only', async () => {
+  const f = fixture(null, async () => ({
+    ok: false,
+    reason: 'config',
+  }));
+  await f.boundary.establish('access-1', verify, {
+    refreshToken: 'refresh-1',
+    expiresIn: 600,
+  });
+  const stored = parseStoredCredential(f.credential()!);
+  assert.equal(stored.accessToken, 'access-1');
+  assert.equal(stored.refreshToken, 'refresh-1');
+  assert.equal(await f.boundary.getCredential(), 'access-1');
+});
+
