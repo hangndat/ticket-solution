@@ -32,6 +32,7 @@ import { offlineDisplay } from '@/tickets/offline-display-session';
 import { logoutAndClearWalletArtifacts } from '@/tickets/wallet-logout';
 import { consumePendingImmediateSignIn } from '@/navigation/attendee-auth-gate';
 import { consumeSignInReturn } from '@/navigation/sign-in-return-intent';
+import { STAFF_ACCOUNT_HREF } from '@/navigation/staff-account-route';
 import { useStaffWorkspace } from '@/navigation/use-staff-workspace';
 import { TabStackTitle } from '@/navigation/tab-stack-title';
 import { useAttendeeTabBarInset } from '@/navigation/use-attendee-tab-bar-inset';
@@ -333,7 +334,13 @@ function ConfiguredAccount({
               <AccountGroupedRow
                 label={accountCopy.deleteAccountRow}
                 showChevron
-                onPress={() => router.push('/(tabs)/account/delete')}
+                onPress={() =>
+                  router.push(
+                    staffWorkspace
+                      ? `${STAFF_ACCOUNT_HREF}/delete`
+                      : '/(tabs)/account/delete',
+                  )
+                }
                 disabled={busy}
                 testID="account-delete-row"
               />
