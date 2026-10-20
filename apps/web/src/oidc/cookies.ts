@@ -29,8 +29,6 @@ export async function readAccessToken(): Promise<string | null> {
   return value.length > 0 ? value : null;
 }
 
-export { resolvePublicOrigin as publicOrigin } from './public-origin';
-
 export async function clearSessionCookies(): Promise<void> {
   const jar = await cookies();
   jar.delete(ACCESS_COOKIE);

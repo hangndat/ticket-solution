@@ -21,12 +21,18 @@ async function errorCode(response: Response | null): Promise<string | null> {
 }
 
 const originalWebPublicOrigin = process.env.WEB_PUBLIC_ORIGIN;
+const originalNodeEnv = process.env.NODE_ENV;
 
 afterEach(() => {
   if (originalWebPublicOrigin === undefined) {
     delete process.env.WEB_PUBLIC_ORIGIN;
   } else {
     process.env.WEB_PUBLIC_ORIGIN = originalWebPublicOrigin;
+  }
+  if (originalNodeEnv === undefined) {
+    delete process.env.NODE_ENV;
+  } else {
+    process.env.NODE_ENV = originalNodeEnv;
   }
 });
 
@@ -120,31 +126,46 @@ describe('assertSameOrigin CSRF/Origin', () => {
     assert.equal(blocked!.status, 403);
     assert.equal(await errorCode(blocked), 'CSRF_ORIGIN_MISMATCH');
   });
+
+  it('production without WEB_PUBLIC_ORIGIN never trusts spoofed forwarding', async () => {
+    process.env.NODE_ENV = 'production';
+    delete process.env.WEB_PUBLIC_ORIGIN;
+    const blocked = assertSameOrigin(
+      mutRequest('http://127.0.0.1:3000/api/bff/admin/events', {
+        origin: 'https://evil.test',
+        'x-forwarded-host': 'evil.test',
+        'x-forwarded-proto': 'https',
+      }),
+    );
+    assert.ok(blocked);
+    assert.equal(await errorCode(blocked), 'ORIGIN_NOT_CONFIGURED');
+  });
 });
 
 describe('resolvePublicOrigin', () => {
   it('prefers WEB_PUBLIC_ORIGIN over X-Forwarded-* and bind URL', () => {
     process.env.WEB_PUBLIC_ORIGIN = 'https://vemoki.com';
     const req = {
-      headers: new Headers({
-        'x-forwarded-host': 'spoofed.example',
-        'x-forwarded-proto': 'https',
-      }),
       url: 'http://0.0.0.0:3000/api/auth/callback',
     };
     assert.equal(resolvePublicOrigin(req), 'https://vemoki.com');
   });
 
-  it('falls back to X-Forwarded when WEB_PUBLIC_ORIGIN unset', () => {
+  it('does not trust X-Forwarded when WEB_PUBLIC_ORIGIN unset', () => {
     delete process.env.WEB_PUBLIC_ORIGIN;
     const req = {
-      headers: new Headers({
-        'x-forwarded-host': 'app.example',
-        'x-forwarded-proto': 'https',
-      }),
       url: 'http://127.0.0.1:3000/x',
     };
-    assert.equal(resolvePublicOrigin(req), 'https://app.example');
+    assert.equal(resolvePublicOrigin(req), 'http://127.0.0.1:3000');
+  });
+
+  it('returns null in production when WEB_PUBLIC_ORIGIN unset', () => {
+    process.env.NODE_ENV = 'production';
+    delete process.env.WEB_PUBLIC_ORIGIN;
+    assert.equal(
+      resolvePublicOrigin({ url: 'http://127.0.0.1:3000/x' }),
+      null,
+    );
   });
 
   it('parses comma-separated WEB_PUBLIC_ORIGIN allowlist', () => {
