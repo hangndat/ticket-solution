@@ -1,9 +1,22 @@
 import { useLocalSearchParams } from 'expo-router';
-import { EventDetailScreen } from '@/screens/event-detail';
+import { Notice, Page } from '@/components/page';
 import { findDemoEventById } from '@/data/demo-events';
+import { fixtureEventRouteAllowed } from '@/navigation/dev-only-routes';
+import { EventDetailScreen } from '@/screens/event-detail';
 
 export default function FixtureEventRoute() {
   const { eventId } = useLocalSearchParams<{ eventId: string }>();
+
+  if (!fixtureEventRouteAllowed()) {
+    return (
+      <Page>
+        <Notice title="Không có sự kiện demo" tone="deny">
+          Đường dẫn sự kiện demo chỉ dùng khi phát triển hoặc UAT local. Không
+          cho vào trên bản phát hành.
+        </Notice>
+      </Page>
+    );
+  }
   const id = typeof eventId === 'string' ? eventId : '';
   const event = findDemoEventById(id);
   if (!event) {

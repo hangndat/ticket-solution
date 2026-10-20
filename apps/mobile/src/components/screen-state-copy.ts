@@ -4,6 +4,13 @@
  * Aligned to PD UX-UI revamp AC (docs/design/ux-ui-revamp).
  */
 
+const walletCopyFirstTicketPush = {
+  title: 'Nhận nhắc về vé và sự kiện?',
+  body: 'Bật thông báo để nhận nhắc khi có thay đổi quan trọng. Bạn có thể tắt trong Cài đặt iPhone.',
+  enableCta: 'Bật thông báo',
+  dismissCta: 'Để sau',
+} as const;
+
 export const walletCopy = {
   loading: {
     title: 'Đang tải vé…',
@@ -23,6 +30,10 @@ export const walletCopy = {
     title: 'Đang đăng nhập',
     body: 'Chờ xác minh đăng nhập — chưa mở ví.',
   },
+  guestWalletBlockedTitle: 'Vé của tôi cần đăng nhập',
+  guestWalletBlockedBody:
+    'Mở tab Tài khoản để đăng nhập. Sau khi xác minh, vé sẽ hiện ở đây.',
+  firstTicketPush: walletCopyFirstTicketPush,
 } as const;
 
 export const scanCopy = {
@@ -42,6 +53,14 @@ export const scanCopy = {
     title: 'Ngữ cảnh cổng',
     body: 'Sự kiện · phiên staff · trạng thái mạng. ID nội bộ chỉ để đối chiếu.',
   },
+  eventPicker: {
+    title: 'Sự kiện cổng',
+    loading: 'Đang tải sự kiện…',
+    empty:
+      'Chưa có quyền cổng cho sự kiện nào. Liên hệ quản trị sự kiện.',
+    error: 'Không tải được danh sách sự kiện. Thử lại khi có mạng.',
+    switchHint: 'Đổi sự kiện đóng phiên cổng — quét online một lần để mở phiên mới.',
+  },
 } as const;
 
 export const eventsCopy = {
@@ -51,15 +70,14 @@ export const eventsCopy = {
   },
   emptyPublished: {
     title: 'Chưa có sự kiện đang mở',
-    body: 'Chưa có sự kiện công khai lúc này. Không thay bằng dữ liệu demo.',
-  },
-  emptyDemo: {
-    title: 'Không có sự kiện demo',
-    body: 'Tổ chức này chưa có sự kiện mẫu.',
+    body: 'Chưa có sự kiện công khai lúc này.',
   },
   errorList: {
     title: 'Không tải được danh sách',
   },
+  misconfiguredTitle: 'Chưa sẵn sàng tải sự kiện',
+  misconfiguredBody:
+    'Không thể mở danh sách sự kiện công khai — thử lại sau hoặc kiểm tra kết nối.',
   loadingDetail: {
     title: 'Đang tải sự kiện…',
     body: 'Đang tải nội dung đã xuất bản…',
@@ -71,6 +89,46 @@ export const eventsCopy = {
   heroSupport: 'Chọn sự kiện hoặc đổi mã để nhận vé vào ví.',
   redeemCta: 'Đổi mã lấy vé',
   signInCta: 'Đăng nhập',
+  accountCta: 'Tài khoản',
+  goToAccountSignInCta: 'Đến tài khoản để đăng nhập',
+  goToAccountCta: 'Mở tài khoản',
+} as const;
+
+export const accountCopy = {
+  screenTitle: 'Tài khoản',
+  staffBackToGate: 'Quay lại quét',
+  signInCancelHint:
+    'Đã hủy đăng nhập — bạn vẫn ở Tài khoản. Thử lại hoặc quay lại màn trước.',
+  sections: {
+    you: 'Bạn',
+    notifications: 'Thông báo',
+    privacy: 'Quyền riêng tư & dữ liệu',
+  },
+  guest: {
+    title: 'Chưa đăng nhập',
+    body: 'Đăng nhập để xem vé trên thiết bị này.',
+    signInCta: 'Đăng nhập',
+  },
+  verified: {
+    body: 'Tài khoản đang dùng trên máy.',
+  },
+  offlineCache: {
+    body: 'Có vé đã lưu để xem khi mất mạng trên thiết bị này.',
+    clearRow: 'Xóa dữ liệu xem offline',
+  },
+  push: {
+    guestHint: 'Đăng nhập để bật nhắc vé và sự kiện',
+    busySaving: 'Đang lưu thiết bị…',
+  },
+  privacyRow: 'Chính sách quyền riêng tư',
+  deleteAccountRow: 'Xóa tài khoản',
+  logoutCta: 'Đăng xuất',
+  logoutAccessibility: 'Đăng xuất, nút, hành động nguy hiểm',
+  misconfiguredTitle: 'Chưa sẵn sàng đăng nhập',
+  misconfiguredBody:
+    'Bản dựng này chưa bật đăng nhập. Bạn vẫn có thể xem sự kiện công khai.',
+  meErrorTitle: 'Không tải được hồ sơ',
+  busyLabel: 'Đang xử lý…',
 } as const;
 
 export const redeemCopy = {
@@ -78,4 +136,7 @@ export const redeemCopy = {
   offlineBody: 'Không có mạng — thử lại khi có kết nối.',
   authCancelTitle: 'Không đăng nhập được',
   emptyTitle: 'Chọn sự kiện hoặc thử lại',
+  authRequiredBody:
+    'Cần đăng nhập để tiếp tục. Chưa gửi đổi mã khi thiếu phiên.',
+  authGateCta: 'Đăng nhập để tiếp tục',
 } as const;

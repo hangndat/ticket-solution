@@ -11,23 +11,23 @@ import type { TicketSummary } from '@ticket/contracts';
 import { AttendeeCta } from '@/components/attendee-cta';
 import { EventLogo } from '@/components/event-media';
 import { BrandWordmark, Notice } from '@/components/page';
-import { ScreenAtmosphere } from '@/components/screen-atmosphere';
 import {
   EmptyState,
   ErrorState,
   LoadingState,
 } from '@/components/screen-state';
-import { walletCopy } from '@/components/screen-state-copy';
+import { eventsCopy, walletCopy } from '@/components/screen-state-copy';
 import {
   attendeeWalletCopy,
   presentTicketRow,
 } from '@/attendee/attendee-outcome-copy';
-import { useAttendeeSignIn } from '@/attendee/use-attendee-sign-in';
+import { goToAccount } from '@/navigation/go-to-account-sign-in';
+import { useWalletAccess } from '@/navigation/use-wallet-access';
+import { TabStackTitle } from '@/navigation/tab-stack-title';
 import { hasDemoMediaForEventId } from '@/data/demo-media';
 import { brand, colors } from '@/theme/colors';
 import { fontFamilies } from '@/theme/fonts';
-import { isOidcConfigured, getTenantId } from '@/identity/config';
-import { endKeycloakSession } from '@/identity/oidc-login';
+import { getTenantId } from '@/identity/config';
 import { session } from '@/identity/session';
 import {
   currentTicketDisplayWriteEpoch,
@@ -45,12 +45,11 @@ import {
   decideTicketSyncApply,
 } from '@/tickets/ticket-sync-guard';
 import { logoutAndClearWalletArtifacts } from '@/tickets/wallet-logout';
-import { SessionScopedAccountDeletionPanel } from '@/account-deletion/account-deletion-panel';
-import {
-  AccountPrivacyPolicyLink,
-  AccountScreen,
-} from '@/screens/account';
-import { SessionScopedPushStatus } from '@/push/push-status';
+import { isApnsProvider, pushProviderName } from '@/push/push';
+import { normalizeIosNotificationPermission } from '@/push/push-permission';
+import { WalletPushPromptCard } from '@/push/wallet-push-prompt-card';
+import { shouldOfferWalletPushPrompt } from '@/push/wallet-push-prompt-policy';
+import { readWalletPushPromptDismissed } from '@/push/wallet-push-prompt-store';
 
 function TicketRow({ ticket }: { ticket: TicketSummary }) {
   const [focused, setFocused] = useState(false);
@@ -129,7 +128,7 @@ function TicketRow({ ticket }: { ticket: TicketSummary }) {
 }
 
 export function MyTicketsScreen() {
-  const configured = isOidcConfigured();
+  const { canAccess } = useWalletAccess();
   const identity = useSyncExternalStore(
     session.subscribe,
     session.getSnapshot,
@@ -141,9 +140,8 @@ export function MyTicketsScreen() {
     offlineDisplay.getSnapshot,
   );
 
-  if (!configured) {
-    // AccountScreen owns Page + atmosphere — avoid nested ScrollView.
-    return <AccountScreen />;
+  if (!canAccess) {
+    return <TabStackTitle title="Vé của tôi" />;
   }
 
   if (identity.status === 'verified') {
@@ -159,61 +157,7 @@ export function MyTicketsScreen() {
     );
   }
 
-  return <SignedOutWallet />;
-}
-
-function SignedOutWallet() {
-  const { busy, error, signIn } = useAttendeeSignIn();
-
-  return (
-    <ScreenAtmosphere>
-    <ScrollView
-      contentInsetAdjustmentBehavior="automatic"
-      style={{ backgroundColor: 'transparent' }}
-      contentContainerStyle={{ padding: 20, paddingBottom: 48, gap: 20 }}
-    >
-      <BrandWordmark />
-      <Notice title={attendeeWalletCopy.signedOutTitle}>
-        {attendeeWalletCopy.signedOutBody}
-      </Notice>
-      <Text
-        style={{
-          color: colors.secondary,
-          fontSize: 15,
-          fontFamily: fontFamilies.body,
-        }}
-      >
-        Trạng thái: chưa đăng nhập
-      </Text>
-      <AttendeeCta
-        label="Đăng nhập"
-        onPress={() => void signIn()}
-        disabled={busy}
-        testID="wallet-cta-signin"
-      />
-      <AttendeeCta
-        label="Đổi mã lấy vé"
-        variant="secondary"
-        onPress={() => router.push('/redeem-global')}
-        testID="wallet-cta-redeem"
-      />
-      {busy ? (
-        <LoadingState title={walletCopy.signInLoading.title}>
-          {walletCopy.signInLoading.body}
-        </LoadingState>
-      ) : null}
-      {error ? (
-        <ErrorState
-          title={walletCopy.signInErrorTitle}
-          onRetry={() => void signIn()}
-          retryLabel="Thử lại"
-        >
-          {error}
-        </ErrorState>
-      ) : null}
-    </ScrollView>
-    </ScreenAtmosphere>
-  );
+  return <TabStackTitle title="Vé của tôi" />;
 }
 
 /** Display-only wallet from prior online-verified binding + durable cache. */
@@ -264,28 +208,11 @@ function OfflineDisplayWallet({
     };
   }, [userId, tenantId]);
 
-  const onLogout = useCallback(async () => {
-    setBusy(true);
-    setError(null);
-    try {
-      await logoutAndClearWalletArtifacts({ userId, tenantId });
-      await endKeycloakSession();
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : 'Đăng xuất thất bại khi xóa SecureStore / bộ đệm vé.',
-      );
-    } finally {
-      setBusy(false);
-    }
-  }, [userId, tenantId]);
-
   return (
-    <ScreenAtmosphere>
+    <>
     <ScrollView
       contentInsetAdjustmentBehavior="automatic"
-      style={{ backgroundColor: 'transparent' }}
+      style={{ flex: 1, backgroundColor: brand.paper }}
       contentContainerStyle={{ padding: 20, paddingBottom: 48, gap: 16 }}
     >
       <Notice title={attendeeWalletCopy.offlineBannerTitle}>
@@ -320,12 +247,14 @@ function OfflineDisplayWallet({
       )}
 
       <AttendeeCta
-        label="Đăng xuất"
-        onPress={() => void onLogout()}
-        disabled={busy}
+        label={eventsCopy.goToAccountCta}
+        variant="secondary"
+        onPress={() => goToAccount()}
+        testID="wallet-cta-account-offline"
       />
     </ScrollView>
-    </ScreenAtmosphere>
+    <TabStackTitle title="Vé của tôi" />
+    </>
   );
 }
 
@@ -337,6 +266,7 @@ function VerifiedWallet({ userId }: { userId: string }) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [showPushPrompt, setShowPushPrompt] = useState(false);
 
   const hydrateFromCache = useCallback(async () => {
     if (!tenantId) return;
@@ -479,6 +409,40 @@ function VerifiedWallet({ userId }: { userId: string }) {
     };
   }, [hydrateFromCache, refresh]);
 
+  useEffect(() => {
+    if (tickets.length < 1) {
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      try {
+        const dismissed = await readWalletPushPromptDismissed();
+        const provider = pushProviderName();
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const mod = require('expo-notifications') as {
+          default?: { getPermissionsAsync(): Promise<{ status: string }> };
+          getPermissionsAsync(): Promise<{ status: string }>;
+        };
+        const notifications = mod.default ?? mod;
+        const current = await notifications.getPermissionsAsync();
+        const perm = normalizeIosNotificationPermission(current.status);
+        const offer = shouldOfferWalletPushPrompt({
+          ticketCount: tickets.length,
+          dismissed,
+          providerIsApns: isApnsProvider(provider),
+          identityVerified: true,
+          iosPermissionAuthorized: perm === 'authorized' || perm === 'provisional',
+        });
+        if (!cancelled) setShowPushPrompt(offer);
+      } catch {
+        if (!cancelled) setShowPushPrompt(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [tickets.length]);
+
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
@@ -488,31 +452,11 @@ function VerifiedWallet({ userId }: { userId: string }) {
     }
   }, [refresh]);
 
-  const onLogout = useCallback(async () => {
-    setBusy(true);
-    setError(null);
-    try {
-      await logoutAndClearWalletArtifacts({
-        userId,
-        tenantId: tenantId ?? null,
-      });
-      await endKeycloakSession();
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : 'Đăng xuất thất bại khi xóa SecureStore / bộ đệm vé.',
-      );
-    } finally {
-      setBusy(false);
-    }
-  }, [tenantId, userId]);
-
   return (
-    <ScreenAtmosphere>
+    <>
     <ScrollView
       contentInsetAdjustmentBehavior="automatic"
-      style={{ backgroundColor: 'transparent' }}
+      style={{ flex: 1, backgroundColor: brand.paper }}
       contentContainerStyle={{ padding: 20, paddingBottom: 48, gap: 16 }}
       refreshControl={
         <RefreshControl refreshing={refreshing} onRefresh={() => void onRefresh()} />
@@ -544,6 +488,10 @@ function VerifiedWallet({ userId }: { userId: string }) {
         <LoadingState title={walletCopy.loading.title}>
           {walletCopy.loading.body}
         </LoadingState>
+      ) : null}
+
+      {showPushPrompt && tickets.length > 0 ? (
+        <WalletPushPromptCard onDismiss={() => setShowPushPrompt(false)} />
       ) : null}
 
       {error ? (
@@ -581,35 +529,18 @@ function VerifiedWallet({ userId }: { userId: string }) {
         disabled={busy || refreshing}
       />
       <AttendeeCta
-        label="Đăng xuất"
-        onPress={() => void onLogout()}
-        disabled={busy}
+        label={eventsCopy.goToAccountCta}
+        variant="secondary"
+        onPress={() => goToAccount()}
+        testID="wallet-cta-account-verified"
       />
-
-      <SessionScopedPushStatus />
-
-      <AccountPrivacyPolicyLink />
-
-      <View style={{ gap: 12 }}>
-        <Text
-          accessibilityRole="header"
-          style={{
-            color: brand.ink,
-            fontFamily: fontFamilies.display,
-            fontSize: 20,
-            fontWeight: '600',
-          }}
-        >
-          Yêu cầu xóa tài khoản
-        </Text>
-        <SessionScopedAccountDeletionPanel />
-      </View>
 
       <Text style={{ color: colors.secondary, fontSize: 13, lineHeight: 18 }}>
         Vé đã cache mở được khi mất mạng chỉ để xem. Không phải check-in offline;
-        cổng vẫn quyết định trên máy chủ.
+        cổng vẫn quyết định trên máy chủ. Đăng xuất và cài đặt tại Tài khoản.
       </Text>
     </ScrollView>
-    </ScreenAtmosphere>
+    <TabStackTitle title="Vé của tôi" />
+    </>
   );
 }
