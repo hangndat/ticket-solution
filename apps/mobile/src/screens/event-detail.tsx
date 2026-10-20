@@ -25,6 +25,7 @@ import { brand, colors } from '@/theme/colors';
 import { fontFamilies } from '@/theme/fonts';
 import { useTheme } from '@/theme/ThemeProvider';
 import { typography } from '@/theme/typography';
+import { WalletOwnedTicketsLink } from '@/components/wallet-owned-tickets-link';
 
 export function EventDetailScreen({
   tenantSlug,
@@ -363,6 +364,11 @@ function PublishedEventComposition({
             Chưa có giờ bắt đầu trên nội dung đã xuất bản
           </Text>
         )}
+
+        <WalletOwnedTicketsLink
+          eventId={event.id}
+          testID="event-detail-owned-tickets"
+        />
 
         <View style={{ gap: 10 }}>
           <AttendeeCta
