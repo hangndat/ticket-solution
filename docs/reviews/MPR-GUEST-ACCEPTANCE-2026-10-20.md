@@ -83,4 +83,4 @@
 | Provenance install | `scripts/sync-ios-build-number.mjs`, `scripts/release-ios-dexter.sh`, `pnpm sync-ios-build` |
 | Account scroll | `paddingBottom` theo tab inset |
 
-**SHA batch 2:** _ghi sau push — root cài `EXPO_PUBLIC_BUILD_GIT_SHA` + `devicectl` CFBundleVersion **21** (hoặc bump khi coordinator chỉ định)._
+**SHA batch 2:** `31b91857c7c3005ee0b896e457af2fcfa65e69a8` — root cài: `apps/mobile/scripts/release-ios-dexter.sh` (hoặc `EXPO_PUBLIC_BUILD_GIT_SHA=31b9185…` + `pnpm sync-ios-build` + `expo run:ios` Release); xác `devicectl` CFBundleVersion **21**.
