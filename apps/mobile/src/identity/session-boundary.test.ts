@@ -240,7 +240,7 @@ test('refresh auth failure signs out and clears credential', async () => {
   assert.equal(f.credential(), null);
 });
 
-test('refresh network failure does not logout; returns prior access token', async () => {
+test('refresh network failure does not logout; signals unreachable instead of expired bearer', async () => {
   const refresh: RefreshOidcTokens = async () => ({
     ok: false,
     reason: 'network',
@@ -257,7 +257,10 @@ test('refresh network failure does not logout; returns prior access token', asyn
       expiresIn: 0,
     }),
   );
-  assert.equal(await f.boundary.getCredential(), 'old-access');
+  assert.deepEqual(await f.boundary.resolveCredential(), {
+    status: 'refresh-unreachable',
+  });
+  assert.equal(await f.boundary.getCredential(), null);
   assert.equal(f.boundary.getSnapshot().status, 'verified');
   assert.ok(f.credential());
 });
