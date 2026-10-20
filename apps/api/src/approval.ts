@@ -32,6 +32,7 @@ import {
   type OidcVerifier,
   type PrismaClient,
 } from '@ticket/backend';
+import { identityErrorHttpStatus } from './identity-http-status';
 
 const UUID =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -91,7 +92,7 @@ export class ApprovalService {
     if (!this.deps.credentialKey) {
       throw new IdentityError(
         IDENTITY_ERROR_CODES.OIDC_MISCONFIGURED,
-        'TICKET_CREDENTIAL_KEY is required',
+        'Ticket credential encryption is not configured',
       );
     }
     const verified = await this.deps.verifier.verifyBearerToken(authorization);
@@ -162,7 +163,7 @@ export class ApprovalController {
           requestId: randomUUID(),
           retryable: error.retryable,
         } satisfies ApiError,
-        error.code === IDENTITY_ERROR_CODES.OIDC_MISCONFIGURED ? 503 : 401,
+        identityErrorHttpStatus(error.code),
       );
     }
     if (error instanceof AuthzError) {

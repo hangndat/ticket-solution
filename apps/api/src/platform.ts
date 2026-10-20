@@ -98,6 +98,8 @@ import {
   type OidcVerifier,
   type IdentityUserRepository,
 } from '@ticket/backend';
+import { identityErrorHttpStatus } from './identity-http-status';
+import { parseOptionalLimitQuery, requireUuidParam } from './http-validation';
 
 class MeEventItemDto implements MeEventItem {
   @ApiProperty({ format: 'uuid' }) tenantId!: string;
@@ -382,7 +384,7 @@ function fail(error: unknown): never {
         requestId: randomUUID(),
         retryable: error.retryable,
       } satisfies ApiError,
-      error.code === IDENTITY_ERROR_CODES.OIDC_MISCONFIGURED ? 503 : 401,
+      identityErrorHttpStatus(error.code),
     );
   }
   throw error;
@@ -485,15 +487,14 @@ export class PlatformService {
 
   listTenants(
     authorization: string | undefined,
-    query: { cursor?: string; limit?: string },
+    query: { cursor?: string; limit?: number },
   ) {
-    const limit = query.limit ? Number(query.limit) : undefined;
     return this.platformActor(authorization)
       .then((u) =>
         listPlatformTenants(this.deps.db!, {
           actorUserId: u.userId,
           cursor: query.cursor,
-          limit: Number.isFinite(limit) ? limit : undefined,
+          limit: query.limit,
         }),
       )
       .catch(fail);
@@ -503,20 +504,19 @@ export class PlatformService {
     authorization: string | undefined,
     query: {
       cursor?: string;
-      limit?: string;
+      limit?: number;
       from?: string;
       to?: string;
       action?: string;
       tenantId?: string;
     },
   ) {
-    const limit = query.limit ? Number(query.limit) : undefined;
     return this.platformActor(authorization)
       .then((u) =>
         listPlatformAudit(this.deps.db!, {
           actorUserId: u.userId,
           cursor: query.cursor,
-          limit: Number.isFinite(limit) ? limit : undefined,
+          limit: query.limit,
           from: query.from,
           to: query.to,
           action: query.action,
@@ -686,16 +686,15 @@ export class PlatformService {
   listMembers(
     authorization: string | undefined,
     tenantId: string,
-    query: { cursor?: string; limit?: string; includeRevoked?: string },
+    query: { cursor?: string; limit?: number; includeRevoked?: string },
   ) {
-    const limit = query.limit ? Number(query.limit) : undefined;
     return this.selfActor(authorization)
       .then((u) =>
         listPortalMembers(this.deps.db!, {
           tenantId,
           actorUserId: u.userId,
           cursor: query.cursor,
-          limit: Number.isFinite(limit) ? limit : undefined,
+          limit: query.limit,
           includeRevoked:
             query.includeRevoked === '1' || query.includeRevoked === 'true',
         }),
@@ -706,9 +705,8 @@ export class PlatformService {
   listInvites(
     authorization: string | undefined,
     tenantId: string,
-    query: { cursor?: string; limit?: string; state?: string },
+    query: { cursor?: string; limit?: number; state?: string },
   ) {
-    const limit = query.limit ? Number(query.limit) : undefined;
     const state = query.state as PortalInviteState | undefined;
     return this.selfActor(authorization)
       .then((u) =>
@@ -716,7 +714,7 @@ export class PlatformService {
           tenantId,
           actorUserId: u.userId,
           cursor: query.cursor,
-          limit: Number.isFinite(limit) ? limit : undefined,
+          limit: query.limit,
           state,
         }),
       )
@@ -943,11 +941,11 @@ export class PlatformController {
   ) {
     return this.platform.listAudit(authorization, {
       cursor,
-      limit,
+      limit: parseOptionalLimitQuery(limit),
       from,
       to,
       action,
-      tenantId,
+      tenantId: tenantId ? requireUuidParam(tenantId, 'tenantId') : undefined,
     });
   }
 
@@ -961,7 +959,10 @@ export class PlatformController {
     @Query('cursor') cursor?: string,
     @Query('limit') limit?: string,
   ) {
-    return this.platform.listTenants(authorization, { cursor, limit });
+    return this.platform.listTenants(authorization, {
+      cursor,
+      limit: parseOptionalLimitQuery(limit),
+    });
   }
 
   @Post('platform/tenants')
@@ -971,7 +972,7 @@ export class PlatformController {
     @Headers('idempotency-key') idempotencyKey: string | undefined,
     @Body() body: Record<string, unknown>,
   ) {
-    return this.platform.createTenant(authorization, idempotencyKey, body);
+    return this.platform.createTenant(authorization, idempotencyKey, body ?? {});
   }
 
   @Get('platform/tenants/:tenantId')
@@ -980,7 +981,10 @@ export class PlatformController {
     @Headers('authorization') authorization: string | undefined,
     @Param('tenantId') tenantId: string,
   ) {
-    return this.platform.tenantDetail(authorization, tenantId);
+    return this.platform.tenantDetail(
+      authorization,
+      requireUuidParam(tenantId, 'tenantId'),
+    );
   }
 
   @Get('platform/tenants/:tenantId/health')
@@ -990,7 +994,10 @@ export class PlatformController {
     @Headers('authorization') authorization: string | undefined,
     @Param('tenantId') tenantId: string,
   ) {
-    return this.platform.tenantHealth(authorization, tenantId);
+    return this.platform.tenantHealth(
+      authorization,
+      requireUuidParam(tenantId, 'tenantId'),
+    );
   }
 
   @Post('platform/tenants/:tenantId/status')
@@ -1000,7 +1007,11 @@ export class PlatformController {
     @Param('tenantId') tenantId: string,
     @Body() body: { status: 'ACTIVE' | 'SUSPENDED'; reason: string; expectedVersion: number },
   ) {
-    return this.platform.setStatus(authorization, tenantId, body);
+    return this.platform.setStatus(
+      authorization,
+      requireUuidParam(tenantId, 'tenantId'),
+      body,
+    );
   }
 
   @Put('platform/tenants/:tenantId/limits')
@@ -1010,7 +1021,11 @@ export class PlatformController {
     @Param('tenantId') tenantId: string,
     @Body() body: never,
   ) {
-    return this.platform.setLimits(authorization, tenantId, body);
+    return this.platform.setLimits(
+      authorization,
+      requireUuidParam(tenantId, 'tenantId'),
+      body,
+    );
   }
 
   @Get('tenants/:tenantId/members')
@@ -1026,11 +1041,15 @@ export class PlatformController {
     @Query('limit') limit?: string,
     @Query('includeRevoked') includeRevoked?: string,
   ) {
-    return this.platform.listMembers(authorization, tenantId, {
-      cursor,
-      limit,
-      includeRevoked,
-    });
+    return this.platform.listMembers(
+      authorization,
+      requireUuidParam(tenantId, 'tenantId'),
+      {
+        cursor,
+        limit: parseOptionalLimitQuery(limit),
+        includeRevoked,
+      },
+    );
   }
 
   @Get('tenants/:tenantId/invites')
@@ -1046,11 +1065,15 @@ export class PlatformController {
     @Query('limit') limit?: string,
     @Query('state') state?: string,
   ) {
-    return this.platform.listInvites(authorization, tenantId, {
-      cursor,
-      limit,
-      state,
-    });
+    return this.platform.listInvites(
+      authorization,
+      requireUuidParam(tenantId, 'tenantId'),
+      {
+        cursor,
+        limit: parseOptionalLimitQuery(limit),
+        state,
+      },
+    );
   }
 
   @Post('tenants/:tenantId/invites')
@@ -1062,7 +1085,12 @@ export class PlatformController {
     @Param('tenantId') tenantId: string,
     @Body() body: CreateInviteBodyDto & Record<string, unknown>,
   ) {
-    return this.platform.invite(authorization, tenantId, idempotencyKey, body);
+    return this.platform.invite(
+      authorization,
+      requireUuidParam(tenantId, 'tenantId'),
+      idempotencyKey,
+      body,
+    );
   }
 
   @Get('tenants/:tenantId/role-presets')
@@ -1072,7 +1100,10 @@ export class PlatformController {
     @Headers('authorization') authorization: string | undefined,
     @Param('tenantId') tenantId: string,
   ) {
-    return this.platform.listPresets(authorization, tenantId);
+    return this.platform.listPresets(
+      authorization,
+      requireUuidParam(tenantId, 'tenantId'),
+    );
   }
 
   @Post('tenants/:tenantId/role-presets')
@@ -1084,7 +1115,11 @@ export class PlatformController {
     @Param('tenantId') tenantId: string,
     @Body() body: CreateRolePresetBodyDto,
   ) {
-    return this.platform.createPreset(authorization, tenantId, body);
+    return this.platform.createPreset(
+      authorization,
+      requireUuidParam(tenantId, 'tenantId'),
+      body,
+    );
   }
 
   @Get('tenants/:tenantId/role-presets/:presetId')
@@ -1095,7 +1130,11 @@ export class PlatformController {
     @Param('tenantId') tenantId: string,
     @Param('presetId') presetId: string,
   ) {
-    return this.platform.getPreset(authorization, tenantId, presetId);
+    return this.platform.getPreset(
+      authorization,
+      requireUuidParam(tenantId, 'tenantId'),
+      requireUuidParam(presetId, 'presetId'),
+    );
   }
 
   @Post('me/membership-invites/accept')
@@ -1119,8 +1158,8 @@ export class PlatformController {
   ) {
     return this.platform.changeRole(
       authorization,
-      tenantId,
-      membershipId,
+      requireUuidParam(tenantId, 'tenantId'),
+      requireUuidParam(membershipId, 'membershipId'),
       body,
     );
   }
@@ -1138,9 +1177,9 @@ export class PlatformController {
   ) {
     return this.platform.putAssignment(
       authorization,
-      tenantId,
-      membershipId,
-      eventId,
+      requireUuidParam(tenantId, 'tenantId'),
+      requireUuidParam(membershipId, 'membershipId'),
+      requireUuidParam(eventId, 'eventId'),
       body,
     );
   }
@@ -1158,9 +1197,9 @@ export class PlatformController {
   ) {
     return this.platform.deleteAssignment(
       authorization,
-      tenantId,
-      membershipId,
-      eventId,
+      requireUuidParam(tenantId, 'tenantId'),
+      requireUuidParam(membershipId, 'membershipId'),
+      requireUuidParam(eventId, 'eventId'),
       body,
     );
   }
@@ -1176,8 +1215,8 @@ export class PlatformController {
   ) {
     return this.platform.revokeMember(
       authorization,
-      tenantId,
-      membershipId,
+      requireUuidParam(tenantId, 'tenantId'),
+      requireUuidParam(membershipId, 'membershipId'),
       body,
     );
   }
@@ -1194,8 +1233,8 @@ export class PlatformController {
   ) {
     return this.platform.revokeInvite(
       authorization,
-      tenantId,
-      inviteId,
+      requireUuidParam(tenantId, 'tenantId'),
+      requireUuidParam(inviteId, 'inviteId'),
       body,
     );
   }
@@ -1212,8 +1251,8 @@ export class PlatformController {
   ) {
     return this.platform.resendInvite(
       authorization,
-      tenantId,
-      inviteId,
+      requireUuidParam(tenantId, 'tenantId'),
+      requireUuidParam(inviteId, 'inviteId'),
       body,
     );
   }
