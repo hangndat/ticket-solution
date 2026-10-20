@@ -1,5 +1,5 @@
 {
-  "timeUTC": "2026-10-19T08:54:00+00:00",
+  "timeUTC": "2026-10-19T09:50:00+00:00",
   "task": 327,
   "epic": 301,
   "story": 307,
@@ -11,6 +11,7 @@
   "submittedForReview": false,
   "released": false,
   "cloudBuild": false,
+  "operatorRedispatch": true,
   "target": {
     "marketingVersion": "1.0.0",
     "build": "14",
@@ -41,12 +42,12 @@
     "push": "SKIP"
   },
   "automationLimits": [
-    "accessibility perform_press did not open OIDC sheet",
-    "WDA XCTest passcode gate on device",
-    "tab bar deep links did not navigate to staff"
+    "coordinator orchestration ask msg_01808529dc1a timed out (no operator credential entry)",
+    "core-device copy/HID requires sudo tunneld on this host",
+    "pymobiledevice3 developer wda type/status hung (XCTest passcode gate)",
+    "accessibility perform_press opens OIDC web sheet but tab/deeplink navigation unreliable without session"
   ],
-  "uatArtifactsDir": "apps/mobile/.uat-artifacts/s4-t3-dexter",
-  "coordinatorRedirect": "usb install prod bake 14 on Dexter (no TF wait)",
-  "apiKeyId": "KHT3SAL2FS",
-  "evidenceTipSha": "a4c1501da5c3ffe7249094d33f665c988c296c2e"
+  "uatArtifactsDir": "apps/mobile/.uat-artifacts/s4-t3-dexter-operator",
+  "pendingOrchestrationAsk": "msg_01808529dc1a",
+  "evidenceTipSha": "6ba435ebfaf810e2a15149761e16abd193368280"
 }
