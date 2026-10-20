@@ -95,6 +95,7 @@ class TicketSummaryDto implements TicketSummary {
   @ApiProperty() state!: string;
   @ApiProperty() credentialVersion!: number;
   @ApiProperty() createdAt!: string;
+  @ApiProperty({ required: false }) eventName?: string;
 }
 
 class MeTicketsDto implements MeTicketsResponse {
@@ -285,6 +286,7 @@ export class TicketIssueService {
           state: t.state,
           credentialVersion: t.credentialVersion,
           createdAt: t.createdAt.toISOString(),
+          ...(t.eventName != null ? { eventName: t.eventName } : {}),
         }),
       ),
     };
@@ -315,6 +317,7 @@ export class TicketIssueService {
           state: t.state,
           credentialVersion: t.credentialVersion,
           createdAt: t.createdAt.toISOString(),
+          ...(t.eventName != null ? { eventName: t.eventName } : {}),
         }),
       ),
     };
