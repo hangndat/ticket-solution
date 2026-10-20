@@ -32,6 +32,12 @@ test('clearSignInReturnIfPath only drops matching path', () => {
   assert.equal(peekSignInReturn(), null);
 });
 
+test('allows global redeem return path', () => {
+  clearSignInReturn();
+  assert.equal(parkSignInReturn({ pathname: '/redeem-global' }), true);
+  assert.equal(consumeSignInReturn()?.pathname, '/redeem-global');
+});
+
 test('allows ticket detail path without query', () => {
   clearSignInReturn();
   const id = '11111111-1111-4111-8111-111111111111';

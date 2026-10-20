@@ -72,3 +72,15 @@
 | Privacy no tabs | **NOT RUN** | Cần `55-guest-privacy` |
 
 **Kết quả revalidation tổng:** _PARTIAL — chờ pass WDA đầy đủ `50-*`…`55-*`; không đổi bảng §Kết quả thao tác root FAIL._
+
+### Zico batch 2 (sẵn sàng root UAT build 21+SHA mới — không cài trong lúc root đang UAT)
+
+| Hạng mục | Thay đổi |
+| --- | --- |
+| CTA vs tab bar | `useAttendeeTabBarInset()` (+56 clearance), footer padding, `scrollIndicatorInsets` |
+| Deep link `/redeem` guest | `app/redeem.tsx` → `Redirect` `/redeem-global` khi chưa verified |
+| Post-login return | `parkSignInReturn('/redeem-global')` trong global redeem; allowlist path |
+| Provenance install | `scripts/sync-ios-build-number.mjs`, `scripts/release-ios-dexter.sh`, `pnpm sync-ios-build` |
+| Account scroll | `paddingBottom` theo tab inset |
+
+**SHA batch 2:** _ghi sau push — root cài `EXPO_PUBLIC_BUILD_GIT_SHA` + `devicectl` CFBundleVersion **21** (hoặc bump khi coordinator chỉ định)._
