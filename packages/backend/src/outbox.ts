@@ -93,29 +93,37 @@ export async function processClaimedOutbox(
   for (const row of rows) {
     try {
       if (row.type === 'MembershipInvite') {
-        await withTenant(db, row.tenant_id, async (tx) => {
-          await tx.$executeRaw`
-            UPDATE outbox
-            SET status = 'PROCESSING', updated_at = now()
-            WHERE tenant_id = ${row.tenant_id}::uuid
-              AND id = ${row.outbox_id}::uuid
-              AND status = 'LEASED'
-          `;
-        });
-        const invitePayloads = await withTenant(db, row.tenant_id, async (tx) =>
-          tx.$queryRaw<{ payload: Prisma.JsonValue }[]>`
-            SELECT payload FROM outbox
-            WHERE tenant_id = ${row.tenant_id}::uuid
-              AND id = ${row.outbox_id}::uuid
-          `,
+        const invitePayload = await withTenant(
+          db,
+          row.tenant_id,
+          async (tx) => {
+            const fenced = await fenceOutboxToProcessing(
+              tx,
+              row,
+              options.leaseOwner,
+            );
+            if (!fenced) {
+              return null;
+            }
+            const invitePayloads = await tx.$queryRaw<
+              { payload: Prisma.JsonValue }[]
+            >`
+              SELECT payload FROM outbox
+              WHERE tenant_id = ${row.tenant_id}::uuid
+                AND id = ${row.outbox_id}::uuid
+            `;
+            return (invitePayloads[0]?.payload ?? {}) as {
+              inviteId?: string;
+              email?: string;
+              role?: string;
+              token?: string;
+              expiresAt?: string;
+            };
+          },
         );
-        const invitePayload = (invitePayloads[0]?.payload ?? {}) as {
-          inviteId?: string;
-          email?: string;
-          role?: string;
-          token?: string;
-          expiresAt?: string;
-        };
+        if (!invitePayload) {
+          continue;
+        }
         if (!email.sendMembershipInvite) {
           throw new Error('invite_email_unsupported');
         }
@@ -151,33 +159,37 @@ export async function processClaimedOutbox(
       // Token storage only — claim recovery reads payload regardless of status.
       // Do not send mail here; InvitationReady is the dispatch/mail event.
       if (row.type === 'InvitationTokenMinted') {
-        await withTenant(db, row.tenant_id, async (tx) => {
-          await tx.$executeRaw`
-            UPDATE outbox
-            SET status = 'PROCESSING', updated_at = now()
-            WHERE tenant_id = ${row.tenant_id}::uuid
-              AND id = ${row.outbox_id}::uuid
-              AND status = 'LEASED'
-          `;
+        const done = await withTenant(db, row.tenant_id, async (tx) => {
+          const fenced = await fenceOutboxToProcessing(
+            tx,
+            row,
+            options.leaseOwner,
+          );
+          if (!fenced) {
+            return false;
+          }
           await markOutboxCompleteFenced(tx, row, options.leaseOwner);
+          return true;
         });
+        if (!done) {
+          continue;
+        }
         completed += 1;
         metricsInc('outbox_jobs_total', { result: 'completed' });
         continue;
       }
 
       if (row.type === 'InvitationReady') {
-        await withTenant(db, row.tenant_id, async (tx) => {
-          await tx.$executeRaw`
-            UPDATE outbox
-            SET status = 'PROCESSING', updated_at = now()
-            WHERE tenant_id = ${row.tenant_id}::uuid
-              AND id = ${row.outbox_id}::uuid
-              AND status = 'LEASED'
-          `;
-        });
-        const readyRows = await withTenant(db, row.tenant_id, async (tx) =>
-          tx.$queryRaw<
+        const readyPhase = await withTenant(db, row.tenant_id, async (tx) => {
+          const fenced = await fenceOutboxToProcessing(
+            tx,
+            row,
+            options.leaseOwner,
+          );
+          if (!fenced) {
+            return null;
+          }
+          const readyRows = await tx.$queryRaw<
             Array<{
               payload: Prisma.JsonValue;
               event_id: string | null;
@@ -186,8 +198,13 @@ export async function processClaimedOutbox(
             SELECT payload, event_id FROM outbox
             WHERE tenant_id = ${row.tenant_id}::uuid
               AND id = ${row.outbox_id}::uuid
-          `,
-        );
+          `;
+          return readyRows[0] ?? null;
+        });
+        if (!readyPhase) {
+          continue;
+        }
+        const readyRows = [readyPhase];
         const readyPayload = (readyRows[0]?.payload ?? {}) as {
           invitationId?: string;
           email?: string;
@@ -278,17 +295,13 @@ export async function processClaimedOutbox(
         continue;
       }
 
-      const outcome = await withTenant(db, row.tenant_id, async (tx) => {
-        const fenced = await tx.$executeRaw`
-          UPDATE outbox
-          SET status = 'PROCESSING', updated_at = now()
-          WHERE tenant_id = ${row.tenant_id}::uuid
-            AND id = ${row.outbox_id}::uuid
-            AND status = 'LEASED'
-            AND lease_owner = ${options.leaseOwner}
-            AND lease_token = ${row.lease_token}
-        `;
-        if (Number(fenced) === 0) {
+      const prep = await withTenant(db, row.tenant_id, async (tx) => {
+        const fenced = await fenceOutboxToProcessing(
+          tx,
+          row,
+          options.leaseOwner,
+        );
+        if (!fenced) {
           return 'stale' as const;
         }
 
@@ -495,22 +508,52 @@ export async function processClaimedOutbox(
           `;
         }
 
-        // Send outside long DB work but still inside tenant tx for fencing after.
-        // Provider call may take time; lease fencing prevents stale ack.
-        const result = await email.sendTicketIssued({
-          tenantId: row.tenant_id,
-          eventId,
+        return {
+          kind: 'send' as const,
+          sendPayload: {
+            tenantId: row.tenant_id,
+            eventId,
+            ticketId,
+            toEmail: payload.email ?? null,
+            requestId: payload.requestId ?? '',
+            subject,
+            text,
+            html,
+            qrPng,
+            messageId,
+            credentialVersion: cred.version,
+            credentialTokenHash: opened.tokenHash,
+          },
+          notification,
+          template,
           ticketId,
-          toEmail: payload.email ?? null,
-          requestId: payload.requestId ?? '',
-          subject,
-          text,
-          html,
-          qrPng,
-          messageId,
-          credentialVersion: cred.version,
-          credentialTokenHash: opened.tokenHash,
-        });
+          eventId,
+          payload,
+          ticket,
+        };
+      });
+
+      if (prep === 'stale') {
+        continue;
+      }
+      if (prep === 'completed') {
+        completed += 1;
+        continue;
+      }
+      if (prep.kind !== 'send') {
+        throw new Error('ticket_issued_prep_invalid');
+      }
+
+      // Provider I/O outside tenant transaction (H2); ack in a follow-up tx.
+      const result = await email.sendTicketIssued(prep.sendPayload);
+
+      const outcome = await withTenant(db, row.tenant_id, async (tx) => {
+        const notification = prep.notification;
+        const template = prep.template;
+        const ticketId = prep.ticketId;
+        const eventId = prep.eventId;
+        const payload = prep.payload;
+        const ticket = prep.ticket;
 
         const providerStatus = result.providerStatus ?? 'ACCEPTED';
         if (notification) {
@@ -857,6 +900,24 @@ async function markChannelDead(
         AND channel = 'email'
     `;
   }
+}
+
+
+async function fenceOutboxToProcessing(
+  tx: Prisma.TransactionClient,
+  row: ClaimedOutboxRow,
+  leaseOwner: string,
+): Promise<boolean> {
+  const fenced = await tx.$executeRaw`
+    UPDATE outbox
+    SET status = 'PROCESSING', updated_at = now()
+    WHERE tenant_id = ${row.tenant_id}::uuid
+      AND id = ${row.outbox_id}::uuid
+      AND status = 'LEASED'
+      AND lease_owner = ${leaseOwner}
+      AND lease_token = ${row.lease_token}
+  `;
+  return Number(fenced) > 0;
 }
 
 async function markOutboxCompleteFenced(

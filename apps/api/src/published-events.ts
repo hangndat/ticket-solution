@@ -9,13 +9,17 @@ import {
   Injectable,
   Param,
   Query,
+  Req,
 } from '@nestjs/common';
 import {
   ApiOkResponse,
   ApiProperty,
+  ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
+type RequestWithIp = { ip?: string };
 import {
+  CURSOR_PAGE_LIMIT,
   type ApiError,
   type PublishedBrand,
   type PublishedEventDetail,
@@ -33,6 +37,12 @@ import {
   PUBLISHED_EVENTS_ERROR_CODES,
   type PrismaClient,
 } from '@ticket/backend';
+import {
+  API_RATE_BUCKETS,
+  API_RATE_LIMITS,
+} from './http-limits';
+import { consumeIpRateLimit } from './http-rate-limit';
+import { parseOptionalLimitQuery } from './http-validation';
 
 class PublishedBrandDto implements PublishedBrand {
   @ApiProperty({ example: '#245B47' }) primaryColor!: string;
@@ -139,16 +149,22 @@ function badRequest(code: string, message: string): HttpException {
 export class PublishedEventsService {
   constructor(private readonly deps: Deps) {}
 
+  async assertPublicReadRateLimit(clientIp?: string): Promise<void> {
+    await consumeIpRateLimit(
+      this.deps.db,
+      clientIp,
+      API_RATE_BUCKETS.publicRead,
+      API_RATE_LIMITS.publicReadPerIp,
+    );
+  }
+
   async list(
     tenantSlug: string,
     cursor?: string,
-    limit?: string,
+    limit?: number,
   ): Promise<PublishedEventListResponse> {
     if (!this.deps.db) throw unavailable();
-    const parsedLimit =
-      limit !== undefined && limit !== ''
-        ? Number.parseInt(limit, 10)
-        : undefined;
+    const parsedLimit = limit;
     const result = await listPublishedEvents(this.deps.db, {
       tenantSlug: tenantSlug.trim().toLowerCase(),
       cursor: cursor ?? null,
@@ -176,13 +192,10 @@ export class PublishedEventsService {
 
   async listPlatform(
     cursor?: string,
-    limit?: string,
+    limit?: number,
   ): Promise<PublishedEventListResponse> {
     if (!this.deps.db) throw unavailable();
-    const parsedLimit =
-      limit !== undefined && limit !== ''
-        ? Number.parseInt(limit, 10)
-        : undefined;
+    const parsedLimit = limit;
     try {
       return await listPlatformPublishedEvents(this.deps.db, {
         cursor: cursor ?? null,
@@ -210,11 +223,24 @@ export class PlatformPublishedEventsController {
 
   @Get()
   @ApiOkResponse({ type: PublishedEventListResponseDto })
+  @ApiQuery({ name: 'cursor', required: false, type: String })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    minimum: CURSOR_PAGE_LIMIT.min,
+    maximum: CURSOR_PAGE_LIMIT.max,
+  })
   async list(
+    @Req() req: RequestWithIp,
     @Query('cursor') cursor?: string,
     @Query('limit') limit?: string,
   ): Promise<PublishedEventListResponse> {
-    return this.published.listPlatform(cursor, limit);
+    await this.published.assertPublicReadRateLimit(req.ip);
+    return this.published.listPlatform(
+      cursor,
+      parseOptionalLimitQuery(limit),
+    );
   }
 }
 
@@ -225,20 +251,36 @@ export class PublishedEventsController {
 
   @Get()
   @ApiOkResponse({ type: PublishedEventListResponseDto })
+  @ApiQuery({ name: 'cursor', required: false, type: String })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    minimum: CURSOR_PAGE_LIMIT.min,
+    maximum: CURSOR_PAGE_LIMIT.max,
+  })
   async list(
+    @Req() req: RequestWithIp,
     @Param('tenantSlug') tenantSlug: string,
     @Query('cursor') cursor?: string,
     @Query('limit') limit?: string,
   ): Promise<PublishedEventListResponse> {
-    return this.published.list(tenantSlug, cursor, limit);
+    await this.published.assertPublicReadRateLimit(req.ip);
+    return this.published.list(
+      tenantSlug,
+      cursor,
+      parseOptionalLimitQuery(limit),
+    );
   }
 
   @Get(':eventSlug')
   @ApiOkResponse({ type: PublishedEventDetailDto })
   async detail(
+    @Req() req: RequestWithIp,
     @Param('tenantSlug') tenantSlug: string,
     @Param('eventSlug') eventSlug: string,
   ): Promise<PublishedEventDetail> {
+    await this.published.assertPublicReadRateLimit(req.ip);
     return this.published.detail(tenantSlug, eventSlug);
   }
 }

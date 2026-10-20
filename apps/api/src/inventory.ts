@@ -55,6 +55,7 @@ import {
   type OidcVerifier,
   type PrismaClient,
 } from '@ticket/backend';
+import { identityErrorHttpStatus } from './identity-http-status';
 
 /** Minimal multipart surface from @fastify/multipart (avoid direct fastify dep). */
 type MultipartRequest = {
@@ -486,7 +487,7 @@ export class InventoryController {
           requestId: randomUUID(),
           retryable: error.retryable,
         } satisfies ApiError,
-        error.code === IDENTITY_ERROR_CODES.OIDC_MISCONFIGURED ? 503 : 401,
+        identityErrorHttpStatus(error.code),
       );
     }
     if (error instanceof AuthzError) {

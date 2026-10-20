@@ -18,7 +18,8 @@ import { accountCopy } from '@/components/screen-state-copy';
 import { brand, colors } from '@/theme/colors';
 import { typography } from '@/theme/typography';
 import { getApiBaseUrl, getTenantId, isOidcConfigured } from '@/identity/config';
-import { fetchMe, verifyViaMe } from '@/identity/fetch-me';
+import { accountMeRefreshFromProbe } from '@/screens/account-me-probe';
+import { probeMe, verifyViaMe } from '@/identity/fetch-me';
 import {
   endKeycloakSession,
   loginWithKeycloak,
@@ -146,16 +147,15 @@ function ConfiguredAccount({
         );
         return;
       }
-      const result = await fetchMe(token);
+      const probe = await probeMe(token);
       if (!session.isEpochCurrent(epoch)) return;
-      if (!result || result.userId !== epoch.userId) {
+      const outcome = accountMeRefreshFromProbe(probe, epoch.userId);
+      if (outcome.kind === 'error') {
         setMe(null);
-        setMeError(
-          'Không tải được hồ sơ tài khoản. Kiểm tra kết nối rồi thử lại.',
-        );
+        setMeError(outcome.message);
         return;
       }
-      setMe(result);
+      setMe(outcome.me);
     } finally {
       setBusy(false);
     }
