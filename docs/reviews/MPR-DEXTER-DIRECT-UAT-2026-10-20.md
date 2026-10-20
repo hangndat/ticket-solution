@@ -58,3 +58,25 @@ Thư mục ảnh và cây UI: `apps/mobile/.uat-artifacts/dexter-live-uat/` (git
 **Code:** `staff-default-tab-target.ts` — bỏ `account` khỏi attendee-only redirect; cho phép segment `account` (stack `/account` + PD). Tab `account` `hidden={showStaffTabs}`. Toolbar `testID=staff-toolbar-account`.
 
 **Verdict phiên Zico:** **PARTIAL PASS** — regression 4 tab **đã hết** trên build 18; blocker redirect Account cần xác nhận thao tác header trên máy (user/root) hoặc WDA ổn định lại.
+
+---
+
+## Zico re-UAT guest parity (build 20, compact header + events list)
+
+**Device:** Dexter · `com.hangndat.ticket` **1.0.0 (20)** · Release embedded bundle · WDA `/tmp/zico-guest-uat.py` · artifacts `apps/mobile/.uat-artifacts/dexter-guest-uat-2026-10-20/`.
+
+**Thay đổi layout:** `tabAttendeeCompactStackScreenOptions` (không large title) cho stack Sự kiện + Tài khoản; `events.tsx` search đầu `ListHeader`, hero cũ bỏ, `TAB_BAR_CLEARANCE` 100.
+
+| Màn | Kết quả | Evidence / ghi chú |
+| --- | --- | --- |
+| Guest Sự kiện (fold, không scroll) | **PASS** | `10-guest-events-fold.png` — title gọn, search y≈124 trong viewport, 2 tab Sự kiện/Tài khoản, card artwork+org/title/date/pill; không còn khoảng trống large-title |
+| Guest Tài khoản | **PASS** | `11-guest-account.png` — «Chưa đăng nhập», không jargon token/phiên |
+| Guest Đổi mã (auth gate) | **PASS** | `12-guest-redeem.png` — màn redeem + CTA đăng nhập theo tác vụ |
+| CTA «Đổi mã lấy vé» trên fold | **GAP** | Có trong cây (`events-cta-redeem`) nhưng sau 2 card — cần scroll (giống thứ tự `full-prototype.html`: search → cards → CTA) |
+| Staff Account header / logout | **NOT RUN** | Phiên guest-only sau foreground đã 2 tab; cần pass staff OIDC riêng trên build 20 |
+
+**So với build 17 FAIL:** gap trước banner + search ẩn → **đã sửa** trên build 20.
+
+**Verdict guest fold:** **PASS with known gap** — CTA đổi mã không cùng viewport với search khi có ≥2 sự kiện prod (chấp nhận prototype scroll-order hoặc follow-up sticky footer nếu PD bắt CTA luôn thấy).
+
+**SHA:** ghi sau `git push` (branch `hangndat/mpr-dexter-uat-install`, PR #596).
