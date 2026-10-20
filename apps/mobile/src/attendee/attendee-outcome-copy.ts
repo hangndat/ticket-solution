@@ -62,7 +62,8 @@ export function ticketStateLabelVi(state: string): string {
  */
 export function presentTicketRow(ticket: TicketSummary): TicketRowView {
   const demo = findDemoEventById(ticket.eventId);
-  const eventTitle = demo?.name ?? 'Sự kiện';
+  const eventTitle =
+    ticket.eventName?.trim() || demo?.name?.trim() || 'Sự kiện';
   const statusLabel = ticketStateLabelVi(ticket.state);
   const shortEventId =
     ticket.eventId.length > 12

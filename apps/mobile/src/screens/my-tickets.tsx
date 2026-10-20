@@ -1,4 +1,4 @@
-import { Link, router } from 'expo-router';
+import { Link, router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import {
   Pressable,
@@ -54,6 +54,65 @@ import { normalizeIosNotificationPermission } from '@/push/push-permission';
 import { WalletPushPromptCard } from '@/push/wallet-push-prompt-card';
 import { shouldOfferWalletPushPrompt } from '@/push/wallet-push-prompt-policy';
 import { readWalletPushPromptDismissed } from '@/push/wallet-push-prompt-store';
+import {
+  countDistinctEvents,
+  filterTicketsByEventId,
+  groupTicketsByEvent,
+  resolveWalletFilterEventName,
+  walletEventSectionHeader,
+  walletListSubtitle,
+} from '@/tickets/wallet-event-grouping';
+
+function parseWalletEventIdFilter(
+  raw: string | string[] | undefined,
+): string | undefined {
+  const value = Array.isArray(raw) ? raw[0] : raw;
+  const trimmed = value?.trim();
+  return trimmed || undefined;
+}
+
+function WalletGroupedTicketList({
+  tickets,
+  filterEventId,
+}: {
+  tickets: TicketSummary[];
+  filterEventId?: string;
+}) {
+  if (filterEventId) {
+    const visible = filterTicketsByEventId(tickets, filterEventId);
+    return (
+      <>
+        {visible.map((ticket) => (
+          <TicketRow key={ticket.ticketId} ticket={ticket} />
+        ))}
+      </>
+    );
+  }
+
+  const groups = groupTicketsByEvent(tickets);
+  return (
+    <>
+      {groups.map((group) => (
+        <View key={group.eventId} style={{ gap: 12 }}>
+          <Text
+            accessibilityRole="header"
+            style={{
+              color: brand.ink,
+              fontSize: 16,
+              fontFamily: fontFamilies.bodySemiBold,
+              fontWeight: '600',
+            }}
+          >
+            {walletEventSectionHeader(group.eventName, group.tickets.length)}
+          </Text>
+          {group.tickets.map((ticket) => (
+            <TicketRow key={ticket.ticketId} ticket={ticket} />
+          ))}
+        </View>
+      ))}
+    </>
+  );
+}
 
 function TicketRow({ ticket }: { ticket: TicketSummary }) {
   const [focused, setFocused] = useState(false);
@@ -164,7 +223,10 @@ export function MyTicketsScreen() {
   return <TabStackTitle title="Vé của tôi" />;
 }
 
-/** Display-only wallet from prior online-verified binding + durable cache. */
+/**
+ * Display-only wallet from prior online-verified binding + durable cache.
+ * Flat list only: offline cache may lack eventName — no event grouping (#602).
+ */
 function OfflineDisplayWallet({
   userId,
   tenantId,
@@ -263,6 +325,8 @@ function OfflineDisplayWallet({
 }
 
 function VerifiedWallet({ userId }: { userId: string }) {
+  const { eventId: eventIdParam } = useLocalSearchParams<{ eventId?: string }>();
+  const filterEventId = parseWalletEventIdFilter(eventIdParam);
   const fetchScope = walletFetchScopeFromEnv();
   const sessionScope = walletSessionScope(fetchScope);
   const cacheScope = walletDisplayCacheScope(fetchScope);
@@ -499,6 +563,61 @@ function VerifiedWallet({ userId }: { userId: string }) {
         {offline ? ' · bộ đệm offline' : ''}
       </Text>
 
+      {filterEventId ? (
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: 10,
+            paddingVertical: 4,
+          }}
+        >
+          <Text
+            style={{
+              color: brand.ink,
+              fontSize: 15,
+              fontFamily: fontFamilies.bodySemiBold,
+              fontWeight: '600',
+              flexShrink: 1,
+            }}
+          >
+            {resolveWalletFilterEventName(tickets, filterEventId)}
+          </Text>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Xem tất cả vé, bỏ lọc sự kiện"
+            onPress={() => router.replace('/(tabs)/my-tickets')}
+            testID="wallet-clear-event-filter"
+          >
+            <Text
+              style={{
+                color: brand.signal,
+                fontSize: 15,
+                fontFamily: fontFamilies.bodySemiBold,
+                fontWeight: '600',
+              }}
+            >
+              Xem tất cả
+            </Text>
+          </Pressable>
+        </View>
+      ) : tickets.length > 0 ? (
+        <Text
+          style={{
+            color: colors.secondary,
+            fontSize: 15,
+            fontFamily: fontFamilies.body,
+          }}
+        >
+          {walletListSubtitle(
+            tickets.length,
+            countDistinctEvents(tickets),
+          )}
+        </Text>
+      ) : null}
+
       {busy && tickets.length === 0 ? (
         <LoadingState title={walletCopy.loading.title}>
           {walletCopy.loading.body}
@@ -524,10 +643,11 @@ function VerifiedWallet({ userId }: { userId: string }) {
           {walletCopy.emptyOnline.body}
         </EmptyState>
       ) : (
-        <View style={{ gap: 12 }}>
-          {tickets.map((ticket) => (
-            <TicketRow key={ticket.ticketId} ticket={ticket} />
-          ))}
+        <View style={{ gap: 16 }}>
+          <WalletGroupedTicketList
+            tickets={tickets}
+            filterEventId={filterEventId}
+          />
         </View>
       )}
 
