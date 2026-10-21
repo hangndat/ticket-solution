@@ -43,7 +43,13 @@ import {
   buildResolveDeps,
 } from './redemptions-resolve';
 import { registerMetricsEndpoint } from './metrics';
-import { PlatformController, PlatformService, buildPlatformDeps } from './platform';
+import {
+  PlatformMeController,
+  PlatformMembershipController,
+  PlatformOperatorController,
+  PlatformService,
+  buildPlatformDeps,
+} from './platform';
 import { BrandingController, BrandingService } from './branding';
 import {
   PlatformPublishedEventsController,
@@ -69,6 +75,7 @@ import {
 import {
   platformAwareOperationIdFactory,
   reorderOpenApiPaths,
+  reorderOpenApiSchemas,
 } from './openapi-document';
 
 export type { CreateAppOptions } from './app-options';
@@ -134,7 +141,9 @@ export async function createApp(
       ExportController,
       DeviceTokenController,
       NotificationController,
-      PlatformController,
+      PlatformMeController,
+      PlatformOperatorController,
+      PlatformMembershipController,
       BrandingController,
       PlatformPublishedEventsController,
       PublishedEventsController,
@@ -259,6 +268,8 @@ export async function createApp(
 export type CreateOpenApiOptions = {
   /** Path keys from the committed spec — keeps `openapi.json` byte-stable across controller splits. */
   pathOrder?: readonly string[];
+  /** Schema keys from the committed spec — stable `components.schemas` ordering. */
+  schemaOrder?: readonly string[];
 };
 
 export function createOpenApi(
@@ -277,8 +288,12 @@ export function createOpenApi(
       .build(),
     { operationIdFactory: platformAwareOperationIdFactory },
   );
+  let stable = document;
   if (options.pathOrder?.length) {
-    return reorderOpenApiPaths(document, options.pathOrder);
+    stable = reorderOpenApiPaths(stable, options.pathOrder);
   }
-  return document;
+  if (options.schemaOrder?.length) {
+    stable = reorderOpenApiSchemas(stable, options.schemaOrder);
+  }
+  return stable;
 }
