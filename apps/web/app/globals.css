@@ -195,7 +195,19 @@ nav a,
   font-size: 1.1rem;
   line-height: 1;
 }
+.nav-mobile-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 45;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: color-mix(in srgb, var(--ink) 28%, transparent);
+  cursor: pointer;
+}
 .nav-mobile-menu {
+  position: relative;
+  z-index: 46;
   display: grid;
   gap: 4px;
   padding: 14px var(--space-5) 18px;
@@ -529,6 +541,25 @@ nav a,
   font-size: 0.88rem;
   font-weight: 700;
   color: var(--signal);
+}
+.home-catalog-card__owned {
+  margin-top: var(--space-3);
+  min-height: 42px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 7px;
+  background: #edf4fd;
+  color: #194c83;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+.home-catalog-card__owned:hover {
+  background: color-mix(in srgb, #edf4fd 70%, var(--focus) 30%);
 }
 .home-catalog-empty {
   margin: var(--space-5) 0 var(--space-7);

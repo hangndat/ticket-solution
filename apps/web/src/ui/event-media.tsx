@@ -176,11 +176,19 @@ export function catalogArtLabel(name: string): string {
   return trimmed.slice(0, 2).toUpperCase();
 }
 
-function CatalogEventCard({ event }: { event: HomeCatalogItem }) {
+function CatalogEventCard({
+  event,
+  ownedCount,
+}: {
+  event: HomeCatalogItem;
+  ownedCount?: number;
+}) {
   const tone = catalogArtTone(event.id);
   const when = formatEventWhen(event);
   const place = event.location ?? event.timezone;
   const artLabel = catalogArtLabel(event.name);
+
+  const showOwned = typeof ownedCount === 'number' && ownedCount > 0;
 
   return (
     <article className="home-catalog-card">
@@ -211,11 +219,29 @@ function CatalogEventCard({ event }: { event: HomeCatalogItem }) {
           </span>
         </div>
       </Link>
+      {showOwned ? (
+        <Link
+          className="home-catalog-card__owned"
+          href={`/wallet?event=${encodeURIComponent(event.id)}`}
+          data-testid={`home-event-owned-${event.id}`}
+        >
+          <span>
+            Bạn có {ownedCount} vé
+          </span>
+          <span aria-hidden="true">Xem vé →</span>
+        </Link>
+      ) : null}
     </article>
   );
 }
 
-export function HomeCatalogGrid({ items }: { items: HomeCatalogItem[] }) {
+export function HomeCatalogGrid({
+  items,
+  ownedByEventId,
+}: {
+  items: HomeCatalogItem[];
+  ownedByEventId?: Record<string, number>;
+}) {
   const [query, setQuery] = useState('');
   const [timeFilter, setTimeFilter] =
     useState<HomeCatalogTimeFilter>('upcoming');
@@ -287,7 +313,11 @@ export function HomeCatalogGrid({ items }: { items: HomeCatalogItem[] }) {
           data-testid="home-catalog-grid"
         >
           {filtered.map((event) => (
-            <CatalogEventCard event={event} key={event.id} />
+            <CatalogEventCard
+              event={event}
+              key={event.id}
+              ownedCount={ownedByEventId?.[event.id]}
+            />
           ))}
         </div>
       )}

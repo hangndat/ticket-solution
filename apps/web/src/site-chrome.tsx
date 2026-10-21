@@ -196,12 +196,16 @@ export function SiteNav({ trailing }: { trailing?: ReactNode }) {
     queueMicrotask(() => menuToggleRef.current?.focus());
   }, [pathname]);
 
-  const toggleMobile = () =>
-    setMobileMenu((prev) =>
-      prev.path === pathname
-        ? { path: pathname, open: !prev.open }
-        : { path: pathname, open: true },
-    );
+  const toggleMobile = () => {
+    setMobileMenu((prev) => {
+      const open =
+        prev.path === pathname ? !prev.open : true;
+      if (prev.path === pathname && prev.open) {
+        queueMicrotask(() => menuToggleRef.current?.focus());
+      }
+      return { path: pathname, open };
+    });
+  };
 
   useEffect(() => {
     if (!mobileOpen) return;
@@ -283,15 +287,24 @@ export function SiteNav({ trailing }: { trailing?: ReactNode }) {
         </button>
       </nav>
       {mobileOpen ? (
-        <div
-          ref={mobileMenuRef}
-          id="site-nav-mobile-menu"
-          className="nav-mobile-menu"
-          data-testid="nav-mobile-menu"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Menu điều hướng"
-        >
+        <>
+          <button
+            type="button"
+            className="nav-mobile-backdrop"
+            aria-hidden="true"
+            tabIndex={-1}
+            data-testid="nav-mobile-backdrop"
+            onClick={closeMobile}
+          />
+          <div
+            ref={mobileMenuRef}
+            id="site-nav-mobile-menu"
+            className="nav-mobile-menu"
+            data-testid="nav-mobile-menu"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Menu điều hướng"
+          >
           {links.map((item) => (
             <NavLinkItem
               key={`mobile-${item.href}`}
@@ -301,7 +314,8 @@ export function SiteNav({ trailing }: { trailing?: ReactNode }) {
             />
           ))}
           {trailing}
-        </div>
+          </div>
+        </>
       ) : null}
     </header>
   );
