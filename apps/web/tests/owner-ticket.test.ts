@@ -290,4 +290,36 @@ describe('loadOwnerWallet', () => {
     }
     assert.equal(calls.length, 2);
   });
+
+  it('retries transient 503 on aggregate tickets', async () => {
+    let ticketCalls = 0;
+    const result = await loadOwnerWallet({
+      accessToken: 'tok',
+      env: { API_BASE_URL: 'http://api.test' } as unknown as NodeJS.ProcessEnv,
+      fetchImpl: async (input) => {
+        const url = String(input);
+        if (url.endsWith('/v1/me/tenants')) {
+          return new Response(JSON.stringify(ME_TENANTS_OK), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          });
+        }
+        ticketCalls += 1;
+        if (ticketCalls === 1) {
+          return new Response('{}', { status: 503 });
+        }
+        return new Response(
+          JSON.stringify({
+            tickets: [{ ...BASE_TICKET, eventName: 'UAT Event' }],
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        );
+      },
+    });
+    assert.equal(result.status, 'ok');
+    if (result.status === 'ok') {
+      assert.equal(result.tickets.length, 1);
+    }
+    assert.equal(ticketCalls, 2);
+  });
 });
