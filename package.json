@@ -27,6 +27,8 @@
     "dev:ios": "pnpm --filter @ticket/contracts build && pnpm --filter @ticket/mobile dev",
     "demo:seed": "./scripts/d9-demo-seed.sh",
     "demo:seed-smoke": "./scripts/d9-demo-seed-smoke.sh",
+    "prod:media:build": "node scripts/prod-media-build.mjs --contact-sheet",
+    "prod:media:verify": "node scripts/prod-media-verify.mjs",
     "check:prepush": "./scripts/pre-push-check.sh",
     "hooks:install": "./scripts/hooks-install.sh",
     "agent-metrics:opened": "node scripts/agent-role-monitor/cli.mjs record-opened",

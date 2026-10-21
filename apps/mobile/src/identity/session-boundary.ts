@@ -1,5 +1,4 @@
 import {
-  accessTokenFromStored,
   accessTokenNeedsRefresh,
   encodeStoredCredential,
   parseStoredCredential,
@@ -51,6 +50,13 @@ type FreshAccessOutcome =
   | { status: 'missing' }
   | { status: 'signed-out' }
   | { status: 'unreachable' };
+
+/** Result of resolving a bearer for API calls while verified. */
+export type CredentialResolveResult =
+  | { status: 'token'; accessToken: string }
+  /** IdP refresh failed (network); do not treat downstream 401 as true revoke. */
+  | { status: 'refresh-unreachable' }
+  | { status: 'unavailable' };
 
 export class SessionBoundary {
   private identity: Identity = { status: 'unknown' };
@@ -269,20 +275,34 @@ export class SessionBoundary {
     await this.storage(() => this.store.clear());
   }
   /**
+   * Resolve bearer for API calls with an explicit signal when refresh failed
+   * due to network (avoids handing an expired access token that would 401).
+   */
+  async resolveCredential(): Promise<CredentialResolveResult> {
+    if (this.identity.status !== 'verified') {
+      return { status: 'unavailable' };
+    }
+    const fresh = await this.ensureFreshAccessToken();
+    if (this.identity.status !== 'verified') {
+      return { status: 'unavailable' };
+    }
+    if (fresh.status === 'token') {
+      return { status: 'token', accessToken: fresh.accessToken };
+    }
+    if (fresh.status === 'unreachable') {
+      return { status: 'refresh-unreachable' };
+    }
+    return { status: 'unavailable' };
+  }
+
+  /**
    * Short-lived bearer for authenticated API calls. Only available while
    * SessionBoundary is verified — never invents a token from UI state.
    * Transparently refreshes when the stored access token is near expiry.
    */
   async getCredential(): Promise<string | null> {
-    if (this.identity.status !== 'verified') return null;
-    const fresh = await this.ensureFreshAccessToken();
-    if (this.identity.status !== 'verified') return null;
-    if (fresh.status === 'token') return fresh.accessToken;
-    if (fresh.status === 'unreachable') {
-      // Network blip: hand back the prior access token; do not self-logout.
-      const raw = await this.storage(() => this.store.read());
-      return raw ? accessTokenFromStored(raw) : null;
-    }
+    const resolved = await this.resolveCredential();
+    if (resolved.status === 'token') return resolved.accessToken;
     return null;
   }
   private key(tenantSlug: string, resource: string) {

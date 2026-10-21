@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Agent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cat >/dev/null; printf '%s\\n' '{\"hookSpecificOutput\": {\"hookEventName\": \"PreToolUse\", \"permissionDecision\": \"deny\", \"permissionDecisionReason\": \"Repo này cấm dùng Agent tool để spawn worker/reviewer khi làm leader. Đọc .cursor/rules/orca-leader-activation.mdc và dùng Orca CLI: `/Applications/Orca.app/Contents/Resources/bin/orca orchestration task-create` + `worker-start --agent cursor --model composer-2.5 --display-name \\\"<Persona> · <label>\\\" --task-title ...`, rồi `check --wait`. Sau worker-start phải đọc result.state (ok:true vẫn có thể state=failed).\"}}'",
+            "statusMessage": "Kiểm tra quy tắc leader Orca"
+          }
+        ]
+      }
+    ]
+  }
+}
