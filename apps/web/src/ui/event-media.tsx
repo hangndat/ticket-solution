@@ -9,6 +9,7 @@ import {
 } from '../demo-media';
 import { publishedEventHref } from '../published/format';
 import { PUBLIC_EVENT_COPY } from '../published/copy';
+import { eventArtTone } from './event-art-tone';
 import { SafeEventImage } from './safe-event-image';
 
 type SharedLookup = {
@@ -117,10 +118,7 @@ export function EventMediaHeader({
 }
 
 export function catalogArtTone(eventId: string): 'default' | 'green' | 'gold' {
-  const n = eventId.charCodeAt(0) + eventId.charCodeAt(eventId.length - 1);
-  if (n % 3 === 1) return 'green';
-  if (n % 3 === 2) return 'gold';
-  return 'default';
+  return eventArtTone(eventId);
 }
 
 function formatEventWhen(event: HomeCatalogItem): string {
