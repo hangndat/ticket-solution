@@ -7,11 +7,44 @@ const UUID =
 export const GATE_UNKNOWN_MESSAGE =
   'Kết quả chưa rõ. Không cho vào. Đối soát trước khi cho bất kỳ ai qua.';
 
+export type ParsedScanDisplayHints = {
+  eventName?: string;
+  ticketTypeLabel?: string;
+  attendeeName?: string;
+};
+
 export type ParsedScan = {
   ticketId: string;
   tenantId: string;
   eventId: string;
+  /** Optional labels from extended ticket.display paste — not gate proof. */
+  displayHints?: ParsedScanDisplayHints;
 };
+
+function readOptionalDisplayString(
+  body: Record<string, unknown>,
+  key: string,
+): string | undefined {
+  const value = body[key];
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
+function displayHintsFromJson(
+  body: Record<string, unknown>,
+): ParsedScanDisplayHints | undefined {
+  const eventName = readOptionalDisplayString(body, 'eventName');
+  const ticketTypeLabel =
+    readOptionalDisplayString(body, 'ticketTypeLabel') ??
+    readOptionalDisplayString(body, 'ticketTypeName');
+  const attendeeName =
+    readOptionalDisplayString(body, 'attendeeName') ??
+    readOptionalDisplayString(body, 'holderName') ??
+    readOptionalDisplayString(body, 'guestName');
+  if (!eventName && !ticketTypeLabel && !attendeeName) return undefined;
+  return { eventName, ticketTypeLabel, attendeeName };
+}
 
 export type GatePhase =
   | 'holding'
@@ -71,6 +104,7 @@ export function parseScan(
           ticketId: body.ticketId,
           tenantId: body.tenantId,
           eventId: body.eventId,
+          displayHints: displayHintsFromJson(body),
         };
       }
     } catch {

@@ -99,7 +99,7 @@ export function presentGateOutcome(op: GateOp | null): GateOutcomeView {
     if (already) {
       return {
         kind: 'already-checked-in',
-        title: 'Đã check-in trước đó',
+        title: 'Vé đã được sử dụng',
         detail:
           op.message ||
           'Vé này đã được ghi nhận vào cổng. Cho qua theo kết quả đã có — không tạo lượt mới.',
@@ -109,7 +109,7 @@ export function presentGateOutcome(op: GateOp | null): GateOutcomeView {
     }
     return {
       kind: 'admitted',
-      title: 'Cho vào',
+      title: 'Được vào',
       detail: op.message || 'Đã ghi nhận check-in.',
       tone: 'admit',
       assertive: false,

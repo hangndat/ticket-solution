@@ -49,7 +49,7 @@ test('fresh admit vs already-checked-in are distinct', () => {
   });
   assert.equal(fresh.kind, 'admitted');
   assert.equal(fresh.tone, 'admit');
-  assert.equal(fresh.title, 'Cho vào');
+  assert.equal(fresh.title, 'Được vào');
 
   const already = presentGateOutcome({
     ...base,
@@ -60,7 +60,7 @@ test('fresh admit vs already-checked-in are distinct', () => {
   });
   assert.equal(already.kind, 'already-checked-in');
   assert.equal(already.tone, 'admit');
-  assert.match(already.title, /đã check-in/i);
+  assert.match(already.title, /đã được sử dụng/i);
   assert.notEqual(already.title, fresh.title);
 });
 
