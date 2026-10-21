@@ -8,13 +8,184 @@ import {
   PUBLIC_EVENT_COPY,
   homeTenantSlugs,
   loadPublishedEventList,
-  publishedEventHref,
 } from '../src/published';
 import { SurfaceState } from '../src/ui/surface-state';
-import { EventBanner, EventLogo } from '../src/ui/event-media';
+import { HomeCatalogGrid } from '../src/ui/event-media';
 
 /** Soft-redirect landing notices from staff routes (O02) + auth stub. */
 export const dynamic = 'force-dynamic';
+
+const HOME_CATALOG_STYLES = `
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.home.home--catalog .home-hero {
+  max-width: none;
+  margin-top: var(--space-6);
+}
+.home.home--catalog .home-hero h1 {
+  font-size: clamp(1.85rem, 4.5vw, 2.4rem);
+  letter-spacing: -0.04em;
+  line-height: 1.15;
+  margin-bottom: var(--space-3);
+}
+.home.home--catalog .home-hero .intro {
+  max-width: 36rem;
+  font-size: 1.05rem;
+  color: var(--muted);
+}
+.wordmark-hero--catalog {
+  margin-bottom: var(--space-3);
+  font-size: clamp(1.1rem, 2.5vw, 1.35rem);
+}
+.home-catalog-tools {
+  display: flex;
+  gap: 10px;
+  margin: var(--space-6) 0 var(--space-5);
+  align-items: stretch;
+}
+.home-catalog-search {
+  flex: 1;
+  display: block;
+}
+.home-catalog-search input,
+.home-catalog-filter select {
+  width: 100%;
+  min-height: 46px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: #fff;
+  font: inherit;
+  color: var(--ink);
+}
+.home-catalog-filter select {
+  min-width: 11rem;
+  cursor: pointer;
+}
+.home-catalog-grid {
+  display: grid;
+  gap: 22px;
+  margin: 0 0 var(--space-7);
+}
+.home-catalog-card {
+  border-bottom: 1px solid var(--line);
+  padding-bottom: var(--space-4);
+}
+.home-catalog-card__link {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+}
+.home-catalog-card__link:focus-visible {
+  outline-offset: 4px;
+}
+.home-catalog-card__art {
+  position: relative;
+  height: 175px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: #182941;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+}
+.home-catalog-card__art::after {
+  content: '';
+  width: 180px;
+  height: 180px;
+  border: 32px solid #f26583;
+  position: absolute;
+  right: -65px;
+  top: -10px;
+  border-radius: 50%;
+  opacity: 0.65;
+  pointer-events: none;
+}
+.home-catalog-card__art--green {
+  background: #13504b;
+}
+.home-catalog-card__art--green::after {
+  border-color: #82d6b3;
+}
+.home-catalog-card__art--gold {
+  background: #6e451d;
+}
+.home-catalog-card__art--gold::after {
+  border-color: #eac786;
+}
+.home-catalog-card__banner {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+.home-catalog-card__art-fallback {
+  font-family: var(--font-display), Sora, ui-sans-serif, sans-serif;
+  font-size: 2.5rem;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  z-index: 1;
+}
+.home-catalog-card__info {
+  padding-top: var(--space-4);
+  display: grid;
+  gap: var(--space-2);
+}
+.home-catalog-card__title {
+  font-size: 1.125rem;
+  margin: 0;
+  font-family: var(--font-display), Sora, ui-sans-serif, sans-serif;
+  letter-spacing: -0.02em;
+}
+.home-catalog-card__meta {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+.home-catalog-card__action {
+  margin-top: var(--space-2);
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--signal);
+}
+.home-catalog-empty {
+  margin: var(--space-5) 0 var(--space-7);
+  padding: var(--space-6);
+  text-align: center;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius-md);
+  color: var(--muted);
+}
+@media (min-width: 768px) {
+  .home-catalog-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (max-width: 767px) {
+  .home-catalog-tools {
+    flex-wrap: wrap;
+  }
+  .home-catalog-search {
+    flex-basis: 100%;
+  }
+  .home-catalog-filter {
+    flex: 1;
+  }
+}
+`;
 
 type Props = {
   searchParams: Promise<{ notice?: string }>;
@@ -69,40 +240,6 @@ function staffDeniedCopy(notice: string | undefined): {
   return null;
 }
 
-function EventCard({ event }: { event: PublishedEventSummary }) {
-  return (
-    <Link
-      className="event-row"
-      href={publishedEventHref(event)}
-      role="listitem"
-      data-testid={`home-event-${event.id}`}
-    >
-      <EventBanner
-        eventId={event.id}
-        tenantSlug={event.tenantSlug}
-        bannerUrl={event.brand.bannerUrl}
-        className="event-banner event-banner-card"
-        testId={`home-banner-${event.id}`}
-        alt=""
-      />
-      <EventLogo
-        eventId={event.id}
-        tenantSlug={event.tenantSlug}
-        logoUrl={event.brand.logoUrl}
-        className="event-logo event-logo-card"
-        testId={`home-logo-${event.id}`}
-        alt=""
-      />
-      <span className="eyebrow">{event.brand.organizationName}</span>
-      <h2>{event.name}</h2>
-      <p>{event.location ?? event.timezone}</p>
-      <span className="card-action">
-        Xem sự kiện <span aria-hidden="true">↗</span>
-      </span>
-    </Link>
-  );
-}
-
 export default async function Home({ searchParams }: Props) {
   const params = await searchParams;
   const catalog = await loadHomeCatalog();
@@ -110,58 +247,19 @@ export default async function Home({ searchParams }: Props) {
   const authNotice = authNoticeFromParam(params.notice?.trim(), {
     retryHref: loginHref('/'),
   });
-  const featured =
-    catalog.status === 'ok' && catalog.items.length > 0
-      ? catalog.items[0]
-      : null;
-  const catalogRest =
-    catalog.status === 'ok' && featured
-      ? catalog.items.slice(1)
-      : catalog.status === 'ok'
-        ? catalog.items
-        : [];
-  const homeLogin = loginHref('/');
 
   return (
-    <main id="main" className="container home">
+    <main id="main" className="container home home--catalog">
+      <style>{HOME_CATALOG_STYLES}</style>
       <SiteNav />
       <section className="home-hero" aria-labelledby="home-title">
-        <HeroWordmark />
-        <h1 id="home-title">Điều tốt đẹp đưa chúng ta lại gần.</h1>
+        <HeroWordmark presentation="catalog" />
+        <h1 id="home-title">Hẹn bạn ở trải nghiệm tiếp theo.</h1>
         <p className="intro">
-          Đổi mã lấy vé hoặc xem sự kiện đã xuất bản.
-        </p>
-        <p className="home-cta auth-buttons">
-          <Link className="button home-cta-primary" href="/redeem">
-            Đổi mã lấy vé
-          </Link>
-          <a className="button-link button-link-secondary" href={homeLogin}>
-            Đăng nhập
-          </a>
+          Khám phá sự kiện từ những nhà tổ chức trên khắp nền tảng. Đổi mã lấy
+          vé qua mục Đổi mã trên thanh điều hướng.
         </p>
       </section>
-
-      {featured ? (
-        <Link
-          className="home-featured"
-          href={publishedEventHref(featured)}
-          data-testid={`home-featured-${featured.id}`}
-          aria-label={`Xem sự kiện ${featured.name}`}
-        >
-          <EventBanner
-            eventId={featured.id}
-            tenantSlug={featured.tenantSlug}
-            bannerUrl={featured.brand.bannerUrl}
-            className="event-banner home-featured-banner"
-            testId={`home-featured-banner-${featured.id}`}
-            alt=""
-          />
-          <span className="home-featured-meta">
-            <span className="eyebrow">{featured.brand.organizationName}</span>
-            <span className="home-featured-name">{featured.name}</span>
-          </span>
-        </Link>
-      ) : null}
 
       {authNotice ? (
         <aside
@@ -231,14 +329,7 @@ export default async function Home({ searchParams }: Props) {
       ) : null}
 
       {catalog.status === 'ok' ? (
-        <div className="event-list" role="list">
-          {featured ? (
-            <EventCard event={featured} key={featured.id} />
-          ) : null}
-          {catalogRest.map((event) => (
-            <EventCard event={event} key={event.id} />
-          ))}
-        </div>
+        <HomeCatalogGrid items={catalog.items} />
       ) : null}
     </main>
   );
