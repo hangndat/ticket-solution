@@ -30,6 +30,8 @@ export const IDENTITY_ERROR_CODES = {
   UNAUTHENTICATED: 'UNAUTHENTICATED',
   EMAIL_NOT_VERIFIED: 'EMAIL_NOT_VERIFIED',
   OIDC_MISCONFIGURED: 'OIDC_MISCONFIGURED',
+  /** JWKS / IdP temporarily unreachable — clients should retry. */
+  OIDC_UNAVAILABLE: 'OIDC_UNAVAILABLE',
 } as const;
 
 /**
@@ -683,6 +685,16 @@ export interface TenantBrandingUpdateBody {
   secondaryColor?: string | null;
   logoAssetId?: string | null;
   expectedVersion: number;
+}
+
+/** Public chrome — GET /v1/public/tenants/{slug}/branding */
+export interface PublicTenantBranding {
+  tenantSlug: string;
+  displayName: string;
+  primaryColor: string;
+  secondaryColor: string | null;
+  logoAssetId: string | null;
+  logoUrl?: string;
 }
 
 /** Built-in enum or named server preset (P2-ROLES-PRESET / ADR §7.3). */

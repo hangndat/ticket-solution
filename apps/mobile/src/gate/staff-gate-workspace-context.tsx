@@ -55,7 +55,8 @@ import {
   loadStaffGateWorkspace,
   saveStaffGateWorkspace,
 } from '@/gate/staff-gate-workspace-store';
-import { fetchMeEvents } from '@/identity/fetch-me-events';
+import { staffGateEventsFromProbe } from '@/gate/staff-gate-events-probe';
+import { probeMeEvents } from '@/identity/fetch-me-events';
 import {
   probeConnectivity,
   type ConnectivityState,
@@ -310,8 +311,14 @@ export function StaffGateWorkspaceProvider({
       setGateEventsError(auth.message);
       return;
     }
-    const body = await fetchMeEvents(auth.bearer);
-    if (!body || body.staffEligible !== true) {
+    const probe = await probeMeEvents(auth.bearer);
+    const outcome = staffGateEventsFromProbe(probe);
+    if (outcome.kind === 'probe-error') {
+      setGateEventsLoading(false);
+      setGateEventsError(outcome.message);
+      return;
+    }
+    if (outcome.kind === 'ineligible') {
       workspaceRef.current = { ...workspaceRef.current, selected: null };
       setGateScope(null);
       setGateEventChoices([]);
@@ -323,6 +330,7 @@ export function StaffGateWorkspaceProvider({
       await saveStaffGateWorkspace(verifiedUserId, workspaceRef.current);
       return;
     }
+    const body = outcome.body;
     const choices = gateStaffEvents(body.items).map(meEventToScope);
     setGateEventChoices(choices);
     const merged = mergeMeEventsIntoWorkspace(

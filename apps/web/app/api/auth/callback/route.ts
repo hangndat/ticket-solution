@@ -11,27 +11,29 @@ import {
   PKCE_COOKIE,
   REFRESH_COOKIE,
   STATE_COOKIE,
-  publicOrigin,
   sessionCookieOptions,
 } from '../../../../src/oidc/cookies';
+import { WEB_AUTH_COOKIES } from '../../../../src/oidc/local-cookies';
+import { requirePublicOrigin } from '../../../../src/oidc/public-origin';
 import {
   POST_LOGIN_COOKIE,
   sanitizePostLoginPath,
 } from '../../../../src/oidc/post-login';
-
-type TokenResponse = {
-  access_token?: string;
-  refresh_token?: string;
-  id_token?: string;
-  expires_in?: number;
-  error?: string;
-  error_description?: string;
-};
+import type { TokenGrantResponse } from '../../../../src/oidc/refresh';
+import {
+  acceptOidcTokenGrant,
+  getRemoteJwks,
+  TokenVerifyError,
+} from '../../../../src/oidc/verify-tokens';
 
 /** Exchange authorization code for tokens; store in HttpOnly cookies. */
 export async function GET(request: NextRequest) {
+  const originResult = requirePublicOrigin(request);
+  if (!originResult.ok) return originResult.response;
+  const origin = originResult.origin;
+
   if (!isOidcConfigured()) {
-    return NextResponse.redirect(new URL('/auth?error=misconfigured', publicOrigin(request)));
+    return NextResponse.redirect(new URL('/auth?error=misconfigured', origin));
   }
 
   const config = readOidcWebConfig()!;
@@ -42,7 +44,7 @@ export async function GET(request: NextRequest) {
 
   if (oauthError) {
     return NextResponse.redirect(
-      new URL(`/auth?error=${encodeURIComponent(oauthError)}`, publicOrigin(request)),
+      new URL(`/auth?error=${encodeURIComponent(oauthError)}`, origin),
     );
   }
 
@@ -51,7 +53,7 @@ export async function GET(request: NextRequest) {
   const verifier = jar.get(PKCE_COOKIE)?.value;
 
   if (!code || !state || !expectedState || state !== expectedState || !verifier) {
-    return NextResponse.redirect(new URL('/auth?error=invalid_state', publicOrigin(request)));
+    return NextResponse.redirect(new URL('/auth?error=invalid_state', origin));
   }
 
   const tokenUrl = `${discoveryBase(config.issuer)}/protocol/openid-connect/token`;
@@ -64,7 +66,7 @@ export async function GET(request: NextRequest) {
     code_verifier: verifier,
   });
 
-  let tokens: TokenResponse;
+  let tokens: TokenGrantResponse;
   try {
     const response = await fetch(tokenUrl, {
       method: 'POST',
@@ -72,31 +74,58 @@ export async function GET(request: NextRequest) {
       body,
       cache: 'no-store',
     });
-    tokens = (await response.json()) as TokenResponse;
+    tokens = (await response.json()) as TokenGrantResponse;
     if (!response.ok || !tokens.access_token) {
       return NextResponse.redirect(
         new URL(
           `/auth?error=${encodeURIComponent(tokens.error ?? 'token_exchange')}`,
-          publicOrigin(request),
+          origin,
         ),
       );
     }
   } catch {
-    return NextResponse.redirect(new URL('/auth?error=token_exchange', publicOrigin(request)));
+    return NextResponse.redirect(new URL('/auth?error=token_exchange', origin));
   }
 
-  const maxAge = Math.max(60, tokens.expires_in ?? 300);
-  jar.set(ACCESS_COOKIE, tokens.access_token, sessionCookieOptions(maxAge));
-  if (tokens.refresh_token) {
+  let grant;
+  try {
+    grant = await acceptOidcTokenGrant({
+      accessToken: tokens.access_token,
+      idToken: tokens.id_token,
+      refreshToken: tokens.refresh_token,
+      expiresIn: tokens.expires_in,
+      issuer: config.issuer,
+      clientId: config.clientId,
+      accessAudience: config.audience,
+      jwks: getRemoteJwks(config.jwksUrl),
+    });
+  } catch (error) {
+    jar.delete(PKCE_COOKIE);
+    jar.delete(STATE_COOKIE);
+    const reason =
+      error instanceof TokenVerifyError ? error.reason : 'token_verify';
+    return NextResponse.redirect(
+      new URL(`/auth?error=${encodeURIComponent(reason)}`, origin),
+    );
+  }
+
+  const maxAge = grant.expiresIn;
+  jar.set(ACCESS_COOKIE, grant.accessToken, sessionCookieOptions(maxAge));
+  if (grant.refreshToken) {
     jar.set(
       REFRESH_COOKIE,
-      tokens.refresh_token,
+      grant.refreshToken,
       sessionCookieOptions(60 * 60 * 24 * 30),
     );
   }
-  if (tokens.id_token) {
-    jar.set(ID_TOKEN_COOKIE, tokens.id_token, sessionCookieOptions(maxAge));
+  if (grant.idToken) {
+    jar.set(ID_TOKEN_COOKIE, grant.idToken, sessionCookieOptions(maxAge));
   }
+  jar.set(
+    WEB_AUTH_COOKIES.subject,
+    grant.subject,
+    sessionCookieOptions(60 * 60 * 24 * 30),
+  );
   jar.delete(PKCE_COOKIE);
   jar.delete(STATE_COOKIE);
 
@@ -104,6 +133,6 @@ export async function GET(request: NextRequest) {
   jar.delete(POST_LOGIN_COOKIE);
 
   return NextResponse.redirect(
-    new URL(postLogin ?? '/', publicOrigin(request)),
+    new URL(postLogin ?? '/', origin),
   );
 }

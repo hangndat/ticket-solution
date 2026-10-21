@@ -1,10 +1,5 @@
 import 'reflect-metadata';
-import { randomUUID } from 'node:crypto';
 import {
-  Controller,
-  Get,
-  Headers,
-  HttpException,
   Injectable,
   Module,
   type OnModuleDestroy,
@@ -15,30 +10,12 @@ import {
   NestFastifyApplication,
 } from '@nestjs/platform-fastify';
 import {
-  ApiBearerAuth,
-  ApiOkResponse,
-  ApiProperty,
-  ApiUnauthorizedResponse,
   DocumentBuilder,
   SwaggerModule,
 } from '@nestjs/swagger';
+import { API_VERSION } from '@ticket/contracts';
 import {
-  API_VERSION,
-  IDENTITY_ERROR_CODES,
-  type ApiError,
-  type HealthResponse,
-  type MeResponse,
-} from '@ticket/contracts';
-import {
-  createDatabase,
-  createOidcVerifier,
-  createPrismaIdentityUserRepository,
-  IdentityError,
-  readOidcEnvironment,
   readProcessEnvironment,
-  type CodeHmacConfig,
-  type IdentityUserRepository,
-  type OidcVerifier,
   type PrismaClient,
 } from '@ticket/backend';
 import { ConfigPublishController, ConfigPublishService } from './config';
@@ -66,7 +43,13 @@ import {
   buildResolveDeps,
 } from './redemptions-resolve';
 import { registerMetricsEndpoint } from './metrics';
-import { PlatformController, PlatformService, buildPlatformDeps } from './platform';
+import {
+  PlatformMeController,
+  PlatformMembershipController,
+  PlatformOperatorController,
+  PlatformService,
+  buildPlatformDeps,
+} from './platform';
 import { BrandingController, BrandingService } from './branding';
 import {
   PlatformPublishedEventsController,
@@ -74,129 +57,40 @@ import {
   PublishedEventsService,
 } from './published-events';
 import {
+  PublishedEventAssetsController,
+  PublishedEventAssetsService,
+} from './published-event-assets';
+import {
+  PublicTenantBrandingController,
+  PublicTenantBrandingService,
+} from './public-tenant-branding';
+import {
+  PublishedTenantAssetsController,
+  PublishedTenantAssetsService,
+} from './published-tenant-assets';
+import {
   TenantRegistrationController,
   TenantRegistrationService,
   buildTenantRegistrationDeps,
 } from './tenant-registrations';
+import {
+  HealthController,
+  IdentityService,
+  MeController,
+  resolveIdentity,
+} from './identity';
+import type { CreateAppOptions } from './app-options';
+import {
+  DEFAULT_JSON_BODY_LIMIT_BYTES,
+  IMPORT_UPLOAD_BODY_LIMIT_BYTES,
+} from './http-limits';
+import {
+  platformAwareOperationIdFactory,
+  reorderOpenApiPaths,
+  reorderOpenApiSchemas,
+} from './openapi-document';
 
-class HealthDto implements HealthResponse {
-  @ApiProperty({ enum: ['ok'] }) status!: 'ok';
-  @ApiProperty({ enum: ['api'] }) service!: 'api';
-  @ApiProperty({ example: '0.1.0' }) version!: string;
-}
-
-class MeDto implements MeResponse {
-  @ApiProperty({ format: 'uuid' }) userId!: string;
-  @ApiProperty() issuer!: string;
-  @ApiProperty() subject!: string;
-  @ApiProperty({ nullable: true, type: String }) email!: string | null;
-  @ApiProperty() emailVerified!: boolean;
-}
-
-class ApiErrorDto implements ApiError {
-  @ApiProperty() code!: string;
-  @ApiProperty() message!: string;
-  @ApiProperty() requestId!: string;
-  @ApiProperty({ required: false }) operationId?: string;
-  @ApiProperty() retryable!: boolean;
-}
-
-function toHttpException(error: IdentityError): HttpException {
-  const requestId = randomUUID();
-  const body: ApiError = {
-    code: error.code,
-    message: error.message,
-    requestId,
-    retryable: error.retryable,
-  };
-  const status =
-    error.code === IDENTITY_ERROR_CODES.UNAUTHENTICATED
-      ? 401
-      : error.code === IDENTITY_ERROR_CODES.OIDC_MISCONFIGURED
-        ? 503
-        : error.code === IDENTITY_ERROR_CODES.EMAIL_NOT_VERIFIED
-          ? 403
-          : 401;
-  return new HttpException(body, status);
-}
-
-@Injectable()
-class IdentityService {
-  constructor(
-    private readonly verifier: OidcVerifier | null,
-    private readonly users: IdentityUserRepository | null,
-    private readonly bootError: IdentityError | null,
-  ) {}
-
-  async me(authorization: string | undefined): Promise<MeResponse> {
-    if (this.bootError) throw this.bootError;
-    if (!this.verifier || !this.users) {
-      throw new IdentityError(
-        IDENTITY_ERROR_CODES.OIDC_MISCONFIGURED,
-        'Identity services are not configured',
-      );
-    }
-    const verified = await this.verifier.verifyBearerToken(authorization);
-    const user = await this.users.upsertFromVerifiedIdentity(verified);
-    return {
-      userId: user.userId,
-      issuer: user.issuer,
-      subject: user.subject,
-      email: user.email,
-      emailVerified: user.emailVerified,
-    };
-  }
-}
-
-@Controller('health')
-class HealthController {
-  @Get()
-  @ApiOkResponse({ type: HealthDto })
-  health(): HealthResponse {
-    return { status: 'ok', service: 'api', version: '0.1.0' };
-  }
-}
-
-@Controller('me')
-class MeController {
-  constructor(private readonly identity: IdentityService) {}
-
-  @Get()
-  @ApiBearerAuth()
-  @ApiOkResponse({ type: MeDto })
-  @ApiUnauthorizedResponse({ type: ApiErrorDto })
-  async me(
-    @Headers('authorization') authorization?: string,
-  ): Promise<MeResponse> {
-    try {
-      return await this.identity.me(authorization);
-    } catch (error) {
-      if (error instanceof IdentityError) throw toHttpException(error);
-      throw error;
-    }
-  }
-}
-
-export type CreateAppOptions = {
-  logging?: boolean;
-  /**
-   * When true, wire OIDC + Prisma users from `env` (default process.env).
-   * Tests should inject verifier/users or leave this unset (fail closed).
-   */
-  fromEnv?: boolean;
-  /** Override process.env when fromEnv is true. */
-  env?: NodeJS.ProcessEnv;
-  oidcVerifier?: OidcVerifier;
-  users?: IdentityUserRepository;
-  /** When set, identity stack is intentionally unavailable (fail closed). */
-  identityBootError?: IdentityError;
-  /** Owned Prisma client closed on app destroy when created from env. */
-  databaseUrl?: string;
-  /** Inject DB for redeem/tickets (tests). */
-  database?: PrismaClient;
-  hmac?: CodeHmacConfig;
-  credentialKey?: string;
-};
+export type { CreateAppOptions } from './app-options';
 
 @Injectable()
 class DatabaseShutdown implements OnModuleDestroy {
@@ -214,105 +108,6 @@ export function readApiEnvironment(env: NodeJS.ProcessEnv) {
   const host = env['HOST'] ?? '127.0.0.1';
   if (!host || /[\s/]/.test(host)) throw new Error('Invalid HOST');
   return { ...common, port: Number(port), host };
-}
-
-function resolveIdentity(options: CreateAppOptions): {
-  verifier: OidcVerifier | null;
-  users: IdentityUserRepository | null;
-  bootError: IdentityError | null;
-  db: PrismaClient | null;
-  ownsDb: boolean;
-  hmac: CodeHmacConfig | null;
-  credentialKey: string | null;
-} {
-  if (options.identityBootError) {
-    return {
-      verifier: null,
-      users: null,
-      bootError: options.identityBootError,
-      db: null,
-      ownsDb: false,
-      hmac: null,
-      credentialKey: null,
-    };
-  }
-  if (options.oidcVerifier && options.users) {
-    const env = options.env ?? process.env;
-    const issue = resolveIssueDeps(env);
-    return {
-      verifier: options.oidcVerifier,
-      users: options.users,
-      bootError: null,
-      db: options.database ?? null,
-      ownsDb: false,
-      hmac: options.hmac ?? issue.hmac,
-      credentialKey: options.credentialKey ?? issue.credentialKey,
-    };
-  }
-
-  if (
-    !options.fromEnv &&
-    !options.env &&
-    !options.databaseUrl &&
-    !options.database
-  ) {
-    return {
-      verifier: null,
-      users: null,
-      bootError: new IdentityError(
-        IDENTITY_ERROR_CODES.OIDC_MISCONFIGURED,
-        'Identity services are not configured',
-      ),
-      db: null,
-      ownsDb: false,
-      hmac: null,
-      credentialKey: null,
-    };
-  }
-
-  const env = options.env ?? process.env;
-  let verifier: OidcVerifier | null = options.oidcVerifier ?? null;
-  let bootError: IdentityError | null = null;
-  if (!verifier) {
-    try {
-      verifier = createOidcVerifier(readOidcEnvironment(env));
-    } catch (error) {
-      if (error instanceof IdentityError) bootError = error;
-      else throw error;
-    }
-  }
-
-  let db: PrismaClient | null = options.database ?? null;
-  let ownsDb = false;
-  let users: IdentityUserRepository | null = options.users ?? null;
-  if (!users) {
-    const databaseUrl = options.databaseUrl ?? env['DATABASE_URL'];
-    if (!databaseUrl?.trim() && !db) {
-      bootError =
-        bootError ??
-        new IdentityError(
-          IDENTITY_ERROR_CODES.OIDC_MISCONFIGURED,
-          'DATABASE_URL is required for identity persistence',
-        );
-    } else if (!db && databaseUrl) {
-      db = createDatabase(databaseUrl);
-      ownsDb = true;
-      users = createPrismaIdentityUserRepository(db, { env });
-    } else if (db) {
-      users = createPrismaIdentityUserRepository(db, { env });
-    }
-  }
-
-  const issue = resolveIssueDeps(env);
-  return {
-    verifier,
-    users,
-    bootError,
-    db,
-    ownsDb,
-    hmac: options.hmac ?? issue.hmac,
-    credentialKey: options.credentialKey ?? issue.credentialKey,
-  };
 }
 
 export async function createApp(
@@ -358,10 +153,15 @@ export async function createApp(
       ExportController,
       DeviceTokenController,
       NotificationController,
-      PlatformController,
+      PlatformMeController,
+      PlatformOperatorController,
+      PlatformMembershipController,
       BrandingController,
       PlatformPublishedEventsController,
       PublishedEventsController,
+      PublishedEventAssetsController,
+      PublicTenantBrandingController,
+      PublishedTenantAssetsController,
       TenantRegistrationController,
     ],
     providers: [
@@ -436,6 +236,18 @@ export async function createApp(
         useValue: new PublishedEventsService({ db: identity.db }),
       },
       {
+        provide: PublishedEventAssetsService,
+        useValue: new PublishedEventAssetsService({ db: identity.db }),
+      },
+      {
+        provide: PublicTenantBrandingService,
+        useValue: new PublicTenantBrandingService({ db: identity.db }),
+      },
+      {
+        provide: PublishedTenantAssetsService,
+        useValue: new PublishedTenantAssetsService({ db: identity.db }),
+      },
+      {
         provide: TenantRegistrationService,
         useValue: new TenantRegistrationService(
           buildTenantRegistrationDeps({
@@ -458,12 +270,17 @@ export async function createApp(
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
     new FastifyAdapter({
-      // 11 MiB — CSV import multipart up to IMPORT_LIMITS.maxBytes (10 MiB).
-      bodyLimit: 11 * 1024 * 1024,
+      bodyLimit: DEFAULT_JSON_BODY_LIMIT_BYTES,
       trustProxy: false,
     }),
     { logger: logging ? undefined : false },
   );
+  app.getHttpAdapter().getInstance().addHook('onRoute', (routeOptions) => {
+    const url = routeOptions.url ?? '';
+    if (url.includes('/imports/files')) {
+      routeOptions.bodyLimit = IMPORT_UPLOAD_BODY_LIMIT_BYTES;
+    }
+  });
   // Multipart for H-I1 CSV quarantine upload (Nest Fastify).
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   await app.register(require('@fastify/multipart'), {
@@ -475,8 +292,18 @@ export async function createApp(
   return app;
 }
 
-export function createOpenApi(app: NestFastifyApplication) {
-  return SwaggerModule.createDocument(
+export type CreateOpenApiOptions = {
+  /** Path keys from the committed spec — keeps `openapi.json` byte-stable across controller splits. */
+  pathOrder?: readonly string[];
+  /** Schema keys from the committed spec — stable `components.schemas` ordering. */
+  schemaOrder?: readonly string[];
+};
+
+export function createOpenApi(
+  app: NestFastifyApplication,
+  options: CreateOpenApiOptions = {},
+) {
+  const document = SwaggerModule.createDocument(
     app,
     new DocumentBuilder()
       .setTitle('Ticket API — D4 CS/export/events')
@@ -486,5 +313,14 @@ export function createOpenApi(app: NestFastifyApplication) {
       )
       .addBearerAuth()
       .build(),
+    { operationIdFactory: platformAwareOperationIdFactory },
   );
+  let stable = document;
+  if (options.pathOrder?.length) {
+    stable = reorderOpenApiPaths(stable, options.pathOrder);
+  }
+  if (options.schemaOrder?.length) {
+    stable = reorderOpenApiSchemas(stable, options.schemaOrder);
+  }
+  return stable;
 }

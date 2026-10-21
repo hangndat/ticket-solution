@@ -11,6 +11,9 @@ export type OidcWebConfig = {
   clientSecret: string;
   redirectUri: string;
   scopes: string;
+  /** Access-token audience — Nest API (`ticket-api`). */
+  audience: string;
+  jwksUrl: string;
 };
 
 export function readOidcWebConfig(
@@ -20,12 +23,41 @@ export function readOidcWebConfig(
   const clientId = env.OIDC_CLIENT_ID?.trim() ?? '';
   const clientSecret = env.OIDC_CLIENT_SECRET?.trim() ?? '';
   const redirectUri = env.OIDC_REDIRECT_URI?.trim() ?? '';
+  const audience = env.OIDC_AUDIENCE?.trim() ?? '';
+  const jwksUrl =
+    env.OIDC_JWKS_URL?.trim() ||
+    (issuer
+      ? `${discoveryBase(issuer)}/protocol/openid-connect/certs`
+      : '');
   const scopes =
     env.OIDC_SCOPES?.trim() || 'openid profile email';
-  if (!issuer || !clientId || !clientSecret || !redirectUri) {
+  if (
+    !issuer ||
+    !clientId ||
+    !clientSecret ||
+    !redirectUri ||
+    !audience ||
+    !jwksUrl
+  ) {
     return null;
   }
-  return { issuer, clientId, clientSecret, redirectUri, scopes };
+  try {
+    const url = new URL(jwksUrl);
+    if (url.protocol !== 'https:' && url.protocol !== 'http:') {
+      return null;
+    }
+  } catch {
+    return null;
+  }
+  return {
+    issuer,
+    clientId,
+    clientSecret,
+    redirectUri,
+    scopes,
+    audience,
+    jwksUrl,
+  };
 }
 
 export function isOidcConfigured(env: OidcEnvBag = process.env): boolean {

@@ -1,35 +1,33 @@
 {
-  "timeUTC": "2026-10-19T08:54:00+00:00",
-  "task": 327,
+  "timeUTC": "2026-10-21T07:50:00+00:00",
+  "task": "task_c515b184a886",
   "epic": 301,
   "story": 307,
   "verdict": "FAIL",
   "physicalTfSmokePass": false,
   "prodBakeOnDevice": true,
   "tfBinaryOnDevice": false,
-  "usbDevInstall14": true,
+  "usbDevInstall26": false,
+  "installedObservedBuild": "14",
   "submittedForReview": false,
   "released": false,
   "cloudBuild": false,
   "target": {
     "marketingVersion": "1.0.0",
-    "build": "14",
-    "ascDeliveryUuid": "fc3a28b8-c0d3-4358-a481-de3a2ab835c8",
-    "processingState": "VALID",
+    "build": "26",
     "bundleId": "com.hangndat.ticket",
-    "team": "BLUA62D52G",
-    "ipaSHA256": "84de550b34c09b07e847ab38eea6880a684b85fd30e27b8ee1bb005c03ab4279",
-    "prodBakeVerifiedIpa": true
+    "team": "BLUA62D52G"
   },
   "devices": {
     "primary": {
-      "name": "Dexter\u2019s iPhone 16 Pro",
-      "coreDeviceId": "06CAC741-EB05-55B0-AAE6-14D7B49F50BB",
-      "udid": "00008140-000605803C01801C",
+      "name": "DatHN iPhone",
+      "coreDeviceId": "CB22153A-C24F-547E-87FC-34EC62527838",
+      "udid": "00008130-000618E402D1001C",
+      "connection": "wifi-coredevice",
       "installedVemoki": {
         "version": "1.0.0",
         "build": "14",
-        "installMethod": "usb-development"
+        "installMethod": "usb-development-legacy"
       }
     }
   },
@@ -38,15 +36,16 @@
     "oidcProdSignIn": "FAIL",
     "attendeeQr": "FAIL",
     "staffGateCamera": "FAIL",
-    "push": "SKIP"
+    "accountDeletionScreen": "FAIL",
+    "noDevRoutesNoCrash": "PARTIAL"
   },
   "automationLimits": [
-    "accessibility perform_press did not open OIDC sheet",
-    "WDA XCTest passcode gate on device",
-    "tab bar deep links did not navigate to staff"
+    "Release build 26 install blocked: iOS Team Provisioning Profile missing DatHN UDID",
+    "accessibility perform_press on Sign In does not open auth.vemoki.com sheet",
+    "WDA requires sudo pymobiledevice3 remote tunneld",
+    "universal-hid-service unavailable on iOS 26",
+    "DatHN not on USB usbmux; native RSD tunnel works for screenshot only"
   ],
-  "uatArtifactsDir": "apps/mobile/.uat-artifacts/s4-t3-dexter",
-  "coordinatorRedirect": "usb install prod bake 14 on Dexter (no TF wait)",
-  "apiKeyId": "KHT3SAL2FS",
-  "evidenceTipSha": "a4c1501da5c3ffe7249094d33f665c988c296c2e"
+  "uatArtifactsDir": "apps/mobile/.uat-artifacts/s4-t3-dathn",
+  "evidenceTipSha": "f3b4af071745a94654e37e24449ac60c057c655a"
 }
