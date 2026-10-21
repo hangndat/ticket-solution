@@ -30,3 +30,14 @@ test('tenant-bound query disables global entry', () => {
   assert.equal(globalRedeemEntryEnabled({}), true);
   delete process.env.NEXT_PUBLIC_SINGLE_CODE_RESOLVE;
 });
+
+test('plain /redeem URL is not tenant-bound (guest single-code surface)', () => {
+  assert.equal(isTenantBoundRedeemQuery({}), false);
+  assert.equal(
+    isTenantBoundRedeemQuery({
+      tenantSlug: '',
+      eventSlug: undefined,
+    }),
+    false,
+  );
+});
