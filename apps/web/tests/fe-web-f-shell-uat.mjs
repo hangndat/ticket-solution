@@ -40,6 +40,13 @@ function findCachedHeadlessShell() {
   return null;
 }
 
+async function expectAriaExpanded(locator, value) {
+  const expanded = await locator.getAttribute('aria-expanded');
+  if (expanded !== String(value)) {
+    throw new Error(`aria-expanded: expected ${value}, got ${expanded}`);
+  }
+}
+
 async function launchBrowser() {
   const shell = findCachedHeadlessShell();
   const opts = shell
@@ -66,12 +73,31 @@ try {
       fullPage: true,
     });
     if (name === 'mobile') {
-      await page.getByTestId('nav-menu-toggle').click();
-      await page.getByTestId('nav-mobile-menu').waitFor({ state: 'visible' });
+      const toggle = page.getByTestId('nav-menu-toggle');
+      await toggle.click();
+      const menu = page.getByTestId('nav-mobile-menu');
+      await menu.waitFor({ state: 'visible' });
+      await expectAriaExpanded(toggle, true);
       await page.screenshot({
         path: join(OUT, `fe-web-F-home-${name}-menu.png`),
         fullPage: true,
       });
+      await page.keyboard.press('Escape');
+      await menu.waitFor({ state: 'hidden' });
+      await expectAriaExpanded(toggle, false);
+      const focusedTestId = await page.evaluate(() =>
+        document.activeElement?.getAttribute('data-testid'),
+      );
+      if (focusedTestId !== 'nav-menu-toggle') {
+        throw new Error(
+          `after Escape, focus should return to nav-menu-toggle, got ${focusedTestId}`,
+        );
+      }
+      await toggle.click();
+      await menu.waitFor({ state: 'visible' });
+      await page.keyboard.press('Tab');
+      await page.keyboard.press('Shift+Tab');
+      await menu.waitFor({ state: 'visible' });
     }
     await page.close();
   }

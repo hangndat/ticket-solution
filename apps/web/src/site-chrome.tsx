@@ -2,7 +2,17 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect, useState, type ReactNode } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
+import {
+  getFocusableElements,
+  handleMobileMenuKeyDown,
+} from './nav/mobile-menu-focus';
 import { BrandMark } from './brand-mark';
 import { useBranding } from './branding';
 import type { NavLink } from './nav/capabilities';
@@ -114,6 +124,8 @@ export function SiteNav({ trailing }: { trailing?: ReactNode }) {
   );
   const [mobileMenu, setMobileMenu] = useState({ path: '', open: false });
   const mobileOpen = mobileMenu.open && mobileMenu.path === pathname;
+  const menuToggleRef = useRef<HTMLButtonElement>(null);
+  const mobileMenuRef = useRef<HTMLDivElement>(null);
   const [avatarInitials, setAvatarInitials] = useState<string | null>(null);
   const [displayHint, setDisplayHint] = useState<string | null>(null);
 
@@ -179,13 +191,45 @@ export function SiteNav({ trailing }: { trailing?: ReactNode }) {
     };
   }, [authenticated]);
 
-  const closeMobile = () => setMobileMenu({ path: pathname, open: false });
+  const closeMobile = useCallback(() => {
+    setMobileMenu({ path: pathname, open: false });
+    queueMicrotask(() => menuToggleRef.current?.focus());
+  }, [pathname]);
+
   const toggleMobile = () =>
     setMobileMenu((prev) =>
       prev.path === pathname
         ? { path: pathname, open: !prev.open }
         : { path: pathname, open: true },
     );
+
+  useEffect(() => {
+    if (!mobileOpen) return;
+
+    const focusFrame = requestAnimationFrame(() => {
+      const menu = mobileMenuRef.current;
+      if (!menu) return;
+      getFocusableElements(menu)[0]?.focus();
+    });
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      const menu = mobileMenuRef.current;
+      if (!menu) return;
+      if (event.key === 'Escape') {
+        closeMobile();
+        event.preventDefault();
+        return;
+      }
+      if (handleMobileMenuKeyDown(event, menu) && event.key === 'Tab') {
+        event.preventDefault();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown, true);
+    return () => {
+      cancelAnimationFrame(focusFrame);
+      window.removeEventListener('keydown', onKeyDown, true);
+    };
+  }, [mobileOpen, closeMobile]);
 
   return (
     <header className="site-header" data-testid="site-header">
@@ -221,10 +265,12 @@ export function SiteNav({ trailing }: { trailing?: ReactNode }) {
           </Link>
         ) : null}
         <button
+          ref={menuToggleRef}
           type="button"
           className="nav-menu-toggle"
           aria-expanded={mobileOpen}
           aria-controls="site-nav-mobile-menu"
+          aria-haspopup="dialog"
           data-testid="nav-menu-toggle"
           onClick={toggleMobile}
         >
@@ -238,10 +284,12 @@ export function SiteNav({ trailing }: { trailing?: ReactNode }) {
       </nav>
       {mobileOpen ? (
         <div
+          ref={mobileMenuRef}
           id="site-nav-mobile-menu"
           className="nav-mobile-menu"
           data-testid="nav-mobile-menu"
           role="dialog"
+          aria-modal="true"
           aria-label="Menu điều hướng"
         >
           {links.map((item) => (
