@@ -10,6 +10,7 @@ import { PUBLISHED_SECTION_KINDS } from './types.ts';
 
 const sampleSummary = {
   id: '11111111-1111-1111-1111-111111111111',
+  tenantId: 'd9d9f001-0000-4000-8000-000000000001',
   tenantSlug: 'mfest-demo',
   slug: 'mfest',
   name: 'MFest',

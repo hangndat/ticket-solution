@@ -38,6 +38,8 @@ export type PublishedBrand = {
 /** Full published event page — server projection only. */
 export type PublishedEventDetail = {
   id: string;
+  /** Owning tenant UUID (public catalog scope; not a secret). */
+  tenantId: string;
   tenantSlug: string;
   slug: string;
   name: string;
@@ -58,6 +60,8 @@ export type PublishedEventDetail = {
 /** List row — no sections/faq/terms. */
 export type PublishedEventSummary = {
   id: string;
+  /** Owning tenant UUID (public catalog scope; not a secret). */
+  tenantId: string;
   tenantSlug: string;
   slug: string;
   name: string;
