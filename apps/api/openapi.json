@@ -4561,6 +4561,45 @@
           "public-tenant-registrations"
         ]
       }
+    },
+    "/v1/public/tenants/{tenantSlug}/events/{eventSlug}/assets/{assetId}": {
+      "get": {
+        "operationId": "PublishedEventAssetsController_getAsset",
+        "parameters": [
+          {
+            "name": "tenantSlug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "eventSlug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "assetId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "public-events"
+        ]
+      }
     }
   },
   "info": {

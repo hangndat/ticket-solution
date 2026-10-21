@@ -177,14 +177,18 @@ Theo [`MEDIA-ASSET-CHECKLIST.md`](./MEDIA-ASSET-CHECKLIST.md). **Không** `D9_ME
 ```bash
 cd /opt/vemoki/src/infra/deploy
 
-# Endpoint nội bộ — ví dụ tên service compose (khớp .env MINIO_ENDPOINT)
+# Epic #686 prod raster pack (`brand/prod/manifest.json`) — owner gate §9 trước khi chạy prod
 docker compose --env-file /opt/vemoki/.env exec -T api \
-  sh -c 'node scripts/d9-seed-media.mjs --json' \
+  sh -c 'PROD_MEDIA_CONFIRM=1 node scripts/prod-seed-media.mjs --json' \
   | tee "/opt/vemoki/backups/media-seed-${STAMP}.json"
+
+# Dry-run (plan + checksum, không PutObject):
+docker compose --env-file /opt/vemoki/.env exec -T api \
+  sh -c 'PROD_MEDIA_DRY_RUN=1 node scripts/prod-seed-media.mjs --json'
 
 # Chỉ kiểm tra object đã có (sau put)
 docker compose --env-file /opt/vemoki/.env exec -T api \
-  node scripts/d9-seed-media.mjs --smoke-only
+  node scripts/prod-seed-media.mjs --smoke-only
 ```
 
 - Credentials: `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`, `MINIO_BUCKET_ASSETS` từ `.env`.
