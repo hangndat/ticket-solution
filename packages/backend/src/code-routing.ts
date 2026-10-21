@@ -318,13 +318,12 @@ export async function buildRedemptionResolveResponse(
     routedCodeId: codeId,
   });
 
-  const terms =
-    published.termsVersion && published.termsBody
-      ? {
-          version: published.termsVersion,
-          bodyMarkdown: published.termsBody,
-        }
-      : null;
+  const terms = published.termsVersion
+    ? {
+        version: published.termsVersion,
+        bodyMarkdown: published.termsBody ?? '',
+      }
+    : null;
 
   return {
     tenantId,
