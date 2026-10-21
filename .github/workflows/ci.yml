@@ -377,6 +377,7 @@ jobs:
           wait "$build_pid"
       - run: pnpm test:rint-host
       - run: ./scripts/rint-stack-smoke.sh
+      - run: bash -n ./scripts/fe-uat-stack.sh
       - run: ./scripts/rint-outbox-recovery.sh
       - name: Platform security-config + realm posture
         run: ./scripts/platform-security-config-smoke.sh
