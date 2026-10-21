@@ -49,15 +49,34 @@ type ScopeBarProps = {
   tenantId: string;
   link: GateLinkState;
   hasSession: boolean;
+  /** Human event name from MeEvents when staff is assigned (mockup «MFest»). */
+  eventDisplayName?: string | null;
+  /** Gate label when scoped; defaults to «Cổng chính» per mockup. */
+  gateDisplayName?: string | null;
 };
 
-export function GateScopeBar({ eventId, tenantId, link, hasSession }: ScopeBarProps) {
-  const scopeLabel = eventId.trim()
-    ? `Sự kiện · ${shortId(eventId)}`
-    : tenantId.trim()
-      ? `Tenant · ${shortId(tenantId)}`
-      : 'Chưa chọn phạm vi';
-  const gateName = hasSession ? 'Phiên đang mở' : 'Cổng web';
+export function GateScopeBar({
+  eventId,
+  tenantId,
+  link,
+  hasSession,
+  eventDisplayName,
+  gateDisplayName,
+}: ScopeBarProps) {
+  const eventName = eventDisplayName?.trim();
+  const scopedByDiscovery = Boolean(eventName);
+  const scopeLabel = scopedByDiscovery
+    ? eventName!
+    : eventId.trim()
+      ? `Sự kiện · ${shortId(eventId)}`
+      : tenantId.trim()
+        ? `Tenant · ${shortId(tenantId)}`
+        : 'Chưa chọn phạm vi';
+  const gateName = hasSession
+    ? 'Phiên đang mở'
+    : scopedByDiscovery
+      ? (gateDisplayName?.trim() || 'Cổng chính')
+      : 'Cổng web';
   const status =
     link === 'online' ? 'Sẵn sàng' : connectivityLabel(link);
   const statusClass =

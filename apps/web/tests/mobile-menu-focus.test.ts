@@ -27,6 +27,9 @@ test('site-chrome wires mobile menu a11y (Escape, trap, aria)', () => {
   assert.match(src, /event\.key === 'Escape'/);
   assert.match(src, /handleMobileMenuKeyDown/);
   assert.match(src, /menuToggleRef/);
+  assert.match(src, /nav-mobile-backdrop/);
+  assert.match(src, /onClick=\{closeMobile\}/);
+  assert.match(src, /menuToggleRef\.current\?\.focus\(\)/);
 });
 
 test('Slice G scopes button-secondary to gate-page only', () => {
