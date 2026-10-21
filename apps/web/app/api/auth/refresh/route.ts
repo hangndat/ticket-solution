@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requirePublicOrigin } from '../../../../src/oidc/public-origin';
+import { requireSessionRedirectOrigin } from '../../../../src/oidc/public-origin';
 import { sanitizePostLoginPath } from '../../../../src/oidc/post-login';
 import { refreshWebAccessToken } from '../../../../src/oidc/refresh';
 import { clearSessionCookies } from '../../../../src/oidc/cookies';
@@ -14,7 +14,7 @@ import {
  * Route Handler — may rotate HttpOnly session cookies (forbidden in RSC).
  */
 export async function GET(request: NextRequest) {
-  const originResult = requirePublicOrigin(request);
+  const originResult = requireSessionRedirectOrigin(request);
   if (!originResult.ok) return originResult.response;
   const origin = originResult.origin;
 
