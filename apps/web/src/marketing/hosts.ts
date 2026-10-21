@@ -219,6 +219,16 @@ export function decideHostRouting(input: {
         locale: mapped.locale,
       };
     }
+    // Product host: `/privacy` is served from `app/privacy` (account chrome), not marketing rewrite.
+    if (
+      !onMarketing &&
+      (pathname === '/privacy' ||
+        pathname === '/privacy/' ||
+        pathname === '/en/privacy' ||
+        pathname === '/en/privacy/')
+    ) {
+      return { type: 'next' };
+    }
     return {
       type: 'rewrite',
       pathname: mapped.internal,

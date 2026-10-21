@@ -1,0 +1,209 @@
+.accountCols {
+  display: grid;
+  gap: var(--space-5);
+  margin-top: var(--space-5);
+  align-items: start;
+}
+
+@media (min-width: 768px) {
+  .accountCols {
+    grid-template-columns: minmax(200px, 220px) minmax(0, 1fr);
+    gap: 40px;
+  }
+}
+
+.accountNav {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+}
+
+@media (max-width: 767px) {
+  .accountNav {
+    grid-auto-flow: column;
+    grid-auto-columns: max-content;
+    overflow-x: auto;
+    padding-bottom: var(--space-2);
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+.accountNavLink {
+  display: block;
+  text-align: left;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  font-size: 0.92rem;
+  color: var(--muted);
+  text-decoration: none;
+  border: 1px solid transparent;
+  min-height: 44px;
+  white-space: nowrap;
+}
+
+.accountNavLink:hover {
+  color: var(--ink);
+  background: color-mix(in srgb, var(--paper) 70%, #fff);
+}
+
+.accountNavLinkActive {
+  background: #edf2f9;
+  color: #205eb3;
+  border-color: color-mix(in srgb, #205eb3 12%, var(--line));
+}
+
+.accountMain {
+  min-width: 0;
+}
+
+.pageTitle {
+  margin: var(--space-6) 0 0;
+  font-size: clamp(1.75rem, 4vw, 2.35rem);
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+.pageLead {
+  margin: var(--space-3) 0 0;
+  max-width: 40rem;
+  color: var(--ink-muted);
+  line-height: 1.55;
+}
+
+.sectionTitle {
+  margin: var(--space-6) 0 var(--space-3);
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.sectionTitle:first-child {
+  margin-top: 0;
+}
+
+.group {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  margin: var(--space-3) 0 var(--space-5);
+  background: #fff;
+}
+
+.rowLink {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-4);
+  width: 100%;
+  padding: 17px 18px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  text-decoration: none;
+  color: inherit;
+  font: inherit;
+  background: transparent;
+  min-height: 44px;
+  cursor: pointer;
+}
+
+.rowLink:last-child {
+  border-bottom: 0;
+}
+
+.rowLink:hover {
+  background: color-mix(in srgb, var(--paper) 65%, #fff);
+}
+
+.rowLink:focus-visible {
+  outline-offset: -2px;
+}
+
+.rowSub {
+  display: block;
+  margin-top: 5px;
+  font-size: 0.88rem;
+  color: var(--ink-muted);
+  line-height: 1.5;
+  font-weight: 400;
+}
+
+.rowChevron {
+  color: var(--muted);
+  flex: none;
+}
+
+.settingsNotice {
+  margin: var(--space-3) 0 var(--space-5);
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--focus) 6%, #fff);
+  color: var(--ink);
+  line-height: 1.55;
+  font-size: 0.92rem;
+}
+
+.settingsNotice p {
+  margin: 0;
+}
+
+.deletionBlock {
+  margin-top: var(--space-4);
+}
+
+.deletionBlock :global(.account-section-title) {
+  margin-top: 0;
+}
+
+.embeddedSession :global(.account-session) {
+  margin: 0;
+  padding: 17px 18px;
+  border: 0;
+  max-width: none;
+  animation: none;
+}
+
+.embeddedSession :global(.account-session h2) {
+  font-size: 1rem;
+  margin: 0 0 var(--space-2);
+  font-weight: 700;
+}
+
+.embeddedSession :global(.account-session .eyebrow) {
+  display: none;
+}
+
+.embeddedSession :global(.account-session__email) {
+  font-size: 0.95rem;
+}
+
+.embeddedSession :global(.account-session__actions) {
+  margin-top: var(--space-4);
+}
+
+.privacyProse {
+  max-width: 42rem;
+}
+
+.privacyProse h2 {
+  margin: var(--space-6) 0 var(--space-3);
+  font-size: 1.1rem;
+}
+
+.privacyProse p {
+  margin: 0 0 var(--space-4);
+  color: var(--ink);
+  line-height: 1.6;
+}
+
+.privacyProse .privacyUpdated {
+  color: var(--ink-muted);
+  font-size: 0.92rem;
+}
+
+.backHome {
+  margin-top: var(--space-7);
+  font-size: 0.92rem;
+}
