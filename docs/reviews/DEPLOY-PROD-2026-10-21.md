@@ -151,6 +151,65 @@ rsync -a "$BACKUP/infra/" /opt/vemoki/src/infra/
 
 ---
 
+## Deploy #678 — `bfc0316` (web server-action edge guard)
+
+| Field | Value |
+| --- | --- |
+| Source SHA | `bfc03166b7e46399a5ea19b68bedaa6c8c1fca3b` (merge PR [#678](https://github.com/hangndat/ticket-solution/pull/678)) |
+| Prior prod marker | `cbabea4ccc6447e7dc40a832ba95c81320c1b0d9` → updated `/opt/vemoki/deployed-sha.txt` |
+| VPS | `conanphong` → `/opt/vemoki/src` |
+| Rollback backup | `/opt/vemoki/backup/deploy-2026-10-21-bfc0316/` |
+| Operator | Gonic (Orca worker `task_f806b6bb6b50`) |
+| Scope | **web** only (no migrate, nginx, keycloak, api, worker, portal) |
+| Compose | VPS `infra/deploy/compose.yaml` unchanged (matches git `a55f89ee`; OIDC hotfix retained) |
+| Build log | `/opt/vemoki/deploy-678-bfc0316-web.log` |
+
+### Code paths
+
+| Path | Change |
+| --- | --- |
+| `apps/web/app/redeem/redeem-form.tsx` | server action wiring |
+| `apps/web/proxy.ts` | edge guard for invalid server actions |
+| `apps/web/src/security/server-action-edge.ts` | **new** — reject bogus `next-action` before RSC handler |
+| `apps/web/src/nav/staff-route-guard.ts` | minor |
+| `apps/web/tests/*` | integration + unit for edge guard |
+
+### Trước deploy #678
+
+| Check | Trước |
+| --- | --- |
+| `GET https://app.vemoki.com/` | 200 |
+| `GET https://app.vemoki.com/api/bff/me` (no cookie) | **401** |
+| `/opt/vemoki/deployed-sha.txt` | `cbabea4…` |
+
+### Thực hiện #678
+
+1. Backup `apps/web` → `deploy-2026-10-21-bfc0316/web/`.
+2. Rsync worktree `bfc0316` `apps/web` only (excludes deploy-prod skill); no lockfile / contracts change.
+3. `vemoki-runtime:local`: `@ticket/web` build → `docker compose restart web`.
+
+### Sau deploy #678
+
+| Check | Sau |
+| --- | --- |
+| `GET https://app.vemoki.com/` | 200 |
+| `GET https://app.vemoki.com/api/bff/me` (no cookie) | **401** |
+| CSP app (`connect-src`) | `connect-src 'self' http://api:3001 https://auth.vemoki.com` + `nosniff` |
+| `POST https://app.vemoki.com/redeem` + `next-action: x` | **400** (edge guard; not 500 / server-action miss) |
+| `GET https://portal.vemoki.com/` | 200 |
+| `GET https://ancafe.anphong.vn/` | 200 |
+| `vemoki-web-1` logs (after redeem probe) | `failed-to-find-server-action` count **0** |
+
+### Rollback #678
+
+```bash
+BACKUP=/opt/vemoki/backup/deploy-2026-10-21-bfc0316
+rsync -a "$BACKUP/web/" /opt/vemoki/src/apps/web/
+## rebuild @ticket/web per deploy-prod skill, restart web
+```
+
+---
+
 ## Deploy `1ba6647` (earlier 2026-10-21)
 
 | Field | Value |
