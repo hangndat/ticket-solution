@@ -14,6 +14,23 @@ function safeMessage(error: unknown): string {
   return `${trimmed.slice(0, MAX_LOG_MESSAGE_LEN)}…`;
 }
 
+export function logWorkerTickStepTimeout(
+  step: WorkerTickStep,
+  timeoutMs: number,
+  consecutiveErrors: number,
+): void {
+  console.error(
+    JSON.stringify({
+      level: 'error',
+      component: 'worker',
+      event: 'tick_step_timeout',
+      step,
+      timeoutMs,
+      consecutiveErrors,
+    }),
+  );
+}
+
 export function logWorkerTickStepError(
   step: WorkerTickStep,
   error: unknown,
