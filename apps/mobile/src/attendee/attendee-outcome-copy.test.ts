@@ -6,6 +6,7 @@ import {
   presentRedeemDecision,
   presentTicketRow,
   ticketGateHint,
+  ticketScheduleVenueLines,
   ticketStateLabelVi,
 } from './attendee-outcome-copy.ts';
 
@@ -21,7 +22,7 @@ const sampleTicket: TicketSummary = {
 };
 
 test('ticketStateLabelVi maps known states to Vietnamese', () => {
-  assert.equal(ticketStateLabelVi('ACTIVE'), 'Còn hiệu lực');
+  assert.equal(ticketStateLabelVi('ACTIVE'), 'Chưa sử dụng');
   assert.equal(ticketStateLabelVi('USED'), 'Đã dùng');
   assert.equal(ticketStateLabelVi('REVOKED'), 'Đã thu hồi');
 });
@@ -29,7 +30,7 @@ test('ticketStateLabelVi maps known states to Vietnamese', () => {
 test('presentTicketRow puts event name and status above UUID/credential', () => {
   const row = presentTicketRow(sampleTicket);
   assert.equal(row.eventTitle, 'MFest · Demo');
-  assert.equal(row.statusLabel, 'Còn hiệu lực');
+  assert.equal(row.statusLabel, 'Chưa sử dụng');
   assert.match(row.accessibilityLabel, /MFest/);
   assert.equal(row.ticketId, sampleTicket.ticketId);
   assert.match(row.credentialLine, /3/);
@@ -119,6 +120,22 @@ test('presentRedeemDecision stale asks reload + reconsent', () => {
 test('attendeeWalletCopy avoids Keycloak / Nest on guest chrome', () => {
   assert.doesNotMatch(attendeeWalletCopy.signedOutBody, /Keycloak|Nest|BFF|\/v1\//i);
   assert.match(attendeeWalletCopy.offlineBannerTitle, /chưa kết nối/i);
+});
+
+test('ticketScheduleVenueLines uses demo catalog when event id matches', () => {
+  const lines = ticketScheduleVenueLines(sampleTicket);
+  assert.ok(lines.when);
+  assert.match(lines.when ?? '', /2027/);
+  assert.ok(lines.where?.includes('Ho Chi Minh'));
+});
+
+test('ticketScheduleVenueLines empty for unknown event id', () => {
+  const lines = ticketScheduleVenueLines({
+    ...sampleTicket,
+    eventId: 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee',
+  });
+  assert.equal(lines.when, null);
+  assert.equal(lines.where, null);
 });
 
 test('ticketGateHint marks demo and non-active states (AC-T1)', () => {
