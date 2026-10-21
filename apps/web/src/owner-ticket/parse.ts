@@ -1,4 +1,4 @@
-import type { OwnerTicketDetail } from './types';
+import type { OwnerTicketDetail, WalletTicketRow } from './types';
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   if (value === null || typeof value !== 'object' || Array.isArray(value)) {
@@ -11,6 +11,12 @@ function asRecord(value: unknown): Record<string, unknown> | null {
  * Fail-closed parse of Nest owner ticket detail / TicketSummary.
  * Rejects bodies that omit required fields.
  */
+function readOptionalEventName(body: Record<string, unknown>): string | undefined {
+  const name =
+    typeof body.eventName === 'string' ? body.eventName.trim() : '';
+  return name.length > 0 ? name : undefined;
+}
+
 export function parseOwnerTicketDetail(raw: unknown): OwnerTicketDetail | null {
   const body = asRecord(raw);
   if (!body) return null;
@@ -53,6 +59,22 @@ export function parseOwnerTicketDetail(raw: unknown): OwnerTicketDetail | null {
     credentialVersion,
     createdAt,
   };
+}
+
+/** Fail-closed parse of Nest GET /v1/me/tickets (aggregate or scoped). */
+export function parseMeTicketsResponse(raw: unknown): WalletTicketRow[] | null {
+  const body = asRecord(raw);
+  if (!body || !Array.isArray(body.tickets)) return null;
+  const tickets: WalletTicketRow[] = [];
+  for (const item of body.tickets) {
+    const row = asRecord(item);
+    if (!row) return null;
+    const base = parseOwnerTicketDetail(row);
+    if (!base) return null;
+    const eventName = readOptionalEventName(row);
+    tickets.push(eventName ? { ...base, eventName } : base);
+  }
+  return tickets;
 }
 
 /** `/t/{slug}/tickets/{uuid}` — matches buildOwnerTicketLink. */

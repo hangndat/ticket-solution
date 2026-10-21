@@ -70,3 +70,38 @@ export function requirePublicOrigin(request: { url: string }):
   }
   return { ok: true, origin };
 }
+
+/**
+ * Post-auth redirects must stay on the same host that received Set-Cookie.
+ * `localhost` and `127.0.0.1` are different browser cookie jars even when
+ * canonicalized for CSRF allowlists.
+ */
+export function resolveSessionRedirectOrigin(
+  request: { url: string },
+  env: NodeJS.ProcessEnv = process.env,
+): string | null {
+  try {
+    const requestOrigin = new URL(request.url).origin;
+    const allowlist = webPublicOriginAllowlist(env);
+    if (allowlist.length === 0) {
+      return requestOrigin;
+    }
+    const canonRequest = canonicalizeOrigin(requestOrigin);
+    if (canonRequest && allowlist.includes(canonRequest)) {
+      return requestOrigin;
+    }
+    return configuredPublicOrigin(env);
+  } catch {
+    return configuredPublicOrigin(env);
+  }
+}
+
+export function requireSessionRedirectOrigin(request: { url: string }):
+  | { ok: true; origin: string }
+  | { ok: false; response: NextResponse } {
+  const origin = resolveSessionRedirectOrigin(request);
+  if (!origin) {
+    return requirePublicOrigin(request);
+  }
+  return { ok: true, origin };
+}
