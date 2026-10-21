@@ -1,5 +1,7 @@
 # D13 — S4-T3 Physical-device smoke (DatHN · prod target 1.0.0/26)
 
+> **Cập nhật 2026-10-21:** lần chạy tự động này FAIL; operator đã smoke tay trên TestFlight build 26 và **PASS** các bước chính — xem [D13-TF-BETA-SUBMITTED-2026-10-21.md](./D13-TF-BETA-SUBMITTED-2026-10-21.md).
+
 Task `task_c515b184a886` · Epic #301 · Story #307. Role `launch-uat` · Architecture impact: **Không**.
 
 **Verdict: FAIL (không PASS)** — DatHN iPhone (Wi‑Fi CoreDevice) chạy được launch + catalog + deeplink Account; **không cài** bản Release dev-signed **1.0.0 (26)** (provisioning profile team `BLUA62D52G` không gồm UDID `00008130-000618E402D1001C` dù thiết bị đã đăng ký portal). Thiết bị vẫn có **1.0.0 (14)** USB dev cũ. OIDC prod **chưa mở sheet** (`perform_press` trên «Đăng nhập» không kích hoạt; WDA/HID cần `sudo tunneld` hoặc HID service không có trên iOS 26). Attendee QR · staff camera · account-deletion **chưa chạy**. Không Submit for Review.
