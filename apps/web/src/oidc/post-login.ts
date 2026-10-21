@@ -12,6 +12,7 @@ const ALLOWED = new Set([
   '/claim',
   '/invite',
   '/redeem',
+  '/wallet',
   '/admin',
   '/auth',
   '/account',

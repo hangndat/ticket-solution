@@ -3,9 +3,11 @@ import { describe, it } from 'node:test';
 import {
   isOwnerTicketPath,
   matchOwnerTicketPath,
+  parseMeTicketsResponse,
   parseOwnerTicketDetail,
   resolveOwnerTenantId,
   loadOwnerTicket,
+  loadOwnerWallet,
 } from '../src/owner-ticket';
 import { sanitizePostLoginPath } from '../src/oidc/post-login';
 
@@ -56,6 +58,19 @@ describe('owner ticket path', () => {
       sanitizePostLoginPath('https://evil.example' + SAMPLE_PATH),
       null,
     );
+  });
+});
+
+describe('parseMeTicketsResponse', () => {
+  it('parses tickets array fail-closed', () => {
+    const ok = parseMeTicketsResponse({
+      tickets: [{ ...BASE_TICKET, eventName: 'Demo Night' }],
+    });
+    assert.ok(ok);
+    assert.equal(ok!.length, 1);
+    assert.equal(ok![0]!.eventName, 'Demo Night');
+    assert.equal(parseMeTicketsResponse({ tickets: [{}] }), null);
+    assert.equal(parseMeTicketsResponse(null), null);
   });
 });
 
@@ -230,5 +245,49 @@ describe('loadOwnerTicket', () => {
       },
     });
     assert.equal(unresolved.status, 'tenant-unresolved');
+  });
+});
+
+describe('loadOwnerWallet', () => {
+  it('returns unauthenticated without token', async () => {
+    const result = await loadOwnerWallet({
+      accessToken: null,
+      fetchImpl: async () => {
+        throw new Error('should not fetch');
+      },
+    });
+    assert.equal(result.status, 'unauthenticated');
+  });
+
+  it('loads aggregate tickets and tenant slugs', async () => {
+    const calls: string[] = [];
+    const result = await loadOwnerWallet({
+      accessToken: 'token',
+      env: { API_BASE_URL: 'http://api.test' } as unknown as NodeJS.ProcessEnv,
+      fetchImpl: async (input) => {
+        const url = String(input);
+        calls.push(url);
+        if (url.endsWith('/v1/me/tenants')) {
+          return new Response(JSON.stringify(ME_TENANTS_OK), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          });
+        }
+        assert.ok(url.endsWith('/v1/me/tickets'));
+        assert.ok(!url.includes('tenantId='));
+        return new Response(
+          JSON.stringify({
+            tickets: [{ ...BASE_TICKET, eventName: 'UAT Event' }],
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        );
+      },
+    });
+    assert.equal(result.status, 'ok');
+    if (result.status === 'ok') {
+      assert.equal(result.tickets.length, 1);
+      assert.equal(result.tenantSlugById[TENANT_ID.toLowerCase()], 'uat-device');
+    }
+    assert.equal(calls.length, 2);
   });
 });

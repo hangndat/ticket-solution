@@ -62,6 +62,7 @@ test('guest / unauthenticated never gets Admin Cổng Platform', () => {
   assert.ok(!hrefs.includes('/admin'));
   assert.ok(!hrefs.includes('/gate'));
   assert.ok(!hrefs.includes('/platform'));
+  assert.ok(!hrefs.includes('/wallet'), 'guest must not see Vé của tôi');
   assert.ok(!hrefs.includes('/auth'), 'guest login goes to PKCE, not /auth UI');
 });
 
@@ -79,6 +80,7 @@ test('attendee-only: staffEligible false → no staff chrome', () => {
   const links = buildNavLinks(caps);
   const hrefs = links.map((l) => l.href);
   assert.ok(hrefs.includes('/account'));
+  assert.ok(hrefs.includes('/wallet'));
   assert.ok(!hrefs.includes('/auth'), 'logged-in nav uses Tài khoản, not Đăng nhập');
 });
 
