@@ -29,6 +29,7 @@ import {
 } from '@/attendee/attendee-outcome-copy';
 import { goToAccount } from '@/navigation/go-to-account-sign-in';
 import { useWalletAccess } from '@/navigation/use-wallet-access';
+import { WalletAccessNotice } from '@/components/wallet-access-notice';
 import { TabStackTitle } from '@/navigation/tab-stack-title';
 import { hasDemoMediaForEventId } from '@/data/demo-media';
 import { brand, colors } from '@/theme/colors';
@@ -210,7 +211,12 @@ export function MyTicketsScreen() {
   );
 
   if (!canAccess) {
-    return <TabStackTitle title="Vé của tôi" />;
+    return (
+      <>
+        <WalletAccessNotice />
+        <TabStackTitle title="Vé của tôi" />
+      </>
+    );
   }
 
   if (identity.status === 'verified') {
