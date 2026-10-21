@@ -26,6 +26,7 @@ const STAFF_CAPS: NavCapabilities = {
 };
 
 const STAFF_LINKS: NavLink[] = [
+  { href: '/', label: 'Sự kiện', testId: 'nav-events' },
   { href: '/redeem', label: 'Đổi mã', testId: 'nav-redeem' },
   { href: '/claim', label: 'Nhận lời mời', testId: 'nav-claim' },
   { href: '/admin', label: 'Sự kiện', testId: 'nav-admin' },

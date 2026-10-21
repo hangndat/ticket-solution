@@ -8,9 +8,9 @@ import { GateOfflineShell } from './gate-offline-shell';
 export const dynamic = 'force-dynamic';
 
 export const metadata = {
-  title: 'Cổng check-in dự phòng',
+  title: 'Cổng check-in',
   description:
-    'Cổng web — giữ chỗ và xác nhận qua API. Không xếp hàng offline. Không cho khách qua khi kết quả chưa biết.',
+    'Quét, nhập tay và lịch sử cổng trên web — giữ chỗ và xác nhận qua API. Fail-closed khi mất mạng hoặc lỗi máy chủ.',
 };
 
 type Props = {
@@ -25,14 +25,12 @@ export default async function GatePage({ searchParams }: Props) {
   const state = resolveWebAuthState({ configured, subject: null });
 
   return (
-    <main id="main" className="container shell redeem-page">
+    <main id="main" className="container shell gate-page">
       <SiteNav />
       <h1>Cổng check-in</h1>
-      <p className="intro">
-        Nhân viên đã gán event mở phiên, giữ chỗ, rồi xác nhận. Chỉ trạng thái
-        «Cho vào» sau phản hồi hệ thống mới được cho khách qua. Timeout, mất mạng
-        và lỗi máy chủ là «Chưa rõ» — Không cho khách qua. Cổng web không xếp hàng
-        offline; khi mất mạng hãy dùng app Nhân viên.
+      <p className="intro gate-page__intro">
+        Quét vé, nhập tay hoặc xem lịch sử trên trình duyệt này. Chỉ «Cho vào» sau
+        phản hồi hệ thống; timeout và lỗi API là «Chưa rõ» — không cho khách qua.
       </p>
       <GateOfflineShell suppressBanner={configured}>
         {!configured ? (
