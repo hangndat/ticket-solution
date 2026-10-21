@@ -10,6 +10,7 @@
 | Runner (retest 6 · final · #678) | Sora · uat · Orca `term_3e682b0f-f0b2-4d7a-a7d5-b19dac7cbe2c` · task `task_4d6a462b3e30` |
 | Runner (retest 8 · final · #682) | Sora · uat · Orca `term_979a325c-f385-4112-a418-2b0138a64fc8` · task `task_e494c7591080` |
 | Runner (retest 12 · final · post pre-stack) | Sora · uat · Orca `term_b5819d93-9ed7-4be3-a1a4-b74e13a9a764` · task `task_2aa97c5a132c` |
+| Runner (retest 13 · final · main #728 #729 #731) | Sora · uat · Orca `term_4bcc2b06-1818-4b2e-8ff3-b72c11e9ac2e` · task `task_39d478b9874f` |
 
 | Runner (retest 11 · final · #711) | Sora · uat · Orca `term_357c8e77-8a70-4e91-946d-14f6d67e14f3` · task `task_19806b506854` |
 
@@ -26,8 +27,85 @@
 | Deploy baseline (retest 8) | `0add1f6072d4e4b9b7b6b73f7b8ffb3baa7b0bb8` (`main`, merge PR #682 deploy prod web — fix gate loading) |
 | Deploy baseline (retest 12) | `9515c980db4185c8109fe648204036e3e0e56fb1` (`main`, merge PR #711 gate token + prod sau dọn `vemoki-pre-*`) |
 | Ảnh (retest 12) | `apps/web/.uat-artifacts/prod-2026-10-21-retest12/` |
+| Deploy baseline (retest 13) | `81bd80499d6fbd573a35da7726da5fa49b1409a9` (`main`, merge #728 infra alias + #729 gate terminal auth + #731 redeem `tenantId` public) |
+| Ảnh (retest 13) | `apps/web/.uat-artifacts/prod-2026-10-21-retest13/` |
 
 ## Launch verdict
+
+**GO** (retest 13 final @ `81bd804`, 2026-10-21 ~20:30 UTC+8 — phạm vi web catalog A/B/C/D/E/I/J; H03 inbox và suite G/H01 máy thật **DEFERRED** riêng)
+
+## Retest 13 (final)
+
+Bối cảnh: prod tip `81bd804` khớp `deployed-sha.txt` trên VPS; stack `vemoki-pre-*` = 0; vhost pre đã gỡ khỏi nginx. Profile Orca **isolated**: `retest13-portal` `992e87a3…`, `retest13-staff` `2e7b8f65…`, `retest13-attendee` `c307adf0…`, `retest13-b07` `bdf9c374…`. Tab: staff `/gate` `1d413023…`, attendee `e1f0d229…`, portal `59e314ff…`, B06 portal `9016c867…`, B07 `d50c70d4…`. Viewport desktop ~1440; mobile P0 `set viewport 390 844` (D06). SSH J: `conanphong` read-only.
+
+**Harness E01 (ART-1):** sau mỗi hard `goto` tới `/gate`, gọi `orca exec screenshot` rồi `snapshot`/`eval` — đo **reveal** (DOM «Cổng check-in»), không poll «Đang tải…» thuần. Server/nginx vẫn nhanh (retest 11); reveal Orca ~1.8–2.2s sau screenshot (3 run — `e01-gate-timing.txt`). Không đo server trace riêng lần này.
+
+**Redeem / gate:** `DEMO-MFEST-007` (008/009 đã dùng retest trước). Slug `/redeem?tenantSlug=mfest-demo&eventSlug=mfest` — **không** «Thiếu phạm vi sự kiện» (#731). Vé mới `4a85c2f9-f57f-40a3-b7e4-65f00a9a6535`. E02 phiên Aurora `20bdde66-e662-472c-b8c6-ff854a16d648`; E03–E05 phiên MFest `e2bcac54-e43f-44a3-9369-97917d7caf69` + vé D02 (Enter trên «Giữ chỗ và xác nhận»). E03 «Cho vào»; E04 `TICKET_NOT_ACTIVE`; E05 `TICKET_NOT_FOUND`.
+
+**Auth / loop:** lần staff login đầu → `/?notice=auth_failed` (terminal, không vòng `/gate`↔`/auth`). B04 sau login + screenshot → «Cổng check-in». E07 attendee → `/?notice=gate_denied`.
+
+| ID | VP | Kết quả | Evidence |
+| --- | --- | --- | --- |
+| A01 | http | **PASS** | `a-http-suite.txt` |
+| A02 | http | **PASS** | portal BFF `401` |
+| A03 | http | **PASS** | app BFF `401` |
+| A04 | http | **PASS** | `/gate` `307` → `/auth?next=/gate` |
+| A05 | http | **PASS** | ancafe `200`; `dath.info` cert không khớp hostname (curl strict fail) nhưng HTTP `200` với `-k` — không sửa conf |
+| A06 | P1 | **PASS** | cert `notAfter=Jan 19 2027` — `a-http-suite.txt` |
+| B01 | desktop | **PASS** | Portal staff → onboarding/shell Aurora — tab `59e314ff…` |
+| B02 | http | **PASS** | `ticket-admin-web`, scope `openid profile email`, PKCE — `b02-authorize.txt` |
+| B03 | browser | **PASS** | Callback portal → shell (không 502) |
+| B04 | desktop | **PASS** | Staff `/gate` + **screenshot** → «Cổng check-in» ≤~2s — tab `1d413023…` |
+| B05 | http | **PASS** | `ticket-web`, `audience=ticket-api` — `b05-authorize.txt` |
+| B06 | desktop | **PASS** | Attendee portal → «Portal quản trị chỉ dành cho nhân sự» — tab `9016c867…` |
+| B07 | desktop | **PASS** | Sai mật khẩu → vẫn `auth.vemoki.com` — tab `d50c70d4…` |
+| B08 | http | **PASS** | `b08-logout-headers.txt` |
+| B09 | P1 | **NOT-RUN** | — |
+| B10 | P0 | **NOT-RUN** | — |
+| C01 | desktop | **PASS** | Aurora Night Org ACTIVE sau onboarding |
+| C02 | desktop | **PASS** | Event Aurora Night UAT overview — `/e/5295ef1a-…` |
+| C03 | desktop | **PASS** | `href` «Mở cổng quét trên app» = `https://app.vemoki.com/gate` |
+| C04 | desktop | **PASS** | Members 1 Owner masked — `/members` |
+| C05–C07 | P1 | **NOT-RUN** | — |
+| C08 | P0 | **NOT-RUN** | — |
+| C09 | P1 | **NOT-RUN** | — |
+| D01 | desktop | **PASS** | Attendee home MFest — tab `e1f0d229…` |
+| D02 | desktop | **PASS** | Slug redeem + `DEMO-MFEST-007` → vé `4a85c2f9-…`; không «Thiếu phạm vi» |
+| D03 | desktop | **PASS** | `NOT-A-REAL-CODE` + terms — không cấp vé (không block success) |
+| D04 | desktop | **PASS** | Gửi lại `DEMO-MFEST-007` sau D02 — không cấp vé thứ hai (đã cấp) |
+| D05 | http | **PASS** | `d05-claim-invite.txt` |
+| D06 | mobile 390 | **PASS** | `d06-redeem-390.png` |
+| D07 | P1 | **NOT-RUN** | — |
+| E01 | desktop | **PASS** | 3× `goto`+screenshot: reveal «Cổng check-in» ~2s — `e01-gate-timing.txt` |
+| E02 | desktop | **PASS** | Aurora tenant/event → phiên `20bdde66-…` |
+| E03 | desktop | **PASS** | Vé `4a85c2f9-…` → «Cho vào» + check-in id — `e03-eval.json` |
+| E04 | desktop | **PASS** | Cùng vé → `TICKET_NOT_ACTIVE` — `e04-eval.json` |
+| E05 | desktop | **PASS** | Vé giả → `TICKET_NOT_FOUND` — `e05-eval.json` |
+| E06 | P1 | **NOT-RUN** | — |
+| E07 | desktop | **PASS** | Attendee `/gate` → `/?notice=gate_denied` |
+| I01 | desktop | **PASS** | Staff → tenant UUID lạ: không lộ event (404 copy) |
+| I02 | http | **PASS** | `i02-me-events.json` `401` |
+| I03 | P1 | **NOT-RUN** | Staff `/platform` redirect portal — chưa chụp copy operator |
+| I04 | P1 | **BLOCKED** | Không user operator demo |
+| J01 | ssh | **PASS** | `j-ssh-output.txt` |
+| J02 | ssh | **PASS** | OIDC scopes portal + web |
+| J03 | ssh | **PASS** | API env names — `j-ssh-output.txt` |
+| J04 | ssh | **PASS** | `compose.yaml` sha256 khớp git @ `81bd804` — `j04-compose-sha256.txt` |
+| J05 | P1 | **NOT-RUN** | — |
+| J06 | ssh | **PASS** | `proxy_buffer_size 32k` — `j06-nginx-buffer.txt` |
+| H03 | — | **DEFERRED** | Không hộp thư kiểm soát prod |
+| Rate limit | http | **PASS** | 12× public BFF → `200` — `rate-limit-mini.txt` |
+
+**Retest 13 verdict (web):** **GO** — Sau #728–#731 và prod @ `81bd804`, P0 web catalog (trừ H03 **DEFERRED**) **PASS**. Còn **P1 NOT-RUN** (B09–B10, C05–C09 một phần, D07, E06, I03, J05) và **I04 BLOCKED**; không chặn launch theo catalog.
+
+```text
+P0 cleared: A01–A04, B01–B08, C01–C04, D01–D06, E01–E05, E07, I01–I02, J01–J04, J06
+P0 DEFERRED: H03
+P1 NOT-RUN / BLOCKED: B09, B10, C05–C07, C08, C09, D07, E06, I03, I04, J05
+DEFERRED: G01–G06, H01 (máy thật)
+```
+
+## Launch verdict (retest 12 — lịch sử)
 
 **NO-GO** (retest 12 final @ `9515c98`, 2026-10-21 ~19:45 UTC+8 — phạm vi web catalog A/B/C/D/E/I/J; H03 inbox và suite G/H01 máy thật **DEFERRED** riêng)
 
