@@ -1,0 +1,71 @@
+---
+description: Review/fix có giới hạn — findings xuyên suốt, revalidation theo diff, chẩn đoán khi không tiến triển
+alwaysApply: false
+---
+
+# Review và sửa lỗi có điều kiện dừng
+
+Coordinator đọc trước khi giao review/fix; reviewer và fix-worker đọc khi nhận Task. Đây là nguồn chung cho giới hạn vòng sửa, không thay gate DoD/security/CI hoặc quyền merge. Áp dụng cả DoD và security, kể cả khi phải tách session.
+
+## 1. Đầu vào và bàn giao
+
+- Trước implementation: chốt AC, paths, ngoài phạm vi, checks bắt buộc và Decision/ADR áp dụng. Thay đổi AC cần quyết định của đúng owner; không thêm yêu cầu ngầm qua review.
+- Trước review: worker bàn giao exact SHA, diff/phạm vi, checks + kết quả, evidence và hạn chế. Với fix, ghi từng finding ID đã xử lý và cách xác minh; không chỉ ghi “đã fix”.
+- Coordinator gom findings DoD/security/CI trên cùng SHA trước khi giao một lượt sửa. Lỗi khẩn cấp có thể xử lý sớm nhưng phải ghi lý do và kiểm tra lại evidence bị ảnh hưởng.
+- Ưu tiên cùng reviewer qua các lượt khi session còn phù hợp; luôn độc lập với implementer. Nếu thay reviewer, bàn giao bảng findings, quyết định đã chốt, SHA và bộ đếm; không giữ worker rảnh chỉ để chờ lượt sau.
+
+## 2. Bảng findings xuyên suốt
+
+Review đầu tiên đưa feedback đầy đủ trong scope. Mỗi finding giữ ID ổn định (`F01`, `F02`…), không cấp ID mới cho cùng nguyên nhân khi đổi SHA, reviewer hay Dispatch.
+
+| Trường | Nội dung bắt buộc |
+| --- | --- |
+| ID / loại | ID; lỗi code, thiếu evidence, môi trường/CI, contract/AC hoặc đề xuất |
+| Mức độ / chặn merge | blocker / should-fix / nit; Có/Không + lý do |
+| Căn cứ | AC/Decision/invariant bị vi phạm; path + dòng trên SHA liên quan |
+| Bằng chứng | Tái hiện, log/test hoặc đường đi code chứng minh lỗi; kỳ vọng và thực tế |
+| Điều kiện đóng | Check hoặc bằng chứng cụ thể để xác nhận đã sửa |
+| Diễn tiến | SHA phát hiện/sửa/xác minh; owner; Mở / Đã sửa chờ xác minh / Đã xác minh / Mở lại / Hoãn có quyết định |
+
+- Lỗi correctness/security/invariant và thiếu acceptance bắt buộc phải chặn. `should-fix` phải ghi rõ có chặn hay không; nhãn mơ hồ không đủ làm căn cứ giao fix.
+- Nit, sở thích refactor và cải thiện ngoài AC không chặn; ghi follow-up, không tự mở feature ngoài roadmap đã duyệt.
+- Finding mới ở lượt sau vẫn phải báo, kể cả lỗi cũ bị bỏ sót. Ghi rõ: regression từ bản sửa, lỗi bỏ sót hay bằng chứng mới; không che lỗi để đạt giới hạn lượt. Không mở lại finding đã xác minh khi không có thay đổi liên quan hoặc bằng chứng mới.
+- Lỗi môi trường/CI cần owner và cách khôi phục riêng; không sửa business code chỉ để vượt lỗi hạ tầng. Cùng lỗi hạ tầng chỉ retry tự động tối đa một lần khi có căn cứ lỗi tạm thời; tiếp tục lỗi thì chẩn đoán. CI đang chạy không phải một lượt thất bại.
+
+## 3. Revalidation theo diff, vẫn pin exact SHA
+
+- Review đầu kiểm toàn bộ scope Task. Lượt sau đọc artifact trước, xác minh findings còn mở, diff từ SHA đã review tới SHA mới và vùng có nguy cơ regression. Chọn checks theo tác động; CI/gate bắt buộc vẫn phải đạt trên commit yêu cầu.
+- Mở rộng review khi diff đổi contract, auth/tenant, dependency, migration, hoặc thay đổi nền ảnh hưởng kết luận trước; ghi lý do và phạm vi. Không audit toàn repo mặc định mỗi lần SHA đổi.
+- Mỗi SHA mới có kết luận mới ghi SHA cũ/mới, diff đã kiểm, findings còn lại, checks đã chạy và evidence tái sử dụng cùng lý do. Không gọi kết quả test SHA cũ là đã chạy trên SHA mới; không tự kế thừa PASS.
+- SHA, scope và evidence không đổi thì dùng kết luận hiện có; chỉ review lại khi có bằng chứng mới, gate hết hiệu lực hoặc phát hiện sai sót, kèm lý do.
+- Ưu tiên comment PR/Issue gắn exact SHA cho evidence. Nếu commit báo cáo trong `docs/reviews/*` làm đổi SHA: reviewer kiểm diff báo cáo, xác nhận không đổi hành vi/gate và ghi revalidation SHA mới bằng comment. Không tạo chuỗi commit chỉ để cập nhật SHA trong chính báo cáo. Docs về AC, policy, cấu hình hay hướng dẫn thực thi không mặc định là “chỉ evidence”.
+- Merge/rebase/conflict không tự miễn revalidation phần thay đổi; CI trên integrated commit vẫn bắt buộc theo DoD.
+
+## 4. Giới hạn sửa và ngắt vòng lặp
+
+Một lượt sửa = một lần coordinator giao xử lý batch findings rồi thu kết quả để revalidate. Implementation đầu và review không tính là lượt sửa. Worker tự kiểm có giới hạn; không chạy lại cùng cách sửa/check đã thất bại mà không có giả thuyết mới.
+
+- Tối đa **2 lượt sửa tự động** cho cùng Task/Issue. Đếm theo Task/Issue xuyên SHA, PR thay thế, Run, session và Dispatch; không reset khi đổi worker, thêm finding hay tách task để tiếp tục cùng lỗi.
+- Ngắt sớm nếu cùng finding vẫn tái hiện sau khi worker báo đã sửa, hoặc các bản sửa luân phiên phá nhau. Reviewer ghi bằng chứng; coordinator không giao lại nguyên yêu cầu “fix tiếp”.
+- Khi ngắt hoặc hết lượt mà chưa đạt: bỏ task khỏi hàng đợi fix tự động, ghi Project `Bị chặn` + checkpoint. Không đánh PASS/Hoàn thành, không dùng known gap để bỏ acceptance/security bắt buộc.
+- Coordinator thực hiện hoặc giao **một lượt chẩn đoán có giới hạn**: nêu câu hỏi cần giải quyết, owner, đầu ra và thời hạn/ngân sách cụ thể trước khi bắt đầu. Phân biệt lỗi code, contract/AC, môi trường và thiếu evidence; lưu bằng chứng tái hiện, nguyên nhân/giả thuyết, vì sao lần sửa trước không hiệu quả và kế hoạch xác minh mới.
+- Sau chẩn đoán, coordinator chỉ mở lại khi có căn cứ mới và kế hoạch cụ thể trong thẩm quyền. Dùng lượt còn lại nếu chưa hết 2; nếu đã hết, chỉ cho phép **1 lượt ngoại lệ** có quyết định ghi rõ lý do, owner, phạm vi và điều kiện dừng. Ngoại lệ không reset bộ đếm.
+- Chẩn đoán không ra căn cứ mới hoặc lượt ngoại lệ vẫn FAIL: giữ `Bị chặn`, báo user quyết định còn thiếu và các phương án. Không tự lặp chẩn đoán/ngoại lệ hoặc đổi tên task để thử tiếp. Chỉ tiếp tục sau quyết định mới có thẩm quyền hoặc thay đổi bên ngoài có bằng chứng, với kế hoạch và giới hạn mới được ghi rõ.
+- Chỉ hỏi user khi cần quyết định vượt thẩm quyền hoặc đã hết đường xử lý có giới hạn; coordinator tự giải quyết việc thường lệ trong scope.
+
+## 5. Checkpoint và điều phối
+
+Lưu một bảng tổng hợp trên Issue/PR (hoặc artifact được Task chỉ định), cập nhật cùng chỗ và giữ lịch sử:
+
+```text
+Issue/PR · AC/scope · SHA trước → SHA hiện tại
+Reviewer / implementer · link evidence / bảng findings
+Lượt sửa tự động: 0|1|2 / 2 · Ngoại lệ: chưa dùng|đã dùng
+Finding mở/đã xác minh/mở lại · nguyên nhân dừng
+Chẩn đoán: chưa chạy|đang chạy|đã xong · owner · hạn/ngân sách
+Quyết định tiếp theo · điều kiện mở lại · người quyết định
+```
+
+Coordinator đọc checkpoint trước mỗi dispatch/revalidation; session mới khôi phục bộ đếm từ evidence, không mặc định về 0. Nếu lịch sử không rõ, đối chiếu trước khi giao thêm fix.
+
+`idle-fill` không được chọn task đang bị ngắt để fix/review lặp; lượt chẩn đoán được giao rõ là công việc riêng trong scope, không reset trạng thái/bộ đếm của Issue gốc. Tiếp tục task độc lập đã được ủy quyền. Vẫn xử lý mailbox, reply/ack và settlement/release đúng lifecycle; ngắt vòng sửa không cho phép bỏ worker live. Khi chỉ còn task bị chặn, không còn Dispatch live hay delivery/cleanup tồn đọng, báo checkpoint và kết thúc chờ; không poll vô hạn để đợi quyết định chưa có.
