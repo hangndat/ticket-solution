@@ -1,0 +1,8 @@
+.venv*/
+**/.venv*/
+**/__pycache__/
+**/.next/
+**/dist/
+**/build/
+**/coverage/
+**/Pods/
