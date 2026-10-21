@@ -31,7 +31,13 @@ export type ApnsSendInput = {
 };
 
 export type ApnsSendResult =
-  | { ok: true; providerStatus: 'ACCEPTED'; providerRef: string }
+  | {
+      ok: true;
+      providerStatus: 'ACCEPTED';
+      providerRef: string;
+      /** APNs host that accepted the push (may differ from client-reported label). */
+      resolvedEnvironment: ApnsEnvironment;
+    }
   | {
       ok: false;
       providerStatus: 'FAILED';
@@ -44,6 +50,13 @@ export type ApnsSendResult =
 export function isApnsEnabled(env: NodeJS.ProcessEnv): boolean {
   const raw = env['APNS_ENABLED']?.trim().toLowerCase();
   return raw === 'true' || raw === '1' || raw === 'yes';
+}
+
+/** Default on; set APNS_ENV_FALLBACK=0|false|no to disable cross-host retry. */
+export function isApnsEnvFallbackEnabled(env: NodeJS.ProcessEnv): boolean {
+  const raw = env['APNS_ENV_FALLBACK']?.trim().toLowerCase();
+  if (raw === '0' || raw === 'false' || raw === 'no') return false;
+  return true;
 }
 
 /**
@@ -100,6 +113,42 @@ function hostFor(env: ApnsEnvironment): string {
     : 'api.sandbox.push.apple.com';
 }
 
+function alternateApnsEnvironment(env: ApnsEnvironment): ApnsEnvironment {
+  return env === 'production' ? 'sandbox' : 'production';
+}
+
+function parseApnsReason(body: string): string {
+  try {
+    const parsed = JSON.parse(body) as { reason?: string };
+    if (parsed.reason) return parsed.reason;
+  } catch {
+    // keep generic
+  }
+  return 'provider_error';
+}
+
+function failureFromResponse(
+  status: number,
+  apnsReason: string,
+): ApnsSendResult {
+  const invalidateToken =
+    apnsReason === 'BadDeviceToken' ||
+    apnsReason === 'Unregistered' ||
+    apnsReason === 'DeviceTokenNotForTopic';
+  const retryable = status === 429 || status >= 500;
+  return {
+    ok: false,
+    providerStatus: 'FAILED',
+    reason: 'provider_error',
+    invalidateToken,
+    retryable,
+  };
+}
+
+function envMismatchFallbackReason(apnsReason: string): boolean {
+  return apnsReason === 'BadDeviceToken' || apnsReason === 'DeviceTokenNotForTopic';
+}
+
 async function providerToken(cfg: ApnsConfig): Promise<string> {
   const key = await importPKCS8(cfg.privateKeyPem, 'ES256');
   return new SignJWT({})
@@ -109,35 +158,56 @@ async function providerToken(cfg: ApnsConfig): Promise<string> {
     .sign(key);
 }
 
-export async function sendApnsPush(
-  cfg: ApnsConfig,
-  input: ApnsSendInput,
-): Promise<ApnsSendResult> {
-  const token = await providerToken(cfg);
-  const host = hostFor(input.environment);
-  const path = `/3/device/${input.deviceToken}`;
-  const apnsId = randomUUID();
-  const payload = JSON.stringify({
-    aps: {
-      alert: { title: input.title, body: input.body },
-      sound: 'default',
-    },
-    ...(input.data ?? {}),
-  });
+export type ApnsHttp2ExchangeResult = {
+  status: number;
+  body: string;
+  apnsId: string;
+};
 
+export type ApnsHttp2Client = {
+  exchange(
+    environment: ApnsEnvironment,
+    request: {
+      path: string;
+      authorization: string;
+      bundleId: string;
+      apnsId: string;
+      payload: string;
+    },
+  ): Promise<ApnsHttp2ExchangeResult>;
+};
+
+let testHttp2Client: ApnsHttp2Client | undefined;
+
+/** Test-only: inject mock HTTP/2 transport (cleared when set to undefined). */
+export function setApnsHttp2ClientForTest(client: ApnsHttp2Client | undefined): void {
+  testHttp2Client = client;
+}
+
+async function defaultHttp2Exchange(
+  environment: ApnsEnvironment,
+  request: {
+    path: string;
+    authorization: string;
+    bundleId: string;
+    apnsId: string;
+    payload: string;
+  },
+): Promise<ApnsHttp2ExchangeResult> {
+  const host = hostFor(environment);
   let session: ClientHttp2Session | null = null;
   try {
     session = connect(`https://${host}`);
-    const result = await new Promise<ApnsSendResult>((resolve, reject) => {
+    return await new Promise<ApnsHttp2ExchangeResult>((resolve, reject) => {
       const req = session!.request({
         ':method': 'POST',
-        ':path': path,
-        'authorization': `bearer ${token}`,
-        'apns-topic': cfg.bundleId,
+        ':path': request.path,
+        'authorization': request.authorization,
+        'apns-topic': request.bundleId,
         'apns-push-type': 'alert',
-        'apns-id': apnsId,
+        'apns-id': request.apnsId,
         'content-type': 'application/json',
-        'content-length': Buffer.byteLength(payload),
+        'content-length': Buffer.byteLength(request.payload),
       });
       const chunks: Buffer[] = [];
       let status = 0;
@@ -147,41 +217,103 @@ export async function sendApnsPush(
       req.on('data', (c) => chunks.push(Buffer.isBuffer(c) ? c : Buffer.from(c)));
       req.on('error', reject);
       req.on('end', () => {
-        const body = Buffer.concat(chunks).toString('utf8');
-        if (status === 200) {
-          resolve({
-            ok: true,
-            providerStatus: 'ACCEPTED',
-            providerRef: apnsId,
-          });
-          return;
-        }
-        let reason = 'provider_error';
-        try {
-          const parsed = JSON.parse(body) as { reason?: string };
-          if (parsed.reason) reason = parsed.reason;
-        } catch {
-          // keep generic
-        }
-        const invalidateToken =
-          reason === 'BadDeviceToken' ||
-          reason === 'Unregistered' ||
-          reason === 'DeviceTokenNotForTopic';
-        const retryable = status === 429 || status >= 500;
         resolve({
-          ok: false,
-          providerStatus: 'FAILED',
-          reason: 'provider_error',
-          invalidateToken,
-          retryable,
+          status,
+          body: Buffer.concat(chunks).toString('utf8'),
+          apnsId: request.apnsId,
         });
       });
-      req.end(payload);
+      req.end(request.payload);
     });
-    return result;
   } finally {
     session?.close();
   }
+}
+
+async function sendApnsToEnvironment(
+  cfg: ApnsConfig,
+  input: ApnsSendInput,
+  environment: ApnsEnvironment,
+  bearerToken: string,
+  http2: ApnsHttp2Client,
+): Promise<ApnsHttp2ExchangeResult> {
+  const apnsId = randomUUID();
+  const path = `/3/device/${input.deviceToken}`;
+  const payload = JSON.stringify({
+    aps: {
+      alert: { title: input.title, body: input.body },
+      sound: 'default',
+    },
+    ...(input.data ?? {}),
+  });
+  return http2.exchange(environment, {
+    path,
+    authorization: `bearer ${bearerToken}`,
+    bundleId: cfg.bundleId,
+    apnsId,
+    payload,
+  });
+}
+
+export async function sendApnsPush(
+  cfg: ApnsConfig,
+  input: ApnsSendInput,
+  options?: { env?: NodeJS.ProcessEnv; http2?: ApnsHttp2Client },
+): Promise<ApnsSendResult> {
+  const processEnv = options?.env ?? process.env;
+  const http2 = options?.http2 ?? testHttp2Client ?? { exchange: defaultHttp2Exchange };
+  const bearerToken = await providerToken(cfg);
+
+  const primary = await sendApnsToEnvironment(
+    cfg,
+    input,
+    input.environment,
+    bearerToken,
+    http2,
+  );
+  if (primary.status === 200) {
+    return {
+      ok: true,
+      providerStatus: 'ACCEPTED',
+      providerRef: primary.apnsId,
+      resolvedEnvironment: input.environment,
+    };
+  }
+
+  const primaryReason = parseApnsReason(primary.body);
+  if (primaryReason === 'Unregistered' || primary.status === 410) {
+    return failureFromResponse(primary.status, primaryReason);
+  }
+
+  const fallbackAllowed =
+    isApnsEnabled(processEnv) && isApnsEnvFallbackEnabled(processEnv);
+
+  if (
+    fallbackAllowed &&
+    primary.status === 400 &&
+    envMismatchFallbackReason(primaryReason)
+  ) {
+    const alternate = alternateApnsEnvironment(input.environment);
+    const secondary = await sendApnsToEnvironment(
+      cfg,
+      input,
+      alternate,
+      bearerToken,
+      http2,
+    );
+    if (secondary.status === 200) {
+      return {
+        ok: true,
+        providerStatus: 'ACCEPTED',
+        providerRef: secondary.apnsId,
+        resolvedEnvironment: alternate,
+      };
+    }
+    const secondaryReason = parseApnsReason(secondary.body);
+    return failureFromResponse(secondary.status, secondaryReason);
+  }
+
+  return failureFromResponse(primary.status, primaryReason);
 }
 
 export type ApnsAdapter = {
@@ -200,7 +332,7 @@ export function createApnsAdapter(env: NodeJS.ProcessEnv): ApnsAdapter {
   return {
     async send(input) {
       const cfg = requireApnsConfig(env);
-      return sendApnsPush(cfg, input);
+      return sendApnsPush(cfg, input, { env });
     },
   };
 }
