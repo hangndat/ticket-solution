@@ -4,9 +4,14 @@ import {
   createGateSsrTrace,
   type GateSsrTrace,
 } from '../gate/gate-ssr-trace';
+import { accessTokenIncludesAudience } from '../oidc/access-token-audience';
 import { isAccessTokenStaleForSsr } from '../oidc/access-token-clock';
+import { readOidcWebConfig } from '../oidc/config';
 import { readAccessToken } from '../oidc/cookies';
-import { refreshWebAccessToken } from '../oidc/refresh';
+import {
+  redirectForSsrDiscovery401,
+  redirectForSsrSessionRenewal,
+} from '../oidc/session-refresh';
 import { PLATFORM_PATHS } from '../platform/contracts';
 import {
   deriveNavCapabilities,
@@ -27,7 +32,11 @@ async function discoveryGet(
   const upstream = await forwardWithBearer(
     path,
     { method: 'GET' },
-    { timeoutMs: STAFF_DISCOVERY_TIMEOUT_MS, trace },
+    {
+      timeoutMs: STAFF_DISCOVERY_TIMEOUT_MS,
+      trace,
+      allowCookieRefresh: false,
+    },
   );
   trace?.mark(`discovery_get_status_${upstream.status}`);
   let body: unknown = null;
@@ -53,20 +62,28 @@ export async function requireSessionOrAuth(
 ): Promise<void> {
   trace?.mark('require_session_start');
   const token = await readAccessToken();
-  if (token && !isAccessTokenStaleForSsr(token)) {
+  const audience = readOidcWebConfig()?.audience ?? '';
+  const audienceOk =
+    Boolean(token) &&
+    Boolean(audience) &&
+    accessTokenIncludesAudience(token!, audience);
+  if (
+    token &&
+    audienceOk &&
+    !isAccessTokenStaleForSsr(token)
+  ) {
     trace?.mark('require_session_access_ok');
     return;
   }
   trace?.mark(
-    token ? 'require_session_refresh_stale' : 'require_session_refresh_missing',
+    !token
+      ? 'require_session_refresh_missing'
+      : !audienceOk
+        ? 'require_session_refresh_bad_audience'
+        : 'require_session_refresh_stale',
   );
-  const refreshed = await refreshWebAccessToken(trace);
-  trace?.mark(
-    refreshed.ok ? 'require_session_refresh_ok' : 'require_session_refresh_fail',
-  );
-  if (!refreshed.ok) {
-    redirect(`/auth?next=${encodeURIComponent(nextPath)}`);
-  }
+  trace?.mark('require_session_redirect_refresh_route');
+  await redirectForSsrSessionRenewal(nextPath);
 }
 
 /**
@@ -80,7 +97,7 @@ export async function requireAdminCapabilityOrHome(): Promise<void> {
   ]);
 
   if (eventsRes.status === 401 || tenantsRes.status === 401) {
-    redirect(`/auth?next=${encodeURIComponent('/admin')}`);
+    await redirectForSsrDiscovery401('/admin');
   }
 
   if (
@@ -115,8 +132,8 @@ export async function requireGateCapabilityOrHome(
   const eventsRes = await discoveryGet(PLATFORM_PATHS.meEvents, trace);
 
   if (eventsRes.status === 401) {
-    trace?.mark('require_gate_capability_redirect_auth');
-    redirect(`/auth?next=${encodeURIComponent('/gate')}`);
+    trace?.mark('require_gate_capability_redirect_refresh');
+    await redirectForSsrDiscovery401('/gate');
   }
 
   if (isTransientDiscoveryFailure(eventsRes.status)) {

@@ -153,7 +153,8 @@ function loadListResult<T>(
   if (status === 401 || status === 403) {
     return {
       kind: 'error',
-      detail: 'Không đủ quyền xem danh sách thành viên hoặc lời mời.',
+      detail:
+        'Tài khoản chưa có quyền Owner xem thành viên hoặc lời mời trong tổ chức này.',
     };
   }
   if (status < 200 || status >= 300) {
@@ -295,12 +296,17 @@ export function TenantStaffPanel({ tenantId }: Props) {
   }
 
   return (
-    <section aria-labelledby="staff-heading" className="redeem-form">
-      <h2 id="staff-heading">Thành viên &amp; lời mời (Owner)</h2>
-      <p>
-        Vai trò theo danh sách máy chủ cho phép — không gửi quyền tùy ý. Lời mời
-        hết hạn sau 48 giờ (theo cấu hình bảo mật).
+    <section
+      aria-labelledby="staff-heading"
+      className="admin-section admin-staff-panel"
+    >
+      <h2 id="staff-heading">Thành viên &amp; lời mời</h2>
+      <p className="admin-section-lead">
+        Mời thành viên và xem danh sách — cần quyền Owner. Lời mời hết hạn sau
+        48 giờ (theo cấu hình bảo mật).
       </p>
+      <details className="admin-tech-details">
+        <summary>Gửi lời mời mới</summary>
       <label>
         Email
         <input
@@ -353,6 +359,9 @@ export function TenantStaffPanel({ tenantId }: Props) {
         >
           Gửi lời mời
         </button>
+      </div>
+      </details>
+      <div className="auth-buttons admin-section-actions">
         <button
           type="button"
           disabled={busy}
@@ -388,7 +397,7 @@ export function TenantStaffPanel({ tenantId }: Props) {
           {membersLoad.kind === 'error' ? (
             <SurfaceState
               kind="error"
-              title="Không tải được thành viên"
+              title="Chưa xem được thành viên"
               detail={membersLoad.detail}
             />
           ) : null}
@@ -400,29 +409,31 @@ export function TenantStaffPanel({ tenantId }: Props) {
             />
           ) : null}
           {membersLoad.kind === 'ok' ? (
-            <table className="staff-table">
-              <caption>Thành viên</caption>
-              <thead>
-                <tr>
-                  <th scope="col">Email / định danh</th>
-                  <th scope="col">Vai trò</th>
-                  <th scope="col">Trạng thái</th>
-                  <th scope="col">Mã thành viên</th>
-                </tr>
-              </thead>
-              <tbody>
-                {membersLoad.rows.map((row) => (
-                  <tr key={row.membershipId}>
-                    <td>{row.email}</td>
-                    <td>{row.role}</td>
-                    <td>{row.status}</td>
-                    <td>
-                      <code>{row.membershipId}</code>
-                    </td>
+            <div className="tablewrap">
+              <table className="admin-table staff-table">
+                <caption>Thành viên</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Email / định danh</th>
+                    <th scope="col">Vai trò</th>
+                    <th scope="col">Trạng thái</th>
+                    <th scope="col">Mã thành viên</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {membersLoad.rows.map((row) => (
+                    <tr key={row.membershipId}>
+                      <td data-label="Email / định danh">{row.email}</td>
+                      <td data-label="Vai trò">{row.role}</td>
+                      <td data-label="Trạng thái">{row.status}</td>
+                      <td data-label="Mã thành viên">
+                        <code>{row.membershipId}</code>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           ) : null}
         </div>
       ) : null}
@@ -431,7 +442,7 @@ export function TenantStaffPanel({ tenantId }: Props) {
           {invitesLoad.kind === 'error' ? (
             <SurfaceState
               kind="error"
-              title="Không tải được lời mời"
+              title="Chưa xem được lời mời"
               detail={invitesLoad.detail}
             />
           ) : null}
@@ -443,56 +454,60 @@ export function TenantStaffPanel({ tenantId }: Props) {
             />
           ) : null}
           {invitesLoad.kind === 'ok' ? (
-            <table className="staff-table">
-              <caption>Lời mời</caption>
-              <thead>
-                <tr>
-                  <th scope="col">Email</th>
-                  <th scope="col">Vai trò</th>
-                  <th scope="col">Trạng thái</th>
-                  <th scope="col">Hết hạn</th>
-                </tr>
-              </thead>
-              <tbody>
-                {invitesLoad.rows.map((row) => (
-                  <tr key={row.inviteId}>
-                    <td>{row.email}</td>
-                    <td>{row.role}</td>
-                    <td>{row.status}</td>
-                    <td>{row.expiresAt ?? '—'}</td>
+            <div className="tablewrap">
+              <table className="admin-table staff-table">
+                <caption>Lời mời</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Email</th>
+                    <th scope="col">Vai trò</th>
+                    <th scope="col">Trạng thái</th>
+                    <th scope="col">Hết hạn</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {invitesLoad.rows.map((row) => (
+                    <tr key={row.inviteId}>
+                      <td data-label="Email">{row.email}</td>
+                      <td data-label="Vai trò">{row.role}</td>
+                      <td data-label="Trạng thái">{row.status}</td>
+                      <td data-label="Hết hạn">{row.expiresAt ?? '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           ) : null}
         </div>
       ) : null}
 
-      <h3>Thu hồi thành viên</h3>
-      <label>
-        Mã thành viên
-        <input
-          value={revokeTarget}
-          onChange={(e) => setRevokeTarget(e.target.value)}
-          autoComplete="off"
-          spellCheck={false}
-        />
-      </label>
-      <label>
-        Lý do
-        <input
-          value={revokeReason}
-          onChange={(e) => setRevokeReason(e.target.value)}
-        />
-      </label>
-      <button
-        type="button"
-        disabled={busy || !revokeTarget.trim()}
-        onClick={() => void revokeMember()}
-      >
-        Thu hồi (cảnh báo yêu cầu tiếp theo)
-      </button>
-      {notice ? <p role="status">{notice}</p> : null}
+      <details className="admin-tech-details">
+        <summary>Thu hồi thành viên (kỹ thuật)</summary>
+        <label>
+          Mã thành viên
+          <input
+            value={revokeTarget}
+            onChange={(e) => setRevokeTarget(e.target.value)}
+            autoComplete="off"
+            spellCheck={false}
+          />
+        </label>
+        <label>
+          Lý do
+          <input
+            value={revokeReason}
+            onChange={(e) => setRevokeReason(e.target.value)}
+          />
+        </label>
+        <button
+          type="button"
+          disabled={busy || !revokeTarget.trim()}
+          onClick={() => void revokeMember()}
+        >
+          Thu hồi (cảnh báo yêu cầu tiếp theo)
+        </button>
+        {notice ? <p role="status">{notice}</p> : null}
+      </details>
     </section>
   );
 }

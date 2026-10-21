@@ -76,6 +76,7 @@ class PublishedTermsDto implements PublishedTerms {
 
 class PublishedEventSummaryDto implements PublishedEventSummary {
   @ApiProperty({ format: 'uuid' }) id!: string;
+  @ApiProperty({ format: 'uuid' }) tenantId!: string;
   @ApiProperty() tenantSlug!: string;
   @ApiProperty() slug!: string;
   @ApiProperty() name!: string;

@@ -117,6 +117,7 @@ DO $$ BEGIN
 END $$;
 CREATE ROLE ${runtimeUser} LOGIN NOSUPERUSER NOBYPASSRLS INHERIT PASSWORD '${runtimePassword.replace(/'/g, "''")}';
 GRANT ticket_runtime TO ${runtimeUser};
+GRANT ticket_platform_runtime TO ${runtimeUser};
 `;
   execFileSync(
     'psql',

@@ -1,10 +1,7 @@
 import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
-import {
-  discoveryBase,
-  isOidcConfigured,
-  readOidcWebConfig,
-} from '../../../../src/oidc/config';
+import { buildWebAuthorizeUrl } from '../../../../src/oidc/authorize';
+import { isOidcConfigured, readOidcWebConfig } from '../../../../src/oidc/config';
 import {
   PKCE_COOKIE,
   STATE_COOKIE,
@@ -55,16 +52,10 @@ export async function GET(request: NextRequest) {
     jar.delete(POST_LOGIN_COOKIE);
   }
 
-  const authorize = new URL(
-    `${discoveryBase(config.issuer)}/protocol/openid-connect/auth`,
-  );
-  authorize.searchParams.set('client_id', config.clientId);
-  authorize.searchParams.set('redirect_uri', config.redirectUri);
-  authorize.searchParams.set('response_type', 'code');
-  authorize.searchParams.set('scope', config.scopes);
-  authorize.searchParams.set('state', state);
-  authorize.searchParams.set('code_challenge', challenge);
-  authorize.searchParams.set('code_challenge_method', 'S256');
+  const authorize = buildWebAuthorizeUrl(config, {
+    state,
+    codeChallenge: challenge,
+  });
 
   return NextResponse.redirect(authorize.toString());
 }

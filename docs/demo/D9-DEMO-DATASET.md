@@ -65,14 +65,48 @@ Pepper: `CODE_HMAC_PEPPER` (local placeholder). Codes lưu HMAC only. Plaintext 
 # Sau khi cập nhật DEMO_MARKETING / venue / FAQ trong demo-seed.ts — bắt buộc trên DB đã seed:
 D9_DEMO_FORCE_MARKETING=1 ./scripts/d9-demo-seed.sh
 
-# API smoke (login / me/tenants / redeem / me/tickets)
+# API smoke (login / me/tenants / redeem / me/tickets + public catalog)
 ./scripts/d9-demo-seed-smoke.sh
 ```
+
+### Local web UAT — catalog API (`ticket_d9_demo` @ `:55432`)
+
+Guest home và event detail gọi `GET /v1/public/events` và `GET /v1/public/tenants/:tenant/events/:event`. API **runtime** phải là login `d9_demo_rt` (hoặc role tương đương) có **cả hai** membership: `ticket_runtime` **và** `ticket_platform_runtime` — thiếu platform role → `SET LOCAL ROLE ticket_platform_runtime` → 500 `permission denied for table events`.
+
+**DB mới (khuyến nghị):** smoke bootstrap tạo DB + role đúng:
+
+```bash
+# In ra runtimeUrl (password ngẫu nội bộ) — dùng cho DATABASE_URL khi chạy API
+node scripts/lib/d9-demo-bootstrap-db.mjs
+```
+
+Sau đó seed với **admin** URL (`ticket_dev` trên cùng DB), chạy API với **runtime** URL từ JSON bootstrap.
+
+**DB đã tồn tại** (tạo trước khi có grant platform): một lần trên `ticket_d9_demo` với superuser:
+
+```sql
+GRANT ticket_platform_runtime TO d9_demo_rt;
+```
+
+**Chạy API local (ví dụ):**
+
+```bash
+pnpm --filter @ticket/backend build && pnpm --filter @ticket/api build
+DATABASE_URL='postgresql://d9_demo_rt:<password>@127.0.0.1:55432/ticket_d9_demo' \
+  OIDC_ISSUER='http://127.0.0.1:8080/realms/ticket' \
+  node apps/api/dist/main.js
+curl -sS 'http://127.0.0.1:3001/v1/public/events?limit=5' | jq '.items[].slug'
+# kỳ vọng: mfest, studio-night (sau ./scripts/d9-demo-seed.sh)
+curl -sS 'http://127.0.0.1:3001/v1/public/tenants/mfest-demo/events/mfest' | jq '.slug'
+```
+
+Slug UAT web: tenant `mfest-demo`, event `mfest` (legacy `demo-fun` / `fun-fest` đã rebrand — xem `D9_LEGACY_TENANT_SLUGS`).
 
 Env:
 
 | Variable | Meaning |
 | --- | --- |
 | `D9_DEMO_FORCE_MARKETING=1` | Save config version mới + publish dù event đã có `published_config_version` |
+| `D9_SMOKE_BOOTSTRAP=0` | Smoke dùng `DATABASE_URL` / `D9_RUNTIME_DATABASE_URL` hiện có thay vì drop/create DB |
 
 See evidence: [`docs/reviews/D9-DEMO-SEED.md`](../reviews/D9-DEMO-SEED.md).
