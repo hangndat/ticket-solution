@@ -35,6 +35,7 @@ async function fetchWithBearer(
   pathAndQuery: string,
   token: string,
   init: RequestInit = {},
+  timeoutMs = 20_000,
 ): Promise<Response> {
   const base = apiBaseUrl();
   const url = `${base}${pathAndQuery.startsWith('/') ? pathAndQuery : `/${pathAndQuery}`}`;
@@ -49,7 +50,7 @@ async function fetchWithBearer(
       ...init,
       headers,
       cache: 'no-store',
-      signal: AbortSignal.timeout(20_000),
+      signal: AbortSignal.timeout(timeoutMs),
     });
     const body = await upstream.arrayBuffer();
     return passthroughUpstream(upstream, body);
@@ -122,10 +123,17 @@ export async function forwardPublic(
  * Refreshes on missing access (when refresh cookie present) and retries once on 401.
  * Never exposes the token. IdP outage does not clear cookies.
  */
+export type ForwardWithBearerOptions = {
+  /** Upstream fetch budget (default 20s). Staff SSR discovery uses a shorter budget. */
+  timeoutMs?: number;
+};
+
 export async function forwardWithBearer(
   pathAndQuery: string,
   init: RequestInit = {},
+  options: ForwardWithBearerOptions = {},
 ): Promise<Response> {
+  const timeoutMs = options.timeoutMs ?? 20_000;
   if (!isOidcConfigured()) {
     return bffApiError(
       IDENTITY_ERROR_CODES.OIDC_MISCONFIGURED,
@@ -143,7 +151,7 @@ export async function forwardWithBearer(
     token = refreshed.accessToken;
   }
 
-  let response = await fetchWithBearer(pathAndQuery, token, init);
+  let response = await fetchWithBearer(pathAndQuery, token, init, timeoutMs);
   if (response.status !== 401) return response;
 
   const refreshed = await refreshWebAccessToken();
@@ -154,6 +162,11 @@ export async function forwardWithBearer(
     await clearSessionCookies();
     return refreshFailureResponse(refreshed.reason);
   }
-  response = await fetchWithBearer(pathAndQuery, refreshed.accessToken, init);
+  response = await fetchWithBearer(
+    pathAndQuery,
+    refreshed.accessToken,
+    init,
+    timeoutMs,
+  );
   return response;
 }
