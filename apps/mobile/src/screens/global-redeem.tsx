@@ -6,8 +6,8 @@ import {
   useSyncExternalStore,
   startTransition,
 } from 'react';
-import { Animated, TextInput, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { Animated, Text, TextInput, View } from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import type { RedemptionResolveResponse } from '@ticket/contracts';
 import {
   redeemActionAnnouncement,
@@ -49,8 +49,10 @@ import { useFadeInOnMount } from '@/hooks/use-fade-in-on-mount';
 import {
   parkSignInReturn,
 } from '@/navigation/sign-in-return-intent';
+import { sanitizeRedeemCodeParam } from '@/navigation/attendee-redeem-entry';
 import { colors } from '@/theme/colors';
 import { fontFamilies } from '@/theme/fonts';
+import { typography } from '@/theme/typography';
 
 const AUTH_CODES = new Set(['UNAUTHENTICATED', 'EMAIL_NOT_VERIFIED']);
 
@@ -70,8 +72,14 @@ function contextNotice(body: RedemptionResolveResponse): string {
   ].join(' · ');
 }
 
+function firstSearchParam(value: string | string[] | undefined): string {
+  if (Array.isArray(value)) return value[0] ?? '';
+  return value ?? '';
+}
+
 export function GlobalRedeemScreen() {
   const router = useRouter();
+  const linkParams = useLocalSearchParams<{ code?: string | string[] }>();
   const identity = useSyncExternalStore(
     session.subscribe,
     session.getSnapshot,
@@ -160,6 +168,23 @@ export function GlobalRedeemScreen() {
   );
 
   const wasVerifiedRef = useRef(identity.status === 'verified');
+  const appliedLinkCodeRef = useRef(false);
+
+  useEffect(() => {
+    const fromLink = sanitizeRedeemCodeParam(
+      firstSearchParam(linkParams.code),
+    );
+    if (!fromLink || appliedLinkCodeRef.current) return;
+    appliedLinkCodeRef.current = true;
+    setCode(fromLink);
+    const epoch = session.captureEpoch();
+    parkGlobalRedeemDraftIntent({
+      code: fromLink,
+      parkedUserId: epoch?.userId ?? null,
+      parkedGeneration: epoch?.generation ?? null,
+    });
+    router.setParams({ code: undefined });
+  }, [linkParams.code, router]);
 
   useEffect(() => {
     const unsub = session.subscribe(() => {
@@ -424,23 +449,18 @@ export function GlobalRedeemScreen() {
   if (guestGate) {
     return (
       <Page>
-        <Notice title="Đổi mã lấy vé">{redeemCopy.globalGuestBody}</Notice>
-        <TextInput
-          value={code}
-          onChangeText={setCode}
-          placeholder="Mã đổi vé"
-          autoCapitalize="characters"
-          accessibilityLabel="Mã đổi vé"
-          editable={!busy && !signInBusy}
-          style={field}
-          testID="global-redeem-code"
-        />
+        <Text accessibilityRole="header" style={{ color: colors.ink, ...typography.display }}>
+          {redeemCopy.globalGuestTitle}
+        </Text>
+        <Text style={{ color: colors.secondary, ...typography.body }}>
+          {redeemCopy.globalGuestBody}
+        </Text>
         <AttendeeCta
           label={
             signInBusy ? 'Đang đăng nhập…' : redeemCopy.authGateCta
           }
-          disabled={busy || signInBusy || code.trim().length === 0}
-          onPress={() => void onContinueOrResolve()}
+          disabled={busy || signInBusy}
+          onPress={() => void onSignIn()}
           testID="global-redeem-cta-continue"
         />
         {signInBusy ? (
@@ -463,13 +483,15 @@ export function GlobalRedeemScreen() {
 
   return (
     <Page>
-      <Notice title="Đổi mã lấy vé">{redeemCopy.globalVerifiedIntro}</Notice>
+      <Text accessibilityRole="header" style={{ color: colors.ink, ...typography.display }}>
+        Đổi mã lấy vé
+      </Text>
 
       {offlineNotice ? (
         <Notice title={redeemCopy.offlineTitle}>{offlineNotice}</Notice>
       ) : null}
 
-      {resolveNotice ? (
+      {resolved && resolveNotice ? (
         <Notice title="Kết quả tra cứu">{resolveNotice}</Notice>
       ) : null}
 
@@ -479,6 +501,16 @@ export function GlobalRedeemScreen() {
         </Notice>
       ) : null}
 
+      <Text
+        style={{
+          color: colors.label,
+          fontFamily: fontFamilies.bodySemiBold,
+          fontSize: 15,
+          fontWeight: '600',
+        }}
+      >
+        {redeemCopy.codeFieldLabel}
+      </Text>
       <TextInput
         value={code}
         onChangeText={(value) => {
@@ -488,17 +520,27 @@ export function GlobalRedeemScreen() {
             setResolveNotice(null);
           }
         }}
-        placeholder="Mã đổi"
+        placeholder={redeemCopy.codeFieldPlaceholder}
         autoCapitalize="characters"
-        accessibilityLabel="Mã đổi vé"
+        accessibilityLabel={redeemCopy.codeFieldLabel}
         editable={!busy}
         style={field}
         testID="global-redeem-code"
       />
+      {!resolved ? (
+        <Text style={{ color: colors.secondary, ...typography.callout }}>
+          {redeemCopy.globalVerifiedHint}
+        </Text>
+      ) : null}
 
       <AttendeeCta
-        label={busy ? 'Đang tra cứu…' : resolved ? 'Tra cứu lại' : 'Tra cứu mã'}
-        variant="secondary"
+        label={
+          busy
+            ? 'Đang tra cứu…'
+            : resolved
+              ? redeemCopy.lookupAgainCta
+              : redeemCopy.lookupCta
+        }
         disabled={busy || code.trim().length === 0}
         onPress={() => void onContinueOrResolve()}
         testID="global-redeem-cta-resolve"
