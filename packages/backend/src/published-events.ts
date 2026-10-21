@@ -303,7 +303,7 @@ function mapDetail(
   };
 }
 
-async function resolveActiveTenantBySlug(
+export async function resolveActiveTenantBySlug(
   db: PrismaClient,
   tenantSlug: string,
 ): Promise<TenantRow | null> {

@@ -28,6 +28,43 @@ export function publishedEventAssetPublicUrl(
   return `${base}/v1/public/tenants/${encodeURIComponent(tenantSlug)}/events/${encodeURIComponent(eventSlug)}/assets/${encodeURIComponent(assetId)}`;
 }
 
+export function publishedTenantAssetPublicUrl(
+  publicBase: string,
+  tenantSlug: string,
+  assetId: string,
+): string {
+  if (!UUID_RE.test(assetId)) return '';
+  const base = publicBase.replace(/\/$/, '');
+  return `${base}/v1/public/tenants/${encodeURIComponent(tenantSlug)}/assets/${encodeURIComponent(assetId)}`;
+}
+
+export async function resolveTenantLogoPublicUrl(
+  tx: Prisma.TransactionClient,
+  input: {
+    publicBase: string;
+    tenantId: string;
+    tenantSlug: string;
+    logoAssetId?: string | null;
+  },
+): Promise<string | undefined> {
+  const assetId = input.logoAssetId?.trim();
+  if (!assetId || !UUID_RE.test(assetId)) return undefined;
+  const rows = await tx.$queryRaw<Array<{ status: string }>>`
+    SELECT status
+    FROM tenant_assets
+    WHERE tenant_id = ${input.tenantId}::uuid
+      AND id = ${assetId}::uuid
+  `;
+  const row = rows[0];
+  if (!row || row.status !== 'READY') return undefined;
+  const url = publishedTenantAssetPublicUrl(
+    input.publicBase,
+    input.tenantSlug,
+    assetId,
+  );
+  return url || undefined;
+}
+
 export async function resolvePublishedBrandAssetUrls(
   tx: Prisma.TransactionClient,
   input: {
