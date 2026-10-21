@@ -8,9 +8,19 @@
  * Output: brand/prod/** + brand/prod/manifest.json
  */
 import { createRequire } from 'node:module';
-import { mkdirSync, writeFileSync, readFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  escapeXml,
+  FONT,
+  INK,
+  PAPER,
+  svgLockup,
+  svgMark,
+  svgMarkWhite,
+  svgTile,
+} from './prod-media-src/tenant-logos.mjs';
 
 const require = createRequire(
   join(dirname(fileURLToPath(import.meta.url)), '../packages/backend/package.json'),
@@ -21,8 +31,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..');
 const OUT_ROOT = join(ROOT, 'brand/prod');
 
-const INK = '#0B1220';
-const PAPER = '#F4F6F8';
+const SRC_ROOT = join(__dirname, 'prod-media-src');
 
 /** @type {const} */
 const ORGS = [
@@ -128,17 +137,6 @@ const EVENTS = [
   },
 ];
 
-const FONT =
-  'DejaVu Sans, Liberation Sans, Helvetica, Arial, sans-serif';
-
-function escapeXml(s) {
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
-
 function motifLayer(motif, w, h, color, opacity = 0.35) {
   const parts = [];
   const c = color;
@@ -176,36 +174,6 @@ function motifLayer(motif, w, h, color, opacity = 0.35) {
     }
   }
   return parts.join('\n');
-}
-
-function markGlyph(x, y, size, color) {
-  const s = size;
-  return `
-    <path d="M ${x} ${y + s} L ${x + s * 0.45} ${y} L ${x + s * 0.9} ${y + s}" fill="none" stroke="${color}" stroke-width="${Math.max(3, s * 0.08)}" stroke-linecap="round"/>
-    <circle cx="${x + s * 0.9}" cy="${y + s * 0.15}" r="${s * 0.09}" fill="#E11D48"/>
-  `;
-}
-
-function svgLogoLockup({ orgName, eventTitle, primary, motif, mono = false }) {
-  const w = 760;
-  const h = 200;
-  const textColor = mono ? '#FFFFFF' : primary;
-  const markColor = mono ? '#FFFFFF' : primary;
-  const title = eventTitle || orgName;
-  const subtitle = eventTitle ? orgName : '';
-  const titleSize = eventTitle ? 32 : 36;
-  return `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
-  ${mono ? '' : `<rect width="${w}" height="${h}" fill="none"/>`}
-  ${markGlyph(48, 52, 96, markColor)}
-  <text x="168" y="108" font-family="${FONT}" font-size="${titleSize}" font-weight="700" fill="${textColor}">${escapeXml(title)}</text>
-  ${
-    subtitle
-      ? `<text x="168" y="142" font-family="${FONT}" font-size="22" font-weight="500" fill="${textColor}" opacity="0.75">${escapeXml(subtitle)}</text>`
-      : ''
-  }
-  ${mono ? '' : motifLayer(motif, w, h, primary, 0.12)}
-</svg>`;
 }
 
 function bannerDefs(style, primary) {
@@ -247,18 +215,19 @@ function bannerDefs(style, primary) {
   </linearGradient>`;
 }
 
-function svgBanner({ style, primary, motif, orgName }) {
+function svgBanner({ style, primary, motif, orgName, orgSlug }) {
   const w = 1200;
   const h = 630;
   const safe = 0.1;
+  const markScale = 0.72;
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
   <defs>${bannerDefs(style, primary)}</defs>
   <rect width="${w}" height="${h}" fill="url(#bg)"/>
   ${motifLayer(motif, w, h, '#FFFFFF', 0.22)}
   <rect x="${w * safe}" y="${h * safe}" width="${w * (1 - 2 * safe)}" height="${h * (1 - 2 * safe)}" fill="none" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="2" rx="12"/>
-  ${markGlyph(w * 0.08, h * 0.38, 72, '#FFFFFF')}
-  <text x="${w * 0.08 + 100}" y="${h * 0.52}" font-family="${FONT}" font-size="28" font-weight="600" fill="#FFFFFF" opacity="0.85">${escapeXml(orgName)}</text>
+  ${svgMarkWhite(orgSlug, w * 0.06, h * 0.34, markScale)}
+  <text x="${w * 0.06 + 100}" y="${h * 0.52}" font-family="${FONT}" font-size="28" font-weight="600" fill="#FFFFFF" opacity="0.85">${escapeXml(orgName)}</text>
 </svg>`;
 }
 
@@ -283,19 +252,85 @@ async function writeFile(relPath, buf) {
   return relPath;
 }
 
+function writeTenantSourceSvgs(org) {
+  const dir = join(SRC_ROOT, org.slug);
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(join(dir, 'mark.svg'), svgMark(org.slug, 100));
+  writeFileSync(join(dir, 'lockup-light.svg'), svgLockup(org.slug, 'light'));
+  writeFileSync(join(dir, 'lockup-dark.svg'), svgLockup(org.slug, 'dark'));
+}
+
+/**
+ * @param {typeof ORGS[number]} org
+ * @param {{ built: object[] }} acc
+ */
+async function buildTenantLogoSuite(org, acc) {
+  writeTenantSourceSvgs(org);
+  const base = `brand/prod/${org.slug}`;
+  const slug = org.slug;
+
+  const push = async (rel, svg, width, height, format) => {
+    const buf = await rasterize(svg, { width, height, format });
+    await writeFile(rel, buf);
+    const mime =
+      format === 'png'
+        ? 'image/png'
+        : format === 'webp'
+          ? 'image/webp'
+          : 'image/jpeg';
+    acc.built.push({ rel, width, height, bytes: buf.length, mime });
+    return { rel, width, height, bytes: buf.length, mime, contentType: mime };
+  };
+
+  const mark512 = await push(
+    `${base}/mark-512.png`,
+    svgMark(slug, 512),
+    512,
+    512,
+    'png',
+  );
+  const lockLight = await push(
+    `${base}/logo.png`,
+    svgLockup(slug, 'light'),
+    760,
+    200,
+    'png',
+  );
+  const lockDark = await push(
+    `${base}/logo-dark.png`,
+    svgLockup(slug, 'dark'),
+    760,
+    200,
+    'png',
+  );
+  await push(`${base}/logo.webp`, svgLockup(slug, 'light'), 760, 200, 'webp');
+  await push(
+    `${base}/logo-dark.webp`,
+    svgLockup(slug, 'dark'),
+    760,
+    200,
+    'webp',
+  );
+
+  const tileSvg = svgTile(slug);
+  const tile1024 = await push(`${base}/tile-1024.png`, tileSvg, 1024, 1024, 'png');
+  await push(`${base}/tile-682.png`, tileSvg, 682, 682, 'png');
+  await push(`${base}/tile-341.png`, tileSvg, 341, 341, 'png');
+  await push(`${base}/tile-1024.webp`, tileSvg, 1024, 1024, 'webp');
+
+  return {
+    mark512,
+    lockLight,
+    lockDark,
+    tile1024,
+  };
+}
+
 async function buildAll() {
   const built = [];
 
   for (const org of ORGS) {
-    const rel = `brand/prod/${org.slug}/logo.png`;
-    const svg = svgLogoLockup({
-      orgName: org.name,
-      primary: org.primary,
-      motif: org.motif,
-    });
-    const buf = await rasterize(svg, { width: 760, height: 200, format: 'png' });
-    await writeFile(rel, buf);
-    built.push({ rel, width: 760, height: 200, bytes: buf.length, mime: 'image/png' });
+    await buildTenantLogoSuite(org, { built });
   }
 
   for (const ev of EVENTS) {
@@ -304,11 +339,9 @@ async function buildAll() {
     const logoRel = `${base}/logo.png`;
     const bannerRel = `${base}/banner.webp`;
 
-    const logoSvg = svgLogoLockup({
-      orgName: org.name,
+    const logoSvg = svgLockup(org.slug, 'light', {
       eventTitle: ev.title,
       primary: ev.primary,
-      motif: org.motif,
     });
     const logoBuf = await rasterize(logoSvg, {
       width: 760,
@@ -329,6 +362,7 @@ async function buildAll() {
       primary: ev.primary,
       motif: org.motif,
       orgName: org.name,
+      orgSlug: org.slug,
     });
     const bannerBuf = await rasterize(bannerSvg, {
       width: 1200,
@@ -362,6 +396,89 @@ async function buildAll() {
           widthPx: 760,
           heightPx: 200,
         },
+        assets: [
+          {
+            role: 'tenant-mark',
+            source: `brand/prod/${org.slug}/mark-512.png`,
+            contentType: 'image/png',
+            extension: 'png',
+            widthPx: 512,
+            heightPx: 512,
+          },
+          {
+            role: 'tenant-logo',
+            assetId: org.logoAssetId,
+            source: `brand/prod/${org.slug}/logo.png`,
+            contentType: 'image/png',
+            extension: 'png',
+            widthPx: 760,
+            heightPx: 200,
+          },
+          {
+            role: 'tenant-lockup-light',
+            source: `brand/prod/${org.slug}/logo.png`,
+            contentType: 'image/png',
+            extension: 'png',
+            widthPx: 760,
+            heightPx: 200,
+          },
+          {
+            role: 'tenant-lockup-dark',
+            source: `brand/prod/${org.slug}/logo-dark.png`,
+            contentType: 'image/png',
+            extension: 'png',
+            widthPx: 760,
+            heightPx: 200,
+          },
+          {
+            role: 'tenant-lockup-light-webp',
+            source: `brand/prod/${org.slug}/logo.webp`,
+            contentType: 'image/webp',
+            extension: 'webp',
+            widthPx: 760,
+            heightPx: 200,
+          },
+          {
+            role: 'tenant-lockup-dark-webp',
+            source: `brand/prod/${org.slug}/logo-dark.webp`,
+            contentType: 'image/webp',
+            extension: 'webp',
+            widthPx: 760,
+            heightPx: 200,
+          },
+          {
+            role: 'tenant-tile',
+            source: `brand/prod/${org.slug}/tile-1024.png`,
+            contentType: 'image/png',
+            extension: 'png',
+            widthPx: 1024,
+            heightPx: 1024,
+          },
+          {
+            role: 'tenant-tile-2x',
+            source: `brand/prod/${org.slug}/tile-682.png`,
+            contentType: 'image/png',
+            extension: 'png',
+            widthPx: 682,
+            heightPx: 682,
+          },
+          {
+            role: 'tenant-tile-1x',
+            source: `brand/prod/${org.slug}/tile-341.png`,
+            contentType: 'image/png',
+            extension: 'png',
+            widthPx: 341,
+            heightPx: 341,
+          },
+          {
+            role: 'tenant-tile-webp',
+            source: `brand/prod/${org.slug}/tile-1024.webp`,
+            contentType: 'image/webp',
+            extension: 'webp',
+            widthPx: 1024,
+            heightPx: 1024,
+          },
+        ],
       },
       events: events.map((ev) => ({
         slug: ev.slug,
@@ -406,6 +523,88 @@ async function buildAll() {
   writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n');
 
   return { built, manifestPath };
+}
+
+async function buildTenantLogoContactSheet() {
+  const pad = 24;
+  const colW = 360;
+  const rowH = 200;
+  const cols = 2;
+  const rows = ORGS.length;
+  const sheetW = cols * colW + pad * 3;
+  const sheetH = rows * rowH + pad * 2 + 40;
+
+  const composites = [];
+  const labels = [];
+
+  for (let i = 0; i < ORGS.length; i++) {
+    const org = ORGS[i];
+    const col = i % cols;
+    const row = Math.floor(i / cols);
+    const x0 = pad + col * (colW + pad);
+    const y0 = pad + 32 + row * rowH;
+
+    const markPath = join(ROOT, `brand/prod/${org.slug}/mark-512.png`);
+    const lockLight = join(ROOT, `brand/prod/${org.slug}/logo.png`);
+    const lockDark = join(ROOT, `brand/prod/${org.slug}/logo-dark.png`);
+
+    const sizes = [
+      { file: markPath, w: 32, h: 32, left: x0, top: y0, bg: PAPER },
+      { file: markPath, w: 32, h: 32, left: x0 + 48, top: y0, bg: INK },
+      { file: markPath, w: 64, h: 64, left: x0 + 110, top: y0 - 8, bg: PAPER },
+      {
+        file: lockLight,
+        w: 200,
+        h: 52,
+        left: x0,
+        top: y0 + 56,
+        bg: PAPER,
+      },
+      {
+        file: lockDark,
+        w: 200,
+        h: 52,
+        left: x0,
+        top: y0 + 120,
+        bg: INK,
+      },
+    ];
+
+    for (const s of sizes) {
+      const thumb = await sharp(s.file)
+        .resize(s.w, s.h, { fit: 'inside' })
+        .toBuffer();
+      const plate = await sharp({
+        create: {
+          width: s.w + 8,
+          height: s.h + 8,
+          channels: 4,
+          background: s.bg,
+        },
+      })
+        .composite([{ input: thumb, left: 4, top: 4 }])
+        .png()
+        .toBuffer();
+      composites.push({ input: plate, left: s.left, top: s.top });
+    }
+
+    labels.push(
+      `<text x="${x0}" y="${y0 - 8}" font-family="${FONT}" font-size="13" font-weight="700" fill="${INK}">${escapeXml(org.name)}</text>`,
+    );
+  }
+
+  const bg = Buffer.from(
+    `<?xml version="1.0"?><svg xmlns="http://www.w3.org/2000/svg" width="${sheetW}" height="${sheetH}">
+      <rect width="100%" height="100%" fill="${PAPER}"/>
+      <text x="${pad}" y="28" font-family="${FONT}" font-size="16" font-weight="700" fill="${INK}">Epic #686 tenant logos — 32px / 64px marks + lockups (paper / ink)</text>
+      ${labels.join('\n')}
+    </svg>`,
+  );
+
+  const out = join(ROOT, 'docs/reviews/EPIC686-TENANT-LOGO-contact-sheet.png');
+  mkdirSync(dirname(out), { recursive: true });
+  await sharp(bg).composite(composites).png().toFile(out);
+  return out;
 }
 
 async function buildContactSheet(built) {
@@ -476,6 +675,8 @@ async function main() {
   if (contactSheet) {
     const path = await buildContactSheet(built);
     console.log(`Contact sheet: ${path}`);
+    const tenantSheet = await buildTenantLogoContactSheet();
+    console.log(`Tenant logo contact sheet: ${tenantSheet}`);
   }
 }
 
