@@ -20,13 +20,21 @@ import {
   logWorkerShutdownWait,
   logWorkerTickSkipped,
   logWorkerTickStepError,
+  logWorkerTickStepTimeout,
   type WorkerTickStep,
 } from './worker-tick-log';
+import {
+  DEFAULT_TICK_STEP_TIMEOUT_MS,
+  runStepWithTimeout,
+  TickStepTimeoutError,
+} from './worker-tick-step-timeout';
 
 export const DEFAULT_SHUTDOWN_TICK_TIMEOUT_MS = 30_000;
+export { DEFAULT_TICK_STEP_TIMEOUT_MS } from './worker-tick-step-timeout';
 
 export type WorkerRelayOptions = {
   shutdownTickTimeoutMs?: number;
+  tickStepTimeoutMs?: number;
 };
 
 export class WorkerRelay implements OnModuleDestroy {
@@ -35,6 +43,7 @@ export class WorkerRelay implements OnModuleDestroy {
   private consecutiveErrors = 0;
   private readonly tickGuard = createTickGuard(() => this.stopped);
   private readonly shutdownTickTimeoutMs: number;
+  private readonly tickStepTimeoutMs: number;
 
   constructor(
     private readonly db: PrismaClient | null,
@@ -50,6 +59,12 @@ export class WorkerRelay implements OnModuleDestroy {
   ) {
     this.shutdownTickTimeoutMs =
       options.shutdownTickTimeoutMs ?? DEFAULT_SHUTDOWN_TICK_TIMEOUT_MS;
+    const stepFromEnv = Number(env['WORKER_TICK_STEP_TIMEOUT_MS']);
+    this.tickStepTimeoutMs =
+      options.tickStepTimeoutMs ??
+      (Number.isFinite(stepFromEnv) && stepFromEnv > 0
+        ? stepFromEnv
+        : DEFAULT_TICK_STEP_TIMEOUT_MS);
   }
 
   private relayOpts() {
@@ -80,11 +95,35 @@ export class WorkerRelay implements OnModuleDestroy {
       name: WorkerTickStep,
       action: () => Promise<unknown>,
     ): Promise<void> => {
+      const runAction = async () => {
+        const hangStep = this.env['WORKER_TEST_HANG_TICK_STEP'];
+        if (
+          this.env['NODE_ENV'] === 'test' &&
+          typeof hangStep === 'string' &&
+          hangStep === name
+        ) {
+          await new Promise<void>(() => {});
+        }
+        return action();
+      };
+
       try {
-        await action();
+        await runStepWithTimeout(
+          name,
+          this.tickStepTimeoutMs,
+          runAction,
+        );
       } catch (error) {
         errorsThisTick += 1;
         this.consecutiveErrors += 1;
+        if (error instanceof TickStepTimeoutError) {
+          logWorkerTickStepTimeout(
+            name,
+            error.timeoutMs,
+            this.consecutiveErrors,
+          );
+          return;
+        }
         logWorkerTickStepError(name, error, this.consecutiveErrors);
       }
     };

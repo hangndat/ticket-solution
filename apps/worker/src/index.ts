@@ -23,7 +23,15 @@ export {
   type ReplayOfflineSyncBatchInput,
 } from './offline-sync-replay';
 
-export { WorkerRelay, DEFAULT_SHUTDOWN_TICK_TIMEOUT_MS } from './worker-relay';
+export {
+  WorkerRelay,
+  DEFAULT_SHUTDOWN_TICK_TIMEOUT_MS,
+  DEFAULT_TICK_STEP_TIMEOUT_MS,
+} from './worker-relay';
+export {
+  runStepWithTimeout,
+  TickStepTimeoutError,
+} from './worker-tick-step-timeout';
 export {
   createTickGuard,
   waitForInflightTick,
@@ -42,6 +50,8 @@ export type CreateWorkerOptions = {
   pollMs?: number;
   /** Max wait for an in-flight poll cycle during shutdown (ms). */
   shutdownTickTimeoutMs?: number;
+  /** Max wait per tick step before logging timeout and continuing (ms). */
+  tickStepTimeoutMs?: number;
 };
 
 function isOptionsObject(value: unknown): value is CreateWorkerOptions {
@@ -54,6 +64,7 @@ function isOptionsObject(value: unknown): value is CreateWorkerOptions {
     'leaseOwner' in value ||
     'pollMs' in value ||
     'shutdownTickTimeoutMs' in value ||
+    'tickStepTimeoutMs' in value ||
     'env' in value ||
     ('logging' in value && !('PATH' in value))
   );
@@ -110,6 +121,13 @@ export async function createWorker(
       ? shutdownFromEnv
       : undefined);
 
+  const tickStepFromEnv = Number(env['WORKER_TICK_STEP_TIMEOUT_MS']);
+  const tickStepTimeoutMs =
+    options.tickStepTimeoutMs ??
+    (Number.isFinite(tickStepFromEnv) && tickStepFromEnv > 0
+      ? tickStepFromEnv
+      : undefined);
+
   const relay = new WorkerRelay(
     db,
     email,
@@ -119,7 +137,7 @@ export async function createWorker(
     intervalMs,
     credentialKeyMaterial,
     env,
-    { shutdownTickTimeoutMs },
+    { shutdownTickTimeoutMs, tickStepTimeoutMs },
   );
 
   @Module({
