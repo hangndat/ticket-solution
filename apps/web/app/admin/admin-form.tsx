@@ -61,6 +61,7 @@ import { CsSection } from './cs-section';
 import { ExportSection } from './export-section';
 import { EventReportSection } from './event-report-section';
 import { AdminReadinessAside } from './admin-readiness-aside';
+import { AdminStatsBar } from './admin-stats-bar';
 
 type Props = { initialTenantId?: string; initialEventId?: string };
 
@@ -627,26 +628,42 @@ export function AdminForm({
           </p>
         </aside>
       ) : null}
-      <div className="admin-layout">
-        <nav
-          className="admin-job-nav"
-          aria-label="Việc quản trị"
-          data-testid="admin-job-nav"
-        >
-          {ADMIN_JOBS.map((job) => (
-            <button
-              key={job.id}
-              type="button"
-              className="admin-job-nav__btn"
-              data-testid={`admin-job-${job.id}`}
-              aria-current={activeJob === job.id ? 'true' : 'false'}
-              onClick={() => setActiveJob(job.id)}
-            >
-              {job.label}
-            </button>
-          ))}
-        </nav>
-        <div className="admin-job-panels">
+      <div className="admin" data-testid="admin-shell">
+        <aside className="admin-sidebar" aria-label="Điều hướng quản trị">
+          <p className="eyebrow admin-sidebar__eyebrow">Không gian</p>
+          <nav
+            className="admin-job-nav"
+            aria-label="Việc quản trị"
+            data-testid="admin-job-nav"
+          >
+            {ADMIN_JOBS.map((job) => (
+              <button
+                key={job.id}
+                type="button"
+                className="admin-job-nav__btn"
+                data-testid={`admin-job-${job.id}`}
+                aria-current={activeJob === job.id ? 'true' : 'false'}
+                onClick={() => setActiveJob(job.id)}
+              >
+                {job.label}
+              </button>
+            ))}
+          </nav>
+        </aside>
+        <div className="admin-main">
+          <AdminStatsBar
+            eventList={listView}
+            readinessItems={readinessItems}
+            tenantLabel={
+              orgTitle?.trim() ||
+              (tenantChoices.length > 0
+                ? `${tenantChoices.length} tổ chức`
+                : 'Chưa chọn')
+            }
+            hasEventContext={Boolean(eventId.trim() || currentEvent)}
+          />
+          <div className="admin-main__grid">
+            <div className="admin-job-panels">
           <section
             className="admin-section admin-job-panel"
             data-job="setup"
@@ -743,19 +760,48 @@ export function AdminForm({
                   testId="admin-events-empty"
                 />
               ) : (
-                <ul data-testid="event-list">
-                  {listView.items.map((item) => (
-                    <li key={item.eventId}>
-                      <button
-                        type="button"
-                        onClick={() => void selectEventContext(item.eventId)}
-                      >
-                        {item.slug} · {item.name} ({item.contentStatus}/
-                        {item.businessStatus} · rev {item.revision})
-                      </button>
-                    </li>
-                  ))}
-                </ul>
+                <div className="tablewrap" data-testid="event-list">
+                  <table className="admin-table">
+                    <caption className="visually-hidden">
+                      Danh sách sự kiện trong tổ chức
+                    </caption>
+                    <thead>
+                      <tr>
+                        <th scope="col">Sự kiện</th>
+                        <th scope="col">Trạng thái</th>
+                        <th scope="col">Phiên bản</th>
+                        <th scope="col">Thao tác</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {listView.items.map((item) => (
+                        <tr key={item.eventId}>
+                          <td data-label="Sự kiện">
+                            <span className="admin-table__primary">
+                              {item.name}
+                            </span>
+                            <span className="admin-table__secondary muted">
+                              {item.slug}
+                            </span>
+                          </td>
+                          <td data-label="Trạng thái">
+                            {item.contentStatus}/{item.businessStatus}
+                          </td>
+                          <td data-label="Phiên bản">rev {item.revision}</td>
+                          <td data-label="Thao tác">
+                            <button
+                              type="button"
+                              className="admin-table__action"
+                              onClick={() => void selectEventContext(item.eventId)}
+                            >
+                              Chọn
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )
             ) : null}
           </section>
@@ -992,8 +1038,10 @@ export function AdminForm({
               onDownload={() => void exportApi.downloadExport()}
             />
           </div>
+            </div>
+            <AdminReadinessAside items={readinessItems} />
+          </div>
         </div>
-        <AdminReadinessAside items={readinessItems} />
       </div>
       {(() => {
         const notice = createView
