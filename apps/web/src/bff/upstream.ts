@@ -166,6 +166,29 @@ export type ForwardWithBearerOptions = {
   allowCookieRefresh?: boolean;
 };
 
+/** Owner/staff SSR reads — no cookie-mutating refresh (use route handler redirect first). */
+export async function ssrUpstreamGet(
+  pathAndQuery: string,
+  options: Pick<ForwardWithBearerOptions, 'timeoutMs' | 'trace'> = {},
+): Promise<{ status: number; body: unknown }> {
+  const upstream = await forwardWithBearer(
+    pathAndQuery,
+    { method: 'GET' },
+    {
+      timeoutMs: options.timeoutMs ?? 20_000,
+      trace: options.trace,
+      allowCookieRefresh: false,
+    },
+  );
+  let body: unknown = null;
+  try {
+    body = await upstream.json();
+  } catch {
+    body = null;
+  }
+  return { status: upstream.status, body };
+}
+
 export async function forwardWithBearer(
   pathAndQuery: string,
   init: RequestInit = {},
