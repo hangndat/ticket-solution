@@ -1,5 +1,10 @@
 import { redirect } from 'next/navigation';
 import { forwardWithBearer } from '../bff/upstream';
+import {
+  createGateSsrTrace,
+  type GateSsrTrace,
+} from '../gate/gate-ssr-trace';
+import { isAccessTokenStaleForSsr } from '../oidc/access-token-clock';
 import { readAccessToken } from '../oidc/cookies';
 import { refreshWebAccessToken } from '../oidc/refresh';
 import { PLATFORM_PATHS } from '../platform/contracts';
@@ -16,12 +21,15 @@ const STAFF_DISCOVERY_TIMEOUT_MS = 8_000;
 
 async function discoveryGet(
   path: string,
+  trace?: GateSsrTrace,
 ): Promise<{ status: number; body: unknown }> {
+  trace?.mark('discovery_get_start');
   const upstream = await forwardWithBearer(
     path,
     { method: 'GET' },
-    { timeoutMs: STAFF_DISCOVERY_TIMEOUT_MS },
+    { timeoutMs: STAFF_DISCOVERY_TIMEOUT_MS, trace },
   );
+  trace?.mark(`discovery_get_status_${upstream.status}`);
   let body: unknown = null;
   try {
     body = await upstream.json();
@@ -39,10 +47,23 @@ function isTransientDiscoveryFailure(status: number): boolean {
  * Soft-redirect anonymous deep-links on staff routes → /auth?next=…
  * Authenticated callers continue; capability checks run separately.
  */
-export async function requireSessionOrAuth(nextPath: StaffRoute): Promise<void> {
+export async function requireSessionOrAuth(
+  nextPath: StaffRoute,
+  trace?: GateSsrTrace,
+): Promise<void> {
+  trace?.mark('require_session_start');
   const token = await readAccessToken();
-  if (token) return;
-  const refreshed = await refreshWebAccessToken();
+  if (token && !isAccessTokenStaleForSsr(token)) {
+    trace?.mark('require_session_access_ok');
+    return;
+  }
+  trace?.mark(
+    token ? 'require_session_refresh_stale' : 'require_session_refresh_missing',
+  );
+  const refreshed = await refreshWebAccessToken(trace);
+  trace?.mark(
+    refreshed.ok ? 'require_session_refresh_ok' : 'require_session_refresh_fail',
+  );
   if (!refreshed.ok) {
     redirect(`/auth?next=${encodeURIComponent(nextPath)}`);
   }
@@ -87,14 +108,19 @@ export async function requireAdminCapabilityOrHome(): Promise<void> {
  * Soft-redirect when discovery says the caller lacks Gate chrome.
  * Transient upstream/IdP failure → allow gate shell (E01: no infinite loading).
  */
-export async function requireGateCapabilityOrHome(): Promise<void> {
-  const eventsRes = await discoveryGet(PLATFORM_PATHS.meEvents);
+export async function requireGateCapabilityOrHome(
+  trace?: GateSsrTrace,
+): Promise<void> {
+  trace?.mark('require_gate_capability_start');
+  const eventsRes = await discoveryGet(PLATFORM_PATHS.meEvents, trace);
 
   if (eventsRes.status === 401) {
+    trace?.mark('require_gate_capability_redirect_auth');
     redirect(`/auth?next=${encodeURIComponent('/gate')}`);
   }
 
   if (isTransientDiscoveryFailure(eventsRes.status)) {
+    trace?.mark('require_gate_capability_transient_allow');
     return;
   }
 
@@ -107,6 +133,17 @@ export async function requireGateCapabilityOrHome(): Promise<void> {
   });
 
   if (!caps.showGate) {
+    trace?.mark('require_gate_capability_denied');
     redirect('/?notice=gate_denied');
   }
+  trace?.mark('require_gate_capability_allow');
+}
+
+/** Gate SSR: session + capability with optional GATE_SSR_TRACE=1 timing. */
+export async function runGateStaffSsrGuards(): Promise<void> {
+  const trace = createGateSsrTrace('gate_page');
+  trace.mark('gate_page_start');
+  await requireSessionOrAuth('/gate', trace);
+  await requireGateCapabilityOrHome(trace);
+  trace.finish('guards_ok');
 }
