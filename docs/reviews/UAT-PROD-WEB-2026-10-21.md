@@ -11,6 +11,8 @@
 | Runner (retest 8 · final · #682) | Sora · uat · Orca `term_979a325c-f385-4112-a418-2b0138a64fc8` · task `task_e494c7591080` |
 | Runner (retest 10 · final · #707) | Sora · uat · Orca `term_93496768-2462-472e-b60e-92ebff94f538` · task `task_9c001be7d029` |
 
+| Runner (retest 9 · final · #703) | Sora · uat · Orca `term_3006a92b-85ee-44d6-bbc4-42caef1fdfaa` · task `task_aec48cbf8332` |
+
 | Runner (retest 12 · final · post pre-stack) | Sora · uat · Orca `term_b5819d93-9ed7-4be3-a1a4-b74e13a9a764` · task `task_2aa97c5a132c` |
 | Runner (retest 13 · final · main #728 #729 #731) | Sora · uat · Orca `term_4bcc2b06-1818-4b2e-8ff3-b72c11e9ac2e` · task `task_39d478b9874f` |
 
@@ -49,6 +51,31 @@ Phạm vi: **E01** + hồi quy sau deploy prod web **#707** (`8f4f70a`). Profile
 | E02–E05 | desktop | **BLOCKED** | Phụ thuộc form cổng (E01 FAIL) |
 | C01–C04 (portal) | desktop | **BLOCKED** | Portal staff KC OK nhưng shell «Chưa có tổ chức» / `t/d9d9f001-…` «Không có quyền» — không tái lập Aurora Owner trong phiên |
 | /admin (web) | http | **PASS** | `admin-redirect.txt` — `302` → `https://portal.vemoki.com/admin` |
+
+| Ảnh | `apps/web/.uat-artifacts/prod-2026-10-21/` + retest `…/prod-2026-10-21-retest/` + retest3 `…/prod-2026-10-21-retest3/` + retest4 `…/prod-2026-10-21-retest4/` + retest5 `…/prod-2026-10-21-retest5/` + retest6 `…/prod-2026-10-21-retest6/` + retest8 `…/prod-2026-10-21-retest8/` + retest9 `…/prod-2026-10-21-retest9/` |
+| Deploy baseline (retest 6) | `bfc03166b7e46399a5ea19b68bedaa6c8c1fca3b` (`main`, merge PR #678 deploy prod web) |
+| Deploy baseline (retest 8) | `0add1f6072d4e4b9b7b6b73f7b8ffb3baa7b0bb8` (`main`, merge PR #682 deploy prod web — fix gate loading) |
+| Deploy baseline (retest 9) | `7af72d35e0d74ed695cbce97a82ff239ca633ca2` (`main`, merge PR **#703** deploy prod web) |
+
+## Launch verdict
+
+**NO-GO** (retest 9 final @ `7af72d3`, 2026-10-21 ~17:20Z+08 — phạm vi web; **P0 còn E01**; H03 inbox và suite G/H01 máy thật **DEFERRED** riêng)
+
+## Retest 9 (final)
+
+Phạm vi: xác nhận **E01** + hồi quy sau deploy prod web **#703** (`7af72d3`). Profile Orca isolated: `retest9-staff` (`51c53879…`, tab `92c4cd12…`), `retest9-attendee` (`1e59b8a9…`), `retest9-portal` (`844b58ac…`). Staff: `login?return=/gate` → KC `staff@example.com`. Không deploy/SSH ghi; không burst public API.
+
+| ID | VP | Kết quả | Evidence |
+| --- | --- | --- | --- |
+| A01–A04 | http | **PASS** | `a01-a04-curl.txt` — marketing/portal/app `200`; BFF `/api/bff/me` `401`; `/gate` `307` → `/auth?next=/gate` |
+| B04 | desktop | **PASS** (callback) / **FAIL** (paint ≤5s) | Staff profile: callback `/gate` OK; form «Cổng check-in» xuất hiện sau ~20s lần đầu, không đạt ≤5s |
+| E01 | desktop | **FAIL** | **5×** `goto https://app.vemoki.com/gate` (foreground, đến form hoặc fail-closed ≤5s): **33.5–35.1s** vẫn «Đang tải…», không fail-closed — `e01-gate-timing-staff-profile.txt`, `e01-staff-profile-loading.png` |
+| E01 (token) | desktop | **FAIL** | Sau chờ **~340s** từ `e01-expiry-wait-start.txt` (access token >300s), `goto /gate`: **52.2s** vẫn `loading`, không refresh nhanh, không `/auth` — `e01-gate-after-token-expiry.txt` |
+| E07 | desktop | **PASS** | Profile `retest9-attendee`: `login?return=/gate` → `/?notice=gate_denied` |
+| #630 | browser | **PASS** | Cùng profile attendee, tab `/account`; chờ **~340s** (`630-wait-start.txt` → `630-wait-end.txt`), `goto /account` → vẫn `attendee@example.com` — `630-after-wait-snapshot.txt`, `b630-account-after-wait-retest9.png` |
+| D02 | desktop | **FAIL** | BFF public `form:null` `terms:true` (1×). UI «Tải biểu mẫu» (`focus`/`Enter`/`click`): vẫn «Chưa có biểu mẫu» hoặc «Không tải được biểu mẫu» — không redeem `DEMO-MFEST-00x` |
+| E02–E05 | desktop | **BLOCKED** | Phụ thuộc form cổng sau `goto /gate` (E01 FAIL) |
+| C01 (portal) | desktop | **BLOCKED** | Tab `retest9-portal` / `uat-retest7-b06-portal`: KC `ticket-admin-web` `fill`+`click` không hoàn tất callback trong phiên — không chứng minh shell Aurora lần này (retest 6/8 vẫn PASS trước đó) |
 
 | Deploy baseline (retest 12) | `9515c980db4185c8109fe648204036e3e0e56fb1` (`main`, merge PR #711 gate token + prod sau dọn `vemoki-pre-*`) |
 | Ảnh (retest 12) | `apps/web/.uat-artifacts/prod-2026-10-21-retest12/` |
@@ -238,6 +265,20 @@ run5 40.76s FAIL_loading
 ```text
 P0 (retest 10): E01, E07 (regress), H03 (DEFERRED)
 P0 stable: #630 PASS; /admin redirect PASS
+
+run1 33.50s FAIL_loading
+run2 35.08s FAIL_loading
+run3 33.83s FAIL_loading
+run4 33.74s FAIL_loading
+run5 33.85s FAIL_loading
+```
+
+**Retest 9 verdict (web):** **NO-GO** — Deploy **#703** **chưa** xóa P0 **E01** (`goto /gate` kẹt loading ≫5s; sau hết hạn access token vẫn kẹt). **#630** và **E07** PASS. **D02** / **E02–E05** / portal **C01** không xác nhận regress trong phiên.
+
+```text
+P0 (retest 9): E01, H03 (DEFERRED)
+P0 cleared vs retest 8: #630 (PASS lại)
+P0 regress: E01 xấu hơn (~33s vs ~12s); D02 FAIL tải biểu mẫu; E02–E05 BLOCKED
 
 run1 33.58s FAIL_loading
 run2 34.11s FAIL_loading
