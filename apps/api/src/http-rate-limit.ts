@@ -21,6 +21,20 @@ export function rateLimitedException(): HttpException {
   );
 }
 
+async function consumeRateLimitInTenantContext(
+  db: PrismaClient,
+  tenantId: string,
+  bucketKey: string,
+  limit: number,
+): Promise<boolean> {
+  return db.$transaction(async (tx) => {
+    // notification_rate_counters is RLS-scoped; counter tenant_id is synthetic
+    // (userId or IP-derived UUID), not the event tenant — bind session for writes.
+    await tx.$queryRaw`SELECT set_config('app.tenant_id', ${tenantId}, true)`;
+    return tryConsumeRateLimit(tx, { tenantId, bucketKey, limit });
+  });
+}
+
 export async function consumeUserRateLimit(
   db: PrismaClient | null,
   userId: string,
@@ -28,12 +42,11 @@ export async function consumeUserRateLimit(
   limit: number,
 ): Promise<void> {
   if (!db || limit < 1) return;
-  const allowed = await db.$transaction((tx) =>
-    tryConsumeRateLimit(tx, {
-      tenantId: userId,
-      bucketKey,
-      limit,
-    }),
+  const allowed = await consumeRateLimitInTenantContext(
+    db,
+    userId,
+    bucketKey,
+    limit,
   );
   if (!allowed) throw rateLimitedException();
 }
@@ -47,12 +60,11 @@ export async function consumeIpRateLimit(
   if (!db || limit < 1) return;
   const ip = clientIp?.trim() || 'unknown';
   const tenantId = abuseTenantIdFromKey(`ip:${ip}`);
-  const allowed = await db.$transaction((tx) =>
-    tryConsumeRateLimit(tx, {
-      tenantId,
-      bucketKey,
-      limit,
-    }),
+  const allowed = await consumeRateLimitInTenantContext(
+    db,
+    tenantId,
+    bucketKey,
+    limit,
   );
   if (!allowed) throw rateLimitedException();
 }
