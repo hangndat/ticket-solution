@@ -7,6 +7,7 @@
 | Runner (retest 3 · #668) | Sora · uat · Orca `term_310eb26e-29c4-4016-b434-e6cbc14c5379` · task `task_0aff0036d08f` |
 | Runner (retest 4 · final) | Sora · uat · Orca `term_b5a5ae6d-99c1-46a7-bde3-1934239ba208` · task `task_6183358f6a56` |
 | Runner (retest 5 · final) | Sora · uat · Orca `term_a2b63072-751e-434a-9e29-d02a8b11cde4` · task `task_4860a2bdec4f` |
+| Runner (retest 6 · final · #678) | Sora · uat · Orca `term_3e682b0f-f0b2-4d7a-a7d5-b19dac7cbe2c` · task `task_4d6a462b3e30` |
 | Catalog | `docs/plans/PROD-LAUNCH-UAT.md` |
 | Catalog SHA-256 | `756e5aa410d2c3dd95a8f8e547fd415ae95b162dd79b3d7c25f7787da1ad2d8f` |
 | Deploy baseline (retest 3) | `cbabea4ccc6447e7dc40a832ba95c81320c1b0d9` (`main`, fix #668 rate-limit RLS + deploy api/web) |
@@ -14,11 +15,49 @@
 | Viewports | Desktop ~1440; mobile 390 qua `orca exec --command "set viewport 390 844"` (retest) |
 | Browser | Orca tabs `6d76d908…` (portal), `4f074dbb…` (app guest) |
 | SSH J-suite | `conanphong` read-only, không in `.env` |
-| Ảnh | `apps/web/.uat-artifacts/prod-2026-10-21/` + retest `…/prod-2026-10-21-retest/` + retest3 `…/prod-2026-10-21-retest3/` + retest4 `…/prod-2026-10-21-retest4/` + retest5 `…/prod-2026-10-21-retest5/` |
+| Ảnh | `apps/web/.uat-artifacts/prod-2026-10-21/` + retest `…/prod-2026-10-21-retest/` + retest3 `…/prod-2026-10-21-retest3/` + retest4 `…/prod-2026-10-21-retest4/` + retest5 `…/prod-2026-10-21-retest5/` + retest6 `…/prod-2026-10-21-retest6/` |
+| Deploy baseline (retest 6) | `bfc03166b7e46399a5ea19b68bedaa6c8c1fca3b` (`main`, merge PR #678 deploy prod web) |
 
 ## Launch verdict
 
-**NO-GO** (retest 5 final @ `4376bc5`, 2026-10-21 ~06:20Z — phạm vi web; H03 inbox và suite G/H01 máy thật **DEFERRED** riêng)
+**NO-GO** (retest 6 final @ `bfc0316`, 2026-10-21 ~14:45Z+08 — phạm vi web; H03 inbox và suite G/H01 máy thật **DEFERRED** riêng)
+
+## Retest 6 (final)
+
+Phạm vi: sau deploy prod #678 (`bfc0316`). Tab Orca mới (`53e5a0d7…` redeem, `471a96c6…` staff `/gate`, `28af341f…` portal). Không deploy/SSH ghi. Drive redeem/gate: `focus` + `press Space`/`Enter` khi `orca exec click` không kích hoạt handler React.
+
+| ID | VP | Kết quả | Evidence |
+| --- | --- | --- | --- |
+| A01–A04 | http | **PASS** | `curl` marketing/portal/app/auth `200`; BFF `/api/bff/me/events` `401`; `/gate` `307` |
+| #630 | browser | **NOT-RUN** | Profile Orca dùng chung: logout staff → attendee KC/`/account` vẫn `staff@example.com` (không chứng minh refresh attendee) |
+| B04 | desktop | **PASS** | Tab `471a96c6…` `login?return=/gate` → KC staff → `/gate` «Cổng check-in» (lần đầu ~20s qua callback); `b04-gate-retest6.png` |
+| B06 | desktop | **BLOCKED** | Portal logout → attendee KC `fill` không hoàn tất callback trong phiên (vẫn form Sign In) |
+| C05–C07 | desktop | **NOT-RUN** | Portal staff shell không tái lập sau logout/KC trong phiên |
+| D02 | desktop | **PASS** | BFF `form:null` + `terms` OK. `focus e11` + `Space` «Tải biểu mẫu» → nhánh terms-only + «Biểu mẫu sẵn sàng»; `DEMO-MFEST-008` → «Đổi mã thành công», vé `7e0c62b7-a835-4b92-a1b5-154730762408`; `d02-guest-retest6.png`, `d02-redeem-result-retest6.png` |
+| D03 | desktop | **PASS** | Mã sai `WRONG-CODE-XYZ` (cùng flow terms) → từ chối, không cấp vé (không lặp success D02) |
+| D04 | desktop | **PASS** | Gửi lại `DEMO-MFEST-008` → không cấp vé thứ hai (trạng thái giữ vé đã cấp) |
+| E01 | desktop | **FAIL** | `goto /gate` sau phiên staff: «Đang tải…» **>16s** (đo đến 16.4s vẫn loading); **không** chuyển fail-closed «Chưa rõ / không cho qua» — kẹt spinner route (`data-surface-state=loading`) |
+| E02 | desktop | **PASS** | MFest tenant/event → phiên `66c74c38-838d-4738-a3c8-47b57c4ffe28` |
+| E03 | desktop | **PASS** | Vé `7e0c62b7-…` → «Cho vào» + check-in `f0a9ca05-…` |
+| E04 | desktop | **PASS** | Xác nhận lại cùng vé → «Không cho vào» `TICKET_NOT_ACTIVE` |
+| E05 | desktop | **PASS** | UUID giả `000…099` → «Không cho vào» `TICKET_NOT_FOUND` (không 500) |
+| I03 | desktop | **PASS** | Staff → `portal.vemoki.com/platform` «Not a Platform Operator» (từ chối platform) |
+| J01 | ssh | **PASS** | (retest 5, không đổi) `j-ssh-output.txt` |
+| J02 | ssh | **PASS** | (retest 5) |
+| J03 | ssh | **PASS** | (retest 5) |
+| J04 | ssh | **PASS** | Coordinator: VPS sha `a55f89ee…` == git hotfix baseline (drift đã chấp nhận retest 5) |
+| J06 | ssh | **PASS** | (retest 5) `proxy_buffer_size 32k` |
+| H03 | — | **BLOCKED** | Không hộp thư kiểm soát prod |
+| Rate limit | http | **NOT-RUN** | Không burst (chính sách phiên) |
+
+**Retest 6 verdict (web):** **NO-GO** — Redeem terms-only + gate mutate đã sống sau #678; **P0 còn E01** (SSR `/gate` loading >15s, không fail-closed), **H03**, **B06** / **#630** chưa chứng minh trong phiên Orca.
+
+```text
+P0 (retest 6): E01, H03, B06, #630 (NOT-RUN/BLOCKED)
+P0 cleared vs retest 5: D02, D03, D04, E02, E03, E04, E05, B04, J04
+P1: CSP connect-src http://api:3001 (không retest)
+DEFERRED: G01–G06, H01 (máy thật)
+```
 
 ## Retest 5 (final)
 
