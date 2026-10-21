@@ -33,10 +33,13 @@ import {
   type GateTab,
 } from './gate-chrome';
 import { GateOfflineBanner } from './offline-banner';
+import type { GateScopeChrome } from './gate-scope-chrome';
+import { DEFAULT_GATE_LABEL } from './gate-scope-chrome';
 
 type Props = {
   initialTenantId?: string;
   initialEventId?: string;
+  scopeChrome?: GateScopeChrome | null;
 };
 
 type Hold = {
@@ -62,10 +65,18 @@ function formatHistoryTime(iso: string): string {
   }
 }
 
-export function GateForm({ initialTenantId = '', initialEventId = '' }: Props) {
+export function GateForm({
+  initialTenantId = '',
+  initialEventId = '',
+  scopeChrome = null,
+}: Props) {
   const [tab, setTab] = useState<GateTab>('scan');
-  const [tenantId, setTenantId] = useState(initialTenantId);
-  const [eventId, setEventId] = useState(initialEventId);
+  const [tenantId, setTenantId] = useState(
+    () => initialTenantId.trim() || scopeChrome?.tenantId || '',
+  );
+  const [eventId, setEventId] = useState(
+    () => initialEventId.trim() || scopeChrome?.eventId || '',
+  );
   const [ticketId, setTicketId] = useState('');
   const [lookupId, setLookupId] = useState('');
   const [sessionId, setSessionId] = useState('');
@@ -330,6 +341,8 @@ export function GateForm({ initialTenantId = '', initialEventId = '' }: Props) {
         tenantId={tenantId}
         link={link}
         hasSession={Boolean(sessionId)}
+        eventDisplayName={scopeChrome?.eventName ?? null}
+        gateDisplayName={scopeChrome ? DEFAULT_GATE_LABEL : null}
       />
       <GateTabNav active={tab} onChange={setTab} />
 

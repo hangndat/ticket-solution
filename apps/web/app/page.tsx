@@ -3,6 +3,7 @@ import type { PublishedEventSummary } from '@ticket/contracts';
 import { HeroWordmark } from '../src/branding/hero-wordmark';
 import { loginHref } from '../src/oidc/login-href';
 import { authNoticeFromParam } from '../src/oidc/auth-notice';
+import { loadOwnerWallet, ownedTicketCountByEventId } from '../src/owner-ticket';
 import { SiteNav } from '../src/site-chrome';
 import {
   PUBLIC_EVENT_COPY,
@@ -71,6 +72,11 @@ function staffDeniedCopy(notice: string | undefined): {
 export default async function Home({ searchParams }: Props) {
   const params = await searchParams;
   const catalog = await loadHomeCatalog();
+  const wallet = await loadOwnerWallet();
+  const ownedByEventId =
+    wallet.status === 'ok'
+      ? ownedTicketCountByEventId(wallet.tickets)
+      : undefined;
   const denied = staffDeniedCopy(params.notice?.trim());
   const authNotice = authNoticeFromParam(params.notice?.trim(), {
     retryHref: loginHref('/'),
@@ -156,7 +162,7 @@ export default async function Home({ searchParams }: Props) {
       ) : null}
 
       {catalog.status === 'ok' ? (
-        <HomeCatalogGrid items={catalog.items} />
+        <HomeCatalogGrid items={catalog.items} ownedByEventId={ownedByEventId} />
       ) : null}
     </main>
   );
