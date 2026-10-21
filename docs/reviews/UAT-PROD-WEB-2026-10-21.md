@@ -8,6 +8,7 @@
 | Runner (retest 4 · final) | Sora · uat · Orca `term_b5a5ae6d-99c1-46a7-bde3-1934239ba208` · task `task_6183358f6a56` |
 | Runner (retest 5 · final) | Sora · uat · Orca `term_a2b63072-751e-434a-9e29-d02a8b11cde4` · task `task_4860a2bdec4f` |
 | Runner (retest 6 · final · #678) | Sora · uat · Orca `term_3e682b0f-f0b2-4d7a-a7d5-b19dac7cbe2c` · task `task_4d6a462b3e30` |
+| Runner (retest 8 · final · #682) | Sora · uat · Orca `term_979a325c-f385-4112-a418-2b0138a64fc8` · task `task_e494c7591080` |
 | Catalog | `docs/plans/PROD-LAUNCH-UAT.md` |
 | Catalog SHA-256 | `756e5aa410d2c3dd95a8f8e547fd415ae95b162dd79b3d7c25f7787da1ad2d8f` |
 | Deploy baseline (retest 3) | `cbabea4ccc6447e7dc40a832ba95c81320c1b0d9` (`main`, fix #668 rate-limit RLS + deploy api/web) |
@@ -15,12 +16,46 @@
 | Viewports | Desktop ~1440; mobile 390 qua `orca exec --command "set viewport 390 844"` (retest) |
 | Browser | Orca tabs `6d76d908…` (portal), `4f074dbb…` (app guest) |
 | SSH J-suite | `conanphong` read-only, không in `.env` |
-| Ảnh | `apps/web/.uat-artifacts/prod-2026-10-21/` + retest `…/prod-2026-10-21-retest/` + retest3 `…/prod-2026-10-21-retest3/` + retest4 `…/prod-2026-10-21-retest4/` + retest5 `…/prod-2026-10-21-retest5/` + retest6 `…/prod-2026-10-21-retest6/` |
+| Ảnh | `apps/web/.uat-artifacts/prod-2026-10-21/` + retest `…/prod-2026-10-21-retest/` + retest3 `…/prod-2026-10-21-retest3/` + retest4 `…/prod-2026-10-21-retest4/` + retest5 `…/prod-2026-10-21-retest5/` + retest6 `…/prod-2026-10-21-retest6/` + retest8 `…/prod-2026-10-21-retest8/` |
 | Deploy baseline (retest 6) | `bfc03166b7e46399a5ea19b68bedaa6c8c1fca3b` (`main`, merge PR #678 deploy prod web) |
+| Deploy baseline (retest 8) | `0add1f6072d4e4b9b7b6b73f7b8ffb3baa7b0bb8` (`main`, merge PR #682 deploy prod web — fix gate loading) |
 
 ## Launch verdict
 
-**NO-GO** (retest 6 final @ `bfc0316`, 2026-10-21 ~14:45Z+08 — phạm vi web; H03 inbox và suite G/H01 máy thật **DEFERRED** riêng)
+**NO-GO** (retest 8 final @ `0add1f6`, 2026-10-21 ~15:45Z+08 — phạm vi web; H03 inbox và suite G/H01 máy thật **DEFERRED** riêng)
+
+## Retest 8 (final)
+
+Phạm vi: sau deploy prod web **#682** (`0add1f6` = merge `hangndat/fix-gate-loading-1021`). Profile Orca tách: `retest8-staff` / `retest8-attendee` (isolated). Tab staff `0fbf8fac…` (`/api/auth/login?return=/gate` → KC staff); attendee `239af934…`; portal `898ac197…`. Không deploy/SSH ghi; không burst public API.
+
+| ID | VP | Kết quả | Evidence |
+| --- | --- | --- | --- |
+| A01–A04 | http | **PASS** | `curl` marketing/portal/app `200`; BFF `/api/bff/me` `401`; `/gate` `307` (no cookie) |
+| B04 | desktop | **PASS** (callback) / **FAIL** (E01 paint) | Profile `retest8-staff`: KC `staff@example.com` → `/gate` URL đúng; nội dung ban đầu vẫn «Đang tải…» (`data-surface-state=loading`), không «Cổng check-in» trong ≤8s |
+| E01 | desktop | **FAIL** | Sau B04, **5×** `goto https://app.vemoki.com/gate` (foreground, đến form hoặc fail-closed): **12.2–12.4s** vẫn «Đang tải…», không fail-closed — `e01-gate-timing-staff-profile.txt`, `e01-staff-profile-loading.png`. Tab default sau cùng: 5× FAIL ~12.3s (`e01-gate-timing-default-tab.txt`) |
+| E07 | desktop | **PASS** | Profile `retest8-attendee`: `/gate` → `/?notice=gate_denied` (gate_denied) |
+| D02 | desktop | **BLOCKED** | Không hoàn tất redeem `DEMO-MFEST-009` trong phiên («Tải biểu mẫu» / terms không ổn định sau nhiều lần thử); BFF public `terms` vẫn `200` (1 lần). Không kết luận regress so retest 6 |
+| E02–E05 | desktop | **BLOCKED** | Phụ thuộc form cổng sau `goto /gate` (E01 FAIL) — không chạy mutate |
+| C01 (portal) | desktop | **PASS** | Tab portal: shell Aurora Night Org Owner, «Open scan Gate on app» — không đổi so retest 6 |
+| H03 | — | **DEFERRED** | Không hộp thư kiểm soát prod (ghi riêng, không kéo web verdict) |
+
+**E01 timing (staff profile, giây → trạng thái cuối):**
+
+```text
+run1 12.35s FAIL_loading
+run2 12.20s FAIL_loading
+run3 12.30s FAIL_loading
+run4 12.32s FAIL_loading
+run5 12.35s FAIL_loading
+```
+
+**Retest 8 verdict (web):** **NO-GO** — Deploy #682 **chưa** xóa P0 **E01** (`goto /gate` kẹt loading >8s, không fail-closed). **E07** gate_denied attendee OK. Portal shell **không đổi**. H03 / G / H01 máy thật vẫn **DEFERRED**.
+
+```text
+P0 (retest 8): E01, H03 (DEFERRED), B06/#630 (không retest)
+P0 regress vs retest 6: E01 vẫn FAIL; E02–E05/D02 vòng nhanh BLOCKED do cổng
+DEFERRED: G01–G06, H01 (máy thật), H03 inbox
+```
 
 ## Retest 6 (final)
 
