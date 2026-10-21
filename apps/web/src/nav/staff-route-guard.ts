@@ -4,7 +4,9 @@ import {
   createGateSsrTrace,
   type GateSsrTrace,
 } from '../gate/gate-ssr-trace';
+import { accessTokenIncludesAudience } from '../oidc/access-token-audience';
 import { isAccessTokenStaleForSsr } from '../oidc/access-token-clock';
+import { readOidcWebConfig } from '../oidc/config';
 import { readAccessToken } from '../oidc/cookies';
 import {
   redirectForSsrDiscovery401,
@@ -60,12 +62,25 @@ export async function requireSessionOrAuth(
 ): Promise<void> {
   trace?.mark('require_session_start');
   const token = await readAccessToken();
-  if (token && !isAccessTokenStaleForSsr(token)) {
+  const audience = readOidcWebConfig()?.audience ?? '';
+  const audienceOk =
+    Boolean(token) &&
+    Boolean(audience) &&
+    accessTokenIncludesAudience(token!, audience);
+  if (
+    token &&
+    audienceOk &&
+    !isAccessTokenStaleForSsr(token)
+  ) {
     trace?.mark('require_session_access_ok');
     return;
   }
   trace?.mark(
-    token ? 'require_session_refresh_stale' : 'require_session_refresh_missing',
+    !token
+      ? 'require_session_refresh_missing'
+      : !audienceOk
+        ? 'require_session_refresh_bad_audience'
+        : 'require_session_refresh_stale',
   );
   trace?.mark('require_session_redirect_refresh_route');
   await redirectForSsrSessionRenewal(nextPath);
