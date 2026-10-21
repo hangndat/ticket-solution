@@ -204,6 +204,7 @@ test(
       );
       for (const row of platformList.items) {
         assert.equal('contentStatus' in row, false);
+        assert.match(row.tenantId, /^[0-9a-f-]{36}$/i);
       }
 
       const list = await listPublishedEvents(db, {
@@ -213,6 +214,7 @@ test(
       assert.equal(list.items.length, 1);
       assert.equal(list.items[0].slug, 'mfest');
       assert.equal(list.items[0].tenantSlug, 'mfest-demo');
+      assert.equal(list.items[0].tenantId, D9_DEMO.tenants.mfest.id);
       assert.ok(list.items[0].publishedConfigVersion >= 1);
       assert.equal(list.nextCursor, null);
 
@@ -222,6 +224,7 @@ test(
       });
       assert.ok(detail);
       assert.equal(detail.slug, 'mfest');
+      assert.equal(detail.tenantId, D9_DEMO.tenants.mfest.id);
       assert.ok(detail.sections.some((s) => s.kind === 'hero'));
       assert.ok(detail.faq.length >= 1);
       assert.ok(
