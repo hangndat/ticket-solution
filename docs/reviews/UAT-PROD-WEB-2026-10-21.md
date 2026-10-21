@@ -2,16 +2,52 @@
 
 | Trường | Giá trị |
 | --- | --- |
-| Runner | Sora · uat · Orca `term_82365d62-fcfb-45f7-8a50-bda8a4fcdf01` · task `task_ed9780af6016` |
+| Runner (lần 1) | Sora · uat · Orca `term_82365d62-fcfb-45f7-8a50-bda8a4fcdf01` · task `task_ed9780af6016` |
+| Runner (retest nginx) | Sora · uat · Orca `term_94a572bc-adbc-4b3c-af8b-6dfa75421f1d` · task `task_03be9fbc418c` |
 | Catalog | `docs/plans/PROD-LAUNCH-UAT.md` |
 | Catalog SHA-256 | `756e5aa410d2c3dd95a8f8e547fd415ae95b162dd79b3d7c25f7787da1ad2d8f` |
 | Deploy baseline | `1ba6647b8e6b1652cfdf25b86500d9d415bab48e` (`main`, PR #665) |
-| Viewports | Desktop ~1440 (Orca default); mobile 390 — **Orca `agent-browser` không có lệnh `resize`/`viewport`** (ghi gap D06) |
+| Viewports | Desktop ~1440; mobile 390 qua `orca exec --command "set viewport 390 844"` (retest) |
 | Browser | Orca tabs `6d76d908…` (portal), `4f074dbb…` (app guest) |
 | SSH J-suite | `conanphong` read-only, không in `.env` |
-| Ảnh | `apps/web/.uat-artifacts/prod-2026-10-21/` |
+| Ảnh | `apps/web/.uat-artifacts/prod-2026-10-21/` + retest `…/prod-2026-10-21-retest/` |
 
 ## Launch verdict
+
+**NO-GO** (sau retest nginx 2026-10-21 ~05:09Z vẫn NO-GO)
+
+## Retest sau fix nginx
+
+Coordinator: `app.vemoki.com` thêm `proxy_buffer_size 32k` (+ buffers) — reload ~05:08Z (`vemoki.conf.bak-20261021-app-buffer`). Chỉ chạy lại case BLOCKED/FAIL trong scope task; không deploy/sửa VPS.
+
+| ID / Issue | Trước | Sau retest | Evidence |
+| --- | --- | --- | --- |
+| B04 | FAIL (callback 502) | **PASS** | Staff `return=/gate` → «Cổng check-in dự phòng»; `b04-gate-after-nginx-fix.png` |
+| B05 | PASS | **PASS** | Authorize `ticket-web` → `app.vemoki.com/api/auth/callback`, scope `openid profile email` (không `offline_access`) |
+| #630 refresh app auth | FAIL (502 callback) | **PASS** | Attendee login + reload → `/account` vẫn `attendee@example.com`, «Đăng xuất» |
+| D01 | PASS | **PASS** | Guest/attendee home, không chrome admin tenant |
+| D02 | BLOCKED | **FAIL** | «Tải biểu mẫu» `mfest-demo`/`mfest` không load form; `vemoki-web-1` log `failed-to-find-server-action` |
+| D03 | BLOCKED | **BLOCKED** | Phụ thuộc D02 |
+| D04 | BLOCKED | **BLOCKED** | Phụ thuộc D02 |
+| D05 | PASS | **PASS** | `/claim`, `/invite` HTTP 200 (không token) |
+| D06 | FAIL (không viewport) | **PASS** | `set viewport 390 844` + `d06-redeem-mobile-390-retest.png` |
+| E01 | BLOCKED | **PASS** | Staff `/gate` form phiên + copy fail-closed |
+| E02 | BLOCKED | **PASS** | Aurora tenant `26c16ee9-…` + event `5295ef1a-…` → phiên `68d601b3-…` |
+| E03 | BLOCKED | **FAIL** | «Giữ chỗ và xác nhận» → «API cổng không tới được»; container log Server Action ID lỗi |
+| E04 | BLOCKED | **BLOCKED** | Phụ thuộc E03 |
+| E05 | BLOCKED | **FAIL** | Ticket UUID giả → cùng lỗi API cổng (không từ chối sạch 4xx) |
+| E07 | BLOCKED | **PASS** | Attendee `/gate` → `?notice=gate_denied`, «Không đủ quyền cổng» |
+| I01 | PASS | **PASS** | Staff portal → URL tenant MFest `d9d9f001-…` → «Cần đăng nhập», không lộ shell MFest |
+| J04 | FAIL | **FAIL** | So **đúng file** `infra/deploy/compose.yaml`: VPS sha `a55f89ee4f3431c609aa8dd1146b9c985da96ffd1a06e75d5b21ccee50eeda75` ≠ git @ `bc916201` sha `7bf278d3f20b84020168280b3b5850f3aa8716d9eb2806433c3af2b0fabb4ac9` (PR #665 hotfix VPS chưa khớp tip git) |
+| H03 | BLOCKED | **BLOCKED** | Không có hộp thư kiểm soát prod |
+
+**Retest verdict:** **NO-GO** — nginx unblock B04/#630 OIDC callback; P0 còn **D02**, **E03/E05**, **J04**, **H03**.
+
+```text
+P0 FAIL/BLOCKED còn: D02, E03, E05, J04, H03 (+ D03–D04, E04 blocked)
+```
+
+## Launch verdict (lần 1 — giữ lịch sử)
 
 **NO-GO**
 
@@ -137,8 +173,9 @@ P0 chặn: **B04** (app OIDC callback `502`), **D02–D04** (phụ thuộc đăn
 | J04 | FAIL |
 
 ```text
-Launch: NO-GO
+Launch: NO-GO (retest nginx 2026-10-21)
 Catalog SHA: 756e5aa410d2c3dd95a8f8e547fd415ae95b162dd79b3d7c25f7787da1ad2d8f
-Deploy SHA: 1ba6647b8e6b1652cfdf25b86500d9d415bab48e
+Deploy SHA (baseline): 1ba6647b8e6b1652cfdf25b86500d9d415bab48e
+Retest artifact SHA: bc916201255ebfedeb3eb845636e652a4df08398
 Artifact: docs/reviews/UAT-PROD-WEB-2026-10-21.md
 ```
