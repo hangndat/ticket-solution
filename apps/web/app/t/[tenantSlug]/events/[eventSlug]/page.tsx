@@ -7,7 +7,7 @@ import {
   brandingFromEventBrand,
   brandingToCssVars,
 } from '../../../../../src/branding';
-import { Wordmark } from '../../../../../src/site-chrome';
+import { SiteNav } from '../../../../../src/site-chrome';
 import {
   PUBLIC_EVENT_COPY,
   formatPublishedEventDate,
@@ -38,6 +38,33 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
+function EventErrorShell({
+  testId,
+  title,
+  detail,
+}: {
+  testId: string;
+  title: string;
+  detail: string;
+}) {
+  return (
+    <main id="main" className="container shell event-page">
+      <SiteNav />
+      <SurfaceState
+        kind="error"
+        title={title}
+        detail={detail}
+        testId={testId}
+        action={
+          <Link className="button" href="/">
+            Về trang chủ
+          </Link>
+        }
+      />
+    </main>
+  );
+}
+
 export default async function EventPage({ params }: Props) {
   const { tenantSlug, eventSlug } = await params;
   const result = await loadPublishedEventDetail(tenantSlug, eventSlug);
@@ -46,37 +73,21 @@ export default async function EventPage({ params }: Props) {
 
   if (result.status === 'unreachable') {
     return (
-      <main id="main" className="container shell">
-        <SurfaceState
-          kind="error"
-          title={PUBLIC_EVENT_COPY.detailUnreachable.title}
-          detail={PUBLIC_EVENT_COPY.detailUnreachable.detail}
-          testId="event-unreachable"
-          action={
-            <Link className="button" href="/">
-              Về trang chủ
-            </Link>
-          }
-        />
-      </main>
+      <EventErrorShell
+        testId="event-unreachable"
+        title={PUBLIC_EVENT_COPY.detailUnreachable.title}
+        detail={PUBLIC_EVENT_COPY.detailUnreachable.detail}
+      />
     );
   }
 
   if (result.status === 'invalid') {
     return (
-      <main id="main" className="container shell">
-        <SurfaceState
-          kind="error"
-          title={PUBLIC_EVENT_COPY.detailInvalid.title}
-          detail={PUBLIC_EVENT_COPY.detailInvalid.detail}
-          testId="event-invalid"
-          action={
-            <Link className="button" href="/">
-              Về trang chủ
-            </Link>
-          }
-        />
-      </main>
+      <EventErrorShell
+        testId="event-invalid"
+        title={PUBLIC_EVENT_COPY.detailInvalid.title}
+        detail={PUBLIC_EVENT_COPY.detailInvalid.detail}
+      />
     );
   }
 
@@ -88,17 +99,12 @@ export default async function EventPage({ params }: Props) {
   } as CSSProperties;
   const sections = visiblePublishedSections(event);
   const whenLabel = formatPublishedEventDate(event.startsAt, event.timezone);
+  const heroCopy = heroCopyFromSections(event.sections);
   const infoSections = sections.filter(
     (s) => s.kind === 'info' || s.kind === 'guide',
   );
   const redeemHref = `/redeem?tenantSlug=${encodeURIComponent(event.tenantSlug)}&eventSlug=${encodeURIComponent(event.slug)}`;
-  const supportParts = [whenLabel, event.location?.trim()].filter(
-    (part): part is string => Boolean(part && part.trim()),
-  );
-  const heroSupport =
-    supportParts.length > 0
-      ? supportParts.join(' · ')
-      : PUBLIC_EVENT_COPY.noStartsAt;
+  const locationLabel = event.location?.trim() || null;
 
   return (
     <ThemeProvider branding={branding} applyCssVars>
@@ -109,15 +115,14 @@ export default async function EventPage({ params }: Props) {
         data-branding-source={branding.source}
         data-testid="event-published"
       >
-        <div className="container event-chrome">
-          <nav aria-label="Điều hướng sự kiện">
-            <Wordmark />
-            <span>{event.brand.organizationName}</span>
-          </nav>
-        </div>
-        <section className="hero hero-atmosphere" aria-labelledby="event-title">
+        <SiteNav />
+        <div className="container event-detail-body">
+          <Link className="event-detail-back" href="/">
+            <span aria-hidden="true">‹</span> Tất cả sự kiện
+          </Link>
+
           <div
-            className="poster poster-media event-hero-bleed"
+            className="event-detail-hero poster poster-media"
             data-testid="event-hero-media"
           >
             <EventBanner
@@ -129,76 +134,92 @@ export default async function EventPage({ params }: Props) {
               alt={`Banner ${event.name}`}
             />
           </div>
-          <div className="container hero-copy event-hero-copy">
-            <h1 id="event-title">{event.name}</h1>
-            <p className="hero-support" data-testid="event-hero-support">
-              {heroSupport}
-            </p>
-            <div className="hero-cta">
-              <Link className="button" href={redeemHref}>
+
+          <div className="event-detail-cols">
+            <div className="event-detail-main">
+              {heroCopy.eyebrow ? (
+                <p className="eyebrow">{heroCopy.eyebrow}</p>
+              ) : null}
+              <h1 id="event-title">{event.name}</h1>
+              <p className="event-detail-org" data-testid="event-hero-support">
+                {event.brand.organizationName}
+              </p>
+
+              <div
+                className="event-facts"
+                aria-label="Thông tin nhanh"
+                data-testid="event-facts"
+              >
+                <div>
+                  <small>Thời gian</small>
+                  <p>
+                    {whenLabel && event.startsAt ? (
+                      <>
+                        <time dateTime={event.startsAt}>{whenLabel}</time>
+                        <span className="event-facts__tz">{event.timezone}</span>
+                      </>
+                    ) : (
+                      <span>{PUBLIC_EVENT_COPY.noStartsAt}</span>
+                    )}
+                  </p>
+                </div>
+                <div>
+                  <small>Địa điểm</small>
+                  <p>
+                    {locationLabel ?? (
+                      <span className="muted">Chưa công bố</span>
+                    )}
+                  </p>
+                </div>
+              </div>
+
+              <div className="event-prose" id="event-details">
+                <h2>Về sự kiện</h2>
+                {heroCopy.intro ? <p>{heroCopy.intro}</p> : null}
+                {infoSections.length > 0 ? (
+                  <>
+                    <h3>Chi tiết từ ban tổ chức</h3>
+                    {infoSections.map((section) => (
+                      <section key={section.id} aria-labelledby={`sec-${section.id}`}>
+                        <h4 id={`sec-${section.id}`}>
+                          {section.title?.trim() || section.kind}
+                        </h4>
+                        {section.bodyMarkdown ? (
+                          <p>{section.bodyMarkdown}</p>
+                        ) : null}
+                      </section>
+                    ))}
+                  </>
+                ) : null}
+              </div>
+            </div>
+
+            <aside
+              className="event-sidebox"
+              aria-labelledby="event-sidebox-title"
+              data-testid="event-sidebox"
+            >
+              <h2 id="event-sidebox-title">Vé tham dự của bạn</h2>
+              <p className="event-sidebox-lead">
+                Bạn có mã nhận vé từ nhà tổ chức?
+              </p>
+              <Link className="button event-sidebox-cta" href={redeemHref}>
                 Đổi mã lấy vé
               </Link>
-              <Link className="button-link button-link-secondary" href="/claim">
+              <Link
+                className="button-link-secondary event-sidebox-secondary"
+                href="/claim"
+              >
                 Nhận lời mời
               </Link>
-              <a className="button-link button-link-secondary" href="#event-details">
-                Chi tiết <span aria-hidden="true">↓</span>
-              </a>
-            </div>
+              <p className="event-detail-help">
+                Mã sẽ tự xác định đúng sự kiện và đơn vị tổ chức.
+              </p>
+            </aside>
           </div>
-        </section>
-        <div className="container">
-          <section
-            id="event-details"
-            className="details"
-            aria-labelledby="details-title"
-          >
-            <h2 id="details-title">Thông tin sự kiện</h2>
-            <dl>
-              <div>
-                <dt>Khi nào</dt>
-                <dd>
-                  {whenLabel && event.startsAt ? (
-                    <>
-                      <time dateTime={event.startsAt}>{whenLabel}</time>
-                      <small>{event.timezone}</small>
-                    </>
-                  ) : (
-                    <span>{PUBLIC_EVENT_COPY.noStartsAt}</span>
-                  )}
-                </dd>
-              </div>
-              {event.location ? (
-                <div>
-                  <dt>Ở đâu</dt>
-                  <dd>{event.location}</dd>
-                </div>
-              ) : null}
-              <div>
-                <dt>Tổ chức bởi</dt>
-                <dd>{event.brand.organizationName}</dd>
-              </div>
-            </dl>
-          </section>
-
-          {infoSections.length > 0 ? (
-            <section className="highlights" aria-labelledby="content-title">
-              <h2 id="content-title">Chi tiết từ ban tổ chức</h2>
-              <ul>
-                {infoSections.map((section) => (
-                  <li key={section.id}>
-                    <strong>{section.title?.trim() || section.kind}</strong>
-                    {section.bodyMarkdown ? (
-                      <p>{section.bodyMarkdown}</p>
-                    ) : null}
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ) : null}
 
           {event.faq.length > 0 ? (
-            <section className="faq" aria-labelledby="faq-title">
+            <section className="event-faq" aria-labelledby="faq-title">
               <h2 id="faq-title">Câu hỏi thường gặp</h2>
               {event.faq.map((item, index) => (
                 <details key={`faq-${index}`}>
@@ -208,10 +229,6 @@ export default async function EventPage({ params }: Props) {
               ))}
             </section>
           ) : null}
-
-          <Link className="back-link" href="/">
-            ← Tất cả sự kiện
-          </Link>
         </div>
       </main>
     </ThemeProvider>
