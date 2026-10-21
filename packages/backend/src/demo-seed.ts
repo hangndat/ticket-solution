@@ -586,12 +586,22 @@ async function ensureInventory(
   return { inserted, skipped };
 }
 
+function samePermissionSet(a: readonly string[], b: readonly string[]): boolean {
+  if (a.length !== b.length) return false;
+  const left = [...a].sort().join('\0');
+  const right = [...b].sort().join('\0');
+  return left === right;
+}
+
 async function ensureStaffAccess(
   tx: Prisma.TransactionClient,
   tenantId: string,
   eventId: string,
   userId: string,
 ): Promise<{ membership: 'granted' | 'skipped'; assignment: 'granted' | 'skipped' }> {
+  const expectedTenantPerms = [...tenantPermissionsForRole('Owner')];
+  const expectedEventPerms = [...eventPermissionsForRole('Owner')];
+
   const existing = await tx.membership.findUnique({
     where: { tenantId_userId: { tenantId, userId } },
   });
@@ -600,15 +610,19 @@ async function ensureStaffAccess(
   if (existing && !existing.revokedAt) {
     membershipId = existing.id;
     membership = 'skipped';
-    if (existing.role !== 'Owner') {
+    const needsTenantPerms =
+      existing.role !== 'Owner' ||
+      !samePermissionSet(existing.permissions, expectedTenantPerms);
+    if (needsTenantPerms) {
       await tx.membership.update({
         where: { id: existing.id },
         data: {
           role: 'Owner',
-          permissions: [...tenantPermissionsForRole('Owner')],
+          permissions: expectedTenantPerms,
           activatedAt: existing.activatedAt ?? new Date(),
         },
       });
+      membership = 'granted';
     }
   } else if (existing?.revokedAt) {
     await tx.membership.update({
@@ -646,14 +660,25 @@ async function ensureStaffAccess(
       },
     },
   });
+  let assignmentStatus: 'granted' | 'skipped' = 'skipped';
   if (assignment && !assignment.revokedAt) {
-    return { membership, assignment: 'skipped' };
+    if (!samePermissionSet(assignment.permissions, expectedEventPerms)) {
+      await tx.eventAssignment.update({
+        where: { id: assignment.id },
+        data: {
+          permissions: expectedEventPerms,
+          activatedAt: assignment.activatedAt ?? new Date(),
+        },
+      });
+      assignmentStatus = 'granted';
+    }
+    return { membership, assignment: assignmentStatus };
   }
   if (assignment?.revokedAt) {
     await tx.eventAssignment.update({
       where: { id: assignment.id },
       data: {
-        permissions: [...eventPermissionsForRole('Owner')],
+        permissions: expectedEventPerms,
         activatedAt: new Date(),
         revokedAt: null,
       },
@@ -666,7 +691,7 @@ async function ensureStaffAccess(
       tenantId,
       eventId,
       membershipId,
-      permissions: [...eventPermissionsForRole('Owner')],
+      permissions: expectedEventPerms,
       activatedAt: new Date(),
     },
   });
