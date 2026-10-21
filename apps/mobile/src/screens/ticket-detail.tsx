@@ -6,7 +6,9 @@ import {
   attendeeWalletCopy,
   presentTicketRow,
   ticketGateHint,
+  ticketScheduleVenueLines,
 } from '@/attendee/attendee-outcome-copy';
+import { walletCopy } from '@/components/screen-state-copy';
 import { EventBanner, EventLogo } from '@/components/event-media';
 import { BrandWordmark, Notice, Page } from '@/components/page';
 import { QrCode } from '@/components/qr-code';
@@ -169,9 +171,8 @@ export function TicketDetailScreen() {
   if (!displayMode || !owner) {
     return (
       <Page>
-        <Notice title="Cần đăng nhập">
-          Chi tiết vé cần phiên đã xác minh hoặc liên kết hiển thị offline trên
-          thiết bị này.
+        <Notice title={walletCopy.guestWalletBlockedTitle}>
+          {walletCopy.guestWalletBlockedBody}
         </Notice>
       </Page>
     );
@@ -180,8 +181,8 @@ export function TicketDetailScreen() {
   if (visibleLoad.status === 'idle') {
     return (
       <Page>
-        <Notice title="Đang tải vé">
-          Đọc bộ nhớ phiên hoặc bộ đệm hiển thị offline…
+        <Notice title={walletCopy.loading.title}>
+          {walletCopy.loading.body}
         </Notice>
       </Page>
     );
@@ -198,8 +199,9 @@ export function TicketDetailScreen() {
     );
   }
 
-  const { ticket, syncedAt, fromCache, mode } = visibleLoad;
+  const { ticket, fromCache, mode } = visibleLoad;
   const row = presentTicketRow(ticket);
+  const { when: eventWhen, where: eventWhere } = ticketScheduleVenueLines(ticket);
   const isDemo =
     hasDemoMediaForEventId(ticket.eventId) ||
     Boolean(findDemoEventById(ticket.eventId));
@@ -285,6 +287,30 @@ export function TicketDetailScreen() {
           >
             {row.statusLabel}
           </Text>
+          {eventWhen ? (
+            <Text
+              style={{
+                color: colors.secondary,
+                fontSize: 15,
+                lineHeight: 22,
+                textAlign: 'center',
+              }}
+            >
+              {eventWhen}
+            </Text>
+          ) : null}
+          {eventWhere ? (
+            <Text
+              style={{
+                color: colors.secondary,
+                fontSize: 15,
+                lineHeight: 22,
+                textAlign: 'center',
+              }}
+            >
+              {eventWhere}
+            </Text>
+          ) : null}
           {qrValue ? (
             <QrCode
               value={qrValue}
@@ -325,26 +351,6 @@ export function TicketDetailScreen() {
           </Text>
         </View>
       </View>
-
-      <Notice title="Chi tiết kỹ thuật">
-        {row.eventIdLine}
-        {'\n'}
-        Loại vé · {ticket.ticketTypeId}
-        {'\n'}
-        Tạo lúc · {ticket.createdAt}
-      </Notice>
-
-      <Notice title="Đồng bộ">
-        {mode === 'offline-display'
-          ? 'Chế độ: xem vé đã lưu (chưa xác minh phiên)'
-          : fromCache
-            ? 'Nguồn: bộ đệm hiển thị offline'
-            : 'Nguồn: lần tải gần nhất'}
-        {'\n'}
-        Đồng bộ lần cuối: {syncedAt ?? 'không rõ'}
-        {'\n'}
-        Trạng thái có thể đã đổi kể từ lần đồng bộ.
-      </Notice>
     </Page>
   );
 }
