@@ -323,6 +323,18 @@ export {
   PUBLISHED_EVENTS_ERROR_CODES,
 } from './published-events';
 export {
+  readPublishedAssetPublicBase,
+  publishedEventAssetPublicUrl,
+  resolvePublishedBrandAssetUrls,
+} from './published-asset-url';
+export { readPublishedEventAsset } from './published-event-asset';
+export {
+  loadProdMediaManifest,
+  eventBrandAssetIds,
+  readyObjectKey,
+  type ProdMediaManifest,
+} from './prod-media-manifest';
+export {
   expirePendingRequest,
   expireDuePendingBatch,
   type ExpirePendingResult,
