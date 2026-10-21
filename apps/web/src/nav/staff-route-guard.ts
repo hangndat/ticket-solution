@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
-import { apiBaseUrl } from '../bff/upstream';
+import { forwardWithBearer } from '../bff/upstream';
 import { readAccessToken } from '../oidc/cookies';
+import { refreshWebAccessToken } from '../oidc/refresh';
 import { PLATFORM_PATHS } from '../platform/contracts';
 import {
   deriveNavCapabilities,
@@ -10,58 +11,62 @@ import {
 
 export type StaffRoute = '/admin' | '/gate';
 
-async function fetchJsonWithBearer(
-  token: string,
+/** Match SiteNav client discovery — avoid long route-level loading on SSR. */
+const STAFF_DISCOVERY_TIMEOUT_MS = 8_000;
+
+async function discoveryGet(
   path: string,
 ): Promise<{ status: number; body: unknown }> {
-  const base = apiBaseUrl();
-  const url = `${base}${path.startsWith('/') ? path : `/${path}`}`;
+  const upstream = await forwardWithBearer(
+    path,
+    { method: 'GET' },
+    { timeoutMs: STAFF_DISCOVERY_TIMEOUT_MS },
+  );
+  let body: unknown = null;
   try {
-    const upstream = await fetch(url, {
-      method: 'GET',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: 'application/json',
-      },
-      cache: 'no-store',
-      signal: AbortSignal.timeout(15_000),
-    });
-    let body: unknown = null;
-    try {
-      body = await upstream.json();
-    } catch {
-      body = null;
-    }
-    return { status: upstream.status, body };
+    body = await upstream.json();
   } catch {
-    return { status: 502, body: null };
+    body = null;
   }
+  return { status: upstream.status, body };
+}
+
+function isTransientDiscoveryFailure(status: number): boolean {
+  return status === 502 || status === 503;
 }
 
 /**
  * Soft-redirect anonymous deep-links on staff routes → /auth?next=…
  * Authenticated callers continue; capability checks run separately.
  */
-export async function requireSessionOrAuth(nextPath: StaffRoute): Promise<string> {
+export async function requireSessionOrAuth(nextPath: StaffRoute): Promise<void> {
   const token = await readAccessToken();
-  if (!token) {
+  if (token) return;
+  const refreshed = await refreshWebAccessToken();
+  if (!refreshed.ok) {
     redirect(`/auth?next=${encodeURIComponent(nextPath)}`);
   }
-  return token;
 }
 
 /**
  * Soft-redirect when discovery says the caller lacks Admin chrome.
- * Network/parse failure → deny (fail-closed), home with notice.
+ * Transient upstream/IdP failure → allow page render (mutations stay fail-closed).
  */
-export async function requireAdminCapabilityOrHome(token: string): Promise<void> {
+export async function requireAdminCapabilityOrHome(): Promise<void> {
   const [eventsRes, tenantsRes] = await Promise.all([
-    fetchJsonWithBearer(token, PLATFORM_PATHS.meEvents),
-    fetchJsonWithBearer(token, PLATFORM_PATHS.meTenants),
+    discoveryGet(PLATFORM_PATHS.meEvents),
+    discoveryGet(PLATFORM_PATHS.meTenants),
   ]);
 
   if (eventsRes.status === 401 || tenantsRes.status === 401) {
     redirect(`/auth?next=${encodeURIComponent('/admin')}`);
+  }
+
+  if (
+    isTransientDiscoveryFailure(eventsRes.status) ||
+    isTransientDiscoveryFailure(tenantsRes.status)
+  ) {
+    return;
   }
 
   const meEvents = parseMeEventsResponse(eventsRes.status, eventsRes.body);
@@ -80,12 +85,17 @@ export async function requireAdminCapabilityOrHome(token: string): Promise<void>
 
 /**
  * Soft-redirect when discovery says the caller lacks Gate chrome.
+ * Transient upstream/IdP failure → allow gate shell (E01: no infinite loading).
  */
-export async function requireGateCapabilityOrHome(token: string): Promise<void> {
-  const eventsRes = await fetchJsonWithBearer(token, PLATFORM_PATHS.meEvents);
+export async function requireGateCapabilityOrHome(): Promise<void> {
+  const eventsRes = await discoveryGet(PLATFORM_PATHS.meEvents);
 
   if (eventsRes.status === 401) {
     redirect(`/auth?next=${encodeURIComponent('/gate')}`);
+  }
+
+  if (isTransientDiscoveryFailure(eventsRes.status)) {
+    return;
   }
 
   const meEvents = parseMeEventsResponse(eventsRes.status, eventsRes.body);
