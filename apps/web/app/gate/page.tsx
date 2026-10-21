@@ -1,9 +1,6 @@
 import Link from 'next/link';
 import { isOidcConfigured, resolveWebAuthState } from '../../src/oidc/config';
-import {
-  requireGateCapabilityOrHome,
-  requireSessionOrAuth,
-} from '../../src/nav/staff-route-guard';
+import { runGateStaffSsrGuards } from '../../src/nav/staff-route-guard';
 import { SiteNav } from '../../src/site-chrome';
 import { GateForm } from './gate-form';
 import { GateOfflineShell } from './gate-offline-shell';
@@ -22,8 +19,7 @@ type Props = {
 
 export default async function GatePage({ searchParams }: Props) {
   const params = await searchParams;
-  const token = await requireSessionOrAuth('/gate');
-  await requireGateCapabilityOrHome(token);
+  await runGateStaffSsrGuards();
 
   const configured = isOidcConfigured();
   const state = resolveWebAuthState({ configured, subject: null });

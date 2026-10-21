@@ -6,6 +6,7 @@ import {
   HttpException,
   Injectable,
   Post,
+  Req,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -22,7 +23,6 @@ import {
 } from '@ticket/contracts';
 import {
   IdentityError,
-  IDENTITY_ERROR_CODES,
   PlatformError,
   readSelfServeRegistrationConfig,
   registerPendingTenant,
@@ -31,6 +31,13 @@ import {
   type PrismaClient,
   type SelfServeRegistrationConfig,
 } from '@ticket/backend';
+type RequestWithIp = { ip?: string };
+import {
+  API_RATE_BUCKETS,
+  API_RATE_LIMITS,
+} from './http-limits';
+import { consumeIpRateLimit } from './http-rate-limit';
+import { identityErrorHttpStatus } from './identity-http-status';
 
 class PublicTenantRegistrationBodyDto implements PublicTenantRegistrationBody {
   @ApiProperty({ example: 'acme-events' }) slug!: string;
@@ -88,7 +95,7 @@ function fail(error: unknown): never {
         requestId: randomUUID(),
         retryable: error.retryable,
       } satisfies ApiError,
-      error.code === IDENTITY_ERROR_CODES.OIDC_MISCONFIGURED ? 503 : 401,
+      identityErrorHttpStatus(error.code),
     );
   }
   throw error;
@@ -146,11 +153,18 @@ export class TenantRegistrationService {
     return this.deps.users.upsertFromVerifiedIdentity(verified);
   }
 
-  register(
+  async register(
     authorization: string | undefined,
     idempotencyKey: string | undefined,
     body: PublicTenantRegistrationBody,
+    clientIp?: string,
   ): Promise<PublicTenantRegistrationResponse> {
+    await consumeIpRateLimit(
+      this.deps.db,
+      clientIp,
+      API_RATE_BUCKETS.tenantRegistration,
+      API_RATE_LIMITS.tenantRegistrationPerIp,
+    );
     return this.actor(authorization)
       .then((u) =>
         registerPendingTenant(this.deps.db!, {
@@ -176,10 +190,21 @@ export class TenantRegistrationController {
   @ApiHeader({ name: 'idempotency-key', required: true })
   @ApiCreatedResponse({ type: PublicTenantRegistrationResponseDto })
   async create(
+    @Req() req: RequestWithIp,
     @Headers('authorization') authorization: string | undefined,
     @Headers('idempotency-key') idempotencyKey: string | undefined,
     @Body() body: PublicTenantRegistrationBodyDto,
   ): Promise<PublicTenantRegistrationResponse> {
-    return this.registrations.register(authorization, idempotencyKey, body);
+    try {
+      return await this.registrations.register(
+        authorization,
+        idempotencyKey,
+        body,
+        req.ip,
+      );
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      throw error;
+    }
   }
 }

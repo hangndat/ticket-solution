@@ -19,6 +19,10 @@ import {
   type PublishedTerms,
 } from '@ticket/contracts';
 import type { Prisma, PrismaClient } from './generated/prisma/client';
+import {
+  readPublishedAssetPublicBase,
+  resolvePublishedBrandAssetUrls,
+} from './published-asset-url';
 import { withPlatformRole } from './platform-context';
 import { withTenant } from './tenant-context';
 
@@ -118,9 +122,22 @@ function asRecord(value: unknown): Record<string, unknown> | null {
   return value as Record<string, unknown>;
 }
 
+function brandAssetIds(
+  snapshot: EventBrandSnapshot | null,
+  payloadBrand: EventBrandSnapshot | undefined,
+): { logoAssetId?: string; bannerAssetId?: string } {
+  const source = snapshot ?? payloadBrand;
+  if (!source) return {};
+  return {
+    ...(source.logoAssetId ? { logoAssetId: source.logoAssetId } : {}),
+    ...(source.bannerAssetId ? { bannerAssetId: source.bannerAssetId } : {}),
+  };
+}
+
 function mapBrand(
   snapshot: EventBrandSnapshot | null,
   payloadBrand: EventBrandSnapshot | undefined,
+  mediaUrls?: { logoUrl?: string; bannerUrl?: string },
 ): PublishedBrand {
   const source = snapshot ?? payloadBrand;
   const primaryColor =
@@ -132,7 +149,37 @@ function mapBrand(
     source.organizationName.length > 0
       ? source.organizationName
       : 'Organization';
-  return { primaryColor, organizationName };
+  return {
+    primaryColor,
+    organizationName,
+    ...(mediaUrls?.logoUrl ? { logoUrl: mediaUrls.logoUrl } : {}),
+    ...(mediaUrls?.bannerUrl ? { bannerUrl: mediaUrls.bannerUrl } : {}),
+  };
+}
+
+async function enrichSummaryMedia(
+  tx: Prisma.TransactionClient,
+  tenantId: string,
+  tenantSlug: string,
+  row: EventProjectionRow,
+  summary: PublishedEventSummary,
+): Promise<PublishedEventSummary> {
+  const payload = asRecord(row.payload) as unknown as EventConfigPayload | null;
+  const ids = brandAssetIds(row.published_brand_snapshot, payload?.brand);
+  if (!ids.logoAssetId && !ids.bannerAssetId) return summary;
+  const urls = await resolvePublishedBrandAssetUrls(tx, {
+    publicBase: readPublishedAssetPublicBase(),
+    tenantId,
+    tenantSlug,
+    eventId: row.id,
+    eventSlug: row.slug,
+    ...ids,
+  });
+  if (!urls.logoUrl && !urls.bannerUrl) return summary;
+  return {
+    ...summary,
+    brand: mapBrand(row.published_brand_snapshot, payload?.brand, urls),
+  };
 }
 
 function mapSection(raw: EventContentSection): PublishedSection | null {
@@ -256,7 +303,7 @@ function mapDetail(
   };
 }
 
-async function resolveActiveTenantBySlug(
+export async function resolveActiveTenantBySlug(
   db: PrismaClient,
   tenantSlug: string,
 ): Promise<TenantRow | null> {
@@ -354,10 +401,14 @@ export async function listPublishedEvents(
     const page = rows.slice(0, limit);
     const nextCursor =
       rows.length > limit ? page[page.length - 1]!.id : null;
-    return {
-      items: page.map((row) => mapSummary(tenant.slug, row)),
-      nextCursor,
-    };
+    const items: PublishedEventSummary[] = [];
+    for (const row of page) {
+      const summary = mapSummary(tenant.slug, row);
+      items.push(
+        await enrichSummaryMedia(tx, tenant.id, tenant.slug, row, summary),
+      );
+    }
+    return { items, nextCursor };
   });
 }
 
@@ -485,10 +536,22 @@ export async function listPlatformPublishedEvents(
             id: last.id,
           })
         : null;
-    return {
-      items: page.map((row) => mapSummary(row.tenant_slug, row)),
-      nextCursor,
-    };
+    const items: PublishedEventSummary[] = [];
+    for (const row of page) {
+      const summary = mapSummary(row.tenant_slug, row);
+      items.push(
+        await withTenant(db, row.tenant_id, async (tenantTx) =>
+          enrichSummaryMedia(
+            tenantTx,
+            row.tenant_id,
+            row.tenant_slug,
+            row,
+            summary,
+          ),
+        ),
+      );
+    }
+    return { items, nextCursor };
   });
 }
 
@@ -525,6 +588,14 @@ export async function getPublishedEventDetail(
     `;
     const row = rows[0];
     if (!row) return null;
-    return mapDetail(tenant.slug, row);
+    const detail = mapDetail(tenant.slug, row);
+    const enriched = await enrichSummaryMedia(
+      tx,
+      tenant.id,
+      tenant.slug,
+      row,
+      detail,
+    );
+    return { ...detail, brand: enriched.brand };
   });
 }

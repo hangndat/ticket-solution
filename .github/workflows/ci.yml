@@ -254,6 +254,18 @@ jobs:
             files: test/published-events.test.cjs
           - shard: import-invitations
             files: test/import-invitations.test.cjs
+          - shard: offline-sync-apply
+            files: test/offline-sync-apply.test.cjs
+          - shard: cs-export
+            files: test/cs-export.test.cjs
+          - shard: tenant-registration
+            files: test/tenant-registration.test.cjs test/role-presets.test.cjs test/portal-audit-codes.test.cjs
+          - shard: demo-seed-rebrand
+            files: test/demo-seed-rebrand.test.cjs
+          - shard: backend-fences
+            files: test/outbox-fence.test.cjs test/event-quota-suspended.test.cjs test/apns-atleast-once.test.cjs
+          - shard: minio-real
+            files: test/minio-real.test.cjs
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup-pnpm

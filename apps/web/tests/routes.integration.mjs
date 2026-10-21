@@ -12,6 +12,7 @@ test('production routes isolate tenant content and reject unknown pairs', async 
   await once(reservation, 'listening');
   const port = reservation.address().port;
   await new Promise((resolve) => reservation.close(resolve));
+  const base = `http://127.0.0.1:${port}`;
   const child = spawn(
     process.execPath,
     [
@@ -22,7 +23,14 @@ test('production routes isolate tenant content and reject unknown pairs', async 
       '--port',
       String(port),
     ],
-    { stdio: ['ignore', 'pipe', 'pipe'] },
+    {
+      stdio: ['ignore', 'pipe', 'pipe'],
+      env: {
+        ...process.env,
+        // Production origin policy requires WEB_PUBLIC_ORIGIN (no Host/forwarded fallback).
+        WEB_PUBLIC_ORIGIN: base,
+      },
+    },
   );
   let output = '';
   child.stdout.on('data', (data) => {
@@ -31,7 +39,6 @@ test('production routes isolate tenant content and reject unknown pairs', async 
   child.stderr.on('data', (data) => {
     output += data;
   });
-  const base = `http://127.0.0.1:${port}`;
   try {
     let ready = false;
     for (let attempt = 0; attempt < 100; attempt++) {
@@ -204,6 +211,16 @@ test('production routes isolate tenant content and reject unknown pairs', async 
     assert.ok(gateHtml.includes('Đăng nhập') || gateHtml.includes('Cần đăng nhập'));
     assert.ok(!gateHtml.includes('data-testid="gate-offline-shell"'));
     assert.ok(!gateHtml.includes('gate-confirm-submit'));
+
+    // Issue #1021: bogus Server Action probes → 400 at proxy (no use server in web).
+    for (const actionId of ['x', 'action', '0', '1']) {
+      const probe = await fetch(base + '/redeem', {
+        method: 'POST',
+        headers: { 'next-action': actionId },
+        body: '',
+      });
+      assert.equal(probe.status, 400, `next-action=${actionId}`);
+    }
 
     // Gate BFF: Origin missing must fail-closed before OIDC/upstream (admin pattern).
     const gateCsrfBlocked = await fetch(base + '/api/bff/gate/confirm', {
@@ -431,6 +448,43 @@ test('production routes isolate tenant content and reject unknown pairs', async 
     });
     assert.equal(exportBff.status, 503);
     assert.equal((await exportBff.json()).code, 'OIDC_MISCONFIGURED');
+
+    // #653: streamed multipart without Content-Length must fail when body exceeds cap.
+    const importBoundary = '----vemokiImport653';
+    const importMaxBody = 10 * 1024 * 1024 + 64 * 1024;
+    const importPadding = 'x'.repeat(importMaxBody + 512);
+    const importMultipart =
+      `--${importBoundary}\r\n` +
+      'Content-Disposition: form-data; name="tenantId"\r\n\r\n' +
+      '11111111-1111-4111-8111-111111111111\r\n' +
+      `--${importBoundary}\r\n` +
+      'Content-Disposition: form-data; name="eventId"\r\n\r\n' +
+      '22222222-2222-4222-8222-222222222222\r\n' +
+      `--${importBoundary}\r\n` +
+      'Content-Disposition: form-data; name="kind"\r\n\r\nCODES\r\n' +
+      `--${importBoundary}\r\n` +
+      'Content-Disposition: form-data; name="file"; filename="big.csv"\r\n' +
+      'Content-Type: text/csv\r\n\r\n' +
+      importPadding +
+      `\r\n--${importBoundary}--\r\n`;
+    // Chunked byte-cap when `request.body` is readable: import-upload-guard.test.ts.
+    const importUploadOversized = await fetch(
+      base + '/api/bff/admin/imports/upload',
+      {
+        method: 'POST',
+        headers: {
+          Origin: base,
+          'Content-Type': `multipart/form-data; boundary=${importBoundary}`,
+          'Content-Length': String(importMultipart.length),
+        },
+        body: importMultipart,
+      },
+    );
+    assert.equal(importUploadOversized.status, 422);
+    assert.equal(
+      (await importUploadOversized.json()).code,
+      'IMPORT_ROW_LIMIT',
+    );
   } finally {
     const stopped = once(child, 'exit');
     child.kill('SIGTERM');

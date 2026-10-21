@@ -1,6 +1,6 @@
 # Vemoki trên VPS
 
-Bản đầu chạy trên máy đã có nginx giữ cổng 80/443. Compose Vemoki không publish 80/443. TLS và vhost nằm ở nginx đó. SMTP production (ADR-13) chưa bật; worker vẫn trỏ Mailpit. MinIO chạy **internal-only** (không publish 9000/9001 lên edge).
+Bản đầu chạy trên máy đã có nginx giữ cổng 80/443. Compose Vemoki không publish 80/443. TLS và vhost nằm ở nginx đó. **SMTP internet (ADR-13):** worker dùng `SMTP_URL` / `SMTP_FROM` trong `/opt/vemoki/.env` (Porkbun `:587`); Keycloak realm **ticket** cấu hình riêng qua `scripts/keycloak-prod-smtp-apply.sh` (không import Mailpit). Realm prod: `infra/keycloak/realm-ticket.prod.json` → `/opt/vemoki/realm-ticket.prod.json`. MinIO chạy **internal-only** (không publish 9000/9001 lên edge).
 
 Env mẫu (không secrets): [`./.env.example`](./.env.example) → copy vào `/opt/vemoki/.env` (mode 600).
 
@@ -23,7 +23,7 @@ Deploy một service khi chỉ service đó đổi. `restart` đủ sau khi buil
 | api | build backend rồi `@ticket/api` | `restart api` |
 | worker | build backend rồi `@ticket/worker` | `restart worker` |
 | migrate | schema Prisma | `up -d migrate`, đợi exit 0 |
-| keycloak | file realm | `up -d --no-deps --force-recreate keycloak` |
+| keycloak | file realm (`realm-ticket.prod.json`, không `smtpServer`) + `keycloak-prod-smtp-apply.sh` sau recreate | `up -d --no-deps --force-recreate keycloak` |
 | nginx | `vemoki.conf` | `nginx -t` rồi reload, không compose stack nginx |
 | postgres | không deploy app | không tạo lại volume |
 | mailpit | không có source | chỉ bật nếu container tắt |
@@ -60,9 +60,17 @@ Bật trên VPS (operator):
 
 `APNS_ENABLED=true` mà thiếu key/path → worker **fail-closed** khi khởi tạo adapter (`APNS_MISCONFIGURED`).
 
-## MembershipInvite / Mailpit
+## SMTP (worker + Keycloak)
 
-Worker cần `PUBLIC_WEB_BASE_URL=https://app.vemoki.com` (O13 product origin; không dùng apex marketing) và `TICKET_CREDENTIAL_KEY` (cho TicketIssued QR). Invite email relay qua SMTP → Mailpit; thiếu `PUBLIC_WEB_BASE_URL` làm fail-closed link accept. Outbox type `MembershipInvite` không bị chặn chỉ vì thiếu credential key (đã tách khỏi TicketIssued).
+Worker: `SMTP_URL` + `SMTP_FROM` trong `/opt/vemoki/.env` (prod Porkbun). Local dev: Mailpit (`compose.yaml` root).
+
+Keycloak: **không** hard-code Mailpit trên prod — import `realm-ticket.prod.json` (không block `smtpServer`), rồi chạy `scripts/keycloak-prod-smtp-apply.sh` (parse `SMTP_URL`, `kcadm` realm `ticket`). Sau mỗi `force-recreate keycloak`, chạy lại script nếu import làm mất SMTP.
+
+Verify (operator, không in secret): gửi `execute-actions-email` UPDATE_PASSWORD tới inbox test; worker smoke qua `sendMailViaSmtp` trong container.
+
+## MembershipInvite
+
+Worker cần `PUBLIC_WEB_BASE_URL=https://app.vemoki.com` (O13 product origin; không dùng apex marketing) và `TICKET_CREDENTIAL_KEY` (cho TicketIssued QR). Invite email relay qua `SMTP_URL`; thiếu `PUBLIC_WEB_BASE_URL` làm fail-closed link accept. Outbox type `MembershipInvite` không bị chặn chỉ vì thiếu credential key (đã tách khỏi TicketIssued).
 
 ## Lệnh
 
