@@ -32,7 +32,12 @@ ORCA reference add https://github.com/hangndat/ticket-solution/issues/<N> --work
 
 **Cấm** để wt feature lâu dài với `linkedIssue`/`linkedPR` trống khi đã biết số Issue/PR.
 
-Tìm agent/wt theo Issue/PR: `ORCA reference find <N|URL> --json` — không đoán từ tên folder.
+Tìm agent/wt theo Issue/PR bằng **URL GitHub đầy đủ** — không dùng số Issue/PR đơn lẻ, không đoán từ tên folder:
+
+```text
+ORCA reference find https://github.com/hangndat/ticket-solution/issues/<N> --json
+ORCA reference find https://github.com/hangndat/ticket-solution/pull/<N> --json
+```
 
 **Persona vs label Shell:** node con `worker-task_<task_id>` trên cây worktree **không** hiển thị Higo/Kazu — Persona nằm ở `orchestration task-list` (`display_name`, `title`). Tuỳ chọn nhận slice trên card: `ORCA worktree set --worktree path:<abs> --display-name "<Persona> · <ui-label> — #<issue>" --json` (không thay `worker-task_*`).
 
