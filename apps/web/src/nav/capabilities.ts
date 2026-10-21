@@ -41,6 +41,7 @@ export const GUEST_NAV_LINKS: NavLink[] = [
 
 const PRODUCT_NAV_LINKS: NavLink[] = [
   { href: '/', label: 'Sự kiện', testId: 'nav-events' },
+  { href: '/wallet', label: 'Vé của tôi', testId: 'nav-wallet' },
   { href: '/redeem', label: 'Đổi mã', testId: 'nav-redeem' },
   { href: '/claim', label: 'Nhận lời mời', testId: 'nav-claim' },
 ];
