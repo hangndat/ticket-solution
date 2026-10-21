@@ -57,4 +57,4 @@ Run `pnpm prod:media:verify` after build — all manifest entries including `ten
 
 ## SHA
 
-`bc59555` (branch `hangndat/tenant-logo`)
+`08ad6e4` (branch `hangndat/tenant-logo`)
