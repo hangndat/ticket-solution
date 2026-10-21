@@ -1,0 +1,234 @@
+{
+  "$schemaComment": "Epic #686 prod media — stable UUIDs; align PROD-SEED-DATASET.md",
+  "bucketEnv": "MINIO_BUCKET_ASSETS",
+  "defaultBucket": "vemoki-assets",
+  "generatedAt": "2026-10-21T07:58:27.667Z",
+  "generator": "scripts/prod-media-build.mjs",
+  "tenants": [
+    {
+      "slug": "luc-bao-live",
+      "tenantId": "686f0001-0001-4000-8000-000000000001",
+      "tenantBrand": {
+        "primaryColor": "#1B4D3E",
+        "organizationName": "Lục Bảo Live",
+        "logo": {
+          "role": "tenant-logo",
+          "assetId": "686f0001-0008-4000-8000-00000101",
+          "source": "brand/prod/luc-bao-live/logo.png",
+          "contentType": "image/png",
+          "extension": "png",
+          "widthPx": 760,
+          "heightPx": 200
+        }
+      },
+      "events": [
+        {
+          "slug": "dem-am-indie",
+          "eventId": "686f0001-0002-4000-8000-000000000001",
+          "assets": [
+            {
+              "role": "logo",
+              "assetId": "686f0001-0008-4000-8000-00010101",
+              "source": "brand/prod/luc-bao-live/dem-am-indie/logo.png",
+              "contentType": "image/png",
+              "extension": "png",
+              "widthPx": 760,
+              "heightPx": 200
+            },
+            {
+              "role": "banner",
+              "assetId": "686f0001-0008-4000-8000-00010102",
+              "source": "brand/prod/luc-bao-live/dem-am-indie/banner.webp",
+              "contentType": "image/webp",
+              "extension": "webp",
+              "widthPx": 1200,
+              "heightPx": 630,
+              "ogShare": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "saigon-pulse",
+      "tenantId": "686f0001-0001-4000-8000-000000000002",
+      "tenantBrand": {
+        "primaryColor": "#E85D04",
+        "organizationName": "Saigon Pulse",
+        "logo": {
+          "role": "tenant-logo",
+          "assetId": "686f0001-0008-4000-8000-00000201",
+          "source": "brand/prod/saigon-pulse/logo.png",
+          "contentType": "image/png",
+          "extension": "png",
+          "widthPx": 760,
+          "heightPx": 200
+        }
+      },
+      "events": [
+        {
+          "slug": "pulse-afterhours",
+          "eventId": "686f0001-0002-4000-8000-000000000002",
+          "assets": [
+            {
+              "role": "logo",
+              "assetId": "686f0001-0008-4000-8000-00020101",
+              "source": "brand/prod/saigon-pulse/pulse-afterhours/logo.png",
+              "contentType": "image/png",
+              "extension": "png",
+              "widthPx": 760,
+              "heightPx": 200
+            },
+            {
+              "role": "banner",
+              "assetId": "686f0001-0008-4000-8000-00020102",
+              "source": "brand/prod/saigon-pulse/pulse-afterhours/banner.webp",
+              "contentType": "image/webp",
+              "extension": "webp",
+              "widthPx": 1200,
+              "heightPx": 630,
+              "ogShare": true
+            }
+          ]
+        },
+        {
+          "slug": "pulse-rooftop",
+          "eventId": "686f0001-0002-4000-8000-000000000003",
+          "assets": [
+            {
+              "role": "logo",
+              "assetId": "686f0001-0008-4000-8000-00030101",
+              "source": "brand/prod/saigon-pulse/pulse-rooftop/logo.png",
+              "contentType": "image/png",
+              "extension": "png",
+              "widthPx": 760,
+              "heightPx": 200
+            },
+            {
+              "role": "banner",
+              "assetId": "686f0001-0008-4000-8000-00030102",
+              "source": "brand/prod/saigon-pulse/pulse-rooftop/banner.webp",
+              "contentType": "image/webp",
+              "extension": "webp",
+              "widthPx": 1200,
+              "heightPx": 630,
+              "ogShare": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "heritage-hoi-an",
+      "tenantId": "686f0001-0001-4000-8000-000000000003",
+      "tenantBrand": {
+        "primaryColor": "#8B4513",
+        "organizationName": "Di sản Hội An",
+        "logo": {
+          "role": "tenant-logo",
+          "assetId": "686f0001-0008-4000-8000-00000301",
+          "source": "brand/prod/heritage-hoi-an/logo.png",
+          "contentType": "image/png",
+          "extension": "png",
+          "widthPx": 760,
+          "heightPx": 200
+        }
+      },
+      "events": [
+        {
+          "slug": "pho-co-dem",
+          "eventId": "686f0001-0002-4000-8000-000000000004",
+          "assets": [
+            {
+              "role": "logo",
+              "assetId": "686f0001-0008-4000-8000-00040101",
+              "source": "brand/prod/heritage-hoi-an/pho-co-dem/logo.png",
+              "contentType": "image/png",
+              "extension": "png",
+              "widthPx": 760,
+              "heightPx": 200
+            },
+            {
+              "role": "banner",
+              "assetId": "686f0001-0008-4000-8000-00040102",
+              "source": "brand/prod/heritage-hoi-an/pho-co-dem/banner.webp",
+              "contentType": "image/webp",
+              "extension": "webp",
+              "widthPx": 1200,
+              "heightPx": 630,
+              "ogShare": true
+            }
+          ]
+        },
+        {
+          "slug": "song-thu-workshop",
+          "eventId": "686f0001-0002-4000-8000-000000000005",
+          "assets": [
+            {
+              "role": "logo",
+              "assetId": "686f0001-0008-4000-8000-00050101",
+              "source": "brand/prod/heritage-hoi-an/song-thu-workshop/logo.png",
+              "contentType": "image/png",
+              "extension": "png",
+              "widthPx": 760,
+              "heightPx": 200
+            },
+            {
+              "role": "banner",
+              "assetId": "686f0001-0008-4000-8000-00050102",
+              "source": "brand/prod/heritage-hoi-an/song-thu-workshop/banner.webp",
+              "contentType": "image/webp",
+              "extension": "webp",
+              "widthPx": 1200,
+              "heightPx": 630,
+              "ogShare": true
+            }
+          ]
+        },
+        {
+          "slug": "festival-an-song",
+          "eventId": "686f0001-0002-4000-8000-000000000006",
+          "assets": [
+            {
+              "role": "logo",
+              "assetId": "686f0001-0008-4000-8000-00060101",
+              "source": "brand/prod/heritage-hoi-an/festival-an-song/logo.png",
+              "contentType": "image/png",
+              "extension": "png",
+              "widthPx": 760,
+              "heightPx": 200
+            },
+            {
+              "role": "banner",
+              "assetId": "686f0001-0008-4000-8000-00060102",
+              "source": "brand/prod/heritage-hoi-an/festival-an-song/banner.webp",
+              "contentType": "image/webp",
+              "extension": "webp",
+              "widthPx": 1200,
+              "heightPx": 630,
+              "ogShare": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "mekong-makers",
+      "tenantId": "686f0001-0001-4000-8000-000000000004",
+      "tenantBrand": {
+        "primaryColor": "#2A6F97",
+        "organizationName": "Mekong Makers",
+        "logo": {
+          "role": "tenant-logo",
+          "assetId": "686f0001-0008-4000-8000-00000401",
+          "source": "brand/prod/mekong-makers/logo.png",
+          "contentType": "image/png",
+          "extension": "png",
+          "widthPx": 760,
+          "heightPx": 200
+        }
+      },
+      "events": []
+    }
+  ]
+}
