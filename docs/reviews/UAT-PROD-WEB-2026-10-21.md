@@ -9,6 +9,7 @@
 | Runner (retest 5 · final) | Sora · uat · Orca `term_a2b63072-751e-434a-9e29-d02a8b11cde4` · task `task_4860a2bdec4f` |
 | Runner (retest 6 · final · #678) | Sora · uat · Orca `term_3e682b0f-f0b2-4d7a-a7d5-b19dac7cbe2c` · task `task_4d6a462b3e30` |
 | Runner (retest 8 · final · #682) | Sora · uat · Orca `term_979a325c-f385-4112-a418-2b0138a64fc8` · task `task_e494c7591080` |
+| Runner (retest 10 · final · #707) | Sora · uat · Orca `term_93496768-2462-472e-b60e-92ebff94f538` · task `task_9c001be7d029` |
 
 | Runner (retest 7 · final · E01/B06/#630) | Sora · uat · Orca `term_30236904-40dd-43f8-9364-0a8af943e34b` · task `task_8f6dc916df4e` |
 | Catalog | `docs/plans/PROD-LAUNCH-UAT.md` |
@@ -18,13 +19,50 @@
 | Viewports | Desktop ~1440; mobile 390 qua `orca exec --command "set viewport 390 844"` (retest) |
 | Browser | Orca tabs `6d76d908…` (portal), `4f074dbb…` (app guest) |
 | SSH J-suite | `conanphong` read-only, không in `.env` |
-| Ảnh | `apps/web/.uat-artifacts/prod-2026-10-21/` + retest `…/prod-2026-10-21-retest/` + retest3 `…/prod-2026-10-21-retest3/` + retest4 `…/prod-2026-10-21-retest4/` + retest5 `…/prod-2026-10-21-retest5/` + retest6 `…/prod-2026-10-21-retest6/` + retest8 `…/prod-2026-10-21-retest8/` |
+| Ảnh | `apps/web/.uat-artifacts/prod-2026-10-21/` + retest `…/prod-2026-10-21-retest/` + retest3 `…/prod-2026-10-21-retest3/` + retest4 `…/prod-2026-10-21-retest4/` + retest5 `…/prod-2026-10-21-retest5/` + retest6 `…/prod-2026-10-21-retest6/` + retest8 `…/prod-2026-10-21-retest8/` + retest10 `…/prod-2026-10-21-retest10/` |
 | Deploy baseline (retest 6) | `bfc03166b7e46399a5ea19b68bedaa6c8c1fca3b` (`main`, merge PR #678 deploy prod web) |
 | Deploy baseline (retest 8) | `0add1f6072d4e4b9b7b6b73f7b8ffb3baa7b0bb8` (`main`, merge PR #682 deploy prod web — fix gate loading) |
+| Deploy baseline (retest 10) | `8f4f70af2a10df072693bfb26047efcea8d93db9` (`main`, merge PR **#707** deploy prod web) |
 
 ## Launch verdict
 
-**NO-GO** (retest 8 final @ `0add1f6`, 2026-10-21 ~15:45Z+08 — phạm vi web; H03 inbox và suite G/H01 máy thật **DEFERRED** riêng)
+**NO-GO** (retest 10 final @ `8f4f70a`, 2026-10-21 ~17:55Z+08 — phạm vi web; **P0 còn E01** + **E07 regress**; H03 inbox và suite G/H01 máy thật **DEFERRED** riêng)
+
+## Retest 10 (final)
+
+Phạm vi: **E01** + hồi quy sau deploy prod web **#707** (`8f4f70a`). Profile Orca isolated mới: `retest10-staff` (`63036c15…`, tab `acfe6d75…`), `retest10-attendee` (`7d67e002…`, tab `3faf311a…`), `retest10-portal` (`c48a81c2…`, tab `63afc97e…`). Staff: `login?return=/gate` → KC `staff@example.com`. Không deploy/SSH ghi; không burst public API. Coordinator: trace prod theo mốc UTC trong `e01-*` / `630-wait-*.txt`.
+
+| ID | VP | Kết quả | Evidence |
+| --- | --- | --- | --- |
+| A01–A04 | http | **PASS** | `a01-a04-curl.txt` @ `2026-10-21T09:40:48Z` — marketing/portal/app `200`; BFF `/api/bff/me` `401`; `/gate` `307` → `/auth?next=/gate` |
+| B04 | desktop | **PASS** (callback) / **FAIL** (paint ≤5s) | Staff profile: KC callback → `/gate` URL đúng; nội dung vẫn «Đang tải…» trong cửa sổ đo E01, không «Cổng check-in» ≤5s |
+| E01 | desktop | **FAIL** | **5×** `goto https://app.vemoki.com/gate` (foreground, UTC trong `e01-gate-timing-staff-profile.txt`): **40.1–40.9s** vẫn «Đang tải…», không fail-closed — `e01-staff-profile-loading.png` |
+| E01 (token) | desktop | **FAIL** | Chờ **~335s** (`e01-expiry-wait-start.txt` `09:40:44Z` → `e01-expiry-wait-end.txt` `09:46:26Z`), `goto /gate`: **73.7s** vẫn `FAIL_loading`, không refresh nhanh qua `/api/auth/refresh`, không `/auth` — `e01-gate-after-token-expiry.txt` |
+| E07 | desktop | **FAIL** | Profile `retest10-attendee`: sau login, `goto /gate` **>60s** vẫn `/gate` + «Đang tải…» — **không** `/?notice=gate_denied` (regress vs retest 8/9) |
+| #630 | browser | **PASS** | Attendee `/account` `attendee@example.com`; chờ **~343s** (`630-wait-start.txt` `09:48:25Z` → `630-wait-end.txt` `09:54:08Z`), `goto /account` → vẫn `attendee@example.com` — `630-after-wait-snapshot.txt`, `b630-account-after-wait-retest10.png` |
+| D02 | desktop | **FAIL** | Tab redeem attendee: `focus`+`Space` «Tải biểu mẫu» → «Không tải được biểu mẫu sự kiện» — không redeem `DEMO-MFEST-00x` |
+| E02–E05 | desktop | **BLOCKED** | Phụ thuộc form cổng (E01 FAIL) |
+| C01–C04 (portal) | desktop | **BLOCKED** | Portal staff KC OK nhưng shell «Chưa có tổ chức» / `t/d9d9f001-…` «Không có quyền» — không tái lập Aurora Owner trong phiên |
+| /admin (web) | http | **PASS** | `admin-redirect.txt` — `302` → `https://portal.vemoki.com/admin` |
+| H03 | — | **DEFERRED** | Không hộp thư kiểm soát prod |
+
+**E01 timing (staff profile, giây → trạng thái cuối):**
+
+```text
+run1 40.16s FAIL_loading  (09:37:14Z–09:37:54Z)
+run2 40.07s FAIL_loading
+run3 40.10s FAIL_loading
+run4 40.86s FAIL_loading
+run5 40.76s FAIL_loading
+```
+
+**Retest 10 verdict (web):** **NO-GO** — Deploy **#707** **chưa** xóa P0 **E01**; **E07** regress (attendee không `gate_denied`). **#630** và **/admin** PASS. **D02** / **E02–E05** / portal **C01–C04** không xác nhận hồi quy tích cực.
+
+```text
+P0 (retest 10): E01, E07 (regress), H03 (DEFERRED)
+P0 stable: #630 PASS; /admin redirect PASS
+DEFERRED: G01–G06, H01 (máy thật), H03 inbox
+```
 
 ## Retest 8 (final)
 
