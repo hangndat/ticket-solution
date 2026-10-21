@@ -33,6 +33,8 @@ Có thể chạy **thêm** sau hoặc song song logic với `reviewer-dod`; secu
 
 Phân loại: **fix trước merge** (exploitable / invariant gãy) vs **hardening** (cải thiện khi có thể).
 
+**Read** [quy trình review/fix](../../../.cursor/rules/orca-review-convergence.mdc): dùng chung bảng findings có ID và bộ đếm với DoD, revalidation theo diff + vùng ảnh hưởng. Phát hiện security mới vẫn phải báo/chặn khi cần; hết lượt không miễn security gate.
+
 ## Artifact
 
 Cùng chuẩn exact-SHA như DoD (`docs/reviews/*` hoặc comment), thêm:
@@ -51,4 +53,4 @@ Cùng chuẩn exact-SHA như DoD (`docs/reviews/*` hoặc comment), thêm:
 
 - Coordinator ghi trong Spec: SHA, paths, implementer session id.
 - Có thể spawn cùng wave với `reviewer-dod` (session khác) hoặc với security review PR khác độc lập.
-- FAIL → giữ `Chờ duyệt` hoặc trả `Đang làm`; spawn fix worker riêng.
+- FAIL → bàn giao findings cho coordinator phân loại/gom batch; còn lượt thì giao fix-worker riêng, bị ngắt/hết lượt thì `Bị chặn` + chẩn đoán theo quy trình chung.
