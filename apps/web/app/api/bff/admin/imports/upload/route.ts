@@ -1,7 +1,9 @@
 import { IMPORT_LIMITS } from '@ticket/contracts';
 import {
   isAcceptedImportCsvFile,
+  isImportUploadBodyTooLargeError,
   oversizedUploadContentLength,
+  readBoundedImportUploadFormData,
 } from '../../../../../../src/admin/import-upload-guard';
 import { importsUploadPath } from '../../../../../../src/admin/import-job';
 import { isScope, scopeError } from '../../../../../../src/admin/scope';
@@ -29,8 +31,15 @@ export async function POST(request: Request) {
 
   let form: FormData;
   try {
-    form = await request.formData();
-  } catch {
+    form = await readBoundedImportUploadFormData(request);
+  } catch (error) {
+    if (isImportUploadBodyTooLargeError(error)) {
+      return bffApiError(
+        'IMPORT_ROW_LIMIT',
+        `CSV must be 1..${IMPORT_LIMITS.maxBytes} bytes.`,
+        422,
+      );
+    }
     return bffApiError('INVALID_MULTIPART', 'Expected multipart form data.', 400);
   }
 
