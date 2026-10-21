@@ -33,4 +33,6 @@ test('D9_DEMO dataset has ≥2 tenants, events, codes, and demo markers', () => 
     'demo-fun',
   ]);
   assert.equal(D9_LEGACY_TENANT_SLUGS[D9_DEMO.tenants.studio.id], undefined);
+  assert.equal(D9_DEMO.termsVersion, 'terms-v1');
+  assert.equal(D9_DEMO.attendeeDemoCode, 'DEMO-MFEST-001');
 });

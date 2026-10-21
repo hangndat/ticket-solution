@@ -18,9 +18,13 @@ import {
   eventPermissionsForRole,
   tenantPermissionsForRole,
 } from './role-map';
+import { loadPublishedFormTerms } from './published-form';
 import { withTenant } from './tenant-context';
 
 const DEMO_MARKER = '· Demo';
+
+/** Published terms version for all D9 demo events — redeem must send this + termsAccepted. */
+export const D9_DEMO_PUBLISHED_TERMS_VERSION = 'terms-v1';
 
 /**
  * Known pre-rebrand D9 tenant slugs (Fun Fest → MFest).
@@ -88,6 +92,10 @@ export const D9_DEMO = {
   },
   staffEmail: 'staff@example.com',
   attendeeEmail: 'attendee@example.com',
+  /** Redeem consent for published marketing terms (both demo events). */
+  termsVersion: D9_DEMO_PUBLISHED_TERMS_VERSION,
+  /** Primary attendee UAT redeem code (mfest-demo / mfest). */
+  attendeeDemoCode: 'DEMO-MFEST-001',
 } as const;
 
 export type D9DemoSeedReport = {
@@ -204,13 +212,31 @@ function marketingPayload(
         order: 5,
         body: {
           title: 'Terms',
-          termsVersion: 'terms-v1',
+          termsVersion: D9_DEMO_PUBLISHED_TERMS_VERSION,
           text: 'By attending you agree to venue house rules, age and safety policies, and the organizer’s ticketing terms. Tickets are non-transferable except where the organizer permits. Photography for personal use is welcome; commercial filming requires prior approval.',
         },
       },
     ],
-    termsVersion: 'terms-v1',
+    termsVersion: D9_DEMO_PUBLISHED_TERMS_VERSION,
   };
+}
+
+/** Re-publish when an older published config lacks demo terms (idempotent upgrade). */
+async function publishedDemoTermsNeedUpgrade(
+  tx: Prisma.TransactionClient,
+  tenantId: string,
+  eventId: string,
+): Promise<boolean> {
+  const published = await loadPublishedFormTerms(tx, tenantId, eventId);
+  if (published.publishedConfigVersion == null) {
+    return false;
+  }
+  const version = published.termsVersion?.trim() ?? '';
+  const body = published.termsBody?.trim() ?? '';
+  if (version !== D9_DEMO_PUBLISHED_TERMS_VERSION) {
+    return true;
+  }
+  return body.length === 0;
 }
 
 async function ensurePublishedMarketingConfig(
@@ -237,7 +263,14 @@ async function ensurePublishedMarketingConfig(
     existing[0]?.published_config_version != null &&
     !input.forceRepublish
   ) {
-    return 'skipped';
+    const needsTermsUpgrade = await publishedDemoTermsNeedUpgrade(
+      tx,
+      input.tenantId,
+      input.eventId,
+    );
+    if (!needsTermsUpgrade) {
+      return 'skipped';
+    }
   }
   const saved = await saveEventConfigVersion(tx, {
     tenantId: input.tenantId,
