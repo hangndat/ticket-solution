@@ -11,7 +11,7 @@ import {
   hasDemoMediaForEventId,
   sanitizeMediaUrl,
 } from '../src/demo-media';
-import { eventArtTone } from '../src/ui/event-media';
+import { eventArtTone } from '../src/ui/event-art-tone';
 
 const webRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
