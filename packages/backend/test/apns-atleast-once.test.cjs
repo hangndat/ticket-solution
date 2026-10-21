@@ -149,7 +149,12 @@ function countingApnsAdapter() {
     adapter: {
       async send() {
         sends += 1;
-        return { ok: true, providerRef: `mock:push:${sends}` };
+        return {
+          ok: true,
+          providerStatus: 'ACCEPTED',
+          providerRef: `mock:push:${sends}`,
+          resolvedEnvironment: 'sandbox',
+        };
       },
     },
     getSends: () => sends,
@@ -504,7 +509,12 @@ test(
           if (sends === 1) {
             throw new Error('simulated_crash_before_ack');
           }
-          return { ok: true, providerRef: 'mock:push:recovery' };
+          return {
+            ok: true,
+            providerStatus: 'ACCEPTED',
+            providerRef: 'mock:push:recovery',
+            resolvedEnvironment: 'sandbox',
+          };
         },
       };
 

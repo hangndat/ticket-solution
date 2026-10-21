@@ -3,7 +3,10 @@ import type { PrismaClient, Prisma } from './generated/prisma/client';
 import type { EmailAdapter } from './email-adapter';
 import { readPublicWebBaseUrl } from './email-adapter';
 import type { ApnsAdapter } from './apns';
-import { revokeDeviceTokenByValue } from './device-tokens';
+import {
+  correctDeviceTokenEnvironment,
+  revokeDeviceTokenByValue,
+} from './device-tokens';
 import { withTenant } from './tenant-context';
 import {
   computeBackoffSeconds,
@@ -777,6 +780,22 @@ async function deliverTicketIssuedApns(
 
     if (!sendResult.ok && sendResult.invalidateToken) {
       await revokeDeviceTokenByValue(db, device.token);
+    }
+
+    if (
+      sendResult.ok &&
+      sendResult.resolvedEnvironment &&
+      sendResult.resolvedEnvironment !== device.environment
+    ) {
+      await correctDeviceTokenEnvironment(db, {
+        userId: ownerForPush,
+        registrationId: device.id,
+        environment: sendResult.resolvedEnvironment,
+      });
+      metricsInc('notification_provider_total', {
+        channel: 'push',
+        result: 'env_corrected',
+      });
     }
 
     await withTenant(db, row.tenant_id, async (tx) => {
