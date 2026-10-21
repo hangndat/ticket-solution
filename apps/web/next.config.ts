@@ -49,10 +49,7 @@ const config: NextConfig = {
       {
         source: '/:path*',
         headers: [
-          {
-            key: 'Content-Security-Policy',
-            value: contentSecurityPolicy(),
-          },
+          // CSP is set per-request in proxy.ts (runtime API_BASE_URL / OIDC_ISSUER).
           { key: 'X-Content-Type-Options', value: 'nosniff' },
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
           {

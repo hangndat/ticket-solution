@@ -43,6 +43,11 @@ COPY packages/backend/prisma.config.ts packages/backend/prisma.config.ts
 COPY packages/backend/tsconfig.json packages/backend/tsconfig.json
 
 ENV NODE_ENV=production
+# Web CSP connect-src is baked at build — pass public API/IdP origins (override at build time).
+ARG API_BASE_URL=https://api.vemoki.com
+ARG OIDC_ISSUER=https://auth.vemoki.com/realms/ticket
+ENV API_BASE_URL=${API_BASE_URL}
+ENV OIDC_ISSUER=${OIDC_ISSUER}
 # contracts has no local typescript; compile it with the toolchain already installed for api.
 RUN pnpm --filter @ticket/api exec tsc -p ../../packages/contracts/tsconfig.json \
   && pnpm --filter @ticket/backend build \
