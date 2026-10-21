@@ -1,0 +1,447 @@
+{
+  "realm": "ticket",
+  "displayName": "Vemoki",
+  "enabled": true,
+  "registrationAllowed": true,
+  "registrationEmailAsUsername": true,
+  "verifyEmail": true,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "editUsernameAllowed": false,
+  "sslRequired": "external",
+  "browserFlow": "browser",
+  "otpPolicyType": "totp",
+  "otpPolicyAlgorithm": "HmacSHA1",
+  "otpPolicyDigits": 6,
+  "otpPolicyPeriod": 30,
+  "roles": {
+    "realm": [
+      {
+        "name": "offline_access"
+      },
+      {
+        "name": "uma_authorization"
+      }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "ticket-api",
+      "name": "Vemoki API (resource / audience)",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "protocol": "openid-connect"
+    },
+    {
+      "clientId": "ticket-platform-api",
+      "name": "Vemoki Platform API (resource / audience)",
+      "description": "Platform operator audience only — never grant to ticket-mobile",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "protocol": "openid-connect"
+    },
+    {
+      "clientId": "ticket-web",
+      "name": "Vemoki Web BFF (attendee)",
+      "description": "Attendee BFF — no mandatory OTP; audience ticket-api only",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "dev-web-secret-change-me",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": false,
+      "protocol": "openid-connect",
+      "redirectUris": [
+        "http://127.0.0.1:3000/api/auth/callback",
+        "http://localhost:3000/api/auth/callback",
+        "http://127.0.0.1:3010/api/auth/callback",
+        "http://localhost:3010/api/auth/callback",
+        "https://vemoki.com/api/auth/callback",
+        "https://app.vemoki.com/api/auth/callback"
+      ],
+      "webOrigins": [
+        "http://127.0.0.1:3000",
+        "http://localhost:3000",
+        "http://127.0.0.1:3010",
+        "http://localhost:3010",
+        "https://vemoki.com",
+        "https://app.vemoki.com"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "https://app.vemoki.com/auth##https://vemoki.com/auth##http://localhost:3000/auth##http://127.0.0.1:3000/auth##http://localhost:3010/auth##http://127.0.0.1:3010/auth"
+      },
+      "protocolMappers": [
+        {
+          "name": "audience-ticket-api",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "ticket-api",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        },
+        {
+          "name": "email",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-property-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "email",
+            "claim.name": "email",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        },
+        {
+          "name": "email verified",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-property-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "emailVerified",
+            "claim.name": "email_verified",
+            "jsonType.label": "boolean",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "ticket-admin-web",
+      "name": "Vemoki Tenant Admin BFF (Owner/Manager MFA)",
+      "description": "Tenant admin console — mandatory OTP; audience ticket-api; not for attendees",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "dev-admin-web-secret-change-me",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "protocol": "openid-connect",
+      "redirectUris": [
+        "http://127.0.0.1:3000/api/admin/auth/callback",
+        "http://localhost:3000/api/admin/auth/callback",
+        "http://127.0.0.1:3010/api/admin/auth/callback",
+        "http://localhost:3010/api/admin/auth/callback",
+        "https://vemoki.com/api/admin/auth/callback",
+        "https://app.vemoki.com/api/admin/auth/callback",
+        "http://127.0.0.1:3013/api/auth/callback",
+        "http://localhost:3013/api/auth/callback",
+        "https://portal.vemoki.com/api/auth/callback"
+      ],
+      "webOrigins": [
+        "http://127.0.0.1:3000",
+        "http://localhost:3000",
+        "http://127.0.0.1:3010",
+        "http://localhost:3010",
+        "https://vemoki.com",
+        "https://app.vemoki.com",
+        "http://127.0.0.1:3013",
+        "http://localhost:3013",
+        "https://portal.vemoki.com"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "https://app.vemoki.com/auth##https://vemoki.com/auth##http://localhost:3000/auth##http://127.0.0.1:3000/auth##http://localhost:3010/auth##http://127.0.0.1:3010/auth##http://127.0.0.1:3013/auth##http://localhost:3013/auth##https://portal.vemoki.com/auth"
+      },
+      "protocolMappers": [
+        {
+          "name": "audience-ticket-api",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "ticket-api",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        },
+        {
+          "name": "acr-mfa-2",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-hardcoded-claim-mapper",
+          "consentRequired": false,
+          "config": {
+            "claim.value": "2",
+            "claim.name": "acr",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        },
+        {
+          "name": "auth-time",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usersessionmodel-note-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.session.note": "AUTH_TIME",
+            "claim.name": "auth_time",
+            "jsonType.label": "int",
+            "id.token.claim": "true",
+            "access.token.claim": "true"
+          }
+        },
+        {
+          "name": "email",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-property-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "email",
+            "claim.name": "email",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        },
+        {
+          "name": "email verified",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-property-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "emailVerified",
+            "claim.name": "email_verified",
+            "jsonType.label": "boolean",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "ticket-platform-web",
+      "name": "Vemoki Platform BFF (operator MFA)",
+      "description": "Platform console — mandatory OTP; audience ticket-platform-api only",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "dev-platform-web-secret-change-me",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "protocol": "openid-connect",
+      "redirectUris": [
+        "http://127.0.0.1:3000/api/platform/auth/callback",
+        "http://localhost:3000/api/platform/auth/callback",
+        "http://127.0.0.1:3010/api/platform/auth/callback",
+        "http://localhost:3010/api/platform/auth/callback",
+        "https://vemoki.com/api/platform/auth/callback",
+        "http://127.0.0.1:3000/api/auth/platform/callback",
+        "http://localhost:3000/api/auth/platform/callback",
+        "http://127.0.0.1:3010/api/auth/platform/callback",
+        "http://localhost:3010/api/auth/platform/callback",
+        "https://vemoki.com/api/auth/platform/callback",
+        "https://app.vemoki.com/api/auth/platform/callback",
+        "https://app.vemoki.com/api/platform/auth/callback",
+        "http://127.0.0.1:3013/api/auth/platform/callback",
+        "http://localhost:3013/api/auth/platform/callback",
+        "https://portal.vemoki.com/api/auth/platform/callback"
+      ],
+      "webOrigins": [
+        "http://127.0.0.1:3000",
+        "http://localhost:3000",
+        "http://127.0.0.1:3010",
+        "http://localhost:3010",
+        "https://vemoki.com",
+        "https://app.vemoki.com",
+        "http://127.0.0.1:3013",
+        "http://localhost:3013",
+        "https://portal.vemoki.com"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "https://app.vemoki.com/auth##https://vemoki.com/auth##http://localhost:3000/auth##http://127.0.0.1:3000/auth##http://localhost:3010/auth##http://127.0.0.1:3010/auth##http://127.0.0.1:3013/auth##http://localhost:3013/auth##https://portal.vemoki.com/auth"
+      },
+      "protocolMappers": [
+        {
+          "name": "audience-ticket-platform-api",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "ticket-platform-api",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        },
+        {
+          "name": "acr-mfa-2",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-hardcoded-claim-mapper",
+          "consentRequired": false,
+          "config": {
+            "claim.value": "2",
+            "claim.name": "acr",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        },
+        {
+          "name": "auth-time",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usersessionmodel-note-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.session.note": "AUTH_TIME",
+            "claim.name": "auth_time",
+            "jsonType.label": "int",
+            "id.token.claim": "true",
+            "access.token.claim": "true"
+          }
+        },
+        {
+          "name": "email",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-property-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "email",
+            "claim.name": "email",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        },
+        {
+          "name": "email verified",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-property-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "emailVerified",
+            "claim.name": "email_verified",
+            "jsonType.label": "boolean",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "ticket-mobile",
+      "name": "Vemoki iOS (public + PKCE)",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "protocol": "openid-connect",
+      "redirectUris": [
+        "vemoki://oauth/callback",
+        "vemoki://oauth/logout",
+        "ticketsolution://oauth/callback",
+        "ticketsolution://oauth/logout",
+        "exp://127.0.0.1:8081/--/oauth",
+        "exp://localhost:8081/--/oauth",
+        "exp://127.0.0.1:8083/--/oauth",
+        "exp://localhost:8083/--/oauth",
+        "exp://192.168.86.8:8083/--/oauth",
+        "exp://192.168.86.8:8083"
+      ],
+      "webOrigins": [
+        "+"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "vemoki://oauth/logout##vemoki://oauth/callback##ticketsolution://oauth/logout"
+      },
+      "protocolMappers": [
+        {
+          "name": "audience-ticket-api",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "ticket-api",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        },
+        {
+          "name": "email",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-property-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "email",
+            "claim.name": "email",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        },
+        {
+          "name": "email verified",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-property-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "emailVerified",
+            "claim.name": "email_verified",
+            "jsonType.label": "boolean",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "attendee@example.com",
+      "email": "attendee@example.com",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Attendee",
+      "lastName": "Demo",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "attendee-demo",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "staff@example.com",
+      "email": "staff@example.com",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Staff",
+      "lastName": "Demo",
+      "requiredActions": [
+        "CONFIGURE_TOTP"
+      ],
+      "credentials": [
+        {
+          "type": "password",
+          "value": "staff-demo",
+          "temporary": false
+        }
+      ]
+    }
+  ]
+}
