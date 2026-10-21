@@ -22,8 +22,8 @@ type Props = {
 
 export default async function GatePage({ searchParams }: Props) {
   const params = await searchParams;
-  const token = await requireSessionOrAuth('/gate');
-  await requireGateCapabilityOrHome(token);
+  await requireSessionOrAuth('/gate');
+  await requireGateCapabilityOrHome();
 
   const configured = isOidcConfigured();
   const state = resolveWebAuthState({ configured, subject: null });
