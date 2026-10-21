@@ -318,14 +318,40 @@ async function main() {
     const tenants = await api(base, staffToken, 'GET', '/v1/me/tenants');
     const items = tenants.json.items || [];
     const slugs = items.map((t) => t.slug).sort();
+    const adminTenantPerms = [
+      'event.create',
+      'event.list',
+      'members.manage',
+      'tenant.profile',
+    ];
+    const staffHasAdminTenantPerms = items.some((t) =>
+      adminTenantPerms.every((p) =>
+        (t.tenantPermissions || []).includes(p),
+      ),
+    );
     results.push({
       check: 'me_tenants_staff',
       status: tenants.status,
       pass:
         tenants.status === 200 &&
         slugs.includes('mfest-demo') &&
-        slugs.includes('demo-studio'),
+        slugs.includes('demo-studio') &&
+        staffHasAdminTenantPerms,
       slugs,
+      staffHasAdminTenantPerms,
+    });
+
+    const staffEvents = await api(base, staffToken, 'GET', '/v1/me/events');
+    results.push({
+      check: 'me_events_staff',
+      status: staffEvents.status,
+      pass:
+        staffEvents.status === 200 &&
+        staffEvents.json.staffEligible === true &&
+        (staffEvents.json.items || []).some((e) =>
+          (e.permissions || []).includes('gate.confirm'),
+        ),
+      staffEligible: staffEvents.json.staffEligible,
     });
 
     const tenantId = first.tenants.find((t) => t.slug === 'mfest-demo').id;
