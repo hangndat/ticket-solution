@@ -120,7 +120,7 @@ export class RedemptionResolveService {
 
     const user = await this.requireUser(authorization);
 
-    const allowed = await this.deps.db.$transaction(async (tx) =>
+    const allowed = await withTenant(this.deps.db, user.userId, (tx) =>
       tryConsumeRateLimit(tx, {
         tenantId: user.userId,
         bucketKey: RESOLVE_BUCKET,
