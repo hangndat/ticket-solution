@@ -6,6 +6,7 @@
 | Runner (retest nginx) | Sora · uat · Orca `term_94a572bc-adbc-4b3c-af8b-6dfa75421f1d` · task `task_03be9fbc418c` |
 | Runner (retest 3 · #668) | Sora · uat · Orca `term_310eb26e-29c4-4016-b434-e6cbc14c5379` · task `task_0aff0036d08f` |
 | Runner (retest 4 · final) | Sora · uat · Orca `term_b5a5ae6d-99c1-46a7-bde3-1934239ba208` · task `task_6183358f6a56` |
+| Runner (retest 5 · final) | Sora · uat · Orca `term_a2b63072-751e-434a-9e29-d02a8b11cde4` · task `task_4860a2bdec4f` |
 | Catalog | `docs/plans/PROD-LAUNCH-UAT.md` |
 | Catalog SHA-256 | `756e5aa410d2c3dd95a8f8e547fd415ae95b162dd79b3d7c25f7787da1ad2d8f` |
 | Deploy baseline (retest 3) | `cbabea4ccc6447e7dc40a832ba95c81320c1b0d9` (`main`, fix #668 rate-limit RLS + deploy api/web) |
@@ -13,11 +14,44 @@
 | Viewports | Desktop ~1440; mobile 390 qua `orca exec --command "set viewport 390 844"` (retest) |
 | Browser | Orca tabs `6d76d908…` (portal), `4f074dbb…` (app guest) |
 | SSH J-suite | `conanphong` read-only, không in `.env` |
-| Ảnh | `apps/web/.uat-artifacts/prod-2026-10-21/` + retest `…/prod-2026-10-21-retest/` + retest3 `…/prod-2026-10-21-retest3/` + retest4 `…/prod-2026-10-21-retest4/` |
+| Ảnh | `apps/web/.uat-artifacts/prod-2026-10-21/` + retest `…/prod-2026-10-21-retest/` + retest3 `…/prod-2026-10-21-retest3/` + retest4 `…/prod-2026-10-21-retest4/` + retest5 `…/prod-2026-10-21-retest5/` |
 
 ## Launch verdict
 
-**NO-GO** (retest 4 final @ `03c6862` / deploy baseline `cbabea4`, 2026-10-21 ~06:10Z — phạm vi web; H03 inbox và suite G/H01 máy thật **DEFERRED/BLOCKED** riêng)
+**NO-GO** (retest 5 final @ `4376bc5`, 2026-10-21 ~06:20Z — phạm vi web; H03 inbox và suite G/H01 máy thật **DEFERRED** riêng)
+
+## Retest 5 (final)
+
+Phạm vi: chỉ case BLOCKED/FAIL retest 4. SSH `conanphong` (alias, read-only). Tab Orca mới cho B04/D02; không deploy VPS.
+
+| ID | VP | Kết quả | Evidence |
+| --- | --- | --- | --- |
+| B04 | desktop | **PASS** | Tab mới `22d3868a…`: staff KC → callback OK → `/gate` (không 502); `b04-gate-retest5.png` |
+| B06 | desktop | **NOT-RUN** | Sau logout portal, chưa hoàn tất flow attendee trên KC trong phiên (profile Orca dùng chung); `b06-attendee-portal-retest5.png` (auth shell) |
+| B07 | desktop | **PASS** | Sai mật khẩu staff trên KC, vẫn form login; `b07-bad-password-retest5.png` |
+| B08 | desktop | **PASS** | `GET /api/auth/logout` → `/auth` «Staff sign-in» |
+| B10 | desktop | **PASS** | Cookie `vemoki_portal_locale=en` (UI toggle tương đương) → `document.documentElement.lang` = `en` + nhãn EN; kết hợp staff login sẵn có trong phiên |
+| C08 | desktop | **PASS** | Cookie `vemoki_portal_locale=en` → «Organization»/«All events»; `html lang=en`; `c08-portal-en-desktop.png` |
+| D02 | desktop | **FAIL** | BFF `200` `form:null` `terms:true` (curl + in-tab JSON). Tab `61f0cfda…` `/redeem?tenantSlug=mfest-demo&eventSlug=mfest`: `click` «Tải biểu mẫu» (`e11`/`ref=e11`) ≥6s vẫn «Chưa có biểu mẫu» — không vào nhánh `termsVersion` (redeem-form ~818). `vemoki-web-1` log `failed-to-find-server-action` / Server Reference ID `x`. `d02-redeem-retest5.png` |
+| D03–D04 | desktop | **BLOCKED** | Phụ thuộc D02 |
+| E01 | desktop | **FAIL** | Sau B04 tab `22d3868a…` `/gate` kẹt «Đang tải…» ≥10s (cùng lỗi Server Action trên web) |
+| E02–E04 | desktop | **BLOCKED** | Không load form cổng + không redeem ticket |
+| I01 | desktop | **PASS** | `staff@example.com` Owner Aurora + MFest: `/t/d9d9f001-…` shell MFest (đúng seed). UUID không membership `a0000000-0000-4000-8000-000000000099` → «Permission denied»; `i01-mfest-tenant-retest5.png` |
+| J01 | ssh | **PASS** | `PRODUCT_ORIGIN=https://app.vemoki.com` — `j-ssh-output.txt` |
+| J02 | ssh | **PASS** | `OIDC_SCOPES=openid profile email` portal + web |
+| J03 | ssh | **PASS** | API env names `PLATFORM_*`, `OIDC_AUDIENCE`, … (không giá trị secret) |
+| J04 | ssh | **FAIL** | VPS sha `a55f89ee…` ≠ git @ `4376bc5` sha `7bf278d3…`; diff **2 dòng** trên service `web`: VPS có `OIDC_AUDIENCE` + `OIDC_JWKS_URL` tại block env (hotfix đã merge git nhưng VPS chưa redeploy khớp tip) — `j04-compose-diff.txt` |
+| J06 | ssh | **PASS** | `proxy_buffer_size 32k` trong `/opt/vemoki/src/infra/deploy/nginx-portal.snippet.conf` |
+| H03 | — | **BLOCKED** | Không hộp thư kiểm soát prod |
+| Rate limit | http | **PASS** (mini) | 12× `GET /v1/public/events` → `200`; `rate-limit-mini.txt` |
+
+**Retest 5 verdict (web):** **NO-GO** — B04/nginx callback đã sạch; P0 còn **D02–D04**, **E01–E04**, **J04** (compose drift), **H03**.
+
+```text
+P0: D02, D03, D04, E01, E02, E03, E04, J04, H03
+P1: CSP connect-src http://api:3001 (không retest)
+DEFERRED: G01–G06, H01 (máy thật)
+```
 
 ## Retest 4 (final)
 
