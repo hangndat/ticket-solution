@@ -180,6 +180,10 @@ export function GuestClaimForm() {
         setEventId(result.schema.eventId);
         setSeeded(true);
       }
+      if (result.schema.tenantId) {
+        setTenantId(result.schema.tenantId);
+        setSeeded(true);
+      }
       setAnswers({});
       setTermsAccepted(false);
       setFieldErrors({});

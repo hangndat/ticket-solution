@@ -261,6 +261,42 @@ async function main() {
     const health = await fetch(`${base}/v1/health`);
     results.push({ check: 'health', status: health.status, pass: health.status === 200 });
 
+    const publicCatalog = await fetch(`${base}/v1/public/events?limit=10`);
+    let publicCatalogJson = {};
+    try {
+      publicCatalogJson = await publicCatalog.json();
+    } catch {
+      /* ignore */
+    }
+    const catalogSlugs = (publicCatalogJson.items || []).map((row) => row.slug);
+    results.push({
+      check: 'public_events_catalog',
+      status: publicCatalog.status,
+      pass:
+        publicCatalog.status === 200 &&
+        catalogSlugs.includes('mfest') &&
+        catalogSlugs.includes('studio-night'),
+      slugs: catalogSlugs,
+    });
+
+    const publicDetail = await fetch(
+      `${base}/v1/public/tenants/mfest-demo/events/mfest`,
+    );
+    let publicDetailJson = {};
+    try {
+      publicDetailJson = await publicDetail.json();
+    } catch {
+      /* ignore */
+    }
+    results.push({
+      check: 'public_event_detail',
+      status: publicDetail.status,
+      pass:
+        publicDetail.status === 200 &&
+        publicDetailJson.slug === 'mfest' &&
+        publicDetailJson.tenantSlug === 'mfest-demo',
+    });
+
     const me = await api(base, attendeeToken, 'GET', '/v1/me');
     results.push({
       check: 'me_attendee',

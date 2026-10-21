@@ -264,12 +264,14 @@ function mapForm(payload: EventConfigPayload): FormDefinition | null {
 }
 
 function mapSummary(
+  tenantId: string,
   tenantSlug: string,
   row: EventProjectionRow,
 ): PublishedEventSummary {
   const payload = asRecord(row.payload) as unknown as EventConfigPayload | null;
   return {
     id: row.id,
+    tenantId,
     tenantSlug,
     slug: row.slug,
     name: row.name,
@@ -283,6 +285,7 @@ function mapSummary(
 }
 
 function mapDetail(
+  tenantId: string,
   tenantSlug: string,
   row: EventProjectionRow,
 ): PublishedEventDetail {
@@ -293,7 +296,7 @@ function mapDetail(
     .map((s) => mapSection(s as EventContentSection))
     .filter((s): s is PublishedSection => s != null)
     .sort((a, b) => a.order - b.order);
-  const summary = mapSummary(tenantSlug, row);
+  const summary = mapSummary(tenantId, tenantSlug, row);
   return {
     ...summary,
     sections,
@@ -403,7 +406,7 @@ export async function listPublishedEvents(
       rows.length > limit ? page[page.length - 1]!.id : null;
     const items: PublishedEventSummary[] = [];
     for (const row of page) {
-      const summary = mapSummary(tenant.slug, row);
+      const summary = mapSummary(tenant.id, tenant.slug, row);
       items.push(
         await enrichSummaryMedia(tx, tenant.id, tenant.slug, row, summary),
       );
@@ -538,7 +541,7 @@ export async function listPlatformPublishedEvents(
         : null;
     const items: PublishedEventSummary[] = [];
     for (const row of page) {
-      const summary = mapSummary(row.tenant_slug, row);
+      const summary = mapSummary(row.tenant_id, row.tenant_slug, row);
       items.push(
         await withTenant(db, row.tenant_id, async (tenantTx) =>
           enrichSummaryMedia(
@@ -588,7 +591,7 @@ export async function getPublishedEventDetail(
     `;
     const row = rows[0];
     if (!row) return null;
-    const detail = mapDetail(tenant.slug, row);
+    const detail = mapDetail(tenant.id, tenant.slug, row);
     const enriched = await enrichSummaryMedia(
       tx,
       tenant.id,

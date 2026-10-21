@@ -7,6 +7,8 @@ type Props = {
   answers: Record<string, FormAnswerValue>;
   fieldErrors: Record<string, string>;
   disabled?: boolean;
+  /** Guest product chrome — softer fieldset legend + spacing. */
+  compact?: boolean;
   onChange: (fieldId: string, value: FormAnswerValue) => void;
 };
 
@@ -15,11 +17,18 @@ export function RedeemFormFields({
   answers,
   fieldErrors,
   disabled,
+  compact = false,
   onChange,
 }: Props) {
+  const fieldsetClass = compact
+    ? 'redeem-published-fields redeem-published-fields--compact'
+    : 'redeem-published-fields';
+
   return (
-    <fieldset className="redeem-published-fields" disabled={disabled}>
-      <legend>Biểu mẫu sự kiện</legend>
+    <fieldset className={fieldsetClass} disabled={disabled}>
+      <legend className={compact ? 'redeem-published-fields__legend' : undefined}>
+        {compact ? 'Thông tin bổ sung' : 'Biểu mẫu sự kiện'}
+      </legend>
       {definition.fields.map((field) => {
         const error = fieldErrors[field.id];
         const errorId = error ? `field-error-${field.id}` : undefined;
@@ -56,7 +65,7 @@ export function RedeemFormFields({
         if (field.type === 'select') {
           return (
             <div key={field.id} className="redeem-field">
-              <label htmlFor={inputId}>
+              <label htmlFor={inputId} className={compact ? 'redeem-field-label' : undefined}>
                 {field.label}
                 {field.required ? ' *' : ''}
                 <select
@@ -90,7 +99,7 @@ export function RedeemFormFields({
 
         return (
           <div key={field.id} className="redeem-field">
-            <label htmlFor={inputId}>
+            <label htmlFor={inputId} className={compact ? 'redeem-field-label' : undefined}>
               {field.label}
               {field.required ? ' *' : ''}
               <input

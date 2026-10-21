@@ -48,6 +48,7 @@ import {
   REQUEST_TIMEOUT_MS,
 } from '../../src/redeem/poll-operation';
 import { loadPublishedRedeemSchema } from '../../src/redeem/published-schema';
+import { validateRedeemScope } from '../../src/redeem/redeem-scope';
 import { resolveRedemptionCodeGlobal } from '../../src/redeem/global-resolve';
 import {
   clearStoredResolveToken,
@@ -61,6 +62,7 @@ import { SurfaceState } from '../../src/ui/surface-state';
 const REDEEM_LOGIN_HREF = loginHref('/redeem');
 
 type Props = {
+  productChrome?: boolean;
   globalEntry?: boolean;
   initialTenantId?: string;
   initialEventId?: string;
@@ -69,6 +71,7 @@ type Props = {
 };
 
 export function RedeemForm({
+  productChrome = false,
   globalEntry = false,
   initialTenantId = '',
   initialEventId = '',
@@ -119,6 +122,7 @@ export function RedeemForm({
   }, []);
 
   const busy = pending || polling;
+  const showDevScopeFields = !productChrome || !globalEntry;
   const canRepoll = Boolean(attempt?.unclear && attempt.key && !busy);
 
   const isStale = useCallback(
@@ -139,13 +143,18 @@ export function RedeemForm({
         setTermsVersion(result.schema.terms?.version ?? null);
         setTermsBody(result.schema.terms?.bodyMarkdown ?? null);
         if (result.schema.eventId) setEventId(result.schema.eventId);
+        if (result.schema.tenantId) setTenantId(result.schema.tenantId);
         // AC-A4: never keep prior answers / silent terms accept after reload.
         setAnswers({});
         setTermsAccepted(false);
         setFieldErrors({});
-        setSchemaNotice(
-          'Đã tải biểu mẫu mới. Điền lại và đồng ý điều khoản trước khi gửi.',
-        );
+        let notice =
+          'Đã tải biểu mẫu mới. Điền lại và đồng ý điều khoản trước khi gửi.';
+        if (!result.schema.tenantId) {
+          notice +=
+            ' Máy chủ chưa trả mã tổ chức — nhập «Mã tổ chức» (UUID) trong tùy chọn nâng cao trước khi đổi mã.';
+        }
+        setSchemaNotice(notice);
         return;
       }
       setFormDefinition(null);
@@ -168,6 +177,21 @@ export function RedeemForm({
       setSchemaNotice('Biểu mẫu không hợp lệ hoặc thiếu mã sự kiện.');
     });
   }, [tenantSlug, eventSlug, isStale]);
+
+  const autoLoadedSlugRef = useRef(false);
+  useEffect(() => {
+    if (globalEntry || !productChrome) return;
+    if (!initialTenantSlug.trim() || !initialEventSlug.trim()) return;
+    if (autoLoadedSlugRef.current) return;
+    autoLoadedSlugRef.current = true;
+    loadSchema();
+  }, [
+    globalEntry,
+    productChrome,
+    initialTenantSlug,
+    initialEventSlug,
+    loadSchema,
+  ]);
 
   const applyDecision = useCallback(
     (next: RedeemDecision, generation: number, fingerprint?: string) => {
@@ -386,9 +410,11 @@ export function RedeemForm({
       onGlobalResolve();
       return;
     }
+    const scopeIssue = validateRedeemScope(tenantId, eventId);
     const validated = validateFormAnswers(formDefinition, answers);
     const termsIssue = requireTermsConsent({ termsVersion, termsAccepted });
     const nextErrors: Record<string, string> = {};
+    if (scopeIssue) nextErrors[scopeIssue.fieldId] = scopeIssue.message;
     if (!validated.ok) {
       for (const issue of validated.issues) {
         nextErrors[issue.fieldId] = issue.message;
@@ -396,7 +422,15 @@ export function RedeemForm({
     }
     if (termsIssue) nextErrors.terms = termsIssue.message;
     setFieldErrors(nextErrors);
-    if (!validated.ok || termsIssue) {
+    if (!validated.ok || termsIssue || scopeIssue) {
+      if (scopeIssue && !showDevScopeFields) {
+        setUx({
+          kind: 'error',
+          title: 'Thiếu phạm vi sự kiện',
+          detail: scopeIssue.message,
+          retryable: false,
+        });
+      }
       focusFirstFieldError(Object.keys(nextErrors));
       return;
     }
@@ -607,16 +641,29 @@ export function RedeemForm({
     [ux],
   );
 
+  const productLead =
+    globalEntry && globalPhase === 'enter-code'
+      ? 'Nhập mã đổi vé. Hệ thống xác định sự kiện — bạn chỉ cần hoàn tất biểu mẫu và điều khoản nếu có.'
+      : globalEntry
+        ? 'Kiểm tra thông tin sự kiện, điền biểu mẫu và đồng ý điều khoản trước khi đổi vé.'
+        : 'Nhập mã và đồng ý điều khoản của sự kiện. Trạng thái chờ duyệt chưa phải vé.';
+
+  const formClassName = productChrome
+    ? 'redeem-form redeem-product-form'
+    : 'redeem-form';
+
   return (
-    <div className="redeem-form">
+    <div className={formClassName}>
       <form onSubmit={onSubmit} aria-labelledby="redeem-form-title" noValidate>
         <h2 id="redeem-form-title">Đổi mã lấy vé</h2>
-        <p className="intro">
-          {globalEntry
-            ? globalPhase === 'enter-code'
-              ? 'Nhập mã đổi vé — hệ thống sẽ xác định sự kiện và loại vé. Sau đó điền biểu mẫu và đồng ý điều khoản.'
-              : 'Xác nhận thông tin sự kiện, hoàn thành biểu mẫu và đồng ý điều khoản trước khi đổi vé.'
-            : 'Tải biểu mẫu sự kiện đã xuất bản, nhập mã và đồng ý điều khoản. Đang chờ duyệt chưa phải vé; nếu chưa rõ kết quả, bấm «Kiểm tra lại».'}
+        <p className={productChrome ? 'redeem-product-lead' : 'intro'}>
+          {productChrome
+            ? productLead
+            : globalEntry
+              ? globalPhase === 'enter-code'
+                ? 'Nhập mã đổi vé — hệ thống sẽ xác định sự kiện và loại vé. Sau đó điền biểu mẫu và đồng ý điều khoản.'
+                : 'Xác nhận thông tin sự kiện, hoàn thành biểu mẫu và đồng ý điều khoản trước khi đổi vé.'
+              : 'Tải biểu mẫu sự kiện đã xuất bản, nhập mã và đồng ý điều khoản. Đang chờ duyệt chưa phải vé; nếu chưa rõ kết quả, bấm «Kiểm tra lại».'}
         </p>
 
         <div className="redeem-fields">
@@ -652,83 +699,195 @@ export function RedeemForm({
             </section>
           ) : null}
 
-          {!globalEntry ? (
-          <>
-          <label>
-            Mã tổ chức
-            <input
-              name="tenantId"
-              required
-              value={tenantId}
-              onChange={(e) => setTenantId(e.target.value)}
-              autoComplete="off"
-              spellCheck={false}
-              placeholder="UUID tổ chức"
-            />
-          </label>
-          <label>
-            Mã sự kiện (tự điền khi tải biểu mẫu)
-            <input
-              name="eventId"
-              required
-              value={eventId}
-              onChange={(e) => setEventId(e.target.value)}
-              autoComplete="off"
-              spellCheck={false}
-              placeholder="UUID sự kiện"
-            />
-          </label>
-          <div className="redeem-versions">
-            <label>
-              Đường dẫn tổ chức
-              <input
-                name="tenantSlug"
-                value={tenantSlug}
-                onChange={(e) => setTenantSlug(e.target.value)}
-                autoComplete="off"
-                spellCheck={false}
-              />
-            </label>
-            <label>
-              Đường dẫn sự kiện
-              <input
-                name="eventSlug"
-                value={eventSlug}
-                onChange={(e) => setEventSlug(e.target.value)}
-                autoComplete="off"
-                spellCheck={false}
-              />
-            </label>
-          </div>
-          <button
-            type="button"
-            onClick={loadSchema}
-            disabled={busy || !tenantSlug.trim() || !eventSlug.trim()}
-          >
-            Tải biểu mẫu
-          </button>
-          {schemaNotice ? (
-            <SurfaceState
-              kind={
-                schemaNotice.startsWith('Đang tải')
-                  ? 'loading'
-                  : schemaNotice.startsWith('Không') ||
-                      schemaNotice.startsWith('Biểu mẫu không')
-                    ? 'error'
-                    : 'empty'
-              }
-              title={
-                schemaNotice.startsWith('Đang tải')
-                  ? 'Đang tải biểu mẫu…'
-                  : schemaNotice.startsWith('Đã tải')
-                    ? 'Biểu mẫu sẵn sàng'
-                    : 'Trạng thái biểu mẫu'
-              }
-              detail={schemaNotice}
-              testId="redeem-schema-notice"
-            />
-          ) : null}
-          </>
+          {!globalEntry && showDevScopeFields ? (
+            <>
+              {productChrome ? (
+                <details className="redeem-secondary-tools">
+                  <summary>Tùy chọn nâng cao (đường dẫn / mã kỹ thuật)</summary>
+                  <div className="redeem-fields">
+                    <label>
+                      Mã tổ chức
+                      <input
+                        name="tenantId"
+                        value={tenantId}
+                        onChange={(e) => setTenantId(e.target.value)}
+                        autoComplete="off"
+                        spellCheck={false}
+                        placeholder="UUID tổ chức"
+                        aria-invalid={fieldErrors.tenantId ? true : undefined}
+                        aria-describedby={
+                          fieldErrors.tenantId ? 'redeem-tenantId-error' : undefined
+                        }
+                      />
+                      {fieldErrors.tenantId ? (
+                        <span
+                          id="redeem-tenantId-error"
+                          className="field-error"
+                          role="alert"
+                        >
+                          {fieldErrors.tenantId}
+                        </span>
+                      ) : null}
+                    </label>
+                    <label>
+                      Mã sự kiện (tự điền khi tải biểu mẫu)
+                      <input
+                        name="eventId"
+                        value={eventId}
+                        onChange={(e) => setEventId(e.target.value)}
+                        autoComplete="off"
+                        spellCheck={false}
+                        placeholder="UUID sự kiện"
+                        aria-invalid={fieldErrors.eventId ? true : undefined}
+                        aria-describedby={
+                          fieldErrors.eventId ? 'redeem-eventId-error' : undefined
+                        }
+                      />
+                      {fieldErrors.eventId ? (
+                        <span
+                          id="redeem-eventId-error"
+                          className="field-error"
+                          role="alert"
+                        >
+                          {fieldErrors.eventId}
+                        </span>
+                      ) : null}
+                    </label>
+                    <div className="redeem-versions">
+                      <label>
+                        Đường dẫn tổ chức
+                        <input
+                          name="tenantSlug"
+                          value={tenantSlug}
+                          onChange={(e) => setTenantSlug(e.target.value)}
+                          autoComplete="off"
+                          spellCheck={false}
+                        />
+                      </label>
+                      <label>
+                        Đường dẫn sự kiện
+                        <input
+                          name="eventSlug"
+                          value={eventSlug}
+                          onChange={(e) => setEventSlug(e.target.value)}
+                          autoComplete="off"
+                          spellCheck={false}
+                        />
+                      </label>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={loadSchema}
+                      disabled={busy || !tenantSlug.trim() || !eventSlug.trim()}
+                    >
+                      Tải biểu mẫu
+                    </button>
+                  </div>
+                </details>
+              ) : (
+                <>
+                  <label>
+                    Mã tổ chức
+                    <input
+                      name="tenantId"
+                      value={tenantId}
+                      onChange={(e) => setTenantId(e.target.value)}
+                      autoComplete="off"
+                      spellCheck={false}
+                      placeholder="UUID tổ chức"
+                      aria-invalid={fieldErrors.tenantId ? true : undefined}
+                      aria-describedby={
+                        fieldErrors.tenantId ? 'redeem-tenantId-error-dev' : undefined
+                      }
+                    />
+                    {fieldErrors.tenantId ? (
+                      <span
+                        id="redeem-tenantId-error-dev"
+                        className="field-error"
+                        role="alert"
+                      >
+                        {fieldErrors.tenantId}
+                      </span>
+                    ) : null}
+                  </label>
+                  <label>
+                    Mã sự kiện (tự điền khi tải biểu mẫu)
+                    <input
+                      name="eventId"
+                      value={eventId}
+                      onChange={(e) => setEventId(e.target.value)}
+                      autoComplete="off"
+                      spellCheck={false}
+                      placeholder="UUID sự kiện"
+                      aria-invalid={fieldErrors.eventId ? true : undefined}
+                      aria-describedby={
+                        fieldErrors.eventId ? 'redeem-eventId-error-dev' : undefined
+                      }
+                    />
+                    {fieldErrors.eventId ? (
+                      <span
+                        id="redeem-eventId-error-dev"
+                        className="field-error"
+                        role="alert"
+                      >
+                        {fieldErrors.eventId}
+                      </span>
+                    ) : null}
+                  </label>
+                  <div className="redeem-versions">
+                    <label>
+                      Đường dẫn tổ chức
+                      <input
+                        name="tenantSlug"
+                        value={tenantSlug}
+                        onChange={(e) => setTenantSlug(e.target.value)}
+                        autoComplete="off"
+                        spellCheck={false}
+                      />
+                    </label>
+                    <label>
+                      Đường dẫn sự kiện
+                      <input
+                        name="eventSlug"
+                        value={eventSlug}
+                        onChange={(e) => setEventSlug(e.target.value)}
+                        autoComplete="off"
+                        spellCheck={false}
+                      />
+                    </label>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={loadSchema}
+                    disabled={busy || !tenantSlug.trim() || !eventSlug.trim()}
+                  >
+                    Tải biểu mẫu
+                  </button>
+                </>
+              )}
+              {schemaNotice ? (
+                <SurfaceState
+                  kind={
+                    schemaNotice.startsWith('Đang')
+                      ? 'loading'
+                      : schemaNotice.startsWith('Không') ||
+                          schemaNotice.startsWith('Biểu mẫu không')
+                        ? 'error'
+                        : 'empty'
+                  }
+                  title={
+                    schemaNotice.startsWith('Đang')
+                      ? 'Đang tải biểu mẫu…'
+                      : schemaNotice.startsWith('Đã tải') ||
+                          schemaNotice.startsWith('Đã xác định')
+                        ? 'Biểu mẫu sẵn sàng'
+                        : 'Trạng thái biểu mẫu'
+                  }
+                  detail={schemaNotice}
+                  testId="redeem-schema-notice"
+                />
+              ) : null}
+            </>
           ) : null}
 
           {globalEntry && schemaNotice ? (
@@ -754,36 +913,44 @@ export function RedeemForm({
           ) : null}
 
           {globalEntry && globalPhase === 'enter-code' ? (
-            <label>
-              Mã đổi vé
-              <input
-                name="code"
-                required
-                value={code}
-                onChange={(e) => setCode(e.target.value)}
-                autoComplete="off"
-                spellCheck={false}
-                placeholder="REDEMPTION-CODE"
-                data-testid="redeem-global-code"
-              />
-            </label>
+            <div className={productChrome ? 'redeem-code-field' : undefined}>
+              <label htmlFor="redeem-code-global">
+                Mã đổi vé
+                <input
+                  id="redeem-code-global"
+                  name="code"
+                  required
+                  value={code}
+                  onChange={(e) => setCode(e.target.value)}
+                  autoComplete="off"
+                  spellCheck={false}
+                  placeholder="Nhập mã đổi vé"
+                  data-testid="redeem-global-code"
+                />
+              </label>
+            </div>
           ) : null}
 
           {!globalEntry || globalPhase === 'confirm' ? (
-          <label>
-            Mã đổi vé
-            <input
-              name="code"
-              required
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              autoComplete="off"
-              spellCheck={false}
-              placeholder="REDEMPTION-CODE"
-              readOnly={globalEntry && globalPhase === 'confirm'}
-              aria-readonly={globalEntry && globalPhase === 'confirm' ? true : undefined}
-            />
-          </label>
+            <div className={productChrome ? 'redeem-code-field' : undefined}>
+              <label htmlFor="redeem-code-confirm">
+                Mã đổi vé
+                <input
+                  id="redeem-code-confirm"
+                  name="code"
+                  required
+                  value={code}
+                  onChange={(e) => setCode(e.target.value)}
+                  autoComplete="off"
+                  spellCheck={false}
+                  placeholder="Nhập mã đổi vé"
+                  readOnly={globalEntry && globalPhase === 'confirm'}
+                  aria-readonly={
+                    globalEntry && globalPhase === 'confirm' ? true : undefined
+                  }
+                />
+              </label>
+            </div>
           ) : null}
 
           {formDefinition ? (
@@ -792,6 +959,7 @@ export function RedeemForm({
               answers={answers}
               fieldErrors={fieldErrors}
               disabled={busy}
+              compact={productChrome}
               onChange={(fieldId, value) => {
                 setAnswers((prev) => ({ ...prev, [fieldId]: value }));
                 setFieldErrors((prev) => {
@@ -859,41 +1027,59 @@ export function RedeemForm({
           ) : null}
         </div>
 
-        <div className="auth-buttons">
+        <div
+          className={
+            productChrome ? 'redeem-primary-actions' : 'auth-buttons'
+          }
+        >
           {globalEntry && globalPhase === 'enter-code' ? (
             <button
               type="submit"
-              className="redeem-submit"
+              className="redeem-submit btn-primary"
               disabled={busy}
               data-testid="redeem-global-resolve"
             >
               {busy ? 'Đang tra mã…' : 'Tiếp tục'}
             </button>
           ) : (
-          <button type="submit" className="redeem-submit" disabled={busy}>
-            {busy ? 'Đang xử lý…' : 'Đổi mã lấy vé'}
-          </button>
+            <button
+              type="submit"
+              className="redeem-submit btn-primary"
+              disabled={busy}
+            >
+              {busy ? 'Đang xử lý…' : 'Đổi mã lấy vé'}
+            </button>
           )}
-          <button type="button" onClick={pollAgain} disabled={!canRepoll}>
-            Kiểm tra lại
-          </button>
-          <button
-            type="button"
-            onClick={refreshOwnerStatus}
-            disabled={busy || !pendingRequestId}
-          >
-            Làm mới trạng thái yêu cầu
-          </button>
-          <button
-            type="button"
-            onClick={loadTickets}
-            disabled={busy || !tenantId.trim()}
-          >
-            Xem vé của tôi
-          </button>
-          <a className="button-link" href={REDEEM_LOGIN_HREF}>
-            Đăng nhập
-          </a>
+          {productChrome ? (
+            canRepoll ? (
+              <button type="button" onClick={pollAgain} disabled={!canRepoll}>
+                Kiểm tra lại
+              </button>
+            ) : null
+          ) : (
+            <>
+              <button type="button" onClick={pollAgain} disabled={!canRepoll}>
+                Kiểm tra lại
+              </button>
+              <button
+                type="button"
+                onClick={refreshOwnerStatus}
+                disabled={busy || !pendingRequestId}
+              >
+                Làm mới trạng thái yêu cầu
+              </button>
+              <button
+                type="button"
+                onClick={loadTickets}
+                disabled={busy || !tenantId.trim()}
+              >
+                Xem vé của tôi
+              </button>
+              <a className="button-link" href={REDEEM_LOGIN_HREF}>
+                Đăng nhập
+              </a>
+            </>
+          )}
         </div>
       </form>
 
@@ -921,7 +1107,8 @@ export function RedeemForm({
               </a>
             </p>
           ) : null}
-          {(idempotencyKey || decision?.kind === 'pending') && (
+          {!productChrome &&
+          (idempotencyKey || decision?.kind === 'pending') && (
             <details className="redeem-meta">
               <summary>Chi tiết kỹ thuật</summary>
               {idempotencyKey ? (
@@ -965,7 +1152,7 @@ export function RedeemForm({
         </section>
       ) : null}
 
-      {tickets?.tickets?.length ? (
+      {!productChrome && tickets?.tickets?.length ? (
         <section className="redeem-ticket-list" aria-labelledby="tickets-title">
           <h3 id="tickets-title">Vé của tôi</h3>
           <ul>
@@ -978,7 +1165,7 @@ export function RedeemForm({
         </section>
       ) : null}
 
-      {raw ? (
+      {raw && !productChrome ? (
         <details className="redeem-meta">
           <summary>Chi tiết kỹ thuật (đóng mặc định)</summary>
           <pre

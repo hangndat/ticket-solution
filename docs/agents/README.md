@@ -142,6 +142,8 @@ Không spawn PD/BA để “làm luôn” code BE+web+iOS. Không reuse session 
   - Issue/PR: #<n> / PR #<n>
   - Paths: <ownership>
   - AC: <3–7 gạch đầu dòng>
+  - Ngoài phạm vi / Decision IDs: <ranh giới + quyết định áp dụng>
+  - Checks / evidence bắt buộc: <lệnh hoặc bằng chứng nghiệm thu>
   - Architecture impact: Có | Không — <1 câu>
   - Cost tier: cheap | standard
   - --model: <pin từ docs/agents/cost-catalog.md>
@@ -189,9 +191,13 @@ Reviewer (thêm):
 ## Review independence
 - Implementer dispatch: <id>
 - Exact SHA: <sha>
-- Artifact: docs/reviews/<slug>.md
+- Artifact: <comment Issue/PR hoặc docs/reviews/<slug>.md>
 - Checklist: DoD [| security]  # gộp khi dod+sec
+- Revalidation: <SHA trước + link findings/checkpoint; lần đầu ghi Không>
+- Lượt sửa tự động: <0|1|2>/2; ngoại lệ: <chưa dùng|đã dùng>
 ```
+
+Review/fix đọc [quy trình chung](../../.cursor/rules/orca-review-convergence.mdc). Spec fix chỉ rõ finding IDs cần sửa, điều kiện đóng và checks; worker bàn giao SHA/kết quả theo từng ID. Đổi Dispatch/Run không reset bộ đếm; ngắt vòng lặp chuyển sang chẩn đoán có giới hạn.
 
 Khối mở rộng (khi cần) — giữ tương thích:
 

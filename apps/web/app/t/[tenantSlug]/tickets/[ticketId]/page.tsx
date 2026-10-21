@@ -7,6 +7,8 @@ import { loginHref } from '../../../../../src/oidc/login-href';
 import {
   loadOwnerTicket,
   OWNER_TICKET_COPY,
+  ticketStateLabel,
+  ticketStateTagClass,
 } from '../../../../../src/owner-ticket';
 import { buildDisplayQrPayload } from '../../../../../src/owner-ticket/display-payload';
 import { TicketQr } from '../../../../../src/owner-ticket/ticket-qr';
@@ -201,11 +203,27 @@ export default async function OwnerTicketPage({ params, searchParams }: Props) {
       data-testid="owner-ticket-ready"
     >
       <SiteNav />
+      <p className="bread">
+        <Link className="back-link" href="/wallet">
+          ‹ Vé của tôi
+        </Link>
+      </p>
       <h1>{OWNER_TICKET_COPY.title}</h1>
       <p className="intro">
         Vé thuộc tổ chức{' '}
         <span data-testid="owner-ticket-tenant">{tenantSlug}</span>.
       </p>
+
+      <article className="ticket-card ticket-card--detail" data-testid="owner-ticket-card">
+        <div className="ticket-card__head">
+          <span
+            className={ticketStateTagClass(ticket.state)}
+            data-testid="owner-ticket-state-tag"
+          >
+            {ticketStateLabel(ticket.state)}
+          </span>
+        </div>
+        <div className="ticket-card__body ticket-card__body--detail">
 
       {isDemo ? (
         <aside
@@ -259,9 +277,11 @@ export default async function OwnerTicketPage({ params, searchParams }: Props) {
           </dd>
         </div>
       </dl>
+        </div>
+      </article>
       <p>
-        <Link className="back-link" href="/">
-          ← Trang chủ
+        <Link className="back-link" href="/wallet">
+          ← Vé của tôi
         </Link>
         {' · '}
         <Link href="/redeem">Đổi mã lấy vé</Link>
