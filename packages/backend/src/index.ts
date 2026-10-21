@@ -151,6 +151,17 @@ export {
   type D9DemoSeedReport,
 } from './demo-seed';
 export {
+  PROD_SEED,
+  PROD_SEED_NAMESPACE,
+  seedProdDataset,
+  assertProdSeedDatabaseHostAllowed,
+  assertProdSeedMutateAllowed,
+  ProdSeedDryRunRollback,
+  type ProdSeedOptions,
+  type ProdSeedReport,
+  type ProdSeedEventDef,
+} from './prod-seed';
+export {
   claimOutboxBatch,
   processClaimedOutbox,
   relayOutboxOnce,
@@ -306,11 +317,30 @@ export {
   listPublishedEvents,
   listPlatformPublishedEvents,
   getPublishedEventDetail,
+  resolveActiveTenantBySlug,
   isValidPublicTenantSlug,
   isValidPublicEventSlug,
   PublishedEventsError,
   PUBLISHED_EVENTS_ERROR_CODES,
 } from './published-events';
+export {
+  readPublishedAssetPublicBase,
+  publishedEventAssetPublicUrl,
+  publishedTenantAssetPublicUrl,
+  resolvePublishedBrandAssetUrls,
+  resolveTenantLogoPublicUrl,
+} from './published-asset-url';
+export { readPublishedEventAsset } from './published-event-asset';
+export { readPublishedTenantAsset } from './published-tenant-asset';
+export { getPublicTenantBranding } from './public-tenant-branding';
+export {
+  loadProdMediaManifest,
+  eventBrandAssetIds,
+  readyObjectKey,
+  tenantReadyObjectKey,
+  tenantOrgLogoAsset,
+  type ProdMediaManifest,
+} from './prod-media-manifest';
 export {
   expirePendingRequest,
   expireDuePendingBatch,

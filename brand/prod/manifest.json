@@ -1,0 +1,566 @@
+{
+  "$schemaComment": "Epic #686 prod media — stable UUIDs; align PROD-SEED-DATASET.md",
+  "bucketEnv": "MINIO_BUCKET_ASSETS",
+  "defaultBucket": "vemoki-assets",
+  "generatedAt": "2026-10-21T08:40:50.555Z",
+  "generator": "scripts/prod-media-build.mjs",
+  "tenants": [
+    {
+      "slug": "luc-bao-live",
+      "tenantId": "686f0001-0001-4000-8000-000000000001",
+      "tenantBrand": {
+        "primaryColor": "#1B4D3E",
+        "organizationName": "Lục Bảo Live",
+        "logo": {
+          "role": "tenant-logo",
+          "assetId": "686f0001-0008-4000-8000-000001010000",
+          "source": "brand/prod/luc-bao-live/logo.png",
+          "contentType": "image/png",
+          "extension": "png",
+          "widthPx": 760,
+          "heightPx": 200
+        },
+        "assets": [
+          {
+            "role": "tenant-mark",
+            "source": "brand/prod/luc-bao-live/mark-512.png",
+            "contentType": "image/png",
+            "extension": "png",
+            "widthPx": 512,
+            "heightPx": 512
+          },
+          {
+            "role": "tenant-logo",
+            "assetId": "686f0001-0008-4000-8000-00000101",
+            "source": "brand/prod/luc-bao-live/logo.png",
+            "contentType": "image/png",
+            "extension": "png",
+            "widthPx": 760,
+            "heightPx": 200
+          },
+          {
+            "role": "tenant-lockup-light",
+            "source": "brand/prod/luc-bao-live/logo.png",
+            "contentType": "image/png",
+            "extension": "png",
+            "widthPx": 760,
+            "heightPx": 200
+          },
+          {
+            "role": "tenant-lockup-dark",
+            "source": "brand/prod/luc-bao-live/logo-dark.png",
+            "contentType": "image/png",
+            "extension": "png",
+            "widthPx": 760,
+            "heightPx": 200
+          },
+          {
+            "role": "tenant-lockup-light-webp",
+            "source": "brand/prod/luc-bao-live/logo.webp",
+            "contentType": "image/webp",
+            "extension": "webp",
+            "widthPx": 760,
+            "heightPx": 200
+          },
+          {
+            "role": "tenant-lockup-dark-webp",
+            "source": "brand/prod/luc-bao-live/logo-dark.webp",
+            "contentType": "image/webp",
+            "extension": "webp",
+            "widthPx": 760,
+            "heightPx": 200
+          },
+          {
+            "role": "tenant-tile",
+            "source": "brand/prod/luc-bao-live/tile-1024.png",
+            "contentType": "image/png",
+            "extension": "png",
+            "widthPx": 1024,
+            "heightPx": 1024
+          },
+          {
+            "role": "tenant-tile-2x",
+            "source": "brand/prod/luc-bao-live/tile-682.png",
+            "contentType": "image/png",
+            "extension": "png",
+            "widthPx": 682,
+            "heightPx": 682
+          },
+          {
+            "role": "tenant-tile-1x",
+            "source": "brand/prod/luc-bao-live/tile-341.png",
+            "contentType": "image/png",
+            "extension": "png",
+            "widthPx": 341,
+            "heightPx": 341
+          },
+          {
+            "role": "tenant-tile-webp",
+            "source": "brand/prod/luc-bao-live/tile-1024.webp",
+            "contentType": "image/webp",
+            "extension": "webp",
+            "widthPx": 1024,
+            "heightPx": 1024
+          }
+        ]
+      },
+      "events": [
+        {
+          "slug": "dem-am-indie",
+          "eventId": "686f0001-0002-4000-8000-000000000001",
+          "assets": [
+            {
+              "role": "logo",
+              "assetId": "686f0001-0008-4000-8000-000101010000",
+              "source": "brand/prod/luc-bao-live/dem-am-indie/logo.png",
+              "contentType": "image/png",
+              "extension": "png",
+              "widthPx": 760,
+              "heightPx": 200
+            },
+            {
+              "role": "banner",
+              "assetId": "686f0001-0008-4000-8000-000101020000",
+              "source": "brand/prod/luc-bao-live/dem-am-indie/banner.webp",
+              "contentType": "image/webp",
+              "extension": "webp",
+              "widthPx": 1200,
+              "heightPx": 630,
+              "ogShare": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "saigon-pulse",
+      "tenantId": "686f0001-0001-4000-8000-000000000002",
+      "tenantBrand": {
+        "primaryColor": "#E85D04",
+        "organizationName": "Saigon Pulse",
+        "logo": {
+          "role": "tenant-logo",
+          "assetId": "686f0001-0008-4000-8000-000002010000",
+          "source": "brand/prod/saigon-pulse/logo.png",
+          "contentType": "image/png",
+          "extension": "png",
+          "widthPx": 760,
+          "heightPx": 200
+        },
+        "assets": [
+          {
+            "role": "tenant-mark",
+            "source": "brand/prod/saigon-pulse/mark-512.png",
+            "contentType": "image/png",
+            "extension": "png",
+            "widthPx": 512,
+            "heightPx": 512
+          },
+          {
+            "role": "tenant-logo",
+            "assetId": "686f0001-0008-4000-8000-00000201",
+            "source": "brand/prod/saigon-pulse/logo.png",
+            "contentType": "image/png",
+            "extension": "png",
+            "widthPx": 760,
+            "heightPx": 200
+          },
+          {
+            "role": "tenant-lockup-light",
+            "source": "brand/prod/saigon-pulse/logo.png",
+            "contentType": "image/png",
+            "extension": "png",
+            "widthPx": 760,
+            "heightPx": 200
+          },
+          {
+            "role": "tenant-lockup-dark",
+            "source": "brand/prod/saigon-pulse/logo-dark.png",
+            "contentType": "image/png",
+            "extension": "png",
+            "widthPx": 760,
+            "heightPx": 200
+          },
+          {
+            "role": "tenant-lockup-light-webp",
+            "source": "brand/prod/saigon-pulse/logo.webp",
+            "contentType": "image/webp",
+            "extension": "webp",
+            "widthPx": 760,
+            "heightPx": 200
+          },
+          {
+            "role": "tenant-lockup-dark-webp",
+            "source": "brand/prod/saigon-pulse/logo-dark.webp",
+            "contentType": "image/webp",
+            "extension": "webp",
+            "widthPx": 760,
+            "heightPx": 200
+          },
+          {
+            "role": "tenant-tile",
+            "source": "brand/prod/saigon-pulse/tile-1024.png",
+            "contentType": "image/png",
+            "extension": "png",
+            "widthPx": 1024,
+            "heightPx": 1024
+          },
+          {
+            "role": "tenant-tile-2x",
+            "source": "brand/prod/saigon-pulse/tile-682.png",
+            "contentType": "image/png",
+            "extension": "png",
+            "widthPx": 682,
+            "heightPx": 682
+          },
+          {
+            "role": "tenant-tile-1x",
+            "source": "brand/prod/saigon-pulse/tile-341.png",
+            "contentType": "image/png",
+            "extension": "png",
+            "widthPx": 341,
+            "heightPx": 341
+          },
+          {
+            "role": "tenant-tile-webp",
+            "source": "brand/prod/saigon-pulse/tile-1024.webp",
+            "contentType": "image/webp",
+            "extension": "webp",
+            "widthPx": 1024,
+            "heightPx": 1024
+          }
+        ]
+      },
+      "events": [
+        {
+          "slug": "pulse-afterhours",
+          "eventId": "686f0001-0002-4000-8000-000000000002",
+          "assets": [
+            {
+              "role": "logo",
+              "assetId": "686f0001-0008-4000-8000-000201010000",
+              "source": "brand/prod/saigon-pulse/pulse-afterhours/logo.png",
+              "contentType": "image/png",
+              "extension": "png",
+              "widthPx": 760,
+              "heightPx": 200
+            },
+            {
+              "role": "banner",
+              "assetId": "686f0001-0008-4000-8000-000201020000",
+              "source": "brand/prod/saigon-pulse/pulse-afterhours/banner.webp",
+              "contentType": "image/webp",
+              "extension": "webp",
+              "widthPx": 1200,
+              "heightPx": 630,
+              "ogShare": true
+            }
+          ]
+        },
+        {
+          "slug": "pulse-rooftop",
+          "eventId": "686f0001-0002-4000-8000-000000000003",
+          "assets": [
+            {
+              "role": "logo",
+              "assetId": "686f0001-0008-4000-8000-000301010000",
+              "source": "brand/prod/saigon-pulse/pulse-rooftop/logo.png",
+              "contentType": "image/png",
+              "extension": "png",
+              "widthPx": 760,
+              "heightPx": 200
+            },
+            {
+              "role": "banner",
+              "assetId": "686f0001-0008-4000-8000-000301020000",
+              "source": "brand/prod/saigon-pulse/pulse-rooftop/banner.webp",
+              "contentType": "image/webp",
+              "extension": "webp",
+              "widthPx": 1200,
+              "heightPx": 630,
+              "ogShare": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "heritage-hoi-an",
+      "tenantId": "686f0001-0001-4000-8000-000000000003",
+      "tenantBrand": {
+        "primaryColor": "#8B4513",
+        "organizationName": "Di sản Hội An",
+        "logo": {
+          "role": "tenant-logo",
+          "assetId": "686f0001-0008-4000-8000-000003010000",
+          "source": "brand/prod/heritage-hoi-an/logo.png",
+          "contentType": "image/png",
+          "extension": "png",
+          "widthPx": 760,
+          "heightPx": 200
+        },
+        "assets": [
+          {
+            "role": "tenant-mark",
+            "source": "brand/prod/heritage-hoi-an/mark-512.png",
+            "contentType": "image/png",
+            "extension": "png",
+            "widthPx": 512,
+            "heightPx": 512
+          },
+          {
+            "role": "tenant-logo",
+            "assetId": "686f0001-0008-4000-8000-00000301",
+            "source": "brand/prod/heritage-hoi-an/logo.png",
+            "contentType": "image/png",
+            "extension": "png",
+            "widthPx": 760,
+            "heightPx": 200
+          },
+          {
+            "role": "tenant-lockup-light",
+            "source": "brand/prod/heritage-hoi-an/logo.png",
+            "contentType": "image/png",
+            "extension": "png",
+            "widthPx": 760,
+            "heightPx": 200
+          },
+          {
+            "role": "tenant-lockup-dark",
+            "source": "brand/prod/heritage-hoi-an/logo-dark.png",
+            "contentType": "image/png",
+            "extension": "png",
+            "widthPx": 760,
+            "heightPx": 200
+          },
+          {
+            "role": "tenant-lockup-light-webp",
+            "source": "brand/prod/heritage-hoi-an/logo.webp",
+            "contentType": "image/webp",
+            "extension": "webp",
+            "widthPx": 760,
+            "heightPx": 200
+          },
+          {
+            "role": "tenant-lockup-dark-webp",
+            "source": "brand/prod/heritage-hoi-an/logo-dark.webp",
+            "contentType": "image/webp",
+            "extension": "webp",
+            "widthPx": 760,
+            "heightPx": 200
+          },
+          {
+            "role": "tenant-tile",
+            "source": "brand/prod/heritage-hoi-an/tile-1024.png",
+            "contentType": "image/png",
+            "extension": "png",
+            "widthPx": 1024,
+            "heightPx": 1024
+          },
+          {
+            "role": "tenant-tile-2x",
+            "source": "brand/prod/heritage-hoi-an/tile-682.png",
+            "contentType": "image/png",
+            "extension": "png",
+            "widthPx": 682,
+            "heightPx": 682
+          },
+          {
+            "role": "tenant-tile-1x",
+            "source": "brand/prod/heritage-hoi-an/tile-341.png",
+            "contentType": "image/png",
+            "extension": "png",
+            "widthPx": 341,
+            "heightPx": 341
+          },
+          {
+            "role": "tenant-tile-webp",
+            "source": "brand/prod/heritage-hoi-an/tile-1024.webp",
+            "contentType": "image/webp",
+            "extension": "webp",
+            "widthPx": 1024,
+            "heightPx": 1024
+          }
+        ]
+      },
+      "events": [
+        {
+          "slug": "pho-co-dem",
+          "eventId": "686f0001-0002-4000-8000-000000000004",
+          "assets": [
+            {
+              "role": "logo",
+              "assetId": "686f0001-0008-4000-8000-000401010000",
+              "source": "brand/prod/heritage-hoi-an/pho-co-dem/logo.png",
+              "contentType": "image/png",
+              "extension": "png",
+              "widthPx": 760,
+              "heightPx": 200
+            },
+            {
+              "role": "banner",
+              "assetId": "686f0001-0008-4000-8000-000401020000",
+              "source": "brand/prod/heritage-hoi-an/pho-co-dem/banner.webp",
+              "contentType": "image/webp",
+              "extension": "webp",
+              "widthPx": 1200,
+              "heightPx": 630,
+              "ogShare": true
+            }
+          ]
+        },
+        {
+          "slug": "song-thu-workshop",
+          "eventId": "686f0001-0002-4000-8000-000000000005",
+          "assets": [
+            {
+              "role": "logo",
+              "assetId": "686f0001-0008-4000-8000-000501010000",
+              "source": "brand/prod/heritage-hoi-an/song-thu-workshop/logo.png",
+              "contentType": "image/png",
+              "extension": "png",
+              "widthPx": 760,
+              "heightPx": 200
+            },
+            {
+              "role": "banner",
+              "assetId": "686f0001-0008-4000-8000-000501020000",
+              "source": "brand/prod/heritage-hoi-an/song-thu-workshop/banner.webp",
+              "contentType": "image/webp",
+              "extension": "webp",
+              "widthPx": 1200,
+              "heightPx": 630,
+              "ogShare": true
+            }
+          ]
+        },
+        {
+          "slug": "festival-an-song",
+          "eventId": "686f0001-0002-4000-8000-000000000006",
+          "assets": [
+            {
+              "role": "logo",
+              "assetId": "686f0001-0008-4000-8000-000601010000",
+              "source": "brand/prod/heritage-hoi-an/festival-an-song/logo.png",
+              "contentType": "image/png",
+              "extension": "png",
+              "widthPx": 760,
+              "heightPx": 200
+            },
+            {
+              "role": "banner",
+              "assetId": "686f0001-0008-4000-8000-000601020000",
+              "source": "brand/prod/heritage-hoi-an/festival-an-song/banner.webp",
+              "contentType": "image/webp",
+              "extension": "webp",
+              "widthPx": 1200,
+              "heightPx": 630,
+              "ogShare": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "mekong-makers",
+      "tenantId": "686f0001-0001-4000-8000-000000000004",
+      "tenantBrand": {
+        "primaryColor": "#2A6F97",
+        "organizationName": "Mekong Makers",
+        "logo": {
+          "role": "tenant-logo",
+          "assetId": "686f0001-0008-4000-8000-000004010000",
+          "source": "brand/prod/mekong-makers/logo.png",
+          "contentType": "image/png",
+          "extension": "png",
+          "widthPx": 760,
+          "heightPx": 200
+        },
+        "assets": [
+          {
+            "role": "tenant-mark",
+            "source": "brand/prod/mekong-makers/mark-512.png",
+            "contentType": "image/png",
+            "extension": "png",
+            "widthPx": 512,
+            "heightPx": 512
+          },
+          {
+            "role": "tenant-logo",
+            "assetId": "686f0001-0008-4000-8000-00000401",
+            "source": "brand/prod/mekong-makers/logo.png",
+            "contentType": "image/png",
+            "extension": "png",
+            "widthPx": 760,
+            "heightPx": 200
+          },
+          {
+            "role": "tenant-lockup-light",
+            "source": "brand/prod/mekong-makers/logo.png",
+            "contentType": "image/png",
+            "extension": "png",
+            "widthPx": 760,
+            "heightPx": 200
+          },
+          {
+            "role": "tenant-lockup-dark",
+            "source": "brand/prod/mekong-makers/logo-dark.png",
+            "contentType": "image/png",
+            "extension": "png",
+            "widthPx": 760,
+            "heightPx": 200
+          },
+          {
+            "role": "tenant-lockup-light-webp",
+            "source": "brand/prod/mekong-makers/logo.webp",
+            "contentType": "image/webp",
+            "extension": "webp",
+            "widthPx": 760,
+            "heightPx": 200
+          },
+          {
+            "role": "tenant-lockup-dark-webp",
+            "source": "brand/prod/mekong-makers/logo-dark.webp",
+            "contentType": "image/webp",
+            "extension": "webp",
+            "widthPx": 760,
+            "heightPx": 200
+          },
+          {
+            "role": "tenant-tile",
+            "source": "brand/prod/mekong-makers/tile-1024.png",
+            "contentType": "image/png",
+            "extension": "png",
+            "widthPx": 1024,
+            "heightPx": 1024
+          },
+          {
+            "role": "tenant-tile-2x",
+            "source": "brand/prod/mekong-makers/tile-682.png",
+            "contentType": "image/png",
+            "extension": "png",
+            "widthPx": 682,
+            "heightPx": 682
+          },
+          {
+            "role": "tenant-tile-1x",
+            "source": "brand/prod/mekong-makers/tile-341.png",
+            "contentType": "image/png",
+            "extension": "png",
+            "widthPx": 341,
+            "heightPx": 341
+          },
+          {
+            "role": "tenant-tile-webp",
+            "source": "brand/prod/mekong-makers/tile-1024.webp",
+            "contentType": "image/webp",
+            "extension": "webp",
+            "widthPx": 1024,
+            "heightPx": 1024
+          }
+        ]
+      },
+      "events": []
+    }
+  ]
+}
