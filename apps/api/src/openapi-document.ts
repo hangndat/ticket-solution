@@ -43,3 +43,36 @@ export function reorderOpenApiPaths(
   }
   return { ...document, paths: ordered };
 }
+
+/** Preserve committed `components.schemas` key order when `@ApiExtraModels` registration order changes. */
+export function reorderOpenApiSchemas(
+  document: OpenAPIObject,
+  schemaOrder: readonly string[],
+): OpenAPIObject {
+  const schemas = document.components?.schemas;
+  if (!schemas || schemaOrder.length === 0) {
+    return document;
+  }
+  const ordered: Record<string, (typeof schemas)[string]> = {};
+  for (const key of schemaOrder) {
+    const item = schemas[key];
+    if (item) {
+      ordered[key] = item;
+    }
+  }
+  for (const key of Object.keys(schemas)) {
+    if (!(key in ordered)) {
+      const item = schemas[key];
+      if (item) {
+        ordered[key] = item;
+      }
+    }
+  }
+  return {
+    ...document,
+    components: {
+      ...document.components,
+      schemas: ordered,
+    },
+  };
+}

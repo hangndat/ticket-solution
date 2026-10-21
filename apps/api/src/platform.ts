@@ -2,7 +2,9 @@
  * Barrel re-export — public API unchanged for `app.ts` consumers.
  */
 export {
-  PlatformController,
+  PlatformMeController,
+  PlatformOperatorController,
+  PlatformMembershipController,
   PlatformService,
   buildPlatformDeps,
 } from './platform/index';
