@@ -30,7 +30,7 @@ Không chờ user duyệt board; không `Hoàn thành` chỉ vì user nói xong.
 2. Merge `main` khi task cần integration (`git-workflow.mdc`)
 3. CI xanh trên integrated commit
 4. Evidence khớp Issue AC
-5. Artifact `docs/reviews/*` + **exact SHA** + verdict
+5. Artifact `docs/reviews/*` hoặc comment Issue/PR + **exact SHA** + verdict
 
 Phân biệt: code complete ≠ acceptance complete ≠ pilot ready.
 
@@ -43,6 +43,6 @@ Phân biệt: code complete ≠ acceptance complete ≠ pilot ready.
 | SHA | Exact từ `git rev-parse` |
 | Checks | Lệnh/CI trên SHA đó |
 | Verdict | PASS / FAIL / PASS with known gap |
-| Revalidation | Commit mới sau review → review lại SHA mới |
+| Revalidation | SHA mới → kiểm diff + findings + vùng ảnh hưởng, kết luận trên SHA mới theo `orca-review-convergence.mdc` |
 
 Coordinator: spawn reviewer, WIP, milestone, `gh` → `github-project-tracking-coordinator.mdc`.

@@ -11,6 +11,8 @@ Bổ sung [github-project-tracking.mdc](./github-project-tracking.mdc). Leader R
 
 Task `Chờ duyệt` → một reviewer độc lập/Task (review only). Nhiều PR → nhiều reviewer (cap ≤3 live; `orca-parallel-workers.mdc`). Agent: `orca-agent-routing-coordinator.mdc`.
 
+Áp dụng [orca-review-convergence.mdc](./orca-review-convergence.mdc) trước review/fix: lưu findings và số lượt trên Issue/PR; bị ngắt → `Bị chặn` kèm owner/điều kiện mở lại, không tự quay lại ready queue. Revalidation ưu tiên reviewer cũ nếu phù hợp, luôn khác implementer.
+
 **Wave C:** DoD+security cùng SHA → một `James · dod+sec`; tách chỉ hot path + lý do evidence.
 
 Architecture impact `Có`: DoD đối chiếu ADR; drift → `architect` trên exact SHA (song song DoD OK).
@@ -22,7 +24,7 @@ Architecture impact `Có`: DoD đối chiếu ADR; drift → `architect` trên e
 | (a) UAT | Orca tab/emulator — `uat-headless.mdc` |
 | (b) iOS local | prebuild + xcodebuild khi chạm mobile — không EAS cloud |
 | (c) Deploy prod | Chỉ khi authorize |
-| (d) Reviews | `docs/reviews/*` + exact SHA |
+| (d) Reviews | `docs/reviews/*` hoặc comment Issue/PR + exact SHA |
 
 ## WIP / backpressure
 
