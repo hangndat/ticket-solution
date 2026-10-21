@@ -4600,6 +4600,67 @@
           "public-events"
         ]
       }
+    },
+    "/v1/public/tenants/{tenantSlug}/branding": {
+      "get": {
+        "operationId": "PublicTenantBrandingController_getBranding",
+        "parameters": [
+          {
+            "name": "tenantSlug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicTenantBrandingDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "public-branding"
+        ]
+      }
+    },
+    "/v1/public/tenants/{tenantSlug}/assets/{assetId}": {
+      "get": {
+        "operationId": "PublishedTenantAssetsController_getAsset",
+        "parameters": [
+          {
+            "name": "tenantSlug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "assetId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "public-branding"
+        ]
+      }
     }
   },
   "info": {
@@ -7590,6 +7651,40 @@
           "registrationId",
           "tenantId",
           "status"
+        ]
+      },
+      "PublicTenantBrandingDto": {
+        "type": "object",
+        "properties": {
+          "tenantSlug": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "primaryColor": {
+            "type": "string",
+            "example": "#0B3D2E"
+          },
+          "secondaryColor": {
+            "type": "string",
+            "nullable": true
+          },
+          "logoAssetId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "logoUrl": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "tenantSlug",
+          "displayName",
+          "primaryColor",
+          "secondaryColor",
+          "logoAssetId"
         ]
       }
     }

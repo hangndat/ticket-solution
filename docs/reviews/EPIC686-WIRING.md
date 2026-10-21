@@ -73,13 +73,26 @@ Playwright full-page screenshots were not committed in this run (browser install
 | Lục Bảo Live | set | uploaded (anchor event E01) |
 | Saigon Pulse | set | uploaded (anchor E02) |
 | Di sản Hội An | set | uploaded (anchor E04) |
-| Mekong Makers | set | no event anchor — object skipped (0 events); tenant id only |
+| Mekong Makers | set | uploaded (tenant-scoped key; 0 events) |
+
+## Tenant branding (org chrome)
+
+- `GET /v1/public/tenants/{tenantSlug}/branding` — `logoUrl` when `tenants.logo_asset_id` has matching `tenant_assets` READY row.
+- `GET /v1/public/tenants/{tenantSlug}/assets/{assetId}` — MinIO proxy for org logo (`tenants/{tenantId}/assets/ready/...`).
+- Seed: `ensureReadyTenantAsset` for all org logos (incl. Mekong 0 events); media upload via `tenantReadyKey` (no event anchor).
+- Manifest: `tenants[].logo` or `tenantBrand.logo` (`assetId`, `source`, `contentType`, `extension`).
+
+| Org | Public branding `logoUrl` (local) |
+| --- | --- |
+| `luc-bao-live` | OK (tenant asset) |
+| `saigon-pulse` | OK |
+| `heritage-hoi-an` | OK |
+| `mekong-makers` | OK (0 events) |
 
 ## Limitations / follow-up
 
-- Public **tenant** branding `logoUrl` for org chrome (non-event) — separate endpoint enrichment.
-- Mekong org raster needs branding anchor event or tenant-scoped asset table.
 - Prod VPS: runbook §6 uses `prod-seed-media.mjs` (not `d9-seed-media.mjs`).
+- Re-run `PROD_MEDIA_CONFIRM=1 ./scripts/prod-seed-media.sh` after pull to migrate org logos to tenant-scoped object keys (was event-anchor path).
 
 ## Prod
 

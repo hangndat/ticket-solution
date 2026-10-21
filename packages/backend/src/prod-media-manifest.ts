@@ -1,8 +1,8 @@
 /**
  * Epic #686 — prod media manifest (`brand/prod/manifest.json`).
  */
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { existsSync, readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 
 export type ProdMediaAssetDef = {
   role: string;
@@ -24,6 +24,8 @@ export type ProdMediaEventDef = {
 export type ProdMediaTenantDef = {
   slug: string;
   tenantId: string;
+  /** Tenant-level logo (Epic #686); preferred over tenantBrand.logo when set. */
+  logo?: ProdMediaAssetDef;
   tenantBrand?: {
     primaryColor?: string;
     organizationName?: string;
@@ -36,9 +38,21 @@ export type ProdMediaManifest = {
   tenants: ProdMediaTenantDef[];
 };
 
+function resolveRepoRoot(repoRoot?: string): string {
+  const explicit = repoRoot?.trim() || process.env.PROD_REPO_ROOT?.trim();
+  if (explicit) return explicit;
+  let dir = process.cwd();
+  for (let i = 0; i < 8; i++) {
+    if (existsSync(join(dir, 'brand/prod/manifest.json'))) return dir;
+    const parent = dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return process.cwd();
+}
+
 export function prodMediaManifestPath(repoRoot?: string): string {
-  const root = repoRoot?.trim() || process.env.PROD_REPO_ROOT?.trim() || process.cwd();
-  return join(root, 'brand/prod/manifest.json');
+  return join(resolveRepoRoot(repoRoot), 'brand/prod/manifest.json');
 }
 
 export function loadProdMediaManifest(repoRoot?: string): ProdMediaManifest {
@@ -53,6 +67,15 @@ export function readyObjectKey(
   extension: string,
 ): string {
   return `tenants/${tenantId}/events/${eventId}/assets/ready/${assetId}.${extension}`;
+}
+
+/** Org logo object key — no event anchor (Mekong / tenant chrome). */
+export function tenantReadyObjectKey(
+  tenantId: string,
+  assetId: string,
+  extension: string,
+): string {
+  return `tenants/${tenantId}/assets/ready/${assetId}.${extension}`;
 }
 
 export function findTenantManifest(
@@ -102,5 +125,7 @@ export function tenantOrgLogoAsset(
   manifest: ProdMediaManifest,
   tenantId: string,
 ): ProdMediaAssetDef | undefined {
-  return findTenantManifest(manifest, tenantId)?.tenantBrand?.logo;
+  const tenant = findTenantManifest(manifest, tenantId);
+  if (!tenant) return undefined;
+  return tenant.logo ?? tenant.tenantBrand?.logo;
 }
