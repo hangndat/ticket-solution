@@ -48,6 +48,7 @@ import {
   REQUEST_TIMEOUT_MS,
 } from '../../src/redeem/poll-operation';
 import { loadPublishedRedeemSchema } from '../../src/redeem/published-schema';
+import { isTenantBoundRedeemQuery } from '../../src/redeem/global-entry';
 import { resolveRedemptionCodeGlobal } from '../../src/redeem/global-resolve';
 import {
   clearStoredResolveToken,
@@ -63,6 +64,8 @@ const REDEEM_LOGIN_HREF = loginHref('/redeem');
 type Props = {
   productChrome?: boolean;
   globalEntry?: boolean;
+  /** URL pins tenant/event — keeps dev/ops redeem tools. */
+  tenantBound?: boolean;
   initialTenantId?: string;
   initialEventId?: string;
   initialTenantSlug?: string;
@@ -72,6 +75,7 @@ type Props = {
 export function RedeemForm({
   productChrome = false,
   globalEntry = false,
+  tenantBound: tenantBoundProp,
   initialTenantId = '',
   initialEventId = '',
   initialTenantSlug = '',
@@ -101,11 +105,22 @@ export function RedeemForm({
   const [pendingRequestId, setPendingRequestId] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const [polling, setPolling] = useState(false);
+  const tenantBound =
+    tenantBoundProp ??
+    isTenantBoundRedeemQuery({
+      tenantId: initialTenantId,
+      eventId: initialEventId,
+      tenantSlug: initialTenantSlug,
+      eventSlug: initialEventSlug,
+    });
+  const attendeeSingleCodeSurface = productChrome && !tenantBound;
+  const singleCodeFlow = globalEntry || attendeeSingleCodeSurface;
+
   const [globalPhase, setGlobalPhase] = useState<'enter-code' | 'confirm'>(
-    globalEntry ? 'enter-code' : 'confirm',
+    singleCodeFlow ? 'enter-code' : 'confirm',
   );
   const [resolveToken, setResolveToken] = useState<string | null>(() =>
-    globalEntry ? readStoredResolveToken() : null,
+    singleCodeFlow ? readStoredResolveToken() : null,
   );
   const [globalContext, setGlobalContext] = useState<{
     tenantDisplayName: string;
@@ -121,7 +136,8 @@ export function RedeemForm({
   }, []);
 
   const busy = pending || polling;
-  const showDevScopeFields = !productChrome || !globalEntry;
+  const showDevScopeFields =
+    tenantBound && (!productChrome || !globalEntry);
   const canRepoll = Boolean(attempt?.unclear && attempt.key && !busy);
 
   const isStale = useCallback(
@@ -331,7 +347,7 @@ export function RedeemForm({
   }
 
   function onGlobalResolve() {
-    if (!globalEntry || busy) return;
+    if (!singleCodeFlow || busy) return;
     const trimmed = code.trim();
     if (!trimmed) {
       setUx(
@@ -400,7 +416,7 @@ export function RedeemForm({
 
   function onSubmit(event: FormEvent) {
     event.preventDefault();
-    if (globalEntry && globalPhase === 'enter-code') {
+    if (singleCodeFlow && globalPhase === 'enter-code') {
       onGlobalResolve();
       return;
     }
@@ -457,7 +473,7 @@ export function RedeemForm({
           answers: validated.answers,
           termsAccepted: termsAccepted === true ? true : undefined,
           idempotencyKey: key,
-          ...(globalEntry && tokenForIssue
+          ...(singleCodeFlow && tokenForIssue
             ? { resolveToken: tokenForIssue }
             : {}),
         },
@@ -507,7 +523,7 @@ export function RedeemForm({
       }
 
       if (
-        globalEntry &&
+        singleCodeFlow &&
         isApiError(result.json) &&
         (result.json.code === 'RESOLVE_TOKEN_STALE' ||
           result.json.code === 'RESOLVE_TOKEN_REQUIRED')
@@ -626,9 +642,9 @@ export function RedeemForm({
   );
 
   const productLead =
-    globalEntry && globalPhase === 'enter-code'
-      ? 'Nhập mã đổi vé. Hệ thống xác định sự kiện — bạn chỉ cần hoàn tất biểu mẫu và điều khoản nếu có.'
-      : globalEntry
+    singleCodeFlow && globalPhase === 'enter-code'
+      ? null
+      : singleCodeFlow
         ? 'Kiểm tra thông tin sự kiện, điền biểu mẫu và đồng ý điều khoản trước khi đổi vé.'
         : 'Nhập mã và đồng ý điều khoản của sự kiện. Trạng thái chờ duyệt chưa phải vé.';
 
@@ -640,18 +656,21 @@ export function RedeemForm({
     <div className={formClassName}>
       <form onSubmit={onSubmit} aria-labelledby="redeem-form-title" noValidate>
         <h2 id="redeem-form-title">Đổi mã lấy vé</h2>
-        <p className={productChrome ? 'redeem-product-lead' : 'intro'}>
-          {productChrome
-            ? productLead
-            : globalEntry
+        {productChrome && productLead ? (
+          <p className="redeem-product-lead">{productLead}</p>
+        ) : null}
+        {!productChrome ? (
+          <p className="intro">
+            {globalEntry
               ? globalPhase === 'enter-code'
                 ? 'Nhập mã đổi vé — hệ thống sẽ xác định sự kiện và loại vé. Sau đó điền biểu mẫu và đồng ý điều khoản.'
                 : 'Xác nhận thông tin sự kiện, hoàn thành biểu mẫu và đồng ý điều khoản trước khi đổi vé.'
               : 'Tải biểu mẫu sự kiện đã xuất bản, nhập mã và đồng ý điều khoản. Đang chờ duyệt chưa phải vé; nếu chưa rõ kết quả, bấm «Kiểm tra lại».'}
-        </p>
+          </p>
+        ) : null}
 
         <div className="redeem-fields">
-          {globalEntry && globalPhase === 'confirm' && globalContext ? (
+          {singleCodeFlow && globalPhase === 'confirm' && globalContext ? (
             <section
               className="redeem-global-context"
               aria-labelledby="redeem-global-context-title"
@@ -826,7 +845,7 @@ export function RedeemForm({
             </>
           ) : null}
 
-          {globalEntry && schemaNotice ? (
+          {singleCodeFlow && schemaNotice ? (
             <SurfaceState
               kind={
                 schemaNotice.startsWith('Đang')
@@ -848,7 +867,7 @@ export function RedeemForm({
             />
           ) : null}
 
-          {globalEntry && globalPhase === 'enter-code' ? (
+          {singleCodeFlow && globalPhase === 'enter-code' ? (
             <div className={productChrome ? 'redeem-code-field' : undefined}>
               <label htmlFor="redeem-code-global">
                 Mã đổi vé
@@ -867,7 +886,7 @@ export function RedeemForm({
             </div>
           ) : null}
 
-          {!globalEntry || globalPhase === 'confirm' ? (
+          {!singleCodeFlow || globalPhase === 'confirm' ? (
             <div className={productChrome ? 'redeem-code-field' : undefined}>
               <label htmlFor="redeem-code-confirm">
                 Mã đổi vé
@@ -880,9 +899,9 @@ export function RedeemForm({
                   autoComplete="off"
                   spellCheck={false}
                   placeholder="Nhập mã đổi vé"
-                  readOnly={globalEntry && globalPhase === 'confirm'}
+                  readOnly={singleCodeFlow && globalPhase === 'confirm'}
                   aria-readonly={
-                    globalEntry && globalPhase === 'confirm' ? true : undefined
+                    singleCodeFlow && globalPhase === 'confirm' ? true : undefined
                   }
                 />
               </label>
@@ -906,7 +925,7 @@ export function RedeemForm({
                 });
               }}
             />
-          ) : globalEntry && globalPhase === 'enter-code' ? null : termsVersion ? (
+          ) : singleCodeFlow && globalPhase === 'enter-code' ? null : termsVersion ? (
             <p className="intro" data-testid="redeem-schema-terms-only">
               Sự kiện này không có trường biểu mẫu — nhập mã và đồng ý điều khoản bên
               dưới để đổi vé.
@@ -916,7 +935,7 @@ export function RedeemForm({
               kind="empty"
               title="Chưa có biểu mẫu"
               detail={
-                globalEntry
+                singleCodeFlow
                   ? 'Tra mã thành công sẽ hiển thị biểu mẫu tại đây.'
                   : 'Tải biểu mẫu bằng đường dẫn tổ chức/sự kiện, hoặc sự kiện chỉ cần mã và điều khoản.'
               }
@@ -968,7 +987,7 @@ export function RedeemForm({
             productChrome ? 'redeem-primary-actions' : 'auth-buttons'
           }
         >
-          {globalEntry && globalPhase === 'enter-code' ? (
+          {singleCodeFlow && globalPhase === 'enter-code' ? (
             <button
               type="submit"
               className="redeem-submit btn-primary"

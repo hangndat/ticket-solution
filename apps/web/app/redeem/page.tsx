@@ -4,7 +4,10 @@ import { isOidcConfigured, resolveWebAuthState } from '../../src/oidc/config';
 import { readSubject } from '../../src/oidc/cookies';
 import { loginHref } from '../../src/oidc/login-href';
 import { SiteNav } from '../../src/site-chrome';
-import { globalRedeemEntryEnabled } from '../../src/redeem/global-entry';
+import {
+  globalRedeemEntryEnabled,
+  isTenantBoundRedeemQuery,
+} from '../../src/redeem/global-entry';
 import { RedeemAuthGate } from './redeem-auth-gate';
 import { RedeemForm } from './redeem-form';
 import styles from './redeem-surface.module.css';
@@ -36,6 +39,12 @@ export default async function RedeemPage({ searchParams }: Props) {
   const redeemLogin = loginHref('/redeem');
   const authNotice = authNoticeFromParam(params.notice?.trim(), {
     retryHref: redeemLogin,
+  });
+  const tenantBound = isTenantBoundRedeemQuery({
+    tenantId: params.tenantId,
+    eventId: params.eventId,
+    tenantSlug: params.tenantSlug,
+    eventSlug: params.eventSlug,
   });
   const globalEntry = globalRedeemEntryEnabled({
     tenantId: params.tenantId,
@@ -110,6 +119,7 @@ export default async function RedeemPage({ searchParams }: Props) {
               key={`${globalEntry ? 'global' : ''}:${params.tenantId ?? ''}:${params.eventId ?? ''}:${params.tenantSlug ?? ''}:${params.eventSlug ?? ''}`}
               productChrome
               globalEntry={globalEntry}
+              tenantBound={tenantBound}
               initialTenantId={params.tenantId?.trim() ?? ''}
               initialEventId={params.eventId?.trim() ?? ''}
               initialTenantSlug={params.tenantSlug?.trim() ?? ''}
