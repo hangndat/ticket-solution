@@ -42,10 +42,10 @@ export default async function Admin({ searchParams }: Props) {
       />
       <header className="admin-page-header">
         <p className="eyebrow">Quản trị tổ chức</p>
-        <h1>Tổng quan quản trị</h1>
+        <h1>Tổng quan</h1>
         <p className="intro admin-page-header__intro">
-          Chọn tổ chức và sự kiện, rồi làm theo việc. Kết quả chưa rõ không coi
-          là thành công.
+          Sidebar, số liệu nhanh và bảng sự kiện theo mockup — form kỹ thuật
+          gom trong phần mở rộng. Kết quả chưa rõ không coi là thành công.
         </p>
       </header>
       {!configured ? (
