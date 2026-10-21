@@ -43,12 +43,12 @@ describe('contentSecurityPolicy', () => {
 });
 
 describe('next.config headers()', () => {
-  it('emits CSP and X-Content-Type-Options on all paths', async () => {
+  it('emits static security headers (CSP is runtime via proxy.ts)', async () => {
     const routes = await config.headers!();
     assert.equal(routes.length, 1);
     assert.equal(routes[0]?.source, '/:path*');
     const keys = new Set(routes[0]?.headers.map((h) => h.key));
-    assert.ok(keys.has('Content-Security-Policy'));
+    assert.ok(!keys.has('Content-Security-Policy'));
     assert.ok(keys.has('X-Content-Type-Options'));
     assert.ok(keys.has('Referrer-Policy'));
     assert.ok(keys.has('Permissions-Policy'));
