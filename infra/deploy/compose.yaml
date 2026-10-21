@@ -217,7 +217,8 @@ services:
       PLATFORM_OIDC_REDIRECT_URI: ${PLATFORM_OIDC_REDIRECT_URI:-https://app.vemoki.com/api/auth/platform/callback}
       PLATFORM_OIDC_AUDIENCE: ${PLATFORM_OIDC_AUDIENCE:-ticket-platform-api}
       PLATFORM_OIDC_REQUIRED_ACR: ${PLATFORM_OIDC_REQUIRED_ACR:-vemoki-mfa}
-      API_BASE_URL: http://api:3001
+      # Edge DNS: use vemoki-api alias (not service name `api`) — shared nginx network collides with other stacks.
+      API_BASE_URL: http://vemoki-api:3001
       AUTH_COOKIE_SECURE: 'true'
       # Code reads WEB_PUBLIC_ORIGIN; keep PUBLIC_WEB_ORIGIN alias for older docs/templates
       WEB_PUBLIC_ORIGIN: ${WEB_PUBLIC_ORIGIN:-https://app.vemoki.com}
@@ -265,7 +266,7 @@ services:
       PLATFORM_OIDC_REDIRECT_URI: ${PORTAL_PLATFORM_OIDC_REDIRECT_URI:-https://portal.vemoki.com/api/auth/platform/callback}
       PLATFORM_OIDC_AUDIENCE: ${PLATFORM_OIDC_AUDIENCE:-ticket-platform-api}
       PLATFORM_OIDC_REQUIRED_ACR: ${PLATFORM_OIDC_REQUIRED_ACR:-vemoki-mfa}
-      API_BASE_URL: http://api:3001
+      API_BASE_URL: http://vemoki-api:3001
       AUTH_COOKIE_SECURE: 'true'
       WEB_PUBLIC_ORIGIN: ${PORTAL_WEB_PUBLIC_ORIGIN:-https://portal.vemoki.com}
       PUBLIC_WEB_ORIGIN: ${PORTAL_WEB_PUBLIC_ORIGIN:-https://portal.vemoki.com}
