@@ -75,7 +75,7 @@ User giao mở rộng MVP, đẩy mạnh UX/UI và yêu cầu BA (`product-ba`) 
 | ADR-09 | **Self-hosted OIDC (Keycloak)**, Auth Code + PKCE iOS | **Keycloak** trong Docker Compose / VPS — xem [spike](./spikes/D1-OIDC-PROVIDER.md) | **Đã chốt (MVP)** 2026-10-16 (user: cấm SaaS; App Store + DNS được phép). POC P4 trên Keycloak local trước business endpoints. |
 | ADR-02 | Shared DB + RLS | Khớp O08 | Không đổi |
 | ADR-11 | **Cấm SaaS runtime**; self-host stack | Postgres/Redis/Keycloak/MinIO/SMTP trên Compose → VPS; **không** Clerk/Auth0/SendGrid/Resend/Expo Push/CDN SaaS/managed DB | Ngoại lệ: Apple App Store / APNs; registrar DNS + Let's Encrypt; GitHub tooling (không runtime) |
-| ADR-12 | Push qua **APNs trực tiếp** từ worker | Không Expo Push Service (`exp.host`) | Device token lưu DB; adapter tách transport |
+| ADR-12 | Push qua **APNs trực tiếp** từ worker | Không Expo Push Service (`exp.host`) | Device token lưu DB; adapter tách transport. **At-least-once (TicketIssued push):** I/O ngoài transaction (H2); crash giữa `apns.send` và ack `notifications` → retry có thể gửi trùng tối đa một lần/device cho đến khi push `ACCEPTED`; dedup khi `SENT`/`ACCEPTED`. Nếu email đã `ACCEPTED` mà push còn `PENDING`, retry outbox hiện **short-circuit** hoàn tất outbox **không** gọi lại APNs — push lỗi ack có thể không được gửi lại cho đến khi có đường vào `push_pending` (giới hạn đã biết; test Issue [#652](https://github.com/hangndat/ticket-solution/issues/652) `apns-atleast-once.test.cjs`). |
 | ADR-13 | Email qua **SMTP adapter** | Dev: Mailpit; prod: Postal hoặc Postfix trên VPS | Không transactional SaaS |
 | ADR-14 | Object storage **S3-compatible self-host** (MinIO API) | Image: `cleanstart/minio@sha256:4febd64f…` (O1 2026-10-18; official Hub/Quay unpullable) | Signed URL ngắn hạn; init `amazon/aws-cli` |
 | ADR-15 | Admission / waiting room trên **Caddy hoặc nginx** | Rate-limit + token admission ký; Gate không đi qua layer này | Không Cloudflare Waiting Room |
@@ -131,6 +131,7 @@ Chỉ mở redemption / Gate / admin tenant **sau khi**:
 | 2026-10-18 | **UX-11 chốt Option A** — MVP đổi mã guest = Keycloak verified email / UI «Cần đăng nhập»; OTP/magic link = sau MVP. Issue [#372](https://github.com/hangndat/ticket-solution/issues/372). |
 | 2026-10-19 | User ủy quyền Epic [#491](https://github.com/hangndat/ticket-solution/issues/491) **A+B+C**. **O17:** mở lại multi-event portfolio (OUT O12/O14); phạm vi P2 roles/onboarding/saved views/EN; handoff [`PORTAL-P2-ADR`](./architecture/PORTAL-P2-ADR.md). Cutover prod chỉ #502. |
 | 2026-10-20 | **O18** — Portal Pro Components `3.1.15-7` trên Next 16 + antd 6; ProLayout + Pro* ops screens; cấm Umi/2.8.x. ADR [`ADR-PORTAL-PRO-COMPONENTS`](./architecture/ADR-PORTAL-PRO-COMPONENTS.md). |
+| 2026-10-21 | **APNs TicketIssued at-least-once** — ghi limitation H2 push trong ADR-12; test DB mô phỏng crash trước ack (Issue [#652](https://github.com/hangndat/ticket-solution/issues/652)). Không đổi semantics runtime. |
 
 ## UX-11 — Guest redeem auth MVP (18/10/2026)
 
