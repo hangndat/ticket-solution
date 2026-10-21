@@ -4,53 +4,11 @@ import Link from 'next/link';
 import { useEffect, useRef, useState, useTransition } from 'react';
 import { clearGuestClaimIntent } from '../../src/guest/claim-intent';
 import { loginHref } from '../../src/oidc/login-href';
+import {
+  summarizeBffMeSession,
+  type SessionSummary,
+} from '../../src/oidc/session-summary';
 import { SurfaceState } from '../../src/ui/surface-state';
-
-type SessionSummary =
-  | { kind: 'signed-in'; subjectHint: string | null }
-  | { kind: 'signed-out' }
-  | { kind: 'error'; detail: string };
-
-function summarizeMe(status: number, body: string): SessionSummary {
-  if (status === 401 || status === 403) {
-    return { kind: 'signed-out' };
-  }
-  if (status >= 200 && status < 300) {
-    let subjectHint: string | null = null;
-    try {
-      const parsed = JSON.parse(body) as Record<string, unknown>;
-      const subject =
-        typeof parsed.sub === 'string'
-          ? parsed.sub
-          : typeof parsed.email === 'string'
-            ? parsed.email
-            : typeof parsed.subject === 'string'
-              ? parsed.subject
-              : null;
-      if (subject && subject.trim()) {
-        const s = subject.trim();
-        subjectHint = s.includes('@')
-          ? s
-          : s.length > 12
-            ? `${s.slice(0, 8)}…`
-            : s;
-      }
-    } catch {
-      subjectHint = null;
-    }
-    return { kind: 'signed-in', subjectHint };
-  }
-  if (status === 0) {
-    return {
-      kind: 'error',
-      detail: 'Không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.',
-    };
-  }
-  return {
-    kind: 'error',
-    detail: 'Không tải được trạng thái phiên lúc này. Thử lại sau.',
-  };
-}
 
 const ACCOUNT_LOGIN = loginHref('/account');
 
@@ -75,7 +33,7 @@ export function SessionPanel() {
         });
         const body = await response.text();
         if (!cancelled) {
-          const next = summarizeMe(response.status, body);
+          const next = summarizeBffMeSession(response.status, body);
           if (wasSignedIn.current && next.kind === 'signed-out') {
             clearParkedClaimOnSessionEnd();
           }
