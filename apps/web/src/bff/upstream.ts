@@ -1,4 +1,5 @@
 import { IDENTITY_ERROR_CODES } from '@ticket/contracts';
+import type { GateSsrTrace } from '../gate/gate-ssr-trace';
 import { isOidcConfigured } from '../oidc/config';
 import { clearSessionCookies, readAccessToken } from '../oidc/cookies';
 import { refreshWebAccessToken } from '../oidc/refresh';
@@ -126,6 +127,8 @@ export async function forwardPublic(
 export type ForwardWithBearerOptions = {
   /** Upstream fetch budget (default 20s). Staff SSR discovery uses a shorter budget. */
   timeoutMs?: number;
+  /** GATE_SSR_TRACE=1 only — step names + ms, no paths with secrets. */
+  trace?: GateSsrTrace;
 };
 
 export async function forwardWithBearer(
@@ -134,6 +137,8 @@ export async function forwardWithBearer(
   options: ForwardWithBearerOptions = {},
 ): Promise<Response> {
   const timeoutMs = options.timeoutMs ?? 20_000;
+  const trace = options.trace;
+  trace?.mark('forward_with_bearer_start');
   if (!isOidcConfigured()) {
     return bffApiError(
       IDENTITY_ERROR_CODES.OIDC_MISCONFIGURED,
@@ -144,29 +149,37 @@ export async function forwardWithBearer(
 
   let token = await readAccessToken();
   if (!token) {
-    const refreshed = await refreshWebAccessToken();
+    trace?.mark('forward_refresh_missing_access');
+    const refreshed = await refreshWebAccessToken(trace);
     if (!refreshed.ok) {
+      trace?.mark(`forward_refresh_fail_${refreshed.reason}`);
       return refreshFailureResponse(refreshed.reason);
     }
     token = refreshed.accessToken;
   }
 
+  trace?.mark('forward_upstream_fetch');
   let response = await fetchWithBearer(pathAndQuery, token, init, timeoutMs);
+  trace?.mark(`forward_upstream_status_${response.status}`);
   if (response.status !== 401) return response;
 
-  const refreshed = await refreshWebAccessToken();
+  trace?.mark('forward_refresh_401');
+  const refreshed = await refreshWebAccessToken(trace);
   if (!refreshed.ok) {
+    trace?.mark(`forward_refresh_401_fail_${refreshed.reason}`);
     if (refreshed.reason === 'network') {
       return refreshFailureResponse('network');
     }
     await clearSessionCookies();
     return refreshFailureResponse(refreshed.reason);
   }
+  trace?.mark('forward_upstream_fetch_retry');
   response = await fetchWithBearer(
     pathAndQuery,
     refreshed.accessToken,
     init,
     timeoutMs,
   );
+  trace?.mark(`forward_upstream_retry_status_${response.status}`);
   return response;
 }
