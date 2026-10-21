@@ -9,6 +9,7 @@
 | Runner (retest 5 · final) | Sora · uat · Orca `term_a2b63072-751e-434a-9e29-d02a8b11cde4` · task `task_4860a2bdec4f` |
 | Runner (retest 6 · final · #678) | Sora · uat · Orca `term_3e682b0f-f0b2-4d7a-a7d5-b19dac7cbe2c` · task `task_4d6a462b3e30` |
 | Runner (retest 8 · final · #682) | Sora · uat · Orca `term_979a325c-f385-4112-a418-2b0138a64fc8` · task `task_e494c7591080` |
+| Runner (retest 11 · final · #711) | Sora · uat · Orca `term_357c8e77-8a70-4e91-946d-14f6d67e14f3` · task `task_19806b506854` |
 
 | Runner (retest 7 · final · E01/B06/#630) | Sora · uat · Orca `term_30236904-40dd-43f8-9364-0a8af943e34b` · task `task_8f6dc916df4e` |
 | Catalog | `docs/plans/PROD-LAUNCH-UAT.md` |
@@ -21,10 +22,50 @@
 | Ảnh | `apps/web/.uat-artifacts/prod-2026-10-21/` + retest `…/prod-2026-10-21-retest/` + retest3 `…/prod-2026-10-21-retest3/` + retest4 `…/prod-2026-10-21-retest4/` + retest5 `…/prod-2026-10-21-retest5/` + retest6 `…/prod-2026-10-21-retest6/` + retest8 `…/prod-2026-10-21-retest8/` |
 | Deploy baseline (retest 6) | `bfc03166b7e46399a5ea19b68bedaa6c8c1fca3b` (`main`, merge PR #678 deploy prod web) |
 | Deploy baseline (retest 8) | `0add1f6072d4e4b9b7b6b73f7b8ffb3baa7b0bb8` (`main`, merge PR #682 deploy prod web — fix gate loading) |
+| Deploy baseline (retest 11) | `9515c980db4185c8109fe648204036e3e0e56fb1` (`main`, merge PR #711 deploy prod web — E01 gate SSR audience OIDC) |
+| Ảnh (retest 11) | `apps/web/.uat-artifacts/prod-2026-10-21-retest11/` |
 
 ## Launch verdict
 
-**NO-GO** (retest 8 final @ `0add1f6`, 2026-10-21 ~15:45Z+08 — phạm vi web; H03 inbox và suite G/H01 máy thật **DEFERRED** riêng)
+**NO-GO** (retest 11 final @ `9515c98`, 2026-10-21 ~18:35Z+08 — phạm vi web; **P0 còn E01**; H03 inbox và suite G/H01 máy thật **DEFERRED** riêng)
+
+## Retest 11 (final)
+
+Phạm vi: sau deploy prod web **#711** (`9515c98` = merge `fix(web): E01 gate SSR — audience OIDC + chặn loop refresh`). Profile Orca tách: `retest11-staff` / `retest11-attendee` (`--scope isolated`). Tab staff `a367dd42…` (`/api/auth/login?return=/gate` → KC staff); attendee `39319b50…`; portal `33fd68af…`; redeem `6fe581ef…`. Chờ **335s** giữa đo E01 run5→run6 và song song attendee `/account` cho #630 (`630-wait-start.txt` / `630-wait-end.txt`). Không deploy/SSH ghi; một lần `curl` BFF public redeem.
+
+| ID | VP | Kết quả | Evidence |
+| --- | --- | --- | --- |
+| A01–A04 | http | **PASS** | `a01-a04-curl.txt` — marketing/portal/app `200`; BFF `401`; `/gate` không cookie `307` → `/auth?next=/gate` |
+| B04 | desktop | **PASS** (callback) / **FAIL** (paint) | Staff KC → URL `/gate`; nội dung «Đang tải…» không «Cổng check-in» trong cửa sổ đo |
+| E01 | desktop | **FAIL** | **5×** + **1×** sau 330s: `goto /gate` foreground — **20–34s** vẫn loading, không fail-closed — `e01-gate-timing-staff-profile.txt`, `e01-staff-gate-loading-retest11.png` |
+| E07 | desktop | **PASS** | Profile attendee: `/gate` → `/?notice=gate_denied` — `e07-url.json`, `e07-text.json` |
+| D02 | desktop | **FAIL** | `focus e11`+`Space` terms OK; `DEMO-MFEST-009` + checkbox `Space` → status «Thiếu phạm vi sự kiện» — `d02-redeem-final.json` (không cấp vé) |
+| E02–E05 | desktop | **BLOCKED** | Cổng staff kẹt loading (E01); không mutate |
+| B04 /admin | browser | **PASS** | `app.vemoki.com/admin` (staff) → `https://portal.vemoki.com/admin` — `admin-redirect-staff.json` |
+| C01–C04 | desktop | **PARTIAL** | Portal staff: shell + link «Mở cổng quét trên app» (`c01-portal-snapshot.json`); wizard onboarding chưa hoàn — không mở Members (C04) |
+| #630 | browser | **PASS** | Attendee `/account` trong phiên; sau `wait330_end` `location.reload()` → vẫn `/account` (trước E07) — `630-wait-*.txt` |
+| H03 | — | **DEFERRED** | Không hộp thư kiểm soát prod |
+
+**E01 timing (staff profile, giây → trạng thái cuối):**
+
+```text
+run1 33.58s FAIL_loading
+run2 34.11s FAIL_loading
+run3 34.25s FAIL_loading
+run4 34.16s FAIL_loading
+run5 34.09s FAIL_loading
+run6_after330s 20.73s FAIL_loading
+```
+
+**Mốc UTC (coordinator trace):** staff login callback ~`2026-10-21T10:24:45Z`; E01 runs `10:25:10Z`–`10:28:00Z`; wait330 `10:28:19Z`–`10:33:54Z`; run6 `10:34:04Z`–`10:34:24Z`; E07 gate_denied ~`10:34:27Z`; D02 redeem ~`10:35:30Z`+.
+
+**Retest 11 verdict (web):** **NO-GO** — Deploy **#711** **chưa** đạt E01 (≤5s tới form/fail-closed). **E07**, **#630**, `/admin`→portal OK. **D02** lỗi phạm vi sự kiện; **E02–E05** blocked. H03 / G / H01 máy thật **DEFERRED**.
+
+```text
+P0 (retest 11): E01, H03 (DEFERRED)
+P0 regress vs retest 8: E01 vẫn FAIL (thời gian đo khác do goto+poll); D02 FAIL (không redeem 009)
+DEFERRED: G01–G06, H01 (máy thật), H03 inbox
+```
 
 ## Retest 8 (final)
 
