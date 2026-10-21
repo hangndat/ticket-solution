@@ -22,9 +22,10 @@ const DEFAULT_SNAPSHOT: StaffEligibilitySnapshot = {
 
 export const staffDenyCopy = {
   title: 'Không có quyền Nhân viên',
-  body: 'Tài khoản này chưa được cấp quyền nhân viên. Tab Nhân viên đã ẩn. Liên hệ quản trị viên sự kiện nếu bạn cần quét cổng.',
+  body:
+    'Tài khoản này chưa được cấp quyền quét cổng. Liên hệ quản trị viên sự kiện nếu bạn cần hỗ trợ.',
   announcement:
-    'Không có quyền Nhân viên. Tab Nhân viên đã ẩn. Không cho vào khu vực staff.',
+    'Không có quyền nhân viên. Không thể mở khu vực quét cổng.',
 } as const;
 
 /**

@@ -16,20 +16,17 @@ import {
 import type { TicketSummary } from '@ticket/contracts';
 import { AttendeeCta } from '@/components/attendee-cta';
 import { EventLogo } from '@/components/event-media';
-import { BrandWordmark, Notice } from '@/components/page';
+import { Notice } from '@/components/page';
 import {
   EmptyState,
   ErrorState,
   LoadingState,
 } from '@/components/screen-state';
-import { eventsCopy, walletCopy } from '@/components/screen-state-copy';
+import { walletCopy } from '@/components/screen-state-copy';
 import {
   attendeeWalletCopy,
   presentTicketRow,
 } from '@/attendee/attendee-outcome-copy';
-import { goToAccount } from '@/navigation/go-to-account-sign-in';
-import { useWalletAccess } from '@/navigation/use-wallet-access';
-import { WalletAccessNotice } from '@/components/wallet-access-notice';
 import { TabStackTitle } from '@/navigation/tab-stack-title';
 import { hasDemoMediaForEventId } from '@/data/demo-media';
 import { brand, colors } from '@/theme/colors';
@@ -121,6 +118,31 @@ function WalletGroupedTicketList({
   );
 }
 
+function TicketStatusPill({ label }: { label: string }) {
+  return (
+    <View
+      style={{
+        alignSelf: 'flex-start',
+        backgroundColor: '#edf5ef',
+        borderRadius: 6,
+        paddingHorizontal: 8,
+        paddingVertical: 5,
+      }}
+    >
+      <Text
+        style={{
+          color: '#26734c',
+          fontSize: 11,
+          fontFamily: fontFamilies.bodySemiBold,
+          fontWeight: '600',
+        }}
+      >
+        {label}
+      </Text>
+    </View>
+  );
+}
+
 function TicketRow({ ticket }: { ticket: TicketSummary }) {
   const [focused, setFocused] = useState(false);
   const row = presentTicketRow(ticket);
@@ -132,18 +154,17 @@ function TicketRow({ ticket }: { ticket: TicketSummary }) {
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
         style={({ pressed }) => ({
-          padding: 16,
-          borderRadius: 14,
+          padding: 18,
+          borderRadius: 16,
           borderCurve: 'continuous',
           backgroundColor: colors.ticketCanvas,
-          borderLeftWidth: 4,
-          borderLeftColor: brand.signal,
-          borderWidth: focused ? 2 : 0,
-          borderColor: focused ? colors.focus : 'transparent',
+          borderWidth: focused ? 2 : 1,
+          borderColor: focused ? colors.focus : '#e1e6ed',
           opacity: pressed ? 0.85 : 1,
-          gap: 6,
+          gap: 10,
         })}
       >
+        <TicketStatusPill label={row.statusLabel} />
         {hasDemoMediaForEventId(ticket.eventId) ? (
           <EventLogo
             eventId={ticket.eventId}
@@ -162,6 +183,18 @@ function TicketRow({ ticket }: { ticket: TicketSummary }) {
         >
           {row.eventTitle}
         </Text>
+        {row.whenLine ? (
+          <Text
+            style={{
+              color: colors.secondary,
+              fontSize: 15,
+              fontFamily: fontFamilies.body,
+              lineHeight: 22,
+            }}
+          >
+            {row.whenLine}
+          </Text>
+        ) : null}
         <Text
           style={{
             color: brand.signal,
@@ -170,27 +203,7 @@ function TicketRow({ ticket }: { ticket: TicketSummary }) {
             fontWeight: '600',
           }}
         >
-          {row.statusLabel}
-        </Text>
-        <Text
-          style={{
-            color: colors.secondary,
-            fontSize: 13,
-            fontFamily: fontFamilies.body,
-          }}
-          selectable
-        >
-          {row.ticketId}
-        </Text>
-        <Text
-          style={{
-            color: colors.secondary,
-            fontSize: 12,
-            fontFamily: fontFamilies.body,
-          }}
-          selectable
-        >
-          {row.credentialLine}
+          {row.viewTicketCta}
         </Text>
       </Pressable>
     </Link>
@@ -198,7 +211,6 @@ function TicketRow({ ticket }: { ticket: TicketSummary }) {
 }
 
 export function MyTicketsScreen() {
-  const { canAccess } = useWalletAccess();
   const identity = useSyncExternalStore(
     session.subscribe,
     session.getSnapshot,
@@ -209,15 +221,6 @@ export function MyTicketsScreen() {
     offlineDisplay.getSnapshot,
     offlineDisplay.getSnapshot,
   );
-
-  if (!canAccess) {
-    return (
-      <>
-        <WalletAccessNotice />
-        <TabStackTitle title="Vé của tôi" />
-      </>
-    );
-  }
 
   if (identity.status === 'verified') {
     return <VerifiedWallet userId={identity.userId} />;
@@ -247,7 +250,6 @@ function OfflineDisplayWallet({
   tenantId: string;
 }) {
   const [tickets, setTickets] = useState<TicketSummary[]>([]);
-  const [syncedAt, setSyncedAt] = useState<string | null>(null);
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -260,14 +262,12 @@ function OfflineDisplayWallet({
         if (cancelled) return;
         if (!cache) {
           setTickets([]);
-          setSyncedAt(null);
           setError(
             'Có liên kết hiển thị offline nhưng không tìm thấy bộ đệm vé cho tài khoản này.',
           );
           return;
         }
         setTickets(cache.tickets);
-        setSyncedAt(cache.syncedAt);
         setError(null);
       } catch (err) {
         if (!cancelled) {
@@ -295,12 +295,7 @@ function OfflineDisplayWallet({
     >
       <Notice title={attendeeWalletCopy.offlineBannerTitle}>
         {attendeeWalletCopy.offlineBannerBody}
-        {'\n'}
-        Đồng bộ lần cuối: {syncedAt ?? '—'}
       </Notice>
-      <Text style={{ color: colors.secondary, fontSize: 13 }}>
-        Đang xem vé đã lưu trên thiết bị này.
-      </Text>
 
       {busy && tickets.length === 0 ? (
         <LoadingState title={walletCopy.loading.title}>
@@ -324,12 +319,6 @@ function OfflineDisplayWallet({
         </View>
       )}
 
-      <AttendeeCta
-        label={eventsCopy.goToAccountCta}
-        variant="secondary"
-        onPress={() => goToAccount()}
-        testID="wallet-cta-account-offline"
-      />
     </ScrollView>
     <TabStackTitle title="Vé của tôi" />
     </>
@@ -346,7 +335,6 @@ function VerifiedWallet({ userId }: { userId: string }) {
   const sessionScope = walletSessionScope(fetchScope);
   const cacheScope = walletDisplayCacheScope(fetchScope);
   const [tickets, setTickets] = useState<TicketSummary[]>([]);
-  const [syncedAt, setSyncedAt] = useState<string | null>(null);
   const [offline, setOffline] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -365,7 +353,6 @@ function VerifiedWallet({ userId }: { userId: string }) {
     });
     if (decision.action !== 'apply') return;
     setTickets(decision.tickets);
-    setSyncedAt(decision.syncedAt);
     setOffline(true);
     if (!session.isEpochCurrent(epoch)) return;
     await session.load(sessionScope, 'me-tickets', async () => decision.tickets);
@@ -444,7 +431,6 @@ function VerifiedWallet({ userId }: { userId: string }) {
 
       if (!session.isEpochCurrent(epoch)) return;
       setTickets(decision.tickets);
-      setSyncedAt(decision.syncedAt);
       setOffline(decision.offline);
       if (decision.action === 'offline-cache') {
         setError(decision.notice);
@@ -566,26 +552,11 @@ function VerifiedWallet({ userId }: { userId: string }) {
         <RefreshControl refreshing={refreshing} onRefresh={() => void onRefresh()} />
       }
     >
-      <BrandWordmark compact />
-      <Text
-        style={{
-          color: brand.ink,
-          fontSize: 17,
-          fontWeight: '600',
-          fontFamily: fontFamilies.bodySemiBold,
-        }}
-      >
-        {attendeeWalletCopy.verifiedCaption}
-      </Text>
       {offline ? (
         <Notice title={attendeeWalletCopy.offlineBannerTitle}>
           {attendeeWalletCopy.offlineBannerBody}
         </Notice>
       ) : null}
-      <Text style={{ color: colors.secondary, fontSize: 13, lineHeight: 20 }}>
-        Đồng bộ: {syncedAt ?? '—'}
-        {offline ? ' · bộ đệm offline' : ''}
-      </Text>
 
       {filterEventId ? (
         <View
@@ -682,22 +653,6 @@ function VerifiedWallet({ userId }: { userId: string }) {
           onPress={() => router.push('/redeem-global')}
         />
       ) : null}
-      <AttendeeCta
-        label="Làm mới vé"
-        onPress={() => void onRefresh()}
-        disabled={busy || refreshing}
-      />
-      <AttendeeCta
-        label={eventsCopy.goToAccountCta}
-        variant="secondary"
-        onPress={() => goToAccount()}
-        testID="wallet-cta-account-verified"
-      />
-
-      <Text style={{ color: colors.secondary, fontSize: 13, lineHeight: 18 }}>
-        Vé đã cache mở được khi mất mạng chỉ để xem. Không phải check-in offline;
-        cổng vẫn quyết định trên máy chủ. Đăng xuất và cài đặt tại Tài khoản.
-      </Text>
     </ScrollView>
     <TabStackTitle title="Vé của tôi" />
     </>
