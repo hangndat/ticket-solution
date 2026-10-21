@@ -5,7 +5,7 @@
 | Desktop 1280 | `docs/reviews/assets/slice-m-admin-desktop-1280-2026-10-21.png` |
 | Mobile 390 | `docs/reviews/assets/slice-m-admin-mobile-390-2026-10-21.png` |
 
-Base URL: `http://127.0.0.1:3099`
+Base URL: `http://localhost:3000`
 
 SoT mockup: `docs/plans/mobile-production-refactor/web-prototype.html` (admin sidebar, stats, table→card).
 

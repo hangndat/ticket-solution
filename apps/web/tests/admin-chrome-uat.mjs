@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
-const BASE = process.argv[2] || process.env.WEB_BASE_URL || 'http://127.0.0.1:3099';
+const BASE = process.argv[2] || process.env.WEB_BASE_URL || 'http://localhost:3000';
 const OUT = join(ROOT, 'docs/reviews/assets');
 const DATE = '2026-10-21';
 
