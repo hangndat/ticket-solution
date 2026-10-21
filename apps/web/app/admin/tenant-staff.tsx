@@ -400,29 +400,31 @@ export function TenantStaffPanel({ tenantId }: Props) {
             />
           ) : null}
           {membersLoad.kind === 'ok' ? (
-            <table className="staff-table">
-              <caption>Thành viên</caption>
-              <thead>
-                <tr>
-                  <th scope="col">Email / định danh</th>
-                  <th scope="col">Vai trò</th>
-                  <th scope="col">Trạng thái</th>
-                  <th scope="col">Mã thành viên</th>
-                </tr>
-              </thead>
-              <tbody>
-                {membersLoad.rows.map((row) => (
-                  <tr key={row.membershipId}>
-                    <td>{row.email}</td>
-                    <td>{row.role}</td>
-                    <td>{row.status}</td>
-                    <td>
-                      <code>{row.membershipId}</code>
-                    </td>
+            <div className="tablewrap">
+              <table className="admin-table staff-table">
+                <caption>Thành viên</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Email / định danh</th>
+                    <th scope="col">Vai trò</th>
+                    <th scope="col">Trạng thái</th>
+                    <th scope="col">Mã thành viên</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {membersLoad.rows.map((row) => (
+                    <tr key={row.membershipId}>
+                      <td data-label="Email / định danh">{row.email}</td>
+                      <td data-label="Vai trò">{row.role}</td>
+                      <td data-label="Trạng thái">{row.status}</td>
+                      <td data-label="Mã thành viên">
+                        <code>{row.membershipId}</code>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           ) : null}
         </div>
       ) : null}
@@ -443,27 +445,29 @@ export function TenantStaffPanel({ tenantId }: Props) {
             />
           ) : null}
           {invitesLoad.kind === 'ok' ? (
-            <table className="staff-table">
-              <caption>Lời mời</caption>
-              <thead>
-                <tr>
-                  <th scope="col">Email</th>
-                  <th scope="col">Vai trò</th>
-                  <th scope="col">Trạng thái</th>
-                  <th scope="col">Hết hạn</th>
-                </tr>
-              </thead>
-              <tbody>
-                {invitesLoad.rows.map((row) => (
-                  <tr key={row.inviteId}>
-                    <td>{row.email}</td>
-                    <td>{row.role}</td>
-                    <td>{row.status}</td>
-                    <td>{row.expiresAt ?? '—'}</td>
+            <div className="tablewrap">
+              <table className="admin-table staff-table">
+                <caption>Lời mời</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Email</th>
+                    <th scope="col">Vai trò</th>
+                    <th scope="col">Trạng thái</th>
+                    <th scope="col">Hết hạn</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {invitesLoad.rows.map((row) => (
+                    <tr key={row.inviteId}>
+                      <td data-label="Email">{row.email}</td>
+                      <td data-label="Vai trò">{row.role}</td>
+                      <td data-label="Trạng thái">{row.status}</td>
+                      <td data-label="Hết hạn">{row.expiresAt ?? '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           ) : null}
         </div>
       ) : null}
