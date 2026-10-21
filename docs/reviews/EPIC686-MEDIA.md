@@ -45,7 +45,7 @@ prod-media-verify PASS (16 files)
 
 ## SHA
 
-`315b725fe8e2` (branch `hangndat/epic686-prod-media-raster`)
+`bbcdf10ac607` (branch `hangndat/epic686-prod-media-raster`, PR #691)
 
 ## Limitations
 
