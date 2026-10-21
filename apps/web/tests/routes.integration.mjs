@@ -212,6 +212,16 @@ test('production routes isolate tenant content and reject unknown pairs', async 
     assert.ok(!gateHtml.includes('data-testid="gate-offline-shell"'));
     assert.ok(!gateHtml.includes('gate-confirm-submit'));
 
+    // Issue #1021: bogus Server Action probes → 400 at proxy (no use server in web).
+    for (const actionId of ['x', 'action', '0', '1']) {
+      const probe = await fetch(base + '/redeem', {
+        method: 'POST',
+        headers: { 'next-action': actionId },
+        body: '',
+      });
+      assert.equal(probe.status, 400, `next-action=${actionId}`);
+    }
+
     // Gate BFF: Origin missing must fail-closed before OIDC/upstream (admin pattern).
     const gateCsrfBlocked = await fetch(base + '/api/bff/gate/confirm', {
       method: 'POST',
