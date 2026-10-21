@@ -7,8 +7,11 @@ import {
   productOriginFromEnv,
 } from './src/marketing/hosts';
 import { decideAdminToPortalRedirect } from './src/portal/dual-run';
+import { isServerActionPost } from './src/security/server-action-edge';
 /** Keep literal — avoid importing next/headers via oidc/cookies in Edge proxy. */
 const OIDC_ACCESS_COOKIE = 'oidc_access_token';
+
+const SERVER_ACTION_PROBE_BODY = 'Server Actions are not enabled on this app.';
 
 function withRuntimeCsp(response: NextResponse): NextResponse {
   response.headers.set('Content-Security-Policy', contentSecurityPolicy());
@@ -23,6 +26,18 @@ function withRuntimeCsp(response: NextResponse): NextResponse {
  * ADR-20 §8: optional GET/HEAD /admin|/platform → PORTAL_ORIGIN (flag default OFF).
  */
 export default function proxy(request: NextRequest) {
+  if (
+    isServerActionPost({
+      method: request.method,
+      nextActionHeader: request.headers.get('next-action'),
+    })
+  ) {
+    return new NextResponse(SERVER_ACTION_PROBE_BODY, {
+      status: 400,
+      headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+    });
+  }
+
   const hostHeader =
     request.headers.get('x-forwarded-host') ?? request.headers.get('host');
   const { pathname, search } = request.nextUrl;
