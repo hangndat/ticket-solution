@@ -5,7 +5,9 @@ import {
   pathWithNotice,
   authNoticeFromParam,
 } from '../../src/oidc/auth-notice';
+import { clearSessionCookies } from '../../src/oidc/cookies';
 import { sanitizePostLoginPath } from '../../src/oidc/post-login';
+import { clearSsrRefreshAttempt } from '../../src/oidc/session-refresh';
 
 /**
  * Thin redirect stub — no guest product UI on `/auth` (UX-UI revamp / AC-S1).
@@ -44,6 +46,10 @@ export async function GET(request: NextRequest) {
   const noticeParam = searchParams.get('notice')?.trim() ?? '';
 
   if (oauthError) {
+    if (oauthError === 'session_rejected') {
+      await clearSessionCookies();
+      await clearSsrRefreshAttempt();
+    }
     return NextResponse.redirect(
       absolute(request, noticeLandingPath(returnPath, 'auth_failed')),
       307,
