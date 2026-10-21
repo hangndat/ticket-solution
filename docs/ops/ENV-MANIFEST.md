@@ -8,11 +8,13 @@ Nguồn mẫu: root `.env.example`, `apps/worker/.env.example`, Compose `compose
 
 | Biến | Bắt buộc prod | Dev/test | Ý nghĩa |
 | --- | --- | --- | --- |
-| `SMTP_URL` | Có (TLS/auth theo URL) | `smtp://127.0.0.1:1025` → Mailpit | Transport; **prod không fallback noop** |
+| `SMTP_URL` | Có (TLS/auth theo URL) | `smtp://127.0.0.1:1025` → Mailpit | Worker transport; **prod không fallback noop** |
 | `SMTP_FROM` | Có | `tickets@localhost` | Envelope/from hiển thị |
-| `MAILPIT_SMTP_PORT` / `MAILPIT_UI_PORT` | Không | `1025` / `8025` | Chỉ Compose Mailpit |
+| `MAILPIT_SMTP_PORT` / `MAILPIT_UI_PORT` | Không | `1025` / `8025` | Chỉ Compose Mailpit (local root `compose.yaml`) |
 
 Production thiếu SMTP → notification FAILED/PENDING/misconfigured rõ (N-BE). Mailpit **không** chứng minh delivery internet.
+
+**Keycloak (realm `ticket`):** không dùng `smtpServer` trong file import prod (`infra/keycloak/realm-ticket.prod.json`, `REALM_FILE=/opt/vemoki/realm-ticket.prod.json`). Cấu hình live cùng credential Porkbun với worker: `scripts/keycloak-prod-smtp-apply.sh` trên VPS (đọc `SMTP_URL` / `SMTP_FROM`, **không** in password). Dev local giữ Mailpit trong `infra/keycloak/realm-ticket.json`.
 
 ## 2. MinIO (ADR-14)
 
