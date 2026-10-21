@@ -14,6 +14,7 @@
 | [privacy-nutrition.md](./privacy-nutrition.md) | D13 S1-T1/T2 | Privacy Nutrition Labels + SDK inventory + policy URL |
 | [privacy-policy-draft.md](./privacy-policy-draft.md) | D13 S1-T1 | Bản draft privacy policy (canonical dài) |
 | [app-review-notes.md](./app-review-notes.md) | D13 S3-T3 | App Review notes + tài khoản demo (O06) |
+| [testflight-test-information.md](./testflight-test-information.md) | D13 TestFlight prep | Beta description, What to Test (EN/VI), external group checklist — **chưa submit** Beta App Review |
 | [D13-BA-PRIVACY-ELIGIBILITY.md](../reviews/D13-BA-PRIVACY-ELIGIBILITY.md) | BA evidence | Exact SHA + Apple guideline URLs + findings mở |
 
 ## Ràng buộc
@@ -32,4 +33,5 @@
 4. Archive local Distribution + TestFlight upload (S4 — không EAS Cloud).  
 5. Sửa copy in-app account-deletion còn nói “O06 chưa chốt” (S5-T1 — `apps/mobile`, ngoài BA).  
 6. Provision demo reviewer trên prod IdP — paste ASC only (S5-T2).  
-7. Territory user chốt (đề xuất VN).  
+7. Điền TestFlight Test Information + external group prep — [testflight-test-information.md](./testflight-test-information.md); **Submit for Beta App Review** chỉ sau user duyệt.  
+8. Territory user chốt (đề xuất VN).  

@@ -370,9 +370,9 @@ function VerifiedWallet({ userId }: { userId: string }) {
     if (!epoch || epoch.userId !== userId) return;
 
     setError(null);
-    const bearer = await session.getCredential();
+    const credential = await session.resolveCredential();
     if (!session.isEpochCurrent(epoch)) return;
-    if (!bearer) {
+    if (credential.status === 'unavailable') {
       setError('Phiên đăng nhập không còn hiệu lực. Đăng nhập lại.');
       return;
     }
@@ -382,8 +382,16 @@ function VerifiedWallet({ userId }: { userId: string }) {
     // by bindAfterOnlineVerify defaulting to a post-logout gate.current().
     const writeEpoch = currentTicketDisplayWriteEpoch();
     const bindingEpoch = captureOfflineBindingEpoch();
+    const credentialRefreshUnreachable =
+      credential.status === 'refresh-unreachable';
     try {
-      const probe = await probeMeTickets(bearer, fetchScope, controller.signal);
+      const probe = credentialRefreshUnreachable
+        ? ({ status: 'unreachable' } as const)
+        : await probeMeTickets(
+            credential.accessToken,
+            fetchScope,
+            controller.signal,
+          );
       if (!session.isEpochCurrent(epoch)) return;
 
       const cached =
@@ -398,6 +406,7 @@ function VerifiedWallet({ userId }: { userId: string }) {
         probe,
         cached,
         expectedUserId: userId,
+        credentialRefreshUnreachable,
       });
 
       if (decision.action === 'stale') return;
