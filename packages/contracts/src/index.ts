@@ -687,6 +687,16 @@ export interface TenantBrandingUpdateBody {
   expectedVersion: number;
 }
 
+/** Public chrome — GET /v1/public/tenants/{slug}/branding */
+export interface PublicTenantBranding {
+  tenantSlug: string;
+  displayName: string;
+  primaryColor: string;
+  secondaryColor: string | null;
+  logoAssetId: string | null;
+  logoUrl?: string;
+}
+
 /** Built-in enum or named server preset (P2-ROLES-PRESET / ADR §7.3). */
 export type InviteRoleRef = MembershipRole | { presetId: string };
 

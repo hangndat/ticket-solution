@@ -165,18 +165,20 @@ function readyKey(tenantId, eventId, assetId, extension) {
   return `tenants/${tenantId}/events/${eventId}/assets/ready/${assetId}.${extension}`;
 }
 
+function tenantReadyKey(tenantId, assetId, extension) {
+  return `tenants/${tenantId}/assets/ready/${assetId}.${extension}`;
+}
+
 function buildPlan(manifest) {
   /** @type {{ key: string, source: string, contentType: string, role: string, sha256: string }[]} */
   const objects = [];
   const seen = new Set();
 
   for (const tenant of manifest.tenants) {
-    const anchorEventId = tenant.events[0]?.eventId ?? null;
-    const orgLogo = tenant.tenantBrand?.logo;
-    if (orgLogo && anchorEventId) {
-      const key = readyKey(
+    const orgLogo = tenant.logo ?? tenant.tenantBrand?.logo;
+    if (orgLogo) {
+      const key = tenantReadyKey(
         tenant.tenantId,
-        anchorEventId,
         orgLogo.assetId,
         orgLogo.extension,
       );
