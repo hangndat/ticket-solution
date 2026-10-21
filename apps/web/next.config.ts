@@ -2,6 +2,11 @@ import type { NextConfig } from 'next';
 
 /**
  * Web app CSP (ADR-20): aligned with apps/portal — no AntD, same connect-src env.
+ *
+ * Issue #653: nonce-based script CSP is not enabled here — Next 16 still injects
+ * inline hydration scripts unless every route wires per-request nonces through
+ * `proxy.ts` + root layout; dropping `'unsafe-inline'` breaks the app. See
+ * `tests/csp-nonce-feasibility.test.ts`.
  */
 export function contentSecurityPolicy(): string {
   const dev = process.env.NODE_ENV === 'development';
