@@ -304,6 +304,7 @@ test('event tap uses published route — never fixture path', async () => {
         status: 'ok',
         event: {
           id: EVENT,
+          tenantId: '22222222-2222-4222-8222-222222222222',
           tenantSlug: 'acme',
           slug: 'spring-fest',
           name: 'Spring',

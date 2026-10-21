@@ -19,6 +19,7 @@ function mockFetch(
 
 const sampleDetail: PublishedEventDetail = {
   id: '11111111-1111-1111-1111-111111111111',
+  tenantId: '22222222-2222-4222-8222-222222222222',
   tenantSlug: 'acme',
   slug: 'spring-fest',
   name: 'Spring Fest',

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import {
   isApiUnreachableResult,
   readBrowserOnline,
@@ -26,6 +26,12 @@ import {
 import { fetchJson } from '../../src/redeem/fetch-json';
 import { REQUEST_TIMEOUT_MS } from '../../src/redeem/poll-operation';
 import { liveRegionForStatus } from '../../src/ui/live-region';
+import {
+  GateScopeBar,
+  GateTabNav,
+  gateTabTitle,
+  type GateTab,
+} from './gate-chrome';
 import { GateOfflineBanner } from './offline-banner';
 
 type Props = {
@@ -39,7 +45,25 @@ type Hold = {
   ticketId: string;
 };
 
+type HistoryRow = KnownCheckin & { recordedAt: string };
+
+const HISTORY_PAGE = 5;
+
+function formatHistoryTime(iso: string): string {
+  try {
+    return new Intl.DateTimeFormat('vi-VN', {
+      hour: '2-digit',
+      minute: '2-digit',
+      day: '2-digit',
+      month: '2-digit',
+    }).format(new Date(iso));
+  } catch {
+    return iso;
+  }
+}
+
 export function GateForm({ initialTenantId = '', initialEventId = '' }: Props) {
+  const [tab, setTab] = useState<GateTab>('scan');
   const [tenantId, setTenantId] = useState(initialTenantId);
   const [eventId, setEventId] = useState(initialEventId);
   const [ticketId, setTicketId] = useState('');
@@ -48,17 +72,33 @@ export function GateForm({ initialTenantId = '', initialEventId = '' }: Props) {
   const [hold, setHold] = useState<Hold | null>(null);
   const [busy, setBusy] = useState(false);
   const [decision, setDecision] = useState<GateDecision | null>(null);
-  const [notes, setNotes] = useState<KnownCheckin[]>([]);
+  const [notes, setNotes] = useState<HistoryRow[]>([]);
+  const [historyVisible, setHistoryVisible] = useState(HISTORY_PAGE);
+  const [historyFilter, setHistoryFilter] = useState('');
   const [browserOnline, setBrowserOnline] = useState(true);
   const [apiUnreachable, setApiUnreachable] = useState(false);
 
   const link: GateLinkState = resolveGateLinkState({ browserOnline, apiUnreachable });
-  /** Fail-closed: block mutate while offline or API unreachable (AC-G4). */
   const actionsBlocked = link !== 'online';
   const outcome = presentGateDecision(decision);
   const outcomeLive = liveRegionForStatus(
     outcome.assertive || outcome.kind === 'unknown' ? 'unknown' : 'idle',
   );
+  const tabCopy = gateTabTitle(tab);
+
+  const filteredHistory = useMemo(() => {
+    const q = historyFilter.trim().toLowerCase();
+    if (!q) return notes;
+    return notes.filter(
+      (row) =>
+        row.ticketId.toLowerCase().includes(q) ||
+        row.checkinId.toLowerCase().includes(q) ||
+        row.message.toLowerCase().includes(q),
+    );
+  }, [historyFilter, notes]);
+
+  const visibleHistory = filteredHistory.slice(0, historyVisible);
+  const historyExhausted = historyVisible >= filteredHistory.length;
 
   useEffect(() => {
     function syncBrowser() {
@@ -100,7 +140,6 @@ export function GateForm({ initialTenantId = '', initialEventId = '' }: Props) {
     return false;
   }
 
-  /** Fail-closed guard before mutating Gate calls. */
   function guardBeforeMutate(): boolean {
     if (!readBrowserOnline()) {
       setBrowserOnline(false);
@@ -123,6 +162,13 @@ export function GateForm({ initialTenantId = '', initialEventId = '' }: Props) {
     setDecision(null);
   }
 
+  function pushHistory(next: KnownCheckin) {
+    setNotes((current) => [
+      { ...next, recordedAt: new Date().toISOString() },
+      ...current.filter((note) => note.ticketId !== next.ticketId),
+    ]);
+  }
+
   async function openSession(event: FormEvent) {
     event.preventDefault();
     if (!guardBeforeMutate()) return;
@@ -139,7 +185,6 @@ export function GateForm({ initialTenantId = '', initialEventId = '' }: Props) {
       const body = result.json as { sessionId?: string; code?: string; message?: string } | null;
       if ((result.status === 200 || result.status === 201) && body?.sessionId) {
         setSessionId(body.sessionId);
-        // Session ready ≠ admit/deny — keep idle outcome («Chờ mã vé»).
         setDecision(null);
         return;
       }
@@ -208,10 +253,11 @@ export function GateForm({ initialTenantId = '', initialEventId = '' }: Props) {
       const next = decideGateConfirm(confirmed);
       setDecision(next);
       if (next.kind === 'admit' && next.checkinId) {
-        setNotes((current) => [
-          { ticketId: next.ticketId, checkinId: next.checkinId, message: next.message },
-          ...current.filter((note) => note.ticketId !== next.ticketId),
-        ]);
+        pushHistory({
+          ticketId: next.ticketId,
+          checkinId: next.checkinId,
+          message: next.message,
+        });
       }
     } finally {
       setBusy(false);
@@ -223,165 +269,338 @@ export function GateForm({ initialTenantId = '', initialEventId = '' }: Props) {
     setDecision(lookupKnownCheckin(notes, lookupId.trim()));
   }
 
-  return (
-    <>
-      <GateOfflineBanner link={link} />
+  function goManualTab() {
+    setTab('manual');
+  }
 
-      <section
-        className="gate-context"
-        data-testid="gate-context"
-        data-link={link}
-        aria-label="Ngữ cảnh cổng"
+  const decisionPanel =
+    decision ? (
+      <aside
+        role={outcomeLive.role}
+        aria-live={outcomeLive.ariaLive}
+        aria-atomic={outcomeLive.ariaAtomic}
+        data-outcome={decision.kind}
+        data-outcome-view={outcome.kind}
+        data-tone={outcome.tone}
+        data-testid="gate-decision"
+        className={
+          outcome.tone === 'admit'
+            ? 'redeem-status redeem-status--success gate-status--admit gate-toast'
+            : outcome.tone === 'deny'
+              ? 'redeem-status redeem-status--denied gate-status--deny gate-toast gate-toast--warn'
+              : 'redeem-status redeem-status--unknown state-unknown gate-toast gate-toast--warn'
+        }
       >
-        <p className="gate-context__eyebrow">Ngữ cảnh cổng</p>
-        <dl className="gate-context__meta">
-          <div>
-            <dt>Kết nối</dt>
-            <dd data-testid="gate-connectivity">{connectivityLabel(link)}</dd>
+        <h2>{outcome.title}</h2>
+        <p>{outcome.detail}</p>
+        {decision.kind === 'admit' && decision.checkinId ? (
+          <p>
+            Check-in <code>{decision.checkinId}</code>
+          </p>
+        ) : null}
+        {decision.kind === 'deny' ? (
+          <p>
+            Mã lỗi: <code>{decision.code}</code>
+          </p>
+        ) : null}
+        {outcome.kind === 'unknown' ? (
+          <p data-testid="gate-reconcile-hint">
+            Kết quả chưa rõ — không cho khách qua. Đối soát trước khi quyết định.
+          </p>
+        ) : null}
+      </aside>
+    ) : (
+      <aside
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        data-testid="gate-decision-idle"
+        className="redeem-status state-empty gate-toast gate-toast--idle"
+      >
+        <h2>{outcome.title}</h2>
+        <p>{outcome.detail}</p>
+      </aside>
+    );
+
+  return (
+    <div className="gate-workspace" data-testid="gate-workspace">
+      <GateOfflineBanner link={link} />
+      <GateScopeBar
+        eventId={eventId}
+        tenantId={tenantId}
+        link={link}
+        hasSession={Boolean(sessionId)}
+      />
+      <GateTabNav active={tab} onChange={setTab} />
+
+      <header className="gate-heading">
+        <h2 id={`gate-panel-${tab}-title`}>{tabCopy.title}</h2>
+        <p>{tabCopy.lead}</p>
+      </header>
+
+      {tab === 'scan' ? (
+        <section
+          id="gate-panel-scan"
+          role="tabpanel"
+          aria-labelledby="gate-tab-scan gate-panel-scan-title"
+          className="gate-panel"
+          data-testid="gate-panel-scan"
+        >
+          <div className="gate-cols">
+            <div className="gate-camera" aria-hidden="true">
+              <div className="gate-camera__frame">
+                <span className="gate-camera__line" />
+                <span className="gate-camera__hint">Đưa QR vào khung</span>
+              </div>
+            </div>
+            <aside className="gate-sidebox">
+              <h3>Camera quét vé</h3>
+              <p className="gate-sidebox__help">
+                Camera cần quyền truy cập và kết nối HTTPS. Cổng web hiện dùng nhập tay
+                qua API — không mô phòng quét trên trình duyệt này.
+              </p>
+              <button type="button" className="button button-secondary" onClick={goManualTab}>
+                Nhập mã vé
+              </button>
+            </aside>
           </div>
-          <div>
-            <dt>Sự kiện</dt>
-            <dd>
-              <code title={eventId || undefined}>{shortId(eventId)}</code>
-            </dd>
-          </div>
-          <div>
-            <dt>Tenant</dt>
-            <dd>
-              <code title={tenantId || undefined}>{shortId(tenantId)}</code>
-            </dd>
-          </div>
-          <div>
-            <dt>Phiên</dt>
-            <dd>
-              <code title={sessionId || undefined}>
-                {sessionId ? shortId(sessionId) : 'Chưa mở'}
-              </code>
-            </dd>
-          </div>
-        </dl>
-        <p className="gate-context__note">
-          Cổng web không xếp hàng offline. Khi mất mạng hãy dùng app Nhân viên.
-        </p>
-        {link === 'degraded' ? (
-          <button
-            type="button"
-            className="gate-retry-link"
-            data-testid="gate-retry-link"
-            onClick={clearUnreachable}
+          {decisionPanel}
+        </section>
+      ) : null}
+
+      {tab === 'manual' ? (
+        <section
+          id="gate-panel-manual"
+          role="tabpanel"
+          aria-labelledby="gate-tab-manual gate-panel-manual-title"
+          className="gate-panel"
+          data-testid="gate-panel-manual"
+        >
+          <section
+            className="gate-context"
+            data-testid="gate-context"
+            data-link={link}
+            aria-label="Ngữ cảnh cổng"
           >
-            Thử lại kết nối
-          </button>
-        ) : null}
-      </section>
+            <p className="gate-context__eyebrow">Ngữ cảnh cổng</p>
+            <dl className="gate-context__meta">
+              <div>
+                <dt>Kết nối</dt>
+                <dd data-testid="gate-connectivity">{connectivityLabel(link)}</dd>
+              </div>
+              <div>
+                <dt>Sự kiện</dt>
+                <dd>
+                  <code title={eventId || undefined}>{shortId(eventId)}</code>
+                </dd>
+              </div>
+              <div>
+                <dt>Tenant</dt>
+                <dd>
+                  <code title={tenantId || undefined}>{shortId(tenantId)}</code>
+                </dd>
+              </div>
+              <div>
+                <dt>Phiên</dt>
+                <dd>
+                  <code title={sessionId || undefined}>
+                    {sessionId ? shortId(sessionId) : 'Chưa mở'}
+                  </code>
+                </dd>
+              </div>
+            </dl>
+            <p className="gate-context__note">
+              Cổng web không xếp hàng offline. Khi mất mạng hãy dùng app Nhân viên.
+            </p>
+            {link === 'degraded' ? (
+              <button
+                type="button"
+                className="gate-retry-link button button-secondary"
+                data-testid="gate-retry-link"
+                onClick={clearUnreachable}
+              >
+                Thử lại kết nối
+              </button>
+            ) : null}
+          </section>
 
-      <form onSubmit={openSession}>
-        <label>
-          Tenant ID
-          <input value={tenantId} onChange={(e) => setTenantId(e.target.value)} required />
-        </label>
-        <label>
-          Event ID
-          <input value={eventId} onChange={(e) => setEventId(e.target.value)} required />
-        </label>
-        <button
-          type="submit"
-          disabled={busy || actionsBlocked}
-          data-testid="gate-session-submit"
+          <div className="gate-narrow">
+            <form className="gate-form-block" onSubmit={openSession}>
+              <h3 className="gate-form-block__title">Mở phiên cổng</h3>
+              <div className="gate-form-grid">
+                <label>
+                  Tenant ID
+                  <input
+                    value={tenantId}
+                    onChange={(e) => setTenantId(e.target.value)}
+                    required
+                    autoComplete="off"
+                  />
+                </label>
+                <label>
+                  Event ID
+                  <input
+                    value={eventId}
+                    onChange={(e) => setEventId(e.target.value)}
+                    required
+                    autoComplete="off"
+                  />
+                </label>
+              </div>
+              <button
+                type="submit"
+                className="button"
+                disabled={busy || actionsBlocked}
+                data-testid="gate-session-submit"
+              >
+                Mở phiên cổng
+              </button>
+              {sessionId ? (
+                <p className="gate-form-meta">
+                  Phiên: <code>{sessionId}</code>
+                </p>
+              ) : null}
+            </form>
+
+            <form className="gate-form-block" onSubmit={confirmEntry}>
+              <h3 className="gate-form-block__title">Kiểm tra vé</h3>
+              <label>
+                Mã vé (Ticket ID)
+                <input
+                  value={ticketId}
+                  onChange={(e) => setTicketId(e.target.value)}
+                  required
+                  autoComplete="off"
+                />
+              </label>
+              <button
+                type="submit"
+                className="button"
+                disabled={busy || !sessionId || actionsBlocked}
+                data-testid="gate-confirm-submit"
+                title={
+                  actionsBlocked
+                    ? 'Cổng offline/suy giảm — không check-in trên web'
+                    : undefined
+                }
+              >
+                Giữ chỗ và xác nhận
+              </button>
+              {hold ? (
+                <p className="gate-form-meta">
+                  Đang giữ reservation <code>{hold.reservationId}</code>
+                </p>
+              ) : null}
+            </form>
+          </div>
+
+          {decisionPanel}
+        </section>
+      ) : null}
+
+      {tab === 'history' ? (
+        <section
+          id="gate-panel-history"
+          role="tabpanel"
+          aria-labelledby="gate-tab-history gate-panel-history-title"
+          className="gate-panel"
+          data-testid="gate-panel-history"
         >
-          Mở phiên cổng
-        </button>
-        {sessionId ? (
-          <p>
-            Phiên: <code>{sessionId}</code>
-          </p>
-        ) : null}
-      </form>
+          <div className="gate-tools">
+            <label className="gate-tools__search">
+              <span className="visually-hidden">Tìm trong các lượt đã tải</span>
+              <input
+                type="search"
+                className="gate-search"
+                placeholder="Tìm trong các lượt đã tải"
+                value={historyFilter}
+                onChange={(e) => {
+                  setHistoryFilter(e.target.value);
+                  setHistoryVisible(HISTORY_PAGE);
+                }}
+                aria-label="Tìm lịch sử"
+              />
+            </label>
+          </div>
 
-      <form onSubmit={confirmEntry}>
-        <label>
-          Ticket ID
-          <input value={ticketId} onChange={(e) => setTicketId(e.target.value)} required />
-        </label>
-        <button
-          type="submit"
-          disabled={busy || !sessionId || actionsBlocked}
-          data-testid="gate-confirm-submit"
-          title={
-            actionsBlocked
-              ? 'Cổng offline/suy giảm — không check-in trên web'
-              : undefined
-          }
-        >
-          Giữ chỗ và xác nhận
-        </button>
-        {hold ? (
-          <p>
-            Đang giữ reservation <code>{hold.reservationId}</code>
-          </p>
-        ) : null}
-      </form>
+          {visibleHistory.length === 0 ? (
+            <p className="gate-history-empty" role="status">
+              Chưa có lượt check-in trên trình duyệt này.
+            </p>
+          ) : (
+            <div className="gate-tablewrap" data-testid="gate-history-table">
+              <table className="gate-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Thời gian</th>
+                    <th scope="col">Vé</th>
+                    <th scope="col">Kết quả</th>
+                    <th scope="col">Chi tiết</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {visibleHistory.map((row) => (
+                    <tr key={`${row.ticketId}-${row.checkinId}`}>
+                      <td data-label="Thời gian">{formatHistoryTime(row.recordedAt)}</td>
+                      <td data-label="Vé">
+                        <code title={row.ticketId}>{shortId(row.ticketId)}</code>
+                      </td>
+                      <td data-label="Kết quả">Được vào</td>
+                      <td data-label="Chi tiết">
+                        <button
+                          type="button"
+                          className="button-link"
+                          onClick={() => {
+                            setLookupId(row.ticketId);
+                            setDecision(lookupKnownCheckin(notes, row.ticketId));
+                          }}
+                        >
+                          Xem
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
 
-      <form onSubmit={lookup}>
-        <h2>Đối soát trên máy này</h2>
-        <p>
-          Chỉ hiện check-in API đã trả trên trình duyệt này. Không có mã thì không
-          cho qua — không phải hàng đợi offline.
-        </p>
-        <label>
-          Ticket ID cần tra
-          <input value={lookupId} onChange={(e) => setLookupId(e.target.value)} required />
-        </label>
-        <button type="submit">Đối soát</button>
-      </form>
+          <div className="gate-history-more">
+            {!historyExhausted && filteredHistory.length > 0 ? (
+              <button
+                type="button"
+                className="button button-secondary"
+                data-testid="gate-history-load-more"
+                onClick={() => setHistoryVisible((n) => n + HISTORY_PAGE)}
+              >
+                Tải thêm
+              </button>
+            ) : filteredHistory.length > 0 ? (
+              <p className="gate-history-end">Đã tải hết lịch sử trên máy này.</p>
+            ) : null}
+          </div>
 
-      {decision ? (
-        <aside
-          role={outcomeLive.role}
-          aria-live={outcomeLive.ariaLive}
-          aria-atomic={outcomeLive.ariaAtomic}
-          data-outcome={decision.kind}
-          data-outcome-view={outcome.kind}
-          data-tone={outcome.tone}
-          data-testid="gate-decision"
-          className={
-            outcome.tone === 'admit'
-              ? 'redeem-status redeem-status--success gate-status--admit'
-              : outcome.tone === 'deny'
-                ? 'redeem-status redeem-status--denied gate-status--deny'
-                : 'redeem-status redeem-status--unknown state-unknown'
-          }
-        >
-          <h2>{outcome.title}</h2>
-          <p>{outcome.detail}</p>
-          {decision.kind === 'admit' && decision.checkinId ? (
+          <form className="gate-narrow gate-reconcile" onSubmit={lookup}>
+            <h3>Đối soát trên máy này</h3>
             <p>
-              Check-in <code>{decision.checkinId}</code>
+              Chỉ hiện check-in API đã trả trên trình duyệt này. Không có mã thì không cho
+              qua — không phải hàng đợi offline.
             </p>
-          ) : null}
-          {decision.kind === 'deny' ? (
-            <p>
-              Mã lỗi: <code>{decision.code}</code>
-            </p>
-          ) : null}
-          {outcome.kind === 'unknown' ? (
-            <p data-testid="gate-reconcile-hint">
-              Kết quả chưa rõ — không cho khách qua. Đối soát trước khi quyết định.
-            </p>
-          ) : null}
-        </aside>
-      ) : (
-        <aside
-          role="status"
-          aria-live="polite"
-          aria-atomic="true"
-          data-testid="gate-decision-idle"
-          className="redeem-status state-empty"
-        >
-          <h2>{outcome.title}</h2>
-          <p>{outcome.detail}</p>
-        </aside>
-      )}
-    </>
+            <label>
+              Ticket ID cần tra
+              <input
+                value={lookupId}
+                onChange={(e) => setLookupId(e.target.value)}
+                required
+                autoComplete="off"
+              />
+            </label>
+            <button type="submit" className="button button-secondary">Đối soát</button>
+          </form>
+
+          {decisionPanel}
+        </section>
+      ) : null}
+    </div>
   );
 }
