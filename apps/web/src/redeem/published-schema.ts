@@ -1,4 +1,5 @@
 import type { FormDefinition, FormFieldType } from '@ticket/contracts';
+import { isUuid } from '../bff/ids';
 
 const FIELD_TYPES = new Set<FormFieldType>([
   'text',
@@ -16,6 +17,8 @@ export type PublishedTerms = {
 /** Subset of public published event needed for redeem form/terms. */
 export type PublishedRedeemSchema = {
   eventId: string;
+  /** From public projection when API exposes tenant scope (D02). */
+  tenantId?: string;
   form: FormDefinition | null;
   terms: PublishedTerms | null;
   schemaVersion: number;
@@ -90,8 +93,17 @@ export function parsePublishedRedeemSchema(
     };
   }
 
+  let tenantId: string | undefined;
+  if (value.tenantId !== undefined && value.tenantId !== null) {
+    if (typeof value.tenantId !== 'string' || !isUuid(value.tenantId)) {
+      return null;
+    }
+    tenantId = value.tenantId.trim();
+  }
+
   return {
     eventId: value.id,
+    tenantId,
     form,
     terms,
     schemaVersion: value.schemaVersion,
