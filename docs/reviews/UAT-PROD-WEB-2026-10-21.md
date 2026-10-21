@@ -9,6 +9,7 @@
 | Runner (retest 5 · final) | Sora · uat · Orca `term_a2b63072-751e-434a-9e29-d02a8b11cde4` · task `task_4860a2bdec4f` |
 | Runner (retest 6 · final · #678) | Sora · uat · Orca `term_3e682b0f-f0b2-4d7a-a7d5-b19dac7cbe2c` · task `task_4d6a462b3e30` |
 | Runner (retest 8 · final · #682) | Sora · uat · Orca `term_979a325c-f385-4112-a418-2b0138a64fc8` · task `task_e494c7591080` |
+| Runner (retest 12 · final · post pre-stack) | Sora · uat · Orca `term_b5819d93-9ed7-4be3-a1a4-b74e13a9a764` · task `task_2aa97c5a132c` |
 
 | Runner (retest 7 · final · E01/B06/#630) | Sora · uat · Orca `term_30236904-40dd-43f8-9364-0a8af943e34b` · task `task_8f6dc916df4e` |
 | Catalog | `docs/plans/PROD-LAUNCH-UAT.md` |
@@ -21,10 +22,78 @@
 | Ảnh | `apps/web/.uat-artifacts/prod-2026-10-21/` + retest `…/prod-2026-10-21-retest/` + retest3 `…/prod-2026-10-21-retest3/` + retest4 `…/prod-2026-10-21-retest4/` + retest5 `…/prod-2026-10-21-retest5/` + retest6 `…/prod-2026-10-21-retest6/` + retest8 `…/prod-2026-10-21-retest8/` |
 | Deploy baseline (retest 6) | `bfc03166b7e46399a5ea19b68bedaa6c8c1fca3b` (`main`, merge PR #678 deploy prod web) |
 | Deploy baseline (retest 8) | `0add1f6072d4e4b9b7b6b73f7b8ffb3baa7b0bb8` (`main`, merge PR #682 deploy prod web — fix gate loading) |
+| Deploy baseline (retest 12) | `9515c980db4185c8109fe648204036e3e0e56fb1` (`main`, merge PR #711 gate token + prod sau dọn `vemoki-pre-*`) |
+| Ảnh (retest 12) | `apps/web/.uat-artifacts/prod-2026-10-21-retest12/` |
 
 ## Launch verdict
 
-**NO-GO** (retest 8 final @ `0add1f6`, 2026-10-21 ~15:45Z+08 — phạm vi web; H03 inbox và suite G/H01 máy thật **DEFERRED** riêng)
+**NO-GO** (retest 12 final @ `9515c98`, 2026-10-21 ~19:45 UTC+8 — phạm vi web catalog A/B/C/D/E/I/J; H03 inbox và suite G/H01 máy thật **DEFERRED** riêng)
+
+## Retest 12 (final)
+
+Bối cảnh: stack staging `vemoki-pre-*` đã gỡ; alias Docker `api` trên `vemoki-web-1` chỉ còn prod (coordinator). `GATE_SSR_TRACE=1` vẫn bật trên prod (đọc log VPS, không SSH ghi). Profile Orca **isolated**: `retest12-portal` `8eb3f8cf…`, `retest12-staff` `ea802cb9…`, `retest12-attendee` `698a9a77…`, `retest12-b07` `792f62a5…`. Tab mới: portal `df8b5bac…`, staff `/gate` `08e33b24…`, attendee app `958f1337…`, redeem `87442ade…`, attendee portal B06 `2e55c642…`. Viewport desktop ~1440; mobile P0 `set viewport 390 844` (D06). SSH J: `conanphong` read-only. Không deploy/SSH ghi; không burst API (12× BFF public cuối phiên).
+
+| ID | VP | Kết quả | Evidence |
+| --- | --- | --- | --- |
+| A01 | http | **PASS** | marketing/portal/app/auth `200` — `a-http-suite.txt` |
+| A02 | http | **PASS** | portal BFF `/api/bff/me/subject` `401` |
+| A03 | http | **PASS** | app BFF `/api/bff/me` `401` |
+| A04 | http | **PASS** | `/gate` `307` → `/auth?next=/gate` — `a04-gate-headers.txt` |
+| A05 | http | **PASS** | `ancafe.anphong.vn` `200`; `dath.info` `200` — `a05-neighbors.txt` |
+| A06 | P1 | **PASS** | cert `notAfter=Jan 19 2027` — `a06-cert-dates.txt` |
+| B01 | desktop | **PASS** | Portal staff → shell (onboarding Aurora Night Org) tab `df8b5bac…` |
+| B02 | http | **PASS** | `ticket-admin-web`, scope `openid profile email`, PKCE S256, không `offline_access` — `b02-authorize.txt` |
+| B03 | browser | **PASS** | Callback portal sau KC → onboarding (không 502) |
+| B04 | desktop | **FAIL** | Staff `login?return=/gate` → URL `/gate` nhưng UI route «Đang tải…» (không «Cổng check-in» trong phiên) |
+| B05 | http | **PASS** | `ticket-web`, scope không `offline_access`, `audience=ticket-api` — `b05-authorize.txt` |
+| B06 | desktop | **PASS** | Profile attendee: portal → «Portal quản trị chỉ dành cho nhân sự» / link khách — tab `2e55c642…` |
+| B07 | desktop | **PASS** | Profile `retest12-b07`: sai mật khẩu → vẫn form KC `auth.vemoki.com` — tab `4a9065c4…` |
+| B08 | http | **PASS** | `GET /api/auth/logout` → `307` — `b08-logout-headers.txt` (không retest UI reload portal trong phiên) |
+| B09 | P1 | **NOT-RUN** | — |
+| B10 | desktop | **NOT-RUN** | — |
+| C01 | desktop | **PASS** | Staff session; copy Aurora Night Org ACTIVE trên onboarding |
+| C02 | desktop | **BLOCKED** | Onboarding chưa hoàn tất — chưa chọn event overview |
+| C03 | desktop | **PASS** | `href` nút «Mở cổng quét trên app» = `https://app.vemoki.com/gate` (không `127.0.0.1`) |
+| C04 | desktop | **BLOCKED** | Phụ thuộc shell sau onboarding |
+| C05–C07 | P1 | **NOT-RUN** | — |
+| C08 | P0 | **NOT-RUN** | — |
+| C09 | P1 | **NOT-RUN** | — |
+| D01 | desktop | **PASS** | Attendee home MFest listing — tab `958f1337…` |
+| D02 | desktop | **FAIL** | URL `https://app.vemoki.com/redeem?tenantSlug=mfest-demo&eventSlug=mfest`; đã login attendee; BFF public event `200` (1 lần); «Tải biểu mẫu» + `focus`/`Space` ≥14s vẫn «Chưa có biểu mẫu» — **không** thấy «Thiếu phạm vi sự kiện». Mã dự định `DEMO-MFEST-007` (chưa dùng 008/009). `d06-redeem-390.png` (viewport) |
+| D03 | desktop | **BLOCKED** | Phụ thuộc D02 |
+| D04 | desktop | **BLOCKED** | Phụ thuộc D02 |
+| D05 | http/browser | **PASS** | `/claim`, `/invite` `200` — `d05-claim-invite.txt` |
+| D06 | mobile 390 | **PASS** | `set viewport 390 844` + `d06-redeem-390.png` |
+| D07 | P1 | **NOT-RUN** | — |
+| E01 | desktop | **FAIL** | Staff tab `08e33b24…`: **5×** `goto /gate` (UTC trong `e01-gate-timing.txt`) — sau 25s poll vẫn «Đang tải…» (`FAIL_loading`/`TIMEOUT` ~42s/vòng); **không** ≤5s tới form/fail-closed. **+1×** sau chờ `#630` **335s**: `post-330s` **17.6s** vẫn `FAIL_loading`. |
+| E02–E05 | desktop | **BLOCKED** | Không load form cổng staff (E01) — không mutate phiên/check-in |
+| E06 | P1 | **NOT-RUN** | — |
+| E07 | desktop | **PASS** | Attendee `goto /gate` → `/?notice=gate_denied` |
+| #630 | browser | **PASS** | Attendee `/account`; chờ **335s** (`630-wait-log.txt`); `reload` → vẫn `/account`, `attendee@example.com` — `630-after.json` |
+| I01 | desktop | **PASS** | Staff → `/t/a0000000-0000-4000-8000-000000000099` «Không có quyền» |
+| I02 | http | **PASS** | `/api/bff/me/events` không cookie `401` — `i02-me-events.json` |
+| I03 | P1 | **PASS** | `/platform` «Không phải Platform Operator» |
+| I04 | P1 | **BLOCKED** | Không user operator demo |
+| J01 | ssh | **PASS** | `PRODUCT_ORIGIN=https://app.vemoki.com` — `j-ssh-output.txt` |
+| J02 | ssh | **PASS** | `OIDC_SCOPES=openid profile email` portal + web |
+| J03 | ssh | **PASS** | API `PLATFORM_INVITE_TTL_SECONDS`, `OIDC_AUDIENCE` (tên only) — `j-ssh-output.txt` |
+| J04 | ssh | **PASS** | `diff` compose VPS vs git @ `9515c98`: **không khác** (sha file VPS `a55f89ee…` vs git blob `c0749dac…` — nội dung khớp retest 6) — `j04-compose-diff.txt` |
+| J05 | P1 | **NOT-RUN** | — |
+| J06 | ssh | **PASS** | `proxy_buffer_size 32k` — `j-ssh-output.txt` |
+| H03 | — | **DEFERRED** | Không hộp thư kiểm soát prod |
+| Rate limit | http | **PASS** (mini) | 12× `GET /api/bff/public/tenants/mfest-demo/events/mfest` → `200` — `rate-limit-mini.txt` |
+
+**E01 timing (staff, giây → outcome):** xem `e01-gate-timing.txt` (5 vòng ~42s `TIMEOUT`/`FAIL_loading`; vòng `post-330s` 17.62s `FAIL_loading`).
+
+**Retest 12 verdict (web):** **NO-GO** — Sau dọn pre-stack, auth/BFF cạnh **PASS**; **E07** / **#630** / **B06** / redeem BFF public **OK**. P0 còn **E01** (staff `/gate` kẹt loading, không đạt ≤5s), **D02** (UI không tải biểu mẫu terms), **B04** (cùng gate loading). **E02–E05**, **D03–D04** **BLOCKED**. H03 / G / H01 máy thật **DEFERRED**.
+
+```text
+P0 FAIL: E01, D02, B04
+P0 BLOCKED: E02, E03, E04, E05, D03, D04, C02, C04, C08 (NOT-RUN)
+P0 DEFERRED: H03
+P1 NOT-RUN: B09, B10, C05–C07, C09, D07, E06, J05
+DEFERRED: G01–G06, H01 (máy thật)
+```
 
 ## Retest 8 (final)
 
