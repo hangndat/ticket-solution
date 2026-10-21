@@ -57,6 +57,7 @@ export async function exchangeRefresh(
     client_id: config.clientId,
     client_secret: config.clientSecret,
     refresh_token: refreshToken,
+    audience: config.audience,
   });
   try {
     const response = await fetch(tokenUrl, {

@@ -35,27 +35,26 @@ export async function hasSsrRefreshAttempt(): Promise<boolean> {
 
 /**
  * SSR guards: never call refreshWebAccessToken (Next forbids Set-Cookie in RSC).
- * Missing/stale access → refresh route when refresh cookie exists, else /auth.
+ * At most one GET /api/auth/refresh per attempt window, then /auth (no loop).
  */
-export async function redirectForSsrSessionRenewal(
-  nextPath: string,
-): Promise<void> {
-  const refresh = await readRefreshToken();
-  if (!refresh) {
-    redirect(`/auth?next=${encodeURIComponent(nextPath)}`);
-  }
-  redirect(sessionRefreshRoutePath(nextPath));
-}
-
-/**
- * Upstream returned 401 during SSR discovery — try refresh route once, then /auth.
- */
-export async function redirectForSsrDiscovery401(
-  nextPath: string,
-): Promise<void> {
+async function redirectToSsrRefreshRouteOnce(nextPath: string): Promise<void> {
   const refresh = await readRefreshToken();
   if (!refresh || (await hasSsrRefreshAttempt())) {
     redirect(`/auth?next=${encodeURIComponent(nextPath)}`);
   }
   redirect(sessionRefreshRoutePath(nextPath));
+}
+
+/** Missing/stale/wrong-audience access cookie. */
+export async function redirectForSsrSessionRenewal(
+  nextPath: string,
+): Promise<void> {
+  await redirectToSsrRefreshRouteOnce(nextPath);
+}
+
+/** Upstream returned 401 during SSR discovery. */
+export async function redirectForSsrDiscovery401(
+  nextPath: string,
+): Promise<void> {
+  await redirectToSsrRefreshRouteOnce(nextPath);
 }
