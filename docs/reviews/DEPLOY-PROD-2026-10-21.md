@@ -617,3 +617,74 @@ cp -a "$BACKUP/infra/deploy/compose.yaml" "$BACKUP/infra/deploy/README.md" /opt/
 ### Follow-up (repo)
 
 - PR docs artifact (mục này); không merge trong task deploy.
+
+---
+
+## Deploy #749 — `17cce6b` (APNs host fallback + sửa nhãn environment)
+
+| Field | Value |
+| --- | --- |
+| Source SHA | `17cce6b8264e27f228315db9283a3ad2e72a2156` (merge PR [#749](https://github.com/hangndat/ticket-solution/pull/749)) |
+| Prior prod marker | `81bd80499d6fbd573a35da7726da5fa49b1409a9` → updated `/opt/vemoki/deployed-sha.txt` |
+| VPS | `conanphong` → `/opt/vemoki/src` |
+| Rollback backup | `/opt/vemoki/backup/deploy-2026-10-21-17cce6b/` |
+| Operator | Gonic (Orca worker `task_549cfc5b2db6`) |
+| Scope | **api** + **worker** only (no migrate, nginx, keycloak, web, portal, compose change) |
+| Build log | `/opt/vemoki/deploy-749-17cce6b-build.log` |
+
+### Code paths
+
+| Path | Change |
+| --- | --- |
+| `packages/backend/src/apns.ts` | APNs alternate host khi token environment label lệch |
+| `packages/backend/src/device-tokens.ts`, `outbox.ts`, `index.ts` | wiring + relay |
+| `packages/backend/test/apns-env-fallback.test.cjs` | **new** |
+| `apps/api`, `apps/worker` | rsync (no functional diff ngoài dependency backend) |
+
+`packages/contracts` — **không** rsync (PR không đổi contracts).
+
+### Trước deploy #749
+
+| Check | Trước |
+| --- | --- |
+| `GET https://api.vemoki.com/v1/health` | 200, `status":"ok"` |
+| `GET https://api.vemoki.com/v1/public/events?limit=1` | 200 |
+| `GET https://app.vemoki.com/` | 200 |
+| `GET https://portal.vemoki.com/` | 200 |
+| `/opt/vemoki/deployed-sha.txt` | `81bd804…` |
+| `docker exec vemoki-worker-1 printenv APNS_ENABLED APNS_PRODUCTION` | `true` / `true` |
+| `docker exec vemoki-worker-1 printenv APNS_ENV_FALLBACK` | unset (mặc định bật fallback) |
+
+### Thực hiện #749
+
+1. Backup `packages/backend`, `apps/{api,worker}` → `deploy-2026-10-21-17cce6b/`.
+2. Rsync worktree paths (excludes deploy-prod skill); không `pnpm install` (lockfile không đổi).
+3. `vemoki-runtime:local`: `@ticket/backend` build → `@ticket/api` build → `docker compose restart api`.
+4. `@ticket/worker` build → `docker compose restart worker`.
+
+### Sau deploy #749
+
+| Check | Sau |
+| --- | --- |
+| `GET https://api.vemoki.com/v1/health` | 200, `status":"ok"` |
+| `GET https://api.vemoki.com/v1/public/events?limit=1` | 200 |
+| `GET https://app.vemoki.com/` | 200 |
+| `GET https://portal.vemoki.com/` | 200 |
+| `docker exec vemoki-worker-1 printenv APNS_ENABLED APNS_PRODUCTION` | `true` / `true` (giữ nguyên) |
+| `docker exec vemoki-worker-1 printenv APNS_ENV_FALLBACK` | unset (giữ mặc định) |
+| `vemoki-worker-1` | **Up**; banner `outbox email relay` trong log |
+| Worker log | Tiếp tục `KEYRING_MISSING` + `relay_exports` **42501** (đã biết); không lỗi APNs mới sau restart |
+
+### Rollback #749
+
+```bash
+BACKUP=/opt/vemoki/backup/deploy-2026-10-21-17cce6b
+rsync -a "$BACKUP/packages/backend/" /opt/vemoki/src/packages/backend/
+rsync -a "$BACKUP/apps/api/" /opt/vemoki/src/apps/api/
+rsync -a "$BACKUP/apps/worker/" /opt/vemoki/src/apps/worker/
+## rebuild backend → api → restart api; worker → restart worker per deploy-prod skill
+```
+
+### Follow-up (repo)
+
+- PR docs artifact (mục này); không merge trong task deploy.
