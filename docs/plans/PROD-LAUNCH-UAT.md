@@ -154,7 +154,7 @@ Build local, team `BLUA62D52G`, không EAS.
 
 | ID | P | Lớp | Các bước | Đúng |
 | --- | --- | --- | --- | --- |
-| H01 | **PASS** (sandbox) · production DEFERRED | physical | Push giao dịch tới máy đã cấp quyền | Trạng thái **DELIVERED** trên máy, không chỉ outbox `ACCEPTED`. Sandbox: ACCEPTED + DELIVERED trên Dexter iPhone 16 Pro, 2026-10-17: [D5-APNS-DEVICE-UAT-STATUS.md](../reviews/D5-APNS-DEVICE-UAT-STATUS.md). **Chưa** chứng minh push production (`aps-environment=production`) trên build 26; báo cáo Beta ghi «Push, iPad: chưa test» |
+| H01 | **PASS** (sandbox + production) | physical | Push giao dịch tới máy đã cấp quyền | Trạng thái **DELIVERED** trên máy, không chỉ outbox `ACCEPTED`. Sandbox: Dexter iPhone 16 Pro, 2026-10-17 ([D5-APNS-DEVICE-UAT-STATUS.md](../reviews/D5-APNS-DEVICE-UAT-STATUS.md)). **Production: DatHN iPhone, TestFlight 1.0.0 (26), 2026-10-21** — hai push thử qua endpoint production hiện trên máy (chủ dự án xác nhận). Phát hiện: build 26 đăng ký token production với nhãn `environment=sandbox` → server gửi sai host và thu hồi token; đã vá phía server (PR #749, deploy 17cce6b). Chưa chạy end-to-end qua outbox thật (cấp vé) để thấy nhãn DB tự sửa |
 | H02 | P1 | http | Mailpit/log worker | Chỉ chứng minh pipeline; **không** thay inbox thật |
 | H03 | P0 | — | Inbox thật (nếu launch gửi mail khách) | Có thư tới hộp kiểm soát, SPF/DKIM ghi nhận. Chưa có hộp kiểm soát → `BLOCKED`. **PASS 2026-10-21**: SPF/DKIM/DMARC pass, vào Hộp thư đến — xem mục H03 trong [UAT-PROD-WEB-2026-10-21.md](../reviews/UAT-PROD-WEB-2026-10-21.md) |
 
@@ -220,7 +220,7 @@ Cost tier worker: `standard`, model `composer-2.5`.
 Launch: NO-GO | GO
 P0: pass n / fail n / blocked n / not-run n
 P1 gaps: …
-Deferred: G04–G06 (máy thật) và H01 production. G01–G03 PASS (TestFlight build 26, 2026-10-21); H01 PASS trên sandbox (2026-10-17)
+Deferred: G04–G06 (máy thật). G01–G03 PASS (TestFlight build 26, 2026-10-21); H01 PASS (sandbox 2026-10-17, production 2026-10-21)
 Drift git↔VPS: có | không
 Catalog SHA: …
 Artifact: docs/reviews/PROD-LAUNCH-UAT-<date>.md
