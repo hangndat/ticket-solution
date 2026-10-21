@@ -281,6 +281,67 @@ rsync -a "$BACKUP/web/" /opt/vemoki/src/apps/web/
 
 ---
 
+## Deploy #707 — `8f4f70a` (web SSR `/api/auth/refresh` Route Handler)
+
+| Field | Value |
+| --- | --- |
+| Source SHA | `8f4f70af2a10df072693bfb26047efcea8d93db9` (merge PR [#707](https://github.com/hangndat/ticket-solution/pull/707)) |
+| Prior prod marker | `7af72d35e0d74ed695cbce97a82ff239ca633ca2` (deploy #703) → updated `/opt/vemoki/deployed-sha.txt` |
+| VPS | `conanphong` → `/opt/vemoki/src` |
+| Rollback backup | `/opt/vemoki/backup/deploy-2026-10-21-8f4f70a/` |
+| Operator | Gonic (Orca worker `task_806bc4a4aba2`) |
+| Scope | **web** only (no migrate, nginx, keycloak, api, worker, portal) |
+| Compose | Giữ `/opt/vemoki/compose.trace.override.yaml` (`GATE_SSR_TRACE=1`); restart web với `-f compose.yaml -f compose.trace.override.yaml` |
+| Build log | `/opt/vemoki/deploy-707-8f4f70a-web.log` |
+
+### Code paths
+
+| Path | Change |
+| --- | --- |
+| `apps/web/app/api/auth/refresh/route.ts` | **new** — GET refresh + cookie rotation (SSR-safe) |
+| `apps/web/app/gate/page.tsx` | redirect qua `/api/auth/refresh?next=/gate` khi stale access |
+| `apps/web/src/oidc/session-refresh.ts` | SSR refresh attempt markers |
+| `apps/web/tests/auth-refresh-route.test.ts` | **new** |
+
+### Trước deploy #707
+
+| Check | Trước |
+| --- | --- |
+| `GET https://app.vemoki.com/` | 200 |
+| `GET https://app.vemoki.com/api/bff/me` (no cookie) | **401** |
+| `GET https://app.vemoki.com/gate` (no cookie) | **307** |
+| `/opt/vemoki/deployed-sha.txt` | `7af72d35…` (#703) |
+
+### Thực hiện #707
+
+1. Backup `apps/web` → `deploy-2026-10-21-8f4f70a/web/`.
+2. Rsync worktree `apps/web` only (excludes deploy-prod skill); no lockfile / contracts change.
+3. `vemoki-runtime:local`: `@ticket/web` build → `docker compose` restart `web` (trace override file retained).
+
+### Sau deploy #707
+
+| Check | Sau |
+| --- | --- |
+| `GET https://app.vemoki.com/` | 200 |
+| `GET https://app.vemoki.com/api/bff/me` (no cookie) | **401** |
+| `GET https://app.vemoki.com/gate` (no cookie) | **307** |
+| `GET https://app.vemoki.com/api/auth/refresh?next=/gate` (no cookie) | **307** → `/auth?next=%2Fgate` (không 5xx) |
+| `GET …/api/auth/refresh?next=https://evil.com` | **307** → `/auth?next=%2F` (không redirect ra ngoài) |
+| `POST https://app.vemoki.com/redeem` + `next-action: x` | **400** (edge guard) |
+| `GET https://portal.vemoki.com/` | 200 |
+| `GET https://ancafe.anphong.vn/` | 200 |
+| `vemoki-web-1` logs (5m, sau probes) | `failed-to-find-server-action` count **0**; `[gate-ssr-trace]` expected (override) |
+
+### Rollback #707
+
+```bash
+BACKUP=/opt/vemoki/backup/deploy-2026-10-21-8f4f70a
+rsync -a "$BACKUP/web/" /opt/vemoki/src/apps/web/
+## rebuild @ticket/web per deploy-prod skill; restart web với trace override compose flags
+```
+
+---
+
 ## Deploy `1ba6647` (earlier 2026-10-21)
 
 | Field | Value |
