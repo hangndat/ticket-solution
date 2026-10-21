@@ -1,5 +1,5 @@
 ---
-description: "[coordinator-only] Orca coordinator continuous listen loop — check --wait forever while Dispatch live; drain/reply/release/idle-fill immediately; never end turn early"
+description: "[coordinator-only] Orca coordinator — listen khi Dispatch live, settle/cleanup đầy đủ; dừng khi scope xong hoặc chỉ còn task bị chặn"
 alwaysApply: false
 ---
 
@@ -30,6 +30,8 @@ worker-start (max fan-out ready)
 4. **Báo cáo user không thay vòng lặp:** có thể gửi progress ngắn giữa các checkpoint, nhưng **không kết thúc turn** nếu vẫn còn Dispatch live, delivery chưa ack, question chưa reply, hoặc reclaimable chờ release trong scope.
 
 ### Exit conditions (chỉ được dừng listen khi)
+
+Task bị ngắt review/fix theo [orca-review-convergence.mdc](./orca-review-convergence.mdc) không còn là task ready cho idle-fill. Hoàn tất chẩn đoán có giới hạn và checkpoint; nếu chỉ còn task bị chặn, không còn Dispatch live, delivery/question chưa xử lý hoặc reclaimable cần cleanup thì báo blocker và dừng chờ. Không chạy `check --wait` vô hạn chỉ để chờ quyết định mở lại; vẫn supervise các task độc lập đang chạy.
 
 - Mọi Dispatch expected trong Run/scope đã settle **và** `worker-list … --terminal-state reclaimable` (scope Run) trả về không còn mục cần quyết định, **và** không còn task ready được ủy quyền cần fill; hoặc
 - User / ủy quyền rõ ràng: dừng / pause / hủy Run; hoặc

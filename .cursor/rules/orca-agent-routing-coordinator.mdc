@@ -31,4 +31,4 @@ Ngừng dispatch Codex; thu checkpoint (git/diff/logs); spawn Cursor replacement
 
 ## Review + merge
 
-`PASS` → merge khi ủy quyền + CI + gates. `FAIL` → `Đang làm` hoặc giữ `Chờ duyệt`. WIP backpressure: `github-project-tracking-coordinator.mdc`.
+Trước giao review/fix: **Read** [orca-review-convergence.mdc](./orca-review-convergence.mdc); khôi phục bảng findings và bộ đếm theo Issue. `PASS` → merge khi ủy quyền + CI + gates. `FAIL` → phân loại nguyên nhân; còn lượt và không bị ngắt thì giao batch fix (`Đang làm`), chờ xác minh thì `Chờ duyệt`; bị ngắt/hết lượt → `Bị chặn` + chẩn đoán có giới hạn. Không mặc định respawn fix. WIP backpressure: `github-project-tracking-coordinator.mdc`.
