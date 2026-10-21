@@ -30,13 +30,19 @@ export type NavCapabilities = {
 
 /** Guest / deny-by-default chrome — never include staff routes. */
 export const GUEST_NAV_LINKS: NavLink[] = [
+  { href: '/', label: 'Sự kiện', testId: 'nav-events' },
+  { href: '/redeem', label: 'Đổi mã', testId: 'nav-redeem' },
+  {
+    href: '/api/auth/login?return=/account',
+    label: 'Tài khoản',
+    testId: 'nav-account',
+  },
+];
+
+const PRODUCT_NAV_LINKS: NavLink[] = [
+  { href: '/', label: 'Sự kiện', testId: 'nav-events' },
   { href: '/redeem', label: 'Đổi mã', testId: 'nav-redeem' },
   { href: '/claim', label: 'Nhận lời mời', testId: 'nav-claim' },
-  {
-    href: '/api/auth/login?return=/',
-    label: 'Đăng nhập',
-    testId: 'nav-auth',
-  },
 ];
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -200,10 +206,7 @@ export function deriveNavCapabilities(input: {
 export function buildNavLinks(caps: NavCapabilities): NavLink[] {
   if (!caps.authenticated) return [...GUEST_NAV_LINKS];
 
-  const links: NavLink[] = [
-    { href: '/redeem', label: 'Đổi mã', testId: 'nav-redeem' },
-    { href: '/claim', label: 'Nhận lời mời', testId: 'nav-claim' },
-  ];
+  const links: NavLink[] = [...PRODUCT_NAV_LINKS];
   if (caps.showAdmin) {
     links.push({ href: '/admin', label: 'Sự kiện', testId: 'nav-admin' });
   }
