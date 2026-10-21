@@ -48,6 +48,17 @@ export function logWorkerTickStepError(
   );
 }
 
+export function logWorkerTickStepStillRunning(step: WorkerTickStep): void {
+  console.warn(
+    JSON.stringify({
+      level: 'warn',
+      component: 'worker',
+      event: 'tick_step_still_running',
+      step,
+    }),
+  );
+}
+
 export function logWorkerTickSkipped(reason: 'reentrant'): void {
   console.warn(
     JSON.stringify({
