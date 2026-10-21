@@ -34,17 +34,20 @@ export default async function Admin({ searchParams }: Props) {
   const bannerQs = bannerSearch.toString();
 
   return (
-    <main id="main" className="container shell redeem-page">
+    <main id="main" className="container shell admin-page">
       <SiteNav />
       <DualRunBanner
         surface="admin"
         search={bannerQs ? `?${bannerQs}` : undefined}
       />
-      <h1>Không gian quản trị sự kiện</h1>
-      <p className="intro">
-        Chọn tổ chức và sự kiện, rồi làm theo việc. Kết quả chưa rõ không coi
-        là thành công.
-      </p>
+      <header className="admin-page-header">
+        <p className="eyebrow">Quản trị tổ chức</p>
+        <h1>Tổng quan quản trị</h1>
+        <p className="intro admin-page-header__intro">
+          Chọn tổ chức và sự kiện, rồi làm theo việc. Kết quả chưa rõ không coi
+          là thành công.
+        </p>
+      </header>
       {!configured ? (
         <aside className="notice auth-unconfigured state-error" role="status">
           <h2>Cần cấu hình đăng nhập</h2>
@@ -71,8 +74,8 @@ export default async function Admin({ searchParams }: Props) {
           initialEventId={params.eventId?.trim() ?? ''}
         />
       </div>
-      <p>
-        <Link href="/">← Trang chủ</Link>
+      <p className="admin-page-back">
+        <Link href="/" className="textlink">← Trang chủ</Link>
       </p>
     </main>
   );
