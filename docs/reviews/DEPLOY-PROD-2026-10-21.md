@@ -210,6 +210,77 @@ rsync -a "$BACKUP/web/" /opt/vemoki/src/apps/web/
 
 ---
 
+## Deploy #682 — `0add1f6` (web `/gate` SSR discovery via forwardWithBearer)
+
+| Field | Value |
+| --- | --- |
+| Source SHA | `0add1f6072d4e4b9b7b6b73f7b8ffb3baa7b0bb8` (merge PR [#682](https://github.com/hangndat/ticket-solution/pull/682)) |
+| Prior prod marker | `bfc03166b7e46399a5ea19b68bedaa6c8c1fca3b` → updated `/opt/vemoki/deployed-sha.txt` |
+| VPS | `conanphong` → `/opt/vemoki/src` |
+| Rollback backup | `/opt/vemoki/backup/deploy-2026-10-21-f01730a/` (snapshot trước rsync; main tip `f01730a`) |
+| Operator | Gonic (Orca worker `task_bc64b07f1ae4`) |
+| Scope | **web** only (no migrate, nginx, keycloak, api, worker, portal) |
+| Build log | `/opt/vemoki/deploy-682-f01730a-web.log` |
+
+### Code paths
+
+| Path | Change |
+| --- | --- |
+| `apps/web/app/admin/page.tsx` | staff route loading |
+| `apps/web/app/gate/page.tsx` | gate SSR loading |
+| `apps/web/src/bff/upstream.ts` | `forwardWithBearer` discovery |
+| `apps/web/src/nav/staff-route-guard.ts` | gate/admin guard |
+| `apps/web/tests/staff-route-guard.test.ts` | **new** |
+
+### Trước deploy #682
+
+| Check | Trước |
+| --- | --- |
+| `GET https://app.vemoki.com/` | 200 |
+| `GET https://app.vemoki.com/api/bff/me` (no cookie) | **401** |
+| `GET https://app.vemoki.com/gate` (no cookie) | **307** |
+| `/opt/vemoki/deployed-sha.txt` | `bfc0316…` |
+
+### Thực hiện #682
+
+1. Backup `apps/web` → `deploy-2026-10-21-f01730a/web/`.
+2. Rsync worktree `apps/web` only (excludes deploy-prod skill); no lockfile / contracts change.
+3. `vemoki-runtime:local`: `@ticket/web` build → `docker compose restart web`.
+
+### Sau deploy #682
+
+| Check | Sau |
+| --- | --- |
+| `GET https://app.vemoki.com/` | 200 |
+| `GET https://app.vemoki.com/api/bff/me` (no cookie) | **401** |
+| `GET https://app.vemoki.com/gate` (no cookie) | **307** |
+| `POST https://app.vemoki.com/redeem` + `next-action: x` | **400** (edge guard) |
+| `GET https://portal.vemoki.com/` | 200 |
+| `GET https://ancafe.anphong.vn/` | 200 |
+| `vemoki-web-1` logs (after probes) | `failed-to-find-server-action` count **0** |
+
+### API log ghi chú (ngoài scope deploy)
+
+`vemoki-api-1` tiếp tục spam `account_deletion_tombstone_keyring_missing` / `KEYRING_MISSING` (không secret). 5 dòng gần nhất lúc verify:
+
+```json
+{"alert":"account_deletion_tombstone_keyring_missing","severity":"error","code":"KEYRING_MISSING","operational_reason":"keyring_unavailable","live_tombstone_keys":0}
+{"alert":"account_deletion_tombstone_keyring_missing","severity":"error"}
+{"alert":"account_deletion_tombstone_keyring_missing","severity":"error","code":"KEYRING_MISSING","operational_reason":"keyring_unavailable","live_tombstone_keys":0}
+{"alert":"account_deletion_tombstone_keyring_missing","severity":"error"}
+{"alert":"account_deletion_tombstone_keyring_missing","severity":"error","code":"KEYRING_MISSING","operational_reason":"keyring_unavailable","live_tombstone_keys":0}
+```
+
+### Rollback #682
+
+```bash
+BACKUP=/opt/vemoki/backup/deploy-2026-10-21-f01730a
+rsync -a "$BACKUP/web/" /opt/vemoki/src/apps/web/
+## rebuild @ticket/web per deploy-prod skill, restart web
+```
+
+---
+
 ## Deploy `1ba6647` (earlier 2026-10-21)
 
 | Field | Value |
