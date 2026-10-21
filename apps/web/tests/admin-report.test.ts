@@ -227,10 +227,22 @@ describe('interpretEventReport', () => {
   it('wires EventReport KPI deep-links to existing admin sections (no KPI approve/resend)', () => {
     const root = join(dirname(fileURLToPath(import.meta.url)), '..');
     const form = readFileSync(join(root, 'app/admin/admin-form.tsx'), 'utf8');
-    const numbersStart = form.indexOf('data-testid="event-report-numbers"');
-    const numbersEnd = form.indexOf('data-testid="event-report-unknown"');
+    const reportSection = readFileSync(
+      join(root, 'app/admin/event-report-section.tsx'),
+      'utf8',
+    );
+    const csSection = readFileSync(
+      join(root, 'app/admin/cs-section.tsx'),
+      'utf8',
+    );
+    const numbersStart = reportSection.indexOf(
+      'data-testid="event-report-numbers"',
+    );
+    const numbersEnd = reportSection.indexOf(
+      'data-testid="event-report-unknown"',
+    );
     assert.ok(numbersStart > 0 && numbersEnd > numbersStart);
-    const kpiBlock = form.slice(numbersStart, numbersEnd);
+    const kpiBlock = reportSection.slice(numbersStart, numbersEnd);
 
     assert.ok(kpiBlock.includes('event-report-cta-pending-approval'));
     assert.ok(kpiBlock.includes('REPORT_PENDING_APPROVAL_SECTION_ID'));
@@ -261,9 +273,10 @@ describe('interpretEventReport', () => {
     assert.ok(
       form.includes(`id="${REPORT_PENDING_APPROVAL_SECTION_ID}"`),
     );
-    assert.ok(form.includes(`id="${REPORT_EMAIL_CS_SECTION_ID}"`));
+    assert.ok(csSection.includes(`id="${REPORT_EMAIL_CS_SECTION_ID}"`));
     assert.ok(form.includes('tabIndex={-1}'));
     assert.ok(form.includes('goToAdminSection'));
+    assert.ok(reportSection.includes('onGoToSection'));
   });
 
   it('forwards the OpenAPI report path and required O12 fields', () => {

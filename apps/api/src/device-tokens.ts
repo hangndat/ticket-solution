@@ -30,6 +30,7 @@ import {
   type OidcVerifier,
   type PrismaClient,
 } from '@ticket/backend';
+import { identityErrorHttpStatus } from './identity-http-status';
 
 type ReplyLike = { status(code: number): { send(): unknown } };
 
@@ -114,7 +115,7 @@ export class DeviceTokenController {
           requestId: randomUUID(),
           retryable: error.retryable,
         } satisfies ApiError,
-        error.code === IDENTITY_ERROR_CODES.OIDC_MISCONFIGURED ? 503 : 401,
+        identityErrorHttpStatus(error.code),
       );
     }
     if (error instanceof DeviceTokenError) {

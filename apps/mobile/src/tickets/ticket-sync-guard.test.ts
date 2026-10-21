@@ -52,6 +52,23 @@ test('unauthorized never falls back to offline cache', () => {
   assert.equal(decision.action, 'unauthorized');
 });
 
+test('unauthorized with credential refresh unreachable uses offline cache (no logout)', () => {
+  const decision = decideTicketSyncApply({
+    epoch: epochA,
+    isEpochCurrent: () => true,
+    probe: { status: 'unauthorized' },
+    cached: {
+      userId: 'user-a',
+      tenantId: ticket.tenantId,
+      syncedAt: '2026-10-16T12:00:00.000Z',
+      tickets: [ticket],
+    },
+    expectedUserId: 'user-a',
+    credentialRefreshUnreachable: true,
+  });
+  assert.equal(decision.action, 'offline-cache');
+});
+
 test('unreachable with matching cache yields offline-cache notice', () => {
   const decision = decideTicketSyncApply({
     epoch: epochA,

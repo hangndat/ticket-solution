@@ -1,0 +1,35 @@
+{
+  "appId": "6823694490",
+  "buildId": "0e1fb73f-367c-49b7-bd26-0536bc7f3399",
+  "betaAppLocalization_enUS": {
+    "locale": "en-US",
+    "feedbackEmail": "hangndat@gmail.com",
+    "privacyPolicyUrl": "https://vemoki.com/privacy",
+    "marketingUrl": "https://vemoki.com",
+    "descriptionLen": 371,
+    "descriptionPreview": "Vemoki is an iOS app for event attendees and gate staff: secure sign-in, digital"
+  },
+  "betaBuildLocalization": {
+    "id": "02699a9b-2bcb-48ae-8056-52117193ab93",
+    "locale": "en-US",
+    "whatsNewLen": 1011,
+    "whatsNewPreview": "Please focus on:\n\n1) Sign-in \u2014 Use the demo accounts provided in TestFlight / App Review (Keycloak l"
+  },
+  "betaAppReviewDetail": {
+    "contactFirstName": "Hang",
+    "contactLastName": "Nguyen Dat",
+    "contactEmail": "hangndat@gmail.com",
+    "contactPhone": "PLACEHOLDER_REPLACE_ON_ASC_UI",
+    "demoAccountRequired": true,
+    "demoAccountName": "review-attendee@vemoki.com",
+    "demoAccountPassword": "[REDACTED]",
+    "notesLen": 2992,
+    "notesPreview": "Thank you for reviewing Vemoki (com.hangndat.ticket).\n\nWHAT THE APP IS\nVemoki is a multi-tenant even"
+  },
+  "notDone": [
+    "betaAppReviewSubmission",
+    "external beta group",
+    "submit"
+  ],
+  "operatorNote": "contactPhone placeholder only in live ASC until user updates UI"
+}

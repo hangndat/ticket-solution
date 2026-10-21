@@ -59,6 +59,8 @@ export const scanCopy = {
     empty:
       'Chưa có quyền cổng cho sự kiện nào. Liên hệ quản trị sự kiện.',
     error: 'Không tải được danh sách sự kiện. Thử lại khi có mạng.',
+    sessionExpired: 'Phiên đăng nhập đã hết hạn. Đăng nhập lại.',
+    invalidResponse: 'Không đọc được danh sách sự kiện. Thử lại sau.',
     switchHint: 'Đổi sự kiện đóng phiên cổng — quét online một lần để mở phiên mới.',
   },
 } as const;
@@ -131,6 +133,13 @@ export const accountCopy = {
   misconfiguredBody:
     'Bản dựng này chưa bật đăng nhập. Bạn vẫn có thể xem sự kiện công khai.',
   meErrorTitle: 'Không tải được hồ sơ',
+  meProbe: {
+    unauthorized: 'Phiên đăng nhập đã hết hạn. Đăng nhập lại.',
+    unreachable: 'Mất kết nối mạng. Kiểm tra mạng rồi thử lại.',
+    invalid: 'Không tải được hồ sơ tài khoản. Thử lại sau.',
+    wrongUser:
+      'Không tải được hồ sơ tài khoản. Kiểm tra kết nối rồi thử lại.',
+  },
   busyLabel: 'Đang xử lý…',
 } as const;
 
