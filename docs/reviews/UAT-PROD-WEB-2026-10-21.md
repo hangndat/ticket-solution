@@ -684,3 +684,28 @@ Deploy SHA (retest 3): cbabea4ccc6447e7dc40a832ba95c81320c1b0d9
 Artifact: docs/reviews/UAT-PROD-WEB-2026-10-21.md
 PR: #666
 ```
+
+---
+
+## H03 — Inbox thật + SPF/DKIM/DMARC (PASS, 2026-10-21)
+
+| Trường | Giá trị |
+| --- | --- |
+| Case | H03 · P0 · Inbox thật tới hộp kiểm soát, ghi nhận SPF/DKIM |
+| Cách gửi | Một thư thử gửi từ container `vemoki-worker-1` bằng `SMTP_URL` prod (smtp.porkbun.com:587, auth, From `noreply@vemoki.com`), không dùng Mailpit. Không in credential. |
+| Hộp kiểm soát | Gmail của chủ dự án (user chỉ định) |
+| Thời điểm | 2026-10-21 13:16:24Z gửi · queue id `DD2E94758EE` · server `hognose1.porkbun.com [35.82.102.206]` |
+| Vị trí | **Hộp thư đến** (không Spam), người gửi hiển thị `noreply@vemoki.com` |
+| SPF | **pass** — `domain of noreply@vemoki.com designates 35.82.102.206 as permitted sender` |
+| DKIM | **pass** — `header.i=@vemoki.com header.s=default` |
+| DMARC | **pass** — `p=QUARANTINE sp=QUARANTINE dis=NONE header.from=vemoki.com` |
+| TLS | TLS 1.3 (AES-256-GCM) giữa Postfix Porkbun và Gmail |
+
+**Verdict H03: PASS.**
+
+Giới hạn ghi rõ:
+- Đây là thư thử trực tiếp qua SMTP prod, **chưa** phải thư giao dịch từ luồng ứng dụng (redeem → outbox → worker). Luồng đó chưa được chạy với hộp thư thật.
+- DKIM key `default._domainkey` là RSA 1024-bit (yếu). Khuyến nghị đổi lên 2048-bit (P1, không chặn launch).
+- DMARC chỉ báo cáo tới địa chỉ mxtoolbox; chưa có người nhận xử lý báo cáo.
+
+**Verdict web prod sau H03:** GO. Chỉ còn DEFERRED: máy thật (G01–G06, H01).
