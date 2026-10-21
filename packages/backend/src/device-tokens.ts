@@ -167,6 +167,27 @@ export async function revokeDeviceToken(
   });
 }
 
+/** Server-learned APNs environment (push fallback); actor-scoped like registration updates. */
+export async function correctDeviceTokenEnvironment(
+  db: PrismaClient,
+  input: {
+    userId: string;
+    registrationId: string;
+    environment: 'sandbox' | 'production';
+  },
+): Promise<void> {
+  await withActor(db, input.userId, async (tx) => {
+    await tx.$executeRaw`
+      UPDATE device_tokens
+      SET environment = ${input.environment},
+          updated_at = clock_timestamp()
+      WHERE id = ${input.registrationId}::uuid
+        AND user_id = ${input.userId}::uuid
+        AND revoked_at IS NULL
+    `;
+  });
+}
+
 /** APNs BadDeviceToken / Unregistered — narrow SECURITY DEFINER, not actor RLS. */
 export async function revokeDeviceTokenByValue(
   db: PrismaClient,
