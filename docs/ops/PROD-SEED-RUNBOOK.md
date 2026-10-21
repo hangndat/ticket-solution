@@ -4,7 +4,7 @@
 
 **Không chạy theo runbook này** cho đến khi: Epic #686 dod+sec PASS, ADR-21 chốt, owner xác nhận cửa sổ (§9).
 
-**Tài liệu liên quan:** [ADR-21](./ADR-21-PROD-DEMO-SEED.md) · [infra/deploy/README.md](../../infra/deploy/README.md) · [deploy-prod skill](../../.cursor/skills/deploy-prod/SKILL.md) · [MEDIA-ASSET-CHECKLIST.md](./MEDIA-ASSET-CHECKLIST.md) · [D9-DEMO-DATASET.md](../demo/D9-DEMO-DATASET.md) (mở rộng BA → 4/6) · Issue [#686](https://github.com/hangndat/ticket-solution/issues/686)
+**Tài liệu liên quan:** [ADR-21](./ADR-21-PROD-DEMO-SEED.md) · [PROD-SEED-DATASET.md](../demo/PROD-SEED-DATASET.md) (SoT UUID/slug/redeem) · [infra/deploy/README.md](../../infra/deploy/README.md) · [deploy-prod skill](../../.cursor/skills/deploy-prod/SKILL.md) · [MEDIA-ASSET-CHECKLIST.md](./MEDIA-ASSET-CHECKLIST.md) · [D9-DEMO-DATASET.md](../demo/D9-DEMO-DATASET.md) (D9 local only — **không** prod seed) · Issue [#686](https://github.com/hangndat/ticket-solution/issues/686)
 
 **SSH host:** alias `conanphong` (không ghi IP trong repo). Tree: `/opt/vemoki/src`. Env: `/opt/vemoki/.env` (mode 600) — **không** in nội dung file.
 
@@ -27,13 +27,13 @@
 
 | Hạng mục | Số lượng | Ghi chú |
 | --- | ---: | --- |
-| Organization (tenant) | 4 | Phân bổ event: 1 + 2 + 3 + 0 (Epic body) |
-| Event PUBLISHED | 6 | Tên có marker `· Demo` trên `event.name` |
-| Staff | Owner plus-address (email thật) | Membership Owner + assignment per event |
-| Redeem codes | Theo dataset BA | Prefix `DEMO-*`, HMAC với prod pepper |
-| Media | Logo/banner per event | `brand/demo/manifest.json` + PD sizes |
+| Organization (tenant) | 4 | Lục Bảo Live, Saigon Pulse, Di sản Hội An, Mekong Makers — phân bổ event **1 + 2 + 3 + 0** |
+| Event PUBLISHED | 6 | Tên production-like — **không** `· Demo` trên UI (xem dataset) |
+| Staff | 20 (4×5) plus-address `hangndat+<org>-<role>@gmail.com` | Membership + event assignment theo roster dataset |
+| Redeem codes | 10 vé / event | Prefix **`VEM-*`** (không `DEMO-*`), HMAC với prod pepper |
+| Media | Logo + banner × 6 event | `brand/prod/manifest.json` + PD sizes |
 
-UUID cố định: namespace `d9d9f001-…` (mở rộng từ D9). Bảng đầy đủ: artifact BA trên Issue #686 — **không** seed trước khi bảng UUID khớp code đã merge `main`.
+UUID cố định: namespace **`686f0001-…`** (tách D9 `d9d9f001-*`). Bảng đầy đủ: [`PROD-SEED-DATASET.md`](../demo/PROD-SEED-DATASET.md) — **không** seed trước khi UUID/slug trên `main` khớp code BE.
 
 ---
 
@@ -92,14 +92,20 @@ Chạy trong `psql` / `exec postgres` — **chỉ SELECT**:
 ```sql
 -- Tenant slug trùng fixture nhưng UUID khác → BLOCK seed
 SELECT id, slug FROM tenants WHERE slug IN (
-  -- thay bằng slug đầy đủ từ dataset BA Epic #686
-  'mfest-demo', 'demo-studio'
+  'luc-bao-live', 'saigon-pulse', 'heritage-hoi-an', 'mekong-makers'
 );
--- Kỳ vọng: 0 rows HOẶC id thuộc allowlist d9d9f001-...
+-- Kỳ vọng: 0 rows HOẶC id thuộc allowlist 686f0001-0001-4000-8000-00000000000%
+
+-- Event slug fixture (6 event — org4 không có event)
+SELECT id, slug FROM events WHERE slug IN (
+  'dem-am-indie', 'pulse-afterhours', 'pulse-rooftop',
+  'pho-co-dem', 'song-thu-workshop', 'festival-an-song'
+);
+-- Kỳ vọng: 0 rows HOẶC id thuộc allowlist 686f0001-0002-4000-8000-00000000000%
 
 -- Tenant production không thuộc fixture (thông tin)
 SELECT count(*) AS prod_tenant_count FROM tenants
-WHERE id::text NOT LIKE 'd9d9f001-%';
+WHERE id::text NOT LIKE '686f0001-%';
 ```
 
 Nếu slug fixture đã gắn UUID lạ → **dừng**, không seed.
@@ -185,7 +191,7 @@ docker compose --env-file /opt/vemoki/.env exec -T api \
 - Object key: `tenants/{tenantId}/events/{eventId}/assets/ready/...` — khớp manifest.
 - **Không** mở cổng MinIO ra internet; app dùng signed URL.
 
-Sau PD Epic #686: cập nhật `brand/demo/manifest.json` trước khi chạy prod.
+Sau PD Epic #686: cập nhật `brand/prod/manifest.json` (UUID `686f0001-*`) trước khi chạy prod.
 
 ---
 
@@ -221,7 +227,7 @@ Xác minh health + không còn tenant fixture nếu restore về trạng thái p
 
 ### 8.2 Surgical (chỉ khi chắc phạm vi fixture)
 
-Xóa theo **UUID allowlist** `d9d9f001-…` (thứ tự: assignment → membership → codes → event → tenant) — viết script BE/review trước khi dùng prod. **Cấm** `DELETE FROM tenants` không điều kiện.
+Xóa theo **UUID allowlist** `686f0001-…` (thứ tự: assignment → membership → codes → event → tenant) — viết script BE/review trước khi dùng prod. **Cấm** `DELETE FROM tenants` không điều kiện.
 
 MinIO: xóa keys trong manifest (aws-cli trong network nội bộ hoặc mc) — không xóa cả bucket.
 
