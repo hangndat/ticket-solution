@@ -352,6 +352,69 @@ rsync -a "$BACKUP/web/" /opt/vemoki/src/apps/web/
 
 ---
 
+## Deploy #703 — `7af72d35` (web SSR gate refresh + `GATE_SSR_TRACE` off by default)
+
+| Field | Value |
+| --- | --- |
+| Source SHA | `7af72d35e0d74ed695cbce97a82ff239ca633ca2` (merge PR [#703](https://github.com/hangndat/ticket-solution/pull/703)) |
+| Prior prod marker | `0add1f6072d4e4b9b7b6b73f7b8ffb3baa7b0bb8` → updated `/opt/vemoki/deployed-sha.txt` |
+| VPS | `conanphong` → `/opt/vemoki/src` |
+| Rollback backup | `/opt/vemoki/backup/deploy-2026-10-21-7af72d35/web/` |
+| Operator | Gonic (Orca worker `task_6581e36a7304`) |
+| Scope | **web** only (no migrate, nginx, keycloak, api, worker, portal) |
+| Compose | `GATE_SSR_TRACE` **không** trong `compose.yaml` (VPS == git; trace tắt mặc định) |
+| Build log | `/opt/vemoki/deploy-703-7af72d35-web.log` |
+
+### Code paths
+
+| Path | Change |
+| --- | --- |
+| `apps/web/app/gate/page.tsx` | gate page |
+| `apps/web/src/bff/upstream.ts` | upstream / bearer forwarding |
+| `apps/web/src/gate/gate-ssr-trace.ts` | **new** — opt-in SSR trace (`GATE_SSR_TRACE`) |
+| `apps/web/src/nav/staff-route-guard.ts` | gate refresh + stale access handling |
+| `apps/web/src/oidc/access-token-clock.ts` | **new** — access token clock skew |
+| `apps/web/src/oidc/refresh.ts` | refresh integration |
+| `apps/web/tests/access-token-clock.test.ts` | **new** |
+
+### Trước deploy #703
+
+| Check | Trước |
+| --- | --- |
+| `GET https://app.vemoki.com/` | 200 |
+| `GET https://app.vemoki.com/api/bff/me` (no cookie) | **401** |
+| `GET https://app.vemoki.com/gate` (no cookie) | **307** |
+| `/opt/vemoki/deployed-sha.txt` | `0add1f6…` |
+
+### Thực hiện #703
+
+1. Backup `apps/web` → `deploy-2026-10-21-7af72d35/web/`.
+2. Rsync worktree `apps/web` only (excludes deploy-prod skill); no lockfile / contracts change.
+3. `vemoki-runtime:local`: `@ticket/web` build → `docker compose restart web` (không `compose --build`).
+
+### Sau deploy #703
+
+| Check | Sau |
+| --- | --- |
+| `GET https://app.vemoki.com/` | 200 |
+| `GET https://vemoki.com/` | 200 |
+| `GET https://app.vemoki.com/api/bff/me` (no cookie) | **401** |
+| `GET https://app.vemoki.com/gate` (no cookie) | **307** |
+| `POST https://app.vemoki.com/redeem` + `next-action: x` | **400** (edge guard) |
+| `GET https://portal.vemoki.com/` | 200 |
+| `GET https://ancafe.anphong.vn/` | 200 |
+| `vemoki-web-1` logs (after probes) | no `error` / `failed-to-find-server-action`; `GATE_SSR_TRACE` không bật |
+
+### Rollback #703
+
+```bash
+BACKUP=/opt/vemoki/backup/deploy-2026-10-21-7af72d35
+rsync -a "$BACKUP/web/" /opt/vemoki/src/apps/web/
+## rebuild @ticket/web per deploy-prod skill, restart web
+```
+
+---
+
 ## Deploy `1ba6647` (earlier 2026-10-21)
 
 | Field | Value |
