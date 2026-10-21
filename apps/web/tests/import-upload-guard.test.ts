@@ -3,9 +3,92 @@ import { describe, it } from 'node:test';
 import { IMPORT_LIMITS } from '@ticket/contracts';
 import {
   IMPORT_UPLOAD_MULTIPART_OVERHEAD_BYTES,
+  ImportUploadBodyTooLargeError,
+  importUploadBodyLimitBytes,
   isAcceptedImportCsvFile,
+  isImportUploadBodyTooLargeError,
   oversizedUploadContentLength,
+  readBoundedImportUploadFormData,
 } from '../src/admin/import-upload-guard';
+
+describe('importUploadBodyLimitBytes', () => {
+  it('matches max file bytes plus multipart overhead', () => {
+    assert.equal(
+      importUploadBodyLimitBytes(),
+      IMPORT_LIMITS.maxBytes + IMPORT_UPLOAD_MULTIPART_OVERHEAD_BYTES,
+    );
+  });
+});
+
+describe('readBoundedImportUploadFormData', () => {
+  it('rejects streamed bodies above the multipart cap', async () => {
+    const boundary = '----vemokiUnit';
+    const limit = importUploadBodyLimitBytes();
+    const padding = 'x'.repeat(limit + 1);
+    const body = [
+      `--${boundary}`,
+      'Content-Disposition: form-data; name="tenantId"',
+      '',
+      'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      `--${boundary}`,
+      'Content-Disposition: form-data; name="file"; filename="big.csv"',
+      'Content-Type: text/csv',
+      '',
+      padding,
+      `--${boundary}--`,
+      '',
+    ].join('\r\n');
+    const request = new Request('http://127.0.0.1/upload', {
+      method: 'POST',
+      headers: {
+        'Content-Type': `multipart/form-data; boundary=${boundary}`,
+      },
+      body: new ReadableStream({
+        start(controller) {
+          controller.enqueue(new TextEncoder().encode(body));
+          controller.close();
+        },
+      }),
+      duplex: 'half',
+    } as RequestInit);
+    await assert.rejects(
+      () => readBoundedImportUploadFormData(request),
+      (error: unknown) => {
+        assert.ok(isImportUploadBodyTooLargeError(error));
+        assert.ok(error instanceof ImportUploadBodyTooLargeError);
+        return true;
+      },
+    );
+  });
+
+  it('accepts small streamed multipart within the cap', async () => {
+    const boundary = '----vemokiOk';
+    const body = [
+      `--${boundary}`,
+      'Content-Disposition: form-data; name="tenantId"',
+      '',
+      'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      `--${boundary}`,
+      'Content-Disposition: form-data; name="file"; filename="ok.csv"',
+      'Content-Type: text/csv',
+      '',
+      'code\nA\n',
+      `--${boundary}--`,
+      '',
+    ].join('\r\n');
+    const request = new Request('http://127.0.0.1/upload', {
+      method: 'POST',
+      headers: {
+        'Content-Type': `multipart/form-data; boundary=${boundary}`,
+      },
+      body,
+    });
+    const form = await readBoundedImportUploadFormData(request);
+    const file = form.get('file');
+    assert.ok(file instanceof File);
+    assert.equal(file.name, 'ok.csv');
+  });
+});
 
 describe('oversizedUploadContentLength', () => {
   it('rejects Content-Length above file cap plus multipart overhead', () => {

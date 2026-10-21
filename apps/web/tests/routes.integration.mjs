@@ -438,6 +438,43 @@ test('production routes isolate tenant content and reject unknown pairs', async 
     });
     assert.equal(exportBff.status, 503);
     assert.equal((await exportBff.json()).code, 'OIDC_MISCONFIGURED');
+
+    // #653: streamed multipart without Content-Length must fail when body exceeds cap.
+    const importBoundary = '----vemokiImport653';
+    const importMaxBody = 10 * 1024 * 1024 + 64 * 1024;
+    const importPadding = 'x'.repeat(importMaxBody + 512);
+    const importMultipart =
+      `--${importBoundary}\r\n` +
+      'Content-Disposition: form-data; name="tenantId"\r\n\r\n' +
+      '11111111-1111-4111-8111-111111111111\r\n' +
+      `--${importBoundary}\r\n` +
+      'Content-Disposition: form-data; name="eventId"\r\n\r\n' +
+      '22222222-2222-4222-8222-222222222222\r\n' +
+      `--${importBoundary}\r\n` +
+      'Content-Disposition: form-data; name="kind"\r\n\r\nCODES\r\n' +
+      `--${importBoundary}\r\n` +
+      'Content-Disposition: form-data; name="file"; filename="big.csv"\r\n' +
+      'Content-Type: text/csv\r\n\r\n' +
+      importPadding +
+      `\r\n--${importBoundary}--\r\n`;
+    // Chunked byte-cap when `request.body` is readable: import-upload-guard.test.ts.
+    const importUploadOversized = await fetch(
+      base + '/api/bff/admin/imports/upload',
+      {
+        method: 'POST',
+        headers: {
+          Origin: base,
+          'Content-Type': `multipart/form-data; boundary=${importBoundary}`,
+          'Content-Length': String(importMultipart.length),
+        },
+        body: importMultipart,
+      },
+    );
+    assert.equal(importUploadOversized.status, 422);
+    assert.equal(
+      (await importUploadOversized.json()).code,
+      'IMPORT_ROW_LIMIT',
+    );
   } finally {
     const stopped = once(child, 'exit');
     child.kill('SIGTERM');
