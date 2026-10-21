@@ -1399,6 +1399,303 @@ details p {
     animation: none;
   }
 }
+/* --- Slice G: gate chrome (quét / nhập tay / lịch sử) --- */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.button-secondary {
+  background: #fff;
+  color: var(--ink);
+  border: 1px solid var(--line);
+}
+.button-secondary:hover {
+  border-color: var(--ink-muted);
+}
+.gate-page h1 {
+  font-size: clamp(1.75rem, 4vw, 2.4rem);
+  letter-spacing: -0.04em;
+}
+.gate-page__intro {
+  max-width: 40rem;
+}
+.gate-workspace {
+  display: grid;
+  gap: var(--space-5);
+  margin: var(--space-5) 0 var(--space-6);
+}
+.gatebar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: color-mix(in srgb, #176343 8%, var(--paper) 92%);
+  border: 1px solid color-mix(in srgb, #176343 22%, var(--line) 78%);
+  border-radius: var(--radius-md);
+  font-size: 0.85rem;
+}
+.gatebar__scope {
+  margin: 0;
+}
+.gatebar__gate-name {
+  font-weight: 500;
+  color: var(--ink-muted);
+}
+.gatebar__status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-weight: 600;
+}
+.gatebar__dot {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  background: #176343;
+}
+.gatebar__status--offline .gatebar__dot {
+  background: var(--signal);
+}
+.gatebar__status--degraded .gatebar__dot {
+  background: #b45309;
+}
+.gate-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  border-bottom: 1px solid var(--line);
+  padding-bottom: var(--space-2);
+}
+.gate-tabs__btn {
+  font: inherit;
+  font-weight: 600;
+  font-size: 0.92rem;
+  padding: 0.55rem 0.85rem;
+  min-height: 44px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--ink-muted);
+  cursor: pointer;
+}
+.gate-tabs__btn--active {
+  color: var(--ink);
+  border-color: var(--line);
+  background: #fff;
+  box-shadow: 0 1px 0 var(--line);
+}
+.gate-heading h2 {
+  margin: 0;
+  font-family: var(--font-display), Sora, ui-sans-serif, sans-serif;
+  font-size: clamp(1.35rem, 3vw, 1.75rem);
+  letter-spacing: -0.03em;
+}
+.gate-heading p {
+  margin: var(--space-2) 0 0;
+  color: var(--ink-muted);
+  max-width: 42rem;
+}
+.gate-panel {
+  display: grid;
+  gap: var(--space-5);
+}
+.gate-cols {
+  display: grid;
+  gap: var(--space-5);
+  grid-template-columns: 1fr;
+}
+@media (min-width: 900px) {
+  .gate-cols {
+    grid-template-columns: minmax(0, 1.2fr) minmax(260px, 0.8fr);
+    align-items: start;
+  }
+}
+.gate-camera__frame {
+  position: relative;
+  min-height: 220px;
+  border-radius: var(--radius-lg);
+  border: 2px dashed color-mix(in srgb, var(--ink) 25%, var(--line) 75%);
+  background: color-mix(in srgb, var(--paper) 70%, var(--ink) 5%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.gate-camera__line {
+  position: absolute;
+  left: 12%;
+  right: 12%;
+  height: 2px;
+  background: color-mix(in srgb, var(--signal) 70%, transparent);
+  animation: gate-scan-line 2.4s ease-in-out infinite;
+}
+@keyframes gate-scan-line {
+  0%,
+  100% {
+    top: 22%;
+    opacity: 0.35;
+  }
+  50% {
+    top: 72%;
+    opacity: 1;
+  }
+}
+.gate-camera__hint {
+  position: relative;
+  z-index: 1;
+  font-weight: 600;
+  color: var(--ink-muted);
+}
+.gate-sidebox {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  background: #fff;
+}
+.gate-sidebox h3 {
+  margin: 0 0 var(--space-2);
+  font-size: 1.05rem;
+}
+.gate-sidebox__help {
+  margin: 0 0 var(--space-4);
+  color: var(--ink-muted);
+  font-size: 0.92rem;
+}
+.gate-narrow {
+  max-width: 34rem;
+  display: grid;
+  gap: var(--space-5);
+}
+.gate-form-block {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: #fff;
+}
+.gate-form-block__title {
+  margin: 0;
+  font-size: 1rem;
+}
+.gate-form-grid {
+  display: grid;
+  gap: var(--space-3);
+}
+.gate-form-block label {
+  display: grid;
+  gap: var(--space-2);
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+.gate-form-block input {
+  min-height: 46px;
+  padding: 0.65rem 0.75rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  font: inherit;
+}
+.gate-form-meta {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--ink-muted);
+}
+.gate-tools {
+  margin-bottom: var(--space-3);
+}
+.gate-search {
+  width: 100%;
+  max-width: 28rem;
+  min-height: 46px;
+  padding: 0.65rem 0.85rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  font: inherit;
+}
+.gate-tablewrap {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: #fff;
+}
+.gate-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+}
+.gate-table th,
+.gate-table td {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+}
+.gate-table th {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-muted);
+  background: color-mix(in srgb, var(--paper) 92%, var(--ink) 8%);
+}
+.gate-history-more {
+  margin-top: var(--space-3);
+}
+.gate-history-empty,
+.gate-history-end {
+  margin: 0;
+  color: var(--ink-muted);
+}
+.gate-reconcile h3 {
+  margin: 0;
+}
+.gate-toast {
+  border-radius: var(--radius-lg);
+  max-width: 36rem;
+}
+.gate-toast--idle {
+  border-style: dashed;
+}
+@media (max-width: 639px) {
+  .gate-table thead {
+    display: none;
+  }
+  .gate-table tr {
+    display: grid;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 1px solid var(--line);
+  }
+  .gate-table td {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-3);
+    border: 0;
+    padding: 0;
+  }
+  .gate-table td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: var(--ink-muted);
+    flex-shrink: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gate-camera__line {
+    animation: none;
+    top: 45%;
+  }
+}
+/* --- / Slice G gate chrome --- */
+
 .gate-offline-banner {
   margin-top: var(--space-4);
   animation: rise-in 0.35s ease-out both;
