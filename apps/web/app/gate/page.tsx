@@ -4,7 +4,7 @@ import { runGateStaffSsrGuards } from '../../src/nav/staff-route-guard';
 import { SiteNav } from '../../src/site-chrome';
 import { GateForm } from './gate-form';
 import { GateOfflineShell } from './gate-offline-shell';
-import { loadGateScopeChromeForPage } from './gate-scope-chrome';
+import { loadGateScopeChromeForPage } from './gate-scope-chrome.server';
 
 export const dynamic = 'force-dynamic';
 
