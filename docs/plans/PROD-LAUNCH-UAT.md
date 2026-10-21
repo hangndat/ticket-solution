@@ -139,24 +139,24 @@ Build local, team `BLUA62D52G`, không EAS.
 
 ## 10. Suite G — iOS nhân viên, thiết bị thật
 
-**DEFERRED 2026-10-19.** Không chạy, không tính vào GO đợt sửa hiện tại. Simulator không được ghi `PASS` thay các dòng này khi mở lại.
+**DEFERRED 2026-10-19; cập nhật 2026-10-21:** G01–G03 đã có bằng chứng thiết bị thật (smoke tay trước khi gửi Beta App Review). G04–G06 vẫn chưa chạy. Simulator không được ghi `PASS` thay các dòng này.
 
 | ID | P | Lớp | Các bước | Đúng |
 | --- | --- | --- | --- | --- |
-| G01 | DEFERRED | physical | Cài bản local signed lên máy thật | Mở app, team cá nhân |
-| G02 | DEFERRED | physical | Login staff, tab Nhân viên | Tab hiện vì có quyền |
-| G03 | DEFERRED | physical | Quét QR vé thật (suite D/E) | Một lần cho vào |
-| G04 | DEFERRED | physical | Quét lại cùng QR | Từ chối trùng |
-| G05 | DEFERRED | physical | Từ chối quyền camera | Thông báo, không crash, không cho vào |
-| G06 | DEFERRED | physical | Mất mạng lúc quét | «Chưa rõ», không cho vào; không hàng đợi offline trừ khi D7 đã bật trên build này |
+| G01 | **PASS** (TestFlight) | physical | Cài bản local signed lên máy thật | Mở app, team cá nhân. **Đã chạy 2026-10-21** trên DatHN iPhone 15 Pro, bản cài từ **TestFlight 1.0.0 (26)** (không phải local signed): [D13-TF-BETA-SUBMITTED-2026-10-21.md](../reviews/D13-TF-BETA-SUBMITTED-2026-10-21.md) |
+| G02 | **PASS** | physical | Login staff, tab Nhân viên | Tab hiện vì có quyền. `review-staff@vemoki.com`, build 26, 2026-10-21: [D13-TF-BETA-SUBMITTED-2026-10-21.md](../reviews/D13-TF-BETA-SUBMITTED-2026-10-21.md) |
+| G03 | **PASS** | physical | Quét QR vé thật (suite D/E) | Một lần cho vào. Camera thật, «Đã vào cổng», server ghi check-in thật; vé đã undo/cấp spare: [D13-TF-BETA-SUBMITTED-2026-10-21.md](../reviews/D13-TF-BETA-SUBMITTED-2026-10-21.md) |
+| G04 | DEFERRED (chưa có bằng chứng) | physical | Quét lại cùng QR | Từ chối trùng |
+| G05 | DEFERRED (chưa có bằng chứng) | physical | Từ chối quyền camera | Thông báo, không crash, không cho vào |
+| G06 | DEFERRED (chưa có bằng chứng) | physical | Mất mạng lúc quét | «Chưa rõ», không cho vào; không hàng đợi offline trừ khi D7 đã bật trên build này |
 
 ## 11. Suite H — Thư và push
 
 | ID | P | Lớp | Các bước | Đúng |
 | --- | --- | --- | --- | --- |
-| H01 | DEFERRED | physical | Push giao dịch tới máy đã cấp quyền | Trạng thái **DELIVERED** trên máy, không chỉ outbox `ACCEPTED`. Hoãn cùng máy thật 2026-10-19 |
+| H01 | **PASS** (sandbox) · production DEFERRED | physical | Push giao dịch tới máy đã cấp quyền | Trạng thái **DELIVERED** trên máy, không chỉ outbox `ACCEPTED`. Sandbox: ACCEPTED + DELIVERED trên Dexter iPhone 16 Pro, 2026-10-17: [D5-APNS-DEVICE-UAT-STATUS.md](../reviews/D5-APNS-DEVICE-UAT-STATUS.md). **Chưa** chứng minh push production (`aps-environment=production`) trên build 26; báo cáo Beta ghi «Push, iPad: chưa test» |
 | H02 | P1 | http | Mailpit/log worker | Chỉ chứng minh pipeline; **không** thay inbox thật |
-| H03 | P0 | — | Inbox thật (nếu launch gửi mail khách) | Có thư tới hộp kiểm soát, SPF/DKIM ghi nhận. Chưa có hộp kiểm soát → `BLOCKED` |
+| H03 | P0 | — | Inbox thật (nếu launch gửi mail khách) | Có thư tới hộp kiểm soát, SPF/DKIM ghi nhận. Chưa có hộp kiểm soát → `BLOCKED`. **PASS 2026-10-21**: SPF/DKIM/DMARC pass, vào Hộp thư đến — xem mục H03 trong [UAT-PROD-WEB-2026-10-21.md](../reviews/UAT-PROD-WEB-2026-10-21.md) |
 
 ## 12. Suite I — Cách ly tenant và platform
 
@@ -220,7 +220,7 @@ Cost tier worker: `standard`, model `composer-2.5`.
 Launch: NO-GO | GO
 P0: pass n / fail n / blocked n / not-run n
 P1 gaps: …
-Deferred: G01–G06, H01 (máy thật, 2026-10-19)
+Deferred: G04–G06 (máy thật) và H01 production. G01–G03 PASS (TestFlight build 26, 2026-10-21); H01 PASS trên sandbox (2026-10-17)
 Drift git↔VPS: có | không
 Catalog SHA: …
 Artifact: docs/reviews/PROD-LAUNCH-UAT-<date>.md
