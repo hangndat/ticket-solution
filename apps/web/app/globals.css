@@ -1825,12 +1825,12 @@ details p {
   white-space: nowrap;
   border: 0;
 }
-.button-secondary {
+.gate-page .button-secondary {
   background: #fff;
   color: var(--ink);
   border: 1px solid var(--line);
 }
-.button-secondary:hover {
+.gate-page .button-secondary:hover {
   border-color: var(--ink-muted);
 }
 .gate-page h1 {
