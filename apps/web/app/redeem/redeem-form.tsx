@@ -802,7 +802,12 @@ export function RedeemForm({
                 });
               }}
             />
-          ) : globalEntry && globalPhase === 'enter-code' ? null : (
+          ) : globalEntry && globalPhase === 'enter-code' ? null : termsVersion ? (
+            <p className="intro" data-testid="redeem-schema-terms-only">
+              Sự kiện này không có trường biểu mẫu — nhập mã và đồng ý điều khoản bên
+              dưới để đổi vé.
+            </p>
+          ) : (
             <SurfaceState
               kind="empty"
               title="Chưa có biểu mẫu"

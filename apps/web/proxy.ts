@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
+import { contentSecurityPolicy } from './next.config';
 import {
   decideHostRouting,
   marketingHostsFromEnv,
@@ -6,8 +7,16 @@ import {
   productOriginFromEnv,
 } from './src/marketing/hosts';
 import { decideAdminToPortalRedirect } from './src/portal/dual-run';
+import { isServerActionPost } from './src/security/server-action-edge';
 /** Keep literal — avoid importing next/headers via oidc/cookies in Edge proxy. */
 const OIDC_ACCESS_COOKIE = 'oidc_access_token';
+
+const SERVER_ACTION_PROBE_BODY = 'Server Actions are not enabled on this app.';
+
+function withRuntimeCsp(response: NextResponse): NextResponse {
+  response.headers.set('Content-Security-Policy', contentSecurityPolicy());
+  return response;
+}
 
 /**
  * Next.js 16 proxy — O13 host-aware marketing vs product.
@@ -17,6 +26,18 @@ const OIDC_ACCESS_COOKIE = 'oidc_access_token';
  * ADR-20 §8: optional GET/HEAD /admin|/platform → PORTAL_ORIGIN (flag default OFF).
  */
 export default function proxy(request: NextRequest) {
+  if (
+    isServerActionPost({
+      method: request.method,
+      nextActionHeader: request.headers.get('next-action'),
+    })
+  ) {
+    return new NextResponse(SERVER_ACTION_PROBE_BODY, {
+      status: 400,
+      headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+    });
+  }
+
   const hostHeader =
     request.headers.get('x-forwarded-host') ?? request.headers.get('host');
   const { pathname, search } = request.nextUrl;
@@ -69,9 +90,11 @@ export default function proxy(request: NextRequest) {
     const requestHeaders = new Headers(request.headers);
     requestHeaders.set('x-vemoki-surface', 'marketing');
     requestHeaders.set('x-vemoki-locale', decision.locale);
-    return NextResponse.rewrite(url, {
-      request: { headers: requestHeaders },
-    });
+    return withRuntimeCsp(
+      NextResponse.rewrite(url, {
+        request: { headers: requestHeaders },
+      }),
+    );
   }
 
   // Already-internal /marketing… — pass through with surface headers (no self-rewrite).
@@ -79,12 +102,14 @@ export default function proxy(request: NextRequest) {
     const requestHeaders = new Headers(request.headers);
     requestHeaders.set('x-vemoki-surface', 'marketing');
     requestHeaders.set('x-vemoki-locale', decision.locale);
-    return NextResponse.next({
-      request: { headers: requestHeaders },
-    });
+    return withRuntimeCsp(
+      NextResponse.next({
+        request: { headers: requestHeaders },
+      }),
+    );
   }
 
-  return NextResponse.next();
+  return withRuntimeCsp(NextResponse.next());
 }
 
 export const config = {

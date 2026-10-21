@@ -24,6 +24,7 @@ async function fetchJsonWithBearer(
         Accept: 'application/json',
       },
       cache: 'no-store',
+      signal: AbortSignal.timeout(15_000),
     });
     let body: unknown = null;
     try {
