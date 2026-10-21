@@ -57,6 +57,7 @@ import {
   writeStoredResolveToken,
 } from '../../src/redeem/resolve-session';
 import { loginHref } from '../../src/oidc/login-href';
+import { RedeemTermsConsent } from '../../src/redeem/redeem-terms-consent';
 import { liveRegionForStatus } from '../../src/ui/live-region';
 import { SurfaceState } from '../../src/ui/surface-state';
 
@@ -96,6 +97,7 @@ export function RedeemForm({
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [schemaNotice, setSchemaNotice] = useState<string | null>(null);
+  const [publishedSchemaReady, setPublishedSchemaReady] = useState(false);
   const [ux, setUx] = useState<RedeemUxMessage | null>(null);
   const [decision, setDecision] = useState<RedeemDecision | null>(null);
   const [ticket, setTicket] = useState<RedeemResponse | null>(null);
@@ -139,6 +141,9 @@ export function RedeemForm({
   const busy = pending || polling;
   const showDevScopeFields =
     tenantBound && (!productChrome || !globalEntry);
+  const slugPinnedSchema =
+    !singleCodeFlow &&
+    Boolean(tenantSlug.trim() && eventSlug.trim());
   const canRepoll = Boolean(attempt?.unclear && attempt.key && !busy);
 
   const isStale = useCallback(
@@ -151,10 +156,12 @@ export function RedeemForm({
     const slugTenant = tenantSlug.trim();
     const slugEvent = eventSlug.trim();
     startTransition(async () => {
+      setPublishedSchemaReady(false);
       setSchemaNotice('Đang tải biểu mẫu và điều khoản…');
       const result = await loadPublishedRedeemSchema(slugTenant, slugEvent);
       if (isStale(generation)) return;
       if (result.status === 'ok') {
+        setPublishedSchemaReady(true);
         setFormDefinition(result.schema.form);
         setTermsVersion(result.schema.terms?.version ?? null);
         setTermsBody(result.schema.terms?.bodyMarkdown ?? null);
@@ -173,6 +180,7 @@ export function RedeemForm({
         setSchemaNotice(notice);
         return;
       }
+      setPublishedSchemaReady(false);
       setFormDefinition(null);
       setTermsVersion(null);
       setTermsBody(null);
@@ -257,6 +265,7 @@ export function RedeemForm({
         setFormDefinition(null);
         setTermsVersion(null);
         setTermsBody(null);
+        setPublishedSchemaReady(false);
         if (tenantSlug.trim() && eventSlug.trim()) {
           setSchemaNotice(
             'Biểu mẫu hoặc điều khoản đã đổi — đang tải lại. Bạn cần đồng ý lại trước khi gửi.',
@@ -350,6 +359,7 @@ export function RedeemForm({
     setTenantId('');
     setEventId('');
     setSchemaNotice(null);
+    setPublishedSchemaReady(false);
   }
 
   function onGlobalResolve() {
@@ -404,6 +414,7 @@ export function RedeemForm({
         eventTitle: body.eventTitle,
         ticketTypeLabel: body.ticketTypeLabel,
       });
+      setPublishedSchemaReady(true);
       setFormDefinition(body.published.form);
       setTermsVersion(body.published.terms?.version ?? null);
       setTermsBody(body.published.terms?.bodyMarkdown ?? null);
@@ -424,6 +435,21 @@ export function RedeemForm({
     event.preventDefault();
     if (singleCodeFlow && globalPhase === 'enter-code') {
       onGlobalResolve();
+      return;
+    }
+    if (
+      slugPinnedSchema &&
+      !publishedSchemaReady &&
+      !formDefinition &&
+      !termsVersion
+    ) {
+      setUx({
+        kind: 'error',
+        title: 'Đang tải biểu mẫu',
+        detail:
+          'Chờ biểu mẫu và điều khoản sự kiện tải xong, rồi đồng ý điều khoản trước khi đổi vé.',
+        retryable: true,
+      });
       return;
     }
     const scopeIssue = validateRedeemScope(tenantId, eventId);
@@ -668,12 +694,49 @@ export function RedeemForm({
     ? 'redeem-form redeem-product-form'
     : 'redeem-form';
 
+  const termsEventHref =
+    tenantSlug.trim() && eventSlug.trim()
+      ? `/t/${encodeURIComponent(tenantSlug.trim())}/events/${encodeURIComponent(eventSlug.trim())}`
+      : null;
+
+  const awaitingPublishedSchema =
+    slugPinnedSchema &&
+    !publishedSchemaReady &&
+    !formDefinition &&
+    !termsVersion;
+
+  const redeemSubmitDisabled =
+    busy ||
+    awaitingPublishedSchema ||
+    (singleCodeFlow && globalPhase === 'confirm' && !publishedSchemaReady);
+
   return (
     <div className={formClassName}>
       <form onSubmit={onSubmit} aria-labelledby="redeem-form-title" noValidate>
         <h2 id="redeem-form-title">Đổi mã lấy vé</h2>
         {productChrome && productLead ? (
           <p className="redeem-product-lead">{productLead}</p>
+        ) : null}
+        {productChrome && slugPinnedSchema && schemaNotice ? (
+          <SurfaceState
+            kind={
+              schemaNotice.startsWith('Đang')
+                ? 'loading'
+                : schemaNotice.startsWith('Không') ||
+                    schemaNotice.startsWith('Biểu mẫu không')
+                  ? 'error'
+                  : 'empty'
+            }
+            title={
+              schemaNotice.startsWith('Đang')
+                ? 'Đang tải biểu mẫu…'
+                : schemaNotice.startsWith('Đã tải')
+                  ? 'Biểu mẫu sẵn sàng'
+                  : 'Trạng thái biểu mẫu'
+            }
+            detail={schemaNotice}
+            testId="redeem-product-schema-notice"
+          />
         ) : null}
         {!productChrome ? (
           <p className="intro">
@@ -884,7 +947,7 @@ export function RedeemForm({
                   </button>
                 </>
               )}
-              {schemaNotice ? (
+              {schemaNotice && !(productChrome && slugPinnedSchema) ? (
                 <SurfaceState
                   kind={
                     schemaNotice.startsWith('Đang')
@@ -1008,41 +1071,24 @@ export function RedeemForm({
           )}
 
           {termsVersion ? (
-            <fieldset className="redeem-terms">
-              <legend>Điều khoản</legend>
-              {termsBody ? (
-                <pre className="redeem-terms-body" tabIndex={0}>
-                  {termsBody}
-                </pre>
-              ) : null}
-              <label className="redeem-checkbox" htmlFor="terms-accepted">
-                <input
-                  id="terms-accepted"
-                  name="termsAccepted"
-                  type="checkbox"
-                  checked={termsAccepted}
-                  aria-invalid={fieldErrors.terms ? true : undefined}
-                  aria-describedby={
-                    fieldErrors.terms ? 'field-error-terms' : undefined
-                  }
-                  onChange={(e) => {
-                    setTermsAccepted(e.target.checked);
-                    setFieldErrors((prev) => {
-                      if (!prev.terms) return prev;
-                      const next = { ...prev };
-                      delete next.terms;
-                      return next;
-                    });
-                  }}
-                />
-                <span>Tôi đồng ý với điều khoản</span>
-              </label>
-              {fieldErrors.terms ? (
-                <p id="field-error-terms" className="redeem-field-error" role="alert">
-                  {fieldErrors.terms}
-                </p>
-              ) : null}
-            </fieldset>
+            <RedeemTermsConsent
+              termsVersion={termsVersion}
+              termsBody={termsBody}
+              termsAccepted={termsAccepted}
+              termsError={fieldErrors.terms}
+              disabled={busy}
+              termsHref={productChrome ? termsEventHref : null}
+              compact={productChrome}
+              onAcceptedChange={(accepted) => {
+                setTermsAccepted(accepted);
+                setFieldErrors((prev) => {
+                  if (!prev.terms) return prev;
+                  const next = { ...prev };
+                  delete next.terms;
+                  return next;
+                });
+              }}
+            />
           ) : null}
         </div>
 
@@ -1064,7 +1110,7 @@ export function RedeemForm({
             <button
               type="submit"
               className="redeem-submit btn-primary"
-              disabled={busy}
+              disabled={redeemSubmitDisabled}
             >
               {busy ? 'Đang xử lý…' : 'Đổi mã lấy vé'}
             </button>
