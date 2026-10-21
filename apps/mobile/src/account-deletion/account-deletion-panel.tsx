@@ -293,10 +293,7 @@ export function AccountDeletionPanel() {
         </Notice>
       ) : null}
 
-      {phase.kind === 'idle' ||
-      phase.kind === 'acknowledged' ||
-      phase.kind === 'status' ||
-      phase.kind === 'unavailable' ? (
+      {phase.kind === 'acknowledged' || phase.kind === 'status' ? (
         <SecondaryButton
           label="Làm mới trạng thái yêu cầu"
           onPress={() => void refreshStatus()}

@@ -35,6 +35,10 @@ export type TicketRowView = {
   credentialLine: string;
   /** Truncated event id when name unknown. */
   eventIdLine: string;
+  /** Event date/time when known (demo catalog only today). */
+  whenLine: string | null;
+  /** List CTA label (mock wallet row). */
+  viewTicketCta: string;
 };
 
 const AUTH_CODES = new Set(['UNAUTHENTICATED', 'EMAIL_NOT_VERIFIED']);
@@ -72,13 +76,16 @@ export function presentTicketRow(ticket: TicketSummary): TicketRowView {
     ticket.eventId.length > 12
       ? `${ticket.eventId.slice(0, 8)}…`
       : ticket.eventId;
+  const { when } = ticketScheduleVenueLines(ticket);
   return {
     eventTitle,
     statusLabel,
-    accessibilityLabel: `${eventTitle} · ${statusLabel}`,
+    accessibilityLabel: `${eventTitle} · ${statusLabel} · ${attendeeWalletCopy.viewTicketCta}`,
     ticketId: ticket.ticketId,
     credentialLine: `Phiên bản vé · ${ticket.credentialVersion}`,
     eventIdLine: demo ? `ID sự kiện · ${shortEventId}` : `Sự kiện · ${shortEventId}`,
+    whenLine: when,
+    viewTicketCta: attendeeWalletCopy.viewTicketCta,
   };
 }
 
@@ -186,9 +193,10 @@ export const attendeeWalletCopy = {
   signedOutTitle: 'Vé của tôi',
   signedOutBody:
     'Đăng nhập cùng tài khoản với web để xem vé. Vé chỉ hiện sau khi phiên được xác minh.',
-  offlineBannerTitle: 'Đang xem vé đã lưu — chưa kết nối',
+  offlineBannerTitle: 'Đang xem vé đã lưu',
   offlineBannerBody:
-    'Chỉ hiển thị. Không đổi mã offline và không check-in cổng từ bộ đệm này.',
+    'Chưa có mạng — chỉ hiển thị vé trên máy. Cập nhật khi có kết nối.',
+  viewTicketCta: 'Xem vé & mã QR →',
   verifiedCaption: 'Vé đã xác minh',
   detailOnlyDisplay:
     'Chỉ để xem trên máy. Máy chủ vẫn quyết định thu hồi hoặc đã dùng tại cổng.',
@@ -200,9 +208,9 @@ export const attendeeWalletCopy = {
 } as const;
 
 /**
- * Gate-scan discouragement copy for ticket detail (AC-T1 / PD §1.4).
+ * Giờ và địa điểm trên vé khi tra được catalog demo (`findDemoEventById`).
+ * Vé production (eventId không khớp demo) → cả hai null; UI không render dòng.
  */
-/** Giờ và địa điểm khi có trong catalog demo hoặc dữ liệu sự kiện công khai. */
 export function ticketScheduleVenueLines(ticket: TicketSummary): {
   when: string | null;
   where: string | null;
