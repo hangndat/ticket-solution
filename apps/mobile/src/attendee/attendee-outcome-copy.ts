@@ -4,7 +4,10 @@
  */
 
 import type { TicketSummary } from '@ticket/contracts';
-import { findDemoEventById } from '../data/demo-events.ts';
+import {
+  eventDate,
+  findDemoEventById,
+} from '../data/demo-events.ts';
 import type { RedeemDecision } from '../redeem/redeem-client.ts';
 
 export type OutcomeTone = 'admit' | 'deny' | 'unknown' | 'default';
@@ -43,7 +46,7 @@ export function ticketStateLabelVi(state: string): string {
   const normalized = state.trim().toUpperCase();
   switch (normalized) {
     case 'ACTIVE':
-      return 'Còn hiệu lực';
+      return 'Chưa sử dụng';
     case 'USED':
       return 'Đã dùng';
     case 'REVOKED':
@@ -199,6 +202,21 @@ export const attendeeWalletCopy = {
 /**
  * Gate-scan discouragement copy for ticket detail (AC-T1 / PD §1.4).
  */
+/** Giờ và địa điểm khi có trong catalog demo hoặc dữ liệu sự kiện công khai. */
+export function ticketScheduleVenueLines(ticket: TicketSummary): {
+  when: string | null;
+  where: string | null;
+} {
+  const demo = findDemoEventById(ticket.eventId);
+  if (!demo) {
+    return { when: null, where: null };
+  }
+  return {
+    when: eventDate(demo),
+    where: demo.location?.trim() || null,
+  };
+}
+
 export function ticketGateHint(
   state: string,
   opts: { demo: boolean },
