@@ -32,11 +32,37 @@ function passthroughUpstream(
   });
 }
 
+async function traceUpstream401(
+  upstream: Response,
+  trace?: GateSsrTrace,
+): Promise<void> {
+  if (!trace || upstream.status !== 401) return;
+  const wwwAuth = upstream.headers.get('WWW-Authenticate')?.slice(0, 120) ?? '';
+  let code = '';
+  try {
+    const contentType = upstream.headers.get('Content-Type') ?? '';
+    if (contentType.includes('json')) {
+      const text = new TextDecoder().decode(await upstream.clone().arrayBuffer());
+      const parsed = JSON.parse(text) as { code?: unknown; error?: unknown };
+      if (typeof parsed.code === 'string') code = parsed.code;
+      else if (typeof parsed.error === 'string') code = parsed.error;
+    }
+  } catch {
+    // ignore — trace only
+  }
+  const detail = [wwwAuth && `www=${wwwAuth}`, code && `code=${code}`]
+    .filter(Boolean)
+    .join(' ');
+  const safe = detail.replace(/[^a-zA-Z0-9_=.-]+/g, '_').slice(0, 160);
+  trace.mark(safe ? `forward_upstream_401_detail_${safe}` : 'forward_upstream_401_detail');
+}
+
 async function fetchWithBearer(
   pathAndQuery: string,
   token: string,
   init: RequestInit = {},
   timeoutMs = 20_000,
+  trace?: GateSsrTrace,
 ): Promise<Response> {
   const base = apiBaseUrl();
   const url = `${base}${pathAndQuery.startsWith('/') ? pathAndQuery : `/${pathAndQuery}`}`;
@@ -54,7 +80,11 @@ async function fetchWithBearer(
       signal: AbortSignal.timeout(timeoutMs),
     });
     const body = await upstream.arrayBuffer();
-    return passthroughUpstream(upstream, body);
+    const out = passthroughUpstream(upstream, body);
+    if (upstream.status === 401) {
+      await traceUpstream401(out, trace);
+    }
+    return out;
   } catch {
     return bffApiError(
       'UPSTREAM_UNAVAILABLE',
@@ -129,6 +159,11 @@ export type ForwardWithBearerOptions = {
   timeoutMs?: number;
   /** GATE_SSR_TRACE=1 only — step names + ms, no paths with secrets. */
   trace?: GateSsrTrace;
+  /**
+   * When false (staff SSR discovery), never call refreshWebAccessToken — RSC cannot Set-Cookie.
+   * Route Handlers default true.
+   */
+  allowCookieRefresh?: boolean;
 };
 
 export async function forwardWithBearer(
@@ -138,6 +173,7 @@ export async function forwardWithBearer(
 ): Promise<Response> {
   const timeoutMs = options.timeoutMs ?? 20_000;
   const trace = options.trace;
+  const allowCookieRefresh = options.allowCookieRefresh ?? true;
   trace?.mark('forward_with_bearer_start');
   if (!isOidcConfigured()) {
     return bffApiError(
@@ -149,6 +185,10 @@ export async function forwardWithBearer(
 
   let token = await readAccessToken();
   if (!token) {
+    if (!allowCookieRefresh) {
+      trace?.mark('forward_missing_access_ssr');
+      return refreshFailureResponse('missing_refresh');
+    }
     trace?.mark('forward_refresh_missing_access');
     const refreshed = await refreshWebAccessToken(trace);
     if (!refreshed.ok) {
@@ -159,9 +199,20 @@ export async function forwardWithBearer(
   }
 
   trace?.mark('forward_upstream_fetch');
-  let response = await fetchWithBearer(pathAndQuery, token, init, timeoutMs);
+  let response = await fetchWithBearer(
+    pathAndQuery,
+    token,
+    init,
+    timeoutMs,
+    trace,
+  );
   trace?.mark(`forward_upstream_status_${response.status}`);
   if (response.status !== 401) return response;
+
+  if (!allowCookieRefresh) {
+    trace?.mark('forward_upstream_401_ssr_no_refresh');
+    return response;
+  }
 
   trace?.mark('forward_refresh_401');
   const refreshed = await refreshWebAccessToken(trace);
@@ -179,6 +230,7 @@ export async function forwardWithBearer(
     refreshed.accessToken,
     init,
     timeoutMs,
+    trace,
   );
   trace?.mark(`forward_upstream_retry_status_${response.status}`);
   return response;
