@@ -3,6 +3,8 @@
  * Cleared on logout via wallet-logout.
  */
 
+import { normalizeAttendeeRedeemPath } from './attendee-redeem-entry.ts';
+
 export type SignInReturnTarget = {
   /** Expo Router path without query (no secrets in route). */
   pathname: string;
@@ -33,11 +35,12 @@ export function peekSignInReturn(): SignInReturnTarget | null {
 }
 
 export function parkSignInReturn(target: SignInReturnTarget): boolean {
-  if (!isAllowedReturnPath(target.pathname)) {
+  const pathname = normalizeAttendeeRedeemPath(target.pathname);
+  if (!isAllowedReturnPath(pathname)) {
     parked = null;
     return false;
   }
-  parked = { pathname: target.pathname };
+  parked = { pathname };
   return true;
 }
 
@@ -53,7 +56,11 @@ export function clearSignInReturn(): void {
 
 /** Drop parked return when leaving a protected screen without signing in. */
 export function clearSignInReturnIfPath(pathname: string): void {
-  if (parked?.pathname === pathname) {
+  const normalized = normalizeAttendeeRedeemPath(pathname);
+  if (
+    parked?.pathname === pathname ||
+    parked?.pathname === normalized
+  ) {
     parked = null;
   }
 }

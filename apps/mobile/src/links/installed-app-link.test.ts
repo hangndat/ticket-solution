@@ -52,11 +52,22 @@ test('oauth callback is not rewritten onto a screen', () => {
   }
 });
 
-test('unrelated and invalid links are left untouched', () => {
-  assert.equal(
-    routeForInstalledAppLink('ticketsolution://redeem'),
+test('redeem deep link routes to global attendee entry', () => {
+  for (const input of [
     'ticketsolution://redeem',
-  );
+    'vemoki://redeem',
+    '/redeem',
+    'redeem',
+  ]) {
+    const parsed = parseInstalledAppLink(input);
+    assert.equal(parsed.kind, 'redeem-entry');
+    if (parsed.kind !== 'redeem-entry') return;
+    assert.equal(parsed.href, '/redeem-global');
+    assert.equal(routeForInstalledAppLink(input), '/redeem-global');
+  }
+});
+
+test('unrelated and invalid links are left untouched', () => {
   assert.equal(parseInstalledAppLink('https://example.com/tickets/x').kind, 'passthrough');
   assert.equal(
     parseInstalledAppLink('ticketsolution://tickets/not-a-uuid').kind,
