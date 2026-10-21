@@ -29,6 +29,21 @@ function jsonResponse(status: number, body: unknown): Response {
   });
 }
 
+test('parse display QR reads optional display hints from JSON', () => {
+  const withHints = JSON.stringify({
+    v: 1,
+    kind: 'ticket.display',
+    ticketId,
+    tenantId,
+    eventId,
+    ticketTypeLabel: 'Vé VIP',
+    attendeeName: 'Lan Hương',
+  });
+  const parsed = parseScan(withHints);
+  assert.equal(parsed?.displayHints?.ticketTypeLabel, 'Vé VIP');
+  assert.equal(parsed?.displayHints?.attendeeName, 'Lan Hương');
+});
+
 test('parse display QR and reject a bare id without event scope', () => {
   const parsed = parseScan(qr);
   assert.equal(parsed?.ticketId, ticketId);
