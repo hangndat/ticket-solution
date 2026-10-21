@@ -1,0 +1,13 @@
+# Pre stack overlay — isolated from production on the same VPS edge network.
+# Usage (on host):
+#   docker compose -f compose.yaml -f compose.pre.yaml --env-file /opt/vemoki-pre/.env -p vemoki-pre up -d
+#
+# Requires COMPOSE_PROJECT_NAME=vemoki-pre and paths in .env.pre.example (copy → /opt/vemoki-pre/.env).
+
+name: vemoki-pre
+
+services:
+  worker:
+    # Pre: no APNs mount (APNS_ENABLED=false); avoid prod secrets path.
+    volumes: !override
+      - ${VEMOKI_SRC_ROOT}:/app

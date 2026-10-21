@@ -86,6 +86,10 @@ docker compose --env-file /opt/vemoki/.env up -d
 
 `apps/mobile` không được cài vào image. File realm Keycloak phải đọc được bởi user trong container. Mode `600` của user host khác sẽ làm import thất bại và container thoát ngay.
 
+## Pre environment (song song prod)
+
+Stack riêng `vemoki-pre` trên `/opt/vemoki-pre`, host `pre*.vemoki.com`. Runbook: [`docs/ops/PRE-ENV.md`](../../docs/ops/PRE-ENV.md). Compose overlay: `compose.pre.yaml` + `.env.pre.example`.
+
 ## Nginx
 
 Proxy (O13 dual-run / cutover):
