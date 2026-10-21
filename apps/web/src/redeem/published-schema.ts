@@ -80,16 +80,16 @@ export function parsePublishedRedeemSchema(
 
   let terms: PublishedTerms | null = null;
   if (value.terms !== null && value.terms !== undefined) {
-    if (
-      !isRecord(value.terms) ||
-      typeof value.terms.version !== 'string' ||
-      typeof value.terms.bodyMarkdown !== 'string'
-    ) {
+    if (!isRecord(value.terms) || typeof value.terms.version !== 'string') {
       return null;
     }
+    const bodyMarkdown =
+      typeof value.terms.bodyMarkdown === 'string'
+        ? value.terms.bodyMarkdown
+        : '';
     terms = {
       version: value.terms.version,
-      bodyMarkdown: value.terms.bodyMarkdown,
+      bodyMarkdown,
     };
   }
 
