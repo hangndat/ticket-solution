@@ -67,11 +67,11 @@ type Props = { initialTenantId?: string; initialEventId?: string };
 
 type AdminJob = 'setup' | 'guests' | 'gate' | 'support';
 
-const ADMIN_JOBS: { id: AdminJob; label: string }[] = [
-  { id: 'setup', label: 'Chuẩn bị' },
-  { id: 'guests', label: 'Khách & mã' },
-  { id: 'gate', label: 'Cổng' },
-  { id: 'support', label: 'Hỗ trợ' },
+const ADMIN_JOBS: { id: AdminJob; label: string; mockHint: string }[] = [
+  { id: 'setup', label: 'Tổng quan', mockHint: 'Sự kiện & xuất bản' },
+  { id: 'guests', label: 'Nhập CSV & mã', mockHint: 'Khách & quota' },
+  { id: 'gate', label: 'Cổng', mockHint: 'Phê duyệt redemption' },
+  { id: 'support', label: 'Thành viên & hỗ trợ', mockHint: 'Lời mời · CS · export' },
 ];
 
 export function AdminForm({
@@ -530,104 +530,6 @@ export function AdminForm({
           </p>
         </aside>
       ) : null}
-      <header className="admin-event-summary" data-testid="admin-event-summary">
-        <p className="admin-event-summary__eyebrow">
-          {orgTitle ? `Tổ chức · ${orgTitle}` : 'Tổ chức · chưa chọn'}
-        </p>
-        <h2 className="admin-event-summary__title">
-          {eventTitle ?? 'Chưa chọn sự kiện'}
-        </h2>
-        <p className="admin-event-summary__meta muted" data-testid="current-event-context">
-          {currentEvent
-            ? `Trạng thái: ${currentEvent.contentStatus}/${currentEvent.businessStatus}`
-            : eventId.trim()
-              ? 'Đã chọn sự kiện — tải metadata nếu tên chưa hiện.'
-              : 'Chọn tổ chức và sự kiện để làm việc.'}
-          {selectedTenant ? ` · ${selectedTenant.role}` : ''}
-        </p>
-      </header>
-      {tenantsPhase === 'loading' ? (
-        <SurfaceState
-          kind="loading"
-          title="Đang tải danh sách tenant…"
-          detail="Discovery qua /me/tenants — chưa chọn ngữ cảnh sự kiện."
-          testId="admin-tenants-loading"
-        />
-      ) : tenantsLoadError ? (
-        <SurfaceState
-          kind="error"
-          title="Không tải được tenant"
-          detail={`Selector /me/tenants: ${tenantsLoadError}. Có thể dùng ô Tenant ID tạm khi BE chưa sẵn sàng.`}
-          testId="admin-tenants-error"
-        />
-      ) : tenantChoices.length === 0 ? (
-        <SurfaceState
-          kind="empty"
-          title="Chưa có tenant trong tài khoản"
-          detail="Đăng nhập đúng tài khoản có membership, hoặc nhận invite thành viên trước khi quản trị sự kiện."
-          testId="admin-tenants-empty"
-        />
-      ) : (
-        <p className="intro">
-          Chọn tổ chức bằng tên/slug. UUID nội bộ nằm trong «Chi tiết kỹ thuật».
-        </p>
-      )}
-      <label>
-        Tổ chức
-        <select
-          name="tenantSelector"
-          data-testid="tenant-selector"
-          value={
-            tenantChoices.some((t) => t.tenantId === tenantId.trim())
-              ? tenantId.trim()
-              : ''
-          }
-          onChange={(e) => setTenantId(e.target.value)}
-        >
-          <option value="">— chọn tổ chức —</option>
-          {tenantChoices.map((t) => (
-            <option key={t.tenantId} value={t.tenantId}>
-              {t.name} · {t.slug} ({t.status}/{t.role})
-            </option>
-          ))}
-        </select>
-      </label>
-      <details className="admin-tech-details" data-testid="admin-tech-details">
-        <summary>Chi tiết kỹ thuật (ID)</summary>
-        <div className="redeem-fields">
-          <label>
-            Tenant ID
-            <input
-              name="tenantId"
-              value={tenantId}
-              onChange={(e) => setTenantId(e.target.value)}
-              autoComplete="off"
-              spellCheck={false}
-              placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-            />
-          </label>
-          <label>
-            Event ID
-            <input
-              name="eventId"
-              value={eventId}
-              onChange={(e) => setEventId(e.target.value)}
-              autoComplete="off"
-              spellCheck={false}
-              placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-            />
-          </label>
-        </div>
-      </details>
-      {tenantSuspended ? (
-        <aside className="notice" role="status" data-testid="suspend-banner">
-          <strong>Tenant SUSPENDED</strong>
-          <p>
-            Admin mutations bị chặn. Vé đã phát / Gate / recovery vẫn dùng được.
-            Backend vẫn enforce — UI chỉ cảnh báo.
-          </p>
-        </aside>
-      ) : null}
       <div className="admin" data-testid="admin-shell">
         <aside className="admin-sidebar" aria-label="Điều hướng quản trị">
           <p className="eyebrow admin-sidebar__eyebrow">Không gian</p>
@@ -645,12 +547,118 @@ export function AdminForm({
                 aria-current={activeJob === job.id ? 'true' : 'false'}
                 onClick={() => setActiveJob(job.id)}
               >
-                {job.label}
+                <span className="admin-job-nav__label">{job.label}</span>
+                <span className="admin-job-nav__hint muted">{job.mockHint}</span>
               </button>
             ))}
           </nav>
         </aside>
         <div className="admin-main">
+          <header className="admin-context" data-testid="admin-event-summary">
+            <div className="admin-context__titles">
+              <p className="admin-event-summary__eyebrow">
+                {orgTitle ? `Tổ chức · ${orgTitle}` : 'Tổ chức · chưa chọn'}
+              </p>
+              <h2 className="admin-event-summary__title">
+                {eventTitle ?? 'Chưa chọn sự kiện'}
+              </h2>
+              <p
+                className="admin-event-summary__meta muted"
+                data-testid="current-event-context"
+              >
+                {currentEvent
+                  ? `Trạng thái: ${currentEvent.contentStatus}/${currentEvent.businessStatus}`
+                  : eventId.trim()
+                    ? 'Đã chọn sự kiện — tải metadata nếu tên chưa hiện.'
+                    : 'Chọn tổ chức và sự kiện để làm việc.'}
+                {selectedTenant ? ` · ${selectedTenant.role}` : ''}
+              </p>
+            </div>
+            <div className="admin-context__scope">
+              {tenantsPhase === 'loading' ? (
+                <SurfaceState
+                  kind="loading"
+                  title="Đang tải tổ chức…"
+                  detail="Discovery qua /me/tenants."
+                  testId="admin-tenants-loading"
+                />
+              ) : tenantsLoadError ? (
+                <SurfaceState
+                  kind="error"
+                  title="Không tải được tổ chức"
+                  detail={`/me/tenants: ${tenantsLoadError}`}
+                  testId="admin-tenants-error"
+                />
+              ) : tenantChoices.length === 0 ? (
+                <SurfaceState
+                  kind="empty"
+                  title="Chưa có tổ chức"
+                  detail="Cần membership hoặc lời mời thành viên trước khi quản trị."
+                  testId="admin-tenants-empty"
+                />
+              ) : (
+                <label className="admin-context__tenant">
+                  Tổ chức
+                  <select
+                    name="tenantSelector"
+                    data-testid="tenant-selector"
+                    value={
+                      tenantChoices.some((t) => t.tenantId === tenantId.trim())
+                        ? tenantId.trim()
+                        : ''
+                    }
+                    onChange={(e) => setTenantId(e.target.value)}
+                  >
+                    <option value="">— chọn tổ chức —</option>
+                    {tenantChoices.map((t) => (
+                      <option key={t.tenantId} value={t.tenantId}>
+                        {t.name} · {t.slug} ({t.status}/{t.role})
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+              <details
+                className="admin-tech-details admin-context__tech"
+                data-testid="admin-tech-details"
+              >
+                <summary>Chi tiết kỹ thuật (ID)</summary>
+                <div className="redeem-fields">
+                  <label>
+                    Tenant ID
+                    <input
+                      name="tenantId"
+                      value={tenantId}
+                      onChange={(e) => setTenantId(e.target.value)}
+                      autoComplete="off"
+                      spellCheck={false}
+                      placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                    />
+                  </label>
+                  <label>
+                    Event ID
+                    <input
+                      name="eventId"
+                      value={eventId}
+                      onChange={(e) => setEventId(e.target.value)}
+                      autoComplete="off"
+                      spellCheck={false}
+                      placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                    />
+                  </label>
+                </div>
+              </details>
+            </div>
+          </header>
+          {tenantSuspended ? (
+            <aside className="notice" role="status" data-testid="suspend-banner">
+              <strong>Tenant SUSPENDED</strong>
+              <p>
+                Admin mutations bị chặn. Vé đã phát / Gate / recovery vẫn dùng được.
+                Backend vẫn enforce — UI chỉ cảnh báo.
+              </p>
+            </aside>
+          ) : null}
           <AdminStatsBar
             eventList={listView}
             readinessItems={readinessItems}
@@ -670,87 +678,90 @@ export function AdminForm({
             hidden={activeJob !== 'setup'}
             aria-labelledby="create-event-heading"
           >
-            <h2 id="create-event-heading">Chuẩn bị · sự kiện</h2>
-            <p>
-              Tạo hoặc liệt kê sự kiện trong tổ chức. Kết quả chưa rõ (timeout/5xx)
-              không coi là đã tạo.
+            <h2 id="create-event-heading">Sự kiện</h2>
+            <p className="admin-section-lead">
+              Liệt kê và chọn sự kiện trong tổ chức. Tạo mới nằm trong phần kỹ
+              thuật — kết quả chưa rõ không coi là đã tạo.
             </p>
-            <details className="admin-tech-details">
-              <summary>Chi tiết kỹ thuật · tạo sự kiện</summary>
-              <p className="muted">
-                POST create qua BFF kèm Idempotency-Key và CSRF. Shape sai → chưa
-                biết, không coi là đã tạo.
-              </p>
-            </details>
-            <label>
-              Event slug
-              <input
-                name="eventSlug"
-                value={eventSlug}
-                onChange={(e) => setEventSlug(e.target.value)}
-                autoComplete="off"
-                spellCheck={false}
-                placeholder="my-event-2026"
-              />
-            </label>
-            <label>
-              Event name
-              <input
-                name="eventName"
-                value={eventName}
-                onChange={(e) => setEventName(e.target.value)}
-                autoComplete="off"
-                spellCheck={false}
-              />
-            </label>
-            <label>
-              Timezone
-              <input
-                name="eventTimezone"
-                value={eventTimezone}
-                onChange={(e) => setEventTimezone(e.target.value)}
-                autoComplete="off"
-                spellCheck={false}
-              />
-            </label>
-            <label>
-              Visibility
-              <select
-                name="eventVisibility"
-                value={metaVisibility}
-                onChange={(e) =>
-                  setMetaVisibility(
-                    e.target.value === 'PUBLIC' ? 'PUBLIC' : 'UNLISTED',
-                  )
-                }
-              >
-                <option value="UNLISTED">UNLISTED</option>
-                <option value="PUBLIC">PUBLIC</option>
-              </select>
-            </label>
-            <div className="auth-buttons">
+            <div className="auth-buttons admin-section-actions">
               <button
                 type="button"
-                disabled={busy}
-                onClick={() => void createEvent()}
-              >
-                Tạo event
-              </button>
-              <button
-                type="button"
+                className="button"
                 disabled={busy}
                 onClick={() => void listEvents()}
               >
-                Liệt kê event
+                Liệt kê sự kiện
               </button>
               <button
                 type="button"
                 disabled={busy || !eventId.trim()}
                 onClick={() => void loadEventDetail()}
               >
-                Tải metadata event
+                Tải metadata
               </button>
             </div>
+            <details className="admin-tech-details">
+              <summary>Tạo sự kiện mới (kỹ thuật)</summary>
+              <p className="muted">
+                POST create qua BFF kèm Idempotency-Key và CSRF. Shape sai → chưa
+                biết, không coi là đã tạo.
+              </p>
+              <label>
+                Event slug
+                <input
+                  name="eventSlug"
+                  value={eventSlug}
+                  onChange={(e) => setEventSlug(e.target.value)}
+                  autoComplete="off"
+                  spellCheck={false}
+                  placeholder="my-event-2026"
+                />
+              </label>
+              <label>
+                Event name
+                <input
+                  name="eventName"
+                  value={eventName}
+                  onChange={(e) => setEventName(e.target.value)}
+                  autoComplete="off"
+                  spellCheck={false}
+                />
+              </label>
+              <label>
+                Timezone
+                <input
+                  name="eventTimezone"
+                  value={eventTimezone}
+                  onChange={(e) => setEventTimezone(e.target.value)}
+                  autoComplete="off"
+                  spellCheck={false}
+                />
+              </label>
+              <label>
+                Visibility
+                <select
+                  name="eventVisibility"
+                  value={metaVisibility}
+                  onChange={(e) =>
+                    setMetaVisibility(
+                      e.target.value === 'PUBLIC' ? 'PUBLIC' : 'UNLISTED',
+                    )
+                  }
+                >
+                  <option value="UNLISTED">UNLISTED</option>
+                  <option value="PUBLIC">PUBLIC</option>
+                </select>
+              </label>
+              <div className="auth-buttons">
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void createEvent()}
+                >
+                  Tạo event
+                </button>
+              </div>
+            </details>
             {listView?.kind === 'list' ? (
               listView.items.length === 0 ? (
                 <SurfaceState
