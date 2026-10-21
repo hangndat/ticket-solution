@@ -1,4 +1,5 @@
 import { Stack } from 'expo-router/stack';
+import { BrandWordmark } from '@/components/page';
 import { tabAttendeeCompactStackScreenOptions } from '@/navigation/tab-stack-options';
 
 export default function Layout() {
@@ -6,7 +7,7 @@ export default function Layout() {
     <Stack
       screenOptions={{
         ...tabAttendeeCompactStackScreenOptions,
-        title: 'Sự kiện',
+        headerTitle: () => <BrandWordmark compact />,
       }}
     />
   );
