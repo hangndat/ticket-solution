@@ -14,3 +14,29 @@ When Grep/Glob/Read are denied or lean-ctx is required, call MCP tools correctly
 Never call a top-level tool named `ctx_call` or `lean-ctx ctx_call` — that yields `Tool ctx_call was not found`.
 
 Prefer code-review-graph (`code-review-graph-ticket`) for symbol/impact first; use lean-ctx for file content / unknown-location compose.
+
+## Khôi phục hook global Cursor bị đổi về deny
+
+Nếu Globbing báo `Native Grep blocked`, kiểm tra `~/.cursor/hooks.json`:
+hook `Grep|Glob` phải gọi `lean-ctx hook redirect`, không phải `hook deny`.
+Đã ghi nhận cấu hình global đổi từ redirect về deny khi khởi động session mới.
+`shadow_mode = true` cho phép lean-ctx tự cài lại hook deny; cần tắt chế độ này
+để giữ bản sửa qua vòng tự khôi phục cấu hình. MCP và các công cụ `ctx_*` vẫn dùng
+được; lựa chọn này áp dụng cho lean-ctx trên máy, không chỉ repo.
+File global nằm ngoài Git,
+nên pull/merge `main` không tự khôi phục cấu hình trên máy.
+
+```bash
+cp ~/.config/lean-ctx/config.toml ~/.config/lean-ctx/config.toml.before-glob-repair.bak
+lean-ctx config set shadow_mode false
+node scripts/repair-lean-ctx-cursor-hooks.mjs --check
+node scripts/repair-lean-ctx-cursor-hooks.mjs
+```
+
+Script chỉ sửa đúng hook lean-ctx `Grep|Glob` bị lỗi, tạo backup trước khi ghi,
+giữ nguyên các hook khác và không trực tiếp sửa cấu hình của Claude.
+`shadow_mode=false` là lựa chọn toàn máy: lean-ctx sẽ không ép deny native tools
+trong các lần tự cài đặt tiếp theo. Không dùng lệnh này để thay đổi hook bảo mật
+của công cụ khác.
+Chạy lại không tạo thay đổi nếu đã sửa. Có thể dùng `--config <path>` để kiểm tra
+một fixture. Nếu session Cursor vẫn giữ hook cũ, mở session mới rồi xác minh lại.
