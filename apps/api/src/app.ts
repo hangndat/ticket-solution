@@ -57,6 +57,18 @@ import {
   PublishedEventsService,
 } from './published-events';
 import {
+  PublishedEventAssetsController,
+  PublishedEventAssetsService,
+} from './published-event-assets';
+import {
+  PublicTenantBrandingController,
+  PublicTenantBrandingService,
+} from './public-tenant-branding';
+import {
+  PublishedTenantAssetsController,
+  PublishedTenantAssetsService,
+} from './published-tenant-assets';
+import {
   TenantRegistrationController,
   TenantRegistrationService,
   buildTenantRegistrationDeps,
@@ -147,6 +159,9 @@ export async function createApp(
       BrandingController,
       PlatformPublishedEventsController,
       PublishedEventsController,
+      PublishedEventAssetsController,
+      PublicTenantBrandingController,
+      PublishedTenantAssetsController,
       TenantRegistrationController,
     ],
     providers: [
@@ -219,6 +234,18 @@ export async function createApp(
       {
         provide: PublishedEventsService,
         useValue: new PublishedEventsService({ db: identity.db }),
+      },
+      {
+        provide: PublishedEventAssetsService,
+        useValue: new PublishedEventAssetsService({ db: identity.db }),
+      },
+      {
+        provide: PublicTenantBrandingService,
+        useValue: new PublicTenantBrandingService({ db: identity.db }),
+      },
+      {
+        provide: PublishedTenantAssetsService,
+        useValue: new PublishedTenantAssetsService({ db: identity.db }),
       },
       {
         provide: TenantRegistrationService,
