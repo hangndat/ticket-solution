@@ -66,6 +66,10 @@ import {
   DEFAULT_JSON_BODY_LIMIT_BYTES,
   IMPORT_UPLOAD_BODY_LIMIT_BYTES,
 } from './http-limits';
+import {
+  platformAwareOperationIdFactory,
+  reorderOpenApiPaths,
+} from './openapi-document';
 
 export type { CreateAppOptions } from './app-options';
 
@@ -252,8 +256,16 @@ export async function createApp(
   return app;
 }
 
-export function createOpenApi(app: NestFastifyApplication) {
-  return SwaggerModule.createDocument(
+export type CreateOpenApiOptions = {
+  /** Path keys from the committed spec — keeps `openapi.json` byte-stable across controller splits. */
+  pathOrder?: readonly string[];
+};
+
+export function createOpenApi(
+  app: NestFastifyApplication,
+  options: CreateOpenApiOptions = {},
+) {
+  const document = SwaggerModule.createDocument(
     app,
     new DocumentBuilder()
       .setTitle('Ticket API — D4 CS/export/events')
@@ -263,5 +275,10 @@ export function createOpenApi(app: NestFastifyApplication) {
       )
       .addBearerAuth()
       .build(),
+    { operationIdFactory: platformAwareOperationIdFactory },
   );
+  if (options.pathOrder?.length) {
+    return reorderOpenApiPaths(document, options.pathOrder);
+  }
+  return document;
 }
