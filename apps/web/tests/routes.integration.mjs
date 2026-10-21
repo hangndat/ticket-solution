@@ -96,6 +96,17 @@ test('production routes isolate tenant content and reject unknown pairs', async 
     assert.ok(!home.includes('data-testid="nav-admin"'));
     assert.ok(!home.includes('data-testid="nav-gate"'));
     assert.ok(!home.includes('data-testid="nav-platform"'));
+    assert.ok(!home.includes('data-testid="nav-wallet"'));
+
+    const wallet = await fetch(base + '/wallet');
+    assert.equal(wallet.status, 200);
+    const walletHtml = await wallet.text();
+    assert.ok(
+      walletHtml.includes('data-testid="wallet-need-login"') ||
+        walletHtml.includes('Cần đăng nhập'),
+      'anonymous /wallet should prompt login',
+    );
+    assert.ok(!walletHtml.includes('data-testid="wallet-ready"'));
 
     // BFF list proxy exists; Nest down → 502 UPSTREAM_UNAVAILABLE.
     const listBff = await fetch(base + '/api/bff/public/tenants/mfest-demo/events');
