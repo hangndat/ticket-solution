@@ -117,7 +117,7 @@ export function EventMediaHeader({
   );
 }
 
-function catalogArtTone(eventId: string): 'default' | 'green' | 'gold' {
+export function catalogArtTone(eventId: string): 'default' | 'green' | 'gold' {
   return eventArtTone(eventId);
 }
 
@@ -166,14 +166,21 @@ export type HomeCatalogItem = {
   };
 };
 
+export function catalogArtLabel(name: string): string {
+  const trimmed = name.trim();
+  if (!trimmed) return '·';
+  const words = trimmed.split(/\s+/).filter(Boolean);
+  if (words.length >= 2) {
+    return `${words[0]![0] ?? ''}${words[1]![0] ?? ''}`.toUpperCase();
+  }
+  return trimmed.slice(0, 2).toUpperCase();
+}
+
 function CatalogEventCard({ event }: { event: HomeCatalogItem }) {
   const tone = catalogArtTone(event.id);
   const when = formatEventWhen(event);
   const place = event.location ?? event.timezone;
-  const bannerSrc =
-    sanitizeMediaUrl(event.brand.bannerUrl) ??
-    resolveDemoPack(event.id, event.tenantSlug)?.bannerUrl ??
-    null;
+  const artLabel = catalogArtLabel(event.name);
 
   return (
     <article className="home-catalog-card">
@@ -187,22 +194,10 @@ function CatalogEventCard({ event }: { event: HomeCatalogItem }) {
       >
         <div
           className={`home-catalog-card__art home-catalog-card__art--${tone}`}
-          data-testid={`home-banner-${event.id}`}
+          data-testid={`home-catalog-art-${event.id}`}
+          aria-hidden="true"
         >
-          {bannerSrc ? (
-            <EventBanner
-              eventId={event.id}
-              tenantSlug={event.tenantSlug}
-              bannerUrl={event.brand.bannerUrl}
-              className="home-catalog-card__banner"
-              testId={`home-banner-img-${event.id}`}
-              alt=""
-            />
-          ) : (
-            <span className="home-catalog-card__art-fallback" aria-hidden="true">
-              {event.name.slice(0, 1)}
-            </span>
-          )}
+          <span className="home-catalog-card__art-fallback">{artLabel}</span>
         </div>
         <div className="home-catalog-card__info">
           <span className="eyebrow">{event.brand.organizationName}</span>

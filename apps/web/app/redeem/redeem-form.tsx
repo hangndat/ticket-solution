@@ -48,6 +48,7 @@ import {
   REQUEST_TIMEOUT_MS,
 } from '../../src/redeem/poll-operation';
 import { loadPublishedRedeemSchema } from '../../src/redeem/published-schema';
+import { validateRedeemScope } from '../../src/redeem/redeem-scope';
 import { resolveRedemptionCodeGlobal } from '../../src/redeem/global-resolve';
 import {
   clearStoredResolveToken,
@@ -142,13 +143,18 @@ export function RedeemForm({
         setTermsVersion(result.schema.terms?.version ?? null);
         setTermsBody(result.schema.terms?.bodyMarkdown ?? null);
         if (result.schema.eventId) setEventId(result.schema.eventId);
+        if (result.schema.tenantId) setTenantId(result.schema.tenantId);
         // AC-A4: never keep prior answers / silent terms accept after reload.
         setAnswers({});
         setTermsAccepted(false);
         setFieldErrors({});
-        setSchemaNotice(
-          'Đã tải biểu mẫu mới. Điền lại và đồng ý điều khoản trước khi gửi.',
-        );
+        let notice =
+          'Đã tải biểu mẫu mới. Điền lại và đồng ý điều khoản trước khi gửi.';
+        if (!result.schema.tenantId) {
+          notice +=
+            ' Máy chủ chưa trả mã tổ chức — nhập «Mã tổ chức» (UUID) trong tùy chọn nâng cao trước khi đổi mã.';
+        }
+        setSchemaNotice(notice);
         return;
       }
       setFormDefinition(null);
@@ -404,9 +410,11 @@ export function RedeemForm({
       onGlobalResolve();
       return;
     }
+    const scopeIssue = validateRedeemScope(tenantId, eventId);
     const validated = validateFormAnswers(formDefinition, answers);
     const termsIssue = requireTermsConsent({ termsVersion, termsAccepted });
     const nextErrors: Record<string, string> = {};
+    if (scopeIssue) nextErrors[scopeIssue.fieldId] = scopeIssue.message;
     if (!validated.ok) {
       for (const issue of validated.issues) {
         nextErrors[issue.fieldId] = issue.message;
@@ -414,7 +422,15 @@ export function RedeemForm({
     }
     if (termsIssue) nextErrors.terms = termsIssue.message;
     setFieldErrors(nextErrors);
-    if (!validated.ok || termsIssue) {
+    if (!validated.ok || termsIssue || scopeIssue) {
+      if (scopeIssue && !showDevScopeFields) {
+        setUx({
+          kind: 'error',
+          title: 'Thiếu phạm vi sự kiện',
+          detail: scopeIssue.message,
+          retryable: false,
+        });
+      }
       focusFirstFieldError(Object.keys(nextErrors));
       return;
     }
@@ -693,25 +709,49 @@ export function RedeemForm({
                       Mã tổ chức
                       <input
                         name="tenantId"
-                        required
                         value={tenantId}
                         onChange={(e) => setTenantId(e.target.value)}
                         autoComplete="off"
                         spellCheck={false}
                         placeholder="UUID tổ chức"
+                        aria-invalid={fieldErrors.tenantId ? true : undefined}
+                        aria-describedby={
+                          fieldErrors.tenantId ? 'redeem-tenantId-error' : undefined
+                        }
                       />
+                      {fieldErrors.tenantId ? (
+                        <span
+                          id="redeem-tenantId-error"
+                          className="field-error"
+                          role="alert"
+                        >
+                          {fieldErrors.tenantId}
+                        </span>
+                      ) : null}
                     </label>
                     <label>
                       Mã sự kiện (tự điền khi tải biểu mẫu)
                       <input
                         name="eventId"
-                        required
                         value={eventId}
                         onChange={(e) => setEventId(e.target.value)}
                         autoComplete="off"
                         spellCheck={false}
                         placeholder="UUID sự kiện"
+                        aria-invalid={fieldErrors.eventId ? true : undefined}
+                        aria-describedby={
+                          fieldErrors.eventId ? 'redeem-eventId-error' : undefined
+                        }
                       />
+                      {fieldErrors.eventId ? (
+                        <span
+                          id="redeem-eventId-error"
+                          className="field-error"
+                          role="alert"
+                        >
+                          {fieldErrors.eventId}
+                        </span>
+                      ) : null}
                     </label>
                     <div className="redeem-versions">
                       <label>
@@ -750,25 +790,49 @@ export function RedeemForm({
                     Mã tổ chức
                     <input
                       name="tenantId"
-                      required
                       value={tenantId}
                       onChange={(e) => setTenantId(e.target.value)}
                       autoComplete="off"
                       spellCheck={false}
                       placeholder="UUID tổ chức"
+                      aria-invalid={fieldErrors.tenantId ? true : undefined}
+                      aria-describedby={
+                        fieldErrors.tenantId ? 'redeem-tenantId-error-dev' : undefined
+                      }
                     />
+                    {fieldErrors.tenantId ? (
+                      <span
+                        id="redeem-tenantId-error-dev"
+                        className="field-error"
+                        role="alert"
+                      >
+                        {fieldErrors.tenantId}
+                      </span>
+                    ) : null}
                   </label>
                   <label>
                     Mã sự kiện (tự điền khi tải biểu mẫu)
                     <input
                       name="eventId"
-                      required
                       value={eventId}
                       onChange={(e) => setEventId(e.target.value)}
                       autoComplete="off"
                       spellCheck={false}
                       placeholder="UUID sự kiện"
+                      aria-invalid={fieldErrors.eventId ? true : undefined}
+                      aria-describedby={
+                        fieldErrors.eventId ? 'redeem-eventId-error-dev' : undefined
+                      }
                     />
+                    {fieldErrors.eventId ? (
+                      <span
+                        id="redeem-eventId-error-dev"
+                        className="field-error"
+                        role="alert"
+                      >
+                        {fieldErrors.eventId}
+                      </span>
+                    ) : null}
                   </label>
                   <div className="redeem-versions">
                     <label>

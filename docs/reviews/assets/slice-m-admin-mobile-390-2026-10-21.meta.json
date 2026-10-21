@@ -1,5 +1,5 @@
 {
-  "url": "http://localhost:3099/?notice=auth_unavailable",
+  "url": "http://127.0.0.1:8080/realms/ticket/protocol/openid-connect/auth?client_id=ticket-web&redirect_uri=http%3A%2F%2F127.0.0.1%3A3000%2Fapi%2Fauth%2Fcallback&response_type=code&scope=openid+profile+email&state=JbakGAM8RyaQ0bTHZAd3WQ&code_challenge=D3JJ26l-ZPbMxsY6oqvls7uW4TEE_4nWmK7-ZjGXk3Q&code_challenge_method=S256&audience=ticket-api",
   "status": 200,
   "viewport": {
     "width": 390,
