@@ -19,6 +19,8 @@ const {
   seedD9DemoDataset,
   listPublishedEvents,
   getPublishedEventDetail,
+  saveEventConfigVersion,
+  publishEventConfig,
   D9_DEMO,
   readCodeHmacEnvironment,
   hashRedemptionCode,
@@ -364,6 +366,97 @@ test(
         () => seedD9DemoDataset(db, hmac4, { oidcIssuer: OIDC }),
         /rebrand blocked: slug mfest-demo/,
       );
+    } finally {
+      if (db) await db.$disconnect().catch(() => {});
+      if (name) {
+        try {
+          docker('rm', '-f', name);
+        } catch {
+          /* ignore */
+        }
+      }
+    }
+  },
+);
+
+test(
+  'D9 seed upgrades published marketing when terms section missing',
+  { timeout: 120_000 },
+  async () => {
+    let name;
+    let db;
+    try {
+      const boot = await startIsolatedPostgres();
+      name = boot.name;
+      db = createDatabase(boot.url, 2);
+      const hmac = readCodeHmacEnvironment({
+        CODE_HMAC_PEPPER: 'd9-terms-upgrade-pepper!!',
+        CODE_HMAC_VERSION: '1',
+      });
+      const first = await seedD9DemoDataset(db, hmac, { oidcIssuer: OIDC });
+      const actorUserId = first.staffUserIds[0];
+      assert.ok(actorUserId);
+      await withTenant(db, MFEST_ID, async (tx) => {
+        const detail = await getPublishedEventDetail(db, {
+          tenantSlug: 'mfest-demo',
+          eventSlug: 'mfest',
+        });
+        assert.ok(detail);
+        const rows = await tx.$queryRaw`
+          SELECT v.payload
+          FROM events e
+          INNER JOIN event_config_versions v
+            ON v.tenant_id = e.tenant_id
+           AND v.event_id = e.id
+           AND v.version = e.published_config_version
+          WHERE e.tenant_id = ${MFEST_ID}::uuid
+            AND e.id = ${MFEST_EVENT_ID}::uuid
+        `;
+        const raw = rows[0]?.payload;
+        assert.ok(raw && typeof raw === 'object' && !Array.isArray(raw));
+        const payload = { ...raw };
+        if (Array.isArray(payload.sections)) {
+          payload.sections = payload.sections.map((s) => {
+            if (s?.kind !== 'terms') return s;
+            const body =
+              s.body && typeof s.body === 'object' && !Array.isArray(s.body)
+                ? { ...s.body }
+                : {};
+            body.termsVersion = 'legacy-v0';
+            body.text = '';
+            return { ...s, body };
+          });
+        }
+        delete payload.termsVersion;
+        const saved = await saveEventConfigVersion(tx, {
+          tenantId: MFEST_ID,
+          eventId: MFEST_EVENT_ID,
+          actorUserId,
+          payload,
+        });
+        await publishEventConfig(tx, {
+          tenantId: MFEST_ID,
+          eventId: MFEST_EVENT_ID,
+          actorUserId,
+          expectedVersion: saved.version,
+        });
+      });
+      const stripped = await getPublishedEventDetail(db, {
+        tenantSlug: 'mfest-demo',
+        eventSlug: 'mfest',
+      });
+      assert.ok(stripped?.terms);
+      assert.notEqual(stripped.terms.version, 'terms-v1');
+
+      const upgraded = await seedD9DemoDataset(db, hmac, { oidcIssuer: OIDC });
+      assert.ok(upgraded.configsPublished >= 1);
+
+      const after = await getPublishedEventDetail(db, {
+        tenantSlug: 'mfest-demo',
+        eventSlug: 'mfest',
+      });
+      assert.ok(after?.terms);
+      assert.equal(after.terms.version, 'terms-v1');
     } finally {
       if (db) await db.$disconnect().catch(() => {});
       if (name) {

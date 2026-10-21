@@ -288,13 +288,16 @@ async function main() {
     } catch {
       /* ignore */
     }
+    const publishedTermsVersion = publicDetailJson.terms?.version ?? null;
     results.push({
       check: 'public_event_detail',
       status: publicDetail.status,
       pass:
         publicDetail.status === 200 &&
         publicDetailJson.slug === 'mfest' &&
-        publicDetailJson.tenantSlug === 'mfest-demo',
+        publicDetailJson.tenantSlug === 'mfest-demo' &&
+        publishedTermsVersion === 'terms-v1',
+      termsVersion: publishedTermsVersion,
     });
 
     const me = await api(base, attendeeToken, 'GET', '/v1/me');
@@ -327,6 +330,11 @@ async function main() {
 
     const tenantId = first.tenants.find((t) => t.slug === 'mfest-demo').id;
     const eventId = first.events.find((e) => e.slug === 'mfest').id;
+    if (!publishedTermsVersion) {
+      throw new Error(
+        'public event detail missing published terms — cannot redeem with consent',
+      );
+    }
     const redeem = await api(
       base,
       attendeeToken,
@@ -335,13 +343,19 @@ async function main() {
       {
         code: 'DEMO-MFEST-001',
         idempotencyKey: cryptoRandom(),
+        termsVersion: publishedTermsVersion,
+        termsAccepted: true,
       },
     );
+    const redeemErrorCode = redeem.json?.error?.code ?? redeem.json?.code ?? null;
     results.push({
       check: 'redeem_attendee',
       status: redeem.status,
-      pass: redeem.status === 200 || redeem.status === 201,
+      pass:
+        (redeem.status === 200 || redeem.status === 201) &&
+        redeemErrorCode !== 'TERMS_REQUIRED',
       code: redeem.json.code || redeem.json.ticketId || null,
+      errorCode: redeemErrorCode,
     });
 
     const tickets = await api(
