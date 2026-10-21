@@ -29,6 +29,7 @@ export {
   DEFAULT_TICK_STEP_TIMEOUT_MS,
 } from './worker-relay';
 export {
+  resolveTickStepTimeoutMs,
   runStepWithTimeout,
   TickStepTimeoutError,
 } from './worker-tick-step-timeout';
@@ -121,12 +122,7 @@ export async function createWorker(
       ? shutdownFromEnv
       : undefined);
 
-  const tickStepFromEnv = Number(env['WORKER_TICK_STEP_TIMEOUT_MS']);
-  const tickStepTimeoutMs =
-    options.tickStepTimeoutMs ??
-    (Number.isFinite(tickStepFromEnv) && tickStepFromEnv > 0
-      ? tickStepFromEnv
-      : undefined);
+  const tickStepTimeoutMs = options.tickStepTimeoutMs;
 
   const relay = new WorkerRelay(
     db,
