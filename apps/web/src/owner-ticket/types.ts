@@ -22,6 +22,46 @@ export type LoadOwnerTicketResult =
   | { status: 'unreachable' }
   | { status: 'invalid' };
 
+/** Row for wallet grid — TicketSummary + optional event label from API. */
+export type WalletTicketRow = OwnerTicketDetail & {
+  eventName?: string;
+};
+
+export type LoadOwnerWalletResult =
+  | {
+      status: 'ok';
+      tickets: WalletTicketRow[];
+      tenantSlugById: Record<string, string>;
+    }
+  | { status: 'unauthenticated' }
+  | { status: 'unreachable' }
+  | { status: 'invalid' };
+
+export const WALLET_COPY = {
+  title: 'Vé của tôi',
+  intro:
+    'Quản lý vé đã cấp theo sự kiện. Mở vé để xem mã QR tại cổng — không chia sẻ ảnh chụp màn hình.',
+  needLogin: {
+    title: 'Cần đăng nhập',
+    detail:
+      'Đăng nhập bằng email chủ vé để xem ví. Chúng tôi không hiển thị danh sách vé khi chưa xác minh.',
+  },
+  unreachable: {
+    title: 'Không tải được vé',
+    detail:
+      'Máy chủ vé tạm thời không phản hồi. Kiểm tra API (API_BASE_URL, thường :3001) đang chạy, rồi thử lại. Dùng một origin localhost (http://localhost:3000) — không trộn 127.0.0.1 với localhost.',
+  },
+  empty: {
+    title: 'Chưa có vé',
+    detail:
+      'Bạn chưa có vé trong tài khoản này. Đổi mã lấy vé hoặc kiểm tra email xác nhận.',
+  },
+  invalid: {
+    title: 'Dữ liệu vé không hợp lệ',
+    detail: 'Phản hồi từ máy chủ không đúng định dạng. Thử tải lại trang.',
+  },
+} as const;
+
 export const OWNER_TICKET_COPY = {
   title: 'Vé của bạn',
   needLogin: {

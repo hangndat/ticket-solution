@@ -73,6 +73,77 @@ BACKUP=/opt/vemoki/backup/deploy-2026-10-21-1ba6647
 
 ---
 
+## Deploy #711 — `9515c980` (web OIDC audience authorize/refresh + SSR aud guard)
+
+| Field | Value |
+| --- | --- |
+| Source SHA | `9515c980db4185c8109fe648204036e3e0e56fb1` (merge PR [#711](https://github.com/hangndat/ticket-solution/pull/711)) |
+| Prior prod marker | `8f4f70af2a10df072693bfb26047efcea8d93db9` → updated `/opt/vemoki/deployed-sha.txt` |
+| VPS | `conanphong` → `/opt/vemoki/src` |
+| Rollback backup | `/opt/vemoki/backup/deploy-2026-10-21-9515c980/` |
+| Operator | Gonic (Orca worker `task_ed057f33438e`) |
+| Scope | **web** only (no migrate, nginx, keycloak, api, worker, portal) |
+| Compose | `docker compose --env-file /opt/vemoki/.env -f compose.yaml -f /opt/vemoki/compose.trace.override.yaml up -d --no-deps web` + `restart web` (trace override retained) |
+
+### Keycloak (read-only, prod realm `ticket`, client `ticket-web`)
+
+| Check | Kết quả |
+| --- | --- |
+| `oidc-audience-mapper` on `ticket-web` | **Có** |
+| `included.client.audience` | `ticket-api` |
+
+### Code paths
+
+| Path | Change |
+| --- | --- |
+| `apps/web/src/oidc/authorize.ts`, `access-token-audience.ts`, `refresh.ts`, `session-refresh.ts` | audience on authorize/refresh |
+| `apps/web/app/api/auth/login/route.ts` | login authorize params |
+| `apps/web/src/nav/staff-route-guard.ts` | SSR decode `aud` guard |
+| `apps/web/tests/*` | audience + authorize URL tests |
+
+### Trước deploy #711
+
+| Check | Trước |
+| --- | --- |
+| `GET https://app.vemoki.com/` | 200 |
+| `GET https://app.vemoki.com/api/bff/me` (no cookie) | **401** |
+| `GET https://app.vemoki.com/gate` (no cookie) | **307** |
+| `/opt/vemoki/deployed-sha.txt` | `8f4f70a…` |
+
+### Thực hiện #711
+
+1. Backup `apps/web` → `deploy-2026-10-21-9515c980/web/`.
+2. Rsync worktree `apps/web` only (excludes deploy-prod skill); no lockfile / contracts change.
+3. `vemoki-runtime:local`: `@ticket/web` build → compose `up -d --no-deps web` (trace override) → `restart web`.
+
+### Sau deploy #711
+
+| Check | Sau |
+| --- | --- |
+| `GET https://vemoki.com/` | 200 |
+| `GET https://app.vemoki.com/` | 200 |
+| `GET https://app.vemoki.com/api/bff/me` (no cookie) | **401** |
+| `GET https://app.vemoki.com/gate` (no cookie) | **307** |
+| `GET https://app.vemoki.com/api/auth/refresh` (no cookie) | **307** → `/auth?next=%2F` (không 5xx) |
+| `POST https://app.vemoki.com/redeem` + `next-action: x` | **400** (edge guard) |
+| `GET https://portal.vemoki.com/` | 200 |
+| `GET https://ancafe.anphong.vn/` | 200 |
+| `vemoki-web-1` logs (5m) | `failed-to-find-server-action` count **0**; không error spike |
+
+### Rollback #711
+
+```bash
+BACKUP=/opt/vemoki/backup/deploy-2026-10-21-9515c980
+rsync -a "$BACKUP/web/" /opt/vemoki/src/apps/web/
+## rebuild @ticket/web per deploy-prod skill; restart web (giữ trace override)
+```
+
+### Follow-up (repo)
+
+- PR docs artifact (mục này); không merge trong task deploy.
+
+---
+
 ## Production deploy — 2026-10-21
 
 ## Deploy #668 — `cbabea4` (fix rate-limit RLS + CSP runtime)
@@ -294,6 +365,19 @@ rsync -a "$BACKUP/web/" /opt/vemoki/src/apps/web/
 | Compose | Giữ `/opt/vemoki/compose.trace.override.yaml` (`GATE_SSR_TRACE=1`); restart web với `-f compose.yaml -f compose.trace.override.yaml` |
 | Build log | `/opt/vemoki/deploy-707-8f4f70a-web.log` |
 
+## Deploy #703 — `7af72d35` (web SSR gate refresh + `GATE_SSR_TRACE` off by default)
+
+| Field | Value |
+| --- | --- |
+| Source SHA | `7af72d35e0d74ed695cbce97a82ff239ca633ca2` (merge PR [#703](https://github.com/hangndat/ticket-solution/pull/703)) |
+| Prior prod marker | `0add1f6072d4e4b9b7b6b73f7b8ffb3baa7b0bb8` → updated `/opt/vemoki/deployed-sha.txt` |
+| VPS | `conanphong` → `/opt/vemoki/src` |
+| Rollback backup | `/opt/vemoki/backup/deploy-2026-10-21-7af72d35/web/` |
+| Operator | Gonic (Orca worker `task_6581e36a7304`) |
+| Scope | **web** only (no migrate, nginx, keycloak, api, worker, portal) |
+| Compose | `GATE_SSR_TRACE` **không** trong `compose.yaml` (VPS == git; trace tắt mặc định) |
+| Build log | `/opt/vemoki/deploy-703-7af72d35-web.log` |
+
 ### Code paths
 
 | Path | Change |
@@ -304,6 +388,16 @@ rsync -a "$BACKUP/web/" /opt/vemoki/src/apps/web/
 | `apps/web/tests/auth-refresh-route.test.ts` | **new** |
 
 ### Trước deploy #707
+
+| `apps/web/app/gate/page.tsx` | gate page |
+| `apps/web/src/bff/upstream.ts` | upstream / bearer forwarding |
+| `apps/web/src/gate/gate-ssr-trace.ts` | **new** — opt-in SSR trace (`GATE_SSR_TRACE`) |
+| `apps/web/src/nav/staff-route-guard.ts` | gate refresh + stale access handling |
+| `apps/web/src/oidc/access-token-clock.ts` | **new** — access token clock skew |
+| `apps/web/src/oidc/refresh.ts` | refresh integration |
+| `apps/web/tests/access-token-clock.test.ts` | **new** |
+
+### Trước deploy #703
 
 | Check | Trước |
 | --- | --- |
@@ -319,6 +413,16 @@ rsync -a "$BACKUP/web/" /opt/vemoki/src/apps/web/
 3. `vemoki-runtime:local`: `@ticket/web` build → `docker compose` restart `web` (trace override file retained).
 
 ### Sau deploy #707
+
+| `/opt/vemoki/deployed-sha.txt` | `0add1f6…` |
+
+### Thực hiện #703
+
+1. Backup `apps/web` → `deploy-2026-10-21-7af72d35/web/`.
+2. Rsync worktree `apps/web` only (excludes deploy-prod skill); no lockfile / contracts change.
+3. `vemoki-runtime:local`: `@ticket/web` build → `docker compose restart web` (không `compose --build`).
+
+### Sau deploy #703
 
 | Check | Sau |
 | --- | --- |
@@ -338,6 +442,21 @@ rsync -a "$BACKUP/web/" /opt/vemoki/src/apps/web/
 BACKUP=/opt/vemoki/backup/deploy-2026-10-21-8f4f70a
 rsync -a "$BACKUP/web/" /opt/vemoki/src/apps/web/
 ## rebuild @ticket/web per deploy-prod skill; restart web với trace override compose flags
+
+| `GET https://vemoki.com/` | 200 |
+| `GET https://app.vemoki.com/api/bff/me` (no cookie) | **401** |
+| `GET https://app.vemoki.com/gate` (no cookie) | **307** |
+| `POST https://app.vemoki.com/redeem` + `next-action: x` | **400** (edge guard) |
+| `GET https://portal.vemoki.com/` | 200 |
+| `GET https://ancafe.anphong.vn/` | 200 |
+| `vemoki-web-1` logs (after probes) | no `error` / `failed-to-find-server-action`; `GATE_SSR_TRACE` không bật |
+
+### Rollback #703
+
+```bash
+BACKUP=/opt/vemoki/backup/deploy-2026-10-21-7af72d35
+rsync -a "$BACKUP/web/" /opt/vemoki/src/apps/web/
+## rebuild @ticket/web per deploy-prod skill, restart web
 ```
 
 ---
@@ -414,3 +533,87 @@ BACKUP=/opt/vemoki/backup/deploy-2026-10-21-1ba6647
 
 - PR [#665](https://github.com/hangndat/ticket-solution/pull/665): artifact + `infra/deploy/compose.yaml` (web OIDC env parity với portal).
 - Không merge trong task deploy gốc.
+
+---
+
+## Deploy #728 / #729 / #731 — `81bd804` (BFF `vemoki-api` alias, API `tenantId`, web redeem)
+
+| Field | Value |
+| --- | --- |
+| Source SHA | `81bd80499d6fbd573a35da7726da5fa49b1409a9` (`main`; #728 auth terminal + compose alias, #729 API `tenantId`, #731 web redeem) |
+| Prior prod marker | `9515c980db4185c8109fe648204036e3e0e56fb1` → updated `/opt/vemoki/deployed-sha.txt` |
+| VPS | `conanphong` → `/opt/vemoki/src` |
+| Rollback backup | `/opt/vemoki/backup/deploy-2026-10-21-81bd804/` |
+| Operator | Gonic (Orca worker `task_92bcf70d3363`) |
+| Scope | **api** + **web** + **portal** compose env (no migrate, nginx vhost edit, keycloak, worker) |
+| Compose | `API_BASE_URL: http://vemoki-api:3001` on web/portal; `up -d --no-deps web portal` **without** `compose.trace.override.yaml` |
+| Build logs | `/opt/vemoki/deploy-728-81bd804-api.log`, `/opt/vemoki/deploy-728-81bd804-web.log` |
+
+### Code / infra paths
+
+| Path | Change |
+| --- | --- |
+| `infra/deploy/compose.yaml`, `infra/deploy/README.md` | BFF upstream `vemoki-api` alias; edge DNS smoke note |
+| `packages/contracts`, `packages/backend`, `apps/api` | public events include `tenantId` (#729) |
+| `apps/web` | auth terminal / redeem (#728, #731) |
+| `apps/portal` | rsync only `next-env.d.ts` (no portal rebuild) |
+
+### Edge DNS (trước recreate web/portal)
+
+| Check | Kết quả |
+| --- | --- |
+| `docker exec vemoki-api-1 getent hosts vemoki-api` | `172.23.0.7` (khớp `vemoki-api-1` trên edge) |
+| `docker exec vemoki-web-1 getent hosts vemoki-api` | một bản ghi, cùng IP |
+
+### Trước deploy
+
+| Check | Trước |
+| --- | --- |
+| `GET https://api.vemoki.com/v1/public/events?limit=1` | 200, **không** có `tenantId` |
+| `docker exec vemoki-web-1 printenv API_BASE_URL` | `http://api:3001` |
+| `/opt/vemoki/deployed-sha.txt` | `9515c980…` |
+
+### Thực hiện
+
+1. Backup `packages/{contracts,backend}`, `apps/{api,web,portal}`, `infra/deploy/{compose.yaml,README.md}` → `deploy-2026-10-21-81bd804/`.
+2. Rsync worktree paths (excludes deploy-prod skill).
+3. `vemoki-runtime:local`: contracts tsc → `@ticket/backend` build → `@ticket/api` build → `docker compose restart api`.
+4. Verify API health + `tenantId` on public events.
+5. `@ticket/web` build → `docker compose --env-file /opt/vemoki/.env up -d --no-deps web portal`.
+6. **Nginx reload (operator):** sau recreate, HTTPS app/portal **502** vì worker nginx giữ upstream IP cũ; `nginx -s reload` bị chặn khi `vemoki-pre-*` không resolve. Đã thêm stub Alpine trên edge (`vemoki-pre-web`, `vemoki-pre-api`, `vemoki-pre-keycloak`, `vemoki-pre-portal`) chỉ để DNS pass `nginx -t`, rồi reload — **không** sửa `vemoki.conf`.
+
+### Sau deploy
+
+| Check | Sau |
+| --- | --- |
+| `GET https://api.vemoki.com/v1/health` | 200, `status":"ok"` |
+| `GET https://api.vemoki.com/v1/public/events?limit=1` | 200, có `tenantId` |
+| `docker exec vemoki-web-1 printenv API_BASE_URL` | `http://vemoki-api:3001` |
+| `docker exec vemoki-portal-1 printenv API_BASE_URL` | `http://vemoki-api:3001` |
+| `GET https://app.vemoki.com/` | 200 |
+| `GET https://portal.vemoki.com/` | 200 |
+| `GET https://app.vemoki.com/api/bff/me` (no cookie) | **401** |
+| `GET https://app.vemoki.com/gate` (no cookie) | **307** |
+| `GET https://app.vemoki.com/api/auth/refresh` (no cookie) | **307** (không 5xx / loop) |
+| `POST https://app.vemoki.com/redeem` + `next-action: x` | **400** |
+| `GET https://app.vemoki.com/api/bff/public/tenants/mfest-demo/events/mfest` | 200, có `tenantId` |
+| `GET https://ancafe.anphong.vn/` | 200 |
+| CSP app `connect-src` | `http://vemoki-api:3001` + `https://auth.vemoki.com` |
+| `vemoki-web-1` / `vemoki-portal-1` logs (5m) | `failed-to-find-server-action` **0**; không spike 401 |
+
+### Rollback
+
+```bash
+BACKUP=/opt/vemoki/backup/deploy-2026-10-21-81bd804
+rsync -a "$BACKUP/packages/contracts/" /opt/vemoki/src/packages/contracts/
+rsync -a "$BACKUP/packages/backend/" /opt/vemoki/src/packages/backend/
+rsync -a "$BACKUP/apps/api/" /opt/vemoki/src/apps/api/
+rsync -a "$BACKUP/apps/web/" /opt/vemoki/src/apps/web/
+rsync -a "$BACKUP/apps/portal/" /opt/vemoki/src/apps/portal/
+cp -a "$BACKUP/infra/deploy/compose.yaml" "$BACKUP/infra/deploy/README.md" /opt/vemoki/src/infra/deploy/
+## rebuild api + web per deploy-prod skill; restart api; up/restart web+portal; nginx reload if recreated
+```
+
+### Follow-up (repo)
+
+- PR docs artifact (mục này); không merge trong task deploy.

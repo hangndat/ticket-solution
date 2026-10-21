@@ -96,6 +96,10 @@ Proxy (O13 dual-run / cutover):
 - `auth.vemoki.com` → `vemoki-keycloak:8080`
 - `portal.vemoki.com` → `vemoki-portal:3013` (Issue #502 / ADR-20; snippet `nginx-portal.snippet.conf`)
 
+**BFF upstream (web/portal):** `API_BASE_URL` phải dùng alias edge duy nhất `http://vemoki-api:3001`, không dùng tên service Compose `api` — network `nginx-letencrypt_nginx_network` có thể gắn nhiều stack (alias `api`/`web`/… trùng). Smoke sau deploy: `docker exec vemoki-web-1 getent ahosts vemoki-api` → một IP prod.
+
+**Chỉ network `internal` (an toàn với alias ngắn):** `postgres`, `minio`, `mailpit`, `migrate` — không publish lên edge.
+
 Giữ `Host`, `X-Forwarded-For`, `X-Forwarded-Proto`. **Bắt buộc** ghi đè `X-Forwarded-Host $host` (không chuyển tiếp header client). Web allowlist: `WEB_PUBLIC_ORIGIN` / `PUBLIC_WEB_ORIGIN` = `https://app.vemoki.com` (không tin forwarded host thô).
 
 Next bind `0.0.0.0` nên `request.url` có thể thành `https://0.0.0.0:3000/...`. Callback và logout dùng `publicOrigin` (forwarded host do nginx ghi đè). Nginx `proxy_redirect` `0.0.0.0:3000` → host đang phục vụ (`https://app.vemoki.com/` trên product vhost; apex vhost → `https://vemoki.com/`).

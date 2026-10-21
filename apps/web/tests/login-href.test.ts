@@ -12,6 +12,7 @@ test('loginHref uses allowlisted return paths (AC-S2)', () => {
   assert.equal(loginHref('/account'), '/api/auth/login?return=%2Faccount');
   assert.equal(loginHref('https://evil.example'), '/api/auth/login?return=/');
   assert.equal(sanitizePostLoginPath('/'), '/');
+assert.equal(sanitizePostLoginPath('/wallet'), '/wallet');
 });
 
 test('authNoticeFromParam maps OIDC cancel/fail (AC-S1)', () => {
