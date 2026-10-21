@@ -4,6 +4,7 @@ import { runGateStaffSsrGuards } from '../../src/nav/staff-route-guard';
 import { SiteNav } from '../../src/site-chrome';
 import { GateForm } from './gate-form';
 import { GateOfflineShell } from './gate-offline-shell';
+import { loadGateScopeChromeForPage } from './gate-scope-chrome';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,6 +21,10 @@ type Props = {
 export default async function GatePage({ searchParams }: Props) {
   const params = await searchParams;
   await runGateStaffSsrGuards();
+  const { scope: scopeChrome } = await loadGateScopeChromeForPage({
+    tenantId: params.tenantId,
+    eventId: params.eventId,
+  });
 
   const configured = isOidcConfigured();
   const state = resolveWebAuthState({ configured, subject: null });
@@ -57,6 +62,7 @@ export default async function GatePage({ searchParams }: Props) {
           <GateForm
             initialTenantId={params.tenantId?.trim() ?? ''}
             initialEventId={params.eventId?.trim() ?? ''}
+            scopeChrome={scopeChrome}
           />
         )}
       </GateOfflineShell>
