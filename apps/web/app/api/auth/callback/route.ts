@@ -14,7 +14,7 @@ import {
   sessionCookieOptions,
 } from '../../../../src/oidc/cookies';
 import { WEB_AUTH_COOKIES } from '../../../../src/oidc/local-cookies';
-import { requirePublicOrigin } from '../../../../src/oidc/public-origin';
+import { requireSessionRedirectOrigin } from '../../../../src/oidc/public-origin';
 import {
   POST_LOGIN_COOKIE,
   sanitizePostLoginPath,
@@ -28,7 +28,7 @@ import {
 
 /** Exchange authorization code for tokens; store in HttpOnly cookies. */
 export async function GET(request: NextRequest) {
-  const originResult = requirePublicOrigin(request);
+  const originResult = requireSessionRedirectOrigin(request);
   if (!originResult.ok) return originResult.response;
   const origin = originResult.origin;
 

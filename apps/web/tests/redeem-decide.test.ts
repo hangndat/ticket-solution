@@ -146,6 +146,7 @@ test('owner status and published schema parsers accept C-F shapes', () => {
 
   const schema = parsePublishedRedeemSchema({
     id: '22222222-2222-4222-8222-222222222222',
+    tenantId: '11111111-1111-4111-8111-111111111111',
     schemaVersion: 1,
     publishedConfigVersion: 2,
     form: {
@@ -157,6 +158,7 @@ test('owner status and published schema parsers accept C-F shapes', () => {
     terms: { version: 'terms-v1', bodyMarkdown: 'Be kind.' },
   });
   assert.ok(schema);
+  assert.equal(schema?.tenantId, '11111111-1111-4111-8111-111111111111');
   assert.equal(schema?.form?.formVersion, 'form-v1');
   assert.equal(schema?.terms?.version, 'terms-v1');
 });

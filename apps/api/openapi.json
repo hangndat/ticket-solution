@@ -7397,6 +7397,10 @@
             "type": "string",
             "format": "uuid"
           },
+          "tenantId": {
+            "type": "string",
+            "format": "uuid"
+          },
           "tenantSlug": {
             "type": "string"
           },
@@ -7429,6 +7433,7 @@
         },
         "required": [
           "id",
+          "tenantId",
           "tenantSlug",
           "slug",
           "name",
@@ -7533,6 +7538,10 @@
             "type": "string",
             "format": "uuid"
           },
+          "tenantId": {
+            "type": "string",
+            "format": "uuid"
+          },
           "tenantSlug": {
             "type": "string"
           },
@@ -7590,6 +7599,7 @@
         },
         "required": [
           "id",
+          "tenantId",
           "tenantSlug",
           "slug",
           "name",
