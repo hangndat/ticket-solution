@@ -69,6 +69,7 @@ test('requireTermsConsent only when published termsVersion present', () => {
     termsAccepted: false,
   });
   assert.equal(missing?.code, 'TERMS_REQUIRED');
+  assert.match(missing?.message ?? '', /điều khoản/i);
   assert.equal(
     requireTermsConsent({ termsVersion: 'terms-v1', termsAccepted: true }),
     null,
