@@ -2,6 +2,11 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { isUuid } from '../../src/bff/ids';
 import { loginHref } from '../../src/oidc/login-href';
+import { readRefreshToken } from '../../src/oidc/cookies';
+import {
+  redirectOwnerDiscovery401,
+  renewOwnerSessionIfPossible,
+} from '../../src/oidc/owner-session-guard';
 import { loadOwnerWallet, WALLET_COPY } from '../../src/owner-ticket';
 import {
   buildWalletEventFilters,
@@ -29,9 +34,13 @@ export default async function WalletPage({ searchParams }: Props) {
   const eventFilter = isUuid(rawEvent) ? rawEvent : null;
   const walletLogin = loginHref('/wallet');
 
+  await renewOwnerSessionIfPossible('/wallet');
   const result = await loadOwnerWallet();
 
   if (result.status === 'unauthenticated') {
+    if (await readRefreshToken()) {
+      await redirectOwnerDiscovery401('/wallet');
+    }
     return (
       <main
         id="main"

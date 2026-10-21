@@ -48,7 +48,8 @@ export const WALLET_COPY = {
   },
   unreachable: {
     title: 'Không tải được vé',
-    detail: 'Máy chủ vé tạm thời không phản hồi. Thử lại sau ít phút.',
+    detail:
+      'Máy chủ vé tạm thời không phản hồi. Kiểm tra API (API_BASE_URL, thường :3001) đang chạy, rồi thử lại. Dùng một origin localhost (http://localhost:3000) — không trộn 127.0.0.1 với localhost.',
   },
   empty: {
     title: 'Chưa có vé',
