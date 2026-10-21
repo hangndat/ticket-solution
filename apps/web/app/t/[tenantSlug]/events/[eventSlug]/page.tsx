@@ -16,7 +16,7 @@ import {
   visiblePublishedSections,
 } from '../../../../../src/published';
 import { SurfaceState } from '../../../../../src/ui/surface-state';
-import { eventArtTone } from '../../../../../src/ui/event-media';
+import { eventArtTone } from '../../../../../src/ui/event-art-tone';
 
 type Props = { params: Promise<{ tenantSlug: string; eventSlug: string }> };
 
