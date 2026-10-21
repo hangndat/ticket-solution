@@ -1,0 +1,9 @@
+{
+  "url": "http://localhost:3099/?notice=auth_unavailable",
+  "status": 200,
+  "viewport": {
+    "width": 390,
+    "height": 900
+  },
+  "note": "Without staff session, /admin fail-closed redirects to auth; chrome tokens validated on reachable surface."
+}
