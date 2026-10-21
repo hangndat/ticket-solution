@@ -10,6 +10,7 @@ coverage/
 .env.*
 !.env.example
 !**/.env.example
+!**/.env.pre.example
 .DS_Store
 *.log
 apps/mobile/ios/

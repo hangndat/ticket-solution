@@ -99,7 +99,7 @@ services:
     image: vemoki-runtime:local
     working_dir: /app
     volumes:
-      - /opt/vemoki/src:/app
+      - ${VEMOKI_SRC_ROOT:-/opt/vemoki/src}:/app
     restart: "no"
     environment:
       MIGRATION_DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
@@ -121,7 +121,7 @@ services:
       KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
       KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN}
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
-      KC_HOSTNAME: https://auth.vemoki.com
+      KC_HOSTNAME: ${KC_HOSTNAME:-https://auth.vemoki.com}
       KC_HTTP_ENABLED: 'true'
       KC_PROXY_HEADERS: xforwarded
       KC_HEALTH_ENABLED: 'true'
@@ -132,7 +132,7 @@ services:
       internal: {}
       edge:
         aliases:
-          - vemoki-keycloak
+          - ${VEMOKI_EDGE_KEYCLOAK_ALIAS:-vemoki-keycloak}
     depends_on:
       postgres:
         condition: service_healthy
@@ -147,7 +147,7 @@ services:
     image: vemoki-runtime:local
     working_dir: /app
     volumes:
-      - /opt/vemoki/src:/app
+      - ${VEMOKI_SRC_ROOT:-/opt/vemoki/src}:/app
     restart: unless-stopped
     environment:
       NODE_ENV: production
@@ -155,14 +155,14 @@ services:
       PORT: '3001'
       DATABASE_URL: postgresql://ticket_app:${TICKET_APP_PASSWORD}@postgres:5432/${POSTGRES_DB}
       OIDC_PROVIDER: keycloak
-      OIDC_ISSUER: https://auth.vemoki.com/realms/ticket
+      OIDC_ISSUER: ${OIDC_ISSUER:-https://auth.vemoki.com/realms/ticket}
       OIDC_AUDIENCE: ticket-api
       PLATFORM_INVITE_TTL_SECONDS: "172800"
       PLATFORM_SUPPORT_TTL_MAX_SECONDS: "3600"
       PLATFORM_MFA_AUTH_TIME_MAX_SECONDS: "900"
       PLATFORM_MFA_ACR_VALUES: "2"
       PLATFORM_OIDC_AUDIENCE: ticket-platform-api
-      OIDC_JWKS_URL: https://auth.vemoki.com/realms/ticket/protocol/openid-connect/certs
+      OIDC_JWKS_URL: ${OIDC_JWKS_URL:-https://auth.vemoki.com/realms/ticket/protocol/openid-connect/certs}
       # Shared denylist keyring only; IdP admin credentials stay worker-only.
       ACCOUNT_DELETION_TOMBSTONE_KEYRING_JSON: ${ACCOUNT_DELETION_TOMBSTONE_KEYRING_JSON:-[]}
       ACCOUNT_DELETION_TOMBSTONE_CURRENT_KEY_ID: ${ACCOUNT_DELETION_TOMBSTONE_CURRENT_KEY_ID:-}
@@ -181,12 +181,12 @@ services:
       EXPORT_TTL_SECONDS: ${EXPORT_TTL_SECONDS:-86400}
     command: ['node', 'apps/api/dist/main.js']
     extra_hosts:
-      - 'auth.vemoki.com:host-gateway'
+      - '${OIDC_HOST:-auth.vemoki.com}:host-gateway'
     networks:
       internal: {}
       edge:
         aliases:
-          - vemoki-api
+          - ${VEMOKI_EDGE_API_ALIAS:-vemoki-api}
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -199,11 +199,11 @@ services:
     image: vemoki-runtime:local
     working_dir: /app
     volumes:
-      - /opt/vemoki/src:/app
+      - ${VEMOKI_SRC_ROOT:-/opt/vemoki/src}:/app
     restart: unless-stopped
     environment:
       NODE_ENV: production
-      OIDC_ISSUER: https://auth.vemoki.com/realms/ticket
+      OIDC_ISSUER: ${OIDC_ISSUER:-https://auth.vemoki.com/realms/ticket}
       OIDC_CLIENT_ID: ticket-web
       OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET}
       # O13 product host (dual-run: keep apex URIs on Keycloak until contract phase)
@@ -231,12 +231,12 @@ services:
       PORTAL_DUAL_RUN_BANNER: ${PORTAL_DUAL_RUN_BANNER:-1}
     command: ['pnpm', '--filter', '@ticket/web', 'exec', 'next', 'start', '--hostname', '0.0.0.0', '--port', '3000']
     extra_hosts:
-      - 'auth.vemoki.com:host-gateway'
+      - '${OIDC_HOST:-auth.vemoki.com}:host-gateway'
     networks:
       internal: {}
       edge:
         aliases:
-          - vemoki-web
+          - ${VEMOKI_EDGE_WEB_ALIAS:-vemoki-web}
     depends_on:
       api:
         condition: service_started
@@ -247,11 +247,11 @@ services:
     image: vemoki-runtime:local
     working_dir: /app
     volumes:
-      - /opt/vemoki/src:/app
+      - ${VEMOKI_SRC_ROOT:-/opt/vemoki/src}:/app
     restart: unless-stopped
     environment:
       NODE_ENV: production
-      OIDC_ISSUER: https://auth.vemoki.com/realms/ticket
+      OIDC_ISSUER: ${OIDC_ISSUER:-https://auth.vemoki.com/realms/ticket}
       OIDC_CLIENT_ID: ticket-admin-web
       # Staff portal secret — set OIDC_ADMIN_CLIENT_SECRET in /opt/vemoki/.env (from Keycloak ticket-admin-web)
       OIDC_CLIENT_SECRET: ${OIDC_ADMIN_CLIENT_SECRET}
@@ -275,12 +275,12 @@ services:
       PORTAL_DUAL_RUN_BANNER: ${PORTAL_DUAL_RUN_BANNER:-1}
     command: ['pnpm', '--filter', '@ticket/portal', 'exec', 'next', 'start', '--hostname', '0.0.0.0', '--port', '3013']
     extra_hosts:
-      - 'auth.vemoki.com:host-gateway'
+      - '${OIDC_HOST:-auth.vemoki.com}:host-gateway'
     networks:
       internal: {}
       edge:
         aliases:
-          - vemoki-portal
+          - ${VEMOKI_EDGE_PORTAL_ALIAS:-vemoki-portal}
     depends_on:
       api:
         condition: service_started
@@ -291,17 +291,17 @@ services:
     image: vemoki-runtime:local
     working_dir: /app
     volumes:
-      - /opt/vemoki/src:/app
-      # When enabling APNs: create /opt/vemoki/secrets/apns/AuthKey.p8 (mode 400),
-      # set APNS_ENABLED=true + APNS_KEY_ID in /opt/vemoki/.env, then uncomment:
-      - /opt/vemoki/secrets/apns:/run/secrets/apns:ro
+      - ${VEMOKI_SRC_ROOT:-/opt/vemoki/src}:/app
+      # When enabling APNs: create ${VEMOKI_SECRETS_ROOT:-/opt/vemoki}/secrets/apns/AuthKey.p8 (mode 400),
+      # set APNS_ENABLED=true + APNS_KEY_ID in env file, then set VEMOKI_APNS_MOUNT=1:
+      - ${VEMOKI_APNS_HOST_PATH:-/opt/vemoki/secrets/apns}:/run/secrets/apns:ro
     restart: unless-stopped
     environment:
       NODE_ENV: production
       DATABASE_URL: postgresql://ticket_app:${TICKET_APP_PASSWORD}@postgres:5432/${POSTGRES_DB}
       SMTP_URL: ${SMTP_URL:-smtp://mailpit:1025}
       SMTP_FROM: ${SMTP_FROM:-noreply@vemoki.com}
-      OIDC_ISSUER: https://auth.vemoki.com/realms/ticket
+      OIDC_ISSUER: ${OIDC_ISSUER:-https://auth.vemoki.com/realms/ticket}
       KEYCLOAK_ERASURE_ENABLED: ${KEYCLOAK_ERASURE_ENABLED:-0}
       KEYCLOAK_BASE_URL: ${KEYCLOAK_BASE_URL:-https://auth.vemoki.com}
       KEYCLOAK_REALM: ${KEYCLOAK_REALM:-ticket}
