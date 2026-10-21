@@ -16,7 +16,7 @@ import {
   visiblePublishedSections,
 } from '../../../../../src/published';
 import { SurfaceState } from '../../../../../src/ui/surface-state';
-import { EventBanner } from '../../../../../src/ui/event-media';
+import { eventArtTone } from '../../../../../src/ui/event-art-tone';
 
 type Props = { params: Promise<{ tenantSlug: string; eventSlug: string }> };
 
@@ -105,6 +105,7 @@ export default async function EventPage({ params }: Props) {
   );
   const redeemHref = `/redeem?tenantSlug=${encodeURIComponent(event.tenantSlug)}&eventSlug=${encodeURIComponent(event.slug)}`;
   const locationLabel = event.location?.trim() || null;
+  const heroTone = eventArtTone(event.id);
 
   return (
     <ThemeProvider branding={branding} applyCssVars>
@@ -122,17 +123,29 @@ export default async function EventPage({ params }: Props) {
           </Link>
 
           <div
-            className="event-detail-hero poster poster-media"
+            className={`event-detail-hero event-detail-hero-art event-detail-hero-art--${heroTone}`}
             data-testid="event-hero-media"
           >
-            <EventBanner
-              eventId={event.id}
-              tenantSlug={event.tenantSlug}
-              bannerUrl={event.brand.bannerUrl}
-              className="event-banner event-banner-hero"
-              testId="event-hero-banner"
-              alt={`Banner ${event.name}`}
-            />
+            <div className="event-detail-hero-art__inner">
+              <h1 id="event-title" className="event-detail-hero-art__title">
+                {event.name}
+              </h1>
+              <p className="event-detail-hero-art__meta">
+                {whenLabel && event.startsAt ? (
+                  <time dateTime={event.startsAt}>{whenLabel}</time>
+                ) : (
+                  <span>{PUBLIC_EVENT_COPY.noStartsAt}</span>
+                )}
+                {locationLabel ? (
+                  <>
+                    <span className="event-detail-hero-art__sep" aria-hidden="true">
+                      ·
+                    </span>
+                    <span>{locationLabel}</span>
+                  </>
+                ) : null}
+              </p>
+            </div>
           </div>
 
           <div className="event-detail-cols">
@@ -140,7 +153,6 @@ export default async function EventPage({ params }: Props) {
               {heroCopy.eyebrow ? (
                 <p className="eyebrow">{heroCopy.eyebrow}</p>
               ) : null}
-              <h1 id="event-title">{event.name}</h1>
               <p className="event-detail-org" data-testid="event-hero-support">
                 {event.brand.organizationName}
               </p>
@@ -167,7 +179,9 @@ export default async function EventPage({ params }: Props) {
                   <small>Địa điểm</small>
                   <p>
                     {locationLabel ?? (
-                      <span className="muted">Chưa công bố</span>
+                      <span className="muted">
+                        {PUBLIC_EVENT_COPY.detailLocationUnknown}
+                      </span>
                     )}
                   </p>
                 </div>
@@ -175,7 +189,9 @@ export default async function EventPage({ params }: Props) {
 
               <div className="event-prose" id="event-details">
                 <h2>Về sự kiện</h2>
-                {heroCopy.intro ? <p>{heroCopy.intro}</p> : null}
+                <p>{heroCopy.intro ?? PUBLIC_EVENT_COPY.detailAboutFallback}</p>
+                <h3>{PUBLIC_EVENT_COPY.detailAttendTitle}</h3>
+                <p>{PUBLIC_EVENT_COPY.detailAttendBody}</p>
                 {infoSections.length > 0 ? (
                   <>
                     <h3>Chi tiết từ ban tổ chức</h3>
@@ -205,12 +221,6 @@ export default async function EventPage({ params }: Props) {
               </p>
               <Link className="button event-sidebox-cta" href={redeemHref}>
                 Đổi mã lấy vé
-              </Link>
-              <Link
-                className="button-link-secondary event-sidebox-secondary"
-                href="/claim"
-              >
-                Nhận lời mời
               </Link>
               <p className="event-detail-help">
                 Mã sẽ tự xác định đúng sự kiện và đơn vị tổ chức.
