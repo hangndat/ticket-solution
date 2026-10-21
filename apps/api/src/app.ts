@@ -43,7 +43,13 @@ import {
   buildResolveDeps,
 } from './redemptions-resolve';
 import { registerMetricsEndpoint } from './metrics';
-import { PlatformController, PlatformService, buildPlatformDeps } from './platform';
+import {
+  PlatformMeController,
+  PlatformMembershipController,
+  PlatformOperatorController,
+  PlatformService,
+  buildPlatformDeps,
+} from './platform';
 import { BrandingController, BrandingService } from './branding';
 import {
   PlatformPublishedEventsController,
@@ -66,6 +72,11 @@ import {
   DEFAULT_JSON_BODY_LIMIT_BYTES,
   IMPORT_UPLOAD_BODY_LIMIT_BYTES,
 } from './http-limits';
+import {
+  platformAwareOperationIdFactory,
+  reorderOpenApiPaths,
+  reorderOpenApiSchemas,
+} from './openapi-document';
 
 export type { CreateAppOptions } from './app-options';
 
@@ -130,7 +141,9 @@ export async function createApp(
       ExportController,
       DeviceTokenController,
       NotificationController,
-      PlatformController,
+      PlatformMeController,
+      PlatformOperatorController,
+      PlatformMembershipController,
       BrandingController,
       PlatformPublishedEventsController,
       PublishedEventsController,
@@ -252,8 +265,18 @@ export async function createApp(
   return app;
 }
 
-export function createOpenApi(app: NestFastifyApplication) {
-  return SwaggerModule.createDocument(
+export type CreateOpenApiOptions = {
+  /** Path keys from the committed spec — keeps `openapi.json` byte-stable across controller splits. */
+  pathOrder?: readonly string[];
+  /** Schema keys from the committed spec — stable `components.schemas` ordering. */
+  schemaOrder?: readonly string[];
+};
+
+export function createOpenApi(
+  app: NestFastifyApplication,
+  options: CreateOpenApiOptions = {},
+) {
+  const document = SwaggerModule.createDocument(
     app,
     new DocumentBuilder()
       .setTitle('Ticket API — D4 CS/export/events')
@@ -263,5 +286,14 @@ export function createOpenApi(app: NestFastifyApplication) {
       )
       .addBearerAuth()
       .build(),
+    { operationIdFactory: platformAwareOperationIdFactory },
   );
+  let stable = document;
+  if (options.pathOrder?.length) {
+    stable = reorderOpenApiPaths(stable, options.pathOrder);
+  }
+  if (options.schemaOrder?.length) {
+    stable = reorderOpenApiSchemas(stable, options.schemaOrder);
+  }
+  return stable;
 }
