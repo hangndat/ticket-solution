@@ -15,6 +15,7 @@ Chỉ lấy task thuộc Epic/Run đã được user/coordinator ủy quyền; k
 
 - No active Dispatch for that ownership slice (or settled `worker_done` / released terminal ready for reuse), **and**
 - Next candidate Task’s real deps are satisfied (no unfinished blocker Task; Project Status not `Bị chặn` for a hard dependency still open).
+- Review/fix phải qua [orca-review-convergence.mdc](./orca-review-convergence.mdc): không chọn lại task bị ngắt/hết lượt; chỉ giao chẩn đoán hoặc mở lại theo quyết định có căn cứ. Capacity trống không là lý do vượt giới hạn.
 
 ## Always do
 

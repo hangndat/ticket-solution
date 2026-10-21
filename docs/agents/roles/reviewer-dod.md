@@ -20,7 +20,7 @@ Issue/PR ở `Chờ duyệt`; hoặc coordinator ưu tiên review khi hàng đ�
 - **Exact SHA** đang duyệt (`git rev-parse`).
 - Checklist DoD / AC từ Issue.
 - Architecture impact Có/Không + lý do; nếu Có: handoff/ADR áp dụng và quyết định được coordinator xác nhận.
-- Link artifact trước (nếu revalidation).
+- Link artifact/bảng findings trước, SHA trước và số lượt sửa đã dùng (nếu revalidation).
 
 ## Cách làm (rút từ upstream, neo Vemoki)
 
@@ -31,7 +31,7 @@ Issue/PR ở `Chờ duyệt`; hoặc coordinator ưu tiên review khi hàng đ�
    - **Automation / agent UAT:** yêu cầu headless (Playwright / `scripts/web-uat.sh`, AXe / `scripts/sim-uat.sh`, Orca embedded browser) — không computer-use chuột desktop user.
    - **Physical-device:** khi AC/Issue yêu cầu camera, push delivered, deep link, offline ví, revoke, hoặc tương đương trên thiết bị vật lý — phải kiểm tra bằng chứng device (local signed / TestFlight theo AC). Headless và Simulator **không** thay thế hoặc loại bỏ bằng chứng đó; thiếu → FAIL hoặc `PASS with known gap` chỉ khi gap đã được ROADMAP/Issue chấp nhận có chủ đích.
 5. Với architecture impact: đối chiếu ranh giới/contract/transaction/failure/compatibility với handoff và ADR. Design drift đáng kể hoặc rủi ro còn mở → báo coordinator giao kiểm tra kiến trúc độc lập theo `architect.md`; không dùng design document thay evidence implementation, không coi architecture review là DoD/security PASS.
-6. Phân loại finding: blocker / should-fix / nit; một vòng feedback đầy đủ.
+6. **Read** [quy trình review/fix](../../../.cursor/rules/orca-review-convergence.mdc): một vòng feedback đầy đủ, finding có ID/bằng chứng/điều kiện đóng và ghi rõ có chặn merge. Revalidation theo diff + findings + vùng ảnh hưởng; lỗi mới vẫn phải báo. Lỗi tái hiện sau khi báo đã sửa → báo coordinator chẩn đoán, không chỉ yêu cầu “fix tiếp”.
 7. Verdict: `PASS` | `FAIL` | `PASS with known gap` (gap không được nuốt acceptance/security bắt buộc — xem routing rule).
 
 ## Artifact bắt buộc
