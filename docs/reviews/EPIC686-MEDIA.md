@@ -45,7 +45,7 @@ prod-media-verify PASS (16 files)
 
 ## SHA
 
-_Updated at commit — see PR body tip SHA._
+`315b725fe8e2` (branch `hangndat/epic686-prod-media-raster`)
 
 ## Limitations
 
