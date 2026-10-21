@@ -35,6 +35,8 @@ Role ≠ agent. Gắn `docs/agents/roles/<id>.md` trong Spec khi spawn architect
 
 Spec: Issue #, paths, **exact SHA**, DoD (± security). Verdict `PASS|FAIL|PASS with known gap`. Cùng SHA cần DoD+security → một session `James · dod+sec` (Wave C). Commit sau review → revalidate SHA mới.
 
+Review/fix: **Read** [orca-review-convergence.mdc](./orca-review-convergence.mdc) — findings giữ ID, revalidation theo diff, tối đa 2 lượt sửa tự động rồi chẩn đoán.
+
 **CI / checks trên SHA:** `./scripts/gh-dod-evidence.sh <pr>` (REST; tránh `gh pr checks` trừ debug). SHA tip: `git rev-parse HEAD` khi worktree đúng branch. Chi tiết: `github-api-hygiene.mdc`.
 
 Artifact exact-SHA trong `docs/reviews/*` hoặc Issue/PR — thiếu GitHub Approve UI không thay Orca DoD.
