@@ -5,6 +5,7 @@
 | Runner (lần 1) | Sora · uat · Orca `term_82365d62-fcfb-45f7-8a50-bda8a4fcdf01` · task `task_ed9780af6016` |
 | Runner (retest nginx) | Sora · uat · Orca `term_94a572bc-adbc-4b3c-af8b-6dfa75421f1d` · task `task_03be9fbc418c` |
 | Runner (retest 3 · #668) | Sora · uat · Orca `term_310eb26e-29c4-4016-b434-e6cbc14c5379` · task `task_0aff0036d08f` |
+| Runner (retest 4 · final) | Sora · uat · Orca `term_b5a5ae6d-99c1-46a7-bde3-1934239ba208` · task `task_6183358f6a56` |
 | Catalog | `docs/plans/PROD-LAUNCH-UAT.md` |
 | Catalog SHA-256 | `756e5aa410d2c3dd95a8f8e547fd415ae95b162dd79b3d7c25f7787da1ad2d8f` |
 | Deploy baseline (retest 3) | `cbabea4ccc6447e7dc40a832ba95c81320c1b0d9` (`main`, fix #668 rate-limit RLS + deploy api/web) |
@@ -12,11 +13,69 @@
 | Viewports | Desktop ~1440; mobile 390 qua `orca exec --command "set viewport 390 844"` (retest) |
 | Browser | Orca tabs `6d76d908…` (portal), `4f074dbb…` (app guest) |
 | SSH J-suite | `conanphong` read-only, không in `.env` |
-| Ảnh | `apps/web/.uat-artifacts/prod-2026-10-21/` + retest `…/prod-2026-10-21-retest/` + retest3 `…/prod-2026-10-21-retest3/` |
+| Ảnh | `apps/web/.uat-artifacts/prod-2026-10-21/` + retest `…/prod-2026-10-21-retest/` + retest3 `…/prod-2026-10-21-retest3/` + retest4 `…/prod-2026-10-21-retest4/` |
 
 ## Launch verdict
 
-**NO-GO** (retest 3 sau deploy #668 @ `cbabea4`, 2026-10-21 ~05:48Z — phạm vi web; H03 inbox và suite G/H01 máy thật **DEFERRED/BLOCKED** riêng)
+**NO-GO** (retest 4 final @ `03c6862` / deploy baseline `cbabea4`, 2026-10-21 ~06:10Z — phạm vi web; H03 inbox và suite G/H01 máy thật **DEFERRED/BLOCKED** riêng)
+
+## Retest 4 (final)
+
+Quy tắc phiên: không spam public API; kiểm 429 **cuối** (12 req → toàn `200` sau cooldown ~5 phút). Pre-check ban đầu: `/v1/public/events` → `429` (IP retest 3); sau chờ → `200`. Login Keycloak qua Orca (`fill`/`type`/`click`); slug redeem qua query `tenantSlug`/`eventSlug`. SSH J-suite: `conanphong@113.161.116.5` → **Permission denied** (không dùng `dexter` theo task).
+
+| ID | VP | Kết quả | Evidence |
+| --- | --- | --- | --- |
+| A01 | http | **PASS** | marketing/portal/app `200`; auth `302` |
+| A02–A04 | http | **PASS** | BFF `401`; `/gate` `307`; `a04-gate-headers.txt` |
+| A05–A06 | http | **PASS** | ancafe/dath `200`; cert `notAfter=Jan 17 2027` (`a06-cert-dates.txt`) |
+| B01 | desktop 1440 | **PASS** | Portal staff → Aurora shell; `b01-portal-home-desktop.png` |
+| B02 | http | **PASS** | Authorize `ticket-admin-web`, PKCE S256, scope không `offline_access` |
+| B03 | browser | **PASS** | Portal callback shell (session retest 4) |
+| B04 | desktop | **BLOCKED** | App `ticket-web` login: tab callback `502 Bad Gateway` (`e50057d0…`); retry KC `fill`/`type` không hoàn tất callback trong 2 lần (`400c35e8…`). Tab `/gate` cũ mất phiên → redirect KC |
+| B05 | http | **PASS** | `ticket-web` authorize URL có PKCE (`b05-authorize-headers.txt` HEAD `405` — dùng browser flow) |
+| B06 | desktop | **NOT-RUN** | Chưa retest attendee-on-portal sau ưu tiên redeem/gate |
+| B07 | desktop | **NOT-RUN** | — |
+| B08 | desktop | **NOT-RUN** | — |
+| B09 | — | **NOT-RUN** | — |
+| B10 | desktop | **NOT-RUN** | — |
+| C01 | desktop | **PASS** | Aurora Night Org shell sau B01 |
+| C02 | desktop | **PASS** | Event list + overview; `c02-event-desktop.png` |
+| C03 | desktop | **PASS** | Nút «Mở cổng quét trên app» present (`ref=e5`) |
+| C04 | desktop | **PASS** | Members; `c04-members-desktop.png` |
+| C05–C07 | desktop | **NOT-RUN** | — |
+| C08 | desktop | **FAIL** | `?lang=en` vẫn nhãn VI («Sự kiện», «Chọn tổ chức») |
+| C09 | — | **NOT-RUN** | P1 |
+| D01 | desktop | **PASS** | Guest home MFest/Studio; `d01-app-home-desktop.png` |
+| D02 | desktop | **FAIL** | BFF `GET /api/bff/public/tenants/mfest-demo/events/mfest` → `200` (`form: null`, `terms: true`) nhưng UI «Tải biểu mẫu» không chuyển trạng thái sau `click` (Orca); không redeem `DEMO-MFEST-003`; `d02-redeem-attempt-desktop.png` |
+| D03–D04 | desktop | **BLOCKED** | Phụ thuộc D02 |
+| D05 | http/browser | **PASS** | `/claim`, `/invite` → `200` |
+| D06 | mobile 390 | **PASS** | `set viewport 390 844`; `d06-redeem-390.png` |
+| D07 | — | **NOT-RUN** | P1 |
+| E01–E02 | desktop | **BLOCKED** | Staff `/gate` tab `7800b3fe…` reload → KC login; không mở phiên Aurora |
+| E03–E04 | desktop | **BLOCKED** | Không ticket redeem + gate session |
+| E05 | desktop | **NOT-RUN** | — |
+| E06 | — | **NOT-RUN** | P1 |
+| E07 | desktop | **PASS** | Attendee `/gate` → `?notice=gate_denied`, «Không đủ quyền cổng»; `e07-attendee-gate.png` |
+| I01 | desktop | **FAIL** | Staff Aurora mở tenant MFest UUID → shell MFest (staff@ Owner cả hai tenant theo seed — không khớp kỳ vọng cách ly «chỉ Aurora»); `i01-mfest-tenant-desktop.png` |
+| I02 | http | **PASS** | `UNAUTHENTICATED`; `i02-me-events.json` |
+| I03 | desktop | **NOT-RUN** | P1 |
+| J01–J03 | ssh | **BLOCKED** | `conanphong@113.161.116.5` publickey denied; `j-ssh-output.txt` |
+| J04 | — | **BLOCKED** | Không đọc VPS compose (SSH); git @ `03c6862` sha `7bf278d3…` (`infra/deploy/compose.yaml`) |
+| J05 | — | **NOT-RUN** | P1 |
+| J06 | ssh | **BLOCKED** | Cùng SSH |
+| H03 | — | **BLOCKED** | Không hộp thư kiểm soát prod |
+| Rate limit | http | **PASS** (mini) | Sau cooldown: 12× `GET /v1/public/events` → `200`; `rate-limit-mini.txt` (không burst 650) |
+| #630 app refresh | browser | **PASS** | Attendee login lần 2 → `/account` (`b630-attendee-account.png`) |
+
+**P1:** CSP app `connect-src` vẫn có `http://api:3001` — `p1-csp-connect.txt`.
+
+**Retest 4 verdict (web):** **NO-GO** — B04 app staff OIDC callback/gate session, **D02–D04**, **E01–E04**, **I01** (nếu giữ AC cách ly chặt), **J01–J04/J06** (SSH), **H03**, **C08**.
+
+```text
+P0 chặn launch web: B04, D02, D03, D04, E01, E02, E03, E04, I01, H03, J04 (+ J01–J03/J06 BLOCKED thiếu SSH)
+P1: CSP connect-src http://api:3001, C08 locale EN
+DEFERRED: G01–G06, H01 (máy thật)
+```
 
 ## Retest 3 sau #668 (`cbabea4`)
 
