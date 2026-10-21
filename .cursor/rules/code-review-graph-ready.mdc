@@ -5,9 +5,9 @@ alwaysApply: true
 
 # Code-review-graph (ticket-solution)
 
-Namespace MCP: `code-review-graph-ticket` (Cursor: `user-code-review-graph-ticket`). Graph khác: BE=`user-code-review-graph`, FE=`user-code-review-graph-fe`, SGAMES=`user-code-review-graph-sgames`.
+Namespace MCP: `code-review-graph-ticket` (Cursor: `user-code-review-graph-ticket`; Claude Code: `code-review-graph-ticket`). Graph khác: FE=`code-review-graph-fe`, SGAMES=`code-review-graph-sgames` (Cursor). Server BE `code-review-graph` (portal-be) đã gỡ — path không còn tồn tại.
 
-Daemon watch alias `ticket-solution`; DB `.code-review-graph/graph.db` (gitignored). Hooks `sessionStart` / `beforeSubmitPrompt` auto-update — agent vẫn **verify** bước 1.
+Daemon watch alias `ticket-solution` → `/Users/admin/SideProject/ticket-solution/main`; DB `.code-review-graph/graph.db` (gitignored) chỉ nằm ở checkout `main`, **worktree Orca không có graph riêng** — MCP luôn trỏ về `main`. Loại file khỏi graph bằng `.code-review-graphignore` (đã loại `.venv*`). Hooks `sessionStart` / `beforeSubmitPrompt` auto-update — agent vẫn **verify** bước 1.
 
 ## Readiness gate (bắt buộc)
 
