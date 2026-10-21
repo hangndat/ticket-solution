@@ -1,17 +1,7 @@
-import { useSyncExternalStore } from 'react';
 import { Redirect } from 'expo-router';
-import { session } from '@/identity/session';
-import { RedeemScreen } from '@/screens/redeem';
+import { ATTENDEE_REDEEM_PATH } from '@/navigation/attendee-redeem-entry';
 
-/** Guest / anonymous → global auth gate; scoped redeem only after verified. */
+/** Attendee `/redeem` always uses global single-code flow (no scoped operator UI). */
 export default function RedeemRoute() {
-  const identity = useSyncExternalStore(
-    session.subscribe,
-    session.getSnapshot,
-    session.getSnapshot,
-  );
-  if (identity.status !== 'verified') {
-    return <Redirect href="/redeem-global" />;
-  }
-  return <RedeemScreen />;
+  return <Redirect href={ATTENDEE_REDEEM_PATH} />;
 }
