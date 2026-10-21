@@ -709,3 +709,20 @@ Giới hạn ghi rõ:
 - DMARC chỉ báo cáo tới địa chỉ mxtoolbox; chưa có người nhận xử lý báo cáo.
 
 **Verdict web prod sau H03:** GO. Chỉ còn DEFERRED: máy thật (G01–G06, H01).
+
+---
+
+## H01 production — push DELIVERED (PASS, 2026-10-21)
+
+| Trường | Giá trị |
+| --- | --- |
+| Thiết bị | DatHN iPhone 15 Pro · TestFlight `1.0.0 (26)` · đã đăng nhập `review-attendee`, bật thông báo |
+| Token | `885b28ae…` (64 ký tự), đăng ký 14:16Z, DB ghi nhãn `environment=sandbox` |
+| Push 1 (14:20Z) | Gửi trực tiếp: `api.push.apple.com` → **200**; `api.sandbox.push.apple.com` → **400 BadDeviceToken**. Hiện trên máy (chủ dự án xác nhận) |
+| Push 2 (14:37Z) | Qua hàm `sendApnsPush` bản deploy `17cce6b` với nhãn `sandbox`: `ok=true`, `ACCEPTED`, `resolvedEnvironment=production`. Hiện trên máy (chủ dự án xác nhận) |
+
+**Phát hiện P1 (đã vá server):** build 26 gắn nhãn `sandbox` cho token production (biến `EXPO_PUBLIC_APS_ENVIRONMENT` không đặt lúc archive). Trước bản vá: push TicketIssued sang host sandbox, `BadDeviceToken`, token hợp lệ bị `revokeDeviceTokenByValue`. Sau PR #749: thử host còn lại một lần, sửa nhãn trong DB, kill-switch `APNS_ENV_FALLBACK=0`.
+
+Giới hạn: chưa chạy end-to-end qua outbox (cấp vé thật) để xác nhận nhãn DB tự sửa; không làm vì tránh đổi trạng thái tài khoản `review-attendee` đang trong Beta App Review. Khuyến nghị cho build 27: đặt `EXPO_PUBLIC_APS_ENVIRONMENT=production` khi archive.
+
+**Verdict H01 production: PASS.** Còn DEFERRED: G04–G06 (máy thật).
