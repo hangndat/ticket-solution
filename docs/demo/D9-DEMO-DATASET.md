@@ -122,4 +122,27 @@ Env:
 | `D9_DEMO_FORCE_MARKETING=1` | Save config version mới + publish dù event đã có `published_config_version` |
 | `D9_SMOKE_BOOTSTRAP=0` | Smoke dùng `DATABASE_URL` / `D9_RUNTIME_DATABASE_URL` hiện có thay vì drop/create DB |
 
+### FE UAT stack (Epic #715) — một quy trình
+
+Script `./scripts/fe-uat-stack.sh` gom bootstrap + seed đúng thứ tự (tránh lệch so reviewer/UAT worker):
+
+1. **Infra:** Compose Postgres `:55432` + Keycloak `:8080` healthy.
+2. **`bootstrap`:** `node scripts/lib/d9-demo-bootstrap-db.mjs` → DB `ticket_d9_demo`, role `d9_demo_rt` có `ticket_runtime` **+** `ticket_platform_runtime`.
+3. **Seed:** `./scripts/d9-demo-seed.sh` với `DATABASE_URL` **admin** (`ticket_dev`), **trước** khi staff/attendee login web — và bắt buộc `D9_DEMO_STAFF_SUBJECT` / `D9_DEMO_ATTENDEE_SUBJECT` lấy từ Keycloak (`scripts/lib/fe-uat-keycloak-tokens.mjs`). Chỉ chạy `d9-demo-seed.sh` tay sau khi user đã login OIDC có thể gắn membership vào row fixture `d9-demo-*-subject-fixture` thay vì `sub` thật → `/admin` / `/gate` deny.
+4. **API :3001:** `DATABASE_URL` = **runtime** URL từ bootstrap; `CODE_HMAC_PEPPER` + `TICKET_CREDENTIAL_KEY` khớp seed; `SINGLE_CODE_RESOLVE_GLOBAL=1` nếu UAT `/redeem` không gắn query tenant/event.
+5. **Web :3000:** `apps/web/.env.example` + `API_BASE_URL=http://127.0.0.1:3001`, `WEB_PUBLIC_ORIGIN=http://localhost:3000`; redeem tenant-bound: `/redeem?tenantSlug=mfest-demo&eventSlug=mfest` (hoặc bật `NEXT_PUBLIC_SINGLE_CODE_RESOLVE=1` cho luồng một mã).
+
+```bash
+pnpm install
+pnpm --filter @ticket/web-session build   # bắt buộc trước next dev (worktree mới)
+./scripts/fe-uat-stack.sh bootstrap
+./scripts/fe-uat-stack.sh print-env   # paste vào terminal API + web
+# Terminal A: pnpm --filter @ticket/api... build && eval exports && node apps/api/dist/main.js
+# Terminal B: apps/web — next dev -p 3000
+./scripts/fe-uat-stack.sh check-api   # me/tickets, staff admin, published terms-v1
+./scripts/fe-uat-stack.sh check-ui    # Playwright: redeem-terms-consent, wallet-ticket-grid, admin-workspace, gate-tabs
+```
+
+State local (gitignored): `.fe-uat-stack/env.sh`.
+
 See evidence: [`docs/reviews/D9-DEMO-SEED.md`](../reviews/D9-DEMO-SEED.md).
