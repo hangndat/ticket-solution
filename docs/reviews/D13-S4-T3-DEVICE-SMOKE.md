@@ -1,52 +1,68 @@
-# D13 — S4-T3 Physical-device smoke (Dexter · prod bake 1.0.0/14)
+# D13 — S4-T3 Physical-device smoke (DatHN · prod target 1.0.0/26)
 
-Task #327 · Epic #301 · Story #307. Role `ios` · Architecture impact: **Không**.
+Task `task_c515b184a886` · Epic #301 · Story #307. Role `launch-uat` · Architecture impact: **Không**.
 
-**Verdict: FAIL (không PASS)** — Build **14** trên Dexter USB; catalog prod MFest **PASS**. OIDC prod **chưa hoàn tất** (sheet `auth.vemoki.com` mở được; không gõ credential — `core-device` HID/pasteboard cần `sudo tunneld`, WDA `type`/`status` treo passcode XCTest). Attendee QR + staff `GateCamera` **FAIL** (chưa đăng nhập; tab/deeplink không đổi route qua a11y). Không Submit for Review.
+**Verdict: FAIL (không PASS)** — DatHN iPhone (Wi‑Fi CoreDevice) chạy được launch + catalog + deeplink Account; **không cài** bản Release dev-signed **1.0.0 (26)** (provisioning profile team `BLUA62D52G` không gồm UDID `00008130-000618E402D1001C` dù thiết bị đã đăng ký portal). Thiết bị vẫn có **1.0.0 (14)** USB dev cũ. OIDC prod **chưa mở sheet** (`perform_press` trên «Đăng nhập» không kích hoạt; WDA/HID cần `sudo tunneld` hoặc HID service không có trên iOS 26). Attendee QR · staff camera · account-deletion **chưa chạy**. Không Submit for Review.
 
 ## Target binary
 
 | Trường | Giá trị |
 | ------ | ------- |
-| Device (primary) | Dexter’s iPhone 16 Pro · `06CAC741-EB05-55B0-AAE6-14D7B49F50BB` · `00008140-000605803C01801C` |
-| Installed (USB dev sign) | **`1.0.0` / `14`** (`devicectl device info apps`) |
-| ASC Delivery UUID (TF) | `fc3a28b8-c0d3-4358-a481-de3a2ab835c8` · `processingState=VALID` |
-| IPA SHA256 | `84de550b34c09b07e847ab38eea6880a684b85fd30e27b8ee1bb005c03ab4279` |
-| Prod bake | `main.jsbundle` chứa `api.vemoki.com` + OIDC issuer + `ticket-mobile`; `aps-environment=production` trên IPA export |
+| Device (this run) | **DatHN iPhone** · iPhone 15 Pro · CoreDevice `CB22153A-C24F-547E-87FC-34EC62527838` · UDID `00008130-000618E402D1001C` |
+| Installed (observed) | **`1.0.0` / `14`** (`devicectl device info apps`) — **không** TF 26 trên máy |
+| Intended (task) | **`1.0.0` / `26`** · prod bake `api.vemoki.com` + `auth.vemoki.com` + `ticket-mobile` · `aps-environment=production` |
+| Build 26 install | **FAIL** — `xcodebuild` / `expo run:ios --configuration Release`: *Provisioning profile "iOS Team Provisioning Profile: com.hangndat.ticket" doesn't include … DatHN iPhone*; `-allowProvisioningUpdates` / `-allowProvisioningDeviceRegistration`: *device already exists on team* nhưng profile chưa refresh |
 | Team | `BLUA62D52G` · bundle `com.hangndat.ticket` |
+| Metro bundle (tip `main`, Release attempt) | `main.jsbundle` chứa `api.vemoki.com`, `auth.vemoki.com` (strings `demo-mfest`/`fixture`/`uat` vẫn trong bundle — không đồng nghĩa route lộ) |
 
-## Smoke checklist (Dexter · prod · operator re-dispatch)
+## Smoke checklist (DatHN · prod · 2026-10-21)
 
-| # | Scenario | Status |
-| - | -------- | ------ |
-| 1 | Launch **1.0.0 (14)**; prod catalog (không «Chưa cấu hình API») | **PASS** — `20-catalog.png` («Đã xuất bản · v2», MFest) |
-| 2 | OIDC prod sign-in → attendee QR | **FAIL** — `10-launch.png` / `12-current.png` tới `auth.vemoki.com`; coordinator `ask` (msg_01808529dc1a) timeout 22m; không submit credential |
-| 3 | Staff `GateCamera` preview | **FAIL** — `vemoki://staff` + a11y tab không đổi route; không tab Nhân viên khi chưa staff session |
-| 4 | Push | **SKIP** |
+| # | Scenario | Status | Evidence |
+| - | -------- | ------ | -------- |
+| 1 | Launch; prod catalog (không «Chưa cấu hình API») | **PASS** (trên build **14**) | `apps/mobile/.uat-artifacts/s4-t3-dathn/11-vemoki-launch.png`, `20-catalog.png` — MFest · Demo, Studio Night · Demo |
+| 2 | OIDC prod sign-in → attendee QR | **FAIL** | Account deeplink OK (`30-account-deeplink.png`); `accessibility perform_press` «Đăng nhập, Button» không mở `auth.vemoki.com` (`40-auth-sheet.png` vẫn Account); chưa gõ credential |
+| 3 | Staff `GateCamera` preview + QR scan | **FAIL** | Chưa staff session |
+| 4 | Account → «Yêu cầu xóa tài khoản» (không xác nhận) | **FAIL** | Chưa đăng nhập |
+| 5 | Không route dev/fixture/UAT lộ; không crash | **PARTIAL** | Không crash; catalog vẫn hiện sự kiện **Demo** (MFest · Demo) trên build 14 — cần xác nhận lại trên binary **26** prod bake |
 
-Demo accounts (operator thủ công): `attendee@example.com` / `attendee-demo`, `staff@example.com` / `staff-demo` (`docs/asc/app-review-notes.md` §A).
+Demo accounts (operator): `review-attendee@vemoki.com`, `review-staff@vemoki.com` — mật khẩu trong `/opt/vemoki/secrets/app-review/asc-sign-in-required.txt` trên VPS `conanphong` (không ghi trong repo).
 
-## Lệnh (rút gọn)
+## Automation (đã thử)
+
+| Cách | Kết quả |
+| ---- | ------- |
+| `devicectl` launch + `--payload-url vemoki://account` | **PASS** — mở tab Tài khoản |
+| `pymobiledevice3 remote start-tunnel --native` + `dvt screenshot --rsd` | **PASS** qua Wi‑Fi (không cần USB) |
+| `accessibility list-items` + `perform_press` (Đăng nhập) | **FAIL** — không mở OIDC sheet |
+| `core-device universal-hid-service tap` | **FAIL** — service không có trên iOS 26 |
+| `developer wda` | **FAIL** — cần `sudo python3 -m pymobiledevice3 remote tunneld` |
+| Release install build 26 | **FAIL** — provisioning |
+
+## Operator handoff (gõ tay ~5 phút)
+
+Thiết bị **đã mở khóa**, app có thể mở lại:
 
 ```sh
-xcrun devicectl device process launch --device 06CAC741-EB05-55B0-AAE6-14D7B49F50BB com.hangndat.ticket
-python3 -m pymobiledevice3 developer dvt screenshot apps/mobile/.uat-artifacts/s4-t3-dexter-operator/20-catalog.png \
-  --udid 00008140-000605803C01801C
-python3 -m pymobiledevice3 developer accessibility list-items --udid 00008140-000605803C01801C
-# HID typing (blocked here without sudo tunneld):
-# PYMOBILEDEVICE3_UDID=… python3 -m pymobiledevice3 developer core-device universal-hid-service type '…'
+DEVICE=CB22153A-C24F-547E-87FC-34EC62527838
+xcrun devicectl device process launch --device "$DEVICE" \
+  --payload-url "vemoki://account" com.hangndat.ticket
 ```
+
+1. Chạm **Đăng nhập** → hoàn tất OIDC `auth.vemoki.com` với `review-attendee@vemoki.com` (mật khẩu từ VPS; không chụp màn hình khi gõ).
+2. **Vé của tôi** → mở vé → xác nhận QR (`~/Desktop/vemoki-review-ticket-qr.png`).
+3. Đăng xuất → đăng nhập `review-staff@vemoki.com` → cho phép Camera → scanner preview; hiển thị ảnh QR trên Mac trước camera nếu quét.
+4. **Tài khoản** → **Yêu cầu xóa tài khoản** — chỉ xem màn xác nhận, **không** bấm xác nhận cuối.
+
+Tùy chọn coordinator: refresh provisioning (Xcode account `hangndat@gmail.com` / team `BLUA62D52G`) hoặc cài TF **26** trên DatHN; cắm USB giúp `pymobiledevice3` HID nếu cần automation lại.
 
 ## Artifacts
 
-`apps/mobile/.uat-artifacts/s4-t3-dexter-operator/` — `10-launch.png` … `40-deeplink-*.png` (gitignored).
+`apps/mobile/.uat-artifacts/s4-t3-dathn/` — `11-vemoki-launch.png`, `20-catalog.png`, `30-account-deeplink.png`, `40-auth-sheet.png` (gitignored).
 
-## Blocker / next
+## Prior run (Dexter · build 14)
 
-1. Operator hoàn tất OIDC trên Dexter (hoặc coordinator trả lời `ask` đang pending).
-2. Bật UI automation passcode + `sudo python3 -m pymobiledevice3 remote tunneld` để HID/WDA typing.
-3. Re-dispatch sau attendee QR + staff camera evidence.
+Xem lịch sử Dexter USB trong git history của file này (`6ba435eb…`).
 
-## Tip SHA
+## Tip SHA (repo evidence)
 
-`6ba435ebfaf810e2a15149761e16abd193368280` (`hangndat/d13-s4-t3-operator-327`).
+`f3b4af071745a94654e37e24449ac60c057c655a` (`hangndat/uat-device-smoke-26`).
