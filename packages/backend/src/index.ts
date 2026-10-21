@@ -151,6 +151,17 @@ export {
   type D9DemoSeedReport,
 } from './demo-seed';
 export {
+  PROD_SEED,
+  PROD_SEED_NAMESPACE,
+  seedProdDataset,
+  assertProdSeedDatabaseHostAllowed,
+  assertProdSeedMutateAllowed,
+  ProdSeedDryRunRollback,
+  type ProdSeedOptions,
+  type ProdSeedReport,
+  type ProdSeedEventDef,
+} from './prod-seed';
+export {
   claimOutboxBatch,
   processClaimedOutbox,
   relayOutboxOnce,
