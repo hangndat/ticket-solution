@@ -5,7 +5,8 @@
 | Epic | [#686](https://github.com/hangndat/ticket-solution/issues/686) — Seed prod: 4 org, 6 event, staff, media |
 | Role | `product-design` — [`docs/agents/roles/product-design.md`](../../agents/roles/product-design.md) |
 | Visual budget | **Có** — bám Live Pulse [`brand/vemoki/tokens.json`](../../../brand/vemoki/tokens.json) + freeze [`docs/design/visual-identity-v2/visual-notes.md`](../visual-identity-v2/visual-notes.md) |
-| Dataset BA | `docs/demo/PROD-SEED-DATASET.md` — **chưa có trên branch**; bảng map placeholder §4 cập nhật khi BA push |
+| Dataset BA | [`docs/demo/PROD-SEED-DATASET.md`](../../demo/PROD-SEED-DATASET.md) — namespace `686f0001-*`; map §4 khớp BA |
+| Tenant logos | PR [#697](https://github.com/hangndat/ticket-solution/pull/697) (`EPIC686-TENANT-LOGO.md`) — mark + lockup + tile per org; manifest `brand/prod/manifest.json` |
 | Phạm vi task | Audit surface + kích thước tối thiểu + art direction — **không** tạo raster/SVG tại đây |
 | Runtime limits | `ASSET_LIMITS` — [`packages/contracts/src/config.ts`](../../../packages/contracts/src/config.ts) |
 | Ops checklist | [`docs/ops/MEDIA-ASSET-CHECKLIST.md`](../../ops/MEDIA-ASSET-CHECKLIST.md) |
@@ -135,9 +136,12 @@ RN dùng **một** bundled PNG per slot; scale theo mật độ màn hình. Cộ
 
 | Asset | Slot API | Kích thước master | Ghi chú |
 | ----- | -------- | ----------------- | ------- |
-| Logo org | `tenants.logo_asset_id` / branding `logoAssetId` | **760×200** hoặc **512×512** | Hiện UI chủ yếu wordmark + `TenantLogo` khi có `logoUrl`; org **không** có banner riêng — banner theo từng event |
+| Logo org (primary) | `tenants.logo_asset_id` / `tenantBrand.logo` → `logo.png` | **760×200** lockup | API `logoUrl`; slot `686f0001-0008-4000-8000-00000{tenant}01` |
+| Mark org | `tenantBrand.assets[]` role `tenant-mark` | **512×512** PNG transparent | Chrome nhỏ (~32px); `mark-512.png` |
+| Lockup dark / WebP | `tenant-lockup-dark`, `*-webp` | **760×200** | Nền ink; tùy surface |
+| Avatar tile | `tenant-tile` (+ `@2x` / `@1x`) | **1024×1024** … **341×341** | OG / tile tương lai |
 
-Org **prod-org-delta** (0 event) vẫn cần **logo org** cho branding API / chrome tương lai.
+Org **`mekong-makers`** (0 event) vẫn cần **bộ tenant đầy đủ** (manifest `tenantBrand.assets[]`, không derive từ event). Chi tiết raster: PR #697.
 
 ### 3.3 Checklist trước upload
 
@@ -148,31 +152,31 @@ Org **prod-org-delta** (0 event) vẫn cần **logo org** cho branding API / chr
 
 ---
 
-## 4. Map dataset prod (cập nhật khi BA push)
+## 4. Map dataset prod
 
-`docs/demo/PROD-SEED-DATASET.md` **chưa có**. Dùng placeholder cho **4 org** / **6 event** (phân bổ 1+2+3+0 theo Epic #686).
+Nguồn: [`docs/demo/PROD-SEED-DATASET.md`](../../demo/PROD-SEED-DATASET.md). **Org key** = thư mục `brand/prod/{slug}/` và `scripts/prod-media-src/{slug}/`. Phân bổ event **1 + 2 + 3 + 0**.
 
-### 4.1 Organizations (placeholder)
+### 4.1 Organizations
 
-| Org key | Tên giữ chỗ | `tenantSlug` (TBD) | Số event | Logo org | Ghi chú art |
-| ------- | ----------- | ------------------ | -------- | -------- | ----------- |
-| `prod-org-alpha` | Tổ chức Alpha (prod) | `TBD-alpha` | 1 | Bắt buộc | Accent xanh lá sâu · motif lưới sự kiện |
-| `prod-org-beta` | Tổ chức Beta (prod) | `TBD-beta` | 2 | Bắt buộc | Accent teal · motif sóng âm |
-| `prod-org-gamma` | Tổ chức Gamma (prod) | `TBD-gamma` | 3 | Bắt buộc | Accent tím than · motif đèn lồng |
-| `prod-org-delta` | Tổ chức Delta (prod) | `TBD-delta` | 0 | Bắt buộc | Accent cam đất · motif đường chạy |
+| Org key (`brand/prod/…`) | Tên (UI) | `tenantSlug` | `tenantId` | `logoAssetId` (tenant) | Số event | Motif (§5.1) |
+| ------------------------ | -------- | ------------ | ---------- | ------------------------ | -------: | ------------ |
+| `luc-bao-live` | Lục Bảo Live | `luc-bao-live` | `686f0001-0001-4000-8000-000000000001` | `686f0001-0008-4000-8000-00000101` | 1 | Jade hex + pulse dots |
+| `saigon-pulse` | Saigon Pulse | `saigon-pulse` | `686f0001-0001-4000-8000-000000000002` | `686f0001-0008-4000-8000-00000201` | 2 | Pulse arcs + tower |
+| `heritage-hoi-an` | Di sản Hội An | `heritage-hoi-an` | `686f0001-0001-4000-8000-000000000003` | `686f0001-0008-4000-8000-00000301` | 3 | Lantern + halo |
+| `mekong-makers` | Mekong Makers | `mekong-makers` | `686f0001-0001-4000-8000-000000000004` | `686f0001-0008-4000-8000-00000401` | 0 | Delta rivers + maker nodes |
 
-Khi BA publish dataset: thay cột slug/tên; giữ **org key** ổn định cho đường dẫn asset.
+### 4.2 Events
 
-### 4.2 Events (placeholder)
+| Key | Tên (UI) | Org (`tenantSlug`) | `eventSlug` | `eventId` | `logoAssetId` | `bannerAssetId` |
+| --- | -------- | ------------------ | ----------- | --------- | ------------- | --------------- |
+| E01 | Đêm Nhạc Indie Lục Bảo | `luc-bao-live` | `dem-am-indie` | `686f0001-0002-4000-8000-000000000001` | `686f0001-0008-4000-8000-00010101` | `686f0001-0008-4000-8000-00010102` |
+| E02 | Pulse Afterhours | `saigon-pulse` | `pulse-afterhours` | `686f0001-0002-4000-8000-000000000002` | `686f0001-0008-4000-8000-00020101` | `686f0001-0008-4000-8000-00020102` |
+| E03 | Pulse Rooftop Session | `saigon-pulse` | `pulse-rooftop` | `686f0001-0002-4000-8000-000000000003` | `686f0001-0008-4000-8000-00030101` | `686f0001-0008-4000-8000-00030102` |
+| E04 | Phố Cổ Về Đêm | `heritage-hoi-an` | `pho-co-dem` | `686f0001-0002-4000-8000-000000000004` | `686f0001-0008-4000-8000-00040101` | `686f0001-0008-4000-8000-00040102` |
+| E05 | Workshop Sông Thu | `heritage-hoi-an` | `song-thu-workshop` | `686f0001-0002-4000-8000-000000000005` | `686f0001-0008-4000-8000-00050101` | `686f0001-0008-4000-8000-00050102` |
+| E06 | Festival Ăn Sống Hội An | `heritage-hoi-an` | `festival-an-song` | `686f0001-0002-4000-8000-000000000006` | `686f0001-0008-4000-8000-00060101` | `686f0001-0008-4000-8000-00060102` |
 
-| Event key | Tên giữ chỗ | Org | `eventSlug` (TBD) | Banner + logo |
-| --------- | ----------- | --- | ----------------- | ------------- |
-| `prod-event-01` | Sự kiện Alpha One | alpha | `TBD-e01` | Bộ §3.1 |
-| `prod-event-02` | Sự kiện Beta Night | beta | `TBD-e02` | Bộ §3.1 |
-| `prod-event-03` | Sự kiện Beta Day | beta | `TBD-e03` | Bộ §3.1 |
-| `prod-event-04` | Sự kiện Gamma A | gamma | `TBD-e04` | Bộ §3.1 |
-| `prod-event-05` | Sự kiện Gamma B | gamma | `TBD-e05` | Bộ §3.1 |
-| `prod-event-06` | Sự kiện Gamma C | gamma | `TBD-e06` | Bộ §3.1 |
+Mỗi hàng event: bộ raster §3.1 dưới `brand/prod/{tenantSlug}/{eventSlug}/`. UUID đầy đủ và quota: PROD-SEED-DATASET.md.
 
 ---
 
@@ -182,23 +186,25 @@ Ràng buộc chung: typography consumer = **Sora + Be Vietnam Pro** (không embe
 
 ### 5.1 Bảng org
 
-| Org | `primaryColor` gợi ý | Palette ảnh | Motif | Kiểu chữ trong lockup |
-| --- | -------------------- | ------------- | ----- | --------------------- |
-| Alpha | `#1B4332` | Rừng tối + paper sáng | Lưới chấm pulse (echo Live Pulse) | Sans đậm, chữ hoa ngắn |
-| Beta | `#0F766E` | Teal + mint | Sóng âm đồng tâm | Sans hẹp, title case |
-| Gamma | `#4C1D95` | Tím than + hồng khói | Đèn lồng / halo | Display nhẹ một dòng |
-| Delta | `#C2410C` | Cam đất + ink | Đường chạy / timeline | Sans geometric |
+| Org (`tenantSlug`) | `primaryColor` (dataset) | Palette ảnh | Motif | Kiểu chữ trong lockup |
+| --- | ------------------------ | ------------- | ----- | --------------------- |
+| `luc-bao-live` | `#1B4D3E` | Rừng ngọc + paper sáng | Jade hex + pulse dots | Sans đậm, title case |
+| `saigon-pulse` | `#E85D04` | Cam pulse + teal accent `#0D9488` | Concentric arcs + tower | Sans hẹp, title case |
+| `heritage-hoi-an` | `#8B4513` | Nâu heritage + tím `#6D28D9` | Lantern + halo | Display nhẹ một dòng |
+| `mekong-makers` | `#2A6F97` | Xanh sông + cam maker `#C2410C` | Delta rivers + maker nodes | Sans geometric |
+
+Lockup raster: `brand/prod/{slug}/logo.png` (light), `logo-dark.png`, `mark-512.png` — xem PR #697.
 
 ### 5.2 Bảng event (banner mood + logo)
 
-| Event | Banner mood (1200×630) | Logo lockup (760×200) | `primaryColor` event |
-| ----- | ------------------------ | ---------------------- | -------------------- |
-| Alpha One | Ảnh không gian xanh, ánh sáng lọc | Mark org + tên sự kiện một dòng | `#245B47` |
-| Beta Night | Gradient teal → ink, bokeh | Logo Beta monochrome trắng trên transparent | `#0D9488` |
-| Beta Day | Sáng, texture giấy, silhouette đám đông | Logo Beta full color | `#14B8A6` |
-| Gamma A | Tím + ánh đèn vàng | Gamma mark + subtitle nhỏ | `#6D28D9` |
-| Gamma B | Tối, smoke, một vệt signal **nhỏ** (org accent, không Vemoki signal) | Lockup trắng | `#7C3AED` |
-| Gamma C | Minimal paper + band màu gamma | Icon-only + wordmark | `#5B21B6` |
+| Event (`eventSlug`) | Banner mood (1200×630) | Logo lockup (760×200) | `primaryColor` (brand snapshot) |
+| ------------------- | ------------------------ | ---------------------- | ------------------------------- |
+| `dem-am-indie` | Không gian xanh lá, ánh sáng sân khấu opera | Mark Lục Bảo + tên sự kiện một dòng | `#1B4D3E` |
+| `pulse-afterhours` | Gradient cam → ink, bokeh đêm club | Saigon Pulse monochrome trắng | `#E85D04` |
+| `pulse-rooftop` | Sunset rooftop, skyline mờ, texture giấy | Saigon Pulse full color | `#E85D04` |
+| `pho-co-dem` | Đèn lồng vàng, phố cổ tối, khói nhẹ | Di sản mark + subtitle nhỏ | `#8B4513` |
+| `song-thu-workshop` | Sáng, gốm và lá, sông Thu | Lockup heritage trên nền trong | `#8B4513` |
+| `festival-an-song` | Minimal paper + band màu heritage | Icon mark + wordmark festival | `#8B4513` |
 
 ### 5.3 Anti-patterns (seed graphics)
 
@@ -218,16 +224,16 @@ Ràng buộc chung: typography consumer = **Sora + Be Vietnam Pro** (không embe
 | G2 | Public tenant branding chưa resolve `logoAssetId` → `logoUrl` | Backend + BFF |
 | G3 | Web event hero chưa render `EventLogo` dù CSS `.event-logo-hero` sẵn | Web (optional polish) |
 | G4 | Per-event OG image | Web/BE follow-up |
-| G5 | `PROD-SEED-DATASET.md` | BA — cập nhật §4 |
+| G5 | Raster `brand/prod/*` + `pnpm prod:media:verify` | Web/asset worker (#697) |
 
 ---
 
 ## 7. DoD artifact PD (Epic #686 media task)
 
 - [x] Audit surface web + iOS + platform + email header + admin upload  
-- [x] Bảng `ASSET_LIMITS` và export tối thiểu / event + / org  
+- [x] Bảng `ASSET_LIMITS` và export tối thiểu / event + / org (+ tenant mark/lockup/tile §3.2)  
 - [x] Art direction 6 event + 4 org bám `tokens.json` / Live Pulse  
-- [x] Map placeholder + chờ `PROD-SEED-DATASET.md`  
+- [x] Map §4 khớp `PROD-SEED-DATASET.md` (`686f0001-*`, slug/tên thật)  
 - [x] Visual budget mục 0  
 - [ ] Raster production — task riêng (Web/asset worker)  
 
