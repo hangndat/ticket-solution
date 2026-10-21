@@ -27,6 +27,7 @@ import {
   TokenVerifyError,
 } from './verify-tokens';
 import type { JWTVerifyGetKey } from 'jose';
+import type { GateSsrTrace } from '../gate/gate-ssr-trace';
 
 export type TokenGrantResponse = {
   access_token?: string;
@@ -151,7 +152,10 @@ export async function performWebRefreshFlight(input: {
  * Single-flight keyed by hash(refresh+issuer+client). Verify JWTs before
  * setting cookies. IdP unreachable keeps cookies; auth rejection clears them.
  */
-export async function refreshWebAccessToken(): Promise<RefreshOutcome> {
+export async function refreshWebAccessToken(
+  trace?: GateSsrTrace,
+): Promise<RefreshOutcome> {
+  trace?.mark('refresh_web_access_start');
   if (!isOidcConfigured()) {
     clearWebRefreshFlightCache();
     await clearSessionCookies();
@@ -163,6 +167,7 @@ export async function refreshWebAccessToken(): Promise<RefreshOutcome> {
   if (!refresh) {
     clearWebRefreshFlightCache();
     await clearSessionCookies();
+    trace?.mark('refresh_web_access_missing_refresh');
     return { ok: false, reason: 'missing_refresh' };
   }
 
@@ -181,9 +186,11 @@ export async function refreshWebAccessToken(): Promise<RefreshOutcome> {
     if (shouldClearSessionOnRefreshFailure(shared.reason)) {
       await clearSessionCookies();
     }
+    trace?.mark(`refresh_web_access_fail_${shared.reason}`);
     return shared;
   }
 
   await applyWebGrant(shared.grant);
+  trace?.mark('refresh_web_access_ok');
   return { ok: true, accessToken: shared.grant.accessToken };
 }
