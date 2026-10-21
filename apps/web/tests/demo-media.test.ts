@@ -11,6 +11,7 @@ import {
   hasDemoMediaForEventId,
   sanitizeMediaUrl,
 } from '../src/demo-media';
+import { eventArtTone } from '../src/ui/event-media';
 
 const webRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -45,6 +46,12 @@ test('unknown events never invent media URLs', () => {
   assert.equal(demoMediaForEventId(null), null);
   assert.equal(demoMediaForTenantSlug('other-tenant'), null);
   assert.equal(hasDemoMediaForEventId('constructor'), false);
+});
+
+test('eventArtTone returns a stable decorative tone', () => {
+  const id = '11111111-1111-4111-8111-111111111101';
+  assert.equal(eventArtTone(id), eventArtTone(id));
+  assert.ok(['default', 'green', 'gold'].includes(eventArtTone(id)));
 });
 
 test('sanitizeMediaUrl allows https and root-relative only', () => {
