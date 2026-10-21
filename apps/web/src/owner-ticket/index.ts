@@ -7,6 +7,7 @@ export {
 export { resolveOwnerTenantId } from './resolve';
 export { loadOwnerTicket } from './load';
 export { loadOwnerWallet } from './load-wallet';
+export { ownedTicketCountByEventId } from './owned-count-by-event';
 export { buildDisplayQrPayload } from './display-payload';
 export { ticketStateLabel, ticketStateTagClass } from './ticket-state';
 export {
