@@ -53,6 +53,7 @@ test('Fastify liveness matches contract; redeem and gate routes documented', asy
       '/v1/public/tenant-registrations',
       '/v1/public/tenants/{tenantSlug}/events',
       '/v1/public/tenants/{tenantSlug}/events/{eventSlug}',
+      '/v1/public/tenants/{tenantSlug}/events/{eventSlug}/assets/{assetId}',
       '/v1/redemptions/resolve',
       '/v1/tenants/{tenantId}/branding',
       '/v1/tenants/{tenantId}/events',
