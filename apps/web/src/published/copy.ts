@@ -30,4 +30,10 @@ export const PUBLIC_EVENT_COPY = {
       'Phản hồi sự kiện không đúng định dạng.',
   },
   noStartsAt: 'Chưa có giờ bắt đầu',
+  detailAboutFallback:
+    'Một không gian để gặp gỡ, kết nối và tận hưởng những khoảnh khắc đáng nhớ. Tìm thông tin tham dự và cập nhật từ nhà tổ chức tại đây.',
+  detailAttendTitle: 'Thông tin tham dự',
+  detailAttendBody:
+    'Kiểm tra thời gian mở cửa trên vé. Đưa mã QR của từng vé cho nhân viên khi vào cổng.',
+  detailLocationUnknown: 'Chưa công bố',
 } as const;
