@@ -20,11 +20,12 @@ import {
   logWorkerShutdownWait,
   logWorkerTickSkipped,
   logWorkerTickStepError,
+  logWorkerTickStepStillRunning,
   logWorkerTickStepTimeout,
   type WorkerTickStep,
 } from './worker-tick-log';
 import {
-  DEFAULT_TICK_STEP_TIMEOUT_MS,
+  resolveTickStepTimeoutMs,
   runStepWithTimeout,
   TickStepTimeoutError,
 } from './worker-tick-step-timeout';
@@ -42,6 +43,7 @@ export class WorkerRelay implements OnModuleDestroy {
   private stopped = false;
   private consecutiveErrors = 0;
   private readonly tickGuard = createTickGuard(() => this.stopped);
+  private readonly stepsInFlight = new Set<WorkerTickStep>();
   private readonly shutdownTickTimeoutMs: number;
   private readonly tickStepTimeoutMs: number;
 
@@ -59,12 +61,10 @@ export class WorkerRelay implements OnModuleDestroy {
   ) {
     this.shutdownTickTimeoutMs =
       options.shutdownTickTimeoutMs ?? DEFAULT_SHUTDOWN_TICK_TIMEOUT_MS;
-    const stepFromEnv = Number(env['WORKER_TICK_STEP_TIMEOUT_MS']);
-    this.tickStepTimeoutMs =
-      options.tickStepTimeoutMs ??
-      (Number.isFinite(stepFromEnv) && stepFromEnv > 0
-        ? stepFromEnv
-        : DEFAULT_TICK_STEP_TIMEOUT_MS);
+    this.tickStepTimeoutMs = resolveTickStepTimeoutMs(
+      env['WORKER_TICK_STEP_TIMEOUT_MS'],
+      options.tickStepTimeoutMs,
+    );
   }
 
   private relayOpts() {
@@ -95,16 +95,26 @@ export class WorkerRelay implements OnModuleDestroy {
       name: WorkerTickStep,
       action: () => Promise<unknown>,
     ): Promise<void> => {
+      if (this.stepsInFlight.has(name)) {
+        logWorkerTickStepStillRunning(name);
+        return;
+      }
+
       const runAction = async () => {
-        const hangStep = this.env['WORKER_TEST_HANG_TICK_STEP'];
-        if (
-          this.env['NODE_ENV'] === 'test' &&
-          typeof hangStep === 'string' &&
-          hangStep === name
-        ) {
-          await new Promise<void>(() => {});
+        this.stepsInFlight.add(name);
+        try {
+          const hangStep = this.env['WORKER_TEST_HANG_TICK_STEP'];
+          if (
+            this.env['NODE_ENV'] === 'test' &&
+            typeof hangStep === 'string' &&
+            hangStep === name
+          ) {
+            await new Promise<void>(() => {});
+          }
+          return await action();
+        } finally {
+          this.stepsInFlight.delete(name);
         }
-        return action();
       };
 
       try {
