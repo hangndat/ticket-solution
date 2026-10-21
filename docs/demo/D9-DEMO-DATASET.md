@@ -48,12 +48,25 @@ Pepper: `CODE_HMAC_PEPPER` (local placeholder). Codes lưu HMAC only. Plaintext 
 | mfest-demo | mfest | 50 | `DEMO-MFEST-001` … `DEMO-MFEST-010` |
 | demo-studio | studio-night | 50 | `DEMO-STUDIO-001` … `DEMO-STUDIO-010` |
 
+**Attendee UAT (wallet):** đăng nhập `attendee@example.com` / `attendee-demo`, đổi mã **`DEMO-MFEST-001`** (tenant `mfest-demo`, event `mfest`). Published terms version **`terms-v1`** — redeem API phải gửi `termsVersion: "terms-v1"` và `termsAccepted: true` (cùng phiên bản như `GET /v1/public/tenants/mfest-demo/events/mfest` → `terms.version`). Thiếu consent → `TERMS_REQUIRED`.
+
+```json
+{
+  "code": "DEMO-MFEST-001",
+  "termsVersion": "terms-v1",
+  "termsAccepted": true,
+  "idempotencyKey": "<uuid>"
+}
+```
+
+Studio Night dùng `DEMO-STUDIO-001` với cùng `terms-v1` trên event `studio-night`.
+
 ## Idempotency
 
 - Upsert tenant/event theo **stable UUID + slug** (name / venue / brand snapshot luôn cập nhật trên re-seed).
 - Inventory: insert-or-skip theo fixed type/source/quota IDs; `issuance_sources.name` **UPDATE** trên conflict; codes insert-or-skip theo HMAC.
 - Membership / assignment: skip nếu đã active cho `(tenant, user)` / `(tenant, event, membership)`.
-- **Marketing config:** lần đầu seed → save + publish. Re-seed mặc định **skip** nếu `published_config_version` đã có (tránh bump version vô ích). Sau khi đổi copy seed, **phải force republish** (xem dưới).
+- **Marketing config:** lần đầu seed → save + publish. Re-seed mặc định **skip** nếu `published_config_version` đã có (tránh bump version vô ích). Nếu bản publish cũ **thiếu** section terms / `terms-v1`, seed tự **upgrade** (save + publish một lần). Sau khi đổi copy marketing seed, **phải force republish** (xem dưới).
 
 ## Commands
 
