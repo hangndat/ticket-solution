@@ -12,9 +12,22 @@
 2. **Access cookie còn nhưng JWT hết hạn** — PR #682 chỉ `refreshWebAccessToken()` khi **không** có access cookie. Phiên staff sau ~5 phút: cookie còn → guard bỏ qua refresh → `forwardWithBearer` gọi Nest với Bearer hết hạn → **401 → refresh → fetch lại** với `STAFF_DISCOVERY_TIMEOUT_MS` **8s** mỗi lần. UAT: retest 7 **>20s** (timeout 15s + retry); retest 8 **~12s** sau giảm timeout 8s — khớp **hai bước upstream tuần tự** (401 retry), không khớp client `fetch /api/bff/me/events` 200 nhanh (cùng token đã refresh trên tab).
 3. **502/503 transient** (#682) chỉ áp dụng khi upstream trả 502/503; nhánh 401-retry vẫn chờ tối đa **2×8s** trước khi render shell.
 
+## Root cause A — cookie refresh trong RSC (prod trace)
+
+`forwardWithBearer` trên nhánh 401 gọi `refreshWebAccessToken` → `cookies().set` trong **Server Component** (`/gate` guards). Next.js ném *Cookies can only be modified in a Server Action or Route Handler* → trang lỗi/kẹt. BFF `/api/bff/me/events` cùng helper nhưng chạy **Route Handler** → refresh hợp lệ → client thấy 200.
+
+**Fix:** SSR discovery `allowCookieRefresh: false`; session renew qua `GET /api/auth/refresh?next=…` (Route Handler). Discovery 401 → refresh route một lần (`vemoki_ssr_refresh_attempt`), sau đó `/auth`.
+
+## Root cause B — 401 nhanh dù `require_session_access_ok`
+
+SSR và BFF dùng cùng cookie `oidc_access_token`, cùng `Authorization: Bearer`, cùng path `PLATFORM_PATHS.meEvents` (`/v1/me/events`), cùng `API_BASE_URL` — không khác header X-Forwarded/host trên forward. Khác biệt quan sát được: BFF **retry sau refresh** trong Route Handler; SSR trước fix **throw** trước khi retry. Token vẫn pass `isAccessTokenStaleForSsr` (exp + 30s skew, **không verify chữ ký**) nhưng API `identityVerifier` từ chối ngay (~16ms) — thường JWT hết hạn thật trên server, audience/issuer, hoặc access đã invalid dù cookie còn.
+
+**Trace phụ (đã có khi `GATE_SSR_TRACE=1`):** bước `forward_upstream_401_detail_*` ghi `WWW-Authenticate` + `code`/`error` JSON từ API (không token).
+
 ## Fix (minimal)
 
-- `requireSessionOrAuth`: refresh khi access **missing hoặc stale** (`decodeJwt` exp + 30s skew — `access-token-clock.ts`), trước discovery.
+- `requireSessionOrAuth`: stale/missing → redirect `/api/auth/refresh?next=…` (không gọi refresh trong RSC).
+- `forwardWithBearer` + staff guards: `allowCookieRefresh: false` trên SSR discovery.
 - `GATE_SSR_TRACE=1`: log bước + ms (`gate-ssr-trace.ts`) trên gate guards, `forwardWithBearer`, `refreshWebAccessToken`.
 
 ## Bật trace prod (compose)
