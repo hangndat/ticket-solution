@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
+import Link from 'next/link';
 import localFont from 'next/font/local';
 import {
   ThemeProvider,
@@ -88,7 +89,11 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           {children}
           <footer className="footer">
             <FooterBrand />
-            <span>Sự kiện & vé</span>
+            <span className="footer-tagline">Sự kiện & vé</span>
+            <nav className="footer-links" aria-label="Liên kết chân trang">
+              <Link href="/redeem">Đổi mã</Link>
+              <Link href="/account">Tài khoản</Link>
+            </nav>
           </footer>
         </ThemeProvider>
       </body>
