@@ -127,10 +127,19 @@ describe('decideHostRouting', () => {
     });
   });
 
-  it('rewrites /privacy on any host', () => {
+  it('serves /privacy on product host (app router)', () => {
     const d = decideHostRouting({
       ...base,
       host: '127.0.0.1:3000',
+      pathname: '/privacy',
+    });
+    assert.deepEqual(d, { type: 'next' });
+  });
+
+  it('rewrites /privacy on marketing apex', () => {
+    const d = decideHostRouting({
+      ...base,
+      host: 'vemoki.com',
       pathname: '/privacy',
     });
     assert.deepEqual(d, {
