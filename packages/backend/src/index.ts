@@ -430,15 +430,18 @@ export {
   registerDeviceToken,
   revokeDeviceToken,
   revokeDeviceTokenByValue,
+  correctDeviceTokenEnvironment,
   listActiveDeviceTokensForUser,
   type DeviceTokenRegistration,
 } from './device-tokens';
 export {
   isApnsEnabled,
+  isApnsEnvFallbackEnabled,
   readApnsPrivateKeyPem,
   readApnsEnvironment,
   requireApnsConfig,
   sendApnsPush,
+  setApnsHttp2ClientForTest,
   createApnsAdapter,
   type ApnsConfig,
   type ApnsAdapter,
