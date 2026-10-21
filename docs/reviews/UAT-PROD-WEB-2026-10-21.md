@@ -4,17 +4,56 @@
 | --- | --- |
 | Runner (lần 1) | Sora · uat · Orca `term_82365d62-fcfb-45f7-8a50-bda8a4fcdf01` · task `task_ed9780af6016` |
 | Runner (retest nginx) | Sora · uat · Orca `term_94a572bc-adbc-4b3c-af8b-6dfa75421f1d` · task `task_03be9fbc418c` |
+| Runner (retest 3 · #668) | Sora · uat · Orca `term_310eb26e-29c4-4016-b434-e6cbc14c5379` · task `task_0aff0036d08f` |
 | Catalog | `docs/plans/PROD-LAUNCH-UAT.md` |
 | Catalog SHA-256 | `756e5aa410d2c3dd95a8f8e547fd415ae95b162dd79b3d7c25f7787da1ad2d8f` |
-| Deploy baseline | `1ba6647b8e6b1652cfdf25b86500d9d415bab48e` (`main`, PR #665) |
+| Deploy baseline (retest 3) | `cbabea4ccc6447e7dc40a832ba95c81320c1b0d9` (`main`, fix #668 rate-limit RLS + deploy api/web) |
+| Deploy baseline (retest nginx) | `1ba6647b8e6b1652cfdf25b86500d9d415bab48e` |
 | Viewports | Desktop ~1440; mobile 390 qua `orca exec --command "set viewport 390 844"` (retest) |
 | Browser | Orca tabs `6d76d908…` (portal), `4f074dbb…` (app guest) |
 | SSH J-suite | `conanphong` read-only, không in `.env` |
-| Ảnh | `apps/web/.uat-artifacts/prod-2026-10-21/` + retest `…/prod-2026-10-21-retest/` |
+| Ảnh | `apps/web/.uat-artifacts/prod-2026-10-21/` + retest `…/prod-2026-10-21-retest/` + retest3 `…/prod-2026-10-21-retest3/` |
 
 ## Launch verdict
 
-**NO-GO** (sau retest nginx 2026-10-21 ~05:09Z vẫn NO-GO)
+**NO-GO** (retest 3 sau deploy #668 @ `cbabea4`, 2026-10-21 ~05:48Z — phạm vi web; H03 inbox và suite G/H01 máy thật **DEFERRED/BLOCKED** riêng)
+
+## Retest 3 sau #668 (`cbabea4`)
+
+Deploy coordinator: API rate-limit RLS không còn 5xx trên `/v1/public/*` và gate mutate (đã verify curl public trước burst). Phạm vi: smoke A01–A04, B01, B04, C01–C04, D02–D04, D06, E01–E05, E07, I01–I02, J04; kiểm tra 429 thật + không 5xx; so `infra/deploy/compose.yaml` VPS vs git.
+
+| ID / Issue | Retest nginx | Retest 3 | Evidence |
+| --- | --- | --- | --- |
+| A01–A04 | PASS | **PASS** | `curl` marketing/portal/app `200`, auth `302`; BFF `401`; `/gate` `307` + CSP/`nosniff` |
+| Rate limit public read | — | **PASS** | 650 req/IP → `175×200` rồi `475×429`; body `RATE_LIMITED` (không 5xx). Runner IP vẫn `429` trong cửa sổ 600/h (chưa chứng minh hết hạn → `200` trên cùng IP trong phiên) |
+| B01 | PASS | **BLOCKED** | Keycloak `ticket-admin-web`: `fill`/`#username` + `#kc-login` không chuyển callback trong Orca tab `6d76d908…` (không tái chứng minh shell Aurora) |
+| B04 | PASS | **BLOCKED** | Cùng blocker KC automation; tab cũ callback `502` là URL stale, không retest end-to-end |
+| C01–C04 | PASS | **BLOCKED** | Phụ thuộc B01 |
+| D01 | PASS | **PASS** | Guest home `app.vemoki.com/` — event MFest/Studio listed |
+| D02 | FAIL | **FAIL** | `/redeem?tenantId=…&eventId=…` + slug `mfest-demo`/`mfest`: «Tải biểu mẫu» disabled; `GET /v1/public/*` từ IP runner `429` sau burst UAT (chặn load form). Mã seed `DEMO-MFEST-001` chưa redeem |
+| D03–D04 | BLOCKED | **BLOCKED** | Phụ thuộc D02 |
+| D05 | PASS | **PASS** | `/claim`, `/invite` HTTP `200` |
+| D06 | PASS | **PASS** | `set viewport 390 844` + `d06-redeem-390.png` |
+| E01 | PASS | **PASS** | Staff tab `7800b3fe…` `/gate` — form phiên, KẾT NỐI «Trực tuyến» sau «Thử lại»; `e01-gate-online.png` |
+| E02 | PASS | **PASS** | Phiên Aurora `68d601b3-…` / tenant `26c16ee9-…` / event `5295ef1a-…` hiển thị |
+| E03–E04 | FAIL/BLOCKED | **BLOCKED** | Không có ticket ID hợp lệ post-D02; phiên staff mất cookie sau thao tác gate (UNAUTHENTICATED) |
+| E05 | FAIL | **PASS** | Ticket giả `000…099` → «Không cho vào» + `UNAUTHENTICATED` (từ chối sạch, không 500) khi API trực tuyến |
+| E07 | PASS | **BLOCKED** | Guest `/gate` → redirect OIDC `ticket-web` (chưa login attendee → chưa thấy `gate_denied`) |
+| I01 | PASS | **BLOCKED** | Phụ thuộc portal staff |
+| I02 | PASS | **PASS** | `GET /v1/me/events` → `401` |
+| J04 | FAIL | **PASS** (drift có chủ đích) | `diff` VPS `infra/deploy/compose.yaml` vs git @ `cbabea4`: **chỉ** thêm `OIDC_AUDIENCE` + `OIDC_JWKS_URL` trên service `web` (PR #665 hotfix chưa merge). VPS sha `a55f89ee…`, git sha `7bf278d3…` |
+| J01–J03 | PASS | **PASS** | SSH `dexter@113.161.116.5`: `PRODUCT_ORIGIN`, `OIDC_SCOPES`, `PLATFORM_INVITE_TTL_SECONDS`, `OIDC_AUDIENCE` (chỉ tên/giá trị không secret) |
+| H03 | BLOCKED | **BLOCKED** | Không có hộp thư kiểm soát prod |
+
+**P1 gap:** CSP app `connect-src` gồm `http://api:3001` (origin Docker nội bộ) — `curl -I https://app.vemoki.com/`.
+
+**Retest 3 verdict (web):** **NO-GO** — API public/gate không 5xx sau #668; rate limit 429 đúng. P0 còn **D02**, **D03–D04**, **B01/B04/C/I01/E03–E04/E07** (redeem + KC automation / phụ thuộc), **H03**.
+
+```text
+P0 chặn launch web: D02, D03, D04, B01, C01–C04, I01, E03, E04, E07, H03
+P1: CSP connect-src http://api:3001
+DEFERRED: G01–G06, H01 (máy thật)
+```
 
 ## Retest sau fix nginx
 
@@ -173,9 +212,9 @@ P0 chặn: **B04** (app OIDC callback `502`), **D02–D04** (phụ thuộc đăn
 | J04 | FAIL |
 
 ```text
-Launch: NO-GO (retest nginx 2026-10-21)
+Launch: NO-GO (retest 3 web 2026-10-21 @ cbabea4)
 Catalog SHA: 756e5aa410d2c3dd95a8f8e547fd415ae95b162dd79b3d7c25f7787da1ad2d8f
-Deploy SHA (baseline): 1ba6647b8e6b1652cfdf25b86500d9d415bab48e
-Retest artifact SHA: bc916201255ebfedeb3eb845636e652a4df08398
+Deploy SHA (retest 3): cbabea4ccc6447e7dc40a832ba95c81320c1b0d9
 Artifact: docs/reviews/UAT-PROD-WEB-2026-10-21.md
+PR: #666
 ```
