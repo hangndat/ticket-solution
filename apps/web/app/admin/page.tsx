@@ -20,8 +20,8 @@ type Props = { searchParams: Promise<{ tenantId?: string; eventId?: string }> };
 
 export default async function Admin({ searchParams }: Props) {
   const params = await searchParams;
-  const token = await requireSessionOrAuth('/admin');
-  await requireAdminCapabilityOrHome(token);
+  await requireSessionOrAuth('/admin');
+  await requireAdminCapabilityOrHome();
 
   const configured = isOidcConfigured();
   const state = resolveWebAuthState({ configured, subject: null });
