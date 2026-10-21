@@ -317,6 +317,7 @@ export {
   listPublishedEvents,
   listPlatformPublishedEvents,
   getPublishedEventDetail,
+  resolveActiveTenantBySlug,
   isValidPublicTenantSlug,
   isValidPublicEventSlug,
   PublishedEventsError,
@@ -325,13 +326,19 @@ export {
 export {
   readPublishedAssetPublicBase,
   publishedEventAssetPublicUrl,
+  publishedTenantAssetPublicUrl,
   resolvePublishedBrandAssetUrls,
+  resolveTenantLogoPublicUrl,
 } from './published-asset-url';
 export { readPublishedEventAsset } from './published-event-asset';
+export { readPublishedTenantAsset } from './published-tenant-asset';
+export { getPublicTenantBranding } from './public-tenant-branding';
 export {
   loadProdMediaManifest,
   eventBrandAssetIds,
   readyObjectKey,
+  tenantReadyObjectKey,
+  tenantOrgLogoAsset,
   type ProdMediaManifest,
 } from './prod-media-manifest';
 export {
