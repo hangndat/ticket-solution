@@ -42,6 +42,7 @@ Roadmap, Project, Issue, status, progress: **Tiếng Việt** (giữ ID/API/comm
 | Context budget | [docs/agents/context-budget.md](docs/agents/context-budget.md) |
 
 - **Leader / boss / orchestrator:** session = coordinator gốc → Read `.cursor/rules/orca-leader-activation.mdc` + coordinator-only rules + skill `orchestration`.
+- **Leader — bắt buộc:** tool đầu tiên khi được gọi leader là Read `orca-leader-activation.mdc`. **Cấm** dùng `Agent` tool (Claude Code subagent) để spawn worker/reviewer; chỉ dùng Orca CLI (`task-create` → `worker-start --agent cursor --model composer-2.5` + `--display-name`/`--task-title` Persona → `check --wait`). Sau `worker-start` đọc `result.state`, không chỉ `ok` (`ok:true` vẫn có thể `state=failed`, vd. sai base branch — lấy tên branch từ `gh pr view <N> --json headRefName`). `.claude/settings.json` có hook PreToolUse chặn `Agent` để ép quy tắc này; cần subagent chỉ đọc cho việc ngoài leader thì hỏi user hoặc đặt `"disableAllHooks": true` trong `.claude/settings.local.json` (tắt mọi hook, chỉ cho phiên đó).
 - **Worker/reviewer** không spawn con; không Read mailbox/parallel/idle-fill/epic-orchestrator trừ khi được giao coordinator.
 - Mỗi Task Spec: `Architecture impact: Có|Không`, `Cost tier: cheap|standard`, Role ID + `docs/agents/roles/<id>.md` khi spawn chuyên môn.
 - DoD: reviewer ≠ implementer; exact SHA → `docs/reviews/*` — Wave C `dod+sec` một session/SHA.
