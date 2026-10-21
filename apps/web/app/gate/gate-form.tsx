@@ -33,8 +33,7 @@ import {
   type GateTab,
 } from './gate-chrome';
 import { GateOfflineBanner } from './offline-banner';
-import type { GateScopeChrome } from './gate-scope-chrome';
-import { DEFAULT_GATE_LABEL } from './gate-scope-chrome';
+import { DEFAULT_GATE_LABEL, type GateScopeChrome } from './gate-scope-chrome';
 
 type Props = {
   initialTenantId?: string;
