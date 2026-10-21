@@ -86,6 +86,26 @@ Localization: thêm **Vietnamese** với copy VI trong listing-metadata.
 
 ---
 
+## 6b. TestFlight — Test Information & external beta
+
+**Nguồn copy:** [testflight-test-information.md](./testflight-test-information.md)  
+**Trạng thái:** prep only — **chưa submit** Beta App Review; **chưa** gắn build external group (chờ user duyệt submit).
+
+| Field / bước | Điền ASC |
+| --- | --- |
+| Beta App Description | ☐ |
+| What to Test (EN) | ☐ |
+| Feedback email | ☐ |
+| Privacy Policy URL | ☐ |
+| Marketing URL (optional) | ☐ |
+| External group + testers | ☐ |
+| Build gắn group | ☐ (sau user duyệt) |
+| **Submit for Beta App Review** | ⛔ **Chỉ sau user duyệt** |
+
+Demo account / QR scan / Keycloak delay: cross-check [app-review-notes.md](./app-review-notes.md).
+
+---
+
 ## 7. Build / signing (liên quan binary — Story archive riêng)
 
 | Mục | Kỳ vọng | Trạng thái docs |
