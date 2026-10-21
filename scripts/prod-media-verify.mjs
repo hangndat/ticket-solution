@@ -43,6 +43,16 @@ function collectAssets(manifest) {
         role: `${tenant.slug}/tenant-logo`,
       });
     }
+    for (const a of tenant.tenantBrand?.assets || []) {
+      if (a.source === tenant.tenantBrand?.logo?.source) continue;
+      items.push({
+        source: a.source,
+        contentType: a.contentType,
+        widthPx: a.widthPx,
+        heightPx: a.heightPx,
+        role: `${tenant.slug}/${a.role}`,
+      });
+    }
     for (const ev of tenant.events || []) {
       for (const a of ev.assets || []) {
         items.push({
