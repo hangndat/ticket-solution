@@ -32,7 +32,7 @@ describe('staff-manual-entry-flow', () => {
     if (result.ok) {
       assert.equal(result.parsed.ticketId, ticketId);
       assert.match(result.previewLine, /MFest/);
-      assert.match(result.previewLine, new RegExp(ticketId));
+      assert.match(result.previewLine, /11111111/);
     }
   });
 
@@ -52,5 +52,19 @@ describe('staff-manual-entry-flow', () => {
       eventId,
     });
     assert.match(line, /Sự kiện đang chọn/);
+  });
+
+  it('builds preview with ticket type and guest when present in JSON', () => {
+    const line = buildManualEntryPreviewLine('MFest', {
+      ticketId,
+      tenantId,
+      eventId,
+      displayHints: {
+        ticketTypeLabel: 'Vé phổ thông',
+        attendeeName: 'Minh Anh',
+      },
+    });
+    assert.equal(line, 'MFest · Vé phổ thông · Minh Anh');
+    assert.doesNotMatch(line, new RegExp(ticketId));
   });
 });
