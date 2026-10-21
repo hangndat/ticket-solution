@@ -2,9 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requirePublicOrigin } from '../../../../src/oidc/public-origin';
 import { sanitizePostLoginPath } from '../../../../src/oidc/post-login';
 import { refreshWebAccessToken } from '../../../../src/oidc/refresh';
+import { clearSessionCookies } from '../../../../src/oidc/cookies';
 import {
   clearSsrRefreshAttempt,
   markSsrRefreshAttempt,
+  ssrTerminalAuthRejectPath,
 } from '../../../../src/oidc/session-refresh';
 
 /**
@@ -22,9 +24,10 @@ export async function GET(request: NextRequest) {
   await markSsrRefreshAttempt();
   const refreshed = await refreshWebAccessToken();
   if (!refreshed.ok) {
+    await clearSessionCookies();
     await clearSsrRefreshAttempt();
     return NextResponse.redirect(
-      new URL(`/auth?next=${encodeURIComponent(nextPath)}`, origin),
+      new URL(ssrTerminalAuthRejectPath(nextPath), origin),
     );
   }
 
