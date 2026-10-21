@@ -16,6 +16,15 @@ import {
   tenantPermissionsForRole,
 } from './role-map';
 import { withTenant } from './tenant-context';
+import {
+  eventBrandAssetIds,
+  loadProdMediaManifest,
+  readyObjectKey,
+  tenantBrandingAnchorEventId,
+  tenantOrgLogoAsset,
+  type ProdMediaAssetDef,
+  type ProdMediaManifest,
+} from './prod-media-manifest';
 
 export const PROD_SEED_NAMESPACE = '686f0001-';
 
@@ -449,9 +458,62 @@ async function ensureStaffUserRow(
   });
 }
 
+async function ensureReadyEventAsset(
+  tx: Prisma.TransactionClient,
+  input: {
+    tenantId: string;
+    eventId: string;
+    asset: ProdMediaAssetDef;
+    createdByUserId: string;
+  },
+): Promise<void> {
+  assertFixtureId(input.asset.assetId, 'asset');
+  const readyKey = readyObjectKey(
+    input.tenantId,
+    input.eventId,
+    input.asset.assetId,
+    input.asset.extension,
+  );
+  const quarantineKey = `tenants/${input.tenantId}/events/${input.eventId}/assets/quarantine/${input.asset.assetId}`;
+  const width = input.asset.widthPx ?? 760;
+  const height = input.asset.heightPx ?? 200;
+  await tx.$executeRaw`
+    INSERT INTO event_assets (
+      tenant_id, event_id, id, status, quarantine_key, ready_key,
+      original_filename, content_type, byte_length, width_px, height_px,
+      sha256, created_by, finalized_at
+    ) VALUES (
+      ${input.tenantId}::uuid,
+      ${input.eventId}::uuid,
+      ${input.asset.assetId}::uuid,
+      'READY',
+      ${quarantineKey},
+      ${readyKey},
+      ${input.asset.source.split('/').pop() ?? 'asset'},
+      ${input.asset.contentType},
+      1,
+      ${width},
+      ${height},
+      'prod-seed-placeholder',
+      ${input.createdByUserId}::uuid,
+      clock_timestamp()
+    )
+    ON CONFLICT (tenant_id, id) DO UPDATE SET
+      status = 'READY',
+      ready_key = EXCLUDED.ready_key,
+      content_type = EXCLUDED.content_type,
+      width_px = EXCLUDED.width_px,
+      height_px = EXCLUDED.height_px,
+      finalized_at = clock_timestamp()
+    WHERE event_assets.status IS DISTINCT FROM 'READY'
+       OR event_assets.ready_key IS DISTINCT FROM EXCLUDED.ready_key
+  `;
+}
+
 async function ensureTenant(
   tx: Prisma.TransactionClient,
   tenant: { id: string; slug: string; name: string },
+  manifest: ProdMediaManifest,
 ): Promise<boolean> {
   assertFixtureId(tenant.id, 'tenant');
   const byId = await tx.tenant.findUnique({ where: { id: tenant.id } });
@@ -461,10 +523,14 @@ async function ensureTenant(
         `Prod seed tenant id ${tenant.id} exists with slug=${byId.slug}, expected ${tenant.slug}`,
       );
     }
-    await tx.tenant.update({
-      where: { id: tenant.id },
-      data: { name: tenant.name, status: 'ACTIVE' },
-    });
+    const orgLogo = tenantOrgLogoAsset(manifest, tenant.id);
+    await tx.$executeRaw`
+      UPDATE tenants SET
+        name = ${tenant.name},
+        status = 'ACTIVE',
+        logo_asset_id = COALESCE(${orgLogo?.assetId ?? null}::uuid, logo_asset_id)
+      WHERE id = ${tenant.id}::uuid
+    `;
     return false;
   }
   const bySlug = await tx.tenant.findUnique({ where: { slug: tenant.slug } });
@@ -474,6 +540,7 @@ async function ensureTenant(
     );
   }
   try {
+    const orgLogo = tenantOrgLogoAsset(manifest, tenant.id);
     await tx.tenant.create({
       data: {
         id: tenant.id,
@@ -481,6 +548,7 @@ async function ensureTenant(
         name: tenant.name,
         status: 'ACTIVE',
         defaultTimezone: 'Asia/Ho_Chi_Minh',
+        ...(orgLogo ? { logoAssetId: orgLogo.assetId } : {}),
       },
     });
   } catch (err) {
@@ -510,10 +578,21 @@ async function ensureEvent(
   tx: Prisma.TransactionClient,
   tenantId: string,
   event: ProdSeedEventDef,
-  brand: { primaryColor: string; organizationName: string },
+  brand: {
+    primaryColor: string;
+    organizationName: string;
+    logoAssetId?: string;
+    bannerAssetId?: string;
+  },
 ): Promise<boolean> {
   assertFixtureId(event.id, 'event');
-  const brandSnapshot = { ...brand, fixture: true };
+  const brandSnapshot = {
+    primaryColor: brand.primaryColor,
+    organizationName: brand.organizationName,
+    ...(brand.logoAssetId ? { logoAssetId: brand.logoAssetId } : {}),
+    ...(brand.bannerAssetId ? { bannerAssetId: brand.bannerAssetId } : {}),
+    fixture: true,
+  };
   const windows = eventWindowTimes(event);
   const byId = await tx.event.findUnique({
     where: { tenantId_id: { tenantId, id: event.id } },
@@ -749,7 +828,12 @@ async function ensureMembershipAndAssignment(
 
 function marketingPayload(
   event: ProdSeedEventDef,
-  brand: { primaryColor: string; organizationName: string },
+  brand: {
+    primaryColor: string;
+    organizationName: string;
+    logoAssetId?: string;
+    bannerAssetId?: string;
+  },
 ): EventConfigPayload {
   const copy = PROD_MARKETING[event.marketingKey]!;
   const highlightsText = copy.highlights.map((h) => `- ${h}`).join('\n');
@@ -904,6 +988,8 @@ async function runProdSeedBody(
     }
   }
 
+  const manifest = loadProdMediaManifest();
+
   const report: ProdSeedReport = {
     fixture: true,
     dryRun: options.dryRun === true,
@@ -925,7 +1011,7 @@ async function runProdSeedBody(
   for (const tenant of allTenants) {
     let tenantCreated = false;
     await runWithTenant(tenant.id, async (tx) => {
-      tenantCreated = await ensureTenant(tx, tenant);
+      tenantCreated = await ensureTenant(tx, tenant, manifest);
     });
     report.tenants.push({
       id: tenant.id,
@@ -957,7 +1043,8 @@ async function runProdSeedBody(
   const eventList = Object.values(PROD_SEED.events) as ProdSeedEventDef[];
   for (const event of eventList) {
     const tenant = tenantForOrgKey(event.orgKey);
-    const brand = tenant.brand;
+    const mediaIds = eventBrandAssetIds(manifest, tenant.id, event.id);
+    const brand = { ...tenant.brand, ...mediaIds };
     const staffBindings = STAFF_ROLES.map((staff) => ({
       role: staff.role,
       email: staffEmail(event.orgKey, staff.roleKey),
@@ -991,6 +1078,34 @@ async function runProdSeedBody(
         staffUserIdsByEmail[staffEmail(event.orgKey, 'owner')] ?? [];
       const eventActorUserId = ownerIds[0];
       if (eventActorUserId) {
+        const eventManifest = manifest.tenants
+          .find((t) => t.tenantId === tenant.id)
+          ?.events.find((e) => e.eventId === event.id);
+        if (eventManifest) {
+          for (const asset of eventManifest.assets) {
+            await ensureReadyEventAsset(tx, {
+              tenantId: tenant.id,
+              eventId: event.id,
+              asset,
+              createdByUserId: eventActorUserId,
+            });
+          }
+        }
+        const anchorEventId = tenantBrandingAnchorEventId(manifest, tenant.id);
+        const orgLogo = tenantOrgLogoAsset(manifest, tenant.id);
+        if (
+          orgLogo &&
+          anchorEventId &&
+          anchorEventId === event.id &&
+          orgLogo.assetId !== mediaIds.logoAssetId
+        ) {
+          await ensureReadyEventAsset(tx, {
+            tenantId: tenant.id,
+            eventId: event.id,
+            asset: orgLogo,
+            createdByUserId: eventActorUserId,
+          });
+        }
         const configResult = await ensurePublishedMarketingConfig(tx, {
           tenantId: tenant.id,
           eventId: event.id,
