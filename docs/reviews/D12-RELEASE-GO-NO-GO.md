@@ -18,7 +18,7 @@ deployedTipSha: 0a65f3c2f2d51357ee1a6270151d279758188fb7
 | --- | --- |
 | Code / acceptance D12 coding (#294–#296) | **DONE** trên `main` |
 | Deploy tip D12 lên VPS + health/OIDC/privacy | **DONE** (evidence trên) |
-| **Pilot ready / production ready** | **NO-GO** — còn SMTP live, device APNs DELIVERED, on-call người thật, store (nếu cần) |
+| **Pilot ready / production ready** | **NO-GO** — còn device APNs DELIVERED, on-call người thật, store (nếu cần); SMTP internet **đã bật** (evidence 2026-10-21) |
 
 ## Cổng đã đóng
 
@@ -37,7 +37,7 @@ deployedTipSha: 0a65f3c2f2d51357ee1a6270151d279758188fb7
 
 | # | Blocker | Ghi chú |
 | --- | --- | --- |
-| 1 | **SMTP internet** | Compose vẫn `smtp://mailpit:1025`. Chọn Postal vs Postfix (ADR-13), DNS SPF/DKIM, đổi `SMTP_URL`, smoke gửi thật. |
+| ~~1~~ | ~~**SMTP internet**~~ | **Đóng 2026-10-21:** worker `SMTP_URL` Porkbun; Keycloak `kcadm` + `realm-ticket.prod.json`; smoke Keycloak `execute-actions-email` HTTP 204 + worker send OK → `hangndat@gmail.com`. DNS: SPF `include:_spf.porkbun.com`, DKIM `default._domainkey`, DMARC `p=quarantine`. Chi tiết: [D12-SMTP-KEYCLOAK-2026-10-21.md](./D12-SMTP-KEYCLOAK-2026-10-21.md). |
 | 2 | **APNs device DELIVERED** | Gateway prod đã bật; cần UAT thiết bị signed / TF production topic. |
 | 3 | **On-call Gate** | Điền người/kênh vào RUNBOOK §6.1 (template sẵn). |
 | 4 | **Store submit** | Ủy quyền ASC riêng nếu cần phân phối rộng. |

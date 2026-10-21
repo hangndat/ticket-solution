@@ -25,10 +25,25 @@ Authentication uses our self-hosted OpenID Connect provider (Keycloak), Authoriz
 There is no “passwordless bypass” or mock staff mode in production paths.
 Sign in with Apple is not required for this release because we use our own OIDC IdP.
 
-DEMO ACCOUNTS (fixture / review only — not production operator secrets)
-Please use the accounts in the “Sign-in required” fields (also listed below).
-1) Attendee — open My Tickets / wallet after sign-in.
-2) Staff — open the gate scanner, allow Camera when prompted, scan a demo ticket QR if provided in the build’s demo tenant, or use manual entry if shown for the role.
+SIGN-IN PERFORMANCE
+The Keycloak login page may take a few seconds to load on first open; please wait before retrying. Email verification and password reset use our live SMTP (delivery may take a minute).
+
+DEMO ACCOUNTS (review only — passwords only in App Store Connect / VPS secret file, not in this repo)
+Dedicated production IdP accounts for Apple review:
+• Attendee: review-attendee@vemoki.com
+• Staff: review-staff@vemoki.com
+Alternate end-to-end fixture (recommended for “Sign-in required” if you need a wallet with an ACTIVE ticket):
+• Attendee: attendee@example.com
+• Staff: staff@example.com
+Use the username/password fields we entered in ASC for the matching account.
+
+ATTENDEE FLOW
+Sign in → My Tickets → open one ticket → display QR at full brightness for gate check-in.
+
+STAFF FLOW / QR SCAN
+Sign in as staff → allow Camera → open gate scanner.
+Scan either: (1) a static ticket QR image we attach to review notes or email, or (2) a live QR displayed on a second device signed in as the attendee account above.
+Staff role requires gate.confirm permission on our demo tenant.
 
 CAMERA
 Camera permission is requested only for scanning ticket QR codes at the gate
@@ -47,11 +62,9 @@ Privacy Policy URL: https://vemoki.com/privacy (also /en/privacy).
 No third-party advertising SDKs; App Tracking Transparency is not used in this MVP.
 
 OUT OF SCOPE / PLEASE IGNORE
-• Android build (iOS-only).
 • Paid in-app ticket checkout (not in this version).
-• Expo/EAS Cloud Build is not used; binaries are produced with local Xcode.
 
-If login fails because the review build points at a staging host, please retry on the network without VPN blocking our API/OIDC hostnames, or contact us at the Review Contact email—we will respond quickly with a refreshed demo tenant.
+If login fails, ensure VPN or corporate DNS is not blocking auth.vemoki.com or api.vemoki.com. Contact us at the Review Contact email—we respond quickly with refreshed demo access or a QR attachment.
 ```
 
 ---
@@ -77,13 +90,13 @@ Nguồn đã công bố nội bộ: `docs/reviews/D1-P4-KEYCLOAK-SMOKE.md` (`ema
 
 **Khuyến nghị paste ASC (end-to-end app path):** cặp fixture §A — đã ROPC OK trên prod; attendee có vé `ACTIVE`; staff có `gate.confirm` (không còn `CONFIGURE_TOTP`).
 
-**Dedicated emails (IdP đã provision):** `review-attendee@vemoki.com` / `review-staff@vemoki.com` — mật khẩu chỉ trên VPS; staff đã seed `gate.confirm`; attendee chưa có vé ACTIVE riêng → **không** ưu tiên hơn fixture cho Sign-in required cho đến khi issue vé.
+**Dedicated emails (IdP prod — S5-T2):** `review-attendee@vemoki.com` / `review-staff@vemoki.com` — mật khẩu **chỉ** trong file VPS + paste ASC; ROPC OK trên prod. Staff có `gate.confirm` trên tenant `uat-device`. Attendee dedicated: IdP OK; ví vé đầy đủ — ưu tiên fixture `attendee@example.com` (1 vé ACTIVE) nếu reviewer cần ticket ngay trong app.
 
-| Field ASC | Giá trị |
+| Field ASC | Giá trị đề xuất |
 | --- | --- |
-| User name | `attendee@example.com` **hoặc** `[REVIEW_ATTENDEE_EMAIL — ASC only]` |
-| Password | `[từ /opt/vemoki/secrets/app-review/asc-sign-in-required.txt — ASC only]` |
-| Notes thêm 1 dòng | “Staff scanner: `staff@example.com` / `[password ASC only]` (Camera required).” |
+| User name (primary) | `attendee@example.com` **hoặc** `review-attendee@vemoki.com` |
+| Password | Keys `FIXTURE_*` / `REVIEW_*` trong `/opt/vemoki/secrets/app-review/asc-sign-in-required.txt` — **ASC only** |
+| Notes thêm | “Staff scanner: `review-staff@vemoki.com` hoặc `staff@example.com` + password ASC (Camera). Quét QR: ảnh đính kèm hoặc attendee trên thiết bị thứ hai. Keycloak login có thể chậm vài giây; email verify/reset qua SMTP thật.” |
 
 Checklist operator (không lưu password vào git):
 
@@ -108,10 +121,11 @@ Checklist operator (không lưu password vào git):
 
 ## Hướng dẫn nhanh cho reviewer (bước UI)
 
-1. Launch app → **Sign in** → IdP login form.  
-2. Attendee: mở danh sách vé → mở 1 vé → hiển thị QR.  
-3. Sign out → Staff: cho phép Camera → màn hình quét → quét QR vé demo (hoặc mã test do contact cung cấp).  
-4. (Optional) Account → **Yêu cầu xóa tài khoản** → xác nhận → kỳ vọng ACK + thông báo anonymize ≤ 30 ngày (không kỳ vọng dữ liệu biến mất ngay).
+1. Launch app → **Sign in** → form Keycloak (có thể chờ vài giây lần đầu).  
+2. Attendee (`review-attendee@vemoki.com` hoặc `attendee@example.com`): **Vé của tôi** → mở 1 vé → QR hiển thị.  
+3. Sign out → Staff (`review-staff@vemoki.com` hoặc `staff@example.com`): cho phép **Camera** → quét QR từ **ảnh đính kèm** review hoặc **màn hình thiết bị thứ hai** đang đăng nhập attendee.  
+4. (Optional) Account → **Yêu cầu xóa tài khoản** → ACK (anonymize ≤ 30 ngày; không xóa tức thì).  
+5. TestFlight external copy: [testflight-test-information.md](./testflight-test-information.md).
 
 ---
 

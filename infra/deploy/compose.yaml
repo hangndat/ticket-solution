@@ -209,6 +209,8 @@ services:
       # O13 product host (dual-run: keep apex URIs on Keycloak until contract phase)
       OIDC_REDIRECT_URI: ${OIDC_REDIRECT_URI:-https://app.vemoki.com/api/auth/callback}
       OIDC_SCOPES: openid profile email
+      OIDC_AUDIENCE: ${OIDC_AUDIENCE:-ticket-api}
+      OIDC_JWKS_URL: ${OIDC_JWKS_URL:-https://auth.vemoki.com/realms/ticket/protocol/openid-connect/certs}
       # Platform operator OIDC — clientId must match realm ticket-platform-web
       PLATFORM_OIDC_CLIENT_ID: ${PLATFORM_OIDC_CLIENT_ID:-ticket-platform-web}
       PLATFORM_OIDC_CLIENT_SECRET: ${PLATFORM_OIDC_CLIENT_SECRET:-}
