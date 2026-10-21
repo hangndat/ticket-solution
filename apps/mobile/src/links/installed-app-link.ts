@@ -1,4 +1,5 @@
 import { isAppScheme } from '../identity/app-schemes.ts';
+import { ATTENDEE_REDEEM_PATH } from '../navigation/attendee-redeem-entry.ts';
 import {
   extractMembershipInviteTokenFromUrl,
   isMembershipInviteToken,
@@ -29,6 +30,7 @@ export type InstalledAppLink =
       href: string;
     }
   | { kind: 'uat-session'; href: string }
+  | { kind: 'redeem-entry'; href: string }
   | { kind: 'oauth-callback' }
   | { kind: 'passthrough' };
 
@@ -65,6 +67,10 @@ export function parseInstalledAppLink(input: string): InstalledAppLink {
     return { kind: 'staff-access', href: '/staff-access' };
   }
 
+  if (head.toLowerCase() === 'redeem' && id === undefined) {
+    return { kind: 'redeem-entry', href: ATTENDEE_REDEEM_PATH };
+  }
+
   if (!id) return { kind: 'passthrough' };
 
   if (head.toLowerCase() === 'tickets' && UUID.test(id)) {
@@ -93,7 +99,8 @@ export function routeForInstalledAppLink(input: string): string | null {
     parsed.kind === 'invitation-claim' ||
     parsed.kind === 'staff-access' ||
     parsed.kind === 'membership-invite' ||
-    parsed.kind === 'uat-session'
+    parsed.kind === 'uat-session' ||
+    parsed.kind === 'redeem-entry'
   ) {
     return parsed.href;
   }
