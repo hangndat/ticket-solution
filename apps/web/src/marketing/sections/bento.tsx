@@ -48,13 +48,17 @@ export function BentoSection({ locale }: MarketingSectionProps) {
   return (
     <section
       id="features"
+      className="mkt-section mkt-section--paper"
       aria-labelledby="bento-title"
       data-analytics-section="features"
       data-testid="marketing-bento"
     >
-      <h2 id="bento-title">{t(locale, 'bento.title')}</h2>
-      <p className="mkt-lead">{t(locale, 'bento.lead')}</p>
-      <BentoGrid className="mkt-bento-grid">
+      <div className="mkt-wrap">
+        <h2 id="bento-title" className="mkt-display mkt-h2">
+          {t(locale, 'bento.title')}
+        </h2>
+        <p className="mkt-lead">{t(locale, 'bento.lead')}</p>
+        <BentoGrid className="mkt-bento-grid">
           {BENTO_CELLS.map((cell) => {
             const titleId = `${cell.id}-title`;
             const bodyId = `${cell.id}-body`;
@@ -106,6 +110,7 @@ export function BentoSection({ locale }: MarketingSectionProps) {
             );
           })}
         </BentoGrid>
+      </div>
     </section>
   );
 }

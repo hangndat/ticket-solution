@@ -35,23 +35,19 @@ export function LocaleSwitch({
     getServerHashSnapshot,
   );
 
+  const viHref = localeSwitchHref('vi', pageKind, hash);
+  const enHref = localeSwitchHref('en', pageKind, hash);
+
   return (
     <span
       className="mkt-locale"
       role="group"
       aria-label={t(locale, 'nav.locale.label')}
     >
-      <Link
-        href={localeSwitchHref('vi', pageKind, hash)}
-        aria-current={locale === 'vi' ? 'true' : undefined}
-      >
+      <Link href={viHref} aria-current={locale === 'vi' ? 'true' : undefined}>
         {t(locale, 'nav.locale.vi')}
       </Link>
-      <span aria-hidden="true">|</span>
-      <Link
-        href={localeSwitchHref('en', pageKind, hash)}
-        aria-current={locale === 'en' ? 'true' : undefined}
-      >
+      <Link href={enHref} aria-current={locale === 'en' ? 'true' : undefined}>
         {t(locale, 'nav.locale.en')}
       </Link>
     </span>
