@@ -1,0 +1,137 @@
+{
+  "comparedAt": "2026-10-22T11:21:43.302Z",
+  "results": [
+    {
+      "file": "marketing-home-vi-1280.png",
+      "diffPixels": 646,
+      "width": 1280,
+      "height": 6601
+    },
+    {
+      "file": "marketing-home-en-1280.png",
+      "diffPixels": 407,
+      "width": 1280,
+      "height": 6516
+    },
+    {
+      "file": "catalog-home-1280.png",
+      "diffPixels": 0,
+      "width": 1280,
+      "height": 720
+    },
+    {
+      "file": "event-detail-1280.png",
+      "diffPixels": 0,
+      "width": 1280,
+      "height": 782
+    },
+    {
+      "file": "ticket-detail-1280.png",
+      "diffPixels": 0,
+      "width": 1280,
+      "height": 720
+    },
+    {
+      "file": "wallet-1280.png",
+      "diffPixels": 0,
+      "width": 1280,
+      "height": 720
+    },
+    {
+      "file": "redeem-1280.png",
+      "diffPixels": 0,
+      "width": 1280,
+      "height": 862
+    },
+    {
+      "file": "account-1280.png",
+      "diffPixels": 0,
+      "width": 1280,
+      "height": 1954
+    },
+    {
+      "file": "privacy-1280.png",
+      "diffPixels": 0,
+      "width": 1280,
+      "height": 1968
+    },
+    {
+      "file": "claim-1280.png",
+      "diffPixels": 0,
+      "width": 1280,
+      "height": 1658
+    },
+    {
+      "file": "invite-1280.png",
+      "diffPixels": 0,
+      "width": 1280,
+      "height": 1417
+    },
+    {
+      "file": "marketing-home-vi-390.png",
+      "diffPixels": 0,
+      "width": 390,
+      "height": 11298
+    },
+    {
+      "file": "marketing-home-en-390.png",
+      "diffPixels": 0,
+      "width": 390,
+      "height": 11239
+    },
+    {
+      "file": "catalog-home-390.png",
+      "diffPixels": 0,
+      "width": 390,
+      "height": 844
+    },
+    {
+      "file": "event-detail-390.png",
+      "diffPixels": 0,
+      "width": 390,
+      "height": 844
+    },
+    {
+      "file": "ticket-detail-390.png",
+      "diffPixels": 0,
+      "width": 390,
+      "height": 844
+    },
+    {
+      "file": "wallet-390.png",
+      "diffPixels": 0,
+      "width": 390,
+      "height": 844
+    },
+    {
+      "file": "redeem-390.png",
+      "diffPixels": 0,
+      "width": 390,
+      "height": 849
+    },
+    {
+      "file": "account-390.png",
+      "diffPixels": 0,
+      "width": 390,
+      "height": 2309
+    },
+    {
+      "file": "privacy-390.png",
+      "diffPixels": 0,
+      "width": 390,
+      "height": 2701
+    },
+    {
+      "file": "claim-390.png",
+      "diffPixels": 0,
+      "width": 390,
+      "height": 1760
+    },
+    {
+      "file": "invite-390.png",
+      "diffPixels": 0,
+      "width": 390,
+      "height": 1463
+    }
+  ]
+}

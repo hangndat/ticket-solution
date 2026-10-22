@@ -1,0 +1,12 @@
+app/live-pulse-legacy.css: 256 classes | alive 241 | dead 0 | dynamic 15
+  rules (approx): 417 total, ~0 fully-dead rules (~0 lines if removed)
+  dynamic (kiểm tay): event-detail-hero-art--green event-detail-hero-art--gold redeem-status--denied redeem-status--exhausted redeem-status--used redeem-status--closed redeem-status--timeout redeem-status--polling redeem-status--verifying redeem-status--auth redeem-status--invalid redeem-status--conflict redeem-status--stale redeem-status--expired redeem-status--unknown
+
+app/marketing-uplift.css: 108 classes | alive 104 | dead 0 | dynamic 4
+  rules (approx): 180 total, ~0 fully-dead rules (~0 lines if removed)
+  dynamic (kiểm tay): mkt-step-visual--1 mkt-step-visual--3 mkt-step-visual--4 mkt-step-visual--5
+
+app/attendee-uplift.css: 44 classes | alive 42 | dead 0 | dynamic 2
+  rules (approx): 62 total, ~0 fully-dead rules (~0 lines if removed)
+  dynamic (kiểm tay): catalog-event-card__art--green catalog-event-card__art--gold
+
