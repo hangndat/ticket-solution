@@ -126,7 +126,7 @@ export function InterestForm({ locale }: { locale: MarketingLocale }) {
           <Button
             type="submit"
             variant="secondary"
-            className="mkt-btn mkt-btn-secondary"
+            className="mkt-btn mkt-btn--secondary transition-[color,background-color,border-color] duration-150"
             disabled={busy}
           >
             {t(locale, 'interest.retry')}
@@ -340,7 +340,7 @@ export function InterestForm({ locale }: { locale: MarketingLocale }) {
         type="submit"
         disabled={busy}
         loading={busy}
-        className="mkt-btn mkt-btn-primary"
+        className="mkt-btn mkt-btn--primary transition-[color,background-color,border-color] duration-150"
         data-testid="interest-submit"
       >
         {busy ? t(locale, 'interest.sending') : t(locale, 'interest.submit')}
