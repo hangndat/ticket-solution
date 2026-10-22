@@ -1,0 +1,20 @@
+{
+  "baselineDir": "docs/reviews/assets/FE-DS-SLICE0-parity-main",
+  "candidateDir": "docs/reviews/assets/FE-DS-SLICE0-parity-pr",
+  "mainSha": "bfd17c50790ce31c58b63d933773ae4175102058",
+  "routes": ["/", "/t/mfest-demo/events/mfest", "/redeem", "/account", "/privacy"],
+  "viewports": ["desktop-1280", "mobile-390"],
+  "rows": [
+    { "name": "account__desktop-1280.png", "diffPixels": 0 },
+    { "name": "account__mobile-390.png", "diffPixels": 0 },
+    { "name": "event-mfest__desktop-1280.png", "diffPixels": 0 },
+    { "name": "event-mfest__mobile-390.png", "diffPixels": 0 },
+    { "name": "home__desktop-1280.png", "diffPixels": 0 },
+    { "name": "home__mobile-390.png", "diffPixels": 0 },
+    { "name": "privacy__desktop-1280.png", "diffPixels": 0 },
+    { "name": "privacy__mobile-390.png", "diffPixels": 0 },
+    { "name": "redeem__desktop-1280.png", "diffPixels": 0 },
+    { "name": "redeem__mobile-390.png", "diffPixels": 0 }
+  ],
+  "allZero": true
+}
