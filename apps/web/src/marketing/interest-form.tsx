@@ -17,6 +17,13 @@ import {
   validateInterest,
   type InterestFieldError,
 } from './interest-validate-client';
+import {
+  marketingConsent,
+  marketingFieldError,
+  marketingForm,
+  marketingFormField,
+  marketingHp,
+} from './marketing-surface';
 
 type FormState = 'empty' | 'loading' | 'error' | 'success';
 
@@ -99,7 +106,6 @@ export function InterestForm({ locale }: { locale: MarketingLocale }) {
   if (state === 'success') {
     return (
       <Alert
-        className="mkt-banner mkt-banner-success"
         variant="default"
         data-testid="interest-success"
       >
@@ -113,7 +119,7 @@ export function InterestForm({ locale }: { locale: MarketingLocale }) {
 
   return (
     <form
-      className="mkt-form"
+      className={marketingForm}
       id="interest-form"
       onSubmit={onSubmit}
       noValidate
@@ -121,7 +127,7 @@ export function InterestForm({ locale }: { locale: MarketingLocale }) {
       aria-busy={busy}
     >
       {banner ? (
-        <Alert className="mkt-banner mkt-banner-error" variant="destructive">
+        <Alert variant="destructive">
           <p>{banner}</p>
           <Button type="submit" variant="secondary" disabled={busy}>
             {t(locale, 'interest.retry')}
@@ -129,12 +135,12 @@ export function InterestForm({ locale }: { locale: MarketingLocale }) {
         </Alert>
       ) : null}
 
-      <label className="mkt-hp" aria-hidden="true">
+      <label className={marketingHp} aria-hidden="true">
         Website
         <input tabIndex={-1} autoComplete="off" name="website" type="text" />
       </label>
 
-      <div className="mkt-form-field">
+      <div className={marketingFormField}>
         <Label htmlFor={`${formId}-name`}>{t(locale, 'interest.name')}</Label>
         <Input
           id={`${formId}-name`}
@@ -143,15 +149,14 @@ export function InterestForm({ locale }: { locale: MarketingLocale }) {
           required
           disabled={busy}
           error={Boolean(fieldErrors.name)}
-          className="mkt-input"
           aria-describedby={fieldErrors.name ? `${formId}-err-name` : undefined}
         />
-        <FieldError id={`${formId}-err-name`} className="mkt-field-error">
+        <FieldError id={`${formId}-err-name`} className={marketingFieldError}>
           {fieldErrors.name}
         </FieldError>
       </div>
 
-      <div className="mkt-form-field">
+      <div className={marketingFormField}>
         <Label htmlFor={`${formId}-email`}>{t(locale, 'interest.email')}</Label>
         <Input
           id={`${formId}-email`}
@@ -161,19 +166,18 @@ export function InterestForm({ locale }: { locale: MarketingLocale }) {
           required
           disabled={busy}
           error={Boolean(fieldErrors.email || fieldErrors.emailInvalid)}
-          className="mkt-input"
           aria-describedby={
             fieldErrors.email || fieldErrors.emailInvalid
               ? `${formId}-err-email`
               : undefined
           }
         />
-        <FieldError id={`${formId}-err-email`} className="mkt-field-error">
+        <FieldError id={`${formId}-err-email`} className={marketingFieldError}>
           {fieldErrors.email || fieldErrors.emailInvalid}
         </FieldError>
       </div>
 
-      <div className="mkt-form-field">
+      <div className={marketingFormField}>
         <Label htmlFor={`${formId}-org`}>{t(locale, 'interest.org')}</Label>
         <Input
           id={`${formId}-org`}
@@ -182,15 +186,14 @@ export function InterestForm({ locale }: { locale: MarketingLocale }) {
           required
           disabled={busy}
           error={Boolean(fieldErrors.org)}
-          className="mkt-input"
           aria-describedby={fieldErrors.org ? `${formId}-err-org` : undefined}
         />
-        <FieldError id={`${formId}-err-org`} className="mkt-field-error">
+        <FieldError id={`${formId}-err-org`} className={marketingFieldError}>
           {fieldErrors.org}
         </FieldError>
       </div>
 
-      <div className="mkt-form-field">
+      <div className={marketingFormField}>
         <Label htmlFor={`${formId}-role`}>{t(locale, 'interest.role')}</Label>
         <select
           id={`${formId}-role`}
@@ -198,7 +201,6 @@ export function InterestForm({ locale }: { locale: MarketingLocale }) {
           required
           disabled={busy}
           defaultValue=""
-          className="mkt-input"
           aria-invalid={fieldErrors.role ? true : undefined}
           aria-describedby={
             fieldErrors.role ? `${formId}-err-role` : undefined
@@ -211,12 +213,12 @@ export function InterestForm({ locale }: { locale: MarketingLocale }) {
           <option value="agency">{t(locale, 'interest.role.agency')}</option>
           <option value="other">{t(locale, 'interest.role.other')}</option>
         </select>
-        <FieldError id={`${formId}-err-role`} className="mkt-field-error">
+        <FieldError id={`${formId}-err-role`} className={marketingFieldError}>
           {fieldErrors.role}
         </FieldError>
       </div>
 
-      <div className="mkt-form-field">
+      <div className={marketingFormField}>
         <Label htmlFor={`${formId}-org-kind`}>
           {t(locale, 'interest.org_kind')}
         </Label>
@@ -225,7 +227,6 @@ export function InterestForm({ locale }: { locale: MarketingLocale }) {
           name="org_kind"
           disabled={busy}
           defaultValue=""
-          className="mkt-input"
         >
           <option value="">{t(locale, 'interest.org_kind.placeholder')}</option>
           <option value="agency">
@@ -242,7 +243,7 @@ export function InterestForm({ locale }: { locale: MarketingLocale }) {
         </select>
       </div>
 
-      <div className="mkt-form-field">
+      <div className={marketingFormField}>
         <Label htmlFor={`${formId}-events`}>
           {t(locale, 'interest.events_per_year')}
         </Label>
@@ -251,7 +252,6 @@ export function InterestForm({ locale }: { locale: MarketingLocale }) {
           name="events_per_year"
           disabled={busy}
           defaultValue=""
-          className="mkt-input"
         >
           <option value="">
             {t(locale, 'interest.events_per_year.placeholder')}
@@ -267,7 +267,7 @@ export function InterestForm({ locale }: { locale: MarketingLocale }) {
         </select>
       </div>
 
-      <div className="mkt-form-field">
+      <div className={marketingFormField}>
         <Label htmlFor={`${formId}-scale`}>
           {t(locale, 'interest.typical_scale')}
         </Label>
@@ -276,7 +276,6 @@ export function InterestForm({ locale }: { locale: MarketingLocale }) {
           name="typical_scale"
           disabled={busy}
           defaultValue=""
-          className="mkt-input"
         >
           <option value="">
             {t(locale, 'interest.typical_scale.placeholder')}
@@ -296,17 +295,16 @@ export function InterestForm({ locale }: { locale: MarketingLocale }) {
         </select>
       </div>
 
-      <div className="mkt-form-field">
+      <div className={marketingFormField}>
         <Label htmlFor={`${formId}-note`}>{t(locale, 'interest.note')}</Label>
         <textarea
           id={`${formId}-note`}
           name="note"
           disabled={busy}
-          className="mkt-input"
         />
       </div>
 
-      <div className="mkt-consent mkt-form-field">
+      <div className={`${marketingConsent} ${marketingFormField}`}>
         <input
           id={`${formId}-consent`}
           name="consent"
@@ -319,7 +317,7 @@ export function InterestForm({ locale }: { locale: MarketingLocale }) {
             fieldErrors.consent ? `${formId}-err-consent` : undefined
           }
         />
-        <Label htmlFor={`${formId}-consent`} className="mkt-consent-label">
+        <Label htmlFor={`${formId}-consent`}>
           {t(locale, 'interest.consent.before')}{' '}
           <Link href={privacyHref(locale)}>
             {t(locale, 'interest.consent.privacy')}
@@ -327,7 +325,7 @@ export function InterestForm({ locale }: { locale: MarketingLocale }) {
           .
         </Label>
       </div>
-      <FieldError id={`${formId}-err-consent`} className="mkt-field-error">
+      <FieldError id={`${formId}-err-consent`} className={marketingFieldError}>
         {fieldErrors.consent}
       </FieldError>
 
