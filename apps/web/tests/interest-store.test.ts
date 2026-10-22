@@ -13,12 +13,19 @@ describe('interest-store durable JSONL', () => {
   let dir: string;
   let prevPath: string | undefined;
   let prevWebhook: string | undefined;
+  let prevIdem: string | undefined;
 
   before(async () => {
+    process.env.MARKETING_INTEREST_DISABLE_RETRY_SCHEDULE = '1';
     dir = await mkdtemp(join(tmpdir(), 'vemoki-interest-'));
     prevPath = process.env.MARKETING_INTEREST_PATH;
     prevWebhook = process.env.MARKETING_INTEREST_WEBHOOK_URL;
+    prevIdem = process.env.MARKETING_INTEREST_IDEMPOTENCY_PATH;
     process.env.MARKETING_INTEREST_PATH = join(dir, 'interest.jsonl');
+    process.env.MARKETING_INTEREST_IDEMPOTENCY_PATH = join(
+      dir,
+      'idempotency.json',
+    );
     delete process.env.MARKETING_INTEREST_WEBHOOK_URL;
   });
 
@@ -29,6 +36,11 @@ describe('interest-store durable JSONL', () => {
       delete process.env.MARKETING_INTEREST_WEBHOOK_URL;
     } else {
       process.env.MARKETING_INTEREST_WEBHOOK_URL = prevWebhook;
+    }
+    if (prevIdem === undefined) {
+      delete process.env.MARKETING_INTEREST_IDEMPOTENCY_PATH;
+    } else {
+      process.env.MARKETING_INTEREST_IDEMPOTENCY_PATH = prevIdem;
     }
     await rm(dir, { recursive: true, force: true });
   });
@@ -66,9 +78,12 @@ describe('interest-store durable JSONL', () => {
     const raw = await readFile(join(dir, 'interest.jsonl'), 'utf8');
     const lines = raw.trim().split('\n');
     assert.equal(lines.length, 2);
-    const second = JSON.parse(lines[1]!) as { name: string; clientKey?: string };
-    assert.equal(second.name, 'B');
-    assert.equal(second.clientKey, '1.2.3.4');
+    const second = JSON.parse(lines[1]!) as {
+      payload: { name: string };
+      client_key?: string;
+    };
+    assert.equal(second.payload.name, 'B');
+    assert.equal(second.client_key, '1.2.3.4');
   });
 
   it('persistInterestSubmission returns record and appends', async () => {
@@ -83,7 +98,7 @@ describe('interest-store durable JSONL', () => {
       },
       { clientKey: 'local' },
     );
-    assert.equal(record.name, 'C');
+    assert.equal(record.payload.name, 'C');
     assert.equal(record.source, 'marketing-interest');
     assert.match(record.at, /^\d{4}-\d{2}-\d{2}T/);
 

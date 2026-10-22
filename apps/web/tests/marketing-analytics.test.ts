@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { POST } from '../app/api/marketing/events/route';
-import { MARKETING_ANALYTICS_EVENTS } from '../src/marketing/analytics/events';
+import { MARKETING_ANALYTICS_CLIENT_EVENTS } from '../src/marketing/analytics/events';
 import {
   __resetAnalyticsRateLimitForTests,
   clientKeyFromRequest,
@@ -28,16 +28,19 @@ function analyticsRequest(
 
 describe('marketing analytics validate', () => {
   it('allowlists known events only', () => {
-    for (const event of MARKETING_ANALYTICS_EVENTS) {
+    for (const event of MARKETING_ANALYTICS_CLIENT_EVENTS) {
       const props =
         event === 'cta_click'
           ? { cta_id: 'cta-demo', locale: 'vi' }
-          : event === 'form_start'
-            ? { locale: 'vi' }
-            : { locale: 'vi', role: 'owner' };
+          : { locale: 'vi' };
       const r = validateMarketingAnalyticsBody({ event, props });
       assert.equal(r.ok, true);
     }
+    const serverOnly = validateMarketingAnalyticsBody({
+      event: 'qualified_lead',
+      props: { locale: 'vi', role: 'owner' },
+    });
+    assert.equal(serverOnly.ok, false);
     const bad = validateMarketingAnalyticsBody({ event: 'page_view', props: {} });
     assert.equal(bad.ok, false);
   });

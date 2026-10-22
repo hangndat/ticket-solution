@@ -3170,6 +3170,13 @@ select[aria-invalid='true'] {
 .mkt-demo-cta {
   margin-top: 1rem;
 }
+.mkt-form-field {
+  display: grid;
+  gap: 0.35rem;
+}
+.mkt-form .mkt-input {
+  width: 100%;
+}
 .mkt-form {
   display: grid;
   gap: 0.9rem;
