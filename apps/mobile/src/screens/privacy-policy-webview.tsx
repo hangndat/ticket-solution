@@ -1,5 +1,6 @@
 import { useCallback, useState, type ReactNode } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { View } from 'react-native';
+import { Spinner } from '@/components/ui/spinner';
 import { WebView } from 'react-native-webview';
 import { AttendeeCta } from '@/components/attendee-cta';
 import { Notice } from '@/components/page';
@@ -137,7 +138,7 @@ export function PrivacyPolicyWebViewScreen({
               backgroundColor: brand.paper,
             }}
           >
-            <ActivityIndicator color={colors.accent} />
+            <Spinner color={colors.accent} accessibilityLabel="Đang tải chính sách" />
           </View>
         ) : null}
       </View>

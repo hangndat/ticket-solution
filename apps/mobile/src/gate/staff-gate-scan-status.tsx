@@ -1,4 +1,5 @@
-import { ActivityIndicator, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
+import { Spinner } from '@/components/ui/spinner';
 import { SymbolView } from 'expo-symbols';
 import type { GateScanStatusView } from './gate-scan-status-ui.ts';
 import { colors } from '@/theme/colors';
@@ -38,7 +39,7 @@ export function StaffGateScanStatusPanel({
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
         {showSpinner ? (
-          <ActivityIndicator
+          <Spinner
             accessibilityLabel="Đang xử lý quét"
             color={colors.accent}
           />

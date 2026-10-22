@@ -2,18 +2,18 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   ADMIN_TENANT_PERMISSIONS,
+  buildNavLinks,
   deriveNavCapabilities,
   parseMeEventsResponse,
   parseMeTenantsResponse,
 } from '../src/nav/capabilities';
 
 /**
- * Staff SSR gate policy (Issue #1021 / E01):
- * - Valid 200 + gate.confirm → allow
- * - Valid 200 without gate → deny redirect
+ * Staff SSR discovery policy (Issue #1021 / E01):
+ * - gate.confirm no longer unlocks web /gate nav (D-6)
  * - 502/503 → render shell (tested via integration; policy mirrored here)
  */
-test('gate discovery: staff with gate.confirm passes capability derivation', () => {
+test('gate.confirm assignment does not add web gate nav (D-6)', () => {
   const meEvents = parseMeEventsResponse(200, {
     staffEligible: true,
     items: [
@@ -32,7 +32,9 @@ test('gate discovery: staff with gate.confirm passes capability derivation', () 
     meTenants: null,
     platformMe: null,
   });
-  assert.equal(caps.showGate, true);
+  const hrefs = buildNavLinks(caps).map((l) => l.href);
+  assert.ok(!hrefs.includes('/gate'));
+  assert.equal(caps.showAdmin, false);
 });
 
 test('admin discovery: staffEligible + gate but empty tenantPermissions denies admin', () => {
@@ -67,7 +69,7 @@ test('admin discovery: staffEligible + gate but empty tenantPermissions denies a
     meTenants,
     platformMe: null,
   });
-  assert.equal(caps.showGate, true);
+  assert.ok(!buildNavLinks(caps).some((l) => l.href === '/gate'));
   assert.equal(caps.showAdmin, false);
 });
 
@@ -99,7 +101,7 @@ test('admin discovery: staffEligible + admin tenant perms allows admin chrome', 
   assert.equal(caps.showAdmin, true);
 });
 
-test('gate discovery: upstream timeout shape does not look authenticated', () => {
+test('discovery: upstream timeout shape does not look authenticated', () => {
   const meEvents = parseMeEventsResponse(502, null);
   assert.equal(meEvents, null);
   const caps = deriveNavCapabilities({
@@ -108,5 +110,5 @@ test('gate discovery: upstream timeout shape does not look authenticated', () =>
     meTenants: null,
     platformMe: null,
   });
-  assert.equal(caps.showGate, false);
+  assert.ok(!buildNavLinks(caps).some((l) => l.href === '/gate'));
 });
