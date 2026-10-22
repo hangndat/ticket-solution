@@ -4,7 +4,7 @@
 | --- | --- |
 | **PR** | [#802](https://github.com/hangndat/ticket-solution/pull/802) |
 | **Issue** | [#787](https://github.com/hangndat/ticket-solution/issues/787) |
-| **SHA (after)** | `e6726372c9cad10fdbe0f947734f3b33bae98afb` |
+| **SHA (after)** | `6b7e227ff657f4e22789a92fba6b6576324d829c` (evidence); branch tip `5b832eeb2f0a7d1b1f56956b0e239396a45026a0` |
 | **SHA (before)** | `fb3396fdc88c1ee1d455d7e71bb37a05bbc9be03` (`origin/main`, dev `:3001`) |
 | **URL** | `http://127.0.0.1:3000/marketing#interest-form` (vi) |
 | **Capture** | `node apps/web/tests/pr802-ui-prefix-evidence.mjs <baseUrl> before\|after` |
