@@ -3,6 +3,7 @@ import { headers } from 'next/headers';
 import { MarketingAnalyticsClient } from '../../src/marketing/analytics/client';
 import { MarketingHtmlAttrs } from '../../src/marketing/html-attrs';
 import { MarketingJsonLd } from '../../src/marketing/seo/json-ld';
+import '../marketing-uplift.css';
 
 /**
  * Marketing-only dynamic boundary (headers for locale/surface).
