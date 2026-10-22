@@ -1,3 +1,4 @@
+import { Button } from '@ticket/ui';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { t } from './copy';
@@ -67,21 +68,19 @@ export function MarketingChrome({
               />
             </>
           ) : null}
-          <a className="mkt-btn mkt-btn--ghost mkt-nav-cta mkt-nav-cta--header" href={login}>
-            {t(locale, 'nav.login')}
-          </a>
+          <Button asChild variant={onSales ? 'ghostOnInk' : 'ghost'} className="ml-[0.15rem]">
+            <a href={login}>{t(locale, 'nav.login')}</a>
+          </Button>
           {onSales ? (
-            <Link
-              className="mkt-btn mkt-btn--primary mkt-nav-cta--header"
-              href={`${sales}#interest`}
-              data-testid="cta-interest-nav"
-            >
-              {t(locale, 'nav.interest')}
-            </Link>
+            <Button asChild variant="primary" className="whitespace-nowrap">
+              <Link href={`${sales}#interest`} data-testid="cta-interest-nav">
+                {t(locale, 'nav.interest')}
+              </Link>
+            </Button>
           ) : (
-            <a className="mkt-btn mkt-btn--primary" href={demo}>
-              {t(locale, 'nav.demo')}
-            </a>
+            <Button asChild variant="primary">
+              <a href={demo}>{t(locale, 'nav.demo')}</a>
+            </Button>
           )}
         </nav>
       </header>

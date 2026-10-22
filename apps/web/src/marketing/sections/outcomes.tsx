@@ -1,4 +1,4 @@
-import { DemoMetric } from '@ticket/ui';
+import { Button, DemoMetric } from '@ticket/ui';
 import {
   OUTCOME_CHART_BARS,
   OUTCOME_METRIC_IDS,
@@ -44,10 +44,10 @@ export function OutcomesSection({ locale, demo }: MarketingSectionProps) {
           </div>
           <p className="mkt-chart-caption">{t(locale, 'outcomes.chart.caption')}</p>
         </div>
-        <p className="mkt-demo-cta">
-          <a className="mkt-btn mkt-btn--secondary" href={demo}>
-            {t(locale, 'demo.cta')}
-          </a>
+        <p className="mt-4">
+          <Button asChild variant="secondary">
+            <a href={demo}>{t(locale, 'demo.cta')}</a>
+          </Button>
           <span className="mkt-outcomes-demo-note">{t(locale, 'badge.demo')}</span>
         </p>
       </div>

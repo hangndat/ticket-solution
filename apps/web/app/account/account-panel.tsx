@@ -1,5 +1,7 @@
 'use client';
 
+import { Button } from '@ticket/ui';
+
 import { useEffect, useState } from 'react';
 import {
   interpretAccountDeletion,
@@ -217,13 +219,16 @@ export function AccountPanel() {
         Tôi hiểu đây là yêu cầu đã được tiếp nhận, không phải đã xóa ngay; mục
         tiêu xử lý xóa hoặc ẩn danh trong ≤ 30 ngày.
       </label>
-      <button
+      <Button
         type="button"
+        variant="destructive"
         disabled={busy || !confirmed || loadPhase === 'loading'}
+        loading={busy}
+        loadingLabel="Đang gửi…"
         onClick={() => void requestDeletion()}
       >
-        {busy ? 'Đang gửi…' : 'Gửi yêu cầu xóa tài khoản'}
-      </button>
+        Gửi yêu cầu xóa tài khoản
+      </Button>
       {busy ? (
         <SurfaceState
           kind="loading"

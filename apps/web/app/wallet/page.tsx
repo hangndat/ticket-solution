@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { Button } from '@ticket/ui';
 import Link from 'next/link';
 import { isUuid } from '../../src/bff/ids';
 import { loginHref } from '../../src/oidc/login-href';
@@ -60,12 +61,12 @@ export default async function WalletPage({ searchParams }: Props) {
           testId="wallet-need-login-state"
           action={
             <div className="auth-buttons">
-              <a className="button" href={walletLogin}>
-                Đăng nhập
-              </a>
-              <Link className="button-link button-link-secondary" href="/redeem">
-                Đổi mã lấy vé
-              </Link>
+              <Button asChild variant="brand">
+                <a href={walletLogin}>Đăng nhập</a>
+              </Button>
+              <Button asChild variant="secondary">
+                <Link href="/redeem">Đổi mã lấy vé</Link>
+              </Button>
             </div>
           }
         />
@@ -90,9 +91,9 @@ export default async function WalletPage({ searchParams }: Props) {
           detail={WALLET_COPY.unreachable.detail}
           testId="wallet-unreachable-state"
           action={
-            <Link className="button" href="/wallet">
-              Thử lại
-            </Link>
+            <Button asChild variant="brand">
+              <Link href="/wallet">Thử lại</Link>
+            </Button>
           }
         />
       </main>
@@ -116,9 +117,9 @@ export default async function WalletPage({ searchParams }: Props) {
           detail={WALLET_COPY.invalid.detail}
           testId="wallet-invalid-state"
           action={
-            <Link className="button" href="/wallet">
-              Thử lại
-            </Link>
+            <Button asChild variant="brand">
+              <Link href="/wallet">Thử lại</Link>
+            </Button>
           }
         />
       </main>
@@ -143,9 +144,9 @@ export default async function WalletPage({ searchParams }: Props) {
           <h1>{WALLET_COPY.title}</h1>
           <p className="intro">{WALLET_COPY.intro}</p>
         </div>
-        <Link className={`button ${walletStyles.headingCta}`} href="/redeem">
-          Đổi mã lấy vé
-        </Link>
+        <Button asChild variant="brand" className={walletStyles.headingCta}>
+          <Link href="/redeem">Đổi mã lấy vé</Link>
+        </Button>
       </header>
 
       {tickets.length === 0 ? (
@@ -155,9 +156,9 @@ export default async function WalletPage({ searchParams }: Props) {
           detail={WALLET_COPY.empty.detail}
           testId="wallet-empty"
           action={
-            <Link className="button" href="/redeem">
-              Đổi mã lấy vé
-            </Link>
+            <Button asChild variant="brand">
+              <Link href="/redeem">Đổi mã lấy vé</Link>
+            </Button>
           }
         />
       ) : (
@@ -174,9 +175,9 @@ export default async function WalletPage({ searchParams }: Props) {
               detail="Chọn «Tất cả» hoặc sự kiện khác để xem vé của bạn."
               testId="wallet-filter-empty"
               action={
-                <Link className="button" href="/wallet">
-                  Xem tất cả vé
-                </Link>
+                <Button asChild variant="brand">
+                  <Link href="/wallet">Xem tất cả vé</Link>
+                </Button>
               }
             />
           ) : (
