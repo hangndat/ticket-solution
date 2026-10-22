@@ -17,7 +17,7 @@ Lệnh: `CI=1 REACT_NATIVE_PACKAGER_HOSTNAME=127.0.0.1 pnpm --filter @ticket/mob
 | Before (`before-main/`) | After (`after/`) | Route | State |
 | --- | --- | --- | --- |
 | `events-before.png` | `events-after.png` | `/--/(events)` | Tab Sự kiện · guest |
-| `event-detail-demo-before.png` | `event-detail-demo-after.png` | `/--/events/demo-mfest` | Fixture MFest |
+| `event-detail-demo-before.png` | `event-detail-demo-after.png` | Tap thẻ MFest trên tab Sự kiện → `/events/mfest-demo/mfest` (`demo-events.ts`) | Chi tiết sự kiện · MFest · Demo |
 | `account-before.png` | `account-after.png` | `/--/(tabs)/account` | Tab Tài khoản |
 | `redeem-default-before.png` | `redeem-default-after.png` | `/--/redeem-global` | Guest · cổng đăng nhập redeem |
 
