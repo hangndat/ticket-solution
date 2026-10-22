@@ -7,6 +7,11 @@ import { loadOwnerWallet, ownedTicketCountByEventId } from '../src/owner-ticket'
 import { staffDeniedNotice } from '../src/nav/staff-denied-copy';
 import { SiteNav } from '../src/site-chrome';
 import {
+  attendeeAuthButtons,
+  attendeeHomeMain,
+  attendeeNoticeError,
+} from '../src/attendee-surface';
+import {
   PUBLIC_EVENT_COPY,
   homeTenantSlugs,
   loadPublishedEventList,
@@ -63,7 +68,11 @@ export default async function Home({ searchParams }: Props) {
   });
 
   return (
-    <main id="main" className="lp-container home home--catalog">
+    <main
+      id="main"
+      className={attendeeHomeMain}
+      data-testid="attendee-home"
+    >
       <SiteNav />
       <CatalogHeroBand
         eyebrow="Vemoki · Sự kiện & vé"
@@ -74,13 +83,13 @@ export default async function Home({ searchParams }: Props) {
 
       {authNotice ? (
         <aside
-          className="notice state-error"
+          className={attendeeNoticeError}
           role="alert"
           data-testid="home-auth-notice"
         >
           <h2>{authNotice.title}</h2>
           <p>{authNotice.detail}</p>
-          <p className="auth-buttons">
+          <p className={attendeeAuthButtons}>
             <Button asChild variant="brand">
               <a href={authNotice.retryHref}>Thử lại</a>
             </Button>
@@ -93,13 +102,13 @@ export default async function Home({ searchParams }: Props) {
 
       {denied ? (
         <aside
-          className="notice state-error"
+          className={attendeeNoticeError}
           role="status"
           data-testid="staff-denied-notice"
         >
           <h2>{denied.title}</h2>
           <p>{denied.detail}</p>
-          <p className="auth-buttons">
+          <p className={attendeeAuthButtons}>
             {denied.portalAdminHref ? (
               <Button asChild variant="brand">
                 <a href={denied.portalAdminHref} data-testid="staff-denied-portal-cta">
