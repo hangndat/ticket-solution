@@ -69,6 +69,15 @@ const themeCss = `/* Auto-generated from brand/vemoki/tokens.json — do not edi
 @theme {
 ${themeLines.join('\n')}
 }
+
+/*
+ * Legacy contract — unprefixed custom properties on :root for live-pulse / marketing CSS.
+ * Tailwind v4 prefix(ui) renames @theme vars to --ui-* on :root; legacy uses var(--color-*),
+ * var(--spacing-*), etc. This block is independent of prefix and stays valid when D-1 drops prefix.
+ */
+:root {
+${themeLines.join('\n')}
+}
 `;
 
 const snapshotLines = [

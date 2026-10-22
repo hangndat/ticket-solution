@@ -84,4 +84,12 @@ describe('@ticket/ui token generator', () => {
       /@theme\s*\{[\s\S]*--color-ink:\s*#0B1220/,
     );
   });
+
+  it('legacy contract :root exposes unprefixed theme vars for prefix(ui)', () => {
+    const rootBlocks = [...themeCss.matchAll(/:root\s*\{([^}]+)\}/g)];
+    assert.ok(rootBlocks.length >= 1, ':root legacy contract block in vemoki-theme.css');
+    const contract = rootBlocks[rootBlocks.length - 1][1];
+    assert.match(contract, /--color-line:\s*#D7DFE9/);
+    assert.match(contract, /--spacing-lg:\s*16px/);
+  });
 });

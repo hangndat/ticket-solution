@@ -143,6 +143,16 @@ Khối dưới **không commit** trong #789 — chỉ handoff:
 
 Sinh CSS: mở rộng pipeline `vemoki-theme.css` + `apps/mobile/src/theme/tokens.ts` đọc cùng shape.
 
+### Contract tên biến (web, `prefix(ui)`)
+
+| Lớp | Tên trên `:root` | Ai dùng |
+| --- | --- | --- |
+| Tailwind `@theme` (có thể bị đổi thành `--ui-*` khi `prefix(ui)`) | `--color-*`, `--spacing-*`, `--radius-*`, … | Utility `ui:*`, primitives `@ticket/ui` |
+| **Legacy contract** (khối `:root` sinh cùng file, không prefix) | Cùng tên `--color-*`, `--spacing-*`, … | `live-pulse-legacy.css`, `marketing-uplift.css` (`var(--color-line)`, `var(--spacing-lg)`, …) |
+| Legacy alias ngắn | `--ink`, `--line`, `--space-4`, … | Rule CSS legacy trong `apps/web/app/*.css` (định nghĩa cục bộ, tham chiếu contract) |
+
+Khi D-1 bỏ `prefix(ui)`, khối legacy contract vẫn hợp lệ (trùng giá trị với `@theme`); không sửa lại file legacy chỉ vì đổi prefix.
+
 ---
 
 ## Audit W-05 — tóm tắt xử lý
