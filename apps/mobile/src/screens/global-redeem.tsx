@@ -6,7 +6,8 @@ import {
   useSyncExternalStore,
   startTransition,
 } from 'react';
-import { Animated, Text, TextInput, View } from 'react-native';
+import { Animated, Text, View } from 'react-native';
+import { Input } from '@/components/ui/input';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import type { RedemptionResolveResponse } from '@ticket/contracts';
 import {
@@ -511,7 +512,7 @@ export function GlobalRedeemScreen() {
       >
         {redeemCopy.codeFieldLabel}
       </Text>
-      <TextInput
+      <Input
         value={code}
         onChangeText={(value) => {
           setCode(value);
@@ -524,7 +525,6 @@ export function GlobalRedeemScreen() {
         autoCapitalize="characters"
         accessibilityLabel={redeemCopy.codeFieldLabel}
         editable={!busy}
-        style={field}
         testID="global-redeem-code"
       />
       {!resolved ? (
@@ -635,12 +635,3 @@ export function GlobalRedeemScreen() {
   );
 }
 
-const field = {
-  minHeight: 48,
-  padding: 12,
-  borderRadius: 12,
-  backgroundColor: colors.card,
-  color: colors.label,
-  fontSize: 17,
-  fontFamily: fontFamilies.body,
-};

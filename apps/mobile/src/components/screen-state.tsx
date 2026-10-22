@@ -1,14 +1,11 @@
 import type { PropsWithChildren, ReactNode } from 'react';
-import {
-  ActivityIndicator,
-  Pressable,
-  Text,
-  View,
-  type AccessibilityRole,
-} from 'react-native';
+import { StyleSheet, Text, View, type AccessibilityRole } from 'react-native';
+import { Button } from '@/components/ui/button';
 import { Notice } from '@/components/page';
+import { Spinner } from '@/components/ui/spinner';
 import { colors } from '@/theme/colors';
 import { fontFamilies } from '@/theme/fonts';
+import { radius, space } from '@/theme/tokens';
 import { typography } from '@/theme/typography';
 
 type PanelProps = PropsWithChildren<{
@@ -28,39 +25,12 @@ export function LoadingState({
       accessibilityRole={'progressbar' as AccessibilityRole}
       accessibilityLabel={label}
       accessibilityLiveRegion="polite"
-      style={{
-        padding: 20,
-        gap: 12,
-        backgroundColor: colors.card,
-        borderRadius: 16,
-        borderCurve: 'continuous',
-        alignItems: 'center',
-      }}
+      style={styles.loadingPanel}
     >
-      <ActivityIndicator color={colors.accent} />
-      <Text
-        style={{
-          color: colors.label,
-          fontSize: 22,
-          fontFamily: fontFamilies.display,
-          fontWeight: '600',
-          textAlign: 'center',
-        }}
-      >
-        {title}
-      </Text>
+      <Spinner color={colors.accent} accessibilityLabel={label} />
+      <Text style={styles.loadingTitle}>{title}</Text>
       {children != null && children !== '' ? (
-        <Text
-          style={{
-            color: colors.secondary,
-            fontSize: 17,
-            lineHeight: 25,
-            fontFamily: fontFamilies.body,
-            textAlign: 'center',
-          }}
-        >
-          {children}
-        </Text>
+        <Text style={styles.loadingBody}>{children}</Text>
       ) : null}
     </View>
   );
@@ -82,35 +52,17 @@ export function ErrorState({
   retryLabel?: string;
 }) {
   return (
-    <View style={{ gap: 12 }}>
+    <View style={styles.errorWrap}>
       <Notice title={title} tone="deny">
         {children}
       </Notice>
       {onRetry ? (
-        <Pressable
-          accessibilityRole="button"
+        <Button
+          label={retryLabel}
+          variant="secondary"
           accessibilityLabel={retryLabel}
           onPress={onRetry}
-          style={({ pressed }) => ({
-            paddingVertical: 14,
-            paddingHorizontal: 18,
-            borderRadius: 12,
-            borderCurve: 'continuous',
-            backgroundColor: colors.card,
-            opacity: pressed ? 0.85 : 1,
-          })}
-        >
-          <Text
-            style={{
-              color: colors.label,
-              fontSize: 17,
-              fontWeight: '600',
-              textAlign: 'center',
-            }}
-          >
-            {retryLabel}
-          </Text>
-        </Pressable>
+        />
       ) : null}
     </View>
   );
@@ -124,3 +76,31 @@ export function StateCaption({ children }: { children: ReactNode }) {
     </Text>
   );
 }
+
+const styles = StyleSheet.create({
+  loadingPanel: {
+    padding: space.xl,
+    gap: space.md,
+    backgroundColor: colors.card,
+    borderRadius: radius.lg - 2,
+    borderCurve: 'continuous',
+    alignItems: 'center',
+  },
+  loadingTitle: {
+    color: colors.label,
+    fontSize: 22,
+    fontFamily: fontFamilies.display,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  loadingBody: {
+    color: colors.secondary,
+    fontSize: 17,
+    lineHeight: 25,
+    fontFamily: fontFamilies.body,
+    textAlign: 'center',
+  },
+  errorWrap: {
+    gap: space.md,
+  },
+});

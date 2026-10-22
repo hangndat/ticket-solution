@@ -1,7 +1,4 @@
-import { useState } from 'react';
-import { Pressable, Text } from 'react-native';
-import { colors } from '@/theme/colors';
-import { fontFamilies } from '@/theme/fonts';
+import { Button } from '@/components/ui/button';
 
 type Props = {
   label: string;
@@ -22,49 +19,15 @@ export function AttendeeCta({
   accessibilityLabel,
   testID,
 }: Props) {
-  const [focused, setFocused] = useState(false);
-  const primary = variant === 'primary';
-  const destructive = variant === 'destructive';
   return (
-    <Pressable
+    <Button
       testID={testID}
-      accessibilityRole="button"
-      accessibilityLabel={accessibilityLabel ?? label}
+      label={label}
+      variant={variant}
+      size="lg"
       disabled={disabled}
       onPress={onPress}
-      onFocus={() => setFocused(true)}
-      onBlur={() => setFocused(false)}
-      style={({ pressed }) => ({
-        minHeight: 48,
-        paddingVertical: 14,
-        paddingHorizontal: 18,
-        borderRadius: 12,
-        borderCurve: 'continuous',
-        backgroundColor: destructive
-          ? 'transparent'
-          : primary
-            ? colors.accent
-            : colors.card,
-        opacity: disabled ? 0.45 : pressed ? 0.85 : 1,
-        borderWidth: focused ? 2 : primary ? 0 : 1,
-        borderColor: focused
-          ? colors.focus
-          : destructive
-            ? colors.accent
-            : colors.ink,
-      })}
-    >
-      <Text
-        style={{
-          color: destructive ? colors.accent : primary ? colors.onAccent : colors.ink,
-          fontSize: 17,
-          fontFamily: fontFamilies.bodySemiBold,
-          fontWeight: '600',
-          textAlign: 'center',
-        }}
-      >
-        {label}
-      </Text>
-    </Pressable>
+      accessibilityLabel={accessibilityLabel ?? label}
+    />
   );
 }

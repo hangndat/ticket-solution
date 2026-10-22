@@ -1,9 +1,9 @@
 {
-  "mobile.font_literals": 160,
-  "mobile.pressable_outside_ui": 35,
+  "mobile.font_literals": 119,
+  "mobile.pressable_outside_ui": 8,
   "mobile.rn_modal": 3,
-  "mobile.spacing_literals": 250,
-  "mobile.tsx_hex_literals": 26,
+  "mobile.spacing_literals": 167,
+  "mobile.tsx_hex_literals": 21,
   "web.css_important": 11,
   "web.css_lines": 6820,
   "web.css_media_px": 48,

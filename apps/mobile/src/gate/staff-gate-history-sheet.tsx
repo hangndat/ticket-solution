@@ -1,4 +1,5 @@
 import { Modal, Pressable, Text, View } from 'react-native';
+import { Button } from '@/components/ui/button';
 import { StaffGateDeviceHistoryPanel } from './staff-gate-device-history-panel.tsx';
 import type { DeviceScanHistoryRow } from './staff-gate-device-history.ts';
 import { colors } from '@/theme/colors';
@@ -52,14 +53,13 @@ export function StaffGateHistorySheet({
             >
               Lịch sử trên máy này
             </Text>
-            <Pressable
-              accessibilityRole="button"
+            <Button
+              variant="ghost"
+              label="Đóng"
               accessibilityLabel="Đóng"
               onPress={onClose}
               hitSlop={8}
-            >
-              <Text style={{ color: colors.accent, fontSize: 16 }}>Đóng</Text>
-            </Pressable>
+            />
           </View>
           <Text style={{ color: colors.secondary, fontSize: 13, marginBottom: 8 }}>
             Chỉ các lượt quét lưu trên thiết bị — không phải toàn hệ thống.

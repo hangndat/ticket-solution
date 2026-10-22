@@ -1,6 +1,7 @@
 import { useCallback, useState, useSyncExternalStore } from 'react';
 import { useFocusEffect } from 'expo-router';
-import { ActivityIndicator, View } from 'react-native';
+import { View } from 'react-native';
+import { Spinner } from '@/components/ui/spinner';
 import {
   AccountGroupedDivider,
   AccountGroupedRow,
@@ -151,7 +152,7 @@ export function PushAccountSection({
       ) : null}
       {busy ? (
         <View style={{ padding: 12, alignItems: 'center' }}>
-          <ActivityIndicator />
+          <Spinner accessibilityLabel="Đang đăng ký thông báo" />
         </View>
       ) : null}
     </AccountGroupedSection>

@@ -1,5 +1,6 @@
 import type { PropsWithChildren, ReactNode } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
+import { Button } from '@/components/ui/button';
 import { brand, colors } from '@/theme/colors';
 import { fontFamilies } from '@/theme/fonts';
 
@@ -129,19 +130,18 @@ export function AccountGroupedRow({
   }
 
   return (
-    <Pressable
+    <Button
       testID={testID}
-      accessibilityRole="button"
+      variant="ghost"
       accessibilityLabel={label}
       accessibilityHint={accessibilityHint}
       disabled={disabled}
       onPress={onPress}
-      style={({ pressed }) => ({
-        backgroundColor: pressed ? colors.separator : 'transparent',
-      })}
+      style={{ alignSelf: 'stretch', paddingHorizontal: 0 }}
+      contentStyle={{ justifyContent: 'flex-start', width: '100%' }}
     >
       {body}
-    </Pressable>
+    </Button>
   );
 }
 
