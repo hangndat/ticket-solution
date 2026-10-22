@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="vi" class="h-full">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Header mobile · Sheet spec #789</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Sora:wght@600;700&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              ink: "#0B1220",
+              paper: "#F4F6F8",
+              signal: "#E11D48",
+              focus: "#2563EB",
+              line: "#D7DFE9",
+              muted: "#5B687B",
+              destructive: "#8A1F1F",
+              admit: "#1B7F4A",
+              unknown: "#8A6D3B",
+            },
+            fontFamily: {
+              display: ["Sora", "ui-sans-serif", "system-ui", "sans-serif"],
+              sans: ['"Be Vietnam Pro"', "ui-sans-serif", "system-ui", "sans-serif"],
+            },
+            borderRadius: {
+              sm: "8px",
+              md: "12px",
+              lg: "18px",
+              xl: "24px",
+            },
+            boxShadow: {
+              soft: "0 24px 64px rgba(11, 18, 32, 0.12)",
+              frame: "0 32px 80px rgba(11, 18, 32, 0.22), 0 0 0 1px rgba(255, 255, 255, 0.06) inset",
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      @media (prefers-reduced-motion: reduce) {
+        .sheet-panel,
+        .sheet-overlay {
+          transition: none !important;
+          animation: none !important;
+        }
+      }
+      .sheet-open body-scroll-lock {
+        overflow: hidden;
+      }
+    </style>
+  </head>
+  <body class="min-h-full bg-zinc-100 font-sans text-ink antialiased">
+    <div class="mx-auto max-w-5xl p-4 md:p-6">
+      <header class="mb-4 rounded-lg border border-line bg-white p-4 shadow-soft">
+        <h1 class="font-display text-lg font-bold tracking-tight">#789 · Header mobile + shadcn Sheet</h1>
+        <p class="mt-1 text-sm text-muted">
+          Token theo <code class="text-xs">docs/design/ui-framework-2026-10/TOKENS.md</code> — markup gần Radix Sheet để FE chép.
+        </p>
+        <div class="mt-4 flex flex-wrap gap-2" role="group" aria-label="Điều khiển review">
+          <fieldset class="flex flex-wrap gap-1 rounded-md border border-line p-2">
+            <legend class="px-1 text-xs font-semibold text-muted">Surface</legend>
+            <button type="button" data-surface="marketing" class="review-btn on rounded-sm bg-ink px-2 py-1 text-xs text-paper">Marketing</button>
+            <button type="button" data-surface="app" class="review-btn rounded-sm px-2 py-1 text-xs hover:bg-paper">Attendee</button>
+          </fieldset>
+          <fieldset class="flex flex-wrap gap-1 rounded-md border border-line p-2">
+            <legend class="px-1 text-xs font-semibold text-muted">Viewport</legend>
+            <button type="button" data-width="390" class="review-btn on rounded-sm bg-ink px-2 py-1 text-xs text-paper">390</button>
+            <button type="button" data-width="360" class="review-btn rounded-sm px-2 py-1 text-xs hover:bg-paper">360</button>
+            <button type="button" data-width="320" class="review-btn rounded-sm px-2 py-1 text-xs hover:bg-paper">320</button>
+          </fieldset>
+          <fieldset class="flex flex-wrap gap-1 rounded-md border border-line p-2">
+            <legend class="px-1 text-xs font-semibold text-muted">Locale</legend>
+            <button type="button" data-locale="vi" class="review-btn on rounded-sm bg-ink px-2 py-1 text-xs text-paper">VI</button>
+            <button type="button" data-locale="en" class="review-btn rounded-sm px-2 py-1 text-xs hover:bg-paper">EN</button>
+          </fieldset>
+          <fieldset class="flex flex-wrap gap-1 rounded-md border border-line p-2">
+            <legend class="px-1 text-xs font-semibold text-muted">Menu</legend>
+            <button type="button" data-menu="closed" class="review-btn on rounded-sm bg-ink px-2 py-1 text-xs text-paper">Đóng</button>
+            <button type="button" data-menu="open" class="review-btn rounded-sm px-2 py-1 text-xs hover:bg-paper">Mở</button>
+          </fieldset>
+        </div>
+      </header>
+
+      <div
+        id="device-frame"
+        class="mx-auto overflow-hidden rounded-xl border-2 border-ink/10 bg-white shadow-frame transition-[width] duration-200"
+        style="width: 390px"
+      >
+        <div class="border-b border-line bg-zinc-50 px-3 py-1.5 text-center text-[10px] text-muted">
+          <span id="frame-label">marketing · 390 · vi · closed</span>
+        </div>
+
+        <!-- Marketing shell -->
+        <div id="shell-marketing" class="shell bg-ink text-paper">
+          <a href="#main" class="sr-only focus:not-sr-only">Bỏ qua nội dung</a>
+          <header
+            class="sticky top-0 z-40 border-b border-white/10 bg-ink"
+            data-testid="marketing-header"
+          >
+            <div class="flex min-h-14 items-center gap-5 px-3 py-2">
+              <a
+                href="#"
+                class="font-display shrink-0 text-base font-bold tracking-tight"
+                aria-label="Vemoki"
+                >vemoki<span class="text-signal" aria-hidden="true">↗</span></a
+              >
+              <div class="ml-auto flex min-w-0 items-center gap-2">
+                <div
+                  class="flex shrink-0 rounded-sm border border-white/20 p-0.5"
+                  role="group"
+                  aria-label="Ngôn ngữ"
+                >
+                  <button type="button" class="locale-vi rounded-sm px-2 py-1 text-xs font-semibold bg-white/15" aria-pressed="true">VI</button>
+                  <button type="button" class="locale-en rounded-sm px-2 py-1 text-xs font-semibold text-paper/80" aria-pressed="false">EN</button>
+                </div>
+                <a
+                  href="#interest"
+                  class="cta-mkt inline-flex shrink-0 items-center whitespace-nowrap rounded-sm bg-signal px-3 py-2 text-sm font-semibold text-white hover:opacity-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+                  data-i18n="cta"
+                  >Quan tâm</a
+                >
+                <button
+                  type="button"
+                  id="sheet-trigger-mkt"
+                  class="menu-trigger inline-flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-sm border border-white/20 text-center leading-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+                  aria-expanded="false"
+                  aria-controls="sheet-mkt"
+                  data-testid="marketing-mobile-nav-toggle"
+                >
+                  <span class="menu-icon text-lg" aria-hidden="true">☰</span>
+                  <span class="menu-label mt-0.5 text-[10px] font-medium" data-i18n="menu">Menu</span>
+                </button>
+              </div>
+            </div>
+          </header>
+          <main id="main" class="px-4 py-8 text-paper/80">
+            <p class="text-sm" data-i18n="hero">Nội dung marketing (placeholder).</p>
+          </main>
+        </div>
+
+        <!-- App shell -->
+        <div id="shell-app" class="shell hidden bg-paper text-ink">
+          <div
+            class="border-b border-line bg-paper px-3 py-1.5 text-center text-[10px] text-muted whitespace-nowrap overflow-hidden text-ellipsis"
+            data-testid="demo-strip"
+          >
+            Dữ liệu mô phỏng · app.vemoki.com · PD 2026-10-22
+          </div>
+          <header class="sticky top-0 z-40 border-b border-line bg-paper" data-testid="site-header">
+            <div class="flex min-h-14 items-center gap-5 px-3 py-2">
+              <a href="#" class="font-display text-base font-bold tracking-tight" aria-label="Vemoki"
+                >vemoki<span class="text-signal" aria-hidden="true">↗</span></a
+              >
+              <button
+                type="button"
+                id="sheet-trigger-app"
+                class="menu-trigger ml-auto inline-flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-sm border border-line bg-paper text-center leading-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+                aria-expanded="false"
+                aria-controls="sheet-app"
+                data-testid="site-mobile-menu-toggle"
+              >
+                <span class="menu-icon text-lg" aria-hidden="true">☰</span>
+                <span class="menu-label mt-0.5 text-[10px] font-medium" data-i18n="menu">Menu</span>
+              </button>
+            </div>
+          </header>
+          <main class="px-4 py-8 text-muted">
+            <p class="text-sm" data-i18n="catalog">Danh sách sự kiện (placeholder).</p>
+          </main>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sheet marketing (Radix-like) -->
+    <div id="sheet-mkt" class="sheet-root hidden" data-state="closed" role="presentation">
+      <div
+        class="sheet-overlay fixed inset-0 z-50 bg-ink/60 data-[state=open]:animate-in data-[state=closed]:animate-out"
+        data-state="closed"
+        aria-hidden="true"
+      ></div>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="sheet-mkt-title"
+        class="sheet-panel fixed inset-y-0 right-0 z-50 flex w-[min(100vw-3rem,20rem)] flex-col border-l border-white/10 bg-ink p-4 text-paper shadow-soft transition-transform data-[state=closed]:translate-x-full data-[state=open]:translate-x-0"
+        data-state="closed"
+        tabindex="-1"
+      >
+        <h2 id="sheet-mkt-title" class="sr-only">Menu chính</h2>
+        <div class="mb-4 flex items-center justify-between">
+          <span class="font-display font-semibold" data-i18n="menuTitle">Menu</span>
+          <button
+            type="button"
+            class="sheet-close inline-flex h-11 w-11 flex-col items-center justify-center rounded-sm border border-white/20 leading-none"
+            data-i18n="close"
+          >
+            <span aria-hidden="true">×</span>
+            <span class="text-[10px]">Đóng</span>
+          </button>
+        </div>
+        <nav class="flex flex-col gap-3 text-sm font-medium" aria-label="Chính">
+          <a class="rounded-sm py-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus" href="#" data-i18n="nav1">Tính năng</a>
+          <a class="rounded-sm py-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus" href="#" data-i18n="nav2">Cách hoạt động</a>
+          <a class="rounded-sm py-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus" href="#" data-i18n="nav3">Giải pháp</a>
+          <a class="rounded-sm py-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus" href="#" data-i18n="nav4">Câu hỏi thường gặp</a>
+          <a class="rounded-sm py-2 text-signal focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus" href="#" data-i18n="nav5">Xem demo</a>
+        </nav>
+      </div>
+    </div>
+
+    <!-- Sheet app -->
+    <div id="sheet-app" class="sheet-root hidden" data-state="closed" role="presentation">
+      <div class="sheet-overlay fixed inset-0 z-50 bg-ink/60" data-state="closed" aria-hidden="true"></div>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="sheet-app-title"
+        class="sheet-panel fixed inset-y-0 right-0 z-50 flex w-[min(100vw-3rem,20rem)] flex-col border-l border-line bg-paper p-4 shadow-soft transition-transform data-[state=closed]:translate-x-full data-[state=open]:translate-x-0"
+        data-state="closed"
+        tabindex="-1"
+      >
+        <h2 id="sheet-app-title" class="sr-only">Menu ứng dụng</h2>
+        <div class="mb-4 flex items-center justify-between">
+          <span class="font-display font-semibold" data-i18n="menuTitle">Menu</span>
+          <button type="button" class="sheet-close inline-flex h-11 w-11 flex-col items-center justify-center rounded-sm border border-line leading-none" data-i18n="close">
+            <span aria-hidden="true">×</span>
+            <span class="text-[10px]">Đóng</span>
+          </button>
+        </div>
+        <nav class="flex flex-col gap-3 text-sm" aria-label="App">
+          <a class="rounded-sm py-2" href="#" data-i18n="app1">Sự kiện</a>
+          <a class="rounded-sm py-2" href="#" data-i18n="app2">Vé của tôi</a>
+          <a class="rounded-sm py-2" href="#" data-i18n="app3">Đổi vé</a>
+          <a class="rounded-sm py-2" href="#" data-i18n="app4">Đăng nhập</a>
+        </nav>
+      </div>
+    </div>
+
+    <script>
+      const i18n = {
+        vi: {
+          cta: "Quan tâm",
+          menu: "Menu",
+          close: "Đóng",
+          menuTitle: "Menu",
+          hero: "Nội dung marketing (placeholder).",
+          catalog: "Danh sách sự kiện (placeholder).",
+          nav1: "Tính năng",
+          nav2: "Cách hoạt động",
+          nav3: "Giải pháp",
+          nav4: "Câu hỏi thường gặp",
+          nav5: "Xem demo",
+          app1: "Sự kiện",
+          app2: "Vé của tôi",
+          app3: "Đổi vé",
+          app4: "Đăng nhập",
+        },
+        en: {
+          cta: "Interest",
+          menu: "Menu",
+          close: "Close",
+          menuTitle: "Menu",
+          hero: "Marketing content (placeholder).",
+          catalog: "Event catalog (placeholder).",
+          nav1: "Features",
+          nav2: "How it works",
+          nav3: "Solutions",
+          nav4: "FAQ",
+          nav5: "View demo",
+          app1: "Events",
+          app2: "My tickets",
+          app3: "Redeem",
+          app4: "Sign in",
+        },
+      };
+
+      const state = { surface: "marketing", width: 390, locale: "vi", menu: "closed" };
+
+      function applyLocale() {
+        const t = i18n[state.locale];
+        document.querySelectorAll("[data-i18n]").forEach((el) => {
+          const key = el.getAttribute("data-i18n");
+          if (t[key]) el.textContent = t[key];
+        });
+        document.querySelectorAll(".locale-vi").forEach((b) => {
+          b.classList.toggle("bg-white/15", state.locale === "vi");
+          b.setAttribute("aria-pressed", state.locale === "vi" ? "true" : "false");
+        });
+        document.querySelectorAll(".locale-en").forEach((b) => {
+          b.classList.toggle("bg-white/15", state.locale === "en");
+          b.setAttribute("aria-pressed", state.locale === "en" ? "true" : "false");
+        });
+        document.documentElement.lang = state.locale === "vi" ? "vi" : "en";
+      }
+
+      function activeSheetId() {
+        return state.surface === "marketing" ? "sheet-mkt" : "sheet-app";
+      }
+
+      function setMenu(open) {
+        state.menu = open ? "open" : "closed";
+        const id = activeSheetId();
+        const root = document.getElementById(id);
+        const other = document.getElementById(state.surface === "marketing" ? "sheet-app" : "sheet-mkt");
+        other.classList.add("hidden");
+        root.classList.remove("hidden");
+        const openState = open ? "open" : "closed";
+        root.dataset.state = openState;
+        root.querySelectorAll("[data-state]").forEach((n) => (n.dataset.state = openState));
+        document.body.classList.toggle("body-scroll-lock", open);
+        const trigger = document.getElementById(state.surface === "marketing" ? "sheet-trigger-mkt" : "sheet-trigger-app");
+        trigger.setAttribute("aria-expanded", open ? "true" : "false");
+        const icon = trigger.querySelector(".menu-icon");
+        const label = trigger.querySelector(".menu-label");
+        if (open) {
+          icon.textContent = "×";
+          label.textContent = i18n[state.locale].close;
+        } else {
+          icon.textContent = "☰";
+          label.textContent = i18n[state.locale].menu;
+        }
+        document.querySelectorAll("[data-menu]").forEach((b) => {
+          b.classList.toggle("on", b.dataset.menu === state.menu);
+          b.classList.toggle("bg-ink", b.dataset.menu === state.menu);
+          b.classList.toggle("text-paper", b.dataset.menu === state.menu);
+        });
+        updateLabel();
+      }
+
+      function updateLabel() {
+        document.getElementById("frame-label").textContent =
+          `${state.surface} · ${state.width} · ${state.locale} · ${state.menu}`;
+        document.getElementById("device-frame").style.width = state.width + "px";
+        document.getElementById("shell-marketing").classList.toggle("hidden", state.surface !== "marketing");
+        document.getElementById("shell-app").classList.toggle("hidden", state.surface !== "app");
+        document.getElementById("sheet-mkt").classList.toggle("hidden", state.surface !== "marketing" || state.menu === "closed");
+        document.getElementById("sheet-app").classList.toggle("hidden", state.surface !== "app" || state.menu === "closed");
+      }
+
+      function setReviewButtons(attr, value) {
+        document.querySelectorAll(`[data-${attr}]`).forEach((b) => {
+          const on = b.getAttribute(`data-${attr}`) === value;
+          b.classList.toggle("on", on);
+          b.classList.toggle("bg-ink", on);
+          b.classList.toggle("text-paper", on);
+        });
+      }
+
+      document.querySelectorAll("[data-surface]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          state.surface = btn.dataset.surface;
+          setReviewButtons("surface", state.surface);
+          setMenu(state.menu === "open");
+          updateLabel();
+        });
+      });
+      document.querySelectorAll("[data-width]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          state.width = Number(btn.dataset.width);
+          setReviewButtons("width", String(state.width));
+          updateLabel();
+        });
+      });
+      document.querySelectorAll("[data-locale]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          state.locale = btn.dataset.locale;
+          setReviewButtons("locale", state.locale);
+          applyLocale();
+          setMenu(state.menu === "open");
+        });
+      });
+      document.querySelectorAll("[data-menu]").forEach((btn) => {
+        btn.addEventListener("click", () => setMenu(btn.dataset.menu === "open"));
+      });
+
+      document.querySelectorAll(".menu-trigger").forEach((t) => {
+        t.addEventListener("click", () => setMenu(state.menu !== "open"));
+      });
+      document.querySelectorAll(".sheet-close, .sheet-overlay").forEach((el) => {
+        el.addEventListener("click", () => setMenu(false));
+      });
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && state.menu === "open") setMenu(false);
+      });
+
+      applyLocale();
+      updateLabel();
+    </script>
+  </body>
+</html>
