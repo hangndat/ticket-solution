@@ -6,7 +6,7 @@ import {
   attendeeWalletCopy,
   presentTicketRow,
   ticketGateHint,
-  ticketScheduleVenueLines,
+  ticketScheduleVenueLines
 } from '@/attendee/attendee-outcome-copy';
 import { walletCopy } from '@/components/screen-state-copy';
 import { EventBanner, EventLogo } from '@/components/event-media';
@@ -21,6 +21,7 @@ import { session } from '@/identity/session';
 import { buildDisplayQrPayload } from '@/tickets/display-payload';
 import { readTicketDisplayCache } from '@/tickets/display-cache';
 import { offlineDisplay } from '@/tickets/offline-display-session';
+import { space, radius } from '@/theme/tokens';
 
 type LoadOwner = {
   ownerUserId: string;
@@ -91,7 +92,7 @@ export function TicketDetailScreen() {
       ownerUserId: displayUserId,
       ownerTenantId: displayTenantId,
       ticketId,
-      mode: displayMode,
+      mode: displayMode
     };
   }, [displayMode, displayTenantId, displayUserId, ticketId]);
 
@@ -125,7 +126,7 @@ export function TicketDetailScreen() {
               ownerUserId,
               ownerTenantId,
               ticketId: id,
-              mode,
+              mode
             });
           }
           return;
@@ -143,7 +144,7 @@ export function TicketDetailScreen() {
           ownerUserId,
           ownerTenantId,
           ticketId: id,
-          mode,
+          mode
         });
       } else {
         setLoad({
@@ -151,7 +152,7 @@ export function TicketDetailScreen() {
           ownerUserId,
           ownerTenantId,
           ticketId: id,
-          mode,
+          mode
         });
       }
     })();
@@ -225,17 +226,17 @@ export function TicketDetailScreen() {
       <View
         style={{
           backgroundColor: colors.ticketCanvas,
-          borderRadius: 20,
+          borderRadius: radius.xl,
           borderCurve: 'continuous',
           overflow: 'hidden',
           borderWidth: 1,
-          borderColor: brand.signal,
+          borderColor: brand.signal
         }}
       >
         <View
           style={{
             height: 6,
-            backgroundColor: brand.signal,
+            backgroundColor: brand.signal
           }}
         />
         {hasDemoMediaForEventId(ticket.eventId) ? (
@@ -247,7 +248,7 @@ export function TicketDetailScreen() {
             accessibilityLabel="Banner sự kiện demo trên vé"
           />
         ) : null}
-        <View style={{ padding: 20, gap: 16, alignItems: 'center' }}>
+        <View style={{ padding: space.xl, gap: space.lg, alignItems: 'center' }}>
           {hasDemoMediaForEventId(ticket.eventId) ? (
             <EventLogo
               eventId={ticket.eventId}
@@ -262,18 +263,14 @@ export function TicketDetailScreen() {
             style={{
               color: brand.ink,
               ...typography.display,
-              textAlign: 'center',
+              textAlign: 'center'
             }}
           >
             Vé của bạn
           </Text>
           <Text
-            style={{
-              color: brand.ink,
-              fontSize: 20,
-              fontWeight: '600',
-              textAlign: 'center',
-            }}
+            style={{ ...typography.sectionTitle, color: brand.ink,
+              textAlign: 'center' }}
           >
             {row.eventTitle}
           </Text>
@@ -281,32 +278,25 @@ export function TicketDetailScreen() {
             style={{
               color: brand.signal,
               ...typography.callout,
-              textAlign: 'center',
-              fontWeight: '600',
+              textAlign: 'center'
             }}
           >
             {row.statusLabel}
           </Text>
           {eventWhen ? (
             <Text
-              style={{
-                color: colors.secondary,
-                fontSize: 15,
+              style={{ ...typography.subhead, color: colors.secondary,
                 lineHeight: 22,
-                textAlign: 'center',
-              }}
+                textAlign: 'center' }}
             >
               {eventWhen}
             </Text>
           ) : null}
           {eventWhere ? (
             <Text
-              style={{
-                color: colors.secondary,
-                fontSize: 15,
+              style={{ ...typography.subhead, color: colors.secondary,
                 lineHeight: 22,
-                textAlign: 'center',
-              }}
+                textAlign: 'center' }}
             >
               {eventWhere}
             </Text>
@@ -315,7 +305,7 @@ export function TicketDetailScreen() {
             <QrCode
               value={qrValue}
               inkColor={brand.ink}
-              paperColor="#ffffff"
+              paperColor={colors.onAccent}
               accessibilityLabel={qrA11y}
             />
           ) : null}
@@ -324,28 +314,22 @@ export function TicketDetailScreen() {
             style={{
               color: colors.secondary,
               ...typography.caption,
-              textAlign: 'center',
+              textAlign: 'center'
             }}
           >
             {row.ticketId}
           </Text>
           <Text
             selectable
-            style={{
-              color: colors.secondary,
-              fontSize: 12,
-              textAlign: 'center',
-            }}
+            style={{ ...typography.micro, color: colors.secondary,
+              textAlign: 'center' }}
           >
             {row.credentialLine}
           </Text>
           <Text
-            style={{
-              color: colors.secondary,
-              fontSize: 15,
+            style={{ ...typography.subhead, color: colors.secondary,
               lineHeight: 22,
-              textAlign: 'center',
-            }}
+              textAlign: 'center' }}
           >
             {attendeeWalletCopy.detailOnlyDisplay}
           </Text>

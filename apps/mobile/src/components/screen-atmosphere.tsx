@@ -1,6 +1,6 @@
 import type { PropsWithChildren } from 'react';
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
-import { brand } from '@/theme/tokens';
+import { brand, radius } from '@/theme/tokens';
 
 /**
  * Live Pulse screen wash — paper → paperDeep + faint signal radial (no flat fill).
@@ -22,9 +22,9 @@ export function AtmosphereWash() {
           right: -60,
           width: 280,
           height: 280,
-          borderRadius: 140,
+          borderRadius: radius.pill,
           backgroundColor: brand.signal,
-          opacity: 0.07,
+          opacity: 0.07
         }}
       />
     </View>
@@ -34,7 +34,7 @@ export function AtmosphereWash() {
 /** Flex root with Live Pulse atmosphere behind children. */
 export function ScreenAtmosphere({
   children,
-  style,
+  style
 }: PropsWithChildren<{ style?: StyleProp<ViewStyle> }>) {
   return (
     <View style={[{ flex: 1, backgroundColor: brand.paper }, style]}>

@@ -4,6 +4,8 @@ import { AtmosphereWash } from '@/components/screen-atmosphere';
 import { colors } from '@/theme/colors';
 import { fontFamilies } from '@/theme/fonts';
 import { TenantLogo } from '@/theme/TenantLogo';
+import { space, radius } from '@/theme/tokens';
+import { typography } from '@/theme/typography';
 
 export function Page({ children }: PropsWithChildren) {
   return (
@@ -13,7 +15,7 @@ export function Page({ children }: PropsWithChildren) {
         contentInsetAdjustmentBehavior="automatic"
         keyboardShouldPersistTaps="handled"
         style={{ backgroundColor: 'transparent' }}
-        contentContainerStyle={{ padding: 20, paddingBottom: 48, gap: 20 }}
+        contentContainerStyle={{ padding: space.xl, paddingBottom: space.huge, gap: space.xl }}
       >
         {children}
       </ScrollView>
@@ -32,7 +34,7 @@ export function BrandWordmark({ compact = false }: { compact?: boolean } = {}) {
 export function Notice({
   title,
   children,
-  tone = 'default',
+  tone = 'default'
 }: PropsWithChildren<{
   title: string;
   tone?: 'default' | 'admit' | 'deny' | 'unknown';
@@ -49,35 +51,28 @@ export function Notice({
   return (
     <View
       style={{
-        padding: 20,
-        gap: 12,
+        padding: space.xl,
+        gap: space.md,
         backgroundColor: colors.card,
-        borderRadius: 16,
+        borderRadius: radius.lg,
         borderCurve: 'continuous',
         borderLeftWidth: accent ? 4 : 0,
-        borderLeftColor: accent,
+        borderLeftColor: accent
       }}
     >
       <Text
         selectable
-        style={{
-          color: colors.label,
-          fontSize: 22,
-          fontFamily: fontFamilies.display,
-          fontWeight: '600',
-        }}
+        style={{ ...typography.title, color: colors.label,
+          fontFamily: fontFamilies.display }}
       >
         {title}
       </Text>
       {children != null && children !== '' ? (
         <Text
           selectable
-          style={{
-            color: colors.secondary,
-            fontSize: 17,
+          style={{ ...typography.body, color: colors.secondary,
             lineHeight: 25,
-            fontFamily: fontFamilies.body,
-          }}
+            fontFamily: fontFamilies.body }}
         >
           {children}
         </Text>

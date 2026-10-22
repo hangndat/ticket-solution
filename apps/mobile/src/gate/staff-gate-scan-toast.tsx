@@ -5,6 +5,8 @@ import { SymbolView } from 'expo-symbols';
 import type { GateScanStatusView } from './gate-scan-status-ui.ts';
 import { SCAN_TOAST_FADE_MS } from './staff-gate-scan-feedback.ts';
 import { colors } from '@/theme/colors';
+import { space, radius } from '@/theme/tokens';
+import { typography } from '@/theme/typography';
 
 function toneColor(tone: GateScanStatusView['tone']): string {
   if (tone === 'admit') return colors.admit;
@@ -17,7 +19,7 @@ export function StaffGateScanToast({
   active,
   visible,
   view,
-  busy,
+  busy
 }: {
   /** Keep mounted through fade-out while parent still holds toast op. */
   active: boolean;
@@ -54,7 +56,7 @@ export function StaffGateScanToast({
       Animated.timing(opacity, {
         toValue: 1,
         duration: 180,
-        useNativeDriver: true,
+        useNativeDriver: true
       }).start();
       return;
     }
@@ -65,7 +67,7 @@ export function StaffGateScanToast({
     Animated.timing(opacity, {
       toValue: 0,
       duration: SCAN_TOAST_FADE_MS,
-      useNativeDriver: true,
+      useNativeDriver: true
     }).start();
   }, [active, visible, opacity, reduceMotion]);
 
@@ -92,47 +94,40 @@ export function StaffGateScanToast({
         transform: [{ translateY: -40 }],
         opacity,
         alignItems: 'center',
-        zIndex: 2,
+        zIndex: 2
       }}
     >
       <View
         style={{
           maxWidth: 320,
           width: '100%',
-          paddingVertical: 14,
-          paddingHorizontal: 16,
-          borderRadius: 14,
+          paddingVertical: space.md,
+          paddingHorizontal: space.lg,
+          borderRadius: radius.md,
           backgroundColor: 'rgba(15, 23, 42, 0.88)',
-          gap: 6,
+          gap: space.sm,
           alignItems: 'center',
-          shadowColor: '#000',
+          shadowColor: colors.shadow,
           shadowOpacity: 0.25,
           shadowRadius: 8,
-          shadowOffset: { width: 0, height: 4 },
+          shadowOffset: { width: 0, height: 4 }
         }}
       >
         {showSpinner ? (
-          <Spinner color="#fff" accessibilityLabel="Đang xử lý quét" />
+          <Spinner color={colors.onAccent} accessibilityLabel="Đang xử lý quét" />
         ) : (
           <SymbolView name={view.symbol} size={36} tintColor={tint} />
         )}
         <Text
-          style={{
-            color: '#fff',
-            fontSize: 17,
-            fontWeight: '700',
-            textAlign: 'center',
-          }}
+          style={{ ...typography.body, color: colors.onAccent,
+            textAlign: 'center' }}
         >
           {view.label}
         </Text>
         <Text
-          style={{
-            color: 'rgba(255,255,255,0.85)',
-            fontSize: 14,
+          style={{ ...typography.footnote, color: 'rgba(255,255,255,0.85)',
             lineHeight: 19,
-            textAlign: 'center',
-          }}
+            textAlign: 'center' }}
           numberOfLines={3}
         >
           {view.hint}

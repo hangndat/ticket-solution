@@ -6,7 +6,7 @@ import {
   View,
   type TextInputProps,
   type StyleProp,
-  type ViewStyle,
+  type ViewStyle
 } from 'react-native';
 import { colors } from '@/theme/colors';
 import { fontFamilies } from '@/theme/fonts';
@@ -84,11 +84,11 @@ export const Input = forwardRef<TextInputRef, InputProps>(function Input(
 
 const styles = StyleSheet.create({
   container: {
-    gap: space.xs + 2,
+    gap: space.xs + 2
   },
   label: {
     color: colors.label,
-    ...typography.body,
+    ...typography.body
   },
   field: {
     minHeight: 48,
@@ -100,24 +100,21 @@ const styles = StyleSheet.create({
     fontSize: typography.body.fontSize,
     fontFamily: fontFamilies.body,
     borderWidth: 1,
-    borderColor: 'transparent',
+    borderColor: 'transparent'
   },
   fieldFocused: {
-    borderColor: colors.focus,
+    borderColor: colors.focus
   },
   fieldError: {
-    borderColor: colors.deny,
+    borderColor: colors.deny
   },
   fieldDisabled: {
-    opacity: 0.55,
+    opacity: 0.55
   },
-  error: {
-    color: colors.deny,
-    fontSize: 15,
-    fontFamily: fontFamilies.body,
-  },
+  error: { ...typography.subhead, color: colors.deny,
+    fontFamily: fontFamilies.body },
   helper: {
     color: colors.secondary,
-    ...typography.caption,
-  },
+    ...typography.caption
+  }
 });

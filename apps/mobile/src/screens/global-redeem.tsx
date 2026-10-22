@@ -4,7 +4,7 @@ import {
   useRef,
   useState,
   useSyncExternalStore,
-  startTransition,
+  startTransition
 } from 'react';
 import { Animated, Text, View } from 'react-native';
 import { Input } from '@/components/ui/input';
@@ -14,7 +14,7 @@ import {
   redeemActionAnnouncement,
   redeemDecisionAnnouncement,
   redeemReconcileAnnouncement,
-  redeemStatusRefreshAnnouncement,
+  redeemStatusRefreshAnnouncement
 } from '@/a11y/announcements';
 import { presentRedeemDecision } from '@/attendee/attendee-outcome-copy';
 import { useAttendeeSignIn } from '@/attendee/use-attendee-sign-in';
@@ -28,14 +28,14 @@ import type { FormAnswerValue, FormDefinition } from '@/redeem/contract';
 import {
   redeemPayloadFingerprint,
   resolveIdempotencyKey,
-  type RedeemAttempt,
+  type RedeemAttempt
 } from '@/redeem/attempt-key';
 import {
   clearGlobalRedeemDraftIntent,
   dropGlobalRedeemDraftIntentIfStale,
   parkGlobalRedeemDraftIntent,
   peekGlobalRedeemDraftIntent,
-  resumeGlobalRedeemDraftIntent,
+  resumeGlobalRedeemDraftIntent
 } from '@/redeem/redeem-draft-intent';
 import { resolveRedemptionCodeGlobal } from '@/redeem/global-resolve-client';
 import { requireTermsConsent, validateFormAnswers } from '@/redeem/form-validate';
@@ -43,12 +43,12 @@ import { fetchOwnerRedemptionStatus } from '@/redeem/owner-status';
 import {
   redeemCode,
   reconcileRedeem,
-  type RedeemDecision,
+  type RedeemDecision
 } from '@/redeem/redeem-client';
 import { RedeemFormFields } from '@/redeem/redeem-form-fields';
 import { useFadeInOnMount } from '@/hooks/use-fade-in-on-mount';
 import {
-  parkSignInReturn,
+  parkSignInReturn
 } from '@/navigation/sign-in-return-intent';
 import { sanitizeRedeemCodeParam } from '@/navigation/attendee-redeem-entry';
 import { colors } from '@/theme/colors';
@@ -91,7 +91,7 @@ export function GlobalRedeemScreen() {
     error: signInError,
     configured,
     signIn,
-    clearError,
+    clearError
   } = useAttendeeSignIn();
 
   const [code, setCode] = useState(() => peekGlobalRedeemDraftIntent()?.code ?? '');
@@ -147,7 +147,7 @@ export function GlobalRedeemScreen() {
         const result = await resolveRedemptionCodeGlobal({
           apiBase,
           bearer,
-          code: codeToResolve,
+          code: codeToResolve
         });
         if (!session.isEpochCurrent(epoch)) return;
         if (result.status === 'ok') {
@@ -182,7 +182,7 @@ export function GlobalRedeemScreen() {
     parkGlobalRedeemDraftIntent({
       code: fromLink,
       parkedUserId: epoch?.userId ?? null,
-      parkedGeneration: epoch?.generation ?? null,
+      parkedGeneration: epoch?.generation ?? null
     });
     router.setParams({ code: undefined });
   }, [linkParams.code, router]);
@@ -192,7 +192,7 @@ export function GlobalRedeemScreen() {
       const epoch = session.captureEpoch();
       dropGlobalRedeemDraftIntentIfStale({
         epoch,
-        isEpochCurrent: (e) => session.isEpochCurrent(e),
+        isEpochCurrent: (e) => session.isEpochCurrent(e)
       });
       const snap = session.getSnapshot();
       if (snap.status !== 'verified') {
@@ -221,7 +221,7 @@ export function GlobalRedeemScreen() {
     const epoch = session.captureEpoch();
     const resumed = resumeGlobalRedeemDraftIntent({
       epoch,
-      isEpochCurrent: (e) => session.isEpochCurrent(e),
+      isEpochCurrent: (e) => session.isEpochCurrent(e)
     });
     if (resumed.ok) {
       startTransition(() => {
@@ -242,7 +242,7 @@ export function GlobalRedeemScreen() {
       parkGlobalRedeemDraftIntent({
         code: trimmed,
         parkedUserId: epoch?.userId ?? null,
-        parkedGeneration: epoch?.generation ?? null,
+        parkedGeneration: epoch?.generation ?? null
       });
       parkSignInReturn({ pathname: '/redeem-global' });
       const ok = await signIn();
@@ -264,7 +264,7 @@ export function GlobalRedeemScreen() {
       setDecision({
         kind: 'denied',
         code: 'UNAUTHENTICATED',
-        message: 'Đăng nhập rồi quay lại đổi mã.',
+        message: 'Đăng nhập rồi quay lại đổi mã.'
       });
       return;
     }
@@ -288,7 +288,7 @@ export function GlobalRedeemScreen() {
       formVersion: form?.formVersion ?? '',
       termsVersion: termsVersion ?? '',
       answers: validated.answers,
-      termsAccepted: termsAccepted === true,
+      termsAccepted: termsAccepted === true
     };
     const fingerprint = redeemPayloadFingerprint(payload);
     const { key } = resolveIdempotencyKey(attempt, fingerprint, () =>
@@ -311,7 +311,7 @@ export function GlobalRedeemScreen() {
         termsVersion: termsVersion ?? undefined,
         answers: validated.answers,
         termsAccepted: termsAccepted === true,
-        resolveToken: resolveContext.resolveToken,
+        resolveToken: resolveContext.resolveToken
       });
       if (!session.isEpochCurrent(epoch)) return;
       setDecision(next);
@@ -331,7 +331,7 @@ export function GlobalRedeemScreen() {
       setDecision({
         kind: 'unknown',
         idempotencyKey: key,
-        message: redeemCopy.offlineBody,
+        message: redeemCopy.offlineBody
       });
     } finally {
       if (session.isEpochCurrent(epoch)) setBusy(false);
@@ -351,7 +351,7 @@ export function GlobalRedeemScreen() {
         bearer,
         tenantId: resolveContext.tenantId,
         eventId: resolveContext.eventId,
-        idempotencyKey: attempt.key,
+        idempotencyKey: attempt.key
       });
       if (!session.isEpochCurrent(epoch)) return;
       setDecision(next);
@@ -372,7 +372,7 @@ export function GlobalRedeemScreen() {
       const result = await fetchOwnerRedemptionStatus({
         apiBase,
         bearer,
-        requestId: decision.requestId,
+        requestId: decision.requestId
       });
       if (!session.isEpochCurrent(epoch)) return;
       if (result.status === 'ok') {
@@ -382,7 +382,7 @@ export function GlobalRedeemScreen() {
             kind: 'issued',
             ticketId: body.ticketId,
             requestId: body.requestId,
-            replayed: true,
+            replayed: true
           });
           setStatusNote('Vé đã sẵn sàng — mở tab Vé của tôi.');
         } else if (body.status === 'PENDING_REVIEW') {
@@ -393,14 +393,14 @@ export function GlobalRedeemScreen() {
           setDecision({
             kind: 'denied',
             code: 'REJECTED',
-            message: body.reason ?? 'Yêu cầu bị từ chối.',
+            message: body.reason ?? 'Yêu cầu bị từ chối.'
           });
           setStatusNote(null);
         } else if (body.status === 'EXPIRED') {
           setDecision({
             kind: 'denied',
             code: 'PENDING_EXPIRED',
-            message: 'Yêu cầu chờ đã hết hạn. Mã có thể được giải phóng.',
+            message: 'Yêu cầu chờ đã hết hạn. Mã có thể được giải phóng.'
           });
           setStatusNote(null);
         }
@@ -417,7 +417,7 @@ export function GlobalRedeemScreen() {
       parkGlobalRedeemDraftIntent({
         code: trimmed,
         parkedUserId: epoch?.userId ?? null,
-        parkedGeneration: epoch?.generation ?? null,
+        parkedGeneration: epoch?.generation ?? null
       });
     }
     parkSignInReturn({ pathname: '/redeem-global' });
@@ -503,12 +503,8 @@ export function GlobalRedeemScreen() {
       ) : null}
 
       <Text
-        style={{
-          color: colors.label,
-          fontFamily: fontFamilies.bodySemiBold,
-          fontSize: 15,
-          fontWeight: '600',
-        }}
+        style={{ ...typography.subheadSemibold, color: colors.label,
+          fontFamily: fontFamilies.bodySemiBold, }}
       >
         {redeemCopy.codeFieldLabel}
       </Text>
@@ -579,7 +575,7 @@ export function GlobalRedeemScreen() {
           {...redeemDecisionAnnouncement({
             kind: decision.kind,
             title: outcome.title,
-            detail: outcomeDetail,
+            detail: outcomeDetail
           })}
           accessibilityLiveRegion={outcome.assertive ? 'assertive' : 'polite'}
         >

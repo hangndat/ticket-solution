@@ -7,7 +7,7 @@ import { AttendeeCta } from '@/components/attendee-cta';
 import {
   AccountGroupedDivider,
   AccountGroupedRow,
-  AccountGroupedSection,
+  AccountGroupedSection
 } from '@/components/account-grouped-section';
 import { Notice, Page } from '@/components/page';
 import { accountCopy } from '@/components/screen-state-copy';
@@ -18,12 +18,12 @@ import { accountMeRefreshFromProbe } from '@/screens/account-me-probe';
 import { probeMe, verifyViaMe } from '@/identity/fetch-me';
 import {
   endKeycloakSession,
-  loginWithKeycloak,
+  loginWithKeycloak
 } from '@/identity/oidc-login';
 import { session } from '@/identity/session';
 import {
   bindIfStillVerified,
-  captureOfflineBindingEpoch,
+  captureOfflineBindingEpoch
 } from '@/tickets/bind-after-verify';
 import { offlineDisplay } from '@/tickets/offline-display-session';
 import { logoutAndClearWalletArtifacts } from '@/tickets/wallet-logout';
@@ -32,18 +32,19 @@ import { consumeSignInReturn } from '@/navigation/sign-in-return-intent';
 import { STAFF_ACCOUNT_HREF } from '@/navigation/staff-account-route';
 import {
   planPostLogoutNavigation,
-  runPostLogoutNavigation,
+  runPostLogoutNavigation
 } from '@/navigation/post-logout-navigation';
 import { returnToStaffGateScanTab } from '@/navigation/staff-scan-tab-navigation';
 import { useStaffWorkspace } from '@/navigation/use-staff-workspace';
 import { TabStackTitle } from '@/navigation/tab-stack-title';
 import { useAttendeeTabBarInset } from '@/navigation/use-attendee-tab-bar-inset';
 import { PushAccountSection } from '@/push/push-account-section';
+import { space } from '@/theme/tokens';
 
 export type AccountPresentation = 'tab' | 'stack';
 
 export function AccountScreen({
-  presentation = 'tab',
+  presentation = 'tab'
 }: {
   presentation?: AccountPresentation;
 }) {
@@ -64,7 +65,7 @@ export function AccountScreen({
 }
 
 function MisconfiguredAccount({
-  presentation,
+  presentation
 }: {
   presentation: AccountPresentation;
 }) {
@@ -101,7 +102,7 @@ function navigateAfterSignIn(presentation: AccountPresentation) {
 }
 
 function ConfiguredAccount({
-  presentation,
+  presentation
 }: {
   presentation: AccountPresentation;
 }) {
@@ -187,7 +188,7 @@ function ConfiguredAccount({
       }
       await session.establish(result.accessToken, verifyViaMe, {
         refreshToken: result.refreshToken,
-        expiresIn: result.expiresIn,
+        expiresIn: result.expiresIn
       });
       const snap = session.getSnapshot();
       if (snap.status !== 'verified') {
@@ -205,7 +206,7 @@ function ConfiguredAccount({
           offline: offlineDisplay,
           userId: snap.userId,
           tenantId,
-          bindingEpoch,
+          bindingEpoch
         });
       }
       void refreshMe();
@@ -288,7 +289,7 @@ function ConfiguredAccount({
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
         style={{ flex: 1, backgroundColor: brand.paper }}
-        contentContainerStyle={{ padding: 20, paddingBottom: tabBarInset, gap: 20 }}
+        contentContainerStyle={{ padding: space.xl, paddingBottom: tabBarInset, gap: space.xl }}
       >
         <AccountGroupedSection title={accountCopy.sections.you}>
           <AccountGroupedRow label={youTitle} value={youBody} disabled={busy} />
@@ -363,13 +364,13 @@ function ConfiguredAccount({
         ) : null}
 
         {busy ? (
-          <View style={{ padding: 8, alignItems: 'center' }}>
+          <View style={{ padding: space.sm, alignItems: 'center' }}>
             <Spinner color={brand.signal} accessibilityLabel="Đang tải tài khoản" />
             <Text
               style={{
-                marginTop: 8,
+                marginTop: space.sm,
                 color: colors.secondary,
-                ...typography.caption,
+                ...typography.caption
               }}
               accessibilityLiveRegion="polite"
             >

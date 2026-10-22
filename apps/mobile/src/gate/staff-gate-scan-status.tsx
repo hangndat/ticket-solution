@@ -3,6 +3,8 @@ import { Spinner } from '@/components/ui/spinner';
 import { SymbolView } from 'expo-symbols';
 import type { GateScanStatusView } from './gate-scan-status-ui.ts';
 import { colors } from '@/theme/colors';
+import { space, radius } from '@/theme/tokens';
+import { typography } from '@/theme/typography';
 
 function toneColor(tone: GateScanStatusView['tone']): string {
   if (tone === 'admit') return colors.admit;
@@ -14,7 +16,7 @@ function toneColor(tone: GateScanStatusView['tone']): string {
 export function StaffGateScanStatusPanel({
   view,
   busy,
-  emphasized,
+  emphasized
 }: {
   view: GateScanStatusView;
   busy: boolean;
@@ -28,16 +30,16 @@ export function StaffGateScanStatusPanel({
   return (
     <View
       style={{
-        gap: 6,
+        gap: space.sm,
         paddingVertical: isIdleReady ? 6 : 10,
-        paddingHorizontal: 12,
-        borderRadius: 12,
+        paddingHorizontal: space.md,
+        borderRadius: radius.md,
         backgroundColor: colors.card,
         borderWidth: emphasized ? 2 : 0,
-        borderColor: emphasized ? tint : 'transparent',
+        borderColor: emphasized ? tint : 'transparent'
       }}
     >
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.md }}>
         {showSpinner ? (
           <Spinner
             accessibilityLabel="Đang xử lý quét"
@@ -53,22 +55,14 @@ export function StaffGateScanStatusPanel({
         )}
         <Text
           accessibilityRole="header"
-          style={{
-            flex: 1,
-            color: colors.label,
-            fontSize: 20,
-            fontWeight: '700',
-          }}
+          style={{ ...typography.sectionTitleBold, color: colors.label, }}
         >
           {view.label}
         </Text>
       </View>
       <Text
-        style={{
-          color: colors.secondary,
-          fontSize: 15,
-          lineHeight: 20,
-        }}
+        style={{ ...typography.subhead, color: colors.secondary,
+          lineHeight: 20 }}
       >
         {view.hint}
       </Text>

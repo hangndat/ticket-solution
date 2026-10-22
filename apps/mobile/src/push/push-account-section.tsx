@@ -5,22 +5,23 @@ import { Spinner } from '@/components/ui/spinner';
 import {
   AccountGroupedDivider,
   AccountGroupedRow,
-  AccountGroupedSection,
+  AccountGroupedSection
 } from '@/components/account-grouped-section';
 import { accountCopy } from '@/components/screen-state-copy';
 import { session } from '@/identity/session';
 import {
   derivePushAccountUi,
-  type PushBackendRegistration,
+  type PushBackendRegistration
 } from './push-account-ui.ts';
 import type { ApnsDeviceTokenResult } from './apns-device-token.ts';
 import {
   readIosNotificationPermission,
   type IosNotificationPermission,
-  type PermissionNotificationsLike,
+  type PermissionNotificationsLike
 } from './push-permission.ts';
 import { isApnsProvider, pushProviderName } from './push.ts';
 import { runPushOptIn } from './push-opt-in.ts';
+import { space } from '@/theme/tokens';
 
 function backendFromResult(
   result: ApnsDeviceTokenResult | null,
@@ -44,7 +45,7 @@ async function loadNotifications(): Promise<PermissionNotificationsLike> {
 
 export function PushAccountSection({
   identityKind,
-  disabled,
+  disabled
 }: {
   identityKind: 'guest' | 'verified';
   disabled?: boolean;
@@ -85,7 +86,7 @@ export function PushAccountSection({
     provider,
     identity: identityKind,
     iosPermission,
-    backend: backendFromResult(lastResult, busy),
+    backend: backendFromResult(lastResult, busy)
   });
 
   const onAction = useCallback(async () => {
@@ -151,7 +152,7 @@ export function PushAccountSection({
         </>
       ) : null}
       {busy ? (
-        <View style={{ padding: 12, alignItems: 'center' }}>
+        <View style={{ padding: space.md, alignItems: 'center' }}>
           <Spinner accessibilityLabel="Đang đăng ký thông báo" />
         </View>
       ) : null}

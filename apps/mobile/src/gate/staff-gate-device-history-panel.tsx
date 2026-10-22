@@ -6,9 +6,10 @@ import { SymbolView } from 'expo-symbols';
 import {
   formatDeviceHistoryTime,
   groupDeviceHistoryByDay,
-  type DeviceScanHistoryRow,
+  type DeviceScanHistoryRow
 } from './staff-gate-device-history.ts';
 import { colors } from '@/theme/colors';
+import { typography } from '@/theme/typography';
 
 function rowTint(tone: DeviceScanHistoryRow['tone']): string {
   if (tone === 'admit') return colors.admit;
@@ -40,7 +41,7 @@ export function StaffGateDeviceHistoryPanel({
   filterQuery = '',
   onFilterQueryChange,
   loadMoreError = false,
-  onRetryLoadMore,
+  onRetryLoadMore
 }: StaffGateDeviceHistoryPanelProps) {
   const paginationEnabled =
     onFilterQueryChange !== undefined || onLoadMore !== undefined;
@@ -49,20 +50,16 @@ export function StaffGateDeviceHistoryPanel({
   const showFooter = paginationEnabled && totalAvailable > 0;
 
   return (
-    <View style={{ gap: 8 }} accessibilityRole="summary">
+    <View style={{ gap: space.sm }} accessibilityRole="summary">
       {hideTitle ? null : (
-        <View style={{ gap: 2 }}>
+        <View style={{ gap: space.xxs }}>
           <Text
             accessibilityRole="header"
-            style={{
-              color: colors.label,
-              fontSize: 17,
-              fontWeight: '600',
-            }}
+            style={{ ...typography.bodySemibold, color: colors.label, }}
           >
             Lịch sử trên máy này
           </Text>
-          <Text style={{ color: colors.secondary, fontSize: 13 }}>
+          <Text style={{ ...typography.caption, color: colors.secondary }}>
             {scopeEventName?.trim()
               ? `Trên thiết bị này · ${scopeEventName.trim()}`
               : 'Chỉ các lượt quét lưu trên thiết bị — không phải toàn hệ thống.'}
@@ -81,26 +78,22 @@ export function StaffGateDeviceHistoryPanel({
         />
       ) : null}
       {totalAvailable === 0 ? (
-        <Text style={{ color: colors.secondary, fontSize: 15 }}>
+        <Text style={{ ...typography.subhead, color: colors.secondary }}>
           {paginationEnabled
             ? 'Chưa có lượt quét trên thiết bị này.'
             : 'Chưa có lượt quét gần đây cho sự kiện này.'}
         </Text>
       ) : rows.length === 0 ? (
-        <Text style={{ color: colors.secondary, fontSize: 15 }}>
+        <Text style={{ ...typography.subhead, color: colors.secondary }}>
           Không có lượt quét khớp với từ khóa trong các lượt đã tải.
         </Text>
       ) : (
-        <View style={{ gap: 12 }}>
+        <View style={{ gap: space.md }}>
           {groupDeviceHistoryByDay(rows).map((section) => (
-            <View key={section.dayKey} style={{ gap: 6 }}>
+            <View key={section.dayKey} style={{ gap: space.sm }}>
               <Text
                 accessibilityRole="header"
-                style={{
-                  color: colors.secondary,
-                  fontSize: 13,
-                  fontWeight: '600',
-                }}
+                style={{ ...typography.caption, color: colors.secondary, }}
               >
                 {section.headerLabel}
               </Text>
@@ -110,11 +103,11 @@ export function StaffGateDeviceHistoryPanel({
                   style={{
                     flexDirection: 'row',
                     alignItems: 'flex-start',
-                    gap: 8,
-                    paddingVertical: 8,
-                    paddingHorizontal: 10,
-                    borderRadius: 10,
-                    backgroundColor: colors.card,
+                    gap: space.sm,
+                    paddingVertical: space.sm,
+                    paddingHorizontal: space.md,
+                    borderRadius: radius.md,
+                    backgroundColor: colors.card
                   }}
                   accessibilityLabel={`${formatDeviceHistoryTime(row.at)}. Vé ${row.ticketLabel}. ${row.statusLabel}. ${row.hint}`}
                 >
@@ -127,32 +120,27 @@ export function StaffGateDeviceHistoryPanel({
                     size={18}
                     tintColor={rowTint(row.tone)}
                   />
-                  <View style={{ flex: 1, gap: 2 }}>
+                  <View style={{ flex: 1, gap: space.xxs }}>
                     <View
                       style={{
                         flexDirection: 'row',
                         justifyContent: 'space-between',
-                        gap: 8,
+                        gap: space.sm
                       }}
                     >
                       <Text
                         numberOfLines={1}
-                        style={{
-                          flex: 1,
-                          color: colors.label,
-                          fontSize: 15,
-                          fontWeight: '600',
-                        }}
+                        style={{ ...typography.subheadSemibold, color: colors.label, }}
                       >
                         {row.statusLabel}
                       </Text>
-                      <Text style={{ color: colors.secondary, fontSize: 13 }}>
+                      <Text style={{ ...typography.caption, color: colors.secondary }}>
                         {formatDeviceHistoryTime(row.at)}
                       </Text>
                     </View>
                     <Text
                       numberOfLines={1}
-                      style={{ color: colors.secondary, fontSize: 13 }}
+                      style={{ ...typography.caption, color: colors.secondary }}
                     >
                       {row.ticketLabel}
                     </Text>
@@ -164,10 +152,10 @@ export function StaffGateDeviceHistoryPanel({
         </View>
       )}
       {showFooter ? (
-        <View style={{ gap: 10, marginTop: 4 }}>
+        <View style={{ gap: space.md, marginTop: space.xs }}>
           {loadMoreError ? (
-            <View style={{ gap: 8 }}>
-              <Text style={{ color: colors.deny, fontSize: 14, lineHeight: 20 }}>
+            <View style={{ gap: space.sm }}>
+              <Text style={{ ...typography.footnote, color: colors.deny,  lineHeight: 20 }}>
                 Không tải được lượt tiếp theo. Các lượt đã tải vẫn được giữ.
               </Text>
               {onRetryLoadMore ? (
@@ -188,12 +176,12 @@ export function StaffGateDeviceHistoryPanel({
               onPress={onLoadMore}
             />
           ) : !hasMore ? (
-            <Text style={{ color: colors.secondary, fontSize: 14, textAlign: 'center' }}>
+            <Text style={{ ...typography.footnote, color: colors.secondary,  textAlign: 'center' }}>
               Đã xem hết lịch sử lưu trên máy này
             </Text>
           ) : null}
           <Text
-            style={{ color: colors.secondary, fontSize: 13, textAlign: 'center' }}
+            style={{ ...typography.caption, color: colors.secondary,  textAlign: 'center' }}
             accessibilityLabel={`Đã tải ${renderedCount} lượt`}
           >
             Đã tải {renderedCount} lượt
@@ -205,5 +193,5 @@ export function StaffGateDeviceHistoryPanel({
 }
 
 const styles = StyleSheet.create({
-  retryBtn: { alignSelf: 'flex-start' },
+  retryBtn: { alignSelf: 'flex-start' }
 });

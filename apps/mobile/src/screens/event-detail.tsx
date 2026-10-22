@@ -3,7 +3,7 @@ import {
   AccessibilityInfo,
   Animated,
   Text,
-  View,
+  View
 } from 'react-native';
 import { router } from 'expo-router';
 import { AttendeeCta } from '@/components/attendee-cta';
@@ -12,13 +12,13 @@ import { BrandWordmark, Notice, Page } from '@/components/page';
 import {
   EmptyState,
   ErrorState,
-  LoadingState,
+  LoadingState
 } from '@/components/screen-state';
 import { eventsCopy, redeemCopy } from '@/components/screen-state-copy';
 import { eventDate, findDemoEvent } from '@/data/demo-events';
 import {
   fetchPublishedEventDetail,
-  visibleSectionsInOrder,
+  visibleSectionsInOrder
 } from '@/published/published-event-api';
 import type { PublishedEventDetail } from '@/published/types';
 import { brand, colors } from '@/theme/colors';
@@ -26,11 +26,12 @@ import { fontFamilies } from '@/theme/fonts';
 import { useTheme } from '@/theme/ThemeProvider';
 import { typography } from '@/theme/typography';
 import { WalletOwnedTicketsLink } from '@/components/wallet-owned-tickets-link';
+import { space, radius } from '@/theme/tokens';
 
 export function EventDetailScreen({
   tenantSlug,
   slug,
-  fixture = false,
+  fixture = false
 }: {
   tenantSlug: string;
   slug: string;
@@ -57,7 +58,7 @@ function useHeroFade() {
         Animated.timing(heroOpacity, {
           toValue: 1,
           duration: 280,
-          useNativeDriver: true,
+          useNativeDriver: true
         }).start();
       }
     });
@@ -76,7 +77,7 @@ function useHeroFade() {
 
 function FixtureDemoDetail({
   tenantSlug,
-  slug,
+  slug
 }: {
   tenantSlug: string;
   slug: string;
@@ -92,7 +93,7 @@ function FixtureDemoDetail({
         tenantSlug: event.tenantSlug,
         organizationName: event.brand.organizationName,
         primaryColor: event.brand.primaryColor,
-        wordmark: event.brand.organizationName,
+        wordmark: event.brand.organizationName
       },
       'api',
     );
@@ -113,16 +114,12 @@ function FixtureDemoDetail({
       <Animated.View
         style={{
           opacity: reduceMotionOs ? 1 : heroOpacity,
-          gap: 16,
+          gap: space.lg
         }}
       >
         <Text
-          style={{
-            color: brand.signal,
-            fontFamily: fontFamilies.bodySemiBold,
-            fontSize: 13,
-            fontWeight: '600',
-          }}
+          style={{ ...typography.caption, color: brand.signal,
+            fontFamily: fontFamilies.bodySemiBold, }}
         >
           Demo · dữ liệu mẫu · chưa xuất bản
         </Text>
@@ -157,7 +154,7 @@ function FixtureDemoDetail({
 
 function PublishedEventDetailView({
   tenantSlug,
-  slug,
+  slug
 }: {
   tenantSlug: string;
   slug: string;
@@ -199,7 +196,7 @@ function PublishedEventDetailView({
         message:
           result.status === 'unreachable'
             ? 'Không tải được sự kiện. Kiểm tra kết nối rồi thử lại.'
-            : 'Không tải được sự kiện. Phản hồi không hợp lệ.',
+            : 'Không tải được sự kiện. Phản hồi không hợp lệ.'
       });
     })();
     return () => {
@@ -265,7 +262,7 @@ function PublishedEventDetailView({
 
 /** Live Pulse composition — media plane + typography stack; no thick floating card. */
 function PublishedEventComposition({
-  event,
+  event
 }: {
   event: PublishedEventDetail;
 }) {
@@ -285,7 +282,7 @@ function PublishedEventComposition({
         organizationName: event.brand.organizationName,
         primaryColor: event.brand.primaryColor,
         logoUrl: event.brand.logoUrl,
-        wordmark: event.brand.organizationName,
+        wordmark: event.brand.organizationName
       },
       'api',
     );
@@ -296,7 +293,7 @@ function PublishedEventComposition({
       <Animated.View
         style={{
           opacity: reduceMotionOs ? 1 : heroOpacity,
-          gap: 16,
+          gap: space.lg
         }}
       >
         <EventBanner
@@ -337,14 +334,10 @@ function PublishedEventComposition({
           testID="event-detail-owned-tickets"
         />
 
-        <View style={{ gap: 10 }}>
+        <View style={{ gap: space.md }}>
           <Text
-            style={{
-              color: brand.ink,
-              fontFamily: fontFamilies.bodySemiBold,
-              fontSize: 17,
-              fontWeight: '600',
-            }}
+            style={{ ...typography.bodySemibold, color: brand.ink,
+              fontFamily: fontFamilies.bodySemiBold, }}
           >
             {redeemCopy.eventDetailRedeemBlockTitle}
           </Text>
@@ -377,13 +370,9 @@ function PublishedEventComposition({
             <Text
               key={`${item.q}-${index}`}
               selectable
-              style={{
-                marginBottom: 8,
-                color: colors.label,
+              style={{ ...typography.body, color: colors.label,
                 fontFamily: fontFamilies.body,
-                fontSize: 17,
-                lineHeight: 25,
-              }}
+                lineHeight: 25 }}
             >
               H: {item.q}
               {'\n'}
@@ -412,7 +401,7 @@ function PublishedEventComposition({
 function PublishedEventMetadataGroup({
   dateLine,
   locationLine,
-  orgLine,
+  orgLine
 }: {
   dateLine: string | null;
   locationLine: string | null;
@@ -435,39 +424,33 @@ function PublishedEventMetadataGroup({
   return (
     <View
       style={{
-        backgroundColor: '#ffffff',
-        borderRadius: 12,
+        backgroundColor: colors.onAccent,
+        borderRadius: radius.md,
         borderCurve: 'continuous',
-        overflow: 'hidden',
+        overflow: 'hidden'
       }}
     >
       {rows.map((row, index) => (
         <View
           key={row.label}
           style={{
-            paddingHorizontal: 16,
-            paddingVertical: 14,
-            gap: 4,
+            paddingHorizontal: space.lg,
+            paddingVertical: space.md,
+            gap: space.xs,
             borderTopWidth: index === 0 ? 0 : 1,
-            borderTopColor: '#e8ecf1',
+            borderTopColor: colors.surfaceMuted
           }}
         >
           <Text
-            style={{
-              color: colors.secondary,
-              fontSize: 13,
-              fontFamily: fontFamilies.body,
-            }}
+            style={{ ...typography.caption, color: colors.secondary,
+              fontFamily: fontFamilies.body }}
           >
             {row.label}
           </Text>
           <Text
             selectable
-            style={{
-              color: brand.ink,
-              fontSize: 17,
-              fontFamily: fontFamilies.body,
-            }}
+            style={{ ...typography.body, color: brand.ink,
+              fontFamily: fontFamilies.body }}
           >
             {row.value}
           </Text>
@@ -482,7 +465,7 @@ function formatPublishedDate(startsAt: string, timezone: string): string {
     return new Intl.DateTimeFormat('vi', {
       dateStyle: 'long',
       timeStyle: 'short',
-      timeZone: timezone,
+      timeZone: timezone
     }).format(new Date(startsAt));
   } catch {
     return startsAt;

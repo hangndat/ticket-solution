@@ -8,6 +8,7 @@ import { session } from '@/identity/session';
 import { staffEligibility } from '@/identity/staff-eligibility';
 import { uatSessionRouteAllowed } from '@/navigation/dev-only-routes';
 import { colors } from '@/theme/colors';
+import { typography } from '@/theme/typography';
 
 /**
  * Local UAT session injector for headless sim-uat (O02 dual persona).
@@ -79,7 +80,7 @@ export default function UatSessionScreen() {
         <Notice title="UAT session bị từ chối" tone="deny">
           {detail}
         </Notice>
-        <Text style={{ color: colors.secondary, fontSize: 15 }}>{detail}</Text>
+        <Text style={{ ...typography.subhead, color: colors.secondary }}>{detail}</Text>
       </Page>
     );
   }

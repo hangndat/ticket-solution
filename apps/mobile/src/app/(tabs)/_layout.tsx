@@ -8,7 +8,7 @@ import { StaffDefaultTabRedirect } from '@/navigation/staff-default-tab-redirect
 import { STAFF_TAB_TITLES } from '@/navigation/staff-tab-titles';
 import {
   useShowAttendeeTabs,
-  useStaffWorkspace,
+  useStaffWorkspace
 } from '@/navigation/use-staff-workspace';
 import { useMyTicketsTabChrome } from '@/navigation/use-wallet-access';
 import { useTheme } from '@/theme/ThemeProvider';

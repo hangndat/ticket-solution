@@ -4,14 +4,14 @@ import {
   useEffect,
   useMemo,
   useState,
-  useSyncExternalStore,
+  useSyncExternalStore
 } from 'react';
 import {
   Pressable,
   RefreshControl,
   ScrollView,
   Text,
-  View,
+  View
 } from 'react-native';
 import type { TicketSummary } from '@ticket/contracts';
 import { AttendeeCta } from '@/components/attendee-cta';
@@ -21,37 +21,39 @@ import { Notice } from '@/components/page';
 import {
   EmptyState,
   ErrorState,
-  LoadingState,
+  LoadingState
 } from '@/components/screen-state';
 import { walletCopy } from '@/components/screen-state-copy';
 import {
   attendeeWalletCopy,
-  presentTicketRow,
+  presentTicketRow
 } from '@/attendee/attendee-outcome-copy';
 import { TabStackTitle } from '@/navigation/tab-stack-title';
 import { hasDemoMediaForEventId } from '@/data/demo-media';
 import { brand, colors } from '@/theme/colors';
+import { space, radius } from '@/theme/tokens';
+import { typography } from '@/theme/typography';
 import { fontFamilies } from '@/theme/fonts';
 import { session } from '@/identity/session';
 import {
   currentTicketDisplayWriteEpoch,
-  readTicketDisplayCache,
+  readTicketDisplayCache
 } from '@/tickets/display-cache';
 import { probeMeTickets } from '@/tickets/fetch-me-tickets';
 import { persistWalletTicketCaches } from '@/tickets/wallet-display-persist';
 import {
   walletDisplayCacheScope,
   walletFetchScopeFromEnv,
-  walletSessionScope,
+  walletSessionScope
 } from '@/tickets/wallet-fetch-scope';
 import {
   bindIfStillVerified,
-  captureOfflineBindingEpoch,
+  captureOfflineBindingEpoch
 } from '@/tickets/bind-after-verify';
 import { offlineDisplay } from '@/tickets/offline-display-session';
 import {
   decideCacheHydrate,
-  decideTicketSyncApply,
+  decideTicketSyncApply
 } from '@/tickets/ticket-sync-guard';
 import { logoutAndClearWalletArtifacts } from '@/tickets/wallet-logout';
 import { isApnsProvider, pushProviderName } from '@/push/push';
@@ -65,7 +67,7 @@ import {
   groupTicketsByEvent,
   resolveWalletFilterEventName,
   walletEventSectionHeader,
-  walletListSubtitle,
+  walletListSubtitle
 } from '@/tickets/wallet-event-grouping';
 
 function parseWalletEventIdFilter(
@@ -78,7 +80,7 @@ function parseWalletEventIdFilter(
 
 function WalletGroupedTicketList({
   tickets,
-  filterEventId,
+  filterEventId
 }: {
   tickets: TicketSummary[];
   filterEventId?: string;
@@ -98,15 +100,11 @@ function WalletGroupedTicketList({
   return (
     <>
       {groups.map((group) => (
-        <View key={group.eventId} style={{ gap: 12 }}>
+        <View key={group.eventId} style={{ gap: space.md }}>
           <Text
             accessibilityRole="header"
-            style={{
-              color: brand.ink,
-              fontSize: 16,
-              fontFamily: fontFamilies.bodySemiBold,
-              fontWeight: '600',
-            }}
+            style={{ ...typography.callout, color: brand.ink,
+              fontFamily: fontFamilies.bodySemiBold }}
           >
             {walletEventSectionHeader(group.eventName, group.tickets.length)}
           </Text>
@@ -124,19 +122,15 @@ function TicketStatusPill({ label }: { label: string }) {
     <View
       style={{
         alignSelf: 'flex-start',
-        backgroundColor: '#edf5ef',
-        borderRadius: 6,
-        paddingHorizontal: 8,
-        paddingVertical: 5,
+        backgroundColor: colors.admitSurface,
+        borderRadius: radius.sm,
+        paddingHorizontal: space.sm,
+        paddingVertical: space.xs
       }}
     >
       <Text
-        style={{
-          color: '#26734c',
-          fontSize: 11,
-          fontFamily: fontFamilies.bodySemiBold,
-          fontWeight: '600',
-        }}
+        style={{ ...typography.badge, color: colors.admit,
+          fontFamily: fontFamilies.bodySemiBold }}
       >
         {label}
       </Text>
@@ -155,14 +149,14 @@ function TicketRow({ ticket }: { ticket: TicketSummary }) {
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
         style={({ pressed }) => ({
-          padding: 18,
-          borderRadius: 16,
+          padding: space.lg,
+          borderRadius: radius.lg,
           borderCurve: 'continuous',
           backgroundColor: colors.ticketCanvas,
           borderWidth: focused ? 2 : 1,
-          borderColor: focused ? colors.focus : '#e1e6ed',
+          borderColor: focused ? colors.focus : colors.line,
           opacity: pressed ? 0.85 : 1,
-          gap: 10,
+          gap: space.md
         })}
       >
         <TicketStatusPill label={row.statusLabel} />
@@ -175,34 +169,23 @@ function TicketRow({ ticket }: { ticket: TicketSummary }) {
           />
         ) : null}
         <Text
-          style={{
-            color: brand.ink,
-            fontSize: 17,
-            fontFamily: fontFamilies.bodySemiBold,
-            fontWeight: '600',
-          }}
+          style={{ ...typography.body, color: brand.ink,
+            fontFamily: fontFamilies.bodySemiBold }}
         >
           {row.eventTitle}
         </Text>
         {row.whenLine ? (
           <Text
-            style={{
-              color: colors.secondary,
-              fontSize: 15,
+            style={{ ...typography.subhead, color: colors.secondary,
               fontFamily: fontFamilies.body,
-              lineHeight: 22,
-            }}
+              lineHeight: 22 }}
           >
             {row.whenLine}
           </Text>
         ) : null}
         <Text
-          style={{
-            color: brand.signal,
-            fontSize: 15,
-            fontFamily: fontFamilies.bodySemiBold,
-            fontWeight: '600',
-          }}
+          style={{ ...typography.subhead, color: brand.signal,
+            fontFamily: fontFamilies.bodySemiBold }}
         >
           {row.viewTicketCta}
         </Text>
@@ -241,11 +224,11 @@ export function MyTicketsScreen() {
 
 /**
  * Display-only wallet from prior online-verified binding + durable cache.
- * Flat list only: offline cache may lack eventName — no event grouping (#602).
+ * Flat list only: offline cache may lack eventName — no event grouping (issue 602).
  */
 function OfflineDisplayWallet({
   userId,
-  tenantId,
+  tenantId
 }: {
   userId: string;
   tenantId: string;
@@ -292,7 +275,7 @@ function OfflineDisplayWallet({
     <ScrollView
       contentInsetAdjustmentBehavior="automatic"
       style={{ flex: 1, backgroundColor: brand.paper }}
-      contentContainerStyle={{ padding: 20, paddingBottom: 48, gap: 16 }}
+      contentContainerStyle={{ padding: space.xl, paddingBottom: space.huge, gap: space.lg }}
     >
       <Notice title={attendeeWalletCopy.offlineBannerTitle}>
         {attendeeWalletCopy.offlineBannerBody}
@@ -313,7 +296,7 @@ function OfflineDisplayWallet({
           {walletCopy.emptyOffline.body}
         </EmptyState>
       ) : (
-        <View style={{ gap: 12 }}>
+        <View style={{ gap: space.md }}>
           {tickets.map((ticket) => (
             <TicketRow key={ticket.ticketId} ticket={ticket} />
           ))}
@@ -331,7 +314,7 @@ function VerifiedWallet({ userId }: { userId: string }) {
   const filterEventId = parseWalletEventIdFilter(eventIdParam);
   // Memoize: walletFetchScopeFromEnv() returns a fresh object each call. Putting
   // that object in refresh deps without useMemo re-creates refresh every render
-  // and re-fires the mount effect (infinite probeMeTickets / UI flicker) — #610.
+  // and re-fires the mount effect (infinite probeMeTickets / UI flicker) — issue 610.
   const fetchScope = useMemo(() => walletFetchScopeFromEnv(), []);
   const sessionScope = walletSessionScope(fetchScope);
   const cacheScope = walletDisplayCacheScope(fetchScope);
@@ -350,7 +333,7 @@ function VerifiedWallet({ userId }: { userId: string }) {
       epoch,
       isEpochCurrent: (e) => session.isEpochCurrent(e),
       cached: cache,
-      expectedUserId: userId,
+      expectedUserId: userId
     });
     if (decision.action !== 'apply') return;
     setTickets(decision.tickets);
@@ -400,7 +383,7 @@ function VerifiedWallet({ userId }: { userId: string }) {
         probe,
         cached,
         expectedUserId: userId,
-        credentialRefreshUnreachable,
+        credentialRefreshUnreachable
       });
 
       if (decision.action === 'stale') return;
@@ -413,7 +396,7 @@ function VerifiedWallet({ userId }: { userId: string }) {
           await logoutAndClearWalletArtifacts({
             userId,
             tenantId: sessionScope,
-            walletScope: fetchScope,
+            walletScope: fetchScope
           });
         } catch (err) {
           setError(
@@ -468,7 +451,7 @@ function VerifiedWallet({ userId }: { userId: string }) {
             offline: offlineDisplay,
             userId,
             tenantId,
-            bindingEpoch,
+            bindingEpoch
           });
         }
       } else if (decision.action === 'offline-cache') {
@@ -522,7 +505,7 @@ function VerifiedWallet({ userId }: { userId: string }) {
           dismissed,
           providerIsApns: isApnsProvider(provider),
           identityVerified: true,
-          iosPermissionAuthorized: perm === 'authorized' || perm === 'provisional',
+          iosPermissionAuthorized: perm === 'authorized' || perm === 'provisional'
         });
         if (!cancelled) setShowPushPrompt(offer);
       } catch {
@@ -548,7 +531,7 @@ function VerifiedWallet({ userId }: { userId: string }) {
     <ScrollView
       contentInsetAdjustmentBehavior="automatic"
       style={{ flex: 1, backgroundColor: brand.paper }}
-      contentContainerStyle={{ padding: 20, paddingBottom: 48, gap: 16 }}
+      contentContainerStyle={{ padding: space.xl, paddingBottom: space.huge, gap: space.lg }}
       refreshControl={
         <RefreshControl refreshing={refreshing} onRefresh={() => void onRefresh()} />
       }
@@ -566,18 +549,14 @@ function VerifiedWallet({ userId }: { userId: string }) {
             alignItems: 'center',
             justifyContent: 'space-between',
             flexWrap: 'wrap',
-            gap: 10,
-            paddingVertical: 4,
+            gap: space.md,
+            paddingVertical: space.xs
           }}
         >
           <Text
-            style={{
-              color: brand.ink,
-              fontSize: 15,
+            style={{ ...typography.subhead, color: brand.ink,
               fontFamily: fontFamilies.bodySemiBold,
-              fontWeight: '600',
-              flexShrink: 1,
-            }}
+              flexShrink: 1 }}
           >
             {resolveWalletFilterEventName(tickets, filterEventId)}
           </Text>
@@ -591,11 +570,8 @@ function VerifiedWallet({ userId }: { userId: string }) {
         </View>
       ) : tickets.length > 0 ? (
         <Text
-          style={{
-            color: colors.secondary,
-            fontSize: 15,
-            fontFamily: fontFamilies.body,
-          }}
+          style={{ ...typography.subhead, color: colors.secondary,
+            fontFamily: fontFamilies.body }}
         >
           {walletListSubtitle(
             tickets.length,
@@ -629,7 +605,7 @@ function VerifiedWallet({ userId }: { userId: string }) {
           {walletCopy.emptyOnline.body}
         </EmptyState>
       ) : (
-        <View style={{ gap: 16 }}>
+        <View style={{ gap: space.lg }}>
           <WalletGroupedTicketList
             tickets={tickets}
             filterEventId={filterEventId}

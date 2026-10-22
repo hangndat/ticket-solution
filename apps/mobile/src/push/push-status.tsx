@@ -6,12 +6,13 @@ import { session } from '@/identity/session';
 import {
   currentApnsRegistrationGeneration,
   registerApnsDeviceToken,
-  type ApnsDeviceTokenResult,
+  type ApnsDeviceTokenResult
 } from '@/push/apns-device-token';
+import { space } from '@/theme/tokens';
 import {
   isApnsProvider,
   pushProviderName,
-  pushUiCopy,
+  pushUiCopy
 } from '@/push/push';
 
 /** Attendee-facing status — never token hint, length, or APNs operator jargon. */
@@ -69,7 +70,7 @@ export function PushStatus() {
       finish({
         status: 'unavailable',
         transport: 'apns',
-        reason: 'registration-timeout',
+        reason: 'registration-timeout'
       });
     }, 12_000);
 
@@ -83,7 +84,7 @@ export function PushStatus() {
         finish({
           status: 'unavailable',
           transport: 'apns',
-          reason: 'registration-failed',
+          reason: 'registration-failed'
         });
       });
   }, []);
@@ -92,7 +93,7 @@ export function PushStatus() {
     <View accessibilityLabel={copy.announcement}>
       <Notice title={copy.title}>{copy.body}</Notice>
       {isApnsProvider(provider) ? (
-        <View style={{ gap: 8, marginTop: 8 }}>
+        <View style={{ gap: space.sm, marginTop: space.sm }}>
           <Button
             label={busy ? 'Đang bật…' : 'Bật thông báo'}
             loading={busy}

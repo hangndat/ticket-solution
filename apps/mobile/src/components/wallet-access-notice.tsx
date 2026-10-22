@@ -3,6 +3,7 @@ import { Notice, Page } from '@/components/page';
 import { walletCopy } from '@/components/screen-state-copy';
 import { brand, colors } from '@/theme/colors';
 import { typography } from '@/theme/typography';
+import { space } from '@/theme/tokens';
 
 /** Deep-link / push routes when wallet access is false (tab is hidden for guests). */
 export function WalletAccessNotice() {
@@ -17,18 +18,14 @@ export function WalletAccessNotice() {
 
 export function WalletAccessNoticeCompact() {
   return (
-    <View style={{ gap: 8, paddingVertical: 8 }}>
+    <View style={{ gap: space.sm, paddingVertical: space.sm }}>
       <Text
         accessibilityRole="header"
-        style={{
-          color: brand.ink,
-          fontSize: 17,
-          fontWeight: '600',
-        }}
+        style={{ ...typography.bodySemibold, color: brand.ink, }}
       >
         {walletCopy.guestWalletBlockedTitle}
       </Text>
-      <Text style={{ color: colors.secondary, fontSize: 15, lineHeight: 22 }}>
+      <Text style={{ ...typography.subhead, color: colors.secondary,  lineHeight: 22 }}>
         {walletCopy.guestWalletBlockedBody}
       </Text>
     </View>

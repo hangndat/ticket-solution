@@ -8,7 +8,7 @@ export default function StaffScanTabLayout() {
     <Stack
       screenOptions={{
         ...tabDetailStackScreenOptions,
-        animation: 'none',
+        animation: 'none'
       }}
     >
       <Stack.Screen

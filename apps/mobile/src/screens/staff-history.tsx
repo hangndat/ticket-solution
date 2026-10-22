@@ -5,16 +5,16 @@ import { StaffGateDeviceHistoryPanel } from '@/gate/staff-gate-device-history-pa
 import {
   computeDeviceHistoryPageView,
   DEVICE_HISTORY_PAGE_SIZE,
-  type DeviceScanHistoryRow,
+  type DeviceScanHistoryRow
 } from '@/gate/staff-gate-device-history';
 import { StaffGateScreenChrome } from '@/gate/staff-gate-screen-chrome';
 import { useStaffGateWorkspace } from '@/gate/staff-gate-workspace-context';
 import { STAFF_TAB_TITLES } from '@/navigation/staff-tab-titles';
-import { brand } from '@/theme/tokens';
+import { brand, space } from '@/theme/tokens';
 
 function StaffHistoryDeviceList({
   deviceHistory,
-  scopeEventName,
+  scopeEventName
 }: {
   deviceHistory: DeviceScanHistoryRow[];
   scopeEventName: string | null;
@@ -70,7 +70,7 @@ export function StaffHistoryScreen() {
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
         style={{ flex: 1, backgroundColor: brand.paper }}
-        contentContainerStyle={{ padding: 20, paddingBottom: 48, gap: 16 }}
+        contentContainerStyle={{ padding: space.xl, paddingBottom: space.huge, gap: space.lg }}
       >
         <StaffGateNoEventState />
         <View>

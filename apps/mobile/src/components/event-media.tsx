@@ -2,14 +2,15 @@ import {
   View,
   type ImageSourcePropType,
   type StyleProp,
-  type ViewStyle,
+  type ViewStyle
 } from 'react-native';
 import { SafeEventImage } from './safe-event-image.tsx';
 import { remoteImageSource } from './safe-event-image-url.ts';
 import {
   hasDemoMediaForEventId,
-  hasDemoMediaForTenantSlug,
+  hasDemoMediaForTenantSlug
 } from '@/data/demo-media';
+import { space, radius } from '@/theme/tokens';
 import {
   demoBannerSource,
   demoLogoSource,
@@ -65,7 +66,7 @@ export function EventBanner({
   height = 140,
   style,
   testID = 'event-banner',
-  accessibilityLabel = 'Ảnh banner sự kiện',
+  accessibilityLabel = 'Ảnh banner sự kiện'
 }: BannerProps) {
   const pack = bundledDemoSource(eventId, tenantSlug);
   const source =
@@ -81,8 +82,8 @@ export function EventBanner({
         {
           height,
           width: '100%',
-          borderRadius: 12,
-          backgroundColor: 'transparent',
+          borderRadius: radius.md,
+          backgroundColor: 'transparent'
         },
         style,
       ]}
@@ -101,7 +102,7 @@ export function EventLogo({
   height = 36,
   style,
   testID = 'event-logo',
-  accessibilityLabel = 'Logo sự kiện',
+  accessibilityLabel = 'Logo sự kiện'
 }: LogoProps) {
   const pack = bundledDemoSource(eventId, tenantSlug);
   const source =
@@ -117,7 +118,7 @@ export function EventLogo({
         {
           height,
           width: height * 3.2,
-          backgroundColor: 'transparent',
+          backgroundColor: 'transparent'
         },
         style,
       ]}
@@ -132,7 +133,7 @@ export function EventMediaHeader({
   bannerUrl,
   logoUrl,
   style,
-  testID = 'event-media',
+  testID = 'event-media'
 }: {
   eventId?: string | null;
   tenantSlug?: string | null;
@@ -142,7 +143,7 @@ export function EventMediaHeader({
   testID?: string;
 }) {
   return (
-    <View style={[{ gap: 10 }, style]} testID={testID}>
+    <View style={[{ gap: space.md }, style]} testID={testID}>
       <EventBanner
         eventId={eventId}
         tenantSlug={tenantSlug}

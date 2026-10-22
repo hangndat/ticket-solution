@@ -7,7 +7,7 @@ import {
   redeemActionAnnouncement,
   redeemDecisionAnnouncement,
   redeemReconcileAnnouncement,
-  redeemStatusRefreshAnnouncement,
+  redeemStatusRefreshAnnouncement
 } from '@/a11y/announcements';
 import { presentRedeemDecision } from '@/attendee/attendee-outcome-copy';
 import { AttendeeCta } from '@/components/attendee-cta';
@@ -16,7 +16,7 @@ import { redeemCopy } from '@/components/screen-state-copy';
 import { requestAttendeeAuthGate } from '@/navigation/attendee-auth-gate';
 import {
   clearSignInReturnIfPath,
-  parkSignInReturn,
+  parkSignInReturn
 } from '@/navigation/sign-in-return-intent';
 import { getApiBaseUrl, getEventId, getTenantId } from '@/identity/config';
 import { session } from '@/identity/session';
@@ -25,24 +25,25 @@ import type { FormAnswerValue, FormDefinition } from '@/redeem/contract';
 import {
   redeemPayloadFingerprint,
   resolveIdempotencyKey,
-  type RedeemAttempt,
+  type RedeemAttempt
 } from '@/redeem/attempt-key';
 import { requireTermsConsent, validateFormAnswers } from '@/redeem/form-validate';
 import { fetchOwnerRedemptionStatus } from '@/redeem/owner-status';
 import {
   redeemCode,
   reconcileRedeem,
-  type RedeemDecision,
+  type RedeemDecision
 } from '@/redeem/redeem-client';
 import {
   clearRedeemDraftIntent,
   dropRedeemDraftIntentIfStale,
   parkRedeemDraftIntent,
   resumeRedeemDraftIntent,
-  type RedeemDraftIntent,
+  type RedeemDraftIntent
 } from '@/redeem/redeem-draft-intent';
 import { RedeemFormFields } from '@/redeem/redeem-form-fields';
 import { useFadeInOnMount } from '@/hooks/use-fade-in-on-mount';
+import { brand } from '@/theme/tokens';
 
 const AUTH_CODES = new Set(['UNAUTHENTICATED', 'EMAIL_NOT_VERIFIED']);
 
@@ -119,7 +120,7 @@ export function RedeemScreen() {
       formVersion: form?.formVersion,
       termsVersion: termsVersion ?? undefined,
       parkedUserId: epoch?.userId ?? null,
-      parkedGeneration: epoch?.generation ?? null,
+      parkedGeneration: epoch?.generation ?? null
     });
   }, [
     verified,
@@ -187,7 +188,7 @@ export function RedeemScreen() {
       const epoch = session.captureEpoch();
       const resumed = resumeRedeemDraftIntent({
         epoch,
-        isEpochCurrent: (e) => session.isEpochCurrent(e),
+        isEpochCurrent: (e) => session.isEpochCurrent(e)
       });
       if (resumed.ok) {
         applyRedeemDraft(resumed);
@@ -198,7 +199,7 @@ export function RedeemScreen() {
       const epoch = session.captureEpoch();
       dropRedeemDraftIntentIfStale({
         epoch,
-        isEpochCurrent: (e) => session.isEpochCurrent(e),
+        isEpochCurrent: (e) => session.isEpochCurrent(e)
       });
       const snap = session.getSnapshot();
       if (snap.status !== 'verified') {
@@ -225,7 +226,7 @@ export function RedeemScreen() {
       setDecision({
         kind: 'denied',
         code: 'UNAUTHENTICATED',
-        message: 'Đăng nhập rồi quay lại đổi mã.',
+        message: 'Đăng nhập rồi quay lại đổi mã.'
       });
       return;
     }
@@ -249,7 +250,7 @@ export function RedeemScreen() {
       formVersion: form?.formVersion ?? '',
       termsVersion: termsVersion ?? '',
       answers: validated.answers,
-      termsAccepted: termsAccepted === true,
+      termsAccepted: termsAccepted === true
     };
     const fingerprint = redeemPayloadFingerprint(payload);
     const { key } = resolveIdempotencyKey(attempt, fingerprint, () =>
@@ -271,7 +272,7 @@ export function RedeemScreen() {
         formVersion: form?.formVersion,
         termsVersion: termsVersion ?? undefined,
         answers: validated.answers,
-        termsAccepted: termsAccepted === true,
+        termsAccepted: termsAccepted === true
       });
       if (!session.isEpochCurrent(epoch)) return;
       setDecision(next);
@@ -290,7 +291,7 @@ export function RedeemScreen() {
       setDecision({
         kind: 'unknown',
         idempotencyKey: key,
-        message: redeemCopy.offlineBody,
+        message: redeemCopy.offlineBody
       });
     } finally {
       if (session.isEpochCurrent(epoch)) setBusy(false);
@@ -310,7 +311,7 @@ export function RedeemScreen() {
         bearer,
         tenantId: tenantId.trim(),
         eventId: eventId.trim(),
-        idempotencyKey: attempt.key,
+        idempotencyKey: attempt.key
       });
       if (!session.isEpochCurrent(epoch)) return;
       setDecision(next);
@@ -331,7 +332,7 @@ export function RedeemScreen() {
       const result = await fetchOwnerRedemptionStatus({
         apiBase,
         bearer,
-        requestId: decision.requestId,
+        requestId: decision.requestId
       });
       if (!session.isEpochCurrent(epoch)) return;
       if (result.status === 'ok') {
@@ -341,7 +342,7 @@ export function RedeemScreen() {
             kind: 'issued',
             ticketId: body.ticketId,
             requestId: body.requestId,
-            replayed: true,
+            replayed: true
           });
           setStatusNote('Vé đã sẵn sàng — mở tab Vé của tôi.');
         } else if (body.status === 'PENDING_REVIEW') {
@@ -352,14 +353,14 @@ export function RedeemScreen() {
           setDecision({
             kind: 'denied',
             code: 'REJECTED',
-            message: body.reason ?? 'Yêu cầu bị từ chối.',
+            message: body.reason ?? 'Yêu cầu bị từ chối.'
           });
           setStatusNote(null);
         } else if (body.status === 'EXPIRED') {
           setDecision({
             kind: 'denied',
             code: 'PENDING_EXPIRED',
-            message: 'Yêu cầu chờ đã hết hạn. Mã có thể được giải phóng.',
+            message: 'Yêu cầu chờ đã hết hạn. Mã có thể được giải phóng.'
           });
           setStatusNote(null);
         }
@@ -487,7 +488,7 @@ export function RedeemScreen() {
           {...redeemDecisionAnnouncement({
             kind: decision.kind,
             title: outcome.title,
-            detail: outcomeDetail,
+            detail: outcomeDetail
           })}
           accessibilityLiveRegion={outcome.assertive ? 'assertive' : 'polite'}
         >
