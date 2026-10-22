@@ -5,6 +5,7 @@ import { useId, useState, type FormEvent } from 'react';
 import { t, type CopyKey } from './copy';
 import type { MarketingLocale } from './hosts';
 import { privacyHref } from './links';
+import { trackLeadSubmitted } from './analytics/client';
 import {
   validateInterest,
   type InterestFieldError,
@@ -76,6 +77,7 @@ export function InterestForm({ locale }: { locale: MarketingLocale }) {
         setState('error');
         return;
       }
+      trackLeadSubmitted(result.value.role);
       setState('success');
     } catch {
       setBanner(t(locale, 'interest.error.generic'));
