@@ -4,20 +4,30 @@
 | --- | --- |
 | **PR** | [#802](https://github.com/hangndat/ticket-solution/pull/802) |
 | **Issue** | [#787](https://github.com/hangndat/ticket-solution/issues/787) |
-| **SHA (after)** | `d8347a5bbfea2ce1de01b8b27818761b40577cd5` |
-| **URL** | `http://localhost:3000/marketing#interest-form` (vi) |
-| **Browser** | Orca embedded tab `93b1abdf-4d14-468b-991d-e328fae71d90` |
+| **SHA (after)** | _(tip branch sau commit evidence — xem PR)_ |
+| **SHA (before)** | `fb3396fdc88c1ee1d455d7e71bb37a05bbc9be03` (`origin/main`, dev `:3001`) |
+| **URL** | `http://127.0.0.1:3000/marketing#interest-form` (vi) |
+| **Capture** | `node apps/web/tests/pr802-ui-prefix-evidence.mjs <baseUrl> before\|after` |
 
-## After (branch `hangndat/uif-787-ui-prefix`)
+## Ma trận (4 state × 2 viewport × before/after)
 
-| File | Viewport | State |
-| --- | --- | --- |
-| `after-default-1280.png` | 1280×900 | default |
-| `after-hover-1280.png` | 1280×900 | hover submit |
-| `after-focus-visible-1280.png` | 1280×900 | focus email field |
-| `after-loading-1280.png` | 1280×900 | submit in-flight |
-| `after-default-390.png` | 390×844 | default |
+| File | Base | Viewport | State | Ghi chú |
+| --- | --- | --- | --- | --- |
+| `before-default-1280.png` | main `:3001` | 1280×900 | default | crop form (`scrollIntoView`) |
+| `before-hover-1280.png` | main | 1280×900 | hover submit | |
+| `before-focus-visible-1280.png` | main | 1280×900 | Tab → email, focus-visible | form element |
+| `before-loading-1280.png` | main | 1280×900 | submit in-flight | `aria-busy`, spinner |
+| `before-default-390.png` | main | 390×844 | default | |
+| `before-hover-390.png` | main | 390×844 | hover submit | |
+| `before-focus-visible-390.png` | main | 390×844 | focus-visible | |
+| `before-loading-390.png` | main | 390×844 | loading | |
+| `after-default-1280.png` | branch `:3000` | 1280×900 | default | form element |
+| `after-hover-1280.png` | branch | 1280×900 | hover submit | |
+| `after-focus-visible-1280.png` | branch | 1280×900 | focus-visible | viewport (ring/caret) |
+| `after-loading-1280.png` | branch | 1280×900 | loading | |
+| `after-default-390.png` | branch | 390×844 | default | |
+| `after-hover-390.png` | branch | 390×844 | hover | |
+| `after-focus-visible-390.png` | branch | 390×844 | focus-visible | |
+| `after-loading-390.png` | branch | 390×844 | loading | |
 
-## Before (`main`)
-
-Baseline broken variant order (`variant:ui:*`) is documented in audit W-01 (Epic #786); no separate Orca capture on tip `main` in this run — hover/focus/disabled/placeholder utilities did not compile under `prefix(ui)` until this fix.
+**Verify:** `bash docs/agents/tools/ui-evidence-check.sh docs/reviews/assets/PR802-ui-prefix` → `OK`.
