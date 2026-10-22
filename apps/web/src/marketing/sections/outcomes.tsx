@@ -1,3 +1,4 @@
+import { DemoMetric } from '@ticket/ui';
 import {
   OUTCOME_CHART_BARS,
   OUTCOME_METRIC_IDS,
@@ -14,40 +15,42 @@ export function OutcomesSection({ locale, demo }: MarketingSectionProps) {
   return (
     <section
       id="outcomes"
+      className="mkt-section mkt-section--ink"
       aria-labelledby="outcomes-title"
       data-analytics-section="outcomes"
     >
-      <h2 id="outcomes-title">{t(locale, 'outcomes.title')}</h2>
-      <p className="mkt-outcomes-disclaimer" role="status">
-        {t(locale, 'outcomes.disclaimer')}
-      </p>
-      <p className="mkt-lead">{t(locale, 'outcomes.lead')}</p>
-      <div className="mkt-outcomes-metrics">
-        {OUTCOME_METRIC_IDS.map((id) => (
-          <div className="mkt-outcome-metric" key={id}>
-            <p className="mkt-outcome-label">{t(locale, metricKey(id, 'label'))}</p>
-            <p className="mkt-outcome-value">{t(locale, metricKey(id, 'value'))}</p>
+      <div className="mkt-wrap">
+        <div className="mkt-demo-banner" role="status">
+          {t(locale, 'outcomes.disclaimer')}
+        </div>
+        <h2 id="outcomes-title" className="mkt-display mkt-h2">
+          {t(locale, 'outcomes.title')}
+        </h2>
+        <p className="mkt-lead">{t(locale, 'outcomes.lead')}</p>
+        <div className="mkt-metrics">
+          {OUTCOME_METRIC_IDS.map((id) => (
+            <DemoMetric
+              key={id}
+              label={t(locale, metricKey(id, 'label'))}
+              value={t(locale, metricKey(id, 'value'))}
+            />
+          ))}
+        </div>
+        <div className="mkt-chart" aria-hidden="true">
+          <div className="mkt-chart-bars">
+            {OUTCOME_CHART_BARS.map((height, index) => (
+              <span key={index} style={{ height: `${height}%` }} />
+            ))}
           </div>
-        ))}
+          <p className="mkt-chart-caption">{t(locale, 'outcomes.chart.caption')}</p>
+        </div>
+        <p className="mkt-demo-cta">
+          <a className="mkt-btn mkt-btn--secondary" href={demo}>
+            {t(locale, 'demo.cta')}
+          </a>
+          <span className="mkt-outcomes-demo-note">{t(locale, 'badge.demo')}</span>
+        </p>
       </div>
-      <div className="mkt-outcomes-chart" aria-hidden="true">
-        {OUTCOME_CHART_BARS.map((height, index) => (
-          <span
-            key={index}
-            className="mkt-outcomes-chart-bar"
-            style={{ height: `${height}%` }}
-          />
-        ))}
-      </div>
-      <p className="mkt-outcomes-chart-caption">
-        {t(locale, 'outcomes.chart.caption')}
-      </p>
-      <p className="mkt-demo-cta">
-        <a className="mkt-btn mkt-btn-secondary" href={demo}>
-          {t(locale, 'demo.cta')}
-        </a>
-        <span className="mkt-outcomes-demo-note">{t(locale, 'badge.demo')}</span>
-      </p>
     </section>
   );
 }
