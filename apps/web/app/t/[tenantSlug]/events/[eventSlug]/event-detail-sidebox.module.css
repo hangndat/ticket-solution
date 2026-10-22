@@ -1,0 +1,61 @@
+.sidebox {
+  border: 1px solid color-mix(in srgb, var(--signal) 22%, var(--line));
+  border-radius: var(--radius-lg, 16px);
+  padding: 24px;
+  background: linear-gradient(165deg, #fff 0%, #fff7f9 48%, #fff 100%);
+  align-self: start;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--signal) 8%, transparent),
+    var(--shadow-md, 0 16px 40px color-mix(in srgb, var(--ink) 10%, transparent));
+}
+
+.sidebox h2 {
+  font-family: var(--font-display), system-ui, sans-serif;
+  font-size: 1.15rem;
+  margin: 0 0 10px;
+  letter-spacing: -0.02em;
+}
+
+.lead {
+  margin: 0 0 16px;
+  color: var(--muted);
+  font-size: 0.94rem;
+  line-height: 1.55;
+}
+
+.cta {
+  display: flex;
+  width: 100%;
+  justify-content: center;
+  min-height: 48px;
+  margin-top: 4px;
+  border-radius: var(--radius-md, 10px);
+  background: linear-gradient(
+    135deg,
+    var(--signal) 0%,
+    color-mix(in srgb, var(--signal) 82%, #be123c) 100%
+  );
+  border-color: transparent;
+  color: var(--paper);
+  box-shadow: 0 10px 28px color-mix(in srgb, var(--signal) 28%, transparent);
+}
+
+.help {
+  margin: 16px 0 0;
+  font-size: 0.82rem;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+@media (min-width: 900px) {
+  .sidebox {
+    position: sticky;
+    top: 5.75rem;
+  }
+}
+
+@media (max-width: 767px) {
+  .sidebox {
+    padding: 20px;
+  }
+}

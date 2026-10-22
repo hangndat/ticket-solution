@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { WalletTicketRow } from './types';
 import { ticketStateLabel, ticketStateTagClass } from './ticket-state';
+import styles from './wallet-ticket-card.module.css';
 
 function shortTicketCode(ticketId: string): string {
   if (ticketId.length <= 10) return ticketId;
@@ -25,25 +26,25 @@ export function WalletTicketCard({ ticket, tenantSlug }: Props) {
 
   const inner = (
     <>
-      <div className="ticket-card__head">
-        <span className={ticketStateTagClass(ticket.state)}>
-          {ticketStateLabel(ticket.state)}
-        </span>
-        <time className="ticket-card__date" dateTime={ticket.createdAt}>
-          {ticket.createdAt.slice(0, 10)}
-        </time>
-      </div>
-      <div className="ticket-card__body">
-        <h3>{title}</h3>
-        <p className="ticket-card__meta">
+      <div className={styles.top}>
+        <div className={styles.head}>
+          <span className={ticketStateTagClass(ticket.state)}>
+            {ticketStateLabel(ticket.state)}
+          </span>
+          <time className={styles.date} dateTime={ticket.createdAt}>
+            {ticket.createdAt.slice(0, 10)}
+          </time>
+        </div>
+        <h3 className={styles.title}>{title}</h3>
+        <p className={styles.meta}>
           Mã vé <code>{shortTicketCode(ticket.ticketId)}</code>
         </p>
       </div>
-      <div className="ticket-card__foot">
-        <span className="ticket-card__code" aria-hidden="true">
+      <div className={styles.foot}>
+        <span className={styles.code} aria-hidden="true">
           {shortTicketCode(ticket.ticketId)}
         </span>
-        <span className="ticket-card__cta">
+        <span className={styles.cta}>
           Mở vé <span aria-hidden="true">→</span>
         </span>
       </div>
@@ -53,12 +54,12 @@ export function WalletTicketCard({ ticket, tenantSlug }: Props) {
   if (!href) {
     return (
       <article
-        className="ticket-card ticket-card--disabled"
+        className={`${styles.card} ${styles.cardDisabled}`}
         data-testid={`wallet-ticket-${ticket.ticketId}`}
         aria-label={`${title} — chưa mở được liên kết vé`}
       >
         {inner}
-        <p className="ticket-card__warn" role="status">
+        <p className={styles.warn} role="status">
           Không xác định được tổ chức cho vé này. Thử đăng nhập lại hoặc đổi mã.
         </p>
       </article>
@@ -68,7 +69,7 @@ export function WalletTicketCard({ ticket, tenantSlug }: Props) {
   return (
     <Link
       href={href}
-      className="ticket-card"
+      className={styles.card}
       data-testid={`wallet-ticket-${ticket.ticketId}`}
       aria-label={`Mở vé ${title}`}
     >
