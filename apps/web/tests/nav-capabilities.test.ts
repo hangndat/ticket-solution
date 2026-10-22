@@ -53,7 +53,6 @@ test('guest / unauthenticated never gets Admin Cổng Platform', () => {
   assert.deepEqual(caps, {
     authenticated: false,
     showAdmin: false,
-    showGate: false,
     showPlatform: false,
     showAccount: false,
   });
@@ -74,7 +73,6 @@ test('attendee-only: staffEligible false → no staff chrome', () => {
     platformMe: null,
   });
   assert.equal(caps.showAdmin, false);
-  assert.equal(caps.showGate, false);
   assert.equal(caps.showPlatform, false);
   assert.equal(caps.showAccount, true);
   const links = buildNavLinks(caps);
@@ -84,7 +82,7 @@ test('attendee-only: staffEligible false → no staff chrome', () => {
   assert.ok(!hrefs.includes('/auth'), 'logged-in nav uses Tài khoản, not Đăng nhập');
 });
 
-test('Scanner with gate.confirm shows Gate, not Admin without tenant perms', () => {
+test('Scanner with gate.confirm has no web gate nav (D-6), not Admin without tenant perms', () => {
   const caps = deriveNavCapabilities({
     authenticated: true,
     meEvents: {
@@ -112,10 +110,9 @@ test('Scanner with gate.confirm shows Gate, not Admin without tenant perms', () 
     },
     platformMe: null,
   });
-  assert.equal(caps.showGate, true);
   assert.equal(caps.showAdmin, false);
   const hrefs = buildNavLinks(caps).map((l) => l.href);
-  assert.ok(hrefs.includes('/gate'));
+  assert.ok(!hrefs.includes('/gate'));
   assert.ok(!hrefs.includes('/admin'));
 });
 
@@ -161,7 +158,6 @@ test('Owner membership with admin tenant perms shows Admin; Gate needs assignmen
     platformMe: null,
   });
   assert.equal(caps.showAdmin, true);
-  assert.equal(caps.showGate, false);
 });
 
 test('platform operator unlocks Platform chrome only', () => {
@@ -177,7 +173,6 @@ test('platform operator unlocks Platform chrome only', () => {
   });
   assert.equal(caps.showPlatform, true);
   assert.equal(caps.showAdmin, false);
-  assert.equal(caps.showGate, false);
 });
 
 test('invalid MeTenants / PlatformMe parse fail-closed', () => {

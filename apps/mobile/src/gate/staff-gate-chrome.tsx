@@ -1,10 +1,13 @@
-import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
 import { SymbolView } from 'expo-symbols';
 import type { GatePhase } from '@/gate/gate-scan';
 import type { ConnectivityState } from '@/gate/offline-queue';
 import type { StaffGateScope } from '@/gate/staff-gate-events';
 import { sameStaffGateScope } from '@/gate/staff-gate-events';
 import { colors } from '@/theme/colors';
+import { radius, space } from '@/theme/tokens';
 
 type OutcomeGlyph = 'idle' | 'busy' | 'admit' | 'deny' | 'unknown' | 'default';
 
@@ -69,23 +72,23 @@ export function GateStatusStrip({
         }
       />
       {queueAttention ? (
-        <Pressable
-          accessibilityRole="button"
+        <Button
+          variant="ghost"
           accessibilityLabel="Đồng bộ hàng đợi offline"
           disabled={syncing}
+          loading={syncing}
           onPress={onSync}
-          hitSlop={8}
+          hitSlop={space.sm}
+          style={styles.iconTap}
         >
-          {syncing ? (
-            <ActivityIndicator size="small" color={colors.accent} />
-          ) : (
+          {syncing ? null : (
             <SymbolView
               name="arrow.triangle.2.circlepath"
               size={22}
               tintColor={colors.unknown}
             />
           )}
-        </Pressable>
+        </Button>
       ) : null}
     </View>
   );
@@ -107,7 +110,7 @@ export function StaffEventRow({
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
       {loading ? (
-        <ActivityIndicator style={{ flex: 1 }} color={colors.secondary} />
+        <Spinner style={styles.rowSpinner} color={colors.secondary} />
       ) : (
         <Text
           numberOfLines={1}
@@ -123,24 +126,19 @@ export function StaffEventRow({
         </Text>
       )}
       {canSwitch ? (
-        <Pressable
-          accessibilityRole="button"
+        <Button
+          variant="secondary"
           accessibilityLabel={pickerOpen ? 'Đóng danh sách sự kiện' : 'Đổi sự kiện'}
           onPress={onTogglePicker}
-          hitSlop={8}
-          style={{
-            paddingHorizontal: 10,
-            paddingVertical: 6,
-            borderRadius: 8,
-            backgroundColor: colors.card,
-          }}
+          hitSlop={space.sm}
+          style={styles.switchEvent}
         >
           <SymbolView
             name="arrow.left.arrow.right"
             size={18}
             tintColor={colors.accent}
           />
-        </Pressable>
+        </Button>
       ) : null}
     </View>
   );
@@ -162,18 +160,17 @@ export function StaffEventPicker({
         const active =
           selected !== null && sameStaffGateScope(selected, choice);
         return (
-          <Pressable
+          <Button
             key={`${choice.tenantId}:${choice.eventId}`}
-            accessibilityRole="button"
+            variant="ghost"
             accessibilityState={{ selected: active }}
             accessibilityLabel={choice.name}
             onPress={() => onSelect(choice)}
-            style={{
-              paddingVertical: 10,
-              paddingHorizontal: 12,
-              borderRadius: 10,
-              backgroundColor: active ? colors.card : 'transparent',
-            }}
+            style={[
+              styles.pickerRow,
+              active ? styles.pickerRowActive : null,
+            ]}
+            contentStyle={styles.pickerRowContent}
           >
             <Text
               numberOfLines={1}
@@ -185,7 +182,7 @@ export function StaffEventPicker({
             >
               {choice.name}
             </Text>
-          </Pressable>
+          </Button>
         );
       })}
     </View>
@@ -220,7 +217,7 @@ export function GateOutcomeGlyph({
         accessibilityLabel={`${accessibilityTitle}. ${accessibilityDetail}`}
         style={{ alignItems: 'center', paddingVertical: 4 }}
       >
-        <ActivityIndicator size="large" color={colors.accent} />
+        <Spinner size="large" color={colors.accent} />
       </View>
     );
   }
@@ -326,28 +323,60 @@ export function GateIconButton({
   testID?: string;
 }) {
   return (
-    <Pressable
+    <Button
       testID={testID}
-      accessibilityRole="button"
+      variant={filled ? 'primary' : 'secondary'}
       accessibilityLabel={label}
       accessibilityState={{ disabled: Boolean(disabled) }}
       disabled={disabled}
       onPress={onPress}
-      style={{
-        width: 48,
-        height: 48,
-        borderRadius: 12,
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: filled ? colors.accent : colors.card,
-        opacity: disabled ? 0.45 : 1,
-      }}
+      style={styles.gateIcon}
+      contentStyle={styles.gateIconContent}
     >
       <SymbolView
         name={symbol}
         size={22}
         tintColor={filled ? colors.onAccent : colors.label}
       />
-    </Pressable>
+    </Button>
   );
 }
+
+const styles = StyleSheet.create({
+  iconTap: {
+    minHeight: 44,
+    paddingVertical: space.xs,
+    paddingHorizontal: space.xs,
+  },
+  rowSpinner: { flex: 1 },
+  switchEvent: {
+    paddingHorizontal: space.sm + 2,
+    paddingVertical: space.xs + 2,
+    borderRadius: radius.sm,
+    minHeight: 44,
+  },
+  pickerRow: {
+    alignSelf: 'stretch',
+    paddingVertical: space.sm + 2,
+    paddingHorizontal: space.md,
+    borderRadius: radius.sm + 2,
+  },
+  pickerRowActive: {
+    backgroundColor: colors.card,
+  },
+  pickerRowContent: {
+    justifyContent: 'flex-start',
+    width: '100%',
+  },
+  gateIcon: {
+    width: 48,
+    height: 48,
+    minHeight: 48,
+    paddingVertical: 0,
+    paddingHorizontal: 0,
+    borderRadius: radius.md,
+  },
+  gateIconContent: {
+    padding: 0,
+  },
+});
