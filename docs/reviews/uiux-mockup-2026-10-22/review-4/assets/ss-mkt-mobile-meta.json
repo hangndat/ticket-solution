@@ -1,0 +1,11 @@
+{
+  "id": "7ecf9d59-418a-402d-bfe5-e01449112a24",
+  "ok": false,
+  "error": {
+    "code": "browser_error",
+    "message": "Element not found. Verify the selector is correct and the element exists in the DOM."
+  },
+  "_meta": {
+    "runtimeId": "bd4984f7-e2dd-4e8d-9d97-09726ed8a2d7"
+  }
+}

@@ -20,9 +20,9 @@ Roster + **ba surface UI** (Dispatch vs `worker-task_*` vs worktree card): [docs
 
 ## Cost tier (worker)
 
-| Tier | Mặc định | Pin |
-| ---- | -------- | --- |
-| `cheap` | docs, CI hẹp, DoD docs-only | `composer-2.5` |
+| Tier       | Mặc định                       | Pin                               |
+| ---------- | ------------------------------ | --------------------------------- |
+| `cheap`    | docs, CI hẹp, DoD docs-only    | `composer-2.5`                    |
 | `standard` | feature, security, DoD runtime | `composer-2.5` (fallback catalog) |
 
 **Cấm** `composer-2.5-fast`, tier `heavy`, model > standard. Worker: follow Cost tier trong Spec; không spawn.
@@ -30,6 +30,8 @@ Roster + **ba surface UI** (Dispatch vs `worker-task_*` vs worktree card): [docs
 ## Role (chuyên môn)
 
 Role ≠ agent. Gắn `docs/agents/roles/<id>.md` trong Spec khi spawn architecture/ownership/reviewer. **Không** copy roles vào `alwaysApply` rules.
+
+Task UI → [ui-workflow.md](../../docs/agents/ui-workflow.md): chọn role/skill theo scope; Spec ghi `Skills cần nạp`, mẫu chuẩn và evidence. Chỉ nạp skill liên quan; UI review có thể gộp DoD (`dod+ux`, `dod+sec+ux`).
 
 ## Review (reviewer session)
 

@@ -6,11 +6,11 @@
 
 ## Ownership (bắt buộc)
 
-| Được sửa | Không sửa |
-| -------- | --------- |
-| `apps/mobile/**` only | `apps/web/**`, backend packages, root lockfile (trừ Task) |
-| Local Expo prebuild / Xcode trên Mac | Upload source/credentials lên EAS Cloud Build |
-| Push APNs client theo ADR-12 pattern repo | Expo Push Service làm SoT |
+| Được sửa                                  | Không sửa                                                 |
+| ----------------------------------------- | --------------------------------------------------------- |
+| `apps/mobile/**` only                     | `apps/web/**`, backend packages, root lockfile (trừ Task) |
+| Local Expo prebuild / Xcode trên Mac      | Upload source/credentials lên EAS Cloud Build             |
+| Push APNs client theo ADR-12 pattern repo | Expo Push Service làm SoT                                 |
 
 ## Stack neo
 
@@ -25,6 +25,7 @@
 - Offline-friendly UX cho vé đã lưu; rõ trạng thái sync/error.
 - Permission / privacy strings trung thực; không nhét IAP/subscription MVP.
 - Performance trên thiết bị cũ hơn trong phạm vi hợp lý pilot.
+- Task UI theo [ui-workflow.md](../ui-workflow.md): nạp Expo overview/RN bắt buộc khi code và skill UI native cần cho thay đổi; không nạp toàn bộ EAS/backend. Dùng mẫu chuẩn, bàn giao ảnh đúng SHA/build/device/state cho reviewer UI/UX.
 
 ## Không làm
 
