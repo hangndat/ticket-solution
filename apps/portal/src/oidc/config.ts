@@ -81,7 +81,7 @@ export function discoveryBase(issuer: string): string {
   return issuer.replace(/\/+$/, '');
 }
 
-/** Product (app.) origin for Gate deep-links — never invent production host. */
+/** Product (app.) origin — never invent production host. */
 export function productOrigin(env: OidcEnvBag = process.env): string {
   const raw = env.PRODUCT_ORIGIN?.trim();
   if (raw) {
@@ -94,29 +94,3 @@ export function productOrigin(env: OidcEnvBag = process.env): string {
   return 'http://127.0.0.1:3000';
 }
 
-/** Path-only segment for Gate deeplink query allowlist (tenantId / eventId). */
-export function isGateDeeplinkId(raw: string | null | undefined): boolean {
-  if (!raw) return false;
-  return /^[A-Za-z0-9_-]{1,128}$/.test(raw);
-}
-
-/**
- * GATE-STAY-APP deeplink to product `/gate`.
- * Optional tenantId/eventId query only when they match the allowlist pattern.
- */
-export function gateDeeplinkUrl(
-  env: OidcEnvBag = process.env,
-  path = '/gate',
-  query?: { tenantId?: string; eventId?: string },
-): string {
-  const origin = productOrigin(env);
-  const safePath = path.startsWith('/') && !path.startsWith('//') ? path : '/gate';
-  const url = new URL(`${origin}${safePath}`);
-  if (query?.tenantId && isGateDeeplinkId(query.tenantId)) {
-    url.searchParams.set('tenantId', query.tenantId);
-  }
-  if (query?.eventId && isGateDeeplinkId(query.eventId)) {
-    url.searchParams.set('eventId', query.eventId);
-  }
-  return url.toString();
-}
