@@ -8,7 +8,9 @@ import {
   brandingToCssVars,
 } from '../src/branding';
 import { configuredPublicOrigin } from '../src/oidc/public-origin';
+import { DemoAttendeeStrip } from '../src/attendee-uplift/demo-attendee-strip';
 import { FooterBrand } from '../src/site-chrome';
+import './attendee-uplift.css';
 import './globals.css';
 
 /** Prod default so OG/Twitter never fall back to request-host localhost. */
@@ -81,17 +83,18 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       data-branding-source={VEMOKI_BRANDING.source}
       data-surface="product"
     >
-      <body>
+      <body className="attendee-uplift">
         <ThemeProvider branding={VEMOKI_BRANDING}>
           <a className="skip-link" href="#main">
             Bỏ qua đến nội dung
           </a>
+          <DemoAttendeeStrip />
           {children}
           <footer className="footer" data-testid="site-footer">
             <FooterBrand />
             <span className="footer-tagline">Sự kiện & vé</span>
             <nav className="footer-links" aria-label="Liên kết chân trang">
-              <Link href="/">Sự kiện</Link>
+              <Link href="/">Khám phá</Link>
               <Link href="/redeem">Đổi mã</Link>
               <Link href="/account">Tài khoản</Link>
             </nav>
