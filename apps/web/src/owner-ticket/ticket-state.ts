@@ -6,7 +6,7 @@ export function ticketStateLabel(state: string): string {
     case 'USED':
       return 'Đã dùng';
     case 'CHECKED_IN':
-      return 'Đã check-in';
+      return 'Đã vào cổng';
     case 'REVOKED':
       return 'Đã thu hồi';
     case 'EXPIRED':
