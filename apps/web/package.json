@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@ticket/contracts": "workspace:*",
+    "@ticket/ui": "workspace:*",
     "@ticket/web-session": "workspace:*",
     "jose": "5.10.0",
     "next": "16.4.2",
@@ -21,12 +22,14 @@
     "react-dom": "19.3.1"
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "4.1.14",
     "@types/node": "24.19.2",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "axe-core": "4.14.0",
     "eslint": "9.39.4",
     "eslint-config-next": "16.4.2",
+    "tailwindcss": "4.1.14",
     "tsx": "4.23.15",
     "typescript": "5.9.3"
   }

@@ -33,7 +33,7 @@ test('site-chrome wires mobile menu a11y (Escape, trap, aria)', () => {
 });
 
 test('Slice G scopes button-secondary to gate-page only', () => {
-  const css = readFileSync(join(root, 'app/globals.css'), 'utf8');
+  const css = readFileSync(join(root, 'app/live-pulse-legacy.css'), 'utf8');
   const slice = css.slice(
     css.indexOf('/* --- Slice G:'),
     css.indexOf('/* --- / Slice G'),

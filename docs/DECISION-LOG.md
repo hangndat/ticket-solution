@@ -1,8 +1,14 @@
 # Decision log — sản phẩm & kỹ thuật
 
-Ngày cập nhật: 2026-10-20
+Ngày cập nhật: 2026-10-22
 Nguồn: [PRD](./PRD.md) mục 15, [Technical Design](./TECHNICAL-DESIGN.md) mục 2 & 18, [ROADMAP](./ROADMAP.md)
 Tracking: Issues [#10](https://github.com/hangndat/ticket-solution/issues/10), [#11](https://github.com/hangndat/ticket-solution/issues/11)
+
+## O22 — Consumer web DS: Aceternity copy-paste + Tailwind v4 scoped (22/10/2026)
+
+Epic [#766](https://github.com/hangndat/ticket-solution/issues/766): `apps/web` Tailwind v4 + `@ticket/ui` pipeline; token SoT `brand/vemoki/tokens.json`; Aceternity Free + shadcn hybrid (vendored, không npm `@aceternity/*`); portal antd freeze. Chi tiết: [`docs/ops/ADR-22-WEB-DS-ACETERNITY.md`](./ops/ADR-22-WEB-DS-ACETERNITY.md). Slice 0 = toolchain only, không đổi UI prod.
+
+Architecture impact: **Có**. Approval ≠ code complete ≠ acceptance complete.
 
 ## O18 — Portal: Ant Design Pro Components trên Next App Router (20/10/2026)
 
