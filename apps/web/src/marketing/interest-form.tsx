@@ -16,7 +16,7 @@ import { trackLeadSubmitted } from './analytics/client';
 import {
   validateInterest,
   type InterestFieldError,
-} from './interest-validate';
+} from './interest-validate-client';
 
 type FormState = 'empty' | 'loading' | 'error' | 'success';
 

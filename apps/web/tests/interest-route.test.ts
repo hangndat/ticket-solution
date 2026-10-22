@@ -44,6 +44,63 @@ describe('POST /api/marketing/interest', () => {
     assert.equal(json.code, 'VALIDATION');
   });
 
+  it('returns quickly when webhook handler is slow', async () => {
+    process.env.MARKETING_INTEREST_WEBHOOK_URL = 'http://127.0.0.1:1/slow';
+    const prevFetch = globalThis.fetch;
+    globalThis.fetch = ((() =>
+      new Promise((resolve) => {
+        setTimeout(
+          () => resolve(new Response('err', { status: 500 })),
+          2_000,
+        );
+      })) as unknown) as typeof fetch;
+
+    const started = Date.now();
+    const res = await POST(
+      new Request('http://127.0.0.1/api/marketing/interest', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'idempotency-key': 'slow-webhook-route',
+        },
+        body: JSON.stringify({
+          name: 'Slow',
+          email: 'slow@example.com',
+          org: 'Org',
+          role: 'agency',
+          consent: true,
+        }),
+      }),
+    );
+    const elapsed = Date.now() - started;
+    globalThis.fetch = prevFetch;
+    delete process.env.MARKETING_INTEREST_WEBHOOK_URL;
+
+    assert.equal(res.status, 200);
+    assert.ok(elapsed < 500, `route blocked ${elapsed}ms waiting on webhook`);
+  });
+
+  it('honors DNT — persists lead without server analytics', async () => {
+    const res = await POST(
+      new Request('http://127.0.0.1/api/marketing/interest', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          dnt: '1',
+          'idempotency-key': 'dnt-route-key',
+        },
+        body: JSON.stringify({
+          name: 'DNT',
+          email: 'dnt@example.com',
+          org: 'Org',
+          role: 'owner',
+          consent: true,
+        }),
+      }),
+    );
+    assert.equal(res.status, 200);
+  });
+
   it('returns 200 with lead_id on valid payload', async () => {
     const res = await POST(
       new Request('http://127.0.0.1/api/marketing/interest', {

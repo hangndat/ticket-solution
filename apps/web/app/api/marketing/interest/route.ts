@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { shouldSkipMarketingAnalytics } from '../../../../src/marketing/analytics/privacy-signals';
 import { acceptMarketingLead } from '../../../../src/marketing/lead/accept-lead';
 import type { MarketingLeadLocale } from '../../../../src/marketing/interest-schema';
 import {
@@ -85,6 +86,7 @@ export async function POST(request: Request) {
     clientKey: clientKey(request),
     locale,
     idempotencyHeader,
+    skipAnalytics: shouldSkipMarketingAnalytics(request.headers),
   });
 
   if (!accepted.ok) {
