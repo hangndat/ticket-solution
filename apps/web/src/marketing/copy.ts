@@ -20,6 +20,9 @@ export type CopyKey =
   | 'nav.locale.vi'
   | 'nav.locale.en'
   | 'nav.locale.label'
+  | 'nav.menu.open'
+  | 'nav.menu.close'
+  | 'nav.menu.label'
   | 'skip'
   | 'badge.demo'
   | 'footer.attendee'
@@ -222,6 +225,9 @@ const VI: Record<CopyKey, string> = {
   'nav.locale.vi': 'VI',
   'nav.locale.en': 'EN',
   'nav.locale.label': 'Ngôn ngữ',
+  'nav.menu.open': 'Menu',
+  'nav.menu.close': 'Đóng',
+  'nav.menu.label': 'Menu điều hướng',
   skip: 'Bỏ qua nội dung',
   'badge.demo': 'Demo giả lập',
   'footer.attendee': 'Bạn có mã mời? Đổi vé trên ứng dụng',
@@ -476,6 +482,9 @@ const EN: Record<CopyKey, string> = {
   'nav.locale.vi': 'VI',
   'nav.locale.en': 'EN',
   'nav.locale.label': 'Language',
+  'nav.menu.open': 'Menu',
+  'nav.menu.close': 'Close',
+  'nav.menu.label': 'Navigation menu',
   skip: 'Skip to content',
   'badge.demo': 'Simulated demo',
   'footer.attendee': 'Have an invite code? Redeem on the app',
