@@ -1,0 +1,85 @@
+{
+  "id": "a024cc6c-a0aa-4ebe-914d-5c6df79c8775",
+  "ok": true,
+  "result": {
+    "runId": "run_3aad5e1c919b",
+    "taskId": "task_b112ad63dae2",
+    "dispatchId": "ctx_d8bb02100f05",
+    "state": "ready",
+    "stage": "input_accepted",
+    "turnStart": "unsupported",
+    "setup": {
+      "requested": "not_applicable",
+      "effective": "not_applicable",
+      "source": "existing_worktree",
+      "hookFound": false,
+      "startupPolicy": "start-immediately",
+      "state": "not_applicable"
+    },
+    "launch": {
+      "requested": {
+        "agent": "cursor",
+        "model": "composer-2.5",
+        "effort": null
+      },
+      "effective": {
+        "agent": "cursor",
+        "model": "composer-2.5",
+        "effort": null
+      }
+    },
+    "mode": {
+      "mode": "terminal",
+      "preferred": "structured",
+      "reason": "agent_without_structured_session",
+      "detail": "Your default is a structured chat session, but this agent has no structured session; started a terminal agent worker instead."
+    },
+    "timeoutMs": 60000,
+    "effects": [
+      {
+        "kind": "worktree",
+        "action": "reused",
+        "id": "37ffe4fe-bcb4-4146-9c06-c0ab699b545f::/Users/admin/orca/workspaces/main/FE-refactor"
+      },
+      {
+        "kind": "setup",
+        "action": "not_applicable",
+        "state": "not_applicable"
+      },
+      {
+        "kind": "terminal",
+        "role": "agent",
+        "action": "created",
+        "id": "term_4237c344-396d-4bb3-b9b7-05895e97b595",
+        "surface": "visible"
+      },
+      {
+        "kind": "dispatch_input",
+        "role": "agent",
+        "id": "term_4237c344-396d-4bb3-b9b7-05895e97b595",
+        "state": "accepted"
+      }
+    ],
+    "prompt": {
+      "requestId": "165951cc-61c8-4956-bce9-a2e3fb3a7ac3",
+      "stages": [
+        "input_accepted"
+      ],
+      "provider": "unsupported",
+      "observation": "unsupported",
+      "processIncarnation": "edf5ae6e-e55e-4831-b110-d7c808a9ce91",
+      "generation": 192,
+      "baselineWorkingSequence": 0,
+      "baselineExplicitWorkingStartedAt": null,
+      "baselinePermissionSequence": 0
+    },
+    "residualResources": [],
+    "mutation": {
+      "requestId": "165951cc-61c8-4956-bce9-a2e3fb3a7ac3",
+      "replayed": false
+    }
+  },
+  "_meta": {
+    "runtimeId": "bd4984f7-e2dd-4e8d-9d97-09726ed8a2d7"
+  }
+}

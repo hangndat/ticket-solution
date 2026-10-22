@@ -1,0 +1,22 @@
+{
+  "frame": "browser mobile",
+  "frameWidth": 390,
+  "issues": [
+    {
+      "clipped": false,
+      "lines": 2,
+      "text": "Email công việc"
+    },
+    {
+      "clipped": false,
+      "lines": 3,
+      "text": "Ghi chú (không bắt buộc)"
+    },
+    {
+      "clipped": false,
+      "lines": 3,
+      "text": "Gửi đăng ký"
+    }
+  ],
+  "viewport": 1440
+}
