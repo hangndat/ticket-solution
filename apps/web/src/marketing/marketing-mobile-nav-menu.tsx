@@ -11,6 +11,11 @@ import {
 } from '@ticket/ui/client';
 import { t } from './copy';
 import type { MarketingLocale } from './hosts';
+import {
+  marketingNavMenuToggle,
+  marketingNavMobileActions,
+  marketingNavMobileLink,
+} from './marketing-surface';
 
 const MENU_ID = 'mkt-nav-mobile-menu';
 
@@ -42,15 +47,15 @@ export function MarketingMobileNavMenu({
       <SheetTrigger asChild>
         <button
           type="button"
-          className="mkt-nav-menu-toggle"
+          className={marketingNavMenuToggle}
           aria-controls={MENU_ID}
           aria-haspopup="dialog"
           data-testid="mkt-nav-menu-toggle"
         >
-          <span className="mkt-nav-menu-toggle__label">
+          <span className="sr-only">
             {open ? t(locale, 'nav.menu.close') : t(locale, 'nav.menu.open')}
           </span>
-          <span className="mkt-nav-menu-toggle__icon leading-none" aria-hidden="true">
+          <span className="text-lg leading-none" aria-hidden="true">
             {open ? '×' : '☰'}
           </span>
         </button>
@@ -61,15 +66,14 @@ export function MarketingMobileNavMenu({
         showCloseButton={false}
         data-testid="mkt-nav-mobile-menu"
         overlayTestId="mkt-nav-mobile-backdrop"
-        overlayClassName="mkt-nav-mobile-backdrop"
-        className="mkt-nav-mobile-menu border-line/30 bg-ink text-paper motion-reduce:animate-none motion-reduce:transition-none overflow-y-auto p-4"
+        className="border-line/30 bg-ink text-paper motion-reduce:animate-none motion-reduce:transition-none overflow-y-auto p-4"
       >
         <SheetTitle className="sr-only">{t(locale, 'nav.menu.label')}</SheetTitle>
-        <nav aria-label={locale === 'en' ? 'Primary' : 'Chính'}>
+        <nav className="grid gap-1" aria-label={locale === 'en' ? 'Primary' : 'Chính'}>
           {sectionLinks.map((item) => (
             <a
               key={item.href}
-              className="mkt-nav-mobile-link"
+              className={marketingNavMobileLink}
               href={item.href}
               onClick={closeMobile}
             >
@@ -77,7 +81,7 @@ export function MarketingMobileNavMenu({
             </a>
           ))}
         </nav>
-        <div className="mkt-nav-mobile-actions">
+        <div className={marketingNavMobileActions}>
           <Button asChild variant="ghostOnInk" block>
             <a href={login} onClick={closeMobile}>
               {t(locale, 'nav.login')}

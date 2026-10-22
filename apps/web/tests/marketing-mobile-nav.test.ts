@@ -28,7 +28,7 @@ test('marketing sales chrome wires desktop links and mobile menu toggle (SSR mar
     'utf8',
   );
   assert.match(chrome, /data-testid="mkt-header"/);
-  assert.match(chrome, /className="mkt-nav-links"/);
+  assert.match(chrome, /marketingNavLinks/);
   assert.match(chrome, /MarketingMobileNavMenu/);
   assert.match(menu, /data-testid="mkt-nav-menu-toggle"/);
 });
