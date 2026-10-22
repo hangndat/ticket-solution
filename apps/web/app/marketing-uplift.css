@@ -1,7 +1,17 @@
 /* Marketing UI uplift v2 — scoped to .mkt.mkt--uplift (Epic #770) */
 /* Live Pulse v2 — marketing uplift prototype (static, no build) */
+html[data-surface='marketing'] {
+  scrollbar-gutter: stable;
+  overflow-x: clip;
+}
+
 .mkt.mkt--uplift {
   color-scheme: light dark;
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  max-width: 100%;
+  overflow-x: clip;
   --ink: #0b1220;
   --paper: #f4f6f8;
   --signal: #e11d48;
@@ -185,6 +195,12 @@ body.mkt.mkt--uplift {
 }
 
 @media (max-width: 767px) {
+  .mkt-header,
+  .mkt-header--sales {
+    min-width: 0;
+    max-width: 100%;
+  }
+
   .mkt-header--sales {
     flex-wrap: nowrap;
     gap: 0.75rem;
@@ -192,6 +208,35 @@ body.mkt.mkt--uplift {
 
   .mkt-header--sales .mkt-wordmark {
     font-size: 1.35rem;
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: 42vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .mkt-nav {
+    flex: 1 1 auto;
+    min-width: 0;
+    justify-content: flex-end;
+  }
+
+  .mkt-wrap,
+  .mkt-section {
+    max-width: 100%;
+    overflow-x: clip;
+  }
+
+  .mkt-bento {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .mkt-preview-tilt {
+    transform: none;
+  }
+
+  .mkt-hero-copy {
+    min-height: 40rem;
   }
 
   .mkt-header--sales .mkt-nav-links {
@@ -303,6 +348,7 @@ body.mkt.mkt--uplift {
   background: rgba(255, 255, 255, 0.08);
 }
 
+.mkt-locale a,
 .mkt-locale button {
   font: inherit;
   border: 0;
@@ -311,17 +357,25 @@ body.mkt.mkt--uplift {
   border-radius: 7px;
   cursor: pointer;
   min-height: 36px;
+  min-width: 2.25rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   color: inherit;
   font-weight: 600;
   font-size: 0.8rem;
+  text-decoration: none;
+  box-sizing: border-box;
 }
 
+.mkt-locale a[aria-current="true"],
 .mkt-locale button[aria-pressed="true"] {
   background: var(--paper-elevated);
   color: var(--ink);
   box-shadow: 0 2px 8px rgba(11, 18, 32, 0.1);
 }
 
+.mkt-header--on-ink .mkt-locale a[aria-current="true"],
 .mkt-header--on-ink .mkt-locale button[aria-pressed="true"] {
   background: rgba(255, 255, 255, 0.14);
   color: var(--paper);
@@ -475,9 +529,16 @@ body.mkt.mkt--uplift {
 }
 
 /* —— Hero —— */
+.mkt.mkt--uplift > main {
+  flex: 1 0 auto;
+  width: 100%;
+  min-width: 0;
+}
+
 .mkt-hero {
   padding-top: clamp(2.5rem, 6vw, 4rem);
   padding-bottom: clamp(3rem, 8vw, 5rem);
+  min-height: min(82vh, 46rem);
 }
 
 .mkt-hero-grid {
@@ -530,8 +591,20 @@ body.mkt.mkt--uplift {
   box-shadow: 0 0 12px var(--signal);
 }
 
+.mkt-hero-copy .mkt-h1 {
+  min-height: 2.35em;
+}
+
+@media (min-width: 960px) {
+  .mkt-hero-copy {
+    min-height: 28rem;
+  }
+}
+
 .mkt-preview-wrap {
   position: relative;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .mkt-preview-glow {
