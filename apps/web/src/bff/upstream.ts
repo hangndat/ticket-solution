@@ -1,5 +1,5 @@
 import { IDENTITY_ERROR_CODES } from '@ticket/contracts';
-import type { GateSsrTrace } from '../gate/gate-ssr-trace';
+import type { GateSsrTrace } from '../nav/ssr-trace';
 import { isOidcConfigured } from '../oidc/config';
 import { clearSessionCookies, readAccessToken } from '../oidc/cookies';
 import { refreshWebAccessToken } from '../oidc/refresh';
