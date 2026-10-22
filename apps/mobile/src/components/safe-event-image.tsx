@@ -5,7 +5,7 @@ import {
   type ImageSourcePropType,
   type ImageStyle,
   type StyleProp,
-  type ViewStyle,
+  type ViewStyle
 } from 'react-native';
 
 type Props = {
@@ -44,7 +44,7 @@ export function SafeEventImage({
   imageStyle,
   resizeMode = 'cover',
   testID,
-  collapseOnFail = true,
+  collapseOnFail = true
 }: Props) {
   const [failed, setFailed] = useState(false);
 

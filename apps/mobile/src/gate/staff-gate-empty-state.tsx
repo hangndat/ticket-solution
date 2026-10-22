@@ -2,6 +2,8 @@ import { StyleSheet, Text, View } from 'react-native';
 import { Button } from '@/components/ui/button';
 import { colors } from '@/theme/colors';
 import { useStaffGateWorkspace } from './staff-gate-workspace-context';
+import { space, radius } from '@/theme/tokens';
+import { typography } from '@/theme/typography';
 
 export function StaffGateNoEventState() {
   const gate = useStaffGateWorkspace();
@@ -11,17 +13,17 @@ export function StaffGateNoEventState() {
   return (
     <View
       style={{
-        padding: 20,
-        gap: 12,
-        borderRadius: 12,
-        backgroundColor: colors.card,
+        padding: space.xl,
+        gap: space.md,
+        borderRadius: radius.md,
+        backgroundColor: colors.card
       }}
       accessibilityRole="alert"
     >
-      <Text style={{ color: colors.label, fontSize: 17, fontWeight: '600' }}>
+      <Text style={{ ...typography.bodySemibold, color: colors.label }}>
         Chưa có sự kiện để quét
       </Text>
-      <Text style={{ color: colors.secondary, fontSize: 15, lineHeight: 22 }}>
+      <Text style={{ ...typography.subhead, color: colors.secondary,  lineHeight: 22 }}>
         {gate.gateEventsError ??
           'Tài khoản chưa được gán sự kiện có quyền cổng. Làm mới hoặc đăng xuất để dùng chế độ khách.'}
       </Text>
@@ -36,5 +38,5 @@ export function StaffGateNoEventState() {
 }
 
 const styles = StyleSheet.create({
-  refresh: { alignSelf: 'flex-start' },
+  refresh: { alignSelf: 'flex-start' }
 });

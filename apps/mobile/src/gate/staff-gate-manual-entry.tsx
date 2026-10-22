@@ -6,12 +6,13 @@ import {
   Pressable,
   StyleSheet,
   Text,
-  View,
+  View
 } from 'react-native';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { colors } from '@/theme/colors';
 import { radius, space } from '@/theme/tokens';
+import { typography } from '@/theme/typography';
 
 export function StaffGateManualEntryModal({
   visible,
@@ -19,7 +20,7 @@ export function StaffGateManualEntryModal({
   disabled,
   onChange,
   onSubmit,
-  onClose,
+  onClose
 }: {
   visible: boolean;
   value: string;
@@ -112,22 +113,18 @@ const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.45)',
-    justifyContent: 'flex-end',
+    justifyContent: 'flex-end'
   },
   sheet: {
     backgroundColor: colors.background,
     borderTopLeftRadius: radius.lg - 2,
     borderTopRightRadius: radius.lg - 2,
     padding: space.lg,
-    gap: space.md,
+    gap: space.md
   },
-  sheetTitle: {
-    color: colors.label,
-    fontSize: 17,
-    fontWeight: '600',
-  },
-  sheetHint: { color: colors.secondary, fontSize: 14 },
+  sheetTitle: { ...typography.bodySemibold, color: colors.label, },
+  sheetHint: { ...typography.footnote, color: colors.secondary },
   multilineField: { minHeight: 88 },
   actions: { flexDirection: 'row', gap: space.md },
-  actionBtn: { flex: 1 },
+  actionBtn: { flex: 1 }
 });

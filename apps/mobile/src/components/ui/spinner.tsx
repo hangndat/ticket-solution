@@ -3,7 +3,7 @@ import {
   StyleSheet,
   type ActivityIndicatorProps,
   type StyleProp,
-  type ViewStyle,
+  type ViewStyle
 } from 'react-native';
 import { colors } from '@/theme/colors';
 
@@ -32,5 +32,5 @@ export function Spinner({
 }
 
 const styles = StyleSheet.create({
-  root: {},
+  root: {}
 });

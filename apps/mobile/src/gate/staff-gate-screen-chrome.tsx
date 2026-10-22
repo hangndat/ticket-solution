@@ -17,7 +17,7 @@ type StaffGateScreenChromeProps = {
  */
 export function StaffGateScreenChrome({
   tabTitle,
-  largeTitle = true,
+  largeTitle = true
 }: StaffGateScreenChromeProps) {
   const gate = useStaffGateWorkspace();
   const canSwitch = gate.gateEventChoices.length > 1;
@@ -29,7 +29,7 @@ export function StaffGateScreenChrome({
       <Stack.Screen
         options={{
           title: navTitle,
-          headerLargeTitleEnabled: largeTitle,
+          headerLargeTitleEnabled: largeTitle
         }}
       />
       <Stack.Toolbar placement="right">

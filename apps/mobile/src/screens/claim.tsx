@@ -4,11 +4,11 @@ import {
   AccessibilityInfo,
   Animated,
   Text,
-  View,
+  View
 } from 'react-native';
 import {
   redeemDecisionAnnouncement,
-  redeemStatusRefreshAnnouncement,
+  redeemStatusRefreshAnnouncement
 } from '@/a11y/announcements';
 import { presentRedeemDecision } from '@/attendee/attendee-outcome-copy';
 import { useAttendeeSignIn } from '@/attendee/use-attendee-sign-in';
@@ -24,7 +24,7 @@ import {
   dropGuestClaimIntentIfStale,
   parkGuestClaimIntent,
   peekGuestClaimIntent,
-  resumeGuestClaimIntent,
+  resumeGuestClaimIntent
 } from '@/redeem/claim-intent';
 import { requireTermsConsent, validateFormAnswers } from '@/redeem/form-validate';
 import { fetchOwnerRedemptionStatus } from '@/redeem/owner-status';
@@ -33,6 +33,7 @@ import { RedeemFormFields } from '@/redeem/redeem-form-fields';
 import { brand, colors } from '@/theme/colors';
 import { fontFamilies } from '@/theme/fonts';
 import { typography } from '@/theme/typography';
+import { space } from '@/theme/tokens';
 
 function firstParam(
   value: string | string[] | undefined,
@@ -58,7 +59,7 @@ export function ClaimScreen() {
     busy: signInBusy,
     error: signInError,
     configured,
-    signIn,
+    signIn
   } = useAttendeeSignIn();
 
   const linkToken = firstParam(params.token);
@@ -94,7 +95,7 @@ export function ClaimScreen() {
       tenantId: linkTenantId || parked?.tenantId || '',
       eventId: linkEventId || parked?.eventId || '',
       tenantSlug: linkTenantSlug || parked?.tenantSlug || '',
-      eventSlug: linkEventSlug || parked?.eventSlug || '',
+      eventSlug: linkEventSlug || parked?.eventSlug || ''
     };
   }, [
     linkToken,
@@ -134,7 +135,7 @@ export function ClaimScreen() {
     Animated.timing(outcomeOpacity, {
       toValue: 1,
       duration: 240,
-      useNativeDriver: true,
+      useNativeDriver: true
     }).start();
   }, [decision, outcomeOpacity, reduceMotionOs]);
 
@@ -149,7 +150,7 @@ export function ClaimScreen() {
         tenantSlug: linkTenantSlug || undefined,
         eventSlug: linkEventSlug || undefined,
         parkedUserId: epoch?.userId ?? null,
-        parkedGeneration: epoch?.generation ?? null,
+        parkedGeneration: epoch?.generation ?? null
       });
     }
 
@@ -157,7 +158,7 @@ export function ClaimScreen() {
       const epoch = session.captureEpoch();
       dropGuestClaimIntentIfStale({
         epoch,
-        isEpochCurrent: (e) => session.isEpochCurrent(e),
+        isEpochCurrent: (e) => session.isEpochCurrent(e)
       });
       const snap = session.getSnapshot();
       if (snap.status !== 'verified') {
@@ -168,7 +169,7 @@ export function ClaimScreen() {
       }
       const resumed = resumeGuestClaimIntent({
         epoch,
-        isEpochCurrent: (e) => session.isEpochCurrent(e),
+        isEpochCurrent: (e) => session.isEpochCurrent(e)
       });
       if (resumed.ok) {
         setNotice('Đã đăng nhập — tiếp tục nhận vé với cùng lời mời.');
@@ -214,7 +215,7 @@ export function ClaimScreen() {
     const epoch = session.captureEpoch();
     const resumed = resumeGuestClaimIntent({
       epoch,
-      isEpochCurrent: (e) => session.isEpochCurrent(e),
+      isEpochCurrent: (e) => session.isEpochCurrent(e)
     });
     if (!resumed.ok) {
       if (resumed.reason === 'epoch-stale' || resumed.reason === 'user-mismatch') {
@@ -257,7 +258,7 @@ export function ClaimScreen() {
         formVersion: form?.formVersion,
         termsVersion: termsVersion ?? undefined,
         answers: validated.answers,
-        termsAccepted: termsAccepted === true,
+        termsAccepted: termsAccepted === true
       });
       if (!session.isEpochCurrent(epoch)) return;
       setDecision(next);
@@ -280,7 +281,7 @@ export function ClaimScreen() {
       const result = await fetchOwnerRedemptionStatus({
         apiBase,
         bearer,
-        requestId: decision.requestId,
+        requestId: decision.requestId
       });
       if (!session.isEpochCurrent(epoch)) return;
       if (result.status === 'ok' && result.body.status === 'ISSUED') {
@@ -288,19 +289,19 @@ export function ClaimScreen() {
           kind: 'issued',
           ticketId: result.body.ticketId,
           requestId: result.body.requestId,
-          replayed: true,
+          replayed: true
         });
       } else if (result.status === 'ok' && result.body.status === 'REJECTED') {
         setDecision({
           kind: 'denied',
           code: 'REJECTED',
-          message: result.body.reason ?? 'Lời mời bị từ chối.',
+          message: result.body.reason ?? 'Lời mời bị từ chối.'
         });
       } else if (result.status === 'ok' && result.body.status === 'EXPIRED') {
         setDecision({
           kind: 'denied',
           code: 'PENDING_EXPIRED',
-          message: 'Lời mời chờ đã hết hạn.',
+          message: 'Lời mời chờ đã hết hạn.'
         });
       } else if (result.status === 'not-found') {
         setNotice(
@@ -350,12 +351,9 @@ export function ClaimScreen() {
 
       {notice ? (
         <Text
-          style={{
-            color: colors.secondary,
+          style={{ ...typography.subhead, color: colors.secondary,
             fontFamily: fontFamilies.body,
-            fontSize: 15,
-            lineHeight: 22,
-          }}
+            lineHeight: 22 }}
           accessibilityLiveRegion="polite"
         >
           {notice}
@@ -363,7 +361,7 @@ export function ClaimScreen() {
       ) : null}
 
       {needsLogin ? (
-        <View style={{ gap: 10 }}>
+        <View style={{ gap: space.md }}>
           {configured ? (
             <AttendeeCta
               label={signInBusy ? 'Đang đăng nhập…' : 'Đăng nhập để nhận vé'}
@@ -413,7 +411,7 @@ export function ClaimScreen() {
           {...redeemDecisionAnnouncement({
             kind: decision.kind,
             title: outcome.title,
-            detail: outcomeDetail,
+            detail: outcomeDetail
           })}
           accessibilityLiveRegion={outcome.assertive ? 'assertive' : 'polite'}
         >
@@ -421,7 +419,7 @@ export function ClaimScreen() {
             {outcomeDetail}
           </Notice>
           {decision.kind === 'issued' ? (
-            <View style={{ marginTop: 12 }}>
+            <View style={{ marginTop: space.md }}>
               <AttendeeCta
                 label="Xem vé của tôi"
                 variant="secondary"

@@ -8,8 +8,9 @@ import { session } from '@/identity/session';
 import {
   accountDeletionConfirmCopy,
   accountDeletionExplainer,
-  describeAccountDeletionRequest,
+  describeAccountDeletionRequest
 } from './account-deletion-copy';
+import { space } from '@/theme/tokens';
 import {
   clearAllPendingIdempotencyKeys,
   loadCurrentAccountDeletionRequest,
@@ -17,14 +18,14 @@ import {
   resolveAccountDeletionRetryAction,
   retryAccountDeletionError,
   submitAccountDeletionRequest,
-  type AccountDeletionUiPhase,
+  type AccountDeletionUiPhase
 } from './account-deletion-flow';
 
 function SecondaryButton({
   label,
   onPress,
   disabled,
-  danger,
+  danger
 }: {
   label: string;
   onPress: () => void;
@@ -45,7 +46,7 @@ function SecondaryButton({
 function PrimaryButton({
   label,
   onPress,
-  disabled,
+  disabled
 }: {
   label: string;
   onPress: () => void;
@@ -124,7 +125,7 @@ export function AccountDeletionPanel() {
       setPhase({
         kind: 'error',
         message: 'Cần đăng nhập đã xác minh để gửi yêu cầu.',
-        retryable: false,
+        retryable: false
       });
       return;
     }
@@ -136,7 +137,7 @@ export function AccountDeletionPanel() {
         session,
         epoch,
         userId: epoch.userId,
-        idempotencyKey: pending,
+        idempotencyKey: pending
       });
       if (!session.isEpochCurrent(epoch)) return;
       setPhase(next);
@@ -156,7 +157,7 @@ export function AccountDeletionPanel() {
         phase,
         session,
         epoch,
-        userId: epoch.userId,
+        userId: epoch.userId
       });
       if (!session.isEpochCurrent(epoch)) return;
       setPhase(next);
@@ -174,7 +175,7 @@ export function AccountDeletionPanel() {
 
   return (
     <View
-      style={{ gap: 10 }}
+      style={{ gap: space.md }}
       accessibilityRole="summary"
       accessibilityLabel="Yêu cầu xóa tài khoản"
     >
@@ -190,7 +191,7 @@ export function AccountDeletionPanel() {
       ) : null}
 
       {phase.kind === 'confirming' ? (
-        <View style={{ gap: 8 }}>
+        <View style={{ gap: space.sm }}>
           <Notice title={confirm.title}>{confirm.body}</Notice>
           <PrimaryButton
             label={confirm.confirmLabel}
@@ -206,9 +207,9 @@ export function AccountDeletionPanel() {
       ) : null}
 
       {phase.kind === 'loading' ? (
-        <View style={{ padding: 8, alignItems: 'center' }}>
+        <View style={{ padding: space.sm, alignItems: 'center' }}>
           <Spinner accessibilityLabel="Đang xử lý yêu cầu xóa tài khoản" />
-          <Text style={{ color: colors.secondary, marginTop: 8 }}>
+          <Text style={{ color: colors.secondary, marginTop: space.sm }}>
             Đang gửi hoặc tải yêu cầu…
           </Text>
         </View>
@@ -221,7 +222,7 @@ export function AccountDeletionPanel() {
       ) : null}
 
       {phase.kind === 'error' ? (
-        <View style={{ gap: 8 }}>
+        <View style={{ gap: space.sm }}>
           <Notice
             title={
               resolveAccountDeletionRetryAction(phase) === 'resubmit'
