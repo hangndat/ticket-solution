@@ -1,5 +1,5 @@
 import {
-  MARKETING_ANALYTICS_EVENTS,
+  MARKETING_ANALYTICS_CLIENT_EVENTS,
   PII_PROP_KEYS,
   type MarketingAnalyticsEventName,
   type MarketingAnalyticsProps,
@@ -10,8 +10,6 @@ const MAX_STRING_LEN = 64;
 
 const LOCALES = new Set(['vi', 'en']);
 const CTA_IDS = new Set(['cta-demo', 'cta-interest']);
-const ROLES = new Set(['owner', 'agency', 'other']);
-
 const PII_VALUE_PATTERNS = [
   /@[^\s@]+\.[^\s@]+/,
   /\+?\d[\d\s().-]{7,}\d/,
@@ -26,10 +24,12 @@ export type ValidateAnalyticsResult =
       code: 'INVALID_EVENT' | 'INVALID_BODY' | 'PII' | 'PROP_SHAPE';
     };
 
-function isAllowedEvent(value: unknown): value is MarketingAnalyticsEventName {
+function isAllowedClientEvent(
+  value: unknown,
+): value is MarketingAnalyticsEventName {
   return (
     typeof value === 'string' &&
-    (MARKETING_ANALYTICS_EVENTS as readonly string[]).includes(value)
+    (MARKETING_ANALYTICS_CLIENT_EVENTS as readonly string[]).includes(value)
   );
 }
 
@@ -85,18 +85,6 @@ function propsForEvent(
       out.locale = locale;
       return out;
     }
-    case 'lead_submitted':
-    case 'qualified_lead': {
-      if (keys.length !== 2 || !keys.includes('locale') || !keys.includes('role')) {
-        return null;
-      }
-      const locale = stringProp(input.locale, LOCALES);
-      const role = stringProp(input.role, ROLES);
-      if (!locale || !role) return null;
-      out.locale = locale;
-      out.role = role;
-      return out;
-    }
     default:
       return null;
   }
@@ -109,7 +97,7 @@ export function validateMarketingAnalyticsBody(
     return { ok: false, code: 'INVALID_BODY' };
   }
   const record = body as Record<string, unknown>;
-  if (!isAllowedEvent(record.event)) {
+  if (!isAllowedClientEvent(record.event)) {
     return { ok: false, code: 'INVALID_EVENT' };
   }
 

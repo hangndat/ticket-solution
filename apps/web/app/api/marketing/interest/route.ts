@@ -1,12 +1,15 @@
 import { NextResponse } from 'next/server';
-import { persistInterestSubmission } from '../../../../src/marketing/interest-store';
+import { shouldSkipMarketingAnalytics } from '../../../../src/marketing/analytics/privacy-signals';
+import { acceptMarketingLead } from '../../../../src/marketing/lead/accept-lead';
+import type { MarketingLeadLocale } from '../../../../src/marketing/interest-schema';
 import {
   validateInterest,
   type InterestPayload,
 } from '../../../../src/marketing/interest-validate';
 
 /** Recent submissions for tests only (durable store is source of truth). */
-const recent: Array<InterestPayload & { at: string }> = [];
+const recent: Array<{ payload: InterestPayload; at: string; lead_id: string }> =
+  [];
 
 const RATE_WINDOW_MS = 60_000;
 const RATE_MAX = 8;
@@ -18,6 +21,14 @@ function clientKey(request: Request): string {
     request.headers.get('x-real-ip') ||
     'local'
   );
+}
+
+function localeFromRequest(request: Request): MarketingLeadLocale {
+  const header = request.headers.get('x-vemoki-locale');
+  if (header === 'en') return 'en';
+  const referer = request.headers.get('referer') ?? '';
+  if (referer.includes('/en')) return 'en';
+  return 'vi';
 }
 
 function rateLimited(key: string): boolean {
@@ -63,21 +74,41 @@ export async function POST(request: Request) {
     );
   }
 
-  try {
-    const record = await persistInterestSubmission(result.value, {
-      clientKey: clientKey(request),
-    });
-    recent.push({ ...result.value, at: record.at });
-    if (recent.length > 50) recent.splice(0, recent.length - 50);
-  } catch (err) {
-    console.error('[marketing-interest] persist failed', err);
+  const locale =
+    result.value.locale ?? localeFromRequest(request);
+  const payload = { ...result.value, locale };
+
+  const idempotencyHeader =
+    request.headers.get('idempotency-key')?.trim() ||
+    request.headers.get('Idempotency-Key')?.trim();
+
+  const accepted = await acceptMarketingLead(payload, {
+    clientKey: clientKey(request),
+    locale,
+    idempotencyHeader,
+    skipAnalytics: shouldSkipMarketingAnalytics(request.headers),
+  });
+
+  if (!accepted.ok) {
     return NextResponse.json(
-      { ok: false, code: 'STORE_FAILED' },
+      { ok: false, code: accepted.code },
       { status: 503 },
     );
   }
 
-  return NextResponse.json({ ok: true });
+  recent.push({
+    payload: accepted.record.payload,
+    at: accepted.record.at,
+    lead_id: accepted.record.lead_id,
+  });
+  if (recent.length > 50) recent.splice(0, recent.length - 50);
+
+  return NextResponse.json({
+    ok: true,
+    lead_id: accepted.record.lead_id,
+    qualified: accepted.record.qualified,
+    duplicate: accepted.duplicate,
+  });
 }
 
 /** Test/helper — not exposed as public list. */
