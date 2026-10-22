@@ -5,7 +5,7 @@ alwaysApply: false
 
 # Orca — worktree hygiene + DAG/gates (ROI cao)
 
-Áp dụng cho **coordinator gốc** và mọi worker khi tạo/đụng worktree hoặc lập wave Epic. Bổ sung (không thay) `orca-parallel-workers.mdc`, `orca-epic-orchestrator.mdc`, `orca-coordinator-mailbox.mdc`.
+**Coordinator-only** (`alwaysApply: false`): **coordinator gốc** (depth 0) áp dụng khi tạo/gắn worktree, wave Epic và fleet hygiene. Worker **không** tạo worktree hay gắn Issue/PR mặc định — chỉ Read file này khi Task Spec giao việc tạo/đụng worktree (pointer `orca-agent-routing-core.mdc`). Bổ sung (không thay) `orca-parallel-workers.mdc`, `orca-epic-orchestrator.mdc`, `orca-coordinator-mailbox.mdc`.
 
 ## 1. Worktree phải có link + comment sống
 
