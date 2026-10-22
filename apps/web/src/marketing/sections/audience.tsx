@@ -1,4 +1,15 @@
 import { t, type CopyKey } from '../copy';
+import {
+  marketingAudienceCard,
+  marketingAudienceGrid,
+  marketingAudienceIcon,
+  marketingH2,
+  marketingLead,
+  marketingRow,
+  marketingSection,
+  marketingStack,
+  marketingWrap,
+} from '../marketing-surface';
 import type { MarketingSectionProps } from './types';
 
 type AudienceKey = 'owner' | 'agency' | 'staff' | 'guest';
@@ -8,26 +19,10 @@ const AUDIENCE_CARDS: Array<{
   emphasis: boolean;
   icon: string;
 }> = [
-  {
-    key: 'owner',
-    emphasis: true,
-    icon: '🏢',
-  },
-  {
-    key: 'agency' as const,
-    emphasis: true,
-    icon: '👥',
-  },
-  {
-    key: 'staff' as const,
-    emphasis: false,
-    icon: '📷',
-  },
-  {
-    key: 'guest' as const,
-    emphasis: false,
-    icon: '🎫',
-  },
+  { key: 'owner', emphasis: true, icon: '🏢' },
+  { key: 'agency', emphasis: true, icon: '👥' },
+  { key: 'staff', emphasis: false, icon: '📷' },
+  { key: 'guest', emphasis: false, icon: '🎫' },
 ];
 
 export function AudienceSection({ locale }: MarketingSectionProps) {
@@ -35,26 +30,22 @@ export function AudienceSection({ locale }: MarketingSectionProps) {
     <>
       <section
         id="solutions"
-        className="mkt-section mkt-section--paper"
+        className={marketingSection('paper')}
         aria-labelledby="audience-title"
         data-analytics-section="solutions"
       >
-        <div className="mkt-wrap">
-          <h2 id="audience-title" className="mkt-display mkt-h2">
+        <div className={marketingWrap}>
+          <h2 id="audience-title" className={marketingH2}>
             {t(locale, 'audience.title')}
           </h2>
-          <p className="mkt-lead">{t(locale, 'audience.lead')}</p>
-          <div className="mkt-audience-grid">
+          <p className={marketingLead}>{t(locale, 'audience.lead')}</p>
+          <div className={marketingAudienceGrid}>
             {AUDIENCE_CARDS.map((card) => (
               <article
                 key={card.key}
-                className={`mkt-audience-card${
-                  card.emphasis
-                    ? ' mkt-audience-card--emphasis'
-                    : ' mkt-audience-card--muted'
-                }`}
+                className={marketingAudienceCard(card.emphasis)}
               >
-                <span className="mkt-audience-icon" aria-hidden="true">{card.icon}</span>
+                <span className={marketingAudienceIcon} aria-hidden="true">{card.icon}</span>
                 <h3>
                   {t(locale, `audience.${card.key}.title` as CopyKey)}
                 </h3>
@@ -67,24 +58,24 @@ export function AudienceSection({ locale }: MarketingSectionProps) {
 
       <section
         id="whitelabel"
-        className="mkt-section mkt-section--paper-alt"
+        className={marketingSection('paperAlt')}
         aria-labelledby="wl-title"
       >
-        <div className="mkt-wrap">
-          <h2 id="wl-title" className="mkt-display mkt-h2">
+        <div className={marketingWrap}>
+          <h2 id="wl-title" className={marketingH2}>
             {t(locale, 'whitelabel.title')}
           </h2>
-          <p className="mkt-lead">{t(locale, 'whitelabel.lead')}</p>
-          <div className="mkt-stack">
-            <div className="mkt-row">
+          <p className={marketingLead}>{t(locale, 'whitelabel.lead')}</p>
+          <div className={marketingStack}>
+            <div className={marketingRow}>
               <h3>{t(locale, 'whitelabel.point1')}</h3>
               <p>{t(locale, 'whitelabel.point1.body')}</p>
             </div>
-            <div className="mkt-row">
+            <div className={marketingRow}>
               <h3>{t(locale, 'whitelabel.point2')}</h3>
               <p>{t(locale, 'whitelabel.point2.body')}</p>
             </div>
-            <div className="mkt-row">
+            <div className={marketingRow}>
               <h3>{t(locale, 'whitelabel.point3')}</h3>
               <p>{t(locale, 'whitelabel.point3.body')}</p>
             </div>

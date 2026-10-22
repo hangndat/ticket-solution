@@ -1,4 +1,14 @@
 import { t, type CopyKey } from '../copy';
+import {
+  marketingH2,
+  marketingLead,
+  marketingSection,
+  marketingTrustCard,
+  marketingTrustGrid,
+  marketingTrustIcon,
+  marketingTrustRow2,
+  marketingWrap,
+} from '../marketing-surface';
 import type { MarketingSectionProps } from './types';
 
 const TRUST_ROWS: Array<{ title: CopyKey; body: CopyKey; icon: string }> = [
@@ -16,28 +26,29 @@ export function TrustSection({ locale }: MarketingSectionProps) {
   return (
     <section
       id="trust"
-      className="mkt-section mkt-section--ink"
+      className={marketingSection('ink')}
       aria-labelledby="trust-title"
       data-analytics-section="trust"
+      data-on-ink=""
     >
-      <div className="mkt-wrap">
-        <h2 id="trust-title" className="mkt-display mkt-h2">
+      <div className={marketingWrap}>
+        <h2 id="trust-title" className={marketingH2}>
           {t(locale, 'trust.title')}
         </h2>
-        <p className="mkt-lead">{t(locale, 'trust.lead')}</p>
-        <div className="mkt-trust-grid">
+        <p className={marketingLead}>{t(locale, 'trust.lead')}</p>
+        <div className={marketingTrustGrid}>
           {top.map((row) => (
-            <article className="mkt-trust-card" key={row.title}>
-              <div className="mkt-trust-icon" aria-hidden="true">{row.icon}</div>
+            <article className={marketingTrustCard} key={row.title}>
+              <div className={marketingTrustIcon} aria-hidden="true">{row.icon}</div>
               <h3>{t(locale, row.title)}</h3>
               <p>{t(locale, row.body)}</p>
             </article>
           ))}
         </div>
-        <div className="mkt-trust-row-2">
+        <div className={marketingTrustRow2}>
           {bottom.map((row) => (
-            <article className="mkt-trust-card" key={row.title}>
-              <div className="mkt-trust-icon" aria-hidden="true">{row.icon}</div>
+            <article className={marketingTrustCard} key={row.title}>
+              <div className={marketingTrustIcon} aria-hidden="true">{row.icon}</div>
               <h3>{t(locale, row.title)}</h3>
               <p>{t(locale, row.body)}</p>
             </article>
