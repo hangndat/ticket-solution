@@ -29,7 +29,7 @@ test('capability shell is deny-by-default until server discovery parses', () => 
   });
   assert.equal(caps.showOrgChrome, false);
   assert.equal(caps.showGateReport, false);
-  assert.equal(caps.showGateDeeplink, false);
+  assert.equal(caps.showGateScanHint, false);
   assert.equal(caps.showPlatform, false);
 });
 
@@ -64,7 +64,7 @@ test('Gate report nav requires report.read — gate.confirm only unlocks deeplin
     platformMe: null,
   });
   assert.equal(caps.showOrgChrome, true);
-  assert.equal(caps.showGateDeeplink, true);
+  assert.equal(caps.showGateScanHint, true);
   assert.equal(caps.showGateReport, false);
 
   const menu = buildEventMenuItems('t1', 'e1', ['gate.confirm'], keyStub);
