@@ -13,7 +13,7 @@
 - File: `docs/agents/roles/product-ba.md`
 - Đọc file role SAU AGENTS.md và rule Orca; nếu xung đột → rule dự án thắng.
 - Không mở rộng MVP / ngoài phạm vi Issue; không hồi sinh Android/payment/seat/Wallet.
-- Agent: cursor (theo orca-agent-routing.mdc)
+- Agent: cursor (theo orca-agent-routing-coordinator.mdc)
 
 ## Ownership
 

@@ -5,7 +5,7 @@
 | Epic | [#254](https://github.com/hangndat/ticket-solution/issues/254) |
 | Orca Run | `run_86f42281f748` |
 | Vai trò soạn | Epic planner (`orca-epic-orchestrator.mdc`) — **không** role coding catalog |
-| Agent | `cursor` (`orca-agent-routing.mdc`) |
+| Agent | `cursor` (`orca-agent-routing-coordinator.mdc`) |
 | Ngày soạn | 2026-10-18 |
 | Baseline inventory SHA | `e8512d0055e0e9d6585007e8363b6224a7138b12` (worktree `epic254-planner`) |
 | Board | [Project #3](https://github.com/users/hangndat/projects/3) — Status động; file này **không** tự `Hoàn thành` |

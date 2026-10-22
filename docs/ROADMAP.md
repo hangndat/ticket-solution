@@ -9,13 +9,11 @@
 
 > **Đã duyệt triển khai ngày 18/10/2026:** user trả lời “duyệt” cho gói D11. Phạm vi thực thi: web admin theo công việc/readiness; iOS Gate feedback/offline/conflict; attendee web/iOS nhận vé/QR/recovery; brand-test đa tenant và a11y trong các bề mặt đó. Thứ tự wave: web admin ∥ iOS Gate, rồi attendee theo slot ownership. Cho phép workflow feature branch → PR → review độc lập → CI → coordinator integration theo git-workflow. Validate-only/manual lookup, metrics mới, O06 số liệu, publish privacy, production deploy và store submit **không** được tự mở từ phê duyệt này. Các phần “chưa approved” bên dưới là snapshot proposal trước phê duyệt; Task Spec cụ thể và comment approval trên #222 là authority thực thi.
 
-
 > **Đối chiếu live 18/10/2026 — cập nhật D11:** Project #3 xác nhận D0–D10 **Hoàn thành**; tại checkpoint trước D11 có 100/101 item Hoàn thành, item #7 là phạm vi hủy. `main` đối chiếu: `3e61cde42d55654897048d6d627ab6834b54b808`. Các bảng snapshot ngày 17/10 bên dưới giữ làm lịch sử; không dùng để suy ra trạng thái hiện tại.
 >
 > **Định hướng mở rộng được user giao ngày 18/10:** đẩy mạnh UX/UI và giao BA/PD nghiên cứu, thiết kế cho vận hành production. Mở **D11 — nghiên cứu và thiết kế UX/UI production** ([Epic #222](https://github.com/hangndat/ticket-solution/issues/222)); pha discovery/design đang thực hiện. Phạm vi tính năng, thứ tự ưu tiên và thiết kế chi tiết là **đề xuất để user review trước feature coding**. Kế hoạch: [D11-UX-PRODUCTION-PLAN](./plans/D11-UX-PRODUCTION-PLAN.md); nghiên cứu: [D11-BA-RESEARCH](./plans/D11-BA-RESEARCH.md); thiết kế: [D11-PRODUCTION-UX-UI](./design/D11-PRODUCTION-UX-UI.md).
 >
 > **Gate D11:** (1) BA nêu pain có nguồn, journeys, ưu tiên và AC/metrics; (2) PD bàn giao flow/state/a11y/UI AC/handoff + prototype tương tác đánh dấu demo; (3) planner chia Epic→Story→Task theo ownership, role/path, dependency thật và wave; (4) user review roadmap trước coding. Research/design complete không phải code complete, acceptance complete hay pilot ready. Không tự deploy production hoặc submit store. Các phạm vi hủy O10 giữ nguyên. O06 retention và các gap phát hành phải được đánh giá bằng evidence khi lập release gate.
-
 
 Ngày cập nhật nội dung: 2026-10-17
 Đối chiếu live: `origin/main` `7c1abae72ab0d847e2a909d2da3ed2323edacf94` (MinIO/APNs D5 [#101](https://github.com/hangndat/ticket-solution/pull/101); D6 web [#92](https://github.com/hangndat/ticket-solution/pull/92) / iOS [#93](https://github.com/hangndat/ticket-solution/pull/93) / docs [#94](https://github.com/hangndat/ticket-solution/pull/94)) và [GitHub Project #3](https://github.com/users/hangndat/projects/3) cùng ngày.
@@ -26,12 +24,12 @@ Tracking lâu dài: GitHub Issues + Project (tiếng Việt). Orca Task/Dispatch
 
 ## 0. Ai là nguồn trạng thái động?
 
-| Artifact | Vai trò |
-| --- | --- |
-| **[Project #3](https://github.com/users/hangndat/projects/3)** | **Nguồn trạng thái động** (Status Issues: Chưa lên lịch · Sẵn sàng · Đang làm · Chờ duyệt · Bị chặn · Hoàn thành). Agent/coordinator đồng bộ board theo sự kiện — không chờ user duyệt từng bước Status. |
-| **Roadmap này** | Phạm vi đợt, gate nghiệm thu, ánh xạ module, Definition of Done, hạn chế bằng chứng (proof limits). **Không** thay Status live trên Project. Khi checkbox §6 lệch board, **board thắng**; sửa roadmap trong PR docs riêng. |
-| **GitHub Milestone** | Nhóm đợt; `open`/`closed` của milestone có thể chậm hơn Status Project — không dùng milestone state làm authority. |
-| **Orca `worker_done`** | Chỉ báo worker kết thúc attempt — **không** = Hoàn thành trên Project. |
+| Artifact                                                       | Vai trò                                                                                                                                                                                                                    |
+| -------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **[Project #3](https://github.com/users/hangndat/projects/3)** | **Nguồn trạng thái động** (Status Issues: Chưa lên lịch · Sẵn sàng · Đang làm · Chờ duyệt · Bị chặn · Hoàn thành). Agent/coordinator đồng bộ board theo sự kiện — không chờ user duyệt từng bước Status.                   |
+| **Roadmap này**                                                | Phạm vi đợt, gate nghiệm thu, ánh xạ module, Definition of Done, hạn chế bằng chứng (proof limits). **Không** thay Status live trên Project. Khi checkbox §6 lệch board, **board thắng**; sửa roadmap trong PR docs riêng. |
+| **GitHub Milestone**                                           | Nhóm đợt; `open`/`closed` của milestone có thể chậm hơn Status Project — không dùng milestone state làm authority.                                                                                                         |
+| **Orca `worker_done`**                                         | Chỉ báo worker kết thúc attempt — **không** = Hoàn thành trên Project.                                                                                                                                                     |
 
 **Roadmap đã được user duyệt lần đầu (2026-10-16)** — đóng D0 và mở D1. Các đoạn “đợt tiếp theo = D1 / chưa mở business endpoints” bên dưới §10 là **lịch sử**; không còn mô tả hiện tại.
 
@@ -41,28 +39,28 @@ Tracking lâu dài: GitHub Issues + Project (tiếng Việt). Orca Task/Dispatch
 
 Cột **Board** = Status parent Issue trên Project #3 tại thời điểm đối chiếu. Chi tiết sub-issue luôn lấy từ board.
 
-| Mục | Board (parent) | Mức hoàn thành | Ghi chú / proof limits |
-| --- | --- | --- | --- |
-| W0 Foundation | **Hoàn thành** (#1) | Nghiệm thu đợt | Prototype — **không** = production auth hay ticketing xong. Evidence: [W0-FOUNDATION-REPORT](./W0-FOUNDATION-REPORT.md) |
-| Identity / OIDC (D1) | **Hoàn thành** (#2) | Nghiệm thu đợt | Keycloak self-host; gỡ Clerk. Live P4 smoke: [D1-P4-KEYCLOAK-SMOKE](./reviews/D1-P4-KEYCLOAK-SMOKE.md). O06 **đã chốt** 2026-10-18 — [DECISION-LOG](./DECISION-LOG.md) |
-| Nhận vé (D2) | **Hoàn thành** (#3) | Nghiệm thu đợt | Mã/quota/issue/outbox + web redeem + iOS ví đã có trên `main` (PRs #30–#32…) |
-| Check-in (D3) | **Hoàn thành** (#4) | Nghiệm thu đợt (có ngoại lệ UAT) | Gate + web Gate + iOS scan/recovery trên `main`. **Camera thiết bị thật** hoãn sang D5 (#26) — không ghi là UAT camera physical đã PASS |
-| Admin & Platform (D4) | **Hoàn thành** (#5) | Nghiệm thu đợt (PASS with known gap) | Tenant 2 prod: [D4-TENANT2-PROD-UAT.md](./reviews/D4-TENANT2-PROD-UAT.md). Gap CSRF invite UI / MinIO export / invite email → theo dõi D5 ops |
-| Hardening / UAT / phát hành (D5) | **Đang làm** (#6) | Child #24/#25/#26/#56 **Hoàn thành** trên board; parent chưa đóng | Còn Gate camera staff + push **DELIVERED** trên thiết bị (TF 0.1.0 (7)); MinIO/APNs wiring đã có [#101](https://github.com/hangndat/ticket-solution/pull/101) — còn gắn/verify prod. Build native **chỉ** local Xcode; **cấm** Expo/EAS Cloud Build |
-| UX/UI polish (D6) | **Hoàn thành** (#81) | Nghiệm thu đợt (acceptance) | Web [#92](https://github.com/hangndat/ticket-solution/pull/92) · iOS [#93](https://github.com/hangndat/ticket-solution/pull/93) · docs S7 [#94](https://github.com/hangndat/ticket-solution/pull/94). #82–#85/#87–#89 + parent #81 closed; Milestone #8 closed. Plan [`D6-UX-UI-PLAN.md`](./plans/D6-UX-UI-PLAN.md). **Không tuyên bố lại từ đầu** — status lấy từ Project. **Proof limits:** D6 ≠ pilot ready / store / production |
-| Offline Gate multi-device (D7) | **Chưa lên lịch** (Issue mới / #7 rewrite) | Trong MVP mở rộng | Đồng bộ board sau rewrite #7 — docs mô tả phạm vi; không spawn coding trước khi Issue sẵn sàng |
-| White-label (D8) | **Chưa lên lịch** | Trong MVP mở rộng | App/branding theo tenant trong phạm vi O10; không Android native |
-| Demo seed + UX/media (D9) | **Chưa lên lịch** | Trong MVP mở rộng | Seed data đủ demo; UX/UI còn lại + thiết kế media |
-| App Store metadata (D10) | **Chưa lên lịch** | Trong MVP mở rộng | Privacy, screenshots, review notes, local signed archive — **không** submit store trừ task riêng ủy quyền |
-| Ngoài phạm vi có chủ đích | — (#7 sau rewrite) | **Không** làm trong MVP | Android native; payment/refund/chuyển nhượng; seat map; Apple/Google Wallet — xem §6 |
+| Mục                              | Board (parent)                             | Mức hoàn thành                                                    | Ghi chú / proof limits                                                                                                                                                                                                                                                                                                                                                                                                              |
+| -------------------------------- | ------------------------------------------ | ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| W0 Foundation                    | **Hoàn thành** (#1)                        | Nghiệm thu đợt                                                    | Prototype — **không** = production auth hay ticketing xong. Evidence: [W0-FOUNDATION-REPORT](./W0-FOUNDATION-REPORT.md)                                                                                                                                                                                                                                                                                                             |
+| Identity / OIDC (D1)             | **Hoàn thành** (#2)                        | Nghiệm thu đợt                                                    | Keycloak self-host; gỡ Clerk. Live P4 smoke: [D1-P4-KEYCLOAK-SMOKE](./reviews/D1-P4-KEYCLOAK-SMOKE.md). O06 **đã chốt** 2026-10-18 — [DECISION-LOG](./DECISION-LOG.md)                                                                                                                                                                                                                                                              |
+| Nhận vé (D2)                     | **Hoàn thành** (#3)                        | Nghiệm thu đợt                                                    | Mã/quota/issue/outbox + web redeem + iOS ví đã có trên `main` (PRs #30–#32…)                                                                                                                                                                                                                                                                                                                                                        |
+| Check-in (D3)                    | **Hoàn thành** (#4)                        | Nghiệm thu đợt (có ngoại lệ UAT)                                  | Gate + web Gate + iOS scan/recovery trên `main`. **Camera thiết bị thật** hoãn sang D5 (#26) — không ghi là UAT camera physical đã PASS                                                                                                                                                                                                                                                                                             |
+| Admin & Platform (D4)            | **Hoàn thành** (#5)                        | Nghiệm thu đợt (PASS with known gap)                              | Tenant 2 prod: [D4-TENANT2-PROD-UAT.md](./reviews/D4-TENANT2-PROD-UAT.md). Gap CSRF invite UI / MinIO export / invite email → theo dõi D5 ops                                                                                                                                                                                                                                                                                       |
+| Hardening / UAT / phát hành (D5) | **Đang làm** (#6)                          | Child #24/#25/#26/#56 **Hoàn thành** trên board; parent chưa đóng | Còn Gate camera staff + push **DELIVERED** trên thiết bị (TF 0.1.0 (7)); MinIO/APNs wiring đã có [#101](https://github.com/hangndat/ticket-solution/pull/101) — còn gắn/verify prod. Build native **chỉ** local Xcode; **cấm** Expo/EAS Cloud Build                                                                                                                                                                                 |
+| UX/UI polish (D6)                | **Hoàn thành** (#81)                       | Nghiệm thu đợt (acceptance)                                       | Web [#92](https://github.com/hangndat/ticket-solution/pull/92) · iOS [#93](https://github.com/hangndat/ticket-solution/pull/93) · docs S7 [#94](https://github.com/hangndat/ticket-solution/pull/94). #82–#85/#87–#89 + parent #81 closed; Milestone #8 closed. Plan [`D6-UX-UI-PLAN.md`](./plans/D6-UX-UI-PLAN.md). **Không tuyên bố lại từ đầu** — status lấy từ Project. **Proof limits:** D6 ≠ pilot ready / store / production |
+| Offline Gate multi-device (D7)   | **Chưa lên lịch** (Issue mới / #7 rewrite) | Trong MVP mở rộng                                                 | Đồng bộ board sau rewrite #7 — docs mô tả phạm vi; không spawn coding trước khi Issue sẵn sàng                                                                                                                                                                                                                                                                                                                                      |
+| White-label (D8)                 | **Chưa lên lịch**                          | Trong MVP mở rộng                                                 | App/branding theo tenant trong phạm vi O10; không Android native                                                                                                                                                                                                                                                                                                                                                                    |
+| Demo seed + UX/media (D9)        | **Chưa lên lịch**                          | Trong MVP mở rộng                                                 | Seed data đủ demo; UX/UI còn lại + thiết kế media                                                                                                                                                                                                                                                                                                                                                                                   |
+| App Store metadata (D10)         | **Chưa lên lịch**                          | Trong MVP mở rộng                                                 | Privacy, screenshots, review notes, local signed archive — **không** submit store trừ task riêng ủy quyền                                                                                                                                                                                                                                                                                                                           |
+| Ngoài phạm vi có chủ đích        | — (#7 sau rewrite)                         | **Không** làm trong MVP                                           | Android native; payment/refund/chuyển nhượng; seat map; Apple/Google Wallet — xem §6                                                                                                                                                                                                                                                                                                                                                |
 
 ### 1.1 Ba mức hoàn thành (bắt buộc phân biệt)
 
-| Mức | Nghĩa | Không được suy ra |
-| --- | --- | --- |
-| **Code complete** | Implementation đã merge `main` (hoặc PR sẵn), CI liên quan xanh trên commit tích hợp | Chưa đủ để Status **Hoàn thành** nếu thiếu review/evidence Issue |
-| **Acceptance complete** (board **Hoàn thành**) | Đủ DoD §2: review độc lập (khi security-sensitive), merge, CI, evidence đúng tiêu chí Issue | Chưa = sẵn sàng pilot / production / store |
-| **Pilot ready** | Gate D5 đạt theo technical design: security/capacity/restore có số liệu rõ; UAT thiết bị thật (camera, deep link, push, offline ví, revoke) với build **local signed**; runbook; chỉ số chưa đạt được nêu rõ | Demo pass, Simulator-only, hoặc `ACCEPTED` APNs **không** đủ |
+| Mức                                            | Nghĩa                                                                                                                                                                                                        | Không được suy ra                                                |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------- |
+| **Code complete**                              | Implementation đã merge `main` (hoặc PR sẵn), CI liên quan xanh trên commit tích hợp                                                                                                                         | Chưa đủ để Status **Hoàn thành** nếu thiếu review/evidence Issue |
+| **Acceptance complete** (board **Hoàn thành**) | Đủ DoD §2: review độc lập (khi security-sensitive), merge, CI, evidence đúng tiêu chí Issue                                                                                                                  | Chưa = sẵn sàng pilot / production / store                       |
+| **Pilot ready**                                | Gate D5 đạt theo technical design: security/capacity/restore có số liệu rõ; UAT thiết bị thật (camera, deep link, push, offline ví, revoke) với build **local signed**; runbook; chỉ số chưa đạt được nêu rõ | Demo pass, Simulator-only, hoặc `ACCEPTED` APNs **không** đủ     |
 
 ### 1.2 Ngoại lệ UAT thiết bị thật & hạn chế bằng chứng
 
@@ -83,18 +81,18 @@ Một đầu việc trên board chỉ chuyển **Hoàn thành** khi:
 
 `worker_done` / Dispatch settled **không** đồng nghĩa task đã hoàn thành trên GitHub Project.
 
-**Agent sync (bắt buộc):** Cập nhật Status Project theo sự kiện (Đang làm / Chờ duyệt / Bị chặn / Hoàn thành) **không chờ user duyệt board**. Khi vào Chờ duyệt, coordinator gốc spawn một Orca worker theo `.cursor/rules/orca-agent-routing.mdc` đóng vai người duyệt (khác session implementer). Chi tiết: `.cursor/rules/github-project-tracking.mdc`.
+**Agent sync (bắt buộc):** Cập nhật Status Project theo sự kiện (Đang làm / Chờ duyệt / Bị chặn / Hoàn thành) **không chờ user duyệt board**. Khi vào Chờ duyệt, coordinator gốc spawn một Orca worker theo `.cursor/rules/orca-agent-routing-coordinator.mdc` đóng vai người duyệt (khác session implementer). Chi tiết: `.cursor/rules/github-project-tracking.mdc`.
 
 ## 3. Vai trò phụ trách
 
-| Nhóm | Ownership | Không tự ý |
-| --- | --- | --- |
-| Coordinator gốc | Trực tiếp spawn planner/workers/reviewers; dispatch, lifecycle, Project sync, root tooling, lockfile, CI, contracts, integration đã ủy quyền | Không đổi nghiệp vụ đã freeze chỉ để giải conflict |
-| Epic planner | Phân Epic → Story → Task, theo dõi phụ thuộc, chuẩn bị spec và nghiệm thu | Không spawn worker con, tự đóng Epic hoặc merge |
-| Backend | `apps/api`, `apps/worker`, `packages/backend`, schema/migrations, RLS tests | UI web/mobile; contract chưa thống nhất |
-| Web | `apps/web` | Database, auth policy, native app |
-| iOS | `apps/mobile` | Backend rules, web, store submission ngoài task |
-| QA / Security (hardening) | Review độc lập RLS/authz/races, load, restore | Không tự viết lại kiến trúc trong task review |
+| Nhóm                      | Ownership                                                                                                                                    | Không tự ý                                         |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| Coordinator gốc           | Trực tiếp spawn planner/workers/reviewers; dispatch, lifecycle, Project sync, root tooling, lockfile, CI, contracts, integration đã ủy quyền | Không đổi nghiệp vụ đã freeze chỉ để giải conflict |
+| Epic planner              | Phân Epic → Story → Task, theo dõi phụ thuộc, chuẩn bị spec và nghiệm thu                                                                    | Không spawn worker con, tự đóng Epic hoặc merge    |
+| Backend                   | `apps/api`, `apps/worker`, `packages/backend`, schema/migrations, RLS tests                                                                  | UI web/mobile; contract chưa thống nhất            |
+| Web                       | `apps/web`                                                                                                                                   | Database, auth policy, native app                  |
+| iOS                       | `apps/mobile`                                                                                                                                | Backend rules, web, store submission ngoài task    |
+| QA / Security (hardening) | Review độc lập RLS/authz/races, load, restore                                                                                                | Không tự viết lại kiến trúc trong task review      |
 
 Catalog chuyên môn Orca (Role ID gắn Task Spec, không `alwaysApply`): [docs/agents/README.md](./agents/README.md) — `product-ba`, `product-design`, `backend`, `web`, `ios`, `reviewer-dod`, `reviewer-security`.
 
@@ -115,39 +113,39 @@ Trước khi parent đợt chuyển **Hoàn thành** trên Project #3, phải c�
 
 Gate chuyên biệt từng đợt (bảng dưới) **bổ sung**, không thay thế 4.1.
 
-| Đợt | Tên | Mục tiêu | Gate chuyên biệt | Board (2026-10-17) |
-| --- | --- | --- | --- | --- |
-| D0 | W0 Foundation | Monorepo, CI, Compose, API health, RLS prototype, web/iOS shell | Foundation integrated; no EAS Cloud Build policy | Hoàn thành |
-| D1 | Quyết định & Identity | O01–O08 liên quan, OIDC, membership/revocation proof | Identity spike đạt criteria trước khi mở business endpoints | Hoàn thành |
-| D2 | Nhận vé xuyên web/app | Mã/quota/issue/outbox + web redeem + iOS ví API thật | Demo đổi vé web → thông báo → cùng user mở vé trên app; concurrency quota/idempotency | Hoàn thành |
-| D3 | Check-in | Gate reserve/confirm/recovery + web Gate + iOS scan | Hai thiết bị / race / recovery; camera physical có thể tách D5 nếu ghi rõ | Hoàn thành (UAT camera device → #26) |
-| D4 | Admin & Platform | Permissions, import, approval, config publish, CS, reporting, app feature còn lại | Tenant thứ hai tự tạo event/brand qua admin, không hardcode pilot | Hoàn thành |
-| D5 | Hardening & phát hành | Security review, capacity, restore, device UAT, local signed iOS / TestFlight | Evidence đạt technical design; publish/store là task riêng → **pilot ready** | Đang làm |
-| D6 | Hoàn thiện UX/UI | Polish brand Vemoki + IA/states/a11y trên web & iOS đã có chức năng | Brand test + headless/sim screenshots; không gộp D5 hardening | Hoàn thành (#81 closed; PRs #92/#93/#94) |
-| D7 | Offline Gate multi-device | Check-in / Gate hoạt động khi nhiều thiết bị và mất mạng có kiểm soát (theo design đợt) | Multi-device + offline/reconcile evidence; không mở Android/payment | Chưa lên lịch |
-| D8 | White-label | Branding / cấu hình app theo tenant trong một codebase (không fork) | Tenant brand smoke + config version; không store submit | Chưa lên lịch |
-| D9 | Demo seed + UX/media | Seed data đủ demo end-to-end; UX/UI còn lại; thiết kế media | Demo script + media assets; headless/sim screenshots | Chưa lên lịch |
-| D10 | App Store metadata | Privacy Nutrition Labels, screenshots, review notes, local signed archive | Metadata + archive sẵn; **không** submit trừ task ủy quyền riêng | Chưa lên lịch |
+| Đợt | Tên                       | Mục tiêu                                                                                | Gate chuyên biệt                                                                      | Board (2026-10-17)                       |
+| --- | ------------------------- | --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- | ---------------------------------------- |
+| D0  | W0 Foundation             | Monorepo, CI, Compose, API health, RLS prototype, web/iOS shell                         | Foundation integrated; no EAS Cloud Build policy                                      | Hoàn thành                               |
+| D1  | Quyết định & Identity     | O01–O08 liên quan, OIDC, membership/revocation proof                                    | Identity spike đạt criteria trước khi mở business endpoints                           | Hoàn thành                               |
+| D2  | Nhận vé xuyên web/app     | Mã/quota/issue/outbox + web redeem + iOS ví API thật                                    | Demo đổi vé web → thông báo → cùng user mở vé trên app; concurrency quota/idempotency | Hoàn thành                               |
+| D3  | Check-in                  | Gate reserve/confirm/recovery + web Gate + iOS scan                                     | Hai thiết bị / race / recovery; camera physical có thể tách D5 nếu ghi rõ             | Hoàn thành (UAT camera device → #26)     |
+| D4  | Admin & Platform          | Permissions, import, approval, config publish, CS, reporting, app feature còn lại       | Tenant thứ hai tự tạo event/brand qua admin, không hardcode pilot                     | Hoàn thành                               |
+| D5  | Hardening & phát hành     | Security review, capacity, restore, device UAT, local signed iOS / TestFlight           | Evidence đạt technical design; publish/store là task riêng → **pilot ready**          | Đang làm                                 |
+| D6  | Hoàn thiện UX/UI          | Polish brand Vemoki + IA/states/a11y trên web & iOS đã có chức năng                     | Brand test + headless/sim screenshots; không gộp D5 hardening                         | Hoàn thành (#81 closed; PRs #92/#93/#94) |
+| D7  | Offline Gate multi-device | Check-in / Gate hoạt động khi nhiều thiết bị và mất mạng có kiểm soát (theo design đợt) | Multi-device + offline/reconcile evidence; không mở Android/payment                   | Chưa lên lịch                            |
+| D8  | White-label               | Branding / cấu hình app theo tenant trong một codebase (không fork)                     | Tenant brand smoke + config version; không store submit                               | Chưa lên lịch                            |
+| D9  | Demo seed + UX/media      | Seed data đủ demo end-to-end; UX/UI còn lại; thiết kế media                             | Demo script + media assets; headless/sim screenshots                                  | Chưa lên lịch                            |
+| D10 | App Store metadata        | Privacy Nutrition Labels, screenshots, review notes, local signed archive               | Metadata + archive sẵn; **không** submit trừ task ủy quyền riêng                      | Chưa lên lịch                            |
 
 ## 5. Ánh xạ module PRD → đợt
 
-| Module | Tên | Đợt chính | Phụ thuộc trước |
-| --- | --- | --- | --- |
-| M01 | Tenant và cách ly dữ liệu | D0 (prototype) → D1/D4 (đầy đủ) | — |
-| M02 | Identity và quyền | D1 | Quyết định provider; O01/O02 |
-| M03 | Event lifecycle | D2 skeleton → D4 đầy đủ | M01, M02 |
-| M04 | Branding và nội dung | D0 fixture → D4 publish → **D6 polish platform+event surfaces** | M03 |
-| M05 | Loại vé, nguồn phát, quota | D2 | M03; identity verified trước issue |
-| M06 | Import mã và khách mời | D4 | M05 |
-| M07 | Redemption và duyệt | D2 (auto-approve) → D4 (duyệt thủ công) | M05, M02 |
-| M08 | Ticket và ví vé | D2 | M07 |
-| M09 | Email và push | D2 (email sandbox) → D4 (push/retry) | Outbox; M08 |
-| M10 | Gate và check-in | D3 → **D7 offline multi-device** | M08 |
-| M11 | CS, báo cáo, vận hành | D3 tối thiểu → D4 | M07–M10 |
-| M12 | Platform Operations | D4–D5 | M01 |
-| M04+ | Branding / white-label mở rộng | D4 publish → D6 polish → **D8 white-label** | M04, O01/O10 |
-| — | Demo seed & media | **D9** | D4–D6 |
-| — | Store metadata (không submit) | **D10** | D5 local signed + D6 surfaces |
+| Module | Tên                            | Đợt chính                                                       | Phụ thuộc trước                    |
+| ------ | ------------------------------ | --------------------------------------------------------------- | ---------------------------------- |
+| M01    | Tenant và cách ly dữ liệu      | D0 (prototype) → D1/D4 (đầy đủ)                                 | —                                  |
+| M02    | Identity và quyền              | D1                                                              | Quyết định provider; O01/O02       |
+| M03    | Event lifecycle                | D2 skeleton → D4 đầy đủ                                         | M01, M02                           |
+| M04    | Branding và nội dung           | D0 fixture → D4 publish → **D6 polish platform+event surfaces** | M03                                |
+| M05    | Loại vé, nguồn phát, quota     | D2                                                              | M03; identity verified trước issue |
+| M06    | Import mã và khách mời         | D4                                                              | M05                                |
+| M07    | Redemption và duyệt            | D2 (auto-approve) → D4 (duyệt thủ công)                         | M05, M02                           |
+| M08    | Ticket và ví vé                | D2                                                              | M07                                |
+| M09    | Email và push                  | D2 (email sandbox) → D4 (push/retry)                            | Outbox; M08                        |
+| M10    | Gate và check-in               | D3 → **D7 offline multi-device**                                | M08                                |
+| M11    | CS, báo cáo, vận hành          | D3 tối thiểu → D4                                               | M07–M10                            |
+| M12    | Platform Operations            | D4–D5                                                           | M01                                |
+| M04+   | Branding / white-label mở rộng | D4 publish → D6 polish → **D8 white-label**                     | M04, O01/O10                       |
+| —      | Demo seed & media              | **D9**                                                          | D4–D6                              |
+| —      | Store metadata (không submit)  | **D10**                                                         | D5 local signed + D6 surfaces      |
 
 ## 6. Backlog đầu việc (checkbox = tiến độ docs; Status live = Project)
 
@@ -239,25 +237,25 @@ Parent [#81](https://github.com/hangndat/ticket-solution/issues/81) **Hoàn thà
 
 Quyết định user **2026-10-17 (O10)** — **hủy khỏi kế hoạch/roadmap MVP** (Issue [#7](https://github.com/hangndat/ticket-solution/issues/7) rewrite đồng bộ board; worker GitHub sở hữu Issue):
 
-| Hủy khỏi MVP | Ghi chú |
-| --- | --- |
-| Android native | Khách Android dùng web responsive; không Google Play trong MVP |
-| Payment / refund / chuyển nhượng vé | Vé miễn phí qua mã / invite như PRD baseline |
-| Seat map | Không sơ đồ ghế trong MVP |
-| Apple / Google Wallet | Ví trong-app + QR; không pass Wallet |
+| Hủy khỏi MVP                        | Ghi chú                                                        |
+| ----------------------------------- | -------------------------------------------------------------- |
+| Android native                      | Khách Android dùng web responsive; không Google Play trong MVP |
+| Payment / refund / chuyển nhượng vé | Vé miễn phí qua mã / invite như PRD baseline                   |
+| Seat map                            | Không sơ đồ ghế trong MVP                                      |
+| Apple / Google Wallet               | Ví trong-app + QR; không pass Wallet                           |
 
 Vẫn **sau MVP** (không thuộc D7–D10, không bị “hủy” khỏi tầm nhìn dài hạn): SSO doanh nghiệp; billing tự động; custom domain/sender tenant; workflow builder tổng quát; marketplace template.
 
 ## 7. Quyết định còn mở (chặn thiết kế liên quan)
 
-| ID | Câu hỏi | Baseline tạm | Ảnh hưởng |
-| --- | --- | --- | --- |
-| O01–O05, O07–O09 | (xem DECISION-LOG) | **Đã chốt MVP** | [DECISION-LOG.md](./DECISION-LOG.md) |
-| O10 | Mở rộng MVP / hủy Android·payment·seat·Wallet | **Đã chốt** 2026-10-17 — D7–D10 trong MVP; mục hủy → §6 | [DECISION-LOG.md](./DECISION-LOG.md) |
-| O06 | Retention, vùng dữ liệu, SLA? | **Đã chốt** 2026-10-18 — xem [DECISION-LOG](./DECISION-LOG.md) O06 / [O06-OPTIONS](./ops/O06-OPTIONS.md) | Privacy copy khớp số; drill RPO/RTO trên VPS trước công bố |
-| UX-11 | Auth đổi mã: Keycloak vs OTP/magic link PRD? | **Đã chốt Option A** 2026-10-18 — MVP = Keycloak verified email / UI «Cần đăng nhập»; OTP/magic link = sau MVP ([#372](https://github.com/hangndat/ticket-solution/issues/372)) | [DECISION-LOG.md](./DECISION-LOG.md) UX-11; không mở Task OTP trừ khi user chọn B |
-| ADR-09 | Provider OIDC cụ thể? | **Keycloak self-host đã chốt** — POC P4 local | [spikes/D1-OIDC-PROVIDER.md](./spikes/D1-OIDC-PROVIDER.md) |
-| ADR-11…15 | SaaS cấm; MinIO/SMTP/APNs/Caddy | **Đã chốt MVP** | [DECISION-LOG.md](./DECISION-LOG.md) |
+| ID               | Câu hỏi                                       | Baseline tạm                                                                                                                                                                    | Ảnh hưởng                                                                         |
+| ---------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| O01–O05, O07–O09 | (xem DECISION-LOG)                            | **Đã chốt MVP**                                                                                                                                                                 | [DECISION-LOG.md](./DECISION-LOG.md)                                              |
+| O10              | Mở rộng MVP / hủy Android·payment·seat·Wallet | **Đã chốt** 2026-10-17 — D7–D10 trong MVP; mục hủy → §6                                                                                                                         | [DECISION-LOG.md](./DECISION-LOG.md)                                              |
+| O06              | Retention, vùng dữ liệu, SLA?                 | **Đã chốt** 2026-10-18 — xem [DECISION-LOG](./DECISION-LOG.md) O06 / [O06-OPTIONS](./ops/O06-OPTIONS.md)                                                                        | Privacy copy khớp số; drill RPO/RTO trên VPS trước công bố                        |
+| UX-11            | Auth đổi mã: Keycloak vs OTP/magic link PRD?  | **Đã chốt Option A** 2026-10-18 — MVP = Keycloak verified email / UI «Cần đăng nhập»; OTP/magic link = sau MVP ([#372](https://github.com/hangndat/ticket-solution/issues/372)) | [DECISION-LOG.md](./DECISION-LOG.md) UX-11; không mở Task OTP trừ khi user chọn B |
+| ADR-09           | Provider OIDC cụ thể?                         | **Keycloak self-host đã chốt** — POC P4 local                                                                                                                                   | [spikes/D1-OIDC-PROVIDER.md](./spikes/D1-OIDC-PROVIDER.md)                        |
+| ADR-11…15        | SaaS cấm; MinIO/SMTP/APNs/Caddy               | **Đã chốt MVP**                                                                                                                                                                 | [DECISION-LOG.md](./DECISION-LOG.md)                                              |
 
 ## 8. Quy ước tracking GitHub
 
@@ -269,7 +267,7 @@ Vẫn **sau MVP** (không thuộc D7–D10, không bị “hủy” khỏi tầm
 - **Parent / sub-issues** theo nhóm module; **blocked-by** khi phụ thuộc thật (ví dụ lịch sử: D2 từng bị chặn bởi D1 identity).
 - **Đồng bộ board:** không chờ user duyệt từng bước Status; `worker_done` ≠ Hoàn thành — xem `.cursor/rules/github-project-tracking.mdc`.
 - **GitHub Flow:** feature branch → commit → push → PR → Cursor DoD review → CI → coordinator merge `main`. Không commit feature thẳng `main` — xem `.cursor/rules/git-workflow.mdc`.
-- **Orca:** chính sách agent duy nhất tại `.cursor/rules/orca-agent-routing.mdc`: tạm thời mọi Task dùng Cursor, trừ override rõ từ user; Task Spec có **Cost tier** (`cheap|standard`, trần standard) để map `--model`. Concurrent soft caps (≤5 non-review live, ≤1 feature/slice) trong `orca-parallel-workers.mdc`. Coordinator gốc trực tiếp spawn Epic planner và ownership workers/reviewers cùng depth 1; planner phân Story/Task, theo dõi phụ thuộc và chuẩn bị nghiệm thu, không spawn worker con. Worktree gắn Issue/PR + DAG/`gate` theo `orca-worktree-hygiene.mdc`. Idle fill và WIP theo `orca-*.mdc` trong `.cursor/rules/`.
+- **Orca:** worker/reviewer `orca-agent-routing-core.mdc`; coordinator spawn `orca-agent-routing-coordinator.mdc`: tạm thời mọi Task dùng Cursor, trừ override rõ từ user; Task Spec có **Cost tier** (`cheap|standard`, trần standard) để map `--model`. Concurrent soft caps (≤5 non-review live, ≤1 feature/slice) trong `orca-parallel-workers.mdc`. Coordinator gốc trực tiếp spawn Epic planner và ownership workers/reviewers cùng depth 1; planner phân Story/Task, theo dõi phụ thuộc và chuẩn bị nghiệm thu, không spawn worker con. Worktree gắn Issue/PR + DAG/`gate` theo `orca-worktree-hygiene.mdc`. Idle fill và WIP theo `orca-*.mdc` trong `.cursor/rules/`.
 
 ## 9. Liên kết vận hành
 

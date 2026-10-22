@@ -5,7 +5,7 @@
 - Checkout docs/coordinator: `/Users/admin/orca/workspaces/ticket-solution/portal-coordination`, branch `hangndat/portal-coordination`, base `c7e344847b1acf1688302fef513b277fc8f18973` (origin/main lúc mở Run).
 - Checkout `/main` đang có công việc khác; không đổi branch/reset/clean/stage mobile/infra hoặc các thay đổi ngoài PORTAL ở đó. 11 artifact nghiên cứu PORTAL được copy có giới hạn sang checkout này; không copy secrets/env.
 - Quyền: coding/feature branch/commit/push/PR/review/CI/coordinator integration trong Epic đã duyệt. Không production DNS/TLS/deploy/cutover/cloud/store. P1.2 hiện chỉ chuẩn bị và kiểm thử local/môi trường được phép.
-- Agent: `cursor` theo `.cursor/rules/orca-agent-routing.mdc`; model/effort theo host mặc định. Tất cả worker depth 1; chỉ coordinator dispatch.
+- Agent: `cursor` theo `.cursor/rules/orca-agent-routing-coordinator.mdc`; model/effort theo host mặc định. Tất cả worker depth 1; chỉ coordinator dispatch.
 
 ## Checkpoint ban đầu
 
