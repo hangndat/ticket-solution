@@ -1,10 +1,6 @@
 import { useCallback, useMemo, useState, useSyncExternalStore } from 'react';
-import {
-  ActivityIndicator,
-  ScrollView,
-  Text,
-  View,
-} from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
+import { Spinner } from '@/components/ui/spinner';
 import { router, useFocusEffect, useSegments } from 'expo-router';
 import type { MeResponse } from '@ticket/contracts';
 import { AttendeeCta } from '@/components/attendee-cta';
@@ -368,7 +364,7 @@ function ConfiguredAccount({
 
         {busy ? (
           <View style={{ padding: 8, alignItems: 'center' }}>
-            <ActivityIndicator color={brand.signal} />
+            <Spinner color={brand.signal} accessibilityLabel="Đang tải tài khoản" />
             <Text
               style={{
                 marginTop: 8,
