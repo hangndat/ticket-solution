@@ -1,9 +1,6 @@
 import { redirect } from 'next/navigation';
 import { forwardWithBearer } from '../bff/upstream';
-import {
-  createGateSsrTrace,
-  type GateSsrTrace,
-} from '../gate/gate-ssr-trace';
+import type { GateSsrTrace } from './ssr-trace';
 import { accessTokenIncludesAudience } from '../oidc/access-token-audience';
 import { isAccessTokenStaleForSsr } from '../oidc/access-token-clock';
 import { readOidcWebConfig } from '../oidc/config';
@@ -19,7 +16,7 @@ import {
   parseMeTenantsResponse,
 } from './capabilities';
 
-export type StaffRoute = '/admin' | '/gate';
+export type StaffRoute = '/admin';
 
 /** Match SiteNav client discovery — avoid long route-level loading on SSR. */
 const STAFF_DISCOVERY_TIMEOUT_MS = 8_000;
@@ -119,48 +116,4 @@ export async function requireAdminCapabilityOrHome(): Promise<void> {
   if (!caps.showAdmin) {
     redirect('/?notice=admin_denied');
   }
-}
-
-/**
- * Soft-redirect when discovery says the caller lacks Gate chrome.
- * Transient upstream/IdP failure → allow gate shell (E01: no infinite loading).
- */
-export async function requireGateCapabilityOrHome(
-  trace?: GateSsrTrace,
-): Promise<void> {
-  trace?.mark('require_gate_capability_start');
-  const eventsRes = await discoveryGet(PLATFORM_PATHS.meEvents, trace);
-
-  if (eventsRes.status === 401) {
-    trace?.mark('require_gate_capability_redirect_refresh');
-    await redirectForSsrDiscovery401('/gate');
-  }
-
-  if (isTransientDiscoveryFailure(eventsRes.status)) {
-    trace?.mark('require_gate_capability_transient_allow');
-    return;
-  }
-
-  const meEvents = parseMeEventsResponse(eventsRes.status, eventsRes.body);
-  const caps = deriveNavCapabilities({
-    authenticated: meEvents !== null,
-    meEvents,
-    meTenants: null,
-    platformMe: null,
-  });
-
-  if (!caps.showGate) {
-    trace?.mark('require_gate_capability_denied');
-    redirect('/?notice=gate_denied');
-  }
-  trace?.mark('require_gate_capability_allow');
-}
-
-/** Gate SSR: session + capability with optional GATE_SSR_TRACE=1 timing. */
-export async function runGateStaffSsrGuards(): Promise<void> {
-  const trace = createGateSsrTrace('gate_page');
-  trace.mark('gate_page_start');
-  await requireSessionOrAuth('/gate', trace);
-  await requireGateCapabilityOrHome(trace);
-  trace.finish('guards_ok');
 }
