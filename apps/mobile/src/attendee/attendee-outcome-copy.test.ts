@@ -119,7 +119,14 @@ test('presentRedeemDecision stale asks reload + reconsent', () => {
 
 test('attendeeWalletCopy avoids Keycloak / Nest on guest chrome', () => {
   assert.doesNotMatch(attendeeWalletCopy.signedOutBody, /Keycloak|Nest|BFF|\/v1\//i);
-  assert.match(attendeeWalletCopy.offlineBannerTitle, /chưa kết nối/i);
+  assert.match(attendeeWalletCopy.offlineBannerTitle, /vé đã lưu/i);
+  assert.match(attendeeWalletCopy.viewTicketCta, /QR/);
+});
+
+test('presentTicketRow includes schedule line for demo events', () => {
+  const row = presentTicketRow(sampleTicket);
+  assert.ok(row.whenLine);
+  assert.equal(row.viewTicketCta, attendeeWalletCopy.viewTicketCta);
 });
 
 test('ticketScheduleVenueLines uses demo catalog when event id matches', () => {

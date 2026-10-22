@@ -12,7 +12,7 @@ export default function AccountTabLayout() {
       <Stack.Screen
         name="privacy"
         options={{
-          title: 'Chính sách quyền riêng tư',
+          title: 'Quyền riêng tư',
           headerLargeTitleEnabled: false,
         }}
       />
