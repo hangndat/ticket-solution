@@ -17,7 +17,7 @@ export function AccountShell({
   children,
 }: AccountShellProps) {
   return (
-    <main id="main" className="container shell account-page">
+    <main id="main" className="lp-container shell account-page">
       <SiteNav />
       <header>
         <h1 className={styles.pageTitle}>{title}</h1>

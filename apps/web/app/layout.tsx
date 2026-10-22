@@ -10,7 +10,6 @@ import {
 import { configuredPublicOrigin } from '../src/oidc/public-origin';
 import { DemoAttendeeStrip } from '../src/attendee-uplift/demo-attendee-strip';
 import { FooterBrand } from '../src/site-chrome';
-import './attendee-uplift.css';
 import './globals.css';
 
 /** Prod default so OG/Twitter never fall back to request-host localhost. */

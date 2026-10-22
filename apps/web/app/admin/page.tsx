@@ -34,7 +34,7 @@ export default async function Admin({ searchParams }: Props) {
   const bannerQs = bannerSearch.toString();
 
   return (
-    <main id="main" className="container shell admin-page">
+    <main id="main" className="lp-container shell admin-page">
       <SiteNav />
       <DualRunBanner
         surface="admin"

@@ -16,8 +16,8 @@ export function Alert({ className, variant, title, children, role = 'status', ..
       className={cn(alertVariants({ variant }), className)}
       {...props}
     >
-      {title ? <strong className="ui:font-semibold">{title}</strong> : null}
-      {children ? <div className="ui:text-sm ui:leading-relaxed">{children}</div> : null}
+      {title ? <strong className="font-semibold">{title}</strong> : null}
+      {children ? <div className="text-sm leading-relaxed">{children}</div> : null}
     </div>
   );
 }

@@ -63,7 +63,7 @@ export default async function Home({ searchParams }: Props) {
   });
 
   return (
-    <main id="main" className="container home home--catalog">
+    <main id="main" className="lp-container home home--catalog">
       <SiteNav />
       <CatalogHeroBand
         eyebrow="Vemoki · Sự kiện & vé"

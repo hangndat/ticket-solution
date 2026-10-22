@@ -3,7 +3,7 @@ import { SurfaceState } from '../src/ui/surface-state';
 
 export default function NotFound() {
   return (
-    <main id="main" className="container shell">
+    <main id="main" className="lp-container shell">
       <p className="eyebrow">404</p>
       <h1>
         Chưa có gì ở đây,
