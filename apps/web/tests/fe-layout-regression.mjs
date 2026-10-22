@@ -7,6 +7,8 @@
  *   node apps/web/tests/fe-layout-regression.mjs [baseUrl]
  *
  * Env: FE_UAT_WEB_URL, WEB_UAT_EXECUTABLE (optional headless shell path)
+ * Local stack: WEB_PUBLIC_ORIGIN=http://localhost:3000; demo strip: NEXT_PUBLIC_DEMO_DATA_STRIP=1.
+ * Omit localhost from MARKETING_HOSTS so /redeem serves locally (localhost+product path → prod redirect).
  */
 import { existsSync, mkdirSync, readdirSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
@@ -17,7 +19,7 @@ import { chromium } from 'playwright';
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 const OUT =
   process.env.WEB_UAT_OUT_DIR ||
-  join(ROOT, 'docs/reviews/assets/fe-layout-fix-2026-10-22');
+  join(ROOT, 'docs/reviews/assets/fe-header-mobile-fix-2026-10-22');
 const BASE = (
   process.argv[2] ||
   process.env.FE_UAT_WEB_URL ||
@@ -26,6 +28,8 @@ const BASE = (
 
 const FOOTER_GAP_MAX_PX = 2;
 const CLS_MAX = 0.08;
+const HEADER_ROW_TOP_MAX_PX = 2;
+const HEADER_BUTTON_CENTER_MAX_PX = 1;
 
 const ATTENDEE_CASES = [
   { id: 'privacy', path: '/privacy', ready: '[data-testid="site-footer"]' },
@@ -137,6 +141,121 @@ async function heroBlockHeight(page) {
   });
 }
 
+async function measureMarketingHeaderRow(page) {
+  return page.evaluate(
+    ({ topMax, centerMax }) => {
+      const header = document.querySelector('[data-testid="mkt-header"]');
+      if (!header) return { ok: false, reason: 'no-header' };
+
+      const isVis = (el) => {
+        if (!el) return false;
+        const style = window.getComputedStyle(el);
+        return (
+          style.display !== 'none' &&
+          style.visibility !== 'hidden' &&
+          el.getClientRects().length > 0
+        );
+      };
+
+      const rowNodes = [
+        header.querySelector('[data-testid="mkt-wordmark"]'),
+        ...header.querySelectorAll('[data-testid="mkt-nav"] > *'),
+      ].filter(isVis);
+
+      const tops = rowNodes.map((el) =>
+        Math.round(el.getBoundingClientRect().top),
+      );
+      const maxTopDelta =
+        tops.length > 1 ? Math.max(...tops) - Math.min(...tops) : 0;
+
+      const toggle = header.querySelector('[data-testid="mkt-nav-menu-toggle"]');
+      let labelCenterDelta = null;
+      if (isVis(toggle)) {
+        const tr = toggle.getBoundingClientRect();
+        const label = toggle.querySelector('.mkt-nav-menu-toggle__label');
+        const lr = (label ?? toggle).getBoundingClientRect();
+        labelCenterDelta =
+          Math.round(
+            Math.abs(tr.top + tr.height / 2 - (lr.top + lr.height / 2)) * 100,
+          ) / 100;
+      }
+
+      const pass =
+        maxTopDelta <= topMax &&
+        (labelCenterDelta === null || labelCenterDelta <= centerMax);
+
+      return {
+        ok: true,
+        visibleCount: rowNodes.length,
+        maxTopDelta,
+        labelCenterDelta,
+        pass,
+      };
+    },
+    {
+      topMax: HEADER_ROW_TOP_MAX_PX,
+      centerMax: HEADER_BUTTON_CENTER_MAX_PX,
+    },
+  );
+}
+
+async function measureSiteHeaderRow(page) {
+  return page.evaluate(
+    ({ topMax, centerMax }) => {
+      const nav = document.querySelector('[data-testid="site-nav"]');
+      if (!nav) {
+        return { ok: true, pass: true, skipped: 'no-site-chrome' };
+      }
+
+      const isVis = (el) => {
+        if (!el) return false;
+        const style = window.getComputedStyle(el);
+        return (
+          style.display !== 'none' &&
+          style.visibility !== 'hidden' &&
+          el.getClientRects().length > 0
+        );
+      };
+
+      const rowNodes = [...nav.children].filter(isVis);
+
+      const tops = rowNodes.map((el) =>
+        Math.round(el.getBoundingClientRect().top),
+      );
+      const maxTopDelta =
+        tops.length > 1 ? Math.max(...tops) - Math.min(...tops) : 0;
+
+      const toggle = nav.querySelector('[data-testid="nav-menu-toggle"]');
+      let labelCenterDelta = null;
+      if (isVis(toggle)) {
+        const tr = toggle.getBoundingClientRect();
+        const label = toggle.querySelector('.nav-menu-toggle__label');
+        const lr = (label ?? toggle).getBoundingClientRect();
+        labelCenterDelta =
+          Math.round(
+            Math.abs(tr.top + tr.height / 2 - (lr.top + lr.height / 2)) * 100,
+          ) / 100;
+      }
+
+      const pass =
+        maxTopDelta <= topMax &&
+        (labelCenterDelta === null || labelCenterDelta <= centerMax);
+
+      return {
+        ok: true,
+        visibleCount: rowNodes.length,
+        maxTopDelta,
+        labelCenterDelta,
+        pass,
+      };
+    },
+    {
+      topMax: HEADER_ROW_TOP_MAX_PX,
+      centerMax: HEADER_BUTTON_CENTER_MAX_PX,
+    },
+  );
+}
+
 async function main() {
   mkdirSync(OUT, { recursive: true });
   const results = {
@@ -157,8 +276,30 @@ async function main() {
       for (const caseDef of ATTENDEE_CASES) {
         const url = `${BASE}${caseDef.path}`;
         await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 120_000 });
-        await page.waitForSelector(caseDef.ready, { timeout: 60_000 });
+        await page.waitForSelector(caseDef.ready, {
+          timeout: 60_000,
+          state: 'attached',
+        });
         await page.evaluate(() => document.fonts?.ready);
+
+        let headerRow = null;
+        if (width <= 390) {
+          await page
+            .waitForSelector('[data-testid="site-wordmark"]', {
+              state: 'visible',
+              timeout: 60_000,
+            })
+            .catch(() => undefined);
+          await page.evaluate(() => window.scrollTo(0, 0));
+          headerRow = await measureSiteHeaderRow(page);
+        }
+
+        if (caseDef.ready.includes('site-footer')) {
+          await page
+            .locator(caseDef.ready)
+            .scrollIntoViewIfNeeded({ timeout: 15_000 })
+            .catch(() => undefined);
+        }
 
         const footer = await measureFooterGap(page);
         const overflow = await measureOverflow(page);
@@ -169,7 +310,9 @@ async function main() {
           footer.ok &&
           (!footer.shortPage ||
             (footer.gapPx !== null && footer.gapPx <= FOOTER_GAP_MAX_PX));
-        const pass = footerPass && overflow.pass;
+        const headerPass =
+          headerRow ? headerRow.pass !== false : true;
+        const pass = footerPass && overflow.pass && headerPass;
         if (!pass) results.ok = false;
 
         results.attendee.push({
@@ -177,6 +320,7 @@ async function main() {
           width,
           footer,
           overflow,
+          headerRow,
           pass,
           shot,
         });
@@ -185,6 +329,7 @@ async function main() {
           `attendee ${caseDef.id} @${width}`,
           footer,
           overflow,
+          headerRow ?? 'header-skip',
         );
       }
     }
@@ -202,15 +347,23 @@ async function main() {
         });
         await page.evaluate(() => document.fonts?.ready);
         const overflow = await measureOverflow(page);
+        let headerRow = null;
+        if (width <= 390) {
+          await page.evaluate(() => window.scrollTo(0, 0));
+          headerRow = await measureMarketingHeaderRow(page);
+        }
         const heroH = await heroBlockHeight(page);
         const shot = join(OUT, `marketing-${locale}-${width}.png`);
         await page.screenshot({ path: shot, fullPage: false });
-        const pass = overflow.pass;
+        const headerPass =
+          headerRow ? headerRow.pass !== false : true;
+        const pass = overflow.pass && headerPass;
         if (!pass) results.ok = false;
         results.marketing.push({
           locale,
           width,
           overflow,
+          headerRow,
           heroCopyHeightPx: heroH,
           pass,
           shot,
@@ -219,6 +372,7 @@ async function main() {
           pass ? 'PASS' : 'FAIL',
           `marketing ${locale} @${width}`,
           overflow,
+          headerRow ?? 'header-skip',
           `heroCopy=${heroH}px`,
         );
       }
@@ -251,6 +405,45 @@ async function main() {
       pass: clsPass,
       max: CLS_MAX,
     };
+
+    const menuWidths = [390, 360, 320];
+    for (const width of menuWidths) {
+      await page.setViewportSize({ width, height: 844 });
+      for (const localePath of ['/marketing', '/marketing/en']) {
+        const locale = localePath.endsWith('/en') ? 'en' : 'vi';
+        await page.goto(`${BASE}${localePath}`, {
+          waitUntil: 'domcontentloaded',
+          timeout: 120_000,
+        });
+        await page.waitForSelector('[data-testid="mkt-nav-menu-toggle"]', {
+          state: 'visible',
+        });
+        await page.click('[data-testid="mkt-nav-menu-toggle"]');
+        await page.waitForSelector('[data-testid="mkt-nav-mobile-menu"]', {
+          state: 'visible',
+        });
+        const shot = join(OUT, `marketing-${locale}-${width}-menu-open.png`);
+        await page.screenshot({ path: shot, fullPage: false });
+        results.marketingMenuShots = results.marketingMenuShots ?? [];
+        results.marketingMenuShots.push({ locale, width, shot });
+      }
+
+      await page.goto(`${BASE}/wallet`, {
+        waitUntil: 'domcontentloaded',
+        timeout: 120_000,
+      });
+      await page.waitForSelector('[data-testid="nav-menu-toggle"]', {
+        state: 'visible',
+      });
+      await page.click('[data-testid="nav-menu-toggle"]');
+      await page.waitForSelector('[data-testid="nav-mobile-menu"]', {
+        state: 'visible',
+      });
+      const appShot = join(OUT, `attendee-wallet-guest-${width}-menu-open.png`);
+      await page.screenshot({ path: appShot, fullPage: false });
+      results.attendeeMenuShots = results.attendeeMenuShots ?? [];
+      results.attendeeMenuShots.push({ width, shot: appShot });
+    }
 
     const jsonPath = join(OUT, 'results.json');
     writeFileSync(jsonPath, `${JSON.stringify(results, null, 2)}\n`);

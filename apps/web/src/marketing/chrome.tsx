@@ -48,17 +48,43 @@ export function MarketingChrome({
           {t(locale, 'nav.brand')}
           <span aria-hidden="true">↗</span>
         </Link>
-        <nav className="mkt-nav" aria-label={locale === 'en' ? 'Primary' : 'Chính'}>
+        <nav
+          className="mkt-nav"
+          aria-label={locale === 'en' ? 'Primary' : 'Chính'}
+          data-testid="mkt-nav"
+        >
           <LocaleSwitch locale={locale} pageKind={pageKind} />
           {onSales ? (
             <>
-              <span className="mkt-nav-links">
+              <span className="mkt-nav-links mkt-nav-desktop-only">
                 <a href={`${sales}#features`}>{t(locale, 'nav.features')}</a>
                 <a href={`${sales}#how_it_works`}>{t(locale, 'nav.how')}</a>
                 <a href={`${sales}#solutions`}>{t(locale, 'nav.solutions')}</a>
                 <a href={`${sales}#faq`}>{t(locale, 'nav.faq')}</a>
                 <a href={demo}>{t(locale, 'nav.demo')}</a>
               </span>
+            </>
+          ) : null}
+          <a
+            className="mkt-btn mkt-btn--ghost mkt-nav-cta mkt-nav-cta--header mkt-nav-desktop-only"
+            href={login}
+          >
+            {t(locale, 'nav.login')}
+          </a>
+          {onSales ? (
+            <>
+              <Link
+                className="mkt-btn mkt-btn--primary mkt-nav-cta mkt-nav-cta--header mkt-nav-primary"
+                href={`${sales}#interest`}
+                data-testid="cta-interest-nav"
+              >
+                <span className="mkt-nav-primary-long">
+                  {t(locale, 'nav.interest')}
+                </span>
+                <span className="mkt-nav-primary-short">
+                  {t(locale, 'nav.interest.short')}
+                </span>
+              </Link>
               <MarketingMobileNavMenu
                 locale={locale}
                 sales={sales}
@@ -66,18 +92,6 @@ export function MarketingChrome({
                 login={login}
               />
             </>
-          ) : null}
-          <a className="mkt-btn mkt-btn--ghost mkt-nav-cta mkt-nav-cta--header" href={login}>
-            {t(locale, 'nav.login')}
-          </a>
-          {onSales ? (
-            <Link
-              className="mkt-btn mkt-btn--primary mkt-nav-cta--header"
-              href={`${sales}#interest`}
-              data-testid="cta-interest-nav"
-            >
-              {t(locale, 'nav.interest')}
-            </Link>
           ) : (
             <a className="mkt-btn mkt-btn--primary" href={demo}>
               {t(locale, 'nav.demo')}

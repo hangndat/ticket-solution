@@ -10,6 +10,7 @@ export type CopyKey =
   | 'nav.brand'
   | 'nav.demo'
   | 'nav.interest'
+  | 'nav.interest.short'
   | 'nav.login'
   | 'nav.privacy'
   | 'nav.support'
@@ -215,6 +216,7 @@ const VI: Record<CopyKey, string> = {
   'nav.brand': 'vemoki',
   'nav.demo': 'Xem demo',
   'nav.interest': 'Đăng ký quan tâm',
+  'nav.interest.short': 'Quan tâm',
   'nav.login': 'Đăng nhập',
   'nav.privacy': 'Quyền riêng tư',
   'nav.support': 'Hỗ trợ',
@@ -472,6 +474,7 @@ const EN: Record<CopyKey, string> = {
   'nav.brand': 'vemoki',
   'nav.demo': 'View demo',
   'nav.interest': 'Register interest',
+  'nav.interest.short': 'Interest',
   'nav.login': 'Log in',
   'nav.privacy': 'Privacy',
   'nav.support': 'Support',

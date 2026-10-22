@@ -44,9 +44,15 @@ html[data-surface='product'] .demo-data-strip {
   background: linear-gradient(90deg, #1a2740, #0b1220);
   color: #c8d4e4;
   font-size: 0.7rem;
-  padding: 8px 20px;
+  padding: 8px 12px;
   text-align: center;
+  text-wrap: balance;
+  line-height: 1.4;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+html[data-surface='product'] .demo-data-strip__meta {
+  white-space: nowrap;
 }
 
 html[data-surface='product'] .demo-data-strip strong {
@@ -59,6 +65,77 @@ html[data-surface='product'] .site-header {
   background: rgba(255, 255, 255, 0.92);
   backdrop-filter: blur(12px);
   border-bottom-color: var(--line);
+}
+
+html[data-surface='product'] .site-header .top-nav {
+  flex-wrap: nowrap;
+  align-items: center;
+  min-height: 56px;
+}
+
+html[data-surface='product'] .site-header .top-nav > * {
+  align-self: center;
+}
+
+html[data-surface='product'] [data-testid='site-wordmark'] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  height: 44px;
+  min-height: 44px;
+  max-height: 44px;
+  line-height: 1;
+  flex: 0 1 auto;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+html[data-surface='product'] [data-testid='site-wordmark'] .brand-mark {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+
+html[data-surface='product'] .nav-menu-toggle__label,
+html[data-surface='product'] .nav-menu-toggle__icon {
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+}
+
+@media (max-width: 767px) {
+  html[data-surface='product'] .site-header .top-nav {
+    box-sizing: border-box;
+    min-height: 56px;
+    height: 56px;
+    max-height: 56px;
+    padding: 0 12px;
+    gap: 8px;
+    align-items: center;
+  }
+
+  html[data-surface='product'] .site-header .wordmark {
+    line-height: 1;
+    align-self: center;
+  }
+
+  html[data-surface='product'] .nav-menu-toggle {
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    align-self: center;
+    height: 44px;
+    min-height: 44px;
+    max-height: 44px;
+    padding: 0 12px;
+    line-height: 1;
+    white-space: nowrap;
+    flex-shrink: 0;
+    margin: 0;
+  }
 }
 
 html[data-surface='product'] .nav-link {
