@@ -6,7 +6,7 @@ import type {
   PlatformMeResponse,
 } from '../platform/contracts';
 
-/** Tenant permissions that unlock Admin / Sự kiện chrome (handoff contract §3). */
+/** Tenant permissions that unlock Quản trị chrome (handoff contract §3). */
 export const ADMIN_TENANT_PERMISSIONS = [
   'event.create',
   'event.list',
@@ -209,7 +209,7 @@ export function buildNavLinks(caps: NavCapabilities): NavLink[] {
 
   const links: NavLink[] = [...PRODUCT_NAV_LINKS];
   if (caps.showAdmin) {
-    links.push({ href: '/admin', label: 'Sự kiện', testId: 'nav-admin' });
+    links.push({ href: '/admin', label: 'Quản trị', testId: 'nav-admin' });
   }
   if (caps.showGate) {
     links.push({ href: '/gate', label: 'Cổng', testId: 'nav-gate' });
