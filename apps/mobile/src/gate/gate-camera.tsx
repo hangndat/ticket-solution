@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { AccessibilityInfo, Animated, Easing, Text, View } from 'react-native';
 import { Button } from '@/components/ui/button';
 import { colors } from '@/theme/colors';
+import { space, radius } from '@/theme/tokens';
+import { typography } from '@/theme/typography';
 
 const FRAME_SIZE = 220;
 const SCAN_SWEEP_MS = 1900;
@@ -60,13 +62,13 @@ export function GateCamera({ disabled, onScan }: Props) {
           toValue: SCAN_SWEEP_TRAVEL,
           duration: SCAN_SWEEP_MS,
           easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
+          useNativeDriver: true
         }),
         Animated.timing(scanLineY, {
           toValue: 0,
           duration: SCAN_SWEEP_MS,
           easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
+          useNativeDriver: true
         }),
       ]),
     );
@@ -98,15 +100,15 @@ export function GateCamera({ disabled, onScan }: Props) {
   const scanLineGlow =
     scanning && !reduceMotion
       ? {
-          shadowColor: '#fb7391',
+          shadowColor: colors.signalTint,
           shadowOpacity: 0.5,
           shadowRadius: 14,
-          shadowOffset: { width: 0, height: 0 },
+          shadowOffset: { width: 0, height: 0 }
         }
       : null;
 
   return (
-    <View style={{ height: 240, borderRadius: 16, overflow: 'hidden' }}>
+    <View style={{ height: 240, borderRadius: radius.lg, overflow: 'hidden' }}>
       <CameraView
         style={{ flex: 1 }}
         facing="back"
@@ -133,7 +135,7 @@ export function GateCamera({ disabled, onScan }: Props) {
           bottom: 0,
           alignItems: 'center',
           justifyContent: 'center',
-          opacity: scanning ? 1 : 0,
+          opacity: scanning ? 1 : 0
         }}
       >
         <View
@@ -142,19 +144,15 @@ export function GateCamera({ disabled, onScan }: Props) {
             height: FRAME_SIZE,
             borderWidth: 3,
             borderColor: 'rgba(255,255,255,0.6)',
-            borderRadius: 24,
+            borderRadius: radius.xl,
             alignItems: 'center',
-            justifyContent: 'center',
+            justifyContent: 'center'
           }}
         >
           <Text
-            style={{
-              color: 'rgba(255,255,255,0.92)',
-              fontSize: 14,
-              fontWeight: '500',
+            style={{ ...typography.footnote, color: 'rgba(255,255,255,0.92)',
               textAlign: 'center',
-              paddingHorizontal: 12,
-            }}
+              paddingHorizontal: space.md }}
           >
             Đưa QR vào khung
           </Text>
@@ -166,7 +164,7 @@ export function GateCamera({ disabled, onScan }: Props) {
                 right: SCAN_LINE_INSET,
                 top: SCAN_LINE_TOP,
                 height: 2,
-                backgroundColor: '#fb7391',
+                backgroundColor: colors.signalTint
               },
               scanLineMotionStyle,
               scanLineGlow,

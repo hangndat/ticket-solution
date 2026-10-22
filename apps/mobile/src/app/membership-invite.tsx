@@ -7,12 +7,13 @@ import { AttendeeCta } from '@/components/attendee-cta';
 import { BrandWordmark, Notice } from '@/components/page';
 import {
   buildMembershipInviteWebUrl,
-  isMembershipInviteToken,
+  isMembershipInviteToken
 } from '@/links/membership-invite-url';
 import { getProductWebOrigin } from '@/identity/product-web-origin';
 import { brand, colors } from '@/theme/colors';
 import { fontFamilies } from '@/theme/fonts';
 import { typography } from '@/theme/typography';
+import { space, radius } from '@/theme/tokens';
 
 function firstParam(value: string | string[] | undefined): string {
   if (Array.isArray(value)) return value[0] ?? '';
@@ -57,7 +58,7 @@ export default function MembershipInviteScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: brand.paper }}>
-      <View style={{ padding: 20, gap: 16, paddingBottom: 8 }}>
+      <View style={{ padding: space.xl, gap: space.lg, paddingBottom: space.sm }}>
       <BrandWordmark compact />
       <Text accessibilityRole="header" style={{ color: colors.ink, ...typography.display }}>
         Lời mời thành viên
@@ -79,7 +80,7 @@ export default function MembershipInviteScreen() {
 
       </View>
       {!trusted ? (
-        <View style={{ paddingHorizontal: 20 }}>
+        <View style={{ paddingHorizontal: space.xl }}>
           <Notice title="Không mở được trang nhận lời mời">
             Bản dựng chưa cấu hình địa chỉ web sản phẩm.
           </Notice>
@@ -88,15 +89,15 @@ export default function MembershipInviteScreen() {
         <View
           style={{
             flex: 1,
-            marginHorizontal: 20,
-            marginBottom: 16,
-            borderRadius: 12,
+            marginHorizontal: space.xl,
+            marginBottom: space.lg,
+            borderRadius: radius.md,
             overflow: 'hidden',
-            backgroundColor: brand.paper,
+            backgroundColor: brand.paper
           }}
         >
           {error ? (
-            <View style={{ padding: 16, gap: 12 }}>
+            <View style={{ padding: space.lg, gap: space.md }}>
               <Notice title="Không tải được trang">{error}</Notice>
               <AttendeeCta label="Thử lại" onPress={onRetry} />
             </View>
@@ -132,7 +133,7 @@ export default function MembershipInviteScreen() {
                 top: 0,
                 bottom: 0,
                 alignItems: 'center',
-                justifyContent: 'center',
+                justifyContent: 'center'
               }}
             >
               <Spinner accessibilityLabel="Đang tải trang nhận lời mời" />
@@ -141,7 +142,7 @@ export default function MembershipInviteScreen() {
         </View>
       )}
 
-      <View style={{ paddingHorizontal: 20, paddingBottom: 24 }}>
+      <View style={{ paddingHorizontal: space.xl, paddingBottom: space.xxl }}>
         <AttendeeCta
           label="Về Sự kiện"
           variant="secondary"

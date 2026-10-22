@@ -2,12 +2,12 @@ import { useEffect, useRef, useSyncExternalStore } from 'react';
 import { type Href, useRouter, useSegments } from 'expo-router';
 import {
   STAFF_DEFAULT_SCAN_HREF,
-  shouldReplaceWithStaffScanTab,
+  shouldReplaceWithStaffScanTab
 } from '@/navigation/staff-default-tab-target';
 import {
   consumeStaffScanTabLanding,
   peekStaffScanTabLanding,
-  subscribeStaffScanTabLanding,
+  subscribeStaffScanTabLanding
 } from '@/navigation/staff-scan-tab-landing';
 import { useStaffWorkspace } from '@/navigation/use-staff-workspace';
 
@@ -36,7 +36,7 @@ export function StaffDefaultTabRedirect() {
         staffWorkspace: true,
         segments,
         enteringStaff,
-        pendingScanLanding,
+        pendingScanLanding
       })
     ) {
       if (pendingScanLanding) {

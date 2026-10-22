@@ -8,14 +8,14 @@ import { EventBanner } from '@/components/event-media';
 import {
   EmptyState,
   ErrorState,
-  LoadingState,
+  LoadingState
 } from '@/components/screen-state';
 import { eventsCopy } from '@/components/screen-state-copy';
 import { fetchPlatformPublishedEventList } from '@/published/published-event-api';
 import {
   initialPublishedListPhase,
   publishedListStateFromResult,
-  type PublishedListPhase,
+  type PublishedListPhase
 } from '@/published/events-home';
 import type { PublishedEventSummary } from '@/published/types';
 import { isAppCatalogConfigured } from '@/identity/catalog-context';
@@ -25,13 +25,15 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { useAttendeeTabBarInset } from '@/navigation/use-attendee-tab-bar-inset';
 import { useShowAttendeeTabs } from '@/navigation/use-staff-workspace';
 import { WalletOwnedTicketsLink } from '@/components/wallet-owned-tickets-link';
+import { space, radius } from '@/theme/tokens';
+import { typography } from '@/theme/typography';
 
 function formatListDate(startsAt: string, timezone: string): string {
   try {
     return new Intl.DateTimeFormat('vi', {
       dateStyle: 'medium',
       timeStyle: 'short',
-      timeZone: timezone,
+      timeZone: timezone
     }).format(new Date(startsAt));
   } catch {
     return startsAt;
@@ -46,24 +48,24 @@ function PublishedEventCard({ item }: { item: PublishedEventSummary }) {
   return (
     <View
       style={{
-        backgroundColor: '#ffffff',
-        borderRadius: 16,
+        backgroundColor: colors.onAccent,
+        borderRadius: radius.lg,
         borderCurve: 'continuous',
         overflow: 'hidden',
-        marginBottom: 18,
+        marginBottom: space.lg
       }}
     >
       <Link
         href={{
           pathname: '/events/[tenantSlug]/[slug]',
-          params: { tenantSlug: item.tenantSlug, slug: item.slug },
+          params: { tenantSlug: item.tenantSlug, slug: item.slug }
         }}
         asChild
       >
         <Pressable
           accessibilityRole="link"
           style={({ pressed }) => ({
-            opacity: pressed ? 0.92 : 1,
+            opacity: pressed ? 0.92 : 1
           })}
         >
           <EventBanner
@@ -74,33 +76,23 @@ function PublishedEventCard({ item }: { item: PublishedEventSummary }) {
             style={{ borderRadius: 0 }}
             testID={`pub-media-${item.id}-banner`}
           />
-          <View style={{ padding: 15, gap: 8 }}>
+          <View style={{ padding: space.lg, gap: space.sm }}>
             <Text
-              style={{
-                color: colors.secondary,
-                fontSize: 13,
-                fontFamily: fontFamilies.body,
-              }}
+              style={{ ...typography.caption, color: colors.secondary,
+                fontFamily: fontFamilies.body }}
             >
               {item.brand.organizationName}
             </Text>
             <Text
               accessibilityRole="header"
-              style={{
-                color: brand.ink,
-                fontSize: 22,
-                fontFamily: fontFamilies.display,
-                fontWeight: '600',
-              }}
+              style={{ ...typography.title, color: brand.ink,
+                fontFamily: fontFamilies.display }}
             >
               {item.name}
             </Text>
             <Text
-              style={{
-                color: colors.secondary,
-                fontSize: 15,
-                fontFamily: fontFamilies.body,
-              }}
+              style={{ ...typography.subhead, color: colors.secondary,
+                fontFamily: fontFamilies.body }}
             >
               {dateLine}
               {item.location ? ` · ${item.location}` : ''}
@@ -108,19 +100,15 @@ function PublishedEventCard({ item }: { item: PublishedEventSummary }) {
             <View
               style={{
                 alignSelf: 'flex-start',
-                backgroundColor: '#edf5ef',
-                borderRadius: 6,
-                paddingHorizontal: 8,
-                paddingVertical: 5,
+                backgroundColor: colors.admitSurface,
+                borderRadius: radius.sm,
+                paddingHorizontal: space.sm,
+                paddingVertical: space.xs
               }}
             >
               <Text
-                style={{
-                  color: '#26734c',
-                  fontSize: 11,
-                  fontFamily: fontFamilies.body,
-                  fontWeight: '600',
-                }}
+                style={{ ...typography.badge, color: colors.admit,
+                  fontFamily: fontFamilies.body }}
               >
                 {eventsCopy.publishedStatusPill}
               </Text>
@@ -196,7 +184,7 @@ export function EventsScreen() {
         organizationName: first.brand.organizationName,
         primaryColor: first.brand.primaryColor,
         logoUrl: first.brand.logoUrl,
-        wordmark: first.brand.organizationName,
+        wordmark: first.brand.organizationName
       },
       'api',
     );
@@ -222,17 +210,13 @@ export function EventsScreen() {
     publishedPhase === 'ready' || publishedPhase === 'loading';
 
   const listHeader = (
-    <View style={{ gap: 12, paddingBottom: 4 }}>
+    <View style={{ gap: space.md, paddingBottom: space.xs }}>
       {showCatalogChrome ? (
         <Text
           accessibilityRole="header"
-          style={{
-            color: brand.ink,
-            fontSize: 30,
+          style={{ ...typography.hero, color: brand.ink,
             fontFamily: fontFamilies.display,
-            fontWeight: '700',
-            letterSpacing: -0.5,
-          }}
+            letterSpacing: -0.5 }}
         >
           {eventsCopy.listHeadline}
         </Text>
@@ -275,7 +259,7 @@ export function EventsScreen() {
 
   const listFooter =
     showAttendeeChrome && publishedPhase === 'ready' ? (
-      <View style={{ paddingTop: 8, paddingBottom: 32 }}>
+      <View style={{ paddingTop: space.sm, paddingBottom: space.xxxl }}>
         <AttendeeCta
           label={eventsCopy.redeemCta}
           variant="secondary"
@@ -295,10 +279,10 @@ export function EventsScreen() {
         scrollIndicatorInsets={{ bottom: tabBarInset - insets.bottom }}
         style={{ flex: 1, backgroundColor: brand.paper }}
         contentContainerStyle={{
-          paddingHorizontal: 20,
-          paddingTop: 8,
+          paddingHorizontal: space.xl,
+          paddingTop: space.sm,
           paddingBottom: bottomInset,
-          flexGrow: 1,
+          flexGrow: 1
         }}
         data={listData}
         keyExtractor={(item) => `pub:${item.tenantSlug}:${item.id}`}
@@ -333,7 +317,7 @@ export function EventsScreen() {
 
 const styles = StyleSheet.create({
   searchField: {
-    backgroundColor: '#e8ecf1',
-    borderRadius: 11,
-  },
+    backgroundColor: colors.surfaceMuted,
+    borderRadius: radius.md
+  }
 });
