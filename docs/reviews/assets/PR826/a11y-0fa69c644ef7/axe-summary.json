@@ -1,0 +1,25 @@
+{
+  "sha": "0fa69c644ef787183ccb639d85d3600160c7f5df",
+  "reports": [
+    {
+      "label": "390-default",
+      "violationCount": 0,
+      "seriousCritical": []
+    },
+    {
+      "label": "1280-default",
+      "violationCount": 0,
+      "seriousCritical": []
+    },
+    {
+      "label": "390-reduce",
+      "violationCount": 0,
+      "seriousCritical": []
+    },
+    {
+      "label": "1280-reduce",
+      "violationCount": 0,
+      "seriousCritical": []
+    }
+  ]
+}
