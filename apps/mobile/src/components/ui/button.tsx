@@ -141,13 +141,13 @@ const styles = StyleSheet.create({
     alignItems: 'center'
   },
   sizeMd: {
-    paddingVertical: space.md - 2,
-    paddingHorizontal: space.lg + 2
+    paddingVertical: space.sm + space.xxs,
+    paddingHorizontal: space.lg + space.xxs
   },
   sizeLg: {
     minHeight: 48,
-    paddingVertical: space.md + 2,
-    paddingHorizontal: space.lg + 2
+    paddingVertical: space.md + space.xxs,
+    paddingHorizontal: space.lg + space.xxs
   },
   primary: {
     backgroundColor: colors.accent,

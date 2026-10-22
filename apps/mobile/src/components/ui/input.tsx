@@ -84,7 +84,7 @@ export const Input = forwardRef<TextInputRef, InputProps>(function Input(
 
 const styles = StyleSheet.create({
   container: {
-    gap: space.xs + 2
+    gap: space.xs + space.xxs
   },
   label: {
     color: colors.label,
