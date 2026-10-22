@@ -1,4 +1,5 @@
-import { Pressable, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { Button } from '@/components/ui/button';
 import { colors } from '@/theme/colors';
 import { useStaffGateWorkspace } from './staff-gate-workspace-context';
 
@@ -24,20 +25,16 @@ export function StaffGateNoEventState() {
         {gate.gateEventsError ??
           'Tài khoản chưa được gán sự kiện có quyền cổng. Làm mới hoặc đăng xuất để dùng chế độ khách.'}
       </Text>
-      <Pressable
-        accessibilityRole="button"
+      <Button
+        label="Làm mới"
         accessibilityLabel="Làm mới danh sách sự kiện"
         onPress={() => void gate.refreshGateEvents()}
-        style={{
-          alignSelf: 'flex-start',
-          paddingVertical: 10,
-          paddingHorizontal: 14,
-          borderRadius: 10,
-          backgroundColor: colors.accent,
-        }}
-      >
-        <Text style={{ color: colors.onAccent, fontWeight: '600' }}>Làm mới</Text>
-      </Pressable>
+        style={styles.refresh}
+      />
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  refresh: { alignSelf: 'flex-start' },
+});

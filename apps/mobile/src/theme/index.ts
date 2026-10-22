@@ -1,4 +1,5 @@
 export { brand, colors } from './colors';
+export { space, radius, elevation } from './tokens';
 export { typography } from './typography';
 
 export { ThemeProvider, useTheme } from './ThemeProvider';
