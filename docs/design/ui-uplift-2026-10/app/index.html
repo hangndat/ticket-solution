@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Vemoki App · UI Uplift 2026-10 (attendee)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Sora:wght@500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/app-uplift.css" />
+</head>
+<body>
+  <a class="skip" href="#site">Bỏ qua khung prototype</a>
+  <div class="review">
+    <div class="reviewhead">
+      <div>
+        <h2>Vemoki · App attendee (app.vemoki.com)</h2>
+        <p data-i18n="reviewDesc">UI uplift Live Pulse v2 — prototype HTML tĩnh, không build. Chuyển màn bằng thanh dưới; desktop/mobile và VI/EN trong khung trình duyệt.</p>
+      </div>
+      <div class="review-controls">
+        <div class="seg" role="group" aria-label="Viewport">
+          <button type="button" id="btnDesktop" class="on" onclick="setView('desktop')">Desktop 1280</button>
+          <button type="button" id="btnMobile" onclick="setView('mobile')">Mobile 390</button>
+        </div>
+      </div>
+    </div>
+    <nav class="reviewnav" id="reviewnav" aria-label="Màn hình prototype"></nav>
+  </div>
+  <div class="browser" id="browser">
+    <div class="chrome">
+      <i class="dot" aria-hidden="true"></i>
+      <i class="dot" aria-hidden="true"></i>
+      <i class="dot" aria-hidden="true"></i>
+      <span class="address" id="address">app.vemoki.com</span>
+    </div>
+    <div class="site" id="site" tabindex="-1"></div>
+  </div>
+  <p class="reviewnote" data-i18n="reviewNote">Dữ liệu minh họa · sự kiện demo có nhãn · không gọi API. Khớp FE-BA-COHERENCE: nav không trùng nhãn, lời mời tách redeem/claim, lỗi redeem có bước tiếp theo.</p>
+  <script>
+    const I18N = {
+      vi: {
+        reviewDesc: "UI uplift Live Pulse v2 — prototype HTML tĩnh, không build. Chuyển màn bằng thanh dưới; desktop/mobile và VI/EN trong khung trình duyệt.",
+        reviewNote: "Dữ liệu minh họa · sự kiện demo có nhãn · không gọi API. Khớp FE-BA-COHERENCE: nav không trùng nhãn, lời mời tách redeem/claim, lỗi redeem có bước tiếp theo.",
+        demoStrip: "Dữ liệu mô phỏng",
+        navExplore: "Khám phá",
+        navWallet: "Vé của tôi",
+        navRedeem: "Đổi mã",
+        navClaim: "Nhận lời mời",
+        navAccount: "Tài khoản",
+        menu: "Menu",
+        close: "Đóng",
+        catalogEyebrow: "Sự kiện trên Vemoki",
+        catalogTitle: "Hẹn bạn ở trải nghiệm tiếp theo",
+        catalogSub: "Tìm sự kiện, đổi mã vé và mang QR tới cổng — một ứng dụng cho người tham dự.",
+        searchPh: "Tìm sự kiện, địa điểm hoặc nhà tổ chức",
+        filterSoon: "Sắp diễn ra",
+        filterAll: "Tất cả",
+        demoBadge: "Demo",
+        owned: (n) => `Bạn có ${n} vé`,
+        viewTickets: "Xem vé →",
+        backEvents: "‹ Tất cả sự kiện",
+        about: "Về sự kiện",
+        attendInfo: "Thông tin tham dự",
+        attendBody: "Kiểm tra giờ mở cổng trên vé. Đưa mã QR cho nhân viên khi vào.",
+        yourTickets: "Vé tham dự của bạn",
+        haveCode: "Bạn có mã nhận vé từ nhà tổ chức?",
+        redeemCta: "Đổi mã lấy vé",
+        redeemHelp: "Mã xác định đúng sự kiện — không cần chọn tổ chức thủ công.",
+        redeemTitle: "Đổi mã lấy vé",
+        redeemSub: "Một mã duy nhất cho vé của bạn.",
+        codeLabel: "Mã nhận vé",
+        codePh: "Nhập hoặc dán mã",
+        findTicket: "Tìm vé",
+        loginContinue: "Đăng nhập để tiếp tục",
+        redeemHelp2: "Mã được kiểm tra trước khi bạn xác nhận nhận vé.",
+        loginTitle: "Đăng nhập",
+        loginSubRedeem: "Hoàn tất đăng nhập để tiếp tục đổi mã.",
+        loginSubDefault: "Vé và sự kiện của bạn ở cùng một nơi.",
+        loginBody: "Bước này chuyển tới xác thực Vemoki rồi trở lại đúng tác vụ.",
+        loginBtn: "Tiếp tục đăng nhập",
+        loginMock: "Mockup không thu thập mật khẩu.",
+        termsTitle: "Xác nhận điều khoản",
+        termsSub: "Đọc và đồng ý trước khi nhận vé vào ví.",
+        termsText: "Bạn nhận vé điện tử cho sự kiện được chỉ định bởi mã. Vé không chuyển nhượng trên nền tảng pilot. QR chỉ dùng cho lượt vào được cấp.",
+        termsAgree: "Tôi đồng ý với điều khoản nhận vé",
+        confirmReceive: "Xác nhận nhận vé",
+        successTitle: "Đã thêm vé vào ví",
+        successSub: "Mang QR tới cổng khi sự kiện bắt đầu.",
+        openWallet: "Mở ví vé",
+        errorTitle: "Không đổi được mã",
+        errorSub: "Mã không hợp lệ hoặc đã hết hạn cho sự kiện này.",
+        errorAction: "Kiểm tra lại mã trong email hoặc liên hệ nhà tổ chức. Bạn vẫn có thể xem vé đã có trong Vé của tôi.",
+        tryAgain: "Thử mã khác",
+        goWallet: "Vé của tôi",
+        walletTitle: "Vé của tôi",
+        walletSub: "Quản lý vé từ mọi nhà tổ chức.",
+        walletMeta: "3 vé · 2 sự kiện",
+        tagUnused: "Chưa sử dụng",
+        ticketType: "Vé phổ thông",
+        openTicket: "Mở vé →",
+        ticketBack: "‹ Vé của tôi",
+        qrHelp: "Đưa mã này cho nhân viên tại cổng.",
+        ticketInfo: "Thông tin vé",
+        qrMock: "Mã minh họa — không dùng tại cổng thật.",
+        accountTitle: "Tài khoản",
+        accountSub: "Thông tin và quyền riêng tư.",
+        you: "Bạn",
+        notLogged: "Chưa đăng nhập",
+        loginHint: "Đăng nhập để xem và quản lý vé.",
+        notifications: "Thông báo",
+        notifBody: "Vé và cập nhật sự kiện hiển thị trong tài khoản. Quyền thông báo trình duyệt là thiết lập riêng.",
+        privacy: "Quyền riêng tư & dữ liệu",
+        privacyPolicy: "Chính sách quyền riêng tư",
+        readOnWeb: "Đọc trên website",
+        deleteAccount: "Yêu cầu xóa tài khoản",
+        logout: "Đăng xuất",
+        claimTitle: "Nhận lời mời sự kiện",
+        claimSub: "Khác với mã vé — dùng khi bạn được mời tham dự qua email.",
+        claimBtn: "Xem lời mời",
+        emptyWalletTitle: "Chưa có vé",
+        emptyWalletSub: "Đổi mã hoặc nhận lời mời để thêm vé vào ví.",
+        loadingTitle: "Đang tải sự kiện…",
+        loadingSub: "Vui lòng chờ trong giây lát.",
+        errorLoadTitle: "Không tải được danh sách",
+        errorLoadSub: "Kiểm tra kết nối và thử lại.",
+        retry: "Thử lại",
+        footerTag: "© Vemoki · Một nơi cho mọi trải nghiệm.",
+        footerRedeem: "Đổi mã lấy vé",
+        toastOk: "Được vào",
+        toastOkSub: "Minh Anh · Vé phổ thông",
+        toastWarn: "Vé đã được sử dụng",
+        toastWarnSub: "Đã vào lúc 18:32 · Không tạo lượt mới",
+        guestName: "Minh Anh",
+        time: "THỜI GIAN",
+        place: "ĐỊA ĐIỂM",
+        city: "TP. Hồ Chí Minh",
+        aboutBody: "Không gian gặp gỡ và trải nghiệm trực tiếp. Cập nhật từ nhà tổ chức hiển thị tại đây.",
+      },
+      en: {
+        reviewDesc: "Live Pulse v2 UI uplift — static HTML, no build. Use the bar below to switch screens; VI/EN and desktop/mobile inside the browser frame.",
+        reviewNote: "Illustrative data · demo events labeled · no API. Aligns FE-BA-COHERENCE: distinct nav labels, invite vs redeem, actionable redeem errors.",
+        demoStrip: "Simulated data",
+        navExplore: "Explore",
+        navWallet: "My tickets",
+        navRedeem: "Redeem",
+        navClaim: "Event invite",
+        navAccount: "Account",
+        menu: "Menu",
+        close: "Close",
+        catalogEyebrow: "Events on Vemoki",
+        catalogTitle: "See you at what’s next",
+        catalogSub: "Find events, redeem codes, and bring your QR to the gate — one app for attendees.",
+        searchPh: "Search events, venue, or organizer",
+        filterSoon: "Upcoming",
+        filterAll: "All",
+        demoBadge: "Demo",
+        owned: (n) => `You have ${n} ticket${n > 1 ? "s" : ""}`,
+        viewTickets: "View tickets →",
+        backEvents: "‹ All events",
+        about: "About",
+        attendInfo: "Attendance",
+        attendBody: "Check gate times on your ticket. Show your QR to staff at entry.",
+        yourTickets: "Your tickets",
+        haveCode: "Have an invite code from the organizer?",
+        redeemCta: "Redeem for tickets",
+        redeemHelp: "The code resolves the correct event — no manual org pick.",
+        redeemTitle: "Redeem for tickets",
+        redeemSub: "One code for your ticket.",
+        codeLabel: "Ticket code",
+        codePh: "Enter or paste code",
+        findTicket: "Find ticket",
+        loginContinue: "Sign in to continue",
+        redeemHelp2: "We validate the code before you confirm.",
+        loginTitle: "Sign in",
+        loginSubRedeem: "Finish sign-in to continue redeeming.",
+        loginSubDefault: "Your tickets and events in one place.",
+        loginBody: "This step goes to Vemoki auth, then returns to your task.",
+        loginBtn: "Continue to sign in",
+        loginMock: "Mockup does not collect passwords.",
+        termsTitle: "Confirm terms",
+        termsSub: "Read and agree before adding tickets to your wallet.",
+        termsText: "You receive digital tickets for the event tied to this code. Tickets are non-transferable on the pilot. QR is valid for one entry.",
+        termsAgree: "I agree to the ticket terms",
+        confirmReceive: "Confirm & add to wallet",
+        successTitle: "Ticket added to wallet",
+        successSub: "Bring your QR to the gate when the event starts.",
+        openWallet: "Open wallet",
+        errorTitle: "Could not redeem",
+        errorSub: "This code is invalid or expired for this event.",
+        errorAction: "Check the code in your email or contact the organizer. You can still open tickets you already have under My tickets.",
+        tryAgain: "Try another code",
+        goWallet: "My tickets",
+        walletTitle: "My tickets",
+        walletSub: "Tickets from every organizer you attend.",
+        walletMeta: "3 tickets · 2 events",
+        tagUnused: "Unused",
+        ticketType: "General admission",
+        openTicket: "Open ticket →",
+        ticketBack: "‹ My tickets",
+        qrHelp: "Show this code to staff at the gate.",
+        ticketInfo: "Ticket details",
+        qrMock: "Illustration only — not valid at a real gate.",
+        accountTitle: "Account",
+        accountSub: "Profile and privacy.",
+        you: "You",
+        notLogged: "Not signed in",
+        loginHint: "Sign in to view and manage tickets.",
+        notifications: "Notifications",
+        notifBody: "Tickets and event updates appear in your account. Browser notification permission is separate.",
+        privacy: "Privacy & data",
+        privacyPolicy: "Privacy policy",
+        readOnWeb: "Read on website",
+        deleteAccount: "Request account deletion",
+        logout: "Sign out",
+        claimTitle: "Accept event invitation",
+        claimSub: "Not a ticket code — use when invited by email.",
+        claimBtn: "View invitation",
+        emptyWalletTitle: "No tickets yet",
+        emptyWalletSub: "Redeem a code or accept an invite to add tickets.",
+        loadingTitle: "Loading events…",
+        loadingSub: "Please wait a moment.",
+        errorLoadTitle: "Could not load list",
+        errorLoadSub: "Check your connection and try again.",
+        retry: "Retry",
+        footerTag: "© Vemoki · One place for every experience.",
+        footerRedeem: "Redeem code",
+        toastOk: "Admitted",
+        toastOkSub: "Minh Anh · General admission",
+        toastWarn: "Ticket already used",
+        toastWarnSub: "Checked in at 18:32 · No new entry",
+        guestName: "Minh Anh",
+        time: "WHEN",
+        place: "WHERE",
+        city: "Ho Chi Minh City",
+        aboutBody: "A space to meet and experience live moments. Organizer updates appear here.",
+      },
+    };
+
+    let locale = "vi";
+    let view = "desktop";
+    let role = "guest";
+    let page = "catalog";
+    let menuOpen = false;
+    let selected = "MFest";
+    let walletFilter = null;
+    let redeemIntent = false;
+    let showToast = false;
+
+    const events = [
+      { name: "MFest", org: "MFest Entertainment", date: "24 Oct · 18:00", style: "", count: 2, demo: true },
+      { name: "Đêm nhạc bên sông", org: "River Collective", date: "31 Oct · 19:00", style: "green", count: 1, demo: false },
+      { name: "Sắc màu sáng tạo", org: "Studio Assembly", date: "8 Nov · 09:00", style: "gold", count: 0, demo: true },
+    ];
+
+    const screens = [
+      ["Guest · Catalog", "guest", "catalog"],
+      ["User · Catalog", "user", "catalog"],
+      ["Event detail", "user", "detail"],
+      ["Redeem · gate", "guest", "redeem"],
+      ["Redeem · form", "user", "redeem"],
+      ["Redeem · terms", "user", "redeem-terms"],
+      ["Redeem · success", "user", "redeem-success"],
+      ["Redeem · error", "user", "redeem-error"],
+      ["Claim invite", "guest", "claim"],
+      ["Wallet", "user", "wallet"],
+      ["Wallet empty", "guest", "wallet-empty"],
+      ["Ticket · QR", "user", "ticket"],
+      ["Account", "user", "account"],
+      ["Loading", "guest", "loading"],
+      ["Error", "guest", "error"],
+      ["Toast", "user", "wallet", true],
+    ];
+
+    const site = document.getElementById("site");
+    const t = (key) => {
+      const v = I18N[locale][key];
+      return typeof v === "function" ? v : v;
+    };
+    const tk = (key) => {
+      const v = I18N[locale][key];
+      return typeof v === "function" ? v : v ?? key;
+    };
+
+    function esc(s) {
+      return String(s).replaceAll("&", "&amp;").replaceAll('"', "&quot;").replaceAll("<", "&lt;");
+    }
+
+    function setView(v) {
+      view = v;
+      document.getElementById("browser").className = "browser" + (v === "mobile" ? " mobile" : "");
+      document.getElementById("btnDesktop").classList.toggle("on", v === "desktop");
+      document.getElementById("btnMobile").classList.toggle("on", v === "mobile");
+    }
+
+    function setLocale(l) {
+      locale = l;
+      document.documentElement.lang = l === "vi" ? "vi" : "en";
+      document.querySelectorAll("[data-i18n]").forEach((el) => {
+        const k = el.getAttribute("data-i18n");
+        if (I18N[l][k]) el.textContent = I18N[l][k];
+      });
+      render();
+    }
+
+    function choose(r, p, toast) {
+      role = r;
+      walletFilter = null;
+      menuOpen = false;
+      showToast = !!toast;
+      go(p);
+    }
+
+    function go(p) {
+      page = p;
+      menuOpen = false;
+      render();
+      site.scrollTop = 0;
+    }
+
+    function current() {
+      return events.find((e) => e.name === selected) || events[0];
+    }
+
+    function navBtn(label, p, active) {
+      return `<button type="button" class="${active ? "on" : ""}" onclick="go('${p}')">${label}</button>`;
+    }
+
+    function spotlightHandlers() {
+      requestAnimationFrame(() => {
+        document.querySelectorAll(".event-card").forEach((card) => {
+          card.addEventListener("pointermove", (e) => {
+            const r = card.getBoundingClientRect();
+            card.style.setProperty("--mx", `${((e.clientX - r.left) / r.width) * 100}%`);
+            card.style.setProperty("--my", `${((e.clientY - r.top) / r.height) * 100}%`);
+          });
+        });
+      });
+    }
+
+    function nav() {
+      const links =
+        navBtn(tk("navExplore"), "catalog", page === "catalog" || page === "loading" || page === "error") +
+        (role !== "guest" ? navBtn(tk("navWallet"), "wallet", page === "wallet" || page === "ticket") : "") +
+        navBtn(tk("navRedeem"), "redeem", page.startsWith("redeem")) +
+        navBtn(tk("navClaim"), "claim", page === "claim") +
+        navBtn(tk("navAccount"), "account", page === "account");
+
+      const menu = menuOpen
+        ? `<div class="menu-sheet" role="dialog" aria-label="${tk("menu")}">${links}<button type="button" class="btn-secondary" style="margin-top:12px;width:100%" onclick="menuOpen=false;render()">${tk("close")}</button></div>`
+        : "";
+
+      return (
+        `<div class="demo-strip" role="status"><strong>${tk("demoStrip")}</strong> · app.vemoki.com · prototype PD 2026-10-22</div>` +
+        `<header class="nav">` +
+        `<button type="button" class="logo" onclick="go('catalog')">vemoki<span aria-hidden="true">↗</span></button>` +
+        `<nav class="navlinks" aria-label="App">${links}</nav>` +
+        `<div class="nav-actions">` +
+        `<div class="locale-toggle" role="group" aria-label="Language">` +
+        `<button type="button" class="${locale === "vi" ? "on" : ""}" onclick="setLocale('vi')">VI</button>` +
+        `<button type="button" class="${locale === "en" ? "on" : ""}" onclick="setLocale('en')">EN</button>` +
+        `</div>` +
+        (role !== "guest"
+          ? `<div class="avatar"><i aria-hidden="true">MA</i><span>${tk("guestName")}</span></div>`
+          : "") +
+        `<button type="button" class="mobile-menu-btn" aria-expanded="${menuOpen}" onclick="menuOpen=true;render()">☰ ${tk("menu")}</button>` +
+        `</div></header>${menu}`
+      );
+    }
+
+    function footer() {
+      return (
+        `<footer class="footer"><span>${tk("footerTag")}</span><nav>` +
+        navBtn(tk("navExplore"), "catalog", false) +
+        navBtn(tk("footerRedeem"), "redeem", false) +
+        navBtn(tk("navAccount"), "account", false) +
+        `</nav></footer>`
+      );
+    }
+
+    function searchIcon() {
+      return '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3-3"/></svg>';
+    }
+
+    function eventCard(e) {
+      const owned =
+        role !== "guest" && e.count
+          ? `<button type="button" class="owned-strip" onclick="event.stopPropagation();walletFilter='${esc(e.name)}';go('wallet')"><span>${I18N[locale].owned(e.count)}</span><span>${tk("viewTickets")}</span></button>`
+          : "";
+      const demo = e.demo ? `<span class="badge-demo">${tk("demoBadge")}</span>` : "";
+      return (
+        `<article class="event-card-wrap"><button type="button" class="event-card" onclick="selected='${esc(e.name)}';go('detail')">` +
+        `<div class="event-art ${e.style}"><span class="event-art-title">${esc(e.name)}</span></div>` +
+        `<div class="event-body"><div class="event-meta"><small>${esc(e.org)}</small>${demo}</div>` +
+        `<h3>${esc(e.name)}</h3><p>${esc(e.date)} · ${tk("city")}</p></div></button>${owned}</article>`
+      );
+    }
+
+    function qr() {
+      const cells = Array.from({ length: 441 }, (_, i) => {
+        const on = (i * 7 + (i % 21) * 3) % 13 > 6;
+        return `<i class="${on ? "" : "blank"}" aria-hidden="true"></i>`;
+      }).join("");
+      return `<div class="qr" aria-label="QR illustration">${cells}</div>`;
+    }
+
+    function catalog() {
+      return (
+        `<section class="catalog-hero"><div class="catalog-hero-inner">` +
+        `<p class="eyebrow">${tk("catalogEyebrow")}</p>` +
+        `<h1>${tk("catalogTitle")}</h1><p>${tk("catalogSub")}</p></div></section>` +
+        `<div class="tools"><div class="search-wrap">${searchIcon()}<input class="search" type="search" aria-label="${tk("searchPh")}" placeholder="${tk("searchPh")}" oninput="filterEvents(this.value)" /></div>` +
+        `<select aria-label="Filter"><option>${tk("filterSoon")}</option><option>${tk("filterAll")}</option></select></div>` +
+        `<div class="chips"><button type="button" class="chip on">${tk("filterSoon")}</button><button type="button" class="chip">${tk("filterAll")}</button></div>` +
+        `<div class="grid" id="eventGrid">${events.map(eventCard).join("")}</div>`
+      );
+    }
+
+    function detail() {
+      const e = current();
+      const owned =
+        role !== "guest" && e.count
+          ? `<button type="button" class="btn btn-secondary" onclick="walletFilter='${esc(e.name)}';go('wallet')">${I18N[locale].owned(e.count)} — ${tk("viewTickets")}</button>`
+          : `<p class="help">${tk("haveCode")}</p><button type="button" class="btn btn-primary" onclick="redeemIntent=true;go('redeem')">${tk("redeemCta")}</button><p class="help">${tk("redeemHelp")}</p>`;
+      return (
+        `<button type="button" class="back btn-ghost" onclick="go('catalog')">${tk("backEvents")}</button>` +
+        `<div class="event-art detail-hero ${e.style}"><span class="event-art-title">${esc(e.name)}</span></div>` +
+        `<div class="cols"><div><h1>${esc(e.name)}</h1><p>${esc(e.org)}</p>` +
+        `<div class="facts"><div><small>${tk("time")}</small><b>${esc(e.date)}</b></div><div><small>${tk("place")}</small><b>${tk("city")}</b></div></div>` +
+        `<h2>${tk("about")}</h2><p>${tk("aboutBody")}</p><h3 style="margin-top:1.5rem">${tk("attendInfo")}</h3><p>${tk("attendBody")}</p></div>` +
+        `<aside class="sidebox sidebox-highlight"><h3>${tk("yourTickets")}</h3>${owned}</aside></div>`
+      );
+    }
+
+    function render() {
+      document.getElementById("reviewnav").innerHTML = screens
+        .map(([label, r, p, toast]) => {
+          const on = role === r && page === p && (!toast || showToast);
+          return `<button type="button" class="${on ? "on" : ""}" onclick="choose('${r}','${p}',${toast ? "true" : "false"})">${label}</button>`;
+        })
+        .join("");
+
+      const paths = {
+        catalog: "",
+        detail: "t/mfest/events/mfest",
+        redeem: "redeem",
+        "redeem-terms": "redeem/confirm",
+        "redeem-success": "redeem/success",
+        "redeem-error": "redeem",
+        claim: "claim",
+        wallet: "wallet",
+        "wallet-empty": "wallet",
+        ticket: "wallet/ticket",
+        account: "account",
+        loading: "",
+        error: "",
+      };
+      document.getElementById("address").textContent = "app.vemoki.com/" + (paths[page] || "");
+
+      let main = "";
+      if (page === "catalog") main = catalog();
+      else if (page === "detail") main = detail();
+      else if (page === "loading")
+        main =
+          `<div class="surface-state" role="status" aria-busy="true"><div class="state-icon loading" aria-hidden="true">…</div><h2>${tk("loadingTitle")}</h2><p>${tk("loadingSub")}</p></div>` +
+          `<div class="skeleton-grid"><div class="skel art"></div><div class="skel art"></div><div class="skel art"></div></div>`;
+      else if (page === "error")
+        main =
+          `<div class="surface-state" role="alert"><div class="state-icon error" aria-hidden="true">!</div><h2>${tk("errorLoadTitle")}</h2><p>${tk("errorLoadSub")}</p>` +
+          `<button type="button" class="btn btn-primary" style="margin-top:16px" onclick="go('catalog')">${tk("retry")}</button></div>`;
+      else if (page === "redeem")
+        main =
+          `<div class="narrow"><div class="page-intro"><h1>${tk("redeemTitle")}</h1><p>${tk("redeemSub")}</p></div>` +
+          `<div class="form-card"><label for="code">${tk("codeLabel")}</label><input id="code" type="text" placeholder="${tk("codePh")}" autocomplete="off" />` +
+          `<button type="button" class="btn btn-primary" onclick="lookup()">${role === "guest" ? tk("loginContinue") : tk("findTicket")}</button>` +
+          `<p class="help">${tk("redeemHelp2")}</p></div></div>`;
+      else if (page === "redeem-terms")
+        main =
+          `<div class="narrow"><div class="page-intro"><h1>${tk("termsTitle")}</h1><p>${tk("termsSub")}</p></div>` +
+          `<div class="form-card"><p class="help" style="margin:0 0 12px">MFest · ${tk("ticketType")}</p>` +
+          `<div class="terms-box">${tk("termsText")}</div>` +
+          `<label class="check-row"><input type="checkbox" checked /><span>${tk("termsAgree")}</span></label>` +
+          `<button type="button" class="btn btn-primary" onclick="go('redeem-success')">${tk("confirmReceive")}</button></div></div>`;
+      else if (page === "redeem-success")
+        main =
+          `<div class="narrow success-panel"><div class="success-ring" aria-hidden="true">✓</div><h1>${tk("successTitle")}</h1><p>${tk("successSub")}</p>` +
+          `<button type="button" class="btn btn-primary" style="margin-top:20px" onclick="go('wallet')">${tk("openWallet")}</button></div>`;
+      else if (page === "redeem-error")
+        main =
+          `<div class="narrow"><div class="page-intro"><h1>${tk("errorTitle")}</h1><p>${tk("errorSub")}</p></div>` +
+          `<div class="notice error" role="alert">${tk("errorAction")}</div>` +
+          `<button type="button" class="btn btn-primary" onclick="go('redeem')">${tk("tryAgain")}</button>` +
+          `<button type="button" class="btn btn-secondary" style="margin-top:10px;width:100%" onclick="role='user';go('wallet')">${tk("goWallet")}</button></div>`;
+      else if (page === "claim")
+        main =
+          `<div class="narrow"><div class="page-intro"><h1>${tk("claimTitle")}</h1><p>${tk("claimSub")}</p></div>` +
+          `<div class="form-card notice" style="margin:0">${locale === "vi" ? "Khác với tab «Đổi mã» — đây là lời mời tham dự sự kiện qua email, không phải mã vé CSV." : "Not the Redeem tab — this is an email event invitation, not a ticket code."}</div>` +
+          `<button type="button" class="btn btn-primary" style="margin-top:16px;width:100%">${tk("claimBtn")}</button></div>`;
+      else if (page === "wallet-empty")
+        main =
+          `<div class="surface-state"><div class="state-icon empty" aria-hidden="true">◎</div><h2>${tk("emptyWalletTitle")}</h2><p>${tk("emptyWalletSub")}</p>` +
+          `<button type="button" class="btn btn-primary" style="margin-top:16px" onclick="go('redeem')">${tk("redeemCta")}</button></div>`;
+      else if (page === "wallet") {
+        const es = walletFilter ? events.filter((e) => e.name === walletFilter) : events.filter((e) => e.count);
+        main =
+          `<div class="wallet-header"><div><h1>${tk("walletTitle")}</h1><p>${tk("walletSub")}</p></div>` +
+          `<button type="button" class="btn btn-primary" onclick="redeemIntent=true;go('redeem')">${tk("redeemCta")}</button></div>` +
+          (walletFilter
+            ? `<div class="chips"><span class="chip">${esc(walletFilter)} <button type="button" class="textlink" onclick="walletFilter=null;render()">×</button></span></div>`
+            : `<p class="muted" style="margin-bottom:16px">${tk("walletMeta")}</p>`) +
+          `<div class="ticket-grid">${es
+            .flatMap((e) =>
+              Array.from({ length: e.count }, (_, i) =>
+                `<article class="ticket-card"><div class="ticket-top"><span class="tag">${tk("tagUnused")}</span><h3 style="margin-top:12px">${esc(e.name)}</h3><p class="help">${esc(e.date)}</p></div>` +
+                  `<div class="ticket-mid"><b>${tk("ticketType")} · ${i + 1}</b><p class="help">${tk("guestName")} · ${esc(e.org)}</p></div>` +
+                  `<div class="ticket-foot"><span>MF–8K2P–${i + 1}X9Q</span><button type="button" class="textlink" onclick="selected='${esc(e.name)}';go('ticket')">${tk("openTicket")}</button></div></article>`
+              )
+            )
+            .join("")}</div>`;
+      } else if (page === "ticket") {
+        const e = current();
+        main =
+          `<button type="button" class="back btn-ghost" onclick="go('wallet')">${tk("ticketBack")}</button>` +
+          `<div class="cols"><div class="sidebox qr-panel"><span class="tag">${tk("tagUnused")}</span><h2 style="margin-top:14px">${esc(e.name)}</h2>${qr()}<b>MF–8K2P–7X9Q</b><p class="help">${tk("qrHelp")}</p></div>` +
+          `<div><h2>${tk("ticketInfo")}</h2><div class="group">` +
+          `<div class="row-btn"><span><b>${tk("ticketType")}</b><small>${tk("guestName")}</small></span></div>` +
+          `<div class="row-btn"><span><b>${tk("time")}</b><small>${esc(e.date)}</small></span></div>` +
+          `<div class="row-btn"><span><b>${tk("place")}</b><small>${tk("city")}</small></span></div>` +
+          `</div><div class="notice">${tk("qrMock")}</div></div></div>`;
+      } else if (page === "account")
+        main =
+          `<h1 style="margin-top:28px">${tk("accountTitle")}</h1><p>${tk("accountSub")}</p>` +
+          `<div class="account-layout"><nav class="account-nav" aria-label="Account">` +
+          `<button type="button" class="on">${tk("you")}</button><button type="button">${tk("privacy")}</button></nav><div>` +
+          `<h2>${tk("you")}</h2><div class="group"><div class="row-btn"><span><b>${role === "guest" ? tk("notLogged") : "minhanh@example.com"}</b><small>${role === "guest" ? tk("loginHint") : tk("guestName")}</small></span></div></div>` +
+          (role === "guest" ? `<button type="button" class="btn btn-primary" onclick="go('redeem')">${tk("loginBtn")}</button>` : "") +
+          `<h2 style="margin-top:1.5rem">${tk("notifications")}</h2><div class="notice">${tk("notifBody")}</div>` +
+          `<h2>${tk("privacy")}</h2><div class="group"><button type="button" class="row-btn"><span><b>${tk("privacyPolicy")}</b><small>${tk("readOnWeb")}</small></span><span>›</span></button>` +
+          (role !== "guest" ? `<button type="button" class="row-btn"><span><b>${tk("deleteAccount")}</b></span><span>›</span></button>` : "") +
+          `</div>${role !== "guest" ? `<button type="button" class="btn btn-destructive" style="margin-top:8px" onclick="role='guest';go('account')">${tk("logout")}</button>` : ""}</div></div>`;
+
+      site.innerHTML = nav() + `<main class="main">${main}</main>` + footer();
+
+      if (showToast && page === "wallet") {
+        site.insertAdjacentHTML(
+          "beforeend",
+          `<div class="toast" role="status"><div><strong>${tk("toastOk")}</strong>${tk("toastOkSub")}</div></div>`
+        );
+        showToast = false;
+      }
+
+      spotlightHandlers();
+    }
+
+    function filterEvents(v) {
+      const q = v.toLowerCase();
+      document.querySelectorAll(".event-card-wrap").forEach((el) => {
+        el.hidden = !el.textContent.toLowerCase().includes(q);
+      });
+    }
+
+    function lookup() {
+      const el = document.getElementById("code");
+      if (!el || !el.value.trim()) {
+        site.insertAdjacentHTML(
+          "beforeend",
+          `<div class="modal-backdrop" onclick="if(event.target===this)render()"><div class="dialog" role="alertdialog"><h2>${locale === "vi" ? "Chưa có mã" : "No code"}</h2><p>${locale === "vi" ? "Nhập mã nhận vé để tiếp tục." : "Enter your ticket code to continue."}</p><button type="button" class="btn btn-primary" onclick="render()">${tk("close")}</button></div></div>`
+        );
+        return;
+      }
+      if (role === "guest") {
+        redeemIntent = true;
+        go("redeem");
+        return;
+      }
+      go("redeem-terms");
+    }
+
+    render();
+  </script>
+</body>
+</html>
