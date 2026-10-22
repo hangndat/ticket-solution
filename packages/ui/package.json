@@ -27,6 +27,7 @@
     "./vemoki-theme.css": "./src/generated/vemoki-theme.css"
   },
   "dependencies": {
+    "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
     "motion": "12.23.24",
     "tailwind-merge": "3.3.1"
@@ -38,6 +39,8 @@
   "devDependencies": {
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
     "typescript": "5.9.3"
   }
 }

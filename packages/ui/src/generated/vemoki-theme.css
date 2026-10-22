@@ -4,4 +4,9 @@
   --color-paper: #F4F6F8;
   --color-signal: #E11D48;
   --color-focus: #2563EB;
+  --color-destructive: #8A1F1F;
+  --color-line: #D7DFE9;
+  --font-display: Sora, ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Be Vietnam Pro", ui-sans-serif, system-ui, sans-serif;
+  --animate-spin: spin 1s linear infinite;
 }
