@@ -29,10 +29,6 @@ export function PortalDualRunBanner({
       description={
         <>
           {t('dualRun.h_16lfg67_2')}
-          <a href={`${product}/gate`} rel="noopener noreferrer">
-            {product}/gate
-          </a>
-          ). Legacy:{' '}
           <a href={legacyAdmin} rel="noopener noreferrer">
             {legacyAdmin}
           </a>

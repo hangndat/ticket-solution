@@ -36,7 +36,7 @@ Hiện trạng source (đã đọc):
 
 | Mã | Quyết định |
 | --- | --- |
-| `GATE-STAY-APP` | Web Gate giữ `app.vemoki.com/gate` trong đợt P0/P1; không chuyển portal cùng cutover admin |
+| `GATE-STAY-APP` | Web Gate giữ `app.vemoki.com/gate` trong đợt P0/P1; không chuyển portal cùng cutover admin. **Superseded 2026-10-22** bởi D-6 (Epic #786, ADR-22 sửa đổi #801): gate web đã gỡ (#804), soát vé staff chỉ trên app iOS; `/gate` redirect 308 → `/`. Rủi ro Android/laptop/kiosk do user chấp nhận. |
 | `PORTAL-SEPARATE-APP` | Next app riêng **`apps/portal`** trong monorepo (không host-aware lâu dài trong `apps/web`; không git repo ngoài) |
 | `PLATFORM-PORTAL-ZONE` | Platform Operator chuyển wave P1.1 vào `portal.vemoki.com/platform` với **client + cookie + audience + nav** riêng; Tenant Owner ≠ Operator |
 | `ANTD-CORE-FIRST` | Ant Design thuần (Layout/Menu/Table/Form/Drawer/Modal/Steps/Upload); locale VI; **không** ProComponents / Umi / Ant Design Pro mặc định |
@@ -167,7 +167,7 @@ Handoff: **đủ để web foundation code ngay** (scaffold portal + login shell
 | --- | --- | --- |
 | Staff invite **accept** / onboarding nhân sự | **`portal.`** | Link email staff → portal path allowlist; login `ticket-admin-web` |
 | Attendee invite / redeem / claim / guest | **`app.`** (giữ) | Không kéo guest vào AntD portal |
-| Gate scanner bookmark | **`app./gate`** | `GATE-STAY-APP` |
+| Gate scanner bookmark | **`app./gate`** | `GATE-STAY-APP`. **Superseded 2026-10-22** bởi D-6 (Epic #786, ADR-22 sửa đổi #801): gate web đã gỡ (#804), soát vé staff chỉ trên app iOS; `/gate` redirect 308 → `/`. Rủi ro Android/laptop/kiosk do user chấp nhận. |
 
 Deep-link an toàn (mọi host):
 
@@ -282,7 +282,7 @@ Headless UAT: `scripts/web-uat.sh` / Playwright — milestone gate khi đóng Ep
 | Phương án | Lý do loại |
 | --- | --- |
 | Host-aware lâu dài trong `apps/web` (A) | Nhiễm AntD/CSP/bundle attendee; user đã duyệt `PORTAL-SEPARATE-APP` |
-| Gate chuyển portal (G1) cùng cutover | Risk day-of/kiosk; đã duyệt `GATE-STAY-APP` |
+| Gate chuyển portal (G1) cùng cutover | Risk day-of/kiosk; đã duyệt `GATE-STAY-APP` (**Superseded 2026-10-22** bởi D-6 (Epic #786, ADR-22 sửa đổi #801): gate web đã gỡ (#804), soát vé staff chỉ trên app iOS; `/gate` redirect 308 → `/`. Rủi ro Android/laptop/kiosk do user chấp nhận.) |
 | Platform host thứ tư / giữ mãi trên app | Ops sớm / lệch staff shell; đã duyệt `PLATFORM-PORTAL-ZONE` |
 | Callback `/api/admin/auth/*` mới | Realm lịch sử lệch code; task cấm thêm legacy path — dùng `/api/auth/callback` trên portal |
 | `Domain=.vemoki.com` / logout đa host bắt buộc P0 | Vi phạm O07/O13 B2; security discovery T4 |
