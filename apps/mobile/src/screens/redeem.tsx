@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
-import { Animated, Pressable, Text, TextInput, View } from 'react-native';
+import { Animated, View } from 'react-native';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { useLocalSearchParams } from 'expo-router';
 import {
   redeemActionAnnouncement,
@@ -41,8 +43,6 @@ import {
 } from '@/redeem/redeem-draft-intent';
 import { RedeemFormFields } from '@/redeem/redeem-form-fields';
 import { useFadeInOnMount } from '@/hooks/use-fade-in-on-mount';
-import { colors } from '@/theme/colors';
-import { fontFamilies } from '@/theme/fonts';
 
 const AUTH_CODES = new Set(['UNAUTHENTICATED', 'EMAIL_NOT_VERIFIED']);
 
@@ -418,54 +418,47 @@ export function RedeemScreen() {
       {schemaNotice ? (
         <Notice title="Biểu mẫu sự kiện">{schemaNotice}</Notice>
       ) : null}
-      <TextInput
+      <Input
         value={tenantSlug}
         onChangeText={setTenantSlug}
         placeholder="Slug tổ chức (biểu mẫu đã xuất bản)"
         autoCapitalize="none"
         accessibilityLabel="Slug tổ chức cho biểu mẫu đã xuất bản"
-        style={field}
       />
-      <TextInput
+      <Input
         value={eventSlug}
         onChangeText={setEventSlug}
         placeholder="Slug sự kiện (biểu mẫu đã xuất bản)"
         autoCapitalize="none"
         accessibilityLabel="Slug sự kiện cho biểu mẫu đã xuất bản"
-        style={field}
       />
-      <Pressable
-        accessibilityRole="button"
+      <Button
+        label="Tải biểu mẫu / điều khoản"
+        variant="secondary"
         accessibilityLabel="Tải biểu mẫu và điều khoản đã xuất bản"
         disabled={busy}
         onPress={() => void loadPublishedSchema()}
-        style={buttonSecondary}
-      >
-        <Text style={buttonSecondaryLabel}>Tải biểu mẫu / điều khoản</Text>
-      </Pressable>
-      <TextInput
+      />
+      <Input
         value={tenantId}
         onChangeText={setTenantId}
         placeholder="ID tổ chức"
         autoCapitalize="none"
         accessibilityLabel="ID tổ chức"
-        style={field}
       />
-      <TextInput
+      <Input
         value={eventId}
         onChangeText={setEventId}
         placeholder="ID sự kiện"
         autoCapitalize="none"
         accessibilityLabel="ID sự kiện"
-        style={field}
       />
-      <TextInput
+      <Input
         value={code}
         onChangeText={setCode}
         placeholder="Mã đổi"
         autoCapitalize="characters"
         accessibilityLabel="Mã đổi"
-        style={field}
       />
       <RedeemFormFields
         form={form}
@@ -537,27 +530,3 @@ export function RedeemScreen() {
   );
 }
 
-const field = {
-  minHeight: 48,
-  padding: 12,
-  borderRadius: 12,
-  backgroundColor: colors.card,
-  color: colors.label,
-  fontSize: 17,
-  fontFamily: fontFamilies.body,
-};
-
-const buttonSecondary = {
-  minHeight: 48,
-  padding: 14,
-  borderRadius: 12,
-  backgroundColor: colors.card,
-};
-
-const buttonSecondaryLabel = {
-  color: colors.label,
-  fontSize: 17,
-  fontFamily: fontFamilies.bodySemiBold,
-  fontWeight: '600' as const,
-  textAlign: 'center' as const,
-};

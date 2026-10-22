@@ -47,9 +47,6 @@ export function EventReportSection({
         máy chủ, timeout hoặc mất mạng là chưa biết — các số đó không được hiện.
         Scan chính trên app Nhân viên; cổng web không xếp hàng offline.
       </p>
-      <p className="intro">
-        <a href="/gate">Mở cổng web (dự phòng)</a>
-      </p>
       <div className="auth-buttons">
         <button
           type="button"

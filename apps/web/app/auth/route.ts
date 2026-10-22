@@ -26,7 +26,7 @@ function resolveReturnPath(
 
 function noticeLandingPath(returnPath: string | null, notice: string): string {
   const path = returnPath ?? '/';
-  if (path === '/admin' || path === '/gate' || path === '/auth') {
+  if (path === '/admin' || path === '/auth') {
     return pathWithNotice('/', notice);
   }
   return pathWithNotice(path, notice);

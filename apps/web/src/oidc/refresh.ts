@@ -27,7 +27,7 @@ import {
   TokenVerifyError,
 } from './verify-tokens';
 import type { JWTVerifyGetKey } from 'jose';
-import type { GateSsrTrace } from '../gate/gate-ssr-trace';
+import type { GateSsrTrace } from '../nav/ssr-trace';
 
 export type TokenGrantResponse = {
   access_token?: string;
