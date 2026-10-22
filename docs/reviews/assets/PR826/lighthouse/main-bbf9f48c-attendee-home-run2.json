@@ -1,0 +1,15 @@
+{
+  "label": "main-bbf9f48c",
+  "route": {
+    "id": "attendee-home",
+    "path": "/"
+  },
+  "run": 2,
+  "lighthouse": "13.5.0",
+  "scores": {
+    "performance": 70,
+    "accessibility": 100,
+    "bestPractices": 96,
+    "seo": 63
+  }
+}
