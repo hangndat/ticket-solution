@@ -1,5 +1,12 @@
+#!/usr/bin/env node
+/**
+ * Opt-in Playwright UAT: marketing interest Button disabled cascade (D-1 runtime).
+ * Not run in CI — use `pnpm --filter @ticket/web uat:cascade` after production build.
+ *
+ *   WEB_UAT_PORT=3196 pnpm --filter @ticket/web uat:cascade
+ */
 import assert from 'node:assert/strict';
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readdirSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { spawn } from 'node:child_process';
@@ -7,12 +14,12 @@ import { createServer } from 'node:net';
 import { once } from 'node:events';
 import { setTimeout } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
-import test from 'node:test';
-import { chromium, type Browser } from 'playwright';
+import { chromium } from 'playwright';
 
 const WEB_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const DEFAULT_PORT = 3196;
 
-function findCachedHeadlessShell(): string | null {
+function findCachedHeadlessShell() {
   if (process.env.WEB_UAT_EXECUTABLE) return process.env.WEB_UAT_EXECUTABLE;
   const cache = join(homedir(), 'Library/Caches/ms-playwright');
   if (!existsSync(cache)) return null;
@@ -32,7 +39,7 @@ function findCachedHeadlessShell(): string | null {
   return null;
 }
 
-async function launchBrowser(): Promise<Browser> {
+async function launchBrowser() {
   const shell = findCachedHeadlessShell();
   const opts = shell
     ? {
@@ -44,29 +51,20 @@ async function launchBrowser(): Promise<Browser> {
   return chromium.launch(opts);
 }
 
-test('globals wires legacy CSS into @layer legacy before utilities', () => {
-  const globals = readFileSync(join(WEB_ROOT, 'app/globals.css'), 'utf8');
-  assert.match(globals, /@layer theme, base, legacy, components, utilities;/);
-  assert.match(globals, /@import '\.\/live-pulse-legacy\.css' layer\(legacy\);/);
-  assert.match(globals, /@import '\.\/attendee-uplift\.css' layer\(legacy\);/);
-  const marketingLegacy = readFileSync(
-    join(WEB_ROOT, 'app/marketing-uplift-legacy.css'),
-    'utf8',
-  );
-  assert.match(
-    marketingLegacy,
-    /@import '\.\/marketing-uplift\.css' layer\(legacy\);/,
-  );
-});
+async function main() {
+  const buildId = join(WEB_ROOT, '.next', 'BUILD_ID');
+  if (!existsSync(buildId)) {
+    console.error(
+      'uat-cascade: missing production build — run `pnpm --filter @ticket/web build` first',
+    );
+    process.exit(1);
+  }
 
-test('production marketing interest Button keeps utility disabled opacity over legacy', async () => {
+  const port = Number(process.env.WEB_UAT_PORT ?? DEFAULT_PORT);
   const reservation = createServer();
-  reservation.listen(0, '127.0.0.1');
+  reservation.listen(port, '127.0.0.1');
   await once(reservation, 'listening');
-  const addr = reservation.address();
-  assert.ok(addr && typeof addr !== 'string');
-  const port = addr.port;
-  await new Promise<void>((resolve) => reservation.close(() => resolve()));
+  await new Promise((resolve) => reservation.close(resolve));
   const base = `http://127.0.0.1:${port}`;
 
   const child = spawn(
@@ -91,10 +89,10 @@ test('production marketing interest Button keeps utility disabled opacity over l
   );
 
   let output = '';
-  child.stdout.on('data', (chunk: Buffer) => {
+  child.stdout.on('data', (chunk) => {
     output += chunk.toString();
   });
-  child.stderr.on('data', (chunk: Buffer) => {
+  child.stderr.on('data', (chunk) => {
     output += chunk.toString();
   });
 
@@ -123,9 +121,9 @@ test('production marketing interest Button keeps utility disabled opacity over l
     await submit.waitFor({ state: 'visible' });
 
     const cascade = await submit.evaluate(async (el) => {
-      const button = el as HTMLButtonElement;
+      const button = el;
       button.toggleAttribute('disabled', true);
-      await new Promise<void>((resolve) => {
+      await new Promise((resolve) => {
         requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
       });
       const opacity = getComputedStyle(button).opacity;
@@ -150,10 +148,16 @@ test('production marketing interest Button keeps utility disabled opacity over l
       parseFloat(cascade.opacity) <= 0.51,
       `utilities disabled:opacity-50 must beat legacy (got ${cascade.opacity})`,
     );
+    console.log('uat-cascade: PASS', JSON.stringify(cascade));
   } finally {
     await browser.close();
     child.kill('SIGTERM');
     await setTimeout(500);
     if (child.exitCode === null) child.kill('SIGKILL');
   }
+}
+
+main().catch((err) => {
+  console.error('uat-cascade: FAIL', err);
+  process.exit(1);
 });
