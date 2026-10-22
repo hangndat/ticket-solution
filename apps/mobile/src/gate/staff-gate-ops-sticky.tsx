@@ -1,4 +1,6 @@
-import { Pressable, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { Button } from '@/components/ui/button';
+import { radius, space } from '@/theme/tokens';
 import { GateStatusStrip, StaffEventPicker } from './staff-gate-chrome.tsx';
 import type { ConnectivityState } from './offline-queue.ts';
 import type { GateOp } from './gate-scan.ts';
@@ -106,19 +108,16 @@ export function StaffGateOpsSticky({
           </Text>
         </View>
         {canSwitchEvent ? (
-          <Pressable
-            accessibilityRole="button"
+          <Button
+            variant="ghost"
+            label="Đổi ›"
             accessibilityLabel={
               eventPickerOpen ? 'Đóng danh sách sự kiện' : 'Đổi sự kiện'
             }
             onPress={onToggleEventPicker}
-            hitSlop={8}
-            style={{ paddingVertical: 4, paddingHorizontal: 2 }}
-          >
-            <Text style={{ color: colors.accent, fontSize: 15, fontWeight: '600' }}>
-              Đổi ›
-            </Text>
-          </Pressable>
+            hitSlop={space.sm}
+            style={styles.switchLink}
+          />
         ) : null}
       </View>
       <GateStatusStrip
@@ -138,42 +137,37 @@ export function StaffGateOpsSticky({
       {showPendingActions ? (
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
           {reconcileEnabled ? (
-            <Pressable
-              accessibilityRole="button"
+            <Button
+              variant="secondary"
+              label="Đối soát"
               accessibilityLabel="Đối soát kết quả chưa rõ"
               onPress={onReconcile}
-              style={{
-                paddingVertical: 8,
-                paddingHorizontal: 12,
-                borderRadius: 8,
-                backgroundColor: colors.card,
-              }}
-            >
-              <Text style={{ color: colors.label, fontSize: 14 }}>Đối soát</Text>
-            </Pressable>
+              style={styles.compactAction}
+            />
           ) : null}
           {onContinueScan ? (
-            <Pressable
+            <Button
               testID="gate-scan-continue"
-              accessibilityRole="button"
+              label="Quét tiếp"
               accessibilityLabel="Quét tiếp"
               onPress={onContinueScan}
-              style={{
-                paddingVertical: 8,
-                paddingHorizontal: 12,
-                borderRadius: 8,
-                backgroundColor: colors.accent,
-              }}
-            >
-              <Text style={{ color: colors.onAccent, fontSize: 14, fontWeight: '600' }}>
-                Quét tiếp
-              </Text>
-            </Pressable>
+              style={styles.compactAction}
+            />
           ) : null}
         </View>
       ) : null}
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  switchLink: { paddingVertical: space.xs, paddingHorizontal: 2 },
+  compactAction: {
+    paddingVertical: space.sm,
+    paddingHorizontal: space.md,
+    borderRadius: radius.sm,
+    minHeight: 44,
+  },
+});
 
 export { buildMachineLabel } from './staff-gate-ops-sticky-label';
