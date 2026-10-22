@@ -14,6 +14,7 @@ import { buildDisplayQrPayload } from '../../../../../src/owner-ticket/display-p
 import { TicketQr } from '../../../../../src/owner-ticket/ticket-qr';
 import { SiteNav } from '../../../../../src/site-chrome';
 import { SurfaceState } from '../../../../../src/ui/surface-state';
+import detailStyles from './ticket-detail.module.css';
 
 type Props = {
   params: Promise<{ tenantSlug: string; ticketId: string }>;
@@ -199,7 +200,7 @@ export default async function OwnerTicketPage({ params, searchParams }: Props) {
   return (
     <main
       id="main"
-      className="container shell ticket-detail"
+      className={`container shell ticket-detail ${detailStyles.shell}`}
       data-testid="owner-ticket-ready"
     >
       <SiteNav />
@@ -208,14 +209,14 @@ export default async function OwnerTicketPage({ params, searchParams }: Props) {
           ‹ Vé của tôi
         </Link>
       </p>
-      <h1>{OWNER_TICKET_COPY.title}</h1>
+      <h1 className={detailStyles.title}>{OWNER_TICKET_COPY.title}</h1>
       <p className="intro">
         Vé thuộc tổ chức{' '}
         <span data-testid="owner-ticket-tenant">{tenantSlug}</span>.
       </p>
 
-      <article className="ticket-card ticket-card--detail" data-testid="owner-ticket-card">
-        <div className="ticket-card__head">
+      <article className={detailStyles.detailCard} data-testid="owner-ticket-card">
+        <div className={detailStyles.cardHead}>
           <span
             className={ticketStateTagClass(ticket.state)}
             data-testid="owner-ticket-state-tag"
@@ -223,7 +224,7 @@ export default async function OwnerTicketPage({ params, searchParams }: Props) {
             {ticketStateLabel(ticket.state)}
           </span>
         </div>
-        <div className="ticket-card__body ticket-card__body--detail">
+        <div className={detailStyles.cardBody}>
 
       {isDemo ? (
         <aside
@@ -248,12 +249,12 @@ export default async function OwnerTicketPage({ params, searchParams }: Props) {
         </aside>
       ) : null}
 
-      <figure className="ticket-qr-figure" data-testid="owner-ticket-qr-figure">
+      <figure className={detailStyles.qrPanel} data-testid="owner-ticket-qr-figure">
         <TicketQr value={qrPayload} label={qrLabel} />
-        <figcaption className="ticket-qr-caption">{qrLabel}</figcaption>
+        <figcaption className={detailStyles.qrCaption}>{qrLabel}</figcaption>
       </figure>
 
-      <dl data-testid="owner-ticket-detail">
+      <dl className={detailStyles.metaList} data-testid="owner-ticket-detail">
         <div>
           <dt>Mã vé</dt>
           <dd>

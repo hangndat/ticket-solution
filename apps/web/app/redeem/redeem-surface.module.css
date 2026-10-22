@@ -207,8 +207,155 @@
   }
 }
 
+.gateIllustration {
+  width: 56px;
+  height: 56px;
+  margin: 0 0 var(--space-4);
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  font-size: 1.5rem;
+  background: linear-gradient(135deg, #eff6ff, #f0f9ff);
+  border: 1px solid #bfdbfe;
+  color: #1d4ed8;
+}
+
+.outcomePanel {
+  margin-top: var(--space-6);
+  padding: 28px 24px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--line);
+  background: #fff;
+  box-shadow: var(--shadow-sm, 0 8px 24px color-mix(in srgb, var(--ink) 6%, transparent));
+  text-align: center;
+}
+
+.outcomePanel h3 {
+  font-family: var(--font-display), system-ui, sans-serif;
+  font-size: clamp(1.35rem, 3vw, 1.65rem);
+  letter-spacing: -0.03em;
+  margin: 0 0 10px;
+}
+
+.outcomePanel p {
+  margin: 0 0 var(--space-4);
+  color: var(--ink-muted);
+  line-height: 1.6;
+  font-size: 0.98rem;
+}
+
+.outcomePanel :global(.auth-buttons) {
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.outcomeSuccess {
+  border-color: #bbf7d0;
+  background: linear-gradient(180deg, #fff 0%, #f0fdf4 100%);
+}
+
+.outcomeError {
+  border-color: #fecaca;
+  background: linear-gradient(180deg, #fff 0%, #fef2f2 100%);
+  text-align: left;
+}
+
+.successRing,
+.errorRing {
+  width: 88px;
+  height: 88px;
+  margin: 0 auto 18px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.successRing {
+  background: var(--success-bg, #ecfdf5);
+  border: 2px solid #86efac;
+  color: var(--success, #15803d);
+  animation: redeem-pop 400ms ease both;
+}
+
+.errorRing {
+  background: #fef2f2;
+  border: 2px solid #fecaca;
+  color: #b91c1c;
+  margin-left: 0;
+  margin-right: auto;
+}
+
+.outcomeError .successRing,
+.outcomeError .errorRing {
+  margin-bottom: 14px;
+}
+
+.outcomeActions {
+  display: grid;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+.outcomeActions :global(.button),
+.outcomeActions :global(a.button) {
+  width: 100%;
+  min-height: 48px;
+  justify-content: center;
+}
+
+.formCard :global(.redeem-product-form .redeem-terms) {
+  margin-top: var(--space-2);
+  padding: 18px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  background: var(--paper);
+  gap: var(--space-3);
+}
+
+.formCard :global(.redeem-product-form .redeem-terms-body) {
+  max-height: 140px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+  background: #fff;
+  padding: 14px;
+  font-size: 0.85rem;
+  line-height: 1.55;
+}
+
+.formCard :global(.redeem-product-form .redeem-checkbox) {
+  align-items: flex-start;
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.formCard :global(.redeem-ticket) {
+  margin-top: var(--space-5);
+  padding: 20px;
+  border-radius: var(--radius-lg);
+  border: 1px dashed #cbd5e1;
+  background: linear-gradient(180deg, #f8fafc, #fff);
+}
+
+@keyframes redeem-pop {
+  from {
+    transform: scale(0.88);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .header {
+    animation: none;
+  }
+
+  .successRing {
     animation: none;
   }
 }
