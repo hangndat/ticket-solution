@@ -1,6 +1,20 @@
 import { Button, ProductPreviewFrame } from '@ticket/ui';
 import Link from 'next/link';
 import { t } from '../copy';
+import {
+  marketingDemoNote,
+  marketingDisplay,
+  marketingEyebrow,
+  marketingHeroCopy,
+  marketingHeroGrid,
+  marketingHeroPoints,
+  marketingHeroSection,
+  marketingH1,
+  marketingLead,
+  marketingMarquee,
+  marketingMarqueeTrack,
+  marketingWrap,
+} from '../marketing-surface';
 import type { MarketingSectionProps } from './types';
 
 function previewLabels(locale: MarketingSectionProps['locale']) {
@@ -30,18 +44,19 @@ export function HeroSection({ locale, demo, login }: MarketingSectionProps) {
   return (
     <section
       id="top"
-      className="mkt-section mkt-section--ink mkt-hero"
+      className={marketingHeroSection}
       aria-labelledby="hero-title"
       data-analytics-section="hero"
+      data-on-ink=""
     >
-      <div className="mkt-wrap mkt-hero-grid">
-        <div className="mkt-hero-copy">
-          <p className="mkt-eyebrow">{t(locale, 'hero.eyebrow')}</p>
-          <h1 id="hero-title" className="mkt-display mkt-h1" data-testid="hero-headline">
+      <div className={`${marketingWrap} ${marketingHeroGrid}`}>
+        <div className={marketingHeroCopy}>
+          <p className={marketingEyebrow}>{t(locale, 'hero.eyebrow')}</p>
+          <h1 id="hero-title" className={`${marketingDisplay} ${marketingH1}`} data-testid="hero-headline">
             {t(locale, 'hero.headline')}
           </h1>
-          <p className="mkt-lead">{t(locale, 'hero.sub')}</p>
-          <ul className="mkt-hero-points" aria-label={t(locale, 'hero.proofs.label')}>
+          <p className={marketingLead}>{t(locale, 'hero.sub')}</p>
+          <ul className={marketingHeroPoints} aria-label={t(locale, 'hero.proofs.label')}>
             <li>{t(locale, 'hero.proof1')}</li>
             <li>{t(locale, 'hero.proof2')}</li>
             <li>{t(locale, 'hero.proof3')}</li>
@@ -62,14 +77,14 @@ export function HeroSection({ locale, demo, login }: MarketingSectionProps) {
               <a href={login}>{t(locale, 'hero.cta.login')}</a>
             </Button>
           </div>
-          <p className="mkt-demo-note" role="status" data-testid="demo-badge">
+          <p className={marketingDemoNote} role="status" data-testid="demo-badge">
             {t(locale, 'hero.demo_note')}
           </p>
         </div>
         <ProductPreviewFrame labels={previewLabels(locale)} />
       </div>
-      <div className="mkt-marquee" aria-hidden="true">
-        <div className="mkt-marquee-track">
+      <div className={marketingMarquee} aria-hidden="true">
+        <div className={marketingMarqueeTrack}>
           <span>{t(locale, 'hero.marquee')}</span>
           <span>{t(locale, 'hero.marquee')}</span>
         </div>
