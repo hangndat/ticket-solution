@@ -27,7 +27,6 @@ import { isAppCatalogConfigured } from '@/identity/catalog-context';
 import { brand, colors } from '@/theme/colors';
 import { fontFamilies } from '@/theme/fonts';
 import { useTheme } from '@/theme/ThemeProvider';
-import { TabStackTitle } from '@/navigation/tab-stack-title';
 import { useAttendeeTabBarInset } from '@/navigation/use-attendee-tab-bar-inset';
 import { useShowAttendeeTabs } from '@/navigation/use-staff-workspace';
 import { WalletOwnedTicketsLink } from '@/components/wallet-owned-tickets-link';
@@ -131,15 +130,14 @@ function PublishedEventCard({ item }: { item: PublishedEventSummary }) {
                 {eventsCopy.publishedStatusPill}
               </Text>
             </View>
+            <WalletOwnedTicketsLink
+              eventId={item.id}
+              variant="card-row"
+              testID={`pub-owned-tickets-${item.id}`}
+            />
           </View>
         </Pressable>
       </Link>
-      <View style={{ paddingHorizontal: 15, paddingBottom: 14 }}>
-        <WalletOwnedTicketsLink
-          eventId={item.id}
-          testID={`pub-owned-tickets-${item.id}`}
-        />
-      </View>
     </View>
   );
 }
@@ -230,6 +228,20 @@ export function EventsScreen() {
 
   const listHeader = (
     <View style={{ gap: 12, paddingBottom: 4 }}>
+      {showCatalogChrome ? (
+        <Text
+          accessibilityRole="header"
+          style={{
+            color: brand.ink,
+            fontSize: 30,
+            fontFamily: fontFamilies.display,
+            fontWeight: '700',
+            letterSpacing: -0.5,
+          }}
+        >
+          {eventsCopy.listHeadline}
+        </Text>
+      ) : null}
       {showCatalogChrome ? (
         <TextInput
           value={searchQuery}
@@ -329,7 +341,6 @@ export function EventsScreen() {
         }
         renderItem={({ item }) => <PublishedEventCard item={item} />}
       />
-      <TabStackTitle title="Sự kiện" large={false} />
     </>
   );
 }

@@ -14,7 +14,7 @@ import {
   ErrorState,
   LoadingState,
 } from '@/components/screen-state';
-import { eventsCopy } from '@/components/screen-state-copy';
+import { eventsCopy, redeemCopy } from '@/components/screen-state-copy';
 import { eventDate, findDemoEvent } from '@/data/demo-events';
 import {
   fetchPublishedEventDetail,
@@ -272,14 +272,11 @@ function PublishedEventComposition({
   const { applyBranding } = useTheme();
   const { heroOpacity, reduceMotionOs } = useHeroFade();
   const sections = visibleSectionsInOrder(event);
-  const supportLine = [
-    event.startsAt
-      ? formatPublishedDate(event.startsAt, event.timezone)
-      : null,
-    event.location?.trim() || null,
-  ]
-    .filter(Boolean)
-    .join(' · ');
+  const dateLine = event.startsAt
+    ? formatPublishedDate(event.startsAt, event.timezone)
+    : null;
+  const locationLine = event.location?.trim() || null;
+  const orgLine = event.brand.organizationName?.trim() || null;
 
   useEffect(() => {
     applyBranding(
@@ -302,27 +299,6 @@ function PublishedEventComposition({
           gap: 16,
         }}
       >
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 10,
-            flexWrap: 'wrap',
-          }}
-        >
-          <BrandWordmark compact />
-          <Text
-            selectable
-            style={{
-              color: colors.secondary,
-              ...typography.caption,
-              flexShrink: 1,
-            }}
-          >
-            {event.brand.organizationName}
-          </Text>
-        </View>
-
         <EventBanner
           eventId={event.id}
           tenantSlug={event.tenantSlug}
@@ -349,46 +325,33 @@ function PublishedEventComposition({
           {event.name}
         </Text>
 
-        {supportLine ? (
-          <Text
-            selectable
-            style={{ color: colors.secondary, ...typography.body }}
-          >
-            {supportLine}
-          </Text>
-        ) : (
-          <Text
-            selectable
-            style={{ color: colors.secondary, ...typography.body }}
-          >
-            Chưa có giờ bắt đầu trên nội dung đã xuất bản
-          </Text>
-        )}
+        <PublishedEventMetadataGroup
+          dateLine={dateLine}
+          locationLine={locationLine}
+          orgLine={orgLine}
+        />
 
         <WalletOwnedTicketsLink
           eventId={event.id}
+          variant="card-row"
           testID="event-detail-owned-tickets"
         />
 
         <View style={{ gap: 10 }}>
+          <Text
+            style={{
+              color: brand.ink,
+              fontFamily: fontFamilies.bodySemiBold,
+              fontSize: 17,
+              fontWeight: '600',
+            }}
+          >
+            {redeemCopy.eventDetailRedeemBlockTitle}
+          </Text>
           <AttendeeCta
-            label="Đổi mã lấy vé"
+            label={eventsCopy.redeemCta}
             onPress={() => router.push('/redeem-global')}
             testID="event-detail-cta-redeem"
-          />
-          <AttendeeCta
-            label="Nhận lời mời"
-            variant="secondary"
-            onPress={() =>
-              router.push({
-                pathname: '/claim',
-                params: {
-                  tenantSlug: event.tenantSlug,
-                  eventSlug: event.slug,
-                },
-              })
-            }
-            testID="event-detail-cta-claim"
           />
         </View>
       </Animated.View>
@@ -443,6 +406,74 @@ function PublishedEventComposition({
         testID="event-detail-all-events"
       />
     </Page>
+  );
+}
+
+function PublishedEventMetadataGroup({
+  dateLine,
+  locationLine,
+  orgLine,
+}: {
+  dateLine: string | null;
+  locationLine: string | null;
+  orgLine: string | null;
+}) {
+  const rows = [
+    dateLine ? { label: 'Ngày', value: dateLine } : null,
+    locationLine ? { label: 'Địa điểm', value: locationLine } : null,
+    orgLine ? { label: 'Đơn vị tổ chức', value: orgLine } : null,
+  ].filter(Boolean) as { label: string; value: string }[];
+
+  if (rows.length === 0) {
+    return (
+      <Text selectable style={{ color: colors.secondary, ...typography.body }}>
+        Chưa có giờ bắt đầu trên nội dung đã xuất bản
+      </Text>
+    );
+  }
+
+  return (
+    <View
+      style={{
+        backgroundColor: '#ffffff',
+        borderRadius: 12,
+        borderCurve: 'continuous',
+        overflow: 'hidden',
+      }}
+    >
+      {rows.map((row, index) => (
+        <View
+          key={row.label}
+          style={{
+            paddingHorizontal: 16,
+            paddingVertical: 14,
+            gap: 4,
+            borderTopWidth: index === 0 ? 0 : 1,
+            borderTopColor: '#e8ecf1',
+          }}
+        >
+          <Text
+            style={{
+              color: colors.secondary,
+              fontSize: 13,
+              fontFamily: fontFamilies.body,
+            }}
+          >
+            {row.label}
+          </Text>
+          <Text
+            selectable
+            style={{
+              color: brand.ink,
+              fontSize: 17,
+              fontFamily: fontFamilies.body,
+            }}
+          >
+            {row.value}
+          </Text>
+        </View>
+      ))}
+    </View>
   );
 }
 
