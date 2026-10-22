@@ -14,7 +14,8 @@ describe('MarketingJsonLd', () => {
     assert.ok(html.includes('SoftwareApplication'));
     assert.ok(!html.includes('aggregateRating'));
     assert.ok(!html.includes('review'));
+    assert.ok(html.includes('FAQPage'));
     const blocks = html.match(/application\/ld\+json/g) ?? [];
-    assert.equal(blocks.length, 3);
+    assert.equal(blocks.length, 4);
   });
 });
