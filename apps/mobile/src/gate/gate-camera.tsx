@@ -152,8 +152,21 @@ export function GateCamera({ disabled, onScan }: Props) {
             borderWidth: 3,
             borderColor: 'rgba(255,255,255,0.6)',
             borderRadius: 24,
+            alignItems: 'center',
+            justifyContent: 'center',
           }}
         >
+          <Text
+            style={{
+              color: 'rgba(255,255,255,0.92)',
+              fontSize: 14,
+              fontWeight: '500',
+              textAlign: 'center',
+              paddingHorizontal: 12,
+            }}
+          >
+            Đưa QR vào khung
+          </Text>
           <Animated.View
             style={[
               {

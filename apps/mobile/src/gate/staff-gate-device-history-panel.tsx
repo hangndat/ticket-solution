@@ -2,6 +2,7 @@ import { Pressable, Text, TextInput, View } from 'react-native';
 import { SymbolView } from 'expo-symbols';
 import {
   formatDeviceHistoryTime,
+  groupDeviceHistoryByDay,
   type DeviceScanHistoryRow,
 } from './staff-gate-device-history.ts';
 import { colors } from '@/theme/colors';
@@ -15,6 +16,7 @@ function rowTint(tone: DeviceScanHistoryRow['tone']): string {
 
 export type StaffGateDeviceHistoryPanelProps = {
   rows: DeviceScanHistoryRow[];
+  scopeEventName?: string | null;
   hideTitle?: boolean;
   totalAvailable?: number;
   hasMore?: boolean;
@@ -27,6 +29,7 @@ export type StaffGateDeviceHistoryPanelProps = {
 
 export function StaffGateDeviceHistoryPanel({
   rows,
+  scopeEventName = null,
   hideTitle = false,
   totalAvailable = 0,
   hasMore = false,
@@ -57,7 +60,9 @@ export function StaffGateDeviceHistoryPanel({
             Lịch sử trên máy này
           </Text>
           <Text style={{ color: colors.secondary, fontSize: 13 }}>
-            Chỉ các lượt quét lưu trên thiết bị — không phải toàn hệ thống.
+            {scopeEventName?.trim()
+              ? `Trên thiết bị này · ${scopeEventName.trim()}`
+              : 'Chỉ các lượt quét lưu trên thiết bị — không phải toàn hệ thống.'}
           </Text>
         </View>
       )}
@@ -92,60 +97,74 @@ export function StaffGateDeviceHistoryPanel({
           Không có lượt quét khớp với từ khóa trong các lượt đã tải.
         </Text>
       ) : (
-        <View style={{ gap: 6 }}>
-          {rows.map((row) => (
-            <View
-              key={row.id}
-              style={{
-                flexDirection: 'row',
-                alignItems: 'flex-start',
-                gap: 8,
-                paddingVertical: 8,
-                paddingHorizontal: 10,
-                borderRadius: 10,
-                backgroundColor: colors.card,
-              }}
-              accessibilityLabel={`${formatDeviceHistoryTime(row.at)}. Vé ${row.ticketLabel}. ${row.statusLabel}. ${row.hint}`}
-            >
-              <SymbolView
-                name={
-                  row.source === 'offline-queue'
-                    ? 'tray.full.fill'
-                    : 'qrcode.viewfinder'
-                }
-                size={18}
-                tintColor={rowTint(row.tone)}
-              />
-              <View style={{ flex: 1, gap: 2 }}>
+        <View style={{ gap: 12 }}>
+          {groupDeviceHistoryByDay(rows).map((section) => (
+            <View key={section.dayKey} style={{ gap: 6 }}>
+              <Text
+                accessibilityRole="header"
+                style={{
+                  color: colors.secondary,
+                  fontSize: 13,
+                  fontWeight: '600',
+                }}
+              >
+                {section.headerLabel}
+              </Text>
+              {section.rows.map((row) => (
                 <View
+                  key={row.id}
                   style={{
                     flexDirection: 'row',
-                    justifyContent: 'space-between',
+                    alignItems: 'flex-start',
                     gap: 8,
+                    paddingVertical: 8,
+                    paddingHorizontal: 10,
+                    borderRadius: 10,
+                    backgroundColor: colors.card,
                   }}
+                  accessibilityLabel={`${formatDeviceHistoryTime(row.at)}. Vé ${row.ticketLabel}. ${row.statusLabel}. ${row.hint}`}
                 >
-                  <Text
-                    numberOfLines={1}
-                    style={{
-                      flex: 1,
-                      color: colors.label,
-                      fontSize: 15,
-                      fontWeight: '600',
-                    }}
-                  >
-                    {row.statusLabel}
-                  </Text>
-                  <Text style={{ color: colors.secondary, fontSize: 13 }}>
-                    {formatDeviceHistoryTime(row.at)}
-                  </Text>
+                  <SymbolView
+                    name={
+                      row.source === 'offline-queue'
+                        ? 'tray.full.fill'
+                        : 'qrcode.viewfinder'
+                    }
+                    size={18}
+                    tintColor={rowTint(row.tone)}
+                  />
+                  <View style={{ flex: 1, gap: 2 }}>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                        gap: 8,
+                      }}
+                    >
+                      <Text
+                        numberOfLines={1}
+                        style={{
+                          flex: 1,
+                          color: colors.label,
+                          fontSize: 15,
+                          fontWeight: '600',
+                        }}
+                      >
+                        {row.statusLabel}
+                      </Text>
+                      <Text style={{ color: colors.secondary, fontSize: 13 }}>
+                        {formatDeviceHistoryTime(row.at)}
+                      </Text>
+                    </View>
+                    <Text
+                      numberOfLines={1}
+                      style={{ color: colors.secondary, fontSize: 13 }}
+                    >
+                      {row.ticketLabel}
+                    </Text>
+                  </View>
                 </View>
-                <Text
-                  numberOfLines={1}
-                  style={{ color: colors.secondary, fontSize: 13 }}
-                >
-                  {row.ticketLabel}
-                </Text>
-              </View>
+              ))}
             </View>
           ))}
         </View>
