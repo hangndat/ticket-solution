@@ -10,6 +10,7 @@ import { CtaSection } from './sections/cta';
 import { FaqSection } from './sections/faq';
 import { HeroSection } from './sections/hero';
 import { OutcomesSection } from './sections/outcomes';
+import { BentoSection } from './sections/bento';
 import { TrustSection } from './sections/trust';
 import { WorkflowSection } from './sections/workflow';
 
@@ -26,6 +27,7 @@ export function SalesPage({ locale }: { locale: MarketingLocale }) {
       <main id="main" data-testid={`sales-${locale}`}>
         <HeroSection {...sectionProps} />
         <TrustSection {...sectionProps} />
+        <BentoSection {...sectionProps} />
         <WorkflowSection {...sectionProps} />
         <AudienceSection {...sectionProps} />
         <OutcomesSection {...sectionProps} />

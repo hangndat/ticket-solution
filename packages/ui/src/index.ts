@@ -27,6 +27,12 @@ export {
   CardTitle,
   type CardProps,
 } from './primitives/card.js';
+export {
+  BentoGrid,
+  BentoGridItem,
+  type BentoGridItemProps,
+  type BentoGridProps,
+} from './primitives/bento-grid.js';
 export { Skeleton, type SkeletonProps } from './primitives/skeleton.js';
 export {
   SurfaceState,

@@ -24,6 +24,14 @@
       "types": "./dist/client.d.ts",
       "default": "./dist/client.js"
     },
+    "./primitives/bento-grid": {
+      "types": "./dist/primitives/bento-grid.d.ts",
+      "default": "./dist/primitives/bento-grid.js"
+    },
+    "./primitives/card": {
+      "types": "./dist/primitives/card.d.ts",
+      "default": "./dist/primitives/card.js"
+    },
     "./vemoki-theme.css": "./src/generated/vemoki-theme.css"
   },
   "dependencies": {

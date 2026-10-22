@@ -1,5 +1,90 @@
 import type { MarketingLocale } from './hosts';
 
+export type BentoCellConfig = {
+  id: string;
+  key: string;
+  colSpan: 1 | 2 | 3 | 4;
+  rowSpan?: 1 | 2;
+  featured?: boolean;
+  image: { src: string; width: number; height: number };
+};
+
+/** Asymmetric bento layout per MKT-PD §3 (desktop 4-col). */
+export const BENTO_CELLS: BentoCellConfig[] = [
+  {
+    id: 'bento-invite',
+    key: 'bento.invite',
+    colSpan: 2,
+    featured: true,
+    image: {
+      src: '/marketing/bento-invite.webp',
+      width: 1982,
+      height: 1834,
+    },
+  },
+  {
+    id: 'bento-qr',
+    key: 'bento.qr',
+    colSpan: 1,
+    image: {
+      src: '/marketing/bento-qr.webp',
+      width: 1280,
+      height: 800,
+    },
+  },
+  {
+    id: 'bento-gate',
+    key: 'bento.gate',
+    colSpan: 1,
+    featured: true,
+    image: {
+      src: '/marketing/bento-gate.webp',
+      width: 1280,
+      height: 955,
+    },
+  },
+  {
+    id: 'bento-offline',
+    key: 'bento.offline',
+    colSpan: 1,
+    image: {
+      src: '/marketing/bento-offline.webp',
+      width: 390,
+      height: 952,
+    },
+  },
+  {
+    id: 'bento-admin',
+    key: 'bento.admin',
+    colSpan: 2,
+    image: {
+      src: '/marketing/bento-admin.webp',
+      width: 1280,
+      height: 800,
+    },
+  },
+  {
+    id: 'bento-whitelabel',
+    key: 'bento.whitelabel',
+    colSpan: 1,
+    image: {
+      src: '/marketing/bento-whitelabel.webp',
+      width: 1280,
+      height: 800,
+    },
+  },
+  {
+    id: 'bento-ops',
+    key: 'bento.ops',
+    colSpan: 4,
+    image: {
+      src: '/marketing/bento-ops.webp',
+      width: 1280,
+      height: 800,
+    },
+  },
+];
+
 export const HERO_PREVIEW = {
   desktop: {
     src: '/marketing/app-redeem-desktop.webp',

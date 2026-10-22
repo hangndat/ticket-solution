@@ -3620,3 +3620,103 @@ select[aria-invalid='true'] {
     flex-direction: column;
   }
 }
+
+/* —— Marketing feature bento (#features) —— */
+.mkt-bento-grid {
+  margin-top: 0.25rem;
+}
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    .mkt-bento-grid {
+      opacity: 0;
+      transform: translateY(10px);
+      animation: mkt-bento-reveal 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 35%;
+    }
+    @keyframes mkt-bento-reveal {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+  }
+}
+.mkt-bento-item {
+  min-height: 0;
+}
+.mkt-bento-card {
+  height: 100%;
+  border-color: var(--mkt-line);
+  transition: border-color 150ms ease;
+}
+.mkt-bento-card:hover {
+  border-color: color-mix(in srgb, var(--ink) 28%, var(--paper));
+}
+.mkt-bento-card-inner {
+  display: grid;
+  gap: 0.85rem;
+  height: 100%;
+  padding: 1rem 1rem 0.85rem !important;
+}
+.mkt-bento-copy {
+  display: grid;
+  gap: 0.35rem;
+}
+.mkt-bento-card-title {
+  margin: 0;
+  font-size: 1.05rem !important;
+  font-family: var(--font-display), Sora, ui-sans-serif, sans-serif;
+}
+.mkt-bento-card-body {
+  margin: 0;
+  font-size: 0.92rem;
+  color: var(--ink-muted);
+  line-height: 1.45;
+}
+.mkt-bento-figure {
+  margin: 0;
+  border: 1px solid var(--mkt-line);
+  border-radius: 2px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--ink) 4%, var(--paper));
+  aspect-ratio: 16 / 10;
+}
+.mkt-bento-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top center;
+}
+.mkt-bento-item[data-span='ops'] .mkt-bento-figure {
+  max-height: 12rem;
+}
+@media (min-width: 768px) {
+  .mkt-bento-card-inner {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+    align-items: start;
+    padding: 1.1rem 1.15rem !important;
+  }
+  .mkt-bento-item .mkt-bento-card-inner {
+    grid-template-columns: 1fr;
+  }
+  .mkt-bento-item[data-span='invite'] .mkt-bento-card-inner,
+  .mkt-bento-item[data-span='admin'] .mkt-bento-card-inner,
+  .mkt-bento-item[data-span='ops'] .mkt-bento-card-inner {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+  }
+  .mkt-bento-item[data-span='ops'] .mkt-bento-figure {
+    max-height: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mkt-bento-grid {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+  .mkt-bento-card {
+    transition: none;
+  }
+}
