@@ -14,7 +14,7 @@ Consumer `apps/web` dùng Live Pulse v2 (`brand/vemoki/tokens.json`, ~3.4k dòng
 1. **`apps/web`** adopt Tailwind CSS **v4** + `@tailwindcss/postcss` **chỉ trong app web** — không root workspace, không `apps/portal`.
 2. **Không bật Tailwind Preflight** trên surface prod hiện có. **Slice 0:** `globals.css` import `vemoki-theme.css` + `live-pulse-legacy.css` **không layer** (cascade giữ nguyên như `main`); Tailwind `theme`/`utilities` chỉ bật khi slice có class utility trên route prod.
 3. **`@ticket/ui` (`packages/ui`)** — `cn()`, token CSS (`vemoki-theme.css`), `UiMotionProvider` (`LazyMotion` + `domAnimation` async + `MotionConfig reducedMotion="user"`) export qua `@ticket/ui/client`. **Slice 0:** không mount provider ở `app/layout.tsx` — zero motion JS trên first-load prod. Slice dùng animation: bọc **island** (client component riêng) hoặc `dynamic(() => import('@ticket/ui/client'))` + `UiMotionProvider` chỉ quanh subtree cần Motion; không bọc root chrome.
-4. **Token SoT:** `brand/vemoki/tokens.json` → generator CSS `@theme` + CI test khớp `:root` legacy.
+4. **Token SoT:** `brand/vemoki/tokens.json` → generator CSS `@theme` + khối `:root` **legacy contract** (tên `--color-*`, `--spacing-*`, … không phụ thuộc `prefix(ui)`) + CI test `var()` trong `apps/web/app/*.css`.
 5. **`components.json`** — shadcn + registry `@aceternity` (Free copy-paste qua CLI; Pro chỉ sau license).
 6. **`apps/portal`** — **không đổi** stack antd / build / CSP trong epic này.
 
