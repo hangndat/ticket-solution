@@ -122,3 +122,55 @@ export function formatDeviceHistoryTime(iso: string): string {
     month: '2-digit',
   }).format(date);
 }
+
+export type DeviceHistoryDaySection = {
+  dayKey: string;
+  headerLabel: string;
+  rows: DeviceScanHistoryRow[];
+};
+
+function localDayKey(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+function formatHistoryDayHeader(date: Date, now: Date): string {
+  const dayMonth = new Intl.DateTimeFormat('vi', {
+    day: 'numeric',
+    month: 'long',
+  }).format(date);
+  const sameDay =
+    date.getFullYear() === now.getFullYear() &&
+    date.getMonth() === now.getMonth() &&
+    date.getDate() === now.getDate();
+  if (sameDay) return `Hôm nay · ${dayMonth}`;
+  const weekday = new Intl.DateTimeFormat('vi', { weekday: 'long' }).format(date);
+  return `${weekday} · ${dayMonth}`;
+}
+
+/** Group device history rows by local calendar day (VI section headers). */
+export function groupDeviceHistoryByDay(
+  rows: readonly DeviceScanHistoryRow[],
+  now: Date = new Date(),
+): DeviceHistoryDaySection[] {
+  const sections: DeviceHistoryDaySection[] = [];
+  let currentKey: string | null = null;
+  let current: DeviceHistoryDaySection | null = null;
+
+  for (const row of rows) {
+    const date = new Date(row.at);
+    const key = Number.isNaN(date.getTime()) ? 'unknown' : localDayKey(date);
+    if (key !== currentKey) {
+      currentKey = key;
+      const headerLabel = Number.isNaN(date.getTime())
+        ? 'Không rõ ngày'
+        : formatHistoryDayHeader(date, now);
+      current = { dayKey: key, headerLabel, rows: [] };
+      sections.push(current);
+    }
+    current!.rows.push(row);
+  }
+  return sections;
+}

@@ -98,6 +98,16 @@ export function presentGateScanStatus(input: {
   };
 }
 
+function deniedToastLabel(op: GateOp | null, fallback: string): string {
+  const blob = `${op?.message ?? ''}`.toLowerCase();
+  if (
+    /không tìm thấy|not found|ticket_not_found|ticket not found/i.test(blob)
+  ) {
+    return 'Không tìm thấy vé';
+  }
+  return fallback;
+}
+
 function mapOutcomeKind(
   kind: GateOutcomeKind,
   canReconcile: boolean,
@@ -108,7 +118,7 @@ function mapOutcomeKind(
     case 'admitted':
       return {
         kind: 'admitted',
-        label: 'Đã vào cổng',
+        label: 'Được vào',
         hint: 'Máy chủ đã ghi nhận check-in — có thể cho khách qua.',
         tone: 'admit',
         symbol: 'checkmark.circle.fill',
@@ -116,7 +126,7 @@ function mapOutcomeKind(
     case 'already-checked-in':
       return {
         kind: 'already-checked-in',
-        label: 'Vé đã dùng',
+        label: 'Vé đã được sử dụng',
         hint: 'Cho qua theo lần check-in trước — không tạo lượt mới.',
         tone: 'admit',
         symbol: 'checkmark.circle',
@@ -124,7 +134,7 @@ function mapOutcomeKind(
     case 'denied':
       return {
         kind: 'denied',
-        label: outcome.title,
+        label: deniedToastLabel(op, outcome.title),
         hint: outcome.detail || op?.message || 'Không cho khách qua.',
         tone: 'deny',
         symbol: 'xmark.circle.fill',

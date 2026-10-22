@@ -9,6 +9,7 @@ import {
   computeDeviceHistoryPageView,
   DEVICE_HISTORY_PAGE_SIZE,
   filterLoadedDeviceHistoryRows,
+  groupDeviceHistoryByDay,
 } from './staff-gate-device-history.ts';
 
 const scope: StaffGateScope = {
@@ -135,4 +136,32 @@ test('filterLoadedDeviceHistoryRows matches ticket or status labels', () => {
   assert.equal(filterLoadedDeviceHistoryRows(rows, 'abcd').length, 1);
   assert.equal(filterLoadedDeviceHistoryRows(rows, 'cho vào').length, 1);
   assert.equal(filterLoadedDeviceHistoryRows(rows, '').length, 2);
+});
+
+test('groupDeviceHistoryByDay adds Hôm nay header for same calendar day', () => {
+  const now = new Date('2026-10-24T15:00:00.000Z');
+  const rows = [
+    {
+      id: '1',
+      at: '2026-10-24T10:00:00.000Z',
+      ticketLabel: 'a',
+      statusLabel: 'Vào',
+      hint: '',
+      tone: 'admit' as const,
+      source: 'scan' as const,
+    },
+    {
+      id: '2',
+      at: '2026-10-23T10:00:00.000Z',
+      ticketLabel: 'b',
+      statusLabel: 'Vào',
+      hint: '',
+      tone: 'admit' as const,
+      source: 'scan' as const,
+    },
+  ];
+  const sections = groupDeviceHistoryByDay(rows, now);
+  assert.equal(sections.length, 2);
+  assert.match(sections[0].headerLabel, /Hôm nay/);
+  assert.equal(sections[0].rows.length, 1);
 });

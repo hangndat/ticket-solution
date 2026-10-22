@@ -14,8 +14,10 @@ import { brand } from '@/theme/tokens';
 
 function StaffHistoryDeviceList({
   deviceHistory,
+  scopeEventName,
 }: {
   deviceHistory: DeviceScanHistoryRow[];
+  scopeEventName: string | null;
 }) {
   const [visibleCount, setVisibleCount] = useState(DEVICE_HISTORY_PAGE_SIZE);
   const [filterQuery, setFilterQuery] = useState('');
@@ -44,6 +46,7 @@ function StaffHistoryDeviceList({
   return (
     <StaffGateDeviceHistoryPanel
       rows={pageView.rows}
+      scopeEventName={scopeEventName}
       totalAvailable={pageView.totalAvailable}
       hasMore={pageView.hasMore}
       onLoadMore={handleLoadMore}
@@ -74,6 +77,7 @@ export function StaffHistoryScreen() {
           <StaffHistoryDeviceList
             key={scopeKey}
             deviceHistory={gate.deviceHistory}
+            scopeEventName={gate.gateScope?.name ?? null}
           />
         </View>
       </ScrollView>
