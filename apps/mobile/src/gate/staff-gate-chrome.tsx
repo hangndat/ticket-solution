@@ -380,8 +380,8 @@ const styles = StyleSheet.create({
   },
   rowSpinner: { flex: 1 },
   switchEvent: {
-    paddingHorizontal: space.sm + 2,
-    paddingVertical: space.xs + 2,
+    paddingHorizontal: space.sm + space.xxs,
+    paddingVertical: space.xs + space.xxs,
     borderRadius: radius.sm,
     minHeight: 44
   },
