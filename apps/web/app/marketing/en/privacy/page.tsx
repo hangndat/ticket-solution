@@ -1,12 +1,7 @@
-import type { Metadata } from 'next';
-import { t } from '../../../../src/marketing/copy';
+import { privacyMetadata } from '../../../../src/marketing/seo/metadata';
 import { PrivacyPage } from '../../../../src/marketing/legal-pages';
 
-export const metadata: Metadata = {
-  title: t('en', 'privacy.title'),
-  description: t('en', 'privacy.intro'),
-  robots: { index: true, follow: true },
-};
+export const metadata = privacyMetadata('en');
 
 export default function MarketingPrivacyEnPage() {
   return <PrivacyPage locale="en" />;

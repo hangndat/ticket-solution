@@ -1,12 +1,7 @@
-import type { Metadata } from 'next';
-import { t } from '../../../src/marketing/copy';
+import { supportMetadata } from '../../../src/marketing/seo/metadata';
 import { SupportPage } from '../../../src/marketing/legal-pages';
 
-export const metadata: Metadata = {
-  title: t('vi', 'support.title'),
-  description: t('vi', 'support.lead'),
-  robots: { index: true, follow: true },
-};
+export const metadata = supportMetadata('vi');
 
 export default function MarketingSupportViPage() {
   return <SupportPage locale="vi" />;

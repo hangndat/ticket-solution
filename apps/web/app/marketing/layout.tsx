@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react';
 import { headers } from 'next/headers';
+import { MarketingAnalyticsClient } from '../../src/marketing/analytics/client';
 import { MarketingHtmlAttrs } from '../../src/marketing/html-attrs';
+import { MarketingJsonLd } from '../../src/marketing/seo/json-ld';
 
 /**
  * Marketing-only dynamic boundary (headers for locale/surface).
@@ -18,6 +20,8 @@ export default async function MarketingLayout({
   return (
     <>
       <MarketingHtmlAttrs locale={locale} />
+      <MarketingJsonLd locale={locale} />
+      <MarketingAnalyticsClient />
       {/* Hide product shell footer when marketing chrome is present */}
       <style>{`body:has([data-testid="marketing-surface"]) > .footer{display:none}`}</style>
       {children}

@@ -1,12 +1,7 @@
-import type { Metadata } from 'next';
-import { t } from '../../src/marketing/copy';
+import { salesMetadata } from '../../src/marketing/seo/metadata';
 import { SalesPage } from '../../src/marketing/sales-page';
 
-export const metadata: Metadata = {
-  title: t('vi', 'meta.title'),
-  description: t('vi', 'meta.description'),
-  robots: { index: true, follow: true },
-};
+export const metadata = salesMetadata('vi');
 
 export default function MarketingSalesViPage() {
   return <SalesPage locale="vi" />;
