@@ -67,6 +67,19 @@ test('redeem deep link routes to global attendee entry', () => {
   }
 });
 
+test('redeem deep link preserves code query on global route', () => {
+  const code = 'SPRING-ADMIT-01';
+  const input = `vemoki://redeem?code=${encodeURIComponent(code)}`;
+  const parsed = parseInstalledAppLink(input);
+  assert.equal(parsed.kind, 'redeem-entry');
+  if (parsed.kind !== 'redeem-entry') return;
+  assert.equal(
+    parsed.href,
+    `/redeem-global?code=${encodeURIComponent(code)}`,
+  );
+  assert.equal(routeForInstalledAppLink(input), parsed.href);
+});
+
 test('unrelated and invalid links are left untouched', () => {
   assert.equal(parseInstalledAppLink('https://example.com/tickets/x').kind, 'passthrough');
   assert.equal(
