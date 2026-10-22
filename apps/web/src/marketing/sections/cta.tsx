@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { t } from '../copy';
-import { InterestForm } from '../interest-form';
+import { InterestFormIsland } from '../interest-form-island';
 import { salesHref } from '../links';
 import type { MarketingSectionProps } from './types';
 
@@ -31,7 +31,7 @@ export function CtaSection({ locale, demo }: MarketingSectionProps) {
       >
         <h2 id="interest-title">{t(locale, 'interest.title')}</h2>
         <p className="mkt-lead">{t(locale, 'interest.lead')}</p>
-        <InterestForm locale={locale} />
+        <InterestFormIsland locale={locale} />
       </section>
 
       <section aria-labelledby="cta-repeat-title">
