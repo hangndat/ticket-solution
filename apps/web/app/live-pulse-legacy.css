@@ -3618,6 +3618,23 @@ select[aria-invalid='true'] {
 .mkt-bento-grid {
   margin-top: 0.25rem;
 }
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    .mkt-bento-grid {
+      opacity: 0;
+      transform: translateY(10px);
+      animation: mkt-bento-reveal 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 35%;
+    }
+    @keyframes mkt-bento-reveal {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+  }
+}
 .mkt-bento-item {
   min-height: 0;
 }
@@ -3687,6 +3704,11 @@ select[aria-invalid='true'] {
   }
 }
 @media (prefers-reduced-motion: reduce) {
+  .mkt-bento-grid {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
   .mkt-bento-card {
     transition: none;
   }
