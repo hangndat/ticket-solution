@@ -71,6 +71,29 @@ export type CopyKey =
   | 'trust.p4.body'
   | 'trust.p5.title'
   | 'trust.p5.body'
+  | 'bento.title'
+  | 'bento.lead'
+  | 'bento.invite.title'
+  | 'bento.invite.body'
+  | 'bento.invite.alt'
+  | 'bento.qr.title'
+  | 'bento.qr.body'
+  | 'bento.qr.alt'
+  | 'bento.gate.title'
+  | 'bento.gate.body'
+  | 'bento.gate.alt'
+  | 'bento.offline.title'
+  | 'bento.offline.body'
+  | 'bento.offline.alt'
+  | 'bento.admin.title'
+  | 'bento.admin.body'
+  | 'bento.admin.alt'
+  | 'bento.whitelabel.title'
+  | 'bento.whitelabel.body'
+  | 'bento.whitelabel.alt'
+  | 'bento.ops.title'
+  | 'bento.ops.body'
+  | 'bento.ops.alt'
   | 'outcomes.title'
   | 'outcomes.disclaimer'
   | 'outcomes.lead'
@@ -229,6 +252,44 @@ const VI: Record<CopyKey, string> = {
   'trust.p5.title': 'Bảo mật vận hành',
   'trust.p5.body':
     'TLS, rate limit, MFA admin, log không chứa token QR/OTP thô.',
+  'bento.title': 'Năng lực vận hành trong một hệ',
+  'bento.lead':
+    'Mỗi khối là luồng thật trong sản phẩm — không slide «tương lai».',
+  'bento.invite.title': 'Mã mời → vé',
+  'bento.invite.body':
+    'Nguồn mã, quota, đổi mã có xác minh email.',
+  'bento.invite.alt':
+    'Màn hình đổi mã vé trong ứng dụng Vemoki (môi trường pilot)',
+  'bento.qr.title': 'Vé & QR ký',
+  'bento.qr.body':
+    'Token ký theo sự kiện; không nhúng PII trong QR.',
+  'bento.qr.alt':
+    'Màn hình vé và mã QR trong ứng dụng Vemoki (môi trường pilot)',
+  'bento.gate.title': 'Cổng & audit',
+  'bento.gate.body':
+    'Quét iOS/web dự phòng; chống trùng; log staff/device.',
+  'bento.gate.alt':
+    'Màn hình check-in cổng nhân viên trong ứng dụng Vemoki (môi trường pilot)',
+  'bento.offline.title': 'Cổng multi-device',
+  'bento.offline.body':
+    'Thiết kế offline D7; vé xem offline trên app.',
+  'bento.offline.alt':
+    'Màn hình cổng trên điện thoại trong ứng dụng Vemoki (môi trường pilot)',
+  'bento.admin.title': 'Quản trị sự kiện',
+  'bento.admin.body':
+    'Sự kiện, loại vé, import khách, email vé.',
+  'bento.admin.alt':
+    'Màn hình quản trị sự kiện trong ứng dụng Vemoki (môi trường pilot)',
+  'bento.whitelabel.title': 'White-label khách',
+  'bento.whitelabel.body':
+    'Brand org/event trên trang khách; platform ở marketing/IdP.',
+  'bento.whitelabel.alt':
+    'Trang chi tiết sự kiện với thương hiệu tổ chức trong ứng dụng Vemoki (môi trường pilot)',
+  'bento.ops.title': 'Ops & báo cáo',
+  'bento.ops.body':
+    'Dashboard gần real-time pilot; báo cáo có định nghĩa chỉ số.',
+  'bento.ops.alt':
+    'Màn hình báo cáo vận hành trong ứng dụng Vemoki (môi trường pilot)',
   'outcomes.title': 'Kết quả vận hành (minh họa)',
   'outcomes.disclaimer':
     'Minh hoạ — dữ liệu mô phỏng, không phải khách hàng thật.',
@@ -405,6 +466,44 @@ const EN: Record<CopyKey, string> = {
   'trust.p5.title': 'Security baseline',
   'trust.p5.body':
     'TLS, rate limits, admin MFA, logs exclude raw QR/OTP tokens.',
+  'bento.title': 'Operations capabilities in one system',
+  'bento.lead':
+    'Each tile is a real product flow — not a future roadmap slide.',
+  'bento.invite.title': 'Invite → ticket',
+  'bento.invite.body':
+    'Code sources, quotas, redeem with verified email.',
+  'bento.invite.alt':
+    'Redeem ticket screen in the Vemoki app (pilot environment)',
+  'bento.qr.title': 'Signed QR tickets',
+  'bento.qr.body':
+    'Event-scoped signed tokens; no PII in QR payload.',
+  'bento.qr.alt':
+    'Wallet ticket and QR screen in the Vemoki app (pilot environment)',
+  'bento.gate.title': 'Gate & audit',
+  'bento.gate.body':
+    'iOS scan + web fallback; duplicate block; staff/device audit.',
+  'bento.gate.alt':
+    'Staff gate check-in screen in the Vemoki app (pilot environment)',
+  'bento.offline.title': 'Multi-device gate',
+  'bento.offline.body':
+    'D7 offline gate design; ticket display offline in app.',
+  'bento.offline.alt':
+    'Mobile gate screen in the Vemoki app (pilot environment)',
+  'bento.admin.title': 'Event administration',
+  'bento.admin.body':
+    'Events, ticket types, guest import, ticket email.',
+  'bento.admin.alt':
+    'Event admin screen in the Vemoki app (pilot environment)',
+  'bento.whitelabel.title': 'Guest white-label',
+  'bento.whitelabel.body':
+    'Org/event brand on guest surfaces; platform on marketing/IdP.',
+  'bento.whitelabel.alt':
+    'Branded event detail page in the Vemoki app (pilot environment)',
+  'bento.ops.title': 'Ops reporting',
+  'bento.ops.body':
+    'Near real-time pilot dashboard; defined metrics in reports.',
+  'bento.ops.alt':
+    'Operations reporting screen in the Vemoki app (pilot environment)',
   'outcomes.title': 'Operational outcomes (illustration)',
   'outcomes.disclaimer':
     'Illustration — simulated data, not real customers.',

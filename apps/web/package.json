@@ -17,6 +17,7 @@
     "@ticket/ui": "workspace:*",
     "@ticket/web-session": "workspace:*",
     "jose": "5.10.0",
+    "motion": "12.23.24",
     "next": "16.4.2",
     "react": "19.3.1",
     "react-dom": "19.3.1"
