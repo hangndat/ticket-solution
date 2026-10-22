@@ -1,15 +1,17 @@
+import { CatalogSkeletonGrid } from '@ticket/ui';
 import { SurfaceState } from '../src/ui/surface-state';
 
-/** Route-level loading for demo surfaces (Next.js App Router). */
+/** Route-level loading — catalog skeleton grid on attendee uplift. */
 export default function Loading() {
   return (
-    <main id="main" className="container shell">
+    <main id="main" className="container shell route-loading-shell">
       <SurfaceState
         kind="loading"
         title="Đang tải…"
-        detail="Vui lòng chờ — chưa có thao tác vé nào được gửi từ màn hình này."
+        detail="Đang lấy danh sách sự kiện — chưa có thao tác vé nào được gửi."
         testId="route-loading"
       />
+      <CatalogSkeletonGrid count={6} />
     </main>
   );
 }
