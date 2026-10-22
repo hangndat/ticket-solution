@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import type { PublishedEventSummary } from '@ticket/contracts';
-import { HeroWordmark } from '../src/branding/hero-wordmark';
+import { CatalogHeroBand } from '@ticket/ui';
 import { loginHref } from '../src/oidc/login-href';
 import { authNoticeFromParam } from '../src/oidc/auth-notice';
 import { loadOwnerWallet, ownedTicketCountByEventId } from '../src/owner-ticket';
@@ -65,14 +65,12 @@ export default async function Home({ searchParams }: Props) {
   return (
     <main id="main" className="container home home--catalog">
       <SiteNav />
-      <section className="home-hero" aria-labelledby="home-title">
-        <HeroWordmark presentation="catalog" />
-        <h1 id="home-title">Hẹn bạn ở trải nghiệm tiếp theo.</h1>
-        <p className="intro">
-          Khám phá sự kiện từ những nhà tổ chức trên khắp nền tảng. Đổi mã lấy
-          vé qua mục Đổi mã trên thanh điều hướng.
-        </p>
-      </section>
+      <CatalogHeroBand
+        eyebrow="Vemoki · Sự kiện & vé"
+        titleId="home-title"
+        title="Hẹn bạn ở trải nghiệm tiếp theo."
+        intro="Khám phá sự kiện từ những nhà tổ chức trên khắp nền tảng. Đổi mã lấy vé qua mục Đổi mã trên thanh điều hướng."
+      />
 
       {authNotice ? (
         <aside
