@@ -51,6 +51,13 @@ html[data-surface='product'] .demo-data-strip {
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
+@media (max-width: 359px) {
+  html[data-surface='product'] .demo-data-strip {
+    padding: 6px 8px;
+    line-height: 1.35;
+  }
+}
+
 html[data-surface='product'] .demo-data-strip__meta {
   white-space: nowrap;
 }
@@ -78,12 +85,13 @@ html[data-surface='product'] .site-header .top-nav > * {
 }
 
 html[data-surface='product'] [data-testid='site-wordmark'] {
-  display: inline-flex;
+  display: inline-flex !important;
   align-items: center;
   justify-content: flex-start;
-  height: 44px;
-  min-height: 44px;
-  max-height: 44px;
+  height: 44px !important;
+  min-height: 44px !important;
+  max-height: 44px !important;
+  flex-shrink: 0;
   line-height: 1;
   flex: 0 1 auto;
   min-width: 0;
@@ -123,7 +131,7 @@ html[data-surface='product'] .nav-menu-toggle__icon {
 
   html[data-surface='product'] .nav-menu-toggle {
     box-sizing: border-box;
-    display: inline-flex;
+    display: inline-flex !important;
     align-items: center;
     justify-content: center;
     align-self: center;
@@ -131,6 +139,9 @@ html[data-surface='product'] .nav-menu-toggle__icon {
     min-height: 44px;
     max-height: 44px;
     padding: 0 12px;
+    font-family: inherit;
+    font-size: inherit;
+    font-weight: 600;
     line-height: 1;
     white-space: nowrap;
     flex-shrink: 0;

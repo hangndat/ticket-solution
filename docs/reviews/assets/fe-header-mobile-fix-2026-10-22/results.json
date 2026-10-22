@@ -1,6 +1,6 @@
 {
-  "capturedAt": "2026-10-22T09:16:50.095Z",
-  "base": "http://localhost:3000",
+  "capturedAt": "2026-10-22T09:36:37.499Z",
+  "base": "http://127.0.0.1:3000",
   "attendee": [
     {
       "case": "privacy",
@@ -9,8 +9,8 @@
         "ok": true,
         "shortPage": false,
         "gapPx": null,
-        "scrollHeight": 1952,
-        "footerBottom": 844.2,
+        "scrollHeight": 1846,
+        "footerBottom": 0,
         "viewportH": 844
       },
       "overflow": {
@@ -29,8 +29,8 @@
         "ok": true,
         "shortPage": false,
         "gapPx": null,
-        "scrollHeight": 879,
-        "footerBottom": 843.77,
+        "scrollHeight": 1029,
+        "footerBottom": 844.02,
         "viewportH": 844
       },
       "overflow": {
@@ -69,8 +69,8 @@
         "ok": true,
         "shortPage": false,
         "gapPx": null,
-        "scrollHeight": 1938,
-        "footerBottom": 1937.8,
+        "scrollHeight": 1849,
+        "footerBottom": 1848.72,
         "viewportH": 844
       },
       "overflow": {
@@ -89,8 +89,8 @@
         "ok": true,
         "shortPage": false,
         "gapPx": null,
-        "scrollHeight": 1675,
-        "footerBottom": 843.84,
+        "scrollHeight": 1658,
+        "footerBottom": 844.17,
         "viewportH": 844
       },
       "overflow": {
@@ -129,8 +129,8 @@
         "ok": true,
         "shortPage": false,
         "gapPx": null,
-        "scrollHeight": 2683,
-        "footerBottom": 844.31,
+        "scrollHeight": 2548,
+        "footerBottom": 0,
         "viewportH": 844
       },
       "overflow": {
@@ -140,10 +140,8 @@
       },
       "headerRow": {
         "ok": true,
-        "visibleCount": 2,
-        "maxTopDelta": 0,
-        "labelCenterDelta": 0.01,
-        "pass": true
+        "pass": true,
+        "skipped": "no-site-chrome"
       },
       "pass": true,
       "shot": "/Users/admin/orca/workspaces/main/fe-header-mobile-fix/docs/reviews/assets/fe-header-mobile-fix-2026-10-22/attendee-privacy-390.png"
@@ -155,8 +153,8 @@
         "ok": true,
         "shortPage": false,
         "gapPx": null,
-        "scrollHeight": 870,
-        "footerBottom": 843.72,
+        "scrollHeight": 1040,
+        "footerBottom": 843.97,
         "viewportH": 844
       },
       "overflow": {
@@ -167,8 +165,9 @@
       "headerRow": {
         "ok": true,
         "visibleCount": 2,
-        "maxTopDelta": 0,
-        "labelCenterDelta": 0.01,
+        "maxTopDelta": 5,
+        "maxCenterDelta": 0,
+        "labelCenterDelta": 0,
         "pass": true
       },
       "pass": true,
@@ -194,6 +193,7 @@
         "ok": true,
         "visibleCount": 2,
         "maxTopDelta": 0,
+        "maxCenterDelta": 0,
         "labelCenterDelta": 0.01,
         "pass": true
       },
@@ -207,8 +207,8 @@
         "ok": true,
         "shortPage": false,
         "gapPx": null,
-        "scrollHeight": 2292,
-        "footerBottom": 2291.75,
+        "scrollHeight": 2045,
+        "footerBottom": 2044.75,
         "viewportH": 844
       },
       "overflow": {
@@ -219,8 +219,9 @@
       "headerRow": {
         "ok": true,
         "visibleCount": 2,
-        "maxTopDelta": 0,
-        "labelCenterDelta": 0.01,
+        "maxTopDelta": 5,
+        "maxCenterDelta": 0,
+        "labelCenterDelta": 0,
         "pass": true
       },
       "pass": true,
@@ -233,8 +234,8 @@
         "ok": true,
         "shortPage": false,
         "gapPx": null,
-        "scrollHeight": 1781,
-        "footerBottom": 843.98,
+        "scrollHeight": 1760,
+        "footerBottom": 844.31,
         "viewportH": 844
       },
       "overflow": {
@@ -245,8 +246,9 @@
       "headerRow": {
         "ok": true,
         "visibleCount": 2,
-        "maxTopDelta": 0,
-        "labelCenterDelta": 0.01,
+        "maxTopDelta": 5,
+        "maxCenterDelta": 0,
+        "labelCenterDelta": 0,
         "pass": true
       },
       "pass": true,
@@ -283,8 +285,8 @@
         "ok": true,
         "shortPage": false,
         "gapPx": null,
-        "scrollHeight": 2878,
-        "footerBottom": 844.08,
+        "scrollHeight": 2703,
+        "footerBottom": 0,
         "viewportH": 844
       },
       "overflow": {
@@ -294,10 +296,8 @@
       },
       "headerRow": {
         "ok": true,
-        "visibleCount": 2,
-        "maxTopDelta": 0,
-        "labelCenterDelta": 0.01,
-        "pass": true
+        "pass": true,
+        "skipped": "no-site-chrome"
       },
       "pass": true,
       "shot": "/Users/admin/orca/workspaces/main/fe-header-mobile-fix/docs/reviews/assets/fe-header-mobile-fix-2026-10-22/attendee-privacy-360.png"
@@ -309,8 +309,8 @@
         "ok": true,
         "shortPage": false,
         "gapPx": null,
-        "scrollHeight": 932,
-        "footerBottom": 843.72,
+        "scrollHeight": 1040,
+        "footerBottom": 843.97,
         "viewportH": 844
       },
       "overflow": {
@@ -321,8 +321,9 @@
       "headerRow": {
         "ok": true,
         "visibleCount": 2,
-        "maxTopDelta": 0,
-        "labelCenterDelta": 0.01,
+        "maxTopDelta": 5,
+        "maxCenterDelta": 0,
+        "labelCenterDelta": 0,
         "pass": true
       },
       "pass": true,
@@ -348,6 +349,7 @@
         "ok": true,
         "visibleCount": 2,
         "maxTopDelta": 0,
+        "maxCenterDelta": 0,
         "labelCenterDelta": 0.01,
         "pass": true
       },
@@ -361,8 +363,8 @@
         "ok": true,
         "shortPage": false,
         "gapPx": null,
-        "scrollHeight": 2399,
-        "footerBottom": 2399.06,
+        "scrollHeight": 2114,
+        "footerBottom": 2114.38,
         "viewportH": 844
       },
       "overflow": {
@@ -373,8 +375,9 @@
       "headerRow": {
         "ok": true,
         "visibleCount": 2,
-        "maxTopDelta": 0,
-        "labelCenterDelta": 0.01,
+        "maxTopDelta": 5,
+        "maxCenterDelta": 0,
+        "labelCenterDelta": 0,
         "pass": true
       },
       "pass": true,
@@ -387,8 +390,8 @@
         "ok": true,
         "shortPage": false,
         "gapPx": null,
-        "scrollHeight": 1805,
-        "footerBottom": 843.55,
+        "scrollHeight": 1784,
+        "footerBottom": 843.88,
         "viewportH": 844
       },
       "overflow": {
@@ -399,8 +402,9 @@
       "headerRow": {
         "ok": true,
         "visibleCount": 2,
-        "maxTopDelta": 0,
-        "labelCenterDelta": 0.01,
+        "maxTopDelta": 5,
+        "maxCenterDelta": 0,
+        "labelCenterDelta": 0,
         "pass": true
       },
       "pass": true,
@@ -437,8 +441,8 @@
         "ok": true,
         "shortPage": false,
         "gapPx": null,
-        "scrollHeight": 3094,
-        "footerBottom": 843.63,
+        "scrollHeight": 2935,
+        "footerBottom": 0,
         "viewportH": 844
       },
       "overflow": {
@@ -448,10 +452,8 @@
       },
       "headerRow": {
         "ok": true,
-        "visibleCount": 2,
-        "maxTopDelta": 0,
-        "labelCenterDelta": 0.01,
-        "pass": true
+        "pass": true,
+        "skipped": "no-site-chrome"
       },
       "pass": true,
       "shot": "/Users/admin/orca/workspaces/main/fe-header-mobile-fix/docs/reviews/assets/fe-header-mobile-fix-2026-10-22/attendee-privacy-320.png"
@@ -463,8 +465,8 @@
         "ok": true,
         "shortPage": false,
         "gapPx": null,
-        "scrollHeight": 956,
-        "footerBottom": 843.72,
+        "scrollHeight": 1064,
+        "footerBottom": 843.97,
         "viewportH": 844
       },
       "overflow": {
@@ -475,8 +477,9 @@
       "headerRow": {
         "ok": true,
         "visibleCount": 2,
-        "maxTopDelta": 0,
-        "labelCenterDelta": 0.01,
+        "maxTopDelta": 5,
+        "maxCenterDelta": 0,
+        "labelCenterDelta": 0,
         "pass": true
       },
       "pass": true,
@@ -489,8 +492,8 @@
         "ok": true,
         "shortPage": false,
         "gapPx": null,
-        "scrollHeight": 964,
-        "footerBottom": 964.03,
+        "scrollHeight": 959,
+        "footerBottom": 959.47,
         "viewportH": 844
       },
       "overflow": {
@@ -502,6 +505,7 @@
         "ok": true,
         "visibleCount": 2,
         "maxTopDelta": 0,
+        "maxCenterDelta": 0,
         "labelCenterDelta": 0.01,
         "pass": true
       },
@@ -515,8 +519,8 @@
         "ok": true,
         "shortPage": false,
         "gapPx": null,
-        "scrollHeight": 2515,
-        "footerBottom": 2515.19,
+        "scrollHeight": 2358,
+        "footerBottom": 2358.45,
         "viewportH": 844
       },
       "overflow": {
@@ -527,8 +531,9 @@
       "headerRow": {
         "ok": true,
         "visibleCount": 2,
-        "maxTopDelta": 0,
-        "labelCenterDelta": 0.01,
+        "maxTopDelta": 5,
+        "maxCenterDelta": 0,
+        "labelCenterDelta": 0,
         "pass": true
       },
       "pass": true,
@@ -541,8 +546,8 @@
         "ok": true,
         "shortPage": false,
         "gapPx": null,
-        "scrollHeight": 1951,
-        "footerBottom": 844.16,
+        "scrollHeight": 1930,
+        "footerBottom": 844.48,
         "viewportH": 844
       },
       "overflow": {
@@ -553,8 +558,9 @@
       "headerRow": {
         "ok": true,
         "visibleCount": 2,
-        "maxTopDelta": 0,
-        "labelCenterDelta": 0.01,
+        "maxTopDelta": 5,
+        "maxCenterDelta": 0,
+        "labelCenterDelta": 0,
         "pass": true
       },
       "pass": true,
@@ -624,6 +630,7 @@
         "ok": true,
         "visibleCount": 4,
         "maxTopDelta": 2,
+        "maxCenterDelta": 0,
         "labelCenterDelta": 0,
         "pass": true
       },
@@ -643,6 +650,7 @@
         "ok": true,
         "visibleCount": 4,
         "maxTopDelta": 2,
+        "maxCenterDelta": 0,
         "labelCenterDelta": 0,
         "pass": true
       },
@@ -662,6 +670,7 @@
         "ok": true,
         "visibleCount": 4,
         "maxTopDelta": 2,
+        "maxCenterDelta": 0,
         "labelCenterDelta": 0,
         "pass": true
       },
@@ -681,6 +690,7 @@
         "ok": true,
         "visibleCount": 4,
         "maxTopDelta": 2,
+        "maxCenterDelta": 0,
         "labelCenterDelta": 0,
         "pass": true
       },
@@ -698,8 +708,9 @@
       },
       "headerRow": {
         "ok": true,
-        "visibleCount": 4,
+        "visibleCount": 3,
         "maxTopDelta": 2,
+        "maxCenterDelta": 0,
         "labelCenterDelta": 0,
         "pass": true
       },
@@ -717,8 +728,9 @@
       },
       "headerRow": {
         "ok": true,
-        "visibleCount": 4,
+        "visibleCount": 3,
         "maxTopDelta": 2,
+        "maxCenterDelta": 0,
         "labelCenterDelta": 0,
         "pass": true
       },

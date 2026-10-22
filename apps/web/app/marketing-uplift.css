@@ -188,9 +188,9 @@ body.mkt.mkt--uplift {
   border-radius: var(--radius-sm);
   background: rgba(255, 255, 255, 0.06);
   color: inherit;
-  font: inherit;
-  font-weight: 600;
+  font-family: inherit;
   font-size: 0.82rem;
+  font-weight: 600;
   line-height: 1;
   white-space: nowrap;
   cursor: pointer;
@@ -287,10 +287,21 @@ body.mkt.mkt--uplift {
   }
 
   .mkt-header--sales .mkt-nav .mkt-btn--primary.mkt-nav-cta--header {
-    min-width: 0;
+    box-sizing: border-box;
+    width: max-content;
+    min-width: min-content;
+    max-width: none;
     padding: 0 0.65rem;
     font-size: 0.78rem;
-    flex-shrink: 1;
+    line-height: 1;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .mkt-header--sales .mkt-nav-primary-long,
+  .mkt-header--sales .mkt-nav-primary-short {
+    white-space: nowrap;
+    line-height: 1;
   }
 
   .mkt-header--sales .mkt-nav-menu-toggle {
@@ -401,6 +412,20 @@ body.mkt.mkt--uplift {
 
   .mkt-header--sales .mkt-nav-mobile-cta .mkt-btn {
     width: 100%;
+  }
+}
+
+@media (max-width: 359px) {
+  .mkt-header--sales .mkt-nav .mkt-btn--primary.mkt-nav-cta--header.mkt-nav-primary {
+    display: none !important;
+  }
+
+  .mkt-header--sales .mkt-nav {
+    gap: 0.1rem;
+  }
+
+  .mkt-header--sales .mkt-locale {
+    margin-right: 0;
   }
 }
 
