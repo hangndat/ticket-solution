@@ -1,3 +1,7 @@
+/**
+ * Giữ RN grouped layout (paper/card, ink typography): @expo/ui List/FieldGroup dùng
+ * chrome Settings hệ thống, phá brand Live Pulse trên account.
+ */
 import type { PropsWithChildren, ReactNode } from 'react';
 import { Text, View } from 'react-native';
 import { Button } from '@/components/ui/button';

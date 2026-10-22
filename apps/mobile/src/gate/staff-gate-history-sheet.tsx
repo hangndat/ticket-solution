@@ -1,4 +1,5 @@
-import { Modal, Pressable, Text, View } from 'react-native';
+import { BottomSheet, Host } from '@expo/ui';
+import { Text, View } from 'react-native';
 import { Button } from '@/components/ui/button';
 import { StaffGateDeviceHistoryPanel } from './staff-gate-device-history-panel.tsx';
 import type { DeviceScanHistoryRow } from './staff-gate-device-history.ts';
@@ -16,42 +17,25 @@ export function StaffGateHistorySheet({
   onClose: () => void;
 }) {
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      transparent
-      onRequestClose={onClose}
-    >
-      <Pressable
-        style={{
-          flex: 1,
-          backgroundColor: 'rgba(0,0,0,0.45)',
-          justifyContent: 'flex-end'
-        }}
-        onPress={onClose}
-        accessibilityLabel="Đóng lịch sử quét"
+    <Host>
+      <BottomSheet
+        isPresented={visible}
+        onDismiss={onClose}
+        snapPoints={[{ fraction: 0.8 }]}
+        containerColor={colors.background}
+        testID="gate-history-sheet"
       >
-        <Pressable
-          onPress={(e) => e.stopPropagation()}
-          style={{
-            maxHeight: '80%',
-            backgroundColor: colors.background,
-            borderTopLeftRadius: 16,
-            borderTopRightRadius: 16,
-            padding: space.lg
-          }}
-        >
+        <View style={{ gap: space.sm, maxHeight: '100%' }}>
           <View
             style={{
               flexDirection: 'row',
               justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: space.sm
+              alignItems: 'center'
             }}
           >
             <Text
               accessibilityRole="header"
-              style={{ ...typography.bodySemibold,  color: colors.label }}
+              style={{ ...typography.bodySemibold, color: colors.label }}
             >
               Lịch sử trên máy này
             </Text>
@@ -63,12 +47,12 @@ export function StaffGateHistorySheet({
               hitSlop={8}
             />
           </View>
-          <Text style={{ ...typography.caption, color: colors.secondary,  marginBottom: space.sm }}>
+          <Text style={{ ...typography.caption, color: colors.secondary }}>
             Chỉ các lượt quét lưu trên thiết bị — không phải toàn hệ thống.
           </Text>
           <StaffGateDeviceHistoryPanel rows={rows} hideTitle />
-        </Pressable>
-      </Pressable>
-    </Modal>
+        </View>
+      </BottomSheet>
+    </Host>
   );
 }

@@ -1,9 +1,8 @@
 import { useEffect, useRef, type ComponentRef } from 'react';
+import { BottomSheet, Host } from '@expo/ui';
 import {
   KeyboardAvoidingView,
-  Modal,
   Platform,
-  Pressable,
   StyleSheet,
   Text,
   View
@@ -11,7 +10,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { colors } from '@/theme/colors';
-import { radius, space } from '@/theme/tokens';
+import { space } from '@/theme/tokens';
 import { typography } from '@/theme/typography';
 
 export function StaffGateManualEntryModal({
@@ -40,25 +39,19 @@ export function StaffGateManualEntryModal({
   }, [visible]);
 
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      transparent
-      onRequestClose={onClose}
-    >
-      <Pressable
-        style={styles.backdrop}
-        onPress={onClose}
-        accessibilityLabel="Đóng nhập mã thủ công"
+    <Host>
+      <BottomSheet
+        isPresented={visible}
+        onDismiss={onClose}
+        snapPoints={['half', 'full']}
+        containerColor={colors.background}
+        testID="gate-manual-entry-sheet"
       >
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
-          <Pressable onPress={(e) => e.stopPropagation()} style={styles.sheet}>
-            <Text
-              accessibilityRole="header"
-              style={styles.sheetTitle}
-            >
+          <View style={styles.sheet}>
+            <Text accessibilityRole="header" style={styles.sheetTitle}>
               Nhập mã vé
             </Text>
             <Text style={styles.sheetHint}>
@@ -102,27 +95,16 @@ export function StaffGateManualEntryModal({
                 style={styles.actionBtn}
               />
             </View>
-          </Pressable>
+          </View>
         </KeyboardAvoidingView>
-      </Pressable>
-    </Modal>
+      </BottomSheet>
+    </Host>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    justifyContent: 'flex-end'
-  },
-  sheet: {
-    backgroundColor: colors.background,
-    borderTopLeftRadius: radius.lg - 2,
-    borderTopRightRadius: radius.lg - 2,
-    padding: space.lg,
-    gap: space.md
-  },
-  sheetTitle: { ...typography.bodySemibold, color: colors.label, },
+  sheet: { gap: space.md },
+  sheetTitle: { ...typography.bodySemibold, color: colors.label },
   sheetHint: { ...typography.footnote, color: colors.secondary },
   multilineField: { minHeight: 88 },
   actions: { flexDirection: 'row', gap: space.md },
