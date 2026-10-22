@@ -89,6 +89,58 @@ describe('acceptMarketingLead / LeadSink', () => {
     assert.equal(a, b);
   });
 
+  it('skipAnalytics suppresses server funnel events (DNT/GPC)', async () => {
+    events.length = 0;
+    const result = await acceptMarketingLead(
+      {
+        name: 'Privacy',
+        email: 'privacy@example.com',
+        org: 'Co',
+        role: 'owner' as const,
+        note: '',
+        consent: true as const,
+        events_per_year: '21+' as const,
+      },
+      { locale: 'vi', skipAnalytics: true, idempotencyHeader: 'dnt-test' },
+    );
+    assert.equal(result.ok, true);
+    assert.equal(events.length, 0);
+  });
+
+  it('webhook delivery does not block acceptMarketingLead', async () => {
+    process.env.MARKETING_INTEREST_WEBHOOK_URL = 'http://127.0.0.1:1/slow';
+    const sink = createDefaultLeadSink(
+      () =>
+        new Promise((resolve) => {
+          setTimeout(
+            () =>
+              resolve(
+                new Response('ok', {
+                  status: 500,
+                }),
+              ),
+            500,
+          );
+        }) as Promise<Response>,
+    );
+    const started = Date.now();
+    const result = await acceptMarketingLead(
+      {
+        name: 'Fast',
+        email: 'fast@example.com',
+        org: 'Co',
+        role: 'owner' as const,
+        note: '',
+        consent: true as const,
+      },
+      { sink, idempotencyHeader: 'fast-webhook-key' },
+    );
+    const elapsed = Date.now() - started;
+    assert.equal(result.ok, true);
+    assert.ok(elapsed < 200, `expected fast return, got ${elapsed}ms`);
+    delete process.env.MARKETING_INTEREST_WEBHOOK_URL;
+  });
+
   it('webhook failure still persists and returns ok', async () => {
     process.env.MARKETING_INTEREST_WEBHOOK_URL = 'http://127.0.0.1:1/nope';
     const sink = createDefaultLeadSink(async () => {

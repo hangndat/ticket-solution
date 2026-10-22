@@ -16,6 +16,8 @@ export type AcceptLeadOptions = {
   locale?: MarketingLeadLocale;
   idempotencyHeader?: string;
   sink?: LeadSink;
+  /** When DNT/GPC is set on the submitting request — lead is stored, analytics skipped. */
+  skipAnalytics?: boolean;
 };
 
 async function recordFromPayload(
@@ -68,6 +70,13 @@ export async function acceptMarketingLead(
 
   const record = await recordFromPayload(payload, opts, idempotency_key);
 
+  if (process.env.MARKETING_INTEREST_WEBHOOK_URL?.trim()) {
+    record.webhook_delivery = {
+      status: 'pending',
+      enqueued_at: new Date().toISOString(),
+    };
+  }
+
   try {
     await sink.persist(record);
     await rememberIdempotency(idempotency_key, record.lead_id);
@@ -76,21 +85,19 @@ export async function acceptMarketingLead(
     return { ok: false, code: 'STORE_FAILED' };
   }
 
-  let webhook_notified = false;
   try {
-    const deliveries = await sink.deliver(record);
-    webhook_notified = deliveries.some((d) => d.adapter === 'webhook' && d.ok);
+    void sink.deliver(record);
   } catch (err) {
-    console.warn('[marketing-interest] deliver failed (submission persisted):', err);
+    console.warn('[marketing-interest] deliver enqueue failed (submission persisted):', err);
   }
 
-  emitLeadAnalytics(record, webhook_notified);
+  emitLeadAnalytics(record, false, { skip: opts.skipAnalytics });
 
   return {
     ok: true,
     record,
     duplicate: false,
-    webhook_notified,
+    webhook_notified: false,
   };
 }
 

@@ -1,32 +1,28 @@
 import { z } from 'zod';
+import {
+  EVENTS_PER_YEAR,
+  INTEREST_ROLES,
+  MARKETING_LOCALES,
+  ORG_KINDS,
+  TYPICAL_SCALES,
+  type InterestInput,
+  type InterestPayload,
+} from './interest-fields';
 
-export const INTEREST_ROLES = ['owner', 'agency', 'other'] as const;
-export type InterestRole = (typeof INTEREST_ROLES)[number];
-
-export const ORG_KINDS = [
-  'agency',
-  'brand_enterprise',
-  'venue',
-  'independent',
-  'other',
-] as const;
-export type OrgKind = (typeof ORG_KINDS)[number];
-
-export const EVENTS_PER_YEAR = ['0', '1-5', '6-20', '21+'] as const;
-export type EventsPerYear = (typeof EVENTS_PER_YEAR)[number];
-
-export const TYPICAL_SCALES = [
-  'under_500',
-  '500_2000',
-  '2000_10000',
-  'over_10000',
-] as const;
-export type TypicalScale = (typeof TYPICAL_SCALES)[number];
-
-export const MARKETING_LOCALES = ['vi', 'en'] as const;
-export type MarketingLeadLocale = (typeof MARKETING_LOCALES)[number];
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+export {
+  EVENTS_PER_YEAR,
+  INTEREST_ROLES,
+  MARKETING_LOCALES,
+  ORG_KINDS,
+  TYPICAL_SCALES,
+  type EventsPerYear,
+  type InterestInput,
+  type InterestPayload,
+  type InterestRole,
+  type MarketingLeadLocale,
+  type OrgKind,
+  type TypicalScale,
+} from './interest-fields';
 
 function trimString(v: unknown): string {
   return typeof v === 'string' ? v.trim() : '';
@@ -46,7 +42,7 @@ function consentCoerce(v: unknown): boolean {
   );
 }
 
-/** Shared wire shape for interest POST (client + server). */
+/** Server wire parse — shared shape with client manual builder. */
 export const interestPayloadSchema = z.object({
   name: z.preprocess(trimString, z.string().min(1)),
   email: z.preprocess(trimString, z.string().min(1)),
@@ -67,23 +63,6 @@ export const interestPayloadSchema = z.object({
   client_submit_id: z.preprocess(trimString, z.string()).optional(),
 });
 
-export type InterestPayload = z.infer<typeof interestPayloadSchema>;
-
-export type InterestInput = {
-  name?: unknown;
-  email?: unknown;
-  org?: unknown;
-  role?: unknown;
-  note?: unknown;
-  consent?: unknown;
-  website?: unknown;
-  org_kind?: unknown;
-  events_per_year?: unknown;
-  typical_scale?: unknown;
-  locale?: unknown;
-  client_submit_id?: unknown;
-};
-
-export function isValidInterestEmail(email: string): boolean {
-  return EMAIL_RE.test(email);
+export function parseInterestPayload(input: InterestInput): InterestPayload {
+  return interestPayloadSchema.parse(input);
 }
