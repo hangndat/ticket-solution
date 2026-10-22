@@ -1,0 +1,7 @@
+/* Snapshot for CI — canonical :root brand colors from tokens.json */
+:root {
+  --ink: #0B1220;
+  --paper: #F4F6F8;
+  --signal: #E11D48;
+  --focus: #2563EB;
+}

@@ -70,7 +70,7 @@ emit_tips() {
 # Path filters mirror .github/workflows/ci.yml (web/mobile/backend only — no db/hardening).
 path_is_web() {
   case "$1" in
-    apps/web/*|packages/web-session/*|packages/contracts/*|pnpm-lock.yaml|pnpm-workspace.yaml|package.json|turbo.json|.npmrc|.github/workflows/ci.yml|.github/actions/*)
+    apps/web/*|packages/ui/*|packages/web-session/*|packages/contracts/*|pnpm-lock.yaml|pnpm-workspace.yaml|package.json|turbo.json|.npmrc|.github/workflows/ci.yml|.github/actions/*)
       return 0
       ;;
     *) return 1 ;;
