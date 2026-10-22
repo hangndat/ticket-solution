@@ -20,8 +20,15 @@ export type CopyKey =
   | 'badge.demo'
   | 'footer.attendee'
   | 'footer.tagline'
+  | 'hero.eyebrow'
   | 'hero.headline'
-  | 'hero.support'
+  | 'hero.sub'
+  | 'hero.proof1'
+  | 'hero.proof2'
+  | 'hero.proof3'
+  | 'hero.proofs.label'
+  | 'hero.preview.alt'
+  | 'hero.preview.caption'
   | 'hero.cta.demo'
   | 'hero.cta.interest'
   | 'hero.cta.login'
@@ -60,6 +67,21 @@ export type CopyKey =
   | 'trust.p2.body'
   | 'trust.p3.title'
   | 'trust.p3.body'
+  | 'trust.p4.title'
+  | 'trust.p4.body'
+  | 'trust.p5.title'
+  | 'trust.p5.body'
+  | 'outcomes.title'
+  | 'outcomes.disclaimer'
+  | 'outcomes.lead'
+  | 'outcomes.metric1.label'
+  | 'outcomes.metric1.value'
+  | 'outcomes.metric2.label'
+  | 'outcomes.metric2.value'
+  | 'outcomes.metric3.label'
+  | 'outcomes.metric3.value'
+  | 'outcomes.chart.caption'
+  | 'faq.title'
   | 'demo.title'
   | 'demo.lead'
   | 'demo.cta'
@@ -117,15 +139,13 @@ export type CopyKey =
   | 'support.app'
   | 'support.sales'
   | 'support.guest'
-  | 'hero.visual.label'
-  | 'hero.visual.meta'
   | 'interest.role.placeholder'
   | 'interest.consent.privacy';
 
 const VI: Record<CopyKey, string> = {
-  'meta.title': 'Vemoki — Nền tảng sự kiện trực tiếp & cổng',
+  'meta.title': 'Vemoki — Hệ điều hành sự kiện trực tiếp',
   'meta.description':
-    'Multi-tenant cho organizer và agency: mã mời, QR, Gate có audit. Thương hiệu của bạn phía khách.',
+    'Event Operating System multi-tenant cho agency và doanh nghiệp sự kiện: mã mời, QR, cổng có audit — không marketplace.',
   'nav.brand': 'vemoki',
   'nav.demo': 'Xem demo',
   'nav.interest': 'Đăng ký quan tâm',
@@ -138,14 +158,24 @@ const VI: Record<CopyKey, string> = {
   skip: 'Bỏ qua nội dung',
   'badge.demo': 'Demo giả lập',
   'footer.attendee': 'Bạn có mã mời? Đổi vé trên ứng dụng',
-  'footer.tagline': 'vemoki↗ · ops sự kiện trực tiếp',
-  'hero.headline': 'Từ mã mời đến cổng — trên một nền tảng',
-  'hero.support':
-    'Multi-tenant cho organizer và agency. Khách thấy thương hiệu của bạn; Gate có audit, không phụ thuộc marketplace.',
+  'footer.tagline': 'vemoki↗ · Event Operating System',
+  'hero.eyebrow': 'Hệ điều hành sự kiện trực tiếp',
+  'hero.headline':
+    'Vận hành sự kiện từ mã mời đến cổng — trên một hệ điều hành',
+  'hero.sub':
+    'Multi-tenant cho agency và doanh nghiệp sự kiện. Khách thấy thương hiệu của bạn; cổng có audit, không phụ thuộc marketplace.',
+  'hero.proof1': 'Mã mời → đổi vé → QR ký theo sự kiện',
+  'hero.proof2': 'Cổng chống trùng + audit',
+  'hero.proof3': 'Tách tenant + RLS + deny-by-default',
+  'hero.proofs.label': 'Điểm mạnh sản phẩm',
+  'hero.preview.alt':
+    'Màn hình đổi mã vé trong ứng dụng Vemoki (môi trường pilot)',
+  'hero.preview.caption':
+    'Giao diện thật từ ứng dụng Vemoki (môi trường pilot).',
   'hero.cta.demo': 'Xem demo',
   'hero.cta.interest': 'Đăng ký quan tâm',
   'hero.cta.login': 'Đăng nhập',
-  'hero.demo_note': 'Demo hiện tại là giả lập — không phải khách hàng thật.',
+  'hero.demo_note': 'Demo giả lập — không phải khách hàng thật.',
   'audience.title': 'Ai dùng Vemoki',
   'audience.lead':
     'Trang này dành cho người mua vận hành sự kiện — không phải khách cầm vé.',
@@ -181,15 +211,38 @@ const VI: Record<CopyKey, string> = {
   'whitelabel.point3': 'Agency chạy nhiều client trên cùng platform',
   'whitelabel.point3.body':
     'Membership nhiều tenant — không fork code per-client.',
-  'trust.title': 'An toàn vận hành',
-  'trust.lead': 'Thiết kế cho cổng thật — không dashboard “ảo real-time”.',
+  'trust.title': 'Tin cậy cho vận hành cổng thật',
+  'trust.lead':
+    'Thiết kế cho sự kiện trực tiếp — không dashboard «ảo real-time».',
   'trust.p1.title': 'Tách tenant',
-  'trust.p1.body': 'Dữ liệu và quyền theo tenant; deny-by-default.',
-  'trust.p2.title': 'Check-in chắc',
-  'trust.p2.body': 'Chống trùng vé; audit lại được sau sự kiện.',
-  'trust.p3.title': 'Trung thực về độ trễ',
+  'trust.p1.body':
+    'PostgreSQL shared schema + RLS và phân quyền deny-by-default theo tenant.',
+  'trust.p2.title': 'Cổng chống trùng',
+  'trust.p2.body':
+    'Check-in ghi audit; QR ký theo sự kiện; thu hồi vé vô hiệu mã cũ.',
+  'trust.p3.title': 'Cổng khi mạng yếu',
   'trust.p3.body':
-    'Số liệu ops kèm mốc asOf — không hứa “tức thì tuyệt đối”.',
+    'D7: luồng cổng multi-device có thiết kế offline — không hứa «luôn online 100%».',
+  'trust.p4.title': 'Số liệu trung thực',
+  'trust.p4.body':
+    'Dashboard ops kèm mốc cập nhật lúc; pilot mục tiêu trễ ≤10s — không «tức thì tuyệt đối».',
+  'trust.p5.title': 'Bảo mật vận hành',
+  'trust.p5.body':
+    'TLS, rate limit, MFA admin, log không chứa token QR/OTP thô.',
+  'outcomes.title': 'Kết quả vận hành (minh họa)',
+  'outcomes.disclaimer':
+    'Minh hoạ — dữ liệu mô phỏng, không phải khách hàng thật.',
+  'outcomes.lead':
+    'Số dưới đây giải thích loại chỉ số bạn theo dõi trong pilot — không phải benchmark đã ký hợp đồng.',
+  'outcomes.metric1.label': 'Thời gian xử lý check-in (p50)',
+  'outcomes.metric1.value': '~1,2 giây',
+  'outcomes.metric2.label': 'Lượt quét trùng bị chặn (phiên demo)',
+  'outcomes.metric2.value': '14',
+  'outcomes.metric3.label': 'Vé đã cấp / cổng mở (fixture)',
+  'outcomes.metric3.value': '1.240 / 3',
+  'outcomes.chart.caption':
+    'Biểu đồ minh họa luồng vào cổng theo giờ — dữ liệu giả lập.',
+  'faq.title': 'Câu hỏi thường gặp',
   'demo.title': 'Dùng thử bản demo giả lập',
   'demo.lead':
     'Mọi demo hiện nay là fixture để xem sản phẩm — không phải case study khách hàng.',
@@ -261,16 +314,14 @@ const VI: Record<CopyKey, string> = {
   'support.app': 'Đăng nhập sản phẩm',
   'support.sales': 'Về trang bán',
   'support.guest': 'Khách có mã mời: đổi vé trên ứng dụng',
-  'hero.visual.label': 'Gate · QR · audit',
-  'hero.visual.meta': 'Bầu không khí sản phẩm — không collage thẻ',
   'interest.role.placeholder': 'Chọn vai trò',
   'interest.consent.privacy': 'Quyền riêng tư',
 };
 
 const EN: Record<CopyKey, string> = {
-  'meta.title': 'Vemoki — In-person events & gate platform',
+  'meta.title': 'Vemoki — In-person Event Operating System',
   'meta.description':
-    'Multi-tenant for organizers and agencies: invite codes, QR, audited Gate. Your brand in front of guests.',
+    'Multi-tenant Event Operating System for agencies and enterprise event teams: invites, QR, audited gate — not a marketplace.',
   'nav.brand': 'vemoki',
   'nav.demo': 'View demo',
   'nav.interest': 'Register interest',
@@ -283,14 +334,24 @@ const EN: Record<CopyKey, string> = {
   skip: 'Skip to content',
   'badge.demo': 'Simulated demo',
   'footer.attendee': 'Have an invite code? Redeem on the app',
-  'footer.tagline': 'vemoki↗ · in-person event ops',
-  'hero.headline': 'From invite code to the gate — on one platform',
-  'hero.support':
-    'Multi-tenant for organizers and agencies. Guests see your brand; Gate stays audited — not a marketplace.',
+  'footer.tagline': 'vemoki↗ · Event Operating System',
+  'hero.eyebrow': 'In-person event operating system',
+  'hero.headline':
+    'Run events from invite to gate — on one operating system',
+  'hero.sub':
+    'Multi-tenant for agencies and enterprise event teams. Your brand for guests; audited gate — not a marketplace.',
+  'hero.proof1': 'Invite → redeem → event-scoped signed QR',
+  'hero.proof2': 'Duplicate-safe gate + audit',
+  'hero.proof3': 'Tenant isolation + RLS + deny-by-default',
+  'hero.proofs.label': 'Product proof points',
+  'hero.preview.alt':
+    'Redeem ticket screen in the Vemoki app (pilot environment)',
+  'hero.preview.caption':
+    'Actual Vemoki app UI (pilot environment).',
   'hero.cta.demo': 'View demo',
   'hero.cta.interest': 'Register interest',
   'hero.cta.login': 'Log in',
-  'hero.demo_note': 'Current demo is simulated — not a real customer.',
+  'hero.demo_note': 'Simulated demo — not a real customer.',
   'audience.title': 'Who Vemoki is for',
   'audience.lead':
     'This page is for event operators — not guests holding a ticket.',
@@ -326,15 +387,38 @@ const EN: Record<CopyKey, string> = {
   'whitelabel.point3': 'Agencies run many clients on one platform',
   'whitelabel.point3.body':
     'Multi-tenant membership — no per-client code forks.',
-  'trust.title': 'Operational safety',
-  'trust.lead': 'Built for real gates — not fake real-time dashboards.',
+  'trust.title': 'Built for real gate operations',
+  'trust.lead':
+    'Designed for in-person events — not vanity real-time dashboards.',
   'trust.p1.title': 'Tenant isolation',
-  'trust.p1.body': 'Data and rights stay per tenant; deny-by-default.',
-  'trust.p2.title': 'Reliable check-in',
-  'trust.p2.body': 'Duplicate-safe admission; auditable after the event.',
-  'trust.p3.title': 'Honest latency',
+  'trust.p1.body':
+    'Shared PostgreSQL with RLS and deny-by-default tenant authz.',
+  'trust.p2.title': 'Duplicate-safe admission',
+  'trust.p2.body':
+    'Audited check-in; event-scoped signed QR; revocation rotates tokens.',
+  'trust.p3.title': 'Gate when connectivity is limited',
   'trust.p3.body':
-    'Ops numbers carry an as-of mark — no absolute real-time promise.',
+    'D7: multi-device gate designed for limited connectivity — not «100% online only».',
+  'trust.p4.title': 'Honest metrics',
+  'trust.p4.body':
+    'Ops views show an as-of time; pilot target latency ≤10s — not absolute instant.',
+  'trust.p5.title': 'Security baseline',
+  'trust.p5.body':
+    'TLS, rate limits, admin MFA, logs exclude raw QR/OTP tokens.',
+  'outcomes.title': 'Operational outcomes (illustration)',
+  'outcomes.disclaimer':
+    'Illustration — simulated data, not real customers.',
+  'outcomes.lead':
+    'Figures below show the kinds of metrics you track in pilot — not contracted benchmarks.',
+  'outcomes.metric1.label': 'Check-in handling time (p50)',
+  'outcomes.metric1.value': '~1.2s',
+  'outcomes.metric2.label': 'Duplicate scans blocked (demo session)',
+  'outcomes.metric2.value': '14',
+  'outcomes.metric3.label': 'Tickets issued / gates open (fixture)',
+  'outcomes.metric3.value': '1,240 / 3',
+  'outcomes.chart.caption':
+    'Illustrative hourly entry chart — simulated data.',
+  'faq.title': 'Frequently asked questions',
   'demo.title': 'Try the simulated demo',
   'demo.lead':
     'Every current demo is a fixture to explore the product — not a customer case study.',
@@ -407,8 +491,6 @@ const EN: Record<CopyKey, string> = {
   'support.app': 'Product sign-in',
   'support.sales': 'Back to sales',
   'support.guest': 'Guests with invite codes: redeem in the app',
-  'hero.visual.label': 'Gate · QR · audit',
-  'hero.visual.meta': 'Product atmosphere — not a card collage',
   'interest.role.placeholder': 'Select a role',
   'interest.consent.privacy': 'Privacy',
 };
