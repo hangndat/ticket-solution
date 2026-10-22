@@ -15,6 +15,7 @@ import {
   loadPublishedEventDetail,
   visiblePublishedSections,
 } from '../../../../../src/published';
+import { publishedSectionKindLabel } from '../../../../../src/published/section-label';
 import { SurfaceState } from '../../../../../src/ui/surface-state';
 import { eventArtTone } from '../../../../../src/ui/event-art-tone';
 
@@ -198,7 +199,8 @@ export default async function EventPage({ params }: Props) {
                     {infoSections.map((section) => (
                       <section key={section.id} aria-labelledby={`sec-${section.id}`}>
                         <h4 id={`sec-${section.id}`}>
-                          {section.title?.trim() || section.kind}
+                          {section.title?.trim() ||
+                            publishedSectionKindLabel(section.kind)}
                         </h4>
                         {section.bodyMarkdown ? (
                           <p>{section.bodyMarkdown}</p>
