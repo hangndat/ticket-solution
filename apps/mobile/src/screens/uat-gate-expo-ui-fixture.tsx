@@ -56,7 +56,7 @@ export function UatGateExpoUiFixtureScreen() {
         contentContainerStyle={{ padding: space.xl, gap: space.lg }}
       >
         <Text accessibilityRole="header" style={{ ...typography.title, color: colors.label }}>
-          UAT @expo/ui gate (#815)
+          UAT @expo/ui gate — Issue 815
         </Text>
         <StaffEventPicker
           choices={MOCK_EVENTS}
