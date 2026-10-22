@@ -144,7 +144,7 @@ Không spawn PD/BA để “làm luôn” code BE+web+iOS. Không reuse session 
 
 ### 2. Task Spec tối thiểu (Wave C) + khối role
 
-Ưu tiên spec ngắn — đủ AC/paths/Role/Persona/Cost/model/SHA; **không** paste nguyên `roles/*.md`.
+Ưu tiên spec ngắn — đủ AC/paths/Role/Persona/Cost tier/SHA; **không** paste nguyên `roles/*.md`.
 
 ```markdown
 ## Task
@@ -156,15 +156,14 @@ Không spawn PD/BA để “làm luôn” code BE+web+iOS. Không reuse session 
 - Checks / evidence bắt buộc: <lệnh hoặc bằng chứng nghiệm thu>
 - Architecture impact: Có | Không — <1 câu>
 - Cost tier: cheap | standard
-- --model: <pin từ docs/agents/cost-catalog.md>
 - --display-name: "<Persona> · <ui-label>"
 - --task-title: "<Persona> · <ui-label> — #<issue> <tóm tắt>"
 
 ## Vai trò chuyên môn
 
-- Role ID: <id>[, reviewer-uiux / reviewer-security theo checklist gộp]
+- Role ID: <id> (role đơn) | `dod+ux` | `dod+sec` | `dod+sec+ux` (reviewer gộp — một session)
 - Persona: <Name>
-- File: docs/agents/roles/<id>.md (liệt kê các role gộp; đọc sau AGENTS.md)
+- File: docs/agents/roles/<id>.md (role đơn) hoặc docs/agents/roles/reviewer-merged.md (reviewer gộp); đọc sau AGENTS.md
 - Skills cần nạp: <tên + mục đích, hoặc Không nếu không cần; chỉ nạp skill liên quan>
 - Nếu Task UI: Mẫu thiết kế chuẩn + Evidence UI theo docs/agents/ui-workflow.md
 ```
