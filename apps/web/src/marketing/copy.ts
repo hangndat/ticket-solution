@@ -13,9 +13,16 @@ export type CopyKey =
   | 'nav.login'
   | 'nav.privacy'
   | 'nav.support'
+  | 'nav.features'
+  | 'nav.how'
+  | 'nav.solutions'
+  | 'nav.faq'
   | 'nav.locale.vi'
   | 'nav.locale.en'
   | 'nav.locale.label'
+  | 'nav.menu.open'
+  | 'nav.menu.close'
+  | 'nav.menu.label'
   | 'skip'
   | 'badge.demo'
   | 'footer.attendee'
@@ -29,6 +36,23 @@ export type CopyKey =
   | 'hero.proofs.label'
   | 'hero.preview.alt'
   | 'hero.preview.caption'
+  | 'hero.preview.tabs_label'
+  | 'hero.preview.tab.wallet'
+  | 'hero.preview.tab.gate'
+  | 'hero.preview.url.wallet'
+  | 'hero.preview.url.gate'
+  | 'hero.preview.nav.wallet'
+  | 'hero.preview.nav.gate'
+  | 'hero.preview.wallet.title'
+  | 'hero.preview.wallet.sub'
+  | 'hero.preview.ticket.unused'
+  | 'hero.preview.event.river'
+  | 'hero.preview.gate.hint'
+  | 'hero.preview.gate.ok'
+  | 'hero.preview.gate.dup'
+  | 'hero.preview.gate.event'
+  | 'hero.preview.phone.meta'
+  | 'hero.marquee'
   | 'hero.cta.demo'
   | 'hero.cta.interest'
   | 'hero.cta.login'
@@ -194,9 +218,16 @@ const VI: Record<CopyKey, string> = {
   'nav.login': 'Đăng nhập',
   'nav.privacy': 'Quyền riêng tư',
   'nav.support': 'Hỗ trợ',
+  'nav.features': 'Tính năng',
+  'nav.how': 'Cách hoạt động',
+  'nav.solutions': 'Giải pháp',
+  'nav.faq': 'Câu hỏi thường gặp',
   'nav.locale.vi': 'VI',
   'nav.locale.en': 'EN',
   'nav.locale.label': 'Ngôn ngữ',
+  'nav.menu.open': 'Menu',
+  'nav.menu.close': 'Đóng',
+  'nav.menu.label': 'Menu điều hướng',
   skip: 'Bỏ qua nội dung',
   'badge.demo': 'Demo giả lập',
   'footer.attendee': 'Bạn có mã mời? Đổi vé trên ứng dụng',
@@ -213,7 +244,24 @@ const VI: Record<CopyKey, string> = {
   'hero.preview.alt':
     'Màn hình đổi mã vé trong ứng dụng Vemoki (môi trường pilot)',
   'hero.preview.caption':
-    'Giao diện thật từ ứng dụng Vemoki (môi trường pilot).',
+    'UI composition có nhãn Demo — không dữ liệu khách thật.',
+  'hero.preview.tabs_label': 'Xem trước sản phẩm',
+  'hero.preview.tab.wallet': 'Vé & ví',
+  'hero.preview.tab.gate': 'Cổng',
+  'hero.preview.url.wallet': 'app.vemoki.com/wallet',
+  'hero.preview.url.gate': 'app.vemoki.com/gate',
+  'hero.preview.nav.wallet': 'Vé của tôi',
+  'hero.preview.nav.gate': 'Cổng · Quét vé',
+  'hero.preview.wallet.title': 'Vé của tôi',
+  'hero.preview.wallet.sub': '3 vé · 2 sự kiện (demo)',
+  'hero.preview.ticket.unused': 'Chưa sử dụng',
+  'hero.preview.event.river': 'Đêm nhạc bên sông',
+  'hero.preview.gate.hint': 'Hướng camera vào mã QR trên vé',
+  'hero.preview.gate.ok': 'Quét hợp lệ · audit ghi nhận',
+  'hero.preview.gate.dup': 'Chống trùng: bật',
+  'hero.preview.gate.event': 'Sự kiện: MFest (fixture)',
+  'hero.preview.phone.meta': 'Vé phổ thông · Cổng A',
+  'hero.marquee': 'EOS · Invite → QR → Gate ·',
   'hero.cta.demo': 'Xem demo',
   'hero.cta.interest': 'Đăng ký quan tâm',
   'hero.cta.login': 'Đăng nhập',
@@ -427,9 +475,16 @@ const EN: Record<CopyKey, string> = {
   'nav.login': 'Log in',
   'nav.privacy': 'Privacy',
   'nav.support': 'Support',
+  'nav.features': 'Features',
+  'nav.how': 'How it works',
+  'nav.solutions': 'Solutions',
+  'nav.faq': 'FAQ',
   'nav.locale.vi': 'VI',
   'nav.locale.en': 'EN',
   'nav.locale.label': 'Language',
+  'nav.menu.open': 'Menu',
+  'nav.menu.close': 'Close',
+  'nav.menu.label': 'Navigation menu',
   skip: 'Skip to content',
   'badge.demo': 'Simulated demo',
   'footer.attendee': 'Have an invite code? Redeem on the app',
@@ -446,7 +501,24 @@ const EN: Record<CopyKey, string> = {
   'hero.preview.alt':
     'Redeem ticket screen in the Vemoki app (pilot environment)',
   'hero.preview.caption':
-    'Actual Vemoki app UI (pilot environment).',
+    'UI composition labeled Demo — no real guest data.',
+  'hero.preview.tabs_label': 'Product preview',
+  'hero.preview.tab.wallet': 'Tickets & wallet',
+  'hero.preview.tab.gate': 'Gate',
+  'hero.preview.url.wallet': 'app.vemoki.com/wallet',
+  'hero.preview.url.gate': 'app.vemoki.com/gate',
+  'hero.preview.nav.wallet': 'My tickets',
+  'hero.preview.nav.gate': 'Gate · Scan',
+  'hero.preview.wallet.title': 'My tickets',
+  'hero.preview.wallet.sub': '3 tickets · 2 events (demo)',
+  'hero.preview.ticket.unused': 'Unused',
+  'hero.preview.event.river': 'Riverside night',
+  'hero.preview.gate.hint': 'Point the camera at the ticket QR',
+  'hero.preview.gate.ok': 'Valid scan · audit recorded',
+  'hero.preview.gate.dup': 'Duplicate block: on',
+  'hero.preview.gate.event': 'Event: MFest (fixture)',
+  'hero.preview.phone.meta': 'General · Gate A',
+  'hero.marquee': 'EOS · Invite → QR → Gate ·',
   'hero.cta.demo': 'View demo',
   'hero.cta.interest': 'Register interest',
   'hero.cta.login': 'Log in',

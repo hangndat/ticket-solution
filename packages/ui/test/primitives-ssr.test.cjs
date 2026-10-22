@@ -54,6 +54,17 @@ describe('@ticket/ui primitives SSR', () => {
     assert.match(html, />Invite</);
   });
 
+  it('renders StepsTimeline without client-only APIs', async () => {
+    const { StepsTimeline } = await loadUi();
+    const html = renderToStaticMarkup(
+      React.createElement(StepsTimeline, {
+        steps: [{ id: 's1', label: 'Step', visualVariant: 1 }],
+      }),
+    );
+    assert.match(html, /mkt-steps/);
+    assert.match(html, />Step</);
+  });
+
   it('FieldError uses role alert', async () => {
     const { FieldError } = await loadUi();
     const html = renderToStaticMarkup(

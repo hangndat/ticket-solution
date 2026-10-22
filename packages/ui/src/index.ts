@@ -61,3 +61,17 @@ export {
   cardVariants,
   focusRingClass,
 } from './primitives/variants.js';
+export {
+  ProductPreviewFrame,
+  type ProductPreviewFrameProps,
+  type ProductPreviewLabels,
+} from './marketing/product-preview-frame.js';
+export {
+  StepsTimeline,
+  type StepsTimelineProps,
+  type StepTimelineItem,
+} from './marketing/steps-timeline.js';
+export {
+  DemoMetric,
+  type DemoMetricProps,
+} from './marketing/demo-metric.js';
