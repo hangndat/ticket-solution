@@ -1,3 +1,7 @@
+/**
+ * Giữ RN Modal (fade, centered): hộp xác nhận có preview nhiều dòng + nút branded
+ * Live Pulse; Alert.alert không đủ layout/hint và không giữ testID gate-manual-confirm-*.
+ */
 import { Modal, Pressable, StyleSheet, Text } from 'react-native';
 import { Button } from '@/components/ui/button';
 import { colors } from '@/theme/colors';
