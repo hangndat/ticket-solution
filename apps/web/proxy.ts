@@ -21,7 +21,8 @@ function withRuntimeCsp(response: NextResponse): NextResponse {
 /**
  * Next.js 16 proxy — O13 host-aware marketing vs product.
  * OIDC session remains HttpOnly cookies on product host only (no Domain=.vemoki.com).
- * O02: anonymous soft-redirect for staff deep-links /admin|/gate → /auth
+ * D-6: retired web gate — /gate|/gate/* → / (308).
+ * O02: anonymous soft-redirect for staff deep-link /admin → /auth
  * (product host only — after apex→app host redirects).
  * ADR-20 §8: optional GET/HEAD /admin|/platform → PORTAL_ORIGIN (flag default OFF).
  */
@@ -70,10 +71,17 @@ export default function proxy(request: NextRequest) {
     return NextResponse.redirect(portalNav.location, portalNav.status);
   }
 
+  if (pathname === '/gate' || pathname.startsWith('/gate/')) {
+    const home = request.nextUrl.clone();
+    home.pathname = '/';
+    home.search = '';
+    return NextResponse.redirect(home, 308);
+  }
+
   // Soft-redirect anonymous staff deep-links only.
   // Owner-ticket `/t/…/tickets/…` renders login CTA on-page (AC-S2) — do not
   // bounce through `/auth` (stub would loop when returning to the ticket path).
-  if (pathname === '/admin' || pathname === '/gate') {
+  if (pathname === '/admin') {
     const token = request.cookies.get(OIDC_ACCESS_COOKIE)?.value?.trim() ?? '';
     if (!token) {
       const auth = request.nextUrl.clone();

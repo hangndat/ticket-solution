@@ -6,7 +6,8 @@
  *
  * AC:
  * - Guest `/` and `/redeem` do not chrome Admin/Cổng/Platform as entitled
- * - Anonymous `/admin` and `/gate` soft-redirect to `/auth`
+ * - Anonymous `/admin` soft-redirects to `/auth`
+ * - `/gate` retired (D-6) → permanent redirect home
  */
 import { mkdirSync } from 'node:fs';
 import { homedir } from 'node:os';
@@ -115,8 +116,12 @@ try {
   await assertSoftRedirect(page, '/admin');
   await page.screenshot({ path: join(OUT, 'o02-soft-redirect-admin.png'), fullPage: true });
 
-  await assertSoftRedirect(page, '/gate');
-  await page.screenshot({ path: join(OUT, 'o02-soft-redirect-gate.png'), fullPage: true });
+  const gateRes = await page.goto(`${BASE}/gate`, { waitUntil: 'domcontentloaded' });
+  const gateUrl = page.url();
+  if (!gateUrl.replace(/\?.*$/, '').endsWith('/')) {
+    die(`/gate: expected redirect to home, landed ${gateUrl} (status ${gateRes?.status()})`);
+  }
+  await page.screenshot({ path: join(OUT, 'o02-gate-redirect-home.png'), fullPage: true });
 
   console.log(`nav-o02-uat: ok ${BASE}`);
   console.log(`nav-o02-uat: artifacts ${OUT}/o02-nav-*.png o02-soft-redirect-*.png`);
