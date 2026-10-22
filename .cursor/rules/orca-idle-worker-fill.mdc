@@ -9,7 +9,7 @@ alwaysApply: false
 
 Coordinator gốc phải dispatch ngay khi còn capacity và Task sẵn sàng trong scope, không chờ cả wave hoặc user chọn Issue. Epic planner (`orca-epic-orchestrator.mdc`) theo dõi dependencies, chuẩn bị ready queue và đề xuất fill cho coordinator; planner/workers không tự spawn.
 
-Chỉ lấy task thuộc Epic/Run đã được user/coordinator ủy quyền; không tự chạy backlog toàn board. Tuân **concurrent soft caps** + WIP trong `orca-parallel-workers.mdc` / `github-project-tracking.mdc`, Cost tier (`orca-agent-routing.mdc`), và ngân sách/thời hạn nếu được giao. Dừng fill khi scope hoàn tất, hết việc sẵn sàng, user yêu cầu dừng hoặc hết giới hạn được giao. Task ngoài phạm vi cần ủy quyền mới.
+Chỉ lấy task thuộc Epic/Run đã được user/coordinator ủy quyền; không tự chạy backlog toàn board. Tuân **concurrent soft caps** + WIP trong `orca-parallel-workers.mdc` / `github-project-tracking.mdc`, Cost tier (`orca-agent-routing-coordinator.mdc`), và ngân sách/thời hạn nếu được giao. Dừng fill khi scope hoàn tất, hết việc sẵn sàng, user yêu cầu dừng hoặc hết giới hạn được giao. Task ngoài phạm vi cần ủy quyền mới.
 
 ## Idle / free means
 
@@ -24,7 +24,7 @@ Chỉ lấy task thuộc Epic/Run đã được user/coordinator ủy quyền; k
 3. Pull các Issue ready cho mọi scope đang free (không chỉ một slice); set Project Status → `Đang làm` when dispatching (see `github-project-tracking.mdc`).
 4. Prefer reusing a settled worker terminal when Orca allows **và** Cost tier Task kế ≤ tier pane đang giữ; otherwise start a new worker for that slice/role (không reuse pane `standard` cho Task `cheap`).
 5. Parallel-first: dưới ngưỡng WIP **và** concurrent soft caps → `worker-start` **hết** slot free (coding + reviewer + BA/PD độc lập) trước `check --wait`. Nhiều item `Chờ duyệt` độc lập → spawn song song reviewer (khác session implementer) **tối đa ≤3 reviewer live / Run**; ưu tiên PR blocking; reviewer **không** chiếm bucket feature ≤5. Map `--model` từ `docs/agents/cost-catalog.md` (không inherit mặc định).
-6. **Chỉ coordinator gốc spawn; áp dụng `orca-agent-routing.mdc` (agent + Cost tier) cho idle fill/reviewer/replacement. Mọi Task dùng Cursor trừ override rõ từ user; không kiểm tra quota Codex cho Cursor.**
+6. **Chỉ coordinator gốc spawn; áp dụng `orca-agent-routing-coordinator.mdc` (agent + Cost tier) cho idle fill/reviewer/replacement. Mọi Task dùng Cursor trừ override rõ từ user; không kiểm tra quota Codex cho Cursor.**
 
 ## Backpressure — ưu tiên khi hàng đợi duyệt đầy
 
@@ -32,7 +32,7 @@ Trước khi `worker-start` **feature coding** mới, kiểm tra tín hiệu đ�
 
 Khi đầy, thứ tự fill cho worker rảnh:
 
-1. **DoD / security review** (agent theo `orca-agent-routing.mdc`, reviewer ≠ implementer) cho item `Chờ duyệt` hoặc PR thiếu evidence exact-SHA
+1. **DoD / security review** (agent theo `orca-agent-routing-coordinator.mdc`, reviewer ≠ implementer) cho item `Chờ duyệt` hoặc PR thiếu evidence exact-SHA
 2. **Fix** theo findings review / CI đỏ (cùng Issue hoặc PR)  
 3. **Integration support** (rebase/conflict cùng slice do owner slice; không merge hộ ngoài ủy quyền)  
 4. **Feature `Sẵn sàng` mới** — chỉ khi hàng đợi không còn đầy **hoặc** slice đó không góp thêm `Chờ duyệt` (ví dụ chỉ còn việc review)

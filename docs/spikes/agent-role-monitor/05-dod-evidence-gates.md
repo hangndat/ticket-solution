@@ -16,7 +16,7 @@ Hai tầng nghiệm thu:
 | **A — Spike docs** | Artifact markdown `01`–`07` + `00-synthesis` | Wave research hiện tại |
 | **B — MVP tooling** | Telemetry / ledger / surface đo role (BE + web sau này) | Khi implement theo synthesis |
 
-Verdict thống nhất: `PASS` | `FAIL` | `PASS with known gap` (gap có chủ đích, không nuốt gate bắt buộc — khớp `orca-agent-routing.mdc`).
+Verdict thống nhất: `PASS` | `FAIL` | `PASS with known gap` (gap có chủ đích, không nuốt gate bắt buộc — khớp `orca-agent-routing-coordinator.mdc`).
 
 ## 2. Claim hợp lệ vs vanity
 

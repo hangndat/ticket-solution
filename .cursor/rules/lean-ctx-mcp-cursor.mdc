@@ -1,6 +1,6 @@
 ---
-description: "How to invoke lean-ctx MCP tools in Cursor (CallDynamicTool). Prevents Tool ctx_call was not found."
-alwaysApply: true
+description: "Request when lean-ctx MCP fails (Tool ctx_call was not found) or native Grep/Glob denied — CallDynamicTool + hook repair"
+alwaysApply: false
 ---
 
 # lean-ctx on Cursor (dynamic MCP)
