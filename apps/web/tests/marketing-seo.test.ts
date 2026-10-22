@@ -10,12 +10,13 @@ import {
 } from '../src/marketing/seo/robots-sitemap';
 
 describe('marketing SEO robots/sitemap', () => {
-  it('disallows private and product paths on marketing host', () => {
+  it('disallows product paths without enumerating private app routes', () => {
     const dis = marketingDisallowPaths();
-    assert.ok(dis.includes('/admin'));
-    assert.ok(dis.includes('/gate'));
-    assert.ok(dis.includes('/wallet'));
+    assert.ok(!dis.includes('/admin'));
+    assert.ok(!dis.includes('/gate'));
+    assert.ok(!dis.includes('/wallet'));
     assert.ok(dis.some((p) => p.startsWith('/t')));
+    assert.ok(dis.includes('/auth'));
   });
 
   it('marketing robots includes sitemap on apex', () => {
