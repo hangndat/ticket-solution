@@ -1,6 +1,7 @@
 /*
  * Design system — Tailwind v4 utilities for @ticket/ui primitives (no Preflight on legacy).
- * Legacy rules live in @layer legacy (before utilities) so un-prefixed utilities win on name clashes.
+ * Cascade: utilities (layered) beat marketing uplift in @layer legacy. Live Pulse + attendee
+ * uplift stay unlayered like prod until legacy sunset (ADR-22 WP-2 / #794).
  */
 @import '@ticket/ui/vemoki-theme.css';
 @layer theme, base, legacy, components, utilities;
@@ -9,5 +10,4 @@
 @source '../../../packages/ui/src/**/*.{ts,tsx}';
 @source '../app/**/*.{ts,tsx}';
 @source '../../src/**/*.{ts,tsx}';
-@import './live-pulse-legacy.css' layer(legacy);
-@import './attendee-uplift.css' layer(legacy);
+@import './live-pulse-legacy.css';

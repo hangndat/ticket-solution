@@ -11,6 +11,7 @@ import { configuredPublicOrigin } from '../src/oidc/public-origin';
 import { DemoAttendeeStrip } from '../src/attendee-uplift/demo-attendee-strip';
 import { FooterBrand } from '../src/site-chrome';
 import './globals.css';
+import './attendee-uplift.css';
 
 /** Prod default so OG/Twitter never fall back to request-host localhost. */
 const METADATA_BASE = new URL(

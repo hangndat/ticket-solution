@@ -1,137 +1,141 @@
 {
-  "comparedAt": "2026-10-22T12:07:18.534Z",
+  "comparedAt": "2026-10-22T12:20:21.436Z",
   "results": [
     {
       "file": "account-1280.png",
-      "diffPixels": -1,
-      "note": "size mismatch 1280x1954 vs 1280x1905"
+      "diffPixels": 395,
+      "width": 1280,
+      "height": 1954
     },
     {
       "file": "account-390.png",
-      "diffPixels": -1,
-      "note": "size mismatch 390x2309 vs 390x2290"
+      "diffPixels": 0,
+      "width": 390,
+      "height": 2309
     },
     {
       "file": "catalog-home-1280.png",
-      "diffPixels": 403,
+      "diffPixels": 395,
       "width": 1280,
       "height": 720
     },
     {
       "file": "catalog-home-390.png",
-      "diffPixels": 18,
+      "diffPixels": 0,
       "width": 390,
       "height": 844
     },
     {
       "file": "claim-1280.png",
-      "diffPixels": 397,
+      "diffPixels": 395,
       "width": 1280,
       "height": 1658
     },
     {
       "file": "claim-390.png",
-      "diffPixels": 12,
+      "diffPixels": 0,
       "width": 390,
       "height": 1760
     },
     {
       "file": "event-detail-1280.png",
-      "diffPixels": 367,
+      "diffPixels": 395,
       "width": 1280,
       "height": 720
     },
     {
       "file": "event-detail-390.png",
-      "diffPixels": 12,
+      "diffPixels": 0,
       "width": 390,
       "height": 844
     },
     {
       "file": "invite-1280.png",
-      "diffPixels": 367,
+      "diffPixels": 395,
       "width": 1280,
       "height": 1417
     },
     {
       "file": "invite-390.png",
-      "diffPixels": 12,
+      "diffPixels": 0,
       "width": 390,
       "height": 1463
     },
     {
       "file": "marketing-home-en-1280.png",
       "diffPixels": -1,
-      "note": "size mismatch 1280x6516 vs 1280x6532"
+      "note": "size mismatch 1280x6516 vs 1280x6542"
     },
     {
       "file": "marketing-home-en-390-dark.png",
       "diffPixels": -1,
-      "note": "size mismatch 390x11239 vs 390x11264"
+      "note": "size mismatch 390x11239 vs 390x11274"
     },
     {
       "file": "marketing-home-en-390.png",
       "diffPixels": -1,
-      "note": "size mismatch 390x11239 vs 390x11264"
+      "note": "size mismatch 390x11239 vs 390x11274"
     },
     {
       "file": "marketing-home-vi-1280.png",
       "diffPixels": -1,
-      "note": "size mismatch 1280x6601 vs 1280x6617"
+      "note": "size mismatch 1280x6601 vs 1280x6627"
     },
     {
       "file": "marketing-home-vi-390-dark.png",
       "diffPixels": -1,
-      "note": "size mismatch 390x11298 vs 390x11322"
+      "note": "size mismatch 390x11298 vs 390x11333"
     },
     {
       "file": "marketing-home-vi-390.png",
       "diffPixels": -1,
-      "note": "size mismatch 390x11298 vs 390x11322"
+      "note": "size mismatch 390x11298 vs 390x11333"
     },
     {
       "file": "privacy-1280.png",
-      "diffPixels": -1,
-      "note": "size mismatch 1280x1968 vs 1280x1919"
+      "diffPixels": 395,
+      "width": 1280,
+      "height": 1968
     },
     {
       "file": "privacy-390.png",
-      "diffPixels": -1,
-      "note": "size mismatch 390x2701 vs 390x2681"
+      "diffPixels": 0,
+      "width": 390,
+      "height": 2701
     },
     {
       "file": "redeem-1280.png",
-      "diffPixels": 418,
+      "diffPixels": 395,
       "width": 1280,
       "height": 862
     },
     {
       "file": "redeem-390.png",
-      "diffPixels": 31,
+      "diffPixels": 0,
       "width": 390,
       "height": 849
     },
     {
       "file": "ticket-detail-1280.png",
-      "diffPixels": 373,
+      "diffPixels": 395,
       "width": 1280,
       "height": 720
     },
     {
       "file": "ticket-detail-390.png",
-      "diffPixels": 18,
+      "diffPixels": 0,
       "width": 390,
       "height": 844
     },
     {
       "file": "wallet-1280.png",
-      "diffPixels": 373,
+      "diffPixels": 395,
       "width": 1280,
       "height": 720
     },
     {
       "file": "wallet-390.png",
-      "diffPixels": 18,
+      "diffPixels": 0,
       "width": 390,
       "height": 844
     }
