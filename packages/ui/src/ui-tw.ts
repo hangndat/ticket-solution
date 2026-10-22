@@ -7,13 +7,15 @@ export function withUiPrefix(classes: string): string {
     .split(/\s+/)
     .filter(Boolean)
     .map((cls) => {
-      if (cls.includes('ui:')) {
+      if (cls.startsWith('ui:')) {
         return cls;
       }
       const parts = cls.split(':');
       const util = parts.pop()!;
-      const variant = parts.length ? `${parts.join(':')}:` : '';
-      return `${variant}ui:${util}`;
+      if (!parts.length) {
+        return `ui:${util}`;
+      }
+      return `ui:${parts.join(':')}:${util}`;
     })
     .join(' ');
 }

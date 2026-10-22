@@ -16,6 +16,8 @@ describe('@ticket/ui primitives SSR', () => {
     );
     assert.match(html, /<button[^>]*type="button"/);
     assert.match(html, /ui:min-h-11/);
+    assert.match(html, /ui:hover:opacity-95/);
+    assert.match(html, /ui:disabled:pointer-events-none/);
     assert.match(html, />Lưu</);
   });
 

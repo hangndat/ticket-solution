@@ -12,7 +12,7 @@ export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> &
 function ButtonSpinner() {
   return (
     <svg
-      className="ui:size-4 ui:shrink-0 ui:animate-spin motion-reduce:ui:animate-none"
+      className="ui:size-4 ui:shrink-0 ui:animate-spin ui:motion-reduce:animate-none"
       viewBox="0 0 24 24"
       fill="none"
       aria-hidden
