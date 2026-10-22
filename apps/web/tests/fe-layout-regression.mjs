@@ -30,6 +30,8 @@ const FOOTER_GAP_MAX_PX = 2;
 const CLS_MAX = 0.08;
 const HEADER_ROW_TOP_MAX_PX = 2;
 const HEADER_BUTTON_CENTER_MAX_PX = 1;
+const HEADER_OVERLAP_MAX_PX = 0;
+const BUTTON_LINE_SLACK_PX = 1;
 
 const ATTENDEE_CASES = [
   { id: 'privacy', path: '/privacy', ready: '[data-testid="site-footer"]' },
@@ -141,12 +143,9 @@ async function heroBlockHeight(page) {
   });
 }
 
-async function measureMarketingHeaderRow(page) {
+async function measureHeaderChrome(page, config) {
   return page.evaluate(
-    ({ topMax, centerMax }) => {
-      const header = document.querySelector('[data-testid="mkt-header"]');
-      if (!header) return { ok: false, reason: 'no-header' };
-
+    ({ topMax, centerMax, overlapMax, lineSlack, ...cfg }) => {
       const isVis = (el) => {
         if (!el) return false;
         const style = window.getComputedStyle(el);
@@ -157,103 +156,178 @@ async function measureMarketingHeaderRow(page) {
         );
       };
 
-      const rowNodes = [
-        header.querySelector('[data-testid="mkt-wordmark"]'),
-        ...header.querySelectorAll('[data-testid="mkt-nav"] > *'),
-      ].filter(isVis);
+      const measureButton = (btn) => {
+        if (!btn || !isVis(btn)) {
+          return { ok: false, reason: 'missing-button' };
+        }
+        const br = btn.getBoundingClientRect();
+        const style = window.getComputedStyle(btn);
+        const lineHeight = parseFloat(style.lineHeight);
+        const paddingTop = parseFloat(style.paddingTop);
+        const paddingBottom = parseFloat(style.paddingBottom);
+        const expectedMax =
+          (Number.isFinite(lineHeight) ? lineHeight : 16) +
+          paddingTop +
+          paddingBottom +
+          lineSlack;
+        const heightOk =
+          btn.scrollHeight <= btn.clientHeight + lineSlack &&
+          br.height <= expectedMax + lineSlack + 2;
 
-      const tops = rowNodes.map((el) =>
-        Math.round(el.getBoundingClientRect().top),
-      );
+        let textSingleLine = true;
+        let labelCenterDelta = null;
+        const label =
+          btn.querySelector('[class*="toggle__label"]') ||
+          btn.querySelector('span') ||
+          btn;
+        const walker = document.createTreeWalker(btn, NodeFilter.SHOW_TEXT);
+        let textNode = null;
+        while (walker.nextNode()) {
+          const t = walker.currentNode;
+          if (t.textContent?.trim()) {
+            textNode = t;
+            break;
+          }
+        }
+        if (textNode) {
+          const range = document.createRange();
+          range.selectNodeContents(textNode);
+          textSingleLine = range.getClientRects().length <= 1;
+          const tr = range.getBoundingClientRect();
+          labelCenterDelta =
+            Math.round(
+              Math.abs(br.top + br.height / 2 - (tr.top + tr.height / 2)) *
+                100,
+            ) / 100;
+        } else if (label) {
+          const lr = label.getBoundingClientRect();
+          labelCenterDelta =
+            Math.round(
+              Math.abs(br.top + br.height / 2 - (lr.top + lr.height / 2)) *
+                100,
+            ) / 100;
+        }
+
+        const pass =
+          heightOk &&
+          textSingleLine &&
+          (labelCenterDelta === null || labelCenterDelta <= centerMax);
+
+        return {
+          ok: true,
+          heightOk,
+          textSingleLine,
+          labelCenterDelta,
+          clientHeight: btn.clientHeight,
+          scrollHeight: btn.scrollHeight,
+          pass,
+        };
+      };
+
+      const root = document.querySelector(cfg.rootSelector);
+      if (!root) return { ok: false, reason: 'no-root' };
+
+      const rowNodes = cfg.rowSelectors
+        .flatMap((sel) => [...root.querySelectorAll(sel)])
+        .filter(isVis);
+      const uniqueRow = [...new Set(rowNodes)];
+
+      const rects = uniqueRow.map((el) => el.getBoundingClientRect());
+      const tops = rects.map((r) => Math.round(r.top));
       const maxTopDelta =
         tops.length > 1 ? Math.max(...tops) - Math.min(...tops) : 0;
+      const centers = rects.map((r) => r.top + r.height / 2);
+      const maxCenterDelta =
+        centers.length > 1
+          ? Math.round((Math.max(...centers) - Math.min(...centers)) * 100) /
+            100
+          : 0;
 
-      const toggle = header.querySelector('[data-testid="mkt-nav-menu-toggle"]');
-      let labelCenterDelta = null;
-      if (isVis(toggle)) {
-        const tr = toggle.getBoundingClientRect();
-        const label = toggle.querySelector('.mkt-nav-menu-toggle__label');
-        const lr = (label ?? toggle).getBoundingClientRect();
-        labelCenterDelta =
-          Math.round(
-            Math.abs(tr.top + tr.height / 2 - (lr.top + lr.height / 2)) * 100,
-          ) / 100;
+      let maxOverlap = 0;
+      for (let i = 0; i < rects.length; i++) {
+        for (let j = i + 1; j < rects.length; j++) {
+          const area =
+            Math.max(0, Math.min(rects[i].right, rects[j].right) -
+              Math.max(rects[i].left, rects[j].left)) *
+            Math.max(0, Math.min(rects[i].bottom, rects[j].bottom) -
+              Math.max(rects[i].top, rects[j].top));
+          maxOverlap = Math.max(maxOverlap, area);
+        }
       }
+      const overlapPass = maxOverlap <= overlapMax;
+
+      const buttons = cfg.buttonSelectors
+        .flatMap((sel) => [...root.querySelectorAll(sel)])
+        .filter(isVis);
+      const buttonMeasures = buttons.map((btn) => ({
+        testId: btn.getAttribute('data-testid'),
+        ...measureButton(btn),
+      }));
+      const buttonsPass = buttonMeasures.every((b) => b.pass !== false);
 
       const pass =
         maxTopDelta <= topMax &&
-        (labelCenterDelta === null || labelCenterDelta <= centerMax);
+        maxCenterDelta <= centerMax &&
+        overlapPass &&
+        buttonsPass;
 
       return {
         ok: true,
-        visibleCount: rowNodes.length,
+        visibleCount: uniqueRow.length,
         maxTopDelta,
-        labelCenterDelta,
+        maxCenterDelta,
+        maxOverlapPx: Math.round(maxOverlap * 100) / 100,
+        overlapPass,
+        buttonMeasures,
         pass,
       };
     },
     {
       topMax: HEADER_ROW_TOP_MAX_PX,
       centerMax: HEADER_BUTTON_CENTER_MAX_PX,
+      overlapMax: HEADER_OVERLAP_MAX_PX,
+      lineSlack: BUTTON_LINE_SLACK_PX,
+      ...config,
     },
   );
 }
 
+async function measureMarketingHeaderRow(page) {
+  const chrome = await measureHeaderChrome(page, {
+    rootSelector: '[data-testid="mkt-header"]',
+    rowSelectors: [
+      '[data-testid="mkt-wordmark"]',
+      '[data-testid="mkt-nav"] > *',
+    ],
+    buttonSelectors: [
+      '[data-testid="cta-interest-nav"]',
+      '[data-testid="mkt-nav-menu-toggle"]',
+    ],
+  });
+  if (!chrome.ok) return chrome;
+  return {
+    ...chrome,
+    labelCenterDelta: chrome.buttonMeasures?.find(
+      (b) => b.testId === 'mkt-nav-menu-toggle',
+    )?.labelCenterDelta,
+  };
+}
+
 async function measureSiteHeaderRow(page) {
-  return page.evaluate(
-    ({ topMax, centerMax }) => {
-      const nav = document.querySelector('[data-testid="site-nav"]');
-      if (!nav) {
-        return { ok: true, pass: true, skipped: 'no-site-chrome' };
-      }
-
-      const isVis = (el) => {
-        if (!el) return false;
-        const style = window.getComputedStyle(el);
-        return (
-          style.display !== 'none' &&
-          style.visibility !== 'hidden' &&
-          el.getClientRects().length > 0
-        );
-      };
-
-      const rowNodes = [...nav.children].filter(isVis);
-
-      const tops = rowNodes.map((el) =>
-        Math.round(el.getBoundingClientRect().top),
-      );
-      const maxTopDelta =
-        tops.length > 1 ? Math.max(...tops) - Math.min(...tops) : 0;
-
-      const toggle = nav.querySelector('[data-testid="nav-menu-toggle"]');
-      let labelCenterDelta = null;
-      if (isVis(toggle)) {
-        const tr = toggle.getBoundingClientRect();
-        const label = toggle.querySelector('.nav-menu-toggle__label');
-        const lr = (label ?? toggle).getBoundingClientRect();
-        labelCenterDelta =
-          Math.round(
-            Math.abs(tr.top + tr.height / 2 - (lr.top + lr.height / 2)) * 100,
-          ) / 100;
-      }
-
-      const pass =
-        maxTopDelta <= topMax &&
-        (labelCenterDelta === null || labelCenterDelta <= centerMax);
-
-      return {
-        ok: true,
-        visibleCount: rowNodes.length,
-        maxTopDelta,
-        labelCenterDelta,
-        pass,
-      };
-    },
-    {
-      topMax: HEADER_ROW_TOP_MAX_PX,
-      centerMax: HEADER_BUTTON_CENTER_MAX_PX,
-    },
-  );
+  const hasNav = await page.$('[data-testid="site-nav"]');
+  if (!hasNav) {
+    return { ok: true, pass: true, skipped: 'no-site-chrome' };
+  }
+  const chrome = await measureHeaderChrome(page, {
+    rootSelector: '[data-testid="site-nav"]',
+    rowSelectors: [':scope > *'],
+    buttonSelectors: ['[data-testid="nav-menu-toggle"]'],
+  });
+  if (!chrome.ok) return chrome;
+  return {
+    ...chrome,
+    labelCenterDelta: chrome.buttonMeasures?.[0]?.labelCenterDelta,
+  };
 }
 
 async function main() {
