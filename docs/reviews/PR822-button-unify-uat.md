@@ -1,6 +1,6 @@
 # PR822 — WP-4 Button unify UAT
 
-**SHA (pre-commit base):** `cda20b2498b4` — update to PR tip after push.
+**SHA:** `d47e2c3` (branch tip — `git rev-parse HEAD` on `hangndat/uif-822-button-unify`).
 
 ## Orca browser UAT
 
