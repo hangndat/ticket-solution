@@ -15,6 +15,12 @@ Trước mỗi spawn: ghi agent, Cost tier, Persona, model requested/effective, 
 
 Override Codex chỉ khi user cho phép; kiểm tra quota ≤5 phút; quota hết → Cursor replacement (checkpoint, không mất wt).
 
+## Task UI/UX
+
+Đọc [ui-workflow.md](../../docs/agents/ui-workflow.md) khi dispatch UI. Chọn role theo công việc: sửa nhỏ → `web`/`ios`; đổi visual/flow đáng kể → `product-design` trước consumer phụ thuộc; critique → `reviewer-uiux`; nghiệm thu PR UI → gộp `reviewer-dod` + `reviewer-uiux` trong session độc lập. Chỉ thêm BA/architect/backend/security khi có phạm vi tương ứng; không spawn đủ roster cho mọi Task.
+
+Trước spawn, Spec phải có `Skills cần nạp` (tên/mục đích), mẫu chuẩn và evidence UI; kiểm skill có sẵn cho worker. Persona/labels lấy từ catalog. Cùng PR/SHA ưu tiên `James · dod+ux` hoặc `James · dod+sec+ux`, không thêm reviewer trùng checklist. Sau `worker-start` đọc `result.state` và lỗi nếu có, không coi `ok: true` là đã chạy thành công.
+
 ## Cost tier — spawn rules
 
 1. Đọc cost-catalog → `--model <pin>`; không `--effort` đơn lẻ.
