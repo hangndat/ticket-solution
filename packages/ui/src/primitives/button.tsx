@@ -1,5 +1,5 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
-import { cn } from '../cn.js';
+import { cn, usesLegacyChromeClass } from '../cn.js';
 import { buttonVariants } from './variants.js';
 import type { VariantProps } from 'class-variance-authority';
 
@@ -56,10 +56,11 @@ export function Button({
     );
   }
 
+  const legacy = usesLegacyChromeClass(className);
   return (
     <button
       type={type}
-      className={cn(buttonVariants({ variant, size }), className)}
+      className={cn(!legacy && buttonVariants({ variant, size }), className)}
       disabled={isDisabled}
       aria-busy={loading || undefined}
       data-loading={loading ? '' : undefined}

@@ -1,5 +1,5 @@
 import type { InputHTMLAttributes } from 'react';
-import { cn } from '../cn.js';
+import { cn, usesLegacyChromeClass } from '../cn.js';
 import { inputVariants } from './variants.js';
 import type { VariantProps } from 'class-variance-authority';
 
@@ -17,9 +17,10 @@ export function Input({
   ...props
 }: InputProps) {
   const resolvedState = error ? 'error' : state;
+  const legacy = usesLegacyChromeClass(className);
   return (
     <input
-      className={cn(inputVariants({ state: resolvedState }), className)}
+      className={cn(!legacy && inputVariants({ state: resolvedState }), className)}
       disabled={disabled}
       aria-invalid={error || undefined}
       data-error={error ? '' : undefined}
