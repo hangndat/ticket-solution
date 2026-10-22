@@ -24,10 +24,10 @@ Sau khi refresh: cập nhật bảng **Pinned** bên dưới + `Pinned at` nếu
 
 Nguồn: `agent models` trên máy này. Effort nằm **trong** model id Cursor (vd. `…-low`, `…-thinking-high`) → **không** truyền `--effort` trừ khi receipt/host yêu cầu rõ.
 
-| Cost tier | `--model` (primary) | Fallback cùng band | Ghi chú |
-| --------- | ------------------- | ------------------ | ------- |
-| `cheap` | `composer-2.5` | `grok-4.7-low`, `gemini-3.7-flash-low` | Docs, hygiene, DoD hẹp, planner đơn |
-| `standard` | `composer-2.5` | `claude-sonnet-5-thinking-low` | Mọi việc còn lại (feature, architect, security hot path, planner DAG rối, retry reasoning) |
+| Cost tier  | `--model` (primary) | Fallback cùng band                     | Ghi chú                                                                                    |
+| ---------- | ------------------- | -------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `cheap`    | `composer-2.5`      | `grok-4.7-low`, `gemini-3.7-flash-low` | Docs, hygiene, DoD hẹp, planner đơn                                                        |
+| `standard` | `composer-2.5`      | `claude-sonnet-5-thinking-low`         | Mọi việc còn lại (feature, architect, security hot path, planner DAG rối, retry reasoning) |
 
 **Cấm:** `composer-2.5-fast`; `claude-sonnet-5-thinking-medium`; tier/model vượt standard — `heavy`, `…-thinking-high`, `gpt-5.6-sol-high`, `…-xhigh`, `…-max`, `…-ultra`, `claude-opus-*` (kể cả user override trừ khi coordinator ghi ngoại lệ ngoài Orca spawn).
 
@@ -46,19 +46,19 @@ Sau launch: so `launch.requested` vs `launch.effective`. Reject primary → th�
 
 ## Hạ tier (volume)
 
-| Loại Task | Tier mặc định |
-| --------- | ------------- |
-| Docs/rules, Project comment, rename, board hygiene, CI fix hẹp | `cheap` (ưu tiên coordinator **inline** nếu &lt; ~15 phút) |
-| DoD docs-only / revalidate tip SHA / checklist cũ (≤ ~15 file, không runtime) | `cheap` |
-| Epic planner DAG đơn (&lt; ~8 Task, không ADR mở) | `cheap` |
-| Feature coding, BA/PD, DoD runtime, reviewer-security (mọi hot path) | `standard` |
-| Architect/ADR; planner DAG rối; retry sau FAIL reasoning | `standard` (`composer-2.5`; fallback `claude-sonnet-5-thinking-low` nếu host reject primary) |
+| Loại Task                                                                     | Tier mặc định                                                                                |
+| ----------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| Docs/rules, Project comment, rename, board hygiene, CI fix hẹp                | `cheap` (ưu tiên coordinator **inline** nếu &lt; ~15 phút)                                   |
+| DoD docs-only / revalidate tip SHA / checklist cũ (≤ ~15 file, không runtime) | `cheap`                                                                                      |
+| Epic planner DAG đơn (&lt; ~8 Task, không ADR mở)                             | `cheap`                                                                                      |
+| Feature coding, BA/PD, DoD runtime, reviewer-security (mọi hot path)          | `standard`                                                                                   |
+| Architect/ADR; planner DAG rối; retry sau FAIL reasoning                      | `standard` (`composer-2.5`; fallback `claude-sonnet-5-thinking-low` nếu host reject primary) |
 
 Không tier cao hơn `standard`; không nâng model chỉ vì role “quan trọng”.
 
 ## Soft caps liên quan
 
-- ≤ **3** reviewer (`reviewer-dod` + `reviewer-security`) live / Run — xem `orca-parallel-workers.mdc`
+- ≤ **3** reviewer (`reviewer-dod`, `reviewer-security`, `reviewer-uiux`) live / Run; gộp nhiều role trong một session tính **một** reviewer — xem `orca-parallel-workers.mdc`.
 
 ## Wave D — đo cost (bắt buộc 1 dòng / wave)
 
@@ -68,13 +68,13 @@ Sau mỗi wave `worker-start` (hoặc cuối checkpoint idle-fill), coordinator 
 cost-wave | run=<id> | n=<spawned> | cheap=<c> standard=<s> | pinned=<p> inherit=<i> | inherit%=<i*100/n> | models=<effective ids> | source=receipt|receipt+mixed|wt-comment-estimate
 ```
 
-| Trường | Nguồn |
-| ------ | ----- |
-| `cheap/standard` | Cost tier trong Spec / task-title / displayName (`heavy` legacy → đếm `standard`) |
-| `pinned` | `launch.effective.model` (hoặc `requested`) khác null và không `auto` |
-| `inherit` | omit `--model`, `--model auto`, hoặc receipt `effective.model` **null** |
-| `models` | `launch.effective.model` (ưu tiên). Comment wt chỉ là soft signal (`source=mixed` / `wt-comment-estimate`) |
-| `source` | `receipt` = chỉ worker-show; `receipt+mixed` = null effective nhưng comment có pin; `wt-comment-estimate` = `--comments-only` hoặc không live |
+| Trường           | Nguồn                                                                                                                                         |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `cheap/standard` | Cost tier trong Spec / task-title / displayName (`heavy` legacy → đếm `standard`)                                                             |
+| `pinned`         | `launch.effective.model` (hoặc `requested`) khác null và không `auto`                                                                         |
+| `inherit`        | omit `--model`, `--model auto`, hoặc receipt `effective.model` **null**                                                                       |
+| `models`         | `launch.effective.model` (ưu tiên). Comment wt chỉ là soft signal (`source=mixed` / `wt-comment-estimate`)                                    |
+| `source`         | `receipt` = chỉ worker-show; `receipt+mixed` = null effective nhưng comment có pin; `wt-comment-estimate` = `--comments-only` hoặc không live |
 
 **Ngưỡng hành động:** `inherit%` > **20%** trong một đợt → refresh `agent models`, sửa pin stale, **không spawn thêm** cho đến khi wave kế có `--model` (Wave E). Comment wt **không** đủ để hạ `inherit%`.
 
@@ -98,10 +98,10 @@ node scripts/orca-spawn-model-preflight.mjs -- \
 # exit 2 → thiếu/invalid --model → dừng wave
 ```
 
-| Gate | Hành vi |
-| ---- | ------- |
-| Thiếu `--model` / `--model auto` | **Reject** wave (trừ `--terminal` reuse) |
-| `--model` ngoài cost-catalog pin set | **Reject** — refresh `agent models` rồi cập nhật catalog |
+| Gate                                                   | Hành vi                                                            |
+| ------------------------------------------------------ | ------------------------------------------------------------------ |
+| Thiếu `--model` / `--model auto`                       | **Reject** wave (trừ `--terminal` reuse)                           |
+| `--model` ngoài cost-catalog pin set                   | **Reject** — refresh `agent models` rồi cập nhật catalog           |
 | Receipt `effective.model` null sau spawn dù đã request | Ghi limitation; đếm **inherit** trên cost-wave; không claim pinned |
 
 Snippet spawn tối thiểu:

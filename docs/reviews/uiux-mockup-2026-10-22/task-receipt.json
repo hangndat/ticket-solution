@@ -1,0 +1,30 @@
+{
+  "id": "02bea242-0ff5-49ca-ad47-a281b1e2b941",
+  "ok": true,
+  "result": {
+    "task": {
+      "id": "task_b112ad63dae2",
+      "run_id": "run_3aad5e1c919b",
+      "parent_id": null,
+      "created_by_terminal_handle": null,
+      "created_by_pane_key": null,
+      "created_by_process_incarnation": null,
+      "created_by_run_generation": null,
+      "task_title": "Mira · ux — Đánh giá mockup UI uplift #766/#770",
+      "display_name": "Mira · ux",
+      "spec": "# Review UI/UX mockup — một worker độc lập\n- Yêu cầu trực tiếp của user: spawn đúng một worker review mockup rồi coordinator đánh giá báo cáo. Không mở feature hoặc sửa UI.\n- Nguồn: docs/design/ui-uplift-2026-10/marketing/ và app/ (mockup liên quan Epic #770/#766; không thay trạng thái Issue/Project).\n- Worktree: /Users/admin/orca/workspaces/main/FE-refactor; dùng local files hiện có. Exact source HEAD: de08f97a4f6498b789d81bce2dbd88b4e6d2ffa5. Source hashes: docs/reviews/uiux-mockup-2026-10-22/source-manifest.json.\n- Role ID: reviewer-uiux. Persona: Mira. Read docs/agents/roles/reviewer-uiux.md + docs/agents/ui-workflow.md sau AGENTS.md.\n- Architecture impact: Không — chỉ đánh giá mockup, không đổi IA/contract.\n- Cost tier: standard. Agent cursor; model composer-2.5.\n- --display-name: Mira · ux\n- --task-title: Mira · ux — Đánh giá mockup UI uplift #766/#770\n- Skills cần nạp: /Users/admin/.agents/skills/impeccable/SKILL.md (critique; context chạy với target mockup cụ thể, không init/rewrite PRODUCT.md/DESIGN.md); /Users/admin/.agents/skills/web-design-guidelines/SKILL.md (fetch checklist và kiểm HTML/CSS liên quan); orca-cli để browser evidence. Không React/Expo/backend skills vì đây là HTML mockup.\n\n## Input và cách làm\n- Chỉ review mockup, không đọc các review cũ để giữ nhận định độc lập.\n- Đọc phần liên quan docs/PRD.md, docs/TECHNICAL-DESIGN.md, docs/DECISION-LOG.md, docs/ROADMAP.md; marketing brief docs/reviews/MKT-PD-EVENT-OS-SPEC-2026-10-22.md; brand/vemoki/tokens.json. Mẫu visual là artifact đang duyệt, không mặc định đã đạt chất lượng.\n- Server do coordinator giữ: http://127.0.0.1:63783/marketing/ và http://127.0.0.1:63783/app/. Không khởi động server khác; không dừng server này.\n- Dùng Orca embedded browser theo .cursor/rules/uat-headless.mdc. Mở tab riêng, ghi browserPageId và luôn truyền --page; không đụng tab coordinator/user. Không Playwright trực tiếp/capture-screenshots.mjs/Computer Use.\n- Xem ảnh render thật, không chỉ chụp rồi không đọc. Kiểm desktop 1280 và mobile 390 (ghi cả outer viewport và chế độ frame mockup); VI chính, EN spot-check nếu có.\n- Marketing: hierarchy, proposition, CTA/navigation, nội dung/proof/demo honesty, responsiveness. App: catalog/detail và luồng guest → redeem form/terms/error/success → wallet/ticket. Chọn trạng thái đại diện, ghi rõ coverage và phần chưa kiểm; không cần chụp mọi tổ hợp.\n- Phân biệt thanh điều khiển prototype với UI sản phẩm; click giả lập/href placeholder không tự là production bug. Review thiết kế và hành vi mockup có thể quan sát, không claim backend/auth/production accessibility đã kiểm.\n\n## Output / ownership\n- Chỉ ghi docs/reviews/uiux-mockup-2026-10-22/worker-review.md và assets/worker/ trong cùng thư mục. Không sửa source, rule/skill, manifest hoặc tài liệu khác. Không commit/push/PR/deploy; không spawn con.\n- Báo cáo tiếng Việt: reviewer/session/dispatch, exact source SHA + hashes, skills/checklist thực dùng, URL/viewport/state/locale, lệnh và ảnh đã xem, 2–3 điểm làm tốt, findings có ID ổn định (vấn đề → tác động → evidence/path:line → mức độ/chặn → điều kiện đóng), thứ tự ưu tiên, limitations và kết luận trong scope mockup.\n- Tập trung tối đa khoảng 8 findings có ích; không đặt số lượng tối thiểu, không chấm điểm cảm tính, không ép verdict FAIL/PASS. Không đưa sở thích typography/brand thành blocker trái brief.\n- Ưu tiên hoàn thành trong khoảng 12 phút bằng coverage đại diện; nếu tool bị chặn ghi evidence và limitation, không lặp retry vô hạn.\n- Trước kết thúc kiểm inbox, gửi worker_done đúng live preamble một lần; report-path đúng file thực. Dọn tab chỉ do mình tạo nếu không cần cho evidence; không giữ process riêng.\n",
+      "status": "ready",
+      "deps": "[]",
+      "result": null,
+      "created_at": "2026-10-22 08:58:29",
+      "completed_at": null
+    },
+    "mutation": {
+      "requestId": "951a61d7-f164-4294-b38c-efeffad19ea3",
+      "replayed": false
+    }
+  },
+  "_meta": {
+    "runtimeId": "bd4984f7-e2dd-4e8d-9d97-09726ed8a2d7"
+  }
+}
