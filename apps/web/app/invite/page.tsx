@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 
 export default function InvitePage() {
   return (
-    <main id="main" className="container shell redeem-page invite-page">
+    <main id="main" className="lp-container shell redeem-page invite-page">
       <SiteNav />
       <header className="invite-header">
         <h1>Nhận lời mời thành viên</h1>

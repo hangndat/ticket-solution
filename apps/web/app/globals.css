@@ -1,11 +1,13 @@
 /*
  * Design system — Tailwind v4 utilities for @ticket/ui primitives (no Preflight on legacy).
- * Live Pulse legacy rules unlayered — prod chrome unchanged until routes adopt primitives.
+ * Legacy rules live in @layer legacy (before utilities) so un-prefixed utilities win on name clashes.
  */
 @import '@ticket/ui/vemoki-theme.css';
-@layer theme, base, components, utilities;
-@import 'tailwindcss/theme.css' layer(theme) prefix(ui);
-@import 'tailwindcss/utilities.css' layer(utilities) prefix(ui);
+@layer theme, base, legacy, components, utilities;
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/utilities.css' layer(utilities);
 @source '../../../packages/ui/src/**/*.{ts,tsx}';
-@source '../app/dev/**/*.{ts,tsx}';
-@import './live-pulse-legacy.css';
+@source '../app/**/*.{ts,tsx}';
+@source '../../src/**/*.{ts,tsx}';
+@import './live-pulse-legacy.css' layer(legacy);
+@import './attendee-uplift.css' layer(legacy);

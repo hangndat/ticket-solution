@@ -30,24 +30,24 @@ export default function DevDesignSystemPage() {
   return (
     <main
       id="main"
-      className="container ui:mx-auto ui:max-w-3xl ui:space-y-10 ui:p-8 ui:text-ink"
+      className="container mx-auto max-w-3xl space-y-10 p-8 text-ink"
     >
-      <header className="ui:space-y-2">
-        <h1 className="ui:font-display ui:text-2xl ui:font-bold ui:tracking-tight">
+      <header className="space-y-2">
+        <h1 className="font-display text-2xl font-bold tracking-tight">
           Design system — slice 1
         </h1>
-        <p className="ui:text-sm ui:text-ink/75">
+        <p className="text-sm text-ink/75">
           Live Pulse v2 primitives (`@ticket/ui`). Prod routes still use legacy CSS until migrated.
         </p>
       </header>
 
-      <section className="ui:space-y-3">
-        <h2 className="ui:font-display ui:text-lg ui:font-semibold">Tokens</h2>
-        <ul className="ui:grid ui:gap-2 ui:text-sm">
+      <section className="space-y-3">
+        <h2 className="font-display text-lg font-semibold">Tokens</h2>
+        <ul className="grid gap-2 text-sm">
           {Object.entries(VEMOKI_BRAND_COLORS).map(([name, hex]) => (
-            <li key={name} className="ui:flex ui:items-center ui:gap-2">
+            <li key={name} className="flex items-center gap-2">
               <span
-                className="ui:inline-block ui:size-4 ui:rounded-sm ui:border ui:border-line"
+                className="inline-block size-4 rounded-sm border border-line"
                 style={{ background: hex }}
                 aria-hidden
               />
@@ -57,9 +57,9 @@ export default function DevDesignSystemPage() {
         </ul>
       </section>
 
-      <section className="ui:space-y-3">
-        <h2 className="ui:font-display ui:text-lg ui:font-semibold">Button</h2>
-        <div className="ui:flex ui:flex-wrap ui:gap-3">
+      <section className="space-y-3">
+        <h2 className="font-display text-lg font-semibold">Button</h2>
+        <div className="flex flex-wrap gap-3">
           <Button variant="primary">Primary</Button>
           <Button variant="secondary">Secondary</Button>
           <Button variant="ghost">Ghost</Button>
@@ -69,9 +69,9 @@ export default function DevDesignSystemPage() {
         </div>
       </section>
 
-      <section className="ui:space-y-3">
-        <h2 className="ui:font-display ui:text-lg ui:font-semibold">Form</h2>
-        <div className="ui:max-w-sm ui:space-y-2">
+      <section className="space-y-3">
+        <h2 className="font-display text-lg font-semibold">Form</h2>
+        <div className="max-w-sm space-y-2">
           <Label htmlFor="ds-code">Mã vé (demo)</Label>
           <Input id="ds-code" name="code" placeholder="VD: DEMO-001" autoComplete="off" />
           <FieldError id="ds-code-error">
@@ -81,8 +81,8 @@ export default function DevDesignSystemPage() {
         </div>
       </section>
 
-      <section className="ui:space-y-3">
-        <h2 className="ui:font-display ui:text-lg ui:font-semibold">Card &amp; Alert</h2>
+      <section className="space-y-3">
+        <h2 className="font-display text-lg font-semibold">Card &amp; Alert</h2>
         <Card>
           <CardHeader>
             <CardTitle>Tiêu đề thẻ</CardTitle>
@@ -90,20 +90,20 @@ export default function DevDesignSystemPage() {
           </CardHeader>
           <CardContent>
             <Alert title="Thông báo">Nội dung alert mặc định.</Alert>
-            <Alert variant="destructive" className="ui:mt-3">
+            <Alert variant="destructive" className="mt-3">
               Không thể hoàn tác — ví dụ destructive.
             </Alert>
           </CardContent>
         </Card>
       </section>
 
-      <section className="ui:space-y-3">
-        <h2 className="ui:font-display ui:text-lg ui:font-semibold">Skeleton</h2>
-        <Skeleton className="ui:h-12 ui:w-full ui:max-w-md" />
+      <section className="space-y-3">
+        <h2 className="font-display text-lg font-semibold">Skeleton</h2>
+        <Skeleton className="h-12 w-full max-w-md" />
       </section>
 
-      <section className="ui:space-y-3">
-        <h2 className="ui:font-display ui:text-lg ui:font-semibold">SurfaceState (legacy classes)</h2>
+      <section className="space-y-3">
+        <h2 className="font-display text-lg font-semibold">SurfaceState (legacy classes)</h2>
         <SurfaceState kind="empty" title="Chưa có vé" detail="Demo empty — class khớp prod." />
         <SurfaceState kind="loading" title="Đang tải…" />
       </section>

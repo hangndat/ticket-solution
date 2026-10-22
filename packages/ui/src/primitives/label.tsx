@@ -7,7 +7,7 @@ export function Label({ className, ...props }: LabelProps) {
   return (
     <label
       className={cn(
-        'ui:text-sm ui:font-semibold ui:text-ink ui:leading-none ui:peer-disabled:cursor-not-allowed ui:peer-disabled:opacity-70',
+        'text-sm font-semibold text-ink leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70',
         className,
       )}
       {...props}

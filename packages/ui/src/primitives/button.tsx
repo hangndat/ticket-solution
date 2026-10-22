@@ -12,13 +12,13 @@ export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> &
 function ButtonSpinner() {
   return (
     <svg
-      className="ui:size-4 ui:shrink-0 ui:animate-spin ui:motion-reduce:animate-none"
+      className="size-4 shrink-0 animate-spin motion-reduce:animate-none"
       viewBox="0 0 24 24"
       fill="none"
       aria-hidden
     >
       <circle
-        className="ui:opacity-25"
+        className="opacity-25"
         cx="12"
         cy="12"
         r="10"
@@ -26,7 +26,7 @@ function ButtonSpinner() {
         strokeWidth="4"
       />
       <path
-        className="ui:opacity-75"
+        className="opacity-75"
         fill="currentColor"
         d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
       />

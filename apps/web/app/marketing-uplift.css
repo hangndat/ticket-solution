@@ -6,7 +6,7 @@ html[data-surface='marketing'] {
 }
 
 .mkt.mkt--uplift {
-  color-scheme: light dark;
+  color-scheme: light;
   display: flex;
   flex-direction: column;
   min-height: 100dvh;
@@ -1530,5 +1530,3 @@ body.mkt.mkt--uplift {
 .mkt.mkt--uplift .mkt-footer {
   margin-top: 0;
 }
-
-

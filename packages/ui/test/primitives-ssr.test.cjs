@@ -15,9 +15,9 @@ describe('@ticket/ui primitives SSR', () => {
       React.createElement(Button, { variant: 'primary', size: 'md' }, 'Lưu'),
     );
     assert.match(html, /<button[^>]*type="button"/);
-    assert.match(html, /ui:min-h-11/);
-    assert.match(html, /ui:hover:opacity-95/);
-    assert.match(html, /ui:disabled:pointer-events-none/);
+    assert.match(html, /min-h-11/);
+    assert.match(html, /hover:opacity-95/);
+    assert.match(html, /disabled:pointer-events-none/);
     assert.match(html, />Lưu</);
   });
 
@@ -51,8 +51,8 @@ describe('@ticket/ui primitives SSR', () => {
         React.createElement(BentoGridItem, { colSpan: 2 }, 'Invite'),
       ),
     );
-    assert.match(html, /ui:grid/);
-    assert.match(html, /ui:md:col-span-2/);
+    assert.match(html, /\bgrid\b/);
+    assert.match(html, /md:col-span-2/);
     assert.match(html, />Invite</);
   });
 
