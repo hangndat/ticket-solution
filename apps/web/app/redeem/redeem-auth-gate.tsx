@@ -14,6 +14,9 @@ export function RedeemAuthGate({ loginHref, intentCopy = true }: Props) {
       aria-labelledby="redeem-auth-gate-title"
       data-testid="redeem-auth-gate"
     >
+      <div className={styles.gateIllustration} aria-hidden="true">
+        🔐
+      </div>
       <p className="eyebrow">Đăng nhập</p>
       <h2 id="redeem-auth-gate-title">Tiếp tục để đổi mã</h2>
       <p>

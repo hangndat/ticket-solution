@@ -15,6 +15,7 @@ import {
 import { WalletTicketCard } from '../../src/owner-ticket/wallet-ticket-card';
 import { SiteNav } from '../../src/site-chrome';
 import { SurfaceState } from '../../src/ui/surface-state';
+import walletStyles from './wallet-page.module.css';
 
 export const dynamic = 'force-dynamic';
 
@@ -44,11 +45,11 @@ export default async function WalletPage({ searchParams }: Props) {
     return (
       <main
         id="main"
-        className="container shell wallet-page"
+        className={`container shell wallet-page ${walletStyles.page}`}
         data-testid="wallet-need-login"
       >
         <SiteNav />
-        <header className="wallet-heading">
+        <header className={walletStyles.heading}>
           <h1>{WALLET_COPY.title}</h1>
           <p className="intro">{WALLET_COPY.intro}</p>
         </header>
@@ -76,11 +77,11 @@ export default async function WalletPage({ searchParams }: Props) {
     return (
       <main
         id="main"
-        className="container shell wallet-page"
+        className={`container shell wallet-page ${walletStyles.page}`}
         data-testid="wallet-unreachable"
       >
         <SiteNav />
-        <header className="wallet-heading">
+        <header className={walletStyles.heading}>
           <h1>{WALLET_COPY.title}</h1>
         </header>
         <SurfaceState
@@ -102,11 +103,11 @@ export default async function WalletPage({ searchParams }: Props) {
     return (
       <main
         id="main"
-        className="container shell wallet-page"
+        className={`container shell wallet-page ${walletStyles.page}`}
         data-testid="wallet-invalid"
       >
         <SiteNav />
-        <header className="wallet-heading">
+        <header className={walletStyles.heading}>
           <h1>{WALLET_COPY.title}</h1>
         </header>
         <SurfaceState
@@ -133,16 +134,16 @@ export default async function WalletPage({ searchParams }: Props) {
   return (
     <main
       id="main"
-      className="container shell wallet-page"
+      className={`container shell wallet-page ${walletStyles.page}`}
       data-testid="wallet-ready"
     >
       <SiteNav />
-      <header className="wallet-heading">
+      <header className={walletStyles.heading}>
         <div>
           <h1>{WALLET_COPY.title}</h1>
           <p className="intro">{WALLET_COPY.intro}</p>
         </div>
-        <Link className="button wallet-heading__cta" href="/redeem">
+        <Link className={`button ${walletStyles.headingCta}`} href="/redeem">
           Đổi mã lấy vé
         </Link>
       </header>
@@ -179,7 +180,7 @@ export default async function WalletPage({ searchParams }: Props) {
               }
             />
           ) : (
-            <div className="ticketgrid" role="list" data-testid="wallet-ticket-grid">
+            <div className={walletStyles.grid} role="list" data-testid="wallet-ticket-grid">
               {visible.map((ticket) => (
                 <WalletTicketCard
                   key={ticket.ticketId}
