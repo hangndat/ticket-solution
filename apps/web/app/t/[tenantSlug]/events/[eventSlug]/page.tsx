@@ -18,6 +18,7 @@ import {
 import { publishedSectionKindLabel } from '../../../../../src/published/section-label';
 import { SurfaceState } from '../../../../../src/ui/surface-state';
 import { eventArtTone } from '../../../../../src/ui/event-art-tone';
+import sideboxStyles from './event-detail-sidebox.module.css';
 
 type Props = { params: Promise<{ tenantSlug: string; eventSlug: string }> };
 
@@ -213,18 +214,18 @@ export default async function EventPage({ params }: Props) {
             </div>
 
             <aside
-              className="event-sidebox"
+              className={`event-sidebox ${sideboxStyles.sidebox}`}
               aria-labelledby="event-sidebox-title"
               data-testid="event-sidebox"
             >
               <h2 id="event-sidebox-title">Vé tham dự của bạn</h2>
-              <p className="event-sidebox-lead">
+              <p className={sideboxStyles.lead}>
                 Bạn có mã nhận vé từ nhà tổ chức?
               </p>
-              <Link className="button event-sidebox-cta" href={redeemHref}>
+              <Link className={`button event-sidebox-cta ${sideboxStyles.cta}`} href={redeemHref}>
                 Đổi mã lấy vé
               </Link>
-              <p className="event-detail-help">
+              <p className={sideboxStyles.help}>
                 Mã sẽ tự xác định đúng sự kiện và đơn vị tổ chức.
               </p>
             </aside>
