@@ -2,17 +2,13 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-  type ReactNode,
-} from 'react';
-import {
-  getFocusableElements,
-  handleMobileMenuKeyDown,
-} from './nav/mobile-menu-focus';
+  Sheet,
+  SheetContent,
+  SheetTitle,
+  SheetTrigger,
+} from '@ticket/ui/client';
 import { BrandMark } from './brand-mark';
 import { useBranding } from './branding';
 import type { NavLink } from './nav/capabilities';
@@ -124,8 +120,6 @@ export function SiteNav({ trailing }: { trailing?: ReactNode }) {
   );
   const [mobileMenu, setMobileMenu] = useState({ path: '', open: false });
   const mobileOpen = mobileMenu.open && mobileMenu.path === pathname;
-  const menuToggleRef = useRef<HTMLButtonElement>(null);
-  const mobileMenuRef = useRef<HTMLDivElement>(null);
   const [avatarInitials, setAvatarInitials] = useState<string | null>(null);
   const [displayHint, setDisplayHint] = useState<string | null>(null);
 
@@ -193,47 +187,14 @@ export function SiteNav({ trailing }: { trailing?: ReactNode }) {
 
   const closeMobile = useCallback(() => {
     setMobileMenu({ path: pathname, open: false });
-    queueMicrotask(() => menuToggleRef.current?.focus());
   }, [pathname]);
 
-  const toggleMobile = () => {
-    setMobileMenu((prev) => {
-      const open =
-        prev.path === pathname ? !prev.open : true;
-      if (prev.path === pathname && prev.open) {
-        queueMicrotask(() => menuToggleRef.current?.focus());
-      }
-      return { path: pathname, open };
-    });
-  };
-
-  useEffect(() => {
-    if (!mobileOpen) return;
-
-    const focusFrame = requestAnimationFrame(() => {
-      const menu = mobileMenuRef.current;
-      if (!menu) return;
-      getFocusableElements(menu)[0]?.focus();
-    });
-
-    const onKeyDown = (event: KeyboardEvent) => {
-      const menu = mobileMenuRef.current;
-      if (!menu) return;
-      if (event.key === 'Escape') {
-        closeMobile();
-        event.preventDefault();
-        return;
-      }
-      if (handleMobileMenuKeyDown(event, menu) && event.key === 'Tab') {
-        event.preventDefault();
-      }
-    };
-    window.addEventListener('keydown', onKeyDown, true);
-    return () => {
-      cancelAnimationFrame(focusFrame);
-      window.removeEventListener('keydown', onKeyDown, true);
-    };
-  }, [mobileOpen, closeMobile]);
+  const setMobileOpen = useCallback(
+    (open: boolean) => {
+      setMobileMenu({ path: pathname, open });
+    },
+    [pathname],
+  );
 
   return (
     <header className="site-header" data-testid="site-header">
@@ -268,55 +229,45 @@ export function SiteNav({ trailing }: { trailing?: ReactNode }) {
             ) : null}
           </Link>
         ) : null}
-        <button
-          ref={menuToggleRef}
-          type="button"
-          className="nav-menu-toggle"
-          aria-expanded={mobileOpen}
-          aria-controls="site-nav-mobile-menu"
-          aria-haspopup="dialog"
-          data-testid="nav-menu-toggle"
-          onClick={toggleMobile}
-        >
-          <span className="nav-menu-toggle__label">
-            {mobileOpen ? 'Đóng' : 'Menu'}
-          </span>
-          <span className="nav-menu-toggle__icon" aria-hidden="true">
-            {mobileOpen ? '×' : '☰'}
-          </span>
-        </button>
-      </nav>
-      {mobileOpen ? (
-        <>
-          <button
-            type="button"
-            className="nav-mobile-backdrop"
-            aria-hidden="true"
-            tabIndex={-1}
-            data-testid="nav-mobile-backdrop"
-            onClick={closeMobile}
-          />
-          <div
-            ref={mobileMenuRef}
+        <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+          <SheetTrigger asChild>
+            <button
+              type="button"
+              className="nav-menu-toggle"
+              aria-controls="site-nav-mobile-menu"
+              aria-haspopup="dialog"
+              data-testid="nav-menu-toggle"
+            >
+              <span className="nav-menu-toggle__label">
+                {mobileOpen ? 'Đóng' : 'Menu'}
+              </span>
+              <span className="nav-menu-toggle__icon leading-none" aria-hidden="true">
+                {mobileOpen ? '×' : '☰'}
+              </span>
+            </button>
+          </SheetTrigger>
+          <SheetContent
             id="site-nav-mobile-menu"
-            className="nav-mobile-menu"
+            side="right"
+            showCloseButton={false}
             data-testid="nav-mobile-menu"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Menu điều hướng"
+            overlayTestId="nav-mobile-backdrop"
+            overlayClassName="nav-mobile-backdrop"
+            className="nav-mobile-menu motion-reduce:animate-none motion-reduce:transition-none overflow-y-auto"
           >
-          {links.map((item) => (
-            <NavLinkItem
-              key={`mobile-${item.href}`}
-              item={item}
-              active={isNavLinkActive(pathname, item.href)}
-              onNavigate={closeMobile}
-            />
-          ))}
-          {trailing}
-          </div>
-        </>
-      ) : null}
+            <SheetTitle className="sr-only">Menu điều hướng</SheetTitle>
+            {links.map((item) => (
+              <NavLinkItem
+                key={`mobile-${item.href}`}
+                item={item}
+                active={isNavLinkActive(pathname, item.href)}
+                onNavigate={closeMobile}
+              />
+            ))}
+            {trailing}
+          </SheetContent>
+        </Sheet>
+      </nav>
     </header>
   );
 }
