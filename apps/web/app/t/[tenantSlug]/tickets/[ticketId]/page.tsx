@@ -53,7 +53,7 @@ export default async function OwnerTicketPage({ params, searchParams }: Props) {
     return (
       <main
         id="main"
-        className="container shell"
+        className="lp-container shell"
         data-testid="owner-ticket-invalid"
       >
         <SiteNav />
@@ -83,7 +83,7 @@ export default async function OwnerTicketPage({ params, searchParams }: Props) {
     return (
       <main
         id="main"
-        className="container shell"
+        className="lp-container shell"
         data-testid="owner-ticket-need-login"
       >
         <SiteNav />
@@ -112,7 +112,7 @@ export default async function OwnerTicketPage({ params, searchParams }: Props) {
     return (
       <main
         id="main"
-        className="container shell"
+        className="lp-container shell"
         data-testid="owner-ticket-unreachable"
       >
         <SiteNav />
@@ -136,7 +136,7 @@ export default async function OwnerTicketPage({ params, searchParams }: Props) {
     return (
       <main
         id="main"
-        className="container shell"
+        className="lp-container shell"
         data-testid="owner-ticket-tenant-unresolved"
       >
         <SiteNav />
@@ -164,7 +164,7 @@ export default async function OwnerTicketPage({ params, searchParams }: Props) {
     return (
       <main
         id="main"
-        className="container shell"
+        className="lp-container shell"
         data-testid="owner-ticket-missing"
       >
         <SiteNav />
@@ -200,7 +200,7 @@ export default async function OwnerTicketPage({ params, searchParams }: Props) {
   return (
     <main
       id="main"
-      className={`container shell ticket-detail ${detailStyles.shell}`}
+      className={`lp-container shell ticket-detail ${detailStyles.shell}`}
       data-testid="owner-ticket-ready"
     >
       <SiteNav />

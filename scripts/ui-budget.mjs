@@ -63,7 +63,7 @@ const metrics = {
       'web.tsx_hex_literals': count(tsx, HEX),
       'web.css_media_px': count(css, /@media[^{]*\d+px/g),
       'web.css_important': count(css, /!important/g),
-      'web.ui_prefix_after_variant': count(tsLike, /[a-z\]]:ui:[a-z]/g),
+      'web.ui_prefix_literals': count(tsLike, /\bui:[a-z]/g),
     };
   },
   mobile: () => {

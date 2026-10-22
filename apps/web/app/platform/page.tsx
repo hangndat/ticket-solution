@@ -22,7 +22,7 @@ export default async function PlatformPage({ searchParams }: Props) {
   const configured = isPlatformOidcConfigured();
 
   return (
-    <main id="main" className="container shell redeem-page">
+    <main id="main" className="lp-container shell redeem-page">
       <SiteNav />
       <DualRunBanner surface="platform" />
       <h1>Platform console</h1>

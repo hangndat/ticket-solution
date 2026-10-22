@@ -22,9 +22,9 @@ const twRequire = createRequire(tailwindPostcssEntry);
 const postcss = twRequire('postcss');
 const tailwindcss = twRequire('@tailwindcss/postcss');
 
-/** Variant utilities: `ui:<variant>:<util>` (literal in source for Tailwind @source). */
-const UI_VARIANT_CLASS_RE =
-  /ui:(?:[a-z]+(?:-\[[^\]]+\])?:)+[a-z][\w./%[\]-]*/gi;
+/** Variant utilities: `<variant>:<util>` (literal in source for Tailwind @source). */
+const VARIANT_CLASS_RE =
+  /(?:^|[\s"'`{])(?:[a-z]+(?:-\[[^\]]+\])?:)+[a-z][\w./%[\]-]*/gi;
 
 function walkTsFiles(dir, out = []) {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -39,12 +39,13 @@ function walkTsFiles(dir, out = []) {
   return out;
 }
 
-function collectUiVariantClassesFromSource() {
+function collectVariantClassesFromSource() {
   const classes = new Set();
   for (const file of walkTsFiles(uiSrc)) {
     const text = fs.readFileSync(file, 'utf8');
-    for (const match of text.matchAll(UI_VARIANT_CLASS_RE)) {
-      classes.add(match[0]);
+    for (const match of text.matchAll(VARIANT_CLASS_RE)) {
+      const cls = match[0].replace(/^[\s"'`{]+/, '').trim();
+      if (cls && !cls.startsWith('ui:')) classes.add(cls);
     }
   }
   return [...classes].sort();
@@ -76,26 +77,9 @@ async function compileWebGlobalsCss() {
   return result.css;
 }
 
-describe('@ticket/ui withUiPrefix', () => {
-  it('prefixes utilities as ui:<variant>:<util> after build', async () => {
-    const { withUiPrefix } = await import('../dist/ui-tw.js');
-    assert.equal(withUiPrefix('hover:opacity-95'), 'ui:hover:opacity-95');
-    assert.equal(
-      withUiPrefix('focus-visible:ring-focus'),
-      'ui:focus-visible:ring-focus',
-    );
-    assert.equal(withUiPrefix('min-h-11'), 'ui:min-h-11');
-    assert.equal(withUiPrefix('ui:hover:opacity-95'), 'ui:hover:opacity-95');
-    assert.equal(
-      withUiPrefix('hover:opacity-95 ui:min-h-11'),
-      'ui:hover:opacity-95 ui:min-h-11',
-    );
-  });
-});
-
-describe('@ticket/ui Tailwind prefix(ui) compile', () => {
-  it('emits CSS selectors for every literal ui: variant class in packages/ui/src', async () => {
-    const variantClasses = collectUiVariantClassesFromSource();
+describe('@ticket/ui Tailwind compile (no ui: prefix)', () => {
+  it('emits CSS selectors for every literal variant class in packages/ui/src', async () => {
+    const variantClasses = collectVariantClassesFromSource();
     assert.ok(
       variantClasses.length >= 10,
       `expected variant classes from primitives source, got ${variantClasses.length}`,
@@ -119,8 +103,8 @@ describe('@ticket/ui Tailwind prefix(ui) compile', () => {
 });
 
 describe('@ticket/ui prefix guard', () => {
-  it('rejects variant-before-ui: class strings in ui and web app sources', () => {
-    const pattern = '[a-z\\]]:ui:';
+  it('rejects leftover ui: class strings in ui and web app sources', () => {
+    const pattern = '\\bui:[a-z]';
     const dirs = [uiSrc, webApp, webSrc].filter((d) => fs.existsSync(d));
     let hits = '';
     for (const dir of dirs) {
@@ -139,7 +123,7 @@ describe('@ticket/ui prefix guard', () => {
     assert.equal(
       hits.trim(),
       '',
-      `found variant-before-ui: classes:\n${hits}`,
+      `found ui: prefixed classes:\n${hits}`,
     );
   });
 });

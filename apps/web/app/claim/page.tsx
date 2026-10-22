@@ -15,7 +15,7 @@ export const metadata: Metadata = {
 
 export default function ClaimPage() {
   return (
-    <main id="main" className="container shell redeem-page claim-page">
+    <main id="main" className="lp-container shell redeem-page claim-page">
       <SiteNav />
       <header className="claim-header">
         <h1>Nhận lời mời sự kiện</h1>
