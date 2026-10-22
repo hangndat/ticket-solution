@@ -1,0 +1,34 @@
+{
+  "source_head": "de08f97a4f6498b789d81bce2dbd88b4e6d2ffa5",
+  "scope": "Static HTML mockup marketing + app; not production acceptance",
+  "files": [
+    {
+      "path": "docs/design/ui-uplift-2026-10/app/capture-screenshots.mjs",
+      "sha256": "5a467cae963952d846a52c98da7ed3d7c222ff31c766b41015ea1eea35b1f18a"
+    },
+    {
+      "path": "docs/design/ui-uplift-2026-10/app/css/app-uplift.css",
+      "sha256": "08753bd057fa5155e2aaf6ae1349254f582f36761f62f030018d625fb596fb64"
+    },
+    {
+      "path": "docs/design/ui-uplift-2026-10/app/index.html",
+      "sha256": "275b609e6b82776c6ec35e00f754ea369134b3d7e293694bfd681620cda894f3"
+    },
+    {
+      "path": "docs/design/ui-uplift-2026-10/marketing/capture-screenshots.mjs",
+      "sha256": "c6b7a2e90b06933c8dd0d525785d07a95798fe27cbe5f08f8c83deb5b74d7775"
+    },
+    {
+      "path": "docs/design/ui-uplift-2026-10/marketing/css/marketing.css",
+      "sha256": "d1e01ecd35ca748568c09a470167983789f0491e2d4b1884dd9684f7dd21d62c"
+    },
+    {
+      "path": "docs/design/ui-uplift-2026-10/marketing/index.html",
+      "sha256": "4011edf178aa8d938a7aae5205d60f1c4f7fd7e41657270f66b9b0d5fc714d81"
+    },
+    {
+      "path": "docs/design/ui-uplift-2026-10/marketing/js/marketing.js",
+      "sha256": "af33c282940833ff25113ec416edfe0672471a73fc36d0dd37630b37c930bb83"
+    }
+  ]
+}

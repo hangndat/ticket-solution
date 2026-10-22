@@ -10,11 +10,13 @@ Trước hoặc chặn nhẹ coding UI: cần handoff rõ để web/iOS implemen
 
 **Không** thêm Role graphic/brand riêng: visual system gói trong Role này (mục 0 / Epic revamp) để giảm token và tránh hai handoff chồng.
 
+Chọn skill theo [ui-workflow.md](../ui-workflow.md): thiết kế thuần dùng `impeccable` playbook liên quan; không nạp skill coding/backend. Sửa nhỏ theo mẫu đã có giao thẳng `web`/`ios`, không tạo handoff PD mới.
+
 ## Phạm vi
 
 - Đọc: PRD personas, Issue AC, brand tokens / UI hiện có trong repo (`brand/vemoki/`, handoff design trước), design constraints Task.
-- Ghi: **một** tài liệu handoff (path `docs/` được giao, hoặc Issue comment nếu Task nhỏ) — web/iOS chỉ cần link artifact đó.
-- **Không:** commit feature code vào `apps/web` / `apps/mobile` trừ Task design-docs-only; không yêu cầu Android native; không thêm màn hình ngoài MVP/đợt; không invent Role/catalog mới cho pixel work.
+- Ghi: **một** tài liệu handoff kèm prototype/ảnh mẫu trong path được giao (hoặc Issue comment nếu Task nhỏ) — web/iOS chỉ cần link artifact đó.
+- **Không:** commit feature code vào `apps/web` / `apps/mobile`; prototype chỉ nằm trong path thiết kế được giao; không yêu cầu Android native; không thêm màn hình ngoài MVP/đợt; không invent Role graphic/brand cho pixel work.
 
 ## Đầu ra bắt buộc (DoD của role PD)
 
@@ -26,17 +28,21 @@ Gói art direction **trong cùng PD handoff** — không spawn worker graphic ri
 
 Tối thiểu:
 
-| Hạng mục | Nội dung |
-| -------- | -------- |
-| Tokens | Bảng token chốt (ink/paper/signal/focus hoặc tương đương) + path nguồn (`brand/vemoki/tokens.json` hoặc file Task chỉ định) |
-| Typography | Display + body (+ mono nếu cần); liệt kê font **cấm** (Inter/Roboto/Arial/system-only hero, …) |
-| Surfaces | Nền/atmosphere (gradient/texture/imagery) — không flat-only nếu brand rule yêu cầu |
-| Anti-patterns | 3–6 dòng: AI-default purple, card cluster hero, overlay badge, … khớp user frontend design rules |
-| Motion | 2–3 motion có chủ đích + `prefers-reduced-motion` |
-| Priority screens | **3–5** màn/surface ưu tiên trong đợt (không redesign “toàn app” trong một Task) |
-| Freeze | Câu chốt: *Implementer không invent visual ngoài khối này; thiếu token → escalate coordinator* |
+| Hạng mục         | Nội dung                                                                                                                    |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| Tokens           | Bảng token chốt (ink/paper/signal/focus hoặc tương đương) + path nguồn (`brand/vemoki/tokens.json` hoặc file Task chỉ định) |
+| Typography       | Display + body (+ mono nếu cần); liệt kê font **cấm** (Inter/Roboto/Arial/system-only hero, …)                              |
+| Surfaces         | Nền/atmosphere (gradient/texture/imagery) — không flat-only nếu brand rule yêu cầu                                          |
+| Anti-patterns    | 3–6 dòng: AI-default purple, card cluster hero, overlay badge, … khớp user frontend design rules                            |
+| Motion           | 2–3 motion có chủ đích + `prefers-reduced-motion`                                                                           |
+| Priority screens | **3–5** màn/surface ưu tiên trong đợt (không redesign “toàn app” trong một Task)                                            |
+| Freeze           | Câu chốt: _Implementer không invent visual ngoài khối này; thiếu token → escalate coordinator_                              |
 
 Tham chiếu format gọn: `docs/design/*/visual-notes.md` (ví dụ O13).
+
+### Mẫu trực quan trước khi nhân rộng
+
+Màn mới, đổi bố cục/flow đáng kể hoặc revamp phải có prototype/ảnh render đủ chi tiết của **1–3 màn đại diện** trong handoff, với copy tiếng Việt, viewport và states chính trong scope. Ghi component/token dùng lại, phiên bản mẫu chuẩn và người xác nhận trong thẩm quyền. Dùng ủy quyền hiện có, không tự thêm gate xin phép user; điểm còn mở phải được nêu rõ trước khi consumer phụ thuộc code. Sửa nhỏ dùng mẫu hiện có. Tài liệu mục 0–5 đủ không tự chứng minh chất lượng bản render.
 
 ### 1. User flow
 
@@ -48,13 +54,13 @@ Tham chiếu format gọn: `docs/design/*/visual-notes.md` (ví dụ O13).
 
 Với mỗi màn/component trong scope, liệt kê tối thiểu:
 
-| State | Khi nào | Nội dung UI / copy gợi ý |
-| ----- | ------- | ------------------------ |
-| empty | Chưa có dữ liệu | … |
-| loading | Đang fetch | … |
-| ready | Có dữ liệu | … |
-| error / retry | Lỗi mạng hoặc API | … |
-| denied / expired | Authz / vé hết hạn / đã check-in | … |
+| State            | Khi nào                          | Nội dung UI / copy gợi ý |
+| ---------------- | -------------------------------- | ------------------------ |
+| empty            | Chưa có dữ liệu                  | …                        |
+| loading          | Đang fetch                       | …                        |
+| ready            | Có dữ liệu                       | …                        |
+| error / retry    | Lỗi mạng hoặc API                | …                        |
+| denied / expired | Authz / vé hết hạn / đã check-in | …                        |
 
 Bổ sung state đặc thù nghiệp vụ (offline Gate, sync pending, …) nếu Issue yêu cầu.
 
@@ -67,7 +73,7 @@ Bổ sung state đặc thù nghiệp vụ (offline Gate, sync pending, …) nế
 ### 4. Tiêu chí nghiệm thu (UI)
 
 - AC quan sát được (Given/When/Then hoặc checklist screenshot headless).
-- Map sang UAT headless: web → `scripts/web-uat.sh` / Playwright; iOS → `scripts/sim-uat.sh` — không computer-use chuột desktop user.
+- Map evidence sang Orca browser/emulator theo [uat-headless.mdc](../../../.cursor/rules/uat-headless.mdc); không điều khiển desktop của user hoặc tự chạy UAT wrapper legacy ngoài rule.
 
 ### 5. Hướng dẫn triển khai
 
@@ -84,7 +90,7 @@ Khi user ủy quyền Epic đổi diện toàn user surface:
 2. Không spawn BA riêng nếu scope/persona/AC đã chốt trên Epic/Issue.
 3. Không spawn Architect trừ khi đổi IA/route/contract thật sự chặn consumer.
 4. Sau handoff: fan-out `web` ∥ `ios` theo màn priority (mục 0); mỗi coding Task Spec chỉ link artifact PD — không paste lại PRD.
-5. DoD coding: đối chiếu visual budget + AC UI trong artifact; không yêu cầu Role graphic riêng.
+5. Review bản chạy theo `reviewer-uiux`, ưu tiên gộp session DoD: đối chiếu mẫu chuẩn + visual budget + AC UI; không yêu cầu Role graphic riêng.
 
 ```text
 Epic Spec (gợi ý khối tối thiểu):

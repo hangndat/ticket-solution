@@ -29,21 +29,23 @@ Roadmap, Project, Issue, status, progress: **Tiếng Việt** (giữ ID/API/comm
 
 ## Workflow (pointers — chi tiết trong rules)
 
-| Topic | Rule file |
-| ----- | --------- |
-| CRG | `.cursor/rules/code-review-graph-ready.mdc` |
-| Project #3 status / DoD worker | `.cursor/rules/github-project-tracking.mdc` |
-| Project WIP / `gh` / milestone | `.cursor/rules/github-project-tracking-coordinator.mdc` (leader) |
-| Agent, Persona, Cost tier worker | `.cursor/rules/orca-agent-routing-core.mdc` |
-| Spawn wave D+E, Codex fallback | `.cursor/rules/orca-agent-routing-coordinator.mdc` (leader) |
-| Giới hạn review/fix, findings, revalidation | `.cursor/rules/orca-review-convergence.mdc` (khi review/fix) |
-| Git / PR | `.cursor/rules/git-workflow.mdc` |
-| Worktree | `.cursor/rules/orca-worktree-hygiene.mdc` |
-| Roles catalog | [docs/agents/README.md](docs/agents/README.md) |
-| Context budget | [docs/agents/context-budget.md](docs/agents/context-budget.md) |
+| Topic                                       | Rule file                                                        |
+| ------------------------------------------- | ---------------------------------------------------------------- |
+| CRG                                         | `.cursor/rules/code-review-graph-ready.mdc`                      |
+| Project #3 status / DoD worker              | `.cursor/rules/github-project-tracking.mdc`                      |
+| Project WIP / `gh` / milestone              | `.cursor/rules/github-project-tracking-coordinator.mdc` (leader) |
+| Agent, Persona, Cost tier worker            | `.cursor/rules/orca-agent-routing-core.mdc`                      |
+| Spawn wave D+E, Codex fallback              | `.cursor/rules/orca-agent-routing-coordinator.mdc` (leader)      |
+| Giới hạn review/fix, findings, revalidation | `.cursor/rules/orca-review-convergence.mdc` (khi review/fix)     |
+| Git / PR                                    | `.cursor/rules/git-workflow.mdc`                                 |
+| Worktree                                    | `.cursor/rules/orca-worktree-hygiene.mdc`                        |
+| Roles catalog                               | [docs/agents/README.md](docs/agents/README.md)                   |
+| Task UI: chọn role/skill, mẫu chuẩn, review | [docs/agents/ui-workflow.md](docs/agents/ui-workflow.md)         |
+| Context budget                              | [docs/agents/context-budget.md](docs/agents/context-budget.md)   |
 
 - **Leader / boss / orchestrator:** session = coordinator gốc → Read `.cursor/rules/orca-leader-activation.mdc` + coordinator-only rules + skill `orchestration`.
 - **Leader — bắt buộc:** tool đầu tiên khi được gọi leader là Read `orca-leader-activation.mdc`. **Cấm** dùng `Agent` tool (Claude Code subagent) để spawn worker/reviewer; chỉ dùng Orca CLI (`task-create` → `worker-start --agent cursor --model composer-2.5` + `--display-name`/`--task-title` Persona → `check --wait`). Sau `worker-start` đọc `result.state`, không chỉ `ok` (`ok:true` vẫn có thể `state=failed`, vd. sai base branch — lấy tên branch từ `gh pr view <N> --json headRefName`). `.claude/settings.json` có hook PreToolUse chặn `Agent` để ép quy tắc này; cần subagent chỉ đọc cho việc ngoài leader thì hỏi user hoặc đặt `"disableAllHooks": true` trong `.claude/settings.local.json` (tắt mọi hook, chỉ cho phiên đó).
 - **Worker/reviewer** không spawn con; không Read mailbox/parallel/idle-fill/epic-orchestrator trừ khi được giao coordinator.
 - Mỗi Task Spec: `Architecture impact: Có|Không`, `Cost tier: cheap|standard`, Role ID + `docs/agents/roles/<id>.md` khi spawn chuyên môn.
+- Task UI: ghi `Skills cần nạp`, mẫu thiết kế chuẩn và evidence; chọn role theo `docs/agents/ui-workflow.md`, chỉ nạp skill liên quan.
 - DoD: reviewer ≠ implementer; exact SHA → `docs/reviews/*` hoặc comment Issue/PR — Wave C `dod+sec` một session/SHA.
