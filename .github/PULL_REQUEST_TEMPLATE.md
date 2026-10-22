@@ -18,6 +18,17 @@
 - [ ] Đã hoặc sẽ spawn **Cursor DoD reviewer độc lập** (≠ session implementer) với exact SHA trên
 - [ ] Security-sensitive (RLS/authz/race): có gate review riêng nếu áp dụng
 
+## Checklist UI (khi đụng `apps/web`, `packages/ui`, `apps/mobile`)
+
+Quy tắc: `docs/reviews/FE-UI-FRAMEWORK-AUDIT-2026-10-22.md` mục 5. Bỏ qua nếu PR không đụng UI.
+
+- [ ] `node scripts/ui-budget.mjs` pass; chỉ số giảm thì đã chạy `--update` trong PR này
+- [ ] Không thêm selector vào `live-pulse-legacy.css` / `marketing-uplift.css` / `attendee-uplift.css`, không tạo `*.module.css` mới
+- [ ] Tương tác dùng shadcn/Radix (web) hoặc `@expo/ui` (mobile) — không tự viết focus trap / roving tabindex
+- [ ] Không hex / số px tùy ý trong tsx; chỉ token. Nút dùng `Button` dùng chung
+- [ ] Chạm route nào thì xóa legacy của route đó; ghi số dòng đã xóa
+- [ ] Screenshot trước/sau (web 1280 + 390, iOS), vi + en, đủ trạng thái control bị đụng; `data-testid` giữ nguyên
+
 ## Evidence nghiệm thu (điền khi chuyển Chờ duyệt)
 
 | Trường | Giá trị |
