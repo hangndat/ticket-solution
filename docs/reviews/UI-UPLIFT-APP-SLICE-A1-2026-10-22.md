@@ -10,8 +10,8 @@
 
 | Viewport | Ảnh |
 | --- | --- |
-| Desktop 1280 | ![](./assets/ui-uplift-app-slice-a1/home-catalog-desktop-1280.png) |
-| Mobile 390 | ![](./assets/ui-uplift-app-slice-a1/home-catalog-mobile-390.png) |
+| Desktop 1280 | ![](./assets/ui-uplift-app-slice-a1/home-catalog-desktop-1280-1280.png) |
+| Mobile 390 | ![](./assets/ui-uplift-app-slice-a1/home-catalog-mobile-390-390.png) |
 
 `home-catalog-uat.mjs` PASS (grid optional when API unreachable; chrome + nav labels verified).
 
