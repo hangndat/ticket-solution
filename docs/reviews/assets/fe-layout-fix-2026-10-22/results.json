@@ -1,0 +1,573 @@
+{
+  "capturedAt": "2026-10-22T07:06:44.600Z",
+  "base": "http://localhost:3000",
+  "attendee": [
+    {
+      "case": "privacy",
+      "width": 1280,
+      "footer": {
+        "ok": true,
+        "shortPage": false,
+        "gapPx": null,
+        "scrollHeight": 1968,
+        "footerBottom": 1968.2,
+        "viewportH": 844
+      },
+      "overflow": {
+        "scrollWidth": 1280,
+        "innerWidth": 1280,
+        "pass": true
+      },
+      "pass": true,
+      "shot": "/Users/admin/orca/workspaces/main/fe-layout-fix/docs/reviews/assets/fe-layout-fix-2026-10-22/attendee-privacy-1280.png"
+    },
+    {
+      "case": "redeem",
+      "width": 1280,
+      "footer": {
+        "ok": true,
+        "shortPage": false,
+        "gapPx": null,
+        "scrollHeight": 862,
+        "footerBottom": 862.09,
+        "viewportH": 844
+      },
+      "overflow": {
+        "scrollWidth": 1280,
+        "innerWidth": 1280,
+        "pass": true
+      },
+      "pass": true,
+      "shot": "/Users/admin/orca/workspaces/main/fe-layout-fix/docs/reviews/assets/fe-layout-fix-2026-10-22/attendee-redeem-1280.png"
+    },
+    {
+      "case": "wallet-guest",
+      "width": 1280,
+      "footer": {
+        "ok": true,
+        "shortPage": true,
+        "gapPx": 0,
+        "scrollHeight": 844,
+        "footerBottom": 844,
+        "viewportH": 844
+      },
+      "overflow": {
+        "scrollWidth": 1280,
+        "innerWidth": 1280,
+        "pass": true
+      },
+      "pass": true,
+      "shot": "/Users/admin/orca/workspaces/main/fe-layout-fix/docs/reviews/assets/fe-layout-fix-2026-10-22/attendee-wallet-guest-1280.png"
+    },
+    {
+      "case": "account-guest",
+      "width": 1280,
+      "footer": {
+        "ok": true,
+        "shortPage": false,
+        "gapPx": null,
+        "scrollHeight": 1954,
+        "footerBottom": 1953.8,
+        "viewportH": 844
+      },
+      "overflow": {
+        "scrollWidth": 1280,
+        "innerWidth": 1280,
+        "pass": true
+      },
+      "pass": true,
+      "shot": "/Users/admin/orca/workspaces/main/fe-layout-fix/docs/reviews/assets/fe-layout-fix-2026-10-22/attendee-account-guest-1280.png"
+    },
+    {
+      "case": "claim",
+      "width": 1280,
+      "footer": {
+        "ok": true,
+        "shortPage": false,
+        "gapPx": null,
+        "scrollHeight": 1658,
+        "footerBottom": 1658.17,
+        "viewportH": 844
+      },
+      "overflow": {
+        "scrollWidth": 1280,
+        "innerWidth": 1280,
+        "pass": true
+      },
+      "pass": true,
+      "shot": "/Users/admin/orca/workspaces/main/fe-layout-fix/docs/reviews/assets/fe-layout-fix-2026-10-22/attendee-claim-1280.png"
+    },
+    {
+      "case": "not-found",
+      "width": 1280,
+      "footer": {
+        "ok": true,
+        "shortPage": true,
+        "gapPx": 0,
+        "scrollHeight": 844,
+        "footerBottom": 844,
+        "viewportH": 844
+      },
+      "overflow": {
+        "scrollWidth": 1280,
+        "innerWidth": 1280,
+        "pass": true
+      },
+      "pass": true,
+      "shot": "/Users/admin/orca/workspaces/main/fe-layout-fix/docs/reviews/assets/fe-layout-fix-2026-10-22/attendee-not-found-1280.png"
+    },
+    {
+      "case": "privacy",
+      "width": 390,
+      "footer": {
+        "ok": true,
+        "shortPage": false,
+        "gapPx": null,
+        "scrollHeight": 2701,
+        "footerBottom": 2700.5,
+        "viewportH": 844
+      },
+      "overflow": {
+        "scrollWidth": 390,
+        "innerWidth": 390,
+        "pass": true
+      },
+      "pass": true,
+      "shot": "/Users/admin/orca/workspaces/main/fe-layout-fix/docs/reviews/assets/fe-layout-fix-2026-10-22/attendee-privacy-390.png"
+    },
+    {
+      "case": "redeem",
+      "width": 390,
+      "footer": {
+        "ok": true,
+        "shortPage": false,
+        "gapPx": null,
+        "scrollHeight": 849,
+        "footerBottom": 849.05,
+        "viewportH": 844
+      },
+      "overflow": {
+        "scrollWidth": 390,
+        "innerWidth": 390,
+        "pass": true
+      },
+      "pass": true,
+      "shot": "/Users/admin/orca/workspaces/main/fe-layout-fix/docs/reviews/assets/fe-layout-fix-2026-10-22/attendee-redeem-390.png"
+    },
+    {
+      "case": "wallet-guest",
+      "width": 390,
+      "footer": {
+        "ok": true,
+        "shortPage": true,
+        "gapPx": 0,
+        "scrollHeight": 844,
+        "footerBottom": 844,
+        "viewportH": 844
+      },
+      "overflow": {
+        "scrollWidth": 390,
+        "innerWidth": 390,
+        "pass": true
+      },
+      "pass": true,
+      "shot": "/Users/admin/orca/workspaces/main/fe-layout-fix/docs/reviews/assets/fe-layout-fix-2026-10-22/attendee-wallet-guest-390.png"
+    },
+    {
+      "case": "account-guest",
+      "width": 390,
+      "footer": {
+        "ok": true,
+        "shortPage": false,
+        "gapPx": null,
+        "scrollHeight": 2309,
+        "footerBottom": 2308.94,
+        "viewportH": 844
+      },
+      "overflow": {
+        "scrollWidth": 390,
+        "innerWidth": 390,
+        "pass": true
+      },
+      "pass": true,
+      "shot": "/Users/admin/orca/workspaces/main/fe-layout-fix/docs/reviews/assets/fe-layout-fix-2026-10-22/attendee-account-guest-390.png"
+    },
+    {
+      "case": "claim",
+      "width": 390,
+      "footer": {
+        "ok": true,
+        "shortPage": false,
+        "gapPx": null,
+        "scrollHeight": 1760,
+        "footerBottom": 1760.31,
+        "viewportH": 844
+      },
+      "overflow": {
+        "scrollWidth": 390,
+        "innerWidth": 390,
+        "pass": true
+      },
+      "pass": true,
+      "shot": "/Users/admin/orca/workspaces/main/fe-layout-fix/docs/reviews/assets/fe-layout-fix-2026-10-22/attendee-claim-390.png"
+    },
+    {
+      "case": "not-found",
+      "width": 390,
+      "footer": {
+        "ok": true,
+        "shortPage": true,
+        "gapPx": 0,
+        "scrollHeight": 844,
+        "footerBottom": 844,
+        "viewportH": 844
+      },
+      "overflow": {
+        "scrollWidth": 390,
+        "innerWidth": 390,
+        "pass": true
+      },
+      "pass": true,
+      "shot": "/Users/admin/orca/workspaces/main/fe-layout-fix/docs/reviews/assets/fe-layout-fix-2026-10-22/attendee-not-found-390.png"
+    },
+    {
+      "case": "privacy",
+      "width": 360,
+      "footer": {
+        "ok": true,
+        "shortPage": false,
+        "gapPx": null,
+        "scrollHeight": 2895,
+        "footerBottom": 2895.27,
+        "viewportH": 844
+      },
+      "overflow": {
+        "scrollWidth": 360,
+        "innerWidth": 360,
+        "pass": true
+      },
+      "pass": true,
+      "shot": "/Users/admin/orca/workspaces/main/fe-layout-fix/docs/reviews/assets/fe-layout-fix-2026-10-22/attendee-privacy-360.png"
+    },
+    {
+      "case": "redeem",
+      "width": 360,
+      "footer": {
+        "ok": true,
+        "shortPage": false,
+        "gapPx": null,
+        "scrollHeight": 911,
+        "footerBottom": 911.05,
+        "viewportH": 844
+      },
+      "overflow": {
+        "scrollWidth": 360,
+        "innerWidth": 360,
+        "pass": true
+      },
+      "pass": true,
+      "shot": "/Users/admin/orca/workspaces/main/fe-layout-fix/docs/reviews/assets/fe-layout-fix-2026-10-22/attendee-redeem-360.png"
+    },
+    {
+      "case": "wallet-guest",
+      "width": 360,
+      "footer": {
+        "ok": true,
+        "shortPage": false,
+        "gapPx": null,
+        "scrollHeight": 889,
+        "footerBottom": 889.44,
+        "viewportH": 844
+      },
+      "overflow": {
+        "scrollWidth": 360,
+        "innerWidth": 360,
+        "pass": true
+      },
+      "pass": true,
+      "shot": "/Users/admin/orca/workspaces/main/fe-layout-fix/docs/reviews/assets/fe-layout-fix-2026-10-22/attendee-wallet-guest-360.png"
+    },
+    {
+      "case": "account-guest",
+      "width": 360,
+      "footer": {
+        "ok": true,
+        "shortPage": false,
+        "gapPx": null,
+        "scrollHeight": 2416,
+        "footerBottom": 2416.25,
+        "viewportH": 844
+      },
+      "overflow": {
+        "scrollWidth": 360,
+        "innerWidth": 360,
+        "pass": true
+      },
+      "pass": true,
+      "shot": "/Users/admin/orca/workspaces/main/fe-layout-fix/docs/reviews/assets/fe-layout-fix-2026-10-22/attendee-account-guest-360.png"
+    },
+    {
+      "case": "claim",
+      "width": 360,
+      "footer": {
+        "ok": true,
+        "shortPage": false,
+        "gapPx": null,
+        "scrollHeight": 1784,
+        "footerBottom": 1783.88,
+        "viewportH": 844
+      },
+      "overflow": {
+        "scrollWidth": 360,
+        "innerWidth": 360,
+        "pass": true
+      },
+      "pass": true,
+      "shot": "/Users/admin/orca/workspaces/main/fe-layout-fix/docs/reviews/assets/fe-layout-fix-2026-10-22/attendee-claim-360.png"
+    },
+    {
+      "case": "not-found",
+      "width": 360,
+      "footer": {
+        "ok": true,
+        "shortPage": true,
+        "gapPx": 0,
+        "scrollHeight": 844,
+        "footerBottom": 844,
+        "viewportH": 844
+      },
+      "overflow": {
+        "scrollWidth": 360,
+        "innerWidth": 360,
+        "pass": true
+      },
+      "pass": true,
+      "shot": "/Users/admin/orca/workspaces/main/fe-layout-fix/docs/reviews/assets/fe-layout-fix-2026-10-22/attendee-not-found-360.png"
+    },
+    {
+      "case": "privacy",
+      "width": 320,
+      "footer": {
+        "ok": true,
+        "shortPage": false,
+        "gapPx": null,
+        "scrollHeight": 3111,
+        "footerBottom": 3110.81,
+        "viewportH": 844
+      },
+      "overflow": {
+        "scrollWidth": 320,
+        "innerWidth": 320,
+        "pass": true
+      },
+      "pass": true,
+      "shot": "/Users/admin/orca/workspaces/main/fe-layout-fix/docs/reviews/assets/fe-layout-fix-2026-10-22/attendee-privacy-320.png"
+    },
+    {
+      "case": "redeem",
+      "width": 320,
+      "footer": {
+        "ok": true,
+        "shortPage": false,
+        "gapPx": null,
+        "scrollHeight": 935,
+        "footerBottom": 935.05,
+        "viewportH": 844
+      },
+      "overflow": {
+        "scrollWidth": 320,
+        "innerWidth": 320,
+        "pass": true
+      },
+      "pass": true,
+      "shot": "/Users/admin/orca/workspaces/main/fe-layout-fix/docs/reviews/assets/fe-layout-fix-2026-10-22/attendee-redeem-320.png"
+    },
+    {
+      "case": "wallet-guest",
+      "width": 320,
+      "footer": {
+        "ok": true,
+        "shortPage": false,
+        "gapPx": null,
+        "scrollHeight": 943,
+        "footerBottom": 943.36,
+        "viewportH": 844
+      },
+      "overflow": {
+        "scrollWidth": 320,
+        "innerWidth": 320,
+        "pass": true
+      },
+      "pass": true,
+      "shot": "/Users/admin/orca/workspaces/main/fe-layout-fix/docs/reviews/assets/fe-layout-fix-2026-10-22/attendee-wallet-guest-320.png"
+    },
+    {
+      "case": "account-guest",
+      "width": 320,
+      "footer": {
+        "ok": true,
+        "shortPage": false,
+        "gapPx": null,
+        "scrollHeight": 2558,
+        "footerBottom": 2558.41,
+        "viewportH": 844
+      },
+      "overflow": {
+        "scrollWidth": 320,
+        "innerWidth": 320,
+        "pass": true
+      },
+      "pass": true,
+      "shot": "/Users/admin/orca/workspaces/main/fe-layout-fix/docs/reviews/assets/fe-layout-fix-2026-10-22/attendee-account-guest-320.png"
+    },
+    {
+      "case": "claim",
+      "width": 320,
+      "footer": {
+        "ok": true,
+        "shortPage": false,
+        "gapPx": null,
+        "scrollHeight": 1930,
+        "footerBottom": 1930.48,
+        "viewportH": 844
+      },
+      "overflow": {
+        "scrollWidth": 320,
+        "innerWidth": 320,
+        "pass": true
+      },
+      "pass": true,
+      "shot": "/Users/admin/orca/workspaces/main/fe-layout-fix/docs/reviews/assets/fe-layout-fix-2026-10-22/attendee-claim-320.png"
+    },
+    {
+      "case": "not-found",
+      "width": 320,
+      "footer": {
+        "ok": true,
+        "shortPage": true,
+        "gapPx": 0,
+        "scrollHeight": 844,
+        "footerBottom": 844,
+        "viewportH": 844
+      },
+      "overflow": {
+        "scrollWidth": 320,
+        "innerWidth": 320,
+        "pass": true
+      },
+      "pass": true,
+      "shot": "/Users/admin/orca/workspaces/main/fe-layout-fix/docs/reviews/assets/fe-layout-fix-2026-10-22/attendee-not-found-320.png"
+    }
+  ],
+  "marketing": [
+    {
+      "locale": "vi",
+      "width": 1280,
+      "overflow": {
+        "scrollWidth": 1280,
+        "innerWidth": 1280,
+        "pass": true
+      },
+      "heroCopyHeightPx": 550,
+      "pass": true,
+      "shot": "/Users/admin/orca/workspaces/main/fe-layout-fix/docs/reviews/assets/fe-layout-fix-2026-10-22/marketing-vi-1280.png"
+    },
+    {
+      "locale": "en",
+      "width": 1280,
+      "overflow": {
+        "scrollWidth": 1280,
+        "innerWidth": 1280,
+        "pass": true
+      },
+      "heroCopyHeightPx": 505,
+      "pass": true,
+      "shot": "/Users/admin/orca/workspaces/main/fe-layout-fix/docs/reviews/assets/fe-layout-fix-2026-10-22/marketing-en-1280.png"
+    },
+    {
+      "locale": "vi",
+      "width": 390,
+      "overflow": {
+        "scrollWidth": 390,
+        "innerWidth": 390,
+        "pass": true
+      },
+      "heroCopyHeightPx": 547,
+      "pass": true,
+      "shot": "/Users/admin/orca/workspaces/main/fe-layout-fix/docs/reviews/assets/fe-layout-fix-2026-10-22/marketing-vi-390.png"
+    },
+    {
+      "locale": "en",
+      "width": 390,
+      "overflow": {
+        "scrollWidth": 390,
+        "innerWidth": 390,
+        "pass": true
+      },
+      "heroCopyHeightPx": 521,
+      "pass": true,
+      "shot": "/Users/admin/orca/workspaces/main/fe-layout-fix/docs/reviews/assets/fe-layout-fix-2026-10-22/marketing-en-390.png"
+    },
+    {
+      "locale": "vi",
+      "width": 360,
+      "overflow": {
+        "scrollWidth": 360,
+        "innerWidth": 360,
+        "pass": true
+      },
+      "heroCopyHeightPx": 577,
+      "pass": true,
+      "shot": "/Users/admin/orca/workspaces/main/fe-layout-fix/docs/reviews/assets/fe-layout-fix-2026-10-22/marketing-vi-360.png"
+    },
+    {
+      "locale": "en",
+      "width": 360,
+      "overflow": {
+        "scrollWidth": 360,
+        "innerWidth": 360,
+        "pass": true
+      },
+      "heroCopyHeightPx": 570,
+      "pass": true,
+      "shot": "/Users/admin/orca/workspaces/main/fe-layout-fix/docs/reviews/assets/fe-layout-fix-2026-10-22/marketing-en-360.png"
+    },
+    {
+      "locale": "vi",
+      "width": 320,
+      "overflow": {
+        "scrollWidth": 320,
+        "innerWidth": 320,
+        "pass": true
+      },
+      "heroCopyHeightPx": 680,
+      "pass": true,
+      "shot": "/Users/admin/orca/workspaces/main/fe-layout-fix/docs/reviews/assets/fe-layout-fix-2026-10-22/marketing-vi-320.png"
+    },
+    {
+      "locale": "en",
+      "width": 320,
+      "overflow": {
+        "scrollWidth": 320,
+        "innerWidth": 320,
+        "pass": true
+      },
+      "heroCopyHeightPx": 623,
+      "pass": true,
+      "shot": "/Users/admin/orca/workspaces/main/fe-layout-fix/docs/reviews/assets/fe-layout-fix-2026-10-22/marketing-en-320.png"
+    }
+  ],
+  "ok": true,
+  "marketingHeroHeights": {
+    "vi": 550,
+    "en": 505,
+    "deltaPx": 45,
+    "pass": true
+  },
+  "marketingLoadCls": {
+    "vi": 0,
+    "en": 0,
+    "pass": true,
+    "max": 0.08
+  }
+}
