@@ -43,7 +43,6 @@ import {
 } from '@/redeem/redeem-draft-intent';
 import { RedeemFormFields } from '@/redeem/redeem-form-fields';
 import { useFadeInOnMount } from '@/hooks/use-fade-in-on-mount';
-import { brand } from '@/theme/tokens';
 
 const AUTH_CODES = new Set(['UNAUTHENTICATED', 'EMAIL_NOT_VERIFIED']);
 
