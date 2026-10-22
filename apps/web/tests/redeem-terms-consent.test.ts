@@ -12,6 +12,7 @@ test('redeem form wires published terms consent UI', () => {
   assert.match(form, /RedeemTermsConsent/);
   assert.match(form, /publishedSchemaReady/);
   assert.match(form, /redeem-product-schema-notice/);
+  assert.match(form, /loadedSlugPairRef/);
 });
 
 test('RedeemTermsConsent exposes stable test id for UAT', () => {
