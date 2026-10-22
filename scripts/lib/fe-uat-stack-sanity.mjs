@@ -284,7 +284,8 @@ async function waitForRedeemTermsConsent(page, base, redeemUrl, options) {
 
   const termsLocator = page.getByTestId('redeem-terms-consent');
   let termsVisible = await termsLocator
-    .isVisible({ timeout: 20_000 })
+    .waitFor({ state: 'visible', timeout: 60_000 })
+    .then(() => true)
     .catch(() => false);
 
   const globalCode = await page
@@ -303,7 +304,8 @@ async function waitForRedeemTermsConsent(page, base, redeemUrl, options) {
       )
       .catch(() => {});
     termsVisible = await termsLocator
-      .isVisible({ timeout: 60_000 })
+      .waitFor({ state: 'visible', timeout: 60_000 })
+      .then(() => true)
       .catch(() => false);
   }
 
