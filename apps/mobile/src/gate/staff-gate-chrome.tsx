@@ -181,19 +181,22 @@ export function StaffEventPicker({
   if (choices.length <= MAX_SEGMENTED_EVENTS) {
     const labels = choices.map((c) => c.name);
     return (
-      <View accessibilityLabel="Chọn sự kiện cổng" accessibilityRole="tablist">
-        <Host matchContents>
-          <SegmentedControl
-            testID="gate-event-segmented"
-            values={labels}
-            selectedIndex={selectedIndex}
-            onChange={(event) => {
-              const index = event.nativeEvent.selectedSegmentIndex;
-              const choice = choices[index];
-              if (choice) onSelect(choice);
-            }}
-          />
-        </Host>
+      <View
+        accessibilityLabel="Chọn sự kiện cổng"
+        accessibilityRole="tablist"
+        style={{ width: '100%' }}
+      >
+        <SegmentedControl
+          testID="gate-event-segmented"
+          values={labels}
+          selectedIndex={selectedIndex}
+          style={{ width: '100%' }}
+          onChange={(event) => {
+            const index = event.nativeEvent.selectedSegmentIndex;
+            const choice = choices[index];
+            if (choice) onSelect(choice);
+          }}
+        />
       </View>
     );
   }
