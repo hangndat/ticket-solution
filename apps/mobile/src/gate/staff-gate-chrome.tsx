@@ -1,13 +1,12 @@
+import { Host, Picker } from '@expo/ui';
+import { SegmentedControl } from '@expo/ui/community/segmented-control';
 import { StyleSheet, Text, View } from 'react-native';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { SymbolView } from 'expo-symbols';
 import type { GatePhase } from '@/gate/gate-scan';
 import type { ConnectivityState } from '@/gate/offline-queue';
-import {
-  sameStaffGateScope,
-  type StaffGateScope,
-} from '@/gate/staff-gate-events';
+import type { StaffGateScope } from '@/gate/staff-gate-events';
 import { colors } from '@/theme/colors';
 import { radius, space } from '@/theme/tokens';
 import { typography } from '@/theme/typography';
@@ -142,6 +141,26 @@ export function StaffEventRow({
   );
 }
 
+const MAX_SEGMENTED_EVENTS = 5;
+
+export function staffGateScopeKey(scope: StaffGateScope): string {
+  return `${scope.tenantId}:${scope.eventId}`;
+}
+
+function selectedScopeKey(
+  choices: StaffGateScope[],
+  selected: StaffGateScope | null,
+): string {
+  if (!selected) return staffGateScopeKey(choices[0]!);
+  const key = staffGateScopeKey(selected);
+  return choices.some((c) => staffGateScopeKey(c) === key)
+    ? key
+    : staffGateScopeKey(choices[0]!);
+}
+
+/**
+ * Native event switcher: segmented (≤5 sự kiện) hoặc menu Picker khi danh sách dài.
+ */
 export function StaffEventPicker({
   choices,
   selected,
@@ -152,34 +171,57 @@ export function StaffEventPicker({
   onSelect: (scope: StaffGateScope) => void;
 }) {
   if (choices.length === 0) return null;
+
+  const selectedKey = selectedScopeKey(choices, selected);
+  const selectedIndex = Math.max(
+    0,
+    choices.findIndex((c) => staffGateScopeKey(c) === selectedKey),
+  );
+
+  if (choices.length <= MAX_SEGMENTED_EVENTS) {
+    const labels = choices.map((c) => c.name);
+    return (
+      <View
+        accessibilityLabel="Chọn sự kiện cổng"
+        accessibilityRole="tablist"
+        style={{ width: '100%' }}
+      >
+        <SegmentedControl
+          testID="gate-event-segmented"
+          values={labels}
+          selectedIndex={selectedIndex}
+          style={{ width: '100%' }}
+          onChange={(event) => {
+            const index = event.nativeEvent.selectedSegmentIndex;
+            const choice = choices[index];
+            if (choice) onSelect(choice);
+          }}
+        />
+      </View>
+    );
+  }
+
   return (
-    <View style={{ gap: space.xs }}>
-      {choices.map((choice) => {
-        const active =
-          selected !== null && sameStaffGateScope(selected, choice);
-        return (
-          <Button
-            key={`${choice.tenantId}:${choice.eventId}`}
-            variant="ghost"
-            accessibilityState={{ selected: active }}
-            accessibilityLabel={choice.name}
-            onPress={() => onSelect(choice)}
-            style={[
-              styles.pickerRow,
-              active ? styles.pickerRowActive : null,
-            ]}
-            contentStyle={styles.pickerRowContent}
-          >
-            <Text
-              numberOfLines={1}
-              style={{ ...typography.callout, color: colors.label,
-                fontWeight: active ? '700' : '400' }}
-            >
-              {choice.name}
-            </Text>
-          </Button>
-        );
-      })}
+    <View accessibilityLabel="Chọn sự kiện cổng">
+      <Host matchContents>
+        <Picker
+          testID="gate-event-picker-menu"
+          selectedValue={selectedKey}
+          appearance="menu"
+          onValueChange={(value) => {
+            const choice = choices.find((c) => staffGateScopeKey(c) === value);
+            if (choice) onSelect(choice);
+          }}
+        >
+        {choices.map((choice) => (
+          <Picker.Item
+            key={staffGateScopeKey(choice)}
+            label={choice.name}
+            value={staffGateScopeKey(choice)}
+          />
+        ))}
+        </Picker>
+      </Host>
     </View>
   );
 }
@@ -345,19 +387,6 @@ const styles = StyleSheet.create({
     paddingVertical: space.xs + space.xxs,
     borderRadius: radius.sm,
     minHeight: 44
-  },
-  pickerRow: {
-    alignSelf: 'stretch',
-    paddingVertical: space.sm + space.xxs,
-    paddingHorizontal: space.md,
-    borderRadius: radius.md
-  },
-  pickerRowActive: {
-    backgroundColor: colors.card
-  },
-  pickerRowContent: {
-    justifyContent: 'flex-start',
-    width: '100%'
   },
   gateIcon: {
     width: 48,

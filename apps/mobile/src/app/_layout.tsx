@@ -81,6 +81,10 @@ function AppStack() {
         name="uat/session"
         options={{ title: 'UAT session', headerShown: false }}
       />
+      <Stack.Screen
+        name="uat/gate-expo-ui"
+        options={{ title: 'UAT gate @expo/ui', headerShown: true }}
+      />
     </Stack>
   );
 }
