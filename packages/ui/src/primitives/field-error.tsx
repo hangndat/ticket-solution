@@ -14,7 +14,7 @@ export function FieldError({ className, id, children, ...props }: FieldErrorProp
     <p
       id={id}
       role="alert"
-      className={cn('ui:mt-1.5 ui:text-sm ui:font-medium ui:text-destructive', className)}
+      className={cn('mt-1.5 text-sm font-medium text-destructive', className)}
       {...props}
     >
       {children}

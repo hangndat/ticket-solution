@@ -13,6 +13,9 @@ test('attendee root layout exposes footer landmark for sticky-footer regression'
   const layout = readFileSync(join(WEB_ROOT, 'app/layout.tsx'), 'utf8');
   assert.match(layout, /className="attendee-uplift"/);
   assert.match(layout, /data-testid="site-footer"/);
+  const globals = readFileSync(join(WEB_ROOT, 'app/globals.css'), 'utf8');
+  assert.match(globals, /attendee-uplift\.css' layer\(legacy\)/);
+  assert.doesNotMatch(layout, /attendee-uplift\.css/);
 });
 
 test('marketing LocaleSwitch marks active locale with aria-current (SSR)', () => {

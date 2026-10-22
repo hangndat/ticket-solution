@@ -55,7 +55,7 @@ export default async function RedeemPage({ searchParams }: Props) {
   const signedIn = authState.authenticated;
 
   return (
-    <main id="main" className="container shell redeem-page">
+    <main id="main" className="lp-container shell redeem-page">
       <SiteNav />
 
       <div className={styles.narrow}>
