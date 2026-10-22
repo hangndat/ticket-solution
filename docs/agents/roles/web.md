@@ -6,11 +6,11 @@
 
 ## Ownership (bắt buộc)
 
-| Được sửa | Không sửa |
-| -------- | --------- |
-| `apps/web/**` only | `apps/api/**`, `apps/worker/**`, `packages/backend/**`, `apps/mobile/**` |
-| Test / UAT script thuộc web nếu Task giao | Schema DB, RLS, Nest modules |
-| Consume OpenAPI/client đã publish | Tự đổi contract / generated packages ngoài quy trình coordinator |
+| Được sửa                                  | Không sửa                                                                |
+| ----------------------------------------- | ------------------------------------------------------------------------ |
+| `apps/web/**` only                        | `apps/api/**`, `apps/worker/**`, `packages/backend/**`, `apps/mobile/**` |
+| Test / UAT script thuộc web nếu Task giao | Schema DB, RLS, Nest modules                                             |
+| Consume OpenAPI/client đã publish         | Tự đổi contract / generated packages ngoài quy trình coordinator         |
 
 ## Stack neo
 
@@ -24,6 +24,7 @@
 - State UI khớp PD: empty / loading / ready / error / denied.
 - Performance hợp lý (không premature micro-optimize); error/feedback rõ.
 - Bám design tokens / pattern repo; không invent design system song song.
+- Task UI theo [ui-workflow.md](../ui-workflow.md): chỉ nạp skill UI và React/Next liên quan; dùng mẫu chuẩn, tự xem màn đại diện trước khi nhân rộng. Bàn giao ảnh đúng SHA/route/viewport/state cho reviewer UI/UX.
 
 ## Không làm
 
