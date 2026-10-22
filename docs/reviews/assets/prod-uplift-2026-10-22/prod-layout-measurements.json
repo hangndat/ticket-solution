@@ -1,0 +1,63 @@
+{
+  "overflow": [
+    {
+      "label": "marketing-vi-390",
+      "url": "https://vemoki.com/",
+      "width": 390,
+      "scrollWidth": 390,
+      "innerWidth": 390,
+      "pass": true
+    },
+    {
+      "label": "marketing-en-390",
+      "url": "https://vemoki.com/en",
+      "width": 390,
+      "scrollWidth": 390,
+      "innerWidth": 390,
+      "pass": true
+    },
+    {
+      "label": "marketing-vi-360",
+      "url": "https://vemoki.com/",
+      "width": 360,
+      "scrollWidth": 360,
+      "innerWidth": 360,
+      "pass": true
+    },
+    {
+      "label": "marketing-en-360",
+      "url": "https://vemoki.com/en",
+      "width": 360,
+      "scrollWidth": 360,
+      "innerWidth": 360,
+      "pass": true
+    },
+    {
+      "label": "marketing-vi-320",
+      "url": "https://vemoki.com/",
+      "width": 320,
+      "scrollWidth": 320,
+      "innerWidth": 320,
+      "pass": true
+    },
+    {
+      "label": "marketing-en-320",
+      "url": "https://vemoki.com/en",
+      "width": 320,
+      "scrollWidth": 320,
+      "innerWidth": 320,
+      "pass": true
+    }
+  ],
+  "localeSwitchCls": {
+    "cls": 0,
+    "pass": true,
+    "max": 0.08
+  },
+  "footerPrivacy390": {
+    "shortPage": false,
+    "gapPx": null,
+    "pass": true
+  },
+  "ok": true
+}
