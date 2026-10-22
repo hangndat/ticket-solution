@@ -22,13 +22,13 @@ export const colors = {
   ticketCanvas: brand.paper,
   ticketInk: brand.ink,
   /** Gate scan outcome accents — no purple/glow. */
-  admit: '#1b7f4a',
+  admit: brand.admit,
   deny: brand.signal,
-  unknown: '#8a6d3b',
+  unknown: brand.unknown,
   /** Form validation / material error red → semantic destructive (TOKENS.md). */
-  destructive: '#8a1f1f',
+  destructive: brand.destructive,
   /** Hairline borders on inputs/cards (#D7DFE9). */
-  line: '#d7dfe9',
+  line: brand.line,
   /** Success pill background (events / tickets). */
   admitSurface: '#edf5ef',
   /** Muted chrome surfaces. */
