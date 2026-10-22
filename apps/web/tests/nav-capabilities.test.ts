@@ -119,6 +119,29 @@ test('Scanner with gate.confirm shows Gate, not Admin without tenant perms', () 
   assert.ok(!hrefs.includes('/admin'));
 });
 
+test('admin nav link uses Quản trị label (BA-002)', () => {
+  const caps = deriveNavCapabilities({
+    authenticated: true,
+    meEvents: { staffEligible: true, items: [] },
+    meTenants: {
+      items: [
+        {
+          tenantId: TENANT,
+          slug: 'demo',
+          name: 'Demo',
+          status: 'ACTIVE',
+          role: 'Owner',
+          tenantPermissions: [...ADMIN_TENANT_PERMISSIONS],
+        },
+      ],
+    },
+    platformMe: null,
+  });
+  const admin = buildNavLinks(caps).find((l) => l.testId === 'nav-admin');
+  assert.ok(admin);
+  assert.equal(admin.label, 'Quản trị');
+});
+
 test('Owner membership with admin tenant perms shows Admin; Gate needs assignment', () => {
   const caps = deriveNavCapabilities({
     authenticated: true,

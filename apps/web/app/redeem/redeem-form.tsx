@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import {
   useCallback,
   useEffect,
@@ -25,6 +26,7 @@ import {
   verifyingMessage,
   type RedeemUxMessage,
 } from '../../src/redeem/messages';
+import { ticketStateLabel } from '../../src/owner-ticket/ticket-state';
 import {
   redeemPayloadFingerprint,
   resolveIdempotencyKey,
@@ -1165,10 +1167,57 @@ export function RedeemForm({
             </p>
           ) : null}
           {ux.kind === 'auth' ? (
-            <p>
+            <p className="auth-buttons">
               <a className="button" href={REDEEM_LOGIN_HREF}>
-                Cần đăng nhập
+                Đăng nhập
               </a>
+              {ux.title === 'Cần xác minh email' ? (
+                <Link className="button-link button-link-secondary" href="/account">
+                  Mở Tài khoản
+                </Link>
+              ) : null}
+            </p>
+          ) : null}
+          {ux.retryable &&
+          ux.kind !== 'unknown' &&
+          ux.kind !== 'auth' &&
+          ux.kind !== 'verifying' &&
+          ux.kind !== 'polling' ? (
+            <p>
+              <button
+                type="button"
+                className="button"
+                onClick={() => {
+                  if (ux.kind === 'stale' || ux.kind === 'timeout') {
+                    window.location.reload();
+                    return;
+                  }
+                  setUx(null);
+                }}
+                disabled={busy}
+              >
+                {ux.kind === 'stale' || ux.kind === 'timeout'
+                  ? 'Tải lại và thử lại'
+                  : 'Thử lại'}
+              </button>
+            </p>
+          ) : null}
+          {ux.kind === 'success' ? (
+            <p className="auth-buttons">
+              <Link className="button" href="/wallet">
+                Xem vé của tôi
+              </Link>
+            </p>
+          ) : null}
+          {(ux.kind === 'exhausted' ||
+            ux.kind === 'used' ||
+            ux.kind === 'closed' ||
+            ux.kind === 'invalid') &&
+          productChrome ? (
+            <p className="auth-buttons">
+              <Link className="button-link button-link-secondary" href="/">
+                Về danh sách sự kiện
+              </Link>
             </p>
           ) : null}
           {!productChrome &&
@@ -1204,7 +1253,7 @@ export function RedeemForm({
             </div>
             <div>
               <dt>Trạng thái</dt>
-              <dd>{ticket.state}</dd>
+              <dd>{ticketStateLabel(ticket.state)}</dd>
             </div>
             {ticket.requestId ? (
               <div>

@@ -28,9 +28,15 @@ export function RedeemTermsConsent({
     <fieldset className="redeem-terms" data-testid="redeem-terms-consent">
       <legend>Điều khoản</legend>
       {termsBody ? (
-        <pre className="redeem-terms-body" tabIndex={0}>
-          {termsBody}
-        </pre>
+        <>
+          <p className="redeem-schema-notice">
+            Nội dung dưới đây do ban tổ chức ban hành (có thể khác ngôn ngữ giao
+            diện).
+          </p>
+          <pre className="redeem-terms-body" tabIndex={0}>
+            {termsBody}
+          </pre>
+        </>
       ) : termsHref ? (
         <p className="redeem-schema-notice">
           <Link className="button-link" href={termsHref}>
