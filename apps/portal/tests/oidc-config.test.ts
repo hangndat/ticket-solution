@@ -1,8 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
-  gateDeeplinkUrl,
-  isGateDeeplinkId,
   isPortalOidcConfigured,
   productOrigin,
   resolvePortalAuthState,
@@ -71,33 +69,12 @@ test('PKCE S256 + nonce generators are opaque random values', () => {
   assert.notEqual(generateOidcNonce(), generateOidcNonce());
 });
 
-test('Gate deeplink allowlists tenantId/eventId query only', () => {
-  assert.equal(
-    gateDeeplinkUrl({ PRODUCT_ORIGIN: 'https://app.vemoki.com' }),
-    'https://app.vemoki.com/gate',
-  );
-  assert.equal(
-    gateDeeplinkUrl(
-      { PRODUCT_ORIGIN: 'https://app.vemoki.com' },
-      '/gate',
-      { tenantId: 't1', eventId: 'e2' },
-    ),
-    'https://app.vemoki.com/gate?tenantId=t1&eventId=e2',
-  );
-  assert.equal(
-    gateDeeplinkUrl(
-      { PRODUCT_ORIGIN: 'https://app.vemoki.com' },
-      '/gate',
-      { tenantId: '../evil', eventId: 'e2' },
-    ),
-    'https://app.vemoki.com/gate?eventId=e2',
-  );
-  assert.equal(isGateDeeplinkId('ok_1-2'), true);
-  assert.equal(isGateDeeplinkId('bad/id'), false);
+test('productOrigin reads PRODUCT_ORIGIN env — never invent production host', () => {
   assert.equal(
     productOrigin({ PRODUCT_ORIGIN: 'https://app.vemoki.com/extra' }),
     'https://app.vemoki.com',
   );
+  assert.equal(productOrigin({}), 'http://127.0.0.1:3000');
 });
 
 test('platform OIDC zone requires audience + acr + jwks — isolated from staff client', () => {

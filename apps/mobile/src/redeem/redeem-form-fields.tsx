@@ -1,6 +1,9 @@
 import { Host, Switch } from '@expo/ui';
-import { Pressable, Text, TextInput, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { colors } from '@/theme/colors';
+import { space } from '@/theme/tokens';
 import type {
   FormAnswerValue,
   FormDefinition,
@@ -35,9 +38,9 @@ export function RedeemFormFields({
   fieldErrors,
 }: Props) {
   return (
-    <View style={{ gap: 16 }}>
+    <View style={styles.stack}>
       {form && form.fields.length > 0 ? (
-        <View style={{ gap: 12 }}>
+        <View style={styles.section}>
           <Text
             accessibilityRole="header"
             style={{ color: colors.label, fontSize: 20, fontWeight: '600' }}
@@ -61,7 +64,7 @@ export function RedeemFormFields({
       ) : null}
 
       {termsVersion ? (
-        <View style={{ gap: 10 }}>
+        <View style={styles.termsBlock}>
           <Text
             accessibilityRole="header"
             style={{ color: colors.label, fontSize: 20, fontWeight: '600' }}
@@ -136,35 +139,23 @@ function FieldControl({
   if (field.type === 'select') {
     const selected = typeof value === 'string' ? value : '';
     return (
-      <View style={{ gap: 8 }}>
-        <Text style={{ color: colors.label, fontSize: 17 }}>{label}</Text>
-        <View style={{ gap: 8 }}>
+      <View style={styles.selectBlock}>
+        <Text style={styles.fieldLabel}>{label}</Text>
+        <View style={styles.selectOptions}>
           {(field.options ?? []).map((opt) => {
             const active = selected === opt.id;
             return (
-              <Pressable
+              <Button
                 key={opt.id}
-                accessibilityRole="button"
+                label={opt.label}
+                variant={active ? 'primary' : 'secondary'}
+                size="lg"
                 accessibilityLabel={`${field.label}: ${opt.label}`}
                 accessibilityState={{ selected: active, disabled }}
                 disabled={disabled}
                 onPress={() => onChange(opt.id)}
-                style={{
-                  minHeight: 48,
-                  padding: 12,
-                  borderRadius: 12,
-                  backgroundColor: active ? colors.accent : colors.card,
-                }}
-              >
-                <Text
-                  style={{
-                    color: active ? '#fff' : colors.label,
-                    fontSize: 17,
-                  }}
-                >
-                  {opt.label}
-                </Text>
-              </Pressable>
+                style={styles.selectOption}
+              />
             );
           })}
         </View>
@@ -181,21 +172,18 @@ function FieldControl({
         : 'default';
 
   return (
-    <View style={{ gap: 6 }}>
-      <Text style={{ color: colors.label, fontSize: 17 }}>{label}</Text>
-      <TextInput
-        accessibilityLabel={label}
-        value={typeof value === 'string' ? value : ''}
-        onChangeText={(text) => onChange(text)}
-        editable={!disabled}
-        autoCapitalize={field.type === 'email' ? 'none' : 'sentences'}
-        autoCorrect={field.type !== 'email' && field.type !== 'phone'}
-        keyboardType={keyboardType}
-        placeholder={field.label}
-        style={fieldStyle}
-      />
-      {error ? <ErrorText message={error} /> : null}
-    </View>
+    <Input
+      label={label}
+      accessibilityLabel={label}
+      value={typeof value === 'string' ? value : ''}
+      onChangeText={(text) => onChange(text)}
+      editable={!disabled}
+      autoCapitalize={field.type === 'email' ? 'none' : 'sentences'}
+      autoCorrect={field.type !== 'email' && field.type !== 'phone'}
+      keyboardType={keyboardType}
+      placeholder={field.label}
+      error={error}
+    />
   );
 }
 
@@ -207,11 +195,12 @@ function ErrorText({ message }: { message: string }) {
   );
 }
 
-const fieldStyle = {
-  minHeight: 48,
-  padding: 12,
-  borderRadius: 12,
-  backgroundColor: colors.card,
-  color: colors.label,
-  fontSize: 17,
-};
+const styles = StyleSheet.create({
+  stack: { gap: space.lg },
+  section: { gap: space.md },
+  termsBlock: { gap: space.sm + 2 },
+  selectBlock: { gap: space.sm },
+  selectOptions: { gap: space.sm },
+  selectOption: { alignSelf: 'stretch' },
+  fieldLabel: { color: colors.label, fontSize: 17 },
+});

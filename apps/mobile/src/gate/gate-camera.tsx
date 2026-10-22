@@ -1,14 +1,8 @@
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useIsFocused } from 'expo-router';
 import { useEffect, useState } from 'react';
-import {
-  AccessibilityInfo,
-  Animated,
-  Easing,
-  Pressable,
-  Text,
-  View,
-} from 'react-native';
+import { AccessibilityInfo, Animated, Easing, Text, View } from 'react-native';
+import { Button } from '@/components/ui/button';
 import { colors } from '@/theme/colors';
 
 const FRAME_SIZE = 220;
@@ -88,15 +82,12 @@ export function GateCamera({ disabled, onScan }: Props) {
   }
   if (!permission.granted) {
     return (
-      <Pressable
-        accessibilityRole="button"
+      <Button
+        label="Cho phép camera để quét QR vé"
+        variant="secondary"
+        accessibilityLabel="Cho phép camera để quét QR vé"
         onPress={() => void requestPermission()}
-        style={{ padding: 14, borderRadius: 12, backgroundColor: colors.card }}
-      >
-        <Text style={{ color: colors.label, fontSize: 17, textAlign: 'center' }}>
-          Cho phép camera để quét QR vé
-        </Text>
-      </Pressable>
+      />
     );
   }
 

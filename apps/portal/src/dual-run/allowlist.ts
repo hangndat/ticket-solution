@@ -1,7 +1,7 @@
 /**
  * ADR-20 §5 / #438 — deep-link allowlist prep for portal dual-run.
  * Staff invite / migration links: path prefixes + safe query keys only.
- * GATE stays on product origin (see gateDeeplinkUrl) — never /gate here.
+ * Web /gate removed (D-6) — portal never deep-links /gate; block path here regardless.
  */
 
 export const PORTAL_DEEPLINK_PATH_PREFIXES = [

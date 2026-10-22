@@ -105,12 +105,16 @@ await page.getByTestId('nav-mobile-backdrop').click();
 await page.waitForSelector('[data-testid="nav-mobile-menu"]', { state: 'detached', timeout: 10_000 });
 
 await context.clearCookies();
-await keycloakLogin(page, STAFF_USER, STAFF_PASS, '/gate');
-await page.waitForSelector('[data-testid="gate-bar"], [data-testid="gate-workspace"]', {
+await keycloakLogin(page, STAFF_USER, STAFF_PASS, '/admin');
+await page.waitForSelector('[data-testid="admin-job-setup"], main#main', {
   timeout: 60_000,
 });
 await page.setViewportSize({ width: 1280, height: 900 });
-await page.screenshot({ path: join(OUT, 'gate-scope-desktop.png'), fullPage: true });
+await page.screenshot({ path: join(OUT, 'staff-admin-desktop.png'), fullPage: true });
+const gateCount = await page.getByTestId('nav-gate').count();
+if (gateCount > 0) {
+  throw new Error('staff nav must not include nav-gate after D-6');
+}
 
 writeFileSync(
   join(OUT, 'report.json'),

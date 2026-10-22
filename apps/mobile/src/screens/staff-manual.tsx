@@ -1,12 +1,7 @@
 import { useCallback, useState } from 'react';
-import {
-  Platform,
-  Pressable,
-  ScrollView,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { Platform, ScrollView, Text, View } from 'react-native';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { normalizeGatePasteInput } from '@/gate/gate-scan';
 import { checkManualEntryCode } from '@/gate/staff-manual-entry-flow';
 import { StaffManualConfirmSheet } from '@/gate/staff-manual-confirm-sheet';
@@ -72,64 +67,35 @@ export function StaffManualEntryScreen() {
         <Text style={{ color: colors.secondary, fontSize: 14, lineHeight: 20 }}>
           Dùng khi không thể đọc mã QR trên vé.
         </Text>
-        <View style={{ gap: 8 }}>
-          <Text
-            nativeID="staff-manual-ticket-label"
-            style={{ color: colors.label, fontSize: 14, fontWeight: '600' }}
-          >
-            Mã vé
-          </Text>
-          <TextInput
-            testID="gate-scan-input"
-            value={raw}
-            onChangeText={(text) => {
-              setRaw(normalizeGatePasteInput(text));
-              if (parseError) setParseError(null);
-            }}
-            accessibilityLabel="Nhập mã trên vé"
-            placeholder="Nhập mã trên vé"
-            placeholderTextColor={colors.secondary}
-            autoCapitalize="none"
-            autoCorrect={false}
-            autoComplete="off"
-            textContentType="none"
-            importantForAutofill="no"
-            editable={!gate.scanDisabled && !gate.busy}
-            keyboardType="ascii-capable"
-            returnKeyType="done"
-            onSubmitEditing={onCheck}
-            multiline={false}
-            style={{
-              minHeight: 48,
-              borderRadius: 12,
-              paddingHorizontal: 14,
-              paddingVertical: 12,
-              backgroundColor: colors.card,
-              color: colors.label,
-              fontSize: 16,
-            }}
-          />
-        </View>
-        <Pressable
+        <Input
+          testID="gate-scan-input"
+          label="Mã vé"
+          value={raw}
+          onChangeText={(text) => {
+            setRaw(normalizeGatePasteInput(text));
+            if (parseError) setParseError(null);
+          }}
+          accessibilityLabel="Nhập mã trên vé"
+          placeholder="Nhập mã trên vé"
+          autoCapitalize="none"
+          autoCorrect={false}
+          autoComplete="off"
+          textContentType="none"
+          importantForAutofill="no"
+          editable={!gate.scanDisabled && !gate.busy}
+          keyboardType="ascii-capable"
+          returnKeyType="done"
+          onSubmitEditing={onCheck}
+          multiline={false}
+        />
+        <Button
           testID="gate-manual-submit"
-          accessibilityRole="button"
+          label="Kiểm tra vé"
           accessibilityLabel="Kiểm tra vé"
           disabled={submitDisabled}
           onPress={onCheck}
-          style={{
-            paddingVertical: 16,
-            borderRadius: 12,
-            alignItems: 'center',
-            backgroundColor: colors.accent,
-            opacity: submitDisabled ? 0.45 : 1,
-          }}
-        >
-          <Text
-            style={{ color: colors.onAccent, fontSize: 17, fontWeight: '600' }}
-          >
-            Kiểm tra vé
-          </Text>
-        </Pressable>
+          size="lg"
+        />
         <Text style={{ color: colors.secondary, fontSize: 12, lineHeight: 18 }}>
           Kiểm tra thông tin trước khi xác nhận lượt vào.
         </Text>

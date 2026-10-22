@@ -47,7 +47,6 @@ const ALLOWED = new Set([
   '/admin',
   '/auth',
   '/account',
-  '/gate',
 ]);
 
 /** Validate path-only return (no scheme/host/query injection). */
