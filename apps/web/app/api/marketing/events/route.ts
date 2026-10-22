@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
 import { shouldSkipMarketingAnalytics } from '../../../../src/marketing/analytics/privacy-signals';
 import {
+  checkMarketingAnalyticsRequest,
+  MAX_ANALYTICS_BODY_BYTES,
+} from '../../../../src/marketing/analytics/request-guard';
+import {
   clientKeyFromRequest,
   isAnalyticsRateLimited,
 } from '../../../../src/marketing/analytics/rate-limit';
@@ -21,6 +25,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, skipped: 'privacy' });
   }
 
+  const guard = checkMarketingAnalyticsRequest(request);
+  if (guard) {
+    return NextResponse.json(
+      { ok: false, code: guard.code },
+      { status: guard.status },
+    );
+  }
+
   const key = clientKeyFromRequest(request);
   if (isAnalyticsRateLimited(key)) {
     return NextResponse.json(
@@ -29,9 +41,18 @@ export async function POST(request: Request) {
     );
   }
 
+  const rawBody = await request.arrayBuffer();
+  if (rawBody.byteLength > MAX_ANALYTICS_BODY_BYTES) {
+    return NextResponse.json(
+      { ok: false, code: 'BODY_TOO_LARGE' },
+      { status: 413 },
+    );
+  }
+
   let body: unknown;
   try {
-    body = await request.json();
+    const text = new TextDecoder().decode(rawBody);
+    body = text ? JSON.parse(text) : null;
   } catch {
     return NextResponse.json(
       { ok: false, code: 'INVALID_JSON' },

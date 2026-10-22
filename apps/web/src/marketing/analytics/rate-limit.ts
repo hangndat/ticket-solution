@@ -1,14 +1,12 @@
+import { trustedClientIpForRateLimit } from '../../platform/trusted-client-ip';
+
 const RATE_WINDOW_MS = 60_000;
 const RATE_MAX = 60;
 
 const hits = new Map<string, number[]>();
 
 export function clientKeyFromRequest(request: Request): string {
-  return (
-    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-    request.headers.get('x-real-ip') ||
-    'local'
-  );
+  return trustedClientIpForRateLimit(request);
 }
 
 export function isAnalyticsRateLimited(key: string): boolean {

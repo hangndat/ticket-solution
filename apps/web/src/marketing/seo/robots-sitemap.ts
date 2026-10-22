@@ -8,11 +8,8 @@ import {
 import { privacyHref, salesHref, supportHref } from '../links';
 import type { MarketingLocale } from '../hosts';
 
-/** Paths that must never appear in marketing sitemap or robots Allow. */
+/** Paths that must never appear in marketing sitemap (not enumerated in robots.txt). */
 export const PRIVATE_PATH_SEGMENTS = [
-  '/admin',
-  '/gate',
-  '/wallet',
   '/auth',
   '/platform',
   '/account',
@@ -25,11 +22,16 @@ export const PRIVATE_PATH_SEGMENTS = [
   '/dev/',
 ] as const;
 
+/** Not listed in robots.txt (noindex on routes instead). */
+const ROBOTS_OMIT_PRIVATE_SURFACE = new Set(['/admin', '/gate', '/wallet']);
+
 export function marketingDisallowPaths(): string[] {
   const fromProduct = PRODUCT_PATH_PREFIXES.map((p) =>
     p.endsWith('/') ? p : p,
   );
-  return [...new Set([...PRIVATE_PATH_SEGMENTS, ...fromProduct])];
+  return [...new Set([...PRIVATE_PATH_SEGMENTS, ...fromProduct])].filter(
+    (p) => !ROBOTS_OMIT_PRIVATE_SURFACE.has(p),
+  );
 }
 
 export function isMarketingRequestHost(
