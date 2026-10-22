@@ -1,5 +1,8 @@
 import { isAppScheme } from '../identity/app-schemes.ts';
-import { ATTENDEE_REDEEM_PATH } from '../navigation/attendee-redeem-entry.ts';
+import {
+  attendeeRedeemHref,
+  extractRedeemCodeFromLinkInput,
+} from '../navigation/attendee-redeem-entry.ts';
 import {
   extractMembershipInviteTokenFromUrl,
   isMembershipInviteToken,
@@ -68,7 +71,8 @@ export function parseInstalledAppLink(input: string): InstalledAppLink {
   }
 
   if (head.toLowerCase() === 'redeem' && id === undefined) {
-    return { kind: 'redeem-entry', href: ATTENDEE_REDEEM_PATH };
+    const code = extractRedeemCodeFromLinkInput(raw);
+    return { kind: 'redeem-entry', href: attendeeRedeemHref(code) };
   }
 
   if (!id) return { kind: 'passthrough' };
