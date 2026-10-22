@@ -1,6 +1,7 @@
-import { Modal, Pressable, Text } from 'react-native';
+import { Modal, Pressable, StyleSheet, Text } from 'react-native';
+import { Button } from '@/components/ui/button';
 import { colors } from '@/theme/colors';
-import { brand } from '@/theme/tokens';
+import { brand, space } from '@/theme/tokens';
 
 export function StaffManualConfirmSheet({
   visible,
@@ -50,45 +51,28 @@ export function StaffManualConfirmSheet({
           <Text style={{ color: colors.secondary, fontSize: 14, lineHeight: 20 }}>
             {previewLine}
           </Text>
-          <Pressable
+          <Button
             testID="gate-manual-confirm-admit"
-            accessibilityRole="button"
+            label={busy ? 'Đang xử lý…' : 'Xác nhận vào cổng'}
+            loading={busy}
             accessibilityLabel="Xác nhận vào cổng"
             disabled={busy}
             onPress={onConfirm}
-            style={{
-              paddingVertical: 14,
-              borderRadius: 12,
-              alignItems: 'center',
-              backgroundColor: colors.accent,
-              opacity: busy ? 0.45 : 1,
-              marginTop: 4,
-            }}
-          >
-            <Text style={{ color: colors.onAccent, fontSize: 17, fontWeight: '600' }}>
-              {busy ? 'Đang xử lý…' : 'Xác nhận vào cổng'}
-            </Text>
-          </Pressable>
-          <Pressable
-            accessibilityRole="button"
+            style={styles.confirm}
+          />
+          <Button
+            label="Hủy"
+            variant="secondary"
             accessibilityLabel="Hủy xác nhận"
             disabled={busy}
             onPress={onCancel}
-            style={{
-              paddingVertical: 14,
-              borderRadius: 12,
-              alignItems: 'center',
-              backgroundColor: colors.card,
-              borderWidth: 1,
-              borderColor: colors.separator,
-            }}
-          >
-            <Text style={{ color: colors.label, fontSize: 17, fontWeight: '600' }}>
-              Hủy
-            </Text>
-          </Pressable>
+          />
         </Pressable>
       </Pressable>
     </Modal>
   );
 }
+
+const styles = StyleSheet.create({
+  confirm: { marginTop: space.xs },
+});
