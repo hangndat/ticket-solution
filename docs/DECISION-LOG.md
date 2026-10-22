@@ -229,3 +229,5 @@ User chốt theo research [`docs/plans/VEMOKI-PLATFORM-SALES-PAGE-RESEARCH.md`](
 **Còn mở:** lịch host privacy/support (khuyến nghị P0 cùng sales — trước store); tách git repo marketing (không bắt buộc nếu monorepo + host routing).
 
 **Wave sau O13:** architect ADR/handoff ∥ PD wireframe sales (VI+EN) → **web coding ngay khi PD handoff sẵn** (ủy quyền #7) → coordinator DNS khi được phép deploy → form quan tâm + demo link nhãn giả lập → ASC URL + headless UAT + reviewer-dod.
+
+**2026-10-22 — O13 / Epic #770 (user chốt):** Trang `vemoki.com` định vị **Event Operating System** (agency + enterprise, in-person ops); giữ anti-marketplace và số liệu demo có nhãn; visual **Live Pulse v2** (KHÔNG đổi Midnight Indigo); IA 8 section theo `docs/reviews/MKT-PD-EVENT-OS-SPEC-2026-10-22.md`.
