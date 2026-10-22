@@ -40,6 +40,20 @@ export {
   type SurfaceStateKind,
   type SurfaceStateProps,
 } from './primitives/surface-state.js';
+export { DemoBadge, type DemoBadgeProps } from './primitives/demo-badge.js';
+export {
+  DemoDataBanner,
+  type DemoDataBannerProps,
+} from './primitives/demo-data-banner.js';
+export { FilterChip, type FilterChipProps } from './primitives/filter-chip.js';
+export {
+  CatalogHeroBand,
+  type CatalogHeroBandProps,
+} from './primitives/catalog-hero-band.js';
+export {
+  CatalogSkeletonGrid,
+  type CatalogSkeletonGridProps,
+} from './primitives/catalog-skeleton-grid.js';
 export {
   buttonVariants,
   inputVariants,
