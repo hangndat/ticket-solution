@@ -58,7 +58,7 @@ export function AccountScreen({
       <>
         <MisconfiguredAccount presentation={presentation} />
         {presentation === 'tab' ? (
-          <TabStackTitle title={accountCopy.screenTitle} large={false} />
+          <TabStackTitle title={accountCopy.screenTitle} large={true} />
         ) : null}
       </>
     );
@@ -402,7 +402,7 @@ function ConfiguredAccount({
         ) : null}
       </ScrollView>
       {presentation === 'tab' ? (
-        <TabStackTitle title={accountCopy.screenTitle} large={false} />
+        <TabStackTitle title={accountCopy.screenTitle} large={true} />
       ) : null}
     </>
   );

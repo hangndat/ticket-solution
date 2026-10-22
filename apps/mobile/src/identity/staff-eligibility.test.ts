@@ -30,8 +30,8 @@ test('isMembershipAuthzDenial matches MEMBERSHIP_* / PERMISSION_DENIED 401/403',
 
 test('staffDenyCopy is Vietnamese fail-closed', () => {
   assert.match(staffDenyCopy.title, /Không có quyền/);
-  assert.match(staffDenyCopy.body, /ẩn/);
-  assert.match(staffDenyCopy.announcement, /Không cho vào/);
+  assert.match(staffDenyCopy.body, /quét cổng/);
+  assert.match(staffDenyCopy.announcement, /quét cổng/);
 });
 
 test('StaffEligibilityStore hides staff when signed out', async () => {
