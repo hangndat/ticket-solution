@@ -3,7 +3,22 @@
  * Cascade (D-1 / ADR-22): theme → base → legacy → components → utilities; utilities win on clashes.
  */
 @import '@ticket/ui/vemoki-theme.css';
+@import 'tw-animate-css';
 @layer theme, base, legacy, components, utilities;
+@theme inline {
+  --color-background: var(--color-paper);
+  --color-foreground: var(--color-ink);
+  --color-muted-foreground: var(--color-muted);
+  --color-border: var(--color-line);
+  --color-ring: var(--color-focus);
+  --color-popover: var(--color-paper);
+  --color-popover-foreground: var(--color-ink);
+  --color-accent: color-mix(in srgb, var(--color-ink) 6%, var(--color-paper));
+  --color-accent-foreground: var(--color-ink);
+  --color-secondary: var(--color-paper);
+  --color-muted: color-mix(in srgb, var(--color-ink) 4%, var(--color-paper));
+  --radius: var(--radius-md);
+}
 @import 'tailwindcss/theme.css' layer(theme);
 @import 'tailwindcss/utilities.css' layer(utilities);
 @source '../../../packages/ui/src/**/*.{ts,tsx}';
