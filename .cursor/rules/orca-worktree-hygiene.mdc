@@ -1,6 +1,6 @@
 ---
-description: Orca worktree link/comment, task DAG + decision gates, fleet hygiene, automations — ROI cao bắt buộc khi coordinate
-alwaysApply: true
+description: "[coordinator-only] Orca worktree link/comment, task DAG + decision gates, fleet hygiene, automations"
+alwaysApply: false
 ---
 
 # Orca — worktree hygiene + DAG/gates (ROI cao)

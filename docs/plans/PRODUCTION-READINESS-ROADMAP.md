@@ -3,7 +3,7 @@
 | Trường | Giá trị |
 | ------ | ------- |
 | Vai trò | Epic planner (`orca-epic-orchestrator.mdc`) — **không** role coding catalog |
-| Agent | `cursor` (theo `orca-agent-routing.mdc`) |
+| Agent | `cursor` (theo `orca-agent-routing-coordinator.mdc`) |
 | Ngày soạn / reconcile | 2026-10-18 |
 | Orca task / dispatch | `task_2e2d64336408` / `ctx_ac1c063e393e` |
 | Run | `run_127c4628d08d` (xem `PRODUCTION-READINESS-RUN.md`) |

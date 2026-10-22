@@ -6,7 +6,7 @@
 - Baseline source: `400ad87a1401972476c79f17c4fd726ca7538063`. Tài liệu nghiên cứu là thay đổi local chưa commit; SHA này không phải SHA nghiệm thu tài liệu mới.
 - Chỉ nghiên cứu/thiết kế/lập kế hoạch. Chưa ủy quyền feature coding, commit/push/PR/merge, DNS/deploy hoặc store trong Run này.
 - Project #3 đọc live lúc bắt đầu: 183 items; D12 #293 và D13 #301 đang làm. Các Task phát hành và thay đổi local ngoài phạm vi được giữ nguyên. Snapshot không thay authority trạng thái live.
-- Agent cho mọi worker: `cursor`, theo `.cursor/rules/orca-agent-routing.mdc`; model theo cấu hình host, không override.
+- Agent cho mọi worker: `cursor`, theo `.cursor/rules/orca-agent-routing-coordinator.mdc`; model theo cấu hình host, không override.
 - Các worker cùng checkout, output docs riêng; không đổi branch hoặc source. Không spawn con.
 
 | Task | Role ID / hướng dẫn | Dispatch | Output |

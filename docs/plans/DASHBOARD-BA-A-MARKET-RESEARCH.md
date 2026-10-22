@@ -3,7 +3,7 @@
 | Trường | Giá trị |
 | ------ | ------- |
 | Role | `product-ba` (`docs/agents/roles/product-ba.md`) |
-| Agent | cursor (theo `orca-agent-routing.mdc`) |
+| Agent | cursor (theo `orca-agent-routing-coordinator.mdc`) |
 | Ngày truy cập nguồn web | **2026-10-18** |
 | Source HEAD SHA đối chiếu | `e8512d0055e0e9d6585007e8363b6224a7138b12` |
 | Branch tại thời điểm research | `hangndat/d11-implementation-evidence` (không đổi branch/index) |

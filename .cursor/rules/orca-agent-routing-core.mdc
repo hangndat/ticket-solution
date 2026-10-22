@@ -9,7 +9,7 @@ Nguồn chính sách chọn agent + Cost tier. Chi tiết spawn coordinator → 
 
 ## Mọi Task dùng Cursor
 
-`--agent cursor` cho impl, plan, review. Chỉ đổi agent khi user chỉ định rõ. **`worker-start`:** chỉ **coordinator gốc (depth 0)** — Orca `nested_worker_depth` mặc định chặn spawn từ worker depth 1 (`nested_worker_depth_exceeded`); xem `orca-wave-leader.mdc`. Epic planner, ownership, reviewer **không** spawn con.
+`--agent cursor` cho impl, plan, review. Chỉ đổi agent khi user chỉ định rõ. **`worker-start`:** chỉ **coordinator gốc (depth 0)** — Orca `nested_worker_depth` mặc định chặn spawn từ worker depth 1 (`nested_worker_depth_exceeded`); xem `orca-wave-leader.mdc`. Epic planner, ownership, reviewer **không** spawn con. Worker **không** tạo worktree hay gắn Issue/PR — coordinator làm theo `orca-worktree-hygiene.mdc` (leader Read).
 
 - Task Spec ghi **Cost tier** `cheap|standard` (trần standard), pin `--model` từ [cost-catalog.md](../../docs/agents/cost-catalog.md) — **cấm inherit UI**.
 - Reviewer **≠** session implementer.
@@ -31,7 +31,7 @@ Roster + **ba surface UI** (Dispatch vs `worker-task_*` vs worktree card): [docs
 
 Role ≠ agent. Gắn `docs/agents/roles/<id>.md` trong Spec khi spawn architecture/ownership/reviewer. **Không** copy roles vào `alwaysApply` rules.
 
-Task UI → [ui-workflow.md](../../docs/agents/ui-workflow.md): chọn role/skill theo scope; Spec ghi `Skills cần nạp`, mẫu chuẩn và evidence. Chỉ nạp skill liên quan; UI review có thể gộp DoD (`dod+ux`, `dod+sec+ux`).
+Task UI → [ui-workflow.md](../../docs/agents/ui-workflow.md): chọn role/skill theo scope; Spec ghi `Skills cần nạp`, mẫu chuẩn và evidence. Chỉ nạp skill liên quan; UI review gộp DoD → Read một file [reviewer-merged.md](../../docs/agents/roles/reviewer-merged.md) (`dod+ux`, `dod+sec`, `dod+sec+ux`).
 
 ## Review (reviewer session)
 

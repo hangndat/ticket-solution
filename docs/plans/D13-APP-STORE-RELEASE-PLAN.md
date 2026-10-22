@@ -5,7 +5,7 @@
 | Trường | Giá trị |
 | ------ | ------- |
 | Vai trò | Epic planner (`orca-epic-orchestrator.mdc`) — **không** role coding catalog |
-| Agent | `cursor` (theo `orca-agent-routing.mdc`) |
+| Agent | `cursor` (theo `orca-agent-routing-coordinator.mdc`) |
 | Ngày soạn | 2026-10-18 |
 | Orca task / dispatch | `task_ea2a717daa59` / `ctx_396c6aac3233` |
 | Ownership file | **Chỉ file này** — không sửa `apps/**`, `docs/ops/RUNBOOK.md`, board, không commit/push/PR/merge |
@@ -361,7 +361,7 @@ Wave 4 (publish):
 ## Vai trò chuyên môn (bổ sung)
 - Role ID: <product-ba|architect|backend|web|ios|reviewer-dod|reviewer-security>
 - File: docs/agents/roles/<id>.md
-- Agent: cursor (orca-agent-routing.mdc)
+- Agent: cursor (orca-agent-routing-coordinator.mdc)
 - Architecture impact: Có | Không — <lý do>
 - Parent: Epic D13 / Story Dx-Sy
 - Reuse SHA: <danh sách SHA D10/D12 được phép trích dẫn>

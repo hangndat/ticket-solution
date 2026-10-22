@@ -17,7 +17,7 @@ Architecture impact: **Không** ở phần điều phối này; các task đối
 | `ctx_2961fe7737b7` | Sửa tương thích seed MFest cũ trong PR #253 | `packages/backend` only; role `backend` / `docs/agents/roles/backend.md` |
 | `ctx_d0c14124e629` | UAT tích hợp / local iOS build #236 | Evidence + task-owned runtime, không feature code; role `reviewer-dod` |
 
-Mọi dispatch mới dùng Cursor theo `orca-agent-routing.mdc`. Worker có role/path trong Task Spec; không spawn worker con. Local build dùng Xcode; headless web và `sim-uat` trên simulator riêng, không dùng chuột macOS.
+Mọi dispatch mới dùng Cursor theo `orca-agent-routing-coordinator.mdc`. Worker có role/path trong Task Spec; không spawn worker con. Local build dùng Xcode; headless web và `sim-uat` trên simulator riêng, không dùng chuột macOS.
 
 ## Kết quả đã kiểm chứng tại checkpoint
 

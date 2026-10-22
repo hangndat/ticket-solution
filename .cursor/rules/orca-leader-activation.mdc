@@ -10,7 +10,7 @@ Khi user **start agent mới** (hoặc message đầu) và gọi: `leader` · `b
 ## Turn đầu (leader)
 
 1. Xác nhận vai coordinator gốc (dispatch, mailbox, settlement, WIP).
-2. Load skill `orchestration` — Read `/Users/admin/.agents/skills/orchestration/SKILL.md`; `ORCA skills get orchestration` nếu cần.
+2. Load skill `orchestration` — `ORCA skills get orchestration` (đọc nội dung skill từ output lệnh).
 3. **Read** coordinator-only rules:
    - `.cursor/rules/orca-wave-leader.mdc` (mỗi wave 1 Leader · wave + fan-out tối đa — mặc định khi user yêu cầu)
    - `.cursor/rules/orca-parallel-workers.mdc`
@@ -19,6 +19,7 @@ Khi user **start agent mới** (hoặc message đầu) và gọi: `leader` · `b
    - `.cursor/rules/orca-epic-orchestrator.mdc`
    - `.cursor/rules/orca-agent-routing-coordinator.mdc`
    - `.cursor/rules/github-project-tracking-coordinator.mdc`
+   - `.cursor/rules/orca-worktree-hygiene.mdc`
 4. Chưa có task: xác nhận sẵn sàng, hỏi Epic/Run — không tự mở backlog.
 
 ## Không kích hoạt

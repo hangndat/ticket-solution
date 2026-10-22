@@ -7,7 +7,7 @@ alwaysApply: true
 
 Namespace MCP: `code-review-graph-ticket` (Cursor: `user-code-review-graph-ticket`; Claude Code: `code-review-graph-ticket`). Graph khác: FE=`code-review-graph-fe`, SGAMES=`code-review-graph-sgames` (Cursor). Server BE `code-review-graph` (portal-be) đã gỡ — path không còn tồn tại.
 
-Daemon watch alias `ticket-solution` → `/Users/admin/SideProject/ticket-solution/main`; DB `.code-review-graph/graph.db` (gitignored) chỉ nằm ở checkout `main`, **worktree Orca không có graph riêng** — MCP luôn trỏ về `main`. Loại file khỏi graph bằng `.code-review-graphignore` (đã loại `.venv*`). Hooks `sessionStart` / `beforeSubmitPrompt` auto-update — agent vẫn **verify** bước 1.
+Hook `.cursor/hooks/crg-ensure-ready.sh` (gọi từ `sessionStart` / `beforeSubmitPrompt`) build/update graph **trong repo root của worktree hiện tại** — DB `.code-review-graph/graph.db` (gitignored) **mỗi checkout một bản**. MCP global `code-review-graph-ticket` thường cấu hình `--repo` trên checkout `main` → tool MCP phản ánh graph **main**, không tự đồng bộ branch worktree; đối chiếu source khi lệch. Loại file khỏi graph bằng `.code-review-graphignore` (đã loại `.venv*`). Agent vẫn **verify** bước 1 readiness.
 
 ## Readiness gate (bắt buộc)
 
