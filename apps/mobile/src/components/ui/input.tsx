@@ -8,12 +8,12 @@ import {
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
-
-type TextInputRef = ComponentRef<typeof TextInput>;
 import { colors } from '@/theme/colors';
 import { fontFamilies } from '@/theme/fonts';
 import { radius, space } from '@/theme/tokens';
 import { typography } from '@/theme/typography';
+
+type TextInputRef = ComponentRef<typeof TextInput>;
 
 export type InputProps = TextInputProps & {
   label?: string;
