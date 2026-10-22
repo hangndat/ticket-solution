@@ -1,5 +1,6 @@
 'use client';
 
+import { Button } from '@ticket/ui';
 import Link from 'next/link';
 import {
   useCallback,
@@ -814,14 +815,14 @@ export function RedeemForm({
                   <dd>{globalContext.ticketTypeLabel}</dd>
                 </div>
               </dl>
-              <button
+              <Button
                 type="button"
-                className="button-link"
+                variant="secondary"
                 onClick={resetGlobalResolveSession}
                 disabled={busy}
               >
                 Nhập mã khác
-              </button>
+              </Button>
             </section>
           ) : null}
 
@@ -901,13 +902,14 @@ export function RedeemForm({
                         />
                       </label>
                     </div>
-                    <button
+                    <Button
                       type="button"
+                      variant="secondary"
                       onClick={loadSchema}
                       disabled={busy || !tenantSlug.trim() || !eventSlug.trim()}
                     >
                       Tải biểu mẫu
-                    </button>
+                    </Button>
                   </div>
                 </details>
               ) : (
@@ -982,13 +984,14 @@ export function RedeemForm({
                       />
                     </label>
                   </div>
-                  <button
+                  <Button
                     type="button"
+                    variant="secondary"
                     onClick={loadSchema}
                     disabled={busy || !tenantSlug.trim() || !eventSlug.trim()}
                   >
                     Tải biểu mẫu
-                  </button>
+                  </Button>
                 </>
               )}
               {schemaNotice && !(productChrome && slugPinnedSchema) ? (
@@ -1142,51 +1145,57 @@ export function RedeemForm({
           }
         >
           {singleCodeFlow && globalPhase === 'enter-code' ? (
-            <button
+            <Button
               type="submit"
-              className="redeem-submit btn-primary"
+              variant="primary"
               disabled={busy}
+              loading={busy}
+              loadingLabel="Đang tra mã…"
               data-testid="redeem-global-resolve"
             >
-              {busy ? 'Đang tra mã…' : 'Tiếp tục'}
-            </button>
+              Tiếp tục
+            </Button>
           ) : (
-            <button
+            <Button
               type="submit"
-              className="redeem-submit btn-primary"
+              variant="primary"
               disabled={redeemSubmitDisabled}
+              loading={busy}
+              loadingLabel="Đang xử lý…"
             >
-              {busy ? 'Đang xử lý…' : 'Đổi mã lấy vé'}
-            </button>
+              Đổi mã lấy vé
+            </Button>
           )}
           {productChrome ? (
             canRepoll ? (
-              <button type="button" onClick={pollAgain} disabled={!canRepoll}>
+              <Button type="button" variant="secondary" onClick={pollAgain} disabled={!canRepoll}>
                 Kiểm tra lại
-              </button>
+              </Button>
             ) : null
           ) : (
             <>
-              <button type="button" onClick={pollAgain} disabled={!canRepoll}>
+              <Button type="button" variant="secondary" onClick={pollAgain} disabled={!canRepoll}>
                 Kiểm tra lại
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
+                variant="secondary"
                 onClick={refreshOwnerStatus}
                 disabled={busy || !pendingRequestId}
               >
                 Làm mới trạng thái yêu cầu
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
+                variant="secondary"
                 onClick={loadTickets}
                 disabled={busy || !tenantId.trim()}
               >
                 Xem vé của tôi
-              </button>
-              <a className="button-link" href={REDEEM_LOGIN_HREF}>
-                Đăng nhập
-              </a>
+              </Button>
+              <Button asChild variant="primary">
+                <a href={REDEEM_LOGIN_HREF}>Đăng nhập</a>
+              </Button>
             </>
           )}
         </div>
@@ -1214,36 +1223,31 @@ export function RedeemForm({
           <p>{ux.detail}</p>
           {ux.kind === 'unknown' && canRepoll ? (
             <p>
-              <button type="button" onClick={pollAgain} disabled={!canRepoll}>
+              <Button type="button" variant="secondary" onClick={pollAgain} disabled={!canRepoll}>
                 Kiểm tra lại
-              </button>
+              </Button>
             </p>
           ) : null}
           {ux.kind === 'auth' ? (
             <p className="auth-buttons">
-              <a className="button" href={REDEEM_LOGIN_HREF}>
-                Đăng nhập
-              </a>
+              <Button asChild variant="brand">
+                <a href={REDEEM_LOGIN_HREF}>Đăng nhập</a>
+              </Button>
               {ux.title === 'Cần xác minh email' ? (
-                <Link className="button-link button-link-secondary" href="/account">
-                  Mở Tài khoản
-                </Link>
+                <Button asChild variant="secondary">
+                  <Link href="/account">Mở Tài khoản</Link>
+                </Button>
               ) : null}
             </p>
           ) : null}
           {productErrorOutcome ? (
             <div className={redeemStyles.outcomeActions}>
-              <button
-                type="button"
-                className="button"
-                onClick={resetRedeemAttempt}
-                disabled={busy}
-              >
+              <Button type="button" variant="brand" onClick={resetRedeemAttempt} disabled={busy}>
                 Thử mã khác
-              </button>
-              <Link className="button btn-primary" href="/wallet">
-                Vé của tôi
-              </Link>
+              </Button>
+              <Button asChild variant="primary">
+                <Link href="/wallet">Vé của tôi</Link>
+              </Button>
             </div>
           ) : null}
           {!productChrome &&
@@ -1253,9 +1257,9 @@ export function RedeemForm({
           ux.kind !== 'verifying' &&
           ux.kind !== 'polling' ? (
             <p>
-              <button
+              <Button
                 type="button"
-                className="button"
+                variant="brand"
                 onClick={() => {
                   if (ux.kind === 'stale' || ux.kind === 'timeout') {
                     window.location.reload();
@@ -1268,14 +1272,14 @@ export function RedeemForm({
                 {ux.kind === 'stale' || ux.kind === 'timeout'
                   ? 'Tải lại và thử lại'
                   : 'Thử lại'}
-              </button>
+              </Button>
             </p>
           ) : null}
           {ux.kind === 'success' ? (
             <p className="auth-buttons">
-              <Link className="button" href="/wallet">
-                Xem vé của tôi
-              </Link>
+              <Button asChild variant="brand">
+                <Link href="/wallet">Xem vé của tôi</Link>
+              </Button>
             </p>
           ) : null}
           {!productErrorOutcome &&
@@ -1285,9 +1289,9 @@ export function RedeemForm({
             ux.kind === 'invalid') &&
           productChrome ? (
             <p className="auth-buttons">
-              <Link className="button-link button-link-secondary" href="/">
-                Về danh sách sự kiện
-              </Link>
+              <Button asChild variant="secondary">
+                <Link href="/">Về danh sách sự kiện</Link>
+              </Button>
             </p>
           ) : null}
           {!productChrome &&

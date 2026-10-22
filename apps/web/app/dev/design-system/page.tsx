@@ -64,6 +64,9 @@ export default function DevDesignSystemPage() {
           <Button variant="secondary">Secondary</Button>
           <Button variant="ghost">Ghost</Button>
           <Button variant="destructive">Destructive</Button>
+          <Button variant="link">Link</Button>
+          <Button size="lg">Large</Button>
+          <Button block className="max-w-xs">Block</Button>
           <Button loading loadingLabel="Đang gửi…">Gửi</Button>
           <Button disabled>Disabled</Button>
         </div>

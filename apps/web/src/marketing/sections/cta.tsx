@@ -1,3 +1,4 @@
+import { Button } from '@ticket/ui';
 import Link from 'next/link';
 import { t } from '../copy';
 import { InterestFormIsland } from '../interest-form-island';
@@ -21,25 +22,21 @@ export function CtaSection({ locale, demo }: MarketingSectionProps) {
           <div className="mkt-demo-banner" role="status">
             {t(locale, 'demo.banner')}
           </div>
-          <p className="mkt-demo-cta">
-            <a
-              className="mkt-btn mkt-btn--primary"
-              href={demo}
-              data-analytics-cta="repeat_demo"
-            >
-              {t(locale, 'demo.cta')}
-            </a>
+          <p className="mt-4">
+            <Button asChild variant="primary" data-analytics-cta="repeat_demo">
+              <a href={demo}>{t(locale, 'demo.cta')}</a>
+            </Button>
           </p>
         </div>
       </section>
 
       <section
         id="interest"
-        className="mkt-section mkt-section--cta"
+        className="mkt-section mkt-section--interest"
         aria-labelledby="interest-title"
         data-analytics-section="conversion"
       >
-        <div className="mkt-wrap mkt-cta-grid">
+        <div className="mkt-wrap mkt-interest-grid">
           <div>
             <h2 id="interest-title" className="mkt-display mkt-h2">
               {t(locale, 'interest.title')}
@@ -58,22 +55,18 @@ export function CtaSection({ locale, demo }: MarketingSectionProps) {
           <h2 id="cta-repeat-title" className="mkt-display mkt-h2">
             {t(locale, 'cta.repeat.title')}
           </h2>
-          <div className="mkt-hero-cta">
-            <a
-              className="mkt-btn mkt-btn--primary"
-              href={demo}
-              data-analytics-cta="repeat_demo"
-            >
-              {t(locale, 'cta.repeat.demo')}
-            </a>
-            <Link
-              className="mkt-btn mkt-btn--secondary"
-              href={`${salesHref(locale)}#interest`}
+          <div className="mt-7 flex flex-wrap items-center gap-3">
+            <Button asChild variant="primary" data-analytics-cta="repeat_demo">
+              <a href={demo}>{t(locale, 'cta.repeat.demo')}</a>
+            </Button>
+            <Button
+              asChild
+              variant="secondary"
               data-testid="cta-interest"
               data-analytics-cta="repeat_interest"
             >
-              {t(locale, 'cta.repeat.interest')}
-            </Link>
+              <Link href={`${salesHref(locale)}#interest`}>{t(locale, 'cta.repeat.interest')}</Link>
+            </Button>
           </div>
         </div>
       </section>

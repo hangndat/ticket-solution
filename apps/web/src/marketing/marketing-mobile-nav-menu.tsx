@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
+import { Button } from '@ticket/ui';
 import {
   Sheet,
   SheetContent,
@@ -76,22 +77,21 @@ export function MarketingMobileNavMenu({
             </a>
           ))}
         </nav>
-        <div className="mkt-nav-mobile-cta">
-          <a
-            className="mkt-btn mkt-btn--ghost mkt-nav-mobile-cta__login"
-            href={login}
-            onClick={closeMobile}
-          >
-            {t(locale, 'nav.login')}
-          </a>
-          <Link
-            className="mkt-btn mkt-btn--primary"
-            href={`${sales}#interest`}
-            data-testid="cta-interest-nav-mobile"
-            onClick={closeMobile}
-          >
-            {t(locale, 'nav.interest')}
-          </Link>
+        <div className="mkt-nav-mobile-actions">
+          <Button asChild variant="ghostOnInk" block>
+            <a href={login} onClick={closeMobile}>
+              {t(locale, 'nav.login')}
+            </a>
+          </Button>
+          <Button asChild variant="primary" block>
+            <Link
+              href={`${sales}#interest`}
+              data-testid="cta-interest-nav-mobile"
+              onClick={closeMobile}
+            >
+              {t(locale, 'nav.interest')}
+            </Link>
+          </Button>
         </div>
       </SheetContent>
     </Sheet>

@@ -71,7 +71,7 @@ async function loginKeycloak(page, base, user, pass) {
   await page.goto(`${base}/auth`, { waitUntil: 'networkidle' });
   // Product copy is VI — link text "Đăng nhập" → /api/auth/login (not English Keycloak label).
   // Prefer exact OIDC start href — nav also has text "Đăng nhập" → /auth.
-  const loginLink = page.locator('a.button-link[href="/api/auth/login"]');
+  const loginLink = page.locator('a[href="/api/auth/login"]');
   await Promise.all([
     page.waitForURL(/openid-connect\/auth|login-actions/, { timeout: 30_000 }),
     loginLink.click(),

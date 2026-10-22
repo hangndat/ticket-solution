@@ -1,3 +1,4 @@
+import { Button } from '@ticket/ui';
 import Link from 'next/link';
 import styles from './redeem-surface.module.css';
 
@@ -25,12 +26,12 @@ export function RedeemAuthGate({ loginHref, intentCopy = true }: Props) {
           : 'Đăng nhập để đổi mã lấy vé trên Vemoki.'}
       </p>
       <div className={`auth-buttons ${styles.gateActions}`}>
-        <a className="button btn-primary" href={loginHref}>
-          Tiếp tục đăng nhập
-        </a>
-        <Link className="button-link button-link-secondary" href="/">
-          Về trang chủ
-        </Link>
+        <Button asChild variant="primary">
+          <a href={loginHref}>Tiếp tục đăng nhập</a>
+        </Button>
+        <Button asChild variant="secondary">
+          <Link href="/">Về trang chủ</Link>
+        </Button>
       </div>
     </section>
   );
