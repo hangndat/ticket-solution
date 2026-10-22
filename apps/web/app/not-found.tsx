@@ -1,3 +1,4 @@
+import { Button } from '@ticket/ui';
 import Link from 'next/link';
 import { SurfaceState } from '../src/ui/surface-state';
 
@@ -19,9 +20,9 @@ export default function NotFound() {
         detail="Kiểm tra lại đường dẫn, hoặc quay về trang chủ để xem sự kiện đã xuất bản."
         testId="route-not-found"
         action={
-          <Link className="button" href="/">
-            Về trang chủ
-          </Link>
+          <Button asChild variant="brand">
+            <Link href="/">Về trang chủ</Link>
+          </Button>
         }
       />
     </main>

@@ -1,3 +1,4 @@
+import { Button } from '@ticket/ui';
 import Link from 'next/link';
 import { t } from './copy';
 import { MarketingChrome } from './chrome';
@@ -55,13 +56,13 @@ export function SupportPage({ locale }: { locale: MarketingLocale }) {
           <a href={`mailto:${email}`}>{email}</a>
         </p>
         <p>{t(locale, 'support.sla')}</p>
-        <p className="mkt-hero-cta">
-          <a className="mkt-btn mkt-btn--primary" href={login}>
-            {t(locale, 'support.app')}
-          </a>
-          <Link className="mkt-btn mkt-btn--secondary" href={salesHref(locale)}>
-            {t(locale, 'support.sales')}
-          </Link>
+        <p className="mt-7 flex flex-wrap items-center gap-3">
+          <Button asChild variant="primary">
+            <a href={login}>{t(locale, 'support.app')}</a>
+          </Button>
+          <Button asChild variant="secondary">
+            <Link href={salesHref(locale)}>{t(locale, 'support.sales')}</Link>
+          </Button>
         </p>
         <p>
           <a href={redeem}>{t(locale, 'support.guest')}</a>

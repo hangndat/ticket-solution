@@ -1,3 +1,4 @@
+import { Button } from '@ticket/ui';
 import Link from 'next/link';
 import { authNoticeFromParam } from '../../src/oidc/auth-notice';
 import { isOidcConfigured, resolveWebAuthState } from '../../src/oidc/config';
@@ -75,12 +76,12 @@ export default async function RedeemPage({ searchParams }: Props) {
             <h2>{authNotice.title}</h2>
             <p>{authNotice.detail}</p>
             <p className="auth-buttons">
-              <a className="button btn-primary" href={authNotice.retryHref}>
-                Thử lại
-              </a>
-              <Link className="button-link button-link-secondary" href="/">
-                Về trang chủ
-              </Link>
+              <Button asChild variant="primary">
+                <a href={authNotice.retryHref}>Thử lại</a>
+              </Button>
+              <Button asChild variant="secondary">
+                <Link href="/">Về trang chủ</Link>
+              </Button>
             </p>
           </aside>
         ) : null}
@@ -103,12 +104,12 @@ export default async function RedeemPage({ searchParams }: Props) {
               ) : null}
             </p>
             <p className="auth-buttons">
-              <a className="button btn-primary" href={redeemLogin}>
-                Đăng nhập
-              </a>
-              <Link className="button-link button-link-secondary" href="/">
-                Về trang chủ
-              </Link>
+              <Button asChild variant="primary">
+                <a href={redeemLogin}>Đăng nhập</a>
+              </Button>
+              <Button asChild variant="secondary">
+                <Link href="/">Về trang chủ</Link>
+              </Button>
             </p>
           </aside>
         ) : !signedIn ? (

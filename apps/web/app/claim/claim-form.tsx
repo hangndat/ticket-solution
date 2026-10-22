@@ -1,5 +1,6 @@
 'use client';
 
+import { Button } from '@ticket/ui';
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import type { FormAnswerValue, FormDefinition } from '@ticket/contracts';
 import { decideClaimBody } from '../../src/guest/claim-api';
@@ -359,9 +360,9 @@ export function GuestClaimForm() {
       </p>
 
       <div className="auth-buttons">
-        <a className="button-link" href={loginHref}>
-          Đăng nhập rồi quay lại nhận lời mời
-        </a>
+        <Button asChild variant="primary">
+          <a href={loginHref}>Đăng nhập rồi quay lại nhận lời mời</a>
+        </Button>
       </div>
 
       <label>
@@ -433,13 +434,16 @@ export function GuestClaimForm() {
       ) : null}
 
       <div className="auth-buttons">
-        <button
+        <Button
           type="button"
+          variant="secondary"
           disabled={busy || !displayTenantSlug.trim() || !displayEventSlug.trim()}
+          loading={busy && !formDefinition}
+          loadingLabel="Đang tải…"
           onClick={() => void loadSchema()}
         >
-          {busy && !formDefinition ? 'Đang tải…' : 'Tải biểu mẫu'}
-        </button>
+          Tải biểu mẫu
+        </Button>
       </div>
 
       {busy && !ux ? (
@@ -485,14 +489,16 @@ export function GuestClaimForm() {
         </>
       ) : null}
 
-      <button
+      <Button
         type="button"
-        className="claim-submit"
+        variant="primary"
         disabled={busy || !token.trim()}
+        loading={busy}
+        loadingLabel="Đang gửi…"
         onClick={() => void submitClaim()}
       >
-        {busy ? 'Đang gửi…' : 'Nhận vé mời'}
-      </button>
+        Nhận vé mời
+      </Button>
 
       {ux && outcomeLive ? (
         <section
@@ -520,20 +526,21 @@ export function GuestClaimForm() {
           ) : null}
           {ux.kind === 'auth' ? (
             <p className="auth-buttons">
-              <a className="button" href={loginHref}>
-                Đăng nhập bằng email đã được mời
-              </a>
+              <Button asChild variant="brand">
+                <a href={loginHref}>Đăng nhập bằng email đã được mời</a>
+              </Button>
             </p>
           ) : null}
           {decision?.kind === 'pending' || ux.kind === 'unknown' ? (
             <p>
-              <button
+              <Button
                 type="button"
+                variant="secondary"
                 disabled={busy || !token.trim()}
                 onClick={() => void submitClaim()}
               >
                 Kiểm tra lại
-              </button>
+              </Button>
             </p>
           ) : null}
         </section>
