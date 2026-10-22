@@ -8,15 +8,19 @@ import { BENTO_CELLS } from '../src/marketing/content-config';
 import { t } from '../src/marketing/copy';
 import { BentoSection } from '../src/marketing/sections/bento';
 
+function renderBentoHtml(locale: 'vi' | 'en' = 'vi') {
+  return renderToStaticMarkup(
+    React.createElement(BentoSection, {
+      locale,
+      demo: 'https://app.vemoki.com/',
+      login: 'https://app.vemoki.com/auth',
+    }),
+  );
+}
+
 describe('marketing bento section', () => {
   it('SSR renders seven capability tiles with landmarks', () => {
-    const html = renderToStaticMarkup(
-      React.createElement(BentoSection, {
-        locale: 'vi',
-        demo: 'https://app.vemoki.com/',
-        login: 'https://app.vemoki.com/auth',
-      }),
-    );
+    const html = renderBentoHtml('vi');
     assert.match(html, /id="features"/);
     assert.match(html, /id="bento-title"/);
     assert.equal(html.match(/mkt-bento-item/g)?.length, 7);
@@ -29,13 +33,12 @@ describe('marketing bento section', () => {
     assert.equal(BENTO_CELLS.length, 7);
   });
 
-  it('reduced-motion: bento reveal and hover transition disabled in CSS', () => {
-    const css = fs.readFileSync(
-      path.join(process.cwd(), 'app/live-pulse-legacy.css'),
-      'utf8',
-    );
-    assert.match(css, /@media \(prefers-reduced-motion: reduce\)[\s\S]*\.mkt-bento-grid/);
-    assert.match(css, /@media \(prefers-reduced-motion: reduce\)[\s\S]*\.mkt-bento-card/);
+  it('SSR ships static bento cards (reduced-motion-safe baseline without motion island)', () => {
+    const html = renderBentoHtml('vi');
+    assert.match(html, /data-testid="marketing-bento"/);
+    assert.match(html, /mkt-bento-grid/);
+    assert.equal(html.match(/mkt-bento-item/g)?.length, 7);
+    assert.doesNotMatch(html, /motion\/react/);
   });
 
   it('bento ops image is not a duplicate of admin tile', () => {
@@ -48,12 +51,9 @@ describe('marketing bento section', () => {
     assert.notEqual(admin.compare(ops), 0);
   });
 
-  it('scroll reveal uses CSS view timeline (no client motion island)', () => {
-    const css = fs.readFileSync(
-      path.join(process.cwd(), 'app/live-pulse-legacy.css'),
-      'utf8',
-    );
-    assert.match(css, /\.mkt-bento-grid[\s\S]*animation-timeline:\s*view\(\)/);
-    assert.doesNotMatch(css, /motion\/react/);
+  it('scroll reveal stays CSS-only (no client motion island in SSR)', () => {
+    const html = renderBentoHtml('vi');
+    assert.match(html, /mkt-bento-grid/);
+    assert.doesNotMatch(html, /motion\/react/);
   });
 });

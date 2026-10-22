@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
@@ -32,8 +32,6 @@ test('site-chrome wires mobile menu a11y (Escape, trap, aria)', () => {
   assert.match(src, /menuToggleRef\.current\?\.focus\(\)/);
 });
 
-test('Slice G gate chrome removed from live-pulse-legacy (D-6)', () => {
-  const css = readFileSync(join(root, 'app/live-pulse-legacy.css'), 'utf8');
-  assert.ok(!css.includes('/* --- Slice G: gate chrome'));
-  assert.ok(!css.includes('.gate-page'));
+test('D-6: retired web gate route has no app/gate page tree', () => {
+  assert.equal(existsSync(join(root, 'app/gate')), false);
 });
