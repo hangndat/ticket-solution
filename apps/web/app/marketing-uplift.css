@@ -135,6 +135,10 @@ body.mkt.mkt--uplift {
   margin-left: 0.15rem;
 }
 
+.mkt-header--sales .mkt-nav-cta--header {
+  white-space: nowrap;
+}
+
 .mkt-nav a {
   padding: 0.5rem 0.85rem;
   font-size: 0.9rem;
