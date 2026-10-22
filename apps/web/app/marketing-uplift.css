@@ -12,25 +12,18 @@ html[data-surface='marketing'] {
   min-height: 100dvh;
   max-width: 100%;
   overflow-x: clip;
-  --ink: #0b1220;
-  --paper: #f4f6f8;
-  --signal: #e11d48;
-  --focus: #2563eb;
-  --muted: #5b687b;
-  --line: #d7dfe9;
+  --ink: var(--color-ink);
+  --paper: var(--color-paper);
+  --signal: var(--color-signal);
+  --focus: var(--color-focus);
+  --muted: var(--color-muted);
+  --line: var(--color-line);
   --ink-90: #141d2e;
   --ink-80: #1a2438;
   --paper-elevated: #ffffff;
   --signal-soft: rgba(225, 29, 72, 0.12);
   --focus-ring: 0 0 0 3px var(--focus);
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 18px;
-  --radius-xl: 24px;
-  --shadow-soft: 0 24px 64px rgba(11, 18, 32, 0.12);
-  --shadow-frame: 0 32px 80px rgba(11, 18, 32, 0.22), 0 0 0 1px rgba(255, 255, 255, 0.06) inset;
-  --font-display: "Sora", system-ui, sans-serif;
-  --font-body: "Be Vietnam Pro", system-ui, sans-serif;
+  --font-body: var(--font-sans);
   --space-section: clamp(4rem, 8vw, 6.5rem);
   --max-content: 1120px;
 }
@@ -1847,11 +1840,11 @@ body.mkt.mkt--uplift {
 /* —— Review chrome (prototype shell) —— */
 :root.review-root {
   color-scheme: light;
-  --ink: #0b1220;
-  --paper: #f4f6f8;
-  --red: #e11d48;
-  --muted: #5b687b;
-  --line: #dde3eb;
+  --ink: var(--color-ink);
+  --paper: var(--color-paper);
+  --red: var(--color-signal);
+  --muted: var(--color-muted);
+  --line: var(--color-line);
 }
 
 body.review-body {

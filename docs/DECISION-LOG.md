@@ -8,6 +8,8 @@ Tracking: Issues [#10](https://github.com/hangndat/ticket-solution/issues/10), [
 
 Epic [#766](https://github.com/hangndat/ticket-solution/issues/766): `apps/web` Tailwind v4 + `@ticket/ui` pipeline; token SoT `brand/vemoki/tokens.json`; Aceternity Free + shadcn hybrid (vendored, không npm `@aceternity/*`); portal antd freeze. Chi tiết: [`docs/ops/ADR-22-WEB-DS-ACETERNITY.md`](./ops/ADR-22-WEB-DS-ACETERNITY.md). Slice 0 = toolchain only, không đổi UI prod.
 
+**Bổ sung Epic [#786](https://github.com/hangndat/ticket-solution/issues/786) (22/10/2026):** D-1 bỏ prefix `ui:` + `@layer legacy`; D-2 prototype PD JSX/Tailwind; D-3 mở rộng `tokens.json` + generator CSS/TS mobile; D-4 light-only; D-5 mobile theme + StyleSheet; D-6 xóa `/gate` web; D-7 đóng băng `app/admin`+`app/platform` đến portal parity (BA [#798](https://github.com/hangndat/ticket-solution/pull/798): thiếu Notify C-N, Platform Operator mutate). Quy tắc UI + CI `scripts/ui-budget.mjs` (ratchet); shadcn trong `packages/ui`; lộ trình legacy = 0 theo audit [#799](https://github.com/hangndat/ticket-solution/pull/799). ADR-22 mục «Sửa đổi 2026-10-22».
+
 Architecture impact: **Có**. Approval ≠ code complete ≠ acceptance complete.
 
 ## O18 — Portal: Ant Design Pro Components trên Next App Router (20/10/2026)

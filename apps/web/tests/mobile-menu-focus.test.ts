@@ -32,15 +32,8 @@ test('site-chrome wires mobile menu a11y (Escape, trap, aria)', () => {
   assert.match(src, /menuToggleRef\.current\?\.focus\(\)/);
 });
 
-test('Slice G scopes button-secondary to gate-page only', () => {
+test('Slice G gate chrome removed from live-pulse-legacy (D-6)', () => {
   const css = readFileSync(join(root, 'app/live-pulse-legacy.css'), 'utf8');
-  const slice = css.slice(
-    css.indexOf('/* --- Slice G:'),
-    css.indexOf('/* --- / Slice G'),
-  );
-  assert.match(slice, /\.gate-page \.button-secondary\s*\{/);
-  assert.ok(
-    !slice.match(/^\s*\.button-secondary\s*\{/m),
-    'global .button-secondary must not appear in Slice G block',
-  );
+  assert.ok(!css.includes('/* --- Slice G: gate chrome'));
+  assert.ok(!css.includes('.gate-page'));
 });

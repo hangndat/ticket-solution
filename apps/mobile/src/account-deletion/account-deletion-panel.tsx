@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
-import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
+import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
 import { Notice } from '@/components/page';
 import { colors } from '@/theme/colors';
 import { session } from '@/identity/session';
@@ -30,33 +32,13 @@ function SecondaryButton({
   danger?: boolean;
 }) {
   return (
-    <Pressable
-      accessibilityRole="button"
+    <Button
+      label={label}
+      variant={danger ? 'destructive' : 'secondary'}
       accessibilityLabel={label}
       disabled={disabled}
       onPress={onPress}
-      style={({ pressed }) => ({
-        paddingVertical: 12,
-        paddingHorizontal: 16,
-        borderRadius: 12,
-        borderCurve: 'continuous',
-        borderWidth: 1,
-        borderColor: danger ? '#c0392b' : colors.secondary,
-        backgroundColor: pressed ? colors.card : 'transparent',
-        opacity: disabled ? 0.45 : 1,
-      })}
-    >
-      <Text
-        style={{
-          color: danger ? '#c0392b' : colors.label,
-          fontSize: 16,
-          fontWeight: '600',
-          textAlign: 'center',
-        }}
-      >
-        {label}
-      </Text>
-    </Pressable>
+    />
   );
 }
 
@@ -70,31 +52,12 @@ function PrimaryButton({
   disabled?: boolean;
 }) {
   return (
-    <Pressable
-      accessibilityRole="button"
+    <Button
+      label={label}
       accessibilityLabel={label}
       disabled={disabled}
       onPress={onPress}
-      style={({ pressed }) => ({
-        paddingVertical: 12,
-        paddingHorizontal: 16,
-        borderRadius: 12,
-        borderCurve: 'continuous',
-        backgroundColor: colors.accent,
-        opacity: disabled ? 0.45 : pressed ? 0.85 : 1,
-      })}
-    >
-      <Text
-        style={{
-          color: '#fff',
-          fontSize: 16,
-          fontWeight: '600',
-          textAlign: 'center',
-        }}
-      >
-        {label}
-      </Text>
-    </Pressable>
+    />
   );
 }
 
@@ -244,7 +207,7 @@ export function AccountDeletionPanel() {
 
       {phase.kind === 'loading' ? (
         <View style={{ padding: 8, alignItems: 'center' }}>
-          <ActivityIndicator />
+          <Spinner accessibilityLabel="Đang xử lý yêu cầu xóa tài khoản" />
           <Text style={{ color: colors.secondary, marginTop: 8 }}>
             Đang gửi hoặc tải yêu cầu…
           </Text>

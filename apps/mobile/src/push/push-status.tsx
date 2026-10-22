@@ -1,7 +1,7 @@
 import { useCallback, useState, useSyncExternalStore } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { View } from 'react-native';
+import { Button } from '@/components/ui/button';
 import { Notice } from '@/components/page';
-import { colors } from '@/theme/colors';
 import { session } from '@/identity/session';
 import {
   currentApnsRegistrationGeneration,
@@ -93,34 +93,16 @@ export function PushStatus() {
       <Notice title={copy.title}>{copy.body}</Notice>
       {isApnsProvider(provider) ? (
         <View style={{ gap: 8, marginTop: 8 }}>
-          <Pressable
-            accessibilityRole="button"
+          <Button
+            label={busy ? 'Đang bật…' : 'Bật thông báo'}
+            loading={busy}
             accessibilityLabel={
               busy ? 'Đang bật thông báo' : 'Bật thông báo trên thiết bị này'
             }
             testID="register-apns-device-token"
             disabled={busy}
             onPress={() => void onRegister()}
-            style={({ pressed }) => ({
-              paddingVertical: 12,
-              paddingHorizontal: 16,
-              borderRadius: 12,
-              borderCurve: 'continuous',
-              backgroundColor: colors.accent,
-              opacity: busy ? 0.45 : pressed ? 0.85 : 1,
-            })}
-          >
-            <Text
-              style={{
-                color: '#fff',
-                fontSize: 16,
-                fontWeight: '600',
-                textAlign: 'center',
-              }}
-            >
-              {busy ? 'Đang bật…' : 'Bật thông báo'}
-            </Text>
-          </Pressable>
+          />
           {statusMessage ? (
             <Notice title="Thông báo">{statusMessage}</Notice>
           ) : null}

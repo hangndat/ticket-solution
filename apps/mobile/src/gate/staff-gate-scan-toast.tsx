@@ -1,11 +1,6 @@
 import { useEffect, useState } from 'react';
-import {
-  AccessibilityInfo,
-  ActivityIndicator,
-  Animated,
-  Text,
-  View,
-} from 'react-native';
+import { AccessibilityInfo, Animated, Text, View } from 'react-native';
+import { Spinner } from '@/components/ui/spinner';
 import { SymbolView } from 'expo-symbols';
 import type { GateScanStatusView } from './gate-scan-status-ui.ts';
 import { SCAN_TOAST_FADE_MS } from './staff-gate-scan-feedback.ts';
@@ -117,7 +112,7 @@ export function StaffGateScanToast({
         }}
       >
         {showSpinner ? (
-          <ActivityIndicator color="#fff" />
+          <Spinner color="#fff" accessibilityLabel="Đang xử lý quét" />
         ) : (
           <SymbolView name={view.symbol} size={36} tintColor={tint} />
         )}
