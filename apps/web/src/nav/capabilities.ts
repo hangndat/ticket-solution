@@ -23,7 +23,6 @@ export type NavLink = {
 export type NavCapabilities = {
   authenticated: boolean;
   showAdmin: boolean;
-  showGate: boolean;
   showPlatform: boolean;
   showAccount: boolean;
 };
@@ -170,7 +169,6 @@ export function deriveNavCapabilities(input: {
     return {
       authenticated: false,
       showAdmin: false,
-      showGate: false,
       showPlatform: false,
       showAccount: false,
     };
@@ -187,19 +185,11 @@ export function deriveNavCapabilities(input: {
     ) ??
       false);
 
-  const showGate =
-    staffEligible &&
-    (input.meEvents?.items.some((event) =>
-      event.permissions.includes('gate.confirm'),
-    ) ??
-      false);
-
   const showPlatform = input.platformMe?.operator === true;
 
   return {
     authenticated: true,
     showAdmin,
-    showGate,
     showPlatform,
     showAccount: true,
   };
@@ -211,9 +201,6 @@ export function buildNavLinks(caps: NavCapabilities): NavLink[] {
   const links: NavLink[] = [...PRODUCT_NAV_LINKS];
   if (caps.showAdmin) {
     links.push({ href: '/admin', label: 'Quản trị', testId: 'nav-admin' });
-  }
-  if (caps.showGate) {
-    links.push({ href: '/gate', label: 'Cổng', testId: 'nav-gate' });
   }
   if (caps.showPlatform) {
     links.push({ href: '/platform', label: 'Platform', testId: 'nav-platform' });
