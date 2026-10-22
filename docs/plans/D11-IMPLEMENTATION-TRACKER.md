@@ -8,7 +8,7 @@
 | Plan discovery | [`D11-UX-PRODUCTION-PLAN.md`](./D11-UX-PRODUCTION-PLAN.md) |
 | BA / PD | [`D11-BA-RESEARCH.md`](./D11-BA-RESEARCH.md) · [`D11-PRODUCTION-UX-UI.md`](../design/D11-PRODUCTION-UX-UI.md) |
 | Task specs | [`docs/tasks/d11/`](../tasks/d11/) |
-| Agent | `--agent cursor` ([orca-agent-routing](../../.cursor/rules/orca-agent-routing.mdc)) |
+| Agent | `--agent cursor` ([orca-agent-routing](../../.cursor/rules/orca-agent-routing-coordinator.mdc)) |
 | Planner | Không coding role; file này = ready queue + Issue matrix cho **coordinator gốc** |
 | Baseline source (discovery) | `3e61cde42d55654897048d6d627ab6834b54b808` — **không** = SHA coding tip |
 | Tracker soạn tại HEAD | `dd94f4116f55b5deb77c893860356fe32a77b8aa` (branch docs; không chứng minh runtime) |

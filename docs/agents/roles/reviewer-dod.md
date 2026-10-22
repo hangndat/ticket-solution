@@ -21,7 +21,7 @@ Issue/PR ở `Chờ duyệt`; hoặc coordinator ưu tiên review khi hàng đ�
 - Checklist DoD / AC từ Issue.
 - Architecture impact Có/Không + lý do; nếu Có: handoff/ADR áp dụng và quyết định được coordinator xác nhận.
 - Link artifact/bảng findings trước, SHA trước và số lượt sửa đã dùng (nếu revalidation).
-- Với PR có UI: khối Task UI theo [ui-workflow.md](../ui-workflow.md), mẫu chuẩn và evidence; gộp role [reviewer-uiux](./reviewer-uiux.md) trong session này theo scope. Sửa nhỏ không cần Task PD/reviewer thứ hai.
+- Với PR có UI: khối Task UI theo [ui-workflow.md](../ui-workflow.md); gộp `dod+ux` / `dod+sec+ux` → Read [reviewer-merged.md](./reviewer-merged.md) (mapping → [reviewer-uiux](./reviewer-uiux.md) / [reviewer-security](./reviewer-security.md)). Sửa nhỏ không cần Task PD/reviewer thứ hai.
 
 ## Cách làm (rút từ upstream, neo Vemoki)
 

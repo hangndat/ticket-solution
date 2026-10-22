@@ -5,7 +5,7 @@
 | Trường | Giá trị |
 | ------ | ------- |
 | Vai trò | Epic planner depth-1 (`orca-epic-orchestrator.mdc`) — **không** role coding catalog |
-| Agent | `cursor` (`orca-agent-routing.mdc`) |
+| Agent | `cursor` (`orca-agent-routing-coordinator.mdc`) |
 | Orca task / dispatch | `task_b032f3bbb89f` / `ctx_ad51e98e0db7` |
 | Ngày tạo tracker | 2026-10-18 |
 | Plan nguồn (không sửa) | [`D13-APP-STORE-RELEASE-PLAN.md`](./D13-APP-STORE-RELEASE-PLAN.md) |

@@ -94,6 +94,6 @@ Không có task sẵn sàng trong phạm vi thì release worker đã settle và 
 
 - Parallel spawn: `orca-parallel-workers.mdc`
 - Idle fill after drain: `orca-idle-worker-fill.mdc`
-- Agent routing / DoD reviewer: `orca-agent-routing.mdc`
+- Agent routing / DoD reviewer: `orca-agent-routing-coordinator.mdc` · worker: `orca-agent-routing-core.mdc`
 
 Mailbox drain is **orthogonal** and **higher urgency** than spawning new feature work: clear the inbox and settle terminals before starting another feature wave when attention is pending.
