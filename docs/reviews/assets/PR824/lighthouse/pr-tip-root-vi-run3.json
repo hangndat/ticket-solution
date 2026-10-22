@@ -1,0 +1,16 @@
+{
+  "label": "pr-tip",
+  "route": {
+    "id": "root-vi",
+    "path": "/",
+    "host": "vemoki.com"
+  },
+  "run": 3,
+  "lighthouse": "13.5.0",
+  "scores": {
+    "performance": 70,
+    "accessibility": 100,
+    "bestPractices": 96,
+    "seo": 63
+  }
+}

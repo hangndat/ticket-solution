@@ -1,0 +1,16 @@
+{
+  "label": "pr-tip",
+  "route": {
+    "id": "marketing-vi",
+    "path": "/marketing",
+    "host": null
+  },
+  "run": 1,
+  "lighthouse": "13.5.0",
+  "scores": {
+    "performance": 80,
+    "accessibility": 97,
+    "bestPractices": 100,
+    "seo": 69
+  }
+}

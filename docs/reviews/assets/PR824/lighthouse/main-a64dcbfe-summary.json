@@ -1,0 +1,107 @@
+{
+  "label": "main-a64dcbfe",
+  "base": "http://127.0.0.1:3460",
+  "lighthouse": "13.5.0",
+  "runs": 3,
+  "generatedAt": "2026-10-22T23:00:03.260Z",
+  "rows": [
+    {
+      "route": "root-vi",
+      "path": "/",
+      "performance": 77,
+      "accessibility": 94,
+      "bestPractices": 100,
+      "seo": 100
+    },
+    {
+      "route": "marketing-vi",
+      "path": "/marketing",
+      "performance": 77,
+      "accessibility": 94,
+      "bestPractices": 100,
+      "seo": 69
+    },
+    {
+      "route": "marketing-en",
+      "path": "/marketing/en",
+      "performance": 78,
+      "accessibility": 97,
+      "bestPractices": 100,
+      "seo": 69
+    }
+  ],
+  "allRuns": [
+    {
+      "route": "root-vi",
+      "run": 1,
+      "performance": 77,
+      "accessibility": 94,
+      "bestPractices": 100,
+      "seo": 100
+    },
+    {
+      "route": "root-vi",
+      "run": 2,
+      "performance": 78,
+      "accessibility": 94,
+      "bestPractices": 100,
+      "seo": 100
+    },
+    {
+      "route": "root-vi",
+      "run": 3,
+      "performance": 77,
+      "accessibility": 94,
+      "bestPractices": 100,
+      "seo": 100
+    },
+    {
+      "route": "marketing-vi",
+      "run": 1,
+      "performance": 77,
+      "accessibility": 94,
+      "bestPractices": 100,
+      "seo": 69
+    },
+    {
+      "route": "marketing-vi",
+      "run": 2,
+      "performance": 77,
+      "accessibility": 94,
+      "bestPractices": 100,
+      "seo": 69
+    },
+    {
+      "route": "marketing-vi",
+      "run": 3,
+      "performance": 78,
+      "accessibility": 94,
+      "bestPractices": 100,
+      "seo": 69
+    },
+    {
+      "route": "marketing-en",
+      "run": 1,
+      "performance": 77,
+      "accessibility": 97,
+      "bestPractices": 100,
+      "seo": 69
+    },
+    {
+      "route": "marketing-en",
+      "run": 2,
+      "performance": 78,
+      "accessibility": 97,
+      "bestPractices": 100,
+      "seo": 69
+    },
+    {
+      "route": "marketing-en",
+      "run": 3,
+      "performance": 78,
+      "accessibility": 97,
+      "bestPractices": 100,
+      "seo": 69
+    }
+  ]
+}

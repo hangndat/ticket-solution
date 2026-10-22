@@ -81,7 +81,7 @@ describe('@ticket/ui primitives SSR', () => {
         steps: [{ id: 's1', label: 'Step', visualVariant: 1 }],
       }),
     );
-    assert.match(html, /mkt-steps/);
+    assert.match(html, /lg:grid-cols-5/);
     assert.match(html, />Step</);
   });
 

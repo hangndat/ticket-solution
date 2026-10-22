@@ -1,8 +1,25 @@
 import { BentoGrid, BentoGridItem } from '@ticket/ui/primitives/bento-grid';
 import { Card, CardContent, CardTitle } from '@ticket/ui/primitives/card';
+import { cn } from '@ticket/ui/cn';
 import Image from 'next/image';
 import { BENTO_CELLS } from '../content-config';
 import { t, type CopyKey } from '../copy';
+import {
+  marketingBentoCard,
+  marketingBentoCardBody,
+  marketingBentoCardInner,
+  marketingBentoCardInnerSpan,
+  marketingBentoCardTitle,
+  marketingBentoCopy,
+  marketingBentoFigure,
+  marketingBentoGrid,
+  marketingBentoImg,
+  marketingBentoItem,
+  marketingH2,
+  marketingLead,
+  marketingSection,
+  marketingWrap,
+} from '../marketing-surface';
 import type { MarketingSectionProps } from './types';
 
 type BentoCellKey =
@@ -48,48 +65,55 @@ export function BentoSection({ locale }: MarketingSectionProps) {
   return (
     <section
       id="features"
-      className="mkt-section mkt-section--paper"
+      className={marketingSection('paper')}
       aria-labelledby="bento-title"
       data-analytics-section="features"
       data-testid="marketing-bento"
     >
-      <div className="mkt-wrap">
-        <h2 id="bento-title" className="mkt-display mkt-h2">
+      <div className={marketingWrap}>
+        <h2 id="bento-title" className={marketingH2}>
           {t(locale, 'bento.title')}
         </h2>
-        <p className="mkt-lead">{t(locale, 'bento.lead')}</p>
-        <BentoGrid className="mkt-bento-grid">
+        <p className={marketingLead}>{t(locale, 'bento.lead')}</p>
+        <BentoGrid className={marketingBentoGrid}>
           {BENTO_CELLS.map((cell) => {
             const titleId = `${cell.id}-title`;
             const bodyId = `${cell.id}-body`;
             const key = cell.key as BentoCellKey;
+            const span = cell.id.replace('bento-', '');
             return (
               <BentoGridItem
                 key={cell.id}
                 colSpan={cell.colSpan}
                 rowSpan={cell.rowSpan}
                 featured={cell.featured}
-                className="mkt-bento-item"
-                data-span={cell.id.replace('bento-', '')}
+                className={marketingBentoItem}
+                data-span={span}
+                data-testid="marketing-bento-item"
               >
                 <Card
                   variant="outline"
-                  className="mkt-bento-card"
+                  className={marketingBentoCard}
                   aria-labelledby={titleId}
                   aria-describedby={bodyId}
                 >
-                  <CardContent className="mkt-bento-card-inner">
-                    <div className="mkt-bento-copy">
-                      <CardTitle id={titleId} className="mkt-bento-card-title">
+                  <CardContent
+                    className={cn(
+                      marketingBentoCardInner,
+                      marketingBentoCardInnerSpan(span),
+                    )}
+                  >
+                    <div className={marketingBentoCopy}>
+                      <CardTitle id={titleId} className={marketingBentoCardTitle}>
                         {t(locale, CELL_TITLE[key])}
                       </CardTitle>
-                      <p id={bodyId} className="mkt-bento-card-body">
+                      <p id={bodyId} className={marketingBentoCardBody}>
                         {t(locale, CELL_BODY[key])}
                       </p>
                     </div>
-                    <figure className="mkt-bento-figure">
+                    <figure className={marketingBentoFigure} data-span={span}>
                       <Image
-                        className="mkt-bento-img"
+                        className={marketingBentoImg}
                         src={cell.image.src}
                         alt={t(locale, CELL_ALT[key])}
                         width={cell.image.width}
