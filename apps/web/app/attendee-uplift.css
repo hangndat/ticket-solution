@@ -19,6 +19,26 @@ html[data-surface='product'] body {
   line-height: 1.55;
 }
 
+/* Sticky site footer on short attendee pages (Epic #770 layout) */
+html[data-surface='product'] body.attendee-uplift {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  overflow-x: clip;
+}
+
+html[data-surface='product'] body.attendee-uplift > main {
+  flex: 1 0 auto;
+  width: 100%;
+  min-width: 0;
+}
+
+html[data-surface='product'] body.attendee-uplift > footer.footer {
+  margin-top: auto;
+  flex-shrink: 0;
+  width: 100%;
+}
+
 /* —— Demo strip —— */
 html[data-surface='product'] .demo-data-strip {
   background: linear-gradient(90deg, #1a2740, #0b1220);
