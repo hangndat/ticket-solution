@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { Button } from '@ticket/ui';
 import Link from 'next/link';
 import { isUuid } from '../../../../../src/bff/ids';
 import { isTenantSlug } from '../../../../../src/branding';
@@ -64,9 +65,9 @@ export default async function OwnerTicketPage({ params, searchParams }: Props) {
           detail={OWNER_TICKET_COPY.invalid.detail}
           testId="owner-ticket-invalid-state"
           action={
-            <Link className="button" href="/">
-              Về trang chủ
-            </Link>
+            <Button asChild variant="brand">
+              <Link href="/">Về trang chủ</Link>
+            </Button>
           }
         />
       </main>
@@ -95,12 +96,12 @@ export default async function OwnerTicketPage({ params, searchParams }: Props) {
           testId="owner-ticket-need-login-state"
           action={
             <div className="auth-buttons">
-              <a className="button" href={ticketLogin}>
-                Đăng nhập
-              </a>
-              <Link className="button-link button-link-secondary" href="/redeem">
-                Đổi mã lấy vé
-              </Link>
+              <Button asChild variant="brand">
+                <a href={ticketLogin}>Đăng nhập</a>
+              </Button>
+              <Button asChild variant="secondary">
+                <Link href="/redeem">Đổi mã lấy vé</Link>
+              </Button>
             </div>
           }
         />
@@ -123,9 +124,9 @@ export default async function OwnerTicketPage({ params, searchParams }: Props) {
           detail={OWNER_TICKET_COPY.unreachable.detail}
           testId="owner-ticket-unreachable-state"
           action={
-            <Link className="button" href={path}>
-              Thử lại
-            </Link>
+            <Button asChild variant="brand">
+              <Link href={path}>Thử lại</Link>
+            </Button>
           }
         />
       </main>
@@ -147,9 +148,9 @@ export default async function OwnerTicketPage({ params, searchParams }: Props) {
           detail={OWNER_TICKET_COPY.tenantUnresolved.detail}
           testId="owner-ticket-tenant-unresolved-state"
           action={
-            <Link className="button" href="/redeem">
-              Đổi mã lấy vé
-            </Link>
+            <Button asChild variant="brand">
+              <Link href="/redeem">Đổi mã lấy vé</Link>
+            </Button>
           }
         />
       </main>
@@ -175,9 +176,9 @@ export default async function OwnerTicketPage({ params, searchParams }: Props) {
           detail={OWNER_TICKET_COPY.missing.detail}
           testId="owner-ticket-missing-state"
           action={
-            <Link className="button" href="/">
-              Về trang chủ
-            </Link>
+            <Button asChild variant="brand">
+              <Link href="/">Về trang chủ</Link>
+            </Button>
           }
         />
       </main>

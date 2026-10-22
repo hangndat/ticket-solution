@@ -1,5 +1,6 @@
 'use client';
 
+import { Button } from '@ticket/ui';
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import {
   interpretAcceptInvite,
@@ -162,9 +163,9 @@ export function InviteAcceptForm() {
         một lần và khớp email — giao diện không tự cấp quyền Owner.
       </p>
       <div className="auth-buttons">
-        <a className="button-link invite-login-cta" href={loginHref}>
-          Đăng nhập
-        </a>
+        <Button asChild variant="primary">
+          <a href={loginHref}>Đăng nhập</a>
+        </Button>
       </div>
       <div className="invite-form-panel">
         <label>
@@ -189,15 +190,17 @@ export function InviteAcceptForm() {
             testId="invite-token-empty"
           />
         ) : null}
-        <button
+        <Button
           type="button"
-          className="invite-submit"
+          variant="primary"
           disabled={busy || !token.trim() || !csrfReady}
+          loading={busy}
+          loadingLabel="Đang nhận…"
           onClick={() => void accept()}
           data-testid="invite-accept-submit"
         >
-          {busy ? 'Đang nhận…' : csrfReady ? 'Nhận lời mời' : 'Đang chuẩn bị…'}
-        </button>
+          {csrfReady ? 'Nhận lời mời' : 'Đang chuẩn bị…'}
+        </Button>
       </div>
       {busy ? (
         <div className="invite-outcome">
@@ -220,12 +223,11 @@ export function InviteAcceptForm() {
           <h2>{ux.title}</h2>
           <p>{ux.detail}</p>
           <p className="auth-buttons">
-            <a
-              className="button invite-admin-cta"
-              href={`/admin?tenantId=${encodeURIComponent(view.value.tenantId)}`}
-            >
-              Mở Admin
-            </a>
+            <Button asChild variant="primary">
+              <a href={`/admin?tenantId=${encodeURIComponent(view.value.tenantId)}`}>
+                Mở Admin
+              </a>
+            </Button>
           </p>
         </section>
       ) : null}
