@@ -341,16 +341,16 @@ const styles = StyleSheet.create({
   },
   rowSpinner: { flex: 1 },
   switchEvent: {
-    paddingHorizontal: space.sm + 2,
-    paddingVertical: space.xs + 2,
+    paddingHorizontal: space.sm + space.xxs,
+    paddingVertical: space.xs + space.xxs,
     borderRadius: radius.sm,
     minHeight: 44
   },
   pickerRow: {
     alignSelf: 'stretch',
-    paddingVertical: space.sm + 2,
+    paddingVertical: space.sm + space.xxs,
     paddingHorizontal: space.md,
-    borderRadius: radius.sm + 2
+    borderRadius: radius.md
   },
   pickerRowActive: {
     backgroundColor: colors.card

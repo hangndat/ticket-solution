@@ -91,7 +91,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     platforms: ['ios'],
     orientation: 'default',
     scheme: ['vemoki', 'ticketsolution'],
-    userInterfaceStyle: 'automatic',
+    userInterfaceStyle: 'light',
     ios: {
       supportsTablet: true,
       bundleIdentifier: 'com.hangndat.ticket',
