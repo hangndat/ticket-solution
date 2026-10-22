@@ -14,7 +14,7 @@ export function TabStackTitle({ title, large = true }: TabStackTitleProps) {
     <Stack.Screen
       options={{
         title,
-        headerLargeTitleEnabled: large,
+        headerLargeTitleEnabled: large
       }}
     />
   );

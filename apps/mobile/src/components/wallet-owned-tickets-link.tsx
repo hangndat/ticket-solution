@@ -3,9 +3,10 @@ import { router } from 'expo-router';
 import { Button } from '@/components/ui/button';
 import { countTicketsForEventId } from '@/tickets/wallet-event-grouping';
 import { useAttendeeOwnedTickets } from '@/tickets/use-attendee-owned-tickets';
-import { brand } from '@/theme/colors';
+import { brand, colors } from '@/theme/colors';
 import { fontFamilies } from '@/theme/fonts';
 import { radius, space } from '@/theme/tokens';
+import { typography } from '@/theme/typography';
 
 type Props = {
   eventId: string;
@@ -17,7 +18,7 @@ type Props = {
 export function WalletOwnedTicketsLink({
   eventId,
   testID,
-  variant = 'inline',
+  variant = 'inline'
 }: Props) {
   const { tickets, verified } = useAttendeeOwnedTickets();
   if (!verified) return null;
@@ -36,7 +37,7 @@ export function WalletOwnedTicketsLink({
       onPress={() =>
         router.push({
           pathname: '/(tabs)/my-tickets',
-          params: { eventId },
+          params: { eventId }
         })
       }
       style={cardRow ? styles.cardRow : styles.inline}
@@ -53,30 +54,22 @@ const styles = StyleSheet.create({
   inline: {
     alignSelf: 'flex-start',
     paddingVertical: space.xs,
-    paddingHorizontal: 0,
+    paddingHorizontal: 0
   },
-  inlineText: {
-    color: brand.signal,
-    fontSize: 15,
+  inlineText: { ...typography.subhead, color: brand.signal,
     fontFamily: fontFamilies.bodySemiBold,
-    fontWeight: '600',
-    textAlign: 'left',
-  },
+    textAlign: 'left' },
   cardRow: {
     width: '100%',
-    backgroundColor: '#f0f4f8',
+    backgroundColor: colors.surfaceSubtle,
     borderRadius: radius.sm + 2,
     paddingVertical: space.md,
-    paddingHorizontal: space.md + 2,
+    paddingHorizontal: space.md + 2
   },
   cardRowContent: {
-    width: '100%',
+    width: '100%'
   },
-  cardRowText: {
-    color: brand.signal,
-    fontSize: 16,
+  cardRowText: { ...typography.callout, color: brand.signal,
     fontFamily: fontFamilies.bodySemiBold,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
+    textAlign: 'center' }
 });

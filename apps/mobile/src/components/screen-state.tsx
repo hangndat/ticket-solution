@@ -17,7 +17,7 @@ type PanelProps = PropsWithChildren<{
 export function LoadingState({
   title,
   children,
-  accessibilityLabel,
+  accessibilityLabel
 }: PanelProps) {
   const label = accessibilityLabel ?? title;
   return (
@@ -46,7 +46,7 @@ export function ErrorState({
   title,
   children,
   onRetry,
-  retryLabel = 'Thử lại',
+  retryLabel = 'Thử lại'
 }: PanelProps & {
   onRetry?: () => void;
   retryLabel?: string;
@@ -84,23 +84,16 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
     borderRadius: radius.lg - 2,
     borderCurve: 'continuous',
-    alignItems: 'center',
+    alignItems: 'center'
   },
-  loadingTitle: {
-    color: colors.label,
-    fontSize: 22,
+  loadingTitle: { ...typography.title, color: colors.label,
     fontFamily: fontFamilies.display,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  loadingBody: {
-    color: colors.secondary,
-    fontSize: 17,
+    textAlign: 'center' },
+  loadingBody: { ...typography.body, color: colors.secondary,
     lineHeight: 25,
     fontFamily: fontFamilies.body,
-    textAlign: 'center',
-  },
+    textAlign: 'center' },
   errorWrap: {
-    gap: space.md,
-  },
+    gap: space.md
+  }
 });

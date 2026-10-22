@@ -8,10 +8,12 @@ import { useFadeInOnMount } from '@/hooks/use-fade-in-on-mount';
 import { session } from '@/identity/session';
 import {
   staffDenyCopy,
-  staffEligibility,
+  staffEligibility
 } from '@/identity/staff-eligibility';
 import { colors } from '@/theme/colors';
 import { fontFamilies } from '@/theme/fonts';
+import { space } from '@/theme/tokens';
+import { typography } from '@/theme/typography';
 
 /**
  * Deep-link / soft-entry for staff when tab may be hidden (O02).
@@ -60,7 +62,7 @@ function StaffAccessDeny() {
   return (
     <Page>
       <Animated.View
-        style={{ gap: 20, opacity: reduceMotionOs ? 1 : opacity }}
+        style={{ gap: space.xl, opacity: reduceMotionOs ? 1 : opacity }}
         accessibilityLiveRegion="assertive"
       >
         <Notice title={staffDenyCopy.title} tone="deny">
@@ -68,12 +70,9 @@ function StaffAccessDeny() {
         </Notice>
         <Text
           accessibilityRole="text"
-          style={{
-            color: colors.secondary,
-            fontSize: 15,
+          style={{ ...typography.subhead, color: colors.secondary,
             lineHeight: 22,
-            fontFamily: fontFamilies.body,
-          }}
+            fontFamily: fontFamilies.body }}
         >
           {staffDenyCopy.announcement}
         </Text>

@@ -13,7 +13,7 @@ export default function AccountTabLayout() {
         name="privacy"
         options={{
           title: 'Quyền riêng tư',
-          headerLargeTitleEnabled: false,
+          headerLargeTitleEnabled: false
         }}
       />
     </Stack>

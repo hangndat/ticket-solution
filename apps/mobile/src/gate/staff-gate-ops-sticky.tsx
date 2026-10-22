@@ -7,6 +7,7 @@ import type { GateOp } from './gate-scan.ts';
 import type { StaffGateScope } from './staff-gate-events.ts';
 import { scanStickyStatusFromMachineLabel } from './staff-gate-scan-sticky-status.ts';
 import { colors } from '@/theme/colors';
+import { typography } from '@/theme/typography';
 
 export function StaffGateOpsSticky({
   connectivity,
@@ -25,7 +26,7 @@ export function StaffGateOpsSticky({
   pendingOp,
   onContinueScan,
   onReconcile,
-  reconcileEnabled,
+  reconcileEnabled
 }: {
   connectivity: ConnectivityState;
   hasSession: boolean;
@@ -53,29 +54,25 @@ export function StaffGateOpsSticky({
   return (
     <View
       style={{
-        gap: 10,
-        paddingBottom: 12,
+        gap: space.sm,
+        paddingBottom: space.md,
         borderBottomWidth: 1,
         borderBottomColor: colors.separator,
-        backgroundColor: colors.paper,
+        backgroundColor: colors.paper
       }}
     >
       <View
         style={{
           flexDirection: 'row',
           alignItems: 'center',
-          gap: 10,
+          gap: space.sm
         }}
       >
         <Text
           numberOfLines={1}
           accessibilityRole="header"
-          style={{
-            flex: 1,
-            fontSize: 15,
-            fontWeight: '600',
-            color: colors.label,
-          }}
+          style={{ ...typography.subheadSemibold, flex: 1,
+            color: colors.label }}
         >
           {title}
         </Text>
@@ -83,26 +80,21 @@ export function StaffGateOpsSticky({
           style={{
             flexDirection: 'row',
             alignItems: 'center',
-            gap: 6,
-            flexShrink: 1,
+            gap: space.sm,
+            flexShrink: 1
           }}
           accessibilityLabel={sticky.statusText}
         >
           <Text
-            style={{
-              fontSize: 13,
-              color: sticky.ready ? colors.admit : colors.secondary,
-            }}
+            style={{ ...typography.caption, 
+              color: sticky.ready ? colors.admit : colors.secondary }}
           >
             ●
           </Text>
           <Text
             numberOfLines={1}
-            style={{
-              fontSize: 13,
-              fontWeight: '500',
-              color: sticky.ready ? colors.admit : colors.secondary,
-            }}
+            style={{ ...typography.caption, 
+              color: sticky.ready ? colors.admit : colors.secondary }}
           >
             {sticky.statusText}
           </Text>
@@ -135,7 +127,7 @@ export function StaffGateOpsSticky({
         />
       ) : null}
       {showPendingActions ? (
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.sm }}>
           {reconcileEnabled ? (
             <Button
               variant="secondary"
@@ -161,13 +153,13 @@ export function StaffGateOpsSticky({
 }
 
 const styles = StyleSheet.create({
-  switchLink: { paddingVertical: space.xs, paddingHorizontal: 2 },
+  switchLink: { paddingVertical: space.xs, paddingHorizontal: space.xxs },
   compactAction: {
     paddingVertical: space.sm,
     paddingHorizontal: space.md,
     borderRadius: radius.sm,
-    minHeight: 44,
-  },
+    minHeight: 44
+  }
 });
 
 export { buildMachineLabel } from './staff-gate-ops-sticky-label';

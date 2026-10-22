@@ -10,7 +10,8 @@ import { StaffGateScreenChrome } from '@/gate/staff-gate-screen-chrome';
 import { useStaffGateWorkspace } from '@/gate/staff-gate-workspace-context';
 import { STAFF_TAB_TITLES } from '@/navigation/staff-tab-titles';
 import { colors } from '@/theme/colors';
-import { brand } from '@/theme/tokens';
+import { brand, space } from '@/theme/tokens';
+import { typography } from '@/theme/typography';
 
 export function StaffManualEntryScreen() {
   const gate = useStaffGateWorkspace();
@@ -61,10 +62,10 @@ export function StaffManualEntryScreen() {
         automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
         keyboardShouldPersistTaps="handled"
         style={{ flex: 1, backgroundColor: brand.paper }}
-        contentContainerStyle={{ padding: 20, paddingBottom: 48, gap: 16 }}
+        contentContainerStyle={{ padding: space.xl, paddingBottom: space.huge, gap: space.lg }}
       >
         <StaffGateNoEventState />
-        <Text style={{ color: colors.secondary, fontSize: 14, lineHeight: 20 }}>
+        <Text style={{ ...typography.footnote, color: colors.secondary,  lineHeight: 20 }}>
           Dùng khi không thể đọc mã QR trên vé.
         </Text>
         <Input
@@ -96,14 +97,14 @@ export function StaffManualEntryScreen() {
           onPress={onCheck}
           size="lg"
         />
-        <Text style={{ color: colors.secondary, fontSize: 12, lineHeight: 18 }}>
+        <Text style={{ ...typography.micro, color: colors.secondary,  lineHeight: 18 }}>
           Kiểm tra thông tin trước khi xác nhận lượt vào.
         </Text>
         {parseError ? (
-          <Text style={{ color: colors.deny, fontSize: 14 }}>{parseError}</Text>
+          <Text style={{ ...typography.footnote, color: colors.deny }}>{parseError}</Text>
         ) : null}
         {gate.gateEventsError && !gate.gateScope ? (
-          <Text style={{ color: colors.deny, fontSize: 14 }}>
+          <Text style={{ ...typography.footnote, color: colors.deny }}>
             {gate.gateEventsError}
           </Text>
         ) : null}

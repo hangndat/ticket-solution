@@ -1,5 +1,4 @@
-import type { ReactNode } from 'react';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import {
   Pressable,
   StyleSheet,
@@ -7,7 +6,7 @@ import {
   View,
   type PressableProps,
   type StyleProp,
-  type ViewStyle,
+  type ViewStyle
 } from 'react-native';
 import { Spinner } from '@/components/ui/spinner';
 import { colors } from '@/theme/colors';
@@ -57,7 +56,7 @@ export function Button({
   const a11yState = {
     disabled: isDisabled,
     busy: loading,
-    ...accessibilityState,
+    ...accessibilityState
   };
 
   return (
@@ -76,7 +75,7 @@ export function Button({
               top: needsHitSlop.vertical,
               bottom: needsHitSlop.vertical,
               left: needsHitSlop.horizontal,
-              right: needsHitSlop.horizontal,
+              right: needsHitSlop.horizontal
             }
           : undefined
       }
@@ -139,72 +138,72 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     borderCurve: 'continuous',
     justifyContent: 'center',
-    alignItems: 'center',
+    alignItems: 'center'
   },
   sizeMd: {
     paddingVertical: space.md - 2,
-    paddingHorizontal: space.lg + 2,
+    paddingHorizontal: space.lg + 2
   },
   sizeLg: {
     minHeight: 48,
     paddingVertical: space.md + 2,
-    paddingHorizontal: space.lg + 2,
+    paddingHorizontal: space.lg + 2
   },
   primary: {
     backgroundColor: colors.accent,
-    borderWidth: 0,
+    borderWidth: 0
   },
   secondary: {
     backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: colors.ink,
+    borderColor: colors.ink
   },
   destructive: {
     backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: colors.accent,
+    borderColor: colors.accent
   },
   ghost: {
     backgroundColor: 'transparent',
     borderWidth: 0,
     minHeight: MIN_TOUCH,
     paddingVertical: space.sm,
-    paddingHorizontal: space.md,
+    paddingHorizontal: space.md
   },
   focusRing: {
     borderWidth: 2,
-    borderColor: colors.focus,
+    borderColor: colors.focus
   },
   disabled: {
-    opacity: 0.45,
+    opacity: 0.45
   },
   pressed: {
-    opacity: 0.85,
+    opacity: 0.85
   },
   content: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: space.sm,
+    gap: space.sm
   },
   label: {
     ...typography.callout,
     fontFamily: fontFamilies.bodySemiBold,
-    textAlign: 'center',
+    textAlign: 'center'
   },
   labelLg: {
-    fontSize: typography.body.fontSize,
+    fontSize: typography.body.fontSize
   },
   labelOnAccent: {
-    color: colors.onAccent,
+    color: colors.onAccent
   },
   labelDefault: {
-    color: colors.ink,
+    color: colors.ink
   },
   labelDestructive: {
-    color: colors.accent,
+    color: colors.accent
   },
   labelWithSpinner: {
-    opacity: 0.9,
-  },
+    opacity: 0.9
+  }
 });
