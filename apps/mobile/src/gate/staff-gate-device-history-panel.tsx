@@ -1,4 +1,7 @@
-import { Pressable, Text, TextInput, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { radius, space } from '@/theme/tokens';
 import { SymbolView } from 'expo-symbols';
 import {
   formatDeviceHistoryTime,
@@ -67,23 +70,14 @@ export function StaffGateDeviceHistoryPanel({
         </View>
       )}
       {showSearch ? (
-        <TextInput
+        <Input
           value={filterQuery}
           onChangeText={onFilterQueryChange}
           placeholder="Tìm trong các lượt đã tải"
-          placeholderTextColor={colors.secondary}
           accessibilityLabel="Tìm trong các lượt đã tải"
           autoCapitalize="none"
           autoCorrect={false}
           clearButtonMode="while-editing"
-          style={{
-            borderRadius: 10,
-            paddingVertical: 10,
-            paddingHorizontal: 12,
-            backgroundColor: colors.card,
-            color: colors.label,
-            fontSize: 16,
-          }}
         />
       ) : null}
       {totalAvailable === 0 ? (
@@ -177,40 +171,22 @@ export function StaffGateDeviceHistoryPanel({
                 Không tải được lượt tiếp theo. Các lượt đã tải vẫn được giữ.
               </Text>
               {onRetryLoadMore ? (
-                <Pressable
-                  accessibilityRole="button"
+                <Button
+                  variant="secondary"
+                  label="Thử lại"
                   accessibilityLabel="Thử tải thêm lượt quét"
                   onPress={onRetryLoadMore}
-                  style={{
-                    alignSelf: 'flex-start',
-                    paddingVertical: 10,
-                    paddingHorizontal: 14,
-                    borderRadius: 10,
-                    backgroundColor: colors.card,
-                  }}
-                >
-                  <Text style={{ color: colors.accent, fontWeight: '600' }}>
-                    Thử lại
-                  </Text>
-                </Pressable>
+                  style={styles.retryBtn}
+                />
               ) : null}
             </View>
           ) : hasMore && onLoadMore ? (
-            <Pressable
-              accessibilityRole="button"
+            <Button
+              variant="secondary"
+              label="Tải thêm lượt quét"
               accessibilityLabel="Tải thêm lượt quét"
               onPress={onLoadMore}
-              style={{
-                paddingVertical: 12,
-                borderRadius: 10,
-                alignItems: 'center',
-                backgroundColor: colors.card,
-              }}
-            >
-              <Text style={{ color: colors.accent, fontSize: 16, fontWeight: '600' }}>
-                Tải thêm lượt quét
-              </Text>
-            </Pressable>
+            />
           ) : !hasMore ? (
             <Text style={{ color: colors.secondary, fontSize: 14, textAlign: 'center' }}>
               Đã xem hết lịch sử lưu trên máy này
@@ -227,3 +203,7 @@ export function StaffGateDeviceHistoryPanel({
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  retryBtn: { alignSelf: 'flex-start' },
+});
