@@ -3,13 +3,14 @@
 | Trường | Giá trị |
 | --- | --- |
 | Ngày | 2026-10-22 |
-| Branch | `hangndat/ds-slice0` |
+| Branch | `hangndat/ds-slice0` (PR #768) |
 | Base `main` | `bfd17c50790ce31c58b63d933773ae4175102058` |
 | Phạm vi | Pipeline only — không đổi markup/route prod |
 
 ## UI prod
 
-- `apps/web/app/live-pulse-legacy.css` **byte-identical** với `main:apps/web/app/globals.css` (SHA-256 khớp) — toàn bộ Live Pulse v2 giữ nguyên; `globals.css` chỉ thêm import Tailwind v4 (theme + utilities, **không Preflight**).
+- `apps/web/app/live-pulse-legacy.css` **byte-identical** với `main:apps/web/app/globals.css` (SHA-256 khớp) — Live Pulse v2 giữ nguyên; `globals.css` chỉ thêm `@import` token theme + legacy **unlayered** (parity cascade).
+- Không mount `UiMotionProvider` trên `app/layout.tsx` (slice 0 — zero motion JS first-load).
 - Không thêm component Aceternity trên route public; `/dev/design-system` trả 404 khi `NODE_ENV=production`.
 
 ## CSP / API / portal
@@ -22,21 +23,34 @@
 
 ## Bundle (sau `pnpm exec turbo run build --filter=@ticket/web...`)
 
-Đo tổng file trong `apps/web/.next/static/chunks/` (local build 2026-10-22):
+Tổng bytes `apps/web/.next/static/chunks/*.{js,css}` (`node scripts/measure-web-chunk-bytes.mjs`):
 
-| Metric | Slice 0 |
-| --- | ---: |
-| JS chunks (bytes) | 1 168 587 |
-| CSS chunks (bytes) | 66 491 |
+| Baseline | JS (bytes) | CSS (bytes) |
+| --- | ---: | ---: |
+| `main` @ `bfd17c5` | 1 168 562 | 66 491 |
+| PR (post gap fix) | 1 168 587 | 74 751 |
+| **Δ** | **+25 (~0%)** | **+8 260** |
 
-Delta JS ~+37 KiB so với artifact `.next` còn trên worktree `main` cũ (1 131 385 B) — chủ yếu `UiMotionProvider` / `motion` lazy client; **không** có route UI mới trên prod. CSS tách chunk do Tailwind pipeline; legacy rules không đổi.
+Δ JS ≈ 0 (đã gỡ motion shell toàn app). Δ CSS từ postcss/Tailwind token pipeline + chunk tách; legacy rules không đổi.
 
-**Lighthouse:** chưa chạy trên stack đầy đủ trong session worker (cần `fe-uat-stack` + server); slice 0 không đổi DOM prod — visual parity dựa trên legacy CSS identity + test suite.
+## Visual regression (main vs PR)
 
-## Visual regression
+Stack: `./scripts/fe-uat-stack.sh bootstrap` + API `:3001` + `next start` (main worktree @ `bfd17c5` vs PR).
 
-- Baseline tham chiếu: [`docs/reviews/assets/FE-PD-DESIGN-SYSTEM-2026-10-22/`](./assets/FE-PD-DESIGN-SYSTEM-2026-10-22/) (prod guest catalog).
-- Slice 0: **không** chụp lại PNG trong PR — kỳ vọng pixel-identical vì legacy CSS không đổi; slice 1+ sẽ bật Playwright screenshot gate.
+```bash
+./scripts/fe-ds-slice0-visual-parity.sh
+# hoặc: node apps/web/tests/fe-ds-slice0-visual-parity.mjs capture|compare
+```
+
+| Route | Viewport | diffPixels |
+| --- | --- | ---: |
+| `/` | 1280 / 390 | 0 |
+| `/t/mfest-demo/events/mfest` | 1280 / 390 | 0 |
+| `/redeem` | 1280 / 390 | 0 |
+| `/account` | 1280 / 390 | 0 |
+| `/privacy` | 1280 / 390 | 0 |
+
+Báo cáo máy: `docs/reviews/assets/FE-DS-SLICE0-parity-pr/parity-report.json` (`allZero: true`).
 
 ## CI commands (local)
 
