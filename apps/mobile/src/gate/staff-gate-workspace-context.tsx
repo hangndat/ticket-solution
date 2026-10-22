@@ -7,7 +7,7 @@ import {
   useRef,
   useState,
   useSyncExternalStore,
-  type PropsWithChildren,
+  type PropsWithChildren
 } from 'react';
 import { AppState } from 'react-native';
 import { scanCopy } from '@/components/screen-state-copy';
@@ -17,20 +17,20 @@ import {
   reconcileOp,
   normalizeGatePasteInput,
   runScan,
-  type GateOp,
+  type GateOp
 } from '@/gate/gate-scan';
 import {
   gateStaffEvents,
   meEventToScope,
   sameStaffGateScope,
-  type StaffGateScope,
+  type StaffGateScope
 } from '@/gate/staff-gate-events';
 import { buildDeviceScanHistory } from '@/gate/staff-gate-device-history';
 import type { DeviceScanHistoryRow } from '@/gate/staff-gate-device-history';
 import { buildMachineLabel } from '@/gate/staff-gate-ops-sticky';
 import {
   presentGateScanStatus,
-  stampGateOpsRecordedAt,
+  stampGateOpsRecordedAt
 } from '@/gate/gate-scan-status-ui';
 import {
   SCAN_TOAST_FADE_MS,
@@ -39,7 +39,7 @@ import {
   needsStickyPendingOp,
   prominentCanReconcile,
   shouldDismissToastAttempt,
-  shouldSuppressCameraRescan,
+  shouldSuppressCameraRescan
 } from '@/gate/staff-gate-scan-feedback';
 import { randomId } from '@/lib/random-id';
 import { resolveGateScanFallback } from '@/gate/staff-gate-scope';
@@ -49,18 +49,18 @@ import {
   opsForScope,
   persistActiveScope,
   sliceWorkspaceForScope,
-  emptyStaffGateWorkspace,
+  emptyStaffGateWorkspace
 } from '@/gate/staff-gate-workspace';
 import {
   loadStaffGateWorkspace,
-  saveStaffGateWorkspace,
+  saveStaffGateWorkspace
 } from '@/gate/staff-gate-workspace-store';
 import { staffGateEventsFromProbe } from '@/gate/staff-gate-events-probe';
 import { probeMeEvents } from '@/identity/fetch-me-events';
 import {
   probeConnectivity,
   type ConnectivityState,
-  type OfflineQueueSnapshot,
+  type OfflineQueueSnapshot
 } from '@/gate/offline-queue';
 import { offlineScanQueue } from '@/gate/offline-queue-session';
 import { getApiBaseUrl, getTenantId } from '@/identity/config';
@@ -91,7 +91,7 @@ async function resolveGateAuth(): Promise<
     return {
       ok: false,
       message:
-        'Thiếu địa chỉ API (EXPO_PUBLIC_API_BASE_URL). Không cho vào.',
+        'Thiếu địa chỉ API (EXPO_PUBLIC_API_BASE_URL). Không cho vào.'
     };
   }
 
@@ -103,7 +103,7 @@ async function resolveGateAuth(): Promise<
   if (!bearer) {
     return {
       ok: false,
-      message: 'Chưa có phiên đăng nhập — đăng xuất và đăng nhập lại trước khi quét.',
+      message: 'Chưa có phiên đăng nhập — đăng xuất và đăng nhập lại trước khi quét.'
     };
   }
   return { ok: true, bearer, apiBase };
@@ -154,7 +154,7 @@ export function useStaffGateWorkspace(): StaffGateWorkspaceValue {
 
 export function StaffGateWorkspaceProvider({
   active,
-  children,
+  children
 }: PropsWithChildren<{ active: boolean }>) {
   const [ops, setOps] = useState<GateOp[]>([]);
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -442,7 +442,7 @@ export function StaffGateWorkspaceProvider({
           eventId: '',
           staffSessionId: '',
           phase: 'denied',
-          message: auth.message,
+          message: auth.message
         },
         attemptId,
       );
@@ -459,7 +459,7 @@ export function StaffGateWorkspaceProvider({
           eventId: '',
           staffSessionId: '',
           phase: 'denied',
-          message: gateEventsError ?? scanCopy.eventPicker.empty,
+          message: gateEventsError ?? scanCopy.eventPicker.empty
         },
         attemptId,
       );
@@ -479,7 +479,7 @@ export function StaffGateWorkspaceProvider({
             staffSessionId: '',
             phase: 'denied',
             message:
-              'Phiên staff chưa xác minh — đăng nhập lại trước khi quét. Không cho vào.',
+              'Phiên staff chưa xác minh — đăng nhập lại trước khi quét. Không cho vào.'
           },
           attemptId,
         );
@@ -494,7 +494,7 @@ export function StaffGateWorkspaceProvider({
         ops: opsForScope(ops, gateScope),
         staffSessionId: sessionId,
         fallback: scanFallback,
-        preferOfflineQueue: preferOffline,
+        preferOfflineQueue: preferOffline
       });
       const nextSessionId = result.staffSessionId ?? sessionId;
       if (result.membershipAuthzDenied) {
@@ -506,7 +506,7 @@ export function StaffGateWorkspaceProvider({
           ticketId: result.parsed.ticketId,
           tenantId: result.parsed.tenantId,
           eventId: result.parsed.eventId,
-          staffSessionId: result.staffSessionId,
+          staffSessionId: result.staffSessionId
         });
         setConnectivity('offline');
         const currentOp = gateOpFromQueued({
@@ -516,7 +516,7 @@ export function StaffGateWorkspaceProvider({
           eventId: queued.eventId,
           staffSessionId: queued.staffSessionId,
           clientEventId: queued.clientEventId,
-          message: queued.lastMessage,
+          message: queued.lastMessage
         });
         await persist(
           [currentOp, ...result.ops],
@@ -538,7 +538,7 @@ export function StaffGateWorkspaceProvider({
       if (!result.networkUnavailable) {
         void offlineScanQueue.replay({
           bearer: auth.bearer,
-          apiBase: auth.apiBase,
+          apiBase: auth.apiBase
         });
       }
     } finally {
@@ -587,7 +587,7 @@ export function StaffGateWorkspaceProvider({
       const reconciled = await reconcileOp({
         op: target,
         bearer: auth.bearer,
-        apiBase: auth.apiBase,
+        apiBase: auth.apiBase
       });
       if (reconciled.membershipAuthzDenied) {
         clearStaffChromeAfterAuthzDenial();
@@ -612,7 +612,7 @@ export function StaffGateWorkspaceProvider({
       setConnectivity(await probeConnectivity(auth.apiBase));
       await offlineScanQueue.replay({
         bearer: auth.bearer,
-        apiBase: auth.apiBase,
+        apiBase: auth.apiBase
       });
     } finally {
       setBusy(false);
@@ -624,7 +624,7 @@ export function StaffGateWorkspaceProvider({
     const userId = snap.status === 'verified' ? snap.userId : null;
     await logoutAndClearWalletArtifacts({
       userId,
-      tenantId: getTenantId(),
+      tenantId: getTenantId()
     });
     await endKeycloakSession();
   }, []);
@@ -632,7 +632,7 @@ export function StaffGateWorkspaceProvider({
   const toastStatus = presentGateScanStatus({
     busy,
     op: busy ? null : toastOp,
-    canReconcile: prominentCanReconcile(pendingOp ?? toastOp),
+    canReconcile: prominentCanReconcile(pendingOp ?? toastOp)
   });
 
   const machineLabel = buildMachineLabel({
@@ -641,7 +641,7 @@ export function StaffGateWorkspaceProvider({
     gateEventsLoading,
     gateScope,
     pendingOp,
-    queuePendingCount: queueSnap.pendingCount,
+    queuePendingCount: queueSnap.pendingCount
   });
 
   const deviceHistory = useMemo(
@@ -684,7 +684,7 @@ export function StaffGateWorkspaceProvider({
       syncNow,
       dismissPendingAction,
       refreshGateEvents,
-      logoutStaff,
+      logoutStaff
     }),
     [
       ready,

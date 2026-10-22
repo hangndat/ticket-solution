@@ -6,6 +6,7 @@ import { walletCopy } from '@/components/screen-state-copy';
 import { session } from '@/identity/session';
 import { runPushOptIn } from './push-opt-in.ts';
 import { dismissWalletPushPrompt } from './wallet-push-prompt-store.ts';
+import { space } from '@/theme/tokens';
 
 type Props = {
   onDismiss: () => void;
@@ -32,7 +33,7 @@ export function WalletPushPromptCard({ onDismiss, onEnabled }: Props) {
   }, [onDismiss]);
 
   return (
-    <View style={{ gap: 10 }} testID="wallet-push-prompt-card">
+    <View style={{ gap: space.md }} testID="wallet-push-prompt-card">
       <Notice title={walletCopy.firstTicketPush.title}>
         {walletCopy.firstTicketPush.body}
       </Notice>

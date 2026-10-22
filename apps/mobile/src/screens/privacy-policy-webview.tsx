@@ -8,6 +8,7 @@ import { PRIVACY_POLICY_URL } from '@/account-deletion/privacy-policy';
 import { brand, colors } from '@/theme/colors';
 import { TabStackTitle } from '@/navigation/tab-stack-title';
 import { closePrivacyPolicy } from '@/navigation/close-privacy-policy';
+import { space } from '@/theme/tokens';
 
 type PrivacyPresentation = 'tab' | 'root';
 
@@ -32,10 +33,10 @@ function PrivacyRootCloseChrome() {
   return (
     <View
       style={{
-        paddingHorizontal: 20,
-        paddingTop: 8,
-        paddingBottom: 4,
-        backgroundColor: brand.paper,
+        paddingHorizontal: space.xl,
+        paddingTop: space.sm,
+        paddingBottom: space.xs,
+        backgroundColor: brand.paper
       }}
     >
       <AttendeeCta
@@ -50,7 +51,7 @@ function PrivacyRootCloseChrome() {
 
 function PrivacyScreenShell({
   presentation,
-  children,
+  children
 }: {
   presentation: PrivacyPresentation;
   children: ReactNode;
@@ -67,7 +68,7 @@ function PrivacyScreenShell({
 }
 
 export function PrivacyPolicyWebViewScreen({
-  presentation = 'tab',
+  presentation = 'tab'
 }: {
   presentation?: PrivacyPresentation;
 }) {
@@ -84,7 +85,7 @@ export function PrivacyPolicyWebViewScreen({
   if (!isTrustedPrivacyUrl(PRIVACY_POLICY_URL)) {
     return (
       <PrivacyScreenShell presentation={presentation}>
-        <View style={{ flex: 1, padding: 20, backgroundColor: brand.paper }}>
+        <View style={{ flex: 1, padding: space.xl, backgroundColor: brand.paper }}>
           <Notice title="Không mở được chính sách">
             Liên kết chính sách không hợp lệ trên bản dựng này.
           </Notice>
@@ -97,7 +98,7 @@ export function PrivacyPolicyWebViewScreen({
     <PrivacyScreenShell presentation={presentation}>
       <View style={{ flex: 1, backgroundColor: brand.paper }}>
         {error ? (
-          <View style={{ padding: 20, gap: 12 }}>
+          <View style={{ padding: space.xl, gap: space.md }}>
             <Notice title="Không tải được trang">{error}</Notice>
             <AttendeeCta label="Thử lại" onPress={onRetry} />
           </View>
@@ -133,9 +134,9 @@ export function PrivacyPolicyWebViewScreen({
               top: 0,
               left: 0,
               right: 0,
-              padding: 24,
+              padding: space.xxl,
               alignItems: 'center',
-              backgroundColor: brand.paper,
+              backgroundColor: brand.paper
             }}
           >
             <Spinner color={colors.accent} accessibilityLabel="Đang tải chính sách" />

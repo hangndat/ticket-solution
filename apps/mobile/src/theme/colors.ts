@@ -25,4 +25,17 @@ export const colors = {
   admit: '#1b7f4a',
   deny: brand.signal,
   unknown: '#8a6d3b',
+  /** Form validation / material error red → semantic destructive (TOKENS.md). */
+  destructive: '#8a1f1f',
+  /** Hairline borders on inputs/cards (#D7DFE9). */
+  line: '#d7dfe9',
+  /** Success pill background (events / tickets). */
+  admitSurface: '#edf5ef',
+  /** Muted chrome surfaces. */
+  surfaceMuted: '#e8ecf1',
+  surfaceSubtle: '#f0f4f8',
+  /** iOS shadowColor fallback. */
+  shadow: '#000000',
+  /** Gate camera focus ring tint (signal @ ~70%). */
+  signalTint: '#fb7391',
 };

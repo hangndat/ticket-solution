@@ -3,11 +3,13 @@ import { Button } from '@/components/ui/button';
 import { StaffGateDeviceHistoryPanel } from './staff-gate-device-history-panel.tsx';
 import type { DeviceScanHistoryRow } from './staff-gate-device-history.ts';
 import { colors } from '@/theme/colors';
+import { space } from '@/theme/tokens';
+import { typography } from '@/theme/typography';
 
 export function StaffGateHistorySheet({
   visible,
   rows,
-  onClose,
+  onClose
 }: {
   visible: boolean;
   rows: DeviceScanHistoryRow[];
@@ -24,7 +26,7 @@ export function StaffGateHistorySheet({
         style={{
           flex: 1,
           backgroundColor: 'rgba(0,0,0,0.45)',
-          justifyContent: 'flex-end',
+          justifyContent: 'flex-end'
         }}
         onPress={onClose}
         accessibilityLabel="Đóng lịch sử quét"
@@ -36,7 +38,7 @@ export function StaffGateHistorySheet({
             backgroundColor: colors.background,
             borderTopLeftRadius: 16,
             borderTopRightRadius: 16,
-            padding: 16,
+            padding: space.lg
           }}
         >
           <View
@@ -44,12 +46,12 @@ export function StaffGateHistorySheet({
               flexDirection: 'row',
               justifyContent: 'space-between',
               alignItems: 'center',
-              marginBottom: 8,
+              marginBottom: space.sm
             }}
           >
             <Text
               accessibilityRole="header"
-              style={{ fontSize: 17, fontWeight: '600', color: colors.label }}
+              style={{ ...typography.bodySemibold,  color: colors.label }}
             >
               Lịch sử trên máy này
             </Text>
@@ -61,7 +63,7 @@ export function StaffGateHistorySheet({
               hitSlop={8}
             />
           </View>
-          <Text style={{ color: colors.secondary, fontSize: 13, marginBottom: 8 }}>
+          <Text style={{ ...typography.caption, color: colors.secondary,  marginBottom: space.sm }}>
             Chỉ các lượt quét lưu trên thiết bị — không phải toàn hệ thống.
           </Text>
           <StaffGateDeviceHistoryPanel rows={rows} hideTitle />

@@ -13,6 +13,8 @@ import { StaffGateScanToast } from '@/gate/staff-gate-scan-toast';
 import { useStaffGateWorkspace } from '@/gate/staff-gate-workspace-context';
 import { STAFF_TAB_TITLES } from '@/navigation/staff-tab-titles';
 import { colors } from '@/theme/colors';
+import { space } from '@/theme/tokens';
+import { typography } from '@/theme/typography';
 
 export function StaffScanScreen() {
   const insets = useSafeAreaInsets();
@@ -27,16 +29,16 @@ export function StaffScanScreen() {
       <View
         style={{
           flex: 1,
-          backgroundColor: colors.paper,
+          backgroundColor: colors.paper
         }}
       >
         <AtmosphereWash />
         <View
           style={{
-            paddingHorizontal: 20,
-            paddingTop: 8,
+            paddingHorizontal: space.xl,
+            paddingTop: space.sm,
             zIndex: 2,
-            backgroundColor: colors.paper,
+            backgroundColor: colors.paper
           }}
         >
           <StaffGateOpsSticky
@@ -67,9 +69,9 @@ export function StaffScanScreen() {
           keyboardShouldPersistTaps="handled"
           contentInsetAdjustmentBehavior="never"
           contentContainerStyle={{
-            padding: 20,
+            padding: space.xl,
             paddingBottom: Math.max(insets.bottom, 20) + 28,
-            gap: 16,
+            gap: space.lg
           }}
           style={{ flex: 1, backgroundColor: 'transparent' }}
         >
@@ -80,7 +82,7 @@ export function StaffScanScreen() {
                 gate.busy ? 'confirming' : announceOp?.phase,
               ),
               title: a11yTitle,
-              message: a11yDetail,
+              message: a11yDetail
             })}
             accessibilityLiveRegion={
               gate.toastStatus.assertive ? 'assertive' : 'polite'
@@ -99,11 +101,7 @@ export function StaffScanScreen() {
             />
           </View>
           <Text
-            style={{
-              textAlign: 'center',
-              color: colors.secondary,
-              fontSize: 14,
-            }}
+            style={{ ...typography.footnote, color: colors.secondary, }}
           >
             Quét QR trong khung — kết quả hiện giữa màn hình, rồi tự ẩn. Nhập tay và
             lịch sử ở tab riêng.

@@ -14,7 +14,7 @@ export default function StaffAccountRootLayout() {
         name="privacy"
         options={{
           title: 'Chính sách quyền riêng tư',
-          headerLargeTitleEnabled: false,
+          headerLargeTitleEnabled: false
         }}
       />
     </Stack>

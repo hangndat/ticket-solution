@@ -17,7 +17,7 @@ export function AttendeeCta({
   disabled,
   variant = 'primary',
   accessibilityLabel,
-  testID,
+  testID
 }: Props) {
   return (
     <Button
