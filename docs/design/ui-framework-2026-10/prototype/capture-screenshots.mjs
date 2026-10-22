@@ -30,8 +30,16 @@ for (const surface of surfaces) {
         await page.click(`[data-menu="${menu}"]`);
         await page.waitForTimeout(300);
         const file = `${prefix}-${width}-${locale}-${menu}.png`;
-        const frame = page.locator("#device-frame");
-        await frame.screenshot({ path: path.join(outDir, file) });
+        if (menu === "open") {
+          // Sheet is position:fixed to the window, outside #device-frame —
+          // shrink the window to the device width so the panel renders as on a phone.
+          await page.setViewportSize({ width, height: 844 });
+          await page.waitForTimeout(300);
+          await page.screenshot({ path: path.join(outDir, file) });
+        } else {
+          const frame = page.locator("#device-frame");
+          await frame.screenshot({ path: path.join(outDir, file) });
+        }
         console.log("wrote", file);
       }
     }
