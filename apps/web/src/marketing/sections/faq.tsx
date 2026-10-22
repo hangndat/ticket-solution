@@ -6,12 +6,15 @@ export function FaqSection({ locale }: MarketingSectionProps) {
   return (
     <section
       id="faq"
+      className="mkt-section mkt-section--paper"
       aria-labelledby="faq-title"
       data-analytics-section="faq"
-      className="mkt-faq"
     >
-      <h2 id="faq-title">{t(locale, 'faq.title')}</h2>
-      <div className="mkt-faq-list">
+      <div className="mkt-wrap">
+        <h2 id="faq-title" className="mkt-display mkt-h2 mkt-faq">
+          {t(locale, 'faq.title')}
+        </h2>
+        <div className="mkt-faq-list">
         {FAQ_ITEMS.map((item) => (
           <details key={item.id} className="mkt-faq-item">
             <summary className="mkt-faq-question">
@@ -22,6 +25,7 @@ export function FaqSection({ locale }: MarketingSectionProps) {
             </div>
           </details>
         ))}
+        </div>
       </div>
     </section>
   );

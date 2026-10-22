@@ -13,6 +13,7 @@ export function PrivacyPage({ locale }: { locale: MarketingLocale }) {
   return (
     <MarketingChrome locale={locale} pageKind="privacy">
       <main id="main" className="mkt-legal" data-testid={`privacy-${locale}`}>
+        <div className="mkt-wrap">
         <h1>{t(locale, 'privacy.title')}</h1>
         <p className="mkt-lead">{t(locale, 'privacy.updated')}</p>
         <p>{t(locale, 'privacy.intro')}</p>
@@ -31,6 +32,7 @@ export function PrivacyPage({ locale }: { locale: MarketingLocale }) {
         <h2>{t(locale, 'privacy.s7.title')}</h2>
         <p>{t(locale, 'privacy.s7.body')}</p>
         <p className="mkt-lead">{t(locale, 'privacy.note')}</p>
+        </div>
       </main>
     </MarketingChrome>
   );
@@ -45,6 +47,7 @@ export function SupportPage({ locale }: { locale: MarketingLocale }) {
   return (
     <MarketingChrome locale={locale} pageKind="support">
       <main id="main" className="mkt-legal" data-testid={`support-${locale}`}>
+        <div className="mkt-wrap">
         <h1>{t(locale, 'support.title')}</h1>
         <p className="mkt-lead">{t(locale, 'support.lead')}</p>
         <p>
@@ -52,17 +55,18 @@ export function SupportPage({ locale }: { locale: MarketingLocale }) {
           <a href={`mailto:${email}`}>{email}</a>
         </p>
         <p>{t(locale, 'support.sla')}</p>
-        <p className="mkt-cta-row">
-          <a className="mkt-btn mkt-btn-primary" href={login}>
+        <p className="mkt-hero-cta">
+          <a className="mkt-btn mkt-btn--primary" href={login}>
             {t(locale, 'support.app')}
           </a>
-          <Link className="mkt-btn mkt-btn-secondary" href={salesHref(locale)}>
+          <Link className="mkt-btn mkt-btn--secondary" href={salesHref(locale)}>
             {t(locale, 'support.sales')}
           </Link>
         </p>
         <p>
           <a href={redeem}>{t(locale, 'support.guest')}</a>
         </p>
+        </div>
       </main>
     </MarketingChrome>
   );
