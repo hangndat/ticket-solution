@@ -21,6 +21,24 @@ describe('@ticket/ui primitives SSR', () => {
     assert.match(html, />Lưu</);
   });
 
+  it('preserves primitive state styles when a consumer supplies legacy classes', async () => {
+    const { Button, Input } = await loadUi();
+    const button = renderToStaticMarkup(
+      React.createElement(Button, { className: 'mkt-btn mkt-btn-primary', loading: true }, 'Gửi'),
+    );
+    assert.match(button, /disabled=""/);
+    assert.match(button, /aria-busy="true"/);
+    assert.match(button, /disabled:opacity-50/);
+    assert.match(button, /aria-\[busy=true\]:cursor-wait/);
+    assert.match(button, /focus-visible:ring-focus/);
+    const input = renderToStaticMarkup(
+      React.createElement(Input, { className: 'mkt-input', error: true, 'aria-label': 'Email' }),
+    );
+    assert.match(input, /aria-invalid="true"/);
+    assert.match(input, /border-destructive/);
+    assert.match(input, /focus-visible:ring-focus/);
+  });
+
   it('renders Input error state with aria-invalid', async () => {
     const { Input } = await loadUi();
     const html = renderToStaticMarkup(
