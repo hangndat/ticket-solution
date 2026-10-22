@@ -4,7 +4,7 @@
 | --- | --- |
 | Epic đề xuất | **PORTAL** (slug board; **không** tái dùng D12/D13) |
 | Vai trò soạn | Epic planner (`orca-epic-orchestrator.mdc`) — **không** ownership coding, **không** spawn |
-| Agent | `cursor` (`orca-agent-routing.mdc`) |
+| Agent | `cursor` (`orca-agent-routing-coordinator.mdc`) |
 | Orca Run | `run_df32d5572a2d` |
 | Task (bản đầu) / Task (hiệu chỉnh) | `task_b1db0479e51c` / `task_f67673d9a277` |
 | Ngày | 2026-10-18 (hiệu chỉnh cùng ngày) |

@@ -9,7 +9,7 @@ alwaysApply: false
 
 ## Mô hình đã chọn
 
-Coordinator gốc (depth 0) trực tiếp spawn **một Epic planner** cho mỗi Epic đang triển khai và các ownership workers/reviewers. Reuse planner đang active, không tạo planner trùng Epic. Agent cho mọi dispatch theo `orca-agent-routing.mdc`. Epic planner Persona = **Dexter** → `--display-name "Dexter · planner"` (roster [docs/agents/README.md](../../docs/agents/README.md)); Cost tier planner đơn = `cheap` + `--model` từ [cost-catalog](../../docs/agents/cost-catalog.md); **release planner** khi ready queue ổn định (không giữ live suốt Epic).
+Coordinator gốc (depth 0) trực tiếp spawn **một Epic planner** cho mỗi Epic đang triển khai và các ownership workers/reviewers. Reuse planner đang active, không tạo planner trùng Epic. Agent cho mọi dispatch theo `orca-agent-routing-coordinator.mdc`. Epic planner Persona = **Dexter** → `--display-name "Dexter · planner"` (roster [docs/agents/README.md](../../docs/agents/README.md)); Cost tier planner đơn = `cheap` + `--model` từ [cost-catalog](../../docs/agents/cost-catalog.md); **release planner** khi ready queue ổn định (không giữ live suốt Epic).
 
 ```text
 Coordinator gốc (depth 0): dispatch, lifecycle, integration
@@ -36,7 +36,7 @@ Planner / coordinator khi lập wave phải:
 
 1. Liệt kê mọi Task `Sẵn sàng` / unblocked trong Epic (không gom theo Story serial).
 2. Gắn edge deps chỉ khi thiếu artifact thật (contract OpenAPI, PD handoff, merge SHA blocker).
-3. Đề xuất một wave gồm **tất cả** node ready dưới concurrent soft caps + WIP — gồm BA∥PD, BE∥web∥iOS, và nhiều `reviewer-dod` trên PR khác nhau; ưu tiên điền `cheap`/`standard` (trần standard), giữ ≤5 non-review live theo `orca-parallel-workers.mdc` / `orca-agent-routing.mdc`.
+3. Đề xuất một wave gồm **tất cả** node ready dưới concurrent soft caps + WIP — gồm BA∥PD, BE∥web∥iOS, và nhiều `reviewer-dod` trên PR khác nhau; ưu tiên điền `cheap`/`standard` (trần standard), giữ ≤5 non-review live theo `orca-parallel-workers.mdc` / `orca-agent-routing-coordinator.mdc`.
 4. Ghi rõ Task bị loại khỏi wave vì: WIP đầy, concurrent soft cap, cùng ownership đang có feature Dispatch, hoặc hard dep chưa xong — không bỏ vì “làm tuần tự cho dễ”.
 
 ## Quy ước và giới hạn
@@ -48,7 +48,7 @@ Planner / coordinator khi lập wave phải:
 
 ## Liên quan
 
-- Agent: `orca-agent-routing.mdc`
+- Agent: `orca-agent-routing-coordinator.mdc`
 - Vai trò chuyên môn: [docs/agents/README.md](../../docs/agents/README.md)
 - Parallel dispatch: `orca-parallel-workers.mdc`
 - Ready queue / idle fill: `orca-idle-worker-fill.mdc`

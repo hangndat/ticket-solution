@@ -12,7 +12,7 @@ Nghiên cứu nghiệp vụ, UX/UI, kiến trúc/vận hành và bảo mật; t�
 
 ## Phân công
 
-Tất cả worker dùng `cursor`, theo `.cursor/rules/orca-agent-routing.mdc`; không override model. Các task độc lập được giao cùng wave, chỉ ghi report được phân công, không sửa source hoặc tài liệu khác.
+Tất cả worker dùng `cursor`, theo `.cursor/rules/orca-agent-routing-coordinator.mdc`; không override model. Các task độc lập được giao cùng wave, chỉ ghi report được phân công, không sửa source hoặc tài liệu khác.
 
 | Task | Vai trò / tài liệu | Dispatch | Báo cáo được giao |
 | --- | --- | --- | --- |

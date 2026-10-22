@@ -4,13 +4,13 @@
 
 ## Chọn role theo việc thực sự cần làm
 
-| Task                                          | Role / thứ tự                                                        | Khi nào cần thêm người                                                                        |
-| --------------------------------------------- | -------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| Sửa spacing, màu, responsive theo mẫu hiện có | `web` hoặc `ios` trực tiếp                                           | Review UI trong session DoD nếu có tiêu chí UI cần nghiệm thu; không tạo Task PD riêng        |
-| Màn mới, đổi bố cục/flow đáng kể, revamp      | `product-design` → `web` / `ios` phụ thuộc handoff → `reviewer-uiux` | Chốt một màn đại diện trước khi nhân rộng; gộp UI review với DoD khi cùng PR/SHA              |
-| Chỉ thiết kế/prototype                        | `product-design`                                                     | `reviewer-uiux` khi Task yêu cầu critique độc lập; không spawn implementer khi chưa giao code |
-| Chỉ review UI/UX                              | `reviewer-uiux`                                                      | Không tự sửa code; bàn giao findings cho đúng owner                                           |
-| Nghiệm thu PR có UI                           | `reviewer-dod` + `reviewer-uiux` trong một session                   | Thêm `reviewer-security` khi có phạm vi nhạy cảm; từng checklist có kết luận riêng            |
+| Task                                          | Role / thứ tự                                                                       | Khi nào cần thêm người                                                                         |
+| --------------------------------------------- | ----------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| Sửa spacing, màu, responsive theo mẫu hiện có | `web` hoặc `ios` trực tiếp                                                          | Review UI trong session DoD nếu có tiêu chí UI cần nghiệm thu; không tạo Task PD riêng         |
+| Màn mới, đổi bố cục/flow đáng kể, revamp      | `product-design` → `web` / `ios` phụ thuộc handoff → `reviewer-uiux`                | Chốt một màn đại diện trước khi nhân rộng; gộp UI review với DoD khi cùng PR/SHA               |
+| Chỉ thiết kế/prototype                        | `product-design`                                                                    | `reviewer-uiux` khi Task yêu cầu critique độc lập; không spawn implementer khi chưa giao code  |
+| Chỉ review UI/UX                              | `reviewer-uiux`                                                                     | Không tự sửa code; bàn giao findings cho đúng owner                                            |
+| Nghiệm thu PR có UI                           | Gộp `dod+ux` / `dod+sec+ux` — Read [reviewer-merged.md](./roles/reviewer-merged.md) | Thêm security khi slice nhạy cảm (`dod+sec` / `dod+sec+ux`); từng verdict riêng trong artifact |
 
 BA chỉ khi bài toán/AC chưa rõ; architect khi có quyết định IA/route/contract thật sự cần giải; backend khi đổi nghiệp vụ/API. Không thêm các role đó chỉ vì Task có UI. Task độc lập vẫn chạy ngay, chỉ consumer thiếu handoff mới chờ.
 
@@ -47,8 +47,8 @@ UI review PASS không thay DoD/security, CI hoặc UAT thiết bị thật khi A
 ## Khối thêm vào Task Spec UI
 
 ```markdown
-- Role ID: <product-design | web | ios | reviewer-uiux | reviewer-dod + reviewer-uiux>
-- File role: <docs/agents/roles/...md; liệt kê role được gộp>
+- Role ID: <product-design | web | ios | reviewer-uiux | dod+ux | dod+sec+ux>
+- File role: <docs/agents/roles/reviewer-merged.md khi gộp review; hoặc một file role đơn>
 - Bề mặt / chế độ: <marketing | consumer web | portal | iOS> / <thiết kế | code | review>
 - Skills cần nạp: <tên + playbook/mục đích; chỉ những skill liên quan>
 - Mẫu thiết kế chuẩn: <artifact + phiên bản/SHA, hoặc mẫu hiện có cho sửa nhỏ>
