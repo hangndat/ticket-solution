@@ -27,7 +27,7 @@ test('K-STAFF-01: staff workspace exposes exactly three tab segments', () => {
     'staff-history',
   ]);
   assert.equal(Object.keys(STAFF_TAB_TITLES).length, 3);
-  assert.equal(STAFF_TAB_TITLES.scan, 'Scan');
+  assert.equal(STAFF_TAB_TITLES.scan, 'Quét vé');
 });
 
 test('K-STAFF-01: staff workspace hides attendee tabs until MeEvents resolves', () => {
