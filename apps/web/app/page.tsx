@@ -4,6 +4,7 @@ import { HeroWordmark } from '../src/branding/hero-wordmark';
 import { loginHref } from '../src/oidc/login-href';
 import { authNoticeFromParam } from '../src/oidc/auth-notice';
 import { loadOwnerWallet, ownedTicketCountByEventId } from '../src/owner-ticket';
+import { staffDeniedNotice } from '../src/nav/staff-denied-copy';
 import { SiteNav } from '../src/site-chrome';
 import {
   PUBLIC_EVENT_COPY,
@@ -48,27 +49,6 @@ async function loadHomeCatalog(): Promise<HomeCatalog> {
   return { status: 'empty' };
 }
 
-function staffDeniedCopy(notice: string | undefined): {
-  title: string;
-  detail: string;
-} | null {
-  if (notice === 'admin_denied') {
-    return {
-      title: 'Không đủ quyền quản trị',
-      detail:
-        'Tài khoản hiện tại không có quyền mở không gian quản trị sự kiện. Liên hệ chủ tổ chức nếu bạn cần quyền này.',
-    };
-  }
-  if (notice === 'gate_denied') {
-    return {
-      title: 'Không đủ quyền cổng',
-      detail:
-        'Tài khoản hiện tại không được gán quyền check-in. Liên hệ chủ tổ chức nếu bạn cần vào cổng.',
-    };
-  }
-  return null;
-}
-
 export default async function Home({ searchParams }: Props) {
   const params = await searchParams;
   const catalog = await loadHomeCatalog();
@@ -77,7 +57,7 @@ export default async function Home({ searchParams }: Props) {
     wallet.status === 'ok'
       ? ownedTicketCountByEventId(wallet.tickets)
       : undefined;
-  const denied = staffDeniedCopy(params.notice?.trim());
+  const denied = staffDeniedNotice(params.notice?.trim());
   const authNotice = authNoticeFromParam(params.notice?.trim(), {
     retryHref: loginHref('/'),
   });
@@ -121,6 +101,25 @@ export default async function Home({ searchParams }: Props) {
         >
           <h2>{denied.title}</h2>
           <p>{denied.detail}</p>
+          <p className="home-cta auth-buttons">
+            {denied.portalAdminHref ? (
+              <a
+                className="button"
+                href={denied.portalAdminHref}
+                data-testid="staff-denied-portal-cta"
+              >
+                Mở portal quản trị
+              </a>
+            ) : null}
+            {params.notice?.trim() === 'gate_denied' ? (
+              <Link className="button-link button-link-secondary" href="/wallet">
+                Vé của tôi
+              </Link>
+            ) : null}
+            <Link className="button-link button-link-secondary" href="/">
+              Ở lại trang chủ
+            </Link>
+          </p>
         </aside>
       ) : null}
 

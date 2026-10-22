@@ -58,7 +58,8 @@ const BY_CODE: Record<
   [ISSUE_ERROR_CODES.CODE_INVALID]: {
     kind: 'invalid',
     title: 'Mã không hợp lệ',
-    detail: 'Không tìm thấy mã cho sự kiện đã chọn.',
+    detail:
+      'Không tìm thấy mã cho sự kiện đã chọn. Kiểm tra lại mã (không thêm khoảng trắng), hoặc quay về trang sự kiện để lấy liên kết đổi mã đúng.',
     retryable: false,
   },
   [RESOLVE_ERROR_CODES.RESOLVE_DISABLED]: {
@@ -83,7 +84,8 @@ const BY_CODE: Record<
   [RESOLVE_ERROR_CODES.RATE_LIMITED]: {
     kind: 'denied',
     title: 'Thử lại sau',
-    detail: 'Quá nhiều lần tra mã. Đợi vài phút rồi thử lại.',
+    detail:
+      'Quá nhiều lần tra mã. Đợi vài phút, rồi nhập mã và bấm «Tiếp tục» lại.',
     retryable: true,
   },
   [ISSUE_ERROR_CODES.EVENT_CLOSED]: {
@@ -107,7 +109,8 @@ const BY_CODE: Record<
   [ISSUE_ERROR_CODES.EMAIL_NOT_VERIFIED]: {
     kind: 'auth',
     title: 'Cần xác minh email',
-    detail: 'Xác minh email trên tài khoản trước khi đổi mã lấy vé.',
+    detail:
+      'Xác minh email trong mục Tài khoản, sau đó quay lại trang Đổi mã.',
     retryable: false,
   },
   [ISSUE_ERROR_CODES.IDEMPOTENCY_CONFLICT]: {
@@ -150,7 +153,8 @@ const BY_CODE: Record<
   [FORM_ERROR_CODES.TERMS_REQUIRED]: {
     kind: 'denied',
     title: 'Cần đồng ý điều khoản',
-    detail: 'Phải chấp nhận điều khoản trước khi đổi mã.',
+    detail:
+      'Đánh dấu ô đồng ý điều khoản sự kiện, rồi bấm «Đổi mã lấy vé» lại.',
     retryable: false,
   },
   [FORM_ERROR_CODES.FORM_REQUIRED]: {
@@ -162,7 +166,8 @@ const BY_CODE: Record<
   [FORM_ERROR_CODES.FORM_INVALID]: {
     kind: 'denied',
     title: 'Biểu mẫu chưa hợp lệ',
-    detail: 'Một hoặc nhiều trường chưa đạt yêu cầu. Kiểm tra lại các mục đánh dấu.',
+    detail:
+      'Một hoặc nhiều trường chưa đạt yêu cầu. Sửa các mục được đánh dấu đỏ rồi gửi lại.',
     retryable: false,
   },
   [FORM_ERROR_CODES.PENDING_EXPIRED]: {
