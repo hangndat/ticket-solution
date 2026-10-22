@@ -125,7 +125,7 @@ export function ProductPreviewFrame({ labels, className }: ProductPreviewFramePr
                   </div>
                   <div className="grid grid-cols-2 gap-2.5">
                     <article className="flex flex-col overflow-hidden rounded-md border border-line bg-white shadow-sm">
-                      <div className="h-[52px] bg-gradient-to-br from-indigo-900 to-rose-700" />
+                      <div className="h-[52px] bg-gradient-to-br from-focus to-signal" />
                       <div className="flex flex-col gap-0.5 p-2 text-[0.68rem] text-muted">
                         <span className="text-[0.62rem] font-semibold text-admit">{labels.ticketUnused}</span>
                         <strong className="text-[0.78rem] text-ink">MFest</strong>
@@ -136,7 +136,7 @@ export function ProductPreviewFrame({ labels, className }: ProductPreviewFramePr
                       </div>
                     </article>
                     <article className="flex flex-col overflow-hidden rounded-md border border-line bg-white shadow-sm">
-                      <div className="h-[52px] bg-gradient-to-br from-teal-700 to-green-500" />
+                      <div className="h-[52px] bg-gradient-to-br from-admit to-[color-mix(in_srgb,var(--color-admit)_55%,var(--color-focus))]" />
                       <div className="flex flex-col gap-0.5 p-2 text-[0.68rem] text-muted">
                         <span className="text-[0.62rem] font-semibold text-admit">{labels.ticketUnused}</span>
                         <strong className="text-[0.78rem] text-ink">{labels.eventRiver}</strong>

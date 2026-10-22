@@ -1,0 +1,36 @@
+{
+  "label": "main-a64dcbfe",
+  "route": {
+    "id": "marketing-en",
+    "path": "/marketing/en",
+    "host": null
+  },
+  "runs": 3,
+  "lighthouse": "13.5.0",
+  "median": {
+    "performance": 78,
+    "accessibility": 97,
+    "bestPractices": 100,
+    "seo": 69
+  },
+  "scores": [
+    {
+      "performance": 77,
+      "accessibility": 97,
+      "bestPractices": 100,
+      "seo": 69
+    },
+    {
+      "performance": 78,
+      "accessibility": 97,
+      "bestPractices": 100,
+      "seo": 69
+    },
+    {
+      "performance": 78,
+      "accessibility": 97,
+      "bestPractices": 100,
+      "seo": 69
+    }
+  ]
+}
