@@ -24,7 +24,8 @@ export default async function MarketingLayout({
       <MarketingJsonLd locale={locale} />
       <MarketingAnalyticsClient />
       {/* Hide product shell footer when marketing chrome is present */}
-      <style>{`body:has([data-testid="marketing-surface"]) > .footer{display:none}`}</style>
+      <style>{`body:has([data-testid="marketing-surface"]) > .footer{display:none}
+body:has([data-testid="marketing-surface"]) > .demo-data-strip{display:none}`}</style>
       {children}
     </>
   );

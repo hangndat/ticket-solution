@@ -18,4 +18,13 @@ test('marketing uplift CSS reserves layout for locale + mobile clip', () => {
   assert.match(css, /scrollbar-gutter:\s*stable/);
   assert.match(css, /overflow-x:\s*clip/);
   assert.match(css, /\.mkt-locale a\[aria-current="true"\]/);
+  assert.match(css, /\.mkt-nav-menu-toggle[\s\S]*justify-content:\s*center/);
+  assert.match(css, /\.mkt-nav-desktop-only/);
+  assert.match(css, /\.mkt-nav-primary-short/);
+});
+
+test('attendee uplift CSS centers mobile nav menu toggle', () => {
+  const css = readFileSync(join(WEB_ROOT, 'app/attendee-uplift.css'), 'utf8');
+  assert.match(css, /\.nav-menu-toggle[\s\S]*justify-content:\s*center/);
+  assert.match(css, /text-wrap:\s*balance/);
 });

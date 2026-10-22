@@ -7,5 +7,11 @@ export function DemoAttendeeStrip({
   env?: NodeJS.ProcessEnv;
 }) {
   if (!isDemoDataStripEnabled(env)) return null;
-  return <DemoDataBanner />;
+  return (
+    <DemoDataBanner>
+      <strong>Dữ liệu mô phỏng</strong>
+      <span aria-hidden="true"> · </span>
+      <span className="demo-data-strip__meta">app.vemoki.com · PD 2026-10-22</span>
+    </DemoDataBanner>
+  );
 }

@@ -238,7 +238,7 @@ export function SiteNav({ trailing }: { trailing?: ReactNode }) {
   return (
     <header className="site-header" data-testid="site-header">
       <nav
-        className="top-nav site-nav"
+        className="top-nav site-nav site-nav__bar"
         aria-label="Điều hướng chính"
         data-testid="site-nav"
       >
