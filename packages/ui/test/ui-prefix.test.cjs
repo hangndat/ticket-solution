@@ -9,6 +9,11 @@ const repoRoot = path.resolve(__dirname, '../../..');
 const uiSrc = path.join(repoRoot, 'packages/ui/src');
 const webApp = path.join(repoRoot, 'apps/web/app');
 const webSrc = path.join(repoRoot, 'apps/web/src');
+const globalsCssPath = path.join(webApp, 'globals.css');
+const vemokiThemePath = path.join(
+  repoRoot,
+  'packages/ui/src/generated/vemoki-theme.css',
+);
 
 const tailwindPostcssEntry = require.resolve('@tailwindcss/postcss', {
   paths: [path.join(repoRoot, 'apps/web')],
@@ -16,6 +21,60 @@ const tailwindPostcssEntry = require.resolve('@tailwindcss/postcss', {
 const twRequire = createRequire(tailwindPostcssEntry);
 const postcss = twRequire('postcss');
 const tailwindcss = twRequire('@tailwindcss/postcss');
+
+/** Variant utilities: `ui:<variant>:<util>` (literal in source for Tailwind @source). */
+const UI_VARIANT_CLASS_RE =
+  /ui:(?:[a-z]+(?:-\[[^\]]+\])?:)+[a-z][\w./%[\]-]*/gi;
+
+function walkTsFiles(dir, out = []) {
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      if (entry.name === 'generated') continue;
+      walkTsFiles(full, out);
+    } else if (/\.(ts|tsx)$/.test(entry.name)) {
+      out.push(full);
+    }
+  }
+  return out;
+}
+
+function collectUiVariantClassesFromSource() {
+  const classes = new Set();
+  for (const file of walkTsFiles(uiSrc)) {
+    const text = fs.readFileSync(file, 'utf8');
+    for (const match of text.matchAll(UI_VARIANT_CLASS_RE)) {
+      classes.add(match[0]);
+    }
+  }
+  return [...classes].sort();
+}
+
+function tailwindClassToEscapedSelector(className) {
+  return (
+    '.' +
+    className
+      .replace(/\\/g, '\\\\')
+      .replace(/:/g, '\\:')
+      .replace(/\[/g, '\\[')
+      .replace(/\]/g, '\\]')
+      .replace(/=/g, '\\=')
+      .replace(/\//g, '\\/')
+      .replace(/%/g, '\\%')
+  );
+}
+
+async function compileWebGlobalsCss() {
+  let input = fs.readFileSync(globalsCssPath, 'utf8');
+  input = input.replace(
+    "@import '@ticket/ui/vemoki-theme.css';",
+    `@import '${vemokiThemePath}';`,
+  );
+  const result = await postcss([tailwindcss()]).process(input, {
+    from: globalsCssPath,
+  });
+  return result.css;
+}
 
 describe('@ticket/ui withUiPrefix', () => {
   it('prefixes utilities as ui:<variant>:<util> after build', async () => {
@@ -35,36 +94,27 @@ describe('@ticket/ui withUiPrefix', () => {
 });
 
 describe('@ticket/ui Tailwind prefix(ui) compile', () => {
-  it('emits variant selectors with ui prefix first', async () => {
-    const themeCss = twRequire.resolve('tailwindcss/theme.css');
-    const utilitiesCss = twRequire.resolve('tailwindcss/utilities.css');
-    const vemokiTheme = path.join(
-      repoRoot,
-      'packages/ui/src/generated/vemoki-theme.css',
+  it('emits CSS selectors for every literal ui: variant class in packages/ui/src', async () => {
+    const variantClasses = collectUiVariantClassesFromSource();
+    assert.ok(
+      variantClasses.length >= 10,
+      `expected variant classes from primitives source, got ${variantClasses.length}`,
     );
-    const uiSourceGlob = path.join(repoRoot, 'packages/ui/src/**/*.{ts,tsx}');
-    const input = `@import '${vemokiTheme}';
-@layer theme, base, components, utilities;
-@import '${themeCss}' layer(theme) prefix(ui);
-@import '${utilitiesCss}' layer(utilities) prefix(ui);
-@source '${uiSourceGlob}';
-`;
-    const inputPath = path.join(repoRoot, 'apps/web/app/globals.css');
-    const result = await postcss([tailwindcss()]).process(input, {
-      from: inputPath,
-    });
-    const css = result.css;
-    for (const needle of [
-      '.ui\\:hover\\:',
-      '.ui\\:focus-visible\\:',
-      '.ui\\:disabled\\:',
-      '.ui\\:placeholder\\:',
-    ]) {
-      assert.ok(
-        css.includes(needle),
-        `expected compiled CSS to contain ${needle}`,
-      );
+
+    const css = await compileWebGlobalsCss();
+
+    const missing = [];
+    for (const cls of variantClasses) {
+      const needle = tailwindClassToEscapedSelector(cls);
+      if (!css.includes(needle)) {
+        missing.push(`${cls} (expected ${needle})`);
+      }
     }
+    assert.equal(
+      missing.length,
+      0,
+      `compiled globals.css missing variant rules:\n${missing.join('\n')}`,
+    );
   });
 });
 

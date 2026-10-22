@@ -1,0 +1,22 @@
+{
+  "baseUrl": "http://127.0.0.1:3000",
+  "primaryDefault": {
+    "opacity": "1",
+    "cursor": "pointer"
+  },
+  "primaryHover": {
+    "opacity": "0.95"
+  },
+  "emailFocus": {
+    "outlineWidth": "3px",
+    "boxShadow": "none"
+  },
+  "placeholder": {
+    "color": "rgb(11, 18, 32)"
+  },
+  "loadingSubmit": {
+    "opacity": "0.5",
+    "cursor": "pointer",
+    "ariaBusy": "true"
+  }
+}
