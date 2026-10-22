@@ -32,12 +32,43 @@
       "types": "./dist/primitives/card.d.ts",
       "default": "./dist/primitives/card.js"
     },
-    "./vemoki-theme.css": "./src/generated/vemoki-theme.css"
+    "./vemoki-theme.css": "./src/generated/vemoki-theme.css",
+    "./components/ui/sheet": {
+      "types": "./dist/components/ui/sheet.d.ts",
+      "default": "./dist/components/ui/sheet.js"
+    },
+    "./components/ui/dialog": {
+      "types": "./dist/components/ui/dialog.d.ts",
+      "default": "./dist/components/ui/dialog.js"
+    },
+    "./components/ui/tabs": {
+      "types": "./dist/components/ui/tabs.d.ts",
+      "default": "./dist/components/ui/tabs.js"
+    },
+    "./components/ui/dropdown-menu": {
+      "types": "./dist/components/ui/dropdown-menu.d.ts",
+      "default": "./dist/components/ui/dropdown-menu.js"
+    },
+    "./components/ui/popover": {
+      "types": "./dist/components/ui/popover.d.ts",
+      "default": "./dist/components/ui/popover.js"
+    },
+    "./components/ui/tooltip": {
+      "types": "./dist/components/ui/tooltip.d.ts",
+      "default": "./dist/components/ui/tooltip.js"
+    },
+    "./components/ui/sonner": {
+      "types": "./dist/components/ui/sonner.d.ts",
+      "default": "./dist/components/ui/sonner.js"
+    }
   },
   "dependencies": {
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
+    "lucide-react": "0.544.0",
     "motion": "12.23.24",
+    "radix-ui": "1.8.1",
+    "sonner": "2.0.8",
     "tailwind-merge": "3.3.1"
   },
   "peerDependencies": {
