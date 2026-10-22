@@ -131,12 +131,7 @@ export function RedeemForm({
     ticketTypeLabel: string;
   } | null>(null);
   const generationRef = useRef(0);
-
-  useEffect(() => {
-    return () => {
-      generationRef.current += 1;
-    };
-  }, []);
+  const loadedSlugPairRef = useRef<string | null>(null);
 
   const busy = pending || polling;
   const showDevScopeFields =
@@ -152,15 +147,18 @@ export function RedeemForm({
   );
 
   const loadSchema = useCallback(() => {
-    const generation = generationRef.current;
+    const generation = ++generationRef.current;
     const slugTenant = tenantSlug.trim();
     const slugEvent = eventSlug.trim();
+    const pairKey =
+      slugTenant && slugEvent ? `${slugTenant}\u0000${slugEvent}` : null;
     startTransition(async () => {
       setPublishedSchemaReady(false);
       setSchemaNotice('Đang tải biểu mẫu và điều khoản…');
       const result = await loadPublishedRedeemSchema(slugTenant, slugEvent);
       if (isStale(generation)) return;
       if (result.status === 'ok') {
+        if (pairKey) loadedSlugPairRef.current = pairKey;
         setPublishedSchemaReady(true);
         setFormDefinition(result.schema.form);
         setTermsVersion(result.schema.terms?.version ?? null);
@@ -202,12 +200,13 @@ export function RedeemForm({
     });
   }, [tenantSlug, eventSlug, isStale]);
 
-  const autoLoadedSlugRef = useRef(false);
   useEffect(() => {
     if (globalEntry || !productChrome) return;
-    if (!initialTenantSlug.trim() || !initialEventSlug.trim()) return;
-    if (autoLoadedSlugRef.current) return;
-    autoLoadedSlugRef.current = true;
+    const slugTenant = initialTenantSlug.trim();
+    const slugEvent = initialEventSlug.trim();
+    if (!slugTenant || !slugEvent) return;
+    const pairKey = `${slugTenant}\u0000${slugEvent}`;
+    if (loadedSlugPairRef.current === pairKey) return;
     loadSchema();
   }, [
     globalEntry,
