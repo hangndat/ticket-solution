@@ -1,11 +1,6 @@
 /*
- * Design system slice 0 — Tailwind v4 (theme + utilities only; no Preflight).
- * Live Pulse legacy: live-pulse-legacy.css in @layer components.
+ * Design system slice 0 — Tailwind v4 postcss pipeline (theme tokens only on slice 0).
+ * Live Pulse legacy rules unlayered — byte-identical cascade to main globals.css.
  */
-@layer theme, base, components, utilities;
-
-@import 'tailwindcss/theme.css' layer(theme);
-@import '@ticket/ui/vemoki-theme.css' layer(theme);
-@import 'tailwindcss/utilities.css' layer(utilities);
-
-@import './live-pulse-legacy.css' layer(components);
+@import '@ticket/ui/vemoki-theme.css';
+@import './live-pulse-legacy.css';
