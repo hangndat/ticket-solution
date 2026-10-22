@@ -63,6 +63,7 @@ jobs:
               - '.github/workflows/ci.yml'
               - '.github/actions/**'
               - 'packages/web-session/**'
+              - 'scripts/ui-budget*'
             portal:
               - 'apps/portal/**'
               - 'packages/web-session/**'
@@ -84,6 +85,7 @@ jobs:
               - '.npmrc'
               - '.github/workflows/ci.yml'
               - '.github/actions/**'
+              - 'scripts/ui-budget*'
             backend:
               - 'apps/api/**'
               - 'apps/worker/**'
@@ -167,6 +169,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
+      # UI budget ratchet (Epic #786) — fail sớm nếu CSS tay / literal tăng.
+      - run: node scripts/ui-budget.mjs --scope web
       - uses: ./.github/actions/setup-pnpm
       # typegen trước → routes.d.ts; turbo: web#build dependsOn typecheck (no race).
       - run: pnpm --filter @ticket/web run typegen
@@ -197,6 +201,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
+      # UI budget ratchet (Epic #786) — fail sớm nếu literal style / Pressable trần tăng.
+      - run: node scripts/ui-budget.mjs --scope mobile
       - uses: ./.github/actions/setup-pnpm
       - run: pnpm exec turbo run lint typecheck test build --filter=@ticket/mobile...
       - uses: ./.github/actions/save-turbo
