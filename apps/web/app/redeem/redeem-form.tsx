@@ -62,6 +62,7 @@ import { loginHref } from '../../src/oidc/login-href';
 import { RedeemTermsConsent } from '../../src/redeem/redeem-terms-consent';
 import { liveRegionForStatus } from '../../src/ui/live-region';
 import { SurfaceState } from '../../src/ui/surface-state';
+import redeemStyles from './redeem-surface.module.css';
 
 const REDEEM_LOGIN_HREF = loginHref('/redeem');
 
@@ -361,6 +362,15 @@ export function RedeemForm({
     setEventId('');
     setSchemaNotice(null);
     setPublishedSchemaReady(false);
+  }
+
+  function resetRedeemAttempt() {
+    setUx(null);
+    setCode('');
+    setTicket(null);
+    if (singleCodeFlow) {
+      resetGlobalResolveSession();
+    }
   }
 
   function onGlobalResolve() {
@@ -676,8 +686,41 @@ export function RedeemForm({
 
   const statusClass = useMemo(() => {
     if (!ux) return '';
-    return `redeem-status redeem-status--${ux.kind}`;
-  }, [ux]);
+    const base = `redeem-status redeem-status--${ux.kind}`;
+    if (!productChrome) return base;
+    const panel = redeemStyles.outcomePanel;
+    if (ux.kind === 'success') {
+      return `${base} ${panel} ${redeemStyles.outcomeSuccess}`;
+    }
+    const errorKinds = new Set([
+      'error',
+      'invalid',
+      'exhausted',
+      'used',
+      'closed',
+      'denied',
+      'conflict',
+      'stale',
+      'timeout',
+      'auth',
+    ]);
+    if (errorKinds.has(ux.kind)) {
+      return `${base} ${panel} ${redeemStyles.outcomeError}`;
+    }
+    return `${base} ${panel}`;
+  }, [ux, productChrome]);
+
+  const productErrorOutcome = Boolean(
+    productChrome &&
+      ux &&
+      (ux.kind === 'error' ||
+        ux.kind === 'invalid' ||
+        ux.kind === 'exhausted' ||
+        ux.kind === 'used' ||
+        ux.kind === 'closed' ||
+        ux.kind === 'denied' ||
+        ux.kind === 'conflict'),
+  );
 
   const statusLive = useMemo(
     () => (ux ? liveRegionForStatus(ux.kind) : null),
@@ -1157,6 +1200,16 @@ export function RedeemForm({
           aria-atomic={statusLive.ariaAtomic}
           data-testid={`redeem-ux-${ux.kind}`}
         >
+          {productChrome && ux.kind === 'success' ? (
+            <div className={redeemStyles.successRing} aria-hidden="true">
+              ✓
+            </div>
+          ) : null}
+          {productChrome && productErrorOutcome ? (
+            <div className={redeemStyles.errorRing} aria-hidden="true">
+              !
+            </div>
+          ) : null}
           <h3>{ux.title}</h3>
           <p>{ux.detail}</p>
           {ux.kind === 'unknown' && canRepoll ? (
@@ -1178,7 +1231,23 @@ export function RedeemForm({
               ) : null}
             </p>
           ) : null}
-          {ux.retryable &&
+          {productErrorOutcome ? (
+            <div className={redeemStyles.outcomeActions}>
+              <button
+                type="button"
+                className="button"
+                onClick={resetRedeemAttempt}
+                disabled={busy}
+              >
+                Thử mã khác
+              </button>
+              <Link className="button btn-primary" href="/wallet">
+                Vé của tôi
+              </Link>
+            </div>
+          ) : null}
+          {!productChrome &&
+          ux.retryable &&
           ux.kind !== 'unknown' &&
           ux.kind !== 'auth' &&
           ux.kind !== 'verifying' &&
@@ -1209,7 +1278,8 @@ export function RedeemForm({
               </Link>
             </p>
           ) : null}
-          {(ux.kind === 'exhausted' ||
+          {!productErrorOutcome &&
+          (ux.kind === 'exhausted' ||
             ux.kind === 'used' ||
             ux.kind === 'closed' ||
             ux.kind === 'invalid') &&
