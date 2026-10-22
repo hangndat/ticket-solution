@@ -22,9 +22,14 @@ test('marketing mobile nav wires menu a11y (Escape, trap, aria)', () => {
   assert.match(src, /menuToggleRef\.current\?\.focus\(\)/);
 });
 
-test('marketing uplift CSS hides desktop links and shows toggle @767', () => {
-  const css = readFileSync(join(root, 'app/marketing-uplift.css'), 'utf8');
-  assert.match(css, /@media \(max-width: 767px\)/);
-  assert.match(css, /\.mkt-header--sales \.mkt-nav-links/);
-  assert.match(css, /\.mkt-header--sales \.mkt-nav-menu-toggle/);
+test('marketing sales chrome wires desktop links and mobile menu toggle (SSR markers)', () => {
+  const chrome = readFileSync(join(root, 'src/marketing/chrome.tsx'), 'utf8');
+  const menu = readFileSync(
+    join(root, 'src/marketing/marketing-mobile-nav-menu.tsx'),
+    'utf8',
+  );
+  assert.match(chrome, /data-testid="mkt-header"/);
+  assert.match(chrome, /className="mkt-nav-links"/);
+  assert.match(chrome, /MarketingMobileNavMenu/);
+  assert.match(menu, /data-testid="mkt-nav-menu-toggle"/);
 });
