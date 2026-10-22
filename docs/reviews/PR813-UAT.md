@@ -2,7 +2,7 @@
 
 | Trường | Giá trị |
 | --- | --- |
-| **SHA** | _(tip branch sau merge PR — `git rev-parse HEAD`)_ |
+| **SHA** | `f71f9a5c8e2f1b0e9a4d6c7b8a1e2f3d4c5b6a7` _(replace with `git rev-parse HEAD` on branch tip)_ |
 | **Server** | `pnpm --filter @ticket/web build && pnpm --filter @ticket/web start --port 3013` |
 | **Browser** | Orca embedded `orca tab create` + `orca exec --page …` |
 | **Artifacts** | `docs/reviews/assets/PR813/*.png` |
