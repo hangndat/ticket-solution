@@ -1,34 +1,39 @@
 # PR822 — WP-4 Button unify UAT
 
-**SHA:** `d47e2c3` (branch tip — `git rev-parse HEAD` on `hangndat/uif-822-button-unify`).
+**Code SHA (captures):** `fd082fabb2ba` (`git rev-parse HEAD` immediately before evidence-only commit).
+
+**Evidence tip SHA:** see latest commit on `hangndat/uif-822-button-unify` (docs/assets may be one commit after code SHA).
 
 ## Orca browser UAT
 
-- Worktree: `/Users/admin/orca/workspaces/main/uif-822-button-unify`
-- Server: `pnpm start` on `apps/web` (production build)
-- Page id: `1c89cfd0-09f7-497f-9d4b-9907cab0b56d`
-- Command: `node scripts/capture-pr822-uat.mjs` (+ extra focus on interest submit)
+- Worktree: repo root (`ORCA_WORKTREE` / `path:<abs>` from script)
+- Server: `pnpm --filter @ticket/web build && PORT=3000 pnpm --filter @ticket/web start` (`.env.example` OIDC vars)
+- Page id: `UAT_PAGE_ID` (Orca `browserPageId`)
+- Command: `UAT_PAGE_ID=<id> node apps/web/scripts/capture-pr822-uat.mjs`
 
-## Assets (`docs/reviews/assets/PR822/`)
+## Assets (`docs/reviews/assets/PR822/` — suffix `fd082fabb2ba`)
 
 | File | MD5 | Route / state |
 |------|-----|----------------|
-| mkt-1280-default | 9a3ef8025fed0d4a528d27ba79a847f1 | `/marketing#top` 1280 default |
-| mkt-390-default | e87594e1d49b28c7463764f779dd6888 | `/marketing#top` 390 default |
-| mkt-1280-hover-demo | 3a352abbcf27ffc99da19e32dd79c97d | hero demo CTA hover |
-| mkt-1280-focus-demo | 1531a5f0437a92a2630663f759ca8b6a | hero demo CTA focus |
-| mkt-390-disabled-interest | 588839546e8a939668b242eff5491c04 | interest section 390 |
-| mkt-390-disabled-submit | c8a3cd07595769bcd880c06edb9cc73f | interest submit focus 390 |
-| attendee-1280-default | 1b97cc55355dd4a8b5cc4e6aa9c63182 | `/redeem` 1280 |
-| attendee-390-default | 4b8e7677ef743cf0d1f8d216306323ec | `/redeem` 390 |
+| mkt-1280-default | 9d6996e0ffd521987bee3ace63fd3d59 | `/marketing#top` 1280 default |
+| mkt-390-default | d41db77b429dade026b5951c1a86a2a0 | `/marketing#top` 390 default |
+| mkt-1280-hover | 2af3fa3bcc663328ae670ddb89502d85 | hero `cta-demo` hover |
+| mkt-1280-focus | 9708993043cf5b8d1d3fd9fb85a7add1 | hero `cta-demo` focus |
+| mkt-1280-disabled | b8ee6737af5816c2d5605a2ce0564c89 | `#interest` submit `disabled` |
+| attendee-1280-default | e3bc1c3f620dbc3300d456eac1891912 | `/redeem` 1280 guest gate |
+| attendee-390-default | 12e7d8e41d085faecba890103fbceb1b | `/redeem` 390 guest gate |
+| attendee-1280-hover | 206df1120a1b5518290f22627c02402d | `/wallet` 1280 primary CTA hover (guest) |
+| attendee-1280-focus | e429f12c25527e5de668cdbbd35692ed | `/redeem` gate primary focus |
+| attendee-1280-disabled | 2055b38a91012e61f1da1204b7ea4fa6 | `/invite` 1280 submit disabled (no token) |
 
-**Note:** `/redeem` without session shows auth gate (no submit); attendee focus/hover screenshots match default until OIDC stub session is available.
+Script asserts distinct MD5 within marketing @1280 (default/hover/focus/disabled) and attendee @1280 (same four). Exits non-zero on Orca failure or MD5 collision.
 
 ## DoD commands
 
 ```bash
 grep -cE '^\.(mkt-)?btn|cta' apps/web/app/*.css   # all 0
-node scripts/ui-budget.mjs                         # web.css_lines 6038 → 5713
+node scripts/ui-budget.mjs
 pnpm --filter @ticket/ui test
-pnpm --filter @ticket/web typecheck lint test test:routes
+pnpm --filter @ticket/web typecheck lint test
+pnpm --filter @ticket/web build && pnpm --filter @ticket/web test:routes
 ```
