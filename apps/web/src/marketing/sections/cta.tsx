@@ -3,6 +3,15 @@ import Link from 'next/link';
 import { t } from '../copy';
 import { InterestFormIsland } from '../interest-form-island';
 import { salesHref } from '../links';
+import {
+  marketingDemoBannerPaper,
+  marketingH2,
+  marketingInterestGrid,
+  marketingInterestH2,
+  marketingLead,
+  marketingSection,
+  marketingWrap,
+} from '../marketing-surface';
 import type { MarketingSectionProps } from './types';
 
 export function CtaSection({ locale, demo }: MarketingSectionProps) {
@@ -10,16 +19,16 @@ export function CtaSection({ locale, demo }: MarketingSectionProps) {
     <>
       <section
         id="demo"
-        className="mkt-section mkt-section--paper-alt"
+        className={marketingSection('paperAlt')}
         aria-labelledby="demo-title"
         data-analytics-section="demo"
       >
-        <div className="mkt-wrap">
-          <h2 id="demo-title" className="mkt-display mkt-h2">
+        <div className={marketingWrap}>
+          <h2 id="demo-title" className={marketingH2}>
             {t(locale, 'demo.title')}
           </h2>
-          <p className="mkt-lead">{t(locale, 'demo.lead')}</p>
-          <div className="mkt-demo-banner" role="status">
+          <p className={marketingLead}>{t(locale, 'demo.lead')}</p>
+          <div className={marketingDemoBannerPaper} role="status">
             {t(locale, 'demo.banner')}
           </div>
           <p className="mt-4">
@@ -32,27 +41,27 @@ export function CtaSection({ locale, demo }: MarketingSectionProps) {
 
       <section
         id="interest"
-        className="mkt-section mkt-section--interest"
+        className={marketingSection('interest')}
         aria-labelledby="interest-title"
         data-analytics-section="conversion"
       >
-        <div className="mkt-wrap mkt-interest-grid">
+        <div className={`${marketingWrap} ${marketingInterestGrid}`}>
           <div>
-            <h2 id="interest-title" className="mkt-display mkt-h2">
+            <h2 id="interest-title" className={marketingInterestH2}>
               {t(locale, 'interest.title')}
             </h2>
-            <p className="mkt-lead">{t(locale, 'interest.lead')}</p>
+            <p className={marketingLead}>{t(locale, 'interest.lead')}</p>
           </div>
           <InterestFormIsland locale={locale} />
         </div>
       </section>
 
       <section
-        className="mkt-section mkt-section--paper"
+        className={marketingSection('paper')}
         aria-labelledby="cta-repeat-title"
       >
-        <div className="mkt-wrap">
-          <h2 id="cta-repeat-title" className="mkt-display mkt-h2">
+        <div className={marketingWrap}>
+          <h2 id="cta-repeat-title" className={marketingH2}>
             {t(locale, 'cta.repeat.title')}
           </h2>
           <div className="mt-7 flex flex-wrap items-center gap-3">

@@ -122,7 +122,6 @@ function linesForDeadRules(cssPath, deadSet) {
 
 const defaultCss = [
   'app/live-pulse-legacy.css',
-  'app/marketing-uplift.css',
   'app/attendee-uplift.css',
 ];
 

@@ -23,7 +23,7 @@ describe('marketing bento section', () => {
     const html = renderBentoHtml('vi');
     assert.match(html, /id="features"/);
     assert.match(html, /id="bento-title"/);
-    assert.equal(html.match(/mkt-bento-item/g)?.length, 7);
+    assert.equal(html.match(/data-testid="marketing-bento-item"/g)?.length, 7);
     assert.match(html, /bento-invite\.webp/);
     assert.doesNotMatch(html, /motion\/react/);
   });
@@ -36,8 +36,7 @@ describe('marketing bento section', () => {
   it('SSR ships static bento cards (reduced-motion-safe baseline without motion island)', () => {
     const html = renderBentoHtml('vi');
     assert.match(html, /data-testid="marketing-bento"/);
-    assert.match(html, /mkt-bento-grid/);
-    assert.equal(html.match(/mkt-bento-item/g)?.length, 7);
+    assert.equal(html.match(/data-testid="marketing-bento-item"/g)?.length, 7);
     assert.doesNotMatch(html, /motion\/react/);
   });
 
@@ -53,7 +52,7 @@ describe('marketing bento section', () => {
 
   it('scroll reveal stays CSS-only (no client motion island in SSR)', () => {
     const html = renderBentoHtml('vi');
-    assert.match(html, /mkt-bento-grid/);
+    assert.match(html, /data-testid="marketing-bento"/);
     assert.doesNotMatch(html, /motion\/react/);
   });
 });
