@@ -50,7 +50,7 @@ function EventErrorShell({
   detail: string;
 }) {
   return (
-    <main id="main" className="container shell event-page">
+    <main id="main" className="lp-container shell event-page">
       <SiteNav />
       <SurfaceState
         kind="error"
@@ -119,7 +119,7 @@ export default async function EventPage({ params }: Props) {
         data-testid="event-published"
       >
         <SiteNav />
-        <div className="container event-detail-body">
+        <div className="lp-container event-detail-body">
           <Link className="event-detail-back" href="/">
             <span aria-hidden="true">‹</span> Tất cả sự kiện
           </Link>

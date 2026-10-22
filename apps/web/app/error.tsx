@@ -4,7 +4,7 @@ import { SurfaceState } from '../src/ui/surface-state';
 
 export default function ErrorBoundary({ reset }: { reset: () => void }) {
   return (
-    <main id="main" className="container shell">
+    <main id="main" className="lp-container shell">
       <p className="eyebrow">Lỗi</p>
       <h1>Không tải được trang này.</h1>
       <p className="intro">
