@@ -209,21 +209,16 @@ test('production routes isolate tenant content and reject unknown pairs', async 
     assert.ok(!claimHtml.includes('Keycloak'));
     assert.ok(!claimHtml.includes('Không tải được trang này'));
 
-    // O02: anonymous /gate soft-redirects (proxy 307) to /auth?next=/gate.
+    // D-6: retired web gate — /gate and /gate/* → / (308).
     const gateRaw = await fetch(base + '/gate', { redirect: 'manual' });
-    assert.equal(gateRaw.status, 307, 'anonymous /gate should HTTP 307');
+    assert.equal(gateRaw.status, 308, 'GET /gate should HTTP 308');
     const gateLoc = gateRaw.headers.get('location') ?? '';
-    assert.ok(gateLoc.includes('/auth'), `Location ${gateLoc}`);
     assert.ok(
-      gateLoc.includes('next=') && gateLoc.includes('gate'),
-      `next=/gate missing in ${gateLoc}`,
+      gateLoc.endsWith('/') || gateLoc.endsWith('/?') || /\/$/.test(gateLoc.replace(/\?.*$/, '')),
+      `Location should be home: ${gateLoc}`,
     );
-    const gateFollow = await fetch(base + '/gate');
-    assert.equal(gateFollow.status, 200);
-    const gateHtml = await gateFollow.text();
-    assert.ok(gateHtml.includes('Đăng nhập') || gateHtml.includes('Cần đăng nhập'));
-    assert.ok(!gateHtml.includes('data-testid="gate-offline-shell"'));
-    assert.ok(!gateHtml.includes('gate-confirm-submit'));
+    const gateNested = await fetch(base + '/gate/scan', { redirect: 'manual' });
+    assert.equal(gateNested.status, 308, 'GET /gate/* should HTTP 308');
 
     // Issue #1021: bogus Server Action probes → 400 at proxy (no use server in web).
     for (const actionId of ['x', 'action', '0', '1']) {
@@ -234,38 +229,6 @@ test('production routes isolate tenant content and reject unknown pairs', async 
       });
       assert.equal(probe.status, 400, `next-action=${actionId}`);
     }
-
-    // Gate BFF: Origin missing must fail-closed before OIDC/upstream (admin pattern).
-    const gateCsrfBlocked = await fetch(base + '/api/bff/gate/confirm', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        tenantId: '11111111-1111-4111-8111-111111111111',
-        eventId: '22222222-2222-4222-8222-222222222222',
-        reservationId: '33333333-3333-4333-8333-333333333333',
-        staffSessionId: '44444444-4444-4444-8444-444444444444',
-        token: 'hold-token',
-      }),
-    });
-    assert.equal(gateCsrfBlocked.status, 403);
-    assert.equal((await gateCsrfBlocked.json()).code, 'CSRF_ORIGIN_REQUIRED');
-
-    const gateBff = await fetch(base + '/api/bff/gate/confirm', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Origin: base,
-      },
-      body: JSON.stringify({
-        tenantId: '11111111-1111-4111-8111-111111111111',
-        eventId: '22222222-2222-4222-8222-222222222222',
-        reservationId: '33333333-3333-4333-8333-333333333333',
-        staffSessionId: '44444444-4444-4444-8444-444444444444',
-        token: 'hold-token',
-      }),
-    });
-    assert.equal(gateBff.status, 503);
-    assert.equal((await gateBff.json()).code, 'OIDC_MISCONFIGURED');
 
     // Redeem BFF: CSRF/Origin fail-closed before OIDC.
     const redeemCsrfBlocked = await fetch(base + '/api/bff/redeem', {
