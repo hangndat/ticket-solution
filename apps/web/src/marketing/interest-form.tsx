@@ -1,5 +1,12 @@
 'use client';
 
+import {
+  Alert,
+  Button,
+  FieldError,
+  Input,
+  Label,
+} from '@ticket/ui';
 import Link from 'next/link';
 import { useId, useState, type FormEvent } from 'react';
 import { t, type CopyKey } from './copy';
@@ -42,6 +49,10 @@ export function InterestForm({ locale }: { locale: MarketingLocale }) {
       note: fd.get('note'),
       consent: fd.get('consent'),
       website: fd.get('website'),
+      org_kind: fd.get('org_kind'),
+      events_per_year: fd.get('events_per_year'),
+      typical_scale: fd.get('typical_scale'),
+      locale,
     };
     const result = validateInterest(input);
     if (!result.ok) {
@@ -77,7 +88,7 @@ export function InterestForm({ locale }: { locale: MarketingLocale }) {
         setState('error');
         return;
       }
-      trackLeadSubmitted(result.value.role);
+      trackLeadSubmitted();
       setState('success');
     } catch {
       setBanner(t(locale, 'interest.error.generic'));
@@ -87,15 +98,14 @@ export function InterestForm({ locale }: { locale: MarketingLocale }) {
 
   if (state === 'success') {
     return (
-      <div
+      <Alert
         className="mkt-banner mkt-banner-success"
-        role="status"
-        aria-live="polite"
+        variant="default"
         data-testid="interest-success"
       >
         <strong>{t(locale, 'interest.success.title')}</strong>
         <p>{t(locale, 'interest.success.body')}</p>
-      </div>
+      </Alert>
     );
   }
 
@@ -111,100 +121,89 @@ export function InterestForm({ locale }: { locale: MarketingLocale }) {
       aria-busy={busy}
     >
       {banner ? (
-        <div className="mkt-banner mkt-banner-error" role="alert">
+        <Alert className="mkt-banner mkt-banner-error" variant="destructive">
           <p>{banner}</p>
-          <button
+          <Button
             type="submit"
+            variant="secondary"
             className="mkt-btn mkt-btn-secondary"
             disabled={busy}
           >
             {t(locale, 'interest.retry')}
-          </button>
-        </div>
+          </Button>
+        </Alert>
       ) : null}
 
-      {/* Honeypot */}
       <label className="mkt-hp" aria-hidden="true">
         Website
-        <input
-          tabIndex={-1}
-          autoComplete="off"
-          name="website"
-          type="text"
-        />
+        <input tabIndex={-1} autoComplete="off" name="website" type="text" />
       </label>
 
-      <label>
-        {t(locale, 'interest.name')}
-        <input
+      <div className="mkt-form-field">
+        <Label htmlFor={`${formId}-name`}>{t(locale, 'interest.name')}</Label>
+        <Input
           id={`${formId}-name`}
           name="name"
           autoComplete="name"
           required
           disabled={busy}
-          aria-invalid={fieldErrors.name ? true : undefined}
-          aria-describedby={
-            fieldErrors.name ? `${formId}-err-name` : undefined
-          }
+          error={Boolean(fieldErrors.name)}
+          className="mkt-input"
+          aria-describedby={fieldErrors.name ? `${formId}-err-name` : undefined}
         />
-        {fieldErrors.name ? (
-          <span className="mkt-field-error" id={`${formId}-err-name`}>
-            {fieldErrors.name}
-          </span>
-        ) : null}
-      </label>
+        <FieldError id={`${formId}-err-name`} className="mkt-field-error">
+          {fieldErrors.name}
+        </FieldError>
+      </div>
 
-      <label>
-        {t(locale, 'interest.email')}
-        <input
+      <div className="mkt-form-field">
+        <Label htmlFor={`${formId}-email`}>{t(locale, 'interest.email')}</Label>
+        <Input
           id={`${formId}-email`}
           name="email"
           type="email"
           autoComplete="email"
           required
           disabled={busy}
-          aria-invalid={
-            fieldErrors.email || fieldErrors.emailInvalid ? true : undefined
-          }
+          error={Boolean(fieldErrors.email || fieldErrors.emailInvalid)}
+          className="mkt-input"
           aria-describedby={
             fieldErrors.email || fieldErrors.emailInvalid
               ? `${formId}-err-email`
               : undefined
           }
         />
-        {fieldErrors.email || fieldErrors.emailInvalid ? (
-          <span className="mkt-field-error" id={`${formId}-err-email`}>
-            {fieldErrors.email || fieldErrors.emailInvalid}
-          </span>
-        ) : null}
-      </label>
+        <FieldError id={`${formId}-err-email`} className="mkt-field-error">
+          {fieldErrors.email || fieldErrors.emailInvalid}
+        </FieldError>
+      </div>
 
-      <label>
-        {t(locale, 'interest.org')}
-        <input
+      <div className="mkt-form-field">
+        <Label htmlFor={`${formId}-org`}>{t(locale, 'interest.org')}</Label>
+        <Input
           id={`${formId}-org`}
           name="org"
           autoComplete="organization"
           required
           disabled={busy}
-          aria-invalid={fieldErrors.org ? true : undefined}
+          error={Boolean(fieldErrors.org)}
+          className="mkt-input"
           aria-describedby={fieldErrors.org ? `${formId}-err-org` : undefined}
         />
-        {fieldErrors.org ? (
-          <span className="mkt-field-error" id={`${formId}-err-org`}>
-            {fieldErrors.org}
-          </span>
-        ) : null}
-      </label>
+        <FieldError id={`${formId}-err-org`} className="mkt-field-error">
+          {fieldErrors.org}
+        </FieldError>
+      </div>
 
-      <label>
-        {t(locale, 'interest.role')}
+      <div className="mkt-form-field">
+        <Label htmlFor={`${formId}-role`}>{t(locale, 'interest.role')}</Label>
         <select
           id={`${formId}-role`}
           name="role"
           required
           disabled={busy}
           defaultValue=""
+          className="mkt-input"
           aria-invalid={fieldErrors.role ? true : undefined}
           aria-describedby={
             fieldErrors.role ? `${formId}-err-role` : undefined
@@ -217,19 +216,102 @@ export function InterestForm({ locale }: { locale: MarketingLocale }) {
           <option value="agency">{t(locale, 'interest.role.agency')}</option>
           <option value="other">{t(locale, 'interest.role.other')}</option>
         </select>
-        {fieldErrors.role ? (
-          <span className="mkt-field-error" id={`${formId}-err-role`}>
-            {fieldErrors.role}
-          </span>
-        ) : null}
-      </label>
+        <FieldError id={`${formId}-err-role`} className="mkt-field-error">
+          {fieldErrors.role}
+        </FieldError>
+      </div>
 
-      <label>
-        {t(locale, 'interest.note')}
-        <textarea id={`${formId}-note`} name="note" disabled={busy} />
-      </label>
+      <div className="mkt-form-field">
+        <Label htmlFor={`${formId}-org-kind`}>
+          {t(locale, 'interest.org_kind')}
+        </Label>
+        <select
+          id={`${formId}-org-kind`}
+          name="org_kind"
+          disabled={busy}
+          defaultValue=""
+          className="mkt-input"
+        >
+          <option value="">{t(locale, 'interest.org_kind.placeholder')}</option>
+          <option value="agency">
+            {t(locale, 'interest.org_kind.agency')}
+          </option>
+          <option value="brand_enterprise">
+            {t(locale, 'interest.org_kind.brand_enterprise')}
+          </option>
+          <option value="venue">{t(locale, 'interest.org_kind.venue')}</option>
+          <option value="independent">
+            {t(locale, 'interest.org_kind.independent')}
+          </option>
+          <option value="other">{t(locale, 'interest.org_kind.other')}</option>
+        </select>
+      </div>
 
-      <label className="mkt-consent">
+      <div className="mkt-form-field">
+        <Label htmlFor={`${formId}-events`}>
+          {t(locale, 'interest.events_per_year')}
+        </Label>
+        <select
+          id={`${formId}-events`}
+          name="events_per_year"
+          disabled={busy}
+          defaultValue=""
+          className="mkt-input"
+        >
+          <option value="">
+            {t(locale, 'interest.events_per_year.placeholder')}
+          </option>
+          <option value="0">{t(locale, 'interest.events_per_year.0')}</option>
+          <option value="1-5">
+            {t(locale, 'interest.events_per_year.1-5')}
+          </option>
+          <option value="6-20">
+            {t(locale, 'interest.events_per_year.6-20')}
+          </option>
+          <option value="21+">{t(locale, 'interest.events_per_year.21+')}</option>
+        </select>
+      </div>
+
+      <div className="mkt-form-field">
+        <Label htmlFor={`${formId}-scale`}>
+          {t(locale, 'interest.typical_scale')}
+        </Label>
+        <select
+          id={`${formId}-scale`}
+          name="typical_scale"
+          disabled={busy}
+          defaultValue=""
+          className="mkt-input"
+        >
+          <option value="">
+            {t(locale, 'interest.typical_scale.placeholder')}
+          </option>
+          <option value="under_500">
+            {t(locale, 'interest.typical_scale.under_500')}
+          </option>
+          <option value="500_2000">
+            {t(locale, 'interest.typical_scale.500_2000')}
+          </option>
+          <option value="2000_10000">
+            {t(locale, 'interest.typical_scale.2000_10000')}
+          </option>
+          <option value="over_10000">
+            {t(locale, 'interest.typical_scale.over_10000')}
+          </option>
+        </select>
+      </div>
+
+      <div className="mkt-form-field">
+        <Label htmlFor={`${formId}-note`}>{t(locale, 'interest.note')}</Label>
+        <textarea
+          id={`${formId}-note`}
+          name="note"
+          disabled={busy}
+          className="mkt-input"
+        />
+      </div>
+
+      <div className="mkt-consent mkt-form-field">
         <input
           id={`${formId}-consent`}
           name="consent"
@@ -242,28 +324,27 @@ export function InterestForm({ locale }: { locale: MarketingLocale }) {
             fieldErrors.consent ? `${formId}-err-consent` : undefined
           }
         />
-        <span>
+        <Label htmlFor={`${formId}-consent`} className="mkt-consent-label">
           {t(locale, 'interest.consent.before')}{' '}
           <Link href={privacyHref(locale)}>
             {t(locale, 'interest.consent.privacy')}
           </Link>
           .
-        </span>
-      </label>
-      {fieldErrors.consent ? (
-        <span className="mkt-field-error" id={`${formId}-err-consent`}>
-          {fieldErrors.consent}
-        </span>
-      ) : null}
+        </Label>
+      </div>
+      <FieldError id={`${formId}-err-consent`} className="mkt-field-error">
+        {fieldErrors.consent}
+      </FieldError>
 
-      <button
-        className="mkt-btn mkt-btn-primary"
+      <Button
         type="submit"
         disabled={busy}
+        loading={busy}
+        className="mkt-btn mkt-btn-primary"
         data-testid="interest-submit"
       >
         {busy ? t(locale, 'interest.sending') : t(locale, 'interest.submit')}
-      </button>
+      </Button>
     </form>
   );
 }
