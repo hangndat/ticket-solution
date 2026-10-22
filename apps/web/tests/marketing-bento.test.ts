@@ -29,11 +29,31 @@ describe('marketing bento section', () => {
     assert.equal(BENTO_CELLS.length, 7);
   });
 
-  it('reduced-motion: hover transition disabled in scoped CSS contract', () => {
+  it('reduced-motion: bento reveal and hover transition disabled in CSS', () => {
     const css = fs.readFileSync(
       path.join(process.cwd(), 'app/live-pulse-legacy.css'),
       'utf8',
     );
+    assert.match(css, /@media \(prefers-reduced-motion: reduce\)[\s\S]*\.mkt-bento-grid/);
     assert.match(css, /@media \(prefers-reduced-motion: reduce\)[\s\S]*\.mkt-bento-card/);
+  });
+
+  it('bento ops image is not a duplicate of admin tile', () => {
+    const admin = fs.readFileSync(
+      path.join(process.cwd(), 'public/marketing/bento-admin.webp'),
+    );
+    const ops = fs.readFileSync(
+      path.join(process.cwd(), 'public/marketing/bento-ops.webp'),
+    );
+    assert.notEqual(admin.compare(ops), 0);
+  });
+
+  it('scroll reveal uses CSS view timeline (no client motion island)', () => {
+    const css = fs.readFileSync(
+      path.join(process.cwd(), 'app/live-pulse-legacy.css'),
+      'utf8',
+    );
+    assert.match(css, /\.mkt-bento-grid[\s\S]*animation-timeline:\s*view\(\)/);
+    assert.doesNotMatch(css, /motion\/react/);
   });
 });

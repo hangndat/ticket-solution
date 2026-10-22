@@ -1,9 +1,9 @@
-import { BentoGrid, BentoGridItem, Card, CardContent, CardTitle } from '@ticket/ui';
+import { BentoGrid, BentoGridItem } from '@ticket/ui/primitives/bento-grid';
+import { Card, CardContent, CardTitle } from '@ticket/ui/primitives/card';
 import Image from 'next/image';
 import { BENTO_CELLS } from '../content-config';
 import { t, type CopyKey } from '../copy';
 import type { MarketingSectionProps } from './types';
-import { BentoReveal } from './bento-reveal';
 
 type BentoCellKey =
   | 'bento.invite'
@@ -54,8 +54,7 @@ export function BentoSection({ locale }: MarketingSectionProps) {
     >
       <h2 id="bento-title">{t(locale, 'bento.title')}</h2>
       <p className="mkt-lead">{t(locale, 'bento.lead')}</p>
-      <BentoReveal>
-        <BentoGrid className="mkt-bento-grid">
+      <BentoGrid className="mkt-bento-grid">
           {BENTO_CELLS.map((cell) => {
             const titleId = `${cell.id}-title`;
             const bodyId = `${cell.id}-body`;
@@ -92,9 +91,11 @@ export function BentoSection({ locale }: MarketingSectionProps) {
                         width={cell.image.width}
                         height={cell.image.height}
                         sizes={
-                          cell.colSpan >= 2
-                            ? '(max-width: 768px) 100vw, 40vw'
-                            : '(max-width: 768px) 100vw, 22vw'
+                          cell.colSpan >= 4
+                            ? '(max-width: 768px) 100vw, 92vw'
+                            : cell.colSpan >= 2
+                              ? '(max-width: 768px) 100vw, 42vw'
+                              : '(max-width: 768px) 100vw, 22vw'
                         }
                         loading="lazy"
                       />
@@ -105,7 +106,6 @@ export function BentoSection({ locale }: MarketingSectionProps) {
             );
           })}
         </BentoGrid>
-      </BentoReveal>
     </section>
   );
 }
