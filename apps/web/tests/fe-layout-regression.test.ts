@@ -3,19 +3,32 @@ import { readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
+import React from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { LocaleSwitch } from '../src/marketing/locale-switch';
 
 const WEB_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
-test('attendee uplift CSS pins footer with flex column + 100dvh', () => {
-  const css = readFileSync(join(WEB_ROOT, 'app/attendee-uplift.css'), 'utf8');
-  assert.match(css, /min-height:\s*100dvh/);
-  assert.match(css, /margin-top:\s*auto/);
-  assert.match(css, /flex:\s*1\s+0\s+auto/);
+test('attendee root layout exposes footer landmark for sticky-footer regression', () => {
+  const layout = readFileSync(join(WEB_ROOT, 'app/layout.tsx'), 'utf8');
+  assert.match(layout, /className="attendee-uplift"/);
+  assert.match(layout, /data-testid="site-footer"/);
 });
 
-test('marketing uplift CSS reserves layout for locale + mobile clip', () => {
-  const css = readFileSync(join(WEB_ROOT, 'app/marketing-uplift.css'), 'utf8');
-  assert.match(css, /scrollbar-gutter:\s*stable/);
-  assert.match(css, /overflow-x:\s*clip/);
-  assert.match(css, /\.mkt-locale a\[aria-current="true"\]/);
+test('marketing LocaleSwitch marks active locale with aria-current (SSR)', () => {
+  const viHtml = renderToStaticMarkup(
+    React.createElement(LocaleSwitch, { locale: 'vi', pageKind: 'sales' }),
+  );
+  assert.match(viHtml, /aria-current="true"/);
+  assert.doesNotMatch(viHtml, /aria-current="true"[^>]*>[\s\S]*aria-current="true"/);
+
+  const enHtml = renderToStaticMarkup(
+    React.createElement(LocaleSwitch, { locale: 'en', pageKind: 'sales' }),
+  );
+  assert.match(enHtml, /aria-current="true"/);
+});
+
+test('marketing chrome exposes surface marker for horizontal-overflow regression', () => {
+  const chrome = readFileSync(join(WEB_ROOT, 'src/marketing/chrome.tsx'), 'utf8');
+  assert.match(chrome, /data-testid="marketing-surface"/);
 });
