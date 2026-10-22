@@ -1,0 +1,36 @@
+{
+  "label": "pr-tip",
+  "route": {
+    "id": "marketing-vi",
+    "path": "/marketing",
+    "host": null
+  },
+  "runs": 3,
+  "lighthouse": "13.5.0",
+  "median": {
+    "performance": 79,
+    "accessibility": 97,
+    "bestPractices": 100,
+    "seo": 69
+  },
+  "scores": [
+    {
+      "performance": 80,
+      "accessibility": 97,
+      "bestPractices": 100,
+      "seo": 69
+    },
+    {
+      "performance": 79,
+      "accessibility": 97,
+      "bestPractices": 100,
+      "seo": 69
+    },
+    {
+      "performance": 79,
+      "accessibility": 97,
+      "bestPractices": 100,
+      "seo": 69
+    }
+  ]
+}
