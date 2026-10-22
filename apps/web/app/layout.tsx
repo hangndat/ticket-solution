@@ -2,7 +2,6 @@ import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import localFont from 'next/font/local';
-import { UiMotionProvider } from '@ticket/ui/client';
 import {
   ThemeProvider,
   VEMOKI_BRANDING,
@@ -83,23 +82,21 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       data-surface="product"
     >
       <body>
-        <UiMotionProvider>
-          <ThemeProvider branding={VEMOKI_BRANDING}>
-            <a className="skip-link" href="#main">
-              Bỏ qua đến nội dung
-            </a>
-            {children}
-            <footer className="footer" data-testid="site-footer">
-              <FooterBrand />
-              <span className="footer-tagline">Sự kiện & vé</span>
-              <nav className="footer-links" aria-label="Liên kết chân trang">
-                <Link href="/">Sự kiện</Link>
-                <Link href="/redeem">Đổi mã</Link>
-                <Link href="/account">Tài khoản</Link>
-              </nav>
-            </footer>
-          </ThemeProvider>
-        </UiMotionProvider>
+        <ThemeProvider branding={VEMOKI_BRANDING}>
+          <a className="skip-link" href="#main">
+            Bỏ qua đến nội dung
+          </a>
+          {children}
+          <footer className="footer" data-testid="site-footer">
+            <FooterBrand />
+            <span className="footer-tagline">Sự kiện & vé</span>
+            <nav className="footer-links" aria-label="Liên kết chân trang">
+              <Link href="/">Sự kiện</Link>
+              <Link href="/redeem">Đổi mã</Link>
+              <Link href="/account">Tài khoản</Link>
+            </nav>
+          </footer>
+        </ThemeProvider>
       </body>
     </html>
   );
