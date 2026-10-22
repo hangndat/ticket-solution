@@ -4,11 +4,14 @@ import {
   Modal,
   Platform,
   Pressable,
+  StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { colors } from '@/theme/colors';
+import { radius, space } from '@/theme/tokens';
 
 export function StaffGateManualEntryModal({
   visible,
@@ -25,7 +28,7 @@ export function StaffGateManualEntryModal({
   onSubmit: () => void;
   onClose: () => void;
 }) {
-  const inputRef = useRef<ComponentRef<typeof TextInput>>(null);
+  const inputRef = useRef<ComponentRef<typeof Input>>(null);
 
   useEffect(() => {
     if (visible) {
@@ -43,42 +46,25 @@ export function StaffGateManualEntryModal({
       onRequestClose={onClose}
     >
       <Pressable
-        style={{
-          flex: 1,
-          backgroundColor: 'rgba(0,0,0,0.45)',
-          justifyContent: 'flex-end',
-        }}
+        style={styles.backdrop}
         onPress={onClose}
         accessibilityLabel="Đóng nhập mã thủ công"
       >
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
-          <Pressable
-            onPress={(e) => e.stopPropagation()}
-            style={{
-              backgroundColor: colors.background,
-              borderTopLeftRadius: 16,
-              borderTopRightRadius: 16,
-              padding: 16,
-              gap: 12,
-            }}
-          >
+          <Pressable onPress={(e) => e.stopPropagation()} style={styles.sheet}>
             <Text
               accessibilityRole="header"
-              style={{
-                color: colors.label,
-                fontSize: 17,
-                fontWeight: '600',
-              }}
+              style={styles.sheetTitle}
             >
               Nhập mã vé
             </Text>
-            <Text style={{ color: colors.secondary, fontSize: 14 }}>
+            <Text style={styles.sheetHint}>
               Dán UUID vé hoặc JSON từ QR. Bấm Gửi để kiểm tra — không tự gửi
               khi đóng.
             </Text>
-            <TextInput
+            <Input
               ref={inputRef}
               testID="gate-scan-input"
               value={value}
@@ -96,49 +82,24 @@ export function StaffGateManualEntryModal({
                 if (!disabled && value.trim()) onSubmit();
               }}
               multiline
-              style={{
-                minHeight: 88,
-                borderRadius: 10,
-                padding: 12,
-                backgroundColor: colors.card,
-                color: colors.label,
-                fontSize: 16,
-              }}
+              style={styles.multilineField}
             />
-            <View style={{ flexDirection: 'row', gap: 12 }}>
-              <Pressable
-                accessibilityRole="button"
+            <View style={styles.actions}>
+              <Button
+                label="Hủy"
+                variant="secondary"
                 accessibilityLabel="Hủy nhập mã"
                 onPress={onClose}
-                style={{
-                  flex: 1,
-                  paddingVertical: 14,
-                  borderRadius: 12,
-                  alignItems: 'center',
-                  backgroundColor: colors.card,
-                }}
-              >
-                <Text style={{ color: colors.label, fontSize: 16 }}>Hủy</Text>
-              </Pressable>
-              <Pressable
+                style={styles.actionBtn}
+              />
+              <Button
                 testID="gate-manual-submit"
-                accessibilityRole="button"
+                label="Gửi"
                 accessibilityLabel="Gửi mã vé để quét"
                 disabled={disabled || value.trim().length === 0}
                 onPress={onSubmit}
-                style={{
-                  flex: 1,
-                  paddingVertical: 14,
-                  borderRadius: 12,
-                  alignItems: 'center',
-                  backgroundColor: colors.accent,
-                  opacity: disabled || value.trim().length === 0 ? 0.45 : 1,
-                }}
-              >
-                <Text style={{ color: colors.onAccent, fontSize: 16, fontWeight: '600' }}>
-                  Gửi
-                </Text>
-              </Pressable>
+                style={styles.actionBtn}
+              />
             </View>
           </Pressable>
         </KeyboardAvoidingView>
@@ -146,3 +107,27 @@ export function StaffGateManualEntryModal({
     </Modal>
   );
 }
+
+const styles = StyleSheet.create({
+  backdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'flex-end',
+  },
+  sheet: {
+    backgroundColor: colors.background,
+    borderTopLeftRadius: radius.lg - 2,
+    borderTopRightRadius: radius.lg - 2,
+    padding: space.lg,
+    gap: space.md,
+  },
+  sheetTitle: {
+    color: colors.label,
+    fontSize: 17,
+    fontWeight: '600',
+  },
+  sheetHint: { color: colors.secondary, fontSize: 14 },
+  multilineField: { minHeight: 88 },
+  actions: { flexDirection: 'row', gap: space.md },
+  actionBtn: { flex: 1 },
+});
