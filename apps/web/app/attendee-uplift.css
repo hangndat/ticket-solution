@@ -165,10 +165,6 @@ html[data-surface='product'] .home.home--catalog {
   padding-top: 0;
 }
 
-html[data-surface='product'] .home.home--catalog .home-hero--legacy-hidden {
-  display: none;
-}
-
 /* —— Catalog tools (paper panel) —— */
 html[data-surface='product'] .home-catalog--uplift {
   margin-top: var(--space-5);
@@ -468,15 +464,19 @@ html[data-surface='product'] .catalog-skeleton-card__line--meta {
 }
 
 @media (min-width: 640px) {
+
   html[data-surface='product'] .catalog-skeleton-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
 }
 
 @media (min-width: 1280px) {
+
   html[data-surface='product'] .catalog-skeleton-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
+
 }
 
 html[data-surface='product'] .route-loading-shell {
@@ -484,6 +484,7 @@ html[data-surface='product'] .route-loading-shell {
 }
 
 @media (prefers-reduced-motion: reduce) {
+
   html[data-surface='product'] .catalog-event-card__link,
   html[data-surface='product'] .catalog-event-card__link::before,
   html[data-surface='product'] .nav-link {
@@ -493,13 +494,18 @@ html[data-surface='product'] .route-loading-shell {
   html[data-surface='product'] .catalog-event-card__link:hover {
     transform: none;
   }
+
 }
 
 @media (max-width: 639px) {
+
   html[data-surface='product'] .catalog-hero-band {
     margin-left: calc(-1 * var(--space-5));
     margin-right: calc(-1 * var(--space-5));
     padding-left: var(--space-5);
     padding-right: var(--space-5);
   }
+
 }
+
+
