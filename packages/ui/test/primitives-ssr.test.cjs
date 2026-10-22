@@ -40,6 +40,20 @@ describe('@ticket/ui primitives SSR', () => {
     assert.match(html, /role="status"/);
   });
 
+  it('renders BentoGrid without client-only APIs', async () => {
+    const { BentoGrid, BentoGridItem } = await loadUi();
+    const html = renderToStaticMarkup(
+      React.createElement(
+        BentoGrid,
+        null,
+        React.createElement(BentoGridItem, { colSpan: 2 }, 'Invite'),
+      ),
+    );
+    assert.match(html, /ui:grid/);
+    assert.match(html, /ui:md:col-span-2/);
+    assert.match(html, />Invite</);
+  });
+
   it('FieldError uses role alert', async () => {
     const { FieldError } = await loadUi();
     const html = renderToStaticMarkup(
