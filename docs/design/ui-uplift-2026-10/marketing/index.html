@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="vi" class="review-root">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>UI uplift · Vemoki marketing prototype</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Sora:wght@600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/marketing.css" />
+  </head>
+  <body class="review-body">
+    <div class="review">
+      <div class="reviewhead">
+        <div>
+          <h2>Vemoki · Marketing uplift (Live Pulse v2)</h2>
+          <p>
+            Prototype tĩnh Epic #770 — chuyển Desktop/Mobile và VI/EN; mở file
+            trực tiếp, không build.
+          </p>
+        </div>
+        <div class="seg" role="group" aria-label="Khung xem">
+          <button type="button" id="btn-desktop" class="on" onclick="device('desktop')">
+            Desktop 1280
+          </button>
+          <button type="button" id="btn-mobile" onclick="device('mobile')">
+            Mobile 390
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="browser" id="browser">
+      <div class="chrome-bar">
+        <i class="dot"></i><i class="dot"></i><i class="dot"></i>
+        <span class="address">vemoki.com</span>
+      </div>
+      <div class="site">
+        <div class="mkt-body">
+          <a class="mkt-skip" href="#main" data-i18n="skip">Bỏ qua nội dung</a>
+
+          <header class="mkt-header mkt-header--on-ink">
+            <a class="mkt-wordmark" href="#top" aria-label="Vemoki"
+              >vemoki<span aria-hidden="true">↗</span></a
+            >
+            <nav class="mkt-nav" aria-label="Chính">
+              <span
+                class="mkt-locale"
+                role="group"
+                aria-label="Ngôn ngữ"
+              >
+                <button
+                  type="button"
+                  id="locale-vi"
+                  aria-pressed="true"
+                  onclick="setLocale('vi')"
+                >
+                  VI
+                </button>
+                <button
+                  type="button"
+                  id="locale-en"
+                  aria-pressed="false"
+                  onclick="setLocale('en')"
+                >
+                  EN
+                </button>
+              </span>
+              <span class="mkt-nav-links">
+                <a href="#features" data-i18n="navFeatures">Tính năng</a>
+                <a href="#how-it-works" data-i18n="navHow">Cách hoạt động</a>
+                <a href="#solutions" data-i18n="navSolutions">Giải pháp</a>
+                <a href="#faq" data-i18n="navFaq">Câu hỏi thường gặp</a>
+                <a href="https://app.vemoki.com/" data-i18n="navDemo">Xem demo</a>
+              </span>
+              <a
+                class="mkt-btn mkt-btn--ghost mkt-nav-cta"
+                href="https://app.vemoki.com/auth"
+                data-i18n="navLogin"
+                >Đăng nhập</a
+              >
+              <a
+                class="mkt-btn mkt-btn--primary"
+                href="#interest"
+                data-i18n="heroInterest"
+                >Đăng ký quan tâm</a
+              >
+            </nav>
+          </header>
+
+          <main id="main">
+            <section
+              id="top"
+              class="mkt-section mkt-section--ink mkt-hero"
+              aria-labelledby="hero-title"
+              data-hero
+            >
+              <div class="mkt-wrap mkt-hero-grid">
+                <div class="mkt-hero-copy">
+                  <p class="mkt-eyebrow" data-i18n="heroEyebrow">
+                    Hệ điều hành sự kiện trực tiếp
+                  </p>
+                  <h1 id="hero-title" class="mkt-display mkt-h1" data-i18n="heroH1">
+                    Vận hành sự kiện từ mã mời đến cổng — trên một hệ điều hành
+                  </h1>
+                  <p class="mkt-lead" data-i18n="heroSub">
+                    Multi-tenant cho agency và doanh nghiệp sự kiện.
+                  </p>
+                  <ul class="mkt-hero-points">
+                    <li data-i18n="heroP1">Mã mời → đổi vé → QR</li>
+                    <li data-i18n="heroP2">Cổng chống trùng + audit</li>
+                    <li data-i18n="heroP3">Tách tenant + RLS</li>
+                  </ul>
+                  <div class="mkt-hero-cta">
+                    <a
+                      class="mkt-btn mkt-btn--primary"
+                      href="https://app.vemoki.com/"
+                      data-i18n="heroDemo"
+                      >Xem demo</a
+                    >
+                    <a
+                      class="mkt-btn mkt-btn--secondary"
+                      href="#interest"
+                      data-i18n="heroInterest"
+                      >Đăng ký quan tâm</a
+                    >
+                    <a
+                      class="mkt-btn mkt-btn--ghost"
+                      href="https://app.vemoki.com/auth"
+                      data-i18n="heroLogin"
+                      >Đăng nhập</a
+                    >
+                  </div>
+                  <p class="mkt-demo-note" role="status" data-i18n="heroNote">
+                    Demo giả lập — không phải khách hàng thật.
+                  </p>
+                </div>
+
+                <div class="mkt-preview-wrap">
+                  <div class="mkt-preview-glow" aria-hidden="true"></div>
+                  <div class="mkt-preview-stage">
+                    <div class="mkt-preview-tilt">
+                      <div class="mkt-preview-frame">
+                        <div class="mkt-preview-chrome" aria-hidden="true">
+                          <i></i><i></i><i></i>
+                          <span id="preview-url">app.vemoki.com/wallet</span>
+                        </div>
+                        <div class="mkt-preview-tabs" role="tablist" aria-label="Product preview">
+                          <button
+                            type="button"
+                            role="tab"
+                            data-preview="wallet"
+                            aria-selected="true"
+                            onclick="setPreviewTab('wallet')"
+                            data-i18n="tabWallet"
+                          >
+                            Vé & ví
+                          </button>
+                          <button
+                            type="button"
+                            role="tab"
+                            data-preview="gate"
+                            aria-selected="false"
+                            onclick="setPreviewTab('gate')"
+                            data-i18n="tabGate"
+                          >
+                            Cổng
+                          </button>
+                        </div>
+                        <div
+                          class="mkt-preview-viewport"
+                          role="tabpanel"
+                          id="preview-panel"
+                          aria-live="polite"
+                        >
+                          <div class="mkt-ui-compose mkt-ui-compose--wallet" data-preview-panel="wallet">
+                            <div class="mkt-ui-compose__bar">
+                              <span class="mkt-ui-compose__logo">vemoki</span>
+                              <span class="mkt-ui-compose__nav" data-i18n="uiNavWallet">Vé của tôi</span>
+                            </div>
+                            <div class="mkt-ui-compose__head">
+                              <div>
+                                <strong data-i18n="uiWalletTitle">Vé của tôi</strong>
+                                <span data-i18n="uiWalletSub">3 vé · 2 sự kiện (demo)</span>
+                              </div>
+                              <span class="mkt-ui-compose__pill" data-i18n="uiDemoPill">Demo</span>
+                            </div>
+                            <div class="mkt-ui-compose__cards">
+                              <article class="mkt-ui-ticket">
+                                <div class="mkt-ui-ticket__art mkt-ui-ticket__art--mfest"></div>
+                                <div class="mkt-ui-ticket__body">
+                                  <span class="mkt-ui-ticket__status" data-i18n="uiTicketUnused">Chưa sử dụng</span>
+                                  <strong>MFest</strong>
+                                  <span>24/10 · 18:00 · HCM</span>
+                                  <code>DEMO-8K2P</code>
+                                </div>
+                              </article>
+                              <article class="mkt-ui-ticket">
+                                <div class="mkt-ui-ticket__art mkt-ui-ticket__art--river"></div>
+                                <div class="mkt-ui-ticket__body">
+                                  <span class="mkt-ui-ticket__status" data-i18n="uiTicketUnused">Chưa sử dụng</span>
+                                  <strong data-i18n="uiEventRiver">Đêm nhạc bên sông</strong>
+                                  <span>31/10 · 19:00 · HCM</span>
+                                  <code>DEMO-3R7N</code>
+                                </div>
+                              </article>
+                            </div>
+                          </div>
+                          <div
+                            class="mkt-ui-compose mkt-ui-compose--gate"
+                            data-preview-panel="gate"
+                            hidden
+                          >
+                            <div class="mkt-ui-compose__bar">
+                              <span class="mkt-ui-compose__logo">vemoki</span>
+                              <span class="mkt-ui-compose__nav" data-i18n="uiNavGate">Cổng · Quét vé</span>
+                            </div>
+                            <div class="mkt-ui-gate">
+                              <div class="mkt-ui-gate__scan">
+                                <div class="mkt-ui-gate__frame" aria-hidden="true">
+                                  <span></span><span></span><span></span><span></span>
+                                </div>
+                                <div class="mkt-ui-gate__qr" aria-hidden="true"></div>
+                                <p data-i18n="uiGateHint">Hướng camera vào mã QR trên vé</p>
+                              </div>
+                              <div class="mkt-ui-gate__side">
+                                <span class="mkt-ui-compose__pill" data-i18n="uiDemoPill">Demo</span>
+                                <p data-i18n="uiGateOk">Quét hợp lệ · audit ghi nhận</p>
+                                <ul>
+                                  <li data-i18n="uiGateDup">Chống trùng: bật</li>
+                                  <li data-i18n="uiGateEvent">Sự kiện: MFest (fixture)</li>
+                                </ul>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="mkt-preview-phone" aria-hidden="true">
+                      <div class="mkt-phone-bezel">
+                        <div class="mkt-phone-notch"></div>
+                        <div class="mkt-phone-screen">
+                          <span class="mkt-ui-compose__pill mkt-ui-compose__pill--sm" data-i18n="uiDemoPill">Demo</span>
+                          <strong>MFest</strong>
+                          <span class="mkt-phone-meta" data-i18n="uiPhoneMeta">Vé phổ thông · Cổng A</span>
+                          <div class="mkt-phone-qr" aria-hidden="true"></div>
+                          <span class="mkt-phone-code">DEMO-8K2P</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <p class="mkt-preview-caption" data-i18n="previewCaption">
+                    UI composition có nhãn Demo — không dữ liệu khách thật.
+                  </p>
+                </div>
+              </div>
+
+              <div class="mkt-marquee" aria-hidden="true">
+                <div class="mkt-marquee-track">
+                  <span data-i18n="marquee">EOS · Invite → QR → Gate ·</span>
+                  <span data-i18n="marquee">EOS · Invite → QR → Gate ·</span>
+                </div>
+              </div>
+            </section>
+
+            <section
+              id="trust"
+              class="mkt-section mkt-section--ink"
+              aria-labelledby="trust-title"
+            >
+              <div class="mkt-wrap">
+                <h2 id="trust-title" class="mkt-display mkt-h2" data-i18n="trustTitle">
+                  Tin cậy cho vận hành cổng thật
+                </h2>
+                <p class="mkt-lead" data-i18n="trustLead">
+                  Thiết kế cho sự kiện trực tiếp.
+                </p>
+                <div class="mkt-trust-grid">
+                  <article class="mkt-trust-card">
+                    <div class="mkt-trust-icon" aria-hidden="true">⬡</div>
+                    <h3 data-i18n="trust1t">Tách tenant</h3>
+                    <p data-i18n="trust1b">PostgreSQL + RLS.</p>
+                  </article>
+                  <article class="mkt-trust-card">
+                    <div class="mkt-trust-icon" aria-hidden="true">✓</div>
+                    <h3 data-i18n="trust2t">Cổng chống trùng</h3>
+                    <p data-i18n="trust2b">Audit check-in.</p>
+                  </article>
+                  <article class="mkt-trust-card">
+                    <div class="mkt-trust-icon" aria-hidden="true">◎</div>
+                    <h3 data-i18n="trust3t">Cổng khi mạng yếu</h3>
+                    <p data-i18n="trust3b">D7 offline design.</p>
+                  </article>
+                </div>
+                <div class="mkt-trust-row-2">
+                  <article class="mkt-trust-card">
+                    <div class="mkt-trust-icon" aria-hidden="true">◷</div>
+                    <h3 data-i18n="trust4t">Số liệu trung thực</h3>
+                    <p data-i18n="trust4b">As-of timestamps.</p>
+                  </article>
+                  <article class="mkt-trust-card">
+                    <div class="mkt-trust-icon" aria-hidden="true">🔒</div>
+                    <h3 data-i18n="trust5t">Bảo mật vận hành</h3>
+                    <p data-i18n="trust5b">TLS, MFA admin.</p>
+                  </article>
+                </div>
+              </div>
+            </section>
+
+            <section
+              id="features"
+              class="mkt-section mkt-section--paper"
+              aria-labelledby="bento-title"
+            >
+              <div class="mkt-wrap">
+                <h2 id="bento-title" class="mkt-display mkt-h2" data-i18n="bentoTitle">
+                  Năng lực vận hành trong một hệ
+                </h2>
+                <p class="mkt-lead" data-i18n="bentoLead">
+                  Mỗi khối là luồng thật trong sản phẩm.
+                </p>
+                <div id="bento-root" class="mkt-bento"></div>
+              </div>
+            </section>
+
+            <section
+              id="how-it-works"
+              class="mkt-section mkt-section--paper-alt"
+              aria-labelledby="how-title"
+            >
+              <div class="mkt-wrap">
+                <h2 id="how-title" class="mkt-display mkt-h2" data-i18n="howTitle">
+                  Cách hệ điều hành chạy
+                </h2>
+                <p class="mkt-lead" data-i18n="howLead">
+                  Một chuỗi ops — từ chuẩn bị đến cổng.
+                </p>
+                <div id="steps-root" class="mkt-steps"></div>
+                <p class="mkt-how-note" data-i18n="howNote">
+                  Không phải marketplace.
+                </p>
+              </div>
+            </section>
+
+            <section
+              id="solutions"
+              class="mkt-section mkt-section--paper"
+              aria-labelledby="sol-title"
+            >
+              <div class="mkt-wrap">
+                <h2 id="sol-title" class="mkt-display mkt-h2" data-i18n="solTitle">
+                  Giải pháp theo đối tượng
+                </h2>
+                <p class="mkt-lead" data-i18n="solLead">
+                  Trang này dành cho người mua vận hành.
+                </p>
+                <div class="mkt-audience-grid">
+                  <article class="mkt-audience-card mkt-audience-card--emphasis">
+                    <span class="mkt-audience-icon" aria-hidden="true">🏢</span>
+                    <h3>Tenant Owner / enterprise</h3>
+                    <p data-i18n-vi="Nhiều sự kiện trong một tổ chức: phát hành mã, email vé, theo dõi cổng, báo cáo ops." data-i18n-en="Multiple events in one org: codes, ticket email, gate tracking, ops reports.">
+                      Nhiều sự kiện trong một tổ chức.
+                    </p>
+                  </article>
+                  <article class="mkt-audience-card mkt-audience-card--emphasis">
+                    <span class="mkt-audience-icon" aria-hidden="true">👥</span>
+                    <h3>Event agency</h3>
+                    <p>
+                      Membership nhiều tenant — một hệ điều hành, nhiều thương
+                      hiệu khách.
+                    </p>
+                  </article>
+                  <article class="mkt-audience-card mkt-audience-card--muted">
+                    <span class="mkt-audience-icon" aria-hidden="true">📷</span>
+                    <h3>Gate staff</h3>
+                    <p>Quét QR trên iOS; web dự phòng; audit theo sự kiện.</p>
+                  </article>
+                  <article class="mkt-audience-card mkt-audience-card--muted">
+                    <span class="mkt-audience-icon" aria-hidden="true">🎫</span>
+                    <h3>Attendees</h3>
+                    <p>Đổi mã trên web/iOS dưới brand sự kiện — xem footer.</p>
+                  </article>
+                </div>
+              </div>
+            </section>
+
+            <section
+              id="outcomes"
+              class="mkt-section mkt-section--ink"
+              aria-labelledby="out-title"
+            >
+              <div class="mkt-wrap">
+                <div class="mkt-demo-banner" role="status" data-i18n="outDisclaimer">
+                  Minh hoạ — dữ liệu mô phỏng.
+                </div>
+                <h2 id="out-title" class="mkt-display mkt-h2" data-i18n="outTitle">
+                  Kết quả vận hành (minh họa)
+                </h2>
+                <p class="mkt-lead" data-i18n="outLead">Số minh họa pilot.</p>
+                <div class="mkt-metrics">
+                  <div class="mkt-metric">
+                    <div class="mkt-metric-label">
+                      <span data-i18n-vi="Thời gian xử lý check-in (p50)" data-i18n-en="Check-in handling time (p50)">Thời gian check-in (p50)</span>
+                    </div>
+                    <div class="mkt-metric-value" data-i18n-vi="~1,2 giây" data-i18n-en="~1.2s">~1,2 giây</div>
+                  </div>
+                  <div class="mkt-metric">
+                    <div class="mkt-metric-label">
+                      <span data-i18n-vi="Lượt quét trùng bị chặn (phiên demo)" data-i18n-en="Duplicate scans blocked (demo session)">Lượt trùng bị chặn (demo)</span>
+                    </div>
+                    <div class="mkt-metric-value">14</div>
+                  </div>
+                  <div class="mkt-metric">
+                    <div class="mkt-metric-label">
+                      <span data-i18n-vi="Vé đã cấp / cổng mở (fixture)" data-i18n-en="Tickets issued / gates open (fixture)">Vé / cổng (fixture)</span>
+                    </div>
+                    <div class="mkt-metric-value">1.240 / 3</div>
+                  </div>
+                </div>
+                <div class="mkt-chart" aria-hidden="true">
+                  <div class="mkt-chart-bars">
+                    <span style="height: 35%"></span>
+                    <span style="height: 55%"></span>
+                    <span style="height: 42%"></span>
+                    <span style="height: 78%"></span>
+                    <span style="height: 65%"></span>
+                    <span style="height: 88%"></span>
+                    <span style="height: 52%"></span>
+                    <span style="height: 70%"></span>
+                  </div>
+                  <p class="mkt-chart-caption" data-i18n-vi="Biểu đồ minh họa luồng vào cổng theo giờ — dữ liệu giả lập." data-i18n-en="Illustrative hourly entry chart — simulated data.">
+                    Biểu đồ minh họa — dữ liệu giả lập.
+                  </p>
+                </div>
+              </div>
+            </section>
+
+            <section
+              id="faq"
+              class="mkt-section mkt-section--paper"
+              aria-labelledby="faq-title"
+            >
+              <div class="mkt-wrap">
+                <h2 id="faq-title" class="mkt-display mkt-h2 mkt-faq" style="max-width: none; margin-bottom: 0" data-i18n="faqTitle">
+                  Câu hỏi thường gặp
+                </h2>
+                <div id="faq-root" class="mkt-faq"></div>
+              </div>
+            </section>
+
+            <section
+              id="interest"
+              class="mkt-section mkt-section--paper-alt mkt-section--cta"
+              aria-labelledby="cta-title"
+            >
+              <div class="mkt-wrap mkt-cta-grid">
+                <div>
+                  <h2 id="cta-title" class="mkt-display mkt-h2" data-i18n="ctaTitle">
+                    Sẵn sàng xem vận hành thật?
+                  </h2>
+                  <p class="mkt-lead" data-i18n="ctaLead">
+                    Xem demo hoặc đăng ký quan tâm.
+                  </p>
+                  <div class="mkt-hero-cta">
+                    <a
+                      class="mkt-btn mkt-btn--primary"
+                      href="https://app.vemoki.com/"
+                      data-i18n="heroDemo"
+                      >Xem demo</a
+                    >
+                    <a
+                      class="mkt-btn mkt-btn--secondary"
+                      href="#interest"
+                      data-i18n="heroInterest"
+                      >Đăng ký quan tâm</a
+                    >
+                  </div>
+                  <p class="mkt-demo-note" role="status" data-i18n="heroNote">
+                    Demo giả lập.
+                  </p>
+                </div>
+                <div class="mkt-form">
+                  <h3 class="mkt-display" style="font-size: 1.25rem; margin: 0 0 0.35rem" data-i18n="formTitle">
+                    Đăng ký quan tâm
+                  </h3>
+                  <p class="mkt-lead" style="font-size: 0.9rem; margin-bottom: 1.25rem" data-i18n="formLead">
+                    Không thanh toán trên form này.
+                  </p>
+                  <form id="interest-form" novalidate>
+                    <div class="mkt-field">
+                      <label for="name">Họ tên</label>
+                      <input id="name" name="name" autocomplete="name" required />
+                    </div>
+                    <div class="mkt-field">
+                      <label for="email">Email công việc</label>
+                      <input id="email" name="email" type="email" autocomplete="email" required />
+                    </div>
+                    <div class="mkt-field">
+                      <label for="org">Tổ chức</label>
+                      <input id="org" name="org" autocomplete="organization" required />
+                    </div>
+                    <div class="mkt-field">
+                      <label for="role">Vai trò</label>
+                      <select id="role" name="role" required>
+                        <option value="">Chọn vai trò</option>
+                        <option value="owner">Tenant Owner</option>
+                        <option value="agency">Agency</option>
+                        <option value="other">Khác</option>
+                      </select>
+                    </div>
+                    <div class="mkt-field">
+                      <label for="notes">Ghi chú (không bắt buộc)</label>
+                      <textarea id="notes" name="notes" rows="2"></textarea>
+                    </div>
+                    <label class="mkt-check">
+                      <input type="checkbox" name="consent" required />
+                      <span
+                        >Tôi đồng ý được liên hệ về Vemoki. Xem
+                        <a href="privacy.html">Quyền riêng tư</a>.</span
+                      >
+                    </label>
+                    <button class="mkt-btn mkt-btn--primary mkt-btn--block" type="submit" data-i18n="formSubmit">
+                      Gửi đăng ký
+                    </button>
+                    <p id="form-status" hidden></p>
+                  </form>
+                </div>
+              </div>
+            </section>
+          </main>
+
+          <footer class="mkt-footer" id="footer">
+            <div class="mkt-footer-grid">
+              <div>
+                <p class="mkt-wordmark" style="color: var(--paper)">
+                  vemoki<span>↗</span>
+                </p>
+                <p data-i18n="footerTag">vemoki↗ · EOS</p>
+              </div>
+              <div class="mkt-footer-links">
+                <a href="https://app.vemoki.com/redeem" data-i18n="footerAttendee"
+                  >Bạn có mã mời?</a
+                >
+                <a href="privacy.html" data-i18n="navPrivacy">Quyền riêng tư</a>
+                <a href="support.html" data-i18n="navSupport">Hỗ trợ</a>
+                <a href="https://app.vemoki.com/auth" data-i18n="navLogin">Đăng nhập</a>
+              </div>
+            </div>
+          </footer>
+        </div>
+      </div>
+    </div>
+
+    <p class="reviewnote">
+      Ảnh product: <code>docs/reviews/assets/app-*</code> (pilot). Không logo khách
+      giả · số liệu có nhãn DEMO · a11y AA + reduced-motion. SoT copy:
+      MKT-PD-EVENT-OS-SPEC-2026-10-22.
+    </p>
+
+    <script src="js/marketing.js"></script>
+    <script>
+      /* VI/EN for static dual-locale nodes */
+      const _origSetLocale = window.setLocale;
+      window.setLocale = function (loc) {
+        _origSetLocale(loc);
+        document.querySelectorAll("[data-i18n-vi]").forEach((el) => {
+          el.textContent = el.getAttribute(loc === "vi" ? "data-i18n-vi" : "data-i18n-en");
+        });
+      };
+    </script>
+  </body>
+</html>
