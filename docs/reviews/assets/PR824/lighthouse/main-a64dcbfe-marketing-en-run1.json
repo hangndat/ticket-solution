@@ -1,0 +1,16 @@
+{
+  "label": "main-a64dcbfe",
+  "route": {
+    "id": "marketing-en",
+    "path": "/marketing/en",
+    "host": null
+  },
+  "run": 1,
+  "lighthouse": "13.5.0",
+  "scores": {
+    "performance": 77,
+    "accessibility": 97,
+    "bestPractices": 100,
+    "seo": 69
+  }
+}

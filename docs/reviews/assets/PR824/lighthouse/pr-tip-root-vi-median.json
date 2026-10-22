@@ -1,0 +1,36 @@
+{
+  "label": "pr-tip",
+  "route": {
+    "id": "root-vi",
+    "path": "/",
+    "host": "vemoki.com"
+  },
+  "runs": 3,
+  "lighthouse": "13.5.0",
+  "median": {
+    "performance": 70,
+    "accessibility": 100,
+    "bestPractices": 96,
+    "seo": 63
+  },
+  "scores": [
+    {
+      "performance": 88,
+      "accessibility": 100,
+      "bestPractices": 96,
+      "seo": 63
+    },
+    {
+      "performance": 69,
+      "accessibility": 100,
+      "bestPractices": 96,
+      "seo": 63
+    },
+    {
+      "performance": 70,
+      "accessibility": 100,
+      "bestPractices": 96,
+      "seo": 63
+    }
+  ]
+}

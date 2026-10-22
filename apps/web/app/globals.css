@@ -16,7 +16,6 @@
   --color-accent: color-mix(in srgb, var(--color-ink) 6%, var(--color-paper));
   --color-accent-foreground: var(--color-ink);
   --color-secondary: var(--color-paper);
-  --color-muted: color-mix(in srgb, var(--color-ink) 4%, var(--color-paper));
   --radius: var(--radius-md);
 }
 @import 'tailwindcss/theme.css' layer(theme);

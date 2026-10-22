@@ -107,7 +107,7 @@ export const marketingInterestH2 = cn(
 
 export const marketingLead = cn(
   'mt-4 max-w-[52ch] text-[clamp(1.05rem,2vw,1.2rem)] text-muted',
-  '[[data-on-ink]_&]:text-paper/80',
+  '[[data-on-ink]_&]:text-paper/90',
 );
 
 export const marketingDemoNote = cn(
@@ -167,7 +167,7 @@ export const marketingAudienceCard = (emphasis: boolean) =>
     'rounded-md border border-line p-6',
     emphasis
       ? 'border-focus/20 bg-paper shadow-soft'
-      : 'border-line bg-transparent opacity-90',
+      : 'border-line bg-transparent',
     '[&_h3]:font-display [&_h3]:my-2 [&_h3]:text-[1.15rem]',
     '[&_p]:m-0 [&_p]:text-[0.9rem] [&_p]:text-muted',
   );

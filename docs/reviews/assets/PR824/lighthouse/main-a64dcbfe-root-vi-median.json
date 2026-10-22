@@ -1,0 +1,36 @@
+{
+  "label": "main-a64dcbfe",
+  "route": {
+    "id": "root-vi",
+    "path": "/",
+    "host": "vemoki.com"
+  },
+  "runs": 3,
+  "lighthouse": "13.5.0",
+  "median": {
+    "performance": 77,
+    "accessibility": 94,
+    "bestPractices": 100,
+    "seo": 100
+  },
+  "scores": [
+    {
+      "performance": 77,
+      "accessibility": 94,
+      "bestPractices": 100,
+      "seo": 100
+    },
+    {
+      "performance": 78,
+      "accessibility": 94,
+      "bestPractices": 100,
+      "seo": 100
+    },
+    {
+      "performance": 77,
+      "accessibility": 94,
+      "bestPractices": 100,
+      "seo": 100
+    }
+  ]
+}
