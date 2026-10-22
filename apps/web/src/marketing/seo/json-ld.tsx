@@ -1,3 +1,4 @@
+import { FAQ_ITEMS } from '../content-config';
 import { t } from '../copy';
 import {
   marketingOriginFromEnv,
@@ -57,11 +58,25 @@ export function MarketingJsonLd({ locale }: { locale: MarketingLocale }) {
     },
   };
 
+  const faqPage: JsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: FAQ_ITEMS.map((item) => ({
+      '@type': 'Question',
+      name: item.question[locale],
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: item.answer[locale],
+      },
+    })),
+  };
+
   return (
     <>
       {scriptJsonLd(organization)}
       {scriptJsonLd(website)}
       {scriptJsonLd(software)}
+      {scriptJsonLd(faqPage)}
     </>
   );
 }
