@@ -67,10 +67,7 @@ export function MarketingAnalyticsClient() {
   return null;
 }
 
-export function trackLeadSubmitted(role: string) {
-  const locale = localeFromDom();
-  sendEvent('lead_submitted', { locale, role });
-  if (role === 'owner' || role === 'agency') {
-    sendEvent('qualified_lead', { locale, role });
-  }
+/** Lead funnel completion is recorded server-side after JSONL persist (no PII). */
+export function trackLeadSubmitted() {
+  /* intentionally no client beacon — see lead/server-analytics.ts */
 }
