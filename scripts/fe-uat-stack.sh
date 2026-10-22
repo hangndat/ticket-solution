@@ -120,6 +120,9 @@ export SINGLE_CODE_RESOLVE_GLOBAL='${SINGLE_CODE_RESOLVE_GLOBAL}'
 # Web (next dev :3000) — copy apps/web/.env.example then override:
 export API_BASE_URL=http://127.0.0.1:3001
 export OIDC_ISSUER='${FE_UAT_ISSUER}'
+export OIDC_CLIENT_ID=ticket-web OIDC_CLIENT_SECRET=dev-web-secret-change-me
+export OIDC_REDIRECT_URI=http://localhost:3000/api/auth/callback
+export OIDC_AUDIENCE=ticket-api OIDC_JWKS_URL='${FE_UAT_ISSUER}/protocol/openid-connect/certs'
 export WEB_PUBLIC_ORIGIN=http://localhost:3000 PRODUCT_ORIGIN=http://localhost:3000
 export NEXT_PUBLIC_SINGLE_CODE_RESOLVE='${NEXT_PUBLIC_SINGLE_CODE_RESOLVE}'
 EOF

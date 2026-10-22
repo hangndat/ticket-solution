@@ -12,6 +12,24 @@ test('redeem form wires published terms consent UI', () => {
   assert.match(form, /RedeemTermsConsent/);
   assert.match(form, /publishedSchemaReady/);
   assert.match(form, /redeem-product-schema-notice/);
+  assert.match(form, /loadedSlugPairRef/);
+});
+
+test('tenant-bound auto-load survives React StrictMode (no mount cleanup generation bump)', () => {
+  const form = readFileSync(join(redeemDir, 'redeem-form.tsx'), 'utf8');
+  assert.doesNotMatch(
+    form,
+    /useEffect\(\(\) => \{\s*return \(\) => \{\s*generationRef\.current \+= 1/,
+  );
+  assert.match(form, /const generation = \+\+generationRef\.current/);
+  assert.doesNotMatch(
+    form,
+    /loadedSlugPairRef\.current = pairKey;\s*\n\s*loadSchema\(\)/,
+  );
+  assert.match(
+    form,
+    /if \(pairKey\) loadedSlugPairRef\.current = pairKey/,
+  );
 });
 
 test('RedeemTermsConsent exposes stable test id for UAT', () => {

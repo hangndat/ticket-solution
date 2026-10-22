@@ -29,6 +29,8 @@ test('production routes isolate tenant content and reject unknown pairs', async 
         ...process.env,
         // Production origin policy requires WEB_PUBLIC_ORIGIN (no Host/forwarded fallback).
         WEB_PUBLIC_ORIGIN: base,
+        // Isolate from a live local API (:3001 default) during route fail-closed checks.
+        API_BASE_URL: 'http://127.0.0.1:1',
       },
     },
   );
