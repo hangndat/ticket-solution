@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import type { PublishedEventSummary } from '@ticket/contracts';
-import { CatalogHeroBand } from '@ticket/ui';
+import { Button, CatalogHeroBand } from '@ticket/ui';
 import { loginHref } from '../src/oidc/login-href';
 import { authNoticeFromParam } from '../src/oidc/auth-notice';
 import { loadOwnerWallet, ownedTicketCountByEventId } from '../src/owner-ticket';
@@ -80,13 +80,13 @@ export default async function Home({ searchParams }: Props) {
         >
           <h2>{authNotice.title}</h2>
           <p>{authNotice.detail}</p>
-          <p className="home-cta auth-buttons">
-            <a className="button" href={authNotice.retryHref}>
-              Thử lại
-            </a>
-            <Link className="button-link button-link-secondary" href="/">
-              Ở lại trang chủ
-            </Link>
+          <p className="auth-buttons">
+            <Button asChild variant="brand">
+              <a href={authNotice.retryHref}>Thử lại</a>
+            </Button>
+            <Button asChild variant="secondary">
+              <Link href="/">Ở lại trang chủ</Link>
+            </Button>
           </p>
         </aside>
       ) : null}
@@ -99,24 +99,22 @@ export default async function Home({ searchParams }: Props) {
         >
           <h2>{denied.title}</h2>
           <p>{denied.detail}</p>
-          <p className="home-cta auth-buttons">
+          <p className="auth-buttons">
             {denied.portalAdminHref ? (
-              <a
-                className="button"
-                href={denied.portalAdminHref}
-                data-testid="staff-denied-portal-cta"
-              >
-                Mở portal quản trị
-              </a>
+              <Button asChild variant="brand">
+                <a href={denied.portalAdminHref} data-testid="staff-denied-portal-cta">
+                  Mở portal quản trị
+                </a>
+              </Button>
             ) : null}
             {params.notice?.trim() === 'gate_denied' ? (
-              <Link className="button-link button-link-secondary" href="/wallet">
-                Vé của tôi
-              </Link>
+              <Button asChild variant="secondary">
+                <Link href="/wallet">Vé của tôi</Link>
+              </Button>
             ) : null}
-            <Link className="button-link button-link-secondary" href="/">
-              Ở lại trang chủ
-            </Link>
+            <Button asChild variant="secondary">
+              <Link href="/">Ở lại trang chủ</Link>
+            </Button>
           </p>
         </aside>
       ) : null}
@@ -137,9 +135,9 @@ export default async function Home({ searchParams }: Props) {
           detail={PUBLIC_EVENT_COPY.homeUnreachable.detail}
           testId="home-events-unreachable"
           action={
-            <Link className="button" href="/">
-              Thử lại
-            </Link>
+            <Button asChild variant="brand">
+              <Link href="/">Thử lại</Link>
+            </Button>
           }
         />
       ) : null}
@@ -151,9 +149,9 @@ export default async function Home({ searchParams }: Props) {
           detail={PUBLIC_EVENT_COPY.homeInvalid.detail}
           testId="home-events-invalid"
           action={
-            <Link className="button" href="/">
-              Thử lại
-            </Link>
+            <Button asChild variant="brand">
+              <Link href="/">Thử lại</Link>
+            </Button>
           }
         />
       ) : null}

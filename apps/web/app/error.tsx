@@ -1,4 +1,5 @@
 'use client';
+import { Button } from '@ticket/ui';
 import Link from 'next/link';
 import { SurfaceState } from '../src/ui/surface-state';
 
@@ -16,9 +17,9 @@ export default function ErrorBoundary({ reset }: { reset: () => void }) {
         detail="Chưa biết kết quả phía máy chủ — không suy diễn thành công hay thất bại nghiệp vụ."
         testId="route-error"
         action={
-          <button type="button" className="button" onClick={reset}>
+          <Button type="button" variant="brand" onClick={reset}>
             Thử lại
-          </button>
+          </Button>
         }
       />
       <p>

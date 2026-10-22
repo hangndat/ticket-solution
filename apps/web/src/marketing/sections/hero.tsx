@@ -1,4 +1,4 @@
-import { ProductPreviewFrame } from '@ticket/ui';
+import { Button, ProductPreviewFrame } from '@ticket/ui';
 import Link from 'next/link';
 import { t } from '../copy';
 import type { MarketingSectionProps } from './types';
@@ -46,31 +46,21 @@ export function HeroSection({ locale, demo, login }: MarketingSectionProps) {
             <li>{t(locale, 'hero.proof2')}</li>
             <li>{t(locale, 'hero.proof3')}</li>
           </ul>
-          <div className="mkt-hero-cta">
-            <a
-              className="mkt-btn mkt-btn--primary"
-              href={demo}
-              data-testid="cta-demo"
-              data-analytics-cta="hero_demo"
-            >
-              {t(locale, 'hero.cta.demo')}
-            </a>
-            <Link
-              className="mkt-btn mkt-btn--secondary"
-              href="#interest"
+          <div className="mt-7 flex flex-wrap items-center gap-3">
+            <Button asChild variant="primary" data-testid="cta-demo" data-analytics-cta="hero_demo">
+              <a href={demo}>{t(locale, 'hero.cta.demo')}</a>
+            </Button>
+            <Button
+              asChild
+              variant="secondaryOnInk"
               data-testid="cta-interest"
               data-analytics-cta="hero_interest"
             >
-              {t(locale, 'hero.cta.interest')}
-            </Link>
-            <a
-              className="mkt-btn mkt-btn--ghost"
-              href={login}
-              data-testid="cta-login"
-              data-analytics-cta="hero_login"
-            >
-              {t(locale, 'hero.cta.login')}
-            </a>
+              <Link href="#interest">{t(locale, 'hero.cta.interest')}</Link>
+            </Button>
+            <Button asChild variant="ghostOnInk" data-testid="cta-login" data-analytics-cta="hero_login">
+              <a href={login}>{t(locale, 'hero.cta.login')}</a>
+            </Button>
           </div>
           <p className="mkt-demo-note" role="status" data-testid="demo-badge">
             {t(locale, 'hero.demo_note')}

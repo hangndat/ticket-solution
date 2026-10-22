@@ -295,35 +295,6 @@ nav a,
   margin: 16px 0;
 }
 
-.auth-buttons button,
-.auth-buttons a.button-link {
-  appearance: none;
-  border: 2px solid var(--ink);
-  background: var(--ink);
-  color: var(--paper);
-  font: inherit;
-  font-weight: 700;
-  padding: 12px 18px;
-  min-height: 44px;
-  min-width: 44px;
-  box-sizing: border-box;
-  cursor: pointer;
-  text-decoration: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.auth-buttons button:disabled {
-  opacity: 0.55;
-  cursor: wait;
-}
-
-.auth-buttons a.button-link-secondary {
-  background: transparent;
-  color: var(--ink);
-}
-
 .me-result {
   margin: 0;
   padding: 16px;
@@ -381,50 +352,6 @@ nav a,
   font-weight: 700;
   text-transform: uppercase;
   color: var(--ink-muted);
-}
-
-.home-cta {
-  margin: var(--space-5) 0 0;
-}
-
-.home-cta .button{
-  color: var(--paper);
-  background: var(--signal);
-  min-height: 44px;
-  transition: background 0.15s ease, color 0.15s ease;
-}
-
-.home-cta .button:hover{
-  background: var(--ink);
-  color: var(--paper);
-}
-
-.home-cta.auth-buttons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-3);
-  align-items: center;
-}
-
-.home-cta .button-link-secondary {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 44px;
-  min-width: 44px;
-  padding: 0.55rem 1.1rem;
-  border: 2px solid var(--ink);
-  border-radius: var(--radius-sm);
-  text-decoration: none;
-  font-weight: 700;
-  background: transparent;
-  color: var(--ink);
-  transition: background 0.15s ease, color 0.15s ease;
-}
-
-.home-cta .button-link-secondary:hover {
-  background: var(--ink);
-  color: var(--paper);
 }
 
 .wordmark-hero--catalog {
@@ -549,28 +476,6 @@ nav a,
   align-items: center;
 }
 
-.account-cta-primary {
-  min-height: 44px;
-  background: var(--signal);
-  color: var(--paper);
-  transition: background 0.15s ease, color 0.15s ease;
-}
-
-.account-cta-primary:hover {
-  background: var(--ink);
-  color: var(--paper);
-}
-
-.account-cta-logout {
-  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
-}
-
-.account-cta-logout:hover {
-  background: var(--signal);
-  border-color: var(--signal);
-  color: var(--paper);
-}
-
 .account-deletion {
   margin-top: var(--space-2);
 }
@@ -593,10 +498,6 @@ nav a,
 
 .claim-outcome {
   animation: fade-rise 0.35s ease-out both;
-}
-
-.claim-submit {
-  min-height: 44px;
 }
 
 .invite-page {
@@ -644,47 +545,9 @@ nav a,
   color: var(--ink-muted);
 }
 
-.invite-submit,
-.redeem-submit {
-  min-height: 44px;
-  appearance: none;
-  border: 2px solid var(--signal);
-  background: var(--signal);
-  color: var(--paper);
-  font: inherit;
-  font-weight: 700;
-  padding: 12px 18px;
-  cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
-}
-
-.invite-submit:hover:not(:disabled),
-.redeem-submit:hover:not(:disabled) {
-  background: var(--ink);
-  border-color: var(--ink);
-  color: var(--paper);
-}
-
-.invite-submit:disabled,
-.redeem-submit:disabled {
-  opacity: 0.55;
-  cursor: wait;
-}
-
 .invite-outcome {
   animation: fade-rise 0.35s ease-out both;
   max-width: 36rem;
-}
-
-.invite-admin-cta {
-  background: var(--signal);
-  color: var(--paper);
-  transition: background 0.15s ease, color 0.15s ease;
-}
-
-.invite-admin-cta:hover {
-  background: var(--ink);
-  color: var(--paper);
 }
 
 .redeem-page {
@@ -834,37 +697,6 @@ h2 {
 
 .footer-links a:hover {
   color: var(--signal);
-}
-
-.btn-primary{
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  min-height: 44px;
-  padding: 12px 18px;
-  border-radius: var(--radius-md);
-  font: inherit;
-  font-weight: 600;
-  text-decoration: none;
-  cursor: pointer;
-  border: 1px solid transparent;
-  transition:
-    background 0.15s ease,
-    color 0.15s ease,
-    border-color 0.15s ease;
-}
-
-.btn-primary {
-  background: var(--signal);
-  color: #fff;
-  border-color: var(--signal);
-}
-
-.btn-primary:hover {
-  background: var(--ink);
-  border-color: var(--ink);
-  color: var(--paper);
 }
 
 .event-page {
@@ -1070,16 +902,6 @@ h2 {
   margin: 0 0 var(--space-2);
 }
 
-.event-sidebox .event-sidebox-cta {
-  display: flex;
-  width: 100%;
-  justify-content: center;
-  margin-top: var(--space-3);
-  background: var(--signal);
-  border-color: var(--signal);
-  color: var(--paper);
-}
-
 .event-faq {
   max-width: 48rem;
   margin-top: var(--space-7);
@@ -1133,23 +955,6 @@ h2 {
 .hero h1 {
   max-width: 700px;
   margin-bottom: var(--space-3);
-}
-
-.button {
-  display: inline-flex;
-  gap: 8px;
-  align-items: center;
-  justify-content: center;
-  padding: 12px 18px;
-  min-height: 44px;
-  border-radius: var(--radius-md);
-  background: var(--brand);
-  color: #fff;
-  font: inherit;
-  font-weight: 600;
-  text-decoration: none;
-  border: 1px solid transparent;
-  cursor: pointer;
 }
 
 .details {
@@ -1264,8 +1069,7 @@ details p {
 /* UX-10 A3 — redeem / gate / admin primary controls ≥44×44 CSS px */
 .redeem-page form button,
 .redeem-page .auth-buttons button,
-.redeem-page .auth-buttons a.button-link,
-.redeem-page a.button,
+.redeem-page .auth-buttons a,
 .redeem-form button,
 .redeem-status button {
   min-height: 44px;
@@ -2229,9 +2033,6 @@ select[aria-invalid='true'] {
 .account-outcome,
 .claim-outcome,
 .invite-outcome,
-.invite-submit,
-.redeem-submit,
-.invite-admin-cta,
 .shell > h1,
 .shell > .intro,
 .redeem-page > h1,
@@ -2449,37 +2250,6 @@ select[aria-invalid='true'] {
   max-width: 22ch;
 }
 
-.mkt-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 44px;
-  padding: 0.7rem 1.2rem;
-  border-radius: 2px;
-  border: 1px solid transparent;
-  font: inherit;
-  font-weight: 600;
-  text-decoration: none;
-  cursor: pointer;
-  transition: filter 160ms ease, color 160ms ease, border-color 160ms ease;
-}
-
-.mkt-btn-primary {
-  background: var(--signal);
-  color: #ffffff;
-}
-
-.mkt-btn-primary:hover {
-  background: var(--ink);
-  color: var(--paper);
-}
-
-.mkt-btn-secondary {
-  background: transparent;
-  color: var(--ink);
-  border-color: color-mix(in srgb, var(--ink) 35%, transparent);
-}
-
 @keyframes mkt-glow {
   from {
     opacity: 0.55;
@@ -2487,14 +2257,6 @@ select[aria-invalid='true'] {
   to {
     opacity: 1;
   }
-}
-
-@media (prefers-reduced-motion: reduce) {
-
-  .mkt-btn {
-    transition: none;
-  }
-
 }
 
 .mkt section {
@@ -2572,10 +2334,6 @@ select[aria-invalid='true'] {
   border: 1px dashed color-mix(in srgb, var(--signal) 45%, var(--ink));
   background: color-mix(in srgb, var(--signal) 8%, var(--paper));
   font-size: 0.9rem;
-}
-
-.mkt-demo-cta {
-  margin-top: 1rem;
 }
 
 .mkt-form-field {

@@ -27,7 +27,7 @@ const LAYER_ORDER = ['theme', 'base', 'legacy', 'components', 'utilities'];
 /** Representative legacy-bundle selectors (live-pulse / marketing / attendee uplift). */
 const LEGACY_SELECTOR_MARKERS = [
   { id: 'live-pulse', needle: '.lp-container' },
-  { id: 'marketing-uplift', needle: '.mkt-btn' },
+  { id: 'marketing-uplift', needle: '.mkt-section--interest' },
   { id: 'attendee-uplift', needle: 'body.attendee-uplift' },
 ];
 
