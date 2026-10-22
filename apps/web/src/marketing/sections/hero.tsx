@@ -64,8 +64,9 @@ export function HeroSection({ locale, demo, login }: MarketingSectionProps) {
             alt={alt}
             width={HERO_PREVIEW.desktop.width}
             height={HERO_PREVIEW.desktop.height}
-            sizes="(max-width: 768px) 100vw, 50vw"
-            priority
+            sizes="(min-width: 960px) 50vw, 0px"
+            loading="lazy"
+            fetchPriority="low"
           />
           <Image
             className="mkt-hero-preview-img mkt-hero-preview-mobile"
@@ -73,8 +74,9 @@ export function HeroSection({ locale, demo, login }: MarketingSectionProps) {
             alt={alt}
             width={HERO_PREVIEW.mobile.width}
             height={HERO_PREVIEW.mobile.height}
-            sizes="100vw"
+            sizes="(max-width: 959px) 100vw, 0px"
             priority
+            fetchPriority="high"
           />
         </div>
         <figcaption className="mkt-hero-preview-caption">{caption}</figcaption>
