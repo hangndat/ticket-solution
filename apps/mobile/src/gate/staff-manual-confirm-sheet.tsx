@@ -1,14 +1,15 @@
 import { Modal, Pressable, StyleSheet, Text } from 'react-native';
 import { Button } from '@/components/ui/button';
 import { colors } from '@/theme/colors';
-import { brand, space } from '@/theme/tokens';
+import { brand, radius, space } from '@/theme/tokens';
+import { typography } from '@/theme/typography';
 
 export function StaffManualConfirmSheet({
   visible,
   previewLine,
   busy,
   onConfirm,
-  onCancel,
+  onCancel
 }: {
   visible: boolean;
   previewLine: string;
@@ -28,7 +29,7 @@ export function StaffManualConfirmSheet({
           flex: 1,
           backgroundColor: 'rgba(11, 18, 32, 0.53)',
           justifyContent: 'center',
-          padding: 22,
+          padding: space.xl
         }}
         onPress={onCancel}
         accessibilityLabel="Đóng xác nhận vé"
@@ -37,18 +38,18 @@ export function StaffManualConfirmSheet({
           onPress={(e) => e.stopPropagation()}
           style={{
             backgroundColor: brand.paper,
-            borderRadius: 20,
-            padding: 22,
-            gap: 12,
+            borderRadius: radius.xl,
+            padding: space.xl,
+            gap: space.md
           }}
         >
           <Text
             accessibilityRole="header"
-            style={{ color: colors.label, fontSize: 20, fontWeight: '700' }}
+            style={{ ...typography.sectionTitleBold, color: colors.label }}
           >
             Vé hợp lệ
           </Text>
-          <Text style={{ color: colors.secondary, fontSize: 14, lineHeight: 20 }}>
+          <Text style={{ ...typography.footnote, color: colors.secondary,  lineHeight: 20 }}>
             {previewLine}
           </Text>
           <Button
@@ -74,5 +75,5 @@ export function StaffManualConfirmSheet({
 }
 
 const styles = StyleSheet.create({
-  confirm: { marginTop: space.xs },
+  confirm: { marginTop: space.xs }
 });

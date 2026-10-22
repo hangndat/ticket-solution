@@ -4,10 +4,13 @@ import { Spinner } from '@/components/ui/spinner';
 import { SymbolView } from 'expo-symbols';
 import type { GatePhase } from '@/gate/gate-scan';
 import type { ConnectivityState } from '@/gate/offline-queue';
-import type { StaffGateScope } from '@/gate/staff-gate-events';
-import { sameStaffGateScope } from '@/gate/staff-gate-events';
+import {
+  sameStaffGateScope,
+  type StaffGateScope,
+} from '@/gate/staff-gate-events';
 import { colors } from '@/theme/colors';
 import { radius, space } from '@/theme/tokens';
+import { typography } from '@/theme/typography';
 
 type OutcomeGlyph = 'idle' | 'busy' | 'admit' | 'deny' | 'unknown' | 'default';
 
@@ -32,7 +35,7 @@ export function GateStatusStrip({
   hasSession,
   queueAttention,
   syncing,
-  onSync,
+  onSync
 }: {
   connectivity: ConnectivityState;
   hasSession: boolean;
@@ -50,7 +53,7 @@ export function GateStatusStrip({
     connectivity === 'online' ? colors.admit : colors.secondary;
 
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 20 }}>
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.xl }}>
       <SymbolView
         name={wifi}
         size={22}
@@ -99,7 +102,7 @@ export function StaffEventRow({
   loading,
   canSwitch,
   pickerOpen,
-  onTogglePicker,
+  onTogglePicker
 }: {
   scope: StaffGateScope | null;
   loading: boolean;
@@ -108,19 +111,14 @@ export function StaffEventRow({
   onTogglePicker: () => void;
 }) {
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.md }}>
       {loading ? (
         <Spinner style={styles.rowSpinner} color={colors.secondary} />
       ) : (
         <Text
           numberOfLines={1}
           accessibilityRole="header"
-          style={{
-            flex: 1,
-            color: colors.label,
-            fontSize: 17,
-            fontWeight: '600',
-          }}
+          style={{ ...typography.bodySemibold, color: colors.label, }}
         >
           {scope?.name ?? '—'}
         </Text>
@@ -147,7 +145,7 @@ export function StaffEventRow({
 export function StaffEventPicker({
   choices,
   selected,
-  onSelect,
+  onSelect
 }: {
   choices: StaffGateScope[];
   selected: StaffGateScope | null;
@@ -155,7 +153,7 @@ export function StaffEventPicker({
 }) {
   if (choices.length === 0) return null;
   return (
-    <View style={{ gap: 4 }}>
+    <View style={{ gap: space.xs }}>
       {choices.map((choice) => {
         const active =
           selected !== null && sameStaffGateScope(selected, choice);
@@ -174,11 +172,8 @@ export function StaffEventPicker({
           >
             <Text
               numberOfLines={1}
-              style={{
-                color: colors.label,
-                fontSize: 16,
-                fontWeight: active ? '700' : '400',
-              }}
+              style={{ ...typography.callout, color: colors.label,
+                fontWeight: active ? '700' : '400' }}
             >
               {choice.name}
             </Text>
@@ -192,7 +187,7 @@ export function StaffEventPicker({
 export function GateOutcomeGlyph({
   kind,
   accessibilityTitle,
-  accessibilityDetail,
+  accessibilityDetail
 }: {
   kind: OutcomeGlyph;
   accessibilityTitle: string;
@@ -215,7 +210,7 @@ export function GateOutcomeGlyph({
         accessible
         accessibilityRole="progressbar"
         accessibilityLabel={`${accessibilityTitle}. ${accessibilityDetail}`}
-        style={{ alignItems: 'center', paddingVertical: 4 }}
+        style={{ alignItems: 'center', paddingVertical: space.xs }}
       >
         <Spinner size="large" color={colors.accent} />
       </View>
@@ -240,7 +235,7 @@ export function GateOutcomeGlyph({
       accessible
       accessibilityRole="image"
       accessibilityLabel={`${accessibilityTitle}. ${accessibilityDetail}`}
-      style={{ alignItems: 'center', paddingVertical: 4 }}
+      style={{ alignItems: 'center', paddingVertical: space.xs }}
     >
       <SymbolView name={symbol} size={size} tintColor={tint} />
     </View>
@@ -256,7 +251,7 @@ type GateIconSymbol =
 export function GateHistoryIconButton({
   count,
   disabled,
-  onPress,
+  onPress
 }: {
   count: number;
   disabled?: boolean;
@@ -283,21 +278,17 @@ export function GateHistoryIconButton({
             right: -4,
             minWidth: 18,
             height: 18,
-            borderRadius: 9,
+            borderRadius: radius.sm,
             backgroundColor: colors.accent,
             alignItems: 'center',
             justifyContent: 'center',
-            paddingHorizontal: 4,
+            paddingHorizontal: space.xs
           }}
           accessibilityElementsHidden
           importantForAccessibility="no-hide-descendants"
         >
           <Text
-            style={{
-              color: colors.onAccent,
-              fontSize: 11,
-              fontWeight: '700',
-            }}
+            style={{ ...typography.badge, color: colors.onAccent, }}
           >
             {count > 99 ? '99+' : count}
           </Text>
@@ -313,7 +304,7 @@ export function GateIconButton({
   disabled,
   onPress,
   filled,
-  testID,
+  testID
 }: {
   symbol: GateIconSymbol;
   label: string;
@@ -346,27 +337,27 @@ const styles = StyleSheet.create({
   iconTap: {
     minHeight: 44,
     paddingVertical: space.xs,
-    paddingHorizontal: space.xs,
+    paddingHorizontal: space.xs
   },
   rowSpinner: { flex: 1 },
   switchEvent: {
     paddingHorizontal: space.sm + 2,
     paddingVertical: space.xs + 2,
     borderRadius: radius.sm,
-    minHeight: 44,
+    minHeight: 44
   },
   pickerRow: {
     alignSelf: 'stretch',
     paddingVertical: space.sm + 2,
     paddingHorizontal: space.md,
-    borderRadius: radius.sm + 2,
+    borderRadius: radius.sm + 2
   },
   pickerRowActive: {
-    backgroundColor: colors.card,
+    backgroundColor: colors.card
   },
   pickerRowContent: {
     justifyContent: 'flex-start',
-    width: '100%',
+    width: '100%'
   },
   gateIcon: {
     width: 48,
@@ -374,9 +365,9 @@ const styles = StyleSheet.create({
     minHeight: 48,
     paddingVertical: 0,
     paddingHorizontal: 0,
-    borderRadius: radius.md,
+    borderRadius: radius.md
   },
   gateIconContent: {
-    padding: 0,
-  },
+    padding: 0
+  }
 });

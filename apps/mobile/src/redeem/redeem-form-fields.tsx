@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { colors } from '@/theme/colors';
 import { space } from '@/theme/tokens';
+import { typography } from '@/theme/typography';
 import type {
   FormAnswerValue,
   FormDefinition,
@@ -35,7 +36,7 @@ export function RedeemFormFields({
   disabled,
   onChangeAnswer,
   onTermsAcceptedChange,
-  fieldErrors,
+  fieldErrors
 }: Props) {
   return (
     <View style={styles.stack}>
@@ -43,11 +44,11 @@ export function RedeemFormFields({
         <View style={styles.section}>
           <Text
             accessibilityRole="header"
-            style={{ color: colors.label, fontSize: 20, fontWeight: '600' }}
+            style={{ ...typography.sectionTitle, color: colors.label }}
           >
             Required details
           </Text>
-          <Text style={{ color: colors.secondary, fontSize: 15 }}>
+          <Text style={{ ...typography.subhead, color: colors.secondary }}>
             Form version {form.formVersion}. Server validates answers.
           </Text>
           {form.fields.map((field) => (
@@ -67,17 +68,17 @@ export function RedeemFormFields({
         <View style={styles.termsBlock}>
           <Text
             accessibilityRole="header"
-            style={{ color: colors.label, fontSize: 20, fontWeight: '600' }}
+            style={{ ...typography.sectionTitle, color: colors.label }}
           >
             Terms
           </Text>
-          <Text selectable style={{ color: colors.secondary, fontSize: 15 }}>
+          <Text selectable style={{ ...typography.subhead, color: colors.secondary }}>
             Version {termsVersion}
           </Text>
           {termsBody ? (
             <Text
               selectable
-              style={{ color: colors.label, fontSize: 16, lineHeight: 24 }}
+              style={{ ...typography.callout, color: colors.label,  lineHeight: 24 }}
             >
               {termsBody}
             </Text>
@@ -93,7 +94,7 @@ export function RedeemFormFields({
           {fieldErrors?.terms ? (
             <Text
               accessibilityRole="alert"
-              style={{ color: '#B00020', fontSize: 15 }}
+              style={{ ...typography.subhead, color: colors.destructive }}
             >
               {fieldErrors.terms}
             </Text>
@@ -109,7 +110,7 @@ function FieldControl({
   value,
   error,
   disabled,
-  onChange,
+  onChange
 }: {
   field: FormFieldDefinition;
   value: FormAnswerValue | undefined;
@@ -122,7 +123,7 @@ function FieldControl({
   if (field.type === 'checkbox') {
     const checked = value === true;
     return (
-      <View style={{ gap: 6 }}>
+      <View style={{ gap: space.sm }}>
         <Host matchContents>
           <Switch
             label={label}
@@ -189,7 +190,7 @@ function FieldControl({
 
 function ErrorText({ message }: { message: string }) {
   return (
-    <Text accessibilityRole="alert" style={{ color: '#B00020', fontSize: 15 }}>
+    <Text accessibilityRole="alert" style={{ ...typography.subhead, color: colors.destructive }}>
       {message}
     </Text>
   );
@@ -202,5 +203,5 @@ const styles = StyleSheet.create({
   selectBlock: { gap: space.sm },
   selectOptions: { gap: space.sm },
   selectOption: { alignSelf: 'stretch' },
-  fieldLabel: { color: colors.label, fontSize: 17 },
+  fieldLabel: { ...typography.body, color: colors.label }
 });

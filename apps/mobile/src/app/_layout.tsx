@@ -10,14 +10,14 @@ import { BrandFontsGate } from '@/theme/BrandFontsGate';
 import { ThemeProvider } from '@/theme/ThemeProvider';
 import {
   bindIfStillVerified,
-  captureOfflineBindingEpoch,
+  captureOfflineBindingEpoch
 } from '@/tickets/bind-after-verify';
 import { offlineDisplay } from '@/tickets/offline-display-session';
 import { tabDetailStackScreenOptions } from '@/navigation/tab-stack-options';
 
 const stackBackFromTabs = {
   ...tabDetailStackScreenOptions,
-  headerBackButtonDisplayMode: 'minimal' as const,
+  headerBackButtonDisplayMode: 'minimal' as const
 };
 
 function AppStack() {
@@ -31,14 +31,14 @@ function AppStack() {
         name="events/[tenantSlug]/[slug]"
         options={{
           ...stackBackFromTabs,
-          title: 'Chi tiết sự kiện',
+          title: 'Chi tiết sự kiện'
         }}
       />
       <Stack.Screen
         name="events/fixture/[eventId]"
         options={{
           ...stackBackFromTabs,
-          title: 'Sự kiện demo',
+          title: 'Sự kiện demo'
         }}
       />
       <Stack.Screen
@@ -58,7 +58,7 @@ function AppStack() {
           headerShown: true,
           headerBackButtonDisplayMode: 'default',
           headerBackTitle: 'Quay lại',
-          gestureEnabled: true,
+          gestureEnabled: true
         }}
       />
       <Stack.Screen
@@ -110,7 +110,7 @@ export default function RootLayout() {
             } catch {
               /* Navigation must never crash wallet bootstrap. */
             }
-          },
+          }
         });
         if (cancelled) {
           handle.stop();
@@ -163,7 +163,7 @@ export default function RootLayout() {
               offline: offlineDisplay,
               userId: identity.userId,
               tenantId,
-              bindingEpoch,
+              bindingEpoch
             });
           }
           return;

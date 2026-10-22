@@ -7,7 +7,7 @@ export default function Layout() {
     <Stack
       screenOptions={{
         ...tabAttendeeCompactStackScreenOptions,
-        headerTitle: () => <BrandWordmark compact />,
+        headerTitle: () => <BrandWordmark compact />
       }}
     />
   );

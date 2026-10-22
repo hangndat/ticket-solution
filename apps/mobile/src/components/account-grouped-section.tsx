@@ -3,6 +3,8 @@ import { Text, View } from 'react-native';
 import { Button } from '@/components/ui/button';
 import { brand, colors } from '@/theme/colors';
 import { fontFamilies } from '@/theme/fonts';
+import { space, radius } from '@/theme/tokens';
+import { typography } from '@/theme/typography';
 
 type SectionProps = PropsWithChildren<{
   title: string;
@@ -12,34 +14,30 @@ type SectionProps = PropsWithChildren<{
 export function AccountGroupedSection({
   title,
   accessibilityLabel,
-  children,
+  children
 }: SectionProps) {
   return (
     <View
       accessibilityRole="none"
       accessibilityLabel={accessibilityLabel ?? title}
-      style={{ gap: 8 }}
+      style={{ gap: space.sm }}
     >
       <Text
         accessibilityRole="header"
-        style={{
-          color: colors.secondary,
+        style={{ ...typography.caption, color: colors.secondary,
           fontFamily: fontFamilies.body,
-          fontSize: 13,
-          fontWeight: '600',
           textTransform: 'uppercase',
           letterSpacing: 0.4,
-          paddingHorizontal: 4,
-        }}
+          paddingHorizontal: space.xs }}
       >
         {title}
       </Text>
       <View
         style={{
-          borderRadius: 12,
+          borderRadius: radius.md,
           borderCurve: 'continuous',
           backgroundColor: colors.card,
-          overflow: 'hidden',
+          overflow: 'hidden'
         }}
       >
         {children}
@@ -56,7 +54,7 @@ export function AccountGroupedRow({
   destructive,
   showChevron,
   testID,
-  accessibilityHint,
+  accessibilityHint
 }: {
   label: string;
   value?: string;
@@ -72,34 +70,28 @@ export function AccountGroupedRow({
     <View
       style={{
         minHeight: 44,
-        paddingVertical: 12,
-        paddingHorizontal: 16,
+        paddingVertical: space.md,
+        paddingHorizontal: space.lg,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        gap: 12,
-        opacity: disabled ? 0.45 : 1,
+        gap: space.md,
+        opacity: disabled ? 0.45 : 1
       }}
     >
-      <View style={{ flex: 1, gap: 2 }}>
+      <View style={{ flex: 1, gap: space.xxs }}>
         <Text
-          style={{
-            color: destructive ? brand.signal : brand.ink,
+          style={{ ...typography.body, color: destructive ? brand.signal : brand.ink,
             fontFamily: fontFamilies.body,
-            fontSize: 17,
-            fontWeight: destructive ? '600' : '400',
-          }}
+            fontWeight: destructive ? '600' : '400' }}
         >
           {label}
         </Text>
         {value ? (
           <Text
-            style={{
-              color: colors.secondary,
+            style={{ ...typography.subhead, color: colors.secondary,
               fontFamily: fontFamilies.body,
-              fontSize: 15,
-              lineHeight: 20,
-            }}
+              lineHeight: 20 }}
           >
             {value}
           </Text>
@@ -107,11 +99,7 @@ export function AccountGroupedRow({
       </View>
       {showChevron ? (
         <Text
-          style={{
-            color: colors.secondary,
-            fontSize: 20,
-            fontWeight: '600',
-          }}
+          style={{ ...typography.sectionTitle, color: colors.secondary, }}
           accessibilityElementsHidden
           importantForAccessibility="no"
         >
@@ -151,7 +139,7 @@ export function AccountGroupedDivider() {
       style={{
         height: 1,
         backgroundColor: colors.separator,
-        marginLeft: 16,
+        marginLeft: space.lg
       }}
     />
   );
@@ -160,13 +148,10 @@ export function AccountGroupedDivider() {
 export function AccountSectionFooter({ children }: { children: ReactNode }) {
   return (
     <Text
-      style={{
-        color: colors.secondary,
+      style={{ ...typography.caption, color: colors.secondary,
         fontFamily: fontFamilies.body,
-        fontSize: 13,
         lineHeight: 18,
-        paddingHorizontal: 4,
-      }}
+        paddingHorizontal: space.xs }}
     >
       {children}
     </Text>

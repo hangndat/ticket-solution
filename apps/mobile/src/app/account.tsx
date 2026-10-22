@@ -9,7 +9,7 @@ export default function AccountRoute() {
       <Stack.Screen
         options={{
           ...tabDetailStackScreenOptions,
-          title: 'Tài khoản',
+          title: 'Tài khoản'
         }}
       />
       <AccountScreen presentation="stack" />
