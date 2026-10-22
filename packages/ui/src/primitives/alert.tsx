@@ -1,5 +1,5 @@
 import type { HTMLAttributes } from 'react';
-import { cn, usesLegacyChromeClass } from '../cn.js';
+import { cn } from '../cn.js';
 import { alertVariants } from './variants.js';
 import type { VariantProps } from 'class-variance-authority';
 
@@ -10,17 +10,14 @@ export type AlertProps = HTMLAttributes<HTMLDivElement> &
 
 export function Alert({ className, variant, title, children, role = 'status', ...props }: AlertProps) {
   const resolvedRole = variant === 'destructive' ? 'alert' : role;
-  const legacy = usesLegacyChromeClass(className);
   return (
     <div
       role={resolvedRole}
-      className={cn(!legacy && alertVariants({ variant }), className)}
+      className={cn(alertVariants({ variant }), className)}
       {...props}
     >
-      {title ? <strong className={legacy ? undefined : 'font-semibold'}>{title}</strong> : null}
-      {children ? (
-        <div className={legacy ? undefined : 'text-sm leading-relaxed'}>{children}</div>
-      ) : null}
+      {title ? <strong className="font-semibold">{title}</strong> : null}
+      {children ? <div className="text-sm leading-relaxed">{children}</div> : null}
     </div>
   );
 }
