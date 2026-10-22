@@ -204,8 +204,8 @@ try {
   const redeemShot = join(OUT, 'd12-a11y-382-redeem.png');
   await page.screenshot({ path: redeemShot, fullPage: true });
 
-  // --- /admin and /gate — soft-redirect or staff chrome ---
-  for (const path of ['/admin', '/gate']) {
+  // --- /admin — soft-redirect or staff chrome; /gate retired → home ---
+  for (const path of ['/admin']) {
     const res = await page.goto(`${BASE}${path}`, {
       waitUntil: 'domcontentloaded',
       // Follow redirects; soft-redirect may be client or server.
@@ -253,24 +253,6 @@ try {
       die(`axe serious/critical on ${path}: ${JSON.stringify(pageAxe.seriousCritical)}`);
     }
     checks.push(`${label}: axe serious/critical=0`);
-
-    if (path === '/gate') {
-      const idle = page.getByTestId('gate-decision-idle');
-      if ((await idle.count()) > 0) {
-        const live = await idle.getAttribute('aria-live');
-        const role = await idle.getAttribute('role');
-        if (live !== 'polite' || role !== 'status') {
-          die(`gate idle live region unexpected: role=${role} aria-live=${live}`);
-        }
-        checks.push('gate: idle polite status live region');
-      }
-      const sessionBtn = page.getByTestId('gate-session-submit');
-      if ((await sessionBtn.count()) > 0) {
-        await assertHitTarget(page, sessionBtn, 'gate session');
-        await assertFocusVisible(page, sessionBtn, 'gate session');
-        checks.push('gate: session button ≥44px + focus-visible');
-      }
-    }
 
     if (path === '/admin') {
       const job = page.getByTestId('admin-job-setup');

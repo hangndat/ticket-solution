@@ -20,7 +20,6 @@ import {
 const STAFF_CAPS: NavCapabilities = {
   authenticated: true,
   showAdmin: true,
-  showGate: true,
   showPlatform: false,
   showAccount: true,
 };
@@ -31,7 +30,6 @@ const STAFF_LINKS: NavLink[] = [
   { href: '/claim', label: 'Nhận lời mời', testId: 'nav-claim' },
   { href: '/wallet', label: 'Vé của tôi', testId: 'nav-wallet' },
   { href: '/admin', label: 'Quản trị', testId: 'nav-admin' },
-  { href: '/gate', label: 'Cổng', testId: 'nav-gate' },
   { href: '/account', label: 'Tài khoản', testId: 'nav-account' },
 ];
 
@@ -75,7 +73,6 @@ test('NavCapabilitiesStore.reset clears staff links immediately', () => {
   assert.equal(snap.resolved, true);
   assert.equal(snap.loading, false);
   assert.equal(snap.caps.showAdmin, false);
-  assert.equal(snap.caps.showGate, false);
   assert.deepEqual(
     snap.links.map((l) => l.href),
     GUEST_NAV_LINKS.map((l) => l.href),

@@ -15,7 +15,6 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ConfigVersionSummary, EventDetail } from '@ticket/contracts';
-import { gateDeeplinkUrl } from '../../../../../src/oidc/config';
 import {
   apiErrorMessage,
   portalGet,
@@ -36,10 +35,7 @@ import {
   reportShowsPendingApprovalCta,
   type EventReportView,
 } from '../../../../../src/ops/report';
-import {
-  GateDeeplinkButton,
-  GateStayAppNotice,
-} from '../../../../../src/components/gate-deeplink';
+import { GateStayAppNotice } from '../../../../../src/components/gate-deeplink';
 import { SurfaceState } from '../../../../../src/components/surface-state';
 import {
   formatEventBusinessStatus,
@@ -437,14 +433,7 @@ export default function EventOverviewPage() {
 
       {notice ? <Alert type="info" showIcon message={notice} /> : null}
 
-      {canScan ? (
-        <div>
-          <GateStayAppNotice />
-          <div style={{ marginTop: 12 }}>
-            <GateDeeplinkButton href={gateDeeplinkUrl()} />
-          </div>
-        </div>
-      ) : null}
+      {canScan ? <GateStayAppNotice /> : null}
 
       {canReport ? (
         <Typography.Paragraph>

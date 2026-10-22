@@ -6,7 +6,6 @@ import { PortalPage } from '../../../../../../src/components/portal-page';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
-import { gateDeeplinkUrl } from '../../../../../../src/oidc/config';
 import { portalGet } from '../../../../../../src/client/portal-fetch';
 import { bffEventAction } from '../../../../../../src/prep/bff-urls';
 import {
@@ -21,19 +20,14 @@ import {
   type EventReportView,
 } from '../../../../../../src/ops/report';
 import { useEventAccess } from '../../../../../../src/prep/use-event-access';
-import {
-  GateDeeplinkButton,
-  GateStayAppNotice,
-} from '../../../../../../src/components/gate-deeplink';
+import { GateStayAppNotice } from '../../../../../../src/components/gate-deeplink';
 import { SurfaceState } from '../../../../../../src/components/surface-state';
 import {
   formatTicketStateCountLabel,
   usePortalLocale,
 } from '../../../../../../src/i18n';
 
-/**
- * GATE-STAY-APP: O12 report surface only — never mount scanner on portal.
- */
+/** O12 report surface only — staff scan on Vemoki iOS app (D-6). */
 export default function EventGateReportPage() {
   const { t, locale } = usePortalLocale();
   const params = useParams<{ tenantId: string; eventId: string }>();
@@ -194,17 +188,6 @@ export default function EventGateReportPage() {
         <SurfaceState kind="loading" />
       ) : null}
 
-      {access.permissions.includes('gate.confirm') ? (
-        <div style={{ marginTop: 16 }}>
-          <p>{t('gate.h_cq4fvf')}</p>
-          <GateDeeplinkButton
-            href={gateDeeplinkUrl(process.env, '/gate', {
-              tenantId,
-              eventId,
-            })}
-          />
-        </div>
-      ) : null}
     </PortalPage>
   );
 }

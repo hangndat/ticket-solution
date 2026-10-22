@@ -24,8 +24,8 @@ export type PortalShellCapabilities = {
   showOrgChrome: boolean;
   /** report.read on any event — Gate report nav (not scan). */
   showGateReport: boolean;
-  /** gate.confirm — deep-link CTA to app./gate only. */
-  showGateDeeplink: boolean;
+  /** gate.confirm — show iOS scan hint in shell (no web /gate link). */
+  showGateScanHint: boolean;
   showPlatform: boolean;
   showAccount: boolean;
 };
@@ -61,7 +61,7 @@ export function derivePortalShellCapabilities(input: {
       staffEligible: false,
       showOrgChrome: false,
       showGateReport: false,
-      showGateDeeplink: false,
+      showGateScanHint: false,
       showPlatform: false,
       showAccount: false,
     };
@@ -84,7 +84,7 @@ export function derivePortalShellCapabilities(input: {
     ) ??
       false);
 
-  const showGateDeeplink =
+  const showGateScanHint =
     staffEligible &&
     (input.meEvents?.items.some((event) =>
       event.permissions.includes('gate.confirm'),
@@ -96,7 +96,7 @@ export function derivePortalShellCapabilities(input: {
     staffEligible: staffEligible ?? false,
     showOrgChrome,
     showGateReport,
-    showGateDeeplink,
+    showGateScanHint,
     showPlatform: input.platformMe?.operator === true,
     showAccount: true,
   };

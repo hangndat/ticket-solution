@@ -1,4 +1,4 @@
-/** Env-gated SSR timing for /gate (Issue #1021). Set GATE_SSR_TRACE=1 — logs step names + ms only. */
+/** Env-gated SSR timing (Issue #1021). Set GATE_SSR_TRACE=1 — logs step names + ms only. */
 export function gateSsrTraceEnabled(): boolean {
   return process.env.GATE_SSR_TRACE === '1';
 }
