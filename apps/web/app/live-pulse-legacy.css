@@ -4,24 +4,27 @@
  */
 :root {
   color-scheme: light;
-  --ink: #0B1220;
-  --paper: #F4F6F8;
-  --signal: #E11D48;
-  --focus: #2563EB;
+  --ink: var(--color-ink);
+  --paper: var(--color-paper);
+  --signal: var(--color-signal);
+  --focus: var(--color-focus);
   --brand: var(--ink);
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-5: 24px;
-  --space-6: 32px;
-  --space-7: 48px;
-  --space-8: 72px;
+  --space-1: var(--spacing-xs);
+  --space-2: var(--spacing-sm);
+  --space-3: var(--spacing-md);
+  --space-4: var(--spacing-lg);
+  --space-5: var(--spacing-2xl);
+  --space-6: var(--spacing-3xl);
+  --space-7: var(--spacing-4xl);
+  --space-8: var(--spacing-5xl);
+  /* legacy — bỏ khi migrate route (audit 6A) */
   --radius-sm: 2px;
+  /* legacy — bỏ khi migrate route (audit 6A) */
   --radius-md: 8px;
+  /* legacy — bỏ khi migrate route (audit 6A) */
   --radius-lg: 14px;
-  --line: #dde3eb;
-  --muted: #5b687b;
+  --line: var(--color-line);
+  --muted: var(--color-muted);
   /* --font-display / --font-body set by next/font on <html> */
   --paper-deep: color-mix(in srgb, var(--paper) 88%, var(--ink) 12%);
   --ink-muted: var(--muted);
