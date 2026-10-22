@@ -1,6 +1,6 @@
 # UIF-811 WP-7 — mapping assertion CSS → hành vi
 
-SHA tip: _(cập nhật khi mở PR)_
+SHA tip: `dbc7397558ad3e3080cbb35836204a2358a2a488`
 
 | File test | Assertion cũ (regex / đọc `.css`) | Thay bằng |
 | --- | --- | --- |
