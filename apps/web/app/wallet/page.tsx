@@ -45,7 +45,7 @@ export default async function WalletPage({ searchParams }: Props) {
     return (
       <main
         id="main"
-        className={`container shell wallet-page ${walletStyles.page}`}
+        className={`lp-container shell wallet-page ${walletStyles.page}`}
         data-testid="wallet-need-login"
       >
         <SiteNav />
@@ -77,7 +77,7 @@ export default async function WalletPage({ searchParams }: Props) {
     return (
       <main
         id="main"
-        className={`container shell wallet-page ${walletStyles.page}`}
+        className={`lp-container shell wallet-page ${walletStyles.page}`}
         data-testid="wallet-unreachable"
       >
         <SiteNav />
@@ -103,7 +103,7 @@ export default async function WalletPage({ searchParams }: Props) {
     return (
       <main
         id="main"
-        className={`container shell wallet-page ${walletStyles.page}`}
+        className={`lp-container shell wallet-page ${walletStyles.page}`}
         data-testid="wallet-invalid"
       >
         <SiteNav />
@@ -134,7 +134,7 @@ export default async function WalletPage({ searchParams }: Props) {
   return (
     <main
       id="main"
-      className={`container shell wallet-page ${walletStyles.page}`}
+      className={`lp-container shell wallet-page ${walletStyles.page}`}
       data-testid="wallet-ready"
     >
       <SiteNav />
