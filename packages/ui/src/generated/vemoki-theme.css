@@ -4,9 +4,74 @@
   --color-paper: #F4F6F8;
   --color-signal: #E11D48;
   --color-focus: #2563EB;
-  --color-destructive: #8A1F1F;
   --color-line: #D7DFE9;
+  --color-muted: #5B687B;
+  --color-destructive: #8A1F1F;
+  --color-admit: #1B7F4A;
+  --color-unknown: #8A6D3B;
   --font-display: Sora, ui-sans-serif, system-ui, sans-serif;
   --font-sans: "Be Vietnam Pro", ui-sans-serif, system-ui, sans-serif;
   --animate-spin: spin 1s linear infinite;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+  --shadow-soft: 0 24px 64px rgba(11, 18, 32, 0.12);
+  --shadow-frame: 0 32px 80px rgba(11, 18, 32, 0.22), 0 0 0 1px rgba(255, 255, 255, 0.06) inset;
+  --shadow-none: none;
+  --spacing-xxs: 2px;
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 12px;
+  --spacing-lg: 16px;
+  --spacing-xl: 20px;
+  --spacing-2xl: 24px;
+  --spacing-3xl: 32px;
+  --spacing-4xl: 48px;
+  --spacing-5xl: 72px;
+  --breakpoint-sm: 640px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1280px;
+}
+
+/*
+ * Legacy contract — unprefixed custom properties on :root for live-pulse / marketing CSS.
+ * Tailwind v4 prefix(ui) renames @theme vars to --ui-* on :root; legacy uses var(--color-*),
+ * var(--spacing-*), etc. This block is independent of prefix and stays valid when D-1 drops prefix.
+ */
+:root {
+  --color-ink: #0B1220;
+  --color-paper: #F4F6F8;
+  --color-signal: #E11D48;
+  --color-focus: #2563EB;
+  --color-line: #D7DFE9;
+  --color-muted: #5B687B;
+  --color-destructive: #8A1F1F;
+  --color-admit: #1B7F4A;
+  --color-unknown: #8A6D3B;
+  --font-display: Sora, ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Be Vietnam Pro", ui-sans-serif, system-ui, sans-serif;
+  --animate-spin: spin 1s linear infinite;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+  --shadow-soft: 0 24px 64px rgba(11, 18, 32, 0.12);
+  --shadow-frame: 0 32px 80px rgba(11, 18, 32, 0.22), 0 0 0 1px rgba(255, 255, 255, 0.06) inset;
+  --shadow-none: none;
+  --spacing-xxs: 2px;
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 12px;
+  --spacing-lg: 16px;
+  --spacing-xl: 20px;
+  --spacing-2xl: 24px;
+  --spacing-3xl: 32px;
+  --spacing-4xl: 48px;
+  --spacing-5xl: 72px;
+  --breakpoint-sm: 640px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1280px;
 }
