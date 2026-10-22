@@ -1,0 +1,12 @@
+{
+  "baseUrl": "http://127.0.0.1:3000",
+  "viewports": [
+    "390x844",
+    "1280x900"
+  ],
+  "screenshots": [
+    "docs/reviews/assets/ui-uplift-app-slice-a1/home-catalog-mobile-390-390.png",
+    "docs/reviews/assets/ui-uplift-app-slice-a1/home-catalog-desktop-1280-1280.png"
+  ],
+  "at": "2026-10-22T06:26:06.121Z"
+}
