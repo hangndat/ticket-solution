@@ -27,7 +27,6 @@ const LAYER_ORDER = ['theme', 'base', 'legacy', 'components', 'utilities'];
 /** Representative legacy-bundle selectors (live-pulse / marketing / attendee uplift). */
 const LEGACY_SELECTOR_MARKERS = [
   { id: 'live-pulse', needle: '.lp-container' },
-  { id: 'attendee-uplift', needle: 'body.attendee-uplift' },
 ];
 
 const UTILITIES_DISABLED_OPACITY =

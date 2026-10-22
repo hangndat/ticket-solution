@@ -24,7 +24,6 @@
 @source '../app/**/*.{ts,tsx}';
 @source '../../src/**/*.{ts,tsx}';
 @import './live-pulse-legacy.css' layer(legacy);
-@import './attendee-uplift.css' layer(legacy);
 
 @layer base {
   html[data-surface='marketing'] {
