@@ -4,7 +4,7 @@
 | --- | --- |
 | Scope | Epic #770 slice 1a · PR #771 |
 | Prior review SHA | `48fd1e8ae093a106c1ccbc74a5c06b84cdc433da` (FAIL) |
-| Fix SHA | _(tip branch sau commit push)_ |
+| Fix SHA | `7305b54e29a734faea580e16e11e647f4900cbd2` |
 
 ## Security fixes (blockers)
 
