@@ -41,7 +41,7 @@ Coordinator: copy-paste hook từ runbook vào `check --wait` loop — **không*
 ## Context nội bộ bắt buộc đọc
 
 - `docs/agents/README.md` — Role ID catalog
-- `.cursor/rules/orca-agent-routing.mdc` — agent = cursor
+- `.cursor/rules/orca-agent-routing-coordinator.mdc` — agent = cursor
 - `.cursor/rules/github-project-tracking.mdc` — WIP / đo nhẹ process
 - `.cursor/rules/orca-coordinator-mailbox.mdc` — Dispatch lifecycle
 - Orca reality: `worker-list --json` có lifecycle/provider, **chưa** có token/CPU per role

@@ -41,7 +41,7 @@ Use **GitHub Flow**. Integration branch is `main`. Do not land feature work as d
 
 1. Push the feature branch (`-u` when new) only within the authorization above, when the task needs remote CI / review — not “publish production”, but required for DoD when CI must run on GitHub.
 2. Open PR with `gh pr create` into `main`. Title/body user-facing bits in **Vietnamese**; keep Issue refs, commands, SHAs intact. Link `Fixes #N` / `Closes #N` when that Issue is the DoD unit. Dùng template `.github/PULL_REQUEST_TEMPLATE.md` (ghi SHA tip branch).
-3. After PR is up: Project Status → `Chờ duyệt`; coordinator gốc spawn DoD reviewer theo `orca-agent-routing.mdc` (see `github-project-tracking.mdc` + `orca-agent-routing.mdc`). Spec reviewer phải kèm **exact SHA** đang duyệt.
+3. After PR is up: Project Status → `Chờ duyệt`; coordinator gốc spawn DoD reviewer theo `orca-agent-routing-coordinator.mdc` (see `github-project-tracking.mdc` + `orca-agent-routing-core.mdc`). Spec reviewer phải kèm **exact SHA** đang duyệt.
 4. **Coordinator**, when authorized for integration, merges after review pass + CI green (incl. database-isolation when relevant). Workers do not self-merge unless the task explicitly says so.
 5. After merge: Project → `Hoàn thành` when full DoD is met; delete remote feature branch if appropriate; report **merge commit SHA** (exact).
 

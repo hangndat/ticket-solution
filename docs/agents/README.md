@@ -7,6 +7,7 @@
 - `.cursor/rules/orca-epic-orchestrator.mdc` · `orca-parallel-workers.mdc` · `orca-idle-worker-fill.mdc` · `orca-coordinator-mailbox.mdc` — **coordinator-only** (`alwaysApply: false`; leader Read khi kích hoạt — Wave B)
 - `.cursor/rules/github-project-tracking.mdc` (+ `github-project-tracking-coordinator.mdc` leader), `git-workflow.mdc`
 - [context-budget.md](./context-budget.md) — đo rules/token
+- [MCP-SETUP.md](./MCP-SETUP.md) — MCP local (`code-review-graph-ticket`, lean-ctx)
 - `.cursor/rules/uat-headless.mdc` — **Wave G:** không `alwaysApply`; globs UAT/artifacts; Task UAT/milestone → Read nếu cần
 
 **Không** cài toàn bộ [agency-agents](https://github.com/msitarzewski/agency-agents) thành `alwaysApply` rules. Gắn role chính vào Task Spec; khi gộp review chỉ nạp các role đúng checklist. Task UI chọn role, skill và mẫu chuẩn theo [ui-workflow.md](./ui-workflow.md).
@@ -24,18 +25,19 @@ docs/agents/
 
 ## Catalog vai trò
 
-| ID                  | File                                                       | Khi dùng                                                                                                                                              | Ownership / ghi chú                                                                    |
-| ------------------- | ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| `product-ba`        | [roles/product-ba.md](./roles/product-ba.md)               | Làm rõ bài toán, non-goals, AC, ưu tiên trong MVP đã chốt                                                                                             | Docs/Issue; không mở rộng MVP                                                          |
-| `product-design`    | [roles/product-design.md](./roles/product-design.md)       | User flow, trạng thái UI, a11y, AC UI, hướng dẫn triển khai; **brand/visual budget** khi Epic revamp (`Visual budget: Có`) — không Role graphic riêng | Docs/design handoff (một artifact); không code ownership slice khác                    |
-| `architect`         | [roles/architect.md](./roles/architect.md)                 | Quyết định kiến trúc, contract, ADR, failure/recovery và kiểm tra sự phù hợp khi cần                                                                  | Docs/handoff trong scope; không sở hữu code đa slice hoặc thay reviewer độc lập        |
-| `backend`           | [roles/backend.md](./roles/backend.md)                     | Implement NestJS / DB / worker                                                                                                                        | `apps/api`, `apps/worker`, `packages/backend`                                          |
-| `web`               | [roles/web.md](./roles/web.md)                             | Implement Next.js                                                                                                                                     | `apps/web` only                                                                        |
-| `ios`               | [roles/ios.md](./roles/ios.md)                             | Implement Expo/RN iOS                                                                                                                                 | `apps/mobile` only; local build, không EAS Cloud                                       |
-| `reviewer-dod`      | [roles/reviewer-dod.md](./roles/reviewer-dod.md)           | DoD / acceptance trên **exact SHA**                                                                                                                   | Session **≠** implementer                                                              |
-| `reviewer-uiux`     | [roles/reviewer-uiux.md](./roles/reviewer-uiux.md)         | Critique thiết kế hoặc review bản chạy theo mẫu, usability và a11y                                                                                    | Review only; độc lập với tác giả; ưu tiên gộp DoD khi cùng PR/SHA                      |
-| `reviewer-security` | [roles/reviewer-security.md](./roles/reviewer-security.md) | Review bảo mật slice nhạy cảm                                                                                                                         | Session **≠** implementer; không thay DoD nếu cần cả hai                               |
-| `launch-uat`        | [roles/launch-uat.md](./roles/launch-uat.md)               | Hành trình thật trên production cho go/no-go launch                                                                                                   | Không thay `reviewer-dod`; catalog [`PROD-LAUNCH-UAT.md`](../plans/PROD-LAUNCH-UAT.md) |
+| ID                                          | File                                                       | Khi dùng                                                                                                                                              | Ownership / ghi chú                                                                    |
+| ------------------------------------------- | ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `product-ba`                                | [roles/product-ba.md](./roles/product-ba.md)               | Làm rõ bài toán, non-goals, AC, ưu tiên trong MVP đã chốt                                                                                             | Docs/Issue; không mở rộng MVP                                                          |
+| `product-design`                            | [roles/product-design.md](./roles/product-design.md)       | User flow, trạng thái UI, a11y, AC UI, hướng dẫn triển khai; **brand/visual budget** khi Epic revamp (`Visual budget: Có`) — không Role graphic riêng | Docs/design handoff (một artifact); không code ownership slice khác                    |
+| `architect`                                 | [roles/architect.md](./roles/architect.md)                 | Quyết định kiến trúc, contract, ADR, failure/recovery và kiểm tra sự phù hợp khi cần                                                                  | Docs/handoff trong scope; không sở hữu code đa slice hoặc thay reviewer độc lập        |
+| `backend`                                   | [roles/backend.md](./roles/backend.md)                     | Implement NestJS / DB / worker                                                                                                                        | `apps/api`, `apps/worker`, `packages/backend`                                          |
+| `web`                                       | [roles/web.md](./roles/web.md)                             | Implement Next.js                                                                                                                                     | `apps/web` only                                                                        |
+| `ios`                                       | [roles/ios.md](./roles/ios.md)                             | Implement Expo/RN iOS                                                                                                                                 | `apps/mobile` only; local build, không EAS Cloud                                       |
+| `reviewer-dod`                              | [roles/reviewer-dod.md](./roles/reviewer-dod.md)           | DoD / acceptance trên **exact SHA**                                                                                                                   | Session **≠** implementer                                                              |
+| `reviewer-uiux`                             | [roles/reviewer-uiux.md](./roles/reviewer-uiux.md)         | Critique thiết kế hoặc review bản chạy theo mẫu, usability và a11y                                                                                    | Review only; độc lập với tác giả; ưu tiên gộp DoD khi cùng PR/SHA                      |
+| `reviewer-security`                         | [roles/reviewer-security.md](./roles/reviewer-security.md) | Review bảo mật slice nhạy cảm                                                                                                                         | Session **≠** implementer; không thay DoD nếu cần cả hai                               |
+| _(gộp `dod+ux` / `dod+sec` / `dod+sec+ux`)_ | [roles/reviewer-merged.md](./roles/reviewer-merged.md)     | Checklist một file; mapping gate → file role gốc                                                                                                      | Spec ghi `reviewer-merged.md` thay vì nhiều `reviewer-*.md`                            |
+| `launch-uat`                                | [roles/launch-uat.md](./roles/launch-uat.md)               | Hành trình thật trên production cho go/no-go launch                                                                                                   | Không thay `reviewer-dod`; catalog [`PROD-LAUNCH-UAT.md`](../plans/PROD-LAUNCH-UAT.md) |
 
 Agent runtime: luôn Cursor (`--agent cursor`), trừ khi user override rõ. Role **≠** agent vendor **≠** Cost tier **≠** Persona — xem `orca-agent-routing-core.mdc`.
 
@@ -204,7 +206,7 @@ Reviewer (thêm):
 - Implementer dispatch: <id>
 - Exact SHA: <sha>
 - Artifact: <comment Issue/PR hoặc docs/reviews/<slug>.md>
-- Checklist: DoD [| UI/UX] [| security] # gộp đúng scope, từng kết luận riêng
+- Checklist: [reviewer-merged.md](./roles/reviewer-merged.md) khi gộp `dod+ux` / `dod+sec` / `dod+sec+ux`; từng kết luận DoD | UI | security riêng
 - Revalidation: <SHA trước + link findings/checkpoint; lần đầu ghi Không>
 - Lượt sửa tự động: <0|1|2>/2; ngoại lệ: <chưa dùng|đã dùng>
 ```
@@ -221,7 +223,7 @@ Khối mở rộng (khi cần) — giữ tương thích:
 - File: docs/agents/roles/<id>.md
 - Đọc file role SAU AGENTS.md và rule Orca; nếu xung đột → rule dự án thắng.
 - Không mở rộng MVP / ngoài phạm vi Issue.
-- Agent: cursor (theo orca-agent-routing.mdc)
+- Agent: cursor (theo orca-agent-routing-core.mdc)
 - Cost tier: cheap | standard — pin --model từ docs/agents/cost-catalog.md (cấm inherit mặc định; trần standard)
 - Architecture impact: Có | Không — lý do + link thiết kế/ADR hiện hành
 - Nếu Có: quyết định còn mở, Task architect/handoff và consumer thực sự phải chờ
@@ -250,7 +252,7 @@ Khối bổ sung khi giao Task Architect (điền cùng parent/scope/AC trong sp
 - Role ID: architect
 - Persona: Dexter
 - File: docs/agents/roles/architect.md
-- Agent: cursor (theo orca-agent-routing.mdc)
+- Agent: cursor (theo orca-agent-routing-core.mdc)
 - Cost tier: standard (`composer-2.5`)
 - Mode: Thiết kế | Kiểm tra sự phù hợp
 - Architecture impact: Có — <quyết định/rủi ro cụ thể>
