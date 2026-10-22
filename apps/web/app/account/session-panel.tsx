@@ -1,5 +1,6 @@
 'use client';
 
+import { Button } from '@ticket/ui';
 import Link from 'next/link';
 import { useEffect, useRef, useState, useTransition } from 'react';
 import { clearGuestClaimIntent } from '../../src/guest/claim-intent';
@@ -83,16 +84,18 @@ export function SessionPanel() {
             : 'Phiên đã xác minh trên thiết bị này.'}
         </p>
         <p className="auth-buttons account-session__actions">
-          <a
-            className="button-link button-link-secondary account-cta-logout"
-            href="/api/auth/logout"
-            onClick={() => clearParkedClaimOnSessionEnd()}
+          <Button
+            asChild
+            variant="secondary"
+            className="hover:border-signal hover:bg-signal hover:text-paper"
           >
-            Đăng xuất
-          </a>
-          <Link className="button account-cta-primary" href="/redeem">
-            Đổi mã lấy vé
-          </Link>
+            <a href="/api/auth/logout" onClick={() => clearParkedClaimOnSessionEnd()}>
+              Đăng xuất
+            </a>
+          </Button>
+          <Button asChild variant="primary">
+            <Link href="/redeem">Đổi mã lấy vé</Link>
+          </Button>
         </p>
       </section>
     );
@@ -107,12 +110,12 @@ export function SessionPanel() {
         testId="account-session-error"
         action={
           <div className="auth-buttons">
-            <a className="button account-cta-primary" href={ACCOUNT_LOGIN}>
-              Đăng nhập
-            </a>
-            <Link className="button-link button-link-secondary" href="/">
-              Về trang chủ
-            </Link>
+            <Button asChild variant="primary">
+              <a href={ACCOUNT_LOGIN}>Đăng nhập</a>
+            </Button>
+            <Button asChild variant="secondary">
+              <Link href="/">Về trang chủ</Link>
+            </Button>
           </div>
         }
       />
@@ -130,12 +133,12 @@ export function SessionPanel() {
       <h2>Chưa đăng nhập</h2>
       <p>Đăng nhập để quản lý phiên hoặc gửi yêu cầu liên quan tài khoản.</p>
       <p className="auth-buttons account-session__actions">
-        <a className="button account-cta-primary" href={ACCOUNT_LOGIN}>
-          Đăng nhập
-        </a>
-        <Link className="button-link button-link-secondary" href="/">
-          Về trang chủ
-        </Link>
+        <Button asChild variant="primary">
+          <a href={ACCOUNT_LOGIN}>Đăng nhập</a>
+        </Button>
+        <Button asChild variant="secondary">
+          <Link href="/">Về trang chủ</Link>
+        </Button>
       </p>
     </section>
   );

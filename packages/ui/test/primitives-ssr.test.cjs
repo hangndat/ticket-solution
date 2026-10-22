@@ -16,7 +16,7 @@ describe('@ticket/ui primitives SSR', () => {
     );
     assert.match(html, /<button[^>]*type="button"/);
     assert.match(html, /min-h-11/);
-    assert.match(html, /hover:opacity-95/);
+    assert.match(html, /hover:border-ink/);
     assert.match(html, /disabled:pointer-events-none/);
     assert.match(html, />Lưu</);
   });
@@ -24,7 +24,7 @@ describe('@ticket/ui primitives SSR', () => {
   it('preserves primitive state styles when a consumer supplies legacy classes', async () => {
     const { Button, Input } = await loadUi();
     const button = renderToStaticMarkup(
-      React.createElement(Button, { className: 'mkt-btn mkt-btn-primary', loading: true }, 'Gửi'),
+      React.createElement(Button, { variant: 'primary', loading: true }, 'Gửi'),
     );
     assert.match(button, /disabled=""/);
     assert.match(button, /aria-busy="true"/);

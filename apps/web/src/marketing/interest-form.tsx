@@ -123,12 +123,7 @@ export function InterestForm({ locale }: { locale: MarketingLocale }) {
       {banner ? (
         <Alert className="mkt-banner mkt-banner-error" variant="destructive">
           <p>{banner}</p>
-          <Button
-            type="submit"
-            variant="secondary"
-            className="mkt-btn mkt-btn--secondary transition-[color,background-color,border-color] duration-150"
-            disabled={busy}
-          >
+          <Button type="submit" variant="secondary" disabled={busy}>
             {t(locale, 'interest.retry')}
           </Button>
         </Alert>
@@ -338,12 +333,13 @@ export function InterestForm({ locale }: { locale: MarketingLocale }) {
 
       <Button
         type="submit"
+        variant="primary"
         disabled={busy}
         loading={busy}
-        className="mkt-btn mkt-btn--primary transition-[color,background-color,border-color] duration-150"
+        loadingLabel={t(locale, 'interest.sending')}
         data-testid="interest-submit"
       >
-        {busy ? t(locale, 'interest.sending') : t(locale, 'interest.submit')}
+        {t(locale, 'interest.submit')}
       </Button>
     </form>
   );

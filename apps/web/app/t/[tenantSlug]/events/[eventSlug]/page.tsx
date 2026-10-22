@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import type { CSSProperties } from 'react';
+import { Button } from '@ticket/ui';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import {
@@ -58,9 +59,9 @@ function EventErrorShell({
         detail={detail}
         testId={testId}
         action={
-          <Link className="button" href="/">
-            Về trang chủ
-          </Link>
+          <Button asChild variant="brand">
+            <Link href="/">Về trang chủ</Link>
+          </Button>
         }
       />
     </main>
@@ -222,9 +223,9 @@ export default async function EventPage({ params }: Props) {
               <p className={sideboxStyles.lead}>
                 Bạn có mã nhận vé từ nhà tổ chức?
               </p>
-              <Link className={`button event-sidebox-cta ${sideboxStyles.cta}`} href={redeemHref}>
-                Đổi mã lấy vé
-              </Link>
+              <Button asChild variant="primary" block className={sideboxStyles.cta}>
+                <Link href={redeemHref}>Đổi mã lấy vé</Link>
+              </Button>
               <p className={sideboxStyles.help}>
                 Mã sẽ tự xác định đúng sự kiện và đơn vị tổ chức.
               </p>

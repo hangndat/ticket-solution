@@ -1,4 +1,5 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
+import { Slot as SlotPrimitive } from 'radix-ui';
 import { cn } from '../cn.js';
 import { buttonVariants } from './variants.js';
 import type { VariantProps } from 'class-variance-authority';
@@ -7,6 +8,7 @@ export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> &
   VariantProps<typeof buttonVariants> & {
     loading?: boolean;
     loadingLabel?: string;
+    asChild?: boolean;
   };
 
 function ButtonSpinner() {
@@ -38,16 +40,18 @@ export function Button({
   className,
   variant,
   size,
+  block,
   loading = false,
   loadingLabel = 'Đang xử lý…',
   disabled,
   children,
   type = 'button',
+  asChild = false,
   ...props
 }: ButtonProps) {
   const isDisabled = Boolean(disabled || loading);
   let content: ReactNode = children;
-  if (loading) {
+  if (loading && !asChild) {
     content = (
       <>
         <ButtonSpinner />
@@ -56,10 +60,25 @@ export function Button({
     );
   }
 
+  const classes = cn(buttonVariants({ variant, size, block }), className);
+
+  if (asChild) {
+    return (
+      <SlotPrimitive.Root
+        className={classes}
+        aria-busy={loading || undefined}
+        data-loading={loading ? '' : undefined}
+        {...props}
+      >
+        {children}
+      </SlotPrimitive.Root>
+    );
+  }
+
   return (
     <button
       type={type}
-      className={cn(buttonVariants({ variant, size }), className)}
+      className={classes}
       disabled={isDisabled}
       aria-busy={loading || undefined}
       data-loading={loading ? '' : undefined}

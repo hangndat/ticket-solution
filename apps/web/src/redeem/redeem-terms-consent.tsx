@@ -1,5 +1,6 @@
 'use client';
 
+import { Button } from '@ticket/ui';
 import Link from 'next/link';
 
 type Props = {
@@ -39,9 +40,9 @@ export function RedeemTermsConsent({
         </>
       ) : termsHref ? (
         <p className="redeem-schema-notice">
-          <Link className="button-link" href={termsHref}>
-            Đọc điều khoản sự kiện (bản {termsVersion})
-          </Link>
+          <Button asChild variant="link">
+            <Link href={termsHref}>Đọc điều khoản sự kiện (bản {termsVersion})</Link>
+          </Button>
         </p>
       ) : (
         <p className="redeem-schema-notice">
