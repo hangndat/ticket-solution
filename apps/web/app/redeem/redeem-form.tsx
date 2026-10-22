@@ -202,12 +202,15 @@ export function RedeemForm({
     });
   }, [tenantSlug, eventSlug, isStale]);
 
-  const autoLoadedSlugRef = useRef(false);
+  const loadedSlugPairRef = useRef<string | null>(null);
   useEffect(() => {
     if (globalEntry || !productChrome) return;
-    if (!initialTenantSlug.trim() || !initialEventSlug.trim()) return;
-    if (autoLoadedSlugRef.current) return;
-    autoLoadedSlugRef.current = true;
+    const slugTenant = initialTenantSlug.trim();
+    const slugEvent = initialEventSlug.trim();
+    if (!slugTenant || !slugEvent) return;
+    const pairKey = `${slugTenant}\u0000${slugEvent}`;
+    if (loadedSlugPairRef.current === pairKey) return;
+    loadedSlugPairRef.current = pairKey;
     loadSchema();
   }, [
     globalEntry,

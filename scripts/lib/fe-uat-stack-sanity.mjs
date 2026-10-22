@@ -5,7 +5,7 @@
  * API (default): public catalog/terms, staff me/*, attendee redeem + tickets.
  * UI (--ui): redeem-terms-consent, wallet-ticket-grid, admin-workspace, gate-tabs.
  */
-import { existsSync, readdirSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -22,6 +22,21 @@ const pepper =
   process.env.CODE_HMAC_PEPPER || 'local-dev-code-pepper-change-me';
 const issuer =
   process.env.OIDC_ISSUER || 'http://127.0.0.1:8080/realms/ticket';
+const UAT_TENANT_ID =
+  process.env.FE_UAT_TENANT_ID || 'd9d9f001-0001-4000-8000-000000000001';
+const UAT_EVENT_ID =
+  process.env.FE_UAT_EVENT_ID || 'd9d9f001-0002-4000-8000-000000000001';
+const REDEEM_ASSET_DIR =
+  process.env.FE_UAT_REDEEM_ASSET_DIR ||
+  join(ROOT, 'docs/reviews/assets/fe-redeem-terms-harness-2026-10-22');
+
+function tenantBoundRedeemUrl(base) {
+  return (
+    `${base}/redeem?tenantId=${encodeURIComponent(UAT_TENANT_ID)}` +
+    `&eventId=${encodeURIComponent(UAT_EVENT_ID)}` +
+    '&tenantSlug=mfest-demo&eventSlug=mfest'
+  );
+}
 
 function log(step, detail) {
   console.log(`[fe-uat-sanity] ${step}${detail ? ` ${detail}` : ''}`);
@@ -197,7 +212,7 @@ async function runApiChecks() {
     process.env.FE_UAT_EVENT_ID ||
     'd9d9f001-0002-4000-8000-000000000001';
   const redeemCode =
-    process.env.FE_UAT_REDEEM_CODE || 'DEMO-MFEST-003';
+    process.env.FE_UAT_REDEEM_CODE || 'DEMO-MFEST-008';
 
   const redeem = await api(
     attendeeToken,
@@ -226,6 +241,88 @@ async function runApiChecks() {
   });
 
   return results;
+}
+
+async function waitForRedeemTermsConsent(page, base, redeemUrl, options) {
+  const {
+    viewport,
+    screenshotPath,
+    globalResolveCode,
+    label,
+  } = options;
+  if (viewport) {
+    await page.setViewportSize(viewport);
+  }
+  await loginKeycloak(page, base, redeemUrl);
+  if (
+    !page.url().includes('tenantSlug=mfest-demo') ||
+    !page.url().includes('eventSlug=mfest')
+  ) {
+    await page.goto(redeemUrl, { waitUntil: 'domcontentloaded' });
+  }
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const stuckLoading = await page
+      .getByTestId('route-loading')
+      .isVisible()
+      .catch(() => false);
+    if (!stuckLoading) break;
+    await page.waitForTimeout(2000);
+    await page.goto(redeemUrl, { waitUntil: 'domcontentloaded' });
+  }
+  await page
+    .locator('.redeem-product-form, .redeem-form')
+    .first()
+    .waitFor({ state: 'visible', timeout: 120_000 });
+  await page
+    .waitForResponse(
+      (res) =>
+        res.url().includes('/api/bff/public/tenants/mfest-demo/events/mfest') &&
+        res.status() === 200,
+      { timeout: 90_000 },
+    )
+    .catch(() => {});
+
+  const termsLocator = page.getByTestId('redeem-terms-consent');
+  let termsVisible = await termsLocator
+    .isVisible({ timeout: 20_000 })
+    .catch(() => false);
+
+  const globalCode = await page
+    .getByTestId('redeem-global-code')
+    .isVisible()
+    .catch(() => false);
+
+  if (!termsVisible && globalCode && globalResolveCode) {
+    await page.getByTestId('redeem-global-code').fill(globalResolveCode);
+    await page.getByTestId('redeem-global-resolve').click();
+    await page
+      .waitForResponse(
+        (res) =>
+          res.url().includes('/api/bff/redeem/resolve') && res.status() < 500,
+        { timeout: 60_000 },
+      )
+      .catch(() => {});
+    termsVisible = await termsLocator
+      .isVisible({ timeout: 60_000 })
+      .catch(() => false);
+  }
+
+  const globalCodeAfter = await page
+    .getByTestId('redeem-global-code')
+    .isVisible()
+    .catch(() => false);
+
+  if (screenshotPath) {
+    mkdirSync(dirname(screenshotPath), { recursive: true });
+    await page.screenshot({ path: screenshotPath, fullPage: true });
+  }
+
+  return {
+    label,
+    termsVisible,
+    globalCodeSurface: globalCodeAfter,
+    url: page.url(),
+  };
 }
 
 async function runUiChecks() {
@@ -270,40 +367,62 @@ async function runUiChecks() {
     });
     await staffCtx.close();
 
+    process.env.FE_UAT_USER = 'attendee@example.com';
+    process.env.FE_UAT_PASS = 'attendee-demo';
+    const redeemUrl = tenantBoundRedeemUrl(webBase);
+    const uiCodeDesktop =
+      process.env.FE_UAT_UI_REDEEM_CODE_DESKTOP || 'DEMO-MFEST-009';
+    const uiCodeMobile =
+      process.env.FE_UAT_UI_REDEEM_CODE_MOBILE || 'DEMO-MFEST-010';
+
+    const desktopCtx = await browser.newContext({
+      viewport: { width: 1280, height: 800 },
+    });
+    const desktopPage = await desktopCtx.newPage();
+    const desktopRedeem = await waitForRedeemTermsConsent(
+      desktopPage,
+      webBase,
+      redeemUrl,
+      {
+        label: 'desktop',
+        globalResolveCode: uiCodeDesktop,
+        screenshotPath: join(REDEEM_ASSET_DIR, 'redeem-terms-desktop.png'),
+      },
+    );
+    await desktopCtx.close();
+
+    const mobileCtx = await browser.newContext({
+      viewport: { width: 390, height: 844 },
+    });
+    const mobilePage = await mobileCtx.newPage();
+    const mobileRedeem = await waitForRedeemTermsConsent(
+      mobilePage,
+      webBase,
+      redeemUrl,
+      {
+        label: 'mobile',
+        globalResolveCode: uiCodeMobile,
+        screenshotPath: join(REDEEM_ASSET_DIR, 'redeem-terms-mobile.png'),
+      },
+    );
+    await mobileCtx.close();
+
     const attCtx = await browser.newContext({
       viewport: { width: 1280, height: 800 },
     });
     const attPage = await attCtx.newPage();
-    process.env.FE_UAT_USER = 'attendee@example.com';
-    process.env.FE_UAT_PASS = 'attendee-demo';
-    const redeemUrl =
-      `${webBase}/redeem?tenantSlug=mfest-demo&eventSlug=mfest`;
     await loginKeycloak(attPage, webBase, redeemUrl);
     await attPage.goto(redeemUrl, { waitUntil: 'domcontentloaded' });
-    if (!attPage.url().includes('tenantSlug=mfest-demo')) {
-      await attPage.goto(redeemUrl, { waitUntil: 'domcontentloaded' });
-    }
-    await attPage
-      .waitForResponse(
-        (res) =>
-          res.url().includes('/api/bff/public/tenants/mfest-demo/events/mfest') &&
-          res.status() === 200,
-        { timeout: 60_000 },
-      )
-      .catch(() => {});
-    const termsVisible = await attPage
-      .getByTestId('redeem-terms-consent')
-      .isVisible({ timeout: 90_000 })
-      .catch(() => false);
-    const globalCode = await attPage
-      .getByTestId('redeem-global-code')
-      .isVisible()
-      .catch(() => false);
     markers.push({
       id: 'redeem-terms-consent',
-      pass: termsVisible && !globalCode,
-      url: attPage.url(),
-      globalCodeSurface: globalCode,
+      pass:
+        desktopRedeem.termsVisible &&
+        mobileRedeem.termsVisible &&
+        !desktopRedeem.globalCodeSurface &&
+        !mobileRedeem.globalCodeSurface,
+      desktop: desktopRedeem,
+      mobile: mobileRedeem,
+      assetDir: REDEEM_ASSET_DIR,
     });
     await attPage.goto(`${webBase}/wallet`, { waitUntil: 'domcontentloaded' });
     await attPage.waitForLoadState('networkidle').catch(() => {});
