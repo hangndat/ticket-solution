@@ -11,6 +11,10 @@ const snapshot = fs.readFileSync(
   path.join(__dirname, '../src/generated/vemoki-root.snapshot.css'),
   'utf8',
 );
+const themeCss = fs.readFileSync(
+  path.join(__dirname, '../src/generated/vemoki-theme.css'),
+  'utf8',
+);
 const legacyCss = fs.readFileSync(
   path.join(repoRoot, 'apps/web/app/live-pulse-legacy.css'),
   'utf8',
@@ -23,20 +27,52 @@ function readRootVar(css, name) {
   return match[1].toUpperCase();
 }
 
+function readThemeVar(css, name) {
+  const re = new RegExp(`--${name}:\\s*([^;]+);`);
+  const match = css.match(re);
+  assert.ok(match, `missing --${name} in theme CSS`);
+  return match[1].trim();
+}
+
 describe('@ticket/ui token generator', () => {
-  it('snapshot matches brand/vemoki/tokens.json', () => {
-    for (const key of ['ink', 'paper', 'signal', 'focus']) {
+  it('snapshot matches brand/vemoki/tokens.json colors', () => {
+    for (const key of Object.keys(tokens.colors)) {
       const expected = tokens.colors[key].toUpperCase();
       assert.equal(readRootVar(snapshot, key), expected);
     }
   });
 
-  it('legacy globals :root matches tokens.json', () => {
+  it('legacy globals :root references generated theme colors', () => {
     const rootBlock = legacyCss.match(/:root\s*\{[^}]+\}/s);
     assert.ok(rootBlock, ':root block in live-pulse-legacy.css');
-    for (const key of ['ink', 'paper', 'signal', 'focus']) {
-      const expected = tokens.colors[key].toUpperCase();
-      assert.equal(readRootVar(rootBlock[0], key), expected);
+    const block = rootBlock[0];
+    for (const key of ['ink', 'paper', 'signal', 'focus', 'line', 'muted']) {
+      const themeKey = key === 'ink' || key === 'paper' || key === 'signal' || key === 'focus'
+        ? `color-${key}`
+        : `color-${key}`;
+      assert.match(block, new RegExp(`--${key}:\\s*var\\(--${themeKey}\\)`));
+    }
+  });
+
+  it('generated theme includes PD token groups from tokens.json', () => {
+    for (const key of ['sm', 'md', 'lg', 'xl']) {
+      assert.equal(readThemeVar(themeCss, `radius-${key}`), tokens.radius[key]);
+    }
+    for (const key of ['soft', 'frame', 'none']) {
+      assert.equal(readThemeVar(themeCss, `shadow-${key}`), tokens.shadow[key]);
+    }
+    for (const key of Object.keys(tokens.space)) {
+      const expected = `${tokens.space[key]}px`;
+      assert.equal(readThemeVar(themeCss, `spacing-${key}`), expected);
+    }
+    for (const key of Object.keys(tokens.breakpoints)) {
+      assert.equal(readThemeVar(themeCss, `breakpoint-${key}`), `${tokens.breakpoints[key]}px`);
+    }
+    for (const key of ['line', 'muted', 'destructive', 'admit', 'unknown']) {
+      assert.equal(
+        readThemeVar(themeCss, `color-${key}`).toUpperCase(),
+        tokens.colors[key].toUpperCase(),
+      );
     }
   });
 
