@@ -1,5 +1,5 @@
 import type { HTMLAttributes } from 'react';
-import { cn } from '../cn.js';
+import { cn, usesLegacyChromeClass } from '../cn.js';
 
 export type FieldErrorProps = HTMLAttributes<HTMLParagraphElement> & {
   id?: string;
@@ -10,11 +10,12 @@ export function FieldError({ className, id, children, ...props }: FieldErrorProp
   if (children == null || children === '') {
     return null;
   }
+  const legacy = usesLegacyChromeClass(className);
   return (
     <p
       id={id}
       role="alert"
-      className={cn('mt-1.5 text-sm font-medium text-destructive', className)}
+      className={cn(!legacy && 'mt-1.5 text-sm font-medium text-destructive', className)}
       {...props}
     >
       {children}
