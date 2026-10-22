@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import type { TicketSummary } from '@ticket/contracts';
 import { AttendeeCta } from '@/components/attendee-cta';
+import { Button } from '@/components/ui/button';
 import { EventLogo } from '@/components/event-media';
 import { Notice } from '@/components/page';
 import {
@@ -580,23 +581,13 @@ function VerifiedWallet({ userId }: { userId: string }) {
           >
             {resolveWalletFilterEventName(tickets, filterEventId)}
           </Text>
-          <Pressable
-            accessibilityRole="button"
+          <Button
+            variant="ghost"
+            label="Xem tất cả"
             accessibilityLabel="Xem tất cả vé, bỏ lọc sự kiện"
             onPress={() => router.replace('/(tabs)/my-tickets')}
             testID="wallet-clear-event-filter"
-          >
-            <Text
-              style={{
-                color: brand.signal,
-                fontSize: 15,
-                fontFamily: fontFamilies.bodySemiBold,
-                fontWeight: '600',
-              }}
-            >
-              Xem tất cả
-            </Text>
-          </Pressable>
+          />
         </View>
       ) : tickets.length > 0 ? (
         <Text

@@ -1,11 +1,6 @@
 import { useEffect, useState } from 'react';
-import {
-  FlatList,
-  Pressable,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Input } from '@/components/ui/input';
 import { Link, router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AttendeeCta } from '@/components/attendee-cta';
@@ -243,7 +238,7 @@ export function EventsScreen() {
         </Text>
       ) : null}
       {showCatalogChrome ? (
-        <TextInput
+        <Input
           value={searchQuery}
           onChangeText={setSearchQuery}
           placeholder={eventsCopy.searchPlaceholder}
@@ -251,16 +246,7 @@ export function EventsScreen() {
           autoCorrect={false}
           clearButtonMode="while-editing"
           editable={publishedPhase === 'ready'}
-          style={{
-            backgroundColor: '#e8ecf1',
-            borderRadius: 11,
-            paddingHorizontal: 14,
-            paddingVertical: 12,
-            minHeight: 48,
-            fontFamily: fontFamilies.body,
-            fontSize: 17,
-            color: brand.ink,
-          }}
+          style={styles.searchField}
           testID="events-search"
         />
       ) : null}
@@ -344,3 +330,10 @@ export function EventsScreen() {
     </>
   );
 }
+
+const styles = StyleSheet.create({
+  searchField: {
+    backgroundColor: '#e8ecf1',
+    borderRadius: 11,
+  },
+});

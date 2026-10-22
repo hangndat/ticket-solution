@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { ActivityIndicator, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
+import { Spinner } from '@/components/ui/spinner';
 import { useLocalSearchParams, router } from 'expo-router';
 import { WebView } from 'react-native-webview';
 import { AttendeeCta } from '@/components/attendee-cta';
@@ -134,7 +135,7 @@ export default function MembershipInviteScreen() {
                 justifyContent: 'center',
               }}
             >
-              <ActivityIndicator accessibilityLabel="Đang tải trang nhận lời mời" />
+              <Spinner accessibilityLabel="Đang tải trang nhận lời mời" />
             </View>
           ) : null}
         </View>
