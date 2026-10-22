@@ -9,9 +9,8 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useMemo, useState, type ReactNode } from 'react';
 import { resolvePortalMenuKeys } from '../nav/portal-menu-keys';
 import type { MeTenantItem } from '@ticket/contracts';
-import { gateDeeplinkUrl } from '../oidc/config';
 import type { PortalShellCapabilities } from '../nav/capabilities';
-import { GateDeeplinkButton } from './gate-deeplink';
+import { GateIosScanHint } from './gate-deeplink';
 import { PortalDualRunBanner } from './dual-run-banner';
 import { SurfaceState } from './surface-state';
 import { usePortalLocale } from '../i18n';
@@ -171,11 +170,8 @@ export function PortalProLayout({
         </Space>
       )}
       actionsRender={() => [
-        caps?.showGateDeeplink ? (
-          <GateDeeplinkButton
-            key="gate"
-            href={gateDeeplinkUrl({ PRODUCT_ORIGIN: productOrigin })}
-          />
+        caps?.showGateScanHint ? (
+          <GateIosScanHint key="gate-scan-hint" />
         ) : null,
         <Dropdown key="account" menu={accountMenu} trigger={['click']}>
           <Button type="text" data-testid="account-menu">{t('shell.account.menu')}</Button>
