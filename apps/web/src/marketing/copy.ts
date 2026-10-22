@@ -95,6 +95,25 @@ export type CopyKey =
   | 'interest.role.owner'
   | 'interest.role.agency'
   | 'interest.role.other'
+  | 'interest.org_kind'
+  | 'interest.org_kind.agency'
+  | 'interest.org_kind.brand_enterprise'
+  | 'interest.org_kind.venue'
+  | 'interest.org_kind.independent'
+  | 'interest.org_kind.other'
+  | 'interest.org_kind.placeholder'
+  | 'interest.events_per_year'
+  | 'interest.events_per_year.0'
+  | 'interest.events_per_year.1-5'
+  | 'interest.events_per_year.6-20'
+  | 'interest.events_per_year.21+'
+  | 'interest.events_per_year.placeholder'
+  | 'interest.typical_scale'
+  | 'interest.typical_scale.under_500'
+  | 'interest.typical_scale.500_2000'
+  | 'interest.typical_scale.2000_10000'
+  | 'interest.typical_scale.over_10000'
+  | 'interest.typical_scale.placeholder'
   | 'interest.note'
   | 'interest.consent'
   | 'interest.consent.before'
@@ -258,6 +277,25 @@ const VI: Record<CopyKey, string> = {
   'interest.role.owner': 'Tenant Owner',
   'interest.role.agency': 'Agency',
   'interest.role.other': 'Khác',
+  'interest.org_kind': 'Loại tổ chức (không bắt buộc)',
+  'interest.org_kind.agency': 'Agency sự kiện',
+  'interest.org_kind.brand_enterprise': 'Thương hiệu / doanh nghiệp',
+  'interest.org_kind.venue': 'Địa điểm / venue',
+  'interest.org_kind.independent': 'Độc lập / freelancer',
+  'interest.org_kind.other': 'Khác',
+  'interest.org_kind.placeholder': 'Chọn loại tổ chức',
+  'interest.events_per_year': 'Số sự kiện/năm (ước lượng, không bắt buộc)',
+  'interest.events_per_year.0': '0',
+  'interest.events_per_year.1-5': '1–5',
+  'interest.events_per_year.6-20': '6–20',
+  'interest.events_per_year.21+': '21+',
+  'interest.events_per_year.placeholder': 'Chọn khoảng',
+  'interest.typical_scale': 'Quy mô điển hình (không bắt buộc)',
+  'interest.typical_scale.under_500': 'Dưới 500 khách',
+  'interest.typical_scale.500_2000': '500–2.000',
+  'interest.typical_scale.2000_10000': '2.000–10.000',
+  'interest.typical_scale.over_10000': 'Trên 10.000',
+  'interest.typical_scale.placeholder': 'Chọn quy mô',
   'interest.note': 'Ghi chú (không bắt buộc)',
   'interest.consent': 'Tôi đồng ý được liên hệ về Vemoki. Xem Quyền riêng tư.',
   'interest.consent.before': 'Tôi đồng ý được liên hệ về Vemoki. Xem',
@@ -284,7 +322,7 @@ const VI: Record<CopyKey, string> = {
     'Vemoki (`vemoki.com`) xử lý dữ liệu cần thiết để vận hành nền tảng sự kiện và trả lời đăng ký quan tâm. Thời gian lưu giữ, vùng dữ liệu và mức hỗ trợ dưới đây là chính sách hiện hành cho bản MVP.',
   'privacy.s1.title': 'Dữ liệu chúng tôi thu',
   'privacy.s1.body':
-    'Tài khoản / phiên đăng nhập (email, mã định danh từ nhà cung cấp đăng nhập Keycloak / user ID); thông tin sự kiện và mã/vé / nội dung QR hiển thị; dữ liệu check-in; mã thiết bị nhận thông báo đẩy (Apple Push) khi bật thông báo; form quan tâm hoặc form sự kiện (tên, email, tổ chức, điện thoại nếu sự kiện yêu cầu); nhật ký kỹ thuật cần thiết (IP, trình duyệt, thời gian). Không bán dữ liệu; MVP không dùng SDK quảng cáo / theo dõi xuyên app.',
+    'Tài khoản / phiên đăng nhập (email, mã định danh từ nhà cung cấp đăng nhập Keycloak / user ID); thông tin sự kiện và mã/vé / nội dung QR hiển thị; dữ liệu check-in; mã thiết bị nhận thông báo đẩy (Apple Push) khi bật thông báo; form quan tâm hoặc form sự kiện (tên, email, tổ chức, vai trò, loại tổ chức/quy mô sự kiện nếu bạn chọn điền, điện thoại nếu sự kiện yêu cầu); nhật ký kỹ thuật cần thiết (IP, trình duyệt, thời gian). Không bán dữ liệu; MVP không dùng SDK quảng cáo / theo dõi xuyên app.',
   'privacy.s2.title': 'Mục đích',
   'privacy.s2.body':
     'Xác thực và phân quyền; cấp / hiển thị / xác thực vé; gửi thông báo giao dịch (email và, nếu bật, thông báo đẩy); hỗ trợ và theo dõi bán hàng; bảo mật, nhật ký kiểm toán và chống lạm dụng; tiếp nhận yêu cầu xóa tài khoản như mô tả bên dưới.',
@@ -434,6 +472,25 @@ const EN: Record<CopyKey, string> = {
   'interest.role.owner': 'Tenant Owner',
   'interest.role.agency': 'Agency',
   'interest.role.other': 'Other',
+  'interest.org_kind': 'Organization type (optional)',
+  'interest.org_kind.agency': 'Event agency',
+  'interest.org_kind.brand_enterprise': 'Brand / enterprise',
+  'interest.org_kind.venue': 'Venue',
+  'interest.org_kind.independent': 'Independent / freelancer',
+  'interest.org_kind.other': 'Other',
+  'interest.org_kind.placeholder': 'Select organization type',
+  'interest.events_per_year': 'Events per year (estimate, optional)',
+  'interest.events_per_year.0': '0',
+  'interest.events_per_year.1-5': '1–5',
+  'interest.events_per_year.6-20': '6–20',
+  'interest.events_per_year.21+': '21+',
+  'interest.events_per_year.placeholder': 'Select range',
+  'interest.typical_scale': 'Typical event size (optional)',
+  'interest.typical_scale.under_500': 'Under 500 attendees',
+  'interest.typical_scale.500_2000': '500–2,000',
+  'interest.typical_scale.2000_10000': '2,000–10,000',
+  'interest.typical_scale.over_10000': 'Over 10,000',
+  'interest.typical_scale.placeholder': 'Select size band',
   'interest.note': 'Notes (optional)',
   'interest.consent':
     'I agree to be contacted about Vemoki. See Privacy.',
@@ -461,7 +518,7 @@ const EN: Record<CopyKey, string> = {
     'Vemoki (`vemoki.com`) processes data needed to run the event platform and respond to interest registrations. Retention, residency, and support figures below are the current MVP policy.',
   'privacy.s1.title': 'Data we collect',
   'privacy.s1.body':
-    'Account / session identifiers (email, login provider Keycloak identifier / user ID); event and code/ticket data / display QR contents; check-in records; device push tokens (Apple Push) when notifications are enabled; interest or event form fields (name, email, org, phone if the event requires them); necessary technical logs (IP, browser, timestamps). We do not sell personal data; the MVP does not use advertising SDKs or cross-app tracking.',
+    'Account / session identifiers (email, login provider Keycloak identifier / user ID); event and code/ticket data / display QR contents; check-in records; device push tokens (Apple Push) when notifications are enabled; interest or event form fields (name, email, organization, role, optional organization type/event scale if you provide them, phone if the event requires them); necessary technical logs (IP, browser, timestamps). We do not sell personal data; the MVP does not use advertising SDKs or cross-app tracking.',
   'privacy.s2.title': 'Purposes',
   'privacy.s2.body':
     'Authenticate and authorize; issue / display / validate tickets; send transactional notices (email and, if enabled, push notifications); support and sales follow-up; security, audit logs, and abuse prevention; honor account-deletion requests as described below.',
