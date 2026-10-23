@@ -1,0 +1,10 @@
+
+Next.js project detected (next.config.ts).
+Start the dev server and scan via URL for best results:
+  npx impeccable detect http://localhost:3000
+
+
+186 files scanned with regex matching only (.css, .ts, .tsx).
+Rules that need a parsed page (tiny-text, low-contrast and other element rules) did not run on them; findings are an undercount, not a clean bill of health.
+For the full check, scan the running app:
+  npx impeccable detect http://localhost:3000

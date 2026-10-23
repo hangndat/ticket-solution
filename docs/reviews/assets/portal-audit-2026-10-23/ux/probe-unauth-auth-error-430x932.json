@@ -1,0 +1,16 @@
+{
+  "id": "ffa60248-a586-4c1c-bac6-c316caefb9c9",
+  "ok": true,
+  "result": {
+    "origin": "http://127.0.0.1:3413/auth?error=access_denied",
+    "result": {
+      "frame": null,
+      "frameWidth": 430,
+      "issues": [],
+      "viewport": 430
+    }
+  },
+  "_meta": {
+    "runtimeId": "9d821662-c628-49db-a168-99fa7b7636fc"
+  }
+}
