@@ -79,19 +79,56 @@ async function loginAttendee(page, base, returnPath = '/account') {
     waitUntil: 'domcontentloaded',
   });
   await page.waitForURL(/openid-connect\/auth|login-actions/, { timeout: 45_000 });
-  await page.locator('#username').first().fill(user);
-  await page.locator('#password').first().fill(pass);
-  await page.locator('#kc-login').first().click();
+
+  let prefer = process.env.KEYCLOAK_PUBLIC_HOST || '';
+  if (!prefer) {
+    try {
+      const disc = await page.request.get(
+        'http://127.0.0.1:8080/realms/ticket/.well-known/openid-configuration',
+      );
+      if (disc.ok()) {
+        const body = await disc.json();
+        prefer = new URL(body.issuer).hostname;
+      }
+    } catch {
+      prefer = '';
+    }
+  }
+  if (!prefer) prefer = '127.0.0.1';
+  const u = new URL(page.url());
+  if (u.port === '8080' && u.hostname !== prefer) {
+    u.hostname = prefer;
+    await page.goto(u.toString(), { waitUntil: 'domcontentloaded' });
+  }
+
+  const userField = page
+    .locator('#username')
+    .or(page.getByLabel(/username|email/i))
+    .first();
+  const passField = page.locator('#password').or(page.getByLabel(/password/i)).first();
+  await userField.waitFor({ state: 'visible', timeout: 20_000 });
+  await userField.fill(user);
+  await passField.fill(pass);
+  await page
+    .locator('#kc-login')
+    .or(page.getByRole('button', { name: /sign in|log in/i }))
+    .first()
+    .click();
   const baseUrl = new URL(base);
+  const appHosts = new Set(['127.0.0.1', 'localhost', baseUrl.hostname]);
   await page.waitForURL(
     (url) =>
-      (url.hostname === 'localhost' || url.hostname === '127.0.0.1') &&
-      url.port === baseUrl.port &&
-      !url.pathname.startsWith('/api/auth/login'),
+      appHosts.has(url.hostname) && !url.pathname.startsWith('/api/auth/login'),
     { timeout: 60_000 },
   );
-  if (!page.url().includes(returnPath.split('#')[0])) {
+  const pathOnly = returnPath.split('#')[0];
+  if (!page.url().includes(pathOnly)) {
     await page.goto(`${base}${returnPath}`, { waitUntil: 'domcontentloaded' });
+  }
+  if (pathOnly === '/account') {
+    await page
+      .waitForSelector('[data-testid="account-session-signed-in"]', { timeout: 30_000 })
+      .catch(() => undefined);
   }
 }
 
@@ -157,6 +194,8 @@ const STATES = [
         timeout: 30_000,
       });
       await page.getByRole('link', { name: 'Đăng xuất' }).click();
+      await page.waitForLoadState('networkidle', { timeout: 30_000 }).catch(() => undefined);
+      await page.goto(`${base}/account`, { waitUntil: 'domcontentloaded' });
       await page.waitForSelector('[data-testid="account-session-signed-out"]', {
         timeout: 30_000,
       });
