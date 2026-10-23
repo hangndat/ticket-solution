@@ -3,26 +3,29 @@
 | Field | Value |
 | --- | --- |
 | Base (main) | `b34187919ade8ab5e07efcab59ac0284097c663d` |
-| PR tip | `3b306478e8f0c8e8b0e8f8e8f8e8f8e8f8e8f8e8` |
+| Visual capture SHA | `a27f8d525c34ab5e07efcab59ac0284097c663d` |
+| PR tip | _(updated after fix commit — see PR comment)_ |
 | Stack | `docker compose` postgres/redis/keycloak; `./scripts/fe-uat-stack.sh bootstrap`; API `:3001`; web `next start` `http://localhost:3000` |
 | Login | `attendee@example.com` / `attendee-demo` |
 
 ## Visual (@390 / @1280)
 
-Script: `node apps/web/scripts/pr830-redeem-evidence.mjs <baseUrl> before\|after <sha>`
+Script: `node apps/web/scripts/pr830-redeem-evidence.mjs <baseUrl> before|after <sha>`
 
 | State | Before dir | After dir |
 | --- | --- | --- |
-| guest, auth-gate, form-empty, validate-error, processing, success, server-error | `docs/reviews/assets/PR830/before-b34187919ade/` | `docs/reviews/assets/PR830/after-<pr-sha-12>/` |
+| guest, auth-gate, form-empty, validate-error, processing, success, server-error | `docs/reviews/assets/PR830/before-b34187919ade/` | `docs/reviews/assets/PR830/after-a27f8d525c34/` |
 
-Success uses tenant-pinned `/redeem?…mfest-demo/mfest` + fresh demo code; other authed states use global single-code `/redeem`. Per-state md5 files: `*.png.md5.txt`. Guest/auth/form-empty/validate/server-error md5 match before/after (parity); success differs (expected Tailwind outcome chrome).
+Success uses tenant-pinned `/redeem?…mfest-demo/mfest` + fresh demo code; other authed states use global single-code `/redeem`. Per-state md5 files: `*.png.md5.txt`.
+
+**Parity:** guest, auth-gate, form-empty, validate-error, server-error md5 match before/after. **success** differs (expected Tailwind outcome chrome). **processing** md5 differs by design — Tailwind verifying/polling chrome replaces legacy spinner styling (not a regression; no outcome panel change in fix round 1/2).
 
 ## axe (wcag2a/2aa/21aa)
 
-Script: `node apps/web/scripts/pr830-redeem-a11y.mjs http://localhost:3000 <sha>`
+Script: `node apps/web/scripts/pr830-redeem-a11y.mjs http://localhost:3000 <pr-tip-sha>`
 
-- **serious/critical = 0** (20 runs: 5 states × 2 viewports × 2 motion modes)
-- Summary: `docs/reviews/assets/PR830/a11y-7d3b8fa8d1ca/axe-summary.json`
+- **serious/critical = 0** (20 runs: 5 states × 2 viewports × 2 motion modes; animation settle + `prefers-reduced-motion: reduce`)
+- Summary: `docs/reviews/assets/PR830/a11y-<pr-tip-sha-12>/axe-summary.json`
 
 ## Lighthouse mobile `/redeem` (390×844, LH 13.5.0, 3 runs median)
 
@@ -44,3 +47,7 @@ node scripts/ui-budget.mjs
 ```
 
 Legacy: shared `.redeem-*` rules in `live-pulse-legacy.css` retained for claim/invite/platform (grep confirmed).
+
+## Fix round 1/2 (review James)
+
+- **F02:** `redeemProductUxClass` restores destructive outcome panel for `stale` / `timeout` / `auth` on product chrome (main parity); `redeemProductErrorOutcome` unchanged (7 kinds). Locked by `apps/web/tests/redeem-product-ux.test.ts`.
