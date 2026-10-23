@@ -1,7 +1,6 @@
 /**
- * ADR-20 §8 dual-run prep: optional GET/HEAD navigation from legacy
- * `app./admin` (+ `/platform`) → fixed portal origin + query allowlist.
- * Default OFF — legacy admin stays until a separately authorized deploy.
+ * ADR-20 §8 / D-7 cutover: GET/HEAD `/admin` and `/platform` on apps/web
+ * redirect to PORTAL_ORIGIN when configured (legacy routes removed).
  * Never redirect POST/PUT/PATCH/DELETE or `/api/*` BFF.
  */
 
@@ -103,14 +102,10 @@ export function isEnvFlagOn(
   return defaultOn;
 }
 
-/**
- * Redirect flag — ADR-20: mặc định OFF.
- * Requires a valid PORTAL_ORIGIN when enabled (else treat as OFF / no-op).
- */
+/** Redirect when PORTAL_ORIGIN is valid (D-7: unconditional; flag ignored). */
 export function isAdminToPortalRedirectEnabled(
   env: DualRunEnv = process.env,
 ): boolean {
-  if (!isEnvFlagOn(env.PORTAL_ADMIN_REDIRECT, false)) return false;
   return portalOriginFromEnv(env) !== null;
 }
 
@@ -287,7 +282,8 @@ export function portalMigrationLocation(
 
 export type AdminToPortalDecision =
   | { type: 'next' }
-  | { type: 'redirect'; location: string; status: 302 };
+  | { type: 'redirect'; location: string; status: 302 }
+  | { type: 'not_found' };
 
 /**
  * Pure decision for apps/web proxy. Call only on the product process.
@@ -302,14 +298,18 @@ export function decideAdminToPortalRedirect(input: {
   env?: DualRunEnv;
 }): AdminToPortalDecision {
   const env = input.env ?? process.env;
-  const enabled =
-    input.enabled ?? isAdminToPortalRedirectEnabled(env);
-  if (!enabled) return { type: 'next' };
+  const pathname = input.pathname || '/';
 
   if (!isNavigationMethod(input.method)) return { type: 'next' };
-
-  const pathname = input.pathname || '/';
   if (!isAdminToPortalPath(pathname)) return { type: 'next' };
+
+  const enabledExplicit = input.enabled;
+  const enabled =
+    enabledExplicit ?? isAdminToPortalRedirectEnabled(env);
+  if (!enabled) {
+    if (enabledExplicit === false) return { type: 'next' };
+    return { type: 'not_found' };
+  }
 
   // Defense in depth — never migrate API/BFF even if prefixes drift.
   if (pathname.startsWith('/api/') || pathname === '/api') {
@@ -323,7 +323,7 @@ export function decideAdminToPortalRedirect(input: {
     input.portalOrigin !== undefined
       ? input.portalOrigin
       : portalOriginFromEnv(env);
-  if (!origin) return { type: 'next' };
+  if (!origin) return { type: 'not_found' };
 
   const dest = portalMigrationLocation(origin, pathname, input.search ?? '');
   return { type: 'redirect', location: dest, status: 302 };

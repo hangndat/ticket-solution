@@ -23,8 +23,7 @@ export type NavCapabilitiesLoader = () => Promise<{
 
 const GUEST_CAPS: NavCapabilities = {
   authenticated: false,
-  showAdmin: false,
-  showPlatform: false,
+  showPortalStaff: false,
   showAccount: false,
 };
 

@@ -22,12 +22,7 @@ function loadPostcss() {
 const postcss = loadPostcss();
 const BUILD_STATIC = join(WEB_ROOT, '.next', 'static');
 
-const LAYER_ORDER = ['theme', 'base', 'legacy', 'components', 'utilities'];
-
-/** Representative legacy-bundle selectors (live-pulse / marketing / attendee uplift). */
-const LEGACY_SELECTOR_MARKERS = [
-  { id: 'live-pulse', needle: '.lp-container' },
-];
+const LAYER_ORDER = ['theme', 'base', 'components', 'utilities'];
 
 const UTILITIES_DISABLED_OPACITY =
   /\.disabled\\:opacity-50:disabled|\.disabled\\?\\:opacity-50:disabled/;
@@ -131,7 +126,7 @@ function analyzeChunk(cssText, label) {
   return { rules: walkRulesWithLayers(root) };
 }
 
-test('compiled CSS encodes D-1 layer cascade and legacy isolation', () => {
+test('compiled CSS encodes D-1 layer cascade (post D-7 legacy removal)', () => {
   const { files, combined, chunks } = loadCompiledCss();
   const allRules = [];
 
@@ -146,20 +141,6 @@ test('compiled CSS encodes D-1 layer cascade and legacy isolation', () => {
     'expected a global CSS chunk with @layer utilities (main app bundle)',
   );
   assertLayerOrder(primaryChunk);
-
-  for (const { id, needle } of LEGACY_SELECTOR_MARKERS) {
-    const matching = allRules.filter((r) => r.selector.includes(needle));
-    assert.ok(
-      matching.length > 0,
-      `expected compiled rule for ${id} (${needle}) — legacy CSS may be missing from build`,
-    );
-    for (const rule of matching) {
-      assert.ok(
-        rule.layers.includes('legacy'),
-        `${needle} must live in @layer legacy, got layers [${rule.layers.join(', ')}] for selector: ${rule.selector}`,
-      );
-    }
-  }
 
   const utilityHits = allRules.filter((r) => UTILITIES_DISABLED_OPACITY.test(r.selector));
   assert.ok(

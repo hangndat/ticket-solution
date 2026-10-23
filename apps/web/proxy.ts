@@ -7,10 +7,11 @@ import {
   productOriginFromEnv,
 } from './src/marketing/hosts';
 import { decideAdminToPortalRedirect } from './src/portal/dual-run';
+import {
+  isLegacyStaffApiPath,
+  legacyStaffApiGoneResponse,
+} from './src/portal/legacy-cutover';
 import { isServerActionPost } from './src/security/server-action-edge';
-/** Keep literal — avoid importing next/headers via oidc/cookies in Edge proxy. */
-const OIDC_ACCESS_COOKIE = 'oidc_access_token';
-
 const SERVER_ACTION_PROBE_BODY = 'Server Actions are not enabled on this app.';
 
 function withRuntimeCsp(response: NextResponse): NextResponse {
@@ -24,7 +25,7 @@ function withRuntimeCsp(response: NextResponse): NextResponse {
  * D-6: retired web gate — /gate|/gate/* → / (308).
  * O02: anonymous soft-redirect for staff deep-link /admin → /auth
  * (product host only — after apex→app host redirects).
- * ADR-20 §8: optional GET/HEAD /admin|/platform → PORTAL_ORIGIN (flag default OFF).
+ * ADR-20 §8 / D-7: GET/HEAD /admin|/platform → PORTAL_ORIGIN; legacy staff API → 410.
  */
 export default function proxy(request: NextRequest) {
   if (
@@ -59,9 +60,15 @@ export default function proxy(request: NextRequest) {
     return NextResponse.redirect(decision.location, decision.status);
   }
 
-  // ADR-20 dual-run: GET/HEAD admin|platform → portal when flag ON.
-  // Before O02 /auth soft-redirect so navigation lands on portal login.
-  // Never mutates POST/PUT/PATCH or /api/bff (pure helper enforces).
+  if (isLegacyStaffApiPath(pathname)) {
+    const gone = legacyStaffApiGoneResponse();
+    return new NextResponse(gone.body, {
+      status: gone.status,
+      headers: gone.headers,
+    });
+  }
+
+  // GET/HEAD admin|platform → portal (D-7); no legacy pages on app host.
   const portalNav = decideAdminToPortalRedirect({
     method: request.method,
     pathname,
@@ -70,26 +77,18 @@ export default function proxy(request: NextRequest) {
   if (portalNav.type === 'redirect') {
     return NextResponse.redirect(portalNav.location, portalNav.status);
   }
+  if (portalNav.type === 'not_found') {
+    return new NextResponse('Not Found', {
+      status: 404,
+      headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+    });
+  }
 
   if (pathname === '/gate' || pathname.startsWith('/gate/')) {
     const home = request.nextUrl.clone();
     home.pathname = '/';
     home.search = '';
     return NextResponse.redirect(home, 308);
-  }
-
-  // Soft-redirect anonymous staff deep-links only.
-  // Owner-ticket `/t/…/tickets/…` renders login CTA on-page (AC-S2) — do not
-  // bounce through `/auth` (stub would loop when returning to the ticket path).
-  if (pathname === '/admin') {
-    const token = request.cookies.get(OIDC_ACCESS_COOKIE)?.value?.trim() ?? '';
-    if (!token) {
-      const auth = request.nextUrl.clone();
-      auth.pathname = '/auth';
-      auth.search = '';
-      auth.searchParams.set('next', pathname);
-      return NextResponse.redirect(auth, 307);
-    }
   }
 
   if (decision.type === 'rewrite') {

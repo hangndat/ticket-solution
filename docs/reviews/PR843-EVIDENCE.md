@@ -28,7 +28,7 @@ pnpm --filter @ticket/portal typecheck lint test build
 UAT (local):
 
 ```bash
-./scripts/portal-843-notify-uat.mjs
+./apps/portal/scripts/portal-843-notify-uat.mjs
 ```
 
 Artifacts: `docs/reviews/assets/PR843/` (PNG md5 in `manifest.json`). Axe serious/critical on `#portal-cn-notify-section`: **0** (reducedMotion reduce, post-settle).
