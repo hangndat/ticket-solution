@@ -96,6 +96,36 @@ export function bffNotifications(tenantId: string, eventId: string): string {
   return bffEventAction(tenantId, eventId, 'notifications');
 }
 
+export function bffNotificationTemplatePreview(
+  tenantId: string,
+  eventId: string,
+): string {
+  return bffEventAction(tenantId, eventId, 'notification-templates/preview');
+}
+
+export function bffNotificationTemplatePublish(
+  tenantId: string,
+  eventId: string,
+): string {
+  return bffEventAction(tenantId, eventId, 'notification-templates/publish');
+}
+
+export function bffReminderPreview(tenantId: string, eventId: string): string {
+  return bffEventAction(tenantId, eventId, 'reminders/preview');
+}
+
+export function bffReminders(tenantId: string, eventId: string): string {
+  return bffEventAction(tenantId, eventId, 'reminders');
+}
+
+export function bffReminderCancel(
+  tenantId: string,
+  eventId: string,
+  reminderId: string,
+): string {
+  return `${bffReminders(tenantId, eventId)}/${encodeURIComponent(reminderId)}/cancel`;
+}
+
 export function bffExports(tenantId: string, eventId: string): string {
   return bffEventAction(tenantId, eventId, 'exports');
 }
