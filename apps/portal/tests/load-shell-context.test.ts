@@ -58,3 +58,51 @@ test('staff-only: platform 401, me tenants 200 → ready staff shell', () => {
     assert.equal(state.caps.showPlatform, false);
   }
 });
+
+test('single staff discovery 5xx with other 401 → serverUnreachable', () => {
+  const state = resolveShellLoadState({
+    tenantsResult: { status: 500, json: { error: 'upstream' } },
+    eventsResult: { status: 401, json: null },
+    platformResult: { status: 401, json: null },
+  });
+  assert.deepEqual(state, {
+    status: 'error',
+    messageKey: 'shell.load.serverUnreachable',
+  });
+});
+
+test('mixed 401 and 5xx on staff discovery → serverUnreachable', () => {
+  const state = resolveShellLoadState({
+    tenantsResult: { status: 401, json: null },
+    eventsResult: { status: 503, json: null },
+    platformResult: { status: 401, json: null },
+  });
+  assert.deepEqual(state, {
+    status: 'error',
+    messageKey: 'shell.load.serverUnreachable',
+  });
+});
+
+test('all three discovery 5xx → serverUnreachable', () => {
+  const state = resolveShellLoadState({
+    tenantsResult: { status: 500, json: null },
+    eventsResult: { status: 502, json: null },
+    platformResult: { status: 503, json: null },
+  });
+  assert.deepEqual(state, {
+    status: 'error',
+    messageKey: 'shell.load.serverUnreachable',
+  });
+});
+
+test('network failure on staff discovery (status 0) → serverUnreachable', () => {
+  const state = resolveShellLoadState({
+    tenantsResult: { status: 0, json: null },
+    eventsResult: { status: 0, json: null },
+    platformResult: { status: 401, json: null },
+  });
+  assert.deepEqual(state, {
+    status: 'error',
+    messageKey: 'shell.load.serverUnreachable',
+  });
+});
