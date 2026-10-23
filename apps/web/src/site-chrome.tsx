@@ -236,7 +236,7 @@ export function SiteNav({ trailing }: { trailing?: ReactNode }) {
             href="/account"
             className={attendeeNavAvatar}
             data-testid="nav-avatar"
-            aria-label="Tài khoản"
+            aria-label={displayHint ? undefined : 'Tài khoản'}
           >
             <span className={attendeeNavAvatarBadge} aria-hidden="true">
               {avatarInitials ?? '…'}

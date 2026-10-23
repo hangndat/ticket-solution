@@ -8,6 +8,14 @@ import {
   redirectOwnerDiscovery401,
   renewOwnerSessionIfPossible,
 } from '../../src/oidc/owner-session-guard';
+import {
+  attendeeWalletGrid,
+  attendeeWalletHeading,
+  attendeeWalletHeadingCta,
+  attendeeWalletIntro,
+  attendeeWalletPage,
+} from '../../src/attendee-detail-surface';
+import { attendeeAuthButtons } from '../../src/attendee-surface';
 import { loadOwnerWallet, WALLET_COPY } from '../../src/owner-ticket';
 import {
   buildWalletEventFilters,
@@ -16,7 +24,6 @@ import {
 import { WalletTicketCard } from '../../src/owner-ticket/wallet-ticket-card';
 import { SiteNav } from '../../src/site-chrome';
 import { SurfaceState } from '../../src/ui/surface-state';
-import walletStyles from './wallet-page.module.css';
 
 export const dynamic = 'force-dynamic';
 
@@ -46,13 +53,13 @@ export default async function WalletPage({ searchParams }: Props) {
     return (
       <main
         id="main"
-        className={`lp-container shell wallet-page ${walletStyles.page}`}
+        className={attendeeWalletPage}
         data-testid="wallet-need-login"
       >
         <SiteNav />
-        <header className={walletStyles.heading}>
+        <header className={attendeeWalletHeading}>
           <h1>{WALLET_COPY.title}</h1>
-          <p className="intro">{WALLET_COPY.intro}</p>
+          <p className={attendeeWalletIntro}>{WALLET_COPY.intro}</p>
         </header>
         <SurfaceState
           kind="empty"
@@ -60,7 +67,7 @@ export default async function WalletPage({ searchParams }: Props) {
           detail={WALLET_COPY.needLogin.detail}
           testId="wallet-need-login-state"
           action={
-            <div className="auth-buttons">
+            <div className={attendeeAuthButtons}>
               <Button asChild variant="brand">
                 <a href={walletLogin}>Đăng nhập</a>
               </Button>
@@ -78,11 +85,11 @@ export default async function WalletPage({ searchParams }: Props) {
     return (
       <main
         id="main"
-        className={`lp-container shell wallet-page ${walletStyles.page}`}
+        className={attendeeWalletPage}
         data-testid="wallet-unreachable"
       >
         <SiteNav />
-        <header className={walletStyles.heading}>
+        <header className={attendeeWalletHeading}>
           <h1>{WALLET_COPY.title}</h1>
         </header>
         <SurfaceState
@@ -104,11 +111,11 @@ export default async function WalletPage({ searchParams }: Props) {
     return (
       <main
         id="main"
-        className={`lp-container shell wallet-page ${walletStyles.page}`}
+        className={attendeeWalletPage}
         data-testid="wallet-invalid"
       >
         <SiteNav />
-        <header className={walletStyles.heading}>
+        <header className={attendeeWalletHeading}>
           <h1>{WALLET_COPY.title}</h1>
         </header>
         <SurfaceState
@@ -135,16 +142,16 @@ export default async function WalletPage({ searchParams }: Props) {
   return (
     <main
       id="main"
-      className={`lp-container shell wallet-page ${walletStyles.page}`}
+      className={attendeeWalletPage}
       data-testid="wallet-ready"
     >
       <SiteNav />
-      <header className={walletStyles.heading}>
+      <header className={attendeeWalletHeading}>
         <div>
           <h1>{WALLET_COPY.title}</h1>
-          <p className="intro">{WALLET_COPY.intro}</p>
+          <p className={attendeeWalletIntro}>{WALLET_COPY.intro}</p>
         </div>
-        <Button asChild variant="brand" className={walletStyles.headingCta}>
+        <Button asChild variant="brand" className={attendeeWalletHeadingCta}>
           <Link href="/redeem">Đổi mã lấy vé</Link>
         </Button>
       </header>
@@ -181,7 +188,7 @@ export default async function WalletPage({ searchParams }: Props) {
               }
             />
           ) : (
-            <div className={walletStyles.grid} role="list" data-testid="wallet-ticket-grid">
+            <div className={attendeeWalletGrid} role="list" data-testid="wallet-ticket-grid">
               {visible.map((ticket) => (
                 <WalletTicketCard
                   key={ticket.ticketId}

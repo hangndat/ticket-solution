@@ -8,6 +8,29 @@ import {
   brandingFromEventBrand,
   brandingToCssVars,
 } from '../../../../../src/branding';
+import {
+  attendeeDetailMain,
+  attendeeEventBackLink,
+  attendeeEventBody,
+  attendeeEventCols,
+  attendeeEventEyebrow,
+  attendeeEventFacts,
+  attendeeEventFactsTz,
+  attendeeEventFaq,
+  attendeeEventHeroArt,
+  attendeeEventHeroInner,
+  attendeeEventHeroMeta,
+  attendeeEventHeroSep,
+  attendeeEventHeroTitle,
+  attendeeEventMuted,
+  attendeeEventOrg,
+  attendeeEventPage,
+  attendeeEventProse,
+  attendeeEventSidebox,
+  attendeeEventSideboxCta,
+  attendeeEventSideboxHelp,
+  attendeeEventSideboxLead,
+} from '../../../../../src/attendee-detail-surface';
 import { SiteNav } from '../../../../../src/site-chrome';
 import {
   PUBLIC_EVENT_COPY,
@@ -19,7 +42,7 @@ import {
 import { publishedSectionKindLabel } from '../../../../../src/published/section-label';
 import { SurfaceState } from '../../../../../src/ui/surface-state';
 import { eventArtTone } from '../../../../../src/ui/event-art-tone';
-import sideboxStyles from './event-detail-sidebox.module.css';
+import { attendeeHomeMain } from '../../../../../src/attendee-surface';
 
 type Props = { params: Promise<{ tenantSlug: string; eventSlug: string }> };
 
@@ -51,7 +74,7 @@ function EventErrorShell({
   detail: string;
 }) {
   return (
-    <main id="main" className="lp-container shell event-page">
+    <main id="main" className={attendeeHomeMain}>
       <SiteNav />
       <SurfaceState
         kind="error"
@@ -114,26 +137,26 @@ export default async function EventPage({ params }: Props) {
     <ThemeProvider branding={branding} applyCssVars>
       <main
         id="main"
-        className="event-page"
+        className={attendeeEventPage}
         style={themeVars}
         data-branding-source={branding.source}
         data-testid="event-published"
       >
         <SiteNav />
-        <div className="lp-container event-detail-body">
-          <Link className="event-detail-back" href="/">
+        <div className={`${attendeeDetailMain} ${attendeeEventBody}`}>
+          <Link className={attendeeEventBackLink} href="/">
             <span aria-hidden="true">‹</span> Tất cả sự kiện
           </Link>
 
           <div
-            className={`event-detail-hero event-detail-hero-art event-detail-hero-art--${heroTone}`}
+            className={attendeeEventHeroArt(heroTone)}
             data-testid="event-hero-media"
           >
-            <div className="event-detail-hero-art__inner">
-              <h1 id="event-title" className="event-detail-hero-art__title">
+            <div className={attendeeEventHeroInner}>
+              <h1 id="event-title" className={attendeeEventHeroTitle}>
                 {event.name}
               </h1>
-              <p className="event-detail-hero-art__meta">
+              <p className={attendeeEventHeroMeta}>
                 {whenLabel && event.startsAt ? (
                   <time dateTime={event.startsAt}>{whenLabel}</time>
                 ) : (
@@ -141,7 +164,7 @@ export default async function EventPage({ params }: Props) {
                 )}
                 {locationLabel ? (
                   <>
-                    <span className="event-detail-hero-art__sep" aria-hidden="true">
+                    <span className={attendeeEventHeroSep} aria-hidden="true">
                       ·
                     </span>
                     <span>{locationLabel}</span>
@@ -151,17 +174,17 @@ export default async function EventPage({ params }: Props) {
             </div>
           </div>
 
-          <div className="event-detail-cols">
-            <div className="event-detail-main">
+          <div className={attendeeEventCols}>
+            <div>
               {heroCopy.eyebrow ? (
-                <p className="eyebrow">{heroCopy.eyebrow}</p>
+                <p className={attendeeEventEyebrow}>{heroCopy.eyebrow}</p>
               ) : null}
-              <p className="event-detail-org" data-testid="event-hero-support">
+              <p className={attendeeEventOrg} data-testid="event-hero-support">
                 {event.brand.organizationName}
               </p>
 
               <div
-                className="event-facts"
+                className={attendeeEventFacts}
                 aria-label="Thông tin nhanh"
                 data-testid="event-facts"
               >
@@ -171,7 +194,7 @@ export default async function EventPage({ params }: Props) {
                     {whenLabel && event.startsAt ? (
                       <>
                         <time dateTime={event.startsAt}>{whenLabel}</time>
-                        <span className="event-facts__tz">{event.timezone}</span>
+                        <span className={attendeeEventFactsTz}>{event.timezone}</span>
                       </>
                     ) : (
                       <span>{PUBLIC_EVENT_COPY.noStartsAt}</span>
@@ -182,7 +205,7 @@ export default async function EventPage({ params }: Props) {
                   <small>Địa điểm</small>
                   <p>
                     {locationLabel ?? (
-                      <span className="muted">
+                      <span className={attendeeEventMuted}>
                         {PUBLIC_EVENT_COPY.detailLocationUnknown}
                       </span>
                     )}
@@ -190,7 +213,7 @@ export default async function EventPage({ params }: Props) {
                 </div>
               </div>
 
-              <div className="event-prose" id="event-details">
+              <div className={attendeeEventProse} id="event-details">
                 <h2>Về sự kiện</h2>
                 <p>{heroCopy.intro ?? PUBLIC_EVENT_COPY.detailAboutFallback}</p>
                 <h3>{PUBLIC_EVENT_COPY.detailAttendTitle}</h3>
@@ -215,25 +238,25 @@ export default async function EventPage({ params }: Props) {
             </div>
 
             <aside
-              className={`event-sidebox ${sideboxStyles.sidebox}`}
+              className={attendeeEventSidebox}
               aria-labelledby="event-sidebox-title"
               data-testid="event-sidebox"
             >
               <h2 id="event-sidebox-title">Vé tham dự của bạn</h2>
-              <p className={sideboxStyles.lead}>
+              <p className={attendeeEventSideboxLead}>
                 Bạn có mã nhận vé từ nhà tổ chức?
               </p>
-              <Button asChild variant="primary" block className={sideboxStyles.cta}>
+              <Button asChild variant="primary" block className={attendeeEventSideboxCta}>
                 <Link href={redeemHref}>Đổi mã lấy vé</Link>
               </Button>
-              <p className={sideboxStyles.help}>
+              <p className={attendeeEventSideboxHelp}>
                 Mã sẽ tự xác định đúng sự kiện và đơn vị tổ chức.
               </p>
             </aside>
           </div>
 
           {event.faq.length > 0 ? (
-            <section className="event-faq" aria-labelledby="faq-title">
+            <section className={attendeeEventFaq} aria-labelledby="faq-title">
               <h2 id="faq-title">Câu hỏi thường gặp</h2>
               {event.faq.map((item, index) => (
                 <details key={`faq-${index}`}>
