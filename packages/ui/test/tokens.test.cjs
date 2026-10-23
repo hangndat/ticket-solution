@@ -15,8 +15,8 @@ const themeCss = fs.readFileSync(
   path.join(__dirname, '../src/generated/vemoki-theme.css'),
   'utf8',
 );
-const legacyCss = fs.readFileSync(
-  path.join(repoRoot, 'apps/web/app/live-pulse-legacy.css'),
+const globalsCss = fs.readFileSync(
+  path.join(repoRoot, 'apps/web/app/globals.css'),
   'utf8',
 );
 
