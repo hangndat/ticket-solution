@@ -3,7 +3,7 @@
 | Field | Value |
 | --- | --- |
 | Base (before) | `9371a5b14da7a03b011457e5baffe33aeb194031` |
-| PR tip (after) | `1319c29667613199bb5025201069a54c8e423e2a` |
+| PR tip (after) | `2b45ea5` (code `1319c2966761` + evidence commit) |
 
 ## Module CSS gate
 
