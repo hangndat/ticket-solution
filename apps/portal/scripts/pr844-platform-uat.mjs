@@ -197,11 +197,68 @@ async function platformLoginCookies() {
 
 async function loadPlaywright() {
   const { chromium } = await import('playwright');
+  const channel = process.env.WEB_UAT_CHANNEL || undefined;
   const exe =
     process.env.WEB_UAT_EXECUTABLE ||
     chromium.executablePath?.() ||
     undefined;
-  return chromium.launch({ headless: true, executablePath: exe });
+  return chromium.launch({
+    headless: true,
+    channel,
+    executablePath: channel ? undefined : exe,
+  });
+}
+
+/** Playwright platform login (Keycloak + portal cookies). */
+async function platformLoginWithPlaywright(browser) {
+  const context = await browser.newContext({
+    viewport: { width: 1280, height: 900 },
+    reducedMotion: 'reduce',
+  });
+  const page = await context.newPage();
+  await page.goto(`${PORTAL}/api/auth/platform/login`, {
+    waitUntil: 'domcontentloaded',
+  });
+  await page.waitForSelector('#username', { timeout: 30_000 });
+  await page.fill('#username', username);
+  await page.fill('#password', password);
+  await page.click('#kc-login');
+  await page.waitForTimeout(800);
+
+  const totpSecret = page.locator('input[name=totpSecret]');
+  if (await totpSecret.count()) {
+    const secret = await totpSecret.inputValue();
+    await page.fill('input[name=totp]', totpFromSessionSecret(secret));
+    await page.locator('input[type=submit], #kc-login').first().click();
+    await page.waitForTimeout(1500);
+  }
+
+  const otp = page.locator('input[name=otp]');
+  if (await otp.count()) {
+    const secret = await page
+      .locator('input[name=totpSecret]')
+      .inputValue()
+      .catch(() => '');
+    if (secret) {
+      await otp.fill(totpFromSessionSecret(secret));
+      await page.locator('input[type=submit], #kc-login').first().click();
+      await page.waitForTimeout(2000);
+    }
+  }
+
+  await page
+    .waitForURL((url) => url.origin === new URL(PORTAL).origin, {
+      timeout: 45_000,
+    })
+    .catch(() => {});
+
+  if (!page.url().startsWith(PORTAL)) {
+    die(`platform login stuck at ${page.url()}`);
+  }
+
+  const cookies = await context.cookies();
+  await page.close();
+  return { context, cookies };
 }
 
 async function runAxe(page) {
@@ -224,13 +281,8 @@ async function main() {
     await import('node:child_process')
   ).execSync('git rev-parse HEAD', { cwd: ROOT, encoding: 'utf8' }).trim();
 
-  const { portalCookies } = await platformLoginCookies();
   const browser = await loadPlaywright();
-  const context = await browser.newContext({
-    viewport: { width: 1280, height: 900 },
-    reducedMotion: 'reduce',
-  });
-  await context.addCookies(portalCookies);
+  const { context } = await platformLoginWithPlaywright(browser);
   const page = await context.newPage();
   await page.addInitScript(axe.source);
 
