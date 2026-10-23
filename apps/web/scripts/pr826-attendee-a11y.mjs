@@ -7,7 +7,7 @@ import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
-import axeCore from 'axe-core';
+import { motionContextOptions, runAxeOnPage } from './lib/axe-run.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 
@@ -41,37 +41,6 @@ const VIEWPORTS = [
   { id: '1280', width: 1280, height: 900 },
 ];
 
-async function settleAnimations(page) {
-  await page.evaluate(async () => {
-    const anims = document.getAnimations();
-    if (anims.length) {
-      await Promise.all(anims.map((a) => a.finished.catch(() => undefined)));
-    }
-  });
-  await page.waitForTimeout(1000);
-}
-
-async function runAxe(page) {
-  await page.addScriptTag({ content: `${axeCore.source}` });
-  return page.evaluate(async () => {
-    // @ts-expect-error axe injected
-    const results = await window.axe.run(document, {
-      runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21aa'] },
-    });
-    const serious = results.violations.filter(
-      (v) => v.impact === 'serious' || v.impact === 'critical',
-    );
-    return {
-      violationCount: results.violations.length,
-      seriousCritical: serious.map((v) => ({
-        id: v.id,
-        impact: v.impact,
-        nodes: v.nodes.length,
-      })),
-    };
-  });
-}
-
 async function main() {
   const base = process.argv[2]?.replace(/\/$/, '');
   const sha = process.argv[3];
@@ -93,9 +62,7 @@ async function main() {
   try {
     for (const motion of ['default', 'reduce']) {
       for (const vp of VIEWPORTS) {
-        const context = await browser.newContext(
-          motion === 'reduce' ? { reducedMotion: 'reduce' } : {},
-        );
+        const context = await browser.newContext(motionContextOptions(motion));
         const page = await context.newPage();
         await page.setViewportSize({ width: vp.width, height: vp.height });
         const res = await page.goto(`${base}/`, {
@@ -104,12 +71,11 @@ async function main() {
         });
         if (!res?.ok()) die(`navigation failed ${vp.id}`);
         await page.waitForSelector('[data-testid="site-header"]');
-        await settleAnimations(page);
-        const axe = await runAxe(page);
+        const { violationCount, seriousCritical } = await runAxeOnPage(page);
         const label = `${vp.id}-${motion}`;
-        reports.push({ label, ...axe });
-        if (axe.seriousCritical.length > 0) {
-          die(`axe serious/critical ${label}: ${JSON.stringify(axe.seriousCritical)}`);
+        reports.push({ label, violationCount, seriousCritical });
+        if (seriousCritical.length > 0) {
+          die(`axe serious/critical ${label}: ${JSON.stringify(seriousCritical)}`);
         }
         await context.close();
       }
