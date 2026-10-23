@@ -15,6 +15,7 @@ import {
 } from '../notifications';
 import { usePortalLocale, type MessageKey } from '../../i18n';
 import { SavedViewsToolbar } from '../../views';
+import { NotificationsTemplatesSection } from './notifications-templates-section';
 
 type Props = {
   tenantId: string;
@@ -46,6 +47,7 @@ export function NotificationsOpsPanel({
 }: Props) {
   const { t, locale } = usePortalLocale();
   const [busy, setBusy] = useState(false);
+  const setPanelBusy = useCallback((next: boolean) => setBusy(next), []);
   const [view, setView] = useState<NotificationListView | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [state, setState] = useState<NotificationProviderStatus | undefined>();
@@ -167,17 +169,17 @@ export function NotificationsOpsPanel({
         dataSource={items}
         pagination={false}
         columns={[
-          { title: 'ID', dataIndex: 'notificationId', ellipsis: true },
-          { title: 'Channel', dataIndex: 'channel', width: 100 },
+          { title: t('ops.table.id'), dataIndex: 'notificationId', ellipsis: true },
+          { title: t('ops.table.channel'), dataIndex: 'channel', width: 100 },
           {
-            title: 'Provider status',
+            title: t('ops.table.providerStatus'),
             dataIndex: 'providerStatus',
             render: (status: string) =>
               providerStatusLabel(
                 status as Parameters<typeof providerStatusLabel>[0], locale,
               ),
           },
-          { title: 'Kind', dataIndex: 'kind', ellipsis: true },
+          { title: t('ops.table.kind'), dataIndex: 'kind', ellipsis: true },
           {
             title: t('ops.h_1pbxt75'),
             key: 'actions',
@@ -201,6 +203,13 @@ export function NotificationsOpsPanel({
       {notice ? (
         <Typography.Text type="secondary">{notice}</Typography.Text>
       ) : null}
+      <NotificationsTemplatesSection
+        tenantId={tenantId}
+        eventId={eventId}
+        canNotify={canNotify}
+        busy={busy}
+        onBusy={setPanelBusy}
+      />
     </Space>
   );
 }

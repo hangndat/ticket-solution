@@ -1,0 +1,16 @@
+{
+  "id": "46677fcd-e132-424a-a841-1bd9806e0bcb",
+  "ok": true,
+  "result": {
+    "origin": "http://127.0.0.1:3413/onboarding",
+    "result": {
+      "frame": null,
+      "frameWidth": 390,
+      "issues": [],
+      "viewport": 390
+    }
+  },
+  "_meta": {
+    "runtimeId": "9d821662-c628-49db-a168-99fa7b7636fc"
+  }
+}

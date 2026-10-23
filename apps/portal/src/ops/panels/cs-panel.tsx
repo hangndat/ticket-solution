@@ -44,7 +44,10 @@ export function CsPanel({ tenantId, eventId, canCs }: Props) {
     }
     if (view.kind === 'resent') {
       setNotice(
-        `Resend queued · providerStatus ${csProviderStatusLabel(view.providerStatus, locale)}${view.replayed ? t('ops.import.replaySuffix') : ''}. ACCEPTED ≠ delivered.`,
+        t('ops.cs.resendQueued', {
+          status: csProviderStatusLabel(view.providerStatus, locale),
+          replaySuffix: view.replayed ? t('ops.import.replaySuffix') : '',
+        }),
       );
       return;
     }
@@ -151,10 +154,14 @@ export function CsPanel({ tenantId, eventId, canCs }: Props) {
           pagination={false}
           locale={{ emptyText: t('ops.h_142nqqm') }}
           columns={[
-            { title: 'Ticket', dataIndex: 'ticketId', ellipsis: true },
-            { title: 'State', dataIndex: 'state', width: 100 },
             {
-              title: 'Email (masked)',
+              title: t('ops.table.ticket'),
+              dataIndex: 'ticketId',
+              ellipsis: true,
+            },
+            { title: t('ops.table.state'), dataIndex: 'state', width: 100 },
+            {
+              title: t('ops.table.emailMasked'),
               dataIndex: 'ownerEmailMasked',
               ellipsis: true,
             },
@@ -166,7 +173,7 @@ export function CsPanel({ tenantId, eventId, canCs }: Props) {
                   size="small"
                   onClick={() => void openDetail(row.ticketId)}
                 >
-                  Timeline
+                  {t('ops.table.timeline')}
                 </Button>
               ),
             },

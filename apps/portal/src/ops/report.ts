@@ -117,11 +117,15 @@ export function formatQuotaRemaining(
   return t(locale, 'ops.h_1lsqc1u');
 }
 
-export function formatReportAsOf(asOf: string): string {
+export function formatReportAsOf(
+  asOf: string,
+  locale: PortalLocale = DEFAULT_PORTAL_LOCALE,
+): string {
   const ms = Date.parse(asOf);
   if (Number.isNaN(ms)) return asOf;
+  const intlLocale = locale === 'en' ? 'en-US' : 'vi-VN';
   try {
-    return new Intl.DateTimeFormat('vi-VN', {
+    return new Intl.DateTimeFormat(intlLocale, {
       dateStyle: 'short',
       timeStyle: 'medium',
       timeZone: 'UTC',

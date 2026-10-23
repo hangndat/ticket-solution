@@ -1,0 +1,158 @@
+=== SHA ===
+b34187919ade8ab5e07efcab59ac0284097c663d
+=== package.json deps (antd/pro/next) ===
+next: 16.4.2
+react: 19.3.1
+react-dom: 19.3.1
+antd: 6.6.6
+@ant-design/icons: MISSING
+@ant-design/pro-components: 3.1.15-7
+@ant-design/cssinjs: MISSING
+dayjs: MISSING
+=== antd imports count ===
+      36
+=== @ant-design/pro-components imports ===
+      22
+   2 ./src/components/portal-pro-table.tsx:@ant-design/pro-components
+   2 ./src/components/portal-pro-layout.tsx:@ant-design/pro-components
+   2 ./src/components/portal-page.tsx:@ant-design/pro-components
+   2 ./app/t/[tenantId]/members/page.tsx:@ant-design/pro-components
+   2 ./app/t/[tenantId]/events/page.tsx:@ant-design/pro-components
+   2 ./app/t/[tenantId]/e/[eventId]/types/page.tsx:@ant-design/pro-components
+   2 ./app/t/[tenantId]/e/[eventId]/sources/page.tsx:@ant-design/pro-components
+   2 ./app/platform/page.tsx:@ant-design/pro-components
+   1 ./tests/portal-menu-keys.test.ts:@ant-design/pro-components
+   1 ./src/nav/portal-menu-keys.ts:@ant-design/pro-components
+   1 ./src/components/providers.tsx:@ant-design/pro-components
+   1 ./src/components/portal-shell.tsx:@ant-design/pro-components
+   1 ./app/t/[tenantId]/settings/page.tsx:@ant-design/pro-components
+   1 ./app/t/[tenantId]/page.tsx:@ant-design/pro-components
+   1 ./app/t/[tenantId]/e/[eventId]/setup/page.tsx:@ant-design/pro-components
+   1 ./app/t/[tenantId]/e/[eventId]/quota/page.tsx:@ant-design/pro-components
+   1 ./app/t/[tenantId]/e/[eventId]/page.tsx:@ant-design/pro-components
+   1 ./app/t/[tenantId]/e/[eventId]/guests/page.tsx:@ant-design/pro-components
+   1 ./app/t/[tenantId]/e/[eventId]/gate/page.tsx:@ant-design/pro-components
+   1 ./app/t/[tenantId]/e/[eventId]/config/page.tsx:@ant-design/pro-components
+   1 ./app/t/[tenantId]/e/[eventId]/audit/page.tsx:@ant-design/pro-components
+   1 ./app/t/[tenantId]/analytics/page.tsx:@ant-design/pro-components
+=== ProLayout PageContainer ProTable ProForm StatisticCard usage ===
+ProLayout files:        2
+PageContainer files:        1
+ProTable files:        8
+ProForm files:        6
+StatisticCard files:        4
+=== tsx file count ===
+      40
+=== 'use client' count ===
+      39
+=== from antd symbol imports top ===
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/views/saved-views-toolbar.tsx:
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/views/saved-views-toolbar.tsx:
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/theme/vemoki.ts:
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/components/providers.tsx:
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/app/onboarding/page.tsx:
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/components/portal-pro-layout.tsx:
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/components/portal-pro-layout.tsx:
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/components/portal-pro-table.tsx:
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/app/onboarding/[tenantId]/page.tsx:
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/app/page.tsx:
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/components/dual-run-banner.tsx:
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/components/surface-state.tsx:
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/components/gate-deeplink.tsx:
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/app/account/security/page.tsx:
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/components/portal-shell.tsx:
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/app/platform/page.tsx:
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/ops/panels/import-invitations-panel.tsx:
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/ops/panels/cs-panel.tsx:
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/ops/panels/audit-panel.tsx:
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/app/auth/page.tsx:
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/app/t/[tenantId]/analytics/page.tsx:
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/ops/panels/export-panel.tsx:
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/ops/panels/pending-panel.tsx:
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/ops/panels/codes-panel.tsx:
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/ops/panels/notifications-panel.tsx:
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/app/t/[tenantId]/events/page.tsx:
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/app/t/[tenantId]/settings/page.tsx:
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/app/t/[tenantId]/events/new/page.tsx:
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/app/t/[tenantId]/e/[eventId]/guests/page.tsx:
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/app/t/[tenantId]/members/page.tsx:
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/app/t/[tenantId]/e/[eventId]/config/page.tsx:
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/app/t/[tenantId]/page.tsx:
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/app/t/[tenantId]/e/[eventId]/page.tsx:
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/app/t/[tenantId]/e/[eventId]/setup/page.tsx:
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/app/t/[tenantId]/e/[eventId]/sources/page.tsx:
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/app/t/[tenantId]/e/[eventId]/quota/page.tsx:
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/app/t/[tenantId]/e/[eventId]/gate/page.tsx:
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/app/t/[tenantId]/e/[eventId]/types/page.tsx:
+  22 Button
+  18 Alert
+  12 Space
+  11 Typography
+   7 Select
+   6 Table
+   6 Input
+   4 Card
+   3 Result
+   3 Form
+   2 Descriptions
+   1 Tooltip
+   1 Timeline
+   1 theme
+   1 Tag
+   1 Progress
+   1 Empty
+   1 Dropdown
+   1 ConfigProvider
+   1 App
+=== pro-components named imports ===
+   7 ProTable
+   5 ProFormText
+   5 ProCard
+   4 StatisticCard
+   4 ProForm
+   1 ProList
+   1 ProLayout
+   1 ProFormTextArea
+   1 ProFormSelect
+   1 ProConfigProvider
+   1 PageContainer
+   1 ModalForm
+=== raw <button <table <form (non-ant) ===
+button:
+0
+table:
+0
+form html:
+0
+=== style={{ count ===
+102
+=== !important in portal ===
+       0
+=== hardcoded hex colors in tsx/css ===
+   4 /Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/app/t/[tenantId]/e/[eventId]/config/page.tsx:#9b3a18
+   3 /Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/theme/vemoki.ts:#ffffff
+   2 /Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/app/onboarding/[tenantId]/page.tsx:#9b3a18
+   1 /Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/tests/readiness.test.ts:#9b3a18
+   1 /Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/tests/dual-run-allowlist.test.ts:#438
+   1 /Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/theme/vemoki.ts:#f7f6f1
+   1 /Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/theme/vemoki.ts:#9b3a18
+   1 /Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/theme/vemoki.ts:#235fd0
+   1 /Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/theme/vemoki.ts:#22241f
+   1 /Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/i18n/messages.ts:#517
+   1 /Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/dual-run/allowlist.ts:#438
+   1 /Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/app/t/[tenantId]/settings/page.tsx:#9b3a18
+   1 /Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/app/onboarding/page.tsx:#fff
+   1 /Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/app/layout.tsx:#566
+   1 /Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/app/globals.css:#fff
+   1 /Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/app/globals.css:#f7f6f1
+   1 /Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/app/globals.css:#9b3a18
+   1 /Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/app/globals.css:#235fd0
+   1 /Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/app/globals.css:#22241f
+=== @media breakpoints unique ===
+=== dayjs/moment ===
+       0
+=== @ant-design/icons ===
+       0
+=== nextjs-registry cssinjs ===
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/next.config.ts
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/app/layout.tsx
