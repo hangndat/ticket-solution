@@ -1,23 +1,23 @@
 {
-  "sha": "56fddeb9f37a209aff8ba379e825b85da103d17c",
+  "sha": "c9a6d28c9542dd1b6eff7f3054093e041d8b2dd9",
   "portal": "http://127.0.0.1:3013",
   "guestsUrl": "http://127.0.0.1:3013/t/d9d9f001-0001-4000-8000-000000000001/e/d9d9f001-0002-4000-8000-000000000001/guests#notifications",
   "screenshots": [
     {
       "path": "/Users/admin/orca/workspaces/main/portal-843-notify-cn/docs/reviews/assets/PR843/01-template-preview.png",
-      "md5": "a26aa23aec98219517f144d08304c626"
+      "md5": "3d0aac74b46af93c3bca6ed6f97fa5e5"
     },
     {
       "path": "/Users/admin/orca/workspaces/main/portal-843-notify-cn/docs/reviews/assets/PR843/02-template-publish.png",
-      "md5": "e39a75fad9344d2f8bf76c78d762d0ab"
+      "md5": "f794a538e42470f1e6ffb8e5129819b6"
     },
     {
       "path": "/Users/admin/orca/workspaces/main/portal-843-notify-cn/docs/reviews/assets/PR843/03-reminder-preview.png",
-      "md5": "469356b7cfbba521a8034f4abbbd1225"
+      "md5": "93aaefd752c2993eb5c2d1625cfc24c6"
     },
     {
       "path": "/Users/admin/orca/workspaces/main/portal-843-notify-cn/docs/reviews/assets/PR843/04-reminder-create.png",
-      "md5": "1c521daee9b3e03dff1ba376519b3071"
+      "md5": "2012896941564d4e6c9ada06996d86bc"
     }
   ],
   "axeSeriousCritical": 0,
