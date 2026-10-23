@@ -8,7 +8,7 @@ test('admin_denied includes portal CTA when PORTAL_ORIGIN set', () => {
   });
   assert.ok(notice);
   assert.match(notice.title, /quản trị/i);
-  assert.equal(notice.portalAdminHref, 'https://portal.vemoki.com/admin');
+  assert.equal(notice.portalAdminHref, 'https://portal.vemoki.com/');
 });
 
 test('admin_denied omits portal href without PORTAL_ORIGIN', () => {

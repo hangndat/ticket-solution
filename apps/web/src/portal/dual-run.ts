@@ -24,8 +24,55 @@ export const MIGRATION_QUERY_ALLOWLIST = [
 
 export type MigrationQueryKey = (typeof MIGRATION_QUERY_ALLOWLIST)[number];
 
+/** Legacy `apps/web` admin workspace jobs (`admin-form.tsx`). */
+export const LEGACY_ADMIN_JOBS = [
+  'setup',
+  'guests',
+  'gate',
+  'support',
+] as const;
+
+export type LegacyAdminJob = (typeof LEGACY_ADMIN_JOBS)[number];
+
+/**
+ * Guest job sub-tabs on portal (`guests/page.tsx` hash keys).
+ * Legacy web uses overlapping sections under job=guests.
+ */
+export const LEGACY_ADMIN_GUEST_TABS = [
+  'import',
+  'pending',
+  'notifications',
+  'export',
+] as const;
+
+/** Setup job sub-routes on portal (types/sources/quota/config). */
+export const LEGACY_ADMIN_SETUP_TABS = [
+  'setup',
+  'types',
+  'sources',
+  'quota',
+  'config',
+] as const;
+
+/** Tenant-scoped tabs when no eventId (portal routes). */
+export const LEGACY_ADMIN_TENANT_TABS = [
+  'members',
+  'settings',
+  'events',
+  'analytics',
+] as const;
+
+/** Migration `intent` query values → portal path suffix. */
+export const LEGACY_ADMIN_INTENTS = ['onboarding', 'create-event'] as const;
+
 const SAFE_ID = /^[A-Za-z0-9_-]{1,128}$/;
 const SAFE_INTENT = /^[A-Za-z0-9_-]{1,64}$/;
+
+const LEGACY_JOB_SET = new Set<string>(LEGACY_ADMIN_JOBS);
+const GUEST_TAB_SET = new Set<string>(LEGACY_ADMIN_GUEST_TABS);
+const SETUP_TAB_SET = new Set<string>(LEGACY_ADMIN_SETUP_TABS);
+const TENANT_TAB_SET = new Set<string>(LEGACY_ADMIN_TENANT_TABS);
+const INTENT_SET = new Set<string>(LEGACY_ADMIN_INTENTS);
 
 export type DualRunEnv = Readonly<Record<string, string | undefined>>;
 
@@ -116,6 +163,128 @@ export function filterMigrationSearch(search: string): string {
   return qs ? `?${qs}` : '';
 }
 
+function migrationQueryRecord(search: string): Record<MigrationQueryKey, string | null> {
+  const filtered = filterMigrationSearch(search);
+  const raw = filtered.startsWith('?') ? filtered.slice(1) : filtered;
+  const input = new URLSearchParams(raw);
+  const out: Record<MigrationQueryKey, string | null> = {
+    tenantId: null,
+    eventId: null,
+    intent: null,
+    tab: null,
+    job: null,
+  };
+  for (const key of MIGRATION_QUERY_ALLOWLIST) {
+    out[key] = input.get(key);
+  }
+  return out;
+}
+
+function segment(id: string): string {
+  return encodeURIComponent(id);
+}
+
+/**
+ * Map legacy GET/HEAD `/admin` (+ allowlisted query) to portal pathname (+ optional `#hash`).
+ * `/platform` → `/platform`. Unknown job/tab values are ignored (safe fallback paths).
+ */
+export function mapLegacyAdminToPortalPath(input: {
+  pathname: string;
+  search?: string;
+}): string {
+  const pathname = input.pathname || '/';
+
+  if (pathname === '/platform' || pathname.startsWith('/platform/')) {
+    return '/platform';
+  }
+
+  if (pathname !== '/admin' && !pathname.startsWith('/admin/')) {
+    return '/';
+  }
+
+  const q = migrationQueryRecord(input.search ?? '');
+  const tenantId = q.tenantId?.trim() ?? '';
+  const eventId = q.eventId?.trim() ?? '';
+  const job = q.job?.trim() ?? '';
+  const tab = q.tab?.trim() ?? '';
+  const intent = q.intent?.trim() ?? '';
+
+  if (intent && INTENT_SET.has(intent)) {
+    if (intent === 'onboarding') {
+      return tenantId
+        ? `/onboarding/${segment(tenantId)}`
+        : '/onboarding';
+    }
+    if (intent === 'create-event' && tenantId) {
+      return `/t/${segment(tenantId)}/events/new`;
+    }
+  }
+
+  if (!tenantId) {
+    return '/';
+  }
+
+  if (!eventId) {
+    if (tab && TENANT_TAB_SET.has(tab)) {
+      if (tab === 'events') return `/t/${segment(tenantId)}/events`;
+      if (tab === 'analytics') return `/t/${segment(tenantId)}/analytics`;
+      return `/t/${segment(tenantId)}/${tab}`;
+    }
+    return `/t/${segment(tenantId)}`;
+  }
+
+  const eventBase = `/t/${segment(tenantId)}/e/${segment(eventId)}`;
+
+  if (!job) {
+    if (tab && SETUP_TAB_SET.has(tab) && tab !== 'setup') {
+      return `${eventBase}/${tab}`;
+    }
+    return eventBase;
+  }
+
+  if (!LEGACY_JOB_SET.has(job)) {
+    return eventBase;
+  }
+
+  if (job === 'setup') {
+    if (tab && SETUP_TAB_SET.has(tab)) {
+      if (tab === 'setup') return `${eventBase}/setup`;
+      return `${eventBase}/${tab}`;
+    }
+    return `${eventBase}/setup`;
+  }
+
+  if (job === 'guests') {
+    if (tab && GUEST_TAB_SET.has(tab)) {
+      return `${eventBase}/guests#${tab}`;
+    }
+    return `${eventBase}/guests`;
+  }
+
+  if (job === 'gate') {
+    return `${eventBase}/gate`;
+  }
+
+  if (job === 'support') {
+    if (tab === 'members') {
+      return `/t/${segment(tenantId)}/members`;
+    }
+    return `${eventBase}/support`;
+  }
+
+  return eventBase;
+}
+
+/** Portal redirect target: fixed origin + mapped path (query consumed by mapper). */
+export function portalMigrationLocation(
+  origin: string,
+  pathname: string,
+  search?: string,
+): string {
+  const path = mapLegacyAdminToPortalPath({ pathname, search });
+  return `${origin.replace(/\/$/, '')}${path}`;
+}
+
 export type AdminToPortalDecision =
   | { type: 'next' }
   | { type: 'redirect'; location: string; status: 302 };
@@ -156,8 +325,7 @@ export function decideAdminToPortalRedirect(input: {
       : portalOriginFromEnv(env);
   if (!origin) return { type: 'next' };
 
-  const filtered = filterMigrationSearch(input.search ?? '');
-  const dest = `${origin.replace(/\/$/, '')}${pathname}${filtered}`;
+  const dest = portalMigrationLocation(origin, pathname, input.search ?? '');
   return { type: 'redirect', location: dest, status: 302 };
 }
 
@@ -173,5 +341,5 @@ export function portalHref(
     path.startsWith('/') && !path.startsWith('//') && isAdminToPortalPath(path)
       ? path
       : '/admin';
-  return `${origin}${safePath}${filterMigrationSearch(search ?? '')}`;
+  return portalMigrationLocation(origin, safePath, search ?? '');
 }
