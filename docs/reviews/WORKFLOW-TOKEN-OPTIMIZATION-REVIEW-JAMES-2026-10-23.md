@@ -75,3 +75,24 @@ Bộ test không có case collect fail + `--release` (F1) hay sibling worktree c
 - Không gọi Orca/GitHub production trong review; F1/F2/F5 dùng fake CLI trong `/tmp`.
 - `join_ambiguous` trên collect là cờ báo cáo; chưa đo impact quota thật trên Composer terminal fallback.
 - F3 chưa đo wall-clock hook vs Cursor 15s limit trong môi trường Orca chậm.
+
+## Revalidate 85e98fc1
+
+Đã revalidate trên exact SHA `85e98fc19b62b10891320f350c822202cd63ded6` (trước `8a222cd84e443d4acb17a829d018d62a20d122fd`), đọc diff in-scope và chạy `pnpm agent:workflow:test` (66/66 PASS). F1/F2 đóng theo AC: `settle --release` bỏ `worker-release` khi collect fail (test `failed collect with --release skips worker-release`) và `resolvedWorkspacePath` + equality loại sibling cùng tiền tố (test `worktree match uses exact resolved path not prefix`). **Verdict: PASS** (exact-SHA local; branch chưa push).
+
+| Lệnh | Kết quả |
+| --- | --- |
+| `git rev-parse HEAD` | `85e98fc19b62b10891320f350c822202cd63ded6` |
+| `pnpm agent:workflow:test` | **66/66 PASS** (2026-10-23) |
+
+| ID | Trạng thái | Ghi chú |
+| --- | --- | --- |
+| F1 | **Đã xác minh** | `agent-workflow-run.mjs` gán `skipped_collect_failed` / `retry_collect_before_release`; không gọi release khi `!collected.ok`. |
+| F2 | **Đã xác minh** | `usage.mjs` `resolvedWorkspacePath` + `===`; sibling `proj` / `proj-2` không ambiguous cho `ctx1`. |
+| F3 | **Mở** (nhẹ) | Không đổi trong lượt fix; hook vẫn không timeout cứng. |
+| F4 | **Mở** (nhẹ) | Không đổi; race read provider file vẫn có thể lệch `task_delta`. |
+| F5 | **Đã xác minh** (phần chặn) | `collectTelemetry` truyền `dispatchId` vào `isWorktreeDispatchAmbiguous`; metadata `join_ambiguous:true` khi 0 active worker sau settle vẫn có thể xảy ra (chấp nhận gap nhẹ). |
+
+**Findings mới F6+:** Không.
+
+**Limitations:** Chỉ review commit local; không push/CI GitHub trên SHA này; không chạy Orca production; `workspace.id` rỗng sau `::` vẫn resolve về cwd — chưa có test regression riêng.
