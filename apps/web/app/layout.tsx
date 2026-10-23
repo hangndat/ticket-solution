@@ -9,6 +9,13 @@ import {
 } from '../src/branding';
 import { configuredPublicOrigin } from '../src/oidc/public-origin';
 import { DemoAttendeeStrip } from '../src/attendee-uplift/demo-attendee-strip';
+import {
+  attendeeBody,
+  attendeeFooter,
+  attendeeFooterLinks,
+  attendeeFooterTagline,
+  attendeeSkip,
+} from '../src/attendee-surface';
 import { FooterBrand } from '../src/site-chrome';
 import './globals.css';
 
@@ -82,17 +89,17 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       data-branding-source={VEMOKI_BRANDING.source}
       data-surface="product"
     >
-      <body className="attendee-uplift">
+      <body className={attendeeBody}>
         <ThemeProvider branding={VEMOKI_BRANDING}>
-          <a className="skip-link" href="#main">
+          <a className={attendeeSkip} href="#main">
             Bỏ qua đến nội dung
           </a>
           <DemoAttendeeStrip />
           {children}
-          <footer className="footer" data-testid="site-footer">
+          <footer className={attendeeFooter} data-testid="site-footer">
             <FooterBrand />
-            <span className="footer-tagline">Sự kiện & vé</span>
-            <nav className="footer-links" aria-label="Liên kết chân trang">
+            <span className={attendeeFooterTagline}>Sự kiện & vé</span>
+            <nav className={attendeeFooterLinks} aria-label="Liên kết chân trang">
               <Link href="/">Khám phá</Link>
               <Link href="/redeem">Đổi mã</Link>
               <Link href="/account">Tài khoản</Link>

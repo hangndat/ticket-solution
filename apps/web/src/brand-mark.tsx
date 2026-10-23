@@ -1,5 +1,6 @@
 'use client';
 
+import { attendeeBrandMark, attendeeBrandMarkImg } from './attendee-surface';
 import { useBranding } from './branding';
 
 /** Vemoki mark — two strokes as V; signal punch = Live Pulse accent (tokens.signal). */
@@ -16,7 +17,7 @@ export function BrandMark({
     return (
       // eslint-disable-next-line @next/next/no-img-element -- tenant logo URL is allowlisted https or root-relative
       <img
-        className="brand-mark brand-mark-img"
+        className={attendeeBrandMarkImg}
         src={logoUrl}
         alt=""
         width={64}
@@ -28,7 +29,7 @@ export function BrandMark({
 
   return (
     <svg
-      className="brand-mark"
+      className={attendeeBrandMark}
       viewBox="0 0 64 64"
       aria-hidden="true"
       data-testid="brand-mark-svg"

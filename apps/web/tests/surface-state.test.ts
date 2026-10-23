@@ -2,9 +2,12 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { surfaceStateClass } from '../src/ui/surface-state';
 
-test('surfaceStateClass maps every kind to shared state chrome', () => {
-  assert.equal(surfaceStateClass('empty'), 'surface-state state-empty');
-  assert.equal(surfaceStateClass('loading'), 'surface-state state-loading');
-  assert.equal(surfaceStateClass('error'), 'surface-state state-error');
-  assert.equal(surfaceStateClass('unknown'), 'surface-state state-unknown');
+test('surfaceStateClass maps every kind to Tailwind surface chrome', () => {
+  for (const kind of ['empty', 'loading', 'error', 'unknown'] as const) {
+    const cls = surfaceStateClass(kind);
+    assert.match(cls, /max-w-\[42rem\]/);
+    assert.match(cls, /grid/);
+  }
+  assert.match(surfaceStateClass('error'), /destructive/);
+  assert.match(surfaceStateClass('loading'), /animate-pulse/);
 });
