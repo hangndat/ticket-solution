@@ -1,0 +1,90 @@
+{
+  "sha": "d24418f461e8a9b7e232cf8c2b33e381482690a9",
+  "reports": [
+    {
+      "state": "account-signed-out",
+      "motion": "default",
+      "viewport": "390",
+      "violationCount": 0,
+      "seriousCritical": []
+    },
+    {
+      "state": "account-signed-in",
+      "motion": "default",
+      "viewport": "390",
+      "violationCount": 0,
+      "seriousCritical": []
+    },
+    {
+      "state": "privacy",
+      "motion": "default",
+      "viewport": "390",
+      "violationCount": 0,
+      "seriousCritical": []
+    },
+    {
+      "state": "account-signed-out",
+      "motion": "default",
+      "viewport": "1280",
+      "violationCount": 0,
+      "seriousCritical": []
+    },
+    {
+      "state": "account-signed-in",
+      "motion": "default",
+      "viewport": "1280",
+      "violationCount": 0,
+      "seriousCritical": []
+    },
+    {
+      "state": "privacy",
+      "motion": "default",
+      "viewport": "1280",
+      "violationCount": 0,
+      "seriousCritical": []
+    },
+    {
+      "state": "account-signed-out",
+      "motion": "reduce",
+      "viewport": "390",
+      "violationCount": 0,
+      "seriousCritical": []
+    },
+    {
+      "state": "account-signed-in",
+      "motion": "reduce",
+      "viewport": "390",
+      "violationCount": 0,
+      "seriousCritical": []
+    },
+    {
+      "state": "privacy",
+      "motion": "reduce",
+      "viewport": "390",
+      "violationCount": 0,
+      "seriousCritical": []
+    },
+    {
+      "state": "account-signed-out",
+      "motion": "reduce",
+      "viewport": "1280",
+      "violationCount": 0,
+      "seriousCritical": []
+    },
+    {
+      "state": "account-signed-in",
+      "motion": "reduce",
+      "viewport": "1280",
+      "violationCount": 0,
+      "seriousCritical": []
+    },
+    {
+      "state": "privacy",
+      "motion": "reduce",
+      "viewport": "1280",
+      "violationCount": 0,
+      "seriousCritical": []
+    }
+  ],
+  "seriousTotal": 0
+}

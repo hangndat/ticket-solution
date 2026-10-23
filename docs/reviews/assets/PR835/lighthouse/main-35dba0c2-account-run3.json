@@ -1,0 +1,15 @@
+{
+  "label": "main-35dba0c2",
+  "route": {
+    "id": "account",
+    "path": "/account"
+  },
+  "run": 3,
+  "lighthouse": "13.5.0",
+  "scores": {
+    "performance": 84,
+    "accessibility": 100,
+    "bestPractices": 96,
+    "seo": 63
+  }
+}
