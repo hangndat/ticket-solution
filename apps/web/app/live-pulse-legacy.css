@@ -438,56 +438,6 @@ nav a,
   display: block;
 }
 
-.account-section-title {
-  margin-top: var(--space-7);
-  font-size: clamp(1.25rem, 2.5vw, 1.6rem);
-}
-
-.account-page {
-  --brand: var(--signal);
-}
-
-.account-session {
-  margin: var(--space-6) 0 0;
-  padding: var(--space-5) 0;
-  border-top: 1px solid var(--ink-faint);
-  border-bottom: 1px solid var(--ink-faint);
-  max-width: 36rem;
-  animation: fade-rise 0.4s ease-out 0.04s both;
-}
-
-.account-session h2 {
-  font-size: clamp(1.35rem, 2.8vw, 1.85rem);
-  margin-bottom: var(--space-2);
-}
-
-.account-session__email {
-  color: var(--ink-muted);
-  margin-bottom: 0;
-  font-size: 1.05rem;
-}
-
-.account-session__actions,
-.account-session .auth-buttons {
-  margin-top: var(--space-4);
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-3);
-  align-items: center;
-}
-
-.account-deletion {
-  margin-top: var(--space-2);
-}
-
-.account-deletion-note {
-  max-width: 40rem;
-}
-
-.account-outcome {
-  animation: fade-rise 0.35s ease-out both;
-}
-
 .redeem-page {
   --brand: var(--signal);
 }
@@ -1720,8 +1670,6 @@ select[aria-invalid='true'] {
     scroll-behavior: auto;
   }
 .event-list,
-.account-session,
-.account-outcome,
 .shell > h1,
 .shell > .intro,
 .redeem-page > h1,
