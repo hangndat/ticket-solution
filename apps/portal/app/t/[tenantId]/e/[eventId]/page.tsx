@@ -364,7 +364,7 @@ export default function EventOverviewPage() {
           subTitle={
             shownReport.asOf
               ? t('analytics.asOfTag', {
-                  asOf: formatReportAsOf(shownReport.asOf),
+                  asOf: formatReportAsOf(shownReport.asOf, locale),
                 })
               : undefined
           }

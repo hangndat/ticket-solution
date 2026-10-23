@@ -12,6 +12,7 @@ import {
   REPORT_UNKNOWN,
   formatQuotaCapacityState,
   formatQuotaRemaining,
+  formatReportAsOf,
   interpretEventReport,
   reportShowsEmailCsCta,
   reportShowsNumbers,
@@ -187,6 +188,17 @@ describe('interpretEventReport', () => {
       JSON.stringify(rejected).includes('guest@example.test'),
       false,
     );
+  });
+
+  it('formats report as-of timestamps by locale in UTC', () => {
+    const iso = '2026-10-18T01:00:00.000Z';
+    const vi = formatReportAsOf(iso, 'vi');
+    const en = formatReportAsOf(iso, 'en');
+    assert.notEqual(vi, en);
+    assert.match(vi, /18/);
+    assert.match(en, /18/);
+    assert.equal(formatReportAsOf('not-a-date', 'vi'), 'not-a-date');
+    assert.equal(formatReportAsOf('not-a-date', 'en'), 'not-a-date');
   });
 
   it('formats VI quota labels without inventing remaining 0', () => {

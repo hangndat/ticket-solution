@@ -167,17 +167,17 @@ export function NotificationsOpsPanel({
         dataSource={items}
         pagination={false}
         columns={[
-          { title: 'ID', dataIndex: 'notificationId', ellipsis: true },
-          { title: 'Channel', dataIndex: 'channel', width: 100 },
+          { title: t('ops.table.id'), dataIndex: 'notificationId', ellipsis: true },
+          { title: t('ops.table.channel'), dataIndex: 'channel', width: 100 },
           {
-            title: 'Provider status',
+            title: t('ops.table.providerStatus'),
             dataIndex: 'providerStatus',
             render: (status: string) =>
               providerStatusLabel(
                 status as Parameters<typeof providerStatusLabel>[0], locale,
               ),
           },
-          { title: 'Kind', dataIndex: 'kind', ellipsis: true },
+          { title: t('ops.table.kind'), dataIndex: 'kind', ellipsis: true },
           {
             title: t('ops.h_1pbxt75'),
             key: 'actions',

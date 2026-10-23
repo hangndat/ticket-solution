@@ -172,7 +172,7 @@ export default function AnalyticsPortfolioPage() {
       subTitle={
         asOf ? (
           <Tag data-testid="portfolio-asof">
-            {t('analytics.asOfTag', { asOf: formatReportAsOf(asOf) })}
+            {t('analytics.asOfTag', { asOf: formatReportAsOf(asOf, locale) })}
           </Tag>
         ) : undefined
       }

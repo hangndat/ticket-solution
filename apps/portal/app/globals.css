@@ -70,3 +70,11 @@ a {
     transform: rotate(360deg);
   }
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .portal-surface-loading__spinner {
+    animation: none;
+    border-top-color: var(--vemoki-signal);
+    opacity: 0.85;
+  }
+}

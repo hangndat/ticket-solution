@@ -116,7 +116,7 @@ export default function EventGateReportPage() {
           <StatisticCard.Group
             title={t('gate.report.snapshotTitle')}
             subTitle={t('analytics.asOfTag', {
-              asOf: `${formatReportAsOf(shown.asOf)} UTC`,
+              asOf: `${formatReportAsOf(shown.asOf, locale)} UTC`,
             })}
           >
             <StatisticCard
