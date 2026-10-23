@@ -3,6 +3,12 @@
 import { Button } from '@ticket/ui';
 import Link from 'next/link';
 import { useEffect, useRef, useState, useTransition } from 'react';
+import {
+  accountSessionEmail,
+  accountSessionEyebrow,
+  accountSessionPanel,
+  accountSessionActions,
+} from '../../src/account/account-flow-surface';
 import { clearGuestClaimIntent } from '../../src/guest/claim-intent';
 import { loginHref } from '../../src/oidc/login-href';
 import {
@@ -71,19 +77,19 @@ export function SessionPanel() {
   if (summary?.kind === 'signed-in') {
     return (
       <section
-        className="account-session account-session--ready"
+        className={accountSessionPanel}
         role="status"
         aria-live="polite"
         data-testid="account-session-signed-in"
       >
-        <p className="eyebrow">Phiên</p>
+        <p className={accountSessionEyebrow}>Phiên</p>
         <h2>Bạn đang đăng nhập</h2>
-        <p className="account-session__email">
+        <p className={accountSessionEmail}>
           {summary.subjectHint
             ? summary.subjectHint
             : 'Phiên đã xác minh trên thiết bị này.'}
         </p>
-        <p className="auth-buttons account-session__actions">
+        <p className={accountSessionActions}>
           <Button
             asChild
             variant="secondary"
@@ -109,7 +115,7 @@ export function SessionPanel() {
         detail={summary.detail}
         testId="account-session-error"
         action={
-          <div className="auth-buttons">
+          <div className={accountSessionActions}>
             <Button asChild variant="primary">
               <a href={ACCOUNT_LOGIN}>Đăng nhập</a>
             </Button>
@@ -124,15 +130,15 @@ export function SessionPanel() {
 
   return (
     <section
-      className="account-session account-session--signed-out"
+      className={accountSessionPanel}
       role="status"
       aria-live="polite"
       data-testid="account-session-signed-out"
     >
-      <p className="eyebrow">Phiên</p>
+      <p className={accountSessionEyebrow}>Phiên</p>
       <h2>Chưa đăng nhập</h2>
       <p>Đăng nhập để quản lý phiên hoặc gửi yêu cầu liên quan tài khoản.</p>
-      <p className="auth-buttons account-session__actions">
+      <p className={accountSessionActions}>
         <Button asChild variant="primary">
           <a href={ACCOUNT_LOGIN}>Đăng nhập</a>
         </Button>

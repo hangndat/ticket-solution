@@ -1,7 +1,13 @@
 import type { ReactNode } from 'react';
 import { SiteNav } from '../../src/site-chrome';
+import {
+  accountCols,
+  accountMainCol,
+  accountPageLead,
+  accountPageMain,
+  accountPageTitle,
+} from '../../src/account/account-flow-surface';
 import { AccountNav, type AccountNavSection } from './account-nav';
-import styles from './account-settings.module.css';
 
 type AccountShellProps = {
   active: AccountNavSection;
@@ -17,15 +23,15 @@ export function AccountShell({
   children,
 }: AccountShellProps) {
   return (
-    <main id="main" className="lp-container shell account-page">
+    <main id="main" className={accountPageMain}>
       <SiteNav />
       <header>
-        <h1 className={styles.pageTitle}>{title}</h1>
-        {lead ? <p className={styles.pageLead}>{lead}</p> : null}
+        <h1 className={accountPageTitle}>{title}</h1>
+        {lead ? <p className={accountPageLead}>{lead}</p> : null}
       </header>
-      <div className={styles.accountCols}>
+      <div className={accountCols}>
         <AccountNav active={active} />
-        <div className={styles.accountMain}>{children}</div>
+        <div className={accountMainCol}>{children}</div>
       </div>
     </main>
   );

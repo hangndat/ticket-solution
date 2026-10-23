@@ -2,7 +2,11 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import styles from './account-settings.module.css';
+import {
+  accountNav,
+  accountNavLink,
+  accountNavLinkActive,
+} from '../../src/account/account-flow-surface';
 
 export type AccountNavSection = 'account' | 'privacy';
 
@@ -15,7 +19,7 @@ export function AccountNav({ active }: { active: AccountNavSection }) {
   const pathname = usePathname();
 
   return (
-    <nav className={styles.accountNav} aria-label="Cài đặt tài khoản">
+    <nav className={accountNav} aria-label="Cài đặt tài khoản">
       {LINKS.map((link) => {
         const isActive =
           active === link.id ||
@@ -25,11 +29,7 @@ export function AccountNav({ active }: { active: AccountNavSection }) {
           <Link
             key={link.id}
             href={link.href}
-            className={
-              isActive
-                ? `${styles.accountNavLink} ${styles.accountNavLinkActive}`
-                : styles.accountNavLink
-            }
+            className={isActive ? accountNavLinkActive : accountNavLink}
             aria-current={isActive ? 'page' : undefined}
           >
             {link.label}

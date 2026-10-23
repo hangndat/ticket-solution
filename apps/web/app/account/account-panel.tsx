@@ -14,6 +14,13 @@ import {
   platformMutate,
 } from '../../src/platform/client-fetch';
 import { REQUEST_TIMEOUT_MS } from '../../src/redeem/poll-operation';
+import {
+  accountDeletionCurrentPanel,
+  accountDeletionFormRoot,
+  accountDeletionNote,
+  accountDeletionOutcomeError,
+  accountDeletionOutcomeOk,
+} from '../../src/account/account-flow-surface';
 import { liveRegionForStatus } from '../../src/ui/live-region';
 import { SurfaceState } from '../../src/ui/surface-state';
 
@@ -139,8 +146,8 @@ export function AccountPanel() {
         : null;
 
   return (
-    <div className="redeem-form account-deletion-form">
-      <aside className="notice account-deletion-note" role="note">
+    <div className={accountDeletionFormRoot}>
+      <aside className={accountDeletionNote} role="note">
         <p>
           Gửi yêu cầu được hệ thống ghi nhận (có thể hiện trạng thái theo dõi).
           Đây chưa phải xóa ngay. Chúng tôi xử lý xóa hoặc ẩn danh dữ liệu cá
@@ -175,7 +182,7 @@ export function AccountPanel() {
       ) : null}
       {current ? (
         <section
-          className="notice"
+          className={accountDeletionCurrentPanel}
           role="status"
           data-testid="account-deletion-current"
         >
@@ -241,8 +248,8 @@ export function AccountPanel() {
         <section
           className={
             view.kind === 'rejected'
-              ? 'redeem-status redeem-status--error account-outcome'
-              : 'notice account-outcome'
+              ? accountDeletionOutcomeError
+              : accountDeletionOutcomeOk
           }
           role={resultLive.role}
           aria-live={resultLive.ariaLive}
