@@ -4,7 +4,7 @@
 | --- | --- |
 | Issue | [#843](https://github.com/hangndat/ticket-solution/issues/843) |
 | Branch | `hangndat/portal-843-notify-cn` |
-| SHA (tip) | `c9a6d28c9542dd1b6eff7f3054093e041d8b2dd9` |
+| SHA (tip) | `1e8278a2e89b750fbb2714c04b35f3e92c182023` |
 | Stack | `docker compose up -d postgres redis keycloak`; `./scripts/fe-uat-stack.sh bootstrap`; API `:3001`; portal `:3013` |
 
 ## Parity (web admin → portal)
