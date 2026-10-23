@@ -4,7 +4,7 @@
 | --- | --- |
 | Base (main) | `b34187919ade8ab5e07efcab59ac0284097c663d` |
 | Visual capture SHA | `a27f8d525c34ab5e07efcab59ac0284097c663d` |
-| PR tip | `f2a96f0150f599874794c2563f4fdf54b514824b` |
+| PR tip | `e9c8f3077b61f696f03515e74a929b4cfd2ef014` |
 | Stack | `docker compose` postgres/redis/keycloak; `./scripts/fe-uat-stack.sh bootstrap`; API `:3001`; web `next start` `http://localhost:3000` |
 | Login | `attendee@example.com` / `attendee-demo` |
 
