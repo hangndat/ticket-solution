@@ -1,0 +1,146 @@
+{
+  "sha": "pending",
+  "reports": [
+    {
+      "state": "guest",
+      "motion": "default",
+      "viewport": "390",
+      "violationCount": 0,
+      "seriousCritical": []
+    },
+    {
+      "state": "auth-gate",
+      "motion": "default",
+      "viewport": "390",
+      "violationCount": 0,
+      "seriousCritical": []
+    },
+    {
+      "state": "form-empty",
+      "motion": "default",
+      "viewport": "390",
+      "violationCount": 0,
+      "seriousCritical": []
+    },
+    {
+      "state": "validate-error",
+      "motion": "default",
+      "viewport": "390",
+      "violationCount": 0,
+      "seriousCritical": []
+    },
+    {
+      "state": "server-error",
+      "motion": "default",
+      "viewport": "390",
+      "violationCount": 0,
+      "seriousCritical": []
+    },
+    {
+      "state": "guest",
+      "motion": "default",
+      "viewport": "1280",
+      "violationCount": 0,
+      "seriousCritical": []
+    },
+    {
+      "state": "auth-gate",
+      "motion": "default",
+      "viewport": "1280",
+      "violationCount": 0,
+      "seriousCritical": []
+    },
+    {
+      "state": "form-empty",
+      "motion": "default",
+      "viewport": "1280",
+      "violationCount": 0,
+      "seriousCritical": []
+    },
+    {
+      "state": "validate-error",
+      "motion": "default",
+      "viewport": "1280",
+      "violationCount": 0,
+      "seriousCritical": []
+    },
+    {
+      "state": "server-error",
+      "motion": "default",
+      "viewport": "1280",
+      "violationCount": 0,
+      "seriousCritical": []
+    },
+    {
+      "state": "guest",
+      "motion": "reduce",
+      "viewport": "390",
+      "violationCount": 0,
+      "seriousCritical": []
+    },
+    {
+      "state": "auth-gate",
+      "motion": "reduce",
+      "viewport": "390",
+      "violationCount": 0,
+      "seriousCritical": []
+    },
+    {
+      "state": "form-empty",
+      "motion": "reduce",
+      "viewport": "390",
+      "violationCount": 0,
+      "seriousCritical": []
+    },
+    {
+      "state": "validate-error",
+      "motion": "reduce",
+      "viewport": "390",
+      "violationCount": 0,
+      "seriousCritical": []
+    },
+    {
+      "state": "server-error",
+      "motion": "reduce",
+      "viewport": "390",
+      "violationCount": 0,
+      "seriousCritical": []
+    },
+    {
+      "state": "guest",
+      "motion": "reduce",
+      "viewport": "1280",
+      "violationCount": 0,
+      "seriousCritical": []
+    },
+    {
+      "state": "auth-gate",
+      "motion": "reduce",
+      "viewport": "1280",
+      "violationCount": 0,
+      "seriousCritical": []
+    },
+    {
+      "state": "form-empty",
+      "motion": "reduce",
+      "viewport": "1280",
+      "violationCount": 0,
+      "seriousCritical": []
+    },
+    {
+      "state": "validate-error",
+      "motion": "reduce",
+      "viewport": "1280",
+      "violationCount": 0,
+      "seriousCritical": []
+    },
+    {
+      "state": "server-error",
+      "motion": "reduce",
+      "viewport": "1280",
+      "violationCount": 0,
+      "seriousCritical": []
+    }
+  ],
+  "seriousTotal": 0
+}
