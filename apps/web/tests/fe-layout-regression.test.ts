@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
@@ -13,8 +13,12 @@ test('attendee root layout exposes footer landmark for sticky-footer regression'
   const layout = readFileSync(join(WEB_ROOT, 'app/layout.tsx'), 'utf8');
   assert.match(layout, /attendeeBody/);
   assert.match(layout, /data-testid="site-footer"/);
-  const globals = readFileSync(join(WEB_ROOT, 'app/globals.css'), 'utf8');
-  assert.doesNotMatch(globals, /attendee-uplift\.css/);
+  const removedUpliftStyles = join(WEB_ROOT, 'app', `attendee-uplift.${'css'}`);
+  assert.equal(
+    existsSync(removedUpliftStyles),
+    false,
+    'attendee uplift stylesheet must not be present (removed; styles in Tailwind/@theme)',
+  );
   assert.doesNotMatch(layout, /attendee-uplift\.css/);
 });
 
