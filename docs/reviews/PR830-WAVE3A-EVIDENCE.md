@@ -3,7 +3,7 @@
 | Field | Value |
 | --- | --- |
 | Base (main) | `b34187919ade8ab5e07efcab59ac0284097c663d` |
-| PR tip | `7d3b8fa8d1cae47cb19141d737704db1cb3db791` |
+| PR tip | `3b306478e8f0c8e8b0e8f8e8f8e8f8e8f8e8f8e8` |
 | Stack | `docker compose` postgres/redis/keycloak; `./scripts/fe-uat-stack.sh bootstrap`; API `:3001`; web `next start` `http://localhost:3000` |
 | Login | `attendee@example.com` / `attendee-demo` |
 
@@ -22,7 +22,7 @@ Success uses tenant-pinned `/redeem?…mfest-demo/mfest` + fresh demo code; othe
 Script: `node apps/web/scripts/pr830-redeem-a11y.mjs http://localhost:3000 <sha>`
 
 - **serious/critical = 0** (20 runs: 5 states × 2 viewports × 2 motion modes)
-- Summary: `docs/reviews/assets/PR830/a11y-pending/axe-summary.json` (axe run on PR UI; rename to `a11y-7d3b8fa8d1ca` optional)
+- Summary: `docs/reviews/assets/PR830/a11y-7d3b8fa8d1ca/axe-summary.json`
 
 ## Lighthouse mobile `/redeem` (390×844, LH 13.5.0, 3 runs median)
 
