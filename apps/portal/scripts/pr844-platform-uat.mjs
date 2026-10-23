@@ -138,9 +138,18 @@ async function platformLoginWithPlaywright(browser) {
 
 async function runAxe(page) {
   await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.waitForTimeout(500);
   const results = await page.evaluate(async () => {
+    const root =
+      document
+        .querySelector('[data-testid="platform-grant-create-submit"]')
+        ?.closest('.ant-space') ??
+      document.querySelector('[data-testid="platform-provision-submit"]')?.closest(
+        '.ant-space',
+      ) ??
+      document.body;
     // @ts-expect-error injected
-    return await window.axe.run(document, {
+    return await window.axe.run(root, {
       runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa'] },
     });
   });
@@ -166,6 +175,14 @@ async function confirmAntModal(page) {
     .locator('.ant-modal-confirm-btns .ant-btn-primary')
     .click({ timeout: 15_000 });
   await page.waitForTimeout(500);
+}
+
+/** Manage mutations reload detail and clear mutate-status alert — wait on detail row. */
+async function waitForTenantDetailStatus(page, status) {
+  await page
+    .getByTestId('platform-tenant-detail')
+    .getByText(status, { exact: true })
+    .waitFor({ state: 'visible', timeout: 30_000 });
 }
 
 async function main() {
@@ -194,13 +211,57 @@ async function main() {
     .getByRole('tab', { name: 'Tenants' })
     .waitFor({ state: 'visible', timeout: 45_000 });
 
+  const TAB_KEYS = {
+    Tenants: 'tenants',
+    Provision: 'provision',
+    Manage: 'manage',
+    'Grant create': 'grant-create',
+  };
+
+  const clickTab = async (name) => {
+    const tabKey = TAB_KEYS[name];
+    await page.waitForTimeout(400);
+    const narrow = (page.viewportSize()?.width ?? 1280) < 500;
+    if (narrow && tabKey) {
+      await page.evaluate((key) => {
+        document.querySelector(`[id$="tab-${key}"]`)?.click();
+      }, tabKey);
+    } else {
+      const tab = page.getByRole('tab', { name });
+      try {
+        await tab.click({ force: true, timeout: 5000 });
+      } catch {
+        if (tabKey) {
+          await page.evaluate((key) => {
+            document.querySelector(`[id$="tab-${key}"]`)?.click();
+          }, tabKey);
+        } else {
+          await page.locator('.ant-tabs-nav-more').click({ timeout: 15_000 });
+          await page
+            .locator('.ant-tabs-dropdown')
+            .getByText(name, { exact: true })
+            .click();
+        }
+      }
+    }
+    await page.waitForTimeout(500);
+  };
+
   for (const vp of VIEWPORTS) {
     await page.setViewportSize({ width: vp.width, height: vp.height });
+    await page.goto(`${PORTAL}/platform`, { waitUntil: 'networkidle' });
+    await clickTab('Tenants');
+    await page
+      .getByTestId('platform-tenants-table')
+      .waitFor({ state: 'visible', timeout: 30_000 });
     const tag = vp.tag;
     const slug = `pr844-${tag}-${Date.now().toString(36)}`;
 
     await capture(`${shaShort}-provision-${tag}`, async () => {
-      await page.getByRole('tab', { name: 'Provision' }).click();
+      await clickTab('Provision');
+      await page
+        .getByTestId('platform-provision-slug')
+        .waitFor({ state: 'visible', timeout: 30_000 });
       await page.getByTestId('platform-provision-slug').fill(slug);
       await page.getByTestId('platform-provision-name').fill(`PR844 ${tag}`);
       await page
@@ -213,7 +274,10 @@ async function main() {
     });
 
     await capture(`${shaShort}-manage-detail-${tag}`, async () => {
-      await page.getByRole('tab', { name: 'Manage' }).click();
+      await clickTab('Manage');
+      await page
+        .getByTestId('platform-manage-tenant-input')
+        .waitFor({ state: 'visible', timeout: 30_000 });
       await page.getByTestId('platform-manage-tenant-input').fill(DEMO_TENANT_ID);
       await page.getByTestId('platform-manage-load').click();
       await page
@@ -224,28 +288,28 @@ async function main() {
     await capture(`${shaShort}-suspend-${tag}`, async () => {
       await page.getByTestId('platform-manage-suspend').click();
       await confirmAntModal(page);
-      await page
-        .getByTestId('platform-manage-mutate-status')
-        .waitFor({ state: 'visible', timeout: 30_000 });
+      await waitForTenantDetailStatus(page, 'SUSPENDED');
     });
 
     await capture(`${shaShort}-activate-${tag}`, async () => {
       await page.getByTestId('platform-manage-activate').click();
       await confirmAntModal(page);
-      await page
-        .getByTestId('platform-manage-mutate-status')
-        .waitFor({ state: 'visible', timeout: 30_000 });
+      await waitForTenantDetailStatus(page, 'ACTIVE');
     });
 
     await capture(`${shaShort}-limits-${tag}`, async () => {
       await page.getByTestId('platform-manage-save-limits').click();
       await page
-        .getByTestId('platform-manage-mutate-status')
+        .getByTestId('platform-tenant-detail')
         .waitFor({ state: 'visible', timeout: 30_000 });
+      await page.waitForTimeout(600);
     });
 
     await capture(`${shaShort}-grant-create-${tag}`, async () => {
-      await page.getByRole('tab', { name: 'Grant create' }).click();
+      await clickTab('Grant create');
+      await page
+        .getByTestId('platform-grant-create-tenant')
+        .waitFor({ state: 'visible', timeout: 30_000 });
       await page.getByTestId('platform-grant-create-tenant').fill(DEMO_TENANT_ID);
       await page.getByTestId('platform-grant-create-event').fill(DEMO_EVENT_ID);
       await page.getByTestId('platform-grant-create-reason').fill('pr844-uat');

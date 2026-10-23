@@ -82,7 +82,7 @@ export function PlatformProvisionPanel({ onTenantCreated }: Props) {
 
   return (
     <Space direction="vertical" style={{ width: '100%' }} size="middle">
-      <Typography.Text type="secondary">{t('platform.mutate.provisionTitle')}</Typography.Text>
+      <Typography.Text>{t('platform.mutate.provisionTitle')}</Typography.Text>
       <Input
         placeholder={t('platform.mutate.phSlug')}
         value={slug}
@@ -295,7 +295,7 @@ export function PlatformManagePanel({ initialManageTenantId = '' }: Props) {
 
   return (
     <Space direction="vertical" style={{ width: '100%' }} size="middle">
-      <Typography.Text type="secondary">{t('platform.mutate.manageTitle')}</Typography.Text>
+      <Typography.Text>{t('platform.mutate.manageTitle')}</Typography.Text>
       <Space wrap>
         <Input
           placeholder={t('platform.h_ggf21i')}
@@ -469,9 +469,7 @@ export function PlatformGrantCreatePanel() {
 
   return (
     <Space direction="vertical" style={{ width: '100%' }} size="middle">
-      <Typography.Text type="secondary">
-        {t('platform.mutate.grantCreateTitle')}
-      </Typography.Text>
+      <Typography.Text>{t('platform.mutate.grantCreateTitle')}</Typography.Text>
       <Input
         placeholder={t('platform.mutate.phTenantId')}
         value={tenantId}
