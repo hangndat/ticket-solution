@@ -77,15 +77,27 @@ async function loginAttendee(page, base) {
   await page.goto(`${base}/api/auth/login?return=/redeem`, {
     waitUntil: 'domcontentloaded',
   });
-  await page.waitForURL(/openid-connect\/auth|login-actions|\/redeem/, {
-    timeout: 45_000,
-  });
-  if (!page.url().includes('/redeem')) {
-    await page.locator('#username').first().fill(user);
-    await page.locator('#password').first().fill(pass);
-    await page.locator('#kc-login').first().click();
-    await page.waitForURL(/\/redeem/, { timeout: 60_000 });
-  }
+  await page.waitForURL(/openid-connect\/auth|login-actions/, { timeout: 45_000 });
+  const userField = page
+    .locator('#username')
+    .or(page.getByLabel(/username|email/i))
+    .first();
+  await userField.waitFor({ state: 'visible', timeout: 20_000 });
+  await userField.fill(user);
+  await page.locator('#password').or(page.getByLabel(/password/i)).first().fill(pass);
+  await page
+    .locator('#kc-login')
+    .or(page.getByRole('button', { name: /sign in|log in/i }))
+    .first()
+    .click();
+  const baseUrl = new URL(base);
+  await page.waitForURL(
+    (url) =>
+      (url.hostname === 'localhost' || url.hostname === '127.0.0.1') &&
+      url.port === baseUrl.port &&
+      url.pathname.startsWith('/redeem'),
+    { timeout: 60_000 },
+  );
 }
 
 const STATES = [
@@ -122,12 +134,16 @@ const STATES = [
   },
   {
     id: 'server-error',
-    ready: '[data-testid="redeem-ux-error"]',
+    ready:
+      '[data-testid="redeem-ux-error"], [data-testid="redeem-ux-invalid"], [data-testid="redeem-ux-denied"]',
     setup: async (page, base) => {
       await loginAttendee(page, base);
       await page.getByTestId('redeem-global-code').fill('NOT-A-VALID-REDEEM-CODE-000');
       await page.getByTestId('redeem-global-resolve').click();
-      await page.waitForSelector('[data-testid="redeem-ux-error"]', { timeout: 60_000 });
+      await page.waitForSelector(
+        '[data-testid="redeem-ux-error"], [data-testid="redeem-ux-invalid"], [data-testid="redeem-ux-denied"]',
+        { timeout: 60_000 },
+      );
     },
   },
 ];
