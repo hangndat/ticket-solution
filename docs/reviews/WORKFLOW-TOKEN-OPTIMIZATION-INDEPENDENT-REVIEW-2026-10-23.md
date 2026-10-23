@@ -73,6 +73,8 @@ Ngoài phạm vi: `agent-workflow-guard`, `agent-evidence`, `agent-review-publis
 - Reviewer James (`ctx_2bd49da1526c`, Cursor `composer-2.5`) review độc lập: **FAIL**, xác nhận F1–F5, không có finding mới — [báo cáo](WORKFLOW-TOKEN-OPTIMIZATION-REVIEW-JAMES-2026-10-23.md). Báo cáo đó ghi "Fix rounds 0/2" do spec của coordinator; bộ đếm đúng theo công việc là **2/2 lượt tự động + ngoại lệ đã dùng** (xem báo cáo gốc).
 - **Quyết định 2026-10-23 (user duyệt):** mở thêm **1 lượt sửa ngoại lệ**, không reset bộ đếm. Owner: Composer fix-worker, coordinator commit. Scope: F1, F2 + regression test; F3–F5 chỉ sửa nếu nằm trong cùng hàm và không mở rộng diff. Điều kiện dừng: James revalidate trên exact SHA; còn FAIL thì giữ `Bị chặn` và báo user, không giao thêm lượt.
 
+- **Kết quả lượt ngoại lệ:** Kazu · tooling (`ctx_aa0e33b32ebf`) sửa F1, F2, F5 + 2 regression test → coordinator commit `85e98fc19b62b10891320f350c822202cd63ded6` → James (`ctx_eb27a62c35ae`) revalidate **PASS** trên SHA đó. F3, F4 còn mở (nhẹ, không chặn). Follow-up nhẹ: `workspace.id` rỗng resolve về cwd, chưa có test (không gán nhầm vì vẫn so dispatch ID).
+
 ## Điều kiện revalidate
 
 1. Implementer sửa F1, F2 (F3–F5 tuỳ chọn, nếu bỏ qua thì ghi lý do), thêm regression test tương ứng, rồi commit.
