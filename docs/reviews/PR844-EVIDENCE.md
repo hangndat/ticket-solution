@@ -3,9 +3,11 @@
 | Field | Value |
 | --- | --- |
 | Issue | [#844](https://github.com/hangndat/ticket-solution/issues/844) |
+| PR | [#850](https://github.com/hangndat/ticket-solution/pull/850) |
 | Branch | `hangndat/portal-844-platform-mutate` |
-| Evidence SHA (code under test) | `8ae3dc0b2329ad352456bd89d0c567b6fefd2077` |
-| UAT run | 2026-10-23 — worker `task_dfb2fde50e1f` |
+| Evidence SHA (code under test) | `0172cebe0ac01780d36416eaaff0e125de9719e7` |
+| Merge base (post `origin/main`, incl. Keycloak dev #851) | `b83702999b4cb4a81d5e26ec15ef10ae19a76517` |
+| UAT run | 2026-10-23 — worker `task_07ec66a02df2` (evidence re-run, **không** lượt sửa 1/2) |
 
 ## Parity (G-791-2/3) — `apps/web` → `apps/portal`
 
@@ -19,44 +21,63 @@
 | GET tenants list (existing) | GET | GET | Tab **Tenants** |
 | Revoke grant (portal-only) | — | POST `…/revoke` | Tab **Revoke** |
 
-## Automated checks (portal)
+## Keycloak / MFA (stack `pr844-uat`)
 
 ```bash
-cd apps/portal && pnpm test && pnpm typecheck && pnpm lint && pnpm build
+COMPOSE_PROJECT_NAME=pr844-uat docker compose up -d postgres redis keycloak
+D5_PLATFORM_OIDC_ISSUER=http://127.0.0.1:8080/realms/ticket ./scripts/platform-keycloak-apply-realm.sh
+D5_PLATFORM_OIDC_ISSUER=http://127.0.0.1:8080/realms/ticket node scripts/lib/platform-keycloak-mfa-live-proof.mjs
 ```
 
-## UAT (local Operator / headless)
+| Check | Kết quả |
+| --- | --- |
+| `PLATFORM_KEYCLOAK_APPLY_PASS` | **PASS** (`kc=http://127.0.0.1:8080`) |
+| `PLATFORM_MFA_LIVE_PROOF_PASS` | **PASS** `acr=2` `aud` includes `ticket-platform-api` (token không log) |
 
-**Stack (worker run):**
+## UAT Operator (local)
 
 ```bash
-COMPOSE_PROJECT_NAME=pr844-uat docker compose up -d
-./scripts/platform-keycloak-apply-realm.sh
-./scripts/fe-uat-stack.sh bootstrap
-# bootstrap_platform_operator(staff user id) — SQL
+FE_UAT_STATE_DIR=.fe-uat-stack-pr844 ./scripts/fe-uat-stack.sh bootstrap
+# bootstrap_platform_operator(<staff user id from seed>)
 # API :3001, portal :3013 (next start), WEB_UAT_CHANNEL=chrome
 node apps/portal/scripts/pr844-platform-uat.mjs
 ```
 
-### Lượt sửa 1/2 — script OTP (F01–F03 code)
-
 | Hạng mục | Kết quả |
 | --- | --- |
-| F01 `Modal.confirm` trước tạo grant + i18n | **Done** (code) |
-| F02 CTA/placeholder `t()` | **Done** (code) |
-| F03 test BFF mutate routes (CSRF/422/proxy mock) | **Done** — `tests/platform-mutate-bff-routes.test.ts` |
-| `pr844-platform-uat.mjs` — `enrolledTotpSecret` từ enroll + cache `/tmp/pr844-platform-totp.secret` + `waitForNextTotpWindow` | **Done** (code) |
-| Login Playwright sau reset `CONFIGURE_TOTP` | OTP nộp OK (không còn `Invalid authenticator code`) |
-| Portal session | Redirect `/platform?error=acr` — `PLATFORM_OIDC_REQUIRED_ACR=2` từ chối token |
-| `platform-keycloak-mfa-live-proof.mjs` trên `:8080` | **FAIL** — `acr want 2 got 1` (cùng stack) |
-| Screenshots mutate @390/@1280 + axe | **BLOCKED** — không vào tabs Operator |
+| Login `/platform` với `acr=2` (OTP enroll + cửa sổ TOTP) | **PASS** |
+| Screenshots mutate @1280 + @390 (provision, detail, suspend, activate, limits, grant create) | **PASS** — `docs/reviews/assets/PR844/` |
+| Axe serious/critical (mutate panels, reducedMotion) | **0** |
+| `PR844_UAT_OK` | **PASS** — 12 shots |
 
-**Log (không secret):**
+### Ảnh (prefix SHA `0172cebe0ac0`)
 
-```text
-pr844-platform-uat.mjs → timeout getByRole('tab', { name: 'Tenants' }) (session không đạt acr=2)
-Debug login: final URL http://127.0.0.1:3013/platform?error=acr sau bước OTP (enrolled secret length 20, cache file mode 0600)
-D5_PLATFORM_OIDC_ISSUER=http://127.0.0.1:8080/realms/ticket node scripts/lib/platform-keycloak-mfa-live-proof.mjs → acr want 2 got 1
-```
+| File | md5 |
+| --- | --- |
+| `0172cebe0ac0-provision-1280.png` | `0b89c2ef052173ab75849dc3a856ca52` |
+| `0172cebe0ac0-provision-390.png` | `3a6eecf9575a652d491c3a3af0a8ebdc` |
+| `0172cebe0ac0-manage-detail-1280.png` | `b0b720649c69043d8278d1ba6e060f46` |
+| `0172cebe0ac0-manage-detail-390.png` | `2c3428867fa25db483c206b523cc68fa` |
+| `0172cebe0ac0-suspend-1280.png` | `3844eae738940ddc76f77776894580f3` |
+| `0172cebe0ac0-suspend-390.png` | `08d2f1aac7137e59417f26522a87bc3a` |
+| `0172cebe0ac0-activate-1280.png` | `0d4e4072ea4bcc53d589c6d988373ecc` |
+| `0172cebe0ac0-activate-390.png` | `72d96af5c3b51e28d421713211831957` |
+| `0172cebe0ac0-limits-1280.png` | `fa5e670915cf241b2f156a7929e903de` |
+| `0172cebe0ac0-limits-390.png` | `a55653df6ee3697430539a9517280a58` |
+| `0172cebe0ac0-grant-create-1280.png` | `f47bd03d1bee82512cb1abfcf47902f3` |
+| `0172cebe0ac0-grant-create-390.png` | `1d03e54795ea464b0c1338f3fdaef429` |
 
-**Chặn còn lại:** Keycloak stack `pr844-uat` chưa phát `acr=2` sau MFA (không chỉ lỗi đọc `totpSecret` trên form OTP). Cần coordinator/infra chốt realm hoặc task-stack KC đã verify acr trước khi re-run UAT evidence.
+Tất cả 12 md5 **khác nhau** (cặp 1280/390 khác nhau theo viewport).
+
+## Lượt sửa 1/2 (giữ nguyên bộ đếm)
+
+| Hạng mục | Trạng thái |
+| --- | --- |
+| F01–F03 (code + unit tests) | Đã land trước run này |
+| UAT evidence sau Keycloak #851 | **PASS** trên SHA `0172cebe0ac0` |
+
+## Ghi chú evidence run
+
+- Stack riêng `COMPOSE_PROJECT_NAME=pr844-uat` (volume mới); không dùng `portal-fix-838`.
+- Fixture DB: seed `tenant_limits` cho D9 demo tenant trước UAT (demo seed không tạo row limits).
+- Sửa nhỏ kèm evidence commit `0172ceb`: shell nhận `platform_oidc` khi staff `me` 401; contrast tiêu đề mutate; harness UAT (tab mobile, axe scope).
