@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import type { ReactNode } from 'react';
 import { Button } from '@ticket/ui';
 import Link from 'next/link';
 import { isUuid } from '../../../../../src/bff/ids';
@@ -13,9 +14,24 @@ import {
 } from '../../../../../src/owner-ticket';
 import { buildDisplayQrPayload } from '../../../../../src/owner-ticket/display-payload';
 import { TicketQr } from '../../../../../src/owner-ticket/ticket-qr';
+import {
+  attendeeTicketBackLink,
+  attendeeTicketBread,
+  attendeeTicketCardBody,
+  attendeeTicketCardHead,
+  attendeeTicketDetailCard,
+  attendeeTicketIntro,
+  attendeeTicketMain,
+  attendeeTicketMetaList,
+  attendeeTicketNoticeError,
+  attendeeTicketNoticeUnknown,
+  attendeeTicketQrCaption,
+  attendeeTicketQrPanel,
+  attendeeTicketTitle,
+} from '../../../../../src/attendee-detail-surface';
+import { attendeeAuthButtons } from '../../../../../src/attendee-surface';
 import { SiteNav } from '../../../../../src/site-chrome';
 import { SurfaceState } from '../../../../../src/ui/surface-state';
-import detailStyles from './ticket-detail.module.css';
 
 type Props = {
   params: Promise<{ tenantSlug: string; ticketId: string }>;
@@ -41,6 +57,22 @@ function shortTicketId(id: string): string {
   return `${id.slice(0, 8)}…`;
 }
 
+function TicketStateShell({
+  testId,
+  children,
+}: {
+  testId: string;
+  children: ReactNode;
+}) {
+  return (
+    <main id="main" className={attendeeTicketMain} data-testid={testId}>
+      <SiteNav />
+      <h1 className={attendeeTicketTitle}>{OWNER_TICKET_COPY.title}</h1>
+      {children}
+    </main>
+  );
+}
+
 export default async function OwnerTicketPage({ params, searchParams }: Props) {
   const { tenantSlug: rawSlug, ticketId: rawId } = await params;
   const tenantSlug = rawSlug?.trim().toLowerCase() ?? '';
@@ -52,13 +84,7 @@ export default async function OwnerTicketPage({ params, searchParams }: Props) {
 
   if (!tenantSlug || !isTenantSlug(tenantSlug) || !isUuid(ticketId)) {
     return (
-      <main
-        id="main"
-        className="lp-container shell"
-        data-testid="owner-ticket-invalid"
-      >
-        <SiteNav />
-        <h1>{OWNER_TICKET_COPY.title}</h1>
+      <TicketStateShell testId="owner-ticket-invalid">
         <SurfaceState
           kind="error"
           title={OWNER_TICKET_COPY.invalid.title}
@@ -70,7 +96,7 @@ export default async function OwnerTicketPage({ params, searchParams }: Props) {
             </Button>
           }
         />
-      </main>
+      </TicketStateShell>
     );
   }
 
@@ -82,20 +108,14 @@ export default async function OwnerTicketPage({ params, searchParams }: Props) {
 
   if (result.status === 'unauthenticated') {
     return (
-      <main
-        id="main"
-        className="lp-container shell"
-        data-testid="owner-ticket-need-login"
-      >
-        <SiteNav />
-        <h1>{OWNER_TICKET_COPY.title}</h1>
+      <TicketStateShell testId="owner-ticket-need-login">
         <SurfaceState
           kind="empty"
           title={OWNER_TICKET_COPY.needLogin.title}
           detail={OWNER_TICKET_COPY.needLogin.detail}
           testId="owner-ticket-need-login-state"
           action={
-            <div className="auth-buttons">
+            <div className={attendeeAuthButtons}>
               <Button asChild variant="brand">
                 <a href={ticketLogin}>Đăng nhập</a>
               </Button>
@@ -105,19 +125,13 @@ export default async function OwnerTicketPage({ params, searchParams }: Props) {
             </div>
           }
         />
-      </main>
+      </TicketStateShell>
     );
   }
 
   if (result.status === 'unreachable') {
     return (
-      <main
-        id="main"
-        className="lp-container shell"
-        data-testid="owner-ticket-unreachable"
-      >
-        <SiteNav />
-        <h1>{OWNER_TICKET_COPY.title}</h1>
+      <TicketStateShell testId="owner-ticket-unreachable">
         <SurfaceState
           kind="error"
           title={OWNER_TICKET_COPY.unreachable.title}
@@ -129,19 +143,13 @@ export default async function OwnerTicketPage({ params, searchParams }: Props) {
             </Button>
           }
         />
-      </main>
+      </TicketStateShell>
     );
   }
 
   if (result.status === 'tenant-unresolved') {
     return (
-      <main
-        id="main"
-        className="lp-container shell"
-        data-testid="owner-ticket-tenant-unresolved"
-      >
-        <SiteNav />
-        <h1>{OWNER_TICKET_COPY.title}</h1>
+      <TicketStateShell testId="owner-ticket-tenant-unresolved">
         <SurfaceState
           kind="empty"
           title={OWNER_TICKET_COPY.tenantUnresolved.title}
@@ -153,7 +161,7 @@ export default async function OwnerTicketPage({ params, searchParams }: Props) {
             </Button>
           }
         />
-      </main>
+      </TicketStateShell>
     );
   }
 
@@ -163,13 +171,7 @@ export default async function OwnerTicketPage({ params, searchParams }: Props) {
     result.status === 'invalid'
   ) {
     return (
-      <main
-        id="main"
-        className="lp-container shell"
-        data-testid="owner-ticket-missing"
-      >
-        <SiteNav />
-        <h1>{OWNER_TICKET_COPY.title}</h1>
+      <TicketStateShell testId="owner-ticket-missing">
         <SurfaceState
           kind="empty"
           title={OWNER_TICKET_COPY.missing.title}
@@ -181,7 +183,7 @@ export default async function OwnerTicketPage({ params, searchParams }: Props) {
             </Button>
           }
         />
-      </main>
+      </TicketStateShell>
     );
   }
 
@@ -201,23 +203,23 @@ export default async function OwnerTicketPage({ params, searchParams }: Props) {
   return (
     <main
       id="main"
-      className={`lp-container shell ticket-detail ${detailStyles.shell}`}
+      className={attendeeTicketMain}
       data-testid="owner-ticket-ready"
     >
       <SiteNav />
-      <p className="bread">
-        <Link className="back-link" href="/wallet">
+      <p className={attendeeTicketBread}>
+        <Link className={attendeeTicketBackLink} href="/wallet">
           ‹ Vé của tôi
         </Link>
       </p>
-      <h1 className={detailStyles.title}>{OWNER_TICKET_COPY.title}</h1>
-      <p className="intro">
+      <h1 className={attendeeTicketTitle}>{OWNER_TICKET_COPY.title}</h1>
+      <p className={attendeeTicketIntro}>
         Vé thuộc tổ chức{' '}
         <span data-testid="owner-ticket-tenant">{tenantSlug}</span>.
       </p>
 
-      <article className={detailStyles.detailCard} data-testid="owner-ticket-card">
-        <div className={detailStyles.cardHead}>
+      <article className={attendeeTicketDetailCard} data-testid="owner-ticket-card">
+        <div className={attendeeTicketCardHead}>
           <span
             className={ticketStateTagClass(ticket.state)}
             data-testid="owner-ticket-state-tag"
@@ -225,64 +227,63 @@ export default async function OwnerTicketPage({ params, searchParams }: Props) {
             {ticketStateLabel(ticket.state)}
           </span>
         </div>
-        <div className={detailStyles.cardBody}>
+        <div className={attendeeTicketCardBody}>
+          {isDemo ? (
+            <aside
+              className={attendeeTicketNoticeUnknown}
+              role="status"
+              data-testid="owner-ticket-demo-label"
+            >
+              <strong>Không dùng vào cổng</strong>
+              <p>Đây là vé demo / fixture — không quét tại cổng thật.</p>
+            </aside>
+          ) : null}
 
-      {isDemo ? (
-        <aside
-          className="notice state-unknown"
-          role="status"
-          data-testid="owner-ticket-demo-label"
-        >
-          <strong>Không dùng vào cổng</strong>
-          <p>Đây là vé demo / fixture — không quét tại cổng thật.</p>
-        </aside>
-      ) : null}
+          {stateBlocked ? (
+            <aside
+              className={attendeeTicketNoticeError}
+              role="status"
+              data-testid="owner-ticket-state-notice"
+            >
+              <p>
+                Vé đang ở trạng thái {ticket.state}. Không dùng mã này để vào cổng.
+              </p>
+            </aside>
+          ) : null}
 
-      {stateBlocked ? (
-        <aside
-          className="notice state-error"
-          role="status"
-          data-testid="owner-ticket-state-notice"
-        >
-          <p>
-            Vé đang ở trạng thái {ticket.state}. Không dùng mã này để vào cổng.
-          </p>
-        </aside>
-      ) : null}
+          <figure className={attendeeTicketQrPanel} data-testid="owner-ticket-qr-figure">
+            <TicketQr value={qrPayload} label={qrLabel} />
+            <figcaption className={attendeeTicketQrCaption}>{qrLabel}</figcaption>
+          </figure>
 
-      <figure className={detailStyles.qrPanel} data-testid="owner-ticket-qr-figure">
-        <TicketQr value={qrPayload} label={qrLabel} />
-        <figcaption className={detailStyles.qrCaption}>{qrLabel}</figcaption>
-      </figure>
-
-      <dl className={detailStyles.metaList} data-testid="owner-ticket-detail">
-        <div>
-          <dt>Mã vé</dt>
-          <dd>
-            <code data-testid="owner-ticket-id" title={ticket.ticketId}>
-              {shortTicketId(ticket.ticketId)}
-            </code>
-          </dd>
-        </div>
-        <div>
-          <dt>Trạng thái</dt>
-          <dd data-testid="owner-ticket-state">{ticket.state}</dd>
-        </div>
-        <div>
-          <dt>Phiên bản chứng thực</dt>
-          <dd>{ticket.credentialVersion}</dd>
-        </div>
-        <div>
-          <dt>Ngày cấp</dt>
-          <dd>
-            <time dateTime={ticket.createdAt}>{ticket.createdAt}</time>
-          </dd>
-        </div>
-      </dl>
+          <dl className={attendeeTicketMetaList} data-testid="owner-ticket-detail">
+            <div>
+              <dt>Mã vé</dt>
+              <dd>
+                <code data-testid="owner-ticket-id" title={ticket.ticketId}>
+                  {shortTicketId(ticket.ticketId)}
+                </code>
+              </dd>
+            </div>
+            <div>
+              <dt>Trạng thái</dt>
+              <dd data-testid="owner-ticket-state">{ticket.state}</dd>
+            </div>
+            <div>
+              <dt>Phiên bản chứng thực</dt>
+              <dd>{ticket.credentialVersion}</dd>
+            </div>
+            <div>
+              <dt>Ngày cấp</dt>
+              <dd>
+                <time dateTime={ticket.createdAt}>{ticket.createdAt}</time>
+              </dd>
+            </div>
+          </dl>
         </div>
       </article>
       <p>
-        <Link className="back-link" href="/wallet">
+        <Link className={attendeeTicketBackLink} href="/wallet">
           ← Vé của tôi
         </Link>
         {' · '}
