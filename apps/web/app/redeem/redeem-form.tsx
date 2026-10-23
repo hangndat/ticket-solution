@@ -61,9 +61,22 @@ import {
 } from '../../src/redeem/resolve-session';
 import { loginHref } from '../../src/oidc/login-href';
 import { RedeemTermsConsent } from '../../src/redeem/redeem-terms-consent';
+import {
+  redeemCodeField,
+  redeemErrorRing,
+  redeemGlobalContext,
+  redeemOutcomeActions,
+  redeemPrimaryActions,
+  redeemProductErrorOutcome,
+  redeemProductFormRoot,
+  redeemProductLead,
+  redeemProductUxClass,
+  redeemSecondaryTools,
+  redeemSuccessRing,
+  redeemTicketCard,
+} from '../../src/redeem/redeem-surface';
 import { liveRegionForStatus } from '../../src/ui/live-region';
 import { SurfaceState } from '../../src/ui/surface-state';
-import redeemStyles from './redeem-surface.module.css';
 
 const REDEEM_LOGIN_HREF = loginHref('/redeem');
 
@@ -687,40 +700,14 @@ export function RedeemForm({
 
   const statusClass = useMemo(() => {
     if (!ux) return '';
-    const base = `redeem-status redeem-status--${ux.kind}`;
-    if (!productChrome) return base;
-    const panel = redeemStyles.outcomePanel;
-    if (ux.kind === 'success') {
-      return `${base} ${panel} ${redeemStyles.outcomeSuccess}`;
+    if (!productChrome) {
+      return `redeem-status redeem-status--${ux.kind}`;
     }
-    const errorKinds = new Set([
-      'error',
-      'invalid',
-      'exhausted',
-      'used',
-      'closed',
-      'denied',
-      'conflict',
-      'stale',
-      'timeout',
-      'auth',
-    ]);
-    if (errorKinds.has(ux.kind)) {
-      return `${base} ${panel} ${redeemStyles.outcomeError}`;
-    }
-    return `${base} ${panel}`;
+    return redeemProductUxClass(ux.kind);
   }, [ux, productChrome]);
 
   const productErrorOutcome = Boolean(
-    productChrome &&
-      ux &&
-      (ux.kind === 'error' ||
-        ux.kind === 'invalid' ||
-        ux.kind === 'exhausted' ||
-        ux.kind === 'used' ||
-        ux.kind === 'closed' ||
-        ux.kind === 'denied' ||
-        ux.kind === 'conflict'),
+    productChrome && ux && redeemProductErrorOutcome(ux.kind),
   );
 
   const statusLive = useMemo(
@@ -735,9 +722,7 @@ export function RedeemForm({
         ? 'Kiểm tra thông tin sự kiện, điền biểu mẫu và đồng ý điều khoản trước khi đổi vé.'
         : 'Nhập mã và đồng ý điều khoản của sự kiện. Trạng thái chờ duyệt chưa phải vé.';
 
-  const formClassName = productChrome
-    ? 'redeem-form redeem-product-form'
-    : 'redeem-form';
+  const formClassName = productChrome ? redeemProductFormRoot : 'redeem-form';
 
   const termsEventHref =
     tenantSlug.trim() && eventSlug.trim()
@@ -758,9 +743,11 @@ export function RedeemForm({
   return (
     <div className={formClassName}>
       <form onSubmit={onSubmit} aria-labelledby="redeem-form-title" noValidate>
-        <h2 id="redeem-form-title">Đổi mã lấy vé</h2>
+        <h2 id="redeem-form-title" className={productChrome ? 'sr-only' : undefined}>
+          Đổi mã lấy vé
+        </h2>
         {productChrome && productLead ? (
-          <p className="redeem-product-lead">{productLead}</p>
+          <p className={redeemProductLead}>{productLead}</p>
         ) : null}
         {productChrome && slugPinnedSchema && schemaNotice ? (
           <SurfaceState
@@ -796,7 +783,7 @@ export function RedeemForm({
         <div className="redeem-fields">
           {singleCodeFlow && globalPhase === 'confirm' && globalContext ? (
             <section
-              className="redeem-global-context"
+              className={redeemGlobalContext}
               aria-labelledby="redeem-global-context-title"
               data-testid="redeem-global-context"
             >
@@ -829,7 +816,7 @@ export function RedeemForm({
           {!globalEntry && showDevScopeFields ? (
             <>
               {productChrome ? (
-                <details className="redeem-secondary-tools">
+                <details className={redeemSecondaryTools}>
                   <summary>Tùy chọn nâng cao (đường dẫn / mã kỹ thuật)</summary>
                   <div className="redeem-fields">
                     <label>
@@ -1042,7 +1029,7 @@ export function RedeemForm({
           ) : null}
 
           {singleCodeFlow && globalPhase === 'enter-code' ? (
-            <div className={productChrome ? 'redeem-code-field' : undefined}>
+            <div className={productChrome ? redeemCodeField : undefined}>
               <label htmlFor="redeem-code-global">
                 Mã đổi vé
                 <input
@@ -1061,7 +1048,7 @@ export function RedeemForm({
           ) : null}
 
           {!singleCodeFlow || globalPhase === 'confirm' ? (
-            <div className={productChrome ? 'redeem-code-field' : undefined}>
+            <div className={productChrome ? redeemCodeField : undefined}>
               <label htmlFor="redeem-code-confirm">
                 Mã đổi vé
                 <input
@@ -1140,9 +1127,7 @@ export function RedeemForm({
         </div>
 
         <div
-          className={
-            productChrome ? 'redeem-primary-actions' : 'auth-buttons'
-          }
+          className={productChrome ? redeemPrimaryActions : 'auth-buttons'}
         >
           {singleCodeFlow && globalPhase === 'enter-code' ? (
             <Button
@@ -1210,12 +1195,12 @@ export function RedeemForm({
           data-testid={`redeem-ux-${ux.kind}`}
         >
           {productChrome && ux.kind === 'success' ? (
-            <div className={redeemStyles.successRing} aria-hidden="true">
+            <div className={redeemSuccessRing} aria-hidden="true">
               ✓
             </div>
           ) : null}
           {productChrome && productErrorOutcome ? (
-            <div className={redeemStyles.errorRing} aria-hidden="true">
+            <div className={redeemErrorRing} aria-hidden="true">
               !
             </div>
           ) : null}
@@ -1241,7 +1226,7 @@ export function RedeemForm({
             </p>
           ) : null}
           {productErrorOutcome ? (
-            <div className={redeemStyles.outcomeActions}>
+            <div className={redeemOutcomeActions}>
               <Button type="button" variant="brand" onClick={resetRedeemAttempt} disabled={busy}>
                 Thử mã khác
               </Button>
@@ -1315,7 +1300,7 @@ export function RedeemForm({
 
       {ticket?.ticketId ? (
         <section
-          className="redeem-ticket"
+          className={productChrome ? redeemTicketCard : 'redeem-ticket'}
           aria-labelledby="ticket-title"
           data-testid="redeem-ticket-card"
         >
