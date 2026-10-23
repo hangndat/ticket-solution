@@ -778,10 +778,16 @@ async function cmdPortalSmoke(portalBaseUrl, appBaseUrl) {
       } catch {
         die(`${path} invalid Location: ${location}`);
       }
+      const portalAdminPath =
+        locUrl.pathname === '/' ||
+        locUrl.pathname === '/platform' ||
+        locUrl.pathname.startsWith('/platform/') ||
+        locUrl.pathname.startsWith('/t/') ||
+        locUrl.pathname.startsWith('/onboarding');
       const toPortal =
         (status === 302 || status === 301 || status === 307 || status === 308) &&
         locUrl.origin === portalOriginExpect &&
-        (locUrl.pathname === '/admin' || locUrl.pathname.startsWith('/admin/'));
+        portalAdminPath;
       const softAuthOnApp =
         (status === 307 || status === 302) &&
         locUrl.origin === appOrigin &&
