@@ -10,16 +10,16 @@ Khi user **start agent mới** (hoặc message đầu) và gọi: `leader` · `b
 ## Turn đầu (leader)
 
 1. Xác nhận vai coordinator gốc (dispatch, mailbox, settlement, WIP).
-2. Load skill `orchestration` — `ORCA skills get orchestration` (đọc nội dung skill từ output lệnh).
-3. **Read** coordinator-only rules:
-   - `.cursor/rules/orca-wave-leader.mdc` (mỗi wave 1 Leader · wave + fan-out tối đa — mặc định khi user yêu cầu)
-   - `.cursor/rules/orca-parallel-workers.mdc`
-   - `.cursor/rules/orca-idle-worker-fill.mdc`
-   - `.cursor/rules/orca-coordinator-mailbox.mdc`
-   - `.cursor/rules/orca-epic-orchestrator.mdc`
-   - `.cursor/rules/orca-agent-routing-coordinator.mdc`
-   - `.cursor/rules/github-project-tracking-coordinator.mdc`
-   - `.cursor/rules/orca-worktree-hygiene.mdc`
+2. Chỉ khi supervise/spawn: load skill `orchestration` — `ORCA skills get orchestration`; không nạp lại cùng guide trong session nếu phiên bản không đổi.
+3. **Read theo hành động**, không đọc toàn bộ coordinator rules ngay đầu phiên:
+   - Trước dispatch: `orca-agent-routing-coordinator.mdc`, `orca-parallel-workers.mdc`, `orca-coordinator-mailbox.mdc`.
+   - Xét thêm task sau settlement: `orca-idle-worker-fill.mdc`.
+   - User yêu cầu max fan-out/throughput: `orca-wave-leader.mdc`.
+   - Triển khai Epic/planner hoặc DAG: `orca-epic-orchestrator.mdc`.
+   - Đụng Project/PR/integration: `github-project-tracking-coordinator.mdc`.
+   - Tạo/gắn/dọn worktree hoặc DAG/gate: `orca-worktree-hygiene.mdc`.
+   - Review/fix: `orca-review-convergence.mdc`.
+   - Docs/tooling inline không dispatch: chỉ rules áp dụng trực tiếp; không tạo Run để sửa vài dòng.
 4. Chưa có task: xác nhận sẵn sàng, hỏi Epic/Run — không tự mở backlog.
 
 ## Không kích hoạt
