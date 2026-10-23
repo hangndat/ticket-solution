@@ -7,12 +7,12 @@ Bảng dưới dành cho Web A (`messages.ts` + panels). **Giữ** phân biệt 
 | Tab Import | Nhập từ CSV | Import from CSV | Tiêu đề tab ngắn; panel title giữ `ops.import.panelTitle` |
 | `ops.import.panelTitle` | Nhập khách và mã từ CSV | Import guests and codes from CSV | OK giữ |
 | `ops.import.panelDescription` | Tải file CSV → xem trước (không giữ suất) → ghi nhận. Báo cáo lỗi tải riêng khi đăng nhập, không dùng link tạm. | Upload CSV → preview (does not hold quota) → commit. Error report downloads separately when signed in; no temporary public link. | Bỏ *idempotent*, *stream authenticated*, *poll* |
-| `ops.import.catalogHint` | Chọn nguồn và loại vé từ danh mục sự kiện (không gõ mã tay). Phiên bản mapping: | Pick source and ticket type from the event catalog (do not type IDs manually). Mapping revision: | Bỏ `sourceId` / `ticketTypeId` trên luồng chính |
+| `ops.import.catalogHint` | Chọn nguồn và loại vé từ danh mục sự kiện (không gõ mã tay). | Pick source and ticket type from the event catalog (do not type IDs manually). | Bỏ mapping revision / ID kỹ thuật trên luồng chính |
 | `ops.import.dispatchPreviewNotice` | Xem trước gửi thử không giữ suất và không gửi email. | Dispatch preview does not hold quota and does not send email. | |
 | Tab Pending | `guests.pendingTitle` Chờ duyệt | Pending approval | |
-| `guests.h_1tkjxlx` (alert Guests) | Xem trước không giữ suất. Đã chấp nhận chưa đồng nghĩa đã gửi email. Chọn nguồn và loại vé từ danh mục. | Preview does not hold quota. Accepted does not mean email was delivered. Pick source and ticket type from the catalog. | |
+| `guests.h_1tkjxlx` (alert Guests) | Xem trước không giữ suất. Nhà cung cấp đã tiếp nhận chưa chứng minh khách đã nhận email. Chọn nguồn và loại vé từ danh mục. | Preview does not hold quota. Accepted by the provider does not prove the guest received email. Pick source and ticket type from the catalog. | Không dùng «đã gửi» thay *delivered* |
 | Tab Notifications | Thông báo | Notifications | `guests.h_1avy3de` |
-| `ops.notifications.listSummary` | Thông báo: {{count}} mục{{pageSuffix}}. Đã chấp nhận ≠ đã gửi. | Notifications: {{count}} item{{pageSuffix}}. Accepted ≠ delivered. | Giữ ý nghĩa, bỏ ALL CAPS nếu có |
+| `ops.notifications.listSummary` | Thông báo: {{count}} mục{{pageSuffix}}. Đã tiếp nhận gửi ≠ khách đã nhận email. | Notifications: {{count}} item{{pageSuffix}}. Accepted ≠ delivered. | VI: nhà cung cấp tiếp nhận ≠ delivered tới khách |
 | Tab Export — `ops.export.panelInfo` | Xuất danh sách CSV | Export guest list (CSV) | Bỏ G-E1 / recovery jargon |
 | `ops.export.panelDescription` | Tạo yêu cầu xuất → kiểm tra trạng thái → tải khi sẵn sàng. Danh sách không hiện link file trực tiếp. Kết quả chưa rõ ≠ đã thành công. | Create export → check status → download when ready. List never shows direct file links. Unknown outcome ≠ success. | |
 | `ops.export.filterHistory` | Lọc lịch sử xuất | Filter export history | |

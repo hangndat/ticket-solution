@@ -1,0 +1,27 @@
+{
+  "devicePixelRatio": 1,
+  "event": {
+    "height": 32,
+    "left": 292,
+    "top": 117,
+    "width": 260
+  },
+  "expectBelow768Stack": null,
+  "layout": {
+    "sideBySide": true,
+    "stacked": false
+  },
+  "mediaMin768": true,
+  "metaText": "Viewport: 1440\u00d71000 \u00b7 locale=en \u00b7 long-names",
+  "stripWidth": 1440,
+  "tenant": {
+    "height": 32,
+    "left": 16,
+    "top": 117,
+    "width": 260
+  },
+  "viewport": {
+    "h": 1000,
+    "w": 1440
+  }
+}
