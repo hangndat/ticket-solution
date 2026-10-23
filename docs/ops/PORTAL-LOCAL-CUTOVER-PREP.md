@@ -110,6 +110,29 @@ pnpm --filter @ticket/portal dev               # :3013
 
 Headless UAT milestone: Task `T-UAT-PORTAL` / `scripts/web-uat.sh` — **không** thay checklist giấy này; không Computer Use headed.
 
+### 4.4 Legacy `/admin` query → portal path (G-791-4 / Issue #845)
+
+Chỉ khi `PORTAL_ADMIN_REDIRECT=1` và `PORTAL_ORIGIN` hợp lệ (`apps/web/src/portal/dual-run.ts`). Query ngoài allowlist bị loại; destination luôn `PORTAL_ORIGIN` (không open-redirect).
+
+| Nguồn (`app.` GET/HEAD) | Đích portal | Ghi chú |
+| --- | --- | --- |
+| `/admin` (không query) | `/` | |
+| `/admin?tenantId={t}` | `/t/{t}` | |
+| `/admin?tenantId={t}&tab=members` | `/t/{t}/members` | tab tenant: `members`, `settings`, `events`, `analytics` |
+| `/admin?tenantId={t}&intent=onboarding` | `/onboarding/{t}` | không `tenantId` → `/onboarding` |
+| `/admin?tenantId={t}&intent=create-event` | `/t/{t}/events/new` | |
+| `/admin?tenantId={t}&eventId={e}` | `/t/{t}/e/{e}` | overview |
+| `/admin?…&job=setup` | `/t/{t}/e/{e}/setup` | job legacy: `setup`, `guests`, `gate`, `support` |
+| `/admin?…&job=setup&tab=config` | `/t/{t}/e/{e}/config` | tab setup: `setup`, `types`, `sources`, `quota`, `config` |
+| `/admin?…&job=guests` | `/t/{t}/e/{e}/guests` | |
+| `/admin?…&job=guests&tab=import` | `/t/{t}/e/{e}/guests#import` | tab guests: `import`, `pending`, `notifications`, `export` |
+| `/admin?…&job=gate` | `/t/{t}/e/{e}/gate` | |
+| `/admin?…&job=support` | `/t/{t}/e/{e}/support` | `tab=members` → `/t/{t}/members` |
+| `/platform` | `/platform` | |
+| `POST/PUT/PATCH` `/api/bff/admin/*` | **không** redirect | |
+
+Unit: `apps/web/tests/portal-dual-run.test.ts`. Mặc định flag **OFF** — cutover bật ở Issue deploy riêng.
+
 ---
 
 ## 5. Rollback trên giấy (local + prod sau này)
