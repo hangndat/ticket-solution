@@ -71,9 +71,9 @@ ${themeLines.join('\n')}
 }
 
 /*
- * Legacy contract — unprefixed custom properties on :root for live-pulse / marketing CSS.
- * Tailwind v4 prefix(ui) renames @theme vars to --ui-* on :root; legacy uses var(--color-*),
- * var(--spacing-*), etc. This block is independent of prefix and stays valid when D-1 drops prefix.
+ * Legacy contract — unprefixed custom properties on :root (mirrors @theme).
+ * Post D-1: @theme is unprefixed; tokens appear on :root as --color-*, --spacing-*, etc.
+ * This :root block keeps var(--*) stable for any remaining legacy CSS until fully removed.
  */
 :root {
 ${themeLines.join('\n')}
