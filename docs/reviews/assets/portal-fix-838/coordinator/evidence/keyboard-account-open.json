@@ -1,0 +1,16 @@
+{
+  "provenance": {
+    "captureHead": "7f6fe6784ecda61e901b0ea42f918df588c811ad",
+    "appTree": "dd2c5c4af1b3c0b0ba880da464a11a67e7618d5b",
+    "buildId": "i7MxSxPuL7tWOl9T867GB",
+    "method": "Orca embedded browser; native controls and real local Keycloak fixture"
+  },
+  "observation": {
+    "focused": "account-menu",
+    "items": [
+      "Session security",
+      "Language",
+      "Sign out of portal"
+    ]
+  }
+}

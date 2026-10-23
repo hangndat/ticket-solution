@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PA-01 · Portal header specimen (PD demo — not runtime)</title>
+  <link rel="stylesheet" href="https://unpkg.com/antd@5.22.2/dist/reset.css" />
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/dayjs@1/dayjs.min.js"></script>
+  <script src="https://unpkg.com/antd@5.22.2/dist/antd.min.js"></script>
+  <style>
+    :root {
+      --vemoki-primary: #1677ff;
+      --vemoki-bg: #f5f5f5;
+      --vemoki-container: #ffffff;
+      --vemoki-text: rgba(0, 0, 0, 0.88);
+      --vemoki-text-secondary: rgba(0, 0, 0, 0.45);
+      --vemoki-border: #d9d9d9;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+      background: var(--vemoki-bg);
+      color: var(--vemoki-text);
+    }
+    .pd-banner {
+      background: #fffbe6;
+      border-bottom: 1px solid #ffe58f;
+      padding: 8px 16px;
+      font-size: 12px;
+      color: #614700;
+    }
+    .pd-banner strong { font-weight: 600; }
+    .shell-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-height: 56px;
+      padding: 0 16px;
+      background: var(--vemoki-container);
+      border-bottom: 1px solid var(--vemoki-border);
+    }
+    .shell-header .brand {
+      font-weight: 600;
+      font-size: 16px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 140px;
+      flex-shrink: 0;
+      color: inherit;
+      text-decoration: none;
+    }
+    .shell-header .header-end {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+    .context-strip {
+      background: var(--vemoki-container);
+      border-bottom: 1px solid var(--vemoki-border);
+      padding: 12px 16px;
+    }
+    .context-strip .row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px 16px;
+      align-items: flex-end;
+    }
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      min-width: 0;
+      flex: 1 1 100%;
+      width: 100%;
+      max-width: 100%;
+    }
+    .field label {
+      font-size: 12px;
+      color: var(--vemoki-text-secondary);
+      line-height: 1.2;
+    }
+    .field .ant-select { width: 100%; }
+    .scan-hint {
+      flex: 1 1 100%;
+      font-size: 13px;
+      color: var(--vemoki-text-secondary);
+      line-height: 1.4;
+      margin-top: 4px;
+    }
+    @media (min-width: 768px) {
+      .shell-header .brand { max-width: 200px; }
+      .scan-hint {
+        flex: 1 1 auto;
+        margin-top: 0;
+        margin-left: auto;
+        text-align: right;
+        max-width: 280px;
+      }
+      .context-strip .row { flex-wrap: nowrap; }
+      .field {
+        flex: 0 1 240px;
+        width: auto;
+        max-width: 280px;
+      }
+    }
+    @media (min-width: 1024px) {
+      .field { flex: 0 1 260px; }
+    }
+    .demo-body {
+      padding: 24px 16px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .demo-meta {
+      font-size: 12px;
+      color: var(--vemoki-text-secondary);
+      margin-bottom: 16px;
+    }
+    .locale-toggle { margin-bottom: 12px; }
+    .long-name .ant-select-selection-item { font-size: 13px; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script>
+    const { ConfigProvider, Select, Button, Dropdown, Space, Typography, theme } = antd;
+    const { useState, useMemo, useEffect } = React;
+
+    const COPY = {
+      vi: {
+        banner: 'Mẫu PD #838 — không phải portal runtime. Fixture: Owner · Guests.',
+        brand: 'Vemoki Portal',
+        menu: 'Tài khoản',
+        tenantLabel: 'Tổ chức',
+        tenantPh: 'Chọn tổ chức',
+        eventLabel: 'Sự kiện',
+        eventPh: 'Chọn sự kiện',
+        scanHint: 'Soát vé bằng app Vemoki trên iPhone',
+        logout: 'Đăng xuất',
+        pageTitle: 'Khách & mã',
+        viewport: 'Viewport',
+      },
+      en: {
+        banner: 'PD specimen #838 — not portal runtime. Fixture: Owner · Guests.',
+        brand: 'Vemoki Portal',
+        menu: 'Account',
+        tenantLabel: 'Organization',
+        tenantPh: 'Select organization',
+        eventLabel: 'Event',
+        eventPh: 'Select event',
+        scanHint: 'Scan tickets with the Vemoki app on iPhone',
+        logout: 'Sign out',
+        pageTitle: 'Guests & codes',
+        viewport: 'Viewport',
+      },
+    };
+
+    const TENANTS = {
+      vi: [
+        { value: 't1', label: 'MFest · Demo (mfest-demo)' },
+        { value: 't2', label: 'Công ty Truyền thông & Sự kiện ABC Việt Nam (abc-events)' },
+      ],
+      en: [
+        { value: 't1', label: 'MFest · Demo (mfest-demo)' },
+        { value: 't2', label: 'ABC Events & Media Vietnam Ltd (abc-events)' },
+      ],
+    };
+
+    const EVENTS = {
+      vi: [
+        { value: 'e1', label: 'Summer Music Festival 2026 — Hà Nội' },
+        { value: 'e2', label: 'Demo' },
+      ],
+      en: [
+        { value: 'e1', label: 'Summer Music Festival 2026 — Hanoi' },
+        { value: 'e2', label: 'Demo' },
+      ],
+    };
+
+    function App() {
+      const params = new URLSearchParams(window.location.search);
+      const localeParam = params.get('locale') === 'en' ? 'en' : 'vi';
+      const longNames = params.get('long') === '1';
+      const showScan = params.get('scan') !== '0';
+      const [locale, setLocale] = useState(localeParam);
+      const [dims, setDims] = useState({ w: 0, h: 0 });
+      useEffect(() => {
+        const update = () =>
+          setDims({ w: window.innerWidth, h: window.innerHeight });
+        update();
+        window.addEventListener('resize', update);
+        return () => window.removeEventListener('resize', update);
+      }, []);
+      const t = COPY[locale];
+      const tenants = TENANTS[locale];
+      const events = EVENTS[locale];
+      const vw =
+        dims.w > 0 ? dims.w + '×' + dims.h : '…';
+
+      const accountItems = useMemo(() => ({
+        items: [{ key: 'logout', label: t.logout }],
+      }), [t]);
+
+      return React.createElement(
+        ConfigProvider,
+        {
+          theme: {
+            token: {
+              colorPrimary: '#1677ff',
+              borderRadius: 8,
+              fontFamily: '"Plus Jakarta Sans", system-ui, -apple-system, sans-serif',
+            },
+          },
+        },
+        React.createElement(
+          'div',
+          { className: longNames ? 'long-name' : '' },
+          React.createElement('div', { className: 'pd-banner' },
+            React.createElement('strong', null, 'PD demo'),
+            ' — ',
+            t.banner
+          ),
+          React.createElement('header', { className: 'shell-header', 'data-testid': 'portal-header-tier-a' },
+            React.createElement('button', {
+              type: 'button',
+              className: 'ant-btn ant-btn-text ant-btn-icon-only',
+              'aria-label': 'Menu',
+              style: { flexShrink: 0 },
+            }, '☰'),
+            React.createElement('a', { href: '#', className: 'brand', 'data-testid': 'portal-brand' }, t.brand),
+            React.createElement('div', { className: 'header-end' },
+              React.createElement(Dropdown, { menu: accountItems, trigger: ['click'] },
+                React.createElement(Button, { type: 'text', 'data-testid': 'account-menu' }, t.menu)
+              )
+            )
+          ),
+          React.createElement('div', { className: 'context-strip', 'data-testid': 'portal-context-strip' },
+            React.createElement('div', { className: 'row' },
+              React.createElement('div', { className: 'field' },
+                React.createElement('label', { id: 'tenant-label' }, t.tenantLabel),
+                React.createElement(Select, {
+                  'aria-labelledby': 'tenant-label',
+                  placeholder: t.tenantPh,
+                  defaultValue: longNames ? 't2' : 't1',
+                  options: tenants,
+                  'data-testid': 'tenant-switcher',
+                })
+              ),
+              React.createElement('div', { className: 'field' },
+                React.createElement('label', { id: 'event-label' }, t.eventLabel),
+                React.createElement(Select, {
+                  'aria-labelledby': 'event-label',
+                  placeholder: t.eventPh,
+                  defaultValue: longNames ? 'e1' : 'e2',
+                  options: events,
+                  allowClear: true,
+                  'data-testid': 'event-switcher',
+                })
+              ),
+              showScan
+                ? React.createElement('div', {
+                    className: 'scan-hint',
+                    'data-testid': 'gate-ios-scan-hint',
+                  }, t.scanHint)
+                : null
+            )
+          ),
+          React.createElement('main', { className: 'demo-body', id: 'portal-main' },
+            React.createElement('div', { className: 'demo-meta' },
+              t.viewport + ': ' + vw + ' · locale=' + locale + (longNames ? ' · long-names' : '')
+            ),
+            React.createElement('div', { className: 'locale-toggle' },
+              React.createElement(Space, null,
+                React.createElement(Button, {
+                  size: 'small',
+                  type: locale === 'vi' ? 'primary' : 'default',
+                  onClick: () => setLocale('vi'),
+                }, 'VI'),
+                React.createElement(Button, {
+                  size: 'small',
+                  type: locale === 'en' ? 'primary' : 'default',
+                  onClick: () => setLocale('en'),
+                }, 'EN')
+              )
+            ),
+            React.createElement(Typography.Title, { level: 4, style: { marginTop: 0 } }, t.pageTitle),
+            React.createElement(Typography.Paragraph, { type: 'secondary' },
+              'Nội dung trang minh họa — Web B gắn Context strip vào ProLayout (slot mới hoặc headerContentRender tách tầng).'
+            )
+          )
+        )
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
+  </script>
+</body>
+</html>

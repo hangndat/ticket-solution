@@ -1,0 +1,27 @@
+{
+  "devicePixelRatio": 1,
+  "event": {
+    "height": 32,
+    "left": 16,
+    "top": 193,
+    "width": 358
+  },
+  "expectBelow768Stack": true,
+  "layout": {
+    "sideBySide": false,
+    "stacked": true
+  },
+  "mediaMin768": false,
+  "metaText": "Viewport: 390\u00d7844 \u00b7 locale=vi \u00b7 long-names",
+  "stripWidth": 390,
+  "tenant": {
+    "height": 32,
+    "left": 16,
+    "top": 131,
+    "width": 358
+  },
+  "viewport": {
+    "h": 844,
+    "w": 390
+  }
+}

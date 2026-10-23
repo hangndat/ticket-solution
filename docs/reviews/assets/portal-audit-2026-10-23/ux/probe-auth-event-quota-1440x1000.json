@@ -1,0 +1,16 @@
+{
+  "id": "57816504-1996-48b8-b7a5-1fdb70273a50",
+  "ok": true,
+  "result": {
+    "origin": "http://127.0.0.1:3413/t/d9d9f001-0001-4000-8000-000000000001/e/d9d9f001-0002-4000-8000-000000000001/quota",
+    "result": {
+      "frame": null,
+      "frameWidth": 1440,
+      "issues": [],
+      "viewport": 1440
+    }
+  },
+  "_meta": {
+    "runtimeId": "9d821662-c628-49db-a168-99fa7b7636fc"
+  }
+}

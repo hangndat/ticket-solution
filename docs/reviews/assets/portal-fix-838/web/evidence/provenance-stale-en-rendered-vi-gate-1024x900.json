@@ -1,0 +1,35 @@
+{
+  "pa01": {
+    "brandLines": 1,
+    "event": {
+      "height": 32,
+      "top": 86,
+      "width": 260
+    },
+    "hasAccount": true,
+    "hasStrip": true,
+    "hintLines": 1,
+    "layout": {
+      "sideBySide": true,
+      "stacked": false
+    },
+    "localeCookie": "en",
+    "mediaMin768": true,
+    "pageOverflowX": false,
+    "tenant": {
+      "height": 32,
+      "top": 86,
+      "width": 260
+    },
+    "viewport": {
+      "h": 900,
+      "w": 1024
+    }
+  },
+  "chrome": {
+    "frame": null,
+    "frameWidth": 1024,
+    "issues": [],
+    "viewport": 1024
+  }
+}
