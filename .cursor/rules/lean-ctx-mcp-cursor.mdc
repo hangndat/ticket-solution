@@ -13,7 +13,9 @@ When Grep/Glob/Read are denied or lean-ctx is required, call MCP tools correctly
 
 Never call a top-level tool named `ctx_call` or `lean-ctx ctx_call` — that yields `Tool ctx_call was not found`.
 
-Prefer code-review-graph (`code-review-graph-ticket`) for symbol/impact first; use lean-ctx for file content / unknown-location compose.
+Prefer code-review-graph (`code-review-graph-ticket`) for symbol/impact first; use lean-ctx for file content / unknown-location compose. Resolve the actual checkout with `git -C <task-checkout> rev-parse --show-toplevel`; never append `/main`. Choose one read mode by intent, not a sequential ladder.
+
+Header-only output, policy/authority errors, worktree freshness and smoke checks: `docs/agents/MCP-SETUP.md`. A token footer alone is not a successful read.
 
 ## Khôi phục hook global Cursor bị đổi về deny
 
