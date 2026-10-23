@@ -134,11 +134,23 @@ export function AuditPanel({ tenantId, eventId }: Props) {
         data-testid="audit-table"
         columns={[
           { title: t('platform.h_zdynbv'), dataIndex: 'createdAt', width: 200, ellipsis: true },
-          { title: 'Action', dataIndex: 'action', width: 160, ellipsis: true },
-          { title: 'Actor', dataIndex: 'actorUserId', ellipsis: true },
-          { title: 'Resource', dataIndex: 'resourceType', width: 120 },
-          { title: 'Resource ID', dataIndex: 'resourceId', ellipsis: true },
-          { title: 'Operation', dataIndex: 'operationId', ellipsis: true },
+          { title: t('ops.table.action'), dataIndex: 'action', width: 160, ellipsis: true },
+          { title: t('ops.table.actor'), dataIndex: 'actorUserId', ellipsis: true },
+          {
+            title: t('ops.table.resource'),
+            dataIndex: 'resourceType',
+            width: 120,
+          },
+          {
+            title: t('ops.table.resourceId'),
+            dataIndex: 'resourceId',
+            ellipsis: true,
+          },
+          {
+            title: t('ops.table.operation'),
+            dataIndex: 'operationId',
+            ellipsis: true,
+          },
         ]}
       />
       {nextCursor ? (
