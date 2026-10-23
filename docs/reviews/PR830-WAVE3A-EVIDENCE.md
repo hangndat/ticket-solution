@@ -4,7 +4,7 @@
 | --- | --- |
 | Base (main) | `b34187919ade8ab5e07efcab59ac0284097c663d` |
 | Visual capture SHA | `a27f8d525c34ab5e07efcab59ac0284097c663d` |
-| PR tip | `7036c2fb0b625b5d3f6d2866d7e1eb3737442dc2` |
+| PR tip | `f2a96f0150f599874794c2563f4fdf54b514824b` |
 | Stack | `docker compose` postgres/redis/keycloak; `./scripts/fe-uat-stack.sh bootstrap`; API `:3001`; web `next start` `http://localhost:3000` |
 | Login | `attendee@example.com` / `attendee-demo` |
 
@@ -22,10 +22,11 @@ Success uses tenant-pinned `/redeem?…mfest-demo/mfest` + fresh demo code; othe
 
 ## axe (wcag2a/2aa/21aa)
 
-Script: `node apps/web/scripts/pr830-redeem-a11y.mjs http://localhost:3000 <pr-tip-sha>`
+Script: `node apps/web/scripts/pr830-redeem-a11y.mjs http://localhost:3000 <sha>`
 
 - **serious/critical = 0** (20 runs: 5 states × 2 viewports × 2 motion modes; animation settle + `prefers-reduced-motion: reduce`)
-- Summary: `docs/reviews/assets/PR830/a11y-7036c2fb0b62/axe-summary.json`
+- Run on UI commit `7036c2fb0b625b5d3f6d2866d7e1eb3737442dc2` (tip `f2a96f0…` is docs/script only)
+- Summary: `docs/reviews/assets/PR830/a11y-7036c2fb0b62/axe-summary.json` (`sha` field in JSON)
 
 ## Lighthouse mobile `/redeem` (390×844, LH 13.5.0, 3 runs median)
 
