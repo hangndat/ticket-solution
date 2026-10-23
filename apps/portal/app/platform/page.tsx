@@ -43,6 +43,11 @@ import {
   type PlatformRevokeView,
   type PlatformTenantsView,
 } from '../../src/ops/platform-zone';
+import {
+  PlatformGrantCreatePanel,
+  PlatformManagePanel,
+  PlatformProvisionPanel,
+} from '../../src/ops/platform-mutate-panels';
 import { usePortalLocale, type MessageKey } from '../../src/i18n';
 
 function PlatformInner() {
@@ -88,6 +93,8 @@ function PlatformInner() {
   const [revokeView, setRevokeView] = useState<PlatformRevokeView | null>(
     null,
   );
+  const [activeTab, setActiveTab] = useState('tenants');
+  const [manageTenantId, setManageTenantId] = useState('');
 
   useEffect(() => {
     void loadShellContext().then((shell) => {
@@ -292,6 +299,16 @@ function PlatformInner() {
           </Button>
           <Button
             size="small"
+            onClick={() => {
+              setManageTenantId(row.tenantId);
+              setActiveTab('manage');
+            }}
+            data-testid={`platform-detail-btn-${row.tenantId}`}
+          >
+            Detail
+          </Button>
+          <Button
+            size="small"
             type="primary"
             loading={healthBusy && healthTenantId === row.tenantId}
             onClick={() => void loadHealth(row.tenantId)}
@@ -318,6 +335,8 @@ function PlatformInner() {
       />
       <ProCard
         tabs={{
+          activeKey: activeTab,
+          onChange: (key) => setActiveTab(key),
           items: [
           {
             key: 'tenants',
@@ -353,6 +372,33 @@ function PlatformInner() {
                 ) : null}
               </Space>
             ),
+          },
+          {
+            key: 'provision',
+            label: 'Provision',
+            children: (
+              <PlatformProvisionPanel
+                onTenantCreated={(id) => {
+                  setManageTenantId(id);
+                  void loadTenants(null, false);
+                }}
+              />
+            ),
+          },
+          {
+            key: 'manage',
+            label: 'Manage',
+            children: (
+              <PlatformManagePanel
+                key={manageTenantId || 'empty'}
+                initialManageTenantId={manageTenantId}
+              />
+            ),
+          },
+          {
+            key: 'grant-create',
+            label: 'Grant create',
+            children: <PlatformGrantCreatePanel />,
           },
           {
             key: 'health',
