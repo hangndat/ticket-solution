@@ -3,12 +3,14 @@
  * Issue #843 — portal C-N templates/reminders UAT (headless Playwright).
  * Preconditions: docker postgres/redis/keycloak, fe-uat-stack bootstrap, API :3001, portal :3013.
  */
+import { createHmac } from 'node:crypto';
 import { createHash } from 'node:crypto';
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
-const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 const axeSource = readFileSync(
   resolve(ROOT, 'apps/portal/node_modules/axe-core/axe.min.js'),
   'utf8',
@@ -24,9 +26,54 @@ const EVENT =
 const USER = process.env.PORTAL_UAT_USER || 'staff@example.com';
 const PASS = process.env.PORTAL_UAT_PASS || 'staff-demo';
 const OUT = resolve(ROOT, 'docs/reviews/assets/PR843');
+const TOTP_SECRET_CACHE = join(
+  tmpdir(),
+  process.env.PR844_TOTP_SECRET_FILE || 'pr844-platform-totp.secret',
+);
 
 function md5File(path) {
   return createHash('md5').update(readFileSync(path)).digest('hex');
+}
+
+function loadCachedTotpSecret() {
+  if (!existsSync(TOTP_SECRET_CACHE)) return '';
+  try {
+    return readFileSync(TOTP_SECRET_CACHE, 'utf8').trim();
+  } catch {
+    return '';
+  }
+}
+
+function saveCachedTotpSecret(secret) {
+  if (!secret) return;
+  writeFileSync(TOTP_SECRET_CACHE, secret, { mode: 0o600 });
+}
+
+function totpCounter(step = 30) {
+  return Math.floor(Date.now() / 1000 / step);
+}
+
+async function waitForNextTotpWindow(step = 30) {
+  const start = totpCounter(step);
+  while (totpCounter(step) === start) {
+    await new Promise((r) => setTimeout(r, 200));
+  }
+  await new Promise((r) => setTimeout(r, 300));
+}
+
+function totpFromSessionSecret(sessionSecret, step = 30, digits = 6) {
+  const key = Buffer.from(sessionSecret, 'utf8');
+  const counter = totpCounter(step);
+  const buf = Buffer.alloc(8);
+  buf.writeBigUInt64BE(BigInt(counter));
+  const hmac = createHmac('sha1', key).update(buf).digest();
+  const offset = hmac[hmac.length - 1] & 0xf;
+  const code =
+    ((hmac[offset] & 0x7f) << 24) |
+    ((hmac[offset + 1] & 0xff) << 16) |
+    ((hmac[offset + 2] & 0xff) << 8) |
+    (hmac[offset + 3] & 0xff);
+  return String(code % 10 ** digits).padStart(digits, '0');
 }
 
 async function loginPortal(page) {
@@ -37,12 +84,36 @@ async function loginPortal(page) {
   await page.locator('#username').fill(USER);
   await page.locator('#password').fill(PASS);
   await page.locator('#kc-login').click();
+  await page.waitForTimeout(800);
+
+  let enrolledTotpSecret = loadCachedTotpSecret();
+  const totpSecret = page.locator('input[name=totpSecret]');
+  if (await totpSecret.count()) {
+    enrolledTotpSecret = await totpSecret.inputValue();
+    if (!enrolledTotpSecret) throw new Error('totpSecret empty on enroll');
+    saveCachedTotpSecret(enrolledTotpSecret);
+    await page.fill('input[name=totp]', totpFromSessionSecret(enrolledTotpSecret));
+    await page.locator('input[type=submit], #kc-login').first().click();
+    await page.waitForTimeout(1500);
+  }
+
+  const otp = page.locator('input[name=otp]');
+  if (await otp.count()) {
+    if (!enrolledTotpSecret) {
+      throw new Error('otp login without enrolled totp secret (cache missing)');
+    }
+    await waitForNextTotpWindow();
+    await otp.fill(totpFromSessionSecret(enrolledTotpSecret));
+    await page.locator('input[type=submit], #kc-login').first().click();
+    await page.waitForTimeout(2000);
+  }
+
   await page.waitForURL(
     (url) =>
       url.hostname === '127.0.0.1' &&
       url.port === '3013' &&
       !url.pathname.startsWith('/api/auth'),
-    { timeout: 45_000 },
+    { timeout: 60_000 },
   );
 }
 

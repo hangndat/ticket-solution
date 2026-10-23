@@ -6,8 +6,8 @@
  *   node apps/portal/scripts/pr844-platform-uat.mjs
  */
 import { createHmac } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { homedir, tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import axe from 'axe-core';
@@ -71,18 +71,50 @@ function totpFromSessionSecret(sessionSecret, step = 30, digits = 6) {
   return String(code % 10 ** digits).padStart(digits, '0');
 }
 
+function findCachedHeadlessShell() {
+  if (process.env.WEB_UAT_EXECUTABLE) return process.env.WEB_UAT_EXECUTABLE;
+  const cache = join(homedir(), 'Library/Caches/ms-playwright');
+  if (!existsSync(cache)) return null;
+  const dirs = readdirSync(cache)
+    .filter((d) => d.startsWith('chromium_headless_shell-'))
+    .sort()
+    .reverse();
+  for (const dir of dirs) {
+    for (const arch of [
+      'chrome-headless-shell-mac-arm64',
+      'chrome-headless-shell-mac-x64',
+    ]) {
+      const candidate = join(cache, dir, arch, 'chrome-headless-shell');
+      if (existsSync(candidate)) return candidate;
+    }
+  }
+  return null;
+}
+
 async function loadPlaywright() {
   const { chromium } = await import('playwright');
+  const shell = findCachedHeadlessShell();
   const channel = process.env.WEB_UAT_CHANNEL || undefined;
-  const exe =
-    process.env.WEB_UAT_EXECUTABLE ||
-    chromium.executablePath?.() ||
-    undefined;
-  return chromium.launch({
-    headless: true,
-    channel,
-    executablePath: channel ? undefined : exe,
-  });
+  const attempts = [
+    shell
+      ? {
+          headless: true,
+          executablePath: shell,
+          args: ['--disable-dev-shm-usage'],
+        }
+      : null,
+    channel ? { headless: true, channel } : null,
+    { headless: true, args: ['--disable-dev-shm-usage'] },
+  ].filter(Boolean);
+  let lastErr;
+  for (const opts of attempts) {
+    try {
+      return await chromium.launch(opts);
+    } catch (err) {
+      lastErr = err;
+    }
+  }
+  throw lastErr ?? new Error('chromium launch failed');
 }
 
 /** Playwright platform login (Keycloak + portal cookies). */
@@ -92,9 +124,24 @@ async function platformLoginWithPlaywright(browser) {
     reducedMotion: 'reduce',
   });
   const page = await context.newPage();
-  await page.goto(`${PORTAL}/api/auth/platform/login`, {
-    waitUntil: 'domcontentloaded',
-  });
+  let lastGotoErr;
+  for (let attempt = 0; attempt < 5; attempt++) {
+    try {
+      await page.goto(`${PORTAL}/api/auth/platform/login`, {
+        waitUntil: 'domcontentloaded',
+        timeout: 30_000,
+      });
+      if (!page.url().startsWith('chrome-error:')) break;
+    } catch (err) {
+      lastGotoErr = err;
+    }
+    await page.waitForTimeout(2000);
+  }
+  if (page.url().startsWith('chrome-error:')) {
+    die(
+      `platform login goto failed: ${page.url()} (${lastGotoErr?.message ?? 'connection'})`,
+    );
+  }
   await page.waitForSelector('#username', { timeout: 30_000 });
   await page.fill('#username', username);
   await page.fill('#password', password);
@@ -208,7 +255,8 @@ async function main() {
 
   await page.goto(`${PORTAL}/platform`, { waitUntil: 'networkidle' });
   await page
-    .getByRole('tab', { name: 'Tenants' })
+    .locator('[id$="tab-tenants"], [data-testid="platform-tenants-table"]')
+    .first()
     .waitFor({ state: 'visible', timeout: 45_000 });
 
   const TAB_KEYS = {
