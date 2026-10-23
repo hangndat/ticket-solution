@@ -3,9 +3,12 @@
 **Issue:** #833 (Epic #786)  
 **Role:** web · Architecture impact: Không
 
-## Code SHA (tip — update after push)
+## Code SHA
 
-Recorded at PR open from `git rev-parse HEAD` on branch `hangndat/uif-833-claim-invite-shell`.
+| Field | SHA |
+| --- | --- |
+| Base (`origin/main`) | `ccde6338b6f7f02df1ff0243a2a41fe3ba103bd1` |
+| PR tip (evidence target) | `fcf3df1c7810c77469cd0969b0191e09a1b6c0b0` |
 
 ## Scope delivered
 
