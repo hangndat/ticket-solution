@@ -3,6 +3,7 @@
 # SoT: stop. afterAgentResponse is accepted but deduped by generation_id in ingest.
 # Fail-open: never block the agent loop.
 set -u
+umask 077
 export PATH="/Users/admin/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
 
 REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -21,6 +22,10 @@ fi
 # Retry briefly so a parallel record-join can win the race before stop returns.
 mkdir -p "$REPO_ROOT/.orca-metrics" 2>/dev/null || true
 LOG="$REPO_ROOT/.orca-metrics/cursor-hooks.log"
+if ! { touch "$LOG" && chmod 600 "$LOG"; } 2>/dev/null; then
+  printf '%s\n' '{}'
+  exit 0
+fi
 TMP="$(mktemp -t agent-metrics-hook.XXXXXX 2>/dev/null || mktemp)"
 printf '%s' "$INPUT" >"$TMP"
 attempt=1
