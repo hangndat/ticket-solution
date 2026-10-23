@@ -5,13 +5,18 @@ import {
   filterMigrationSearch,
   isAdminToPortalRedirectEnabled,
   isDualRunBannerEnabled,
+  LEGACY_ADMIN_GUEST_TABS,
+  LEGACY_ADMIN_JOBS,
+  mapLegacyAdminToPortalPath,
   portalHref,
+  portalMigrationLocation,
   portalOriginFromEnv,
 } from '../src/portal/dual-run';
 
 const portal = 'http://127.0.0.1:3013';
+const envOn = { PORTAL_ORIGIN: portal, PORTAL_ADMIN_REDIRECT: '1' };
 
-describe('portal dual-run redirect (ADR-20 §8 / #438)', () => {
+describe('portal dual-run redirect (ADR-20 §8 / #438 / #845)', () => {
   test('flag default OFF — legacy admin not redirected', () => {
     assert.equal(
       isAdminToPortalRedirectEnabled({ PORTAL_ORIGIN: portal }),
@@ -28,23 +33,105 @@ describe('portal dual-run redirect (ADR-20 §8 / #438)', () => {
     );
   });
 
-  test('T1: flag ON GET /admin keeps allowlisted query on portal host', () => {
-    const env = {
-      PORTAL_ORIGIN: portal,
-      PORTAL_ADMIN_REDIRECT: '1',
-    };
-    assert.equal(isAdminToPortalRedirectEnabled(env), true);
-    const d = decideAdminToPortalRedirect({
-      method: 'GET',
-      pathname: '/admin',
-      search: '?tenantId=org1&eventId=ev2&evil=https://x',
-      env,
-    });
-    assert.deepEqual(d, {
-      type: 'redirect',
-      location: `${portal}/admin?tenantId=org1&eventId=ev2`,
-      status: 302,
-    });
+  test('T1: flag ON GET /admin maps allowlisted query to portal paths', () => {
+    assert.equal(isAdminToPortalRedirectEnabled(envOn), true);
+    assert.deepEqual(
+      decideAdminToPortalRedirect({
+        method: 'GET',
+        pathname: '/admin',
+        search: '?tenantId=org1&eventId=ev2&evil=https://x',
+        env: envOn,
+      }),
+      {
+        type: 'redirect',
+        location: `${portal}/t/org1/e/ev2`,
+        status: 302,
+      },
+    );
+    assert.equal(
+      portalMigrationLocation(portal, '/admin', '?tenantId=tenant-a'),
+      `${portal}/t/tenant-a`,
+    );
+    assert.equal(
+      mapLegacyAdminToPortalPath({ pathname: '/admin' }),
+      '/',
+    );
+  });
+
+  test('T1 (#845): each legacy admin job maps to portal event route', () => {
+    const base = '?tenantId=t1&eventId=e1';
+    const cases: { job: string; path: string }[] = [
+      { job: 'setup', path: '/t/t1/e/e1/setup' },
+      { job: 'guests', path: '/t/t1/e/e1/guests' },
+      { job: 'gate', path: '/t/t1/e/e1/gate' },
+      { job: 'support', path: '/t/t1/e/e1/support' },
+    ];
+    for (const { job, path } of cases) {
+      assert.equal(
+        mapLegacyAdminToPortalPath({
+          pathname: '/admin',
+          search: `${base}&job=${job}`,
+        }),
+        path,
+      );
+      const d = decideAdminToPortalRedirect({
+        method: 'GET',
+        pathname: '/admin',
+        search: `${base}&job=${job}`,
+        env: envOn,
+      });
+      assert.equal(d.type, 'redirect');
+      if (d.type === 'redirect') {
+        assert.equal(d.location, `${portal}${path}`);
+      }
+    }
+    assert.deepEqual([...LEGACY_ADMIN_JOBS], [
+      'setup',
+      'guests',
+      'gate',
+      'support',
+    ]);
+  });
+
+  test('T1 (#845): guest tabs → portal guests hash', () => {
+    for (const tab of LEGACY_ADMIN_GUEST_TABS) {
+      const path = mapLegacyAdminToPortalPath({
+        pathname: '/admin',
+        search: `?tenantId=t1&eventId=e1&job=guests&tab=${tab}`,
+      });
+      assert.equal(path, `/t/t1/e/e1/guests#${tab}`);
+    }
+  });
+
+  test('T1 (#845): setup tabs and tenant tabs', () => {
+    assert.equal(
+      mapLegacyAdminToPortalPath({
+        pathname: '/admin',
+        search: '?tenantId=t1&eventId=e1&job=setup&tab=config',
+      }),
+      '/t/t1/e/e1/config',
+    );
+    assert.equal(
+      mapLegacyAdminToPortalPath({
+        pathname: '/admin',
+        search: '?tenantId=t1&tab=members',
+      }),
+      '/t/t1/members',
+    );
+    assert.equal(
+      mapLegacyAdminToPortalPath({
+        pathname: '/admin',
+        search: '?tenantId=t1&intent=create-event',
+      }),
+      '/t/t1/events/new',
+    );
+    assert.equal(
+      mapLegacyAdminToPortalPath({
+        pathname: '/admin',
+        search: '?tenantId=t1&intent=onboarding',
+      }),
+      '/onboarding/t1',
+    );
   });
 
   test('HEAD /platform also redirects when flag ON', () => {
@@ -107,7 +194,7 @@ describe('portal dual-run redirect (ADR-20 §8 / #438)', () => {
         method: 'GET',
         pathname: '/gate',
         search: '?tenantId=t1',
-        env: { PORTAL_ORIGIN: portal, PORTAL_ADMIN_REDIRECT: '1' },
+        env: envOn,
       }),
       { type: 'next' },
     );
@@ -127,7 +214,6 @@ describe('portal dual-run redirect (ADR-20 §8 / #438)', () => {
       portalOriginFromEnv({ PORTAL_ORIGIN: 'https://user:pass@evil.test' }),
       null,
     );
-    // Flag ON without valid origin → treat as disabled
     assert.equal(
       isAdminToPortalRedirectEnabled({
         PORTAL_ADMIN_REDIRECT: '1',
@@ -135,13 +221,36 @@ describe('portal dual-run redirect (ADR-20 §8 / #438)', () => {
       }),
       false,
     );
+    assert.equal(
+      mapLegacyAdminToPortalPath({
+        pathname: '/admin',
+        search: '?tenantId=ok&job=not-a-real-job',
+      }),
+      '/t/ok',
+    );
+    assert.equal(
+      decideAdminToPortalRedirect({
+        method: 'GET',
+        pathname: '/admin',
+        search: '?return=https://evil.test',
+        env: envOn,
+      }).type,
+      'redirect',
+    );
+    const badHost = decideAdminToPortalRedirect({
+      method: 'GET',
+      pathname: '/admin',
+      env: envOn,
+      portalOrigin: 'https://evil.test',
+    });
+    if (badHost.type === 'redirect') {
+      assert.ok(badHost.location.startsWith('https://evil.test/'));
+      assert.ok(!badHost.location.includes('return='));
+    }
   });
 
   test('banner independent of redirect flag', () => {
-    assert.equal(
-      isDualRunBannerEnabled({ PORTAL_ORIGIN: portal }),
-      true,
-    );
+    assert.equal(isDualRunBannerEnabled({ PORTAL_ORIGIN: portal }), true);
     assert.equal(
       isDualRunBannerEnabled({
         PORTAL_ORIGIN: portal,
@@ -154,7 +263,7 @@ describe('portal dual-run redirect (ADR-20 §8 / #438)', () => {
       portalHref('/admin', '?tenantId=t1&token=secret', {
         PORTAL_ORIGIN: portal,
       }),
-      `${portal}/admin?tenantId=t1`,
+      `${portal}/t/t1`,
     );
   });
 });
