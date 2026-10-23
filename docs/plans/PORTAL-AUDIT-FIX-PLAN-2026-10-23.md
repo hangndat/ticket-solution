@@ -2,6 +2,8 @@
 
 User **duyệt** sau báo cáo [audit #832](../reviews/PORTAL-AUDIT-2026-10-23.md). Triển khai PA-01–PA-06 theo wave; giữ O18/O22, AntD/ProComponents, API và auth hiện tại. Architecture impact: **Không**. Visual budget: **Không** — dùng token staff hiện hành. Không production/store từ approval này.
 
+Tracking implementation: [#838](https://github.com/hangndat/ticket-solution/issues/838). Run: `run_76c9c2fb9cf5`. Coding/review/integration trong scope PA-01–06 được thực hiện theo approval này; các giới hạn audit-only trong report gốc mô tả lượt audit trước approval.
+
 | Task | Ownership | Phụ thuộc thật | Đầu ra |
 | --- | --- | --- | --- |
 | PD — Liv | `docs/design/portal-audit-fix-2026-10-23/` | Không | Handoff header + prototype/ảnh 390/1024/1440, copy chuẩn, states/a11y/AC |
