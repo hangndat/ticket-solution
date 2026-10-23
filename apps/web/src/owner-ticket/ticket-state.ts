@@ -1,3 +1,5 @@
+import { attendeeTicketStateTag } from '../attendee-detail-surface';
+
 /** Guest-facing ticket state label for wallet / detail chrome. */
 export function ticketStateLabel(state: string): string {
   switch (state) {
@@ -17,12 +19,5 @@ export function ticketStateLabel(state: string): string {
 }
 
 export function ticketStateTagClass(state: string): string {
-  if (state === 'ACTIVE') return 'ticket-tag ticket-tag--ready';
-  if (state === 'USED' || state === 'CHECKED_IN') {
-    return 'ticket-tag ticket-tag--used';
-  }
-  if (state === 'REVOKED' || state === 'EXPIRED') {
-    return 'ticket-tag ticket-tag--blocked';
-  }
-  return 'ticket-tag';
+  return attendeeTicketStateTag(state);
 }
