@@ -154,3 +154,12 @@ Policy: [`PLATFORM-POLICY.md`](./PLATFORM-POLICY.md) · Config: `infra/platform/
 ```
 
 Attendee (`ticket-web`) không ép OTP; Owner/admin (`ticket-admin-web`) và platform (`ticket-platform-web`) bind flow OTP.
+
+## 9. Cutover staff UI app → portal (D-7 / #846) — prod checklist
+
+**Không tự chạy từ PR** — coordinator/user ops sau merge + CI xanh.
+
+1. Xác nhận `apps/web` không còn route admin/platform; legacy BFF trả 410; attendee/redeem/account vẫn trên `app.vemoki.com`.
+2. Deploy app với `PORTAL_ORIGIN=https://portal.vemoki.com`; smoke GET `/admin?tenantId=…&job=gate` → portal path đúng.
+3. Keycloak prod: thu hồi redirect URI `app.` cho clients admin/platform khi traffic = 0; giữ portal callbacks.
+4. Chi tiết local dual-run: [`PORTAL-LOCAL-CUTOVER-PREP.md`](./PORTAL-LOCAL-CUTOVER-PREP.md) §8.

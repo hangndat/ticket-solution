@@ -8,35 +8,9 @@ import {
   interpretPlatformMe,
   interpretSupportGrant,
   PLATFORM_UNKNOWN,
-} from '../src/platform/shape';
-import { isPlatformOidcConfigured } from '../src/platform/oidc';
+} from '../src/bff/me-shape';
 import { assertMutatingBrowser } from '../src/bff/csrf';
 import { CSRF_COOKIE, CSRF_HEADER } from '../src/bff/csrf-constants';
-
-test('platform OIDC fail closed without full PLATFORM_OIDC_*', () => {
-  assert.equal(isPlatformOidcConfigured({}), false);
-  assert.equal(
-    isPlatformOidcConfigured({
-      PLATFORM_OIDC_ISSUER: 'http://127.0.0.1:8080/realms/ticket',
-      PLATFORM_OIDC_CLIENT_ID: 'ticket-platform-web',
-      PLATFORM_OIDC_CLIENT_SECRET: 'x',
-      PLATFORM_OIDC_REDIRECT_URI: 'http://localhost:3000/api/auth/platform/callback',
-      // missing audience + acr
-    }),
-    false,
-  );
-  assert.equal(
-    isPlatformOidcConfigured({
-      PLATFORM_OIDC_ISSUER: 'http://127.0.0.1:8080/realms/ticket',
-      PLATFORM_OIDC_CLIENT_ID: 'ticket-platform-web',
-      PLATFORM_OIDC_CLIENT_SECRET: 'x',
-      PLATFORM_OIDC_REDIRECT_URI: 'http://localhost:3000/api/auth/platform/callback',
-      PLATFORM_OIDC_AUDIENCE: 'ticket-platform-api',
-      PLATFORM_OIDC_REQUIRED_ACR: 'vemoki-mfa',
-    }),
-    true,
-  );
-});
 
 test('interpretPlatformMe requires assurance enum', () => {
   assert.equal(

@@ -9,7 +9,6 @@ let bound = false;
 const DISCOVERY_PATH_MARKERS = [
   '/api/bff/me/events',
   '/api/bff/me/tenants',
-  '/api/bff/platform/me',
 ] as const;
 
 export function isNavDiscoveryRequestUrl(requestUrl: string): boolean {

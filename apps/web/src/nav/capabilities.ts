@@ -4,7 +4,7 @@ import type {
   MeTenantItem,
   MeTenantsResponse,
   PlatformMeResponse,
-} from '../platform/contracts';
+} from '../bff/platform-contracts';
 
 /** Tenant permissions that unlock Quản trị chrome (handoff contract §3). */
 export const ADMIN_TENANT_PERMISSIONS = [
@@ -22,8 +22,8 @@ export type NavLink = {
 
 export type NavCapabilities = {
   authenticated: boolean;
-  showAdmin: boolean;
-  showPlatform: boolean;
+  /** Staff / operator — portal CTA via GET /admin redirect (D-7). */
+  showPortalStaff: boolean;
   showAccount: boolean;
 };
 
@@ -168,29 +168,26 @@ export function deriveNavCapabilities(input: {
   if (!input.authenticated) {
     return {
       authenticated: false,
-      showAdmin: false,
-      showPlatform: false,
+      showPortalStaff: false,
       showAccount: false,
     };
   }
 
   const staffEligible = input.meEvents?.staffEligible === true;
 
-  const showAdmin =
-    staffEligible &&
-    (input.meTenants?.items.some((tenant) =>
-      tenant.tenantPermissions.some((perm) =>
-        (ADMIN_TENANT_PERMISSIONS as readonly string[]).includes(perm),
-      ),
-    ) ??
-      false);
-
-  const showPlatform = input.platformMe?.operator === true;
+  const showPortalStaff =
+    input.platformMe?.operator === true ||
+    (staffEligible &&
+      (input.meTenants?.items.some((tenant) =>
+        tenant.tenantPermissions.some((perm) =>
+          (ADMIN_TENANT_PERMISSIONS as readonly string[]).includes(perm),
+        ),
+      ) ??
+        false));
 
   return {
     authenticated: true,
-    showAdmin,
-    showPlatform,
+    showPortalStaff,
     showAccount: true,
   };
 }
@@ -199,11 +196,12 @@ export function buildNavLinks(caps: NavCapabilities): NavLink[] {
   if (!caps.authenticated) return [...GUEST_NAV_LINKS];
 
   const links: NavLink[] = [...PRODUCT_NAV_LINKS];
-  if (caps.showAdmin) {
-    links.push({ href: '/admin', label: 'Quản trị', testId: 'nav-admin' });
-  }
-  if (caps.showPlatform) {
-    links.push({ href: '/platform', label: 'Platform', testId: 'nav-platform' });
+  if (caps.showPortalStaff) {
+    links.push({
+      href: '/admin',
+      label: 'Quản trị tổ chức',
+      testId: 'nav-portal-staff',
+    });
   }
   if (caps.showAccount) {
     links.push({ href: '/account', label: 'Tài khoản', testId: 'nav-account' });

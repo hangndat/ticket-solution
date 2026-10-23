@@ -11,7 +11,7 @@ import {
   escapeText,
   visibleSectionsInOrder,
   type AllowlistedSectionBody,
-} from '../admin/config-schema';
+} from '../content/config-schema';
 
 export type ConfigRendererProps = {
   payload: EventConfigPayload;

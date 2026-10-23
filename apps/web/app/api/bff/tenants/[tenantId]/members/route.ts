@@ -1,6 +1,6 @@
 import { bffApiError, isUuid } from '../../../../../../src/bff/upstream';
-import { PLATFORM_PATHS } from '../../../../../../src/platform/contracts';
-import { forwardTenantBearer } from '../../../../../../src/platform/forward';
+import { PLATFORM_PATHS } from '../../../../../../src/bff/platform-contracts';
+import { forwardTenantBearer } from '../../../../../../src/bff/platform-forward';
 
 type Props = { params: Promise<{ tenantId: string }> };
 

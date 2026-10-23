@@ -4,9 +4,9 @@
   "mobile.rn_modal": 1,
   "mobile.spacing_literals": 9,
   "mobile.tsx_hex_literals": 0,
-  "web.css_important": 4,
-  "web.css_lines": 1864,
-  "web.css_media_px": 19,
+  "web.css_important": 0,
+  "web.css_lines": 0,
+  "web.css_media_px": 0,
   "web.module_css_files": 0,
   "web.tsx_hex_literals": 6,
   "web.ui_prefix_literals": 0

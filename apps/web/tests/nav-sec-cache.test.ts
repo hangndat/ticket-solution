@@ -19,8 +19,7 @@ import {
 
 const STAFF_CAPS: NavCapabilities = {
   authenticated: true,
-  showAdmin: true,
-  showPlatform: false,
+  showPortalStaff: true,
   showAccount: true,
 };
 
@@ -29,7 +28,7 @@ const STAFF_LINKS: NavLink[] = [
   { href: '/redeem', label: 'Đổi mã', testId: 'nav-redeem' },
   { href: '/claim', label: 'Nhận lời mời', testId: 'nav-claim' },
   { href: '/wallet', label: 'Vé của tôi', testId: 'nav-wallet' },
-  { href: '/admin', label: 'Quản trị', testId: 'nav-admin' },
+  { href: '/admin', label: 'Quản trị tổ chức', testId: 'nav-portal-staff' },
   { href: '/account', label: 'Tài khoản', testId: 'nav-account' },
 ];
 
@@ -72,7 +71,7 @@ test('NavCapabilitiesStore.reset clears staff links immediately', () => {
   const snap = store.getSnapshot();
   assert.equal(snap.resolved, true);
   assert.equal(snap.loading, false);
-  assert.equal(snap.caps.showAdmin, false);
+  assert.equal(snap.caps.showPortalStaff, false);
   assert.deepEqual(
     snap.links.map((l) => l.href),
     GUEST_NAV_LINKS.map((l) => l.href),
@@ -137,7 +136,7 @@ test('late refresh after reset cannot restore revoked chrome', async () => {
   await pending;
 
   const snap = store.getSnapshot();
-  assert.equal(snap.caps.showAdmin, false);
+  assert.equal(snap.caps.showPortalStaff, false);
   assert.ok(!snap.links.some((l) => l.href === '/admin'));
 });
 
@@ -166,20 +165,20 @@ test('fetchJson publishes results to observers (SEC-CACHE hook)', async () => {
   assert.deepEqual(seen[0]!.result.json, { code: 'MEMBERSHIP_REVOKED' });
 });
 
-test('isNavDiscoveryRequestUrl excludes me/events tenants platform/me', async () => {
+test('isNavDiscoveryRequestUrl marks only me/events and me/tenants', async () => {
   const { isNavDiscoveryRequestUrl } = await import(
     '../src/nav/bind-fetch-authz-observer'
   );
   assert.equal(isNavDiscoveryRequestUrl('/api/bff/me/events'), true);
   assert.equal(isNavDiscoveryRequestUrl('/api/bff/me/tenants'), true);
-  assert.equal(isNavDiscoveryRequestUrl('/api/bff/platform/me'), true);
+  assert.equal(isNavDiscoveryRequestUrl('/api/bff/platform/me'), false);
   assert.equal(isNavDiscoveryRequestUrl('/api/bff/admin/events'), false);
 });
 
 test('singleton reset helper clears shared store', () => {
   resetNavCapabilitiesStoreForTests();
   const snap = navCapabilitiesStore.getSnapshot();
-  assert.equal(snap.caps.showAdmin, false);
+  assert.equal(snap.caps.showPortalStaff, false);
   assert.deepEqual(
     snap.links.map((l) => l.href),
     GUEST_NAV_LINKS.map((l) => l.href),

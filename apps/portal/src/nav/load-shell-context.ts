@@ -63,6 +63,75 @@ async function getJson(
  */
 let shellContextInflight: Promise<ShellLoadState> | null = null;
 
+export type DiscoveryHttpResult = { status: number; json: unknown };
+
+/** Pure resolver for shell discovery — unit-tested (#850 F04). */
+export function resolveShellLoadState(input: {
+  tenantsResult: DiscoveryHttpResult;
+  eventsResult: DiscoveryHttpResult;
+  platformResult: DiscoveryHttpResult;
+}): ShellLoadState {
+  const { tenantsResult, eventsResult, platformResult } = input;
+
+  if (
+    tenantsResult.status === 401 &&
+    eventsResult.status === 401 &&
+    platformResult.status === 401
+  ) {
+    return { status: 'unauthenticated' };
+  }
+
+  const meTenants = parseMeTenantsResponse(
+    tenantsResult.status,
+    tenantsResult.json,
+  );
+  const meEvents = parseMeEventsResponse(
+    eventsResult.status,
+    eventsResult.json,
+  );
+  const platformMe = parsePlatformMeResponse(
+    platformResult.status,
+    platformResult.json,
+  );
+
+  const authenticated =
+    meTenants !== null || meEvents !== null || platformMe !== null;
+
+  if (!authenticated) {
+    if (
+      tenantsResult.status >= 500 ||
+      eventsResult.status >= 500 ||
+      (tenantsResult.status === 0 && eventsResult.status === 0)
+    ) {
+      return {
+        status: 'error',
+        messageKey: 'shell.load.serverUnreachable',
+      };
+    }
+    return { status: 'unauthenticated' };
+  }
+
+  const caps = derivePortalShellCapabilities({
+    authenticated: true,
+    meEvents,
+    meTenants,
+    platformMe,
+  });
+
+  return {
+    status: 'ready',
+    caps,
+    meTenants,
+    meEvents,
+    platformMe,
+    http: {
+      tenants: tenantsResult.status,
+      events: eventsResult.status,
+      platform: platformResult.status,
+    },
+  };
+}
+
 async function loadShellContextOnce(): Promise<ShellLoadState> {
   try {
     const [tenantsResult, eventsResult, platformResult] = await Promise.all([
@@ -70,64 +139,11 @@ async function loadShellContextOnce(): Promise<ShellLoadState> {
       getJson('/api/bff/me/events'),
       getJson('/api/bff/platform/me'),
     ]);
-
-    if (
-      tenantsResult.status === 401 &&
-      eventsResult.status === 401 &&
-      platformResult.status === 401
-    ) {
-      return { status: 'unauthenticated' };
-    }
-
-    const meTenants = parseMeTenantsResponse(
-      tenantsResult.status,
-      tenantsResult.json,
-    );
-    const meEvents = parseMeEventsResponse(
-      eventsResult.status,
-      eventsResult.json,
-    );
-    const platformMe = parsePlatformMeResponse(
-      platformResult.status,
-      platformResult.json,
-    );
-
-    const authenticated =
-      meTenants !== null || meEvents !== null || platformMe !== null;
-
-    if (!authenticated) {
-      if (
-        tenantsResult.status >= 500 ||
-        eventsResult.status >= 500 ||
-        (tenantsResult.status === 0 && eventsResult.status === 0)
-      ) {
-        return {
-          status: 'error',
-          messageKey: 'shell.load.serverUnreachable',
-        };
-      }
-      return { status: 'unauthenticated' };
-    }
-
-    const caps = derivePortalShellCapabilities({
-      authenticated: true,
-      meEvents,
-      meTenants,
-      platformMe,
+    return resolveShellLoadState({
+      tenantsResult,
+      eventsResult,
+      platformResult,
     });
-
-    return {
-      status: 'ready',
-      caps,
-      meTenants,
-      meEvents,
-      platformMe,
-      http: {
-        tenants: tenantsResult.status,
-        events: eventsResult.status,
-        platform: platformResult.status,
-      },
-    };
   } catch {
     return {
       status: 'error',
