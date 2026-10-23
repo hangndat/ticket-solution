@@ -20,9 +20,7 @@ const PORTAL = (process.env.PORTAL_UAT_BASE || 'http://127.0.0.1:3013').replace(
 const issuer = (
   process.env.OIDC_ISSUER || 'http://127.0.0.1:8080/realms/ticket'
 ).replace(/\/$/, '');
-const kcBase = issuer.split('/realms/')[0];
 const clientId = 'ticket-platform-web';
-const clientSecret = 'dev-platform-web-secret-change-me';
 const redirectUri =
   process.env.PLATFORM_OIDC_REDIRECT_URI ||
   `${PORTAL}/api/auth/platform/callback`;
