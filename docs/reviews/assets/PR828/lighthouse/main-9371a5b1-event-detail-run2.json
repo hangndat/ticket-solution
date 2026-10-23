@@ -1,0 +1,15 @@
+{
+  "label": "main-9371a5b1",
+  "route": {
+    "id": "event-detail",
+    "path": "/t/mfest-demo/events/mfest"
+  },
+  "run": 2,
+  "lighthouse": "13.5.0",
+  "scores": {
+    "performance": 86,
+    "accessibility": 100,
+    "bestPractices": 96,
+    "seo": 54
+  }
+}

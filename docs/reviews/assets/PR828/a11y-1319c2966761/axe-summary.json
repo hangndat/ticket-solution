@@ -1,0 +1,31 @@
+{
+  "sha": "1319c29667613199bb5025201069a54c8e423e2a",
+  "path": "/t/mfest-demo/events/mfest",
+  "reports": [
+    {
+      "motion": "default",
+      "viewport": "390",
+      "violationCount": 0,
+      "seriousCritical": []
+    },
+    {
+      "motion": "default",
+      "viewport": "1280",
+      "violationCount": 0,
+      "seriousCritical": []
+    },
+    {
+      "motion": "reduce",
+      "viewport": "390",
+      "violationCount": 0,
+      "seriousCritical": []
+    },
+    {
+      "motion": "reduce",
+      "viewport": "1280",
+      "violationCount": 0,
+      "seriousCritical": []
+    }
+  ],
+  "seriousTotal": 0
+}
