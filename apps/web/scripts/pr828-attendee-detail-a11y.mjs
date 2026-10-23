@@ -8,7 +8,7 @@ import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
-import axeCore from 'axe-core';
+import { motionContextOptions, runAxeOnPage } from './lib/axe-run.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 
@@ -61,37 +61,6 @@ const VIEWPORTS = [
   { id: '1280', width: 1280, height: 900 },
 ];
 
-async function settleAnimations(page) {
-  await page.evaluate(async () => {
-    const anims = document.getAnimations();
-    if (anims.length) {
-      await Promise.all(anims.map((a) => a.finished.catch(() => undefined)));
-    }
-  });
-  await page.waitForTimeout(1000);
-}
-
-async function runAxe(page) {
-  await page.addScriptTag({ content: `${axeCore.source}` });
-  return page.evaluate(async () => {
-    // @ts-expect-error axe injected
-    const results = await window.axe.run(document, {
-      runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21aa'] },
-    });
-    const serious = results.violations.filter(
-      (v) => v.impact === 'serious' || v.impact === 'critical',
-    );
-    return {
-      violationCount: results.violations.length,
-      seriousCritical: serious.map((v) => ({
-        id: v.id,
-        impact: v.impact,
-        nodes: v.nodes.length,
-      })),
-    };
-  });
-}
-
 async function loginForWallet(page, base) {
   const user = process.env.WEB_UAT_USER;
   const pass = process.env.WEB_UAT_PASS;
@@ -120,14 +89,14 @@ async function axeRoute(page, base, route, motion, vp, reports) {
     die(`${route.id} navigation failed status=${res?.status()}`);
   }
   await page.waitForSelector(route.ready, { timeout: 60_000 });
-  await settleAnimations(page);
-  const axe = await runAxe(page);
+  const { violationCount, seriousCritical } = await runAxeOnPage(page);
   reports.push({
     route: route.id,
     motion,
     viewport: vp.id,
     path: route.path,
-    ...axe,
+    violationCount,
+    seriousCritical,
   });
 }
 
@@ -156,9 +125,7 @@ async function main() {
     for (const motion of ['default', 'reduce']) {
       for (const vp of VIEWPORTS) {
         for (const route of GUEST_ROUTES) {
-          const context = await browser.newContext(
-            motion === 'reduce' ? { reducedMotion: 'reduce' } : {},
-          );
+          const context = await browser.newContext(motionContextOptions(motion));
           const page = await context.newPage();
           await axeRoute(page, base, route, motion, vp, reports);
           await context.close();
@@ -222,14 +189,14 @@ async function main() {
               reducedMotion: motion === 'reduce' ? 'reduce' : 'no-preference',
             });
             await page.setViewportSize({ width: vp.width, height: vp.height });
-            await settleAnimations(page);
-            const axe = await runAxe(page);
+            const { violationCount, seriousCritical } = await runAxeOnPage(page);
             reports.push({
               route: ticketRoute.id,
               motion,
               viewport: vp.id,
               path: ticketRoute.path,
-              ...axe,
+              violationCount,
+              seriousCritical,
             });
           }
         }
