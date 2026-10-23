@@ -4,7 +4,7 @@
 | --- | --- |
 | Issue | [#844](https://github.com/hangndat/ticket-solution/issues/844) |
 | Branch | `hangndat/portal-844-platform-mutate` |
-| Evidence SHA (code under test) | _tip sau push lượt sửa 1/2_ |
+| Evidence SHA (code under test) | `8ae3dc0b2329ad352456bd89d0c567b6fefd2077` |
 | UAT run | 2026-10-23 — worker `task_dfb2fde50e1f` |
 
 ## Parity (G-791-2/3) — `apps/web` → `apps/portal`
