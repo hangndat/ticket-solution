@@ -5,8 +5,9 @@
  *
  *   node apps/portal/scripts/pr844-platform-uat.mjs
  */
-import { createHash, createHmac, randomBytes } from 'node:crypto';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { createHmac } from 'node:crypto';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import axe from 'axe-core';
@@ -17,32 +18,47 @@ const PORTAL = (process.env.PORTAL_UAT_BASE || 'http://127.0.0.1:3013').replace(
   /\/$/,
   '',
 );
-const issuer = (
-  process.env.OIDC_ISSUER || 'http://127.0.0.1:8080/realms/ticket'
-).replace(/\/$/, '');
-const clientId = 'ticket-platform-web';
-const redirectUri =
-  process.env.PLATFORM_OIDC_REDIRECT_URI ||
-  `${PORTAL}/api/auth/platform/callback`;
 const username = process.env.PLATFORM_UAT_USER || 'staff@example.com';
 const password = process.env.PLATFORM_UAT_PASS || 'staff-demo';
+const TOTP_SECRET_CACHE = join(
+  tmpdir(),
+  process.env.PR844_TOTP_SECRET_FILE || 'pr844-platform-totp.secret',
+);
+
+function loadCachedTotpSecret() {
+  if (!existsSync(TOTP_SECRET_CACHE)) return '';
+  try {
+    return readFileSync(TOTP_SECRET_CACHE, 'utf8').trim();
+  } catch {
+    return '';
+  }
+}
+
+function saveCachedTotpSecret(secret) {
+  if (!secret) return;
+  writeFileSync(TOTP_SECRET_CACHE, secret, { mode: 0o600 });
+}
 
 function die(msg) {
   console.error(`pr844-uat: ${msg}`);
   process.exit(1);
 }
 
-function b64url(buf) {
-  return Buffer.from(buf)
-    .toString('base64')
-    .replace(/=/g, '')
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_');
+function totpCounter(step = 30) {
+  return Math.floor(Date.now() / 1000 / step);
+}
+
+async function waitForNextTotpWindow(step = 30) {
+  const start = totpCounter(step);
+  while (totpCounter(step) === start) {
+    await new Promise((r) => setTimeout(r, 200));
+  }
+  await new Promise((r) => setTimeout(r, 300));
 }
 
 function totpFromSessionSecret(sessionSecret, step = 30, digits = 6) {
   const key = Buffer.from(sessionSecret, 'utf8');
-  const counter = Math.floor(Date.now() / 1000 / step);
+  const counter = totpCounter(step);
   const buf = Buffer.alloc(8);
   buf.writeBigUInt64BE(BigInt(counter));
   const hmac = createHmac('sha1', key).update(buf).digest();
@@ -53,146 +69,6 @@ function totpFromSessionSecret(sessionSecret, step = 30, digits = 6) {
     ((hmac[offset + 2] & 0xff) << 8) |
     (hmac[offset + 3] & 0xff);
   return String(code % 10 ** digits).padStart(digits, '0');
-}
-
-function extractForm(html) {
-  const actionMatch = html.match(/<form[^>]*action="([^"]+)"/i);
-  if (!actionMatch) return null;
-  const action = actionMatch[1].replace(/&amp;/g, '&');
-  const inputs = {};
-  for (const tag of html.match(/<input[^>]*>/gi) || []) {
-    const name = (tag.match(/name="([^"]+)"/i) || [])[1];
-    if (!name) continue;
-    inputs[name] = (tag.match(/value="([^"]*)"/i) || [])[1] || '';
-  }
-  return { action, inputs };
-}
-
-async function platformLoginCookies() {
-  const verifier = b64url(randomBytes(32));
-  const challenge = b64url(createHash('sha256').update(verifier).digest());
-  const authUrl =
-    `${issuer}/protocol/openid-connect/auth?` +
-    new URLSearchParams({
-      client_id: clientId,
-      redirect_uri: redirectUri,
-      response_type: 'code',
-      scope: 'openid',
-      state: b64url(randomBytes(16)),
-      code_challenge: challenge,
-      code_challenge_method: 'S256',
-    }).toString();
-
-  const jar = new Map();
-  const storeCookies = (res) => {
-    for (const c of res.headers.getSetCookie?.() || []) {
-      const [nv] = c.split(';');
-      const eq = nv.indexOf('=');
-      if (eq > 0) jar.set(nv.slice(0, eq).trim(), nv.slice(eq + 1));
-    }
-  };
-  const cookieHeader = () =>
-    [...jar.entries()].map(([k, v]) => `${k}=${v}`).join('; ');
-
-  const follow = async (startRes) => {
-    let res = startRes;
-    storeCookies(res);
-    while (res.status >= 300 && res.status < 400) {
-      const loc = res.headers.get('location');
-      if (!loc) break;
-      if (loc.includes('code=')) return { loc, html: '' };
-      res = await fetch(new URL(loc, issuer).toString(), {
-        redirect: 'manual',
-        headers: { Cookie: cookieHeader() },
-      });
-      storeCookies(res);
-    }
-    const html = res.status === 200 ? await res.text() : '';
-    return { loc: res.headers.get('location'), html };
-  };
-
-  let { html, loc } = await follow(
-    await fetch(authUrl, { redirect: 'manual' }),
-  );
-  let form = extractForm(html);
-  if (!form) die('Keycloak login form missing');
-  form.inputs.username = username;
-  form.inputs.password = password;
-  ({ html, loc } = await follow(
-    await fetch(form.action, {
-      method: 'POST',
-      redirect: 'manual',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        Cookie: cookieHeader(),
-      },
-      body: new URLSearchParams(form.inputs),
-    }),
-  ));
-
-  if (html && /totpSecret/i.test(html)) {
-    form = extractForm(html);
-    const sessionSecret = form?.inputs?.totpSecret;
-    if (!sessionSecret) die('totpSecret missing');
-    form.inputs.totp = totpFromSessionSecret(sessionSecret);
-    form.inputs.totpSecret = sessionSecret;
-    form.inputs.userLabel = 'uat';
-    ({ html, loc } = await follow(
-      await fetch(form.action, {
-        method: 'POST',
-        redirect: 'manual',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          Cookie: cookieHeader(),
-        },
-        body: new URLSearchParams(form.inputs),
-      }),
-    ));
-  }
-
-  if (html && /name="otp"/i.test(html)) {
-    form = extractForm(html);
-    if (!form) die('otp form missing');
-    const secretField = form.inputs.totpSecret || '';
-    if (secretField) form.inputs.otp = totpFromSessionSecret(secretField);
-    ({ html, loc } = await follow(
-      await fetch(form.action, {
-        method: 'POST',
-        redirect: 'manual',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          Cookie: cookieHeader(),
-        },
-        body: new URLSearchParams(form.inputs),
-      }),
-    ));
-  }
-
-  if (!loc || !loc.includes('code=')) {
-    die(`no auth code (html snippet: ${(html || '').slice(0, 120)})`);
-  }
-  const code = new URL(loc, PORTAL).searchParams.get('code');
-  const cbRes = await fetch(loc, {
-    redirect: 'manual',
-    headers: { Cookie: cookieHeader() },
-  });
-  storeCookies(cbRes);
-  let next = cbRes;
-  while (next.status >= 300 && next.status < 400) {
-    const l = next.headers.get('location');
-    if (!l) break;
-    next = await fetch(new URL(l, PORTAL).toString(), {
-      redirect: 'manual',
-      headers: { Cookie: cookieHeader() },
-    });
-    storeCookies(next);
-  }
-  const portalCookies = [...jar.entries()].map(([name, value]) => ({
-    name,
-    value,
-    url: PORTAL,
-  }));
-  return { portalCookies, code };
 }
 
 async function loadPlaywright() {
@@ -225,25 +101,24 @@ async function platformLoginWithPlaywright(browser) {
   await page.click('#kc-login');
   await page.waitForTimeout(800);
 
+  let enrolledTotpSecret = loadCachedTotpSecret();
   const totpSecret = page.locator('input[name=totpSecret]');
   if (await totpSecret.count()) {
-    const secret = await totpSecret.inputValue();
-    await page.fill('input[name=totp]', totpFromSessionSecret(secret));
+    enrolledTotpSecret = await totpSecret.inputValue();
+    if (!enrolledTotpSecret) die('totpSecret empty on enroll');
+    saveCachedTotpSecret(enrolledTotpSecret);
+    await page.fill('input[name=totp]', totpFromSessionSecret(enrolledTotpSecret));
     await page.locator('input[type=submit], #kc-login').first().click();
     await page.waitForTimeout(1500);
   }
 
   const otp = page.locator('input[name=otp]');
   if (await otp.count()) {
-    const secret = await page
-      .locator('input[name=totpSecret]')
-      .inputValue()
-      .catch(() => '');
-    if (secret) {
-      await otp.fill(totpFromSessionSecret(secret));
-      await page.locator('input[type=submit], #kc-login').first().click();
-      await page.waitForTimeout(2000);
-    }
+    if (!enrolledTotpSecret) die('otp login without enrolled totp secret (cache missing)');
+    await waitForNextTotpWindow();
+    await otp.fill(totpFromSessionSecret(enrolledTotpSecret));
+    await page.locator('input[type=submit], #kc-login').first().click();
+    await page.waitForTimeout(2000);
   }
 
   await page
@@ -275,11 +150,30 @@ async function runAxe(page) {
   return serious;
 }
 
+const DEMO_TENANT_ID =
+  process.env.PR844_UAT_TENANT_ID ||
+  'd9d9f001-0001-4000-8000-000000000001';
+const DEMO_EVENT_ID =
+  process.env.PR844_UAT_EVENT_ID ||
+  'd9d9f001-0002-4000-8000-000000000001';
+const VIEWPORTS = [
+  { tag: '1280', width: 1280, height: 900 },
+  { tag: '390', width: 390, height: 844 },
+];
+
+async function confirmAntModal(page) {
+  await page
+    .locator('.ant-modal-confirm-btns .ant-btn-primary')
+    .click({ timeout: 15_000 });
+  await page.waitForTimeout(500);
+}
+
 async function main() {
   mkdirSync(OUT, { recursive: true });
   const sha = (
     await import('node:child_process')
   ).execSync('git rev-parse HEAD', { cwd: ROOT, encoding: 'utf8' }).trim();
+  const shaShort = sha.slice(0, 12);
 
   const browser = await loadPlaywright();
   const { context } = await platformLoginWithPlaywright(browser);
@@ -295,27 +189,81 @@ async function main() {
     shots.push(name);
   };
 
-  await capture('01-platform-tenants', async () => {
-    await page.goto(`${PORTAL}/platform`, { waitUntil: 'networkidle' });
-    await page.getByRole('tab', { name: 'Tenants' }).click();
-  });
-  await capture('02-platform-provision', async () => {
-    await page.getByRole('tab', { name: 'Provision' }).click();
-  });
-  await capture('03-platform-manage', async () => {
-    await page.getByRole('tab', { name: 'Manage' }).click();
-  });
-  await capture('04-platform-grant-create', async () => {
-    await page.getByRole('tab', { name: 'Grant create' }).click();
-  });
+  await page.goto(`${PORTAL}/platform`, { waitUntil: 'networkidle' });
+  await page
+    .getByRole('tab', { name: 'Tenants' })
+    .waitFor({ state: 'visible', timeout: 45_000 });
 
-  const axeViolations = await runAxe(page);
-  if (axeViolations.length) {
-    writeFileSync(
-      join(OUT, 'axe-violations.json'),
-      JSON.stringify(axeViolations, null, 2),
-    );
-    die(`axe serious/critical: ${axeViolations.length}`);
+  for (const vp of VIEWPORTS) {
+    await page.setViewportSize({ width: vp.width, height: vp.height });
+    const tag = vp.tag;
+    const slug = `pr844-${tag}-${Date.now().toString(36)}`;
+
+    await capture(`${shaShort}-provision-${tag}`, async () => {
+      await page.getByRole('tab', { name: 'Provision' }).click();
+      await page.getByTestId('platform-provision-slug').fill(slug);
+      await page.getByTestId('platform-provision-name').fill(`PR844 ${tag}`);
+      await page
+        .getByTestId('platform-provision-owner-email')
+        .fill('owner-pr844@example.com');
+      await page.getByTestId('platform-provision-submit').click();
+      await page
+        .getByTestId('platform-provision-status')
+        .waitFor({ state: 'visible', timeout: 30_000 });
+    });
+
+    await capture(`${shaShort}-manage-detail-${tag}`, async () => {
+      await page.getByRole('tab', { name: 'Manage' }).click();
+      await page.getByTestId('platform-manage-tenant-input').fill(DEMO_TENANT_ID);
+      await page.getByTestId('platform-manage-load').click();
+      await page
+        .getByTestId('platform-tenant-detail')
+        .waitFor({ state: 'visible', timeout: 30_000 });
+    });
+
+    await capture(`${shaShort}-suspend-${tag}`, async () => {
+      await page.getByTestId('platform-manage-suspend').click();
+      await confirmAntModal(page);
+      await page
+        .getByTestId('platform-manage-mutate-status')
+        .waitFor({ state: 'visible', timeout: 30_000 });
+    });
+
+    await capture(`${shaShort}-activate-${tag}`, async () => {
+      await page.getByTestId('platform-manage-activate').click();
+      await confirmAntModal(page);
+      await page
+        .getByTestId('platform-manage-mutate-status')
+        .waitFor({ state: 'visible', timeout: 30_000 });
+    });
+
+    await capture(`${shaShort}-limits-${tag}`, async () => {
+      await page.getByTestId('platform-manage-save-limits').click();
+      await page
+        .getByTestId('platform-manage-mutate-status')
+        .waitFor({ state: 'visible', timeout: 30_000 });
+    });
+
+    await capture(`${shaShort}-grant-create-${tag}`, async () => {
+      await page.getByRole('tab', { name: 'Grant create' }).click();
+      await page.getByTestId('platform-grant-create-tenant').fill(DEMO_TENANT_ID);
+      await page.getByTestId('platform-grant-create-event').fill(DEMO_EVENT_ID);
+      await page.getByTestId('platform-grant-create-reason').fill('pr844-uat');
+      await page.getByTestId('platform-grant-create-submit').click();
+      await confirmAntModal(page);
+      await page
+        .getByTestId('platform-grant-create-status')
+        .waitFor({ state: 'visible', timeout: 30_000 });
+    });
+
+    const axeViolations = await runAxe(page);
+    if (axeViolations.length) {
+      writeFileSync(
+        join(OUT, `axe-violations-${tag}.json`),
+        JSON.stringify(axeViolations, null, 2),
+      );
+      die(`axe serious/critical @${tag}: ${axeViolations.length}`);
+    }
   }
 
   const report = {
