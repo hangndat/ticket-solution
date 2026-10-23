@@ -105,6 +105,20 @@ export const PORTAL_UPSTREAM = {
     notificationId: string,
   ) =>
     `${eventBase(tenantId, eventId)}/notifications/${encodeURIComponent(notificationId)}/retry`,
+  notificationTemplatePreview: (tenantId: string, eventId: string) =>
+    `${eventBase(tenantId, eventId)}/notification-templates/preview`,
+  notificationTemplatePublish: (tenantId: string, eventId: string) =>
+    `${eventBase(tenantId, eventId)}/notification-templates/publish`,
+  reminderPreview: (tenantId: string, eventId: string) =>
+    `${eventBase(tenantId, eventId)}/reminders/preview`,
+  reminders: (tenantId: string, eventId: string) =>
+    `${eventBase(tenantId, eventId)}/reminders`,
+  reminderCancel: (
+    tenantId: string,
+    eventId: string,
+    reminderId: string,
+  ) =>
+    `${eventBase(tenantId, eventId)}/reminders/${encodeURIComponent(reminderId)}/cancel`,
   exports: (tenantId: string, eventId: string) =>
     `${eventBase(tenantId, eventId)}/exports`,
   exportJob: (tenantId: string, eventId: string, exportId: string) =>
