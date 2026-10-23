@@ -4,7 +4,8 @@
 | --- | --- |
 | Issue | [#846](https://github.com/hangndat/ticket-solution/issues/846) |
 | Branch | `hangndat/web-846-d7-cutover` |
-| SHA | `2cd2b9e` (tip at commit; re-validate after push) |
+| PR | [#852](https://github.com/hangndat/ticket-solution/pull/852) |
+| SHA | `89348c82c70abf60d232e741b5979ce50f2411bc` |
 
 ## Checks (local)
 
