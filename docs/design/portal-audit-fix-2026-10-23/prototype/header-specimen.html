@@ -76,7 +76,8 @@
       flex-direction: column;
       gap: 4px;
       min-width: 0;
-      flex: 1 1 160px;
+      flex: 1 1 100%;
+      width: 100%;
       max-width: 100%;
     }
     .field label {
@@ -102,7 +103,11 @@
         max-width: 280px;
       }
       .context-strip .row { flex-wrap: nowrap; }
-      .field { flex: 0 1 240px; max-width: 280px; }
+      .field {
+        flex: 0 1 240px;
+        width: auto;
+        max-width: 280px;
+      }
     }
     @media (min-width: 1024px) {
       .field { flex: 0 1 260px; }
@@ -125,7 +130,7 @@
   <div id="root"></div>
   <script>
     const { ConfigProvider, Select, Button, Dropdown, Space, Typography, theme } = antd;
-    const { useState, useMemo } = React;
+    const { useState, useMemo, useEffect } = React;
 
     const COPY = {
       vi: {
@@ -184,10 +189,19 @@
       const longNames = params.get('long') === '1';
       const showScan = params.get('scan') !== '0';
       const [locale, setLocale] = useState(localeParam);
+      const [dims, setDims] = useState({ w: 0, h: 0 });
+      useEffect(() => {
+        const update = () =>
+          setDims({ w: window.innerWidth, h: window.innerHeight });
+        update();
+        window.addEventListener('resize', update);
+        return () => window.removeEventListener('resize', update);
+      }, []);
       const t = COPY[locale];
       const tenants = TENANTS[locale];
       const events = EVENTS[locale];
-      const vw = window.innerWidth + '×' + window.innerHeight;
+      const vw =
+        dims.w > 0 ? dims.w + '×' + dims.h : '…';
 
       const accountItems = useMemo(() => ({
         items: [{ key: 'logout', label: t.logout }],
