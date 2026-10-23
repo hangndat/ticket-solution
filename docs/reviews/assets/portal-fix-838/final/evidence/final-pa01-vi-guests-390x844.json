@@ -1,0 +1,46 @@
+{
+  "pa01": {
+    "accountLabel": "T\u00e0i kho\u1ea3n \u25be",
+    "brandLines": 1,
+    "event": {
+      "height": 32,
+      "top": 149,
+      "width": 358
+    },
+    "hasAccount": true,
+    "hasStrip": true,
+    "hintLines": 1,
+    "layout": {
+      "sideBySide": false,
+      "stacked": true
+    },
+    "locale": {
+      "cookie": "vi",
+      "localStorage": "vi"
+    },
+    "mediaMin768": false,
+    "meta": {
+      "htmlLang": "vi",
+      "pathname": "/t/d9d9f001-0001-4000-8000-000000000001/e/d9d9f001-0002-4000-8000-000000000001/guests"
+    },
+    "pageOverflowX": false,
+    "tenant": {
+      "height": 32,
+      "top": 86,
+      "width": 358
+    },
+    "viewport": {
+      "h": 844,
+      "w": 390
+    }
+  },
+  "chrome": {
+    "frame": null,
+    "frameWidth": 390,
+    "issues": [],
+    "viewport": 390
+  },
+  "captureSHA": "23e7d15288c0ad75f65432f2d78a451e33d27598",
+  "requestedLocale": "vi",
+  "route": "http://127.0.0.1:3413/t/d9d9f001-0001-4000-8000-000000000001/e/d9d9f001-0002-4000-8000-000000000001/guests"
+}

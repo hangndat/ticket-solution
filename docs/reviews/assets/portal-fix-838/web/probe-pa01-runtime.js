@@ -1,5 +1,13 @@
-// PA-01 runtime probe — portal context strip + brand line count.
+// PA-01 runtime probe — locale storage, html lang, context strip layout.
 (() => {
+  const readLocaleStorage = () => {
+    try {
+      return localStorage.getItem('vemoki_portal_locale');
+    } catch {
+      return null;
+    }
+  };
+  const cookieMatch = document.cookie.match(/(?:^|;\s*)vemoki_portal_locale=([^;]+)/);
   const brand = document.querySelector('[data-testid="portal-brand"]');
   const strip = document.querySelector('[data-testid="portal-context-strip"]');
   const tenant = document.querySelector('[data-testid="tenant-switcher"]');
@@ -48,10 +56,20 @@
     docEl.scrollWidth > docEl.clientWidth + 1 ||
     document.body.scrollWidth > document.body.clientWidth + 1;
 
+  const accountLabel = account?.textContent?.trim() ?? null;
+
   return {
     viewport: { w: window.innerWidth, h: window.innerHeight },
     mediaMin768: window.matchMedia('(min-width: 768px)').matches,
-    localeCookie: document.cookie.match(/portal_locale=([^;]+)/)?.[1] ?? null,
+    meta: {
+      htmlLang: docEl.lang || null,
+      pathname: location.pathname,
+    },
+    locale: {
+      cookie: cookieMatch?.[1] ?? null,
+      localStorage: readLocaleStorage(),
+    },
+    accountLabel,
     brandLines,
     hintLines,
     pageOverflowX,

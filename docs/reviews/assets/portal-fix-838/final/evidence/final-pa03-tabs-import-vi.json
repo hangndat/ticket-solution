@@ -1,0 +1,11 @@
+{
+  "id": "61a10cb1-62aa-4413-ba12-5ad4e6ecc905",
+  "ok": true,
+  "result": {
+    "origin": "http://127.0.0.1:3413/onboarding/d9d9f001-0001-4000-8000-000000000001",
+    "result": "[]"
+  },
+  "_meta": {
+    "runtimeId": "9d821662-c628-49db-a168-99fa7b7636fc"
+  }
+}

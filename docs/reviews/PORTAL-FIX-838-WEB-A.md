@@ -1,8 +1,9 @@
 # #838 Web A — PA-02–06 handoff (Higo · web)
 
-**Branch:** `hangndat/portal-fix-838-web` (local commit only; coordinator integrates)  
-**Base:** `hangndat/portal-audit` @ `7dc042f`  
-**Scope:** `apps/portal/**` — PA-01 / header **not** touched (PD / Web B).
+**Branch:** `hangndat/portal-audit` (local commits only; coordinator integrates)  
+**Implementation SHA (Web A baseline):** `15f0c930be16b602f4a04c3ef254fa3ddd17d32e` (PA-02–06 first land)  
+**Batch 2/2:** copy F02 + test cleanup F03 on integration branch — see `PORTAL-FIX-838-BATCH-2.md` for exact tip SHA.  
+**Scope:** `apps/portal/**` — PA-01 / header owned by Web B slice.
 
 ## PA map
 
@@ -14,27 +15,24 @@
 | PA-05 | Export job ID accessible name + placeholder | `src/ops/panels/export-panel.tsx`, messages |
 | PA-06 | Reduced-motion override for CSS spinner | `app/globals.css` |
 
-## Checks (worktree)
+## Checks (integration worktree — batch 2)
 
 | Check | Result |
 | --- | --- |
 | `pnpm lint` (portal) | PASS |
-| `pnpm test` (portal) | PASS after `pnpm install --frozen-lockfile` + build `@ticket/contracts` + `@ticket/web-session` |
-| `pnpm --filter @ticket/portal build` | PASS (with workspace packages built) |
-| Browser UAT | **Not run** — coordinator fixture auth for Web B / acceptance |
+| `pnpm test` (portal) | PASS 131/131 (removed 3 structural mirror tests per F03) |
+| `pnpm --filter @ticket/portal build` | PASS |
+| Browser UAT | Batch 2 final assets `docs/reviews/assets/portal-fix-838/final/` |
 
-## Tests added
+## Tests retained
 
 - `tests/ops-report.test.ts` — `formatReportAsOf` vi/en + invalid date
-- `tests/guests-import-filters.test.ts` — import filters scoped to Import tab
-- `tests/globals-reduced-motion.test.ts` — `prefers-reduced-motion` CSS
+
+## Superseded
+
+- `tests/globals-reduced-motion.test.ts`, `tests/guests-import-filters.test.ts`, `tests/portal-pa01-header.test.ts` — removed batch 2/2 (browser/CSS proof thay thế).
 
 ## Gaps / notes
 
-- PA-01 header unchanged by design.
-- Some ops status strings still use machine enums in cells (by design); labels/placeholders/guides are operational.
-- Ready for coordinator auth fixture when Web B needs rendered VI/EN evidence on Guests/CS/Export.
-
-## Commit
-
-`3d0a2867c31c85280572e2e3a3d1dfea76295150` — `fix(portal): PA-02–06 ops copy, import filters, locale as-of (#838)` (local only).
+- PA-01 header unchanged by Web A.
+- Some ops status strings still use machine enums in cells (by design).

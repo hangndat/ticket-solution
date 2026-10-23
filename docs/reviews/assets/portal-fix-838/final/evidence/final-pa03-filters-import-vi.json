@@ -1,0 +1,11 @@
+{
+  "id": "c8aa7925-4944-4a29-b75a-149403e3ec53",
+  "ok": true,
+  "result": {
+    "origin": "http://127.0.0.1:3413/t/d9d9f001-0001-4000-8000-000000000001/e/d9d9f001-0002-4000-8000-000000000001/guests",
+    "result": "{\"importGroupAria\":\"Bộ lọc nguồn và loại vé cho nhập khách\",\"pendingTab\":\"Chờ duyệt\"}"
+  },
+  "_meta": {
+    "runtimeId": "9d821662-c628-49db-a168-99fa7b7636fc"
+  }
+}
