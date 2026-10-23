@@ -1,6 +1,30 @@
 import { cn } from '../lib/utils';
 
-/** Attendee detail routes (event / ticket / wallet) — Tailwind v4, replaces legacy + module.css. */
+/**
+ * Attendee detail routes (event / ticket / wallet) — Tailwind v4, replaces legacy + module.css.
+ *
+ * D-1 hex → @theme token replacements (nearest vemoki/tokens.json):
+ * | legacy hex | token / mix |
+ * | #13504b | color-mix(admit 85%, ink) |
+ * | #82d6b3 | color-mix(admit 55%, paper) |
+ * | #6e451d | color-mix(unknown 90%, ink) |
+ * | #eac786 | color-mix(unknown 45%, paper) |
+ * | #182941 | color-mix(ink 92%, focus) |
+ * | #f26583 | color-mix(signal 75%, paper) |
+ * | #fff / #ffffff | paper (on dark hero) or white utility |
+ * | #fff7f9 | color-mix(signal 6%, white) |
+ * | #be123c | color-mix(signal 88%, ink) |
+ * | #cbd5e1 | color-mix(line 85%, muted) |
+ * | #f8fafc | color-mix(paper 96%, white) |
+ * | #8a1f1f | destructive |
+ * | #f8e8e8 | color-mix(destructive 12%, paper) |
+ * | #4a4a4a | color-mix(ink 55%, muted) |
+ * | #ececec | color-mix(paper 88%, ink) |
+ * | #2a2a2a | color-mix(ink 88%, muted) |
+ * | #edf5ef / #27744d | color-mix(admit 12%, paper) / admit |
+ * | #eef2f7 / #4a5c73 | color-mix(focus 10%, paper) / color-mix(ink 45%, muted) |
+ * | #fdeef1 / #9f2840 | color-mix(signal 12%, paper) / color-mix(destructive 75%, signal) |
+ */
 
 export const attendeeDetailMain = cn(
   'mx-auto w-full max-w-[1200px] px-[var(--spacing-2xl)] min-w-0',
@@ -27,10 +51,10 @@ export const attendeeEventBackLink = cn(
 export function attendeeEventHeroArt(tone: string) {
   const toneBg =
     tone === 'green'
-      ? 'bg-[#13504b] after:border-[#82d6b3]'
+      ? 'bg-[color-mix(in_srgb,var(--color-admit)_85%,var(--color-ink))] after:border-[color-mix(in_srgb,var(--color-admit)_55%,var(--color-paper))]'
       : tone === 'gold'
-        ? 'bg-[#6e451d] after:border-[#eac786]'
-        : 'bg-[#182941] after:border-[#f26583]';
+        ? 'bg-[color-mix(in_srgb,var(--color-unknown)_90%,var(--color-ink))] after:border-[color-mix(in_srgb,var(--color-unknown)_45%,var(--color-paper))]'
+        : 'bg-[color-mix(in_srgb,var(--color-ink)_92%,var(--color-focus))] after:border-[color-mix(in_srgb,var(--color-signal)_75%,var(--color-paper))]';
   return cn(
     'relative flex min-h-[clamp(200px,32vw,280px)] items-end overflow-hidden rounded-2xl',
     'animate-in fade-in duration-500 fill-mode-both motion-reduce:animate-none',
@@ -51,7 +75,7 @@ export const attendeeEventHeroTitle = cn(
 
 export const attendeeEventHeroMeta = cn(
   'm-0 mt-3 text-[clamp(0.92rem,2.2vw,1.05rem)] font-semibold leading-[1.45]',
-  'text-[color-mix(in_srgb,#fff_88%,var(--color-paper))] [&_time]:text-inherit',
+  'text-[color-mix(in_srgb,var(--color-paper)_88%,white)] [&_time]:text-inherit',
 );
 
 export const attendeeEventHeroSep = 'mx-[0.35em] opacity-85';
@@ -88,7 +112,7 @@ export const attendeeEventMuted = 'text-muted';
 
 export const attendeeEventSidebox = cn(
   'self-start rounded-2xl border border-[color-mix(in_srgb,var(--color-signal)_22%,var(--color-line))] p-6 max-md:p-5',
-  'bg-gradient-to-br from-white from-0% via-[#fff7f9] via-[48%] to-white to-100%',
+  'bg-gradient-to-br from-white from-0% via-[color-mix(in_srgb,var(--color-signal)_6%,white)] via-[48%] to-white to-100%',
   'shadow-[0_0_0_1px_color-mix(in_srgb,var(--color-signal)_8%,transparent),var(--shadow-md)]',
   'min-[900px]:sticky min-[900px]:top-[5.75rem]',
   '[&_h2]:m-0 [&_h2]:mb-2.5 [&_h2]:font-display [&_h2]:text-[1.15rem] [&_h2]:tracking-[-0.02em]',
@@ -99,7 +123,7 @@ export const attendeeEventSideboxLead =
 
 export const attendeeEventSideboxCta = cn(
   'mt-1 flex min-h-12 w-full justify-center rounded-md border-transparent',
-  'bg-gradient-to-br from-signal from-0% to-[color-mix(in_srgb,var(--color-signal)_82%,#be123c)] to-100%',
+  'bg-gradient-to-br from-signal from-0% to-[color-mix(in_srgb,var(--color-signal)_88%,var(--color-ink))] to-100%',
   'text-paper shadow-[0_10px_28px_color-mix(in_srgb,var(--color-signal)_28%,transparent)]',
 );
 
@@ -132,13 +156,13 @@ export const attendeeTicketDetailCard = cn(
 );
 
 export const attendeeTicketCardHead =
-  'border-b border-dashed border-[#cbd5e1] bg-gradient-to-b from-[#f8fafc] to-white px-5 py-4';
+  'border-b border-dashed border-[color-mix(in_srgb,var(--color-line)_85%,var(--color-muted))] bg-gradient-to-b from-[color-mix(in_srgb,var(--color-paper)_96%,white)] to-white px-5 py-4';
 
 export const attendeeTicketCardBody = 'grid gap-4 p-5';
 
 export const attendeeTicketQrPanel = cn(
-  'm-0 rounded-md border border-line bg-gradient-to-b from-white to-[#f8fafc] px-5 py-6 text-center',
-  'shadow-[inset_0_0_0_4px_#fff,inset_0_0_0_5px_color-mix(in_srgb,var(--color-line)_80%,transparent)]',
+  'm-0 rounded-md border border-line bg-gradient-to-b from-white to-[color-mix(in_srgb,var(--color-paper)_96%,white)] px-5 py-6 text-center',
+  'shadow-[inset_0_0_0_4px_white,inset_0_0_0_5px_color-mix(in_srgb,var(--color-line)_80%,transparent)]',
   '[&_.ticket-qr]:mx-auto',
 );
 
@@ -158,13 +182,13 @@ export const attendeeTicketNoticeBase = 'my-4 border-2 px-5 py-4';
 
 export const attendeeTicketNoticeError = cn(
   attendeeTicketNoticeBase,
-  'border-[color-mix(in_srgb,#8a1f1f_55%,transparent)] bg-[#f8e8e8] text-[#8a1f1f]',
+  'border-[color-mix(in_srgb,var(--color-destructive)_55%,transparent)] bg-[color-mix(in_srgb,var(--color-destructive)_12%,var(--color-paper))] text-destructive',
   '[&_p]:mb-0',
 );
 
 export const attendeeTicketNoticeUnknown = cn(
   attendeeTicketNoticeBase,
-  'border-[#4a4a4a] bg-[#ececec] text-[#2a2a2a]',
+  'border-[color-mix(in_srgb,var(--color-ink)_55%,var(--color-muted))] bg-[color-mix(in_srgb,var(--color-paper)_88%,var(--color-ink))] text-[color-mix(in_srgb,var(--color-ink)_88%,var(--color-muted))]',
   '[&_p]:mb-0',
 );
 
@@ -173,13 +197,22 @@ export const attendeeTicketStateTagBase =
 
 export function attendeeTicketStateTag(state: string): string {
   if (state === 'ACTIVE') {
-    return cn(attendeeTicketStateTagBase, 'bg-[#edf5ef] text-[#27744d]');
+    return cn(
+      attendeeTicketStateTagBase,
+      'bg-[color-mix(in_srgb,var(--color-admit)_12%,var(--color-paper))] text-admit',
+    );
   }
   if (state === 'USED' || state === 'CHECKED_IN') {
-    return cn(attendeeTicketStateTagBase, 'bg-[#eef2f7] text-[#4a5c73]');
+    return cn(
+      attendeeTicketStateTagBase,
+      'bg-[color-mix(in_srgb,var(--color-focus)_10%,var(--color-paper))] text-[color-mix(in_srgb,var(--color-ink)_45%,var(--color-muted))]',
+    );
   }
   if (state === 'REVOKED' || state === 'EXPIRED') {
-    return cn(attendeeTicketStateTagBase, 'bg-[#fdeef1] text-[#9f2840]');
+    return cn(
+      attendeeTicketStateTagBase,
+      'bg-[color-mix(in_srgb,var(--color-signal)_12%,var(--color-paper))] text-[color-mix(in_srgb,var(--color-destructive)_75%,var(--color-signal))]',
+    );
   }
   return attendeeTicketStateTagBase;
 }
@@ -217,7 +250,7 @@ export function attendeeWalletFilterChip(active: boolean) {
 }
 
 export const attendeeWalletFilterCount =
-  'text-[0.72rem] font-bold text-muted';
+  'text-[0.72rem] font-bold text-[color-mix(in_srgb,var(--color-ink)_70%,var(--color-muted))]';
 
 export const attendeeWalletTicketCard = cn(
   'relative flex flex-col overflow-visible rounded-2xl border border-line bg-white text-inherit no-underline shadow-sm',
@@ -235,7 +268,7 @@ export const attendeeWalletTicketCardDisabled = cn(
 );
 
 export const attendeeWalletTicketTop =
-  'border-b border-dashed border-[#cbd5e1] bg-gradient-to-b from-[#f8fafc] to-white px-5 py-[18px]';
+  'border-b border-dashed border-[color-mix(in_srgb,var(--color-line)_85%,var(--color-muted))] bg-gradient-to-b from-[color-mix(in_srgb,var(--color-paper)_96%,white)] to-white px-5 py-[18px]';
 
 export const attendeeWalletTicketHead =
   'flex items-center justify-between gap-3';
@@ -253,7 +286,7 @@ export const attendeeWalletTicketMeta = cn(
 );
 
 export const attendeeWalletTicketFoot = cn(
-  'flex min-h-12 items-center justify-between gap-3 border-t border-dashed border-[#cbd5e1] px-5 py-3.5 text-[0.8rem]',
+  'flex min-h-12 items-center justify-between gap-3 border-t border-dashed border-[color-mix(in_srgb,var(--color-line)_85%,var(--color-muted))] px-5 py-3.5 text-[0.8rem]',
 );
 
 export const attendeeWalletTicketCode = cn(
@@ -261,7 +294,7 @@ export const attendeeWalletTicketCode = cn(
 );
 
 export const attendeeWalletTicketCta = cn(
-  'text-[0.85rem] font-bold text-[color-mix(in_srgb,var(--color-focus)_88%,var(--color-ink))]',
+  'text-[0.85rem] font-bold text-[color-mix(in_srgb,var(--color-focus)_55%,var(--color-ink))]',
 );
 
 export const attendeeWalletTicketWarn =

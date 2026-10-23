@@ -66,6 +66,7 @@ export function WalletTicketCard({ ticket, tenantSlug }: Props) {
   if (!href) {
     return (
       <article
+        role="listitem"
         className={attendeeWalletTicketCardDisabled}
         data-testid={`wallet-ticket-${ticket.ticketId}`}
         aria-label={`${title} — chưa mở được liên kết vé`}
@@ -81,6 +82,7 @@ export function WalletTicketCard({ ticket, tenantSlug }: Props) {
   return (
     <Link
       href={href}
+      role="listitem"
       className={attendeeWalletTicketCard}
       data-testid={`wallet-ticket-${ticket.ticketId}`}
       aria-label={`Mở vé ${title}`}
