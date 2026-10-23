@@ -9,9 +9,17 @@ import {
   globalRedeemEntryEnabled,
   isTenantBoundRedeemQuery,
 } from '../../src/redeem/global-entry';
+import {
+  redeemFooterLinks,
+  redeemFormCard,
+  redeemGateCard,
+  redeemHeader,
+  redeemLead,
+  redeemNarrow,
+  redeemPageMain,
+} from '../../src/redeem/redeem-surface';
 import { RedeemAuthGate } from './redeem-auth-gate';
 import { RedeemForm } from './redeem-form';
-import styles from './redeem-surface.module.css';
 
 /** OIDC + redeem are runtime — never SSG the fail-closed branch. */
 export const dynamic = 'force-dynamic';
@@ -56,13 +64,13 @@ export default async function RedeemPage({ searchParams }: Props) {
   const signedIn = authState.authenticated;
 
   return (
-    <main id="main" className="lp-container shell redeem-page">
+    <main id="main" className={redeemPageMain}>
       <SiteNav />
 
-      <div className={styles.narrow}>
-        <header className={styles.header}>
+      <div className={redeemNarrow}>
+        <header className={redeemHeader}>
           <h1>Đổi mã lấy vé</h1>
-          <p className={styles.lead}>
+          <p className={redeemLead}>
             Một mã duy nhất. Không cần chọn sự kiện hay tổ chức.
           </p>
         </header>
@@ -88,7 +96,7 @@ export default async function RedeemPage({ searchParams }: Props) {
 
         {!configured ? (
           <aside
-            className={`notice auth-unconfigured state-error ${styles.gateCard}`}
+            className={`notice auth-unconfigured state-error ${redeemGateCard}`}
             role="status"
           >
             <h2>Cần đăng nhập</h2>
@@ -115,7 +123,7 @@ export default async function RedeemPage({ searchParams }: Props) {
         ) : !signedIn ? (
           <RedeemAuthGate loginHref={redeemLogin} />
         ) : (
-          <div className={styles.formCard}>
+          <div className={redeemFormCard}>
             <RedeemForm
               key={`${globalEntry ? 'global' : ''}:${params.tenantId ?? ''}:${params.eventId ?? ''}:${params.tenantSlug ?? ''}:${params.eventSlug ?? ''}`}
               productChrome
@@ -129,7 +137,7 @@ export default async function RedeemPage({ searchParams }: Props) {
           </div>
         )}
 
-        <p className={styles.footerLinks}>
+        <p className={redeemFooterLinks}>
           <Link href="/">← Trang chủ</Link>
         </p>
       </div>
