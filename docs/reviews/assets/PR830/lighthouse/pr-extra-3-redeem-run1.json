@@ -1,0 +1,15 @@
+{
+  "label": "pr-extra-3",
+  "route": {
+    "id": "redeem",
+    "path": "/redeem"
+  },
+  "run": 1,
+  "lighthouse": "13.5.0",
+  "scores": {
+    "performance": 84,
+    "accessibility": 100,
+    "bestPractices": 96,
+    "seo": 63
+  }
+}
