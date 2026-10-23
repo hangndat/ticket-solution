@@ -1,0 +1,2 @@
+{"type":"token_count","last_token_usage":{"input_tokens":100,"cached_input_tokens":40,"output_tokens":10,"reasoning_output_tokens":5}}
+{"type":"token_count","total_token_usage":{"input_tokens":500,"cached_input_tokens":200,"output_tokens":80,"reasoning_output_tokens":20}}

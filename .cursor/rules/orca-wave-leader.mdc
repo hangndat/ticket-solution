@@ -3,7 +3,7 @@ description: "[coordinator-only] Mỗi wave coordinator gốc điều phối + f
 alwaysApply: false
 ---
 
-> **Coordinator-only:** leader **Read** khi kích hoạt (`orca-leader-activation.mdc`).
+> **Coordinator-only:** đọc khi lập wave; fan-out tối đa task ready theo `orca-parallel-workers.mdc`, caps và WIP.
 
 # Orca — Wave (1 leader / wave, fan-out tối đa)
 

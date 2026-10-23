@@ -11,6 +11,7 @@ Coordinator đọc trước khi giao review/fix; reviewer và fix-worker đọc 
 
 - Trước implementation: chốt AC, paths, ngoài phạm vi, checks bắt buộc và Decision/ADR áp dụng. Thay đổi AC cần quyết định của đúng owner; không thêm yêu cầu ngầm qua review.
 - Trước review: worker bàn giao exact SHA, diff/phạm vi, checks + kết quả, evidence và hạn chế. Với fix, ghi từng finding ID đã xử lý và cách xác minh; không chỉ ghi “đã fix”.
+- Evidence-only/UI: probe journey đại diện trước batch UAT; kiểm manifest/provenance và scope bằng `scripts/agent-workflow-guard.mjs handoff` trước bàn giao. Probe lỗi thì chẩn đoán môi trường/auth/automation, không lặp chụp hoặc lặng lẽ sửa runtime. Xem [hướng dẫn](../../docs/agents/workflow-evidence-telemetry.md) khi áp dụng.
 - Coordinator gom findings DoD/security/CI trên cùng SHA trước khi giao một lượt sửa. Lỗi khẩn cấp có thể xử lý sớm nhưng phải ghi lý do và kiểm tra lại evidence bị ảnh hưởng.
 - Ưu tiên cùng reviewer qua các lượt khi session còn phù hợp; luôn độc lập với implementer. Nếu thay reviewer, bàn giao bảng findings, quyết định đã chốt, SHA và bộ đếm; không giữ worker rảnh chỉ để chờ lượt sau.
 
@@ -39,6 +40,7 @@ Review đầu tiên đưa feedback đầy đủ trong scope. Mỗi finding giữ
 - Mỗi SHA mới có kết luận mới ghi SHA cũ/mới, diff đã kiểm, findings còn lại, checks đã chạy và evidence tái sử dụng cùng lý do. Không gọi kết quả test SHA cũ là đã chạy trên SHA mới; không tự kế thừa PASS.
 - SHA, scope và evidence không đổi thì dùng kết luận hiện có; chỉ review lại khi có bằng chứng mới, gate hết hiệu lực hoặc phát hiện sai sót, kèm lý do.
 - Ưu tiên comment PR/Issue gắn exact SHA cho evidence. Nếu commit báo cáo trong `docs/reviews/*` làm đổi SHA: reviewer kiểm diff báo cáo, xác nhận không đổi hành vi/gate và ghi revalidation SHA mới bằng comment. Không tạo chuỗi commit chỉ để cập nhật SHA trong chính báo cáo. Docs về AC, policy, cấu hình hay hướng dẫn thực thi không mặc định là “chỉ evidence”.
+- Báo cáo canonical trên PR, Issue/Project chỉ link + thay đổi trạng thái; không copy nguyên review qua nhiều nơi. `scripts/agent-review-publish.mjs` mặc định read-only; chỉ `--apply` khi task authorize đăng GitHub.
 - Merge/rebase/conflict không tự miễn revalidation phần thay đổi; CI trên integrated commit vẫn bắt buộc theo DoD.
 
 ## 4. Giới hạn sửa và ngắt vòng lặp

@@ -39,7 +39,7 @@ docs/agents/
 | _(gộp `dod+ux` / `dod+sec` / `dod+sec+ux`)_ | [roles/reviewer-merged.md](./roles/reviewer-merged.md)     | Checklist một file; mapping gate → file role gốc                                                                                                      | Spec ghi `reviewer-merged.md` thay vì nhiều `reviewer-*.md`                            |
 | `launch-uat`                                | [roles/launch-uat.md](./roles/launch-uat.md)               | Hành trình thật trên production cho go/no-go launch                                                                                                   | Không thay `reviewer-dod`; catalog [`PROD-LAUNCH-UAT.md`](../plans/PROD-LAUNCH-UAT.md) |
 
-Agent runtime: luôn Cursor (`--agent cursor`), trừ khi user override rõ. Role **≠** agent vendor **≠** Cost tier **≠** Persona — xem `orca-agent-routing-core.mdc`.
+Agent runtime: Codex điều phối; Composer thực thi phần ít cần suy luận; Codex worker chọn lọc cho reasoning/review theo cost-catalog. Role **≠** agent vendor **≠** Cost tier **≠** Persona — xem `orca-agent-routing-core.mdc`.
 
 ## Persona roster (`--display-name` + `--task-title`)
 
@@ -143,6 +143,10 @@ Chi tiết spawn: [orca-agent-routing-coordinator.mdc](../../.cursor/rules/orca-
 Không spawn PD/BA để “làm luôn” code BE+web+iOS. Không reuse session implementer làm reviewer. **Không** spawn DoD/security/UI reviewer trùng checklist trên cùng PR/SHA; gộp session khi scope cho phép. Sửa UI nhỏ theo mẫu có sẵn giao thẳng `web`/`ios`, không spawn thêm PD/BA/architect nếu không có việc thuộc chuyên môn đó.
 
 ### 2. Task Spec tối thiểu (Wave C) + khối role
+
+Mẫu dùng khi dispatch: [Task Spec ngắn](templates/task-spec.md). Mẫu bàn giao: [báo cáo worker ngắn](templates/worker-report.md). Cách thu evidence và dùng lại context: [context-budget](context-budget.md#vận-hành-codex-coordinator--composer-workers). Đọc on-demand, không paste nguyên mẫu/tài liệu vào mọi prompt.
+
+Coordinator dùng [review.md](templates/review.md) một lần để soạn spec review đã điền (150–250 từ, initial/revalidate). Reviewer chỉ nhận spec + evidence links, đọc role/rules áp dụng; không phải đọc template trống hoặc hai mẫu trên. Một báo cáo/checks chung cho DoD/security/UI trên cùng PR/SHA, verdict riêng; coordinator chỉ bổ sung trạng thái/decision mới và link báo cáo, không chép lại.
 
 Ưu tiên spec ngắn — đủ AC/paths/Role/Persona/Cost tier/SHA; **không** paste nguyên `roles/*.md`.
 
@@ -278,7 +282,7 @@ Khối bổ sung khi giao Task Architect (điền cùng parent/scope/AC trong sp
 
 ### 5. Wave tối đa song song (ownership giữ nguyên)
 
-Coordinator / Epic planner **fan-out hết** Task ready trong một wave (concurrent soft caps + WIP cho phép — xem `orca-parallel-workers.mdc`). Chỉ xếp tuần tự khi có dependency artifact thật.
+Coordinator/planner fan-out hết task ready độc lập dưới caps/WIP (5 non-review + 3 reviewer). Một planner/Epic, không tạo dependency giả; scope task lẻ nhỏ có thể làm inline. Authority: `orca-parallel-workers.mdc`.
 
 ```text
 Wave rộng (ví dụ — spawn cùng lúc nếu unblocked):
@@ -296,8 +300,10 @@ Wave rộng (ví dụ — spawn cùng lúc nếu unblocked):
 | Nhiều reviewer trên **PR khác nhau**                            | Review trùng checklist trên **cùng** PR/SHA (gộp `dod` ± `ux` ± `sec`) |
 | Coding slice A ∥ review/fix slice B ∥ BA/PD                     | Chờ cả Story đóng mới mở Task ready Story khác                         |
 
-Cùng ownership slice: tối đa **một** feature coding Dispatch active (tránh conflict git). Soft cap: ≤**5** non-review live / Run; reviewer/fix không chiếm bucket feature. Parallel vẫn theo `orca-parallel-workers.mdc` + idle fill. WIP / `Chờ duyệt` đầy **hoặc** soft cap đầy → ưu tiên **song song** reviewer/fix trước feature mới.
+Cùng ownership slice: tối đa **một** feature coding Dispatch active (tránh conflict git). Soft cap: ≤**5** non-review live / Run, ≤**3** reviewer; fix CI hẹp không chiếm bucket feature. Parallel vẫn theo `orca-parallel-workers.mdc` + idle fill. WIP / `Chờ duyệt` đầy **hoặc** soft cap đầy → ưu tiên **song song** reviewer/fix trước feature mới.
 
 ## Upstream
+
+Workflow evidence/UAT, review canonical và đo token/cache/allowance: [hướng dẫn vận hành](workflow-evidence-telemetry.md), chỉ đọc khi áp dụng; không thêm vào context mặc định của mọi worker.
 
 Chi tiết license, SHA và mapping: [upstream/PROVENANCE.md](./upstream/PROVENANCE.md).
