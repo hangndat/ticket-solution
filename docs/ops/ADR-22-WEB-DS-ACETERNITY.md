@@ -150,7 +150,8 @@ Pipeline only: toolchain, token build, `components.json`, Motion provider **expo
 
 ## D-7 cutover — **Done: legacy removed** (Issue [#846](https://github.com/hangndat/ticket-solution/issues/846))
 
-- **SHA:** ghi trên PR #846 tại merge (tip branch trước merge: xem `git rev-parse HEAD` trên `hangndat/web-846-d7-cutover`).
+- **SHA:** `955839d8fb424f82df09cc7dddd7ea382a3f5082` (merge PR [#852](https://github.com/hangndat/ticket-solution/pull/852), Epic [#840](https://github.com/hangndat/ticket-solution/issues/840)).
+- **PR Epic #840:** [#847](https://github.com/hangndat/ticket-solution/pull/847), [#848](https://github.com/hangndat/ticket-solution/pull/848), [#849](https://github.com/hangndat/ticket-solution/pull/849), [#850](https://github.com/hangndat/ticket-solution/pull/850), [#851](https://github.com/hangndat/ticket-solution/pull/851), [#852](https://github.com/hangndat/ticket-solution/pull/852).
 - **Đã gỡ:** `apps/web/app/admin`, `app/platform`, `app/api/bff/admin/**`, `app/api/bff/platform/**`, `app/api/auth/platform/**`, `src/admin/**`, `src/platform/**` (helper dùng chung chuyển `src/bff/*`, `src/content/config-schema.ts`, …), `live-pulse-legacy.css`.
 - **Giữ:** redirect GET/HEAD `/admin`·`/platform` → `PORTAL_ORIGIN` (`src/portal/dual-run.ts`); legacy staff API → **410** (`src/portal/legacy-cutover.ts` + `proxy.ts`).
 - **Cascade CSS:** `@layer theme, base, components, utilities` (không còn `legacy`).
