@@ -62,9 +62,17 @@ import {
 import { loginHref } from '../../src/oidc/login-href';
 import { RedeemTermsConsent } from '../../src/redeem/redeem-terms-consent';
 import {
+  authButtonsRow,
+  introLead,
+  meResultPre,
   redeemCodeField,
+  redeemDevFormRoot,
+  redeemDevStatusClass,
+  redeemDevTicketCard,
   redeemErrorRing,
+  redeemFieldsGrid,
   redeemGlobalContext,
+  redeemMetaDetails,
   redeemOutcomeActions,
   redeemPrimaryActions,
   redeemProductErrorOutcome,
@@ -74,6 +82,8 @@ import {
   redeemSecondaryTools,
   redeemSuccessRing,
   redeemTicketCard,
+  redeemTicketListSection,
+  redeemVersionsGrid,
 } from '../../src/redeem/redeem-surface';
 import { liveRegionForStatus } from '../../src/ui/live-region';
 import { SurfaceState } from '../../src/ui/surface-state';
@@ -701,7 +711,7 @@ export function RedeemForm({
   const statusClass = useMemo(() => {
     if (!ux) return '';
     if (!productChrome) {
-      return `redeem-status redeem-status--${ux.kind}`;
+      return redeemDevStatusClass(ux.kind);
     }
     return redeemProductUxClass(ux.kind);
   }, [ux, productChrome]);
@@ -722,7 +732,7 @@ export function RedeemForm({
         ? 'Kiểm tra thông tin sự kiện, điền biểu mẫu và đồng ý điều khoản trước khi đổi vé.'
         : 'Nhập mã và đồng ý điều khoản của sự kiện. Trạng thái chờ duyệt chưa phải vé.';
 
-  const formClassName = productChrome ? redeemProductFormRoot : 'redeem-form';
+  const formClassName = productChrome ? redeemProductFormRoot : redeemDevFormRoot;
 
   const termsEventHref =
     tenantSlug.trim() && eventSlug.trim()
@@ -771,7 +781,7 @@ export function RedeemForm({
           />
         ) : null}
         {!productChrome ? (
-          <p className="intro">
+          <p className={introLead}>
             {globalEntry
               ? globalPhase === 'enter-code'
                 ? 'Nhập mã đổi vé — hệ thống sẽ xác định sự kiện và loại vé. Sau đó điền biểu mẫu và đồng ý điều khoản.'
@@ -780,7 +790,7 @@ export function RedeemForm({
           </p>
         ) : null}
 
-        <div className="redeem-fields">
+        <div className={redeemFieldsGrid}>
           {singleCodeFlow && globalPhase === 'confirm' && globalContext ? (
             <section
               className={redeemGlobalContext}
@@ -818,7 +828,7 @@ export function RedeemForm({
               {productChrome ? (
                 <details className={redeemSecondaryTools}>
                   <summary>Tùy chọn nâng cao (đường dẫn / mã kỹ thuật)</summary>
-                  <div className="redeem-fields">
+                  <div className={redeemFieldsGrid}>
                     <label>
                       Mã tổ chức
                       <input
@@ -867,7 +877,7 @@ export function RedeemForm({
                         </span>
                       ) : null}
                     </label>
-                    <div className="redeem-versions">
+                    <div className={redeemVersionsGrid}>
                       <label>
                         Đường dẫn tổ chức
                         <input
@@ -949,7 +959,7 @@ export function RedeemForm({
                       </span>
                     ) : null}
                   </label>
-                  <div className="redeem-versions">
+                  <div className={redeemVersionsGrid}>
                     <label>
                       Đường dẫn tổ chức
                       <input
@@ -1087,7 +1097,7 @@ export function RedeemForm({
               }}
             />
           ) : singleCodeFlow && globalPhase === 'enter-code' ? null : termsVersion ? (
-            <p className="intro" data-testid="redeem-schema-terms-only">
+            <p className={introLead} data-testid="redeem-schema-terms-only">
               Sự kiện này không có trường biểu mẫu — nhập mã và đồng ý điều khoản bên
               dưới để đổi vé.
             </p>
@@ -1127,7 +1137,7 @@ export function RedeemForm({
         </div>
 
         <div
-          className={productChrome ? redeemPrimaryActions : 'auth-buttons'}
+          className={productChrome ? redeemPrimaryActions : authButtonsRow}
         >
           {singleCodeFlow && globalPhase === 'enter-code' ? (
             <Button
@@ -1214,7 +1224,7 @@ export function RedeemForm({
             </p>
           ) : null}
           {ux.kind === 'auth' ? (
-            <p className="auth-buttons">
+            <p className={authButtonsRow}>
               <Button asChild variant="brand">
                 <a href={REDEEM_LOGIN_HREF}>Đăng nhập</a>
               </Button>
@@ -1261,7 +1271,7 @@ export function RedeemForm({
             </p>
           ) : null}
           {ux.kind === 'success' ? (
-            <p className="auth-buttons">
+            <p className={authButtonsRow}>
               <Button asChild variant="brand">
                 <Link href="/wallet">Xem vé của tôi</Link>
               </Button>
@@ -1273,7 +1283,7 @@ export function RedeemForm({
             ux.kind === 'closed' ||
             ux.kind === 'invalid') &&
           productChrome ? (
-            <p className="auth-buttons">
+            <p className={authButtonsRow}>
               <Button asChild variant="secondary">
                 <Link href="/">Về danh sách sự kiện</Link>
               </Button>
@@ -1281,7 +1291,7 @@ export function RedeemForm({
           ) : null}
           {!productChrome &&
           (idempotencyKey || decision?.kind === 'pending') && (
-            <details className="redeem-meta">
+            <details className={redeemMetaDetails}>
               <summary>Chi tiết kỹ thuật</summary>
               {idempotencyKey ? (
                 <p>
@@ -1300,7 +1310,7 @@ export function RedeemForm({
 
       {ticket?.ticketId ? (
         <section
-          className={productChrome ? redeemTicketCard : 'redeem-ticket'}
+          className={productChrome ? redeemTicketCard : redeemDevTicketCard}
           aria-labelledby="ticket-title"
           data-testid="redeem-ticket-card"
         >
@@ -1325,7 +1335,7 @@ export function RedeemForm({
       ) : null}
 
       {!productChrome && tickets?.tickets?.length ? (
-        <section className="redeem-ticket-list" aria-labelledby="tickets-title">
+        <section className={redeemTicketListSection} aria-labelledby="tickets-title">
           <h3 id="tickets-title">Vé của tôi</h3>
           <ul>
             {tickets.tickets.map((t) => (
@@ -1338,10 +1348,10 @@ export function RedeemForm({
       ) : null}
 
       {raw && !productChrome ? (
-        <details className="redeem-meta">
+        <details className={redeemMetaDetails}>
           <summary>Chi tiết kỹ thuật (đóng mặc định)</summary>
           <pre
-            className="me-result"
+            className={meResultPre}
             tabIndex={0}
             aria-label="Phản hồi máy chủ dạng JSON — chỉ dành cho hỗ trợ kỹ thuật"
           >

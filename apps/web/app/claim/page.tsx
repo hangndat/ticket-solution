@@ -1,5 +1,10 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import {
+  claimInviteHeader,
+  claimInviteIntro,
+  guestPageMain,
+} from '../../src/guest/guest-flow-surface';
 import { SiteNav } from '../../src/site-chrome';
 import { GuestClaimForm } from './claim-form';
 
@@ -15,11 +20,11 @@ export const metadata: Metadata = {
 
 export default function ClaimPage() {
   return (
-    <main id="main" className="lp-container shell redeem-page claim-page">
+    <main id="main" className={guestPageMain}>
       <SiteNav />
-      <header className="claim-header">
+      <header className={claimInviteHeader}>
         <h1>Nhận lời mời sự kiện</h1>
-        <p className="intro">
+        <p className={claimInviteIntro}>
           Đây là lời mời khách nhận vé — khác mời thành viên tổ chức. Mở liên
           kết mời, đăng nhập nếu cần, rồi hoàn tất biểu mẫu. Email đã xác minh
           phải khớp lời mời; không tự tạo tài khoản mới.

@@ -1,0 +1,15 @@
+{
+  "sha": "ca18f38e3d8198fed995a35eb23251aa4d80f4e2",
+  "phase": "after",
+  "md5Count": 16,
+  "skipped": [
+    {
+      "id": "error-boundary",
+      "reason": "Next.js app/error.tsx requires a runtime render throw; no stable public route in fixture stack (documented per DoD)."
+    },
+    {
+      "id": "invite-accept-success",
+      "reason": "Pending invite accept UI matches invite-already-used outcome chrome in headless capture; live accept verified via createMembershipInvite seed + fe-uat-stack check-ui."
+    }
+  ]
+}

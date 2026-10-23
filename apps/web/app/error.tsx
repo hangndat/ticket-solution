@@ -1,14 +1,19 @@
 'use client';
 import { Button } from '@ticket/ui';
 import Link from 'next/link';
+import {
+  eyebrowKicker,
+  routeShellMain,
+} from '../src/guest/guest-flow-surface';
+import { introLead } from '../src/redeem/redeem-surface';
 import { SurfaceState } from '../src/ui/surface-state';
 
 export default function ErrorBoundary({ reset }: { reset: () => void }) {
   return (
-    <main id="main" className="lp-container shell">
-      <p className="eyebrow">Lỗi</p>
+    <main id="main" className={routeShellMain}>
+      <p className={eyebrowKicker}>Lỗi</p>
       <h1>Không tải được trang này.</h1>
-      <p className="intro">
+      <p className={introLead}>
         Thử lại. Không có thao tác vé nào được thực hiện từ màn hình này.
       </p>
       <SurfaceState
