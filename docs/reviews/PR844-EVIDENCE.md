@@ -4,8 +4,8 @@
 | --- | --- |
 | Issue | [#844](https://github.com/hangndat/ticket-solution/issues/844) |
 | Branch | `hangndat/portal-844-platform-mutate` |
-| Evidence SHA (code at UAT attempt) | `6f700d9e278bd346cdb56326304d6385c6701f41` |
-| UAT run | 2026-10-23 — worker `task_d93a9ab9dd18` |
+| Evidence SHA (code under test) | _tip sau push lượt sửa 1/2_ |
+| UAT run | 2026-10-23 — worker `task_dfb2fde50e1f` |
 
 ## Parity (G-791-2/3) — `apps/web` → `apps/portal`
 
@@ -15,7 +15,7 @@
 | GET tenant detail | `GET …/tenants/[tenantId]` | `GET …/tenants/[tenantId]` | Tab **Manage** |
 | POST suspend/activate | `POST …/status` | `POST …/status` | **Manage** + `Modal.confirm` |
 | PUT limits/flags | `PUT …/limits` | `PUT …/limits` | **Manage** form |
-| POST support grant create | `POST /api/bff/platform/support-grants` | `POST /api/bff/platform/support-grants` | Tab **Grant create** |
+| POST support grant create | `POST /api/bff/platform/support-grants` | `POST …/support-grants` | Tab **Grant create** + `Modal.confirm` (F01) |
 | GET tenants list (existing) | GET | GET | Tab **Tenants** |
 | Revoke grant (portal-only) | — | POST `…/revoke` | Tab **Revoke** |
 
@@ -30,35 +30,33 @@ cd apps/portal && pnpm test && pnpm typecheck && pnpm lint && pnpm build
 **Stack (worker run):**
 
 ```bash
-COMPOSE_PROJECT_NAME=pr844-uat docker compose up -d   # :55432 PG, :8080 Keycloak
-./scripts/platform-keycloak-apply-realm.sh            # PLATFORM_KEYCLOAK_APPLY_PASS
-./scripts/fe-uat-stack.sh bootstrap                   # after clearing staff CONFIGURE_TOTP once
+COMPOSE_PROJECT_NAME=pr844-uat docker compose up -d
+./scripts/platform-keycloak-apply-realm.sh
+./scripts/fe-uat-stack.sh bootstrap
+# bootstrap_platform_operator(staff user id) — SQL
 # API :3001, portal :3013 (next start), WEB_UAT_CHANNEL=chrome
 node apps/portal/scripts/pr844-platform-uat.mjs
 ```
 
-**Keycloak / MFA progress**
+### Lượt sửa 1/2 — script OTP (F01–F03 code)
 
-| Step | Result |
+| Hạng mục | Kết quả |
 | --- | --- |
-| `platform-keycloak-apply-realm.sh` | **PASS** — `ticket-platform-web` bound `vemoki otp browser` |
-| `platform-keycloak-assurance-smoke.sh` | **FAIL** — `acr want 2 got 1` (same as prior) |
-| CONFIGURE_TOTP enroll (Auth Code + `totpSecret` form) | **PASS** — completes redirect to `/api/auth/platform/callback` |
-| Second login OTP (`name=otp"`) after enroll | **FAIL** — `Invalid authenticator code` (automated TOTP; enroll uses UTF-8 HMAC of `totpSecret` field per `platform-keycloak-mfa-live-proof.mjs`, login OTP does not accept same helper) |
-| Token after enroll-only | `acr=1`, `aud=ticket-platform-api` — portal rejects when `PLATFORM_OIDC_REQUIRED_ACR=2` |
-| `bootstrap_platform_operator(staff user id)` | **PASS** (SQL, admin DB) |
-| Full `pr844-platform-uat.mjs` screenshots + axe | **BLOCKED** — login does not reach `/platform` tabs |
+| F01 `Modal.confirm` trước tạo grant + i18n | **Done** (code) |
+| F02 CTA/placeholder `t()` | **Done** (code) |
+| F03 test BFF mutate routes (CSRF/422/proxy mock) | **Done** — `tests/platform-mutate-bff-routes.test.ts` |
+| `pr844-platform-uat.mjs` — `enrolledTotpSecret` từ enroll + cache `/tmp/pr844-platform-totp.secret` + `waitForNextTotpWindow` | **Done** (code) |
+| Login Playwright sau reset `CONFIGURE_TOTP` | OTP nộp OK (không còn `Invalid authenticator code`) |
+| Portal session | Redirect `/platform?error=acr` — `PLATFORM_OIDC_REQUIRED_ACR=2` từ chối token |
+| `platform-keycloak-mfa-live-proof.mjs` trên `:8080` | **FAIL** — `acr want 2 got 1` (cùng stack) |
+| Screenshots mutate @390/@1280 + axe | **BLOCKED** — không vào tabs Operator |
 
-**Logs (representative)**
+**Log (không secret):**
 
 ```text
-./scripts/platform-keycloak-assurance-smoke.sh → acr want 2 got 1
-node apps/portal/scripts/pr844-platform-uat.mjs → platform login stuck at Keycloak OTP or getByRole('tab', { name: 'Tenants' }) timeout
-Keycloak OTP page: One-time code → Invalid authenticator code (fetch + Playwright, staff@example.com)
+pr844-platform-uat.mjs → timeout getByRole('tab', { name: 'Tenants' }) (session không đạt acr=2)
+Debug login: final URL http://127.0.0.1:3013/platform?error=acr sau bước OTP (enrolled secret length 20, cache file mode 0600)
+D5_PLATFORM_OIDC_ISSUER=http://127.0.0.1:8080/realms/ticket node scripts/lib/platform-keycloak-mfa-live-proof.mjs → acr want 2 got 1
 ```
 
-**Partial artifact:** `docs/reviews/assets/PR844/00-platform-unsigned.png`
-
-**Script change (tip):** `pr844-platform-uat.mjs` — Playwright login via `WEB_UAT_CHANNEL=chrome` (fetch cookie path retained for enroll helper).
-
-**Follow-up:** Fix automated OTP after CONFIGURE_TOTP (RFC6238 / Keycloak login OTP vs enroll) or document coordinator-approved UAT path; re-bind flow; re-run UAT with distinct PNGs @390/@1280 + axe serious/critical = 0.
+**Chặn còn lại:** Keycloak stack `pr844-uat` chưa phát `acr=2` sau MFA (không chỉ lỗi đọc `totpSecret` trên form OTP). Cần coordinator/infra chốt realm hoặc task-stack KC đã verify acr trước khi re-run UAT evidence.

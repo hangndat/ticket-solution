@@ -84,27 +84,27 @@ export function PlatformProvisionPanel({ onTenantCreated }: Props) {
     <Space direction="vertical" style={{ width: '100%' }} size="middle">
       <Typography.Text type="secondary">{t('platform.mutate.provisionTitle')}</Typography.Text>
       <Input
-        placeholder="slug"
+        placeholder={t('platform.mutate.phSlug')}
         value={slug}
         onChange={(e) => setSlug(e.target.value)}
         spellCheck={false}
         data-testid="platform-provision-slug"
       />
       <Input
-        placeholder="name"
+        placeholder={t('platform.mutate.phName')}
         value={name}
         onChange={(e) => setName(e.target.value)}
         data-testid="platform-provision-name"
       />
       <Input
-        placeholder="owner email"
+        placeholder={t('platform.mutate.phOwnerEmail')}
         value={ownerEmail}
         onChange={(e) => setOwnerEmail(e.target.value)}
         autoComplete="off"
         data-testid="platform-provision-owner-email"
       />
       <Input
-        placeholder="defaultTimezone"
+        placeholder={t('platform.mutate.phTimezone')}
         value={timezone}
         onChange={(e) => setTimezone(e.target.value)}
         spellCheck={false}
@@ -116,7 +116,7 @@ export function PlatformProvisionPanel({ onTenantCreated }: Props) {
         onClick={() => void submit()}
         data-testid="platform-provision-submit"
       >
-        Create tenant
+        {t('platform.mutate.createTenant')}
       </Button>
       {view?.kind === 'ok' ? (
         <Alert
@@ -311,11 +311,11 @@ export function PlatformManagePanel({ initialManageTenantId = '' }: Props) {
           onClick={() => void loadDetail()}
           data-testid="platform-manage-load"
         >
-          Load detail
+          {t('platform.mutate.loadDetail')}
         </Button>
       </Space>
       <Input
-        placeholder="reason (status/limits)"
+        placeholder={t('platform.mutate.phReasonStatusLimits')}
         value={reason}
         onChange={(e) => setReason(e.target.value)}
         maxLength={500}
@@ -373,13 +373,13 @@ export function PlatformManagePanel({ initialManageTenantId = '' }: Props) {
               checked={importsEnabled}
               onChange={(e) => setImportsEnabled(e.target.checked)}
             >
-              importsEnabled
+              {t('platform.mutate.importsEnabled')}
             </Checkbox>
             <Checkbox
               checked={exportsEnabled}
               onChange={(e) => setExportsEnabled(e.target.checked)}
             >
-              exportsEnabled
+              {t('platform.mutate.exportsEnabled')}
             </Checkbox>
           </Form>
           <Space wrap>
@@ -390,7 +390,7 @@ export function PlatformManagePanel({ initialManageTenantId = '' }: Props) {
               onClick={() => confirmStatus('SUSPENDED')}
               data-testid="platform-manage-suspend"
             >
-              Suspend
+              {t('platform.mutate.suspend')}
             </Button>
             <Button
               loading={mutateBusy}
@@ -398,7 +398,7 @@ export function PlatformManagePanel({ initialManageTenantId = '' }: Props) {
               onClick={() => confirmStatus('ACTIVE')}
               data-testid="platform-manage-activate"
             >
-              Activate
+              {t('platform.mutate.activate')}
             </Button>
             <Button
               type="primary"
@@ -460,27 +460,34 @@ export function PlatformGrantCreatePanel() {
     setBusy(false);
   }, [tenantId, eventId, grantReason, expiresAt, locale]);
 
+  const confirmGrant = () => {
+    Modal.confirm({
+      title: t('platform.mutate.confirmGrant'),
+      onOk: () => submit(),
+    });
+  };
+
   return (
     <Space direction="vertical" style={{ width: '100%' }} size="middle">
       <Typography.Text type="secondary">
         {t('platform.mutate.grantCreateTitle')}
       </Typography.Text>
       <Input
-        placeholder="tenantId"
+        placeholder={t('platform.mutate.phTenantId')}
         value={tenantId}
         onChange={(e) => setTenantId(e.target.value)}
         spellCheck={false}
         data-testid="platform-grant-create-tenant"
       />
       <Input
-        placeholder="eventId"
+        placeholder={t('platform.mutate.phEventId')}
         value={eventId}
         onChange={(e) => setEventId(e.target.value)}
         spellCheck={false}
         data-testid="platform-grant-create-event"
       />
       <Input.TextArea
-        placeholder="reason"
+        placeholder={t('platform.mutate.phReason')}
         value={grantReason}
         onChange={(e) => setGrantReason(e.target.value)}
         maxLength={500}
@@ -488,7 +495,7 @@ export function PlatformGrantCreatePanel() {
         data-testid="platform-grant-create-reason"
       />
       <Input
-        placeholder="expiresAt ISO (empty = +1h)"
+        placeholder={t('platform.mutate.phExpiresAt')}
         value={expiresAt}
         onChange={(e) => setExpiresAt(e.target.value)}
         spellCheck={false}
@@ -497,10 +504,10 @@ export function PlatformGrantCreatePanel() {
       <Button
         type="primary"
         loading={busy}
-        onClick={() => void submit()}
+        onClick={() => confirmGrant()}
         data-testid="platform-grant-create-submit"
       >
-        Create grant
+        {t('platform.mutate.createGrant')}
       </Button>
       {view?.kind === 'ok' ? (
         <Alert
