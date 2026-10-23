@@ -1,0 +1,15 @@
+{
+  "label": "pr-tip-1319c2966761",
+  "route": {
+    "id": "event-detail",
+    "path": "/t/mfest-demo/events/mfest"
+  },
+  "run": 2,
+  "lighthouse": "13.5.0",
+  "scores": {
+    "performance": 77,
+    "accessibility": 100,
+    "bestPractices": 96,
+    "seo": 54
+  }
+}

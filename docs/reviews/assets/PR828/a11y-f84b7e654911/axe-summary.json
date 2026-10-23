@@ -1,0 +1,166 @@
+{
+  "sha": "f84b7e6549117a38e55fcbd75c19d971b3214c5f",
+  "reports": [
+    {
+      "route": "event-detail",
+      "motion": "default",
+      "viewport": "390",
+      "path": "/t/mfest-demo/events/mfest",
+      "violationCount": 0,
+      "seriousCritical": []
+    },
+    {
+      "route": "ticket-need-login",
+      "motion": "default",
+      "viewport": "390",
+      "path": "/t/uat-device/tickets/97f77680-4d65-4b6d-baf3-b3f699a006a6",
+      "violationCount": 0,
+      "seriousCritical": []
+    },
+    {
+      "route": "wallet-need-login",
+      "motion": "default",
+      "viewport": "390",
+      "path": "/wallet",
+      "violationCount": 0,
+      "seriousCritical": []
+    },
+    {
+      "route": "event-detail",
+      "motion": "default",
+      "viewport": "1280",
+      "path": "/t/mfest-demo/events/mfest",
+      "violationCount": 0,
+      "seriousCritical": []
+    },
+    {
+      "route": "ticket-need-login",
+      "motion": "default",
+      "viewport": "1280",
+      "path": "/t/uat-device/tickets/97f77680-4d65-4b6d-baf3-b3f699a006a6",
+      "violationCount": 0,
+      "seriousCritical": []
+    },
+    {
+      "route": "wallet-need-login",
+      "motion": "default",
+      "viewport": "1280",
+      "path": "/wallet",
+      "violationCount": 0,
+      "seriousCritical": []
+    },
+    {
+      "route": "event-detail",
+      "motion": "reduce",
+      "viewport": "390",
+      "path": "/t/mfest-demo/events/mfest",
+      "violationCount": 0,
+      "seriousCritical": []
+    },
+    {
+      "route": "ticket-need-login",
+      "motion": "reduce",
+      "viewport": "390",
+      "path": "/t/uat-device/tickets/97f77680-4d65-4b6d-baf3-b3f699a006a6",
+      "violationCount": 0,
+      "seriousCritical": []
+    },
+    {
+      "route": "wallet-need-login",
+      "motion": "reduce",
+      "viewport": "390",
+      "path": "/wallet",
+      "violationCount": 0,
+      "seriousCritical": []
+    },
+    {
+      "route": "event-detail",
+      "motion": "reduce",
+      "viewport": "1280",
+      "path": "/t/mfest-demo/events/mfest",
+      "violationCount": 0,
+      "seriousCritical": []
+    },
+    {
+      "route": "ticket-need-login",
+      "motion": "reduce",
+      "viewport": "1280",
+      "path": "/t/uat-device/tickets/97f77680-4d65-4b6d-baf3-b3f699a006a6",
+      "violationCount": 0,
+      "seriousCritical": []
+    },
+    {
+      "route": "wallet-need-login",
+      "motion": "reduce",
+      "viewport": "1280",
+      "path": "/wallet",
+      "violationCount": 0,
+      "seriousCritical": []
+    },
+    {
+      "route": "wallet-authed",
+      "motion": "default",
+      "viewport": "390",
+      "path": "/wallet",
+      "violationCount": 0,
+      "seriousCritical": []
+    },
+    {
+      "route": "wallet-authed",
+      "motion": "default",
+      "viewport": "1280",
+      "path": "/wallet",
+      "violationCount": 0,
+      "seriousCritical": []
+    },
+    {
+      "route": "wallet-authed",
+      "motion": "reduce",
+      "viewport": "390",
+      "path": "/wallet",
+      "violationCount": 0,
+      "seriousCritical": []
+    },
+    {
+      "route": "wallet-authed",
+      "motion": "reduce",
+      "viewport": "1280",
+      "path": "/wallet",
+      "violationCount": 0,
+      "seriousCritical": []
+    },
+    {
+      "route": "ticket-ready",
+      "motion": "default",
+      "viewport": "390",
+      "path": "/t/mfest-demo/tickets/82dda10f-14f9-4774-80a2-de1111272d5b?tenantId=d9d9f001-0001-4000-8000-000000000001",
+      "violationCount": 0,
+      "seriousCritical": []
+    },
+    {
+      "route": "ticket-ready",
+      "motion": "default",
+      "viewport": "1280",
+      "path": "/t/mfest-demo/tickets/82dda10f-14f9-4774-80a2-de1111272d5b?tenantId=d9d9f001-0001-4000-8000-000000000001",
+      "violationCount": 0,
+      "seriousCritical": []
+    },
+    {
+      "route": "ticket-ready",
+      "motion": "reduce",
+      "viewport": "390",
+      "path": "/t/mfest-demo/tickets/82dda10f-14f9-4774-80a2-de1111272d5b?tenantId=d9d9f001-0001-4000-8000-000000000001",
+      "violationCount": 0,
+      "seriousCritical": []
+    },
+    {
+      "route": "ticket-ready",
+      "motion": "reduce",
+      "viewport": "1280",
+      "path": "/t/mfest-demo/tickets/82dda10f-14f9-4774-80a2-de1111272d5b?tenantId=d9d9f001-0001-4000-8000-000000000001",
+      "violationCount": 0,
+      "seriousCritical": []
+    }
+  ],
+  "seriousTotal": 0
+}
