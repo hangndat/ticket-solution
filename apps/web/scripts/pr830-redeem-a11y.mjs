@@ -72,32 +72,31 @@ async function runAxe(page) {
 }
 
 async function loginAttendee(page, base) {
-  const user = process.env.WEB_UAT_USER ?? 'attendee@example.com';
-  const pass = process.env.WEB_UAT_PASS ?? 'attendee-demo';
-  await page.goto(`${base}/api/auth/login?return=/redeem`, {
+  const user = process.env.WEB_UAT_USER ?? process.env.FE_UAT_USER ?? 'attendee@example.com';
+  const pass = process.env.WEB_UAT_PASS ?? process.env.FE_UAT_PASS ?? 'attendee-demo';
+  await page.goto(`${base}/api/auth/login?return=${encodeURIComponent('/redeem')}`, {
     waitUntil: 'domcontentloaded',
   });
   await page.waitForURL(/openid-connect\/auth|login-actions/, { timeout: 45_000 });
-  const userField = page
-    .locator('#username')
-    .or(page.getByLabel(/username|email/i))
-    .first();
-  await userField.waitFor({ state: 'visible', timeout: 20_000 });
-  await userField.fill(user);
-  await page.locator('#password').or(page.getByLabel(/password/i)).first().fill(pass);
-  await page
-    .locator('#kc-login')
-    .or(page.getByRole('button', { name: /sign in|log in/i }))
-    .first()
-    .click();
+  await page.locator('#username').first().fill(user);
+  await page.locator('#password').first().fill(pass);
+  await page.locator('#kc-login').first().click();
   const baseUrl = new URL(base);
   await page.waitForURL(
     (url) =>
       (url.hostname === 'localhost' || url.hostname === '127.0.0.1') &&
       url.port === baseUrl.port &&
-      url.pathname.startsWith('/redeem'),
+      !url.pathname.startsWith('/api/auth/login'),
     { timeout: 60_000 },
   );
+  const landed = new URL(page.url());
+  if (landed.searchParams.get('notice') === 'auth_failed') {
+    die('login failed (/?notice=auth_failed) — check OIDC env and web build NEXT_PUBLIC_SINGLE_CODE_RESOLVE');
+  }
+  if (!page.url().includes('/redeem')) {
+    await page.goto(`${base}/redeem`, { waitUntil: 'domcontentloaded' });
+  }
+  await page.getByTestId('redeem-global-code').waitFor({ state: 'visible', timeout: 30_000 });
 }
 
 const STATES = [
@@ -127,9 +126,7 @@ const STATES = [
     ready: '.field-error, [data-testid^="redeem-ux-"]',
     setup: async (page, base) => {
       await loginAttendee(page, base);
-      await page.getByTestId('redeem-global-resolve').click({ timeout: 10_000 }).catch(() =>
-        page.getByRole('button', { name: 'Đổi mã lấy vé' }).click(),
-      );
+      await page.getByTestId('redeem-global-resolve').click();
     },
   },
   {
