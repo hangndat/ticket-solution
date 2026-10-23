@@ -4,6 +4,17 @@ import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { CatalogEventCard } from '@ticket/ui/client';
 import { FilterChip } from '@ticket/ui/client';
+import {
+  attendeeCatalogOwnedStrip,
+  attendeeHomeCatalog,
+  attendeeHomeCatalogEmpty,
+  attendeeHomeCatalogFilters,
+  attendeeHomeCatalogGrid,
+  attendeeHomeCatalogSearch,
+  attendeeHomeCatalogSearchIcon,
+  attendeeHomeCatalogSearchInput,
+  attendeeHomeCatalogTools,
+} from '../attendee-surface';
 import { publishedEventHref } from '../published/format';
 import {
   catalogArtLabel,
@@ -51,23 +62,23 @@ export function HomeCatalogGrid({
 
   return (
     <section
-      className="home-catalog home-catalog--uplift"
+      className={attendeeHomeCatalog}
       aria-labelledby="home-catalog-title"
       data-testid="home-catalog"
     >
-      <h2 id="home-catalog-title" className="visually-hidden">
+      <h2 id="home-catalog-title" className="sr-only">
         Danh sách sự kiện
       </h2>
-      <div className="home-catalog-tools home-catalog-tools--uplift">
-        <label className="home-catalog-search">
-          <span className="visually-hidden">Tìm sự kiện</span>
-          <span className="home-catalog-search__icon" aria-hidden="true">
+      <div className={attendeeHomeCatalogTools}>
+        <label className={attendeeHomeCatalogSearch}>
+          <span className="sr-only">Tìm sự kiện</span>
+          <span className={attendeeHomeCatalogSearchIcon} aria-hidden="true">
             ⌕
           </span>
           <input
             type="search"
             name="q"
-            className="home-catalog-search__input"
+            className={attendeeHomeCatalogSearchInput}
             placeholder="Tìm sự kiện hoặc nhà tổ chức"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
@@ -76,7 +87,7 @@ export function HomeCatalogGrid({
           />
         </label>
         <div
-          className="home-catalog-filters"
+          className={attendeeHomeCatalogFilters}
           role="group"
           aria-label="Lọc theo thời gian"
         >
@@ -91,8 +102,8 @@ export function HomeCatalogGrid({
             </FilterChip>
           ))}
         </div>
-        <label className="home-catalog-filter home-catalog-filter--legacy visually-hidden">
-          <span className="visually-hidden">Lọc theo thời gian</span>
+        <label className="sr-only">
+          <span className="sr-only">Lọc theo thời gian</span>
           <select
             name="time"
             value={timeFilter}
@@ -114,7 +125,7 @@ export function HomeCatalogGrid({
 
       {filtered.length === 0 ? (
         <p
-          className="home-catalog-empty home-catalog-empty--uplift"
+          className={attendeeHomeCatalogEmpty}
           data-testid="home-catalog-empty"
           role="status"
         >
@@ -122,7 +133,7 @@ export function HomeCatalogGrid({
         </p>
       ) : (
         <div
-          className="home-catalog-grid home-catalog-grid--uplift"
+          className={attendeeHomeCatalogGrid}
           role="list"
           data-testid="home-catalog-grid"
         >
@@ -157,7 +168,7 @@ export function HomeCatalogGrid({
                   showOwned
                     ? (
                         <Link
-                          className="catalog-event-card__owned"
+                          className={attendeeCatalogOwnedStrip}
                           href={`/wallet?event=${encodeURIComponent(event.id)}`}
                           data-testid={`home-event-owned-${event.id}`}
                         >

@@ -103,7 +103,7 @@ describe('@ticket/ui primitives SSR', () => {
         intro: 'Intro',
       }),
     );
-    assert.match(hero, /catalog-hero-band/);
+    assert.match(hero, /font-display/);
     assert.match(hero, /id="home-title"/);
     const strip = renderToStaticMarkup(React.createElement(DemoDataBanner));
     assert.match(strip, /demo-data-strip/);

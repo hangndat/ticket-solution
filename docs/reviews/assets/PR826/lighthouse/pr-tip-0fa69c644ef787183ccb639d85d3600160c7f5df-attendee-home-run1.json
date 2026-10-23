@@ -1,0 +1,15 @@
+{
+  "label": "pr-tip-0fa69c644ef787183ccb639d85d3600160c7f5df",
+  "route": {
+    "id": "attendee-home",
+    "path": "/"
+  },
+  "run": 1,
+  "lighthouse": "13.5.0",
+  "scores": {
+    "performance": 68,
+    "accessibility": 100,
+    "bestPractices": 96,
+    "seo": 63
+  }
+}

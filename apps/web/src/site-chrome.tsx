@@ -3,12 +3,27 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { Button } from '@ticket/ui';
 import {
   Sheet,
   SheetContent,
   SheetTitle,
   SheetTrigger,
 } from '@ticket/ui/client';
+import {
+  attendeeFooterBrand,
+  attendeeNavAvatar,
+  attendeeNavAvatarBadge,
+  attendeeNavAvatarLabel,
+  attendeeNavLink,
+  attendeeNavLinksDesktop,
+  attendeeNavMenuToggle,
+  attendeeSheetNav,
+  attendeeSheetNavLink,
+  attendeeSiteHeader,
+  attendeeTopNav,
+  attendeeWordmark,
+} from './attendee-surface';
 import { BrandMark } from './brand-mark';
 import { useBranding } from './branding';
 import type { NavLink } from './nav/capabilities';
@@ -22,7 +37,7 @@ export function Wordmark({ href = '/' }: { href?: string }) {
   return (
     <Link
       href={href}
-      className="wordmark"
+      className={attendeeWordmark}
       aria-label={label}
       data-testid="site-wordmark"
       data-branding-source={branding.source}
@@ -79,12 +94,14 @@ function NavLinkItem({
   item,
   active,
   onNavigate,
+  mobile,
 }: {
   item: NavLink;
   active: boolean;
   onNavigate?: () => void;
+  mobile?: boolean;
 }) {
-  const className = active ? 'nav-link nav-link--active' : 'nav-link';
+  const className = mobile ? attendeeSheetNavLink(active) : attendeeNavLink(active);
   const common = {
     className,
     'data-testid': item.testId,
@@ -197,14 +214,14 @@ export function SiteNav({ trailing }: { trailing?: ReactNode }) {
   );
 
   return (
-    <header className="site-header" data-testid="site-header">
+    <header className={attendeeSiteHeader} data-testid="site-header">
       <nav
-        className="top-nav site-nav"
+        className={attendeeTopNav}
         aria-label="Điều hướng chính"
         data-testid="site-nav"
       >
         <Wordmark />
-        <span className="nav-links nav-links--desktop">
+        <span className={attendeeNavLinksDesktop}>
           {links.map((item) => (
             <NavLinkItem
               key={item.href}
@@ -217,34 +234,36 @@ export function SiteNav({ trailing }: { trailing?: ReactNode }) {
         {authenticated ? (
           <Link
             href="/account"
-            className="nav-avatar"
+            className={attendeeNavAvatar}
             data-testid="nav-avatar"
             aria-label="Tài khoản"
           >
-            <span className="nav-avatar__badge" aria-hidden="true">
+            <span className={attendeeNavAvatarBadge} aria-hidden="true">
               {avatarInitials ?? '…'}
             </span>
             {displayHint ? (
-              <span className="nav-avatar__label">{displayHint}</span>
+              <span className={attendeeNavAvatarLabel}>{displayHint}</span>
             ) : null}
           </Link>
         ) : null}
         <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
           <SheetTrigger asChild>
-            <button
+            <Button
               type="button"
-              className="nav-menu-toggle"
+              variant="secondary"
+              size="sm"
+              className={attendeeNavMenuToggle}
               aria-controls="site-nav-mobile-menu"
               aria-haspopup="dialog"
               data-testid="nav-menu-toggle"
             >
-              <span className="nav-menu-toggle__label">
+              <span className="text-xs max-[360px]:sr-only">
                 {mobileOpen ? 'Đóng' : 'Menu'}
               </span>
-              <span className="nav-menu-toggle__icon leading-none" aria-hidden="true">
+              <span className="text-lg leading-none" aria-hidden="true">
                 {mobileOpen ? '×' : '☰'}
               </span>
-            </button>
+            </Button>
           </SheetTrigger>
           <SheetContent
             id="site-nav-mobile-menu"
@@ -252,8 +271,7 @@ export function SiteNav({ trailing }: { trailing?: ReactNode }) {
             showCloseButton={false}
             data-testid="nav-mobile-menu"
             overlayTestId="nav-mobile-backdrop"
-            overlayClassName="nav-mobile-backdrop"
-            className="nav-mobile-menu motion-reduce:animate-none motion-reduce:transition-none overflow-y-auto"
+            className={attendeeSheetNav}
           >
             <SheetTitle className="sr-only">Menu điều hướng</SheetTitle>
             {links.map((item) => (
@@ -262,6 +280,7 @@ export function SiteNav({ trailing }: { trailing?: ReactNode }) {
                 item={item}
                 active={isNavLinkActive(pathname, item.href)}
                 onNavigate={closeMobile}
+                mobile
               />
             ))}
             {trailing}
@@ -276,7 +295,7 @@ export function SiteNav({ trailing }: { trailing?: ReactNode }) {
 export function FooterBrand() {
   const branding = useBranding();
   return (
-    <span className="footer-brand" data-testid="footer-brand">
+    <span className={attendeeFooterBrand} data-testid="footer-brand">
       {branding.wordmark}
       {branding.signalGlyph ? (
         <span aria-hidden="true">{branding.signalGlyph}</span>

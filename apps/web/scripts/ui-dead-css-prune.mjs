@@ -143,7 +143,6 @@ function pruneFile(relPath, deadSet) {
 
 const defaultCss = [
   'app/live-pulse-legacy.css',
-  'app/attendee-uplift.css',
 ];
 const cssList = cssArgs.length ? cssArgs : defaultCss;
 const deadByFile = loadDeadSets();
