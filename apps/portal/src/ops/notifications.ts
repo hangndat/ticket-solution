@@ -143,14 +143,16 @@ export function reminderCancelUpstreamPath(
 }
 
 export function notificationEndpointTemplates() {
+  const eventScoped =
+    '/api/bff/tenants/:tenantId/events/:eventId';
   return {
-    list: 'GET /api/bff/admin/notifications',
-    retry: 'POST /api/bff/admin/notifications/:notificationId/retry',
-    templatePreview: 'POST /api/bff/admin/notification-templates/preview',
-    templatePublish: 'POST /api/bff/admin/notification-templates/publish',
-    reminderPreview: 'POST /api/bff/admin/reminders/preview',
-    reminderCreate: 'POST /api/bff/admin/reminders',
-    reminderCancel: 'POST /api/bff/admin/reminders/:reminderId/cancel',
+    list: `GET ${eventScoped}/notifications`,
+    retry: `POST ${eventScoped}/notifications/:notificationId/retry`,
+    templatePreview: `POST ${eventScoped}/notification-templates/preview`,
+    templatePublish: `POST ${eventScoped}/notification-templates/publish`,
+    reminderPreview: `POST ${eventScoped}/reminders/preview`,
+    reminderCreate: `POST ${eventScoped}/reminders`,
+    reminderCancel: `POST ${eventScoped}/reminders/:reminderId/cancel`,
   } as const;
 }
 

@@ -15,6 +15,7 @@ import {
 } from '../notifications';
 import { usePortalLocale, type MessageKey } from '../../i18n';
 import { SavedViewsToolbar } from '../../views';
+import { NotificationsTemplatesSection } from './notifications-templates-section';
 
 type Props = {
   tenantId: string;
@@ -46,6 +47,7 @@ export function NotificationsOpsPanel({
 }: Props) {
   const { t, locale } = usePortalLocale();
   const [busy, setBusy] = useState(false);
+  const setPanelBusy = useCallback((next: boolean) => setBusy(next), []);
   const [view, setView] = useState<NotificationListView | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [state, setState] = useState<NotificationProviderStatus | undefined>();
@@ -201,6 +203,13 @@ export function NotificationsOpsPanel({
       {notice ? (
         <Typography.Text type="secondary">{notice}</Typography.Text>
       ) : null}
+      <NotificationsTemplatesSection
+        tenantId={tenantId}
+        eventId={eventId}
+        canNotify={canNotify}
+        busy={busy}
+        onBusy={setPanelBusy}
+      />
     </Space>
   );
 }

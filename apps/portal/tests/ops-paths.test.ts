@@ -16,6 +16,11 @@ describe('PORTAL_UPSTREAM ops paths', () => {
     );
     assert.match(PORTAL_UPSTREAM.notifications(t, e), /\/notifications$/);
     assert.match(
+      PORTAL_UPSTREAM.notificationTemplatePreview(t, e),
+      /notification-templates\/preview$/,
+    );
+    assert.match(PORTAL_UPSTREAM.reminders(t, e), /\/reminders$/);
+    assert.match(
       PORTAL_UPSTREAM.exportDownload(t, e, '44444444-4444-4444-8444-444444444444'),
       /\/download$/,
     );
