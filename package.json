@@ -37,7 +37,13 @@
     "agent-metrics:ingest-cursor-turn": "node scripts/agent-role-monitor/cli.mjs ingest-cursor-turn",
     "agent-metrics:rollup": "node scripts/agent-role-monitor/cli.mjs rollup",
     "agent-metrics:host-sample": "node scripts/agent-role-monitor/cli.mjs host-sample",
-    "agent-metrics:test": "node --test scripts/agent-role-monitor/smoke.test.mjs"
+    "agent-metrics:test": "node --test scripts/agent-role-monitor/smoke.test.mjs",
+    "agent:evidence": "node scripts/agent-evidence.mjs",
+    "agent:guard": "node scripts/agent-workflow-guard.mjs",
+    "agent:workflow": "node scripts/agent-workflow-run.mjs",
+    "agent:review-publish": "node scripts/agent-review-publish.mjs",
+    "agent:telemetry": "node scripts/agent-role-monitor/telemetry.mjs",
+    "agent:workflow:test": "node --test scripts/agent-evidence.test.mjs scripts/agent-workflow-guard.test.mjs scripts/agent-workflow-run.test.mjs scripts/agent-review-publish.test.mjs scripts/agent-role-monitor/*.test.mjs"
   },
   "devDependencies": {
     "pixelmatch": "7.1.0",

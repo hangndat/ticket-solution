@@ -1,65 +1,14 @@
 ---
-description: "[coordinator-only] Coordinator gốc keeps idle workers busy — review-queue backpressure; agent routing theo chính sách hiện hành"
+description: Coordinator — fill task ready trong scope dưới caps và WIP
 alwaysApply: false
 ---
 
-> **Coordinator-only (Wave B):** không `alwaysApply` cho ownership/reviewer workers. Leader/orchestrator **phải Read** file này khi kích hoạt (xem `orca-leader-activation.mdc`).
+# Ready queue sau settlement
 
-# Orca — never leave an unblocked worker idle
+Chỉ áp dụng cho Epic/Run đã được ủy quyền; caps theo [parallel-workers](orca-parallel-workers.mdc). Sau settlement/dependency mở, fill mọi slot free có task ready phù hợp trong cùng wave, không chờ user nhắc hoặc cả Story đóng.
 
-Coordinator gốc phải dispatch ngay khi còn capacity và Task sẵn sàng trong scope, không chờ cả wave hoặc user chọn Issue. Epic planner (`orca-epic-orchestrator.mdc`) theo dõi dependencies, chuẩn bị ready queue và đề xuất fill cho coordinator; planner/workers không tự spawn.
-
-Chỉ lấy task thuộc Epic/Run đã được user/coordinator ủy quyền; không tự chạy backlog toàn board. Tuân **concurrent soft caps** + WIP trong `orca-parallel-workers.mdc` / `github-project-tracking.mdc`, Cost tier (`orca-agent-routing-coordinator.mdc`), và ngân sách/thời hạn nếu được giao. Dừng fill khi scope hoàn tất, hết việc sẵn sàng, user yêu cầu dừng hoặc hết giới hạn được giao. Task ngoài phạm vi cần ủy quyền mới.
-
-## Idle / free means
-
-- No active Dispatch for that ownership slice (or settled `worker_done` / released terminal ready for reuse), **and**
-- Next candidate Task’s real deps are satisfied (no unfinished blocker Task; Project Status not `Bị chặn` for a hard dependency still open).
-- Review/fix phải qua [orca-review-convergence.mdc](./orca-review-convergence.mdc): không chọn lại task bị ngắt/hết lượt; chỉ giao chẩn đoán hoặc mở lại theo quyết định có căn cứ. Capacity trống không là lý do vượt giới hạn.
-
-## Always do
-
-1. Maintain a ready queue from GitHub Project #3: prefer Status `Sẵn sàng`, then unblocked items in the active đợt (D1…); respect ownership (BE / web / iOS / coordinator / BA / PD / architect / reviewer) và hierarchy Epic → Story → Task — **không** serialize theo Story nếu Task đã ready.
-2. On every checkpoint (`worker_done`, escalation resolved, dep unblocked, `check` batch processed): **fill every free, unblocked slot trong cùng một wave** (tối đa fan-out dưới soft cap) — nhưng **ưu tiên loại việc** theo backpressure bên dưới. Fill xong **không** end turn nếu còn Dispatch live: quay lại `check --wait` theo continuous listen loop trong `orca-coordinator-mailbox.mdc`.
-3. Pull các Issue ready cho mọi scope đang free (không chỉ một slice); set Project Status → `Đang làm` when dispatching (see `github-project-tracking.mdc`).
-4. Prefer reusing a settled worker terminal when Orca allows **và** Cost tier Task kế ≤ tier pane đang giữ; otherwise start a new worker for that slice/role (không reuse pane `standard` cho Task `cheap`).
-5. Parallel-first: dưới ngưỡng WIP **và** concurrent soft caps → `worker-start` **hết** slot free (coding + reviewer + BA/PD độc lập) trước `check --wait`. Nhiều item `Chờ duyệt` độc lập → spawn song song reviewer (khác session implementer) **tối đa ≤3 reviewer live / Run**; ưu tiên PR blocking; reviewer **không** chiếm bucket feature ≤5. Map `--model` từ `docs/agents/cost-catalog.md` (không inherit mặc định).
-6. **Chỉ coordinator gốc spawn; áp dụng `orca-agent-routing-coordinator.mdc` (agent + Cost tier) cho idle fill/reviewer/replacement. Mọi Task dùng Cursor trừ override rõ từ user; không kiểm tra quota Codex cho Cursor.**
-
-## Backpressure — ưu tiên khi hàng đợi duyệt đầy
-
-Trước khi `worker-start` **feature coding** mới, kiểm tra tín hiệu đầy trong `github-project-tracking.mdc` (Chờ duyệt / PR mở / slice).
-
-Khi đầy, thứ tự fill cho worker rảnh:
-
-1. **DoD / security review** (agent theo `orca-agent-routing-coordinator.mdc`, reviewer ≠ implementer) cho item `Chờ duyệt` hoặc PR thiếu evidence exact-SHA
-2. **Fix** theo findings review / CI đỏ (cùng Issue hoặc PR)  
-3. **Integration support** (rebase/conflict cùng slice do owner slice; không merge hộ ngoài ủy quyền)  
-4. **Feature `Sẵn sàng` mới** — chỉ khi hàng đợi không còn đầy **hoặc** slice đó không góp thêm `Chờ duyệt` (ví dụ chỉ còn việc review)
-
-Không được để reviewer/fix idle trong khi vẫn spawn thêm feature cùng slice làm phình queue. Parallel-first **giữ** cho các slice độc lập khi mỗi slice còn dưới ngưỡng.
-
-## Do not
-
-```text
-❌ Hold a free BE worker idle while only waiting on unrelated web/iOS (và BE còn Sẵn sàng / review)
-❌ Serialize “one Issue at a time” globally when other scopes are ready and queue not full
-❌ Ask the user “làm Issue nào tiếp?” when Sẵn sàng / unblocked backlog exists
-❌ Dispatch work whose deps are still running (true block → leave idle or mark Bị chặn)
-❌ Unlimited feature dispatch while ≥ ngưỡng Chờ duyệt / PR chờ DoD (xem github-project-tracking.mdc)
-❌ Feature/BA/PD/architect fill khi bucket non-review đã ≥5 live (xem orca-parallel-workers.mdc)
-❌ Planner/worker spawn worker con hoặc bỏ qua chính sách agent / Cost tier
-
-✅ After iOS worker_done, immediately dispatch next Sẵn sàng iOS — hoặc DoD review nếu queue ưu tiên
-✅ While BE coding runs, keep web/iOS (+ BA/PD / reviewers khác PR) busy on independent ready Issues (nếu dưới WIP + soft cap)
-✅ Free capacity + N item Chờ duyệt độc lập → spawn tới N reviewer DoD/security cùng wave, rồi mới xét feature mới
-✅ Một checkpoint: fill BE+web+iOS+2 reviewer ready cùng lúc thay vì từng cái một — trừ khi soft cap đầy thì ưu tiên reviewer/fix
-```
-
-## Empty backlog
-
-Nếu không còn task sẵn sàng trong phạm vi: release worker đã settle, đóng session/terminal và dừng process riêng của task theo `orca-coordinator-mailbox.mdc` § Cleanup; để capacity trống, báo “không còn Task sẵn sàng cho scope này”. Không giữ agent rảnh hoặc tự tạo việc ngoài scope.
-
-## Đo nhẹ khi fill
-
-Khi áp dụng backpressure, ghi 1 dòng coordinator: số `Chờ duyệt`, số PR mở chờ DoD/CI, và việc đã ưu tiên (review / fix / feature). Sau fill có spawn mới: thêm dòng **`cost-wave`** (Wave D — inherit%/tier; `docs/agents/cost-catalog.md`). Chỉ số chi tiết: `github-project-tracking.mdc` § đo lường.
+- Dùng queue đã có; chỉ refresh Project khi trạng thái liên quan thay đổi, không đọc lại toàn board mỗi timeout.
+- Ưu tiên review/fix/integration khi WIP đầy, rồi feature ready. Không giao task còn dependency thật, bị chặn hoặc hết lượt fix.
+- Reuse cùng worker nếu có task ngay, context/model phù hợp và giữ độc lập reviewer; không giữ session rảnh để có thể dùng sau.
+- Không còn task phù hợp thì release worker đã settle. Còn dispatch live thì tiếp tục mailbox; scope xong thì dừng. Không tự tạo việc ngoài scope.
+- Chỉ coordinator gốc spawn; worker/planner không spawn con. Bắt đầu task cập nhật tracking; worker_done không tự đổi thành Hoàn thành.

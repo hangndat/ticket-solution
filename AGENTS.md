@@ -1,6 +1,6 @@
 # Agent working agreement
 
-Read docs/PRD.md, docs/TECHNICAL-DESIGN.md, docs/DECISION-LOG.md and your task spec. Work only in assigned scope. **Trạng thái đột:** [GitHub Project #3](https://github.com/users/hangndat/projects/3). Scope/gates: [docs/ROADMAP.md](docs/ROADMAP.md). Phân biệt code complete / acceptance complete / pilot ready.
+Read your task spec and applicable instructions. Với business code/acceptance: đọc các mục liên quan trong docs/PRD.md, docs/TECHNICAL-DESIGN.md, docs/DECISION-LOG.md; mở rộng khi scope/contract/invariant yêu cầu. Với docs/tooling thuần: chỉ đọc quyết định ảnh hưởng scope, không nạp toàn bộ tài liệu sản phẩm. Trong cùng session không đọc lại nội dung chưa đổi. Work only in assigned scope. **Trạng thái đột:** [GitHub Project #3](https://github.com/users/hangndat/projects/3). Scope/gates: [docs/ROADMAP.md](docs/ROADMAP.md). Phân biệt code complete / acceptance complete / pilot ready.
 
 ## Planning and tracking language
 
@@ -43,8 +43,8 @@ Roadmap, Project, Issue, status, progress: **Tiếng Việt** (giữ ID/API/comm
 | Task UI: chọn role/skill, mẫu chuẩn, review | [docs/agents/ui-workflow.md](docs/agents/ui-workflow.md)         |
 | Context budget                              | [docs/agents/context-budget.md](docs/agents/context-budget.md)   |
 
-- **Leader / boss / orchestrator:** session = coordinator gốc → Read `.cursor/rules/orca-leader-activation.mdc` + coordinator-only rules + skill `orchestration`.
-- **Leader — bắt buộc:** tool đầu tiên khi được gọi leader là Read `orca-leader-activation.mdc`. **Cấm** dùng `Agent` tool (Claude Code subagent) để spawn worker/reviewer; chỉ dùng Orca CLI (`task-create` → `worker-start --agent cursor --model composer-2.5` + `--display-name`/`--task-title` Persona → `check --wait`). Sau `worker-start` đọc `result.state`, không chỉ `ok` (`ok:true` vẫn có thể `state=failed`, vd. sai base branch — lấy tên branch từ `gh pr view <N> --json headRefName`). `.claude/settings.json` có hook PreToolUse chặn `Agent` để ép quy tắc này; cần subagent chỉ đọc cho việc ngoài leader thì hỏi user hoặc đặt `"disableAllHooks": true` trong `.claude/settings.local.json` (tắt mọi hook, chỉ cho phiên đó).
+- **Leader / boss / orchestrator:** session = coordinator gốc → Read `.cursor/rules/orca-leader-activation.mdc` + coordinator-only rules theo hành động cần làm + skill `orchestration` khi supervise.
+- **Leader — bắt buộc:** tool đầu tiên khi được gọi leader là Read `orca-leader-activation.mdc`. **Cấm** dùng `Agent` tool (Claude Code subagent) để spawn worker/reviewer; chỉ dùng Orca CLI (`task-create` → `worker-start` với agent/model theo `docs/agents/cost-catalog.md` (Codex điều phối; Composer thực thi thường lệ; Codex worker chọn lọc) + `--display-name`/`--task-title` Persona → `check --wait`). Sau `worker-start` đọc `result.state`, không chỉ `ok` (`ok:true` vẫn có thể `state=failed`, vd. sai base branch — lấy tên branch từ `gh pr view <N> --json headRefName`). `.claude/settings.json` có hook PreToolUse chặn `Agent` để ép quy tắc này; cần subagent chỉ đọc cho việc ngoài leader thì hỏi user hoặc đặt `"disableAllHooks": true` trong `.claude/settings.local.json` (tắt mọi hook, chỉ cho phiên đó).
 - **Worker/reviewer** không spawn con; không Read mailbox/parallel/idle-fill/epic-orchestrator trừ khi được giao coordinator.
 - Mỗi Task Spec: `Architecture impact: Có|Không`, `Cost tier: cheap|standard`, Role ID + `docs/agents/roles/<id>.md` khi spawn chuyên môn.
 - Task UI: ghi `Skills cần nạp`, mẫu thiết kế chuẩn và evidence; chọn role theo `docs/agents/ui-workflow.md`, chỉ nạp skill liên quan.
