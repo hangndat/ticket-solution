@@ -21,6 +21,15 @@ export type CatalogEventCardProps = {
   artTestId?: string;
 };
 
+const artToneClass: Record<CatalogEventCardArtTone, string> = {
+  default:
+    'bg-[linear-gradient(135deg,color-mix(in_srgb,var(--color-focus)_55%,var(--color-ink)),var(--color-ink))] after:border-[color-mix(in_srgb,var(--color-signal)_50%,transparent)]',
+  green:
+    'bg-[linear-gradient(135deg,color-mix(in_srgb,var(--color-admit)_65%,var(--color-ink)),var(--color-ink))] after:border-[color-mix(in_srgb,var(--color-admit)_55%,transparent)]',
+  gold:
+    'bg-[linear-gradient(135deg,color-mix(in_srgb,var(--color-unknown)_55%,var(--color-ink)),var(--color-ink))] after:border-[color-mix(in_srgb,var(--color-unknown)_55%,transparent)]',
+};
+
 export function CatalogEventCard({
   href,
   title,
@@ -57,9 +66,16 @@ export function CatalogEventCard({
   }, []);
 
   return (
-    <article className="catalog-event-card" data-testid={testId}>
+    <article className="relative list-none" data-testid={testId}>
       <a
-        className="catalog-event-card__link"
+        className={cn(
+          'relative block overflow-hidden rounded-2xl border border-line bg-paper text-inherit no-underline',
+          'transition-[transform,box-shadow,border-color] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none',
+          'hover:-translate-y-[3px] hover:border-line hover:shadow-[0_8px_24px_color-mix(in_srgb,var(--color-ink)_8%,transparent)] motion-reduce:hover:translate-none',
+          'before:pointer-events-none before:absolute before:inset-0 before:z-[2] before:opacity-0 before:transition-opacity before:duration-200 motion-reduce:before:transition-none',
+          'before:bg-[radial-gradient(600px_circle_at_var(--catalog-mx,50%)_var(--catalog-my,0%),color-mix(in_srgb,var(--color-focus)_8%,transparent),transparent_40%)]',
+          'hover:before:opacity-100 focus-within:before:opacity-100',
+        )}
         href={href}
         style={spotStyle}
         onMouseMove={onMove}
@@ -69,22 +85,25 @@ export function CatalogEventCard({
       >
         <div
           className={cn(
-            'catalog-event-card__art',
-            artTone !== 'default' && `catalog-event-card__art--${artTone}`,
+            'relative flex h-[168px] items-end overflow-hidden p-[22px] text-paper',
+            'after:pointer-events-none after:absolute after:-right-[50px] after:-top-[30px] after:size-[160px] after:rounded-full after:border-[28px] after:opacity-70',
+            artToneClass[artTone],
           )}
           data-testid={artTestId}
           aria-hidden="true"
         >
-          {showDemoBadge ? (
-            <DemoBadge className="catalog-event-card__demo-badge" />
-          ) : null}
-          <span className="catalog-event-card__art-fallback">{artLabel}</span>
+          {showDemoBadge ? <DemoBadge className="absolute left-3 top-3 z-[2]" /> : null}
+          <span className="z-[1] font-display text-[2rem] font-extrabold tracking-[-0.04em]">
+            {artLabel}
+          </span>
         </div>
-        <div className="catalog-event-card__body">
-          <span className="catalog-event-card__eyebrow">{organization}</span>
-          <h2 className="catalog-event-card__title">{title}</h2>
-          <p className="catalog-event-card__meta">{meta}</p>
-          <span className="catalog-event-card__action">
+        <div className="grid gap-2 px-5 pb-5 pt-[18px]">
+          <span className="text-[0.65rem] font-bold uppercase tracking-[0.12em] text-muted">
+            {organization}
+          </span>
+          <h2 className="m-0 font-display text-[1.1rem] tracking-[-0.02em]">{title}</h2>
+          <p className="m-0 text-[0.85rem] text-muted">{meta}</p>
+          <span className="mt-1 text-[0.88rem] font-bold text-signal">
             {actionLabel} <span aria-hidden="true">↗</span>
           </span>
         </div>

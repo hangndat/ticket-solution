@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { cn } from '../../lib/utils';
 
 export type SurfaceStateKind = 'empty' | 'loading' | 'error' | 'unknown';
 
@@ -10,17 +11,28 @@ export type SurfaceStateProps = {
   testId?: string;
 };
 
-/** Shared class names for empty / loading / error / unknown demo surfaces. */
-export function surfaceStateClass(kind: SurfaceStateKind): string {
+const surfaceBase = cn(
+  'my-4 grid max-w-[42rem] gap-2 border-2 p-[var(--spacing-2xl)]',
+  'border-[color-mix(in_srgb,var(--color-ink)_12%,var(--color-paper))] bg-[color-mix(in_srgb,var(--color-paper)_92%,var(--color-ink)_8%)]',
+);
+
+function surfaceKindClass(kind: SurfaceStateKind): string {
   switch (kind) {
-    case 'empty':
-      return 'surface-state state-empty';
     case 'loading':
-      return 'surface-state state-loading';
+      return cn(
+        surfaceBase,
+        'border-[color-mix(in_srgb,var(--color-focus)_40%,var(--color-ink)_12%)] bg-[color-mix(in_srgb,var(--color-paper)_90%,var(--color-focus)_10%)]',
+        'motion-safe:animate-pulse motion-reduce:animate-none',
+      );
     case 'error':
-      return 'surface-state state-error';
+      return cn(surfaceBase, 'border-destructive/55 bg-destructive/10 text-destructive');
     case 'unknown':
-      return 'surface-state state-unknown';
+      return cn(
+        surfaceBase,
+        'border-ink/40 bg-[color-mix(in_srgb,var(--color-ink)_8%,var(--color-paper))] text-ink',
+      );
+    case 'empty':
+      return surfaceBase;
   }
 }
 
@@ -44,7 +56,7 @@ export function SurfaceState({
         : undefined;
   return (
     <aside
-      className={surfaceStateClass(kind)}
+      className={surfaceKindClass(kind)}
       role={role}
       aria-busy={kind === 'loading' ? true : undefined}
       aria-live={ariaLive}
@@ -52,9 +64,18 @@ export function SurfaceState({
       data-testid={testId}
       data-surface-state={kind}
     >
-      <strong className="surface-state__title">{title}</strong>
-      {detail ? <p className="surface-state__detail">{detail}</p> : null}
-      {action ? <div className="surface-state__action">{action}</div> : null}
+      <strong className="font-display text-[1.05rem] font-bold tracking-[-0.02em]">
+        {title}
+      </strong>
+      {detail ? (
+        <p className="m-0 text-[0.95rem] opacity-90">{detail}</p>
+      ) : null}
+      {action ? <div className="mt-2">{action}</div> : null}
     </aside>
   );
+}
+
+/** @deprecated Use SurfaceState — kept for tests importing surfaceStateClass. */
+export function surfaceStateClass(kind: SurfaceStateKind): string {
+  return surfaceKindClass(kind);
 }

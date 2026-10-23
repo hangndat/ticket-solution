@@ -122,7 +122,6 @@ function linesForDeadRules(cssPath, deadSet) {
 
 const defaultCss = [
   'app/live-pulse-legacy.css',
-  'app/attendee-uplift.css',
 ];
 
 const cssList = process.argv.slice(2).length

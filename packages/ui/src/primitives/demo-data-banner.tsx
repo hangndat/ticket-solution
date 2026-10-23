@@ -7,7 +7,11 @@ export type DemoDataBannerProps = HTMLAttributes<HTMLElement>;
 export function DemoDataBanner({ className, children, ...props }: DemoDataBannerProps) {
   return (
     <aside
-      className={cn('demo-data-strip', className)}
+      className={cn(
+        'border-b border-paper/10 bg-[linear-gradient(90deg,color-mix(in_srgb,var(--color-ink)_92%,var(--color-focus)),var(--color-ink))] px-5 py-2 text-center text-[0.7rem] text-paper/80',
+        '[&_strong]:font-semibold [&_strong]:text-[color-mix(in_srgb,var(--color-signal)_55%,var(--color-paper))]',
+        className,
+      )}
       role="status"
       data-testid="demo-data-strip"
       {...props}
