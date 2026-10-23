@@ -134,7 +134,8 @@ export const redeemOutcomeActions = cn(
   '[&_a.button]:min-h-12 [&_a.button]:w-full [&_a.button]:justify-center',
 );
 
-const PRODUCT_ERROR_KINDS = new Set([
+/** Kinds that get destructive outcome panel chrome (parity with main redeem-form statusClass). */
+export const REDEEM_PRODUCT_PANEL_ERROR_KINDS = [
   'error',
   'invalid',
   'exhausted',
@@ -142,7 +143,24 @@ const PRODUCT_ERROR_KINDS = new Set([
   'closed',
   'denied',
   'conflict',
-]);
+  'stale',
+  'timeout',
+  'auth',
+] as const;
+
+/** Kinds that show product error ring + primary recovery actions (excludes stale/timeout/auth). */
+export const REDEEM_PRODUCT_OUTCOME_ERROR_KINDS = [
+  'error',
+  'invalid',
+  'exhausted',
+  'used',
+  'closed',
+  'denied',
+  'conflict',
+] as const;
+
+const PRODUCT_PANEL_ERROR_KINDS = new Set<string>(REDEEM_PRODUCT_PANEL_ERROR_KINDS);
+const PRODUCT_OUTCOME_ERROR_KINDS = new Set<string>(REDEEM_PRODUCT_OUTCOME_ERROR_KINDS);
 
 /** Product chrome UX panel — Tailwind only (no legacy redeem-status--* modifiers). */
 export function redeemProductUxClass(kind: string): string {
@@ -150,12 +168,12 @@ export function redeemProductUxClass(kind: string): string {
   if (kind === 'success') {
     return cn(base, redeemOutcomeSuccess);
   }
-  if (PRODUCT_ERROR_KINDS.has(kind)) {
+  if (PRODUCT_PANEL_ERROR_KINDS.has(kind)) {
     return cn(base, redeemOutcomeError);
   }
   return base;
 }
 
 export function redeemProductErrorOutcome(kind: string): boolean {
-  return PRODUCT_ERROR_KINDS.has(kind);
+  return PRODUCT_OUTCOME_ERROR_KINDS.has(kind);
 }
