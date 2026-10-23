@@ -16,6 +16,15 @@ import {
   messageForInviteView,
   type InviteUxMessage,
 } from '../../src/platform/invite-messages';
+import {
+  authButtonsRow,
+  claimFormRoot,
+  guestOutcomeWrap,
+  inviteFieldHint,
+  inviteFormPanel,
+  inviteSuccessOutcomeClass,
+  inviteSupportCopy,
+} from '../../src/guest/guest-flow-surface';
 import { REQUEST_TIMEOUT_MS } from '../../src/redeem/poll-operation';
 import { liveRegionForStatus } from '../../src/ui/live-region';
 import { SurfaceState } from '../../src/ui/surface-state';
@@ -157,17 +166,17 @@ export function InviteAcceptForm() {
         : null;
 
   return (
-    <div className="redeem-form invite-form">
-      <p className="invite-support">
+    <div className={claimFormRoot}>
+      <p className={inviteSupportCopy}>
         Đăng nhập bằng đúng email đã được mời. Máy chủ kiểm tra hết hạn, dùng
         một lần và khớp email — giao diện không tự cấp quyền Owner.
       </p>
-      <div className="auth-buttons">
+      <div className={authButtonsRow}>
         <Button asChild variant="primary">
           <a href={loginHref}>Đăng nhập</a>
         </Button>
       </div>
-      <div className="invite-form-panel">
+      <div className={inviteFormPanel}>
         <label>
           Mã lời mời
           <input
@@ -178,7 +187,7 @@ export function InviteAcceptForm() {
             aria-label="Mã lời mời"
           />
         </label>
-        <span className="invite-field-hint">
+        <span className={inviteFieldHint}>
           Mở link mời (mã nằm sau # trên URL) — tránh dán mã dạng ?token= trên
           thanh địa chỉ.
         </span>
@@ -203,7 +212,7 @@ export function InviteAcceptForm() {
         </Button>
       </div>
       {busy ? (
-        <div className="invite-outcome">
+        <div className={guestOutcomeWrap}>
           <SurfaceState
             kind="loading"
             title="Đang nhận lời mời…"
@@ -214,7 +223,7 @@ export function InviteAcceptForm() {
       ) : null}
       {ux && ux.kind === 'success' && view?.kind === 'ok' ? (
         <section
-          className="redeem-status redeem-status--success invite-outcome"
+          className={inviteSuccessOutcomeClass()}
           role={outcomeLive?.role ?? 'status'}
           aria-live={outcomeLive?.ariaLive}
           aria-atomic={outcomeLive?.ariaAtomic}
@@ -222,7 +231,7 @@ export function InviteAcceptForm() {
         >
           <h2>{ux.title}</h2>
           <p>{ux.detail}</p>
-          <p className="auth-buttons">
+          <p className={authButtonsRow}>
             <Button asChild variant="primary">
               <a href={`/admin?tenantId=${encodeURIComponent(view.value.tenantId)}`}>
                 Mở Admin
@@ -232,7 +241,7 @@ export function InviteAcceptForm() {
         </section>
       ) : null}
       {ux && ux.kind !== 'success' ? (
-        <div className="invite-outcome">
+        <div className={guestOutcomeWrap}>
           <SurfaceState
             kind={surfaceKind(ux)}
             title={ux.title}

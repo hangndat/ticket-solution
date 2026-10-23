@@ -1,17 +1,22 @@
 import { Button } from '@ticket/ui';
 import Link from 'next/link';
+import {
+  eyebrowKicker,
+  routeShellMain,
+} from '../src/guest/guest-flow-surface';
+import { introLead } from '../src/redeem/redeem-surface';
 import { SurfaceState } from '../src/ui/surface-state';
 
 export default function NotFound() {
   return (
-    <main id="main" className="lp-container shell">
-      <p className="eyebrow">404</p>
+    <main id="main" className={routeShellMain}>
+      <p className={eyebrowKicker}>404</p>
       <h1>
         Chưa có gì ở đây,
         <br />
         tạm thời.
       </h1>
-      <p className="intro">
+      <p className={introLead}>
         Không tìm thấy tổ hợp tenant và sự kiện này — hoặc trang đã chuyển đi.
       </p>
       <SurfaceState
