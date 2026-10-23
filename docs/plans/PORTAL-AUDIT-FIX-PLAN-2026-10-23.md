@@ -1,5 +1,7 @@
 # Kế hoạch sửa portal sau audit — 23/10/2026
 
+> Checkpoint mới nhất: #838 / PR #841, sửa tự động **2/2**, ngoại lệ evidence **1/1 đã dùng**. Source HEAD `7f6fe6784ecda61e901b0ea42f918df588c811ad`, app-tree `dd2c5c4af1b3c0b0ba880da464a11a67e7618d5b`. Project giữ Bị chặn tới khi reviewer độc lập xác minh F01–F03 và CI tip mới đạt. Xem [báo cáo coordinator](../reviews/PORTAL-FIX-838-COORDINATOR-VERIFICATION.md). Không mở thêm fix nếu revalidation FAIL; kết luận8014 vẫn là FAIL lịch sử.
+
 User **duyệt** sau báo cáo [audit #832](../reviews/PORTAL-AUDIT-2026-10-23.md). Triển khai PA-01–PA-06 theo wave; giữ O18/O22, AntD/ProComponents, API và auth hiện tại. Architecture impact: **Không**. Visual budget: **Không** — dùng token staff hiện hành. Không production/store từ approval này.
 
 Tracking implementation: [#838](https://github.com/hangndat/ticket-solution/issues/838). Run: `run_76c9c2fb9cf5`. Coding/review/integration trong scope PA-01–06 được thực hiện theo approval này; các giới hạn audit-only trong report gốc mô tả lượt audit trước approval.

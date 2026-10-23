@@ -1,5 +1,7 @@
 # #838 / PR 841 — Batch sửa 2/2 (F01–F03)
 
+> Hiệu chỉnh của coordinator: runtime và một số tên evidence dưới đây đã cũ/sai state. Xem [báo cáo xác minh bổ sung](PORTAL-FIX-838-COORDINATOR-VERIFICATION.md) để dùng matrix đúng SHA/app-tree, tên diagnostic đã sửa và các giới hạn. Handoff này không cấp DoD/UI PASS.
+
 | Field | Value |
 | --- | --- |
 | Worker | Higo · web |

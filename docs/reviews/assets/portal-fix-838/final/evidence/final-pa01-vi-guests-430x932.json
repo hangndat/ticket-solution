@@ -1,6 +1,6 @@
 {
   "pa01": {
-    "accountLabel": "T\u00e0i kho\u1ea3n \u25be",
+    "accountLabel": "Tài khoản ▾",
     "brandLines": 1,
     "event": {
       "height": 32,
@@ -40,7 +40,8 @@
     "issues": [],
     "viewport": 430
   },
-  "captureSHA": "23e7d15288c0ad75f65432f2d78a451e33d27598",
   "requestedLocale": "vi",
-  "route": "http://127.0.0.1:3413/t/d9d9f001-0001-4000-8000-000000000001/e/d9d9f001-0002-4000-8000-000000000001/guests"
+  "route": "http://127.0.0.1:3413/t/d9d9f001-0001-4000-8000-000000000001/e/d9d9f001-0002-4000-8000-000000000001/guests",
+  "captureBaseHEAD": "23e7d15288c0ad75f65432f2d78a451e33d27598",
+  "provenanceLimitation": "HEAD at capture while working tree changes were present; not proof of exact built source SHA. Superseded by coordinator matrix for final app-tree."
 }
