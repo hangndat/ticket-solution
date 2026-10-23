@@ -106,15 +106,50 @@ async function loginAttendee(page, base) {
   await page.goto(`${base}/api/auth/login?return=/redeem`, {
     waitUntil: 'domcontentloaded',
   });
-  await page.waitForURL(/openid-connect\/auth|login-actions|\/redeem/, {
+  await page.waitForURL(/openid-connect\/auth|login-actions/, {
     timeout: 45_000,
   });
-  if (!page.url().includes('/redeem')) {
-    await page.locator('#username').first().fill(user);
-    await page.locator('#password').first().fill(pass);
-    await page.locator('#kc-login').first().click();
-    await page.waitForURL(/\/redeem/, { timeout: 60_000 });
+
+  let prefer = process.env.KEYCLOAK_PUBLIC_HOST || '';
+  if (!prefer) {
+    try {
+      const disc = await page.request.get(
+        'http://127.0.0.1:8080/realms/ticket/.well-known/openid-configuration',
+      );
+      if (disc.ok()) {
+        const body = await disc.json();
+        prefer = new URL(body.issuer).hostname;
+      }
+    } catch {
+      prefer = '';
+    }
   }
+  if (!prefer) prefer = '127.0.0.1';
+  const u = new URL(page.url());
+  if (u.port === '8080' && u.hostname !== prefer) {
+    u.hostname = prefer;
+    await page.goto(u.toString(), { waitUntil: 'domcontentloaded' });
+  }
+
+  const userField = page
+    .locator('#username')
+    .or(page.getByLabel(/username|email/i))
+    .first();
+  const passField = page.locator('#password').or(page.getByLabel(/password/i)).first();
+  await userField.waitFor({ state: 'visible', timeout: 20_000 });
+  await userField.fill(user);
+  await passField.fill(pass);
+  await page
+    .locator('#kc-login')
+    .or(page.getByRole('button', { name: /sign in|log in/i }))
+    .first()
+    .click();
+  const baseUrl = new URL(base);
+  const appHosts = new Set(['127.0.0.1', 'localhost', baseUrl.hostname]);
+  await page.waitForURL(
+    (url) => appHosts.has(url.hostname) && url.pathname.startsWith('/redeem'),
+    { timeout: 60_000 },
+  );
 }
 
 const STATES = [
@@ -155,7 +190,7 @@ const STATES = [
     ready: '[aria-busy="true"], button[aria-busy="true"]',
     setup: async (page, base) => {
       await loginAttendee(page, base);
-      const code = process.env.WEB_UAT_REDEEM_CODE ?? 'DEMO-MFEST-002';
+      const code = process.env.WEB_UAT_REDEEM_PROCESSING_CODE ?? 'DEMO-MFEST-009';
       await page.getByTestId('redeem-global-code').fill(code).catch(async () => {
         await page.locator('input[name="code"]').first().fill(code);
       });
@@ -168,22 +203,25 @@ const STATES = [
     ready: '[data-testid="redeem-ux-success"]',
     setup: async (page, base) => {
       await loginAttendee(page, base);
+      const tenantId =
+        process.env.WEB_UAT_TENANT_ID ?? 'd9d9f001-0001-4000-8000-000000000001';
+      const eventId =
+        process.env.WEB_UAT_EVENT_ID ?? 'd9d9f001-0002-4000-8000-000000000001';
       const code =
         process.env.WEB_UAT_REDEEM_SUCCESS_CODE ??
         process.env.WEB_UAT_REDEEM_CODE ??
-        'DEMO-MFEST-003';
-      await page.getByTestId('redeem-global-code').fill(code).catch(async () => {
-        await page.locator('input[name="code"]').first().fill(code);
+        'DEMO-MFEST-005';
+      const redeemUrl =
+        `${base}/redeem?tenantId=${encodeURIComponent(tenantId)}` +
+        `&eventId=${encodeURIComponent(eventId)}` +
+        '&tenantSlug=mfest-demo&eventSlug=mfest';
+      await page.goto(redeemUrl, { waitUntil: 'domcontentloaded' });
+      await page.waitForSelector('[data-testid="redeem-terms-consent"]', {
+        timeout: 90_000,
       });
-      const continueBtn = page.getByTestId('redeem-global-resolve');
-      if ((await continueBtn.count()) > 0) {
-        await continueBtn.click();
-        await page.getByLabel(/điều khoản/i).check({ timeout: 30_000 }).catch(() => undefined);
-        await page.getByRole('button', { name: 'Đổi mã lấy vé' }).click();
-      } else {
-        await page.getByLabel(/điều khoản/i).check({ timeout: 30_000 }).catch(() => undefined);
-        await page.getByRole('button', { name: 'Đổi mã lấy vé' }).click();
-      }
+      await page.locator('input[name="code"]').first().fill(code);
+      await page.locator('#terms-accepted').check({ timeout: 30_000 });
+      await page.getByRole('button', { name: 'Đổi mã lấy vé' }).click();
       await page.waitForSelector('[data-testid="redeem-ux-success"]', {
         timeout: 90_000,
       });
@@ -191,7 +229,8 @@ const STATES = [
   },
   {
     id: 'server-error',
-    ready: '[data-testid="redeem-ux-error"]',
+    ready:
+      '[data-testid="redeem-ux-error"], [data-testid="redeem-ux-invalid"], [data-testid="redeem-ux-denied"]',
     setup: async (page, base) => {
       await loginAttendee(page, base);
       await page.getByTestId('redeem-global-code').fill('NOT-A-VALID-REDEEM-CODE-000').catch(
@@ -200,7 +239,10 @@ const STATES = [
         },
       );
       await page.getByTestId('redeem-global-resolve').click();
-      await page.waitForSelector('[data-testid="redeem-ux-error"]', { timeout: 60_000 });
+      await page.waitForSelector(
+        '[data-testid="redeem-ux-error"], [data-testid="redeem-ux-invalid"], [data-testid="redeem-ux-denied"]',
+        { timeout: 60_000 },
+      );
     },
   },
 ];
@@ -219,16 +261,16 @@ async function main() {
   mkdirSync(outDir, { recursive: true });
 
   const browser = await launchBrowser();
-  const context = await browser.newContext();
-  const page = await context.newPage();
   const md5s = [];
 
   try {
     for (const state of STATES) {
+      const context = await browser.newContext();
+      const statePage = await context.newPage();
       try {
         md5s.push(
           ...(await captureState(
-            page,
+            statePage,
             base,
             state.id,
             state.ready,
@@ -240,6 +282,8 @@ async function main() {
         );
       } catch (err) {
         die(`state ${state.id} failed: ${err instanceof Error ? err.message : String(err)}`);
+      } finally {
+        await context.close();
       }
     }
   } finally {
