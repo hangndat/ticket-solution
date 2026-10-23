@@ -3,7 +3,7 @@
 | Field | Value |
 | --- | --- |
 | Base (before) | `9371a5b14da7a03b011457e5baffe33aeb194031` |
-| PR tip (after) | `2b45ea5` (code `1319c2966761` + evidence commit) |
+| PR tip (after) | _pending push — see PR #829 comment_ |
 
 ## Module CSS gate
 
@@ -14,20 +14,19 @@ find apps/web/app apps/web/src -name "*.module.css" | wc -l
 
 ## Visual (`docs/reviews/assets/PR828/`)
 
-Server: `WEB_PUBLIC_ORIGIN=http://127.0.0.1:3456` + `next start --port 3456` (no live API — published event surfaces `event-unreachable`).
+Stack: `docker compose up -d postgres redis keycloak` → `./scripts/fe-uat-stack.sh bootstrap` → API `:3001` + `next start` `:3000` with `print-env` (OIDC). Login: `WEB_UAT_USER=attendee@example.com` `WEB_UAT_PASS=attendee-demo` via `http://localhost:3000/api/auth/login` (Keycloak `#kc-login`).
 
-| State | Before dir | After dir |
+| State | Before (`9371a5b1`) | After (PR tip) |
 | --- | --- | --- |
-| Event detail @390/@1280 | `before-9371a5b14da7/event-detail-*` | `after-1319c2966761/event-detail-*` |
-| Ticket need-login | `ticket-need-login-*` | same md5 parity on unreachable API |
-| Ticket invalid UUID | `ticket-invalid-*` | |
-| Wallet need-login | `wallet-need-login-*` | |
+| Guest routes @390/@1280 | `before-9371a5b14da7/*` | `after-<tip-sha12>/*` |
+| Wallet có vé (đăng nhập) | `wallet-ready-*-before.png` | `wallet-ready-*-after.png` |
+| Ticket QR (đăng nhập) | `ticket-ready-*-before.png` | `ticket-ready-*-after.png` |
 
-Authenticated wallet grid / ticket QR require `WEB_UAT_USER` + `WEB_UAT_PASS` (optional block in evidence script).
+MD5 authenticated states **khác** guest-only; wallet/ticket before vs after so sánh parity visual wave 2b.
 
 ## axe-core (serious/critical)
 
-Event detail route — 4 runs after animation settle (@390/@1280 × default + `prefers-reduced-motion: reduce`): **0** serious/critical (`a11y-1319c2966761/axe-summary.json`).
+Script `apps/web/scripts/pr828-attendee-detail-a11y.mjs` — event + wallet/ticket (guest + đăng nhập) @390/@1280 × default + `prefers-reduced-motion: reduce`. **0** serious/critical (`a11y-<tip-sha12>/axe-summary.json`, 20 runs).
 
 ## Lighthouse mobile (event detail `/t/mfest-demo/events/mfest`)
 
@@ -36,17 +35,20 @@ Event detail route — 4 runs after animation settle (@390/@1280 × default + `p
 | `main-9371a5b1` | 86 | 100 |
 | `pr-tip-1319c2966761` | 77 | 100 |
 
-Δ perf = −9 (exceeds ≤3 threshold on this workstation; a11y unchanged). Artifacts: `docs/reviews/assets/PR828/lighthouse/`.
+Δ perf implementer = −9 (reviewer paired 77/77 Δ0 — xem PR #829). Artifacts: `docs/reviews/assets/PR828/lighthouse/`.
 
 ## Commands
 
 ```bash
+./scripts/fe-uat-stack.sh bootstrap
+# API + web shells: ./scripts/fe-uat-stack.sh print-env
 pnpm --filter @ticket/web build
-cd apps/web && WEB_PUBLIC_ORIGIN=http://127.0.0.1:3456 pnpm exec next start --hostname 127.0.0.1 --port 3456
-node apps/web/scripts/pr828-attendee-detail-evidence.mjs http://127.0.0.1:3456 before|after <sha>
-node apps/web/scripts/pr828-attendee-detail-a11y.mjs http://127.0.0.1:3456 <sha>
-node apps/web/scripts/pr828-lighthouse-benchmark.mjs http://127.0.0.1:3456 <label> docs/reviews/assets/PR828/lighthouse 3
+cd apps/web && NODE_ENV=production pnpm exec next start --hostname 127.0.0.1 --port 3000
+WEB_UAT_USER=attendee@example.com WEB_UAT_PASS=attendee-demo \
+  node apps/web/scripts/pr828-attendee-detail-evidence.mjs http://localhost:3000 before|after <sha>
+WEB_UAT_USER=attendee@example.com WEB_UAT_PASS=attendee-demo \
+  node apps/web/scripts/pr828-attendee-detail-a11y.mjs http://localhost:3000 <sha>
 pnpm --filter @ticket/web typecheck lint test
-pnpm --filter @ticket/web build && pnpm --filter @ticket/web test:routes
+env -i HOME="$HOME" PATH="$PATH" pnpm --filter @ticket/web test:routes
 node scripts/ui-budget.mjs
 ```
