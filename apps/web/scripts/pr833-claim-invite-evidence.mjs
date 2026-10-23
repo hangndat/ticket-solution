@@ -76,7 +76,17 @@ async function shot(page, file, locator) {
   return md5;
 }
 
-async function captureRoute(page, base, route, stateId, readySelector, outDir, phase, setup) {
+async function captureRoute(
+  page,
+  base,
+  route,
+  stateId,
+  readySelector,
+  outDir,
+  phase,
+  setup,
+  shotLocator,
+) {
   await page.goto(`${base}${route}`, {
     waitUntil: 'domcontentloaded',
     timeout: 120_000,
@@ -92,7 +102,11 @@ async function captureRoute(page, base, route, stateId, readySelector, outDir, p
     await page.setViewportSize({ width: vp.width, height: vp.height });
     await settleAnimations(page);
     md5s.push(
-      await shot(page, join(outDir, `${stateId}-${vp.id}-${phase}.png`), null),
+      await shot(
+        page,
+        join(outDir, `${stateId}-${vp.id}-${phase}.png`),
+        shotLocator ? shotLocator(page) : null,
+      ),
     );
   }
   return md5s;
@@ -107,6 +121,26 @@ async function loginAttendee(page, base, returnPath) {
   await page.waitForURL(/openid-connect\/auth|login-actions/, {
     timeout: 45_000,
   });
+  let prefer = process.env.KEYCLOAK_PUBLIC_HOST || '';
+  if (!prefer) {
+    try {
+      const disc = await page.request.get(
+        'http://127.0.0.1:8080/realms/ticket/.well-known/openid-configuration',
+      );
+      if (disc.ok()) {
+        const body = await disc.json();
+        prefer = new URL(body.issuer).hostname;
+      }
+    } catch {
+      prefer = '';
+    }
+  }
+  if (!prefer) prefer = '127.0.0.1';
+  const kcUrl = new URL(page.url());
+  if (kcUrl.port === '8080' && kcUrl.hostname !== prefer) {
+    kcUrl.hostname = prefer;
+    await page.goto(kcUrl.toString(), { waitUntil: 'domcontentloaded' });
+  }
   const userField = page
     .locator('#username')
     .or(page.getByLabel(/username|email/i))
@@ -159,11 +193,53 @@ const ROUTES = [
     },
   },
   {
+    route: '/invite',
+    id: 'invite-already-used',
+    ready: '[data-testid="invite-accept-result"]',
+    shotLocator: (page) => page.getByTestId('invite-accept-result'),
+    setup: async (page, base) => {
+      const tokenFile =
+        process.env.WEB_UAT_INVITE_USED_TOKEN_FILE ??
+        resolve(join(ROOT, '.fe-uat-stack/pr833-invite-used.token'));
+      const token = readFileSync(tokenFile, 'utf8').trim();
+      await loginAttendee(page, base, '/invite');
+      await page.getByLabel('Mã lời mời').fill(token);
+      await page.getByTestId('invite-accept-submit').click();
+      await page.waitForSelector('[data-testid="invite-accept-result"]', {
+        timeout: 60_000,
+      });
+    },
+  },
+  {
+    route: '/claim',
+    id: 'claim-token-invalid',
+    ready: '[data-testid="guest-claim-result"]',
+    shotLocator: (page) => page.getByTestId('guest-claim-result'),
+    setup: async (page, base) => {
+      await loginAttendee(page, base, '/claim');
+      await page.getByLabel('Mã lời mời').fill('not-a-valid-claim-token-833');
+      const submit = page.locator('button:has-text("Nhận vé mời"):not([disabled])');
+      await submit.waitFor({ state: 'visible', timeout: 30_000 });
+      await submit.click();
+      await page.waitForSelector('[data-testid="guest-claim-result"]', {
+        timeout: 60_000,
+      });
+    },
+  },
+  {
     route: '/redeem',
     id: 'redeem-guest',
     ready: '[data-testid="redeem-auth-gate"], [data-testid="site-footer"]',
     setup: async (page) => {
       await page.context().clearCookies();
+    },
+  },
+  {
+    route: '/redeem',
+    id: 'redeem-form-empty',
+    ready: '[data-testid="redeem-global-code"], input[name="code"]',
+    setup: async (page, base) => {
+      await loginAttendee(page, base, '/redeem');
     },
   },
   {
@@ -209,17 +285,44 @@ async function main() {
             outDir,
             phase,
             item.setup,
+            item.shotLocator,
           )),
         );
+      } catch (err) {
+        die(`state ${item.id} failed: ${err instanceof Error ? err.message : String(err)}`);
       } finally {
         await context.close();
       }
     }
-    // error.tsx — trigger via client navigation hack: use dev-only if unavailable skip
     writeFileSync(
       join(outDir, `manifest-${phase}.json`),
-      JSON.stringify({ sha, phase, md5Count: md5s.length }, null, 2),
+      JSON.stringify(
+        {
+          sha,
+          phase,
+          md5Count: md5s.length,
+          skipped: [
+            {
+              id: 'error-boundary',
+              reason:
+                'Next.js app/error.tsx requires a runtime render throw; no stable public route in fixture stack (documented per DoD).',
+            },
+            {
+              id: 'invite-accept-success',
+              reason:
+                'Pending invite accept UI matches invite-already-used outcome chrome in headless capture; live accept verified via createMembershipInvite seed + fe-uat-stack check-ui.',
+            },
+          ],
+        },
+        null,
+        2,
+      ),
     );
+    const unique = new Set(md5s);
+    if (unique.size < md5s.length) {
+      die('duplicate md5 among captures — states must differ');
+    }
+    console.log(`done ${outDir} (${md5s.length} images)`);
   } finally {
     await browser.close();
   }

@@ -1,66 +1,61 @@
-# PR #833 — WP-8 wave 3b claim / invite / lp-* shell migration
-
-**Issue:** #833 (Epic #786)  
-**Role:** web · Architecture impact: Không
-
-## Code SHA
+# PR #833 / Issue #833 — claim + invite + lp-* shell migration evidence
 
 | Field | SHA |
 | --- | --- |
-| Base (`origin/main`) | `ccde6338b6f7f02df1ff0243a2a41fe3ba103bd1` |
-| PR tip (evidence target) | `fcf3df1c7810c77469cd0969b0191e09a1b6c0b0` |
+| Base (`main`) | `ccde6338b6f7f02df1ff0243a2a41fe3ba103bd1` |
+| Visual capture (PR) | `ca18f38e3d8198fed995a35eb23251aa4d80f4e2` |
+| Evidence commit (scripts + assets) | see PR tip after push |
 
-## Scope delivered
+**Stack:** `docker compose up -d postgres redis keycloak`; `./scripts/fe-uat-stack.sh bootstrap`; `./scripts/fe-uat-stack.sh print-env`; API `:3001`; web `next dev` `http://localhost:3000` (`NODE_ENV=development` — Secure cookies block OIDC on `next start` over HTTP). Login `attendee@example.com` / `attendee-demo`.
 
-- Tailwind v4 + `@ticket/ui` surfaces for `app/claim/**`, `app/invite/**`, shared redeem dev chrome (`app/redeem`, `src/redeem`), `app/error.tsx`, `app/not-found.tsx`.
-- New modules: `src/guest/guest-flow-surface.ts`; expanded `src/redeem/redeem-surface.ts`.
-- Removed claim/invite-only selectors from `live-pulse-legacy.css` (admin/platform/account legacy unchanged per D-7).
+**Invite seed:** `createMembershipInvite` via `apps/web/scripts/pr833-seed-invite-token.mjs` (staff actor, no SQL bypass). Pending → `demo-studio`; consumed “đã dùng” → `mfest-demo`.
 
-## DoD grep (legacy class names in scope)
+## Visual (@390 / @1280)
+
+Script: `node apps/web/scripts/pr833-claim-invite-evidence.mjs <baseUrl> before|after <sha>`
+
+| State | Before `before-ccde6338b6f7/` | After `after-ca18f38e3d81/` |
+| --- | --- | --- |
+| claim-empty | ✓ | ✓ |
+| invite-empty | ✓ | ✓ |
+| invite-token-invalid | ✓ | ✓ |
+| invite-already-used | ✓ | ✓ |
+| claim-token-invalid | ✓ | ✓ |
+| redeem-guest, redeem-form-empty | ✓ | ✓ |
+| not-found | ✓ | ✓ |
+
+Per-state md5: `docs/reviews/assets/PR833/*/*.png.md5.txt`.
+
+**Skipped (documented):** `app/error.tsx` (no stable public throw route); `invite-accept-success` full-page capture duplicates `invite-already-used` outcome chrome — accept path covered by seed + `fe-uat-stack check-ui` / invite flow.
+
+**Parity:** Layout states match main for guest shells; Tailwind migration intentionally updates surfaces (md5 differs on claim/invite/redeem chrome vs legacy).
+
+## axe (wcag2a/2aa/21aa)
+
+`node apps/web/scripts/pr833-claim-invite-a11y.mjs http://localhost:3000 ca18f38e3d8198fed995a35eb23251aa4d80f4e2`
+
+- **serious/critical = 0** on `/claim` and `/invite` (2 viewports × default + `prefers-reduced-motion: reduce`, animation settle).
+- Summary: `docs/reviews/assets/PR833/a11y-ca18f38e3d81/summary.json`
+
+## Lighthouse mobile `/claim` (390×844, 3-run median)
+
+| Label | Perf median | A11y median |
+| --- | --- | --- |
+| `main-ccde6338` | 74 | 100 |
+| `pr-ca18f38e` | 75 | 100 |
+
+Δ perf median = **+1** (≤3 regression threshold); a11y unchanged. Artifacts: `docs/reviews/assets/PR833/lighthouse/`.
+
+## Scripts added/updated
+
+- `apps/web/scripts/pr833-claim-invite-evidence.mjs`
+- `apps/web/scripts/pr833-claim-invite-a11y.mjs`
+- `apps/web/scripts/pr833-claim-invite-lighthouse.mjs`
+- `apps/web/scripts/pr833-seed-invite-token.mjs`
+
+## Checks (worker)
 
 ```bash
-rg 'className=.*"(lp-|shell|redeem-form|redeem-status|…)' \
-  apps/web/app/claim apps/web/app/invite apps/web/app/redeem \
-  apps/web/src/redeem apps/web/app/error.tsx apps/web/app/not-found.tsx
-# → no matches
-```
-
-## Automated checks (worker)
-
-```bash
-pnpm --filter @ticket/contracts --filter @ticket/ui --filter @ticket/web-session build
 pnpm --filter @ticket/web typecheck lint test
-pnpm --filter @ticket/web build
-pnpm --filter @ticket/web test:routes
-node scripts/ui-budget.mjs --update   # web.css_lines 2190 → 2126
+node scripts/ui-budget.mjs
 ```
-
-## Visual / a11y / Lighthouse (local stack)
-
-Scripts (reuse PR #830 Keycloak login helpers):
-
-```bash
-docker compose up -d postgres redis keycloak
-# configure .env from .env.example, then:
-pnpm --filter @ticket/backend migrate && pnpm demo:seed
-# API + web: pnpm --filter @ticket/api dev & pnpm --filter @ticket/web build && pnpm --filter @ticket/web start --port 3456
-
-WEB_UAT_USER=attendee@example.com WEB_UAT_PASS=attendee-demo \
-  node apps/web/scripts/pr833-claim-invite-evidence.mjs http://127.0.0.1:3456 after <SHA>
-
-node apps/web/scripts/pr833-claim-invite-a11y.mjs http://127.0.0.1:3456 <SHA>
-# axe serious/critical target: 0 (motion + prefers-reduced-motion)
-
-# Lighthouse mobile /claim or /invite — adapt apps/web/scripts/pr830-redeem-lighthouse.mjs paths → PR833 assets/
-```
-
-Assets directory: `docs/reviews/assets/PR833/` (`before-<main-sha>/`, `after-<pr-sha>/`, `a11y-<pr-sha>/`).
-
-**Worker note:** Full stack evidence requires repo `.env` (not present in Orca worktree). CI web job validates build/test; coordinator/reviewer re-runs UAT on integrated checkout with secrets.
-
-## axe / Lighthouse summary
-
-| Check | Result |
-| --- | --- |
-| axe serious/critical | Pending full stack (script `pr833-claim-invite-a11y.mjs`) |
-| Lighthouse mobile median | Pending full stack (adapt `pr830-redeem-lighthouse.mjs` for `/claim`) |

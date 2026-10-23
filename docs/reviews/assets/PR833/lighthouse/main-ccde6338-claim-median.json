@@ -1,0 +1,15 @@
+{
+  "label": "main-ccde6338",
+  "route": {
+    "id": "claim",
+    "path": "/claim"
+  },
+  "lighthouse": "13.5.0",
+  "medianScores": {
+    "performance": 74,
+    "accessibility": 100,
+    "bestPractices": 96,
+    "seo": 63
+  },
+  "runs": 3
+}
