@@ -3,7 +3,7 @@
 | Field | Value |
 | --- | --- |
 | Base (before) | `9371a5b14da7a03b011457e5baffe33aeb194031` |
-| PR tip (after) | _pending push — see PR #829 comment_ |
+| PR tip (after) | `f84b7e6549117a38e55fcbd75c19d971b3214c5f` |
 
 ## Module CSS gate
 
@@ -18,7 +18,7 @@ Stack: `docker compose up -d postgres redis keycloak` → `./scripts/fe-uat-stac
 
 | State | Before (`9371a5b1`) | After (PR tip) |
 | --- | --- | --- |
-| Guest routes @390/@1280 | `before-9371a5b14da7/*` | `after-<tip-sha12>/*` |
+| Guest routes @390/@1280 | `before-9371a5b14da7/*` | `after-f84b7e654911/*` |
 | Wallet có vé (đăng nhập) | `wallet-ready-*-before.png` | `wallet-ready-*-after.png` |
 | Ticket QR (đăng nhập) | `ticket-ready-*-before.png` | `ticket-ready-*-after.png` |
 
