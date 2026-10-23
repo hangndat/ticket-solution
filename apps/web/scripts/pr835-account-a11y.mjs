@@ -78,6 +78,12 @@ async function loginAttendee(page, base, returnPath = '/account') {
     waitUntil: 'domcontentloaded',
   });
   await page.waitForURL(/openid-connect\/auth|login-actions/, { timeout: 45_000 });
+  let prefer = process.env.KEYCLOAK_PUBLIC_HOST || '127.0.0.1';
+  const u = new URL(page.url());
+  if (u.port === '8080' && u.hostname !== prefer) {
+    u.hostname = prefer;
+    await page.goto(u.toString(), { waitUntil: 'domcontentloaded' });
+  }
   await page.locator('#username').first().fill(user);
   await page.locator('#password').first().fill(pass);
   await page.locator('#kc-login').first().click();
@@ -89,6 +95,9 @@ async function loginAttendee(page, base, returnPath = '/account') {
       !url.pathname.startsWith('/api/auth/login'),
     { timeout: 60_000 },
   );
+  if (!page.url().includes(returnPath.split('#')[0])) {
+    await page.goto(`${base}${returnPath}`, { waitUntil: 'domcontentloaded' });
+  }
 }
 
 const STATES = [
