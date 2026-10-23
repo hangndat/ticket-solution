@@ -1,5 +1,7 @@
 # Audit portal — framework frontend và UX/UI (23/10/2026)
 
+> **Phê duyệt tiếp theo 23/10/2026:** User “duyệt” sau báo cáo. PA-01–PA-06 được triển khai theo [kế hoạch sửa](../plans/PORTAL-AUDIT-FIX-PLAN-2026-10-23.md), Issue #838; report này giữ nguyên baseline và giới hạn của lượt audit.
+
 **Portal đã dùng Ant Design/ProComponents thật. Vấn đề ưu tiên là header mobile bị vỡ và trải nghiệm vận hành còn mang ngôn ngữ kỹ thuật. Chưa có căn cứ để thay framework hoặc tuyên bố UX đã nghiệm thu.**
 
 | Mục | Bằng chứng / phạm vi |

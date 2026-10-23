@@ -1,0 +1,106 @@
+=== tests list ===
+      24
+bff-cache-control.test.ts
+capabilities.test.ts
+dual-run-allowlist.test.ts
+fixtures
+i18n.test.ts
+locale-server.test.ts
+logout-isolation.test.ts
+oidc-config.test.ts
+onboarding.test.ts
+ops-audit-codes.test.ts
+ops-cs-export.test.ts
+ops-filters.test.ts
+ops-import.test.ts
+ops-paths.test.ts
+ops-pending.test.ts
+ops-portfolio.test.ts
+ops-report.test.ts
+ops-role-presets.test.ts
+origin-adapter.test.ts
+portal-menu-keys.test.ts
+readiness.test.ts
+refresh-flight.test.ts
+saved-views.test.ts
+verify-tokens.test.ts
+=== fetch/abort/useEffect patterns ===
+      83
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/client/portal-fetch.ts:35:  const controller = new AbortController();
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/client/portal-fetch.ts:65:  const controller = new AbortController();
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/client/portal-fetch.ts:116:  const controller = new AbortController();
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/client/portal-fetch.ts:155:  const controller = new AbortController();
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/views/use-portal-user-id.ts:22:      const controller = new AbortController();
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/nav/load-shell-context.ts:38:  const controller = new AbortController();
+=== no-store cache ===
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/client/portal-fetch.ts:41:      cache: 'no-store',
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/client/portal-fetch.ts:71:      cache: 'no-store',
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/client/portal-fetch.ts:122:      cache: 'no-store',
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/client/portal-fetch.ts:161:      cache: 'no-store',
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/views/use-portal-user-id.ts:31:          cache: 'no-store',
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/nav/load-shell-context.ts:44:      cache: 'no-store',
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/ops/export-job.ts:149: * Download is streamed CSV (text/csv) with Cache-Control: private, no-store.
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/oidc/public-origin.ts:27:          headers: { 'Cache-Control': 'private, no-store' },
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/bff/cache-control.ts:4:  headers.set('Cache-Control', 'private, no-store');
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/oidc/refresh.ts:59:      cache: 'no-store',
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/bff/api-error.ts:22:    headers: { 'Cache-Control': 'private, no-store' },
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/bff/upstream.ts:29:  else outHeaders.set('Cache-Control', 'private, no-store');
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/bff/upstream.ts:52:      cache: 'no-store',
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/tests/bff-cache-control.test.ts:16:    assert.equal(out.headers.get('Cache-Control'), 'private, no-store');
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/tests/bff-cache-control.test.ts:20:  it('sets private, no-store when the response has no cache header', () => {
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/tests/bff-cache-control.test.ts:23:    assert.equal(out.headers.get('Cache-Control'), 'private, no-store');
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/app/api/bff/me/events/route.ts:14:  headers.set('Cache-Control', 'private, no-store');
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/app/api/bff/me/tenants/route.ts:14:  headers.set('Cache-Control', 'private, no-store');
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/app/api/bff/me/subject/route.ts:13:    'Cache-Control': 'private, no-store',
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/app/api/auth/login/route.ts:30:      { status: 503, headers: { 'Cache-Control': 'private, no-store' } },
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/app/api/bff/platform/me/route.ts:14:  headers.set('Cache-Control', 'private, no-store');
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/app/api/auth/logout/route.ts:32:      cache: 'no-store',
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/app/api/auth/callback/route.ts:76:      cache: 'no-store',
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/app/api/auth/platform/login/route.ts:31:      { status: 503, headers: { 'Cache-Control': 'private, no-store' } },
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/app/api/bff/platform/tenants/route.ts:15:  headers.set('Cache-Control', 'private, no-store');
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/app/api/auth/platform/callback/route.ts:75:      cache: 'no-store',
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/app/api/bff/platform/support-grants/[grantId]/revoke/route.ts:49:  headers.set('Cache-Control', 'private, no-store');
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/app/api/auth/platform/logout/route.ts:31:      cache: 'no-store',
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/app/api/bff/platform/tenants/[tenantId]/health/route.ts:27:  headers.set('Cache-Control', 'private, no-store');
+=== aria/role/label ===
+      79
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/views/saved-views-toolbar.tsx:169:          <Button aria-label={t('views.toolbar.aria')}>
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/views/saved-views-toolbar.tsx:190:          aria-label={t('views.action.manage')}
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/ops/panels/export-panel.tsx:204:      <Space wrap role="search" aria-label={t('ops.export.filterHistoryAria')}>
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/ops/panels/export-panel.tsx:212:          aria-label={t('ops.export.filterStatusAria')}
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/ops/panels/export-panel.tsx:218:          aria-label={t('ops.export.filterHistoryApply')}
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/ops/panels/export-panel.tsx:241:          aria-label="exportId"
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/ops/panels/notifications-panel.tsx:128:      <Space wrap role="search" aria-label={t('ops.notifications.filtersTitle')}>
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/ops/panels/notifications-panel.tsx:136:          aria-label={t('ops.h_70gxgv')}
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/ops/panels/notifications-panel.tsx:145:          aria-label={t('ops.h_1je2q3y')}
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/ops/panels/notifications-panel.tsx:151:          aria-label={t('ops.notifications.applyFilters')}
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/ops/panels/pending-panel.tsx:159:        <Space wrap role="search" aria-label={t('ops.pending.filtersTitle')}>
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/ops/panels/pending-panel.tsx:167:            aria-label={t('ops.h_1u6lt1m')}
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/ops/panels/pending-panel.tsx:176:            aria-label={t('ops.h_1wib0ad')}
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/ops/panels/pending-panel.tsx:185:            aria-label={t('ops.h_1syu2ee')}
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/ops/panels/pending-panel.tsx:191:            aria-label={t('ops.pending.applyFilters')}
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/ops/panels/pending-panel.tsx:204:            aria-label={t('ops.h_1qz57kh')}
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/components/portal-pro-layout.tsx:127:            aria-label={t('shell.tenant.label')}
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/components/portal-pro-layout.tsx:144:            aria-label={t('nav.org.events')}
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/components/surface-state.tsx:12:      aria-label={label}
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/app/t/[tenantId]/analytics/page.tsx:44:        <span aria-label={item.message}>—</span>
+=== Link vs router ===
+       9
+=== custom Table vs ProTable ===
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/ops/panels/cs-panel.tsx
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/ops/panels/export-panel.tsx
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/ops/panels/codes-panel.tsx
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/ops/panels/notifications-panel.tsx
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/ops/panels/import-invitations-panel.tsx
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/ops/panels/audit-panel.tsx
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/ops/panels/pending-panel.tsx
+=== portal-shell vs pro-layout ===
+     255 /Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/components/portal-shell.tsx
+     217 /Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/components/portal-pro-layout.tsx
+      57 /Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/components/portal-pro-table.tsx
+      45 /Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/components/portal-page.tsx
+     574 total
+=== globals.css lines ===
+      72 /Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/app/globals.css
+=== surface-state ===
+     132 /Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/components/surface-state.tsx
