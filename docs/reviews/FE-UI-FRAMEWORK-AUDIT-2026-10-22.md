@@ -530,8 +530,8 @@ grep -nE "^\s*--(ink|paper|signal|focus|line|muted|radius-[a-z]+|space-[0-9]+):"
 # A11y tự viết
 test ! -e apps/web/src/nav/mobile-menu-focus.ts
 
-# Test không regex CSS
-grep -rlE "\.css['\"]" apps/web/tests | wc -l                                  # 0 (hiện 4: fe-layout-regression, marketing-bento, marketing-mobile-nav, mobile-menu-focus)
+# Test không regex CSS (loại *.postbuild.mjs — đọc CSS compiled sau build, #794)
+grep -rlE "\.css['\"]" apps/web/tests --exclude='*.postbuild.mjs' | wc -l     # 0 (hiện 0)
 
 # Route admin/platform đã chuyển sang portal (D-7)
 test ! -d apps/web/app/admin && test ! -d apps/web/app/platform
