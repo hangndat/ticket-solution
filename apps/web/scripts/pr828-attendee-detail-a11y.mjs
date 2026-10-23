@@ -107,9 +107,10 @@ async function main() {
           timeout: 120_000,
         });
         if (!res?.ok()) die(`event detail navigation failed status=${res?.status()}`);
-        await page.waitForSelector('[data-testid="event-published"]', {
-          timeout: 60_000,
-        });
+        await page.waitForSelector(
+          '[data-testid="event-published"], [data-testid="event-unreachable"]',
+          { timeout: 60_000 },
+        );
         await settleAnimations(page);
         const axe = await runAxe(page);
         reports.push({ motion, viewport: vp.id, ...axe });

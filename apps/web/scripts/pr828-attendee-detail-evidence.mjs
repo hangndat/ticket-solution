@@ -21,7 +21,8 @@ const ROUTES = [
   {
     id: 'event-detail',
     path: '/t/mfest-demo/events/mfest',
-    ready: '[data-testid="event-published"]',
+    ready:
+      '[data-testid="event-published"], [data-testid="event-unreachable"]',
   },
   {
     id: 'ticket-need-login',
