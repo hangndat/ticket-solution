@@ -15,19 +15,12 @@ import { execFileSync } from "node:child_process";
 const commentsOnly = process.argv.includes("--comments-only");
 
 function orcaJson(args) {
-  const out = execFileSync("orca", args, { encoding: "utf8", maxBuffer: 20e6 });
+  const out = execFileSync(process.env.ORCA_CLI_COMMAND || "orca", args, { encoding: "utf8", maxBuffer: 20e6 });
   return JSON.parse(out);
 }
 
-const CATALOG_PINS = new Set([
-  "composer-2.5",
-  "claude-sonnet-5-thinking-low",
-  "grok-4.7-low",
-  "gemini-3.7-flash-low",
-]);
-
 const PIN_RE =
-  /\bmodel\s+(composer-2\.5|claude-sonnet-5-thinking-low|grok-4\.7-low|gemini-3\.7-flash-low)\b/i;
+  /\bmodel\s+(gpt-6-sol|composer-2\.5|claude-sonnet-5-thinking-low|grok-4\.7-low|gemini-3\.7-flash-low)\b/i;
 const TIER_RE = /\bCost\s+(cheap|standard|heavy)\b/i;
 const TIER_DN_RE = /\b(cheap|standard|heavy)\b/i;
 const INHERIT_RE = /\binherit\b|\bmodel\s+auto\b/i;
@@ -46,12 +39,15 @@ function commentPin(blob) {
 
 const wl = orcaJson(["orchestration", "worker-list", "--include-remote", "--json"]);
 const workers = wl.result?.workers ?? [];
-const live = workers.filter((w) => w.projection?.liveness?.verdict === "live");
+// A missing structured-session status does not mean the dispatch stopped.
+const live = workers.filter((w) => w.terminalState === "active" || w.projection?.liveness?.verdict === "live");
+const tasks = orcaJson(["orchestration", "task-list", "--json"]).result?.tasks ?? [];
+const taskById = new Map(tasks.map((t) => [t.id, t]));
 
 const list = orcaJson(["worktree", "list", "--json"]);
 const wtByPath = new Map();
 for (const w of list.result?.worktrees ?? []) {
-  if ((w.path || "").includes("ticket-solution") && !w.isArchived) {
+  if (!w.isArchived) {
     wtByPath.set(w.path, w);
   }
 }
@@ -73,14 +69,12 @@ function bumpTier(tier) {
 }
 
 function classifyReceipt(launch, wtBlob) {
-  const req = launch?.requested?.model ?? null;
   const eff = launch?.effective?.model ?? null;
-  const claim = eff ?? req;
+  const claim = eff;
   if (claim && claim !== "auto") {
     receiptRows++;
-    const ok = CATALOG_PINS.has(String(claim)) || Boolean(req);
     return {
-      kind: ok ? "pinned" : "pinned",
+      kind: "pinned",
       model: String(claim),
       source: "receipt",
     };
@@ -95,7 +89,7 @@ function classifyReceipt(launch, wtBlob) {
   return { kind: "inherit", model: "null-effective", source: "receipt" };
 }
 
-if (commentsOnly || live.length === 0) {
+if (commentsOnly) {
   const paths = new Set();
   for (const w of live) {
     const id = w.resource?.worktreeId ?? "";
@@ -127,7 +121,7 @@ if (commentsOnly || live.length === 0) {
     const id = w.resource?.worktreeId ?? "";
     const path = id.includes("::") ? id.split("::").pop() : id;
     const wt = path ? wtByPath.get(path) : null;
-    const blob = `${wt?.comment || ""}\n${wt?.displayName || ""}\n${w.taskTitle || ""}`;
+    const blob = `${wt?.comment || ""}\n${wt?.displayName || ""}\n${w.taskTitle || ""}\n${taskById.get(w.taskId)?.spec || ""}`;
     bumpTier(tierFromBlob(blob) || tierFromBlob(w.taskTitle || ""));
 
     let launch = null;
@@ -150,7 +144,7 @@ if (commentsOnly || live.length === 0) {
           commentRows++;
           const c = commentPin(blob);
           return {
-            kind: c.kind === "pinned" ? "pinned" : "inherit",
+            kind: "inherit",
             model: c.model,
             source: "wt-comment",
           };
@@ -177,7 +171,7 @@ if (!commentsOnly && live.length) {
   else source = "wt-comment-estimate";
 }
 
-const line = `cost-wave | run=${run} | n=${n} live | cheap=${cheap} standard=${standard} unknown=${unknown} | pinned=${pinned} inherit=${inherit} | inherit%=${inheritPct} | models=${[...new Set(models)].join(",") || "-"} | source=${source}`;
+const line = `cost-wave | run=${run} | n=${n} active | cheap=${cheap} standard=${standard} unknown=${unknown} | pinned=${pinned} inherit=${inherit} | inherit%=${inheritPct} | models=${[...new Set(models)].join(",") || "-"} | source=${source}`;
 
 console.log(line);
 if (inheritPct > 20) {

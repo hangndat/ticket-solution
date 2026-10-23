@@ -1,91 +1,26 @@
 ---
-description: "[coordinator-only] Orca max fan-out — spawn mọi Task độc lập cùng wave; concurrent soft caps + WIP; Cost tier; agent routing"
+description: Coordinator — fan-out tối đa task độc lập trong scope, caps và WIP
 alwaysApply: false
 ---
 
-> **Coordinator-only (Wave B):** không `alwaysApply` cho ownership/reviewer workers. Leader/orchestrator **phải Read** file này khi kích hoạt (xem `orca-leader-activation.mdc`).
+# Dispatch song song
 
-# Orca — parallel coding workers (default)
+Mặc định coordinator spawn **mọi Task ready độc lập** trong cùng wave dưới soft caps và WIP; không chờ việc không liên quan. Codex điều phối, Composer thực thi thường lệ. User giữ cơ chế max fan-out/planner; tối ưu token bằng context gọn, reuse và tránh việc trùng.
 
-When the user asks for coding work that Orca should run (or when you are the coordinator gốc), **prefer parallel worker spawn over serial solo coding**. Mục tiêu: **mỗi wave spawn tối đa** mọi Task độc lập còn capacity — không để slot rảnh vì chờ việc không liên quan.
+| Bucket | Soft cap / Run |
+| --- | --- |
+| Feature + planner + architect + BA/PD | ≤5 live |
+| Reviewer DoD/security/UI | ≤3 live |
+| Cùng ownership slice | ≤1 feature coding |
+| Codex worker ngoài coordinator | ≤1 live |
 
-**Mô hình wave + leader (user):** mỗi wave **coordinator gốc** đóng vai leader — `worker-start` fan-out tối đa (depth 0); wave độc lập có thể spawn song song. **Không** spawn dispatch depth 1 để fan-out (Orca `nested_worker_depth`) — `orca-wave-leader.mdc`.
+Fix CI hẹp không chiếm bucket feature; vẫn tôn scope và cost tier. User chỉ định concurrency cụ thể thì theo chỉ định đó.
 
-Epic-level work: coordinator gốc spawn/reuse **một Epic planner** (`orca-epic-orchestrator.mdc`). Planner phân Story/Task và đề xuất **wave bề rộng tối đa**; coordinator gốc spawn ownership/reviewers. Planner không `worker-start`; ownership/reviewer không spawn con.
-
-## Default — max fan-out
-
-1. Decompose the request into independent units (không chỉ “một Issue”):
-   - Backend → `apps/api`, `apps/worker`, `packages/backend` (+ DB tests/migrations) — Role `backend`
-   - Web → `apps/web` — Role `web`
-   - iOS → `apps/mobile` — Role `ios`
-   - Coordinator-only → root tooling, lockfile, CI, shared contracts / OpenAPI
-   - Kiến trúc / ADR / contract handoff → Role `architect`, docs được giao; chỉ consumer thiếu quyết định thật phải chờ, không thay quyền sửa shared contract của coordinator
-   - Discovery / design docs → Role `product-ba` / `product-design` (có thể song song với nhau và với coding slice không đụng path)
-   - DoD / security → Role `reviewer-dod` (± `reviewer-security`); **cùng PR/SHA → một session `dod+sec`** (Wave C); **nhiều PR độc lập = nhiều reviewer** (cap ≤3 live)
-2. Trước `check --wait`: liệt kê mọi Task ready (deps thật đã xong, dưới WIP **và** concurrent soft caps), rồi **`worker-start` hết trong cùng một wave**. Không code các slice đó serially trong terminal coordinator. Mỗi Task Spec gắn Role ID + **Cost tier** + **Persona** theo [docs/agents/README.md](../../docs/agents/README.md) và `orca-agent-routing-coordinator.mdc` (agent vẫn `--agent cursor`); mỗi spawn phải có `--display-name "<Persona> · <ui-label>"` từ roster (`dod`/`sec`/`be`/… — không `reviewer-dod`; pool nhiều người → pick free).
-3. Dependencies chỉ khi ordering thật (vd. contract/API trước → web + iOS consumer song song). Prefer shallow DAG; **cấm** chuỗi giả (Story A xong mới mở Story B) nếu Task đã unblocked. **Bắt buộc** với Epic ≥2 Task: `task-create` (+ `--deps` khi có edge thật) → mỗi wave lấy `task-list --ready` rồi `worker-start --task` — không chỉ `worker-start --spec` ad-hoc. Quyết định nhánh DAG (scope cut / ADR / có-deploy): `gate-create` / `gate-resolve` (xem `orca-worktree-hygiene.mdc`); không dùng gate thay `ask` của worker.
-4. Cùng ownership slice: **một** Dispatch feature coding active / slice (tránh conflict git/worktree). Vẫn song song: coding slice A + review/fix slice B + BA/PD docs + reviewer khác PR.
-5. Each worker stays in its scope; no cross-scope edits. Task-specific ports/project names; do not control another worker's simulator or DB.
-6. Load Orca orchestration via `ORCA skills get orchestration` and use the live preamble IDs — never invent lifecycle args.
-
-## Concurrent soft caps (host capacity)
-
-Orca CLI **không** expose hard `max concurrent workers` (chỉ nested depth). “Capacity host” trong repo này = soft cap đếm Dispatch **live** trên Run đang bind (`ORCA orchestration worker-list --include-remote --json`):
-
-| Bucket | Soft cap | Ghi chú |
-| ------ | -------- | ------- |
-| Feature coding + Epic planner + architect + BA/PD (non-review) | ≤ **5** live / Run | Planner và BA/PD đếm vào bucket này |
-| Cùng ownership slice | ≤ **1** feature coding | Giữ nguyên — tránh conflict git/worktree |
-| Reviewer DoD + security live | ≤ **3** live / Run | Không vào bucket feature; ưu tiên PR blocking merge; có thể gộp DoD∥security cùng PR/SHA một session |
-| Fix CI hẹp | Ngoài cap feature | Vẫn tôn Cost tier `cheap` khi máy móc |
-
-Khi bucket feature+planner+BA/PD đã ≥ **5** live: **không** spawn thêm feature / BA / PD / architect; vẫn được spawn **reviewer/fix** nếu hàng đợi duyệt ưu tiên **và** reviewer live &lt; 3. Không hard-code fan-out = số slice (3). Ghi 1 dòng evidence khi trì hoãn vì cap (số live + bucket + tier/inherit). Sau mỗi wave spawn: **1 dòng `cost-wave`** (Wave D — `docs/agents/cost-catalog.md`).
-
-## WIP / backpressure (không phá parallel-first)
-
-Parallel-first **không** có nghĩa dispatch feature không giới hạn. Trước mỗi wave feature:
-
-1. Đọc tín hiệu hàng đợi đầy trong `github-project-tracking.mdc` **và** concurrent soft caps ở trên.
-2. Nếu đầy: wave ưu tiên **review + fix + integration** (có thể song song nhiều slice) thay vì wave feature mới.
-3. Nếu một slice dưới ngưỡng còn slice khác đầy: vẫn spawn parallel cho slice còn room; slice đầy chỉ nhận review/fix.
-4. Idle fill tuân `orca-idle-worker-fill.mdc` (cùng thứ tự ưu tiên).
-5. Map Cost tier → `--model` trên fresh launch (trần **standard**); không reuse pane `standard` cho Task `cheap` (xem `orca-agent-routing-coordinator.mdc`).
-
-Mục tiêu: giữ throughput đa slice, giảm thời gian chờ duyệt, CI re-run và bão session/RAM do quá nhiều Dispatch live.
-
-## When NOT to parallelize
-
-- Single-scope change (one ownership boundary only)
-- Hard serial dependency with no parallel tail (e.g. only coordinator lockfile regen)
-- User explicitly asks for one agent / sequential / no Orca workers
-- Exploration-only / Q&A with no implementation
-- Review queue full **và** chỉ còn việc serial trên một PR/fix (vẫn có thể parallel reviewers trên PR khác)
-
-## Anti-patterns
-
-```text
-❌ Plan BE + web + iOS, then implement all three yourself in one terminal
-❌ Start worker A, wait for worker_done, then start worker B for independent work
-❌ One mega-spec that mixes apps/api + apps/web + apps/mobile
-❌ Spawn 3 feature workers while ≥3 Chờ duyệt / nhiều PR cùng slice chưa DoD
-❌ Spawn thêm feature khi ≥5 Dispatch non-review live (bỏ qua concurrent soft cap)
-❌ Spawn model vượt standard (thinking-high, sol-high, opus, xhigh/max)
-❌ Spawn không `--model` (inherit UI) hoặc `--model auto` làm mặc định
-❌ >3 reviewer DoD/security live cùng lúc
-❌ Epic planner spawn worker con hoặc tự code toàn Epic
-❌ Epic ≥2 Task mà không `task-create` / `--ready` — chỉ `worker-start --spec` ad-hoc
-❌ Serialize BA → PD → BE → web → iOS → review khi các bước không phụ thuộc nhau
-❌ Chỉ spawn 1 reviewer trong khi ≥2 PR/Issue Chờ duyệt độc lập còn room (và reviewer live &lt; 3)
-❌ Chờ cả Story đóng mới mở Task ready của Story khác cùng Epic
-
-✅ worker-start --agent cursor cho mọi ready slice (BE + web + iOS ± BA/PD) trong một wave dưới soft cap → check --wait
-✅ `task-create --deps` → `task-list --ready` → `worker-start --task` (Epic ≥2); gate cho nhánh quyết định
-✅ Contract task first (if needed) → then parallel consumer workers (--agent cursor)
-✅ Queue full hoặc feature bucket đầy → parallel DoD/security reviewers + fix; trì hoãn feature wave
-✅ Coordinator gốc → Epic planner + ownership + reviewers cùng depth 1, fan-out tối đa dưới soft cap
-✅ Cùng checkpoint: reuse/release xong → fill ngay mọi slot free còn ready (idle-fill)
-```
-
-**Trước mỗi spawn, coordinator gốc áp dụng `orca-agent-routing-coordinator.mdc`: mọi Task dùng Cursor + Cost tier, trừ override rõ từ user. Không kiểm tra quota Codex khi spawn Cursor.**
-When a worker becomes free and unblocked, fill it from the ready backlog immediately: see `orca-idle-worker-fill.mdc`.
+- Epic: coordinator spawn/reuse một planner theo orca-epic-orchestrator; không planner trùng. Coordinator depth 0 trực tiếp spawn ownership/reviewer; worker/planner không spawn con.
+- Liệt kê mọi task ready thuộc scope, tạo task-create/deps cho Epic nhiều task; dependencies chỉ khi thiếu artifact/contract thật. Spawn hết task độc lập còn capacity trước check --wait.
+- Gộp việc nhỏ cùng scope/input/mục tiêu; không gom BE/web/iOS vào một owner. Root tooling/docs nhỏ đủ context có thể làm inline.
+- WIP đầy: ưu tiên review → fix → integration trước feature. Không dùng slot trống để mở backlog ngoài ủy quyền.
+- Nhiều PR độc lập: review song song dưới cap. Cùng PR/SHA: gộp DoD/security/UI phù hợp trong một session độc lập; không đối chứng hai model khi không được yêu cầu. Revalidation theo findings + diff.
+- Reuse worker đã settle khi có task ngay, cùng domain/context, model/effort phù hợp và giữ độc lập reviewer. Cheap/standard cùng Composer không tự buộc tạo session mới; không giữ session rảnh.
+- Spawn qua preflight + Persona + receipt theo routing-coordinator; sau wave ghi một dòng cost-wave, không đo lại khi không có spawn/model thay đổi.
+- Sau settlement xét fill mọi slot còn task ready trong scope; supervise và cleanup theo mailbox. Không bỏ worker live để tiết kiệm token.

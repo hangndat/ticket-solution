@@ -8,13 +8,15 @@
 
 - Session / dispatch **khác** implementer của Task đang duyệt.
 - Không reuse terminal implementer để “tự DoD”.
-- Agent: `--agent cursor` (không đổi vendor vì là reviewer).
+- Agent: Cursor mặc định; Codex `gpt-6-sol` cho DoD rủi ro/phức tạp theo cost-catalog. Reviewer luôn độc lập với implementer.
 
 ## Khi nào dùng
 
 Issue/PR ở `Chờ duyệt`; hoặc coordinator ưu tiên review khi hàng đợi duyệt đầy. Scope = review only — không drive-by refactor, không implement fix trừ khi Task riêng là fix-worker.
 
 ## Đầu vào Spec phải có
+
+Nhận spec đã điền (initial/revalidate), AC/evidence/findings từ coordinator; không đọc các template review/task-spec/worker-report trống. Ghi một báo cáo theo spec và yêu cầu artifact bên dưới. Tóm tắt ≤3 câu; findings mới/mở ghi đủ bằng chứng/điều kiện đóng, findings đã xác minh chỉ dẫn ID/report trước. Không chép lại log CI cho từng checklist.
 
 - Issue #, PR # (nếu có), ownership slice, paths.
 - **Exact SHA** đang duyệt (`git rev-parse`).

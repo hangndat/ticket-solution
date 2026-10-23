@@ -1,0 +1,15 @@
+{
+  "result": {
+    "accountId": "acct_secret_should_not_leak",
+    "ordinaryUsageAllowed": true,
+    "rateLimits": {
+      "limitId": "codex",
+      "planType": "prolite",
+      "primary": {
+        "usedPercent": 4,
+        "windowDurationMins": 10080,
+        "resetsAt": 1793336928
+      }
+    }
+  }
+}

@@ -2,6 +2,8 @@
 
 **Một file Read** khi Spec gộp nhiều reviewer trên cùng PR/SHA. Chi tiết đầy đủ vẫn ở file role gốc — không bỏ gate.
 
+Nhận spec ngắn đã điền từ coordinator; **không đọc template review/task-spec/worker-report trống**. Checklist dưới đây là entry point; chỉ đọc section role chi tiết khi scope/gate tương ứng cần, không tự đọc đủ ba role mỗi lượt. Cùng SHA dùng chung checks/evidence, giữ verdict từng phần. Initial kiểm đủ scope; revalidation theo findings + diff, không review lại từ đầu khi không có lý do mở rộng. Tóm tắt ≤3 câu; findings mới/mở ghi đủ căn cứ, bằng chứng, mức độ/chặn và điều kiện đóng; findings đã xác minh dẫn ID/report trước, không chép lại lịch sử.
+
 | UI label     | Role ID gộp                          | File chi tiết (khi cần đào sâu)                                                       |
 | ------------ | ------------------------------------ | ------------------------------------------------------------------------------------- |
 | `dod+ux`     | `reviewer-dod` + `reviewer-uiux`     | [reviewer-dod.md](./reviewer-dod.md) · [reviewer-uiux.md](./reviewer-uiux.md)         |

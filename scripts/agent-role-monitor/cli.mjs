@@ -28,6 +28,7 @@ import {
   repoRoot,
 } from './lib/ledger.mjs';
 import { samplePid } from './lib/host-sample.mjs';
+import { isWorktreeDispatchAmbiguous } from './lib/usage.mjs';
 
 const USAGE = `Usage:
   node scripts/agent-role-monitor/cli.mjs <command> [options]
@@ -211,7 +212,15 @@ async function cmdIngestCursorTurn(flags, ledger) {
   let resolved = resolveJoinForHook(events, input);
   let attribution = 'join';
   if (!resolved) {
-    const activeJoin = loadActiveDispatchJoin(repoRoot());
+    const root = repoRoot();
+    const candidate = loadActiveDispatchJoin(root);
+    const ambiguous = isWorktreeDispatchAmbiguous(root, process.env, candidate?.dispatch_id);
+    const activeJoin = ambiguous ? null : candidate;
+    if (ambiguous) {
+      console.error(
+        'ingest-cursor-turn: active dispatch identity unavailable or ambiguous — skip active-dispatch fallback (unproven join)',
+      );
+    }
     if (activeJoin) {
       const conversationId = input.conversation_id || input.conversationId || null;
       // Persist join so later turns / rollup stay attributed.
