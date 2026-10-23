@@ -10,6 +10,8 @@ import {
   isTenantBoundRedeemQuery,
 } from '../../src/redeem/global-entry';
 import {
+  authButtonsRow,
+  redeemAuthNotice,
   redeemFooterLinks,
   redeemFormCard,
   redeemGateCard,
@@ -18,6 +20,7 @@ import {
   redeemNarrow,
   redeemPageMain,
 } from '../../src/redeem/redeem-surface';
+import { cn } from '../../lib/utils';
 import { RedeemAuthGate } from './redeem-auth-gate';
 import { RedeemForm } from './redeem-form';
 
@@ -77,13 +80,13 @@ export default async function RedeemPage({ searchParams }: Props) {
 
         {authNotice ? (
           <aside
-            className="notice state-error"
+            className={redeemAuthNotice}
             role="alert"
             data-testid="redeem-auth-notice"
           >
             <h2>{authNotice.title}</h2>
             <p>{authNotice.detail}</p>
-            <p className="auth-buttons">
+            <p className={authButtonsRow}>
               <Button asChild variant="primary">
                 <a href={authNotice.retryHref}>Thử lại</a>
               </Button>
@@ -96,7 +99,7 @@ export default async function RedeemPage({ searchParams }: Props) {
 
         {!configured ? (
           <aside
-            className={`notice auth-unconfigured state-error ${redeemGateCard}`}
+            className={cn(redeemGateCard, redeemAuthNotice, '[&_code]:text-[0.9em]')}
             role="status"
           >
             <h2>Cần đăng nhập</h2>
@@ -111,7 +114,7 @@ export default async function RedeemPage({ searchParams }: Props) {
                 </>
               ) : null}
             </p>
-            <p className="auth-buttons">
+            <p className={authButtonsRow}>
               <Button asChild variant="primary">
                 <a href={redeemLogin}>Đăng nhập</a>
               </Button>

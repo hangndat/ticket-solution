@@ -1,0 +1,50 @@
+[
+  {
+    "route": "/claim",
+    "viewport": "390",
+    "reducedMotion": false,
+    "seriousCount": 0
+  },
+  {
+    "route": "/claim",
+    "viewport": "1280",
+    "reducedMotion": false,
+    "seriousCount": 0
+  },
+  {
+    "route": "/claim",
+    "viewport": "390",
+    "reducedMotion": true,
+    "seriousCount": 0
+  },
+  {
+    "route": "/claim",
+    "viewport": "1280",
+    "reducedMotion": true,
+    "seriousCount": 0
+  },
+  {
+    "route": "/invite",
+    "viewport": "390",
+    "reducedMotion": false,
+    "seriousCount": 0
+  },
+  {
+    "route": "/invite",
+    "viewport": "1280",
+    "reducedMotion": false,
+    "seriousCount": 0
+  },
+  {
+    "route": "/invite",
+    "viewport": "390",
+    "reducedMotion": true,
+    "seriousCount": 0
+  },
+  {
+    "route": "/invite",
+    "viewport": "1280",
+    "reducedMotion": true,
+    "seriousCount": 0
+  }
+]

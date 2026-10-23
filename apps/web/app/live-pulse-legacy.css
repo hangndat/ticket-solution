@@ -488,68 +488,6 @@ nav a,
   animation: fade-rise 0.35s ease-out both;
 }
 
-.claim-page {
-  --brand: var(--signal);
-}
-
-.claim-header {
-  max-width: 40rem;
-}
-
-.claim-outcome {
-  animation: fade-rise 0.35s ease-out both;
-}
-
-.invite-page {
-  --brand: var(--signal);
-}
-
-.invite-header {
-  max-width: 40rem;
-}
-
-.invite-form-panel {
-  display: grid;
-  gap: var(--space-4);
-  padding: var(--space-5);
-  border: 2px solid var(--ink-faint);
-  background: color-mix(in srgb, var(--paper) 94%, var(--ink) 6%);
-  max-width: 36rem;
-}
-
-.invite-form-panel label {
-  display: grid;
-  gap: var(--space-2);
-  font-weight: 700;
-  font-size: 0.88rem;
-}
-
-.invite-form-panel input {
-  font: inherit;
-  font-weight: 400;
-  padding: 12px 14px;
-  border: 2px solid color-mix(in srgb, var(--ink) 25%, transparent);
-  background: #fff;
-  color: var(--ink);
-  min-height: 44px;
-}
-
-.invite-field-hint {
-  font-size: 0.88rem;
-  color: var(--ink-muted);
-  line-height: 1.45;
-}
-
-.invite-support {
-  max-width: 36rem;
-  color: var(--ink-muted);
-}
-
-.invite-outcome {
-  animation: fade-rise 0.35s ease-out both;
-  max-width: 36rem;
-}
-
 .redeem-page {
   --brand: var(--signal);
 }
@@ -1784,8 +1722,6 @@ select[aria-invalid='true'] {
 .event-list,
 .account-session,
 .account-outcome,
-.claim-outcome,
-.invite-outcome,
 .shell > h1,
 .shell > .intro,
 .redeem-page > h1,
