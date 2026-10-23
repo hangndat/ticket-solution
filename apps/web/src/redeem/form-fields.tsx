@@ -2,7 +2,11 @@
 
 import type { FormAnswerValue, FormDefinition } from '@ticket/contracts';
 import {
+  redeemCheckboxRow,
+  redeemFieldError,
   redeemFieldLabel,
+  redeemFieldStack,
+  redeemPublishedFields,
   redeemPublishedFieldsCompact,
   redeemPublishedLegend,
 } from './redeem-surface';
@@ -27,7 +31,7 @@ export function RedeemFormFields({
 }: Props) {
   const fieldsetClass = compact
     ? redeemPublishedFieldsCompact
-    : 'redeem-published-fields';
+    : redeemPublishedFields;
 
   return (
     <fieldset className={fieldsetClass} disabled={disabled}>
@@ -42,8 +46,8 @@ export function RedeemFormFields({
 
         if (field.type === 'checkbox') {
           return (
-            <div key={field.id} className="redeem-field">
-              <label className="redeem-checkbox" htmlFor={inputId}>
+            <div key={field.id} className={redeemFieldStack}>
+              <label className={redeemCheckboxRow} htmlFor={inputId}>
                 <input
                   id={inputId}
                   name={field.id}
@@ -59,7 +63,7 @@ export function RedeemFormFields({
                 </span>
               </label>
               {error ? (
-                <p id={errorId} className="redeem-field-error" role="alert">
+                <p id={errorId} className={redeemFieldError} role="alert">
                   {error}
                 </p>
               ) : null}
@@ -69,7 +73,7 @@ export function RedeemFormFields({
 
         if (field.type === 'select') {
           return (
-            <div key={field.id} className="redeem-field">
+            <div key={field.id} className={redeemFieldStack}>
               <label htmlFor={inputId} className={compact ? redeemFieldLabel : undefined}>
                 {field.label}
                 {field.required ? ' *' : ''}
@@ -91,7 +95,7 @@ export function RedeemFormFields({
                 </select>
               </label>
               {error ? (
-                <p id={errorId} className="redeem-field-error" role="alert">
+                <p id={errorId} className={redeemFieldError} role="alert">
                   {error}
                 </p>
               ) : null}
@@ -103,7 +107,7 @@ export function RedeemFormFields({
           field.type === 'email' ? 'email' : field.type === 'phone' ? 'tel' : 'text';
 
         return (
-          <div key={field.id} className="redeem-field">
+          <div key={field.id} className={redeemFieldStack}>
             <label htmlFor={inputId} className={compact ? redeemFieldLabel : undefined}>
               {field.label}
               {field.required ? ' *' : ''}
@@ -121,7 +125,7 @@ export function RedeemFormFields({
               />
             </label>
             {error ? (
-              <p id={errorId} className="redeem-field-error" role="alert">
+              <p id={errorId} className={redeemFieldError} role="alert">
                 {error}
               </p>
             ) : null}

@@ -3,7 +3,14 @@
 import { Button } from '@ticket/ui';
 import Link from 'next/link';
 import { cn } from '../../lib/utils';
-import { redeemTermsProduct } from './redeem-surface';
+import {
+  redeemCheckboxRow,
+  redeemFieldError,
+  redeemSchemaNotice,
+  redeemTermsBlock,
+  redeemTermsBody,
+  redeemTermsProduct,
+} from './redeem-surface';
 
 type Props = {
   termsVersion: string;
@@ -29,32 +36,32 @@ export function RedeemTermsConsent({
 }: Props) {
   return (
     <fieldset
-      className={cn('redeem-terms', compact && redeemTermsProduct)}
+      className={cn(redeemTermsBlock, compact && redeemTermsProduct)}
       data-testid="redeem-terms-consent"
     >
       <legend>Điều khoản</legend>
       {termsBody ? (
         <>
-          <p className="redeem-schema-notice">
+          <p className={redeemSchemaNotice}>
             Nội dung dưới đây do ban tổ chức ban hành (có thể khác ngôn ngữ giao
             diện).
           </p>
-          <pre className="redeem-terms-body" tabIndex={0}>
+          <pre className={redeemTermsBody} data-terms-body tabIndex={0}>
             {termsBody}
           </pre>
         </>
       ) : termsHref ? (
-        <p className="redeem-schema-notice">
+        <p className={redeemSchemaNotice}>
           <Button asChild variant="link">
             <Link href={termsHref}>Đọc điều khoản sự kiện (bản {termsVersion})</Link>
           </Button>
         </p>
       ) : (
-        <p className="redeem-schema-notice">
+        <p className={redeemSchemaNotice}>
           Phiên bản điều khoản: <strong>{termsVersion}</strong>
         </p>
       )}
-      <label className="redeem-checkbox" htmlFor="terms-accepted">
+      <label className={redeemCheckboxRow} htmlFor="terms-accepted">
         <input
           id="terms-accepted"
           name="termsAccepted"
@@ -72,7 +79,7 @@ export function RedeemTermsConsent({
         </span>
       </label>
       {termsError ? (
-        <p id="field-error-terms" className="redeem-field-error" role="alert">
+        <p id="field-error-terms" className={redeemFieldError} role="alert">
           {termsError}
         </p>
       ) : null}

@@ -22,6 +22,14 @@ import {
   messageForDecision,
   type RedeemUxMessage,
 } from '../../src/redeem/messages';
+import {
+  authButtonsRow,
+  claimFormRoot,
+  claimOutcomeClass,
+  meResultPre,
+  redeemMetaDetails,
+} from '../../src/guest/guest-flow-surface';
+import { redeemCheckboxRow } from '../../src/redeem/redeem-surface';
 import { loadPublishedRedeemSchema } from '../../src/redeem/published-schema';
 import { REQUEST_TIMEOUT_MS } from '../../src/redeem/poll-operation';
 import { liveRegionForStatus } from '../../src/ui/live-region';
@@ -352,14 +360,14 @@ export function GuestClaimForm() {
     : null;
 
   return (
-    <div className="redeem-form">
+    <div className={claimFormRoot}>
       <p>
         Đăng nhập bằng đúng email đã được mời, mở liên kết lời mời, rồi điền
         biểu mẫu và đồng ý điều khoản. Email chưa xác minh, sai email, hoặc lời
         mời hết hạn sẽ không được cấp vé. Không tự tạo tài khoản mới.
       </p>
 
-      <div className="auth-buttons">
+      <div className={authButtonsRow}>
         <Button asChild variant="primary">
           <a href={loginHref}>Đăng nhập rồi quay lại nhận lời mời</a>
         </Button>
@@ -433,7 +441,7 @@ export function GuestClaimForm() {
         />
       ) : null}
 
-      <div className="auth-buttons">
+      <div className={authButtonsRow}>
         <Button
           type="button"
           variant="secondary"
@@ -466,7 +474,7 @@ export function GuestClaimForm() {
               setAnswers((prev) => ({ ...prev, [fieldId]: value }))
             }
           />
-          <label className="redeem-checkbox">
+          <label className={redeemCheckboxRow}>
             <input
               type="checkbox"
               checked={termsAccepted}
@@ -475,10 +483,10 @@ export function GuestClaimForm() {
             <span>Tôi đồng ý với điều khoản</span>
           </label>
           {termsBody ? (
-            <details className="redeem-meta" open>
+            <details className={redeemMetaDetails} open>
               <summary>Điều khoản sự kiện</summary>
               <pre
-                className="me-result"
+                className={meResultPre}
                 tabIndex={0}
                 aria-label="Nội dung điều khoản sự kiện"
               >
@@ -502,18 +510,7 @@ export function GuestClaimForm() {
 
       {ux && outcomeLive ? (
         <section
-          className={
-            ux.kind === 'error' ||
-            ux.kind === 'denied' ||
-            ux.kind === 'expired' ||
-            ux.kind === 'auth'
-              ? 'redeem-status redeem-status--error claim-outcome'
-              : ux.kind === 'pending'
-                ? 'redeem-status redeem-status--pending claim-outcome'
-                : ux.kind === 'success'
-                  ? 'redeem-status redeem-status--success claim-outcome'
-                  : 'notice claim-outcome'
-          }
+          className={claimOutcomeClass(ux.kind)}
           role={outcomeLive.role}
           aria-live={outcomeLive.ariaLive}
           aria-atomic={outcomeLive.ariaAtomic}
@@ -525,7 +522,7 @@ export function GuestClaimForm() {
             <p>Chưa phải vé — kiểm tra lại khi có cập nhật.</p>
           ) : null}
           {ux.kind === 'auth' ? (
-            <p className="auth-buttons">
+            <p className={authButtonsRow}>
               <Button asChild variant="brand">
                 <a href={loginHref}>Đăng nhập bằng email đã được mời</a>
               </Button>
