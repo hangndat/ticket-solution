@@ -4,7 +4,7 @@
 | --- | --- |
 | Issue | [#844](https://github.com/hangndat/ticket-solution/issues/844) |
 | Branch | `hangndat/portal-844-platform-mutate` |
-| Evidence SHA | _(filled after commit — `git rev-parse HEAD` on tip)_ |
+| Evidence SHA | `4f81173` (full: `git rev-parse HEAD` on branch tip) |
 
 ## Parity (G-791-2/3) — `apps/web` → `apps/portal`
 
