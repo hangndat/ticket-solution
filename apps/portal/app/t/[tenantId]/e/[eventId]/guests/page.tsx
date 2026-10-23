@@ -102,7 +102,9 @@ export default function EventGuestsPage() {
   );
   const canImport = permissions.includes('inventory.import');
   const canApprove = permissions.includes('redemption.approve');
-  const canNotify = permissions.includes('notify.send');
+  const canNotify =
+    permissions.includes('notify.send') ||
+    permissions.includes('event.config');
   const canExportCreate = permissions.includes('export.create');
   const canExportDownload = permissions.includes('export.download');
   const canExport = canExportCreate || canExportDownload;
