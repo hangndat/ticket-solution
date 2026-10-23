@@ -1,0 +1,20 @@
+{
+  "sha": "0172cebe0ac01780d36416eaaff0e125de9719e7",
+  "portal": "http://127.0.0.1:3013",
+  "shots": [
+    "0172cebe0ac0-provision-1280",
+    "0172cebe0ac0-manage-detail-1280",
+    "0172cebe0ac0-suspend-1280",
+    "0172cebe0ac0-activate-1280",
+    "0172cebe0ac0-limits-1280",
+    "0172cebe0ac0-grant-create-1280",
+    "0172cebe0ac0-provision-390",
+    "0172cebe0ac0-manage-detail-390",
+    "0172cebe0ac0-suspend-390",
+    "0172cebe0ac0-activate-390",
+    "0172cebe0ac0-limits-390",
+    "0172cebe0ac0-grant-create-390"
+  ],
+  "axeSeriousCritical": 0,
+  "at": "2026-10-23T06:25:23.826Z"
+}
