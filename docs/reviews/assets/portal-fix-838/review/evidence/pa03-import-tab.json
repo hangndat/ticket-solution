@@ -1,0 +1,11 @@
+{
+  "id": "8e5a712f-2b3e-4718-aa25-f2c43b5d8ad4",
+  "ok": false,
+  "error": {
+    "code": "browser_error",
+    "message": "Evaluation error: ReferenceError: group is not defined\n    at <anonymous>:1:97"
+  },
+  "_meta": {
+    "runtimeId": "9d821662-c628-49db-a168-99fa7b7636fc"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "id": "53e9173c-2322-4306-87dc-7eb4a1c0cdb3",
+  "ok": true,
+  "result": {
+    "origin": "http://127.0.0.1:3413/onboarding",
+    "refs": {
+      "e1": {
+        "name": "Kiểm tra lại",
+        "role": "button"
+      }
+    },
+    "snapshot": "- generic\n  - alert\n    - image \"exclamation-circle\"\n    - StaticText \"Chưa rõ kết quả\"\n    - StaticText \"Không kết nối được máy chủ. Thử lại sau.\"\n    - button \"Kiểm tra lại\" [ref=e1]\n      - StaticText \"Kiểm tra lại\"\n  - alert"
+  },
+  "_meta": {
+    "runtimeId": "9d821662-c628-49db-a168-99fa7b7636fc"
+  }
+}

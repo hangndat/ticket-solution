@@ -1,0 +1,11 @@
+{
+  "id": "4223638f-bcf3-4a1f-9cf4-5c0b0947dc40",
+  "ok": true,
+  "result": {
+    "origin": "http://127.0.0.1:3413/onboarding/d9d9f001-0001-4000-8000-000000000001",
+    "result": "{\"pathname\":\"/onboarding/d9d9f001-0001-4000-8000-000000000001\",\"tenantValue\":\"\"}"
+  },
+  "_meta": {
+    "runtimeId": "9d821662-c628-49db-a168-99fa7b7636fc"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "id": "e935126c-3ca3-4917-a812-3d5b1bfe9ea1",
+  "ok": true,
+  "result": {
+    "origin": "http://127.0.0.1:3413/onboarding/d9d9f001-0001-4000-8000-000000000001",
+    "result": "{\"sha\":\"e8e0320\"}"
+  },
+  "_meta": {
+    "runtimeId": "9d821662-c628-49db-a168-99fa7b7636fc"
+  }
+}
