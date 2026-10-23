@@ -1,6 +1,11 @@
 'use client';
 
 import type { FormAnswerValue, FormDefinition } from '@ticket/contracts';
+import {
+  redeemFieldLabel,
+  redeemPublishedFieldsCompact,
+  redeemPublishedLegend,
+} from './redeem-surface';
 
 type Props = {
   definition: FormDefinition;
@@ -21,12 +26,12 @@ export function RedeemFormFields({
   onChange,
 }: Props) {
   const fieldsetClass = compact
-    ? 'redeem-published-fields redeem-published-fields--compact'
+    ? redeemPublishedFieldsCompact
     : 'redeem-published-fields';
 
   return (
     <fieldset className={fieldsetClass} disabled={disabled}>
-      <legend className={compact ? 'redeem-published-fields__legend' : undefined}>
+      <legend className={compact ? redeemPublishedLegend : undefined}>
         {compact ? 'Thông tin bổ sung' : 'Biểu mẫu sự kiện'}
       </legend>
       {definition.fields.map((field) => {
@@ -65,7 +70,7 @@ export function RedeemFormFields({
         if (field.type === 'select') {
           return (
             <div key={field.id} className="redeem-field">
-              <label htmlFor={inputId} className={compact ? 'redeem-field-label' : undefined}>
+              <label htmlFor={inputId} className={compact ? redeemFieldLabel : undefined}>
                 {field.label}
                 {field.required ? ' *' : ''}
                 <select
@@ -99,7 +104,7 @@ export function RedeemFormFields({
 
         return (
           <div key={field.id} className="redeem-field">
-            <label htmlFor={inputId} className={compact ? 'redeem-field-label' : undefined}>
+            <label htmlFor={inputId} className={compact ? redeemFieldLabel : undefined}>
               {field.label}
               {field.required ? ' *' : ''}
               <input
