@@ -1,7 +1,19 @@
 import Link from 'next/link';
+import {
+  attendeeWalletTicketCard,
+  attendeeWalletTicketCardDisabled,
+  attendeeWalletTicketCode,
+  attendeeWalletTicketCta,
+  attendeeWalletTicketDate,
+  attendeeWalletTicketFoot,
+  attendeeWalletTicketHead,
+  attendeeWalletTicketMeta,
+  attendeeWalletTicketTitle,
+  attendeeWalletTicketTop,
+  attendeeWalletTicketWarn,
+} from '../attendee-detail-surface';
 import type { WalletTicketRow } from './types';
 import { ticketStateLabel, ticketStateTagClass } from './ticket-state';
-import styles from './wallet-ticket-card.module.css';
 
 function shortTicketCode(ticketId: string): string {
   if (ticketId.length <= 10) return ticketId;
@@ -26,25 +38,25 @@ export function WalletTicketCard({ ticket, tenantSlug }: Props) {
 
   const inner = (
     <>
-      <div className={styles.top}>
-        <div className={styles.head}>
+      <div className={attendeeWalletTicketTop}>
+        <div className={attendeeWalletTicketHead}>
           <span className={ticketStateTagClass(ticket.state)}>
             {ticketStateLabel(ticket.state)}
           </span>
-          <time className={styles.date} dateTime={ticket.createdAt}>
+          <time className={attendeeWalletTicketDate} dateTime={ticket.createdAt}>
             {ticket.createdAt.slice(0, 10)}
           </time>
         </div>
-        <h3 className={styles.title}>{title}</h3>
-        <p className={styles.meta}>
+        <h3 className={attendeeWalletTicketTitle}>{title}</h3>
+        <p className={attendeeWalletTicketMeta}>
           Mã vé <code>{shortTicketCode(ticket.ticketId)}</code>
         </p>
       </div>
-      <div className={styles.foot}>
-        <span className={styles.code} aria-hidden="true">
+      <div className={attendeeWalletTicketFoot}>
+        <span className={attendeeWalletTicketCode} aria-hidden="true">
           {shortTicketCode(ticket.ticketId)}
         </span>
-        <span className={styles.cta}>
+        <span className={attendeeWalletTicketCta}>
           Mở vé <span aria-hidden="true">→</span>
         </span>
       </div>
@@ -54,12 +66,13 @@ export function WalletTicketCard({ ticket, tenantSlug }: Props) {
   if (!href) {
     return (
       <article
-        className={`${styles.card} ${styles.cardDisabled}`}
+        role="listitem"
+        className={attendeeWalletTicketCardDisabled}
         data-testid={`wallet-ticket-${ticket.ticketId}`}
         aria-label={`${title} — chưa mở được liên kết vé`}
       >
         {inner}
-        <p className={styles.warn} role="status">
+        <p className={attendeeWalletTicketWarn} role="status">
           Không xác định được tổ chức cho vé này. Thử đăng nhập lại hoặc đổi mã.
         </p>
       </article>
@@ -69,7 +82,8 @@ export function WalletTicketCard({ ticket, tenantSlug }: Props) {
   return (
     <Link
       href={href}
-      className={styles.card}
+      role="listitem"
+      className={attendeeWalletTicketCard}
       data-testid={`wallet-ticket-${ticket.ticketId}`}
       aria-label={`Mở vé ${title}`}
     >

@@ -1,4 +1,9 @@
 import Link from 'next/link';
+import {
+  attendeeWalletFilterChip,
+  attendeeWalletFilterCount,
+  attendeeWalletFilters,
+} from '../attendee-detail-surface';
 import type { WalletTicketRow } from './types';
 
 export type WalletEventFilter = {
@@ -46,22 +51,18 @@ export function WalletEventFilters({
 
   return (
     <nav
-      className="wallet-filters"
+      className={attendeeWalletFilters}
       aria-label="Lọc vé theo sự kiện"
       data-testid="wallet-event-filters"
     >
       <Link
         href="/wallet"
-        className={
-          activeEventId
-            ? 'wallet-filter-chip'
-            : 'wallet-filter-chip wallet-filter-chip--active'
-        }
+        className={attendeeWalletFilterChip(!activeEventId)}
         aria-current={activeEventId ? undefined : 'true'}
         data-testid="wallet-filter-all"
       >
         Tất cả
-        <span className="wallet-filter-chip__count">{totalCount}</span>
+        <span className={attendeeWalletFilterCount}>{totalCount}</span>
       </Link>
       {filters.map((filter) => {
         const active = activeEventId === filter.eventId;
@@ -69,16 +70,12 @@ export function WalletEventFilters({
           <Link
             key={filter.eventId}
             href={`/wallet?event=${encodeURIComponent(filter.eventId)}`}
-            className={
-              active
-                ? 'wallet-filter-chip wallet-filter-chip--active'
-                : 'wallet-filter-chip'
-            }
+            className={attendeeWalletFilterChip(active)}
             aria-current={active ? 'true' : undefined}
             data-testid={`wallet-filter-${filter.eventId}`}
           >
             {filter.label}
-            <span className="wallet-filter-chip__count">{filter.count}</span>
+            <span className={attendeeWalletFilterCount}>{filter.count}</span>
           </Link>
         );
       })}
