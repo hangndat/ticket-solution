@@ -102,7 +102,9 @@ export default function EventGuestsPage() {
   );
   const canImport = permissions.includes('inventory.import');
   const canApprove = permissions.includes('redemption.approve');
-  const canNotify = permissions.includes('notify.send');
+  const canNotify =
+    permissions.includes('notify.send') ||
+    permissions.includes('event.config');
   const canExportCreate = permissions.includes('export.create');
   const canExportDownload = permissions.includes('export.download');
   const canExport = canExportCreate || canExportDownload;
@@ -140,12 +142,34 @@ export default function EventGuestsPage() {
       key: 'import',
       label: t('ops.import.panelTitle'),
       children: (
-        <ImportInvitationsPanel
-          tenantId={tenantId}
-          eventId={eventId}
-          sourceId={sourceId}
-          ticketTypeId={ticketTypeId}
-        />
+        <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+          <Space wrap role="group" aria-label={t('ops.import.catalogFiltersAria')}>
+            <span>{t('nav.event.sources')}</span>
+            <Select
+              style={{ minWidth: 220 }}
+              value={sourceId || undefined}
+              placeholder={t('ops.import.chooseSource')}
+              options={sources.map((s) => ({ value: s.id, label: s.label }))}
+              onChange={setSourceId}
+              aria-label={t('ops.h_1u6lt1m')}
+            />
+            <span>{t('nav.event.types')}</span>
+            <Select
+              style={{ minWidth: 220 }}
+              value={ticketTypeId || undefined}
+              placeholder={t('ops.import.chooseTicketType')}
+              options={types.map((t) => ({ value: t.id, label: t.label }))}
+              onChange={setTicketTypeId}
+              aria-label={t('ops.h_1wib0ad')}
+            />
+          </Space>
+          <ImportInvitationsPanel
+            tenantId={tenantId}
+            eventId={eventId}
+            sourceId={sourceId}
+            ticketTypeId={ticketTypeId}
+          />
+        </Space>
       ),
     });
   }
@@ -196,26 +220,6 @@ export default function EventGuestsPage() {
     <PortalPage title={t('nav.event.guests')} subTitle={t('guests.h_1tkjxlx')}>
       {catalogError ? (
         <Alert type="warning" showIcon message={catalogError} />
-      ) : null}
-      {canImport ? (
-        <Space wrap>
-          <span>{t('nav.event.sources')}</span>
-          <Select
-            style={{ minWidth: 220 }}
-            value={sourceId || undefined}
-            placeholder={t('ops.import.chooseSource')}
-            options={sources.map((s) => ({ value: s.id, label: s.label }))}
-            onChange={setSourceId}
-          />
-          <span>{t('nav.event.types')}</span>
-          <Select
-            style={{ minWidth: 220 }}
-            value={ticketTypeId || undefined}
-            placeholder={t('ops.import.chooseTicketType')}
-            options={types.map((t) => ({ value: t.id, label: t.label }))}
-            onChange={setTicketTypeId}
-          />
-        </Space>
       ) : null}
       <ProCard
         tabs={{

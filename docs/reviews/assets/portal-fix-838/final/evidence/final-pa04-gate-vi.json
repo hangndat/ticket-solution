@@ -1,0 +1,11 @@
+{
+  "id": "323c487e-9652-47ab-b7cd-6268ba70a0cf",
+  "ok": false,
+  "error": {
+    "code": "browser_error",
+    "message": "Evaluation error: SyntaxError: Invalid or unexpected token"
+  },
+  "_meta": {
+    "runtimeId": "9d821662-c628-49db-a168-99fa7b7636fc"
+  }
+}

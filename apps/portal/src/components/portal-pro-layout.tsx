@@ -2,15 +2,15 @@
 
 import { ProLayout } from '@ant-design/pro-components';
 import type { MenuDataItem } from '@ant-design/pro-components';
-import { Button, Dropdown, Select, Space, theme } from 'antd';
+import { Button, Dropdown, theme } from 'antd';
 import type { MenuProps } from 'antd';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { useMemo, useState, type ReactNode } from 'react';
 import { resolvePortalMenuKeys } from '../nav/portal-menu-keys';
 import type { MeTenantItem } from '@ticket/contracts';
 import type { PortalShellCapabilities } from '../nav/capabilities';
-import { GateIosScanHint } from './gate-deeplink';
+import { PortalContextStrip } from './portal-context-strip';
 import { PortalDualRunBanner } from './dual-run-banner';
 import { SurfaceState } from './surface-state';
 import { usePortalLocale } from '../i18n';
@@ -42,7 +42,6 @@ export function PortalProLayout({
 }: PortalProLayoutProps) {
   const { t, locale, setLocale } = usePortalLocale();
   const pathname = usePathname();
-  const router = useRouter();
   const { token } = theme.useToken();
 
   const { selectedKeys, openKeys: pathOpenKeys } = useMemo(
@@ -116,63 +115,17 @@ export function PortalProLayout({
       menuRender={showSider ? undefined : false}
       fixSiderbar
       logo={
-        <Link href="/" style={{ color: 'inherit' }} data-testid="portal-brand">
+        <Link
+          href="/"
+          className="portal-brand-link"
+          data-testid="portal-brand"
+        >
           Vemoki Portal
         </Link>
       }
       title={false}
-      headerContentRender={() => (
-        <Space wrap size="middle" style={{ flex: 1, marginInlineStart: 16 }}>
-          <Select
-            aria-label={t('shell.tenant.label')}
-            placeholder={
-              tenants.length === 0 ? t('shell.tenant.empty') : t('shell.tenant.placeholder')
-            }
-            style={{ minWidth: 200 }}
-            value={resolvedTenantId ?? undefined}
-            options={tenants.map((tenant) => ({
-              value: tenant.tenantId,
-              label: `${tenant.name} (${tenant.slug})`,
-            }))}
-            onChange={(value) => {
-              router.push(`/t/${value}`);
-            }}
-            disabled={tenants.length === 0}
-            data-testid="tenant-switcher"
-          />
-          <Select
-            aria-label={t('nav.org.events')}
-            placeholder={
-              !resolvedTenantId
-                ? t('shell.event.selectTenantFirst')
-                : tenantEvents.length === 0
-                  ? t('shell.event.empty')
-                  : t('shell.event.placeholder')
-            }
-            style={{ minWidth: 200 }}
-            value={effectiveEventId ?? undefined}
-            options={tenantEvents.map((e) => ({
-              value: e.eventId,
-              label: e.name,
-            }))}
-            onChange={(value) => {
-              if (resolvedTenantId) {
-                router.push(`/t/${resolvedTenantId}/e/${value}`);
-              }
-            }}
-            disabled={!resolvedTenantId || tenantEvents.length === 0}
-            data-testid="event-switcher"
-            allowClear
-            onClear={() => {
-              if (resolvedTenantId) router.push(`/t/${resolvedTenantId}`);
-            }}
-          />
-        </Space>
-      )}
+      headerContentRender={false}
       actionsRender={() => [
-        caps?.showGateScanHint ? (
-          <GateIosScanHint key="gate-scan-hint" />
-        ) : null,
         <Dropdown key="account" menu={accountMenu} trigger={['click']}>
           <Button type="text" data-testid="account-menu">{t('shell.account.menu')}</Button>
         </Dropdown>,
@@ -185,7 +138,7 @@ export function PortalProLayout({
           colorMenuBackground: token.colorBgContainer,
         },
       }}
-      contentStyle={{ padding: 24 }}
+      contentStyle={{ padding: 0 }}
       menuProps={
         {
           openKeys,
@@ -197,7 +150,14 @@ export function PortalProLayout({
       }
     >
       <a href="#portal-main" className="portal-skip-link">{t('shell.skipNav')}</a>
-      <div id="portal-main" tabIndex={-1}>
+      <PortalContextStrip
+        tenants={tenants}
+        tenantEvents={tenantEvents}
+        resolvedTenantId={resolvedTenantId}
+        effectiveEventId={effectiveEventId}
+        showGateScanHint={Boolean(caps?.showGateScanHint)}
+      />
+      <div id="portal-main" tabIndex={-1} className="portal-main-surface">
         <PortalDualRunBanner productOrigin={productOrigin} />
         {activeTenant?.status === 'SUSPENDED' ? <SurfaceState kind="suspended" /> : null}
         {activeTenant?.status === 'PENDING' ? (

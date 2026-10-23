@@ -26,7 +26,7 @@ MD5 authenticated states **khác** guest-only; wallet/ticket before vs after so 
 
 ## axe-core (serious/critical)
 
-Script `apps/web/scripts/pr828-attendee-detail-a11y.mjs` — event + wallet/ticket (guest + đăng nhập) @390/@1280 × default + `prefers-reduced-motion: reduce`. **0** serious/critical (`a11y-<tip-sha12>/axe-summary.json`, 20 runs).
+Script `apps/web/scripts/pr828-attendee-detail-a11y.mjs` — event + wallet/ticket (guest + đăng nhập) @390/@1280 × default + `prefers-reduced-motion: reduce`. **0** serious/critical (`a11y-f84b7e654911/axe-summary.json`, 20 runs).
 
 ## Lighthouse mobile (event detail `/t/mfest-demo/events/mfest`)
 

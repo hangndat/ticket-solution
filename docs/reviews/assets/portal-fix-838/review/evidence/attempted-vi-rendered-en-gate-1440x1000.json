@@ -1,0 +1,46 @@
+{
+  "reviewSHA": "8014fc30796c25243e954e2d0e6c325de3e03f01",
+  "route": "http://127.0.0.1:3413/t/d9d9f001-0001-4000-8000-000000000001/e/d9d9f001-0002-4000-8000-000000000001/gate",
+  "meta": {
+    "pathname": "/t/d9d9f001-0001-4000-8000-000000000001/e/d9d9f001-0002-4000-8000-000000000001/gate",
+    "htmlLang": "en",
+    "innerViewport": "1440x1000"
+  },
+  "probes": {
+    "pa01": {
+      "brandLines": 1,
+      "event": {
+        "height": 32,
+        "top": 86,
+        "width": 260
+      },
+      "hasAccount": true,
+      "hasStrip": true,
+      "hintLines": 1,
+      "layout": {
+        "sideBySide": true,
+        "stacked": false
+      },
+      "localeCookie": "en",
+      "mediaMin768": true,
+      "pageOverflowX": false,
+      "tenant": {
+        "height": 32,
+        "top": 86,
+        "width": 260
+      },
+      "viewport": {
+        "h": 1000,
+        "w": 1440
+      }
+    },
+    "chrome": {
+      "frame": null,
+      "frameWidth": 1440,
+      "issues": [],
+      "viewport": 1440
+    }
+  },
+  "requestedLocale": "vi",
+  "coordinatorNote": "Diagnostic failed locale setup; actual language is in meta.htmlLang. Not a valid VI acceptance capture."
+}

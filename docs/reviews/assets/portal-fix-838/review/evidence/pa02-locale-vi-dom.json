@@ -1,0 +1,11 @@
+{
+  "id": "538965f3-d506-40f3-9fe6-dbd7e55fefc2",
+  "ok": true,
+  "result": {
+    "origin": "http://127.0.0.1:3413/t/d9d9f001-0001-4000-8000-000000000001/e/d9d9f001-0002-4000-8000-000000000001/guests",
+    "result": "{\"lang\":\"en\",\"title\":\"Guests & codes\",\"cookie\":\"portal_csrf=7d9c7204f02c44b893001db90628d8ef22cb9141cc124eb8b235e20ef7c14bed; vemoki_portal_locale=en\"}"
+  },
+  "_meta": {
+    "runtimeId": "9d821662-c628-49db-a168-99fa7b7636fc"
+  }
+}

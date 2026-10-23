@@ -233,12 +233,13 @@ export function ExportPanel({
           </Typography.Text>
         )}
         <Input
-          placeholder="exportId"
+          placeholder={t('ops.export.exportIdPlaceholder')}
           value={exportId}
           onChange={(e) => setExportId(e.target.value)}
           style={{ minWidth: 280 }}
           spellCheck={false}
-          aria-label="exportId"
+          aria-label={t('ops.export.exportIdAria')}
+          data-testid="export-id-input"
         />
         <Button
           loading={busy}
@@ -279,9 +280,17 @@ export function ExportPanel({
         pagination={false}
         locale={{ emptyText: t('ops.export.historyEmpty') }}
         columns={[
-          { title: 'Export ID', dataIndex: 'exportId', ellipsis: true },
-          { title: 'Status', dataIndex: 'status', width: 120 },
-          { title: 'Created', dataIndex: 'createdAt', ellipsis: true },
+          {
+            title: t('ops.table.exportId'),
+            dataIndex: 'exportId',
+            ellipsis: true,
+          },
+          { title: t('ops.table.status'), dataIndex: 'status', width: 120 },
+          {
+            title: t('ops.table.created'),
+            dataIndex: 'createdAt',
+            ellipsis: true,
+          },
           {
             title: '',
             key: 'use',

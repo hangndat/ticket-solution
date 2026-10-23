@@ -1,0 +1,25 @@
+{
+  "id": "cfd30ed3-7abb-4f3b-9937-246a9fbca0ff",
+  "ok": true,
+  "result": {
+    "origin": "http://127.0.0.1:3413/auth",
+    "refs": {
+      "e1": {
+        "name": "Vemoki Portal",
+        "role": "heading"
+      },
+      "e2": {
+        "name": "",
+        "role": "generic"
+      },
+      "e3": {
+        "name": "Đăng nhập nhân sự",
+        "role": "link"
+      }
+    },
+    "snapshot": "- generic\n  - heading \"Vemoki Portal\" [level=2, ref=e1] clickable [onclick]\n  - generic [ref=e2] clickable [onclick]\n    - StaticText \"Đăng nhập nhân sự qua nhà cung cấp danh tính. Không dùng phiên khách (app) trên portal.\"\n  - alert\n    - image \"info-circle\"\n    - StaticText \"Cookie phiên chỉ thuộc portal — không chia sẻ với app.\"\n  - link \"Đăng nhập nhân sự\" [ref=e3]\n    - StaticText \"Đăng nhập nhân sự\"\n  - alert"
+  },
+  "_meta": {
+    "runtimeId": "9d821662-c628-49db-a168-99fa7b7636fc"
+  }
+}
