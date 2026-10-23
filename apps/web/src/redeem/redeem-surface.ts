@@ -1,26 +1,45 @@
 import { cn } from '../../lib/utils';
 
 /**
- * Redeem route (/redeem) — Tailwind v4 + tokens; replaces redeem-surface.module.css.
- *
- * D-1: no raw #hex — color-mix on @theme semantic tokens.
- * Dev / tenant-bound tooling keeps legacy `.redeem-form` classes from live-pulse-legacy.
+ * Redeem route (/redeem) + shared guest-flow primitives — Tailwind v4 + @theme tokens (D-1).
  */
 
-export const redeemPageMain = cn(
-  'lp-container shell [--brand:var(--color-signal)]',
+export const fadeRiseMotion = cn(
+  'motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 motion-safe:duration-500 motion-safe:fill-mode-both motion-reduce:animate-none',
 );
+
+export const lpPageShell = cn(
+  'mx-auto max-w-[75rem] px-5 [--brand:var(--color-signal)]',
+  'min-h-[75vh] pt-20 pb-[60px]',
+  'min-[760px]:px-12 min-[760px]:pt-[100px] min-[760px]:pb-[70px]',
+);
+
+export const redeemPageMain = cn(lpPageShell, '[--brand:var(--color-signal)]');
+
+export const introLead = 'max-w-[570px] text-[1.15rem] leading-[1.65]';
 
 export const redeemNarrow = 'mx-auto mb-12 max-w-[33.125rem]';
 
 export const redeemHeader = cn(
-  'mt-8 text-left animate-in fade-in slide-in-from-bottom-2 duration-500 fill-mode-both motion-reduce:animate-none',
+  'mt-8 text-left',
   '[&_h1]:mb-3 [&_h1]:font-display [&_h1]:text-[clamp(1.85rem,4.5vw,2.4rem)] [&_h1]:tracking-[-0.04em]',
   'max-[480px]:[&_h1]:text-[1.75rem]',
+  fadeRiseMotion,
 );
 
 export const redeemLead =
   'm-0 max-w-[32rem] text-[1.05rem] leading-[1.65] text-ink-muted';
+
+export const authButtonsRow = cn(
+  'my-4 flex flex-wrap gap-3',
+  '[&_button]:box-border [&_button]:min-h-11 [&_button]:min-w-11',
+  '[&_a]:box-border [&_a]:inline-flex [&_a]:min-h-11 [&_a]:min-w-11 [&_a]:items-center',
+);
+
+export const redeemAuthNotice = cn(
+  'my-9 border border-destructive/55 bg-destructive/10 p-6 text-destructive',
+  '[&_h2]:text-xl [&_h2]:tracking-normal [&_p]:mb-0',
+);
 
 export const redeemGateCard = cn(
   'mt-8 rounded-lg border border-line bg-white p-6 shadow-[0_1px_0_color-mix(in_srgb,var(--color-ink)_4%,transparent)]',
@@ -45,7 +64,23 @@ export const redeemFormCard = cn(
 
 export const redeemFooterLinks = 'mt-8 text-[0.95rem]';
 
-export const redeemProductFormRoot = 'redeem-form redeem-product-form m-0 grid max-w-none gap-8';
+const devFormFieldChrome = cn(
+  '[&_label]:grid [&_label]:gap-1.5 [&_label]:text-sm [&_label]:font-bold',
+  '[&_input:not([type=checkbox]):not([type=radio])]:box-border [&_input:not([type=checkbox]):not([type=radio])]:min-h-11 [&_input:not([type=checkbox]):not([type=radio])]:w-full [&_input:not([type=checkbox]):not([type=radio])]:border-2 [&_input:not([type=checkbox]):not([type=radio])]:border-[color-mix(in_srgb,var(--color-ink)_25%,transparent)] [&_input:not([type=checkbox]):not([type=radio])]:bg-white [&_input:not([type=checkbox]):not([type=radio])]:px-3.5 [&_input:not([type=checkbox]):not([type=radio])]:py-3 [&_input:not([type=checkbox]):not([type=radio])]:font-[inherit] [&_input:not([type=checkbox]):not([type=radio])]:font-normal [&_input:not([type=checkbox]):not([type=radio])]:text-ink',
+  '[&_select]:box-border [&_select]:min-h-11 [&_select]:w-full [&_select]:border-2 [&_select]:border-[color-mix(in_srgb,var(--color-ink)_25%,transparent)] [&_select]:bg-white [&_select]:px-3.5 [&_select]:py-3 [&_select]:font-[inherit]',
+  '[&_textarea]:box-border [&_textarea]:min-h-11 [&_textarea]:w-full [&_textarea]:border-2 [&_textarea]:border-[color-mix(in_srgb,var(--color-ink)_25%,transparent)] [&_textarea]:bg-white [&_textarea]:px-3.5 [&_textarea]:py-3 [&_textarea]:font-[inherit] [&_textarea]:font-normal',
+  '[&_textarea[readonly]]:bg-[color-mix(in_srgb,var(--color-ink)_5%,transparent)]',
+  '[&_button]:min-h-11 [&_button]:min-w-11',
+);
+
+export const redeemDevFormRoot = cn('my-8 grid max-w-[45rem] gap-7', devFormFieldChrome);
+
+export const guestFormRoot = redeemDevFormRoot;
+
+export const redeemProductFormRoot = cn(
+  'redeem-product-form m-0 grid max-w-none gap-8',
+  devFormFieldChrome,
+);
 
 export const redeemProductFormTitle = cn(
   'absolute m-[-1px] h-px w-px overflow-hidden border-0 p-0 whitespace-nowrap',
@@ -61,9 +96,7 @@ export const redeemCodeField = cn(
   '[&_input:focus-visible]:outline [&_input:focus-visible]:outline-[3px] [&_input:focus-visible]:outline-focus [&_input:focus-visible]:outline-offset-2',
 );
 
-export const redeemPrimaryActions = cn(
-  'grid gap-3 [&_.redeem-submit]:w-full [&_.redeem-submit]:rounded-md',
-);
+export const redeemPrimaryActions = cn('grid gap-3 [&_.redeem-submit]:w-full [&_.redeem-submit]:rounded-md');
 
 export const redeemSecondaryTools = cn(
   'mt-2 [&_summary]:flex [&_summary]:min-h-11 [&_summary]:cursor-pointer [&_summary]:items-center [&_summary]:font-semibold [&_summary]:text-ink-muted',
@@ -77,34 +110,148 @@ export const redeemGlobalContext = cn(
   '[&_dd]:m-0 [&_dd]:font-semibold',
 );
 
+export const redeemFieldsGrid = 'grid gap-4';
+
+export const redeemVersionsGrid = cn(
+  'grid gap-4 min-[760px]:grid-cols-2',
+  '[&_label]:grid [&_label]:gap-1.5 [&_label]:text-sm [&_label]:font-bold',
+  '[&_input]:min-h-11 [&_input]:border-2 [&_input]:border-[color-mix(in_srgb,var(--color-ink)_25%,transparent)] [&_input]:bg-white [&_input]:px-3.5 [&_input]:py-3',
+);
+
+export const redeemPublishedFields = cn(
+  'm-0 grid gap-3.5 border-2 border-[color-mix(in_srgb,var(--color-ink)_19%,transparent)] p-4',
+  devFormFieldChrome,
+);
+
 export const redeemPublishedFieldsCompact = cn(
-  'redeem-published-fields redeem-published-fields--compact gap-3 rounded-md border border-line p-4',
+  'gap-3 rounded-md border border-line p-4',
+  redeemPublishedFields,
 );
 
 export const redeemPublishedLegend =
-  'redeem-published-fields__legend text-xs font-bold tracking-[0.04em] uppercase text-ink-muted';
+  'px-1.5 text-xs font-bold tracking-[0.04em] uppercase text-ink-muted';
+
+export const redeemFieldStack = 'grid gap-1.5';
 
 export const redeemFieldLabel = cn(
-  'redeem-field-label grid gap-2 text-xs font-bold',
+  'grid gap-2 text-xs font-bold',
   '[&_input]:min-h-[46px] [&_input]:rounded-md [&_input]:border [&_input]:border-[color-mix(in_srgb,var(--color-ink)_14%,var(--color-line))]',
   '[&_select]:min-h-[46px] [&_select]:rounded-md [&_select]:border [&_select]:border-[color-mix(in_srgb,var(--color-ink)_14%,var(--color-line))]',
 );
 
+export const redeemCheckboxRow = cn(
+  'flex min-h-11 items-center gap-2.5 font-semibold',
+  '[&_input]:m-0 [&_input]:size-5 [&_input]:min-h-5 [&_input]:min-w-5 [&_input]:shrink-0',
+);
+
+export const redeemFieldError = 'm-0 text-sm font-semibold text-destructive';
+
+export const redeemSchemaNotice = 'm-0 text-sm text-ink-muted';
+
+export const redeemTermsBlock = cn(
+  'm-0 grid gap-3.5 border-2 border-[color-mix(in_srgb,var(--color-ink)_19%,transparent)] p-4',
+);
+
+export const redeemTermsBody = cn(
+  'm-0 max-h-[180px] overflow-auto whitespace-pre-wrap border border-[color-mix(in_srgb,var(--color-ink)_19%,transparent)] bg-[color-mix(in_srgb,var(--color-ink)_5%,transparent)] p-3 text-sm',
+);
+
 export const redeemTermsProduct = cn(
-  'redeem-terms mt-2 gap-3 rounded-md border border-line bg-paper p-[18px]',
-  '[&_.redeem-terms-body]:max-h-[140px] [&_.redeem-terms-body]:rounded-sm [&_.redeem-terms-body]:border [&_.redeem-terms-body]:border-line [&_.redeem-terms-body]:bg-white [&_.redeem-terms-body]:p-3.5 [&_.redeem-terms-body]:text-[0.85rem] [&_.redeem-terms-body]:leading-[1.55]',
-  '[&_.redeem-checkbox]:items-start [&_.redeem-checkbox]:text-[0.88rem] [&_.redeem-checkbox]:leading-[1.45]',
+  'mt-2 gap-3 rounded-md border border-line bg-paper p-[18px]',
+  redeemTermsBlock,
+  '[&_[data-terms-body]]:max-h-[140px] [&_[data-terms-body]]:rounded-sm [&_[data-terms-body]]:border [&_[data-terms-body]]:border-line [&_[data-terms-body]]:bg-white [&_[data-terms-body]]:p-3.5 [&_[data-terms-body]]:text-[0.85rem] [&_[data-terms-body]]:leading-[1.55]',
+);
+
+export const redeemMetaDetails = cn(
+  'mt-2.5 break-all text-sm',
+  '[&_summary]:cursor-pointer [&_summary]:font-bold',
+);
+
+export const meResultPre = cn(
+  'm-0 max-h-80 overflow-auto border border-[color-mix(in_srgb,var(--color-ink)_19%,transparent)] bg-[color-mix(in_srgb,var(--color-ink)_5%,transparent)] p-4 text-sm',
+);
+
+export const redeemDevTicketCard = cn(
+  'mt-8 rounded-lg border border-dashed border-line bg-[color-mix(in_srgb,var(--color-ink)_5%,transparent)] p-5',
+  '[&_dl]:m-0 [&_dl]:grid [&_dl]:gap-2.5',
+  '[&_dl>div]:grid [&_dl>div]:grid-cols-[160px_1fr] [&_dl>div]:gap-3',
+  '[&_dt]:text-sm [&_dt]:font-bold',
+  '[&_dd]:m-0 [&_dd]:break-all [&_dd]:font-mono [&_dd]:text-sm',
+);
+
+export const redeemTicketListSection = cn(
+  '[&_ul]:m-0 [&_ul]:grid [&_ul]:list-none [&_ul]:gap-2 [&_ul]:p-0',
+  '[&_li]:border [&_li]:border-[color-mix(in_srgb,var(--color-ink)_19%,transparent)] [&_li]:bg-[color-mix(in_srgb,var(--color-ink)_5%,transparent)] [&_li]:px-3 [&_li]:py-2.5 [&_li]:text-sm',
 );
 
 export const redeemTicketCard = cn(
-  'redeem-ticket mt-8 rounded-lg border border-dashed border-[color-mix(in_srgb,var(--color-line)_85%,var(--color-muted))] bg-gradient-to-b from-[color-mix(in_srgb,var(--color-paper)_96%,white)] to-white p-5',
+  'mt-8 rounded-lg border border-dashed border-[color-mix(in_srgb,var(--color-line)_85%,var(--color-muted))] bg-gradient-to-b from-[color-mix(in_srgb,var(--color-paper)_96%,white)] to-white p-5',
+  '[&_dl]:m-0 [&_dl]:grid [&_dl]:gap-2.5',
+  '[&_dl>div]:grid [&_dl>div]:grid-cols-[160px_1fr] [&_dl>div]:gap-3',
+  '[&_dt]:text-sm [&_dt]:font-bold',
+  '[&_dd]:m-0 [&_dd]:break-all [&_dd]:font-mono [&_dd]:text-sm',
 );
+
+const devStatusBase = cn(
+  'grid gap-2 border-2 px-5 py-[18px]',
+  'border-[color-mix(in_srgb,var(--color-ink)_25%,transparent)] bg-[color-mix(in_srgb,var(--color-ink)_3%,transparent)]',
+  '[&_h2]:m-0 [&_h2]:mb-2 [&_h2]:text-[1.15rem] [&_h3]:m-0 [&_h3]:mb-2 [&_h3]:text-[1.15rem]',
+  '[&_p]:m-0',
+  '[&_button]:min-h-11 [&_button]:min-w-11',
+);
+
+const devStatusSuccess = cn(
+  'border-[color-mix(in_srgb,var(--color-ink)_55%,var(--color-focus)_45%)] bg-[color-mix(in_srgb,var(--color-paper)_88%,var(--color-focus)_12%)] text-ink',
+);
+
+const devStatusSignal = cn(
+  'border-[color-mix(in_srgb,var(--color-signal)_45%,var(--color-ink))] bg-[color-mix(in_srgb,var(--color-signal)_10%,var(--color-paper))] text-ink',
+);
+
+const devStatusFocus = cn(
+  'border-focus bg-[color-mix(in_srgb,var(--color-focus)_12%,var(--color-paper))] text-[color-mix(in_srgb,var(--color-focus)_70%,var(--color-ink))]',
+);
+
+const devStatusDestructive =
+  'border-destructive/80 bg-destructive/10 text-destructive';
+
+const devStatusPending = cn(
+  'border-[color-mix(in_srgb,var(--color-focus)_50%,var(--color-ink))] bg-[color-mix(in_srgb,var(--color-focus)_12%,var(--color-paper))] text-ink',
+);
+
+const devStatusMuted = cn(
+  'border-ink/40 bg-[color-mix(in_srgb,var(--color-ink)_8%,var(--color-paper))] text-ink',
+);
+
+const DEV_STATUS_KIND: Record<string, string> = {
+  success: devStatusSuccess,
+  exhausted: devStatusSignal,
+  used: devStatusSignal,
+  closed: devStatusSignal,
+  timeout: devStatusFocus,
+  polling: devStatusFocus,
+  verifying: devStatusFocus,
+  auth: devStatusDestructive,
+  error: devStatusDestructive,
+  invalid: devStatusDestructive,
+  conflict: devStatusDestructive,
+  denied: devStatusDestructive,
+  stale: devStatusDestructive,
+  pending: devStatusPending,
+  expired: devStatusMuted,
+  unknown: devStatusMuted,
+};
+
+/** Dev / tenant-bound redeem UX panels (legacy redeem-status parity). */
+export function redeemDevStatusClass(kind: string): string {
+  const variant = DEV_STATUS_KIND[kind] ?? DEV_STATUS_KIND.unknown;
+  return cn(devStatusBase, variant);
+}
 
 export const redeemOutcomePanel = cn(
   'mt-8 rounded-lg border border-line bg-white px-6 py-7 text-center shadow-sm',
   '[&_h3]:m-0 [&_h3]:mb-2.5 [&_h3]:font-display [&_h3]:text-[clamp(1.35rem,3vw,1.65rem)] [&_h3]:tracking-[-0.03em]',
   '[&_p]:m-0 [&_p]:mb-4 [&_p]:text-[0.98rem] [&_p]:leading-[1.6] [&_p]:text-ink-muted',
-  '[&_.auth-buttons]:flex [&_.auth-buttons]:flex-wrap [&_.auth-buttons]:justify-center',
 );
 
 export const redeemOutcomeSuccess = cn(
@@ -130,11 +277,10 @@ export const redeemErrorRing = cn(
 
 export const redeemOutcomeActions = cn(
   'mt-4 grid gap-3',
-  '[&_.button]:min-h-12 [&_.button]:w-full [&_.button]:justify-center',
-  '[&_a.button]:min-h-12 [&_a.button]:w-full [&_a.button]:justify-center',
+  '[&_button]:min-h-12 [&_button]:w-full [&_button]:justify-center',
+  '[&_a]:min-h-12 [&_a]:w-full [&_a]:justify-center',
 );
 
-/** Kinds that get destructive outcome panel chrome (parity with main redeem-form statusClass). */
 export const REDEEM_PRODUCT_PANEL_ERROR_KINDS = [
   'error',
   'invalid',
@@ -148,7 +294,6 @@ export const REDEEM_PRODUCT_PANEL_ERROR_KINDS = [
   'auth',
 ] as const;
 
-/** Kinds that show product error ring + primary recovery actions (excludes stale/timeout/auth). */
 export const REDEEM_PRODUCT_OUTCOME_ERROR_KINDS = [
   'error',
   'invalid',
@@ -162,9 +307,8 @@ export const REDEEM_PRODUCT_OUTCOME_ERROR_KINDS = [
 const PRODUCT_PANEL_ERROR_KINDS = new Set<string>(REDEEM_PRODUCT_PANEL_ERROR_KINDS);
 const PRODUCT_OUTCOME_ERROR_KINDS = new Set<string>(REDEEM_PRODUCT_OUTCOME_ERROR_KINDS);
 
-/** Product chrome UX panel — Tailwind only (no legacy redeem-status--* modifiers). */
 export function redeemProductUxClass(kind: string): string {
-  const base = cn('redeem-status', redeemOutcomePanel);
+  const base = cn(redeemOutcomePanel);
   if (kind === 'success') {
     return cn(base, redeemOutcomeSuccess);
   }

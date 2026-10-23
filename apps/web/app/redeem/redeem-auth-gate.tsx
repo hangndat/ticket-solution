@@ -1,10 +1,13 @@
 import { Button } from '@ticket/ui';
 import Link from 'next/link';
+import { eyebrowKicker } from '../../src/guest/guest-flow-surface';
 import {
+  authButtonsRow,
   redeemGateActions,
   redeemGateCard,
   redeemGateIllustration,
 } from '../../src/redeem/redeem-surface';
+import { cn } from '../../lib/utils';
 
 type Props = {
   loginHref: string;
@@ -22,14 +25,14 @@ export function RedeemAuthGate({ loginHref, intentCopy = true }: Props) {
       <div className={redeemGateIllustration} aria-hidden="true">
         🔐
       </div>
-      <p className="eyebrow">Đăng nhập</p>
+      <p className={eyebrowKicker}>Đăng nhập</p>
       <h2 id="redeem-auth-gate-title">Tiếp tục để đổi mã</h2>
       <p>
         {intentCopy
           ? 'Hoàn tất đăng nhập để tiếp tục đổi mã — sau khi đăng nhập bạn sẽ quay lại trang này.'
           : 'Đăng nhập để đổi mã lấy vé trên Vemoki.'}
       </p>
-      <div className={`auth-buttons ${redeemGateActions}`}>
+      <div className={cn(authButtonsRow, redeemGateActions)}>
         <Button asChild variant="primary">
           <a href={loginHref}>Tiếp tục đăng nhập</a>
         </Button>

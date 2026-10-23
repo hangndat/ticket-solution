@@ -1,0 +1,15 @@
+{
+  "label": "pr-ca18f38e",
+  "route": {
+    "id": "claim",
+    "path": "/claim"
+  },
+  "run": 1,
+  "lighthouse": "13.5.0",
+  "scores": {
+    "performance": 81,
+    "accessibility": 100,
+    "bestPractices": 96,
+    "seo": 63
+  }
+}
