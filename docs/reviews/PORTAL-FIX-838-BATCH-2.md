@@ -4,7 +4,7 @@
 | --- | --- |
 | Worker | Higo · web |
 | Base SHA (dispatch) | `23e7d15288c0ad75f65432f2d78a451e33d27598` |
-| Commit (local, post-fix) | *(ghi sau commit)* |
+| Commit (local, post-fix) | `e8e0320` |
 | Lượt sửa | **2/2** |
 | Verdict worker | **Đã sửa — chờ reviewer revalidate** (không đổi James FAIL độc lập) |
 
