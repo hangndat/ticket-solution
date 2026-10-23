@@ -165,22 +165,27 @@ async function main() {
     const authed = await loginForWallet(page, base);
     if (authed) {
       await page.goto(`${base}/wallet`, { waitUntil: 'domcontentloaded' });
-      const ready =
-        (await page.getByTestId('wallet-ready').count()) > 0
-          ? 'wallet-ready'
-          : (await page.getByTestId('wallet-empty').count()) > 0
-            ? 'wallet-empty'
-            : null;
-      if (ready) {
-        await page.waitForSelector(`[data-testid="${ready}"]`, { timeout: 60_000 });
-        await settleAnimations(page);
-        for (const vp of VIEWPORTS) {
-          await page.setViewportSize({ width: vp.width, height: vp.height });
-          md5s.push(
-            await shot(page, join(outDir, `${ready}-${vp.id}-${phase}.png`)),
-          );
-        }
-        const ticket = page.locator('[data-testid^="wallet-ticket-"]').first();
+      await page.waitForSelector('[data-testid="wallet-ready"]', {
+        timeout: 60_000,
+      });
+      const hasGrid = await page
+        .getByTestId('wallet-ticket-grid')
+        .waitFor({ state: 'visible', timeout: 60_000 })
+        .then(() => true)
+        .catch(() => false);
+      const walletShotId = hasGrid ? 'wallet-ready' : 'wallet-empty';
+      await settleAnimations(page);
+      for (const vp of VIEWPORTS) {
+        await page.setViewportSize({ width: vp.width, height: vp.height });
+        md5s.push(
+          await shot(
+            page,
+            join(outDir, `${walletShotId}-${vp.id}-${phase}.png`),
+          ),
+        );
+      }
+      if (hasGrid) {
+        const ticket = page.locator('a[data-testid^="wallet-ticket-"]').first();
         if ((await ticket.count()) > 0) {
           await ticket.click();
           await page.waitForSelector('[data-testid="owner-ticket-ready"]', {

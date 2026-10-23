@@ -64,7 +64,7 @@ export const attendeeNavAvatar = cn(
 );
 
 export const attendeeNavAvatarBadge = cn(
-  'grid size-8 shrink-0 place-items-center rounded-full bg-[color-mix(in_srgb,var(--color-signal)_14%,var(--color-paper))] text-[0.68rem] font-bold text-[color-mix(in_srgb,var(--color-signal)_85%,var(--color-ink))]',
+  'grid size-8 shrink-0 place-items-center rounded-full bg-[color-mix(in_srgb,var(--color-signal)_14%,var(--color-paper))] text-[0.68rem] font-bold text-[color-mix(in_srgb,var(--color-ink)_28%,var(--color-signal))]',
 );
 
 export const attendeeNavAvatarLabel =
