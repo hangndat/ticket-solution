@@ -40,7 +40,7 @@ export const accountNavLink = cn(
 
 export const accountNavLinkActive = cn(
   accountNavLink,
-  'border-[color-mix(in_srgb,var(--color-focus)_12%,var(--color-line))] bg-[color-mix(in_srgb,var(--color-focus)_8%,var(--color-paper))] text-focus',
+  'border-[color-mix(in_srgb,var(--color-focus)_12%,var(--color-line))] bg-[color-mix(in_srgb,var(--color-focus)_8%,var(--color-paper))] text-[color-mix(in_srgb,var(--color-focus)_55%,var(--color-ink))]',
 );
 
 export const accountSectionTitle = cn(
