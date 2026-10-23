@@ -1,0 +1,12 @@
+{
+  "owned_roots": [
+    45596,
+    90046
+  ],
+  "signalled_pids": [
+    90047,
+    90046,
+    45596
+  ],
+  "scope": "Only descendants of exact recorded API and portal audit server PIDs"
+}

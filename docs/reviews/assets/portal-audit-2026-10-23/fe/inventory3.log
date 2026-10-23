@@ -1,0 +1,87 @@
+=== pages without PortalPage ===
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/app/auth/page.tsx
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/app/account/security/page.tsx
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/app/page.tsx
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/app/onboarding/[tenantId]/page.tsx
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/app/onboarding/page.tsx
+=== ProTable vs PortalCursorProTable vs antd Table files ===
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/components/portal-pro-table.tsx
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/app/platform/page.tsx
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/app/t/[tenantId]/analytics/page.tsx
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/app/t/[tenantId]/events/page.tsx
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/app/t/[tenantId]/members/page.tsx
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/app/t/[tenantId]/e/[eventId]/sources/page.tsx
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/app/t/[tenantId]/e/[eventId]/config/page.tsx
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/app/t/[tenantId]/e/[eventId]/types/page.tsx
+=== useEffect without cleanup fetch ===
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/views/saved-views-toolbar.tsx:62:  useEffect(() => {
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/views/saved-views-toolbar.tsx-63-    if (!ready || appliedDefaultRef.current || !defaultView) return;
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/views/saved-views-toolbar.tsx-64-    appliedDefaultRef.current = true;
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/views/saved-views-toolbar.tsx-65-    const applied = applyView(defaultView);
+--
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/i18n/locale-context.tsx:41:  useEffect(() => {
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/i18n/locale-context.tsx-42-    const stored = readStoredPortalLocale();
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/i18n/locale-context.tsx-43-    if (stored !== initialLocale) {
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/i18n/locale-context.tsx-44-      // eslint-disable-next-line react-hooks/set-state-in-effect
+--
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/i18n/locale-context.tsx:50:  useEffect(() => {
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/i18n/locale-context.tsx-51-    if (!hydrated) return;
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/i18n/locale-context.tsx-52-    document.documentElement.lang = locale;
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/i18n/locale-context.tsx-53-  }, [locale, hydrated]);
+--
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/ops/panels/export-panel.tsx:80:  useEffect(() => {
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/ops/panels/export-panel.tsx-81-    let cancelled = false;
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/ops/panels/export-panel.tsx-82-    queueMicrotask(() => {
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/ops/panels/export-panel.tsx-83-      if (!cancelled) void loadHistory();
+--
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/ops/panels/codes-panel.tsx:70:  useEffect(() => {
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/ops/panels/codes-panel.tsx-71-    let cancelled = false;
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/ops/panels/codes-panel.tsx-72-    queueMicrotask(() => {
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/ops/panels/codes-panel.tsx-73-      if (!cancelled) void load(null, false);
+--
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/ops/panels/notifications-panel.tsx:73:  useEffect(() => {
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/ops/panels/notifications-panel.tsx-74-    let cancelled = false;
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/ops/panels/notifications-panel.tsx-75-    queueMicrotask(() => {
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/ops/panels/notifications-panel.tsx-76-      if (!cancelled) void load();
+--
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/ops/panels/audit-panel.tsx:62:  useEffect(() => {
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/ops/panels/audit-panel.tsx-63-    let cancelled = false;
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/ops/panels/audit-panel.tsx-64-    queueMicrotask(() => {
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/ops/panels/audit-panel.tsx-65-      if (!cancelled) void load(null, false);
+--
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/ops/panels/pending-panel.tsx:78:  useEffect(() => {
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/ops/panels/pending-panel.tsx-79-    let cancelled = false;
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/ops/panels/pending-panel.tsx-80-    queueMicrotask(() => {
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/ops/panels/pending-panel.tsx-81-      if (!cancelled) void load();
+--
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/components/providers.tsx:19:  useEffect(() => {
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/components/providers.tsx-20-    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/components/providers.tsx-21-    const sync = () => setReducedMotion(mq.matches);
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/components/providers.tsx-22-    sync();
+--
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/components/portal-shell.tsx:68:  useEffect(() => {
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/components/portal-shell.tsx-69-    void loadShellContext().then(setShell);
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/components/portal-shell.tsx-70-  }, []);
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/components/portal-shell.tsx-71-
+--
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/components/portal-shell.tsx:75:  useEffect(() => {
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/components/portal-shell.tsx-76-    if (!staffLoginUrl) return;
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/components/portal-shell.tsx-77-    window.location.replace(staffLoginUrl);
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/components/portal-shell.tsx-78-  }, [staffLoginUrl]);
+--
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/app/onboarding/page.tsx:53:  useEffect(() => {
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/app/onboarding/page.tsx-54-    if (identity.status === 'loading') {
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/app/onboarding/page.tsx-55-      return;
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/app/onboarding/page.tsx-56-    }
+--
+=== skip link usage ===
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/ops/a11y-contracts.ts:8:  skipLinkClass: 'portal-skip-link',
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/tests/fixtures/filter-toolbar-a11y.html:8:    <a href="#portal-main" class="portal-skip-link">Bỏ qua tới nội dung</a>
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/components/portal-pro-layout.tsx:199:      <a href="#portal-main" className="portal-skip-link">{t('shell.skipNav')}</a>
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/tests/ops-filters.test.ts:156:    assert.match(html, /portal-skip-link/);
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/app/globals.css:22:.portal-skip-link {
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/app/globals.css:32:.portal-skip-link:focus {
+=== axe usage ===
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/src/ops/a11y-contracts.ts
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/package.json
+/Users/admin/orca/workspaces/main/portal-audit-832-fe/apps/portal/tests/ops-filters.test.ts
