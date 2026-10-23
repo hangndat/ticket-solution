@@ -128,6 +128,31 @@ else:
 flow_enc = up.quote(flow)
 st, raw = api("GET", f"/admin/realms/{realm}/authentication/flows/{flow_enc}/executions")
 execs = json.loads(raw.decode())
+
+# Keycloak 26 browser copy: top-level REQUIRED next to Cookie/IdP ALTERNATIVE makes the flow
+# ignore the alternatives and fail before the login form (AuthenticationFlowException).
+# Keep "forms" ALTERNATIVE and disable the unused "Organization" subflow.
+for e in execs:
+    if e.get("level") != 0 or not e.get("authenticationFlow"):
+        continue
+    disp_l = (e.get("displayName") or "").lower()
+    want = None
+    if disp_l.endswith(" forms"):
+        want = "ALTERNATIVE"
+    elif disp_l.endswith(" organization"):
+        want = "DISABLED"
+    if want and e.get("requirement") != want:
+        e["requirement"] = want
+        st3, raw3 = api(
+            "PUT",
+            f"/admin/realms/{realm}/authentication/flows/{flow_enc}/executions",
+            e,
+        )
+        print(f"top-level {e.get('displayName')} → {want} http={st3}")
+        if st3 >= 400:
+            print(raw3.decode()[:300], file=sys.stderr)
+            sys.exit(1)
+
 updated = 0
 for e in execs:
     disp = (e.get("displayName") or "")
@@ -189,6 +214,19 @@ for cid in ("ticket-platform-web", "ticket-admin-web"):
     if st >= 400:
         print(raw.decode()[:500], file=sys.stderr)
         sys.exit(1)
+
+# Realm default scope "acr" (oidc-acr-mapper, LoA from session) overrides the client's
+# hardcoded acr=2 claim with acr=1 — detach it from MFA clients.
+st, raw = api("GET", f"/admin/realms/{realm}/client-scopes")
+acr_scope = next((s["id"] for s in json.loads(raw.decode()) if s.get("name") == "acr"), None)
+if acr_scope:
+    for cid in ("ticket-platform-web", "ticket-admin-web"):
+        uuid = client_id(cid)
+        st, raw = api("DELETE", f"/admin/realms/{realm}/clients/{uuid}/default-client-scopes/{acr_scope}")
+        print(f"detach default scope acr → {cid} http={st}")
+        if st >= 400 and st != 404:
+            print(raw.decode()[:300], file=sys.stderr)
+            sys.exit(1)
 
 # Clear binding on attendee ticket-web
 uuid = client_id("ticket-web")
