@@ -15,8 +15,8 @@ const themeCss = fs.readFileSync(
   path.join(__dirname, '../src/generated/vemoki-theme.css'),
   'utf8',
 );
-const legacyCss = fs.readFileSync(
-  path.join(repoRoot, 'apps/web/app/live-pulse-legacy.css'),
+const globalsCss = fs.readFileSync(
+  path.join(repoRoot, 'apps/web/app/globals.css'),
   'utf8',
 );
 
@@ -42,16 +42,16 @@ describe('@ticket/ui token generator', () => {
     }
   });
 
-  it('legacy globals :root references generated theme colors', () => {
-    const rootBlock = legacyCss.match(/:root\s*\{[^}]+\}/s);
-    assert.ok(rootBlock, ':root block in live-pulse-legacy.css');
-    const block = rootBlock[0];
-    for (const key of ['ink', 'paper', 'signal', 'focus', 'line', 'muted']) {
-      const themeKey = key === 'ink' || key === 'paper' || key === 'signal' || key === 'focus'
-        ? `color-${key}`
-        : `color-${key}`;
-      assert.match(block, new RegExp(`--${key}:\\s*var\\(--${themeKey}\\)`));
-    }
+  it('apps/web globals imports vemoki theme (post D-7, no legacy bundle)', () => {
+    assert.match(
+      globalsCss,
+      /@import '@ticket\/ui\/vemoki-theme\.css'/,
+      'globals.css must import generated theme',
+    );
+    assert.ok(
+      !fs.existsSync(path.join(repoRoot, 'apps/web/app/live-pulse-legacy.css')),
+      'live-pulse-legacy.css removed in D-7',
+    );
   });
 
   it('generated theme includes PD token groups from tokens.json', () => {

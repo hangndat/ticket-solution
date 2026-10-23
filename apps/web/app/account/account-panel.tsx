@@ -7,12 +7,12 @@ import {
   interpretAccountDeletion,
   viewLabel,
   type ViewResult,
-} from '../../src/platform/shape';
-import type { AccountDeletionRequestResponse } from '../../src/platform/contracts';
+} from '../../src/bff/me-shape';
+import type { AccountDeletionRequestResponse } from '../../src/bff/platform-contracts';
 import {
   platformGet,
   platformMutate,
-} from '../../src/platform/client-fetch';
+} from '../../src/bff/same-origin-fetch';
 import { REQUEST_TIMEOUT_MS } from '../../src/redeem/poll-operation';
 import {
   accountDeletionCurrentPanel,

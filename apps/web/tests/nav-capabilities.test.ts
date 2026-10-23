@@ -43,7 +43,7 @@ test('parseMeEventsResponse requires staffEligible + tenantId items', () => {
   assert.equal(ok.items.length, 1);
 });
 
-test('guest / unauthenticated never gets Admin Cổng Platform', () => {
+test('guest / unauthenticated never gets portal staff chrome', () => {
   const caps = deriveNavCapabilities({
     authenticated: false,
     meEvents: null,
@@ -52,8 +52,7 @@ test('guest / unauthenticated never gets Admin Cổng Platform', () => {
   });
   assert.deepEqual(caps, {
     authenticated: false,
-    showAdmin: false,
-    showPlatform: false,
+    showPortalStaff: false,
     showAccount: false,
   });
   const hrefs = buildNavLinks(caps).map((l) => l.href);
@@ -72,8 +71,7 @@ test('attendee-only: staffEligible false → no staff chrome', () => {
     meTenants: { items: [] },
     platformMe: null,
   });
-  assert.equal(caps.showAdmin, false);
-  assert.equal(caps.showPlatform, false);
+  assert.equal(caps.showPortalStaff, false);
   assert.equal(caps.showAccount, true);
   const links = buildNavLinks(caps);
   const hrefs = links.map((l) => l.href);
@@ -82,7 +80,7 @@ test('attendee-only: staffEligible false → no staff chrome', () => {
   assert.ok(!hrefs.includes('/auth'), 'logged-in nav uses Tài khoản, not Đăng nhập');
 });
 
-test('Scanner with gate.confirm has no web gate nav (D-6), not Admin without tenant perms', () => {
+test('Scanner with gate.confirm has no web gate nav (D-6), not portal staff without tenant perms', () => {
   const caps = deriveNavCapabilities({
     authenticated: true,
     meEvents: {
@@ -110,13 +108,13 @@ test('Scanner with gate.confirm has no web gate nav (D-6), not Admin without ten
     },
     platformMe: null,
   });
-  assert.equal(caps.showAdmin, false);
+  assert.equal(caps.showPortalStaff, false);
   const hrefs = buildNavLinks(caps).map((l) => l.href);
   assert.ok(!hrefs.includes('/gate'));
   assert.ok(!hrefs.includes('/admin'));
 });
 
-test('admin nav link uses Quản trị label (BA-002)', () => {
+test('portal staff nav link (D-7)', () => {
   const caps = deriveNavCapabilities({
     authenticated: true,
     meEvents: { staffEligible: true, items: [] },
@@ -134,12 +132,13 @@ test('admin nav link uses Quản trị label (BA-002)', () => {
     },
     platformMe: null,
   });
-  const admin = buildNavLinks(caps).find((l) => l.testId === 'nav-admin');
-  assert.ok(admin);
-  assert.equal(admin.label, 'Quản trị');
+  const staff = buildNavLinks(caps).find((l) => l.testId === 'nav-portal-staff');
+  assert.ok(staff);
+  assert.equal(staff.label, 'Quản trị tổ chức');
+  assert.equal(staff.href, '/admin');
 });
 
-test('Owner membership with admin tenant perms shows Admin; Gate needs assignment', () => {
+test('Owner membership with admin tenant perms shows portal staff CTA', () => {
   const caps = deriveNavCapabilities({
     authenticated: true,
     meEvents: { staffEligible: true, items: [] },
@@ -157,10 +156,10 @@ test('Owner membership with admin tenant perms shows Admin; Gate needs assignmen
     },
     platformMe: null,
   });
-  assert.equal(caps.showAdmin, true);
+  assert.equal(caps.showPortalStaff, true);
 });
 
-test('platform operator unlocks Platform chrome only', () => {
+test('platform operator unlocks portal staff CTA', () => {
   const caps = deriveNavCapabilities({
     authenticated: true,
     meEvents: { staffEligible: false, items: [] },
@@ -171,8 +170,7 @@ test('platform operator unlocks Platform chrome only', () => {
       assurance: 'mfa',
     },
   });
-  assert.equal(caps.showPlatform, true);
-  assert.equal(caps.showAdmin, false);
+  assert.equal(caps.showPortalStaff, true);
 });
 
 test('invalid MeTenants / PlatformMe parse fail-closed', () => {

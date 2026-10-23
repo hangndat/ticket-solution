@@ -147,3 +147,10 @@ Pipeline only: toolchain, token build, `components.json`, Motion provider **expo
 | Slice 0 | `UiMotionProvider` có trong `packages/ui`; **không** import `@ticket/ui/client` từ `layout.tsx` |
 | Component animated | Client boundary cục bộ → `UiMotionProvider` bọc subtree → `LazyMotion` + `domAnimation` |
 | CSP (#653) | Truyền `nonce` vào `UiMotionProvider` khi siết `style-src` |
+
+## D-7 cutover — **Done: legacy removed** (Issue [#846](https://github.com/hangndat/ticket-solution/issues/846))
+
+- **SHA:** ghi trên PR #846 tại merge (tip branch trước merge: xem `git rev-parse HEAD` trên `hangndat/web-846-d7-cutover`).
+- **Đã gỡ:** `apps/web/app/admin`, `app/platform`, `app/api/bff/admin/**`, `app/api/bff/platform/**`, `app/api/auth/platform/**`, `src/admin/**`, `src/platform/**` (helper dùng chung chuyển `src/bff/*`, `src/content/config-schema.ts`, …), `live-pulse-legacy.css`.
+- **Giữ:** redirect GET/HEAD `/admin`·`/platform` → `PORTAL_ORIGIN` (`src/portal/dual-run.ts`); legacy staff API → **410** (`src/portal/legacy-cutover.ts` + `proxy.ts`).
+- **Cascade CSS:** `@layer theme, base, components, utilities` (không còn `legacy`).

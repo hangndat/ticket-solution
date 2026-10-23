@@ -5,17 +5,17 @@ import { useEffect, useState, useSyncExternalStore } from 'react';
 import {
   interpretAcceptInvite,
   type ViewResult,
-} from '../../src/platform/shape';
-import type { AcceptInviteResponse } from '../../src/platform/contracts';
+} from '../../src/bff/me-shape';
+import type { AcceptInviteResponse } from '../../src/bff/platform-contracts';
 import {
   platformGet,
   platformMutate,
-} from '../../src/platform/client-fetch';
+} from '../../src/bff/same-origin-fetch';
 import {
   inviteNetworkMessage,
   messageForInviteView,
   type InviteUxMessage,
-} from '../../src/platform/invite-messages';
+} from '../../src/invite/platform-messages';
 import {
   authButtonsRow,
   claimFormRoot,

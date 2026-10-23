@@ -1,6 +1,6 @@
 import { ensureCsrfCookie } from '../../../../../src/bff/csrf';
-import { PLATFORM_PATHS } from '../../../../../src/platform/contracts';
-import { forwardTenantBearer } from '../../../../../src/platform/forward';
+import { PLATFORM_PATHS } from '../../../../../src/bff/platform-contracts';
+import { forwardTenantBearer } from '../../../../../src/bff/platform-forward';
 
 /** GET /api/bff/me/tenants — tenant selector discovery (no UUID-only UX). */
 export async function GET() {

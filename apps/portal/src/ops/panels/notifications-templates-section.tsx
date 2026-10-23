@@ -394,21 +394,21 @@ export function NotificationsTemplatesSection({
         disabled={busy || !canNotify}
         onChange={(e) => setSubject(e.target.value)}
         placeholder="Subject"
-        aria-label="Template subject"
+        aria-label={t('ops.notifications.templateSubjectAria')}
       />
       <Input.TextArea
         value={bodyText}
         disabled={busy || !canNotify}
         onChange={(e) => setBodyText(e.target.value)}
         rows={5}
-        aria-label="Template body text"
+        aria-label={t('ops.notifications.templateBodyTextAria')}
       />
       <Input.TextArea
         value={bodyHtml}
         disabled={busy || !canNotify}
         onChange={(e) => setBodyHtml(e.target.value)}
         rows={4}
-        aria-label="Template body HTML"
+        aria-label={t('ops.notifications.templateBodyHtmlAria')}
       />
       <Space wrap>
         <Button

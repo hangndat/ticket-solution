@@ -62,7 +62,7 @@ Kinds: `empty` | `loading` | `error` | `unknown`. Class names match `apps/web` l
 
 ## Tailwind prefix
 
-Consumer `globals.css` loads utilities as `prefix(ui)` — primitive classes use the `ui:` prefix (e.g. `ui:min-h-11`) so legacy `.container` and other unprefixed classes stay unchanged.
+Consumer `globals.css` (post D-7 #846) uses Tailwind v4 layers without `live-pulse-legacy.css`; primitives use unprefixed utilities per ADR-22 D-1.
 
 ## Focus & a11y
 

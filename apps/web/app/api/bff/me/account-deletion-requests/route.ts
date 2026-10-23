@@ -1,7 +1,7 @@
 import { assertMutatingBrowserAsync } from '../../../../../src/bff/csrf';
 import { bffApiError, isUuid } from '../../../../../src/bff/upstream';
-import { PLATFORM_PATHS } from '../../../../../src/platform/contracts';
-import { forwardTenantBearer } from '../../../../../src/platform/forward';
+import { PLATFORM_PATHS } from '../../../../../src/bff/platform-contracts';
+import { forwardTenantBearer } from '../../../../../src/bff/platform-forward';
 
 type Body = { confirmation?: boolean; idempotencyKey?: string };
 
