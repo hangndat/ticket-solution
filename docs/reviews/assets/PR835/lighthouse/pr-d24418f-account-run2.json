@@ -1,0 +1,15 @@
+{
+  "label": "pr-d24418f",
+  "route": {
+    "id": "account",
+    "path": "/account"
+  },
+  "run": 2,
+  "lighthouse": "13.5.0",
+  "scores": {
+    "performance": 84,
+    "accessibility": 100,
+    "bestPractices": 96,
+    "seo": 63
+  }
+}
