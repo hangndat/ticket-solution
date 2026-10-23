@@ -152,10 +152,14 @@ export function CodesPanel({ tenantId, eventId }: Props) {
         locale={{ emptyText: t('ops.h_16do87c') }}
         data-testid="codes-table"
         columns={[
-          { title: 'Code ID', dataIndex: 'codeId', ellipsis: true },
-          { title: 'State', dataIndex: 'state', width: 120 },
-          { title: 'Source', dataIndex: 'sourceId', ellipsis: true },
-          { title: 'Ticket type', dataIndex: 'ticketTypeId', ellipsis: true },
+          { title: t('ops.table.codeId'), dataIndex: 'codeId', ellipsis: true },
+          { title: t('ops.table.state'), dataIndex: 'state', width: 120 },
+          { title: t('ops.table.source'), dataIndex: 'sourceId', ellipsis: true },
+          {
+            title: t('ops.table.ticketType'),
+            dataIndex: 'ticketTypeId',
+            ellipsis: true,
+          },
         ]}
       />
       {nextCursor ? (
