@@ -132,12 +132,18 @@ execs = json.loads(raw.decode())
 # Keycloak 26 browser copy: top-level REQUIRED next to Cookie/IdP ALTERNATIVE makes the flow
 # ignore the alternatives and fail before the login form (AuthenticationFlowException).
 # Keep "forms" ALTERNATIVE and disable the unused "Organization" subflow.
+# Disable "Cookie": an SSO session created elsewhere (attendee ticket-web, password only) must not
+# yield a code for the MFA clients without OTP — they emit a hardcoded acr=2 claim.
 for e in execs:
-    if e.get("level") != 0 or not e.get("authenticationFlow"):
+    if e.get("level") != 0:
         continue
     disp_l = (e.get("displayName") or "").lower()
     want = None
-    if disp_l.endswith(" forms"):
+    if e.get("providerId") == "auth-cookie":
+        want = "DISABLED"
+    elif not e.get("authenticationFlow"):
+        continue
+    elif disp_l.endswith(" forms"):
         want = "ALTERNATIVE"
     elif disp_l.endswith(" organization"):
         want = "DISABLED"
