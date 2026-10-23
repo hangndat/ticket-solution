@@ -10,8 +10,21 @@
 | Visual budget | **Không** — token AntD staff [`apps/portal/src/theme/vemoki.ts`](../../../apps/portal/src/theme/vemoki.ts), O18 ProLayout |
 | Xác nhận | User đã duyệt PA-01–06 + plan 23/10/2026 |
 | Consumer | Web B (PA-01 header) · Web A (PA-02–03 copy, dùng [copy-guests-pa02-pa03.md](./copy-guests-pa02-pa03.md)) |
+| PD handoff SHA | `c9598be` → commit batch 1/2 trên cùng branch (xem `git log -1` / worker_done) |
 
 **Mẫu trực quan trong thư mục này là specimen PD (banner vàng «PD demo»), không chứng minh runtime authenticated.**
+
+### Evidence batch sửa 1/2 (#838)
+
+| Kiểm tra | Kết quả |
+| --- | --- |
+| Mobile stack &lt;768px | CSS `flex: 1 1 100%` + probe `layout.stacked: true` @ 390px (vi, vi-long, en) |
+| Viewport label | `useEffect` + `resize`; chụp: `orca tab create --url` → `set viewport W H` → probe `metaText` khớp W×H |
+| Desktop row | probe `layout.sideBySide: true` @ 1024 / 1440 |
+| Ảnh PNG | `sips` khớp tên file; `ui-evidence-check` trên `assets/header-pa01-*.png` — không trùng hash |
+| Probe JSON | `assets/evidence/header-pa01-*.json` (viewport, mediaMin768, bounding boxes tenant/event) |
+
+Capture: [prototype/capture-screenshots.sh](./prototype/capture-screenshots.sh) + [probe-pa01-header.js](./prototype/probe-pa01-header.js).
 
 ## Artifact
 
@@ -20,7 +33,8 @@
 | [copy-guests-pa02-pa03.md](./copy-guests-pa02-pa03.md) | Bảng copy VI/EN Guests Import / Pending / Notifications / Export + PA-03 scope filter |
 | [prototype/header-specimen.html](./prototype/header-specimen.html) | HTML/React+AntD CDN — two-tier chrome |
 | [prototype/capture-screenshots.sh](./prototype/capture-screenshots.sh) | Orca browser chụp ảnh vào `assets/` |
-| [assets/](./assets/) | Ảnh 390 / 1024 / 1440 (sau chạy script) |
+| [assets/](./assets/) | Ảnh 390 / 1024 / 1440 |
+| [assets/evidence/](./assets/evidence/) | Probe JSON đo viewport/media/layout mỗi ảnh |
 
 ## PA-01 — Quyết định header (one pattern)
 
@@ -97,7 +111,8 @@ portal-pro-layout.tsx
 | File | Viewport | Locale / fixture |
 | --- | --- | --- |
 | `assets/header-pa01-vi-390x844.png` | 390×844 | VI |
-| `assets/header-pa01-vi-long-390x844.png` | 390×844 | VI, tên dài |
+| `assets/header-pa01-vi-long-390x844.png` | 390×844 | VI, tên dài (stack) |
+| `assets/header-pa01-en-390x844.png` | 390×844 | EN |
 | `assets/header-pa01-vi-1024x900.png` | 1024×900 | VI |
 | `assets/header-pa01-vi-1440x1000.png` | 1440×1000 | VI, tên dài |
 | `assets/header-pa01-en-1440x1000.png` | 1440×1000 | EN, tên dài |
@@ -111,7 +126,7 @@ Chi tiết key và câu chốt: [copy-guests-pa02-pa03.md](./copy-guests-pa02-pa
 Tóm tắt:
 
 - Loại jargon luồng chính: G-E1, `commit idempotent`, `stream authenticated`, `poll`, permission string trong câu user-facing.
-- Giữ ý nghĩa trạng thái (accepted/delivered, unknown, READY semantics trong copy vận hành).
+- Giữ ý nghĩa trạng thái (accepted/delivered, unknown, READY semantics trong copy vận hành). VI: *tiếp nhận gửi / nhà cung cấp tiếp nhận* ≠ khách đã nhận email — không dùng «đã gửi» thay *delivered*.
 - Filter nguồn/loại vé **chỉ** tab Import (PA-03).
 
 ## Hướng dẫn triển khai
