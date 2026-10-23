@@ -1,0 +1,16 @@
+{
+  "id": "ddca2bff-0b16-4a52-b6c1-0503abcd13c4",
+  "ok": true,
+  "result": {
+    "origin": "http://127.0.0.1:3413/account/security",
+    "result": {
+      "frame": null,
+      "frameWidth": 1440,
+      "issues": [],
+      "viewport": 1440
+    }
+  },
+  "_meta": {
+    "runtimeId": "9d821662-c628-49db-a168-99fa7b7636fc"
+  }
+}
