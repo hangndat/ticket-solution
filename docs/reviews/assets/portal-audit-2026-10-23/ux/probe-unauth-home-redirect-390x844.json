@@ -1,0 +1,16 @@
+{
+  "id": "87cc3bbc-6d76-40a3-87ce-b30a00b66ca6",
+  "ok": true,
+  "result": {
+    "origin": "http://127.0.0.1:3413/",
+    "result": {
+      "frame": null,
+      "frameWidth": 390,
+      "issues": [],
+      "viewport": 390
+    }
+  },
+  "_meta": {
+    "runtimeId": "9d821662-c628-49db-a168-99fa7b7636fc"
+  }
+}

@@ -1,0 +1,10 @@
+
+> @ticket/portal@0.1.0 typecheck /Users/admin/orca/workspaces/main/portal-audit/apps/portal
+> pnpm run typegen && tsc --noEmit
+
+
+> @ticket/portal@0.1.0 typegen /Users/admin/orca/workspaces/main/portal-audit/apps/portal
+> node -e "require('fs').mkdirSync('.next/types',{recursive:true})" && next typegen
+
+Generating route types...
+✓ Types generated successfully
