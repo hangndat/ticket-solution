@@ -25,7 +25,7 @@ Trước **coding / explore / impact / review**:
 1. **Symbols first** — PascalCase (`TicketService`, `CheckInController`), không URL slug
 2. `semantic_search_nodes_tool(query=Symbol)` → ambiguous thì `qualified_name`
 3. `query_graph_tool` (`callees_of` / `callers_of` / `imports_of` / `tests_for`) hoặc `get_impact_radius_tool` / `get_affected_flows_tool`
-4. **lean-ctx** cho routes/docs/literals CRG không index; `ctx_read` ladder: map → signatures → lines → anchored → full
+4. **lean-ctx** cho routes/docs/literals CRG không index; chọn **một** mode `ctx_read` theo mục đích: `map` (cấu trúc), `signatures` (API), `lines:N-M` (đoạn đã biết), `anchored` (sửa), `full` (cần toàn bộ). Không đọc tuần tự mọi mode
 5. Source wins nếu graph ≠ source; không đổi code chỉ từ graph
 
 ## Khi ưu tiên graph

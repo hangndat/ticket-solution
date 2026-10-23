@@ -103,7 +103,7 @@ Thay đổi: `orca-worktree-hygiene.mdc` + `lean-ctx-mcp-cursor.mdc` → `always
 ## lean-ctx
 
 - **Cố định (user):** `lean-ctx.mdc` (~4 KB). **`lean-ctx-mcp-cursor.mdc`** requestable (~2.4 KB) khi MCP/hook lỗi.
-- **Tiết kiệm:** `ctx_read` map/signatures/lines vs full file; CRG trước khi đọc file.
+- **Tiết kiệm:** CRG xác định symbol/impact; `ctx_read` chọn một mode map/signatures/lines/anchored/full theo mục đích, không đi tuần tự các mode. Routing, root và smoke checks: [MCP-SETUP.md](MCP-SETUP.md).
 - **Chi phí:** shadow MCP round-trip; không giảm gói rules ~19k tok trước refactor.
 
 ## Session types
