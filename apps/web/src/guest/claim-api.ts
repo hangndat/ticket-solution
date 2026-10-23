@@ -7,7 +7,7 @@ import {
   decideRedeemBody,
   type RedeemDecision,
 } from '../redeem/decide';
-import type { AdminScope } from '../admin/scope';
+import type { AdminScope } from '../bff/event-scope';
 
 export function invitationClaimUpstreamPath(scope: AdminScope): string {
   return `/v1/tenants/${encodeURIComponent(scope.tenantId)}/events/${encodeURIComponent(scope.eventId)}/invitations/claim`;

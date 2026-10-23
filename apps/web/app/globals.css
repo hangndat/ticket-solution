@@ -1,10 +1,10 @@
 /*
  * Design system — Tailwind v4 utilities for @ticket/ui primitives (no Preflight on legacy).
- * Cascade (D-1 / ADR-22): theme → base → legacy → components → utilities; utilities win on clashes.
+ * Cascade (D-1 / ADR-22): theme → base → components → utilities; utilities win on clashes.
  */
 @import '@ticket/ui/vemoki-theme.css';
 @import 'tw-animate-css';
-@layer theme, base, legacy, components, utilities;
+@layer theme, base, components, utilities;
 @theme inline {
   --color-background: var(--color-paper);
   --color-foreground: var(--color-ink);
@@ -23,8 +23,6 @@
 @source '../../../packages/ui/src/**/*.{ts,tsx}';
 @source '../app/**/*.{ts,tsx}';
 @source '../../src/**/*.{ts,tsx}';
-@import './live-pulse-legacy.css' layer(legacy);
-
 @layer base {
   html[data-surface='marketing'] {
     scrollbar-gutter: stable;

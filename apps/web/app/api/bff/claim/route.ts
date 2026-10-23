@@ -1,6 +1,6 @@
 import { INVITATION_CLAIM_COMMAND } from '@ticket/contracts';
 import { invitationClaimUpstreamPath } from '../../../../src/guest/claim-api';
-import { isScope, scopeError } from '../../../../src/admin/scope';
+import { isScope, scopeError } from '../../../../src/bff/event-scope';
 import { isUuid } from '../../../../src/bff/ids';
 import { assertSameOrigin } from '../../../../src/bff/origin';
 import {

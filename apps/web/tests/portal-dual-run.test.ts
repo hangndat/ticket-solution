@@ -16,11 +16,11 @@ import {
 const portal = 'http://127.0.0.1:3013';
 const envOn = { PORTAL_ORIGIN: portal, PORTAL_ADMIN_REDIRECT: '1' };
 
-describe('portal dual-run redirect (ADR-20 §8 / #438 / #845)', () => {
-  test('flag default OFF — legacy admin not redirected', () => {
+describe('portal dual-run redirect (ADR-20 §8 / D-7 #846)', () => {
+  test('redirect ON when PORTAL_ORIGIN valid (no flag)', () => {
     assert.equal(
       isAdminToPortalRedirectEnabled({ PORTAL_ORIGIN: portal }),
-      false,
+      true,
     );
     assert.deepEqual(
       decideAdminToPortalRedirect({
@@ -29,7 +29,23 @@ describe('portal dual-run redirect (ADR-20 §8 / #438 / #845)', () => {
         search: '?tenantId=t1',
         env: { PORTAL_ORIGIN: portal },
       }),
-      { type: 'next' },
+      {
+        type: 'redirect',
+        location: `${portal}/t/t1`,
+        status: 302,
+      },
+    );
+  });
+
+  test('missing PORTAL_ORIGIN → not_found for /admin GET', () => {
+    assert.equal(isAdminToPortalRedirectEnabled({}), false);
+    assert.deepEqual(
+      decideAdminToPortalRedirect({
+        method: 'GET',
+        pathname: '/admin',
+        env: {},
+      }),
+      { type: 'not_found' },
     );
   });
 
@@ -146,7 +162,7 @@ describe('portal dual-run redirect (ADR-20 §8 / #438 / #845)', () => {
     }
   });
 
-  test('T2: flag OFF even with PORTAL_ORIGIN', () => {
+  test('explicit enabled:false overrides (tests only)', () => {
     assert.deepEqual(
       decideAdminToPortalRedirect({
         method: 'GET',

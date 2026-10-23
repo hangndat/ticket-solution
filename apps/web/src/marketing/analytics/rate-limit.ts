@@ -1,4 +1,4 @@
-import { trustedClientIpForRateLimit } from '../../platform/trusted-client-ip';
+import { trustedClientIpForRateLimit } from '../../security/trusted-client-ip';
 
 const RATE_WINDOW_MS = 60_000;
 const RATE_MAX = 60;
