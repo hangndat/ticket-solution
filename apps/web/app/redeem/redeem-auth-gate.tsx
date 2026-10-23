@@ -1,6 +1,10 @@
 import { Button } from '@ticket/ui';
 import Link from 'next/link';
-import styles from './redeem-surface.module.css';
+import {
+  redeemGateActions,
+  redeemGateCard,
+  redeemGateIllustration,
+} from '../../src/redeem/redeem-surface';
 
 type Props = {
   loginHref: string;
@@ -11,11 +15,11 @@ type Props = {
 export function RedeemAuthGate({ loginHref, intentCopy = true }: Props) {
   return (
     <section
-      className={styles.gateCard}
+      className={redeemGateCard}
       aria-labelledby="redeem-auth-gate-title"
       data-testid="redeem-auth-gate"
     >
-      <div className={styles.gateIllustration} aria-hidden="true">
+      <div className={redeemGateIllustration} aria-hidden="true">
         🔐
       </div>
       <p className="eyebrow">Đăng nhập</p>
@@ -25,7 +29,7 @@ export function RedeemAuthGate({ loginHref, intentCopy = true }: Props) {
           ? 'Hoàn tất đăng nhập để tiếp tục đổi mã — sau khi đăng nhập bạn sẽ quay lại trang này.'
           : 'Đăng nhập để đổi mã lấy vé trên Vemoki.'}
       </p>
-      <div className={`auth-buttons ${styles.gateActions}`}>
+      <div className={`auth-buttons ${redeemGateActions}`}>
         <Button asChild variant="primary">
           <a href={loginHref}>Tiếp tục đăng nhập</a>
         </Button>

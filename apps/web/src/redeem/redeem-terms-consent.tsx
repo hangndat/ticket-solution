@@ -2,6 +2,8 @@
 
 import { Button } from '@ticket/ui';
 import Link from 'next/link';
+import { cn } from '../../lib/utils';
+import { redeemTermsProduct } from './redeem-surface';
 
 type Props = {
   termsVersion: string;
@@ -26,7 +28,10 @@ export function RedeemTermsConsent({
   onAcceptedChange,
 }: Props) {
   return (
-    <fieldset className="redeem-terms" data-testid="redeem-terms-consent">
+    <fieldset
+      className={cn('redeem-terms', compact && redeemTermsProduct)}
+      data-testid="redeem-terms-consent"
+    >
       <legend>Điều khoản</legend>
       {termsBody ? (
         <>
