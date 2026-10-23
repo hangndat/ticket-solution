@@ -69,6 +69,11 @@ async function loginCookieHeader(base) {
     waitUntil: 'domcontentloaded',
   });
   await page.waitForURL(/openid-connect\/auth|login-actions/, { timeout: 45_000 });
+  const u = new URL(page.url());
+  if (u.port === '8080' && u.hostname !== '127.0.0.1') {
+    u.hostname = '127.0.0.1';
+    await page.goto(u.toString(), { waitUntil: 'domcontentloaded' });
+  }
   await page.locator('#username').first().fill(user);
   await page.locator('#password').first().fill(pass);
   await page.locator('#kc-login').first().click();
