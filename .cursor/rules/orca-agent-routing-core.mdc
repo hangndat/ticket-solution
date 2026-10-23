@@ -1,44 +1,15 @@
 ---
-description: Orca worker/reviewer — Cursor, Persona, Cost tier, role, review (luôn nạp)
+description: Orca worker — ownership, model pin, review và bàn giao
 alwaysApply: true
 ---
 
-# Orca — routing (worker / reviewer)
+# Routing và nghĩa vụ worker
 
-Nguồn chính sách chọn agent + Cost tier. Chi tiết spawn coordinator → `orca-agent-routing-coordinator.mdc` (leader Read).
-
-## Mọi Task dùng Cursor
-
-`--agent cursor` cho impl, plan, review. Chỉ đổi agent khi user chỉ định rõ. **`worker-start`:** chỉ **coordinator gốc (depth 0)** — Orca `nested_worker_depth` mặc định chặn spawn từ worker depth 1 (`nested_worker_depth_exceeded`); xem `orca-wave-leader.mdc`. Epic planner, ownership, reviewer **không** spawn con. Worker **không** tạo worktree hay gắn Issue/PR — coordinator làm theo `orca-worktree-hygiene.mdc` (leader Read).
-
-- Task Spec ghi **Cost tier** `cheap|standard` (trần standard), pin `--model` từ [cost-catalog.md](../../docs/agents/cost-catalog.md) — **cấm inherit UI**.
-- Reviewer **≠** session implementer.
-
-## Persona (`--display-name` + `--task-title`)
-
-Roster + **ba surface UI** (Dispatch vs `worker-task_*` vs worktree card): [docs/agents/README.md](../../docs/agents/README.md). Coordinator spawn mới: **cả hai** flag — `display-name` `"<Persona> · <ui-label>"`, `task-title` `"<Persona> · <ui-label> — #<issue> …"`. Cây worktree vẫn có thể hiện `worker-task_<id>`; kiểm tra Persona qua `task-list`, không suy từ node Shell. Pool `web`/`backend`: chọn persona chưa live cùng role.
-
-## Cost tier (worker)
-
-| Tier       | Mặc định                       | Pin                               |
-| ---------- | ------------------------------ | --------------------------------- |
-| `cheap`    | docs, CI hẹp, DoD docs-only    | `composer-2.5`                    |
-| `standard` | feature, security, DoD runtime | `composer-2.5` (fallback catalog) |
-
-**Cấm** `composer-2.5-fast`, tier `heavy`, model > standard. Worker: follow Cost tier trong Spec; không spawn.
-
-## Role (chuyên môn)
-
-Role ≠ agent. Gắn `docs/agents/roles/<id>.md` trong Spec khi spawn architecture/ownership/reviewer. **Không** copy roles vào `alwaysApply` rules.
-
-Task UI → [ui-workflow.md](../../docs/agents/ui-workflow.md): chọn role/skill theo scope; Spec ghi `Skills cần nạp`, mẫu chuẩn và evidence. Chỉ nạp skill liên quan; UI review gộp DoD → Read một file [reviewer-merged.md](../../docs/agents/roles/reviewer-merged.md) (`dod+ux`, `dod+sec`, `dod+sec+ux`).
-
-## Review (reviewer session)
-
-Spec: Issue #, paths, **exact SHA**, DoD (± security). Verdict `PASS|FAIL|PASS with known gap`. Cùng SHA cần DoD+security → một session `James · dod+sec` (Wave C). Commit sau review → revalidate SHA mới.
-
-Review/fix: **Read** [orca-review-convergence.mdc](./orca-review-convergence.mdc) — findings giữ ID, revalidation theo diff, tối đa 2 lượt sửa tự động rồi chẩn đoán.
-
-**CI / checks trên SHA:** `./scripts/gh-dod-evidence.sh <pr>` (REST; tránh `gh pr checks` trừ debug). SHA tip: `git rev-parse HEAD` khi worktree đúng branch. Chi tiết: `github-api-hygiene.mdc`.
-
-Artifact exact-SHA trong `docs/reviews/*` hoặc Issue/PR — thiếu GitHub Approve UI không thay Orca DoD.
+- Codex điều phối; Composer 2.5 làm coding theo spec rõ, docs/tests. Codex worker chỉ cho reasoning sâu có lý do, tối đa 1 ngoài coordinator; allowance tính cả coordinator.
+- Spec có scope/AC, Architecture impact, Cost tier `cheap|standard`, Role ID/file, Persona và skills cần thiết. Pin theo [cost-catalog](../../docs/agents/cost-catalog.md); không inherit UI, không `composer-2.5-fast`, không tier heavy.
+- Chỉ coordinator gốc spawn qua Orca. Planner/worker/reviewer không spawn con, không sửa slice khác để vượt check, không tự tạo worktree.
+- Worker chỉ đọc rules/skills áp dụng, không đọc mailbox/parallel/idle-fill của coordinator. Implementation bàn giao theo worker-report; reviewer theo spec đã điền và role được giao, không phải đọc template trống. Dùng preamble thật để check thư và gửi worker_done đúng một lần trước khi kết thúc.
+- Reviewer khác implementer; exact SHA + scope + checks/evidence + verdict `PASS|FAIL|PASS with known gap`. Cùng SHA cần DoD/security → một reviewer gộp; UI dùng [reviewer-merged](../../docs/agents/roles/reviewer-merged.md) khi áp dụng. Không chạy đối chứng model nếu task không yêu cầu.
+- Khi review/fix đọc [review-convergence](orca-review-convergence.mdc): giữ findings ID, tối đa 2 lượt fix tự động, revalidate diff và vùng regression trên SHA mới. Không dùng known gap bỏ gate bắt buộc.
+- CI dùng `scripts/gh-dod-evidence.sh` hoặc evidence packet được coordinator giao; tránh gọi trùng. Review artifact tại `docs/reviews/*` hoặc Issue/PR; thiếu GitHub Approve không phủ nhận evidence ngoài GitHub.
+- Code complete ≠ acceptance complete ≠ pilot ready. Coordinator spawn/Persona/caps/fallback: [routing-coordinator](orca-agent-routing-coordinator.mdc); UI task: [ui-workflow](../../docs/agents/ui-workflow.md).

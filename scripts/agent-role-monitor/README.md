@@ -76,6 +76,8 @@ Override ledger path with `--ledger PATH` or `ORCA_METRICS_LEDGER`.
 
 Hook log (best-effort): `.orca-metrics/cursor-hooks.log`. Fail-open (never blocks the agent).
 
+Ledger và hai hook tạo `role-dispatch.jsonl` / `cursor-hooks.log` với quyền 0600, đồng thời siết file cũ về 0600 trước khi ghi; event trùng cũng sửa quyền ledger. Hook bỏ ghi log nếu không thể bảo đảm quyền này. Không mặc định mọi artifact cũ dưới `.orca-metrics/` đều private.
+
 ### Join missing
 
 If there is no `join.conversation` for the hook’s `conversation_id` (and no join via `attrs.dispatch_id` / `dispatch_id`), `ingest-cursor-turn` **skips** the row (exit 0), prints a clear message on **stderr**, and returns JSON `{ reason: "join_missing" }`. Call `record-join` when the conversation↔dispatch map is known (coordinator/worker probe — not spike `09`).
@@ -88,6 +90,39 @@ If there is no `join.conversation` for the hook’s `conversation_id` (and no jo
 | `join.conversation` | `(conversation_id, dispatch_id)` |
 | `cursor.turn` | `generation_id` |
 | `host.sample` / `dispatch.heartbeat` | always append (time series) |
+
+## Telemetry (`telemetry.mjs`)
+
+Separate metadata ledger: `.orca-metrics/telemetry-metadata.jsonl` (gitignored, **mode 0600**). Role/dispatch metrics ledger above stays unchanged.
+
+```bash
+# Collect transcript structure + optional Codex provider JSONL (uses ORCA_CLI_COMMAND)
+node scripts/agent-role-monitor/telemetry.mjs collect \
+  --dispatch-id ctx_abc --role-id backend --run-id run_1 \
+  --provider-file /path/to/codex-events.jsonl --thread-id thread_abc
+
+# Provider-only (no Orca dispatch): JSONL + thread id
+node scripts/agent-role-monitor/telemetry.mjs collect \
+  --role-id backend --provider-file /path/to/codex-events.jsonl --thread-id thread_abc
+
+# Account allowance snapshot (codex app-server account/rateLimits/read — no inference)
+node scripts/agent-role-monitor/telemetry.mjs snapshot --out .orca-metrics/account-snap.json
+
+# Report for a run (optional baseline); shared allowance deltas in percentage points only
+node scripts/agent-role-monitor/telemetry.mjs report --run-id run_1 --baseline-run-id run_0
+```
+
+Task token delta cần `snapshot-provider --provider-file PATH --thread-id ID --out BEFORE.json` **trước** boundary, sau đó `collect ... --baseline-file BEFORE.json`. Không có boundary thì `task_delta: null`; cumulative session không phải chi phí task. Baseline chấp nhận append và xác minh SHA-256 prefix; thread/prefix/counter mismatch bị từ chối. `cachedInput/input` là tỷ lệ token cached, không phải % quota tiết kiệm. Report so sánh cần `--comparison-key` cho cùng workload/model/provider và task boundary; xem [workflow vận hành](../../docs/agents/workflow-evidence-telemetry.md).
+
+| Command | Events / output |
+| ------- | ---------------- |
+| `collect` | `telemetry.collect` — structural transcript rows only; `sourceExact` / `contentComplete` / `clipping` from worker-read; Cursor terminal fallback **never** claims complete |
+| `snapshot` | `telemetry.account_snapshot` — whitelisted `plan`, `usedPercent`, `windowDurationMins`, `resetsAt`, `timestamp`; `accountId` → one-way hash only |
+| `report` | stdout JSON — compatible-run comparison only; no per-dispatch quota attribution unless proven |
+
+Env: `ORCA_CLI_COMMAND`, `ORCA_TELEMETRY_LEDGER`, `CODEX_TELEMETRY_APP_SERVER_FIXTURE` (tests), `CODEX_CLI_COMMAND`.
+
+Tests: `node --test scripts/agent-role-monitor/telemetry.test.mjs` (+ existing `smoke.test.mjs`).
 
 ## Privacy
 

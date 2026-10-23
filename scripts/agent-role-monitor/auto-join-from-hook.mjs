@@ -6,6 +6,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { isWorktreeDispatchAmbiguous } from './lib/usage.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '../..');
@@ -30,6 +31,9 @@ try {
 
 const cid = hook.conversation_id || hook.conversationId;
 if (!cid || !active.dispatch_id || !active.role_id) process.exit(0);
+
+// A shared active-dispatch file cannot identify concurrent conversations.
+if (isWorktreeDispatchAmbiguous(repoRoot, process.env, active.dispatch_id)) process.exit(0);
 
 const args = [
   cli,

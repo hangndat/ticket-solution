@@ -312,6 +312,17 @@ describe('agent-role-monitor ledger', () => {
         role_id: 'web',
       }),
     );
+    const orcaFixtureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'arm-orca-single-'));
+    const orcaCli = path.join(orcaFixtureDir, 'orca');
+    const wt = repoRootFromTest();
+    const nodeBin = process.execPath.replace(/\\/g, '\\\\');
+    fs.writeFileSync(
+      orcaCli,
+      `#!${nodeBin}
+console.log(JSON.stringify({ ok: true, result: { workers: [{ dispatchId: 'ctx_active_fallback', terminalState: 'active', projection: { workspace: { id: 'repo::${wt}' } } }] } }));
+`,
+      { mode: 0o700 },
+    );
     try {
       const result = spawnSync(
         process.execPath,
@@ -326,6 +337,7 @@ describe('agent-role-monitor ledger', () => {
             output_tokens: 4,
           }),
           encoding: 'utf8',
+          env: { ...process.env, ORCA_CLI_COMMAND: orcaCli },
         },
       );
       assert.equal(result.status, 0, result.stderr || result.stdout);
@@ -340,6 +352,7 @@ describe('agent-role-monitor ledger', () => {
     } finally {
       if (prev == null) fs.rmSync(activePath, { force: true });
       else fs.writeFileSync(activePath, prev);
+      fs.rmSync(orcaFixtureDir, { recursive: true, force: true });
     }
   });
 

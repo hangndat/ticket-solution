@@ -363,7 +363,10 @@ export function buildHostSampleEvent(opts) {
 }
 
 export function ensureLedgerDir(ledgerPath) {
-  fs.mkdirSync(path.dirname(ledgerPath), { recursive: true });
+  fs.mkdirSync(path.dirname(ledgerPath), { recursive: true, mode: 0o700 });
+  // Tighten existing ledgers too, including calls that return as duplicates.
+  const fd = fs.openSync(ledgerPath, 'a', 0o600);
+  try { fs.fchmodSync(fd, 0o600); } finally { fs.closeSync(fd); }
 }
 
 /**
@@ -422,7 +425,7 @@ export function appendEvent(ledgerPath, event) {
   }
 
   const line = `${JSON.stringify(event)}\n`;
-  fs.appendFileSync(ledgerPath, line, 'utf8');
+  fs.appendFileSync(ledgerPath, line, { encoding: 'utf8', mode: 0o600 });
   return { appended: true, event };
 }
 
