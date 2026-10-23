@@ -4,9 +4,14 @@
  */
 
 import type {
+  PlatformCreateTenantResponse,
+  PlatformTenantDetail,
   PortalPlatformTenantHealth,
   PortalPlatformTenantSummary,
   PortalPlatformTenantsPage,
+  SupportGrantResponse,
+  TenantFlagsDto,
+  TenantLimitsDto,
   TenantStatus,
 } from '@ticket/contracts';
 import { asRecord, isNonEmptyString, apiErrorFrom } from './contract-shape';
@@ -302,4 +307,237 @@ export function interpretSupportGrantRevoke(
   const err = apiErrorFrom(asRecord(json));
   if (err) return { kind: 'rejected', ...err };
   return { kind: 'unknown', message: t(locale, 'platform.h_1vi2x57') };
+}
+
+export const PLATFORM_MUTATE_UNKNOWN = t(
+  DEFAULT_PORTAL_LOCALE,
+  'platform.mutate.unknown',
+);
+
+function parseLimitsDto(value: unknown): TenantLimitsDto | null {
+  const body = asRecord(value);
+  if (!body) return null;
+  for (const key of [
+    'maxEvents',
+    'maxStaff',
+    'emailPerDay',
+    'importRowsPerJob',
+  ] as const) {
+    const v = body[key];
+    if (v !== null && (typeof v !== 'number' || !Number.isFinite(v))) {
+      return null;
+    }
+  }
+  return {
+    maxEvents: body.maxEvents as number | null,
+    maxStaff: body.maxStaff as number | null,
+    emailPerDay: body.emailPerDay as number | null,
+    importRowsPerJob: body.importRowsPerJob as number | null,
+  };
+}
+
+function parseFlagsDto(value: unknown): TenantFlagsDto | null {
+  const body = asRecord(value);
+  if (!body) return null;
+  if (
+    typeof body.importsEnabled !== 'boolean' ||
+    typeof body.exportsEnabled !== 'boolean'
+  ) {
+    return null;
+  }
+  return {
+    importsEnabled: body.importsEnabled,
+    exportsEnabled: body.exportsEnabled,
+  };
+}
+
+function platformMutateRejected(
+  status: number,
+  json: unknown,
+  networkError: boolean,
+  locale: PortalLocale,
+  unknownMessage: string,
+): { kind: 'rejected'; code: string; message: string } | { kind: 'unknown'; message: string } {
+  if (networkError || status === 0 || status >= 500) {
+    return { kind: 'unknown', message: unknownMessage };
+  }
+  if (status === 401 || status === 403) {
+    const err = apiErrorFrom(asRecord(json));
+    return {
+      kind: 'rejected',
+      code: err?.code ?? 'FORBIDDEN',
+      message: err?.message ?? t(locale, 'platform.operatorMfaOnly'),
+    };
+  }
+  const err = apiErrorFrom(asRecord(json));
+  if (err) return { kind: 'rejected', ...err };
+  return { kind: 'unknown', message: unknownMessage };
+}
+
+export type PlatformCreateTenantView =
+  | { kind: 'ok'; result: PlatformCreateTenantResponse }
+  | { kind: 'rejected'; code: string; message: string }
+  | { kind: 'unknown'; message: string };
+
+export function interpretPlatformCreateTenant(
+  status: number,
+  json: unknown,
+  networkError: boolean,
+  locale: PortalLocale = DEFAULT_PORTAL_LOCALE,
+): PlatformCreateTenantView {
+  const unknown = t(locale, 'platform.mutate.unknown');
+  if (networkError || status === 0 || status >= 500) {
+    return { kind: 'unknown', message: unknown };
+  }
+  if (status === 200 || status === 201) {
+    const body = asRecord(json);
+    if (
+      !body ||
+      !isNonEmptyString(body.tenantId) ||
+      body.status !== 'PENDING' ||
+      typeof body.version !== 'number' ||
+      !Number.isInteger(body.version) ||
+      !isNonEmptyString(body.ownerInviteId)
+    ) {
+      return { kind: 'unknown', message: unknown };
+    }
+    return {
+      kind: 'ok',
+      result: {
+        tenantId: body.tenantId.trim(),
+        status: 'PENDING',
+        version: body.version,
+        ownerInviteId: body.ownerInviteId.trim(),
+      },
+    };
+  }
+  const rejected = platformMutateRejected(status, json, false, locale, unknown);
+  return rejected;
+}
+
+export type PlatformTenantDetailView =
+  | { kind: 'ok'; detail: PlatformTenantDetail }
+  | { kind: 'rejected'; code: string; message: string }
+  | { kind: 'unknown'; message: string };
+
+export function interpretPlatformTenantDetail(
+  status: number,
+  json: unknown,
+  networkError: boolean,
+  locale: PortalLocale = DEFAULT_PORTAL_LOCALE,
+): PlatformTenantDetailView {
+  const unknown = t(locale, 'platform.mutate.detailUnknown');
+  if (networkError || status === 0 || status >= 500) {
+    return { kind: 'unknown', message: unknown };
+  }
+  if (status === 200) {
+    const body = asRecord(json);
+    const limits = parseLimitsDto(body?.limits);
+    const flags = parseFlagsDto(body?.flags);
+    const usage = asRecord(body?.usage);
+    if (
+      !body ||
+      !isNonEmptyString(body.tenantId) ||
+      !isNonEmptyString(body.slug) ||
+      !isNonEmptyString(body.name) ||
+      typeof body.status !== 'string' ||
+      !TENANT_STATUSES.has(body.status as TenantStatus) ||
+      typeof body.defaultTimezone !== 'string' ||
+      (body.contact !== null && typeof body.contact !== 'string') ||
+      typeof body.version !== 'number' ||
+      !limits ||
+      !flags ||
+      !usage ||
+      typeof usage.events !== 'number' ||
+      typeof usage.staffActive !== 'number' ||
+      typeof usage.staffPendingInvites !== 'number' ||
+      typeof usage.emailToday !== 'number'
+    ) {
+      return { kind: 'unknown', message: unknown };
+    }
+    return {
+      kind: 'ok',
+      detail: {
+        tenantId: body.tenantId.trim(),
+        slug: body.slug.trim(),
+        name: body.name.trim(),
+        status: body.status as TenantStatus,
+        defaultTimezone: body.defaultTimezone,
+        contact: body.contact as string | null,
+        version: body.version,
+        limits,
+        flags,
+        usage: {
+          events: usage.events,
+          staffActive: usage.staffActive,
+          staffPendingInvites: usage.staffPendingInvites,
+          emailToday: usage.emailToday,
+        },
+      },
+    };
+  }
+  return platformMutateRejected(status, json, false, locale, unknown);
+}
+
+export type PlatformMutationOkView =
+  | { kind: 'ok' }
+  | { kind: 'rejected'; code: string; message: string }
+  | { kind: 'unknown'; message: string };
+
+export function interpretPlatformMutationOk(
+  status: number,
+  json: unknown,
+  networkError: boolean,
+  locale: PortalLocale = DEFAULT_PORTAL_LOCALE,
+): PlatformMutationOkView {
+  const unknown = t(locale, 'platform.mutate.unknown');
+  if (networkError || status === 0 || status >= 500) {
+    return { kind: 'unknown', message: unknown };
+  }
+  if (status >= 200 && status < 300) {
+    return { kind: 'ok' };
+  }
+  return platformMutateRejected(status, json, false, locale, unknown);
+}
+
+export type PlatformSupportGrantCreateView =
+  | { kind: 'ok'; grant: SupportGrantResponse }
+  | { kind: 'rejected'; code: string; message: string }
+  | { kind: 'unknown'; message: string };
+
+export function interpretPlatformSupportGrantCreate(
+  status: number,
+  json: unknown,
+  networkError: boolean,
+  locale: PortalLocale = DEFAULT_PORTAL_LOCALE,
+): PlatformSupportGrantCreateView {
+  const unknown = t(locale, 'platform.mutate.grantUnknown');
+  if (networkError || status === 0 || status >= 500) {
+    return { kind: 'unknown', message: unknown };
+  }
+  if (status === 200 || status === 201) {
+    const body = asRecord(json);
+    if (
+      !body ||
+      !isNonEmptyString(body.grantId) ||
+      !isNonEmptyString(body.tenantId) ||
+      !isNonEmptyString(body.eventId) ||
+      !Array.isArray(body.scopes) ||
+      !body.scopes.every((s) => s === 'cs.read') ||
+      typeof body.expiresAt !== 'string'
+    ) {
+      return { kind: 'unknown', message: unknown };
+    }
+    return {
+      kind: 'ok',
+      grant: {
+        grantId: body.grantId.trim(),
+        tenantId: body.tenantId.trim(),
+        eventId: body.eventId.trim(),
+        scopes: ['cs.read'],
+        expiresAt: body.expiresAt,
+      },
+    };
+  }
+  return platformMutateRejected(status, json, false, locale, unknown);
 }
