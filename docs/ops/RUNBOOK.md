@@ -155,6 +155,15 @@ Policy: [`PLATFORM-POLICY.md`](./PLATFORM-POLICY.md) · Config: `infra/platform/
 
 Attendee (`ticket-web`) không ép OTP; Owner/admin (`ticket-admin-web`) và platform (`ticket-platform-web`) bind flow OTP.
 
+Flow `vemoki otp browser` (Keycloak 26) phải có: `Cookie` **DISABLED** (không cho phiên SSO tạo từ `ticket-web` chỉ bằng mật khẩu cấp code cho client MFA — hai client này phát claim hardcode `acr=2`), `Organization` DISABLED, `forms` ALTERNATIVE, `Browser - Conditional OTP` REQUIRED + `OTP Form` REQUIRED (user chưa có OTP bị ép `CONFIGURE_TOTP`). Client MFA **không** gắn default scope `acr` (mapper LoA ghi đè `acr=2` thành `acr=1`); chỉ gỡ scope sau khi đã bind flow.
+
+```bash
+D5_PLATFORM_OIDC_ISSUER=http://127.0.0.1:8080/realms/ticket node scripts/lib/platform-keycloak-mfa-live-proof.mjs      # acr=2 sau OTP
+D5_PLATFORM_OIDC_ISSUER=http://127.0.0.1:8080/realms/ticket node scripts/lib/platform-keycloak-sso-reuse-proof.mjs     # SSO ticket-web không bỏ qua OTP
+```
+
+**Prod (2026-10-23):** đã áp flow trên (bind 2 client MFA, gỡ scope `acr`, gỡ redirect URI `app.`/apex cũ) qua admin API — không ghi đè cấu hình client khác. Backup JSON client: `/opt/vemoki/backup/kc-*-20261023-*.json`. Rollback: bỏ binding `browser`, gắn lại default scope `acr`, xoá flow `vemoki otp browser`.
+
 ## 9. Cutover staff UI app → portal (D-7 / #846) — prod checklist
 
 **Không tự chạy từ PR** — coordinator/user ops sau merge + CI xanh.
