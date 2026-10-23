@@ -144,12 +144,28 @@ export function bffPlatformTenants(): string {
   return '/api/bff/platform/tenants';
 }
 
+export function bffPlatformTenant(tenantId: string): string {
+  return `/api/bff/platform/tenants/${encodeURIComponent(tenantId)}`;
+}
+
+export function bffPlatformTenantStatus(tenantId: string): string {
+  return `${bffPlatformTenant(tenantId)}/status`;
+}
+
+export function bffPlatformTenantLimits(tenantId: string): string {
+  return `${bffPlatformTenant(tenantId)}/limits`;
+}
+
 export function bffPlatformAudit(): string {
   return '/api/bff/platform/audit';
 }
 
 export function bffPlatformTenantHealth(tenantId: string): string {
-  return `/api/bff/platform/tenants/${encodeURIComponent(tenantId)}/health`;
+  return `${bffPlatformTenant(tenantId)}/health`;
+}
+
+export function bffPlatformSupportGrants(): string {
+  return '/api/bff/platform/support-grants';
 }
 
 export function bffPlatformSupportGrantRevoke(grantId: string): string {

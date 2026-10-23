@@ -71,7 +71,11 @@ async function loadShellContextOnce(): Promise<ShellLoadState> {
       getJson('/api/bff/platform/me'),
     ]);
 
-    if (tenantsResult.status === 401 && eventsResult.status === 401) {
+    if (
+      tenantsResult.status === 401 &&
+      eventsResult.status === 401 &&
+      platformResult.status === 401
+    ) {
       return { status: 'unauthenticated' };
     }
 

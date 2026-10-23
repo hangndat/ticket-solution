@@ -40,9 +40,16 @@ export const PORTAL_UPSTREAM = {
     `${eventBase(tenantId, eventId)}/codes`,
   /** H-P1 / H-P-AUDIT / H-P2 — platform Operator MFA audience only */
   platformTenants: '/v1/platform/tenants',
+  platformTenant: (tenantId: string) =>
+    `/v1/platform/tenants/${encodeURIComponent(tenantId)}`,
+  platformTenantStatus: (tenantId: string) =>
+    `/v1/platform/tenants/${encodeURIComponent(tenantId)}/status`,
+  platformTenantLimits: (tenantId: string) =>
+    `/v1/platform/tenants/${encodeURIComponent(tenantId)}/limits`,
   platformAudit: '/v1/platform/audit',
   platformTenantHealth: (tenantId: string) =>
     `/v1/platform/tenants/${encodeURIComponent(tenantId)}/health`,
+  platformSupportGrants: '/v1/platform/support-grants',
   platformSupportGrantRevoke: (grantId: string) =>
     `/v1/platform/support-grants/${encodeURIComponent(grantId)}/revoke`,
   members: (tenantId: string) => `${tenantBase(tenantId)}/members`,
