@@ -13,7 +13,7 @@ import {
 } from '../src/marketing/analytics/request-guard';
 import { shouldSkipMarketingAnalytics } from '../src/marketing/analytics/privacy-signals';
 import { validateMarketingAnalyticsBody } from '../src/marketing/analytics/validate';
-import { trustedClientIpForRateLimit } from '../src/platform/trusted-client-ip';
+import { trustedClientIpForRateLimit } from '../src/security/trusted-client-ip';
 
 function analyticsRequest(
   init: RequestInit & { url?: string } = {},

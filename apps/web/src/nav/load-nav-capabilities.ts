@@ -1,12 +1,11 @@
 'use client';
 
-import { platformGet } from '../platform/client-fetch';
+import { platformGet } from '../bff/same-origin-fetch';
 import {
   buildNavLinks,
   deriveNavCapabilities,
   parseMeEventsResponse,
   parseMeTenantsResponse,
-  parsePlatformMeResponse,
   type NavCapabilities,
   type NavLink,
   GUEST_NAV_LINKS,
@@ -22,10 +21,9 @@ export async function loadNavCapabilities(): Promise<{
   caps: NavCapabilities;
   links: NavLink[];
 }> {
-  const [eventsResult, tenantsResult, platformResult] = await Promise.all([
+  const [eventsResult, tenantsResult] = await Promise.all([
     platformGet('/api/bff/me/events', REQUEST_TIMEOUT_MS),
     platformGet('/api/bff/me/tenants', REQUEST_TIMEOUT_MS),
-    platformGet('/api/bff/platform/me', REQUEST_TIMEOUT_MS),
   ]);
 
   const meEvents = parseMeEventsResponse(
@@ -36,21 +34,13 @@ export async function loadNavCapabilities(): Promise<{
     tenantsResult.status,
     tenantsResult.json,
   );
-  const platformMe = parsePlatformMeResponse(
-    platformResult.status,
-    platformResult.json,
-  );
-
-  // Authenticated iff MeEvents or MeTenants returned a valid discovery payload.
-  // Platform operator alone can still unlock Platform chrome via platformMe.
-  const authenticated =
-    meEvents !== null || meTenants !== null || platformMe !== null;
+  const authenticated = meEvents !== null || meTenants !== null;
 
   const caps = deriveNavCapabilities({
     authenticated,
     meEvents,
     meTenants,
-    platformMe,
+    platformMe: null,
   });
 
   return { caps, links: buildNavLinks(caps) };

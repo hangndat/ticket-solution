@@ -29,6 +29,7 @@ test('production routes isolate tenant content and reject unknown pairs', async 
         ...process.env,
         // Production origin policy requires WEB_PUBLIC_ORIGIN (no Host/forwarded fallback).
         WEB_PUBLIC_ORIGIN: base,
+        PORTAL_ORIGIN: 'http://127.0.0.1:3013',
         // Isolate from a live local API (:3001 default) during route fail-closed checks.
         API_BASE_URL: 'http://127.0.0.1:1',
       },
@@ -140,25 +141,11 @@ test('production routes isolate tenant content and reject unknown pairs', async 
       'anonymous deeplink must not render owner-ticket ready state',
     );
 
-    // O02: anonymous /admin soft-redirects (proxy 307) to /auth?next=/admin.
-    const adminRaw = await fetch(base + '/admin', { redirect: 'manual' });
-    assert.equal(adminRaw.status, 307, 'anonymous /admin should HTTP 307');
+    // D-7: GET /admin redirects to portal when PORTAL_ORIGIN is set (no legacy page).
+    const adminRaw = await fetch(base + '/admin?tenantId=t1', { redirect: 'manual' });
+    assert.equal(adminRaw.status, 302, 'GET /admin should redirect to portal');
     const adminLoc = adminRaw.headers.get('location') ?? '';
-    assert.ok(adminLoc.includes('/auth'), `Location ${adminLoc}`);
-    assert.ok(
-      adminLoc.includes('next=') && adminLoc.includes('admin'),
-      `next=/admin missing in ${adminLoc}`,
-    );
-    const adminFollow = await fetch(base + '/admin');
-    assert.equal(adminFollow.status, 200);
-    const adminHtml = await adminFollow.text();
-    // `/auth` stub (OIDC unset) → Home notice — no Admin workspace chrome.
-    assert.ok(adminHtml.includes('Đăng nhập') || adminHtml.includes('Cần đăng nhập'));
-    assert.ok(!adminHtml.includes('Không gian quản trị sự kiện'));
-    assert.ok(!adminHtml.includes('admin-tech-details'));
-    assert.ok(!adminHtml.includes('data-testid="nav-admin"'));
-    assert.ok(!adminHtml.includes('data-testid="nav-gate"'));
-    assert.ok(!adminHtml.includes('data-testid="nav-platform"'));
+    assert.equal(adminLoc, 'http://127.0.0.1:3013/t/t1');
     // `/auth` is a thin redirect stub — no product login UI when OIDC unset.
     const authRaw = await fetch(base + '/auth', { redirect: 'manual' });
     assert.ok(
@@ -300,167 +287,20 @@ test('production routes isolate tenant content and reject unknown pairs', async 
     const redeemErr = await redeemBff.json();
     assert.equal(redeemErr.code, 'OIDC_MISCONFIGURED');
 
-    // CSRF: mutating admin BFF without Origin must fail closed before OIDC.
-    const csrfBlocked = await fetch(base + '/api/bff/admin/publish', {
+    // D-7: legacy staff BFF on apps/web → 410 Gone (proxy).
+    const legacyGone = await fetch(base + '/api/bff/admin/publish', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', Origin: base },
       body: JSON.stringify({
         tenantId: '11111111-1111-4111-8111-111111111111',
         eventId: '22222222-2222-4222-8222-222222222222',
         expectedVersion: 1,
       }),
     });
-    assert.equal(csrfBlocked.status, 403);
-    assert.equal((await csrfBlocked.json()).code, 'CSRF_ORIGIN_REQUIRED');
-
-    const sameOriginJson = {
-      'Content-Type': 'application/json',
-      Origin: base,
-    };
-
-    const publishBff = await fetch(base + '/api/bff/admin/publish', {
-      method: 'POST',
-      headers: sameOriginJson,
-      body: JSON.stringify({
-        tenantId: '11111111-1111-4111-8111-111111111111',
-        eventId: '22222222-2222-4222-8222-222222222222',
-        expectedVersion: 1,
-      }),
-    });
-    assert.equal(publishBff.status, 503);
-    assert.equal((await publishBff.json()).code, 'OIDC_MISCONFIGURED');
-    const importBff = await fetch(base + '/api/bff/admin/imports', {
-      method: 'POST',
-      headers: sameOriginJson,
-      body: JSON.stringify({
-        tenantId: '11111111-1111-4111-8111-111111111111',
-        eventId: '22222222-2222-4222-8222-222222222222',
-        codes: ['CODE-A'],
-        eventQuota: 10,
-      }),
-    });
-    assert.equal(importBff.status, 503);
-    assert.equal((await importBff.json()).code, 'OIDC_MISCONFIGURED');
-    const quotaBff = await fetch(
-      base +
-        '/api/bff/admin/quota?tenantId=11111111-1111-4111-8111-111111111111&eventId=22222222-2222-4222-8222-222222222222',
-    );
-    assert.equal(quotaBff.status, 503);
-    assert.equal((await quotaBff.json()).code, 'OIDC_MISCONFIGURED');
-    const reportBff = await fetch(
-      base +
-        '/api/bff/admin/report?tenantId=11111111-1111-4111-8111-111111111111&eventId=22222222-2222-4222-8222-222222222222',
-    );
-    assert.equal(reportBff.status, 503);
-    assert.equal((await reportBff.json()).code, 'OIDC_MISCONFIGURED');
-
-    const approvalBody = {
-      tenantId: '11111111-1111-4111-8111-111111111111',
-      eventId: '22222222-2222-4222-8222-222222222222',
-      requestId: '33333333-3333-4333-8333-333333333333',
-      idempotencyKey: '44444444-4444-4444-8444-444444444444',
-    };
-    const approveBff = await fetch(base + '/api/bff/admin/redemptions/approve', {
-      method: 'POST',
-      headers: sameOriginJson,
-      body: JSON.stringify(approvalBody),
-    });
-    assert.equal(approveBff.status, 503);
-    assert.equal((await approveBff.json()).code, 'OIDC_MISCONFIGURED');
-    const denyBff = await fetch(base + '/api/bff/admin/redemptions/deny', {
-      method: 'POST',
-      headers: sameOriginJson,
-      body: JSON.stringify({ ...approvalBody, reason: 'Không đủ điều kiện' }),
-    });
-    assert.equal(denyBff.status, 503);
-    assert.equal((await denyBff.json()).code, 'OIDC_MISCONFIGURED');
-
-    // C-E create uses full CSRF double-submit (not Origin-only); missing token → 403.
-    const createEventBff = await fetch(base + '/api/bff/admin/events', {
-      method: 'POST',
-      headers: sameOriginJson,
-      body: JSON.stringify({
-        tenantId: '11111111-1111-4111-8111-111111111111',
-        slug: 'aurora-night',
-        name: 'Aurora Night',
-        idempotencyKey: '66666666-6666-4666-8666-666666666666',
-      }),
-    });
-    assert.equal(createEventBff.status, 403);
-    assert.equal((await createEventBff.json()).code, 'CSRF_TOKEN_INVALID');
-
-    const csListBff = await fetch(
-      base +
-        '/api/bff/admin/tickets?tenantId=11111111-1111-4111-8111-111111111111&eventId=22222222-2222-4222-8222-222222222222&q=test',
-    );
-    assert.equal(csListBff.status, 503);
-    assert.equal((await csListBff.json()).code, 'OIDC_MISCONFIGURED');
-
-    const csResendBff = await fetch(
-      base +
-        '/api/bff/admin/tickets/33333333-3333-4333-8333-333333333333/resend',
-      {
-        method: 'POST',
-        headers: sameOriginJson,
-        body: JSON.stringify({
-          tenantId: '11111111-1111-4111-8111-111111111111',
-          eventId: '22222222-2222-4222-8222-222222222222',
-          idempotencyKey: '44444444-4444-4444-8444-444444444444',
-        }),
-      },
-    );
-    assert.equal(csResendBff.status, 503);
-    assert.equal((await csResendBff.json()).code, 'OIDC_MISCONFIGURED');
-
-    const exportBff = await fetch(base + '/api/bff/admin/exports', {
-      method: 'POST',
-      headers: sameOriginJson,
-      body: JSON.stringify({
-        tenantId: '11111111-1111-4111-8111-111111111111',
-        eventId: '22222222-2222-4222-8222-222222222222',
-        format: 'csv',
-        idempotencyKey: '55555555-5555-4555-8555-555555555555',
-      }),
-    });
-    assert.equal(exportBff.status, 503);
-    assert.equal((await exportBff.json()).code, 'OIDC_MISCONFIGURED');
-
-    // #653: streamed multipart without Content-Length must fail when body exceeds cap.
-    const importBoundary = '----vemokiImport653';
-    const importMaxBody = 10 * 1024 * 1024 + 64 * 1024;
-    const importPadding = 'x'.repeat(importMaxBody + 512);
-    const importMultipart =
-      `--${importBoundary}\r\n` +
-      'Content-Disposition: form-data; name="tenantId"\r\n\r\n' +
-      '11111111-1111-4111-8111-111111111111\r\n' +
-      `--${importBoundary}\r\n` +
-      'Content-Disposition: form-data; name="eventId"\r\n\r\n' +
-      '22222222-2222-4222-8222-222222222222\r\n' +
-      `--${importBoundary}\r\n` +
-      'Content-Disposition: form-data; name="kind"\r\n\r\nCODES\r\n' +
-      `--${importBoundary}\r\n` +
-      'Content-Disposition: form-data; name="file"; filename="big.csv"\r\n' +
-      'Content-Type: text/csv\r\n\r\n' +
-      importPadding +
-      `\r\n--${importBoundary}--\r\n`;
-    // Chunked byte-cap when `request.body` is readable: import-upload-guard.test.ts.
-    const importUploadOversized = await fetch(
-      base + '/api/bff/admin/imports/upload',
-      {
-        method: 'POST',
-        headers: {
-          Origin: base,
-          'Content-Type': `multipart/form-data; boundary=${importBoundary}`,
-          'Content-Length': String(importMultipart.length),
-        },
-        body: importMultipart,
-      },
-    );
-    assert.equal(importUploadOversized.status, 422);
-    assert.equal(
-      (await importUploadOversized.json()).code,
-      'IMPORT_ROW_LIMIT',
-    );
+    assert.equal(legacyGone.status, 410);
+    assert.equal((await legacyGone.json()).code, 'LEGACY_GONE');
+    const legacyGet = await fetch(base + '/api/bff/admin/events');
+    assert.equal(legacyGet.status, 410);
   } finally {
     const stopped = once(child, 'exit');
     child.kill('SIGTERM');

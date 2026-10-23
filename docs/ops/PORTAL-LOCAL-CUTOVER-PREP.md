@@ -173,3 +173,14 @@ Prod DNS/nginx rollback chỉ áp dụng khi có Task deploy — ngoài phạm v
 - [ ] **Không** DNS/TLS/deploy prod trong PR
 
 Script kiểm tra: [`scripts/portal-local-dual-run-check.sh`](../../scripts/portal-local-dual-run-check.sh).
+
+---
+
+## 8. Sau D-7 (#846) — prod ops checklist (không thực thi trong PR)
+
+> Chỉ ghi việc cần làm khi merge cutover; **không** deploy prod từ agent.
+
+1. **apps/web:** đã gỡ `app/admin`, `app/platform`, BFF admin/platform, `live-pulse-legacy.css`; GET `/admin`·`/platform` redirect `PORTAL_ORIGIN`; POST legacy staff API → **410**.
+2. **Prod redirect:** bật `PORTAL_ORIGIN=https://portal.vemoki.com` trên app host (redirect không còn phụ thuộc `PORTAL_ADMIN_REDIRECT`).
+3. **Keycloak prod:** sau metric không còn traffic `app.` callback, gỡ redirect URI `app.vemoki.com` khỏi `ticket-admin-web` / `ticket-platform-web` (giữ portal URI); đối chiếu realm KC 26 (flow `Organization`, scope `acr`) theo PR #851.
+4. **UAT:** stack local `./scripts/fe-uat-stack.sh` — redirect + 410 + attendee spot-check + portal Notify/Operator smoke (`apps/portal/scripts/pr843*`, `pr844-platform-uat.mjs`).

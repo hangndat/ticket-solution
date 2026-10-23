@@ -1,12 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { PLATFORM_ERROR_CODES } from '../src/platform/contracts';
+import { PLATFORM_ERROR_CODES } from '../src/bff/platform-contracts';
 import {
   inviteNetworkMessage,
   messageForInviteError,
   messageForInviteView,
-} from '../src/platform/invite-messages';
-import { interpretAcceptInvite } from '../src/platform/shape';
+} from '../src/invite/platform-messages';
+import { interpretAcceptInvite } from '../src/bff/me-shape';
 
 test('INVITE_ALREADY_USED has distinct VI copy (no English code as title)', () => {
   const msg = messageForInviteError(PLATFORM_ERROR_CODES.INVITE_ALREADY_USED);
