@@ -1,0 +1,69 @@
+{
+  "id": "5650620b-1d0b-434a-b94e-85d3c69f5938",
+  "ok": true,
+  "result": {
+    "origin": "http://127.0.0.1:3413/t/d9d9f001-0001-4000-8000-000000000001/e/d9d9f001-0002-4000-8000-000000000001",
+    "refs": {
+      "e1": {
+        "name": "",
+        "role": "menu"
+      },
+      "e10": {
+        "name": "",
+        "role": "generic"
+      },
+      "e11": {
+        "name": "",
+        "role": "generic"
+      },
+      "e12": {
+        "name": "Clear",
+        "role": "button"
+      },
+      "e13": {
+        "name": "Organization",
+        "role": "combobox"
+      },
+      "e14": {
+        "name": "Events",
+        "role": "combobox"
+      },
+      "e2": {
+        "name": "expand",
+        "role": "generic"
+      },
+      "e3": {
+        "name": "Skip navigation",
+        "role": "link"
+      },
+      "e4": {
+        "name": "T",
+        "role": "menuitem"
+      },
+      "e5": {
+        "name": "M",
+        "role": "menuitem"
+      },
+      "e6": {
+        "name": "E",
+        "role": "menuitem"
+      },
+      "e7": {
+        "name": "",
+        "role": "generic"
+      },
+      "e8": {
+        "name": "Account ▾",
+        "role": "button"
+      },
+      "e9": {
+        "name": "Vemoki Portal",
+        "role": "link"
+      }
+    },
+    "snapshot": "- menu \"TThis organizationMMFest · DemoEEvent setup\" [ref=e1] focusable [tabindex]\n  - menuitem \"T\" [expanded=false, ref=e4]\n  - menuitem \"M\" [expanded=true, ref=e5]\n  - menuitem \"E\" [expanded=false, ref=e6]\n- generic \"expand\" [ref=e2] clickable [cursor:pointer, onclick]\n- link \"Vemoki Portal\" [ref=e9]\n- generic \"MFest (mfest-demo)\" [ref=e10] clickable [cursor:pointer]\n  - combobox \"Organization\" [expanded=false, ref=e13]\n- generic \"MFest · Demo\" [ref=e11] clickable [cursor:pointer]\n  - combobox \"Events\" [expanded=false, ref=e14]\n  - button \"Clear\" [ref=e12]\n- generic \"Scan tickets with the Vemoki app on iPhone\" [ref=e7] clickable [cursor:pointer, onclick]\n- button \"Account ▾\" [ref=e8]\n- link \"Skip navigation\" [ref=e3]"
+  },
+  "_meta": {
+    "runtimeId": "9d821662-c628-49db-a168-99fa7b7636fc"
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "sha": "b34187919ade8ab5e07efcab59ac0284097c663d",
+  "method": "source regex inventory; client declaration at file start; import counts per source file; excludes node_modules/.next",
+  "tsx": 40,
+  "page_tsx": 22,
+  "client_pages": 22,
+  "client_tsx": 39,
+  "antd_import_files": 35,
+  "pro_import_files": 20,
+  "inline_style_objects": 102,
+  "native_elements": {
+    "button": 0,
+    "table": 0,
+    "form": 0
+  },
+  "css_lines": 72,
+  "protable_import_files": [
+    "apps/portal/app/platform/page.tsx",
+    "apps/portal/app/t/[tenantId]/members/page.tsx",
+    "apps/portal/app/t/[tenantId]/events/page.tsx",
+    "apps/portal/app/t/[tenantId]/e/[eventId]/types/page.tsx",
+    "apps/portal/app/t/[tenantId]/e/[eventId]/config/page.tsx",
+    "apps/portal/app/t/[tenantId]/e/[eventId]/sources/page.tsx",
+    "apps/portal/app/t/[tenantId]/analytics/page.tsx",
+    "apps/portal/src/components/portal-pro-table.tsx"
+  ],
+  "raw_table_panel_files": [
+    "apps/portal/src/ops/panels/pending-panel.tsx",
+    "apps/portal/src/ops/panels/audit-panel.tsx",
+    "apps/portal/src/ops/panels/import-invitations-panel.tsx",
+    "apps/portal/src/ops/panels/notifications-panel.tsx",
+    "apps/portal/src/ops/panels/codes-panel.tsx",
+    "apps/portal/src/ops/panels/export-panel.tsx",
+    "apps/portal/src/ops/panels/cs-panel.tsx"
+  ]
+}
