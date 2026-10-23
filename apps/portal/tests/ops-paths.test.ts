@@ -42,10 +42,26 @@ describe('PORTAL_UPSTREAM ops paths', () => {
       `/v1/tenants/${t}/role-presets`,
     );
     assert.equal(PORTAL_UPSTREAM.platformTenants, '/v1/platform/tenants');
+    assert.equal(
+      PORTAL_UPSTREAM.platformTenant(t),
+      `/v1/platform/tenants/${t}`,
+    );
+    assert.equal(
+      PORTAL_UPSTREAM.platformTenantStatus(t),
+      `/v1/platform/tenants/${t}/status`,
+    );
+    assert.equal(
+      PORTAL_UPSTREAM.platformTenantLimits(t),
+      `/v1/platform/tenants/${t}/limits`,
+    );
     assert.equal(PORTAL_UPSTREAM.platformAudit, '/v1/platform/audit');
     assert.equal(
       PORTAL_UPSTREAM.platformTenantHealth(t),
       `/v1/platform/tenants/${t}/health`,
+    );
+    assert.equal(
+      PORTAL_UPSTREAM.platformSupportGrants,
+      '/v1/platform/support-grants',
     );
     assert.equal(
       PORTAL_UPSTREAM.platformSupportGrantRevoke(t),
