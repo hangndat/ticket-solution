@@ -19,7 +19,9 @@ Layout: [infra/deploy/README.md](../../../infra/deploy/README.md). Do not build 
 
 - Do not touch `/media/anphong/nginx-letencrypt` except `data/nginx/vemoki.conf`. Leave vhosts `ancafe` and `dath` alone.
 - Do not publish 80, 443, 8080, 1883, 27017, or 9001. Network `edge` is external `nginx-letencrypt_nginx_network`.
-- Rsync must exclude `node_modules`, `.git`, `.next`, `dist`, `.turbo`, `apps/mobile/ios`, `apps/mobile/android`, `.uat-artifacts`. Never delete `/opt/vemoki/src/.pnpm-store` or `/opt/vemoki/src/node_modules`.
+- Rsync must exclude `node_modules`, `.git`, `.next`, `dist`, `.turbo`, `apps/mobile/ios`, `apps/mobile/android`, `.uat-artifacts`, `.data`, `.env`. Never delete `/opt/vemoki/src/.pnpm-store` or `/opt/vemoki/src/node_modules`. `apps/web/.data` holds runtime state (marketing lead idempotency) and `apps/portal/.env` is host-only; `rsync --delete` would remove them. Sync from a clean checkout of the commit you deploy, path by path, and dry-run (`-n --itemize-changes`) first.
+- Back up before replacing an app: `tar czf /opt/vemoki/backup/<app>-<ts>.tgz --exclude=node_modules apps/<app> …`. Files under `.next` are owned by root (built in the container); restore them from inside `vemoki-runtime:local`, not as the host user.
+- Never pipe a build into `tail`/`grep` and then restart: the pipe hides the exit code. Check the build's own exit status (`> /tmp/x.log 2>&1; echo $?`) before any restart.
 - pnpm runs in `vemoki-runtime:local` with a single mount `-v /opt/vemoki/src:/app`, store `/app/.pnpm-store`, `package-import-method=hardlink`. Do not install `@ticket/mobile`.
 - Rebuild `vemoki-runtime:local` from `Dockerfile.runtime` only when that file changes or the image is missing.
 - Run `pnpm install --frozen-lockfile --filter @ticket/api... --filter @ticket/web... --filter @ticket/portal... --filter @ticket/worker...` only when a lockfile or `package.json` changed.
@@ -30,15 +32,37 @@ Compile contracts, when api, web, or worker need them:
 pnpm --filter @ticket/api exec tsc -p ../../packages/contracts/tsconfig.json
 ```
 
+## Next.js apps (web, portal): build workspace deps first, then build out of place
+
+Workspace packages (`@ticket/ui`, `@ticket/web-session`, `@ticket/contracts`) export from `dist/`, which rsync does not copy. Build them before the app, or the app type-checks against stale `dist` and `next build` fails:
+
+```bash
+pnpm --filter @ticket/ui build && pnpm --filter @ticket/web-session build   # + contracts tsc above
+```
+
+`next build` wipes the live `.next` first, so building in place means downtime (and a failed build leaves the service with no build). Build in a copy, test, then swap:
+
+```bash
+# inside vemoki-runtime:local, cwd /app
+rm -rf apps/<app>-buildtest && cp -a apps/<app> apps/<app>-buildtest && rm -rf apps/<app>-buildtest/.next
+(cd apps/<app>-buildtest && ./node_modules/.bin/next build > /tmp/b.log 2>&1; echo exit=$?)
+# smoke: run the candidate with apps/<app>-buildtest mounted at /app/apps/<app>, call
+# ./node_modules/.bin/next start directly (not pnpm --filter), curl a few routes
+# swap: mv apps/<app> apps/<app>-prev; mv apps/<app>-buildtest apps/<app>;
+#       move the current .data/.env from -prev into the new dir; mv apps/<app>-prev /backup/
+```
+
+The copy has the same package name, so `pnpm --filter @ticket/<app> exec next start` (the compose command) would start it twice and fail with `EADDRINUSE`. Move every `-buildtest`/`-prev` copy out of `apps/` before restarting the service.
+
 ## portal
 
-Sync `apps/portal` and shared packages as needed. Build `@ticket/portal`. `docker compose restart portal` (or `up -d --no-deps portal`).
+Sync `apps/portal` and shared packages as needed. Build `@ticket/portal` (deps first, out of place — section above). `docker compose restart portal` (or `up -d --no-deps portal`).
 
-Verify: `https://portal.vemoki.com/` is 200/307; `/api/bff/me` without session is 401. Dual-run + nginx: `docs/ops/PORTAL-PROD-CUTOVER.md`. Gate stays on `app.vemoki.com`.
+Verify: `https://portal.vemoki.com/` is 200/307; `/api/bff/me/tenants` and `/api/bff/platform/me` without session are 401 (there is no `/api/bff/me` root route on portal). Dual-run + nginx: `docs/ops/PORTAL-PROD-CUTOVER.md`. Gate stays on `app.vemoki.com`.
 
 ## web
 
-Sync `apps/web` and, if imported types changed, `packages/contracts`. Build `@ticket/web`. `docker compose restart web`.
+Sync `apps/web`, `packages/ui`, `packages/web-session`, `brand/` and, if imported types changed, `packages/contracts`. Build `@ticket/web` (deps first, out of place — section above). `docker compose restart web`.
 
 Verify: `https://vemoki.com/` is 200. If auth code changed, run the login check below. Do not set `HOSTNAME=0.0.0.0`. Listen only via `next start --hostname 0.0.0.0 --port 3000`.
 
