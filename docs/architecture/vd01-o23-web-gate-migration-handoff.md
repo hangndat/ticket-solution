@@ -6,7 +6,7 @@
 | Role | `architect` (Dexter) · [`docs/agents/roles/architect.md`](../agents/roles/architect.md) |
 | Worktree | `/Users/admin/SideProject/ticket-solution/vd01-gate-migration` |
 | **Exact SHA đối chiếu** | `9e6565af68e6aba1c61790ed857a7082d0229fdd` |
-| Quyết định nguồn (checkout gốc `ticket-solution`, chưa merge O23 vào `DECISION-LOG` worktree) | [O23](../../../docs/DECISION-LOG.md) (main worktree) · [Plan VD-*](../../../docs/plans/VEMOKI-UNIFIED-DESIGN-IMPLEMENTATION-2026-10-24.md) · [DESIGN-ACCEPTANCE](../../../docs/design/Vemoki-Complete%202/DESIGN-ACCEPTANCE.md) |
+| Quyết định nguồn | [O23](../DECISION-LOG.md) · [Plan VD-*](../plans/VEMOKI-UNIFIED-DESIGN-IMPLEMENTATION-2026-10-24.md) · [DESIGN-ACCEPTANCE](../design/vemoki-unified-v1/DESIGN-ACCEPTANCE.md) |
 | Mẫu artifact | [`docs/architecture/<task-slug>.md`](./vd01-o23-web-gate-migration-handoff.md) (architect role) |
 | **Kết luận** | **Đủ để triển khai trong scope** — không cần ADR mới; consumer VD-02/VD-06/VD-07 triển khai theo ma trận dưới |
 
@@ -175,7 +175,7 @@ pnpm --filter @ticket/web test
 | --- | --- |
 | Đọc `proxy.ts`, `post-login`, portal gate page, dual-run | Khớp ma trận §3 |
 | CRG / graph | Graph MCP trên `main` có thể lệch branch; source worktree thắng |
-| Decision Log worktree | **Chưa** có mục O23 — handoff dẫn checkout gốc; merge O23 là Task coordinator |
+| Decision Log nhánh tích hợp | O23 đã được thêm ở VD-00; khi merge cần giữ cùng SHA với handoff này |
 | Design complete | Không đồng nghĩa pilot ready (DESIGN-ACCEPTANCE §Gate còn mở) |
 
 ---
