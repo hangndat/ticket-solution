@@ -210,6 +210,26 @@ describe('loadOwnerTicket', () => {
     assert.equal(tenantsCalled, false);
   });
 
+  it('maps Nest 403 to forbidden', async () => {
+    const forbidden = await loadOwnerTicket({
+      tenantSlug: 'uat-device',
+      ticketId: SAMPLE_ID,
+      accessToken: 'tok',
+      env: { API_BASE_URL: 'http://api.test' } as unknown as NodeJS.ProcessEnv,
+      fetchImpl: async (input) => {
+        const url = String(input);
+        if (url.endsWith('/v1/me/tenants')) {
+          return new Response(JSON.stringify(ME_TENANTS_OK), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          });
+        }
+        return new Response('{}', { status: 403 });
+      },
+    });
+    assert.equal(forbidden.status, 'forbidden');
+  });
+
   it('maps Nest 404 and tenant-unresolved', async () => {
     const notFound = await loadOwnerTicket({
       tenantSlug: 'uat-device',

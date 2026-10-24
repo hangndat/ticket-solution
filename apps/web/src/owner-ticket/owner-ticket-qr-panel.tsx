@@ -7,7 +7,6 @@ import {
   attendeeTicketQrCaption,
   attendeeTicketQrPanel,
 } from '../attendee-detail-surface';
-import { writeOwnerTicketDisplayCache } from './display-cache';
 import { TicketQr } from './ticket-qr';
 
 type Props = {
@@ -18,8 +17,13 @@ type Props = {
   qrLabel: string;
 };
 
+/** Client-only; safe to call from effects after mount. */
+export function readBrowserOffline(): boolean {
+  return typeof navigator !== 'undefined' && !navigator.onLine;
+}
+
 function subscribeOnline(setOffline: (offline: boolean) => void): () => void {
-  const update = () => setOffline(typeof navigator !== 'undefined' && !navigator.onLine);
+  const update = () => setOffline(readBrowserOffline());
   update();
   window.addEventListener('online', update);
   window.addEventListener('offline', update);
@@ -30,24 +34,12 @@ function subscribeOnline(setOffline: (offline: boolean) => void): () => void {
 }
 
 export function OwnerTicketQrPanel({
-  tenantId,
-  ticketId,
-  state,
   qrPayload,
   qrLabel,
 }: Props) {
   const [offline, setOffline] = useState(false);
 
-  useEffect(() => {
-    writeOwnerTicketDisplayCache({
-      tenantId,
-      ticketId,
-      qrPayload,
-      state,
-      cachedAt: new Date().toISOString(),
-    });
-    return subscribeOnline(setOffline);
-  }, [tenantId, ticketId, qrPayload, state]);
+  useEffect(() => subscribeOnline(setOffline), []);
 
   return (
     <>
@@ -57,7 +49,7 @@ export function OwnerTicketQrPanel({
           role="status"
           data-testid="owner-ticket-offline-label"
         >
-          {ATTENDEE_COPY.offlineCachedQr}
+          {ATTENDEE_COPY.offlineQrBanner}
         </p>
       ) : null}
       <figure className={attendeeTicketQrPanel} data-testid="owner-ticket-qr-figure">

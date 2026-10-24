@@ -4,27 +4,39 @@
 
 ## Exact SHA
 
-`2ac5a7ba6d4b5f7615b1b72dc0184c8d3c551648` (branch `hangndat/vd04-attendee-web`; feature commit — if amended, re-run `git rev-parse HEAD`)
+**Fix round 1 (this branch):** `git rev-parse HEAD` on `hangndat/vd04-attendee-web` after worker handoff (see `worker_done` / coordinator for pinned full SHA).
+
+**PR #888 James review baseline:** `6c8236d1ef35454527823b6f8e5e08dc0f2c6e07`
 
 ## Delta delivered
 
 | Area | Change |
 | --- | --- |
 | Atmosphere | `attendeeProductAtmosphere` on home, event, redeem, wallet, ticket mains (light radial wash; not marketing neon). |
-| COPY-GUIDE | Central `attendee-copy.ts`; redeem eyebrow «Nhập mã mời»; unknown issuance copy; offline QR label. |
-| Ticket / QR | White card retained; metadata labels ≥12px (`0.75rem` dt); `OwnerTicketQrPanel` + session cache; offline banner when `navigator.onLine === false`. |
+| COPY-GUIDE | Central `attendee-copy.ts`; redeem eyebrow «Nhập mã mời»; unknown issuance copy; offline QR banner (no persistence claim). |
+| Ticket / QR | White card retained; metadata labels ≥12px (`0.75rem` dt); `OwnerTicketQrPanel` shows SSR/hydrated QR; offline banner when `navigator.onLine === false` (no sessionStorage cache). |
 | States | Distinct `forbidden` vs `missing` on owner ticket; redeem unknown message aligned with COPY-GUIDE (no fake ticket). |
 | Shell | `ConsumerPageShell`, skeletons, OIDC gates unchanged. |
 
-## Checks (local)
+## James review fix round 1 (F01–F06)
+
+| ID | Action |
+| --- | --- |
+| F01/F02 | Removed write-only `display-cache.ts`; offline UX keeps hydrated QR only. |
+| F03 | `unknownIssuance` aligned to COPY-GUIDE («Vui lòng kiểm tra vé…»). |
+| F04 | Tests: `loadOwnerTicket` 403 → `forbidden`; `OwnerTicketQrPanel` / `readBrowserOffline`. |
+| F05 | `redeemEyebrow` `0.75rem` (12px @ 16px root). |
+| F06 | Evidence documents PR head + post-fix SHA (this file). |
+
+## Checks (local, fix round 1)
 
 | Command | Result |
 | --- | --- |
 | `pnpm --filter @ticket/contracts --filter @ticket/ui --filter @ticket/web-session build` | pass |
 | `pnpm --filter @ticket/web lint` | pass |
 | `pnpm --filter @ticket/web typecheck` | pass |
-| `pnpm --filter @ticket/web test` | 291 pass |
-| `node --test apps/web/tests/routes.integration.mjs` | pass |
+| `pnpm --filter @ticket/web test` | 293 pass |
+| `node --test apps/web/tests/routes.integration.mjs` (from `apps/web`) | pass |
 | `pnpm --filter @ticket/web build` | pass |
 | `node scripts/ui-budget.mjs` | pass |
 
@@ -40,9 +52,9 @@
 
 ## Residual acceptance gaps
 
-1. **Cold offline ticket deeplink:** SSR still requires network for first paint; session cache only helps re-read after a successful online visit (banner shows when browser goes offline on an already-rendered ticket).
+1. **Cold offline ticket deeplink:** SSR still requires network for first paint; no session cache — user must load ticket online once, then QR stays visible if the tab goes offline.
 2. **Full responsive matrix (320/768/1024/1440)** not re-captured in Orca this run (screenshot gate above).
-3. **Independent reviewer + `dod+ux`** not in worker scope.
+3. **Independent re-review** after fix commit not in worker scope (coordinator / James revalidation).
 
 ## Routes exercised (manual / integration)
 

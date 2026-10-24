@@ -22,7 +22,7 @@ export const redeemPageMain = cn(
 );
 
 export const redeemEyebrow = cn(
-  'm-0 mb-2 text-[0.72rem] font-bold uppercase tracking-[0.14em] text-signal',
+  'm-0 mb-2 text-[0.75rem] font-bold uppercase tracking-[0.14em] text-signal',
 );
 
 export const introLead = 'max-w-[570px] text-[1.15rem] leading-[1.65]';

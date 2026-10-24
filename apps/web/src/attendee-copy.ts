@@ -8,9 +8,10 @@ export const ATTENDEE_COPY = {
   redeemEyebrow: 'Nhập mã mời',
   redeemTitle: 'Đổi mã lấy vé',
   emailVerification: 'Xác minh email để nhận vé',
-  offlineCachedQr: 'Bản vé đã lưu · Trạng thái có thể chưa cập nhật',
+  offlineQrBanner:
+    'Mất kết nối · QR trên màn hình có thể chưa cập nhật trạng thái mới nhất.',
   unknownIssuance:
-    'Chưa xác định kết quả. Kiểm tra lại vé của bạn trước khi thử lại.',
+    'Chưa xác định kết quả. Vui lòng kiểm tra vé trước khi thử lại.',
   eventForbidden: {
     title: 'Sự kiện không công khai',
     detail:
