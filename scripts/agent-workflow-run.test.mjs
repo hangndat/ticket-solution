@@ -12,7 +12,9 @@ function fixture(fn) {
  writeFileSync(log,'');
  writeFileSync(orca,`#!/usr/bin/env node
 const fs=require('node:fs'),a=process.argv.slice(2);fs.appendFileSync(process.env.FIX_LOG,JSON.stringify(a)+'\\n');
-let result={};if(a[1]==='worker-start')result={runId:'run1',taskId:'task1',dispatchId:'ctx1',state:process.env.FIX_START||'ready',launch:{effective:{agent:'cursor',model:'composer-2.5'}}};
+const value=flag=>a[a.indexOf(flag)+1];
+if(a[1]==='worker-start' && a.includes('--display-name') && !['new-child','new-top-level'].includes(value('--worktree'))) {console.log(JSON.stringify({ok:false,error:{code:'creation_flag_for_existing_worktree'}}));process.exit(1);}
+let result={};if(a[1]==='worker-start')result={runId:'run1',taskId:'task1',dispatchId:'ctx1',state:process.env.FIX_START||'ready',launch:{effective:process.env.FIX_EFFECTIVE_JSON?JSON.parse(process.env.FIX_EFFECTIVE_JSON):{agent:value('--agent'),model:value('--model'),effort:a.includes('--effort')?value('--effort'):null}}};
 if(a[1]==='worker-show')result={dispatch:{id:'ctx1',runId:process.env.FIX_RUN||'run1',status:process.env.FIX_STATUS||'completed'}};
 if(a[1]==='worker-release')result={state:'released'};
 console.log(JSON.stringify({ok:true,result}));
@@ -107,5 +109,25 @@ test('Claude routes preserve requested model and effort; quota stays explicitly 
   assert.equal(launch[launch.indexOf('--agent')+1],'claude');
   assert.equal(launch[launch.indexOf('--model')+1],model);assert.equal(launch[launch.indexOf('--effort')+1],effort);
   assert.equal(launch.includes('--cost-tier'),false);assert.equal(launch.includes('--tier-reason'),false);
+ }
+}));
+
+test('Persona is local for existing worktrees and forwarded only for new placement',()=>fixture(({run,calls})=>{
+ for(const worktree of ['current','path:/existing','new-child','new-top-level']) {
+  const r=run([...start,'--worktree',worktree,'--display-name','James · dod+sec','--task-title','James · review']);assert.equal(r.status,0,r.stderr);
+  const j=JSON.parse(r.stdout);assert.equal(JSON.parse(readFileSync(join(j.receiptDirectory,'routing.json'),'utf8')).displayName,'James · dod+sec');
+  const launch=calls().filter(a=>a[1]==='worker-start').at(-1);
+  assert.equal(launch.includes('--display-name'),worktree.startsWith('new-'));assert.equal(launch.includes('--task-title'),true);
+ }
+}));
+test('wrong or missing effective route preserves live dispatch and never retries',()=>fixture(({run,calls})=>{
+ const cases=[null,{}, {agent:'codex',model:'gpt-6-sol'}, {agent:'cursor',model:'composer-2.5'}, {agent:'codex',model:'other',effort:'medium'}, {agent:'codex',model:'gpt-6-sol',effort:'high'}];
+ for(const effective of cases) {
+  const before=calls().filter(a=>a[1]==='worker-start').length;
+  const r=run(codexStart,{FIX_EFFECTIVE_JSON:JSON.stringify(effective)});assert.equal(r.status,1,r.stderr);const j=JSON.parse(r.stdout);
+  assert.equal(j.agentReady,true);assert.equal(j.dispatchId,'ctx1');assert.equal(j.openedRecorded,true);assert.equal(j.ok,false);
+  assert.equal(j.nextAction,'observe_existing_dispatch_do_not_restart');assert.match(j.errorCode,/^effective_route_(unknown|mismatch)$/);
+  assert.equal(calls().filter(a=>a[1]==='worker-start').length,before+1);
+  assert.ok(!calls().some(a=>['worker-stop','worker-release'].includes(a[1])));
  }
 }));
