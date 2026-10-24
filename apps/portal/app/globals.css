@@ -1,13 +1,3 @@
-:root {
-  --vemoki-ink: #0b1220;
-  --vemoki-paper: #f4f6f8;
-  --vemoki-signal: #e11d48;
-  --vemoki-focus: #2563eb;
-  --vemoki-line: #d7dfe9;
-  --vemoki-muted: #5b687b;
-  --vemoki-sider: #0b1027;
-}
-
 html,
 body {
   margin: 0;

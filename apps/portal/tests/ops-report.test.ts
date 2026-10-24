@@ -238,6 +238,27 @@ describe('interpretEventReport', () => {
     assert.equal(reportShowsEmailCsCta(rejected), false);
   });
 
+  it('wires ReportStaleAlert refresh loading on event overview and gate pages', () => {
+    const root = join(dirname(fileURLToPath(import.meta.url)), '..');
+    const eventOverview = readFileSync(
+      join(root, 'app/t/[tenantId]/e/[eventId]/page.tsx'),
+      'utf8',
+    );
+    const gate = readFileSync(
+      join(root, 'app/t/[tenantId]/e/[eventId]/gate/page.tsx'),
+      'utf8',
+    );
+    const staleAlert = readFileSync(
+      join(root, 'src/components/report-stale-alert.tsx'),
+      'utf8',
+    );
+
+    assert.ok(eventOverview.includes('loading={reportBusy}'));
+    assert.ok(eventOverview.includes('refreshReport'));
+    assert.ok(gate.includes('loading={busy}'));
+    assert.match(staleAlert, /<Button[^>]*loading=\{loading\}/);
+  });
+
   it('wires EventReport KPI deep-links to portal guests/support (no KPI approve/resend)', () => {
     const root = join(dirname(fileURLToPath(import.meta.url)), '..');
     const gate = readFileSync(

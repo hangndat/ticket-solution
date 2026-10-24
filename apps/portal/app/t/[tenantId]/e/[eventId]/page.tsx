@@ -63,7 +63,22 @@ export default function EventOverviewPage() {
   >('loading');
   const [message, setMessage] = useState<string | undefined>();
   const [busy, setBusy] = useState(false);
+  const [reportBusy, setReportBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+
+  const refreshReport = useCallback(async () => {
+    setReportBusy(true);
+    const r = await portalGet(bffEventAction(tenantId, eventId, 'report'));
+    setReport(
+      interpretEventReport(
+        r.status,
+        r.json,
+        r.networkError || r.timedOut,
+        locale,
+      ),
+    );
+    setReportBusy(false);
+  }, [tenantId, eventId, locale]);
 
   const load = useCallback(async () => {
     await Promise.resolve();
@@ -355,7 +370,8 @@ export default function EventOverviewPage() {
         >
           <ReportStaleAlert
             asOf={shownReport.asOf}
-            onRefresh={() => void load()}
+            loading={reportBusy}
+            onRefresh={() => void refreshReport()}
           />
           <StatisticCard.Group className="portal-gate-report-compact">
             <StatisticCard
