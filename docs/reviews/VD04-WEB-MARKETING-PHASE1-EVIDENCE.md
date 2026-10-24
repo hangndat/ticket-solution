@@ -4,7 +4,7 @@
 
 ## SHA
 
-Record after commit: `git rev-parse HEAD` on branch `hangndat/vd04-web-surfaces`.
+`85648a0ff2d1af9225125062bf683335eb483a19` (branch `hangndat/vd04-web-surfaces`)
 
 ## Changes
 
