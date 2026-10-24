@@ -26,7 +26,14 @@ export const attendeeFooterBrand = cn(
   '[&_span]:text-signal',
 );
 
+/** Light paper wash — product routes only (not marketing neon). */
+export const attendeeProductAtmosphere = cn(
+  'relative bg-paper',
+  'bg-[radial-gradient(ellipse_120%_80%_at_50%_-20%,color-mix(in_srgb,var(--color-signal)_7%,transparent),transparent_55%),radial-gradient(ellipse_90%_60%_at_100%_0%,color-mix(in_srgb,var(--color-focus)_6%,transparent),transparent_50%)]',
+);
+
 export const attendeeHomeMain = cn(
+  attendeeProductAtmosphere,
   'mx-auto w-full max-w-[1200px] px-[var(--spacing-2xl)] pt-0',
   'flex flex-col min-w-0',
 );

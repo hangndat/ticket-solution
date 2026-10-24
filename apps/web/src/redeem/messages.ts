@@ -4,6 +4,7 @@ import {
   ISSUE_ERROR_CODES,
   RESOLVE_ERROR_CODES,
 } from '@ticket/contracts';
+import { ATTENDEE_COPY } from '../attendee-copy';
 import type { RedeemDecision } from './decide';
 import type { OwnerRedemptionStatus } from '@ticket/contracts';
 
@@ -308,9 +309,8 @@ export function unknownMessage(idempotencyKey: string): RedeemUxMessage {
   void idempotencyKey;
   return {
     kind: 'unknown',
-    title: 'Chưa rõ kết quả — chưa phải vé',
-    detail:
-      'Chưa xác nhận đã cấp vé. Bấm «Kiểm tra lại» — không hiện vé giả. Khóa thao tác đã giữ để dò an toàn.',
+    title: 'Chưa xác định kết quả — chưa phải vé',
+    detail: `${ATTENDEE_COPY.unknownIssuance} Khóa thao tác đã giữ để dò an toàn.`,
     retryable: true,
   };
 }

@@ -14,11 +14,13 @@ import {
   redeemAuthNotice,
   redeemFormCard,
   redeemGateCard,
+  redeemEyebrow,
   redeemHeader,
   redeemLead,
   redeemNarrow,
   redeemPageMain,
 } from '../../../src/redeem/redeem-surface';
+import { ATTENDEE_COPY } from '../../../src/attendee-copy';
 import { cn } from '../../../lib/utils';
 import { RedeemAuthGate } from './redeem-auth-gate';
 import { RedeemForm } from './redeem-form';
@@ -27,9 +29,9 @@ import { RedeemForm } from './redeem-form';
 export const dynamic = 'force-dynamic';
 
 export const metadata = {
-  title: 'Đổi mã lấy vé',
+  title: ATTENDEE_COPY.redeemTitle,
   description:
-    'Nhập một mã đổi vé — không cần chọn sự kiện hay tổ chức. Đăng nhập trước khi đổi mã.',
+    'Nhập mã mời — không cần chọn sự kiện hay tổ chức. Đăng nhập trước khi đổi mã.',
 };
 
 type Props = {
@@ -69,9 +71,10 @@ export default async function RedeemPage({ searchParams }: Props) {
     <ConsumerPageShell mainClassName={redeemPageMain}>
       <div className={redeemNarrow}>
         <header className={redeemHeader}>
-          <h1>Đổi mã lấy vé</h1>
+          <p className={redeemEyebrow}>{ATTENDEE_COPY.redeemEyebrow}</p>
+          <h1>{ATTENDEE_COPY.redeemTitle}</h1>
           <p className={redeemLead}>
-            Một mã duy nhất. Không cần chọn sự kiện hay tổ chức.
+            Một mã mời duy nhất. Không cần chọn sự kiện hay tổ chức.
           </p>
         </header>
 

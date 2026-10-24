@@ -56,7 +56,7 @@ test('UNAUTHENTICATED uses Cần đăng nhập (AC-A3)', () => {
 test('unknown outcome never claims a ticket (AC-A2)', () => {
   const unknown = unknownMessage('11111111-1111-4111-8111-111111111111');
   assert.equal(unknown.kind, 'unknown');
-  assert.match(unknown.detail, /Kiểm tra lại/);
+  assert.match(unknown.detail, /Vui lòng kiểm tra vé/);
   assert.equal(/đã cấp vé|vé của bạn/i.test(unknown.title), false);
 });
 
