@@ -113,15 +113,16 @@ test('interpretSupportGrant only cs.read', () => {
   );
 });
 
-test('account deletion ACK is AWAITING_POLICY only', () => {
+test('account deletion ACK matches current O06 REQUESTED policy', () => {
   assert.equal(
     interpretAccountDeletion(
-      202,
+      201,
       {
         requestId: '11111111-1111-4111-8111-111111111111',
-        state: 'AWAITING_POLICY',
+        state: 'REQUESTED',
         requestedAt: '2026-10-17T12:00:00.000Z',
-        policyStatus: 'UNRESOLVED',
+        policyStatus: 'RESOLVED',
+        anonymizeWithinDays: 30,
       },
       false,
     ).kind,
@@ -134,7 +135,8 @@ test('account deletion ACK is AWAITING_POLICY only', () => {
         requestId: '11111111-1111-4111-8111-111111111111',
         state: 'COMPLETED',
         requestedAt: '2026-10-17T12:00:00.000Z',
-        policyStatus: 'UNRESOLVED',
+        policyStatus: 'RESOLVED',
+        anonymizeWithinDays: 30,
       },
       false,
     ).kind,

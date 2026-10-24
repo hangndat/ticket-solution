@@ -1,19 +1,14 @@
 import { BentoGrid, BentoGridItem } from '@ticket/ui/primitives/bento-grid';
 import { Card, CardContent, CardTitle } from '@ticket/ui/primitives/card';
-import { cn } from '@ticket/ui/cn';
-import Image from 'next/image';
 import { BENTO_CELLS } from '../content-config';
 import { t, type CopyKey } from '../copy';
 import {
   marketingBentoCard,
   marketingBentoCardBody,
-  marketingBentoCardInner,
-  marketingBentoCardInnerSpan,
+  marketingBentoCardInnerText,
   marketingBentoCardTitle,
   marketingBentoCopy,
-  marketingBentoFigure,
   marketingBentoGrid,
-  marketingBentoImg,
   marketingBentoItem,
   marketingH2,
   marketingLead,
@@ -49,16 +44,6 @@ const CELL_BODY: Record<BentoCellKey, CopyKey> = {
   'bento.admin': 'bento.admin.body',
   'bento.whitelabel': 'bento.whitelabel.body',
   'bento.ops': 'bento.ops.body',
-};
-
-const CELL_ALT: Record<BentoCellKey, CopyKey> = {
-  'bento.invite': 'bento.invite.alt',
-  'bento.qr': 'bento.qr.alt',
-  'bento.gate': 'bento.gate.alt',
-  'bento.offline': 'bento.offline.alt',
-  'bento.admin': 'bento.admin.alt',
-  'bento.whitelabel': 'bento.whitelabel.alt',
-  'bento.ops': 'bento.ops.alt',
 };
 
 export function BentoSection({ locale }: MarketingSectionProps) {
@@ -97,12 +82,7 @@ export function BentoSection({ locale }: MarketingSectionProps) {
                   aria-labelledby={titleId}
                   aria-describedby={bodyId}
                 >
-                  <CardContent
-                    className={cn(
-                      marketingBentoCardInner,
-                      marketingBentoCardInnerSpan(span),
-                    )}
-                  >
+                  <CardContent className={marketingBentoCardInnerText}>
                     <div className={marketingBentoCopy}>
                       <CardTitle id={titleId} className={marketingBentoCardTitle}>
                         {t(locale, CELL_TITLE[key])}
@@ -111,23 +91,6 @@ export function BentoSection({ locale }: MarketingSectionProps) {
                         {t(locale, CELL_BODY[key])}
                       </p>
                     </div>
-                    <figure className={marketingBentoFigure} data-span={span}>
-                      <Image
-                        className={marketingBentoImg}
-                        src={cell.image.src}
-                        alt={t(locale, CELL_ALT[key])}
-                        width={cell.image.width}
-                        height={cell.image.height}
-                        sizes={
-                          cell.colSpan >= 4
-                            ? '(max-width: 768px) 100vw, 92vw'
-                            : cell.colSpan >= 2
-                              ? '(max-width: 768px) 100vw, 42vw'
-                              : '(max-width: 768px) 100vw, 22vw'
-                        }
-                        loading="lazy"
-                      />
-                    </figure>
                   </CardContent>
                 </Card>
               </BentoGridItem>

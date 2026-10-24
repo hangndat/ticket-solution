@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Agent company work event v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "id", "occurredAt", "recordedAt", "employeeId", "type", "runId", "taskId", "dispatchId", "summary", "source"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "id": { "type": "string", "minLength": 1 },
+    "occurredAt": { "type": "string", "format": "date-time" },
+    "recordedAt": { "type": "string", "format": "date-time" },
+    "employeeId": { "type": "string", "minLength": 1 },
+    "type": { "enum": ["assigned", "checkpoint", "interrupted", "recovered", "handoff", "reviewed", "settled", "released"] },
+    "runId": { "type": "string", "minLength": 1 },
+    "taskId": { "type": "string", "minLength": 1 },
+    "dispatchId": { "type": "string", "minLength": 1 },
+    "previousDispatchId": { "type": ["string", "null"] },
+    "roleId": { "type": ["string", "null"] },
+    "issue": { "type": ["integer", "null"] },
+    "pr": { "type": ["integer", "null"] },
+    "summary": { "type": "string", "minLength": 1, "maxLength": 1500 },
+    "outcome": { "type": ["string", "null"] },
+    "model": {
+      "type": ["object", "null"],
+      "properties": {
+        "requested": { "type": ["object", "null"] },
+        "effective": { "type": ["object", "null"] },
+        "source": { "type": "string" }
+      }
+    },
+    "sha": { "type": ["string", "null"] },
+    "evidence": { "type": "array", "items": { "type": "string" } },
+    "source": { "type": "string", "minLength": 1 }
+  }
+}

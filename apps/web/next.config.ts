@@ -43,7 +43,7 @@ export function contentSecurityPolicy(): string {
 
 const config: NextConfig = {
   poweredByHeader: false,
-  allowedDevOrigins: ['127.0.0.1', 'localhost'],
+  allowedDevOrigins: ['127.0.0.1', 'localhost', 'marketing.localhost'],
   async headers() {
     return [
       {

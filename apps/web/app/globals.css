@@ -47,6 +47,13 @@
   html[data-surface='marketing'] {
     scrollbar-gutter: stable;
     overflow-x: clip;
+    scroll-behavior: smooth;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html[data-surface='marketing'] {
+      scroll-behavior: auto;
+    }
   }
 }
 

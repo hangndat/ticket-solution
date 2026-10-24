@@ -85,9 +85,9 @@ export const attendeeEventCols = cn(
 );
 
 export const attendeeEventEyebrow =
-  'text-[0.72rem] font-bold uppercase tracking-[0.12em] text-ink-muted';
+  'text-[0.72rem] font-bold uppercase tracking-[0.12em] text-muted';
 
-export const attendeeEventOrg = 'm-0 mb-5 text-[1.05rem] text-ink-muted';
+export const attendeeEventOrg = 'm-0 mb-5 text-[1.05rem] text-muted';
 
 export const attendeeEventMainH1 = cn(
   'my-2 font-display text-[clamp(1.75rem,4vw,2.4rem)] leading-[1.15] tracking-[-0.03em]',
@@ -226,7 +226,7 @@ export const attendeeWalletHeading = cn(
 );
 
 export const attendeeWalletIntro =
-  'm-0 max-w-[36rem] text-[1.02rem] leading-[1.6] text-ink-muted';
+  'm-0 max-w-[36rem] text-[1.02rem] leading-[1.6] text-muted';
 
 export const attendeeWalletHeadingCta = cn(
   'min-h-11 shrink-0 rounded-md shadow-[0_8px_24px_color-mix(in_srgb,var(--color-signal)_22%,transparent)]',
