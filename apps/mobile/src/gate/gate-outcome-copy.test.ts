@@ -27,7 +27,7 @@ test('queued and unknown never use admit tone', () => {
   assert.equal(queued.tone, 'unknown');
   assert.equal(queued.assertive, true);
   assert.notEqual(queued.title, 'Cho vào');
-  assert.match(queued.title, /chưa cho vào/i);
+  assert.match(queued.title, /Chưa xác nhận vào cổng/i);
 
   const unknown = presentGateOutcome({
     ...base,

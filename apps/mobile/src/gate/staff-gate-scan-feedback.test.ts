@@ -7,6 +7,7 @@ import {
   classifyScanFeedbackLifecycle,
   shouldDismissToastAttempt,
   selectScanFeedbackOp,
+  shouldShowCameraToast,
   shouldSuppressCameraRescan,
 } from './staff-gate-scan-feedback.ts';
 import { presentGateScanStatus } from './gate-scan-status-ui.ts';
@@ -22,6 +23,20 @@ const admitted: GateOp = {
   message: 'ok',
   admissionKind: 'fresh',
 };
+
+test('shouldShowCameraToast only for terminal-flash outcomes', () => {
+  assert.equal(shouldShowCameraToast(admitted, false), true);
+  assert.equal(
+    shouldShowCameraToast({ ...admitted, phase: 'queued' }, false),
+    false,
+  );
+  assert.equal(
+    shouldShowCameraToast({ ...admitted, phase: 'denied' }, false),
+    false,
+  );
+  assert.equal(shouldShowCameraToast(null, true), true);
+  assert.equal(shouldShowCameraToast(admitted, true), true);
+});
 
 test('classifyScanFeedbackLifecycle terminal only for admitted', () => {
   assert.equal(
