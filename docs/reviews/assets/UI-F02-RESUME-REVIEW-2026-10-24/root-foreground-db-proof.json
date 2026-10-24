@@ -1,0 +1,12 @@
+[
+  {
+    "state": "USED",
+    "eventId": "d9d9f001-0002-4000-8000-000000000001",
+    "tenantId": "d9d9f001-0001-4000-8000-000000000001",
+    "ticketId": "29aec431-8a11-4315-8a05-c1cb44175c60",
+    "appliedAt": "2026-10-23T16:35:20.396406+00:00",
+    "checkinId": "48cc5c68-4549-4667-9c50-9a2d1e1e6ab2",
+    "clientEventId": "369c3150-883c-4a6d-9701-14ddd50db973",
+    "staffSessionId": "b5158021-2e23-4587-9e20-caa6a6a2bf6b"
+  }
+]

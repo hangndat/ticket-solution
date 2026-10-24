@@ -1,4 +1,4 @@
-import type { SessionBoundary } from '../identity/session-boundary.ts';
+import type { SessionBoundary, SessionEpoch } from '../identity/session-boundary.ts';
 import {
   deleteDeviceToken,
   postDeviceToken,
@@ -10,6 +10,7 @@ import {
 import type {
   DeviceTokenEnvironment,
   DeviceTokenRegistration,
+  LocalDeviceRegistration,
 } from './device-token-types.ts';
 
 /**
@@ -91,6 +92,12 @@ export type ClearApnsDeps = {
   fetchImpl?: typeof fetch;
   /** Optional bearer captured before logout if session already signed out. */
   bearer?: string | null;
+  /** Logout epoch guard: a late detach must not clear a newer registration. */
+  shouldContinue?: () => boolean;
+  expectedEpoch?: SessionEpoch;
+  /** Only the pre-switch path may detach a persisted local tuple after unreachable restore. */
+  allowUnverifiedLocal?: boolean;
+  unverifiedExpectedUserId?: string | null;
 };
 
 async function defaultNotifications(): Promise<ApnsNotificationsLike> {
@@ -242,6 +249,8 @@ export async function registerApnsDeviceToken(
         await compensateOrphanServerRegistration({
           bearer,
           registrationId: posted.registration.registrationId,
+          userId: epoch.userId,
+          environment: posted.registration.environment,
           store,
           fetchImpl,
         });
@@ -272,6 +281,8 @@ export async function registerApnsDeviceToken(
       await compensateOrphanServerRegistration({
         bearer,
         registrationId: posted.registration.registrationId,
+        userId: epoch.userId,
+        environment: posted.registration.environment,
         store,
         fetchImpl,
       });
@@ -301,24 +312,21 @@ export async function registerApnsDeviceToken(
 async function compensateOrphanServerRegistration(input: {
   bearer: string;
   registrationId: string;
+  userId: string;
+  environment: DeviceTokenEnvironment;
   store: ApnsRegistrationStore;
   fetchImpl: typeof fetch;
 }): Promise<void> {
-  try {
-    await deleteDeviceToken(
-      input.bearer,
-      input.registrationId,
-      undefined,
-      input.fetchImpl,
-    );
-  } catch {
-    /* best-effort — cannot prove server revoke if DELETE fails */
+  const tuple: LocalDeviceRegistration = {
+    userId: input.userId, registrationId: input.registrationId,
+    environment: input.environment,
+  };
+  await input.store.retainPending(tuple);
+  const deleted = await deleteDeviceToken(input.bearer, input.registrationId, undefined, input.fetchImpl);
+  if (deleted.status !== 'ok' && deleted.status !== 'not-found') {
+    throw new Error('Chưa xác nhận gỡ đăng ký thông báo. Vui lòng thử lại.');
   }
-  try {
-    await input.store.clear();
-  } catch {
-    /* best-effort */
-  }
+  await input.store.clearIfMatches(tuple);
 }
 
 /**
@@ -333,38 +341,43 @@ async function compensateOrphanServerRegistration(input: {
 export async function clearApnsRegistrationState(
   deps: ClearApnsDeps = {},
 ): Promise<void> {
+  if (deps.expectedEpoch && deps.session && !deps.session.isEpochCurrent(deps.expectedEpoch)) return;
   registrationGeneration += 1;
   const boundary = deps.session ?? (await defaultBoundary());
   const store = deps.store ?? secureApnsRegistrationStore;
   const notifications = deps.notifications ?? (await defaultNotifications());
   const fetchImpl = deps.fetchImpl ?? fetch;
-
-  let local: Awaited<ReturnType<ApnsRegistrationStore['read']>> = null;
-  try {
-    local = await store.read();
-  } catch {
-    local = null;
+  const epoch = deps.expectedEpoch ?? boundary.captureEpoch();
+  if (deps.expectedEpoch && !boundary.isEpochCurrent(deps.expectedEpoch)) return;
+  const local = await store.read();
+  if (deps.allowUnverifiedLocal && !epoch && local && local.userId !== deps.unverifiedExpectedUserId) {
+    throw new Error('Chưa xác nhận chủ đăng ký thông báo. Vui lòng thử lại.');
   }
+  const userId = epoch?.userId ?? (deps.allowUnverifiedLocal ? deps.unverifiedExpectedUserId : null);
+  if (deps.allowUnverifiedLocal && !epoch && await store.hasPendingOutside(userId ?? null)) {
+    throw new Error('Chưa xác nhận gỡ đăng ký thông báo của phiên trước. Vui lòng thử lại.');
+  }
+  const pending = userId ? await store.pendingFor(userId) : [];
+  if (deps.shouldContinue && !deps.shouldContinue()) return;
 
   const bearer =
     deps.bearer !== undefined
       ? deps.bearer
-      : await boundary.getCredential().catch(() => null);
-
-  if (local?.registrationId && bearer) {
-    try {
-      await deleteDeviceToken(bearer, local.registrationId, undefined, fetchImpl);
-    } catch {
-      /* best-effort detach — logout must continue */
+      : await boundary.getCredential();
+  if (deps.shouldContinue && !deps.shouldContinue()) return;
+  const targets = [...pending];
+  if (userId && local?.userId === userId && !targets.some((item) => item.registrationId === local.registrationId)) targets.push(local);
+  if (targets.length && !bearer) throw new Error('Chưa thể gỡ đăng ký thông báo. Vui lòng thử lại.');
+  for (const target of targets) {
+    await store.retainPending(target);
+    const deleted = await deleteDeviceToken(bearer!, target.registrationId, undefined, fetchImpl);
+    if (deleted.status !== 'ok' && deleted.status !== 'not-found') {
+      throw new Error('Chưa xác nhận gỡ đăng ký thông báo. Vui lòng thử lại.');
     }
+    await store.clearIfMatches(target);
   }
 
-  try {
-    await store.clear();
-  } catch {
-    /* best-effort */
-  }
-
+  if (deps.shouldContinue && !deps.shouldContinue()) return;
   try {
     await notifications.setBadgeCountAsync(0);
   } catch {

@@ -1,0 +1,11 @@
+{
+  "at": "2026-10-24T01:24:17.686183+00:00",
+  "claims": {
+    "iat": 1792804937,
+    "exp": 1792805237,
+    "sub": "6daa25c7-ebe8-4148-917b-03ec3362a36a",
+    "aud": "ticket-api",
+    "acr": "1"
+  },
+  "note": "Bound before M10; no credential injection during queued/restart/recovery"
+}

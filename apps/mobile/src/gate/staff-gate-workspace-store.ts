@@ -1,128 +1,49 @@
 import * as SecureStore from 'expo-secure-store';
-import { recoverOps, type GateOp } from './gate-scan.ts';
-import { readPersistedStaffGateScope } from './staff-gate-scope.ts';
-import {
-  emptyStaffGateWorkspace,
-  scopeStorageKey,
-  type StaffGateWorkspace,
-} from './staff-gate-workspace.ts';
+import { readPersistedStaffGateScopeUnsafe } from './staff-gate-scope.ts';
+import { createGateWorkspaceStore } from './staff-gate-workspace-store-core.ts';
+import { createDurableGateOwnership, parseGateOwnerJournal } from './durable-gate-ownership.ts';
+import { listGateLegacyKeys } from './gate-keychain-index.ts';
 
-const WORKSPACE_KEY_PREFIX = 'ticket.gate.workspace.v2.';
-const LEGACY_OPS_KEY = 'ticket.gate.ops.v1';
+const store = createGateWorkspaceStore(SecureStore, readPersistedStaffGateScopeUnsafe);
+const ownerOptions: SecureStore.SecureStoreOptions = {
+  keychainService: 'ticket-foundation.gate-ownership',
+  keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+};
+const queueOptions: SecureStore.SecureStoreOptions = {
+  keychainService: 'ticket-foundation.gate-offline-queue',
+  keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+};
+const OWNER_KEY = 'ticket.gate.identity-owner.v1';
+const ownership = createDurableGateOwnership({
+  readJournal: () => SecureStore.getItemAsync(OWNER_KEY, ownerOptions),
+  writeJournal: (raw) => SecureStore.setItemAsync(OWNER_KEY, raw, ownerOptions),
+  list: listGateLegacyKeys,
+  invalidate: store.invalidate,
+  allow: store.allow,
+  load: store.load,
+  save: store.save,
+  deletePartition: async (userId) => {
+    await store.beginPurge(userId);
+    await SecureStore.deleteItemAsync(`ticket.gate.offline-queue.v1.${userId}`, queueOptions);
+    await SecureStore.deleteItemAsync(`ticket.gate.offline-seq.v1.${userId}`, queueOptions);
+  },
+  deleteLegacy: () => SecureStore.deleteItemAsync('ticket.gate.ops.v1'),
+});
 
-function workspaceKey(userId: string): string {
-  return `${WORKSPACE_KEY_PREFIX}${userId}`;
-}
-
-function parseWorkspace(raw: string | null): StaffGateWorkspace | null {
-  if (!raw) return null;
-  try {
-    const parsed = JSON.parse(raw) as unknown;
-    if (!parsed || typeof parsed !== 'object') return null;
-    const row = parsed as Record<string, unknown>;
-    if (row.v !== 2) return null;
-    const selected = row.selected;
-    let selectedScope: StaffGateWorkspace['selected'] = null;
-    if (selected && typeof selected === 'object') {
-      const s = selected as Record<string, unknown>;
-      if (
-        typeof s.tenantId === 'string' &&
-        typeof s.eventId === 'string' &&
-        typeof s.name === 'string'
-      ) {
-        selectedScope = {
-          tenantId: s.tenantId,
-          eventId: s.eventId,
-          name: s.name,
-        };
-      }
-    }
-    const sessionsByScope: Record<string, string> = {};
-    if (row.sessionsByScope && typeof row.sessionsByScope === 'object') {
-      for (const [k, v] of Object.entries(
-        row.sessionsByScope as Record<string, unknown>,
-      )) {
-        if (typeof v === 'string') sessionsByScope[k] = v;
-      }
-    }
-    const opsByScope: Record<string, GateOp[]> = {};
-    if (row.opsByScope && typeof row.opsByScope === 'object') {
-      for (const [k, v] of Object.entries(
-        row.opsByScope as Record<string, unknown>,
-      )) {
-        if (Array.isArray(v)) {
-          opsByScope[k] = recoverOps(v as GateOp[]);
-        }
-      }
-    }
-    return {
-      v: 2,
-      selected: selectedScope,
-      sessionsByScope,
-      opsByScope,
-    };
-  } catch {
-    return null;
-  }
-}
-
-async function migrateLegacyWorkspace(
-  userId: string,
-): Promise<StaffGateWorkspace> {
-  const ws = emptyStaffGateWorkspace();
-  const legacyScope = await readPersistedStaffGateScope(userId);
-  const legacyOpsRaw = await SecureStore.getItemAsync(LEGACY_OPS_KEY);
-  let legacyOps: GateOp[] = [];
-  if (legacyOpsRaw) {
-    try {
-      const parsed = JSON.parse(legacyOpsRaw) as unknown;
-      if (Array.isArray(parsed)) legacyOps = recoverOps(parsed as GateOp[]);
-    } catch {
-      legacyOps = [];
-    }
-  }
-  const selected =
-    legacyScope ??
-    (legacyOps[0]
-      ? {
-          tenantId: legacyOps[0].tenantId,
-          eventId: legacyOps[0].eventId,
-          name: 'Sự kiện đã lưu',
-        }
-      : null);
-  if (!selected) return ws;
-  const key = scopeStorageKey(selected);
-  return {
-    v: 2,
-    selected,
-    sessionsByScope: {},
-    opsByScope: legacyOps.length > 0 ? { [key]: legacyOps } : {},
-  };
-}
-
-export async function loadStaffGateWorkspace(
-  userId: string,
-): Promise<StaffGateWorkspace> {
-  if (!userId) return emptyStaffGateWorkspace();
-  const raw = await SecureStore.getItemAsync(workspaceKey(userId));
-  const parsed = parseWorkspace(raw);
-  if (parsed) return parsed;
-  return migrateLegacyWorkspace(userId);
-}
-
-export async function saveStaffGateWorkspace(
-  userId: string,
-  workspace: StaffGateWorkspace,
-): Promise<void> {
-  if (!userId) return;
-  await SecureStore.setItemAsync(
-    workspaceKey(userId),
-    JSON.stringify(workspace),
-  );
-}
-
-/** Drop durable gate workspace for this user (logout / account switch). */
-export async function clearStaffGateWorkspace(userId: string): Promise<void> {
-  if (!userId) return;
-  await SecureStore.deleteItemAsync(workspaceKey(userId));
-}
+export const loadStaffGateWorkspace = ownership.load;
+export const saveStaffGateWorkspace = ownership.save;
+export const prepareVerifiedGateOwnership = ownership.prepareVerified;
+export const beginDurableGateLogout = ownership.beginLogout;
+export const runGateForOwner = ownership.runForOwner;
+export const serialGateStorage = ownership.serial;
+export const readLastVerifiedGateOwner = () => ownership.serial(async () =>
+  parseGateOwnerJournal(await SecureStore.getItemAsync(OWNER_KEY, ownerOptions)).lastVerifiedUserId);
+export const clearStaffGateWorkspace = store.clear;
+export const beginStaffGateWorkspacePurge = store.beginPurge;
+export const invalidateStaffGateWorkspaceWrites = store.invalidate;
+export const allowStaffGateWorkspaceWrites = (userId: string, generation?: number) => {
+  if (ownership.getState().readyOwner === userId && !ownership.getState().blocked) store.allow(userId, generation);
+};
+export const gateWorkspaceWriteGeneration = store.generation;
+export const isGateWorkspaceWriteGenerationCurrent = store.current;
+export const subscribeStaffGateWorkspaceInvalidation = store.subscribeInvalidation;

@@ -205,6 +205,8 @@ jobs:
       - run: node scripts/ui-budget.mjs --scope mobile
       - uses: ./.github/actions/setup-pnpm
       - run: pnpm exec turbo run lint typecheck test build --filter=@ticket/mobile...
+      - name: Production Gate ownership integration
+        run: pnpm --filter @ticket/mobile test:durable-integration
       - uses: ./.github/actions/save-turbo
         if: success()
         with:
@@ -263,7 +265,7 @@ jobs:
           - shard: import-invitations
             files: test/import-invitations.test.cjs
           - shard: offline-sync-apply
-            files: test/offline-sync-apply.test.cjs
+            files: test/offline-sync-apply.test.cjs test/offline-sync-receipt.test.cjs
           - shard: cs-export
             files: test/cs-export.test.cjs
           - shard: tenant-registration

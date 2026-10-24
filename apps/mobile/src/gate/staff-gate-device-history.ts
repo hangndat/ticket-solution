@@ -8,6 +8,13 @@ export type DeviceScanHistoryRow = {
   id: string;
   at: string;
   ticketLabel: string;
+  /** Mã lượt (clientEventId) for staff cross-check. */
+  operationLabel: string;
+  /** Full UUID for a11y / copy when shortened in UI. */
+  operationIdFull?: string;
+  /** Mã check-in từ receipt khi có. */
+  receiptLabel: string;
+  receiptIdFull?: string;
   statusLabel: string;
   hint: string;
   tone: 'admit' | 'deny' | 'unknown' | 'default';
@@ -53,12 +60,24 @@ export function buildDeviceScanHistory(
       op,
       canReconcile: canReconcile(op),
     });
+    const operationLabel = op.clientEventId
+      ? shortId(op.clientEventId, 12)
+      : shortId(op.id, 12);
+    const receiptLabel = op.checkinId ? shortId(op.checkinId, 12) : '—';
+    const crossCheck =
+      op.clientEventId || op.checkinId
+        ? `Mã lượt ${operationLabel}${op.checkinId ? ` · Biên nhận ${receiptLabel}` : ''}`
+        : '';
     rows.push({
       id: op.id,
       at: op.recordedAt ?? '',
       ticketLabel: op.ticketId ? shortId(op.ticketId, 10) : '—',
+      operationLabel,
+      operationIdFull: op.clientEventId ?? undefined,
+      receiptLabel,
+      receiptIdFull: op.checkinId ?? undefined,
       statusLabel: status.label,
-      hint: status.hint,
+      hint: crossCheck ? `${status.hint} ${crossCheck}` : status.hint,
       tone: status.tone,
       source: 'scan',
     });
@@ -71,8 +90,12 @@ export function buildDeviceScanHistory(
       id: item.clientEventId,
       at: item.clientOccurredAt,
       ticketLabel: shortId(item.ticketId, 10),
+      operationLabel: shortId(item.clientEventId, 12),
+      operationIdFull: item.clientEventId,
+      receiptLabel: item.checkinId ? shortId(item.checkinId, 12) : '—',
+      receiptIdFull: item.checkinId ?? undefined,
       statusLabel: q.label,
-      hint: item.lastMessage ?? q.detail,
+      hint: `Mã lượt ${shortId(item.clientEventId, 12)}${item.checkinId ? ` · Biên nhận ${shortId(item.checkinId, 12)}` : ''}. ${item.lastMessage ?? q.detail}`,
       tone: q.tone,
       source: 'offline-queue',
     });

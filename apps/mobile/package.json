@@ -34,6 +34,7 @@
     "@types/react": "19.3.0",
     "eslint": "9.39.4",
     "eslint-config-expo": "58.0.4",
+    "react-test-renderer": "19.3.0",
     "typescript": "6.0.3"
   },
   "scripts": {
@@ -41,6 +42,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint src",
     "test": "node --experimental-strip-types --test src/identity/*.test.ts src/data/*.test.ts src/tickets/*.test.ts src/gate/*.test.ts src/redeem/*.test.ts src/navigation/*.test.ts src/links/*.test.ts src/push/*.test.ts src/account-deletion/*.test.ts src/published/*.test.ts src/theme/*.test.ts src/components/*.test.ts src/attendee/*.test.ts src/screens/*.test.ts",
+    "test:durable-integration": "node --import ./scripts/durable-test-loader.mjs --test src/gate/durable-production.integration.test.mjs",
     "build": "expo export --platform ios --output-dir dist",
     "sync-ios-build": "node scripts/sync-ios-build-number.mjs"
   },

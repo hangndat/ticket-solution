@@ -23,6 +23,7 @@ export function classifyScanFeedbackLifecycle(
   if (op.phase === 'queued') return 'sticky';
   if (op.phase === 'unknown') return 'sticky';
   if (op.phase === 'denied') return 'sticky';
+  if (op.phase === 'recorded') return 'terminal-flash';
   if (op.phase === 'admitted') return 'terminal-flash';
   return 'sticky';
 }
@@ -30,6 +31,14 @@ export function classifyScanFeedbackLifecycle(
 export function needsStickyPendingOp(op: GateOp | null): boolean {
   if (!op) return false;
   return classifyScanFeedbackLifecycle(op, false) === 'sticky';
+}
+
+/** Manual / sticky UI: pending op survives toast timer clear. */
+export function selectScanFeedbackOp(
+  pendingOp: GateOp | null,
+  toastOp: GateOp | null,
+): GateOp | null {
+  return pendingOp ?? toastOp;
 }
 
 /** Camera dedupe + feedback chrome — toast visible counts as active feedback. */

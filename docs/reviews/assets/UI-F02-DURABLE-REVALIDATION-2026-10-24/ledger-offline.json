@@ -1,0 +1,16 @@
+{
+  "at": "2026-10-24T02:24:22.523687+00:00",
+  "phase": "offline",
+  "rows": [
+    {
+      "ticketId": "14de0a49-4af9-4f8c-8aec-fc98e7057cc3",
+      "state": "ACTIVE",
+      "checkinCount": 0,
+      "checkinId": null,
+      "clientEventId": null,
+      "staffSessionId": null,
+      "deviceId": null,
+      "confirmedAt": null
+    }
+  ]
+}

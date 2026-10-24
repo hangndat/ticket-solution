@@ -1,0 +1,95 @@
+{
+  "at": "2026-10-24T02:25:08.481Z",
+  "id": "22d7dff3-4d7f-43cf-8fb4-5a537fb3036c",
+  "ok": true,
+  "result": [
+    {
+      "role": "application",
+      "type": "Application",
+      "label": " ",
+      "value": "",
+      "enabled": true,
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      },
+      "children": [
+        {
+          "role": "text",
+          "type": "StaticText",
+          "label": "“Vemoki” Wants to Use “127.0.0.1” to Sign In",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.1696,
+            "y": 0.4264,
+            "width": 0.6616,
+            "height": 0.0497
+          },
+          "children": []
+        },
+        {
+          "role": "text",
+          "type": "StaticText",
+          "label": "This allows the app and website to share information about you.",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.1696,
+            "y": 0.4851,
+            "width": 0.6616,
+            "height": 0.0446
+          },
+          "children": []
+        },
+        {
+          "role": "button",
+          "type": "Button",
+          "label": "Cancel",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.134,
+            "y": 0.5536,
+            "width": 0.3562,
+            "height": 0.0563
+          },
+          "children": []
+        },
+        {
+          "role": "button",
+          "type": "Button",
+          "label": "Continue",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.5106,
+            "y": 0.5536,
+            "width": 0.3562,
+            "height": 0.0563
+          },
+          "children": []
+        },
+        {
+          "role": "",
+          "type": "GenericElement",
+          "label": "Dynamic Island, Empty",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.341,
+            "y": 0.0133,
+            "width": 0.3181,
+            "height": 0.043
+          },
+          "children": []
+        }
+      ]
+    }
+  ],
+  "_meta": {
+    "runtimeId": "9d821662-c628-49db-a168-99fa7b7636fc"
+  }
+}

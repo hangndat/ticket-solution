@@ -1,0 +1,47 @@
+{
+  "at": "2026-10-24T01:25:22.144826+00:00",
+  "db": [
+    {
+      "ticketId": "3469a929-d032-4e63-9688-8d8955c7eb22",
+      "state": "USED",
+      "checkinId": "39c38c92-467e-4f1c-93f3-2d12bebf8a3f",
+      "clientEventId": "ba81cd4f-5582-4da3-b494-1baa282400a1",
+      "staffSessionId": "83d7fcd4-e696-4110-98f4-7193f31d84eb",
+      "deviceId": "9a95b622-336b-47d1-826e-2fc0af25327c",
+      "confirmedAt": "2026-10-24T01:24:29.875637+00:00",
+      "checkinCount": 1
+    }
+  ],
+  "trace": [
+    {
+      "at": "2026-10-24T01:24:29.844Z",
+      "kind": "offline_request",
+      "requestNumber": 2523,
+      "tenantId": "d9d9f001-0001-4000-8000-000000000001",
+      "staffSessionId": "83d7fcd4-e696-4110-98f4-7193f31d84eb",
+      "deviceId": "9a95b622-336b-47d1-826e-2fc0af25327c",
+      "events": [
+        {
+          "clientEventId": "ba81cd4f-5582-4da3-b494-1baa282400a1",
+          "ticketId": "3469a929-d032-4e63-9688-8d8955c7eb22",
+          "eventId": "d9d9f001-0002-4000-8000-000000000001",
+          "clientSeq": 0,
+          "clientOccurredAt": "2026-10-24T01:23:58.828Z"
+        }
+      ]
+    },
+    {
+      "at": "2026-10-24T01:24:29.882Z",
+      "kind": "offline_response",
+      "requestNumber": 2523,
+      "status": 201,
+      "results": [
+        {
+          "clientEventId": "ba81cd4f-5582-4da3-b494-1baa282400a1",
+          "status": "APPLIED",
+          "checkinId": "39c38c92-467e-4f1c-93f3-2d12bebf8a3f"
+        }
+      ]
+    }
+  ]
+}

@@ -1,4 +1,5 @@
 import * as SecureStore from 'expo-secure-store';
+import { runGateForOwner, serialGateStorage } from './staff-gate-workspace-store.ts';
 import type {
   OfflineQueueStore,
   StoredOfflineScan,
@@ -64,20 +65,19 @@ function parseSeqMap(raw: string | null): Record<string, number> {
 export const secureOfflineQueueStore: OfflineQueueStore = {
   async readQueue(userId) {
     if (!userId) return [];
-    const raw = await SecureStore.getItemAsync(queueKey(userId), options);
-    return parseQueue(raw);
+    return runGateForOwner(userId, async () => parseQueue(await SecureStore.getItemAsync(queueKey(userId), options)));
   },
   async writeQueue(userId, items) {
     if (!userId) return;
-    await SecureStore.setItemAsync(
+    await runGateForOwner(userId, () => SecureStore.setItemAsync(
       queueKey(userId),
       JSON.stringify(items),
       options,
-    );
+    ));
   },
   async clearQueue(userId) {
     if (!userId) return;
-    await SecureStore.deleteItemAsync(queueKey(userId), options);
+    await serialGateStorage(() => SecureStore.deleteItemAsync(queueKey(userId), options));
   },
   async readDeviceId() {
     return SecureStore.getItemAsync(DEVICE_KEY, options);
@@ -87,19 +87,18 @@ export const secureOfflineQueueStore: OfflineQueueStore = {
   },
   async readSeqMap(userId) {
     if (!userId) return {};
-    const raw = await SecureStore.getItemAsync(seqKey(userId), options);
-    return parseSeqMap(raw);
+    return runGateForOwner(userId, async () => parseSeqMap(await SecureStore.getItemAsync(seqKey(userId), options)));
   },
   async writeSeqMap(userId, map) {
     if (!userId) return;
-    await SecureStore.setItemAsync(
+    await runGateForOwner(userId, () => SecureStore.setItemAsync(
       seqKey(userId),
       JSON.stringify(map),
       options,
-    );
+    ));
   },
   async clearSeqMap(userId) {
     if (!userId) return;
-    await SecureStore.deleteItemAsync(seqKey(userId), options);
+    await serialGateStorage(() => SecureStore.deleteItemAsync(seqKey(userId), options));
   },
 };

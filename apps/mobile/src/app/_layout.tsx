@@ -1,4 +1,6 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { Text, View } from 'react-native';
+import { Button } from '@/components/ui/button';
 import { router } from 'expo-router';
 import { Stack } from 'expo-router/stack';
 import { getTenantId, isOidcConfigured } from '@/identity/config';
@@ -7,7 +9,10 @@ import { session } from '@/identity/session';
 import '@/push/push-notifications-init';
 import { attachNotificationRouting } from '@/push/notification-routing';
 import { BrandFontsGate } from '@/theme/BrandFontsGate';
+import { colors } from '@/theme/colors';
 import { ThemeProvider } from '@/theme/ThemeProvider';
+import { space } from '@/theme/tokens';
+import { typography } from '@/theme/typography';
 import {
   bindIfStillVerified,
   captureOfflineBindingEpoch
@@ -98,6 +103,8 @@ function AppStack() {
  */
 export default function RootLayout() {
   const configured = isOidcConfigured();
+  const [restoreRetry, setRestoreRetry] = useState(0);
+  const [restoreError, setRestoreError] = useState(false);
 
   useEffect(() => {
     let stopRouting: (() => void) | undefined;
@@ -183,14 +190,37 @@ export default function RootLayout() {
           await offlineDisplay.clear();
         }
       } catch {
-        /* Remain unknown on storage failure; never stub verified. */
+        setRestoreError(true);
       }
     })();
-  }, [configured]);
+  }, [configured, restoreRetry]);
 
   return (
     <BrandFontsGate>
       <ThemeProvider>
+        {restoreError ? (
+          <View
+            accessibilityRole="alert"
+            style={{
+              padding: space.lg,
+              gap: space.sm,
+              backgroundColor: colors.surfaceSubtle,
+            }}
+          >
+            <Text style={{ ...typography.footnote, color: colors.label }}>
+              Chưa thể khôi phục phiên và dữ liệu cổng. Vui lòng thử lại.
+            </Text>
+            <Button
+              label="Thử lại"
+              variant="secondary"
+              accessibilityLabel="Thử khôi phục phiên"
+              onPress={() => {
+                setRestoreError(false);
+                setRestoreRetry((value) => value + 1);
+              }}
+            />
+          </View>
+        ) : null}
         <AppStack />
       </ThemeProvider>
     </BrandFontsGate>
