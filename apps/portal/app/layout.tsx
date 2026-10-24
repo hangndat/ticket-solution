@@ -5,7 +5,10 @@ import { PortalProviders } from '../src/components/providers';
 import { PortalShell } from '../src/components/portal-shell';
 import { readPortalLocaleFromServerCookies } from '../src/i18n/locale-server';
 import { productOrigin } from '../src/oidc/config';
+import { buildVemokiRootCssBlock } from '../src/theme/vemoki-root-vars';
 import './globals.css';
+
+const vemokiRootCss = buildVemokiRootCssBlock();
 
 const beVietnam = Be_Vietnam_Pro({
   subsets: ['latin', 'vietnamese'],
@@ -27,6 +30,9 @@ export default async function RootLayout({
   const locale = await readPortalLocaleFromServerCookies();
   return (
     <html lang={locale} className={beVietnam.variable} suppressHydrationWarning>
+      <head>
+        <style dangerouslySetInnerHTML={{ __html: vemokiRootCss }} />
+      </head>
       <body
         style={{ fontFamily: 'var(--font-portal), sans-serif' }}
         suppressHydrationWarning

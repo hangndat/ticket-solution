@@ -5,7 +5,6 @@ import {
   Alert,
   Button,
   Descriptions,
-  List,
   Modal,
   Space,
   Typography,
@@ -36,16 +35,16 @@ import {
   type EventReportView,
 } from '../../../../../src/ops/report';
 import { GateStayAppNotice } from '../../../../../src/components/gate-deeplink';
+import { EventReportAsOfLine } from '../../../../../src/components/event-report-as-of';
+import { ReadinessChecklist } from '../../../../../src/components/readiness-checklist';
+import { ReportStaleAlert } from '../../../../../src/components/report-stale-alert';
 import { SurfaceState } from '../../../../../src/components/surface-state';
 import {
   formatEventBusinessStatus,
   formatEventContentStatus,
   formatEventVisibility,
-  formatReadinessStatus,
   usePortalLocale,
 } from '../../../../../src/i18n';
-import { formatReportAsOf } from '../../../../../src/ops/report';
-
 export default function EventOverviewPage() {
   const { t, locale } = usePortalLocale();
   const params = useParams<{ tenantId: string; eventId: string }>();
@@ -64,7 +63,22 @@ export default function EventOverviewPage() {
   >('loading');
   const [message, setMessage] = useState<string | undefined>();
   const [busy, setBusy] = useState(false);
+  const [reportBusy, setReportBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+
+  const refreshReport = useCallback(async () => {
+    setReportBusy(true);
+    const r = await portalGet(bffEventAction(tenantId, eventId, 'report'));
+    setReport(
+      interpretEventReport(
+        r.status,
+        r.json,
+        r.networkError || r.timedOut,
+        locale,
+      ),
+    );
+    setReportBusy(false);
+  }, [tenantId, eventId, locale]);
 
   const load = useCallback(async () => {
     await Promise.resolve();
@@ -339,21 +353,11 @@ export default function EventOverviewPage() {
         </Descriptions>
       </ProCard>
 
-      <ProCard size="small" title={t('common.h_4nfgg4')} style={{ marginBottom: 16 }}>
-        <Typography.Paragraph type="secondary">
-          {readinessSummary(readiness, locale)}
-        </Typography.Paragraph>
-        <List
-          size="small"
-          dataSource={readiness}
-          renderItem={(item) => (
-            <List.Item>
-              <List.Item.Meta
-                title={`${item.label} — ${formatReadinessStatus(locale, item.status)}`}
-                description={item.detail}
-              />
-            </List.Item>
-          )}
+      <ProCard size="small" style={{ marginBottom: 16 }}>
+        <ReadinessChecklist
+          title={t('common.h_4nfgg4')}
+          summary={readinessSummary(readiness, locale)}
+          items={readiness}
         />
       </ProCard>
 
@@ -361,24 +365,15 @@ export default function EventOverviewPage() {
         <ProCard
           size="small"
           title={t('gate.reportQuickTitle')}
-          subTitle={
-            shownReport.asOf
-              ? (
-                  <>
-                    {t('analytics.asOfTag', { asOf: '' }).trimEnd()}
-                    {' '}
-                    <strong data-testid="pa04-formatted-instant">
-                      {formatReportAsOf(shownReport.asOf, locale)}
-                    </strong>
-                    {' '}
-                    <span className="utc-badge">UTC</span>
-                  </>
-                )
-              : undefined
-          }
+          subTitle={<EventReportAsOfLine asOf={shownReport.asOf} />}
           style={{ marginBottom: 16 }}
         >
-          <StatisticCard.Group>
+          <ReportStaleAlert
+            asOf={shownReport.asOf}
+            loading={reportBusy}
+            onRefresh={() => void refreshReport()}
+          />
+          <StatisticCard.Group className="portal-gate-report-compact">
             <StatisticCard
               statistic={{
                 title: t('gate.stat.quotaAllocated'),

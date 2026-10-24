@@ -14,6 +14,8 @@ import {
   formatQuotaRemaining,
   formatReportAsOf,
   interpretEventReport,
+  isReportDataStale,
+  REPORT_STALE_AFTER_MS,
   reportShowsEmailCsCta,
   reportShowsNumbers,
   reportShowsPendingApprovalCta,
@@ -236,6 +238,27 @@ describe('interpretEventReport', () => {
     assert.equal(reportShowsEmailCsCta(rejected), false);
   });
 
+  it('wires ReportStaleAlert refresh loading on event overview and gate pages', () => {
+    const root = join(dirname(fileURLToPath(import.meta.url)), '..');
+    const eventOverview = readFileSync(
+      join(root, 'app/t/[tenantId]/e/[eventId]/page.tsx'),
+      'utf8',
+    );
+    const gate = readFileSync(
+      join(root, 'app/t/[tenantId]/e/[eventId]/gate/page.tsx'),
+      'utf8',
+    );
+    const staleAlert = readFileSync(
+      join(root, 'src/components/report-stale-alert.tsx'),
+      'utf8',
+    );
+
+    assert.ok(eventOverview.includes('loading={reportBusy}'));
+    assert.ok(eventOverview.includes('refreshReport'));
+    assert.ok(gate.includes('loading={busy}'));
+    assert.match(staleAlert, /<Button[^>]*loading=\{loading\}/);
+  });
+
   it('wires EventReport KPI deep-links to portal guests/support (no KPI approve/resend)', () => {
     const root = join(dirname(fileURLToPath(import.meta.url)), '..');
     const gate = readFileSync(
@@ -309,5 +332,16 @@ describe('interpretEventReport', () => {
       }),
       '/v1/tenants/11111111-1111-4111-8111-111111111111/events/22222222-2222-4222-8222-222222222222/report',
     );
+  });
+});
+
+describe('isReportDataStale', () => {
+  it('flags watermark older than REPORT_STALE_AFTER_MS', () => {
+    const now = Date.parse('2026-10-24T12:00:00.000Z');
+    const fresh = '2026-10-24T11:56:00.000Z';
+    const old = '2026-10-24T11:54:00.000Z';
+    assert.equal(isReportDataStale(fresh, now, REPORT_STALE_AFTER_MS), false);
+    assert.equal(isReportDataStale(old, now, REPORT_STALE_AFTER_MS), true);
+    assert.equal(isReportDataStale('not-a-date', now), false);
   });
 });
