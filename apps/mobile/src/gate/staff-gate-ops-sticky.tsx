@@ -5,6 +5,7 @@ import { GateStatusStrip, StaffEventPicker } from './staff-gate-chrome.tsx';
 import type { ConnectivityState } from './offline-queue.ts';
 import type { GateOp } from './gate-scan.ts';
 import type { StaffGateScope } from './staff-gate-events.ts';
+import { shortId } from './gate-outcome-copy.ts';
 import { scanStickyStatusFromMachineLabel } from './staff-gate-scan-sticky-status.ts';
 import { colors } from '@/theme/colors';
 import { typography } from '@/theme/typography';
@@ -12,6 +13,7 @@ import { typography } from '@/theme/typography';
 export function StaffGateOpsSticky({
   connectivity,
   hasSession,
+  sessionId,
   queueAttention,
   syncing,
   onSync,
@@ -30,6 +32,7 @@ export function StaffGateOpsSticky({
 }: {
   connectivity: ConnectivityState;
   hasSession: boolean;
+  sessionId?: string | null;
   queueAttention: boolean;
   syncing: boolean;
   onSync?: () => void;
@@ -112,6 +115,19 @@ export function StaffGateOpsSticky({
           />
         ) : null}
       </View>
+      <Text
+        numberOfLines={1}
+        style={{ ...typography.caption, color: colors.secondary }}
+        accessibilityLabel={
+          hasSession
+            ? `Phiên cổng ${shortId(sessionId, 8)}`
+            : 'Chưa mở phiên cổng'
+        }
+      >
+        {hasSession
+          ? `Phiên cổng · ${shortId(sessionId, 8)}`
+          : 'Chưa mở phiên cổng'}
+      </Text>
       <GateStatusStrip
         connectivity={connectivity}
         hasSession={hasSession}

@@ -105,6 +105,7 @@ export function StaffManualEntryScreen() {
         <StaffGateOpsSticky
           connectivity={gate.connectivity}
           hasSession={Boolean(gate.sessionId)}
+          sessionId={gate.sessionId}
           queueAttention={gate.queueAttention}
           syncing={gate.queueSnap.syncing}
           onSync={() => void gate.syncNow()}
