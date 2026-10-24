@@ -24,7 +24,32 @@ export const OFFLINE_SYNC_PAYLOAD_VERSION = 1 as const;
 
 export const OFFLINE_SYNC_ENDPOINTS = {
   sync: '/v1/gate/events/{eventId}/offline-sync',
+  receipt:
+    '/v1/gate/events/{eventId}/offline-sync/receipts/{clientEventId}',
 } as const;
+
+/** Trạng thái check-in/ticket tại thời điểm đọc — không cấp quyền admission. */
+export type OfflineSyncReceiptCheckinState =
+  | 'CURRENT'
+  | 'UNDONE'
+  | 'TICKET_REVOKED'
+  | 'NO_LONGER_CURRENT';
+
+export type OfflineSyncReceiptStatus = 'APPLIED';
+
+/** GET offline-sync receipt — historical reconciliation only (#859). */
+export interface OfflineSyncReceiptResponse {
+  tenantId: string;
+  eventId: string;
+  clientEventId: string;
+  status: OfflineSyncReceiptStatus;
+  historical: true;
+  ticketId: string;
+  checkinId: string;
+  staffSessionId: string;
+  appliedAt: string;
+  checkinState: OfflineSyncReceiptCheckinState;
+}
 
 /** Offline event kinds allowed in D7. Undo/revoke stay online-only. */
 export const OFFLINE_SYNC_EVENT_TYPES = ['CHECKIN_OFFLINE'] as const;
@@ -60,6 +85,8 @@ export const OFFLINE_SYNC_ERROR_CODES = {
   REPLAY_ORDER_INVALID: 'OFFLINE_SYNC_REPLAY_ORDER_INVALID',
   /** Legacy stub code from #105; apply path (#106) no longer returns this. */
   NOT_IMPLEMENTED: 'OFFLINE_SYNC_NOT_IMPLEMENTED',
+  /** Scoped GET receipt — no row or ownership mismatch after authz (fail-closed). */
+  RECEIPT_NOT_FOUND: 'OFFLINE_SYNC_RECEIPT_NOT_FOUND',
 } as const;
 
 export type OfflineSyncErrorCode =

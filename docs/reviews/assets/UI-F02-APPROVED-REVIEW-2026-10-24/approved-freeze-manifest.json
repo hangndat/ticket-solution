@@ -1,0 +1,40 @@
+{
+  "capturedAt": "2026-10-23T17:08:29.720822+00:00",
+  "head": "b2faa48a1ce443c8fc6c849cb74a06a57f8b0c37",
+  "dirty": true,
+  "files": [
+    {
+      "path": "apps/mobile/src/app/(tabs)/_layout.tsx",
+      "sha256": "58021ca6388b5ed3def3077a8634315c1ebc4fd27fe11c4047b03771a298cbdb"
+    },
+    {
+      "path": "apps/mobile/src/gate/staff-gate-workspace-context.tsx",
+      "sha256": "6dbc3697d01391b60f128d100fbfd96044d09bd4f14332fe27d3b9f7981ced1d"
+    },
+    {
+      "path": "apps/mobile/src/gate/gate-workspace-lifecycle.ts",
+      "sha256": "f11853ea69355ca692af5dba4472730e5377cc0de7c7059c01c3bd93667ff57c"
+    },
+    {
+      "path": "apps/mobile/src/gate/gate-workspace-lifecycle.test.ts",
+      "sha256": "4c0c38c4f01dcd636b8b1858e99a0dc66aeb68aaf15642102c6abd6cc5b892f2"
+    },
+    {
+      "path": "apps/mobile/src/identity/staff-eligibility.test.ts",
+      "sha256": "f266950d6104aaf198efb0adc5b5e2f9678586cc931685c7464dbd32dd33bf80"
+    },
+    {
+      "path": "apps/mobile/src/identity/staff-eligibility.ts",
+      "sha256": "ca6068799243078454c48ab75ac2c3b4f35b5640c6fd8556975dff75bae399ae"
+    },
+    {
+      "path": "apps/mobile/src/gate/offline-queue.ts",
+      "sha256": "e279dd9fd4237933f57f0726c1ab61591cdf4ba04cccb9b27c219749c98ef851"
+    },
+    {
+      "path": "apps/mobile/src/gate/offline-scan-reconciliation.ts",
+      "sha256": "106a435712638e544ee5a70446b2c87a3f5b618a7904a5b9fec80b33cb3fc503"
+    }
+  ],
+  "baseline37UnexpectedDrift": []
+}

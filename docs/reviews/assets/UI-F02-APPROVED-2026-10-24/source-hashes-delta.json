@@ -1,0 +1,16 @@
+{
+  "baseline": "b2faa48a1ce443c8fc6c849cb74a06a57f8b0c37",
+  "patch": ".orca-metrics/fix-all/F02-NEXT-REVIEWABLE.patch",
+  "updatedAt": "2026-10-24T01:10:00+08:00",
+  "integrationBaseline37": {
+    "apps/mobile/src/gate/staff-gate-workspace-context.tsx": "4861bf78db1c8d0c56151eb9da48d40272b188b7ed37b39765becbb94350281b"
+  },
+  "batchAfter": {
+    "apps/mobile/src/app/(tabs)/_layout.tsx": "58021ca6388b5ed3def3077a8634315c1ebc4fd27fe11c4047b03771a298cbdb",
+    "apps/mobile/src/gate/staff-gate-workspace-context.tsx": "6dbc3697d01391b60f128d100fbfd96044d09bd4f14332fe27d3b9f7981ced1d",
+    "apps/mobile/src/gate/gate-workspace-lifecycle.ts": "f11853ea69355ca692af5dba4472730e5377cc0de7c7059c01c3bd93667ff57c",
+    "apps/mobile/src/gate/gate-workspace-lifecycle.test.ts": "4c0c38c4f01dcd636b8b1858e99a0dc66aeb68aaf15642102c6abd6cc5b892f2",
+    "apps/mobile/src/identity/staff-eligibility.test.ts": "f266950d6104aaf198efb0adc5b5e2f9678586cc931685c7464dbd32dd33bf80"
+  },
+  "preflightFix": "task_907abb284494 — eager ready false, guarded hydrate apply, feedbackGeneration on invalidate, await bindUser"
+}

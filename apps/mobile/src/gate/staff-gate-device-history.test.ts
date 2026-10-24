@@ -97,8 +97,13 @@ test('computeDeviceHistoryPageView paginates and reports hasMore', () => {
     tone: 'admit' as const,
     source: 'scan' as const,
   }));
+  const withMeta = all.map((row) => ({
+    ...row,
+    operationLabel: 'op-…',
+    receiptLabel: '—',
+  }));
   const first = computeDeviceHistoryPageView(
-    all,
+    withMeta,
     DEVICE_HISTORY_PAGE_SIZE,
     '',
   );
@@ -107,7 +112,7 @@ test('computeDeviceHistoryPageView paginates and reports hasMore', () => {
   assert.equal(first.totalAvailable, 15);
   assert.equal(first.hasMore, true);
 
-  const full = computeDeviceHistoryPageView(all, 30, '');
+  const full = computeDeviceHistoryPageView(withMeta, 30, '');
   assert.equal(full.hasMore, false);
   assert.equal(full.rows.length, 15);
 });
@@ -118,6 +123,8 @@ test('filterLoadedDeviceHistoryRows matches ticket or status labels', () => {
       id: '1',
       at: '2026-10-19T10:00:00.000Z',
       ticketLabel: 'abcd-1234',
+      operationLabel: 'ce-1',
+      receiptLabel: '—',
       statusLabel: 'Từ chối',
       hint: '',
       tone: 'deny' as const,
@@ -127,6 +134,8 @@ test('filterLoadedDeviceHistoryRows matches ticket or status labels', () => {
       id: '2',
       at: '2026-10-19T11:00:00.000Z',
       ticketLabel: 'wxyz-5678',
+      operationLabel: 'ce-2',
+      receiptLabel: '—',
       statusLabel: 'Cho vào',
       hint: '',
       tone: 'admit' as const,
@@ -145,6 +154,8 @@ test('groupDeviceHistoryByDay adds Hôm nay header for same calendar day', () =>
       id: '1',
       at: '2026-10-24T10:00:00.000Z',
       ticketLabel: 'a',
+      operationLabel: 'ce-a',
+      receiptLabel: '—',
       statusLabel: 'Vào',
       hint: '',
       tone: 'admit' as const,
@@ -154,6 +165,8 @@ test('groupDeviceHistoryByDay adds Hôm nay header for same calendar day', () =>
       id: '2',
       at: '2026-10-23T10:00:00.000Z',
       ticketLabel: 'b',
+      operationLabel: 'ce-b',
+      receiptLabel: '—',
       statusLabel: 'Vào',
       hint: '',
       tone: 'admit' as const,

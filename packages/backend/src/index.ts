@@ -270,6 +270,8 @@ export {
   validateOfflineSyncRequest,
   offlineSyncNotImplemented,
   applyOfflineSyncBatch,
+  lookupOfflineSyncReceipt,
+  deriveOfflineSyncReceiptCheckinState,
   offlineEventPayloadHash,
   compareOfflineReplayOrder,
   isWithinOfflineClockSkew,
@@ -277,6 +279,7 @@ export {
   OFFLINE_SYNC_MAX_CLOCK_SKEW_SECONDS,
   OFFLINE_SYNC_ERROR_CODES,
   type ApplyOfflineSyncInput,
+  type LookupOfflineSyncReceiptInput,
 } from './offline-sync';
 export {
   ApprovalError,

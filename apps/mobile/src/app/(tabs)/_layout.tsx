@@ -4,6 +4,7 @@ import { NativeTabs } from 'expo-router/native-tabs';
 import { StaffGateWorkspaceProvider } from '@/gate/staff-gate-workspace-context';
 import { session } from '@/identity/session';
 import { staffEligibility } from '@/identity/staff-eligibility';
+import { tryRestoreVerifiedSession } from '@/identity/session-restore-retry';
 import { StaffDefaultTabRedirect } from '@/navigation/staff-default-tab-redirect';
 import { STAFF_TAB_TITLES } from '@/navigation/staff-tab-titles';
 import {
@@ -40,8 +41,12 @@ export default function TabLayout() {
   useEffect(() => {
     const sub = AppState.addEventListener('change', (state) => {
       if (state !== 'active') return;
-      if (session.getSnapshot().status !== 'verified') return;
-      void staffEligibility.refresh(session);
+      void (async () => {
+        await tryRestoreVerifiedSession(session);
+        if (session.getSnapshot().status === 'verified') {
+          void staffEligibility.refresh(session);
+        }
+      })();
     });
     return () => sub.remove();
   }, []);
@@ -51,7 +56,7 @@ export default function TabLayout() {
     (eligibility.resolved && eligibility.staffEligible === true);
 
   return (
-    <StaffGateWorkspaceProvider active={staffWorkspace}>
+    <StaffGateWorkspaceProvider active={identity.status === 'verified'}>
       <StaffDefaultTabRedirect />
       <NativeTabs tintColor={theme.signal}>
         <NativeTabs.Trigger name="(events)" hidden={!showAttendee}>

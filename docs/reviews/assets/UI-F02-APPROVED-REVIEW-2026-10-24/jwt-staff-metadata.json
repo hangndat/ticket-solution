@@ -1,0 +1,30 @@
+{
+  "fixtureFetchedAt": "2026-10-23T17:20:52.362Z",
+  "staffAccessTokenPresent": true,
+  "staffError": null,
+  "sessionInject": {
+    "helper": ".orca-metrics/fix-all/native-review/open-staff-session.mjs",
+    "scheme": "vemoki://uat/session?access_token=\u2026",
+    "note": "Inject ch\u1ec9 tr\u01b0\u1edbc flow; kh\u00f4ng log token"
+  },
+  "staffJwtClaims": {
+    "iat": 1792776052,
+    "exp": 1792776352,
+    "sub": "6daa25c7-ebe8-4148-917b-03ec3362a36a",
+    "preferred_username": "staff@example.com",
+    "aud": "ticket-api"
+  },
+  "iatIso": "2026-10-23T17:20:52Z",
+  "expIso": "2026-10-23T17:25:52Z",
+  "759aaFlowInject": {
+    "flowStartUtc": "2026-10-23T17:26:46Z",
+    "fixtureFetchedAt": "2026-10-23T17:26:33.567Z",
+    "staffJwtClaims": {
+      "iat": 1792776393,
+      "exp": 1792776693,
+      "sub": "6daa25c7-ebe8-4148-917b-03ec3362a36a",
+      "preferred_username": "staff@example.com",
+      "aud": "ticket-api"
+    }
+  }
+}

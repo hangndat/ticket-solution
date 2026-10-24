@@ -296,14 +296,20 @@ export class OfflineScanQueue {
    */
   async clearForUser(userId: string): Promise<void> {
     if (!userId) return;
+    this.fenceForUser(userId);
+    await this.store.clearQueue(userId);
+    await this.store.clearSeqMap(userId);
+  }
+
+  /** Install the logout generation fence before durable journal I/O. */
+  fenceForUser(userId: string): void {
+    if (!userId) return;
     this.writeGeneration += 1;
     this.lastSuccessfulWriteGeneration.delete(userId);
     if (this.ownerUserId === userId || this.ownerUserId === null) {
       this.resetMemoryKeepingListeners();
       this.emit();
     }
-    await this.store.clearQueue(userId);
-    await this.store.clearSeqMap(userId);
   }
 
   async hydrate(): Promise<void> {
@@ -488,6 +494,7 @@ export class OfflineScanQueue {
     bearer: string;
     apiBase: string;
     fetchImpl?: typeof fetch;
+    shouldContinue?: () => boolean;
   }): Promise<{ flushed: number; results: OfflineSyncItemResult[] }> {
     await this.hydrate();
     const ownerUserId = this.ownerUserId;
@@ -496,6 +503,7 @@ export class OfflineScanQueue {
     if (!ownerUserId) {
       return { flushed: 0, results: [] };
     }
+    if (input.shouldContinue && !input.shouldContinue()) return { flushed: 0, results: [] };
     if (this.syncing) {
       return { flushed: 0, results: [] };
     }
@@ -557,6 +565,7 @@ export class OfflineScanQueue {
               return { flushed, results: allResults };
             }
             const chunk = sorted.slice(i, i + OFFLINE_SYNC_MAX_BATCH);
+            if (input.shouldContinue && !input.shouldContinue()) return { flushed, results: allResults };
             const ids = new Set(chunk.map((c) => c.clientEventId));
             this.items = this.items.map((row) =>
               ids.has(row.clientEventId)
@@ -574,12 +583,22 @@ export class OfflineScanQueue {
               events: chunk.map(toTransportEvent),
             };
 
+            if (input.shouldContinue && !input.shouldContinue()) {
+              this.items = this.items.map((row) => ids.has(row.clientEventId) ? { ...row, localStatus: 'pending' as const } : row);
+              return { flushed, results: allResults };
+            }
+
             const outcome = await postOfflineSync({
               fetchImpl,
               url: `${base}${offlineSyncPath(eventId)}`,
               bearer: input.bearer,
               body,
             });
+
+            if (input.shouldContinue && !input.shouldContinue()) {
+              this.items = this.items.map((row) => ids.has(row.clientEventId) ? { ...row, localStatus: 'pending' as const } : row);
+              return { flushed, results: allResults };
+            }
 
             if (
               !this.isBindCurrent(bindGeneration, ownerUserId) ||

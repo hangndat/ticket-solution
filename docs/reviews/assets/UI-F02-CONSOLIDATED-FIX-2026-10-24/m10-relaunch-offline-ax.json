@@ -1,0 +1,221 @@
+{
+  "id": "84242d11-3b2f-4846-a3c6-c2f643ee94f8",
+  "ok": true,
+  "result": [
+    {
+      "role": "application",
+      "type": "Application",
+      "label": "Vemoki",
+      "value": "",
+      "enabled": true,
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      },
+      "children": [
+        {
+          "role": "heading",
+          "type": "Heading",
+          "label": "vemoki↗",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.4003,
+            "y": 0.0794,
+            "width": 0.1993,
+            "height": 0.0309
+          },
+          "children": []
+        },
+        {
+          "role": "text",
+          "type": "StaticText",
+          "label": "Không tải được danh sách",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.112,
+            "y": 0.1655,
+            "width": 0.7863,
+            "height": 0.0329
+          },
+          "children": []
+        },
+        {
+          "role": "text",
+          "type": "StaticText",
+          "label": "Không tải được danh sách đã xuất bản — không dùng demo thay thế.",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.112,
+            "y": 0.2124,
+            "width": 0.7863,
+            "height": 0.0591
+          },
+          "children": []
+        },
+        {
+          "role": "button",
+          "type": "Button",
+          "label": "Thử lại",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.0509,
+            "y": 0.3091,
+            "width": 0.8982,
+            "height": 0.0516
+          },
+          "children": []
+        },
+        {
+          "role": "group",
+          "type": "Group",
+          "label": "Tab Bar",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0,
+            "y": 0.9026,
+            "width": 1,
+            "height": 0.0974
+          },
+          "children": []
+        },
+        {
+          "role": "",
+          "type": "GenericElement",
+          "label": "!, Open debugger to view warnings.",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.0254,
+            "y": 0.8987,
+            "width": 0.9491,
+            "height": 0.0563
+          },
+          "children": []
+        },
+        {
+          "role": "text",
+          "type": "StaticText",
+          "label": "3:02 AM",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.1349,
+            "y": 0.0223,
+            "width": 0.0941,
+            "height": 0.0239
+          },
+          "children": []
+        },
+        {
+          "role": "",
+          "type": "GenericElement",
+          "label": "Dynamic Island, Empty",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.341,
+            "y": 0.0133,
+            "width": 0.3181,
+            "height": 0.043
+          },
+          "children": []
+        },
+        {
+          "role": "",
+          "type": "GenericElement",
+          "label": "Cellular",
+          "value": "No signal",
+          "enabled": true,
+          "frame": {
+            "x": 0.7176,
+            "y": 0.027,
+            "width": 0.0492,
+            "height": 0.0145
+          },
+          "children": []
+        },
+        {
+          "role": "",
+          "type": "GenericElement",
+          "label": "100% battery power",
+          "value": "Not charging",
+          "enabled": true,
+          "frame": {
+            "x": 0.8473,
+            "y": 0.0266,
+            "width": 0.0696,
+            "height": 0.0153
+          },
+          "children": []
+        },
+        {
+          "role": "Nav bar",
+          "type": "Group",
+          "label": "",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0,
+            "y": 0.0692,
+            "width": 1,
+            "height": 0.0634
+          },
+          "children": [],
+          "id": "index"
+        },
+        {
+          "role": "tab",
+          "type": "RadioButton",
+          "label": "Sự kiện",
+          "value": "1",
+          "enabled": true,
+          "frame": {
+            "x": 0.1628,
+            "y": 0.9073,
+            "width": 0.2392,
+            "height": 0.0634
+          },
+          "children": []
+        },
+        {
+          "role": "tab",
+          "type": "RadioButton",
+          "label": "Vé của tôi",
+          "value": "0",
+          "enabled": true,
+          "frame": {
+            "x": 0.3817,
+            "y": 0.9073,
+            "width": 0.2392,
+            "height": 0.0634
+          },
+          "children": []
+        },
+        {
+          "role": "tab",
+          "type": "RadioButton",
+          "label": "Tài khoản",
+          "value": "0",
+          "enabled": true,
+          "frame": {
+            "x": 0.6005,
+            "y": 0.9073,
+            "width": 0.2392,
+            "height": 0.0634
+          },
+          "children": []
+        }
+      ]
+    }
+  ],
+  "_meta": {
+    "runtimeId": "9d821662-c628-49db-a168-99fa7b7636fc"
+  }
+}

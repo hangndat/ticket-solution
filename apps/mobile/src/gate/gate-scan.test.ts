@@ -5,6 +5,7 @@ import {
   classifyScan,
   parseScan,
   recoverOps,
+  reconcileOp,
   runScan,
   type GateOp,
 } from './gate-scan.ts';
@@ -20,6 +21,45 @@ const qr = JSON.stringify({
   eventId,
   credentialVersion: 1,
   state: 'ACTIVE',
+});
+
+test('logout while reservation response is pending prevents a later confirm admission', async () => {
+  let release!: () => void;
+  let entered!: () => void;
+  const pending = new Promise<void>((resolve) => { release = resolve; });
+  const started = new Promise<void>((resolve) => { entered = resolve; });
+  let current = true;
+  let confirms = 0;
+  const fetchImpl: typeof fetch = async (input) => {
+    const url = String(input);
+    if (url.endsWith('/reservations')) {
+      entered();
+      await pending;
+      return jsonResponse(200, { reservationId: 'reservation', token: 'test-token' });
+    }
+    confirms += 1;
+    return jsonResponse(200, { state: 'USED' });
+  };
+  const scan = runScan({ raw: qr, bearer: 'test', apiBase: 'http://127.0.0.1:3001',
+    ops: [], staffSessionId: 'session', fetchImpl, shouldContinue: () => current });
+  await started;
+  current = false;
+  release();
+  const result = await scan;
+  assert.equal(result.current, null);
+  assert.equal(confirms, 0);
+});
+
+test('reconcile after logout does not send confirm', async () => {
+  let requests = 0;
+  const op: GateOp = { id: 'op', ticketId, tenantId, eventId,
+    staffSessionId: 'session', reservationId: 'reservation', token: 'test-token',
+    phase: 'unknown', message: 'pending' };
+  const result = await reconcileOp({ op, bearer: 'test', apiBase: 'http://127.0.0.1:3001',
+    shouldContinue: () => false,
+    fetchImpl: async () => { requests += 1; return jsonResponse(200, { state: 'USED' }); } });
+  assert.equal(result.op, op);
+  assert.equal(requests, 0);
 });
 
 function jsonResponse(status: number, body: unknown): Response {

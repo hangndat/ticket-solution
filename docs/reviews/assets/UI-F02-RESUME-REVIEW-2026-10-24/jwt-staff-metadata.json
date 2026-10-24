@@ -1,0 +1,9 @@
+{
+  "sub": "6daa25c7-ebe8-4148-917b-03ec3362a36a",
+  "iat": 1792773050,
+  "exp": 1792773350,
+  "aud": "ticket-api",
+  "iss": "http://127.0.0.1:8080/realms/ticket",
+  "acr": "1",
+  "ttl_seconds": 300
+}

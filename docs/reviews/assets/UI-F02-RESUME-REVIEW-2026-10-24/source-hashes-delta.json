@@ -1,0 +1,28 @@
+{
+  "baseline": "b2faa48a1ce443c8fc6c849cb74a06a57f8b0c37",
+  "baseline_fingerprint": "docs/reviews/assets/UI-FIXALL-INTEGRATION-2026-10-23/source-fingerprints.json",
+  "dirty": true,
+  "reviewer_session": "James · reviewer-dod · task_6c065e8fa1b5 · ctx_cab2be9b31a7",
+  "changed_since_integration_fingerprint": {
+    "apps/mobile/src/identity/staff-eligibility.ts": {
+      "before": null,
+      "after": "8bd42a758e81507d37b49d3e0906274173a9daa1943ae44398f62c16de5150c4"
+    },
+    "apps/mobile/src/gate/staff-gate-workspace-context.tsx": {
+      "before": "4861bf78db1c8d0c56151eb9da48d40272b188b7ed37b39765becbb94350281b",
+      "after": "3b68d5d775ecba46123f8a067e265d72ec37366eb3c7aef8f56e7182c4dbd1c4"
+    },
+    "apps/mobile/src/identity/staff-eligibility.test.ts": {
+      "before": null,
+      "after": "50ce6c55f8318e4a46195cceeda8a781d7567e287ae3bae8b1238436cb2f903a"
+    },
+    "apps/mobile/src/navigation/staff-regression.test.ts": {
+      "before": null,
+      "after": "09addce40bdfd7fadc5a7ab2088c5e59c98d79de5386f5f2fd7c248779ee8f73"
+    }
+  },
+  "unchanged_native_gate_core": {
+    "apps/mobile/src/gate/offline-scan-reconciliation.ts": "106a435712638e544ee5a70446b2c87a3f5b618a7904a5b9fec80b33cb3fc503",
+    "offline-queue.ts": "e279dd9fd4237933f57f0726c1ab61591cdf4ba04cccb9b27c219749c98ef851"
+  }
+}

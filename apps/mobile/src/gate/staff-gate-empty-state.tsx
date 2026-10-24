@@ -21,15 +21,15 @@ export function StaffGateNoEventState() {
       accessibilityRole="alert"
     >
       <Text style={{ ...typography.bodySemibold, color: colors.label }}>
-        Chưa có sự kiện để quét
+        {gate.gateEventsError ? 'Dữ liệu cổng chưa sẵn sàng' : 'Chưa có sự kiện để quét'}
       </Text>
       <Text style={{ ...typography.subhead, color: colors.secondary,  lineHeight: 22 }}>
         {gate.gateEventsError ??
           'Tài khoản chưa được gán sự kiện có quyền cổng. Làm mới hoặc đăng xuất để dùng chế độ khách.'}
       </Text>
       <Button
-        label="Làm mới"
-        accessibilityLabel="Làm mới danh sách sự kiện"
+        label={gate.gateEventsError ? 'Thử lại' : 'Làm mới'}
+        accessibilityLabel={gate.gateEventsError ? 'Thử mở dữ liệu cổng' : 'Làm mới danh sách sự kiện'}
         onPress={() => void gate.refreshGateEvents()}
         style={styles.refresh}
       />

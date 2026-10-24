@@ -1,0 +1,501 @@
+{
+  "id": "d9c1dca3-59a0-4b1d-bf3b-bf91328df9b2",
+  "ok": true,
+  "result": [
+    {
+      "role": "application",
+      "type": "Application",
+      "label": "Vemoki",
+      "value": "",
+      "enabled": true,
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      },
+      "children": [
+        {
+          "role": "Nav bar",
+          "type": "Group",
+          "label": "",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0,
+            "y": 0.0692,
+            "width": 1,
+            "height": 0.1311
+          },
+          "children": [],
+          "id": "MFest · Demo"
+        },
+        {
+          "role": "heading",
+          "type": "Heading",
+          "label": "Lịch sử trên máy này",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.0509,
+            "y": 0.2238,
+            "width": 0.8982,
+            "height": 0.0254
+          },
+          "children": []
+        },
+        {
+          "role": "text",
+          "type": "StaticText",
+          "label": "Trên thiết bị này · MFest · Demo",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.0509,
+            "y": 0.2516,
+            "width": 0.8982,
+            "height": 0.0215
+          },
+          "children": []
+        },
+        {
+          "role": "text field",
+          "type": "TextField",
+          "label": "Tìm trong các lượt đã tải",
+          "value": "Tìm trong các lượt đã tải",
+          "enabled": true,
+          "frame": {
+            "x": 0.0534,
+            "y": 0.2836,
+            "width": 0.8931,
+            "height": 0.054
+          },
+          "children": []
+        },
+        {
+          "role": "heading",
+          "type": "Heading",
+          "label": "Hôm nay · 24 tháng 10",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.0509,
+            "y": 0.3482,
+            "width": 0.8982,
+            "height": 0.0215
+          },
+          "children": []
+        },
+        {
+          "role": "text",
+          "type": "StaticText",
+          "label": "Được vào",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.1476,
+            "y": 0.3885,
+            "width": 0.1832,
+            "height": 0.0262
+          },
+          "children": []
+        },
+        {
+          "role": "text",
+          "type": "StaticText",
+          "label": "01:27 24-10",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.726,
+            "y": 0.3885,
+            "width": 0.1925,
+            "height": 0.0262
+          },
+          "children": []
+        },
+        {
+          "role": "text",
+          "type": "StaticText",
+          "label": "Vé 759aa40b-f… · Mã lượt 4aeccfec-aa8… · Biên nhận 0552dcd6-6bb…",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.1476,
+            "y": 0.4171,
+            "width": 0.771,
+            "height": 0.0215
+          },
+          "children": []
+        },
+        {
+          "role": "text",
+          "type": "StaticText",
+          "label": "Được vào",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.1476,
+            "y": 0.4667,
+            "width": 0.1832,
+            "height": 0.0262
+          },
+          "children": []
+        },
+        {
+          "role": "text",
+          "type": "StaticText",
+          "label": "01:21 24-10",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.7328,
+            "y": 0.4667,
+            "width": 0.1858,
+            "height": 0.0262
+          },
+          "children": []
+        },
+        {
+          "role": "text",
+          "type": "StaticText",
+          "label": "Vé adbef3d7-3… · Mã lượt 357a6d33-dd0… · Biên nhận 79e07462-b5c…",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.1476,
+            "y": 0.4953,
+            "width": 0.771,
+            "height": 0.0215
+          },
+          "children": []
+        },
+        {
+          "role": "text",
+          "type": "StaticText",
+          "label": "Không cho vào",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.1476,
+            "y": 0.545,
+            "width": 0.2833,
+            "height": 0.0262
+          },
+          "children": []
+        },
+        {
+          "role": "text",
+          "type": "StaticText",
+          "label": "00:38 24-10",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.7142,
+            "y": 0.545,
+            "width": 0.2044,
+            "height": 0.0262
+          },
+          "children": []
+        },
+        {
+          "role": "text",
+          "type": "StaticText",
+          "label": "Vé ffea00b3-4… · Mã lượt c90b9c5a-a5b…",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.1476,
+            "y": 0.5736,
+            "width": 0.771,
+            "height": 0.0215
+          },
+          "children": []
+        },
+        {
+          "role": "text",
+          "type": "StaticText",
+          "label": "Được vào",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.1476,
+            "y": 0.6232,
+            "width": 0.1832,
+            "height": 0.0262
+          },
+          "children": []
+        },
+        {
+          "role": "text",
+          "type": "StaticText",
+          "label": "00:34 24-10",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.7116,
+            "y": 0.6232,
+            "width": 0.207,
+            "height": 0.0262
+          },
+          "children": []
+        },
+        {
+          "role": "text",
+          "type": "StaticText",
+          "label": "Vé 29aec431-8… · Mã lượt 369c3150-883… · Biên nhận 48cc5c68-454…",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.1476,
+            "y": 0.6518,
+            "width": 0.771,
+            "height": 0.0215
+          },
+          "children": []
+        },
+        {
+          "role": "heading",
+          "type": "Heading",
+          "label": "Thứ Sáu · 23 tháng 10",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.0509,
+            "y": 0.6968,
+            "width": 0.8982,
+            "height": 0.0215
+          },
+          "children": []
+        },
+        {
+          "role": "text",
+          "type": "StaticText",
+          "label": "Không tìm thấy vé",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.1476,
+            "y": 0.7371,
+            "width": 0.3418,
+            "height": 0.0262
+          },
+          "children": []
+        },
+        {
+          "role": "text",
+          "type": "StaticText",
+          "label": "23:49 23-10",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.7133,
+            "y": 0.7371,
+            "width": 0.2053,
+            "height": 0.0262
+          },
+          "children": []
+        },
+        {
+          "role": "text",
+          "type": "StaticText",
+          "label": "Vé 00000000-0… · Mã lượt 27816cd7-f56…",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.1476,
+            "y": 0.7656,
+            "width": 0.771,
+            "height": 0.0215
+          },
+          "children": []
+        },
+        {
+          "role": "text",
+          "type": "StaticText",
+          "label": "Đã xem hết lịch sử lưu trên máy này",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.0509,
+            "y": 0.8106,
+            "width": 0.8982,
+            "height": 0.0239
+          },
+          "children": []
+        },
+        {
+          "role": "text",
+          "type": "StaticText",
+          "label": "Đã tải 5 lượt",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.0509,
+            "y": 0.8486,
+            "width": 0.8982,
+            "height": 0.0215
+          },
+          "children": []
+        },
+        {
+          "role": "group",
+          "type": "Group",
+          "label": "Tab Bar",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0,
+            "y": 0.9026,
+            "width": 1,
+            "height": 0.0974
+          },
+          "children": []
+        },
+        {
+          "role": "text",
+          "type": "StaticText",
+          "label": "2:17 AM",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.1399,
+            "y": 0.0223,
+            "width": 0.0848,
+            "height": 0.0239
+          },
+          "children": []
+        },
+        {
+          "role": "",
+          "type": "GenericElement",
+          "label": "Dynamic Island, Empty",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.341,
+            "y": 0.0133,
+            "width": 0.3181,
+            "height": 0.043
+          },
+          "children": []
+        },
+        {
+          "role": "",
+          "type": "GenericElement",
+          "label": "Cellular",
+          "value": "No signal",
+          "enabled": true,
+          "frame": {
+            "x": 0.7176,
+            "y": 0.027,
+            "width": 0.0492,
+            "height": 0.0145
+          },
+          "children": []
+        },
+        {
+          "role": "",
+          "type": "GenericElement",
+          "label": "100% battery power",
+          "value": "Not charging",
+          "enabled": true,
+          "frame": {
+            "x": 0.8473,
+            "y": 0.0266,
+            "width": 0.0696,
+            "height": 0.0153
+          },
+          "children": []
+        },
+        {
+          "role": "heading",
+          "type": "Heading",
+          "label": "MFest · Demo",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.0407,
+            "y": 0.1369,
+            "width": 0.5437,
+            "height": 0.0544
+          },
+          "children": []
+        },
+        {
+          "role": "button",
+          "type": "Button",
+          "label": "Tài khoản",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.4996,
+            "y": 0.0739,
+            "width": 0.0916,
+            "height": 0.0423
+          },
+          "children": []
+        },
+        {
+          "role": "button",
+          "type": "Button",
+          "label": "More",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.8575,
+            "y": 0.0739,
+            "width": 0.0916,
+            "height": 0.0423
+          },
+          "children": []
+        },
+        {
+          "role": "tab",
+          "type": "RadioButton",
+          "label": "Nhập tay",
+          "value": "0",
+          "enabled": true,
+          "frame": {
+            "x": 0.1628,
+            "y": 0.9073,
+            "width": 0.2392,
+            "height": 0.0634
+          },
+          "children": []
+        },
+        {
+          "role": "tab",
+          "type": "RadioButton",
+          "label": "Quét vé",
+          "value": "0",
+          "enabled": true,
+          "frame": {
+            "x": 0.3817,
+            "y": 0.9073,
+            "width": 0.2392,
+            "height": 0.0634
+          },
+          "children": []
+        },
+        {
+          "role": "tab",
+          "type": "RadioButton",
+          "label": "Lịch sử",
+          "value": "1",
+          "enabled": true,
+          "frame": {
+            "x": 0.6005,
+            "y": 0.9073,
+            "width": 0.2392,
+            "height": 0.0634
+          },
+          "children": []
+        }
+      ]
+    }
+  ],
+  "_meta": {
+    "runtimeId": "9d821662-c628-49db-a168-99fa7b7636fc"
+  }
+}

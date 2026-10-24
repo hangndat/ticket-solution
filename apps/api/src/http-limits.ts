@@ -9,6 +9,8 @@ export const API_RATE_BUCKETS = {
   gateReserve: 'api.gate.reserve',
   gateConfirm: 'api.gate.confirm',
   gateOfflineSync: 'api.gate.offline-sync',
+  /** GET receipt lookup (#859) — separate counter from POST replay budget. */
+  gateOfflineSyncReceipt: 'api.gate.offline-sync.receipt',
   publicRead: 'api.public.read',
   tenantRegistration: 'api.public.tenant-registration',
 } as const;
@@ -19,6 +21,8 @@ export const API_RATE_LIMITS = {
   gateReservePerUser: 240,
   gateConfirmPerUser: 240,
   gateOfflineSyncPerUser: 60,
+  /** Hourly GET receipt reads per user (does not consume POST offline-sync budget). */
+  gateOfflineSyncReceiptPerUser: 240,
   publicReadPerIp: 600,
   tenantRegistrationPerIp: 20,
 } as const;

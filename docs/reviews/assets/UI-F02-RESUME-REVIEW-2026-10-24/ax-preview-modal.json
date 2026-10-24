@@ -1,0 +1,335 @@
+{
+  "id": "1123405e-8b03-4976-bf57-8e815ec6739a",
+  "ok": true,
+  "result": [
+    {
+      "role": "application",
+      "type": "Application",
+      "label": "Vemoki",
+      "value": "",
+      "enabled": true,
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      },
+      "children": [
+        {
+          "role": "Nav bar",
+          "type": "Group",
+          "label": "",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0,
+            "y": 0.0692,
+            "width": 1,
+            "height": 0.0634
+          },
+          "children": [],
+          "id": "MFest · Demo"
+        },
+        {
+          "role": "button",
+          "type": "Button",
+          "label": "Đổi sự kiện",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.8414,
+            "y": 0,
+            "width": 0.1077,
+            "height": 0.0516
+          },
+          "children": []
+        },
+        {
+          "role": "heading",
+          "type": "Heading",
+          "label": "MFest · Demo",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.0509,
+            "y": 0.0125,
+            "width": 0.5615,
+            "height": 0.0262
+          },
+          "children": []
+        },
+        {
+          "role": "text",
+          "type": "StaticText",
+          "label": "●",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.6327,
+            "y": 0.0153,
+            "width": 0.0204,
+            "height": 0.0215
+          },
+          "children": []
+        },
+        {
+          "role": "text",
+          "type": "StaticText",
+          "label": "Sẵn sàng",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.6735,
+            "y": 0.0153,
+            "width": 0.1476,
+            "height": 0.0215
+          },
+          "children": []
+        },
+        {
+          "role": "button",
+          "type": "Button",
+          "label": "Đồng bộ hàng đợi offline",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.2646,
+            "y": 0.061,
+            "width": 0.0763,
+            "height": 0.0516
+          },
+          "children": []
+        },
+        {
+          "role": "text",
+          "type": "StaticText",
+          "label": "Dùng khi không thể đọc mã QR trên vé.",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.0509,
+            "y": 0.1467,
+            "width": 0.8982,
+            "height": 0.0239
+          },
+          "children": []
+        },
+        {
+          "role": "text",
+          "type": "StaticText",
+          "label": "Mã vé",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.0509,
+            "y": 0.1894,
+            "width": 0.8982,
+            "height": 0.0297
+          },
+          "children": []
+        },
+        {
+          "role": "text field",
+          "type": "TextField",
+          "label": "Nhập mã trên vé",
+          "value": "29aec431-8a11-4315-8a05-c1cb44175c6029aec431-8a11-4315-8a05-c1cb44175c60",
+          "enabled": true,
+          "frame": {
+            "x": 0.0534,
+            "y": 0.2273,
+            "width": 0.8931,
+            "height": 0.054
+          },
+          "children": [],
+          "id": "gate-scan-input"
+        },
+        {
+          "role": "button",
+          "type": "Button",
+          "label": "Kiểm tra vé",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.0509,
+            "y": 0.3013,
+            "width": 0.8982,
+            "height": 0.0583
+          },
+          "children": [],
+          "id": "gate-manual-submit"
+        },
+        {
+          "role": "text",
+          "type": "StaticText",
+          "label": "Kiểm tra định dạng mã trước khi gửi lên máy chủ — kết quả cổng hiện bên dưới.",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.0509,
+            "y": 0.3783,
+            "width": 0.8982,
+            "height": 0.0426
+          },
+          "children": []
+        },
+        {
+          "role": "group",
+          "type": "Group",
+          "label": "Tab Bar",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0,
+            "y": 0.9026,
+            "width": 1,
+            "height": 0.0974
+          },
+          "children": []
+        },
+        {
+          "role": "",
+          "type": "GenericElement",
+          "label": "!, Open debugger to view warnings.",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.0254,
+            "y": 0.8987,
+            "width": 0.9491,
+            "height": 0.0563
+          },
+          "children": []
+        },
+        {
+          "role": "text",
+          "type": "StaticText",
+          "label": "12:34 AM",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.1247,
+            "y": 0.0223,
+            "width": 0.1145,
+            "height": 0.0239
+          },
+          "children": []
+        },
+        {
+          "role": "",
+          "type": "GenericElement",
+          "label": "Cellular",
+          "value": "No signal",
+          "enabled": true,
+          "frame": {
+            "x": 0.7176,
+            "y": 0.027,
+            "width": 0.0492,
+            "height": 0.0145
+          },
+          "children": []
+        },
+        {
+          "role": "",
+          "type": "GenericElement",
+          "label": "100% battery power",
+          "value": "Not charging",
+          "enabled": true,
+          "frame": {
+            "x": 0.8473,
+            "y": 0.0266,
+            "width": 0.0696,
+            "height": 0.0153
+          },
+          "children": []
+        },
+        {
+          "role": "heading",
+          "type": "Heading",
+          "label": "MFest · Demo",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.0407,
+            "y": 0.081,
+            "width": 0.3265,
+            "height": 0.0282
+          },
+          "children": []
+        },
+        {
+          "role": "button",
+          "type": "Button",
+          "label": "Tài khoản",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.4996,
+            "y": 0.0739,
+            "width": 0.0916,
+            "height": 0.0423
+          },
+          "children": []
+        },
+        {
+          "role": "button",
+          "type": "Button",
+          "label": "More",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.8575,
+            "y": 0.0739,
+            "width": 0.0916,
+            "height": 0.0423
+          },
+          "children": []
+        },
+        {
+          "role": "tab",
+          "type": "RadioButton",
+          "label": "Nhập tay",
+          "value": "1",
+          "enabled": true,
+          "frame": {
+            "x": 0.1628,
+            "y": 0.9073,
+            "width": 0.2392,
+            "height": 0.0634
+          },
+          "children": []
+        },
+        {
+          "role": "tab",
+          "type": "RadioButton",
+          "label": "Quét vé",
+          "value": "0",
+          "enabled": true,
+          "frame": {
+            "x": 0.3817,
+            "y": 0.9073,
+            "width": 0.2392,
+            "height": 0.0634
+          },
+          "children": []
+        },
+        {
+          "role": "tab",
+          "type": "RadioButton",
+          "label": "Lịch sử",
+          "value": "0",
+          "enabled": true,
+          "frame": {
+            "x": 0.6005,
+            "y": 0.9073,
+            "width": 0.2392,
+            "height": 0.0634
+          },
+          "children": []
+        }
+      ]
+    }
+  ],
+  "_meta": {
+    "runtimeId": "9d821662-c628-49db-a168-99fa7b7636fc"
+  }
+}

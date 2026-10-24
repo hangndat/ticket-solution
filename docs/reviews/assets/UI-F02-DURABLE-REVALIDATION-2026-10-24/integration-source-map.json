@@ -1,0 +1,26 @@
+{
+  "base": "31b26d5562a2bf46a012679697480a14ca24c2d6",
+  "originalDirtyHead": "b2faa48a1ce443c8fc6c849cb74a06a57f8b0c37",
+  "originalManifestSha256": "0820c92399747e9b1c1c3ef032fceae9264ccb93daaca8f1935cdbf722b9b8c7",
+  "importedFiles": 101,
+  "sourceDelta": {
+    "apps/mobile/src/app/_layout.tsx": {
+      "original": "1062f7a99299b537db4c95244f9e9d8bab53bc128345e5c4084e7e73f581bd3a",
+      "integration": "c2ac923177e773d783047351e437ccbeb2b92d4046216dbc95c4a93889c51abc"
+    },
+    "apps/mobile/src/app/uat/durable-keychain.tsx": {
+      "original": "9015d7c8376b0bb02dc2c637100e445df259c7345633e65e746d2fcb579889ff",
+      "integration": "d919df14fee2ed2d1bc9928e0c05159a54958c911834f017521ed69ed1d5a5a8"
+    },
+    "apps/mobile/src/screens/staff-manual.tsx": {
+      "original": "83f07bb28579101530e7f11c6fe66abe2b74f8f2f892d43f17eb9b6f9c527b8e",
+      "integration": "96f461e6329b480fdb95640b36ed8c16323c9908ecf9cc6bbab253c30964838b"
+    }
+  },
+  "openApiSemanticMatch": true,
+  "separatePrs": {
+    "web": 862,
+    "portal": 863,
+    "mockups": 864
+  }
+}

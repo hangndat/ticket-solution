@@ -1,0 +1,26 @@
+{
+  "capturedAt": "2026-10-23T17:24:38.832053+00:00",
+  "purpose": "Đối chiếu server với UAT reviewer; không thay proof client operation/History.",
+  "rows": [
+    {
+      "state": "ACTIVE",
+      "eventId": "d9d9f001-0002-4000-8000-000000000001",
+      "tenantId": "d9d9f001-0001-4000-8000-000000000001",
+      "ticketId": "759aa40b-f011-4674-b73f-5078da568e20",
+      "appliedAt": null,
+      "checkinId": null,
+      "clientEventId": null,
+      "staffSessionId": null
+    },
+    {
+      "state": "USED",
+      "eventId": "d9d9f001-0002-4000-8000-000000000001",
+      "tenantId": "d9d9f001-0001-4000-8000-000000000001",
+      "ticketId": "adbef3d7-3915-4687-82b5-3323505e04af",
+      "appliedAt": "2026-10-23T17:22:16.913179+00:00",
+      "checkinId": "79e07462-b5c3-4c4c-999e-8d641586dd26",
+      "clientEventId": "357a6d33-dd0b-416c-a192-263254a1b555",
+      "staffSessionId": "b5158021-2e23-4587-9e20-caa6a6a2bf6b"
+    }
+  ]
+}

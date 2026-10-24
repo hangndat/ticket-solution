@@ -1,0 +1,22 @@
+{
+  "at": "2026-10-24T02:28:17.646689+00:00",
+  "head": "b2faa48a1ce443c8fc6c849cb74a06a57f8b0c37",
+  "manifestSha256": "0820c92399747e9b1c1c3ef032fceae9264ccb93daaca8f1935cdbf722b9b8c7",
+  "fileCount": 113,
+  "mismatches": [],
+  "diffCheckExitCode": 0,
+  "diffCheckOutput": "",
+  "workerPage": {
+    "limit": 100,
+    "total": 68,
+    "hasMore": false,
+    "nextCursor": null
+  },
+  "workerCounts": {
+    "retained": 26,
+    "released": 42
+  },
+  "activeOrReclaimable": [],
+  "proxyMode": "online",
+  "helperKillConfirmed": true
+}

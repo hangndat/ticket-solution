@@ -29,6 +29,12 @@ export type StaffGateDeviceHistoryPanelProps = {
   onFilterQueryChange?: (value: string) => void;
   loadMoreError?: boolean;
   onRetryLoadMore?: () => void;
+  knownOpInput?: string;
+  onKnownOpInputChange?: (value: string) => void;
+  onImportKnownOp?: () => void;
+  importKnownBusy?: boolean;
+  importKnownError?: string | null;
+  importKnownInfo?: string | null;
 };
 
 export function StaffGateDeviceHistoryPanel({
@@ -41,13 +47,21 @@ export function StaffGateDeviceHistoryPanel({
   filterQuery = '',
   onFilterQueryChange,
   loadMoreError = false,
-  onRetryLoadMore
+  onRetryLoadMore,
+  knownOpInput = '',
+  onKnownOpInputChange,
+  onImportKnownOp,
+  importKnownBusy = false,
+  importKnownError = null,
+  importKnownInfo = null
 }: StaffGateDeviceHistoryPanelProps) {
   const paginationEnabled =
     onFilterQueryChange !== undefined || onLoadMore !== undefined;
   const renderedCount = rows.length;
   const showSearch = onFilterQueryChange !== undefined;
   const showFooter = paginationEnabled && totalAvailable > 0;
+  const showKnownOpImport =
+    onKnownOpInputChange !== undefined && onImportKnownOp !== undefined;
 
   return (
     <View style={{ gap: space.sm }} accessibilityRole="summary">
@@ -66,6 +80,47 @@ export function StaffGateDeviceHistoryPanel({
           </Text>
         </View>
       )}
+      {showKnownOpImport ? (
+        <View style={{ gap: space.sm }}>
+          <Text style={{ ...typography.subheadSemibold, color: colors.label }}>
+            Đối soát mã lượt đã biết
+          </Text>
+          <Text style={{ ...typography.caption, color: colors.secondary }}>
+            Nhập mã lượt (UUID) từ biên nhận đồng bộ — chỉ trong sự kiện đang
+            chọn, không tìm vé.
+          </Text>
+          <Input
+            value={knownOpInput}
+            onChangeText={onKnownOpInputChange}
+            placeholder="Mã lượt UUID"
+            accessibilityLabel="Mã lượt UUID đã biết"
+            autoCapitalize="none"
+            autoCorrect={false}
+            clearButtonMode="while-editing"
+            editable={!importKnownBusy}
+          />
+          <Button
+            variant="secondary"
+            label={importKnownBusy ? 'Đang đối soát…' : 'Đối soát'}
+            accessibilityLabel="Đối soát mã lượt đã biết"
+            onPress={onImportKnownOp}
+            disabled={importKnownBusy || !knownOpInput.trim()}
+          />
+          {importKnownError ? (
+            <Text
+              accessibilityRole="alert"
+              style={{ ...typography.footnote, color: colors.deny, lineHeight: 20 }}
+            >
+              {importKnownError}
+            </Text>
+          ) : null}
+          {importKnownInfo && !importKnownError ? (
+            <Text style={{ ...typography.footnote, color: colors.secondary, lineHeight: 20 }}>
+              {importKnownInfo}
+            </Text>
+          ) : null}
+        </View>
+      ) : null}
       {showSearch ? (
         <Input
           value={filterQuery}
@@ -100,6 +155,7 @@ export function StaffGateDeviceHistoryPanel({
               {section.rows.map((row) => (
                 <View
                   key={row.id}
+                  accessible={true}
                   style={{
                     flexDirection: 'row',
                     alignItems: 'flex-start',
@@ -109,7 +165,7 @@ export function StaffGateDeviceHistoryPanel({
                     borderRadius: radius.md,
                     backgroundColor: colors.card
                   }}
-                  accessibilityLabel={`${formatDeviceHistoryTime(row.at)}. Vé ${row.ticketLabel}. ${row.statusLabel}. ${row.hint}`}
+                  accessibilityLabel={`${formatDeviceHistoryTime(row.at)}. Vé ${row.ticketLabel}. Mã lượt ${row.operationIdFull ?? row.operationLabel}${row.receiptIdFull ? `. Biên nhận ${row.receiptIdFull}` : ''}. ${row.statusLabel}. ${row.hint}`}
                 >
                   <SymbolView
                     name={
@@ -142,7 +198,10 @@ export function StaffGateDeviceHistoryPanel({
                       numberOfLines={1}
                       style={{ ...typography.caption, color: colors.secondary }}
                     >
-                      {row.ticketLabel}
+                      Vé {row.ticketLabel} · Mã lượt {row.operationLabel}
+                      {row.receiptLabel !== '—'
+                        ? ` · Biên nhận ${row.receiptLabel}`
+                        : ''}
                     </Text>
                   </View>
                 </View>
