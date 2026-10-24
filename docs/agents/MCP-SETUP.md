@@ -44,6 +44,14 @@ git -C <task-checkout> rev-parse HEAD
 
 Truyền root tuyệt đối cho `ctx_compose`, scope `ctx_search` vào đúng checkout và dùng đường dẫn tuyệt đối cho `ctx_read`. CRG MCP trỏ checkout khác chỉ là gợi ý: xác minh source ở worktree/SHA của task trước khi kết luận impact hoặc review. Không dùng graph main để khẳng định branch không có symbol.
 
+## Scope và output trong monorepo
+
+- Task spec ghi checkout tuyệt đối, base/head SHA, slice được tìm/đọc và path/section tài liệu liên quan. Không tìm từ home hoặc worktree khác.
+- Ưu tiên thư mục slice (`apps/api`, `apps/worker`, `packages/backend`, `apps/web`, `apps/portal`, `apps/mobile`, `docs/agents`) trước khi mở rộng để xác minh contract/impact. Khi `ctx_compose` ở root báo `source file budget exceeded`, thu hẹp câu hỏi/phạm vi qua `ctx_search` trong slice; không gọi lặp cùng yêu cầu toàn repo.
+- Listing native dùng `ls -1 <dir>` / `ls -la <dir>`; bare `ls` có thể bị rewrite thành cây thư mục lớn. Đọc file dùng `ctx_read`; không đọc lại chỉ để đổi mode.
+- Output read-only dài từ `orca`, `node`, build/test/log dùng `ctx_shell`. Lệnh ghi/commit/push/install/deploy dùng native shell; giữ output gọn. JSON `gh` lọc bằng `--jq` / `--template`, không pipe interpreter chỉ để lọc.
+- Archive/reference đã trả về: `ctx_expand` theo phần cần; không chạy lại để lấy cùng output. Ghi lỗi bounce/authority theo task và nguyên nhân; không tắt policy hay bật deny/shadow chỉ để tăng Gain Score.
+
 ## Chẩn đoán output thiếu nội dung
 
 1. Smoke-test `ctx_read` trên tài liệu public đã biết và `ctx_call(name="ctx_discover_tools", arguments={query:"metrics"})`. Thành công phải có nội dung/danh sách tool, không chỉ footer `tok sent`.
