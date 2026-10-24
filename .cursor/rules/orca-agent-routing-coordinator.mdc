@@ -13,7 +13,7 @@ Trước mỗi spawn: ghi agent, Cost tier, Persona, model requested/effective, 
 
 Worker mới dùng `scripts/agent-workflow-run.mjs start` để preflight + snapshot allowance + lưu receipt; sau settlement hợp lệ dùng `settle` để collect transcript/token metadata trước release. Reuse terminal giữ receipt model gốc, snapshot theo wave và collect thủ công; thiếu source báo unknown. Coordinator Codex cũng phải có provider baseline tại boundary cần đo. Hướng dẫn chỉ đọc khi áp dụng: [workflow evidence/telemetry](../../docs/agents/workflow-evidence-telemetry.md). Không quy token/cache thành quota tiết kiệm.
 
-**Persona argv:** mỗi `task-create` / `worker-start` fresh phải có `--display-name` **và** `--task-title` (cùng prefix Persona — xem `docs/agents/README.md`). Sau wave: `task-list --json` → `display_name` + `title` khác null. `worker-task_*` trên cây worktree ≠ thiếu Persona.
+**Persona argv:** mỗi `task-create` có `--display-name` **và** `--task-title` cùng prefix Persona (xem `docs/agents/README.md`). `worker-start` trên current/existing lấy Persona từ Task; không truyền creation flag `--display-name`. Chỉ truyền flag đó khi tạo worktree mới. Sau wave: `task-list --json` → `display_name` + `title` khác null. `worker-task_*` trên cây worktree ≠ thiếu Persona.
 
 Codex chọn lọc đã được user duyệt: theo cost-catalog; kiểm allowance ≤5 phút, unknown không mở thêm Codex worker ngoài benchmark được chỉ định; coordinator Codex vẫn điều phối. Tối đa 1 Codex worker live ngoài coordinator; quota không gate Cursor. Ghi requested/effective, effort, source allowance và reset; không suy allowance từ tokens.
 
@@ -29,13 +29,15 @@ Trước spawn, Spec phải có `Skills cần nạp` (tên/mục đích), mẫu 
 2. Cấm inherit UI; inherit chỉ sau reject pin cùng band — ghi limitation.
 3. Reuse khi cùng context và pin/effort phù hợp; cheap/standard cùng Composer không buộc spawn mới. Không reuse pane có model/effort cao hơn budget task.
 4. **Wave D:** sau wave `node scripts/orca-cost-wave-evidence.mjs` — `inherit%` > 20% → refresh pin, dừng spawn.
-5. **Wave E:** trước `worker-start` fresh: `node scripts/orca-spawn-model-preflight.mjs -- --agent cursor --model <pin> …`; Codex: `node scripts/orca-spawn-model-preflight.mjs -- --agent codex --model gpt-6-sol --effort medium …`
+5. **Wave E:** preflight và `agent-workflow-run.mjs start` bắt buộc `--cost-tier <tier>` khớp Task Spec và một mapping agent/model/effort trong catalog. Ví dụ mapping hiện tại: `--cost-tier advanced --agent codex --model gpt-6-sol --effort medium`. Preflight từ chối tổ hợp chưa đăng ký; wrapper giữ `--cost-tier` local, không gửi flag này vào Orca.
 6. Fan-out tối đa task ready theo `orca-parallel-workers.mdc`: ≤5 non-review + ≤3 reviewer; ≤1 feature/slice. CI evidence: `./scripts/gh-dod-evidence.sh` — stagger nếu ≥2 reviewer cùng gọi `gh` (`github-api-hygiene.mdc`).
 7. Giao Composer phần thực thi ít cần suy luận, gộp vào task phù hợp; lifecycle/hygiene vài lệnh coordinator làm inline, không spawn chỉ để đổi vài dòng.
 
+Worker/reviewer `focused|advanced|high` ưu tiên Claude Sonnet 5 trước Codex theo catalog; Codex là fallback cùng tier khi Claude không khả dụng/quota không đủ hoặc unknown, có evidence cần đổi provider hoặc user chỉ định, và phải ghi lý do; không đổi coordinator, không tăng caps. Claude chưa có quota adapter: kiểm `/usage` đúng tài khoản và ghi evidence trước dispatch; unknown thì hoãn Claude và xét quota Codex riêng, không lấy snapshot Codex làm quota Claude.
+
 ## Codex quota exhaustion (coordinator)
 
-Ngừng dispatch Codex; thu checkpoint (git/diff/logs); xác minh attempt đã dừng và settle theo Orca recovery trước khi spawn Cursor replacement cùng Task; không reset wt; Project giữ `Đang làm`/`Chờ duyệt`.
+Ngừng dispatch Codex; thu checkpoint (git/diff/logs); xác minh attempt đã dừng và settle theo Orca recovery. Chọn replacement từ mapping cùng tier đã đăng ký trong cost-catalog; nếu không có, giữ checkpoint. Hạ tier chỉ khi coordinator đã phân loại lại scope còn lại; phần vẫn thuộc `high` phải dùng route `high`. Không reset wt; Project giữ `Đang làm`/`Chờ duyệt`.
 
 ## Review + merge
 
@@ -48,3 +50,6 @@ Trước giao review/fix: **Read** [orca-review-convergence.mdc](./orca-review-c
 Dùng [Task Spec ngắn](../../docs/agents/templates/task-spec.md) và yêu cầu [báo cáo worker ngắn](../../docs/agents/templates/worker-report.md). Composer thu evidence bằng `node scripts/agent-evidence.mjs` khi cần bàn giao; xem [context-budget](../../docs/agents/context-budget.md). Tóm tắt trước, mở code/log liên quan khi cần xác minh; không dùng summary để bỏ review độc lập hoặc gate bắt buộc. Checkpoint giữ SHA, findings/lượt fix, quyết định và bước tiếp; không đọc lại tài liệu chưa đổi trong cùng session.
 
 Coordinator gốc dùng Codex theo chỉ định user. Composer thực hiện task có spec/AC rõ, coding thường lệ, docs/tests, thu log/CI và sửa lỗi có nguyên nhân đã xác định. Codex tập trung chia task, quyết định, tổng hợp findings và xử lý blocker. Chỉ mở thêm Codex worker khi cần suy luận sâu theo cost-catalog; không dùng Codex worker cho checklist hoặc thu log thuần túy.
+
+- Tiết kiệm quota: việc khó nhưng scope rõ/rủi ro giới hạn mặc định `advanced`; `high` cần lý do rủi ro/kiến trúc cụ thể (`--tier-reason`). Không hạ phần auth/tenant/RLS, transaction/race, migration rủi ro hoặc verdict invariant nhạy cảm.
+- Quota trước dispatch theo cost-catalog: dự phòng 20%, việc thường hoãn khi chạm ngưỡng; dùng dự phòng cần `--essential-reason`. Hết/unknown/stale chặn worker Codex mới; không tự downgrade hoặc đổi billing. Provider khác kiểm thủ công; xác minh account snapshot trùng worker.

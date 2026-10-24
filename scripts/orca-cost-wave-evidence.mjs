@@ -11,6 +11,7 @@
  *   node scripts/orca-cost-wave-evidence.mjs --comments-only
  */
 import { execFileSync } from "node:child_process";
+import { COST_TIERS, LEGACY_COST_TIERS } from "./lib/agent-cost-tiers.mjs";
 
 const commentsOnly = process.argv.includes("--comments-only");
 
@@ -21,13 +22,18 @@ function orcaJson(args) {
 
 const PIN_RE =
   /\bmodel\s+(gpt-6-sol|composer-2\.5|claude-sonnet-5-thinking-low|grok-4\.7-low|gemini-3\.7-flash-low)\b/i;
-const TIER_RE = /\bCost\s+(cheap|standard|heavy)\b/i;
-const TIER_DN_RE = /\b(cheap|standard|heavy)\b/i;
+const TIER_VALUES = [...COST_TIERS, ...Object.keys(LEGACY_COST_TIERS)].join("|");
+const TIER_RE = new RegExp(`\\bCost(?:\\s+tier)?[\\s:*\x60]*(?:=\\s*)?(${TIER_VALUES})(?![\\w-])`, "i");
+const TIER_DN_RE = new RegExp(`(?:^|[\\s·|])(${TIER_VALUES})(?=$|[\\s·|])`, "i");
 const INHERIT_RE = /\binherit\b|\bmodel\s+auto\b/i;
 
 function tierFromBlob(blob) {
-  const m = blob.match(TIER_RE) || blob.match(TIER_DN_RE);
+  const m = blob.match(TIER_RE);
   return m?.[1]?.toLowerCase() || null;
+}
+
+function tierFromName(name) {
+  return tierFromBlob(name) || name.match(TIER_DN_RE)?.[1]?.toLowerCase() || null;
 }
 
 function commentPin(blob) {
@@ -52,9 +58,8 @@ for (const w of list.result?.worktrees ?? []) {
   }
 }
 
-let cheap = 0,
-  standard = 0,
-  unknown = 0,
+const tiers = Object.fromEntries(COST_TIERS.map((tier) => [tier, 0]));
+let unknown = 0,
   pinned = 0,
   inherit = 0;
 const models = [];
@@ -63,8 +68,8 @@ let commentRows = 0;
 let mixedRows = 0;
 
 function bumpTier(tier) {
-  if (tier === "cheap") cheap++;
-  else if (tier === "standard" || tier === "heavy") standard++;
+  if (Object.hasOwn(LEGACY_COST_TIERS, tier)) tier = LEGACY_COST_TIERS[tier];
+  if (Object.hasOwn(tiers, tier)) tiers[tier]++;
   else unknown++;
 }
 
@@ -105,7 +110,7 @@ if (commentsOnly) {
     if (!w || w.isMainWorktree) continue;
     if (live.length && !paths.has(w.path)) continue;
     const blob = `${w.comment || ""}\n${w.displayName || ""}`;
-    bumpTier(tierFromBlob(blob));
+    bumpTier(tierFromBlob(blob) || tierFromName(w.displayName || ""));
     const c = commentPin(blob);
     commentRows++;
     if (c.kind === "pinned") {
@@ -121,8 +126,12 @@ if (commentsOnly) {
     const id = w.resource?.worktreeId ?? "";
     const path = id.includes("::") ? id.split("::").pop() : id;
     const wt = path ? wtByPath.get(path) : null;
-    const blob = `${wt?.comment || ""}\n${wt?.displayName || ""}\n${w.taskTitle || ""}\n${taskById.get(w.taskId)?.spec || ""}`;
-    bumpTier(tierFromBlob(blob) || tierFromBlob(w.taskTitle || ""));
+    const spec = taskById.get(w.taskId)?.spec || "";
+    const title = w.taskTitle || "";
+    const wtBlob = `${wt?.comment || ""}\n${wt?.displayName || ""}`;
+    const blob = `${wtBlob}\n${title}\n${spec}`;
+    // Task declarations take precedence over stale worktree comments.
+    bumpTier(tierFromBlob(spec) || tierFromName(title) || tierFromBlob(wtBlob) || tierFromName(wt?.displayName || ""));
 
     let launch = null;
     try {
@@ -160,7 +169,7 @@ if (commentsOnly) {
   }
 }
 
-const n = cheap + standard + unknown;
+const n = Object.values(tiers).reduce((sum, count) => sum + count, 0) + unknown;
 const inheritPct = n ? Math.round((inherit * 1000) / n) / 10 : 0;
 const run = live[0]?.runId ?? workers[0]?.runId ?? "run_?";
 
@@ -171,7 +180,7 @@ if (!commentsOnly && live.length) {
   else source = "wt-comment-estimate";
 }
 
-const line = `cost-wave | run=${run} | n=${n} active | cheap=${cheap} standard=${standard} unknown=${unknown} | pinned=${pinned} inherit=${inherit} | inherit%=${inheritPct} | models=${[...new Set(models)].join(",") || "-"} | source=${source}`;
+const line = `cost-wave | run=${run} | n=${n} active | ${Object.entries(tiers).map(([tier, count]) => `${tier}=${count}`).join(" ")} unknown=${unknown} | pinned=${pinned} inherit=${inherit} | inherit%=${inheritPct} | models=${[...new Set(models)].join(",") || "-"} | source=${source}`;
 
 console.log(line);
 if (inheritPct > 20) {

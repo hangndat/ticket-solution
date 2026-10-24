@@ -41,6 +41,7 @@
     "agent:evidence": "node scripts/agent-evidence.mjs",
     "agent:guard": "node scripts/agent-workflow-guard.mjs",
     "agent:workflow": "node scripts/agent-workflow-run.mjs",
+    "agent:cost:test": "node --test scripts/lib/agent-quota-policy.test.mjs scripts/orca-spawn-model-preflight.test.mjs scripts/orca-cost-wave-evidence.test.mjs scripts/agent-workflow-run.test.mjs",
     "agent:review-publish": "node scripts/agent-review-publish.mjs",
     "agent:telemetry": "node scripts/agent-role-monitor/telemetry.mjs",
     "agent:workflow:test": "node --test scripts/agent-evidence.test.mjs scripts/agent-workflow-guard.test.mjs scripts/agent-workflow-run.test.mjs scripts/agent-review-publish.test.mjs scripts/agent-role-monitor/*.test.mjs"
