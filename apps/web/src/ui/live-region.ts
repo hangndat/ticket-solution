@@ -1,5 +1,5 @@
 /**
- * Live-region contract for redeem/admin/gate status chrome (UX-10 A5).
+ * Live-region contract for redeem/admin status chrome (UX-10 A5).
  * unknown / queued → assertive alert; other status → polite status.
  * Does not claim WCAG AA for the whole app.
  */

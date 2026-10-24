@@ -25,6 +25,14 @@ describe('marketing copy VI/EN', () => {
     assert.notEqual(t('vi', 'interest.name'), t('en', 'interest.name'));
   });
 
+  it('O23 VD-02: marketing copy does not advertise live web gate URL', () => {
+    for (const locale of ['vi', 'en'] as const) {
+      const blob = allCopyValues(locale).join('\n');
+      assert.doesNotMatch(blob, /app\.vemoki\.com\/gate/i);
+      assert.doesNotMatch(blob, /web fallback/i);
+    }
+  });
+
   it('AC-6: no forbidden product claims in copy bundles', () => {
     for (const locale of ['vi', 'en'] as const) {
       const blob = allCopyValues(locale).join('\n');
