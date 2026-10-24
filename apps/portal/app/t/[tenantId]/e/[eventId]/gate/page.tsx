@@ -11,7 +11,6 @@ import { bffEventAction } from '../../../../../../src/prep/bff-urls';
 import {
   formatQuotaCapacityState,
   formatQuotaRemaining,
-  formatReportAsOf,
   interpretEventReport,
   reportEmailCsHref,
   reportPendingApprovalHref,
@@ -21,6 +20,8 @@ import {
 } from '../../../../../../src/ops/report';
 import { useEventAccess } from '../../../../../../src/prep/use-event-access';
 import { GateStayAppNotice } from '../../../../../../src/components/gate-deeplink';
+import { EventReportAsOfLine } from '../../../../../../src/components/event-report-as-of';
+import { ReportStaleAlert } from '../../../../../../src/components/report-stale-alert';
 import { SurfaceState } from '../../../../../../src/components/surface-state';
 import {
   formatTicketStateCountLabel,
@@ -91,6 +92,14 @@ export default function EventGateReportPage() {
     <PortalPage title={t('gate.h_1klnels')}>
       <GateStayAppNotice />
 
+      {shown ? (
+        <ReportStaleAlert
+          asOf={shown.asOf}
+          loading={busy}
+          onRefresh={() => void load()}
+        />
+      ) : null}
+
       {report?.kind === 'unknown' || report?.kind === 'rejected' ? (
         <Alert
           type="warning"
@@ -114,10 +123,9 @@ export default function EventGateReportPage() {
       {shown ? (
         <>
           <StatisticCard.Group
+            className="portal-gate-report-compact"
             title={t('gate.report.snapshotTitle')}
-            subTitle={t('analytics.asOfTag', {
-              asOf: `${formatReportAsOf(shown.asOf, locale)} UTC`,
-            })}
+            subTitle={<EventReportAsOfLine asOf={shown.asOf} />}
           >
             <StatisticCard
               statistic={{
