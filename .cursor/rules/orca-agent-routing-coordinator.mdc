@@ -13,7 +13,7 @@ Trước mỗi spawn: ghi agent, Cost tier, Persona, model requested/effective, 
 
 Worker mới dùng `scripts/agent-workflow-run.mjs start` để preflight + snapshot allowance + lưu receipt; sau settlement hợp lệ dùng `settle` để collect transcript/token metadata trước release. Reuse terminal giữ receipt model gốc, snapshot theo wave và collect thủ công; thiếu source báo unknown. Coordinator Codex cũng phải có provider baseline tại boundary cần đo. Hướng dẫn chỉ đọc khi áp dụng: [workflow evidence/telemetry](../../docs/agents/workflow-evidence-telemetry.md). Không quy token/cache thành quota tiết kiệm.
 
-**Persona argv:** mỗi `task-create` / `worker-start` fresh phải có `--display-name` **và** `--task-title` (cùng prefix Persona — xem `docs/agents/README.md`). Sau wave: `task-list --json` → `display_name` + `title` khác null. `worker-task_*` trên cây worktree ≠ thiếu Persona.
+**Persona argv:** mỗi `task-create` có `--display-name` **và** `--task-title` cùng prefix Persona (xem `docs/agents/README.md`). `worker-start` trên current/existing lấy Persona từ Task; không truyền creation flag `--display-name`. Chỉ truyền flag đó khi tạo worktree mới. Sau wave: `task-list --json` → `display_name` + `title` khác null. `worker-task_*` trên cây worktree ≠ thiếu Persona.
 
 Codex chọn lọc đã được user duyệt: theo cost-catalog; kiểm allowance ≤5 phút, unknown không mở thêm Codex worker ngoài benchmark được chỉ định; coordinator Codex vẫn điều phối. Tối đa 1 Codex worker live ngoài coordinator; quota không gate Cursor. Ghi requested/effective, effort, source allowance và reset; không suy allowance từ tokens.
 
