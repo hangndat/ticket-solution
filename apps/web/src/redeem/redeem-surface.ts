@@ -1,4 +1,5 @@
 import { cn } from '../../lib/utils';
+import { attendeeProductAtmosphere } from '../attendee-surface';
 
 /**
  * Redeem route (/redeem) + shared guest-flow primitives — Tailwind v4 + @theme tokens (D-1).
@@ -14,7 +15,15 @@ export const lpPageShell = cn(
   'min-[760px]:px-12 min-[760px]:pb-[70px]',
 );
 
-export const redeemPageMain = cn(lpPageShell, '[--brand:var(--color-signal)]');
+export const redeemPageMain = cn(
+  attendeeProductAtmosphere,
+  lpPageShell,
+  '[--brand:var(--color-signal)]',
+);
+
+export const redeemEyebrow = cn(
+  'm-0 mb-2 text-[0.75rem] font-bold uppercase tracking-[0.14em] text-signal',
+);
 
 export const introLead = 'max-w-[570px] text-[1.15rem] leading-[1.65]';
 
