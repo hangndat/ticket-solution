@@ -1,6 +1,6 @@
 # Roadmap Epic #580 — Refactor trải nghiệm production (mobile)
 
-> **Refactor app production — O18, 20/10/2026:** Issue [#580](https://github.com/hangndat/ticket-solution/issues/580), [gói kế hoạch hiện hành](README.md), [DECISION-LOG O18](../../DECISION-LOG.md). Authority: [README.md](README.md) thắng `archive/`.
+> **Refactor app production — Issue #580, 20/10/2026:** [Issue và phê duyệt](https://github.com/hangndat/ticket-solution/issues/580), [gói handoff](README.md). “O18” trong các bảng lịch sử bên dưới là nhãn cũ của gói mobile; [DECISION-LOG.md](../../DECISION-LOG.md) dùng O18 cho Portal, không phải authority mobile. [README.md](README.md) thắng `archive/`.
 
 > **Đối chiếu 24/10/2026:** đây là roadmap và ma trận gap tại thời điểm thiết kế, không phải danh sách task live. Wave 1 đã có PR #586, #587 và #597 merge; Issue #580 đã đóng. §1, §4, §7 và §8 giữ nguyên để truy vết đề xuất ban đầu. Trạng thái hiện hành lấy từ [Project #3](https://github.com/users/hangndat/projects/3), PR và evidence exact SHA; các AC/UAT chưa được xác nhận chỉ bằng việc merge. Xem [README](README.md).
 

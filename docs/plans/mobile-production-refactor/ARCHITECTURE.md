@@ -1,6 +1,7 @@
 # Kiến trúc — Refactor trải nghiệm production (mobile)
 
 > Handoff kiến trúc ngày 20/10/2026. Các phần “đề xuất” và bảng hiện trạng phản ánh thời điểm lập kế hoạch; catalog API, mobile catalog/Tài khoản và ví owner đã lần lượt merge qua PR #586, #587, #597. Đối chiếu implementation và trạng thái nghiệm thu trên PR/SHA, không suy từ bản thiết kế này.
+> “O18” trong handoff là nhãn cũ của gói mobile #580; DECISION-LOG O18 hiện chỉ quyết định Portal Pro Components. Xem [README](./README.md) để phân biệt authority.
 
 | Trường | Giá trị |
 | --- | --- |
@@ -8,7 +9,7 @@
 | **Role** | Architect ([`docs/agents/roles/architect.md`](../../../docs/agents/roles/architect.md)) |
 | **Revision** | 2026-10-20 — follow-up coordinator freeze (`task_a1d832cc4ffc`) |
 | **Base SHA** | `6ba435ebfaf810e2a15149761e16abd193368280` (`main`; mobile dirty — chỉ đọc) |
-| **Authority** | [README](./README.md) · [O18](../../DECISION-LOG.md#o18--refactor-app-production-tài-khoản-thông-báo-catalog-toàn-platform-20102026) · [PRD](../../PRD.md) · [TECHNICAL-DESIGN](../../TECHNICAL-DESIGN.md) · [ADR-19](../../ops/ADR-19-EVENT-SERVER-SOURCE.md) |
+| **Authority** | [README](./README.md) · [Issue #580](https://github.com/hangndat/ticket-solution/issues/580) · [PRD](../../PRD.md) · [TECHNICAL-DESIGN](../../TECHNICAL-DESIGN.md) · [ADR-19](../../ops/ADR-19-EVENT-SERVER-SOURCE.md) |
 | **Trạng thái** | **Đủ để triển khai trong scope O18** — contract catalog platform + aggregate wallet là **đề xuất kỹ thuật** (§4, §6); amendment ADR-19 do coordinator cấp ID |
 | **Phân loại** | Design — không code / acceptance / pilot ready |
 

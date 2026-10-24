@@ -4,7 +4,7 @@
 **Role:** `product-design` · **Persona:** Liv · **Cost tier:** standard · **Architecture impact:** Có (IA Account + luồng quyền thông báo)\
 **Visual budget:** Có — [`brand/vemoki/tokens.json`](../../../brand/vemoki/tokens.json), [`docs/design/visual-identity-v2/visual-notes.md`](../../design/visual-identity-v2/visual-notes.md)\
 **Prototype:** [`prototype.html`](./prototype.html) — **PREVIEW ONLY**, không API, không dữ liệu production\
-**Authority:** [`README.md`](./README.md) (O18 / quyết định user 20/10/2026)
+**Authority:** [`README.md`](./README.md) (Issue #580 / quyết định user 20/10/2026; “O18” là nhãn cũ của gói mobile, không phải DECISION-LOG O18)
 
 | Mốc | Trạng thái |
 | --- | --- |

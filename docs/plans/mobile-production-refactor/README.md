@@ -1,6 +1,7 @@
-# Refactor trải nghiệm production — quyết định và handoff O18
+# Refactor trải nghiệm production — quyết định và handoff #580
 
 **Trạng thái đối chiếu 24/10/2026:** user đã duyệt thiết kế, mockup và roadmap ngày 20/10. Wave 1 đã có [PR #586](https://github.com/hangndat/ticket-solution/pull/586) (catalog API), [PR #587](https://github.com/hangndat/ticket-solution/pull/587) (mobile catalog/Tài khoản) và [PR #597](https://github.com/hangndat/ticket-solution/pull/597) (ví owner) merge vào `main`; Issue [#580](https://github.com/hangndat/ticket-solution/issues/580) đã đóng. Các gap và task trong [ROADMAP.md](ROADMAP.md) là snapshot lúc lập kế hoạch, không phải trạng thái triển khai live. Lấy tiến độ từ [Project #3](https://github.com/users/hangndat/projects/3) và evidence trên PR/SHA; việc merge không tự chứng minh toàn bộ AC, UAT iPhone vật lý hoặc pilot ready.
+**ID quyết định:** các handoff cũ dùng “O18” làm nhãn của gói mobile #580. Trong [DECISION-LOG.md](../../DECISION-LOG.md), O18 là quyết định Portal Pro Components; không dùng entry đó làm authority cho mobile. Authority của gói này là yêu cầu và phê duyệt trên Issue #580 cùng các artifact liên kết ở đây.
 Run: `run_526c9a272efd`. Nguồn quyết định: user ngày 20/10/2026.
 
 ## Quyết định đã chốt
