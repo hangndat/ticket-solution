@@ -1,0 +1,28 @@
+[
+  {
+    "page": "55750899-6fd3-4c07-a60b-5379f000cada",
+    "active": true,
+    "result": {
+      "now": 4573980.599999994,
+      "raf": {
+        "requested": 4572192.5,
+        "fired": 4572193.6
+      },
+      "visibility": "visible",
+      "animations": []
+    }
+  },
+  {
+    "page": "d9e2651f-94d9-4211-a51a-693da1b48859",
+    "active": true,
+    "result": {
+      "now": 448201.5,
+      "raf": {
+        "requested": 446412,
+        "fired": 447153.6
+      },
+      "visibility": "visible",
+      "animations": []
+    }
+  }
+]

@@ -1,0 +1,35 @@
+{
+  "capture": "consumer-390-reduced-vi",
+  "url": "http://localhost:3000/",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "sourceSha": "b2faa48a1ce443c8fc6c849cb74a06a57f8b0c37",
+  "sheetSha": "868394be232360aabde907ed37524243505827054887357eae32d2dad80e677b",
+  "open": {
+    "surface": "consumer",
+    "viewport": {
+      "innerWidth": 390,
+      "innerHeight": 844,
+      "dpr": 1
+    },
+    "dialogOpen": true,
+    "widthComputed": "320px",
+    "rectWidth": 353,
+    "narrowStripe": false,
+    "cssSupportsOld": false,
+    "cssSupportsFixed": true
+  },
+  "afterEscape": {
+    "timelineCurrentTime": 7223.388,
+    "dialogPresent": false,
+    "dialogState": null,
+    "focusInClosedDialog": false,
+    "focusOnTrigger": true,
+    "activeTestId": "nav-menu-toggle",
+    "animCount": 0,
+    "animSnap": [],
+    "reducedMotion": true
+  }
+}
