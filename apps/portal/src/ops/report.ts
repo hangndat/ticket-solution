@@ -117,6 +117,19 @@ export function formatQuotaRemaining(
   return t(locale, 'ops.h_1lsqc1u');
 }
 
+/** Client UX: watermark older than this is shown as stale (VD-03 portal report). */
+export const REPORT_STALE_AFTER_MS = 5 * 60 * 1000;
+
+export function isReportDataStale(
+  asOfIso: string,
+  nowMs = Date.now(),
+  maxAgeMs = REPORT_STALE_AFTER_MS,
+): boolean {
+  const asOfMs = Date.parse(asOfIso);
+  if (Number.isNaN(asOfMs)) return false;
+  return nowMs - asOfMs > maxAgeMs;
+}
+
 export function formatReportAsOf(
   asOf: string,
   locale: PortalLocale = DEFAULT_PORTAL_LOCALE,
