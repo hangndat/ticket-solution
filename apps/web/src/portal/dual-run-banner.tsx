@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import {
   isDualRunBannerEnabled,
   portalHref,
@@ -50,8 +49,10 @@ export function DualRunBanner({
         <a href={href} data-testid="portal-dual-run-cta">
           Mở trên portal →
         </a>
-        {' · '}
-        <Link href="/gate">Cổng quét vẫn trên app</Link>
+      </p>
+      <p data-testid="portal-dual-run-gate-ios">
+        Quét vé cổng chỉ trên ứng dụng <strong>Vemoki Staff</strong> (iOS) — không
+        còn scanner trên web.
       </p>
     </aside>
   );
