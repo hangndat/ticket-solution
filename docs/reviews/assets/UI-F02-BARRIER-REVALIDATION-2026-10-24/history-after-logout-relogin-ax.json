@@ -1,0 +1,306 @@
+{
+  "at": "2026-10-24T01:26:47.852Z",
+  "id": "7255f296-6283-4bff-92f1-b0123883d3b4",
+  "ok": true,
+  "result": [
+    {
+      "role": "application",
+      "type": "Application",
+      "label": "Vemoki",
+      "value": "",
+      "enabled": true,
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      },
+      "children": [
+        {
+          "role": "Nav bar",
+          "type": "Group",
+          "label": "",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0,
+            "y": 0.0692,
+            "width": 1,
+            "height": 0.1311
+          },
+          "children": [],
+          "id": "MFest · Demo"
+        },
+        {
+          "role": "heading",
+          "type": "Heading",
+          "label": "Lịch sử trên máy này",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.0509,
+            "y": 0.2238,
+            "width": 0.8982,
+            "height": 0.0254
+          },
+          "children": []
+        },
+        {
+          "role": "text",
+          "type": "StaticText",
+          "label": "Trên thiết bị này · MFest · Demo",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.0509,
+            "y": 0.2516,
+            "width": 0.8982,
+            "height": 0.0215
+          },
+          "children": []
+        },
+        {
+          "role": "text",
+          "type": "StaticText",
+          "label": "Đối soát mã lượt đã biết",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.0509,
+            "y": 0.2825,
+            "width": 0.8982,
+            "height": 0.0262
+          },
+          "children": []
+        },
+        {
+          "role": "text",
+          "type": "StaticText",
+          "label": "Nhập mã lượt (UUID) từ biên nhận đồng bộ — chỉ trong sự kiện đang chọn, không tìm vé.",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.0509,
+            "y": 0.3181,
+            "width": 0.8982,
+            "height": 0.0426
+          },
+          "children": []
+        },
+        {
+          "role": "text field",
+          "type": "TextField",
+          "label": "Mã lượt UUID đã biết",
+          "value": "Mã lượt UUID",
+          "enabled": true,
+          "frame": {
+            "x": 0.0534,
+            "y": 0.3713,
+            "width": 0.8931,
+            "height": 0.054
+          },
+          "children": []
+        },
+        {
+          "role": "button",
+          "type": "Button",
+          "label": "Đối soát mã lượt đã biết",
+          "value": "",
+          "enabled": false,
+          "frame": {
+            "x": 0.0509,
+            "y": 0.4358,
+            "width": 0.8982,
+            "height": 0.0516
+          },
+          "children": []
+        },
+        {
+          "role": "text field",
+          "type": "TextField",
+          "label": "Tìm trong các lượt đã tải",
+          "value": "Tìm trong các lượt đã tải",
+          "enabled": true,
+          "frame": {
+            "x": 0.0534,
+            "y": 0.498,
+            "width": 0.8931,
+            "height": 0.054
+          },
+          "children": []
+        },
+        {
+          "role": "text",
+          "type": "StaticText",
+          "label": "Chưa có lượt quét trên thiết bị này.",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.0509,
+            "y": 0.5626,
+            "width": 0.8982,
+            "height": 0.0262
+          },
+          "children": []
+        },
+        {
+          "role": "group",
+          "type": "Group",
+          "label": "Tab Bar",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0,
+            "y": 0.9026,
+            "width": 1,
+            "height": 0.0974
+          },
+          "children": []
+        },
+        {
+          "role": "text",
+          "type": "StaticText",
+          "label": "9:26 AM",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.1349,
+            "y": 0.0223,
+            "width": 0.095,
+            "height": 0.0239
+          },
+          "children": []
+        },
+        {
+          "role": "",
+          "type": "GenericElement",
+          "label": "Dynamic Island, Empty",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.341,
+            "y": 0.0133,
+            "width": 0.3181,
+            "height": 0.043
+          },
+          "children": []
+        },
+        {
+          "role": "",
+          "type": "GenericElement",
+          "label": "Cellular",
+          "value": "No signal",
+          "enabled": true,
+          "frame": {
+            "x": 0.7176,
+            "y": 0.027,
+            "width": 0.0492,
+            "height": 0.0145
+          },
+          "children": []
+        },
+        {
+          "role": "",
+          "type": "GenericElement",
+          "label": "100% battery power",
+          "value": "Not charging",
+          "enabled": true,
+          "frame": {
+            "x": 0.8473,
+            "y": 0.0266,
+            "width": 0.0696,
+            "height": 0.0153
+          },
+          "children": []
+        },
+        {
+          "role": "heading",
+          "type": "Heading",
+          "label": "MFest · Demo",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.0407,
+            "y": 0.1369,
+            "width": 0.5437,
+            "height": 0.0544
+          },
+          "children": []
+        },
+        {
+          "role": "button",
+          "type": "Button",
+          "label": "Tài khoản",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.4996,
+            "y": 0.0739,
+            "width": 0.0916,
+            "height": 0.0423
+          },
+          "children": []
+        },
+        {
+          "role": "button",
+          "type": "Button",
+          "label": "More",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.8575,
+            "y": 0.0739,
+            "width": 0.0916,
+            "height": 0.0423
+          },
+          "children": []
+        },
+        {
+          "role": "tab",
+          "type": "RadioButton",
+          "label": "Nhập tay",
+          "value": "0",
+          "enabled": true,
+          "frame": {
+            "x": 0.1628,
+            "y": 0.9073,
+            "width": 0.2392,
+            "height": 0.0634
+          },
+          "children": []
+        },
+        {
+          "role": "tab",
+          "type": "RadioButton",
+          "label": "Quét vé",
+          "value": "0",
+          "enabled": true,
+          "frame": {
+            "x": 0.3817,
+            "y": 0.9073,
+            "width": 0.2392,
+            "height": 0.0634
+          },
+          "children": []
+        },
+        {
+          "role": "tab",
+          "type": "RadioButton",
+          "label": "Lịch sử",
+          "value": "1",
+          "enabled": true,
+          "frame": {
+            "x": 0.6005,
+            "y": 0.9073,
+            "width": 0.2392,
+            "height": 0.0634
+          },
+          "children": []
+        }
+      ]
+    }
+  ],
+  "_meta": {
+    "runtimeId": "9d821662-c628-49db-a168-99fa7b7636fc"
+  }
+}

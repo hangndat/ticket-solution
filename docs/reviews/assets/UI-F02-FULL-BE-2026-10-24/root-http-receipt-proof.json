@@ -1,0 +1,42 @@
+{
+  "capturedAt": "2026-10-23T18:01:25.012729+00:00",
+  "baseSha": "b2faa48a1ce443c8fc6c849cb74a06a57f8b0c37",
+  "dirty": true,
+  "jwtClaims": {
+    "iat": 1792778458,
+    "exp": 1792778758,
+    "sub": "6daa25c7-ebe8-4148-917b-03ec3362a36a",
+    "aud": "ticket-api"
+  },
+  "cases": {
+    "unauthenticated": {
+      "http": 401,
+      "body": {
+        "code": "UNAUTHENTICATED",
+        "retryable": false
+      }
+    },
+    "legacyReceipt": {
+      "http": 200,
+      "body": {
+        "tenantId": "d9d9f001-0001-4000-8000-000000000001",
+        "eventId": "d9d9f001-0002-4000-8000-000000000001",
+        "clientEventId": "6c812d24-2d8e-44eb-b55d-23c358e75f09",
+        "status": "APPLIED",
+        "historical": true,
+        "ticketId": "e93ddc6b-1f8f-4716-afb6-e4eabbbdfabe",
+        "checkinId": "46a428ee-10df-479b-abcd-945f967de183",
+        "staffSessionId": "b5158021-2e23-4587-9e20-caa6a6a2bf6b",
+        "appliedAt": "2026-10-23T15:00:03.261Z",
+        "checkinState": "CURRENT"
+      }
+    },
+    "unknownReceipt": {
+      "http": 404,
+      "body": {
+        "code": "OFFLINE_SYNC_RECEIPT_NOT_FOUND",
+        "retryable": true
+      }
+    }
+  }
+}

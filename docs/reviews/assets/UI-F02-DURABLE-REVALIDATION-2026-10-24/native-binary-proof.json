@@ -1,0 +1,23 @@
+{
+  "at": "2026-10-24T02:21:51.620265+00:00",
+  "device": "B0727247-340D-423A-8547-A6C107A9756A",
+  "files": {
+    ".orca-metrics/fix-all/durable-native-build/SignedDerivedData/Build/Products/Debug-iphonesimulator/Vemoki.app/Vemoki": "02a529f3fb1256b7e3e5f1e73f5cd5fd2dd2bd6f6125abf0e30e930fa46a7084",
+    "/Users/admin/Library/Developer/CoreSimulator/Devices/B0727247-340D-423A-8547-A6C107A9756A/data/Containers/Bundle/Application/940D9F7F-F164-4D2B-8A68-279915AD1760/Vemoki.app/Vemoki": "02a529f3fb1256b7e3e5f1e73f5cd5fd2dd2bd6f6125abf0e30e930fa46a7084",
+    ".orca-metrics/fix-all/durable-native-build/xcodebuild-signed-final.log": "6eae823ea18151b33f9c5005bf76d7427bbfb6f954d1d4004f381dc3aac18c39",
+    "apps/mobile/modules/gate-keychain-index/ios/GateKeychainIndexModule.swift": "a02c57220628be5b7f7575bc7421c9fb689adf7561b498bee0a856c1e6782403",
+    "apps/mobile/modules/gate-keychain-index/ios/GateKeychainIndex.podspec": "31db56be0bcd9c1776dbeb9a6949d52b8392e352939acd12a9a91b824ae6fd96"
+  },
+  "installedMatchesBuild": true,
+  "debugDylibs": {
+    "__preview.dylib": {
+      "built": "19e6a8588f9cdc593925c93705f288badca3b0578af03b3fd2a2e6cf089ee670",
+      "installed": "19e6a8588f9cdc593925c93705f288badca3b0578af03b3fd2a2e6cf089ee670"
+    },
+    "Vemoki.debug.dylib": {
+      "built": "6d8cf52dac80ba7ac00b49cd886c5dd1d7c9b41f5386798eb2f0b242b70322b9",
+      "installed": "6d8cf52dac80ba7ac00b49cd886c5dd1d7c9b41f5386798eb2f0b242b70322b9"
+    }
+  },
+  "installedDylibsMatch": true
+}

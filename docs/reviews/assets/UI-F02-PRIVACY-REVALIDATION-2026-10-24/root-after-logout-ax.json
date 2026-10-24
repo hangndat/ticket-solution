@@ -1,0 +1,234 @@
+{
+  "id": "338d4f80-6aa8-4c48-89f2-f75ea41583f2",
+  "ok": true,
+  "result": [
+    {
+      "role": "application",
+      "type": "Application",
+      "label": "Vemoki",
+      "value": "",
+      "enabled": true,
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      },
+      "children": [
+        {
+          "role": "heading",
+          "type": "Heading",
+          "label": "Tài khoản",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.3851,
+            "y": 0.081,
+            "width": 0.229,
+            "height": 0.0282
+          },
+          "children": []
+        },
+        {
+          "role": "heading",
+          "type": "Heading",
+          "label": "BẠN",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.0509,
+            "y": 0.1561,
+            "width": 0.8982,
+            "height": 0.0215
+          },
+          "children": []
+        },
+        {
+          "role": "text",
+          "type": "StaticText",
+          "label": "Chưa đăng nhập",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.0916,
+            "y": 0.2011,
+            "width": 0.8168,
+            "height": 0.0297
+          },
+          "children": []
+        },
+        {
+          "role": "text",
+          "type": "StaticText",
+          "label": "Đăng nhập để xem vé trên thiết bị này.",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.0916,
+            "y": 0.2332,
+            "width": 0.8168,
+            "height": 0.0239
+          },
+          "children": []
+        },
+        {
+          "role": "text",
+          "type": "StaticText",
+          "label": "Đăng nhập",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.0916,
+            "y": 0.2864,
+            "width": 0.8168,
+            "height": 0.0297
+          },
+          "children": []
+        },
+        {
+          "role": "heading",
+          "type": "Heading",
+          "label": "THÔNG BÁO",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.0509,
+            "y": 0.3537,
+            "width": 0.8982,
+            "height": 0.0215
+          },
+          "children": []
+        },
+        {
+          "role": "text",
+          "type": "StaticText",
+          "label": "Chưa hỗ trợ thông báo trên phiên bản này",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.0916,
+            "y": 0.3987,
+            "width": 0.8168,
+            "height": 0.0591
+          },
+          "children": []
+        },
+        {
+          "role": "heading",
+          "type": "Heading",
+          "label": "QUYỀN RIÊNG TƯ & DỮ LIỆU",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.0509,
+            "y": 0.4953,
+            "width": 0.8982,
+            "height": 0.0215
+          },
+          "children": []
+        },
+        {
+          "role": "text",
+          "type": "StaticText",
+          "label": "Chính sách quyền riêng tư",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.0916,
+            "y": 0.5403,
+            "width": 0.7642,
+            "height": 0.0297
+          },
+          "children": []
+        },
+        {
+          "role": "",
+          "type": "GenericElement",
+          "label": "In progress",
+          "value": "1",
+          "enabled": true,
+          "frame": {
+            "x": 0.475,
+            "y": 0.617,
+            "width": 0.0509,
+            "height": 0.0235
+          },
+          "children": []
+        },
+        {
+          "role": "text",
+          "type": "StaticText",
+          "label": "Đang xử lý…",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.4037,
+            "y": 0.6498,
+            "width": 0.1925,
+            "height": 0.0215
+          },
+          "children": []
+        },
+        {
+          "role": "text",
+          "type": "StaticText",
+          "label": "3:52 AM",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.1349,
+            "y": 0.0223,
+            "width": 0.0941,
+            "height": 0.0239
+          },
+          "children": []
+        },
+        {
+          "role": "",
+          "type": "GenericElement",
+          "label": "Dynamic Island, Empty",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.341,
+            "y": 0.0133,
+            "width": 0.3181,
+            "height": 0.043
+          },
+          "children": []
+        },
+        {
+          "role": "",
+          "type": "GenericElement",
+          "label": "Cellular",
+          "value": "No signal",
+          "enabled": true,
+          "frame": {
+            "x": 0.7176,
+            "y": 0.027,
+            "width": 0.0492,
+            "height": 0.0145
+          },
+          "children": []
+        },
+        {
+          "role": "",
+          "type": "GenericElement",
+          "label": "100% battery power",
+          "value": "Not charging",
+          "enabled": true,
+          "frame": {
+            "x": 0.8473,
+            "y": 0.0266,
+            "width": 0.0696,
+            "height": 0.0153
+          },
+          "children": []
+        }
+      ]
+    }
+  ],
+  "_meta": {
+    "runtimeId": "9d821662-c628-49db-a168-99fa7b7636fc"
+  }
+}

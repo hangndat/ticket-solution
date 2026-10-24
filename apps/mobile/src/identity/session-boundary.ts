@@ -69,12 +69,20 @@ export class SessionBoundary {
 
   private store: CredentialStore;
   private refreshTokens: RefreshOidcTokens;
+  private beforeVerified?: (userId: string, generation: number, isCurrent: () => boolean) => Promise<void>;
+  private beforeSwitch?: (context: { epoch: SessionEpoch | null; bearer: string | null }) => Promise<void>;
   constructor(
     store: CredentialStore,
     refreshTokens: RefreshOidcTokens = refreshOidcTokens,
+    hooks: {
+      beforeVerified?: (userId: string, generation: number, isCurrent: () => boolean) => Promise<void>;
+      beforeSwitch?: (context: { epoch: SessionEpoch | null; bearer: string | null }) => Promise<void>;
+    } = {},
   ) {
     this.store = store;
     this.refreshTokens = refreshTokens;
+    this.beforeVerified = hooks.beforeVerified;
+    this.beforeSwitch = hooks.beforeSwitch;
   }
   getSnapshot = (): Identity => this.identity;
   subscribe = (listener: () => void) => {
@@ -219,6 +227,8 @@ export class SessionBoundary {
         return 'unreachable';
       }
       if (verified && typeof verified === 'object' && verified.userId) {
+        await this.beforeVerified?.(verified.userId, generation, () => generation === this.generation);
+        if (generation !== this.generation) return 'unknown';
         this.publish({ status: 'verified', userId: verified.userId });
         return 'verified';
       }
@@ -242,6 +252,14 @@ export class SessionBoundary {
     verify: VerifyCredential,
     tokens?: Omit<SessionTokenParts, 'accessToken'>,
   ) {
+    const startGeneration = this.generation;
+    const previous = this.captureEpoch();
+    const previousRaw = await this.storage(() => this.store.read());
+    const previousBearer = previous
+      ? await this.getCredential()
+      : previousRaw ? parseStoredCredential(previousRaw).accessToken : null;
+    if (previous || previousRaw) await this.beforeSwitch?.({ epoch: previous, bearer: previousBearer });
+    if (startGeneration !== this.generation) throw new Error('Phiên đăng nhập đã đổi. Vui lòng thử lại.');
     const generation = this.invalidate({ status: 'unknown' });
     // Remove the preceding account's credential even if verification fails.
     await this.storage(() => this.store.clear());
@@ -265,6 +283,13 @@ export class SessionBoundary {
       this.publish({ status: 'signed-out' });
       return;
     }
+    try {
+      await this.beforeVerified?.(verified.userId, generation, () => generation === this.generation);
+    } catch (error) {
+      if (generation === this.generation) this.publish({ status: 'unknown' });
+      throw error;
+    }
+    if (generation !== this.generation) return;
     await this.storage(() => this.store.write(stored));
     if (generation === this.generation)
       this.publish({ status: 'verified', userId: verified.userId });

@@ -22,6 +22,8 @@ const MOCK_HISTORY = [
     id: '1',
     at: new Date(Date.now() - 60_000).toISOString(),
     ticketLabel: 'VIP-001',
+    operationLabel: 'ce-demo…',
+    receiptLabel: '—',
     statusLabel: 'Đã vào',
     hint: 'MFest 2026',
     tone: 'admit' as const,

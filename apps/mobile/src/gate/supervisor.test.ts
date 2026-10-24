@@ -19,6 +19,16 @@ const holding: GateOp = {
   message: 'Confirming',
 };
 
+test('recorded historical receipt is not an admission', () => {
+  const recorded: GateOp = {
+    ...holding,
+    phase: 'recorded',
+    checkinId: '66666666-6666-4666-8666-666666666666',
+    message: 'Đã ghi nhận trước đó',
+  };
+  assert.equal(classifySupervisorOp(recorded), 'not-admission');
+});
+
 test('unknown is not an admission', () => {
   const unknown: GateOp = {
     ...holding,

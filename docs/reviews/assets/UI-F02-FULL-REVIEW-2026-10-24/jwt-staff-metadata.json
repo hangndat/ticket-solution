@@ -1,0 +1,8 @@
+{
+  "fetchedAt": "2026-10-23T18:38:04.673Z",
+  "staffAccessTokenPresent": true,
+  "iat": 1792780684,
+  "exp": 1792780984,
+  "sub": "6daa25c7-ebe8-4148-917b-03ec3362a36a",
+  "preferred_username": "staff@example.com"
+}

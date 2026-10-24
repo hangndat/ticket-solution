@@ -4,6 +4,11 @@
  */
 import { Modal, Pressable, StyleSheet, Text } from 'react-native';
 import { Button } from '@/components/ui/button';
+import {
+  MANUAL_PREVIEW_DISCLAIMER,
+  MANUAL_PREVIEW_HEADER,
+  MANUAL_SUBMIT_TO_GATE_LABEL,
+} from '@/gate/staff-manual-confirm-copy';
 import { colors } from '@/theme/colors';
 import { brand, radius, space } from '@/theme/tokens';
 import { typography } from '@/theme/typography';
@@ -51,16 +56,19 @@ export function StaffManualConfirmSheet({
             accessibilityRole="header"
             style={{ ...typography.sectionTitleBold, color: colors.label }}
           >
-            Vé hợp lệ
+            {MANUAL_PREVIEW_HEADER}
           </Text>
           <Text style={{ ...typography.footnote, color: colors.secondary,  lineHeight: 20 }}>
             {previewLine}
           </Text>
+          <Text style={{ ...typography.micro, color: colors.secondary,  lineHeight: 18 }}>
+            {MANUAL_PREVIEW_DISCLAIMER}
+          </Text>
           <Button
             testID="gate-manual-confirm-admit"
-            label={busy ? 'Đang xử lý…' : 'Xác nhận vào cổng'}
+            label={busy ? 'Đang xử lý…' : MANUAL_SUBMIT_TO_GATE_LABEL}
             loading={busy}
-            accessibilityLabel="Xác nhận vào cổng"
+            accessibilityLabel={MANUAL_SUBMIT_TO_GATE_LABEL}
             disabled={busy}
             onPress={onConfirm}
             style={styles.confirm}

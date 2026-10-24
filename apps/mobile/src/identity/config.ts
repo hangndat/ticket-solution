@@ -8,6 +8,9 @@ type TicketPublicExtra = {
   eventId?: string;
   pushProvider?: string;
   apsEnvironment?: 'development' | 'production';
+  allowLocalFixtureApi?: boolean;
+  allowUatSessionRoutes?: boolean;
+  allowFixtureEventRoutes?: boolean;
 };
 
 /**
@@ -65,9 +68,65 @@ export function getOidcScopes(): string {
 /** Production API origin (O18 / K-API-02). Ignores legacy EXPO_PUBLIC_* and baked extra. */
 export const VEMOKI_PROD_API_BASE_URL = 'https://api.vemoki.com';
 
-/** Nest API base URL (no trailing slash). Always production origin at runtime. */
-export function getApiBaseUrl(): string {
+function isPinnedProductionApi(url: string): boolean {
+  return url.replace(/\/+$/, '') === VEMOKI_PROD_API_BASE_URL;
+}
+
+/**
+ * Nest API base URL (no trailing slash).
+ * K-API-02: retail builds use production. Local fixture API only when
+ * `extra.ticketPublic.allowLocalFixtureApi` was baked at config time (development APS).
+ */
+function resolveAllowLocalFixtureApi(extra: TicketPublicExtra): boolean {
+  if (getApsEnvironment() === 'production') return false;
+  if (extra.allowLocalFixtureApi === true) return true;
+  const flag = process.env.EXPO_PUBLIC_ALLOW_UAT_SESSION?.trim();
+  return flag === '1' || flag === 'true';
+}
+
+export function resolveApiBaseUrl(
+  caps: { allowLocalFixtureApi: boolean },
+  env: { EXPO_PUBLIC_API_BASE_URL?: string },
+  extra: Pick<TicketPublicExtra, 'apiBaseUrl'>,
+): string {
+  if (caps.allowLocalFixtureApi) {
+    const local = pickPublic(env.EXPO_PUBLIC_API_BASE_URL, extra.apiBaseUrl);
+    if (local && !isPinnedProductionApi(local)) {
+      return local.replace(/\/+$/, '');
+    }
+  }
   return VEMOKI_PROD_API_BASE_URL;
+}
+
+export function getApiBaseUrl(): string {
+  const extra = readTicketPublicExtra();
+  return resolveApiBaseUrl(
+    { allowLocalFixtureApi: resolveAllowLocalFixtureApi(extra) },
+    {
+      EXPO_PUBLIC_API_BASE_URL: process.env.EXPO_PUBLIC_API_BASE_URL,
+    },
+    extra,
+  );
+}
+
+export function getRetailBakeCaps(): {
+  allowLocalFixtureApi: boolean;
+  allowUatSessionRoutes: boolean;
+  allowFixtureEventRoutes: boolean;
+} {
+  if (getApsEnvironment() === 'production') {
+    return {
+      allowLocalFixtureApi: false,
+      allowUatSessionRoutes: false,
+      allowFixtureEventRoutes: false,
+    };
+  }
+  const extra = readTicketPublicExtra();
+  return {
+    allowLocalFixtureApi: extra.allowLocalFixtureApi === true,
+    allowUatSessionRoutes: extra.allowUatSessionRoutes === true,
+    allowFixtureEventRoutes: extra.allowFixtureEventRoutes === true,
+  };
 }
 
 /**
@@ -111,14 +170,15 @@ export function isOidcConfigured(): boolean {
  * EXPO_PUBLIC_APS_ENVIRONMENT, then baked extra from app.config.ts.
  */
 export function getApsEnvironment(): 'development' | 'production' {
-  const fromEnv =
-    process.env.EXPO_PUBLIC_APS_ENVIRONMENT?.trim() ||
-    process.env.APS_ENVIRONMENT?.trim() ||
-    process.env.APP_VARIANT?.trim() ||
-    '';
-  if (fromEnv === 'production') return 'production';
   const fromExtra = readTicketPublicExtra().apsEnvironment;
-  return fromExtra === 'production' ? 'production' : 'development';
+  if (fromExtra === 'production') return 'production';
+  // A contradictory development marker cannot mask any production intent.
+  if ([
+    process.env.EXPO_PUBLIC_APS_ENVIRONMENT,
+    process.env.APP_VARIANT,
+    process.env.APS_ENVIRONMENT,
+  ].some((value) => value?.trim() === 'production')) return 'production';
+  return 'development';
 }
 
 /**

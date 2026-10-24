@@ -1,0 +1,450 @@
+{
+  "at": "2026-10-24T01:25:23.643Z",
+  "id": "c52c3ec1-9ae0-457b-9623-9e20581c398c",
+  "ok": true,
+  "result": [
+    {
+      "role": "application",
+      "type": "Application",
+      "label": "Vemoki",
+      "value": "",
+      "enabled": true,
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      },
+      "children": [
+        {
+          "role": "Nav bar",
+          "type": "Group",
+          "label": "",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": -0.3003,
+            "y": 0.0692,
+            "width": 1,
+            "height": 0.1311
+          },
+          "children": [],
+          "id": "MFest · Demo"
+        },
+        {
+          "role": "heading",
+          "type": "Heading",
+          "label": "Tài khoản",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.3851,
+            "y": 0.081,
+            "width": 0.229,
+            "height": 0.0282
+          },
+          "children": []
+        },
+        {
+          "role": "heading",
+          "type": "Heading",
+          "label": "Lịch sử trên máy này",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": -0.2494,
+            "y": 0.2238,
+            "width": 0.8982,
+            "height": 0.0254
+          },
+          "children": []
+        },
+        {
+          "role": "text",
+          "type": "StaticText",
+          "label": "Trên thiết bị này · MFest · Demo",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": -0.2494,
+            "y": 0.2516,
+            "width": 0.8982,
+            "height": 0.0215
+          },
+          "children": []
+        },
+        {
+          "role": "text",
+          "type": "StaticText",
+          "label": "Đối soát mã lượt đã biết",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": -0.2494,
+            "y": 0.2825,
+            "width": 0.8982,
+            "height": 0.0262
+          },
+          "children": []
+        },
+        {
+          "role": "text",
+          "type": "StaticText",
+          "label": "Nhập mã lượt (UUID) từ biên nhận đồng bộ — chỉ trong sự kiện đang chọn, không tìm vé.",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": -0.2494,
+            "y": 0.3181,
+            "width": 0.8982,
+            "height": 0.0426
+          },
+          "children": []
+        },
+        {
+          "role": "text field",
+          "type": "TextField",
+          "label": "Mã lượt UUID đã biết",
+          "value": "Mã lượt UUID",
+          "enabled": true,
+          "frame": {
+            "x": -0.2468,
+            "y": 0.3713,
+            "width": 0.8931,
+            "height": 0.054
+          },
+          "children": []
+        },
+        {
+          "role": "button",
+          "type": "Button",
+          "label": "Đối soát mã lượt đã biết",
+          "value": "",
+          "enabled": false,
+          "frame": {
+            "x": -0.2494,
+            "y": 0.4358,
+            "width": 0.8982,
+            "height": 0.0516
+          },
+          "children": []
+        },
+        {
+          "role": "text field",
+          "type": "TextField",
+          "label": "Tìm trong các lượt đã tải",
+          "value": "Tìm trong các lượt đã tải",
+          "enabled": true,
+          "frame": {
+            "x": -0.2468,
+            "y": 0.498,
+            "width": 0.8931,
+            "height": 0.054
+          },
+          "children": []
+        },
+        {
+          "role": "heading",
+          "type": "Heading",
+          "label": "Hôm nay · 24 tháng 10",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": -0.2494,
+            "y": 0.5626,
+            "width": 0.8982,
+            "height": 0.0215
+          },
+          "children": []
+        },
+        {
+          "role": "",
+          "type": "GenericElement",
+          "label": "09:23 24-10. Vé 3469a929-d…. Mã lượt ba81cd4f-5582-4da3-b494-1baa282400a1. Biên nhận 39c38c92-467e-4f1c-93f3-2d12bebf8a3f. Được vào. Máy chủ đã ghi nhận check-in — có thể cho khách qua. Mã lượt ba81cd4f-558… · Biên nhận 39c38c92-467…",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": -0.2494,
+            "y": 0.5935,
+            "width": 0.8982,
+            "height": 0.0689
+          },
+          "children": []
+        },
+        {
+          "role": "",
+          "type": "GenericElement",
+          "label": "09:23 24-10. Vé ef3254e4-4…. Mã lượt 24220502-5a3…. Không cho vào. Ticket is not active",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": -0.2494,
+            "y": 0.6718,
+            "width": 0.8982,
+            "height": 0.0689
+          },
+          "children": []
+        },
+        {
+          "role": "",
+          "type": "GenericElement",
+          "label": "09:19 24-10. Vé 3469a929-d…. Mã lượt 7b287c74-b8b…. Không cho vào. Mất mạng và chưa có phiên nhân viên. Cần online một lần để mở phiên trước khi xếp hàng offline.",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": -0.2494,
+            "y": 0.75,
+            "width": 0.8982,
+            "height": 0.0689
+          },
+          "children": []
+        },
+        {
+          "role": "text",
+          "type": "StaticText",
+          "label": "Đã xem hết lịch sử lưu trên máy này",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": -0.2494,
+            "y": 0.8329,
+            "width": 0.8982,
+            "height": 0.0239
+          },
+          "children": []
+        },
+        {
+          "role": "text",
+          "type": "StaticText",
+          "label": "Đã tải 3 lượt",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": -0.2494,
+            "y": 0.8709,
+            "width": 0.8982,
+            "height": 0.0215
+          },
+          "children": []
+        },
+        {
+          "role": "heading",
+          "type": "Heading",
+          "label": "BẠN",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.0509,
+            "y": 0.1561,
+            "width": 0.8982,
+            "height": 0.0215
+          },
+          "children": []
+        },
+        {
+          "role": "text",
+          "type": "StaticText",
+          "label": "staff@example.com",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.0916,
+            "y": 0.2011,
+            "width": 0.8168,
+            "height": 0.0297
+          },
+          "children": []
+        },
+        {
+          "role": "text",
+          "type": "StaticText",
+          "label": "Tài khoản đang dùng trên máy.",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.0916,
+            "y": 0.2332,
+            "width": 0.8168,
+            "height": 0.0239
+          },
+          "children": []
+        },
+        {
+          "role": "heading",
+          "type": "Heading",
+          "label": "THÔNG BÁO",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.0509,
+            "y": 0.2946,
+            "width": 0.8982,
+            "height": 0.0215
+          },
+          "children": []
+        },
+        {
+          "role": "text",
+          "type": "StaticText",
+          "label": "Chưa hỗ trợ thông báo trên phiên bản này",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.0916,
+            "y": 0.3396,
+            "width": 0.8168,
+            "height": 0.0591
+          },
+          "children": []
+        },
+        {
+          "role": "heading",
+          "type": "Heading",
+          "label": "QUYỀN RIÊNG TƯ & DỮ LIỆU",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.0509,
+            "y": 0.4362,
+            "width": 0.8982,
+            "height": 0.0215
+          },
+          "children": []
+        },
+        {
+          "role": "button",
+          "type": "Button",
+          "label": "Chính sách quyền riêng tư",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.0509,
+            "y": 0.4671,
+            "width": 0.8982,
+            "height": 0.0767
+          },
+          "children": [],
+          "id": "account-cta-privacy"
+        },
+        {
+          "role": "button",
+          "type": "Button",
+          "label": "Xóa tài khoản",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.0509,
+            "y": 0.545,
+            "width": 0.8982,
+            "height": 0.0767
+          },
+          "children": [],
+          "id": "account-delete-row"
+        },
+        {
+          "role": "button",
+          "type": "Button",
+          "label": "Quay lại quét",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.0509,
+            "y": 0.6451,
+            "width": 0.8982,
+            "height": 0.0606
+          },
+          "children": [],
+          "id": "account-cta-staff-back"
+        },
+        {
+          "role": "button",
+          "type": "Button",
+          "label": "Đăng xuất, nút, hành động nguy hiểm",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.0509,
+            "y": 0.7293,
+            "width": 0.8982,
+            "height": 0.0606
+          },
+          "children": [],
+          "id": "account-cta-logout"
+        },
+        {
+          "role": "group",
+          "type": "Group",
+          "label": "Tab Bar",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": -0.3003,
+            "y": 0.9026,
+            "width": 1,
+            "height": 0.0974
+          },
+          "children": []
+        },
+        {
+          "role": "text",
+          "type": "StaticText",
+          "label": "9:25 AM",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.1349,
+            "y": 0.0223,
+            "width": 0.0941,
+            "height": 0.0239
+          },
+          "children": []
+        },
+        {
+          "role": "",
+          "type": "GenericElement",
+          "label": "Dynamic Island, Empty",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.341,
+            "y": 0.0133,
+            "width": 0.3181,
+            "height": 0.043
+          },
+          "children": []
+        },
+        {
+          "role": "",
+          "type": "GenericElement",
+          "label": "Cellular",
+          "value": "No signal",
+          "enabled": true,
+          "frame": {
+            "x": 0.7176,
+            "y": 0.027,
+            "width": 0.0492,
+            "height": 0.0145
+          },
+          "children": []
+        },
+        {
+          "role": "",
+          "type": "GenericElement",
+          "label": "100% battery power",
+          "value": "Not charging",
+          "enabled": true,
+          "frame": {
+            "x": 0.8473,
+            "y": 0.0266,
+            "width": 0.0696,
+            "height": 0.0153
+          },
+          "children": []
+        }
+      ]
+    }
+  ],
+  "_meta": {
+    "runtimeId": "9d821662-c628-49db-a168-99fa7b7636fc"
+  }
+}

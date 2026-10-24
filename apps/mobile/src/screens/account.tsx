@@ -110,6 +110,7 @@ function ConfiguredAccount({
   const segments = useSegments();
   const [me, setMe] = useState<MeResponse | null>(null);
   const [meError, setMeError] = useState<string | null>(null);
+  const [logoutFailed, setLogoutFailed] = useState(false);
   const [busy, setBusy] = useState(false);
   const identity = useSyncExternalStore(
     session.subscribe,
@@ -233,9 +234,11 @@ function ConfiguredAccount({
     const logoutPlan = planPostLogoutNavigation({ segments, staffWorkspace });
     try {
       await logoutAndClearWalletArtifacts({ userId, tenantId });
+      setLogoutFailed(false);
       await endKeycloakSession();
       runPostLogoutNavigation(logoutPlan);
     } catch (error) {
+      setLogoutFailed(true);
       setMeError(
         error instanceof Error
           ? error.message
@@ -387,13 +390,13 @@ function ConfiguredAccount({
           </View>
         ) : null}
 
-        {showLogout ? (
+        {showLogout || logoutFailed ? (
           <AttendeeCta
-            label={accountCopy.logoutCta}
+            label={logoutFailed ? 'Thử lại đăng xuất' : accountCopy.logoutCta}
             variant="destructive"
             onPress={() => void onLogout()}
             disabled={busy}
-            accessibilityLabel={accountCopy.logoutAccessibility}
+            accessibilityLabel={logoutFailed ? 'Thử lại dọn dẹp đăng xuất' : accountCopy.logoutAccessibility}
             testID="account-cta-logout"
           />
         ) : null}

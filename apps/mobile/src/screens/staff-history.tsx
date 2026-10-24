@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { StaffGateNoEventState } from '@/gate/staff-gate-empty-state';
 import { StaffGateDeviceHistoryPanel } from '@/gate/staff-gate-device-history-panel';
@@ -14,14 +14,24 @@ import { brand, space } from '@/theme/tokens';
 
 function StaffHistoryDeviceList({
   deviceHistory,
-  scopeEventName
+  scopeEventName,
+  onImportKnownOperation
 }: {
   deviceHistory: DeviceScanHistoryRow[];
   scopeEventName: string | null;
+  onImportKnownOperation: (raw: string) => Promise<{
+    kind: string;
+    reason?: string;
+    message?: string;
+  }>;
 }) {
   const [visibleCount, setVisibleCount] = useState(DEVICE_HISTORY_PAGE_SIZE);
   const [filterQuery, setFilterQuery] = useState('');
   const [loadMoreError, setLoadMoreError] = useState(false);
+  const [knownOpInput, setKnownOpInput] = useState('');
+  const [importKnownBusy, setImportKnownBusy] = useState(false);
+  const [importKnownError, setImportKnownError] = useState<string | null>(null);
+  const [importKnownInfo, setImportKnownInfo] = useState<string | null>(null);
 
   const pageView = useMemo(
     () =>
@@ -43,6 +53,27 @@ function StaffHistoryDeviceList({
     handleLoadMore();
   };
 
+  const handleImportKnownOp = useCallback(async () => {
+    setImportKnownError(null);
+    setImportKnownInfo(null);
+    setImportKnownBusy(true);
+    try {
+      const outcome = await onImportKnownOperation(knownOpInput);
+      if (outcome.kind === 'error') {
+        setImportKnownError(outcome.message ?? 'Không đối soát được mã lượt này.');
+        return;
+      }
+      if (outcome.kind === 'noop') {
+        setImportKnownInfo('Lượt này đã được ghi nhận trước đó trên máy.');
+        return;
+      }
+      setImportKnownInfo('Đã đối soát và ghi nhận lịch sử từ máy chủ.');
+      setKnownOpInput('');
+    } finally {
+      setImportKnownBusy(false);
+    }
+  }, [knownOpInput, onImportKnownOperation]);
+
   return (
     <StaffGateDeviceHistoryPanel
       rows={pageView.rows}
@@ -54,6 +85,12 @@ function StaffHistoryDeviceList({
       onFilterQueryChange={setFilterQuery}
       loadMoreError={loadMoreError}
       onRetryLoadMore={handleRetryLoadMore}
+      knownOpInput={knownOpInput}
+      onKnownOpInputChange={setKnownOpInput}
+      onImportKnownOp={() => void handleImportKnownOp()}
+      importKnownBusy={importKnownBusy}
+      importKnownError={importKnownError}
+      importKnownInfo={importKnownInfo}
     />
   );
 }
@@ -78,6 +115,7 @@ export function StaffHistoryScreen() {
             key={scopeKey}
             deviceHistory={gate.deviceHistory}
             scopeEventName={gate.gateScope?.name ?? null}
+            onImportKnownOperation={gate.importKnownOperation}
           />
         </View>
       </ScrollView>
