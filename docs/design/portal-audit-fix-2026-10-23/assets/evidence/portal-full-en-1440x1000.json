@@ -1,0 +1,42 @@
+{
+  "auditTab": null,
+  "locale": "en",
+  "metaText": "Viewport: 1440\u00d71000 \u00b7 locale=en \u00b7 page=guests \u00b7 tab=pending \u00b7 state=ready \u00b7 persona=owner",
+  "mrR08": {
+    "auditPage": false,
+    "auditTab": null,
+    "auditTableVisible": false,
+    "codesTableVisible": false,
+    "platformGrantsVisible": false
+  },
+  "pa03": {
+    "catalogVisible": false,
+    "expectCatalogOnlyOnImport": true
+  },
+  "pa04": {
+    "formatted": null,
+    "hasUtcSibling": false
+  },
+  "pa05": {
+    "exportAriaLabel": null,
+    "exportAriaNotFieldId": false
+  },
+  "pa06": {
+    "rmMedia": false,
+    "rmQueryClass": false,
+    "spinnerAnim": null
+  },
+  "page": "guests",
+  "platformTab": null,
+  "state": "ready",
+  "tab": "pending",
+  "viewport": {
+    "h": 1000,
+    "w": 1440
+  },
+  "pngPixels": {
+    "w": 1440,
+    "h": 1000
+  },
+  "viewportMatch": true
+}

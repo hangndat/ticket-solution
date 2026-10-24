@@ -1,0 +1,11 @@
+{
+  "id": "9ea0e5ac-e8cc-4087-89e4-035b8a864abe",
+  "ok": true,
+  "result": {
+    "origin": "http://127.0.0.1:57277/design/ui-uplift-2026-10/app/index.html",
+    "result": "{\"surface\":\"app\",\"typeofVemokiSheetNav\":\"object\",\"sheetRadix\":true,\"dialogPresent\":true,\"dialogState\":\"open\",\"title\":\"Menu\",\"navLinks\":4,\"triggerExpanded\":\"true\",\"focusInDialog\":true,\"activeTag\":\"BUTTON\",\"locale\":\"en\",\"viewport\":{\"w\":390,\"h\":844,\"dpr\":1}}"
+  },
+  "_meta": {
+    "runtimeId": "9d821662-c628-49db-a168-99fa7b7636fc"
+  }
+}

@@ -1,0 +1,58 @@
+{
+  "capture": "app-mobile-390-vi.png",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "live": {
+    "viewport": {
+      "w": 390,
+      "h": 844,
+      "dpr": 1
+    },
+    "locale": "vi",
+    "frameWidth": 370
+  },
+  "probe": {
+    "sections": [
+      {
+        "id": "top",
+        "ok": false
+      },
+      {
+        "id": "trust",
+        "ok": false
+      },
+      {
+        "id": "features",
+        "ok": false
+      },
+      {
+        "id": "how-it-works",
+        "ok": false
+      },
+      {
+        "id": "solutions",
+        "ok": false
+      },
+      {
+        "id": "outcomes",
+        "ok": false
+      },
+      {
+        "id": "faq",
+        "ok": false
+      },
+      {
+        "id": "interest",
+        "ok": false
+      }
+    ]
+  },
+  "chromeWrap": {
+    "frame": "browser mobile",
+    "frameWidth": 370,
+    "issues": [],
+    "viewport": 390
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "task": "MR-MKT-WEB",
+  "capture": "marketing-en-form-390.png",
+  "baseReviewSha": "b2faa48a1ce443c8fc6c849cb74a06a57f8b0c37",
+  "viewport": {
+    "requested": { "width": 390, "height": 844 },
+    "innerWidth": 390,
+    "innerHeight": 844,
+    "devicePixelRatio": 1,
+    "frameWidth": 350,
+    "pngPixels": { "width": 390, "height": 844 }
+  },
+  "locale": { "htmlLang": "en", "localeEnPressed": "true" },
+  "interestFormLabelsEn": [
+    "Full name",
+    "Work email",
+    "Organization",
+    "Role",
+    "Notes (optional)",
+    "I agree to be contacted about Vemoki. See Privacy."
+  ],
+  "consentText": "I agree to be contacted about Vemoki. See Privacy.",
+  "runner": "http://127.0.0.1:57277/design/ui-uplift-2026-10/marketing/index.html#interest"
+}

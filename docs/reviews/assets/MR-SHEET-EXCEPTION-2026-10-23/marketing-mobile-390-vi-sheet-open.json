@@ -1,0 +1,33 @@
+{
+  "capture": "marketing-mobile-390-vi-sheet-open.png",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "live": {
+    "viewport": {
+      "w": 390,
+      "h": 844,
+      "dpr": 1
+    },
+    "locale": "vi"
+  },
+  "probe": {
+    "surface": "marketing",
+    "typeofVemokiSheetNav": "object",
+    "sheetRadix": true,
+    "dialogPresent": true,
+    "dialogState": "open",
+    "title": "Menu",
+    "navLinks": 7,
+    "triggerExpanded": "true",
+    "focusInDialog": true,
+    "activeTag": "BUTTON",
+    "locale": "vi",
+    "viewport": {
+      "w": 390,
+      "h": 844,
+      "dpr": 1
+    }
+  }
+}

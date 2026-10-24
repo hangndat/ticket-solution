@@ -1,0 +1,11 @@
+{
+  "id": "68a86dc1-a045-4a93-8845-29668c6260b6",
+  "ok": true,
+  "result": {
+    "origin": "http://127.0.0.1:57277/design/ui-uplift-2026-10/app/index.html",
+    "result": "{\"sections\":[{\"id\":\"top\",\"ok\":false},{\"id\":\"trust\",\"ok\":false},{\"id\":\"features\",\"ok\":false},{\"id\":\"how-it-works\",\"ok\":false},{\"id\":\"solutions\",\"ok\":false},{\"id\":\"outcomes\",\"ok\":false},{\"id\":\"faq\",\"ok\":false},{\"id\":\"interest\",\"ok\":false}]}"
+  },
+  "_meta": {
+    "runtimeId": "9d821662-c628-49db-a168-99fa7b7636fc"
+  }
+}
