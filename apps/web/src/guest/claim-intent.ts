@@ -144,15 +144,18 @@ export function readClaimTokenFromLocation(): {
     eventId = params.get('eventId')?.trim() ?? '';
     tenantSlug = params.get('tenantSlug')?.trim() ?? '';
     eventSlug = params.get('eventSlug')?.trim() ?? '';
+    // A new fragment is one invitation. Never fill its missing fields from an
+    // older parked invitation, even when the new fragment is incomplete.
+    return { token, tenantId, eventId, tenantSlug, eventSlug };
   }
 
   const parked = readRaw();
   return {
-    token: token || parked?.token || '',
-    tenantId: tenantId || parked?.tenantId || '',
-    eventId: eventId || parked?.eventId || '',
-    tenantSlug: tenantSlug || parked?.tenantSlug || '',
-    eventSlug: eventSlug || parked?.eventSlug || '',
+    token: parked?.token || '',
+    tenantId: parked?.tenantId || '',
+    eventId: parked?.eventId || '',
+    tenantSlug: parked?.tenantSlug || '',
+    eventSlug: parked?.eventSlug || '',
   };
 }
 

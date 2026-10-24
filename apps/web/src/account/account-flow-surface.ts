@@ -107,10 +107,15 @@ export const accountPrivacyProse = cn(
 export const accountPrivacyUpdated =
   'text-[0.92rem] text-muted';
 
-export const accountDeletionFormRoot = redeemDevFormRoot;
+export const accountDeletionFormRoot = cn(
+  redeemDevFormRoot,
+  'm-0 max-w-none gap-4 border-t border-line px-[18px] py-5',
+  '[&_label.account-deletion-consent]:flex [&_label.account-deletion-consent]:items-start [&_label.account-deletion-consent]:gap-3 [&_label.account-deletion-consent]:font-normal',
+  '[&_label.account-deletion-consent_input]:mt-1 [&_label.account-deletion-consent_input]:shrink-0',
+);
 
 export const accountDeletionNote = cn(
-  'my-9 max-w-[40rem] border border-line bg-[color-mix(in_srgb,var(--color-paper)_60%,white)] p-6',
+  'm-0 max-w-[40rem] text-[0.92rem] leading-[1.55] text-ink',
   '[&_h2]:m-0 [&_h2]:mb-2 [&_h2]:text-[1.2rem] [&_h2]:tracking-normal',
   '[&_p]:m-0',
 );

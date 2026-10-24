@@ -19,6 +19,8 @@ export type PublishedRedeemSchema = {
   eventId: string;
   /** From public projection when API exposes tenant scope (D02). */
   tenantId?: string;
+  eventName?: string;
+  organizationName?: string;
   form: FormDefinition | null;
   terms: PublishedTerms | null;
   schemaVersion: number;
@@ -104,6 +106,11 @@ export function parsePublishedRedeemSchema(
   return {
     eventId: value.id,
     tenantId,
+    eventName: typeof value.name === 'string' ? value.name : undefined,
+    organizationName:
+      isRecord(value.brand) && typeof value.brand.organizationName === 'string'
+        ? value.brand.organizationName
+        : undefined,
     form,
     terms,
     schemaVersion: value.schemaVersion,

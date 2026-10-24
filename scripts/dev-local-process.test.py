@@ -109,6 +109,43 @@ class ProcessOwnershipTest(unittest.TestCase):
         self.assertIn('ui869dev', result.stderr)
         self.assertIn('stop failed', result.stdout)
 
+    def test_dead_leader_with_surviving_child_fails_and_keeps_owner(self):
+        childfile, ready = self.root / 'child', self.root / 'ready'
+        child_code = f'import signal,time;from pathlib import Path;signal.signal(signal.SIGTERM,signal.SIG_IGN);Path({str(ready)!r}).touch();time.sleep(120)'
+        parent_code = (f'import subprocess,sys,time;from pathlib import Path;'
+                       f'child=subprocess.Popen([sys.executable,"-c",{child_code!r}]);'
+                       f'Path({str(childfile)!r}).write_text(str(child.pid));'
+                       f'\nwhile not Path({str(ready)!r}).exists(): time.sleep(.01)'
+                       '\ntime.sleep(.2)')
+        owner = self.start(parent_code)
+        child, birth = None, None
+        try:
+            self.assertTrue(module.wait_stopped(lambda: module.identity(owner['pid']), 4))
+            child = int(childfile.read_text())
+            birth = module.identity(child)
+            self.assertIsNotNone(birth)
+            self.assertEqual(os.getpgid(child), owner['group'])
+            before = self.pidfile.with_suffix('.json').read_text()
+            result = self.run_helper('stop', self.pidfile)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertEqual(json.loads(result.stderr)['errorCode'], 'owned_group_identity_unverifiable')
+            self.assertEqual(self.pidfile.with_suffix('.json').read_text(), before)
+            self.assertTrue(self.pidfile.exists())
+            self.assertEqual(module.identity(child), birth)
+        finally:
+            if child and birth and module.identity(child) == birth and os.getpgid(child) == owner['group']:
+                os.kill(child, signal.SIGKILL)
+                self.assertTrue(module.wait_stopped(lambda: module.identity(child), 2))
+
+    def test_dead_leader_with_empty_group_cleans_stale_receipt(self):
+        owner = self.start('import time;time.sleep(.2)')
+        self.assertTrue(module.wait_stopped(lambda: module.identity(owner['pid']), 4))
+        self.assertEqual(module.group_members(owner['group']), {})
+        result = self.run_helper('stop', self.pidfile)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse(self.pidfile.exists())
+        self.assertFalse(self.pidfile.with_suffix('.json').exists())
+
 
 if __name__ == '__main__':
     unittest.main()

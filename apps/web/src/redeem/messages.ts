@@ -59,7 +59,7 @@ const BY_CODE: Record<
     kind: 'invalid',
     title: 'Mã không hợp lệ',
     detail:
-      'Không tìm thấy mã cho sự kiện đã chọn. Kiểm tra lại mã (không thêm khoảng trắng), hoặc quay về trang sự kiện để lấy liên kết đổi mã đúng.',
+      'Không tìm thấy mã đổi vé. Kiểm tra lại mã trong email hoặc liên hệ ban tổ chức.',
     retryable: false,
   },
   [RESOLVE_ERROR_CODES.RESOLVE_DISABLED]: {

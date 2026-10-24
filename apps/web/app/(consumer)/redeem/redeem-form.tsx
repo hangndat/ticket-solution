@@ -161,6 +161,8 @@ export function RedeemForm({
   const loadedSlugPairRef = useRef<string | null>(null);
 
   const busy = pending || polling;
+  const outcomeRequiresStatusCheck =
+    decision?.kind === 'pending' || Boolean(attempt?.unclear);
   const showDevScopeFields =
     tenantBound && (!productChrome || !globalEntry);
   const slugPinnedSchema =
@@ -386,6 +388,13 @@ export function RedeemForm({
     setEventId('');
     setSchemaNotice(null);
     setPublishedSchemaReady(false);
+    setAttempt(null);
+    setIdempotencyKey(null);
+    setDecision(null);
+    setPendingRequestId(null);
+    setTicket(null);
+    setRaw(null);
+    setUx(null);
   }
 
   function resetRedeemAttempt() {
@@ -468,6 +477,7 @@ export function RedeemForm({
 
   function onSubmit(event: FormEvent) {
     event.preventDefault();
+    if (busy || outcomeRequiresStatusCheck || decision?.kind === 'issued') return;
     if (singleCodeFlow && globalPhase === 'enter-code') {
       onGlobalResolve();
       return;
@@ -642,6 +652,12 @@ export function RedeemForm({
         setUx(messageForOwnerStatus(result.body));
         setRaw(JSON.stringify(result.body, null, 2));
         if (result.body.status === 'ISSUED') {
+          setDecision({
+            kind: 'issued',
+            ticketId: result.body.ticketId,
+            requestId: result.body.requestId,
+            replayed: false,
+          });
           setTicket({
             ticketId: result.body.ticketId,
             requestId: result.body.requestId,
@@ -653,6 +669,9 @@ export function RedeemForm({
             credentialVersion: 1,
             replayed: false,
           });
+        } else if (result.body.status === 'REJECTED' || result.body.status === 'EXPIRED') {
+          setDecision(null);
+          setPendingRequestId(null);
         }
         return;
       }
@@ -747,15 +766,23 @@ export function RedeemForm({
 
   const redeemSubmitDisabled =
     busy ||
+    outcomeRequiresStatusCheck ||
+    decision?.kind === 'issued' ||
     awaitingPublishedSchema ||
     (singleCodeFlow && globalPhase === 'confirm' && !publishedSchemaReady);
 
   return (
     <div className={formClassName}>
-      <form onSubmit={onSubmit} aria-labelledby="redeem-form-title" noValidate>
-        <h2 id="redeem-form-title" className={productChrome ? 'sr-only' : undefined}>
-          Đổi mã lấy vé
+      <form onSubmit={onSubmit} aria-labelledby="redeem-form-title" noValidate
+        className={productChrome ? 'grid gap-4' : undefined}>
+        <h2 id="redeem-form-title" className={productChrome ? 'm-0 text-[1.2rem] font-bold' : undefined}>
+          {singleCodeFlow && globalPhase === 'enter-code' ? 'Nhập mã đổi vé' : 'Đổi mã lấy vé'}
         </h2>
+        {productChrome && singleCodeFlow && globalPhase === 'enter-code' ? (
+          <p className="m-0 text-[0.95rem] leading-[1.55] text-muted">
+            Thông tin sự kiện và loại vé sẽ hiện ở bước tiếp theo.
+          </p>
+        ) : null}
         {productChrome && productLead ? (
           <p className={redeemProductLead}>{productLead}</p>
         ) : null}
@@ -816,7 +843,7 @@ export function RedeemForm({
                 type="button"
                 variant="secondary"
                 onClick={resetGlobalResolveSession}
-                disabled={busy}
+                disabled={busy || outcomeRequiresStatusCheck}
               >
                 Nhập mã khác
               </Button>
@@ -1046,6 +1073,7 @@ export function RedeemForm({
                   id="redeem-code-global"
                   name="code"
                   required
+                  disabled={busy}
                   value={code}
                   onChange={(e) => setCode(e.target.value)}
                   autoComplete="off"
@@ -1054,6 +1082,9 @@ export function RedeemForm({
                   data-testid="redeem-global-code"
                 />
               </label>
+              <p className="m-0 text-[0.85rem] leading-[1.45] text-muted">
+                Nhập mã trong email hoặc trên vé của bạn.
+              </p>
             </div>
           ) : null}
 
@@ -1065,6 +1096,7 @@ export function RedeemForm({
                   id="redeem-code-confirm"
                   name="code"
                   required
+                  disabled={busy}
                   value={code}
                   onChange={(e) => setCode(e.target.value)}
                   autoComplete="off"
@@ -1166,6 +1198,10 @@ export function RedeemForm({
               <Button type="button" variant="secondary" onClick={pollAgain} disabled={!canRepoll}>
                 Kiểm tra lại
               </Button>
+            ) : decision?.kind === 'pending' && pendingRequestId ? (
+              <Button type="button" variant="secondary" onClick={refreshOwnerStatus} disabled={busy}>
+                Kiểm tra trạng thái yêu cầu
+              </Button>
             ) : null
           ) : (
             <>
@@ -1195,6 +1231,11 @@ export function RedeemForm({
           )}
         </div>
       </form>
+      {productChrome && singleCodeFlow && globalPhase === 'enter-code' ? (
+        <p className="m-0 text-[0.9rem]">
+          <Link href="/wallet">Vé của tôi</Link>
+        </p>
+      ) : null}
 
       {ux && statusLive ? (
         <section

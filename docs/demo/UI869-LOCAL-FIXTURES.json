@@ -21,7 +21,9 @@
     { "id": "redeem-consumed", "route": "/redeem", "code": "DEMO-STUDIO-010", "expected": "already-used code rejected or existing result returned per contract" },
     { "id": "redeem-closed", "route": "/redeem", "code": "DEMO-PAST-001", "expected": "redemption window closed" },
     { "id": "redeem-unknown", "route": "/redeem", "code": "DEMO-NOT-FOUND", "expected": "unknown code rejected" },
-    { "id": "wallet", "route": "/wallet", "account": "attendee@example.com", "expected": "future and past event tickets" }
+    { "id": "wallet", "route": "/wallet", "account": "attendee@example.com", "expected": "future and past event tickets" },
+    { "id": "claim-email", "route": "/claim", "account": "attendee@example.com", "mailpitOrigin": "http://127.0.0.1:8026", "openCommand": "node scripts/dev-local-invitation.cjs open", "expected": "open actual invitation email link, restore context after OIDC, accept published terms, claim ticket for matching verified email", "privacy": "Raw invitation URL/token lives only in ignored0600 .local-dev/ui869/invitation.json and local Mailpit; never commit or print it." },
+    { "id": "claim-no-link", "route": "/claim", "expected": "email-link empty state, no technical scope inputs" }
   ],
   "privacy": "All identities, passwords, codes and events are public local fixtures; no production/user data. No tokens or cookies are recorded."
 }

@@ -76,7 +76,8 @@ async function main() {
       await tx.$executeRaw`UPDATE events SET redemption_opens_at = now() - interval '90 days', redemption_closes_at = now() - interval '30 days', check_in_opens_at = now() - interval '90 days', check_in_closes_at = now() - interval '30 days' WHERE tenant_id = ${studioTenant}::uuid AND id = ${past.id}::uuid`;
     });
     const catalog = await request('/v1/public/events?limit=20');
-    console.log(JSON.stringify({ ok:true, fixture:true, events:catalog.items?.length, routingCandidatesAdded:routing.candidates, ambiguousGroups:routing.ambiguousGroups, activeTicket, pastTicket, codes:{ valid:'DEMO-MFEST-002', disabled:'DEMO-MFEST-008', consumed:'DEMO-STUDIO-010', pastEvent:'DEMO-PAST-001', unknown:'DEMO-NOT-FOUND' } }));
+    const invitation = await require('./dev-local-invitation.cjs').seed();
+    console.log(JSON.stringify({ ok:true, fixture:true, events:catalog.items?.length, routingCandidatesAdded:routing.candidates, ambiguousGroups:routing.ambiguousGroups, activeTicket, pastTicket, invitation:invitation.created?'created':'preserved', mailpit:invitation.mailpit, codes:{ valid:'DEMO-MFEST-002', disabled:'DEMO-MFEST-008', consumed:'DEMO-STUDIO-010', pastEvent:'DEMO-PAST-001', unknown:'DEMO-NOT-FOUND' } }));
   } finally { await db.$disconnect(); }
 }
 main().catch(error => { console.error(JSON.stringify({ ok:false, errorCode:error.message })); process.exitCode=1; });

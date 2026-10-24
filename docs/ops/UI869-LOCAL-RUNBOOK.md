@@ -156,3 +156,16 @@ not reset unless `seed --reset` is run explicitly.
 3. `install-autostart` bootstraps the launchd agent immediately (explicit
    user authorization for this task covers local auto-start); `uninstall-autostart`
    reverses it.
+4. Nếu leader đã chết trước `stop` nhưng process group còn thành viên, helper trả nonzero `owned_group_identity_unverifiable`, giữ PID/owner record và không gửi signal khi chưa chứng minh ownership. Đây là lỗi cần người vận hành kiểm tra, không phải shutdown thành công. Batch function-first theo quyết định mới của user có regression test riêng cho nhánh này; review độc lập exact SHA vẫn là gate nghiệm thu.
+
+## Lời mời nhận vé qua email local
+
+`node scripts/dev-local-invitation.cjs seed` bổ sung lời mời cho attendee@example.com bằng pipeline import/preview/commit/dispatch hiện có; SMTP chỉ tới Mailpit loopback. Helper được gọi từ additive fixtures cho starter mới. Rerun giữ lời mời đã có, không reset vé/mã và không gửi lại email trùng.
+
+Mở Mailpit tại `http://127.0.0.1:8026` và chọn email “Lời mời tham dự — MFest · Demo”. Với Orca UAT, `node scripts/dev-local-invitation.cjs open` mở tab bằng link thật và chỉ trả browserPageId; caller đóng tab khi xong. Token/URL chỉ ở ignored0600 `.local-dev/ui869/invitation.json` và Mailpit; không in/commit link, không chụp email chứa raw link vào evidence.
+
+TTL48h theo contract; trạng thái expired/revoked/claimed được giữ. `/claim` không phải mục menu để tự nhập UUID; luôn bắt đầu từ email link. Tài khoản thử: attendee@example.com/attendee-demo, real Keycloak. Không submit yêu cầu xóa trên tài khoản attendee/staff dùng chung.
+
+## Tài khoản QA chức năng riêng
+
+`node scripts/dev-local-qa-user.mjs` tạo idempotent identity tổng hợp `qa-functions@example.com` / `qa-functions-demo` trong đúng Keycloak container thuộc project `ui869dev`; không cấp membership hoặc mock session. Receipt ignored0600 `qa-identity.json` bind exact user ID; thiếu/khác receipt thì helper fail, không nhận nhầm hoặc reset user có sẵn. Dùng browser profile riêng cho UAT yêu cầu xóa tài khoản; yêu cầu đã gửi được giữ nguyên khi restart. UAT chỉ xác nhận tiếp nhận/trạng thái yêu cầu, không chạy job xóa hoặc ẩn danh. Mã `DEMO-MFEST-003` dành cho QA single-code (đã consume trong UAT này); `DEMO-MFEST-002` dành người dùng kiểm tra thủ công.

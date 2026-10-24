@@ -26,11 +26,23 @@ type Body = {
 export async function POST(request: Request) {
   const csrf = assertSameOrigin(request);
   if (csrf) return csrf;
-  let body: Body;
+  let parsed: unknown;
   try {
-    body = (await request.json()) as Body;
+    parsed = await request.json();
   } catch {
     return bffApiError('INVALID_JSON', 'Request body must be JSON.', 400);
+  }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    return bffApiError('INVALID_JSON', 'Request body must be a JSON object.', 400);
+  }
+  const body = parsed as Body;
+  if (['tenantId', 'eventId', 'token', 'formVersion', 'termsVersion',
+    'idempotencyKey'].some((field) => {
+    const value = body[field as keyof Body];
+    return value !== undefined && typeof value !== 'string';
+  }) || (body.answers !== undefined &&
+      (!body.answers || typeof body.answers !== 'object' || Array.isArray(body.answers)))) {
+    return bffApiError('INVALID_JSON', 'Claim fields have invalid types.', 400);
   }
   const scope = scopeError(body);
   if (!isScope(scope)) return scope;
@@ -59,10 +71,10 @@ export async function POST(request: Request) {
   }
   const formVersion = body.formVersion?.trim() ?? '';
   const termsVersion = body.termsVersion?.trim() ?? '';
-  if (!formVersion || !termsVersion) {
+  if (!termsVersion) {
     return bffApiError(
-      'FORM_VERSION_REQUIRED',
-      'formVersion and termsVersion from published schema are required.',
+      'TERMS_REQUIRED',
+      'termsVersion from published schema is required.',
       422,
     );
   }
@@ -70,10 +82,10 @@ export async function POST(request: Request) {
   const payload: Record<string, unknown> = {
     command: INVITATION_CLAIM_COMMAND,
     token,
-    formVersion,
     termsVersion,
     termsAccepted: true as const,
   };
+  if (formVersion) payload.formVersion = formVersion;
   if (body.answers && typeof body.answers === 'object') {
     payload.answers = body.answers;
   }
