@@ -18,7 +18,7 @@ Roadmap, Project, Issue, status, progress: **Tiếng Việt** (giữ ID/API/comm
 ## iOS build policy
 
 - **Không** Expo/EAS Cloud Build.
-- Local prebuild + Xcode/xcodebuild/fastlane trên Mac.
+- Local prebuild + Xcode/xcodebuild/fastlane trên Mac. Trước build/signing/provisioning/store: đọc `/Users/admin/.cursor/rules/apple-developer-personal.mdc`; xác minh personal team, không lấy mặc định từ Xcode/Keychain.
 - Không upload signing lên Expo cloud.
 
 ## Safety and correctness

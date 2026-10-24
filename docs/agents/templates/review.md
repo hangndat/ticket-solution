@@ -8,6 +8,7 @@ Chỉ gửi khối đã điền, xóa placeholder/mục không áp dụng; mục
 
 ```text
 Review only: <Issue/PR + paths>; <initial|revalidate>.
+Checkout: <đường dẫn tuyệt đối worktree>; tìm/đọc ban đầu: <slice paths>.
 Base → head: <full SHAs>; SHA đã review: <nếu revalidate>.
 Role/file + Persona: <...>; reviewer khác implementer <session/dispatch>.
 Agent/model/effort + Cost tier: <...>; Architecture impact: <Có|Không + ADR>.
