@@ -24,7 +24,7 @@
 | Copy user-facing | **Không** jargon: phiên, token, verified, cấu hình bản dựng, log kỹ thuật, disclaimer RBAC/staff trên flow khách. |
 | Push UI | Trạng thái **quyền iOS thật**; không toggle giả; không hứa «đã gửi» / delivery receipt. |
 
-**Ngoài scope:** catalog Sự kiện công khai, staff 3 tab, guest wallet, redeem auth gate, single-code redemption ([`archive/single-code-redemption.md`](./archive/single-code-redemption.md)).
+**Ngoài scope:** catalog Sự kiện công khai, staff 3 tab, guest wallet, redeem auth gate, single-code redemption ([`single-code-redemption.md`](../../architecture/single-code-redemption.md)).
 
 ---
 
