@@ -2,17 +2,19 @@ import { Button } from '@ticket/ui';
 import Image from 'next/image';
 import Link from 'next/link';
 import { t } from '../copy';
+import { MarketingHeroDecor } from '../marketing-hero-decor';
 import {
   marketingDemoNote,
-  marketingDisplay,
   marketingHeroCopy,
+  marketingHeroEyebrow,
   marketingHeroGrid,
+  marketingHeroHeadline,
   marketingHeroLogin,
   marketingHeroMedia,
   marketingHeroMediaCaption,
   marketingHeroMediaImg,
+  marketingHeroProofs,
   marketingHeroSection,
-  marketingH1,
   marketingLead,
   marketingWrap,
 } from '../marketing-surface';
@@ -27,9 +29,11 @@ export function HeroSection({ locale, demo, login }: MarketingSectionProps) {
       data-analytics-section="hero"
       data-on-ink=""
     >
+      <MarketingHeroDecor />
       <div className={`${marketingWrap} ${marketingHeroGrid}`}>
         <div className={marketingHeroCopy}>
-          <h1 id="hero-title" className={`${marketingDisplay} ${marketingH1}`} data-testid="hero-headline">
+          <p className={marketingHeroEyebrow}>{t(locale, 'hero.eyebrow')}</p>
+          <h1 id="hero-title" className={marketingHeroHeadline} data-testid="hero-headline">
             {t(locale, 'hero.headline')}
           </h1>
           <p className={marketingLead}>{t(locale, 'hero.sub')}</p>
@@ -55,6 +59,11 @@ export function HeroSection({ locale, demo, login }: MarketingSectionProps) {
           <p className={marketingDemoNote} role="status" data-testid="demo-badge">
             {t(locale, 'hero.demo_note')}
           </p>
+          <ul className={marketingHeroProofs} aria-label={t(locale, 'hero.proofs.label')}>
+            <li>{t(locale, 'hero.proof1')}</li>
+            <li>{t(locale, 'hero.proof2')}</li>
+            <li>{t(locale, 'hero.proof3')}</li>
+          </ul>
         </div>
         <figure className={marketingHeroMedia}>
           <Image
