@@ -1,0 +1,21 @@
+{
+  "task": "MR-FIX1-IDX",
+  "finding": "MR-R02",
+  "url": "http://127.0.0.1:57277/design/o13-platform-sales/prototype/index.html",
+  "requestedViewport": {
+    "width": 390,
+    "height": 844
+  },
+  "live": {
+    "innerWidth": 390,
+    "innerHeight": 844,
+    "devicePixelRatio": 1
+  },
+  "probe": {
+    "bannerPresent": true,
+    "hasSuperseded": true,
+    "hasCanonicalLink": true,
+    "sample": "\u0110\u00e3 thay th\u1ebf (superseded) \u2014 IA/visual marketing theo #770. M\u1edf mockup canonical: ui-uplift-2026-10/marketing/ \u00b7 Copy/form "
+  },
+  "screenshot": "o13-index-superseded-banner-390.png"
+}

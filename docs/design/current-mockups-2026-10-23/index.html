@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Vemoki — Mockup canonical index (2026-10-23)</title>
+  <style>
+    :root { color-scheme: light; --ink: #0f172a; --muted: #64748b; --line: #e2e8f0; --accent: #e11d48; --active: #ecfdf5; --active-border: #6ee7b7; --super: #fffbeb; --super-border: #fcd34d; --partial: #fef3c7; --partial-border: #fbbf24; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font: 15px/1.55 system-ui, -apple-system, sans-serif; color: var(--ink); background: #f1f5f9; }
+    .wrap { max-width: 920px; margin: 0 auto; padding: 28px 20px 48px; }
+    h1 { font-size: 1.65rem; letter-spacing: -0.02em; margin: 0 0 8px; }
+    .lede { color: var(--muted); margin: 0 0 24px; max-width: 68ch; }
+    .meta { font-size: 13px; color: var(--muted); margin-bottom: 28px; }
+    .meta code { font-size: 12px; background: #fff; padding: 2px 6px; border-radius: 4px; border: 1px solid var(--line); }
+    .badge-final { display: inline-block; font-size: 11px; font-weight: 600; background: #dbeafe; color: #1e40af; padding: 3px 8px; border-radius: 4px; margin-left: 6px; vertical-align: middle; }
+    h2 { font-size: 1.1rem; margin: 32px 0 12px; }
+    .grid { display: grid; gap: 12px; }
+    @media (min-width: 640px) { .grid.surfaces { grid-template-columns: 1fr 1fr; } }
+    a.card { display: block; padding: 16px 18px; background: #fff; border: 1px solid var(--line); border-radius: 10px; text-decoration: none; color: inherit; border-left: 4px solid var(--accent); }
+    a.card:hover { border-color: #cbd5e1; box-shadow: 0 4px 14px #0f172a0a; }
+    a.card strong { display: block; font-size: 1rem; margin-bottom: 4px; }
+    a.card span { font-size: 13px; color: var(--muted); }
+    .tag { display: inline-block; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; padding: 3px 8px; border-radius: 4px; margin-bottom: 8px; }
+    .tag-active { background: var(--active); color: #047857; border: 1px solid var(--active-border); }
+    .tag-super { background: var(--super); color: #92400e; border: 1px solid var(--super-border); }
+    .tag-ref { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+    ul.legacy { margin: 0; padding-left: 1.2rem; font-size: 14px; }
+    ul.legacy li { margin: 6px 0; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; background: #fff; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+    th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--line); vertical-align: top; }
+    th { background: #f8fafc; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+    tr:last-child td { border-bottom: 0; }
+    .ok { color: #047857; font-weight: 600; }
+    .partial { color: #b45309; font-weight: 600; }
+    .runner { background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; font-size: 13px; }
+    .runner pre { margin: 8px 0 0; overflow-x: auto; font-size: 12px; background: #0f172a; color: #e2e8f0; padding: 12px; border-radius: 6px; }
+    footer { margin-top: 40px; font-size: 13px; color: var(--muted); }
+    footer a { color: #2563eb; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Mockup canonical index <span class="badge-final">FIX 2/2</span></h1>
+    <p class="lede">Bốn bề mặt sản phẩm (marketing, consumer web, iOS, portal) + chrome Sheet. Legacy giữ banner; evidence đóng băng trong <code>docs/reviews/assets/MR-*</code> (IDX re-capture MR-R02).</p>
+    <p class="meta">Run <code>run_2c9e147d89e6</code> · Issue #859 · Base <code>b2faa48a1ce4</code> · Manifest <a href="source-manifest.json">source-manifest.json</a> (<code>dirty: true</code>) · <a href="README.md">README</a></p>
+
+    <h2>Bốn bề mặt — canonical</h2>
+    <div class="grid surfaces">
+      <a class="card" href="../ui-uplift-2026-10/marketing/index.html">
+        <span class="tag tag-active">Marketing · A-MKT-01</span>
+        <strong>Event OS marketing</strong>
+        <span>8 section · EN form · Sheet @390</span>
+      </a>
+      <a class="card" href="../ui-uplift-2026-10/app/index.html">
+        <span class="tag tag-active">Consumer · A-APP-01</span>
+        <strong>Attendee web</strong>
+        <span>Redeem/terms/pending/offline · catalog</span>
+      </a>
+      <a class="card" href="../../plans/mobile-production-refactor/full-prototype.html">
+        <span class="tag tag-active">iOS · A-IOS-01</span>
+        <strong>Mobile flows</strong>
+        <span>Gate SoT · M07/M10 states</span>
+      </a>
+      <a class="card" href="../portal-audit-fix-2026-10-23/prototype/portal-full-specimen.html">
+        <span class="tag tag-active">Portal · A-POR-01</span>
+        <strong>AntD full specimen</strong>
+        <span>PA-01..06 · VI/EN</span>
+      </a>
+    </div>
+
+    <h2>Chrome & reference</h2>
+    <div class="grid surfaces">
+      <a class="card" href="../ui-framework-2026-10/prototype/header-mobile-sheet.html">
+        <span class="tag tag-active">Chrome · A-MKT-02</span>
+        <strong>Header mobile Sheet</strong>
+        <span>#789 · D-2 tier 2</span>
+      </a>
+      <a class="card" href="../portal-audit-fix-2026-10-23/prototype/header-specimen.html">
+        <span class="tag tag-ref">Portal PA-01</span>
+        <strong>Header strip only</strong>
+        <span>Subset of A-POR-01 pack</span>
+      </a>
+      <a class="card" href="../d11-prototype/index.html">
+        <span class="tag tag-ref">Reference · A-REF-01</span>
+        <strong>D-11 semantics</strong>
+        <span>Redeem/gate reference flows</span>
+      </a>
+    </div>
+
+    <h2>Legacy (superseded)</h2>
+    <ul class="legacy">
+      <li><a href="../o13-platform-sales/prototype/index.html">O13 sales HTML</a> → marketing uplift</li>
+      <li><a href="../../plans/mobile-production-refactor/web-prototype.html">web-prototype monolith</a> → app uplift · gate → iOS · admin → portal</li>
+    </ul>
+
+    <h2>Requirement coverage (R-01..R-10)</h2>
+    <table>
+      <thead><tr><th>Req</th><th>Status</th><th>Owner</th></tr></thead>
+      <tbody>
+        <tr><td>R-01 Marketing 8 section</td><td class="ok">Met</td><td>MR-MKT-WEB</td></tr>
+        <tr><td>R-02 Form VI/EN</td><td class="ok">Met</td><td>MR-MKT-WEB</td></tr>
+        <tr><td>R-03 Sheet header</td><td class="ok">Met</td><td>MR-MKT-WEB</td></tr>
+        <tr><td>R-04 Terms gate</td><td class="ok">Met</td><td>MKT + iOS</td></tr>
+        <tr><td>R-05 Web gate/admin</td><td class="ok">Met (markers)</td><td>MKT + IDX</td></tr>
+        <tr><td>R-06 Portal PA-04..06</td><td class="ok">Met</td><td>MR-PORTAL</td></tr>
+        <tr><td>R-07 D-2 format</td><td class="ok">Met</td><td>MR-D2-COMPLETE (Tailwind/token)</td></tr>
+        <tr><td>R-08 Negative states</td><td class="ok">Met</td><td>MKT + iOS</td></tr>
+        <tr><td>R-09 Catalog filter</td><td class="ok">Met</td><td>MR-MKT-WEB</td></tr>
+        <tr><td>R-10 Token SoT</td><td class="ok">Met</td><td><code>brand/vemoki/tokens.json</code> in manifest</td></tr>
+      </tbody>
+    </table>
+
+    <h2>Runner</h2>
+    <div class="runner">
+      <p>Serve <code>docs/</code> on port <strong>57277</strong>:</p>
+      <pre>python3 -m http.server 57277 --bind 127.0.0.1 --directory docs</pre>
+      <p>This page: <code>/design/current-mockups-2026-10-23/index.html</code></p>
+    </div>
+
+    <footer>
+      Reports: <code>.orca-metrics/mockup-refresh/REPORT-MR-FINALIZE.md</code> · Next: MR-REVIEW
+    </footer>
+  </div>
+</body>
+</html>

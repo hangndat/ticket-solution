@@ -1,0 +1,11 @@
+{
+  "id": "5c7962f5-9460-48f8-ae0c-116008d13caa",
+  "ok": true,
+  "result": {
+    "origin": "http://127.0.0.1:57277/design/ui-uplift-2026-10/marketing/index.html?v=esc",
+    "result": "{\"surface\":\"marketing\",\"locale\":\"vi\",\"triggerId\":\"mkt-sheet-trigger\",\"dialogOpen\":false,\"focusOnTrigger\":true,\"triggerExpanded\":\"false\"}"
+  },
+  "_meta": {
+    "runtimeId": "9d821662-c628-49db-a168-99fa7b7636fc"
+  }
+}

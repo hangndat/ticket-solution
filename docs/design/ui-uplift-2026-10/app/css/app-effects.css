@@ -1,0 +1,58 @@
+/* Decorative-only (gradients, QR mock). App chrome uses Tailwind utilities via app-tw.js */
+
+@media (max-width: 519px) {
+  .site .navlinks {
+    display: none !important;
+  }
+
+  .site .mobile-menu-btn {
+    display: inline-flex !important;
+    white-space: nowrap;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+    font-size: 0.8125rem;
+  }
+
+  .site .nav {
+    gap: 0.5rem;
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+
+  .site .logo {
+    font-size: 1.25rem;
+  }
+}
+[data-event-art="green"] {
+  background: linear-gradient(135deg, #15803d, #22c55e);
+}
+
+[data-event-art="gold"] {
+  background: linear-gradient(135deg, #b45309, #f59e0b);
+}
+
+[data-event-art="mfest"] {
+  background: linear-gradient(135deg, #e11d48, #7c3aed);
+}
+
+[data-qr-grid] {
+  display: grid;
+  grid-template-columns: repeat(21, 1fr);
+  gap: 1px;
+  width: 168px;
+  height: 168px;
+  padding: 8px;
+  background: #fff;
+  border: 1px solid #dde3eb;
+  border-radius: 8px;
+}
+
+[data-qr-grid] i {
+  display: block;
+  aspect-ratio: 1;
+  background: #0b1220;
+}
+
+[data-qr-grid] i.blank {
+  background: transparent;
+}

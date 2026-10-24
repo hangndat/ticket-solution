@@ -1,0 +1,28 @@
+{
+  "file": "MR-IOS-fullviewport-390x844.png",
+  "captureMode": "fullViewport",
+  "probe": {
+    "innerWidth": 390,
+    "innerHeight": 844,
+    "devicePixelRatio": 1,
+    "captureMode": "fullViewport",
+    "phoneBox": {
+      "cssWidth": 366,
+      "cssHeight": 737,
+      "left": 12,
+      "top": 614
+    },
+    "locale": "vi",
+    "screen": "scan",
+    "title": "Vemoki \u00b7 To\u00e0n b\u1ed9 lu\u1ed3ng"
+  },
+  "pngPixels": {
+    "width": 390,
+    "height": 844
+  },
+  "r07": {
+    "innerWidth": 390,
+    "expected": 390,
+    "match": true
+  }
+}

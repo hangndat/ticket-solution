@@ -10,7 +10,9 @@
 | Visual budget | **Không** — token AntD staff [`apps/portal/src/theme/vemoki.ts`](../../../apps/portal/src/theme/vemoki.ts), O18 ProLayout |
 | Xác nhận | User đã duyệt PA-01–06 + plan 23/10/2026 |
 | Consumer | Web B (PA-01 header) · Web A (PA-02–03 copy, dùng [copy-guests-pa02-pa03.md](./copy-guests-pa02-pa03.md)) |
-| PD handoff SHA | `c9598be` → commit batch 1/2 trên cùng branch (xem `git log -1` / worker_done) |
+| PD handoff SHA | Batch 1 `c9598be`; MR-PORTAL refresh **local** (không commit) — xem [CHANGELOG-pack.md](./CHANGELOG-pack.md) |
+| MR-PORTAL evidence | [`docs/reviews/assets/MR-PORTAL-2026-10-23/`](../../reviews/assets/MR-PORTAL-2026-10-23/) |
+| MR-FIX1-PORTAL (#859 batch 1/2) | [`docs/reviews/assets/MR-FIX1-PORTAL-2026-10-23/`](../../reviews/assets/MR-FIX1-PORTAL-2026-10-23/) · [REPORT-FIX1-PORTAL](../../../.orca-metrics/mockup-refresh/REPORT-FIX1-PORTAL.md) |
 
 **Mẫu trực quan trong thư mục này là specimen PD (banner vàng «PD demo»), không chứng minh runtime authenticated.**
 
@@ -31,10 +33,17 @@ Capture: [prototype/capture-screenshots.sh](./prototype/capture-screenshots.sh) 
 | Path | Nội dung |
 | --- | --- |
 | [copy-guests-pa02-pa03.md](./copy-guests-pa02-pa03.md) | Bảng copy VI/EN Guests Import / Pending / Notifications / Export + PA-03 scope filter |
-| [prototype/header-specimen.html](./prototype/header-specimen.html) | HTML/React+AntD CDN — two-tier chrome |
-| [prototype/capture-screenshots.sh](./prototype/capture-screenshots.sh) | Orca browser chụp ảnh vào `assets/` |
-| [assets/](./assets/) | Ảnh 390 / 1024 / 1440 |
-| [assets/evidence/](./assets/evidence/) | Probe JSON đo viewport/media/layout mỗi ảnh |
+| [pa03-import-filter-diagram.md](./pa03-import-filter-diagram.md) | Sơ đồ PA-03 — filter chỉ tab Import |
+| [pa06-reduced-motion-notes.md](./pa06-reduced-motion-notes.md) | PA-06 CSS + kiểm tra reduced motion |
+| [CHANGELOG-pack.md](./CHANGELOG-pack.md) | Lịch sử batch PD (PA-01 regression) |
+| [prototype/header-specimen.html](./prototype/header-specimen.html) | PA-01 — two-tier chrome (giữ tên file) |
+| [prototype/portal-full-specimen.html](./prototype/portal-full-specimen.html) | **Full portal mockup**: org/event/operator nav, Guests tabs, **audit & codes** (MR-R08), setup, platform grants preview, state presets VI/EN |
+| [prototype/capture-screenshots.sh](./prototype/capture-screenshots.sh) | Orca chụp PA-01 → `assets/header-pa01-*` |
+| [prototype/capture-portal-mr.sh](./prototype/capture-portal-mr.sh) | Orca chụp MR-PORTAL qua docs server `:57277` |
+| [prototype/probe-portal-full.js](./prototype/probe-portal-full.js) | Probe PA-03..06 + viewport |
+| [assets/](./assets/) | Ảnh PA-01 + `portal-*` MR batch |
+| [assets/evidence/](./assets/evidence/) | Probe JSON mỗi ảnh |
+| [../../reviews/assets/MR-PORTAL-2026-10-23/](../../reviews/assets/MR-PORTAL-2026-10-23/) | Mirror evidence + `source-manifest.json` |
 
 ## PA-01 — Quyết định header (one pattern)
 
@@ -121,13 +130,25 @@ portal-pro-layout.tsx
 
 ## PA-02 / PA-03 — Copy
 
-Chi tiết key và câu chốt: [copy-guests-pa02-pa03.md](./copy-guests-pa02-pa03.md).
+Chi tiết key và câu chốt: [copy-guests-pa02-pa03.md](./copy-guests-pa02-pa03.md). Sơ đồ filter: [pa03-import-filter-diagram.md](./pa03-import-filter-diagram.md).
 
 Tóm tắt:
 
 - Loại jargon luồng chính: G-E1, `commit idempotent`, `stream authenticated`, `poll`, permission string trong câu user-facing.
 - Giữ ý nghĩa trạng thái (accepted/delivered, unknown, READY semantics trong copy vận hành). VI: *tiếp nhận gửi / nhà cung cấp tiếp nhận* ≠ khách đã nhận email — không dùng «đã gửi» thay *delivered*.
 - Filter nguồn/loại vé **chỉ** tab Import (PA-03).
+
+### AC quan sát (PA-02..06) — specimen `portal-full-specimen.html`
+
+| ID | Kiểm tra | Evidence |
+| --- | --- | --- |
+| PA-02 | Tab/alert Guests không jargon protocol; VI/EN toggle | `portal-guests-import-vi-390x844.png`, `portal-full-en-1024x900.png` |
+| PA-03 | Pending/Export: không `import-catalog-filters` | Probe `portal-guests-pending-vi-1024x900.json` → `catalogVisible: false` |
+| PA-04 | `Intl` locale VI vs EN + nhãn UTC | `portal-pa04-datetime-vi/en-390x844.png` |
+| PA-05 | `aria-label` export ≠ `exportId` | Probe export tab → «Mã yêu cầu xuất» / «Export request ID» |
+| PA-06 | Spinner `animation: none` khi `?rm=1` | [pa06-reduced-motion-notes.md](./pa06-reduced-motion-notes.md), `portal-pa06-rm-vi-390x844.png` |
+
+Query gợi ý: `?page=guests&tab=export&locale=vi`, `?page=audit&auditTab=codes&locale=en`, `?page=platform&persona=operator&platformTab=grants`, `?long=1`, `?state=loading&rm=1`.
 
 ## Hướng dẫn triển khai
 
