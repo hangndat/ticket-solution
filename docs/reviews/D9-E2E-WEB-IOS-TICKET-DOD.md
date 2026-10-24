@@ -17,7 +17,7 @@
 | Secrets | Chỉ fixture local (`attendee-demo`, pepper demo, LAN IP) — không secret prod |
 | iOS bake local (AC1) | Artifact ghi `EXPO_PUBLIC_API_BASE_URL=http://192.168.86.8:3001` + Info.plist `apiBaseUrl` cùng host — **không** `api.vemoki.com`; rebuild local Release-for-sim · Team `BLUA62D52G` · **không** EAS Cloud |
 | Web headless redeem (AC2) | `scripts/web-uat.mjs` thêm `redeem` (chrome-headless-shell); claim `DEMO-FUN-006` → BFF tickets **200** `ticketCount=1`; user `attendee@example.com` |
-| iOS My Tickets cùng user (AC3) | Curated `d9-e2e-my-tickets.png`: **ACTIVE · v1** · Tenant `d9d9f001-0001-4000-8000-000000000001` · sync `2026-10-17T15:21:59Z` — khớp seed demo-fun |
+| iOS My Tickets cùng user (AC3) | Curated `d9-uat/e2e-web-ios/ios/d9-e2e-my-tickets.png`: **ACTIVE · v1** · Tenant `d9d9f001-0001-4000-8000-000000000001` · sync `2026-10-17T15:21:59Z` — khớp seed demo-fun |
 | Published-list không lỗi do prod (AC4) | UI ErrorState fail-closed (không fallback fixture-as-published); curl local `GET …/v1/public/tenants/demo-fun/events` → Nest **404** (prod cùng path cũng 404) — bake gap #147 **đóng**; HTTP 200 public list **ngoài scope** |
 | Headless / no EAS (AC6) | web-uat headless; sim-uat AXe/simctl documented; không EAS Cloud; không computer-use |
 | CI tip PR #202 | `changes` SUCCESS · `ci` SUCCESS · web/mobile/backend/db **SKIPPED** (docs+script) — [run 39044858391](https://github.com/hangndat/ticket-solution/actions/runs/39044858391) |
@@ -29,7 +29,7 @@
 | --- | --- |
 | Known gap (chấp nhận theo Task #200 / coordinator) | Nest thiếu `GET /v1/public/tenants/...` → **404** trên local **và** prod. Published-list UI lỗi là fail-closed đúng; **không** còn do bake `api.vemoki.com`. Không claim pilot. |
 | Should-fix (UAT harness, không blocker AC chính) | `cmdRedeem` successHint `/đã cấp\|ticketId\|ACTIVE\|Vé/i` **khớp** nút luôn hiện *「Xem vé của tôi」* → có thể pass race trước khi redeem xong. |
-| Nit (evidence quality) | Curated `d9-e2e-redeem.png` vẫn hiện *「Đang xác minh mã…」* / *「Đang xử lý…」* — không phải success surface; độ tin cậy dựa bảng tickets 200 + iOS ACTIVE, không dựa PNG web success. |
+| Nit (evidence quality) | Curated `d9-uat/e2e-web-ios/web/d9-e2e-redeem.png` vẫn hiện *「Đang xác minh mã…」* / *「Đang xử lý…」* — không phải success surface; độ tin cậy dựa bảng tickets 200 + iOS ACTIVE, không dựa PNG web success. |
 | Nit | Tip SHA trong artifact ghi `git rev-parse HEAD` thay vì literal `80a36138…` (PR body đã pin đúng tip). |
 
 Không blocker ownership / secrets / EAS / headless / bake-prod / thiếu iOS ACTIVE.

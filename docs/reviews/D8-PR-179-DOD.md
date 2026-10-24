@@ -56,7 +56,7 @@ gh api repos/hangndat/ticket-solution/commits/bf4b1fb0d1af13f3e6f74d67d6d6ff9b84
 # web/ci/changes/turbo-persist → success
 ```
 
-UAT screenshots đã có sẵn trên SHA (không re-run Playwright trong session review; visual spot-check `d8-home.png` + `d8-event-sunburst.png`: home Vemoki lockup; event chrome wordmark tenant/demo).
+UAT screenshots đã có sẵn trên SHA (không re-run Playwright trong session review; visual spot-check `d8-uat/web/d8-home.png` + `d8-uat/web/d8-event-sunburst.png`: home Vemoki lockup; event chrome wordmark tenant/demo).
 
 ## Findings
 

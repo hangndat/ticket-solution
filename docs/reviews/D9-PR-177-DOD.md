@@ -44,7 +44,7 @@ gh pr checks 177  # mobile/ci/changes/turbo-persist = pass
 
 1. **Copy tests only** — `screen-state-copy.test.ts` assert VI strings; không có RN renderer test cho panel wiring. Chấp nhận được cho D9 polish; CI suite mobile vẫn xanh.
 2. **Retry không đều** — `VerifiedWallet` + events list có `onRetry`; offline wallet error và event-detail error/misconfig chưa có retry CTA. UX nhỏ, không phá fail-closed.
-3. **Screenshot ví** (`d9-my-tickets.png`) — chứng minh OIDC fail-closed (`Chưa cấu hình OIDC`), không phải empty wallet sau sign-in. Khớp known gap dưới đây.
+3. **Screenshot ví** (`d9-uat/ios/d9-my-tickets.png`) — chứng minh OIDC fail-closed (`Chưa cấu hình OIDC`), không phải empty wallet sau sign-in. Khớp known gap dưới đây.
 
 ### Known gaps (có chủ đích — không FAIL)
 

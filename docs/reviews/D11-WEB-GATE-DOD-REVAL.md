@@ -18,7 +18,7 @@
 | CI tip | **PASS** | Run [39090763197](https://github.com/hangndat/ticket-solution/actions/runs/39090763197) · `headSha` = `30f88b3…` · conclusion `success` · jobs `web` + `ci` (+ `changes` / `turbo-persist`) SUCCESS; backend/mobile/db skipped (path filter) |
 | `routes.integration` copy | **PASS** | `apps/web/tests/routes.integration.mjs:154` `assert.ok(gateHtml.includes('Không cho khách qua'))` — tip SSR meta/intro chứa đúng cụm (capital-K); CI web xanh chứng minh |
 | Unit / outcome tests | **PASS (CI)** | Job `web` trên tip; local worktree không có `node_modules` — không re-run `tsx --test` tại session này |
-| Headless UAT | **PASS (artifact + script)** | Script `apps/web/tests/gate-offline-uat.mjs`: banner «Cổng web offline», «Không xếp hàng trên web», disable confirm/session khi offline, reject fake «Đã xếp hàng — chờ đồng bộ». PNGs: [`d11-uat/web/d11-gate-offline.png`](./d11-uat/web/d11-gate-offline.png), [`d11-gate-online.png`](./d11-uat/web/d11-gate-online.png). Reviewer đã xem PNG offline (banner VI + fail-closed); không re-host Playwright (thiếu deps) |
+| Headless UAT | **PASS (artifact + script)** | Script `apps/web/tests/gate-offline-uat.mjs`: banner «Cổng web offline», «Không xếp hàng trên web», disable confirm/session khi offline, reject fake «Đã xếp hàng — chờ đồng bộ». PNGs: [`d11-uat/web/d11-gate-offline.png`](./d11-uat/web/d11-gate-offline.png), [`d11-uat/web/d11-gate-online.png`](./d11-uat/web/d11-gate-online.png). Reviewer đã xem PNG offline (banner VI + fail-closed); không re-host Playwright (thiếu deps) |
 | Independent reviewer | **PASS** | Dispatch `ctx_2c6aa6ee9329` ≠ implementer / fix |
 
 ## Checklist revalidation
