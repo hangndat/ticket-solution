@@ -31,6 +31,10 @@ export const colors = {
   line: brand.line,
   /** Success pill background (events / tickets). */
   admitSurface: '#edf5ef',
+  /** Gate scan deny sticky panel (brand denyBg tint). */
+  denySurface: '#fde8ec',
+  /** Gate scan unknown/queued sticky panel (amber wash on paper). */
+  unknownSurface: '#fff6e8',
   /** Muted chrome surfaces. */
   surfaceMuted: '#e8ecf1',
   surfaceSubtle: '#f0f4f8',

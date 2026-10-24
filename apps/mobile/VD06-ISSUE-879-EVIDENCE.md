@@ -3,7 +3,8 @@
 | Field | Value |
 | --- | --- |
 | Branch | `hangndat/vd06-ios-staff` |
-| **SHA** | `85f90ce3` (run `git rev-parse HEAD` on branch) |
+| **Code SHA** | `85f90ce3` (staff scan UI behavior; unchanged through evidence tip) |
+| **Evidence tip** | Run `git rev-parse HEAD` after each commit on branch (includes doc-only + fix rounds) |
 | Base | `992a85e9` |
 | Scope | `apps/mobile/**` only |
 
@@ -15,13 +16,19 @@
 - Camera denied: `gate-camera-denied` card with Settings CTA when blocked.
 - Sticky ops: event title + `Phiên cổng · {shortId}` + connectivity/session strip (unchanged classifier/API/idempotency/offline).
 
-## Checks (SHA `85f90ce3`)
+## Checks
+
+Re-run on **current branch tip** after fix rounds (not the historical code SHA alone):
 
 ```bash
+node scripts/ui-budget.mjs --scope mobile
 pnpm --filter @ticket/contracts build
 cd apps/mobile && pnpm test && pnpm typecheck && pnpm lint
 ```
 
+Initial worker dispatch (code @ `85f90ce3`): test/typecheck/lint pass; **ui-budget** failed on review SHA `88c67a32` until F01 semantic surfaces (fix round 1).
+
+- **ui-budget (mobile):** pass after F01 (`mobile.tsx_hex_literals` back to baseline 0)
 - **test:** pass (gate + mobile suite)
 - **typecheck:** pass
 - **lint:** pass (pre-existing warnings only)

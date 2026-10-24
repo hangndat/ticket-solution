@@ -16,8 +16,8 @@ function toneColor(tone: GateScanStatusView['tone']): string {
 function toneSurface(tone: GateScanStatusView['tone'], emphasized: boolean): string {
   if (!emphasized) return colors.card;
   if (tone === 'admit') return colors.admitSurface;
-  if (tone === 'deny') return '#fde8ec';
-  if (tone === 'unknown') return '#fff6e8';
+  if (tone === 'deny') return colors.denySurface;
+  if (tone === 'unknown') return colors.unknownSurface;
   return colors.surfaceMuted;
 }
 
