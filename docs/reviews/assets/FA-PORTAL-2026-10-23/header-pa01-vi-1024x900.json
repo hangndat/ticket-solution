@@ -1,0 +1,51 @@
+{
+  "sha": "b2faa48a1ce443c8fc6c849cb74a06a57f8b0c37",
+  "png": "header-pa01-vi-1024x900.png",
+  "locale": "vi",
+  "viewportTarget": {
+    "w": 1024,
+    "h": 900
+  },
+  "measured": {
+    "dpr": 1,
+    "innerHeight": 900,
+    "innerWidth": 1024
+  },
+  "viewportMatch": true,
+  "probe": {
+    "pa01": {
+      "chrome": {
+        "activeTab": {
+          "clientWidth": 177,
+          "clipped": false,
+          "scrollWidth": 177,
+          "text": "Nhập khách và mã từ CSV"
+        },
+        "contextStrip": {
+          "overflowX": false,
+          "stacked": false
+        },
+        "filtersVisible": true,
+        "notifyTabAria": "Thông báo",
+        "pageSubTitle": {
+          "clientWidth": 535,
+          "clipped": true,
+          "scrollWidth": 874,
+          "text": "Xem trước không giữ suất. Nhà cung cấp đã tiếp nhận chưa chứng minh khách đã nhận email. Chọn nguồn và loại vé từ danh m"
+        },
+        "pageTitle": {
+          "clientWidth": 97,
+          "clipped": true,
+          "scrollWidth": 119,
+          "text": "Khách & mã"
+        }
+      },
+      "lang": "vi",
+      "measured": {
+        "dpr": 1,
+        "innerHeight": 900,
+        "innerWidth": 1024
+      }
+    }
+  }
+}

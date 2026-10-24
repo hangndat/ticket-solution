@@ -29,6 +29,7 @@ export function PortalPage({
 }: PortalPageProps) {
   return (
     <PageContainer
+      className="portal-page-container"
       title={title}
       subTitle={subTitle}
       extra={extra}
