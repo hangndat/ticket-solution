@@ -75,9 +75,13 @@ export default async function Home({ searchParams }: Props) {
       <CatalogHeroBand
         eyebrow="Vemoki · Sự kiện & vé"
         titleId="home-title"
-        title="Hẹn bạn ở trải nghiệm tiếp theo."
-        intro="Khám phá sự kiện từ những nhà tổ chức trên khắp nền tảng. Đổi mã lấy vé qua mục Đổi mã trên thanh điều hướng."
-      />
+        title="Khám phá sự kiện"
+        intro="Tìm sự kiện và xem thông tin tham dự."
+      >
+        <p className="m-0 mt-3 max-w-[36rem] text-[0.95rem] text-paper/75">
+          <Link href="/redeem">Có mã mời? Đổi mã lấy vé</Link>
+        </p>
+      </CatalogHeroBand>
 
       {authNotice ? (
         <aside

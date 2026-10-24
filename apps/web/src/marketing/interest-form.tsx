@@ -36,7 +36,13 @@ const FIELD_ERROR_KEY: Record<InterestFieldError, CopyKey> = {
   consent: 'interest.error.consent',
 };
 
-export function InterestForm({ locale }: { locale: MarketingLocale }) {
+export function InterestForm({
+  locale,
+  demo,
+}: {
+  locale: MarketingLocale;
+  demo: string;
+}) {
   const formId = useId();
   const [state, setState] = useState<FormState>('empty');
   const [fieldErrors, setFieldErrors] = useState<
@@ -111,6 +117,9 @@ export function InterestForm({ locale }: { locale: MarketingLocale }) {
       >
         <strong>{t(locale, 'interest.success.title')}</strong>
         <p>{t(locale, 'interest.success.body')}</p>
+        <p>
+          <a href={demo}>{t(locale, 'interest.secondary_demo')}</a>
+        </p>
       </Alert>
     );
   }
@@ -339,6 +348,9 @@ export function InterestForm({ locale }: { locale: MarketingLocale }) {
       >
         {t(locale, 'interest.submit')}
       </Button>
+      <p>
+        <a href={demo}>{t(locale, 'interest.secondary_demo')}</a>
+      </p>
     </form>
   );
 }

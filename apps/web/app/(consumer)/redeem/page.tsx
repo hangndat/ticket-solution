@@ -12,7 +12,6 @@ import {
 import {
   authButtonsRow,
   redeemAuthNotice,
-  redeemFooterLinks,
   redeemFormCard,
   redeemGateCard,
   redeemHeader,
@@ -137,10 +136,6 @@ export default async function RedeemPage({ searchParams }: Props) {
             />
           </div>
         )}
-
-        <p className={redeemFooterLinks}>
-          <Link href="/">← Trang chủ</Link>
-        </p>
       </div>
     </ConsumerPageShell>
   );

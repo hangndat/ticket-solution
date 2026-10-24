@@ -3,7 +3,7 @@ import { cn } from '../../lib/utils';
 /** Marketing shell + section utilities (Tailwind v4 / @theme tokens — replaces marketing-uplift.css). */
 
 export const marketingSurface =
-  'flex flex-col min-h-dvh max-w-full overflow-x-clip text-ink antialiased scheme-light [&>main]:flex-1 [&>main]:min-w-0 [&>main]:w-full [&>main_a]:underline [&>main_a]:decoration-1 [&>main_a]:underline-offset-[3px] hover:[&>main_a]:text-focus';
+  'flex flex-col min-h-dvh max-w-full overflow-x-clip text-ink antialiased scheme-light [&>main]:flex-1 [&>main]:min-w-0 [&>main]:w-full [:where(&>main_a)]:underline [:where(&>main_a)]:decoration-1 [:where(&>main_a)]:underline-offset-[3px] hover:[:where(&>main_a)]:text-focus';
 
 export const marketingSkip =
   'skip-link absolute -left-[9999px] top-0 z-[100] rounded-sm bg-ink px-4 py-3 text-paper focus:left-4 focus:top-4';
@@ -186,10 +186,6 @@ export const marketingRow = cn(
 
 export const marketingDemoBannerInk = cn(
   'mb-6 rounded-sm border border-signal/35 bg-signal/15 px-4 py-3.5 text-[0.85rem] font-semibold text-[color-mix(in_srgb,var(--color-signal)_30%,var(--color-paper))]',
-);
-
-export const marketingDemoBannerPaper = cn(
-  'rounded-sm border border-dashed border-signal/45 bg-signal/10 px-3.5 py-2.5 text-[0.9rem]',
 );
 
 export const marketingMetrics =
