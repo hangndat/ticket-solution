@@ -1,0 +1,35 @@
+{
+  "capture": "marketing-320-vi",
+  "url": "http://localhost:3000/marketing",
+  "viewport": {
+    "width": 320,
+    "height": 844
+  },
+  "sourceSha": "b2faa48a1ce443c8fc6c849cb74a06a57f8b0c37",
+  "sheetSha": "868394be232360aabde907ed37524243505827054887357eae32d2dad80e677b",
+  "open": {
+    "surface": "marketing",
+    "viewport": {
+      "innerWidth": 320,
+      "innerHeight": 844,
+      "dpr": 1
+    },
+    "dialogOpen": true,
+    "widthComputed": "272px",
+    "rectWidth": 305,
+    "narrowStripe": false,
+    "cssSupportsOld": false,
+    "cssSupportsFixed": true
+  },
+  "afterEscape": {
+    "timelineCurrentTime": 7259.746,
+    "dialogPresent": false,
+    "dialogState": null,
+    "focusInClosedDialog": false,
+    "focusOnTrigger": true,
+    "activeTestId": "mkt-nav-menu-toggle",
+    "animCount": 0,
+    "animSnap": [],
+    "reducedMotion": false
+  }
+}

@@ -1,0 +1,42 @@
+[
+  {
+    "page": "55750899-6fd3-4c07-a60b-5379f000cada",
+    "result": {
+      "url": "http://localhost:3000/",
+      "now": 4550356,
+      "visibility": "visible",
+      "raf": {
+        "requested": 4548279.399999991,
+        "fired": null
+      },
+      "dialog": "closed",
+      "animations": [
+        {
+          "name": "exit",
+          "pending": true,
+          "current": 0,
+          "start": null
+        },
+        {
+          "name": "exit",
+          "pending": true,
+          "current": 0,
+          "start": null
+        }
+      ]
+    }
+  },
+  {
+    "page": "d9e2651f-94d9-4211-a51a-693da1b48859",
+    "result": {
+      "url": "http://localhost:3000/",
+      "now": 422514.799999997,
+      "visibility": "visible",
+      "raf": {
+        "requested": 420430.59999999404,
+        "fired": 420423.9
+      },
+      "animations": []
+    }
+  }
+]

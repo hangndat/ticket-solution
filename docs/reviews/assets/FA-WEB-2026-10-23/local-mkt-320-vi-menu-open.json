@@ -1,0 +1,35 @@
+{
+  "capture": "local-mkt-320-vi-menu-open",
+  "persona": "public-guest",
+  "url": "http://127.0.0.1:3000/marketing",
+  "viewport": {
+    "width": 320,
+    "height": 844
+  },
+  "sourceSha": "b2faa48a1ce443c8fc6c849cb74a06a57f8b0c37",
+  "sheet": {
+    "surface": "marketing-next",
+    "url": "http://127.0.0.1:3000/marketing",
+    "dialogPresent": true,
+    "menuTestId": true,
+    "dialogState": "open",
+    "overlay": true,
+    "navLinksInDialog": 7,
+    "triggerExpanded": "true",
+    "focusInDialog": true,
+    "activeTag": "DIV",
+    "locale": "vi",
+    "headerInterestVisible": false,
+    "menuInterestVisible": true,
+    "viewport": {
+      "w": 320,
+      "h": 844,
+      "dpr": 1
+    }
+  },
+  "chromeWrap": {
+    "issues": [],
+    "pageOverflowX": false,
+    "viewport": 320
+  }
+}

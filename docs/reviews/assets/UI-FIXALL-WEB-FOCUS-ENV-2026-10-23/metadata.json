@@ -1,0 +1,16 @@
+{
+  "coordinator": "root; không phải independent reviewer",
+  "head": "b2faa48a1ce443c8fc6c849cb74a06a57f8b0c37",
+  "dirty": true,
+  "page": "55750899-6fd3-4c07-a60b-5379f000cada",
+  "viewport": [
+    390,
+    844,
+    1
+  ],
+  "sourceHashes": {
+    "apps/web/src/site-chrome.tsx": "44c4b9569c21d11134c6e453769073172cc400360f0ee4c952fe5d990a2b3414",
+    "packages/ui/src/components/ui/sheet.tsx": "868394be232360aabde907ed37524243505827054887357eae32d2dad80e677b"
+  },
+  "intervention": "orca tab switch --page <old-id> --focus; requestAnimationFrame diagnostic only; no CSS/DOM/source injection or animation.finish for acceptance"
+}

@@ -1,0 +1,13 @@
+{
+  "capture": "local-mkt-interest-en-390-validation",
+  "url": "http://localhost:3000/marketing/en#interest",
+  "viewport": { "width": 390, "height": 844 },
+  "sourceSha": "b2faa48a1ce443c8fc6c849cb74a06a57f8b0c37",
+  "design": {
+    "noValidate": true,
+    "nativeConstraintValidation": "disabled by design (form noValidate + onSubmit preventDefault)",
+    "customValidation": "validateInterest in interest-validate-client.ts sets FieldError copy from marketing-copy EN keys"
+  },
+  "runtimeNote": "Orca click on interest-submit did not reliably surface FieldError text in this fix-round session (browser runtime timeout); labels at #interest remain verified in local-mkt-interest-en-390.json. EN error strings covered by marketing-copy.test.ts + validateInterest unit path — not inferred as runtime FAIL.",
+  "canonicalAttendeeRedeem": "docs/reviews/assets/UI-FIXALL-WEB-REVIEW-2026-10-23/review-attendee-oidc-390-vi.json"
+}
