@@ -1,0 +1,108 @@
+{
+  "id": "7129fc22-526d-4b8b-bd40-0d1ea614e697",
+  "ok": true,
+  "result": [
+    {
+      "role": "application",
+      "type": "Application",
+      "label": "Vemoki",
+      "value": "",
+      "enabled": true,
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      },
+      "children": [
+        {
+          "role": "",
+          "type": "GenericElement",
+          "label": "Đóng xác nhận vé",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "children": []
+        },
+        {
+          "role": "",
+          "type": "GenericElement",
+          "label": "!, Open debugger to view warnings.",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.0254,
+            "y": 0.8987,
+            "width": 0.9491,
+            "height": 0.0563
+          },
+          "children": []
+        },
+        {
+          "role": "text",
+          "type": "StaticText",
+          "label": "1:14 AM",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.1408,
+            "y": 0.0223,
+            "width": 0.0823,
+            "height": 0.0239
+          },
+          "children": []
+        },
+        {
+          "role": "",
+          "type": "GenericElement",
+          "label": "Dynamic Island, Empty",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.341,
+            "y": 0.0133,
+            "width": 0.3181,
+            "height": 0.043
+          },
+          "children": []
+        },
+        {
+          "role": "",
+          "type": "GenericElement",
+          "label": "Cellular",
+          "value": "No signal",
+          "enabled": true,
+          "frame": {
+            "x": 0.7176,
+            "y": 0.027,
+            "width": 0.0492,
+            "height": 0.0145
+          },
+          "children": []
+        },
+        {
+          "role": "",
+          "type": "GenericElement",
+          "label": "100% battery power",
+          "value": "Not charging",
+          "enabled": true,
+          "frame": {
+            "x": 0.8473,
+            "y": 0.0266,
+            "width": 0.0696,
+            "height": 0.0153
+          },
+          "children": []
+        }
+      ]
+    }
+  ],
+  "_meta": {
+    "runtimeId": "9d821662-c628-49db-a168-99fa7b7636fc"
+  }
+}

@@ -7,6 +7,7 @@ import {
   staffDenyCopy,
   staffEligibleFromMeEvents,
 } from './staff-eligibility.ts';
+import { isStaffWorkspace } from '../navigation/staff-workspace.ts';
 
 test('staffEligibleFromMeEvents is deny-by-default', () => {
   assert.equal(staffEligibleFromMeEvents(null), false);
@@ -138,6 +139,98 @@ test('StaffEligibilityStore shows staff only when MeEvents staffEligible true', 
     snap = await store.refresh(session);
     assert.equal(snap.staffEligible, false);
     assert.equal(snap.resolved, true);
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (previous === undefined) delete process.env.EXPO_PUBLIC_API_BASE_URL;
+    else process.env.EXPO_PUBLIC_API_BASE_URL = previous;
+  }
+});
+
+test('StaffEligibilityStore cross-user: fail-closed while MeEvents for B is in-flight (F02-SEC-02)', async () => {
+  const previous = process.env.EXPO_PUBLIC_API_BASE_URL;
+  process.env.EXPO_PUBLIC_API_BASE_URL = 'http://127.0.0.1:39997';
+  const originalFetch = globalThis.fetch;
+
+  let staffEligibleResponse = true;
+  let meEventsCalls = 0;
+  const deferred: {
+    resolve: ((value: Response) => void) | null;
+  } = { resolve: null };
+
+  globalThis.fetch = () => {
+    meEventsCalls += 1;
+    if (meEventsCalls === 1) {
+      return Promise.resolve(
+        new Response(
+          JSON.stringify({
+            staffEligible: true,
+            items: [
+              {
+                tenantId: '11111111-1111-1111-1111-111111111111',
+                eventId: '22222222-2222-2222-2222-222222222222',
+                name: 'Demo',
+                permissions: ['gate.confirm'],
+              },
+            ],
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        ),
+      );
+    }
+    return new Promise<Response>((resolve) => {
+      deferred.resolve = resolve;
+    });
+  };
+
+  let credential: string | null = 'tok-a';
+  const session = new SessionBoundary({
+    read: async () => credential,
+    write: async (next) => {
+      credential = next;
+    },
+    clear: async () => {
+      credential = null;
+    },
+  });
+  await session.establish('tok-a', async () => ({ userId: 'staff_a' }));
+  const store = new StaffEligibilityStore();
+
+  try {
+    const staffSnap = await store.refresh(session);
+    assert.equal(staffSnap.staffEligible, true);
+    assert.equal(isStaffWorkspace({ status: 'verified' }, staffSnap), true);
+
+    await session.establish('tok-b', async () => ({ userId: 'attendee_b' }));
+    staffEligibleResponse = false;
+    const pending = store.refresh(session);
+
+    for (let i = 0; i < 50 && !deferred.resolve; i += 1) {
+      await new Promise<void>((r) => setImmediate(r));
+    }
+    const finish = deferred.resolve;
+    assert.ok(finish, 'MeEvents for B must be in-flight');
+
+    const during = store.getSnapshot();
+    assert.equal(during.staffEligible, false, 'must not keep staff A eligibility sticky');
+    assert.equal(during.resolved, false, 'chrome must stay unresolved while probing B');
+    assert.equal(during.loading, true);
+    assert.equal(
+      isStaffWorkspace({ status: 'verified' }, during),
+      false,
+      'attendee B must not see staff chrome during deferred MeEvents',
+    );
+
+    finish!(
+      new Response(
+        JSON.stringify({ staffEligible: false, items: [] }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      ),
+    );
+    deferred.resolve = null;
+    const after = await pending;
+    assert.equal(after.staffEligible, false);
+    assert.equal(after.resolved, true);
+    assert.equal(isStaffWorkspace({ status: 'verified' }, after), false);
   } finally {
     globalThis.fetch = originalFetch;
     if (previous === undefined) delete process.env.EXPO_PUBLIC_API_BASE_URL;

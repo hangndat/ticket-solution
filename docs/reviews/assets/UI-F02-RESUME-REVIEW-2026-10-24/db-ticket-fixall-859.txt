@@ -1,0 +1,8 @@
+# ticket_fixall_859 (docker ui-audit-fixall-859-postgres-1)
+# psql -U $POSTGRES_USER -d ticket_fixall_859
+29aec431-8a11-4315-8a05-c1cb44175c60  ACTIVE
+1016ad07-f9bc-4713-965b-e9c903124847  ACTIVE
+ffea00b3-4c99-4293-abe6-053c81b469b4  ACTIVE
+da4a22cd-ec0b-4130-9893-c85a8205115a  USED
+
+Prior reviewer query used wrong DB name `ticket_solution` (empty public schema) — mislabeled as "no tables".

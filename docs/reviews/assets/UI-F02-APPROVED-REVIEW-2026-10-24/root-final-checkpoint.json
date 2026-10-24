@@ -1,0 +1,28 @@
+{
+  "capturedAt": "2026-10-23T17:30:58.109271+00:00",
+  "freezeMismatch": [],
+  "baseline37UnexpectedDrift": [],
+  "rows": [
+    {
+      "state": "USED",
+      "eventId": "d9d9f001-0002-4000-8000-000000000001",
+      "tenantId": "d9d9f001-0001-4000-8000-000000000001",
+      "ticketId": "759aa40b-f011-4674-b73f-5078da568e20",
+      "appliedAt": "2026-10-23T17:27:25.013638+00:00",
+      "checkinId": "0552dcd6-6bb4-49d1-a65c-d6f1bbf48c94",
+      "clientEventId": "4aeccfec-aa8c-475a-967a-973a2cdd787a",
+      "staffSessionId": "b5158021-2e23-4587-9e20-caa6a6a2bf6b"
+    },
+    {
+      "state": "ACTIVE",
+      "eventId": "d9d9f001-0002-4000-8000-000000000001",
+      "tenantId": "d9d9f001-0001-4000-8000-000000000001",
+      "ticketId": "ffea00b3-4c99-4293-abe6-053c81b469b4",
+      "appliedAt": null,
+      "checkinId": null,
+      "clientEventId": null,
+      "staffSessionId": null
+    }
+  ],
+  "note": "DB không thay bằng chứng clientEventId local/partition/History; ffea có thể đã replay khi verified trở lại, không tự đóng M10."
+}

@@ -1,0 +1,232 @@
+{
+  "ticketId": "759aa40b-f011-4674-b73f-5078da568e20",
+  "classification": "AppState foreground-only path: home + simctl launch without terminate",
+  "staffInjectBeforeFlowOnly": true,
+  "noMidFlowInject": true,
+  "log": [
+    {
+      "t": "2026-10-23T17:26:46Z",
+      "action": "proxy online"
+    },
+    {
+      "t": "2026-10-23T17:26:49Z",
+      "action": "tap tab Nh\u1eadp tay"
+    },
+    {
+      "t": "2026-10-23T17:26:51Z",
+      "action": "focus gate-scan-input"
+    },
+    {
+      "t": "2026-10-23T17:27:05Z",
+      "action": "typed uuid",
+      "len": 36,
+      "value": "759aa40b-f011-4674-b73f-5078da568e20"
+    },
+    {
+      "t": "2026-10-23T17:27:11Z",
+      "action": "tap Ki\u1ec3m tra v\u00e9 (preview)"
+    },
+    {
+      "t": "2026-10-23T17:27:11Z",
+      "action": "proxy offline"
+    },
+    {
+      "t": "2026-10-23T17:27:20Z",
+      "action": "tap G\u1eedi ki\u1ec3m tra c\u1ed5ng; wait 8s queued"
+    },
+    {
+      "t": "2026-10-23T17:27:22Z",
+      "action": "proxy online"
+    },
+    {
+      "t": "2026-10-23T17:27:24Z",
+      "action": "orca emulator button home"
+    },
+    {
+      "t": "2026-10-23T17:27:24Z",
+      "action": "xcrun simctl launch (NO terminate)"
+    },
+    {
+      "t": "2026-10-23T17:27:30Z",
+      "action": "poll 5s",
+      "ax": [
+        "C\u00f3 l\u01b0\u1ee3t ch\u1edd \u0111\u1ed3ng b\u1ed9 offline",
+        "Offline \u2014 ch\u1edd \u0111\u1ed3ng b\u1ed9"
+      ]
+    },
+    {
+      "t": "2026-10-23T17:27:37Z",
+      "action": "poll 10s",
+      "ax": [
+        "C\u00f3 l\u01b0\u1ee3t ch\u1edd \u0111\u1ed3ng b\u1ed9 offline",
+        "Offline \u2014 ch\u1edd \u0111\u1ed3ng b\u1ed9"
+      ]
+    },
+    {
+      "t": "2026-10-23T17:27:44Z",
+      "action": "poll 15s",
+      "ax": [
+        "C\u00f3 l\u01b0\u1ee3t ch\u1edd \u0111\u1ed3ng b\u1ed9 offline",
+        "Offline \u2014 ch\u1edd \u0111\u1ed3ng b\u1ed9"
+      ]
+    },
+    {
+      "t": "2026-10-23T17:27:51Z",
+      "action": "poll 20s",
+      "ax": [
+        "C\u00f3 l\u01b0\u1ee3t ch\u1edd \u0111\u1ed3ng b\u1ed9 offline",
+        "Offline \u2014 ch\u1edd \u0111\u1ed3ng b\u1ed9"
+      ]
+    },
+    {
+      "t": "2026-10-23T17:27:57Z",
+      "action": "poll 25s",
+      "ax": [
+        "C\u00f3 l\u01b0\u1ee3t ch\u1edd \u0111\u1ed3ng b\u1ed9 offline",
+        "Offline \u2014 ch\u1edd \u0111\u1ed3ng b\u1ed9"
+      ]
+    },
+    {
+      "t": "2026-10-23T17:28:01Z",
+      "action": "tap tab L\u1ecbch s\u1eed"
+    }
+  ],
+  "poll": [
+    {
+      "t": "2026-10-23T17:27:30Z",
+      "seconds": 5,
+      "labels": [
+        "C\u00f3 l\u01b0\u1ee3t ch\u1edd \u0111\u1ed3ng b\u1ed9 offline",
+        "Offline \u2014 ch\u1edd \u0111\u1ed3ng b\u1ed9"
+      ]
+    },
+    {
+      "t": "2026-10-23T17:27:37Z",
+      "seconds": 10,
+      "labels": [
+        "C\u00f3 l\u01b0\u1ee3t ch\u1edd \u0111\u1ed3ng b\u1ed9 offline",
+        "Offline \u2014 ch\u1edd \u0111\u1ed3ng b\u1ed9"
+      ]
+    },
+    {
+      "t": "2026-10-23T17:27:44Z",
+      "seconds": 15,
+      "labels": [
+        "C\u00f3 l\u01b0\u1ee3t ch\u1edd \u0111\u1ed3ng b\u1ed9 offline",
+        "Offline \u2014 ch\u1edd \u0111\u1ed3ng b\u1ed9"
+      ]
+    },
+    {
+      "t": "2026-10-23T17:27:51Z",
+      "seconds": 20,
+      "labels": [
+        "C\u00f3 l\u01b0\u1ee3t ch\u1edd \u0111\u1ed3ng b\u1ed9 offline",
+        "Offline \u2014 ch\u1edd \u0111\u1ed3ng b\u1ed9"
+      ]
+    },
+    {
+      "t": "2026-10-23T17:27:57Z",
+      "seconds": 25,
+      "labels": [
+        "C\u00f3 l\u01b0\u1ee3t ch\u1edd \u0111\u1ed3ng b\u1ed9 offline",
+        "Offline \u2014 ch\u1edd \u0111\u1ed3ng b\u1ed9"
+      ]
+    }
+  ],
+  "historyPendingLabels": [
+    "C\u00f3 l\u01b0\u1ee3t ch\u1edd \u0111\u1ed3ng b\u1ed9 offline",
+    "Offline \u2014 ch\u1edd \u0111\u1ed3ng b\u1ed9"
+  ],
+  "historySampleLabels": [
+    "C\u00f3 l\u01b0\u1ee3t ch\u1edd \u0111\u1ed3ng b\u1ed9 offline",
+    "Offline \u2014 ch\u1edd \u0111\u1ed3ng b\u1ed9",
+    "L\u1ecbch s\u1eed"
+  ],
+  "correctionAttempt": [
+    {
+      "t": "2026-10-23T17:28:32Z",
+      "action": "correction: home to SpringBoard"
+    },
+    {
+      "t": "2026-10-23T17:28:33Z",
+      "action": "correction: tap Vemoki icon via AX",
+      "coords": [
+        "Vemoki",
+        0.6166,
+        0.2606
+      ]
+    },
+    {
+      "t": "2026-10-23T17:28:42Z",
+      "action": "correction poll 5s",
+      "labels": [
+        "\u0110\u01b0\u1ee3c v\u00e0o"
+      ]
+    },
+    {
+      "t": "2026-10-23T17:28:49Z",
+      "action": "correction poll 10s",
+      "labels": [
+        "\u0110\u01b0\u1ee3c v\u00e0o"
+      ]
+    },
+    {
+      "t": "2026-10-23T17:28:55Z",
+      "action": "correction poll 15s",
+      "labels": [
+        "\u0110\u01b0\u1ee3c v\u00e0o"
+      ]
+    },
+    {
+      "t": "2026-10-23T17:29:02Z",
+      "action": "correction poll 20s",
+      "labels": [
+        "\u0110\u01b0\u1ee3c v\u00e0o"
+      ]
+    },
+    {
+      "t": "2026-10-23T17:29:08Z",
+      "action": "correction poll 25s",
+      "labels": [
+        "\u0110\u01b0\u1ee3c v\u00e0o"
+      ]
+    }
+  ],
+  "correctionPoll": [
+    {
+      "t": "2026-10-23T17:28:42Z",
+      "s": 5,
+      "labels": [
+        "\u0110\u01b0\u1ee3c v\u00e0o"
+      ]
+    },
+    {
+      "t": "2026-10-23T17:28:49Z",
+      "s": 10,
+      "labels": [
+        "\u0110\u01b0\u1ee3c v\u00e0o"
+      ]
+    },
+    {
+      "t": "2026-10-23T17:28:55Z",
+      "s": 15,
+      "labels": [
+        "\u0110\u01b0\u1ee3c v\u00e0o"
+      ]
+    },
+    {
+      "t": "2026-10-23T17:29:02Z",
+      "s": 20,
+      "labels": [
+        "\u0110\u01b0\u1ee3c v\u00e0o"
+      ]
+    },
+    {
+      "t": "2026-10-23T17:29:08Z",
+      "s": 25,
+      "labels": [
+        "\u0110\u01b0\u1ee3c v\u00e0o"
+      ]
+    }
+  ]
+}

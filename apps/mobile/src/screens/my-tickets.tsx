@@ -55,6 +55,7 @@ import {
   decideCacheHydrate,
   decideTicketSyncApply
 } from '@/tickets/ticket-sync-guard';
+import { walletOfflineNoticeBody } from '@/tickets/wallet-sync-display';
 import { logoutAndClearWalletArtifacts } from '@/tickets/wallet-logout';
 import { isApnsProvider, pushProviderName } from '@/push/push';
 import { normalizeIosNotificationPermission } from '@/push/push-permission';
@@ -234,6 +235,7 @@ function OfflineDisplayWallet({
   tenantId: string;
 }) {
   const [tickets, setTickets] = useState<TicketSummary[]>([]);
+  const [syncedAt, setSyncedAt] = useState<string | null>(null);
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -246,12 +248,14 @@ function OfflineDisplayWallet({
         if (cancelled) return;
         if (!cache) {
           setTickets([]);
+          setSyncedAt(null);
           setError(
             'Có liên kết hiển thị offline nhưng không tìm thấy bộ đệm vé cho tài khoản này.',
           );
           return;
         }
         setTickets(cache.tickets);
+        setSyncedAt(cache.syncedAt);
         setError(null);
       } catch (err) {
         if (!cancelled) {
@@ -278,7 +282,10 @@ function OfflineDisplayWallet({
       contentContainerStyle={{ padding: space.xl, paddingBottom: space.huge, gap: space.lg }}
     >
       <Notice title={attendeeWalletCopy.offlineBannerTitle}>
-        {attendeeWalletCopy.offlineBannerBody}
+        {walletOfflineNoticeBody(
+          attendeeWalletCopy.offlineBannerBody,
+          syncedAt,
+        )}
       </Notice>
 
       {busy && tickets.length === 0 ? (
@@ -320,6 +327,7 @@ function VerifiedWallet({ userId }: { userId: string }) {
   const cacheScope = walletDisplayCacheScope(fetchScope);
   const [tickets, setTickets] = useState<TicketSummary[]>([]);
   const [offline, setOffline] = useState(false);
+  const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -338,6 +346,7 @@ function VerifiedWallet({ userId }: { userId: string }) {
     if (decision.action !== 'apply') return;
     setTickets(decision.tickets);
     setOffline(true);
+    setLastSyncedAt(decision.syncedAt);
     if (!session.isEpochCurrent(epoch)) return;
     await session.load(sessionScope, 'me-tickets', async () => decision.tickets);
   }, [cacheScope, sessionScope, userId]);
@@ -416,6 +425,9 @@ function VerifiedWallet({ userId }: { userId: string }) {
       if (!session.isEpochCurrent(epoch)) return;
       setTickets(decision.tickets);
       setOffline(decision.offline);
+      if (decision.action === 'apply' || decision.action === 'offline-cache') {
+        setLastSyncedAt(decision.syncedAt);
+      }
       if (decision.action === 'offline-cache') {
         setError(decision.notice);
       } else {
@@ -538,7 +550,10 @@ function VerifiedWallet({ userId }: { userId: string }) {
     >
       {offline ? (
         <Notice title={attendeeWalletCopy.offlineBannerTitle}>
-          {attendeeWalletCopy.offlineBannerBody}
+          {walletOfflineNoticeBody(
+            attendeeWalletCopy.offlineBannerBody,
+            lastSyncedAt,
+          )}
         </Notice>
       ) : null}
 

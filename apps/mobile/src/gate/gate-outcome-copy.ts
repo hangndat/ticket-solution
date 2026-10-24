@@ -16,7 +16,8 @@ export type GateOutcomeKind =
   | 'already-checked-in'
   | 'denied'
   | 'unknown'
-  | 'queued';
+  | 'queued'
+  | 'recorded';
 
 export type GateOutcomeView = {
   kind: GateOutcomeKind;
@@ -93,6 +94,18 @@ export function presentGateOutcome(op: GateOp | null): GateOutcomeView {
     };
   }
 
+  if (op.phase === 'recorded') {
+    return {
+      kind: 'recorded',
+      title: 'Đã ghi nhận trước đó',
+      detail:
+        op.message ||
+        'Máy chủ đã có bản ghi check-in cho lượt này — không tạo lượt vào mới.',
+      tone: 'unknown',
+      assertive: true,
+    };
+  }
+
   if (op.phase === 'admitted') {
     const already =
       op.admissionKind === 'already' || ALREADY_MESSAGE.test(op.message);
@@ -131,6 +144,7 @@ export function announcementPhaseFor(
 ): 'admitted' | 'unknown' | 'denied' | 'confirming' | 'holding' | string {
   if (!phase) return 'idle';
   if (phase === 'queued') return 'unknown';
+  if (phase === 'recorded') return 'unknown';
   return phase;
 }
 

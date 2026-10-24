@@ -40,6 +40,22 @@ function fixture(
 }
 const verify = async (credential: string) => ({ userId: credential });
 
+test('production boundary hook blocks verified publication on restore and establish failure', async () => {
+  let raw: string | null = 'A';
+  const store: CredentialStore = {
+    read: async () => raw,
+    write: async (value) => { raw = value; },
+    clear: async () => { raw = null; },
+  };
+  const boundary = new SessionBoundary(store, undefined, {
+    beforeVerified: async () => { throw new Error('Gate journal unavailable'); },
+  });
+  await assert.rejects(boundary.restore(verify), /Gate journal unavailable/);
+  assert.notEqual(boundary.getSnapshot().status, 'verified');
+  await assert.rejects(boundary.establish('B', verify), /Gate journal unavailable/);
+  assert.notEqual(boundary.getSnapshot().status, 'verified');
+});
+
 test('restored credentials require server verification; no provider means signed out', async () => {
   const f = fixture('old-keychain-credential');
   assert.equal(f.boundary.getSnapshot().status, 'unknown');

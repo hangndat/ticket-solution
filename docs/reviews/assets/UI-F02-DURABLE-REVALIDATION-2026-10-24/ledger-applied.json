@@ -1,0 +1,16 @@
+{
+  "at": "2026-10-24T02:24:48.770527+00:00",
+  "phase": "applied",
+  "rows": [
+    {
+      "ticketId": "14de0a49-4af9-4f8c-8aec-fc98e7057cc3",
+      "state": "USED",
+      "checkinCount": 1,
+      "checkinId": "cae78aec-86e2-458c-a4ea-caa6ffbb8f80",
+      "clientEventId": "b932b811-b6c5-48b6-9a3d-bb4992a399c7",
+      "staffSessionId": "10e2af24-13fd-4161-ba6a-fa91d4d955a5",
+      "deviceId": "9a95b622-336b-47d1-826e-2fc0af25327c",
+      "confirmedAt": "2026-10-24T02:24:32.455738+00:00"
+    }
+  ]
+}

@@ -182,6 +182,38 @@ test('clearApnsRegistrationState DELETEs then clears local + badge', async () =>
   assert.equal(currentApnsRegistrationGeneration(), genBefore + 1);
 });
 
+test('deferred old APNs detach leaves a newly authenticated registration intact', async () => {
+  __resetApnsRegistrationGenerationForTests();
+  process.env.EXPO_PUBLIC_API_BASE_URL = 'http://api.test';
+  const boundary = new SessionBoundary(credentialStore('old'));
+  await boundary.establish('old', async () => ({ userId: 'user-a' }));
+  const epoch = boundary.captureEpoch()!;
+  const regStore = createMemoryApnsRegistrationStore({
+    registrationId: '22222222-2222-2222-2222-222222222222',
+    environment: 'sandbox', userId: 'user-a',
+  });
+  const notifications = notificationsFixture();
+  let release!: () => void;
+  let started!: () => void;
+  const hold = new Promise<void>((done) => { release = done; });
+  const atDelete = new Promise<void>((done) => { started = done; });
+  const detach = clearApnsRegistrationState({
+    session: boundary, store: regStore, notifications,
+    shouldContinue: () => boundary.isEpochCurrent(epoch),
+    fetchImpl: mockFetch(async () => { started(); await hold; return new Response(null, { status: 204 }); }),
+  });
+  await atDelete;
+  await boundary.establish('new', async () => ({ userId: 'user-b' }));
+  await regStore.write({
+    registrationId: '33333333-3333-3333-3333-333333333333',
+    environment: 'sandbox', userId: 'user-b',
+  });
+  release();
+  await detach;
+  assert.equal(regStore.peek()?.userId, 'user-b');
+  assert.deepEqual(notifications.badges, []);
+});
+
 test('logout path: clear before logout cancels late register and drops store', async () => {
   __resetApnsRegistrationGenerationForTests();
   process.env.EXPO_PUBLIC_API_BASE_URL = 'http://api.test';
@@ -293,7 +325,7 @@ test('late POST 2xx after clear compensates with DELETE registrationId', async (
   assert.equal(regStore.peek(), null);
 });
 
-test('DELETE failure after late POST still cancels without keeping local registration', async () => {
+test('DELETE failure after late POST retains a pending detach and reports failure', async () => {
   __resetApnsRegistrationGenerationForTests();
   process.env.EXPO_PUBLIC_API_BASE_URL = 'http://api.test';
   const store = credentialStore('tok');
@@ -346,10 +378,90 @@ test('DELETE failure after late POST still cancels without keeping local registr
     ),
   );
 
-  const result = await registerPromise;
-  assert.equal(result.status, 'cancelled');
+  await assert.rejects(registerPromise, /Chưa xác nhận gỡ đăng ký thông báo/);
   assert.equal(regStore.peek(), null);
+  assert.equal((await regStore.pendingFor('user-a'))[0]?.registrationId, '55555555-5555-5555-5555-555555555555');
 });
+
+test('late A POST compensation preserves B registration and B logout DELETEs B', async () => {
+  __resetApnsRegistrationGenerationForTests();
+  process.env.EXPO_PUBLIC_API_BASE_URL = 'http://api.test';
+  const boundary = new SessionBoundary(credentialStore('bearer-a'));
+  await boundary.establish('bearer-a', async () => ({ userId: 'user-a' }));
+  const regStore = createMemoryApnsRegistrationStore();
+  let resolveA!: (value: Response) => void;
+  let startedA!: () => void;
+  const aPost = new Promise<Response>((resolve) => { resolveA = resolve; });
+  const aStarted = new Promise<void>((resolve) => { startedA = resolve; });
+  const deletes: string[] = [];
+  const fetchImpl = mockFetch(async (url, init) => {
+    if (init?.method === 'POST' && new Headers(init.headers).get('Authorization') === 'Bearer bearer-a') {
+      startedA();
+      return aPost;
+    }
+    if (init?.method === 'POST') return new Response(JSON.stringify({
+      registrationId: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+      environment: 'sandbox', registeredAt: '2026-10-24T00:00:00.000Z',
+    }), { status: 200 });
+    if (init?.method === 'DELETE') {
+      deletes.push(url);
+      return new Response(null, { status: 204 });
+    }
+    return new Response(null, { status: 500 });
+  });
+  const a = registerApnsDeviceToken({ session: boundary, store: regStore, platform: 'ios',
+    notifications: notificationsFixture(), fetchImpl, resolveEnvironment: () => 'sandbox' });
+  await aStarted;
+  await clearApnsRegistrationState({ session: boundary, store: regStore,
+    notifications: notificationsFixture(), fetchImpl });
+  await boundary.establish('bearer-b', async () => ({ userId: 'user-b' }));
+  const b = await registerApnsDeviceToken({ session: boundary, store: regStore, platform: 'ios',
+    notifications: notificationsFixture(), fetchImpl, resolveEnvironment: () => 'sandbox' });
+  assert.equal(b.status, 'ready');
+  resolveA(new Response(JSON.stringify({
+    registrationId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    environment: 'sandbox', registeredAt: '2026-10-24T00:00:00.000Z',
+  }), { status: 200 }));
+  assert.equal((await a).status, 'cancelled');
+  assert.equal(regStore.peek()?.userId, 'user-b');
+  await clearApnsRegistrationState({ session: boundary, store: regStore,
+    notifications: notificationsFixture(), fetchImpl });
+  assert.deepEqual(deletes.map((url) => url.split('/').at(-1)), [
+    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+  ]);
+});
+
+test('APNs compare-and-clear is atomic with a B write', async () => {
+  const regStore = createMemoryApnsRegistrationStore({ userId: 'A', registrationId: 'A-id', environment: 'sandbox' });
+  const old = await regStore.read();
+  await regStore.write({ userId: 'B', registrationId: 'B-id', environment: 'sandbox' });
+  await regStore.clearIfMatches(old!);
+  assert.equal(regStore.peek()?.registrationId, 'B-id');
+});
+
+for (const status of [401, 503]) {
+  test(`APNs logout DELETE ${status} retains pending ID until confirmed retry`, async () => {
+    __resetApnsRegistrationGenerationForTests();
+    process.env.EXPO_PUBLIC_API_BASE_URL = 'http://api.test';
+    const boundary = new SessionBoundary(credentialStore('A-token'));
+    await boundary.establish('A-token', async () => ({ userId: 'A' }));
+    const regStore = createMemoryApnsRegistrationStore({
+      userId: 'A', registrationId: 'A-id', environment: 'sandbox',
+    });
+    await assert.rejects(clearApnsRegistrationState({
+      session: boundary, store: regStore, notifications: notificationsFixture(),
+      fetchImpl: mockFetch(async () => new Response(null, { status })),
+    }), /Chưa xác nhận gỡ đăng ký thông báo/);
+    assert.equal(regStore.peek(), null);
+    assert.equal((await regStore.pendingFor('A'))[0]?.registrationId, 'A-id');
+    await clearApnsRegistrationState({
+      session: boundary, store: regStore, notifications: notificationsFixture(),
+      fetchImpl: mockFetch(async () => new Response(null, { status: 204 })),
+    });
+    assert.deepEqual(await regStore.pendingFor('A'), []);
+  });
+}
 
 test('signed-out register skips backend POST (skipped-unsigned)', async () => {
   __resetApnsRegistrationGenerationForTests();

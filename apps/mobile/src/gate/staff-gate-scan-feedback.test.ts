@@ -6,8 +6,10 @@ import {
   cameraFeedbackLifecycle,
   classifyScanFeedbackLifecycle,
   shouldDismissToastAttempt,
+  selectScanFeedbackOp,
   shouldSuppressCameraRescan,
 } from './staff-gate-scan-feedback.ts';
+import { presentGateScanStatus } from './gate-scan-status-ui.ts';
 
 const admitted: GateOp = {
   id: 'a1',
@@ -61,6 +63,29 @@ test('camera dedupe suppresses same QR only while feedback active', () => {
     shouldSuppressCameraRescan('other', payload, 'terminal-flash'),
     false,
   );
+});
+
+test('selectScanFeedbackOp keeps pending when toast cleared', () => {
+  const queued = { ...admitted, phase: 'queued' as const, message: 'offline' };
+  assert.equal(selectScanFeedbackOp(queued, null), queued);
+  assert.equal(selectScanFeedbackOp(null, admitted), admitted);
+});
+
+test('manual persistent status stays non-idle after toast op cleared', () => {
+  const queued = { ...admitted, phase: 'queued' as const, message: 'Chờ đồng bộ' };
+  const idleToast = presentGateScanStatus({
+    busy: false,
+    op: null,
+    canReconcile: false,
+  });
+  const persistent = presentGateScanStatus({
+    busy: false,
+    op: selectScanFeedbackOp(queued, null),
+    canReconcile: false,
+  });
+  assert.match(idleToast.label, /Sẵn sàng quét/i);
+  assert.doesNotMatch(persistent.label, /Sẵn sàng quét/i);
+  assert.match(persistent.label, /chờ|đồng bộ|offline/i);
 });
 
 test('TERMINAL_SCAN_FLASH_MS in 2–3s range', () => {

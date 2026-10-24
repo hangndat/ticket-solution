@@ -3,6 +3,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -26,6 +27,29 @@ import {
   type StaffGateScope
 } from '@/gate/staff-gate-events';
 import { buildDeviceScanHistory } from '@/gate/staff-gate-device-history';
+import { gateWorkspaceOperationGuard } from '@/gate/gate-workspace-operation-guard';
+import { canApplyOfflineReplay, rebaseOfflineReplayOps, reconcileOfflineScanOps } from '@/gate/offline-scan-reconciliation';
+import { reconcileOpsWithHistoricalReceipts } from '@/gate/offline-sync-receipt';
+import { OFFLINE_SYNC_ERROR_CODES } from '@/gate/offline-sync-contract';
+import { openReplacementGateSession } from '@/gate/gate-session-renewal';
+import {
+  applyKnownOperationImportToOps,
+  findScopedGateOpByClientEventId,
+  importKnownOperationErrorMessage,
+  importKnownOperationFromReceipt,
+  parseKnownClientEventIdInput,
+  type ImportKnownOperationOutcome,
+} from '@/gate/gate-known-op-recovery';
+import {
+  findTerminalReplayFeedbackOp,
+  resolvePendingOpAfterOfflineReplay,
+} from '@/gate/staff-gate-replay-pending';
+import {
+  invalidateGateWorkspaceLifecycle,
+  isGateWorkspaceLifecycleCurrent,
+  loadWorkspaceWithLifecycleGuard,
+  scheduleGateWorkspaceLifecycleWork,
+} from '@/gate/gate-workspace-lifecycle';
 import type { DeviceScanHistoryRow } from '@/gate/staff-gate-device-history';
 import { buildMachineLabel } from '@/gate/staff-gate-ops-sticky';
 import {
@@ -38,6 +62,7 @@ import {
   cameraFeedbackLifecycle,
   needsStickyPendingOp,
   prominentCanReconcile,
+  selectScanFeedbackOp,
   shouldDismissToastAttempt,
   shouldSuppressCameraRescan
 } from '@/gate/staff-gate-scan-feedback';
@@ -48,13 +73,19 @@ import {
   mergeMeEventsIntoWorkspace,
   opsForScope,
   persistActiveScope,
+  scopeStorageKey,
   sliceWorkspaceForScope,
   emptyStaffGateWorkspace
 } from '@/gate/staff-gate-workspace';
 import {
+  allowStaffGateWorkspaceWrites,
+  gateWorkspaceWriteGeneration,
+  isGateWorkspaceWriteGenerationCurrent,
   loadStaffGateWorkspace,
-  saveStaffGateWorkspace
+  saveStaffGateWorkspace,
+  subscribeStaffGateWorkspaceInvalidation
 } from '@/gate/staff-gate-workspace-store';
+import { projectStaffGateOwnedSnapshot } from '@/gate/staff-gate-owned-snapshot';
 import { staffGateEventsFromProbe } from '@/gate/staff-gate-events-probe';
 import { probeMeEvents } from '@/identity/fetch-me-events';
 import {
@@ -67,6 +98,7 @@ import { getApiBaseUrl, getTenantId } from '@/identity/config';
 import { verifyViaMe } from '@/identity/fetch-me';
 import { endKeycloakSession } from '@/identity/oidc-login';
 import { session } from '@/identity/session';
+import type { SessionEpoch } from '@/identity/session-boundary';
 import { staffEligibility } from '@/identity/staff-eligibility';
 import { logoutAndClearWalletArtifacts } from '@/tickets/wallet-logout';
 
@@ -122,6 +154,7 @@ export type StaffGateWorkspaceValue = {
   gateEventChoices: StaffGateScope[];
   gateEventsLoading: boolean;
   gateEventsError: string | null;
+  workspaceLoadError?: boolean;
   eventPickerOpen: boolean;
   setEventPickerOpen: (open: boolean | ((prev: boolean) => boolean)) => void;
   queueSnap: OfflineQueueSnapshot;
@@ -130,11 +163,18 @@ export type StaffGateWorkspaceValue = {
   scanDisabled: boolean;
   queueAttention: boolean;
   toastStatus: ReturnType<typeof presentGateScanStatus>;
+  /** Outcome for manual entry: prefers sticky pendingOp after toast timer. */
+  persistentScanStatus: ReturnType<typeof presentGateScanStatus>;
   selectGateScope: (scope: StaffGateScope) => void;
   submitScan: (payload: string) => Promise<void>;
   handleCameraScan: (data: string) => void;
   reconcile: () => Promise<void>;
   syncNow: () => Promise<void>;
+  /** Staff tab focus: connectivity replay on the shared foreground lifecycle chain. */
+  focusSync: () => Promise<void>;
+  importKnownOperation: (
+    rawClientEventId: string,
+  ) => Promise<ImportKnownOperationOutcome>;
   dismissPendingAction: () => void;
   refreshGateEvents: () => Promise<void>;
   logoutStaff: () => Promise<void>;
@@ -170,15 +210,39 @@ export function StaffGateWorkspaceProvider({
   );
   const [gateEventsLoading, setGateEventsLoading] = useState(false);
   const [gateEventsError, setGateEventsError] = useState<string | null>(null);
+  const [workspaceLoadError, setWorkspaceLoadError] = useState(false);
   const [eventPickerOpen, setEventPickerOpen] = useState(false);
   const lock = useRef(false);
+  const lockOwnerRef = useRef<string | null>(null);
   const workspaceRef = useRef(emptyStaffGateWorkspace());
+  const ownerRef = useRef<SessionEpoch | null>(null);
+  const ownerWriteGenerationRef = useRef(0);
+  const [owner, setOwner] = useState<SessionEpoch | null>(null);
   const toastAttemptRef = useRef<string | null>(null);
   const toastHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const toastCleanupTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
   const lastCameraPayloadRef = useRef<string | null>(null);
+  const viewRef = useRef({ gateScope, sessionId, ops });
+  const feedbackGenerationRef = useRef(0);
+  const foregroundLifecycleRef = useRef(0);
+  const foregroundSyncChainRef = useRef<Promise<void>>(Promise.resolve());
+  const workspaceWriteRef = useRef<Promise<void>>(Promise.resolve());
+  const recoveryAttemptedSessionsRef = useRef(new Set<string>());
+  useLayoutEffect(() => {
+    viewRef.current = { gateScope, sessionId, ops };
+  }, [gateScope, sessionId, ops]);
+
+  const saveWorkspace = useCallback((userId: string) => {
+    const workspace = workspaceRef.current;
+    const epoch = session.captureEpoch();
+    const write = workspaceWriteRef.current.catch(() => undefined).then(() =>
+      saveStaffGateWorkspace(userId, workspace, () => session.isEpochCurrent(epoch) && epoch?.userId === userId),
+    );
+    workspaceWriteRef.current = write;
+    return write;
+  }, []);
 
   const clearToastTimers = useCallback(() => {
     if (toastHideTimerRef.current) {
@@ -199,6 +263,23 @@ export function StaffGateWorkspaceProvider({
     setPendingOp(null);
     lastCameraPayloadRef.current = null;
   }, [clearToastTimers]);
+
+  useEffect(() => subscribeStaffGateWorkspaceInvalidation((userId) => {
+    const identity = session.getSnapshot();
+    if (identity.status !== 'verified' || identity.userId !== userId) return;
+    feedbackGenerationRef.current += 1;
+    invalidateGateWorkspaceLifecycle(foregroundLifecycleRef);
+    workspaceRef.current = emptyStaffGateWorkspace();
+    viewRef.current = { gateScope: null, sessionId: null, ops: [] };
+    setOps([]);
+    setSessionId(null);
+    setGateScope(null);
+    setReady(false);
+    setBusy(false);
+    lock.current = false;
+    lockOwnerRef.current = null;
+    clearScanFeedback();
+  }), [clearScanFeedback]);
 
   const dismissPendingAction = useCallback(() => {
     setPendingOp(null);
@@ -247,22 +328,24 @@ export function StaffGateWorkspaceProvider({
     offlineScanQueue.getSnapshot,
   );
 
-  const verifiedUserId = useSyncExternalStore(
+  const identitySnapshot = useSyncExternalStore(
     session.subscribe,
-    () => {
-      const snap = session.getSnapshot();
-      return snap.status === 'verified' ? snap.userId : null;
-    },
-    () => null,
+    session.getSnapshot,
+    session.getSnapshot,
   );
+  const verifiedUserId = identitySnapshot.status === 'verified' ? identitySnapshot.userId : null;
+
 
   const persist = useCallback(
     async (
       next: GateOp[],
       active: GateOp | null,
       nextSessionId: string | null,
+      shouldApply: () => boolean = () => true,
     ) => {
+      if (!shouldApply() || !session.isEpochCurrent(ownerRef.current)) return;
       const stamped = stampGateOpsRecordedAt(next, ops);
+      viewRef.current = { gateScope, sessionId: nextSessionId, ops: stamped };
       setOps(stamped);
       setSessionId(nextSessionId);
       if (!verifiedUserId || !gateScope) return;
@@ -272,34 +355,146 @@ export function StaffGateWorkspaceProvider({
         stamped,
         nextSessionId,
       );
-      await saveStaffGateWorkspace(verifiedUserId, workspaceRef.current);
+      await saveWorkspace(verifiedUserId);
     },
-    [verifiedUserId, gateScope, ops],
+    [verifiedUserId, gateScope, ops, saveWorkspace],
   );
 
+  const replayAndReconcile = useCallback(async (bearer: string, apiBase: string, userId: string, epoch: SessionEpoch | null) => {
+    const generation = feedbackGenerationRef.current;
+    const startedView = viewRef.current;
+    const replayGuard = () => {
+      const identity = session.getSnapshot();
+      return session.isEpochCurrent(epoch) && epoch?.userId === userId && canApplyOfflineReplay({
+        replayUserId: userId,
+        verifiedUserId: identity.status === 'verified' ? identity.userId : null,
+        queueOwnerUserId: offlineScanQueue.ownerUserIdOrNull(),
+        startedGeneration: generation,
+        currentGeneration: feedbackGenerationRef.current,
+        startedScope: startedView.gateScope,
+        currentScope: viewRef.current.gateScope,
+        startedSessionId: startedView.sessionId,
+        currentSessionId: viewRef.current.sessionId,
+      });
+    };
+    if (!replayGuard()) return;
+    const replayResult = await offlineScanQueue.replay({ bearer, apiBase, shouldContinue: replayGuard });
+    const identity = session.getSnapshot();
+    if (!session.isEpochCurrent(epoch) || !canApplyOfflineReplay({
+      replayUserId: userId,
+      verifiedUserId: identity.status === 'verified' ? identity.userId : null,
+      queueOwnerUserId: offlineScanQueue.ownerUserIdOrNull(),
+      startedGeneration: generation,
+      currentGeneration: feedbackGenerationRef.current,
+      startedScope: startedView.gateScope,
+      currentScope: viewRef.current.gateScope,
+      startedSessionId: startedView.sessionId,
+      currentSessionId: viewRef.current.sessionId,
+    })) return;
+    const { gateScope: scope, sessionId: activeSession, ops: currentOps } = viewRef.current;
+    if (!scope || !activeSession) return;
+    const queueItems = offlineScanQueue.getSnapshot().items;
+    const orderRejected = replayResult.results.some((result) =>
+      result.status === 'REJECTED' &&
+      result.code === OFFLINE_SYNC_ERROR_CODES.REPLAY_ORDER_INVALID &&
+      queueItems.some((row) => row.clientEventId === result.clientEventId && row.staffSessionId === activeSession && row.tenantId === scope.tenantId && row.eventId === scope.eventId),
+    );
+    let nextOps = reconcileOfflineScanOps(currentOps, queueItems);
+    const receiptGuard = () => {
+      const identity = session.getSnapshot();
+      return session.isEpochCurrent(epoch) && canApplyOfflineReplay({
+        replayUserId: userId,
+        verifiedUserId:
+          identity.status === 'verified' ? identity.userId : null,
+        queueOwnerUserId: offlineScanQueue.ownerUserIdOrNull(),
+        startedGeneration: generation,
+        currentGeneration: feedbackGenerationRef.current,
+        startedScope: startedView.gateScope,
+        currentScope: viewRef.current.gateScope,
+        startedSessionId: startedView.sessionId,
+        currentSessionId: viewRef.current.sessionId,
+      });
+    };
+    nextOps = await reconcileOpsWithHistoricalReceipts({
+      ops: nextOps,
+      queueItems,
+      bearer,
+      apiBase,
+      shouldContinue: receiptGuard,
+      onAuthzDenied: () => clearStaffChromeAfterAuthzDenial(),
+    });
+    if (!receiptGuard()) return;
+    // Replay examined a snapshot. Import and new scans may have changed the
+    // active list while a receipt was in flight, so apply only its changed IDs.
+    const latestOps = viewRef.current.ops;
+    const mergedOps = rebaseOfflineReplayOps(currentOps, nextOps, latestOps);
+    const key = scopeStorageKey(scope);
+    if (workspaceRef.current.sessionsByScope[key] !== activeSession) return;
+    if (!receiptGuard()) return;
+    if (!mergedOps.every((op, index) => op === latestOps[index])) {
+      viewRef.current = { gateScope: scope, sessionId: activeSession, ops: mergedOps };
+      workspaceRef.current = persistActiveScope(workspaceRef.current, scope, mergedOps, activeSession);
+      setOps(mergedOps);
+      setPendingOp((current) =>
+        resolvePendingOpAfterOfflineReplay({
+          currentPending: current,
+          currentOps,
+          nextOps: mergedOps,
+          activeSession,
+        }),
+      );
+      const replayFeedback = findTerminalReplayFeedbackOp(latestOps, mergedOps);
+      if (replayFeedback) applyScanResult(replayFeedback, randomId());
+      await saveWorkspace(userId);
+    }
+    if (!orderRejected || recoveryAttemptedSessionsRef.current.has(activeSession) || !receiptGuard()) return;
+    recoveryAttemptedSessionsRef.current.add(activeSession);
+    const renewal = await openReplacementGateSession({
+      bearer, apiBase, tenantId: scope.tenantId, eventId: scope.eventId,
+      shouldContinue: receiptGuard,
+    });
+    if (renewal.kind === 'auth') clearStaffChromeAfterAuthzDenial();
+    if (renewal.kind === 'stale' || !receiptGuard()) return;
+    // The old operation keeps its original session; only future scans use the
+    // new server-issued session. A failed renewal requires online setup later.
+    const nextSession = renewal.kind === 'ok' ? renewal.sessionId : null;
+    feedbackGenerationRef.current += 1;
+    const latestAtRenewal = viewRef.current.ops;
+    viewRef.current = { gateScope: scope, sessionId: nextSession, ops: latestAtRenewal };
+    workspaceRef.current = persistActiveScope(workspaceRef.current, scope, latestAtRenewal, nextSession);
+    setSessionId(nextSession);
+    await saveWorkspace(userId);
+  }, [applyScanResult, saveWorkspace]);
+
   const refreshConnectivityAndSync = useCallback(async () => {
+    const epoch = session.captureEpoch();
+    if (!epoch) return;
     const apiBase = getApiBaseUrl();
     if (!apiBase) {
       setConnectivity('unknown');
       return;
     }
     const state = await probeConnectivity(apiBase);
+    if (!session.isEpochCurrent(epoch)) return;
     setConnectivity(state);
     if (state !== 'online') return;
-    const snap = session.getSnapshot();
-    if (snap.status !== 'verified') return;
-    await offlineScanQueue.bindUser(snap.userId);
+    await offlineScanQueue.bindUser(epoch.userId);
+    if (!session.isEpochCurrent(epoch)) return;
     const bearer = await session.getCredential();
-    if (!bearer) return;
-    await offlineScanQueue.replay({ bearer, apiBase });
-  }, []);
+    if (!bearer || !session.isEpochCurrent(epoch)) return;
+    await replayAndReconcile(bearer, apiBase, epoch.userId, epoch);
+  }, [replayAndReconcile]);
 
   const refreshGateEvents = useCallback(async () => {
+    const startedGeneration = feedbackGenerationRef.current;
     if (!verifiedUserId) {
+      feedbackGenerationRef.current += 1;
       workspaceRef.current = emptyStaffGateWorkspace();
+      viewRef.current = { gateScope: null, sessionId: null, ops: [] };
       setGateScope(null);
       setGateEventChoices([]);
       setGateEventsError(null);
+      setWorkspaceLoadError(false);
       setGateEventsLoading(false);
       return;
     }
@@ -312,6 +507,11 @@ export function StaffGateWorkspaceProvider({
       return;
     }
     const probe = await probeMeEvents(auth.bearer);
+    const identity = session.getSnapshot();
+    if (feedbackGenerationRef.current !== startedGeneration || identity.status !== 'verified' || identity.userId !== verifiedUserId) {
+      setGateEventsLoading(false);
+      return;
+    }
     const outcome = staffGateEventsFromProbe(probe);
     if (outcome.kind === 'probe-error') {
       setGateEventsLoading(false);
@@ -319,7 +519,9 @@ export function StaffGateWorkspaceProvider({
       return;
     }
     if (outcome.kind === 'ineligible') {
+      feedbackGenerationRef.current += 1;
       workspaceRef.current = { ...workspaceRef.current, selected: null };
+      viewRef.current = { gateScope: null, sessionId: null, ops: [] };
       setGateScope(null);
       setGateEventChoices([]);
       setOps([]);
@@ -327,7 +529,7 @@ export function StaffGateWorkspaceProvider({
       clearScanFeedback();
       setGateEventsLoading(false);
       setGateEventsError(scanCopy.eventPicker.empty);
-      await saveStaffGateWorkspace(verifiedUserId, workspaceRef.current);
+      await saveWorkspace(verifiedUserId);
       return;
     }
     const body = outcome.body;
@@ -340,13 +542,20 @@ export function StaffGateWorkspaceProvider({
     );
     workspaceRef.current = merged.workspace;
     if (merged.scope) {
+      const currentView = viewRef.current;
       const slice = sliceWorkspaceForScope(merged.workspace, merged.scope);
       setGateScope(merged.scope);
       setOps(slice.ops);
       setSessionId(slice.sessionId);
-      clearScanFeedback();
+      viewRef.current = { gateScope: merged.scope, sessionId: slice.sessionId, ops: slice.ops };
+      if (!currentView.gateScope || !sameStaffGateScope(currentView.gateScope, merged.scope) || currentView.sessionId !== slice.sessionId) {
+        feedbackGenerationRef.current += 1;
+        clearScanFeedback();
+      }
       setGateEventsError(null);
     } else {
+      feedbackGenerationRef.current += 1;
+      viewRef.current = { gateScope: null, sessionId: null, ops: [] };
       setGateScope(null);
       setOps([]);
       setSessionId(null);
@@ -354,51 +563,176 @@ export function StaffGateWorkspaceProvider({
       setGateEventsError(scanCopy.eventPicker.empty);
     }
     setGateEventsLoading(false);
-    await saveStaffGateWorkspace(verifiedUserId, workspaceRef.current);
-  }, [verifiedUserId, clearScanFeedback]);
+    await saveWorkspace(verifiedUserId);
+  }, [verifiedUserId, clearScanFeedback, saveWorkspace]);
+
+  const runForegroundSync = useCallback(() => {
+    return scheduleGateWorkspaceLifecycleWork(
+      foregroundLifecycleRef,
+      foregroundSyncChainRef,
+      async (lifecycleToken) => {
+        if (!isGateWorkspaceLifecycleCurrent(foregroundLifecycleRef, lifecycleToken)) {
+          return;
+        }
+        await refreshGateEvents();
+        if (!isGateWorkspaceLifecycleCurrent(foregroundLifecycleRef, lifecycleToken)) {
+          return;
+        }
+        await refreshConnectivityAndSync();
+      },
+    );
+  }, [refreshConnectivityAndSync, refreshGateEvents]);
+
+  const runFocusConnectivitySync = useCallback(() => {
+    return scheduleGateWorkspaceLifecycleWork(
+      foregroundLifecycleRef,
+      foregroundSyncChainRef,
+      async (lifecycleToken) => {
+        if (!isGateWorkspaceLifecycleCurrent(foregroundLifecycleRef, lifecycleToken)) {
+          return;
+        }
+        await refreshConnectivityAndSync();
+      },
+    );
+  }, [refreshConnectivityAndSync]);
 
   useEffect(() => {
-    if (!active) return;
+    const activationEpoch = session.captureEpoch();
+    if (active && verifiedUserId && activationEpoch?.userId === verifiedUserId) {
+      allowStaffGateWorkspaceWrites(verifiedUserId, activationEpoch.generation);
+    }
     let cancelled = false;
-    void (async () => {
-      setReady(false);
-      if (!verifiedUserId) {
-        workspaceRef.current = emptyStaffGateWorkspace();
-        setOps([]);
-        clearScanFeedback();
-        setSessionId(null);
-        offlineScanQueue.invalidateMemory();
-        if (!cancelled) setReady(true);
-        return;
-      }
-      workspaceRef.current = await loadStaffGateWorkspace(verifiedUserId);
+    ownerRef.current = null;
+    workspaceRef.current = emptyStaffGateWorkspace();
+    viewRef.current = { gateScope: null, sessionId: null, ops: [] };
+    lock.current = false;
+    lockOwnerRef.current = null;
+    queueMicrotask(() => {
       if (cancelled) return;
-      void offlineScanQueue.bindUser(verifiedUserId);
-      await refreshConnectivityAndSync();
-      await refreshGateEvents();
-      if (!cancelled) setReady(true);
-    })();
+      clearScanFeedback();
+      setOwner(null);
+      setOps([]);
+      setSessionId(null);
+      setGateScope(null);
+      setGateEventChoices([]);
+      setGateEventsError(null);
+      setWorkspaceLoadError(false);
+      setGateEventsLoading(false);
+      setEventPickerOpen(false);
+      setConnectivity('unknown');
+      setBusy(false);
+      setReady(false);
+    });
+    feedbackGenerationRef.current += 1;
+    invalidateGateWorkspaceLifecycle(foregroundLifecycleRef);
+    if (!active) {
+      // Unknown/unreachable hides the old in-memory snapshot. Its v2 key stays
+      // intact so a later verified return to the same user can recover M10.
+      offlineScanQueue.invalidateMemory();
+      return () => { cancelled = true; };
+    }
+    void scheduleGateWorkspaceLifecycleWork(
+      foregroundLifecycleRef,
+      foregroundSyncChainRef,
+      async (lifecycleToken) => {
+        if (!isGateWorkspaceLifecycleCurrent(foregroundLifecycleRef, lifecycleToken)) {
+          return;
+        }
+        if (!verifiedUserId) {
+          feedbackGenerationRef.current += 1;
+          workspaceRef.current = emptyStaffGateWorkspace();
+          viewRef.current = { gateScope: null, sessionId: null, ops: [] };
+          setOps([]);
+          setBusy(false);
+          lock.current = false;
+          lockOwnerRef.current = null;
+          clearScanFeedback();
+          setSessionId(null);
+          offlineScanQueue.invalidateMemory();
+          if (
+            !cancelled &&
+            isGateWorkspaceLifecycleCurrent(foregroundLifecycleRef, lifecycleToken)
+          ) {
+            setReady(true);
+          }
+          return;
+        }
+        if (!activationEpoch || !session.isEpochCurrent(activationEpoch) || cancelled) return;
+        let loaded;
+        try {
+          loaded = await loadWorkspaceWithLifecycleGuard(
+            foregroundLifecycleRef,
+            lifecycleToken,
+            () => loadStaffGateWorkspace(verifiedUserId),
+          );
+        } catch {
+          setGateEventsError('Không thể mở dữ liệu cổng trên thiết bị. Vui lòng thử lại.');
+          setWorkspaceLoadError(true);
+          return;
+        }
+        if (
+          !loaded ||
+          cancelled ||
+          !session.isEpochCurrent(activationEpoch) ||
+          !isGateWorkspaceLifecycleCurrent(foregroundLifecycleRef, lifecycleToken)
+        ) {
+          return;
+        }
+        workspaceRef.current = loaded;
+        setWorkspaceLoadError(false);
+        await offlineScanQueue.bindUser(verifiedUserId);
+        if (
+          cancelled ||
+          !session.isEpochCurrent(activationEpoch) ||
+          !isGateWorkspaceLifecycleCurrent(foregroundLifecycleRef, lifecycleToken)
+        ) {
+          return;
+        }
+        ownerRef.current = activationEpoch;
+        ownerWriteGenerationRef.current = gateWorkspaceWriteGeneration(verifiedUserId);
+        await refreshGateEvents();
+        if (
+          cancelled ||
+          !session.isEpochCurrent(activationEpoch) ||
+          !isGateWorkspaceLifecycleCurrent(foregroundLifecycleRef, lifecycleToken)
+        ) {
+          return;
+        }
+        await refreshConnectivityAndSync();
+        if (
+          !cancelled &&
+          session.isEpochCurrent(activationEpoch) &&
+          isGateWorkspaceLifecycleCurrent(foregroundLifecycleRef, lifecycleToken)
+        ) {
+          setOwner(activationEpoch);
+          setReady(true);
+        }
+      },
+    );
     const sub = AppState.addEventListener('change', (next) => {
       if (next === 'active') {
-        void refreshConnectivityAndSync();
-        void refreshGateEvents();
+        void runForegroundSync();
       }
     });
     return () => {
       cancelled = true;
+      feedbackGenerationRef.current += 1;
+      invalidateGateWorkspaceLifecycle(foregroundLifecycleRef);
       sub.remove();
     };
   }, [
     active,
-    refreshConnectivityAndSync,
-    refreshGateEvents,
+    identitySnapshot,
+    runForegroundSync,
     verifiedUserId,
     clearScanFeedback,
   ]);
 
   const selectGateScope = useCallback(
     (next: StaffGateScope) => {
-      if (!verifiedUserId) return;
+      const identity = session.getSnapshot();
+      if (!verifiedUserId || identity.status !== 'verified' || identity.userId !== verifiedUserId ||
+          !isGateWorkspaceWriteGenerationCurrent(verifiedUserId, gateWorkspaceWriteGeneration(verifiedUserId))) return;
       if (gateScope && sameStaffGateScope(gateScope, next)) {
         setEventPickerOpen(false);
         return;
@@ -412,27 +746,47 @@ export function StaffGateWorkspaceProvider({
       );
       workspaceRef.current = ws;
       const slice = sliceWorkspaceForScope(ws, next);
+      feedbackGenerationRef.current += 1;
+      viewRef.current = { gateScope: next, sessionId: slice.sessionId, ops: slice.ops };
       setGateScope(next);
       setOps(slice.ops);
       setSessionId(slice.sessionId);
       clearScanFeedback();
       setEventPickerOpen(false);
-      void saveStaffGateWorkspace(verifiedUserId, ws);
+      void saveWorkspace(verifiedUserId);
     },
-    [gateScope, verifiedUserId, ops, sessionId, clearScanFeedback],
+    [gateScope, verifiedUserId, ops, sessionId, clearScanFeedback, saveWorkspace],
   );
 
   const submitScan = useCallback(async (payload: string) => {
+    const replayEpoch = session.captureEpoch();
+    const startedView = viewRef.current;
+    const writeGeneration = gateWorkspaceWriteGeneration(replayEpoch?.userId ?? '');
     const code = payload.trim();
-    if (!code || lock.current) return;
+    if (!code || lock.current || !replayEpoch || replayEpoch.userId !== verifiedUserId) return;
     const attemptId = randomId();
+    feedbackGenerationRef.current += 1;
+    const startedGeneration = feedbackGenerationRef.current;
+    const isCurrent = gateWorkspaceOperationGuard({
+      startedUserId: replayEpoch.userId, startedView, startedGeneration, writeGeneration,
+      isEpochCurrent: () => session.isEpochCurrent(replayEpoch),
+      currentUserId: () => { const snap = session.getSnapshot(); return snap.status === 'verified' ? snap.userId : null; },
+      currentView: () => viewRef.current,
+      currentGeneration: () => feedbackGenerationRef.current,
+      isWriteGenerationCurrent: () => isGateWorkspaceWriteGenerationCurrent(replayEpoch.userId, writeGeneration),
+    });
     toastAttemptRef.current = attemptId;
     clearToastTimers();
     setToastOp(null);
     setToastVisible(false);
     setPendingOp(null);
     lock.current = true;
+    lockOwnerRef.current = attemptId;
     const auth = await resolveGateAuth();
+    if (!isCurrent()) {
+      if (lockOwnerRef.current === attemptId) { lock.current = false; lockOwnerRef.current = null; }
+      return;
+    }
     if (!auth.ok) {
       applyScanResult(
         {
@@ -447,6 +801,7 @@ export function StaffGateWorkspaceProvider({
         attemptId,
       );
       lock.current = false;
+      lockOwnerRef.current = null;
       return;
     }
     const scanFallback = resolveGateScanFallback(gateScope);
@@ -464,6 +819,7 @@ export function StaffGateWorkspaceProvider({
         attemptId,
       );
       lock.current = false;
+      lockOwnerRef.current = null;
       return;
     }
     setBusy(true);
@@ -486,6 +842,7 @@ export function StaffGateWorkspaceProvider({
         return;
       }
       await offlineScanQueue.bindUser(snap.userId);
+      if (!isCurrent()) return;
       const preferOffline = connectivity === 'offline';
       const result = await runScan({
         raw: code,
@@ -494,8 +851,10 @@ export function StaffGateWorkspaceProvider({
         ops: opsForScope(ops, gateScope),
         staffSessionId: sessionId,
         fallback: scanFallback,
-        preferOfflineQueue: preferOffline
+        preferOfflineQueue: preferOffline,
+        shouldContinue: isCurrent,
       });
+      if (!isCurrent()) return;
       const nextSessionId = result.staffSessionId ?? sessionId;
       if (result.membershipAuthzDenied) {
         clearStaffChromeAfterAuthzDenial();
@@ -508,6 +867,7 @@ export function StaffGateWorkspaceProvider({
           eventId: result.parsed.eventId,
           staffSessionId: result.staffSessionId
         });
+        if (!isCurrent()) return;
         setConnectivity('offline');
         const currentOp = gateOpFromQueued({
           id: queued.clientEventId,
@@ -522,8 +882,9 @@ export function StaffGateWorkspaceProvider({
           [currentOp, ...result.ops],
           currentOp,
           result.staffSessionId,
+          isCurrent,
         );
-        applyScanResult(currentOp, attemptId);
+        if (session.isEpochCurrent(replayEpoch) && feedbackGenerationRef.current === startedGeneration) applyScanResult(currentOp, attemptId);
         return;
       }
 
@@ -533,17 +894,15 @@ export function StaffGateWorkspaceProvider({
         setConnectivity('online');
       }
 
-      await persist(result.ops, result.current, nextSessionId);
+      await persist(result.ops, result.current, nextSessionId, isCurrent);
+      if (!session.isEpochCurrent(replayEpoch) || feedbackGenerationRef.current !== startedGeneration) return;
       applyScanResult(result.current, attemptId);
       if (!result.networkUnavailable) {
-        void offlineScanQueue.replay({
-          bearer: auth.bearer,
-          apiBase: auth.apiBase
-        });
+         void replayAndReconcile(auth.bearer, auth.apiBase, snap.userId, replayEpoch);
       }
     } finally {
-      lock.current = false;
-      setBusy(false);
+      if (lockOwnerRef.current === attemptId) { lock.current = false; lockOwnerRef.current = null; }
+      if (session.isEpochCurrent(replayEpoch)) setBusy(false);
     }
   }, [
     applyScanResult,
@@ -552,7 +911,9 @@ export function StaffGateWorkspaceProvider({
     gateScope,
     ops,
     persist,
+    replayAndReconcile,
     sessionId,
+    verifiedUserId,
   ]);
 
   const handleCameraScan = useCallback((data: string) => {
@@ -573,53 +934,161 @@ export function StaffGateWorkspaceProvider({
   }, [busy, pendingOp, submitScan, toastVisible]);
 
   const reconcile = useCallback(async () => {
+    const epoch = session.captureEpoch();
+    const startedView = viewRef.current;
+    const writeGeneration = gateWorkspaceWriteGeneration(epoch?.userId ?? '');
+    const startedGeneration = feedbackGenerationRef.current;
+    const isCurrent = gateWorkspaceOperationGuard({
+      startedUserId: epoch?.userId ?? null, startedView, startedGeneration, writeGeneration,
+      isEpochCurrent: () => session.isEpochCurrent(epoch),
+      currentUserId: () => { const snap = session.getSnapshot(); return snap.status === 'verified' ? snap.userId : null; },
+      currentView: () => viewRef.current,
+      currentGeneration: () => feedbackGenerationRef.current,
+      isWriteGenerationCurrent: () => !!epoch && isGateWorkspaceWriteGenerationCurrent(epoch.userId, writeGeneration),
+    });
     const target = pendingOp;
-    if (!target || !canReconcile(target)) return;
+    if (!target || !canReconcile(target) || !isCurrent()) return;
     const attemptId = randomId();
     toastAttemptRef.current = attemptId;
     clearToastTimers();
     setToastOp(null);
     setToastVisible(false);
     const auth = await resolveGateAuth();
-    if (!auth.ok) return;
+    if (!auth.ok || !isCurrent()) return;
     setBusy(true);
     try {
       const reconciled = await reconcileOp({
         op: target,
         bearer: auth.bearer,
-        apiBase: auth.apiBase
+        apiBase: auth.apiBase,
+        shouldContinue: isCurrent,
       });
+      if (!isCurrent()) return;
       if (reconciled.membershipAuthzDenied) {
         clearStaffChromeAfterAuthzDenial();
       }
       const next = reconciled.op;
       const rest = ops.filter((op) => op.id !== target.id);
-      await persist([next, ...rest], next, sessionId);
-      applyScanResult(next, attemptId);
+      await persist([next, ...rest], next, sessionId, isCurrent);
+      if (isCurrent()) applyScanResult(next, attemptId);
     } finally {
-      setBusy(false);
+      if (session.isEpochCurrent(epoch)) setBusy(false);
     }
-  }, [applyScanResult, clearToastTimers, ops, pendingOp, persist, sessionId]);
+  }, [applyScanResult, clearToastTimers, ops, pendingOp, persist, sessionId, verifiedUserId]);
 
   const syncNow = useCallback(async () => {
+    const epoch = session.captureEpoch();
+    if (!epoch) return;
     const auth = await resolveGateAuth();
-    if (!auth.ok) return;
-    const snap = session.getSnapshot();
-    if (snap.status !== 'verified') return;
+    if (!auth.ok || !session.isEpochCurrent(epoch)) return;
     setBusy(true);
     try {
-      await offlineScanQueue.bindUser(snap.userId);
+      await offlineScanQueue.bindUser(epoch.userId);
+      if (!session.isEpochCurrent(epoch)) return;
       setConnectivity(await probeConnectivity(auth.apiBase));
-      await offlineScanQueue.replay({
-        bearer: auth.bearer,
-        apiBase: auth.apiBase
-      });
+      if (!session.isEpochCurrent(epoch)) return;
+      await replayAndReconcile(auth.bearer, auth.apiBase, epoch.userId, epoch);
     } finally {
       setBusy(false);
     }
-  }, []);
+  }, [replayAndReconcile]);
+
+  const importKnownOperation = useCallback(
+    async (rawClientEventId: string): Promise<ImportKnownOperationOutcome> => {
+      const epoch = session.captureEpoch();
+      const startedGeneration = feedbackGenerationRef.current;
+      const startedView = viewRef.current;
+      const startedUserId = verifiedUserId;
+      const scope = startedView.gateScope;
+      const activeSession = startedView.sessionId;
+      if (!startedUserId || !scope) {
+        return {
+          kind: 'error',
+          code: 'no_scope',
+          message: importKnownOperationErrorMessage('no_scope'),
+        };
+      }
+      if (!activeSession) {
+        return {
+          kind: 'error',
+          code: 'no_session',
+          message: importKnownOperationErrorMessage('no_session'),
+        };
+      }
+      const auth = await resolveGateAuth();
+      if (!session.isEpochCurrent(epoch)) {
+        return { kind: 'error', code: 'stale', message: importKnownOperationErrorMessage('stale') };
+      }
+      if (!auth.ok) {
+        return {
+          kind: 'error',
+          code: 'auth',
+          message: auth.message,
+        };
+      }
+      const receiptGuard = () => {
+        const identity = session.getSnapshot();
+        return (
+          session.isEpochCurrent(epoch) &&
+          identity.status === 'verified' &&
+          identity.userId === startedUserId &&
+          feedbackGenerationRef.current === startedGeneration &&
+          viewRef.current.gateScope?.tenantId === scope.tenantId &&
+          viewRef.current.gateScope?.eventId === scope.eventId &&
+          viewRef.current.sessionId === activeSession
+        );
+      };
+      const parsedId = parseKnownClientEventIdInput(rawClientEventId);
+      const existingBefore = parsedId
+        ? findScopedGateOpByClientEventId(startedView.ops, scope, parsedId)
+        : undefined;
+      const outcome = await importKnownOperationFromReceipt(rawClientEventId, {
+        scope,
+        sessionId: activeSession,
+        verifiedUserId: startedUserId,
+        ops: startedView.ops,
+        bearer: auth.bearer,
+        apiBase: auth.apiBase,
+        shouldContinue: receiptGuard,
+        onAuthzDenied: () => clearStaffChromeAfterAuthzDenial(),
+      });
+      if (outcome.kind === 'error') return outcome;
+      if (!receiptGuard()) {
+        return {
+          kind: 'error',
+          code: 'stale',
+          message: 'Phiên hoặc sự kiện đã đổi trong lúc đối soát — thử lại.',
+        };
+      }
+      const recorded = outcome.op;
+      const existing =
+        existingBefore ??
+        findScopedGateOpByClientEventId(
+          viewRef.current.ops,
+          scope,
+          recorded.clientEventId ?? parsedId ?? '',
+        );
+      if (outcome.kind === 'noop') {
+        return outcome;
+      }
+      const nextOps = applyKnownOperationImportToOps(
+        viewRef.current.ops,
+        existing,
+        recorded,
+      );
+      await persist(nextOps, null, activeSession, receiptGuard);
+      return outcome;
+    },
+    [persist, verifiedUserId],
+  );
+
+  const focusSync = useCallback(() => {
+    return runFocusConnectivitySync();
+  }, [runFocusConnectivitySync]);
 
   const logoutStaff = useCallback(async () => {
+    feedbackGenerationRef.current += 1;
+    clearScanFeedback();
     const snap = session.getSnapshot();
     const userId = snap.status === 'verified' ? snap.userId : null;
     await logoutAndClearWalletArtifacts({
@@ -627,11 +1096,19 @@ export function StaffGateWorkspaceProvider({
       tenantId: getTenantId()
     });
     await endKeycloakSession();
-  }, []);
+  }, [clearScanFeedback]);
+
+  const feedbackOp = busy ? null : selectScanFeedbackOp(pendingOp, toastOp);
 
   const toastStatus = presentGateScanStatus({
     busy,
     op: busy ? null : toastOp,
+    canReconcile: prominentCanReconcile(pendingOp ?? toastOp)
+  });
+
+  const persistentScanStatus = presentGateScanStatus({
+    busy,
+    op: feedbackOp,
     canReconcile: prominentCanReconcile(pendingOp ?? toastOp)
   });
 
@@ -669,6 +1146,7 @@ export function StaffGateWorkspaceProvider({
       gateEventChoices,
       gateEventsLoading,
       gateEventsError,
+      workspaceLoadError,
       eventPickerOpen,
       setEventPickerOpen,
       queueSnap,
@@ -677,11 +1155,14 @@ export function StaffGateWorkspaceProvider({
       scanDisabled,
       queueAttention,
       toastStatus,
+      persistentScanStatus,
       selectGateScope,
       submitScan,
       handleCameraScan,
       reconcile,
       syncNow,
+      focusSync,
+      importKnownOperation,
       dismissPendingAction,
       refreshGateEvents,
       logoutStaff
@@ -699,6 +1180,7 @@ export function StaffGateWorkspaceProvider({
       gateEventChoices,
       gateEventsLoading,
       gateEventsError,
+      workspaceLoadError,
       eventPickerOpen,
       queueSnap,
       machineLabel,
@@ -706,19 +1188,34 @@ export function StaffGateWorkspaceProvider({
       scanDisabled,
       queueAttention,
       toastStatus,
+      persistentScanStatus,
       selectGateScope,
       submitScan,
       handleCameraScan,
       reconcile,
       syncNow,
+      focusSync,
+      importKnownOperation,
       dismissPendingAction,
       refreshGateEvents,
       logoutStaff,
     ],
   );
 
+  const currentEpoch = session.captureEpoch();
+  // The owner guard must run before the effect that clears prior-user state.
+  // eslint-disable-next-line react-hooks/refs
+  const ownedValue = projectStaffGateOwnedSnapshot(value, owner, currentEpoch, () =>
+    active &&
+    ownerRef.current === owner &&
+    session.isEpochCurrent(owner) &&
+    !!owner &&
+    offlineScanQueue.ownerUserIdOrNull() === owner.userId &&
+    isGateWorkspaceWriteGenerationCurrent(owner.userId, ownerWriteGenerationRef.current),
+  );
+
   return (
-    <StaffGateWorkspaceContext.Provider value={active ? value : null}>
+    <StaffGateWorkspaceContext.Provider value={active ? ownedValue : null}>
       {children}
     </StaffGateWorkspaceContext.Provider>
   );

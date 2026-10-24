@@ -1,0 +1,54 @@
+{
+  "at": "2026-10-23T19:16:00.157614+00:00",
+  "head": "b2faa48a1ce443c8fc6c849cb74a06a57f8b0c37",
+  "freezeSha256": "e0c7482763b00fd095be08308c320542a81811a02993144ff5673f98e199ec43",
+  "filesChecked": 77,
+  "drift": [],
+  "diffCheck": {
+    "exit": 0,
+    "output": ""
+  },
+  "dbExit": 0,
+  "db": [
+    {
+      "ticketId": "979d7ce0-fdd1-4fd9-a599-de3a5c6936da",
+      "state": "USED",
+      "clientEventId": "4867e9d6-0070-41c6-9d90-e16811158e93",
+      "checkinId": "74d44692-6599-4edb-a48d-6cf1a624fd85",
+      "staffSessionId": "47e4d3a4-f4cb-4da9-bfd8-9d4f8bdcad36",
+      "deviceId": "9a95b622-336b-47d1-826e-2fc0af25327c",
+      "clientSeq": 2,
+      "appliedAt": "2026-10-23T19:12:49.618417+00:00"
+    },
+    {
+      "ticketId": "b11366f4-0135-4c17-bb36-f69998f0a0f6",
+      "state": "USED",
+      "clientEventId": "f8d63674-0363-458b-a9db-f1cdfe5bdff6",
+      "checkinId": "11e1953f-35ca-4ebd-b789-c7731a0fa37a",
+      "staffSessionId": "47e4d3a4-f4cb-4da9-bfd8-9d4f8bdcad36",
+      "deviceId": "9a95b622-336b-47d1-826e-2fc0af25327c",
+      "clientSeq": 1,
+      "appliedAt": "2026-10-23T19:11:26.817826+00:00"
+    }
+  ],
+  "currentActiveWorkers": [],
+  "jwtMetadata": {
+    "flowA-jwt-metadata.json": {
+      "fetchedAt": "2026-10-23T19:09:33.297Z",
+      "iat": 1792782573,
+      "exp": 1792782873,
+      "sub": "6daa25c7-ebe8-4148-917b-03ec3362a36a",
+      "aud": "ticket-api",
+      "acr": "1"
+    },
+    "flowB-jwt-metadata.json": {
+      "fetchedAt": "2026-10-23T19:12:05.139Z",
+      "iat": 1792782725,
+      "exp": 1792783025,
+      "sub": "6daa25c7-ebe8-4148-917b-03ec3362a36a",
+      "aud": "ticket-api",
+      "acr": "1"
+    }
+  },
+  "proxyMode": "online"
+}

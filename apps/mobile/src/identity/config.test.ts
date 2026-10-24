@@ -8,6 +8,7 @@ import {
   getTenantId,
   getTenantSlug,
   isOidcConfigured,
+  resolveApiBaseUrl,
   showDemoEventCatalog,
   VEMOKI_PROD_API_BASE_URL,
 } from './config.ts';
@@ -53,14 +54,38 @@ test('issuer + client id is configured', () => {
   else process.env.EXPO_PUBLIC_OIDC_CLIENT_ID = prevClient;
 });
 
-test('API base URL is always production (K-API-02 / HOST-1)', () => {
-  const previous = process.env.EXPO_PUBLIC_API_BASE_URL;
+test('API base URL is production unless baked allowLocalFixtureApi', () => {
+  const env = { EXPO_PUBLIC_API_BASE_URL: 'http://127.0.0.1:3001/' };
+  assert.equal(
+    resolveApiBaseUrl({ allowLocalFixtureApi: false }, env, {}),
+    VEMOKI_PROD_API_BASE_URL,
+  );
+  assert.equal(
+    resolveApiBaseUrl({ allowLocalFixtureApi: true }, env, {}),
+    'http://127.0.0.1:3001',
+  );
+  assert.equal(
+    resolveApiBaseUrl({ allowLocalFixtureApi: true }, {}, {
+      apiBaseUrl: 'http://127.0.0.1:3001',
+    }),
+    'http://127.0.0.1:3001',
+  );
+});
+
+test('runtime getApiBaseUrl ignores UAT env when APS environment is production', () => {
+  const prevApi = process.env.EXPO_PUBLIC_API_BASE_URL;
+  const prevUat = process.env.EXPO_PUBLIC_ALLOW_UAT_SESSION;
+  const prevAps = process.env.EXPO_PUBLIC_APS_ENVIRONMENT;
   process.env.EXPO_PUBLIC_API_BASE_URL = 'http://127.0.0.1:3001/';
+  process.env.EXPO_PUBLIC_ALLOW_UAT_SESSION = '1';
+  process.env.EXPO_PUBLIC_APS_ENVIRONMENT = 'production';
   assert.equal(getApiBaseUrl(), VEMOKI_PROD_API_BASE_URL);
-  delete process.env.EXPO_PUBLIC_API_BASE_URL;
-  assert.equal(getApiBaseUrl(), 'https://api.vemoki.com');
-  if (previous === undefined) delete process.env.EXPO_PUBLIC_API_BASE_URL;
-  else process.env.EXPO_PUBLIC_API_BASE_URL = previous;
+  if (prevApi === undefined) delete process.env.EXPO_PUBLIC_API_BASE_URL;
+  else process.env.EXPO_PUBLIC_API_BASE_URL = prevApi;
+  if (prevUat === undefined) delete process.env.EXPO_PUBLIC_ALLOW_UAT_SESSION;
+  else process.env.EXPO_PUBLIC_ALLOW_UAT_SESSION = prevUat;
+  if (prevAps === undefined) delete process.env.EXPO_PUBLIC_APS_ENVIRONMENT;
+  else process.env.EXPO_PUBLIC_APS_ENVIRONMENT = prevAps;
 });
 
 test('tenant id empty is null (no invented tenant)', () => {

@@ -1,0 +1,431 @@
+{
+  "id": "da844033-dd12-4a4c-a07e-4846cec43cf9",
+  "ok": true,
+  "result": [
+    {
+      "role": "application",
+      "type": "Application",
+      "label": "Vemoki",
+      "value": "",
+      "enabled": true,
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      },
+      "children": [
+        {
+          "role": "Nav bar",
+          "type": "Group",
+          "label": "",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0,
+            "y": 0.0692,
+            "width": 1,
+            "height": 0.1311
+          },
+          "children": [],
+          "id": "MFest · Demo"
+        },
+        {
+          "role": "heading",
+          "type": "Heading",
+          "label": "Lịch sử trên máy này",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.0509,
+            "y": 0.2238,
+            "width": 0.8982,
+            "height": 0.0254
+          },
+          "children": []
+        },
+        {
+          "role": "text",
+          "type": "StaticText",
+          "label": "Trên thiết bị này · MFest · Demo",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.0509,
+            "y": 0.2516,
+            "width": 0.8982,
+            "height": 0.0215
+          },
+          "children": []
+        },
+        {
+          "role": "text",
+          "type": "StaticText",
+          "label": "Đối soát mã lượt đã biết",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.0509,
+            "y": 0.2825,
+            "width": 0.8982,
+            "height": 0.0262
+          },
+          "children": []
+        },
+        {
+          "role": "text",
+          "type": "StaticText",
+          "label": "Nhập mã lượt (UUID) từ biên nhận đồng bộ — chỉ trong sự kiện đang chọn, không tìm vé.",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.0509,
+            "y": 0.3181,
+            "width": 0.8982,
+            "height": 0.0426
+          },
+          "children": []
+        },
+        {
+          "role": "text field",
+          "type": "TextField",
+          "label": "Mã lượt UUID đã biết",
+          "value": "Mã lượt UUID",
+          "enabled": true,
+          "frame": {
+            "x": 0.0534,
+            "y": 0.3713,
+            "width": 0.8931,
+            "height": 0.054
+          },
+          "children": []
+        },
+        {
+          "role": "button",
+          "type": "Button",
+          "label": "Đối soát mã lượt đã biết",
+          "value": "",
+          "enabled": false,
+          "frame": {
+            "x": 0.0509,
+            "y": 0.4358,
+            "width": 0.8982,
+            "height": 0.0516
+          },
+          "children": []
+        },
+        {
+          "role": "text field",
+          "type": "TextField",
+          "label": "Tìm trong các lượt đã tải",
+          "value": "Tìm trong các lượt đã tải",
+          "enabled": true,
+          "frame": {
+            "x": 0.0534,
+            "y": 0.498,
+            "width": 0.8931,
+            "height": 0.054
+          },
+          "children": []
+        },
+        {
+          "role": "heading",
+          "type": "Heading",
+          "label": "Hôm nay · 24 tháng 10",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.0509,
+            "y": 0.5626,
+            "width": 0.8982,
+            "height": 0.0215
+          },
+          "children": []
+        },
+        {
+          "role": "",
+          "type": "GenericElement",
+          "label": "03:12 24-10. Vé 979d7ce0-f…. Mã lượt 4867e9d6-0070-41c6-9d90-e16811158e93. Biên nhận 74d44692-6599-4edb-a48d-6cf1a624fd85. Được vào. Máy chủ đã ghi nhận check-in — có thể cho khách qua. Mã lượt 4867e9d6-007… · Biên nhận 74d44692-659…",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.0509,
+            "y": 0.5935,
+            "width": 0.8982,
+            "height": 0.0689
+          },
+          "children": []
+        },
+        {
+          "role": "",
+          "type": "GenericElement",
+          "label": "03:10 24-10. Vé b11366f4-0…. Mã lượt f8d63674-0363-458b-a9db-f1cdfe5bdff6. Biên nhận 11e1953f-35ca-4ebd-b789-c7731a0fa37a. Được vào. Máy chủ đã ghi nhận check-in — có thể cho khách qua. Mã lượt f8d63674-036… · Biên nhận 11e1953f-35c…",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.0509,
+            "y": 0.6718,
+            "width": 0.8982,
+            "height": 0.0689
+          },
+          "children": []
+        },
+        {
+          "role": "",
+          "type": "GenericElement",
+          "label": "03:01 24-10. Vé 6459b263-d…. Mã lượt 6380dc86-7cab-4539-8e73-112f541a8dd1. Biên nhận 65437eb8-2530-443c-90ec-64efd03eb08e. Được vào. Máy chủ đã ghi nhận check-in — có thể cho khách qua. Mã lượt 6380dc86-7ca… · Biên nhận 65437eb8-253…",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.0509,
+            "y": 0.75,
+            "width": 0.8982,
+            "height": 0.0689
+          },
+          "children": []
+        },
+        {
+          "role": "",
+          "type": "GenericElement",
+          "label": "03:00 24-10. Vé 752ba87d-a…. Mã lượt 543049fc-90b2-40e6-8115-11b59c96528b. Từ chối. Mã lượt 543049fc-90b…. Thứ tự hàng đợi không hợp lệ. Giữ vé và đối soát thủ công.",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.0509,
+            "y": 0.8282,
+            "width": 0.8982,
+            "height": 0.0689
+          },
+          "children": []
+        },
+        {
+          "role": "",
+          "type": "GenericElement",
+          "label": "02:54 24-10. Vé e0523489-7…. Mã lượt 08adf857-27da-492d-be03-77280a109119. Từ chối. Mã lượt 08adf857-27d…. Thứ tự hàng đợi không hợp lệ. Giữ vé và đối soát thủ công.",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.0509,
+            "y": 0.9065,
+            "width": 0.8982,
+            "height": 0.0689
+          },
+          "children": []
+        },
+        {
+          "role": "",
+          "type": "GenericElement",
+          "label": "02:38 24-10. Vé 32d7ace4-4…. Mã lượt d2db721b-81da-43b4-9890-393d92c54b18. Không cho vào. Thứ tự hàng đợi không hợp lệ. Giữ vé và đối soát thủ công. Mã lượt d2db721b-81d…",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.0509,
+            "y": 0.9847,
+            "width": 0.8982,
+            "height": 0.0689
+          },
+          "children": []
+        },
+        {
+          "role": "",
+          "type": "GenericElement",
+          "label": "02:24 24-10. Vé e93ddc6b-1…. Mã lượt 6c812d24-2d8e-44eb-b55d-23c358e75f09. Biên nhận 46a428ee-10df-479b-abcd-945f967de183. Đã ghi nhận trước đó. Đã ghi nhận trước đó — check-in vẫn là bản ghi hiện tại trên máy chủ. Không tạo lượt vào mới từ đối soát lịch sử. Mã lượt 6c812d24-2d8… · Biên nhận 46a428ee-10d…",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.0509,
+            "y": 1.063,
+            "width": 0.8982,
+            "height": 0.0689
+          },
+          "children": []
+        },
+        {
+          "role": "text",
+          "type": "StaticText",
+          "label": "Đã xem hết lịch sử lưu trên máy này",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.0509,
+            "y": 1.1459,
+            "width": 0.8982,
+            "height": 0.0239
+          },
+          "children": []
+        },
+        {
+          "role": "text",
+          "type": "StaticText",
+          "label": "Đã tải 7 lượt",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.0509,
+            "y": 1.1839,
+            "width": 0.8982,
+            "height": 0.0215
+          },
+          "children": []
+        },
+        {
+          "role": "group",
+          "type": "Group",
+          "label": "Tab Bar",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0,
+            "y": 0.9026,
+            "width": 1,
+            "height": 0.0974
+          },
+          "children": []
+        },
+        {
+          "role": "text",
+          "type": "StaticText",
+          "label": "3:14 AM",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.1374,
+            "y": 0.0223,
+            "width": 0.0891,
+            "height": 0.0239
+          },
+          "children": []
+        },
+        {
+          "role": "",
+          "type": "GenericElement",
+          "label": "Dynamic Island, Empty",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.341,
+            "y": 0.0133,
+            "width": 0.3181,
+            "height": 0.043
+          },
+          "children": []
+        },
+        {
+          "role": "",
+          "type": "GenericElement",
+          "label": "Cellular",
+          "value": "No signal",
+          "enabled": true,
+          "frame": {
+            "x": 0.7176,
+            "y": 0.027,
+            "width": 0.0492,
+            "height": 0.0145
+          },
+          "children": []
+        },
+        {
+          "role": "",
+          "type": "GenericElement",
+          "label": "100% battery power",
+          "value": "Not charging",
+          "enabled": true,
+          "frame": {
+            "x": 0.8473,
+            "y": 0.0266,
+            "width": 0.0696,
+            "height": 0.0153
+          },
+          "children": []
+        },
+        {
+          "role": "heading",
+          "type": "Heading",
+          "label": "MFest · Demo",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.0407,
+            "y": 0.1369,
+            "width": 0.5437,
+            "height": 0.0544
+          },
+          "children": []
+        },
+        {
+          "role": "button",
+          "type": "Button",
+          "label": "Tài khoản",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.4996,
+            "y": 0.0739,
+            "width": 0.0916,
+            "height": 0.0423
+          },
+          "children": []
+        },
+        {
+          "role": "button",
+          "type": "Button",
+          "label": "More",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.8575,
+            "y": 0.0739,
+            "width": 0.0916,
+            "height": 0.0423
+          },
+          "children": []
+        },
+        {
+          "role": "tab",
+          "type": "RadioButton",
+          "label": "Nhập tay",
+          "value": "0",
+          "enabled": true,
+          "frame": {
+            "x": 0.1628,
+            "y": 0.9073,
+            "width": 0.2392,
+            "height": 0.0634
+          },
+          "children": []
+        },
+        {
+          "role": "tab",
+          "type": "RadioButton",
+          "label": "Quét vé",
+          "value": "0",
+          "enabled": true,
+          "frame": {
+            "x": 0.3817,
+            "y": 0.9073,
+            "width": 0.2392,
+            "height": 0.0634
+          },
+          "children": []
+        },
+        {
+          "role": "tab",
+          "type": "RadioButton",
+          "label": "Lịch sử",
+          "value": "1",
+          "enabled": true,
+          "frame": {
+            "x": 0.6005,
+            "y": 0.9073,
+            "width": 0.2392,
+            "height": 0.0634
+          },
+          "children": []
+        }
+      ]
+    }
+  ],
+  "_meta": {
+    "runtimeId": "9d821662-c628-49db-a168-99fa7b7636fc"
+  }
+}

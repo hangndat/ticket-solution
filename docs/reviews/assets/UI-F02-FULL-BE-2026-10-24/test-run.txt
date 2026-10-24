@@ -1,0 +1,9 @@
+# packages/backend receipt tests — 2026-10-24 worker task_21d62e36a4f7
+pnpm --filter @ticket/contracts build && pnpm --filter @ticket/backend build && pnpm --filter @ticket/api build && cd apps/api && pnpm openapi
+
+cd packages/backend && node --test test/offline-sync-receipt.test.cjs test/offline-sync-unit.test.cjs
+# Result: 8 pass, 0 fail
+# - offline receipt lookup: matrix authz, states, closed window, read-only
+# - deriveOfflineSyncReceiptCheckinState precedence
+# - lookup rejects malformed UUID
+# - offline-sync-unit tests (5)

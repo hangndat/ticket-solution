@@ -1,0 +1,14 @@
+Flow A — reviewer James — ticket 32d7ace4-498d-4c0c-a15b-744cbdae281e
+HEAD b2faa48a1ce443c8fc6c849cb74a06a57f8b0c37 dirty
+Sim B0727247-340D-423A-8547-A6C107A9756A
+
+Preview online: 2026-10-23T18:36Z (Mã đọc được, chưa xác minh)
+Offline queue: 2026-10-23T18:38Z — AX pending chrome + Offline — chờ đồng bộ
+clientEventId BEFORE sync (AX truncated): d2db721b-81d…
+staffSession / scope: MFest · Demo gate scope (fixture tenant/event); full session UUID not in AX
+
+Online resume: 2026-10-23T18:39:28Z Home+icon, +25s
+Outcome: Không cho vào — Thứ tự hàng đợi không hợp lệ
+DB offline_sync_events for ticket: none after sync
+
+Proxy restored online end of session.

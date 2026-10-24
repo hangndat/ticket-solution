@@ -1,0 +1,13 @@
+Ticket: 29aec431-8a11-4315-8a05-c1cb44175c60 (DB ticket_fixall_859 ACTIVE)
+JWT: apps/mobile/.uat-artifacts/fa-ios-tokens.json refreshed 2026-10-24 (metadata jwt-staff-metadata.json, TTL 300s)
+Metro manifest ticketPublic.apiBaseUrl: http://127.0.0.1:3009 (metro-manifest-ticket-public.json)
+UUID entry: Orca char-by-char type, AX value length 36 (ax-uuid-36chars-proof.txt)
+
+Flow:
+1. online → preview modal «Mã đọc được, chưa xác minh» (f02-preview-modal.png)
+2. proxy offline (health 000) → «Gửi kiểm tra cổng»
+3. 8s: panel «Offline — chờ đồng bộ» + AX value full UUID (ax-queued-offline-8s.json, f02-29aec-queued-offline-8s.png)
+4. proxy online → sim Home → relaunch app
+5. 25s foreground, NO manual sync: panel «Được vào» (f02-29aec-foreground-25s.png, ax-foreground-25s.json)
+
+Prior PNGs f02-queued-offline-6s.png / f02-da4a-offline-8s.png: tenant-not-found harness error (truncated UUID / duplicate typing), NOT offline queue — mislabeled.

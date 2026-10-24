@@ -4661,6 +4661,77 @@
           "public-branding"
         ]
       }
+    },
+    "/v1/gate/events/{eventId}/offline-sync/receipts/{clientEventId}": {
+      "get": {
+        "operationId": "GateController_offlineSyncReceipt",
+        "parameters": [
+          {
+            "name": "eventId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "clientEventId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OfflineSyncReceiptResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "gate"
+        ]
+      }
     }
   },
   "info": {
@@ -5628,7 +5699,8 @@
               "CHECKIN_WINDOW_CLOSED",
               "EVENT_CANCELLED",
               "OFFLINE_SYNC_REPLAY_ORDER_INVALID",
-              "OFFLINE_SYNC_NOT_IMPLEMENTED"
+              "OFFLINE_SYNC_NOT_IMPLEMENTED",
+              "OFFLINE_SYNC_RECEIPT_NOT_FOUND"
             ]
           },
           "message": {
@@ -7695,6 +7767,71 @@
           "primaryColor",
           "secondaryColor",
           "logoAssetId"
+        ]
+      },
+      "OfflineSyncReceiptResponseDto": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "eventId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "clientEventId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "APPLIED"
+            ]
+          },
+          "historical": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "ticketId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "checkinId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "staffSessionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "appliedAt": {
+            "type": "string"
+          },
+          "checkinState": {
+            "type": "string",
+            "enum": [
+              "CURRENT",
+              "UNDONE",
+              "TICKET_REVOKED",
+              "NO_LONGER_CURRENT"
+            ]
+          }
+        },
+        "required": [
+          "tenantId",
+          "eventId",
+          "clientEventId",
+          "status",
+          "historical",
+          "ticketId",
+          "checkinId",
+          "staffSessionId",
+          "appliedAt",
+          "checkinState"
         ]
       }
     }

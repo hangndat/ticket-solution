@@ -1,0 +1,236 @@
+{
+  "at": "2026-10-24T01:18:55.708Z",
+  "id": "0a0cc666-f190-4b21-9b93-b6edbcf31af3",
+  "ok": true,
+  "result": [
+    {
+      "role": "application",
+      "type": "Application",
+      "label": "Vemoki",
+      "value": "",
+      "enabled": true,
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      },
+      "children": [
+        {
+          "role": "",
+          "type": "GenericElement",
+          "label": "In progress",
+          "value": "1",
+          "enabled": true,
+          "frame": {
+            "x": 0.475,
+            "y": 0.1162,
+            "width": 0.0509,
+            "height": 0.0235
+          },
+          "children": []
+        },
+        {
+          "role": "text",
+          "type": "StaticText",
+          "label": "UAT session",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.3257,
+            "y": 0.1538,
+            "width": 0.3478,
+            "height": 0.0329
+          },
+          "children": []
+        },
+        {
+          "role": "text",
+          "type": "StaticText",
+          "label": "Đang nạp phiên UAT…",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.2697,
+            "y": 0.2007,
+            "width": 0.4597,
+            "height": 0.0297
+          },
+          "children": []
+        },
+        {
+          "role": "",
+          "type": "GenericElement",
+          "label": "!, Open debugger to view warnings.",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.0254,
+            "y": 0.8987,
+            "width": 0.9491,
+            "height": 0.0563
+          },
+          "children": []
+        },
+        {
+          "role": "text",
+          "type": "StaticText",
+          "label": "9:18 AM",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.1374,
+            "y": 0.0223,
+            "width": 0.0891,
+            "height": 0.0239
+          },
+          "children": []
+        },
+        {
+          "role": "",
+          "type": "GenericElement",
+          "label": "Dynamic Island, Empty",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.341,
+            "y": 0.0133,
+            "width": 0.3181,
+            "height": 0.043
+          },
+          "children": []
+        },
+        {
+          "role": "",
+          "type": "GenericElement",
+          "label": "Cellular",
+          "value": "No signal",
+          "enabled": true,
+          "frame": {
+            "x": 0.7176,
+            "y": 0.027,
+            "width": 0.0492,
+            "height": 0.0145
+          },
+          "children": []
+        },
+        {
+          "role": "",
+          "type": "GenericElement",
+          "label": "100% battery power",
+          "value": "Not charging",
+          "enabled": true,
+          "frame": {
+            "x": 0.8473,
+            "y": 0.0266,
+            "width": 0.0696,
+            "height": 0.0153
+          },
+          "children": []
+        },
+        {
+          "role": "link",
+          "type": "Link",
+          "label": "Ảnh banner sự kiện, MFest, MFest · Demo, 10:00 ngày 20 thg 3, 2027 · Bến Bạch Đằng, TP. Hồ Chí Minh, Sắp diễn ra",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.0509,
+            "y": 0.2617,
+            "width": 0.8982,
+            "height": 0.3646
+          },
+          "children": []
+        },
+        {
+          "role": "button",
+          "type": "Button",
+          "label": "Kiểm tra vé",
+          "value": "",
+          "enabled": false,
+          "frame": {
+            "x": 0.0509,
+            "y": 0.4757,
+            "width": 0.8982,
+            "height": 0.0583
+          },
+          "children": [],
+          "id": "gate-manual-submit"
+        },
+        {
+          "role": "text",
+          "type": "StaticText",
+          "label": "Kiểm tra định dạng mã trước khi gửi lên máy chủ — kết quả cổng hiện bên dưới.",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.0509,
+            "y": 0.5528,
+            "width": 0.8982,
+            "height": 0.0426
+          },
+          "children": []
+        },
+        {
+          "role": "group",
+          "type": "Group",
+          "label": "Tab Bar",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0,
+            "y": 0.9026,
+            "width": 1,
+            "height": 0.0974
+          },
+          "children": []
+        },
+        {
+          "role": "tab",
+          "type": "RadioButton",
+          "label": "Nhập tay",
+          "value": "1",
+          "enabled": true,
+          "frame": {
+            "x": 0.1628,
+            "y": 0.9073,
+            "width": 0.2392,
+            "height": 0.0634
+          },
+          "children": []
+        },
+        {
+          "role": "tab",
+          "type": "RadioButton",
+          "label": "Quét vé",
+          "value": "0",
+          "enabled": true,
+          "frame": {
+            "x": 0.3817,
+            "y": 0.9073,
+            "width": 0.2392,
+            "height": 0.0634
+          },
+          "children": []
+        },
+        {
+          "role": "tab",
+          "type": "RadioButton",
+          "label": "Lịch sử",
+          "value": "0",
+          "enabled": true,
+          "frame": {
+            "x": 0.6005,
+            "y": 0.9073,
+            "width": 0.2392,
+            "height": 0.0634
+          },
+          "children": []
+        }
+      ]
+    }
+  ],
+  "_meta": {
+    "runtimeId": "9d821662-c628-49db-a168-99fa7b7636fc"
+  }
+}

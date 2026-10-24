@@ -1,0 +1,238 @@
+{
+  "at": "2026-10-24T02:48:37.988Z",
+  "id": "c2493abe-a52f-4cac-96b2-809fdb3dc215",
+  "ok": true,
+  "result": [
+    {
+      "role": "application",
+      "type": "Application",
+      "label": "Vemoki",
+      "value": "",
+      "enabled": true,
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      },
+      "children": [
+        {
+          "role": "heading",
+          "type": "Heading",
+          "label": "vemoki↗",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.4003,
+            "y": 0.0794,
+            "width": 0.1993,
+            "height": 0.0309
+          },
+          "children": []
+        },
+        {
+          "role": "heading",
+          "type": "Heading",
+          "label": "Sự kiện",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.0509,
+            "y": 0.142,
+            "width": 0.8982,
+            "height": 0.0446
+          },
+          "children": []
+        },
+        {
+          "role": "text field",
+          "type": "TextField",
+          "label": "Tìm tên sự kiện",
+          "value": "⌕ Tìm tên sự kiện",
+          "enabled": true,
+          "frame": {
+            "x": 0.0534,
+            "y": 0.2019,
+            "width": 0.8931,
+            "height": 0.054
+          },
+          "children": [],
+          "id": "events-search"
+        },
+        {
+          "role": "link",
+          "type": "Link",
+          "label": "Ảnh banner sự kiện, MFest, MFest · Demo, 10:00 ngày 20 thg 3, 2027 · Bến Bạch Đằng, TP. Hồ Chí Minh, Sắp diễn ra",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.0509,
+            "y": 0.2617,
+            "width": 0.8982,
+            "height": 0.3646
+          },
+          "children": []
+        },
+        {
+          "role": "link",
+          "type": "Link",
+          "label": "Ảnh banner sự kiện, Studio Organization, Studio Night · Demo, 18:00 ngày 10 thg 4, 2027 · The Factory Contemporary Arts Centre, TP. Hồ Chí Minh, Sắp diễn ra",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.0509,
+            "y": 0.6451,
+            "width": 0.8982,
+            "height": 0.3646
+          },
+          "children": []
+        },
+        {
+          "role": "button",
+          "type": "Button",
+          "label": "Đổi mã lấy vé",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.0509,
+            "y": 1.0379,
+            "width": 0.8982,
+            "height": 0.0606
+          },
+          "children": [],
+          "id": "events-cta-redeem"
+        },
+        {
+          "role": "group",
+          "type": "Group",
+          "label": "Tab Bar",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0,
+            "y": 0.9026,
+            "width": 1,
+            "height": 0.0974
+          },
+          "children": []
+        },
+        {
+          "role": "",
+          "type": "GenericElement",
+          "label": "!, Open debugger to view warnings.",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.0254,
+            "y": 0.8987,
+            "width": 0.9491,
+            "height": 0.0563
+          },
+          "children": []
+        },
+        {
+          "role": "text",
+          "type": "StaticText",
+          "label": "10:48 AM",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.1238,
+            "y": 0.0223,
+            "width": 0.117,
+            "height": 0.0239
+          },
+          "children": []
+        },
+        {
+          "role": "",
+          "type": "GenericElement",
+          "label": "Dynamic Island, Empty",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.341,
+            "y": 0.0133,
+            "width": 0.3181,
+            "height": 0.043
+          },
+          "children": []
+        },
+        {
+          "role": "",
+          "type": "GenericElement",
+          "label": "Cellular",
+          "value": "No signal",
+          "enabled": true,
+          "frame": {
+            "x": 0.7176,
+            "y": 0.027,
+            "width": 0.0492,
+            "height": 0.0145
+          },
+          "children": []
+        },
+        {
+          "role": "",
+          "type": "GenericElement",
+          "label": "100% battery power",
+          "value": "Not charging",
+          "enabled": true,
+          "frame": {
+            "x": 0.8473,
+            "y": 0.0266,
+            "width": 0.0696,
+            "height": 0.0153
+          },
+          "children": []
+        },
+        {
+          "role": "Nav bar",
+          "type": "Group",
+          "label": "",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0,
+            "y": 0.0692,
+            "width": 1,
+            "height": 0.0634
+          },
+          "children": [],
+          "id": "index"
+        },
+        {
+          "role": "tab",
+          "type": "RadioButton",
+          "label": "Sự kiện",
+          "value": "1",
+          "enabled": true,
+          "frame": {
+            "x": 0.2723,
+            "y": 0.9073,
+            "width": 0.2392,
+            "height": 0.0634
+          },
+          "children": []
+        },
+        {
+          "role": "tab",
+          "type": "RadioButton",
+          "label": "Tài khoản",
+          "value": "0",
+          "enabled": true,
+          "frame": {
+            "x": 0.4911,
+            "y": 0.9073,
+            "width": 0.2392,
+            "height": 0.0634
+          },
+          "children": []
+        }
+      ]
+    }
+  ],
+  "_meta": {
+    "runtimeId": "9d821662-c628-49db-a168-99fa7b7636fc"
+  }
+}

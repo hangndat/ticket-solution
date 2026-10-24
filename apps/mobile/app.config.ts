@@ -1,4 +1,9 @@
 import type { ConfigContext, ExpoConfig } from 'expo/config';
+import {
+  assertRetailPublicEnv,
+  resolveApsEnvironment,
+  resolveDevelopmentBakeFlags,
+} from './src/identity/retail-public-guard.ts';
 
 /**
  * Dynamic Expo config. `aps-environment` must be `production` for Release /
@@ -12,27 +17,10 @@ import type { ConfigContext, ExpoConfig } from 'expo/config';
  * `extra.ticketPublic` (and process.env for Metro inline) when unset — TF/device
  * archives must not ship with empty API/OIDC (Gate fail-closed "sign in / API").
  */
-function resolveApsEnvironment(
-  env: NodeJS.ProcessEnv = process.env,
-): 'development' | 'production' {
-  const raw =
-    env.APS_ENVIRONMENT?.trim() ||
-    env.APP_VARIANT?.trim() ||
-    env.EXPO_PUBLIC_APS_ENVIRONMENT?.trim() ||
-    '';
-  return raw === 'production' ? 'production' : 'development';
-}
+import { VEMOKI_PROD_PUBLIC } from './src/identity/vemoki-public-constants.ts';
 
-/**
- * Public (non-secret) production defaults for Release / TestFlight bake.
- * Issuer stays on auth.vemoki.com — independent of O13 web apex vs app.vemoki.com.
- */
-export const VEMOKI_PROD_PUBLIC = {
-  apiBaseUrl: 'https://api.vemoki.com',
-  oidcIssuer: 'https://auth.vemoki.com/realms/ticket',
-  oidcClientId: 'ticket-mobile',
-  pushProvider: 'apns',
-} as const;
+/** Re-export for tests and tooling that import from app.config. */
+export { VEMOKI_PROD_PUBLIC };
 
 export type TicketPublicExtra = {
   apiBaseUrl?: string;
@@ -43,6 +31,10 @@ export type TicketPublicExtra = {
   eventId?: string;
   pushProvider?: string;
   apsEnvironment?: 'development' | 'production';
+  /** Development bake only: local fixture API + UAT routes when env opts in at config time. */
+  allowLocalFixtureApi?: boolean;
+  allowUatSessionRoutes?: boolean;
+  allowFixtureEventRoutes?: boolean;
 };
 
 function trimEnv(value: string | undefined): string {
@@ -57,6 +49,8 @@ function bakePublicConfig(
   apsEnvironment: 'development' | 'production',
   env: NodeJS.ProcessEnv = process.env,
 ): TicketPublicExtra {
+  assertRetailPublicEnv(apsEnvironment, env);
+
   if (apsEnvironment === 'production') {
     env.EXPO_PUBLIC_API_BASE_URL ||= VEMOKI_PROD_PUBLIC.apiBaseUrl;
     env.EXPO_PUBLIC_OIDC_ISSUER ||= VEMOKI_PROD_PUBLIC.oidcIssuer;
@@ -75,6 +69,18 @@ function bakePublicConfig(
     pushProvider: trimEnv(env.EXPO_PUBLIC_PUSH_PROVIDER) || undefined,
     apsEnvironment,
   };
+
+  if (apsEnvironment === 'development') {
+    const devFlags = resolveDevelopmentBakeFlags(env);
+    ticketPublic.allowLocalFixtureApi = devFlags.allowLocalFixtureApi;
+    ticketPublic.allowUatSessionRoutes = devFlags.allowUatSessionRoutes;
+    ticketPublic.allowFixtureEventRoutes = devFlags.allowFixtureEventRoutes;
+  } else {
+    ticketPublic.allowLocalFixtureApi = false;
+    ticketPublic.allowUatSessionRoutes = false;
+    ticketPublic.allowFixtureEventRoutes = false;
+  }
+
   return ticketPublic;
 }
 

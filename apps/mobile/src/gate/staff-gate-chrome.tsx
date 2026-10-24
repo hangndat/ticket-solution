@@ -20,6 +20,7 @@ export function gateOutcomeGlyph(
 ): OutcomeGlyph {
   if (busy) return 'busy';
   if (!phase) return 'idle';
+  if (phase === 'recorded') return 'unknown';
   if (tone === 'admit' || phase === 'admitted') return 'admit';
   if (tone === 'deny' || phase === 'denied') return 'deny';
   if (tone === 'unknown' || phase === 'unknown' || phase === 'queued') {

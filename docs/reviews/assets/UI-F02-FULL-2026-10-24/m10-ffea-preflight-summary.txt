@@ -1,0 +1,26 @@
+Ticket: ffea00b3-4c99-4293-abe6-053c81b469b4 (ACTIVE @ preflight DB)
+Sim: UI-FixAll-859 B0727247-340D-423A-8547-A6C107A9756A · proxy mode file · API3001/3009 online end
+SHA: b2faa48a1ce443c8fc6c849cb74a06a57f8b0c37 dirty (+focusSync/replay UI)
+
+Phase A — offline queue (partial PASS):
+- proxy offline → manual UUID 36 chars → confirm «Được vào»
+- Screenshot: f02-m10-ffea-queued-offline-8s.png
+- DB ticket still ACTIVE (no server APPLIED yet — replay not run)
+
+Phase B — terminate/relaunch OFFLINE (INCOMPLETE):
+- simctl terminate+launch com.hangndat.ticket, proxy still offline at launch
+- Cold start: attendee «Sự kiện» + «Không tải được danh sách» → «Thử lại» → MFest card (session persisted, no inject)
+- Staff tabs (Quét/Nhập tay/Lịch sử) NOT visible: eligibility chrome still attendee-only (staffEligible not true in tab layout)
+- proxy online + SpringBoard icon resume: still no staff tabs; cannot exercise focusSync / History / terminal without staff surface
+- clientEventId: not read from UI; server ledger row not created (ticket ACTIVE)
+
+759 / History note (no new image claims):
+- Prior ROOTNOTE: server APPLIED 17:27:25Z while AX «Offline — chờ đồng bộ» until icon resume — class F02-759AA-HARNESS (simctl launch ≠ AppState active)
+- History tap «warning toast» = harness/UI noise on manual tab during sticky toast; not used as admission proof
+
+Code correction (batch complete):
+- focusSync → runFocusConnectivitySync on shared foreground lifecycle chain (not direct refreshConnectivityAndSync)
+- staff-gate-replay-pending.ts + tests; lifecycle test focus-waits-mount
+- tryRestoreVerifiedSession: Events «Thử lại» + AppState active → restore(verifyViaMe) then staff eligibility refresh
+
+Tests: mobile 392/392 + tsc PASS (worker run 2026-10-24)

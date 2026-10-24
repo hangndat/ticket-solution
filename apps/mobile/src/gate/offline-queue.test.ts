@@ -131,6 +131,41 @@ test('clientSeq is monotonic per device+session', async () => {
   assert.equal(b.clientSeq, 1);
 });
 
+test('stale replay before POST sends nothing; stale deferred POST cannot settle queue', async () => {
+  const store = createMemoryOfflineQueueStore([], userA);
+  const q = await queueFor(store, userA, {
+    createId: () => '00000000-0000-4000-8000-000000000001',
+    nowIso: () => '2026-10-17T08:00:00.000Z',
+  });
+  const item = await q.enqueue({ ticketId, tenantId, eventId, staffSessionId });
+  let fetches = 0;
+  const noPost = await q.replay({ bearer: 't', apiBase: 'https://api.example',
+    shouldContinue: () => false,
+    fetchImpl: async () => { fetches += 1; return jsonResponse(500, {}); },
+  });
+  assert.equal(noPost.flushed, 0);
+  assert.equal(fetches, 0);
+  let allow = true;
+  let release!: () => void;
+  const waiting = new Promise<void>((resolve) => { release = resolve; });
+  const replay = q.replay({ bearer: 't', apiBase: 'https://api.example',
+    shouldContinue: () => allow,
+    fetchImpl: async () => {
+      fetches += 1;
+      await waiting;
+      return jsonResponse(200, { results: [{ clientEventId: item.clientEventId, status: 'APPLIED', checkinId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' }] });
+    },
+  });
+  while (fetches === 0) await new Promise((resolve) => setTimeout(resolve, 0));
+  allow = false;
+  release();
+  const result = await replay;
+  assert.equal(result.flushed, 0);
+  assert.equal(q.getSnapshot().items[0]?.localStatus, 'pending');
+  const restored = await queueFor(store, userA);
+  assert.equal(restored.getSnapshot().items[0]?.localStatus, 'pending');
+});
+
 test('replay maps CONFLICT_LOST and keeps ALREADY_CHECKED_IN messaging', async () => {
   const store = createMemoryOfflineQueueStore([], userA);
   let n = 0;

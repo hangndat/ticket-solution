@@ -1,0 +1,11 @@
+Ticket: 759aa40b-f011-4674-b73f-5078da568e20 (review-approved-restart / AppState foreground)
+Staff inject before flow: refresh + open-staff-session @ 2026-10-23T17:26:46Z (jwt-staff-metadata.json 759aaFlowInject)
+UUID 36 chars → offline queue 8s → proxy online → Home
+
+Attempt A (harness): xcrun simctl launch without terminate → poll 5–25s still «Offline — chờ đồng bộ» (FAIL for AppState proof; see ax-759aa-appstate-25s.png)
+
+Correction B (allowed): SpringBoard → tap icon «Vemoki» (AX 0.617, 0.261) → «Được vào» by t=5s through 25s (f02-759aa-appstate-foreground-5s.png). No terminate, no mid-flow inject, no rescan.
+
+Chrome after sync: «Sẵn sàng» (no «Có lượt chờ»). History tab AX did not expose ticket row text; do not claim History list proof.
+
+DB: clientEventId 4aeccfec-aa8c-475a-967a-973a2cdd787a (root-db-after-759aa.json). Full log: uat-759aa-appstate-provenance.json

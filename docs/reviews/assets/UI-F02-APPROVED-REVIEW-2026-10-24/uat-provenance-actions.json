@@ -1,0 +1,71 @@
+{
+  "purpose": "Exact recovery path for reviewer UAT adbef3d7 — không claim AppState foreground-only",
+  "simulatorUdid": "B0727247-340D-423A-8547-A6C107A9756A",
+  "ticketId": "adbef3d7-3915-4687-82b5-3323505e04af",
+  "staffSessionInject": {
+    "when": "2026-10-23T17:20:52.362Z",
+    "helpers": [
+      ".orca-metrics/fix-all/private/refresh-native-staff.mjs",
+      ".orca-metrics/fix-all/native-review/open-staff-session.mjs"
+    ],
+    "metadata": "jwt-staff-metadata.json (claims only)"
+  },
+  "proxyModeFile": ".orca-metrics/fix-all/native-review/mobile-proxy-mode.txt",
+  "steps": [
+    {
+      "seq": 1,
+      "utcApprox": "2026-10-23T17:21:30Z",
+      "action": "orca emulator type char-by-char UUID; AX gate-scan-input length 36",
+      "artifact": "ax-uuid-36chars-proof.json"
+    },
+    {
+      "seq": 2,
+      "utcApprox": "2026-10-23T17:21:35Z",
+      "action": "proxy online; tap gate-manual-submit → preview modal «Mã đọc được, chưa xác minh»",
+      "artifact": "f02-adbef-modal-open.png"
+    },
+    {
+      "seq": 3,
+      "utcApprox": "2026-10-23T17:22:04Z",
+      "action": "proxy offline (health 000); tap Gửi kiểm tra cổng y≈0.53; wait 8s",
+      "artifact": "f02-adbef-queued-offline-8s.png",
+      "axLabels": ["Có lượt chờ đồng bộ offline", "Offline — chờ đồng bộ"]
+    },
+    {
+      "seq": 4,
+      "utcApprox": "2026-10-23T17:22:10Z",
+      "action": "proxy online",
+      "artifact": null
+    },
+    {
+      "seq": 5,
+      "utcApprox": "2026-10-23T17:22:11Z",
+      "action": "orca emulator button home (SpringBoard)",
+      "note": "Not AppState resume — left app via Home"
+    },
+    {
+      "seq": 6,
+      "utcApprox": "2026-10-23T17:22:12Z",
+      "action": "xcrun simctl terminate com.hangndat.ticket then simctl launch (cold restart)",
+      "classification": "warm/cold relaunch — NOT AppState foreground-only sync proof"
+    },
+    {
+      "seq": 7,
+      "utcApprox": "2026-10-23T17:22:17Z",
+      "action": "poll AX every 5s up to 25s after relaunch; no manual «Đồng bộ hàng đợi»",
+      "artifact": "f02-adbef-foreground-25s.png",
+      "axLabelFirstSeen": "Được vào at t=5s"
+    }
+  ],
+  "notProven": [
+    "AppState change active→background→active without terminate+launch",
+    "History tab pending count 0 via AX",
+    "restart fixture 759aa40b-f011-4674-b73f-5078da568e20 same clientEventId partition"
+  ],
+  "serverCheckpoint": {
+    "before": "root-db-checkpoint.json @ 2026-10-23T17:17:45Z",
+    "after": "root-db-after-adbef.json @ 2026-10-23T17:24:38Z",
+    "clientEventId": "357a6d33-dd0b-416c-a192-263254a1b555",
+    "checkinId": "79e07462-b5c3-4c4c-999e-8d641586dd26"
+  }
+}

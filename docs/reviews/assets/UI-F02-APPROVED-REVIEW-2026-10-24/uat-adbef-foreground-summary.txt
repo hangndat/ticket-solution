@@ -1,0 +1,10 @@
+Ticket: adbef3d7-3915-4687-82b5-3323505e04af (review-approved-foreground, DB ticket_fixall_859 ACTIVE → USED after sync)
+Simulator: UI-FixAll-859 B0727247-340D-423A-8547-A6C107A9756A
+Staff inject (pre-flow only): refresh-native-staff.mjs + open-staff-session.mjs @ 2026-10-23T17:20:52Z — jwt-staff-metadata.json (iat/exp/sub, no token)
+UUID: char-by-char Orca type, AX length 36 (ax-uuid-36chars-proof.json)
+
+Offline queue: online preview → proxy offline → Gửi kiểm tra cổng (tap y≈0.53) → 8s «Offline — chờ đồng bộ» (f02-adbef-queued-offline-8s.png)
+
+Recovery path proven (NOT AppState foreground-only): proxy online → orca emulator button home → xcrun simctl terminate + launch com.hangndat.ticket → «Được vào» first seen t=5s through t=25s without manual sync (f02-adbef-foreground-25s.png). Classify as cold/warm relaunch sync, not F02 «foreground» AppState chain alone.
+
+Server: clientEventId 357a6d33-dd0b-416c-a192-263254a1b555 (root-db-after-adbef.json). Detail: uat-provenance-actions.json

@@ -1,0 +1,12 @@
+[
+  {
+    "state": "ACTIVE",
+    "eventId": "d9d9f001-0002-4000-8000-000000000001",
+    "tenantId": "d9d9f001-0001-4000-8000-000000000001",
+    "ticketId": "ffea00b3-4c99-4293-abe6-053c81b469b4",
+    "appliedAt": null,
+    "checkinId": null,
+    "clientEventId": null,
+    "staffSessionId": null
+  }
+]

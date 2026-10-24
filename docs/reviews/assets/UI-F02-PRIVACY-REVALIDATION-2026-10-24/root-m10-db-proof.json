@@ -1,0 +1,15 @@
+{
+  "at": "2026-10-23T19:52:46.337741+00:00",
+  "db": [
+    {
+      "ticketId": "ef3254e4-403d-4eb4-a848-54587b47174d",
+      "state": "USED",
+      "clientEventId": "9a47534e-74b4-42d1-b297-28cc295117b6",
+      "checkinId": "262b515b-fcd1-429c-b5ca-c8bc9ed9cfc1",
+      "staffSessionId": "47e4d3a4-f4cb-4da9-bfd8-9d4f8bdcad36",
+      "deviceId": "9a95b622-336b-47d1-826e-2fc0af25327c",
+      "clientSeq": 3,
+      "appliedAt": "2026-10-23T19:51:39.897077+00:00"
+    }
+  ]
+}
