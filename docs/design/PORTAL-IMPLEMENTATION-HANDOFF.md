@@ -452,5 +452,4 @@ Mỗi Vxx: file PNG/WebP + ghi SHA build + role fixture dùng.
 
 ## 14. Tóm tắt executive
 
-Portal implement trên **`apps/portal`** + AntD VI theo **`PORTAL-SEPARATE-APP` / `GATE-STAY-APP` / `PLATFORM-PORTAL-ZONE` / `ANTD-CORE-FIRST`** — đã reconcile khỏi khuyến nghị PD cũ (host-aware, Platform giữ app, Pro*). Routes chỉ `tenantId`/`eventId`; menu O02; mọi màn P0–P1 có state/AntD/reuse/API gap; parity matrix + screenshot headless V01–V20 trước cutover. Còn lại: architect ADR auth cho P0.1, BE đóng H-M*/H-I*/H-A*/H-P*, worker web coding theo wave — **không** đợi P2.
-`)
+Portal implement trên **`apps/portal`** + AntD VI theo **`PORTAL-SEPARATE-APP` / O23 / `PLATFORM-PORTAL-ZONE` / `ANTD-CORE-FIRST`** — đã reconcile khỏi khuyến nghị PD cũ (host-aware, Platform giữ app, Pro*). O23 thay `GATE-STAY-APP`: Portal Gate chỉ đọc báo cáo theo `report.read`, admission chỉ trên iOS Staff. Routes chỉ `tenantId`/`eventId`; menu O02; mọi màn P0–P1 có state/AntD/reuse/API gap; parity matrix + screenshot headless V01–V20 trước cutover. Còn lại: architect ADR auth cho P0.1, BE đóng H-M*/H-I*/H-A*/H-P*, worker web coding theo wave — **không** đợi P2.

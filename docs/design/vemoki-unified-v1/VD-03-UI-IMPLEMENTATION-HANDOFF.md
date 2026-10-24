@@ -1,10 +1,10 @@
 # VD-03 — Delta handoff UI (mẫu chốt ↔ app hiện hành)
 
-**Issue:** [#875](https://github.com/hangndat/ticket-solution/issues/875) · **Epic:** [#874](https://github.com/hangndat/ticket-solution/issues/874)  
-**Tác giả:** Liv · Product Design · Persona theo `company/employees.json`  
-**Baseline đối chiếu:** `14f3f56ea273b99a56b63ae632bfa983eff2ff8a` (branch `hangndat/vd03-ui-mapping`)  
-**Mẫu chốt (concept):** `docs/design/vemoki-unified-v1/` — **không** coi HTML/PNG là UI production hay evidence runtime.  
-**Quyết định sản phẩm:** [O23](../../DECISION-LOG.md) — Gate chỉ iOS Staff; không Web Gate; Portal `report.read` read-only.  
+**Issue:** [#875](https://github.com/hangndat/ticket-solution/issues/875) · **Epic:** [#874](https://github.com/hangndat/ticket-solution/issues/874)
+**Tác giả:** Liv · Product Design · Persona theo `company/employees.json`
+**Baseline đối chiếu:** `14f3f56ea273b99a56b63ae632bfa983eff2ff8a` (branch `hangndat/vd03-ui-mapping`)
+**Mẫu chốt (concept):** `docs/design/vemoki-unified-v1/` — **không** coi HTML/PNG là UI production hay evidence runtime.
+**Quyết định sản phẩm:** [O23](../../DECISION-LOG.md) — Gate chỉ iOS Staff; không Web Gate; Portal `report.read` read-only.
 **Kế hoạch:** [VEMOKI-UNIFIED-DESIGN-IMPLEMENTATION-2026-10-24.md](../../plans/VEMOKI-UNIFIED-DESIGN-IMPLEMENTATION-2026-10-24.md)
 
 Consumer tiếp theo: VD-04 (web), VD-05/06 (iOS), VD-07 (portal). Mỗi Task chỉ làm **delta** trong bảng dưới; không mở feature, payment, seat map, Wallet store, Android hay production asset không license.
@@ -42,8 +42,8 @@ Consumer tiếp theo: VD-04 (web), VD-05/06 (iOS), VD-07 (portal). Mỗi Task ch
 
 ### Motion
 
-1. **Marketing hero:** parallax/orb nhẹ — `prefers-reduced-motion` → tĩnh.  
-2. **Đổi mã / vé:** fade-in outcome ngắn (đã có pattern consumer — **giữ**, không fade header về opacity 0).  
+1. **Marketing hero:** parallax/orb nhẹ — `prefers-reduced-motion` → tĩnh.
+2. **Đổi mã / vé:** fade-in outcome ngắn (đã có pattern consumer — **giữ**, không fade header về opacity 0).
 3. **Staff scan:** lock UI in-flight; không toast che khung camera.
 
 ### Priority screens (5 — đợt unified v1)
@@ -60,7 +60,7 @@ Consumer tiếp theo: VD-04 (web), VD-05/06 (iOS), VD-07 (portal). Mỗi Task ch
 
 ## 1. Ma trận giữ / sửa / bỏ (tránh hồi quy #870)
 
-**#870 / #869 đã nghiệm thu trên web** (`docs/reviews/UI869-DELIVERY.md`): locale nav, hero/media provenance, catalog card height, shared inputs/empty/skeleton, header không fade-to-zero. Cột **Giữ** = không revert khi áp Neon.
+**#870 đã merge; #869 còn Chờ duyệt acceptance** (`docs/reviews/UI869-DELIVERY.md`): locale nav, hero/media provenance, catalog card height, shared inputs/empty/skeleton, header không fade-to-zero. Cột **Giữ** = không revert khi áp Neon.
 
 ### Marketing (`vemoki.com`)
 
@@ -210,7 +210,7 @@ Consumer tiếp theo: VD-04 (web), VD-05/06 (iOS), VD-07 (portal). Mỗi Task ch
 | Lệnh | Kết quả tại baseline |
 | --- | --- |
 | `git rev-parse HEAD` | `14f3f56ea273b99a56b63ae632bfa983eff2ff8a` |
-| `python3 docs/design/vemoki-unified-v1/VERIFY.py` | PASS — 56 payload files |
+| `python3 docs/design/vemoki-unified-v1/VERIFY.py` | PASS — 57 payload files sau khi thêm handoff này |
 
 Không chạy feature CI — scope docs-only.
 
@@ -218,8 +218,8 @@ Không chạy feature CI — scope docs-only.
 
 ## 10. Điểm mở / escalate
 
-1. License ảnh marketing neon trước go-live.  
-2. Portal palette migration vs AntD regression — owner VD-07 + snapshot visual.  
+1. License ảnh marketing neon trước go-live.
+2. Portal palette migration vs AntD regression — owner VD-07 + snapshot visual.
 3. Mức độ «dark neon» marketing vs giữ light shell #870 — nếu user muốn full dark, cần xác nhận không ảnh hưởng consumer subdomain chrome.
 
 ---

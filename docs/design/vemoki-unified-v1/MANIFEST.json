@@ -1,7 +1,7 @@
 {
   "version": "1.4",
-  "file_count_excluding_manifest": 56,
-  "total_files_including_manifest": 57,
+  "file_count_excluding_manifest": 57,
+  "total_files_including_manifest": 58,
   "files": [
     {
       "path": "ACCESSIBILITY-REMEDIATION.md",
@@ -30,8 +30,8 @@
     },
     {
       "path": "VD-03-UI-IMPLEMENTATION-HANDOFF.md",
-      "bytes": 14829,
-      "sha256": "0471617c5e10b59cbb0b08daf65a97da7ab9795333f442d31f4a3a7445283617"
+      "bytes": 14850,
+      "sha256": "b69195b9ff8b2e6eb972d0033b37054f701068aa8a66e0d6686f4ef1fae49efc"
     },
     {
       "path": "VERIFY.py",
