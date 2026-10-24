@@ -2,8 +2,15 @@ import { cn } from '../../lib/utils';
 
 /** Marketing shell + section utilities (Tailwind v4 / @theme tokens — replaces marketing-uplift.css). */
 
-export const marketingSurface =
-  'flex flex-col min-h-dvh max-w-full overflow-x-clip text-ink antialiased scheme-light [&>main]:flex-1 [&>main]:min-w-0 [&>main]:w-full [:where(&>main_a)]:underline [:where(&>main_a)]:decoration-1 [:where(&>main_a)]:underline-offset-[3px] hover:[:where(&>main_a)]:text-focus';
+export function marketingSurface(neonSales = false) {
+  return cn(
+    'flex flex-col min-h-dvh max-w-full overflow-x-clip antialiased',
+    neonSales
+      ? 'mkt-neon-surface text-[var(--vm-text)] scheme-dark'
+      : 'text-ink scheme-light',
+    '[&>main]:flex-1 [&>main]:min-w-0 [&>main]:w-full [:where(&>main_a)]:underline [:where(&>main_a)]:decoration-1 [:where(&>main_a)]:underline-offset-[3px] hover:[:where(&>main_a)]:text-focus',
+  );
+}
 
 export const marketingSkip =
   'skip-link absolute -left-[9999px] top-0 z-[100] rounded-sm bg-ink px-4 py-3 text-paper focus:left-4 focus:top-4';
@@ -120,17 +127,33 @@ export const marketingDemoNote = cn(
 
 export const marketingHeroSection = cn(
   marketingSection('ink'),
-  'pt-[clamp(2.5rem,6vw,4rem)] pb-[clamp(3rem,8vw,5rem)]',
+  'mkt-hero-section relative pt-[clamp(2.5rem,6vw,4rem)] pb-[clamp(3rem,8vw,5rem)]',
 );
 
 export const marketingHeroGrid = cn(
   'grid grid-cols-1 items-center gap-8 max-md:py-8 max-md:gap-8 xl:grid-cols-[1fr_1.12fr] xl:gap-12',
 );
 
-export const marketingHeroCopy = '';
+export const marketingHeroCopy = 'mkt-hero-copy relative z-[2]';
+
+export const marketingHeroEyebrow = cn(
+  'mb-4 font-display text-[0.7rem] font-bold tracking-[0.18em] text-[var(--vm-purple)] uppercase',
+  'max-md:text-sm max-md:tracking-[0.14em]',
+);
+
+export const marketingHeroHeadline = cn(
+  marketingH1,
+  'mkt-hero-headline max-w-[18ch] min-h-[2.2em]',
+);
+
+export const marketingHeroProofs = cn(
+  'mt-8 flex list-none flex-col gap-2 p-0 sm:flex-row sm:flex-wrap sm:gap-x-5 sm:gap-y-2',
+  '[&_li]:flex [&_li]:items-start [&_li]:gap-2 [&_li]:text-[0.88rem] [&_li]:font-semibold [&_li]:text-[var(--vm-text-secondary)]',
+  '[&_li]:before:mt-[0.45em] [&_li]:before:size-1.5 [&_li]:before:shrink-0 [&_li]:before:rounded-full [&_li]:before:bg-[var(--vm-magenta)] [&_li]:before:content-[""]',
+);
 
 export const marketingHeroMedia = cn(
-  'm-0 overflow-hidden rounded-md border border-paper/10 bg-paper/5',
+  'mkt-hero-media relative z-[1] m-0 overflow-hidden rounded-[var(--vm-radius-md,1rem)] border border-[var(--vm-outline-soft)] bg-[var(--vm-surface)] shadow-[var(--vm-shadow-card)]',
 );
 
 export const marketingHeroMediaImg = 'block size-full object-cover object-top';
