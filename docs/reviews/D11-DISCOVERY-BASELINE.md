@@ -27,7 +27,7 @@ Kết quả:
 {"ok":true,"status":200,"url":"https://vemoki.com/","title":"Vemoki","screenshot":"/tmp/d11-baseline-public.png"}
 ```
 
-Bản lưu: [screenshot public baseline](./d11-public-baseline.png). Playwright Chromium headless; không điều khiển chuột macOS. Chỉ GET trang public, không auth/admin hay mutation.
+Bản lưu: [screenshot public baseline](./d9-uat/web/d9-home.png). Playwright Chromium headless; không điều khiển chuột macOS. Chỉ GET trang public, không auth/admin hay mutation.
 
 ```text
 curl -sS -o /dev/null -w 'privacy HTTP %{http_code}\n' --max-time 15 https://vemoki.com/privacy

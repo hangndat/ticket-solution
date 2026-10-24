@@ -25,7 +25,7 @@
 
 | Severity | Finding |
 | --- | --- |
-| Known gap (chấp nhận trong scope T1) | `d9-sim-events-loaded.png` cho thấy **lỗi** tải danh sách published (`api.vemoki.com`), không phải load thành công — khớp Limitations implementer; seed demo catalog (`demo-fun` / FUN FEST) vẫn có trên Events. Không dùng headless để PASS AC thiết bị thật. |
+| Known gap (chấp nhận trong scope T1) | `d9-uat/s4-t1/ios/d9-sim-events-loaded.png` cho thấy **lỗi** tải danh sách published (`api.vemoki.com`), không phải load thành công — khớp Limitations implementer; seed demo catalog (`demo-fun` / FUN FEST) vẫn có trên Events. Không dùng headless để PASS AC thiết bị thật. |
 | Nit | Tên file `events-loaded` dễ hiểu nhầm là success; nội dung vẫn là evidence trung thực. |
 | Nit | Curated `bff-login-*.png` chủ yếu chrome `/auth`; claim HTTP 200 / emailVerified dựa bảng lệnh implementer (không thấy session badge rõ trên PNG). API smoke redeem `DEMO-FUN-003` → 201 vẫn được ghi. |
 

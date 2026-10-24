@@ -17,7 +17,7 @@
 | Diff ownership | **PASS** | Behavior commits under `apps/web` gate (+ evidence/UAT under `docs/reviews/`); không đụng BE/iOS/contracts/lockfile |
 | Unit / copy tests (implementer + CI) | **PASS (CI)** | Tip run [39090763197](https://github.com/hangndat/ticket-solution/actions/runs/39090763197) · `web` SUCCESS · aggregate `ci` SUCCESS · `headSha` = `30f88b3…`. Reviewer worktree không có `node_modules` — **không** re-run `tsx --test` local. |
 | Typecheck / lint | **PASS (CI)** | Job `web` trên tip (path-filtered) |
-| Headless UAT | **PASS (artifacts + script)** | Implementer: `node apps/web/tests/gate-offline-uat.mjs` + PNGs [`d11-uat/web/d11-gate-offline.png`](./d11-uat/web/d11-gate-offline.png) / [`d11-gate-online.png`](./d11-uat/web/d11-gate-online.png). Script asserts banner `Cổng web offline`, disable `gate-confirm-submit` / `gate-session-submit` khi offline, không UI «Đã xếp hàng — chờ đồng bộ». Reviewer không re-host Playwright trong session này. |
+| Headless UAT | **PASS (artifacts + script)** | Implementer: `node apps/web/tests/gate-offline-uat.mjs` + PNGs [`d11-uat/web/d11-gate-offline.png`](./d11-uat/web/d11-gate-offline.png) / [`d11-uat/web/d11-gate-online.png`](./d11-uat/web/d11-gate-online.png). Script asserts banner `Cổng web offline`, disable `gate-confirm-submit` / `gate-session-submit` khi offline, không UI «Đã xếp hàng — chờ đồng bộ». Reviewer không re-host Playwright trong session này. |
 | CI tip | **PASS** | Run `39090763197` conclusion `success`; jobs `changes` / `web` / `ci` / `turbo-persist` SUCCESS; mobile/backend/db skipped (path filter) |
 | Independent reviewer | **PASS** | Dispatch `ctx_f6697120356b` ≠ implementer `ctx_a51abd99cc9d` |
 

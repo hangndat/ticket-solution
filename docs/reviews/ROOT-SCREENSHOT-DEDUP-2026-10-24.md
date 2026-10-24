@@ -1,0 +1,75 @@
+# Ảnh review trùng lặp — 24/10/2026
+
+Các ảnh ở cột cũ trùng byte-for-byte với bản trong thư mục UAT. Liên kết Markdown và các tham chiếu hiện dùng được đổi sang bản UAT. Tên file trong lệnh chụp ảnh, checksum và mô tả artifact tại worktree cũ được giữ nguyên để không sửa sai lịch sử. Bản cũ vẫn có trong lịch sử Git tại `d1dafeb978db561c3f59860a487dba45335ba6cd`.
+
+Ảnh UAT mới nên có một đường dẫn chuẩn dưới thư mục UAT của đợt review, rồi liên kết trực tiếp từ báo cáo; không chép thêm bản giống hệt vào gốc `docs/reviews/`. Việc xóa bản trùng khỏi tip giảm kích thước checkout, không làm Git history hay clone nông tự thu nhỏ tương ứng.
+
+| Đường dẫn cũ | Bản giữ lại | SHA-256 (12 ký tự) |
+| --- | --- | --- |
+| `docs/reviews/auth-smoke-1792245410571.png` | `docs/reviews/d9-uat/s4-t1/web/auth-smoke-1792245410571.png` | `66873d307c5c` |
+| `docs/reviews/bff-login-1792245412199.png` | `docs/reviews/d9-uat/s4-t1/web/bff-login-1792245412199.png` | `fd4c42e9b4d1` |
+| `docs/reviews/d11-gate-offline.png` | `docs/reviews/d11-uat/web/d11-gate-offline.png` | `273840fe4e17` |
+| `docs/reviews/d11-gate-online.png` | `docs/reviews/d11-uat/web/d11-gate-online.png` | `10f8c88bdb28` |
+| `docs/reviews/d11-public-baseline.png` | `docs/reviews/d9-uat/web/d9-home.png` | `0c785c9fdb01` |
+| `docs/reviews/d6-account.png` | `docs/reviews/d6-uat/web/d6-account.png` | `aae1f169bb6b` |
+| `docs/reviews/d6-admin.png` | `docs/reviews/d6-uat/web/d6-admin.png` | `5f8d74c00eda` |
+| `docs/reviews/d6-event.png` | `docs/reviews/d6-uat/web/d6-event.png` | `da2905fd25c6` |
+| `docs/reviews/d6-events.png` | `docs/reviews/d6-uat/ios/d6-events.png` | `b04a6383099f` |
+| `docs/reviews/d6-gate.png` | `docs/reviews/d6-uat/web/d6-gate.png` | `fc5041b47810` |
+| `docs/reviews/d6-home.png` | `docs/reviews/d6-uat/web/d6-home.png` | `cd1862b8f67e` |
+| `docs/reviews/d6-my-tickets.png` | `docs/reviews/d6-uat/ios/d6-my-tickets.png` | `d096bdb52a4e` |
+| `docs/reviews/d6-redeem.png` | `docs/reviews/d6-uat/web/d6-redeem.png` | `7daa62d96e58` |
+| `docs/reviews/d6-staff-scan.png` | `docs/reviews/d6-uat/ios/d6-staff-scan.png` | `37544abd675b` |
+| `docs/reviews/d6-ticket-detail.png` | `docs/reviews/d6-uat/ios/d6-ticket-detail.png` | `e054f48560c4` |
+| `docs/reviews/d7-gate-offline.png` | `docs/reviews/d7-uat/web/d7-gate-offline.png` | `e9367601f813` |
+| `docs/reviews/d7-gate-online.png` | `docs/reviews/d7-uat/web/d7-gate-online.png` | `a7c25872e166` |
+| `docs/reviews/d7-s2-conflict-banner.png` | `docs/reviews/d7-uat/ios/d7-s2-conflict-banner.png` | `756628efdbbc` |
+| `docs/reviews/d7-s2-offline-banner.png` | `docs/reviews/d7-uat/ios/d7-s2-offline-banner.png` | `ccfac11045e1` |
+| `docs/reviews/d7-s2-syncing-banner.png` | `docs/reviews/d7-uat/ios/d7-s2-syncing-banner.png` | `bdac8c900450` |
+| `docs/reviews/d7-s4-gate-offline.png` | `docs/reviews/d7-uat/web/d7-s4-gate-offline.png` | `e9367601f813` |
+| `docs/reviews/d7-s4-gate-online.png` | `docs/reviews/d7-uat/web/d7-s4-gate-online.png` | `a7c25872e166` |
+| `docs/reviews/d7-s4-offline-after-replay.png` | `docs/reviews/d7-uat/ios/d7-s4-offline-after-replay.png` | `af73b6d7ea01` |
+| `docs/reviews/d7-s4-offline-after-restart.png` | `docs/reviews/d7-uat/ios/d7-s4-offline-after-restart.png` | `1e640cd0192b` |
+| `docs/reviews/d7-s4-offline-enqueued.png` | `docs/reviews/d7-uat/ios/d7-s4-offline-enqueued.png` | `dceafca85cc9` |
+| `docs/reviews/d7-s4-offline-retry-nodup.png` | `docs/reviews/d7-uat/ios/d7-s4-offline-retry-nodup.png` | `a3b11fec2ba7` |
+| `docs/reviews/d7-s4-sim-launch.png` | `docs/reviews/d7-uat/ios/d7-s4-sim-launch.png` | `09e22ba4a916` |
+| `docs/reviews/d7-s4-staff-screen.png` | `docs/reviews/d7-uat/ios/d7-s4-staff-screen.png` | `d9085b8f63a5` |
+| `docs/reviews/d7-s4-staff-verified.png` | `docs/reviews/d7-uat/ios/d7-s4-staff-verified.png` | `d9d530849d58` |
+| `docs/reviews/d8-admin.png` | `docs/reviews/d8-uat/web/d8-admin.png` | `204fcd7672f2` |
+| `docs/reviews/d8-event-northline.png` | `docs/reviews/d8-uat/web/d8-event-northline.png` | `32d0664c1196` |
+| `docs/reviews/d8-event-sunburst.png` | `docs/reviews/d8-uat/web/d8-event-sunburst.png` | `5435fbbfe39d` |
+| `docs/reviews/d8-gate.png` | `docs/reviews/d8-uat/web/d8-gate.png` | `c0f03874abe5` |
+| `docs/reviews/d8-home.png` | `docs/reviews/d8-uat/web/d8-home.png` | `007b2928b54a` |
+| `docs/reviews/d9-404.png` | `docs/reviews/d9-uat/web/d9-404.png` | `68723b629673` |
+| `docs/reviews/d9-account.png` | `docs/reviews/d9-uat/web/d9-account.png` | `876062d8cb37` |
+| `docs/reviews/d9-admin.png` | `docs/reviews/d9-uat/web/d9-admin.png` | `6634c19b829d` |
+| `docs/reviews/d9-claim-empty.png` | `docs/reviews/d9-uat/web/d9-claim-empty.png` | `2aecd5544079` |
+| `docs/reviews/d9-e2e-my-tickets.png` | `docs/reviews/d9-uat/e2e-web-ios/ios/d9-e2e-my-tickets.png` | `748b6e18038c` |
+| `docs/reviews/d9-e2e-published-list-error.png` | `docs/reviews/d9-uat/e2e-web-ios/ios/d9-e2e-published-list-error.png` | `f7919d277b53` |
+| `docs/reviews/d9-e2e-published-list.png` | `docs/reviews/d9-uat/e2e-web-ios/ios/d9-e2e-published-list.png` | `a792b20aa782` |
+| `docs/reviews/d9-e2e-redeem.png` | `docs/reviews/d9-uat/e2e-web-ios/web/d9-e2e-redeem.png` | `b7017e2ba6dc` |
+| `docs/reviews/d9-events.png` | `docs/reviews/d9-uat/ios/d9-events.png` | `9bc6785ab19a` |
+| `docs/reviews/d9-home.png` | `docs/reviews/d9-uat/web/d9-home.png` | `0c785c9fdb01` |
+| `docs/reviews/d9-invite-empty.png` | `docs/reviews/d9-uat/web/d9-invite-empty.png` | `f12e300eab26` |
+| `docs/reviews/d9-my-tickets.png` | `docs/reviews/d9-uat/ios/d9-my-tickets.png` | `0091142794be` |
+| `docs/reviews/d9-redeem.png` | `docs/reviews/d9-uat/web/d9-redeem.png` | `7c6f04011695` |
+| `docs/reviews/d9-seed-account.png` | `docs/reviews/d9-uat/s4-t1/web/d9-seed-account.png` | `936707ae6d28` |
+| `docs/reviews/d9-seed-admin.png` | `docs/reviews/d9-uat/s4-t1/web/d9-seed-admin.png` | `40c3caa0b729` |
+| `docs/reviews/d9-seed-claim.png` | `docs/reviews/d9-uat/s4-t1/web/d9-seed-claim.png` | `2aecd5544079` |
+| `docs/reviews/d9-seed-home.png` | `docs/reviews/d9-uat/s4-t1/web/d9-seed-home.png` | `007b2928b54a` |
+| `docs/reviews/d9-seed-invite.png` | `docs/reviews/d9-uat/s4-t1/web/d9-seed-invite.png` | `f12e300eab26` |
+| `docs/reviews/d9-seed-redeem.png` | `docs/reviews/d9-uat/s4-t1/web/d9-seed-redeem.png` | `7da717201203` |
+| `docs/reviews/d9-sim-events-loaded.png` | `docs/reviews/d9-uat/s4-t1/ios/d9-sim-events-loaded.png` | `c5e2fdc32199` |
+| `docs/reviews/d9-sim-events.png` | `docs/reviews/d9-uat/s4-t1/ios/d9-sim-events.png` | `065e96885ce9` |
+| `docs/reviews/d9-sim-launch.png` | `docs/reviews/d9-uat/s4-t1/ios/d9-sim-launch.png` | `feed26ee13bf` |
+| `docs/reviews/d9-sim-my-tickets.png` | `docs/reviews/d9-uat/s4-t1/ios/d9-sim-my-tickets.png` | `73fefd8d1cc6` |
+| `docs/reviews/d9-sim-redeem.png` | `docs/reviews/d9-uat/s4-t1/ios/d9-sim-redeem.png` | `60021329e6b9` |
+| `docs/reviews/d9-sim-scan-idle.png` | `docs/reviews/d9-uat/s4-t1/ios/d9-sim-scan-idle.png` | `849eb27c6423` |
+| `docs/reviews/d9-sim-staff.png` | `docs/reviews/d9-uat/s4-t1/ios/d9-sim-staff.png` | `76ade041f680` |
+| `docs/reviews/d9-staff-scan.png` | `docs/reviews/d9-uat/ios/d9-staff-scan.png` | `63a33063f8a3` |
+| `docs/reviews/ios-tenant-demo-fun.png` | `docs/reviews/d8-uat/s4-t1/ios/ios-tenant-demo-fun.png` | `e2b5ad665781` |
+| `docs/reviews/ios-tenant-demo-studio.png` | `docs/reviews/d8-uat/s4-t1/ios/ios-tenant-demo-studio.png` | `d8e744bb266d` |
+| `docs/reviews/ios-tenant-slug-demo-studio.png` | `docs/reviews/d8-uat/s4-t1/ios/ios-tenant-slug-demo-studio.png` | `7aad584c5d6f` |
+| `docs/reviews/web-platform-vemoki.png` | `docs/reviews/d8-uat/s4-t1/web/web-platform-vemoki.png` | `6f84b753b1fa` |
+| `docs/reviews/web-tenant-northline.png` | `docs/reviews/d8-uat/s4-t1/web/web-tenant-northline.png` | `0e7b44da298b` |
+| `docs/reviews/web-tenant-sunburst.png` | `docs/reviews/d8-uat/s4-t1/web/web-tenant-sunburst.png` | `7582b12c84b8` |
