@@ -1,5 +1,7 @@
 # Portal — Handoff triển khai UI (`product-design`)
 
+> **Supersession 24/10/2026:** [O23](../DECISION-LOG.md) thay `GATE-STAY-APP`: không còn Web Gate scan/link để admission. Các bảng dưới đây ghi lại handoff P0+P1 ngày 18/10; khi triển khai Gate dùng quyết định mới, Portal chỉ đọc báo cáo theo `report.read`.
+
 | Trường | Giá trị |
 | --- | --- |
 | Role | `product-design` — [`docs/agents/roles/product-design.md`](../agents/roles/product-design.md) |
