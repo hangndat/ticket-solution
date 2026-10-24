@@ -1,0 +1,11 @@
+{
+  "id": "ed43028a-9534-4921-8b12-46ecfa221caa",
+  "ok": true,
+  "result": {
+    "origin": "http://127.0.0.1:57277/design/ui-uplift-2026-10/marketing/index.html",
+    "result": "{\"surface\":\"marketing\",\"typeofVemokiSheetNav\":\"object\",\"sheetRadix\":true,\"dialogPresent\":true,\"dialogState\":\"open\",\"title\":\"Menu\",\"navLinks\":7,\"triggerExpanded\":\"true\",\"focusInDialog\":true,\"activeTag\":\"A\",\"locale\":\"vi\",\"viewport\":{\"w\":390,\"h\":844,\"dpr\":1}}"
+  },
+  "_meta": {
+    "runtimeId": "9d821662-c628-49db-a168-99fa7b7636fc"
+  }
+}

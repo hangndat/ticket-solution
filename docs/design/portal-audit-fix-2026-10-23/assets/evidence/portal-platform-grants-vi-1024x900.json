@@ -1,0 +1,42 @@
+{
+  "auditTab": null,
+  "locale": "vi",
+  "metaText": "Viewport: 1024\u00d7900 \u00b7 locale=vi \u00b7 page=platform \u00b7 platformTab=grants \u00b7 state=ready \u00b7 persona=operator",
+  "mrR08": {
+    "auditPage": false,
+    "auditTab": null,
+    "auditTableVisible": false,
+    "codesTableVisible": false,
+    "platformGrantsVisible": true
+  },
+  "pa03": {
+    "catalogVisible": false,
+    "expectCatalogOnlyOnImport": true
+  },
+  "pa04": {
+    "formatted": null,
+    "hasUtcSibling": false
+  },
+  "pa05": {
+    "exportAriaLabel": null,
+    "exportAriaNotFieldId": false
+  },
+  "pa06": {
+    "rmMedia": false,
+    "rmQueryClass": false,
+    "spinnerAnim": null
+  },
+  "page": "platform",
+  "platformTab": "grants",
+  "state": "ready",
+  "tab": null,
+  "viewport": {
+    "h": 900,
+    "w": 1024
+  },
+  "pngPixels": {
+    "w": 1024,
+    "h": 900
+  },
+  "viewportMatch": true
+}

@@ -1,0 +1,35 @@
+{
+  "capture": "marketing-desktop-1280-en.png",
+  "viewport": {
+    "width": 1280,
+    "height": 900
+  },
+  "live": {
+    "viewport": {
+      "w": 1280,
+      "h": 900,
+      "dpr": 1
+    },
+    "locale": "en"
+  },
+  "probe": {
+    "htmlLang": "en",
+    "localeViPressed": "false",
+    "localeEnPressed": "true",
+    "innerWidth": 1280,
+    "innerHeight": 900,
+    "devicePixelRatio": 1,
+    "frameWidth": 1240,
+    "interestLabels": [
+      "Full name",
+      "Work email",
+      "Organization",
+      "Role",
+      "Notes (optional)",
+      "I agree to be contacted about Vemoki. See Privacy."
+    ],
+    "consentText": "I agree to be contacted about Vemoki. See Privacy.",
+    "termsChecked": null,
+    "menuExpanded": "false"
+  }
+}

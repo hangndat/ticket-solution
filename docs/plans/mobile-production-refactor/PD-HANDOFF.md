@@ -1,9 +1,9 @@
 # PD handoff — Tài khoản (iOS production refactor)
 
-**Issue:** [#580](https://github.com/hangndat/ticket-solution/issues/580) · **Run:** `run_526c9a272efd` · **Task:** `task_3645ab7ab7e0` (polish sau `task_fcd365de3ddb`)  
-**Role:** `product-design` · **Persona:** Liv · **Cost tier:** standard · **Architecture impact:** Có (IA Account + luồng quyền thông báo)  
-**Visual budget:** Có — [`brand/vemoki/tokens.json`](../../../brand/vemoki/tokens.json), [`docs/design/visual-identity-v2/visual-notes.md`](../../design/visual-identity-v2/visual-notes.md)  
-**Prototype:** [`prototype.html`](./prototype.html) — **PREVIEW ONLY**, không API, không dữ liệu production  
+**Issue:** [#580](https://github.com/hangndat/ticket-solution/issues/580) · **Run:** `run_526c9a272efd` · **Task:** `task_3645ab7ab7e0` (polish sau `task_fcd365de3ddb`)\
+**Role:** `product-design` · **Persona:** Liv · **Cost tier:** standard · **Architecture impact:** Có (IA Account + luồng quyền thông báo)\
+**Visual budget:** Có — [`brand/vemoki/tokens.json`](../../../brand/vemoki/tokens.json), [`docs/design/visual-identity-v2/visual-notes.md`](../../design/visual-identity-v2/visual-notes.md)\
+**Prototype:** [`prototype.html`](./prototype.html) — **PREVIEW ONLY**, không API, không dữ liệu production\
 **Authority:** [`README.md`](./README.md) (O18 / quyết định user 20/10/2026)
 
 | Mốc | Trạng thái |
@@ -197,10 +197,95 @@ Không claim UAT đã chạy. Bằng chứng acceptance: **phiên UAT trên iPho
 
 ---
 
+## O22 — Đổi mã (redeem) & Cổng (gate) · Issue [#859](https://github.com/hangndat/ticket-solution/issues/859)
+
+**Run:** `run_2c9e147d89e6` · **Task:** MR-IOS · **Prototype:** [`full-prototype.html`](./full-prototype.html) (HTML/iOS shell, không kết luận app native)\
+**PRD:** M07 (redemption/duyệt) · M10 (gate/check-in) · **Quyết định:** O22 D-3/D-4/D-5 · light-only chrome (D-4); staff **3 tab** giữ (D-6 gate mobile-only).
+
+### Luồng đổi mã (attendee)
+
+```mermaid
+flowchart TD
+  A[Nhập mã] --> B{Tra cứu}
+  B -->|Sai / hết quota / đã dùng| E[Màn lỗi + thử lại]
+  B -->|Chờ duyệt nguồn| P[Pending — chưa chiếm quota]
+  B -->|Hợp lệ tự động| C[Form bắt buộc + điều khoản]
+  C -->|Chưa đồng ý / thiếu field| C
+  C -->|Nhận vé| W[Ví / chi tiết vé]
+  P --> A
+  E --> A
+```
+
+**Không** nhảy thẳng từ tra cứu vào ví (MR-04). Một form mã (single-code); không chọn sự kiện thủ công.
+
+### Ma trận trạng thái — redeem (mock preset)
+
+| State | Khi nào | UI / copy gợi ý | Preset mã (minh họa) |
+| --- | --- | --- | --- |
+| `redeem` | Đã đăng nhập, chưa tra cứu | Ô mã + «Tìm vé» | — |
+| `redeem-confirm` | Tra cứu OK, chưa submit | MFest summary + họ tên + SĐT + checkbox điều khoản; «Nhận vé» disabled đến khi hợp lệ | `DEMO-OK` |
+| `redeem-pending` | Nguồn chờ duyệt (M07) | «Đang chờ duyệt» — không hứa vé; chưa chiếm quota | `PENDING-01` |
+| `redeem-denied` | Sai mã | «Không tìm thấy mã» + thử lại | `BAD-CODE` |
+| `redeem-denied` | Hết quota | «Hết suất cho mã này» | `QUOTA-FULL` |
+| `redeem-denied` | Mã đã dùng | «Mã đã được sử dụng» | `USED-01` |
+| `redeem-success` | Submit thành công | Ring ✓ → mở ví lọc sự kiện | Sau confirm |
+
+### Luồng cổng (staff · Scan tab)
+
+```mermaid
+flowchart LR
+  S[Scan QR] --> R{Mạng + máy chủ}
+  R -->|Online + confirm| OK[Được vào]
+  R -->|Offline| NO[Không xác nhận — không toast xanh «Được vào»]
+  R -->|Timeout| U[Chưa rõ → đối soát / retry]
+  R -->|Held / used / revoked / wrong event| W[Warn hoặc error theo M10]
+```
+
+ADR-18 / D7: **không** cấm mọi thao tác offline; phân biệt local/provisional vs server-confirmed. Mock: toggle **○ Online / ● Offline** trên màn Scan; khi offline, preset «Hợp lệ» → toast **error** «Không xác nhận khi offline».
+
+### Ma trận trạng thái — gate scan (mock preset)
+
+| Kết quả | Toast | Lớp | Ghi chú |
+| --- | --- | --- | --- |
+| Hợp lệ (online) | Được vào | success | Có nhãn xác nhận máy chủ |
+| Hợp lệ (offline) | Không xác nhận khi offline | error | M10 — không success giả |
+| Đã sử dụng | Vé đã được sử dụng | warn | |
+| Đang giữ | Vé đang được giữ | warn | M10 held |
+| Thu hồi | Vé đã thu hồi | error | |
+| Sai sự kiện | Sai sự kiện | error | |
+| Chưa rõ | Chưa rõ kết quả | warn | Trước retry |
+| Đối soát (online) | Đã đối soát | success | Sau timeout · **xác nhận máy chủ** |
+| Đối soát (offline) | Đối soát cục bộ | warn (provisional) | D7 — lưu máy · **chờ đồng bộ**; không toast success «Đã đối soát» |
+
+### Evidence UI (MR-IOS)
+
+| Artifact | Viewport | Preset |
+| --- | --- | --- |
+| `MR-IOS-attendee-redeem-terms-390.png` | 390×phone frame | `user` · `redeem-confirm` · checkbox + form |
+| `MR-IOS-attendee-redeem-pending-390.png` | 390 | `redeem-pending` · `PENDING-01` |
+| `MR-IOS-staff-gate-offline-390.png` | phone clip @ DPR 2 | `staff` · `scan` · offline + `result(ok)` toast từ chối |
+| `MR-IOS-staff-gate-offline-recover-390.png` | phone clip @ DPR 2 | offline + `result(recover)` · toast **cục bộ/chờ sync** |
+| `MR-IOS-fullviewport-390x844.png` | **innerWidth 390** full window | `staff` · `scan` · R-07 responsive proof (không thay phone clip) |
+
+Server tĩnh (coordinator): `http://127.0.0.1:57277/plans/mobile-production-refactor/full-prototype.html` — **không** claim UAT device thật.
+
+### AC map (task MR-IOS)
+
+| AC | Đáp ứng |
+| --- | --- |
+| AC-1 | Form + terms trước «Nhận vé» |
+| AC-2 | Pending + denied/error + quota stub |
+| AC-3 | Gate warn/valid; offline không success giả |
+| AC-4 | `:root{color-scheme:light}` — không dark mock |
+| AC-5 | Section O22 này (flow + bảng) |
+| AC-6 | PNG 390 attendee + staff (evidence dir) |
+
+---
+
 ## 9. Tham chiếu
 
-- [`README.md`](./README.md) · [`prototype.html`](./prototype.html)  
-- Guest CTA: [`archive/PD-GUEST-FLOW-HANDOFF.md`](./archive/PD-GUEST-FLOW-HANDOFF.md) (lịch sử; slug catalog superseded)  
+- [`README.md`](./README.md) · [`prototype.html`](./prototype.html)\
+- Guest CTA: [`archive/PD-GUEST-FLOW-HANDOFF.md`](./archive/PD-GUEST-FLOW-HANDOFF.md) (lịch sử; slug catalog superseded)\
 - Visual: [`docs/design/visual-identity-v2/`](../../design/visual-identity-v2/)
 
 ---

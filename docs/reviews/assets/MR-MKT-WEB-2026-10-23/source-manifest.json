@@ -1,0 +1,34 @@
+{
+  "baseReviewSha": "b2faa48a1ce443c8fc6c849cb74a06a57f8b0c37",
+  "note": "Fingerprints of local dirty tree at capture time",
+  "files": [
+    {
+      "path": "docs/design/ui-uplift-2026-10/marketing/index.html",
+      "sha256": "1db19c1d0a59029489f484e02a683e0637bb109586640c41a0278c487c66ce0e"
+    },
+    {
+      "path": "docs/design/ui-uplift-2026-10/marketing/js/marketing.js",
+      "sha256": "8bff4c24d059a3b915ffff480d803af64b010ceaba2c6174b1596744423cff15"
+    },
+    {
+      "path": "docs/design/ui-uplift-2026-10/marketing/css/marketing.css",
+      "sha256": "94bf717f4a35966aa3791b0fffb27c5222035f455b77c58b6e519d4a468d9233"
+    },
+    {
+      "path": "docs/design/ui-uplift-2026-10/app/index.html",
+      "sha256": "51ffb320fead98332efef93c596e4476e893df14e4486bb75ba9700b80cf3a06"
+    },
+    {
+      "path": "docs/design/ui-uplift-2026-10/app/css/app-uplift.css",
+      "sha256": "71a567f2c2fc2c5a581a6a299009c6fb0f598c464f3bacadb194a9a320a29b8f"
+    },
+    {
+      "path": "docs/design/ui-framework-2026-10/prototype/sheet-nav.js",
+      "sha256": "54b387c3c60f6508c34d062a204a4fe54e3060c6280e037e98c4299f0843388c"
+    },
+    {
+      "path": "docs/design/ui-uplift-2026-10/README.md",
+      "sha256": "52c314a8d04e8de7d12aa88965da0b4b787b89826e09358642ac3cce5b583620"
+    }
+  ]
+}

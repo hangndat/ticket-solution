@@ -1,0 +1,28 @@
+{
+  "capture": "app-redeem-terms-390-en.png",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "live": {
+    "viewport": {
+      "w": 390,
+      "h": 844,
+      "dpr": 1
+    },
+    "locale": "en"
+  },
+  "probe": {
+    "htmlLang": "en",
+    "localeViPressed": null,
+    "localeEnPressed": null,
+    "innerWidth": 390,
+    "innerHeight": 844,
+    "devicePixelRatio": 1,
+    "frameWidth": 366,
+    "interestLabels": [],
+    "consentText": "",
+    "termsChecked": false,
+    "menuExpanded": "false"
+  }
+}

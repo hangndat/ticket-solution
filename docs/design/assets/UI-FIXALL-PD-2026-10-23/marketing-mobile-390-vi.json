@@ -1,0 +1,58 @@
+{
+  "capture": "marketing-mobile-390-vi.png",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "live": {
+    "viewport": {
+      "w": 390,
+      "h": 844,
+      "dpr": 1
+    },
+    "locale": "vi",
+    "frameWidth": 370
+  },
+  "probe": {
+    "sections": [
+      {
+        "id": "top",
+        "ok": true
+      },
+      {
+        "id": "trust",
+        "ok": true
+      },
+      {
+        "id": "features",
+        "ok": true
+      },
+      {
+        "id": "how-it-works",
+        "ok": true
+      },
+      {
+        "id": "solutions",
+        "ok": true
+      },
+      {
+        "id": "outcomes",
+        "ok": true
+      },
+      {
+        "id": "faq",
+        "ok": true
+      },
+      {
+        "id": "interest",
+        "ok": true
+      }
+    ]
+  },
+  "chromeWrap": {
+    "frame": "browser mobile",
+    "frameWidth": 370,
+    "issues": [],
+    "viewport": 390
+  }
+}

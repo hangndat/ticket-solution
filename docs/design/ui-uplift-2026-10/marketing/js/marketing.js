@@ -25,7 +25,29 @@
       previewCaption:
         "UI composition có nhãn Demo — không dữ liệu khách thật.",
       tabWallet: "Vé & ví",
-      tabGate: "Cổng",
+      tabStaff: "Staff (D-6)",
+      menuLabel: "Menu",
+      menuTitle: "Menu",
+      menuClose: "Đóng",
+      staffNoteTitle: "Staff — không phải web gate SoT",
+      staffNoteBody:
+        "D-6/D-7: Cổng quét SoT trên iOS Vemoki Gate; quản trị sự kiện SoT trên portal. Marketing không mô phòng web gate hay admin platform.",
+      staffLinkIos: "Prototype cổng iOS",
+      staffLinkPortal: "Mẫu portal PD",
+      solStaffTitle: "Nhân viên cổng",
+      formLabelName: "Họ tên",
+      formLabelEmail: "Email công việc",
+      formLabelOrg: "Tổ chức",
+      formLabelRole: "Vai trò",
+      formLabelNotes: "Ghi chú (không bắt buộc)",
+      formRolePlaceholder: "Chọn vai trò",
+      formRoleOwner: "Tenant Owner",
+      formRoleAgency: "Agency",
+      formRoleOther: "Khác",
+      formConsent: "Tôi đồng ý được liên hệ về Vemoki. Xem Quyền riêng tư.",
+      formErrRequired: "Vui lòng điền các trường bắt buộc.",
+      formErrEmail: "Email không hợp lệ.",
+      formErrConsent: "Bạn cần đồng ý trước khi gửi.",
       uiNavWallet: "Vé của tôi",
       uiNavGate: "Cổng · Quét vé",
       uiWalletTitle: "Vé của tôi",
@@ -87,7 +109,7 @@
       solAgency:
         "Membership nhiều tenant — một hệ điều hành, nhiều thương hiệu khách, không fork code.",
       solStaff:
-        "Quét QR trên iOS; web dự phòng; audit theo sự kiện.",
+        "Quét QR trên iOS (SoT). Portal cho quản trị — không phải web gate staff trong MVP.",
       solGuest:
         "Đổi mã trên web/iOS dưới brand sự kiện — xem footer attendee link.",
     },
@@ -116,7 +138,29 @@
       previewCaption:
         "Demo-labeled UI composition — no real guest data.",
       tabWallet: "Wallet",
-      tabGate: "Gate",
+      tabStaff: "Staff (D-6)",
+      menuLabel: "Menu",
+      menuTitle: "Menu",
+      menuClose: "Close",
+      staffNoteTitle: "Staff surfaces — not web gate SoT",
+      staffNoteBody:
+        "D-6/D-7: Gate scanning SoT is iOS Vemoki Gate; event admin SoT is portal. Marketing does not simulate staff web gate or platform admin.",
+      staffLinkIos: "iOS gate prototype",
+      staffLinkPortal: "Portal PD specimens",
+      solStaffTitle: "Gate staff",
+      formLabelName: "Full name",
+      formLabelEmail: "Work email",
+      formLabelOrg: "Organization",
+      formLabelRole: "Role",
+      formLabelNotes: "Notes (optional)",
+      formRolePlaceholder: "Select role",
+      formRoleOwner: "Tenant Owner",
+      formRoleAgency: "Agency",
+      formRoleOther: "Other",
+      formConsent: "I agree to be contacted about Vemoki. See Privacy.",
+      formErrRequired: "Please complete required fields.",
+      formErrEmail: "Enter a valid email address.",
+      formErrConsent: "You must agree before submitting.",
       uiNavWallet: "My tickets",
       uiNavGate: "Gate · Scan",
       uiWalletTitle: "My tickets",
@@ -178,7 +222,7 @@
       solAgency:
         "Membership across tenants — one OS, many client brands, no code forks.",
       solStaff:
-        "Scan on iOS; web fallback; per-event audit.",
+        "Scan on iOS (SoT). Portal for admin — not a staff web gate product surface in MVP.",
       solGuest:
         "Redeem on web/iOS under the event brand — see footer attendee link.",
     },
@@ -327,8 +371,24 @@
     const c = copy[locale];
     $all("[data-i18n]").forEach((el) => {
       const key = el.getAttribute("data-i18n");
-      if (c[key] !== undefined) el.textContent = c[key];
+      if (c[key] === undefined) return;
+      if (key === "formConsent") {
+        el.innerHTML =
+          locale === "vi"
+            ? 'Tôi đồng ý được liên hệ về Vemoki. Xem <a href="privacy.html">Quyền riêng tư</a>.'
+            : 'I agree to be contacted about Vemoki. See <a href="privacy.html">Privacy</a>.';
+      } else {
+        el.textContent = c[key];
+      }
     });
+    const roleSelect = $("#role");
+    if (roleSelect) {
+      const opts = roleSelect.options;
+      if (opts[0]) opts[0].textContent = c.formRolePlaceholder;
+      if (opts[1]) opts[1].textContent = c.formRoleOwner;
+      if (opts[2]) opts[2].textContent = c.formRoleAgency;
+      if (opts[3]) opts[3].textContent = c.formRoleOther;
+    }
     const solKeys = ["solOwner", "solAgency", "solStaff", "solGuest"];
     $all(".mkt-audience-card p").forEach((el, i) => {
       const key = solKeys[i];
@@ -339,6 +399,7 @@
     updatePreviewPanels();
     $("#locale-vi")?.setAttribute("aria-pressed", locale === "vi" ? "true" : "false");
     $("#locale-en")?.setAttribute("aria-pressed", locale === "en" ? "true" : "false");
+    if (sheetApi?.setContent) sheetApi.setContent(sheetContent());
   }
 
   function setDevice(d) {
@@ -347,6 +408,27 @@
     browser?.classList.toggle("mobile", d === "mobile");
     $("#btn-desktop")?.classList.toggle("on", d === "desktop");
     $("#btn-mobile")?.classList.toggle("on", d === "mobile");
+    const navLinks = $(".mkt-nav-links");
+    const ghostCta = $(".mkt-nav-cta.mkt-btn--ghost");
+    const primaryCta = $(".mkt-nav-cta-primary");
+    const mobileMenu = $(".mkt-mobile-menu");
+    const mobile = d === "mobile";
+    if (mobile) {
+      navLinks?.classList.add("hidden");
+      navLinks?.classList.remove("lg:inline-flex");
+      ghostCta?.classList.add("hidden");
+      ghostCta?.classList.remove("lg:inline-flex");
+      primaryCta?.classList.add("hidden");
+      primaryCta?.classList.remove("lg:inline-flex");
+      mobileMenu?.classList.add("inline-flex");
+      mobileMenu?.classList.remove("hidden");
+    } else {
+      navLinks?.classList.add("hidden", "lg:inline-flex");
+      ghostCta?.classList.add("hidden", "lg:inline-flex");
+      primaryCta?.classList.add("hidden", "lg:inline-flex");
+      mobileMenu?.classList.add("hidden");
+      mobileMenu?.classList.remove("inline-flex");
+    }
     updatePreviewPanels();
   }
 
@@ -356,7 +438,7 @@
       url.textContent =
         previewTab === "wallet"
           ? "app.vemoki.com/wallet"
-          : "app.vemoki.com/gate";
+          : "D-6 · iOS / portal (not web gate)";
     }
     $all("[data-preview-panel]").forEach((panel) => {
       const on = panel.dataset.previewPanel === previewTab;
@@ -381,13 +463,13 @@
     root.innerHTML = faq[locale]
       .map(
         ([q, a], i) => `
-      <div class="mkt-faq-item" data-open="${i === 0 ? "true" : "false"}">
-        <button type="button" class="mkt-faq-trigger" aria-expanded="${i === 0 ? "true" : "false"}" aria-controls="faq-panel-${i}" id="faq-trigger-${i}">
+      <div class="mkt-faq-item ${window.MKT_TW?.faqItem || ""}" data-open="${i === 0 ? "true" : "false"}">
+        <button type="button" class="mkt-faq-trigger ${window.MKT_TW?.faqTrigger || ""}" aria-expanded="${i === 0 ? "true" : "false"}" aria-controls="faq-panel-${i}" id="faq-trigger-${i}">
           <span>${q}</span>
-          <span class="mkt-faq-icon" aria-hidden="true">+</span>
+          <span class="mkt-faq-icon ${window.MKT_TW?.faqIcon || ""}" aria-hidden="true">+</span>
         </button>
-        <div class="mkt-faq-panel" id="faq-panel-${i}" role="region" aria-labelledby="faq-trigger-${i}">
-          <div class="mkt-faq-panel-inner">${a}</div>
+        <div class="mkt-faq-panel ${window.MKT_TW?.faqPanel || ""} ${i === 0 ? "max-h-96" : "max-h-0"}" id="faq-panel-${i}" role="region" aria-labelledby="faq-trigger-${i}">
+          <div class="mkt-faq-panel-inner ${window.MKT_TW?.faqPanelInner || ""}">${a}</div>
         </div>
       </div>`,
       )
@@ -398,6 +480,9 @@
         const open = item.dataset.open === "true";
         item.dataset.open = open ? "false" : "true";
         btn.setAttribute("aria-expanded", open ? "false" : "true");
+        const panel = item.querySelector(".mkt-faq-panel");
+        panel?.classList.toggle("max-h-0", open);
+        panel?.classList.toggle("max-h-96", !open);
       });
     });
   }
@@ -433,8 +518,13 @@
         const cls = cells[i];
         const extra = cls === "ops" ? " mkt-bento-cell--ops" : "";
         const visual = visuals[cls] ? visuals[cls] : "";
-        return `<article class="mkt-bento-cell mkt-bento-cell--${cls}${extra}">
-          <span class="mkt-bento-tag">${tag}</span>
+        const tw = window.MKT_TW || {};
+        const cellTw =
+          cls === "ops"
+            ? `${tw.bentoCell || ""} ${tw.bentoOps || ""}`
+            : tw.bentoCell || "";
+        return `<article class="mkt-bento-cell mkt-bento-cell--${cls}${extra} ${cellTw}">
+          <span class="mkt-bento-tag ${tw.bentoTag || ""}">${tag}</span>
           <h3>${title}</h3>
           <p>${body}</p>
           ${visual}
@@ -449,10 +539,10 @@
     root.innerHTML = steps[locale]
       .map(
         (text, i) => `
-      <div class="mkt-step">
-        <div class="mkt-step-num">${i + 1}</div>
-        <p>${text}</p>
-        <div class="mkt-step-visual mkt-step-visual--${i + 1}" aria-hidden="true"></div>
+      <div class="mkt-step ${window.MKT_TW?.step || ""}">
+        <div class="mkt-step-num ${window.MKT_TW?.stepNum || ""}">${i + 1}</div>
+        <p class="text-sm text-muted">${text}</p>
+        <div class="mkt-step-visual mkt-step-visual--${i + 1} ${window.MKT_TW?.stepVisual || ""}" aria-hidden="true"></div>
       </div>`,
       )
       .join("");
@@ -462,9 +552,13 @@
     const header = $(".mkt-header");
     const hero = $("#top");
     if (!header || !hero) return;
+    const inkOn = ["border-white/10", "bg-ink/90", "text-paper"];
+    const inkOff = ["border-line", "bg-paper/90", "text-ink"];
     const onScroll = () => {
-      const heroBottom = hero.getBoundingClientRect().bottom;
-      header.classList.toggle("mkt-header--on-ink", heroBottom > 72);
+      const onInk = hero.getBoundingClientRect().bottom > 72;
+      header.classList.toggle("mkt-header--on-ink", onInk);
+      inkOff.forEach((c) => header.classList.toggle(c, !onInk));
+      inkOn.forEach((c) => header.classList.toggle(c, onInk));
     };
     window.addEventListener("scroll", onScroll, { passive: true });
     document.querySelector(".site")?.addEventListener("scroll", onScroll, {
@@ -477,7 +571,48 @@
     const form = $("#interest-form");
     form?.addEventListener("submit", (e) => {
       e.preventDefault();
+      const c = copy[locale];
+      const err = $("#form-errors");
       const status = $("#form-status");
+      if (err) {
+        err.hidden = true;
+        err.textContent = "";
+      }
+      if (status) status.hidden = true;
+
+      const name = $("#name");
+      const email = $("#email");
+      const org = $("#org");
+      const role = $("#role");
+      const consent = $("#consent");
+      [name, email, org, role].forEach((el) => el?.removeAttribute("aria-invalid"));
+
+      if (!name?.value.trim() || !org?.value.trim() || !role?.value) {
+        if (err) {
+          err.hidden = false;
+          err.textContent = c.formErrRequired;
+        }
+        (name?.value.trim() ? org : name)?.focus();
+        return;
+      }
+      if (!email?.value.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value)) {
+        email?.setAttribute("aria-invalid", "true");
+        if (err) {
+          err.hidden = false;
+          err.textContent = c.formErrEmail;
+        }
+        email?.focus();
+        return;
+      }
+      if (!consent?.checked) {
+        consent?.setAttribute("aria-invalid", "true");
+        if (err) {
+          err.hidden = false;
+          err.textContent = c.formErrConsent;
+        }
+        consent?.focus();
+        return;
+      }
       if (status) {
         status.hidden = false;
         status.textContent =
@@ -486,6 +621,58 @@
             : "Interest received (prototype — no server).";
         status.setAttribute("role", "status");
       }
+    });
+  }
+
+  let sheetApi = null;
+
+  function sheetContent() {
+    const c = copy[locale];
+    const close = "if(window.__closeMktSheet)window.__closeMktSheet()";
+    return {
+      title: c.menuTitle,
+      closeLabel: c.menuClose,
+      navLabel: locale === "vi" ? "Chính" : "Main",
+      links: [
+        { href: "#features", label: c.navFeatures, onClick: close },
+        { href: "#how-it-works", label: c.navHow, onClick: close },
+        { href: "#solutions", label: c.navSolutions, onClick: close },
+        { href: "#faq", label: c.navFaq, onClick: close },
+        { href: "https://app.vemoki.com/", label: c.navDemo, onClick: close },
+        { href: "https://app.vemoki.com/auth", label: c.navLogin, onClick: close },
+        {
+          href: "#interest",
+          label: c.heroInterest,
+          onClick: close,
+          className:
+            "mt-2 min-h-[44px] rounded-md bg-signal px-3 py-2.5 text-center text-sm font-semibold text-white hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus",
+        },
+      ],
+    };
+  }
+
+  function initSheet() {
+    if (!window.VemokiSheetNav?.bind) return;
+    window.__closeMktSheet = () => sheetApi?.setOpen(false);
+    sheetApi = window.VemokiSheetNav.bind({
+      triggerId: "mkt-sheet-trigger",
+      rootId: "mkt-sheet-root",
+      getContent: sheetContent,
+      onChange(open) {
+        const trigger = $("#mkt-sheet-trigger");
+        if (!trigger) return;
+        const label = trigger.querySelector("span:last-child");
+        const icon = trigger.querySelector("span:first-child");
+        const c = copy[locale];
+        if (open) {
+          icon.textContent = "×";
+          if (label) label.textContent = c.menuClose;
+          sheetApi?.setContent?.(sheetContent());
+        } else {
+          icon.textContent = "☰";
+          if (label) label.textContent = c.menuLabel;
+        }
+      },
     });
   }
 
@@ -498,10 +685,30 @@
     renderSteps();
     renderFaq();
     setLocale("vi");
-    setDevice("desktop");
+    const syncDevice = () => {
+      if (window.innerWidth < 520 && device !== "mobile") setDevice("mobile");
+    };
+    setDevice(window.innerWidth < 520 ? "mobile" : "desktop");
+    window.addEventListener("resize", syncDevice);
+    const reviewViewportTick = () => {
+      if (window.innerWidth < 520 && device !== "mobile") setDevice("mobile");
+    };
+    window.setInterval(reviewViewportTick, 300);
     setPreviewTab("wallet");
     initHeaderInk();
     initForm();
-    $(".mkt-hero-copy")?.classList.add("mkt-fade-in");
+    let sheetBooted = false;
+    const bootSheet = () => {
+      if (sheetBooted || !window.VemokiSheetNav?.bind) return;
+      sheetBooted = true;
+      initSheet();
+    };
+    document.addEventListener("vemoki-sheet-ready", bootSheet);
+    const waitSheet = () => {
+      if (window.VemokiSheetNav?.bind) bootSheet();
+      else setTimeout(waitSheet, 50);
+    };
+    waitSheet();
+    $(".mkt-hero-copy")?.setAttribute("data-fade-in", "");
   });
 })();
