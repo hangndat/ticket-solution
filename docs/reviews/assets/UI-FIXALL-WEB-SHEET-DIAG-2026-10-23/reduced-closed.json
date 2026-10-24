@@ -1,0 +1,21 @@
+{
+  "id": "4ec77a80-7599-4a25-bd6e-057ccff56240",
+  "ok": true,
+  "result": {
+    "result": {
+      "focus": "nav-menu-toggle",
+      "mounted": false,
+      "page": "http://localhost:3000/",
+      "reduced": true,
+      "viewport": [
+        390,
+        844,
+        1
+      ]
+    },
+    "origin": "http://localhost:3000/"
+  },
+  "_meta": {
+    "runtimeId": "9d821662-c628-49db-a168-99fa7b7636fc"
+  }
+}

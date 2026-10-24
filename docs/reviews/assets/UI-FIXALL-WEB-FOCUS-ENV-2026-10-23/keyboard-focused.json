@@ -1,0 +1,121 @@
+{
+  "page": "55750899-6fd3-4c07-a60b-5379f000cada",
+  "capturedAt": "2026-10-23T14:46:29.577Z",
+  "cases": [
+    {
+      "tabs": 0,
+      "steps": [
+        {
+          "step": "open",
+          "probe": {
+            "origin": "http://localhost:3000/",
+            "result": "{\"viewport\":[390,844,1],\"dialogState\":\"open\",\"dialogMounted\":true,\"focusOnTrigger\":false,\"focusInDialog\":true,\"active\":{\"tag\":\"DIV\",\"testId\":\"nav-mobile-menu\",\"inDialog\":true,\"rect\":{\"w\":353,\"h\":876}},\"triggerVisible\":{\"display\":\"flex\",\"rectWidth\":75.171875}}"
+          }
+        },
+        {
+          "step": "Escape+1200ms",
+          "probe": {
+            "origin": "http://localhost:3000/",
+            "result": "{\"viewport\":[390,844,1],\"dialogState\":null,\"dialogMounted\":false,\"focusOnTrigger\":true,\"focusInDialog\":false,\"active\":{\"tag\":\"BUTTON\",\"testId\":\"nav-menu-toggle\",\"inDialog\":false,\"rect\":{\"w\":81.171875,\"h\":44}},\"triggerVisible\":{\"display\":\"flex\",\"rectWidth\":81.171875}}"
+          }
+        }
+      ]
+    },
+    {
+      "tabs": 10,
+      "steps": [
+        {
+          "step": "open",
+          "probe": {
+            "origin": "http://localhost:3000/",
+            "result": "{\"viewport\":[390,844,1],\"dialogState\":\"open\",\"dialogMounted\":true,\"focusOnTrigger\":false,\"focusInDialog\":true,\"active\":{\"tag\":\"DIV\",\"testId\":\"nav-mobile-menu\",\"inDialog\":true,\"rect\":{\"w\":353,\"h\":876}},\"triggerVisible\":{\"display\":\"flex\",\"rectWidth\":75.171875}}"
+          }
+        },
+        {
+          "step": "Tab0",
+          "probe": {
+            "origin": "http://localhost:3000/",
+            "result": "{\"viewport\":[390,844,1],\"dialogState\":\"open\",\"dialogMounted\":true,\"focusOnTrigger\":false,\"focusInDialog\":true,\"active\":{\"tag\":\"A\",\"testId\":\"nav-events\",\"inDialog\":true,\"rect\":{\"w\":348,\"h\":208}},\"triggerVisible\":{\"display\":\"flex\",\"rectWidth\":75.171875}}"
+          }
+        },
+        {
+          "step": "Tab1",
+          "probe": {
+            "origin": "http://localhost:3000/",
+            "result": "{\"viewport\":[390,844,1],\"dialogState\":\"open\",\"dialogMounted\":true,\"focusOnTrigger\":false,\"focusInDialog\":true,\"active\":{\"tag\":\"A\",\"testId\":\"nav-redeem\",\"inDialog\":true,\"rect\":{\"w\":348,\"h\":208}},\"triggerVisible\":{\"display\":\"flex\",\"rectWidth\":75.171875}}"
+          }
+        },
+        {
+          "step": "Tab2",
+          "probe": {
+            "origin": "http://localhost:3000/",
+            "result": "{\"viewport\":[390,844,1],\"dialogState\":\"open\",\"dialogMounted\":true,\"focusOnTrigger\":false,\"focusInDialog\":true,\"active\":{\"tag\":\"A\",\"testId\":\"nav-claim\",\"inDialog\":true,\"rect\":{\"w\":348,\"h\":208}},\"triggerVisible\":{\"display\":\"flex\",\"rectWidth\":75.171875}}"
+          }
+        },
+        {
+          "step": "Tab3",
+          "probe": {
+            "origin": "http://localhost:3000/",
+            "result": "{\"viewport\":[390,844,1],\"dialogState\":\"open\",\"dialogMounted\":true,\"focusOnTrigger\":false,\"focusInDialog\":true,\"active\":{\"tag\":\"A\",\"testId\":\"nav-account\",\"inDialog\":true,\"rect\":{\"w\":348,\"h\":208}},\"triggerVisible\":{\"display\":\"flex\",\"rectWidth\":75.171875}}"
+          }
+        },
+        {
+          "step": "Tab4",
+          "probe": {
+            "origin": "http://localhost:3000/",
+            "result": "{\"viewport\":[390,844,1],\"dialogState\":\"open\",\"dialogMounted\":true,\"focusOnTrigger\":false,\"focusInDialog\":true,\"active\":{\"tag\":\"A\",\"testId\":\"nav-events\",\"inDialog\":true,\"rect\":{\"w\":348,\"h\":208}},\"triggerVisible\":{\"display\":\"flex\",\"rectWidth\":75.171875}}"
+          }
+        },
+        {
+          "step": "Tab5",
+          "probe": {
+            "origin": "http://localhost:3000/",
+            "result": "{\"viewport\":[390,844,1],\"dialogState\":\"open\",\"dialogMounted\":true,\"focusOnTrigger\":false,\"focusInDialog\":true,\"active\":{\"tag\":\"A\",\"testId\":\"nav-redeem\",\"inDialog\":true,\"rect\":{\"w\":348,\"h\":208}},\"triggerVisible\":{\"display\":\"flex\",\"rectWidth\":75.171875}}"
+          }
+        },
+        {
+          "step": "Tab6",
+          "probe": {
+            "origin": "http://localhost:3000/",
+            "result": "{\"viewport\":[390,844,1],\"dialogState\":\"open\",\"dialogMounted\":true,\"focusOnTrigger\":false,\"focusInDialog\":true,\"active\":{\"tag\":\"A\",\"testId\":\"nav-claim\",\"inDialog\":true,\"rect\":{\"w\":348,\"h\":208}},\"triggerVisible\":{\"display\":\"flex\",\"rectWidth\":75.171875}}"
+          }
+        },
+        {
+          "step": "Tab7",
+          "probe": {
+            "origin": "http://localhost:3000/",
+            "result": "{\"viewport\":[390,844,1],\"dialogState\":\"open\",\"dialogMounted\":true,\"focusOnTrigger\":false,\"focusInDialog\":true,\"active\":{\"tag\":\"A\",\"testId\":\"nav-account\",\"inDialog\":true,\"rect\":{\"w\":348,\"h\":208}},\"triggerVisible\":{\"display\":\"flex\",\"rectWidth\":75.171875}}"
+          }
+        },
+        {
+          "step": "Tab8",
+          "probe": {
+            "origin": "http://localhost:3000/",
+            "result": "{\"viewport\":[390,844,1],\"dialogState\":\"open\",\"dialogMounted\":true,\"focusOnTrigger\":false,\"focusInDialog\":true,\"active\":{\"tag\":\"A\",\"testId\":\"nav-events\",\"inDialog\":true,\"rect\":{\"w\":348,\"h\":208}},\"triggerVisible\":{\"display\":\"flex\",\"rectWidth\":75.171875}}"
+          }
+        },
+        {
+          "step": "Tab9",
+          "probe": {
+            "origin": "http://localhost:3000/",
+            "result": "{\"viewport\":[390,844,1],\"dialogState\":\"open\",\"dialogMounted\":true,\"focusOnTrigger\":false,\"focusInDialog\":true,\"active\":{\"tag\":\"A\",\"testId\":\"nav-redeem\",\"inDialog\":true,\"rect\":{\"w\":348,\"h\":208}},\"triggerVisible\":{\"display\":\"flex\",\"rectWidth\":75.171875}}"
+          }
+        },
+        {
+          "step": "ShiftTab",
+          "probe": {
+            "origin": "http://localhost:3000/",
+            "result": "{\"viewport\":[390,844,1],\"dialogState\":\"open\",\"dialogMounted\":true,\"focusOnTrigger\":false,\"focusInDialog\":true,\"active\":{\"tag\":\"A\",\"testId\":\"nav-events\",\"inDialog\":true,\"rect\":{\"w\":348,\"h\":208}},\"triggerVisible\":{\"display\":\"flex\",\"rectWidth\":75.171875}}"
+          }
+        },
+        {
+          "step": "Escape+1200ms",
+          "probe": {
+            "origin": "http://localhost:3000/",
+            "result": "{\"viewport\":[390,844,1],\"dialogState\":null,\"dialogMounted\":false,\"focusOnTrigger\":true,\"focusInDialog\":false,\"active\":{\"tag\":\"BUTTON\",\"testId\":\"nav-menu-toggle\",\"inDialog\":false,\"rect\":{\"w\":81.171875,\"h\":44}},\"triggerVisible\":{\"display\":\"flex\",\"rectWidth\":81.171875}}"
+          }
+        }
+      ]
+    }
+  ]
+}

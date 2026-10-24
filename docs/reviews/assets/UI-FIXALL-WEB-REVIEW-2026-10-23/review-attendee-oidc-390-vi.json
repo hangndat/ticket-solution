@@ -1,0 +1,46 @@
+{
+  "capture": "review-attendee-oidc-390-vi",
+  "sourceSha": "b2faa48a1ce443c8fc6c849cb74a06a57f8b0c37",
+  "persona": "authenticated-attendee",
+  "authMethod": "Keycloak UI OIDC via /api/auth/login?return=tenant-bound redeem (localhost:3000, PKCE cookies)",
+  "bffMe": {
+    "status": 200,
+    "email": "attendee@example.com",
+    "subject": "850d2098-b411-4683-8fe9-ce1d20d22af6"
+  },
+  "measuredViewport": {
+    "measuredViewport": {
+      "innerWidth": 390,
+      "innerHeight": 844,
+      "devicePixelRatio": 1
+    },
+    "url": "http://localhost:3000/redeem?tenantSlug=mfest-demo&eventSlug=mfest",
+    "locale": "vi",
+    "personaEmail": null,
+    "bffEmailFromDom": null,
+    "mockSessionMarker": false,
+    "cookieNames": [
+      "vemoki_csrf"
+    ]
+  },
+  "termsAtSubmit": {
+    "viewport": {
+      "w": 390,
+      "h": 844,
+      "dpr": 1
+    },
+    "checked": false,
+    "hasRefusal": false,
+    "bffNote": "see review-attendee-bff-me.json"
+  },
+  "ownerArtifactReconciliation": {
+    "excludeFromProof": "FA-WEB local-redeem-terms-390-vi.png/.json \u2014 staff@example.com + desktop-width chrome; mislabeled persona/viewport",
+    "reviewerCanonical": [
+      "review-attendee-bff-me.json",
+      "review-attendee-persona-pre.json",
+      "review-attendee-redeem-authenticated-390-vi.png",
+      "review-attendee-terms-refusal-390-vi.json"
+    ]
+  },
+  "findingF-WEB-01": "closed"
+}

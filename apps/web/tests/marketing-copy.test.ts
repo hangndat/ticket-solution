@@ -15,6 +15,16 @@ describe('marketing copy VI/EN', () => {
     assert.equal(t('vi', 'badge.demo'), 'Demo giả lập');
   });
 
+  it('R-02 / AC-2: interest form labels and validation copy are English on en locale', () => {
+    assert.equal(t('en', 'interest.name'), 'Full name');
+    assert.equal(t('en', 'interest.email'), 'Work email');
+    assert.equal(t('en', 'interest.org'), 'Organization');
+    assert.equal(t('en', 'interest.submit'), 'Submit');
+    assert.equal(t('en', 'interest.error.name'), 'Enter your name');
+    assert.equal(t('en', 'interest.error.consent'), 'Consent required to contact you');
+    assert.notEqual(t('vi', 'interest.name'), t('en', 'interest.name'));
+  });
+
   it('AC-6: no forbidden product claims in copy bundles', () => {
     for (const locale of ['vi', 'en'] as const) {
       const blob = allCopyValues(locale).join('\n');

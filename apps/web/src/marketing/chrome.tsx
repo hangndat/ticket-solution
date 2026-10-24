@@ -80,11 +80,19 @@ export function MarketingChrome({
               />
             </>
           ) : null}
-          <Button asChild variant={onInk ? 'ghostOnInk' : 'ghost'} className="ml-[0.15rem]">
+          <Button
+            asChild
+            variant={onInk ? 'ghostOnInk' : 'ghost'}
+            className="ml-[0.15rem] max-md:hidden"
+          >
             <a href={login}>{t(locale, 'nav.login')}</a>
           </Button>
           {onSales ? (
-            <Button asChild variant="primary" className="whitespace-nowrap">
+            <Button
+              asChild
+              variant="primary"
+              className="whitespace-nowrap max-md:hidden"
+            >
               <Link href={`${sales}#interest`} data-testid="cta-interest-nav">
                 {t(locale, 'nav.interest')}
               </Link>

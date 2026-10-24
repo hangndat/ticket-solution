@@ -1,0 +1,110 @@
+{
+  "capture": "review-consumer-kb-390-vi",
+  "sourceSha": "b2faa48a1ce443c8fc6c849cb74a06a57f8b0c37",
+  "ac": "F-WEB-04 consumer sheet keyboard @390",
+  "escapeFocusOnTrigger": false,
+  "steps": {
+    "after-nav": {
+      "measuredViewport": {
+        "innerWidth": 390,
+        "innerHeight": 844,
+        "devicePixelRatio": 1
+      },
+      "locale": "vi",
+      "dialogOpen": true,
+      "triggerExpanded": "true",
+      "focusOnTrigger": false,
+      "activeElement": {
+        "tag": "DIV",
+        "testId": "nav-mobile-menu",
+        "text": "Menu \u0111i\u1ec1u h\u01b0\u1edbng\nKh\u00e1m ph\u00e1\n\u0110\u1ed5i m\u00e3\nNh\u1eadn l\u1eddi",
+        "hiddenOrDetached": true
+      }
+    },
+    "escape": {
+      "measuredViewport": {
+        "innerWidth": 390,
+        "innerHeight": 844,
+        "devicePixelRatio": 1
+      },
+      "locale": "vi",
+      "dialogOpen": false,
+      "triggerExpanded": "false",
+      "focusOnTrigger": false,
+      "activeElement": {
+        "tag": "A",
+        "testId": "nav-events",
+        "text": "Kh\u00e1m ph\u00e1",
+        "hiddenOrDetached": false
+      }
+    },
+    "open": {
+      "measuredViewport": {
+        "innerWidth": 390,
+        "innerHeight": 844,
+        "devicePixelRatio": 1
+      },
+      "locale": "vi",
+      "dialogOpen": true,
+      "triggerExpanded": "true",
+      "focusOnTrigger": false,
+      "activeElement": {
+        "tag": "DIV",
+        "testId": "nav-mobile-menu",
+        "text": "Menu \u0111i\u1ec1u h\u01b0\u1edbng\nKh\u00e1m ph\u00e1\n\u0110\u1ed5i m\u00e3\nNh\u1eadn l\u1eddi",
+        "hiddenOrDetached": true
+      }
+    },
+    "reopen": {
+      "measuredViewport": {
+        "innerWidth": 390,
+        "innerHeight": 844,
+        "devicePixelRatio": 1
+      },
+      "locale": "vi",
+      "dialogOpen": true,
+      "triggerExpanded": "true",
+      "focusOnTrigger": false,
+      "activeElement": {
+        "tag": "DIV",
+        "testId": "nav-mobile-menu",
+        "text": "Menu \u0111i\u1ec1u h\u01b0\u1edbng\nKh\u00e1m ph\u00e1\n\u0110\u1ed5i m\u00e3\nNh\u1eadn l\u1eddi",
+        "hiddenOrDetached": true
+      }
+    },
+    "shift-tab": {
+      "measuredViewport": {
+        "innerWidth": 390,
+        "innerHeight": 844,
+        "devicePixelRatio": 1
+      },
+      "locale": "vi",
+      "dialogOpen": true,
+      "triggerExpanded": "true",
+      "focusOnTrigger": false,
+      "activeElement": {
+        "tag": "A",
+        "testId": "nav-events",
+        "text": "Kh\u00e1m ph\u00e1",
+        "hiddenOrDetached": false
+      }
+    },
+    "tabs": {
+      "measuredViewport": {
+        "innerWidth": 390,
+        "innerHeight": 844,
+        "devicePixelRatio": 1
+      },
+      "locale": "vi",
+      "dialogOpen": true,
+      "triggerExpanded": "true",
+      "focusOnTrigger": false,
+      "activeElement": {
+        "tag": "A",
+        "testId": "nav-redeem",
+        "text": "\u0110\u1ed5i m\u00e3",
+        "hiddenOrDetached": false
+      }
+    }
+  }
+}

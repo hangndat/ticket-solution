@@ -1,0 +1,12 @@
+{
+  "capture": "review-consumer-kb-390-vi-after-tabs-escape",
+  "sourceSha": "b2faa48a1ce443c8fc6c849cb74a06a57f8b0c37",
+  "journey": "open → 10×Tab → Shift+Tab → Escape",
+  "probe": {
+    "measuredViewport": { "innerWidth": 390, "innerHeight": 844, "devicePixelRatio": 1 },
+    "dialogOpen": false,
+    "focusOnTrigger": false,
+    "activeElement": { "tag": "A", "testId": "nav-events", "hiddenOrDetached": false }
+  },
+  "note": "Post–Tab-cycle Esc may leave focus on header nav-events; primary dismiss path passes isolated probe."
+}

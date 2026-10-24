@@ -1,0 +1,1 @@
+{"origin": "http://localhost:3000/redeem?tenantSlug=mfest-demo&eventSlug=mfest", "result": "{\"url\":\"http://localhost:3000/redeem?tenantSlug=mfest-demo&eventSlug=mfest\",\"hasSessionUi\":false,\"sessionSnippet\":null,\"redeemForm\":false,\"mockSessionMarker\":false,\"cookieNames\":[\"vemoki_csrf\"]}"}

@@ -1,0 +1,14 @@
+{
+  "capture": "review-consumer-kb-390-vi-escape-isolated",
+  "sourceSha": "b2faa48a1ce443c8fc6c849cb74a06a57f8b0c37",
+  "journey": "open nav-menu-toggle → Escape (no prior Tab)",
+  "probe": {
+    "measuredViewport": { "innerWidth": 390, "innerHeight": 844, "devicePixelRatio": 1 },
+    "locale": "vi",
+    "dialogOpen": false,
+    "triggerExpanded": "false",
+    "focusOnTrigger": true,
+    "activeElement": { "tag": "BUTTON", "testId": "nav-menu-toggle", "hiddenOrDetached": false }
+  },
+  "ac": "F-WEB-04"
+}

@@ -1,0 +1,39 @@
+{
+  "capture": "local-app-consumer-keyboard-390-vi",
+  "url": "http://localhost:3000/",
+  "viewport": {
+    "width": 390,
+    "height": 844,
+    "devicePixelRatio": 1
+  },
+  "sourceSha": "b2faa48a1ce443c8fc6c849cb74a06a57f8b0c37",
+  "fixRound": "F-WEB-04",
+  "steps": {
+    "escape": {
+      "measuredViewport": {
+        "innerWidth": 390,
+        "innerHeight": 844,
+        "devicePixelRatio": 1
+      },
+      "dialogOpen": false,
+      "menuVisible": false,
+      "focusOnTrigger": true,
+      "triggerExpanded": "false",
+      "activeTestId": "nav-menu-toggle",
+      "activeTag": "BUTTON"
+    },
+    "reopen": {
+      "measuredViewport": {
+        "innerWidth": 390,
+        "innerHeight": 844,
+        "devicePixelRatio": 1
+      },
+      "dialogOpen": true,
+      "menuVisible": true,
+      "focusOnTrigger": false,
+      "triggerExpanded": "true",
+      "activeTestId": "nav-mobile-menu",
+      "activeTag": "DIV"
+    }
+  }
+}
