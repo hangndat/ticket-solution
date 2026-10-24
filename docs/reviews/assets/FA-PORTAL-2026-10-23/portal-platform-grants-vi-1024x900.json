@@ -1,0 +1,23 @@
+{
+  "sha": "b2faa48a1ce443c8fc6c849cb74a06a57f8b0c37",
+  "png": "portal-platform-grants-vi-1024x900.png",
+  "viewportTarget": {
+    "w": 1024,
+    "h": 900
+  },
+  "measured": {
+    "innerHeight": 900,
+    "innerWidth": 1024
+  },
+  "viewportMatch": true,
+  "journey": "platform-oidc-mfa-operator",
+  "probe": {
+    "operator": {
+      "assurance": "mfa",
+      "grantTenant": true,
+      "grants": true,
+      "operator": true,
+      "platformStatus": 200
+    }
+  }
+}

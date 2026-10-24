@@ -398,7 +398,11 @@ function PlatformInner() {
           {
             key: 'grant-create',
             label: 'Grant create',
-            children: <PlatformGrantCreatePanel />,
+            children: (
+              <div data-testid="platform-grants-panel">
+                <PlatformGrantCreatePanel />
+              </div>
+            ),
           },
           {
             key: 'health',
