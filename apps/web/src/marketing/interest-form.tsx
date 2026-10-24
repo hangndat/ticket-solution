@@ -13,6 +13,7 @@ import { t, type CopyKey } from './copy';
 import type { MarketingLocale } from './hosts';
 import { privacyHref } from './links';
 import { trackLeadSubmitted } from './analytics/client';
+import { controlClass } from '../ui/control-classes';
 import {
   validateInterest,
   type InterestFieldError,
@@ -36,7 +37,13 @@ const FIELD_ERROR_KEY: Record<InterestFieldError, CopyKey> = {
   consent: 'interest.error.consent',
 };
 
-export function InterestForm({ locale }: { locale: MarketingLocale }) {
+export function InterestForm({
+  locale,
+  demo,
+}: {
+  locale: MarketingLocale;
+  demo: string;
+}) {
   const formId = useId();
   const [state, setState] = useState<FormState>('empty');
   const [fieldErrors, setFieldErrors] = useState<
@@ -111,6 +118,9 @@ export function InterestForm({ locale }: { locale: MarketingLocale }) {
       >
         <strong>{t(locale, 'interest.success.title')}</strong>
         <p>{t(locale, 'interest.success.body')}</p>
+        <p>
+          <a href={demo}>{t(locale, 'interest.secondary_demo')}</a>
+        </p>
       </Alert>
     );
   }
@@ -201,6 +211,7 @@ export function InterestForm({ locale }: { locale: MarketingLocale }) {
           required
           disabled={busy}
           defaultValue=""
+          className={controlClass(Boolean(fieldErrors.role))}
           aria-invalid={fieldErrors.role ? true : undefined}
           aria-describedby={
             fieldErrors.role ? `${formId}-err-role` : undefined
@@ -227,6 +238,7 @@ export function InterestForm({ locale }: { locale: MarketingLocale }) {
           name="org_kind"
           disabled={busy}
           defaultValue=""
+          className={controlClass()}
         >
           <option value="">{t(locale, 'interest.org_kind.placeholder')}</option>
           <option value="agency">
@@ -252,6 +264,7 @@ export function InterestForm({ locale }: { locale: MarketingLocale }) {
           name="events_per_year"
           disabled={busy}
           defaultValue=""
+          className={controlClass()}
         >
           <option value="">
             {t(locale, 'interest.events_per_year.placeholder')}
@@ -276,6 +289,7 @@ export function InterestForm({ locale }: { locale: MarketingLocale }) {
           name="typical_scale"
           disabled={busy}
           defaultValue=""
+          className={controlClass()}
         >
           <option value="">
             {t(locale, 'interest.typical_scale.placeholder')}
@@ -300,11 +314,13 @@ export function InterestForm({ locale }: { locale: MarketingLocale }) {
         <textarea
           id={`${formId}-note`}
           name="note"
+          rows={4}
           disabled={busy}
+          className={`${controlClass()} min-h-24 resize-y py-2.5`}
         />
       </div>
 
-      <div className={`${marketingConsent} ${marketingFormField}`}>
+      <div className={marketingConsent}>
         <input
           id={`${formId}-consent`}
           name="consent"
@@ -312,18 +328,19 @@ export function InterestForm({ locale }: { locale: MarketingLocale }) {
           value="true"
           required
           disabled={busy}
+          className="mt-0.5 size-5 shrink-0 cursor-pointer accent-signal focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
           aria-invalid={fieldErrors.consent ? true : undefined}
           aria-describedby={
             fieldErrors.consent ? `${formId}-err-consent` : undefined
           }
         />
-        <Label htmlFor={`${formId}-consent`}>
+        <label htmlFor={`${formId}-consent`} className="min-w-0 cursor-pointer text-sm font-normal leading-relaxed">
           {t(locale, 'interest.consent.before')}{' '}
           <Link href={privacyHref(locale)}>
             {t(locale, 'interest.consent.privacy')}
           </Link>
           .
-        </Label>
+        </label>
       </div>
       <FieldError id={`${formId}-err-consent`} className={marketingFieldError}>
         {fieldErrors.consent}
@@ -339,6 +356,9 @@ export function InterestForm({ locale }: { locale: MarketingLocale }) {
       >
         {t(locale, 'interest.submit')}
       </Button>
+      <p>
+        <a href={demo}>{t(locale, 'interest.secondary_demo')}</a>
+      </p>
     </form>
   );
 }

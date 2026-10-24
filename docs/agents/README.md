@@ -64,8 +64,10 @@ Cùng prefix Persona; `display-name` ngắn, `task-title` có Issue + tóm tắt
 
 | Role ID / vai                         | Persona pool               | Ghi chú                                                                                      |
 | ------------------------------------- | -------------------------- | -------------------------------------------------------------------------------------------- |
-| `web`                                 | Higo, Enton                | FE — pick free khi song song                                                                 |
+| `web`                                 | Higo, Enton, Linh          | FE — pick free khi song song; Linh giữ danh tính theo yêu cầu user                            |
 | `backend`                             | Gonic, Colin, Remy, Monica | pick free khi song song                                                                      |
+| Root tooling local được giao rõ       | Noah                      | Không tự đổi auth business; scope do coordinator giao                                        |
+| Coordinator gốc                      | Minh                      | Danh tính điều phối; không thay routing model do user chỉ định                               |
 | `ios`                                 | Zico                       | 1 người                                                                                      |
 | `architect`                           | Dexter                     |                                                                                              |
 | `product-design`                      | Liv                        |                                                                                              |
@@ -79,6 +81,8 @@ Cùng prefix Persona; `display-name` ngắn, `task-title` có Issue + tóm tắt
 | `Leader · wave` (tuỳ chọn, plan-only) | _(không Persona roster)_   | Worker depth 1 chỉ lập kế hoạch / `ask`; coordinator gốc spawn thật — `orca-wave-leader.mdc` |
 
 **Format:** `--display-name "<Persona> · <ui-label>"` — Role ID trong Spec vẫn đầy đủ; **ui-label** ngắn trên Orca:
+
+Hồ sơ và văn phong cố định: [`company/employees.json`](../../company/employees.json). Quy trình giao việc/nhật ký có cấu trúc: [`company/README.md`](../../company/README.md). Mỗi lần start dùng `--employee <id>` trong workflow wrapper; giữ nhân viên qua các dispatch phục hồi, ghi model requested/effective thực tế. Không tạo dashboard trong phạm vi hiện tại.
 
 | Role ID                           | ui-label     |
 | --------------------------------- | ------------ |

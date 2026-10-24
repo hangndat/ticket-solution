@@ -187,8 +187,8 @@ test('production routes isolate tenant content and reject unknown pairs', async 
     assert.equal(claim.status, 200);
     const claimHtml = await claim.text();
     assert.ok(claimHtml.includes('Nhận lời mời sự kiện'));
-    assert.ok(claimHtml.includes('Chưa có mã lời mời'));
-    assert.ok(claimHtml.includes('Đăng nhập rồi quay lại nhận lời mời'));
+    assert.ok(claimHtml.includes('Mở liên kết trong email'));
+    assert.ok(claimHtml.includes('data-testid="claim-token-empty"'));
     assert.ok(!claimHtml.includes('OIDC'));
     assert.ok(!claimHtml.includes('C-I'));
     assert.ok(!claimHtml.includes('C-F'));

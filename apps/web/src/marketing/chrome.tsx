@@ -61,8 +61,8 @@ export function MarketingChrome({
           {t(locale, 'nav.brand')}
           <span aria-hidden="true">↗</span>
         </Link>
+        <LocaleSwitch locale={locale} pageKind={pageKind} onInk={onInk} />
         <nav className={marketingNav} aria-label={locale === 'en' ? 'Primary' : 'Chính'}>
-          <LocaleSwitch locale={locale} pageKind={pageKind} onInk={onInk} />
           {onSales ? (
             <>
               <span className={marketingNavLinks}>
@@ -83,7 +83,7 @@ export function MarketingChrome({
           <Button
             asChild
             variant={onInk ? 'ghostOnInk' : 'ghost'}
-            className="ml-[0.15rem] max-md:hidden"
+            className="ml-[0.15rem] shrink-0 max-md:hidden max-xl:whitespace-nowrap"
           >
             <a href={login}>{t(locale, 'nav.login')}</a>
           </Button>
@@ -91,7 +91,7 @@ export function MarketingChrome({
             <Button
               asChild
               variant="primary"
-              className="whitespace-nowrap max-md:hidden"
+              className="shrink-0 whitespace-nowrap max-md:hidden"
             >
               <Link href={`${sales}#interest`} data-testid="cta-interest-nav">
                 {t(locale, 'nav.interest')}

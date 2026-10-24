@@ -1,6 +1,4 @@
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
-import path from 'node:path';
 import { describe, it } from 'node:test';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
@@ -24,7 +22,8 @@ describe('marketing bento section', () => {
     assert.match(html, /id="features"/);
     assert.match(html, /id="bento-title"/);
     assert.equal(html.match(/data-testid="marketing-bento-item"/g)?.length, 7);
-    assert.match(html, /bento-invite\.webp/);
+    assert.match(html, /bento-invite-title/);
+    assert.doesNotMatch(html, /\.webp/);
     assert.doesNotMatch(html, /motion\/react/);
   });
 
@@ -40,14 +39,8 @@ describe('marketing bento section', () => {
     assert.doesNotMatch(html, /motion\/react/);
   });
 
-  it('bento ops image is not a duplicate of admin tile', () => {
-    const admin = fs.readFileSync(
-      path.join(process.cwd(), 'public/marketing/bento-admin.webp'),
-    );
-    const ops = fs.readFileSync(
-      path.join(process.cwd(), 'public/marketing/bento-ops.webp'),
-    );
-    assert.notEqual(admin.compare(ops), 0);
+  it('bento ops and admin tiles have distinct copy (no shared mockup image)', () => {
+    assert.notEqual(t('vi', 'bento.admin.body'), t('vi', 'bento.ops.body'));
   });
 
   it('scroll reveal stays CSS-only (no client motion island in SSR)', () => {

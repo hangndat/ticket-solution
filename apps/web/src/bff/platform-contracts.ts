@@ -197,9 +197,10 @@ export interface AccountDeletionRequestBody {
 
 export interface AccountDeletionRequestResponse {
   requestId: string;
-  state: 'AWAITING_POLICY';
+  state: 'REQUESTED';
   requestedAt: string;
-  policyStatus: 'UNRESOLVED';
+  policyStatus: 'RESOLVED';
+  anonymizeWithinDays: 30;
 }
 
 /** Upstream paths from frozen §6 plan (prefix /v1). */
