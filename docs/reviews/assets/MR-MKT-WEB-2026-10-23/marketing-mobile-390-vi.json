@@ -1,0 +1,32 @@
+{
+  "capture": "marketing-mobile-390-vi.png",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "probe": {
+    "origin": "http://127.0.0.1:57277/design/ui-uplift-2026-10/marketing/index.html",
+    "result": "{\"htmlLang\":\"vi\",\"localeViPressed\":\"true\",\"localeEnPressed\":\"false\",\"frameWidth\":350,\"interestLabels\":[\"H\u1ecd t\u00ean\",\"Email c\u00f4ng vi\u1ec7c\",\"T\u1ed5 ch\u1ee9c\",\"Vai tr\u00f2\",\"Ghi ch\u00fa (kh\u00f4ng b\u1eaft bu\u1ed9c)\",\"T\u00f4i \u0111\u1ed3ng \u00fd \u0111\u01b0\u1ee3c li\u00ean h\u1ec7 v\u1ec1 Vemoki. Xem Quy\u1ec1n ri\u00eang t\u01b0.\"],\"consentText\":\"T\u00f4i \u0111\u1ed3ng \u00fd \u0111\u01b0\u1ee3c li\u00ean h\u1ec7 v\u1ec1 Vemoki. Xem Quy\u1ec1n ri\u00eang t\u01b0.\",\"termsChecked\":null,\"menuExpanded\":\"false\"}"
+  },
+  "pngPixels": {
+    "width": 390,
+    "height": 844
+  },
+  "probeParsed": {
+    "htmlLang": "vi",
+    "localeViPressed": "true",
+    "localeEnPressed": "false",
+    "frameWidth": 350,
+    "interestLabels": [
+      "H\u1ecd t\u00ean",
+      "Email c\u00f4ng vi\u1ec7c",
+      "T\u1ed5 ch\u1ee9c",
+      "Vai tr\u00f2",
+      "Ghi ch\u00fa (kh\u00f4ng b\u1eaft bu\u1ed9c)",
+      "T\u00f4i \u0111\u1ed3ng \u00fd \u0111\u01b0\u1ee3c li\u00ean h\u1ec7 v\u1ec1 Vemoki. Xem Quy\u1ec1n ri\u00eang t\u01b0."
+    ],
+    "consentText": "T\u00f4i \u0111\u1ed3ng \u00fd \u0111\u01b0\u1ee3c li\u00ean h\u1ec7 v\u1ec1 Vemoki. Xem Quy\u1ec1n ri\u00eang t\u01b0.",
+    "termsChecked": null,
+    "menuExpanded": "false"
+  }
+}

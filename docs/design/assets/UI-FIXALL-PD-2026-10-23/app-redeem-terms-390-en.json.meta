@@ -1,0 +1,11 @@
+{
+  "id": "0ca95d14-810f-4d1a-9159-9c1e86867d4b",
+  "ok": true,
+  "result": {
+    "origin": "http://127.0.0.1:57277/design/ui-uplift-2026-10/app/index.html",
+    "result": "{\"viewport\":{\"w\":390,\"h\":844,\"dpr\":1},\"locale\":\"en\",\"frameWidth\":370}"
+  },
+  "_meta": {
+    "runtimeId": "9d821662-c628-49db-a168-99fa7b7636fc"
+  }
+}

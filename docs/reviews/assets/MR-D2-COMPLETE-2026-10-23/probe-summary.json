@@ -1,0 +1,16 @@
+{
+  "docsServer": "http://127.0.0.1:57277",
+  "probeScript": "docs/design/ui-uplift-2026-10/scripts/probe-d2.js",
+  "marketing": {
+    "viewport": { "w": 1280, "h": 900, "dpr": 1 },
+    "sectionsOk": 8,
+    "locale": "vi"
+  },
+  "appRedeemTermsEn": {
+    "viewport": { "w": 390, "h": 844, "dpr": 1 },
+    "locale": "en",
+    "termsH1": "Confirm terms",
+    "termsUnchecked": true
+  },
+  "scopeCheck": "OK: D-2 scope — no canonical BEM body stylesheet import; active CSS free of .mkt-"
+}

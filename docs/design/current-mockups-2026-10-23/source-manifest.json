@@ -1,0 +1,197 @@
+{
+  "schema": "mockup-source-manifest/v2",
+  "generatedAt": "2026-10-23",
+  "finalizedBy": "MR-R09-A11Y-MENU-CONTRAST",
+  "fixRound": "MR-R09-round2",
+  "runId": "run_2c9e147d89e6",
+  "issue": 859,
+  "baseSha": "b2faa48a1ce443c8fc6c849cb74a06a57f8b0c37",
+  "dirty": true,
+  "indexPath": "docs/design/current-mockups-2026-10-23/",
+  "note": "SHA256 reflect local working tree after MR-R09-A11Y menu contrast fix (Issue #859). dirty:true \u2014 do not attribute these hashes to baseSha commit. Prior manifest: 3870caed\u2026ab85.",
+  "runner": {
+    "command": "python3 -m http.server 57277 --bind 127.0.0.1 --directory docs",
+    "baseUrl": "http://127.0.0.1:57277",
+    "indexUrl": "/design/current-mockups-2026-10-23/index.html"
+  },
+  "tokenSoT": {
+    "path": "brand/vemoki/tokens.json",
+    "sha256": "ec8e827db5cccbf54c12e0215eacf1cc35ddeab632765830ad47d8e476806127",
+    "requirement": "R-10"
+  },
+  "canonical": [
+    {
+      "id": "A-MKT-01",
+      "surface": "marketing",
+      "role": "canonical-entry",
+      "path": "docs/design/ui-uplift-2026-10/marketing/index.html",
+      "sha256": "eefb3fb9dc1a1628003b0d7d50b40c437da584428e0c31ab268ece1abc80746e",
+      "reconciledBy": "MR-R09-A11Y-MENU-CONTRAST",
+      "relatedSha256": {
+        "docs/design/ui-uplift-2026-10/marketing/js/marketing.js": "4b682c248e9ff7029e1174ed2e0034280e6ad5112a6da2ffa1fccae31beb0054",
+        "docs/design/ui-uplift-2026-10/marketing/js/mkt-tw.js": "314edf8a48533ac5f97f4bd277d03d631cdd8cf7dba2fb4bb63d9a1d06c79075",
+        "docs/design/ui-uplift-2026-10/marketing/css/marketing-effects.css": "ce17040719bb1155cee502e0ce6ea3e11c5c6bdcfef9eb286e7756b60d35e5a5",
+        "docs/design/ui-uplift-2026-10/css/prototype-frame.css": "5aad0849fe1dce49aecd15d1b647a3ca9a95809920a8b4d14ace77dbdfc83138"
+      }
+    },
+    {
+      "id": "A-MKT-02",
+      "surface": "marketing-chrome",
+      "role": "chrome-spec",
+      "path": "docs/design/ui-framework-2026-10/prototype/header-mobile-sheet.html",
+      "sha256": "b16e54a390eba5ba5e0470a08061ee5eabef54619690ef00845361259d0b82c2",
+      "reconciledBy": "MR-D2-COMPLETE",
+      "relatedSha256": {
+        "docs/design/ui-framework-2026-10/prototype/sheet-nav.js": "c87b75ec2134d3d065274356c2cfd2a201ef351b37600f98da8449a9513bb5ec",
+        "docs/design/ui-framework-2026-10/prototype/sheet-nav-loader.mjs": "90319a4911a5891329a7e38b4252473d8227fd3217ea0ff3b6d8c0dd6b49dc12",
+        "docs/design/ui-framework-2026-10/prototype/sheet-nav-radix.mjs": "7c69738bf90aa10f45e22af77c59fa1dd75f3cd541296a2341cdbe1ad6a341e6"
+      }
+    },
+    {
+      "id": "A-APP-01",
+      "surface": "consumer-web",
+      "role": "canonical-entry",
+      "path": "docs/design/ui-uplift-2026-10/app/index.html",
+      "sha256": "bf17d18528a2dddb5bb424381187d652e87bb1e018f8436319d09741e359846c",
+      "reconciledBy": "MR-SHEET-EXCEPTION",
+      "relatedSha256": {
+        "docs/design/ui-uplift-2026-10/app/js/app-tw.js": "f921290facccfedbbdbf20561a4b3f71ba63c80bd929a9a5cb8b4f5277a5b419",
+        "docs/design/ui-uplift-2026-10/app/css/app-effects.css": "652477d468087d9fd9f311de3b1ef6ff55339de36325211aa0dfa1bcc923b833",
+        "docs/design/ui-uplift-2026-10/css/prototype-frame.css": "5aad0849fe1dce49aecd15d1b647a3ca9a95809920a8b4d14ace77dbdfc83138"
+      }
+    },
+    {
+      "id": "A-IOS-01",
+      "surface": "ios",
+      "role": "canonical-entry",
+      "path": "docs/plans/mobile-production-refactor/full-prototype.html",
+      "sha256": "f5570df3f00439601de2a6e757d08ff7a1cd2c8fdf4425f7eab89a464101d19e",
+      "reconciledBy": "MR-IOS",
+      "relatedSha256": {
+        "docs/plans/mobile-production-refactor/PD-HANDOFF.md": "3488ea32295576cd2e54b63fd36ffffa8f7c89806788b6b7d38f406134bb239a"
+      }
+    },
+    {
+      "id": "A-POR-01",
+      "surface": "portal",
+      "role": "canonical-entry",
+      "path": "docs/design/portal-audit-fix-2026-10-23/prototype/portal-full-specimen.html",
+      "sha256": "16f42847eb773922fa5d3facab5662d01eeaede6628d604190b66ac891eb73f6",
+      "reconciledBy": "MR-PORTAL",
+      "relatedSha256": {
+        "docs/design/portal-audit-fix-2026-10-23/prototype/header-specimen.html": "55c4744dc6ac4be04c4d0a5d55c5dee7bc542537729b711e06a9c5f9a5df6b34"
+      }
+    }
+  ],
+  "reference": [
+    {
+      "id": "A-REF-01",
+      "path": "docs/design/d11-prototype/index.html",
+      "sha256": "3cede4da8e271901dda6c878a575464bb162d4ed10c73c359a214894c928a493",
+      "role": "d11-flow-reference"
+    }
+  ],
+  "evidenceFrozen": [
+    {
+      "task": "MR-IDX",
+      "path": "docs/reviews/assets/MR-IDX-2026-10-23/",
+      "notes": "o13-index-superseded-banner-390 re-captured fix 2/2 (MR-R02)"
+    },
+    {
+      "task": "MR-FIX1-IDX",
+      "path": "docs/reviews/assets/MR-FIX1-IDX-2026-10-23/"
+    },
+    {
+      "task": "MR-MKT-WEB",
+      "path": "docs/reviews/assets/MR-MKT-WEB-2026-10-23/"
+    },
+    {
+      "task": "MR-FIX1-WEB",
+      "path": "docs/reviews/assets/MR-FIX1-WEB-2026-10-23/"
+    },
+    {
+      "task": "MR-D2-COMPLETE",
+      "path": "docs/reviews/assets/MR-D2-COMPLETE-2026-10-23/"
+    },
+    {
+      "task": "MR-IOS",
+      "path": "docs/reviews/assets/MR-IOS-O22-2026-10-23/"
+    },
+    {
+      "task": "MR-PORTAL",
+      "path": "docs/reviews/assets/MR-PORTAL-2026-10-23/"
+    },
+    {
+      "task": "MR-SHEET-EXCEPTION",
+      "path": "docs/reviews/assets/MR-SHEET-EXCEPTION-2026-10-23/",
+      "notes": "Issue #859 sheet-nav Radix loader fix (MR-R04)"
+    },
+    {
+      "task": "MR-R09-FIXALL-PD",
+      "path": "docs/design/assets/UI-FIXALL-PD-2026-10-23/",
+      "notes": "Chrome 320/360/390 + D-2 PNG batch; menu-contrast probes @320/390 VI/EN; hero fade settle on mobile captures (MR-R09-EVID-320)"
+    }
+  ],
+  "superseded": [
+    {
+      "id": "S-O13-HTML",
+      "glob": "docs/design/o13-platform-sales/prototype/*.html",
+      "supersededBy": "A-MKT-01",
+      "banner": true,
+      "evidence": "docs/reviews/assets/MR-IDX-2026-10-23/o13-index-superseded-banner-390.png"
+    },
+    {
+      "id": "S-WEB-LEG",
+      "path": "docs/plans/mobile-production-refactor/web-prototype.html",
+      "sha256": "d8ba1f69b83d0df6de9aa6883ee419815c644642b7f33838c69a4826dca6b7d1",
+      "supersededBy": "A-APP-01",
+      "redirectNotes": {
+        "consumer": "A-APP-01",
+        "gate": "A-IOS-01",
+        "adminPlatform": "A-POR-01"
+      },
+      "banner": true
+    },
+    {
+      "id": "S-FW-UPLIFT-HDR",
+      "note": "Inline uplift headers superseded by integrated Sheet + A-MKT-02 spec",
+      "supersededBy": "A-MKT-02"
+    },
+    {
+      "id": "S-BEM-UPLIFT-CSS",
+      "note": "Archived BEM body CSS \u2014 not canonical import after D-2",
+      "paths": [
+        "docs/design/ui-uplift-2026-10/marketing/css/archive/marketing-bem.css",
+        "docs/design/ui-uplift-2026-10/app/css/archive/app-uplift-bem.css"
+      ]
+    }
+  ],
+  "archive": [
+    "docs/design/ux-ui-revamp/**",
+    "docs/design/visual-identity-v2/**",
+    "docs/design/production-web-review/**",
+    "docs/design/PORTAL-ROADMAP.html",
+    "docs/reviews/assets/** (evidence only \u2014 not editable prototypes)"
+  ],
+  "indexArtifacts": [
+    {
+      "path": "docs/design/current-mockups-2026-10-23/index.html",
+      "sha256": "07b91e562ff8b45ccdc2c7e068c00693051a639a881444511d4eefdb26604ed7"
+    },
+    {
+      "path": "docs/design/current-mockups-2026-10-23/README.md",
+      "sha256": "f02534333c9a4b7fe5dcf151fc5b6f7b8167bcfda2b2e2156e37e7d1b809089f"
+    }
+  ],
+  "integrationMetadataRevalidation": {
+    "date": "2026-10-24",
+    "priorManifestSha256": "ee0f85838fd12d97086a4b1a073696a457256ba7a4d879fb59adc0c13dddf247",
+    "change": "Markdown hard breaks: trailing spaces replaced with backslash; visual prototype sources unchanged",
+    "paths": [
+      "docs/design/current-mockups-2026-10-23/README.md",
+      "docs/design/ui-framework-2026-10/README.md",
+      "docs/plans/mobile-production-refactor/PD-HANDOFF.md",
+      "docs/reviews/REPORT-SHEET-EXCEPTION.md"
+    ]
+  }
+}

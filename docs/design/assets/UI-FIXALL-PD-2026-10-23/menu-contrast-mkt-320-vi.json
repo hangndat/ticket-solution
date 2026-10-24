@@ -1,0 +1,81 @@
+{
+  "viewport": {
+    "w": 845,
+    "h": 973
+  },
+  "locale": "vi",
+  "frameWidth": 390,
+  "trigger": {
+    "text": "\u2630 Menu",
+    "color": "rgb(11, 18, 32)",
+    "backgroundColor": "rgb(255, 255, 255)",
+    "opacity": "1",
+    "disabled": false,
+    "ariaExpanded": "false",
+    "contrastVsEffectiveBg": 18.72,
+    "wcagAANormal": true,
+    "wcagAALarge": true
+  },
+  "ancestors": [
+    {
+      "tag": "BUTTON",
+      "id": "mkt-sheet-trigger",
+      "cls": "mkt-mobile-menu ml-auto shrink-0 min-h-[44px] items-center gap-1.5 whitespace-no",
+      "color": "rgb(11, 18, 32)",
+      "backgroundColor": "rgb(255, 255, 255)",
+      "opacity": "1",
+      "disabled": false,
+      "ariaDisabled": null
+    },
+    {
+      "tag": "NAV",
+      "id": null,
+      "cls": "mkt-nav ml-auto flex min-w-0 flex-1 flex-nowrap items-center justify-end gap-1",
+      "color": "rgb(244, 246, 248)",
+      "backgroundColor": "rgba(0, 0, 0, 0)",
+      "opacity": "1",
+      "disabled": false,
+      "ariaDisabled": null
+    },
+    {
+      "tag": "HEADER",
+      "id": null,
+      "cls": "mkt-header sticky top-0 z-20 flex min-h-[72px] min-w-0 items-center gap-3 border",
+      "color": "rgb(244, 246, 248)",
+      "backgroundColor": "rgba(11, 18, 32, 0.9)",
+      "opacity": "1",
+      "disabled": false,
+      "ariaDisabled": null
+    },
+    {
+      "tag": "DIV",
+      "id": null,
+      "cls": "mkt-body min-h-full font-sans text-ink antialiased bg-paper",
+      "color": "rgb(11, 18, 32)",
+      "backgroundColor": "rgb(244, 246, 248)",
+      "opacity": "1",
+      "disabled": false,
+      "ariaDisabled": null
+    },
+    {
+      "tag": "DIV",
+      "id": null,
+      "cls": "site",
+      "color": "rgb(11, 18, 32)",
+      "backgroundColor": "rgb(244, 246, 248)",
+      "opacity": "1",
+      "disabled": false,
+      "ariaDisabled": null
+    },
+    {
+      "tag": "DIV",
+      "id": "browser",
+      "cls": "browser mobile",
+      "color": "rgb(11, 18, 32)",
+      "backgroundColor": "rgb(255, 255, 255)",
+      "opacity": "1",
+      "disabled": false,
+      "ariaDisabled": null
+    }
+  ]
+}

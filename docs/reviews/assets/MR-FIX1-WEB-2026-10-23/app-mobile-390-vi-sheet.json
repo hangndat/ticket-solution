@@ -1,0 +1,28 @@
+{
+  "capture": "app-mobile-390-vi-sheet.png",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "live": {
+    "viewport": {
+      "w": 390,
+      "h": 844,
+      "dpr": 1
+    },
+    "locale": "vi"
+  },
+  "probe": {
+    "htmlLang": "vi",
+    "localeViPressed": null,
+    "localeEnPressed": null,
+    "innerWidth": 390,
+    "innerHeight": 844,
+    "devicePixelRatio": 1,
+    "frameWidth": 366,
+    "interestLabels": [],
+    "consentText": "",
+    "termsChecked": null,
+    "menuExpanded": "true"
+  }
+}
