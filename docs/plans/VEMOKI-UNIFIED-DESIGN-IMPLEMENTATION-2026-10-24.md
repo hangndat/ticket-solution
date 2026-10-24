@@ -1,6 +1,6 @@
 # Kế hoạch triển khai thiết kế Vemoki thống nhất — 24/10/2026
 
-**Trạng thái:** user đã duyệt thực thi ngày 24/10/2026; Task vẫn qua WIP/DoD/CI/UAT theo từng slice. **Architecture impact: Có** (kênh Gate O23, route/deep link, token adapter và các ranh giới host/tenant). **Mẫu chuẩn:** [`vemoki-unified-v1`](../design/vemoki-unified-v1/DESIGN-ACCEPTANCE.md). Thiết kế đã chốt ở mức concept; HTML/PNG không phải UI production hay bằng chứng nghiệm thu app.
+**Trạng thái:** đã duyệt và triển khai; VD-00…VD-07 code complete, VD-08 đang nghiệm thu. **Architecture impact: Có** (kênh Gate O23, route/deep link, token adapter và các ranh giới host/tenant). **Mẫu chuẩn:** [`vemoki-unified-v1`](../design/vemoki-unified-v1/DESIGN-ACCEPTANCE.md), pin từ nguồn cuối `Vemoki-Complete 2`; không dùng export `github-pr/` cũ. Thiết kế đã chốt ở mức concept; HTML/PNG không phải UI production hay bằng chứng nghiệm thu app.
 
 ## 1. Baseline và phạm vi
 
@@ -20,13 +20,13 @@
 | P1 | Portal | Shell, readiness, danh sách và Gate report theo theme Ant Design; số liệu server-backed có `asOf`/stale; `report.read` chỉ đọc, không link tới scanner web. |
 | Xuyên suốt | Hệ token và a11y | `brand/vemoki/tokens.json` là SoT; adapter theo surface, không global rebrand; tương phản, focus, keyboard, Dynamic Type/VoiceOver và reduced motion được kiểm trên app thật. |
 
-## 3. Task Spec đề xuất theo ownership
+## 3. Task Spec theo ownership
 
-Các mã `VD-*` là mã trong plan; Epic [#874](https://github.com/hangndat/ticket-solution/issues/874) theo dõi thực thi. Mỗi Task thực thi phải gắn Issue, nhân viên cố định từ `company/employees.json`, role file, cost tier/model theo catalog, branch/worktree và exact SHA. Coordinator kiểm tra Project #3/WIP trước dispatch.
+Các mã `VD-*` là mã trong plan; khi triển khai, mỗi Task được gắn Issue/Project item và nhân viên cố định từ `company/employees.json`, role file, cost tier/model theo catalog, branch/worktree và exact SHA. Coordinator kiểm tra Project #3/WIP trước dispatch.
 
 | Task | Role / cost tier / architecture | Paths và đầu ra | Phụ thuộc thực |
 | --- | --- | --- | --- |
-| **VD-00 — Baseline & nguồn mẫu** | Coordinator `Minh`, `standard`, **Có** | Chuyển phần nguồn cuối thành `docs/design/vemoki-unified-v1` có SHA; loại export `github-pr/` cũ và hai bundle trước khỏi handoff triển khai; lập ma trận màn × route × state × token × ảnh/license. Chốt trạng thái #869/#867/#766 để tránh trùng scope. | Không |
+| **VD-00 — Baseline & nguồn mẫu** | Coordinator `Minh`, `standard`, **Có** | Chuyển phần nguồn cuối của `Vemoki-Complete 2` thành artifact ổn định có SHA; loại export `github-pr/` cũ và hai bundle trước khỏi handoff triển khai; lập ma trận màn × route × state × token × ảnh/license. Chốt trạng thái #869/#867/#766 để tránh trùng scope. | Không |
 | **VD-01 — Handoff Gate migration** | `architect`, `docs/agents/roles/architect.md`, Dexter, `standard`, **Có** | Contract cho request trực tiếp `/gate`, bookmark/deep link, link Portal/marketing cũ, auth/session và rollback. Dùng O23/ADR-22; nếu ADR hiện có đủ, ghi đối chiếu thay vì tạo ADR mới. Không đổi Gate API hoặc quyền. | Không; consumer cần kết quả này trước khi đổi route/link |
 | **VD-02 — Dọn Web Gate dư** | `web`, `docs/agents/roles/web.md`, một nhân viên web cố định, `standard`, **Có** | Chỉ `apps/web`: bỏ CTA/link và copy scanner cũ; xử lý `/gate` trực tiếp theo VD-01; test guest/staff/bookmark, không còn camera/manual admission trên web. | VD-01; không tranh `apps/web` khi #869 còn worker live |
 | **VD-03 — Mapping UI và assets** | `product-design`, `docs/agents/roles/product-design.md`, Liv, `standard`, **Không** | Handoff delta giữa mẫu chốt và UI hiện hành cho marketing, attendee, iOS, Portal; một màn đại diện mỗi surface, copy VI, states, responsive, ảnh/font có quyền dùng. Bảng **giữ/sửa/bỏ** để không phá #870. | VD-00; có thể song song VD-01 |
@@ -54,4 +54,4 @@ Các mã `VD-*` là mã trong plan; Epic [#874](https://github.com/hangndat/tick
 
 ## 6. Điều kiện mở thực thi
 
-Coordinator rà WIP Project #3 và trạng thái #867/#869/#766, pin artifact mẫu bằng SHA, xác nhận Task Spec O16 cho owner `apps/portal`, rồi tạo Issue/Task theo bảng. User đã giao thực thi, nhưng từng Task chỉ được mở khi `Sẵn sàng` theo dependency/WIP; production/store vẫn cần ủy quyền riêng.
+Coordinator rà WIP Project #3 và trạng thái #867/#869/#766, pin artifact mẫu bằng SHA, xác nhận Task Spec O16 cho owner `apps/portal`, rồi tạo Issue/Task theo bảng. Quyền đã dùng chỉ gồm implementation, review, CI và merge PR; production deploy/store vẫn cần ủy quyền riêng. Kết quả và các gate còn mở được cập nhật trong `docs/reviews/VD08-VEMOKI-INTEGRATION-2026-10-25.md` và Issue #889.
