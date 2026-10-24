@@ -74,6 +74,11 @@ export const OWNER_TICKET_COPY = {
     detail:
       'Không có vé khớp đường dẫn này cho tài khoản hiện tại. Đăng xuất rồi đăng nhập đúng email chủ vé (trong thư xác nhận), hoặc kiểm tra lại liên kết.',
   },
+  forbidden: {
+    title: 'Bạn không có quyền xem vé này',
+    detail:
+      'Vé không thuộc tài khoản hiện tại hoặc tổ chức đã chặn truy cập. Đăng nhập đúng email chủ vé hoặc liên hệ ban tổ chức.',
+  },
   tenantUnresolved: {
     title: 'Không xác định được tổ chức',
     detail:

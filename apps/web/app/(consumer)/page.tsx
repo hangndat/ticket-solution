@@ -5,6 +5,7 @@ import { loginHref } from '../../src/oidc/login-href';
 import { authNoticeFromParam } from '../../src/oidc/auth-notice';
 import { loadOwnerWallet, ownedTicketCountByEventId } from '../../src/owner-ticket';
 import { staffDeniedNotice } from '../../src/nav/staff-denied-copy';
+import { ATTENDEE_COPY } from '../../src/attendee-copy';
 import { ConsumerPageShell } from '../../src/consumer-page-shell';
 import {
   attendeeAuthButtons,
@@ -74,7 +75,7 @@ export default async function Home({ searchParams }: Props) {
       <div data-testid="attendee-home">
       <CatalogHeroBand
         titleId="home-title"
-        title="Khám phá sự kiện"
+        title={ATTENDEE_COPY.browseEvents}
         intro="Tìm sự kiện và xem thông tin tham dự."
       >
         <p className="m-0 mt-3 max-w-[36rem] text-[0.95rem] text-muted">
