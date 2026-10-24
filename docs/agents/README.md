@@ -39,7 +39,7 @@ docs/agents/
 | _(gộp `dod+ux` / `dod+sec` / `dod+sec+ux`)_ | [roles/reviewer-merged.md](./roles/reviewer-merged.md)     | Checklist một file; mapping gate → file role gốc                                                                                                      | Spec ghi `reviewer-merged.md` thay vì nhiều `reviewer-*.md`                            |
 | `launch-uat`                                | [roles/launch-uat.md](./roles/launch-uat.md)               | Hành trình thật trên production cho go/no-go launch                                                                                                   | Không thay `reviewer-dod`; catalog [`PROD-LAUNCH-UAT.md`](../plans/PROD-LAUNCH-UAT.md) |
 
-Agent runtime: Codex điều phối; Composer thực thi phần ít cần suy luận; Codex worker chọn lọc cho reasoning/review theo cost-catalog. Role **≠** agent vendor **≠** Cost tier **≠** Persona — xem `orca-agent-routing-core.mdc`.
+Agent runtime: Codex điều phối; Composer thực thi phần ít cần suy luận; worker/reviewer ưu tiên Claude Sonnet 5 trước Codex ở focused/advanced/high theo cost-catalog cho reasoning/review. Role **≠** agent vendor **≠** Cost tier **≠** Persona — xem `orca-agent-routing-core.mdc`.
 
 ## Persona roster (`--display-name` + `--task-title`)
 
@@ -159,7 +159,7 @@ Coordinator dùng [review.md](templates/review.md) một lần để soạn spec
 - Ngoài phạm vi / Decision IDs: <ranh giới + quyết định áp dụng>
 - Checks / evidence bắt buộc: <lệnh hoặc bằng chứng nghiệm thu>
 - Architecture impact: Có | Không — <1 câu>
-- Cost tier: cheap | standard
+- Cost tier: cheap | standard | focused | advanced | high
 - --display-name: "<Persona> · <ui-label>"
 - --task-title: "<Persona> · <ui-label> — #<issue> <tóm tắt>"
 
@@ -178,6 +178,7 @@ Preflight **trước** `worker-start` (fresh launch; bỏ qua khi `--terminal` r
 
 ```text
 node scripts/orca-spawn-model-preflight.mjs -- \
+  --cost-tier <cheap|standard> \
   --agent cursor \
   --model <pin> \
   --display-name "<Persona> · <ui-label>"
@@ -226,8 +227,8 @@ Khối mở rộng (khi cần) — giữ tương thích:
 - File: docs/agents/roles/<id>.md
 - Đọc file role SAU AGENTS.md và rule Orca; nếu xung đột → rule dự án thắng.
 - Không mở rộng MVP / ngoài phạm vi Issue.
-- Agent: cursor (theo orca-agent-routing-core.mdc)
-- Cost tier: cheap | standard — pin --model từ docs/agents/cost-catalog.md (cấm inherit mặc định; trần standard)
+- Agent/model/effort: chọn mapping đã đăng ký cho tier trong cost-catalog; tên tier độc lập với hãng/model
+- Cost tier: cheap | standard | focused | advanced | high — pin agent/model/effort từ docs/agents/cost-catalog.md (cấm inherit mặc định)
 - Architecture impact: Có | Không — lý do + link thiết kế/ADR hiện hành
 - Nếu Có: quyết định còn mở, Task architect/handoff và consumer thực sự phải chờ
 - Orca: --display-name "<Persona> · <ui-label>" (vd. James · dod+sec)
