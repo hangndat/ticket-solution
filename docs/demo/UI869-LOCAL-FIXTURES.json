@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "kind": "local-demo-fixtures",
+  "database": "ticket_ui869_dev",
+  "apiOrigin": "http://127.0.0.1:3498",
+  "productOrigin": "http://localhost:3417",
+  "marketingOrigin": "http://marketing.localhost:3417",
+  "oidcIssuer": "http://127.0.0.1:8080/realms/ticket",
+  "seedCommand": "./scripts/dev-local-stack.sh fixtures",
+  "resetCommand": "./scripts/dev-local-stack.sh seed --reset && ./scripts/dev-local-stack.sh up",
+  "accounts": [
+    { "username": "attendee@example.com", "fixturePassword": "attendee-demo", "role": "attendee" },
+    { "username": "staff@example.com", "fixturePassword": "staff-demo", "role": "event-manager" }
+  ],
+  "scenarios": [
+    { "id": "catalog-upcoming", "route": "/", "events": ["mfest", "studio-night"] },
+    { "id": "catalog-past", "route": "/", "filter": "past", "events": ["studio-night-past"] },
+    { "id": "catalog-empty", "route": "/", "query": "NO-MATCH-UI869", "expected": "empty state with reset action" },
+    { "id": "redeem-success", "route": "/redeem", "code": "DEMO-MFEST-002", "expected": "resolve event, accept terms, issue ticket" },
+    { "id": "redeem-disabled", "route": "/redeem", "code": "DEMO-MFEST-008", "expected": "disabled code rejected" },
+    { "id": "redeem-consumed", "route": "/redeem", "code": "DEMO-STUDIO-010", "expected": "already-used code rejected or existing result returned per contract" },
+    { "id": "redeem-closed", "route": "/redeem", "code": "DEMO-PAST-001", "expected": "redemption window closed" },
+    { "id": "redeem-unknown", "route": "/redeem", "code": "DEMO-NOT-FOUND", "expected": "unknown code rejected" },
+    { "id": "wallet", "route": "/wallet", "account": "attendee@example.com", "expected": "future and past event tickets" }
+  ],
+  "privacy": "All identities, passwords, codes and events are public local fixtures; no production/user data. No tokens or cookies are recorded."
+}

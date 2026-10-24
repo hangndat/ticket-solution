@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { appendEvent, events } from './company-worklog.mjs';
 const cli=fileURLToPath(new URL('./agent-workflow-run.mjs',import.meta.url));
 function fixture(fn) {
  const dir=mkdtempSync(join(tmpdir(),'measured-worker-'));
@@ -15,17 +16,48 @@ const fs=require('node:fs'),a=process.argv.slice(2);fs.appendFileSync(process.en
 const value=flag=>a[a.indexOf(flag)+1];
 if(a[1]==='worker-start' && a.includes('--display-name') && !['new-child','new-top-level'].includes(value('--worktree'))) {console.log(JSON.stringify({ok:false,error:{code:'creation_flag_for_existing_worktree'}}));process.exit(1);}
 let result={};if(a[1]==='worker-start')result={runId:'run1',taskId:'task1',dispatchId:'ctx1',state:process.env.FIX_START||'ready',launch:{effective:process.env.FIX_EFFECTIVE_JSON?JSON.parse(process.env.FIX_EFFECTIVE_JSON):{agent:value('--agent'),model:value('--model'),effort:a.includes('--effort')?value('--effort'):null}}};
-if(a[1]==='worker-show')result={dispatch:{id:'ctx1',runId:process.env.FIX_RUN||'run1',status:process.env.FIX_STATUS||'completed'}};
+if(a[1]==='worker-show')result={dispatch:{id:'ctx1',taskId:'task1',runId:process.env.FIX_RUN||'run1',status:process.env.FIX_STATUS||'completed'}};
 if(a[1]==='worker-release')result={state:'released'};
 console.log(JSON.stringify({ok:true,result}));
 `,{mode:0o700});
  writeFileSync(telemetry,`import fs from 'node:fs';const a=process.argv.slice(2);fs.appendFileSync(process.env.FIX_LOG,JSON.stringify(a)+'\\n');if(a[0]==='collect'&&process.env.FIX_COLLECT_FAIL){console.error('collect failed');process.exit(1);}if(a[0]==='snapshot'){const p=a[a.indexOf('--out')+1];if(process.env.FIX_SNAPSHOT_FAIL){console.error('unavailable');process.exit(1);}fs.writeFileSync(p,JSON.stringify(process.env.FIX_QUOTA_JSON?JSON.parse(process.env.FIX_QUOTA_JSON):{source:'codex.app-server.account/rateLimits/read',timestamp:new Date().toISOString(),accountIdHash:'fixture',buckets:[{limitId:'codex',primary:{usedPercent:1,windowDurationMins:10080,resetsAt:Math.floor(Date.now()/1000)+3600},secondary:null}]}),{mode:0o600,flag:'wx'});}console.log(JSON.stringify({ok:true}));`);
- const run=(args,extra={})=>spawnSync(process.execPath,[cli,...args,'--dir',join(dir,'receipts')],{cwd:dir,encoding:'utf8',env:{...process.env,ORCA_CLI_COMMAND:orca,AGENT_TELEMETRY_CLI:telemetry,ORCA_METRICS_LEDGER:join(dir,'metrics.jsonl'),FIX_LOG:log,...extra}});
+ const run=(args,extra={})=>spawnSync(process.execPath,[cli,...args,'--dir',join(dir,'receipts')],{cwd:dir,encoding:'utf8',env:{...process.env,ORCA_CLI_COMMAND:orca,AGENT_TELEMETRY_CLI:telemetry,ORCA_METRICS_LEDGER:join(dir,'metrics.jsonl'),COMPANY_WORKLOG_FILE:join(dir,'work-events.jsonl'),FIX_LOG:log,...extra}});
  const calls=()=>readFileSync(log,'utf8').trim().split('\n').filter(Boolean).map(JSON.parse);
  try {fn({dir,run,calls});}finally{rmSync(dir,{recursive:true,force:true});}
 }
-const start=['start','--task','task1','--run-id','run1','--role-id','coordinator','--cost-tier','standard','--agent','cursor','--model','composer-2.5'];
+const start=['start','--task','task1','--run-id','run1','--role-id','coordinator','--cost-tier','standard','--agent','cursor','--model','composer-2.5','--employee','minh','--task-title','Minh · wave'];
 const settle=['settle','--dispatch-id','ctx1','--run-id','run1','--role-id','coordinator'];
+test('company events normalize source UTC, dedupe and reject conflicting identities',()=>fixture(({dir})=>{
+ const path=join(dir,'company.jsonl');
+ const e={employeeId:'linh',type:'checkpoint',runId:'run1',taskId:'task1',dispatchId:'ctx1',summary:'Kiểm tra card trên local.',occurredAt:'2026-10-24 08:00:00'};
+ const r=appendEvent(e,path);assert.equal(r.event.occurredAt,'2026-10-24T08:00:00.000Z');
+ assert.equal(appendEvent(e,path).recorded,false);assert.equal(events(path).length,1);
+ assert.throws(()=>appendEvent({...e,employeeId:'liv'},path),/event_identity_conflict/);
+ assert.throws(()=>appendEvent({...e,occurredAt:'invalid'},path),/invalid_event_timestamp/);
+ assert.throws(()=>appendEvent({...e,issue:'869'},path),/invalid_event_reference/);
+}));
+test('employee identity rejects role/title mismatch before launch and tracks settlement',()=>fixture(({dir,run,calls})=>{
+ const withoutIdentity=start.slice(0,-4);
+ assert.equal(run(withoutIdentity).status,1);assert.deepEqual(calls(),[]);
+ assert.equal(run([...withoutIdentity,'--employee','linh','--task-title','Linh · web']).status,1);
+ assert.deepEqual(calls(),[]);
+ assert.equal(run([...withoutIdentity,'--employee','minh','--task-title','Linh · web']).status,1);
+ assert.deepEqual(calls(),[]);
+ const r=run(start);assert.equal(r.status,0,r.stderr);
+ const wrong=run([...settle,'--employee','linh','--release']);assert.equal(wrong.status,1);
+ assert.ok(!calls().some(a=>a[1]==='worker-release'));
+ assert.equal(run([...settle,'--employee','minh','--release']).status,0);
+ const log=readFileSync(join(dir,'work-events.jsonl'),'utf8').trim().split('\n').map(JSON.parse);
+ assert.deepEqual(log.map(e=>e.type),['assigned','settled','released']);
+ assert.ok(log.every(e=>e.employeeId==='minh'));
+ assert.equal(log[0].model.effective.model,'composer-2.5');
+}));
+test('explicit recovery preserves failed dispatch identity without implicit retry',()=>fixture(({run,calls})=>{
+ const r=run([...start,'--retry-of','ctx_failed','--worktree','current']);assert.equal(r.status,0,r.stderr);
+ const launches=calls().filter(a=>a[1]==='worker-start');assert.equal(launches.length,1);
+ assert.equal(launches[0][launches[0].indexOf('--retry-of')+1],'ctx_failed');
+ assert.equal(launches[0][launches[0].indexOf('--task')+1],'task1');
+}));
 test('quota before start, private receipt and no implicit retries',()=>fixture(({run,calls})=>{
  const r=run(start);assert.equal(r.status,0,r.stderr);const j=JSON.parse(r.stdout);assert.equal(j.state,'ready');
  const c=calls();assert.equal(c[0][0],'snapshot');assert.equal(c[1][1],'worker-start');
@@ -114,8 +146,8 @@ test('Claude routes preserve requested model and effort; quota stays explicitly 
 
 test('Persona is local for existing worktrees and forwarded only for new placement',()=>fixture(({run,calls})=>{
  for(const worktree of ['current','path:/existing','new-child','new-top-level']) {
-  const r=run([...start,'--worktree',worktree,'--display-name','James · dod+sec','--task-title','James · review']);assert.equal(r.status,0,r.stderr);
-  const j=JSON.parse(r.stdout);assert.equal(JSON.parse(readFileSync(join(j.receiptDirectory,'routing.json'),'utf8')).displayName,'James · dod+sec');
+  const r=run([...start,'--worktree',worktree,'--display-name','Minh · wave']);assert.equal(r.status,0,r.stderr);
+  const j=JSON.parse(r.stdout);assert.equal(JSON.parse(readFileSync(join(j.receiptDirectory,'routing.json'),'utf8')).displayName,'Minh · wave');
   const launch=calls().filter(a=>a[1]==='worker-start').at(-1);
   assert.equal(launch.includes('--display-name'),worktree.startsWith('new-'));assert.equal(launch.includes('--task-title'),true);
  }

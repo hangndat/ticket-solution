@@ -26,6 +26,8 @@ Roadmap, Project, Issue, status, progress: **Tiếng Việt** (giữ ID/API/comm
 - Không secrets/user data thật; không mock auth production; PG = SoT business state; tenant transaction-local + RLS.
 - Cloud prod / store chỉ khi task authorize. Commit/PR/merge: `.cursor/rules/git-workflow.mdc`.
 - UAT session: Orca browser + emulator — `.cursor/rules/uat-headless.mdc` (Read nếu glob chưa khớp).
+- Sau UAT luôn tự đóng browser page/tab do agent mở; không đóng tab user, giữ server local nếu còn phục vụ review/dev.
+- Công ty agent: mỗi task gắn nhân viên cố định trong `company/employees.json`, đọc persona/văn phong của người nhận; start qua workflow wrapper với `--employee <id>`. Tracking append-only theo `company/README.md` và `company/work-events.jsonl`; không đổi nhân viên khi phục hồi phiên/đổi model, không ghi secrets hoặc suy nghĩ nội bộ. Chưa build dashboard.
 
 ## Workflow (pointers — chi tiết trong rules)
 
