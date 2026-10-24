@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Vemoki — Tài khoản (PD preview)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600&family=Sora:wght@600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --ink: #0b1220;
+      --paper: #f4f6f8;
+      --signal: #e11d48;
+      --focus: #2563eb;
+      --separator: #d8dee6;
+      --secondary: #5c6573;
+      --radius: 12px;
+      --row-min: 44px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Be Vietnam Pro", system-ui, sans-serif;
+      background: #1a1f2a;
+      color: var(--ink);
+      padding: 16px 16px 32px;
+    }
+    .banner {
+      max-width: 420px;
+      margin: 0 auto 12px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      background: #2d3544;
+      color: #e8ecf1;
+      font-size: 13px;
+      line-height: 1.45;
+      border: 1px dashed #6b7280;
+    }
+    .banner strong { color: #fbbf24; }
+    .nav-preview {
+      max-width: 420px;
+      margin: 0 auto 12px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      font-size: 13px;
+    }
+    .nav-preview a {
+      color: #93c5fd;
+      text-decoration: none;
+      padding: 6px 10px;
+      border-radius: 8px;
+      border: 1px solid #4b5563;
+      min-height: var(--row-min);
+      display: inline-flex;
+      align-items: center;
+    }
+    .nav-preview a[aria-current="page"] {
+      background: var(--focus);
+      border-color: var(--focus);
+      color: #fff;
+    }
+    .phone {
+      max-width: 390px;
+      margin: 0 auto;
+      background: var(--paper);
+      border-radius: 40px;
+      padding: 12px;
+      box-shadow: 0 16px 48px rgba(0,0,0,.4);
+    }
+    .screen {
+      border-radius: 32px;
+      overflow: hidden;
+      background: var(--paper);
+      display: none;
+      flex-direction: column;
+    }
+    .screen[data-active="true"] { display: flex; }
+    .status-bar {
+      height: 40px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      padding-bottom: 4px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .nav-large { padding: 4px 20px 4px; }
+    .nav-large h1 {
+      margin: 0;
+      font-family: Sora, sans-serif;
+      font-size: 34px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+    .scroll { padding-bottom: 12px; }
+    .section { margin-top: 20px; }
+    .section-header {
+      padding: 0 20px 6px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .group {
+      margin: 0 16px;
+      background: #fff;
+      border-radius: var(--radius);
+      border: 1px solid var(--separator);
+      overflow: hidden;
+    }
+    .row {
+      min-height: var(--row-min);
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--separator);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 2px;
+    }
+    .row:last-child { border-bottom: none; }
+    .row-link {
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+      text-decoration: none;
+      color: inherit;
+      min-height: var(--row-min);
+    }
+    .row-title { font-size: 17px; font-weight: 500; }
+    .row-sub { font-size: 15px; color: var(--secondary); line-height: 1.4; }
+    .chevron { color: var(--secondary); font-size: 18px; }
+    .btn-primary, .btn-destructive, .btn-text {
+      display: block;
+      width: calc(100% - 32px);
+      margin: 12px 16px 0;
+      padding: 14px 16px;
+      min-height: var(--row-min);
+      border-radius: var(--radius);
+      font-size: 17px;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      text-align: center;
+      border: none;
+    }
+    .btn-primary { background: var(--signal); color: #fff; }
+    .btn-destructive {
+      background: transparent;
+      color: var(--signal);
+      border: 1px solid #fecdd3;
+      margin-top: 28px;
+      margin-bottom: 8px;
+    }
+    .btn-text {
+      background: transparent;
+      color: var(--focus);
+      font-weight: 500;
+      width: auto;
+      margin: 0;
+      padding: 12px 0;
+      min-height: var(--row-min);
+      text-align: left;
+    }
+    .context-card {
+      margin: 12px 16px 0;
+      padding: 14px 16px;
+      background: #fff;
+      border-radius: var(--radius);
+      border: 1px solid var(--separator);
+    }
+    .context-card h2 {
+      margin: 0 0 6px;
+      font-family: Sora, sans-serif;
+      font-size: 17px;
+    }
+    .context-card p {
+      margin: 0 0 12px;
+      font-size: 14px;
+      color: var(--secondary);
+      line-height: 1.4;
+    }
+    .context-actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .context-actions a, .context-actions button {
+      font-family: inherit;
+      font-size: 15px;
+      min-height: var(--row-min);
+      padding: 8px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      border: none;
+      background: var(--signal);
+      color: #fff;
+      font-weight: 600;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+    }
+    .context-actions a.dismiss {
+      background: transparent;
+      color: var(--secondary);
+      border: 1px solid var(--separator);
+      font-weight: 500;
+    }
+    .detail-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      min-height: var(--row-min);
+    }
+    .detail-bar a { color: var(--focus); text-decoration: none; font-size: 17px; }
+    .tab-bar {
+      display: flex;
+      border-top: 1px solid var(--separator);
+      background: rgba(255,255,255,.95);
+      padding: 8px 0 16px;
+      margin-top: 8px;
+    }
+    .tab-bar span {
+      flex: 1;
+      text-align: center;
+      font-size: 10px;
+      color: var(--secondary);
+    }
+    .tab-bar span.on { color: var(--signal); font-weight: 600; }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+  <p class="banner">
+    <strong>PREVIEW ONLY</strong> — Mockup PD #580. Không API, không dữ liệu production (email là placeholder).
+    Điều hướng <code>href="#"</code> + <code>data-state</code>, không mạng.
+  </p>
+
+  <nav class="nav-preview" aria-label="Chọn trạng thái mockup">
+    <a href="#guest" data-state="guest" aria-current="page">Khách</a>
+    <a href="#verified" data-state="verified">Đã đăng nhập</a>
+    <a href="#push-denied" data-state="push-denied">Thông báo tắt</a>
+    <a href="#wallet-card" data-state="wallet-card">Card sau vé đầu</a>
+    <a href="#delete-detail" data-state="delete-detail">Xóa tài khoản</a>
+  </nav>
+
+  <div class="phone">
+    <!-- Guest -->
+    <div class="screen" id="guest" data-active="true" data-state-panel="guest">
+      <div class="status-bar">9:41</div>
+      <div class="nav-large"><h1>Tài khoản</h1></div>
+      <div class="scroll">
+        <div class="section">
+          <div class="section-header">Bạn</div>
+          <div class="group">
+            <div class="row">
+              <span class="row-title">Chưa đăng nhập</span>
+              <span class="row-sub">Đăng nhập để xem vé trên thiết bị này.</span>
+            </div>
+          </div>
+          <button type="button" class="btn-primary">Đăng nhập</button>
+        </div>
+        <div class="section">
+          <div class="section-header">Thông báo</div>
+          <div class="group">
+            <div class="row">
+              <span class="row-sub">Đăng nhập để bật nhắc vé và sự kiện.</span>
+            </div>
+          </div>
+        </div>
+        <div class="section">
+          <div class="section-header">Quyền riêng tư &amp; dữ liệu</div>
+          <div class="group">
+            <a class="row row-link" href="#"><span class="row-title">Chính sách quyền riêng tư</span><span class="chevron">›</span></a>
+          </div>
+        </div>
+      </div>
+      <div class="tab-bar"><span>Sự kiện</span><span>Vé của tôi</span><span class="on">Tài khoản</span></div>
+    </div>
+
+    <!-- Verified -->
+    <div class="screen" id="verified" data-state-panel="verified">
+      <div class="status-bar">9:41</div>
+      <div class="nav-large"><h1>Tài khoản</h1></div>
+      <div class="scroll">
+        <div class="section">
+          <div class="section-header">Bạn</div>
+          <div class="group">
+            <div class="row">
+              <span class="row-title">banve@example.vn</span>
+              <span class="row-sub">Tài khoản đang dùng trên máy.</span>
+            </div>
+          </div>
+        </div>
+        <div class="section">
+          <div class="section-header">Thông báo</div>
+          <div class="group">
+            <div class="row">
+              <span class="row-title">Chưa bật</span>
+              <span class="row-sub">Nhận nhắc giờ và cập nhật vé.</span>
+              <button type="button" class="btn-text">Bật thông báo</button>
+            </div>
+          </div>
+        </div>
+        <div class="section">
+          <div class="section-header">Quyền riêng tư &amp; dữ liệu</div>
+          <div class="group">
+            <a class="row row-link" href="#"><span class="row-title">Chính sách quyền riêng tư</span><span class="chevron">›</span></a>
+            <a class="row row-link" href="#delete-detail" data-state="delete-detail"><span class="row-title">Xóa tài khoản</span><span class="chevron">›</span></a>
+          </div>
+        </div>
+        <button type="button" class="btn-destructive">Đăng xuất</button>
+      </div>
+      <div class="tab-bar"><span>Sự kiện</span><span>Vé của tôi</span><span class="on">Tài khoản</span></div>
+    </div>
+
+    <!-- Push denied -->
+    <div class="screen" id="push-denied" data-state-panel="push-denied">
+      <div class="status-bar">9:41</div>
+      <div class="nav-large"><h1>Tài khoản</h1></div>
+      <div class="scroll">
+        <div class="section">
+          <div class="section-header">Bạn</div>
+          <div class="group">
+            <div class="row">
+              <span class="row-title">banve@example.vn</span>
+              <span class="row-sub">Tài khoản đang dùng trên máy.</span>
+            </div>
+          </div>
+        </div>
+        <div class="section">
+          <div class="section-header">Thông báo</div>
+          <div class="group">
+            <div class="row">
+              <span class="row-title">Đã tắt trên iPhone</span>
+              <span class="row-sub">Bạn có thể bật lại trong Cài đặt.</span>
+              <button type="button" class="btn-text">Mở Cài đặt</button>
+            </div>
+          </div>
+        </div>
+        <div class="section">
+          <div class="section-header">Quyền riêng tư &amp; dữ liệu</div>
+          <div class="group">
+            <a class="row row-link" href="#"><span class="row-title">Chính sách quyền riêng tư</span><span class="chevron">›</span></a>
+            <a class="row row-link" href="#delete-detail" data-state="delete-detail"><span class="row-title">Xóa tài khoản</span><span class="chevron">›</span></a>
+          </div>
+        </div>
+        <button type="button" class="btn-destructive">Đăng xuất</button>
+      </div>
+      <div class="tab-bar"><span>Sự kiện</span><span>Vé của tôi</span><span class="on">Tài khoản</span></div>
+    </div>
+
+    <!-- Wallet context card -->
+    <div class="screen" id="wallet-card" data-state-panel="wallet-card">
+      <div class="status-bar">9:41</div>
+      <div class="nav-large"><h1>Vé của tôi</h1></div>
+      <div class="scroll">
+        <div class="context-card" id="wallet-context-card">
+          <h2>Nhận nhắc về vé và sự kiện?</h2>
+          <p>Bật thông báo để nhắc giờ. Bạn có thể tắt trong Cài đặt iPhone.</p>
+          <div class="context-actions">
+            <button type="button">Bật thông báo</button>
+            <a href="#wallet-card" class="dismiss" data-dismiss-card>Bỏ qua</a>
+          </div>
+        </div>
+        <div class="section">
+          <div class="group">
+            <div class="row"><span class="row-title">Vé mẫu — Sự kiện demo</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="tab-bar"><span>Sự kiện</span><span class="on">Vé của tôi</span><span>Tài khoản</span></div>
+    </div>
+
+    <!-- Delete detail -->
+    <div class="screen" id="delete-detail" data-state-panel="delete-detail">
+      <div class="detail-bar">
+        <a href="#verified" data-state="verified">‹ Tài khoản</a>
+      </div>
+      <div class="nav-large"><h1>Xóa tài khoản</h1></div>
+      <div class="scroll" style="padding: 0 20px 24px">
+        <p class="row-sub" style="margin: 0 0 16px">
+          Yêu cầu được ghi nhận trên máy chủ. Đăng xuất là thao tác riêng và không thay cho yêu cầu xóa.
+        </p>
+        <button type="button" class="btn-destructive" style="width:100%;margin:0">Gửi yêu cầu xóa</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const screens = document.querySelectorAll('.screen');
+      const navLinks = document.querySelectorAll('.nav-preview a[data-state]');
+
+      function showState(name) {
+        screens.forEach((s) => {
+          const on = s.dataset.statePanel === name;
+          s.dataset.active = on ? 'true' : 'false';
+        });
+        navLinks.forEach((a) => {
+          a.setAttribute('aria-current', a.dataset.state === name ? 'page' : 'false');
+        });
+        if (location.hash !== '#' + name) {
+          history.replaceState(null, '', '#' + name);
+        }
+      }
+
+      function fromHash() {
+        const id = (location.hash || '#guest').slice(1);
+        const valid = ['guest', 'verified', 'push-denied', 'wallet-card', 'delete-detail'];
+        showState(valid.includes(id) ? id : 'guest');
+      }
+
+      navLinks.forEach((a) => {
+        a.addEventListener('click', (e) => {
+          e.preventDefault();
+          showState(a.dataset.state);
+        });
+      });
+
+      document.querySelectorAll('[data-state]').forEach((el) => {
+        if (el.closest('.nav-preview')) return;
+        el.addEventListener('click', (e) => {
+          const st = el.getAttribute('data-state');
+          if (!st) return;
+          if (el.tagName === 'A') e.preventDefault();
+          showState(st);
+        });
+      });
+
+      document.querySelector('[data-dismiss-card]')?.addEventListener('click', (e) => {
+        e.preventDefault();
+        document.getElementById('wallet-context-card')?.classList.add('hidden');
+      });
+
+      window.addEventListener('hashchange', fromHash);
+      fromHash();
+    })();
+  </script>
+</body>
+</html>
