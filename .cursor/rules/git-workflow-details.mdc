@@ -1,0 +1,68 @@
+---
+description: GitHub Flow for commits — feature branch, conventional commits, PR, exact-SHA DoD evidence
+alwaysApply: false
+---
+
+# Git workflow (commit & integrate)
+
+Use **GitHub Flow**. Integration branch is `main`. Do not land feature work as drive-by commits on `main`.
+
+## Phạm vi ủy quyền
+
+- Task yêu cầu triển khai đến PR/CI hoặc giao Epic end-to-end mặc định cho phép commit, push feature branch và mở PR trong scope đó. Giao Epic end-to-end hoặc yêu cầu integration/merge cũng cho phép coordinator merge sau đủ DoD + CI.
+- Yêu cầu chỉ sửa file local, lập kế hoạch hoặc review không mặc định cho phép commit/push/PR/merge. Tôn trọng mọi giới hạn cụ thể trong task; không hỏi lại quyền đã có.
+- Tạo cloud resources, deploy production và submit store luôn cần ủy quyền riêng. Status `Sẵn sàng` không tự cấp quyền thực thi task ngoài Epic/Run đã giao.
+
+## Branch
+
+1. Start from the coordinator’s **base / integration commit** (usually latest `main`), not an unrelated dirty tree.
+2. Branch name: `<github-user>/<dot>-<scope>-<slug>`\
+   Examples: `hangndat/d1-web-clerk`, `hangndat/d1-backend-membership`, `hangndat/d2-ios-wallet`.
+3. One Issue (or one clear ownership slice) per branch when practical. No mixing BE+web+iOS on one branch.
+4. Workers stay on their task branch; do not push/merge to `main` unless the task explicitly authorizes integration.
+
+## Commit
+
+1. Commit only within the authorization above, when asked by the user/coordinator/task spec, or when the authorized task DoD requires a commit SHA for handoff. Otherwise leave a clean report of uncommitted work.
+2. Conventional Commits, Vietnamese or English OK for subject; prefer short why-focused subjects matching repo style:
+
+   ```text
+   feat(api): add membership deny-by-default guard
+   fix(mobile): isolate identity cache by user
+   docs(agents): sync GitHub Project status rules
+   ```
+
+3. Nội dung commit/PR nhiều dòng: ghi vào file, dùng `git commit -F <file>` / `gh pr create --body-file <file>`; giữ newline thật. Never `--no-verify` / force-skip hooks unless the user explicitly orders it.
+4. This repo is **not** Seatincorp S10: if the local Jira commit hook blocks, use `JIRA_COMMIT_SKIP=1` for the commit (do **not** invent fake `S10-####` keys).
+5. Never commit secrets, `.env`, credentials, or real user data. Do not `git add` unrelated untracked noise (local `mcp.json`, etc.) unless intended.
+6. No `commit --amend` / force-push unless the user explicitly requests and safety conditions in the agent commit protocol are met. Preserve commits; rebase/fix via owner, don’t reset away work.
+
+## Pull request & merge
+
+1. Push the feature branch (`-u` when new) only within the authorization above, when the task needs remote CI / review — not “publish production”, but required for DoD when CI must run on GitHub.
+2. Open PR with `gh pr create` into `main`. Title/body user-facing bits in **Vietnamese**; keep Issue refs, commands, SHAs intact. Link `Fixes #N` / `Closes #N` when that Issue is the DoD unit. Dùng template `.github/PULL_REQUEST_TEMPLATE.md` (ghi SHA tip branch).
+3. After PR is up: Project Status → `Chờ duyệt`; coordinator gốc spawn DoD reviewer theo `orca-agent-routing-coordinator.mdc` (see `github-project-tracking.mdc` + `orca-agent-routing-core.mdc`). Spec reviewer phải kèm **exact SHA** đang duyệt.
+4. **Coordinator**, when authorized for integration, merges after review pass + CI green (incl. database-isolation when relevant). Workers do not self-merge unless the task explicitly says so.
+5. After merge: Project → `Hoàn thành` when full DoD is met; delete remote feature branch if appropriate; report **merge commit SHA** (exact).
+
+### Evidence trên PR / Issue
+
+- Comment nghiệm thu hoặc `docs/reviews/*` phải cite **exact SHA** đã review, reviewer/session, scope, checks, findings/limitations (xem `github-project-tracking.mdc`).
+- Commit mới sau DoD → **revalidation** theo diff trên SHA mới; không “PASS kế thừa”. Theo [orca-review-convergence.mdc](./orca-review-convergence.mdc), ưu tiên comment gắn SHA; commit chỉ chứa báo cáo được xác minh bằng comment trên tip mới, không commit cập nhật SHA lặp.
+- **Thiếu GitHub Review / Approve trên UI không chứng minh thiếu Orca DoD.** Ghi rõ nếu DoD chạy ngoài GitHub (Orca worker) và link/artifact + SHA.
+
+### WIP trước khi mở PR feature mới
+
+Nếu hàng đợi duyệt đầy (ngưỡng trong `github-project-tracking.mdc`): ưu tiên đóng / sửa / merge PR đang mở cùng slice trước khi mở thêm PR feature. PR **fix review** và PR **docs/process** nhỏ vẫn được ưu tiên.
+
+## Anti-patterns
+
+```text
+❌ git commit on main for feature/fix work
+❌ One PR spanning apps/api + apps/web + apps/mobile
+❌ Force-push main / destructive reset to “clean” conflicts
+❌ Mark Hoàn thành with only local commits and no PR/CI when DoD requires integration
+❌ DoD “PASS” without exact commit SHA / without independent reviewer theo routing rule
+❌ Treat missing GitHub approve as “no review happened” when Orca DoD artifact exists
+✅ branch → commit(s) → push → PR → independent review (exact SHA) → CI → coordinator merge
+```

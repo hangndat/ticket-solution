@@ -10,6 +10,8 @@ Task review: coordinator dùng [review.md](review.md) để soạn spec ngắn �
 - Kết quả: <hành vi/đầu ra cụ thể, 1–2 câu>
 - Owner / paths được sửa: <một ownership slice>
 - Ngoài phạm vi: <paths, deploy/store, contract không được đổi>
+- Checkout: <đường dẫn tuyệt đối worktree; xác minh bằng git rev-parse --show-toplevel>
+- Phạm vi tìm/đọc ban đầu: <thư mục slice trong checkout; mở rộng khi contract/impact cần>
 - Base SHA: <full SHA>; review/revalidate: <exact head SHA>
 - Architecture impact: Có | Không — <lý do / ADR>
 
