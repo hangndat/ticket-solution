@@ -11,7 +11,7 @@ import {
   accountSectionTitle,
   accountSettingsGroup,
   accountSettingsNotice,
-} from '../../src/account/account-flow-surface';
+} from '../../../src/account/account-flow-surface';
 import { AccountPanel } from './account-panel';
 import { AccountShell } from './account-shell';
 import { SessionPanel } from './session-panel';

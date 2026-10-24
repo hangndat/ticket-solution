@@ -19,7 +19,7 @@ export const accountPageTitle =
   'm-6 mb-0 mt-6 text-[clamp(1.75rem,4vw,2.35rem)] leading-[1.15] tracking-[-0.02em]';
 
 export const accountPageLead =
-  'm-0 mt-3 max-w-[40rem] leading-[1.55] text-ink-muted';
+  'm-0 mt-3 max-w-[40rem] leading-[1.55] text-muted';
 
 export const accountCols = cn(
   'mt-5 grid items-start gap-5',
@@ -57,7 +57,7 @@ export const accountRowLink = cn(
 );
 
 export const accountRowSub =
-  'mt-[5px] block text-[0.88rem] font-normal leading-[1.5] text-ink-muted';
+  'mt-[5px] block text-[0.88rem] font-normal leading-[1.5] text-muted';
 
 export const accountRowChevron = 'shrink-0 text-muted';
 
@@ -92,7 +92,7 @@ export const accountSessionPanel = cn(
   '[&_h2]:mb-2 [&_h2]:text-[clamp(1.35rem,2.8vw,1.85rem)]',
 );
 
-export const accountSessionEmail = 'account-session-email m-0 mb-0 text-[1.05rem] text-ink-muted';
+export const accountSessionEmail = 'account-session-email m-0 mb-0 text-[1.05rem] text-muted';
 
 export const accountSessionActions = cn('account-session-actions', authButtonsRow);
 
@@ -105,7 +105,7 @@ export const accountPrivacyProse = cn(
 );
 
 export const accountPrivacyUpdated =
-  'text-[0.92rem] text-ink-muted';
+  'text-[0.92rem] text-muted';
 
 export const accountDeletionFormRoot = redeemDevFormRoot;
 

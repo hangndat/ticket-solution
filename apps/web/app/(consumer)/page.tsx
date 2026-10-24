@@ -1,23 +1,23 @@
 import Link from 'next/link';
 import type { PublishedEventSummary } from '@ticket/contracts';
 import { Button, CatalogHeroBand } from '@ticket/ui';
-import { loginHref } from '../src/oidc/login-href';
-import { authNoticeFromParam } from '../src/oidc/auth-notice';
-import { loadOwnerWallet, ownedTicketCountByEventId } from '../src/owner-ticket';
-import { staffDeniedNotice } from '../src/nav/staff-denied-copy';
-import { SiteNav } from '../src/site-chrome';
+import { loginHref } from '../../src/oidc/login-href';
+import { authNoticeFromParam } from '../../src/oidc/auth-notice';
+import { loadOwnerWallet, ownedTicketCountByEventId } from '../../src/owner-ticket';
+import { staffDeniedNotice } from '../../src/nav/staff-denied-copy';
+import { ConsumerPageShell } from '../../src/consumer-page-shell';
 import {
   attendeeAuthButtons,
   attendeeHomeMain,
   attendeeNoticeError,
-} from '../src/attendee-surface';
+} from '../../src/attendee-surface';
 import {
   PUBLIC_EVENT_COPY,
   homeTenantSlugs,
   loadPublishedEventList,
-} from '../src/published';
-import { SurfaceState } from '../src/ui/surface-state';
-import { HomeCatalogGrid } from '../src/ui/event-media';
+} from '../../src/published';
+import { SurfaceState } from '../../src/ui/surface-state';
+import { HomeCatalogGrid } from '../../src/ui/event-media';
 
 /** Soft-redirect landing notices from staff routes (O02) + auth stub. */
 export const dynamic = 'force-dynamic';
@@ -68,12 +68,10 @@ export default async function Home({ searchParams }: Props) {
   });
 
   return (
-    <main
-      id="main"
-      className={attendeeHomeMain}
-      data-testid="attendee-home"
+    <ConsumerPageShell
+      mainClassName={attendeeHomeMain}
     >
-      <SiteNav />
+      <div data-testid="attendee-home">
       <CatalogHeroBand
         eyebrow="Vemoki · Sự kiện & vé"
         titleId="home-title"
@@ -168,6 +166,7 @@ export default async function Home({ searchParams }: Props) {
       {catalog.status === 'ok' ? (
         <HomeCatalogGrid items={catalog.items} ownedByEventId={ownedByEventId} />
       ) : null}
-    </main>
+      </div>
+    </ConsumerPageShell>
   );
 }

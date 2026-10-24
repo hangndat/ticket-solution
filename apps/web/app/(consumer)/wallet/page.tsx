@@ -1,29 +1,29 @@
 import type { Metadata } from 'next';
 import { Button } from '@ticket/ui';
 import Link from 'next/link';
-import { isUuid } from '../../src/bff/ids';
-import { loginHref } from '../../src/oidc/login-href';
-import { readRefreshToken } from '../../src/oidc/cookies';
+import { isUuid } from '../../../src/bff/ids';
+import { loginHref } from '../../../src/oidc/login-href';
+import { readRefreshToken } from '../../../src/oidc/cookies';
 import {
   redirectOwnerDiscovery401,
   renewOwnerSessionIfPossible,
-} from '../../src/oidc/owner-session-guard';
+} from '../../../src/oidc/owner-session-guard';
 import {
   attendeeWalletGrid,
   attendeeWalletHeading,
   attendeeWalletHeadingCta,
   attendeeWalletIntro,
   attendeeWalletPage,
-} from '../../src/attendee-detail-surface';
-import { attendeeAuthButtons } from '../../src/attendee-surface';
-import { loadOwnerWallet, WALLET_COPY } from '../../src/owner-ticket';
+} from '../../../src/attendee-detail-surface';
+import { attendeeAuthButtons } from '../../../src/attendee-surface';
+import { loadOwnerWallet, WALLET_COPY } from '../../../src/owner-ticket';
 import {
   buildWalletEventFilters,
   WalletEventFilters,
-} from '../../src/owner-ticket/wallet-event-filters';
-import { WalletTicketCard } from '../../src/owner-ticket/wallet-ticket-card';
-import { SiteNav } from '../../src/site-chrome';
-import { SurfaceState } from '../../src/ui/surface-state';
+} from '../../../src/owner-ticket/wallet-event-filters';
+import { WalletTicketCard } from '../../../src/owner-ticket/wallet-ticket-card';
+import { ConsumerPageShell } from '../../../src/consumer-page-shell';
+import { SurfaceState } from '../../../src/ui/surface-state';
 
 export const dynamic = 'force-dynamic';
 
@@ -51,12 +51,10 @@ export default async function WalletPage({ searchParams }: Props) {
       await redirectOwnerDiscovery401('/wallet');
     }
     return (
-      <main
-        id="main"
-        className={attendeeWalletPage}
-        data-testid="wallet-need-login"
+      <ConsumerPageShell
+        mainClassName={attendeeWalletPage}
+        mainTestId="wallet-need-login"
       >
-        <SiteNav />
         <header className={attendeeWalletHeading}>
           <h1>{WALLET_COPY.title}</h1>
           <p className={attendeeWalletIntro}>{WALLET_COPY.intro}</p>
@@ -77,18 +75,16 @@ export default async function WalletPage({ searchParams }: Props) {
             </div>
           }
         />
-      </main>
+      </ConsumerPageShell>
     );
   }
 
   if (result.status === 'unreachable') {
     return (
-      <main
-        id="main"
-        className={attendeeWalletPage}
-        data-testid="wallet-unreachable"
+      <ConsumerPageShell
+        mainClassName={attendeeWalletPage}
+        mainTestId="wallet-unreachable"
       >
-        <SiteNav />
         <header className={attendeeWalletHeading}>
           <h1>{WALLET_COPY.title}</h1>
         </header>
@@ -103,18 +99,16 @@ export default async function WalletPage({ searchParams }: Props) {
             </Button>
           }
         />
-      </main>
+      </ConsumerPageShell>
     );
   }
 
   if (result.status === 'invalid') {
     return (
-      <main
-        id="main"
-        className={attendeeWalletPage}
-        data-testid="wallet-invalid"
+      <ConsumerPageShell
+        mainClassName={attendeeWalletPage}
+        mainTestId="wallet-invalid"
       >
-        <SiteNav />
         <header className={attendeeWalletHeading}>
           <h1>{WALLET_COPY.title}</h1>
         </header>
@@ -129,7 +123,7 @@ export default async function WalletPage({ searchParams }: Props) {
             </Button>
           }
         />
-      </main>
+      </ConsumerPageShell>
     );
   }
 
@@ -140,12 +134,10 @@ export default async function WalletPage({ searchParams }: Props) {
     : tickets;
 
   return (
-    <main
-      id="main"
-      className={attendeeWalletPage}
-      data-testid="wallet-ready"
+    <ConsumerPageShell
+      mainClassName={attendeeWalletPage}
+      mainTestId="wallet-ready"
     >
-      <SiteNav />
       <header className={attendeeWalletHeading}>
         <div>
           <h1>{WALLET_COPY.title}</h1>
@@ -202,6 +194,6 @@ export default async function WalletPage({ searchParams }: Props) {
           )}
         </>
       )}
-    </main>
+    </ConsumerPageShell>
   );
 }

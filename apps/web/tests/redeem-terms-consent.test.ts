@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import test from 'node:test';
 import { parsePublishedRedeemSchema } from '../src/redeem/published-schema';
 
-const redeemDir = join(process.cwd(), 'app/redeem');
+const redeemDir = join(process.cwd(), 'app/(consumer)/redeem');
 const redeemSrc = join(process.cwd(), 'src/redeem');
 
 test('redeem form wires published terms consent UI', () => {

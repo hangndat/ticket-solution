@@ -9,17 +9,22 @@ import { LocaleSwitch } from '../src/marketing/locale-switch';
 
 const WEB_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
-test('attendee root layout exposes footer landmark for sticky-footer regression', () => {
-  const layout = readFileSync(join(WEB_ROOT, 'app/layout.tsx'), 'utf8');
-  assert.match(layout, /attendeeBody/);
+test('consumer layout exposes footer landmark for sticky-footer regression', () => {
+  const layout = readFileSync(
+    join(WEB_ROOT, 'app/(consumer)/layout.tsx'),
+    'utf8',
+  );
   assert.match(layout, /data-testid="site-footer"/);
+  const root = readFileSync(join(WEB_ROOT, 'app/layout.tsx'), 'utf8');
+  assert.match(root, /attendeeBody/);
+  assert.doesNotMatch(root, /data-testid="site-footer"/);
   const removedUpliftStyles = join(WEB_ROOT, 'app', `attendee-uplift.${'css'}`);
   assert.equal(
     existsSync(removedUpliftStyles),
     false,
     'attendee uplift stylesheet must not be present (removed; styles in Tailwind/@theme)',
   );
-  assert.doesNotMatch(layout, /attendee-uplift\.css/);
+  assert.doesNotMatch(root, /attendee-uplift\.css/);
 });
 
 test('marketing LocaleSwitch marks active locale with aria-current (SSR)', () => {
@@ -41,6 +46,22 @@ test('marketing chrome exposes surface marker for horizontal-overflow regression
 });
 
 test('attendee home exposes surface marker for layout regression', () => {
-  const page = readFileSync(join(WEB_ROOT, 'app/page.tsx'), 'utf8');
+  const page = readFileSync(join(WEB_ROOT, 'app/(consumer)/page.tsx'), 'utf8');
   assert.match(page, /data-testid="attendee-home"/);
+});
+
+test('marketing layout does not hide footer via runtime CSS hack', () => {
+  const layout = readFileSync(join(WEB_ROOT, 'app/marketing/layout.tsx'), 'utf8');
+  assert.doesNotMatch(layout, /display:\s*none/);
+  assert.doesNotMatch(layout, /marketing-surface/);
+});
+
+test('consumer page shell keeps SiteNav outside padded main', () => {
+  const shell = readFileSync(
+    join(WEB_ROOT, 'src/consumer-page-shell.tsx'),
+    'utf8',
+  );
+  assert.match(shell, /SiteNav/);
+  assert.match(shell, /id="main"/);
+  assert.match(shell, /SiteNav trailing={navTrailing}/);
 });

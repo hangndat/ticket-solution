@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
-import Link from 'next/link';
 import localFont from 'next/font/local';
 import {
   ThemeProvider,
@@ -9,14 +8,7 @@ import {
 } from '../src/branding';
 import { configuredPublicOrigin } from '../src/oidc/public-origin';
 import { DemoAttendeeStrip } from '../src/attendee-uplift/demo-attendee-strip';
-import {
-  attendeeBody,
-  attendeeFooter,
-  attendeeFooterLinks,
-  attendeeFooterTagline,
-  attendeeSkip,
-} from '../src/attendee-surface';
-import { FooterBrand } from '../src/site-chrome';
+import { attendeeBody, attendeeSkip } from '../src/attendee-surface';
 import './globals.css';
 
 /** Prod default so OG/Twitter never fall back to request-host localhost. */
@@ -96,15 +88,6 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           </a>
           <DemoAttendeeStrip />
           {children}
-          <footer className={attendeeFooter} data-testid="site-footer">
-            <FooterBrand />
-            <span className={attendeeFooterTagline}>Sự kiện & vé</span>
-            <nav className={attendeeFooterLinks} aria-label="Liên kết chân trang">
-              <Link href="/">Khám phá</Link>
-              <Link href="/redeem">Đổi mã</Link>
-              <Link href="/account">Tài khoản</Link>
-            </nav>
-          </footer>
         </ThemeProvider>
       </body>
     </html>

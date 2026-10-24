@@ -8,14 +8,14 @@ import {
   accountSessionEyebrow,
   accountSessionPanel,
   accountSessionActions,
-} from '../../src/account/account-flow-surface';
-import { clearGuestClaimIntent } from '../../src/guest/claim-intent';
-import { loginHref } from '../../src/oidc/login-href';
+} from '../../../src/account/account-flow-surface';
+import { clearGuestClaimIntent } from '../../../src/guest/claim-intent';
+import { loginHref } from '../../../src/oidc/login-href';
 import {
   summarizeBffMeSession,
   type SessionSummary,
-} from '../../src/oidc/session-summary';
-import { SurfaceState } from '../../src/ui/surface-state';
+} from '../../../src/oidc/session-summary';
+import { SurfaceState } from '../../../src/ui/surface-state';
 
 const ACCOUNT_LOGIN = loginHref('/account');
 

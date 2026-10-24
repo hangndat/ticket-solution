@@ -2,18 +2,18 @@ import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import { Button } from '@ticket/ui';
 import Link from 'next/link';
-import { isUuid } from '../../../../../src/bff/ids';
-import { isTenantSlug } from '../../../../../src/branding';
-import { hasDemoMediaForEventId } from '../../../../../src/demo-media';
-import { loginHref } from '../../../../../src/oidc/login-href';
+import { isUuid } from '../../../../../../src/bff/ids';
+import { isTenantSlug } from '../../../../../../src/branding';
+import { hasDemoMediaForEventId } from '../../../../../../src/demo-media';
+import { loginHref } from '../../../../../../src/oidc/login-href';
 import {
   loadOwnerTicket,
   OWNER_TICKET_COPY,
   ticketStateLabel,
   ticketStateTagClass,
-} from '../../../../../src/owner-ticket';
-import { buildDisplayQrPayload } from '../../../../../src/owner-ticket/display-payload';
-import { TicketQr } from '../../../../../src/owner-ticket/ticket-qr';
+} from '../../../../../../src/owner-ticket';
+import { buildDisplayQrPayload } from '../../../../../../src/owner-ticket/display-payload';
+import { TicketQr } from '../../../../../../src/owner-ticket/ticket-qr';
 import {
   attendeeTicketBackLink,
   attendeeTicketBread,
@@ -28,10 +28,10 @@ import {
   attendeeTicketQrCaption,
   attendeeTicketQrPanel,
   attendeeTicketTitle,
-} from '../../../../../src/attendee-detail-surface';
-import { attendeeAuthButtons } from '../../../../../src/attendee-surface';
-import { SiteNav } from '../../../../../src/site-chrome';
-import { SurfaceState } from '../../../../../src/ui/surface-state';
+} from '../../../../../../src/attendee-detail-surface';
+import { attendeeAuthButtons } from '../../../../../../src/attendee-surface';
+import { ConsumerPageShell } from '../../../../../../src/consumer-page-shell';
+import { SurfaceState } from '../../../../../../src/ui/surface-state';
 
 type Props = {
   params: Promise<{ tenantSlug: string; ticketId: string }>;
@@ -65,11 +65,13 @@ function TicketStateShell({
   children: ReactNode;
 }) {
   return (
-    <main id="main" className={attendeeTicketMain} data-testid={testId}>
-      <SiteNav />
+    <ConsumerPageShell
+      mainClassName={attendeeTicketMain}
+      mainTestId={testId}
+    >
       <h1 className={attendeeTicketTitle}>{OWNER_TICKET_COPY.title}</h1>
       {children}
-    </main>
+    </ConsumerPageShell>
   );
 }
 
@@ -201,12 +203,10 @@ export default async function OwnerTicketPage({ params, searchParams }: Props) {
     ticket.state === 'CHECKED_IN';
 
   return (
-    <main
-      id="main"
-      className={attendeeTicketMain}
-      data-testid="owner-ticket-ready"
+    <ConsumerPageShell
+      mainClassName={attendeeTicketMain}
+      mainTestId="owner-ticket-ready"
     >
-      <SiteNav />
       <p className={attendeeTicketBread}>
         <Link className={attendeeTicketBackLink} href="/wallet">
           ‹ Vé của tôi
@@ -289,6 +289,6 @@ export default async function OwnerTicketPage({ params, searchParams }: Props) {
         {' · '}
         <Link href="/redeem">Đổi mã lấy vé</Link>
       </p>
-    </main>
+    </ConsumerPageShell>
   );
 }
