@@ -15,11 +15,13 @@ import { bffEventAction } from '../../../../../../src/prep/bff-urls';
 import { useEventAccess } from '../../../../../../src/prep/use-event-access';
 import { SurfaceState } from '../../../../../../src/components/surface-state';
 import { usePortalLocale } from '../../../../../../src/i18n';
+import { useCompactChrome } from '../../../../../../src/hooks/use-compact-chrome';
 
 type CatalogItem = { id: string; label: string };
 
 export default function EventGuestsPage() {
   const { t } = usePortalLocale();
+  const compactChrome = useCompactChrome();
   const params = useParams<{ tenantId: string; eventId: string }>();
   const { tenantId, eventId } = params;
   const access = useEventAccess(tenantId, eventId);
@@ -31,7 +33,7 @@ export default function EventGuestsPage() {
   const [activeTab, setActiveTab] = useState('import');
 
   useEffect(() => {
-    queueMicrotask(() => {
+    const syncTabFromHash = () => {
       const hash = window.location.hash.replace('#', '');
       if (
         hash === 'pending' ||
@@ -41,7 +43,10 @@ export default function EventGuestsPage() {
       ) {
         setActiveTab(hash);
       }
-    });
+    };
+    queueMicrotask(syncTabFromHash);
+    window.addEventListener('hashchange', syncTabFromHash);
+    return () => window.removeEventListener('hashchange', syncTabFromHash);
   }, []);
 
   useEffect(() => {
@@ -136,17 +141,37 @@ export default function EventGuestsPage() {
   const catalogSources = sources;
   const catalogTypes = types;
 
-  const tabItems: { key: string; label: string; children: ReactNode }[] = [];
+  const tabLabel = (fullKey: Parameters<typeof t>[0], shortKey: Parameters<typeof t>[0]) => {
+    const full = t(fullKey);
+    const short = t(shortKey);
+    const text = compactChrome ? short : full;
+    return (
+      <span title={full} aria-label={full}>
+        {text}
+      </span>
+    );
+  };
+
+  const tabItems: { key: string; label: ReactNode; children: ReactNode }[] = [];
   if (canImport) {
     tabItems.push({
       key: 'import',
-      label: t('ops.import.panelTitle'),
+      label: tabLabel('ops.import.panelTitle', 'ops.import.tabLabel'),
       children: (
         <Space direction="vertical" size="middle" style={{ width: '100%' }}>
-          <Space wrap role="group" aria-label={t('ops.import.catalogFiltersAria')}>
+          <Space
+            wrap
+            className="portal-guests-filters"
+            role="group"
+            aria-label={t('ops.import.catalogFiltersAria')}
+            data-testid="import-catalog-filters"
+          >
             <span>{t('nav.event.sources')}</span>
             <Select
-              style={{ minWidth: 220 }}
+              style={{
+                minWidth: compactChrome ? undefined : 220,
+                width: compactChrome ? '100%' : undefined,
+              }}
               value={sourceId || undefined}
               placeholder={t('ops.import.chooseSource')}
               options={sources.map((s) => ({ value: s.id, label: s.label }))}
@@ -155,7 +180,7 @@ export default function EventGuestsPage() {
             />
             <span>{t('nav.event.types')}</span>
             <Select
-              style={{ minWidth: 220 }}
+              style={{ minWidth: compactChrome ? undefined : 220, width: compactChrome ? '100%' : undefined }}
               value={ticketTypeId || undefined}
               placeholder={t('ops.import.chooseTicketType')}
               options={types.map((t) => ({ value: t.id, label: t.label }))}
@@ -176,7 +201,7 @@ export default function EventGuestsPage() {
   if (canApprove) {
     tabItems.push({
       key: 'pending',
-      label: t('guests.pendingTitle'),
+      label: tabLabel('guests.pendingTitle', 'guests.pendingTabLabel'),
       children: (
         <PendingPanel
           tenantId={tenantId}
@@ -191,7 +216,7 @@ export default function EventGuestsPage() {
   if (canNotify) {
     tabItems.push({
       key: 'notifications',
-      label: t('guests.h_1avy3de'),
+      label: tabLabel('guests.h_1avy3de', 'guests.notificationsTabLabel'),
       children: (
         <NotificationsOpsPanel
           tenantId={tenantId}
@@ -204,7 +229,7 @@ export default function EventGuestsPage() {
   if (canExport) {
     tabItems.push({
       key: 'export',
-      label: t('ops.export.panelInfo'),
+      label: tabLabel('ops.export.panelInfo', 'ops.export.tabLabel'),
       children: (
         <ExportPanel
           tenantId={tenantId}
@@ -217,17 +242,24 @@ export default function EventGuestsPage() {
   }
 
   return (
-    <PortalPage title={t('nav.event.guests')} subTitle={t('guests.h_1tkjxlx')}>
+    <PortalPage
+      title={t(compactChrome ? 'nav.event.guestsCompact' : 'nav.event.guests')}
+      subTitle={compactChrome ? undefined : t('guests.h_1tkjxlx')}
+    >
       {catalogError ? (
         <Alert type="warning" showIcon message={catalogError} />
       ) : null}
       <ProCard
+        className="portal-guests-tabs"
         tabs={{
           activeKey:
             tabItems.some((tab) => tab.key === activeTab)
               ? activeTab
               : tabItems[0]?.key,
-          onChange: setActiveTab,
+          onChange: (key) => {
+            setActiveTab(key);
+            window.location.hash = key;
+          },
           items: tabItems,
         }}
       />
