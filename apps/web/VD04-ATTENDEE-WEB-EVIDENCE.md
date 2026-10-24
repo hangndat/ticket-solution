@@ -4,7 +4,7 @@
 
 ## Exact SHA
 
-`63dc391ff3100cf2c5dc46e8e2fabc4aa238ffd0` (branch `hangndat/vd04-attendee-web`)
+`2ac5a7ba6d4b5f7615b1b72dc0184c8d3c551648` (branch `hangndat/vd04-attendee-web`; feature commit — if amended, re-run `git rev-parse HEAD`)
 
 ## Delta delivered
 
