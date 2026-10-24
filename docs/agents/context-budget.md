@@ -1,5 +1,25 @@
 # Agent context budget (rules)
 
+## Nạp theo task — 2026-10-24
+
+Được user yêu cầu áp dụng sau kiểm tra setup máy và ticket-solution. Đo lại bằng `node scripts/orca-context-budget.mjs --user-rules` trên cùng máy, với user rules hiện tại, so `origin/main` (`83e6d1ed`) và nhánh tài liệu này:
+
+| Rules cố định worker | `origin/main` | Nhánh này |
+| --- | --- | --- |
+| Bytes trên đĩa | 27.436 | 22.328 |
+| Token ước lượng (bytes/3,5) | 7.839 | 6.379 |
+
+Giảm 5.108 bytes, khoảng 1.460 token (18,6%) ở phần cố định so với `origin/main` khi user rule Apple đã glob-scoped. Phép đo ban đầu 29.955 → 21.783 bytes còn bao gồm thay đổi rule local và base `main` cũ, nên không dùng làm diff của PR này. Đây không phải mức giảm billed tokens/quota; tác vụ Git/iOS vẫn nạp tài liệu chi tiết khi cần, host có thể nạp rules khác nhau. Nội dung đã ở trong lịch sử session không được xóa bởi thay đổi này.
+
+- `git-workflow.mdc` và `github-api-hygiene.mdc` giữ quyền/gates và trigger đọc; hướng dẫn đầy đủ chuyển sang hai file `*-details.mdc` requestable, không mất quy định review/CI/exact-SHA.
+- Rule local `apple-developer-personal.mdc` chuyển sang globs iOS/signing + description cho thao tác không mở file; AGENTS yêu cầu đọc trước build/signing/store. Không đưa tài khoản/cert vào repo. Rule local đã được sao lưu trước sửa; checkout trên máy khác phải cấu hình rule tương ứng.
+- Task/review spec có checkout tuyệt đối và phạm vi đọc ban đầu; [MCP-SETUP.md](MCP-SETUP.md) ghi cách thu hẹp monorepo, lấy output/archive và xử lý lỗi authority.
+- Giữ fan-out 5 non-review + 3 reviewer, một planner/Epic, model routing và reviewer độc lập. Không đổi lean-ctx runtime/policy/proxy hoặc xóa thống kê để tăng điểm.
+
+Theo dõi 5–10 task tương đương bằng evidence/telemetry hiện có: task + checkout/SHA, loại việc, token/cache nếu host có (thiếu ghi unknown), thời gian, lượt gọi/đọc lại, bounce mới và nguyên nhân, findings/rework. So sánh trước/sau trong cùng nguồn và khoảng đo; không gán toàn bộ stats store của máy cho repo này. Có thể chụp `lean-ctx gain --by-tool --json` trước/sau một batch để tham khảo; nếu có agent/repo khác chạy đồng thời thì số chênh không phải attribution riêng của batch.
+
+CLI/MCP từng trả 52/50 và Navigability 83/0; chưa xác minh công thức hoặc nguyên nhân nên không dùng điểm này làm acceptance. Kiểm tra local: `git diff --check`, đối chiếu nội dung rules chi tiết với bản trước và đường dẫn liên kết; chưa phải DoD exact-SHA sau commit.
+
 ## Review chi phí token — 2026-10-23
 
 Điều chỉnh mới nhất: user giữ max fan-out và planner; đã khôi phục caps 5 non-review + 3 reviewer và một planner/Epic. Các số đo bytes trong bảng là snapshot của lượt review chi phí trước khi khôi phục chính sách này, không phải số đo của tip hiện tại. Mẫu review hiện hành: [review.md](templates/review.md), thay việc dùng đồng thời task-spec/worker-report; một báo cáo trên PR/SHA, revalidation theo findings/diff và evidence dùng chung giữa các vai trò.
