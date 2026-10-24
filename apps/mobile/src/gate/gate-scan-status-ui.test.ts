@@ -15,6 +15,16 @@ const baseOp: GateOp = {
   admissionKind: 'fresh',
 };
 
+test('presentGateScanStatus queued uses COPY-GUIDE headline', () => {
+  const view = presentGateScanStatus({
+    busy: false,
+    op: { ...baseOp, phase: 'queued', message: 'offline' },
+    canReconcile: false,
+  });
+  assert.match(view.label, /Chưa xác nhận vào cổng/);
+  assert.equal(view.tone, 'unknown');
+});
+
 test('presentGateScanStatus processing avoids admit check when busy', () => {
   const view = presentGateScanStatus({
     busy: true,

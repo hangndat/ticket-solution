@@ -61,7 +61,7 @@ export function presentGateOutcome(op: GateOp | null): GateOutcomeView {
   if (op.phase === 'queued') {
     return {
       kind: 'queued',
-      title: 'Đã xếp hàng — chưa cho vào',
+      title: 'Chờ đồng bộ — Chưa xác nhận vào cổng',
       detail:
         op.message ||
         'Lưu trên máy. Đồng bộ khi có mạng — không cho khách qua sớm. Không chống trùng đa thiết bị khi còn offline.',
@@ -153,7 +153,7 @@ export function presentQueueStatus(status: OfflineLocalStatus): QueueStatusView 
     case 'pending':
       return {
         status,
-        label: 'Chờ đồng bộ',
+        label: 'Chờ đồng bộ — Chưa xác nhận vào cổng',
         detail: 'Đang xếp hàng trên máy — chưa cho vào.',
         tone: 'unknown',
         serverToken: 'pending',

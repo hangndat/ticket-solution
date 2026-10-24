@@ -143,7 +143,7 @@ function mapOutcomeKind(
     case 'queued':
       return {
         kind: 'queued',
-        label: 'Offline — chờ đồng bộ',
+        label: 'Chờ đồng bộ — Chưa xác nhận vào cổng',
         hint: 'Đã lưu trên máy. Đồng bộ khi có mạng — chưa cho vào.',
         tone: 'unknown',
         symbol: 'tray.full.fill',

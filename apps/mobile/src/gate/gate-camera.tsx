@@ -1,12 +1,14 @@
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useIsFocused } from 'expo-router';
+import { SymbolView } from 'expo-symbols';
 import { useEffect, useState } from 'react';
-import { AccessibilityInfo, Animated, Easing, Text, View } from 'react-native';
+import { AccessibilityInfo, Animated, Easing, Linking, Text, View } from 'react-native';
 import { Button } from '@/components/ui/button';
 import { colors } from '@/theme/colors';
 import { space, radius } from '@/theme/tokens';
 import { typography } from '@/theme/typography';
 
+const VIEWPORT_HEIGHT = 300;
 const FRAME_SIZE = 220;
 const SCAN_SWEEP_MS = 1900;
 const SCAN_LINE_TOP = 12;
@@ -83,13 +85,57 @@ export function GateCamera({ disabled, onScan }: Props) {
     return null;
   }
   if (!permission.granted) {
+    const blocked = permission.canAskAgain === false;
     return (
-      <Button
-        label="Cho phép camera để quét QR vé"
-        variant="secondary"
-        accessibilityLabel="Cho phép camera để quét QR vé"
-        onPress={() => void requestPermission()}
-      />
+      <View
+        testID="gate-camera-denied"
+        accessibilityRole="alert"
+        style={{
+          minHeight: VIEWPORT_HEIGHT,
+          borderRadius: radius.lg,
+          backgroundColor: colors.surfaceMuted,
+          borderWidth: 1,
+          borderColor: colors.line,
+          padding: space.xl,
+          gap: space.md,
+          justifyContent: 'center',
+        }}
+      >
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.md }}>
+          <SymbolView
+            name="camera.fill"
+            size={28}
+            tintColor={colors.secondary}
+            accessibilityLabel="Camera"
+          />
+          <Text
+            accessibilityRole="header"
+            style={{ ...typography.sectionTitleBold, color: colors.label, flex: 1 }}
+          >
+            {blocked ? 'Camera bị tắt' : 'Cần quyền camera'}
+          </Text>
+        </View>
+        <Text style={{ ...typography.footnote, color: colors.secondary, lineHeight: 20 }}>
+          {blocked
+            ? 'Bật quyền camera cho Vemoki trong Cài đặt iPhone để quét QR vé tại cổng. Bạn vẫn có thể nhập mã thủ công.'
+            : 'Cho phép camera để quét QR trong khung — không lưu ảnh hay video.'}
+        </Text>
+        {blocked ? (
+          <Button
+            label="Mở Cài đặt"
+            variant="secondary"
+            accessibilityLabel="Mở Cài đặt iPhone để bật camera"
+            onPress={() => void Linking.openSettings()}
+          />
+        ) : (
+          <Button
+            label="Cho phép camera"
+            variant="secondary"
+            accessibilityLabel="Cho phép camera để quét QR vé"
+            onPress={() => void requestPermission()}
+          />
+        )}
+      </View>
     );
   }
 
@@ -108,7 +154,10 @@ export function GateCamera({ disabled, onScan }: Props) {
       : null;
 
   return (
-    <View style={{ height: 240, borderRadius: radius.lg, overflow: 'hidden' }}>
+    <View
+      testID="gate-camera-viewport"
+      style={{ height: VIEWPORT_HEIGHT, borderRadius: radius.lg, overflow: 'hidden' }}
+    >
       <CameraView
         style={{ flex: 1 }}
         facing="back"

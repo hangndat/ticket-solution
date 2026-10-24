@@ -64,6 +64,7 @@ import {
   prominentCanReconcile,
   selectScanFeedbackOp,
   shouldDismissToastAttempt,
+  shouldShowCameraToast,
   shouldSuppressCameraRescan
 } from '@/gate/staff-gate-scan-feedback';
 import { randomId } from '@/lib/random-id';
@@ -292,11 +293,21 @@ export function StaffGateWorkspaceProvider({
         clearScanFeedback();
         return;
       }
-      setToastOp(op);
-      setToastVisible(true);
       toastAttemptRef.current = attemptId;
       clearToastTimers();
       setPendingOp(needsStickyPendingOp(op) ? op : null);
+
+      if (shouldShowCameraToast(op, false)) {
+        setToastOp(op);
+        setToastVisible(true);
+      } else {
+        setToastOp(null);
+        setToastVisible(false);
+      }
+
+      if (!shouldShowCameraToast(op, false)) {
+        return;
+      }
 
       toastHideTimerRef.current = setTimeout(() => {
         if (!shouldDismissToastAttempt(attemptId, toastAttemptRef.current)) {

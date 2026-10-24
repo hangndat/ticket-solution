@@ -13,6 +13,13 @@ export type ScanFeedbackLifecycle =
   | 'sticky'
   | 'terminal-flash';
 
+/** Brief camera overlay — only terminal admit/recorded; sticky outcomes use the panel below. */
+export function shouldShowCameraToast(op: GateOp | null, busy: boolean): boolean {
+  if (busy) return true;
+  if (!op) return false;
+  return classifyScanFeedbackLifecycle(op, false) === 'terminal-flash';
+}
+
 export function classifyScanFeedbackLifecycle(
   op: GateOp | null,
   busy: boolean,

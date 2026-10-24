@@ -13,30 +13,42 @@ function toneColor(tone: GateScanStatusView['tone']): string {
   return colors.secondary;
 }
 
+function toneSurface(tone: GateScanStatusView['tone'], emphasized: boolean): string {
+  if (!emphasized) return colors.card;
+  if (tone === 'admit') return colors.admitSurface;
+  if (tone === 'deny') return '#fde8ec';
+  if (tone === 'unknown') return '#fff6e8';
+  return colors.surfaceMuted;
+}
+
 export function StaffGateScanStatusPanel({
   view,
   busy,
-  emphasized
+  emphasized,
+  testID
 }: {
   view: GateScanStatusView;
   busy: boolean;
   /** Terminal / sticky scan result — not idle ready chrome. */
   emphasized?: boolean;
+  testID?: string;
 }) {
   const tint = toneColor(view.tone);
   const showSpinner = busy || view.kind === 'processing';
   const isIdleReady = !emphasized && view.kind === 'idle';
+  const panelEmphasized = emphasized || view.kind !== 'idle';
 
   return (
     <View
+      testID={testID}
       style={{
         gap: space.sm,
-        paddingVertical: isIdleReady ? 6 : 10,
-        paddingHorizontal: space.md,
+        paddingVertical: isIdleReady ? space.sm : space.md,
+        paddingHorizontal: space.lg,
         borderRadius: radius.md,
-        backgroundColor: colors.card,
-        borderWidth: emphasized ? 2 : 0,
-        borderColor: emphasized ? tint : 'transparent'
+        backgroundColor: toneSurface(view.tone, panelEmphasized),
+        borderWidth: panelEmphasized ? 1 : 0,
+        borderColor: panelEmphasized ? colors.line : 'transparent'
       }}
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.md }}>
@@ -55,7 +67,11 @@ export function StaffGateScanStatusPanel({
         )}
         <Text
           accessibilityRole="header"
-          style={{ ...typography.sectionTitleBold, color: colors.label, }}
+          style={{
+            ...typography.sectionTitleBold,
+            color: colors.label,
+            flex: 1,
+          }}
         >
           {view.label}
         </Text>
