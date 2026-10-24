@@ -1,8 +1,11 @@
 :root {
-  --vemoki-ink: #22241f;
-  --vemoki-paper: #f7f6f1;
-  --vemoki-signal: #9b3a18;
-  --vemoki-focus: #235fd0;
+  --vemoki-ink: #0b1220;
+  --vemoki-paper: #f4f6f8;
+  --vemoki-signal: #e11d48;
+  --vemoki-focus: #2563eb;
+  --vemoki-line: #d7dfe9;
+  --vemoki-muted: #5b687b;
+  --vemoki-sider: #0b1027;
 }
 
 html,
@@ -251,5 +254,92 @@ a {
     animation: none;
     border-top-color: var(--vemoki-signal);
     opacity: 0.85;
+  }
+}
+
+.ant-layout-sider .portal-brand-link {
+  color: #faf9ff;
+}
+
+.portal-readiness {
+  border: 1px solid var(--vemoki-line);
+  border-radius: 14px;
+  background: #fff;
+  padding: 18px 20px;
+}
+
+.portal-readiness__title {
+  margin: 0 0 4px;
+  font-size: 1.0625rem;
+  font-weight: 650;
+  color: var(--vemoki-ink);
+}
+
+.portal-readiness__summary {
+  margin: 0 0 14px;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: var(--vemoki-muted);
+}
+
+.portal-ready-item {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px 0;
+  font-size: 0.9375rem;
+  line-height: 1.4;
+  border-bottom: 1px solid color-mix(in srgb, var(--vemoki-line) 65%, transparent);
+}
+
+.portal-ready-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.portal-ready-item__mark {
+  flex: 0 0 1.5rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.portal-ready-item--ok .portal-ready-item__mark {
+  color: #1b7f4a;
+}
+
+.portal-ready-item--missing .portal-ready-item__mark {
+  color: #a86a12;
+}
+
+.portal-ready-item--unknown .portal-ready-item__mark {
+  color: var(--vemoki-muted);
+}
+
+.portal-ready-item__body strong {
+  display: block;
+  font-weight: 600;
+  color: var(--vemoki-ink);
+}
+
+.portal-ready-item__body span {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.8125rem;
+  color: var(--vemoki-muted);
+}
+
+.portal-gate-report-compact .ant-statistic-card {
+  min-width: 0;
+}
+
+@media (max-width: 575px) {
+  .portal-gate-report-compact .ant-pro-statistic-card-group {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .portal-gate-report-compact .ant-statistic-card {
+    margin: 0 !important;
   }
 }
