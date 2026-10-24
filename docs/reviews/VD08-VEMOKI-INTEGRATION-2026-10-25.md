@@ -6,7 +6,7 @@
 
 - Mẫu chuẩn: `docs/design/vemoki-unified-v1/` từ nguồn cuối `Vemoki-Complete 2`. Manifest `VERIFY.py` đã PASS 57 file ở PR #877. Bỏ Web Gate admission theo O23; Portal chỉ đọc Gate report, Staff iOS sở hữu scan/confirm.
 - Không dùng bundle `github-pr/` cũ làm nguồn. Không mở API/permission/payment/Android/Wallet mới. Không production deploy hoặc store submit.
-- `origin/main` sau PR #888: `d6a17787424750b475450886f2f1052fd40fde7e`. CI tích hợp của SHA này được theo dõi ở [run 40113019581](https://github.com/hangndat/ticket-solution/actions/runs/40113019581); trạng thái phải được cập nhật sau khi run kết thúc.
+- `origin/main` sau PR #888: `d6a17787424750b475450886f2f1052fd40fde7e`. [CI tích hợp run 40113019581](https://github.com/hangndat/ticket-solution/actions/runs/40113019581) **SUCCESS**, gồm web, mobile, portal, backend, database-isolation, `ci` và `turbo-persist`.
 
 ## Code và review đã tích hợp
 
@@ -38,7 +38,7 @@ Local iOS artifacts (gitignored): `vd06-ios-staff/apps/mobile/.uat-artifacts/vd0
 
 ## Quyết định handoff
 
-1. **Code complete:** Có cho phạm vi VD-00…VD-07 đã chốt và merge. CI từng PR PASS; chờ CI tích hợp `d6a17787…` kết thúc để chốt gate cuối.
+1. **Code complete:** Có cho phạm vi VD-00…VD-07 đã chốt và merge. CI từng PR và CI tích hợp `d6a17787…` đều PASS.
 2. **Acceptance complete:** Chưa. Issues #878–#882 ở Chờ duyệt; #889 tổng hợp UAT. Bằng chứng còn thiếu ở bảng trên không được suy từ prototype, unit test hoặc simulator guest.
 3. **Pilot ready:** Chưa. Cần môi trường OIDC có persona/tenant dữ liệu kiểm thử, Orca browser viewport capture hoạt động, và thiết bị thật cho camera/QR/offline/a11y. Khi có điều kiện, chạy lại từng AC, gắn SHA/build/viewport/UDID/persona/state vào issue tương ứng rồi review sign-off.
 4. **Release:** Chỉ chuẩn bị handoff. Production deploy, signing/store submission cần task và ủy quyền riêng theo policy dự án.
