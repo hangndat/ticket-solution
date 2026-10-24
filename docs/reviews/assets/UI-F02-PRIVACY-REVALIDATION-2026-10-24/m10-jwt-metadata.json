@@ -1,0 +1,10 @@
+{
+  "fetchedAt": "2026-10-23T19:37:36.600Z",
+  "iat": 1792784256,
+  "exp": 1792784556,
+  "sub": "6daa25c7-ebe8-4148-917b-03ec3362a36a",
+  "aud": "ticket-api",
+  "acr": "1",
+  "preferred_username": "staff@example.com",
+  "staffAccessTokenPresent": true
+}

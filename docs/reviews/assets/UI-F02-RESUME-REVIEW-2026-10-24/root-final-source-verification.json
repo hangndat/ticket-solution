@@ -1,0 +1,17 @@
+{
+  "checkedAt": "2026-10-23T16:47:21.729658+00:00",
+  "head": "b2faa48a1ce443c8fc6c849cb74a06a57f8b0c37",
+  "dirty": true,
+  "baselineSourceFiles": 37,
+  "baselineDrift": [],
+  "rollbackFiles": 4,
+  "rollbackMismatch": [],
+  "diffCheckExit": 0,
+  "proposalApplied": false,
+  "workerCounts": {
+    "retained": 20,
+    "released": 18,
+    "live": 0,
+    "reclaimable": 0
+  }
+}

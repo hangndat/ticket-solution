@@ -1,0 +1,6 @@
+Orca emulator char-by-char type after fresh launch (2026-10-24T16:33Z).
+TextField AX value compact length: 36
+Expected: 29aec431-8a11-4315-8a05-c1cb44175c60
+Match: true
+
+Prior PNG-only evidence showed horizontal scroll suffix (c431-8a11-…) without AX length — mislabeled as queued offline.

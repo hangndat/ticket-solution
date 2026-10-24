@@ -1,0 +1,46 @@
+{
+  "id": "1fad4f31-f6f7-4f7b-bd10-e938798a265c",
+  "ok": true,
+  "result": {
+    "screenshot": null,
+    "screenshotStatus": {
+      "state": "skipped",
+      "reason": "no_screenshot_flag"
+    },
+    "snapshot": {
+      "window": {
+        "id": 4985,
+        "x": 640,
+        "isMinimized": false,
+        "y": 53,
+        "platform": {
+          "layer": 0
+        },
+        "height": 950,
+        "title": "UI-FixAll-859 – iOS 26.5",
+        "isOffscreen": false,
+        "screenIndex": 0,
+        "width": 447
+      },
+      "elementCount": 15,
+      "id": "F70A675B-B857-4B92-945D-1E6A1A6DCBBD",
+      "treeText": "App=com.apple.iphonesimulator (pid 1875)\nWindow: \"UI-FixAll-859 – iOS 26.5\", App: Simulator.\n\n0 standard window UI-FixAll-859 – iOS 26.5\n\t1 button Action\n\t2 button Volume Up\n\t3 button Volume Down\n\t4 button Sleep/Wake\n\t5 generic element Đóng xác nhận vé, Secondary Actions: cancel\n\t6 toolbar\n\t\t7 button Home, Secondary Actions: name: move previous\n target:0x0\n selector:(null), name: move next\n target:0x0\n selector:(null), name: remove from toolbar\n target:0x0\n selector:(null)\n\t\t8 button Save Screen, Secondary Actions: name: move previous\n target:0x0\n selector:(null), name: move next\n target:0x0\n selector:(null), name: remove from toolbar\n target:0x0\n selector:(null)\n\t\t9 button Rotate, Secondary Actions: name: move previous\n target:0x0\n selector:(null), name: move next\n target:0x0\n selector:(null), name: remove from toolbar\n target:0x0\n selector:(null)\n\t10 close button\n\t11 full screen button, Secondary Actions: zoom the window\n\t12 minimize button\n\t13 text UI-FixAll-859\n\t14 text iOS 26.5\n\nThe focused UI element is 1 button Action.",
+      "app": {
+        "bundleId": "com.apple.iphonesimulator",
+        "pid": 1875,
+        "name": "Simulator"
+      },
+      "focusedElementId": 1,
+      "coordinateSpace": "window",
+      "truncation": {
+        "truncated": false,
+        "maxDepthReached": false,
+        "maxDepth": 64,
+        "maxNodes": 1200
+      }
+    }
+  },
+  "_meta": {
+    "runtimeId": "9d821662-c628-49db-a168-99fa7b7636fc"
+  }
+}

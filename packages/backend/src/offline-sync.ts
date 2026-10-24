@@ -15,6 +15,8 @@ import {
   isWithinOfflineClockSkew,
   type OfflineSyncEvent,
   type OfflineSyncItemResult,
+  type OfflineSyncReceiptCheckinState,
+  type OfflineSyncReceiptResponse,
   type OfflineSyncRequestBody,
   type OfflineSyncResponse,
 } from '@ticket/contracts';
@@ -668,3 +670,165 @@ export async function applyOfflineSyncBatch(
 
 /** Re-export contract codes for backend callers. */
 export { OFFLINE_SYNC_ERROR_CODES };
+
+/**
+ * Pure check-in state for historical receipt (precedence: revoked > undone > current).
+ */
+export function deriveOfflineSyncReceiptCheckinState(input: {
+  ticketState: string;
+  checkinUndoneAt: Date | null;
+  ledgerCheckinId: string;
+  currentCheckinId: string | null;
+}): OfflineSyncReceiptCheckinState {
+  if (input.ticketState === 'REVOKED') {
+    return 'TICKET_REVOKED';
+  }
+  if (input.checkinUndoneAt != null) {
+    return 'UNDONE';
+  }
+  if (
+    input.currentCheckinId === input.ledgerCheckinId &&
+    input.ticketState === 'USED'
+  ) {
+    return 'CURRENT';
+  }
+  return 'NO_LONGER_CURRENT';
+}
+
+async function assertActorHasActiveSessionOnEvent(
+  tx: Prisma.TransactionClient,
+  tenantId: string,
+  eventId: string,
+  userId: string,
+): Promise<void> {
+  const rows = await tx.$queryRaw<Array<{ id: string }>>`
+    SELECT id
+    FROM staff_sessions
+    WHERE tenant_id = ${tenantId}::uuid
+      AND event_id = ${eventId}::uuid
+      AND user_id = ${userId}::uuid
+      AND status = 'ACTIVE'
+      AND revoked_at IS NULL
+    LIMIT 1
+    FOR SHARE
+  `;
+  if (!rows[0]) {
+    throw new GateError(
+      GATE_ERROR_CODES.SESSION_NOT_ACTIVE,
+      'Staff session is not active',
+    );
+  }
+}
+
+type ReceiptLedgerRow = {
+  event_id: string;
+  client_event_id: string;
+  ticket_id: string;
+  checkin_id: string;
+  staff_session_id: string;
+  applied_at: Date;
+  ticket_state: string;
+  undone_at: Date | null;
+  current_checkin_id: string | null;
+};
+
+export type LookupOfflineSyncReceiptInput = {
+  tenantId: string;
+  pathEventId: string;
+  clientEventId: string;
+  actorUserId: string;
+};
+
+/**
+ * Read-only scoped receipt lookup (#859). No assertOpenForGate; uniform 404 after authz.
+ */
+export async function lookupOfflineSyncReceipt(
+  tx: Prisma.TransactionClient,
+  input: LookupOfflineSyncReceiptInput,
+): Promise<OfflineSyncReceiptResponse> {
+  const tenantId = requireUuid(input.tenantId, 'tenantId');
+  const pathEventId = requireUuid(input.pathEventId, 'eventId');
+  const clientEventId = requireUuid(input.clientEventId, 'clientEventId');
+  requireUuid(input.actorUserId, 'actorUserId');
+
+  await requireTenantPermission(tx, {
+    tenantId,
+    userId: input.actorUserId,
+    permission: PERMISSION_CONFIRM,
+    eventId: pathEventId,
+  });
+  await assertActorHasActiveSessionOnEvent(
+    tx,
+    tenantId,
+    pathEventId,
+    input.actorUserId,
+  );
+
+  const rows = await tx.$queryRaw<ReceiptLedgerRow[]>`
+    SELECT
+      l.event_id,
+      l.client_event_id,
+      l.ticket_id,
+      l.checkin_id,
+      l.staff_session_id,
+      l.applied_at,
+      t.state AS ticket_state,
+      c.undone_at,
+      (
+        SELECT ci.id
+        FROM checkins ci
+        WHERE ci.tenant_id = l.tenant_id
+          AND ci.ticket_id = l.ticket_id
+          AND ci.undone_at IS NULL
+        LIMIT 1
+      ) AS current_checkin_id
+    FROM offline_sync_events l
+    INNER JOIN staff_sessions ss
+      ON ss.tenant_id = l.tenant_id
+      AND ss.id = l.staff_session_id
+      AND ss.event_id = l.event_id
+    INNER JOIN checkins c
+      ON c.tenant_id = l.tenant_id
+      AND c.id = l.checkin_id
+      AND c.event_id = l.event_id
+      AND c.ticket_id = l.ticket_id
+    INNER JOIN tickets t
+      ON t.tenant_id = l.tenant_id
+      AND t.id = l.ticket_id
+      AND t.event_id = l.event_id
+    WHERE l.tenant_id = ${tenantId}::uuid
+      AND l.client_event_id = ${clientEventId}::uuid
+      AND l.event_id = ${pathEventId}::uuid
+      AND l.actor_user_id = ${input.actorUserId}::uuid
+      AND ss.user_id = ${input.actorUserId}::uuid
+    FOR SHARE
+  `;
+
+  const row = rows[0];
+  if (!row) {
+    throw new GateError(
+      GATE_ERROR_CODES.OFFLINE_SYNC_RECEIPT_NOT_FOUND,
+      'Offline sync receipt not found',
+    );
+  }
+
+  const checkinState = deriveOfflineSyncReceiptCheckinState({
+    ticketState: row.ticket_state,
+    checkinUndoneAt: row.undone_at,
+    ledgerCheckinId: row.checkin_id,
+    currentCheckinId: row.current_checkin_id,
+  });
+
+  return {
+    tenantId,
+    eventId: row.event_id,
+    clientEventId: row.client_event_id,
+    status: 'APPLIED',
+    historical: true,
+    ticketId: row.ticket_id,
+    checkinId: row.checkin_id,
+    staffSessionId: row.staff_session_id,
+    appliedAt: row.applied_at.toISOString(),
+    checkinState,
+  };
+}

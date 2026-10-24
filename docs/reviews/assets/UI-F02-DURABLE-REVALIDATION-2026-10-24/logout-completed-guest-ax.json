@@ -1,0 +1,126 @@
+{
+  "at": "2026-10-24T02:25:13.533Z",
+  "id": "206e68ee-ec94-463e-8736-8bc2dcb47a46",
+  "ok": true,
+  "result": [
+    {
+      "role": "application",
+      "type": "Application",
+      "label": "Vemoki",
+      "value": "",
+      "enabled": true,
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      },
+      "children": [
+        {
+          "role": "text",
+          "type": "StaticText",
+          "label": "10:25 AM",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.1247,
+            "y": 0.0223,
+            "width": 0.1145,
+            "height": 0.0239
+          },
+          "children": []
+        },
+        {
+          "role": "",
+          "type": "GenericElement",
+          "label": "Dynamic Island, Empty",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.341,
+            "y": 0.0133,
+            "width": 0.3181,
+            "height": 0.043
+          },
+          "children": []
+        },
+        {
+          "role": "",
+          "type": "GenericElement",
+          "label": "Cellular",
+          "value": "No signal",
+          "enabled": true,
+          "frame": {
+            "x": 0.7176,
+            "y": 0.027,
+            "width": 0.0492,
+            "height": 0.0145
+          },
+          "children": []
+        },
+        {
+          "role": "",
+          "type": "GenericElement",
+          "label": "100% battery power",
+          "value": "Not charging",
+          "enabled": true,
+          "frame": {
+            "x": 0.8473,
+            "y": 0.0266,
+            "width": 0.0696,
+            "height": 0.0153
+          },
+          "children": []
+        },
+        {
+          "role": "button",
+          "type": "Button",
+          "label": "Cancel",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.0407,
+            "y": 0.0998,
+            "width": 0.112,
+            "height": 0.0516
+          },
+          "children": [],
+          "id": "Close"
+        },
+        {
+          "role": "",
+          "type": "GenericElement",
+          "label": "Address",
+          "value": "‎127.0.0.1",
+          "enabled": true,
+          "frame": {
+            "x": 0.4135,
+            "y": 0.1064,
+            "width": 0.1722,
+            "height": 0.0239
+          },
+          "children": [],
+          "id": "URL"
+        },
+        {
+          "role": "button",
+          "type": "Button",
+          "label": "Format Options",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.8473,
+            "y": 0.0998,
+            "width": 0.112,
+            "height": 0.0516
+          },
+          "children": [],
+          "id": "PageFormatMenuButton"
+        }
+      ]
+    }
+  ],
+  "_meta": {
+    "runtimeId": "9d821662-c628-49db-a168-99fa7b7636fc"
+  }
+}

@@ -19,6 +19,9 @@ import {
 } from '@/published/events-home';
 import type { PublishedEventSummary } from '@/published/types';
 import { isAppCatalogConfigured } from '@/identity/catalog-context';
+import { session } from '@/identity/session';
+import { staffEligibility } from '@/identity/staff-eligibility';
+import { tryRestoreVerifiedSession } from '@/identity/session-restore-retry';
 import { brand, colors } from '@/theme/colors';
 import { fontFamilies } from '@/theme/fonts';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -145,7 +148,13 @@ export function EventsScreen() {
   const retryPublished = () => {
     setPublishedPhase('loading');
     setPublishedError(null);
-    setReloadKey((key) => key + 1);
+    void (async () => {
+      const outcome = await tryRestoreVerifiedSession(session);
+      if (outcome === 'verified' || outcome === 'already-verified') {
+        void staffEligibility.refresh(session);
+      }
+      setReloadKey((key) => key + 1);
+    })();
   };
 
   useEffect(() => {

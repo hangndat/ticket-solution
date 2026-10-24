@@ -1,0 +1,192 @@
+{
+  "id": "31fbbb39-9630-4a92-b76b-6295ed84a1dc",
+  "ok": true,
+  "result": [
+    {
+      "role": "application",
+      "type": "Application",
+      "label": "Vemoki",
+      "value": "",
+      "enabled": true,
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      },
+      "children": [
+        {
+          "role": "text",
+          "type": "StaticText",
+          "label": "3:39 AM",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.134,
+            "y": 0.0223,
+            "width": 0.0958,
+            "height": 0.0239
+          },
+          "children": []
+        },
+        {
+          "role": "",
+          "type": "GenericElement",
+          "label": "Dynamic Island, Empty",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.341,
+            "y": 0.0133,
+            "width": 0.3181,
+            "height": 0.043
+          },
+          "children": []
+        },
+        {
+          "role": "",
+          "type": "GenericElement",
+          "label": "Cellular",
+          "value": "No signal",
+          "enabled": true,
+          "frame": {
+            "x": 0.7176,
+            "y": 0.027,
+            "width": 0.0492,
+            "height": 0.0145
+          },
+          "children": []
+        },
+        {
+          "role": "",
+          "type": "GenericElement",
+          "label": "100% battery power",
+          "value": "Not charging",
+          "enabled": true,
+          "frame": {
+            "x": 0.8473,
+            "y": 0.0266,
+            "width": 0.0696,
+            "height": 0.0153
+          },
+          "children": []
+        },
+        {
+          "role": "text",
+          "type": "StaticText",
+          "label": "RAM 236.36 MB",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0,
+            "y": 0.0692,
+            "width": 0.112,
+            "height": 0.0587
+          },
+          "children": []
+        },
+        {
+          "role": "text",
+          "type": "StaticText",
+          "label": "JSC 0.00 MB",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.112,
+            "y": 0.0692,
+            "width": 0.112,
+            "height": 0.0587
+          },
+          "children": []
+        },
+        {
+          "role": "text",
+          "type": "StaticText",
+          "label": "Views 0 0",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.2239,
+            "y": 0.0692,
+            "width": 0.112,
+            "height": 0.0587
+          },
+          "children": []
+        },
+        {
+          "role": "text",
+          "type": "StaticText",
+          "label": "60",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.341,
+            "y": 0.0857,
+            "width": 0.1018,
+            "height": 0.0352
+          },
+          "children": []
+        },
+        {
+          "role": "text",
+          "type": "StaticText",
+          "label": "60",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.4529,
+            "y": 0.0857,
+            "width": 0.1018,
+            "height": 0.0352
+          },
+          "children": []
+        },
+        {
+          "role": "text",
+          "type": "StaticText",
+          "label": "UAT session bị từ chối",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.112,
+            "y": 0.1162,
+            "width": 0.7863,
+            "height": 0.0329
+          },
+          "children": []
+        },
+        {
+          "role": "text",
+          "type": "StaticText",
+          "label": "Máy chủ không xác minh được phiên UAT (API /v1/me). Không cho vào.",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.112,
+            "y": 0.1631,
+            "width": 0.7863,
+            "height": 0.0591
+          },
+          "children": []
+        },
+        {
+          "role": "text",
+          "type": "StaticText",
+          "label": "Máy chủ không xác minh được phiên UAT (API /v1/me). Không cho vào.",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.0509,
+            "y": 0.2692,
+            "width": 0.8982,
+            "height": 0.052
+          },
+          "children": []
+        }
+      ]
+    }
+  ],
+  "_meta": {
+    "runtimeId": "9d821662-c628-49db-a168-99fa7b7636fc"
+  }
+}

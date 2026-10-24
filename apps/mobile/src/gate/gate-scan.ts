@@ -53,7 +53,9 @@ export type GatePhase =
   | 'denied'
   | 'unknown'
   /** Local offline queue — never an admission until server apply. */
-  | 'queued';
+  | 'queued'
+  /** Historical GET receipt — neutral terminal, never fresh admission. */
+  | 'recorded';
 
 export type GateOp = {
   id: string;
@@ -75,6 +77,13 @@ export type GateOp = {
   admissionKind?: 'fresh' | 'already';
   /** Device-local history ordering; stamped via stampGateOpsRecordedAt. */
   recordedAt?: string;
+  /** Present when phase === 'recorded' (GET historical receipt). */
+  historicalCheckinState?:
+    | 'CURRENT'
+    | 'UNDONE'
+    | 'TICKET_REVOKED'
+    | 'NO_LONGER_CURRENT';
+  receiptAppliedAt?: string;
 };
 
 /** Strip zero-width / BOM from camera or paste payloads before parseScan. */
@@ -129,6 +138,8 @@ export function classifyScan(
   const mine = ops.filter((op) => op.ticketId === ticketId);
   const admitted = mine.find((op) => op.phase === 'admitted' && op.checkinId);
   if (admitted) return { action: 'show', op: admitted };
+  const recorded = mine.find((op) => op.phase === 'recorded' && op.checkinId);
+  if (recorded) return { action: 'show', op: recorded };
   const queued = mine.find((op) => op.phase === 'queued');
   if (queued) return { action: 'wait', op: queued };
   const inflight = mine.find(
@@ -296,6 +307,8 @@ export async function runScan(input: {
   createId?: () => string;
   /** When true and network fails with an existing session, skip reserve/confirm. */
   preferOfflineQueue?: boolean;
+  /** Stops later network hops when the verified workspace lifecycle changes. */
+  shouldContinue?: () => boolean;
 }): Promise<RunScanResult> {
   const fetchImpl = input.fetchImpl ?? fetch;
   // Hermes has no global `crypto` — never call crypto.randomUUID() here.
@@ -327,6 +340,8 @@ export async function runScan(input: {
   const base = input.apiBase.replace(/\/$/, '');
   let staffSessionId = input.staffSessionId;
   let membershipAuthzDenied = false;
+  const stale = (): RunScanResult => ({ ops: [...input.ops], staffSessionId: input.staffSessionId, current: null });
+  if (input.shouldContinue && !input.shouldContinue()) return stale();
   if (!staffSessionId) {
     const opened = await readJson(
       fetchImpl,
@@ -334,6 +349,7 @@ export async function runScan(input: {
       input.bearer,
       { tenantId: parsed.tenantId },
     );
+    if (input.shouldContinue && !input.shouldContinue()) return stale();
     const body = asRecord(opened.json);
     if (
       opened.networkError ||
@@ -390,6 +406,8 @@ export async function runScan(input: {
     };
   }
 
+  if (input.shouldContinue && !input.shouldContinue()) return stale();
+
   const reserved = await readJson(
     fetchImpl,
     `${base}/v1/gate/events/${parsed.eventId}/reservations`,
@@ -400,6 +418,7 @@ export async function runScan(input: {
       staffSessionId,
     },
   );
+  if (input.shouldContinue && !input.shouldContinue()) return stale();
   const hold = asRecord(reserved.json);
   if (
     reserved.networkError ||
@@ -446,6 +465,7 @@ export async function runScan(input: {
     phase: 'confirming',
     message: GATE_UNKNOWN_MESSAGE,
   };
+  if (input.shouldContinue && !input.shouldContinue()) return stale();
   const confirmed = await readJson(
     fetchImpl,
     `${base}/v1/gate/events/${parsed.eventId}/reservations/${hold.reservationId}/confirm`,
@@ -513,8 +533,10 @@ export async function reconcileOp(input: {
   bearer: string;
   apiBase: string;
   fetchImpl?: typeof fetch;
+  shouldContinue?: () => boolean;
 }): Promise<ReconcileOpResult> {
   if (!canReconcile(input.op)) return { op: input.op };
+  if (input.shouldContinue && !input.shouldContinue()) return { op: input.op };
   const fetchImpl = input.fetchImpl ?? fetch;
   const base = input.apiBase.replace(/\/$/, '');
   const confirmed = await readJson(

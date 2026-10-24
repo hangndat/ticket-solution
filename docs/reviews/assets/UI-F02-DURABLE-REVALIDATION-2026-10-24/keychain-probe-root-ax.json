@@ -1,0 +1,137 @@
+{
+  "at": "2026-10-24T02:21:59.864Z",
+  "id": "72cf96dd-647b-4c06-9148-d973e1a761d4",
+  "ok": true,
+  "result": [
+    {
+      "role": "application",
+      "type": "Application",
+      "label": "Vemoki",
+      "value": "",
+      "enabled": true,
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      },
+      "children": [
+        {
+          "role": "heading",
+          "type": "Heading",
+          "label": "uat/durable-keychain",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.2841,
+            "y": 0.0829,
+            "width": 0.4309,
+            "height": 0.0243
+          },
+          "children": []
+        },
+        {
+          "role": "heading",
+          "type": "Heading",
+          "label": "F02 Keychain probe",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.0611,
+            "y": 0.48,
+            "width": 0.8779,
+            "height": 0.02
+          },
+          "children": []
+        },
+        {
+          "role": "text",
+          "type": "StaticText",
+          "label": "PASS: Gate allowlist, service isolation, exact deletion",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.0611,
+            "y": 0.5,
+            "width": 0.8779,
+            "height": 0.02
+          },
+          "children": []
+        },
+        {
+          "role": "",
+          "type": "GenericElement",
+          "label": "!, Open debugger to view warnings.",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.0254,
+            "y": 0.8987,
+            "width": 0.9491,
+            "height": 0.0563
+          },
+          "children": []
+        },
+        {
+          "role": "text",
+          "type": "StaticText",
+          "label": "10:21 AM",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.1281,
+            "y": 0.0223,
+            "width": 0.1077,
+            "height": 0.0239
+          },
+          "children": []
+        },
+        {
+          "role": "",
+          "type": "GenericElement",
+          "label": "Dynamic Island, Empty",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.341,
+            "y": 0.0133,
+            "width": 0.3181,
+            "height": 0.043
+          },
+          "children": []
+        },
+        {
+          "role": "",
+          "type": "GenericElement",
+          "label": "Cellular",
+          "value": "No signal",
+          "enabled": true,
+          "frame": {
+            "x": 0.7176,
+            "y": 0.027,
+            "width": 0.0492,
+            "height": 0.0145
+          },
+          "children": []
+        },
+        {
+          "role": "",
+          "type": "GenericElement",
+          "label": "100% battery power",
+          "value": "Not charging",
+          "enabled": true,
+          "frame": {
+            "x": 0.8473,
+            "y": 0.0266,
+            "width": 0.0696,
+            "height": 0.0153
+          },
+          "children": []
+        }
+      ]
+    }
+  ],
+  "_meta": {
+    "runtimeId": "9d821662-c628-49db-a168-99fa7b7636fc"
+  }
+}

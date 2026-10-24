@@ -14,7 +14,8 @@ export type GateScanStatusKind =
   | 'already-checked-in'
   | 'denied'
   | 'unknown'
-  | 'queued';
+  | 'queued'
+  | 'recorded';
 
 export type GateScanStatusView = {
   kind: GateScanStatusKind;
@@ -146,6 +147,17 @@ function mapOutcomeKind(
         hint: 'Đã lưu trên máy. Đồng bộ khi có mạng — chưa cho vào.',
         tone: 'unknown',
         symbol: 'tray.full.fill',
+      };
+    case 'recorded':
+      return {
+        kind: 'recorded',
+        label: 'Đã ghi nhận trước đó',
+        hint:
+          outcome.detail ||
+          op?.message ||
+          'Đối soát lịch sử — không cho vào theo lượt mới.',
+        tone: 'unknown',
+        symbol: 'checkmark.circle',
       };
     case 'unknown':
     case 'holding':

@@ -1,0 +1,17 @@
+{
+  "source": "GET http://[::1]:8083/ (Expo dev manifest, 2026-10-24T16:31Z reviewer)",
+  "launchBundleUrl": "http://[::1]:8083/apps/mobile/node_modules/expo-router/entry.bundle?platform=ios&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.bytecode=1&transform.routerRoot=src%2Fapp&unstable_transformProfile=hermes-stable",
+  "hostUri": "[::1]:8083",
+  "ticketPublic": {
+    "apiBaseUrl": "http://127.0.0.1:3009",
+    "oidcIssuer": "http://127.0.0.1:8080/realms/ticket",
+    "oidcClientId": "ticket-mobile",
+    "tenantId": "d9d9f001-0001-4000-8000-000000000001",
+    "eventId": "d9d9f001-0002-4000-8000-000000000001",
+    "apsEnvironment": "development",
+    "allowLocalFixtureApi": true,
+    "allowUatSessionRoutes": true,
+    "allowFixtureEventRoutes": true
+  },
+  "note": "Manifest baked config; app must reload bundle after Metro restart to match. Sim shows TCP to [::1]:8083 (lsof)."
+}
