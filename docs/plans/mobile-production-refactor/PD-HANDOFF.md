@@ -4,7 +4,7 @@
 **Role:** `product-design` · **Persona:** Liv · **Cost tier:** standard · **Architecture impact:** Có (IA Account + luồng quyền thông báo)\
 **Visual budget:** Có — [`brand/vemoki/tokens.json`](../../../brand/vemoki/tokens.json), [`docs/design/visual-identity-v2/visual-notes.md`](../../design/visual-identity-v2/visual-notes.md)\
 **Prototype:** [`prototype.html`](./prototype.html) — **PREVIEW ONLY**, không API, không dữ liệu production\
-**Authority:** [`README.md`](./README.md) (O18 / quyết định user 20/10/2026)
+**Authority:** [`README.md`](./README.md) (Issue #580 / quyết định user 20/10/2026; “O18” là nhãn cũ của gói mobile, không phải DECISION-LOG O18)
 
 | Mốc | Trạng thái |
 | --- | --- |
@@ -24,7 +24,7 @@
 | Copy user-facing | **Không** jargon: phiên, token, verified, cấu hình bản dựng, log kỹ thuật, disclaimer RBAC/staff trên flow khách. |
 | Push UI | Trạng thái **quyền iOS thật**; không toggle giả; không hứa «đã gửi» / delivery receipt. |
 
-**Ngoài scope:** catalog Sự kiện công khai, staff 3 tab, guest wallet, redeem auth gate, single-code redemption ([`archive/single-code-redemption.md`](./archive/single-code-redemption.md)).
+**Ngoài scope:** catalog Sự kiện công khai, staff 3 tab, guest wallet, redeem auth gate, single-code redemption ([`single-code-redemption.md`](../../architecture/single-code-redemption.md)).
 
 ---
 
