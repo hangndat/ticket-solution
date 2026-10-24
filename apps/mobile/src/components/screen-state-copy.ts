@@ -119,7 +119,7 @@ export const accountCopy = {
     body: 'Tài khoản đang dùng trên máy.',
   },
   offlineCache: {
-    body: 'Có vé đã lưu để xem khi mất mạng trên thiết bị này.',
+    body: 'Bản vé đã lưu trên thiết bị — trạng thái có thể chưa cập nhật.',
     clearRow: 'Xóa dữ liệu xem offline',
   },
   push: {
