@@ -18,6 +18,25 @@ const FORBIDDEN_OUTPUT_KEYS = new Set([
 
 const DEFAULT_RPC_TIMEOUT_MS = 30_000;
 
+function quotaWindow(raw) {
+  if (raw == null) return null;
+  return {
+    usedPercent: typeof raw.usedPercent === 'number' && Number.isFinite(raw.usedPercent) && raw.usedPercent >= 0 && raw.usedPercent <= 100 ? raw.usedPercent : null,
+    windowDurationMins: typeof raw.windowDurationMins === 'number' && Number.isFinite(raw.windowDurationMins) && raw.windowDurationMins > 0 ? raw.windowDurationMins : null,
+    resetsAt: typeof raw.resetsAt === 'number' && Number.isFinite(raw.resetsAt) && raw.resetsAt > 0 ? raw.resetsAt : null,
+  };
+}
+
+function quotaBucket(raw, fallbackId) {
+  return {
+    limitId: raw?.limitId != null ? String(raw.limitId) : fallbackId,
+    plan: raw?.planType != null ? String(raw.planType) : null,
+    primary: quotaWindow(raw?.primary),
+    secondary: quotaWindow(raw?.secondary),
+    rateLimitReachedType: raw?.rateLimitReachedType != null ? String(raw.rateLimitReachedType) : null,
+  };
+}
+
 /**
  * @param {Record<string, unknown>} raw
  * @param {string} [capturedAt]
@@ -52,6 +71,14 @@ export function whitelistAccountSnapshot(raw, capturedAt = new Date().toISOStrin
     resetsAt: resetAt,
     source: 'codex.app-server.account/rateLimits/read',
   };
+
+  const byId = raw.rateLimitsByLimitId;
+  snap.buckets = byId && typeof byId === 'object' && !Array.isArray(byId)
+    ? Object.entries(byId).map(([id, bucket]) => quotaBucket(bucket, id))
+    : [];
+  if (limitId && !snap.buckets.some(bucket => bucket.limitId === limitId)) {
+    snap.buckets.push(quotaBucket(rl, limitId));
+  }
 
   if (raw.accountId != null && String(raw.accountId).length > 0) {
     snap.accountIdHash = createHash('sha256')
