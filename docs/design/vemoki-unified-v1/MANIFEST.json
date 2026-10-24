@@ -1,0 +1,295 @@
+{
+  "version": "1.4",
+  "file_count_excluding_manifest": 57,
+  "total_files_including_manifest": 58,
+  "files": [
+    {
+      "path": "ACCESSIBILITY-REMEDIATION.md",
+      "bytes": 1396,
+      "sha256": "63f36f84bc7cc9aa0c98b51dd7c7dc6ec082ae4403ba9c21b267ec9a8d218183"
+    },
+    {
+      "path": "DESIGN-ACCEPTANCE.md",
+      "bytes": 2463,
+      "sha256": "283bddd82c69fef8e33988615fcbb318ab0890405053dfeb2be26da65f98121e"
+    },
+    {
+      "path": "IMPLEMENTATION-MAP.md",
+      "bytes": 3038,
+      "sha256": "0530d827a5dfcef2a78eb8db110b2c51cbfa13092a5751c50784098d354f80e4"
+    },
+    {
+      "path": "README.md",
+      "bytes": 2005,
+      "sha256": "043f16d3276aab4fde1491569673fa48e0a026d6e2d0a6152c634e5477bd17ac"
+    },
+    {
+      "path": "VALIDATION-REPORT.md",
+      "bytes": 1393,
+      "sha256": "4be1d0615aa566a6cc6cf1e3fdadaeb6942ac83479cfe3e53ee408c14cdb7df1"
+    },
+    {
+      "path": "VD-03-UI-IMPLEMENTATION-HANDOFF.md",
+      "bytes": 14850,
+      "sha256": "b69195b9ff8b2e6eb972d0033b37054f701068aa8a66e0d6686f4ef1fae49efc"
+    },
+    {
+      "path": "VERIFY.py",
+      "bytes": 1838,
+      "sha256": "47828f1c339851be988d28bee1d816966fd27ae72a58917513d969ec52ebeed5"
+    },
+    {
+      "path": "design-system/README.md",
+      "bytes": 443,
+      "sha256": "104acaac61e406da4ca1af91d3db7663d11a688bc6a69c36c327a3e9d0d29c30"
+    },
+    {
+      "path": "design-system/marketing/DESIGN-SYSTEM.md",
+      "bytes": 11294,
+      "sha256": "e7fea56b86238d9a93573384d860bf1a12ab4c800ef0d9d822f2397545a962fd"
+    },
+    {
+      "path": "design-system/marketing/assets/event1.jpg",
+      "bytes": 49232,
+      "sha256": "71f57eb4ec4da81ed44143704b2a57e11f600a55886dc7d8e957f58699539045"
+    },
+    {
+      "path": "design-system/marketing/assets/event2.jpg",
+      "bytes": 53327,
+      "sha256": "7d3b764e60b13844558a37d77d73b0864b9a45877b851ce7955ee4b4b59f5062"
+    },
+    {
+      "path": "design-system/marketing/assets/event3.jpg",
+      "bytes": 51114,
+      "sha256": "b9825e0fa3895b5a459332c695c2ee30375c1f38cb5ea52a75f0429602b62d9a"
+    },
+    {
+      "path": "design-system/marketing/assets/event4.jpg",
+      "bytes": 52987,
+      "sha256": "ebd2b3d30082bc58359bf6b50c0ee776833ae2d5f401eddf1fbb46fdd6883ee7"
+    },
+    {
+      "path": "design-system/marketing/assets/hero-figure.png",
+      "bytes": 685457,
+      "sha256": "42c14b2224611eab7b6135d66c0787c4c54df2414e5e6bd5ed15ed5c18f29065"
+    },
+    {
+      "path": "design-system/marketing/assets/product.jpg",
+      "bytes": 138354,
+      "sha256": "3807f037ba83066a42e68eed485544855f714a98f4c5ec00b2de8e7ce15001f5"
+    },
+    {
+      "path": "design-system/marketing/desktop.png",
+      "bytes": 5543633,
+      "sha256": "7a43f7f0187de809c00701198e3f5c369b8e0a36dfb75616b1c0fd2e553a40c4"
+    },
+    {
+      "path": "design-system/marketing/index.html",
+      "bytes": 6528,
+      "sha256": "b77f31a65ec75331db42b0dc7611ba6a3b69532ffbaa179339ddfbedcd04ae4d"
+    },
+    {
+      "path": "design-system/marketing/mobile-small.png",
+      "bytes": 2051992,
+      "sha256": "85f739c144dcd077f2e4fafa060084a9608105fff2efa23e5f1cb8969200e0d9"
+    },
+    {
+      "path": "design-system/marketing/mobile.png",
+      "bytes": 2412656,
+      "sha256": "bd121efcfc01386d29ba9885f4e783167525a91e5abf110f54b8fe5902178075"
+    },
+    {
+      "path": "design-system/marketing/styles.css",
+      "bytes": 11002,
+      "sha256": "27d0470be192d5a64b3c1434caefca0411ac285c36ba21a00753df304edfe96f"
+    },
+    {
+      "path": "design-system/marketing/tokens.css",
+      "bytes": 1614,
+      "sha256": "61c924d985e859e76385a615307dca7c992b5b16baa8129293d5cc7621b5088a"
+    },
+    {
+      "path": "design-system/product/CHECKLIST.md",
+      "bytes": 2010,
+      "sha256": "104151f4a814371a3be57f1735ad9361ca7ce00df43fa2cbb9b0b596865ad13b"
+    },
+    {
+      "path": "design-system/product/DESIGN-SYSTEM.md",
+      "bytes": 12936,
+      "sha256": "f0788f22858b63ee24c9cf23f6f736555d0ae9e26eab0c27d1b8ad966a8616f9"
+    },
+    {
+      "path": "design-system/product/FLOWS-AND-STATES.md",
+      "bytes": 5966,
+      "sha256": "4a77ac2688ad3e50814bda4092bb851deadb8e4ae3de9e7a19618217a2f4ce93"
+    },
+    {
+      "path": "design-system/product/IMPLEMENTATION-BACKLOG.md",
+      "bytes": 7365,
+      "sha256": "f03fb78a28935267eae64aec0b878087956d24d2fb3d9e7b47fdb93520b190dd"
+    },
+    {
+      "path": "design-system/product/README.md",
+      "bytes": 4207,
+      "sha256": "760633069168c56a5f944877e49e206352813b59fd629ce36f8a184db2b173c9"
+    },
+    {
+      "path": "design-system/product/assets/event1.jpg",
+      "bytes": 49232,
+      "sha256": "71f57eb4ec4da81ed44143704b2a57e11f600a55886dc7d8e957f58699539045"
+    },
+    {
+      "path": "design-system/product/assets/event2.jpg",
+      "bytes": 53327,
+      "sha256": "7d3b764e60b13844558a37d77d73b0864b9a45877b851ce7955ee4b4b59f5062"
+    },
+    {
+      "path": "design-system/product/assets/event3.jpg",
+      "bytes": 51114,
+      "sha256": "b9825e0fa3895b5a459332c695c2ee30375c1f38cb5ea52a75f0429602b62d9a"
+    },
+    {
+      "path": "design-system/product/assets/event4.jpg",
+      "bytes": 52987,
+      "sha256": "ebd2b3d30082bc58359bf6b50c0ee776833ae2d5f401eddf1fbb46fdd6883ee7"
+    },
+    {
+      "path": "design-system/product/assets/hero-figure.png",
+      "bytes": 685457,
+      "sha256": "42c14b2224611eab7b6135d66c0787c4c54df2414e5e6bd5ed15ed5c18f29065"
+    },
+    {
+      "path": "design-system/product/assets/qr-demo-not-valid.png",
+      "bytes": 2046,
+      "sha256": "b07bf2e030f60ed4a067d62218e5b79af549ea3bcfea1383077e798dc5252409"
+    },
+    {
+      "path": "design-system/product/attendee-mobile.html",
+      "bytes": 5077,
+      "sha256": "d330c8b421bf21f8a0fc967bc2a6f5987dda4bedd6b63be2e6bdbb8d766ca593"
+    },
+    {
+      "path": "design-system/product/attendee-web-mobile.html",
+      "bytes": 3189,
+      "sha256": "d4c4db4993eb8dd82c98f7add2003a631668d1d16f69502c21d2e4b53e15e000"
+    },
+    {
+      "path": "design-system/product/attendee-web.html",
+      "bytes": 4173,
+      "sha256": "10518ea7ab40f238f05e36431271f10349021e7fe5a6cc24df22fd0d71b00db4"
+    },
+    {
+      "path": "design-system/product/implementation/COPY-GUIDE.md",
+      "bytes": 1348,
+      "sha256": "6323ffc189351e2464c6f0cf6362b68c428b7f788a865bc7579b8b14d088ffee"
+    },
+    {
+      "path": "design-system/product/implementation/mobile-semantic-tokens.ts",
+      "bytes": 1252,
+      "sha256": "d8a65ab901c94b7397d03c0c6c5870eb9b20e1cc830ba56404ac44d4c410b35c"
+    },
+    {
+      "path": "design-system/product/implementation/portal-antd-theme.ts",
+      "bytes": 991,
+      "sha256": "763c28eb5c0770a01ed8011aa8101ac5c365f900f90228a511385e9e8de0bcb8"
+    },
+    {
+      "path": "design-system/product/implementation/theme.css",
+      "bytes": 1448,
+      "sha256": "602e25444f5368a32c18bd4085f37fd6a480884fd34b8027f6f7d11a4437db16"
+    },
+    {
+      "path": "design-system/product/index.html",
+      "bytes": 4697,
+      "sha256": "2f592ae6d7e4768e3d367dd8544481d2ef3f6437e43fc5c5af7285b95d13aa9f"
+    },
+    {
+      "path": "design-system/product/portal-mobile.html",
+      "bytes": 4740,
+      "sha256": "5fe5ac443690827bc23e0571a132ace1f8bca0edb2487efbc84e2c6e52d3eae8"
+    },
+    {
+      "path": "design-system/product/portal.html",
+      "bytes": 6987,
+      "sha256": "8a515e140650262f8afd7263b9f83635832eb01991018ec36cf2ebefbb367bab"
+    },
+    {
+      "path": "design-system/product/previews/attendee-mobile-thumb.png",
+      "bytes": 142992,
+      "sha256": "ccc58f1621ece30965b0299a833055c409dd5074d3b62e81aae44ed2bd2d1e39"
+    },
+    {
+      "path": "design-system/product/previews/attendee-mobile.png",
+      "bytes": 369636,
+      "sha256": "3f9f3d9198ebe45ec84b4b412cdecb3c68cc34338fc5d3075223569a43250670"
+    },
+    {
+      "path": "design-system/product/previews/attendee-web-mobile.png",
+      "bytes": 214021,
+      "sha256": "fc456a7e18971c43d588a01b2a357f52eb3bdd6d25d11240c8c9be1dec81cee0"
+    },
+    {
+      "path": "design-system/product/previews/attendee-web-thumb.png",
+      "bytes": 464046,
+      "sha256": "204e523ea3546930e10e6c845c49b25d72c05e5dd523f011c5a5563c2ca26cbe"
+    },
+    {
+      "path": "design-system/product/previews/attendee-web.png",
+      "bytes": 631192,
+      "sha256": "1a77a1c422fe3bce927ad846a25c915c8270d1ad5226787e2fb1b354cf8c936e"
+    },
+    {
+      "path": "design-system/product/previews/index.png",
+      "bytes": 622990,
+      "sha256": "a05e756c159f52c3fc2a328a3db7a2846cc40aeff665841178cd049f8a0c0479"
+    },
+    {
+      "path": "design-system/product/previews/portal-mobile.png",
+      "bytes": 120027,
+      "sha256": "d7e138987306bb9692f0e4a1461652e8a0891560c05446ae375e8fb62f584779"
+    },
+    {
+      "path": "design-system/product/previews/portal-thumb.png",
+      "bytes": 159298,
+      "sha256": "14fb77a4ee9bbb0379b52ee5420ef3644c02232eae9919b3df76e99b39919f97"
+    },
+    {
+      "path": "design-system/product/previews/portal.png",
+      "bytes": 239797,
+      "sha256": "ad3b19dae10c6396e099bf4d9f6cdfcfef4fb35d30931da0a1cb80dab79ee3f3"
+    },
+    {
+      "path": "design-system/product/previews/staff-mobile-thumb.png",
+      "bytes": 124562,
+      "sha256": "7045fd7a3f0cc7ec76a437d56fbf7c55e3b24485f5d578ac8c2e7d7033b1203b"
+    },
+    {
+      "path": "design-system/product/previews/staff-mobile.png",
+      "bytes": 201152,
+      "sha256": "1d63b071bdedd6aeca411b24493be28ec0d7edbe88263503ed5d7c5120eb6bec"
+    },
+    {
+      "path": "design-system/product/prototype.css",
+      "bytes": 22448,
+      "sha256": "98ba9b3298ad72ec2afb843fe8069ac328860330a43288dffc984e781164ee20"
+    },
+    {
+      "path": "design-system/product/staff-mobile.html",
+      "bytes": 3603,
+      "sha256": "39ff0a71e34a705a9db698b00ec9d8ab07789304f64ba2a631ff3d7ae2bbb17f"
+    },
+    {
+      "path": "design-system/product/tokens.json",
+      "bytes": 3199,
+      "sha256": "da6221c4f9a8bbac71472294c2a4b44cece987cb8d8866a9b07007923690c045"
+    },
+    {
+      "path": "reference/approved-neon-desktop.png",
+      "bytes": 2142335,
+      "sha256": "27606ab7948908f0c1559c7bfdaf9214fb3624911311808c60a21b0baff5518c"
+    }
+  ],
+  "created_on": "2026-10-24",
+  "note": "SHA-256 and byte sizes for this canonical folder, excluding MANIFEST.json and .DS_Store.",
+  "package": "Vemoki unified design v1 — canonical handoff"
+}
