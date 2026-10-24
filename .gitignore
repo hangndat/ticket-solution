@@ -14,6 +14,7 @@ coverage/
 *.log
 apps/mobile/ios/
 apps/mobile/android/
+apps/mobile/.derived-data/
 apps/web/.uat-artifacts/
 apps/portal/.uat-artifacts/
 apps/mobile/.uat-artifacts/
@@ -37,3 +38,6 @@ AuthKey_*.p8
 .orca-metrics/
 .fe-uat-stack/
 docs/reviews/assets/FE-DS-SLICE0-parity-*/*.png
+
+# Local LeanCTX cache and machine overlays
+.lean-ctx/
