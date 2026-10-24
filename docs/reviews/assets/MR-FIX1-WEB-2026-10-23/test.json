@@ -1,0 +1,15 @@
+{
+  "capture": "test.png",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "live": {
+    "origin": "http://127.0.0.1:57277/design/ui-uplift-2026-10/app/index.html",
+    "result": "{\"viewport\":{\"w\":845,\"h\":973,\"dpr\":2},\"locale\":\"en\"}"
+  },
+  "probe": {
+    "origin": "http://127.0.0.1:57277/design/ui-uplift-2026-10/app/index.html",
+    "result": "{\"htmlLang\":\"en\",\"localeViPressed\":null,\"localeEnPressed\":null,\"innerWidth\":845,\"innerHeight\":973,\"devicePixelRatio\":2,\"frameWidth\":390,\"interestLabels\":[],\"consentText\":\"\",\"termsChecked\":false,\"menuExpanded\":\"false\"}"
+  }
+}

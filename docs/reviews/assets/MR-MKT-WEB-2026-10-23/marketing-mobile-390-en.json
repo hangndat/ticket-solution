@@ -1,0 +1,32 @@
+{
+  "capture": "marketing-mobile-390-en.png",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "probe": {
+    "origin": "http://127.0.0.1:57277/design/ui-uplift-2026-10/marketing/index.html",
+    "result": "{\"htmlLang\":\"en\",\"localeViPressed\":\"false\",\"localeEnPressed\":\"true\",\"frameWidth\":350,\"interestLabels\":[\"Full name\",\"Work email\",\"Organization\",\"Role\",\"Notes (optional)\",\"I agree to be contacted about Vemoki. See Privacy.\"],\"consentText\":\"I agree to be contacted about Vemoki. See Privacy.\",\"termsChecked\":null,\"menuExpanded\":\"false\"}"
+  },
+  "pngPixels": {
+    "width": 390,
+    "height": 844
+  },
+  "probeParsed": {
+    "htmlLang": "en",
+    "localeViPressed": "false",
+    "localeEnPressed": "true",
+    "frameWidth": 350,
+    "interestLabels": [
+      "Full name",
+      "Work email",
+      "Organization",
+      "Role",
+      "Notes (optional)",
+      "I agree to be contacted about Vemoki. See Privacy."
+    ],
+    "consentText": "I agree to be contacted about Vemoki. See Privacy.",
+    "termsChecked": null,
+    "menuExpanded": "false"
+  }
+}

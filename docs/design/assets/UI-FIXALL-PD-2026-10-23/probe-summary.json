@@ -1,0 +1,36 @@
+{
+  "task": "MR-R09-round2",
+  "issue": 859,
+  "dispatch": "ctx_fc5dfd25a8ac",
+  "anchorSha": "b2faa48a1ce443c8fc6c849cb74a06a57f8b0c37",
+  "priorManifestSha256": "3870caedbf49a9bae04b1fc1fd8ed7599d21219e92c1354aa1bbe1b732c9ab85",
+  "manifestSha256": "ee0f85838fd12d97086a4b1a073696a457256ba7a4d879fb59adc0c13dddf247",
+  "runner": "http://127.0.0.1:57277",
+  "d2ScopeCheck": "OK",
+  "uiEvidenceCheck": "OK (68 files, no duplicate content)",
+  "menuContrastProbe": {
+    "tool": "docs/reviews/assets/UI-FIXALL-PD-REVIEW-2026-10-23/probe-menu-contrast.js",
+    "mkt320vi": { "ratio": 18.72, "wcagAANormal": true },
+    "mkt320en": { "ratio": 18.72, "wcagAANormal": true },
+    "mkt390vi": { "ratio": 18.72, "wcagAANormal": true },
+    "mkt390en": { "ratio": 18.72, "wcagAANormal": true }
+  },
+  "findings": [
+    {
+      "id": "MR-R09",
+      "status": "addressed",
+      "summary": "Chrome wrap / sheet (prior round)."
+    },
+    {
+      "id": "MR-R09-A11Y-MENU-CONTRAST",
+      "status": "addressed-pending-review",
+      "summary": "text-ink on #mkt-sheet-trigger; contrast ~18.7:1 on bg-white @320/390."
+    },
+    {
+      "id": "MR-R09-EVID-320",
+      "status": "addressed",
+      "summary": "Marketing mobile captures wait for hero fade settle."
+    }
+  ],
+  "verdict": "implementation-complete — independent regression review required"
+}

@@ -1,0 +1,16 @@
+{
+  "id": "b6f5993b-2f94-4632-8a27-553eae7b5c43",
+  "ok": true,
+  "result": {
+    "origin": "http://127.0.0.1:57277/design/ui-uplift-2026-10/marketing/index.html",
+    "result": {
+      "frame": "browser mobile",
+      "frameWidth": 300,
+      "issues": [],
+      "viewport": 320
+    }
+  },
+  "_meta": {
+    "runtimeId": "9d821662-c628-49db-a168-99fa7b7636fc"
+  }
+}

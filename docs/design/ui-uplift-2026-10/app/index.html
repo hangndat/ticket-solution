@@ -7,9 +7,51 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Sora:wght@500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/app-uplift.css" />
+  <link rel="stylesheet" href="../css/prototype-frame.css?v=20261023-mr09" />
+  <link rel="stylesheet" href="css/app-effects.css" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            ink: "#0B1220",
+            paper: "#F4F6F8",
+            signal: "#E11D48",
+            focus: "#2563EB",
+            line: "#D7DFE9",
+            muted: "#5B687B",
+          },
+        },
+      },
+    };
+  </script>
+  <script type="module" data-vemoki-sheet-loader src="../../ui-framework-2026-10/prototype/sheet-nav-loader.mjs?v=20261023-sheet"></script>
+  <script src="js/app-tw.js"></script>
+  <style id="app-mr09-chrome">
+    @media (max-width: 519px) {
+      .site .navlinks {
+        display: none !important;
+      }
+      .site .mobile-menu-btn {
+        display: inline-flex !important;
+        white-space: nowrap;
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+        font-size: 0.8125rem;
+      }
+      .site .nav {
+        gap: 0.5rem;
+        padding-left: 0.75rem;
+        padding-right: 0.75rem;
+      }
+      .site .logo {
+        font-size: 1.25rem;
+      }
+    }
+  </style>
 </head>
-<body>
+<body class="review-body">
   <a class="skip" href="#site">Bỏ qua khung prototype</a>
   <div class="review">
     <div class="reviewhead">
@@ -37,6 +79,7 @@
   </div>
   <p class="reviewnote" data-i18n="reviewNote">Dữ liệu minh họa · sự kiện demo có nhãn · không gọi API. Khớp FE-BA-COHERENCE: nav không trùng nhãn, lời mời tách redeem/claim, lỗi redeem có bước tiếp theo.</p>
   <script>
+    const TW = window.APP_TW || {};
     const I18N = {
       vi: {
         reviewDesc: "UI uplift Live Pulse v2 — prototype HTML tĩnh, không build. Chuyển màn bằng thanh dưới; desktop/mobile và VI/EN trong khung trình duyệt.",
@@ -55,6 +98,14 @@
         searchPh: "Tìm sự kiện, địa điểm hoặc nhà tổ chức",
         filterSoon: "Sắp diễn ra",
         filterAll: "Tất cả",
+        filterTimeHint: "Bộ lọc thời gian — không trùng với ô tìm kiếm sự kiện.",
+        termsErr: "Bạn cần đồng ý điều khoản trước khi nhận vé.",
+        pendingTitle: "Đang xử lý đổi mã",
+        pendingSub: "Vé chưa vào ví — không giữ quota trong lúc chờ xác nhận.",
+        pendingBody: "Chúng tôi đang xác minh mã với nhà tổ chức. Bạn có thể đóng màn hình và quay lại Vé của tôi sau.",
+        offlineTitle: "Mạng chậm hoặc timeout",
+        offlineSub: "Không hoàn tất đổi mã — thử lại khi có kết nối.",
+        offlineBody: "Stub copy: lỗi timeout/conflict — kiểm tra mạng hoặc thử mã khác; vé đã có vẫn trong ví.",
         demoBadge: "Demo",
         owned: (n) => `Bạn có ${n} vé`,
         viewTickets: "Xem vé →",
@@ -153,6 +204,14 @@
         searchPh: "Search events, venue, or organizer",
         filterSoon: "Upcoming",
         filterAll: "All",
+        filterTimeHint: "Time window filter — separate from event search.",
+        termsErr: "You must agree to the terms before adding tickets.",
+        pendingTitle: "Redemption pending",
+        pendingSub: "Ticket not in wallet yet — quota is not held while pending.",
+        pendingBody: "We are confirming your code with the organizer. You can leave and check My tickets later.",
+        offlineTitle: "Slow network or timeout",
+        offlineSub: "Redemption did not finish — try again when online.",
+        offlineBody: "Stub: timeout/conflict — check connection or try another code; tickets you already have stay in wallet.",
         demoBadge: "Demo",
         owned: (n) => `You have ${n} ticket${n > 1 ? "s" : ""}`,
         viewTickets: "View tickets →",
@@ -241,6 +300,7 @@
     let role = "guest";
     let page = "catalog";
     let menuOpen = false;
+    let sheetApi = null;
     let selected = "MFest";
     let walletFilter = null;
     let redeemIntent = false;
@@ -259,6 +319,8 @@
       ["Redeem · gate", "guest", "redeem"],
       ["Redeem · form", "user", "redeem"],
       ["Redeem · terms", "user", "redeem-terms"],
+      ["Redeem · pending", "user", "redeem-pending"],
+      ["Redeem · offline", "user", "redeem-offline"],
       ["Redeem · success", "user", "redeem-success"],
       ["Redeem · error", "user", "redeem-error"],
       ["Claim invite", "guest", "claim"],
@@ -287,9 +349,28 @@
 
     function setView(v) {
       view = v;
-      document.getElementById("browser").className = "browser" + (v === "mobile" ? " mobile" : "");
+      const mobile = v === "mobile";
+      document.getElementById("browser").className = "browser" + (mobile ? " mobile" : "");
       document.getElementById("btnDesktop").classList.toggle("on", v === "desktop");
-      document.getElementById("btnMobile").classList.toggle("on", v === "mobile");
+      document.getElementById("btnMobile").classList.toggle("on", mobile);
+      document.querySelectorAll(".navlinks").forEach((el) => {
+        if (mobile) {
+          el.classList.add("hidden");
+          el.classList.remove("md:flex");
+        } else {
+          el.classList.add("hidden", "md:flex");
+        }
+      });
+      document.querySelectorAll(".mobile-menu-btn").forEach((el) => {
+        if (mobile) {
+          el.classList.add("inline-flex");
+          el.classList.remove("hidden");
+        } else {
+          el.classList.add("hidden");
+          el.classList.remove("inline-flex");
+        }
+      });
+      render();
     }
 
     function setLocale(l) {
@@ -322,7 +403,7 @@
     }
 
     function navBtn(label, p, active) {
-      return `<button type="button" class="${active ? "on" : ""}" onclick="go('${p}')">${label}</button>`;
+      return `<button type="button" class="${TW.navlinkBtn || ""} ${active ? TW.navlinkOn || "on" : ""}" onclick="go('${p}')">${label}</button>`;
     }
 
     function spotlightHandlers() {
@@ -345,31 +426,81 @@
         navBtn(tk("navClaim"), "claim", page === "claim") +
         navBtn(tk("navAccount"), "account", page === "account");
 
-      const menu = menuOpen
-        ? `<div class="menu-sheet" role="dialog" aria-label="${tk("menu")}">${links}<button type="button" class="btn-secondary" style="margin-top:12px;width:100%" onclick="menuOpen=false;render()">${tk("close")}</button></div>`
-        : "";
-
       return (
-        `<div class="demo-strip" role="status"><strong>${tk("demoStrip")}</strong> · app.vemoki.com · prototype PD 2026-10-22</div>` +
-        `<header class="nav">` +
-        `<button type="button" class="logo" onclick="go('catalog')">vemoki<span aria-hidden="true">↗</span></button>` +
-        `<nav class="navlinks" aria-label="App">${links}</nav>` +
-        `<div class="nav-actions">` +
-        `<div class="locale-toggle" role="group" aria-label="Language">` +
-        `<button type="button" class="${locale === "vi" ? "on" : ""}" onclick="setLocale('vi')">VI</button>` +
-        `<button type="button" class="${locale === "en" ? "on" : ""}" onclick="setLocale('en')">EN</button>` +
+        `<div class="${TW.demoStrip || "demo-strip"}" role="status"><strong>${tk("demoStrip")}</strong> · app.vemoki.com · prototype PD 2026-10-22</div>` +
+        `<header class="${TW.nav || "nav"}">` +
+        `<button type="button" class="${TW.logo || "logo"}" onclick="go('catalog')">vemoki<span aria-hidden="true">↗</span></button>` +
+        `<nav class="navlinks ${TW.navlinks || ""}" aria-label="App">${links}</nav>` +
+        `<div class="${TW.navActions || "nav-actions"}">` +
+        `<div class="${TW.locale || "locale-toggle"}" role="group" aria-label="Language">` +
+        `<button type="button" id="locale-vi" class="${TW.localeBtn || ""} ${locale === "vi" ? TW.localeOn || "on" : ""}" onclick="setLocale('vi')">VI</button>` +
+        `<button type="button" id="locale-en" class="${TW.localeBtn || ""} ${locale === "en" ? TW.localeOn || "on" : ""}" onclick="setLocale('en')">EN</button>` +
         `</div>` +
         (role !== "guest"
-          ? `<div class="avatar"><i aria-hidden="true">MA</i><span>${tk("guestName")}</span></div>`
+          ? `<div class="${TW.avatar || "avatar"}"><i class="${TW.avatarIcon || ""}" aria-hidden="true">MA</i><span>${tk("guestName")}</span></div>`
           : "") +
-        `<button type="button" class="mobile-menu-btn" aria-expanded="${menuOpen}" onclick="menuOpen=true;render()">☰ ${tk("menu")}</button>` +
-        `</div></header>${menu}`
+        `<button type="button" id="app-sheet-trigger" class="mobile-menu-btn ${TW.mobileMenu || ""}" aria-expanded="${menuOpen}" aria-controls="app-sheet-root" onclick="openMenu()">☰ ${tk("menu")}</button>` +
+        `</div></header><div id="app-sheet-root" hidden data-state="${menuOpen ? "open" : "closed"}"></div>`
       );
+    }
+
+    function appSheetContent() {
+      const close = "window.__closeAppSheet&&window.__closeAppSheet()";
+      const items = [
+        { label: tk("navExplore"), onClick: `go('catalog');${close}` },
+        ...(role !== "guest"
+          ? [{ label: tk("navWallet"), onClick: `go('wallet');${close}` }]
+          : []),
+        { label: tk("navRedeem"), onClick: `go('redeem');${close}` },
+        { label: tk("navClaim"), onClick: `go('claim');${close}` },
+        { label: tk("navAccount"), onClick: `go('account');${close}` },
+      ];
+      return {
+        title: tk("menu"),
+        closeLabel: tk("close"),
+        navLabel: "App",
+        links: items,
+      };
+    }
+
+    function ensureSheetApi() {
+      if (sheetApi || !window.VemokiSheetNav?.bind) return sheetApi;
+      window.__closeAppSheet = () => {
+        menuOpen = false;
+        sheetApi?.setOpen(false);
+        render();
+      };
+      sheetApi = window.VemokiSheetNav.bind({
+        triggerId: "app-sheet-trigger",
+        rootId: "app-sheet-root",
+        getContent: appSheetContent,
+        onChange(open) {
+          menuOpen = open;
+          if (!open) render();
+          else sheetApi?.setContent?.(appSheetContent());
+        },
+      });
+      return sheetApi;
+    }
+
+    function openMenu() {
+      menuOpen = true;
+      render();
+      requestAnimationFrame(() => {
+        ensureSheetApi();
+        sheetApi?.setOpen(true);
+      });
+    }
+
+    function closeMenu() {
+      menuOpen = false;
+      sheetApi?.setOpen(false);
+      render();
     }
 
     function footer() {
       return (
-        `<footer class="footer"><span>${tk("footerTag")}</span><nav>` +
+        `<footer class="${TW.footer || "footer"}"><span>${tk("footerTag")}</span><nav>` +
         navBtn(tk("navExplore"), "catalog", false) +
         navBtn(tk("footerRedeem"), "redeem", false) +
         navBtn(tk("navAccount"), "account", false) +
@@ -386,12 +517,13 @@
         role !== "guest" && e.count
           ? `<button type="button" class="owned-strip" onclick="event.stopPropagation();walletFilter='${esc(e.name)}';go('wallet')"><span>${I18N[locale].owned(e.count)}</span><span>${tk("viewTickets")}</span></button>`
           : "";
-      const demo = e.demo ? `<span class="badge-demo">${tk("demoBadge")}</span>` : "";
+      const artKey = e.style === "green" ? "green" : e.style === "gold" ? "gold" : "mfest";
+      const demo = e.demo ? `<span class="${TW.badgeDemo || "badge-demo"}">${tk("demoBadge")}</span>` : "";
       return (
-        `<article class="event-card-wrap"><button type="button" class="event-card" onclick="selected='${esc(e.name)}';go('detail')">` +
-        `<div class="event-art ${e.style}"><span class="event-art-title">${esc(e.name)}</span></div>` +
-        `<div class="event-body"><div class="event-meta"><small>${esc(e.org)}</small>${demo}</div>` +
-        `<h3>${esc(e.name)}</h3><p>${esc(e.date)} · ${tk("city")}</p></div></button>${owned}</article>`
+        `<article class="${TW.eventWrap || "event-card-wrap"}"><button type="button" class="${TW.eventCard || "event-card"}" onclick="selected='${esc(e.name)}';go('detail')">` +
+        `<div class="${TW.eventArt || "event-art"}" data-event-art="${artKey}"><span class="${TW.eventArtTitle || "event-art-title"}">${esc(e.name)}</span></div>` +
+        `<div class="${TW.eventBody || "event-body"}"><div class="${TW.eventMeta || "event-meta"}"><small>${esc(e.org)}</small>${demo}</div>` +
+        `<h3 class="font-display text-lg font-semibold text-ink">${esc(e.name)}</h3><p class="text-sm text-muted">${esc(e.date)} · ${tk("city")}</p></div></button>${owned}</article>`
       );
     }
 
@@ -400,18 +532,18 @@
         const on = (i * 7 + (i % 21) * 3) % 13 > 6;
         return `<i class="${on ? "" : "blank"}" aria-hidden="true"></i>`;
       }).join("");
-      return `<div class="qr" aria-label="QR illustration">${cells}</div>`;
+      return `<div class="${TW.qrPanel || ""}" data-qr-grid aria-label="QR illustration">${cells}</div>`;
     }
 
     function catalog() {
       return (
-        `<section class="catalog-hero"><div class="catalog-hero-inner">` +
-        `<p class="eyebrow">${tk("catalogEyebrow")}</p>` +
-        `<h1>${tk("catalogTitle")}</h1><p>${tk("catalogSub")}</p></div></section>` +
-        `<div class="tools"><div class="search-wrap">${searchIcon()}<input class="search" type="search" aria-label="${tk("searchPh")}" placeholder="${tk("searchPh")}" oninput="filterEvents(this.value)" /></div>` +
-        `<select aria-label="Filter"><option>${tk("filterSoon")}</option><option>${tk("filterAll")}</option></select></div>` +
-        `<div class="chips"><button type="button" class="chip on">${tk("filterSoon")}</button><button type="button" class="chip">${tk("filterAll")}</button></div>` +
-        `<div class="grid" id="eventGrid">${events.map(eventCard).join("")}</div>`
+        `<section class="${TW.catalogHero || "catalog-hero"}"><div class="${TW.catalogHeroInner || "catalog-hero-inner"}">` +
+        `<p class="${TW.eyebrow || "eyebrow"}">${tk("catalogEyebrow")}</p>` +
+        `<h1 class="font-display text-3xl font-bold text-ink">${tk("catalogTitle")}</h1><p class="mt-2 text-muted">${tk("catalogSub")}</p></div></section>` +
+        `<div class="${TW.tools || "tools"}"><div class="${TW.searchWrap || "search-wrap"}">${searchIcon()}<input class="${TW.search || "search"}" type="search" aria-label="${tk("searchPh")}" placeholder="${tk("searchPh")}" oninput="filterEvents(this.value)" /></div>` +
+        `<select class="min-h-[44px] rounded-md border border-line bg-white px-3 text-sm" aria-label="${tk("filterSoon")}"><option>${tk("filterSoon")}</option><option>${tk("filterAll")}</option></select></div>` +
+        `<p class="${TW.help || "help"} filter-time-hint mx-auto max-w-5xl px-5 md:px-8">${tk("filterTimeHint")}</p>` +
+        `<div class="${TW.grid || "grid"}" id="eventGrid">${events.map(eventCard).join("")}</div>`
       );
     }
 
@@ -419,8 +551,8 @@
       const e = current();
       const owned =
         role !== "guest" && e.count
-          ? `<button type="button" class="btn btn-secondary" onclick="walletFilter='${esc(e.name)}';go('wallet')">${I18N[locale].owned(e.count)} — ${tk("viewTickets")}</button>`
-          : `<p class="help">${tk("haveCode")}</p><button type="button" class="btn btn-primary" onclick="redeemIntent=true;go('redeem')">${tk("redeemCta")}</button><p class="help">${tk("redeemHelp")}</p>`;
+          ? `<button type="button" class="${TW.btn || 'btn'} ${TW.btnSecondary || 'btn-secondary'}" onclick="walletFilter='${esc(e.name)}';go('wallet')">${I18N[locale].owned(e.count)} — ${tk("viewTickets")}</button>`
+          : `<p class="${TW.help || 'help'}">${tk("haveCode")}</p><button type="button" class="${TW.btn || 'btn'} ${TW.btnPrimary || 'btn-primary'}" onclick="redeemIntent=true;go('redeem')">${tk("redeemCta")}</button><p class="${TW.help || 'help'}">${tk("redeemHelp")}</p>`;
       return (
         `<button type="button" class="back btn-ghost" onclick="go('catalog')">${tk("backEvents")}</button>` +
         `<div class="event-art detail-hero ${e.style}"><span class="event-art-title">${esc(e.name)}</span></div>` +
@@ -444,6 +576,8 @@
         detail: "t/mfest/events/mfest",
         redeem: "redeem",
         "redeem-terms": "redeem/confirm",
+        "redeem-pending": "redeem/pending",
+        "redeem-offline": "redeem",
         "redeem-success": "redeem/success",
         "redeem-error": "redeem",
         claim: "claim",
@@ -461,57 +595,68 @@
       else if (page === "detail") main = detail();
       else if (page === "loading")
         main =
-          `<div class="surface-state" role="status" aria-busy="true"><div class="state-icon loading" aria-hidden="true">…</div><h2>${tk("loadingTitle")}</h2><p>${tk("loadingSub")}</p></div>` +
+          `<div class="${TW.surfaceState || 'surface-state'}" role="status" aria-busy="true"><div class="state-icon loading" aria-hidden="true">…</div><h2>${tk("loadingTitle")}</h2><p>${tk("loadingSub")}</p></div>` +
           `<div class="skeleton-grid"><div class="skel art"></div><div class="skel art"></div><div class="skel art"></div></div>`;
       else if (page === "error")
         main =
-          `<div class="surface-state" role="alert"><div class="state-icon error" aria-hidden="true">!</div><h2>${tk("errorLoadTitle")}</h2><p>${tk("errorLoadSub")}</p>` +
-          `<button type="button" class="btn btn-primary" style="margin-top:16px" onclick="go('catalog')">${tk("retry")}</button></div>`;
+          `<div class="${TW.surfaceState || 'surface-state'}" role="alert"><div class="state-icon error" aria-hidden="true">!</div><h2>${tk("errorLoadTitle")}</h2><p>${tk("errorLoadSub")}</p>` +
+          `<button type="button" class="${TW.btn || 'btn'} ${TW.btnPrimary || 'btn-primary'}" style="margin-top:16px" onclick="go('catalog')">${tk("retry")}</button></div>`;
       else if (page === "redeem")
         main =
-          `<div class="narrow"><div class="page-intro"><h1>${tk("redeemTitle")}</h1><p>${tk("redeemSub")}</p></div>` +
-          `<div class="form-card"><label for="code">${tk("codeLabel")}</label><input id="code" type="text" placeholder="${tk("codePh")}" autocomplete="off" />` +
-          `<button type="button" class="btn btn-primary" onclick="lookup()">${role === "guest" ? tk("loginContinue") : tk("findTicket")}</button>` +
-          `<p class="help">${tk("redeemHelp2")}</p></div></div>`;
+          `<div class="${TW.narrow || 'narrow'}"><div class="${TW.pageIntro || 'page-intro'}"><h1>${tk("redeemTitle")}</h1><p>${tk("redeemSub")}</p></div>` +
+          `<div class="${TW.formCard || 'form-card'}"><label for="code">${tk("codeLabel")}</label><input id="code" type="text" placeholder="${tk("codePh")}" autocomplete="off" />` +
+          `<button type="button" class="${TW.btn || 'btn'} ${TW.btnPrimary || 'btn-primary'}" onclick="lookup()">${role === "guest" ? tk("loginContinue") : tk("findTicket")}</button>` +
+          `<p class="${TW.help || 'help'}">${tk("redeemHelp2")}</p></div></div>`;
       else if (page === "redeem-terms")
         main =
-          `<div class="narrow"><div class="page-intro"><h1>${tk("termsTitle")}</h1><p>${tk("termsSub")}</p></div>` +
-          `<div class="form-card"><p class="help" style="margin:0 0 12px">MFest · ${tk("ticketType")}</p>` +
-          `<div class="terms-box">${tk("termsText")}</div>` +
-          `<label class="check-row"><input type="checkbox" checked /><span>${tk("termsAgree")}</span></label>` +
-          `<button type="button" class="btn btn-primary" onclick="go('redeem-success')">${tk("confirmReceive")}</button></div></div>`;
+          `<div class="${TW.narrow || 'narrow'}"><div class="${TW.pageIntro || 'page-intro'}"><h1>${tk("termsTitle")}</h1><p>${tk("termsSub")}</p></div>` +
+          `<div class="${TW.formCard || 'form-card'}"><p class="${TW.help || 'help'}" style="margin:0 0 12px">MFest · ${tk("ticketType")}</p>` +
+          `<div class="${TW.termsBox || 'terms-box'}">${tk("termsText")}</div>` +
+          `<label class="${TW.checkRow || 'check-row'}"><input type="checkbox" id="terms-agree" /><span>${tk("termsAgree")}</span></label>` +
+          `<p id="terms-error" class="${TW.formError || 'form-inline-error'}" role="alert" hidden>${tk("termsErr")}</p>` +
+          `<button type="button" class="${TW.btn || 'btn'} ${TW.btnPrimary || 'btn-primary'}" onclick="confirmTerms()">${tk("confirmReceive")}</button></div></div>`;
+      else if (page === "redeem-pending")
+        main =
+          `<div class="${TW.narrow || 'narrow'}"><div class="${TW.surfaceState || 'surface-state'}" role="status"><div class="state-icon loading" aria-hidden="true">…</div>` +
+          `<h2>${tk("pendingTitle")}</h2><p>${tk("pendingSub")}</p><p class="${TW.help || 'help'}">${tk("pendingBody")}</p>` +
+          `<button type="button" class="${TW.btn || 'btn'} ${TW.btnSecondary || 'btn-secondary'}" style="margin-top:16px" onclick="go('wallet')">${tk("goWallet")}</button></div></div>`;
+      else if (page === "redeem-offline")
+        main =
+          `<div class="${TW.narrow || 'narrow'}"><div class="${TW.surfaceState || 'surface-state'}" role="alert"><div class="state-icon error" aria-hidden="true">!</div>` +
+          `<h2>${tk("offlineTitle")}</h2><p>${tk("offlineSub")}</p><p class="${TW.help || 'help'}">${tk("offlineBody")}</p>` +
+          `<button type="button" class="${TW.btn || 'btn'} ${TW.btnPrimary || 'btn-primary'}" style="margin-top:16px" onclick="go('redeem')">${tk("tryAgain")}</button></div></div>`;
       else if (page === "redeem-success")
         main =
           `<div class="narrow success-panel"><div class="success-ring" aria-hidden="true">✓</div><h1>${tk("successTitle")}</h1><p>${tk("successSub")}</p>` +
-          `<button type="button" class="btn btn-primary" style="margin-top:20px" onclick="go('wallet')">${tk("openWallet")}</button></div>`;
+          `<button type="button" class="${TW.btn || 'btn'} ${TW.btnPrimary || 'btn-primary'}" style="margin-top:20px" onclick="go('wallet')">${tk("openWallet")}</button></div>`;
       else if (page === "redeem-error")
         main =
-          `<div class="narrow"><div class="page-intro"><h1>${tk("errorTitle")}</h1><p>${tk("errorSub")}</p></div>` +
+          `<div class="${TW.narrow || 'narrow'}"><div class="${TW.pageIntro || 'page-intro'}"><h1>${tk("errorTitle")}</h1><p>${tk("errorSub")}</p></div>` +
           `<div class="notice error" role="alert">${tk("errorAction")}</div>` +
-          `<button type="button" class="btn btn-primary" onclick="go('redeem')">${tk("tryAgain")}</button>` +
-          `<button type="button" class="btn btn-secondary" style="margin-top:10px;width:100%" onclick="role='user';go('wallet')">${tk("goWallet")}</button></div>`;
+          `<button type="button" class="${TW.btn || 'btn'} ${TW.btnPrimary || 'btn-primary'}" onclick="go('redeem')">${tk("tryAgain")}</button>` +
+          `<button type="button" class="${TW.btn || 'btn'} ${TW.btnSecondary || 'btn-secondary'}" style="margin-top:10px;width:100%" onclick="role='user';go('wallet')">${tk("goWallet")}</button></div>`;
       else if (page === "claim")
         main =
-          `<div class="narrow"><div class="page-intro"><h1>${tk("claimTitle")}</h1><p>${tk("claimSub")}</p></div>` +
+          `<div class="${TW.narrow || 'narrow'}"><div class="${TW.pageIntro || 'page-intro'}"><h1>${tk("claimTitle")}</h1><p>${tk("claimSub")}</p></div>` +
           `<div class="form-card notice" style="margin:0">${locale === "vi" ? "Khác với tab «Đổi mã» — đây là lời mời tham dự sự kiện qua email, không phải mã vé CSV." : "Not the Redeem tab — this is an email event invitation, not a ticket code."}</div>` +
-          `<button type="button" class="btn btn-primary" style="margin-top:16px;width:100%">${tk("claimBtn")}</button></div>`;
+          `<button type="button" class="${TW.btn || 'btn'} ${TW.btnPrimary || 'btn-primary'}" style="margin-top:16px;width:100%">${tk("claimBtn")}</button></div>`;
       else if (page === "wallet-empty")
         main =
-          `<div class="surface-state"><div class="state-icon empty" aria-hidden="true">◎</div><h2>${tk("emptyWalletTitle")}</h2><p>${tk("emptyWalletSub")}</p>` +
-          `<button type="button" class="btn btn-primary" style="margin-top:16px" onclick="go('redeem')">${tk("redeemCta")}</button></div>`;
+          `<div class="${TW.surfaceState || 'surface-state'}"><div class="state-icon empty" aria-hidden="true">◎</div><h2>${tk("emptyWalletTitle")}</h2><p>${tk("emptyWalletSub")}</p>` +
+          `<button type="button" class="${TW.btn || 'btn'} ${TW.btnPrimary || 'btn-primary'}" style="margin-top:16px" onclick="go('redeem')">${tk("redeemCta")}</button></div>`;
       else if (page === "wallet") {
         const es = walletFilter ? events.filter((e) => e.name === walletFilter) : events.filter((e) => e.count);
         main =
           `<div class="wallet-header"><div><h1>${tk("walletTitle")}</h1><p>${tk("walletSub")}</p></div>` +
-          `<button type="button" class="btn btn-primary" onclick="redeemIntent=true;go('redeem')">${tk("redeemCta")}</button></div>` +
+          `<button type="button" class="${TW.btn || 'btn'} ${TW.btnPrimary || 'btn-primary'}" onclick="redeemIntent=true;go('redeem')">${tk("redeemCta")}</button></div>` +
           (walletFilter
             ? `<div class="chips"><span class="chip">${esc(walletFilter)} <button type="button" class="textlink" onclick="walletFilter=null;render()">×</button></span></div>`
             : `<p class="muted" style="margin-bottom:16px">${tk("walletMeta")}</p>`) +
           `<div class="ticket-grid">${es
             .flatMap((e) =>
               Array.from({ length: e.count }, (_, i) =>
-                `<article class="ticket-card"><div class="ticket-top"><span class="tag">${tk("tagUnused")}</span><h3 style="margin-top:12px">${esc(e.name)}</h3><p class="help">${esc(e.date)}</p></div>` +
-                  `<div class="ticket-mid"><b>${tk("ticketType")} · ${i + 1}</b><p class="help">${tk("guestName")} · ${esc(e.org)}</p></div>` +
+                `<article class="ticket-card"><div class="ticket-top"><span class="tag">${tk("tagUnused")}</span><h3 style="margin-top:12px">${esc(e.name)}</h3><p class="${TW.help || 'help'}">${esc(e.date)}</p></div>` +
+                  `<div class="ticket-mid"><b>${tk("ticketType")} · ${i + 1}</b><p class="${TW.help || 'help'}">${tk("guestName")} · ${esc(e.org)}</p></div>` +
                   `<div class="ticket-foot"><span>MF–8K2P–${i + 1}X9Q</span><button type="button" class="textlink" onclick="selected='${esc(e.name)}';go('ticket')">${tk("openTicket")}</button></div></article>`
               )
             )
@@ -520,7 +665,7 @@
         const e = current();
         main =
           `<button type="button" class="back btn-ghost" onclick="go('wallet')">${tk("ticketBack")}</button>` +
-          `<div class="cols"><div class="sidebox qr-panel"><span class="tag">${tk("tagUnused")}</span><h2 style="margin-top:14px">${esc(e.name)}</h2>${qr()}<b>MF–8K2P–7X9Q</b><p class="help">${tk("qrHelp")}</p></div>` +
+          `<div class="cols"><div class="sidebox qr-panel"><span class="tag">${tk("tagUnused")}</span><h2 style="margin-top:14px">${esc(e.name)}</h2>${qr()}<b>MF–8K2P–7X9Q</b><p class="${TW.help || 'help'}">${tk("qrHelp")}</p></div>` +
           `<div><h2>${tk("ticketInfo")}</h2><div class="group">` +
           `<div class="row-btn"><span><b>${tk("ticketType")}</b><small>${tk("guestName")}</small></span></div>` +
           `<div class="row-btn"><span><b>${tk("time")}</b><small>${esc(e.date)}</small></span></div>` +
@@ -532,13 +677,13 @@
           `<div class="account-layout"><nav class="account-nav" aria-label="Account">` +
           `<button type="button" class="on">${tk("you")}</button><button type="button">${tk("privacy")}</button></nav><div>` +
           `<h2>${tk("you")}</h2><div class="group"><div class="row-btn"><span><b>${role === "guest" ? tk("notLogged") : "minhanh@example.com"}</b><small>${role === "guest" ? tk("loginHint") : tk("guestName")}</small></span></div></div>` +
-          (role === "guest" ? `<button type="button" class="btn btn-primary" onclick="go('redeem')">${tk("loginBtn")}</button>` : "") +
+          (role === "guest" ? `<button type="button" class="${TW.btn || 'btn'} ${TW.btnPrimary || 'btn-primary'}" onclick="go('redeem')">${tk("loginBtn")}</button>` : "") +
           `<h2 style="margin-top:1.5rem">${tk("notifications")}</h2><div class="notice">${tk("notifBody")}</div>` +
           `<h2>${tk("privacy")}</h2><div class="group"><button type="button" class="row-btn"><span><b>${tk("privacyPolicy")}</b><small>${tk("readOnWeb")}</small></span><span>›</span></button>` +
           (role !== "guest" ? `<button type="button" class="row-btn"><span><b>${tk("deleteAccount")}</b></span><span>›</span></button>` : "") +
           `</div>${role !== "guest" ? `<button type="button" class="btn btn-destructive" style="margin-top:8px" onclick="role='guest';go('account')">${tk("logout")}</button>` : ""}</div></div>`;
 
-      site.innerHTML = nav() + `<main class="main">${main}</main>` + footer();
+      site.innerHTML = nav() + `<main class="${TW.main || "main"}">${main}</main>` + footer();
 
       if (showToast && page === "wallet") {
         site.insertAdjacentHTML(
@@ -549,6 +694,25 @@
       }
 
       spotlightHandlers();
+      if (menuOpen) {
+        ensureSheetApi();
+        sheetApi?.setContent?.(appSheetContent());
+        sheetApi?.setOpen(true);
+      }
+    }
+
+    function confirmTerms() {
+      const cb = document.getElementById("terms-agree");
+      const err = document.getElementById("terms-error");
+      if (!cb?.checked) {
+        cb?.setAttribute("aria-invalid", "true");
+        if (err) err.hidden = false;
+        cb?.focus();
+        return;
+      }
+      cb?.removeAttribute("aria-invalid");
+      if (err) err.hidden = true;
+      go("redeem-success");
     }
 
     function filterEvents(v) {
@@ -563,7 +727,7 @@
       if (!el || !el.value.trim()) {
         site.insertAdjacentHTML(
           "beforeend",
-          `<div class="modal-backdrop" onclick="if(event.target===this)render()"><div class="dialog" role="alertdialog"><h2>${locale === "vi" ? "Chưa có mã" : "No code"}</h2><p>${locale === "vi" ? "Nhập mã nhận vé để tiếp tục." : "Enter your ticket code to continue."}</p><button type="button" class="btn btn-primary" onclick="render()">${tk("close")}</button></div></div>`
+          `<div class="modal-backdrop" onclick="if(event.target===this)render()"><div class="dialog" role="alertdialog"><h2>${locale === "vi" ? "Chưa có mã" : "No code"}</h2><p>${locale === "vi" ? "Nhập mã nhận vé để tiếp tục." : "Enter your ticket code to continue."}</p><button type="button" class="${TW.btn || 'btn'} ${TW.btnPrimary || 'btn-primary'}" onclick="render()">${tk("close")}</button></div></div>`
         );
         return;
       }
@@ -575,7 +739,14 @@
       go("redeem-terms");
     }
 
-    render();
+    const syncView = () => {
+      if (window.innerWidth < 520 && view !== "mobile") setView("mobile");
+    };
+    setView(window.innerWidth < 520 ? "mobile" : "desktop");
+    window.addEventListener("resize", syncView);
+    window.setInterval(() => {
+      if (window.innerWidth < 520 && view !== "mobile") setView("mobile");
+    }, 300);
   </script>
 </body>
 </html>
