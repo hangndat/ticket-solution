@@ -3,7 +3,7 @@
 | Field | Value |
 | --- | --- |
 | Branch | `hangndat/vd05-ios-attendee` |
-| **Code SHA** | Run `git rev-parse HEAD` on branch tip after commit |
+| **Code SHA** | `bda842005d0306e060213741e9ad4ca0db91c2ad` |
 | Base | `c242b7ce7859d6b0c36fe8fbb333aab37311631a` |
 | Scope | `apps/mobile/**` only |
 
