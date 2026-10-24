@@ -12,6 +12,7 @@ import { walletCopy } from '@/components/screen-state-copy';
 import { EventBanner, EventLogo } from '@/components/event-media';
 import { BrandWordmark, Notice, Page } from '@/components/page';
 import { QrCode } from '@/components/qr-code';
+import { TicketStatusPill } from '@/components/ticket-status-pill';
 import { hasDemoMediaForEventId } from '@/data/demo-media';
 import { findDemoEventById } from '@/data/demo-events';
 import { brand, colors } from '@/theme/colors';
@@ -252,18 +253,22 @@ export function TicketDetailScreen() {
             accessibilityLabel="Banner sự kiện demo trên vé"
           />
         ) : null}
-        <View style={{ padding: space.xl, gap: space.lg, alignItems: 'center' }}>
-          {hasDemoMediaForEventId(ticket.eventId) ? (
-            <EventLogo
-              eventId={ticket.eventId}
-              height={32}
-              testID="ticket-detail-logo"
-              accessibilityLabel="Logo sự kiện demo trên vé"
-            />
-          ) : (
-            <BrandWordmark compact />
-          )}
+        <View style={{ padding: space.xl, gap: space.lg, alignItems: 'stretch' }}>
+          <View style={{ alignItems: 'center', gap: space.md, width: '100%' }}>
+            {hasDemoMediaForEventId(ticket.eventId) ? (
+              <EventLogo
+                eventId={ticket.eventId}
+                height={32}
+                testID="ticket-detail-logo"
+                accessibilityLabel="Logo sự kiện demo trên vé"
+              />
+            ) : (
+              <BrandWordmark compact />
+            )}
+            <TicketStatusPill label={row.statusLabel} />
+          </View>
           <Text
+            maxFontSizeMultiplier={2}
             style={{
               color: brand.ink,
               ...typography.display,
@@ -273,19 +278,12 @@ export function TicketDetailScreen() {
             Vé của bạn
           </Text>
           <Text
+            maxFontSizeMultiplier={2}
+            accessibilityRole="header"
             style={{ ...typography.sectionTitle, color: brand.ink,
               textAlign: 'center' }}
           >
             {row.eventTitle}
-          </Text>
-          <Text
-            style={{
-              color: brand.signal,
-              ...typography.callout,
-              textAlign: 'center'
-            }}
-          >
-            {row.statusLabel}
           </Text>
           {eventWhen ? (
             <Text
@@ -305,6 +303,16 @@ export function TicketDetailScreen() {
               {eventWhere}
             </Text>
           ) : null}
+          <View
+            accessibilityElementsHidden
+            importantForAccessibility="no-hide-descendants"
+            style={{
+              height: 1,
+              backgroundColor: colors.line,
+              marginVertical: space.xs,
+              alignSelf: 'stretch'
+            }}
+          />
           {qrValue ? (
             <QrCode
               value={qrValue}

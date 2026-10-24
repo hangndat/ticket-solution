@@ -28,6 +28,7 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { useAttendeeTabBarInset } from '@/navigation/use-attendee-tab-bar-inset';
 import { useShowAttendeeTabs } from '@/navigation/use-staff-workspace';
 import { WalletOwnedTicketsLink } from '@/components/wallet-owned-tickets-link';
+import { ScreenAtmosphere } from '@/components/screen-atmosphere';
 import { space, radius } from '@/theme/tokens';
 import { typography } from '@/theme/typography';
 
@@ -221,14 +222,25 @@ export function EventsScreen() {
   const listHeader = (
     <View style={{ gap: space.md, paddingBottom: space.xs }}>
       {showCatalogChrome ? (
-        <Text
-          accessibilityRole="header"
-          style={{ ...typography.hero, color: brand.ink,
-            fontFamily: fontFamilies.display,
-            letterSpacing: -0.5 }}
-        >
-          {eventsCopy.listHeadline}
-        </Text>
+        <View style={{ gap: space.xs }}>
+          <Text
+            accessibilityRole="header"
+            maxFontSizeMultiplier={2}
+            style={{ ...typography.hero, color: brand.ink,
+              fontFamily: fontFamilies.display,
+              letterSpacing: -0.5 }}
+          >
+            {eventsCopy.listHeadline}
+          </Text>
+          <Text
+            maxFontSizeMultiplier={2}
+            style={{ ...typography.subhead, color: colors.secondary,
+              fontFamily: fontFamilies.body,
+              lineHeight: 22 }}
+          >
+            {eventsCopy.heroSupport}
+          </Text>
+        </View>
       ) : null}
       {showCatalogChrome ? (
         <Input
@@ -281,12 +293,12 @@ export function EventsScreen() {
   const bottomInset = tabBarInset;
 
   return (
-    <>
+    <ScreenAtmosphere>
       <FlatList
         contentInsetAdjustmentBehavior="never"
         keyboardShouldPersistTaps="handled"
         scrollIndicatorInsets={{ bottom: tabBarInset - insets.bottom }}
-        style={{ flex: 1, backgroundColor: brand.paper }}
+        style={{ flex: 1, backgroundColor: 'transparent' }}
         contentContainerStyle={{
           paddingHorizontal: space.xl,
           paddingTop: space.sm,
@@ -320,7 +332,7 @@ export function EventsScreen() {
         }
         renderItem={({ item }) => <PublishedEventCard item={item} />}
       />
-    </>
+    </ScreenAtmosphere>
   );
 }
 
