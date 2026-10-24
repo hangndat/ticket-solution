@@ -1,21 +1,23 @@
-import { CatalogSkeletonGrid } from '@ticket/ui';
-import { attendeeHomeMain, attendeeRouteLoadingShell } from '../src/attendee-surface';
-import { SurfaceState } from '../src/ui/surface-state';
+import { Skeleton } from '@ticket/ui';
 
-/** Route-level loading — catalog skeleton grid on attendee uplift. */
+/**
+ * Root fallback loading — only hit by routes without their own loading.tsx
+ * (claim/invite/account/privacy/support/dev). Generic content-shaped
+ * skeleton, not a full-page "Đang tải…" status card and not the catalog
+ * grid copy (that belongs to the consumer catalog route's own loading.tsx).
+ */
 export default function Loading() {
   return (
-    <main
-      id="main"
-      className={`${attendeeHomeMain} ${attendeeRouteLoadingShell}`}
-    >
-      <SurfaceState
-        kind="loading"
-        title="Đang tải…"
-        detail="Đang lấy danh sách sự kiện — chưa có thao tác vé nào được gửi."
-        testId="route-loading"
-      />
-      <CatalogSkeletonGrid count={6} />
+    <main id="main" className="mx-auto max-w-[40rem] px-5 py-[var(--spacing-3xl)]">
+      <span className="sr-only" role="status">
+        Đang tải nội dung
+      </span>
+      <div className="grid gap-3" aria-busy="true">
+        <Skeleton className="h-8 w-[60%]" />
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-[85%]" />
+        <Skeleton className="mt-3 h-11 w-full" />
+      </div>
     </main>
   );
 }

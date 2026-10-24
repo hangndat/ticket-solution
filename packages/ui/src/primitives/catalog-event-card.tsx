@@ -66,10 +66,10 @@ export function CatalogEventCard({
   }, []);
 
   return (
-    <article className="relative list-none" data-testid={testId}>
+    <article className="relative flex h-full min-w-0 list-none flex-col" data-testid={testId}>
       <a
         className={cn(
-          'relative block overflow-hidden rounded-2xl border border-line bg-paper text-inherit no-underline',
+          'relative flex min-w-0 flex-1 flex-col overflow-hidden rounded-2xl border border-line bg-paper text-inherit no-underline',
           'transition-[transform,box-shadow,border-color] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none',
           'hover:-translate-y-[3px] hover:border-line hover:shadow-[0_8px_24px_color-mix(in_srgb,var(--color-ink)_8%,transparent)] motion-reduce:hover:translate-none',
           'before:pointer-events-none before:absolute before:inset-0 before:z-[2] before:opacity-0 before:transition-opacity before:duration-200 motion-reduce:before:transition-none',
@@ -85,7 +85,7 @@ export function CatalogEventCard({
       >
         <div
           className={cn(
-            'relative flex h-[168px] items-end overflow-hidden p-[22px] text-paper',
+            'relative flex h-[168px] shrink-0 items-end overflow-hidden p-[22px] text-paper',
             'after:pointer-events-none after:absolute after:-right-[50px] after:-top-[30px] after:size-[160px] after:rounded-full after:border-[28px] after:opacity-70',
             artToneClass[artTone],
           )}
@@ -97,13 +97,13 @@ export function CatalogEventCard({
             {artLabel}
           </span>
         </div>
-        <div className="grid gap-2 px-5 pb-5 pt-[18px]">
+        <div className="flex flex-1 flex-col gap-2 break-words px-5 pb-5 pt-[18px]">
           <span className="text-[0.65rem] font-bold uppercase tracking-[0.12em] text-muted">
             {organization}
           </span>
           <h2 className="m-0 font-display text-[1.1rem] tracking-[-0.02em]">{title}</h2>
           <p className="m-0 text-[0.85rem] text-muted">{meta}</p>
-          <span className="mt-1 text-[0.88rem] font-bold text-signal">
+          <span className="mt-auto pt-1 text-[0.88rem] font-bold text-signal">
             {actionLabel} <span aria-hidden="true">↗</span>
           </span>
         </div>

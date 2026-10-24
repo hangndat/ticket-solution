@@ -61,8 +61,8 @@ export function MarketingChrome({
           {t(locale, 'nav.brand')}
           <span aria-hidden="true">↗</span>
         </Link>
+        <LocaleSwitch locale={locale} pageKind={pageKind} onInk={onInk} />
         <nav className={marketingNav} aria-label={locale === 'en' ? 'Primary' : 'Chính'}>
-          <LocaleSwitch locale={locale} pageKind={pageKind} onInk={onInk} />
           {onSales ? (
             <>
               <span className={marketingNavLinks}>

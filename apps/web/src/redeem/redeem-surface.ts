@@ -5,7 +5,7 @@ import { cn } from '../../lib/utils';
  */
 
 export const fadeRiseMotion = cn(
-  'motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 motion-safe:duration-500 motion-safe:fill-mode-both motion-reduce:animate-none',
+  'motion-safe:animate-in motion-safe:slide-in-from-bottom-2 motion-safe:duration-300 motion-reduce:animate-none',
 );
 
 export const lpPageShell = cn(
@@ -57,10 +57,15 @@ export const redeemFormCard = cn(
 
 const devFormFieldChrome = cn(
   '[&_label]:grid [&_label]:gap-1.5 [&_label]:text-sm [&_label]:font-bold',
-  '[&_input:not([type=checkbox]):not([type=radio])]:box-border [&_input:not([type=checkbox]):not([type=radio])]:min-h-11 [&_input:not([type=checkbox]):not([type=radio])]:w-full [&_input:not([type=checkbox]):not([type=radio])]:border-2 [&_input:not([type=checkbox]):not([type=radio])]:border-[color-mix(in_srgb,var(--color-ink)_25%,transparent)] [&_input:not([type=checkbox]):not([type=radio])]:bg-white [&_input:not([type=checkbox]):not([type=radio])]:px-3.5 [&_input:not([type=checkbox]):not([type=radio])]:py-3 [&_input:not([type=checkbox]):not([type=radio])]:font-[inherit] [&_input:not([type=checkbox]):not([type=radio])]:font-normal [&_input:not([type=checkbox]):not([type=radio])]:text-ink',
-  '[&_select]:box-border [&_select]:min-h-11 [&_select]:w-full [&_select]:border-2 [&_select]:border-[color-mix(in_srgb,var(--color-ink)_25%,transparent)] [&_select]:bg-white [&_select]:px-3.5 [&_select]:py-3 [&_select]:font-[inherit]',
-  '[&_textarea]:box-border [&_textarea]:min-h-11 [&_textarea]:w-full [&_textarea]:border-2 [&_textarea]:border-[color-mix(in_srgb,var(--color-ink)_25%,transparent)] [&_textarea]:bg-white [&_textarea]:px-3.5 [&_textarea]:py-3 [&_textarea]:font-[inherit] [&_textarea]:font-normal',
+  '[&_input:not([type=checkbox]):not([type=radio])]:box-border [&_input:not([type=checkbox]):not([type=radio])]:min-h-11 [&_input:not([type=checkbox]):not([type=radio])]:w-full [&_input:not([type=checkbox]):not([type=radio])]:rounded-md [&_input:not([type=checkbox]):not([type=radio])]:border-2 [&_input:not([type=checkbox]):not([type=radio])]:border-[color-mix(in_srgb,var(--color-ink)_25%,transparent)] [&_input:not([type=checkbox]):not([type=radio])]:bg-white [&_input:not([type=checkbox]):not([type=radio])]:px-3.5 [&_input:not([type=checkbox]):not([type=radio])]:py-3 [&_input:not([type=checkbox]):not([type=radio])]:font-[inherit] [&_input:not([type=checkbox]):not([type=radio])]:font-normal [&_input:not([type=checkbox]):not([type=radio])]:text-ink',
+  '[&_select]:box-border [&_select]:min-h-11 [&_select]:w-full [&_select]:rounded-md [&_select]:border-2 [&_select]:border-[color-mix(in_srgb,var(--color-ink)_25%,transparent)] [&_select]:bg-white [&_select]:px-3.5 [&_select]:py-3 [&_select]:font-[inherit]',
+  '[&_textarea]:box-border [&_textarea]:min-h-11 [&_textarea]:w-full [&_textarea]:rounded-md [&_textarea]:border-2 [&_textarea]:border-[color-mix(in_srgb,var(--color-ink)_25%,transparent)] [&_textarea]:bg-white [&_textarea]:px-3.5 [&_textarea]:py-3 [&_textarea]:font-[inherit] [&_textarea]:font-normal',
   '[&_textarea[readonly]]:bg-[color-mix(in_srgb,var(--color-ink)_5%,transparent)]',
+  '[&_input:disabled]:cursor-not-allowed [&_input:disabled]:opacity-50 [&_select:disabled]:cursor-not-allowed [&_select:disabled]:opacity-50 [&_textarea:disabled]:cursor-not-allowed [&_textarea:disabled]:opacity-50',
+  '[&_input[aria-invalid=true]]:border-destructive [&_select[aria-invalid=true]]:border-destructive [&_textarea[aria-invalid=true]]:border-destructive',
+  '[&_input:focus-visible]:outline-none [&_input:focus-visible]:ring-[3px] [&_input:focus-visible]:ring-focus [&_input:focus-visible]:ring-offset-2 [&_input:focus-visible]:ring-offset-paper',
+  '[&_select:focus-visible]:outline-none [&_select:focus-visible]:ring-[3px] [&_select:focus-visible]:ring-focus [&_select:focus-visible]:ring-offset-2 [&_select:focus-visible]:ring-offset-paper',
+  '[&_textarea:focus-visible]:outline-none [&_textarea:focus-visible]:ring-[3px] [&_textarea:focus-visible]:ring-focus [&_textarea:focus-visible]:ring-offset-2 [&_textarea:focus-visible]:ring-offset-paper',
   '[&_button]:min-h-11 [&_button]:min-w-11',
 );
 
@@ -106,7 +111,8 @@ export const redeemFieldsGrid = 'grid gap-4';
 export const redeemVersionsGrid = cn(
   'grid gap-4 min-[760px]:grid-cols-2',
   '[&_label]:grid [&_label]:gap-1.5 [&_label]:text-sm [&_label]:font-bold',
-  '[&_input]:min-h-11 [&_input]:border-2 [&_input]:border-[color-mix(in_srgb,var(--color-ink)_25%,transparent)] [&_input]:bg-white [&_input]:px-3.5 [&_input]:py-3',
+  '[&_input]:min-h-11 [&_input]:rounded-md [&_input]:border-2 [&_input]:border-[color-mix(in_srgb,var(--color-ink)_25%,transparent)] [&_input]:bg-white [&_input]:px-3.5 [&_input]:py-3',
+  '[&_input:focus-visible]:outline-none [&_input:focus-visible]:ring-[3px] [&_input:focus-visible]:ring-focus [&_input:focus-visible]:ring-offset-2 [&_input:focus-visible]:ring-offset-paper',
 );
 
 export const redeemPublishedFields = cn(
