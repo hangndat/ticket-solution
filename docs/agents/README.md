@@ -43,7 +43,7 @@ Agent runtime: Codex điều phối; Composer thực thi phần ít cần suy lu
 
 ## Persona roster (`--display-name` + `--task-title`)
 
-Coordinator **bắt buộc cả hai** khi `task-create` / `worker-start` (dispatch mới; không rename worker đang live):
+Coordinator **bắt buộc cả hai** khi `task-create` (không rename worker đang live). `worker-start` current/existing lấy Persona từ Task, không truyền creation flag `--display-name`; flag này chỉ dành cho placement tạo worktree mới:
 
 | Flag             | Format                                          | Orchestration field |
 | ---------------- | ----------------------------------------------- | ------------------- |
@@ -116,7 +116,6 @@ ORCA orchestration task-create \
 
 ORCA orchestration worker-start \
   --task <task_id> --worktree … --agent cursor \
-  --display-name "Higo · web" \
   --task-title "Higo · web — #123 membership UI" \
   --json
 ```
@@ -188,7 +187,6 @@ ORCA orchestration worker-start \
   --worktree path:<abs> \
   --agent cursor \
   --model <pin> \
-  --display-name "<Persona> · <ui-label>" \
   --task-title "<Persona> · <ui-label> — #<issue> <tóm tắt>" \
   --json
 ```
