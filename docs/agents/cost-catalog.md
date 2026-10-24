@@ -48,11 +48,17 @@ Tên cũ chỉ dùng khi đọc evidence: `codex-low` → `focused`, `codex-medi
 
 ## Map spawn
 
+Đặt Persona khi tạo Task trước; start trên current/existing chỉ truyền launch flags hợp lệ. Ví dụ:
+
 ```text
-ORCA orchestration worker-start \
-  --task <id> --worktree … --agent cursor \
-  --model composer-2.5 \
+ORCA orchestration task-create \
   --display-name "James · dod+sec" \
+  --task-title "James · dod+sec — PR #<n> exact SHA" \
+  --spec "<spec đã điền>" --json
+
+ORCA orchestration worker-start \
+  --task <id> --worktree current --agent cursor \
+  --model composer-2.5 \
   --task-title "James · dod+sec — PR #<n> exact SHA" \
   --json
 ```
@@ -145,8 +151,8 @@ Coordinator **không** gọi `worker-start` nếu argv thiếu pin:
 
 ```text
 node scripts/orca-spawn-model-preflight.mjs -- \
-  --cost-tier standard --agent cursor --model composer-2.5 --display-name "…" …
-# exit 0 → mới worker-start với cùng flags
+  --cost-tier standard --agent cursor --model composer-2.5
+# exit 0 → worker-start với agent/model/effort; cost-tier/tier-reason là metadata local
 # exit 2 → thiếu/sai tier hoặc agent/model/effort → dừng wave
 ```
 
@@ -159,13 +165,12 @@ node scripts/orca-spawn-model-preflight.mjs -- \
 | `--model` ngoài cost-catalog pin set                   | **Reject** — refresh `agent models` rồi cập nhật catalog           |
 | Receipt `effective.model` null sau spawn dù đã request | Ghi limitation; đếm **inherit** trên cost-wave; không claim pinned |
 
-Snippet spawn tối thiểu:
+Snippet spawn trên existing worktree sau khi Task đã có Persona:
 
 ```text
 ORCA orchestration worker-start \
   --task <id> --worktree path:<abs> --agent cursor \
   --model <pin-from-cost-catalog> \
-  --display-name "<Persona> · <ui-label>" \
   --task-title "<Persona> · <ui-label> — #<issue> <tóm tắt>" \
   --json
 ```
