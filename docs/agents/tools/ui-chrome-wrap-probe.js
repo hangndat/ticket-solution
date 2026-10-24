@@ -4,7 +4,7 @@
 (() => {
   const root = document.querySelector('#site, .site, main, body');
   const sel =
-    'header a, header button, nav a, nav button, button, .btn, label, [role=tab]';
+    'header a, header button, header nav a, header nav button, nav[aria-label] a, nav[aria-label] button, [role=tablist] button, [role=tab], form.mkt-form label, form.mkt-form button, .formCard label, .formCard button';
   const out = [];
   for (const el of root.querySelectorAll(sel)) {
     const text = el.innerText.trim().replace(/\s+/g, ' ');

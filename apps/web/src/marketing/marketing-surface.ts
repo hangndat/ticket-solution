@@ -10,7 +10,7 @@ export const marketingSkip =
 
 export function marketingHeader(onSales: boolean, onInk: boolean) {
   return cn(
-    'sticky top-0 z-20 flex min-h-[72px] w-full items-center gap-6 px-[clamp(1.25rem,4vw,2rem)] backdrop-blur-md',
+    'sticky top-0 z-20 flex min-h-[72px] w-full items-center gap-6 px-[clamp(1.25rem,4vw,2rem)] backdrop-blur-md [&_a[href]]:no-underline',
     onInk
       ? 'border-b border-paper/10 bg-ink/90 text-paper'
       : 'border-b border-line bg-paper/90',
