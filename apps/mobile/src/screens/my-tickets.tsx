@@ -15,6 +15,8 @@ import {
 } from 'react-native';
 import type { TicketSummary } from '@ticket/contracts';
 import { AttendeeCta } from '@/components/attendee-cta';
+import { ScreenAtmosphere } from '@/components/screen-atmosphere';
+import { TicketStatusPill } from '@/components/ticket-status-pill';
 import { Button } from '@/components/ui/button';
 import { EventLogo } from '@/components/event-media';
 import { Notice } from '@/components/page';
@@ -115,27 +117,6 @@ function WalletGroupedTicketList({
         </View>
       ))}
     </>
-  );
-}
-
-function TicketStatusPill({ label }: { label: string }) {
-  return (
-    <View
-      style={{
-        alignSelf: 'flex-start',
-        backgroundColor: colors.admitSurface,
-        borderRadius: radius.sm,
-        paddingHorizontal: space.sm,
-        paddingVertical: space.xs
-      }}
-    >
-      <Text
-        style={{ ...typography.badge, color: colors.admit,
-          fontFamily: fontFamilies.bodySemiBold }}
-      >
-        {label}
-      </Text>
-    </View>
   );
 }
 
@@ -276,9 +257,10 @@ function OfflineDisplayWallet({
 
   return (
     <>
+    <ScreenAtmosphere>
     <ScrollView
       contentInsetAdjustmentBehavior="automatic"
-      style={{ flex: 1, backgroundColor: brand.paper }}
+      style={{ flex: 1, backgroundColor: 'transparent' }}
       contentContainerStyle={{ padding: space.xl, paddingBottom: space.huge, gap: space.lg }}
     >
       <Notice title={attendeeWalletCopy.offlineBannerTitle}>
@@ -311,6 +293,7 @@ function OfflineDisplayWallet({
       )}
 
     </ScrollView>
+    </ScreenAtmosphere>
     <TabStackTitle title="Vé của tôi" />
     </>
   );
@@ -540,9 +523,10 @@ function VerifiedWallet({ userId }: { userId: string }) {
 
   return (
     <>
+    <ScreenAtmosphere>
     <ScrollView
       contentInsetAdjustmentBehavior="automatic"
-      style={{ flex: 1, backgroundColor: brand.paper }}
+      style={{ flex: 1, backgroundColor: 'transparent' }}
       contentContainerStyle={{ padding: space.xl, paddingBottom: space.huge, gap: space.lg }}
       refreshControl={
         <RefreshControl refreshing={refreshing} onRefresh={() => void onRefresh()} />
@@ -636,6 +620,7 @@ function VerifiedWallet({ userId }: { userId: string }) {
         />
       ) : null}
     </ScrollView>
+    </ScreenAtmosphere>
     <TabStackTitle title="Vé của tôi" />
     </>
   );
