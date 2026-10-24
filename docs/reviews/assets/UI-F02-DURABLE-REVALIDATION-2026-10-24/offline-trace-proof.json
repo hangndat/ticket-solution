@@ -1,0 +1,32 @@
+[
+  {
+    "at": "2026-10-24T02:24:32.425Z",
+    "kind": "offline_request",
+    "requestNumber": 6967,
+    "tenantId": "d9d9f001-0001-4000-8000-000000000001",
+    "staffSessionId": "10e2af24-13fd-4161-ba6a-fa91d4d955a5",
+    "deviceId": "9a95b622-336b-47d1-826e-2fc0af25327c",
+    "events": [
+      {
+        "clientEventId": "b932b811-b6c5-48b6-9a3d-bb4992a399c7",
+        "ticketId": "14de0a49-4af9-4f8c-8aec-fc98e7057cc3",
+        "eventId": "d9d9f001-0002-4000-8000-000000000001",
+        "clientSeq": 0,
+        "clientOccurredAt": "2026-10-24T02:23:51.861Z"
+      }
+    ]
+  },
+  {
+    "at": "2026-10-24T02:24:32.464Z",
+    "kind": "offline_response",
+    "requestNumber": 6967,
+    "status": 201,
+    "results": [
+      {
+        "clientEventId": "b932b811-b6c5-48b6-9a3d-bb4992a399c7",
+        "status": "APPLIED",
+        "checkinId": "cae78aec-86e2-458c-a4ea-caa6ffbb8f80"
+      }
+    ]
+  }
+]

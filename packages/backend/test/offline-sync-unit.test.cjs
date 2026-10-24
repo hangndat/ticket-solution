@@ -8,6 +8,7 @@ const {
   offlineSyncNotImplemented,
   offlineEventPayloadHash,
   compareOfflineReplayOrder,
+  deriveOfflineSyncReceiptCheckinState,
   OFFLINE_SYNC_MAX_CLOCK_SKEW_SECONDS,
 } = require('../dist');
 

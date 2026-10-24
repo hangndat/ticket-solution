@@ -2,15 +2,14 @@ import { getTenantId, getTenantSlug } from '../identity/config.ts';
 import { staffEligibility } from '../identity/staff-eligibility.ts';
 import { session } from '../identity/session.ts';
 import { clearCachedBranding } from '../theme/branding-cache.ts';
-import {
-  clearTicketDisplayCache,
-  invalidateTicketDisplayWrites,
-} from './display-cache.ts';
+import { clearTicketDisplayCache, invalidateTicketDisplayWrites } from './display-cache.ts';
 import { clearWalletDisplayCaches } from './wallet-display-persist.ts';
 import type { MeTicketsFetchScope } from './wallet-fetch-scope.ts';
 import { invalidateOfflineBindingWrites } from './offline-display.ts';
 import { offlineDisplay } from './offline-display-session.ts';
 import { offlineScanQueue } from '../gate/offline-queue-session.ts';
+import { beginDurableGateLogout } from '../gate/staff-gate-workspace-store.ts';
+import { captureLogoutSessionGuard } from './wallet-logout-transaction.ts';
 
 export type WalletLogoutInput = {
   userId: string | null;
@@ -21,137 +20,51 @@ export type WalletLogoutInput = {
   ticketTenantIds?: string[];
 };
 
-function asError(value: unknown, fallback: string): Error {
-  return value instanceof Error ? value : new Error(fallback);
-}
-
-/**
- * Logout from every wallet entry point:
- * 1) Invalidate durable write gates (block late cache/binding resurrection)
- * 2) Fail-closed offline memory immediately (UI must not keep prior binding)
- * 3) Attempt session logout + durable binding/cache clears independently
- *
- * Bearer deletion failure must not skip binding/cache cleanup. Aggregate errors
- * so callers never claim durable logout succeeded when any step failed.
- */
-export async function logoutAndClearWalletArtifacts(
-  input: WalletLogoutInput,
-): Promise<void> {
+/** Invalidate memory and install the durable Gate purge fence before any await. */
+export function logoutAndClearWalletArtifacts(input: WalletLogoutInput): Promise<void> {
+  const logoutSession = captureLogoutSessionGuard(session);
+  if (logoutSession.verifiedUserId && input.userId && logoutSession.verifiedUserId !== input.userId) {
+    return Promise.reject(new Error('Phiên tài khoản đã đổi. Vui lòng thử lại.'));
+  }
+  const userId = logoutSession.verifiedUserId ?? input.userId;
   staffEligibility.reset();
   invalidateTicketDisplayWrites();
   invalidateOfflineBindingWrites();
   offlineDisplay.invalidateMemory();
-  offlineScanQueue.invalidateMemory();
+  if (userId) offlineScanQueue.fenceForUser(userId);
+  else offlineScanQueue.invalidateMemory();
 
-  const errors: Error[] = [];
-
-  // Detach push while the bearer is still readable (before session.logout).
-  try {
-    const { clearApnsRegistrationState } = await import(
-      '../push/apns-device-token.ts'
-    );
-    await clearApnsRegistrationState({ session });
-  } catch (error) {
-    errors.push(asError(error, 'Gỡ đăng ký APNs thất bại'));
-  }
-
-  // Drop guest claim login-return intent + answers isolation (C-I).
-  try {
+  return beginDurableGateLogout(userId, logoutSession.generation, async () => {
+    if (logoutSession.hasVerifiedEpoch()) {
+      const { clearApnsRegistrationState } = await import('../push/apns-device-token.ts');
+      if (logoutSession.hasVerifiedEpoch()) await clearApnsRegistrationState({
+        session,
+        shouldContinue: logoutSession.hasVerifiedEpoch,
+      });
+    }
     const { clearGuestClaimIntent } = await import('../redeem/claim-intent.ts');
     clearGuestClaimIntent();
-  } catch (error) {
-    errors.push(asError(error, 'Xóa intent claim khách thất bại'));
-  }
-
-  try {
-    const { clearRedeemDraftIntent, clearGlobalRedeemDraftIntent } =
-      await import('../redeem/redeem-draft-intent.ts');
+    const { clearRedeemDraftIntent, clearGlobalRedeemDraftIntent } = await import('../redeem/redeem-draft-intent.ts');
     clearRedeemDraftIntent();
     clearGlobalRedeemDraftIntent();
-  } catch (error) {
-    errors.push(asError(error, 'Xóa draft đổi mã thất bại'));
-  }
-
-  try {
-    const { clearSignInReturn } = await import(
-      '../navigation/sign-in-return-intent.ts'
-    );
+    const { clearSignInReturn } = await import('../navigation/sign-in-return-intent.ts');
     clearSignInReturn();
-  } catch (error) {
-    errors.push(asError(error, 'Xóa lộ trình quay lại sau đăng nhập thất bại'));
-  }
-
-  try {
-    const { clearPendingImmediateSignIn } = await import(
-      '../navigation/attendee-auth-gate.ts'
-    );
+    const { clearPendingImmediateSignIn } = await import('../navigation/attendee-auth-gate.ts');
     clearPendingImmediateSignIn();
-  } catch (error) {
-    errors.push(asError(error, 'Xóa cổng đăng nhập ngữ cảnh thất bại'));
-  }
-
-  // Drop push tap login-return intent (C-N) so late resolve cannot route prior user.
-  try {
-    const { clearNotificationTapIntent } = await import(
-      '../push/notification-intent.ts'
-    );
+    const { clearNotificationTapIntent } = await import('../push/notification-intent.ts');
     clearNotificationTapIntent();
-  } catch (error) {
-    errors.push(asError(error, 'Xóa intent chạm thông báo thất bại'));
-  }
-
-  try {
-    await session.logout();
-  } catch (error) {
-    errors.push(asError(error, 'Đăng xuất phiên thất bại'));
-  }
-
-  try {
     await offlineDisplay.clear();
-  } catch (error) {
-    errors.push(asError(error, 'Xóa liên kết hiển thị offline thất bại'));
-  }
-
-  if (input.userId) {
-    try {
-      await offlineScanQueue.clearForUser(input.userId);
-    } catch (error) {
-      errors.push(asError(error, 'Xóa hàng đợi quét offline thất bại'));
+    if (userId && input.walletScope) {
+      await clearWalletDisplayCaches(userId, input.walletScope, input.ticketTenantIds ?? []);
+    } else if (userId && input.tenantId) {
+      await clearTicketDisplayCache(userId, input.tenantId);
     }
-  }
-
-  if (input.userId) {
-    try {
-      if (input.walletScope) {
-        await clearWalletDisplayCaches(
-          input.userId,
-          input.walletScope,
-          input.ticketTenantIds ?? [],
-        );
-      } else if (input.tenantId) {
-        await clearTicketDisplayCache(input.userId, input.tenantId);
-      }
-    } catch (error) {
-      errors.push(asError(error, 'Xóa bộ đệm hiển thị vé thất bại'));
-    }
-  }
-
-  // S-P0-C: drop durable tenant brand cache so next session cannot flash prior chrome.
-  try {
     const tenantId = (input.tenantId ?? getTenantId() ?? '').trim();
     const tenantSlug = (getTenantSlug() ?? '').trim();
     if (tenantId) await clearCachedBranding(`id:${tenantId}`);
     if (tenantSlug) await clearCachedBranding(`slug:${tenantSlug}`);
-  } catch (error) {
-    errors.push(asError(error, 'Xóa bộ đệm brand thất bại'));
-  }
-
-  if (errors.length === 1) throw errors[0];
-  if (errors.length > 1) {
-    throw new Error(
-      `Dọn dẹp đăng xuất thất bại (${errors.length} bước): ${errors
-        .map((error) => error.message)
-        .join('; ')}`,
-    );
-  }
+    if (logoutSession.isCurrent()) await session.logout();
+  }).catch((cause: unknown) => {
+    throw new Error('Chưa thể hoàn tất dọn dẹp đăng xuất. Vui lòng thử lại.', { cause });
+  });
 }

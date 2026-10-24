@@ -1,0 +1,12 @@
+{
+  "at": "2026-10-23T19:55:29.491210+00:00",
+  "head": "b2faa48a1ce443c8fc6c849cb74a06a57f8b0c37",
+  "manifestSha256": "c48f86a10b28822dcac6a5104c21661f8a46fc329dd0fc86d7c27b11f22f467a",
+  "filesChecked": 83,
+  "drift": [],
+  "diffCheckExit": 0,
+  "currentActiveWorkers": [],
+  "proxyMode": "online",
+  "security": "FAIL SEC-03/05; SEC-04 verified closed",
+  "native": "Root completion M10 PASS; normal logout/relogin History empty PASS; does not close races"
+}

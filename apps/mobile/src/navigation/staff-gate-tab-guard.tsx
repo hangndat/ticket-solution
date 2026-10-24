@@ -1,10 +1,21 @@
-import { useEffect, useSyncExternalStore, type PropsWithChildren } from 'react';
-import { Redirect } from 'expo-router';
+import { useCallback, useEffect, useSyncExternalStore, type PropsWithChildren } from 'react';
+import { Redirect, useFocusEffect } from 'expo-router';
 import { Page } from '@/components/page';
 import { LoadingState } from '@/components/screen-state';
+import { useStaffGateWorkspace } from '@/gate/staff-gate-workspace-context';
 import { session } from '@/identity/session';
 import { staffEligibility } from '@/identity/staff-eligibility';
 import { resolveStaffGateTabPhase } from './staff-gate-tab-guard-policy';
+
+function StaffGateTabFocusSync() {
+  const gate = useStaffGateWorkspace();
+  useFocusEffect(
+    useCallback(() => {
+      void gate.focusSync();
+    }, [gate.focusSync]),
+  );
+  return null;
+}
 
 /** Fail-closed entry for staff-only tab routes (Scan / Nhập tay / Lịch sử). */
 export function StaffGateTabGuard({ children }: PropsWithChildren) {
@@ -49,5 +60,10 @@ export function StaffGateTabGuard({ children }: PropsWithChildren) {
     return <Redirect href="/staff-access" />;
   }
 
-  return children;
+  return (
+    <>
+      <StaffGateTabFocusSync />
+      {children}
+    </>
+  );
 }

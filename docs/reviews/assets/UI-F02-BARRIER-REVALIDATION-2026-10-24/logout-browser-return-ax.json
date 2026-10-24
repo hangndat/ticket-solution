@@ -1,0 +1,69 @@
+{
+  "at": "2026-10-24T01:25:52.253Z",
+  "id": "a4f9c532-6cdd-43a0-9934-71a0e9fc1465",
+  "ok": true,
+  "result": [
+    {
+      "role": "application",
+      "type": "Application",
+      "label": " ",
+      "value": "",
+      "enabled": true,
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      },
+      "children": [
+        {
+          "role": "",
+          "type": "GenericElement",
+          "label": "Dynamic Island, Empty",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.341,
+            "y": 0.0133,
+            "width": 0.3181,
+            "height": 0.043
+          },
+          "children": []
+        },
+        {
+          "role": "button",
+          "type": "Button",
+          "label": "Cancel",
+          "value": "",
+          "enabled": true,
+          "frame": {
+            "x": 0.0407,
+            "y": 0.0998,
+            "width": 0.112,
+            "height": 0.0516
+          },
+          "children": [],
+          "id": "Close"
+        },
+        {
+          "role": "",
+          "type": "GenericElement",
+          "label": "Address",
+          "value": "‎127.0.0.1",
+          "enabled": true,
+          "frame": {
+            "x": 0.4135,
+            "y": 0.1064,
+            "width": 0.1722,
+            "height": 0.0239
+          },
+          "children": [],
+          "id": "URL"
+        }
+      ]
+    }
+  ],
+  "_meta": {
+    "runtimeId": "9d821662-c628-49db-a168-99fa7b7636fc"
+  }
+}

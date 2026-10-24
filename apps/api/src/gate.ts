@@ -2,12 +2,14 @@ import { randomUUID } from 'node:crypto';
 import {
   Body,
   Controller,
+  Get,
   Headers,
   HttpCode,
   HttpException,
   Injectable,
   Param,
   Post,
+  Query,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -23,6 +25,7 @@ import {
   OFFLINE_SYNC_MAX_CLOCK_SKEW_SECONDS,
   OFFLINE_SYNC_PAYLOAD_VERSION,
   type ApiError,
+  type OfflineSyncReceiptResponse,
   type OfflineSyncResponse,
 } from '@ticket/contracts';
 import {
@@ -33,6 +36,7 @@ import {
   IDENTITY_ERROR_CODES,
   confirmCheckin,
   applyOfflineSyncBatch,
+  lookupOfflineSyncReceipt,
   openStaffSession,
   reserveCheckin,
   revokeStaffSession,
@@ -156,6 +160,26 @@ class OfflineSyncResponseDto {
   results!: OfflineSyncItemResultDto[];
 }
 
+class OfflineSyncReceiptResponseDto {
+  @ApiProperty({ format: 'uuid' }) tenantId!: string;
+  @ApiProperty({ format: 'uuid' }) eventId!: string;
+  @ApiProperty({ format: 'uuid' }) clientEventId!: string;
+  @ApiProperty({ enum: ['APPLIED'] }) status!: 'APPLIED';
+  @ApiProperty({ enum: [true] }) historical!: true;
+  @ApiProperty({ format: 'uuid' }) ticketId!: string;
+  @ApiProperty({ format: 'uuid' }) checkinId!: string;
+  @ApiProperty({ format: 'uuid' }) staffSessionId!: string;
+  @ApiProperty() appliedAt!: string;
+  @ApiProperty({
+    enum: ['CURRENT', 'UNDONE', 'TICKET_REVOKED', 'NO_LONGER_CURRENT'],
+  })
+  checkinState!:
+    | 'CURRENT'
+    | 'UNDONE'
+    | 'TICKET_REVOKED'
+    | 'NO_LONGER_CURRENT';
+}
+
 type GateDeps = {
   db: PrismaClient | null;
   verifier: OidcVerifier | null;
@@ -188,8 +212,14 @@ function gateHttpException(error: GateError): HttpException {
     code: error.code,
     message: error.message,
     requestId: randomUUID(),
-    retryable: false,
+    retryable:
+      error.code === GATE_ERROR_CODES.OFFLINE_SYNC_RECEIPT_NOT_FOUND,
   };
+  if (
+    error.code === GATE_ERROR_CODES.OFFLINE_SYNC_RECEIPT_NOT_FOUND
+  ) {
+    return new HttpException(body, 404);
+  }
   if (
     error.code === GATE_ERROR_CODES.OFFLINE_SYNC_BATCH_TOO_LARGE ||
     error.code === GATE_ERROR_CODES.OFFLINE_SYNC_CLOCK_SKEW_EXCEEDED ||
@@ -370,6 +400,33 @@ export class GateService {
   /**
    * D7 offline queue replay (#106/#107): auth + validate + durable idempotent apply.
    */
+  /**
+   * Scoped historical receipt read (#859). Rate limit: dedicated read bucket so GET
+   * reconciliation lookups do not consume POST offline-sync replay budget.
+   */
+  async offlineSyncReceipt(
+    authorization: string | undefined,
+    eventId: string,
+    tenantId: string,
+    clientEventId: string,
+  ): Promise<OfflineSyncReceiptResponse> {
+    const user = await this.actor(authorization);
+    await consumeUserRateLimit(
+      this.deps.db,
+      user.userId,
+      API_RATE_BUCKETS.gateOfflineSyncReceipt,
+      API_RATE_LIMITS.gateOfflineSyncReceiptPerUser,
+    );
+    return withTenant(this.deps.db!, tenantId, (tx) =>
+      lookupOfflineSyncReceipt(tx, {
+        tenantId,
+        pathEventId: eventId,
+        clientEventId,
+        actorUserId: user.userId,
+      }),
+    );
+  }
+
   async offlineSync(
     authorization: string | undefined,
     eventId: string,
@@ -507,6 +564,30 @@ export class GateController {
       await this.gate.revoke(authorization, event, ticket, body);
       return { status: 'REVOKED' as const, ticketId: ticket };
     });
+  }
+
+  @Get('gate/events/:eventId/offline-sync/receipts/:clientEventId')
+  @ApiBearerAuth()
+  @ApiOkResponse({ type: OfflineSyncReceiptResponseDto })
+  @ApiResponse({ status: 404, type: ApiErrorDto })
+  @ApiUnauthorizedResponse({ type: ApiErrorDto })
+  offlineSyncReceipt(
+    @Headers('authorization') authorization: string | undefined,
+    @Param('eventId') eventId: string,
+    @Param('clientEventId') clientEventId: string,
+    @Query('tenantId') tenantIdRaw: string,
+  ) {
+    const event = requireUuid(eventId, 'eventId');
+    const clientEvent = requireUuid(clientEventId, 'clientEventId');
+    const tenantId = requireUuid(tenantIdRaw, 'tenantId');
+    return this.run(() =>
+      this.gate.offlineSyncReceipt(
+        authorization,
+        event,
+        tenantId,
+        clientEvent,
+      ),
+    );
   }
 
   @Post('gate/events/:eventId/offline-sync')

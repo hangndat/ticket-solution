@@ -1,25 +1,63 @@
 import { useCallback, useState } from 'react';
 import { Platform, ScrollView, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { gateOutcomeAnnouncement } from '@/a11y/announcements';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { normalizeGatePasteInput } from '@/gate/gate-scan';
+import { canReconcile, normalizeGatePasteInput } from '@/gate/gate-scan';
+import { announcementPhaseFor } from '@/gate/gate-outcome-copy';
 import { checkManualEntryCode } from '@/gate/staff-manual-entry-flow';
 import { StaffManualConfirmSheet } from '@/gate/staff-manual-confirm-sheet';
 import { StaffGateNoEventState } from '@/gate/staff-gate-empty-state';
+import { StaffGateOpsSticky } from '@/gate/staff-gate-ops-sticky';
 import { StaffGateScreenChrome } from '@/gate/staff-gate-screen-chrome';
+import type { GateScanStatusView } from '@/gate/gate-scan-status-ui';
 import { useStaffGateWorkspace } from '@/gate/staff-gate-workspace-context';
 import { STAFF_TAB_TITLES } from '@/navigation/staff-tab-titles';
 import { colors } from '@/theme/colors';
-import { brand, space } from '@/theme/tokens';
+import { brand, radius, space } from '@/theme/tokens';
 import { typography } from '@/theme/typography';
 
+function manualResultToneColor(tone: GateScanStatusView['tone']): string {
+  if (tone === 'admit') return colors.admit;
+  if (tone === 'deny') return colors.deny;
+  if (tone === 'unknown') return colors.unknown;
+  if (tone === 'default') return colors.label;
+  return colors.label;
+}
+
 export function StaffManualEntryScreen() {
+  const insets = useSafeAreaInsets();
   const gate = useStaffGateWorkspace();
   const [raw, setRaw] = useState('');
   const [parseError, setParseError] = useState<string | null>(null);
   const [confirmVisible, setConfirmVisible] = useState(false);
   const [pendingCode, setPendingCode] = useState('');
   const [previewLine, setPreviewLine] = useState('');
+  const [clearedFreshAdmitId, setClearedFreshAdmitId] = useState<string | null>(
+    null,
+  );
+
+  const resultView = gate.persistentScanStatus;
+
+  const showScanResult = Boolean(
+    gate.busy || gate.toastOp || gate.pendingOp,
+  );
+  const announceOp = gate.busy
+    ? null
+    : gate.pendingOp ?? gate.toastOp;
+
+  const activeOp = gate.toastOp ?? gate.pendingOp;
+  const freshAdmitKey =
+    activeOp?.phase === 'admitted' && activeOp.admissionKind === 'fresh'
+      ? activeOp.id
+      : null;
+  if (freshAdmitKey && freshAdmitKey !== clearedFreshAdmitId) {
+    setClearedFreshAdmitId(freshAdmitKey);
+    setRaw('');
+    setPendingCode('');
+    setParseError(null);
+  }
 
   const onCheck = useCallback(() => {
     const result = checkManualEntryCode(raw, gate.gateScope);
@@ -38,12 +76,8 @@ export function StaffManualEntryScreen() {
   const onConfirmAdmit = useCallback(() => {
     const code = pendingCode.trim();
     if (!code || gate.scanDisabled) return;
-    void gate.submitScan(code).then(() => {
-      setRaw('');
-      setPendingCode('');
-      setConfirmVisible(false);
-      setParseError(null);
-    });
+    setConfirmVisible(false);
+    void gate.submitScan(code);
   }, [gate, pendingCode]);
 
   const onCancelConfirm = useCallback(() => {
@@ -62,10 +96,39 @@ export function StaffManualEntryScreen() {
         automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
         keyboardShouldPersistTaps="handled"
         style={{ flex: 1, backgroundColor: brand.paper }}
-        contentContainerStyle={{ padding: space.xl, paddingBottom: space.huge, gap: space.lg }}
+        contentContainerStyle={{
+          paddingHorizontal: space.xl,
+          paddingBottom: Math.max(insets.bottom, 20) + space.huge,
+          gap: space.lg,
+        }}
       >
+        <StaffGateOpsSticky
+          connectivity={gate.connectivity}
+          hasSession={Boolean(gate.sessionId)}
+          queueAttention={gate.queueAttention}
+          syncing={gate.queueSnap.syncing}
+          onSync={() => void gate.syncNow()}
+          machineLabel={gate.machineLabel}
+          eventName={gate.gateScope?.name ?? null}
+          canSwitchEvent={gate.gateEventChoices.length > 1}
+          eventPickerOpen={gate.eventPickerOpen}
+          onToggleEventPicker={() => gate.setEventPickerOpen((open) => !open)}
+          gateEventChoices={gate.gateEventChoices}
+          gateScope={gate.gateScope}
+          onSelectGateScope={gate.selectGateScope}
+          pendingOp={gate.pendingOp}
+          onContinueScan={
+            gate.pendingOp && !gate.busy ? gate.dismissPendingAction : undefined
+          }
+          onReconcile={() => void gate.reconcile()}
+          reconcileEnabled={Boolean(
+            gate.pendingOp && canReconcile(gate.pendingOp) && !gate.busy,
+          )}
+        />
         <StaffGateNoEventState />
-        <Text style={{ ...typography.footnote, color: colors.secondary,  lineHeight: 20 }}>
+        <Text
+          style={{ ...typography.footnote, color: colors.secondary, lineHeight: 20 }}
+        >
           Dùng khi không thể đọc mã QR trên vé.
         </Text>
         <Input
@@ -97,16 +160,64 @@ export function StaffManualEntryScreen() {
           onPress={onCheck}
           size="lg"
         />
-        <Text style={{ ...typography.micro, color: colors.secondary,  lineHeight: 18 }}>
-          Kiểm tra thông tin trước khi xác nhận lượt vào.
+        <Text
+          style={{ ...typography.micro, color: colors.secondary, lineHeight: 18 }}
+        >
+          Kiểm tra định dạng mã trước khi gửi lên máy chủ — kết quả cổng hiện bên
+          dưới.
         </Text>
         {parseError ? (
-          <Text style={{ ...typography.footnote, color: colors.deny }}>{parseError}</Text>
+          <Text style={{ ...typography.footnote, color: colors.deny }}>
+            {parseError}
+          </Text>
         ) : null}
         {gate.gateEventsError && !gate.gateScope ? (
           <Text style={{ ...typography.footnote, color: colors.deny }}>
             {gate.gateEventsError}
           </Text>
+        ) : null}
+        {showScanResult ? (
+          <View
+            testID="gate-manual-scan-result"
+            {...gateOutcomeAnnouncement({
+              phase: announcementPhaseFor(
+                gate.busy ? 'confirming' : announceOp?.phase,
+              ),
+              title: gate.busy ? 'Đang kiểm tra cổng' : resultView.label,
+              message: gate.busy
+                ? 'Đang gửi mã lên máy chủ.'
+                : resultView.hint,
+            })}
+            accessibilityLiveRegion={
+              resultView.assertive ? 'assertive' : 'polite'
+            }
+            style={{
+              padding: space.lg,
+              borderRadius: radius.md,
+              backgroundColor: colors.surfaceMuted,
+              gap: space.sm,
+            }}
+          >
+            <Text
+              style={{
+                ...typography.callout,
+                color: manualResultToneColor(resultView.tone),
+              }}
+            >
+              {gate.busy ? 'Đang kiểm tra cổng…' : resultView.label}
+            </Text>
+            <Text
+              style={{
+                ...typography.footnote,
+                color: colors.secondary,
+                lineHeight: 20,
+              }}
+            >
+              {gate.busy
+                ? 'Đang gửi mã lên máy chủ.'
+                : resultView.hint}
+            </Text>
+          </View>
         ) : null}
       </ScrollView>
       <StaffManualConfirmSheet

@@ -21,6 +21,7 @@ import { session } from '@/identity/session';
 import { buildDisplayQrPayload } from '@/tickets/display-payload';
 import { readTicketDisplayCache } from '@/tickets/display-cache';
 import { offlineDisplay } from '@/tickets/offline-display-session';
+import { walletOfflineNoticeBody } from '@/tickets/wallet-sync-display';
 import { space, radius } from '@/theme/tokens';
 
 type LoadOwner = {
@@ -200,7 +201,7 @@ export function TicketDetailScreen() {
     );
   }
 
-  const { ticket, fromCache, mode } = visibleLoad;
+  const { ticket, fromCache, mode, syncedAt } = visibleLoad;
   const row = presentTicketRow(ticket);
   const { when: eventWhen, where: eventWhere } = ticketScheduleVenueLines(ticket);
   const isDemo =
@@ -213,7 +214,10 @@ export function TicketDetailScreen() {
     <Page>
       {mode === 'offline-display' || fromCache ? (
         <Notice title={attendeeWalletCopy.offlineBannerTitle}>
-          {attendeeWalletCopy.offlineBannerBody}
+          {walletOfflineNoticeBody(
+            attendeeWalletCopy.offlineBannerBody,
+            syncedAt,
+          )}
         </Notice>
       ) : null}
       {gateHint ? (

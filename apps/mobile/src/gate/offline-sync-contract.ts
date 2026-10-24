@@ -9,7 +9,30 @@ export const OFFLINE_SYNC_PAYLOAD_VERSION = 1 as const;
 
 export const OFFLINE_SYNC_ENDPOINTS = {
   sync: '/v1/gate/events/{eventId}/offline-sync',
+  receipt:
+    '/v1/gate/events/{eventId}/offline-sync/receipts/{clientEventId}',
 } as const;
+
+export type OfflineSyncReceiptCheckinState =
+  | 'CURRENT'
+  | 'UNDONE'
+  | 'TICKET_REVOKED'
+  | 'NO_LONGER_CURRENT';
+
+export type OfflineSyncReceiptStatus = 'APPLIED';
+
+export interface OfflineSyncReceiptResponse {
+  tenantId: string;
+  eventId: string;
+  clientEventId: string;
+  status: OfflineSyncReceiptStatus;
+  historical: true;
+  ticketId: string;
+  checkinId: string;
+  staffSessionId: string;
+  appliedAt: string;
+  checkinState: OfflineSyncReceiptCheckinState;
+}
 
 export const OFFLINE_SYNC_EVENT_TYPES = ['CHECKIN_OFFLINE'] as const;
 export type OfflineSyncEventType = (typeof OFFLINE_SYNC_EVENT_TYPES)[number];
@@ -28,6 +51,7 @@ export const OFFLINE_SYNC_ERROR_CODES = {
   EVENT_CANCELLED: 'EVENT_CANCELLED',
   REPLAY_ORDER_INVALID: 'OFFLINE_SYNC_REPLAY_ORDER_INVALID',
   NOT_IMPLEMENTED: 'OFFLINE_SYNC_NOT_IMPLEMENTED',
+  RECEIPT_NOT_FOUND: 'OFFLINE_SYNC_RECEIPT_NOT_FOUND',
 } as const;
 
 export type OfflineSyncErrorCode =
@@ -126,4 +150,11 @@ export function compareOfflineReplayOrder(
 
 export function offlineSyncPath(eventId: string): string {
   return `/v1/gate/events/${eventId}/offline-sync`;
+}
+
+export function offlineSyncReceiptPath(
+  eventId: string,
+  clientEventId: string,
+): string {
+  return `/v1/gate/events/${eventId}/offline-sync/receipts/${clientEventId}`;
 }

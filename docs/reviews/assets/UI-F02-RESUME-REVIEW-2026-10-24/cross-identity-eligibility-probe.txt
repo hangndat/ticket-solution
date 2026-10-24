@@ -1,0 +1,5 @@
+Reviewer probe (node, SessionBoundary + StaffEligibilityStore, no secrets):
+establish user_staff_a -> refresh -> staffEligible true
+establish user_attendee_b -> refresh (deferred MeEvents)
+during_B_probe: {"staffEligible":true,"resolved":true,"loading":true}
+after_B_probe: {"staffEligible":false,"resolved":true,"loading":false}

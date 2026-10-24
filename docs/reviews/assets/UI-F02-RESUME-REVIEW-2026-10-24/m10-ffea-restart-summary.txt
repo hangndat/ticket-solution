@@ -1,0 +1,18 @@
+Ticket: ffea00b3-4c99-4293-abe6-053c81b469b4 (ticket_fixall_859 ACTIVE)
+Timestamp: 2026-10-24 ~12:38–12:40Z (reviewer local)
+JWT: refresh-native-staff.mjs + open-staff-session.mjs once before flow (metadata jwt-staff-metadata.json from same session class)
+
+Phase A — offline queue (PASS partial):
+- Char-by-char AX UUID 36 chars
+- proxy offline → panel «Offline — chờ đồng bộ», header «Có lượt chờ đồng bộ offline»
+- f02-m10-ffea-queued-offline-8s.png, ax-m10-queued-offline.json
+- clientEventId: NOT exposed in AX (only ticket_id visible). Root DB lookup: ticket_id=ffea00b3-4c99-4293-abe6-053c81b469b4, tenant d9d9f001-0001-4000-8000-000000000001, event d9d9f001-0002-4000-8000-000000000002
+
+Phase B — M10 terminate/relaunch (INCOMPLETE within budget):
+- simctl terminate com.hangndat.ticket (no logout, proxy still offline at terminate)
+- simctl launch → cold start landed attendee «Sự kiện» with «Không tải được danh sách» (offline), f02-m10-ffea-after-restart-30s.png
+- proxy online 200; after 30s no gate terminal (not on staff workspace)
+- Thử lại → Events list loads (MFest card) — verified session persisted, no UAT session re-inject
+- Gate APPLIED / History / pending=0 after restart: NOT proven; no manual sync used
+
+proxy end: online :3009 200

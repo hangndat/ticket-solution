@@ -1,0 +1,23 @@
+Batch: F02-NEXT-REVIEWABLE.patch applied on HEAD b2faa48a1ce443c8fc6c849cb74a06a57f8b0c37 (dirty baseline).
+Simulator: UI-FixAll-859 B0727247-340D-423A-8547-A6C107A9756A · Debug 26 · VI
+Proxy: mobile-proxy-mode.txt → online · :3009/v1/health 200
+Staff session: refresh-native-staff.mjs + open-staff-session.mjs (metadata only in fixture TTL 300s)
+
+Code checks (2026-10-24, handoff complete):
+- apps/mobile npm test → 390/390 PASS (F02-SEC-02 cross-user + gate-workspace-lifecycle x3)
+- apps/mobile npm run typecheck → PASS
+- gate-workspace-lifecycle.ts: mount + foreground share scheduleGateWorkspaceLifecycleWork chain
+
+Runtime (this worker session):
+- Staff chrome after inject: tabs Nhập tay / Quét vé / Lịch sử visible (verified staff).
+- Foreground ticket 1016ad07-f9bc-4713-965b-e9c903124847: DB ticket_fixall_859 ACTIVE (psql).
+- Orca char-by-char AX once showed field len 36; after relaunch, TextField AX value reverted to placeholder and «Kiểm tra vé» disabled → confirm sheet / offline queue flow NOT completed in this session (RN controlled input vs emulator type — harness limitation).
+- Prior-session clock-skew panel («Đồng hồ thiết bị lệch…») observed before relaunch; not re-validated as terminal gate outcome for 1016ad07.
+
+NOT run / NOT proven (mandatory gaps unchanged):
+- Full offline→queue>5s→Home→foreground «Được vào» for 1016ad07 or c41be886 restart ticket.
+- M10 ffea00b3 terminate/relaunch terminal + pending=0 + clientEventId pin.
+- Orphan 6c812d24 lifecycle.
+- Cross-user SEC-02 independent probe (reviewer).
+
+Artifacts: f02-approved-manual-harness-blocked.png, ax-manual-after-type.json

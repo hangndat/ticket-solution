@@ -1,0 +1,13 @@
+{
+  "at": "2026-10-24T01:28:10.769353+00:00",
+  "head": "b2faa48a1ce443c8fc6c849cb74a06a57f8b0c37",
+  "manifest": ".orca-metrics/fix-all/private/barrier-final-freeze.json",
+  "manifestSha256": "0793c6e918b1f1fc0997c2917fafa5f0f40c971b477799bf3fb1bb21e6804342",
+  "files": 91,
+  "drift": [],
+  "diffCheckExit": 0,
+  "diffCheckOutput": "",
+  "activeOrReclaimable": [],
+  "proxyMode": "online",
+  "emulatorHelper": "root killed via Orca after UAT; device left booted"
+}
