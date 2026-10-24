@@ -60,7 +60,7 @@ export function main(argv=process.argv.slice(2)) {
     const pin=['--agent',f.agent,'--model',f.model];if(f.effort)pin.push('--effort',f.effort);
     const preflight=child(process.execPath,[join(ROOT,'scripts/orca-spawn-model-preflight.mjs'),'--','--cost-tier',f['cost-tier'],...pin,...(f['tier-reason']?['--tier-reason',f['tier-reason']]:[])]);
     if(!preflight.ok)throw Error('model_preflight_failed');
-    save(dir,'routing.json',{costTier:f['cost-tier'],agent:f.agent,model:f.model,effort:f.effort||null,...(f['tier-reason']?{tierReason:f['tier-reason']}:{}),...(f['essential-reason']?{essentialReason:f['essential-reason']}:{})});
+    save(dir,'routing.json',{costTier:f['cost-tier'],agent:f.agent,model:f.model,effort:f.effort||null,...(f['tier-reason']?{tierReason:f['tier-reason']}:{}),...(f['essential-reason']?{essentialReason:f['essential-reason']}:{}),...(f['display-name']?{displayName:f['display-name']}:{})});
     const quota=snapshot(dir,'quota-before.json',run,null,role);
     const quotaAvailable=quota.available;
     const route=COST_TIER_ROUTES[f['cost-tier']].find(r=>r.agent===f.agent && r.models.includes(f.model) && r.effort===(f.effort||null));
@@ -72,7 +72,9 @@ export function main(argv=process.argv.slice(2)) {
       console.log(JSON.stringify({ok:false,errorCode:'quota_'+quotaCheck.state,agentReady:false,costTier:f['cost-tier'],quotaCheck,receiptDirectory:dir,nextAction:'defer_or_review_registered_same_tier_route'}));process.exitCode=1;return;
     }
     const args=['orchestration','worker-start','--run',run,'--task',f.task,'--worktree',f.worktree||'current',...pin,'--json'];
-    for (const key of ['display-name','task-title']) if(f[key])args.push(`--${key}`,f[key]);
+    // Existing worktrees take Persona from task-create; display-name is creation-only.
+    if(f['display-name'] && ['new-child','new-top-level'].includes(f.worktree)) args.push('--display-name',f['display-name']);
+    if(f['task-title'])args.push('--task-title',f['task-title']);
     if(f['retry-request'])args.push('--retry-request',f['retry-request']);
     const receipt=child(orca,args);save(dir,'start-receipt.json',receipt.data || {available:false,errorCode:'receipt_unavailable'});
     const r=receipt.data?.result;
@@ -82,8 +84,13 @@ export function main(argv=process.argv.slice(2)) {
     }
     const opened=child(process.execPath,[join(ROOT,'scripts/agent-role-monitor/cli.mjs'),'record-opened','--dispatch-id',r.dispatchId,'--task-id',f.task,'--run-id',run,'--role-id',role,'--agent',f.agent]);
     save(dir,'opened-status.json',{recorded:opened.ok});
-    if(!opened.ok)process.exitCode=1;
-    output={ok:opened.ok,command,runId:run,taskId:f.task,dispatchId:r.dispatchId,state:r.state,agentReady:true,costTier:f['cost-tier'],launch:r.launch,quotaAvailable,quotaSnapshotProvider:'codex',quotaCheck,openedRecorded:opened.ok,telemetryStatus:opened.ok?'recorded':'degraded',nextAction:opened.ok?'supervise':'observe_existing_dispatch_do_not_restart',receiptDirectory:dir};
+    const effective=r.launch?.effective;
+    const routingVerified=effective?.agent===f.agent && effective?.model===f.model && (effective?.effort??null)===(f.effort||null);
+    const routingStatus=routingVerified?'verified':!effective?.agent || !effective?.model || (f.effort && !effective.effort)?'unknown':'mismatch';
+    save(dir,'routing-status.json',{status:routingStatus,requested:{agent:f.agent,model:f.model,effort:f.effort||null},effective:effective??null});
+    if(!opened.ok || !routingVerified)process.exitCode=1;
+    output={ok:opened.ok && routingVerified,command,runId:run,taskId:f.task,dispatchId:r.dispatchId,state:r.state,agentReady:true,costTier:f['cost-tier'],launch:r.launch,quotaAvailable,quotaSnapshotProvider:'codex',quotaCheck,openedRecorded:opened.ok,telemetryStatus:opened.ok?'recorded':'degraded',routingStatus,nextAction:opened.ok && routingVerified?'supervise':'observe_existing_dispatch_do_not_restart',receiptDirectory:dir};
+    if(!routingVerified)output.errorCode='effective_route_'+routingStatus;
   } else {
     const id=f['dispatch-id'];
     const show=child(orca,['orchestration','worker-show','--dispatch',id,'--json']);

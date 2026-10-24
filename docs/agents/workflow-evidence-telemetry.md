@@ -56,10 +56,12 @@ Với worker mới, dùng wrapper để preflight, snapshot quota trước start
 
 ```bash
 node scripts/agent-workflow-run.mjs start --run-id RUN --task TASK --role-id ROLE \
-  --cost-tier standard --agent cursor --model composer-2.5 --display-name "Persona · role" --task-title "Persona · việc cần làm"
+  --cost-tier standard --agent cursor --model composer-2.5 --task-title "Persona · việc cần làm"
 ```
 
-`--cost-tier` phải khớp Task Spec và agent/model/effort trong cost-catalog. Wrapper lưu `routing.json` cùng receipt và không gửi flag local này vào Orca. Đọc `state`, requested/effective và receipt, không chỉ `ok`. Start thất bại/không rõ hoặc ledger lỗi sau khi agent ready: quan sát dispatch hiện hữu, không launch lại tự động. Worker cũ reuse bằng Orca theo skill: chụp quota theo wave và collect trước release, giữ receipt model gốc; model unknown phải báo unknown.
+Đặt `--display-name` và `--task-title` Persona khi `task-create`; start trên current/existing không gửi creation flag `--display-name`. Wrapper giữ display-name local cho existing, chỉ chuyển vào Orca khi `--worktree new-child|new-top-level`.
+
+`--cost-tier` phải khớp Task Spec và agent/model/effort trong cost-catalog. Wrapper lưu `routing.json` cùng receipt và không gửi flag local này vào Orca. Đọc `state`, requested/effective và receipt, không chỉ `ok`. Effective agent/model/effort thiếu hoặc lệch làm wrapper trả lỗi kèm dispatch đang live và `observe_existing_dispatch_do_not_restart`; không tự retry/stop/release. Start thất bại/không rõ hoặc ledger lỗi sau khi agent ready: quan sát dispatch hiện hữu, không launch lại tự động. Worker cũ reuse bằng Orca theo skill: chụp quota theo wave và collect trước release, giữ receipt model gốc; model unknown phải báo unknown.
 
 Sau `worker_done` hợp lệ và đối chiếu task/dispatch/run:
 
