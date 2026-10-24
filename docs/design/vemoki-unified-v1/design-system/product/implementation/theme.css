@@ -1,0 +1,47 @@
+/* DESIGN REFERENCE ONLY. Scope to the root of the specific surface.
+   Existing Live Pulse v2 tokens and tenant branding stay authoritative.
+   Never import this file globally from apps/web/app/globals.css. */
+[data-vm-surface] {
+  --vm-font-body: 'Be Vietnam Pro', system-ui, sans-serif;
+  --vm-font-display: Sora, 'Be Vietnam Pro', system-ui, sans-serif;
+  --vm-accent: #9b4dff;
+  --vm-magenta: #f23cb3;
+  --vm-coral: #ff835f;
+  --vm-blue: #397dff;
+  --vm-focus: #3568ef;
+  --vm-radius-md: 16px;
+  --vm-radius-lg: 22px;
+  --vm-gradient-action: linear-gradient(105deg,#ee35b4,#9944ff 48%,#3383ff);
+}
+[data-vm-surface="attendee-mobile"],
+[data-vm-surface="staff-mobile"] {
+  --vm-bg: #060817;
+  --vm-surface: #0e1229;
+  --vm-text: #faf9ff;
+  --vm-text-secondary: #c2c6de;
+}
+[data-vm-surface="attendee-web"],
+[data-vm-surface="portal"] {
+  --vm-bg: #f6f8fc;
+  --vm-surface: #ffffff;
+  --vm-text: #172039;
+  --vm-text-secondary: #53607b;
+}
+[data-vm-surface="staff-mobile"] {
+  --vm-admit: #127349;
+  --vm-deny: #b3213a;
+  --vm-warn: #8a5800;
+  --vm-unknown: #6753a0;
+  --vm-gate-focus: #b2cbff;
+}
+[data-vm-surface] :focus-visible {
+  outline: 3px solid var(--vm-focus);
+  outline-offset: 3px;
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-vm-surface] *, [data-vm-surface] *::before, [data-vm-surface] *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

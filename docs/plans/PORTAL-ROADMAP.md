@@ -1,5 +1,7 @@
 # Roadmap Portal Vemoki — `portal.vemoki.com` / Ant Design
 
+> **Supersession 24/10/2026:** [O23](../DECISION-LOG.md) thay quyết định `GATE-STAY-APP` trong gói P0+P1: bỏ Web Gate, admission chỉ trong iOS Staff. Nội dung Web Gate bên dưới là lịch sử phê duyệt ngày 18/10; migration `/gate` cần Task/contract và nghiệm thu riêng.
+
 Ngày: **18/10/2026** · Chủ trì: coordinator gốc · Run: `run_df32d5572a2d`.
 
 > **Người dùng đã duyệt ngày 18/10/2026** bằng phản hồi “duyệt” sau bản tổng hợp và planning review PASS. Bắt đầu Epic [#406](https://github.com/hangndat/ticket-solution/issues/406), Run `run_34fde1e32ed1`: P0+P1, `PORTAL-SEPARATE-APP`, `GATE-STAY-APP`, `PLATFORM-PORTAL-ZONE`, `ANTD-CORE-FIRST`. Cho phép coding/PR/review/CI/coordinator integration trong scope; không production DNS/deploy/cutover/cloud/store. Các câu “đề xuất/chờ duyệt” dưới đây là snapshot nghiên cứu trước approval; triển khai theo Task Spec và ADR-20 trong phạm vi đã duyệt. Approval không phải bằng chứng nghiệm thu sản phẩm.

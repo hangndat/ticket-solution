@@ -1,0 +1,48 @@
+/* Vemoki Neon Event Experience — MARKETING ONLY.
+   Namespace every public token to avoid overriding Live Pulse v2 product/admin.
+   Reference: brand/vemoki/tokens.json (source of truth for existing shared brand).
+*/
+:root[data-vemoki-marketing='neon-v1'] {
+  --vm-bg: #060817;
+  --vm-bg-deep: #040611;
+  --vm-surface: #0e1229;
+  --vm-surface-raised: #151935;
+  --vm-outline: #38345f;
+  --vm-outline-soft: rgba(181, 169, 255, .20);
+  --vm-text: #faf9ff;
+  --vm-text-secondary: #c2c6de;
+  --vm-text-subtle: #989dbd;
+  --vm-purple: #9b4dff;
+  --vm-magenta: #f23cb3;
+  --vm-coral: #ff835f;
+  --vm-blue: #397dff;
+  --vm-cyan: #28d4ef;
+  --vm-success: #39e3aa;
+  --vm-focus: #b2cbff;
+  --vm-cta-gradient: linear-gradient(105deg, #ee35b4 0%, #9944ff 48%, #3383ff 100%);
+  --vm-text-gradient: linear-gradient(100deg, #ff68aa 2%, #ff8f6e 31%, #c870ff 63%, #777cff 100%);
+  --vm-radius-sm: 10px;
+  --vm-radius-md: 16px;
+  --vm-radius-lg: 22px;
+  --vm-radius-xl: 28px;
+  --vm-radius-pill: 999px;
+  --vm-space-1: 4px;
+  --vm-space-2: 8px;
+  --vm-space-3: 12px;
+  --vm-space-4: 16px;
+  --vm-space-5: 20px;
+  --vm-space-6: 24px;
+  --vm-space-8: 32px;
+  --vm-space-10: 40px;
+  --vm-space-12: 48px;
+  --vm-space-16: 64px;
+  --vm-space-20: 80px;
+  --vm-shadow-card: 0 14px 48px rgba(0,0,0,.34);
+  --vm-shadow-cta: 0 10px 30px rgba(148,69,250,.30), inset 0 1px rgba(255,255,255,.3);
+  --vm-max-content: 1220px;
+  --vm-font-display: Sora, 'Be Vietnam Pro', system-ui, sans-serif;
+  --vm-font-body: 'Be Vietnam Pro', system-ui, sans-serif;
+}
+
+/* a11y v1.2: text-scale floor for key copy */
+small,.caption,.eyebrow{font-size:14px}

@@ -1,8 +1,16 @@
 # Decision log — sản phẩm & kỹ thuật
 
-Ngày cập nhật: 2026-10-22
+Ngày cập nhật: 2026-10-24
 Nguồn: [PRD](./PRD.md) mục 15, [Technical Design](./TECHNICAL-DESIGN.md) mục 2 & 18, [ROADMAP](./ROADMAP.md)
 Tracking: Issues [#10](https://github.com/hangndat/ticket-solution/issues/10), [#11](https://github.com/hangndat/ticket-solution/issues/11)
+
+## O23 — Gate chỉ trên iOS Staff; chốt hướng thiết kế Vemoki (24/10/2026)
+
+User quyết định **bỏ Web Gate**. Quét QR, nhập tay và xác nhận vào cổng chỉ thuộc workspace Staff trong app iOS, theo quyền và kết quả backend. Attendee web/iOS chỉ hiển thị vé; Portal chỉ đọc báo cáo Gate theo `report.read`, không có hành động admission. Quyết định này thay thế phần `GATE-STAY-APP` của O16 và các mô tả Web Gate trong PRD/roadmap cũ; phần còn lại của O16 giữ nguyên như lịch sử quyết định.
+
+Hướng thiết kế được chốt tại [`docs/design/vemoki-unified-v1/`](./design/vemoki-unified-v1/README.md). Đây là **design complete** cho prototype, không chứng minh code complete, acceptance complete hay pilot ready. Trước khi tắt `/gate` đang chạy: kiểm kê route/deep link/client, chọn trang giải thích hoặc redirect an toàn, cập nhật navigation, test và monitoring; giữ Gate iOS và invariant reserve/confirm, offline reconciliation, RBAC, audit. Không coi việc chốt thiết kế là đã hoàn tất migration hoặc cho phép deploy production.
+
+Architecture impact: **Có** — thay đổi kênh admission và migration Web Gate; cần contract/ADR và Task Spec theo ownership trước implementation.
 
 ## O22 — Consumer web DS: Aceternity copy-paste + Tailwind v4 scoped (22/10/2026)
 
