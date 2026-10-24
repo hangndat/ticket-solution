@@ -233,3 +233,11 @@ User chốt theo research [`docs/plans/VEMOKI-PLATFORM-SALES-PAGE-RESEARCH.md`](
 **Wave sau O13:** architect ADR/handoff ∥ PD wireframe sales (VI+EN) → **web coding ngay khi PD handoff sẵn** (ủy quyền #7) → coordinator DNS khi được phép deploy → form quan tâm + demo link nhãn giả lập → ASC URL + headless UAT + reviewer-dod.
 
 **2026-10-22 — O13 / Epic #770 (user chốt):** Trang `vemoki.com` định vị **Event Operating System** (agency + enterprise, in-person ops); giữ anti-marketplace và số liệu demo có nhãn; visual **Live Pulse v2** (KHÔNG đổi Midnight Indigo); IA 8 section theo `docs/reviews/MKT-PD-EVENT-OS-SPEC-2026-10-22.md`.
+
+## Bổ sung24/10/2026 — #859 receipt offline
+
+User “duyệt, fix hết đi” mở phần recovery còn lại của #859. Chấp nhận [contract receipt historical-only](architecture/F02-OFFLINE-RECEIPT-2026-10-24.md) sau preflight bảo mật: GET scope actor/tenant/event/owned session và active assignment, receipt không cấp admission; không đổi POST replay/ADR18/privacy logout. Không mở search/manual lookup rộng hoặc production/store/Git integration. Implementation và native acceptance còn phải review độc lập.
+
+### Bổ sung #859 — khôi phục session sau lỗi thứ tự offline (24/10/2026)
+
+Trong batch user “duyệt, fix hết đi”, trace thật xác nhận sequence local1 nhỏ hơn server9 cho cùng device/session. Cho phép client giữ nguyên operation bị server từ chối và chỉ mở staff session thật mới qua API hiện có cho lượt quét tiếp theo; không đổi payload, sequence hay receipt của lượt cũ. Khóa bằng epoch/user/scope/session, giới hạn một recovery cho session lỗi. Không rotate session khi restart offline chưa nhận durable reject; không revoke session cũ nếu còn pending. Explicit logout xóa staff workspace cùng queue/sequence, còn restore unreachable giữ partition để M10 hồi phục. Không đổi receipt GET/read-only contract, DB schema hoặc authz. Chi tiết và trace: `.orca-metrics/fix-all/DECISION-F02-ORDER-RECOVERY.md`; cần review độc lập trên source freeze cuối trước nghiệm thu.
