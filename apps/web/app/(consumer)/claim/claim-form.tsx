@@ -3,37 +3,37 @@
 import { Button } from '@ticket/ui';
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import type { FormAnswerValue, FormDefinition } from '@ticket/contracts';
-import { decideClaimBody } from '../../src/guest/claim-api';
+import { decideClaimBody } from '../../../src/guest/claim-api';
 import {
   clearClaimHashFromLocation,
   clearGuestClaimIntent,
   parkGuestClaimIntent,
   peekGuestClaimIntent,
   readClaimTokenFromLocation,
-} from '../../src/guest/claim-intent';
-import { redeemMutate } from '../../src/redeem/client-fetch';
-import type { RedeemDecision } from '../../src/redeem/decide';
-import { RedeemFormFields } from '../../src/redeem/form-fields';
+} from '../../../src/guest/claim-intent';
+import { redeemMutate } from '../../../src/redeem/client-fetch';
+import type { RedeemDecision } from '../../../src/redeem/decide';
+import { RedeemFormFields } from '../../../src/redeem/form-fields';
 import {
   requireTermsConsent,
   validateFormAnswers,
-} from '../../src/redeem/form-validate';
+} from '../../../src/redeem/form-validate';
 import {
   messageForDecision,
   type RedeemUxMessage,
-} from '../../src/redeem/messages';
+} from '../../../src/redeem/messages';
 import {
   authButtonsRow,
   claimFormRoot,
   claimOutcomeClass,
   meResultPre,
   redeemMetaDetails,
-} from '../../src/guest/guest-flow-surface';
-import { redeemCheckboxRow } from '../../src/redeem/redeem-surface';
-import { loadPublishedRedeemSchema } from '../../src/redeem/published-schema';
-import { REQUEST_TIMEOUT_MS } from '../../src/redeem/poll-operation';
-import { liveRegionForStatus } from '../../src/ui/live-region';
-import { SurfaceState } from '../../src/ui/surface-state';
+} from '../../../src/guest/guest-flow-surface';
+import { redeemCheckboxRow } from '../../../src/redeem/redeem-surface';
+import { loadPublishedRedeemSchema } from '../../../src/redeem/published-schema';
+import { REQUEST_TIMEOUT_MS } from '../../../src/redeem/poll-operation';
+import { liveRegionForStatus } from '../../../src/ui/live-region';
+import { SurfaceState } from '../../../src/ui/surface-state';
 
 type ClaimLocation = {
   token: string;

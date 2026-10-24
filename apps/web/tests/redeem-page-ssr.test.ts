@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import test from 'node:test';
 
-const redeemDir = join(process.cwd(), 'app/redeem');
+const redeemDir = join(process.cwd(), 'app/(consumer)/redeem');
 
 test('redeem-auth-gate exposes stable SSR marker (PR #722 nit)', () => {
   const gate = readFileSync(join(redeemDir, 'redeem-auth-gate.tsx'), 'utf8');

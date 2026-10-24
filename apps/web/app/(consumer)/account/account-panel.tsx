@@ -7,22 +7,22 @@ import {
   interpretAccountDeletion,
   viewLabel,
   type ViewResult,
-} from '../../src/bff/me-shape';
-import type { AccountDeletionRequestResponse } from '../../src/bff/platform-contracts';
+} from '../../../src/bff/me-shape';
+import type { AccountDeletionRequestResponse } from '../../../src/bff/platform-contracts';
 import {
   platformGet,
   platformMutate,
-} from '../../src/bff/same-origin-fetch';
-import { REQUEST_TIMEOUT_MS } from '../../src/redeem/poll-operation';
+} from '../../../src/bff/same-origin-fetch';
+import { REQUEST_TIMEOUT_MS } from '../../../src/redeem/poll-operation';
 import {
   accountDeletionCurrentPanel,
   accountDeletionFormRoot,
   accountDeletionNote,
   accountDeletionOutcomeError,
   accountDeletionOutcomeOk,
-} from '../../src/account/account-flow-surface';
-import { liveRegionForStatus } from '../../src/ui/live-region';
-import { SurfaceState } from '../../src/ui/surface-state';
+} from '../../../src/account/account-flow-surface';
+import { liveRegionForStatus } from '../../../src/ui/live-region';
+import { SurfaceState } from '../../../src/ui/surface-state';
 
 type DeletionCurrent = {
   requestId: string;

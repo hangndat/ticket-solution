@@ -26,41 +26,41 @@ import {
   unknownMessage,
   verifyingMessage,
   type RedeemUxMessage,
-} from '../../src/redeem/messages';
-import { ticketStateLabel } from '../../src/owner-ticket/ticket-state';
+} from '../../../src/redeem/messages';
+import { ticketStateLabel } from '../../../src/owner-ticket/ticket-state';
 import {
   redeemPayloadFingerprint,
   resolveIdempotencyKey,
   type RedeemAttempt,
-} from '../../src/redeem/attempt-key';
-import { redeemMutate } from '../../src/redeem/client-fetch';
-import { decideRedeemBody, type RedeemDecision } from '../../src/redeem/decide';
-import { fetchJson } from '../../src/redeem/fetch-json';
+} from '../../../src/redeem/attempt-key';
+import { redeemMutate } from '../../../src/redeem/client-fetch';
+import { decideRedeemBody, type RedeemDecision } from '../../../src/redeem/decide';
+import { fetchJson } from '../../../src/redeem/fetch-json';
 import {
   focusFirstFieldError,
   RedeemFormFields,
-} from '../../src/redeem/form-fields';
+} from '../../../src/redeem/form-fields';
 import {
   requireTermsConsent,
   validateFormAnswers,
-} from '../../src/redeem/form-validate';
-import { fetchOwnerRedemptionStatus } from '../../src/redeem/owner-status';
+} from '../../../src/redeem/form-validate';
+import { fetchOwnerRedemptionStatus } from '../../../src/redeem/owner-status';
 import {
   isApiError,
   pollOperation,
   REQUEST_TIMEOUT_MS,
-} from '../../src/redeem/poll-operation';
-import { loadPublishedRedeemSchema } from '../../src/redeem/published-schema';
-import { isTenantBoundRedeemQuery } from '../../src/redeem/global-entry';
-import { validateRedeemScope } from '../../src/redeem/redeem-scope';
-import { resolveRedemptionCodeGlobal } from '../../src/redeem/global-resolve';
+} from '../../../src/redeem/poll-operation';
+import { loadPublishedRedeemSchema } from '../../../src/redeem/published-schema';
+import { isTenantBoundRedeemQuery } from '../../../src/redeem/global-entry';
+import { validateRedeemScope } from '../../../src/redeem/redeem-scope';
+import { resolveRedemptionCodeGlobal } from '../../../src/redeem/global-resolve';
 import {
   clearStoredResolveToken,
   readStoredResolveToken,
   writeStoredResolveToken,
-} from '../../src/redeem/resolve-session';
-import { loginHref } from '../../src/oidc/login-href';
-import { RedeemTermsConsent } from '../../src/redeem/redeem-terms-consent';
+} from '../../../src/redeem/resolve-session';
+import { loginHref } from '../../../src/oidc/login-href';
+import { RedeemTermsConsent } from '../../../src/redeem/redeem-terms-consent';
 import {
   authButtonsRow,
   introLead,
@@ -84,9 +84,9 @@ import {
   redeemTicketCard,
   redeemTicketListSection,
   redeemVersionsGrid,
-} from '../../src/redeem/redeem-surface';
-import { liveRegionForStatus } from '../../src/ui/live-region';
-import { SurfaceState } from '../../src/ui/surface-state';
+} from '../../../src/redeem/redeem-surface';
+import { liveRegionForStatus } from '../../../src/ui/live-region';
+import { SurfaceState } from '../../../src/ui/surface-state';
 
 const REDEEM_LOGIN_HREF = loginHref('/redeem');
 

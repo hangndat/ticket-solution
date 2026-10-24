@@ -7,7 +7,7 @@ import {
   ThemeProvider,
   brandingFromEventBrand,
   brandingToCssVars,
-} from '../../../../../src/branding';
+} from '../../../../../../src/branding';
 import {
   attendeeDetailMain,
   attendeeEventBackLink,
@@ -30,19 +30,19 @@ import {
   attendeeEventSideboxCta,
   attendeeEventSideboxHelp,
   attendeeEventSideboxLead,
-} from '../../../../../src/attendee-detail-surface';
-import { SiteNav } from '../../../../../src/site-chrome';
+} from '../../../../../../src/attendee-detail-surface';
+import { ConsumerPageShell } from '../../../../../../src/consumer-page-shell';
 import {
   PUBLIC_EVENT_COPY,
   formatPublishedEventDate,
   heroCopyFromSections,
   loadPublishedEventDetail,
   visiblePublishedSections,
-} from '../../../../../src/published';
-import { publishedSectionKindLabel } from '../../../../../src/published/section-label';
-import { SurfaceState } from '../../../../../src/ui/surface-state';
-import { eventArtTone } from '../../../../../src/ui/event-art-tone';
-import { attendeeHomeMain } from '../../../../../src/attendee-surface';
+} from '../../../../../../src/published';
+import { publishedSectionKindLabel } from '../../../../../../src/published/section-label';
+import { SurfaceState } from '../../../../../../src/ui/surface-state';
+import { eventArtTone } from '../../../../../../src/ui/event-art-tone';
+import { attendeeHomeMain } from '../../../../../../src/attendee-surface';
 
 type Props = { params: Promise<{ tenantSlug: string; eventSlug: string }> };
 
@@ -74,8 +74,7 @@ function EventErrorShell({
   detail: string;
 }) {
   return (
-    <main id="main" className={attendeeHomeMain}>
-      <SiteNav />
+    <ConsumerPageShell mainClassName={attendeeHomeMain}>
       <SurfaceState
         kind="error"
         title={title}
@@ -87,7 +86,7 @@ function EventErrorShell({
           </Button>
         }
       />
-    </main>
+    </ConsumerPageShell>
   );
 }
 
@@ -135,15 +134,15 @@ export default async function EventPage({ params }: Props) {
 
   return (
     <ThemeProvider branding={branding} applyCssVars>
-      <main
-        id="main"
-        className={attendeeEventPage}
-        style={themeVars}
-        data-branding-source={branding.source}
-        data-testid="event-published"
+      <ConsumerPageShell
+        mainClassName={attendeeEventPage}
+        mainTestId="event-published"
+        mainProps={{ style: themeVars }}
       >
-        <SiteNav />
-        <div className={`${attendeeDetailMain} ${attendeeEventBody}`}>
+        <div
+          className={`${attendeeDetailMain} ${attendeeEventBody}`}
+          data-branding-source={branding.source}
+        >
           <Link className={attendeeEventBackLink} href="/">
             <span aria-hidden="true">‹</span> Tất cả sự kiện
           </Link>
@@ -267,7 +266,7 @@ export default async function EventPage({ params }: Props) {
             </section>
           ) : null}
         </div>
-      </main>
+      </ConsumerPageShell>
     </ThemeProvider>
   );
 }

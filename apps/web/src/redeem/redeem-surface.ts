@@ -10,8 +10,8 @@ export const fadeRiseMotion = cn(
 
 export const lpPageShell = cn(
   'mx-auto max-w-[75rem] px-5 [--brand:var(--color-signal)]',
-  'min-h-[75vh] pt-20 pb-[60px]',
-  'min-[760px]:px-12 min-[760px]:pt-[100px] min-[760px]:pb-[70px]',
+  'min-h-[75vh] pb-[60px]',
+  'min-[760px]:px-12 min-[760px]:pb-[70px]',
 );
 
 export const redeemPageMain = cn(lpPageShell, '[--brand:var(--color-signal)]');
@@ -28,7 +28,7 @@ export const redeemHeader = cn(
 );
 
 export const redeemLead =
-  'm-0 max-w-[32rem] text-[1.05rem] leading-[1.65] text-ink-muted';
+  'm-0 max-w-[32rem] text-[1.05rem] leading-[1.65] text-muted';
 
 export const authButtonsRow = cn(
   'my-4 flex flex-wrap gap-3',
@@ -45,7 +45,7 @@ export const redeemGateCard = cn(
   'mt-8 rounded-lg border border-line bg-white p-6 shadow-[0_1px_0_color-mix(in_srgb,var(--color-ink)_4%,transparent)]',
   'max-[480px]:p-5',
   '[&_h2]:mb-2 [&_h2]:font-display [&_h2]:text-[clamp(1.25rem,2.8vw,1.55rem)]',
-  '[&_p]:m-0 [&_p]:mb-4 [&_p]:leading-[1.6] [&_p]:text-ink-muted',
+  '[&_p]:m-0 [&_p]:mb-4 [&_p]:leading-[1.6] [&_p]:text-muted',
 );
 
 export const redeemGateIllustration = cn(
@@ -87,7 +87,7 @@ export const redeemProductFormTitle = cn(
   '[clip:rect(0,0,0,0)]',
 );
 
-export const redeemProductLead = 'm-0 text-[0.95rem] leading-[1.55] text-ink-muted';
+export const redeemProductLead = 'm-0 text-[0.95rem] leading-[1.55] text-muted';
 
 export const redeemCodeField = cn(
   'grid gap-2',
@@ -99,14 +99,14 @@ export const redeemCodeField = cn(
 export const redeemPrimaryActions = cn('grid gap-3 [&_.redeem-submit]:w-full [&_.redeem-submit]:rounded-md');
 
 export const redeemSecondaryTools = cn(
-  'mt-2 [&_summary]:flex [&_summary]:min-h-11 [&_summary]:cursor-pointer [&_summary]:items-center [&_summary]:font-semibold [&_summary]:text-ink-muted',
+  'mt-2 [&_summary]:flex [&_summary]:min-h-11 [&_summary]:cursor-pointer [&_summary]:items-center [&_summary]:font-semibold [&_summary]:text-muted',
 );
 
 export const redeemGlobalContext = cn(
   'rounded-md border border-line bg-[color-mix(in_srgb,var(--color-paper)_92%,var(--color-focus)_8%)] p-4',
   '[&_h3]:m-0 [&_h3]:mb-3 [&_h3]:text-base',
   '[&_dl]:m-0 [&_dl]:grid [&_dl]:gap-2',
-  '[&_dt]:text-[0.72rem] [&_dt]:uppercase [&_dt]:tracking-[0.06em] [&_dt]:text-ink-muted',
+  '[&_dt]:text-[0.72rem] [&_dt]:uppercase [&_dt]:tracking-[0.06em] [&_dt]:text-muted',
   '[&_dd]:m-0 [&_dd]:font-semibold',
 );
 
@@ -129,7 +129,7 @@ export const redeemPublishedFieldsCompact = cn(
 );
 
 export const redeemPublishedLegend =
-  'px-1.5 text-xs font-bold tracking-[0.04em] uppercase text-ink-muted';
+  'px-1.5 text-xs font-bold tracking-[0.04em] uppercase text-muted';
 
 export const redeemFieldStack = 'grid gap-1.5';
 
@@ -146,7 +146,7 @@ export const redeemCheckboxRow = cn(
 
 export const redeemFieldError = 'm-0 text-sm font-semibold text-destructive';
 
-export const redeemSchemaNotice = 'm-0 text-sm text-ink-muted';
+export const redeemSchemaNotice = 'm-0 text-sm text-muted';
 
 export const redeemTermsBlock = cn(
   'm-0 grid gap-3.5 border-2 border-[color-mix(in_srgb,var(--color-ink)_19%,transparent)] p-4',
@@ -251,7 +251,7 @@ export function redeemDevStatusClass(kind: string): string {
 export const redeemOutcomePanel = cn(
   'mt-8 rounded-lg border border-line bg-white px-6 py-7 text-center shadow-sm',
   '[&_h3]:m-0 [&_h3]:mb-2.5 [&_h3]:font-display [&_h3]:text-[clamp(1.35rem,3vw,1.65rem)] [&_h3]:tracking-[-0.03em]',
-  '[&_p]:m-0 [&_p]:mb-4 [&_p]:text-[0.98rem] [&_p]:leading-[1.6] [&_p]:text-ink-muted',
+  '[&_p]:m-0 [&_p]:mb-4 [&_p]:text-[0.98rem] [&_p]:leading-[1.6] [&_p]:text-muted',
 );
 
 export const redeemOutcomeSuccess = cn(

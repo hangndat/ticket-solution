@@ -3,14 +3,15 @@ import { cn } from '../../lib/utils';
 /** Marketing shell + section utilities (Tailwind v4 / @theme tokens — replaces marketing-uplift.css). */
 
 export const marketingSurface =
-  'flex flex-col min-h-dvh max-w-full overflow-x-clip text-ink antialiased scheme-light [&>main]:flex-1 [&>main]:min-w-0 [&>main]:w-full [&_a]:underline [&_a]:decoration-1 [&_a]:underline-offset-[3px] hover:[&_a]:text-focus';
+  'flex flex-col min-h-dvh max-w-full overflow-x-clip text-ink antialiased scheme-light [&>main]:flex-1 [&>main]:min-w-0 [&>main]:w-full [&>main_a]:underline [&>main_a]:decoration-1 [&>main_a]:underline-offset-[3px] hover:[&>main_a]:text-focus';
 
 export const marketingSkip =
   'skip-link absolute -left-[9999px] top-0 z-[100] rounded-sm bg-ink px-4 py-3 text-paper focus:left-4 focus:top-4';
 
 export function marketingHeader(onSales: boolean, onInk: boolean) {
   return cn(
-    'sticky top-0 z-20 flex min-h-[72px] w-full items-center gap-6 px-[clamp(1.25rem,4vw,2rem)] backdrop-blur-md [&_a[href]]:no-underline',
+    'sticky top-0 z-20 flex min-h-[72px] w-full min-w-0 items-center gap-4 px-[clamp(1.25rem,4vw,2rem)] backdrop-blur-md [&_a[href]]:no-underline',
+    'lg:gap-5 xl:gap-6',
     onInk
       ? 'border-b border-paper/10 bg-ink/90 text-paper'
       : 'border-b border-line bg-paper/90',
@@ -19,9 +20,10 @@ export function marketingHeader(onSales: boolean, onInk: boolean) {
 }
 
 export const marketingWordmark = cn(
-  'font-display text-[1.65rem] font-bold tracking-tight text-inherit no-underline whitespace-nowrap',
+  'min-w-0 shrink font-display text-[1.65rem] font-bold tracking-tight text-inherit no-underline',
   '[&_span]:text-signal',
-  'max-md:max-w-[42vw] max-md:min-w-0 max-md:flex-[0_1_auto] max-md:overflow-hidden max-md:text-ellipsis max-md:text-[1.35rem]',
+  'max-lg:max-w-[9.5rem] max-lg:overflow-hidden max-lg:text-ellipsis max-lg:whitespace-nowrap max-lg:text-[1.35rem]',
+  'max-md:max-w-[42vw] max-md:flex-[0_1_auto]',
 );
 
 export const marketingNav = cn(
@@ -30,7 +32,7 @@ export const marketingNav = cn(
 );
 
 export const marketingNavLinks = cn(
-  'hidden items-center gap-[0.1rem] md:inline-flex',
+  'hidden items-center gap-[0.1rem] xl:inline-flex',
   '[&_a]:inline-flex [&_a]:min-h-11 [&_a]:items-center [&_a]:rounded-sm [&_a]:px-[0.65rem] [&_a]:py-[0.45rem] [&_a]:text-[0.82rem] [&_a]:whitespace-nowrap [&_a]:no-underline',
   'text-paper/85',
 );
@@ -50,7 +52,7 @@ export const marketingLocaleLink = cn(
 
 export const marketingNavMenuToggle = cn(
   'hidden min-h-11 min-w-11 cursor-pointer items-center gap-[0.35rem] rounded-sm border border-paper/15 bg-paper/5 px-[0.65rem] py-[0.35rem] text-[0.82rem] font-semibold text-inherit',
-  'max-md:inline-flex',
+  'max-xl:inline-flex',
   'focus-visible:outline focus-visible:outline-3 focus-visible:outline-focus focus-visible:outline-offset-2',
 );
 

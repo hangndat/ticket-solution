@@ -4,8 +4,8 @@ import {
   claimInviteHeader,
   claimInviteIntro,
   guestPageMain,
-} from '../../src/guest/guest-flow-surface';
-import { SiteNav } from '../../src/site-chrome';
+} from '../../../src/guest/guest-flow-surface';
+import { ConsumerPageShell } from '../../../src/consumer-page-shell';
 import { InviteAcceptForm } from './invite-accept';
 
 export const metadata: Metadata = {
@@ -17,8 +17,7 @@ export const metadata: Metadata = {
 
 export default function InvitePage() {
   return (
-    <main id="main" className={guestPageMain}>
-      <SiteNav />
+    <ConsumerPageShell mainClassName={guestPageMain}>
       <header className={claimInviteHeader}>
         <h1>Nhận lời mời thành viên</h1>
         <p className={claimInviteIntro}>
@@ -31,6 +30,6 @@ export default function InvitePage() {
       <p>
         <Link href="/">← Trang chủ</Link>
       </p>
-    </main>
+    </ConsumerPageShell>
   );
 }

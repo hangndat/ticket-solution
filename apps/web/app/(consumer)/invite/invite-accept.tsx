@@ -5,17 +5,17 @@ import { useEffect, useState, useSyncExternalStore } from 'react';
 import {
   interpretAcceptInvite,
   type ViewResult,
-} from '../../src/bff/me-shape';
-import type { AcceptInviteResponse } from '../../src/bff/platform-contracts';
+} from '../../../src/bff/me-shape';
+import type { AcceptInviteResponse } from '../../../src/bff/platform-contracts';
 import {
   platformGet,
   platformMutate,
-} from '../../src/bff/same-origin-fetch';
+} from '../../../src/bff/same-origin-fetch';
 import {
   inviteNetworkMessage,
   messageForInviteView,
   type InviteUxMessage,
-} from '../../src/invite/platform-messages';
+} from '../../../src/invite/platform-messages';
 import {
   authButtonsRow,
   claimFormRoot,
@@ -24,10 +24,10 @@ import {
   inviteFormPanel,
   inviteSuccessOutcomeClass,
   inviteSupportCopy,
-} from '../../src/guest/guest-flow-surface';
-import { REQUEST_TIMEOUT_MS } from '../../src/redeem/poll-operation';
-import { liveRegionForStatus } from '../../src/ui/live-region';
-import { SurfaceState } from '../../src/ui/surface-state';
+} from '../../../src/guest/guest-flow-surface';
+import { REQUEST_TIMEOUT_MS } from '../../../src/redeem/poll-operation';
+import { liveRegionForStatus } from '../../../src/ui/live-region';
+import { SurfaceState } from '../../../src/ui/surface-state';
 
 const STORAGE_KEY = 'vemoki_invite_token';
 

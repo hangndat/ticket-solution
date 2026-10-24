@@ -1,8 +1,8 @@
-import { t } from '../../src/marketing/copy';
+import { t } from '../../../src/marketing/copy';
 import {
   accountPrivacyProse,
   accountPrivacyUpdated,
-} from '../../src/account/account-flow-surface';
+} from '../../../src/account/account-flow-surface';
 
 /** Product-surface privacy copy (same legal text as marketing, without apex chrome). */
 export function ProductPrivacyBody() {

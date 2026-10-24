@@ -1,12 +1,12 @@
 import type { ReactNode } from 'react';
-import { SiteNav } from '../../src/site-chrome';
+import { ConsumerPageShell } from '../../../src/consumer-page-shell';
 import {
   accountCols,
   accountMainCol,
   accountPageLead,
   accountPageMain,
   accountPageTitle,
-} from '../../src/account/account-flow-surface';
+} from '../../../src/account/account-flow-surface';
 import { AccountNav, type AccountNavSection } from './account-nav';
 
 type AccountShellProps = {
@@ -23,8 +23,7 @@ export function AccountShell({
   children,
 }: AccountShellProps) {
   return (
-    <main id="main" className={accountPageMain}>
-      <SiteNav />
+    <ConsumerPageShell mainClassName={accountPageMain}>
       <header>
         <h1 className={accountPageTitle}>{title}</h1>
         {lead ? <p className={accountPageLead}>{lead}</p> : null}
@@ -33,6 +32,6 @@ export function AccountShell({
         <AccountNav active={active} />
         <div className={accountMainCol}>{children}</div>
       </div>
-    </main>
+    </ConsumerPageShell>
   );
 }
