@@ -1,5 +1,8 @@
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
+import React from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { DualRunBanner } from '../src/portal/dual-run-banner';
 import {
   decideAdminToPortalRedirect,
   filterMigrationSearch,
@@ -263,6 +266,17 @@ describe('portal dual-run redirect (ADR-20 §8 / D-7 #846)', () => {
       assert.ok(badHost.location.startsWith('https://evil.test/'));
       assert.ok(!badHost.location.includes('return='));
     }
+  });
+
+  test('VD-02: dual-run banner has no /gate scanner link (iOS Staff copy only)', () => {
+    const html = renderToStaticMarkup(
+      React.createElement(DualRunBanner, {
+        env: { PORTAL_ORIGIN: portal },
+      }),
+    );
+    assert.match(html, /data-testid="portal-dual-run-gate-ios"/);
+    assert.doesNotMatch(html, /href="\/gate"/);
+    assert.match(html, /Vemoki Staff/);
   });
 
   test('banner independent of redirect flag', () => {
