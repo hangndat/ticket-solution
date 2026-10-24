@@ -2,12 +2,10 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import {
   accountBackLink,
-  accountDeletionBlock,
   accountEmbeddedSessionWrap,
   accountRowChevron,
   accountRowLink,
   accountRowSub,
-  accountSectionHeading,
   accountSectionTitle,
   accountSettingsGroup,
   accountSettingsNotice,
@@ -28,7 +26,7 @@ export default function AccountPage() {
     <AccountShell
       active="account"
       title="Tài khoản"
-      lead="Xem phiên đăng nhập, thông báo và quyền riêng tư. Yêu cầu xóa tài khoản tuân thỏi chính sách dữ liệu."
+      lead="Xem phiên đăng nhập, thông báo và quyền riêng tư."
     >
       <h2 className={accountSectionTitle}>Bạn</h2>
       <div className={accountEmbeddedSessionWrap}>
@@ -55,30 +53,18 @@ export default function AccountPage() {
           </span>
           <span className={accountRowChevron} aria-hidden="true">›</span>
         </Link>
-        <Link
-          className={accountRowLink}
-          href="/account#account-deletion"
-        >
-          <span>
-            Yêu cầu xóa tài khoản
-            <span className={accountRowSub}>
-              Gửi yêu cầu theo chính sách — chưa phải xóa ngay.
+        <details id="account-deletion">
+          <summary className={accountRowLink}>
+            <span>
+              Xóa tài khoản
+              <span className={accountRowSub}>
+                Xem chính sách và gửi yêu cầu khi bạn sẵn sàng.
+              </span>
             </span>
-          </span>
-          <span className={accountRowChevron} aria-hidden="true">›</span>
-        </Link>
+          </summary>
+          <AccountPanel />
+        </details>
       </div>
-
-      <section
-        id="account-deletion"
-        className={accountDeletionBlock}
-        aria-labelledby="account-deletion-title"
-      >
-        <h2 id="account-deletion-title" className={accountSectionHeading}>
-          Yêu cầu xóa tài khoản
-        </h2>
-        <AccountPanel />
-      </section>
 
       <p className={accountBackLink}>
         <Link href="/">← Trang chủ</Link>

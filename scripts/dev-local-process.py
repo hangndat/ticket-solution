@@ -60,6 +60,19 @@ def wait_stopped(observe, timeout):
 
 def stop(pidfile):
     record = read_owner(pidfile)
+    if record is None:
+        # A dead leader is not proof that its private process group stopped.
+        # We no longer have a live birth identity to authorize signalling it;
+        # preserve the receipt and fail rather than forget surviving children.
+        try:
+            stale = json.loads(pidfile.with_suffix('.json').read_text())
+            pid = int(pidfile.read_text().strip())
+        except (OSError, ValueError):
+            stale, pid = {}, 0
+        if (isinstance(stale, dict) and pid > 1 and stale.get('pid') == pid
+                and stale.get('group') == pid and stale.get('started')
+                and identity(pid) is None and group_members(pid)):
+            raise RuntimeError('owned_group_identity_unverifiable')
     if record:
         pid = record['pid']
         if record['group'] == pid:
@@ -144,5 +157,6 @@ if __name__ == '__main__':
             fcntl.flock(stream, fcntl.LOCK_EX)
             sys.exit(main(sys.argv[1:]))
     except Exception as error:
-        print(json.dumps({'ok': False, 'errorCode': type(error).__name__}), file=sys.stderr)
+        code = str(error) if isinstance(error, RuntimeError) else type(error).__name__
+        print(json.dumps({'ok': False, 'errorCode': code}), file=sys.stderr)
         sys.exit(1)

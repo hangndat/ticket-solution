@@ -31,7 +31,6 @@ export type NavCapabilities = {
 export const GUEST_NAV_LINKS: NavLink[] = [
   { href: '/', label: 'Khám phá', testId: 'nav-events' },
   { href: '/redeem', label: 'Đổi mã', testId: 'nav-redeem' },
-  { href: '/claim', label: 'Nhận lời mời', testId: 'nav-claim' },
   {
     href: '/api/auth/login?return=/account',
     label: 'Tài khoản',
@@ -42,7 +41,6 @@ export const GUEST_NAV_LINKS: NavLink[] = [
 const PRODUCT_NAV_LINKS: NavLink[] = [
   { href: '/', label: 'Khám phá', testId: 'nav-events' },
   { href: '/redeem', label: 'Đổi mã', testId: 'nav-redeem' },
-  { href: '/claim', label: 'Nhận lời mời', testId: 'nav-claim' },
   { href: '/wallet', label: 'Vé của tôi', testId: 'nav-wallet' },
 ];
 

@@ -320,7 +320,7 @@ export function InterestForm({
         />
       </div>
 
-      <div className={`${marketingConsent} ${marketingFormField}`}>
+      <div className={marketingConsent}>
         <input
           id={`${formId}-consent`}
           name="consent"
@@ -328,18 +328,19 @@ export function InterestForm({
           value="true"
           required
           disabled={busy}
+          className="mt-0.5 size-5 shrink-0 cursor-pointer accent-signal focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
           aria-invalid={fieldErrors.consent ? true : undefined}
           aria-describedby={
             fieldErrors.consent ? `${formId}-err-consent` : undefined
           }
         />
-        <Label htmlFor={`${formId}-consent`}>
+        <label htmlFor={`${formId}-consent`} className="min-w-0 cursor-pointer text-sm font-normal leading-relaxed">
           {t(locale, 'interest.consent.before')}{' '}
           <Link href={privacyHref(locale)}>
             {t(locale, 'interest.consent.privacy')}
           </Link>
           .
-        </Label>
+        </label>
       </div>
       <FieldError id={`${formId}-err-consent`} className={marketingFieldError}>
         {fieldErrors.consent}

@@ -1,0 +1,43 @@
+{
+  "source": "Orca visible DOM; root working tree F10 layout fix",
+  "measurements": [
+    {
+      "checkbox": {
+        "height": 20,
+        "width": 20,
+        "x": 45,
+        "y": 425.9453125
+      },
+      "label": {
+        "height": 45.5,
+        "width": 270,
+        "x": 75,
+        "y": 423.9453125
+      },
+      "privacyHref": "/privacy",
+      "rowDisplay": "flex",
+      "scrollWidth": 390,
+      "textClickToggles": true,
+      "viewport": 390
+    },
+    {
+      "checkbox": {
+        "height": 20,
+        "width": 20,
+        "x": 765,
+        "y": 508.8515625
+      },
+      "label": {
+        "height": 22.75,
+        "width": 373.7578125,
+        "x": 795,
+        "y": 506.8515625
+      },
+      "privacyHref": "/privacy",
+      "rowDisplay": "flex",
+      "scrollWidth": 1440,
+      "textClickToggles": true,
+      "viewport": 1440
+    }
+  ]
+}
