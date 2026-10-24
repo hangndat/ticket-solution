@@ -2,6 +2,8 @@
 
 > **D11 đã được user duyệt triển khai 18/10/2026:** phạm vi và wave theo [gói review D11](./plans/D11-REVIEW-PACKAGE.md). Giữ các non-goals và gate production/store; approval không chứng minh pilot ready.
 
+> **Cập nhật phạm vi 24/10/2026 — O23:** user quyết định bỏ Web Gate. Gate scan, nhập tay và xác nhận vào cổng chỉ trên iOS Staff; Portal chỉ đọc báo cáo theo quyền. Các dòng mô tả Web Gate bên dưới là baseline lịch sử, không còn là đích triển khai. Xem [Decision Log O23](./DECISION-LOG.md#o23--gate-chỉ-trên-ios-staff-chốt-hướng-thiết-kế-vemoki-24102026). Migration `/gate` cần Task/contract và nghiệm thu riêng; quyết định này không chứng minh mọi link cũ đã sạch.
+
 Phiên bản: 0.4 — Draft để review (MVP mở rộng O10)
 Ngày: 2026-10-17
 Nguồn: yêu cầu sản phẩm trong trao đổi; quyết định mở rộng MVP 2026-10-17.
