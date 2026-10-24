@@ -1,0 +1,42 @@
+{
+  "capture": "review-consumer-keyboard-390-vi",
+  "sourceSha": "b2faa48a1ce443c8fc6c849cb74a06a57f8b0c37",
+  "steps": {
+    "review-consumer-kb-escape": {
+      "measuredViewport": {
+        "innerWidth": 390,
+        "innerHeight": 844,
+        "devicePixelRatio": 1
+      },
+      "dialogOpen": false,
+      "menuVisible": true,
+      "focusOnTrigger": false,
+      "triggerExpanded": "false",
+      "activeTestId": "nav-claim"
+    },
+    "review-consumer-kb-reopen": {
+      "measuredViewport": {
+        "innerWidth": 390,
+        "innerHeight": 844,
+        "devicePixelRatio": 1
+      },
+      "dialogOpen": true,
+      "menuVisible": true,
+      "focusOnTrigger": false,
+      "triggerExpanded": "true",
+      "activeTestId": "nav-mobile-menu"
+    },
+    "review-consumer-kb-tabs": {
+      "measuredViewport": {
+        "innerWidth": 390,
+        "innerHeight": 844,
+        "devicePixelRatio": 1
+      },
+      "dialogOpen": true,
+      "menuVisible": true,
+      "focusOnTrigger": false,
+      "triggerExpanded": "true",
+      "activeTestId": "nav-claim"
+    }
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "capture": "local-mkt-1024-en-menu-open",
+  "persona": "public-guest",
+  "url": "http://127.0.0.1:3000/marketing/en",
+  "viewport": {
+    "width": 1024,
+    "height": 900
+  },
+  "sourceSha": "b2faa48a1ce443c8fc6c849cb74a06a57f8b0c37",
+  "sheet": {
+    "surface": "marketing-next",
+    "url": "http://127.0.0.1:3000/marketing/en",
+    "dialogPresent": false,
+    "menuTestId": false,
+    "dialogState": null,
+    "overlay": false,
+    "navLinksInDialog": 0,
+    "triggerExpanded": "false",
+    "focusInDialog": false,
+    "activeTag": "BODY",
+    "locale": "en",
+    "headerInterestVisible": true,
+    "menuInterestVisible": false,
+    "viewport": {
+      "w": 1024,
+      "h": 900,
+      "dpr": 1
+    }
+  },
+  "chromeWrap": {
+    "issues": [],
+    "pageOverflowX": false,
+    "viewport": 1024
+  }
+}

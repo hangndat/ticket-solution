@@ -1,0 +1,17 @@
+{
+  "capture": "local-app-catalog-filter-390-vi",
+  "url": "http://localhost:3000/",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "locale": "vi",
+  "sourceSha": "b2faa48a1ce443c8fc6c849cb74a06a57f8b0c37",
+  "filterProbe": {
+    "upcomingGridCount": 2,
+    "pastGridCount": 0
+  },
+  "ac": {
+    "R-09": "PASS"
+  }
+}
