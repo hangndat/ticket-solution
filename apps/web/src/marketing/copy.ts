@@ -56,7 +56,10 @@ export type CopyKey =
   | 'hero.cta.demo'
   | 'hero.cta.interest'
   | 'hero.cta.login'
+  | 'hero.login_prefix'
   | 'hero.demo_note'
+  | 'hero.media.alt'
+  | 'hero.media.caption'
   | 'audience.title'
   | 'audience.lead'
   | 'audience.owner.title'
@@ -132,7 +135,6 @@ export type CopyKey =
   | 'demo.title'
   | 'demo.lead'
   | 'demo.cta'
-  | 'demo.banner'
   | 'interest.title'
   | 'interest.lead'
   | 'interest.name'
@@ -165,6 +167,7 @@ export type CopyKey =
   | 'interest.consent'
   | 'interest.consent.before'
   | 'interest.submit'
+  | 'interest.secondary_demo'
   | 'interest.sending'
   | 'interest.retry'
   | 'interest.success.title'
@@ -176,9 +179,6 @@ export type CopyKey =
   | 'interest.error.org'
   | 'interest.error.role'
   | 'interest.error.consent'
-  | 'cta.repeat.title'
-  | 'cta.repeat.demo'
-  | 'cta.repeat.interest'
   | 'privacy.title'
   | 'privacy.updated'
   | 'privacy.intro'
@@ -232,11 +232,10 @@ const VI: Record<CopyKey, string> = {
   'badge.demo': 'Demo giả lập',
   'footer.attendee': 'Bạn có mã mời? Đổi vé trên ứng dụng',
   'footer.tagline': 'vemoki↗ · Event Operating System',
-  'hero.eyebrow': 'Hệ điều hành sự kiện trực tiếp',
-  'hero.headline':
-    'Vận hành sự kiện từ mã mời đến cổng — trên một hệ điều hành',
+  'hero.eyebrow': 'Dành cho nhà tổ chức sự kiện',
+  'hero.headline': 'Vận hành sự kiện từ mã mời đến cổng.',
   'hero.sub':
-    'Multi-tenant cho agency và doanh nghiệp sự kiện. Khách thấy thương hiệu của bạn; cổng có audit, không phụ thuộc marketplace.',
+    'Phát mã mời, quản lý vé và kiểm soát cổng trong cùng một hệ thống. Khách tham dự nhìn thấy thương hiệu của bạn.',
   'hero.proof1': 'Mã mời → đổi vé → QR ký theo sự kiện',
   'hero.proof2': 'Cổng chống trùng + audit',
   'hero.proof3': 'Tách tenant + RLS + deny-by-default',
@@ -262,10 +261,13 @@ const VI: Record<CopyKey, string> = {
   'hero.preview.gate.event': 'Sự kiện: MFest (fixture)',
   'hero.preview.phone.meta': 'Vé phổ thông · Cổng A',
   'hero.marquee': 'EOS · Invite → QR → Gate ·',
-  'hero.cta.demo': 'Xem demo',
-  'hero.cta.interest': 'Đăng ký quan tâm',
+  'hero.cta.demo': 'Xem sản phẩm',
+  'hero.cta.interest': 'Trao đổi nhu cầu',
   'hero.cta.login': 'Đăng nhập',
+  'hero.login_prefix': 'Đã có tài khoản?',
   'hero.demo_note': 'Demo giả lập — không phải khách hàng thật.',
+  'hero.media.alt': 'Ảnh chụp trang Khám phá Vemoki với các sự kiện demo',
+  'hero.media.caption': 'Trang Khám phá · ảnh chụp sản phẩm thật, dữ liệu demo',
   'audience.title': 'Ai dùng Vemoki',
   'audience.lead':
     'Trang này dành cho người mua vận hành sự kiện — không phải khách cầm vé.',
@@ -371,11 +373,10 @@ const VI: Record<CopyKey, string> = {
   'outcomes.chart.caption':
     'Biểu đồ minh họa luồng vào cổng theo giờ — dữ liệu giả lập.',
   'faq.title': 'Câu hỏi thường gặp',
-  'demo.title': 'Dùng thử bản demo giả lập',
+  'demo.title': 'Khám phá bản demo',
   'demo.lead':
-    'Mọi demo hiện nay là fixture để xem sản phẩm — không phải case study khách hàng.',
+    'Dữ liệu minh họa để trải nghiệm sản phẩm, không phải sự kiện hay khách hàng thật.',
   'demo.cta': 'Mở demo trên ứng dụng',
-  'demo.banner': 'Demo giả lập · không dùng làm bằng chứng khách thật',
   'interest.title': 'Đăng ký quan tâm',
   'interest.lead':
     'Để lại thông tin — chúng tôi liên hệ về demo hoặc onboarding. Không thanh toán trên form này.',
@@ -409,6 +410,7 @@ const VI: Record<CopyKey, string> = {
   'interest.consent': 'Tôi đồng ý được liên hệ về Vemoki. Xem Quyền riêng tư.',
   'interest.consent.before': 'Tôi đồng ý được liên hệ về Vemoki. Xem',
   'interest.submit': 'Gửi đăng ký',
+  'interest.secondary_demo': 'Hoặc xem demo',
   'interest.sending': 'Đang gửi…',
   'interest.retry': 'Thử lại',
   'interest.success.title': 'Đã nhận đăng ký',
@@ -422,9 +424,6 @@ const VI: Record<CopyKey, string> = {
   'interest.error.org': 'Nhập tổ chức',
   'interest.error.role': 'Chọn vai trò',
   'interest.error.consent': 'Cần đồng ý để chúng tôi liên hệ',
-  'cta.repeat.title': 'Sẵn sàng xem vận hành thật?',
-  'cta.repeat.demo': 'Xem demo',
-  'cta.repeat.interest': 'Đăng ký quan tâm',
   'privacy.title': 'Quyền riêng tư',
   'privacy.updated': 'Cập nhật: 2026-10-18',
   'privacy.intro':
@@ -489,11 +488,10 @@ const EN: Record<CopyKey, string> = {
   'badge.demo': 'Simulated demo',
   'footer.attendee': 'Have an invite code? Redeem on the app',
   'footer.tagline': 'vemoki↗ · Event Operating System',
-  'hero.eyebrow': 'In-person event operating system',
-  'hero.headline':
-    'Run events from invite to gate — on one operating system',
+  'hero.eyebrow': 'For event organizers',
+  'hero.headline': 'Run events from invite to gate.',
   'hero.sub':
-    'Multi-tenant for agencies and enterprise event teams. Your brand for guests; audited gate — not a marketplace.',
+    'Send invites, manage tickets, and control the gate in one system. Guests see your brand.',
   'hero.proof1': 'Invite → redeem → event-scoped signed QR',
   'hero.proof2': 'Duplicate-safe gate + audit',
   'hero.proof3': 'Tenant isolation + RLS + deny-by-default',
@@ -519,10 +517,13 @@ const EN: Record<CopyKey, string> = {
   'hero.preview.gate.event': 'Event: MFest (fixture)',
   'hero.preview.phone.meta': 'General · Gate A',
   'hero.marquee': 'EOS · Invite → QR → Gate ·',
-  'hero.cta.demo': 'View demo',
-  'hero.cta.interest': 'Register interest',
+  'hero.cta.demo': 'Explore the product',
+  'hero.cta.interest': 'Discuss your needs',
   'hero.cta.login': 'Log in',
+  'hero.login_prefix': 'Already have an account?',
   'hero.demo_note': 'Simulated demo — not a real customer.',
+  'hero.media.alt': 'Screenshot of the Vemoki Discover page with demo events',
+  'hero.media.caption': 'Discover page · real product screenshot, demo data',
   'audience.title': 'Who Vemoki is for',
   'audience.lead':
     'This page is for event operators — not guests holding a ticket.',
@@ -628,11 +629,10 @@ const EN: Record<CopyKey, string> = {
   'outcomes.chart.caption':
     'Illustrative hourly entry chart — simulated data.',
   'faq.title': 'Frequently asked questions',
-  'demo.title': 'Try the simulated demo',
+  'demo.title': 'Explore the demo',
   'demo.lead':
-    'Every current demo is a fixture to explore the product — not a customer case study.',
+    'Try the product with sample data, not real events or customers.',
   'demo.cta': 'Open demo in the app',
-  'demo.banner': 'Simulated demo · not proof of real customers',
   'interest.title': 'Register your interest',
   'interest.lead':
     'Leave your details — we’ll follow up about a demo or onboarding. No payment on this form.',
@@ -667,6 +667,7 @@ const EN: Record<CopyKey, string> = {
     'I agree to be contacted about Vemoki. See Privacy.',
   'interest.consent.before': 'I agree to be contacted about Vemoki. See',
   'interest.submit': 'Submit',
+  'interest.secondary_demo': 'Or view demo',
   'interest.sending': 'Sending…',
   'interest.retry': 'Try again',
   'interest.success.title': 'Interest received',
@@ -680,9 +681,6 @@ const EN: Record<CopyKey, string> = {
   'interest.error.org': 'Enter your organization',
   'interest.error.role': 'Select a role',
   'interest.error.consent': 'Consent required to contact you',
-  'cta.repeat.title': 'Ready to see real ops?',
-  'cta.repeat.demo': 'View demo',
-  'cta.repeat.interest': 'Register interest',
   'privacy.title': 'Privacy',
   'privacy.updated': 'Updated: 2026-10-18',
   'privacy.intro':

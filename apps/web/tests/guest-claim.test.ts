@@ -9,6 +9,7 @@ import {
   clearGuestClaimIntent,
   parkGuestClaimIntent,
   peekGuestClaimIntent,
+  readClaimTokenFromLocation,
   redactGuestClaimIntent,
   resumeGuestClaimIntent,
 } from '../src/guest/claim-intent';
@@ -44,6 +45,33 @@ describe('guest claim intent (no token logs)', () => {
     clearGuestClaimIntent();
     assert.equal(peekGuestClaimIntent(), null);
     assert.equal(resumeGuestClaimIntent().ok, false);
+  });
+});
+
+describe('claim link context isolation', () => {
+  it('never combines a new incomplete link with an older parked invitation', () => {
+    clearGuestClaimIntent();
+    parkGuestClaimIntent({
+      token: 'old-token', tenantId: scope.tenantId, eventId: scope.eventId,
+      tenantSlug: 'old-org', eventSlug: 'old-event',
+    });
+    const previousWindow = Object.getOwnPropertyDescriptor(globalThis, 'window');
+    Object.defineProperty(globalThis, 'window', {
+      configurable: true,
+      value: { location: { hash: '#token=new-token&tenantSlug=new-org' } },
+    });
+    try {
+      const incoming = readClaimTokenFromLocation();
+      assert.equal(incoming.token, 'new-token');
+      assert.equal(incoming.tenantSlug, 'new-org');
+      assert.equal(incoming.tenantId, '');
+      assert.equal(incoming.eventId, '');
+      assert.equal(incoming.eventSlug, '');
+    } finally {
+      if (previousWindow) Object.defineProperty(globalThis, 'window', previousWindow);
+      else Reflect.deleteProperty(globalThis, 'window');
+      clearGuestClaimIntent();
+    }
   });
 });
 

@@ -30,10 +30,14 @@ test('parsePublishedRedeemSchema accepts tenantId UUID from projection', () => {
   const schema = parsePublishedRedeemSchema({
     ...baseProjection,
     tenantId: TENANT_ID,
+    name: 'MFest · Demo',
+    brand: { organizationName: 'MFest' },
   });
   assert.ok(schema);
   assert.equal(schema?.eventId, EVENT_ID);
   assert.equal(schema?.tenantId, TENANT_ID);
+  assert.equal(schema?.eventName, 'MFest · Demo');
+  assert.equal(schema?.organizationName, 'MFest');
 });
 
 test('parsePublishedRedeemSchema rejects invalid tenantId', () => {

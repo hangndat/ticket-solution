@@ -14,7 +14,10 @@ describe('eventArtTone import boundary (F01 / PR #735)', () => {
 
   it('EventPage imports tone from server-safe module, not event-media client bundle', () => {
     const page = readFileSync(
-      join(webRoot, 'app/t/[tenantSlug]/events/[eventSlug]/page.tsx'),
+      join(
+        webRoot,
+        'app/(consumer)/t/[tenantSlug]/events/[eventSlug]/page.tsx',
+      ),
       'utf8',
     );
     assert.match(page, /from ['"].*event-art-tone['"]/);

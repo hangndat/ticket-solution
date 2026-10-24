@@ -5,13 +5,13 @@ import { cn } from '../../lib/utils';
  */
 
 export const fadeRiseMotion = cn(
-  'motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 motion-safe:duration-500 motion-safe:fill-mode-both motion-reduce:animate-none',
+  'motion-safe:animate-in motion-safe:slide-in-from-bottom-2 motion-safe:duration-300 motion-reduce:animate-none',
 );
 
 export const lpPageShell = cn(
   'mx-auto max-w-[75rem] px-5 [--brand:var(--color-signal)]',
-  'min-h-[75vh] pt-20 pb-[60px]',
-  'min-[760px]:px-12 min-[760px]:pt-[100px] min-[760px]:pb-[70px]',
+  'min-h-[75vh] pb-[60px]',
+  'min-[760px]:px-12 min-[760px]:pb-[70px]',
 );
 
 export const redeemPageMain = cn(lpPageShell, '[--brand:var(--color-signal)]');
@@ -28,7 +28,7 @@ export const redeemHeader = cn(
 );
 
 export const redeemLead =
-  'm-0 max-w-[32rem] text-[1.05rem] leading-[1.65] text-ink-muted';
+  'm-0 max-w-[32rem] text-[1.05rem] leading-[1.65] text-muted';
 
 export const authButtonsRow = cn(
   'my-4 flex flex-wrap gap-3',
@@ -45,14 +45,7 @@ export const redeemGateCard = cn(
   'mt-8 rounded-lg border border-line bg-white p-6 shadow-[0_1px_0_color-mix(in_srgb,var(--color-ink)_4%,transparent)]',
   'max-[480px]:p-5',
   '[&_h2]:mb-2 [&_h2]:font-display [&_h2]:text-[clamp(1.25rem,2.8vw,1.55rem)]',
-  '[&_p]:m-0 [&_p]:mb-4 [&_p]:leading-[1.6] [&_p]:text-ink-muted',
-);
-
-export const redeemGateIllustration = cn(
-  'mb-4 grid h-14 w-14 place-items-center rounded-[14px] border text-2xl',
-  'border-[color-mix(in_srgb,var(--color-focus)_35%,var(--color-line))]',
-  'bg-gradient-to-br from-[color-mix(in_srgb,var(--color-focus)_8%,white)] to-[color-mix(in_srgb,var(--color-focus)_4%,var(--color-paper))]',
-  'text-[color-mix(in_srgb,var(--color-focus)_88%,var(--color-ink))]',
+  '[&_p]:m-0 [&_p]:mb-4 [&_p]:leading-[1.6] [&_p]:text-muted',
 );
 
 export const redeemGateActions = 'grid gap-3 [&_a]:w-full [&_a]:text-center';
@@ -62,14 +55,17 @@ export const redeemFormCard = cn(
   'max-[480px]:p-5',
 );
 
-export const redeemFooterLinks = 'mt-8 text-[0.95rem]';
-
 const devFormFieldChrome = cn(
   '[&_label]:grid [&_label]:gap-1.5 [&_label]:text-sm [&_label]:font-bold',
-  '[&_input:not([type=checkbox]):not([type=radio])]:box-border [&_input:not([type=checkbox]):not([type=radio])]:min-h-11 [&_input:not([type=checkbox]):not([type=radio])]:w-full [&_input:not([type=checkbox]):not([type=radio])]:border-2 [&_input:not([type=checkbox]):not([type=radio])]:border-[color-mix(in_srgb,var(--color-ink)_25%,transparent)] [&_input:not([type=checkbox]):not([type=radio])]:bg-white [&_input:not([type=checkbox]):not([type=radio])]:px-3.5 [&_input:not([type=checkbox]):not([type=radio])]:py-3 [&_input:not([type=checkbox]):not([type=radio])]:font-[inherit] [&_input:not([type=checkbox]):not([type=radio])]:font-normal [&_input:not([type=checkbox]):not([type=radio])]:text-ink',
-  '[&_select]:box-border [&_select]:min-h-11 [&_select]:w-full [&_select]:border-2 [&_select]:border-[color-mix(in_srgb,var(--color-ink)_25%,transparent)] [&_select]:bg-white [&_select]:px-3.5 [&_select]:py-3 [&_select]:font-[inherit]',
-  '[&_textarea]:box-border [&_textarea]:min-h-11 [&_textarea]:w-full [&_textarea]:border-2 [&_textarea]:border-[color-mix(in_srgb,var(--color-ink)_25%,transparent)] [&_textarea]:bg-white [&_textarea]:px-3.5 [&_textarea]:py-3 [&_textarea]:font-[inherit] [&_textarea]:font-normal',
+  '[&_input:not([type=checkbox]):not([type=radio])]:box-border [&_input:not([type=checkbox]):not([type=radio])]:min-h-11 [&_input:not([type=checkbox]):not([type=radio])]:w-full [&_input:not([type=checkbox]):not([type=radio])]:rounded-md [&_input:not([type=checkbox]):not([type=radio])]:border-2 [&_input:not([type=checkbox]):not([type=radio])]:border-[color-mix(in_srgb,var(--color-ink)_25%,transparent)] [&_input:not([type=checkbox]):not([type=radio])]:bg-white [&_input:not([type=checkbox]):not([type=radio])]:px-3.5 [&_input:not([type=checkbox]):not([type=radio])]:py-3 [&_input:not([type=checkbox]):not([type=radio])]:font-[inherit] [&_input:not([type=checkbox]):not([type=radio])]:font-normal [&_input:not([type=checkbox]):not([type=radio])]:text-ink',
+  '[&_select]:box-border [&_select]:min-h-11 [&_select]:w-full [&_select]:rounded-md [&_select]:border-2 [&_select]:border-[color-mix(in_srgb,var(--color-ink)_25%,transparent)] [&_select]:bg-white [&_select]:px-3.5 [&_select]:py-3 [&_select]:font-[inherit]',
+  '[&_textarea]:box-border [&_textarea]:min-h-11 [&_textarea]:w-full [&_textarea]:rounded-md [&_textarea]:border-2 [&_textarea]:border-[color-mix(in_srgb,var(--color-ink)_25%,transparent)] [&_textarea]:bg-white [&_textarea]:px-3.5 [&_textarea]:py-3 [&_textarea]:font-[inherit] [&_textarea]:font-normal',
   '[&_textarea[readonly]]:bg-[color-mix(in_srgb,var(--color-ink)_5%,transparent)]',
+  '[&_input:disabled]:cursor-not-allowed [&_input:disabled]:opacity-50 [&_select:disabled]:cursor-not-allowed [&_select:disabled]:opacity-50 [&_textarea:disabled]:cursor-not-allowed [&_textarea:disabled]:opacity-50',
+  '[&_input[aria-invalid=true]]:border-destructive [&_select[aria-invalid=true]]:border-destructive [&_textarea[aria-invalid=true]]:border-destructive',
+  '[&_input:focus-visible]:outline-none [&_input:focus-visible]:ring-[3px] [&_input:focus-visible]:ring-focus [&_input:focus-visible]:ring-offset-2 [&_input:focus-visible]:ring-offset-paper',
+  '[&_select:focus-visible]:outline-none [&_select:focus-visible]:ring-[3px] [&_select:focus-visible]:ring-focus [&_select:focus-visible]:ring-offset-2 [&_select:focus-visible]:ring-offset-paper',
+  '[&_textarea:focus-visible]:outline-none [&_textarea:focus-visible]:ring-[3px] [&_textarea:focus-visible]:ring-focus [&_textarea:focus-visible]:ring-offset-2 [&_textarea:focus-visible]:ring-offset-paper',
   '[&_button]:min-h-11 [&_button]:min-w-11',
 );
 
@@ -87,7 +83,7 @@ export const redeemProductFormTitle = cn(
   '[clip:rect(0,0,0,0)]',
 );
 
-export const redeemProductLead = 'm-0 text-[0.95rem] leading-[1.55] text-ink-muted';
+export const redeemProductLead = 'm-0 text-[0.95rem] leading-[1.55] text-muted';
 
 export const redeemCodeField = cn(
   'grid gap-2',
@@ -99,14 +95,14 @@ export const redeemCodeField = cn(
 export const redeemPrimaryActions = cn('grid gap-3 [&_.redeem-submit]:w-full [&_.redeem-submit]:rounded-md');
 
 export const redeemSecondaryTools = cn(
-  'mt-2 [&_summary]:flex [&_summary]:min-h-11 [&_summary]:cursor-pointer [&_summary]:items-center [&_summary]:font-semibold [&_summary]:text-ink-muted',
+  'mt-2 [&_summary]:flex [&_summary]:min-h-11 [&_summary]:cursor-pointer [&_summary]:items-center [&_summary]:font-semibold [&_summary]:text-muted',
 );
 
 export const redeemGlobalContext = cn(
   'rounded-md border border-line bg-[color-mix(in_srgb,var(--color-paper)_92%,var(--color-focus)_8%)] p-4',
   '[&_h3]:m-0 [&_h3]:mb-3 [&_h3]:text-base',
   '[&_dl]:m-0 [&_dl]:grid [&_dl]:gap-2',
-  '[&_dt]:text-[0.72rem] [&_dt]:uppercase [&_dt]:tracking-[0.06em] [&_dt]:text-ink-muted',
+  '[&_dt]:text-[0.72rem] [&_dt]:uppercase [&_dt]:tracking-[0.06em] [&_dt]:text-muted',
   '[&_dd]:m-0 [&_dd]:font-semibold',
 );
 
@@ -115,7 +111,8 @@ export const redeemFieldsGrid = 'grid gap-4';
 export const redeemVersionsGrid = cn(
   'grid gap-4 min-[760px]:grid-cols-2',
   '[&_label]:grid [&_label]:gap-1.5 [&_label]:text-sm [&_label]:font-bold',
-  '[&_input]:min-h-11 [&_input]:border-2 [&_input]:border-[color-mix(in_srgb,var(--color-ink)_25%,transparent)] [&_input]:bg-white [&_input]:px-3.5 [&_input]:py-3',
+  '[&_input]:min-h-11 [&_input]:rounded-md [&_input]:border-2 [&_input]:border-[color-mix(in_srgb,var(--color-ink)_25%,transparent)] [&_input]:bg-white [&_input]:px-3.5 [&_input]:py-3',
+  '[&_input:focus-visible]:outline-none [&_input:focus-visible]:ring-[3px] [&_input:focus-visible]:ring-focus [&_input:focus-visible]:ring-offset-2 [&_input:focus-visible]:ring-offset-paper',
 );
 
 export const redeemPublishedFields = cn(
@@ -129,7 +126,7 @@ export const redeemPublishedFieldsCompact = cn(
 );
 
 export const redeemPublishedLegend =
-  'px-1.5 text-xs font-bold tracking-[0.04em] uppercase text-ink-muted';
+  'px-1.5 text-xs font-bold tracking-[0.04em] uppercase text-muted';
 
 export const redeemFieldStack = 'grid gap-1.5';
 
@@ -146,7 +143,7 @@ export const redeemCheckboxRow = cn(
 
 export const redeemFieldError = 'm-0 text-sm font-semibold text-destructive';
 
-export const redeemSchemaNotice = 'm-0 text-sm text-ink-muted';
+export const redeemSchemaNotice = 'm-0 text-sm text-muted';
 
 export const redeemTermsBlock = cn(
   'm-0 grid gap-3.5 border-2 border-[color-mix(in_srgb,var(--color-ink)_19%,transparent)] p-4',
@@ -251,7 +248,7 @@ export function redeemDevStatusClass(kind: string): string {
 export const redeemOutcomePanel = cn(
   'mt-8 rounded-lg border border-line bg-white px-6 py-7 text-center shadow-sm',
   '[&_h3]:m-0 [&_h3]:mb-2.5 [&_h3]:font-display [&_h3]:text-[clamp(1.35rem,3vw,1.65rem)] [&_h3]:tracking-[-0.03em]',
-  '[&_p]:m-0 [&_p]:mb-4 [&_p]:text-[0.98rem] [&_p]:leading-[1.6] [&_p]:text-ink-muted',
+  '[&_p]:m-0 [&_p]:mb-4 [&_p]:text-[0.98rem] [&_p]:leading-[1.6] [&_p]:text-muted',
 );
 
 export const redeemOutcomeSuccess = cn(

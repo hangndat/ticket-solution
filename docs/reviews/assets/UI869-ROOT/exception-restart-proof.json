@@ -1,0 +1,7 @@
+{
+  "fixtureCountsAfterRestart": {"events": 3, "tickets": 3, "codes": 25},
+  "checks": {"apiHealth": "OK", "keycloakRealm": "OK", "web3417": "OK"},
+  "database": "ticket_ui869_dev",
+  "resetOrReseed": false,
+  "source": "dev-local-stack.sh down/up/status + read-only psql counts"
+}

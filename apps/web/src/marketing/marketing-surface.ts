@@ -3,14 +3,15 @@ import { cn } from '../../lib/utils';
 /** Marketing shell + section utilities (Tailwind v4 / @theme tokens — replaces marketing-uplift.css). */
 
 export const marketingSurface =
-  'flex flex-col min-h-dvh max-w-full overflow-x-clip text-ink antialiased scheme-light [&>main]:flex-1 [&>main]:min-w-0 [&>main]:w-full [&_a]:underline [&_a]:decoration-1 [&_a]:underline-offset-[3px] hover:[&_a]:text-focus';
+  'flex flex-col min-h-dvh max-w-full overflow-x-clip text-ink antialiased scheme-light [&>main]:flex-1 [&>main]:min-w-0 [&>main]:w-full [:where(&>main_a)]:underline [:where(&>main_a)]:decoration-1 [:where(&>main_a)]:underline-offset-[3px] hover:[:where(&>main_a)]:text-focus';
 
 export const marketingSkip =
   'skip-link absolute -left-[9999px] top-0 z-[100] rounded-sm bg-ink px-4 py-3 text-paper focus:left-4 focus:top-4';
 
 export function marketingHeader(onSales: boolean, onInk: boolean) {
   return cn(
-    'sticky top-0 z-20 flex min-h-[72px] w-full items-center gap-6 px-[clamp(1.25rem,4vw,2rem)] backdrop-blur-md [&_a[href]]:no-underline',
+    'sticky top-0 z-20 flex min-h-[72px] w-full min-w-0 items-center gap-4 px-[clamp(1.25rem,4vw,2rem)] backdrop-blur-md [&_a[href]]:no-underline',
+    'lg:gap-5 xl:gap-6',
     onInk
       ? 'border-b border-paper/10 bg-ink/90 text-paper'
       : 'border-b border-line bg-paper/90',
@@ -19,9 +20,10 @@ export function marketingHeader(onSales: boolean, onInk: boolean) {
 }
 
 export const marketingWordmark = cn(
-  'font-display text-[1.65rem] font-bold tracking-tight text-inherit no-underline whitespace-nowrap',
+  'min-w-0 shrink-0 font-display text-[1.65rem] font-bold tracking-tight text-inherit no-underline',
   '[&_span]:text-signal',
-  'max-md:max-w-[42vw] max-md:min-w-0 max-md:flex-[0_1_auto] max-md:overflow-hidden max-md:text-ellipsis max-md:text-[1.35rem]',
+  'max-lg:max-w-[9.5rem] max-lg:overflow-hidden max-lg:text-ellipsis max-lg:whitespace-nowrap max-lg:text-[1.35rem]',
+  'max-md:max-w-[42vw] max-md:flex-[0_0_auto]',
 );
 
 export const marketingNav = cn(
@@ -30,14 +32,14 @@ export const marketingNav = cn(
 );
 
 export const marketingNavLinks = cn(
-  'hidden items-center gap-[0.1rem] md:inline-flex',
+  'hidden items-center gap-[0.1rem] xl:inline-flex',
   '[&_a]:inline-flex [&_a]:min-h-11 [&_a]:items-center [&_a]:rounded-sm [&_a]:px-[0.65rem] [&_a]:py-[0.45rem] [&_a]:text-[0.82rem] [&_a]:whitespace-nowrap [&_a]:no-underline',
   'text-paper/85',
 );
 
 export const marketingLocaleGroup = cn(
-  'mr-2 inline-flex items-center gap-1 rounded-[10px] p-1',
-  'bg-ink/6 max-md:mr-[0.15rem]',
+  'inline-flex w-[5.5rem] shrink-0 items-center justify-center gap-1 rounded-[10px] p-1',
+  'bg-ink/6',
   '[[data-header-on-ink]_&]:bg-paper/10',
 );
 
@@ -50,7 +52,7 @@ export const marketingLocaleLink = cn(
 
 export const marketingNavMenuToggle = cn(
   'hidden min-h-11 min-w-11 cursor-pointer items-center gap-[0.35rem] rounded-sm border border-paper/15 bg-paper/5 px-[0.65rem] py-[0.35rem] text-[0.82rem] font-semibold text-inherit',
-  'max-md:inline-flex',
+  'max-xl:inline-flex',
   'focus-visible:outline focus-visible:outline-3 focus-visible:outline-focus focus-visible:outline-offset-2',
 );
 
@@ -62,7 +64,8 @@ export const marketingNavMobileLink = cn(
 export const marketingNavMobileActions =
   'grid gap-2 border-t border-paper/10 pt-1.5';
 
-const sectionPad = 'px-[clamp(1.25rem,4vw,2rem)] py-[clamp(4rem,8vw,6.5rem)] max-md:max-w-full max-md:overflow-x-clip';
+const sectionPad =
+  'scroll-mt-24 px-[clamp(1.25rem,4vw,2rem)] py-[clamp(4rem,8vw,6.5rem)] max-md:max-w-full max-md:overflow-x-clip';
 
 export const marketingWrap = 'relative z-[1] mx-auto max-w-[1120px]';
 
@@ -117,15 +120,29 @@ export const marketingDemoNote = cn(
 
 export const marketingHeroSection = cn(
   marketingSection('ink'),
-  'min-h-[min(82vh,46rem)] pt-[clamp(2.5rem,6vw,4rem)] pb-[clamp(3rem,8vw,5rem)]',
+  'pt-[clamp(2.5rem,6vw,4rem)] pb-[clamp(3rem,8vw,5rem)]',
 );
 
 export const marketingHeroGrid = cn(
-  'grid grid-cols-1 items-center gap-10 lg:grid-cols-[1fr_1.05fr] lg:gap-12',
+  'grid grid-cols-1 items-center gap-8 max-md:py-8 max-md:gap-8 xl:grid-cols-[1fr_1.12fr] xl:gap-12',
 );
 
-export const marketingHeroCopy =
-  'max-md:min-h-[40rem] lg:min-h-[28rem]';
+export const marketingHeroCopy = '';
+
+export const marketingHeroMedia = cn(
+  'm-0 overflow-hidden rounded-md border border-paper/10 bg-paper/5',
+);
+
+export const marketingHeroMediaImg = 'block size-full object-cover object-top';
+
+export const marketingHeroMediaCaption = cn(
+  'mt-2 text-[0.8rem] text-paper/55',
+);
+
+export const marketingHeroLogin = cn(
+  'mt-5 text-[0.88rem] text-paper/70',
+  '[&_a]:font-semibold [&_a]:text-paper [&_a]:no-underline [&_a]:hover:underline',
+);
 
 export const marketingHeroPoints = cn(
   'mt-6 flex list-none flex-col gap-[0.65rem] p-0',
@@ -184,10 +201,6 @@ export const marketingRow = cn(
 
 export const marketingDemoBannerInk = cn(
   'mb-6 rounded-sm border border-signal/35 bg-signal/15 px-4 py-3.5 text-[0.85rem] font-semibold text-[color-mix(in_srgb,var(--color-signal)_30%,var(--color-paper))]',
-);
-
-export const marketingDemoBannerPaper = cn(
-  'rounded-sm border border-dashed border-signal/45 bg-signal/10 px-3.5 py-2.5 text-[0.9rem]',
 );
 
 export const marketingMetrics =
@@ -273,6 +286,9 @@ export const marketingBentoCard = cn(
 
 export const marketingBentoCardInner =
   'grid h-full gap-3.5 p-4! md:grid-cols-1 md:items-start md:p-[1.1rem]!';
+
+export const marketingBentoCardInnerText =
+  'flex h-full flex-col justify-center gap-3.5 p-5! md:p-6!';
 
 export function marketingBentoCardInnerSpan(span: string) {
   const wide = span === 'invite' || span === 'admin' || span === 'ops';

@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "kind": "actual-product-capture",
+  "route": "/",
+  "origin": "http://127.0.0.1:3917",
+  "build": {
+    "mode": "next production local",
+    "sourceCommit": "30ce1daa60572f6309305436ff9aa29a17ccebe1",
+    "workingTreeChanges": true,
+    "note": "Current final UI working tree; all changes will be integrated in PR870. This is runtime capture, not prototype."
+  },
+  "persona": "attendee@example.com — synthetic local fixture; header anonymous state after access-token expiry, owned-ticket strips rendered from fixture",
+  "state": "ready",
+  "viewport": {
+    "width": 1440,
+    "height": 900,
+    "deviceScaleFactor": 1
+  },
+  "capturedAt": "2026-10-24T09:14:45Z",
+  "capturedBy": "Orca embedded browser / root",
+  "asset": "apps/web/public/marketing/product/catalog-7bd933401625.png",
+  "usedIn": "marketing hero VI/EN",
+  "privacy": "Local fixture only; no tokens/cookies/customer data. Production-mode server removes Next dev indicator."
+}

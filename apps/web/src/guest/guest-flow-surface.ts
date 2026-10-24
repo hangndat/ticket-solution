@@ -24,7 +24,7 @@ export const routeShellMain = cn(
 );
 
 export const eyebrowKicker =
-  'text-[0.72rem] font-bold uppercase tracking-[0.12em] text-ink-muted';
+  'text-[0.72rem] font-bold uppercase tracking-[0.12em] text-muted';
 
 export const claimInviteHeader = cn(
   'mt-8 max-w-[40rem] text-left',
@@ -37,7 +37,7 @@ export const claimInviteIntro = introLead;
 
 export const claimFormRoot = guestFormRoot;
 
-export const inviteSupportCopy = 'max-w-[36rem] text-ink-muted';
+export const inviteSupportCopy = 'max-w-[36rem] text-muted';
 
 export const inviteFormPanel = cn(
   'grid max-w-[36rem] gap-4 border-2 border-[color-mix(in_srgb,var(--color-ink)_8%,var(--color-paper))] bg-[color-mix(in_srgb,var(--color-paper)_94%,var(--color-ink)_6%)] p-5',
@@ -45,7 +45,7 @@ export const inviteFormPanel = cn(
   '[&_input]:min-h-11 [&_input]:border-2 [&_input]:border-[color-mix(in_srgb,var(--color-ink)_25%,transparent)] [&_input]:bg-white [&_input]:px-3.5 [&_input]:py-3 [&_input]:font-[inherit] [&_input]:font-normal [&_input]:text-ink',
 );
 
-export const inviteFieldHint = 'text-sm leading-[1.45] text-ink-muted';
+export const inviteFieldHint = 'text-sm leading-[1.45] text-muted';
 
 export const guestOutcomeWrap = cn('max-w-[36rem]', fadeRiseMotion);
 

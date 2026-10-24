@@ -7,6 +7,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { randomUUID } from 'node:crypto';
 import { COST_TIER_ROUTES } from './lib/agent-cost-tiers.mjs';
 import { assessCodexQuota } from './lib/agent-quota-policy.mjs';
+import { appendEvent, employee, validateAssignment, events as companyEvents } from './company-worklog.mjs';
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const telemetry = process.env.AGENT_TELEMETRY_CLI || join(ROOT, 'scripts/agent-role-monitor/telemetry.mjs');
 const orca = process.env.ORCA_CLI_COMMAND || 'orca';
@@ -34,7 +35,7 @@ function snapshot(dir, name, run, dispatch, role) {
 }
 function parse(argv) {
   const command = argv.shift(), flags = {};
-  const values = new Set(['task','run-id','dispatch-id','role-id','agent','model','effort','cost-tier','worktree','dir','provider-file','retry-request','thread-id','baseline-file','comparison-key','display-name','task-title','tier-reason','essential-reason']);
+  const values = new Set(['task','run-id','dispatch-id','role-id','employee','agent','model','effort','cost-tier','worktree','dir','provider-file','retry-request','retry-of','thread-id','baseline-file','comparison-key','display-name','task-title','tier-reason','essential-reason']);
   for(let i=0;i<argv.length;i++) {
     if(argv[i]==='--release') { flags.release=true;continue; }
     const key=argv[i].slice(2);
@@ -43,13 +44,14 @@ function parse(argv) {
   }
   if(!['start','settle'].includes(command) || !flags['run-id'] || !flags['role-id']) throw Error('command_run_role_required');
   if(command==='start' && (!flags.task || !flags.agent || !flags.model || !flags['cost-tier'] || flags.release)) throw Error('start_task_tier_agent_model_required');
+  if(command==='start' && (!flags.employee || !flags['task-title'])) throw Error('start_employee_and_title_required');
   if(command==='settle' && !flags['dispatch-id']) throw Error('settle_dispatch_required');
   for (const key of ['tier-reason','essential-reason']) if (flags[key] !== undefined && !flags[key].trim()) throw Error('empty_reason');
   return {command,flags};
 }
 export function main(argv=process.argv.slice(2)) {
   if(argv.includes('--help')) {
-    console.log('agent-workflow-run start --task ID --run-id ID --role-id ID --cost-tier standard --agent cursor --model composer-2.5 [--worktree current] [--effort LEVEL] [--tier-reason REASON] [--essential-reason REASON] [--retry-request REQUEST_ID]\nagent-workflow-run settle --dispatch-id ID --run-id ID --role-id ID [--provider-file PATH] [--release]\n--dir defaults to private .orca-metrics/lifecycle. Start validates tier/agent/model/effort, snapshots quota and records receipt. Cost tier is local metadata, not an Orca flag. Never automatically retries a failed/unknown start. Settle requires proven completed/failed dispatch; collects before optional release. Codex starts require fresh quota; reserve 20%, usable only with --essential-reason. Exhausted/unknown quota blocks Codex. Other provider quota requires manual checking.');return;
+    console.log('agent-workflow-run start --task ID --run-id ID --role-id ID --employee ID --task-title TITLE --cost-tier standard --agent cursor --model composer-2.5 [--worktree current] [--retry-of DISPATCH] [--effort LEVEL] [--tier-reason REASON] [--essential-reason REASON] [--retry-request REQUEST_ID]\nagent-workflow-run settle --dispatch-id ID --run-id ID --role-id ID [--provider-file PATH] [--release]\n--dir defaults to private .orca-metrics/lifecycle. Start validates tier/agent/model/effort, snapshots quota and records receipt. Cost tier is local metadata, not an Orca flag. Never automatically retries a failed/unknown start. Settle requires proven completed/failed dispatch; collects before optional release. Codex starts require fresh quota; reserve 20%, usable only with --essential-reason. Exhausted/unknown quota blocks Codex. Other provider quota requires manual checking.');return;
   }
   const {command,flags:f}=parse([...argv]);
   const run=f['run-id'], role=f['role-id'];
@@ -57,6 +59,7 @@ export function main(argv=process.argv.slice(2)) {
   mkdirSync(dir,{recursive:true,mode:0o700});chmodSync(dir,0o700);
   let output;
   if(command==='start') {
+    if(f.employee) validateAssignment(f.employee, role, f['task-title']);
     const pin=['--agent',f.agent,'--model',f.model];if(f.effort)pin.push('--effort',f.effort);
     const preflight=child(process.execPath,[join(ROOT,'scripts/orca-spawn-model-preflight.mjs'),'--','--cost-tier',f['cost-tier'],...pin,...(f['tier-reason']?['--tier-reason',f['tier-reason']]:[])]);
     if(!preflight.ok)throw Error('model_preflight_failed');
@@ -76,6 +79,7 @@ export function main(argv=process.argv.slice(2)) {
     if(f['display-name'] && ['new-child','new-top-level'].includes(f.worktree)) args.push('--display-name',f['display-name']);
     if(f['task-title'])args.push('--task-title',f['task-title']);
     if(f['retry-request'])args.push('--retry-request',f['retry-request']);
+    if(f['retry-of'])args.push('--retry-of',f['retry-of']);
     const receipt=child(orca,args);save(dir,'start-receipt.json',receipt.data || {available:false,errorCode:'receipt_unavailable'});
     const r=receipt.data?.result;
     if(!receipt.ok || !receipt.data?.ok || r?.state!=='ready' || r.runId!==run || r.taskId!==f.task || !r.dispatchId) {
@@ -91,11 +95,23 @@ export function main(argv=process.argv.slice(2)) {
     if(!opened.ok || !routingVerified)process.exitCode=1;
     output={ok:opened.ok && routingVerified,command,runId:run,taskId:f.task,dispatchId:r.dispatchId,state:r.state,agentReady:true,costTier:f['cost-tier'],launch:r.launch,quotaAvailable,quotaSnapshotProvider:'codex',quotaCheck,openedRecorded:opened.ok,telemetryStatus:opened.ok?'recorded':'degraded',routingStatus,nextAction:opened.ok && routingVerified?'supervise':'observe_existing_dispatch_do_not_restart',receiptDirectory:dir};
     if(!routingVerified)output.errorCode='effective_route_'+routingStatus;
+    if(f.employee) {
+      try {
+        appendEvent({employeeId:f.employee,type:f['retry-of']?'recovered':'assigned',runId:run,taskId:f.task,dispatchId:r.dispatchId,previousDispatchId:f['retry-of'],roleId:role,summary:f['task-title'],model:{requested:r.launch?.requested??null,effective:r.launch?.effective??null,source:'Orca worker-start receipt'},source:'agent-workflow-run'});
+        output.employeeId=f.employee;output.companyTracking='recorded';
+      } catch(e) {
+        output.ok=false;output.companyTracking='degraded';output.errorCode=e.message;output.nextAction='repair_company_log_do_not_restart_worker';process.exitCode=1;
+      }
+    }
   } else {
     const id=f['dispatch-id'];
     const show=child(orca,['orchestration','worker-show','--dispatch',id,'--json']);
     const d=show.data?.result?.dispatch;
     if(!show.ok || !show.data?.ok || !d || !['completed','failed'].includes(d.status) || (d.runId || d.run_id)!==run)throw Error('dispatch_not_proven_settled_in_run');
+    const assigned=companyEvents().find(e=>e.dispatchId===id);
+    const employeeId=f.employee||assigned?.employeeId;
+    if(employeeId) employee(employeeId);
+    if(f.employee && assigned && assigned.employeeId!==f.employee) throw Error('employee_dispatch_mismatch');
     const args=[telemetry,'collect','--dispatch-id',id,'--role-id',role,'--run-id',run];
     for (const key of ['provider-file','thread-id','baseline-file','comparison-key']) if(f[key])args.push(`--${key}`,f[key]);
     const collected=child(process.execPath,args);save(dir,'collection-status.json',{available:collected.ok,result:collected.data});
@@ -114,6 +130,13 @@ export function main(argv=process.argv.slice(2)) {
     }
     if(!collected.ok)process.exitCode=1;
     output={ok:!process.exitCode,command,runId:run,dispatchId:id,telemetryCollected:collected.ok,quotaAvailable,release,receiptDirectory:dir};
+    if(employeeId) {
+      try {
+        appendEvent({employeeId,type:'settled',runId:run,taskId:d.taskId||d.task_id,dispatchId:id,roleId:role,outcome:d.status,summary:`Dispatch ${d.status}; telemetry ${collected.ok?'collected':'unavailable'}.`,source:'Orca worker-show receipt'});
+        if(release==='released') appendEvent({employeeId,type:'released',runId:run,taskId:d.taskId||d.task_id,dispatchId:id,roleId:role,summary:'Đã release tài nguyên worker theo receipt.',source:'Orca worker-release receipt'});
+        output.employeeId=employeeId;output.companyTracking='recorded';
+      } catch(e) { output.ok=false;output.companyTracking='degraded';output.errorCode=e.message;process.exitCode=1; }
+    }
     if(nextAction)output.nextAction=nextAction;
   }
   console.log(JSON.stringify(output));

@@ -56,7 +56,7 @@ test('guest / unauthenticated never gets portal staff chrome', () => {
     showAccount: false,
   });
   const hrefs = buildNavLinks(caps).map((l) => l.href);
-  assert.deepEqual(hrefs, ['/', '/redeem', '/claim', '/api/auth/login?return=/account']);
+  assert.deepEqual(hrefs, ['/', '/redeem', '/api/auth/login?return=/account']);
   assert.ok(!hrefs.includes('/admin'));
   assert.ok(!hrefs.includes('/gate'));
   assert.ok(!hrefs.includes('/platform'));
@@ -77,6 +77,7 @@ test('attendee-only: staffEligible false → no staff chrome', () => {
   const hrefs = links.map((l) => l.href);
   assert.ok(hrefs.includes('/account'));
   assert.ok(hrefs.includes('/wallet'));
+  assert.ok(!hrefs.includes('/claim'), 'email invitation is link-only');
   assert.ok(!hrefs.includes('/auth'), 'logged-in nav uses Tài khoản, not Đăng nhập');
 });
 

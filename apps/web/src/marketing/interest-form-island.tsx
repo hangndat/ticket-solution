@@ -8,6 +8,12 @@ const InterestForm = dynamic(
   { ssr: false },
 );
 
-export function InterestFormIsland({ locale }: { locale: MarketingLocale }) {
-  return <InterestForm locale={locale} />;
+export function InterestFormIsland({
+  locale,
+  demo,
+}: {
+  locale: MarketingLocale;
+  demo: string;
+}) {
+  return <InterestForm locale={locale} demo={demo} />;
 }

@@ -37,6 +37,7 @@ AuthKey_*.p8
 # Local Orca Role × Dispatch metrics ledger (agent-role-monitor MVP)
 .orca-metrics/
 .fe-uat-stack/
+.local-dev/
 docs/reviews/assets/FE-DS-SLICE0-parity-*/*.png
 
 # Local LeanCTX cache and machine overlays

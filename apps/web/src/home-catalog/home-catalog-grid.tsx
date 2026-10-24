@@ -2,12 +2,13 @@
 
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
-import { CatalogEventCard } from '@ticket/ui/client';
-import { FilterChip } from '@ticket/ui/client';
+import { Button } from '@ticket/ui';
+import { CatalogEventCard, FilterChip } from '@ticket/ui/client';
 import {
   attendeeCatalogOwnedStrip,
   attendeeHomeCatalog,
   attendeeHomeCatalogEmpty,
+  attendeeHomeCatalogEmptyAction,
   attendeeHomeCatalogFilters,
   attendeeHomeCatalogGrid,
   attendeeHomeCatalogSearch,
@@ -124,13 +125,28 @@ export function HomeCatalogGrid({
       </div>
 
       {filtered.length === 0 ? (
-        <p
+        <div
           className={attendeeHomeCatalogEmpty}
           data-testid="home-catalog-empty"
           role="status"
         >
-          Không có sự kiện khớp bộ lọc. Thử đổi từ khóa hoặc khoảng thời gian.
-        </p>
+          <p>Không có sự kiện khớp bộ lọc. Thử đổi từ khóa hoặc khoảng thời gian.</p>
+          {(query.trim() || timeFilter !== 'upcoming') && (
+            <div className={attendeeHomeCatalogEmptyAction}>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => {
+                  setQuery('');
+                  setTimeFilter('upcoming');
+                }}
+                data-testid="home-catalog-empty-reset"
+              >
+                Xóa bộ lọc
+              </Button>
+            </div>
+          )}
+        </div>
       ) : (
         <div
           className={attendeeHomeCatalogGrid}
