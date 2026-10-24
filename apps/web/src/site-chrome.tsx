@@ -272,6 +272,14 @@ export function SiteNav({ trailing }: { trailing?: ReactNode }) {
             data-testid="nav-mobile-menu"
             overlayTestId="nav-mobile-backdrop"
             className={attendeeSheetNav}
+            onCloseAutoFocus={(event) => {
+              event.preventDefault();
+              document
+                .querySelector<HTMLButtonElement>(
+                  '[data-testid="nav-menu-toggle"]',
+                )
+                ?.focus();
+            }}
           >
             <SheetTitle className="sr-only">Menu điều hướng</SheetTitle>
             {links.map((item) => (

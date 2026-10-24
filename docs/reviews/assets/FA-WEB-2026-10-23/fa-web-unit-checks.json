@@ -1,0 +1,7 @@
+{
+  "command": "pnpm --filter @ticket/web test -- tests/marketing-mobile-nav.test.ts tests/mobile-menu-focus.test.ts tests/marketing-copy.test.ts tests/redeem-terms-consent.test.ts tests/home-catalog-filter.test.ts",
+  "exitCode": 0,
+  "pass": 286,
+  "fail": 0,
+  "typecheck": "pnpm --filter @ticket/web typecheck — exit 0"
+}

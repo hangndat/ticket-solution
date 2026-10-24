@@ -1,0 +1,26 @@
+{
+  "capture": "review-keyboard-390-vi",
+  "sourceSha": "b2faa48a1ce443c8fc6c849cb74a06a57f8b0c37",
+  "steps": {
+    "review-kb-after-escape": {
+      "origin": "http://localhost:3000/marketing",
+      "result": "{\"probe\":\"keyboard-full\",\"note\":\"run steps via orca press\",\"snap\":{\"dialogOpen\":false,\"focusInDialog\":false,\"focusOnTrigger\":true,\"activeTestId\":\"mkt-nav-menu-toggle\",\"activeTag\":\"BUTTON\",\"activeText\":\"Menu\\n\u2630\",\"triggerExpanded\":\"false\"}}"
+    },
+    "review-kb-after-shift-tab": {
+      "origin": "http://localhost:3000/marketing",
+      "result": "{\"probe\":\"keyboard-full\",\"note\":\"run steps via orca press\",\"snap\":{\"dialogOpen\":true,\"focusInDialog\":true,\"focusOnTrigger\":false,\"activeTestId\":null,\"activeTag\":\"A\",\"activeText\":\"C\u00e2u h\u1ecfi th\u01b0\u1eddng g\u1eb7p\",\"triggerExpanded\":\"true\"}}"
+    },
+    "review-kb-after-tabs": {
+      "origin": "http://localhost:3000/marketing",
+      "result": "{\"probe\":\"keyboard-full\",\"note\":\"run steps via orca press\",\"snap\":{\"dialogOpen\":true,\"focusInDialog\":true,\"focusOnTrigger\":false,\"activeTestId\":null,\"activeTag\":\"A\",\"activeText\":\"Xem demo\",\"triggerExpanded\":\"true\"}}"
+    },
+    "review-kb-open": {
+      "origin": "http://localhost:3000/marketing",
+      "result": "{\"surface\":\"marketing-next\",\"url\":\"http://localhost:3000/marketing\",\"dialogPresent\":true,\"menuTestId\":true,\"dialogState\":\"open\",\"overlay\":true,\"navLinksInDialog\":7,\"triggerExpanded\":\"true\",\"focusInDialog\":true,\"activeTag\":\"DIV\",\"locale\":\"vi\",\"headerInterestVisible\":false,\"menuInterestVisible\":true,\"viewport\":{\"w\":390,\"h\":844,\"dpr\":1}}"
+    },
+    "review-kb-reopen": {
+      "origin": "http://localhost:3000/marketing",
+      "result": "{\"surface\":\"marketing-next\",\"url\":\"http://localhost:3000/marketing\",\"dialogPresent\":true,\"menuTestId\":true,\"dialogState\":\"open\",\"overlay\":true,\"navLinksInDialog\":7,\"triggerExpanded\":\"true\",\"focusInDialog\":true,\"activeTag\":\"DIV\",\"locale\":\"vi\",\"headerInterestVisible\":false,\"menuInterestVisible\":true,\"viewport\":{\"w\":390,\"h\":844,\"dpr\":1}}"
+    }
+  }
+}

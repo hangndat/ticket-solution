@@ -1,0 +1,23 @@
+{
+  "specId": "FA-WEB",
+  "dispatchId": "ctx_9b1cb19b2517",
+  "verifiedAt": "2026-10-23T20:55:00+08:00",
+  "webBase": "http://localhost:3000",
+  "apiHealth": "http://127.0.0.1:3001/v1/health",
+  "sourceSha": "b2faa48a1ce443c8fc6c849cb74a06a57f8b0c37",
+  "prodDeploySha": "unknown",
+  "runtimeVerdict": "PASS-local",
+  "notes": [
+    "Use localhost (not 127.0.0.1) for OIDC redirect_uri parity",
+    "API health path is /v1/health not /health",
+    "Redeem terms UAT via tenant-bound mfest-demo/mfest + Enter submit"
+  ],
+  "ac": {
+    "AC-1_mkt_sheet": "PASS",
+    "AC-2_interest_en": "PASS",
+    "AC-3_redeem_terms": "PASS",
+    "AC-4_catalog_filter": "PASS",
+    "AC-5_chrome_320": "PASS",
+    "AC-6_evidence": "PASS"
+  }
+}

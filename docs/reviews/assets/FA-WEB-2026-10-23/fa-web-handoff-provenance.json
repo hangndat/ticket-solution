@@ -1,0 +1,54 @@
+{
+  "specId": "FA-WEB",
+  "runId": "run_43fc795b5ff1",
+  "taskId": "task_7ec2759ad5ba",
+  "baseSha": "b2faa48a1ce443c8fc6c849cb74a06a57f8b0c37",
+  "workerNote": "Local source verify + unit tests; Orca browser UAT deferred — web:3000/api:3001 not up during worker window.",
+  "prodDeploySha": "unknown",
+  "mockupManifest": "0840ca38ceadedb1ddf2051d30868e65254b223b035c317e7106fabadb509650",
+  "capturedAt": "2026-10-23T20:45:00+08:00",
+  "journeys": [
+    {
+      "id": "mkt-mobile-nav",
+      "finding": "MP-PD-01/R-03",
+      "viewport": [390, 320],
+      "method": "source+unit",
+      "result": "PASS",
+      "notes": "Radix Sheet in marketing-mobile-nav-menu.tsx; marketing-mobile-nav.test.ts"
+    },
+    {
+      "id": "interest-en",
+      "finding": "R-02",
+      "viewport": 390,
+      "locale": "en",
+      "method": "unit",
+      "result": "PASS",
+      "notes": "marketing-copy.test.ts AC-2 assertions"
+    },
+    {
+      "id": "redeem-terms",
+      "finding": "R-04/M07",
+      "viewport": 390,
+      "method": "source+unit",
+      "result": "PASS",
+      "notes": "termsAccepted useState(false); requireTermsConsent on submit"
+    },
+    {
+      "id": "catalog-filter",
+      "finding": "R-09",
+      "viewport": 390,
+      "locale": "vi",
+      "method": "unit",
+      "result": "PASS",
+      "notes": "FilterChip tabs + home-catalog-filter.test.ts"
+    },
+    {
+      "id": "chrome-320",
+      "finding": "MR-R09/AC-5",
+      "viewport": 320,
+      "method": "source-fix",
+      "result": "PASS-local-pending-UAT",
+      "notes": "Hide duplicate header Login/Interest on max-md; sheet retains CTAs"
+    }
+  ]
+}

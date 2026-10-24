@@ -1,0 +1,11 @@
+{
+  "id": "94c2f750-b5d5-4f90-9f7d-8c83d8133f15",
+  "ok": true,
+  "result": {
+    "origin": "http://localhost:3000/",
+    "result": "{\"url\":\"http://localhost:3000/\",\"width\":390,\"hidden\":false,\"focused\":true,\"focus\":\"<button type=\\\"button\\\" class=\\\"justify-center no-underline transition-[color,opacity,background-color,border-color,transform,filter] duration-150 disabled:pointer\",\"animations\":[{\"state\":\"running\",\"time\":0,\"start\":null,\"pending\":true,\"timeline\":4384771.562},{\"state\":\"running\",\"time\":0,\"start\":null,\"pending\":true,\"timeline\":4384771.562},{\"state\":\"running\",\"time\":0,\"start\":null,\"pending\":true,\"timeline\":4384771.562},{\"state\":\"running\",\"time\":0,\"start\":null,\"pending\":true,\"timeline\":4384771.562}]}"
+  },
+  "_meta": {
+    "runtimeId": "9d821662-c628-49db-a168-99fa7b7636fc"
+  }
+}
