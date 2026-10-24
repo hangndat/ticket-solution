@@ -1,0 +1,58 @@
+{
+  "capture": "marketing-hero-desktop-1280-en.png",
+  "viewport": {
+    "width": 1280,
+    "height": 900
+  },
+  "live": {
+    "viewport": {
+      "w": 1280,
+      "h": 900,
+      "dpr": 1
+    },
+    "locale": "en",
+    "frameWidth": 1240
+  },
+  "probe": {
+    "sections": [
+      {
+        "id": "top",
+        "ok": true
+      },
+      {
+        "id": "trust",
+        "ok": true
+      },
+      {
+        "id": "features",
+        "ok": true
+      },
+      {
+        "id": "how-it-works",
+        "ok": true
+      },
+      {
+        "id": "solutions",
+        "ok": true
+      },
+      {
+        "id": "outcomes",
+        "ok": true
+      },
+      {
+        "id": "faq",
+        "ok": true
+      },
+      {
+        "id": "interest",
+        "ok": true
+      }
+    ]
+  },
+  "chromeWrap": {
+    "frame": "browser",
+    "frameWidth": 1240,
+    "issues": [],
+    "viewport": 1280
+  }
+}

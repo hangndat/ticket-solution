@@ -1,0 +1,32 @@
+{
+  "task": "MR-PORTAL",
+  "baseShaNote": "review local \u2014 artifacts not tied to commit",
+  "gitHead": "b2faa48a1ce443c8fc6c849cb74a06a57f8b0c37",
+  "docsServer": "http://127.0.0.1:57277",
+  "prototypeFiles": [
+    {
+      "path": "prototype/capture-portal-mr.sh",
+      "sha256": "99077621c756ad8610a2f49aaa0d88c2510927092a89e65cf51f3c87c30a868e"
+    },
+    {
+      "path": "prototype/capture-screenshots.sh",
+      "sha256": "6095403197f7f0bf618824b28011570023c7437fb72aff2061640846911872a7"
+    },
+    {
+      "path": "prototype/header-specimen.html",
+      "sha256": "55c4744dc6ac4be04c4d0a5d55c5dee7bc542537729b711e06a9c5f9a5df6b34"
+    },
+    {
+      "path": "prototype/portal-full-specimen.html",
+      "sha256": "16f42847eb773922fa5d3facab5662d01eeaede6628d604190b66ac891eb73f6"
+    },
+    {
+      "path": "prototype/probe-pa01-header.js",
+      "sha256": "17755291d1d9dae15bf02c0b2b493efd544e59f515b1d70f020ed25dbc3b5564"
+    },
+    {
+      "path": "prototype/probe-portal-full.js",
+      "sha256": "f52164ebc8ad5606f552036d6e7c4bf2f0c0b5e81ab9e95b631599d95ea252f7"
+    }
+  ]
+}

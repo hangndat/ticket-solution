@@ -1,0 +1,23 @@
+{
+  "capture": "app-mobile-390-vi-sheet.png",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "probe": {
+    "origin": "http://127.0.0.1:57277/design/ui-uplift-2026-10/app/index.html",
+    "result": "{\"htmlLang\":\"vi\",\"frameWidth\":366,\"interestLabels\":[],\"consentText\":\"\",\"termsChecked\":null,\"menuExpanded\":\"true\"}"
+  },
+  "pngPixels": {
+    "width": 390,
+    "height": 844
+  },
+  "probeParsed": {
+    "htmlLang": "vi",
+    "frameWidth": 366,
+    "interestLabels": [],
+    "consentText": "",
+    "termsChecked": null,
+    "menuExpanded": "true"
+  }
+}

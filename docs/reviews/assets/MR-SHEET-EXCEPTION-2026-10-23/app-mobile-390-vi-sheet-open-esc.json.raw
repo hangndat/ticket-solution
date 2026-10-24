@@ -1,0 +1,11 @@
+{
+  "id": "b07cd907-47c3-45d6-81d7-30533bf6ec73",
+  "ok": true,
+  "result": {
+    "origin": "http://127.0.0.1:57277/design/ui-uplift-2026-10/app/index.html?v=esc",
+    "result": "{\"surface\":\"app\",\"locale\":\"vi\",\"triggerId\":\"app-sheet-trigger\",\"dialogOpen\":false,\"focusOnTrigger\":true,\"triggerExpanded\":\"false\"}"
+  },
+  "_meta": {
+    "runtimeId": "9d821662-c628-49db-a168-99fa7b7636fc"
+  }
+}

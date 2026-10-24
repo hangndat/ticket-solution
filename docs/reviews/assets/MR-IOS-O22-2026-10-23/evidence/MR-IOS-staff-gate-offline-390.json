@@ -1,0 +1,29 @@
+{
+  "file": "MR-IOS-staff-gate-offline-390.png",
+  "captureMode": "phoneClip",
+  "probe": {
+    "innerWidth": 845,
+    "innerHeight": 900,
+    "devicePixelRatio": 1,
+    "captureMode": "phoneClip",
+    "phoneBox": {
+      "cssWidth": 390,
+      "cssHeight": 737,
+      "left": 268,
+      "top": 100
+    },
+    "locale": "vi",
+    "screen": "scan",
+    "title": "Vemoki \u00b7 To\u00e0n b\u1ed9 lu\u1ed3ng"
+  },
+  "pngPixels": {
+    "width": 845,
+    "height": 900
+  },
+  "phoneClip": {
+    "phoneCssWidth": 390,
+    "bitmapWidth": 845,
+    "windowInnerWidth": 845,
+    "devicePixelRatio": 1
+  }
+}

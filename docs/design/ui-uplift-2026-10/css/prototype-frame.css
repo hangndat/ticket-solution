@@ -1,0 +1,277 @@
+/* Prototype review shell only — not product body (D-2). Shared by marketing + app uplift. */
+:root.review-root {
+  color-scheme: light;
+  --ink: #0b1220;
+  --paper: #f4f6f8;
+  --muted: #5b687b;
+  --line: #dde3eb;
+  --font-display: "Sora", system-ui, sans-serif;
+  --font-body: "Be Vietnam Pro", system-ui, sans-serif;
+}
+
+body.review-body {
+  margin: 0;
+  background: #e5eaf0;
+  color: var(--ink);
+  font: 14px var(--font-body), -apple-system, sans-serif;
+  padding: 20px;
+}
+
+@media (max-width: 420px) {
+  body.review-body {
+    padding: 10px;
+  }
+}
+
+.review {
+  max-width: 1260px;
+  margin: auto;
+}
+
+.reviewhead {
+  display: flex;
+  justify-content: space-between;
+  gap: 15px;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.reviewhead h2 {
+  font-family: var(--font-display);
+  font-size: 21px;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.reviewhead p {
+  font-size: 12px;
+  margin: 6px 0 0;
+  color: var(--muted);
+}
+
+.review-controls {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.seg {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: #d4dce6;
+  border-radius: 10px;
+}
+
+.seg button {
+  padding: 0 14px;
+  border-radius: 7px;
+  white-space: nowrap;
+  min-height: 44px;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  font: inherit;
+}
+
+.seg .on {
+  background: #fff;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.06);
+}
+
+.reviewnav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.reviewnav button {
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: #fff;
+  font-size: 0.72rem;
+  cursor: pointer;
+}
+
+.reviewnav .on {
+  background: var(--ink);
+  color: #fff;
+  border-color: var(--ink);
+}
+
+.reviewnote {
+  max-width: 1320px;
+  margin: 14px auto 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.65;
+}
+
+.browser {
+  max-width: 1260px;
+  margin: auto;
+  background: white;
+  border: 1px solid #cbd4df;
+  border-radius: 14px;
+  overflow: visible;
+  box-shadow: 0 15px 40px rgba(11, 18, 32, 0.08);
+}
+
+.browser .chrome-bar,
+.browser .chrome {
+  height: 37px;
+  background: #f0f3f7;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 14px;
+}
+
+.browser .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #b2bdcc;
+}
+
+.browser .address {
+  font-size: 10px;
+  letter-spacing: 0.3px;
+  color: #59667a;
+  margin: auto;
+  font-family: ui-monospace, monospace;
+}
+
+.browser .site {
+  background: var(--paper);
+  position: relative;
+  min-height: 900px;
+  overflow: visible;
+  container-type: inline-size;
+}
+
+/* MR-R09: narrow review viewport — product chrome uses mobile header (viewport + container). */
+@media (max-width: 519px) {
+  .mkt-nav-links,
+  .mkt-nav-cta,
+  .mkt-nav-cta-primary {
+    display: none !important;
+  }
+
+  .mkt-mobile-menu {
+    display: inline-flex !important;
+  }
+
+  .site .navlinks {
+    display: none !important;
+  }
+
+  .site .mobile-menu-btn {
+    display: inline-flex !important;
+    white-space: nowrap;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+    font-size: 0.8125rem;
+  }
+
+  .site .nav {
+    gap: 0.5rem;
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+
+  .site .logo {
+    font-size: 1.25rem;
+  }
+
+  .mkt-header {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+    gap: 0.5rem;
+  }
+
+  .mkt-wordmark {
+    font-size: 1.25rem !important;
+  }
+}
+
+@container (max-width: 520px) {
+  .mkt-nav-links,
+  .mkt-nav-cta,
+  .mkt-nav-cta-primary {
+    display: none !important;
+  }
+
+  .mkt-mobile-menu {
+    display: inline-flex !important;
+  }
+
+  .site .navlinks {
+    display: none !important;
+  }
+
+  .site .mobile-menu-btn {
+    display: inline-flex !important;
+    white-space: nowrap;
+  }
+}
+
+@container (max-width: 340px) {
+  .mkt-header {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+    gap: 0.5rem;
+  }
+
+  .mkt-wordmark {
+    font-size: 1.25rem !important;
+  }
+
+  .site .nav {
+    gap: 0.5rem;
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+
+  .site .logo {
+    font-size: 1.25rem;
+  }
+
+  .site .mobile-menu-btn {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+    font-size: 0.8125rem;
+  }
+}
+
+.browser.mobile {
+  width: min(390px, 100%);
+  max-width: 390px;
+  border-radius: 20px;
+}
+
+.browser.mobile .site {
+  min-height: 844px;
+  height: 844px;
+  overflow: auto;
+}
+
+.skip {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 100;
+  padding: 0.75rem 1rem;
+  background: var(--ink);
+  color: var(--paper);
+  border-radius: 8px;
+}
+
+.skip:focus {
+  left: 1rem;
+  top: 1rem;
+}

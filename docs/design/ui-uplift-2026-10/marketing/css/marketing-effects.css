@@ -1,0 +1,106 @@
+/* Non-BEM decorative helpers (keyframes / preview art). Canonical body uses Tailwind utilities. */
+@keyframes marquee-scroll {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes fade-up-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+[data-marquee-track] {
+  animation: marquee-scroll 28s linear infinite;
+}
+
+[data-fade-in] {
+  animation: fade-up-in 300ms ease both;
+}
+
+[data-preview-glow] {
+  background: radial-gradient(circle at 50% 40%, rgba(225, 29, 72, 0.2), transparent 55%);
+}
+
+[data-ticket-art="mfest"] {
+  background: linear-gradient(135deg, #e11d48, #7c3aed);
+}
+
+[data-ticket-art="river"] {
+  background: linear-gradient(135deg, #2563eb, #0ea5e9);
+}
+
+[data-phone-qr] {
+  background: repeating-linear-gradient(90deg, #0b1220 0 2px, transparent 2px 4px),
+    repeating-linear-gradient(#0b1220 0 2px, transparent 2px 4px);
+  background-size: 8px 8px;
+}
+
+/* Product chrome + form labels inside prototype frame (MR-R09 narrow widths). */
+.mkt-field label {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.mkt-form button[type="submit"] {
+  white-space: nowrap;
+}
+
+.mkt-header {
+  gap: 0.75rem;
+}
+
+/* MR-R09-A11Y: white menu chip must not inherit header text-paper on ink chrome */
+.mkt-mobile-menu {
+  color: #0b1220;
+}
+
+.mkt-mobile-menu:hover {
+  color: #0b1220;
+  background-color: rgba(11, 18, 32, 0.05);
+}
+
+.mkt-mobile-menu:focus-visible {
+  color: #0b1220;
+}
+
+@media (max-width: 519px) {
+  .mkt-nav-links,
+  .mkt-nav-cta,
+  .mkt-nav-cta-primary {
+    display: none !important;
+  }
+
+  .mkt-mobile-menu {
+    display: inline-flex !important;
+  }
+}
+
+@container (max-width: 320px) {
+  .mkt-wordmark {
+    font-size: 1.35rem !important;
+  }
+
+  .mkt-locale {
+    margin-right: 0.25rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  [data-marquee-track],
+  [data-fade-in] {
+    animation: none;
+  }
+}

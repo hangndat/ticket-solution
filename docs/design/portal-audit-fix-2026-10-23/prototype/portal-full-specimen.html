@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Portal full specimen (PD #838 — not runtime)</title>
+  <link rel="stylesheet" href="https://unpkg.com/antd@5.22.2/dist/reset.css" />
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/dayjs@1/dayjs.min.js"></script>
+  <script src="https://unpkg.com/antd@5.22.2/dist/antd.min.js"></script>
+  <style>
+    :root {
+      --vemoki-primary: #1677ff;
+      --vemoki-bg: #f5f5f5;
+      --vemoki-container: #ffffff;
+      --vemoki-text: rgba(0, 0, 0, 0.88);
+      --vemoki-text-secondary: rgba(0, 0, 0, 0.45);
+      --vemoki-border: #d9d9d9;
+      --sider-w: 220px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+      background: var(--vemoki-bg);
+      color: var(--vemoki-text);
+    }
+    .pd-banner {
+      background: #fffbe6;
+      border-bottom: 1px solid #ffe58f;
+      padding: 6px 12px;
+      font-size: 11px;
+      color: #614700;
+      line-height: 1.35;
+    }
+    .pd-banner strong { font-weight: 600; }
+    .shell-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-height: 56px;
+      padding: 0 16px;
+      background: var(--vemoki-container);
+      border-bottom: 1px solid var(--vemoki-border);
+    }
+    .shell-header .brand {
+      font-weight: 600;
+      font-size: 16px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 140px;
+      flex-shrink: 0;
+      color: inherit;
+      text-decoration: none;
+    }
+    .shell-header .header-end { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+    .context-strip {
+      background: var(--vemoki-container);
+      border-bottom: 1px solid var(--vemoki-border);
+      padding: 10px 16px;
+    }
+    .context-strip .row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px 16px;
+      align-items: flex-end;
+    }
+    .field { display: flex; flex-direction: column; gap: 4px; flex: 1 1 100%; min-width: 0; }
+    .field label { font-size: 12px; color: var(--vemoki-text-secondary); }
+    .field .ant-select { width: 100%; }
+    .scan-hint { flex: 1 1 100%; font-size: 12px; color: var(--vemoki-text-secondary); margin-top: 4px; }
+    @media (min-width: 768px) {
+      .shell-header .brand { max-width: 200px; }
+      .context-strip .row { flex-wrap: nowrap; }
+      .field { flex: 0 1 240px; max-width: 280px; }
+      .scan-hint { flex: 1 1 auto; margin-top: 0; margin-left: auto; text-align: right; max-width: 280px; }
+    }
+    .portal-layout { display: flex; min-height: calc(100vh - 120px); }
+    .portal-sider {
+      width: var(--sider-w);
+      flex-shrink: 0;
+      background: #001529;
+      color: #fff;
+      padding: 8px 0;
+      display: none;
+    }
+    @media (min-width: 768px) { .portal-sider { display: block; } }
+    .portal-sider a {
+      display: block;
+      padding: 8px 16px;
+      color: rgba(255,255,255,0.75);
+      text-decoration: none;
+      font-size: 13px;
+    }
+    .portal-sider a.active { background: var(--vemoki-primary); color: #fff; }
+    .portal-sider .group { font-size: 11px; text-transform: uppercase; opacity: 0.45; padding: 12px 16px 4px; }
+    .portal-main { flex: 1; min-width: 0; padding: 16px; }
+    .demo-meta { font-size: 11px; color: var(--vemoki-text-secondary); margin-bottom: 12px; }
+    .preset-bar { margin-bottom: 12px; flex-wrap: wrap; }
+    .utc-badge {
+      display: inline-block;
+      font-size: 11px;
+      padding: 0 6px;
+      border-radius: 4px;
+      background: #f0f5ff;
+      color: #0958d9;
+      margin-left: 6px;
+    }
+    .pd-spinner {
+      width: 32px;
+      height: 32px;
+      border: 3px solid #e6f4ff;
+      border-top-color: var(--vemoki-primary);
+      border-radius: 50%;
+      animation: pd-spin 0.9s linear infinite;
+    }
+    @keyframes pd-spin { to { transform: rotate(360deg); } }
+    @media (prefers-reduced-motion: reduce) {
+      .pd-spinner { animation: none !important; border-top-color: var(--vemoki-primary); }
+    }
+    body.rm-reduce .pd-spinner { animation: none !important; }
+    .state-chip { font-size: 11px; margin-left: 8px; }
+    .fixture-label { color: #ad6800; font-weight: 500; }
+    .mobile-nav {
+      display: flex;
+      gap: 4px;
+      overflow-x: auto;
+      margin-bottom: 12px;
+      padding-bottom: 4px;
+    }
+    @media (min-width: 768px) { .mobile-nav { display: none; } }
+    .link-header-specimen { font-size: 11px; margin-left: 8px; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script>
+    const {
+      ConfigProvider, Select, Button, Dropdown, Space, Typography, theme,
+      Layout, Card, Tabs, Table, Alert, Result, Input, Tag, Statistic, Row, Col, Empty,
+    } = antd;
+    const { useState, useMemo, useEffect } = React;
+
+    const ISO_INSTANT = '2026-07-15T14:30:00.000Z';
+
+    function formatReportInstant(iso, locale) {
+      const loc = locale === 'en' ? 'en-GB' : 'vi-VN';
+      try {
+        const d = new Date(iso);
+        const fmt = new Intl.DateTimeFormat(loc, {
+          timeZone: 'UTC',
+          dateStyle: 'medium',
+          timeStyle: 'short',
+        });
+        return fmt.format(d);
+      } catch {
+        return locale === 'en' ? 'Invalid time' : 'Thời điểm không hợp lệ';
+      }
+    }
+
+    const COPY = {
+      vi: {
+        banner: 'Mẫu PD #838 — fixture có nhãn · không phải portal runtime.',
+        brand: 'Vemoki Portal',
+        menu: 'Tài khoản',
+        tenantLabel: 'Tổ chức',
+        eventLabel: 'Sự kiện',
+        scanHint: 'Soát vé bằng app Vemoki trên iPhone',
+        logout: 'Đăng xuất',
+        viewport: 'Viewport',
+        persona: 'Persona',
+        state: 'State',
+        navOrg: 'Tổng quan tổ chức',
+        navEvents: 'Sự kiện',
+        navMembers: 'Thành viên',
+        navSettings: 'Cấu hình',
+        navEventHome: 'Tổng quan sự kiện',
+        navGuests: 'Khách & mã',
+        navGate: 'Báo cáo cổng',
+        navAudit: 'Nhật ký & mã',
+        navSupport: 'Hỗ trợ',
+        navSetup: 'Thiết lập sự kiện',
+        navPlatform: 'Nền tảng (Operator)',
+        auditLogTab: 'Nhật ký',
+        codesTab: 'Mã tồn kho',
+        jobsTab: 'Lịch sử xuất',
+        auditFilterHint: 'Lọc theo hành động hoặc khoảng thời gian (UTC). Không hiển thị mã thô hay dữ liệu nhạy cảm.',
+        codesFilterHint: 'Tra cứu mã đã che — không hiện mã vé đầy đủ trên màn hình.',
+        auditActionPh: 'Hành động (tuỳ chọn)',
+        auditFromPh: 'Từ (UTC, …Z)',
+        auditToPh: 'Đến (UTC, …Z)',
+        auditEmpty: 'Chưa có bản ghi trong phạm vi này.',
+        codesEmpty: 'Chưa có mã trong phạm vi lọc.',
+        grantPreview: 'Cấp quyền hỗ trợ (xem trước)',
+        grantReasonPh: 'Lý do (bắt buộc, ghi nhật ký)',
+        grantTtl: 'Thời hạn (phút)',
+        mutateFixture: 'Chỉ xem trước — không gọi API production.',
+        setupTitle: 'Chuẩn bị sự kiện',
+        setupDesc: 'Loại vé, nguồn mã, hạn mức và phát hành cấu hình (fixture).',
+        orgEventsTitle: 'Danh sách sự kiện',
+        retry: 'Thử lại',
+        unknownSurface: 'Chưa xác định kết quả. Kiểm tra lại trước khi thao tác.',
+        tabImport: 'Nhập từ CSV',
+        tabPending: 'Chờ duyệt',
+        tabNotify: 'Thông báo',
+        tabExport: 'Xuất danh sách',
+        importDesc: 'Tải file CSV → xem trước (không giữ suất) → ghi nhận.',
+        importCatalog: 'Chọn nguồn mã',
+        importType: 'Chọn loại vé',
+        pendingTitle: 'Chờ duyệt',
+        notifySummary: 'Đã tiếp nhận gửi ≠ khách đã nhận email.',
+        exportInfo: 'Xuất danh sách CSV',
+        exportDesc: 'Tạo yêu cầu xuất → kiểm tra trạng thái → tải khi sẵn sàng. Kết quả chưa rõ ≠ đã thành công.',
+        exportIdLabel: 'Mã yêu cầu xuất',
+        exportIdPh: 'Nhập mã yêu cầu',
+        reportAt: 'Cập nhật báo cáo (UTC)',
+        loading: 'Đang tải…',
+        emptyGuests: 'Chưa có khách trong phạm vi này.',
+        errorGuests: 'Không tải được danh sách. Thử lại.',
+        denied: 'Thiếu quyền thao tác trên máy chủ (nhập / duyệt / gửi thông báo / xuất).',
+        unknownExport: 'Chưa xác định kết quả xuất. Không coi là đã tạo hoặc đã tải.',
+        operatorMfa: 'Operator · MFA (fixture)',
+        operatorMfaHint: 'Trạng thái xác thực mô phỏng — không gọi Keycloak production.',
+        platformTenants: 'Tenant nền tảng',
+        reducedMotion: 'Reduced motion',
+      },
+      en: {
+        banner: 'PD specimen #838 — labeled fixtures · not portal runtime.',
+        brand: 'Vemoki Portal',
+        menu: 'Account',
+        tenantLabel: 'Organization',
+        eventLabel: 'Event',
+        scanHint: 'Scan tickets with the Vemoki app on iPhone',
+        logout: 'Sign out',
+        viewport: 'Viewport',
+        persona: 'Persona',
+        state: 'State',
+        navOrg: 'Organization overview',
+        navEvents: 'Events',
+        navMembers: 'Members',
+        navSettings: 'Settings',
+        navEventHome: 'Event overview',
+        navGuests: 'Guests & codes',
+        navGate: 'Gate report',
+        navAudit: 'Audit & codes',
+        navSupport: 'Support',
+        navSetup: 'Event setup',
+        navPlatform: 'Platform (Operator)',
+        auditLogTab: 'Audit log',
+        codesTab: 'Code inventory',
+        jobsTab: 'Export history',
+        auditFilterHint: 'Filter by action or time range (UTC). No raw codes or sensitive payloads.',
+        codesFilterHint: 'Masked code lookup — full ticket codes are not shown on screen.',
+        auditActionPh: 'Action (optional)',
+        auditFromPh: 'From (UTC, …Z)',
+        auditToPh: 'To (UTC, …Z)',
+        auditEmpty: 'No records in this scope yet.',
+        codesEmpty: 'No codes match these filters.',
+        grantPreview: 'Support grant (preview)',
+        grantReasonPh: 'Reason (required, audited)',
+        grantTtl: 'TTL (minutes)',
+        mutateFixture: 'Preview only — does not call production APIs.',
+        setupTitle: 'Event preparation',
+        setupDesc: 'Ticket types, code sources, quota, and publish config (fixture).',
+        orgEventsTitle: 'Events list',
+        retry: 'Try again',
+        unknownSurface: 'Outcome unknown. Check again before acting.',
+        tabImport: 'Import from CSV',
+        tabPending: 'Pending approval',
+        tabNotify: 'Notifications',
+        tabExport: 'Export guest list',
+        importDesc: 'Upload CSV → preview (does not hold quota) → commit.',
+        importCatalog: 'Select code source',
+        importType: 'Select ticket type',
+        pendingTitle: 'Pending approval',
+        notifySummary: 'Accepted ≠ delivered.',
+        exportInfo: 'Export guest list (CSV)',
+        exportDesc: 'Create export → check status → download when ready. Unknown outcome ≠ success.',
+        exportIdLabel: 'Export request ID',
+        exportIdPh: 'Enter export request ID',
+        reportAt: 'Report updated (UTC)',
+        loading: 'Loading…',
+        emptyGuests: 'No guests in this scope yet.',
+        errorGuests: 'Could not load the list. Try again.',
+        denied: 'Missing server permission for import, approval, notifications, or export.',
+        unknownExport: 'Export outcome unknown. Do not treat as created or downloaded.',
+        operatorMfa: 'Operator · MFA (fixture)',
+        operatorMfaHint: 'Simulated auth state — does not call production Keycloak.',
+        platformTenants: 'Platform tenants',
+        reducedMotion: 'Reduced motion',
+      },
+    };
+
+    const PAGES = [
+      'org-home', 'org-events', 'members', 'settings',
+      'event-home', 'setup', 'guests', 'gate', 'audit', 'support',
+      'platform', 'operator-auth',
+    ];
+    const TABS = ['import', 'pending', 'notifications', 'export'];
+    const AUDIT_TABS = ['audit', 'codes', 'jobs'];
+    const PLATFORM_TABS = ['tenants', 'audit', 'grants'];
+    const STATES = ['ready', 'loading', 'empty', 'error', 'denied', 'unknown'];
+    const TENANT_SHORT = 'MFest · Demo (fixture)';
+    const TENANT_LONG = 'MFest Productions International · Demo Tenant With A Very Long Display Name (fixture)';
+    const EVENT_SHORT = 'Summer Music Festival 2026 (fixture)';
+    const EVENT_LONG = 'Summer Music Festival 2026 — Extended Weekend Pass · Ho Chi Minh City (fixture)';
+
+    function App() {
+      const params = new URLSearchParams(window.location.search);
+      const [locale, setLocale] = useState(params.get('locale') === 'en' ? 'en' : 'vi');
+      const [page, setPage] = useState(PAGES.includes(params.get('page')) ? params.get('page') : 'guests');
+      const [tab, setTab] = useState(TABS.includes(params.get('tab')) ? params.get('tab') : 'import');
+      const [auditTab, setAuditTab] = useState(AUDIT_TABS.includes(params.get('auditTab')) ? params.get('auditTab') : 'audit');
+      const [platformTab, setPlatformTab] = useState(PLATFORM_TABS.includes(params.get('platformTab')) ? params.get('platformTab') : 'tenants');
+      const [uiState, setUiState] = useState(STATES.includes(params.get('state')) ? params.get('state') : 'ready');
+      const [persona, setPersona] = useState(params.get('persona') === 'operator' ? 'operator' : 'owner');
+      const useLongLabels = params.get('long') === '1';
+      const rmQuery = params.get('rm') === '1';
+      const tenantLabel = useLongLabels ? TENANT_LONG : TENANT_SHORT;
+      const eventLabel = useLongLabels ? EVENT_LONG : EVENT_SHORT;
+      const [dims, setDims] = useState({ w: 0, h: 0 });
+
+      useEffect(() => {
+        document.documentElement.lang = locale;
+        document.body.classList.toggle('rm-reduce', rmQuery);
+      }, [locale, rmQuery]);
+
+      useEffect(() => {
+        const update = () => setDims({ w: window.innerWidth, h: window.innerHeight });
+        update();
+        window.addEventListener('resize', update);
+        return () => window.removeEventListener('resize', update);
+      }, []);
+
+      const t = COPY[locale];
+      const formatted = formatReportInstant(ISO_INSTANT, locale);
+      const vw = dims.w > 0 ? dims.w + '×' + dims.h : '…';
+
+      const accountItems = useMemo(() => ({
+        items: [{ key: 'logout', label: t.logout }],
+      }), [t]);
+
+      function navLink(key, label) {
+        const active = page === key;
+        return React.createElement('a', {
+          href: '#',
+          className: active ? 'active' : '',
+          onClick: (e) => { e.preventDefault(); setPage(key); },
+          'data-nav': key,
+        }, label);
+      }
+
+      function SurfaceBlock({ testId, children }) {
+        if (uiState === 'denied') {
+          return React.createElement(Result, {
+            status: '403',
+            title: t.denied,
+            subTitle: React.createElement('span', { className: 'fixture-label' }, '[fixture: denied]'),
+          });
+        }
+        if (uiState === 'loading') {
+          return React.createElement('div', { 'data-testid': testId || 'loading-surface', style: { textAlign: 'center', padding: 48 } },
+            React.createElement('div', { className: 'pd-spinner', 'data-testid': 'pd-spinner', role: 'status', 'aria-label': t.loading }),
+            React.createElement('div', { style: { marginTop: 12 } }, t.loading)
+          );
+        }
+        if (uiState === 'error') {
+          return React.createElement(Alert, {
+            type: 'error',
+            showIcon: true,
+            message: t.errorGuests,
+            action: React.createElement(Button, { size: 'small', onClick: () => setUiState('ready') }, t.retry),
+          });
+        }
+        if (uiState === 'unknown') {
+          return React.createElement(Alert, { type: 'warning', showIcon: true, message: t.unknownSurface });
+        }
+        return children;
+      }
+
+      function GuestsPanel() {
+        if (uiState === 'denied') {
+          return React.createElement(Result, {
+            status: '403',
+            title: t.denied,
+            subTitle: React.createElement('span', { className: 'fixture-label' }, '[fixture: denied]'),
+          });
+        }
+        if (uiState === 'loading') {
+          return React.createElement('div', { 'data-testid': 'loading-surface', style: { textAlign: 'center', padding: 48 } },
+            React.createElement('div', { className: 'pd-spinner', 'data-testid': 'pd-spinner', role: 'status', 'aria-label': t.loading }),
+            React.createElement('div', { style: { marginTop: 12 } }, t.loading),
+            rmQuery ? React.createElement(Tag, { color: 'gold' }, t.reducedMotion) : null
+          );
+        }
+
+        const tabItems = [
+          { key: 'import', label: t.tabImport },
+          { key: 'pending', label: t.tabPending },
+          { key: 'notifications', label: t.tabNotify },
+          { key: 'export', label: t.tabExport },
+        ];
+
+        const catalogFilters = tab === 'import' ? React.createElement(
+          'div',
+          { 'data-testid': 'import-catalog-filters', style: { marginBottom: 16 } },
+          React.createElement(Space, { wrap: true },
+            React.createElement('div', null,
+              React.createElement('label', { id: 'src-lbl', style: { display: 'block', fontSize: 12 } }, t.importCatalog),
+              React.createElement(Select, { 'aria-labelledby': 'src-lbl', style: { width: 200 }, placeholder: t.importCatalog, options: [{ value: 's1', label: 'Partner API (fixture)' }] })
+            ),
+            React.createElement('div', null,
+              React.createElement('label', { id: 'type-lbl', style: { display: 'block', fontSize: 12 } }, t.importType),
+              React.createElement(Select, { 'aria-labelledby': 'type-lbl', style: { width: 200 }, placeholder: t.importType, options: [{ value: 'ga', label: 'GA (fixture)' }] })
+            )
+          )
+        ) : null;
+
+        let tabBody;
+        if (tab === 'import') {
+          tabBody = React.createElement(Alert, { type: 'info', showIcon: true, message: t.importDesc, style: { marginBottom: 12 } });
+        } else if (tab === 'pending') {
+          tabBody = uiState === 'empty'
+            ? React.createElement(Empty, { description: t.emptyGuests })
+            : React.createElement(Table, {
+              size: 'small',
+              pagination: false,
+              columns: [{ title: locale === 'vi' ? 'Khách' : 'Guest', dataIndex: 'g' }, { title: locale === 'vi' ? 'Trạng thái' : 'Status', dataIndex: 's' }],
+              dataSource: uiState === 'error' ? undefined : [{ key: 1, g: 'demo@fixture.vemoki', s: locale === 'vi' ? 'Chờ duyệt' : 'Pending' }],
+              locale: uiState === 'error' ? { emptyText: t.errorGuests } : undefined,
+            });
+        } else if (tab === 'notifications') {
+          tabBody = React.createElement(Alert, { type: 'warning', showIcon: true, message: t.notifySummary });
+        } else {
+          tabBody = React.createElement('div', null,
+            React.createElement(Typography.Paragraph, null, t.exportDesc),
+            uiState === 'unknown' ? React.createElement(Alert, { type: 'error', showIcon: true, message: t.unknownExport, style: { marginBottom: 12 } }) : null,
+            React.createElement(Space, { direction: 'vertical', style: { width: '100%' } },
+              React.createElement('label', { id: 'export-id-lbl', style: { fontSize: 12 } }, t.exportIdLabel),
+              React.createElement(Input, {
+                id: 'export-request-id',
+                placeholder: t.exportIdPh,
+                'aria-label': t.exportIdLabel,
+                'data-testid': 'export-request-id',
+              })
+            )
+          );
+        }
+
+        return React.createElement(Card, { 'data-testid': 'guests-procard' },
+          catalogFilters,
+          React.createElement(Tabs, {
+            activeKey: tab,
+            onChange: setTab,
+            items: tabItems.map((item) => ({
+              key: item.key,
+              label: item.label,
+              children: item.key === tab ? tabBody : null,
+            })),
+          })
+        );
+      }
+
+      function AuditFixture() {
+        const auditBody = uiState === 'empty'
+          ? React.createElement(Empty, { description: t.auditEmpty })
+          : React.createElement(Table, {
+            size: 'small',
+            pagination: false,
+            'data-testid': 'audit-table',
+            rowKey: 'id',
+            columns: [
+              { title: locale === 'vi' ? 'Thời điểm (UTC)' : 'Time (UTC)', dataIndex: 'at', width: 180 },
+              { title: locale === 'vi' ? 'Hành động' : 'Action', dataIndex: 'action' },
+              { title: locale === 'vi' ? 'Người thực hiện' : 'Actor', dataIndex: 'actor', ellipsis: true },
+              { title: locale === 'vi' ? 'Tài nguyên' : 'Resource', dataIndex: 'resource', ellipsis: true },
+            ],
+            dataSource: [{ key: 1, id: 'a1', at: formatted + ' UTC', action: 'import.commit', actor: 'user…4f2a (fixture)', resource: 'job…9c1b' }],
+          });
+
+        const codesBody = uiState === 'empty'
+          ? React.createElement(Empty, { description: t.codesEmpty })
+          : React.createElement(Table, {
+            size: 'small',
+            pagination: false,
+            'data-testid': 'codes-table',
+            rowKey: 'id',
+            columns: [
+              { title: locale === 'vi' ? 'Mã (đã che)' : 'Code (masked)', dataIndex: 'code' },
+              { title: locale === 'vi' ? 'Trạng thái' : 'State', dataIndex: 'state' },
+            ],
+            dataSource: [{ key: 1, id: 'c1', code: '…AB12', state: 'AVAILABLE' }],
+          });
+
+        const jobsBody = React.createElement('div', { 'data-testid': 'export-jobs-panel' },
+          React.createElement(Alert, {
+            type: 'info',
+            showIcon: true,
+            message: locale === 'vi' ? 'Lịch sử yêu cầu xuất (fixture) — không giữ PII.' : 'Export job history (fixture) — no PII retained.',
+          })
+        );
+
+        const auditPanel = React.createElement('div', { 'data-testid': 'audit-log-panel' },
+          React.createElement(Alert, { type: 'info', showIcon: true, message: t.auditFilterHint, style: { marginBottom: 12 } }),
+          React.createElement(Space, { wrap: true, style: { marginBottom: 12 } },
+            React.createElement(Input, { placeholder: t.auditActionPh, style: { minWidth: 160 }, 'data-testid': 'audit-filter-action' }),
+            React.createElement(Input, { placeholder: t.auditFromPh, style: { minWidth: 200 }, spellCheck: false }),
+            React.createElement(Input, { placeholder: t.auditToPh, style: { minWidth: 200 }, spellCheck: false }),
+            React.createElement(Button, { type: 'primary' }, locale === 'vi' ? 'Lọc' : 'Filter')
+          ),
+          auditBody
+        );
+        const codesPanel = React.createElement('div', { 'data-testid': 'codes-panel' },
+          React.createElement(Alert, { type: 'info', showIcon: true, message: t.codesFilterHint, style: { marginBottom: 12 } }),
+          codesBody
+        );
+
+        return React.createElement(Card, { title: t.navAudit, 'data-testid': 'audit-procard' },
+          React.createElement(Tabs, {
+            activeKey: auditTab,
+            onChange: setAuditTab,
+            items: [
+              { key: 'audit', label: t.auditLogTab, children: auditTab === 'audit' ? auditPanel : null },
+              { key: 'codes', label: t.codesTab, children: auditTab === 'codes' ? codesPanel : null },
+              { key: 'jobs', label: t.jobsTab, children: auditTab === 'jobs' ? jobsBody : null },
+            ],
+          })
+        );
+      }
+
+      function PlatformFixture() {
+        const tenantsBody = uiState === 'empty'
+          ? React.createElement(Empty, { description: locale === 'vi' ? 'Chưa có tenant.' : 'No tenants yet.' })
+          : React.createElement(Table, {
+            size: 'small',
+            pagination: false,
+            columns: [{ title: 'Tenant', dataIndex: 'n' }, { title: 'Status', dataIndex: 's' }],
+            dataSource: [{ key: 1, n: 'mfest-demo', s: 'ACTIVE' }],
+          });
+
+        const platAuditBody = React.createElement(Table, {
+          size: 'small',
+          pagination: false,
+          'data-testid': 'platform-audit-table',
+          columns: [
+            { title: locale === 'vi' ? 'Tenant' : 'Tenant', dataIndex: 'tenant' },
+            { title: locale === 'vi' ? 'Hành động' : 'Action', dataIndex: 'action' },
+          ],
+          dataSource: [{ key: 1, tenant: 'mfest-demo', action: 'platform.tenant.suspend (fixture)' }],
+        });
+
+        const grantsBody = React.createElement('div', { 'data-testid': 'platform-grants-panel' },
+          React.createElement(Alert, { type: 'warning', showIcon: true, message: t.mutateFixture, style: { marginBottom: 12 } }),
+          React.createElement(Space, { direction: 'vertical', style: { width: '100%', maxWidth: 420 } },
+            React.createElement('label', { id: 'grant-reason', style: { fontSize: 12 } }, t.grantReasonPh),
+            React.createElement(Input.TextArea, { 'aria-labelledby': 'grant-reason', rows: 2, placeholder: t.grantReasonPh }),
+            React.createElement('label', { id: 'grant-ttl', style: { fontSize: 12 } }, t.grantTtl),
+            React.createElement(Input, { 'aria-labelledby': 'grant-ttl', type: 'number', defaultValue: 60, style: { maxWidth: 120 } }),
+            React.createElement(Button, { type: 'primary', disabled: true, 'data-testid': 'grant-submit-mock' }, t.grantPreview)
+          )
+        );
+
+        return React.createElement(Card, { title: t.platformTenants, 'data-testid': 'platform-procard' },
+          React.createElement(Tabs, {
+            activeKey: platformTab,
+            onChange: setPlatformTab,
+            items: [
+              { key: 'tenants', label: locale === 'vi' ? 'Tenant' : 'Tenants', children: platformTab === 'tenants' ? tenantsBody : null },
+              { key: 'audit', label: locale === 'vi' ? 'Nhật ký nền tảng' : 'Platform audit', children: platformTab === 'audit' ? platAuditBody : null },
+              { key: 'grants', label: t.grantPreview, children: platformTab === 'grants' ? grantsBody : null },
+            ],
+          })
+        );
+      }
+
+      function MainContent() {
+        if (page === 'org-home') {
+          return React.createElement(SurfaceBlock, { testId: 'org-home-surface' },
+            React.createElement('div', { 'data-testid': 'org-home' },
+              React.createElement(Typography.Title, { level: 4 }, t.navOrg),
+              uiState === 'empty'
+                ? React.createElement(Empty, { description: locale === 'vi' ? 'Chưa có số liệu tổ chức.' : 'No organization metrics yet.' })
+                : React.createElement(Row, { gutter: 16 },
+                  React.createElement(Col, { span: 12 }, React.createElement(Card, null, React.createElement(Statistic, { title: locale === 'vi' ? 'Sự kiện' : 'Events', value: 3 }))),
+                  React.createElement(Col, { span: 12 }, React.createElement(Card, null, React.createElement(Statistic, { title: locale === 'vi' ? 'Thành viên' : 'Members', value: 12 })))
+                )
+            )
+          );
+        }
+        if (page === 'org-events') {
+          return React.createElement(SurfaceBlock, { testId: 'org-events-surface' },
+            React.createElement(Card, { title: t.orgEventsTitle, 'data-testid': 'org-events' },
+              uiState === 'empty'
+                ? React.createElement(Empty, { description: locale === 'vi' ? 'Chưa có sự kiện.' : 'No events yet.' })
+                : React.createElement(Table, {
+                  size: 'small',
+                  pagination: false,
+                  columns: [{ title: locale === 'vi' ? 'Tên' : 'Name', dataIndex: 'n' }, { title: locale === 'vi' ? 'Trạng thái' : 'Status', dataIndex: 's' }],
+                  dataSource: [{ key: 1, n: eventLabel, s: locale === 'vi' ? 'Đang chuẩn bị' : 'Preparing' }],
+                })
+            )
+          );
+        }
+        if (page === 'event-home') {
+          return React.createElement(SurfaceBlock, { testId: 'event-home-surface' },
+            React.createElement('div', { 'data-testid': 'event-home' },
+              React.createElement(Typography.Title, { level: 4 }, t.navEventHome),
+              React.createElement(Typography.Text, null,
+                t.reportAt, ': ',
+                React.createElement('strong', { 'data-testid': 'pa04-formatted-instant' }, formatted),
+                React.createElement('span', { className: 'utc-badge' }, 'UTC')
+              ),
+              React.createElement('div', { style: { marginTop: 16 } },
+                React.createElement(Tag, { color: 'blue' }, locale === 'vi' ? 'Sẵn sàng phát hành (fixture)' : 'Ready to publish (fixture)')
+              )
+            )
+          );
+        }
+        if (page === 'setup') {
+          return React.createElement(SurfaceBlock, { testId: 'setup-surface' },
+            React.createElement(Card, { title: t.setupTitle, 'data-testid': 'event-setup' },
+              React.createElement(Typography.Paragraph, null, t.setupDesc),
+              React.createElement(Space, { wrap: true },
+                React.createElement(Tag, null, locale === 'vi' ? 'Loại vé' : 'Ticket types'),
+                React.createElement(Tag, null, locale === 'vi' ? 'Nguồn mã' : 'Code sources'),
+                React.createElement(Tag, null, locale === 'vi' ? 'Hạn mức' : 'Quota'),
+                React.createElement(Tag, null, locale === 'vi' ? 'Phát hành cấu hình' : 'Publish config')
+              )
+            )
+          );
+        }
+        if (page === 'guests') return GuestsPanel();
+        if (page === 'members') {
+          return React.createElement(SurfaceBlock, { testId: 'members-surface' },
+            React.createElement(Card, { title: t.navMembers, 'data-testid': 'members-page' },
+              uiState === 'empty'
+                ? React.createElement(Empty, { description: locale === 'vi' ? 'Chưa có thành viên.' : 'No members yet.' })
+                : React.createElement(Table, {
+                  size: 'small',
+                  pagination: false,
+                  columns: [{ title: 'Email', dataIndex: 'e' }, { title: locale === 'vi' ? 'Vai trò' : 'Role', dataIndex: 'r' }],
+                  dataSource: [{ key: 1, e: 'owner@fixture.vemoki', r: 'Owner' }],
+                })
+            )
+          );
+        }
+        if (page === 'settings') {
+          return React.createElement(SurfaceBlock, { testId: 'settings-surface' },
+            React.createElement(Card, { title: t.navSettings, 'data-testid': 'settings-page' },
+              React.createElement(Typography.Paragraph, { type: 'secondary' }, locale === 'vi' ? 'Brand tổ chức (fixture)' : 'Organization brand (fixture)')
+            )
+          );
+        }
+        if (page === 'gate') {
+          return React.createElement(SurfaceBlock, { testId: 'gate-surface' },
+            React.createElement(Card, { title: t.navGate, 'data-testid': 'gate-report' },
+              React.createElement(Typography.Text, null, t.reportAt, ': ', React.createElement('strong', { 'data-testid': 'pa04-formatted-instant' }, formatted), React.createElement('span', { className: 'utc-badge' }, 'UTC')),
+              React.createElement(Alert, { style: { marginTop: 12 }, type: 'info', showIcon: true, message: locale === 'vi' ? 'Cổng quét trên app Vemoki (fixture GATE-STAY-APP)' : 'Gate scan stays on Vemoki app (fixture GATE-STAY-APP)' })
+            )
+          );
+        }
+        if (page === 'audit') {
+          return React.createElement(SurfaceBlock, { testId: 'audit-surface' }, AuditFixture());
+        }
+        if (page === 'support') {
+          return React.createElement(SurfaceBlock, { testId: 'support-surface' },
+            React.createElement(Card, { title: t.navSupport, 'data-testid': 'support-page' },
+              React.createElement('label', { id: 'cs-lbl', style: { fontSize: 12 } }, locale === 'vi' ? 'Mã vé hoặc mã yêu cầu' : 'Ticket or request ID'),
+              React.createElement(Input, { 'aria-labelledby': 'cs-lbl', placeholder: locale === 'vi' ? 'Nhập mã (fixture UUID)' : 'Enter ID (fixture UUID)', style: { marginTop: 8, maxWidth: 360 } })
+            )
+          );
+        }
+        if (page === 'platform') {
+          return React.createElement(SurfaceBlock, { testId: 'platform-surface' }, PlatformFixture());
+        }
+        if (page === 'operator-auth') {
+          return React.createElement(Result, {
+            title: t.operatorMfa,
+            subTitle: t.operatorMfaHint,
+            extra: React.createElement(Button, { type: 'primary', disabled: true }, locale === 'vi' ? 'Xác thực (mock)' : 'Verify (mock)'),
+          });
+        }
+        return null;
+      }
+
+      const siderItems = persona === 'operator'
+        ? [
+          navLink('platform', t.navPlatform),
+          navLink('operator-auth', t.operatorMfa),
+        ]
+        : [
+          React.createElement('div', { className: 'group', key: 'g1' }, locale === 'vi' ? 'Tổ chức' : 'Organization'),
+          navLink('org-home', t.navOrg),
+          navLink('org-events', t.navEvents),
+          navLink('members', t.navMembers),
+          navLink('settings', t.navSettings),
+          React.createElement('div', { className: 'group', key: 'g2' }, locale === 'vi' ? 'Vận hành sự kiện' : 'Event ops'),
+          navLink('event-home', t.navEventHome),
+          navLink('gate', t.navGate),
+          navLink('audit', t.navAudit),
+          navLink('support', t.navSupport),
+          React.createElement('div', { className: 'group', key: 'g3' }, locale === 'vi' ? 'Thiết lập' : 'Setup'),
+          navLink('setup', t.navSetup),
+          navLink('guests', t.navGuests),
+        ];
+
+      return React.createElement(
+        ConfigProvider,
+        { theme: { token: { colorPrimary: '#1677ff', borderRadius: 8, fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif' } } },
+        React.createElement('div', { 'data-testid': 'portal-full-root' },
+          React.createElement('div', { className: 'pd-banner' },
+            React.createElement('strong', null, 'PD demo'),
+            ' — ',
+            t.banner,
+            React.createElement('a', { className: 'link-header-specimen', href: 'header-specimen.html' }, '· PA-01 header-specimen')
+          ),
+          React.createElement('header', { className: 'shell-header', 'data-testid': 'portal-header-tier-a' },
+            React.createElement('button', { type: 'button', className: 'ant-btn ant-btn-text', 'aria-label': 'Menu' }, '☰'),
+            React.createElement('a', { href: '#', className: 'brand' }, t.brand),
+            React.createElement('div', { className: 'header-end' },
+              React.createElement(Dropdown, { menu: accountItems, trigger: ['click'] },
+                React.createElement(Button, { type: 'text', 'data-testid': 'account-menu' }, t.menu)
+              )
+            )
+          ),
+          React.createElement('div', { className: 'context-strip', 'data-testid': 'portal-context-strip' },
+            React.createElement('div', { className: 'row' },
+              React.createElement('div', { className: 'field' },
+                React.createElement('label', { id: 'tenant-label' }, t.tenantLabel),
+                React.createElement(Select, { 'aria-labelledby': 'tenant-label', defaultValue: 't1', options: [{ value: 't1', label: tenantLabel }] })
+              ),
+              React.createElement('div', { className: 'field' },
+                React.createElement('label', { id: 'event-label' }, t.eventLabel),
+                React.createElement(Select, { 'aria-labelledby': 'event-label', defaultValue: 'e1', options: [{ value: 'e1', label: eventLabel }] })
+              ),
+              React.createElement('div', { className: 'scan-hint' }, t.scanHint)
+            )
+          ),
+          React.createElement('div', { className: 'portal-layout' },
+            React.createElement('nav', { className: 'portal-sider', 'data-testid': 'portal-sider' }, siderItems),
+            React.createElement('main', { className: 'portal-main', id: 'portal-main' },
+              React.createElement('div', { className: 'demo-meta', 'data-testid': 'demo-meta' },
+                t.viewport + ': ' + vw + ' · locale=' + locale + ' · page=' + page
+                + (page === 'guests' ? ' · tab=' + tab : '')
+                + (page === 'audit' ? ' · auditTab=' + auditTab : '')
+                + (page === 'platform' ? ' · platformTab=' + platformTab : '')
+                + ' · state=' + uiState + ' · persona=' + persona + (useLongLabels ? ' · long=1' : '')
+              ),
+              React.createElement(Space, { className: 'preset-bar', wrap: true },
+                React.createElement(Button, { size: 'small', type: locale === 'vi' ? 'primary' : 'default', onClick: () => setLocale('vi') }, 'VI'),
+                React.createElement(Button, { size: 'small', type: locale === 'en' ? 'primary' : 'default', onClick: () => setLocale('en') }, 'EN'),
+                React.createElement(Button, { size: 'small', type: persona === 'owner' ? 'primary' : 'default', onClick: () => { setPersona('owner'); setPage('guests'); } }, 'owner'),
+                React.createElement(Button, { size: 'small', type: persona === 'operator' ? 'primary' : 'default', onClick: () => { setPersona('operator'); setPage('platform'); } }, 'operator'),
+                ...PAGES.map((p) => React.createElement(Button, { key: p, size: 'small', type: page === p ? 'primary' : 'default', onClick: () => setPage(p) }, p)),
+                ...STATES.map((s) => React.createElement(Button, { key: s, size: 'small', type: uiState === s ? 'dashed' : 'default', onClick: () => setUiState(s) }, s))
+              ),
+              React.createElement('div', { className: 'mobile-nav' },
+                siderItems.filter((x) => x && x.type === 'a').map((link) => link)
+              ),
+              MainContent()
+            )
+          )
+        )
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
+  </script>
+</body>
+</html>

@@ -1,0 +1,42 @@
+{
+  "auditTab": null,
+  "locale": "en",
+  "metaText": "Viewport: 390\u00d7844 \u00b7 locale=en \u00b7 page=event-home \u00b7 state=ready \u00b7 persona=owner",
+  "mrR08": {
+    "auditPage": false,
+    "auditTab": null,
+    "auditTableVisible": false,
+    "codesTableVisible": false,
+    "platformGrantsVisible": false
+  },
+  "pa03": {
+    "catalogVisible": false,
+    "expectCatalogOnlyOnImport": true
+  },
+  "pa04": {
+    "formatted": "15 Jul 2026, 14:30",
+    "hasUtcSibling": true
+  },
+  "pa05": {
+    "exportAriaLabel": null,
+    "exportAriaNotFieldId": false
+  },
+  "pa06": {
+    "rmMedia": false,
+    "rmQueryClass": false,
+    "spinnerAnim": null
+  },
+  "page": "event-home",
+  "platformTab": null,
+  "state": "ready",
+  "tab": null,
+  "viewport": {
+    "h": 844,
+    "w": 390
+  },
+  "pngPixels": {
+    "w": 390,
+    "h": 844
+  },
+  "viewportMatch": true
+}

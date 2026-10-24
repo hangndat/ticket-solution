@@ -1,0 +1,64 @@
+{
+  "baseReviewSha": "b2faa48a1ce443c8fc6c849cb74a06a57f8b0c37",
+  "pack": "MR-FIX1-WEB-2026-10-23",
+  "issue": 859,
+  "dirty": true,
+  "sources": [
+    {
+      "path": "docs/design/ui-uplift-2026-10/marketing/index.html",
+      "sha256": "d490f1b17c524bd9401d620a522efb373834c34df084441e806ca011bedafa21"
+    },
+    {
+      "path": "docs/design/ui-uplift-2026-10/marketing/js/marketing.js",
+      "sha256": "dcbee7739ffd87a15e6ea7cbe148ab5973a9d4fbcf07901c205ed844aacd07a2"
+    },
+    {
+      "path": "docs/design/ui-uplift-2026-10/marketing/css/marketing.css",
+      "sha256": "d89f11f27de4fc04af751fd66d15d5c0f86c59266fd71da822d16f139af520d4"
+    },
+    {
+      "path": "docs/design/ui-uplift-2026-10/app/index.html",
+      "sha256": "2db818b7ce0d58533004e45b7ff5d5292ac4da7294cb8232c9d6e01b1fa06fc4"
+    },
+    {
+      "path": "docs/design/ui-framework-2026-10/prototype/sheet-nav-loader.mjs",
+      "sha256": "9af75612beaf74272f6c4ff4ca8032dac9110c76dcd299c2032e7dbf06e419bc"
+    },
+    {
+      "path": "docs/design/ui-framework-2026-10/prototype/sheet-nav-radix.mjs",
+      "sha256": "3793b4486ee362d18740a795ad91c69846eff2438322791d12f9fecd02f3e53c"
+    }
+  ],
+  "evidence": [
+    {
+      "file": "app-redeem-terms-390-en.png",
+      "viewport": "390x844",
+      "locale": "en",
+      "innerWidth": 390,
+      "dpr": 1,
+      "bytes": 110866,
+      "h1": "Confirm terms"
+    },
+    {
+      "file": "marketing-desktop-1280-en.png",
+      "viewport": "1280x900",
+      "locale": "en",
+      "innerWidth": 1280,
+      "frameWidth": 1240,
+      "dpr": 1,
+      "bytes": 297937
+    },
+    {
+      "file": "marketing-mobile-390-en.png",
+      "viewport": "390x844",
+      "locale": "en",
+      "bytes": 113742
+    },
+    {
+      "file": "app-mobile-390-vi-sheet.png",
+      "viewport": "390x844",
+      "locale": "vi",
+      "bytes": 160893
+    }
+  ]
+}

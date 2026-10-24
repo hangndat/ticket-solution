@@ -1,0 +1,27 @@
+{
+  "task": "MR-IDX",
+  "fixRound": "2/2",
+  "baseSha": "b2faa48a1ce443c8fc6c849cb74a06a57f8b0c37",
+  "manifestPath": "docs/design/current-mockups-2026-10-23/source-manifest.json",
+  "capture": {
+    "finding": "MR-R02",
+    "viewport": { "width": 390, "height": 844 },
+    "devicePixelRatio": 1,
+    "innerWidth": 390,
+    "innerHeight": 844,
+    "locale": "vi",
+    "url": "http://127.0.0.1:57277/design/o13-platform-sales/prototype/index.html",
+    "screenshot": "o13-index-superseded-banner-390.png",
+    "sidecar": "o13-index-superseded-banner-390.json",
+    "pngPixels": "390x844"
+  },
+  "canonicalSha256": {
+    "A-MKT-01": "cc9444ba1001dd5b27c3d25a1d0bb0c01945c074e42add25781f207c4091f9f0",
+    "A-MKT-02": "b16e54a390eba5ba5e0470a08061ee5eabef54619690ef00845361259d0b82c2",
+    "A-APP-01": "627f4df5e9c0af3ba8f22a36fabb9ee66aaa4c324317aca4c56f9e7fff230821",
+    "A-IOS-01": "f5570df3f00439601de2a6e757d08ff7a1cd2c8fdf4425f7eab89a464101d19e",
+    "A-POR-01": "16f42847eb773922fa5d3facab5662d01eeaede6628d604190b66ac891eb73f6",
+    "A-REF-01": "3cede4da8e271901dda6c878a575464bb162d4ed10c73c359a214894c928a493",
+    "tokens.json": "ec8e827db5cccbf54c12e0215eacf1cc35ddeab632765830ad47d8e476806127"
+  }
+}
