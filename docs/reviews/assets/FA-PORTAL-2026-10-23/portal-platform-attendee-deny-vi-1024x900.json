@@ -1,0 +1,22 @@
+{
+  "sha": "b2faa48a1ce443c8fc6c849cb74a06a57f8b0c37",
+  "png": "portal-platform-attendee-deny-vi-1024x900.png",
+  "viewportTarget": {
+    "w": 1024,
+    "h": 900
+  },
+  "measured": {
+    "innerHeight": 900,
+    "innerWidth": 1024
+  },
+  "viewportMatch": true,
+  "journey": "attendee-platform-oidc-no-operator",
+  "probe": {
+    "attendeePlatform": {
+      "denied": true,
+      "grants": false,
+      "operator": false,
+      "platformStatus": 200
+    }
+  }
+}
