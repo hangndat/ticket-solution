@@ -132,7 +132,6 @@ export type CopyKey =
   | 'demo.title'
   | 'demo.lead'
   | 'demo.cta'
-  | 'demo.banner'
   | 'interest.title'
   | 'interest.lead'
   | 'interest.name'
@@ -165,6 +164,7 @@ export type CopyKey =
   | 'interest.consent'
   | 'interest.consent.before'
   | 'interest.submit'
+  | 'interest.secondary_demo'
   | 'interest.sending'
   | 'interest.retry'
   | 'interest.success.title'
@@ -176,9 +176,6 @@ export type CopyKey =
   | 'interest.error.org'
   | 'interest.error.role'
   | 'interest.error.consent'
-  | 'cta.repeat.title'
-  | 'cta.repeat.demo'
-  | 'cta.repeat.interest'
   | 'privacy.title'
   | 'privacy.updated'
   | 'privacy.intro'
@@ -232,7 +229,7 @@ const VI: Record<CopyKey, string> = {
   'badge.demo': 'Demo giả lập',
   'footer.attendee': 'Bạn có mã mời? Đổi vé trên ứng dụng',
   'footer.tagline': 'vemoki↗ · Event Operating System',
-  'hero.eyebrow': 'Hệ điều hành sự kiện trực tiếp',
+  'hero.eyebrow': 'Dành cho nhà tổ chức sự kiện',
   'hero.headline':
     'Vận hành sự kiện từ mã mời đến cổng — trên một hệ điều hành',
   'hero.sub':
@@ -371,11 +368,10 @@ const VI: Record<CopyKey, string> = {
   'outcomes.chart.caption':
     'Biểu đồ minh họa luồng vào cổng theo giờ — dữ liệu giả lập.',
   'faq.title': 'Câu hỏi thường gặp',
-  'demo.title': 'Dùng thử bản demo giả lập',
+  'demo.title': 'Khám phá bản demo',
   'demo.lead':
-    'Mọi demo hiện nay là fixture để xem sản phẩm — không phải case study khách hàng.',
+    'Dữ liệu minh họa để trải nghiệm sản phẩm, không phải sự kiện hay khách hàng thật.',
   'demo.cta': 'Mở demo trên ứng dụng',
-  'demo.banner': 'Demo giả lập · không dùng làm bằng chứng khách thật',
   'interest.title': 'Đăng ký quan tâm',
   'interest.lead':
     'Để lại thông tin — chúng tôi liên hệ về demo hoặc onboarding. Không thanh toán trên form này.',
@@ -409,6 +405,7 @@ const VI: Record<CopyKey, string> = {
   'interest.consent': 'Tôi đồng ý được liên hệ về Vemoki. Xem Quyền riêng tư.',
   'interest.consent.before': 'Tôi đồng ý được liên hệ về Vemoki. Xem',
   'interest.submit': 'Gửi đăng ký',
+  'interest.secondary_demo': 'Hoặc xem demo',
   'interest.sending': 'Đang gửi…',
   'interest.retry': 'Thử lại',
   'interest.success.title': 'Đã nhận đăng ký',
@@ -422,9 +419,6 @@ const VI: Record<CopyKey, string> = {
   'interest.error.org': 'Nhập tổ chức',
   'interest.error.role': 'Chọn vai trò',
   'interest.error.consent': 'Cần đồng ý để chúng tôi liên hệ',
-  'cta.repeat.title': 'Sẵn sàng xem vận hành thật?',
-  'cta.repeat.demo': 'Xem demo',
-  'cta.repeat.interest': 'Đăng ký quan tâm',
   'privacy.title': 'Quyền riêng tư',
   'privacy.updated': 'Cập nhật: 2026-10-18',
   'privacy.intro':
@@ -489,7 +483,7 @@ const EN: Record<CopyKey, string> = {
   'badge.demo': 'Simulated demo',
   'footer.attendee': 'Have an invite code? Redeem on the app',
   'footer.tagline': 'vemoki↗ · Event Operating System',
-  'hero.eyebrow': 'In-person event operating system',
+  'hero.eyebrow': 'For event organizers',
   'hero.headline':
     'Run events from invite to gate — on one operating system',
   'hero.sub':
@@ -628,11 +622,10 @@ const EN: Record<CopyKey, string> = {
   'outcomes.chart.caption':
     'Illustrative hourly entry chart — simulated data.',
   'faq.title': 'Frequently asked questions',
-  'demo.title': 'Try the simulated demo',
+  'demo.title': 'Explore the demo',
   'demo.lead':
-    'Every current demo is a fixture to explore the product — not a customer case study.',
+    'Try the product with sample data, not real events or customers.',
   'demo.cta': 'Open demo in the app',
-  'demo.banner': 'Simulated demo · not proof of real customers',
   'interest.title': 'Register your interest',
   'interest.lead':
     'Leave your details — we’ll follow up about a demo or onboarding. No payment on this form.',
@@ -667,6 +660,7 @@ const EN: Record<CopyKey, string> = {
     'I agree to be contacted about Vemoki. See Privacy.',
   'interest.consent.before': 'I agree to be contacted about Vemoki. See',
   'interest.submit': 'Submit',
+  'interest.secondary_demo': 'Or view demo',
   'interest.sending': 'Sending…',
   'interest.retry': 'Try again',
   'interest.success.title': 'Interest received',
@@ -680,9 +674,6 @@ const EN: Record<CopyKey, string> = {
   'interest.error.org': 'Enter your organization',
   'interest.error.role': 'Select a role',
   'interest.error.consent': 'Consent required to contact you',
-  'cta.repeat.title': 'Ready to see real ops?',
-  'cta.repeat.demo': 'View demo',
-  'cta.repeat.interest': 'Register interest',
   'privacy.title': 'Privacy',
   'privacy.updated': 'Updated: 2026-10-18',
   'privacy.intro':

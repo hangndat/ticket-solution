@@ -48,21 +48,12 @@ export const redeemGateCard = cn(
   '[&_p]:m-0 [&_p]:mb-4 [&_p]:leading-[1.6] [&_p]:text-muted',
 );
 
-export const redeemGateIllustration = cn(
-  'mb-4 grid h-14 w-14 place-items-center rounded-[14px] border text-2xl',
-  'border-[color-mix(in_srgb,var(--color-focus)_35%,var(--color-line))]',
-  'bg-gradient-to-br from-[color-mix(in_srgb,var(--color-focus)_8%,white)] to-[color-mix(in_srgb,var(--color-focus)_4%,var(--color-paper))]',
-  'text-[color-mix(in_srgb,var(--color-focus)_88%,var(--color-ink))]',
-);
-
 export const redeemGateActions = 'grid gap-3 [&_a]:w-full [&_a]:text-center';
 
 export const redeemFormCard = cn(
   'mt-8 rounded-lg border border-line bg-white p-6 shadow-[0_1px_0_color-mix(in_srgb,var(--color-ink)_4%,transparent)]',
   'max-[480px]:p-5',
 );
-
-export const redeemFooterLinks = 'mt-8 text-[0.95rem]';
 
 const devFormFieldChrome = cn(
   '[&_label]:grid [&_label]:gap-1.5 [&_label]:text-sm [&_label]:font-bold',
