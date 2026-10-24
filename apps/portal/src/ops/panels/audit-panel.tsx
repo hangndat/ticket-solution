@@ -70,7 +70,12 @@ export function AuditPanel({ tenantId, eventId }: Props) {
   }, [load]);
 
   return (
-    <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+    <Space
+      direction="vertical"
+      size="middle"
+      style={{ width: '100%' }}
+      data-testid="audit-log-panel"
+    >
       <Alert
         type="info"
         showIcon

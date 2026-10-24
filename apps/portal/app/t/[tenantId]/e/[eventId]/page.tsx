@@ -363,9 +363,17 @@ export default function EventOverviewPage() {
           title={t('gate.reportQuickTitle')}
           subTitle={
             shownReport.asOf
-              ? t('analytics.asOfTag', {
-                  asOf: formatReportAsOf(shownReport.asOf, locale),
-                })
+              ? (
+                  <>
+                    {t('analytics.asOfTag', { asOf: '' }).trimEnd()}
+                    {' '}
+                    <strong data-testid="pa04-formatted-instant">
+                      {formatReportAsOf(shownReport.asOf, locale)}
+                    </strong>
+                    {' '}
+                    <span className="utc-badge">UTC</span>
+                  </>
+                )
               : undefined
           }
           style={{ marginBottom: 16 }}
