@@ -1,4 +1,5 @@
 import { cn } from '../lib/utils';
+import { attendeeProductAtmosphere } from './attendee-surface';
 
 /**
  * Attendee detail routes (event / ticket / wallet) — Tailwind v4, replaces legacy + module.css.
@@ -32,11 +33,13 @@ export const attendeeDetailMain = cn(
 );
 
 export const attendeeTicketMain = cn(
+  attendeeProductAtmosphere,
   attendeeDetailMain,
   'max-w-[40rem]',
 );
 
 export const attendeeEventPage = cn(
+  attendeeProductAtmosphere,
   'pb-12 text-[currentColor]',
   '[&_nav]:border-[currentColor] [&_.wordmark]:text-[1.35rem]',
 );
@@ -173,9 +176,15 @@ export const attendeeTicketMetaList = cn(
   'm-0 grid gap-3 p-0',
   '[&>div]:grid [&>div]:gap-1 [&>div]:rounded-sm [&>div]:border [&>div]:border-[color-mix(in_srgb,var(--color-line)_90%,transparent)]',
   '[&>div]:bg-[color-mix(in_srgb,var(--color-paper)_92%,var(--color-focus)_8%)] [&>div]:px-3.5 [&>div]:py-3',
-  '[&_dt]:text-[0.68rem] [&_dt]:font-bold [&_dt]:uppercase [&_dt]:tracking-[0.08em] [&_dt]:text-muted',
+  '[&_dt]:text-[0.75rem] [&_dt]:font-bold [&_dt]:uppercase [&_dt]:tracking-[0.08em] [&_dt]:text-muted',
   '[&_dd]:m-0 [&_dd]:text-[0.95rem] [&_dd]:font-semibold',
   '[&_code]:font-mono [&_code]:text-[0.92rem] [&_code]:tracking-[0.04em]',
+);
+
+export const attendeeTicketOfflineBanner = cn(
+  'm-0 rounded-md border border-[color-mix(in_srgb,var(--color-unknown)_35%,var(--color-line))]',
+  'bg-[color-mix(in_srgb,var(--color-unknown)_10%,var(--color-paper))] px-4 py-3',
+  'text-[0.8rem] font-semibold leading-[1.5] text-[color-mix(in_srgb,var(--color-ink)_75%,var(--color-muted))]',
 );
 
 export const attendeeTicketNoticeBase = 'my-4 border-2 px-5 py-4';
@@ -218,7 +227,11 @@ export function attendeeTicketStateTag(state: string): string {
 }
 
 /** Wallet */
-export const attendeeWalletPage = cn(attendeeDetailMain, 'pb-10 [--brand:var(--color-signal)]');
+export const attendeeWalletPage = cn(
+  attendeeProductAtmosphere,
+  attendeeDetailMain,
+  'pb-10 [--brand:var(--color-signal)]',
+);
 
 export const attendeeWalletHeading = cn(
   'my-7 mb-[22px] flex flex-wrap items-end justify-between gap-5 max-md:mt-[22px] max-md:flex-col max-md:items-start',
@@ -281,8 +294,8 @@ export const attendeeWalletTicketTitle = cn(
 );
 
 export const attendeeWalletTicketMeta = cn(
-  'm-0 text-[0.88rem] leading-[1.5] text-muted',
-  '[&_code]:font-mono [&_code]:text-[0.92em] [&_code]:font-semibold [&_code]:tracking-[0.04em] [&_code]:text-ink',
+  'm-0 text-[0.8rem] leading-[1.5] text-muted',
+  '[&_code]:font-mono [&_code]:text-[0.95em] [&_code]:font-semibold [&_code]:tracking-[0.04em] [&_code]:text-ink',
 );
 
 export const attendeeWalletTicketFoot = cn(

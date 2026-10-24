@@ -13,7 +13,7 @@ import {
   ticketStateTagClass,
 } from '../../../../../../src/owner-ticket';
 import { buildDisplayQrPayload } from '../../../../../../src/owner-ticket/display-payload';
-import { TicketQr } from '../../../../../../src/owner-ticket/ticket-qr';
+import { OwnerTicketQrPanel } from '../../../../../../src/owner-ticket/owner-ticket-qr-panel';
 import {
   attendeeTicketBackLink,
   attendeeTicketBread,
@@ -25,8 +25,6 @@ import {
   attendeeTicketMetaList,
   attendeeTicketNoticeError,
   attendeeTicketNoticeUnknown,
-  attendeeTicketQrCaption,
-  attendeeTicketQrPanel,
   attendeeTicketTitle,
 } from '../../../../../../src/attendee-detail-surface';
 import { attendeeAuthButtons } from '../../../../../../src/attendee-surface';
@@ -167,11 +165,25 @@ export default async function OwnerTicketPage({ params, searchParams }: Props) {
     );
   }
 
-  if (
-    result.status === 'not-found' ||
-    result.status === 'forbidden' ||
-    result.status === 'invalid'
-  ) {
+  if (result.status === 'forbidden') {
+    return (
+      <TicketStateShell testId="owner-ticket-forbidden">
+        <SurfaceState
+          kind="empty"
+          title={OWNER_TICKET_COPY.forbidden.title}
+          detail={OWNER_TICKET_COPY.forbidden.detail}
+          testId="owner-ticket-forbidden-state"
+          action={
+            <Button asChild variant="brand">
+              <Link href="/wallet">Vé của tôi</Link>
+            </Button>
+          }
+        />
+      </TicketStateShell>
+    );
+  }
+
+  if (result.status === 'not-found' || result.status === 'invalid') {
     return (
       <TicketStateShell testId="owner-ticket-missing">
         <SurfaceState
@@ -251,10 +263,13 @@ export default async function OwnerTicketPage({ params, searchParams }: Props) {
             </aside>
           ) : null}
 
-          <figure className={attendeeTicketQrPanel} data-testid="owner-ticket-qr-figure">
-            <TicketQr value={qrPayload} label={qrLabel} />
-            <figcaption className={attendeeTicketQrCaption}>{qrLabel}</figcaption>
-          </figure>
+          <OwnerTicketQrPanel
+            tenantId={ticket.tenantId}
+            ticketId={ticket.ticketId}
+            state={ticket.state}
+            qrPayload={qrPayload}
+            qrLabel={qrLabel}
+          />
 
           <dl className={attendeeTicketMetaList} data-testid="owner-ticket-detail">
             <div>
