@@ -120,6 +120,7 @@ test('presentRedeemDecision stale asks reload + reconsent', () => {
 test('attendeeWalletCopy avoids Keycloak / Nest on guest chrome', () => {
   assert.doesNotMatch(attendeeWalletCopy.signedOutBody, /Keycloak|Nest|BFF|\/v1\//i);
   assert.match(attendeeWalletCopy.offlineBannerTitle, /vé đã lưu/i);
+  assert.match(attendeeWalletCopy.offlineBannerBody, /chưa cập nhật/i);
   assert.match(attendeeWalletCopy.viewTicketCta, /QR/);
 });
 

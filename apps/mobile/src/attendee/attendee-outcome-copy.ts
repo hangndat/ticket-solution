@@ -193,9 +193,8 @@ export const attendeeWalletCopy = {
   signedOutTitle: 'Vé của tôi',
   signedOutBody:
     'Đăng nhập cùng tài khoản với web để xem vé. Vé chỉ hiện sau khi phiên được xác minh.',
-  offlineBannerTitle: 'Đang xem vé đã lưu',
-  offlineBannerBody:
-    'Chưa có mạng — chỉ hiển thị vé trên máy. Cập nhật khi có kết nối.',
+  offlineBannerTitle: 'Bản vé đã lưu',
+  offlineBannerBody: 'Trạng thái có thể chưa cập nhật',
   viewTicketCta: 'Xem vé & mã QR →',
   verifiedCaption: 'Vé đã xác minh',
   detailOnlyDisplay:

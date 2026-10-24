@@ -10,6 +10,7 @@ import {
   AccountGroupedSection
 } from '@/components/account-grouped-section';
 import { Notice, Page } from '@/components/page';
+import { ScreenAtmosphere } from '@/components/screen-atmosphere';
 import { accountCopy } from '@/components/screen-state-copy';
 import { brand, colors } from '@/theme/colors';
 import { typography } from '@/theme/typography';
@@ -289,9 +290,10 @@ function ConfiguredAccount({
 
   return (
     <>
+      <ScreenAtmosphere>
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
-        style={{ flex: 1, backgroundColor: brand.paper }}
+        style={{ flex: 1, backgroundColor: 'transparent' }}
         contentContainerStyle={{ padding: space.xl, paddingBottom: tabBarInset, gap: space.xl }}
       >
         <AccountGroupedSection title={accountCopy.sections.you}>
@@ -401,6 +403,7 @@ function ConfiguredAccount({
           />
         ) : null}
       </ScrollView>
+      </ScreenAtmosphere>
       {presentation === 'tab' ? (
         <TabStackTitle title={accountCopy.screenTitle} large={true} />
       ) : null}
