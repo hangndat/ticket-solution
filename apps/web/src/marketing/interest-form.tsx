@@ -13,6 +13,7 @@ import { t, type CopyKey } from './copy';
 import type { MarketingLocale } from './hosts';
 import { privacyHref } from './links';
 import { trackLeadSubmitted } from './analytics/client';
+import { controlClass } from '../ui/control-classes';
 import {
   validateInterest,
   type InterestFieldError,
@@ -210,6 +211,7 @@ export function InterestForm({
           required
           disabled={busy}
           defaultValue=""
+          className={controlClass(Boolean(fieldErrors.role))}
           aria-invalid={fieldErrors.role ? true : undefined}
           aria-describedby={
             fieldErrors.role ? `${formId}-err-role` : undefined
@@ -236,6 +238,7 @@ export function InterestForm({
           name="org_kind"
           disabled={busy}
           defaultValue=""
+          className={controlClass()}
         >
           <option value="">{t(locale, 'interest.org_kind.placeholder')}</option>
           <option value="agency">
@@ -261,6 +264,7 @@ export function InterestForm({
           name="events_per_year"
           disabled={busy}
           defaultValue=""
+          className={controlClass()}
         >
           <option value="">
             {t(locale, 'interest.events_per_year.placeholder')}
@@ -285,6 +289,7 @@ export function InterestForm({
           name="typical_scale"
           disabled={busy}
           defaultValue=""
+          className={controlClass()}
         >
           <option value="">
             {t(locale, 'interest.typical_scale.placeholder')}
@@ -309,7 +314,9 @@ export function InterestForm({
         <textarea
           id={`${formId}-note`}
           name="note"
+          rows={4}
           disabled={busy}
+          className={`${controlClass()} min-h-24 resize-y py-2.5`}
         />
       </div>
 

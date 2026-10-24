@@ -56,7 +56,10 @@ export type CopyKey =
   | 'hero.cta.demo'
   | 'hero.cta.interest'
   | 'hero.cta.login'
+  | 'hero.login_prefix'
   | 'hero.demo_note'
+  | 'hero.media.alt'
+  | 'hero.media.caption'
   | 'audience.title'
   | 'audience.lead'
   | 'audience.owner.title'
@@ -230,10 +233,9 @@ const VI: Record<CopyKey, string> = {
   'footer.attendee': 'Bạn có mã mời? Đổi vé trên ứng dụng',
   'footer.tagline': 'vemoki↗ · Event Operating System',
   'hero.eyebrow': 'Dành cho nhà tổ chức sự kiện',
-  'hero.headline':
-    'Vận hành sự kiện từ mã mời đến cổng — trên một hệ điều hành',
+  'hero.headline': 'Vận hành sự kiện từ mã mời đến cổng.',
   'hero.sub':
-    'Multi-tenant cho agency và doanh nghiệp sự kiện. Khách thấy thương hiệu của bạn; cổng có audit, không phụ thuộc marketplace.',
+    'Phát mã mời, quản lý vé và kiểm soát cổng trong cùng một hệ thống. Khách tham dự nhìn thấy thương hiệu của bạn.',
   'hero.proof1': 'Mã mời → đổi vé → QR ký theo sự kiện',
   'hero.proof2': 'Cổng chống trùng + audit',
   'hero.proof3': 'Tách tenant + RLS + deny-by-default',
@@ -259,10 +261,13 @@ const VI: Record<CopyKey, string> = {
   'hero.preview.gate.event': 'Sự kiện: MFest (fixture)',
   'hero.preview.phone.meta': 'Vé phổ thông · Cổng A',
   'hero.marquee': 'EOS · Invite → QR → Gate ·',
-  'hero.cta.demo': 'Xem demo',
+  'hero.cta.demo': 'Xem sản phẩm',
   'hero.cta.interest': 'Đăng ký quan tâm',
   'hero.cta.login': 'Đăng nhập',
+  'hero.login_prefix': 'Đã có tài khoản?',
   'hero.demo_note': 'Demo giả lập — không phải khách hàng thật.',
+  'hero.media.alt': 'Ảnh chụp trang Khám phá Vemoki với các sự kiện demo',
+  'hero.media.caption': 'Trang Khám phá · ảnh chụp sản phẩm thật, dữ liệu demo',
   'audience.title': 'Ai dùng Vemoki',
   'audience.lead':
     'Trang này dành cho người mua vận hành sự kiện — không phải khách cầm vé.',
@@ -484,10 +489,9 @@ const EN: Record<CopyKey, string> = {
   'footer.attendee': 'Have an invite code? Redeem on the app',
   'footer.tagline': 'vemoki↗ · Event Operating System',
   'hero.eyebrow': 'For event organizers',
-  'hero.headline':
-    'Run events from invite to gate — on one operating system',
+  'hero.headline': 'Run events from invite to gate.',
   'hero.sub':
-    'Multi-tenant for agencies and enterprise event teams. Your brand for guests; audited gate — not a marketplace.',
+    'Send invites, manage tickets, and control the gate in one system. Guests see your brand.',
   'hero.proof1': 'Invite → redeem → event-scoped signed QR',
   'hero.proof2': 'Duplicate-safe gate + audit',
   'hero.proof3': 'Tenant isolation + RLS + deny-by-default',
@@ -513,10 +517,13 @@ const EN: Record<CopyKey, string> = {
   'hero.preview.gate.event': 'Event: MFest (fixture)',
   'hero.preview.phone.meta': 'General · Gate A',
   'hero.marquee': 'EOS · Invite → QR → Gate ·',
-  'hero.cta.demo': 'View demo',
+  'hero.cta.demo': 'Explore the product',
   'hero.cta.interest': 'Register interest',
   'hero.cta.login': 'Log in',
+  'hero.login_prefix': 'Already have an account?',
   'hero.demo_note': 'Simulated demo — not a real customer.',
+  'hero.media.alt': 'Screenshot of the Vemoki Discover page with demo events',
+  'hero.media.caption': 'Discover page · real product screenshot, demo data',
   'audience.title': 'Who Vemoki is for',
   'audience.lead':
     'This page is for event operators — not guests holding a ticket.',

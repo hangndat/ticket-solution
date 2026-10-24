@@ -117,8 +117,10 @@ export const attendeeHomeCatalogSearchInput = cn(
 export const attendeeHomeCatalogFilters = 'flex flex-wrap items-center gap-2';
 
 export const attendeeHomeCatalogEmpty = cn(
-  'rounded-2xl border border-solid border-line bg-paper shadow-[0_1px_2px_rgba(11,18,32,0.06)]',
+  'grid gap-3 rounded-2xl border border-solid border-line bg-paper p-[var(--spacing-2xl)] text-center shadow-[0_1px_2px_rgba(11,18,32,0.06)]',
 );
+
+export const attendeeHomeCatalogEmptyAction = 'flex justify-center';
 
 export const attendeeHomeCatalogGrid = cn(
   'grid grid-cols-1 gap-[22px] sm:grid-cols-2 xl:grid-cols-3',
