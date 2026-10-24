@@ -21,6 +21,7 @@ import {
   marketingWrap,
 } from './marketing-surface';
 import { privacyHref, salesHref, supportHref } from './links';
+import { MarketingNeonScope } from './marketing-neon-scope';
 
 export function MarketingChrome({
   locale,
@@ -40,10 +41,12 @@ export function MarketingChrome({
 
   return (
     <div
-      className={marketingSurface}
+      className={marketingSurface(onSales)}
       data-testid="marketing-surface"
       data-locale={locale}
+      data-marketing-neon={onSales ? '' : undefined}
     >
+      <MarketingNeonScope enabled={onSales} />
       <a className={marketingSkip} href="#main">
         {t(locale, 'skip')}
       </a>
