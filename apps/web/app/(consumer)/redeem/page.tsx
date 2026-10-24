@@ -1,14 +1,14 @@
 import { Button } from '@ticket/ui';
 import Link from 'next/link';
-import { authNoticeFromParam } from '../../src/oidc/auth-notice';
-import { isOidcConfigured, resolveWebAuthState } from '../../src/oidc/config';
-import { readSubject } from '../../src/oidc/cookies';
-import { loginHref } from '../../src/oidc/login-href';
-import { SiteNav } from '../../src/site-chrome';
+import { authNoticeFromParam } from '../../../src/oidc/auth-notice';
+import { isOidcConfigured, resolveWebAuthState } from '../../../src/oidc/config';
+import { readSubject } from '../../../src/oidc/cookies';
+import { loginHref } from '../../../src/oidc/login-href';
+import { ConsumerPageShell } from '../../../src/consumer-page-shell';
 import {
   globalRedeemEntryEnabled,
   isTenantBoundRedeemQuery,
-} from '../../src/redeem/global-entry';
+} from '../../../src/redeem/global-entry';
 import {
   authButtonsRow,
   redeemAuthNotice,
@@ -19,8 +19,8 @@ import {
   redeemLead,
   redeemNarrow,
   redeemPageMain,
-} from '../../src/redeem/redeem-surface';
-import { cn } from '../../lib/utils';
+} from '../../../src/redeem/redeem-surface';
+import { cn } from '../../../lib/utils';
 import { RedeemAuthGate } from './redeem-auth-gate';
 import { RedeemForm } from './redeem-form';
 
@@ -67,9 +67,7 @@ export default async function RedeemPage({ searchParams }: Props) {
   const signedIn = authState.authenticated;
 
   return (
-    <main id="main" className={redeemPageMain}>
-      <SiteNav />
-
+    <ConsumerPageShell mainClassName={redeemPageMain}>
       <div className={redeemNarrow}>
         <header className={redeemHeader}>
           <h1>Đổi mã lấy vé</h1>
@@ -144,6 +142,6 @@ export default async function RedeemPage({ searchParams }: Props) {
           <Link href="/">← Trang chủ</Link>
         </p>
       </div>
-    </main>
+    </ConsumerPageShell>
   );
 }

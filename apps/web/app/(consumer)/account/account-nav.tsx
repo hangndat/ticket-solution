@@ -6,7 +6,7 @@ import {
   accountNav,
   accountNavLink,
   accountNavLinkActive,
-} from '../../src/account/account-flow-surface';
+} from '../../../src/account/account-flow-surface';
 
 export type AccountNavSection = 'account' | 'privacy';
 

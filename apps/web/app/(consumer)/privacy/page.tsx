@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { accountBackLink } from '../../src/account/account-flow-surface';
+import { accountBackLink } from '../../../src/account/account-flow-surface';
 import { AccountShell } from '../account/account-shell';
 import { ProductPrivacyBody } from './privacy-body';
-import { t } from '../../src/marketing/copy';
+import { t } from '../../../src/marketing/copy';
 
 export const metadata: Metadata = {
   title: t('vi', 'privacy.title'),

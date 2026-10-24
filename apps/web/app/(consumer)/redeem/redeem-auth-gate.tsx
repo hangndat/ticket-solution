@@ -1,13 +1,13 @@
 import { Button } from '@ticket/ui';
 import Link from 'next/link';
-import { eyebrowKicker } from '../../src/guest/guest-flow-surface';
+import { eyebrowKicker } from '../../../src/guest/guest-flow-surface';
 import {
   authButtonsRow,
   redeemGateActions,
   redeemGateCard,
   redeemGateIllustration,
-} from '../../src/redeem/redeem-surface';
-import { cn } from '../../lib/utils';
+} from '../../../src/redeem/redeem-surface';
+import { cn } from '../../../lib/utils';
 
 type Props = {
   loginHref: string;
