@@ -2,7 +2,7 @@
 import { readFileSync, appendFileSync, mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 export const EVENT_TYPES = ['assigned', 'checkpoint', 'interrupted', 'recovered', 'handoff', 'reviewed', 'settled', 'released'];
@@ -41,6 +41,24 @@ export function validateEvent(event) {
   if (event.model !== null && (typeof event.model !== 'object' || Array.isArray(event.model))) throw Error('invalid_event_model');
   return event;
 }
+export function validateJournal(all) {
+  const ids = new Set(), owners = new Map();
+  for (const event of all) {
+    validateEvent(event);
+    if (ids.has(event.id)) throw Error('invalid_worklog');
+    ids.add(event.id);
+    const owner = owners.get(event.dispatchId);
+    if (owner && ['employeeId','runId','taskId'].some(key => owner[key] !== event[key])) throw Error('dispatch_identity_conflict');
+    owners.set(event.dispatchId, event);
+  }
+  // Check both directions so historical imports cannot hide a conflicting
+  // recovery merely by appending the previous dispatch later.
+  for (const event of all) {
+    const previous = owners.get(event.previousDispatchId);
+    if (previous && ['employeeId','runId','taskId'].some(key => previous[key] !== event[key])) throw Error('recovery_identity_conflict');
+  }
+  return all;
+}
 export function appendEvent(input, path = process.env.COMPANY_WORKLOG_FILE || resolve(ROOT, 'company/work-events.jsonl')) {
   employee(input.employeeId);
   if (!EVENT_TYPES.includes(input.type)) throw Error('invalid_event_type');
@@ -48,7 +66,9 @@ export function appendEvent(input, path = process.env.COMPANY_WORKLOG_FILE || re
   if (!input.summary || typeof input.summary !== 'string' || input.summary.length > 1500) throw Error('invalid_event_summary');
   const event = {
     schemaVersion: 1,
-    id: input.id || createHash('sha256').update(`${input.dispatchId}:${input.type}`).digest('hex').slice(0, 24),
+    // Lifecycle receipts are singletons; checkpoints/handoffs/reviews can
+    // legitimately occur many times. Pass the returned ID to retry one event.
+    id: input.id || (['checkpoint','handoff','reviewed'].includes(input.type) ? randomUUID() : createHash('sha256').update(`${input.dispatchId}:${input.type}`).digest('hex').slice(0, 24)),
     occurredAt: timestamp(input.occurredAt || new Date().toISOString()),
     recordedAt: new Date().toISOString(),
     employeeId: input.employeeId, type: input.type,
@@ -60,9 +80,11 @@ export function appendEvent(input, path = process.env.COMPANY_WORKLOG_FILE || re
     evidence: input.evidence || [], source: input.source || 'coordinator',
   };
   validateEvent(event);
-  const existing = events(path).find(e => e.id === event.id);
-  if (existing && ['employeeId','runId','taskId','dispatchId','type'].some(key => existing[key] !== event[key])) throw Error('event_identity_conflict');
+  const all = validateJournal(events(path));
+  const existing = all.find(e => e.id === event.id);
+  if (existing && ['employeeId','runId','taskId','dispatchId','type','summary','outcome','sha'].some(key => existing[key] !== event[key])) throw Error('event_identity_conflict');
   if (existing) return { recorded: false, event: existing };
+  validateJournal([...all, event]);
   mkdirSync(dirname(path), { recursive: true });
   appendFileSync(path, `${JSON.stringify(event)}\n`, { encoding: 'utf8', mode: 0o644 });
   return { recorded: true, event };
@@ -74,14 +96,9 @@ function main(args) {
   if (command === 'profile') return employee(rest[0]);
   if (command === 'record') return appendEvent(JSON.parse(readFileSync(rest[0], 'utf8')));
   if (command === 'validate') {
-    const all = events(); const ids = new Set();
+    const all = validateJournal(events());
     const people = roster().employees;
     if (new Set(people.map(p => p.id)).size !== people.length || new Set(people.map(p => p.name)).size !== people.length) throw Error('duplicate_employee');
-    for (const e of all) {
-      validateEvent(e);
-      if (ids.has(e.id)) throw Error('invalid_worklog');
-      ids.add(e.id);
-    }
     return { ok: true, employees: roster().employees.length, events: all.length };
   }
   if (command === 'status') {
