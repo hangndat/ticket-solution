@@ -27,3 +27,7 @@ Orca có lúc typed click chỉ focus mà không submit; native `button.click()`
 Lời mời local dùng pipeline import → preview → commit → dispatch → real SMTP Mailpit; token ở file ignored0600 và Mailpit, không commit link. Xem `UI869-INVITATION-FIXTURE.md`. Claim thật và regression web do Linh ghi trong `UI869-FUNCTION-WEB.md`; root account/single-code evidence bổ sung sau checkpoint của Linh. F10 consent checkbox có desktop/mobile runtime evidence riêng tại `assets/UI869-F10/`.
 
 Journal structured `node scripts/company-worklog.mjs validate` PASS (16 personas); lifecycle Linh function `ctx_ef17ec64438f` đã settle/release. Root đóng các tab mình mở sau UAT, giữ local stack/autostart chạy. Không merge/deploy; CI và review độc lập còn là gate.
+
+## Hiệu chỉnh integration test trong lúc review
+
+CI `40089001476` trên `537cd12` FAIL tại `routes.integration.mjs:190–191`: hai assertion còn copy empty-state cũ, trong khi `/claim` đã chuyển sang mở link email. Root cập nhật test hiện có sang title “Mở liên kết trong email” và `claim-token-empty`, giữ toàn bộ kiểm tenant isolation/chrome/error và không sửa runtime source. `pnpm --filter @ticket/web test:routes` local **PASS** sau thay đổi; CI head kế tiếp và review exact SHA vẫn bắt buộc. Đây là hiệu chỉnh test trong cùng batch integration, không thêm feature hoặc reset bộ đếm fix.
