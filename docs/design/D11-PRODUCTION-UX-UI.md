@@ -9,7 +9,7 @@
 | Trạng thái | **Đề xuất design** — chờ user review roadmap; **không** pilot/production ready |
 
 **Reconcile BA:** đã đọc [`docs/plans/D11-BA-RESEARCH.md`](../plans/D11-BA-RESEARCH.md) (P0-1…P0-7, P1-1…P1-5, handoff §14).
-**Baseline:** [`docs/reviews/D11-DISCOVERY-BASELINE.md`](../reviews/D11-DISCOVERY-BASELINE.md) + public screenshot `d11-public-baseline.png` / `/tmp/d11-baseline-public.png`.
+**Baseline:** [`docs/reviews/D11-DISCOVERY-BASELINE.md`](../reviews/D11-DISCOVERY-BASELINE.md) + [public screenshot](../reviews/d9-uat/web/d9-home.png) / `/tmp/d11-baseline-public.png`.
 
 ---
 
@@ -32,7 +32,7 @@
 | `brand/vemoki/tokens.json`, `globals.css`, iOS theme | Quan sát | ink/paper/signal/focus |
 | Redeem `messages.ts`: `UNAUTHENTICATED`, `EMAIL_NOT_VERIFIED` | Quan sát | Đổi mã hiện tại **yêu cầu đăng nhập / email verified** qua Keycloak path — **không** chứng minh anonymous redeem |
 | PRD §2 Identity: OTP/magic link trước cấp vé | Quan sát tài liệu | Khác UX copy hiện tại (Keycloak) — **TBD product**: OTP guest vs staff IdP; PD **không** mở anonymous trong prototype |
-| `admin-form.tsx` ~1930L; D8 `d8-admin.png` | Quan sát source + **screenshot lịch sử D8** | Không = pixel `main` authenticated hôm nay |
+| `admin-form.tsx` ~1930L; [D8 admin](../reviews/d8-uat/web/d8-admin.png) | Quan sát source + **screenshot lịch sử D8** | Không = pixel `main` authenticated hôm nay |
 | Public `vemoki.com` 200 + privacy 404 (baseline D11) | Quan sát tươi | Home còn disclaimer Nest BFF / fixture |
 | ADR-18: item `APPLIED` / `DUPLICATE` / `REJECTED` / `CONFLICT` | Quan sát | Client phase `queued` ≠ admission; không fake chống trùng đa thiết bị khi còn offline |
 | BA P0-6/P0-7/P0-3 | Suy luận BA (đã reconcile) | IA admin + home copy + Gate queue copy |

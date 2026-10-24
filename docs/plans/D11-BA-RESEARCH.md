@@ -57,7 +57,7 @@
 | `https://vemoki.com/` HTTP 200, title Vemoki (headless `scripts/web-uat.sh` → `/tmp/d11-baseline-public.png`) | Coordinator mailbox | Quan sát public, không auth |
 | `https://vemoki.com/privacy` → **HTTP 404** (curl, 2026-10-18) | Coordinator mailbox | Quan sát — xác nhận lại gap D10 G1 bằng evidence tươi |
 | Screenshot lịch sử D8 `docs/reviews/d8-uat/web/d8-admin.png`: form rất dài, nhiều task quản trị trên một trang | Coordinator xem trực tiếp + file artifact | **Evidence lịch sử D8** — chưa tự chứng minh pixel runtime `main` hôm nay |
-| Screenshot lịch sử D8 `d8-home.png`: copy demo / disclaimer kỹ thuật (fixture, Nest BFF, `/auth`) | Artifact + mô tả ảnh | Evidence lịch sử D8; cần PD copy production-lite |
+| Screenshot lịch sử [D8 home](../reviews/d8-uat/web/d8-home.png): copy demo / disclaimer kỹ thuật (fixture, Nest BFF, `/auth`) | Artifact + mô tả ảnh | Evidence lịch sử D8; cần PD copy production-lite |
 
 ### 2.2 Đối chiếu source admin hiện tại (quan sát code, 2026-10-18)
 
@@ -110,8 +110,8 @@ Từ [`D6-UX-UI-PLAN.md`](./D6-UX-UI-PLAN.md) §3.4 (audit trước polish) và 
 | Gap | Evidence | Fix vs mở rộng |
 | --- | --- | --- |
 | Chrome/POC từng lệch brand (`ticket↗`, eyebrow đợt) | D6 plan audit; D6 DoD #92 PASS with known gap (AuthPoc nội bộ còn) | Fix (phần lớn đã làm D6; residual naming) |
-| Admin mật độ cao / IA một trang | D6 plan §3.2; source `admin-form.tsx` ~1930L (2026-10-18); screenshot lịch sử D8 `d8-admin.png` | Fix IA (**nâng P0**) — progressive disclosure, ẩn ID thô |
-| Home public còn copy demo/kỹ thuật | Screenshot lịch sử D8 `d8-home.png`; baseline `vemoki.com` 200 (chưa re-audit copy trên live trong task) | Fix copy/IA (P0/P1) — brand đủ chất lượng, không chỉ skin |
+| Admin mật độ cao / IA một trang | D6 plan §3.2; source `admin-form.tsx` ~1930L (2026-10-18); screenshot lịch sử [D8 admin](../reviews/d8-uat/web/d8-admin.png) | Fix IA (**nâng P0**) — progressive disclosure, ẩn ID thô |
+| Home public còn copy demo/kỹ thuật | Screenshot lịch sử [D8 home](../reviews/d8-uat/web/d8-home.png); baseline `vemoki.com` 200 (chưa re-audit copy trên live trong task) | Fix copy/IA (P0/P1) — brand đủ chất lượng, không chỉ skin |
 | White-label chrome iOS/web fallback Vemoki | D8-S4-T1 DoD known gap | Fix (P0/P1 tùy mức brand-test) |
 | Privacy URL 404; ASC/TF chưa upload | D10 G1–G8 + **curl privacy 404 xác nhận lại 2026-10-18** | Fix ops (P0) — **không** = coding feature mới |
 | Invite CSRF / prod revalidation | D4 gap + D5 PR #100 DoD: prod UAT invite còn mở | Fix |
