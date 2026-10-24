@@ -56,10 +56,10 @@ Với worker mới, dùng wrapper để preflight, snapshot quota trước start
 
 ```bash
 node scripts/agent-workflow-run.mjs start --run-id RUN --task TASK --role-id ROLE \
-  --agent cursor --model composer-2.5 --display-name "Persona · role" --task-title "Persona · việc cần làm"
+  --cost-tier standard --agent cursor --model composer-2.5 --display-name "Persona · role" --task-title "Persona · việc cần làm"
 ```
 
-Đọc `state`, requested/effective và receipt, không chỉ `ok`. Start thất bại/không rõ hoặc ledger lỗi sau khi agent ready: quan sát dispatch hiện hữu, không launch lại tự động. Worker cũ reuse bằng Orca theo skill: chụp quota theo wave và collect trước release, giữ receipt model gốc; model unknown phải báo unknown.
+`--cost-tier` phải khớp Task Spec và agent/model/effort trong cost-catalog. Wrapper lưu `routing.json` cùng receipt và không gửi flag local này vào Orca. Đọc `state`, requested/effective và receipt, không chỉ `ok`. Start thất bại/không rõ hoặc ledger lỗi sau khi agent ready: quan sát dispatch hiện hữu, không launch lại tự động. Worker cũ reuse bằng Orca theo skill: chụp quota theo wave và collect trước release, giữ receipt model gốc; model unknown phải báo unknown.
 
 Sau `worker_done` hợp lệ và đối chiếu task/dispatch/run:
 
@@ -101,3 +101,5 @@ Worker có thể truyền các flags provider/thread/baseline/comparison-key nà
 `report --run-id NEW --baseline-run-id OLD --comparison-key KEY` chỉ tính % input giảm khi workload key, model/provider và boundary coverage khớp. Key phải đại diện cùng AC, input/diff và checks; thay template nhưng đổi workload không phải A/B hợp lệ. Một run nhiều task chưa có pairing 1:1 thì không được lấy một task đại diện để báo tiết kiệm cả run. Không quy token/cache thành % quota hoặc USD của subscription. Không có baseline lịch sử cho review GitHub trước đây thì không hồi suy được % tiết kiệm thực tế.
 
 Ledger, snapshots và lifecycle receipts ở `.orca-metrics/` gitignored, files 0600; chỉ share số liệu đã whitelist. Hướng dẫn CLI chi tiết: [agent-role-monitor](../../scripts/agent-role-monitor/README.md). Kiểm thử: `pnpm agent:workflow:test`.
+
+Quota gate Codex trước start: xem `cost-catalog.md`, dự phòng 20%, snapshot tối đa 5 phút, kiểm primary/secondary theo bucket route. `quota-decision.json` ghi quyết định; `--essential-reason` chỉ cho phép dùng dự phòng, không vượt quota exhausted/unknown/stale. High cần `--tier-reason`. Các flag này không truyền Orca; provider khác vẫn kiểm quota thủ công.
