@@ -1,0 +1,31 @@
+{
+  "id": "25c7c815-3f6d-4f92-b46e-4a0ee5ebc620",
+  "ok": true,
+  "result": {
+    "result": {
+      "animation": "enter",
+      "focus": "nav-mobile-menu",
+      "inDialog": true,
+      "page": "http://localhost:3000/",
+      "rect": {
+        "height": 876,
+        "width": 41,
+        "x": 349
+      },
+      "reduced": false,
+      "state": "open",
+      "supportsCalc": true,
+      "supportsOld": false,
+      "viewport": [
+        390,
+        844,
+        1
+      ],
+      "width": "8px"
+    },
+    "origin": "http://localhost:3000/"
+  },
+  "_meta": {
+    "runtimeId": "9d821662-c628-49db-a168-99fa7b7636fc"
+  }
+}

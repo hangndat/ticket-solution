@@ -1,0 +1,20 @@
+{
+  "capture": "local-mkt-interest-en-390",
+  "persona": "public-guest",
+  "url": "http://127.0.0.1:3000/marketing/en#interest",
+  "viewport": { "width": 390, "height": 844 },
+  "sourceSha": "b2faa48a1ce443c8fc6c849cb74a06a57f8b0c37",
+  "probe": {
+    "locale": "en",
+    "formPresent": true,
+    "labels": {
+      "name": "Full name",
+      "email": "Work email",
+      "org": "Organization",
+      "role": "Role"
+    },
+    "submitLabel": "Submit",
+    "consentDefaultChecked": false
+  },
+  "ac": { "R-02": "PASS", "note": "readonly labels; no production submit" }
+}

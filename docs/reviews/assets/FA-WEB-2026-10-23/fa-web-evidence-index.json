@@ -1,0 +1,13 @@
+{
+  "updated": "2026-10-23T21:20:00+08:00",
+  "dispatch": "ctx_a76135d3ebe8",
+  "removedMislabeled": [
+    "local-redeem-terms-390-vi.png (staff persona / desktop chrome — deleted)",
+    "local-redeem-terms-390-vi.json (deleted)"
+  ],
+  "canonicalReviewerAttendee": {
+    "termsOidc": "UI-FIXALL-WEB-REVIEW-2026-10-23/review-attendee-oidc-390-vi.json",
+    "termsRefusal": "UI-FIXALL-WEB-REVIEW-2026-10-23/review-attendee-terms-refusal-390-vi.json"
+  },
+  "fWeb04": "local-app-consumer-keyboard-390-vi.json (focusOnTrigger true after Escape post-fix)"
+}
