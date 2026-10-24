@@ -55,6 +55,161 @@
       scroll-behavior: auto;
     }
   }
+
+  /* VD-04: Neon marketing — scoped tokens (design-system/marketing/tokens.css) */
+  html[data-vemoki-marketing='neon-v1'] {
+    color-scheme: dark;
+    --vm-bg: #060817;
+    --vm-bg-deep: #040611;
+    --vm-surface: #0e1229;
+    --vm-surface-raised: #151935;
+    --vm-outline: #38345f;
+    --vm-outline-soft: rgba(181, 169, 255, 0.2);
+    --vm-text: #faf9ff;
+    --vm-text-secondary: #c2c6de;
+    --vm-text-subtle: #989dbd;
+    --vm-purple: #9b4dff;
+    --vm-magenta: #f23cb3;
+    --vm-coral: #ff835f;
+    --vm-blue: #397dff;
+    --vm-cyan: #28d4ef;
+    --vm-focus: #b2cbff;
+    --vm-cta-gradient: linear-gradient(105deg, #ee35b4 0%, #9944ff 48%, #3383ff 100%);
+    --vm-text-gradient: linear-gradient(
+      100deg,
+      #ff68aa 2%,
+      #ff8f6e 31%,
+      #c870ff 63%,
+      #777cff 100%
+    );
+    --vm-radius-md: 16px;
+    --vm-shadow-card: 0 14px 48px rgba(0, 0, 0, 0.34);
+  }
+
+  html[data-vemoki-marketing='neon-v1'] .mkt-neon-surface {
+    background:
+      radial-gradient(60rem 40rem at 90% 7%, rgba(82, 27, 171, 0.19), transparent 70%),
+      radial-gradient(30rem 30rem at -20% 22%, rgba(195, 35, 165, 0.08), transparent 75%),
+      var(--vm-bg);
+  }
+
+  html[data-vemoki-marketing='neon-v1'] .mkt-hero-section {
+    background: transparent;
+  }
+
+  html[data-vemoki-marketing='neon-v1'] .mkt-hero-section::before {
+    content: none;
+  }
+
+  html[data-vemoki-marketing='neon-v1'] .mkt-hero-headline {
+    color: var(--vm-text);
+    background: var(--vm-text-gradient);
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  @supports not (background-clip: text) {
+    html[data-vemoki-marketing='neon-v1'] .mkt-hero-headline {
+      -webkit-text-fill-color: unset;
+      color: var(--vm-text);
+      background: none;
+    }
+  }
+
+  @media (forced-colors: active) {
+    html[data-vemoki-marketing='neon-v1'] .mkt-hero-headline {
+      -webkit-text-fill-color: unset;
+      color: CanvasText;
+      background: none;
+    }
+  }
+
+  html[data-vemoki-marketing='neon-v1'] .mkt-hero-media::after {
+    content: '';
+    pointer-events: none;
+    position: absolute;
+    inset: -8% -12% -12% -8%;
+    background: radial-gradient(ellipse at 65% 43%, rgba(90, 37, 226, 0.35), transparent 60%);
+    z-index: 0;
+  }
+
+  html[data-vemoki-marketing='neon-v1'] .mkt-hero-media img {
+    position: relative;
+    z-index: 1;
+  }
+
+  html[data-vemoki-marketing='neon-v1'] .mkt-lead-section {
+    background: var(--color-paper);
+    color: var(--color-ink);
+    border-color: var(--color-line);
+  }
+
+  html[data-vemoki-marketing='neon-v1'] .mkt-lead-section::before {
+    content: none;
+  }
+
+  .mkt-hero-glow {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(28px);
+    opacity: 0.85;
+  }
+
+  .mkt-hero-glow-a {
+    background: rgba(150, 57, 244, 0.69);
+    width: 190px;
+    height: 190px;
+    top: 12%;
+    right: 8%;
+    animation: mkt-orb-drift-a 18s ease-in-out infinite alternate;
+  }
+
+  .mkt-hero-glow-b {
+    background: rgba(233, 53, 187, 0.38);
+    width: 225px;
+    height: 80px;
+    bottom: 18%;
+    left: 12%;
+    animation: mkt-orb-drift-b 22s ease-in-out infinite alternate;
+  }
+
+  .mkt-hero-orbit {
+    position: absolute;
+    pointer-events: none;
+    border: 28px solid transparent;
+    border-top-color: #f75cc2;
+    border-left-color: #613fff;
+    border-radius: 49%;
+    filter: drop-shadow(0 0 18px rgba(183, 61, 255, 0.67));
+    opacity: 0.75;
+  }
+
+  .mkt-hero-orbit-a {
+    width: 210px;
+    height: 80px;
+    transform: rotate(-37deg);
+    top: 10%;
+    left: 6%;
+    animation: mkt-orbit-a 24s ease-in-out infinite alternate;
+  }
+
+  .mkt-hero-orbit-b {
+    width: 170px;
+    height: 65px;
+    transform: rotate(25deg);
+    bottom: 14%;
+    right: 10%;
+    animation: mkt-orbit-b 20s ease-in-out infinite alternate;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .mkt-hero-glow-a,
+    .mkt-hero-glow-b,
+    .mkt-hero-orbit-a,
+    .mkt-hero-orbit-b {
+      animation: none !important;
+    }
+  }
 }
 
 @layer theme {
@@ -67,6 +222,42 @@
     to {
       opacity: 1;
       transform: translateY(0);
+    }
+  }
+
+  @keyframes mkt-orb-drift-a {
+    from {
+      transform: translate(0, 0);
+    }
+    to {
+      transform: translate(-12px, 18px);
+    }
+  }
+
+  @keyframes mkt-orb-drift-b {
+    from {
+      transform: translate(0, 0);
+    }
+    to {
+      transform: translate(16px, -10px);
+    }
+  }
+
+  @keyframes mkt-orbit-a {
+    from {
+      transform: rotate(-37deg);
+    }
+    to {
+      transform: rotate(-28deg) translate(6px, 4px);
+    }
+  }
+
+  @keyframes mkt-orbit-b {
+    from {
+      transform: rotate(25deg);
+    }
+    to {
+      transform: rotate(32deg) translate(-8px, 6px);
     }
   }
 }

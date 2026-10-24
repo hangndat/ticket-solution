@@ -1,4 +1,5 @@
 import { Button } from '@ticket/ui';
+import { cn } from '../../../lib/utils';
 import { t } from '../copy';
 import { InterestFormIsland } from '../interest-form-island';
 import {
@@ -35,7 +36,7 @@ export function CtaSection({ locale, demo }: MarketingSectionProps) {
 
       <section
         id="interest"
-        className={marketingSection('interest')}
+        className={cn(marketingSection('interest'), 'mkt-lead-section')}
         aria-labelledby="interest-title"
         data-analytics-section="conversion"
       >
