@@ -1,14 +1,14 @@
 'use client';
 
 import { Button } from '@ticket/ui';
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import Link from 'next/link';
 import type { FormAnswerValue, FormDefinition } from '@ticket/contracts';
 import { decideClaimBody } from '../../../src/guest/claim-api';
 import {
   clearClaimHashFromLocation,
   clearGuestClaimIntent,
   parkGuestClaimIntent,
-  peekGuestClaimIntent,
   readClaimTokenFromLocation,
 } from '../../../src/guest/claim-intent';
 import { redeemMutate } from '../../../src/redeem/client-fetch';
@@ -26,11 +26,11 @@ import {
   authButtonsRow,
   claimFormRoot,
   claimOutcomeClass,
-  meResultPre,
-  redeemMetaDetails,
 } from '../../../src/guest/guest-flow-surface';
 import { redeemCheckboxRow } from '../../../src/redeem/redeem-surface';
 import { loadPublishedRedeemSchema } from '../../../src/redeem/published-schema';
+import { fetchOwnerRedemptionStatus } from '../../../src/redeem/owner-status';
+import { messageForOwnerStatus } from '../../../src/redeem/messages';
 import { REQUEST_TIMEOUT_MS } from '../../../src/redeem/poll-operation';
 import { liveRegionForStatus } from '../../../src/ui/live-region';
 import { SurfaceState } from '../../../src/ui/surface-state';
@@ -64,6 +64,11 @@ function sameClaimLocation(a: ClaimLocation, b: ClaimLocation): boolean {
   );
 }
 
+function claimLocationKey(location: ClaimLocation): string {
+  return [location.token, location.tenantId, location.eventId,
+    location.tenantSlug, location.eventSlug].join('\u0000');
+}
+
 /**
  * Pure snapshot: fragment + parked intent (no side effects).
  * Returns a cached reference when values are unchanged so useSyncExternalStore
@@ -71,29 +76,7 @@ function sameClaimLocation(a: ClaimLocation, b: ClaimLocation): boolean {
  */
 function getClaimLocationSnapshot(): ClaimLocation {
   const fromLoc = readClaimTokenFromLocation();
-  let next: ClaimLocation;
-  if (fromLoc.token || fromLoc.tenantId || fromLoc.eventId) {
-    next = {
-      token: fromLoc.token,
-      tenantId: fromLoc.tenantId,
-      eventId: fromLoc.eventId,
-      tenantSlug: fromLoc.tenantSlug,
-      eventSlug: fromLoc.eventSlug,
-    };
-  } else {
-    const parked = peekGuestClaimIntent();
-    if (!parked) {
-      next = EMPTY_LOCATION;
-    } else {
-      next = {
-        token: parked.token,
-        tenantId: parked.tenantId,
-        eventId: parked.eventId,
-        tenantSlug: parked.tenantSlug ?? '',
-        eventSlug: parked.eventSlug ?? '',
-      };
-    }
-  }
+  const next: ClaimLocation = fromLoc;
   if (sameClaimLocation(cachedLocationSnapshot, next)) {
     return cachedLocationSnapshot;
   }
@@ -103,9 +86,11 @@ function getClaimLocationSnapshot(): ClaimLocation {
 
 function subscribeClaimLocation(onStoreChange: () => void): () => void {
   window.addEventListener('hashchange', onStoreChange);
+  window.addEventListener('popstate', onStoreChange);
   window.addEventListener('storage', onStoreChange);
   return () => {
     window.removeEventListener('hashchange', onStoreChange);
+    window.removeEventListener('popstate', onStoreChange);
     window.removeEventListener('storage', onStoreChange);
   };
 }
@@ -117,12 +102,6 @@ export function GuestClaimForm() {
     () => EMPTY_LOCATION,
   );
 
-  const [tokenOverride, setTokenOverride] = useState<string | null>(null);
-  const [tenantId, setTenantId] = useState('');
-  const [eventId, setEventId] = useState('');
-  const [tenantSlug, setTenantSlug] = useState('');
-  const [eventSlug, setEventSlug] = useState('');
-  const [seeded, setSeeded] = useState(false);
   const [formDefinition, setFormDefinition] = useState<FormDefinition | null>(
     null,
   );
@@ -133,97 +112,97 @@ export function GuestClaimForm() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [decision, setDecision] = useState<RedeemDecision | null>(null);
   const [ux, setUx] = useState<RedeemUxMessage | null>(null);
+  const [resultContextKey, setResultContextKey] = useState('');
   const [busy, setBusy] = useState(false);
-  const [idempotencyKey] = useState(
-    () =>
-      typeof crypto !== 'undefined' && 'randomUUID' in crypto
-        ? crypto.randomUUID()
-        : `claim-${Date.now().toString(16)}`,
-  );
-
-  const token =
-    tokenOverride !== null ? tokenOverride : locationSnap.token;
-
-  // Seed editable fields once from fragment/parked snapshot (like invite-accept).
-  const displayTenantId = seeded ? tenantId : tenantId || locationSnap.tenantId;
-  const displayEventId = seeded ? eventId : eventId || locationSnap.eventId;
-  const displayTenantSlug = seeded
-    ? tenantSlug
-    : tenantSlug || locationSnap.tenantSlug;
-  const displayEventSlug = seeded
-    ? eventSlug
-    : eventSlug || locationSnap.eventSlug;
+  const [schemaKey, setSchemaKey] = useState('');
+  const [schemaStatus, setSchemaStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [schemaError, setSchemaError] = useState('');
+  const [eventName, setEventName] = useState('');
+  const [organizationName, setOrganizationName] = useState('');
+  const [claimedKey, setClaimedKey] = useState('');
+  const [completed, setCompleted] = useState(false);
+  const token = locationSnap.token;
+  const displayTenantId = locationSnap.tenantId;
+  const displayEventId = locationSnap.eventId;
+  const displayTenantSlug = locationSnap.tenantSlug;
+  const displayEventSlug = locationSnap.eventSlug;
+  const contextKey = claimLocationKey(locationSnap);
+  const validContext = Boolean(token.trim() && displayTenantId.trim() &&
+    displayEventId.trim() && displayTenantSlug.trim() && displayEventSlug.trim());
+  const activeContext = useRef(contextKey);
+  const [attempt, setAttempt] = useState<{ key: string; idempotencyKey: string } | null>(null);
+  const idempotencyKey = attempt?.key === contextKey ? attempt.idempotencyKey : '';
+  const schemaReady = schemaKey === contextKey && schemaStatus === 'ready';
 
   useEffect(() => {
-    if (!locationSnap.token) return;
+    activeContext.current = contextKey;
+    if (!validContext) {
+      if (window.location.hash &&
+          sameClaimLocation(locationSnap, readClaimTokenFromLocation())) {
+        clearGuestClaimIntent();
+        clearClaimHashFromLocation();
+        queueMicrotask(() => {
+          if (activeContext.current !== contextKey) return;
+          setCompleted(false);
+          setBusy(false);
+        });
+      }
+      return;
+    }
     parkGuestClaimIntent({
       token: locationSnap.token,
-      tenantId: locationSnap.tenantId || displayTenantId,
-      eventId: locationSnap.eventId || displayEventId,
-      tenantSlug: locationSnap.tenantSlug || undefined,
-      eventSlug: locationSnap.eventSlug || undefined,
+      tenantId: locationSnap.tenantId,
+      eventId: locationSnap.eventId,
+      tenantSlug: locationSnap.tenantSlug,
+      eventSlug: locationSnap.eventSlug,
     });
     clearClaimHashFromLocation();
-  }, [
-    locationSnap.token,
-    locationSnap.tenantId,
-    locationSnap.eventId,
-    locationSnap.tenantSlug,
-    locationSnap.eventSlug,
-    displayTenantId,
-    displayEventId,
-  ]);
-
-  async function loadSchema() {
-    setBusy(true);
-    setUx(null);
-    const result = await loadPublishedRedeemSchema(
-      displayTenantSlug.trim(),
-      displayEventSlug.trim(),
-    );
-    if (result.status === 'ok') {
-      setFormDefinition(result.schema.form);
-      setTermsVersion(result.schema.terms?.version ?? null);
-      setTermsBody(result.schema.terms?.bodyMarkdown ?? null);
-      if (result.schema.eventId) {
-        setEventId(result.schema.eventId);
-        setSeeded(true);
-      }
-      if (result.schema.tenantId) {
-        setTenantId(result.schema.tenantId);
-        setSeeded(true);
-      }
-      setAnswers({});
-      setTermsAccepted(false);
-      setFieldErrors({});
-      setUx({
-        kind: 'verifying',
-        title: 'Đã tải biểu mẫu',
-        detail:
-          'Điền các trường và đồng ý điều khoản trước khi nhận lời mời.',
-        retryable: false,
-      });
-    } else {
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (cancelled) return;
+      setAttempt({ key: contextKey, idempotencyKey: crypto.randomUUID() });
+      setSchemaKey(contextKey);
+      setSchemaStatus('loading');
       setFormDefinition(null);
       setTermsVersion(null);
       setTermsBody(null);
-      setUx({
-        kind: 'error',
-        title: 'Không tải được biểu mẫu',
-        detail:
-          result.status === 'not-found'
-            ? 'Không tìm thấy sự kiện đã xuất bản.'
-            : result.status === 'unreachable'
-              ? 'Không tải được biểu mẫu sự kiện. Thử lại sau — không dùng bản demo.'
-              : 'Thiếu đường dẫn tổ chức/sự kiện hoặc biểu mẫu không hợp lệ.',
-        retryable: false,
-      });
-    }
-    setBusy(false);
-  }
+      setEventName('');
+      setOrganizationName('');
+      setAnswers({});
+      setTermsAccepted(false);
+      setFieldErrors({});
+      setDecision(null);
+      setUx(null);
+      setResultContextKey('');
+      setCompleted(false);
+      setBusy(false);
+    });
+    void loadPublishedRedeemSchema(displayTenantSlug, displayEventSlug).then((result) => {
+      if (cancelled || activeContext.current !== contextKey ||
+          claimLocationKey(readClaimTokenFromLocation()) !== contextKey) return;
+      if (result.status === 'ok' && result.schema.eventId === displayEventId &&
+          result.schema.tenantId === displayTenantId && result.schema.terms?.version) {
+      setFormDefinition(result.schema.form);
+      setTermsVersion(result.schema.terms?.version ?? null);
+      setTermsBody(result.schema.terms?.bodyMarkdown ?? null);
+      setEventName(result.schema.eventName ?? 'Sự kiện được mời');
+      setOrganizationName(result.schema.organizationName ?? '');
+      setSchemaStatus('ready');
+      } else {
+        setSchemaError(result.status === 'not-found'
+          ? 'Không tìm thấy sự kiện đã xuất bản. Mở lại liên kết trong email.'
+          : 'Thông tin lời mời không khớp sự kiện đã xuất bản hoặc chưa thể tải biểu mẫu.');
+        setSchemaStatus('error');
+      }
+    });
+    return () => { cancelled = true; };
+  }, [contextKey, validContext, displayTenantSlug, displayEventSlug,
+    displayTenantId, displayEventId, locationSnap]);
 
   async function submitClaim() {
+    if (!validContext || !schemaReady || !idempotencyKey || busy || claimedKey === contextKey) return;
     setBusy(true);
+    setResultContextKey(contextKey);
     setDecision(null);
     setFieldErrors({});
     setUx(null);
@@ -249,7 +228,7 @@ export function GuestClaimForm() {
       setBusy(false);
       return;
     }
-    if (!formDefinition || !termsVersion) {
+    if (!termsVersion) {
       setUx({
         kind: 'error',
         title: 'Chưa có biểu mẫu',
@@ -261,17 +240,19 @@ export function GuestClaimForm() {
       return;
     }
 
-    const validated = validateFormAnswers(formDefinition, answers);
+    const validated = formDefinition
+      ? validateFormAnswers(formDefinition, answers)
+      : null;
     const termsIssue = requireTermsConsent({ termsVersion, termsAccepted });
     const nextErrors: Record<string, string> = {};
-    if (!validated.ok) {
+    if (validated && !validated.ok) {
       for (const issue of validated.issues) {
         nextErrors[issue.fieldId] = issue.message;
       }
     }
     if (termsIssue) nextErrors.terms = termsIssue.message;
     setFieldErrors(nextErrors);
-    if (!validated.ok || termsIssue) {
+    if ((validated && !validated.ok) || termsIssue) {
       setUx({
         kind: 'error',
         title: 'Biểu mẫu chưa hợp lệ',
@@ -288,7 +269,7 @@ export function GuestClaimForm() {
       eventId: displayEventId.trim(),
       tenantSlug: displayTenantSlug.trim() || undefined,
       eventSlug: displayEventSlug.trim() || undefined,
-      formVersion: formDefinition.formVersion,
+      formVersion: formDefinition?.formVersion,
       termsVersion,
     });
 
@@ -298,19 +279,22 @@ export function GuestClaimForm() {
         tenantId: displayTenantId.trim(),
         eventId: displayEventId.trim(),
         token: token.trim(),
-        formVersion: formDefinition.formVersion,
+        formVersion: formDefinition?.formVersion,
         termsVersion,
-        answers: validated.answers,
+        answers: validated?.ok ? validated.answers : {},
         termsAccepted: true,
         idempotencyKey,
       },
       REQUEST_TIMEOUT_MS,
     );
 
+    if (activeContext.current !== contextKey ||
+        claimLocationKey(readClaimTokenFromLocation()) !== contextKey) return;
+
     if (
       !result.networkError &&
       !result.timedOut &&
-      (result.status === 401 || result.status === 403)
+      result.status === 401
     ) {
       setDecision(null);
       setUx({
@@ -330,12 +314,14 @@ export function GuestClaimForm() {
       idempotencyKey,
       result.networkError || result.timedOut,
     );
+    const nextUx = messageForDecision(next);
     setDecision(next);
-    setUx(messageForDecision(next));
+    setUx(nextUx);
 
     if (next.kind === 'issued' || next.kind === 'pending') {
+      setCompleted(true);
       clearGuestClaimIntent();
-      setTokenOverride('');
+      setClaimedKey(contextKey);
     }
     if (next.kind === 'field_errors') {
       const map: Record<string, string> = {};
@@ -343,6 +329,32 @@ export function GuestClaimForm() {
         map[err.fieldId] = err.message;
       }
       setFieldErrors(map);
+    }
+    setBusy(false);
+  }
+
+  async function refreshClaimStatus() {
+    if (decision?.kind !== 'pending' || busy) return;
+    const requestId = decision.requestId;
+    const activeKey = activeContext.current;
+    setBusy(true);
+    const result = await fetchOwnerRedemptionStatus(requestId);
+    if (activeContext.current !== activeKey ||
+        claimLocationKey(readClaimTokenFromLocation()) !== activeKey) return;
+    if (result.status === 'ok') {
+      setUx(messageForOwnerStatus(result.body));
+      if (result.body.status === 'ISSUED') {
+        setDecision({ kind: 'issued', ticketId: result.body.ticketId,
+          requestId, replayed: false });
+      } else if (result.body.status === 'REJECTED' || result.body.status === 'EXPIRED') {
+        setDecision(null);
+      }
+    } else {
+      setUx({ kind: 'unknown', title: 'Chưa đọc được trạng thái',
+        detail: result.status === 'unauthorized'
+          ? 'Đăng nhập lại bằng email được mời để xem trạng thái yêu cầu.'
+          : 'Chưa xác nhận được trạng thái mới. Thử kiểm tra lại sau.',
+        retryable: true });
     }
     setBusy(false);
   }
@@ -358,101 +370,75 @@ export function GuestClaimForm() {
           : ux.kind,
       )
     : null;
+  const outcomeSection = ux && outcomeLive &&
+    (!validContext || resultContextKey === contextKey) ? (
+    <section
+      className={claimOutcomeClass(ux.kind)}
+      role={outcomeLive.role}
+      aria-live={outcomeLive.ariaLive}
+      aria-atomic={outcomeLive.ariaAtomic}
+      data-testid="guest-claim-result"
+    >
+      <h2>{ux.title}</h2>
+      <p>{ux.detail}</p>
+      {decision?.kind === 'pending' ? (
+        <p>Chưa phải vé — kiểm tra lại khi có cập nhật.</p>
+      ) : null}
+      {ux.kind === 'auth' ? (
+        <p className={authButtonsRow}>
+          <Button asChild variant="brand">
+            <a href={loginHref}>Đăng nhập bằng email đã được mời</a>
+          </Button>
+        </p>
+      ) : null}
+      {decision?.kind === 'pending' ? (
+        <p><Button type="button" variant="secondary" disabled={busy}
+          onClick={() => void refreshClaimStatus()}>Kiểm tra trạng thái</Button></p>
+      ) : ux.kind === 'unknown' && validContext ? (
+        <p><Button type="button" variant="secondary" disabled={busy}
+          onClick={() => void submitClaim()}>Gửi lại cùng yêu cầu</Button></p>
+      ) : null}
+      {decision?.kind === 'issued' ? (
+        <p><Button asChild variant="brand"><Link href="/wallet">Xem vé của tôi</Link></Button></p>
+      ) : null}
+    </section>
+  ) : null;
+
+  if (!validContext) {
+    if (completed && sameClaimLocation(locationSnap, EMPTY_LOCATION)) {
+      return <div className={claimFormRoot}>{outcomeSection}</div>;
+    }
+    return <div className={claimFormRoot}>
+      <SurfaceState kind="empty" title="Mở liên kết trong email"
+        detail="Liên kết lời mời cần đầy đủ thông tin sự kiện. Hãy mở lại email mời để tiếp tục."
+        testId="claim-token-empty" />
+      <div className={authButtonsRow}>
+        <Button asChild variant="secondary"><Link href="/redeem">Đổi mã</Link></Button>
+        <Button asChild variant="secondary"><Link href="/wallet">Vé của tôi</Link></Button>
+      </div>
+    </div>;
+  }
 
   return (
     <div className={claimFormRoot}>
       <p>
-        Đăng nhập bằng đúng email đã được mời, mở liên kết lời mời, rồi điền
-        biểu mẫu và đồng ý điều khoản. Email chưa xác minh, sai email, hoặc lời
-        mời hết hạn sẽ không được cấp vé. Không tự tạo tài khoản mới.
+        Đăng nhập bằng đúng email đã được mời và đã xác minh. Sau đó hoàn tất
+        biểu mẫu và đồng ý điều khoản để nhận lời mời.
       </p>
 
       <div className={authButtonsRow}>
         <Button asChild variant="primary">
-          <a href={loginHref}>Đăng nhập rồi quay lại nhận lời mời</a>
+          <a href={loginHref}>Đăng nhập bằng email được mời</a>
         </Button>
       </div>
 
-      <label>
-        Đường dẫn tổ chức
-        <input
-          value={displayTenantSlug}
-          onChange={(e) => {
-            setSeeded(true);
-            setTenantSlug(e.target.value);
-          }}
-          autoComplete="off"
-          spellCheck={false}
-        />
-      </label>
-      <label>
-        Đường dẫn sự kiện
-        <input
-          value={displayEventSlug}
-          onChange={(e) => {
-            setSeeded(true);
-            setEventSlug(e.target.value);
-          }}
-          autoComplete="off"
-          spellCheck={false}
-        />
-      </label>
-      <label>
-        Mã tổ chức
-        <input
-          value={displayTenantId}
-          onChange={(e) => {
-            setSeeded(true);
-            setTenantId(e.target.value);
-          }}
-          autoComplete="off"
-          spellCheck={false}
-        />
-      </label>
-      <label>
-        Mã sự kiện
-        <input
-          value={displayEventId}
-          onChange={(e) => {
-            setSeeded(true);
-            setEventId(e.target.value);
-          }}
-          autoComplete="off"
-          spellCheck={false}
-        />
-      </label>
-      <label>
-        Mã lời mời (từ liên kết — không dán vào địa chỉ trang)
-        <input
-          value={token}
-          onChange={(e) => setTokenOverride(e.target.value)}
-          autoComplete="off"
-          spellCheck={false}
-          aria-label="Mã lời mời"
-        />
-      </label>
-
-      {!token.trim() ? (
-        <SurfaceState
-          kind="empty"
-          title="Chưa có mã lời mời"
-          detail="Mở liên kết lời mời sau khi đăng nhập. Không dán mã vào địa chỉ trang."
-          testId="claim-token-empty"
-        />
+      {schemaKey !== contextKey || schemaStatus === 'loading' ? (
+        <SurfaceState kind="loading" title="Đang tải sự kiện…"
+          detail="Đang kiểm tra biểu mẫu và điều khoản đã xuất bản." />
       ) : null}
-
-      <div className={authButtonsRow}>
-        <Button
-          type="button"
-          variant="secondary"
-          disabled={busy || !displayTenantSlug.trim() || !displayEventSlug.trim()}
-          loading={busy && !formDefinition}
-          loadingLabel="Đang tải…"
-          onClick={() => void loadSchema()}
-        >
-          Tải biểu mẫu
-        </Button>
-      </div>
+      {schemaKey === contextKey && schemaStatus === 'error' ? (
+        <SurfaceState kind="error" title="Không thể mở lời mời" detail={schemaError} />
+      ) : null}
 
       {busy && !ux ? (
         <SurfaceState
@@ -463,85 +449,60 @@ export function GuestClaimForm() {
         />
       ) : null}
 
-      {formDefinition ? (
+      {schemaReady ? (
         <>
-          <RedeemFormFields
+          <section aria-label="Sự kiện trong lời mời">
+            <h2>{eventName}</h2>
+            {organizationName ? <p>{organizationName}</p> : null}
+          </section>
+          {formDefinition ? <RedeemFormFields
             definition={formDefinition}
             answers={answers}
             fieldErrors={fieldErrors}
-            disabled={busy}
+            disabled={busy || claimedKey === contextKey}
             onChange={(fieldId, value) =>
               setAnswers((prev) => ({ ...prev, [fieldId]: value }))
             }
-          />
-          <label className={redeemCheckboxRow}>
+          /> : null}
+          <div className={redeemCheckboxRow}>
             <input
+              id="claim-terms-consent"
               type="checkbox"
               checked={termsAccepted}
+              disabled={busy || claimedKey === contextKey}
               onChange={(e) => setTermsAccepted(e.target.checked)}
+              aria-invalid={fieldErrors.terms ? true : undefined}
             />
-            <span>Tôi đồng ý với điều khoản</span>
-          </label>
+            <label htmlFor="claim-terms-consent">Tôi đồng ý với điều khoản sự kiện</label>
+          </div>
+          {fieldErrors.terms ? <p className="field-error" role="alert">{fieldErrors.terms}</p> : null}
           {termsBody ? (
-            <details className={redeemMetaDetails} open>
+            <details className="mt-2.5 min-w-0 max-w-full text-sm [&_summary]:mb-2 [&_summary]:cursor-pointer [&_summary]:font-bold" open>
               <summary>Điều khoản sự kiện</summary>
-              <pre
-                className={meResultPre}
+              <div
+                className="max-h-80 max-w-full overflow-auto whitespace-pre-wrap break-words rounded-md border border-line bg-paper p-4 text-[0.9rem] font-normal leading-[1.6]"
                 tabIndex={0}
                 aria-label="Nội dung điều khoản sự kiện"
               >
                 {termsBody}
-              </pre>
+              </div>
             </details>
           ) : null}
         </>
       ) : null}
 
-      <Button
+      {schemaReady ? <Button
         type="button"
         variant="primary"
-        disabled={busy || !token.trim()}
+        disabled={busy || claimedKey === contextKey}
         loading={busy}
         loadingLabel="Đang gửi…"
         onClick={() => void submitClaim()}
       >
         Nhận vé mời
-      </Button>
+      </Button> : null}
 
-      {ux && outcomeLive ? (
-        <section
-          className={claimOutcomeClass(ux.kind)}
-          role={outcomeLive.role}
-          aria-live={outcomeLive.ariaLive}
-          aria-atomic={outcomeLive.ariaAtomic}
-          data-testid="guest-claim-result"
-        >
-          <h2>{ux.title}</h2>
-          <p>{ux.detail}</p>
-          {decision?.kind === 'pending' ? (
-            <p>Chưa phải vé — kiểm tra lại khi có cập nhật.</p>
-          ) : null}
-          {ux.kind === 'auth' ? (
-            <p className={authButtonsRow}>
-              <Button asChild variant="brand">
-                <a href={loginHref}>Đăng nhập bằng email đã được mời</a>
-              </Button>
-            </p>
-          ) : null}
-          {decision?.kind === 'pending' || ux.kind === 'unknown' ? (
-            <p>
-              <Button
-                type="button"
-                variant="secondary"
-                disabled={busy || !token.trim()}
-                onClick={() => void submitClaim()}
-              >
-                Kiểm tra lại
-              </Button>
-            </p>
-          ) : null}
-        </section>
-      ) : null}
+      {outcomeSection}
     </div>
   );
 }

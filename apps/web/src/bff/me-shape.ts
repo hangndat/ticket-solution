@@ -349,20 +349,22 @@ export function interpretAccountDeletion(
       if (
         typeof body.requestId !== 'string' ||
         !body.requestId.trim() ||
-        body.state !== 'AWAITING_POLICY' ||
+        body.state !== 'REQUESTED' ||
         typeof body.requestedAt !== 'string' ||
-        body.policyStatus !== 'UNRESOLVED'
+        body.policyStatus !== 'RESOLVED' ||
+        body.anonymizeWithinDays !== 30
       ) {
         return null;
       }
       return {
         requestId: body.requestId.trim(),
-        state: 'AWAITING_POLICY',
+        state: 'REQUESTED',
         requestedAt: body.requestedAt,
-        policyStatus: 'UNRESOLVED',
+        policyStatus: 'RESOLVED',
+        anonymizeWithinDays: 30,
       };
     },
-    [202, 200],
+    [201, 202, 200],
   );
 }
 

@@ -2,7 +2,7 @@
 
 import { Button } from '@ticket/ui';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   interpretAccountDeletion,
   viewLabel,
@@ -33,15 +33,15 @@ type DeletionCurrent = {
 function asDeletionCurrent(json: unknown): DeletionCurrent | null {
   if (!json || typeof json !== 'object' || Array.isArray(json)) return null;
   const body = json as Record<string, unknown>;
-  if (typeof body.requestId !== 'string' || !body.requestId.trim()) {
+  if (typeof body.requestId !== 'string' || !body.requestId.trim() ||
+      typeof body.state !== 'string' || ![
+        'REQUESTED', 'UNDER_REVIEW', 'AWAITING_POLICY', 'COMPLETED', 'REJECTED',
+      ].includes(body.state)) {
     return null;
   }
   return {
     requestId: body.requestId.trim(),
-    state:
-      typeof body.state === 'string' && body.state.trim()
-        ? body.state.trim()
-        : 'AWAITING_POLICY',
+    state: body.state,
     requestedAt:
       typeof body.requestedAt === 'string' ? body.requestedAt : '',
   };
@@ -79,6 +79,12 @@ export function AccountPanel() {
     useState<ViewResult<AccountDeletionRequestResponse> | null>(null);
   const [busy, setBusy] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
+  const inFlight = useRef(false);
+  const attemptKey = useRef<string | null>(null);
+  const openRequest = current !== null &&
+    (current.state === 'REQUESTED' || current.state === 'UNDER_REVIEW' ||
+      current.state === 'AWAITING_POLICY');
+  const canRequest = !current || current.state === 'REJECTED';
 
   useEffect(() => {
     void (async () => {
@@ -98,13 +104,20 @@ export function AccountPanel() {
         return;
       }
       if (result.status >= 200 && result.status < 300) {
-        setCurrent(asDeletionCurrent(result.json));
+        const parsed = asDeletionCurrent(result.json);
+        if (result.json !== null && !parsed) {
+          setLoadPhase('error');
+          setLoadError('Trạng thái tài khoản không hợp lệ. Thử lại sau.');
+          return;
+        }
+        setCurrent(parsed);
         setLoadPhase('ready');
         return;
       }
       if (result.status === 401 || result.status === 403) {
         setCurrent(null);
-        setLoadPhase('ready');
+        setLoadPhase('error');
+        setLoadError('Đăng nhập để xem hoặc gửi yêu cầu xóa tài khoản.');
         return;
       }
       if (result.status === 404) {
@@ -120,22 +133,39 @@ export function AccountPanel() {
   }, []);
 
   async function requestDeletion() {
-    if (!confirmed) return;
+    if (!confirmed || inFlight.current || busy || loadPhase !== 'ready' ||
+        !canRequest || view?.kind === 'ok') return;
+    inFlight.current = true;
     setBusy(true);
     setView(null);
-    const result = await platformMutate(
-      '/api/bff/me/account-deletion-requests',
-      { confirmation: true, idempotencyKey: crypto.randomUUID() },
-      REQUEST_TIMEOUT_MS,
-    );
-    setView(
-      interpretAccountDeletion(
+    const key = attemptKey.current ?? crypto.randomUUID();
+    attemptKey.current = key;
+    try {
+      const result = await platformMutate(
+        '/api/bff/me/account-deletion-requests',
+        { confirmation: true, idempotencyKey: key },
+        REQUEST_TIMEOUT_MS,
+      );
+      const next = interpretAccountDeletion(
         result.status,
         result.json,
         result.networkError || result.timedOut,
-      ),
-    );
-    setBusy(false);
+      );
+      setView(next.kind === 'unknown' ? {
+        kind: 'unknown',
+        message: 'Chưa xác nhận được yêu cầu. Đăng nhập lại nếu phiên hết hạn, kiểm tra trạng thái rồi chỉ gửi lại cùng yêu cầu.',
+      } : next);
+      if (next.kind === 'ok') {
+        setCurrent(asDeletionCurrent(next.value));
+        setConfirmed(false);
+        attemptKey.current = null;
+      } else if (next.kind === 'rejected') {
+        attemptKey.current = null;
+      }
+    } finally {
+      inFlight.current = false;
+      setBusy(false);
+    }
   }
 
   const resultLive =
@@ -149,10 +179,9 @@ export function AccountPanel() {
     <div className={accountDeletionFormRoot}>
       <aside className={accountDeletionNote} role="note">
         <p>
-          Gửi yêu cầu được hệ thống ghi nhận (có thể hiện trạng thái theo dõi).
-          Đây chưa phải xóa ngay. Chúng tôi xử lý xóa hoặc ẩn danh dữ liệu cá
-          nhân liên quan trong ≤ 30 ngày; nhật ký kiểm toán có thể giữ tới 730
-          ngày theo chính sách. Chi tiết:{' '}
+          Gửi yêu cầu xóa hoặc ẩn danh dữ liệu cá nhân. Xử lý trong tối đa 30
+          ngày theo chính sách. Nhật ký kiểm toán có thể được giữ tối đa 730
+          ngày. Chi tiết:{' '}
           <a href="/privacy">chính sách quyền riêng tư</a>.
         </p>
       </aside>
@@ -173,20 +202,18 @@ export function AccountPanel() {
         />
       ) : null}
       {loadPhase === 'ready' && !current ? (
-        <SurfaceState
-          kind="empty"
-          title="Chưa có yêu cầu xóa"
-          detail="Bạn chưa gửi yêu cầu xóa tài khoản. Khi gửi, yêu cầu đã được tiếp nhận; chúng tôi xử lý xóa hoặc ẩn danh trong ≤ 30 ngày — chưa phải đã xóa dữ liệu ngay."
-          testId="account-load-empty"
-        />
+        <p className="m-0 text-[0.92rem] text-muted" data-testid="account-load-empty">
+          Chưa có yêu cầu xóa tài khoản.
+        </p>
       ) : null}
-      {current ? (
+      {current && view?.kind !== 'ok' ? (
         <section
           className={accountDeletionCurrentPanel}
           role="status"
           data-testid="account-deletion-current"
         >
-          <h2>Yêu cầu xóa đang mở</h2>
+          <h2>{openRequest ? 'Yêu cầu xóa đang mở' :
+            current.state === 'COMPLETED' ? 'Yêu cầu đã hoàn tất' : 'Yêu cầu đã bị từ chối'}</h2>
           <dl>
             <div>
               <dt>Trạng thái</dt>
@@ -212,30 +239,33 @@ export function AccountPanel() {
             ) : null}
           </dl>
           <p>
-            Đây chưa phải đã xóa dữ liệu. Hệ thống vẫn đang xử lý theo chính
-            sách (mục tiêu ≤ 30 ngày).
+            {current.state === 'COMPLETED'
+              ? 'Yêu cầu đã hoàn tất theo chính sách. Xem chính sách quyền riêng tư để biết phạm vi dữ liệu được giữ lại.'
+              : current.state === 'REJECTED'
+                ? 'Yêu cầu trước đã bị từ chối. Bạn có thể gửi yêu cầu mới nếu vẫn muốn xóa tài khoản.'
+                : 'Yêu cầu đang được theo dõi; đây chưa phải xác nhận đã xóa dữ liệu.'}
           </p>
         </section>
       ) : null}
-      <label>
+      {canRequest && view?.kind !== 'ok' ? <label className="account-deletion-consent">
         <input
           type="checkbox"
           checked={confirmed}
+          disabled={loadPhase !== 'ready' || busy}
           onChange={(e) => setConfirmed(e.target.checked)}
-        />{' '}
-        Tôi hiểu đây là yêu cầu đã được tiếp nhận, không phải đã xóa ngay; mục
-        tiêu xử lý xóa hoặc ẩn danh trong ≤ 30 ngày.
-      </label>
-      <Button
+        />
+        <span>Tôi đã đọc và muốn gửi yêu cầu xóa tài khoản.</span>
+      </label> : null}
+      {canRequest && view?.kind !== 'ok' ? <Button
         type="button"
         variant="destructive"
-        disabled={busy || !confirmed || loadPhase === 'loading'}
+        disabled={busy || !confirmed || loadPhase !== 'ready'}
         loading={busy}
         loadingLabel="Đang gửi…"
         onClick={() => void requestDeletion()}
       >
-        Gửi yêu cầu xóa tài khoản
-      </Button>
+        {view?.kind === 'unknown' ? 'Gửi lại cùng yêu cầu' : 'Gửi yêu cầu xóa tài khoản'}
+      </Button> : null}
       {busy ? (
         <SurfaceState
           kind="loading"
@@ -247,7 +277,7 @@ export function AccountPanel() {
       {view && resultLive ? (
         <section
           className={
-            view.kind === 'rejected'
+            view.kind === 'rejected' || view.kind === 'unknown'
               ? accountDeletionOutcomeError
               : accountDeletionOutcomeOk
           }

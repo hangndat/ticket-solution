@@ -24,9 +24,7 @@ export default function ClaimPage() {
       <header className={claimInviteHeader}>
         <h1>Nhận lời mời sự kiện</h1>
         <p className={claimInviteIntro}>
-          Đây là lời mời khách nhận vé — khác mời thành viên tổ chức. Mở liên
-          kết mời, đăng nhập nếu cần, rồi hoàn tất biểu mẫu. Email đã xác minh
-          phải khớp lời mời; không tự tạo tài khoản mới.
+          Lời mời nhận vé được gửi qua email. Email đã xác minh phải khớp lời mời.
         </p>
       </header>
       <GuestClaimForm />
