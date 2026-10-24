@@ -20,10 +20,10 @@ export function marketingHeader(onSales: boolean, onInk: boolean) {
 }
 
 export const marketingWordmark = cn(
-  'min-w-0 shrink font-display text-[1.65rem] font-bold tracking-tight text-inherit no-underline',
+  'min-w-0 shrink-0 font-display text-[1.65rem] font-bold tracking-tight text-inherit no-underline',
   '[&_span]:text-signal',
   'max-lg:max-w-[9.5rem] max-lg:overflow-hidden max-lg:text-ellipsis max-lg:whitespace-nowrap max-lg:text-[1.35rem]',
-  'max-md:max-w-[42vw] max-md:flex-[0_1_auto]',
+  'max-md:max-w-[42vw] max-md:flex-[0_0_auto]',
 );
 
 export const marketingNav = cn(
@@ -38,8 +38,8 @@ export const marketingNavLinks = cn(
 );
 
 export const marketingLocaleGroup = cn(
-  'mr-2 inline-flex items-center gap-1 rounded-[10px] p-1',
-  'bg-ink/6 max-md:mr-[0.15rem]',
+  'inline-flex w-[5.5rem] shrink-0 items-center justify-center gap-1 rounded-[10px] p-1',
+  'bg-ink/6',
   '[[data-header-on-ink]_&]:bg-paper/10',
 );
 
@@ -64,7 +64,8 @@ export const marketingNavMobileLink = cn(
 export const marketingNavMobileActions =
   'grid gap-2 border-t border-paper/10 pt-1.5';
 
-const sectionPad = 'px-[clamp(1.25rem,4vw,2rem)] py-[clamp(4rem,8vw,6.5rem)] max-md:max-w-full max-md:overflow-x-clip';
+const sectionPad =
+  'scroll-mt-24 px-[clamp(1.25rem,4vw,2rem)] py-[clamp(4rem,8vw,6.5rem)] max-md:max-w-full max-md:overflow-x-clip';
 
 export const marketingWrap = 'relative z-[1] mx-auto max-w-[1120px]';
 
@@ -119,15 +120,29 @@ export const marketingDemoNote = cn(
 
 export const marketingHeroSection = cn(
   marketingSection('ink'),
-  'min-h-[min(82vh,46rem)] pt-[clamp(2.5rem,6vw,4rem)] pb-[clamp(3rem,8vw,5rem)]',
+  'pt-[clamp(2.5rem,6vw,4rem)] pb-[clamp(3rem,8vw,5rem)]',
 );
 
 export const marketingHeroGrid = cn(
-  'grid grid-cols-1 items-center gap-10 lg:grid-cols-[1fr_1.05fr] lg:gap-12',
+  'grid grid-cols-1 items-center gap-8 max-md:px-5 max-md:py-8 max-md:gap-8 xl:grid-cols-[1fr_1.12fr] xl:gap-12',
 );
 
-export const marketingHeroCopy =
-  'max-md:min-h-[40rem] lg:min-h-[28rem]';
+export const marketingHeroCopy = '';
+
+export const marketingHeroMedia = cn(
+  'm-0 overflow-hidden rounded-md border border-paper/10 bg-paper/5',
+);
+
+export const marketingHeroMediaImg = 'block size-full object-cover object-top';
+
+export const marketingHeroMediaCaption = cn(
+  'mt-2 text-[0.8rem] text-paper/55',
+);
+
+export const marketingHeroLogin = cn(
+  'mt-5 text-[0.88rem] text-paper/70',
+  '[&_a]:font-semibold [&_a]:text-paper [&_a]:no-underline [&_a]:hover:underline',
+);
 
 export const marketingHeroPoints = cn(
   'mt-6 flex list-none flex-col gap-[0.65rem] p-0',
@@ -271,6 +286,9 @@ export const marketingBentoCard = cn(
 
 export const marketingBentoCardInner =
   'grid h-full gap-3.5 p-4! md:grid-cols-1 md:items-start md:p-[1.1rem]!';
+
+export const marketingBentoCardInnerText =
+  'flex h-full flex-col justify-center gap-3.5 p-5! md:p-6!';
 
 export function marketingBentoCardInnerSpan(span: string) {
   const wide = span === 'invite' || span === 'admin' || span === 'ops';
