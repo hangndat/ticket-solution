@@ -124,7 +124,7 @@ export const marketingHeroSection = cn(
 );
 
 export const marketingHeroGrid = cn(
-  'grid grid-cols-1 items-center gap-8 max-md:px-5 max-md:py-8 max-md:gap-8 xl:grid-cols-[1fr_1.12fr] xl:gap-12',
+  'grid grid-cols-1 items-center gap-8 max-md:py-8 max-md:gap-8 xl:grid-cols-[1fr_1.12fr] xl:gap-12',
 );
 
 export const marketingHeroCopy = '';

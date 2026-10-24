@@ -41,4 +41,4 @@ Workflow wrapper bắt buộc `--employee` và task title đúng tên/role trư�
 
 Web lint PASS, web tests286/286 PASS, web production build + TypeScript PASS; UI shared17/17 PASS; workflow78/78 PASS; process ownership4/4 PASS; shell syntax và ui-budget PASS. Build còn cảnh báo tracing filesystem ở marketing lead idempotency (đã có trước, không đổi trong diff).
 
-**Trạng thái:** code complete và local journey chính đã kiểm. Chờ reviewer độc lập exactSHA + CI trên PR cập nhật. Không gọi pilot ready; các flow ngoài web scope như native Gate/offline và portal không được nhận là đã UAT trong đợt này.
+**Trạng thái:** code complete và local journey chính đã kiểm. CI trên `7df8f64` xanh; James review độc lập phát hiện F01–F06, chưa acceptance complete. Chẩn đoán và một lượt ngoại lệ duy nhất được ghi tại `UI869-DIAGNOSIS.md` / `UI869-EXCEPTION-HANDOFF.md`; chờ revalidation exact SHA mới + CI. Không gọi pilot ready; các flow ngoài web scope như native Gate/offline và portal không được nhận là đã UAT trong đợt này.

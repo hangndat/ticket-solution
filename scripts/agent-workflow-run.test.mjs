@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { appendEvent, events } from './company-worklog.mjs';
+import { appendEvent, events, validateJournal } from './company-worklog.mjs';
 const cli=fileURLToPath(new URL('./agent-workflow-run.mjs',import.meta.url));
 function fixture(fn) {
  const dir=mkdtempSync(join(tmpdir(),'measured-worker-'));
@@ -29,12 +29,36 @@ const start=['start','--task','task1','--run-id','run1','--role-id','coordinator
 const settle=['settle','--dispatch-id','ctx1','--run-id','run1','--role-id','coordinator'];
 test('company events normalize source UTC, dedupe and reject conflicting identities',()=>fixture(({dir})=>{
  const path=join(dir,'company.jsonl');
- const e={employeeId:'linh',type:'checkpoint',runId:'run1',taskId:'task1',dispatchId:'ctx1',summary:'Kiểm tra card trên local.',occurredAt:'2026-10-24 08:00:00'};
+ const e={id:'checkpoint-1',employeeId:'linh',type:'checkpoint',runId:'run1',taskId:'task1',dispatchId:'ctx1',summary:'Kiểm tra card trên local.',occurredAt:'2026-10-24 08:00:00'};
  const r=appendEvent(e,path);assert.equal(r.event.occurredAt,'2026-10-24T08:00:00.000Z');
  assert.equal(appendEvent(e,path).recorded,false);assert.equal(events(path).length,1);
  assert.throws(()=>appendEvent({...e,employeeId:'liv'},path),/event_identity_conflict/);
  assert.throws(()=>appendEvent({...e,occurredAt:'invalid'},path),/invalid_event_timestamp/);
  assert.throws(()=>appendEvent({...e,issue:'869'},path),/invalid_event_reference/);
+}));
+test('multiple checkpoints survive and retry each event exactly once',()=>fixture(({dir})=>{
+ const path=join(dir,'company.jsonl');
+ const base={employeeId:'james',type:'checkpoint',runId:'run1',taskId:'task1',dispatchId:'ctx1',summary:'first'};
+ const first=appendEvent(base,path).event;
+ const second=appendEvent({...base,summary:'second'},path).event;
+ assert.notEqual(first.id,second.id);
+ assert.equal(appendEvent(first,path).recorded,false);
+ assert.equal(appendEvent(second,path).recorded,false);
+ assert.deepEqual(events(path).map(e=>e.summary),['first','second']);
+ assert.throws(()=>appendEvent({...first,summary:'changed'},path),/event_identity_conflict/);
+}));
+test('dispatch and recovery keep employee/run/task across event types and validation',()=>fixture(({dir})=>{
+ const path=join(dir,'company.jsonl');
+ const assigned=appendEvent({employeeId:'james',type:'assigned',runId:'run1',taskId:'task1',dispatchId:'ctx1',summary:'assigned'},path).event;
+ for(const change of [{employeeId:'linh'},{runId:'run2'},{taskId:'task2'}]) {
+  assert.throws(()=>appendEvent({...assigned,id:'settled-new',type:'settled',...change},path),/dispatch_identity_conflict/);
+  assert.throws(()=>validateJournal([assigned,{...assigned,id:'settled-new',type:'settled',...change}]),/dispatch_identity_conflict/);
+  assert.throws(()=>appendEvent({...assigned,id:'recovered-new',type:'recovered',dispatchId:'ctx2',previousDispatchId:'ctx1',...change},path),/recovery_identity_conflict/);
+ }
+ appendEvent({...assigned,id:'recovered-good',type:'recovered',dispatchId:'ctx2',previousDispatchId:'ctx1'},path);
+ appendEvent({...assigned,id:'settled-good',type:'settled',dispatchId:'ctx2'},path);
+ assert.equal(validateJournal(events(path)).length,3);
+ assert.throws(()=>validateJournal([{...assigned,id:'future-recovery',dispatchId:'ctx3',previousDispatchId:'ctx4'}, {...assigned,id:'later-source',dispatchId:'ctx4',employeeId:'linh'}]),/recovery_identity_conflict/);
 }));
 test('employee identity rejects role/title mismatch before launch and tracks settlement',()=>fixture(({dir,run,calls})=>{
  const withoutIdentity=start.slice(0,-4);

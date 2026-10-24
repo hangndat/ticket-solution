@@ -39,15 +39,43 @@ def write_owner(pidfile, pid):
         path.chmod(0o600)
 
 
+def group_members(group):
+    rows = subprocess.check_output(['ps', '-axo', 'pid=,pgid=,lstart=,stat='], text=True).splitlines()
+    members = {}
+    for row in rows:
+        parts = row.split()
+        if len(parts) >= 8 and int(parts[1]) == group and not parts[-1].startswith('Z'):
+            members[int(parts[0])] = ' '.join(parts[2:-1])
+    return members
+
+
+def wait_stopped(observe, timeout):
+    deadline = time.monotonic() + timeout
+    while observe():
+        if time.monotonic() >= deadline:
+            return False
+        time.sleep(.05)
+    return True
+
+
 def stop(pidfile):
     record = read_owner(pidfile)
     if record:
         pid = record['pid']
-        if record['group'] == pid and os.getpgid(pid) == pid:
+        if record['group'] == pid:
+            births = group_members(pid)
+            if births.get(pid) != record['started']:
+                raise RuntimeError('owned_group_identity_unverifiable')
             os.killpg(pid, signal.SIGTERM)
-            time.sleep(.3)
-            if identity(pid) == record['started']:
+            if not wait_stopped(lambda: group_members(pid), .3):
+                remaining = group_members(pid)
+                # The leader may already have exited. A surviving member with
+                # its original birth identity still anchors this private group.
+                if not any(births.get(p) == birth for p, birth in remaining.items()):
+                    raise RuntimeError('owned_group_identity_unverifiable')
                 os.killpg(pid, signal.SIGKILL)
+                if not wait_stopped(lambda: group_members(pid), 2):
+                    raise RuntimeError('owned_group_did_not_stop')
         else:
             # Legacy process adopted once during migration: enumerate descendants,
             # never kill its shared terminal/supervisor process group.
@@ -63,6 +91,15 @@ def stop(pidfile):
                         os.kill(p, signal.SIGTERM)
                     except ProcessLookupError:
                         pass
+            survivors = lambda: [p for p in selected if births[p] and identity(p) == births[p]]
+            if not wait_stopped(survivors, .3):
+                for p in survivors():
+                    try:
+                        os.kill(p, signal.SIGKILL)
+                    except ProcessLookupError:
+                        pass
+                if not wait_stopped(survivors, 2):
+                    raise RuntimeError('owned_descendants_did_not_stop')
     for path in [pidfile, pidfile.with_suffix('.json')]:
         path.unlink(missing_ok=True)
 

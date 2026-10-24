@@ -1,6 +1,7 @@
 import importlib.util
 import json
 import os
+import signal
 from pathlib import Path
 import subprocess
 import sys
@@ -73,6 +74,40 @@ class ProcessOwnershipTest(unittest.TestCase):
                 break
             time.sleep(.05)
         self.assertIsNone(module.identity(child))
+
+    def test_stop_kills_child_ignoring_term_after_leader_exits(self):
+        childfile, ready = self.root / 'child', self.root / 'ready'
+        child_code = f'import signal,time;from pathlib import Path;signal.signal(signal.SIGTERM,signal.SIG_IGN);Path({str(ready)!r}).touch();time.sleep(120)'
+        owner = self.start(f'import subprocess,sys,time;from pathlib import Path;child=subprocess.Popen([sys.executable,"-c",{child_code!r}]);Path({str(childfile)!r}).write_text(str(child.pid));time.sleep(120)')
+        child, birth = None, None
+        try:
+            for _ in range(100):
+                if ready.exists() and childfile.exists():
+                    break
+                time.sleep(.02)
+            self.assertTrue(ready.exists())
+            child = int(childfile.read_text())
+            birth = module.identity(child)
+            self.assertEqual(os.getpgid(child), owner['group'])
+            result = self.run_helper('stop', self.pidfile)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIsNone(module.identity(owner['pid']))
+            self.assertIsNone(module.identity(child))
+            self.assertFalse(self.pidfile.exists())
+        finally:
+            if child and birth and module.identity(child) == birth and os.getpgid(child) == owner['group']:
+                os.kill(child, signal.SIGKILL)
+
+    def test_down_reports_compose_failure_and_preserves_pause(self):
+        docker = self.root / 'docker'
+        docker.write_text('#!/bin/sh\nprintf "%s\\n" "$*" >&2\nexit 37\n')
+        docker.chmod(0o700)
+        state = self.root / 'state'
+        result = subprocess.run(['bash', str(SCRIPT.with_name('dev-local-stack.sh')), 'down'], env={**os.environ, 'PATH': str(self.root) + os.pathsep + os.environ['PATH'], 'UI869_DEV_STATE_DIR': str(state)}, capture_output=True, text=True)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertTrue((state / 'paused').exists())
+        self.assertIn('ui869dev', result.stderr)
+        self.assertIn('stop failed', result.stdout)
 
 
 if __name__ == '__main__':

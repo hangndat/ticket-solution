@@ -22,6 +22,8 @@ Mỗi event có `schemaVersion`, `id` (duy nhất), `occurredAt` (thời điểm
 
 `type`: `assigned`, `checkpoint`, `interrupted`, `recovered`, `handoff`, `reviewed`, `settled`, `released`. `model` giữ `requested`/`effective` và nguồn receipt; null nghĩa chưa biết, không coi là default đã được xác minh. `evidence` là các path/URL đã kiểm; `source` ghi công cụ/receipt. Historical backfill phải giữ thời điểm nguồn và chỉ đánh dấu phần đã xác minh.
 
+Checkpoint/handoff/review mới nhận ID riêng; khi retry cùng một event, truyền lại `id` đã nhận (hoặc tự cấp ID ổn định trước khi record). Các receipt lifecycle chỉ xuất hiện một lần mỗi loại/dispatch. Append và `validate` đều kiểm một dispatch giữ đúng employee/run/task qua các loại event; recovery chain đã có dữ liệu cũng phải giữ cùng danh tính.
+
 Lệnh đọc: `node scripts/company-worklog.mjs roster`, `profile linh`, `status`, `validate`. File JSONL có thể đọc trực tiếp để dựng dashboard sau; không phụ thuộc UI hoặc database mới.
 
 Các persona có sẵn trong `docs/agents/README.md` được giữ nguyên; bổ sung Minh (coordinator), Linh (web, theo user yêu cầu phục hồi) và Noah (tooling local được giao trong #869). Registry này mở rộng nhân sự, không thay ownership/routing/role contract và model catalog hiện hành.

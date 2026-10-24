@@ -6,8 +6,8 @@
 # project or `ticket_d9_demo` state.
 #
 # Host split (explicit per task authorization — local loopback only):
-#   marketing surface: http://localhost:3417   (MARKETING_HOSTS/MARKETING_ORIGIN)
-#   product surface:   http://127.0.0.1:3417   (PRODUCT_ORIGIN / WEB_PUBLIC_ORIGIN)
+#   marketing surface: http://marketing.localhost:3417 (MARKETING_HOSTS/MARKETING_ORIGIN)
+#   product surface:   http://localhost:3417 (PRODUCT_ORIGIN / WEB_PUBLIC_ORIGIN)
 #   API:               http://127.0.0.1:3498
 #   OIDC issuer:       http://127.0.0.1:8080 (isolated ui869dev Keycloak, realm "ticket")
 #
@@ -395,12 +395,15 @@ stop_pid() {
 cmd_down() {
   mkdirs
   touch "${STATE_DIR}/paused"
-  stop_pid "${PID_DIR}/web.pid" "web"
-  stop_pid "${PID_DIR}/api.pid" "api"
-  if docker compose -p "${COMPOSE_PROJECT}" ps -q >/dev/null 2>&1; then
-    log "stopping isolated compose project '${COMPOSE_PROJECT}' containers (volumes preserved, not destroyed)"
-    compose stop 2>/dev/null || true
+  local failed=0
+  stop_pid "${PID_DIR}/web.pid" "web" || failed=1
+  stop_pid "${PID_DIR}/api.pid" "api" || failed=1
+  log "stopping isolated compose project '${COMPOSE_PROJECT}' containers (volumes preserved, not destroyed)"
+  if ! compose stop; then
+    log "ERROR: docker compose -p '${COMPOSE_PROJECT}' stop failed; stack remains paused"
+    failed=1
   fi
+  return "${failed}"
 }
 
 # Foreground supervisor: ensures infra/API/web are up and restarts API/web if
