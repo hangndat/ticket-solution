@@ -1,6 +1,8 @@
 # Roadmap Epic #580 — Refactor trải nghiệm production (mobile)
 
-> **Refactor app production — O18, 20/10/2026:** Issue [#580](https://github.com/hangndat/ticket-solution/issues/580), [gói kế hoạch hiện hành](README.md), [DECISION-LOG O18](../../DECISION-LOG.md). Authority: [README.md](README.md) thắng `archive/`.
+> **Refactor app production — Issue #580, 20/10/2026:** [Issue và phê duyệt](https://github.com/hangndat/ticket-solution/issues/580), [gói handoff](README.md). “O18” trong các bảng lịch sử bên dưới là nhãn cũ của gói mobile; [DECISION-LOG.md](../../DECISION-LOG.md) dùng O18 cho Portal, không phải authority mobile. [README.md](README.md) thắng `archive/`.
+
+> **Đối chiếu 24/10/2026:** đây là roadmap và ma trận gap tại thời điểm thiết kế, không phải danh sách task live. Wave 1 đã có PR #586, #587 và #597 merge; Issue #580 đã đóng. §1, §4, §7 và §8 giữ nguyên để truy vết đề xuất ban đầu. Trạng thái hiện hành lấy từ [Project #3](https://github.com/users/hangndat/projects/3), PR và evidence exact SHA; các AC/UAT chưa được xác nhận chỉ bằng việc merge. Xem [README](README.md).
 
 | Trường | Giá trị |
 | --- | --- |
@@ -61,7 +63,7 @@
 
 ---
 
-## 4. Epic → Story → Task (đề xuất Issues — chưa tạo)
+## 4. Epic → Story → Task (đề xuất lúc lập kế hoạch 20/10)
 
 Prefix **MPR**. Persona theo [docs/agents/README.md](../../agents/README.md).
 
@@ -102,7 +104,7 @@ Parent [#580](https://github.com/hangndat/ticket-solution/issues/580). DoD: AC �
 - **T5** design artifact hoàn tất; không block spawn T4 (PD đã handoff).
 - **T6** redeem polish **không** dep T3/T4 (tránh dep giả redeem→catalog).
 - **T7** không re-implement staff refactor; preserve WIP qua snapshot/branch; AC regression §6.
-- **T8** một session James **dod+sec** cùng SHA ([orca routing](../../.cursor/rules/orca-agent-routing-core.mdc)).
+- **T8** một session James **dod+sec** cùng SHA ([orca routing](../../../.cursor/rules/orca-agent-routing-core.mdc)).
 - **T9** owner **iOS + coordinator** chạy UAT trên iPhone thật (đội); user không bắt buộc làm tester; ghi blocker thật nếu thiếu thiết bị/quyền.
 
 **Web (optional):** **MPR-W1** nếu Architect ghi consumer web cần `GET /v1/public/events` — không chặn iOS.
@@ -179,7 +181,7 @@ Wave 7   MPR-T9 physical UAT (iOS/coordinator)
 
 ---
 
-## 8. Đề xuất Issues GitHub (sau roadmap review)
+## 8. Đề xuất Issues GitHub (snapshot trước triển khai)
 
 | Issue | Title (VI) | Task |
 | --- | --- | --- |
@@ -198,7 +200,7 @@ PD artifact **#580** — không Issue coding (T5 done).
 
 ## 9. Workstream SCR (single-code)
 
-Không migration/flag prod trong #580. Sau SCR contracts/BE: Task iOS global redeem **tách Epic**. Tham chiếu [archive/SINGLE-CODE-REDEMPTION-PLAN.md](archive/SINGLE-CODE-REDEMPTION-PLAN.md), [`docs/architecture/single-code-redemption.md`](../../architecture/single-code-redemption.md).
+Không migration/flag prod trong #580. Sau SCR contracts/BE: Task iOS global redeem **tách Epic**. Tham chiếu [kế hoạch SCR](../SINGLE-CODE-REDEMPTION-PLAN.md), [`docs/architecture/single-code-redemption.md`](../../architecture/single-code-redemption.md).
 
 ---
 
@@ -211,4 +213,4 @@ Không migration/flag prod trong #580. Sau SCR contracts/BE: Task iOS global red
 | [ARCHITECTURE.md](ARCHITECTURE.md) | K-API-01/02, W1 wallet, deps BE→iOS |
 | [IOS-AUDIT.md](IOS-AUDIT.md) | B1–B6, dirty handoff, T7 scope, Dexter screenshot evidence |
 
-**Planner worker:** roadmap đủ spawn specs; coordinator mở Issues §8 sau user roadmap review O18.
+**Planner worker (20/10):** roadmap đủ để soạn specs; danh sách Issue §8 là đề xuất ban đầu, không dùng để tạo lại task đã triển khai.
