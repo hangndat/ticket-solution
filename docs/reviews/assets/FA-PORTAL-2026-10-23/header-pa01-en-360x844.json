@@ -1,0 +1,46 @@
+{
+  "sha": "b2faa48a1ce443c8fc6c849cb74a06a57f8b0c37",
+  "png": "header-pa01-en-360x844.png",
+  "locale": "en",
+  "viewportTarget": {
+    "w": 360,
+    "h": 844
+  },
+  "measured": {
+    "dpr": 1,
+    "innerHeight": 844,
+    "innerWidth": 360
+  },
+  "viewportMatch": true,
+  "probe": {
+    "pa01": {
+      "chrome": {
+        "activeTab": {
+          "clientWidth": 46,
+          "clipped": false,
+          "scrollWidth": 46,
+          "text": "Import"
+        },
+        "contextStrip": {
+          "overflowX": true,
+          "stacked": true
+        },
+        "filtersVisible": true,
+        "notifyTabAria": "Notifications",
+        "pageSubTitle": null,
+        "pageTitle": {
+          "clientWidth": 172,
+          "clipped": false,
+          "scrollWidth": 172,
+          "text": "Guests"
+        }
+      },
+      "lang": "en",
+      "measured": {
+        "dpr": 1,
+        "innerHeight": 844,
+        "innerWidth": 360
+      }
+    }
+  }
+}

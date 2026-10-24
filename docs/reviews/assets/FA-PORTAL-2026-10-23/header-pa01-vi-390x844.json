@@ -1,0 +1,46 @@
+{
+  "sha": "b2faa48a1ce443c8fc6c849cb74a06a57f8b0c37",
+  "png": "header-pa01-vi-390x844.png",
+  "locale": "vi",
+  "viewportTarget": {
+    "w": 390,
+    "h": 844
+  },
+  "measured": {
+    "dpr": 1,
+    "innerHeight": 844,
+    "innerWidth": 390
+  },
+  "viewportMatch": true,
+  "probe": {
+    "pa01": {
+      "chrome": {
+        "activeTab": {
+          "clientWidth": 37,
+          "clipped": false,
+          "scrollWidth": 37,
+          "text": "Nhập"
+        },
+        "contextStrip": {
+          "overflowX": false,
+          "stacked": true
+        },
+        "filtersVisible": true,
+        "notifyTabAria": "Thông báo",
+        "pageSubTitle": null,
+        "pageTitle": {
+          "clientWidth": 202,
+          "clipped": false,
+          "scrollWidth": 202,
+          "text": "Khách"
+        }
+      },
+      "lang": "vi",
+      "measured": {
+        "dpr": 1,
+        "innerHeight": 844,
+        "innerWidth": 390
+      }
+    }
+  }
+}
