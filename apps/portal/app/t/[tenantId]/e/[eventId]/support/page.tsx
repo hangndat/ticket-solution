@@ -3,6 +3,7 @@
 import { PortalPage } from '../../../../../../src/components/portal-page';
 import { useParams } from 'next/navigation';
 import { CsPanel } from '../../../../../../src/ops/panels/cs-panel';
+import { isEventPagePermitted } from '../../../../../../src/prep/event-access-resolver';
 import { useEventAccess } from '../../../../../../src/prep/use-event-access';
 import { SurfaceState } from '../../../../../../src/components/surface-state';
 import { usePortalLocale } from '../../../../../../src/i18n';
@@ -30,6 +31,17 @@ export default function EventSupportPage() {
         description={t('support.h_14ecmxf')}
         onRetry={() => {
           window.location.href = `/t/${tenantId}`;
+        }}
+      />
+    );
+  }
+  if (!isEventPagePermitted('support', access.permissions)) {
+    return (
+      <SurfaceState
+        kind="permission-denied"
+        description={t('support.h_14ecmxf')}
+        onRetry={() => {
+          window.location.href = `/t/${tenantId}/e/${eventId}`;
         }}
       />
     );
