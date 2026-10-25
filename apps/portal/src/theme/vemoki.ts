@@ -8,7 +8,7 @@ export const VEMOKI_COLORS = {
   ink: '#172039',
   paper: '#F6F8FC',
   signal: '#E11D48',
-  focus: '#2563EB',
+  focus: '#3568EF',
   line: '#DFE5F0',
   muted: '#53607B',
   /** Ant Design primary — enterprise violet (DEC-02), not marketing neon. */
@@ -37,7 +37,7 @@ export const PORTAL_ALERT_TOKENS = {
 export const vemokiTheme: ThemeConfig = {
   token: {
     colorPrimary: VEMOKI_COLORS.primary,
-    colorInfo: '#2563EB',
+    colorInfo: '#397DFF',
     colorSuccess: '#127349',
     colorWarning: '#8A5800',
     colorError: '#B3213A',
@@ -50,16 +50,37 @@ export const vemokiTheme: ThemeConfig = {
     controlOutline: VEMOKI_COLORS.focus,
     borderRadius: 12,
     controlHeight: 44,
+    fontSize: 16,
+    fontSizeLG: 16,
+    fontSizeHeading1: 30,
+    fontSizeHeading2: 22,
+    fontSizeHeading3: 18,
+    fontSizeHeading4: 16,
+    fontSizeHeading5: 14,
+    lineHeight: 1.5,
+    lineHeightHeading1: 1.2,
     fontFamily:
       "'Be Vietnam Pro', 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif",
     fontFamilyCode: 'ui-monospace, SFMono-Regular, Menlo, monospace',
   },
   components: {
     Button: {
-      borderRadius: 12,
+      borderRadius: 10,
       controlHeight: 44,
       primaryShadow: 'none',
       defaultShadow: 'none',
+    },
+    Input: {
+      controlHeight: 44,
+      borderRadius: 12,
+    },
+    Select: {
+      controlHeight: 44,
+      borderRadius: 12,
+    },
+    Form: {
+      labelFontSize: 14,
+      labelColor: VEMOKI_COLORS.ink,
     },
     Alert: {
       colorInfoBg: PORTAL_ALERT_TOKENS.colorInfoBg,
