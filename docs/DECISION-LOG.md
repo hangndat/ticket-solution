@@ -6,6 +6,18 @@ Tracking: Issues [#10](https://github.com/hangndat/ticket-solution/issues/10), [
 
 **Kiến trúc hiện trạng (canonical, Epic [#891](https://github.com/hangndat/ticket-solution/issues/891) / F06):** [`docs/architecture/ar891-current-architecture.md`](./architecture/ar891-current-architecture.md) — deployed / tested / proposed; không thay nội dung quyết định lịch sử bên dưới.
 
+## O25 — Epic #914: tách slice portal/web và chốt phạm vi offline (26/10/2026)
+
+User duyệt định hướng/phạm vi Epic [#914](https://github.com/hangndat/ticket-solution/issues/914) ngày 26/10/2026. Roadmap thực thi canonical: [`docs/plans/VEMOKI-CORE-UX-ROADMAP-2026-10-26.md`](./plans/VEMOKI-CORE-UX-ROADMAP-2026-10-26.md); [`docs/vemoki-core-roadmap-agents.md`](./vemoki-core-roadmap-agents.md) chỉ là reference. (Số O24 đang được đề xuất trên nhánh PP1 chưa merge nên không dùng.)
+
+| # | Quyết định | Chi tiết |
+| - | ---------- | -------- |
+| 1 | Ownership | `apps/portal` và `apps/web` là **hai ownership slice riêng**; mỗi slice tối đa một feature coding worker cùng lúc. Thay quy định "cùng slice web, kể cả `apps/web` và `apps/portal`" trong `docs/plans/PORTAL-ROADMAP.md` §4 và `docs/plans/PORTAL-IMPLEMENTATION-RUN.md`. Shared contracts, root tooling, lockfile, CI vẫn do coordinator. Giữ caps, employee identity, backpressure; không giao một employee hai dispatch chồng nhau. |
+| 2 | Offline attendee web | Attendee web cần mạng để tải vé lần đầu. Epic #914 **không** thêm cold-offline web, PWA hoặc cache offline. Tiêu chí cold-offline web trong #889/#881 là ngoài scope, không được ghi PASS. |
+| 3 | Offline iOS | iOS offline chỉ áp dụng cho dữ liệu đã tải theo contract hiện hành (ADR-18, O10); không mở rộng claim offline multi-device. |
+
+Architecture impact: **Không** (quy tắc ownership/scope, không đổi runtime). Approval ≠ code complete ≠ acceptance complete ≠ pilot ready.
+
 ## O23 — Gate chỉ trên iOS Staff; chốt hướng thiết kế Vemoki (24/10/2026)
 
 User quyết định **bỏ Web Gate**. Quét QR, nhập tay và xác nhận vào cổng chỉ thuộc workspace Staff trong app iOS, theo quyền và kết quả backend. Attendee web/iOS chỉ hiển thị vé; Portal chỉ đọc báo cáo Gate theo `report.read`, không có hành động admission. Quyết định này thay thế phần `GATE-STAY-APP` của O16 và các mô tả Web Gate trong PRD/roadmap cũ; phần còn lại của O16 giữ nguyên như lịch sử quyết định.
