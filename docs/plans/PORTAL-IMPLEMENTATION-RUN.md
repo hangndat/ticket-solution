@@ -21,7 +21,7 @@ Giao tiếp coordinator khác bằng đúng handle được `run-list` trả (`t
 | #409 | `architect`, `docs/agents/roles/architect.md`; Architecture impact Có | `task_fe3aadfcd481` / `ctx_0f85ebfd8721` | `docs/ops/ADR-20-PORTAL-ADMIN.md` |
 | #410 | `product-design`, `docs/agents/roles/product-design.md`; Architecture impact Không (theo gói đã duyệt) | `task_61a47c5c4685` / `ctx_32f71830742d` | `docs/design/PORTAL-IMPLEMENTATION-HANDOFF.md` |
 
-Root tooling/CI/lockfile/shared contracts: coordinator; `apps/portal` và `apps/web` là cùng slice web, không hai coding Dispatch feature đồng thời. Backend scope riêng; reviewer độc lập theo exact SHA. Mọi Task unblocked được fill dưới capacity/WIP sau khi ownership rảnh.
+Root tooling/CI/lockfile/shared contracts: coordinator; `apps/portal` và `apps/web` là cùng slice web, không hai coding Dispatch feature đồng thời. _(Supersession 26/10/2026 — [O25](../DECISION-LOG.md): hai slice riêng, mỗi slice ≤1 feature coding worker.)_ Backend scope riêng; reviewer độc lập theo exact SHA. Mọi Task unblocked được fill dưới capacity/WIP sau khi ownership rảnh.
 
 ## Checks và giới hạn
 
