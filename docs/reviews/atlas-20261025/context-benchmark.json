@@ -1,0 +1,213 @@
+{
+  "runtimeSourceSha": "152b6383d0127c13b9373dfd9ead3105bb510409",
+  "runtimeModified": false,
+  "runId": "c6721bd3",
+  "wrapperExitCode": 0,
+  "contextTests": {
+    "pass": 4,
+    "fail": 0
+  },
+  "previousAttempts": [
+    {
+      "runId": "935e0730",
+      "type": "small smoke",
+      "wrapperExitCode": 0,
+      "measurementPass": true
+    },
+    {
+      "runId": "913c8a96",
+      "type": "full baseline",
+      "wrapperExitCode": 127,
+      "measurementPass": true,
+      "limitation": "Shell script comment edited during execution; clean rerun supersedes this attempt"
+    }
+  ],
+  "s3HttpStatusCounts": [
+    {
+      "name": "s3_reserve",
+      "status": "200",
+      "count": 1200
+    },
+    {
+      "name": "s3_issue",
+      "status": "201",
+      "count": 3001
+    },
+    {
+      "name": "s3_confirm",
+      "status": "200",
+      "count": 1200
+    }
+  ],
+  "fileSha256": {
+    "scripts/d5-load-baseline.mjs": "f4c4211e5a5c03307af0696b10a44c19b7da695820ca8f1bf3753d9ffb50a950",
+    "scripts/d5-load-baseline.sh": "8f43a196120b5cabe8a217f9ad832f5f7a21a35d6d5bfe0076cf082f6c5d7edd",
+    "scripts/load/scanner-context.mjs": "f0ec38b537dd8f4bf24102eddabe7688b759a4238777915b8dc347f7fc955cbc",
+    "scripts/load/scanner-context.test.mjs": "d68358174feea043997262ba7a834407373560223e122d8925cb8a30c949cb03",
+    "scripts/load/s3-issue-confirm.js": "8fa370ed763d036535db4f2d44f7e97f7fcee7342b4fac4c5290954a3c580445",
+    "scripts/load/gate-scanners.js": "2ca5285da036480c729f10f3164ca0fcd37c6bef95c8013cab6fb6f25edfeb30",
+    "package.json": "093f85084b26fd6a767753a1c5ca6ad645907e8580906548b7af27b89003f925"
+  },
+  "summary": {
+    "scenario": "TD S3 sustained issue+confirm concurrent + S1 volume SQL seed",
+    "ticketsPerEventTarget": 20000,
+    "events": 2,
+    "scannersPerEvent": 50,
+    "scannersTotal": 100,
+    "scannerIdentityContext": {
+      "model": "one-identity-per-scanner",
+      "distinctIdentities": 100,
+      "distinctUsers": 100,
+      "distinctSessions": 100,
+      "events": 2,
+      "scannersPerEvent": 50
+    },
+    "sessionsByEvent": {
+      "92070c2e-bce0-41d1-a0fb-46a8266c3a29": 50,
+      "aef5acff-c5b6-4736-bfed-41526da9a333": 50
+    },
+    "volumeSeedMs": 134000,
+    "volumeSeedNote": "ACTIVE tickets bulk-inserted in SQL for S1 volume; NOT counted as HTTP issue RPS. HTTP issue path measured separately via k6 S3.",
+    "httpIssuePoolSize": 3000,
+    "s3": {
+      "issueRateTarget": 50,
+      "confirmRateTarget": 20,
+      "sustainSecTarget": 60,
+      "elapsedSec": 60.74,
+      "ok": true,
+      "error": null,
+      "metrics": {
+        "issueOk": 3001,
+        "confirmOk": 1200,
+        "issueRpsAchieved": 50.016666666666666,
+        "confirmRpsAchieved": 20,
+        "issueP95Ms": 26,
+        "confirmP95Ms": 17,
+        "issueErrorRate": 0,
+        "confirmErrorRate": 0
+      },
+      "rateOk": true,
+      "p95Ok": true,
+      "errOk": true,
+      "artifact": "/tmp/atlas-20261025-context-clean/k6-s3-c6721bd3.json",
+      "summaryArtifact": "/tmp/atlas-20261025-context-clean/k6-s3-summary-c6721bd3.json"
+    },
+    "admissionLayer": {
+      "implemented": true,
+      "measuredInThisHarness": false,
+      "adr": "ADR-15",
+      "note": "Run ./scripts/d5-admission-s4.sh for isolated ADR-15 edge; not inlined in API load path",
+      "script": "./scripts/d5-admission-s4.sh"
+    },
+    "hardware": {
+      "ncpu": "14",
+      "memGb": "36"
+    },
+    "healthK6": {
+      "ok": true,
+      "artifact": "/tmp/atlas-20261025-context-clean/k6-health-c6721bd3.json"
+    },
+    "gateK6ByEvent": [
+      {
+        "eventId": "92070c2e-bce0-41d1-a0fb-46a8266c3a29",
+        "ok": true,
+        "error": null,
+        "artifact": "/tmp/atlas-20261025-context-clean/k6-gate-92070c2e.json",
+        "sessions": 50
+      },
+      {
+        "eventId": "aef5acff-c5b6-4736-bfed-41526da9a333",
+        "ok": true,
+        "error": null,
+        "artifact": "/tmp/atlas-20261025-context-clean/k6-gate-aef5acff.json",
+        "sessions": 50
+      }
+    ],
+    "invariants": {
+      "92070c2e-bce0-41d1-a0fb-46a8266c3a29": {
+        "tickets": 20000,
+        "allocatedEvent": 20000,
+        "allocatedType": 20000,
+        "allocatedSource": 20000,
+        "credentialsWithKid": 20000,
+        "currentCheckins": 700,
+        "usedTickets": 700,
+        "outboxRowsTenant": 3000,
+        "auditLogsTenant": 4500,
+        "confirmedReservations": 700,
+        "distinctCheckinTickets": 700,
+        "sampleDecryptOk": true,
+        "allSampleOk": true,
+        "hmacUnique": true,
+        "pepperConsistent": true,
+        "allAesCredentials": true,
+        "codeCount": 20000,
+        "distinctHmac": 20000,
+        "ticketsMatchAllocated": true,
+        "quotaScopesAligned": true,
+        "everyTicketHasKid": true,
+        "checkinsMatchUsed": true,
+        "noDoubleConfirm": true,
+        "checkinsMeetExpected": true,
+        "ok": true
+      },
+      "aef5acff-c5b6-4736-bfed-41526da9a333": {
+        "tickets": 20000,
+        "allocatedEvent": 20000,
+        "allocatedType": 20000,
+        "allocatedSource": 20000,
+        "credentialsWithKid": 20000,
+        "currentCheckins": 700,
+        "usedTickets": 700,
+        "outboxRowsTenant": 3000,
+        "auditLogsTenant": 4500,
+        "confirmedReservations": 700,
+        "distinctCheckinTickets": 700,
+        "sampleDecryptOk": true,
+        "allSampleOk": true,
+        "hmacUnique": true,
+        "pepperConsistent": true,
+        "allAesCredentials": true,
+        "codeCount": 20000,
+        "distinctHmac": 20000,
+        "ticketsMatchAllocated": true,
+        "quotaScopesAligned": true,
+        "everyTicketHasKid": true,
+        "checkinsMatchUsed": true,
+        "noDoubleConfirm": true,
+        "checkinsMeetExpected": true,
+        "ok": true
+      }
+    },
+    "invariantsOk": true,
+    "reportApiStatus": 200,
+    "reportSample": {
+      "eventId": "92070c2e-bce0-41d1-a0fb-46a8266c3a29",
+      "ticketsByState": {
+        "ACTIVE": 19300,
+        "REVOKED": 0,
+        "CANCELLED": 0,
+        "USED": 700
+      },
+      "quota": {
+        "capacity": 20000,
+        "allocated": 20000
+      },
+      "quotaRemaining": 0,
+      "quotaCapacityState": "FINITE",
+      "pendingApprovalCount": 0,
+      "checkInSuccessCount": 700,
+      "rejectByReason": {},
+      "emailNeedsCsCount": 0,
+      "asOf": "2026-10-25T08:38:07.966Z"
+    },
+    "apiLog": "/tmp/atlas-20261025-context-clean/api-c6721bd3.log",
+    "db": {
+      "container": "d5-load-pg-c6721bd3",
+      "port": 55553
+    },
+    "productionClaim": false,
+    "meetsPrdPilotWithoutCaveat": true,
+    "pass": true
+  }
+}
