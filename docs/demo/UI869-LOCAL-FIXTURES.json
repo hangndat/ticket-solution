@@ -7,10 +7,18 @@
   "marketingOrigin": "http://marketing.localhost:3417",
   "oidcIssuer": "http://127.0.0.1:8080/realms/ticket",
   "seedCommand": "./scripts/dev-local-stack.sh fixtures",
+  "personaSeedCommand": "./scripts/dev-local-stack.sh persona-fixtures",
   "resetCommand": "./scripts/dev-local-stack.sh seed --reset && ./scripts/dev-local-stack.sh up",
+  "personaDoc": "docs/ops/UI925-LOCAL-PERSONA-FIXTURES.md",
   "accounts": [
     { "username": "attendee@example.com", "fixturePassword": "attendee-demo", "role": "attendee" },
-    { "username": "staff@example.com", "fixturePassword": "staff-demo", "role": "event-manager" }
+    { "username": "staff@example.com", "fixturePassword": "staff-demo", "role": "owner-legacy-dual-tenant" },
+    { "username": "owner.fixture@example.com", "fixturePassword": "owner-fixture-demo", "role": "Owner" },
+    { "username": "manager.fixture@example.com", "fixturePassword": "manager-fixture-demo", "role": "Manager" },
+    { "username": "cs.fixture@example.com", "fixturePassword": "cs-fixture-demo", "role": "CS" },
+    { "username": "supervisor.fixture@example.com", "fixturePassword": "supervisor-fixture-demo", "role": "Supervisor" },
+    { "username": "scanner.fixture@example.com", "fixturePassword": "scanner-fixture-demo", "role": "Scanner" },
+    { "username": "report.fixture@example.com", "fixturePassword": "report-fixture-demo", "role": "report-only" }
   ],
   "scenarios": [
     { "id": "catalog-upcoming", "route": "/", "events": ["mfest", "studio-night"] },
