@@ -20,8 +20,10 @@ const {
   AuthzError,
   AUTHZ_ERROR_CODES,
   APPROVAL_ERROR_CODES,
+  ApprovalError,
   APPROVAL_PENDING,
   ISSUE_ERROR_CODES,
+  IssueError,
 } = require('../dist');
 
 const docker = (...args) =>
@@ -115,6 +117,256 @@ async function eventAllocated(db, tenantId, eventId) {
     return Number(rows[0].allocated);
   });
 }
+
+test('F01: mixed auto/manual contention preserves quota and replay across five events', { timeout: 120000 }, async (t) => {
+  let name;
+  let db;
+  try {
+    const boot = await startIsolatedPostgres();
+    name = boot.name;
+    db = createDatabase(boot.url, 20);
+    const users = createPrismaIdentityUserRepository(db);
+    const actors = [];
+    for (let i = 0; i < 21; i++) {
+      actors.push(await users.upsertFromVerifiedIdentity({
+        issuer: 'https://atlas.example.test', subject: 'quota-' + i,
+        email: 'quota-' + i + '@example.test', emailVerified: true,
+      }));
+    }
+    const staff = actors[20];
+    for (let round = 0; round < 5; round++) {
+      const tenantId = randomUUID();
+      const eventId = randomUUID();
+      const manualSourceId = randomUUID();
+      const manualTypeId = randomUUID();
+      const codes = Array.from({ length: 20 }, (_, i) => 'ATLAS-' + round + '-' + i);
+      await withTenant(db, tenantId, async (tx) => {
+        await tx.tenant.create({ data: { id: tenantId, slug: 'atlas-' + round, name: 'Atlas fixture' } });
+        await tx.event.create({ data: { tenantId, id: eventId, slug: 'quota', name: 'Quota', status: 'DRAFT' } });
+        const member = await grantMembership(tx, {
+          tenantId, userId: staff.userId, role: 'MANAGER', permissions: ['redemption.approve'],
+        });
+        await grantEventAssignment(tx, {
+          tenantId, eventId, membershipId: member.membershipId, permissions: ['redemption.approve'],
+        });
+        const inventory = await seedEventInventory(tx, HMAC, {
+          tenantId, eventId, eventQuota: 7, typeQuota: 7, sourceQuota: 7, rawCodes: codes,
+        });
+        await tx.$executeRaw`
+          INSERT INTO ticket_types (tenant_id, event_id, id, label, entitlement_snapshot)
+          VALUES (${tenantId}::uuid, ${eventId}::uuid, ${manualTypeId}::uuid, 'Manual type', '{}'::jsonb)
+        `;
+        await tx.$executeRaw`
+          INSERT INTO issuance_sources (tenant_id, event_id, id, name, approval_mode)
+          VALUES (${tenantId}::uuid, ${eventId}::uuid, ${manualSourceId}::uuid, 'Manual source', 'MANUAL')
+        `;
+        await tx.$executeRaw`
+          INSERT INTO source_ticket_types (tenant_id, event_id, source_id, ticket_type_id)
+          VALUES (${tenantId}::uuid, ${eventId}::uuid, ${manualSourceId}::uuid, ${manualTypeId}::uuid)
+        `;
+        await tx.$executeRaw`
+          INSERT INTO quota_buckets (tenant_id, event_id, id, scope, scope_id, capacity, allocated)
+          VALUES (${tenantId}::uuid, ${eventId}::uuid, ${randomUUID()}::uuid, 'TICKET_TYPE', ${manualTypeId}::uuid, 7, 0),
+                 (${tenantId}::uuid, ${eventId}::uuid, ${randomUUID()}::uuid, 'ISSUANCE_SOURCE', ${manualSourceId}::uuid, 7, 0)
+        `;
+        for (const codeId of inventory.codeIds.slice(10)) {
+          await tx.$executeRaw`
+            UPDATE redemption_codes SET source_id = ${manualSourceId}::uuid, ticket_type_id = ${manualTypeId}::uuid
+            WHERE tenant_id = ${tenantId}::uuid AND id = ${codeId}::uuid
+          `;
+        }
+      });
+      const jobs = [];
+      const manualRequests = [];
+      for (let i = 0; i < 20; i++) {
+        const input = {
+          tenantId, eventId, actorUserId: actors[i].userId, actorEmail: actors[i].email,
+          emailVerified: true, rawCode: codes[i], idempotencyKey: randomUUID(),
+        };
+        if (i < 10) {
+          jobs.push(() => withTenant(db, tenantId, tx => redeemAndIssueTicket(tx, HMAC, CREDENTIAL_KEY, input)));
+        } else {
+          const pending = await withTenant(db, tenantId, tx => redeemAndIssueTicket(tx, HMAC, CREDENTIAL_KEY, input));
+          assert.equal(pending.ok, 'pending');
+          manualRequests.push(pending.result.requestId);
+          const decision = {
+            tenantId, eventId, requestId: pending.result.requestId,
+            actorUserId: staff.userId, decision: 'approve', idempotencyKey: randomUUID(),
+          };
+          jobs.push(() => withTenant(db, tenantId, tx => decideRedemption(tx, CREDENTIAL_KEY, decision)));
+        }
+      }
+      // Alternate both paths; all calls use independent pool connections and
+      // distinct actors/codes, so code/attendee locks cannot serialize the race.
+      const interleaved = Array.from({ length: 10 }, (_, i) => [jobs[i], jobs[i + 10]]).flat();
+      if (round % 2) interleaved.reverse();
+      const results = await Promise.allSettled(interleaved.map(job => job()));
+      const rejected = results.filter(result => result.status === 'rejected');
+      t.diagnostic(JSON.stringify({ round, calls: 20, unexpectedErrors: rejected.length }));
+      assert.equal(rejected.length, 0, 'no unhandled deadlock/timeout under mixed contention');
+      const values = results.map(result => result.value);
+      assert.equal(values.filter(result => result.ok === true).length, 7);
+      assert.equal(values.filter(result => result.ok === false && result.rejection.code === ISSUE_ERROR_CODES.QUOTA_EXHAUSTED).length, 13);
+      // Same keys must replay terminal outcomes without consuming quota again.
+      const replay = await Promise.all(interleaved.map(job => job()));
+      assert.equal(replay.filter(result => result.ok === true).length, 7);
+      for (let i = 0; i < results.length; i++) {
+        assert.equal(replay[i].ok, values[i].ok);
+        if (values[i].ok) {
+          assert.equal(replay[i].result.ticketId, values[i].result.ticketId);
+          assert.equal(replay[i].result.operationId, values[i].result.operationId);
+          assert.equal(replay[i].result.replayed, true);
+        } else {
+          assert.equal(replay[i].rejection.code, values[i].rejection.code);
+          assert.equal(replay[i].rejection.operationId, values[i].rejection.operationId);
+        }
+      }
+      await withTenant(db, tenantId, async (tx) => {
+        const tickets = await tx.$queryRaw`SELECT id, ticket_type_id, source_id, request_id, owner_user_id FROM tickets WHERE tenant_id = ${tenantId}::uuid`;
+        const buckets = await tx.$queryRaw`SELECT scope, scope_id, capacity, allocated FROM quota_buckets WHERE tenant_id = ${tenantId}::uuid`;
+        assert.equal(tickets.length, 7);
+        assert.equal(new Set(tickets.map(ticket => ticket.request_id)).size, 7);
+        for (const bucket of buckets) {
+          const expected = bucket.scope === 'EVENT' ? tickets.length : tickets.filter(ticket =>
+            (bucket.scope === 'TICKET_TYPE' ? ticket.ticket_type_id : ticket.source_id) === bucket.scope_id).length;
+          assert.equal(bucket.allocated, expected);
+          assert.ok(bucket.allocated <= bucket.capacity);
+        }
+        const counters = await tx.$queryRaw`
+          SELECT a.user_id, c.issued_count FROM attendee_counters c
+          JOIN event_attendees a ON a.tenant_id = c.tenant_id AND a.id = c.attendee_id
+          WHERE c.tenant_id = ${tenantId}::uuid AND c.event_id = ${eventId}::uuid
+        `;
+        assert.equal(counters.reduce((sum, counter) => sum + counter.issued_count, 0), 7);
+        for (const counter of counters) {
+          assert.equal(counter.issued_count, tickets.filter(ticket => ticket.owner_user_id === counter.user_id).length);
+        }
+        const consumed = await tx.$queryRaw`SELECT id FROM redemption_codes WHERE tenant_id = ${tenantId}::uuid AND event_id = ${eventId}::uuid AND status = 'CONSUMED'`;
+        assert.equal(consumed.length, 7);
+        const outbox = await tx.$queryRaw`SELECT aggregate_id FROM outbox WHERE tenant_id = ${tenantId}::uuid AND type = 'TicketIssued'`;
+        assert.equal(outbox.length, 7);
+        assert.deepEqual(new Set(outbox.map(row => row.aggregate_id)), new Set(tickets.map(row => row.id)));
+        const audits = await tx.$queryRaw`
+          SELECT action FROM audit_logs WHERE tenant_id = ${tenantId}::uuid
+            AND event_id = ${eventId}::uuid
+            AND action IN ('ticket.issued', 'redemption.approved')
+        `;
+        assert.equal(audits.length, 7);
+        const operations = await tx.$queryRaw`
+          SELECT status FROM operations WHERE tenant_id = ${tenantId}::uuid AND event_id = ${eventId}::uuid
+        `;
+        assert.equal(operations.length, 30);
+        assert.ok(operations.every(operation => operation.status === 'COMPLETED'));
+      });
+      if (round === 0) {
+        // Force a quota row lock timeout after the operation claim. The whole
+        // transaction must roll back so the same key can safely be retried.
+        const loser = Array.from({ length: 10 }, (_, i) => i).find(i => values[i * 2].ok === false);
+        assert.notEqual(loser, undefined);
+        await withTenant(db, tenantId, tx => tx.$executeRaw`
+          UPDATE quota_buckets SET capacity = 8
+          WHERE tenant_id = ${tenantId}::uuid AND event_id = ${eventId}::uuid
+        `);
+        const retryKey = randomUUID();
+        const retryInput = {
+          tenantId, eventId, actorUserId: actors[loser].userId,
+          actorEmail: actors[loser].email, emailVerified: true,
+          rawCode: codes[loser], idempotencyKey: retryKey,
+        };
+        let lockAcquired;
+        let releaseLock;
+        const acquired = new Promise(resolve => { lockAcquired = resolve; });
+        const release = new Promise(resolve => { releaseLock = resolve; });
+        const holder = withTenant(db, tenantId, async tx => {
+          await tx.$queryRaw`
+            SELECT id FROM quota_buckets WHERE tenant_id = ${tenantId}::uuid
+              AND event_id = ${eventId}::uuid AND scope = 'EVENT' FOR UPDATE
+          `;
+          lockAcquired();
+          await release;
+        });
+        await acquired;
+        try {
+          await assert.rejects(() => withTenant(db, tenantId, async tx => {
+            await tx.$executeRaw`SET LOCAL lock_timeout = '150ms'`;
+            return redeemAndIssueTicket(tx, HMAC, CREDENTIAL_KEY, retryInput);
+          }), error => error instanceof IssueError &&
+            error.code === ISSUE_ERROR_CODES.RETRYABLE_CONFLICT && error.retryable);
+        } finally {
+          releaseLock();
+          await holder;
+        }
+        await withTenant(db, tenantId, async tx => {
+          const operations = await tx.$queryRaw`
+            SELECT id FROM operations WHERE tenant_id = ${tenantId}::uuid
+              AND event_id = ${eventId}::uuid AND client_key = ${retryKey}
+          `;
+          assert.equal(operations.length, 0, 'lock timeout must not commit IN_PROGRESS operation');
+        });
+        const recovered = await withTenant(db, tenantId, tx =>
+          redeemAndIssueTicket(tx, HMAC, CREDENTIAL_KEY, retryInput));
+        assert.equal(recovered.ok, true);
+        assert.equal((await withTenant(db, tenantId, tx =>
+          redeemAndIssueTicket(tx, HMAC, CREDENTIAL_KEY, retryInput))).result.ticketId,
+        recovered.result.ticketId);
+        assert.equal(await eventAllocated(db, tenantId, eventId), 8);
+
+        const manualLoser = Array.from({ length: 10 }, (_, i) => i).find(i => values[i * 2 + 1].ok === false);
+        assert.notEqual(manualLoser, undefined);
+        await withTenant(db, tenantId, tx => tx.$executeRaw`
+          UPDATE quota_buckets SET capacity = 9
+          WHERE tenant_id = ${tenantId}::uuid AND event_id = ${eventId}::uuid
+        `);
+        const approvalKey = randomUUID();
+        const approvalInput = {
+          tenantId, eventId, requestId: manualRequests[manualLoser],
+          actorUserId: staff.userId, decision: 'approve', idempotencyKey: approvalKey,
+        };
+        let approvalLockAcquired;
+        let releaseApprovalLock;
+        const approvalAcquired = new Promise(resolve => { approvalLockAcquired = resolve; });
+        const approvalRelease = new Promise(resolve => { releaseApprovalLock = resolve; });
+        const approvalHolder = withTenant(db, tenantId, async tx => {
+          await tx.$queryRaw`
+            SELECT id FROM quota_buckets WHERE tenant_id = ${tenantId}::uuid
+              AND event_id = ${eventId}::uuid AND scope = 'EVENT' FOR UPDATE
+          `;
+          approvalLockAcquired();
+          await approvalRelease;
+        });
+        await approvalAcquired;
+        try {
+          await assert.rejects(() => withTenant(db, tenantId, async tx => {
+            await tx.$executeRaw`SET LOCAL lock_timeout = '150ms'`;
+            return decideRedemption(tx, CREDENTIAL_KEY, approvalInput);
+          }), error => error instanceof ApprovalError &&
+            error.code === APPROVAL_ERROR_CODES.RETRYABLE_CONFLICT && error.retryable);
+        } finally {
+          releaseApprovalLock();
+          await approvalHolder;
+        }
+        await withTenant(db, tenantId, async tx => {
+          const operations = await tx.$queryRaw`
+            SELECT id FROM operations WHERE tenant_id = ${tenantId}::uuid
+              AND event_id = ${eventId}::uuid AND client_key = ${approvalKey}
+          `;
+          assert.equal(operations.length, 0);
+        });
+        const approved = await withTenant(db, tenantId, tx =>
+          decideRedemption(tx, CREDENTIAL_KEY, approvalInput));
+        assert.equal(approved.ok, true);
+        const approvalReplay = await withTenant(db, tenantId, tx =>
+          decideRedemption(tx, CREDENTIAL_KEY, approvalInput));
+        assert.equal(approvalReplay.result.ticketId, approved.result.ticketId);
+        assert.equal(approvalReplay.result.replayed, true);
+        assert.equal(await eventAllocated(db, tenantId, eventId), 9);
+      }
+    }
+  } finally {
+    if (db) await db.$disconnect();
+    if (name) docker('rm', '-f', '-v', name);
+  }
+});
 
 test('manual approval is audited, idempotent, and tenant-denied', { timeout: 120000 }, async () => {
   let name;
