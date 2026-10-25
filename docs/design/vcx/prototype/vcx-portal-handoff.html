@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>VCX #923 — Portal handoff specimen (PD, not runtime)</title>
+  <style>
+    :root {
+      --ink: #0f172a;
+      --paper: #f8fafc;
+      --signal: #1677ff;
+      --border: #e2e8f0;
+      --muted: #64748b;
+      --warn-bg: #fffbe6;
+      --warn-border: #ffe58f;
+      --frame-w: 390px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Be Vietnam Pro", system-ui, sans-serif;
+      background: #1e293b;
+      color: var(--ink);
+      min-height: 100vh;
+    }
+    .toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      padding: 10px 16px;
+      background: #0f172a;
+      color: #e2e8f0;
+      font-size: 13px;
+    }
+    .toolbar button {
+      background: #334155;
+      border: 1px solid #475569;
+      color: inherit;
+      padding: 6px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .toolbar button.active { background: var(--signal); border-color: var(--signal); }
+    .toolbar .meta { margin-left: auto; opacity: 0.85; }
+    .stage {
+      display: flex;
+      justify-content: center;
+      padding: 24px 16px 48px;
+    }
+    .frame {
+      width: var(--frame-w);
+      max-width: 100%;
+      background: var(--paper);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 24px 48px rgba(0,0,0,0.35);
+      transition: width 0.2s ease;
+    }
+    .pd-banner {
+      background: var(--warn-bg);
+      border-bottom: 1px solid var(--warn-border);
+      padding: 8px 12px;
+      font-size: 11px;
+      color: #614700;
+      line-height: 1.4;
+    }
+    .chrome {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      background: #fff;
+    }
+    .chrome h1 { margin: 0; font-size: 18px; font-weight: 600; }
+    .chrome p { margin: 4px 0 0; font-size: 12px; color: var(--muted); }
+    .seg {
+      display: flex;
+      gap: 4px;
+      padding: 12px 16px 0;
+      flex-wrap: wrap;
+    }
+    .seg span {
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      background: #fff;
+      border: 1px solid var(--border);
+    }
+    .seg span.on { background: #e6f4ff; border-color: #91caff; color: #0958d9; }
+    .tabs {
+      display: flex;
+      gap: 0;
+      border-bottom: 1px solid var(--border);
+      margin: 12px 16px 0;
+      overflow-x: auto;
+    }
+    .tabs button {
+      flex: 0 0 auto;
+      border: none;
+      background: none;
+      padding: 10px 14px;
+      font-size: 13px;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      color: var(--muted);
+    }
+    .tabs button.on { color: var(--signal); border-bottom-color: var(--signal); font-weight: 600; }
+    .content { padding: 16px; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    th, td { padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--border); }
+    th { background: #f1f5f9; font-weight: 600; }
+    .tag {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      background: #f0f0f0;
+    }
+    .tag.ok { background: #f6ffed; color: #389e0d; }
+    .tag.pending { background: #fff7e6; color: #d46b08; }
+    .drawer {
+      margin-top: 12px;
+      border: 2px dashed var(--signal);
+      border-radius: 8px;
+      padding: 12px;
+      background: #fff;
+    }
+    .drawer h3 { margin: 0 0 8px; font-size: 14px; }
+    .timeline { border-left: 2px solid var(--border); margin-left: 8px; padding-left: 12px; }
+    .timeline li { margin-bottom: 8px; font-size: 12px; list-style: none; }
+    .steps {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+    .step {
+      flex: 1;
+      min-width: 70px;
+      text-align: center;
+      padding: 8px 4px;
+      border-radius: 6px;
+      font-size: 11px;
+      background: #fff;
+      border: 1px solid var(--border);
+    }
+    .step.done { background: #e6f4ff; border-color: #91caff; }
+    .step.cur { border-color: var(--signal); font-weight: 600; }
+    .card {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+    .btn {
+      display: inline-block;
+      padding: 8px 14px;
+      border-radius: 6px;
+      font-size: 13px;
+      border: 1px solid var(--border);
+      background: #fff;
+      margin-right: 8px;
+      margin-top: 8px;
+    }
+    .btn.primary { background: var(--signal); color: #fff; border-color: var(--signal); }
+    .modal {
+      border: 2px solid #faad14;
+      background: #fffbe6;
+      border-radius: 8px;
+      padding: 12px;
+      margin-top: 12px;
+    }
+    .screen { display: none; }
+    .screen.active { display: block; }
+    .desc-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #f1f5f9; font-size: 13px; }
+    .desc-row span:last-child { color: var(--muted); text-align: right; max-width: 55%; }
+    @media (min-width: 1024px) {
+      .drawer { max-width: 420px; margin-left: auto; }
+    }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <span>Màn:</span>
+    <button type="button" data-screen="workspace" class="active">1 · Khách & vé</button>
+    <button type="button" data-screen="import">2 · Import 4 bước</button>
+    <button type="button" data-screen="wizard">3 · Wizard review</button>
+    <span>| Viewport:</span>
+    <button type="button" data-vp="390" class="active">390</button>
+    <button type="button" data-vp="1024">1024</button>
+    <button type="button" data-vp="1440">1440</button>
+    <span class="meta" id="vp-label">390 × 844 (mẫu)</span>
+  </div>
+  <div class="stage">
+    <div class="frame" id="frame">
+      <div class="pd-banner"><strong>PD specimen #923</strong> — Dữ liệu có nhãn «(mẫu)». Không chứng minh runtime authenticated. Viewports evidence: 390 / 1024 / 1440.</div>
+
+      <div id="screen-workspace" class="screen active">
+        <div class="chrome">
+          <h1>Khách &amp; vé</h1>
+          <p>Sự kiện: Demo Pulse 2026 (mẫu)</p>
+        </div>
+        <div class="seg">
+          <span class="on">Danh sách</span>
+          <span>Vận hành</span>
+        </div>
+        <div class="tabs">
+          <button type="button">Lời mời</button>
+          <button type="button">Yêu cầu</button>
+          <button type="button" class="on">Vé</button>
+        </div>
+        <div class="content">
+          <input type="search" placeholder="Tìm theo mã hoặc email (mẫu)" style="width:100%;padding:8px;margin-bottom:12px;border:1px solid var(--border);border-radius:6px;" aria-label="Tìm kiếm vé" />
+          <table>
+            <thead>
+              <tr>
+                <th>Mã vé</th>
+                <th>Khách</th>
+                <th>Trạng thái vé</th>
+                <th>Check-in</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>VMK-0042</td>
+                <td>ng***@example.com (mẫu)</td>
+                <td><span class="tag ok">Đã cấp</span></td>
+                <td><span class="tag">Chưa vào</span></td>
+              </tr>
+              <tr>
+                <td>VMK-0043</td>
+                <td>tr***@example.com (mẫu)</td>
+                <td><span class="tag ok">Đã cấp</span></td>
+                <td><span class="tag ok">Đã vào cổng</span></td>
+              </tr>
+            </tbody>
+          </table>
+          <p style="font-size:11px;color:var(--muted);margin-top:8px;">Thông báo: đã tiếp nhận gửi ≠ khách đã nhận email.</p>
+          <div class="drawer" aria-label="Drawer timeline mẫu">
+            <h3>Chi tiết vé VMK-0042 (mẫu)</h3>
+            <p style="font-size:12px;color:var(--muted);">Thông tin liên hệ được ẩn một phần theo quyền tài khoản.</p>
+            <ul class="timeline">
+              <li><strong>14:02</strong> — Vé được cấp (trạng thái vé)</li>
+              <li><strong>14:05</strong> — Thông báo: đã tiếp nhận gửi (mẫu)</li>
+              <li><strong>—</strong> — Check-in: chưa ghi nhận</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div id="screen-import" class="screen">
+        <div class="chrome">
+          <h1>Nhập từ CSV</h1>
+          <p>Chọn nguồn &amp; loại vé trong tab Import (mẫu)</p>
+        </div>
+        <div class="content">
+          <div class="card" style="background:#fff7e6;border-color:#ffd591;">
+            Còn một lần nhập chưa hoàn tất (mẫu). <button type="button" class="btn primary" style="margin-top:4px;">Tiếp tục</button>
+          </div>
+          <div class="steps">
+            <div class="step done">1 Chọn file</div>
+            <div class="step done">2 Ghép cột</div>
+            <div class="step cur">3 Xem trước</div>
+            <div class="step">4 Ghi nhận</div>
+          </div>
+          <p style="font-size:12px;">Xem trước không giữ suất (mẫu). 120 dòng hợp lệ, 2 dòng lỗi.</p>
+          <table>
+            <thead><tr><th>Dòng</th><th>Email</th><th>Lỗi</th></tr></thead>
+            <tbody>
+              <tr><td>14</td><td>invalid</td><td>Email không hợp lệ (mẫu)</td></tr>
+            </tbody>
+          </table>
+          <button type="button" class="btn">Quay lại</button>
+          <button type="button" class="btn primary">Ghi nhận lên máy chủ</button>
+          <h4 style="font-size:13px;margin-top:20px;">Việc nhập gần đây</h4>
+          <div class="card">Nhập khách · đang xử lý · bắt đầu 14:32 (mẫu)</div>
+        </div>
+      </div>
+
+      <div id="screen-wizard" class="screen">
+        <div class="chrome">
+          <h1>Tạo sự kiện</h1>
+          <p>Bước 3 — Xem lại trước khi tạo</p>
+        </div>
+        <div class="content">
+          <div class="steps">
+            <div class="step done">Thông tin</div>
+            <div class="step done">Địa điểm</div>
+            <div class="step cur">Xem lại</div>
+          </div>
+          <div class="card">
+            <div class="desc-row"><span>Tên</span><span>Demo Pulse 2026 (mẫu)</span></div>
+            <div class="desc-row"><span>Slug</span><span>demo-pulse-2026</span></div>
+            <div class="desc-row"><span>Múi giờ</span><span>Asia/Ho_Chi_Minh</span></div>
+            <div class="desc-row"><span>Hiển thị</span><span>UNLISTED</span></div>
+            <div class="desc-row"><span>Địa điểm</span><span>Nhà hát Hà Nội (mẫu)</span></div>
+            <div class="desc-row"><span>Email liên hệ</span><span>ops@example.com (mẫu)</span></div>
+          </div>
+          <button type="button" class="btn">Quay lại</button>
+          <button type="button" class="btn primary">Tạo sự kiện</button>
+          <div class="modal" role="dialog" aria-label="Conflict mẫu">
+            <strong>Phiên bản đã thay đổi (mẫu)</strong>
+            <p style="font-size:12px;margin:8px 0;">Người khác vừa lưu. Tải lại để xem bản mới nhất.</p>
+            <button type="button" class="btn primary">Tải lại bản mới</button>
+            <button type="button" class="btn">Đóng</button>
+          </div>
+          <div class="card" style="border-color:#ffccc7;background:#fff2f0;margin-top:12px;">
+            <strong>Đã đạt giới hạn gói (mẫu)</strong>
+            <p style="font-size:12px;margin:6px 0 0;">TENANT_LIMIT_REACHED — không hiển thị mã kỹ thuật cho người dùng.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    const frame = document.getElementById('frame');
+    const vpLabel = document.getElementById('vp-label');
+    const sizes = { 390: [390, 844], 1024: [1024, 768], 1440: [1440, 900] };
+    document.querySelectorAll('[data-vp]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('[data-vp]').forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+        const w = btn.getAttribute('data-vp');
+        frame.style.setProperty('--frame-w', w + 'px');
+        const pair = sizes[w];
+        vpLabel.textContent = pair[0] + ' × ' + pair[1] + ' (mẫu)';
+      });
+    });
+    document.querySelectorAll('[data-screen]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('[data-screen]').forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+        document.querySelectorAll('.screen').forEach((s) => s.classList.remove('active'));
+        document.getElementById('screen-' + btn.getAttribute('data-screen')).classList.add('active');
+      });
+    });
+  </script>
+</body>
+</html>
