@@ -6,6 +6,18 @@ CREATE TABLE public.worker_job_reclaim_counters (
 );
 REVOKE ALL ON public.worker_job_reclaim_counters FROM PUBLIC, ticket_runtime;
 ALTER TABLE public.worker_job_reclaim_counters OWNER TO migration_owner;
+ALTER TABLE public.worker_job_reclaim_counters ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.worker_job_reclaim_counters FORCE ROW LEVEL SECURITY;
+-- Definer functions run as migration_owner; runtime roles have no table grant.
+CREATE POLICY worker_reclaim_definer ON public.worker_job_reclaim_counters
+  FOR ALL TO migration_owner USING (true) WITH CHECK (true);
+
+-- The pending discovery definer runs as migration_owner under FORCE RLS.
+-- Restrict its visibility to due envelopes; tenant writes still use withTenant.
+CREATE POLICY pending_expiry_definer_due ON public.redemption_requests
+  FOR SELECT TO migration_owner
+  USING (status = 'PENDING_REVIEW' AND expires_at IS NOT NULL
+         AND expires_at <= clock_timestamp());
 
 -- Preserve the claim signature and lease fence used by old workers.
 CREATE OR REPLACE FUNCTION public.claim_outbox_batch(
