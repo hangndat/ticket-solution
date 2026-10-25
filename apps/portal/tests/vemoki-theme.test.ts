@@ -81,4 +81,17 @@ test('portal root CSS vars are emitted from VEMOKI_COLORS (no duplicate hex in g
     );
   }
   assert.ok(rootCss.includes(`--vemoki-sider: ${VEMOKI_COLORS.siderBg}`));
+  assert.ok(
+    rootCss.includes(`--vemoki-primary: ${VEMOKI_COLORS.primary}`),
+    'root CSS must expose product primary for non-Ant surfaces',
+  );
+  assert.equal(
+    globals.includes('--vemoki-signal'),
+    false,
+    'globals.css must not use legacy signal red for chrome',
+  );
+  assert.ok(
+    globals.includes('var(--vemoki-primary)'),
+    'loading spinner must use product primary token',
+  );
 });

@@ -1,14 +1,15 @@
-# Portal — remaining red / rose usage (post VD10 tenant default)
+# Portal — remaining red / rose usage (post VD10 tenant default + loading primary fix)
 
-SHA: `cb70fceb69dc17eb799084442072ea23308ba518` (branch `hangndat/vd09-marketing-neon`)
+SHA: `9a0e98f42a1b548fe70e9a8566940e9f6535077d` (branch `hangndat/vd09-marketing-neon`)
 
 Grep `#E11D48` in `apps/portal` after change:
 
 | Location | Why kept |
 | --- | --- |
-| `src/theme/vemoki.ts` `VEMOKI_COLORS.signal` | Brand token parity with `brand/vemoki/tokens.json`; not product/tenant primary |
-| `src/theme/vemoki-root-vars.ts` `--vemoki-signal` | CSS var alias for `signal` token |
-| `app/globals.css` `.portal-surface-loading__spinner` | Uses `var(--vemoki-signal)` for loading chrome (non-error); literal `#E11D48` not present |
+| `src/theme/vemoki.ts` `VEMOKI_COLORS.signal` | Brand token parity with `brand/vemoki/tokens.json`; not used for product chrome |
+| `src/theme/vemoki-root-vars.ts` `--vemoki-signal` | CSS var alias for `signal` token (no non-error consumers in portal CSS) |
+
+Grep `var(--vemoki-signal)` in `apps/portal`: **none** (loading spinner uses `--vemoki-primary` → `#7C4DED`).
 
 Other semantic reds (not `#E11D48`):
 

@@ -5,6 +5,7 @@ export function buildVemokiRootCssBlock(): string {
   return `:root {
   --vemoki-ink: ${VEMOKI_COLORS.ink};
   --vemoki-paper: ${VEMOKI_COLORS.paper};
+  --vemoki-primary: ${VEMOKI_COLORS.primary};
   --vemoki-signal: ${VEMOKI_COLORS.signal};
   --vemoki-focus: ${VEMOKI_COLORS.focus};
   --vemoki-line: ${VEMOKI_COLORS.line};
