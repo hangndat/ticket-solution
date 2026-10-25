@@ -7,7 +7,7 @@
 | Roadmap | [`docs/plans/VEMOKI-CORE-UX-ROADMAP-2026-10-26.md`](../../plans/VEMOKI-CORE-UX-ROADMAP-2026-10-26.md) · O25 |
 | Mẫu UI | Ant Design + ProComponents (O18) · Live Pulse scoped — [`VD-03-UI-IMPLEMENTATION-HANDOFF.md`](../vemoki-unified-v1/VD-03-UI-IMPLEMENTATION-HANDOFF.md) |
 | Baseline code đối chiếu | `a04e71afbc53af4490d0683c1ff680b37a96315a` (`origin/main` tại dispatch) |
-| Handoff SHA | _(điền sau commit PR)_ |
+| Handoff SHA | `f063e9793d784e48560eebcf3e2dec5f5c8fcc67` |
 | Consumer | **web** (`apps/portal`) — S2-T01 wizard · S3-T02 workspace · S3-T03 import · S2-T04 conflict · S5-T02 limits |
 | Reviewer | Mira · `reviewer-uiux` |
 | Visual budget | **Không invent** — `apps/portal/src/theme/vemoki.ts` + token Live Pulse portal trong VD-03 §0 |
