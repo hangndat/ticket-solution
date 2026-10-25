@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useState } from 'react';
 import { Button } from '@ticket/ui';
 import {
@@ -16,6 +15,7 @@ import {
   marketingNavMobileActions,
   marketingNavMobileLink,
 } from './marketing-surface';
+import { InterestCtaAnchor, InterestCtaLink } from './interest-cta-link';
 
 const MENU_ID = 'mkt-nav-mobile-menu';
 
@@ -69,16 +69,27 @@ export function MarketingMobileNavMenu({
       >
         <SheetTitle className="sr-only">{t(locale, 'nav.menu.label')}</SheetTitle>
         <nav className="grid gap-1" aria-label={locale === 'en' ? 'Primary' : 'Chính'}>
-          {sectionLinks.map((item) => (
-            <a
-              key={item.href}
-              className={marketingNavMobileLink}
-              href={item.href}
-              onClick={closeMobile}
-            >
-              {item.label}
-            </a>
-          ))}
+          {sectionLinks.map((item) =>
+            item.href.includes('#interest') ? (
+              <InterestCtaAnchor
+                key={item.href}
+                className={marketingNavMobileLink}
+                href={item.href}
+                onClick={closeMobile}
+              >
+                {item.label}
+              </InterestCtaAnchor>
+            ) : (
+              <a
+                key={item.href}
+                className={marketingNavMobileLink}
+                href={item.href}
+                onClick={closeMobile}
+              >
+                {item.label}
+              </a>
+            ),
+          )}
         </nav>
         <div className={marketingNavMobileActions}>
           <Button asChild variant="ghostOnInk" block>
@@ -87,13 +98,13 @@ export function MarketingMobileNavMenu({
             </a>
           </Button>
           <Button asChild variant="primary" block>
-            <Link
+            <InterestCtaLink
               href={`${sales}#interest`}
               data-testid="cta-interest-nav-mobile"
               onClick={closeMobile}
             >
               {t(locale, 'nav.interest')}
-            </Link>
+            </InterestCtaLink>
           </Button>
         </div>
       </SheetContent>

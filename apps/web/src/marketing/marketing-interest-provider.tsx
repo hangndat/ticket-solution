@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -16,22 +16,13 @@ import {
 import { t } from './copy';
 import type { MarketingLocale } from './hosts';
 import { InterestFormIsland } from './interest-form-island';
-
-function interestHashActive() {
-  if (typeof window === 'undefined') return false;
-  return window.location.hash === '#interest';
-}
-
-function isInterestHref(href: string | null) {
-  if (!href) return false;
-  if (href === '#interest') return true;
-  try {
-    const url = new URL(href, window.location.href);
-    return url.hash === '#interest';
-  } catch {
-    return href.endsWith('#interest');
-  }
-}
+import { MarketingInterestContext } from './marketing-interest-context';
+import {
+  clearInterestHashFromHistory,
+  interestHashActive,
+  isInterestHref,
+  setInterestHashInHistory,
+} from './marketing-interest-hash';
 
 export function MarketingInterestProvider({
   locale,
@@ -47,16 +38,19 @@ export function MarketingInterestProvider({
 
   const openInterest = useCallback(() => {
     setOpen(true);
-    if (typeof window !== 'undefined' && window.location.hash !== '#interest') {
-      window.history.pushState(null, '', `${window.location.pathname}${window.location.search}#interest`);
-    }
+    setInterestHashInHistory();
   }, []);
 
   const closeInterest = useCallback((next: boolean) => {
     setOpen(next);
-    if (!next && typeof window !== 'undefined' && interestHashActive()) {
-      const path = `${window.location.pathname}${window.location.search}`;
-      window.history.replaceState(null, '', path);
+    if (!next) {
+      clearInterestHashFromHistory();
+    }
+  }, []);
+
+  const syncOpenFromLocation = useCallback(() => {
+    if (interestHashActive()) {
+      setOpen(true);
     }
   }, []);
 
@@ -69,13 +63,15 @@ export function MarketingInterestProvider({
   }, []);
 
   useEffect(() => {
-    if (interestHashActive()) setOpen(true);
-    const onHash = () => {
-      if (interestHashActive()) setOpen(true);
-    };
+    syncOpenFromLocation();
+    const onHash = () => syncOpenFromLocation();
     window.addEventListener('hashchange', onHash);
-    return () => window.removeEventListener('hashchange', onHash);
-  }, []);
+    window.addEventListener('popstate', onHash);
+    return () => {
+      window.removeEventListener('hashchange', onHash);
+      window.removeEventListener('popstate', onHash);
+    };
+  }, [syncOpenFromLocation]);
 
   useEffect(() => {
     const onClick = (event: MouseEvent) => {
@@ -83,23 +79,23 @@ export function MarketingInterestProvider({
       if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
         return;
       }
-      const target = event.target as Element | null;
-      const anchor = target?.closest('a[href]');
-      if (!anchor) return;
-      if (!isInterestHref(anchor.getAttribute('href'))) return;
+      const anchor = (event.target as Element | null)?.closest('a[href]');
+      if (!anchor || !isInterestHref(anchor.getAttribute('href'))) return;
       event.preventDefault();
       openInterest();
     };
-    document.addEventListener('click', onClick);
-    return () => document.removeEventListener('click', onClick);
+    document.addEventListener('click', onClick, true);
+    return () => document.removeEventListener('click', onClick, true);
   }, [openInterest]);
+
+  const contextValue = useMemo(() => ({ openInterest }), [openInterest]);
 
   const title = t(locale, 'interest.title');
   const lead = t(locale, 'interest.lead');
   const form = <InterestFormIsland locale={locale} demo={demo} />;
 
   return (
-    <>
+    <MarketingInterestContext.Provider value={contextValue}>
       <span id="interest" className="sr-only" tabIndex={-1} />
       {children}
       {mobileSheet ? (
@@ -131,6 +127,6 @@ export function MarketingInterestProvider({
           </DialogContent>
         </Dialog>
       )}
-    </>
+    </MarketingInterestContext.Provider>
   );
 }

@@ -1,7 +1,7 @@
-import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@ticket/ui';
 import { t } from '../copy';
+import { InterestCtaLink } from '../interest-cta-link';
 import { NEON_MARKETING_ASSETS } from '../neon-assets';
 import { marketingWrap } from '../marketing-surface';
 import type { MarketingSectionProps } from './types';
@@ -15,6 +15,11 @@ export function NeonFinalCtaSection({ locale, demo }: MarketingSectionProps) {
       data-analytics-section="final_cta"
       data-testid="marketing-neon-final-cta"
     >
+      <div className="mkt-neon-final-mobile-card" aria-hidden="true">
+        <span className="mkt-neon-final-ripple mkt-neon-final-ripple-a" />
+        <span className="mkt-neon-final-ripple mkt-neon-final-ripple-b" />
+        <span className="mkt-neon-final-ripple mkt-neon-final-ripple-c" />
+      </div>
       <div className="mkt-neon-final-bleed">
         <Image
           src={NEON_MARKETING_ASSETS.finalCtaCrowd}
@@ -25,8 +30,12 @@ export function NeonFinalCtaSection({ locale, demo }: MarketingSectionProps) {
           priority={false}
         />
         <div className="mkt-neon-final-scrim" aria-hidden="true" />
+        <p className="mkt-neon-final-script" aria-hidden="true">
+          <span>{t(locale, 'neon.final.script.line1')}</span>
+          <span>{t(locale, 'neon.final.script.line2')}</span>
+        </p>
         <div className={`${marketingWrap} mkt-neon-final-stage`}>
-          <div className="mkt-neon-cta-content">
+          <div className="mkt-neon-cta-content mkt-neon-final-mobile-inner">
             <p className="mkt-neon-eyebrow">{t(locale, 'neon.final.eyebrow')}</p>
             <h2 id="neon-contact-title" className="mkt-neon-h2">
               {t(locale, 'neon.final.title.line1')}
@@ -47,14 +56,14 @@ export function NeonFinalCtaSection({ locale, demo }: MarketingSectionProps) {
                   <span aria-hidden="true"> ↗</span>
                 </a>
               </Button>
-              <Link
+              <InterestCtaLink
                 href="#interest"
                 className="mkt-neon-btn-secondary mkt-neon-btn-on-photo"
                 data-testid="cta-interest-final"
                 data-analytics-cta="final_interest"
               >
                 {t(locale, 'hero.cta.interest')}
-              </Link>
+              </InterestCtaLink>
             </div>
           </div>
         </div>
