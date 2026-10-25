@@ -28,6 +28,8 @@ export type ApnsSendInput = {
   body: string;
   /** Opaque data — must not include QR/PII. */
   data?: Record<string, string>;
+  /** Cancels provider I/O when the per-send deadline expires. */
+  signal?: AbortSignal;
 };
 
 export type ApnsSendResult =
@@ -46,10 +48,15 @@ export type ApnsSendResult =
       retryable: boolean;
     };
 
-/** True only when operator explicitly enables push (APNS_ENABLED=true|1|yes). */
+/** Reject typos at startup rather than treating them as intentional disablement. */
 export function isApnsEnabled(env: NodeJS.ProcessEnv): boolean {
   const raw = env['APNS_ENABLED']?.trim().toLowerCase();
-  return raw === 'true' || raw === '1' || raw === 'yes';
+  if (raw === undefined || raw === '' || raw === 'false' || raw === '0' || raw === 'no') return false;
+  if (raw === 'true' || raw === '1' || raw === 'yes') return true;
+  throw new DeviceTokenError(
+    DEVICE_TOKEN_ERROR_CODES.APNS_MISCONFIGURED,
+    'APNS_ENABLED must be true|1|yes or false|0|no',
+  );
 }
 
 /** Default on; set APNS_ENV_FALLBACK=0|false|no to disable cross-host retry. */
@@ -173,6 +180,7 @@ export type ApnsHttp2Client = {
       bundleId: string;
       apnsId: string;
       payload: string;
+      signal?: AbortSignal;
     },
   ): Promise<ApnsHttp2ExchangeResult>;
 };
@@ -192,6 +200,7 @@ async function defaultHttp2Exchange(
     bundleId: string;
     apnsId: string;
     payload: string;
+    signal?: AbortSignal;
   },
 ): Promise<ApnsHttp2ExchangeResult> {
   const host = hostFor(environment);
@@ -211,12 +220,27 @@ async function defaultHttp2Exchange(
       });
       const chunks: Buffer[] = [];
       let status = 0;
+      const abort = () => {
+        req.close();
+        session?.destroy();
+        reject(new Error('apns_request_timeout_or_aborted'));
+      };
+      if (request.signal?.aborted) {
+        abort();
+        return;
+      }
+      request.signal?.addEventListener('abort', abort, { once: true });
       req.on('response', (headers) => {
         status = Number(headers[':status'] ?? 0);
       });
       req.on('data', (c) => chunks.push(Buffer.isBuffer(c) ? c : Buffer.from(c)));
-      req.on('error', reject);
+      req.on('error', (error) => {
+        request.signal?.removeEventListener('abort', abort);
+        reject(error);
+      });
+      session!.on('error', reject);
       req.on('end', () => {
+        request.signal?.removeEventListener('abort', abort);
         resolve({
           status,
           body: Buffer.concat(chunks).toString('utf8'),
@@ -252,10 +276,11 @@ async function sendApnsToEnvironment(
     bundleId: cfg.bundleId,
     apnsId,
     payload,
+    signal: input.signal,
   });
 }
 
-export async function sendApnsPush(
+async function sendApnsPushWithinDeadline(
   cfg: ApnsConfig,
   input: ApnsSendInput,
   options?: { env?: NodeJS.ProcessEnv; http2?: ApnsHttp2Client },
@@ -314,6 +339,33 @@ export async function sendApnsPush(
   }
 
   return failureFromResponse(primary.status, primaryReason);
+}
+
+/** An entire primary + fallback attempt must fit inside one lease window. */
+export async function sendApnsPush(
+  cfg: ApnsConfig,
+  input: ApnsSendInput,
+  options?: { env?: NodeJS.ProcessEnv; http2?: ApnsHttp2Client; timeoutMs?: number },
+): Promise<ApnsSendResult> {
+  const timeoutMs = options?.timeoutMs ?? 15_000;
+  const deadline = AbortSignal.timeout(timeoutMs);
+  const signal = input.signal
+    ? AbortSignal.any([input.signal, deadline])
+    : deadline;
+  if (signal.aborted) throw new Error('apns_request_timeout_or_aborted');
+  let onAbort: (() => void) | undefined;
+  const aborted = new Promise<never>((_, reject) => {
+    onAbort = () => reject(new Error('apns_request_timeout_or_aborted'));
+    signal.addEventListener('abort', onAbort, { once: true });
+  });
+  try {
+    return await Promise.race([
+      sendApnsPushWithinDeadline(cfg, { ...input, signal }, options),
+      aborted,
+    ]);
+  } finally {
+    if (onAbort) signal.removeEventListener('abort', onAbort);
+  }
 }
 
 export type ApnsAdapter = {
