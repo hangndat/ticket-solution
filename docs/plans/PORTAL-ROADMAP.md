@@ -93,7 +93,7 @@ Waves là trình tự dependency ở mức kết quả, **không ép hoàn tất
 | R0 / S0 | R0 nghiên cứu; đã bàn giao trong Run này |
 | I1 / S1 | P0.1 nền tảng |
 | I2 / S2 | P0.2 → P0.3 → P0.4 theo dependency từng Task, không chặn Task độc lập |
-| S3 Platform | P1.1 Platform zone (audit/security mở rộng cũng ở P1.1); không chạy coding song song cùng slice web |
+| S3 Platform | P1.1 Platform zone (audit/security mở rộng cũng ở P1.1); không chạy coding song song cùng slice web _(26/10/2026 — [O25](../DECISION-LOG.md): `apps/web` và `apps/portal` là hai slice riêng)_ |
 | S4 Gate | Chỉ liên kết/regression cho `GATE-STAY-APP`; không mở Task chuyển Gate từ gói này |
 | I3 / S5–S6 | P1.2 cutover + UAT/review/rollback; review/CI vẫn chạy liên tục từng PR ở các wave trước |
 
