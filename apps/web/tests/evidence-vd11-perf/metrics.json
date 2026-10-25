@@ -1,0 +1,74 @@
+{
+  "base": "http://127.0.0.1:3000",
+  "capturedAt": "2026-10-25T09:20:13.426Z",
+  "headerBoxes": [
+    {
+      "route": "/",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 73
+      }
+    },
+    {
+      "route": "/redeem",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 73
+      }
+    },
+    {
+      "route": "/",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 73
+      }
+    },
+    {
+      "route": "/redeem",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 73
+      }
+    }
+  ],
+  "navigations": [
+    {
+      "from": "/",
+      "to": "/redeem",
+      "click": "[data-testid=\"nav-redeem\"]",
+      "transitionMs": 45,
+      "clsDuringHop": 0,
+      "headerDeltaY": 0,
+      "headerDeltaHeight": 0
+    },
+    {
+      "from": "/redeem",
+      "to": "/",
+      "click": "[data-testid=\"nav-events\"]",
+      "transitionMs": 42,
+      "clsDuringHop": 0,
+      "headerDeltaY": 0,
+      "headerDeltaHeight": 0
+    },
+    {
+      "from": "/",
+      "to": "/redeem",
+      "click": "[data-testid=\"nav-redeem\"]",
+      "transitionMs": 42,
+      "clsDuringHop": 0,
+      "headerDeltaY": 0,
+      "headerDeltaHeight": 0
+    }
+  ],
+  "notes": [],
+  "clsBaselineAfterLoad": 0,
+  "inpClickSample": []
+}

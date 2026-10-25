@@ -86,15 +86,34 @@ export class NavCapabilitiesStore {
    * Revalidate MeEvents / MeTenants / PlatformMe.
    * Fail-closed while probing — never keep prior staff links sticky.
    */
+  /**
+   * Apply SSR / parent-provided snapshot without clearing links (first paint).
+   */
+  hydrateFromServer(next: NavCapabilitiesSnapshot) {
+    this.publish({
+      ...next,
+      resolved: true,
+      loading: false,
+    });
+  }
+
   async refresh(): Promise<NavCapabilitiesSnapshot> {
     const requestId = ++this.requestId;
+    const previous = this.snapshot;
     this.refreshing = true;
-    this.publish({
-      caps: GUEST_CAPS,
-      links: [...GUEST_NAV_LINKS],
-      resolved: false,
-      loading: true,
-    });
+    if (!previous.resolved) {
+      this.publish({
+        caps: GUEST_CAPS,
+        links: [...GUEST_NAV_LINKS],
+        resolved: false,
+        loading: true,
+      });
+    } else {
+      this.publish({
+        ...previous,
+        loading: true,
+      });
+    }
 
     try {
       const { caps, links } = await this.loader();

@@ -10,6 +10,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from '@ticket/ui/client';
+import { cn } from '../lib/utils';
 import {
   attendeeFooterBrand,
   attendeeNavAvatar,
@@ -28,7 +29,14 @@ import { BrandMark } from './brand-mark';
 import { useBranding } from './branding';
 import type { NavLink } from './nav/capabilities';
 import { bindNavCapabilitiesAuthzObserver } from './nav/bind-fetch-authz-observer';
-import { navCapabilitiesStore } from './nav/nav-capabilities-store';
+import {
+  navCapabilitiesStore,
+  type NavCapabilitiesSnapshot,
+} from './nav/nav-capabilities-store';
+import {
+  navSessionAvatarFromText,
+  type NavSessionAvatar,
+} from './nav/nav-session-avatar';
 
 /** Platform / tenant wordmark — defaults to Vemoki lockup from ThemeProvider. */
 export function Wordmark({ href = '/' }: { href?: string }) {
@@ -63,33 +71,6 @@ function isNavLinkActive(pathname: string, href: string): boolean {
   return pathname === path || pathname.startsWith(`${path}/`);
 }
 
-function initialsFromSession(body: string): string | null {
-  try {
-    const parsed = JSON.parse(body) as Record<string, unknown>;
-    const raw =
-      typeof parsed.email === 'string'
-        ? parsed.email
-        : typeof parsed.sub === 'string'
-          ? parsed.sub
-          : typeof parsed.subject === 'string'
-            ? parsed.subject
-            : null;
-    if (!raw?.trim()) return null;
-    const s = raw.trim();
-    if (s.includes('@')) {
-      const local = s.split('@')[0] ?? s;
-      const parts = local.split(/[._-]+/).filter(Boolean);
-      if (parts.length >= 2) {
-        return `${parts[0]![0] ?? ''}${parts[1]![0] ?? ''}`.toUpperCase();
-      }
-      return local.slice(0, 2).toUpperCase();
-    }
-    return s.slice(0, 2).toUpperCase();
-  } catch {
-    return null;
-  }
-}
-
 function NavLinkItem({
   item,
   active,
@@ -116,7 +97,7 @@ function NavLinkItem({
     );
   }
   return (
-    <Link key={item.href} href={item.href} {...common}>
+    <Link key={item.href} href={item.href} prefetch={true} {...common}>
       {item.label}
     </Link>
   );
@@ -127,20 +108,37 @@ function NavLinkItem({
  * Starts deny-by-default (guest); never hardcodes Admin/Cổng/Platform by route.
  * SEC-CACHE: clears staff links on MEMBERSHIP_* 401/403; refetches on focus/visibility.
  */
-export function SiteNav({ trailing }: { trailing?: ReactNode }) {
+export function SiteNav({
+  trailing,
+  initialSnapshot,
+  initialAvatar,
+}: {
+  trailing?: ReactNode;
+  initialSnapshot?: NavCapabilitiesSnapshot;
+  initialAvatar?: NavSessionAvatar | null;
+}) {
   const pathname = usePathname() ?? '/';
   const [links, setLinks] = useState<NavLink[]>(
-    () => navCapabilitiesStore.getSnapshot().links,
+    () => initialSnapshot?.links ?? navCapabilitiesStore.getSnapshot().links,
   );
   const [authenticated, setAuthenticated] = useState(
-    () => navCapabilitiesStore.getSnapshot().caps.authenticated,
+    () =>
+      initialSnapshot?.caps.authenticated ??
+      navCapabilitiesStore.getSnapshot().caps.authenticated,
   );
   const [mobileMenu, setMobileMenu] = useState({ path: '', open: false });
   const mobileOpen = mobileMenu.open && mobileMenu.path === pathname;
-  const [avatarInitials, setAvatarInitials] = useState<string | null>(null);
-  const [displayHint, setDisplayHint] = useState<string | null>(null);
+  const [avatarInitials, setAvatarInitials] = useState<string | null>(
+    () => initialAvatar?.initials ?? null,
+  );
+  const [displayHint, setDisplayHint] = useState<string | null>(
+    () => initialAvatar?.displayHint ?? null,
+  );
 
   useEffect(() => {
+    if (initialSnapshot?.resolved) {
+      navCapabilitiesStore.hydrateFromServer(initialSnapshot);
+    }
     bindNavCapabilitiesAuthzObserver();
     const unsub = navCapabilitiesStore.subscribe(() => {
       const snap = navCapabilitiesStore.getSnapshot();
@@ -167,10 +165,17 @@ export function SiteNav({ trailing }: { trailing?: ReactNode }) {
       document.removeEventListener('visibilitychange', onVisible);
       window.removeEventListener('pageshow', onPageShow);
     };
-  }, []);
+  }, [initialSnapshot]);
 
   useEffect(() => {
-    if (!authenticated) return;
+    if (!authenticated) {
+      setAvatarInitials(null);
+      setDisplayHint(null);
+      return;
+    }
+    if (initialAvatar?.initials || initialAvatar?.displayHint) {
+      return;
+    }
     let cancelled = false;
     void (async () => {
       try {
@@ -183,15 +188,10 @@ export function SiteNav({ trailing }: { trailing?: ReactNode }) {
         if (cancelled || response.status < 200 || response.status >= 300) {
           return;
         }
-        const initials = initialsFromSession(body);
-        if (!cancelled) setAvatarInitials(initials);
-        try {
-          const parsed = JSON.parse(body) as Record<string, unknown>;
-          const email =
-            typeof parsed.email === 'string' ? parsed.email.trim() : null;
-          if (!cancelled && email) setDisplayHint(email);
-        } catch {
-          /* ignore */
+        const avatar = navSessionAvatarFromText(body);
+        if (!cancelled && avatar) {
+          if (avatar.initials) setAvatarInitials(avatar.initials);
+          if (avatar.displayHint) setDisplayHint(avatar.displayHint);
         }
       } catch {
         /* fail-closed — nav still works without avatar */
@@ -200,7 +200,7 @@ export function SiteNav({ trailing }: { trailing?: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [authenticated]);
+  }, [authenticated, initialAvatar]);
 
   const closeMobile = useCallback(() => {
     setMobileMenu({ path: pathname, open: false });
@@ -234,16 +234,23 @@ export function SiteNav({ trailing }: { trailing?: ReactNode }) {
         {authenticated ? (
           <Link
             href="/account"
+            prefetch={true}
             className={attendeeNavAvatar}
             data-testid="nav-avatar"
-            aria-label={displayHint ? undefined : 'Tài khoản'}
+            aria-label={displayHint ?? 'Tài khoản'}
           >
             <span className={attendeeNavAvatarBadge} aria-hidden="true">
-              {avatarInitials ?? '…'}
+              {avatarInitials ?? '··'}
             </span>
-            {displayHint ? (
-              <span className={attendeeNavAvatarLabel}>{displayHint}</span>
-            ) : null}
+            <span
+              className={cn(
+                attendeeNavAvatarLabel,
+                !displayHint && 'text-transparent select-none',
+              )}
+              aria-hidden={!displayHint}
+            >
+              {displayHint ?? 'user@vemoki.com'}
+            </span>
           </Link>
         ) : null}
         <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
