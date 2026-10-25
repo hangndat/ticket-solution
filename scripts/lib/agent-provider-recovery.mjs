@@ -282,6 +282,7 @@ export function recordProviderLimit(
 ) {
   assertRegisteredProviderRoute({ provider, model, effort });
   const at = parseIsoInstant(limitedAt, 'limited_at');
+  const resetParsed = resetAt === null ? NaN : parseIsoInstant(resetAt, 'reset_at');
   let idHash = identityHash;
   if (!idHash && provider === 'claude') {
     const auth = runClaudeAuth(deps);
@@ -298,7 +299,6 @@ export function recordProviderLimit(
   }
   if (!idHash) throw new Error('identity_required');
   const key = stateKey({ provider, identityHash: idHash, model, effort });
-  const resetParsed = resetAt ? parseIsoInstant(resetAt, 'reset_at') : NaN;
   const nextCheck =
     Number.isFinite(resetParsed) && resetParsed > now
       ? resetParsed

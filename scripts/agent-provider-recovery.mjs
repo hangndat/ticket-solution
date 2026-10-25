@@ -11,6 +11,7 @@ import {
   recommendRoute,
   runClaudeAuth,
   assertRegisteredProviderRoute,
+  parseIsoInstant,
 } from './lib/agent-provider-recovery.mjs';
 import { COST_TIER_ROUTES } from './lib/agent-cost-tiers.mjs';
 import { recoveryRoot, hashIdentity } from './lib/agent-provider-state.mjs';
@@ -71,7 +72,11 @@ function validate(command, flags) {
     if (!flags.provider || !flags.model) throw new Error('provider_model_required');
     if (!['claude', 'codex'].includes(flags.provider)) throw new Error('invalid_provider');
     assertRegisteredProviderRoute({ provider: flags.provider, model: flags.model, effort: flags.effort || null });
-    if (command === 'record-limit' && !flags['limited-at']) throw new Error('record_limit_fields_required');
+    if (command === 'record-limit') {
+      if (!flags['limited-at']) throw new Error('record_limit_fields_required');
+      parseIsoInstant(flags['limited-at'], 'limited_at');
+      if (flags['reset-at'] !== undefined) parseIsoInstant(flags['reset-at'], 'reset_at');
+    }
   }
 }
 

@@ -153,6 +153,86 @@ test('record-limit requires ISO limited-at with timezone and registered route', 
   rmSync(dir, { recursive: true, force: true });
 });
 
+test('record-limit rejects malformed dates before auth, telemetry, or state changes', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'prov-dates-'));
+  const root = join(dir, 'state');
+  const authMarker = join(dir, 'auth-called');
+  const telemetryMarker = join(dir, 'telemetry-called');
+  const authBin = join(dir, 'claude-auth');
+  const telemetryBin = join(dir, 'telemetry.mjs');
+  const cli = join(WORKTREE, 'scripts/agent-provider-recovery.mjs');
+  const validAt = '2026-10-26T00:00:00Z';
+  writeFileSync(
+    authBin,
+    `#!/usr/bin/env node\nconst fs = require('node:fs');\nfs.writeFileSync(${JSON.stringify(authMarker)}, 'called');\nconsole.log(JSON.stringify(${JSON.stringify(REAL_AUTH)}));\n`,
+    { mode: 0o700 },
+  );
+  writeFileSync(
+    telemetryBin,
+    `import { writeFileSync } from 'node:fs';\nwriteFileSync(${JSON.stringify(telemetryMarker)}, 'called');\n`,
+  );
+  try {
+    for (const [field, value, expected] of [
+      ['limitedAt', 'invalid', 'invalid_limited_at_iso'],
+      ['resetAt', 'invalid', 'invalid_reset_at_iso'],
+    ]) {
+      assert.throws(
+        () =>
+          recordProviderLimit(
+            { provider: 'claude', model: 'claude-sonnet-5', effort: 'medium', limitedAt: validAt, [field]: value },
+            { root, deps: { claudeAuthBin: authBin } },
+          ),
+        { message: expected },
+      );
+      assert.equal(existsSync(authMarker), false);
+      assert.equal(existsSync(root), false);
+    }
+
+    for (const [provider, model, effort] of [
+      ['claude', 'claude-sonnet-5', 'medium'],
+      ['codex', 'gpt-6-sol', 'medium'],
+    ]) {
+      for (const [flag, value, expected] of [
+        ['--limited-at', 'invalid', 'invalid_limited_at_iso'],
+        ['--reset-at', 'invalid', 'invalid_reset_at_iso'],
+      ]) {
+        const args = [
+          'record-limit', '--provider', provider, '--model', model, '--effort', effort,
+          '--limited-at', validAt, '--reset-at', validAt, '--root', root,
+        ];
+        args[args.indexOf(flag) + 1] = value;
+        const result = spawnSync(process.execPath, [cli, ...args], {
+          encoding: 'utf8',
+          env: { ...process.env, AGENT_PROVIDER_CLAUDE_AUTH_BIN: authBin, AGENT_TELEMETRY_CLI: telemetryBin },
+        });
+        assert.equal(result.status, 1, `${provider} ${flag}: ${result.stderr}`);
+        assert.equal(JSON.parse(result.stderr.trim()).errorCode, expected);
+        assert.equal(result.stdout, '');
+        assert.equal(existsSync(authMarker), false);
+        assert.equal(existsSync(telemetryMarker), false);
+        assert.equal(existsSync(root), false);
+      }
+    }
+
+    const valid = spawnSync(
+      process.execPath,
+      [cli, 'record-limit', '--provider', 'claude', '--model', 'claude-sonnet-5', '--effort', 'medium',
+        '--limited-at', validAt, '--reset-at', '2026-10-27T00:00:00Z', '--root', root],
+      {
+        encoding: 'utf8',
+        env: { ...process.env, AGENT_PROVIDER_CLAUDE_AUTH_BIN: authBin, AGENT_TELEMETRY_CLI: telemetryBin },
+      },
+    );
+    assert.equal(valid.status, 0, valid.stderr);
+    assert.equal(JSON.parse(valid.stdout.trim()).record.resetAt, '2026-10-27T00:00:00.000Z');
+    assert.equal(existsSync(authMarker), true);
+    assert.equal(existsSync(telemetryMarker), false);
+    assert.equal(readdirSync(root).length, 1);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test('cooldown skips probe', () => {
   const dir = mkdtempSync(join(tmpdir(), 'prov-rec-'));
   const bins = fakeBins(dir);
