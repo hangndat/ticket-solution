@@ -5,16 +5,19 @@ import type { ReactNode } from 'react';
 import { vemokiTheme } from '../theme/vemoki';
 
 /**
- * ProLayout `navTheme="realDark"` applies darkAlgorithm to shell descendants.
- * Wrap chrome that sits on light surfaces (context strip, account menu, main ops UI)
- * so Ant Select/Dropdown popups inherit light tokens from ConfigProvider.
+ * ProLayout may apply its theme to shell descendants.
+ * Nested ConfigProvider with only `defaultAlgorithm` still merges parent tokens
+ * unless `inherit: false` (Ant useTheme resets to defaultConfig base).
+ * Wrap chrome on light surfaces so Select/Dropdown popups get light elevated/ink tokens.
  */
 export function PortalContentTheme({ children }: { children: ReactNode }) {
   return (
     <ConfigProvider
       theme={{
-        ...vemokiTheme,
+        inherit: false,
         algorithm: antdTheme.defaultAlgorithm,
+        cssVar: { key: 'portal-light-chrome' },
+        ...vemokiTheme,
       }}
     >
       {children}
