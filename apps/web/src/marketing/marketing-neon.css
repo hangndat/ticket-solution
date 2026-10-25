@@ -767,8 +767,141 @@ html[data-vemoki-marketing='neon-v1'] [data-testid='mkt-footer'] {
   }
 }
 
+html[data-vemoki-marketing='neon-v1'] .mkt-neon-edge-decor {
+  contain: strict;
+}
+
+html[data-vemoki-marketing='neon-v1'] .mkt-neon-edge-strip {
+  position: absolute;
+  top: -2%;
+  height: 104%;
+  width: auto;
+  max-width: min(30vw, 340px);
+  object-fit: cover;
+  object-position: left center;
+  opacity: 0.94;
+  mix-blend-mode: screen;
+  filter: saturate(1.08);
+}
+
+html[data-vemoki-marketing='neon-v1'] .mkt-neon-edge-strip-left {
+  left: 0;
+  transform: translateX(-6%);
+}
+
+html[data-vemoki-marketing='neon-v1'] .mkt-neon-edge-strip-right {
+  right: 0;
+  left: auto;
+  object-position: right center;
+  transform: scaleX(-1) translateX(-6%);
+}
+
+html[data-vemoki-marketing='neon-v1'] .mkt-neon-float-bubble {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(
+    circle at 30% 26%,
+    rgba(255, 255, 255, 0.62) 0%,
+    rgba(236, 72, 153, 0.42) 22%,
+    rgba(139, 92, 246, 0.28) 48%,
+    rgba(59, 130, 246, 0.12) 72%,
+    transparent 100%
+  );
+  box-shadow:
+    0 0 36px rgba(168, 85, 247, 0.38),
+    inset 0 -10px 22px rgba(255, 143, 110, 0.22);
+  opacity: 0.82;
+}
+
+html[data-vemoki-marketing='neon-v1'] .mkt-neon-float-bubble-a {
+  width: clamp(52px, 9vw, 88px);
+  height: clamp(52px, 9vw, 88px);
+  top: 11%;
+  left: 2%;
+  animation: mkt-neon-bubble-drift-a 20s ease-in-out infinite alternate;
+}
+
+html[data-vemoki-marketing='neon-v1'] .mkt-neon-float-bubble-b {
+  width: clamp(40px, 7vw, 64px);
+  height: clamp(40px, 7vw, 64px);
+  top: 38%;
+  right: 3%;
+  animation: mkt-neon-bubble-drift-b 24s ease-in-out infinite alternate;
+}
+
+html[data-vemoki-marketing='neon-v1'] .mkt-neon-float-bubble-c {
+  width: clamp(36px, 6vw, 56px);
+  height: clamp(36px, 6vw, 56px);
+  bottom: 28%;
+  left: 5%;
+  animation: mkt-neon-bubble-drift-c 18s ease-in-out infinite alternate;
+}
+
+html[data-vemoki-marketing='neon-v1'] .mkt-neon-float-bubble-d {
+  width: clamp(44px, 8vw, 72px);
+  height: clamp(44px, 8vw, 72px);
+  bottom: 8%;
+  right: 4%;
+  animation: mkt-neon-bubble-drift-d 26s ease-in-out infinite alternate;
+}
+
+@keyframes mkt-neon-bubble-drift-a {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(8px, 14px, 0);
+  }
+}
+
+@keyframes mkt-neon-bubble-drift-b {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-10px, 12px, 0);
+  }
+}
+
+@keyframes mkt-neon-bubble-drift-c {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(6px, -10px, 0);
+  }
+}
+
+@keyframes mkt-neon-bubble-drift-d {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-8px, -12px, 0);
+  }
+}
+
+@media (max-width: 640px) {
+  html[data-vemoki-marketing='neon-v1'] .mkt-neon-edge-strip {
+    max-width: min(38vw, 200px);
+    opacity: 0.88;
+  }
+
+  html[data-vemoki-marketing='neon-v1'] .mkt-neon-float-bubble {
+    opacity: 0.9;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   html[data-vemoki-marketing='neon-v1'] .mkt-neon-btn-secondary {
     transition: none;
+  }
+
+  html[data-vemoki-marketing='neon-v1'] .mkt-neon-float-bubble-a,
+  html[data-vemoki-marketing='neon-v1'] .mkt-neon-float-bubble-b,
+  html[data-vemoki-marketing='neon-v1'] .mkt-neon-float-bubble-c,
+  html[data-vemoki-marketing='neon-v1'] .mkt-neon-float-bubble-d {
+    animation: none !important;
   }
 }

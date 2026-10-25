@@ -27,17 +27,19 @@ test('consumer layout exposes footer landmark for sticky-footer regression', () 
   assert.doesNotMatch(root, /attendee-uplift\.css/);
 });
 
-test('marketing LocaleSwitch renders native select with active locale (SSR)', () => {
+test('marketing LocaleSwitch renders VI|EN toggle with active locale (SSR)', () => {
   const viHtml = renderToStaticMarkup(
     React.createElement(LocaleSwitch, { locale: 'vi', pageKind: 'sales' }),
   );
-  assert.match(viHtml, /data-testid="mkt-locale-select"/);
-  assert.match(viHtml, /<option value="vi"[^>]*selected/);
+  assert.match(viHtml, /data-testid="mkt-locale-toggle"/);
+  assert.match(viHtml, /data-testid="mkt-locale-vi"/);
+  assert.match(viHtml, /aria-current="true"[^>]*data-testid="mkt-locale-vi"|data-testid="mkt-locale-vi"[^>]*aria-current="true"/);
 
   const enHtml = renderToStaticMarkup(
     React.createElement(LocaleSwitch, { locale: 'en', pageKind: 'sales' }),
   );
-  assert.match(enHtml, /<option value="en"[^>]*selected/);
+  assert.match(enHtml, /data-testid="mkt-locale-en"/);
+  assert.match(enHtml, /aria-current="true"[^>]*data-testid="mkt-locale-en"|data-testid="mkt-locale-en"[^>]*aria-current="true"/);
 });
 
 test('marketing chrome exposes surface marker for horizontal-overflow regression', () => {
@@ -45,7 +47,7 @@ test('marketing chrome exposes surface marker for horizontal-overflow regression
   assert.match(chrome, /data-testid="marketing-surface"/);
 });
 
-test('marketing chrome places locale select rightmost after primary nav', () => {
+test('marketing chrome places locale toggle rightmost after primary nav', () => {
   const chrome = readFileSync(join(WEB_ROOT, 'src/marketing/chrome.tsx'), 'utf8');
   assert.doesNotMatch(chrome, /MarketingDesktopInterestCta/);
   const navClose = chrome.lastIndexOf('</nav>');

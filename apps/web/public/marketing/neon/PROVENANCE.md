@@ -11,6 +11,7 @@ Assets in this folder are **AI-generated marketing illustrations** from the desi
 
 | File | Description | Tool / notes |
 | --- | --- | --- |
+| `page-edge-decor-left.png` | Cropped left edge ribbons + spheres (mirrored for right in CSS) | OpenAI imagegen edge frame; `screen` blend on dark surface |
 | `hero-composite-v2.png` | Desktop hero composite (floating UI depth, transparent PNG) | OpenAI imagegen; inspired by approved neon desktop hero art; not a customer screenshot |
 | `final-cta-crowd-v2.png` | Full-width final CTA crowd band | OpenAI imagegen; inspired by approved neon desktop final CTA; illustrative crowd only |
 

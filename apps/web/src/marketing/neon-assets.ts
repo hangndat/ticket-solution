@@ -1,5 +1,6 @@
 /** Public paths for neon handoff art — see public/marketing/neon/PROVENANCE.md */
 export const NEON_MARKETING_ASSETS = {
+  pageEdgeDecor: '/marketing/neon/page-edge-decor-left.png',
   heroFigure: '/marketing/neon/hero-figure.png',
   heroCompositeDesktop: '/marketing/neon/hero-composite-v2.png',
   finalCtaCrowd: '/marketing/neon/final-cta-crowd-v2.png',
