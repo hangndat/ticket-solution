@@ -113,8 +113,17 @@ Nguồn: [`infra/deploy/README.md`](../../infra/deploy/README.md). Rủi ro tr�
 | --- | --- | --- |
 | PG outage | Business state trên PG; không mất vé do Redis queue | ADR-17 |
 | Worker crash + outbox lease | Reclaim job sau lease; fencing ack | Outbox tests, PR [#907](https://github.com/hangndat/ticket-solution/pull/907) (F02 delivery semantics) |
-| Quota concurrent issue | Lock order DB | PR [#908](https://github.com/hangndat/ticket-solution/pull/908) (F01) |
+| Quota concurrent issue | SQL lock order (`lockIssuanceQuotas`: EVENT → TICKET_TYPE → ISSUANCE_SOURCE, `ORDER BY id FOR UPDATE`; auto issue + manual approval) | **Tested** (merged trên `main`, không gọi **Deployed**) · Task [#896](https://github.com/hangndat/ticket-solution/issues/896) · PR [#908](https://github.com/hangndat/ticket-solution/pull/908) · DoD review @ `07d8a99c089e00cfccdc5aeb664c48bdbc9e990e` · tích hợp `fb2da38e893881e76a7ef0649ee112220f93fb91` · CI [40192263681](https://github.com/hangndat/ticket-solution/actions/runs/40192263681) SUCCESS · [acceptance #896](https://github.com/hangndat/ticket-solution/issues/896#issuecomment-6397578014) |
 | Worker slow export / provider | Supervisor + class budgets; không overlap vô hạn | PR #909, [ar891-t4 evidence](../reviews/ar891-t4-worker-budget-evidence.md) |
+
+### Provenance — Atlas F01 vs Task #896 / PR #908
+
+| ID | Ý nghĩa | Trạng thái trong repo |
+| --- | --- | --- |
+| **Atlas F01** | Finding «thứ tự khóa quota» + giới hạn *deterministic lock-order proof* tại session review 25/10 | **Historical** — [`atlas-project-review-2026-10-25.md`](./atlas-project-review-2026-10-25.md) §F01 và [`evidence.json`](../reviews/atlas-20261025/evidence.json) @ runtime SHA baseline `152b6383…` **giữ nguyên** (không sửa raw/verdict JSON) |
+| **#896 / PR #908** | Implementation + test PG concurrency cho lock order SQL (xem hàng bảng trên) | **Accepted** sau review độc lập; merge ≠ deployed production |
+| **AR891-T2-F01** | Retry mapping finding Epic T2 → Task #896 (cùng scope implementation) | **Closed** — không nhầm với Atlas F01 *proof gap* tại baseline session |
+| **AR891-T8-F01** | Doc ambiguity: nhãn «(F01)» cạnh PR #908 dễ đọc nhầm Atlas F01 đã đóng | **Resolved** (batch PR #912) — tách implementation #908 vs historical Atlas proof |
 
 ### Handoff recovery (đọc contract, không thay ADR lịch sử)
 
@@ -146,5 +155,5 @@ Mixed load/soak production-like, RPO/RTO restore đo trên môi trường đích
 ## Giới hạn tài liệu
 
 - Không mô tả secret, compose production đầy đủ, hay trạng thái live GitHub Project #3.
-- Số đo trong `evidence.json` / worker fixture là **Tested local**, không production SLO.
+- Số đo trong `evidence.json` / worker fixture là **Tested local**, không production SLO; dòng *F01 remains open* ghi **tại baseline** `152b6383…`, không mâu thuẫn với acceptance PR #908 trên SHA tích hợp mới hơn.
 - Code complete trên branch ≠ acceptance complete Epic #891; matrix review: [#903](https://github.com/hangndat/ticket-solution/issues/903).
