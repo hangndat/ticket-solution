@@ -3,19 +3,7 @@
 import type { MenuDataItem } from '@ant-design/pro-components';
 import { Button } from 'antd';
 import { usePathname } from 'next/navigation';
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-  type ReactNode,
-} from 'react';
-import {
-  cachedEventForTenant,
-  persistPortalContextFromRoute,
-  readPortalContextCache,
-} from '../context-cache';
-import { usePortalUserId } from '../views/use-portal-user-id';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { MeEventItem, MeTenantItem } from '@ticket/contracts';
 import { isStaffPortalTenant } from '../onboarding';
 import {
@@ -28,13 +16,17 @@ import {
   loadShellContext,
   type ShellLoadState,
 } from '../nav/load-shell-context';
-import { resolveShellEffectiveEventId } from '../nav/portal-context-routes';
 import { PortalProLayout } from './portal-pro-layout';
 import { SurfaceState } from './surface-state';
 import { usePortalLocale } from '../i18n';
 
 function tenantFromPath(pathname: string): string | null {
   const m = pathname.match(/^\/t\/([^/]+)/);
+  return m?.[1] ?? null;
+}
+
+function eventFromPath(pathname: string): string | null {
+  const m = pathname.match(/^\/t\/[^/]+\/e\/([^/]+)/);
   return m?.[1] ?? null;
 }
 
@@ -57,14 +49,16 @@ export function PortalShell({
 }) {
   const { t } = usePortalLocale();
   const pathname = usePathname();
-  const identity = usePortalUserId();
   const [shell, setShell] = useState<ShellLoadState>({ status: 'loading' });
-  const identityUserId =
-    identity.status === 'ready' ? identity.userId : null;
 
   const pathTenantId = tenantFromPath(pathname);
+  const pathEventId = eventFromPath(pathname);
+  const [selectedTenantId] = useState<string | null>(pathTenantId);
+  const [selectedEventId] = useState<string | null>(pathEventId);
 
-  const effectiveTenantId = pathTenantId;
+  // Keep switcher selection aligned with the URL without an effect round-trip.
+  const effectiveTenantId = pathTenantId ?? selectedTenantId;
+  const effectiveEventId = pathEventId ?? selectedEventId;
 
   const reload = useCallback(() => {
     setShell({ status: 'loading' });
@@ -108,35 +102,6 @@ export function PortalShell({
   const resolvedTenantId =
     effectiveTenantId ??
     (tenants.length === 1 ? tenants[0]!.tenantId : null);
-
-  const contextCache = identityUserId
-    ? readPortalContextCache(identityUserId)
-    : null;
-
-  const cachedEventId =
-    resolvedTenantId && contextCache && ready
-      ? cachedEventForTenant({
-          cache: contextCache,
-          tenantId: resolvedTenantId,
-          tenants,
-          events,
-        })
-      : null;
-
-  const effectiveEventId = resolveShellEffectiveEventId(
-    pathname,
-    cachedEventId,
-  );
-
-  useEffect(() => {
-    if (!identityUserId || shell.status !== 'ready' || !pathTenantId) return;
-    persistPortalContextFromRoute({
-      userId: identityUserId,
-      pathname,
-      tenants,
-      events,
-    });
-  }, [identityUserId, shell.status, pathname, tenants, events, pathTenantId]);
 
   const activeTenant =
     tenants.find((tenant) => tenant.tenantId === resolvedTenantId) ?? null;

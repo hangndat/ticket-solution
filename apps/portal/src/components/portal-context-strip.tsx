@@ -4,7 +4,6 @@ import { Select, Typography } from 'antd';
 import { useRouter } from 'next/navigation';
 import type { MeTenantItem } from '@ticket/contracts';
 import { usePortalLocale } from '../i18n';
-import { routeAfterEventSelectChange } from '../nav/portal-context-routes';
 
 export type PortalContextStripProps = {
   tenants: MeTenantItem[];
@@ -77,15 +76,16 @@ export function PortalContextStrip({
               title: e.name,
             }))}
             onChange={(value) => {
-              const target = routeAfterEventSelectChange(
-                resolvedTenantId ?? '',
-                value,
-              );
-              if (target) router.push(target);
+              if (resolvedTenantId) {
+                router.push(`/t/${resolvedTenantId}/e/${value}`);
+              }
             }}
             disabled={!resolvedTenantId || tenantEvents.length === 0}
             data-testid="event-switcher"
             allowClear
+            onClear={() => {
+              if (resolvedTenantId) router.push(`/t/${resolvedTenantId}`);
+            }}
           />
         </div>
         {showGateScanHint ? (
