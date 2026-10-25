@@ -9,6 +9,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint src",
     "test": "pnpm build && node --test test/*.test.cjs",
+    "test:worker-budget-baseline": "pnpm build && node test/worker-budget-baseline.cjs",
     "dev": "pnpm build && node --watch dist/main.js",
     "start": "node dist/main.js"
   },

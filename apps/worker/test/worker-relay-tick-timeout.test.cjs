@@ -46,6 +46,7 @@ test('hung tick step times out and poll cycle completes', async () => {
         WORKER_TEST_HANG_TICK_STEP: 'reconcile_pending_redemptions',
       },
       tickStepTimeoutMs: 40,
+      shutdownTickTimeoutMs: 30,
       pollMs: 0,
       logging: false,
       database: mockDb(),
