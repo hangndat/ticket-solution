@@ -25,6 +25,7 @@ import {
 import { SurfaceState } from '../../../src/components/surface-state';
 import { usePortalLocale } from '../../../src/i18n';
 import { loadShellContext } from '../../../src/nav/load-shell-context';
+import { DEFAULT_TENANT_PRIMARY_COLOR } from '../../../src/theme/vemoki';
 import {
   firstRunCurrentStep,
   isPendingActivationStatus,
@@ -168,7 +169,7 @@ export default function TenantOnboardingPage() {
         setBranding(b);
         orgForm.setFieldsValue({
           displayName: b.displayName,
-          primaryColor: b.primaryColor || '#9b3a18',
+          primaryColor: b.primaryColor || DEFAULT_TENANT_PRIMARY_COLOR,
         });
       }
       if (
@@ -409,7 +410,7 @@ export default function TenantOnboardingPage() {
                 label={t('onboarding.firstRun.primaryColor')}
                 rules={[{ required: true }]}
               >
-                <Input placeholder="#9b3a18" />
+                <Input placeholder={DEFAULT_TENANT_PRIMARY_COLOR} />
               </Form.Item>
               <Button type="primary" loading={busy} onClick={() => void saveOrg()}>
                 {t('onboarding.firstRun.saveOrg')}

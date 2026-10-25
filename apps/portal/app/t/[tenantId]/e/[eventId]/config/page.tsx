@@ -27,6 +27,7 @@ import { bffEvent, bffEventAction } from '../../../../../../src/prep/bff-urls';
 import { useEventAccess } from '../../../../../../src/prep/use-event-access';
 import { SurfaceState } from '../../../../../../src/components/surface-state';
 import { usePortalLocale } from '../../../../../../src/i18n';
+import { DEFAULT_TENANT_PRIMARY_COLOR } from '../../../../../../src/theme/vemoki';
 
 export default function ConfigBrandPage() {
   const { t } = usePortalLocale();
@@ -94,7 +95,7 @@ export default function ConfigBrandPage() {
           const terms = sections?.find((s) => s.kind === 'terms');
           form.setFieldsValue({
             organizationName: brand?.organizationName ?? '',
-            primaryColor: brand?.primaryColor ?? '#9b3a18',
+            primaryColor: brand?.primaryColor ?? DEFAULT_TENANT_PRIMARY_COLOR,
             termsText:
               typeof terms?.body?.text === 'string' ? terms.body.text : '',
           });
@@ -102,14 +103,14 @@ export default function ConfigBrandPage() {
       } else if (!published) {
         form.setFieldsValue({
           organizationName: '',
-          primaryColor: '#9b3a18',
+          primaryColor: DEFAULT_TENANT_PRIMARY_COLOR,
           termsText: '',
         });
       }
     } else {
       form.setFieldsValue({
         organizationName: '',
-        primaryColor: '#9b3a18',
+        primaryColor: DEFAULT_TENANT_PRIMARY_COLOR,
         termsText: '',
       });
     }
@@ -310,7 +311,7 @@ export default function ConfigBrandPage() {
               name="primaryColor"
               label={t('config.h_1fbsj7r')}
               rules={[{ required: true }]}
-              fieldProps={{ placeholder: '#9b3a18' }}
+              fieldProps={{ placeholder: DEFAULT_TENANT_PRIMARY_COLOR }}
             />
             <ProFormTextArea
               name="termsText"

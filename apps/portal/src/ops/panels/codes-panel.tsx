@@ -12,6 +12,7 @@ import {
 } from '../codes';
 import { usePortalLocale } from '../../i18n';
 import { SavedViewsToolbar } from '../../views';
+import { portalFieldMin } from '../../layout/density';
 
 type Props = {
   tenantId: string;
@@ -106,7 +107,7 @@ export function CodesPanel({ tenantId, eventId }: Props) {
         <Select
           allowClear
           placeholder="state"
-          style={{ minWidth: 140 }}
+          className={portalFieldMin.w140}
           value={state || undefined}
           options={STATE_OPTIONS}
           onChange={(v) => setState((v as PortalCodeState | undefined) ?? '')}
@@ -115,21 +116,21 @@ export function CodesPanel({ tenantId, eventId }: Props) {
           placeholder={t('ops.h_gelxe4')}
           value={sourceId}
           onChange={(e) => setSourceId(e.target.value)}
-          style={{ minWidth: 220 }}
+          className={portalFieldMin.w220}
           spellCheck={false}
         />
         <Input
           placeholder={t('ops.h_1wzddxz')}
           value={ticketTypeId}
           onChange={(e) => setTicketTypeId(e.target.value)}
-          style={{ minWidth: 220 }}
+          className={portalFieldMin.w220}
           spellCheck={false}
         />
         <Input.Password
           placeholder={t('ops.h_uf5xhg')}
           value={lookup}
           onChange={(e) => setLookup(e.target.value)}
-          style={{ minWidth: 220 }}
+          className={portalFieldMin.w220}
           visibilityToggle={false}
           autoComplete="off"
         />

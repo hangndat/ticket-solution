@@ -16,6 +16,7 @@ import {
 import { usePortalLocale, type MessageKey } from '../../i18n';
 import { SavedViewsToolbar } from '../../views';
 import { NotificationsTemplatesSection } from './notifications-templates-section';
+import { portalFieldMin } from '../../layout/density';
 
 type Props = {
   tenantId: string;
@@ -131,7 +132,7 @@ export function NotificationsOpsPanel({
         <Select
           allowClear
           placeholder="Provider state"
-          style={{ minWidth: 220 }}
+          className={portalFieldMin.w220}
           value={state}
           options={buildStateOptions(t)}
           onChange={(v) => setState(v)}
@@ -140,7 +141,7 @@ export function NotificationsOpsPanel({
         <Select
           allowClear
           placeholder="Channel"
-          style={{ minWidth: 140 }}
+          className={portalFieldMin.w140}
           value={channel}
           options={CHANNEL_OPTIONS}
           onChange={(v) => setChannel(v)}

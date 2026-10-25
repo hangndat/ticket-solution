@@ -13,6 +13,7 @@ import {
 } from '../pending';
 import { usePortalLocale } from '../../i18n';
 import { SavedViewsToolbar } from '../../views';
+import { portalFieldMin } from '../../layout/density';
 
 type CatalogItem = { id: string; label: string };
 
@@ -160,7 +161,7 @@ export function PendingPanel({
           <Select
             allowClear
             placeholder={t('ops.import.chooseSource')}
-            style={{ minWidth: 200 }}
+            className={portalFieldMin.w200}
             value={sourceId}
             options={sources.map((s) => ({ value: s.id, label: s.label }))}
             onChange={(v) => setSourceId(v)}
@@ -169,7 +170,7 @@ export function PendingPanel({
           <Select
             allowClear
             placeholder={t('ops.import.chooseTicketTypeCatalog')}
-            style={{ minWidth: 200 }}
+            className={portalFieldMin.w200}
             value={ticketTypeId}
             options={ticketTypes.map((tt) => ({ value: tt.id, label: tt.label }))}
             onChange={(v) => setTicketTypeId(v)}
@@ -179,7 +180,7 @@ export function PendingPanel({
             placeholder={t('ops.h_k67vfi')}
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            style={{ minWidth: 280 }}
+            className={portalFieldMin.w280}
             spellCheck={false}
             maxLength={64}
             aria-label={t('ops.h_1syu2ee')}
@@ -199,7 +200,7 @@ export function PendingPanel({
             placeholder={t('ops.h_1ga5au4')}
             value={denyReason}
             onChange={(e) => setDenyReason(e.target.value)}
-            style={{ minWidth: 280 }}
+            className={portalFieldMin.w280}
             maxLength={500}
             aria-label={t('ops.h_1qz57kh')}
           />

@@ -14,6 +14,7 @@ import { bffBranding } from '../../../../src/prep/bff-urls';
 import { useTenantAccess } from '../../../../src/prep/use-event-access';
 import { SurfaceState } from '../../../../src/components/surface-state';
 import { usePortalLocale } from '../../../../src/i18n';
+import { DEFAULT_TENANT_PRIMARY_COLOR } from '../../../../src/theme/vemoki';
 
 type Branding = {
   displayName: string;
@@ -194,7 +195,7 @@ export default function OrgSettingsPage() {
               name="primaryColor"
               label={t('config.h_1fbsj7r')}
               rules={[{ required: true }]}
-              fieldProps={{ placeholder: '#9b3a18' }}
+              fieldProps={{ placeholder: DEFAULT_TENANT_PRIMARY_COLOR }}
             />
             <ProFormText name="secondaryColor" label={t('settings.h_me7m5c')} />
             <Typography.Text type="secondary">

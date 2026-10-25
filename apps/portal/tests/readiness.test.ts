@@ -10,6 +10,7 @@ import {
   hasTermsContent,
   isMinimalBrandOk,
 } from '../src/prep/default-config';
+import { DEFAULT_TENANT_PRIMARY_COLOR } from '../src/theme/vemoki';
 import {
   buildCreateEventUpstreamBody,
   isEventVisibility,
@@ -58,12 +59,13 @@ test('readinessAllOk only when every gate is ok', () => {
 test('minimal config payload has brand + terms', () => {
   const payload = buildMinimalConfigPayload({
     organizationName: 'Vemoki',
-    primaryColor: '#9b3a18',
+    primaryColor: DEFAULT_TENANT_PRIMARY_COLOR,
     termsText: 'Điều khoản demo',
   });
   assert.equal(isMinimalBrandOk(payload), true);
   assert.equal(hasTermsContent(payload), true);
   assert.equal(payload.schemaVersion, 1);
+  assert.equal(payload.brand.primaryColor, DEFAULT_TENANT_PRIMARY_COLOR);
 });
 
 test('create event body allowlists visibility and venue pair', () => {

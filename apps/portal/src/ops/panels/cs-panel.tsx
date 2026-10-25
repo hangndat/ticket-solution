@@ -16,6 +16,7 @@ import {
 } from '../cs';
 import { usePortalLocale } from '../../i18n';
 import { SavedViewsToolbar } from '../../views';
+import { portalFieldMin } from '../../layout/density';
 
 type Props = {
   tenantId: string;
@@ -139,7 +140,7 @@ export function CsPanel({ tenantId, eventId, canCs }: Props) {
                 placeholder={t('ops.h_1ehht5k')}
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
-                style={{ minWidth: 320 }}
+                className={portalFieldMin.w320}
                 spellCheck={false}
               />
               <Button type="primary" loading={busy} onClick={() => void search()}>{t('ops.h_n3x4mp')}</Button>

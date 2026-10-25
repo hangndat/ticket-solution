@@ -12,6 +12,7 @@ import {
 } from '../audit';
 import { usePortalLocale } from '../../i18n';
 import { SavedViewsToolbar } from '../../views';
+import { portalFieldMin } from '../../layout/density';
 
 type Props = {
   tenantId: string;
@@ -102,21 +103,21 @@ export function AuditPanel({ tenantId, eventId }: Props) {
           placeholder={t('audit.filter.actionOptional')}
           value={action}
           onChange={(e) => setAction(e.target.value)}
-          style={{ minWidth: 180 }}
+          className={portalFieldMin.w180}
           allowClear
         />
         <Input
           placeholder="from ISO (…Z)"
           value={from}
           onChange={(e) => setFrom(e.target.value)}
-          style={{ minWidth: 220 }}
+          className={portalFieldMin.w220}
           spellCheck={false}
         />
         <Input
           placeholder="to ISO (…Z)"
           value={to}
           onChange={(e) => setTo(e.target.value)}
-          style={{ minWidth: 220 }}
+          className={portalFieldMin.w220}
           spellCheck={false}
         />
         <Button type="primary" loading={busy} onClick={() => void load(null, false)}>{t('platform.loc')}</Button>
