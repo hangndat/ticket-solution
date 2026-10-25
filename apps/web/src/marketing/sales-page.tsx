@@ -6,7 +6,7 @@ import {
 } from './hosts';
 import { MarketingChrome } from './chrome';
 import { HeroSection } from './sections/hero';
-import { InterestSection } from './sections/interest';
+import { MarketingInterestProvider } from './marketing-interest-provider';
 import { NeonEventsSection } from './sections/neon-events';
 import { NeonFinalCtaSection } from './sections/neon-final-cta';
 import { NeonProductSection } from './sections/neon-product';
@@ -20,14 +20,15 @@ export function SalesPage({ locale }: { locale: MarketingLocale }) {
   };
 
   return (
-    <MarketingChrome locale={locale} pageKind="sales">
-      <main id="main" data-testid={`sales-${locale}`}>
-        <HeroSection {...sectionProps} />
-        <NeonEventsSection {...sectionProps} />
-        <NeonProductSection {...sectionProps} />
-        <NeonFinalCtaSection {...sectionProps} />
-        <InterestSection {...sectionProps} />
-      </main>
-    </MarketingChrome>
+    <MarketingInterestProvider locale={locale} demo={sectionProps.demo}>
+      <MarketingChrome locale={locale} pageKind="sales">
+        <main id="main" data-testid={`sales-${locale}`}>
+          <HeroSection {...sectionProps} />
+          <NeonEventsSection {...sectionProps} />
+          <NeonProductSection {...sectionProps} />
+          <NeonFinalCtaSection {...sectionProps} />
+        </main>
+      </MarketingChrome>
+    </MarketingInterestProvider>
   );
 }
