@@ -1,6 +1,6 @@
 # Portal — remaining red / rose usage (post VD10 tenant default + loading primary fix)
 
-SHA: `9a0e98f42a1b548fe70e9a8566940e9f6535077d` (branch `hangndat/vd09-marketing-neon`)
+SHA: `64fe91e45fec1b310a0f151936cc9f146028e54b` (branch `hangndat/vd09-marketing-neon`)
 
 Grep `#E11D48` in `apps/portal` after change:
 
