@@ -24,6 +24,7 @@ import { ErrorState, LoadingState } from '@/components/screen-state';
 import { redeemCopy } from '@/components/screen-state-copy';
 import { getApiBaseUrl } from '@/identity/config';
 import { session } from '@/identity/session';
+import { randomId } from '@/lib/random-id';
 import type { FormAnswerValue, FormDefinition } from '@/redeem/contract';
 import {
   redeemPayloadFingerprint,
@@ -291,9 +292,7 @@ export function GlobalRedeemScreen() {
       termsAccepted: termsAccepted === true
     };
     const fingerprint = redeemPayloadFingerprint(payload);
-    const { key } = resolveIdempotencyKey(attempt, fingerprint, () =>
-      crypto.randomUUID(),
-    );
+    const { key } = resolveIdempotencyKey(attempt, fingerprint, randomId);
     setAttempt({ key, fingerprint, unclear: true });
     setBusy(true);
     setStatusNote(null);

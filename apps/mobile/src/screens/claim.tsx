@@ -16,6 +16,7 @@ import { AttendeeCta } from '@/components/attendee-cta';
 import { BrandWordmark, Notice, Page } from '@/components/page';
 import { getApiBaseUrl } from '@/identity/config';
 import { session } from '@/identity/session';
+import { randomId } from '@/lib/random-id';
 import { fetchPublishedEventDetail } from '@/published/published-event-api';
 import type { FormAnswerValue, FormDefinition } from '@/redeem/contract';
 import { claimInvitation } from '@/redeem/claim-client';
@@ -254,7 +255,7 @@ export function ClaimScreen() {
         tenantId: intent.tenantId,
         eventId: intent.eventId,
         token: intent.token,
-        idempotencyKey: crypto.randomUUID(),
+        idempotencyKey: randomId(),
         formVersion: form?.formVersion,
         termsVersion: termsVersion ?? undefined,
         answers: validated.answers,

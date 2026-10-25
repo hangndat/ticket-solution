@@ -1,4 +1,5 @@
 import type { SessionBoundary, SessionEpoch } from '../identity/session-boundary.ts';
+import { randomId } from '../lib/random-id.ts';
 import {
   getCurrentAccountDeletionRequest,
   postAccountDeletionRequest,
@@ -59,14 +60,14 @@ export function retainPendingIdempotencyKey(
 }
 
 export function createIdempotencyKey(
-  createId: () => string = () => crypto.randomUUID(),
+  createId: () => string = randomId,
 ): string {
   return createId();
 }
 
 export function resolveIdempotencyKeyForSubmit(
   userId: string,
-  createId: () => string = () => crypto.randomUUID(),
+  createId: () => string = randomId,
 ): string {
   const existing = pendingKeys.get(userId);
   if (existing) return existing;

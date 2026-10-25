@@ -20,6 +20,7 @@ import {
 } from '@/navigation/sign-in-return-intent';
 import { getApiBaseUrl, getEventId, getTenantId } from '@/identity/config';
 import { session } from '@/identity/session';
+import { randomId } from '@/lib/random-id';
 import { fetchPublishedEventDetail } from '@/published/published-event-api';
 import type { FormAnswerValue, FormDefinition } from '@/redeem/contract';
 import {
@@ -252,9 +253,7 @@ export function RedeemScreen() {
       termsAccepted: termsAccepted === true
     };
     const fingerprint = redeemPayloadFingerprint(payload);
-    const { key } = resolveIdempotencyKey(attempt, fingerprint, () =>
-      crypto.randomUUID(),
-    );
+    const { key } = resolveIdempotencyKey(attempt, fingerprint, randomId);
     setAttempt({ key, fingerprint, unclear: true });
     setBusy(true);
     setStatusNote(null);
