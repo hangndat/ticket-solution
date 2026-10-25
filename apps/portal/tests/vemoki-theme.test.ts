@@ -5,6 +5,7 @@ import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import {
   DEFAULT_TENANT_PRIMARY_COLOR,
+  PORTAL_ALERT_TOKENS,
   VEMOKI_COLORS,
   vemokiTheme,
 } from '../src/theme/vemoki';
@@ -34,6 +35,15 @@ test('portal Ant theme uses enterprise violet primary (DEC-02), not signal red',
 test('tenant brand default stays Live Pulse signal (DEC-04)', () => {
   assert.equal(VEMOKI_COLORS.signal, brandTokens.colors.signal);
   assert.equal(DEFAULT_TENANT_PRIMARY_COLOR, '#E11D48');
+});
+
+test('portal alert tokens use light paper surfaces (VD10-R-01)', () => {
+  assert.equal(vemokiTheme.token?.colorInfoBg, PORTAL_ALERT_TOKENS.colorInfoBg);
+  assert.equal(
+    vemokiTheme.components?.Alert?.colorInfoBg,
+    PORTAL_ALERT_TOKENS.colorInfoBg,
+  );
+  assert.equal(vemokiTheme.components?.Button?.primaryShadow, 'none');
 });
 
 test('portal surface colors align with portal-antd-theme quiet enterprise', () => {

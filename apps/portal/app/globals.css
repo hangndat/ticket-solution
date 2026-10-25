@@ -50,6 +50,7 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  color: var(--vemoki-ink);
 }
 
 .portal-brand-mark {
@@ -135,22 +136,31 @@ body {
 }
 
 .portal-page-container .ant-page-header,
+.portal-page-container .ant-pro-page-header,
 .portal-page-container .ant-page-header-heading,
+.portal-page-container .ant-pro-page-header-heading,
 .portal-page-container .ant-page-header-heading-left,
+.portal-page-container .ant-pro-page-header-heading-left,
 .portal-page-container .ant-page-header-heading-title,
-.portal-page-container .ant-page-header-heading-sub-title {
+.portal-page-container .ant-pro-page-header-heading-title,
+.portal-page-container .ant-page-header-heading-sub-title,
+.portal-page-container .ant-pro-page-header-heading-sub-title {
   overflow: visible;
   max-width: 100%;
 }
 
 .portal-page-container .ant-page-header-heading-title,
-.portal-page-container .ant-page-header-heading-sub-title {
+.portal-page-container .ant-pro-page-header-heading-title,
+.portal-page-container .ant-page-header-heading-sub-title,
+.portal-page-container .ant-pro-page-header-heading-sub-title {
   display: block;
-  white-space: normal;
-  text-overflow: clip;
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
   word-break: break-word;
   line-height: 1.35;
-  text-overflow: unset;
+  width: auto !important;
+  max-width: none !important;
 }
 
 .portal-page-container .ant-page-header-heading {
@@ -158,11 +168,19 @@ body {
   width: 100%;
 }
 
-.portal-page-container .ant-page-header-heading-left {
-  flex: 1 1 100%;
+.portal-page-container .ant-page-header-heading-left,
+.portal-page-container .ant-pro-page-header-heading-left {
+  flex: 1 1 auto !important;
   min-width: 0;
-  max-width: 100%;
-  width: 100%;
+  max-width: none !important;
+  width: auto !important;
+  overflow: visible !important;
+}
+
+.portal-page-container .ant-pro-page-header-heading,
+.portal-page-container .ant-page-header-heading {
+  flex-wrap: wrap;
+  align-items: flex-start;
 }
 
 .portal-page-container .ant-page-header-heading-sub-title {
@@ -266,6 +284,14 @@ a {
 
 .ant-layout-sider .portal-brand-link {
   color: #faf9ff;
+}
+
+/* Mix layout: brand lockup on white header uses ink, not link/info blue (VD10-R-02). */
+.ant-pro-global-header .portal-brand-link,
+.ant-pro-global-header .portal-brand-link:hover,
+.ant-pro-global-header .portal-brand-link:focus-visible,
+.ant-pro-global-header .portal-brand-link .portal-brand-text {
+  color: var(--vemoki-ink) !important;
 }
 
 /* Mix layout: logo renders in ant-pro-global-header, not the sider. */
@@ -378,6 +404,17 @@ a {
 .portal-auth-page__inner {
   width: 100%;
   max-width: 480px;
+}
+
+/* VD10-R-03: remove primary button bottom shadow/border artifact on auth card. */
+.portal-auth-page .ant-btn-primary,
+.portal-auth-page .ant-btn-primary:not(:disabled):hover,
+.portal-auth-page .ant-btn-primary:not(:disabled):active,
+.portal-auth-page .ant-btn-primary:focus-visible {
+  box-shadow: none !important;
+  background-image: none !important;
+  border-color: transparent !important;
+  outline-offset: 2px;
 }
 
 .portal-field-min {
