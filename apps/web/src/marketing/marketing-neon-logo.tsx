@@ -10,10 +10,9 @@ export function MarketingNeonLogo() {
         xmlns="http://www.w3.org/2000/svg"
         viewBox="0 0 44 44"
         fill="none"
-        role="img"
         focusable="false"
+        aria-hidden="true"
       >
-        <title>Vemoki</title>
         <defs>
           <linearGradient
             id="mkt-neon-logo-ribbon-left"
@@ -41,16 +40,16 @@ export function MarketingNeonLogo() {
           </linearGradient>
         </defs>
         <path
-          d="M7 5.5C9 8 14 30 22 40"
+          d="M6 4.5C8.5 7.5 13 28 22 39.5"
           stroke="url(#mkt-neon-logo-ribbon-left)"
-          strokeWidth="8"
+          strokeWidth="10.5"
           strokeLinecap="round"
           strokeLinejoin="round"
         />
         <path
-          d="M37 5.5C35 8 30 30 22 40"
+          d="M38 4.5C35.5 7.5 31 28 22 39.5"
           stroke="url(#mkt-neon-logo-ribbon-right)"
-          strokeWidth="8"
+          strokeWidth="10.5"
           strokeLinecap="round"
           strokeLinejoin="round"
         />
