@@ -1,4 +1,4 @@
-SHA: 9a0e98f42a1b548fe70e9a8566940e9f6535077d
+SHA: 64fe91e45fec1b310a0f151936cc9f146028e54b
 pnpm --filter @ticket/portal test  # pass
 pnpm --filter @ticket/portal build  # pass
 WEB_UAT_EXECUTABLE="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" node apps/portal/tests/evidence-vd10/capture-loading-spinner.mjs  # loading-spinner-390.png
