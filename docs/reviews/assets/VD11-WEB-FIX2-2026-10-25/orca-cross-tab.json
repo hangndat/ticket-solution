@@ -1,0 +1,55 @@
+{
+  "ok": true,
+  "step": "account_b_then_guest",
+  "result": {
+    "source": "5c66678c961edab15cb7ef19c53d71b2527f7232",
+    "initial": {
+      "avatarA": true,
+      "height": 73,
+      "tickets": 6
+    },
+    "normalNavigationSameHeader": true,
+    "freshB": {
+      "hiddenBoundaries": 0,
+      "tickets": 0,
+      "walletEmpty": true
+    },
+    "screenshot": "/tmp/vd11-cross-proof-old-tab-after-b-1440.png",
+    "oldTab": {
+      "avatarB": true,
+      "documentReplaced": true,
+      "height": 73,
+      "identityB": true,
+      "me": 200,
+      "sameHeader": false,
+      "scroll": 1440,
+      "tickets": 0,
+      "viewport": 1440,
+      "walletEmpty": true
+    },
+    "privateContentCleared": true,
+    "history": [
+      {
+        "identityB": true,
+        "oldEmailInMain": false,
+        "path": "/account",
+        "tickets": 0,
+        "direction": "back"
+      },
+      {
+        "identityB": true,
+        "oldEmailInMain": false,
+        "path": "/wallet",
+        "tickets": 0,
+        "direction": "forward"
+      }
+    ],
+    "guest": {
+      "avatar": false,
+      "consumer": true,
+      "me": 401,
+      "priorEmailInMain": false,
+      "tickets": 0
+    }
+  }
+}
