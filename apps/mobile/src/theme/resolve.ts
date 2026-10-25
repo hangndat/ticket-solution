@@ -41,6 +41,7 @@ export function resolveThemeTokens(
     signal: branding.primaryColor,
     focus: secondary ?? base.focus,
     wordmark: branding.wordmark ?? branding.organizationName,
+    signalMark: branding.signalGlyph ?? '',
     organizationName: branding.organizationName,
     logoUrl: branding.logoUrl ?? null,
     logoAssetId: branding.logoAssetId ?? null,

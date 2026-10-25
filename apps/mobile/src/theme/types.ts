@@ -17,6 +17,8 @@ export type TenantBrandingDto = {
   logoAssetId?: string | null;
   /** Optional display wordmark; falls back to organizationName / Vemoki. */
   wordmark?: string;
+  /** Glyph after wordmark (e.g. ↗); empty/absent hides platform default glyph. */
+  signalGlyph?: string;
   brandVersion?: number;
 };
 
