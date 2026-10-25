@@ -18,7 +18,7 @@ python3 scripts/release-artifact.py --root /opt/vemoki/releases build --sha <FUL
 python3 scripts/release-artifact.py --root /opt/vemoki/releases verify <SHA-BUILD_ID>
 ```
 
-Build dùng `git archive` của SHA, pnpm frozen lockfile, build contracts/backend/ui/web-session và cả bốn app **trong staging**, không đọc `.env` thật. `pnpm generate` tạo Prisma client trên Linux. Image Node version và arch được kiểm trước build; native `sharp`/Prisma phải qua smoke ở đúng architecture trước deploy. Build ID là hash của tree; nếu output không deterministic (Next build ID, generated output), hai build cùng SHA có thể ra ID khác: so manifest và điều tra, không tự nhận bit-for-bit reproducibility. Không copy `node_modules` build trên macOS sang Linux. Workspace symlink thoát tree làm verify fail.
+Build dùng `git archive` của SHA với allowlist chỉ gồm app, workspace dependencies, brand và root build config; loại `.env*` ngay trong staging. pnpm frozen lockfile build contracts/backend/ui/web-session và cả bốn app **trong staging**, không đọc `.env` thật. `pnpm generate` tạo Prisma client trên Linux. Image Node version và arch được kiểm trước build; native `sharp`/Prisma phải qua smoke ở đúng architecture trước deploy. Build ID là hash của tree; Next 16 sinh BUILD_ID ngẫu nhiên nên hai build cùng SHA có thể ra ID khác, nhưng mỗi release vẫn được pin/checksum riêng. Không tự nhận bit-for-bit reproducibility. Không copy `node_modules` build trên macOS sang Linux. Workspace symlink thoát tree làm verify fail.
 
 ## Expand, rollout, rollback
 
