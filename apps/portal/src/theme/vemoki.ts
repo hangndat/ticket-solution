@@ -22,13 +22,26 @@ export const VEMOKI_COLORS = {
 /** Default tenant/event brand color placeholder and fallback (Live Pulse signal). */
 export const DEFAULT_TENANT_PRIMARY_COLOR = VEMOKI_COLORS.signal;
 
+/** Light-surface alert fills — WCAG AA body text on paper layout (VD10-R-01). */
+export const PORTAL_ALERT_TOKENS = {
+  colorInfoBg: '#E8F1FF',
+  colorInfoBorder: '#B8D4FF',
+  colorSuccessBg: '#E7F5EE',
+  colorSuccessBorder: '#9FD4B8',
+  colorWarningBg: '#FFF4E0',
+  colorWarningBorder: '#E8C878',
+  colorErrorBg: '#FCE8EC',
+  colorErrorBorder: '#F0B8C4',
+} as const;
+
 export const vemokiTheme: ThemeConfig = {
   token: {
     colorPrimary: VEMOKI_COLORS.primary,
-    colorInfo: '#397DFF',
+    colorInfo: '#2563EB',
     colorSuccess: '#127349',
     colorWarning: '#8A5800',
     colorError: '#B3213A',
+    ...PORTAL_ALERT_TOKENS,
     colorText: VEMOKI_COLORS.ink,
     colorTextSecondary: VEMOKI_COLORS.muted,
     colorBgLayout: VEMOKI_COLORS.paper,
@@ -42,7 +55,22 @@ export const vemokiTheme: ThemeConfig = {
     fontFamilyCode: 'ui-monospace, SFMono-Regular, Menlo, monospace',
   },
   components: {
-    Button: { borderRadius: 12, controlHeight: 44 },
+    Button: {
+      borderRadius: 12,
+      controlHeight: 44,
+      primaryShadow: 'none',
+      defaultShadow: 'none',
+    },
+    Alert: {
+      colorInfoBg: PORTAL_ALERT_TOKENS.colorInfoBg,
+      colorInfoBorder: PORTAL_ALERT_TOKENS.colorInfoBorder,
+      colorSuccessBg: PORTAL_ALERT_TOKENS.colorSuccessBg,
+      colorSuccessBorder: PORTAL_ALERT_TOKENS.colorSuccessBorder,
+      colorWarningBg: PORTAL_ALERT_TOKENS.colorWarningBg,
+      colorWarningBorder: PORTAL_ALERT_TOKENS.colorWarningBorder,
+      colorErrorBg: PORTAL_ALERT_TOKENS.colorErrorBg,
+      colorErrorBorder: PORTAL_ALERT_TOKENS.colorErrorBorder,
+    },
     Card: { borderRadiusLG: 18 },
     Table: { headerBg: '#F8FAFD', rowHoverBg: VEMOKI_COLORS.paper },
     Layout: {

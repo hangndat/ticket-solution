@@ -16,6 +16,7 @@ import { PortalDualRunBanner } from './dual-run-banner';
 import { SurfaceState } from './surface-state';
 import { usePortalLocale } from '../i18n';
 import { PortalBrandLockup } from './portal-brand-lockup';
+import { PortalContentTheme } from './portal-content-theme';
 
 export type PortalProLayoutProps = {
   children: ReactNode;
@@ -171,19 +172,21 @@ export function PortalProLayout({
         showGateScanHint={Boolean(caps?.showGateScanHint)}
       />
       <div id="portal-main" tabIndex={-1} className="portal-main-surface">
-        <PortalDualRunBanner productOrigin={productOrigin} />
-        {activeTenant?.status === 'SUSPENDED' ? <SurfaceState kind="suspended" /> : null}
-        {activeTenant?.status === 'PENDING' ? (
-          <SurfaceState
-            kind="pending-activation"
-            emptyAction={
-              <Link href={`/onboarding/${activeTenant.tenantId}`}>
-                <Button type="link">{t('onboarding.pending.openWait')}</Button>
-              </Link>
-            }
-          />
-        ) : null}
-        {children}
+        <PortalContentTheme>
+          <PortalDualRunBanner productOrigin={productOrigin} />
+          {activeTenant?.status === 'SUSPENDED' ? <SurfaceState kind="suspended" /> : null}
+          {activeTenant?.status === 'PENDING' ? (
+            <SurfaceState
+              kind="pending-activation"
+              emptyAction={
+                <Link href={`/onboarding/${activeTenant.tenantId}`}>
+                  <Button type="link">{t('onboarding.pending.openWait')}</Button>
+                </Link>
+              }
+            />
+          ) : null}
+          {children}
+        </PortalContentTheme>
       </div>
     </ProLayout>
   );
