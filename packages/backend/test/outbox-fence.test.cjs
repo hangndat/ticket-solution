@@ -21,6 +21,10 @@ const {
   readCodeHmacEnvironment,
   processClaimedOutbox,
   relayOutboxOnce,
+  claimOutboxBatch,
+  collectWorkerDueJobSnapshot,
+  metricsQuantileSeconds,
+  resetMetricsForTests,
   publishNotificationTemplate,
   publishEventConfig,
   saveEventConfigVersion,
@@ -123,6 +127,9 @@ async function startIsolatedPostgres() {
       'GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO ticket_runtime',
     );
     await admin.query(
+      'REVOKE ALL ON public.worker_job_reclaim_counters FROM ticket_runtime',
+    );
+    await admin.query(
       'GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO ticket_runtime',
     );
     await admin.query(
@@ -187,7 +194,7 @@ test(
     try {
       const boot = await startIsolatedPostgres();
       pgName = boot.name;
-      db = createDatabase(boot.url, 2);
+      db = createDatabase(boot.url, 2, true);
 
       const tenantId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
       const outboxId = randomUUID();
@@ -258,6 +265,105 @@ test(
         return rows[0]?.status;
       });
       assert.equal(status, 'COMPLETE');
+
+      const reclaimId = randomUUID();
+      await withTenant(db, tenantId, async (tx) => {
+        await tx.$executeRaw`
+          INSERT INTO outbox (
+            tenant_id, event_id, id, type, aggregate_id, payload_version,
+            payload, status, attempts, lease_owner, lease_token,
+            lease_expires_at, created_at, updated_at
+          ) VALUES (
+            ${tenantId}::uuid, NULL, ${reclaimId}::uuid,
+            'MembershipInvite', ${inviteId}::uuid, 1, '{}'::jsonb,
+            'LEASED', 1, 'worker-dead', 'old-token',
+            clock_timestamp() - interval '3 seconds',
+            clock_timestamp() - interval '10 seconds', clock_timestamp()
+          )
+        `;
+      });
+      const due = await collectWorkerDueJobSnapshot(db);
+      const before = due.find((row) => row.jobClass === 'relay_outbox');
+      assert.equal(before.dueCount, 1);
+      assert.ok(before.oldestDueAgeSeconds >= 2);
+      assert.equal(before.reclaimCount, 0);
+      const claimed = await claimOutboxBatch(db, 'worker-new', 1);
+      assert.equal(claimed.length, 1);
+      assert.equal(claimed[0].outbox_id, reclaimId);
+      assert.notEqual(claimed[0].lease_token, 'old-token');
+      const after = (await collectWorkerDueJobSnapshot(db)).find(
+        (row) => row.jobClass === 'relay_outbox',
+      );
+      assert.equal(after.dueCount, 0);
+      assert.equal(
+        after.reclaimCount,
+        1,
+        'only an expired lease claim counts as reclaim',
+      );
+      const privilege = await db.$queryRaw`
+        SELECT has_function_privilege('ticket_runtime', 'public.worker_due_job_snapshot()', 'EXECUTE') AS worker_can_probe,
+               has_table_privilege('ticket_runtime', 'public.worker_job_reclaim_counters', 'SELECT') AS worker_can_read_counter
+      `;
+      assert.equal(privilege[0].worker_can_probe, true);
+      assert.equal(privilege[0].worker_can_read_counter, false);
+      const runtime = new Client({ connectionString: boot.url });
+      await runtime.connect();
+      try {
+        await runtime.query('SET ROLE ticket_runtime');
+        const visible = await runtime.query(
+          'SELECT * FROM public.worker_due_job_snapshot()',
+        );
+        assert.equal(visible.rows.length, 5);
+        assert.deepEqual(
+          Object.keys(visible.rows[0]).sort(),
+          [
+            'job_class',
+            'oldest_due_age_seconds',
+            'due_count',
+            'reclaim_count',
+          ].sort(),
+        );
+        await assert.rejects(
+          () =>
+            runtime.query('SELECT * FROM public.worker_job_reclaim_counters'),
+          /permission denied/i,
+        );
+        await assert.rejects(
+          () => runtime.query("INSERT INTO public.worker_job_reclaim_counters(job_class,reclaim_count) VALUES('relay_outbox',999)"),
+          /permission denied/i,
+        );
+        await assert.rejects(
+          () => runtime.query("UPDATE public.worker_job_reclaim_counters SET reclaim_count=999 WHERE job_class='relay_outbox'"),
+          /permission denied/i,
+        );
+        await runtime.query('RESET ROLE');
+        await runtime.query('SET ROLE ticket_platform_runtime');
+        await assert.rejects(
+          () => runtime.query('SELECT * FROM public.worker_due_job_snapshot()'),
+          /permission denied/i,
+        );
+      } finally {
+        await runtime.end();
+      }
+      assert.deepEqual(
+        Object.keys(due[0]).sort(),
+        ['dueCount', 'jobClass', 'oldestDueAgeSeconds', 'reclaimCount'].sort(),
+      );
+
+      resetMetricsForTests();
+      const tightPool = createDatabase(boot.url, 1, true);
+      try {
+        const slow = tightPool.$queryRaw`SELECT 1 AS n FROM pg_sleep(0.08)`;
+        await new Promise((resolve) => setTimeout(resolve, 10));
+        const waiting = tightPool.$queryRaw`SELECT 1`;
+        await Promise.all([slow, waiting]);
+        assert.ok(
+          metricsQuantileSeconds('worker_db_pool_wait_seconds', {}, 1) > 0.04,
+          'saturated one-connection pool must record actual acquisition wait',
+        );
+      } finally {
+        await tightPool.$disconnect();
+      }
     } finally {
       if (db) await db.$disconnect();
       if (pgName) docker('rm', '-f', '-v', pgName);

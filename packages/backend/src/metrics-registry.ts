@@ -48,6 +48,21 @@ export function metricsSetGauge(
   counters.set(key, value);
 }
 
+/** In-process quantile for worker log summaries (fixed, low-cardinality labels). */
+export function metricsQuantileSeconds(
+  name: string,
+  labels: Labels,
+  q: number,
+): number {
+  const samples = histograms.get(labelKey(name, labels));
+  return samples
+    ? quantile(
+        [...samples].sort((a, b) => a - b),
+        q,
+      )
+    : 0;
+}
+
 function parseKey(key: string): { name: string; labels: Labels } {
   const pipe = key.indexOf('|');
   const name = pipe < 0 ? key : key.slice(0, pipe);
@@ -116,12 +131,12 @@ export function renderPrometheusText(extraGauges: string[] = []): string {
         lines.push(`${name}_bucket${formatLabels(labels)} ${cumulative}`);
       }
       const infLabels = { ...parsed.labels, le: '+Inf' };
-      lines.push(
-        `${name}_bucket${formatLabels(infLabels)} ${sorted.length}`,
-      );
+      lines.push(`${name}_bucket${formatLabels(infLabels)} ${sorted.length}`);
       const sum = sorted.reduce((a, b) => a + b, 0);
       lines.push(`${name}_sum${formatLabels(parsed.labels)} ${sum}`);
-      lines.push(`${name}_count${formatLabels(parsed.labels)} ${sorted.length}`);
+      lines.push(
+        `${name}_count${formatLabels(parsed.labels)} ${sorted.length}`,
+      );
       // Summary-style quantiles as companion gauges (p50/p95/p99).
       lines.push(
         `${name}_p50${formatLabels(parsed.labels)} ${quantile(sorted, 0.5)}`,

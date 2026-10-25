@@ -1,8 +1,19 @@
 import { PrismaPg } from '@prisma/adapter-pg';
+import { Pool } from 'pg';
+import { metricsObserveSeconds, metricsSetGauge } from './metrics-registry';
 import { PrismaClient, Prisma } from './generated/prisma/client';
 export { PrismaClient, Prisma };
+export {
+  collectWorkerDueJobSnapshot,
+  WORKER_JOB_CLASSES,
+  type WorkerDueJobSnapshot,
+  type WorkerJobClass,
+} from './worker-job-metrics';
 export { withTenant, withActor } from './tenant-context';
-export { configureIssuanceLockTimeout, isRetryableTransactionConflict } from './transaction-conflict';
+export {
+  configureIssuanceLockTimeout,
+  isRetryableTransactionConflict,
+} from './transaction-conflict';
 export {
   IdentityError,
   IDENTITY_ERROR_CODES,
@@ -507,8 +518,60 @@ export { sendMimeMailViaSmtp, sendMailViaSmtp } from './smtp-send';
 export function createDatabase(
   connectionString: string,
   max = 5,
+  observePoolWait = false,
+  workerLimits?: {
+    statementTimeoutMs: number;
+    lockTimeoutMs: number;
+    poolWaitTimeoutMs: number;
+  },
 ): PrismaClient {
   validateDatabaseUrl(connectionString);
+  if (observePoolWait) {
+    const pool = new Pool({
+      connectionString,
+      max,
+      ...(workerLimits
+        ? {
+            // Server-side cancellation ends the query on this connection before
+            // pg releases it; no PID-based cancel can hit a reused connection.
+            options: `-c statement_timeout=${workerLimits.statementTimeoutMs} -c lock_timeout=${workerLimits.lockTimeoutMs}`,
+            connectionTimeoutMillis: workerLimits.poolWaitTimeoutMs,
+          }
+        : {}),
+    });
+    const connect = pool.connect.bind(pool);
+    type ConnectCallback = Parameters<typeof pool.connect>[0];
+    pool.connect = ((callback?: ConnectCallback) => {
+      const started = performance.now();
+      metricsSetGauge('worker_db_pool_waiting', pool.waitingCount + 1);
+      const recordWait = () => {
+        metricsObserveSeconds(
+          'worker_db_pool_wait_seconds',
+          (performance.now() - started) / 1000,
+        );
+        metricsSetGauge('worker_db_pool_waiting', pool.waitingCount);
+      };
+      if (callback) {
+        return connect((error, client, release) => {
+          recordWait();
+          callback(error, client, release);
+        });
+      }
+      return connect().then(
+        (client) => {
+          recordWait();
+          return client;
+        },
+        (error: unknown) => {
+          recordWait();
+          throw error;
+        },
+      );
+    }) as typeof pool.connect;
+    return new PrismaClient({
+      adapter: new PrismaPg(pool, { disposeExternalPool: true }),
+    });
+  }
   return new PrismaClient({ adapter: new PrismaPg({ connectionString, max }) });
 }
 
@@ -549,6 +612,7 @@ export {
   metricsInc,
   metricsObserveSeconds,
   metricsSetGauge,
+  metricsQuantileSeconds,
   renderPrometheusText,
   resetMetricsForTests,
   routeTemplateFromPath,
