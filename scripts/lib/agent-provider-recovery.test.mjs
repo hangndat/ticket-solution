@@ -94,6 +94,32 @@ test('parseClaudeAuth missing identity is unknown', () => {
   assert.equal(r.reason, 'auth_identity_unknown');
 });
 
+test('parseClaudeAuth org-only without email or account uuid is unknown', () => {
+  const r = parseClaudeAuth(
+    JSON.stringify({
+      loggedIn: true,
+      authMethod: 'claude.ai',
+      apiProvider: 'firstParty',
+      orgId: 'org-shared',
+    }),
+  );
+  assert.equal(r.ok, false);
+  assert.equal(r.reason, 'auth_identity_unknown');
+});
+
+test('parseClaudeAuth accepts profile plus config dir without email', () => {
+  const r = parseClaudeAuth(
+    JSON.stringify({
+      loggedIn: true,
+      authMethod: 'claude.ai',
+      apiProvider: 'firstParty',
+      profileId: 'profile-a',
+      configDir: '/tmp/claude-config-a',
+    }),
+  );
+  assert.equal(r.ok, true);
+});
+
 test('parseIsoInstant requires timezone', () => {
   assert.throws(() => parseIsoInstant('2026-10-25T10:00:00'), /invalid_instant_iso/);
   assert.equal(parseIsoInstant('2026-10-25T10:00:00.000Z'), Date.parse('2026-10-25T10:00:00.000Z'));
@@ -169,6 +195,12 @@ test('probe rejects nonzero exit and error envelope even with OK body', () => {
   const env = runClaudeProbe({ model: 'claude-sonnet-5', effort: 'medium', deps: badEnvelope });
   assert.equal(env.ok, false);
   assert.equal(env.reason, 'probe_not_success_envelope');
+  const missingIsError = fakeBins(dir, {
+    probeBody: { type: 'result', subtype: 'success', result: 'OK' },
+  });
+  const loose = runClaudeProbe({ model: 'claude-sonnet-5', effort: 'medium', deps: missingIsError });
+  assert.equal(loose.ok, false);
+  assert.equal(loose.reason, 'probe_not_success_envelope');
   rmSync(dir, { recursive: true, force: true });
 });
 
@@ -202,6 +234,37 @@ test('session and rate limit probe messages are limited', () => {
     { root, deps: { ...bins, claudeBin: badBin } },
   );
   assert.equal(unknown.availability, 'unknown');
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('Codex check ignores probe lock and re-applies reserve policy', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'prov-rec-'));
+  const root = recoveryRoot(dir);
+  checkProvider(
+    {
+      provider: 'codex',
+      model: 'gpt-6-sol',
+      effort: 'medium',
+      essential: true,
+      codexSnapshot: codexSnapshot(85),
+    },
+    { root, now: Date.now() },
+  );
+  const lock = tryAcquireProbeLock(root);
+  assert.equal(lock.acquired, true);
+  const reserved = checkProvider(
+    {
+      provider: 'codex',
+      model: 'gpt-6-sol',
+      effort: 'medium',
+      essential: false,
+      codexSnapshot: codexSnapshot(85),
+    },
+    { root, now: Date.now() + 1000 },
+  );
+  assert.equal(reserved.serviceAvailable, false);
+  assert.equal(reserved.reason, 'reserved');
+  releaseProbeLock(lock.lockPath, lock.ownerToken);
   rmSync(dir, { recursive: true, force: true });
 });
 

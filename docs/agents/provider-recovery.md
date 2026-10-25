@@ -15,7 +15,7 @@ Leader kiểm tra provider đã hết quota có hồi phục **trước** `worke
 node scripts/agent-provider-recovery.mjs route --cost-tier advanced
 node scripts/agent-provider-recovery.mjs check --provider claude --model claude-sonnet-5 --effort medium
 node scripts/agent-provider-recovery.mjs status --provider claude --model claude-sonnet-5 --effort medium
-node scripts/agent-provider-recovery.mjs record-limit --provider claude --model claude-sonnet-5 --limited-at 2026-10-26T00:00:00.000Z [--reset-at ISO]
+node scripts/agent-provider-recovery.mjs record-limit --provider claude --model claude-sonnet-5 --effort medium --limited-at 2026-10-26T00:00:00.000Z [--reset-at ISO]
 ```
 
 - `route`: gợi ý route đã đăng ký cho `focused|advanced|high`; ưu tiên Claude khi `serviceAvailable` mới.
