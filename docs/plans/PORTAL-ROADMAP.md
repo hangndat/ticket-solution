@@ -84,7 +84,7 @@ Footnote này cũng giải nghĩa dòng security đối chiếu lựa chọn PD:
 | **P1.2 — Cutover có kiểm soát** | Deploy portal khi được ủy quyền riêng; dual-run, deep-link migration, redirect tạm, quan sát và rollback | Coordinator edge/env/Keycloak ∥ web redirect/nav/email-link đúng ownership; UAT/review sau build phù hợp | Login/E2E portal và attendee/Gate regression; rollback drill; chỉ gỡ đường cũ khi parity đã đạt |
 | **P2 — Đề xuất sau** | Multi-event analytics, saved views/automation nâng cao, EN portal, custom roles hoặc self-serve onboarding | Discovery riêng theo nhu cầu thật | **Cần duyệt phạm vi riêng**; chưa xếp coding trong gói P0/P1 |
 
-Waves là trình tự dependency ở mức kết quả, **không ép hoàn tất toàn Story mới làm Task khác**. Mọi Task unblocked khác ownership được chạy cùng checkpoint dưới capacity/WIP. **Không** chạy hai feature coding Dispatch cùng slice web, kể cả `apps/web` và `apps/portal`; BE tương tự. Reviewer có thể chạy song song nhiều PR.
+Waves là trình tự dependency ở mức kết quả, **không ép hoàn tất toàn Story mới làm Task khác**. Mọi Task unblocked khác ownership được chạy cùng checkpoint dưới capacity/WIP. **Không** chạy hai feature coding Dispatch cùng slice web, kể cả `apps/web` và `apps/portal`; BE tương tự. _(Supersession 26/10/2026 — [O25](../DECISION-LOG.md): `apps/web` và `apps/portal` là hai slice riêng, mỗi slice ≤1 feature coding worker.)_ Reviewer có thể chạy song song nhiều PR.
 
 Ánh xạ skeleton planner → roadmap tổng hợp (để tạo Issue không dùng hai lịch khác nhau):
 
