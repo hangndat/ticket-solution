@@ -13,6 +13,8 @@
 
 Architecture impact: **Có**.
 
+**Bổ sung được user chốt 25/10/2026 — O24 / VD11:** web khách chỉ duy trì phiên attendee. Discovery `/v1/me/tenants` hợp lệ có membership staff thì callback/refresh và các đường attendee được bảo vệ chuyển sang Portal trên origin riêng, xóa phiên web cũ; membership `Attendee` của ticket owner không phải staff. Discovery lỗi/unknown hoặc Portal origin không hợp lệ phải fail closed, không tạo phiên attendee dự phòng. Tenant-admin BFF legacy trên web phải ngừng forward (không replay mutation sang Portal); giữ attendee claim/invite, CSRF và luồng Platform tách biệt. Header focus/bfcache phải vô hiệu identity/quyền cũ trước khi revalidate. Cookie tiếp tục host-only, SSO qua IdP/PKCE, không chuyển token qua URL. **O02 iOS không đổi**, Web Gate vẫn bị thay thế bởi O23/D-6. Các bảng cũ dưới đây được giữ như lịch sử ADR; khi khác nhau, áp dụng O23/O24. Xem [Decision Log O24](../DECISION-LOG.md#o24--nhân-viên-đăng-nhập-web-chuyển-thẳng-portal-25102026).
+
 > Decision Log: coordinator cập nhật mục tiếp nối O13 sau khi commit ADR này (worker không sửa GitHub / Decision Log trong Task này).
 
 ---

@@ -120,6 +120,8 @@ Nghiệm thu: dùng ID của tenant khác trong API, URL, job hoặc file reques
 - Khách xác minh email qua OTP hoặc magic link; mã có hạn dùng và giới hạn thử/gửi.
 - Có thể bắt đầu đổi mã trước, nhưng phải xác minh email trước khi cấp vé; yêu cầu chưa xác minh không giữ quota.
 - Nhân viên đăng nhập bằng tài khoản được mời; admin dùng MFA. Provider và phương thức đăng nhập nhân viên chốt trong thiết kế kỹ thuật.
+- **Web, bổ sung O24 (25/10/2026):** tài khoản có membership nhân viên hợp lệ chuyển thẳng Portal khi đăng nhập web khách, kể cả tài khoản đồng thời sở hữu vé; không tạo/tiếp tục phiên attendee web. Ticket owner chỉ có role `Attendee` vẫn dùng web khách. O02 chuyển chế độ trong app iOS giữ nguyên.
+- Discovery quyền không xác minh được phải có lỗi/thử lại an toàn, không hạ thành attendee; header không giữ identity/quyền của phiên trước khi đổi hoặc xác minh lại phiên. Chi tiết audience/cookie/BFF: [O24](./DECISION-LOG.md#o24--nhân-viên-đăng-nhập-web-chuyển-thẳng-portal-25102026).
 - Membership tenant và phân công event là hai phạm vi khác nhau; quyền mặc định từ chối.
 - Owner quản lý thành viên; Event Manager chỉ quản lý event được giao; CS không thay quota; Scanner không export hoặc sửa vé.
 - Thu hồi membership phải chặn thao tác mới kể cả thiết bị còn phiên đăng nhập.

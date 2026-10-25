@@ -1,8 +1,19 @@
 # Decision log — sản phẩm & kỹ thuật
 
-Ngày cập nhật: 2026-10-24
+Ngày cập nhật: 2026-10-25
 Nguồn: [PRD](./PRD.md) mục 15, [Technical Design](./TECHNICAL-DESIGN.md) mục 2 & 18, [ROADMAP](./ROADMAP.md)
 Tracking: Issues [#10](https://github.com/hangndat/ticket-solution/issues/10), [#11](https://github.com/hangndat/ticket-solution/issues/11)
+
+## O24 — Nhân viên đăng nhập web chuyển thẳng Portal (25/10/2026)
+
+User chốt trong VD11: tài khoản nhân viên đăng nhập web khách phải chuyển thẳng trang quản trị, không dùng trải nghiệm vé của web khách. Quyết định bổ sung audience của O16/ADR-20; **O02 trên app iOS giữ nguyên**, navigation và Gate native vẫn theo quyền server. Không thay đổi ownership vé hoặc quyền backend vì redirect UI.
+
+- Discovery `/v1/me/tenants` thành công xác nhận membership nhân viên hiện hành (`Owner`, `Manager`, `CS`, `Supervisor`, `Scanner`) thì chuyển đăng nhập sang Portal. Tài khoản có cả vé và membership nhân viên cũng theo nhánh này. Tenant có `role=Attendee` do sở hữu vé không phải nhân viên; không suy luận từ danh sách tenant khác rỗng.
+- Chỉ discovery hợp lệ xác nhận attendee mới tạo/tiếp tục phiên web khách. Timeout, lỗi mạng, 401/403, response sai định dạng hoặc role không biết phải fail closed với đường thử lại; không âm thầm hạ thành attendee. Staff mà thiếu Portal origin hợp lệ phải báo lỗi an toàn.
+- Xóa cookie phiên web cũ khi chuyển staff; Portal tự dùng authorization-code/PKCE và IdP SSO trên origin riêng. Không chuyển token qua URL, không dùng cookie parent-domain, không replay POST mutation sang Portal. Tenant-admin BFF legacy trên host web không tiếp tục forward quyền staff sau cutover; attendee claim/invite và CSRF vẫn đúng contract. Platform Operator giữ client/audience/cookie riêng.
+- Header persistent chỉ hiển thị identity/quyền đã được xác minh cho phiên hiện hành; revalidation tại focus/bfcache không giữ chrome xác thực của phiên cũ trong lúc chờ. Dùng vùng bố cục dự phòng để tránh header nhảy khi trạng thái được xác minh lại.
+
+Architecture impact: **Có** — ranh giới audience và session web. Run `run_a86b15bd9842`; review/fix VD11 giữ exact SHA và findings. Quyết định sản phẩm không tự chứng minh acceptance complete hoặc pilot ready; triển khai chỉ sau các gate trong phạm vi ủy quyền của user.
 
 ## O23 — Gate chỉ trên iOS Staff; chốt hướng thiết kế Vemoki (24/10/2026)
 
