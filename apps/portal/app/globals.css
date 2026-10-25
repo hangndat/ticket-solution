@@ -257,8 +257,8 @@ a {
   width: 40px;
   height: 40px;
   margin: 0 auto;
-  border: 3px solid color-mix(in srgb, var(--vemoki-signal) 25%, transparent);
-  border-top-color: var(--vemoki-signal);
+  border: 3px solid color-mix(in srgb, var(--vemoki-primary) 25%, transparent);
+  border-top-color: var(--vemoki-primary);
   border-radius: 50%;
   animation: portal-surface-loading-spin 0.8s linear infinite;
 }
@@ -277,7 +277,7 @@ a {
 @media (prefers-reduced-motion: reduce) {
   .portal-surface-loading__spinner {
     animation: none;
-    border-top-color: var(--vemoki-signal);
+    border-top-color: var(--vemoki-primary);
     opacity: 0.85;
   }
 }
