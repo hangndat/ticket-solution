@@ -9,16 +9,16 @@ services:
     working_dir: /app
     command: ['node', 'apps/api/dist/main.js']
     volumes:
-      - ${RELEASE_A_DIR:?verified artifact required}:/app:ro
+      - ${RELEASE_API_DIR:?verified artifact required}:/app:ro
     environment:
       NODE_ENV: production
       HOST: 0.0.0.0
       PORT: '3001'
       DATABASE_URL: ${RELEASE_RUNTIME_URL:?isolated PG required}
       OIDC_PROVIDER: keycloak
-      OIDC_ISSUER: https://auth.example.test/realms/ticket
+      OIDC_ISSUER: http://127.0.0.1:8080/realms/ticket
       OIDC_AUDIENCE: ticket-api
-      OIDC_JWKS_URL: https://auth.example.test/realms/ticket/protocol/openid-connect/certs
+      OIDC_JWKS_URL: http://oidc-fixture:8080/jwks
       CODE_HMAC_PEPPER: release-fixture-pepper
       CODE_HMAC_VERSION: '1'
       TICKET_CREDENTIAL_KEY: release-fixture-credential-key
@@ -35,9 +35,9 @@ services:
       PORT: '3001'
       DATABASE_URL: ${RELEASE_RUNTIME_URL:?isolated PG required}
       OIDC_PROVIDER: keycloak
-      OIDC_ISSUER: https://auth.example.test/realms/ticket
+      OIDC_ISSUER: http://127.0.0.1:8080/realms/ticket
       OIDC_AUDIENCE: ticket-api
-      OIDC_JWKS_URL: https://auth.example.test/realms/ticket/protocol/openid-connect/certs
+      OIDC_JWKS_URL: http://oidc-fixture:8080/jwks
       CODE_HMAC_PEPPER: release-fixture-pepper
       CODE_HMAC_VERSION: '1'
       TICKET_CREDENTIAL_KEY: release-fixture-credential-key
