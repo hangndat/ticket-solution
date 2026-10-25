@@ -25,6 +25,15 @@ ORCA skills get orca-emulator     # iOS Simulator trong Orca
 
 Closing a **milestone / Epic** on Project #3 requires **UAT evidence** (web and/or iOS per scope) — gate (a) in `github-project-tracking.mdc`. Ghi **lệnh Orca**, artifact paths, exact SHA trong `docs/reviews/*` hoặc Issue comment. Headed desktop browser / `open -a Simulator` **không** đủ gate trừ khi user miễn headless cho milestone đó.
 
+## Trước UAT — Orca executable + ports (read-only)
+
+1. Resolve CLI: `ORCA` = `resolveOrcaBin()` / `ORCA_CLI_COMMAND` (không đoán binary).
+2. Quét listener: `orca ports --worktree path:<abs-worktree> --json` (native folder workspace → thêm `--all`; `--all` **không** tự chứng minh ownership — chỉ tin `owner.confidence: cwd` trên row `kind: workspace`).
+3. Ghi evidence: `executionHostId`, `scannedAt`, từng row `port`/`pid`/`kind`/`owner.confidence`/`owner.path`; `unavailableReason`, scan rỗng hoặc `scannedAt` quá cũ → `runtimeStatus: unknown` (không suy port từ lsof).
+4. Chọn base URL: ưu tiên `protocol: http|https` hoặc `advertisedUrl`; `protocol: unknown` **không** giả định HTTP — chỉ chọn sau HTTP probe thành công. Nhiều port → lọc theo service (`web`/`api`) rồi probe.
+5. Port **không** chứng minh git SHA; vẫn probe build (`meta git-commit` / `build-id`) qua HTTP hoặc bước `agent-workflow-guard probe` sau khi có tab.
+6. Wrapper repo: `node scripts/uat-orca-runtime.mjs --worktree <abs> [--service web|api] --json` (fixture trong test; live cần Orca runtime).
+
 ## Web — Orca embedded browser (bắt buộc cho agent UAT)
 
 1. Scope worktree: `--worktree path:<abs>` hoặc `active` (UAT chạy trên wt Issue/Epic).
