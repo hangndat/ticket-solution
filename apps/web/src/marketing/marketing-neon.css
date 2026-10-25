@@ -97,9 +97,39 @@ html[data-vemoki-marketing='neon-v1'] .mkt-neon-btn-primary {
   border-radius: 12px;
   font-weight: 750;
   font-size: 14px;
+  color: var(--vm-text) !important;
   background: var(--vm-cta-gradient) !important;
   box-shadow: var(--vm-shadow-cta);
   border: none;
+}
+
+html[data-vemoki-marketing='neon-v1'] .mkt-neon-btn-primary:hover,
+html[data-vemoki-marketing='neon-v1'] .mkt-neon-btn-primary:focus-visible {
+  background: var(--vm-cta-gradient) !important;
+  color: var(--vm-text) !important;
+  filter: brightness(1.04);
+}
+
+/* Legal/support chrome — neon scope off; header demo still uses gradient (DS-WEB-04). */
+html[data-surface='marketing'] [data-testid='mkt-header'] .mkt-neon-btn-primary {
+  --vm-cta-gradient: linear-gradient(105deg, #ee35b4 0%, #9944ff 48%, #3383ff 100%);
+  --vm-shadow-cta: 0 10px 30px rgba(148, 69, 250, 0.3),
+    inset 0 1px rgba(255, 255, 255, 0.3);
+  min-height: 44px;
+  padding: 10px 20px;
+  border-radius: 12px;
+  font-weight: 750;
+  font-size: 14px;
+  color: #faf9ff !important;
+  background: var(--vm-cta-gradient) !important;
+  box-shadow: var(--vm-shadow-cta);
+  border: none;
+}
+
+html[data-surface='marketing'] .mkt-neon-interest-retry {
+  border-color: var(--color-line);
+  background: var(--color-paper);
+  color: var(--color-ink);
 }
 
 html[data-vemoki-marketing='neon-v1'] .mkt-neon-btn-secondary {

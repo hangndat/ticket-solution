@@ -1,7 +1,7 @@
 import Image from 'next/image';
-import { Button } from '@ticket/ui';
 import { t } from '../copy';
 import { InterestCtaLink } from '../interest-cta-link';
+import { MarketingNeonPrimaryButton } from '../marketing-neon-primary-button';
 import { NEON_MARKETING_ASSETS } from '../neon-assets';
 import { marketingWrap } from '../marketing-surface';
 import type { MarketingSectionProps } from './types';
@@ -44,10 +44,8 @@ export function NeonFinalCtaSection({ locale, demo }: MarketingSectionProps) {
             </h2>
             <p className="mkt-neon-final-lead">{t(locale, 'neon.final.sub')}</p>
             <div className="mkt-neon-hero-actions mkt-neon-final-actions">
-              <Button
+              <MarketingNeonPrimaryButton
                 asChild
-                variant="primary"
-                className="mkt-neon-btn-primary"
                 data-testid="cta-demo-final"
                 data-analytics-cta="final_demo"
               >
@@ -55,7 +53,7 @@ export function NeonFinalCtaSection({ locale, demo }: MarketingSectionProps) {
                   {t(locale, 'hero.cta.demo')}
                   <span aria-hidden="true"> ↗</span>
                 </a>
-              </Button>
+              </MarketingNeonPrimaryButton>
               <InterestCtaLink
                 href="#interest"
                 className="mkt-neon-btn-secondary mkt-neon-btn-on-photo"

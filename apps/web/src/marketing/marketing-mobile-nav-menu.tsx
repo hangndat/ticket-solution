@@ -44,8 +44,9 @@ export function MarketingMobileNavMenu({
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <button
+        <Button
           type="button"
+          variant="ghostOnInk"
           className={marketingNavMenuToggle}
           aria-controls={MENU_ID}
           aria-haspopup="dialog"
@@ -57,7 +58,7 @@ export function MarketingMobileNavMenu({
           <span className="text-lg leading-none" aria-hidden="true">
             {open ? '×' : '☰'}
           </span>
-        </button>
+        </Button>
       </SheetTrigger>
       <SheetContent
         id={MENU_ID}

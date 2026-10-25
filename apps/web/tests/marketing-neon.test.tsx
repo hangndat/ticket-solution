@@ -16,6 +16,7 @@ describe('marketing neon sales page', () => {
     assert.match(html, /data-testid="marketing-neon-final-cta"/);
     assert.match(html, /data-testid="marketing-neon-interior-ribbons"/);
     assert.match(html, /id="interest"/);
+    assert.match(html, /id="demo"/);
     assert.match(html, /hero-composite-v2\.png/);
     assert.match(html, /final-cta-crowd-v2\.png/);
     assert.doesNotMatch(html, /data-testid="marketing-bento"/);

@@ -1,5 +1,11 @@
 'use client';
 
+/**
+ * Secondary marketing CTAs (e.g. hero «Tư vấn») intentionally use native links with
+ * `.mkt-neon-btn-secondary` instead of @ticket/ui `Button` — keeps hash/dialog behavior
+ * and ink-surface styling without fighting CVA (DS-WEB-08).
+ */
+
 import Link from 'next/link';
 import type { ComponentProps } from 'react';
 import { useMarketingInterest } from './marketing-interest-context';

@@ -1,6 +1,6 @@
-import { Button } from '@ticket/ui';
 import Image from 'next/image';
 import { t } from '../copy';
+import { MarketingNeonPrimaryButton } from '../marketing-neon-primary-button';
 import { NEON_MARKETING_ASSETS } from '../neon-assets';
 import { marketingWrap } from '../marketing-surface';
 import type { MarketingSectionProps } from './types';
@@ -38,17 +38,16 @@ export function NeonProductSection({ locale, demo }: MarketingSectionProps) {
               </li>
             ))}
           </ul>
-          <Button
+          <MarketingNeonPrimaryButton
             asChild
-            variant="primary"
-            className="mkt-neon-btn-primary mkt-neon-product-cta max-md:w-full"
+            className="mkt-neon-product-cta max-md:w-full"
             data-analytics-cta="product_demo"
           >
             <a href={demo}>
               {t(locale, 'neon.product.cta')}
               <span aria-hidden="true"> ↗</span>
             </a>
-          </Button>
+          </MarketingNeonPrimaryButton>
         </div>
         <div className="mkt-neon-product-image">
           <span className="mkt-neon-product-halo" aria-hidden="true" />
