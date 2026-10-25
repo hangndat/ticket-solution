@@ -6,7 +6,7 @@ import Image from 'next/image';
 
 const V_MARK_SRC = '/marketing/neon/vemoki-v-mark.png';
 const V_MARK_WIDTH = 128;
-const V_MARK_HEIGHT = 121;
+const V_MARK_HEIGHT = 111;
 
 export function MarketingNeonLogo() {
   return (

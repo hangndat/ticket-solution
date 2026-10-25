@@ -3,7 +3,11 @@ import type { TenantBranding } from './types';
 /**
  * Canonical Vemoki defaults from brand/vemoki/tokens.json (Live Pulse v2).
  * Keep in sync with apps/web/app/globals.css :root — branding-theme test.
+ * Default product mark: gradient V in `BrandMark` (SVG); raster twins in
+ * `app/icon.png` / `app/apple-icon.png` (Vemoki Logo Kit, approved-original).
  */
+export const VEMOKI_DEFAULT_MARK_PATH = '/icon.png';
+
 export const VEMOKI_BRANDING: TenantBranding = {
   wordmark: 'vemoki',
   displayName: 'Vemoki',
