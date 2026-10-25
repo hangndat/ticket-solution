@@ -29,7 +29,7 @@ export type TenantBranding = {
   primaryColor: string;
   /** Optional secondary accent (also drives --focus when set) */
   secondaryColor: string | null;
-  /** Same-origin or https logo URL; null → SVG BrandMark */
+  /** Same-origin or https logo URL; null → default raster BrandMark */
   logoUrl: string | null;
   logoAssetId: string | null;
   source: BrandingSource;
