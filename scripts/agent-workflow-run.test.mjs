@@ -17,7 +17,7 @@ const value=flag=>a[a.indexOf(flag)+1];
 if(a[1]==='worker-start' && a.includes('--display-name') && !['new-child','new-top-level'].includes(value('--worktree'))) {console.log(JSON.stringify({ok:false,error:{code:'creation_flag_for_existing_worktree'}}));process.exit(1);}
 let result={};if(a[1]==='worker-start')result={runId:'run1',taskId:'task1',dispatchId:'ctx1',state:process.env.FIX_START||'ready',launch:{effective:process.env.FIX_EFFECTIVE_JSON?JSON.parse(process.env.FIX_EFFECTIVE_JSON):{agent:value('--agent'),model:value('--model'),effort:a.includes('--effort')?value('--effort'):null}}};
 if(a[1]==='worker-show')result={dispatch:{id:'ctx1',taskId:'task1',runId:process.env.FIX_RUN||'run1',status:process.env.FIX_STATUS||'completed'}};
-if(a[1]==='worker-release')result={state:'released'};
+if(a[1]==='worker-release')result={state:process.env.FIX_RELEASE||'released'};
 console.log(JSON.stringify({ok:true,result}));
 `,{mode:0o700});
  writeFileSync(telemetry,`import fs from 'node:fs';const a=process.argv.slice(2);fs.appendFileSync(process.env.FIX_LOG,JSON.stringify(a)+'\\n');if(a[0]==='collect'&&process.env.FIX_COLLECT_FAIL){console.error('collect failed');process.exit(1);}if(a[0]==='snapshot'){const p=a[a.indexOf('--out')+1];if(process.env.FIX_SNAPSHOT_FAIL){console.error('unavailable');process.exit(1);}fs.writeFileSync(p,JSON.stringify(process.env.FIX_QUOTA_JSON?JSON.parse(process.env.FIX_QUOTA_JSON):{source:'codex.app-server.account/rateLimits/read',timestamp:new Date().toISOString(),accountIdHash:'fixture',buckets:[{limitId:'codex',primary:{usedPercent:1,windowDurationMins:10080,resetsAt:Math.floor(Date.now()/1000)+3600},secondary:null}]}),{mode:0o600,flag:'wx'});}console.log(JSON.stringify({ok:true}));`);
@@ -98,6 +98,23 @@ test('collect and snapshot precede explicitly requested release',()=>fixture(({r
  const r=run([...settle,'--release']);assert.equal(r.status,0,r.stderr);
  assert.deepEqual(calls().map(a=>a[0]==='orchestration'?a[1]:a[0]),['worker-show','collect','snapshot','worker-release']);
  assert.equal(JSON.parse(r.stdout).release,'released');
+}));
+test('active dispatch never calls worker-release; unverifiable receipt still requests release once without released log',()=>fixture(({dir,run,calls})=>{
+ run(start);
+ assert.equal(run([...settle,'--release'],{FIX_STATUS:'dispatched'}).status,1);
+ assert.equal(calls().filter(a=>a[1]==='worker-release').length,0);
+ const bad=run([...settle,'--employee','minh','--release'],{FIX_RELEASE:'unverifiable'});
+ assert.equal(bad.status,1);
+ assert.equal(JSON.parse(bad.stdout).release,'unverifiable');
+ assert.equal(calls().filter(a=>a[1]==='worker-release').length,1);
+ const log=readFileSync(join(dir,'work-events.jsonl'),'utf8').trim().split('\n').map(JSON.parse);
+ assert.ok(!log.some(e=>e.type==='released'));
+}));
+test('failed dispatch still collects; release receipt must be released',()=>fixture(({run,calls})=>{
+ run(start);
+ const ok=run([...settle,'--employee','minh','--release'],{FIX_STATUS:'failed'});
+ assert.equal(ok.status,0,ok.stderr);
+ assert.deepEqual(calls().filter(a=>a[1]==='worker-release').length,1);
 }));
 test('failed collect with --release skips worker-release',()=>fixture(({run,calls})=>{
  const r=run([...settle,'--release'],{FIX_COLLECT_FAIL:'1'});assert.equal(r.status,1,r.stderr);
