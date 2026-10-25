@@ -20,6 +20,7 @@
     "uat:p4-oidc": "python3 scripts/uat-d1-p4-keycloak.py",
     "uat:web": "node scripts/web-uat.mjs",
     "test:rint-host": "node --test scripts/lib/tenant-host.test.mjs",
+    "test:load-context": "node --test scripts/load/scanner-context.test.mjs",
     "test:rint-outbox": "./scripts/rint-outbox-recovery.sh",
     "test:rint-stack": "./scripts/rint-stack-smoke.sh",
     "dev:web": "pnpm --filter @ticket/contracts build && pnpm --filter @ticket/web dev",
