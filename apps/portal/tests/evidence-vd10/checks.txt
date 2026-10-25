@@ -1,3 +1,4 @@
+SHA=52d76661
 pnpm --filter @ticket/portal test
 pnpm --filter @ticket/portal build
-node apps/portal/tests/evidence-vd10/capture-screenshots.mjs
+PORTAL_EVIDENCE_NO_SPAWN=1 node apps/portal/tests/evidence-vd10/capture-screenshots.mjs
