@@ -2,21 +2,11 @@
 
 import { PageContainer } from '@ant-design/pro-components';
 import type { PageContainerProps } from '@ant-design/pro-components';
-import { Grid, Typography } from 'antd';
 import type { ReactNode } from 'react';
 
 function PortalPageTitle({ title }: { title: ReactNode }) {
-  const screens = Grid.useBreakpoint();
-  const narrow = !screens.md;
-
   if (typeof title !== 'string') return title;
-  if (!narrow) return title;
-
-  return (
-    <Typography.Text ellipsis={{ tooltip: title }} style={{ maxWidth: '100%' }}>
-      {title}
-    </Typography.Text>
-  );
+  return <span className="portal-page-title">{title}</span>;
 }
 
 export type PortalPageProps = {
