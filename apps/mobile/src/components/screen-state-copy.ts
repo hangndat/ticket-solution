@@ -93,6 +93,7 @@ export const eventsCopy = {
   searchAccessibilityLabel: 'Tìm tên sự kiện',
   listHeadline: 'Sự kiện',
   publishedStatusPill: 'Sắp diễn ra',
+  cardPrimaryCta: 'Xem chi tiết',
   redeemCta: 'Đổi mã lấy vé',
   signInCta: 'Đăng nhập',
   accountCta: 'Tài khoản',

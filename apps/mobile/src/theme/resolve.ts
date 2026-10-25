@@ -63,7 +63,7 @@ export function themeColors(tokens: ThemeTokens) {
     ticketCanvas: tokens.paper,
     ticketInk: tokens.ink,
     admit: '#1b7f4a',
-    deny: tokens.signal,
+    deny: '#B3213A',
     unknown: '#8a6d3b',
   };
 }

@@ -104,7 +104,7 @@ export function Button({
               primary && !destructive && !ghost
                 ? colors.onAccent
                 : destructive
-                  ? colors.accent
+                  ? colors.deny
                   : colors.label
             }
             accessibilityLabel="Đang xử lý"
@@ -161,7 +161,7 @@ const styles = StyleSheet.create({
   destructive: {
     backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: colors.accent
+    borderColor: colors.deny
   },
   ghost: {
     backgroundColor: 'transparent',
@@ -171,7 +171,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.md
   },
   focusRing: {
-    borderWidth: 2,
+    borderWidth: 3,
     borderColor: colors.focus
   },
   disabled: {
@@ -201,7 +201,7 @@ const styles = StyleSheet.create({
     color: colors.ink
   },
   labelDestructive: {
-    color: colors.accent
+    color: colors.deny
   },
   labelWithSpinner: {
     opacity: 0.9

@@ -23,7 +23,8 @@ export const colors = {
   ticketInk: brand.ink,
   /** Gate scan outcome accents — no purple/glow. */
   admit: brand.admit,
-  deny: brand.signal,
+  /** Gate deny / destructive CTA — product deny red (#B3213A), not Live Pulse signal. */
+  deny: '#B3213A',
   unknown: brand.unknown,
   /** Form validation / material error red → semantic destructive (TOKENS.md). */
   destructive: brand.destructive,
