@@ -2,6 +2,7 @@ import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient, Prisma } from './generated/prisma/client';
 export { PrismaClient, Prisma };
 export { withTenant, withActor } from './tenant-context';
+export { configureIssuanceLockTimeout, isRetryableTransactionConflict } from './transaction-conflict';
 export {
   IdentityError,
   IDENTITY_ERROR_CODES,
