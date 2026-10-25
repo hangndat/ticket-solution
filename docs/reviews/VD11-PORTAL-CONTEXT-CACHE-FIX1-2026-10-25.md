@@ -2,7 +2,7 @@
 
 **Ngày:** 2026-10-25 · **Implementer:** Linh (worker `task_4be60ef2f9ab`)  
 **Base:** `7109fc5ae23c4cb4bbf3f7d85805ec8a73cc449a` (post-deploy review SHA)  
-**SHA (sau commit fix):** `a77c7d14d9dbe55b94f0a142b7510e9d6eb5bebc` (`git rev-parse HEAD` @ `hangndat/vd11-integration`)  
+**SHA (handoff):** `4fb1e96c2c52fd70a6c9cf90607e839c889a31ac` (fix `a77c7d14` + review doc `4fb1e96c`)  
 **Scope:** `apps/portal/**` — C01/C02 only; **không** sửa P-F05 / `ConfigProvider` / theme shell.
 
 ## Findings addressed
