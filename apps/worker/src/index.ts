@@ -82,6 +82,7 @@ export async function createWorker(
 
   const env = options.env ?? process.env;
   readProcessEnvironment(env);
+  const apnsEnabled = isApnsEnabled(env);
 
   let db = options.database ?? null;
   let ownsDb = false;
@@ -96,7 +97,7 @@ export async function createWorker(
   const apns: ApnsAdapter | null | undefined =
     options.apnsAdapter !== undefined
       ? options.apnsAdapter
-      : isApnsEnabled(env)
+      : apnsEnabled
         ? createApnsAdapter(env)
         : undefined;
   const leaseOwner = options.leaseOwner ?? `worker-${randomUUID()}`;

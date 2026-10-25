@@ -843,6 +843,26 @@ async function deliverTicketIssuedApns(
       ) {
         return { skip: true } as const;
       }
+      // Revocation can happen after email or an earlier device was accepted.
+      // Serialize this check with ticket state changes before each provider call.
+      const tickets = await tx.$queryRaw<Array<{ state: string }>>`
+        SELECT state FROM tickets
+        WHERE tenant_id = ${row.tenant_id}::uuid AND id = ${ctx.ticketId}::uuid
+        FOR UPDATE
+      `;
+      if (tickets[0]?.state === 'REVOKED' || tickets[0]?.state === 'CANCELLED') {
+        await tx.$executeRaw`
+          UPDATE notifications SET state = 'DEAD',
+            last_error = 'ticket revoked/cancelled', next_attempt_at = NULL,
+            lease_owner = NULL, lease_token = NULL, lease_expires_at = NULL,
+            updated_at = now()
+          WHERE tenant_id = ${row.tenant_id}::uuid AND channel = 'push'
+            AND business_key LIKE ${prefix} AND state NOT IN ('ACCEPTED', 'DEAD')
+        `;
+        await markOutboxDeadFenced(tx, row, options.leaseOwner, 'ticket revoked/cancelled');
+        return { revoked: true } as const;
+      }
+      if (!tickets[0]) throw new Error('ticket missing for push delivery');
       const active = await tx.$queryRaw<
         Array<{ id: string; token: string; environment: string }>
       >`
@@ -872,9 +892,20 @@ async function deliverTicketIssuedApns(
         });
         return { skip: true } as const;
       }
+      // Each device gets a fresh fenced lease. The APNs deadline is shorter
+      // than this window, so a slow batch cannot outlive its original claim.
+      const renewed = await tx.$executeRaw`
+        UPDATE outbox SET lease_expires_at = clock_timestamp() + interval '30 seconds',
+          updated_at = now()
+        WHERE tenant_id = ${row.tenant_id}::uuid AND id = ${row.outbox_id}::uuid
+          AND lease_owner = ${options.leaseOwner} AND lease_token = ${row.lease_token}
+          AND lease_expires_at > clock_timestamp()
+      `;
+      if (Number(renewed) !== 1) return null;
       return { skip: false, device } as const;
     });
     if (!beforeSend) return 'stale';
+    if ('revoked' in beforeSend) return 'failed';
     if (beforeSend.skip) continue;
 
     let result: Awaited<
@@ -884,17 +915,30 @@ async function deliverTicketIssuedApns(
     if (!options.apns) {
       errorState = 'FAILED';
     } else {
+      const controller = new AbortController();
+      let timer: NodeJS.Timeout | undefined;
       try {
-        result = await options.apns.send({
-          deviceToken: beforeSend.device.token,
-          environment: beforeSend.device.environment as
-            'sandbox' | 'production',
-          title: 'Vé đã sẵn sàng',
-          body: 'Vé của bạn đã được cấp.',
-          data: { ticketId: ctx.ticketId },
-        });
+        result = await Promise.race([
+          options.apns.send({
+            deviceToken: beforeSend.device.token,
+            environment: beforeSend.device.environment as
+              'sandbox' | 'production',
+            title: 'Vé đã sẵn sàng',
+            body: 'Vé của bạn đã được cấp.',
+            data: { ticketId: ctx.ticketId },
+            signal: controller.signal,
+          }),
+          new Promise<never>((_, reject) => {
+            timer = setTimeout(() => {
+              controller.abort();
+              reject(new Error('apns_request_timeout_or_aborted'));
+            }, 15_000);
+          }),
+        ]);
       } catch {
         errorState = 'UNKNOWN';
+      } finally {
+        if (timer) clearTimeout(timer);
       }
     }
     if (result && !result.ok) {
@@ -988,6 +1032,24 @@ async function deliverTicketIssuedApns(
   return withTenant(db, row.tenant_id, async (tx) => {
     if (!(await lockOutboxLease(tx, row, options.leaseOwner)))
       return 'stale' as const;
+    const tickets = await tx.$queryRaw<Array<{ state: string }>>`
+      SELECT state FROM tickets
+      WHERE tenant_id = ${row.tenant_id}::uuid AND id = ${ctx.ticketId}::uuid
+      FOR UPDATE
+    `;
+    if (tickets[0]?.state === 'REVOKED' || tickets[0]?.state === 'CANCELLED') {
+      await tx.$executeRaw`
+        UPDATE notifications SET state = 'DEAD',
+          last_error = 'ticket revoked/cancelled', next_attempt_at = NULL,
+          lease_owner = NULL, lease_token = NULL, lease_expires_at = NULL,
+          updated_at = now()
+        WHERE tenant_id = ${row.tenant_id}::uuid AND channel = 'push'
+          AND business_key LIKE ${prefix} AND state NOT IN ('ACCEPTED', 'DEAD')
+      `;
+      await markOutboxDeadFenced(tx, row, options.leaseOwner, 'ticket revoked/cancelled');
+      return 'failed' as const;
+    }
+    if (!tickets[0]) throw new Error('ticket missing for push delivery');
     const states = await tx.$queryRaw<
       Array<{ state: string; next_attempt_at: Date | null }>
     >`
@@ -1078,11 +1140,53 @@ async function scheduleRetryFenced(
   const notification = notes[0];
   const emailPending = notification?.state !== 'ACCEPTED';
   const ordinal = (notification?.attempts ?? 0) + 1;
-  // Unexpected push-path errors still need a bounded dead letter, while an
-  // accepted email must never be reopened to retry push.
-  const dead = emailPending
-    ? ordinal >= retry.maxAttempts
-    : row.attempts >= retry.maxAttempts;
+  // Claim count is not a delivery budget. Once email is accepted, charge an
+  // unexpected push-path failure only to unfinished push notifications.
+  let pushDead = false;
+  let pushPending = false;
+  let pushBackoffSeconds: number | null = null;
+  if (!emailPending) {
+    const push = await tx.$queryRaw<Array<{ id: string; state: string; attempts: number }>>`
+      SELECT id, state, attempts FROM notifications
+      WHERE tenant_id = ${row.tenant_id}::uuid AND channel = 'push'
+        AND business_key LIKE ${`ticket:${row.aggregate_id}:issued:push:%`}
+      FOR UPDATE
+    `;
+    for (const delivery of push) {
+      if (delivery.state === 'DEAD') {
+        pushDead = true;
+        continue;
+      }
+      if (delivery.state === 'ACCEPTED') continue;
+      const pushOrdinal = delivery.attempts + 1;
+      const terminal = pushOrdinal >= retry.maxAttempts;
+      const delay = pushBackoff(pushOrdinal, retry);
+      pushBackoffSeconds = pushBackoffSeconds === null
+        ? delay : Math.min(pushBackoffSeconds, delay);
+      await appendAttempt(tx, {
+        tenantId: row.tenant_id,
+        notificationId: delivery.id,
+        ordinal: pushOrdinal,
+        channel: 'push',
+        leaseOwner,
+        leaseToken: row.lease_token,
+        providerStatus: terminal ? 'DEAD' : noteState,
+        providerRef: null,
+        sanitizedError: message,
+      });
+      await tx.$executeRaw`
+        UPDATE notifications SET state = ${terminal ? 'DEAD' : noteState},
+          attempts = ${pushOrdinal}::integer, last_error = ${message},
+          next_attempt_at = CASE WHEN ${terminal}::boolean THEN NULL
+            ELSE clock_timestamp() + make_interval(secs => ${delay}::integer) END,
+          updated_at = now()
+        WHERE tenant_id = ${row.tenant_id}::uuid AND id = ${delivery.id}::uuid
+      `;
+      if (terminal) pushDead = true;
+      else pushPending = true;
+    }
+  }
+  const dead = emailPending && ordinal >= retry.maxAttempts;
   const state = dead ? 'DEAD' : noteState;
   const computed = computeBackoffSeconds(ordinal, retry);
   const backoff = Number.isFinite(computed) ? computed : 1;
@@ -1118,7 +1222,7 @@ async function scheduleRetryFenced(
     `;
   }
 
-  if (dead || notification?.state === 'DEAD') {
+  if (dead || notification?.state === 'DEAD' || (pushDead && !pushPending)) {
     await markOutboxDeadFenced(tx, row, leaseOwner, message);
     return;
   }
@@ -1129,7 +1233,7 @@ async function scheduleRetryFenced(
         lease_owner = NULL,
         lease_token = NULL,
         lease_expires_at = NULL,
-        next_attempt_at = clock_timestamp() + make_interval(secs => ${backoff}::integer),
+        next_attempt_at = clock_timestamp() + make_interval(secs => ${pushBackoffSeconds ?? backoff}::integer),
         updated_at = now()
     WHERE tenant_id = ${row.tenant_id}::uuid
       AND id = ${row.outbox_id}::uuid

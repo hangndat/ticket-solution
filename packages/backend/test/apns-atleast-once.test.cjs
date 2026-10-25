@@ -21,6 +21,7 @@ const {
   unwrapRedeemOutcome,
   readCodeHmacEnvironment,
   processClaimedOutbox,
+  claimOutboxBatch,
   relayOutboxOnce,
   publishNotificationTemplate,
   publishEventConfig,
@@ -30,7 +31,7 @@ const {
   createNoopEmailAdapter,
 } = require('../dist');
 
-const TASK_LABEL = 'task_5228eb044e35';
+const TASK_LABEL = 'task_80e87aca9c87';
 
 const docker = (...args) =>
   execFileSync('docker', args, {
@@ -427,6 +428,129 @@ test(
         },
         'recovery must finish push while preserving the committed email ack',
       );
+    } finally {
+      if (db) await db.$disconnect();
+      if (pgName) docker('rm', '-f', '-v', pgName);
+    }
+  },
+);
+
+test(
+  'AR891-T3-F01: accepted email at its last attempt cannot exhaust untouched push',
+  { timeout: 240000, skip: !dockerAvailable() },
+  async () => {
+    let pgName;
+    let db;
+    try {
+      const boot = await startIsolatedPostgres();
+      pgName = boot.name;
+      db = createDatabase(boot.url, 2);
+      const hmac = readCodeHmacEnvironment({
+        CODE_HMAC_PEPPER: 'ar891-t3-f01-pepper', CODE_HMAC_VERSION: '1',
+      });
+      const key = 'ar891-t3-f01-credential';
+      const { tenantId, ticketId } = await seedTicketIssuedFixture(db, hmac, key);
+      let emailSends = 0;
+      let pushSends = 0;
+      let faultArmed = false;
+      const baseEmail = createNoopEmailAdapter();
+      const email = {
+        ...baseEmail,
+        async sendTicketIssued(payload) {
+          emailSends += 1;
+          if (emailSends < 3) throw new Error('injected smtp outage');
+          faultArmed = true;
+          return baseEmail.sendTicketIssued(payload);
+        },
+      };
+      const apns = {
+        async send() {
+          pushSends += 1;
+          return { ok: true, providerStatus: 'ACCEPTED', providerRef: 'mock:f01', resolvedEnvironment: 'sandbox' };
+        },
+      };
+      const retryConfig = {
+        maxAttempts: 3, initialBackoffSeconds: 1,
+        maxBackoffSeconds: 1, jitterRatio: 0,
+      };
+      const opts = {
+        credentialKeyMaterial: key,
+        publicWebBaseUrl: 'https://tickets.example.test',
+        env: { NODE_ENV: 'test' }, apns, retryConfig,
+      };
+      for (let claimNo = 1; claimNo <= 3; claimNo += 1) {
+        const owner = `f01-worker-${claimNo}`;
+        const rows = await claimOutboxBatch(db, owner, 10);
+        assert.equal(rows.length, 1);
+        const processDb = claimNo === 3
+          ? {
+              $transaction: (operation, txOptions) =>
+                db.$transaction((tx) => operation(new Proxy(tx, {
+                  get(target, prop) {
+                    if (prop !== '$queryRaw') return target[prop];
+                    return (...args) => {
+                      if (faultArmed && String(args[0]?.join(' ')).includes('SELECT payload FROM outbox')) {
+                        faultArmed = false;
+                        throw new Error('injected push snapshot read failure');
+                      }
+                      return target.$queryRaw(...args);
+                    };
+                  },
+                })), txOptions),
+            }
+          : db;
+        await processClaimedOutbox(processDb, email, rows, { ...opts, leaseOwner: owner });
+        await withTenant(db, tenantId, async (tx) => {
+          if (claimNo < 3) {
+            await tx.$executeRaw`
+              UPDATE outbox SET next_attempt_at = clock_timestamp() - interval '1 second'
+              WHERE tenant_id = ${tenantId}::uuid AND aggregate_id = ${ticketId}::uuid
+                AND type = 'TicketIssued'
+            `;
+          }
+        });
+      }
+      const afterFault = await withTenant(db, tenantId, async (tx) => {
+        const notes = await tx.$queryRaw`
+          SELECT channel, state, attempts FROM notifications
+          WHERE tenant_id = ${tenantId}::uuid
+            AND business_key LIKE ${'ticket:' + ticketId + ':issued:%'}
+          ORDER BY channel
+        `;
+        const outbox = await tx.$queryRaw`
+          SELECT status FROM outbox WHERE tenant_id = ${tenantId}::uuid
+            AND aggregate_id = ${ticketId}::uuid AND type = 'TicketIssued'
+        `;
+        return { notes, status: outbox[0]?.status };
+      });
+      assert.equal(afterFault.status, 'PENDING');
+      assert.deepEqual(afterFault.notes.map((n) => [n.channel, n.state, n.attempts]), [
+        ['email', 'ACCEPTED', 3], ['push', 'FAILED', 1],
+      ]);
+      assert.equal(pushSends, 0);
+      await withTenant(db, tenantId, async (tx) => {
+        await tx.$executeRaw`
+          UPDATE outbox SET next_attempt_at = clock_timestamp() - interval '1 second'
+          WHERE tenant_id = ${tenantId}::uuid AND aggregate_id = ${ticketId}::uuid
+            AND type = 'TicketIssued'
+        `;
+        await tx.$executeRaw`
+          UPDATE notifications SET next_attempt_at = clock_timestamp() - interval '1 second'
+          WHERE tenant_id = ${tenantId}::uuid AND channel = 'push'
+            AND business_key LIKE ${'ticket:' + ticketId + ':issued:push:%'}
+        `;
+      });
+      const recovered = await relayOutboxOnce(db, email, 'f01-recovery', 10, opts);
+      assert.equal(recovered.completed, 1);
+      assert.equal(emailSends, 3);
+      assert.equal(pushSends, 1);
+      await withTenant(db, tenantId, async (tx) => {
+        const push = await tx.$queryRaw`
+          SELECT state, attempts FROM notifications WHERE tenant_id = ${tenantId}::uuid
+            AND channel = 'push' AND business_key LIKE ${'ticket:' + ticketId + ':issued:push:%'}
+        `;
+        assert.deepEqual(push.map((n) => [n.state, n.attempts]), [['ACCEPTED', 2]]);
+      });
     } finally {
       if (db) await db.$disconnect();
       if (pgName) docker('rm', '-f', '-v', pgName);
@@ -1119,6 +1243,338 @@ test(
             ['push', 'DEAD'],
           ],
         );
+      });
+    } finally {
+      if (db) await db.$disconnect();
+      if (pgName) docker('rm', '-f', '-v', pgName);
+    }
+  },
+);
+
+test(
+  'AR891-T3-F02: revoke ticket after device A push in same claim — device B not sent, outbox DEAD',
+  { timeout: 240000, skip: !dockerAvailable() },
+  async (t) => {
+    let pgName;
+    let db;
+    try {
+      const boot = await startIsolatedPostgres();
+      pgName = boot.name;
+      db = createDatabase(boot.url, 2);
+      const hmac = readCodeHmacEnvironment({
+        CODE_HMAC_PEPPER: 'ar891-t3-f02-revoke-pepper',
+        CODE_HMAC_VERSION: '1',
+      });
+      const credentialKey = 'ar891-t3-f02-revoke-credential';
+      const deviceBToken = 'ar891-t3-f02-device-b-token-abcdef12';
+      const { tenantId, ticketId, ownerUserId } = await seedTicketIssuedFixture(
+        db,
+        hmac,
+        credentialKey,
+      );
+      await registerDeviceToken(db, {
+        userId: ownerUserId,
+        token: deviceBToken,
+        environment: 'sandbox',
+      });
+
+      let emailSends = 0;
+      const baseEmail = createNoopEmailAdapter();
+      const email = {
+        ...baseEmail,
+        async sendTicketIssued(payload) {
+          emailSends += 1;
+          return baseEmail.sendTicketIssued(payload);
+        },
+      };
+
+      const pushedTokens = [];
+      const apns = {
+        async send(input) {
+          pushedTokens.push(input.deviceToken);
+          if (pushedTokens.length === 1) {
+            await withTenant(db, tenantId, async (tx) => {
+              await tx.$executeRaw`
+                UPDATE tickets SET state = 'REVOKED'
+                WHERE tenant_id = ${tenantId}::uuid AND id = ${ticketId}::uuid
+              `;
+            });
+          }
+          return {
+            ok: true,
+            providerStatus: 'ACCEPTED',
+            providerRef: 'mock:push:' + pushedTokens.length,
+            resolvedEnvironment: 'sandbox',
+          };
+        },
+      };
+      const opts = {
+        credentialKeyMaterial: credentialKey,
+        publicWebBaseUrl: 'https://tickets.example.test',
+        env: { NODE_ENV: 'test' },
+        apns,
+      };
+
+      const result = await relayOutboxOnce(
+        db,
+        email,
+        'ar891-t3-f02-revoke-worker',
+        10,
+        opts,
+      );
+
+      const actual = await withTenant(db, tenantId, async (tx) => {
+        const notifications = await tx.$queryRaw`
+          SELECT business_key, channel, state, last_error
+          FROM notifications
+          WHERE tenant_id = ${tenantId}::uuid
+            AND business_key LIKE ${'ticket:' + ticketId + ':issued:%'}
+          ORDER BY business_key
+        `;
+        const outbox = await tx.$queryRaw`
+          SELECT status FROM outbox
+          WHERE tenant_id = ${tenantId}::uuid
+            AND aggregate_id = ${ticketId}::uuid AND type = 'TicketIssued'
+        `;
+        return {
+          relay: result,
+          emailSends,
+          pushSends: pushedTokens.length,
+          pushedTokens,
+          notifications,
+          outboxStatus: outbox[0]?.status,
+        };
+      });
+      t.diagnostic(JSON.stringify(actual));
+
+      assert.equal(emailSends, 1, 'email must send once and not retry');
+      assert.equal(
+        pushedTokens.length,
+        1,
+        'device B must not receive push in the same claim after ticket revoke',
+      );
+      assert.equal(
+        actual.outboxStatus,
+        'DEAD',
+        'outbox must be DEAD when revoked ticket blocks remaining push',
+      );
+      assert.equal(result.failed >= 1 || result.completed === 0, true);
+
+      const pushRows = actual.notifications.filter((n) => n.channel === 'push');
+      assert.equal(pushRows.length, 2);
+      const acceptedPush = pushRows.filter((n) => n.state === 'ACCEPTED');
+      const deadPush = pushRows.filter((n) => n.state === 'DEAD');
+      assert.equal(acceptedPush.length, 1);
+      assert.equal(deadPush.length, 1);
+      assert.match(
+        deadPush[0].last_error ?? '',
+        /revoked|cancelled/i,
+        'terminal push delivery must record revoke/cancel reason',
+      );
+      assert.equal(
+        actual.notifications.find((n) => n.channel === 'email')?.state,
+        'ACCEPTED',
+      );
+    } finally {
+      if (db) await db.$disconnect();
+      if (pgName) docker('rm', '-f', '-v', pgName);
+    }
+  },
+);
+
+test(
+  'AR891-T3-F04: three slow devices complete after the original 30s lease',
+  { timeout: 240000, skip: !dockerAvailable() },
+  async () => {
+    let pgName;
+    let db;
+    try {
+      const boot = await startIsolatedPostgres();
+      pgName = boot.name;
+      db = createDatabase(boot.url, 2);
+      const hmac = readCodeHmacEnvironment({
+        CODE_HMAC_PEPPER: 'ar891-t3-f04-slow-pepper', CODE_HMAC_VERSION: '1',
+      });
+      const key = 'ar891-t3-f04-slow-credential';
+      const { tenantId, ticketId, ownerUserId } = await seedTicketIssuedFixture(db, hmac, key);
+      for (const token of ['slow-device-b-abcdefgh', 'slow-device-c-abcdefgh']) {
+        await registerDeviceToken(db, { userId: ownerUserId, token, environment: 'sandbox' });
+      }
+      let sends = 0;
+      const apns = {
+        async send() {
+          sends += 1;
+          await new Promise((resolve) => setTimeout(resolve, 11_000));
+          return { ok: true, providerStatus: 'ACCEPTED', providerRef: `mock:slow:${sends}`, resolvedEnvironment: 'sandbox' };
+        },
+      };
+      const started = Date.now();
+      const result = await relayOutboxOnce(db, createNoopEmailAdapter(), 'f04-slow-worker', 10, {
+        credentialKeyMaterial: key, publicWebBaseUrl: 'https://tickets.example.test',
+        env: { NODE_ENV: 'test' }, apns,
+      });
+      assert.ok(Date.now() - started >= 30_000, 'batch must actually exceed original lease');
+      assert.equal(sends, 3);
+      assert.equal(result.completed, 1);
+      await withTenant(db, tenantId, async (tx) => {
+        const notes = await tx.$queryRaw`
+          SELECT state FROM notifications WHERE tenant_id = ${tenantId}::uuid
+            AND channel = 'push' AND business_key LIKE ${'ticket:' + ticketId + ':issued:push:%'}
+        `;
+        assert.deepEqual(notes.map((n) => n.state).sort(), ['ACCEPTED', 'ACCEPTED', 'ACCEPTED']);
+      });
+    } finally {
+      if (db) await db.$disconnect();
+      if (pgName) docker('rm', '-f', '-v', pgName);
+    }
+  },
+);
+
+test(
+  'AR891-T3-F04: reclaimed lease fences old worker before second device',
+  { timeout: 240000, skip: !dockerAvailable() },
+  async () => {
+    let pgName;
+    let db;
+    try {
+      const boot = await startIsolatedPostgres();
+      pgName = boot.name;
+      db = createDatabase(boot.url, 2);
+      const hmac = readCodeHmacEnvironment({
+        CODE_HMAC_PEPPER: 'ar891-t3-f04-stale-pepper', CODE_HMAC_VERSION: '1',
+      });
+      const key = 'ar891-t3-f04-stale-credential';
+      const { tenantId, ticketId, ownerUserId } = await seedTicketIssuedFixture(db, hmac, key);
+      await registerDeviceToken(db, {
+        userId: ownerUserId, token: 'stale-device-b-abcdefgh', environment: 'sandbox',
+      });
+      let sends = 0;
+      const apns = {
+        async send() {
+          sends += 1;
+          if (sends === 1) {
+            await withTenant(db, tenantId, (tx) => tx.$executeRaw`
+              UPDATE outbox SET lease_expires_at = clock_timestamp() - interval '1 second'
+              WHERE tenant_id = ${tenantId}::uuid AND aggregate_id = ${ticketId}::uuid
+                AND type = 'TicketIssued'
+            `);
+            const reclaimed = await claimOutboxBatch(db, 'f04-new-worker', 10);
+            assert.equal(reclaimed.length, 1);
+          }
+          return { ok: true, providerStatus: 'ACCEPTED', providerRef: `mock:stale:${sends}`, resolvedEnvironment: 'sandbox' };
+        },
+      };
+      const result = await relayOutboxOnce(db, createNoopEmailAdapter(), 'f04-old-worker', 10, {
+        credentialKeyMaterial: key, publicWebBaseUrl: 'https://tickets.example.test',
+        env: { NODE_ENV: 'test' }, apns,
+      });
+      assert.equal(result.completed, 0);
+      assert.equal(sends, 1, 'old worker must not reach device B');
+      await withTenant(db, tenantId, async (tx) => {
+        const notes = await tx.$queryRaw`
+          SELECT state FROM notifications WHERE tenant_id = ${tenantId}::uuid
+            AND channel = 'push' AND business_key LIKE ${'ticket:' + ticketId + ':issued:push:%'}
+        `;
+        assert.deepEqual(notes.map((n) => n.state).sort(), ['PENDING', 'PENDING']);
+        const outbox = await tx.$queryRaw`
+          SELECT status, lease_owner FROM outbox WHERE tenant_id = ${tenantId}::uuid
+            AND aggregate_id = ${ticketId}::uuid AND type = 'TicketIssued'
+        `;
+        assert.equal(outbox[0].lease_owner, 'f04-new-worker');
+        assert.notEqual(outbox[0].status, 'COMPLETE');
+      });
+    } finally {
+      if (db) await db.$disconnect();
+      if (pgName) docker('rm', '-f', '-v', pgName);
+    }
+  },
+);
+
+test(
+  'AR891-T3-F04: hung APNs call aborts and leaves durable retry without false completion',
+  { timeout: 240000, skip: !dockerAvailable() },
+  async () => {
+    let pgName;
+    let db;
+    try {
+      const boot = await startIsolatedPostgres();
+      pgName = boot.name;
+      db = createDatabase(boot.url, 2);
+      const hmac = readCodeHmacEnvironment({
+        CODE_HMAC_PEPPER: 'ar891-t3-f04-hang-pepper', CODE_HMAC_VERSION: '1',
+      });
+      const key = 'ar891-t3-f04-hang-credential';
+      const { tenantId, ticketId } = await seedTicketIssuedFixture(db, hmac, key);
+      let aborted = false;
+      const apns = {
+        send(input) {
+          return new Promise((_resolve, reject) => {
+            input.signal.addEventListener('abort', () => {
+              aborted = true;
+              reject(new Error('provider aborted'));
+            }, { once: true });
+          });
+        },
+      };
+      const result = await relayOutboxOnce(db, createNoopEmailAdapter(), 'f04-hang-worker', 10, {
+        credentialKeyMaterial: key, publicWebBaseUrl: 'https://tickets.example.test',
+        env: { NODE_ENV: 'test' }, apns,
+      });
+      assert.equal(aborted, true);
+      assert.equal(result.completed, 0);
+      assert.equal(result.failed, 1);
+      await withTenant(db, tenantId, async (tx) => {
+        const notes = await tx.$queryRaw`
+          SELECT state, attempts FROM notifications WHERE tenant_id = ${tenantId}::uuid
+            AND channel = 'push' AND business_key LIKE ${'ticket:' + ticketId + ':issued:push:%'}
+        `;
+        assert.deepEqual(notes.map((n) => [n.state, n.attempts]), [['UNKNOWN', 1]]);
+        const outbox = await tx.$queryRaw`
+          SELECT status FROM outbox WHERE tenant_id = ${tenantId}::uuid
+            AND aggregate_id = ${ticketId}::uuid AND type = 'TicketIssued'
+        `;
+        assert.equal(outbox[0].status, 'PENDING');
+      });
+    } finally {
+      if (db) await db.$disconnect();
+      if (pgName) docker('rm', '-f', '-v', pgName);
+    }
+  },
+);
+
+test(
+  'AR891-T3-F03: explicit APNs disable records disabled snapshot despite active device',
+  { timeout: 240000, skip: !dockerAvailable() },
+  async () => {
+    let pgName;
+    let db;
+    try {
+      const boot = await startIsolatedPostgres();
+      pgName = boot.name;
+      db = createDatabase(boot.url, 2);
+      const hmac = readCodeHmacEnvironment({
+        CODE_HMAC_PEPPER: 'ar891-t3-f03-off-pepper', CODE_HMAC_VERSION: '1',
+      });
+      const key = 'ar891-t3-f03-off-credential';
+      const { tenantId, ticketId } = await seedTicketIssuedFixture(db, hmac, key);
+      const result = await relayOutboxOnce(db, createNoopEmailAdapter(), 'f03-disabled-worker', 10, {
+        credentialKeyMaterial: key, publicWebBaseUrl: 'https://tickets.example.test',
+        env: { NODE_ENV: 'test', APNS_ENABLED: 'false' },
+      });
+      assert.equal(result.completed, 1);
+      await withTenant(db, tenantId, async (tx) => {
+        const outbox = await tx.$queryRaw`
+          SELECT status, payload FROM outbox WHERE tenant_id = ${tenantId}::uuid
+            AND aggregate_id = ${ticketId}::uuid AND type = 'TicketIssued'
+        `;
+        assert.equal(outbox[0].status, 'COMPLETE');
+        assert.equal(outbox[0].payload.deliverySnapshot.push, 'disabled');
+        assert.equal(outbox[0].payload.deliverySnapshot.count, 0);
+        const push = await tx.$queryRaw`
+          SELECT id FROM notifications WHERE tenant_id = ${tenantId}::uuid
+            AND channel = 'push' AND business_key LIKE ${'ticket:' + ticketId + ':issued:push:%'}
+        `;
+        assert.equal(push.length, 0);
       });
     } finally {
       if (db) await db.$disconnect();
