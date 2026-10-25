@@ -106,6 +106,15 @@ async function main() {
     { name: 'shell-390', width: 390, height: 844 },
   ];
 
+  async function assertMarkOnlyHeader(page) {
+    const mark = page.locator('.portal-brand-mark');
+    await mark.waitFor({ state: 'visible', timeout: 15_000 });
+    const textWidth = await page.locator('.portal-brand-text').evaluate((el) => el.offsetWidth);
+    if (textWidth > 0) {
+      throw new Error(`expected mark-only header, wordmark offsetWidth=${textWidth}`);
+    }
+  }
+
   for (const vp of shellViewports) {
     await shellPage.setViewportSize({ width: vp.width, height: vp.height });
     await shellPage.goto(`${PORTAL}/account/security`, { waitUntil: 'domcontentloaded' });
@@ -114,8 +123,32 @@ async function main() {
       timeout: 30_000,
     });
     await shellPage.waitForTimeout(500);
+    if (vp.width <= 390) {
+      await assertMarkOnlyHeader(shellPage);
+    }
     await shellPage.screenshot({ path: join(OUT, `${vp.name}.png`), fullPage: true });
   }
+
+  await shellPage.setViewportSize({ width: 1440, height: 900 });
+  await shellPage.goto(`${PORTAL}/account/security`, { waitUntil: 'domcontentloaded' });
+  await shellPage.waitForSelector('[data-testid="portal-brand"]', {
+    state: 'visible',
+    timeout: 30_000,
+  });
+  const expandedTextWidth = await shellPage
+    .locator('.portal-brand-text')
+    .evaluate((el) => el.offsetWidth);
+  if (expandedTextWidth <= 0) {
+    throw new Error('expected full lockup at 1440 before collapse');
+  }
+  await shellPage.screenshot({ path: join(OUT, 'shell-1440-expanded.png'), fullPage: true });
+
+  const collapseControl = shellPage.locator('.ant-pro-sider-collapsed-button');
+  await collapseControl.waitFor({ state: 'visible', timeout: 15_000 });
+  await collapseControl.click();
+  await shellPage.waitForTimeout(400);
+  await assertMarkOnlyHeader(shellPage);
+  await shellPage.screenshot({ path: join(OUT, 'shell-1440-collapsed.png'), fullPage: true });
 
   const favRes = await fetch(`${PORTAL}/favicon.ico`);
   const favBuf = Buffer.from(await favRes.arrayBuffer());
@@ -133,6 +166,7 @@ Captured against \`${PORTAL}\` with mocked BFF for authenticated shell.
 
 - auth-1440.png / auth-390.png — \`/auth\` login card with V mark
 - shell-1440.png / shell-390.png — home shell header via route mocks
+- shell-1440-expanded.png / shell-1440-collapsed.png — mix header lockup expanded vs collapsed sider
 - favicon.ico — copied from live \`/favicon.ico\`
 `,
   );

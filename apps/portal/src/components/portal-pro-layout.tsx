@@ -51,6 +51,7 @@ export function PortalProLayout({
     [pathname, menuData],
   );
   const [userOpenKeys, setUserOpenKeys] = useState<string[]>([]);
+  const [siderCollapsed, setSiderCollapsed] = useState(false);
   const openKeys = useMemo(() => {
     const merged = new Set(userOpenKeys);
     for (const key of pathOpenKeys) merged.add(key);
@@ -105,6 +106,8 @@ export function PortalProLayout({
       navTheme="realDark"
       siderWidth={240}
       breakpoint="lg"
+      collapsed={siderCollapsed}
+      onCollapse={setSiderCollapsed}
       location={{ pathname }}
       route={{ path: '/', routes: menuData }}
       menuDataRender={() => menuData}
@@ -120,7 +123,11 @@ export function PortalProLayout({
       logo={
         <Link
           href="/"
-          className="portal-brand-link"
+          className={
+            siderCollapsed
+              ? 'portal-brand-link portal-brand-link--mark-only'
+              : 'portal-brand-link'
+          }
           data-testid="portal-brand"
         >
           <PortalBrandLockup />
