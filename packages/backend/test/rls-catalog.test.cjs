@@ -55,6 +55,9 @@ const DEFINER_OWNER_TABLES = new Set([
   'tenant_registrations',
   // P2-ROLES-PRESET: accept_membership_invite resolves role_presets (FORCE RLS).
   'role_presets',
+  // Worker aggregate counters are writable/readable only by definer owner.
+  'worker_job_reclaim_counters',
+  'redemption_requests',
 ]);
 /** Platform metadata pool — USING(true) cross-tenant (NOBYPASSRLS). */
 const PLATFORM_OPEN_TABLES = new Set([
@@ -302,7 +305,14 @@ test(
             DEFINER_OWNER_TABLES.has(policy.relname),
             'unexpected owner policy on ' + policy.relname,
           );
-          assert.equal(policy.using_expr, 'true');
+          if (policy.relname === 'redemption_requests') {
+            assert.equal(policy.polcmd, 'r');
+            assert.match(policy.using_expr, /PENDING_REVIEW/);
+            assert.match(policy.using_expr, /expires_at/);
+            assert.equal(policy.check_expr, null);
+          } else {
+            assert.equal(policy.using_expr, 'true');
+          }
           continue;
         }
         if (policy.role_name === 'ticket_platform_runtime') {

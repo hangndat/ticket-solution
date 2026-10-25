@@ -7,6 +7,7 @@ import { createPrivateKey, randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { connect, type ClientHttp2Session } from 'node:http2';
 import { SignJWT, importPKCS8 } from 'jose';
+import { metricsObserveSeconds } from './metrics-registry';
 import {
   DeviceTokenError,
   DEVICE_TOKEN_ERROR_CODES,
@@ -51,7 +52,14 @@ export type ApnsSendResult =
 /** Reject typos at startup rather than treating them as intentional disablement. */
 export function isApnsEnabled(env: NodeJS.ProcessEnv): boolean {
   const raw = env['APNS_ENABLED']?.trim().toLowerCase();
-  if (raw === undefined || raw === '' || raw === 'false' || raw === '0' || raw === 'no') return false;
+  if (
+    raw === undefined ||
+    raw === '' ||
+    raw === 'false' ||
+    raw === '0' ||
+    raw === 'no'
+  )
+    return false;
   if (raw === 'true' || raw === '1' || raw === 'yes') return true;
   throw new DeviceTokenError(
     DEVICE_TOKEN_ERROR_CODES.APNS_MISCONFIGURED,
@@ -153,7 +161,9 @@ function failureFromResponse(
 }
 
 function envMismatchFallbackReason(apnsReason: string): boolean {
-  return apnsReason === 'BadDeviceToken' || apnsReason === 'DeviceTokenNotForTopic';
+  return (
+    apnsReason === 'BadDeviceToken' || apnsReason === 'DeviceTokenNotForTopic'
+  );
 }
 
 async function providerToken(cfg: ApnsConfig): Promise<string> {
@@ -188,7 +198,9 @@ export type ApnsHttp2Client = {
 let testHttp2Client: ApnsHttp2Client | undefined;
 
 /** Test-only: inject mock HTTP/2 transport (cleared when set to undefined). */
-export function setApnsHttp2ClientForTest(client: ApnsHttp2Client | undefined): void {
+export function setApnsHttp2ClientForTest(
+  client: ApnsHttp2Client | undefined,
+): void {
   testHttp2Client = client;
 }
 
@@ -211,7 +223,7 @@ async function defaultHttp2Exchange(
       const req = session!.request({
         ':method': 'POST',
         ':path': request.path,
-        'authorization': request.authorization,
+        authorization: request.authorization,
         'apns-topic': request.bundleId,
         'apns-push-type': 'alert',
         'apns-id': request.apnsId,
@@ -233,7 +245,9 @@ async function defaultHttp2Exchange(
       req.on('response', (headers) => {
         status = Number(headers[':status'] ?? 0);
       });
-      req.on('data', (c) => chunks.push(Buffer.isBuffer(c) ? c : Buffer.from(c)));
+      req.on('data', (c) =>
+        chunks.push(Buffer.isBuffer(c) ? c : Buffer.from(c)),
+      );
       req.on('error', (error) => {
         request.signal?.removeEventListener('abort', abort);
         reject(error);
@@ -286,7 +300,8 @@ async function sendApnsPushWithinDeadline(
   options?: { env?: NodeJS.ProcessEnv; http2?: ApnsHttp2Client },
 ): Promise<ApnsSendResult> {
   const processEnv = options?.env ?? process.env;
-  const http2 = options?.http2 ?? testHttp2Client ?? { exchange: defaultHttp2Exchange };
+  const http2 = options?.http2 ??
+    testHttp2Client ?? { exchange: defaultHttp2Exchange };
   const bearerToken = await providerToken(cfg);
 
   const primary = await sendApnsToEnvironment(
@@ -345,9 +360,14 @@ async function sendApnsPushWithinDeadline(
 export async function sendApnsPush(
   cfg: ApnsConfig,
   input: ApnsSendInput,
-  options?: { env?: NodeJS.ProcessEnv; http2?: ApnsHttp2Client; timeoutMs?: number },
+  options?: {
+    env?: NodeJS.ProcessEnv;
+    http2?: ApnsHttp2Client;
+    timeoutMs?: number;
+  },
 ): Promise<ApnsSendResult> {
-  const timeoutMs = options?.timeoutMs ?? 15_000;
+  const started = performance.now();
+  const timeoutMs = options?.timeoutMs ?? 5_000;
   const deadline = AbortSignal.timeout(timeoutMs);
   const signal = input.signal
     ? AbortSignal.any([input.signal, deadline])
@@ -365,6 +385,11 @@ export async function sendApnsPush(
     ]);
   } finally {
     if (onAbort) signal.removeEventListener('abort', onAbort);
+    metricsObserveSeconds(
+      'worker_provider_latency_seconds',
+      (performance.now() - started) / 1000,
+      { provider: 'apns' },
+    );
   }
 }
 
