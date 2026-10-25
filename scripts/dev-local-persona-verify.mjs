@@ -54,6 +54,30 @@ function hasPerm(items, perm) {
   return items.some((e) => (e.permissions || []).includes(perm));
 }
 
+/** Minimal valid config save body (authz runs after schema validation). */
+function minimalConfigSaveBody() {
+  const kinds = ['hero', 'info', 'redeem', 'guide', 'faq', 'terms'];
+  return {
+    payload: {
+      schemaVersion: 1,
+      brand: { primaryColor: '#112233', organizationName: 'fixture-verify' },
+      sections: kinds.map((kind, order) => ({
+        kind,
+        id: kind,
+        visible: kind !== 'guide',
+        order,
+        body:
+          kind === 'faq'
+            ? { title: 'FAQ', items: [{ question: 'Q', answer: 'A' }] }
+            : kind === 'terms'
+              ? { title: 'Terms', termsVersion: 'fixture-1', text: 'Fixture terms.' }
+              : { title: kind, text: 'fixture' },
+      })),
+      termsVersion: 'fixture-1',
+    },
+  };
+}
+
 async function runChecks(target) {
   const rows = [];
   const issuer = target.issuer;
@@ -65,6 +89,7 @@ async function runChecks(target) {
   const owner = personaById('owner');
   const manager = personaById('manager');
   const cs = personaById('cs');
+  const supervisor = personaById('supervisor');
   const scanner = personaById('scanner');
   const reportOnly = personaById('report-only');
   const attendee = personaById('attendee');
@@ -72,6 +97,7 @@ async function runChecks(target) {
   const ownerToken = await passwordToken(issuer, owner.email, owner.password);
   const managerToken = await passwordToken(issuer, manager.email, manager.password);
   const csToken = await passwordToken(issuer, cs.email, cs.password);
+  const supervisorToken = await passwordToken(issuer, supervisor.email, supervisor.password);
   const scannerToken = await passwordToken(issuer, scanner.email, scanner.password);
   const reportToken = await passwordToken(issuer, reportOnly.email, reportOnly.password);
   const attendeeToken = await passwordToken(issuer, attendee.email, attendee.password);
@@ -133,7 +159,7 @@ async function runChecks(target) {
     csToken,
     'POST',
     `/v1/tenants/${mfest}/events/${mfestEvent}/config-versions`,
-    { schemaVersion: 1, brand: { primaryColor: '#000', organizationName: 'x' }, sections: [] },
+    minimalConfigSaveBody(),
   );
   rows.push({
     persona: 'cs',
@@ -141,6 +167,35 @@ async function runChecks(target) {
     expected: '403',
     actual: csConfig.status,
     pass: csConfig.status === 403,
+  });
+
+  const supervisorMembers = await api(
+    apiBase,
+    supervisorToken,
+    'GET',
+    `/v1/tenants/${mfest}/members?limit=5`,
+  );
+  rows.push({
+    persona: 'supervisor',
+    check: 'portal admin members',
+    expected: '403',
+    actual: supervisorMembers.status,
+    pass: supervisorMembers.status === 403,
+  });
+
+  const supervisorEvents = await api(apiBase, supervisorToken, 'GET', '/v1/me/events');
+  rows.push({
+    persona: 'supervisor',
+    check: 'me/events gate supervisor perms',
+    expected: '200 + gate.confirm, gate.undo, ticket.revoke, no event.config',
+    actual: supervisorEvents.status,
+    pass:
+      supervisorEvents.status === 200 &&
+      supervisorEvents.json?.staffEligible === true &&
+      hasPerm(supervisorEvents.json?.items || [], 'gate.confirm') &&
+      hasPerm(supervisorEvents.json?.items || [], 'gate.undo') &&
+      hasPerm(supervisorEvents.json?.items || [], 'ticket.revoke') &&
+      !hasPerm(supervisorEvents.json?.items || [], 'event.config'),
   });
 
   const scannerMembers = await api(
