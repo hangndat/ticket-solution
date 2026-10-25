@@ -1,0 +1,43 @@
+{
+  "base": "http://127.0.0.1:3000",
+  "shots": [
+    {
+      "surface": "consumer-home-wordmark",
+      "viewport": "1440",
+      "file": "consumer-home-wordmark-1440.png",
+      "wordmarkText": "Vemoki"
+    },
+    {
+      "surface": "consumer-home-wordmark",
+      "viewport": "390",
+      "file": "consumer-home-wordmark-390.png",
+      "wordmarkText": "Vemoki"
+    },
+    {
+      "surface": "marketing-wordmark",
+      "viewport": "1440",
+      "file": "marketing-wordmark-1440.png",
+      "wordmarkText": "Vemoki vemoki"
+    },
+    {
+      "surface": "marketing-wordmark",
+      "viewport": "390",
+      "file": "marketing-wordmark-390.png",
+      "wordmarkText": "Vemoki vemoki"
+    },
+    {
+      "surface": "event-detail-wordmark",
+      "viewport": "1440",
+      "file": "event-detail-wordmark-1440.png",
+      "href": "/t/mfest-demo/events/mfest",
+      "wordmarkText": "mfest"
+    },
+    {
+      "surface": "event-detail-wordmark",
+      "viewport": "390",
+      "file": "event-detail-wordmark-390.png",
+      "href": "/t/mfest-demo/events/mfest",
+      "wordmarkText": "mfest"
+    }
+  ]
+}
