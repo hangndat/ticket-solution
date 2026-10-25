@@ -1,0 +1,62 @@
+{
+  "base": "http://127.0.0.1:3000",
+  "shots": [
+    {
+      "file": "privacy-vi-1440-chrome",
+      "viewport": "1440x900",
+      "path": "/marketing/privacy"
+    },
+    {
+      "file": "privacy-vi-390-chrome",
+      "viewport": "390x844",
+      "path": "/marketing/privacy"
+    },
+    {
+      "file": "support-vi-390-chrome",
+      "viewport": "390x844",
+      "path": "/marketing/support"
+    },
+    {
+      "file": "marketing-vi-390-mobile-nav",
+      "viewport": "390x844",
+      "path": "/marketing"
+    },
+    {
+      "file": "marketing-vi-1440-interest-submit",
+      "viewport": "1440x900"
+    },
+    {
+      "file": "home-1024",
+      "viewport": "1024x768",
+      "path": "/"
+    },
+    {
+      "file": "marketing-regression-1024",
+      "viewport": "1024x768",
+      "path": "/marketing"
+    },
+    {
+      "file": "marketing-vi-1024-interest",
+      "viewport": "1024x768",
+      "path": "/marketing#interest"
+    },
+    {
+      "file": "ticket-qr-1440",
+      "viewport": "1440x900",
+      "path": "/t/mfest-demo/tickets/cc4b4773-a039-492b-9922-c0d240025b3f",
+      "qr": true
+    },
+    {
+      "file": "ticket-qr-390",
+      "viewport": "390x844",
+      "path": "/t/mfest-demo/tickets/cc4b4773-a039-492b-9922-c0d240025b3f",
+      "qr": true
+    },
+    {
+      "file": "ticket-qr-1024",
+      "viewport": "1024x768",
+      "path": "/t/mfest-demo/tickets/cc4b4773-a039-492b-9922-c0d240025b3f",
+      "qr": true
+    }
+  ]
+}
