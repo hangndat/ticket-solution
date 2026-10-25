@@ -31,7 +31,7 @@ const {
   createNoopEmailAdapter,
 } = require('../dist');
 
-const TASK_LABEL = 'task_80e87aca9c87';
+const TASK_LABEL = 'task_dc75d3a8cd45';
 
 const docker = (...args) =>
   execFileSync('docker', args, {
@@ -525,9 +525,9 @@ test(
       });
       assert.equal(afterFault.status, 'PENDING');
       assert.deepEqual(afterFault.notes.map((n) => [n.channel, n.state, n.attempts]), [
-        ['email', 'ACCEPTED', 3], ['push', 'FAILED', 1],
+        ['email', 'ACCEPTED', 3], ['push', 'PENDING', 0],
       ]);
-      assert.equal(pushSends, 0);
+      assert.equal(pushSends, 0, 'snapshot failure did not attempt APNs');
       await withTenant(db, tenantId, async (tx) => {
         await tx.$executeRaw`
           UPDATE outbox SET next_attempt_at = clock_timestamp() - interval '1 second'
@@ -549,7 +549,7 @@ test(
           SELECT state, attempts FROM notifications WHERE tenant_id = ${tenantId}::uuid
             AND channel = 'push' AND business_key LIKE ${'ticket:' + ticketId + ':issued:push:%'}
         `;
-        assert.deepEqual(push.map((n) => [n.state, n.attempts]), [['ACCEPTED', 2]]);
+        assert.deepEqual(push.map((n) => [n.state, n.attempts]), [['ACCEPTED', 1]]);
       });
     } finally {
       if (db) await db.$disconnect();
@@ -1534,6 +1534,164 @@ test(
             AND aggregate_id = ${ticketId}::uuid AND type = 'TicketIssued'
         `;
         assert.equal(outbox[0].status, 'PENDING');
+      });
+    } finally {
+      if (db) await db.$disconnect();
+      if (pgName) docker('rm', '-f', '-v', pgName);
+    }
+  },
+);
+
+test(
+  'AR891-T3-F05: post-ack device A DB fault does not consume device B backoff or last attempt',
+  { timeout: 240000, skip: !dockerAvailable() },
+  async () => {
+    let pgName;
+    let db;
+    try {
+      const boot = await startIsolatedPostgres();
+      pgName = boot.name;
+      db = createDatabase(boot.url, 2);
+      const hmac = readCodeHmacEnvironment({
+        CODE_HMAC_PEPPER: 'ar891-t3-f05-pepper', CODE_HMAC_VERSION: '1',
+      });
+      const key = 'ar891-t3-f05-credential';
+      const { tenantId, ticketId, ownerUserId } = await seedTicketIssuedFixture(db, hmac, key);
+      await registerDeviceToken(db, {
+        userId: ownerUserId, token: 'f05-second-device-token-abcdefgh', environment: 'sandbox',
+      });
+      let emailSends = 0;
+      const baseEmail = createNoopEmailAdapter();
+      const email = {
+        ...baseEmail,
+        async sendTicketIssued(payload) {
+          emailSends += 1;
+          return baseEmail.sendTicketIssued(payload);
+        },
+      };
+      const pushedTokens = [];
+      let deviceBId;
+      let bBefore;
+      let faultArmed = false;
+      const apns = {
+        async send(input) {
+          pushedTokens.push(input.deviceToken);
+          if (pushedTokens.length === 1) {
+            await withTenant(db, tenantId, async (tx) => {
+              const devices = await tx.$queryRaw`
+                SELECT id, token FROM list_active_device_tokens_for_user(${ownerUserId}::uuid)
+              `;
+              deviceBId = devices.find((device) => device.token !== input.deviceToken).id;
+              await tx.$executeRaw`
+                UPDATE notifications SET state = 'FAILED', attempts = 2,
+                  next_attempt_at = clock_timestamp() + interval '30 seconds'
+                WHERE tenant_id = ${tenantId}::uuid AND channel = 'push'
+                  AND business_key = ${`ticket:${ticketId}:issued:push:${deviceBId}`}
+              `;
+              const note = await tx.$queryRaw`
+                SELECT id, state, attempts, next_attempt_at FROM notifications
+                WHERE tenant_id = ${tenantId}::uuid AND channel = 'push'
+                  AND business_key = ${`ticket:${ticketId}:issued:push:${deviceBId}`}
+              `;
+              bBefore = note[0];
+              for (const ordinal of [1, 2]) {
+                await tx.$executeRaw`
+                  INSERT INTO notification_attempts (tenant_id, notification_id, ordinal,
+                    channel, lease_owner, lease_token, started_at, finished_at,
+                    provider_status, sanitized_error, created_at)
+                  VALUES (${tenantId}::uuid, ${bBefore.id}::uuid, ${ordinal}::integer,
+                    'push', 'earlier-worker', 'earlier-lease', now(), now(),
+                    'FAILED', 'prior transient failure', now())
+                `;
+              }
+            });
+            faultArmed = true;
+          }
+          return {
+            ok: true, providerStatus: 'ACCEPTED',
+            providerRef: `mock:f05:${pushedTokens.length}`,
+            resolvedEnvironment: pushedTokens.length === 1 ? 'production' : 'sandbox',
+          };
+        },
+      };
+      const processDb = {
+        $transaction: (operation, txOptions) => db.$transaction((tx) => operation(new Proxy(tx, {
+          get(target, prop) {
+            if (prop !== '$executeRaw') return target[prop];
+            return (...args) => {
+              if (faultArmed && String(args[0]?.join(' ')).includes('UPDATE device_tokens')) {
+                faultArmed = false;
+                throw new Error('injected environment correction DB failure');
+              }
+              return target.$executeRaw(...args);
+            };
+          },
+        })), txOptions),
+      };
+      const opts = {
+        credentialKeyMaterial: key, publicWebBaseUrl: 'https://tickets.example.test',
+        env: { NODE_ENV: 'test' }, apns,
+        retryConfig: { maxAttempts: 3, initialBackoffSeconds: 60, maxBackoffSeconds: 60, jitterRatio: 0 },
+      };
+      const claimed = await claimOutboxBatch(db, 'f05-first-worker', 10);
+      assert.equal(claimed.length, 1);
+      const first = await processClaimedOutbox(processDb, email, claimed, {
+        ...opts, leaseOwner: 'f05-first-worker',
+      });
+      assert.equal(first.completed, 0);
+      assert.equal(first.failed, 1);
+      assert.equal(faultArmed, false, 'fault must fire after durable A ack');
+      assert.equal(pushedTokens.length, 1);
+      await withTenant(db, tenantId, async (tx) => {
+        const notes = await tx.$queryRaw`
+          SELECT id, channel, state, attempts, next_attempt_at FROM notifications
+          WHERE tenant_id = ${tenantId}::uuid
+            AND business_key LIKE ${`ticket:${ticketId}:issued:%`}
+        `;
+        const b = notes.find((note) => note.id === bBefore.id);
+        assert.equal(b.state, bBefore.state);
+        assert.equal(b.attempts, bBefore.attempts);
+        assert.equal(b.next_attempt_at.getTime(), bBefore.next_attempt_at.getTime());
+        const bAttempts = await tx.$queryRaw`
+          SELECT ordinal FROM notification_attempts
+          WHERE tenant_id = ${tenantId}::uuid AND notification_id = ${bBefore.id}::uuid
+          ORDER BY ordinal
+        `;
+        assert.deepEqual(bAttempts.map((attempt) => attempt.ordinal), [1, 2]);
+        assert.equal(notes.find((note) => note.channel === 'email').state, 'ACCEPTED');
+        assert.equal(notes.filter((note) => note.channel === 'push' && note.state === 'ACCEPTED').length, 1);
+        const outbox = await tx.$queryRaw`
+          SELECT status, next_attempt_at FROM outbox WHERE tenant_id = ${tenantId}::uuid
+            AND aggregate_id = ${ticketId}::uuid AND type = 'TicketIssued'
+        `;
+        assert.equal(outbox[0].status, 'PENDING');
+        assert.equal(outbox[0].next_attempt_at.getTime(), bBefore.next_attempt_at.getTime());
+        await tx.$executeRaw`
+          UPDATE notifications SET next_attempt_at = clock_timestamp() - interval '1 second'
+          WHERE tenant_id = ${tenantId}::uuid AND id = ${bBefore.id}::uuid
+        `;
+        await tx.$executeRaw`
+          UPDATE outbox SET next_attempt_at = clock_timestamp() - interval '1 second'
+          WHERE tenant_id = ${tenantId}::uuid AND aggregate_id = ${ticketId}::uuid
+            AND type = 'TicketIssued'
+        `;
+      });
+      const second = await relayOutboxOnce(db, email, 'f05-second-worker', 10, opts);
+      assert.equal(second.completed, 1);
+      assert.equal(emailSends, 1);
+      assert.equal(pushedTokens.length, 2);
+      assert.notEqual(pushedTokens[0], pushedTokens[1]);
+      await withTenant(db, tenantId, async (tx) => {
+        const b = await tx.$queryRaw`
+          SELECT state, attempts FROM notifications
+          WHERE tenant_id = ${tenantId}::uuid AND id = ${bBefore.id}::uuid
+        `;
+        assert.deepEqual([b[0].state, b[0].attempts], ['ACCEPTED', 3]);
+        const outbox = await tx.$queryRaw`
+          SELECT status FROM outbox WHERE tenant_id = ${tenantId}::uuid
+            AND aggregate_id = ${ticketId}::uuid AND type = 'TicketIssued'
+        `;
+        assert.equal(outbox[0].status, 'COMPLETE');
       });
     } finally {
       if (db) await db.$disconnect();
