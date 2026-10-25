@@ -13,7 +13,10 @@ const TENANT = '11111111-1111-4111-8111-111111111111';
 const EVENT = '22222222-2222-4222-8222-222222222222';
 
 test('parseMeEventsResponse requires staffEligible + tenantId items', () => {
-  assert.equal(parseMeEventsResponse(401, { staffEligible: false, items: [] }), null);
+  assert.equal(
+    parseMeEventsResponse(401, { staffEligible: false, items: [] }),
+    null,
+  );
   assert.equal(
     parseMeEventsResponse(200, { items: [] }),
     null,
@@ -78,7 +81,10 @@ test('attendee-only: staffEligible false → no staff chrome', () => {
   assert.ok(hrefs.includes('/account'));
   assert.ok(hrefs.includes('/wallet'));
   assert.ok(!hrefs.includes('/claim'), 'email invitation is link-only');
-  assert.ok(!hrefs.includes('/auth'), 'logged-in nav uses Tài khoản, not Đăng nhập');
+  assert.ok(
+    !hrefs.includes('/auth'),
+    'logged-in nav uses Tài khoản, not Đăng nhập',
+  );
 });
 
 test('Scanner with gate.confirm has no web gate nav (D-6), not portal staff without tenant perms', () => {
@@ -115,7 +121,7 @@ test('Scanner with gate.confirm has no web gate nav (D-6), not portal staff with
   assert.ok(!hrefs.includes('/admin'));
 });
 
-test('portal staff nav link (D-7)', () => {
+test('staff (any tenant membership) get guest chrome, not a portal CTA (USER DECISION 2026-10-25: staff never use attendee web app — proxy.ts/callback already redirect them to the portal before this renders)', () => {
   const caps = deriveNavCapabilities({
     authenticated: true,
     meEvents: { staffEligible: true, items: [] },
@@ -133,16 +139,19 @@ test('portal staff nav link (D-7)', () => {
     },
     platformMe: null,
   });
-  const staff = buildNavLinks(caps).find((l) => l.testId === 'nav-portal-staff');
-  assert.ok(staff);
-  assert.equal(staff.label, 'Quản trị tổ chức');
-  assert.equal(staff.href, '/admin');
+  assert.equal(caps.authenticated, false);
+  assert.equal(caps.showPortalStaff, false);
+  assert.equal(caps.showAccount, false);
+  const staff = buildNavLinks(caps).find(
+    (l) => l.testId === 'nav-portal-staff',
+  );
+  assert.equal(staff, undefined);
 });
 
-test('Owner membership with admin tenant perms shows portal staff CTA', () => {
+test('ticket-owner tenant rows keep attendee wallet chrome', () => {
   const caps = deriveNavCapabilities({
     authenticated: true,
-    meEvents: { staffEligible: true, items: [] },
+    meEvents: { staffEligible: false, items: [] },
     meTenants: {
       items: [
         {
@@ -150,14 +159,15 @@ test('Owner membership with admin tenant perms shows portal staff CTA', () => {
           slug: 'demo',
           name: 'Demo',
           status: 'ACTIVE',
-          role: 'Owner',
-          tenantPermissions: [...ADMIN_TENANT_PERMISSIONS],
+          role: 'Attendee',
+          tenantPermissions: [],
         },
       ],
     },
     platformMe: null,
   });
-  assert.equal(caps.showPortalStaff, true);
+  assert.equal(caps.authenticated, true);
+  assert.ok(buildNavLinks(caps).some((link) => link.href === '/wallet'));
 });
 
 test('platform operator unlocks portal staff CTA', () => {
@@ -176,6 +186,21 @@ test('platform operator unlocks portal staff CTA', () => {
 
 test('invalid MeTenants / PlatformMe parse fail-closed', () => {
   assert.equal(parseMeTenantsResponse(200, { items: 'nope' }), null);
+  assert.equal(
+    parseMeTenantsResponse(200, {
+      items: [
+        {
+          tenantId: TENANT,
+          slug: 'demo',
+          name: 'Demo',
+          status: 'ACTIVE',
+          role: 'Mystery',
+          tenantPermissions: [],
+        },
+      ],
+    }),
+    null,
+  );
   assert.equal(
     parsePlatformMeResponse(200, {
       operator: true,

@@ -99,14 +99,25 @@ function parseMeTenantItem(value: unknown): MeTenantItem | null {
   const tenantPermissions = parsePermissions(value.tenantPermissions);
   if (
     typeof value.tenantId !== 'string' ||
+    value.tenantId.trim().length === 0 ||
     typeof value.slug !== 'string' ||
+    value.slug.trim().length === 0 ||
     typeof value.name !== 'string' ||
-    typeof value.status !== 'string' ||
-    typeof value.role !== 'string' ||
+    value.name.trim().length === 0 ||
+    (value.status !== 'PENDING' &&
+      value.status !== 'ACTIVE' &&
+      value.status !== 'SUSPENDED') ||
+    (value.role !== 'Owner' &&
+      value.role !== 'Manager' &&
+      value.role !== 'CS' &&
+      value.role !== 'Supervisor' &&
+      value.role !== 'Scanner' &&
+      value.role !== 'Attendee') ||
     tenantPermissions === null
   ) {
     return null;
   }
+  if (value.role === 'Attendee' && tenantPermissions.length > 0) return null;
   return {
     tenantId: value.tenantId,
     slug: value.slug,
@@ -164,6 +175,20 @@ export function deriveNavCapabilities(input: {
   platformMe: PlatformMeResponse | null;
 }): NavCapabilities {
   if (!input.authenticated) {
+    return {
+      authenticated: false,
+      showPortalStaff: false,
+      showAccount: false,
+    };
+  }
+
+  // Staff never use the attendee web app (USER DECISION 2026-10-25) — any
+  // tenant membership means the account is mid-redirect to the portal, so
+  // the header must render as guest, not as logged-in attendee chrome.
+  if (
+    input.meTenants === null ||
+    input.meTenants.items.some((tenant) => tenant.role !== 'Attendee')
+  ) {
     return {
       authenticated: false,
       showPortalStaff: false,

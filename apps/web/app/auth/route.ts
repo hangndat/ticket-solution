@@ -51,7 +51,16 @@ export async function GET(request: NextRequest) {
       await clearSsrRefreshAttempt();
     }
     return NextResponse.redirect(
-      absolute(request, noticeLandingPath(returnPath, 'auth_failed')),
+      absolute(
+        request,
+        noticeLandingPath(
+          returnPath,
+          oauthError === 'staff_check_unavailable' ||
+            oauthError === 'portal_unavailable'
+            ? oauthError
+            : 'auth_failed',
+        ),
+      ),
       307,
     );
   }

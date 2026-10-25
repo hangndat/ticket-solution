@@ -17,6 +17,23 @@ export function authNoticeFromParam(
   if (!key) return null;
   const retryHref = options?.retryHref ?? '/api/auth/login?return=/';
 
+  if (key === 'staff_check_unavailable') {
+    return {
+      title: 'Chưa thể xác nhận tài khoản',
+      detail:
+        'Hệ thống tạm thời chưa kiểm tra được quyền truy cập. Vui lòng thử đăng nhập lại.',
+      retryHref,
+    };
+  }
+
+  if (key === 'portal_unavailable') {
+    return {
+      title: 'Cổng quản trị chưa sẵn sàng',
+      detail: 'Tài khoản nhân viên cần cổng quản trị. Vui lòng thử lại sau.',
+      retryHref,
+    };
+  }
+
   if (
     key === 'auth_failed' ||
     key === 'access_denied' ||
@@ -27,8 +44,7 @@ export function authNoticeFromParam(
   ) {
     return {
       title: 'Không đăng nhập được',
-      detail:
-        'Phiên đăng nhập bị hủy hoặc lỗi. Thử lại, hoặc ở lại trang này.',
+      detail: 'Phiên đăng nhập bị hủy hoặc lỗi. Thử lại, hoặc ở lại trang này.',
       retryHref,
     };
   }
