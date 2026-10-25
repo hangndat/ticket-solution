@@ -1,6 +1,8 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { Button } from '@ticket/ui';
 import { t } from '../copy';
+import { NEON_MARKETING_ASSETS } from '../neon-assets';
 import { marketingWrap } from '../marketing-surface';
 import type { MarketingSectionProps } from './types';
 
@@ -13,9 +15,17 @@ export function NeonFinalCtaSection({ locale, demo }: MarketingSectionProps) {
       data-analytics-section="final_cta"
       data-testid="marketing-neon-final-cta"
     >
-      <div className={marketingWrap}>
-        <div className="mkt-neon-final-inner">
-          <div className="mkt-neon-cta-art" aria-hidden="true" />
+      <div className="mkt-neon-final-bleed">
+        <Image
+          src={NEON_MARKETING_ASSETS.finalCtaCrowd}
+          alt=""
+          fill
+          sizes="100vw"
+          className="mkt-neon-final-crowd-img"
+          priority={false}
+        />
+        <div className="mkt-neon-final-scrim" aria-hidden="true" />
+        <div className={`${marketingWrap} mkt-neon-final-stage`}>
           <div className="mkt-neon-cta-content">
             <p className="mkt-neon-eyebrow">{t(locale, 'neon.final.eyebrow')}</p>
             <h2 id="neon-contact-title" className="mkt-neon-h2">
@@ -24,7 +34,7 @@ export function NeonFinalCtaSection({ locale, demo }: MarketingSectionProps) {
               <span className="mkt-neon-grad">{t(locale, 'neon.final.title.emphasis')}</span>
             </h2>
             <p className="mkt-neon-final-lead">{t(locale, 'neon.final.sub')}</p>
-            <div className="mkt-neon-hero-actions">
+            <div className="mkt-neon-hero-actions mkt-neon-final-actions">
               <Button
                 asChild
                 variant="primary"
@@ -39,7 +49,7 @@ export function NeonFinalCtaSection({ locale, demo }: MarketingSectionProps) {
               </Button>
               <Link
                 href="#interest"
-                className="mkt-neon-btn-secondary"
+                className="mkt-neon-btn-secondary mkt-neon-btn-on-photo"
                 data-testid="cta-interest-final"
                 data-analytics-cta="final_interest"
               >

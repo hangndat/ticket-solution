@@ -56,13 +56,17 @@ export function MarketingChrome({
         data-header-on-ink={onInk ? '' : undefined}
       >
         <Link
-          className={marketingWordmark}
+          className={`${marketingWordmark} mkt-neon-wordmark-link`}
           href={sales}
           aria-label={t(locale, 'nav.brand')}
           data-testid="mkt-wordmark"
         >
-          {t(locale, 'nav.brand')}
-          <span aria-hidden="true">↗</span>
+          <span className="mkt-neon-wordmark" aria-hidden="true">
+            <span className="mkt-neon-wordmark-v">V</span>
+            <span className="mkt-neon-wordmark-rest">emoki</span>
+          </span>
+          <span className="sr-only">{t(locale, 'nav.brand')}</span>
+          <span aria-hidden="true" className="mkt-neon-wordmark-arrow">↗</span>
         </Link>
         <LocaleSwitch locale={locale} pageKind={pageKind} onInk={onInk} />
         <nav className={marketingNav} aria-label={locale === 'en' ? 'Primary' : 'Chính'}>

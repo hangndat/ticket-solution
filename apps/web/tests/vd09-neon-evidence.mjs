@@ -14,6 +14,8 @@ mkdirSync(OUT, { recursive: true });
 const SHOTS = [
   { name: 'marketing-vi-1440-full', path: '/marketing', width: 1440, height: 900, fullPage: true },
   { name: 'marketing-vi-390-full', path: '/marketing', width: 390, height: 844, fullPage: true },
+  { name: 'marketing-en-1440-full', path: '/marketing/en', width: 1440, height: 900, fullPage: true },
+  { name: 'marketing-en-390-full', path: '/marketing/en', width: 390, height: 844, fullPage: true },
   { name: 'marketing-vi-768-overflow', path: '/marketing', width: 768, height: 1024, fullPage: false },
   { name: 'marketing-vi-320-overflow', path: '/marketing', width: 320, height: 568, fullPage: false },
 ];

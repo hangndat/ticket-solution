@@ -7,8 +7,8 @@ import { NEON_MARKETING_ASSETS } from '../neon-assets';
 import { marketingWrap } from '../marketing-surface';
 import type { MarketingSectionProps } from './types';
 
-const TRUST_KEYS = ['hero.proof1', 'hero.proof2', 'hero.proof3'] as const;
-const TRUST_ICONS = ['✦', '◎', '▥'] as const;
+const TRUST_KEYS = ['hero.proof1', 'hero.proof2', 'hero.proof3', 'hero.proof4'] as const;
+const TRUST_ICONS = ['✦', '◎', '▥', '⌁'] as const;
 
 export function HeroSection({ locale, demo }: MarketingSectionProps) {
   return (
@@ -70,12 +70,21 @@ export function HeroSection({ locale, demo }: MarketingSectionProps) {
         >
           <MarketingHeroDecor />
           <Image
+            src={NEON_MARKETING_ASSETS.heroCompositeDesktop}
+            alt=""
+            width={960}
+            height={640}
+            priority
+            sizes="(min-width: 641px) 52vw, 0px"
+            className="mkt-neon-hero-composite"
+          />
+          <Image
             src={NEON_MARKETING_ASSETS.heroFigure}
             alt=""
             width={720}
             height={490}
             priority
-            sizes="(max-width: 640px) 108vw, 48vw"
+            sizes="(max-width: 640px) 108vw, 0px"
             className="mkt-neon-hero-figure"
           />
         </div>

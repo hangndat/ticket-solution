@@ -65,6 +65,7 @@ export type CopyKey =
   | 'hero.proof1'
   | 'hero.proof2'
   | 'hero.proof3'
+  | 'hero.proof4'
   | 'hero.proofs.label'
   | 'hero.preview.alt'
   | 'hero.preview.caption'
@@ -274,6 +275,7 @@ const VI: Record<CopyKey, string> = {
   'hero.proof1': 'Thiết lập nhanh',
   'hero.proof2': 'Mọi quy mô',
   'hero.proof3': 'Một nền tảng',
+  'hero.proof4': 'Check-in QR',
   'neon.hero.headline.lead': 'Biến mọi sự kiện thành ',
   'neon.hero.headline.emphasis': 'trải nghiệm đáng nhớ',
   'neon.hero.visual.label': 'Minh hoạ trải nghiệm sự kiện Vemoki (AI, dữ liệu demo)',
@@ -563,6 +565,7 @@ const EN: Record<CopyKey, string> = {
   'hero.proof1': 'Fast setup',
   'hero.proof2': 'Any scale',
   'hero.proof3': 'One platform',
+  'hero.proof4': 'QR check-in',
   'neon.hero.headline.lead': 'Turn every event into a ',
   'neon.hero.headline.emphasis': 'memorable experience',
   'neon.hero.visual.label': 'Vemoki event experience illustration (AI, demo data)',
