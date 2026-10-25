@@ -91,9 +91,7 @@ export function parseClaudeAuth(stdout) {
   const orgId = data.orgId ?? data.organizationId ?? null;
   const email = data.email ?? null;
   const configDir = data.configDir ?? data.config_dir ?? null;
-  const hasAccountIdentity = Boolean(email || accountUuid);
-  const hasProfileContext = Boolean(profileId && configDir);
-  if (!hasAccountIdentity && !hasProfileContext) {
+  if (!email && !accountUuid) {
     return { ok: false, reason: 'auth_identity_unknown' };
   }
   const identityHash = hashIdentity({
@@ -250,6 +248,7 @@ function completeCodexProviderCheck(
       remainingPercent: assessed.remainingPercent,
       reason: assessed.reason,
       quotaState: assessed.quota?.state,
+      resetAt: null,
     },
     now,
   );
@@ -413,6 +412,21 @@ export function checkProvider(
     record = null;
   }
 
+  if (provider === 'codex') {
+    return completeCodexProviderCheck({
+      model,
+      effort,
+      identityHash,
+      codexSnapshot,
+      limitIds,
+      essential,
+      root,
+      key,
+      record,
+      now,
+    });
+  }
+
   if (record && beforeKnownReset(record, now)) {
     return {
       ok: true,
@@ -429,9 +443,7 @@ export function checkProvider(
     };
   }
 
-  const skipAvailabilityCache = provider === 'codex';
-
-  if (!force && record && !skipAvailabilityCache) {
+  if (!force && record) {
     if (inBackoff(record, now) && isFresh(record, now)) {
       return {
         ok: true,
@@ -464,21 +476,6 @@ export function checkProvider(
     }
   }
 
-  if (provider === 'codex') {
-    return completeCodexProviderCheck({
-      model,
-      effort,
-      identityHash,
-      codexSnapshot,
-      limitIds,
-      essential,
-      root,
-      key,
-      record,
-      now,
-    });
-  }
-
   const lock = tryAcquireProbeLock(root, { now });
   if (!lock.acquired) {
     const fallback = record || baseRecord({ provider, identityHash, model, effort, now });
@@ -504,7 +501,6 @@ export function checkProvider(
       !force &&
       record &&
       isFresh(record, now) &&
-      !inBackoff(record, now) &&
       record.availability === 'available' &&
       record.serviceAvailable;
     if (freshAuthoritative) {

@@ -10,7 +10,9 @@ import {
   recordProviderLimit,
   recommendRoute,
   runClaudeAuth,
+  assertRegisteredProviderRoute,
 } from './lib/agent-provider-recovery.mjs';
+import { COST_TIER_ROUTES } from './lib/agent-cost-tiers.mjs';
 import { recoveryRoot, hashIdentity } from './lib/agent-provider-state.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -32,6 +34,7 @@ function parse(argv) {
   ]);
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === '--force') {
+      if (flags.force !== undefined) throw new Error('invalid_arguments');
       flags.force = true;
       continue;
     }
@@ -44,6 +47,32 @@ function parse(argv) {
     flags[key] = val;
   }
   return { command, flags };
+}
+
+function validate(command, flags) {
+  const common = ['root'];
+  const allowed = {
+    status: [...common, 'provider', 'model', 'effort', 'codex-snapshot'],
+    check: [...common, 'provider', 'model', 'effort', 'codex-snapshot', 'essential', 'force'],
+    'record-limit': [...common, 'provider', 'model', 'effort', 'codex-snapshot', 'limited-at', 'reset-at', 'reason'],
+    route: [...common, 'cost-tier', 'codex-snapshot', 'essential', 'force'],
+  }[command];
+  if (!allowed) throw new Error('unknown_command');
+  if (Object.keys(flags).some((key) => !allowed.includes(key))) throw new Error('invalid_arguments');
+  if (flags.essential !== undefined && !['true', 'false', '1', '0'].includes(flags.essential)) {
+    throw new Error('invalid_essential');
+  }
+  if (command === 'route') {
+    if (!flags['cost-tier']) throw new Error('cost_tier_required');
+    if (!['focused', 'advanced', 'high'].includes(flags['cost-tier']) || !COST_TIER_ROUTES[flags['cost-tier']]) {
+      throw new Error('invalid_cost_tier');
+    }
+  } else {
+    if (!flags.provider || !flags.model) throw new Error('provider_model_required');
+    if (!['claude', 'codex'].includes(flags.provider)) throw new Error('invalid_provider');
+    assertRegisteredProviderRoute({ provider: flags.provider, model: flags.model, effort: flags.effort || null });
+    if (command === 'record-limit' && !flags['limited-at']) throw new Error('record_limit_fields_required');
+  }
 }
 
 function loadCodexSnapshot(path) {
@@ -78,6 +107,7 @@ export function main(argv = process.argv.slice(2)) {
     return;
   }
   const { command, flags: f } = parse([...argv]);
+  validate(command, f);
   const root = f.root ? resolve(f.root) : recoveryRoot();
   const essential = f.essential === 'true' || f.essential === '1';
 

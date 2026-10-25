@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, readdirSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, readdirSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import {
   checkProvider,
   recordProviderLimit,
@@ -19,7 +19,7 @@ import {
   releaseProbeLock,
   STATE_TTL_MS,
 } from './agent-provider-state.mjs';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname } from 'node:path';
 
 const WORKTREE = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -107,7 +107,7 @@ test('parseClaudeAuth org-only without email or account uuid is unknown', () => 
   assert.equal(r.reason, 'auth_identity_unknown');
 });
 
-test('parseClaudeAuth accepts profile plus config dir without email', () => {
+test('parseClaudeAuth rejects profile plus config dir without account identity', () => {
   const r = parseClaudeAuth(
     JSON.stringify({
       loggedIn: true,
@@ -117,7 +117,8 @@ test('parseClaudeAuth accepts profile plus config dir without email', () => {
       configDir: '/tmp/claude-config-a',
     }),
   );
-  assert.equal(r.ok, true);
+  assert.equal(r.ok, false);
+  assert.equal(r.reason, 'auth_identity_unknown');
 });
 
 test('parseIsoInstant requires timezone', () => {
@@ -309,24 +310,49 @@ test('Codex check re-assesses essential and usage within TTL', () => {
   rmSync(dir, { recursive: true, force: true });
 });
 
-test('account switch uses new identity hash without persisting email', () => {
+test('Codex snapshot overrides manual reset and still applies reserve each invocation', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'prov-rec-'));
+  const root = recoveryRoot(dir);
+  const now = Date.now();
+  recordProviderLimit(
+    { provider: 'codex', model: 'gpt-6-sol', effort: 'medium', limitedAt: new Date(now).toISOString(), resetAt: new Date(now + 3600000).toISOString() },
+    { root, deps: { codexSnapshot: codexSnapshot(100) }, now },
+  );
+  const fresh = checkProvider(
+    { provider: 'codex', model: 'gpt-6-sol', effort: 'medium', codexSnapshot: codexSnapshot(5) },
+    { root, now: now + 1000 },
+  );
+  assert.equal(fresh.serviceAvailable, true);
+  assert.equal(fresh.reason, 'available');
+  assert.equal(fresh.record.resetAt, null);
+  const reserved = checkProvider(
+    { provider: 'codex', model: 'gpt-6-sol', effort: 'medium', codexSnapshot: codexSnapshot(85) },
+    { root, now: now + 2000 },
+  );
+  assert.equal(reserved.serviceAvailable, false);
+  assert.equal(reserved.reason, 'reserved');
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('account switch with same profile uses new identity hash without reusing cache or persisting email', () => {
   const dir = mkdtempSync(join(tmpdir(), 'prov-rec-'));
   const root = recoveryRoot(dir);
   const a = fakeBins(dir, {
-    authBody: { ...REAL_AUTH, email: 'a@example.com' },
+    authBody: { ...REAL_AUTH, email: 'a@example.com', profileId: 'same-profile', configDir: '/same/config' },
   });
   const first = checkProvider(
     { provider: 'claude', model: 'claude-sonnet-5', effort: 'low', force: true },
     { root, deps: a },
   );
   const b = fakeBins(dir, {
-    authBody: { ...REAL_AUTH, email: 'b@example.com' },
+    authBody: { ...REAL_AUTH, email: 'b@example.com', profileId: 'same-profile', configDir: '/same/config' },
   });
   const after = checkProvider(
-    { provider: 'claude', model: 'claude-sonnet-5', effort: 'low', force: true },
+    { provider: 'claude', model: 'claude-sonnet-5', effort: 'low' },
     { root, deps: b },
   );
   assert.notEqual(first.record.identityHash, after.record.identityHash);
+  assert.equal(after.probed, true);
   assert.equal(after.serviceAvailable, true);
   const all = readdirSync(root)
     .filter((f) => f.endsWith('.json'))
@@ -357,6 +383,56 @@ test('concurrent check: lock busy never returns stale serviceAvailable', () => {
   rmSync(dir, { recursive: true, force: true });
 });
 
+test('two processes reading stale cache before lock reuse the first fresh probe', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'prov-interleave-'));
+  const root = recoveryRoot(dir);
+  const bins = fakeBins(dir);
+  const now = Date.now();
+  const request = { provider: 'claude', model: 'claude-sonnet-5', effort: 'low' };
+  checkProvider(request, { root, deps: bins, now: now - STATE_TTL_MS - 1000 });
+
+  // The copy pauses process B after its initial state read and before lock acquisition.
+  const sourcePath = join(WORKTREE, 'scripts/lib/agent-provider-recovery.mjs');
+  const signal = join(dir, 'continue-b');
+  const source = readFileSync(sourcePath, 'utf8')
+    .replace("import { mkdtempSync, rmSync } from 'node:fs';", "import { mkdtempSync, rmSync, existsSync } from 'node:fs';")
+    .replaceAll("from './", `from '${pathToFileURL(join(WORKTREE, 'scripts/lib') + '/').href}`)
+    .replace(
+      'const lock = tryAcquireProbeLock(root, { now });',
+      `process.stdout.write('READY\\n'); while (!existsSync(${JSON.stringify(signal)})) Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 20); const lock = tryAcquireProbeLock(root, { now });`,
+    );
+  const pausedModule = join(dir, 'paused-recovery.mjs');
+  writeFileSync(pausedModule, source);
+  const requestCode = `const result = checkProvider(${JSON.stringify(request)}, { root: ${JSON.stringify(root)}, deps: ${JSON.stringify(bins)}, now: ${now} }); console.log(JSON.stringify({probed:result.probed,reason:result.reason,serviceAvailable:result.serviceAvailable}));`;
+  const b = spawn(process.execPath, ['--input-type=module', '-e', `import { checkProvider } from ${JSON.stringify(pathToFileURL(pausedModule).href)}; ${requestCode}`], { encoding: 'utf8' });
+  let bOutput = '';
+  let bError = '';
+  b.stdout.on('data', (chunk) => { bOutput += chunk; });
+  b.stderr.on('data', (chunk) => { bError += chunk; });
+  try {
+    await new Promise((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error(`process B did not reach the lock: ${bError}`)), 5000);
+      b.stdout.on('data', () => {
+        if (bOutput.includes('READY\n')) { clearTimeout(timer); resolve(); }
+      });
+      b.on('exit', () => { clearTimeout(timer); if (!bOutput.includes('READY\n')) reject(new Error(bError)); });
+    });
+    const a = spawnSync(process.execPath, ['--input-type=module', '-e', `import { checkProvider } from ${JSON.stringify(pathToFileURL(sourcePath).href)}; ${requestCode}`], { encoding: 'utf8', timeout: 5000 });
+    assert.equal(a.status, 0, a.stderr);
+    assert.equal(JSON.parse(a.stdout.trim()).probed, true);
+    writeFileSync(signal, 'go');
+    const bExit = await new Promise((resolve) => b.on('close', resolve));
+    assert.equal(bExit, 0, bError);
+    const result = JSON.parse(bOutput.trim().split('\n').at(-1));
+    assert.equal(result.probed, false);
+    assert.equal(result.serviceAvailable, true);
+    assert.equal(result.reason, 'probe_ok');
+  } finally {
+    b.kill();
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test('child process waits on probe lock without deleting malformed lock', () => {
   const dir = mkdtempSync(join(tmpdir(), 'prov-rec-'));
   const root = recoveryRoot(dir);
@@ -376,6 +452,41 @@ console.log(JSON.stringify(r));`,
   const parsed = JSON.parse(child.stdout.trim());
   assert.equal(parsed.acquired, false);
   assert.ok(readFileSync(join(root, '.probe.lock'), 'utf8').includes('not-json'));
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('CLI rejects invalid routes and option values before auth, telemetry, or state writes', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'prov-cli-'));
+  const cli = join(WORKTREE, 'scripts/agent-provider-recovery.mjs');
+  const common = ['--root', join(dir, 'state')];
+  const cases = [
+    ['check', '--provider', 'unsupported', '--model', 'arbitrary'],
+    ['check', '--provider', 'claude', '--model', 'arbitrary', '--effort', 'medium'],
+    ['check', '--provider', 'codex', '--model', 'gpt-6-sol', '--effort', 'arbitrary'],
+    ['check', '--provider', 'codex', '--model', 'gpt-6-sol', '--effort', 'medium', '--essential', 'maybe'],
+    ['check', '--provider', 'codex', '--model', 'gpt-6-sol', '--effort', 'medium', '--force', '--force'],
+    ['status', '--provider', 'unsupported', '--model', 'arbitrary'],
+    ['status', '--provider', 'claude', '--model', 'arbitrary', '--effort', 'medium'],
+    ['status', '--provider', 'claude', '--model', 'claude-sonnet-5', '--effort', 'medium', '--essential', 'true'],
+    ['record-limit', '--provider', 'unsupported', '--model', 'arbitrary', '--limited-at', new Date().toISOString()],
+    ['record-limit', '--provider', 'codex', '--model', 'gpt-6-sol', '--effort', 'arbitrary', '--limited-at', new Date().toISOString()],
+    ['record-limit', '--provider', 'claude', '--model', 'claude-sonnet-5', '--effort', 'medium', '--limited-at', new Date().toISOString(), '--essential', 'true'],
+    ['route', '--cost-tier', 'unsupported'],
+    ['route', '--cost-tier', 'advanced', '--essential', 'maybe'],
+    ['route', '--cost-tier', 'advanced', '--provider', 'claude'],
+  ];
+  for (const args of cases) {
+    const result = spawnSync(process.execPath, [cli, ...args, ...common], {
+      encoding: 'utf8',
+      env: { ...process.env, AGENT_PROVIDER_CLAUDE_AUTH_BIN: join(dir, 'must-not-run'), AGENT_TELEMETRY_CLI: join(dir, 'must-not-run') },
+    });
+    assert.equal(result.status, 1, args.join(' '));
+    const error = JSON.parse(result.stderr.trim());
+    assert.equal(error.ok, false);
+    assert.match(error.errorCode, /^[a-z_]+$/);
+    assert.equal(result.stdout, '');
+    assert.equal(existsSync(join(dir, 'state')), false);
+  }
   rmSync(dir, { recursive: true, force: true });
 });
 
