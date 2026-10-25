@@ -1,31 +1,31 @@
-# VD-09 Neon marketing — user V mark PNG (definitive asset)
+# VD-09 Neon — locale toggle + edge decor evidence
 
 | Field | Value |
 | --- | --- |
 | Branch | `hangndat/vd09-marketing-neon` |
-| Asset | `public/marketing/neon/vemoki-v-mark.png` (128×121 RGBA, ~12KB) |
-| Component | `apps/web/src/marketing/marketing-neon-logo.tsx` |
-| Header/footer | `data-testid="mkt-wordmark"` / `mkt-footer-wordmark` |
-
-## Change
-
-- Replaced inline SVG ribbon paths with optimized transparent PNG from user-supplied source (broad rounded base, capsule arms).
-- `next/image` with `sizes` for 34–40px header lockup; CSS `object-fit: contain`, no opaque backing.
-- Footer sales chrome repeats neon wordmark lockup.
+| Scope | VI/EN header toggle (rightmost), edge ribbons/spheres, no header advisory CTA |
 
 ## Checks (local)
 
 - `pnpm --filter @ticket/web typecheck` — pass
 - `pnpm --filter @ticket/web build` — pass
-- Focused marketing tests — pass
-- `vd09-neon-interest-click.mjs` — pass
-- Locale select from `/marketing#interest` → `/en#interest` (hash preserved)
+- Focused marketing + layout regression tests — pass
+- Playwright evidence — overflow 0px at 1440/768/390/320
 
 ## Screenshots
 
-| File | Viewport |
+| File | Notes |
 | --- | --- |
-| `logo-1440-wordmark.png` | 1440 header lockup |
-| `logo-390-wordmark.png` | 390 header lockup |
-| `logo-320-wordmark.png` | 320 header lockup |
-| `logo-mark-34px.png` | Isolated mark @ 34px (shape gate) |
+| `marketing-vi-1440-full.png` | Desktop VI full page |
+| `marketing-en-1440-full.png` | Desktop EN full page |
+| `marketing-vi-768-overflow.png` | Tablet viewport |
+| `marketing-vi-390-full.png` | Mobile VI |
+| `marketing-en-390-full.png` | Mobile EN |
+| `marketing-vi-320-overflow.png` | Narrow mobile |
+| `locale-toggle-vi-1440.png` | VI active toggle crop |
+| `locale-toggle-en-390.png` | EN active toggle crop (mobile) |
+| `mobile-nav-open-390.png` | Mobile sheet (no header advisory CTA) |
+
+## Hash (PD F3)
+
+`mkt-locale-en` href from `/marketing#interest` → `/en#interest` (verified via Playwright `getAttribute('href')`).

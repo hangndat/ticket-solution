@@ -21,6 +21,7 @@ import {
   marketingWrap,
 } from './marketing-surface';
 import { privacyHref, salesHref, supportHref } from './links';
+import { MarketingNeonEdgeDecor } from './marketing-neon-edge-decor';
 import { MarketingNeonScope } from './marketing-neon-scope';
 import { MarketingNeonLogo } from './marketing-neon-logo';
 
@@ -48,6 +49,7 @@ export function MarketingChrome({
       data-marketing-neon={onSales ? '' : undefined}
     >
       <MarketingNeonScope enabled={onSales} />
+      {onSales ? <MarketingNeonEdgeDecor /> : null}
       <a className={marketingSkip} href="#main">
         {t(locale, 'skip')}
       </a>
