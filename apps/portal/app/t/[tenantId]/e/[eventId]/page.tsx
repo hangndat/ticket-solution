@@ -255,9 +255,6 @@ export default function EventOverviewPage() {
     });
   }
 
-  if (access.kind === 'loading' || loadKind === 'loading') {
-    return <SurfaceState kind="loading" />;
-  }
   if (access.kind === 'error') {
     return (
       <SurfaceState
@@ -277,6 +274,9 @@ export default function EventOverviewPage() {
         }}
       />
     );
+  }
+  if (access.kind === 'loading' || loadKind === 'loading') {
+    return <SurfaceState kind="loading" />;
   }
   if (loadKind === 'unknown') {
     return (
