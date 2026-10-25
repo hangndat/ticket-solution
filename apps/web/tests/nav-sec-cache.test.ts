@@ -174,6 +174,30 @@ test('isNavDiscoveryRequestUrl marks only me/events and me/tenants', async () =>
   assert.equal(isNavDiscoveryRequestUrl('/api/bff/admin/events'), false);
 });
 
+test('refresh keeps resolved links while revalidating (no guest flash)', async () => {
+  let loads = 0;
+  const store = new NavCapabilitiesStore(async () => {
+    loads += 1;
+    await new Promise((r) => setTimeout(r, 5));
+    return { caps: STAFF_CAPS, links: STAFF_LINKS };
+  });
+  store.replaceSnapshot({
+    caps: STAFF_CAPS,
+    links: STAFF_LINKS,
+    resolved: true,
+    loading: false,
+  });
+
+  const pending = store.refresh();
+  const mid = store.getSnapshot();
+  assert.equal(mid.loading, true);
+  assert.ok(mid.links.some((l) => l.href === '/admin'), 'staff link must stay visible during refresh');
+
+  await pending;
+  assert.ok(loads >= 1);
+  assert.ok(store.getSnapshot().links.some((l) => l.href === '/admin'));
+});
+
 test('singleton reset helper clears shared store', () => {
   resetNavCapabilitiesStoreForTests();
   const snap = navCapabilitiesStore.getSnapshot();

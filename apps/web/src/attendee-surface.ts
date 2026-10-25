@@ -74,8 +74,10 @@ export const attendeeNavAvatarBadge = cn(
   'grid size-8 shrink-0 place-items-center rounded-full bg-[color-mix(in_srgb,var(--color-primary)_14%,var(--color-paper))] text-[0.68rem] font-bold text-[color-mix(in_srgb,var(--color-ink)_28%,var(--color-primary))]',
 );
 
-export const attendeeNavAvatarLabel =
-  'max-w-40 overflow-hidden text-ellipsis whitespace-nowrap text-[0.82rem] font-semibold';
+export const attendeeNavAvatarLabel = cn(
+  'min-w-[9.5rem] max-w-40 overflow-hidden text-ellipsis whitespace-nowrap text-[0.82rem] font-semibold',
+  'empty:min-w-0',
+);
 
 export const attendeeNavMenuToggle = cn(
   'ml-auto inline-flex min-h-11 min-w-11 items-center gap-2 rounded-md border border-line bg-paper px-3 font-semibold text-ink md:hidden',

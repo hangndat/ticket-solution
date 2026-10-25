@@ -45,6 +45,11 @@
     font-weight: 700;
   }
 
+  html[data-surface='product'] {
+    scrollbar-gutter: stable;
+    overflow-x: clip;
+  }
+
   html[data-surface='marketing'] {
     scrollbar-gutter: stable;
     overflow-x: clip;

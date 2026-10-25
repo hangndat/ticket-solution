@@ -5,12 +5,14 @@ import {
   attendeeFooterLinks,
   attendeeFooterTagline,
 } from '../../src/attendee-surface';
+import { ConsumerSiteHeader } from '../../src/consumer-site-header';
 import { FooterBrand } from '../../src/site-chrome';
 
 /** Consumer product routes — attendee footer; marketing uses its own chrome (no double footer). */
 export default function ConsumerLayout({ children }: { children: ReactNode }) {
   return (
     <>
+      <ConsumerSiteHeader />
       {children}
       <footer className={attendeeFooter} data-testid="site-footer">
         <FooterBrand />

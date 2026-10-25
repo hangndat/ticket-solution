@@ -1,15 +1,8 @@
 'use client';
 
 import { platformGet } from '../bff/same-origin-fetch';
-import {
-  buildNavLinks,
-  deriveNavCapabilities,
-  parseMeEventsResponse,
-  parseMeTenantsResponse,
-  type NavCapabilities,
-  type NavLink,
-  GUEST_NAV_LINKS,
-} from './capabilities';
+import { GUEST_NAV_LINKS, type NavCapabilities, type NavLink } from './capabilities';
+import { resolveNavCapabilitiesFromUpstream } from './resolve-nav-capabilities';
 
 const REQUEST_TIMEOUT_MS = 8_000;
 
@@ -26,24 +19,10 @@ export async function loadNavCapabilities(): Promise<{
     platformGet('/api/bff/me/tenants', REQUEST_TIMEOUT_MS),
   ]);
 
-  const meEvents = parseMeEventsResponse(
-    eventsResult.status,
-    eventsResult.json,
+  return resolveNavCapabilitiesFromUpstream(
+    { status: eventsResult.status, body: eventsResult.json },
+    { status: tenantsResult.status, body: tenantsResult.json },
   );
-  const meTenants = parseMeTenantsResponse(
-    tenantsResult.status,
-    tenantsResult.json,
-  );
-  const authenticated = meEvents !== null || meTenants !== null;
-
-  const caps = deriveNavCapabilities({
-    authenticated,
-    meEvents,
-    meTenants,
-    platformMe: null,
-  });
-
-  return { caps, links: buildNavLinks(caps) };
 }
 
 export function guestNavLinks(): NavLink[] {
