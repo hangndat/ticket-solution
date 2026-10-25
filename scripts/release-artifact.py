@@ -90,6 +90,9 @@ def verify(path):
     actual = inventory(path)
     if actual != manifest.get("files"):
         fail("artifact file checksum mismatch")
+    for rel in ("apps/web/.data", "apps/web/.next/cache", "apps/portal/.next/cache"):
+        if not (path / rel).is_dir() or (path / rel).is_symlink():
+            fail(f"missing writable mount target: {rel}")
     for service in SERVICES:
         entry = manifest.get("services", {}).get(service, {})
         paths = ARTIFACTS[service]
@@ -198,6 +201,8 @@ def build(args):
         shutil.rmtree(stage / ".pnpm-store", ignore_errors=True)
         for app in ("web", "portal"):
             shutil.rmtree(stage / "apps" / app / ".next" / "cache", ignore_errors=True)
+            (stage / "apps" / app / ".next" / "cache").mkdir(parents=True)
+        (stage / "apps" / "web" / ".data").mkdir(parents=True, exist_ok=True)
         all_files = inventory(stage)
         source = {"format": 1, "sourceSha": args.sha,
                   "buildId": hashlib.sha256(json.dumps(all_files, sort_keys=True).encode()).hexdigest()[:12],

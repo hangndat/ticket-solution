@@ -32,6 +32,8 @@ class ReleaseFixture(unittest.TestCase):
                 else:
                     target.mkdir(parents=True, exist_ok=True)
                     (target / "artifact").write_text(marker)
+        for rel in ("apps/web/.data", "apps/web/.next/cache", "apps/portal/.next/cache"):
+            (path / rel).mkdir(parents=True)
         files = release.inventory(path)
         manifest = {"format": 1, "sourceSha": sha,
             "lockfileSha256": release.digest(path / "pnpm-lock.yaml"),
@@ -76,6 +78,10 @@ class ReleaseFixture(unittest.TestCase):
             self.pin(old, "api", 3)
         (old / "apps/api/dist/artifact").write_text("tampered")
         with self.assertRaisesRegex(ValueError, "checksum"):
+            release.verify(old)
+        (old / "apps/api/dist/artifact").write_text("c")
+        (old / "apps/web/.next/cache").rmdir()
+        with self.assertRaisesRegex(ValueError, "mount target"):
             release.verify(old)
 
     def test_legacy_worker_and_escape_rejected(self):
