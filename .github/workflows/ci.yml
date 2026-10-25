@@ -105,6 +105,8 @@ jobs:
               - 'packages/contracts/**'
             hardening:
               - 'scripts/d5-**'
+              - 'scripts/load/scanner-context.*'
+              - 'scripts/load/gate-scanners.js'
               - 'scripts/rint-**'
               - 'scripts/platform-**'
               - 'scripts/lib/**'
@@ -386,6 +388,7 @@ jobs:
           done
           wait "$build_pid"
       - run: pnpm test:rint-host
+      - run: pnpm test:load-context
       - run: ./scripts/rint-stack-smoke.sh
       - run: bash -n ./scripts/fe-uat-stack.sh
       - run: ./scripts/rint-outbox-recovery.sh
