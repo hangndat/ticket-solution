@@ -23,6 +23,13 @@ Hai container Node riêng cùng load backend từ read-only artifact. Khi servic
 
 ## Giới hạn và tái chạy
 
+| AC #899 | Evidence local | Giới hạn |
+| --- | --- | --- |
+| Deploy A không đổi B, provenance runtime | Hai release read-only, pin riêng; `docker inspect` mount A/B và checksum B trước/sau recreate trùng nhau. | Container mount smoke load backend, chưa chạy HTTP service đầy đủ. |
+| Expand/contract và app cũ/mới đồng tồn | Migration PG F03 additive; old/new backend đọc cùng row; old API issue, old/new worker relay. | Chưa chạy contract migration hoặc staging rollout. |
+| App rollback / forward recovery schema | Rollback pin/schema 2 và worker cũ PASS; schema 3 bị chặn, giữ schema expand, không down migration. | Forward recovery sau migration lỗi chưa fault-inject; cần release sửa riêng khi xảy ra. |
+| Runbook lỗi/cleanup/secrets | `IMMUTABLE-RELEASE.md`, entrypoint `deploy-prod`, guard pre-F02/schema/pinned cleanup; fixture synthetic đã dọn. | Không thử SSH/production, không dùng secret thật. |
+
 Harness gọi entrypoint nghiệp vụ backend của hai artifact trong **một** process Node Linux trên PG thật; hai container riêng chứng minh mount/process provenance, chưa boot HTTP API và worker daemon đầy đủ hay thử trên staging/host production. Provider APNs/email là synthetic; `ACCEPTED` không có nghĩa thiết bị nhận. Lease crash được tái tạo ở durable SQL boundary, không kill process thật. Schema range là tuyên bố operator của fixture, reviewer phải đối chiếu migration khi dùng thực tế. Đây là forward recovery schema theo additive migration và app rollback; chưa có migration sửa lỗi sau một migration hỏng. Build logs có Next `BUILD_ID` ngẫu nhiên; không claim reproducibility tuyệt đối.
 
 Lệnh chính: `python3 scripts/release-artifact.py ... build/verify/pin`, rồi `docker run ... node scripts/release-pg-rehearsal.cjs /old /new` với `RELEASE_PG_URL` synthetic trên Docker network cô lập. Log lọc trạng thái tại `/tmp/ar891-t5-pg-rehearsal.log`; manifests ở `/tmp/ar891-t5-pg-rehearsal-releases/<source>-<build>/release-manifest.json`. Fixture PG, container A/B và network của task đã được dọn; không dọn container/volume ngoài task. Full Linux builds chỉ chạy cho hai source SHA trên, còn commit prose/harness sau đó cần revalidate diff và CI, không giả định cùng binary build.
