@@ -28,6 +28,8 @@ test('brand tokens match Live Pulse brand/vemoki/tokens.json', () => {
   assert.equal(brand.ink, raw.colors.ink);
   assert.equal(brand.paper, raw.colors.paper);
   assert.equal(brand.signal, raw.colors.signal);
+  assert.equal(brand.primary, raw.colors.primary);
+  assert.equal(brand.primary.toLowerCase(), '#7c4ded');
   assert.equal(brand.focus, raw.colors.focus);
   assert.equal(brand.line, raw.colors.line);
   assert.equal(brand.muted, raw.colors.muted);

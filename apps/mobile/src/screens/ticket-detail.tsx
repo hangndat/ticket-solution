@@ -235,13 +235,13 @@ export function TicketDetailScreen() {
           borderCurve: 'continuous',
           overflow: 'hidden',
           borderWidth: 1,
-          borderColor: brand.signal
+          borderColor: brand.primary
         }}
       >
         <View
           style={{
             height: 6,
-            backgroundColor: brand.signal
+            backgroundColor: brand.primary
           }}
         />
         {hasDemoMediaForEventId(ticket.eventId) ? (

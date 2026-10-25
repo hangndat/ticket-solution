@@ -6,7 +6,7 @@ export function defaultThemeTokens(): ThemeTokens {
   return {
     ink: vemokiBrand.ink,
     paper: vemokiBrand.paper,
-    signal: vemokiBrand.signal,
+    signal: vemokiBrand.primary,
     focus: vemokiBrand.focus,
     wordmark: vemokiBrand.wordmark,
     signalMark: vemokiBrand.signalMark,

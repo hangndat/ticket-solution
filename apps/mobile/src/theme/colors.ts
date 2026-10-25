@@ -11,12 +11,13 @@ export const colors = {
   card: brand.paperDeep,
   separator: brand.inkFaint,
   /** Replaces systemBlue on product CTAs / links. */
-  accent: brand.signal,
+  accent: brand.primary,
   onAccent: '#ffffff',
   ink: brand.ink,
   paper: brand.paper,
   paperDeep: brand.paperDeep,
-  signal: brand.signal,
+  /** Product accent (solid primary violet); marketing signal stays on `brand.signal`. */
+  signal: brand.primary,
   focus: brand.focus,
   /** Ticket QR canvas (brand paper/ink). */
   ticketCanvas: brand.paper,
@@ -41,6 +42,6 @@ export const colors = {
   surfaceSubtle: '#f0f4f8',
   /** iOS shadowColor fallback. */
   shadow: '#000000',
-  /** Gate camera focus ring tint (signal @ ~70%). */
-  signalTint: '#fb7391',
+  /** Gate camera focus ring tint (primary @ ~70% on paper). */
+  signalTint: '#b8a4f5',
 };

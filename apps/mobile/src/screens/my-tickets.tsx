@@ -166,7 +166,7 @@ function TicketRow({ ticket }: { ticket: TicketSummary }) {
           </Text>
         ) : null}
         <Text
-          style={{ ...typography.subhead, color: brand.signal,
+          style={{ ...typography.subhead, color: brand.primary,
             fontFamily: fontFamilies.bodySemiBold }}
         >
           {row.viewTicketCta}

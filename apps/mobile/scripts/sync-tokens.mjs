@@ -118,8 +118,18 @@ function formatViewStyle(style, indent) {
  * @returns {string}
  */
 export function buildTokensModule(json) {
-  const { ink, paper, signal, focus, line, muted, destructive, admit, unknown } =
-    json.colors;
+  const {
+    ink,
+    paper,
+    signal,
+    primary,
+    focus,
+    line,
+    muted,
+    destructive,
+    admit,
+    unknown,
+  } = json.colors;
   const paperDeep = mixHex(paper, ink, 0.88);
   const inkMuted = muted;
   const inkFaint = `rgba(${parseHex(ink).join(', ')}, 0.18)`;
@@ -159,6 +169,7 @@ export function buildTokensModule(json) {
   ink: '${ink}',
   paper: '${paper}',
   signal: '${signal}',
+  primary: '${primary}',
   focus: '${focus}',
   line: '${line}',
   muted: '${muted}',

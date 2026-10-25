@@ -56,7 +56,7 @@ const styles = StyleSheet.create({
     paddingVertical: space.xs,
     paddingHorizontal: 0
   },
-  inlineText: { ...typography.subhead, color: brand.signal,
+  inlineText: { ...typography.subhead, color: brand.primary,
     fontFamily: fontFamilies.bodySemiBold,
     textAlign: 'left' },
   cardRow: {
@@ -69,7 +69,7 @@ const styles = StyleSheet.create({
   cardRowContent: {
     width: '100%'
   },
-  cardRowText: { ...typography.callout, color: brand.signal,
+  cardRowText: { ...typography.callout, color: brand.primary,
     fontFamily: fontFamilies.bodySemiBold,
     textAlign: 'center' }
 });

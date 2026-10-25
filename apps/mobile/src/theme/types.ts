@@ -28,7 +28,7 @@ export type ThemeSource = 'default' | 'cache' | 'api';
 export type ThemeTokens = {
   ink: string;
   paper: string;
-  /** Product accent — tenant primaryColor when valid, else Vemoki signal. */
+  /** Product accent — tenant primaryColor when valid, else Vemoki primary (#7C4DED). */
   signal: string;
   /** Focus — tenant secondaryColor when valid, else Vemoki focus. */
   focus: string;

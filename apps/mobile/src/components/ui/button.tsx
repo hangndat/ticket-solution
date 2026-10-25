@@ -1,4 +1,3 @@
-import { LinearGradient } from 'expo-linear-gradient';
 import { useState, type ReactNode } from 'react';
 import {
   Pressable,
@@ -10,7 +9,6 @@ import {
   type ViewStyle
 } from 'react-native';
 import { Spinner } from '@/components/ui/spinner';
-import { attendeePrimaryGradient } from '@/theme/attendee-primary';
 import { colors } from '@/theme/colors';
 import { fontFamilies } from '@/theme/fonts';
 import { radius, space } from '@/theme/tokens';
@@ -61,8 +59,6 @@ export function Button({
     ...accessibilityState
   };
 
-  const showPrimaryGradient = primary && !ghost && !destructive;
-
   return (
     <Pressable
       testID={testID}
@@ -86,12 +82,11 @@ export function Button({
       style={({ pressed }) => [
         styles.base,
         size === 'lg' ? styles.sizeLg : styles.sizeMd,
-        showPrimaryGradient ? styles.primaryShell : null,
         ghost ? styles.ghost : null,
         !ghost && destructive
           ? styles.destructive
           : !ghost && primary
-            ? null
+            ? styles.primary
             : !ghost
               ? styles.secondary
               : null,
@@ -101,17 +96,6 @@ export function Button({
       ]}
       {...rest}
     >
-      {showPrimaryGradient ? (
-        <LinearGradient
-          colors={[
-            attendeePrimaryGradient.start,
-            attendeePrimaryGradient.end,
-          ]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={StyleSheet.absoluteFill}
-        />
-      ) : null}
       <View style={[styles.content, contentStyle]}>
         {loading ? (
           <Spinner
@@ -165,15 +149,9 @@ const styles = StyleSheet.create({
     paddingVertical: space.md + space.xxs,
     paddingHorizontal: space.lg + space.xxs
   },
-  primaryShell: {
-    overflow: 'hidden',
+  primary: {
+    backgroundColor: colors.accent,
     borderWidth: 0,
-    backgroundColor: 'transparent',
-    shadowColor: colors.signal,
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.28,
-    shadowRadius: 14,
-    elevation: 4,
   },
   secondary: {
     backgroundColor: colors.card,
