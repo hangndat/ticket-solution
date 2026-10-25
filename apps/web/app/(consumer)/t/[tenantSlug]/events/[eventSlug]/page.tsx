@@ -81,7 +81,7 @@ function EventErrorShell({
         detail={detail}
         testId={testId}
         action={
-          <Button asChild variant="brand">
+          <Button asChild variant="attendeePrimary">
             <Link href="/">Về trang chủ</Link>
           </Button>
         }
@@ -245,7 +245,7 @@ export default async function EventPage({ params }: Props) {
               <p className={attendeeEventSideboxLead}>
                 Bạn có mã nhận vé từ nhà tổ chức?
               </p>
-              <Button asChild variant="primary" block className={attendeeEventSideboxCta}>
+              <Button asChild variant="attendeePrimary" block className={attendeeEventSideboxCta}>
                 <Link href={redeemHref}>Đổi mã lấy vé</Link>
               </Button>
               <p className={attendeeEventSideboxHelp}>

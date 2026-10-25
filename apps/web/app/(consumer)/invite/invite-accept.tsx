@@ -172,7 +172,7 @@ export function InviteAcceptForm() {
         một lần và khớp email — giao diện không tự cấp quyền Owner.
       </p>
       <div className={authButtonsRow}>
-        <Button asChild variant="primary">
+        <Button asChild variant="attendeePrimary">
           <a href={loginHref}>Đăng nhập</a>
         </Button>
       </div>
@@ -201,7 +201,7 @@ export function InviteAcceptForm() {
         ) : null}
         <Button
           type="button"
-          variant="primary"
+          variant="attendeePrimary"
           disabled={busy || !token.trim() || !csrfReady}
           loading={busy}
           loadingLabel="Đang nhận…"
@@ -232,7 +232,7 @@ export function InviteAcceptForm() {
           <h2>{ux.title}</h2>
           <p>{ux.detail}</p>
           <p className={authButtonsRow}>
-            <Button asChild variant="primary">
+            <Button asChild variant="attendeePrimary">
               <a href={`/admin?tenantId=${encodeURIComponent(view.value.tenantId)}`}>
                 Mở Admin
               </a>

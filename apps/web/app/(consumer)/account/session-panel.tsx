@@ -99,7 +99,7 @@ export function SessionPanel() {
               Đăng xuất
             </a>
           </Button>
-          <Button asChild variant="primary">
+          <Button asChild variant="attendeePrimary">
             <Link href="/redeem">Đổi mã lấy vé</Link>
           </Button>
         </p>
@@ -116,7 +116,7 @@ export function SessionPanel() {
         testId="account-session-error"
         action={
           <div className={accountSessionActions}>
-            <Button asChild variant="primary">
+            <Button asChild variant="attendeePrimary">
               <a href={ACCOUNT_LOGIN}>Đăng nhập</a>
             </Button>
             <Button asChild variant="secondary">
@@ -139,7 +139,7 @@ export function SessionPanel() {
       <h2>Chưa đăng nhập</h2>
       <p>Đăng nhập để quản lý phiên hoặc gửi yêu cầu liên quan tài khoản.</p>
       <p className={accountSessionActions}>
-        <Button asChild variant="primary">
+        <Button asChild variant="attendeePrimary">
           <a href={ACCOUNT_LOGIN}>Đăng nhập</a>
         </Button>
         <Button asChild variant="secondary">

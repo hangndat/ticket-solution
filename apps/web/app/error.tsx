@@ -22,7 +22,7 @@ export default function ErrorBoundary({ reset }: { reset: () => void }) {
         detail="Chưa biết kết quả phía máy chủ — không suy diễn thành công hay thất bại nghiệp vụ."
         testId="route-error"
         action={
-          <Button type="button" variant="brand" onClick={reset}>
+          <Button type="button" variant="attendeePrimary" onClick={reset}>
             Thử lại
           </Button>
         }

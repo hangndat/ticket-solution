@@ -116,9 +116,7 @@ export const attendeeHomeCatalogSearchIcon =
   'pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[1.1rem] opacity-45';
 
 export const attendeeHomeCatalogSearchInput = cn(
-  'w-full min-h-12 rounded-md border border-line bg-paper py-3 pl-[42px] pr-3.5 font-[inherit] text-ink',
-  'transition-[border-color,box-shadow] motion-reduce:transition-none',
-  'focus:border-focus focus:outline-none focus:shadow-[0_0_0_3px_rgba(37,99,235,0.15)]',
+  'min-h-12 bg-paper py-3 pl-[42px] pr-3.5 font-[inherit]',
 );
 
 export const attendeeHomeCatalogFilters = 'flex flex-wrap items-center gap-2';

@@ -12,8 +12,8 @@ export type SurfaceStateProps = {
 };
 
 const surfaceBase = cn(
-  'my-4 grid max-w-[42rem] gap-2 border-2 p-[var(--spacing-2xl)]',
-  'border-[color-mix(in_srgb,var(--color-ink)_12%,var(--color-paper))] bg-[color-mix(in_srgb,var(--color-paper)_92%,var(--color-ink)_8%)]',
+  'my-4 grid max-w-[42rem] gap-2 rounded-2xl border border-line p-[var(--spacing-2xl)]',
+  'bg-[color-mix(in_srgb,var(--color-paper)_92%,var(--color-ink)_8%)]',
 );
 
 function surfaceKindClass(kind: SurfaceStateKind): string {

@@ -386,7 +386,7 @@ export function GuestClaimForm() {
       ) : null}
       {ux.kind === 'auth' ? (
         <p className={authButtonsRow}>
-          <Button asChild variant="brand">
+          <Button asChild variant="attendeePrimary">
             <a href={loginHref}>Đăng nhập bằng email đã được mời</a>
           </Button>
         </p>
@@ -399,7 +399,7 @@ export function GuestClaimForm() {
           onClick={() => void submitClaim()}>Gửi lại cùng yêu cầu</Button></p>
       ) : null}
       {decision?.kind === 'issued' ? (
-        <p><Button asChild variant="brand"><Link href="/wallet">Xem vé của tôi</Link></Button></p>
+        <p><Button asChild variant="attendeePrimary"><Link href="/wallet">Xem vé của tôi</Link></Button></p>
       ) : null}
     </section>
   ) : null;
@@ -427,7 +427,7 @@ export function GuestClaimForm() {
       </p>
 
       <div className={authButtonsRow}>
-        <Button asChild variant="primary">
+        <Button asChild variant="attendeePrimary">
           <a href={loginHref}>Đăng nhập bằng email được mời</a>
         </Button>
       </div>
@@ -493,7 +493,7 @@ export function GuestClaimForm() {
 
       {schemaReady ? <Button
         type="button"
-        variant="primary"
+        variant="attendeePrimary"
         disabled={busy || claimedKey === contextKey}
         loading={busy}
         loadingLabel="Đang gửi…"

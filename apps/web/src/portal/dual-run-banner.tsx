@@ -1,3 +1,4 @@
+import { Alert } from '@ticket/ui';
 import {
   isDualRunBannerEnabled,
   portalHref,
@@ -30,14 +31,13 @@ export function DualRunBanner({
     origin;
 
   return (
-    <aside
-      className="notice"
-      role="status"
+    <Alert
+      className="my-4 max-w-[48rem]"
       data-testid="portal-dual-run-banner"
       data-portal-origin={origin}
+      title="Portal admin đang chạy song song"
     >
-      <h2>Portal admin đang chạy song song</h2>
-      <p>
+      <p className="m-0">
         Cổng quản trị mới (Ant Design) có tại{' '}
         <a href={href} rel="noopener noreferrer">
           {origin}
@@ -45,15 +45,15 @@ export function DualRunBanner({
         . Trang này trên app vẫn phục vụ cho đến khi có Task deploy được ủy quyền
         riêng — redirect GET mặc định tắt.
       </p>
-      <p>
+      <p className="m-0 mt-2">
         <a href={href} data-testid="portal-dual-run-cta">
           Mở trên portal →
         </a>
       </p>
-      <p data-testid="portal-dual-run-gate-ios">
+      <p className="m-0 mt-2" data-testid="portal-dual-run-gate-ios">
         Quét vé cổng chỉ trên ứng dụng <strong>Vemoki Staff</strong> (iOS) — không
         còn scanner trên web.
       </p>
-    </aside>
+    </Alert>
   );
 }

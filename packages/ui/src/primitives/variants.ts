@@ -16,7 +16,10 @@ export const buttonVariants = cva(
     variants: {
       variant: {
         primary:
-          'border border-signal bg-signal text-white shadow-[0_4px_20px_color-mix(in_srgb,var(--color-signal)_35%,transparent)] hover:border-ink hover:bg-ink hover:text-paper hover:-translate-y-px motion-reduce:hover:translate-y-0',
+          'border border-signal bg-signal text-white shadow-[0_4px_20px_color-mix(in_srgb,var(--color-signal)_35%,transparent)] hover:border-[color-mix(in_srgb,var(--color-signal)_88%,var(--color-ink))] hover:bg-[color-mix(in_srgb,var(--color-signal)_88%,var(--color-ink))] hover:-translate-y-px motion-reduce:hover:translate-y-0',
+        /** Consumer attendee primary — restrained signal gradient (DEC-01). */
+        attendeePrimary:
+          'border border-transparent bg-gradient-to-br from-signal from-0% to-[color-mix(in_srgb,var(--color-signal)_88%,var(--color-ink))] to-100% text-paper shadow-[0_10px_28px_color-mix(in_srgb,var(--color-signal)_28%,transparent)] hover:opacity-95 hover:-translate-y-px motion-reduce:hover:translate-y-0',
         secondary:
           'border border-ink/20 bg-white text-ink hover:border-ink/40 hover:bg-paper',
         secondaryOnInk:
@@ -69,7 +72,7 @@ export const inputVariants = cva(
 );
 
 export const alertVariants = cva(
-  'grid gap-2 rounded-md border p-4 text-sm',
+  'grid gap-2 rounded-2xl border p-4 text-sm',
   {
     variants: {
       variant: {
@@ -84,7 +87,7 @@ export const alertVariants = cva(
   },
 );
 
-export const cardVariants = cva('rounded-md border bg-white text-ink', {
+export const cardVariants = cva('rounded-2xl border bg-white text-ink', {
   variants: {
     variant: {
       elevated: 'border-line shadow-sm',
