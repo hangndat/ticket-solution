@@ -1,0 +1,13 @@
+# VD11 — kiểm tra web tích hợp bằng Orca và OIDC local
+
+Source candidate: `767913e8e5a523d672ccf5801e7dde55c1dbb464`. Coordinator kiểm trên production build web `http://localhost:3340`, API local thật `3498`, Keycloak local `8080`, Portal `http://127.0.0.1:3334`. Chỉ dùng tài khoản synthetic; không mock BFF hoặc bypass đăng nhập.
+
+- Owner synthetic đăng nhập từ `/api/auth/login?return=/wallet`, hoàn thành mật khẩu và OTP thật, rồi tới Portal onboarding/shell không phải nhập lại credential. Trở lại trang chủ web, chỉ còn cookie CSRF trên localhost; không còn web OIDC access/refresh/id-token cookie, wallet/avatar không xuất hiện. Ảnh chuyển Portal bắt frame drawer animation nên không dùng làm bằng chứng chất lượng giao diện.
+- Attendee synthetic đăng nhập thật tới `/wallet`. Tại 1440px, điều hướng bằng header `/wallet → /redeem → /wallet` giữ cùng DOM header, cao 73px. Observer ghi hai layout shifts khoảng `0.0114959`, đều có recent input và nguồn footer, không ảnh hưởng header. Đây không phải kết luận whole-page CLS hoặc INP bằng 0.
+- Ảnh wallet 1440/390 và redeem 1440 đã mở kiểm tra. Mobile header thu gọn thành Menu. Vé hiển thị là fixture local; không mở QR hoặc thực hiện đổi vé.
+- Thử đổi user ở tab khác chưa hoàn tất: no-access synthetic trả về `/?notice=auth_failed`, `/api/bff/me` 401; tab wallet cũ lúc kiểm sau đó đã ẩn avatar/wallet. Quá trình logout trung gian đã làm mất điều kiện A→B liên tục, nên không dùng để đóng `VD11-W-F02` hoặc chứng minh cửa sổ pending của `VD11-W-F03`. Hai finding vẫn mở theo review độc lập.
+- Đã đóng cả hai tab attendee do coordinator tạo (`7f45a32a-5f35-4d27-a25d-a7cb8d18e2fb`, `fed74783-6989-41ce-ad07-e62897c3ac70`) và tab staff trước đó. Callback/logout URI và Owner membership phục vụ UAT local được giữ tạm cho lượt sửa/revalidation, cần cleanup khi kết thúc.
+
+Ảnh: [wallet 1440](assets/VD11-WEB-OIDC-2026-10-25/wallet-1440.png), [wallet 390](assets/VD11-WEB-OIDC-2026-10-25/wallet-390.png), [redeem 1440](assets/VD11-WEB-OIDC-2026-10-25/redeem-1440.png).
+
+Review độc lập authoritative: [VD11-INTEGRATED-REVIEW-2026-10-25.md](VD11-INTEGRATED-REVIEW-2026-10-25.md). Local web 301 tests, Portal 169 tests, route tests 3 và build/typecheck đã xanh trước review; candidate vẫn **FAIL acceptance/security/UI**, chưa deploy, chưa pilot ready. Fix batch tiếp theo giữ nguyên `W-F01..F03`, `P-F03..F04`, lượt **1/2**.
