@@ -33,7 +33,7 @@ export function logWorkerTickStepTimeout(
 
 export function logWorkerTickStepError(
   step: WorkerTickStep,
-  error: unknown,
+  _error: unknown,
   consecutiveErrors: number,
 ): void {
   console.error(
@@ -42,7 +42,7 @@ export function logWorkerTickStepError(
       component: 'worker',
       event: 'tick_step_failed',
       step,
-      message: safeMessage(error),
+      code: 'STEP_FAILED',
       consecutiveErrors,
     }),
   );

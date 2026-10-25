@@ -87,7 +87,7 @@ export async function createWorker(
   let db = options.database ?? null;
   let ownsDb = false;
   if (!db && env['DATABASE_URL']?.trim()) {
-    db = createDatabase(env['DATABASE_URL']);
+    db = createDatabase(env['DATABASE_URL'], 5, true);
     ownsDb = true;
   }
 
