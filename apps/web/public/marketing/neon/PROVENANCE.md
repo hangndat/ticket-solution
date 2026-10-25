@@ -3,8 +3,8 @@
 Assets in this folder are **AI-generated marketing illustrations** from the design handoff
 (`docs/design/Vemoki-Complete 2/design-system/marketing/assets/`).
 
-- **Local/dev preview only** until original artwork or licensed replacements are approved.
-- **Release gate:** confirm asset rights / commission original art before production marketing deploy.
+- **Production rights confirmed by the user on 2026-10-25** for the design handoff artwork in this directory. This records the user's authorization; no independent license audit was performed.
+- OpenAI imagegen originals listed below were created for this marketing page.
 - Do not present as customer screenshots, production dashboards, or third-party logos.
 
 ## Generated originals (2026-10-25)
