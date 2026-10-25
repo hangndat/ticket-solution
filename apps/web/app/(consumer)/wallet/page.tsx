@@ -66,7 +66,7 @@ export default async function WalletPage({ searchParams }: Props) {
           testId="wallet-need-login-state"
           action={
             <div className={attendeeAuthButtons}>
-              <Button asChild variant="brand">
+              <Button asChild variant="attendeePrimary">
                 <a href={walletLogin}>Đăng nhập</a>
               </Button>
               <Button asChild variant="secondary">
@@ -94,7 +94,7 @@ export default async function WalletPage({ searchParams }: Props) {
           detail={WALLET_COPY.unreachable.detail}
           testId="wallet-unreachable-state"
           action={
-            <Button asChild variant="brand">
+            <Button asChild variant="attendeePrimary">
               <Link href="/wallet">Thử lại</Link>
             </Button>
           }
@@ -118,7 +118,7 @@ export default async function WalletPage({ searchParams }: Props) {
           detail={WALLET_COPY.invalid.detail}
           testId="wallet-invalid-state"
           action={
-            <Button asChild variant="brand">
+            <Button asChild variant="attendeePrimary">
               <Link href="/wallet">Thử lại</Link>
             </Button>
           }
@@ -143,7 +143,7 @@ export default async function WalletPage({ searchParams }: Props) {
           <h1>{WALLET_COPY.title}</h1>
           <p className={attendeeWalletIntro}>{WALLET_COPY.intro}</p>
         </div>
-        <Button asChild variant="brand" className={attendeeWalletHeadingCta}>
+        <Button asChild variant="attendeePrimary" className={attendeeWalletHeadingCta}>
           <Link href="/redeem">Đổi mã lấy vé</Link>
         </Button>
       </header>
@@ -155,7 +155,7 @@ export default async function WalletPage({ searchParams }: Props) {
           detail={WALLET_COPY.empty.detail}
           testId="wallet-empty"
           action={
-            <Button asChild variant="brand">
+            <Button asChild variant="attendeePrimary">
               <Link href="/redeem">Đổi mã lấy vé</Link>
             </Button>
           }
@@ -174,7 +174,7 @@ export default async function WalletPage({ searchParams }: Props) {
               detail="Chọn «Tất cả» hoặc sự kiện khác để xem vé của bạn."
               testId="wallet-filter-empty"
               action={
-                <Button asChild variant="brand">
+                <Button asChild variant="attendeePrimary">
                   <Link href="/wallet">Xem tất cả vé</Link>
                 </Button>
               }

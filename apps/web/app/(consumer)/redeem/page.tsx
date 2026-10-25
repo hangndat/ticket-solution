@@ -87,7 +87,7 @@ export default async function RedeemPage({ searchParams }: Props) {
             <h2>{authNotice.title}</h2>
             <p>{authNotice.detail}</p>
             <p className={authButtonsRow}>
-              <Button asChild variant="primary">
+              <Button asChild variant="attendeePrimary">
                 <a href={authNotice.retryHref}>Thử lại</a>
               </Button>
               <Button asChild variant="secondary">
@@ -115,7 +115,7 @@ export default async function RedeemPage({ searchParams }: Props) {
               ) : null}
             </p>
             <p className={authButtonsRow}>
-              <Button asChild variant="primary">
+              <Button asChild variant="attendeePrimary">
                 <a href={redeemLogin}>Đăng nhập</a>
               </Button>
               <Button asChild variant="secondary">

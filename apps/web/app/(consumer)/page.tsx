@@ -94,7 +94,7 @@ export default async function Home({ searchParams }: Props) {
           <h2>{authNotice.title}</h2>
           <p>{authNotice.detail}</p>
           <p className={attendeeAuthButtons}>
-            <Button asChild variant="brand">
+            <Button asChild variant="attendeePrimary">
               <a href={authNotice.retryHref}>Thử lại</a>
             </Button>
             <Button asChild variant="secondary">
@@ -114,7 +114,7 @@ export default async function Home({ searchParams }: Props) {
           <p>{denied.detail}</p>
           <p className={attendeeAuthButtons}>
             {denied.portalAdminHref ? (
-              <Button asChild variant="brand">
+              <Button asChild variant="attendeePrimary">
                 <a href={denied.portalAdminHref} data-testid="staff-denied-portal-cta">
                   Mở portal quản trị
                 </a>
@@ -148,7 +148,7 @@ export default async function Home({ searchParams }: Props) {
           detail={PUBLIC_EVENT_COPY.homeUnreachable.detail}
           testId="home-events-unreachable"
           action={
-            <Button asChild variant="brand">
+            <Button asChild variant="attendeePrimary">
               <Link href="/">Thử lại</Link>
             </Button>
           }
@@ -162,7 +162,7 @@ export default async function Home({ searchParams }: Props) {
           detail={PUBLIC_EVENT_COPY.homeInvalid.detail}
           testId="home-events-invalid"
           action={
-            <Button asChild variant="brand">
+            <Button asChild variant="attendeePrimary">
               <Link href="/">Thử lại</Link>
             </Button>
           }

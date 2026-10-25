@@ -1,0 +1,85 @@
+{
+  "base": "http://127.0.0.1:3000",
+  "shots": [
+    {
+      "surface": "home",
+      "viewport": "1440",
+      "file": "home-1440.png"
+    },
+    {
+      "surface": "home",
+      "viewport": "390",
+      "file": "home-390.png"
+    },
+    {
+      "surface": "redeem",
+      "viewport": "1440",
+      "file": "redeem-1440.png"
+    },
+    {
+      "surface": "redeem",
+      "viewport": "390",
+      "file": "redeem-390.png"
+    },
+    {
+      "surface": "wallet",
+      "viewport": "1440",
+      "file": "wallet-1440.png"
+    },
+    {
+      "surface": "wallet",
+      "viewport": "390",
+      "file": "wallet-390.png"
+    },
+    {
+      "surface": "account",
+      "viewport": "1440",
+      "file": "account-1440.png"
+    },
+    {
+      "surface": "account",
+      "viewport": "390",
+      "file": "account-390.png"
+    },
+    {
+      "surface": "claim",
+      "viewport": "1440",
+      "file": "claim-1440.png"
+    },
+    {
+      "surface": "claim",
+      "viewport": "390",
+      "file": "claim-390.png"
+    },
+    {
+      "surface": "invite",
+      "viewport": "1440",
+      "file": "invite-1440.png"
+    },
+    {
+      "surface": "invite",
+      "viewport": "390",
+      "file": "invite-390.png"
+    },
+    {
+      "surface": "marketing-regression",
+      "viewport": "1440",
+      "file": "marketing-regression-1440.png"
+    },
+    {
+      "surface": "marketing-regression",
+      "viewport": "390",
+      "file": "marketing-regression-390.png"
+    },
+    {
+      "surface": "not-found",
+      "viewport": "1440",
+      "file": "not-found-1440.png"
+    },
+    {
+      "surface": "not-found",
+      "viewport": "390",
+      "file": "not-found-390.png"
+    }
+  ]
+}

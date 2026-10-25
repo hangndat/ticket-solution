@@ -25,7 +25,7 @@ export default function NotFound() {
         detail="Kiểm tra lại đường dẫn, hoặc quay về trang chủ để xem sự kiện đã xuất bản."
         testId="route-not-found"
         action={
-          <Button asChild variant="brand">
+          <Button asChild variant="attendeePrimary">
             <Link href="/">Về trang chủ</Link>
           </Button>
         }

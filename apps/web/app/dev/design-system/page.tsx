@@ -37,7 +37,7 @@ export default function DevDesignSystemPage() {
           Design system — slice 1
         </h1>
         <p className="text-sm text-ink/75">
-          Live Pulse v2 primitives (`@ticket/ui`). Prod routes still use legacy CSS until migrated.
+          Live Pulse v2 primitives (`@ticket/ui`). Consumer routes use Tailwind surfaces; marketing neon stays scoped.
         </p>
       </header>
 
@@ -61,6 +61,7 @@ export default function DevDesignSystemPage() {
         <h2 className="font-display text-lg font-semibold">Button</h2>
         <div className="flex flex-wrap gap-3">
           <Button variant="primary">Primary</Button>
+          <Button variant="attendeePrimary">Attendee primary</Button>
           <Button variant="secondary">Secondary</Button>
           <Button variant="ghost">Ghost</Button>
           <Button variant="destructive">Destructive</Button>

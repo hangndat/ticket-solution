@@ -1174,7 +1174,7 @@ export function RedeemForm({
           {singleCodeFlow && globalPhase === 'enter-code' ? (
             <Button
               type="submit"
-              variant="primary"
+              variant="attendeePrimary"
               disabled={busy}
               loading={busy}
               loadingLabel="Đang tra mã…"
@@ -1185,7 +1185,7 @@ export function RedeemForm({
           ) : (
             <Button
               type="submit"
-              variant="primary"
+              variant="attendeePrimary"
               disabled={redeemSubmitDisabled}
               loading={busy}
               loadingLabel="Đang xử lý…"
@@ -1224,7 +1224,7 @@ export function RedeemForm({
               >
                 Xem vé của tôi
               </Button>
-              <Button asChild variant="primary">
+              <Button asChild variant="attendeePrimary">
                 <a href={REDEEM_LOGIN_HREF}>Đăng nhập</a>
               </Button>
             </>
@@ -1266,7 +1266,7 @@ export function RedeemForm({
           ) : null}
           {ux.kind === 'auth' ? (
             <p className={authButtonsRow}>
-              <Button asChild variant="brand">
+              <Button asChild variant="attendeePrimary">
                 <a href={REDEEM_LOGIN_HREF}>Đăng nhập</a>
               </Button>
               {ux.title === 'Cần xác minh email' ? (
@@ -1278,10 +1278,10 @@ export function RedeemForm({
           ) : null}
           {productErrorOutcome ? (
             <div className={redeemOutcomeActions}>
-              <Button type="button" variant="brand" onClick={resetRedeemAttempt} disabled={busy}>
+              <Button type="button" variant="attendeePrimary" onClick={resetRedeemAttempt} disabled={busy}>
                 Thử mã khác
               </Button>
-              <Button asChild variant="primary">
+              <Button asChild variant="secondary">
                 <Link href="/wallet">Vé của tôi</Link>
               </Button>
             </div>
@@ -1295,7 +1295,7 @@ export function RedeemForm({
             <p>
               <Button
                 type="button"
-                variant="brand"
+                variant="attendeePrimary"
                 onClick={() => {
                   if (ux.kind === 'stale' || ux.kind === 'timeout') {
                     window.location.reload();
@@ -1313,7 +1313,7 @@ export function RedeemForm({
           ) : null}
           {ux.kind === 'success' ? (
             <p className={authButtonsRow}>
-              <Button asChild variant="brand">
+              <Button asChild variant="attendeePrimary">
                 <Link href="/wallet">Xem vé của tôi</Link>
               </Button>
             </p>

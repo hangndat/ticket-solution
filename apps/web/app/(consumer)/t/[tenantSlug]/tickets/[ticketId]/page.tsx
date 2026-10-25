@@ -91,7 +91,7 @@ export default async function OwnerTicketPage({ params, searchParams }: Props) {
           detail={OWNER_TICKET_COPY.invalid.detail}
           testId="owner-ticket-invalid-state"
           action={
-            <Button asChild variant="brand">
+            <Button asChild variant="attendeePrimary">
               <Link href="/">Về trang chủ</Link>
             </Button>
           }
@@ -116,7 +116,7 @@ export default async function OwnerTicketPage({ params, searchParams }: Props) {
           testId="owner-ticket-need-login-state"
           action={
             <div className={attendeeAuthButtons}>
-              <Button asChild variant="brand">
+              <Button asChild variant="attendeePrimary">
                 <a href={ticketLogin}>Đăng nhập</a>
               </Button>
               <Button asChild variant="secondary">
@@ -138,7 +138,7 @@ export default async function OwnerTicketPage({ params, searchParams }: Props) {
           detail={OWNER_TICKET_COPY.unreachable.detail}
           testId="owner-ticket-unreachable-state"
           action={
-            <Button asChild variant="brand">
+            <Button asChild variant="attendeePrimary">
               <Link href={path}>Thử lại</Link>
             </Button>
           }
@@ -156,7 +156,7 @@ export default async function OwnerTicketPage({ params, searchParams }: Props) {
           detail={OWNER_TICKET_COPY.tenantUnresolved.detail}
           testId="owner-ticket-tenant-unresolved-state"
           action={
-            <Button asChild variant="brand">
+            <Button asChild variant="attendeePrimary">
               <Link href="/redeem">Đổi mã lấy vé</Link>
             </Button>
           }
@@ -174,7 +174,7 @@ export default async function OwnerTicketPage({ params, searchParams }: Props) {
           detail={OWNER_TICKET_COPY.forbidden.detail}
           testId="owner-ticket-forbidden-state"
           action={
-            <Button asChild variant="brand">
+            <Button asChild variant="attendeePrimary">
               <Link href="/wallet">Vé của tôi</Link>
             </Button>
           }
@@ -192,7 +192,7 @@ export default async function OwnerTicketPage({ params, searchParams }: Props) {
           detail={OWNER_TICKET_COPY.missing.detail}
           testId="owner-ticket-missing-state"
           action={
-            <Button asChild variant="brand">
+            <Button asChild variant="attendeePrimary">
               <Link href="/">Về trang chủ</Link>
             </Button>
           }
