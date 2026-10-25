@@ -57,3 +57,34 @@ intent in Postgres without claiming BullMQ is deployed. Redis is not the source
 of truth for notification jobs. Root/coordinator should record the ADR delta
 against TECHNICAL-DESIGN ADR-04 when integrating.
 
+### TicketIssued delivery recovery (F02)
+
+The outbox payload now stores `deliverySnapshot` version 1 with the push mode and
+device count. The first fenced processing transaction creates one push notification
+per active device and writes this marker atomically. Existing leased or pending rows
+without the marker are reconciled by the new worker on reclaim. Email and each
+device keep separate attempts. `COMPLETE` requires email `ACCEPTED` and every
+snapshotted push `ACCEPTED`; an exhausted or revoked device leads to `DEAD` after
+other pending devices have been processed. `ACCEPTED` means provider acceptance,
+not end-user delivery. A provider accepting before DB ack can still cause a
+duplicate on reclaim; this remains at-least-once.
+
+Before switching workers, stop every old worker, wait for its leases to expire,
+then start the new binary. The schema is unchanged, but an old worker can still
+complete a row on email acceptance alone, so old and new worker binaries must not
+claim the same queue. API binaries may continue writing the existing payload.
+Rollback the worker only after draining/reconciling rows with pending push under
+the new binary; otherwise the old worker can repeat the F02 loss.
+
+For already `COMPLETE` rows, run the tenant-scoped repair script with a runtime
+database URL after the old worker is stopped. It defaults to a dry run and reports
+candidate count; `--apply` requeues up to 100 rows per invocation and writes an
+audit record per row. Run repeatedly until the dry run reports zero, then let the
+new worker reclaim. Legacy rows without a marker are deliberately included;
+review the dry-run count before applying because their original device set was not
+recorded. The new worker uses the currently active owner devices for those rows.
+
+```sh
+DATABASE_URL=... node packages/backend/scripts/repair-ticket-issued-outbox.cjs --tenant <uuid>
+DATABASE_URL=... node packages/backend/scripts/repair-ticket-issued-outbox.cjs --tenant <uuid> --apply
+```
