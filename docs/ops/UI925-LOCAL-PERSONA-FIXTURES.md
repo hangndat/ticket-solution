@@ -51,8 +51,8 @@ node scripts/dev-local-persona-verify.mjs
 
 `dev-local-persona-verify.mjs` kiểm:
 
-- Positive: `me/tenants`, `me/events` theo role (permissions kỳ vọng).
-- Negative: CS/Scanner `GET .../members` → 403; CS `POST .../config-versions` → 403; Manager truy cập tenant studio → 403/404; report-only không có `event.config`.
+- Positive: `me/tenants`, `me/events` theo role (permissions kỳ vọng); Supervisor có `gate.confirm`, `gate.undo`, `ticket.revoke` trên event, không có `event.config`.
+- Negative: CS/Supervisor/Scanner `GET .../members` → 403; CS `POST .../config-versions` → 403; Manager truy cập tenant studio → 403/404; report-only không có `event.config`.
 
 ## Tái sử dụng script
 
