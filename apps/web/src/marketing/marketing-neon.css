@@ -48,6 +48,7 @@ html[data-vemoki-marketing='neon-v1'] .mkt-neon-h2 {
 
 html[data-vemoki-marketing='neon-v1'] .mkt-neon-hero {
   position: relative;
+  z-index: 2;
   min-height: 535px;
 }
 
@@ -162,6 +163,7 @@ html[data-vemoki-marketing='neon-v1'] .mkt-neon-hero-visual {
   align-self: stretch;
   margin-right: -50px;
   min-width: 0;
+  overflow: visible;
 }
 
 html[data-vemoki-marketing='neon-v1'] .mkt-neon-hero-visual::before {
@@ -212,12 +214,74 @@ html[data-vemoki-marketing='neon-v1'] .mkt-neon-hero-figure {
 }
 
 html[data-vemoki-marketing='neon-v1'] .mkt-neon-block {
+  position: relative;
+  z-index: 2;
   padding-block: 78px;
 }
 
 html[data-vemoki-marketing='neon-v1'] .mkt-neon-events {
   border-top: 1px solid rgba(145, 128, 242, 0.12);
   background: linear-gradient(180deg, #080b1c, #0a0b20);
+}
+
+html[data-vemoki-marketing='neon-v1'] .mkt-neon-interior-ribbons {
+  contain: layout style;
+}
+
+html[data-vemoki-marketing='neon-v1'] .mkt-neon-interior-ribbon {
+  position: absolute;
+  left: -10%;
+  width: 120%;
+  height: clamp(14px, 2.2vw, 26px);
+  border-radius: 999px;
+  opacity: 0.78;
+  mix-blend-mode: screen;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(251, 146, 60, 0.95) 10%,
+    rgba(244, 114, 182, 0.98) 26%,
+    rgba(192, 72, 255, 0.95) 48%,
+    rgba(96, 122, 255, 0.92) 68%,
+    rgba(59, 130, 246, 0.88) 82%,
+    transparent 100%
+  );
+  box-shadow:
+    0 0 32px rgba(168, 85, 247, 0.42),
+    0 0 14px rgba(244, 114, 182, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  filter: saturate(1.12);
+  transform-origin: center center;
+}
+
+html[data-vemoki-marketing='neon-v1'] .mkt-neon-interior-ribbon::before {
+  content: '';
+  position: absolute;
+  inset: -35% -4%;
+  border-radius: inherit;
+  background: inherit;
+  filter: blur(10px);
+  opacity: 0.55;
+  z-index: -1;
+}
+
+html[data-vemoki-marketing='neon-v1'] .mkt-neon-interior-ribbon-a {
+  top: clamp(500px, 38vh, 620px);
+  transform: rotate(-5.5deg);
+}
+
+html[data-vemoki-marketing='neon-v1'] .mkt-neon-interior-ribbon-b {
+  top: clamp(1080px, 72vh, 1280px);
+  transform: rotate(3.5deg);
+  height: clamp(16px, 2.5vw, 30px);
+  opacity: 0.82;
+}
+
+html[data-vemoki-marketing='neon-v1'] .mkt-neon-interior-ribbon-c {
+  top: clamp(1680px, 112vh, 1980px);
+  transform: rotate(-2.5deg);
+  width: 112%;
+  left: -6%;
 }
 
 html[data-vemoki-marketing='neon-v1'] .mkt-neon-section-heading {
@@ -437,6 +501,8 @@ html[data-vemoki-marketing='neon-v1'] .mkt-neon-wordmark-text {
 }
 
 html[data-vemoki-marketing='neon-v1'] .mkt-neon-final-cta {
+  position: relative;
+  z-index: 2;
   margin-block: 40px 0;
   padding-bottom: 56px;
 }
@@ -632,6 +698,22 @@ html[data-vemoki-marketing='neon-v1'] [data-testid='mkt-footer'] {
   }
   html[data-vemoki-marketing='neon-v1'] .mkt-neon-block {
     padding-block: 48px;
+  }
+  html[data-vemoki-marketing='neon-v1'] .mkt-neon-interior-ribbon {
+    height: clamp(10px, 2.8vw, 16px);
+    opacity: 0.62;
+  }
+  html[data-vemoki-marketing='neon-v1'] .mkt-neon-interior-ribbon-a {
+    top: 34%;
+    transform: rotate(-4deg);
+  }
+  html[data-vemoki-marketing='neon-v1'] .mkt-neon-interior-ribbon-b {
+    top: 58%;
+    transform: rotate(2.5deg);
+  }
+  html[data-vemoki-marketing='neon-v1'] .mkt-neon-interior-ribbon-c {
+    top: 80%;
+    transform: rotate(-2deg);
   }
   html[data-vemoki-marketing='neon-v1'] .mkt-neon-event-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
