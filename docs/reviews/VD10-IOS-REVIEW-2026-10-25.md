@@ -96,3 +96,62 @@ Không phát hiện High chặn merge cho batch DS-IOS. Staff deny dùng `Notice
 - Reviewer không chạy lại full axe capture (Metro packager down trên relaunch); tin capture implementer @ SHA + static review.
 - Không EAS / thiết bị thật.
 - Web/portal VD10 review song song (Mira) — ngoài scope file này.
+
+---
+
+## Revalidation — solid primary violet @ `4f3e4109`
+
+**Ngày:** 2026-10-25 · **Reviewer:** James (`reviewer-uiux`, dispatch `task_0dd9d352ed3b`)  
+**Implementer (khác reviewer):** Zico  
+**Exact SHA:** `4f3e41097042f1505a2bc8ee46960a8ff6999da4`  
+**Diff:** `a0d94d8c..4f3e4109` · **Worktree:** `vd09-marketing-neon` · **Scope:** `apps/mobile` (read-only)  
+**Quyết định sản phẩm:** primary attendee **solid** `#7C4DED`; đỏ `#B3213A` chỉ semantic (deny/destructive); admit gate `#1B7F4A` giữ semantic.
+
+### Tóm tắt điều hành
+
+Commit `4f3e4109` bỏ `LinearGradient` / `attendee-primary.ts`, map `colors.accent` và `colors.signal` → `brand.primary` (`#7C4DED`), primary `Button` solid + chữ `onAccent` trắng; `colors.deny` vẫn `#B3213A`. Typecheck và full unit test mobile **pass** trên SHA này. Icon tab «Sự kiện» **xanh đậm** trong `docs/reviews/assets/vd10-ios/ios-events-feed.png` **không** phải token `admit` cũ: nguồn là `NativeTabs tintColor={theme.signal}` sau `EventsScreen` gọi `applyBranding` với `primaryColor` catalog đầu tiên (demo MFest `#245B47`), trong khi CTA dùng `colors.accent` tĩnh `#7C4DED` — lệch quyết định primary violet thống nhất trên attendee chrome.
+
+**Verdict @ `4f3e4109`:** **PASS with known gap** (migration violet đúng trên CTA/tokens tĩnh; tab tint tenant vs platform primary — `VD10-IOS-R-03`).
+
+### Đối chiếu thay đổi mobile
+
+| Hạng mục | @ `4f3e4109` | Ghi chú |
+| --- | --- | --- |
+| Primary CTA | **OK** | `button.tsx`: `backgroundColor: colors.accent` (`#7C4DED`), không gradient |
+| `LinearGradient` | **Removed** | Không import trong `apps/mobile/src`; dep `expo-linear-gradient` vẫn trong `package.json` (orphan, Low) |
+| `colors.deny` / destructive | **OK** | `#B3213A`; `account-grouped-section` destructive label → `colors.deny` (không `brand.signal` đỏ marketing) |
+| Gate admit / deny | **OK** | `colors.admit` `#1B7F4A`, `colors.deny` `#B3213A`; toast/status/history/staff-access deny không đổi semantic |
+| Contrast trắng / violet | **OK** | `#FFFFFF` on `#7C4DED` ≈ **5.07:1** (AA body); pressed `opacity: 0.85`, disabled `0.45` — giữ pattern |
+| Tab active tint | **Gap** | `(tabs)/_layout.tsx` → `theme.signal`; runtime tenant override, không `brand.primary` |
+
+### Tab tint — nguồn màu xanh coordinator
+
+1. `apps/mobile/src/app/(tabs)/_layout.tsx`: `<NativeTabs tintColor={theme.signal}>`.
+2. `defaultThemeTokens()` @ SHA này: `signal: vemokiBrand.primary` (`#7C4DED`) — guest chưa branding → tab violet.
+3. `EventsScreen` (`events.tsx` L201–214): khi catalog `ready`, `applyBranding({ primaryColor: first.brand.primaryColor, … })` → `resolveThemeTokens` gán `signal: branding.primaryColor`.
+4. Demo / catalog MFest: `primaryColor: '#245B47'` (`demo-events.ts` / API) → tab active **xanh đậm**, không liên quan pill «Đã xuất bản» (`colors.admit` trên card).
+5. CTA card «Xem sự kiện» vẫn `#7C4DED` vì `colors.accent` đọc `brand.primary` tĩnh, **không** theo `ThemeProvider`.
+
+Các tab khác (Đổi mã, Tài khoản) dùng cùng `tintColor` — không token stale riêng; inactive theo chrome hệ thống.
+
+### Findings bổ sung (`VD10-IOS-R-xx`)
+
+| ID | Sev | Loại | Vấn đề | Evidence | Đóng khi |
+| --- | --- | --- | --- | --- | --- |
+| **VD10-IOS-R-03** | **Med** | brand / chrome | Tab attendee tint theo tenant `primaryColor` (`theme.signal`) trong khi product primary violet cố định trên CTA (`colors.accent`) | `ios-events-feed.png` + `(tabs)/_layout.tsx`, `events.tsx` applyBranding, `resolve.ts` | Tab tint dùng `brand.primary` / token product hoặc policy tenant chỉ logo/wordmark, không tab |
+| **VD10-IOS-R-04** | **Low** | deps | `expo-linear-gradient` còn dependency sau khi bỏ gradient | `package.json` | Gỡ dep khi coordinator cho phép slice cleanup |
+
+`VD10-IOS-R-01`, `R-02` từ review @ `a0d94d8c` **vẫn mở** (evidence journey / EventBanner).
+
+### Cập nhật audit `DS-IOS-04`
+
+@ `4f3e4109`: **Closed** — primary attendee **solid** `#7C4DED` (thay gradient DEC-01); marketing `brand.signal` (`#E11D48`) không còn drive product CTA.
+
+### Checks @ `4f3e4109`
+
+| Check | Kết quả |
+| --- | --- |
+| SHA | `4f3e41097042f1505a2bc8ee46960a8ff6999da4` |
+| `pnpm --filter @ticket/mobile typecheck` | Pass |
+| `pnpm --filter @ticket/mobile test` | Pass (0 fail) |
+| Verdict | **PASS with known gap** (`R-03` Med tab/tenant vs violet; `R-01` evidence; `R-04` Low dep) |
