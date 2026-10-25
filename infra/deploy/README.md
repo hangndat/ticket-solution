@@ -6,23 +6,23 @@ Env mẫu (không secrets): [`./.env.example`](./.env.example) → copy vào `/o
 
 ## Image
 
-`Dockerfile.runtime` chỉ có Node 24, OpenSSL và pnpm. `node_modules`, `dist` và `.next` nằm trên đĩa host, mount vào `/app`.
+`Dockerfile.runtime` chỉ có Node 24, OpenSSL và pnpm. `node_modules`, `dist` và `.next` thuộc release directory bất biến; mỗi service mount một đường dẫn release riêng, read-only. Quy trình mới: [`docs/ops/IMMUTABLE-RELEASE.md`](../../docs/ops/IMMUTABLE-RELEASE.md). Không build/install vào `/opt/vemoki/src` đang chạy.
 
-Store pnpm phải cùng một mount với source. Hai bind mount khác nhau cùng ổ vẫn không hard link được, pnpm sẽ copy từng file. Trên VPS store là `/opt/vemoki/src/.pnpm-store`.
+Store pnpm tạm nằm trong staging release trong lúc build và được xóa trước publish. Build chạy trên Linux/Node 24 đúng architecture của VPS để Prisma và sharp có binary tương thích.
 
 `Dockerfile` (build một image tự chứa) tách layer dependency và dùng cache BuildKit. Cách đó không phải cách đang chạy trên VPS.
 
 ## Từng service
 
-Deploy một service khi chỉ service đó đổi. `restart` đủ sau khi build lên bind mount. `up -d --no-deps` khi không muốn kéo dependency. Chi tiết lệnh và verify: `.cursor/skills/deploy-prod/SKILL.md`.
+Deploy một service khi chỉ service đó đổi: verify release, đổi một pin, rồi `up -d --no-deps --force-recreate` đúng service. `restart` không nhận bind mount mới. Các lệnh cũ trong `.cursor/skills/deploy-prod/SKILL.md` chỉ mô tả layout trước #899; dùng runbook immutable release cho app services.
 
 | Service | Việc | Khởi động lại |
 | --- | --- | --- |
-| web | build `@ticket/web` | `restart web` |
-| portal | build `@ticket/portal` | `restart portal` |
-| api | build backend rồi `@ticket/api` | `restart api` |
-| worker | build backend rồi `@ticket/worker` | `restart worker` |
-| migrate | schema Prisma | `up -d migrate`, đợi exit 0 |
+| web | pin verified release của `@ticket/web` | `up -d --no-deps --force-recreate web` |
+| portal | pin verified release của `@ticket/portal` | `up -d --no-deps --force-recreate portal` |
+| api | pin verified release của backend + `@ticket/api` | `up -d --no-deps --force-recreate api` |
+| worker | pin verified release của backend + `@ticket/worker` | `up -d --no-deps --force-recreate worker` |
+| migrate | pin verified migration package | `up -d --no-deps --force-recreate migrate`, đợi exit 0 |
 | keycloak | file realm (`realm-ticket.prod.json`, không `smtpServer`) + `keycloak-prod-smtp-apply.sh` sau recreate | `up -d --no-deps --force-recreate keycloak` |
 | nginx | `vemoki.conf` | `nginx -t` rồi reload, không compose stack nginx |
 | postgres | không deploy app | không tạo lại volume |
@@ -55,7 +55,7 @@ Bật trên VPS (operator):
 1. Tạo thư mục host: `mkdir -p /opt/vemoki/secrets/apns && chmod 700 /opt/vemoki/secrets/apns`
 2. Đặt AuthKey Apple (`.p8`) thành `/opt/vemoki/secrets/apns/AuthKey.p8` (mode `400`). **Không** commit / rsync vào git.
 3. Trong `/opt/vemoki/.env`: `APNS_ENABLED=true`, `APNS_KEY_ID=<Key ID>`, giữ `APNS_TEAM_ID=BLUA62D52G`, `APNS_BUNDLE_ID=com.hangndat.ticket`, `APNS_KEY_PATH=/run/secrets/apns/AuthKey.p8`, `APNS_PRODUCTION=true` (TF/prod gateway).
-4. Uncomment volume mount APNs trong `compose.yaml` service `worker`, rồi `up -d --no-deps --force-recreate worker`.
+4. APNs volume nằm ngoài release; recreate worker bằng pin đã verify.
 5. Verify: worker start không crash; notification `providerStatus=ACCEPTED` sau gửi thành công — **không** ghi `DELIVERED` (ADR-12). Device delivery thật thuộc UAT thiết bị.
 
 `APNS_ENABLED=true` mà thiếu key/path → worker **fail-closed** khi khởi tạo adapter (`APNS_MISCONFIGURED`).
@@ -76,13 +76,7 @@ Worker cần `PUBLIC_WEB_BASE_URL=https://app.vemoki.com` (O13 product origin; k
 
 Từ `infra/deploy`, với env file ngoài git:
 
-```bash
-docker build -f Dockerfile.runtime -t vemoki-runtime:local .
-docker run --rm --env-file /opt/vemoki/.env -v /opt/vemoki/src:/app -w /app \
-  vemoki-runtime:local \
-  sh -c 'pnpm config set store-dir /app/.pnpm-store && pnpm config set package-import-method hardlink && pnpm install --frozen-lockfile --filter @ticket/api... --filter @ticket/web... --filter @ticket/portal... --filter @ticket/worker... && pnpm --filter @ticket/api exec tsc -p ../../packages/contracts/tsconfig.json && pnpm --filter @ticket/backend build && pnpm --filter @ticket/api build && pnpm --filter @ticket/web build && pnpm --filter @ticket/portal build && pnpm --filter @ticket/worker build'
-docker compose --env-file /opt/vemoki/.env up -d
-```
+Xem lệnh build, pin, verify và rollback trong [`docs/ops/IMMUTABLE-RELEASE.md`](../../docs/ops/IMMUTABLE-RELEASE.md). Không chạy lệnh install/build cũ trên live mount.
 
 `apps/mobile` không được cài vào image. File realm Keycloak phải đọc được bởi user trong container. Mode `600` của user host khác sẽ làm import thất bại và container thoát ngay.
 
