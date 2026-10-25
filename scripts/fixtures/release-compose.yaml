@@ -1,0 +1,93 @@
+name: ar891-release-rehearsal
+networks:
+  rehearsal:
+    external: true
+    name: ${RELEASE_REHEARSAL_NETWORK:?isolated network required}
+services:
+  api_a:
+    image: vemoki-runtime:local
+    working_dir: /app
+    command: ['node', 'apps/api/dist/main.js']
+    volumes:
+      - ${RELEASE_A_DIR:?verified artifact required}:/app:ro
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: '3001'
+      DATABASE_URL: ${RELEASE_RUNTIME_URL:?isolated PG required}
+      OIDC_PROVIDER: keycloak
+      OIDC_ISSUER: https://auth.example.test/realms/ticket
+      OIDC_AUDIENCE: ticket-api
+      OIDC_JWKS_URL: https://auth.example.test/realms/ticket/protocol/openid-connect/certs
+      CODE_HMAC_PEPPER: release-fixture-pepper
+      CODE_HMAC_VERSION: '1'
+      TICKET_CREDENTIAL_KEY: release-fixture-credential-key
+    networks: [rehearsal]
+  api_b:
+    image: vemoki-runtime:local
+    working_dir: /app
+    command: ['node', 'apps/api/dist/main.js']
+    volumes:
+      - ${RELEASE_B_DIR:?verified artifact required}:/app:ro
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: '3001'
+      DATABASE_URL: ${RELEASE_RUNTIME_URL:?isolated PG required}
+      OIDC_PROVIDER: keycloak
+      OIDC_ISSUER: https://auth.example.test/realms/ticket
+      OIDC_AUDIENCE: ticket-api
+      OIDC_JWKS_URL: https://auth.example.test/realms/ticket/protocol/openid-connect/certs
+      CODE_HMAC_PEPPER: release-fixture-pepper
+      CODE_HMAC_VERSION: '1'
+      TICKET_CREDENTIAL_KEY: release-fixture-credential-key
+    networks: [rehearsal]
+  worker:
+    image: vemoki-runtime:local
+    working_dir: /app
+    command: ['node', 'apps/worker/dist/main.js']
+    volumes:
+      - ${RELEASE_WORKER_DIR:?verified artifact required}:/app:ro
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${RELEASE_RUNTIME_URL:?isolated PG required}
+      SMTP_URL: smtp://mailpit:1025
+      SMTP_FROM: noreply@example.test
+      OUTBOX_POLL_MS: '500'
+      TICKET_CREDENTIAL_KEY: release-fixture-credential-key
+      PUBLIC_WEB_BASE_URL: https://tickets.example.test
+      APNS_ENABLED: 'false'
+    networks: [rehearsal]
+  web:
+    profiles: [cache]
+    image: vemoki-runtime:local
+    working_dir: /app
+    command: ['pnpm', '--filter', '@ticket/web', 'exec', 'next', 'start', '--hostname', '0.0.0.0', '--port', '3000']
+    volumes:
+      - ${RELEASE_WEB_DIR:?verified artifact required}:/app:ro
+      - ${RELEASE_STATE_ROOT:?isolated state required}/web-data:/app/apps/web/.data
+      - ${RELEASE_STATE_ROOT:?isolated state required}/web-next-cache:/app/apps/web/.next/cache
+    environment:
+      NODE_ENV: production
+      OIDC_ISSUER: https://auth.example.test/realms/ticket
+      OIDC_CLIENT_ID: ticket-web
+      OIDC_CLIENT_SECRET: synthetic-client-only
+      API_BASE_URL: http://api_b:3001
+      WEB_PUBLIC_ORIGIN: https://tickets.example.test
+    networks: [rehearsal]
+  portal:
+    profiles: [cache]
+    image: vemoki-runtime:local
+    working_dir: /app
+    command: ['pnpm', '--filter', '@ticket/portal', 'exec', 'next', 'start', '--hostname', '0.0.0.0', '--port', '3013']
+    volumes:
+      - ${RELEASE_PORTAL_DIR:?verified artifact required}:/app:ro
+      - ${RELEASE_STATE_ROOT:?isolated state required}/portal-next-cache:/app/apps/portal/.next/cache
+    environment:
+      NODE_ENV: production
+      OIDC_ISSUER: https://auth.example.test/realms/ticket
+      OIDC_CLIENT_ID: ticket-admin-web
+      OIDC_CLIENT_SECRET: synthetic-client-only
+      API_BASE_URL: http://api_b:3001
+      WEB_PUBLIC_ORIGIN: https://portal.example.test
+    networks: [rehearsal]
