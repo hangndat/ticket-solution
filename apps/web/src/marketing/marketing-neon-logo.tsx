@@ -41,16 +41,16 @@ export function MarketingNeonLogo() {
           </linearGradient>
         </defs>
         <path
-          d="M12 5.5C9 21 10 33 21.5 39.5"
+          d="M7 5.5C9 8 14 30 22 40"
           stroke="url(#mkt-neon-logo-ribbon-left)"
-          strokeWidth="8.25"
+          strokeWidth="8"
           strokeLinecap="round"
           strokeLinejoin="round"
         />
         <path
-          d="M32 5.5C35 21 34 33 22.5 39.5"
+          d="M37 5.5C35 8 30 30 22 40"
           stroke="url(#mkt-neon-logo-ribbon-right)"
-          strokeWidth="8.25"
+          strokeWidth="8"
           strokeLinecap="round"
           strokeLinejoin="round"
         />
