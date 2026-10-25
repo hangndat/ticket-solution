@@ -14,6 +14,8 @@ import {
 import { requireTenantPermission } from './membership';
 import { expirePendingRequest } from './pending-expiry';
 import type { FormAnswerValue } from '@ticket/contracts';
+import { lockIssuanceQuotas } from './quota-lock';
+import { isRetryableTransactionConflict } from './transaction-conflict';
 
 export const APPROVE_COMMAND = 'redemption.approve' as const;
 export const DENY_COMMAND = 'redemption.deny' as const;
@@ -101,14 +103,6 @@ type OperationRow = {
   response_json: Prisma.JsonValue | null;
 };
 
-type QuotaRow = {
-  id: string;
-  scope: string;
-  scope_id: string | null;
-  capacity: number | null;
-  allocated: number;
-};
-
 function decisionHash(input: DecideRedemptionInput): string {
   const payload = JSON.stringify({
     tenantId: input.tenantId,
@@ -122,13 +116,6 @@ function decisionHash(input: DecideRedemptionInput): string {
 
 function commandFor(decision: ApprovalDecision): string {
   return decision === 'approve' ? APPROVE_COMMAND : DENY_COMMAND;
-}
-
-function scopeOrder(scope: string): number {
-  if (scope === 'EVENT') return 0;
-  if (scope === 'TICKET_TYPE') return 1;
-  if (scope === 'ISSUANCE_SOURCE') return 2;
-  return 99;
 }
 
 function sealCredentialToken(
@@ -333,6 +320,13 @@ export async function decideRedemption(
     await tx.$executeRaw`RELEASE SAVEPOINT approval_business`;
     return { ok: true, result: { ...result, replayed: false } };
   } catch (error) {
+    if (isRetryableTransactionConflict(error)) {
+      throw new ApprovalError(
+        APPROVAL_ERROR_CODES.RETRYABLE_CONFLICT,
+        'Approval transaction conflicted; retry with the same key',
+        true,
+      );
+    }
     await tx.$executeRaw`ROLLBACK TO SAVEPOINT approval_business`;
     if (error instanceof ApprovalError && !error.retryable) {
       const rejectionPayload = {
@@ -741,22 +735,11 @@ async function approvePending(
     );
   }
 
-  const quotas = await tx.$queryRaw<QuotaRow[]>`
-    SELECT id, scope, scope_id, capacity, allocated
-    FROM quota_buckets
-    WHERE tenant_id = ${input.tenantId}::uuid
-      AND event_id = ${input.eventId}::uuid
-      AND (
-        (scope = 'EVENT' AND scope_id IS NULL)
-        OR (scope = 'TICKET_TYPE' AND scope_id = ${code.ticket_type_id}::uuid)
-        OR (scope = 'ISSUANCE_SOURCE' AND scope_id = ${code.source_id}::uuid)
-      )
-    FOR UPDATE
-  `;
-  quotas.sort((a, b) => {
-    const delta = scopeOrder(a.scope) - scopeOrder(b.scope);
-    if (delta !== 0) return delta;
-    return (a.scope_id ?? '').localeCompare(b.scope_id ?? '');
+  const quotas = await lockIssuanceQuotas(tx, {
+    tenantId: input.tenantId,
+    eventId: input.eventId,
+    ticketTypeId: code.ticket_type_id,
+    sourceId: code.source_id,
   });
   if (quotas.length < 1) {
     throw new ApprovalError(
