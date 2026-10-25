@@ -1,14 +1,10 @@
 'use client';
 
-import Link from 'next/link';
 import { useSyncExternalStore } from 'react';
 import { t } from './copy';
 import type { MarketingLocale } from './hosts';
 import { localeSwitchHref } from './links';
-import {
-  marketingLocaleGroup,
-  marketingLocaleLink,
-} from './marketing-surface';
+import { marketingLocaleSelect } from './marketing-surface';
 
 function subscribeHash(onStoreChange: () => void): () => void {
   window.addEventListener('hashchange', onStoreChange);
@@ -24,7 +20,7 @@ function getServerHashSnapshot(): string {
 }
 
 /**
- * VI|EN switcher — preserves current hash (e.g. #interest) per PD F3.
+ * Single native locale control — preserves current hash (e.g. #interest) per PD F3.
  */
 export function LocaleSwitch({
   locale,
@@ -41,30 +37,24 @@ export function LocaleSwitch({
     getServerHashSnapshot,
   );
 
-  const viHref = localeSwitchHref('vi', pageKind, hash);
-  const enHref = localeSwitchHref('en', pageKind, hash);
+  const label = t(locale, 'nav.locale.label');
 
   return (
-    <span
-      className={marketingLocaleGroup}
-      role="group"
-      aria-label={t(locale, 'nav.locale.label')}
+    <select
+      id="mkt-locale-select"
+      className={marketingLocaleSelect}
+      value={locale}
+      aria-label={label}
       data-header-on-ink={onInk ? '' : undefined}
+      data-testid="mkt-locale-select"
+      onChange={(event) => {
+        const next = event.target.value as MarketingLocale;
+        if (next === locale) return;
+        window.location.assign(localeSwitchHref(next, pageKind, hash));
+      }}
     >
-      <Link
-        href={viHref}
-        className={marketingLocaleLink}
-        aria-current={locale === 'vi' ? 'true' : undefined}
-      >
-        {t(locale, 'nav.locale.vi')}
-      </Link>
-      <Link
-        href={enHref}
-        className={marketingLocaleLink}
-        aria-current={locale === 'en' ? 'true' : undefined}
-      >
-        {t(locale, 'nav.locale.en')}
-      </Link>
-    </span>
+      <option value="vi">{t(locale, 'nav.locale.vi')}</option>
+      <option value="en">{t(locale, 'nav.locale.en')}</option>
+    </select>
   );
 }

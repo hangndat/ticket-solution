@@ -43,7 +43,6 @@ const browser = await chromium.launch({ channel: 'chrome' });
 const desktop = await browser.newPage({ viewport: { width: 1440, height: 900 } });
 await assertInterestOpens(desktop, 'cta-interest');
 await assertInterestOpens(desktop, 'cta-interest-final');
-await assertInterestOpens(desktop, 'cta-interest-nav');
 await assertDeepLink(desktop);
 await desktop.close();
 
