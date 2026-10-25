@@ -408,20 +408,22 @@ html[data-vemoki-marketing='neon-v1'] .mkt-neon-wordmark-mark {
   display: block;
   flex: none;
   width: 2.125rem;
-  height: 2.125rem;
+  height: auto;
+  max-height: 2.125rem;
+  object-fit: contain;
 }
 
 @media (min-width: 390px) {
   html[data-vemoki-marketing='neon-v1'] .mkt-neon-wordmark-mark {
     width: 2.375rem;
-    height: 2.375rem;
+    max-height: 2.375rem;
   }
 }
 
 @media (min-width: 1440px) {
   html[data-vemoki-marketing='neon-v1'] .mkt-neon-wordmark-mark {
     width: 2.5rem;
-    height: 2.5rem;
+    max-height: 2.5rem;
   }
 }
 

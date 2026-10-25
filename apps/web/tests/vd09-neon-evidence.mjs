@@ -41,7 +41,7 @@ const LOGO_SHOTS = [
     path: '/marketing',
     width: 1440,
     height: 900,
-    selector: '.mkt-neon-wordmark-mark',
+    selector: '[data-testid="mkt-wordmark"] .mkt-neon-wordmark-mark',
   },
   {
     name: 'logo-320-wordmark',
