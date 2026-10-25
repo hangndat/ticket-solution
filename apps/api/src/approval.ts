@@ -25,6 +25,8 @@ import {
   IdentityError,
   IDENTITY_ERROR_CODES,
   decideRedemption,
+  configureIssuanceLockTimeout,
+  isRetryableTransactionConflict,
   listStaffPendingRedemptions,
   unwrapApprovalOutcome,
   withTenant,
@@ -109,17 +111,30 @@ export class ApprovalService {
     reason?: string | null,
   ) {
     const user = await this.actor(authorization);
-    const outcome = await withTenant(this.deps.db!, tenantId, (tx) =>
-      decideRedemption(tx, this.deps.credentialKey!, {
-        tenantId,
-        eventId,
-        requestId,
-        actorUserId: user.userId,
-        decision,
-        idempotencyKey: idempotencyKey ?? '',
-        reason: reason ?? null,
-      }),
-    );
+    let outcome;
+    try {
+      outcome = await withTenant(this.deps.db!, tenantId, async (tx) => {
+        await configureIssuanceLockTimeout(tx);
+        return decideRedemption(tx, this.deps.credentialKey!, {
+          tenantId,
+          eventId,
+          requestId,
+          actorUserId: user.userId,
+          decision,
+          idempotencyKey: idempotencyKey ?? '',
+          reason: reason ?? null,
+        });
+      });
+    } catch (error) {
+      if (isRetryableTransactionConflict(error)) {
+        throw new ApprovalError(
+          APPROVAL_ERROR_CODES.RETRYABLE_CONFLICT,
+          'Approval transaction conflicted; retry with the same key',
+          true,
+        );
+      }
+      throw error;
+    }
     return unwrapApprovalOutcome(outcome);
   }
 

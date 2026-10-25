@@ -1,3 +1,12 @@
+import type { Prisma } from './generated/prisma/client';
+
+/** Bound issue/approval row-lock waits before withTenant's 5s statement timeout.
+ * PostgreSQL reports this timeout as 55P03; unrelated statement cancellation
+ * remains 57014 and must not be presented as a retryable lock conflict. */
+export async function configureIssuanceLockTimeout(tx: Prisma.TransactionClient): Promise<void> {
+  await tx.$executeRaw`SET LOCAL lock_timeout = '2000ms'`;
+}
+
 /** PostgreSQL lock/deadlock/serialization failures must roll back the whole
  * issuance transaction. Prisma can expose SQLSTATE directly or through P2010. */
 export function isRetryableTransactionConflict(error: unknown): boolean {
