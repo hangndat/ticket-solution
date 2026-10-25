@@ -16,8 +16,8 @@ export const brandGenerated = {
   paperDeep: '#d8dbde',
   inkMuted: '#5B687B',
   inkFaint: 'rgba(11, 18, 32, 0.18)',
-  wordmark: 'vemoki',
-  signalMark: '↗',
+  wordmark: 'Vemoki',
+  signalMark: '',
 } as const;
 
 export const spaceGenerated = {

@@ -76,7 +76,9 @@ export function TenantLogo({
         }}
       >
         {wordmark}
-        <Text style={{ color: theme.signal }}>{signalMark}</Text>
+        {signalMark ? (
+          <Text style={{ color: theme.signal }}>{signalMark}</Text>
+        ) : null}
       </Text>
     </View>
   );

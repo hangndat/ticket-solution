@@ -36,6 +36,9 @@ test('brand tokens match Live Pulse brand/vemoki/tokens.json', () => {
   assert.equal(brand.unknown, raw.colors.unknown);
   assert.equal(raw.typography.display, 'Sora');
   assert.equal(raw.typography.body, 'Be Vietnam Pro');
+  assert.equal(brand.wordmark, 'Vemoki');
+  assert.equal(brand.signalMark, '');
+  assert.equal(raw.signal, '');
 });
 
 test('space scale matches brand JSON (mobile key aliases)', () => {

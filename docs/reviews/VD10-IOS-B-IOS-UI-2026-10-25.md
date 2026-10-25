@@ -1,4 +1,4 @@
-# VD10 — Batch B-IOS-UI (DS-IOS-01..06)
+# VD10 — Batch B-IOS-UI (DS-IOS-01..06) + brand lockup refresh
 
 **Worker:** Zico (ios) · **Worktree:** `vd09-marketing-neon`  
 **Checks:** `pnpm --filter @ticket/mobile typecheck` · `pnpm --filter @ticket/mobile test` (pass)
@@ -12,21 +12,24 @@
 | DS-IOS-03 | Med | **Fixed** | `PublishedEventCard` primary CTA → shared `Button` + `eventsCopy.cardPrimaryCta` |
 | DS-IOS-04 | Low | **Fixed** | `expo-linear-gradient` + `attendeePrimaryGradient` (signal → color-mix(signal 88%, ink)); primary `Button` matches web `attendeePrimary` |
 | DS-IOS-05 | Low | **Fixed** | Focus ring `borderWidth` 2 → 3 on non-ghost `Button` |
-| DS-IOS-06 | Low | **Fixed** | Debug sim + Metro 8083; PNGs refreshed with gradient CTAs visible on events card, redeem, fixture event, staff deny |
+| DS-IOS-06 | Low | **Fixed** | Simulator PNGs refreshed — no ↗ on default wordmarks; new demo banner/lockup; gradient card CTA |
+| DS-IOS-07 | Med | **Fixed** | `sync-tokens.mjs` + `signalGlyph` on tenant branding API; platform `signalMark` empty; `TenantLogo` hides glyph unless tenant provides `signalGlyph` |
 
 ## Simulator evidence (local)
 
 | File | Screen |
 | --- | --- |
-| `docs/reviews/assets/vd10-ios/ios-events-feed.png` | Events catalog (card primary CTA) |
+| `docs/reviews/assets/vd10-ios/ios-events-feed.png` | Events catalog (MFest header, Vemoki card banner, gradient CTA) |
+| `docs/reviews/assets/vd10-ios/ios-event-detail-fixture.png` | Published MFest · Demo detail |
 | `docs/reviews/assets/vd10-ios/ios-redeem-global.png` | Redeem global |
-| `docs/reviews/assets/vd10-ios/ios-ticket-detail-fixture.png` | Fixture event detail (`vemoki://events/demo-mfest`) |
-| `docs/reviews/assets/vd10-ios/ios-staff-access-deny.png` | Staff gate soft-deny |
+| `docs/reviews/assets/vd10-ios/ios-ticket-detail-fixture.png` | Demo fixture event (`ticketsolution://events/demo-mfest`) |
+| `docs/reviews/assets/vd10-ios/ios-staff-access-deny.png` | Staff soft-deny (`ticketsolution://staff`) |
 
-Capture: `xcodebuild` Debug + `expo start --port 8083 --dev-client`; `xcrun simctl openurl` + `simctl io screenshot`. Full set (gitignored): `apps/mobile/.uat-artifacts/vd10/`.
+Capture: Metro `8083` + `EXPO_PUBLIC_UAT_SCREENSHOT=1` (LogBox suppressed); in-app `axe` navigation + `ticketsolution://` only (no `vemoki://` sheet). Script: `apps/mobile/scripts/capture-vd10-screenshots.sh`. Full set (gitignored): `apps/mobile/.uat-artifacts/vd10/`.
 
-## Implementation notes (DS-IOS-04)
+## Implementation notes (DS-IOS-04 / brand)
 
 - Dependency: `expo-linear-gradient` (Expo SDK 58, via `expo install`).
 - Tokens: `src/theme/color-mix.ts`, `src/theme/attendee-primary.ts` — DEC-01 parity with `packages/ui` `attendeePrimary` gradient stop.
-- Destructive variant unchanged (deny red outline); disabled/loading/pressed use existing opacity on shell.
+- Demo raster: `brand/vemoki/lockup.png` → `assets/demo/logo.png`; `apps/web/public/demo/banner.png` → `assets/demo/banner.png`.
+- `icon.png` / splash unchanged (prior VD10 review).

@@ -1,3 +1,4 @@
+import '@/uat/screenshot-capture.ts';
 import { useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 import { Button } from '@/components/ui/button';

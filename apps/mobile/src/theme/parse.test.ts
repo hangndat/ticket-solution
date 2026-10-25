@@ -65,6 +65,17 @@ test('parseTenantBranding strips invalid logoUrl without failing', () => {
   assert.equal(parsed.primaryColor, '#000000');
 });
 
+test('parseTenantBranding preserves signalGlyph when tenant provides it', () => {
+  const parsed = parseTenantBranding({
+    tenantSlug: 'acme',
+    organizationName: 'Acme',
+    primaryColor: '#245b47',
+    signalGlyph: ' ↗ ',
+  });
+  assert.ok(parsed);
+  assert.equal(parsed.signalGlyph, '↗');
+});
+
 test('parseTenantBranding rejects empty / incomplete payloads', () => {
   assert.equal(parseTenantBranding({ primaryColor: '#000000' }), null);
   assert.equal(

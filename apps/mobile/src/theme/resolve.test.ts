@@ -47,5 +47,22 @@ test('resolveThemeTokens falls back wordmark to organizationName', () => {
     primaryColor: '#59428a',
   });
   assert.equal(tokens.wordmark, 'MFest');
+  assert.equal(tokens.signalMark, '');
   assert.equal(tokens.logoUrl, null);
+});
+
+test('resolveThemeTokens applies tenant signalGlyph when provided', () => {
+  const tokens = resolveThemeTokens({
+    tenantSlug: 'acme',
+    organizationName: 'Acme Org',
+    primaryColor: '#245b47',
+    signalGlyph: '↗',
+  });
+  assert.equal(tokens.signalMark, '↗');
+});
+
+test('defaultThemeTokens has empty platform signalMark (no ↗ glyph)', () => {
+  const tokens = defaultThemeTokens();
+  assert.equal(tokens.wordmark, 'Vemoki');
+  assert.equal(tokens.signalMark, '');
 });

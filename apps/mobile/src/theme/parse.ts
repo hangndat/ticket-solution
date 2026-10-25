@@ -78,6 +78,10 @@ export function parseTenantBranding(value: unknown): TenantBrandingDto | null {
   const logoAssetId = nonEmptyString(value.logoAssetId) ?? null;
   const tenantId = nonEmptyString(value.tenantId);
   const wordmark = nonEmptyString(value.wordmark);
+  const signalGlyph =
+    typeof value.signalGlyph === 'string'
+      ? value.signalGlyph.trim().slice(0, 8)
+      : undefined;
   const brandVersion =
     typeof value.version === 'number' &&
     Number.isFinite(value.version) &&
@@ -112,6 +116,7 @@ export function parseTenantBranding(value: unknown): TenantBrandingDto | null {
     ...(logoUrl ? { logoUrl } : {}),
     logoAssetId,
     ...(wordmark ? { wordmark } : {}),
+    ...(signalGlyph !== undefined ? { signalGlyph } : {}),
     ...(brandVersion !== undefined ? { brandVersion } : {}),
   };
 }
