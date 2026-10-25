@@ -151,6 +151,7 @@ def write_pins(path, pins):
 
 
 def build(args):
+    validate_root(args.root)
     root = args.root.resolve()
     validate_root(root)
     if not SHA.fullmatch(args.sha):
@@ -231,10 +232,13 @@ def build(args):
         print(json.dumps({"release": str(dest), "sourceSha": args.sha, "buildId": source["buildId"]}))
     finally:
         if stage.exists():
+            for directory in [stage, *(p for p in stage.rglob("*") if p.is_dir() and not p.is_symlink())]:
+                os.chmod(directory, directory.stat().st_mode | 0o700)
             shutil.rmtree(stage)
 
 
 def pin(args):
+    validate_root(args.root)
     root = args.root.resolve()
     dest = release_path(root, args.release)
     manifest = verify(dest)
@@ -250,6 +254,7 @@ def pin(args):
 
 
 def cleanup(args):
+    validate_root(args.root)
     root = args.root.resolve()
     validate_root(root)
     pins = set(read_pins(args.pins).values())
@@ -299,7 +304,9 @@ def main():
     args = parser.parse_args()
     try:
         if args.command == "build": build(args)
-        elif args.command == "verify": print(json.dumps(verify(release_path(args.root.resolve(), args.release))["services"], sort_keys=True))
+        elif args.command == "verify":
+            validate_root(args.root)
+            print(json.dumps(verify(release_path(args.root.resolve(), args.release))["services"], sort_keys=True))
         elif args.command == "pin": pin(args)
         elif args.command == "cleanup": cleanup(args)
     except (ValueError, OSError, subprocess.CalledProcessError) as error:
