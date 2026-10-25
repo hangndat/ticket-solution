@@ -38,6 +38,7 @@ test('production callback and proxy gate staff while ticket owners remain attend
   Object.assign(jwk, { kid: 'staff-test', alg: 'RS256', use: 'sig' });
   const minted = new Map();
   let membershipCalls = 0;
+  let tenantAdminCalls = 0;
 
   async function tokenFor(subject) {
     if (!minted.has(subject)) {
@@ -57,6 +58,7 @@ test('production callback and proxy gate staff while ticket owners remain attend
   }
 
   const upstream = createHttpServer(async (req, res) => {
+    if (req.url?.startsWith('/v1/tenants/')) tenantAdminCalls++;
     if (req.url === '/jwks') {
       res.setHeader('Content-Type', 'application/json');
       res.end(JSON.stringify({ keys: [jwk] }));
@@ -253,6 +255,39 @@ test('production callback and proxy gate staff while ticket owners remain attend
     });
     assert.equal(staffTicketApi.status, 403);
     assert.equal(staffTicketApi.headers.get('location'), null);
+    const tenantId = tenant.tenantId;
+    const legacyTenantPaths = [
+      ['/api/bff/tenants/' + tenantId + '/invites', 'GET'],
+      ['/api/bff/tenants/' + tenantId + '/invites', 'POST'],
+      ['/api/bff/tenants/' + tenantId + '/members', 'GET'],
+      ['/api/bff/tenants/' + tenantId + '/invites/' + tenantId + '/revoke', 'POST'],
+      ['/api/bff/tenants/' + tenantId + '/members/' + tenantId + '/revoke', 'POST'],
+    ];
+    const beforeTenantAdmin = tenantAdminCalls;
+    for (const [path, method] of legacyTenantPaths) {
+      const response = await fetch(`${app}${path}`, {
+        method,
+        headers: {
+          Cookie: staffCookie,
+          Origin: app,
+          'Content-Type': 'application/json',
+        },
+        body: method === 'POST' ? '{}' : undefined,
+      });
+      assert.equal(response.status, 410, `${method} ${path}`);
+      assert.equal((await response.json()).code, 'LEGACY_GONE');
+    }
+    assert.equal(tenantAdminCalls, beforeTenantAdmin, 'legacy tenant routes must never reach upstream');
+    const attendeeCookie = `oidc_access_token=${await tokenFor('ticket-owner')}`;
+    for (const path of ['/api/bff/claim', '/api/bff/me/membership-invites/accept']) {
+      const response = await fetch(`${app}${path}`, {
+        method: 'POST',
+        headers: { Cookie: attendeeCookie, 'Content-Type': 'application/json' },
+        body: '{}',
+      });
+      assert.equal(response.status, 403, `attendee ${path} must retain CSRF gate`);
+      assert.equal((await response.json()).code, 'CSRF_ORIGIN_REQUIRED');
+    }
     const staleStaff = await fetch(`${app}/wallet`, {
       redirect: 'manual',
       headers: { Cookie: 'oidc_refresh_token=staff-refresh' },
@@ -314,6 +349,8 @@ test('production callback and proxy gate staff while ticket owners remain attend
       platformRoute.headers.get('location'),
       `${portal}/api/auth/login`,
     );
+    assert.equal(platformRoute.status, 410);
+    assert.equal((await platformRoute.json()).code, 'LEGACY_GONE');
     assert.equal(membershipCalls, beforePlatform, 'platform auth is separate');
 
     // Misconfigured portal must never turn a known staff account into an attendee.

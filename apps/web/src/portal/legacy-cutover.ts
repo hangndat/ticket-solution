@@ -5,6 +5,7 @@
 const LEGACY_GONE_PREFIXES = [
   '/api/bff/admin',
   '/api/bff/platform',
+  '/api/bff/tenants',
   '/api/auth/platform',
 ] as const;
 

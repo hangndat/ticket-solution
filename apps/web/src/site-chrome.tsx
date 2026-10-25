@@ -33,10 +33,8 @@ import {
   navCapabilitiesStore,
   type NavCapabilitiesSnapshot,
 } from './nav/nav-capabilities-store';
-import {
-  navSessionAvatarFromText,
-  type NavSessionAvatar,
-} from './nav/nav-session-avatar';
+import { NavIdentityController } from './nav/nav-identity-controller';
+import type { NavSessionAvatar } from './nav/nav-session-avatar';
 
 /** Platform / tenant wordmark — defaults to Vemoki lockup from ThemeProvider. */
 export function Wordmark({ href = '/' }: { href?: string }) {
@@ -126,35 +124,41 @@ export function SiteNav({
       initialSnapshot?.caps.authenticated ??
       navCapabilitiesStore.getSnapshot().caps.authenticated,
   );
+  const [navLoading, setNavLoading] = useState(
+    () => initialSnapshot?.loading ?? false,
+  );
+  const [wasAuthenticated, setWasAuthenticated] = useState(authenticated);
   const [mobileMenu, setMobileMenu] = useState({ path: '', open: false });
   const mobileOpen = mobileMenu.open && mobileMenu.path === pathname;
-  const [avatarInitials, setAvatarInitials] = useState<string | null>(
-    () => initialAvatar?.initials ?? null,
+  const [identity] = useState(
+    () => new NavIdentityController(navCapabilitiesStore, initialAvatar ?? null),
   );
-  const [displayHint, setDisplayHint] = useState<string | null>(
-    () => initialAvatar?.displayHint ?? null,
-  );
+  const [avatar, setAvatar] = useState(() => identity.getAvatar());
 
   useEffect(() => {
     if (initialSnapshot?.resolved) {
       navCapabilitiesStore.hydrateFromServer(initialSnapshot);
     }
     bindNavCapabilitiesAuthzObserver();
+    const unsubAvatar = identity.subscribe(setAvatar);
     const unsub = navCapabilitiesStore.subscribe(() => {
       const snap = navCapabilitiesStore.getSnapshot();
       setLinks(snap.links);
       setAuthenticated(snap.caps.authenticated);
+      setNavLoading(snap.loading);
+      if (snap.caps.authenticated) setWasAuthenticated(true);
+      if (!snap.caps.authenticated) identity.clear();
     });
-    void navCapabilitiesStore.refresh();
+    void identity.revalidate();
 
     const onVisible = () => {
       if (document.visibilityState === 'visible') {
-        void navCapabilitiesStore.refresh();
+        void identity.revalidate();
       }
     };
     const onPageShow = (event: PageTransitionEvent) => {
       if (event.persisted) {
-        void navCapabilitiesStore.refresh();
+        void identity.revalidate();
       }
     };
     document.addEventListener('visibilitychange', onVisible);
@@ -162,45 +166,12 @@ export function SiteNav({
 
     return () => {
       unsub();
+      unsubAvatar();
+      identity.clear();
       document.removeEventListener('visibilitychange', onVisible);
       window.removeEventListener('pageshow', onPageShow);
     };
-  }, [initialSnapshot]);
-
-  useEffect(() => {
-    if (!authenticated) {
-      setAvatarInitials(null);
-      setDisplayHint(null);
-      return;
-    }
-    if (initialAvatar?.initials || initialAvatar?.displayHint) {
-      return;
-    }
-    let cancelled = false;
-    void (async () => {
-      try {
-        const response = await fetch('/api/bff/me', {
-          method: 'GET',
-          credentials: 'same-origin',
-          cache: 'no-store',
-        });
-        const body = await response.text();
-        if (cancelled || response.status < 200 || response.status >= 300) {
-          return;
-        }
-        const avatar = navSessionAvatarFromText(body);
-        if (!cancelled && avatar) {
-          if (avatar.initials) setAvatarInitials(avatar.initials);
-          if (avatar.displayHint) setDisplayHint(avatar.displayHint);
-        }
-      } catch {
-        /* fail-closed — nav still works without avatar */
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [authenticated, initialAvatar]);
+  }, [initialSnapshot, identity]);
 
   const closeMobile = useCallback(() => {
     setMobileMenu({ path: pathname, open: false });
@@ -231,27 +202,31 @@ export function SiteNav({
           ))}
           {trailing}
         </span>
-        {authenticated ? (
-          <Link
-            href="/account"
-            prefetch={true}
-            className={attendeeNavAvatar}
-            data-testid="nav-avatar"
-            aria-label={displayHint ?? 'Tài khoản'}
-          >
-            <span className={attendeeNavAvatarBadge} aria-hidden="true">
-              {avatarInitials ?? '··'}
-            </span>
-            <span
-              className={cn(
-                attendeeNavAvatarLabel,
-                !displayHint && 'text-transparent select-none',
-              )}
-              aria-hidden={!displayHint}
-            >
-              {displayHint ?? 'user@vemoki.com'}
-            </span>
-          </Link>
+        {authenticated || (navLoading && wasAuthenticated) ? (
+          <span className="hidden min-w-[13.5rem] md:block" data-testid="nav-avatar-slot">
+            {authenticated ? (
+              <Link
+                href="/account"
+                prefetch={true}
+                className={cn(attendeeNavAvatar, 'w-full')}
+                data-testid="nav-avatar"
+                aria-label={avatar?.displayHint ?? 'Tài khoản'}
+              >
+                <span className={attendeeNavAvatarBadge} aria-hidden="true">
+                  {avatar?.initials ?? '··'}
+                </span>
+                <span
+                  className={cn(
+                    attendeeNavAvatarLabel,
+                    !avatar?.displayHint && 'text-transparent select-none',
+                  )}
+                  aria-hidden={!avatar?.displayHint}
+                >
+                  {avatar?.displayHint ?? 'user@vemoki.com'}
+                </span>
+              </Link>
+            ) : null}
+          </span>
         ) : null}
         <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
           <SheetTrigger asChild>

@@ -174,13 +174,11 @@ test('isNavDiscoveryRequestUrl marks only me/events and me/tenants', async () =>
   assert.equal(isNavDiscoveryRequestUrl('/api/bff/admin/events'), false);
 });
 
-test('refresh keeps resolved links while revalidating (no guest flash)', async () => {
-  let loads = 0;
-  const store = new NavCapabilitiesStore(async () => {
-    loads += 1;
-    await new Promise((r) => setTimeout(r, 5));
-    return { caps: STAFF_CAPS, links: STAFF_LINKS };
-  });
+test('refresh clears authenticated chrome while a deferred identity probe is pending', async () => {
+  let resolveLoad!: (value: { caps: NavCapabilities; links: NavLink[] }) => void;
+  const store = new NavCapabilitiesStore(() => new Promise((resolve) => {
+    resolveLoad = resolve;
+  }));
   store.replaceSnapshot({
     caps: STAFF_CAPS,
     links: STAFF_LINKS,
@@ -191,10 +189,11 @@ test('refresh keeps resolved links while revalidating (no guest flash)', async (
   const pending = store.refresh();
   const mid = store.getSnapshot();
   assert.equal(mid.loading, true);
-  assert.ok(mid.links.some((l) => l.href === '/admin'), 'staff link must stay visible during refresh');
+  assert.equal(mid.caps.authenticated, false);
+  assert.deepEqual(mid.links.map((l) => l.href), GUEST_NAV_LINKS.map((l) => l.href));
 
+  resolveLoad({ caps: STAFF_CAPS, links: STAFF_LINKS });
   await pending;
-  assert.ok(loads >= 1);
   assert.ok(store.getSnapshot().links.some((l) => l.href === '/admin'));
 });
 

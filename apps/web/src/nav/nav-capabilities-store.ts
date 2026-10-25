@@ -83,10 +83,6 @@ export class NavCapabilitiesStore {
   }
 
   /**
-   * Revalidate MeEvents / MeTenants / PlatformMe.
-   * Fail-closed while probing — never keep prior staff links sticky.
-   */
-  /**
    * Apply SSR / parent-provided snapshot without clearing links (first paint).
    */
   hydrateFromServer(next: NavCapabilitiesSnapshot) {
@@ -99,21 +95,15 @@ export class NavCapabilitiesStore {
 
   async refresh(): Promise<NavCapabilitiesSnapshot> {
     const requestId = ++this.requestId;
-    const previous = this.snapshot;
     this.refreshing = true;
-    if (!previous.resolved) {
-      this.publish({
-        caps: GUEST_CAPS,
-        links: [...GUEST_NAV_LINKS],
-        resolved: false,
-        loading: true,
-      });
-    } else {
-      this.publish({
-        ...previous,
-        loading: true,
-      });
-    }
+    // A focus or bfcache return can have a different cookie or revoked rights.
+    // Do not publish the previous authenticated snapshot during discovery.
+    this.publish({
+      caps: GUEST_CAPS,
+      links: [...GUEST_NAV_LINKS],
+      resolved: false,
+      loading: true,
+    });
 
     try {
       const { caps, links } = await this.loader();
