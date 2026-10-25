@@ -19,6 +19,30 @@ function sampleP8() {
   return privateKey.export({ type: 'pkcs8', format: 'pem' }).toString();
 }
 
+test('AR891-T3-F03: explicit APNS_ENABLED off/unset stays disabled; true|1|yes enabled', () => {
+  for (const value of [undefined, '', 'false', '0', 'no', 'FALSE', 'NO']) {
+    const env =
+      value === undefined ? {} : { APNS_ENABLED: value };
+    assert.equal(
+      isApnsEnabled(env),
+      false,
+      `APNS_ENABLED=${value ?? '(unset)'} must stay disabled`,
+    );
+  }
+  for (const value of ['true', '1', 'yes', 'TRUE', 'Yes']) {
+    assert.equal(isApnsEnabled({ APNS_ENABLED: value }), true);
+  }
+});
+
+test('AR891-T3-F03: invalid APNS_ENABLED values reject in backend config', () => {
+  for (const value of ['tru', 'enabled', 'maybe', '2']) {
+    assert.throws(
+      () => isApnsEnabled({ APNS_ENABLED: value }),
+      (error) => error?.code === DEVICE_TOKEN_ERROR_CODES.APNS_MISCONFIGURED,
+    );
+  }
+});
+
 test('APNs disabled by default; enabled without key fail-closed', async () => {
   assert.equal(isApnsEnabled({}), false);
   assert.equal(isApnsEnabled({ APNS_ENABLED: 'false' }), false);

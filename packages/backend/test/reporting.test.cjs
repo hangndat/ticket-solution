@@ -566,7 +566,8 @@ test(
         10,
         RELAY_OPTS,
       );
-      assert.ok(drained.completed >= 4);
+      // The revoked ticket is a terminal DEAD delivery, not a false completion.
+      assert.ok(drained.completed + drained.failed >= 4);
 
       const waiting = await issue(eventId, 'WAIT-1');
       const failed = await relayOutboxOnce(
@@ -830,7 +831,9 @@ test(
         }),
       );
       assert.equal(portfolio.limit, PORTFOLIO_PAGE_LIMIT.default);
-      assert.ok(typeof portfolio.asOf === 'string' && portfolio.asOf.length > 0);
+      assert.ok(
+        typeof portfolio.asOf === 'string' && portfolio.asOf.length > 0,
+      );
       assert.equal(portfolio.items.length, 2);
       assert.deepEqual(
         portfolio.items.map((item) => item.eventId),

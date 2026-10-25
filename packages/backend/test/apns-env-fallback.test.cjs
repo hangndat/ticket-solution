@@ -178,3 +178,30 @@ test('DeviceTokenNotForTopic triggers one alternate host attempt', async () => {
   assert.equal(result.resolvedEnvironment, 'production');
   assert.deepEqual(calls, ['sandbox', 'production']);
 });
+
+test('AR891-T3-F04: hanging HTTP/2 exchange is aborted at the provider deadline', async () => {
+  let aborted = false;
+  setApnsHttp2ClientForTest({
+    exchange(_environment, request) {
+      return new Promise((_resolve, reject) => {
+        request.signal.addEventListener('abort', () => {
+          aborted = true;
+          reject(new Error('transport aborted'));
+        }, { once: true });
+      });
+    },
+  });
+  await assert.rejects(
+    () => sendApnsPush(cfg, baseInput, { env: enabledEnv, timeoutMs: 25 }),
+    /aborted|timeout/i,
+  );
+  assert.equal(aborted, true);
+});
+
+test('AR891-T3-F04: deadline resolves even if an injected transport ignores abort', async () => {
+  setApnsHttp2ClientForTest({ exchange: () => new Promise(() => {}) });
+  await assert.rejects(
+    () => sendApnsPush(cfg, baseInput, { env: enabledEnv, timeoutMs: 25 }),
+    /aborted|timeout/i,
+  );
+});
