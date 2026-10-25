@@ -1,0 +1,3 @@
+pnpm --filter @ticket/portal test
+pnpm --filter @ticket/portal build
+node apps/portal/tests/evidence-vd11/capture-screenshots.mjs
