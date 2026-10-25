@@ -6,7 +6,7 @@ const path = require('node:path');
 const { randomUUID } = require('node:crypto');
 const { spawnSync } = require('node:child_process');
 const ROOT = path.resolve(__dirname, '..');
-const STATE = path.join(ROOT, '.local-dev/ui869');
+const STATE = process.env.UI869_DEV_STATE_DIR || path.join(ROOT, '.local-dev/ui869');
 const LINK_FILE = path.join(STATE, 'invitation.json');
 const backend = require('../packages/backend/dist');
 const loopback = raw => ['localhost','127.0.0.1','[::1]'].includes(new URL(raw).hostname);
@@ -59,7 +59,7 @@ async function seed() {
     fs.mkdirSync(STATE,{recursive:true,mode:0o700});
     fs.writeFileSync(LINK_FILE,JSON.stringify({invitationId:invitation.id,claimUrl,expiresAt:invitation.expires_at,fixture:true})+'\n',{mode:0o600});
     fs.chmodSync(LINK_FILE,0o600);
-    return {ok:true,created,fixture:true,mailpit:'http://127.0.0.1:8026',privateLinkFile:'.local-dev/ui869/invitation.json',outboxFailures:failed};
+    return {ok:true,created,fixture:true,mailpit:'http://127.0.0.1:8026',privateLinkFile:LINK_FILE,outboxFailures:failed};
   } finally { await db.$disconnect(); }
 }
 
