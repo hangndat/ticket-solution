@@ -5,8 +5,8 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { vemokiTheme } from '../theme/vemoki';
 
 /**
- * ProLayout `navTheme="realDark"` applies darkAlgorithm to shell descendants.
- * Nested ConfigProvider with only `defaultAlgorithm` still merges parent dark tokens
+ * ProLayout may apply its theme to shell descendants.
+ * Nested ConfigProvider with only `defaultAlgorithm` still merges parent tokens
  * unless `inherit: false` (Ant useTheme resets to defaultConfig base).
  * Wrap chrome on light surfaces so Select/Dropdown popups get light elevated/ink tokens.
  */
