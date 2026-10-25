@@ -11,6 +11,9 @@ OIDC_ISSUER=http://127.0.0.1:8080/realms/ticket UI869_API_URL=http://127.0.0.1:3
 ```
 
 `up` tạo Keycloak và D9 fixture trong Docker project riêng, tự thêm ba persona vào local Keycloak/DB, và có thể chạy lại. Khi state file thiếu mà PostgreSQL volume đã có, script dừng để tránh tự reset DB. State/receipt nằm trong `.local-dev/` (ignored, mode 600); script không in token.
+`up` cũng bind flow OTP thật cho `ticket-admin-web` và `ticket-platform-web` trên Keycloak local; client attendee giữ flow thường.
+
+Email local đi qua worker và `SMTP_URL=smtp://127.0.0.1:1026` vào Mailpit `http://127.0.0.1:8026`. Full flow không bật `EMAIL_ALLOW_NOOP`.
 
 ## Persona và kết quả
 
@@ -22,14 +25,20 @@ OIDC_ISSUER=http://127.0.0.1:8080/realms/ticket UI869_API_URL=http://127.0.0.1:3
 | `no-access@example.com` | Không membership | báo cáo và Gate MFest 403 |
 | `attendee@example.com` | Chỉ attendee | báo cáo MFest 403 |
 
-Chạy smoke thực tế: **9/9 PASS**, token do Keycloak local cấp qua `ticket-web`, API kiểm tra JWT và quyền DB. `bash -n scripts/dev-local-stack.sh` PASS. Chạy `up` lần hai PASS và không tạo trùng persona. Web trả HTTP 200.
+Chạy smoke thực tế: **9/9 PASS**, token do Keycloak local cấp qua `ticket-web`, API kiểm tra JWT và quyền DB. `bash -n scripts/dev-local-stack.sh` PASS. Chạy `up` sau khi dừng toàn stack PASS, không tạo trùng persona và áp dụng lại OTP flow; smoke quyền vẫn **9/9 PASS**. Web trả HTTP 200. Stack sinh keyring tombstone riêng trong state local để worker không báo thiếu cấu hình.
 
 Chạy thêm `scripts/uat-d1-p4-keycloak.py` với issuer/API local: **12/12 PASS** cho discovery, Authorization Code + PKCE, audience/email verified, `/v1/me`, đổi tài khoản attendee → staff, hiệu lực access token đến TTL, thu hồi refresh token sau logout-all, và required action `CONFIGURE_TOTP` chặn đăng nhập thầm. Script dọn required action sau phép thử. Đây là bằng chứng bước yêu cầu cấu hình TOTP, chưa phải bằng chứng hoàn tất nhập mã TOTP.
 
-Orca browser: tab `773c9c91-9d5f-4e7b-ad57-01ba94705189` vào `/account` → `Đăng nhập` → Keycloak → nhập attendee → callback HTTP 307 → `/account` HTTP 200 (theo log web). Sau callback, lệnh `orca snapshot` bị treo; chưa xác nhận được nội dung trạng thái đăng nhập trên giao diện. Tab agent mở đã đóng.
+Sau khi bind flow OTP: `platform-keycloak-sso-reuse-proof.mjs` PASS (SSO attendee không bỏ qua OTP ở hai client staff) và `platform-keycloak-mfa-live-proof.mjs` PASS (Auth Code + PKCE + nhập OTP thật → access token có `ticket-platform-api`, `acr=2`, `auth_time`). User MFA proof là synthetic và script xóa sau khi chạy.
+
+Lượt Orca browser đầu tiên bị treo ở `snapshot` sau callback; lượt chạy lại bên dưới đã xác nhận trạng thái attendee trên giao diện.
+
+Chạy lại UAT Orca: `/account` hiện attendee đã đăng nhập; `/redeem` xác định mã `DEMO-MFEST-002` → phát hành HTTP 201 → `/wallet` hiện vé MFest. Mailpit tăng từ 3 lên 4 thư sau relay, có email “Vé đã cấp — MFest · Demo”. Sau khi bật worker polling Mailpit, phát hành mã `DEMO-MFEST-003` qua API HTTP 201; Mailpit tự tăng từ 4 lên 5 thư. Portal đăng nhập staff qua `ticket-admin-web` và hiện shell quản trị/MFest. Các tab agent mở đã đóng. Mailpit local không lưu thư qua lần dừng compose; bằng chứng số thư thuộc phiên trước khi restart.
+
+Build iOS Release cho simulator bằng Xcode local **PASS**. Lượt đầu dùng `CODE_SIGNING_ALLOWED=NO` khiến `expo-secure-store` báo thiếu Keychain entitlement; lượt build tiếp theo thiếu `EXPO_PUBLIC_*` nên không bật đăng nhập. Build lại với Xcode tự ký **và** đầy đủ biến local đã khắc phục cả hai lỗi cấu hình test: app đăng nhập Keycloak thành công với `attendee@example.com`, ví hiện 2 vé MFest và mở được chi tiết vé. Trên màn đổi mã, app tra cứu `DEMO-MFEST-004` thành công và bật switch đồng ý điều khoản; chạm nút “Xác nhận đổi mã” nhiều lần không tạo kết quả hay request quan sát được. Vì vậy luồng đổi mã iOS chưa PASS.
 
 ## Phạm vi còn cần xác nhận
 
-- MFA TOTP cho portal/platform và client riêng chưa được thiết lập trong fixture này. Staff demo hiện được bỏ bước `CONFIGURE_TOTP` chỉ trong realm local để cho phép smoke token; không dùng cấu hình này làm bằng chứng MFA.
-- Chưa nghiệm thu iOS simulator, camera, thiết bị thật, logout/session switch hoặc toàn bộ các màn hình Vemoki. Các ca này vẫn cần UAT riêng; kết quả API 9/9 không đồng nghĩa acceptance hoàn tất.
-- Trạng thái: chỉ là evidence local của nhánh VD-08; chưa có review độc lập, CI hay nghiệm thu thiết bị.
+- Staff demo được bỏ `CONFIGURE_TOTP` trong realm local để cho phép smoke `ticket-web` qua password grant. Sau khi bind flow OTP, Portal/Platform đòi OTP riêng; phiên Portal đã mở trước khi bind flow không dùng làm bằng chứng MFA. Bằng chứng OTP thực tế nằm ở script live proof trên.
+- iOS simulator đã PASS đăng nhập/ví, nhưng bước xác nhận đổi mã chưa có kết quả; camera, thiết bị thật, logout/session switch và toàn bộ màn hình chưa nghiệm thu. Chế độ viewport iPhone của Orca browser cũng treo ở loading khi thử, chưa tính là PASS.
+- Trạng thái: chỉ là evidence local của nhánh VD-08; chưa có review độc lập, CI trên thay đổi mới hay nghiệm thu thiết bị. Điều kiện deploy prod theo yêu cầu “ổn thì deploy” chưa đạt.

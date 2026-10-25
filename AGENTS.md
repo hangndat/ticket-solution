@@ -24,6 +24,7 @@ Roadmap, Project, Issue, status, progress: **Tiếng Việt** (giữ ID/API/comm
 ## Safety and correctness
 
 - Không secrets/user data thật; không mock auth production; PG = SoT business state; tenant transaction-local + RLS.
+- Mọi email từ môi trường local/dev/UAT phải gửi vào Mailpit qua `SMTP_URL` trỏ tới Mailpit local; không dùng nhà cung cấp email thật và không dùng `EMAIL_ALLOW_NOOP=1` cho full flow cần kiểm tra email. Kiểm tra thư trong Mailpit UI/API.
 - Cloud prod / store chỉ khi task authorize. Commit/PR/merge: `.cursor/rules/git-workflow.mdc`.
 - UAT session: Orca browser + emulator — `.cursor/rules/uat-headless.mdc` (Read nếu glob chưa khớp).
 - Sau UAT luôn tự đóng browser page/tab do agent mở; không đóng tab user, giữ server local nếu còn phục vụ review/dev.
