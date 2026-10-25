@@ -126,7 +126,7 @@ export function PortalProLayout({
   return (
     <ProLayout
       layout="mix"
-      navTheme="realDark"
+      navTheme="light"
       siderWidth={240}
       breakpoint="lg"
       collapsed={siderCollapsed}
@@ -181,6 +181,7 @@ export function PortalProLayout({
       contentStyle={{ padding: 0 }}
       menuProps={
         {
+          theme: 'dark',
           openKeys,
           motion: { motionName: undefined },
           onOpenChange: (keys: string[]) => {

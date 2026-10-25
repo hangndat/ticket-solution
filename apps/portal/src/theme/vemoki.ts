@@ -46,6 +46,7 @@ export const vemokiTheme: ThemeConfig = {
     colorTextSecondary: VEMOKI_COLORS.muted,
     colorBgLayout: VEMOKI_COLORS.paper,
     colorBgContainer: '#ffffff',
+    colorBgElevated: '#ffffff',
     colorBorder: VEMOKI_COLORS.line,
     controlOutline: VEMOKI_COLORS.focus,
     borderRadius: 12,
