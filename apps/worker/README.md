@@ -7,10 +7,10 @@ Nest application context chạy **outbox email relay**, reconcile pending redemp
 ## Vận hành
 
 - Cần `DATABASE_URL` và SMTP/MinIO theo slice backend; `TICKET_CREDENTIAL_KEY` (≥16 ký tự) cho relay credential — nếu thiếu/sai, worker log cảnh báo JSON (`credential_key_misconfigured`) và relay có thể đánh dấu job FAILED.
-- Lỗi từng bước trong poll cycle được log JSON (`tick_step_failed`, không PII); bước treo quá giới hạn log `tick_step_timeout` (mặc định 120s, `WORKER_TICK_STEP_TIMEOUT_MS`; giá trị env ≤0 hoặc không hợp lệ → 120s) rồi **tiếp tục** bước sau — timeout không coi bước đã hoàn tất. Promise nền vẫn chạy: tick kế **bỏ qua** cùng bước nếu còn in-flight (`tick_step_still_running`), không chồng hai lần cùng bước.
-- Đếm lỗi liên tiếp reset khi một cycle hoàn tất không lỗi/timeout.
-- Poll **không tái nhập**: interval chồng lên tick đang chạy sẽ bỏ qua (`tick_skipped`).
-- **Shutdown** (`SIGINT`/`SIGTERM` → Nest hooks): dừng interval, chờ tick đang chạy tối đa 30s (`WORKER_SHUTDOWN_TICK_TIMEOUT_MS` nếu set), rồi `$disconnect` khi worker sở hữu DB.
+- Ba lịch poll trong cùng process: reconcile, outbox, maintenance (anonymization → export → cleanup). Mỗi job class chỉ có một action đang chạy; một provider/export chậm không giữ lịch reconcile. Tổng số action có thể đang chạy tối đa 5, bằng pool worker 5 connections; mỗi outbox/export claim một row.
+- Giới hạn supervisor theo class: reconcile 5s, outbox 20s, anonymization 30s, export 60s, cleanup 30s. `WORKER_TICK_STEP_TIMEOUT_MS` chỉ có thể giảm giới hạn này. Supervisor timeout log `tick_step_timeout`, không tuyên bố I/O đã hủy; action còn chạy khiến tick sau bỏ qua cùng class (`tick_step_still_running`). SMTP và APNs có deadline transport 5s; MinIO có deadline 60s.
+- Mỗi 10s worker đọc `worker_due_job_snapshot()` (migration `202610250001_ar891_worker_budget`) và log `queue_snapshot` với due count, oldest due age, reclaim count, p95 duration và pool wait p95. Vượt tuổi budget log `job_due_age_budget_exceeded`. Log và metric chỉ dùng tên class cố định, không ghi tenant/user/ticket/token. `queue_probe_failed` báo thiếu migration/quyền hoặc DB lỗi.
+- **Shutdown** (`SIGINT`/`SIGTERM` → Nest hooks): dừng mọi timer, chờ action và probe đang chạy tối đa 30s (`WORKER_SHUTDOWN_TICK_TIMEOUT_MS` nếu set), rồi `$disconnect` khi worker sở hữu DB. Job còn lease được PG reclaim sau restart; SMTP/APNs đã được provider chấp nhận trước DB ack vẫn có thể gửi lặp theo at-least-once.
 
 `node dist/main.js` in banner D4; không Redis queue consumer riêng — PostgreSQL outbox là nguồn sự thật.
 

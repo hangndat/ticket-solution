@@ -6,6 +6,7 @@ import { createHash, createHmac, randomUUID } from 'node:crypto';
 import { request as httpRequest } from 'node:http';
 import { request as httpsRequest } from 'node:https';
 import { ConfigError, CONFIG_ERROR_CODES } from './config-error';
+import { metricsObserveSeconds } from './metrics-registry';
 
 export type MinioConfig = {
   endpoint: string;
@@ -29,7 +30,9 @@ export type ObjectStore = {
   }): Promise<{ uploadUrl: string; expiresAt: Date }>;
 };
 
-export function readMinioEnvironment(env: NodeJS.ProcessEnv): MinioConfig | null {
+export function readMinioEnvironment(
+  env: NodeJS.ProcessEnv,
+): MinioConfig | null {
   const endpoint = env['MINIO_ENDPOINT']?.trim();
   const accessKey =
     env['MINIO_ACCESS_KEY']?.trim() || env['MINIO_ROOT_USER']?.trim();
@@ -95,6 +98,7 @@ async function signedRequest(input: {
   objectKey: string;
   body?: Buffer;
   contentType?: string;
+  timeoutMs?: number;
 }): Promise<Buffer> {
   const url = new URL(input.cfg.endpoint);
   if (!['http:', 'https:'].includes(url.protocol)) {
@@ -176,6 +180,7 @@ async function signedRequest(input: {
           chunks.push(Buffer.isBuffer(c) ? c : Buffer.from(c)),
         );
         res.on('end', () => {
+          clearTimeout(deadline);
           const buf = Buffer.concat(chunks);
           if ((res.statusCode ?? 500) >= 400) {
             reject(
@@ -188,16 +193,29 @@ async function signedRequest(input: {
           }
           resolve(buf);
         });
+        res.on('error', () => {
+          clearTimeout(deadline);
+          reject(
+            new ConfigError(
+              CONFIG_ERROR_CODES.MINIO_MISCONFIGURED,
+              'MinIO response failed',
+            ),
+          );
+        });
       },
     );
-    req.on('error', () =>
+    const deadline = setTimeout(() => {
+      req.destroy(new Error('MinIO request timeout'));
+    }, input.timeoutMs ?? 60_000);
+    req.on('error', () => {
+      clearTimeout(deadline);
       reject(
         new ConfigError(
           CONFIG_ERROR_CODES.MINIO_MISCONFIGURED,
           'MinIO connection failed',
         ),
-      ),
-    );
+      );
+    });
     if (body.length) req.write(body);
     req.end();
   });
@@ -208,8 +226,25 @@ export async function putObject(
   objectKey: string,
   body: Buffer,
   contentType: string,
+  timeoutMs?: number,
 ): Promise<void> {
-  await signedRequest({ cfg, method: 'PUT', objectKey, body, contentType });
+  const started = performance.now();
+  try {
+    await signedRequest({
+      cfg,
+      method: 'PUT',
+      objectKey,
+      body,
+      contentType,
+      timeoutMs,
+    });
+  } finally {
+    metricsObserveSeconds(
+      'worker_provider_latency_seconds',
+      (performance.now() - started) / 1000,
+      { provider: 'minio' },
+    );
+  }
 }
 
 export async function getObject(
@@ -319,7 +354,9 @@ export function createMemoryObjectStore(): ObjectStore & {
     },
     async createPresignedPutUrl(input) {
       const token = randomUUID();
-      const expiresAt = new Date(Date.now() + (input.expiresSeconds ?? 900) * 1000);
+      const expiresAt = new Date(
+        Date.now() + (input.expiresSeconds ?? 900) * 1000,
+      );
       return {
         uploadUrl: `memory://upload/${encodeURIComponent(input.objectKey)}?token=${token}&ct=${encodeURIComponent(input.contentType)}`,
         expiresAt,

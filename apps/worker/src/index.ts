@@ -87,7 +87,11 @@ export async function createWorker(
   let db = options.database ?? null;
   let ownsDb = false;
   if (!db && env['DATABASE_URL']?.trim()) {
-    db = createDatabase(env['DATABASE_URL']);
+    db = createDatabase(env['DATABASE_URL'], 5, true, {
+      statementTimeoutMs: 15_000,
+      lockTimeoutMs: 2_000,
+      poolWaitTimeoutMs: 2_000,
+    });
     ownsDb = true;
   }
 
