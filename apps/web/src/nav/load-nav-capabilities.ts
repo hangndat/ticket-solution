@@ -34,7 +34,9 @@ export async function loadNavCapabilities(): Promise<{
     tenantsResult.status,
     tenantsResult.json,
   );
-  const authenticated = meEvents !== null || meTenants !== null;
+  // MeEvents alone cannot prove this is an attendee session. In particular,
+  // a failed MeTenants check must not show staff as logged into consumer UI.
+  const authenticated = meTenants !== null;
 
   const caps = deriveNavCapabilities({
     authenticated,

@@ -11,6 +11,7 @@ import {
   PKCE_COOKIE,
   REFRESH_COOKIE,
   STATE_COOKIE,
+  clearSessionCookies,
   sessionCookieOptions,
 } from '../../../../src/oidc/cookies';
 import { WEB_AUTH_COOKIES } from '../../../../src/oidc/local-cookies';
@@ -21,10 +22,16 @@ import {
 } from '../../../../src/oidc/post-login';
 import type { TokenGrantResponse } from '../../../../src/oidc/refresh';
 import {
+  fetchStaffStatus,
+  staffPortalLoginUrl,
+} from '../../../../src/oidc/staff-gate';
+import {
   acceptOidcTokenGrant,
   getRemoteJwks,
   TokenVerifyError,
 } from '../../../../src/oidc/verify-tokens';
+import { apiBaseUrl } from '../../../../src/bff/upstream';
+import { portalOriginFromEnv } from '../../../../src/portal/dual-run';
 
 /** Exchange authorization code for tokens; store in HttpOnly cookies. */
 export async function GET(request: NextRequest) {
@@ -52,7 +59,13 @@ export async function GET(request: NextRequest) {
   const expectedState = jar.get(STATE_COOKIE)?.value;
   const verifier = jar.get(PKCE_COOKIE)?.value;
 
-  if (!code || !state || !expectedState || state !== expectedState || !verifier) {
+  if (
+    !code ||
+    !state ||
+    !expectedState ||
+    state !== expectedState ||
+    !verifier
+  ) {
     return NextResponse.redirect(new URL('/auth?error=invalid_state', origin));
   }
 
@@ -109,6 +122,29 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  // A successful, validated attendee result is required before writing cookies.
+  // D13 also includes role=Attendee ticket-owner rows in me/tenants.
+  const staffStatus = await fetchStaffStatus({
+    accessToken: grant.accessToken,
+    apiBaseUrl: apiBaseUrl(),
+  });
+  if (staffStatus !== 'attendee') {
+    await clearSessionCookies();
+    jar.delete(POST_LOGIN_COOKIE);
+    if (staffStatus === 'staff') {
+      const portalLogin = staffPortalLoginUrl(origin, portalOriginFromEnv());
+      if (portalLogin) return NextResponse.redirect(portalLogin);
+      console.error('[auth/callback] staff portal origin unavailable');
+      return NextResponse.redirect(
+        new URL('/auth?error=portal_unavailable', origin),
+      );
+    }
+    console.error('[auth/callback] me/tenants staff check unavailable');
+    return NextResponse.redirect(
+      new URL('/auth?error=staff_check_unavailable', origin),
+    );
+  }
+
   const maxAge = grant.expiresIn;
   jar.set(ACCESS_COOKIE, grant.accessToken, sessionCookieOptions(maxAge));
   if (grant.refreshToken) {
@@ -132,7 +168,5 @@ export async function GET(request: NextRequest) {
   const postLogin = sanitizePostLoginPath(jar.get(POST_LOGIN_COOKIE)?.value);
   jar.delete(POST_LOGIN_COOKIE);
 
-  return NextResponse.redirect(
-    new URL(postLogin ?? '/', origin),
-  );
+  return NextResponse.redirect(new URL(postLogin ?? '/', origin));
 }

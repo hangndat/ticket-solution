@@ -10,7 +10,7 @@
     "typegen": "node -e \"require('fs').mkdirSync(require('path').join('.next','types'),{recursive:true})\" && next typegen",
     "typecheck": "pnpm run typegen && tsc --noEmit",
     "test": "tsx --test --test-concurrency=1 tests/*.test.ts",
-    "test:routes": "node --test tests/routes.integration.mjs tests/legacy-cascade.postbuild.mjs",
+    "test:routes": "node --test tests/routes.integration.mjs tests/legacy-cascade.postbuild.mjs tests/staff-auth.integration.mjs",
     "uat:cascade": "node tests/uat-cascade.mjs"
   },
   "dependencies": {
