@@ -13,6 +13,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@ticket/ui/client';
+import { cn } from '../../lib/utils';
 import { t } from './copy';
 import type { MarketingLocale } from './hosts';
 import { InterestFormIsland } from './interest-form-island';
@@ -23,6 +24,7 @@ import {
   isInterestHref,
   setInterestHashInHistory,
 } from './marketing-interest-hash';
+import { marketingInterestLead, marketingInterestShell } from './marketing-surface';
 
 export function MarketingInterestProvider({
   locale,
@@ -102,12 +104,17 @@ export function MarketingInterestProvider({
         <Sheet open={open} onOpenChange={closeInterest}>
           <SheetContent
             side="bottom"
-            className="max-h-[min(92dvh,720px)] overflow-y-auto rounded-t-2xl border-line bg-paper px-4 pb-8 pt-6 text-ink scheme-light"
+            className={cn(
+              marketingInterestShell,
+              'max-h-[min(92dvh,720px)] overflow-y-auto rounded-t-2xl px-4 pb-8 pt-6',
+            )}
             data-testid="marketing-interest"
           >
             <SheetHeader className="text-left">
               <SheetTitle id="interest-title">{title}</SheetTitle>
-              <SheetDescription>{lead}</SheetDescription>
+              <SheetDescription className={marketingInterestLead}>
+                {lead}
+              </SheetDescription>
             </SheetHeader>
             <div className="mt-4">{form}</div>
           </SheetContent>
@@ -115,13 +122,18 @@ export function MarketingInterestProvider({
       ) : (
         <Dialog open={open} onOpenChange={closeInterest}>
           <DialogContent
-            className="max-h-[min(90dvh,820px)] max-w-[min(100%-2rem,560px)] overflow-y-auto border-line bg-paper text-ink scheme-light sm:max-w-[560px]"
+            className={cn(
+              marketingInterestShell,
+              'max-h-[min(90dvh,820px)] max-w-[min(100%-2rem,560px)] overflow-y-auto sm:max-w-[560px]',
+            )}
             data-testid="marketing-interest"
             aria-labelledby="interest-title"
           >
             <DialogHeader>
               <DialogTitle id="interest-title">{title}</DialogTitle>
-              <DialogDescription>{lead}</DialogDescription>
+              <DialogDescription className={marketingInterestLead}>
+                {lead}
+              </DialogDescription>
             </DialogHeader>
             <div className="mt-2">{form}</div>
           </DialogContent>

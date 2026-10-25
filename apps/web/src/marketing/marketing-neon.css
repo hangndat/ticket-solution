@@ -132,6 +132,47 @@ html[data-surface='marketing'] .mkt-neon-interest-retry {
   color: var(--color-ink);
 }
 
+/* VD10-R-05 — interest modal/sheet: AA contrast on paper over neon chrome */
+html[data-surface='marketing'] [data-testid='marketing-interest'] {
+  --mkt-interest-placeholder: color-mix(in srgb, var(--color-ink) 58%, var(--color-paper));
+  --mkt-interest-helper: color-mix(in srgb, var(--color-ink) 82%, var(--color-muted));
+}
+
+html[data-surface='marketing'] [data-testid='marketing-interest'] [data-slot='dialog-close'],
+html[data-surface='marketing'] [data-testid='marketing-interest'] [data-slot='sheet-content'] > button.absolute {
+  color: var(--color-ink);
+  opacity: 0.88;
+}
+
+html[data-surface='marketing'] [data-testid='marketing-interest'] [data-slot='dialog-close']:focus-visible,
+html[data-surface='marketing']
+  [data-testid='marketing-interest']
+  [data-slot='sheet-content']
+  > button.absolute:focus-visible {
+  opacity: 1;
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+  box-shadow: none;
+}
+
+html[data-surface='marketing'] .mkt-interest-form :is(input, textarea)::placeholder {
+  color: var(--mkt-interest-placeholder);
+}
+
+html[data-surface='marketing'] .mkt-interest-form select:required:invalid {
+  color: var(--mkt-interest-placeholder);
+}
+
+html[data-surface='marketing'] .mkt-interest-form select:required:valid,
+html[data-surface='marketing'] .mkt-interest-form select:not(:required) {
+  color: var(--color-ink);
+}
+
+html[data-surface='marketing'] .mkt-interest-form [data-slot='field-error'],
+html[data-surface='marketing'] .mkt-interest-form .text-signal {
+  color: var(--color-destructive);
+}
+
 html[data-vemoki-marketing='neon-v1'] .mkt-neon-btn-secondary {
   min-height: 48px;
   padding: 12px 24px;
