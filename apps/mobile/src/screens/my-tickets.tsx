@@ -1,4 +1,4 @@
-import { Link, router, useLocalSearchParams } from 'expo-router';
+import { Link, router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import {
   useCallback,
   useEffect,
@@ -462,21 +462,23 @@ function VerifiedWallet({ userId }: { userId: string }) {
     }
   }, [cacheScope, fetchScope, sessionScope, userId]);
 
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      setBusy(true);
-      try {
-        await hydrateFromCache();
-        if (!cancelled) await refresh();
-      } finally {
-        if (!cancelled) setBusy(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [hydrateFromCache, refresh]);
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      void (async () => {
+        setBusy(true);
+        try {
+          await hydrateFromCache();
+          if (!cancelled) await refresh();
+        } finally {
+          if (!cancelled) setBusy(false);
+        }
+      })();
+      return () => {
+        cancelled = true;
+      };
+    }, [hydrateFromCache, refresh]),
+  );
 
   useEffect(() => {
     if (tickets.length < 1) {
