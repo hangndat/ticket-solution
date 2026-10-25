@@ -2,6 +2,8 @@
  * k6: N virtual scanners — each VU uses one staff session and reserve→confirm.
  * Env: BASE_URL, STAFF_TOKEN, TENANT_ID, EVENT_ID, SESSION_IDS, TICKET_IDS, VUS,
  *      ITERATIONS (default 2), MAX_ERROR_RATE (default 0.05)
+ *      SCANNERS_FILE optional private JSON [{userId, sessionId, token}]; when set,
+ *      each VU uses its own identity/session instead of the legacy shared token.
  */
 import http from 'k6/http';
 import { check, sleep } from 'k6';
@@ -17,6 +19,7 @@ const TOKEN = __ENV.STAFF_TOKEN;
 const TENANT = __ENV.TENANT_ID;
 const EVENT = __ENV.EVENT_ID;
 const SESSIONS = (__ENV.SESSION_IDS || '').split(',').filter(Boolean);
+const SCANNERS = __ENV.SCANNERS_FILE ? JSON.parse(open(__ENV.SCANNERS_FILE)) : null;
 const TICKETS = (__ENV.TICKET_IDS || '').split(',').filter(Boolean);
 const VUS = Number(__ENV.VUS || SESSIONS.length || 1);
 const ITERATIONS = Number(__ENV.ITERATIONS || 2);
@@ -38,16 +41,19 @@ export const options = {
   },
 };
 
-function headers() {
+function headers(token) {
   return {
-    Authorization: `Bearer ${TOKEN}`,
+    Authorization: `Bearer ${token}`,
     'Content-Type': 'application/json',
   };
 }
 
 export default function () {
   const vu = __VU - 1;
-  const sessionId = SESSIONS[vu % SESSIONS.length];
+  const scanner = SCANNERS?.[vu];
+  if (SCANNERS && !scanner) throw new Error('Missing scanner identity for VU');
+  const sessionId = scanner?.sessionId ?? SESSIONS[vu % SESSIONS.length];
+  const token = scanner?.token ?? TOKEN;
   const ticketId = TICKETS[(vu + __ITER * VUS) % TICKETS.length];
 
   const reserveRes = http.post(
@@ -57,7 +63,7 @@ export default function () {
       ticketId,
       staffSessionId: sessionId,
     }),
-    { headers: headers(), tags: { name: 'gate_reserve' } },
+    { headers: headers(token), tags: { name: 'gate_reserve' } },
   );
 
   const reserved = check(reserveRes, {
@@ -95,7 +101,7 @@ export default function () {
       staffSessionId: sessionId,
       token: holdToken,
     }),
-    { headers: headers(), tags: { name: 'gate_confirm' } },
+    { headers: headers(token), tags: { name: 'gate_confirm' } },
   );
   confirmTrend.add(Date.now() - t0);
 
