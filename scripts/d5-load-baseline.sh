@@ -16,6 +16,11 @@
 #   D5_LOAD_PG_PORT             default 55452
 #   D5_LOAD_OIDC_ISSUER         default http://127.0.0.1:8080/realms/ticket
 #   D5_LOAD_SKIP_BUILD=1        skip pnpm build if dist already present
+#   D5_LOAD_REVIEW_SUMMARY_PATH optional durable summary destination; historical
+#                               review snapshots are not overwritten by default
+#
+# Each virtual scanner gets its own Keycloak identity, event assignment and
+# staff session. S3 interleaves events; API rate-limit policy is unchanged.
 #
 # Uses throwaway Postgres (docker label ticket.task=d5-load). Does not touch
 # ticket_dev / compose project ticket-solution volumes.

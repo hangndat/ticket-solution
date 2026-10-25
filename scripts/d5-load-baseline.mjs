@@ -20,6 +20,8 @@ import {
   sealCredentialToken,
 } from './lib/credential-crypto.mjs';
 
+import { createScannerContexts, scannerContextSummary, interleaveEventJobs } from './load/scanner-context.mjs';
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
 const MIGRATION_DIR = path.join(ROOT, 'packages/backend/prisma/migrations');
@@ -847,12 +849,13 @@ async function main() {
   console.log(
     `provisioning ${userCount} Keycloak attendees for ${httpCodes.length} issue jobs (${TICKETS_PER_USER}/user)…`,
   );
-  const issueUsers = await provisionIssueAttendees(userCount);
+  const issueUsers = await provisionIssueAttendees(userCount + SCANNERS * EVENTS);
+  state.provisionedUsers = issueUsers;
 
   // Prefetch one token per user (parallel), then map codes → tokens.
   const issueJobs = [];
+  const tokenByEmail = new Map();
   try {
-    const tokenByEmail = new Map();
     const tokConcurrency = 20;
     let tokNext = 0;
     async function tokWorker() {
@@ -878,10 +881,16 @@ async function main() {
   }
 
   // Sessions: SCANNERS per event × EVENTS
+  const scannerContexts = await createScannerContexts({
+    databaseUrl, base, tenantId: TENANT_ID, eventIds, scannersPerEvent: SCANNERS,
+    users: issueUsers.slice(userCount), tokenByEmail, httpJson, openSessions,
+  });
+  const scannerIdentityContext = scannerContextSummary(scannerContexts, eventIds, SCANNERS);
+  console.log('Scanner context:', JSON.stringify(scannerIdentityContext));
   const sessionsByEvent = {};
   let totalSessions = 0;
   for (const meta of eventMeta) {
-    const sessions = await openSessions(base, staffTok, meta.eventId, SCANNERS);
+    const sessions = scannerContexts[meta.eventId].map(scanner => scanner.sessionId);
     sessionsByEvent[meta.eventId] = sessions;
     totalSessions += sessions.length;
   }
@@ -910,15 +919,15 @@ async function main() {
         eventId: meta.eventId,
         ticketId: tickets[i],
         sessionId: sessions[i % sessions.length],
-        staffToken: staffTok,
+        staffToken: scannerContexts[meta.eventId][i % sessions.length].token,
       });
     }
   }
 
   const issueJobsFile = path.join(ARTIFACT_DIR, `issue-jobs-${SUFFIX}.json`);
   const confirmJobsFile = path.join(ARTIFACT_DIR, `confirm-jobs-${SUFFIX}.json`);
-  writeFileSync(issueJobsFile, JSON.stringify(issueJobs));
-  writeFileSync(confirmJobsFile, JSON.stringify(confirmJobs));
+  writeFileSync(issueJobsFile, JSON.stringify(issueJobs), { mode: 0o600 });
+  writeFileSync(confirmJobsFile, JSON.stringify(interleaveEventJobs(confirmJobs)), { mode: 0o600 });
 
   const healthScript = path.join(ROOT, 'scripts/load/health-burst.js');
   const healthOut = path.join(ARTIFACT_DIR, `k6-health-${SUFFIX}.json`);
@@ -962,8 +971,6 @@ async function main() {
     console.error('k6 S3 failed', s3Err);
   }
   const s3ElapsedSec = (Date.now() - s3Started) / 1000;
-  await cleanupIssueAttendees(issueUsers);
-
   // Per-event gate scanner pass (50 VU × 2 iter) after S3 — extra coverage
   const gateResults = [];
   for (const meta of eventMeta) {
@@ -1007,7 +1014,9 @@ async function main() {
             return [l.slice(0, i), l.slice(i + 1)];
           }),
       );
-      runK6(envMap, gateScript, k6Out);
+      const scannersFile = path.join(ARTIFACT_DIR, `scanners-${meta.eventId}.json`);
+      writeFileSync(scannersFile, JSON.stringify(scannerContexts[meta.eventId]), { mode: 0o600 });
+      runK6({ ...envMap, SCANNERS_FILE: scannersFile }, gateScript, k6Out);
     } catch (e) {
       gateOk = false;
       gateErr = String(e.message || e);
@@ -1022,6 +1031,7 @@ async function main() {
   }
 
   const s3Metrics = extractK6Counters(s3Summary);
+  await cleanupIssueAttendees(issueUsers);
   const issueOkCount = s3Metrics.issueOk ?? 0;
   const confirmOkCount = s3Metrics.confirmOk ?? 0;
   const issueTarget = ISSUE_RATE * SUSTAIN_SEC;
@@ -1099,6 +1109,7 @@ async function main() {
     events: EVENTS,
     scannersPerEvent: SCANNERS,
     scannersTotal: totalSessions,
+    scannerIdentityContext,
     sessionsByEvent: Object.fromEntries(
       Object.entries(sessionsByEvent).map(([k, v]) => [k, v.length]),
     ),
@@ -1155,14 +1166,9 @@ async function main() {
 
   const outPath = path.join(ARTIFACT_DIR, `load-summary-${SUFFIX}.json`);
   writeFileSync(outPath, JSON.stringify(summary, null, 2));
-  // Durable copy for docs reviews
-  try {
-    writeFileSync(
-      path.join(ROOT, 'docs/reviews/D5-ISSUE-25-LOAD-SUMMARY.json'),
-      JSON.stringify(summary, null, 2),
-    );
-  } catch {
-    /* optional */
+  // Historical review snapshots are immutable unless a destination is explicit.
+  if (process.env.D5_LOAD_REVIEW_SUMMARY_PATH) {
+    writeFileSync(path.resolve(process.env.D5_LOAD_REVIEW_SUMMARY_PATH), JSON.stringify(summary, null, 2));
   }
 
   console.log(
@@ -1178,7 +1184,8 @@ async function main() {
   state.pgStarted = false;
 }
 
-main().catch((err) => {
+main().catch(async (err) => {
+  if (state.provisionedUsers?.length) await cleanupIssueAttendees(state.provisionedUsers);
   console.error(err);
   cleanup();
   process.exit(1);
