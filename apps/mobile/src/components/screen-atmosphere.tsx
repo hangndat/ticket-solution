@@ -23,7 +23,7 @@ export function AtmosphereWash() {
           width: 280,
           height: 280,
           borderRadius: radius.pill,
-          backgroundColor: brand.signal,
+          backgroundColor: brand.primary,
           opacity: 0.07
         }}
       />

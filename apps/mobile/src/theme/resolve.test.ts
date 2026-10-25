@@ -5,7 +5,7 @@ import { brand } from './tokens.ts';
 
 test('defaultThemeTokens matches Vemoki platform brand', () => {
   const tokens = defaultThemeTokens();
-  assert.equal(tokens.signal, brand.signal);
+  assert.equal(tokens.signal, brand.primary);
   assert.equal(tokens.wordmark, brand.wordmark);
   assert.equal(tokens.source, 'default');
   assert.equal(tokens.logoUrl, null);

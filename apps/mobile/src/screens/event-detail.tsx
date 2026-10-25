@@ -118,7 +118,7 @@ function FixtureDemoDetail({
         }}
       >
         <Text
-          style={{ ...typography.caption, color: brand.signal,
+          style={{ ...typography.caption, color: brand.primary,
             fontFamily: fontFamilies.bodySemiBold, }}
         >
           Demo · dữ liệu mẫu · chưa xuất bản

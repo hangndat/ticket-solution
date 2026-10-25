@@ -370,7 +370,7 @@ function ConfiguredAccount({
 
         {busy ? (
           <View style={{ padding: space.sm, alignItems: 'center' }}>
-            <Spinner color={brand.signal} accessibilityLabel="Đang tải tài khoản" />
+            <Spinner color={brand.primary} accessibilityLabel="Đang tải tài khoản" />
             <Text
               style={{
                 marginTop: space.sm,
