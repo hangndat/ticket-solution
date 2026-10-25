@@ -32,7 +32,7 @@ Closing a **milestone / Epic** on Project #3 requires **UAT evidence** (web and/
 3. Ghi evidence: `executionHostId`, `scannedAt`, từng row `port`/`pid`/`kind`/`owner.confidence`/`owner.path`; `unavailableReason`, scan rỗng hoặc `scannedAt` quá cũ → `runtimeStatus: unknown` (không suy port từ lsof).
 4. Chọn base URL: ưu tiên `protocol: http|https` hoặc `advertisedUrl`; `protocol: unknown` **không** giả định HTTP — chỉ chọn sau HTTP probe thành công. Nhiều port → lọc theo service (`web`/`api`) rồi probe.
 5. Port **không** chứng minh git SHA; vẫn probe build (`meta git-commit` / `build-id`) qua HTTP hoặc bước `agent-workflow-guard probe` sau khi có tab.
-6. Wrapper repo: `node scripts/uat-orca-runtime.mjs --worktree <abs> [--service web|api] --json` (fixture trong test; live cần Orca runtime).
+6. Nhiều candidate: lọc theo service (`web`/`api`), so `owner.path` với worktree đích, rồi HTTP/DOM/build probe — không chọn endpoint chỉ vì một row có port; `owner.path` khác worktree hoặc `owner.confidence` không `cwd` trên `kind: workspace` không chứng minh ownership.
 
 ## Web — Orca embedded browser (bắt buộc cho agent UAT)
 
