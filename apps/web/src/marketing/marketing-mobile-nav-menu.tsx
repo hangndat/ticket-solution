@@ -15,7 +15,7 @@ import {
   marketingNavMobileActions,
   marketingNavMobileLink,
 } from './marketing-surface';
-import { InterestCtaAnchor, InterestCtaLink } from './interest-cta-link';
+import { InterestCtaAnchor } from './interest-cta-link';
 
 const MENU_ID = 'mkt-nav-mobile-menu';
 
@@ -96,15 +96,6 @@ export function MarketingMobileNavMenu({
             <a href={login} onClick={closeMobile}>
               {t(locale, 'nav.login')}
             </a>
-          </Button>
-          <Button asChild variant="primary" block>
-            <InterestCtaLink
-              href={`${sales}#interest`}
-              data-testid="cta-interest-nav-mobile"
-              onClick={closeMobile}
-            >
-              {t(locale, 'nav.interest')}
-            </InterestCtaLink>
           </Button>
         </div>
       </SheetContent>

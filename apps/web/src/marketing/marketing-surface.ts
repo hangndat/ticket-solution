@@ -44,17 +44,12 @@ export const marketingNavLinks = cn(
   'text-paper/85',
 );
 
-export const marketingLocaleGroup = cn(
-  'inline-flex w-[5.5rem] shrink-0 items-center justify-center gap-1 rounded-[10px] p-1',
-  'bg-ink/6',
-  '[[data-header-on-ink]_&]:bg-paper/10',
-);
-
-export const marketingLocaleLink = cn(
-  'inline-flex min-h-9 min-w-9 items-center justify-center rounded-[7px] border-0 bg-transparent px-[0.65rem] py-[0.35rem] text-[0.8rem] font-semibold text-inherit no-underline',
-  'max-md:min-h-11',
-  'aria-[current=true]:bg-paper aria-[current=true]:text-ink aria-[current=true]:shadow-sm',
-  '[[data-header-on-ink]_&]:aria-[current=true]:bg-paper/15 [[data-header-on-ink]_&]:aria-[current=true]:text-paper',
+export const marketingLocaleSelect = cn(
+  'min-h-11 min-w-[4.75rem] max-w-full shrink-0 cursor-pointer appearance-none rounded-[10px] border border-ink/10 bg-ink/6 px-3 py-2 pr-8 text-[0.82rem] font-semibold text-inherit',
+  'bg-[length:0.65rem] bg-position-[right_0.65rem_center] bg-no-repeat',
+  "bg-[url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%228%22 fill=%22none%22%3E%3Cpath stroke=%22currentColor%22 stroke-width=%221.5%22 d=%22M1 1.5 6 6.5 11 1.5%22/%3E%3C/svg%3E')]",
+  '[[data-header-on-ink]_&]:border-paper/15 [[data-header-on-ink]_&]:bg-paper/10',
+  'focus-visible:outline focus-visible:outline-3 focus-visible:outline-focus focus-visible:outline-offset-2',
 );
 
 export const marketingNavMenuToggle = cn(

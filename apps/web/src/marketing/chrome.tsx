@@ -22,7 +22,6 @@ import {
 } from './marketing-surface';
 import { privacyHref, salesHref, supportHref } from './links';
 import { MarketingNeonScope } from './marketing-neon-scope';
-import { MarketingDesktopInterestCta } from './marketing-desktop-interest-cta';
 import { MarketingNeonLogo } from './marketing-neon-logo';
 
 export function MarketingChrome({
@@ -72,7 +71,6 @@ export function MarketingChrome({
           )}
           <span className="sr-only">{t(locale, 'nav.brand')}</span>
         </Link>
-        <LocaleSwitch locale={locale} pageKind={pageKind} onInk={onInk} />
         <nav className={marketingNav} aria-label={locale === 'en' ? 'Primary' : 'Chính'}>
           {onSales ? (
             <>
@@ -96,14 +94,13 @@ export function MarketingChrome({
           >
             <a href={login}>{t(locale, 'nav.login')}</a>
           </Button>
-          {onSales ? (
-            <MarketingDesktopInterestCta locale={locale} sales={sales} />
-          ) : (
+          {!onSales ? (
             <Button asChild variant="primary">
               <a href={demo}>{t(locale, 'nav.demo')}</a>
             </Button>
-          )}
+          ) : null}
         </nav>
+        <LocaleSwitch locale={locale} pageKind={pageKind} onInk={onInk} />
       </header>
       {children}
       <footer className={marketingFooter(onSales)} data-testid="mkt-footer">
