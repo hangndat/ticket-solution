@@ -1,5 +1,5 @@
 /**
- * VD-09 brand asset evidence — OG, product BrandMark, attendee header lockups.
+ * VD-09 brand asset evidence — OG, marketing header/footer lockups, product BrandMark.
  * Usage: pnpm --filter @ticket/web start & node apps/web/tests/vd09-brand-assets-evidence.mjs http://127.0.0.1:3000
  */
 import { copyFileSync, mkdirSync, writeFileSync } from 'node:fs';
@@ -10,6 +10,8 @@ import { chromium } from 'playwright';
 const BASE = process.argv[2] ?? 'http://127.0.0.1:3000';
 const WEB_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = join(dirname(fileURLToPath(import.meta.url)), 'evidence-vd09-brand-assets');
+const MARKETING_PATH = '/marketing';
+
 mkdirSync(OUT, { recursive: true });
 
 copyFileSync(
@@ -17,8 +19,9 @@ copyFileSync(
   join(OUT, 'opengraph-preview.png'),
 );
 
-const HEADER_WIDTHS = [
+const VIEWPORT_SHOTS = [
   { name: 'header-1440', width: 1440, height: 900 },
+  { name: 'header-768', width: 768, height: 1024 },
   { name: 'header-390', width: 390, height: 844 },
   { name: 'header-320', width: 320, height: 568 },
 ];
@@ -26,10 +29,10 @@ const HEADER_WIDTHS = [
 const browser = await chromium.launch({ channel: 'chrome' });
 const page = await browser.newPage({ deviceScaleFactor: 2 });
 
-for (const shot of HEADER_WIDTHS) {
+for (const shot of VIEWPORT_SHOTS) {
   await page.setViewportSize({ width: shot.width, height: shot.height });
-  await page.goto(`${BASE}/`, { waitUntil: 'networkidle' });
-  await page.waitForSelector('[data-testid="site-wordmark"]', { timeout: 30_000 });
+  await page.goto(`${BASE}${MARKETING_PATH}`, { waitUntil: 'networkidle' });
+  await page.waitForSelector('[data-testid="mkt-wordmark"]', { timeout: 30_000 });
   const overflow = await page.evaluate(() => {
     const doc = document.documentElement;
     return Math.max(doc.scrollWidth - doc.clientWidth, 0);
@@ -38,10 +41,20 @@ for (const shot of HEADER_WIDTHS) {
     join(OUT, `${shot.name}-overflow.json`),
     `${JSON.stringify({ overflowPx: overflow })}\n`,
   );
-  await page.locator('[data-testid="site-wordmark"]').screenshot({
+  await page.locator('[data-testid="mkt-wordmark"]').screenshot({
     path: join(OUT, `${shot.name}-wordmark.png`),
   });
-  console.log(JSON.stringify({ shot: shot.name, overflowPx: overflow }));
+  console.log(JSON.stringify({ shot: shot.name, overflowPx: overflow, surface: 'mkt-header' }));
+}
+
+for (const shot of VIEWPORT_SHOTS) {
+  await page.setViewportSize({ width: shot.width, height: shot.height });
+  await page.goto(`${BASE}${MARKETING_PATH}`, { waitUntil: 'networkidle' });
+  await page.waitForSelector('[data-testid="mkt-footer-wordmark"]', { timeout: 30_000 });
+  await page.locator('[data-testid="mkt-footer-wordmark"]').screenshot({
+    path: join(OUT, `${shot.name.replace('header', 'footer')}-wordmark.png`),
+  });
+  console.log(JSON.stringify({ shot: shot.name.replace('header', 'footer'), surface: 'mkt-footer' }));
 }
 
 await page.setViewportSize({ width: 390, height: 844 });
