@@ -106,7 +106,7 @@ export function PrivateContentBoundary({
   const verified =
     trust.state === 'verified' && trust.epoch === routeState.epoch;
   return (
-    <div ref={host} data-testid="consumer-private-boundary">
+    <div ref={host} className="min-w-0 w-full flex-1" data-testid="consumer-private-boundary">
       {!privateRoute || verified ? children : (
         <main id="main" className="mx-auto min-h-[40vh] w-full max-w-5xl px-5 py-12">
           {trust.state === 'error' ? (
