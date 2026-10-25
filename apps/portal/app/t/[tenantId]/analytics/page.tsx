@@ -135,9 +135,6 @@ export default function AnalyticsPortfolioPage() {
     };
   }, [access.kind, load]);
 
-  if (access.kind === 'loading' || page.kind === 'loading') {
-    return <SurfaceState kind="loading" />;
-  }
   if (access.kind === 'error') {
     return (
       <SurfaceState
@@ -160,6 +157,9 @@ export default function AnalyticsPortfolioPage() {
         }}
       />
     );
+  }
+  if (access.kind === 'loading' || page.kind === 'loading') {
+    return <SurfaceState kind="loading" />;
   }
 
   const canListEvents = access.tenant.tenantPermissions.includes('event.list');
