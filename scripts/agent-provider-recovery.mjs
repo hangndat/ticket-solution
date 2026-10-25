@@ -83,6 +83,15 @@ export function main(argv = process.argv.slice(2)) {
 
   if (command === 'record-limit') {
     if (!f.provider || !f.model || !f['limited-at']) throw new Error('record_limit_fields_required');
+    let codexSnapshot = null;
+    if (f.provider === 'codex') {
+      codexSnapshot = loadCodexSnapshot(f['codex-snapshot']);
+      if (!codexSnapshot) {
+        const tmp = join(root, '..', `codex-snapshot-${Date.now()}.json`);
+        codexSnapshot = snapshotCodex(tmp);
+      }
+      if (!codexSnapshot?.accountIdHash) throw new Error('codex_snapshot_required');
+    }
     const { record } = recordProviderLimit(
       {
         provider: f.provider,
@@ -92,7 +101,7 @@ export function main(argv = process.argv.slice(2)) {
         resetAt: f['reset-at'] || null,
         reason: f.reason || 'manual_limit',
       },
-      { root },
+      { root, deps: { codexSnapshot } },
     );
     console.log(JSON.stringify({ ok: true, command, record }));
     return;
@@ -116,7 +125,11 @@ export function main(argv = process.argv.slice(2)) {
   if (!f.provider || !f.model) throw new Error('provider_model_required');
 
   if (command === 'check') {
-    const snapshot = f.provider === 'codex' ? loadCodexSnapshot(f['codex-snapshot']) : null;
+    let snapshot = f.provider === 'codex' ? loadCodexSnapshot(f['codex-snapshot']) : null;
+    if (f.provider === 'codex' && !snapshot) {
+      const tmp = join(root, '..', `codex-snapshot-${Date.now()}.json`);
+      snapshot = snapshotCodex(tmp);
+    }
     const result = checkProvider(
       {
         provider: f.provider,

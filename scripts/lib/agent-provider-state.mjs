@@ -10,7 +10,7 @@ import {
   existsSync,
 } from 'node:fs';
 import { join } from 'node:path';
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 
 export const RECOVERY_DIR_NAME = 'provider-recovery';
 export const STATE_TTL_MS = 5 * 60 * 1000;
@@ -70,30 +70,41 @@ export function tryAcquireProbeLock(root, { staleMs = PROBE_TIMEOUT_MS + 5000, n
   if (existsSync(lockPath)) {
     try {
       const held = JSON.parse(readFileSync(lockPath, 'utf8'));
-      if (held?.since && now - Date.parse(held.since) < staleMs) return { acquired: false, lockPath };
-      unlinkSync(lockPath);
-    } catch {
-      try {
-        unlinkSync(lockPath);
-      } catch {
+      const since = held?.since ? Date.parse(held.since) : NaN;
+      if (Number.isFinite(since) && now - since < staleMs) return { acquired: false, lockPath };
+      if (Number.isFinite(since)) {
+        try {
+          unlinkSync(lockPath);
+        } catch {
+          return { acquired: false, lockPath };
+        }
+      } else {
         return { acquired: false, lockPath };
       }
+    } catch {
+      return { acquired: false, lockPath };
     }
   }
+  const ownerToken = randomUUID();
   try {
     const fd = openSync(lockPath, 'wx', 0o600);
-    writeFileSync(fd, `${JSON.stringify({ since: new Date(now).toISOString(), pid: process.pid })}\n`);
+    writeFileSync(
+      fd,
+      `${JSON.stringify({ since: new Date(now).toISOString(), pid: process.pid, owner: ownerToken })}\n`,
+    );
     closeSync(fd);
     chmodSync(lockPath, 0o600);
-    return { acquired: true, lockPath };
+    return { acquired: true, lockPath, ownerToken };
   } catch {
     return { acquired: false, lockPath };
   }
 }
 
-export function releaseProbeLock(lockPath) {
-  if (!lockPath) return;
+export function releaseProbeLock(lockPath, ownerToken) {
+  if (!lockPath || !ownerToken) return;
   try {
+    const held = JSON.parse(readFileSync(lockPath, 'utf8'));
+    if (held?.owner !== ownerToken) return;
     unlinkSync(lockPath);
   } catch {
     /* best-effort */

@@ -6,6 +6,29 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { assessCodexQuota } from './agent-quota-policy.mjs';
 import { COST_TIER_ROUTES } from './agent-cost-tiers.mjs';
+
+const ISO_INSTANT_RE =
+  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/;
+
+export function parseIsoInstant(value, field = 'instant') {
+  if (typeof value !== 'string' || !ISO_INSTANT_RE.test(value)) {
+    throw new Error(`invalid_${field}_iso`);
+  }
+  const t = Date.parse(value);
+  if (!Number.isFinite(t)) throw new Error(`invalid_${field}_iso`);
+  return t;
+}
+
+export function assertRegisteredProviderRoute({ provider, model, effort = null }) {
+  const routes = Object.values(COST_TIER_ROUTES).flat();
+  const ok = routes.some(
+    (route) =>
+      route.agent === provider &&
+      route.models.includes(model) &&
+      (effort ?? null) === (route.effort ?? null),
+  );
+  if (!ok) throw new Error('model_effort_not_registered');
+}
 import {
   recoveryRoot,
   stateKey,
@@ -27,6 +50,7 @@ import {
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
 const RATE_LIMIT_RE = /rate.?limit|overloaded|too many requests/i;
+const USAGE_LIMIT_RE = /session limit|usage limit|you've hit your/i;
 
 function nowIso(now = Date.now()) {
   return new Date(now).toISOString();
@@ -59,15 +83,25 @@ export function parseClaudeAuth(stdout) {
     return { ok: false, reason: 'auth_malformed' };
   }
   if (!data?.loggedIn) return { ok: false, reason: 'auth_logged_out' };
-  if (data.authMethod !== 'firstParty' || data.apiProvider !== 'claude.ai') {
+  if (data.authMethod !== 'claude.ai' || data.apiProvider !== 'firstParty') {
     return { ok: false, reason: 'auth_not_first_party_subscription' };
+  }
+  const accountUuid = data.accountUuid ?? data.account_uuid ?? null;
+  const profileId = data.profileId ?? data.profile_id ?? null;
+  const orgId = data.orgId ?? data.organizationId ?? null;
+  const email = data.email ?? null;
+  if (!email && !orgId && !accountUuid && !profileId) {
+    return { ok: false, reason: 'auth_identity_unknown' };
   }
   const identityHash = hashIdentity({
     provider: 'claude',
     authMethod: data.authMethod,
     apiProvider: data.apiProvider,
-    email: data.email ?? null,
-    orgId: data.orgId ?? null,
+    email,
+    orgId,
+    accountUuid,
+    profileId,
+    configDir: data.configDir ?? data.config_dir ?? null,
   });
   return { ok: true, identityHash, authMethod: data.authMethod, apiProvider: data.apiProvider };
 }
@@ -113,7 +147,7 @@ export function runClaudeProbe({ model, effort, deps, now = Date.now() }) {
     timeout: PROBE_TIMEOUT_MS,
     maxBuffer: MAX_PROBE_STDOUT,
     shell: false,
-    env: { ...process.env, CLAUDE_CODE_DISABLE_NONE: '1' },
+    env: { ...process.env },
   });
   try {
     rmSync(cwd, { recursive: true, force: true });
@@ -124,8 +158,14 @@ export function runClaudeProbe({ model, effort, deps, now = Date.now() }) {
     return { ok: false, reason: 'probe_timeout', availability: 'unknown' };
   }
   const blob = `${r.stdout || ''}\n${r.stderr || ''}`;
+  if (USAGE_LIMIT_RE.test(blob)) {
+    return { ok: false, reason: 'probe_usage_limited', availability: 'limited' };
+  }
   if (RATE_LIMIT_RE.test(blob)) {
     return { ok: false, reason: 'probe_rate_limited', availability: 'limited' };
+  }
+  if (r.status !== 0) {
+    return { ok: false, reason: 'probe_exit_nonzero', availability: 'unknown' };
   }
   let payload;
   try {
@@ -133,11 +173,12 @@ export function runClaudeProbe({ model, effort, deps, now = Date.now() }) {
   } catch {
     return { ok: false, reason: 'probe_malformed', availability: 'unknown' };
   }
-  if (payload.is_error || payload.success === false) {
+  if (payload.is_error || payload.type !== 'result' || payload.subtype !== 'success') {
     const err = String(payload.error || payload.result || '');
+    if (USAGE_LIMIT_RE.test(err)) return { ok: false, reason: 'probe_usage_limited', availability: 'limited' };
     if (RATE_LIMIT_RE.test(err)) return { ok: false, reason: 'probe_rate_limited', availability: 'limited' };
     if (/auth|login|credential/i.test(err)) return { ok: false, reason: 'probe_auth', availability: 'limited' };
-    return { ok: false, reason: 'probe_error', availability: 'unknown' };
+    return { ok: false, reason: 'probe_not_success_envelope', availability: 'unknown' };
   }
   const text = typeof payload.result === 'string' ? payload.result.trim() : '';
   if (text !== 'OK') return { ok: false, reason: 'probe_unexpected_body', availability: 'unknown' };
@@ -199,17 +240,25 @@ export function recordProviderLimit(
   },
   { root = recoveryRoot(), deps = {}, now = Date.now() } = {},
 ) {
-  const at = Date.parse(limitedAt);
-  if (!Number.isFinite(at)) throw new Error('invalid_limited_at_iso');
+  assertRegisteredProviderRoute({ provider, model, effort });
+  const at = parseIsoInstant(limitedAt, 'limited_at');
   let idHash = identityHash;
   if (!idHash && provider === 'claude') {
     const auth = runClaudeAuth(deps);
     if (!auth.ok) throw new Error(auth.reason);
     idHash = auth.identityHash;
   }
+  if (!idHash && provider === 'codex') {
+    const assessed = assessCodexFromSnapshot(deps.codexSnapshot ?? null, {
+      limitIds: ['codex'],
+      essential: false,
+      now,
+    });
+    idHash = assessed.identityHash;
+  }
   if (!idHash) throw new Error('identity_required');
   const key = stateKey({ provider, identityHash: idHash, model, effort });
-  const resetParsed = resetAt ? Date.parse(resetAt) : NaN;
+  const resetParsed = resetAt ? parseIsoInstant(resetAt, 'reset_at') : NaN;
   const nextCheck =
     Number.isFinite(resetParsed) && resetParsed > now
       ? resetParsed
@@ -339,7 +388,9 @@ export function checkProvider(
     };
   }
 
-  if (!force && record) {
+  const skipAvailabilityCache = provider === 'codex';
+
+  if (!force && record && !skipAvailabilityCache) {
     if (inBackoff(record, now) && isFresh(record, now)) {
       return {
         ok: true,
@@ -375,21 +426,25 @@ export function checkProvider(
   const lock = tryAcquireProbeLock(root, { now });
   if (!lock.acquired) {
     const fallback = record || baseRecord({ provider, identityHash, model, effort, now });
+    const freshCached = record && isFresh(record, now);
     return {
       ok: true,
       provider,
       model,
       effort,
-      availability: fallback.availability,
-      serviceAvailable: fallback.serviceAvailable,
+      availability: freshCached ? fallback.availability : 'unknown',
+      serviceAvailable: freshCached ? fallback.serviceAvailable : false,
       reason: 'probe_lock_busy',
       probed: false,
       probeSkipped: true,
       record: fallback,
+      fresh: !!freshCached,
     };
   }
 
   try {
+    const reread = readState(root, key);
+    if (reread?.identityHash === identityHash) record = reread;
     let outcome;
     if (provider === 'claude') {
       outcome = runClaudeProbe({ model, effort, deps, now });
@@ -438,7 +493,7 @@ export function checkProvider(
       quota: outcome.quota,
     };
   } finally {
-    releaseProbeLock(lock.lockPath);
+    releaseProbeLock(lock.lockPath, lock.ownerToken);
   }
 }
 
@@ -482,9 +537,8 @@ export function recommendRoute(
   } else if (codex?.check.serviceAvailable) {
     recommendation = codex.route;
     reason = 'codex_available';
-  } else if (claude) {
-    recommendation = claude.route;
-    reason = claude.check.serviceAvailable ? 'claude_recovered' : 'claude_not_verified_fallback_explicit';
+  } else if (claude?.check.availability === 'unknown' || codex?.check.availability === 'unknown') {
+    reason = 'route_unknown';
   }
   return { costTier, routes: evaluated, recommendation, reason };
 }
