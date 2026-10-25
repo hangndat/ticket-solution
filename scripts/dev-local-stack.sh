@@ -43,7 +43,7 @@ REALM_FILE="${STATE_DIR}/realm-ticket.local.json"
 COMPOSE_OVERRIDE="${STATE_DIR}/docker-compose.override.yml"
 LABEL="com.vemoki.dev.ui869"
 PLIST="${HOME}/Library/LaunchAgents/${LABEL}.plist"
-COMPOSE_PROJECT="ui869dev"
+COMPOSE_PROJECT="${UI869_COMPOSE_PROJECT:-ui869dev}"
 
 WEB_PORT="${UI869_WEB_PORT:-3417}"
 API_PORT="${UI869_API_PORT:-3498}"
@@ -162,6 +162,12 @@ cmd_up() {
   need_cmd psql
   need_cmd curl
 
+  # A fresh worktree has no state file, but may share an older compose volume.
+  # Refuse the implicit bootstrap in that case: it drops/recreates the demo DB.
+  if [[ ! -f "${ENV_FILE}" ]] && docker volume inspect "${COMPOSE_PROJECT}_postgres_data" >/dev/null 2>&1; then
+    die "bootstrap state missing but ${COMPOSE_PROJECT}_postgres_data exists — choose a fresh UI869_COMPOSE_PROJECT or explicitly run seed --reset for this fixture"
+  fi
+
   write_realm_and_override
 
   log "ensuring isolated compose project '${COMPOSE_PROJECT}' (own volumes, loopback-only ports: pg ${POSTGRES_PORT}, redis ${REDIS_PORT}, keycloak ${OIDC_PORT}, minio ${MINIO_API_PORT}/${MINIO_CONSOLE_PORT}, mailpit ${MAILPIT_SMTP_PORT}/${MAILPIT_UI_PORT})"
@@ -213,7 +219,19 @@ cmd_up() {
   if [[ ! -f "${STATE_DIR}/fixtures-v1" ]]; then
     cmd_fixtures
   fi
+  cmd_oidc_personas
   ensure_web
+}
+
+cmd_oidc_personas() {
+  [[ -f "${ENV_FILE}" ]] || die "bootstrap state missing; run up first"
+  source "${ENV_FILE}"
+  (
+    cd "${ROOT}"
+    export DATABASE_URL="${UI869_ADMIN_DATABASE_URL}" OIDC_ISSUER="${UI869_OIDC_ISSUER}"
+    export UI869_COMPOSE_PROJECT="${COMPOSE_PROJECT}" UI869_DEV_STATE_DIR="${STATE_DIR}"
+    node scripts/dev-local-oidc-personas.cjs
+  )
 }
 
 cmd_fixtures() {
@@ -245,6 +263,7 @@ ensure_web() {
     log "web already running (PID $(cat "${web_pid_file}")) on :${WEB_PORT}"
   else
     log "starting web (next dev, bound 127.0.0.1:${WEB_PORT}) — marketing host ${MARKETING_HOST}, product host ${PRODUCT_HOST}"
+    (cd "${ROOT}" && pnpm --filter '@ticket/web^...' build)
     (
       cd "${ROOT}/apps/web"
       export API_BASE_URL="http://127.0.0.1:${API_PORT}"
@@ -317,6 +336,8 @@ cmd_seed() {
   admin_url="$(node -e "console.log(JSON.parse(process.argv[1]).adminUrl)" "${boot_json}")"
   runtime_url="$(node -e "console.log(JSON.parse(process.argv[1]).runtimeUrl)" "${boot_json}")"
 
+  # d9-demo-seed.sh builds backend directly; a fresh worktree has no contracts dist.
+  (cd "${ROOT}" && pnpm --filter @ticket/contracts build)
   log "seeding fixture data (reuse scripts/d9-demo-seed.sh — future+past events, media)"
   (
     cd "${ROOT}"
