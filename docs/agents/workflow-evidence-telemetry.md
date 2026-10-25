@@ -74,11 +74,13 @@ Wrapper chỉ collect/release dispatch completed/failed đúng run, không tự 
 
 ### Recovery khi worker lỗi / quota trước `worker_done`
 
-Thông báo mailbox (`worker_done`, heartbeat, escalation) **không** bằng settlement Orca. Coordinator phải quan sát **exact dispatch** (`worker-show`, terminal projection) và giữ phân loại `live` / `unverifiable` / `exited` — timeout hoặc inbox rỗng không chứng minh worker đã dừng ([orca-coordinator-mailbox](../../.cursor/rules/orca-coordinator-mailbox.mdc)). Đọc recovery guide version-matched (`ORCA skills get orca-cli` / orchestration skill trên host); **không** tự `worker-start` lại khi dispatch còn live.
+Heartbeat, escalation và thông báo lỗi mailbox **không** settle dispatch. `worker_done` hợp lệ (task/dispatch/run khớp, outcome rõ) **được Orca settle** — coordinator xác minh rồi `agent-workflow-run.mjs settle` (collect; `--release` chỉ khi receipt `released`).
 
-Chỉ khi có positive proof (receipt exited, hoặc dispatch `completed`/`failed` khớp run) mới `stop`/`abandon` theo guide, rồi `agent-workflow-run.mjs settle` (collect, `--release` chỉ khi receipt `released`). Retry cùng `--employee` và `--retry-of <dispatch cũ>`; không ack delivery trước khi xử lý batch. Start thất bại sau agent ready → `observe_existing_dispatch_do_not_restart`, không implicit retry.
+Liveness fleet: `orca orchestration worker-list --run <RUN> --include-remote --json` → `projection.liveness` và `projection.nextAction`; `worker-show` `observation.status` chỉ PTY. `unverifiable`, timeout hoặc inbox rỗng không chứng minh agent dừng ([orca-coordinator-mailbox](../../.cursor/rules/orca-coordinator-mailbox.mdc)). Đọc `ORCA skills get orchestration --reference references/recovery-and-cleanup.md`; **không** `worker-start` khi dispatch còn `live`.
 
-Trước batch UAT web: `node scripts/uat-orca-runtime.mjs --worktree <abs> --json` (ports read-only; port không chứng minh SHA).
+Dispatch `completed`/`failed` đã settled: chỉ collect và (nếu cần) `--release` — **không** `worker-stop`/`worker-abandon` lại. Trước settlement: chỉ positive proof (`exited`, hoặc dispatch failed/stopped đúng run) mới stop/abandon/retry theo guide. `--release` là request wrapper; chỉ ghi `released` sau receipt, không điều kiện vòng trước khi gọi. Retry cùng `--employee` và `--retry-of <dispatch cũ>`; không ack delivery trước batch. Start thất bại sau agent ready → `observe_existing_dispatch_do_not_restart`, không implicit retry.
+
+Trước batch UAT web (read-only): `orca ports --worktree path:<abs-worktree> --json`. Nhiều candidate → xác minh service/host/checkout qua HTTP/DOM hoặc build probe; `protocol: unknown` không suy scheme HTTP; `ports --all` trên folder workspace không chứng minh ownership — chỉ tin `owner.confidence: cwd` trên row `kind: workspace`. `scannedAt` cũ, scan rỗng, `unavailableReason`, hoặc liveness `missing`/`host_unavailable`/`capability_unsupported` là hạn chế — không chọn endpoint chỉ từ port. Port không chứng minh git SHA.
 
 Cursor hook `stop`/`afterAgentResponse` dedupe theo generation; conversation ↔ dispatch phải join đúng. Shared worktree có nhiều worker thì dùng `record-join` với conversation ID thật; không suy từ một active-dispatch.json dùng chung. Provider không đưa token/cache thì giữ null, không báo bằng 0.
 
