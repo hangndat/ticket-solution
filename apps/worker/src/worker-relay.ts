@@ -21,6 +21,7 @@ import {
 import { createTickGuard, waitForInflightTick } from './worker-tick-guard';
 import {
   logWorkerShutdownWait,
+  logWorkerDbDisconnectTimeout,
   logWorkerTickSkipped,
   logWorkerTickStepError,
   logWorkerTickStepStillRunning,
@@ -58,6 +59,15 @@ const OLDEST_DUE_BUDGET_SECONDS: Record<WorkerJobClass, number> = {
   relay_exports: 5 * 60,
   cleanup_import_files: 30 * 60,
 };
+
+function hasDueWork(result: unknown): boolean {
+  if (!result || typeof result !== 'object') return false;
+  const summary = result as { claimed?: unknown; scanned?: unknown };
+  return (
+    (typeof summary.claimed === 'number' && summary.claimed > 0) ||
+    (typeof summary.scanned === 'number' && summary.scanned > 0)
+  );
+}
 
 export class WorkerRelay implements OnModuleDestroy {
   private readonly timers: NodeJS.Timeout[] = [];
@@ -123,6 +133,7 @@ export class WorkerRelay implements OnModuleDestroy {
       this.stepsInFlight.add(name);
       metricsSetGauge('worker_job_inflight', 1, { job_class: name });
       const started = performance.now();
+      let active = false;
       try {
         const hangStep = this.env['WORKER_TEST_HANG_TICK_STEP'];
         if (
@@ -136,13 +147,21 @@ export class WorkerRelay implements OnModuleDestroy {
           this.env['NODE_ENV'] === 'test'
             ? this.testActions?.[name]
             : undefined;
-        return await (testAction ?? action)();
+        const result = await (testAction ?? action)();
+        active = hasDueWork(result);
+        return result;
       } finally {
+        const durationSeconds = (performance.now() - started) / 1000;
         metricsObserveSeconds(
           'worker_job_duration_seconds',
-          (performance.now() - started) / 1000,
+          durationSeconds,
           { job_class: name },
         );
+        if (active) {
+          metricsObserveSeconds('worker_job_active_duration_seconds', durationSeconds, {
+            job_class: name,
+          });
+        }
         metricsSetGauge('worker_job_inflight', 0, { job_class: name });
         this.stepsInFlight.delete(name);
       }
@@ -362,6 +381,7 @@ export class WorkerRelay implements OnModuleDestroy {
   async onModuleDestroy() {
     this.stopped = true;
     for (const timer of this.timers) clearInterval(timer);
+    const shutdownDeadline = performance.now() + this.shutdownTickTimeoutMs;
     const waitOutcome = await waitForInflightTick(() => {
       const active = [
         this.tickGuard.getInflightTick(),
@@ -376,6 +396,21 @@ export class WorkerRelay implements OnModuleDestroy {
         : null;
     }, this.shutdownTickTimeoutMs);
     logWorkerShutdownWait(waitOutcome, this.shutdownTickTimeoutMs);
-    if (this.ownsDb && this.db) await this.db.$disconnect();
+    if (this.ownsDb && this.db) {
+      const remainingMs = Math.max(1, Math.floor(shutdownDeadline - performance.now()));
+      try {
+        await runStepWithTimeout(
+          'db_disconnect',
+          remainingMs,
+          () => this.db!.$disconnect(),
+        );
+      } catch (error) {
+        if (error instanceof TickStepTimeoutError) {
+          logWorkerDbDisconnectTimeout(this.shutdownTickTimeoutMs);
+        } else {
+          throw error;
+        }
+      }
+    }
   }
 }

@@ -9,6 +9,11 @@ export async function withTenant<T>(
   db: PrismaClient,
   tenantId: string,
   operation: (tx: Prisma.TransactionClient) => Promise<T>,
+  limits: {
+    statementTimeoutMs?: number;
+    maxWaitMs?: number;
+    transactionTimeoutMs?: number;
+  } = {},
 ): Promise<T> {
   if (
     !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
@@ -20,10 +25,13 @@ export async function withTenant<T>(
   return db.$transaction(
     async (tx) => {
       await tx.$queryRaw`SELECT set_config('app.tenant_id', ${tenantId}, true)`;
-      await tx.$queryRaw`SELECT set_config('statement_timeout', '5000', true)`;
+      await tx.$queryRaw`SELECT set_config('statement_timeout', ${String(limits.statementTimeoutMs ?? 5000)}, true)`;
       return operation(tx);
     },
-    { maxWait: 5000, timeout: 10000 },
+    {
+      maxWait: limits.maxWaitMs ?? 5000,
+      timeout: limits.transactionTimeoutMs ?? 10000,
+    },
   );
 }
 

@@ -14,7 +14,7 @@ Giữ **một process**, tách ba lịch trong process: reconcile, outbox, maint
 | Export                       | ≤60s / ≤5 phút                   | claim 1, MinIO hard deadline 60s, export lease 120s        |
 | Import cleanup               | ≤30s / ≤30 phút                  | batch 20, supervisor 30s                                   |
 
-Một action/class được giữ tới khi promise thật settle, kể cả supervisor đã timeout. Lịch sau bỏ qua class đang chạy nên timeout không sinh overlap vô hạn. Shutdown dừng timer, đợi action có giới hạn; PG lease và F02 fence xử lý reclaim khi restart. Một outbox row/invocation bảo vệ lease 30s; export CSV query có statement timeout 15s và MinIO 60s, dưới lease 120s trong đường bình thường. Nếu process bị kill giữa provider accept và ack, side effect có thể lặp; không khẳng định exactly-once.
+Một action/class được giữ tới khi promise thật settle, kể cả supervisor đã timeout. Lịch sau bỏ qua class đang chạy nên timeout không sinh overlap vô hạn. Worker DB pool riêng đặt `statement_timeout=15s`, `lock_timeout=2s`, pool wait tối đa 2s; pending discovery đặt `SET LOCAL statement_timeout≤3s`, tenant expiry transaction lấy phần deadline 5s còn lại. PG tự hủy truy vấn/rollback trên chính connection trước khi trả connection về pool; không gửi cancel theo PID có thể trỏ vào query mới. `withTenant` mặc định của API không đổi. Shutdown dừng timer, dùng cùng một deadline cho action và `$disconnect`; PG lease và F02 fence xử lý reclaim khi restart. Một outbox row/invocation bảo vệ lease 30s; export CSV query có statement timeout 15s và MinIO 60s, dưới lease 120s trong đường bình thường. Nếu process bị kill giữa provider accept và ack, side effect có thể lặp; không khẳng định exactly-once.
 
 Pool worker tối đa **5** connection như trước. Tối đa hai class ưu tiên + ba action maintenance (nếu supervisor timeout rồi chuyển bước), nên upper bound action đồng thời = 5. `createDatabase(..., 5, true)` đo thời gian `pg.Pool.connect` thực tế cho cả callback/promise path; log snapshot báo p95 pool wait. API dùng `createDatabase` mặc định không đổi. Trong local PostgreSQL pool 1 connection, query `pg_sleep(0.08)` cùng query thứ hai tạo pool wait >40ms, test PASS.
 
@@ -28,6 +28,26 @@ Pool worker tối đa **5** connection như trước. Tối đa hai class ưu ti
 | SMTP server local treo sau greeting, deadline fixture 35ms                                                    | `UNKNOWN` khoảng 38ms, đóng socket; server fixture trả 250 vẫn được `ACCEPTED` | Production default 5s; APNs deadline 5s từ F02 và test recovery                    |
 | PG isolated, expired outbox lease                                                                             | `due_count` 1 → 0; `reclaim_count` 0 → 1; token mới khác token cũ              | Snapshot aggregate không trả ID/tenant; F02 fence test giữ nguyên                  |
 
+## Batch review #909 — F01/F02/F03 (25/10/2026)
+
+Review nguồn: PR #909 comment `6397856349`, head `cd6762e3977fa421962e07817cea0fbd52aa124c`, reviewer James. Fix counter **1/2**; cả ba finding dưới đây ở trạng thái **Đã sửa chờ reviewer xác minh**, chưa gọi DoD/acceptance PASS.
+
+| Finding | Baseline / nguyên nhân | Sửa và chứng cứ local |
+| --- | --- | --- |
+| AR891-T4-F01 | `rls-catalog.test.cjs` FAIL đúng `worker_job_reclaim_counters ENABLE RLS` tại head review. | Bảng counter `ENABLE/FORCE RLS`, policy `FOR ALL TO migration_owner` duy nhất cho definer; `PUBLIC`/`ticket_runtime` vẫn không có table privilege. Catalog PASS; `ticket_runtime` bị từ chối SELECT/INSERT/UPDATE trực tiếp, trong khi claim lease hết hạn tăng counter thật `0→1` và snapshot chỉ trả aggregate. |
+| AR891-T4-F02 | Supervisor trả timeout nhưng PG action còn treo, class không poll lại; `$disconnect` ngoài shutdown cap. Fault ban đầu trong review chỉ dùng no-op reconcile. | Worker-only PG timeout, pending discovery/tenant transaction theo deadline, shutdown dùng chung deadline. `worker-db-cancel.test.cjs`: giữ `ACCESS EXCLUSIVE` lock trên `redemption_requests`, supervisor timeout 250ms, poll kế tiếp bị skip vì query cũ còn chạy, PG `lock_timeout=2s` hủy query; row/code không đổi khi bị chặn. Sau nhả lock, poll sau đổi `PENDING_REVIEW→EXPIRED`, `HELD→AVAILABLE`; shutdown <1,5s, client mới reclaim lease hết hạn với token mới, counter=1. Test còn phát hiện `FORCE RLS` trước đó làm definer không thấy pending; thêm policy `SELECT TO migration_owner` chỉ cho row `PENDING_REVIEW` đã due, giữ tenant mutation trong `withTenant`. |
+| AR891-T4-F03 | Fixture 115ms never-settling stub không đo CSV, transport, pool và backlog chung. | Fixture PG cô lập bên dưới chạy scheduler thật, CSV thật từ 20.000 ticket, SMTP socket và HTTP object upload thật với delay, pool một connection và 6 query tranh chấp. |
+
+Fixture `pnpm --filter @ticket/backend test:worker-budget-fault` tạo Docker PostgreSQL tạm với migrations/RLS, login `ticket_runtime` không BYPASSRLS; tạo dữ liệu synthetic riêng rồi xóa container/port sau test. 20.000 vé là mức `MAX_ROWS` của export, mỗi CSV **3.220.064 bytes**, 5 export đều `READY` và `row_count=20.000`. 12 outbox `MembershipInvite` đều `COMPLETE`, SMTP local nhận 12 thư với ACK chậm 120ms; 120 pending đều `EXPIRED`; HTTP object receiver ACK chậm 350ms, nhận đủ 5 body. Worker pool size 1, sáu `pg_sleep(180ms)` tạo contention đo được, poll 75ms. Cửa sổ đo **3.240ms**, 18 snapshot hàng đợi; `reclaim_count=1` là claim lease hết hạn thật từ pha restart, không suy từ retry.
+
+| Class có việc thật | Mẫu active | p95 duration local | Max oldest due age trong 18 snapshot | Budget T1 p95 / age |
+| --- | ---: | ---: | ---: | ---: |
+| `reconcile_pending_redemptions` | 3 | 1,567s | 2,866s | 5s / 10s |
+| `relay_outbox` | 12 | 0,590s | 3,797s | 15s / 60s |
+| `relay_exports` | 5 | 0,916s | 2,648s | 60s / 300s |
+
+P95 là nearest-rank trên **invocation có `scanned>0`/`claimed>0`**, không pha loãng bằng poll rỗng; n=3/5 là số mẫu nhỏ, chỉ là p95 của fixture local. `worker_db_pool_wait_seconds` p95 = **0,189s**, đo ở `pg.Pool.connect`; test assert có contention >50ms. Số đo chưa đại diện sản xuất, không có S3/S6 mixed load 2×10 phút hoặc soak #901; HTTP receiver là transport fixture, không xác nhận MinIO thật lưu object. Các budget/age ở bảng chỉ PASS trong fault gate riêng #898 của fixture này. Không đổi business contract, API pool/global timeout hay mô hình broker/process.
+
 Runbook: theo dõi `queue_snapshot`, `job_due_age_budget_exceeded`, `tick_step_timeout`, `tick_step_still_running`, `queue_probe_failed`; điều tra class, due count, p95 và reclaim delta. `worker_due_job_snapshot()` là `SECURITY DEFINER`, fixed search path, chỉ trả năm class + aggregate. PUBLIC không có EXECUTE; `ticket_runtime` chỉ có EXECUTE, không SELECT counter table. Migration additive, giữ nguyên chữ ký claim/F02 fence; phải migrate schema trước worker mới. Counter reclaim chỉ tăng khi claim thực sự lấy lease hết hạn, không suy từ attempts/retry.
 
 ## Checks và giới hạn còn lại
@@ -39,5 +59,6 @@ Runbook: theo dõi `queue_snapshot`, `job_due_age_budget_exceeded`, `tick_step_t
 - `pnpm --filter @ticket/backend test`: 54 PASS.
 - `pnpm --filter @ticket/backend test:architecture-recovery`: 27 PASS, 0 FAIL (F02 fence/APNs, local isolated PG).
 - `pnpm --filter @ticket/backend lint`, `pnpm --filter @ticket/worker lint`: PASS.
+- Batch #909 trên working diff: `pnpm --filter @ticket/backend test:worker-budget-fault` PASS; `test:worker-budget-db`, `test:worker-provider-deadline`, `test:architecture-recovery`, `test:db`, backend unit `test`, `rls-catalog.test.cjs`, worker `test`, lint cả hai package, backend/worker build và `git diff --check` đều PASS. CI phải xác nhận lại trên exact commit SHA sau push; reviewer độc lập vẫn cần xác minh F01–F03.
 
 Chưa có hai lượt mixed-load S3/S6 10 phút và soak #901 trên tài nguyên tương đương production. Chưa khẳng định p95/oldest due age đạt budget trong pilot. Nếu age reconcile/outbox vượt budget >5% mẫu trong 10 phút hai lượt, hoặc pool wait/event-loop lag kéo critical, xem tách process với pool/cpu budget riêng; không thêm broker khi chưa chứng minh PG poll là nút thắt. Infra scrape/alert routing do coordinator sở hữu, worker đã phát log/metric low-cardinality.

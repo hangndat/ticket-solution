@@ -95,3 +95,14 @@ export function logWorkerShutdownWait(
     }),
   );
 }
+
+export function logWorkerDbDisconnectTimeout(timeoutMs: number): void {
+  console.error(
+    JSON.stringify({
+      level: 'error',
+      component: 'worker',
+      event: 'db_disconnect_timeout',
+      timeoutMs,
+    }),
+  );
+}

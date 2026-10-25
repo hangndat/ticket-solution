@@ -1,6 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { createWorker } = require('../dist');
+const { createWorker, WorkerRelay } = require('../dist');
 
 function mockDb() {
   return { $disconnect: async () => {} };
@@ -46,4 +46,16 @@ test('reentrant poll cycle is skipped while tick runs', async () => {
   assert.equal(relay.isTickInFlight(), true);
   await first;
   await app.close();
+});
+
+test('shutdown caps disconnect inside the same deadline', async () => {
+  const relay = new WorkerRelay(
+    { $disconnect: () => new Promise(() => {}) },
+    { sendTicketIssued: async () => ({ providerRef: 'fixture', providerStatus: 'ACCEPTED' }) },
+    undefined, 'shutdown-cap', true, 0, 'fixture-key-material-12345',
+    { NODE_ENV: 'test' }, { shutdownTickTimeoutMs: 40 },
+  );
+  const started = performance.now();
+  await relay.onModuleDestroy();
+  assert.ok(performance.now() - started < 250, 'disconnect cannot extend shutdown indefinitely');
 });
