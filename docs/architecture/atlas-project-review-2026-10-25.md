@@ -53,6 +53,8 @@ Loại: lỗi code so với thiết kế; **should-fix**, ưu tiên cao. Mở t�
 
 Điều kiện đóng: review SQL và kiểm thử cạnh tranh auto/manual trên nhiều source/type của cùng event; số vé/counter đúng, retry có kết quả ổn định. Owner: backend; reviewer độc lập xác minh.
 
+**Annotation provenance (T8 / PR #912, không sửa verdict session):** Phần trên mô tả finding **tại runtime SHA baseline** của lượt review này. Task [#896](https://github.com/hangndat/ticket-solution/issues/896) / PR [#908](https://github.com/hangndat/ticket-solution/pull/908) sau đó **đã merge** (`fb2da38e893881e76a7ef0649ee112220f93fb91` trên `main`) với implementation `packages/backend/src/quota-lock.ts` (EVENT → TICKET_TYPE → ISSUANCE_SOURCE, `ORDER BY id FOR UPDATE`) và independent DoD @ `07d8a99c089e00cfccdc5aeb664c48bdbc9e990e` ([PR #908 review](https://github.com/hangndat/ticket-solution/pull/908#issuecomment-6397496834), [acceptance #896](https://github.com/hangndat/ticket-solution/issues/896#issuecomment-6397578014)). **AR891-T2-F01** (retry mapping Epic T2) **closed** cùng acceptance đó. Dòng historical *F01 remains open: no deterministic lock-order proof* trong [`evidence.json`](../reviews/atlas-20261025/evidence.json) vẫn đúng **cho session baseline** `152b6383…` (stress §F01 bổ sung không chứng minh deterministic locking); hiện trạng implementation: [`ar891-current-architecture.md`](./ar891-current-architecture.md) §provenance.
+
 ### F02 — Email ACCEPTED có thể kết thúc job trong khi push chưa xong
 
 Loại: correctness/recovery gap đã biết; **should-fix**, ưu tiên cao. Cần đóng trước khi cam kết recovery push tự động đầy đủ.
@@ -100,6 +102,8 @@ Loại: documentation drift; **should-fix**, không tự chặn merge.
 `docs/TECHNICAL-DESIGN.md:10` còn nói Redis/BullMQ; `:49`, `:76` còn Web Gate; trong khi ADR-17 và O23 đã thay đổi. Bảng topology có primary + standby và Gate API pool (`:51–54`) nhưng không nên đọc như bằng chứng hạ tầng đang chạy. Roadmap có nhiều checkpoint lịch sử, đã cảnh báo nguồn live là Project #3.
 
 Đề xuất thêm một trang hiện trạng canonical với SHA/ngày xác minh, topology đang triển khai, quyết định thay thế và proof limits; giữ lịch sử ADR nhưng đánh dấu superseded ngay nơi dễ đọc nhầm. Owner: architect/docs phối hợp coordinator. Điều kiện đóng: một người mới xác định được worker hiện tại, bề mặt Gate và topology thực tế mà không ghép nhiều snapshot mâu thuẫn.
+
+**Cập nhật #902:** trang canonical [`ar891-current-architecture.md`](./ar891-current-architecture.md) (SHA/evidence trong file); TD và Decision Log chỉ bổ sung liên kết/trạng thái, không rewrite lịch sử ADR.
 
 ## Giới hạn offline cần giữ trong sản phẩm
 
