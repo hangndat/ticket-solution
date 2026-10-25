@@ -6,10 +6,7 @@ import { useEffect, useState } from 'react';
 import { loadShellContext } from '../src/nav/load-shell-context';
 import { SurfaceState } from '../src/components/surface-state';
 import { usePortalLocale, type MessageKey } from '../src/i18n';
-import {
-  readPortalContextCache,
-  resolveHomeDestination,
-} from '../src/context-cache';
+import { resolveOnboardingSurface } from '../src/onboarding';
 import { usePortalUserId } from '../src/views/use-portal-user-id';
 
 function redirectFromHome(path: string) {
@@ -55,26 +52,27 @@ export default function PortalHomePage() {
         setState('loading');
         return;
       }
-      const cache =
-        identityUserId
-          ? readPortalContextCache(identityUserId)
-          : null;
-      const destination = resolveHomeDestination({
-        userId: identityUserId,
+      const surface = resolveOnboardingSurface({
         tenants: shell.meTenants?.items,
-        events: shell.meEvents?.items,
-        cache,
+        userId: identityUserId,
+        eventCountForTenant: (tenantId) =>
+          shell.meEvents?.items.filter((e) => e.tenantId === tenantId).length ??
+          0,
       });
-      if (destination.kind === 'customer') {
+      if (surface.kind === 'customer') {
         setState('customer');
         return;
       }
-      if (destination.kind === 'signup') {
+      if (surface.kind === 'signup') {
         setState('empty');
         return;
       }
       setState('redirecting');
-      redirectFromHome(destination.path);
+      if (surface.kind === 'pending-activation' || surface.kind === 'first-run') {
+        redirectFromHome(`/onboarding/${surface.tenant.tenantId}`);
+        return;
+      }
+      redirectFromHome(`/t/${surface.tenant.tenantId}`);
     });
     return () => {
       cancelled = true;
