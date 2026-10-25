@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, StyleSheet, Text, View } from 'react-native';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Link, router } from 'expo-router';
+import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AttendeeCta } from '@/components/attendee-cta';
 import { EventBanner } from '@/components/event-media';
@@ -49,6 +50,13 @@ function PublishedEventCard({ item }: { item: PublishedEventSummary }) {
     ? formatListDate(item.startsAt, item.timezone)
     : 'Chưa có giờ bắt đầu';
 
+  const openDetail = () => {
+    router.push({
+      pathname: '/events/[tenantSlug]/[slug]',
+      params: { tenantSlug: item.tenantSlug, slug: item.slug }
+    });
+  };
+
   return (
     <View
       style={{
@@ -59,72 +67,77 @@ function PublishedEventCard({ item }: { item: PublishedEventSummary }) {
         marginBottom: space.lg
       }}
     >
-      <Link
-        href={{
-          pathname: '/events/[tenantSlug]/[slug]',
-          params: { tenantSlug: item.tenantSlug, slug: item.slug }
-        }}
-        asChild
-      >
-        <Pressable
-          accessibilityRole="link"
-          style={({ pressed }) => ({
-            opacity: pressed ? 0.92 : 1
-          })}
+      <EventBanner
+        eventId={item.id}
+        tenantSlug={item.tenantSlug}
+        bannerUrl={item.brand.bannerUrl}
+        height={142}
+        style={{ borderRadius: 0 }}
+        testID={`pub-media-${item.id}-banner`}
+      />
+      <View style={{ padding: space.lg, gap: space.sm }}>
+        <Text
+          style={{
+            ...typography.caption,
+            color: colors.secondary,
+            fontFamily: fontFamilies.body
+          }}
         >
-          <EventBanner
-            eventId={item.id}
-            tenantSlug={item.tenantSlug}
-            bannerUrl={item.brand.bannerUrl}
-            height={142}
-            style={{ borderRadius: 0 }}
-            testID={`pub-media-${item.id}-banner`}
-          />
-          <View style={{ padding: space.lg, gap: space.sm }}>
-            <Text
-              style={{ ...typography.caption, color: colors.secondary,
-                fontFamily: fontFamilies.body }}
-            >
-              {item.brand.organizationName}
-            </Text>
-            <Text
-              accessibilityRole="header"
-              style={{ ...typography.title, color: brand.ink,
-                fontFamily: fontFamilies.display }}
-            >
-              {item.name}
-            </Text>
-            <Text
-              style={{ ...typography.subhead, color: colors.secondary,
-                fontFamily: fontFamilies.body }}
-            >
-              {dateLine}
-              {item.location ? ` · ${item.location}` : ''}
-            </Text>
-            <View
-              style={{
-                alignSelf: 'flex-start',
-                backgroundColor: colors.admitSurface,
-                borderRadius: radius.sm,
-                paddingHorizontal: space.sm,
-                paddingVertical: space.xs
-              }}
-            >
-              <Text
-                style={{ ...typography.badge, color: colors.admit,
-                  fontFamily: fontFamilies.body }}
-              >
-                {eventsCopy.publishedStatusPill}
-              </Text>
-            </View>
-            <WalletOwnedTicketsLink
-              eventId={item.id}
-              variant="card-row"
-              testID={`pub-owned-tickets-${item.id}`}
-            />
-          </View>
-        </Pressable>
-      </Link>
+          {item.brand.organizationName}
+        </Text>
+        <Text
+          accessibilityRole="header"
+          style={{
+            ...typography.title,
+            color: brand.ink,
+            fontFamily: fontFamilies.display
+          }}
+        >
+          {item.name}
+        </Text>
+        <Text
+          style={{
+            ...typography.subhead,
+            color: colors.secondary,
+            fontFamily: fontFamilies.body
+          }}
+        >
+          {dateLine}
+          {item.location ? ` · ${item.location}` : ''}
+        </Text>
+        <View
+          style={{
+            alignSelf: 'flex-start',
+            backgroundColor: colors.admitSurface,
+            borderRadius: radius.sm,
+            paddingHorizontal: space.sm,
+            paddingVertical: space.xs
+          }}
+        >
+          <Text
+            style={{
+              ...typography.badge,
+              color: colors.admit,
+              fontFamily: fontFamilies.body
+            }}
+          >
+            {eventsCopy.publishedStatusPill}
+          </Text>
+        </View>
+        <WalletOwnedTicketsLink
+          eventId={item.id}
+          variant="card-row"
+          testID={`pub-owned-tickets-${item.id}`}
+        />
+        <Button
+          label={eventsCopy.cardPrimaryCta}
+          variant="primary"
+          onPress={openDetail}
+          accessibilityLabel={`${eventsCopy.cardPrimaryCta}: ${item.name}`}
+          testID={`pub-card-cta-${item.id}`}
+          style={{ alignSelf: 'stretch' }}
+        />
+      </View>
     </View>
   );
 }
