@@ -117,8 +117,30 @@ write_realm_and_override() {
     // login works against a fresh isolated Keycloak volume (shared stack volume
     // predates this requirement so it is unaffected; never touches the
     // committed realm-ticket.json).
+    const fixtureUsers = [
+      { username: "owner.fixture@example.com", email: "owner.fixture@example.com", firstName: "Owner", password: "owner-fixture-demo" },
+      { username: "manager.fixture@example.com", email: "manager.fixture@example.com", firstName: "Manager", password: "manager-fixture-demo" },
+      { username: "cs.fixture@example.com", email: "cs.fixture@example.com", firstName: "CS", password: "cs-fixture-demo" },
+      { username: "supervisor.fixture@example.com", email: "supervisor.fixture@example.com", firstName: "Supervisor", password: "supervisor-fixture-demo" },
+      { username: "scanner.fixture@example.com", email: "scanner.fixture@example.com", firstName: "Scanner", password: "scanner-fixture-demo" },
+      { username: "report.fixture@example.com", email: "report.fixture@example.com", firstName: "Report", password: "report-fixture-demo" },
+    ];
+    const byUsername = new Map((realm.users || []).map((u) => [u.username, u]));
+    for (const spec of fixtureUsers) {
+      if (!byUsername.has(spec.username)) {
+        realm.users.push({
+          username: spec.username,
+          email: spec.email,
+          enabled: true,
+          emailVerified: true,
+          firstName: spec.firstName,
+          lastName: "Fixture",
+          credentials: [{ type: "password", value: spec.password, temporary: false }],
+        });
+      }
+    }
     for (const u of realm.users || []) {
-      if (!["staff@example.com", "attendee@example.com"].includes(u.username)) continue;
+      if (!u.username?.endsWith("@example.com")) continue;
       if (Array.isArray(u.requiredActions)) {
         u.requiredActions = u.requiredActions.filter((a) => a !== "CONFIGURE_TOTP");
       }
@@ -226,6 +248,8 @@ cmd_fixtures() {
     export UI869_API_URL="http://127.0.0.1:${API_PORT}"
     node scripts/dev-local-fixtures.cjs
   )
+  log "persona fixtures (VCX-925 — idempotent OIDC roles + volume data)"
+  "${ROOT}/scripts/dev-local-persona-fixtures.sh" || die "persona fixtures failed"
   touch "${STATE_DIR}/fixtures-v1"
   chmod 600 "${STATE_DIR}/fixtures-v1"
 }
@@ -331,6 +355,14 @@ cmd_seed() {
   log "seeding MinIO media (reuse scripts/d9-seed-media.sh, isolated :${MINIO_API_PORT})"
   (cd "${ROOT}" && DATABASE_URL="${admin_url}" MINIO_ENDPOINT="http://127.0.0.1:${MINIO_API_PORT}" ./scripts/d9-seed-media.sh) \
     || log "WARNING: media seed failed — see output above; web still usable without media"
+
+  log "persona fixtures after base D9 seed (VCX-925)"
+  (
+    export DATABASE_URL="${admin_url}" OIDC_ISSUER="${issuer}"
+    export UI869_API_URL="http://127.0.0.1:${API_PORT}"
+    export CODE_HMAC_PEPPER="${UI869_CODE_HMAC_PEPPER}" CODE_HMAC_VERSION="${UI869_CODE_HMAC_VERSION}"
+    "${ROOT}/scripts/dev-local-persona-fixtures.sh"
+  ) || die "persona fixtures failed during seed"
 
   mkdir -p "${STATE_DIR}"
   cat >"${ENV_FILE}" <<EOF
@@ -497,7 +529,8 @@ Commands:
   logs [api|web]         Tail logs (default: both)
   down                   Stop owned API/web PIDs + isolated compose containers (volumes preserved)
   seed --reset           Explicit-only: bootstrap/reseed isolated DB ticket_ui869_dev
-  fixtures               Additive scenarios + routing + tickets, preserving existing data
+  fixtures               Additive scenarios + routing + tickets + persona roles (VCX-925)
+  persona-fixtures       VCX-925 persona OIDC seed/verify only (idempotent; guarded)
   supervisor             Foreground ensure/restart loop (launchd Program target)
   install-autostart      Write + bootstrap launchd agent (user-authorized)
   uninstall-autostart    Unload + remove launchd agent
@@ -516,6 +549,7 @@ main() {
     down) cmd_down "$@" ;;
     seed) cmd_seed "$@" ;;
     fixtures) cmd_fixtures ;;
+    persona-fixtures) "${ROOT}/scripts/dev-local-persona-fixtures.sh" ;;
     supervisor) cmd_supervisor "$@" ;;
     install-autostart) cmd_install_autostart "$@" ;;
     uninstall-autostart) cmd_uninstall_autostart "$@" ;;
