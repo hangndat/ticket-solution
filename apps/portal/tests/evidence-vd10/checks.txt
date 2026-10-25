@@ -1,4 +1,4 @@
-SHA: 4ffb8be0a523107aec77350b74051d60f5e8e9cb
+SHA: cb70fceb69dc17eb799084442072ea23308ba518
 pnpm --filter @ticket/portal test  # pass
 pnpm --filter @ticket/portal build  # pass
 WEB_UAT_EXECUTABLE="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" node apps/portal/tests/evidence-vd10/capture-screenshots.mjs  # pass
