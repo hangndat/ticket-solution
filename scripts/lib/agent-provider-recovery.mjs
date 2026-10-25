@@ -1,0 +1,494 @@
+/** Provider recovery checks: Codex via telemetry snapshot; Claude via bounded CLI probe. */
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, dirname } from 'node:path';
+import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
+import { assessCodexQuota } from './agent-quota-policy.mjs';
+import { COST_TIER_ROUTES } from './agent-cost-tiers.mjs';
+import {
+  recoveryRoot,
+  stateKey,
+  readState,
+  writeState,
+  deleteState,
+  hashIdentity,
+  tryAcquireProbeLock,
+  releaseProbeLock,
+  isFresh,
+  inBackoff,
+  beforeKnownReset,
+  BACKOFF_MS,
+  PROBE_TIMEOUT_MS,
+  MAX_PROBE_STDOUT,
+  STATE_TTL_MS,
+} from './agent-provider-state.mjs';
+
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
+
+const RATE_LIMIT_RE = /rate.?limit|overloaded|too many requests/i;
+
+function nowIso(now = Date.now()) {
+  return new Date(now).toISOString();
+}
+
+function baseRecord({ provider, identityHash, model, effort, now }) {
+  return {
+    provider,
+    identityHash,
+    model,
+    effort: effort ?? null,
+    checkedAt: nowIso(now),
+    nextCheckAt: nowIso(now),
+    resetAt: null,
+    limitedAt: null,
+    availability: 'unknown',
+    serviceAvailable: false,
+    remainingPercent: null,
+    reason: null,
+    probeSkipped: false,
+    identityBinding: 'cli_only',
+  };
+}
+
+export function parseClaudeAuth(stdout) {
+  let data;
+  try {
+    data = JSON.parse(stdout);
+  } catch {
+    return { ok: false, reason: 'auth_malformed' };
+  }
+  if (!data?.loggedIn) return { ok: false, reason: 'auth_logged_out' };
+  if (data.authMethod !== 'firstParty' || data.apiProvider !== 'claude.ai') {
+    return { ok: false, reason: 'auth_not_first_party_subscription' };
+  }
+  const identityHash = hashIdentity({
+    provider: 'claude',
+    authMethod: data.authMethod,
+    apiProvider: data.apiProvider,
+    email: data.email ?? null,
+    orgId: data.orgId ?? null,
+  });
+  return { ok: true, identityHash, authMethod: data.authMethod, apiProvider: data.apiProvider };
+}
+
+export function runClaudeAuth(deps) {
+  const bin = deps.claudeAuthBin || process.env.AGENT_PROVIDER_CLAUDE_AUTH_BIN || 'claude';
+  const r = spawnSync(bin, ['auth', 'status', '--json'], {
+    encoding: 'utf8',
+    timeout: 15000,
+    maxBuffer: MAX_PROBE_STDOUT,
+    shell: false,
+  });
+  if (r.error || r.status !== 0) return { ok: false, reason: 'auth_exec_failed' };
+  return parseClaudeAuth(r.stdout);
+}
+
+export function runClaudeProbe({ model, effort, deps, now = Date.now() }) {
+  const bin = deps.claudeBin || process.env.AGENT_PROVIDER_CLAUDE_BIN || 'claude';
+  const cwd = mkdtempSync(join(tmpdir(), 'claude-probe-'));
+  const args = [
+    '--print',
+    '--output-format',
+    'json',
+    '--no-session-persistence',
+    '--tools',
+    '',
+    '--strict-mcp-config',
+    '--mcp-config',
+    '{"mcpServers":{}}',
+    '--permission-mode',
+    'dontAsk',
+    '--model',
+    model,
+    '--effort',
+    effort,
+    '--system-prompt',
+    'Reply exactly OK.',
+    'Reply exactly OK.',
+  ];
+  const r = spawnSync(bin, args, {
+    cwd,
+    encoding: 'utf8',
+    timeout: PROBE_TIMEOUT_MS,
+    maxBuffer: MAX_PROBE_STDOUT,
+    shell: false,
+    env: { ...process.env, CLAUDE_CODE_DISABLE_NONE: '1' },
+  });
+  try {
+    rmSync(cwd, { recursive: true, force: true });
+  } catch {
+    /* ignore */
+  }
+  if (r.error?.code === 'ETIMEDOUT' || r.signal === 'SIGTERM') {
+    return { ok: false, reason: 'probe_timeout', availability: 'unknown' };
+  }
+  const blob = `${r.stdout || ''}\n${r.stderr || ''}`;
+  if (RATE_LIMIT_RE.test(blob)) {
+    return { ok: false, reason: 'probe_rate_limited', availability: 'limited' };
+  }
+  let payload;
+  try {
+    payload = JSON.parse(r.stdout);
+  } catch {
+    return { ok: false, reason: 'probe_malformed', availability: 'unknown' };
+  }
+  if (payload.is_error || payload.success === false) {
+    const err = String(payload.error || payload.result || '');
+    if (RATE_LIMIT_RE.test(err)) return { ok: false, reason: 'probe_rate_limited', availability: 'limited' };
+    if (/auth|login|credential/i.test(err)) return { ok: false, reason: 'probe_auth', availability: 'limited' };
+    return { ok: false, reason: 'probe_error', availability: 'unknown' };
+  }
+  const text = typeof payload.result === 'string' ? payload.result.trim() : '';
+  if (text !== 'OK') return { ok: false, reason: 'probe_unexpected_body', availability: 'unknown' };
+  return {
+    ok: true,
+    availability: 'available',
+    serviceAvailable: true,
+    remainingPercent: null,
+    reason: 'probe_ok',
+    checkedAt: nowIso(now),
+  };
+}
+
+export function assessCodexFromSnapshot(snapshot, { limitIds, essential, now = Date.now() }) {
+  const q = assessCodexQuota(snapshot, { limitIds, essential, now });
+  let availability = 'unknown';
+  let serviceAvailable = false;
+  if (q.state === 'available' || q.state === 'reserve_for_essential') {
+    availability = 'available';
+    serviceAvailable = true;
+  } else if (q.state === 'reserved' || q.state === 'exhausted' || q.state === 'stale') {
+    availability = 'limited';
+  }
+  const identityHash = snapshot?.accountIdHash
+    ? hashIdentity({ provider: 'codex', accountIdHash: snapshot.accountIdHash })
+    : null;
+  return {
+    quota: q,
+    identityHash,
+    availability,
+    serviceAvailable,
+    remainingPercent: q.remainingPercent ?? null,
+    reason: q.state,
+  };
+}
+
+function mergeOutcome(record, patch, now = Date.now()) {
+  const next = { ...record, ...patch, checkedAt: patch.checkedAt || nowIso(now) };
+  const limited = next.availability === 'limited' || next.availability === 'unknown';
+  if (limited && !patch.nextCheckAt) {
+    next.nextCheckAt = nowIso(now + BACKOFF_MS);
+  }
+  if (next.availability === 'available' && next.serviceAvailable) {
+    next.nextCheckAt = nowIso(now + STATE_TTL_MS);
+    next.limitedAt = null;
+  }
+  return next;
+}
+
+export function recordProviderLimit(
+  {
+    provider,
+    model,
+    effort = null,
+    limitedAt,
+    resetAt = null,
+    reason = 'manual_limit',
+    identityHash = null,
+  },
+  { root = recoveryRoot(), deps = {}, now = Date.now() } = {},
+) {
+  const at = Date.parse(limitedAt);
+  if (!Number.isFinite(at)) throw new Error('invalid_limited_at_iso');
+  let idHash = identityHash;
+  if (!idHash && provider === 'claude') {
+    const auth = runClaudeAuth(deps);
+    if (!auth.ok) throw new Error(auth.reason);
+    idHash = auth.identityHash;
+  }
+  if (!idHash) throw new Error('identity_required');
+  const key = stateKey({ provider, identityHash: idHash, model, effort });
+  const resetParsed = resetAt ? Date.parse(resetAt) : NaN;
+  const nextCheck =
+    Number.isFinite(resetParsed) && resetParsed > now
+      ? resetParsed
+      : now + BACKOFF_MS;
+  const record = mergeOutcome(
+    baseRecord({ provider, identityHash: idHash, model, effort, now }),
+    {
+      availability: 'limited',
+      serviceAvailable: false,
+      limitedAt: new Date(at).toISOString(),
+      resetAt: Number.isFinite(resetParsed) ? new Date(resetParsed).toISOString() : null,
+      nextCheckAt: new Date(nextCheck).toISOString(),
+      reason,
+      remainingPercent: null,
+    },
+    now,
+  );
+  writeState(root, key, record);
+  return { key, record };
+}
+
+export function getProviderStatus(
+  { provider, model, effort = null, identityHash },
+  { root = recoveryRoot(), now = Date.now() } = {},
+) {
+  const key = stateKey({ provider, identityHash, model, effort });
+  const record = readState(root, key);
+  if (!record) {
+    return { key, record: null, fresh: false, due: true, inCooldown: false, beforeReset: false };
+  }
+  return {
+    key,
+    record,
+    fresh: isFresh(record, now),
+    due: !inBackoff(record, now),
+    inCooldown: inBackoff(record, now),
+    beforeReset: beforeKnownReset(record, now),
+  };
+}
+
+export function checkProvider(
+  {
+    provider,
+    model,
+    effort = null,
+    force = false,
+    essential = false,
+    codexSnapshot = null,
+    limitIds = ['codex'],
+  },
+  { root = recoveryRoot(), deps = {}, now = Date.now() } = {},
+) {
+  let identityHash = null;
+  if (provider === 'claude') {
+    const auth = runClaudeAuth(deps);
+    if (!auth.ok) {
+      return {
+        ok: false,
+        provider,
+        model,
+        effort,
+        availability: 'unknown',
+        serviceAvailable: false,
+        reason: auth.reason,
+        probed: false,
+      };
+    }
+    identityHash = auth.identityHash;
+  } else if (provider === 'codex') {
+    const assessed = assessCodexFromSnapshot(codexSnapshot, { limitIds, essential, now });
+    if (!assessed.identityHash) {
+      return {
+        ok: false,
+        provider,
+        model,
+        effort,
+        availability: 'unknown',
+        serviceAvailable: false,
+        reason: 'codex_snapshot_missing',
+        probed: false,
+        quota: assessed.quota,
+      };
+    }
+    identityHash = assessed.identityHash;
+  } else {
+    return {
+      ok: true,
+      provider,
+      model,
+      effort,
+      availability: 'unknown',
+      serviceAvailable: false,
+      reason: 'provider_not_tracked',
+      probed: false,
+    };
+  }
+
+  const key = stateKey({ provider, identityHash, model, effort });
+  const existing = readState(root, key);
+  if (existing && existing.identityHash && existing.identityHash !== identityHash) {
+    deleteState(root, key);
+  }
+  const cached = readState(root, key);
+  if (cached?.identityHash && cached.identityHash !== identityHash) deleteState(root, key);
+
+  const status = getProviderStatus({ provider, identityHash, model, effort }, { root, now });
+  let record = status.record;
+
+  if (record && record.identityHash !== identityHash) {
+    deleteState(root, key);
+    record = null;
+  }
+
+  if (record && beforeKnownReset(record, now)) {
+    return {
+      ok: true,
+      provider,
+      model,
+      effort,
+      availability: record.availability,
+      serviceAvailable: false,
+      reason: 'before_known_reset',
+      probed: false,
+      probeSkipped: true,
+      record,
+      fresh: isFresh(record, now),
+    };
+  }
+
+  if (!force && record) {
+    if (inBackoff(record, now) && isFresh(record, now)) {
+      return {
+        ok: true,
+        provider,
+        model,
+        effort,
+        availability: record.availability,
+        serviceAvailable: record.serviceAvailable,
+        reason: 'cooldown_cached',
+        probed: false,
+        probeSkipped: true,
+        record,
+        fresh: true,
+      };
+    }
+    if (inBackoff(record, now) && !force) {
+      return {
+        ok: true,
+        provider,
+        model,
+        effort,
+        availability: record.availability,
+        serviceAvailable: record.serviceAvailable,
+        reason: 'cooldown',
+        probed: false,
+        probeSkipped: true,
+        record,
+        fresh: false,
+      };
+    }
+  }
+
+  const lock = tryAcquireProbeLock(root, { now });
+  if (!lock.acquired) {
+    const fallback = record || baseRecord({ provider, identityHash, model, effort, now });
+    return {
+      ok: true,
+      provider,
+      model,
+      effort,
+      availability: fallback.availability,
+      serviceAvailable: fallback.serviceAvailable,
+      reason: 'probe_lock_busy',
+      probed: false,
+      probeSkipped: true,
+      record: fallback,
+    };
+  }
+
+  try {
+    let outcome;
+    if (provider === 'claude') {
+      outcome = runClaudeProbe({ model, effort, deps, now });
+      const base = baseRecord({ provider, identityHash, model, effort, now });
+      record = mergeOutcome(
+        record || base,
+        {
+          identityHash,
+          availability: outcome.availability || (outcome.ok ? 'available' : 'unknown'),
+          serviceAvailable: !!outcome.serviceAvailable,
+          remainingPercent: null,
+          reason: outcome.reason,
+          limitedAt: outcome.ok ? null : record?.limitedAt || nowIso(now),
+        },
+        now,
+      );
+    } else {
+      const assessed = assessCodexFromSnapshot(codexSnapshot, { limitIds, essential, now });
+      const base = baseRecord({ provider, identityHash, model, effort, now });
+      record = mergeOutcome(
+        record || base,
+        {
+          identityHash,
+          availability: assessed.availability,
+          serviceAvailable: assessed.serviceAvailable,
+          remainingPercent: assessed.remainingPercent,
+          reason: assessed.reason,
+          quotaState: assessed.quota?.state,
+        },
+        now,
+      );
+      outcome = { ok: assessed.serviceAvailable, ...assessed };
+    }
+    writeState(root, key, record);
+    return {
+      ok: true,
+      provider,
+      model,
+      effort,
+      availability: record.availability,
+      serviceAvailable: record.serviceAvailable,
+      remainingPercent: record.remainingPercent,
+      reason: record.reason,
+      probed: provider === 'claude',
+      record,
+      quota: outcome.quota,
+    };
+  } finally {
+    releaseProbeLock(lock.lockPath);
+  }
+}
+
+const HEAVY_TIERS = new Set(['focused', 'advanced', 'high']);
+
+export function recommendRoute(
+  { costTier, essential = false, codexSnapshot = null, force = false },
+  { root = recoveryRoot(), deps = {}, now = Date.now() } = {},
+) {
+  if (!HEAVY_TIERS.has(costTier)) {
+    return { costTier, routes: COST_TIER_ROUTES[costTier] || [], recommendation: null, reason: 'tier_not_preflighted' };
+  }
+  const routes = COST_TIER_ROUTES[costTier] || [];
+  const evaluated = [];
+  for (const route of routes) {
+    const check = checkProvider(
+      {
+        provider: route.agent,
+        model: route.models[0],
+        effort: route.effort,
+        force,
+        essential,
+        codexSnapshot,
+        limitIds: route.quotaLimitIds || ['codex'],
+      },
+      { root, deps, now },
+    );
+    evaluated.push({
+      route,
+      check,
+      preferred: route.agent === 'claude' && check.serviceAvailable,
+    });
+  }
+  const claude = evaluated.find((e) => e.route.agent === 'claude');
+  const codex = evaluated.find((e) => e.route.agent === 'codex');
+  let recommendation = null;
+  let reason = 'no_route_available';
+  if (claude?.check.serviceAvailable) {
+    recommendation = claude.route;
+    reason = 'claude_recovered';
+  } else if (codex?.check.serviceAvailable) {
+    recommendation = codex.route;
+    reason = 'codex_available';
+  } else if (claude) {
+    recommendation = claude.route;
+    reason = claude.check.serviceAvailable ? 'claude_recovered' : 'claude_not_verified_fallback_explicit';
+  }
+  return { costTier, routes: evaluated, recommendation, reason };
+}
+
+export function recoveryTelemetryPath() {
+  return join(ROOT, 'scripts/agent-role-monitor/telemetry.mjs');
+}

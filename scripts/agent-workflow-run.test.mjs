@@ -21,7 +21,10 @@ if(a[1]==='worker-release')result={state:process.env.FIX_RELEASE||'released'};
 console.log(JSON.stringify({ok:true,result}));
 `,{mode:0o700});
  writeFileSync(telemetry,`import fs from 'node:fs';const a=process.argv.slice(2);fs.appendFileSync(process.env.FIX_LOG,JSON.stringify(a)+'\\n');if(a[0]==='collect'&&process.env.FIX_COLLECT_FAIL){console.error('collect failed');process.exit(1);}if(a[0]==='snapshot'){const p=a[a.indexOf('--out')+1];if(process.env.FIX_SNAPSHOT_FAIL){console.error('unavailable');process.exit(1);}fs.writeFileSync(p,JSON.stringify(process.env.FIX_QUOTA_JSON?JSON.parse(process.env.FIX_QUOTA_JSON):{source:'codex.app-server.account/rateLimits/read',timestamp:new Date().toISOString(),accountIdHash:'fixture',buckets:[{limitId:'codex',primary:{usedPercent:1,windowDurationMins:10080,resetsAt:Math.floor(Date.now()/1000)+3600},secondary:null}]}),{mode:0o600,flag:'wx'});}console.log(JSON.stringify({ok:true}));`);
- const run=(args,extra={})=>spawnSync(process.execPath,[cli,...args,'--dir',join(dir,'receipts')],{cwd:dir,encoding:'utf8',env:{...process.env,ORCA_CLI_COMMAND:orca,AGENT_TELEMETRY_CLI:telemetry,ORCA_METRICS_LEDGER:join(dir,'metrics.jsonl'),COMPANY_WORKLOG_FILE:join(dir,'work-events.jsonl'),FIX_LOG:log,...extra}});
+ const claudeAuth=join(dir,'claude-auth'), claudeProbe=join(dir,'claude-probe');
+ writeFileSync(claudeAuth,`#!/usr/bin/env node\nconsole.log(JSON.stringify({loggedIn:true,authMethod:'firstParty',apiProvider:'claude.ai'}));\n`,{mode:0o700});
+ writeFileSync(claudeProbe,`#!/usr/bin/env node\nconsole.log(JSON.stringify({success:true,is_error:false,result:'OK'}));\n`,{mode:0o700});
+ const run=(args,extra={})=>spawnSync(process.execPath,[cli,...args,'--dir',join(dir,'receipts')],{cwd:dir,encoding:'utf8',env:{...process.env,ORCA_CLI_COMMAND:orca,AGENT_TELEMETRY_CLI:telemetry,ORCA_METRICS_LEDGER:join(dir,'metrics.jsonl'),COMPANY_WORKLOG_FILE:join(dir,'work-events.jsonl'),AGENT_PROVIDER_CLAUDE_AUTH_BIN:claudeAuth,AGENT_PROVIDER_CLAUDE_BIN:claudeProbe,FIX_LOG:log,...extra}});
  const calls=()=>readFileSync(log,'utf8').trim().split('\n').filter(Boolean).map(JSON.parse);
  try {fn({dir,run,calls});}finally{rmSync(dir,{recursive:true,force:true});}
 }

@@ -7,8 +7,10 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { randomUUID } from 'node:crypto';
 import { COST_TIER_ROUTES } from './lib/agent-cost-tiers.mjs';
 import { assessCodexQuota } from './lib/agent-quota-policy.mjs';
+import { checkProvider } from './lib/agent-provider-recovery.mjs';
 import { appendEvent, employee, validateAssignment, events as companyEvents } from './company-worklog.mjs';
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const HEAVY_COST_TIERS = new Set(['focused', 'advanced', 'high']);
 const telemetry = process.env.AGENT_TELEMETRY_CLI || join(ROOT, 'scripts/agent-role-monitor/telemetry.mjs');
 const orca = process.env.ORCA_CLI_COMMAND || 'orca';
 function child(bin, args) {
@@ -74,6 +76,21 @@ export function main(argv=process.argv.slice(2)) {
     if(quotaCheck.enforced && !quotaCheck.allowed) {
       console.log(JSON.stringify({ok:false,errorCode:'quota_'+quotaCheck.state,agentReady:false,costTier:f['cost-tier'],quotaCheck,receiptDirectory:dir,nextAction:'defer_or_review_registered_same_tier_route'}));process.exitCode=1;return;
     }
+    let providerRecovery=null;
+    if(HEAVY_COST_TIERS.has(f['cost-tier']) && f.agent==='claude') {
+      providerRecovery=checkProvider({provider:'claude',model:f.model,effort:f.effort||null,essential:!!f['essential-reason']},{root:join(process.cwd(),'.orca-metrics','provider-recovery')});
+      const recoveryReceipt={
+        ...providerRecovery,
+        quotaAmountKnown:false,
+        workerAccountBinding:'unverified',
+        cliIdentityBinding:'cli_only',
+      };
+      save(dir,'provider-recovery.json',recoveryReceipt);
+      providerRecovery=recoveryReceipt;
+      if(!providerRecovery.serviceAvailable) {
+        console.log(JSON.stringify({ok:false,errorCode:'provider_recovery_'+providerRecovery.availability,agentReady:false,costTier:f['cost-tier'],providerRecovery,quotaCheck,receiptDirectory:dir,nextAction:'defer_or_pick_registered_codex_route'}));process.exitCode=1;return;
+      }
+    }
     const args=['orchestration','worker-start','--run',run,'--task',f.task,'--worktree',f.worktree||'current',...pin,'--json'];
     // Existing worktrees take Persona from task-create; display-name is creation-only.
     if(f['display-name'] && ['new-child','new-top-level'].includes(f.worktree)) args.push('--display-name',f['display-name']);
@@ -93,7 +110,7 @@ export function main(argv=process.argv.slice(2)) {
     const routingStatus=routingVerified?'verified':!effective?.agent || !effective?.model || (f.effort && !effective.effort)?'unknown':'mismatch';
     save(dir,'routing-status.json',{status:routingStatus,requested:{agent:f.agent,model:f.model,effort:f.effort||null},effective:effective??null});
     if(!opened.ok || !routingVerified)process.exitCode=1;
-    output={ok:opened.ok && routingVerified,command,runId:run,taskId:f.task,dispatchId:r.dispatchId,state:r.state,agentReady:true,costTier:f['cost-tier'],launch:r.launch,quotaAvailable,quotaSnapshotProvider:'codex',quotaCheck,openedRecorded:opened.ok,telemetryStatus:opened.ok?'recorded':'degraded',routingStatus,nextAction:opened.ok && routingVerified?'supervise':'observe_existing_dispatch_do_not_restart',receiptDirectory:dir};
+    output={ok:opened.ok && routingVerified,command,runId:run,taskId:f.task,dispatchId:r.dispatchId,state:r.state,agentReady:true,costTier:f['cost-tier'],launch:r.launch,quotaAvailable,quotaSnapshotProvider:'codex',quotaCheck,...(providerRecovery?{providerRecovery,providerRecoveryEvidence:{serviceAvailable:providerRecovery.serviceAvailable,quotaAmountKnown:providerRecovery.quotaAmountKnown,workerAccountBinding:providerRecovery.workerAccountBinding,reason:providerRecovery.reason,checkedAt:providerRecovery.record?.checkedAt??null,preferClaudeRecovered:providerRecovery.serviceAvailable&&providerRecovery.reason==='probe_ok'}}:{}),openedRecorded:opened.ok,telemetryStatus:opened.ok?'recorded':'degraded',routingStatus,nextAction:opened.ok && routingVerified?'supervise':'observe_existing_dispatch_do_not_restart',receiptDirectory:dir};
     if(!routingVerified)output.errorCode='effective_route_'+routingStatus;
     if(f.employee) {
       try {
