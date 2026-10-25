@@ -1,14 +1,13 @@
 import type { MeEventItem, MeTenantItem } from '@ticket/contracts';
 import { isStaffPortalTenant } from '../onboarding';
+import {
+  isTenantOrgHomePath,
+  parsePathEventId,
+} from '../nav/portal-context-routes';
 import { patchPortalContextCache, type StorageLike } from './storage';
 
 function tenantFromPath(pathname: string): string | null {
   const m = pathname.match(/^\/t\/([^/]+)/);
-  return m?.[1] ?? null;
-}
-
-function eventFromPath(pathname: string): string | null {
-  const m = pathname.match(/^\/t\/[^/]+\/e\/([^/]+)/);
   return m?.[1] ?? null;
 }
 
@@ -38,13 +37,13 @@ export function persistPortalContextFromRoute(input: {
     return;
   }
 
-  const pathEventId = eventFromPath(input.pathname);
+  const pathEventId = parsePathEventId(input.pathname);
   const eventValid =
     pathEventId &&
     input.events.some(
       (e) => e.tenantId === tenantId && e.eventId === pathEventId,
     );
-  const tenantHomeOnly = /^\/t\/[^/]+\/?$/.test(input.pathname);
+  const tenantHomeOnly = isTenantOrgHomePath(input.pathname);
 
   patchPortalContextCache(
     input.userId,
