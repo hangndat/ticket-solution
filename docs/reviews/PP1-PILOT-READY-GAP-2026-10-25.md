@@ -40,7 +40,7 @@ Ngày: 2026-10-25 · Nhân viên: Gonic (backend) · Nguồn: `gh issue/comment`
 
 | PR | Nội dung | SHA | CI |
 | --- | --- | --- | --- |
-| *(điền sau khi mở PR)* | Sync `docs/ROADMAP.md` §1/§1.1 dòng D5 theo board "Hoàn thành" + trỏ gap report; không đổi tiêu chí pilot ready | — | — |
+| [#910](https://github.com/hangndat/ticket-solution/pull/910) | Sync `docs/ROADMAP.md` §1/§6 dòng D5 theo board "Hoàn thành" + trỏ gap report; không đổi tiêu chí pilot ready | `f3848d0a` | *(chờ CI)* |
 
 ## 5. Checklist thiết bị vật lý — user tự chạy
 
