@@ -491,6 +491,62 @@ html[data-vemoki-marketing='neon-v1'] .mkt-neon-final-lead {
   margin: 0 0 24px;
 }
 
+html[data-vemoki-marketing='neon-v1'] .mkt-neon-final-script {
+  position: absolute;
+  right: clamp(12px, 4vw, 48px);
+  top: 50%;
+  z-index: 2;
+  margin: 0;
+  transform: translateY(-42%) rotate(-6deg);
+  font-family: 'Segoe Script', 'Brush Script MT', cursive;
+  font-size: clamp(1.35rem, 2.4vw, 2.15rem);
+  line-height: 1.05;
+  color: rgba(255, 255, 255, 0.92);
+  text-shadow: 0 0 28px rgba(236, 72, 153, 0.45);
+  pointer-events: none;
+  display: none;
+}
+
+html[data-vemoki-marketing='neon-v1'] .mkt-neon-final-script span {
+  display: block;
+}
+
+html[data-vemoki-marketing='neon-v1'] .mkt-neon-final-mobile-card {
+  display: none;
+}
+
+html[data-vemoki-marketing='neon-v1'] .mkt-neon-final-ripple {
+  position: absolute;
+  left: 50%;
+  top: 44%;
+  width: min(92vw, 340px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: 1px solid rgba(168, 85, 247, 0.35);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+html[data-vemoki-marketing='neon-v1'] .mkt-neon-final-ripple-a {
+  opacity: 0.55;
+}
+
+html[data-vemoki-marketing='neon-v1'] .mkt-neon-final-ripple-b {
+  width: min(78vw, 280px);
+  opacity: 0.38;
+}
+
+html[data-vemoki-marketing='neon-v1'] .mkt-neon-final-ripple-c {
+  width: min(64vw, 220px);
+  opacity: 0.28;
+}
+
+@media (min-width: 641px) {
+  html[data-vemoki-marketing='neon-v1'] .mkt-neon-final-script {
+    display: block;
+  }
+}
+
 html[data-vemoki-marketing='neon-v1'] [data-testid='mkt-footer'] {
   border-top: 1px solid #25213d;
   color: var(--vm-text-subtle);
@@ -619,13 +675,57 @@ html[data-vemoki-marketing='neon-v1'] [data-testid='mkt-footer'] {
   }
   html[data-vemoki-marketing='neon-v1'] .mkt-neon-final-cta {
     margin-block: 18px 0;
-    padding-bottom: 40px;
+    padding: 0 16px 40px;
+    position: relative;
+  }
+  html[data-vemoki-marketing='neon-v1'] .mkt-neon-final-mobile-card {
+    display: block;
+    position: absolute;
+    inset: 0 16px auto 16px;
+    min-height: 320px;
+    border-radius: 22px;
+    background: radial-gradient(
+        120% 90% at 50% 0%,
+        rgba(168, 85, 247, 0.35) 0%,
+        rgba(59, 130, 246, 0.12) 42%,
+        rgba(8, 6, 28, 0.95) 100%
+      ),
+      linear-gradient(165deg, #1a1038 0%, #0a0618 55%, #050510 100%);
+    overflow: hidden;
+    box-shadow:
+      0 0 0 1px rgba(168, 85, 247, 0.25),
+      0 18px 48px rgba(4, 3, 14, 0.55);
   }
   html[data-vemoki-marketing='neon-v1'] .mkt-neon-final-bleed {
+    position: relative;
+    z-index: 2;
+    left: auto;
+    right: auto;
+    width: auto;
+    margin: 0;
     min-height: 320px;
+    border-radius: 22px;
+    overflow: hidden;
+    background: transparent;
   }
-  html[data-vemoki-marketing='neon-v1'] .mkt-neon-final-crowd-img {
-    object-position: center 38%;
+  html[data-vemoki-marketing='neon-v1'] .mkt-neon-final-crowd-img,
+  html[data-vemoki-marketing='neon-v1'] .mkt-neon-final-scrim {
+    display: none;
+  }
+  html[data-vemoki-marketing='neon-v1'] .mkt-neon-final-stage {
+    min-height: 320px;
+    align-items: flex-end;
+  }
+  html[data-vemoki-marketing='neon-v1'] .mkt-neon-final-mobile-inner {
+    position: relative;
+    z-index: 3;
+    width: 100%;
+    max-width: 100%;
+    padding: 28px 20px 32px;
+    text-align: center;
+  }
+  html[data-vemoki-marketing='neon-v1'] .mkt-neon-final-mobile-inner .mkt-neon-eyebrow {
+    justify-content: center;
   }
   html[data-vemoki-marketing='neon-v1'] .mkt-neon-cta-content {
     max-width: 100%;

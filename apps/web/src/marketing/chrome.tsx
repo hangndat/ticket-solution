@@ -22,6 +22,7 @@ import {
 } from './marketing-surface';
 import { privacyHref, salesHref, supportHref } from './links';
 import { MarketingNeonScope } from './marketing-neon-scope';
+import { MarketingDesktopInterestCta } from './marketing-desktop-interest-cta';
 
 export function MarketingChrome({
   locale,
@@ -93,15 +94,7 @@ export function MarketingChrome({
             <a href={login}>{t(locale, 'nav.login')}</a>
           </Button>
           {onSales ? (
-            <Button
-              asChild
-              variant="primary"
-              className="shrink-0 whitespace-nowrap max-md:hidden"
-            >
-              <Link href={`${sales}#interest`} data-testid="cta-interest-nav">
-                {t(locale, 'nav.interest')}
-              </Link>
-            </Button>
+            <MarketingDesktopInterestCta locale={locale} sales={sales} />
           ) : (
             <Button asChild variant="primary">
               <a href={demo}>{t(locale, 'nav.demo')}</a>

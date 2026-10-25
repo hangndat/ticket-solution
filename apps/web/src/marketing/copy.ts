@@ -49,6 +49,8 @@ export type CopyKey =
   | 'neon.final.title.line1'
   | 'neon.final.title.emphasis'
   | 'neon.final.sub'
+  | 'neon.final.script.line1'
+  | 'neon.final.script.line2'
   | 'nav.locale.vi'
   | 'nav.locale.en'
   | 'nav.locale.label'
@@ -306,6 +308,8 @@ const VI: Record<CopyKey, string> = {
   'neon.final.title.line1': 'Sự kiện tiếp theo.',
   'neon.final.title.emphasis': 'Trải nghiệm khác biệt.',
   'neon.final.sub': 'Khám phá Vemoki cho sự kiện của bạn.',
+  'neon.final.script.line1': 'Good Events',
+  'neon.final.script.line2': 'Brighter Together',
   'hero.proofs.label': 'Điểm mạnh sản phẩm',
   'hero.preview.alt':
     'Màn hình đổi mã vé trong ứng dụng Vemoki (môi trường pilot)',
@@ -596,6 +600,8 @@ const EN: Record<CopyKey, string> = {
   'neon.final.title.line1': 'Your next event.',
   'neon.final.title.emphasis': 'A different experience.',
   'neon.final.sub': 'Explore Vemoki for your event.',
+  'neon.final.script.line1': 'Good Events',
+  'neon.final.script.line2': 'Brighter Together',
   'hero.proofs.label': 'Highlights',
   'hero.preview.alt':
     'Redeem ticket screen in the Vemoki app (pilot environment)',

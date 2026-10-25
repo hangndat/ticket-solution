@@ -1,7 +1,7 @@
 import { Button } from '@ticket/ui';
 import Image from 'next/image';
-import Link from 'next/link';
 import { t } from '../copy';
+import { InterestCtaLink } from '../interest-cta-link';
 import { MarketingHeroDecor } from '../marketing-hero-decor';
 import { NEON_MARKETING_ASSETS } from '../neon-assets';
 import { marketingWrap } from '../marketing-surface';
@@ -42,14 +42,14 @@ export function HeroSection({ locale, demo }: MarketingSectionProps) {
                 <span aria-hidden="true"> ↗</span>
               </a>
             </Button>
-            <Link
+            <InterestCtaLink
               href="#interest"
               className="mkt-neon-btn-secondary"
               data-testid="cta-interest"
               data-analytics-cta="hero_interest"
             >
               {t(locale, 'hero.cta.interest')}
-            </Link>
+            </InterestCtaLink>
           </div>
           <p className="mkt-neon-demo-note" role="status" data-testid="demo-badge">
             {t(locale, 'hero.demo_note')}
