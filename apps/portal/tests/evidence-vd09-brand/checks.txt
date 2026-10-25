@@ -1,0 +1,11 @@
+VD09 portal brand — local verification (vd09-marketing-neon worktree)
+
+Commands (pass):
+  pnpm --filter @ticket/portal run typecheck
+  pnpm --filter @ticket/portal run build
+  pnpm --filter @ticket/portal test
+
+Playwright evidence:
+  PORTAL_EVIDENCE_NO_SPAWN=1 WEB_UAT_EXECUTABLE=<chromium-1248> node apps/portal/tests/evidence-vd09-brand/capture-screenshots.mjs
+
+Artifacts: auth-1440.png, auth-390.png, shell-1440.png, shell-390.png, favicon.ico

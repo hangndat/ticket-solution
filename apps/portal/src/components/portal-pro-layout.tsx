@@ -15,6 +15,7 @@ import { PortalContextStrip } from './portal-context-strip';
 import { PortalDualRunBanner } from './dual-run-banner';
 import { SurfaceState } from './surface-state';
 import { usePortalLocale } from '../i18n';
+import { PortalBrandLockup } from './portal-brand-lockup';
 
 export type PortalProLayoutProps = {
   children: ReactNode;
@@ -122,7 +123,7 @@ export function PortalProLayout({
           className="portal-brand-link"
           data-testid="portal-brand"
         >
-          Vemoki Portal
+          <PortalBrandLockup />
         </Link>
       }
       title={false}
