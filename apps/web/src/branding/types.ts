@@ -18,7 +18,7 @@ export type TenantBrandingColors = {
 };
 
 export type TenantBranding = {
-  /** Wordmark text shown in chrome (lowercase product/org lockup) */
+  /** Wordmark text shown in chrome (platform default: Vemoki; tenant payloads may be lowercased) */
   wordmark: string;
   /** Accessible display name (aria / titles) */
   displayName: string;

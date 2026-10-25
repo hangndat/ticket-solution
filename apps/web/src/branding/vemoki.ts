@@ -12,9 +12,9 @@ export const VEMOKI_PRODUCT_MARK_WIDTH = 128;
 export const VEMOKI_PRODUCT_MARK_HEIGHT = 111;
 
 export const VEMOKI_BRANDING: TenantBranding = {
-  wordmark: 'vemoki',
+  wordmark: 'Vemoki',
   displayName: 'Vemoki',
-  signalGlyph: '↗',
+  signalGlyph: '',
   colors: {
     ink: '#0B1220',
     paper: '#F4F6F8',
