@@ -32,9 +32,10 @@ test('portal Ant theme uses enterprise violet primary (DEC-02), not signal red',
   assert.equal(vemokiTheme.token?.borderRadius, 12);
 });
 
-test('tenant brand default stays Live Pulse signal (DEC-04)', () => {
+test('tenant brand default matches enterprise violet primary', () => {
+  assert.equal(DEFAULT_TENANT_PRIMARY_COLOR, VEMOKI_COLORS.primary);
+  assert.equal(DEFAULT_TENANT_PRIMARY_COLOR, '#7C4DED');
   assert.equal(VEMOKI_COLORS.signal, brandTokens.colors.signal);
-  assert.equal(DEFAULT_TENANT_PRIMARY_COLOR, '#E11D48');
 });
 
 test('portal alert tokens use light paper surfaces (VD10-R-01)', () => {

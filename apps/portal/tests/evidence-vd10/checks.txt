@@ -1,4 +1,5 @@
-SHA=52d76661
-pnpm --filter @ticket/portal test
-pnpm --filter @ticket/portal build
-PORTAL_EVIDENCE_NO_SPAWN=1 node apps/portal/tests/evidence-vd10/capture-screenshots.mjs
+SHA: 4ffb8be0a523107aec77350b74051d60f5e8e9cb
+pnpm --filter @ticket/portal test  # pass
+pnpm --filter @ticket/portal build  # pass
+WEB_UAT_EXECUTABLE="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" node apps/portal/tests/evidence-vd10/capture-screenshots.mjs  # pass
+rg '#E11D48' apps/portal  # vemoki.ts signal token only (+ docs in evidence)
