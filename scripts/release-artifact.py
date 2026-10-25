@@ -81,7 +81,7 @@ def verify(path):
     if path.is_symlink() or not path.is_dir():
         fail("release is absent or symlinked")
     manifest = json.loads((path / "release-manifest.json").read_text())
-    if manifest.get("format") != 1 or not SHA.fullmatch(manifest.get("sourceSha", "")):
+    if manifest.get("format") not in (1, 2) or not SHA.fullmatch(manifest.get("sourceSha", "")):
         fail("invalid manifest")
     if not RELEASE_ID.fullmatch(path.name) or not path.name.startswith(manifest["sourceSha"] + "-"):
         fail("release ID and source SHA mismatch")
@@ -106,7 +106,15 @@ def verify(path):
         if entry.get("sha256") != service_digest(actual, paths):
             fail(f"service checksum mismatch: {service}")
         compat = entry.get("schema", {})
-        if not isinstance(compat.get("min"), int) or not isinstance(compat.get("max"), int) or compat["min"] > compat["max"]:
+        if service == "migrate" and manifest["format"] == 2:
+            if (set(compat) != {"inputMin", "inputMax", "target"}
+                    or any(type(compat[key]) is not int for key in compat)
+                    or compat["inputMin"] > compat["inputMax"]
+                    or compat["target"] < compat["inputMax"]):
+                fail("invalid migration input/target contract")
+        elif (set(compat) != {"min", "max"}
+              or any(type(compat[key]) is not int for key in compat)
+              or compat["min"] > compat["max"]):
             fail(f"invalid schema range: {service}")
     return manifest
 
@@ -118,12 +126,14 @@ def service_digest(files, paths):
 
 
 def current_schema(manifest):
-    # The migration package's max is the schema version reached by this release.
-    return manifest["services"]["migrate"]["schema"]["max"]
+    schema = manifest["services"]["migrate"]["schema"]
+    return schema.get("target", schema.get("max"))
 
 
 def compatible(manifest, service, schema):
     bounds = manifest["services"][service]["schema"]
+    if service == "migrate" and manifest["format"] == 2:
+        return bounds["inputMin"] <= schema <= bounds["inputMax"]
     return bounds["min"] <= schema <= bounds["max"]
 
 
@@ -135,7 +145,7 @@ def read_pins(path):
         if not line or line.startswith("#"):
             continue
         key, sep, value = line.partition("=")
-        if not sep or key not in {f"RELEASE_{name.upper()}_DIR" for name in SERVICES}:
+        if not sep or key not in {f"RELEASE_{name.upper()}_DIR" for name in SERVICES} or key in result or not value:
             fail("invalid pin file")
         result[key] = value
     return result
@@ -161,6 +171,9 @@ def build(args):
         fail("source must be a full commit SHA")
     if args.schema_min > args.schema_max:
         fail("invalid schema range")
+    if (args.migrate_input_min > args.migrate_input_max
+            or args.migrate_target < args.migrate_input_max):
+        fail("invalid migration input/target contract")
     root.mkdir(parents=True, exist_ok=True)
     stage = Path(tempfile.mkdtemp(prefix=".build-", dir=root))
     try:
@@ -204,7 +217,7 @@ def build(args):
             (stage / "apps" / app / ".next" / "cache").mkdir(parents=True)
         (stage / "apps" / "web" / ".data").mkdir(parents=True, exist_ok=True)
         all_files = inventory(stage)
-        source = {"format": 1, "sourceSha": args.sha,
+        source = {"format": 2, "sourceSha": args.sha,
                   "buildId": hashlib.sha256(json.dumps(all_files, sort_keys=True).encode()).hexdigest()[:12],
                   "lockfileSha256": digest(stage / "pnpm-lock.yaml"),
                   "builder": {"image": args.image, "imageId": image_id, "runtime": platform},
@@ -214,7 +227,9 @@ def build(args):
             source["services"][service] = {"paths": list(paths),
                 "packageVersion": json.loads(package.read_text())["version"] if service != "migrate" else "prisma-migrations",
                 "sha256": service_digest(all_files, paths),
-                "schema": {"min": args.schema_min, "max": args.schema_max}}
+                "schema": ({"inputMin": args.migrate_input_min, "inputMax": args.migrate_input_max,
+                            "target": args.migrate_target} if service == "migrate" else
+                           {"min": args.schema_min, "max": args.schema_max})}
         source["workerPendingPushSafe"] = subprocess.run(["git", "merge-base", "--is-ancestor",
             "710b57140fe476661e98fbdf6c9bf6d5170dfbc1", args.sha]).returncode == 0
         for service, paths in ARTIFACTS.items():
@@ -262,16 +277,26 @@ def cleanup(args):
     validate_root(args.root)
     root = args.root.resolve()
     validate_root(root)
-    pins = set(read_pins(args.pins).values())
-    active = set(args.active or [])
+    if args.execute and not args.pins.is_file():
+        fail("pin file missing; refusing cleanup")
+    pins = read_pins(args.pins)
+    for value in pins.values():
+        pinned = Path(value)
+        if (not pinned.is_absolute() or not RELEASE_ID.fullmatch(pinned.name)
+                or pinned != release_path(root, pinned.name) or pinned.is_symlink()):
+            fail("invalid pin file path")
+    protected = [Path(value).resolve() for value in pins.values()]
+    protected.extend(Path(value).resolve() for value in args.active or [])
     if args.execute:
-        ids = subprocess.check_output(["docker", "ps", "-q"], text=True).split()
+        ids = subprocess.check_output(["docker", "ps", "-aq"], text=True).split()
         if ids:
             containers = json.loads(subprocess.check_output(["docker", "inspect", *ids], text=True))
-            active.update(mount["Source"] for container in containers for mount in container.get("Mounts", []))
+            protected.extend(Path(mount["Source"]).resolve() for container in containers
+                             for mount in container.get("Mounts", []) if mount.get("Source"))
     for name in args.releases:
         path = release_path(root, name)
-        if str(path) in pins or str(path) in active:
+        if any(path == source or path.is_relative_to(source) or source.is_relative_to(path)
+               for source in protected):
             fail(f"release is pinned or active: {name}")
         verify(path)
         if not args.execute:
@@ -294,6 +319,9 @@ def main():
     b.add_argument("--platform", choices=("linux/amd64", "linux/arm64"), default="linux/amd64")
     b.add_argument("--schema-min", type=int, required=True)
     b.add_argument("--schema-max", type=int, required=True)
+    b.add_argument("--migrate-input-min", type=int, required=True)
+    b.add_argument("--migrate-input-max", type=int, required=True)
+    b.add_argument("--migrate-target", type=int, required=True)
     v = sub.add_parser("verify")
     v.add_argument("release")
     p = sub.add_parser("pin")
