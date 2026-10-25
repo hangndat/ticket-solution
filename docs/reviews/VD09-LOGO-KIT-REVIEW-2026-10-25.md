@@ -71,3 +71,53 @@ Footer crops cùng thư mục (`mkt-footer-1440/768/390/320.png`) — hashes ri�
 **Web (90):** OG/favicon/apple/marketing lockup raster đạt AC; product mark đúng hướng kit; trừ điểm evidence script sai surface (LK-01).
 
 **Mobile (85):** Icon/splash/demo đạt AC kỹ thuật; trừ nhẹ vì trùng file splash và kích thước PNG lớn (LK-02).
+
+---
+
+## Revalidation @ `fbca335536c22409f5b59d483f6a0584314e9fcd` (pinned)
+
+| Field | Value |
+| --- | --- |
+| Reviewer | Mira (`reviewer-uiux`), dispatch `task_8c6d65b4721d` |
+| Independence | Reviewer ≠ implementer; fixes @ `b36c4acc`, `e9355e9c`, `fbca3355` (hangndat) |
+| **Exact SHA** | **`fbca335536c22409f5b59d483f6a0584314e9fcd`** |
+| Worktree | `vd09-marketing-neon` |
+| Diff revalidated | `5444e87d..fbca3355` |
+| Scope bổ sung | `apps/portal` favicon/lockup; đóng LK-01/LK-02 trên web/mobile |
+
+### Verdict (revalidation)
+
+| Surface | Verdict | Ghi chú |
+| --- | --- | --- |
+| Web (LK-01) | **PASS** | Evidence script + committed crops |
+| Mobile (LK-02) | **PASS** | Asset dedupe + typecheck |
+| Portal (mới) | **PASS** | Build/tests/Playwright; xem LK-03 (không chặn) |
+| **Overall** | **PASS** | LK-01/LK-02 đóng; portal brand ship-ready với gap mix-layout |
+
+### Finding status
+
+| ID | Trước | Sau @ fbca3355 |
+| --- | --- | --- |
+| **VD09-LK-01** | Open (medium) | **Đóng** — `vd09-brand-assets-evidence.mjs` chụp `/marketing` + `[data-testid="mkt-wordmark"]` / footer; `header-{1440,768,390,320}-wordmark.png` MD5 khác nhau (`8e846e77…`, `6268fbd9…`, `51153347…`, `a0bec5ee…`). |
+| **VD09-LK-02** | Open (low) | **Đóng** — `splash-icon-dark.png` gỡ; `app.config.ts` dark dùng `splash-icon.png`; `icon.png` 1024×1024 RGB (~109 KiB); `splash-icon.png` ~157 KiB (giảm ~14 KiB). |
+| **VD09-LK-03** | — | **Mới (low, không chặn)** — CSS `.ant-layout-sider-collapsed .portal-brand-*` không áp dụng: `logo` ProLayout `layout="mix"` render trong `ant-pro-global-header` (`inSider: false`). Thu gọn sider @ 1440 vẫn hiện “Vemoki Portal” + mark; mark có `width`/`height` 32×28 (không CLS). |
+
+### Checks @ fbca3355
+
+| Check | Kết quả | Evidence |
+| --- | --- | --- |
+| `pnpm --filter @ticket/portal typecheck` | Pass | Local @ SHA |
+| `pnpm --filter @ticket/portal build` | Pass | Next 16.4.2 production build |
+| `pnpm --filter @ticket/portal test` | Pass | Node test suite exit 0 |
+| `pnpm --filter @ticket/mobile` typecheck | Pass | `tsc --noEmit` exit 0 |
+| Portal `/auth` 1440 + 390 | Pass | Playwright regen `apps/portal/tests/evidence-vd09-brand/auth-*.png` (`.portal-brand-mark` visible) |
+| Portal shell 1440 + 390 (mock BFF) | Pass | `shell-*.png` @ `/account/security` |
+| `/favicon.ico` served | Pass | HTTP 200; byte-match `app/favicon.ico` MD5 `58bdf340…` |
+| Auth/nav logic | Pass | `auth/page.tsx`: chỉ thêm `PortalBrandMark` + flex title; không đổi redirect/error keys |
+| `globals.css` scope | Pass | Chỉ `.portal-brand-*` + `.ant-layout-sider-collapsed` brand rules |
+| Portal mark CLS | Pass | `portal-brand-lockup.tsx` explicit 32×28 + `flex-shrink: 0` |
+| Collapsed sider mark-only | Gap (LK-03) | Playwright @ 1440: sider `ant-layout-sider-collapsed` nhưng wordmark `offsetWidth` 140px |
+
+### Portal verdict
+
+**PASS** — favicon/lockup/auth/shell đạt AC reviewer; gap collapsed mark-only ghi LK-03 (mix header, không regression chức năng).
