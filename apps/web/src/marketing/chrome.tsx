@@ -23,6 +23,7 @@ import {
 import { privacyHref, salesHref, supportHref } from './links';
 import { MarketingNeonScope } from './marketing-neon-scope';
 import { MarketingDesktopInterestCta } from './marketing-desktop-interest-cta';
+import { MarketingNeonLogo } from './marketing-neon-logo';
 
 export function MarketingChrome({
   locale,
@@ -62,12 +63,14 @@ export function MarketingChrome({
           aria-label={t(locale, 'nav.brand')}
           data-testid="mkt-wordmark"
         >
-          <span className="mkt-neon-wordmark" aria-hidden="true">
-            <span className="mkt-neon-wordmark-v">V</span>
-            <span className="mkt-neon-wordmark-rest">emoki</span>
-          </span>
+          {onSales ? (
+            <MarketingNeonLogo />
+          ) : (
+            <span className="font-display text-[1.35rem] font-bold tracking-tight">
+              Vemoki
+            </span>
+          )}
           <span className="sr-only">{t(locale, 'nav.brand')}</span>
-          <span aria-hidden="true" className="mkt-neon-wordmark-arrow">↗</span>
         </Link>
         <LocaleSwitch locale={locale} pageKind={pageKind} onInk={onInk} />
         <nav className={marketingNav} aria-label={locale === 'en' ? 'Primary' : 'Chính'}>
