@@ -86,6 +86,11 @@ class ReleaseFixture(unittest.TestCase):
         (old / "escape").symlink_to(self.pins)
         with self.assertRaisesRegex(ValueError, "symlink escapes"):
             release.verify(old)
+        alias = Path(self.temp.name) / "release-alias"
+        alias.symlink_to(self.root, target_is_directory=True)
+        with self.assertRaisesRegex(ValueError, "without a symlink"):
+            release.pin(SimpleNamespace(root=alias, release=old.name, service="api",
+                                        schema=1, pins=self.pins))
 
     def test_expand_backfill_old_new_and_forward_recovery_fixture(self):
         db = sqlite3.connect(":memory:")
