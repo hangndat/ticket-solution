@@ -24,6 +24,7 @@ import {
   bffReminders,
 } from '../../prep/bff-urls';
 import { usePortalLocale } from '../../i18n';
+import { portalFieldMin } from '../../layout/density';
 import {
   DEFAULT_TICKET_ISSUED_DRAFT,
   TEMPLATE_VARIABLES_BY_KIND,
@@ -375,7 +376,7 @@ export function NotificationsTemplatesSection({
         {t('ops.notifications.templateEditorTitle')}
       </Typography.Title>
       <Select
-        style={{ minWidth: 220 }}
+        className={portalFieldMin.w220}
         value={kind}
         disabled={busy || !canNotify}
         options={NOTIFICATION_KINDS.map((k: NotificationKind) => ({

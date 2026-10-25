@@ -22,6 +22,7 @@ import {
 } from '../export-job';
 import { usePortalLocale } from '../../i18n';
 import { SavedViewsToolbar } from '../../views';
+import { portalFieldMin } from '../../layout/density';
 
 type Props = {
   tenantId: string;
@@ -205,7 +206,7 @@ export function ExportPanel({
         <Select
           allowClear
           placeholder="Status history"
-          style={{ minWidth: 160 }}
+          className={portalFieldMin.w160}
           value={statusFilter}
           options={STATUS_OPTIONS}
           onChange={(v) => setStatusFilter(v)}
@@ -236,7 +237,7 @@ export function ExportPanel({
           placeholder={t('ops.export.exportIdPlaceholder')}
           value={exportId}
           onChange={(e) => setExportId(e.target.value)}
-          style={{ minWidth: 280 }}
+          className={portalFieldMin.w280}
           spellCheck={false}
           aria-label={t('ops.export.exportIdAria')}
           data-testid="export-id-input"

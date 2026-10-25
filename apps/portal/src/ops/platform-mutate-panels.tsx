@@ -16,6 +16,7 @@ import {
 import { useCallback, useEffect, useState } from 'react';
 import { portalGet, portalMutate } from '../client/portal-fetch';
 import { usePortalLocale } from '../i18n';
+import { portalFieldMin } from '../layout/density';
 import {
   bffPlatformSupportGrants,
   bffPlatformTenant,
@@ -301,7 +302,7 @@ export function PlatformManagePanel({ initialManageTenantId = '' }: Props) {
           placeholder={t('platform.h_ggf21i')}
           value={tenantId}
           onChange={(e) => setTenantId(e.target.value)}
-          style={{ minWidth: 320 }}
+          className={portalFieldMin.w320}
           spellCheck={false}
           data-testid="platform-manage-tenant-input"
         />

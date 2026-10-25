@@ -49,6 +49,7 @@ import {
   PlatformProvisionPanel,
 } from '../../src/ops/platform-mutate-panels';
 import { usePortalLocale, type MessageKey } from '../../src/i18n';
+import { portalFieldMin } from '../../src/layout/density';
 
 function PlatformInner() {
   const { t, locale } = usePortalLocale();
@@ -420,7 +421,7 @@ function PlatformInner() {
                     placeholder={t('platform.h_ggf21i')}
                     value={healthTenantId}
                     onChange={(e) => setHealthTenantId(e.target.value)}
-                    style={{ minWidth: 320 }}
+                    className={portalFieldMin.w320}
                     spellCheck={false}
                     allowClear
                     data-testid="platform-health-tenant-input"
@@ -549,14 +550,14 @@ function PlatformInner() {
                     placeholder="action"
                     value={action}
                     onChange={(e) => setAction(e.target.value)}
-                    style={{ minWidth: 160 }}
+                    className={portalFieldMin.w160}
                     allowClear
                   />
                   <Input
                     placeholder="tenantId filter"
                     value={filterTenantId}
                     onChange={(e) => setFilterTenantId(e.target.value)}
-                    style={{ minWidth: 280 }}
+                    className={portalFieldMin.w280}
                     spellCheck={false}
                     allowClear
                   />
@@ -564,14 +565,14 @@ function PlatformInner() {
                     placeholder="from ISO (…Z)"
                     value={from}
                     onChange={(e) => setFrom(e.target.value)}
-                    style={{ minWidth: 200 }}
+                    className={portalFieldMin.w200}
                     spellCheck={false}
                   />
                   <Input
                     placeholder="to ISO (…Z)"
                     value={to}
                     onChange={(e) => setTo(e.target.value)}
-                    style={{ minWidth: 200 }}
+                    className={portalFieldMin.w200}
                     spellCheck={false}
                   />
                   <Button
