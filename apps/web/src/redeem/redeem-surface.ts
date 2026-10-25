@@ -10,7 +10,7 @@ export const fadeRiseMotion = cn(
 );
 
 export const lpPageShell = cn(
-  'mx-auto max-w-[75rem] px-5 [--brand:var(--color-signal)]',
+  'mx-auto max-w-[75rem] px-5 [--brand:var(--color-primary)]',
   'min-h-[75vh] pb-[60px]',
   'min-[760px]:px-12 min-[760px]:pb-[70px]',
 );
@@ -18,11 +18,11 @@ export const lpPageShell = cn(
 export const redeemPageMain = cn(
   attendeeProductAtmosphere,
   lpPageShell,
-  '[--brand:var(--color-signal)]',
+  '[--brand:var(--color-primary)]',
 );
 
 export const redeemEyebrow = cn(
-  'm-0 mb-2 text-[0.75rem] font-bold uppercase tracking-[0.14em] text-signal',
+  'm-0 mb-2 text-[0.75rem] font-bold uppercase tracking-[0.14em] text-primary',
 );
 
 export const introLead = 'max-w-[570px] text-[1.15rem] leading-[1.65]';
@@ -211,7 +211,7 @@ const devStatusSuccess = cn(
 );
 
 const devStatusSignal = cn(
-  'border-[color-mix(in_srgb,var(--color-signal)_45%,var(--color-ink))] bg-[color-mix(in_srgb,var(--color-signal)_10%,var(--color-paper))] text-ink',
+  'border-[color-mix(in_srgb,var(--color-primary)_45%,var(--color-ink))] bg-[color-mix(in_srgb,var(--color-primary)_10%,var(--color-paper))] text-ink',
 );
 
 const devStatusFocus = cn(

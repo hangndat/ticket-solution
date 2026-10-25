@@ -18,10 +18,10 @@ export const VEMOKI_BRANDING: TenantBranding = {
   colors: {
     ink: '#0B1220',
     paper: '#F4F6F8',
-    signal: '#E11D48',
+    signal: '#7C4DED',
     focus: '#2563EB',
   },
-  primaryColor: '#E11D48',
+  primaryColor: '#7C4DED',
   secondaryColor: '#2563EB',
   logoUrl: null,
   logoAssetId: null,

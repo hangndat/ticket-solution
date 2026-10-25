@@ -16,10 +16,10 @@ export const buttonVariants = cva(
     variants: {
       variant: {
         primary:
-          'border border-signal bg-signal text-white shadow-[0_4px_20px_color-mix(in_srgb,var(--color-signal)_35%,transparent)] hover:border-[color-mix(in_srgb,var(--color-signal)_88%,var(--color-ink))] hover:bg-[color-mix(in_srgb,var(--color-signal)_88%,var(--color-ink))] hover:-translate-y-px motion-reduce:hover:translate-y-0',
-        /** Consumer attendee primary — restrained signal gradient (DEC-01). */
+          'border border-primary bg-primary text-white hover:border-[color-mix(in_srgb,var(--color-primary)_88%,var(--color-ink))] hover:bg-[color-mix(in_srgb,var(--color-primary)_88%,var(--color-ink))] active:bg-[color-mix(in_srgb,var(--color-primary)_92%,var(--color-ink))]',
+        /** Consumer attendee primary — solid product violet (portal-aligned). */
         attendeePrimary:
-          'border border-transparent bg-gradient-to-br from-signal from-0% to-[color-mix(in_srgb,var(--color-signal)_88%,var(--color-ink))] to-100% text-paper shadow-[0_10px_28px_color-mix(in_srgb,var(--color-signal)_28%,transparent)] hover:opacity-95 hover:-translate-y-px motion-reduce:hover:translate-y-0',
+          'border border-primary bg-primary text-white hover:border-[color-mix(in_srgb,var(--color-primary)_88%,var(--color-ink))] hover:bg-[color-mix(in_srgb,var(--color-primary)_88%,var(--color-ink))] active:bg-[color-mix(in_srgb,var(--color-primary)_92%,var(--color-ink))]',
         secondary:
           'border border-ink/20 bg-white text-ink hover:border-ink/40 hover:bg-paper',
         secondaryOnInk:
