@@ -277,7 +277,7 @@ def cleanup(args):
     validate_root(args.root)
     root = args.root.resolve()
     validate_root(root)
-    if args.execute and not args.pins.is_file():
+    if args.execute and (not args.pins.is_file() or args.pins.is_symlink()):
         fail("pin file missing; refusing cleanup")
     pins = read_pins(args.pins)
     for value in pins.values():
@@ -293,12 +293,15 @@ def cleanup(args):
             containers = json.loads(subprocess.check_output(["docker", "inspect", *ids], text=True))
             protected.extend(Path(mount["Source"]).resolve() for container in containers
                              for mount in container.get("Mounts", []) if mount.get("Source"))
+    paths = []
     for name in args.releases:
         path = release_path(root, name)
         if any(path == source or path.is_relative_to(source) or source.is_relative_to(path)
                for source in protected):
             fail(f"release is pinned or active: {name}")
         verify(path)
+        paths.append(path)
+    for path in paths:
         if not args.execute:
             print(f"would remove {path}")
         else:

@@ -118,6 +118,11 @@ class ReleaseFixture(unittest.TestCase):
             release.cleanup(SimpleNamespace(root=self.root, releases=[old.name], pins=self.pins,
                                             active=[], execute=True))
         self.pins.write_text("")
+        pins_alias = Path(self.temp.name) / "pins-alias.env"
+        pins_alias.symlink_to(self.pins)
+        with self.assertRaisesRegex(ValueError, "pin file missing"):
+            release.cleanup(SimpleNamespace(root=self.root, releases=[old.name], pins=pins_alias,
+                                            active=[], execute=True))
         with self.assertRaisesRegex(ValueError, "pinned or active"):
             release.cleanup(SimpleNamespace(root=self.root, releases=[old.name], pins=self.pins,
                                             active=[str(old / "apps/api/dist")], execute=False))

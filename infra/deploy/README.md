@@ -22,7 +22,7 @@ Deploy một service khi chỉ service đó đổi: verify release, đổi một
 | portal | pin verified release của `@ticket/portal` | `up -d --no-deps --force-recreate portal` |
 | api | pin verified release của backend + `@ticket/api` | `up -d --no-deps --force-recreate api` |
 | worker | pin verified release của backend + `@ticket/worker` | `up -d --no-deps --force-recreate worker` |
-| migrate | pin verified migration package | `up -d --no-deps --force-recreate migrate`, đợi exit 0 |
+| migrate | pin verified migration package với `--schema` bằng DB input hiện tại, kiểm manifest `inputMin/inputMax/target` | `up -d --no-deps --force-recreate migrate`, đợi exit 0 rồi đo schema target |
 | keycloak | file realm (`realm-ticket.prod.json`, không `smtpServer`) + `keycloak-prod-smtp-apply.sh` sau recreate | `up -d --no-deps --force-recreate keycloak` |
 | nginx | `vemoki.conf` | `nginx -t` rồi reload, không compose stack nginx |
 | postgres | không deploy app | không tạo lại volume |

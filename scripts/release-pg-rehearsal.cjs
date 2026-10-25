@@ -196,6 +196,7 @@ async function main() {
   assert.equal(failedRow.rows.length, 1);
   assert.equal(failedRow.rows[0].finished_at, null);
   assert.equal(failedRow.rows[0].rolled_back_at, null);
+  assert.match(failedRow.rows[0].logs ?? '', /division by zero/i);
   const partial = await admin.query('SELECT rehearsal_repair_note FROM outbox WHERE tenant_id = $1', [tenantId]);
   assert.ok(partial.rows.some((row) => row.rehearsal_repair_note === 'PARTIAL'), 'partial write must survive failure');
   const repairSql = `UPDATE outbox SET rehearsal_repair_note = 'REPAIRED' WHERE tenant_id = '${tenantId}' AND rehearsal_repair_note = 'PARTIAL'`;
@@ -215,6 +216,9 @@ async function main() {
   assert.equal(forward.status, 0, forward.stderr);
   const forwardAgain = prismaFixture(newDir, migrationUrl, fixtureConfig, 'deploy');
   assert.equal(forwardAgain.status, 0, forwardAgain.stderr);
+  const recoveredMigrationRows = await admin.query('SELECT migration_name, finished_at, rolled_back_at FROM _prisma_migrations WHERE migration_name IN ($1, $2) ORDER BY migration_name', [brokenName, forwardName]);
+  assert.equal(recoveredMigrationRows.rows.filter((row) => row.finished_at && !row.rolled_back_at).length, 2);
+  assert.equal(recoveredMigrationRows.rows.filter((row) => !row.finished_at && row.rolled_back_at).length, 1);
   const repairedAfterDeploy = await admin.query('SELECT id, tenant_id, status, rehearsal_repair_note FROM outbox ORDER BY id');
   assert.deepEqual(repairedAfterDeploy.rows, repairedBeforeRepeat.rows);
   const oldAfterRepair = await old.withTenant(oldDb, tenantId, (tx) => tx.$queryRaw`SELECT status FROM outbox WHERE tenant_id = ${tenantId}::uuid AND id = ${before.outbox[0].id}::uuid`);
