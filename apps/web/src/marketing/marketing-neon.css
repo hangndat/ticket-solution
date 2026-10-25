@@ -386,42 +386,52 @@ html[data-vemoki-marketing='neon-v1'] .mkt-neon-demo-label {
 html[data-vemoki-marketing='neon-v1'] .mkt-neon-wordmark-link {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.15rem;
   text-decoration: none;
+  color: inherit;
+}
+
+html[data-vemoki-marketing='neon-v1'] .mkt-neon-wordmark-link:focus-visible {
+  outline: 3px solid var(--vm-focus);
+  outline-offset: 3px;
+  border-radius: 6px;
 }
 
 html[data-vemoki-marketing='neon-v1'] .mkt-neon-wordmark {
   display: inline-flex;
-  align-items: baseline;
-  font-family: var(--vm-font-display);
-  font-weight: 800;
-  font-size: 1.55rem;
-  letter-spacing: -0.04em;
+  align-items: center;
+  gap: 0.55rem;
   line-height: 1;
 }
 
-html[data-vemoki-marketing='neon-v1'] .mkt-neon-wordmark-v {
-  display: inline-grid;
-  place-items: center;
-  width: 1.65rem;
-  height: 1.65rem;
-  margin-right: 0.12rem;
-  border-radius: 0.45rem;
-  font-size: 1.05rem;
-  color: #fff;
-  background: linear-gradient(145deg, #ff4ecd, #7c3aed 58%, #2563eb);
-  box-shadow: 0 6px 18px rgba(124, 58, 237, 0.45);
+html[data-vemoki-marketing='neon-v1'] .mkt-neon-wordmark-mark {
+  display: block;
+  flex: none;
+  width: 2rem;
+  height: 2rem;
 }
 
-html[data-vemoki-marketing='neon-v1'] .mkt-neon-wordmark-rest {
+@media (min-width: 390px) {
+  html[data-vemoki-marketing='neon-v1'] .mkt-neon-wordmark-mark {
+    width: 2.125rem;
+    height: 2.125rem;
+  }
+}
+
+@media (min-width: 1440px) {
+  html[data-vemoki-marketing='neon-v1'] .mkt-neon-wordmark-mark {
+    width: 2.25rem;
+    height: 2.25rem;
+  }
+}
+
+html[data-vemoki-marketing='neon-v1'] .mkt-neon-wordmark-text {
+  font-family: var(--vm-font-display);
+  font-weight: 800;
+  font-size: clamp(1.25rem, 2.6vw, 1.55rem);
+  letter-spacing: -0.035em;
   color: var(--vm-text);
-  text-transform: lowercase;
-}
-
-html[data-vemoki-marketing='neon-v1'] .mkt-neon-wordmark-arrow {
-  color: var(--vm-magenta);
-  font-size: 0.95rem;
-  opacity: 0.9;
+  white-space: nowrap;
 }
 
 html[data-vemoki-marketing='neon-v1'] .mkt-neon-final-cta {
