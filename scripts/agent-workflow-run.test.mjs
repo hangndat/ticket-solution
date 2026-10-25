@@ -99,7 +99,7 @@ test('collect and snapshot precede explicitly requested release',()=>fixture(({r
  assert.deepEqual(calls().map(a=>a[0]==='orchestration'?a[1]:a[0]),['worker-show','collect','snapshot','worker-release']);
  assert.equal(JSON.parse(r.stdout).release,'released');
 }));
-test('unverifiable release and active dispatch never release resources',()=>fixture(({dir,run,calls})=>{
+test('active dispatch never calls worker-release; unverifiable receipt still requests release once without released log',()=>fixture(({dir,run,calls})=>{
  run(start);
  assert.equal(run([...settle,'--release'],{FIX_STATUS:'dispatched'}).status,1);
  assert.equal(calls().filter(a=>a[1]==='worker-release').length,0);
