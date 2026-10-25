@@ -159,9 +159,11 @@ export function PortalProLayout({
       title={false}
       headerContentRender={false}
       actionsRender={() => [
-        <Dropdown key="account" menu={accountMenu} trigger={['click']}>
-          <Button type="text" data-testid="account-menu">{t('shell.account.menu')}</Button>
-        </Dropdown>,
+        <PortalContentTheme key="account-light-theme">
+          <Dropdown menu={accountMenu} trigger={['click']}>
+            <Button type="text" data-testid="account-menu">{t('shell.account.menu')}</Button>
+          </Dropdown>
+        </PortalContentTheme>,
       ]}
       token={{
         header: {
@@ -192,15 +194,15 @@ export function PortalProLayout({
       }
     >
       <a href="#portal-main" className="portal-skip-link">{t('shell.skipNav')}</a>
-      <PortalContextStrip
-        tenants={tenants}
-        tenantEvents={tenantEvents}
-        resolvedTenantId={resolvedTenantId}
-        effectiveEventId={effectiveEventId}
-        showGateScanHint={Boolean(caps?.showGateScanHint)}
-      />
-      <div id="portal-main" tabIndex={-1} className="portal-main-surface">
-        <PortalContentTheme>
+      <PortalContentTheme>
+        <PortalContextStrip
+          tenants={tenants}
+          tenantEvents={tenantEvents}
+          resolvedTenantId={resolvedTenantId}
+          effectiveEventId={effectiveEventId}
+          showGateScanHint={Boolean(caps?.showGateScanHint)}
+        />
+        <div id="portal-main" tabIndex={-1} className="portal-main-surface">
           <PortalDualRunBanner productOrigin={productOrigin} />
           {activeTenant?.status === 'SUSPENDED' ? <SurfaceState kind="suspended" /> : null}
           {activeTenant?.status === 'PENDING' ? (
@@ -214,8 +216,8 @@ export function PortalProLayout({
             />
           ) : null}
           {children}
-        </PortalContentTheme>
-      </div>
+        </div>
+      </PortalContentTheme>
     </ProLayout>
   );
 }
