@@ -34,7 +34,9 @@ import {
   IssueError,
   REDEEM_COMMAND,
   createDatabase,
+  configureIssuanceLockTimeout,
   getOperationForActor,
+  isRetryableTransactionConflict,
   getTicketForOwner,
   listOwnerTicketsAggregated,
   listTicketsForOwner,
@@ -226,24 +228,39 @@ export class TicketIssueService {
     );
     // Commit terminal rejection inside withTenant, then map to IssueError outside
     // so operations COMPLETED+rejection is durable (TD §8.1).
-    const outcome = await withTenant(this.deps.db, tenantId, (tx) =>
-      redeemAndIssueTicket(tx, this.deps.hmac!, this.deps.credentialKey!, {
-        tenantId,
-        eventId,
-        actorUserId: user.userId,
-        actorEmail: user.email,
-        emailVerified: user.emailVerified,
-        rawCode: body.code,
-        idempotencyKey: idempotencyKey ?? '',
-        formVersion: body.formVersion,
-        termsVersion: body.termsVersion,
-        answers: body.answers,
-        termsAccepted: body.termsAccepted,
-        resolveToken: resolveTokenHeader?.trim() || undefined,
-        resolveTokenSecret: this.deps.resolveTokenSecret ?? undefined,
-        routingPeppers: this.deps.routingPeppers ?? undefined,
-      }),
-    );
+    let outcome;
+    try {
+      outcome = await withTenant(this.deps.db, tenantId, async (tx) => {
+        await configureIssuanceLockTimeout(tx);
+        return redeemAndIssueTicket(tx, this.deps.hmac!, this.deps.credentialKey!, {
+          tenantId,
+          eventId,
+          actorUserId: user.userId,
+          actorEmail: user.email,
+          emailVerified: user.emailVerified,
+          rawCode: body.code,
+          idempotencyKey: idempotencyKey ?? '',
+          formVersion: body.formVersion,
+          termsVersion: body.termsVersion,
+          answers: body.answers,
+          termsAccepted: body.termsAccepted,
+          resolveToken: resolveTokenHeader?.trim() || undefined,
+          resolveTokenSecret: this.deps.resolveTokenSecret ?? undefined,
+          routingPeppers: this.deps.routingPeppers ?? undefined,
+        });
+      });
+    } catch (error) {
+      // This also sees errors before the business savepoint and at COMMIT.
+      // withTenant has rolled back before the HTTP layer sees a conflict.
+      if (isRetryableTransactionConflict(error)) {
+        throw new IssueError(
+          ISSUE_ERROR_CODES.RETRYABLE_CONFLICT,
+          'Issuance transaction conflicted; retry with the same key',
+          true,
+        );
+      }
+      throw error;
+    }
     if (outcome.ok === 'pending') return outcome.result;
     return unwrapRedeemOutcome(outcome);
   }
