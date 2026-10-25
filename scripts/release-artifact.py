@@ -24,6 +24,9 @@ ARTIFACTS = {
     "portal": ("apps/portal/.next", "packages/ui/dist", "packages/web-session/dist", "packages/contracts/dist"),
     "migrate": ("packages/backend/prisma/migrations", "packages/backend/prisma/schema.prisma"),
 }
+SOURCE_PATHS = ("package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", "tsconfig.base.json",
+                "apps/api", "apps/worker", "apps/web", "apps/portal", "packages/backend",
+                "packages/contracts", "packages/ui", "packages/web-session", "brand")
 SHA = re.compile(r"[0-9a-f]{40}\Z")
 RELEASE_ID = re.compile(r"[0-9a-f]{40}-[0-9a-f]{12}\Z")
 
@@ -157,11 +160,14 @@ def build(args):
     root.mkdir(parents=True, exist_ok=True)
     stage = Path(tempfile.mkdtemp(prefix=".build-", dir=root))
     try:
-        archive = subprocess.Popen(["git", "archive", "--format=tar", args.sha], stdout=subprocess.PIPE)
+        archive = subprocess.Popen(["git", "archive", "--format=tar", args.sha, *SOURCE_PATHS], stdout=subprocess.PIPE)
         subprocess.run(["tar", "-xf", "-", "-C", str(stage)], stdin=archive.stdout, check=True)
         archive.stdout.close()
         if archive.wait() != 0:
             fail("git archive failed")
+        for candidate in stage.rglob("*"):
+            if candidate.is_file() and (candidate.name == ".env" or candidate.name.startswith(".env.")):
+                candidate.unlink()
         # Build inside Linux/Node 24. The store and every workspace link stay within stage.
         command = " && ".join((
             "pnpm config set store-dir /app/.pnpm-store",
