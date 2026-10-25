@@ -1,7 +1,7 @@
 'use client';
 
 import { ConfigProvider, theme as antdTheme } from 'antd';
-import type { ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { vemokiTheme } from '../theme/vemoki';
 
 /**
@@ -11,6 +11,16 @@ import { vemokiTheme } from '../theme/vemoki';
  * Wrap chrome on light surfaces so Select/Dropdown popups get light elevated/ink tokens.
  */
 export function PortalContentTheme({ children }: { children: ReactNode }) {
+  const [reducedMotion, setReducedMotion] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const sync = () => setReducedMotion(mq.matches);
+    sync();
+    mq.addEventListener('change', sync);
+    return () => mq.removeEventListener('change', sync);
+  }, []);
+
   return (
     <ConfigProvider
       theme={{
@@ -18,6 +28,16 @@ export function PortalContentTheme({ children }: { children: ReactNode }) {
         algorithm: antdTheme.defaultAlgorithm,
         cssVar: { key: 'portal-light-chrome' },
         ...vemokiTheme,
+        token: {
+          ...vemokiTheme.token,
+          ...(reducedMotion
+            ? {
+                motionDurationFast: '0s',
+                motionDurationMid: '0s',
+                motionDurationSlow: '0s',
+              }
+            : {}),
+        },
       }}
     >
       {children}
