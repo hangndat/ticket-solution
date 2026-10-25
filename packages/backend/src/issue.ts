@@ -31,6 +31,8 @@ import {
 import { metricsInc } from './metrics-registry';
 import { assertTenantAllowsIssue, lockTenantPolicyForShare } from './tenant-policy';
 import { withActor, withTenant } from './tenant-context';
+import { lockIssuanceQuotas } from './quota-lock';
+import { isRetryableTransactionConflict } from './transaction-conflict';
 import type { PrismaClient } from './generated/prisma/client';
 
 export const REDEEM_COMMAND = 'redemption.redeem' as const;
@@ -115,14 +117,6 @@ type CodeRow = {
   entitlement_snapshot: Prisma.JsonValue;
 };
 
-type QuotaRow = {
-  id: string;
-  scope: string;
-  scope_id: string | null;
-  capacity: number | null;
-  allocated: number;
-};
-
 type OperationRow = {
   id: string;
   request_hash: string;
@@ -171,13 +165,6 @@ function canonicalRequestHash(input: {
     termsAccepted: input.termsAccepted === true ? true : null,
   });
   return createHash('sha256').update(payload).digest('hex');
-}
-
-function scopeOrder(scope: string): number {
-  if (scope === 'EVENT') return 0;
-  if (scope === 'TICKET_TYPE') return 1;
-  if (scope === 'ISSUANCE_SOURCE') return 2;
-  return 99;
 }
 
 function sealCredentialToken(
@@ -348,6 +335,15 @@ export async function redeemAndIssueTicket(
     }
     return { ok: true, result: { ...business.ticket, replayed: false } };
   } catch (error) {
+    // A lock/deadlock failure invalidates this attempt. Let withTenant roll
+    // back the operation claim too, so the client can retry the same key.
+    if (isRetryableTransactionConflict(error)) {
+      throw new IssueError(
+        ISSUE_ERROR_CODES.RETRYABLE_CONFLICT,
+        'Issuance transaction conflicted; retry with the same key',
+        true,
+      );
+    }
     await tx.$executeRaw`ROLLBACK TO SAVEPOINT issue_business`;
     if (error instanceof IssueError && !error.retryable) {
       // Terminal business rejection: keep operation completed with error payload
@@ -545,23 +541,12 @@ async function runIssueBusiness(
     );
   }
 
-  // 5) Lock quota buckets in deterministic order: EVENT → TYPE → SOURCE
-  const quotas = await tx.$queryRaw<QuotaRow[]>`
-    SELECT id, scope, scope_id, capacity, allocated
-    FROM quota_buckets
-    WHERE tenant_id = ${input.tenantId}::uuid
-      AND event_id = ${input.eventId}::uuid
-      AND (
-        (scope = 'EVENT' AND scope_id IS NULL)
-        OR (scope = 'TICKET_TYPE' AND scope_id = ${code.ticket_type_id}::uuid)
-        OR (scope = 'ISSUANCE_SOURCE' AND scope_id = ${code.source_id}::uuid)
-      )
-    FOR UPDATE
-  `;
-  quotas.sort((a, b) => {
-    const d = scopeOrder(a.scope) - scopeOrder(b.scope);
-    if (d !== 0) return d;
-    return (a.scope_id ?? '').localeCompare(b.scope_id ?? '');
+  // 5) Lock quota buckets in the shared SQL order before any allocation.
+  const quotas = await lockIssuanceQuotas(tx, {
+    tenantId: input.tenantId,
+    eventId: input.eventId,
+    ticketTypeId: code.ticket_type_id,
+    sourceId: code.source_id,
   });
   if (quotas.length < 1) {
     throw new IssueError(
