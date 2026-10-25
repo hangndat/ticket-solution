@@ -12,4 +12,4 @@ Playwright evidence:
 
 Artifacts: auth-1440.png, auth-390.png, shell-1440.png, shell-390.png, shell-1440-expanded.png, shell-1440-collapsed.png, favicon.ico
 
-Commit SHA: (filled after commit)
+Commit SHA: 123f29612752a42a728b218e73787cb4b95f54c3
