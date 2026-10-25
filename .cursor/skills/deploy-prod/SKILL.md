@@ -9,80 +9,35 @@ description: >-
 
 # Deploy Vemoki production
 
-SSH: use the local shell alias / SSH config host `conanphong` (or `VEMoki_SSH_HOST` if set). Do **not** embed production IP/user in this skill. Tree: `/opt/vemoki/src`. Secrets: `/opt/vemoki/.env` (mode 600). Never print that file or realm client secrets.
+SSH: use the local shell alias / SSH config host `conanphong` (or `VEMoki_SSH_HOST` if set). Do **not** embed production IP/user in this skill. Source checkout: `/opt/vemoki/src`; immutable artifacts: `/opt/vemoki/releases`; state and secrets live outside both. Secrets: `/opt/vemoki/.env` (mode 600). Never print that file or realm client secrets.
 
-Compose directory: `/opt/vemoki/src/infra/deploy`. Always pass `--env-file /opt/vemoki/.env`. Deploy **one service** unless the user asked for the whole stack. `docker compose up -d <service>` without `--no-deps` restarts dependencies. After a bind-mount rebuild, `docker compose restart <service>` is enough. Use `up -d --no-deps --force-recreate <service>` only when the compose file for that service changed.
+Compose directory: `/opt/vemoki/src/infra/deploy`. For **every** Compose command pass both `--env-file /opt/vemoki/.env --env-file /opt/vemoki/release-pins.env`, because Compose interpolates all service pins. Deploy **one service** unless the user asked for the whole stack. Recreate a pinned service with `up -d --no-deps --force-recreate <service>`; `restart` does not replace its mount. Never run `up` without `--no-deps` during a one-service rollout.
 
-Layout: [infra/deploy/README.md](../../../infra/deploy/README.md). Do not build the fat `Dockerfile` on this host. Do not `du /var/lib/docker` or `docker commit` the app tree.
+Authoritative app/migrate procedure: [docs/ops/IMMUTABLE-RELEASE.md](../../../docs/ops/IMMUTABLE-RELEASE.md), [infra/deploy/README.md](../../../infra/deploy/README.md), and `scripts/release-artifact.py`. Do not build the fat `Dockerfile` on this host. Do not `du /var/lib/docker` or `docker commit` the app tree.
 
 ## Shared rules
 
 - Do not touch `/media/anphong/nginx-letencrypt` except `data/nginx/vemoki.conf`. Leave vhosts `ancafe` and `dath` alone.
 - Do not publish 80, 443, 8080, 1883, 27017, or 9001. Network `edge` is external `nginx-letencrypt_nginx_network`.
-- Rsync must exclude `node_modules`, `.git`, `.next`, `dist`, `.turbo`, `apps/mobile/ios`, `apps/mobile/android`, `.uat-artifacts`, `.data`, `.env`. Never delete `/opt/vemoki/src/.pnpm-store` or `/opt/vemoki/src/node_modules`. `apps/web/.data` holds runtime state (marketing lead idempotency) and `apps/portal/.env` is host-only; `rsync --delete` would remove them. Sync from a clean checkout of the commit you deploy, path by path, and dry-run (`-n --itemize-changes`) first.
-- Back up before replacing an app: `tar czf /opt/vemoki/backup/<app>-<ts>.tgz --exclude=node_modules apps/<app> …`. Files under `.next` are owned by root (built in the container); restore them from inside `vemoki-runtime:local`, not as the host user.
-- Never pipe a build into `tail`/`grep` and then restart: the pipe hides the exit code. Check the build's own exit status (`> /tmp/x.log 2>&1; echo $?`) before any restart.
-- pnpm runs in `vemoki-runtime:local` with a single mount `-v /opt/vemoki/src:/app`, store `/app/.pnpm-store`, `package-import-method=hardlink`. Do not install `@ticket/mobile`.
-- Rebuild `vemoki-runtime:local` from `Dockerfile.runtime` only when that file changes or the image is missing.
-- Run `pnpm install --frozen-lockfile --filter @ticket/api... --filter @ticket/web... --filter @ticket/portal... --filter @ticket/worker...` only when a lockfile or `package.json` changed.
+- App and migrate rollout requires explicit authorization for this production change, an exact reviewed source SHA, a verified Linux/Node 24 artifact for the host architecture, current schema evidence, and reviewed schema ranges and service pins. If any is missing, stop before changing the VPS.
+- Build only in a staging directory from the clean exact SHA; check build exit status, native Prisma/sharp, manifest and checksums, then atomically publish a read-only release. Never install, build, rsync, or swap source under a running app mount. Keep `.env`, APNs keys, `.data`, and Next cache outside the release.
+- Back up database and persistent state as required by the release plan before migration. Do not put secrets or user data in an artifact, manifest, or log. Do not install `@ticket/mobile` for this server release.
+- Before the first Compose invocation with release pins, verify and pin **all five** services (`api`, `worker`, `web`, `portal`, `migrate`); subsequently change only the requested service pin. Preserve the last-good release through the rollback window.
 
-Compile contracts, when api, web, or worker need them:
+## App and migrate rollout (`api`, `worker`, `web`, `portal`, `migrate`)
 
-```bash
-pnpm --filter @ticket/api exec tsc -p ../../packages/contracts/tsconfig.json
-```
+Follow the immutable release runbook in order: expand/backfill compatibility review, build and `verify`, pin one service with `--schema <CURRENT>` and external pin file, Compose `config --quiet`, `up -d --no-deps --force-recreate <service>`, then check health, manifest and the container's actual mount via `docker inspect`. Do not infer compatibility solely from a passing `pin`: its schema range was supplied by an operator and must match migration tests. For `migrate`, pin the verified migration artifact, run once, and wait for exit 0 before proceeding. A failed migration stops rollout; recover forward without a destructive down migration.
 
-## Next.js apps (web, portal): build workspace deps first, then build out of place
+Roll worker only after additive schema, legacy row repair and F02 semantics have been checked. If old and new workers disagree on outbox states, stop old claims and let leases expire before switching; do not run both against the same outbox. Roll API independently only while its contract and schema range permit the version skew. Rollback is a new pin plus recreate and smoke against the **current** schema; a schema-incompatible release or pre-F02 worker must stay blocked. Cleanup requires the runbook's dry run, rollback-window check, pin check and live mount check.
 
-Workspace packages (`@ticket/ui`, `@ticket/web-session`, `@ticket/contracts`) export from `dist/`, which rsync does not copy. Build them before the app, or the app type-checks against stale `dist` and `next build` fails:
+Service checks after recreate:
 
-```bash
-pnpm --filter @ticket/ui build && pnpm --filter @ticket/web-session build   # + contracts tsc above
-```
+- `web`: `https://vemoki.com/` 200; if auth changed, use the login check below. Do not set `HOSTNAME=0.0.0.0`; use `next start --hostname 0.0.0.0 --port 3000`.
+- `portal`: `https://portal.vemoki.com/` 200/307; unauthenticated `/api/bff/me/tenants` and `/api/bff/platform/me` 401. Dual-run and nginx: `docs/ops/PORTAL-PROD-CUTOVER.md`.
+- `api`: `https://api.vemoki.com/v1/health` 200 with `"status":"ok"`.
+- `worker`: process stays up; inspect outbox relay and pending delivery state. SMTP remains Mailpit in this setup; do not redirect it to public SMTP as part of an app rollout.
+- `migrate`: exit 0 and expected `_prisma_migrations` rows; do not recreate postgres.
 
-`next build` wipes the live `.next` first, so building in place means downtime (and a failed build leaves the service with no build). Build in a copy, test, then swap:
-
-```bash
-# inside vemoki-runtime:local, cwd /app
-rm -rf apps/<app>-buildtest && cp -a apps/<app> apps/<app>-buildtest && rm -rf apps/<app>-buildtest/.next
-(cd apps/<app>-buildtest && ./node_modules/.bin/next build > /tmp/b.log 2>&1; echo exit=$?)
-# smoke: run the candidate with apps/<app>-buildtest mounted at /app/apps/<app>, call
-# ./node_modules/.bin/next start directly (not pnpm --filter), curl a few routes
-# swap: mv apps/<app> apps/<app>-prev; mv apps/<app>-buildtest apps/<app>;
-#       move the current .data/.env from -prev into the new dir; mv apps/<app>-prev /backup/
-```
-
-The copy has the same package name, so `pnpm --filter @ticket/<app> exec next start` (the compose command) would start it twice and fail with `EADDRINUSE`. Move every `-buildtest`/`-prev` copy out of `apps/` before restarting the service.
-
-## portal
-
-Sync `apps/portal` and shared packages as needed. Build `@ticket/portal` (deps first, out of place — section above). `docker compose restart portal` (or `up -d --no-deps portal`).
-
-Verify: `https://portal.vemoki.com/` is 200/307; `/api/bff/me/tenants` and `/api/bff/platform/me` without session are 401 (there is no `/api/bff/me` root route on portal). Dual-run + nginx: `docs/ops/PORTAL-PROD-CUTOVER.md`. Gate stays on `app.vemoki.com`.
-
-## web
-
-Sync `apps/web`, `packages/ui`, `packages/web-session`, `brand/` and, if imported types changed, `packages/contracts`. Build `@ticket/web` (deps first, out of place — section above). `docker compose restart web`.
-
-Verify: `https://vemoki.com/` is 200. If auth code changed, run the login check below. Do not set `HOSTNAME=0.0.0.0`. Listen only via `next start --hostname 0.0.0.0 --port 3000`.
-
-## api
-
-Sync `apps/api`, `packages/backend`, and `packages/contracts` as needed. Build `@ticket/backend` then `@ticket/api`. `docker compose restart api`.
-
-Verify: `https://api.vemoki.com/v1/health` is 200 and the body contains `"status":"ok"`.
-
-## worker
-
-Sync `apps/worker` and `packages/backend` as needed. Build `@ticket/backend` then `@ticket/worker`. `docker compose restart worker`.
-
-Verify: container stays up and the log shows the outbox relay. SMTP is still Mailpit. Do not point it at a public SMTP server in this step.
-
-## migrate
-
-Sync `packages/backend/prisma` and `prisma.config.ts`. Do not rebuild the app. `docker compose up -d migrate` and wait for exit 0. Then restart `api` and `worker` only if they must load the new schema.
-
-Verify: migrate logs say the migrations applied. Do not recreate `postgres`.
 
 ## keycloak
 
@@ -108,7 +63,7 @@ No source sync. `docker compose up -d --no-deps mailpit` only if that service is
 
 ## Whole stack
 
-Run the services in this order only when the user asked for a full deploy: runtime image if needed, install if the lockfile changed, migrate, keycloak, mailpit, api, worker, web, nginx if its file changed. Then run every verify line that applies.
+Only with explicit whole-stack production authorization, verify the exact source/build SHA, platform, five release pins, schema compatibility and backup first. Follow the immutable runbook for build, expand/backfill and one-shot migrate, then recreate and verify `api`, `worker`, `web`, `portal` one at a time. Apply `keycloak`, `mailpit`, and `nginx` procedures below only if their own configuration changed; verify every service touched. Do not rebuild or sync a mutable app tree during the rollout.
 
 ## Login check
 
