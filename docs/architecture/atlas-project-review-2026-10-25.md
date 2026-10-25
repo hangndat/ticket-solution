@@ -101,6 +101,8 @@ Loại: documentation drift; **should-fix**, không tự chặn merge.
 
 Đề xuất thêm một trang hiện trạng canonical với SHA/ngày xác minh, topology đang triển khai, quyết định thay thế và proof limits; giữ lịch sử ADR nhưng đánh dấu superseded ngay nơi dễ đọc nhầm. Owner: architect/docs phối hợp coordinator. Điều kiện đóng: một người mới xác định được worker hiện tại, bề mặt Gate và topology thực tế mà không ghép nhiều snapshot mâu thuẫn.
 
+**Cập nhật #902:** trang canonical [`ar891-current-architecture.md`](./ar891-current-architecture.md) (SHA/evidence trong file); TD và Decision Log chỉ bổ sung liên kết/trạng thái, không rewrite lịch sử ADR.
+
 ## Giới hạn offline cần giữ trong sản phẩm
 
 ADR-18 cho phép queue và hòa giải; không bảo đảm ngăn hai người được cho qua cửa vật lý khi thiết bị mất kết nối. Một check-in thắng trong DB sau sync khác với exactly-once admission ngoài đời. Replay ordering trong code là theo batch; không hiểu là sắp xếp toàn cục mọi thiết bị theo thời gian scan.
