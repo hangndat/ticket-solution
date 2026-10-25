@@ -233,6 +233,64 @@ body {
   padding: 16px;
 }
 
+.portal-main-surface .ant-input,
+.portal-main-surface .ant-input-affix-wrapper,
+.portal-main-surface .ant-select-selector,
+.portal-main-surface .ant-picker,
+.portal-main-surface .ant-btn {
+  min-height: 44px;
+}
+
+.portal-page-container .ant-page-header-heading-title,
+.portal-page-container .ant-pro-page-header-heading-title {
+  font-size: 1.75rem;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  color: var(--vemoki-ink);
+}
+
+.portal-page-container .ant-page-header-heading-sub-title,
+.portal-page-container .ant-pro-page-header-heading-sub-title {
+  font-size: 0.9375rem;
+  color: var(--vemoki-muted);
+}
+
+.portal-page-container .ant-form-item-label > label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--vemoki-ink);
+}
+
+.portal-page-container .ant-form-item-explain,
+.portal-page-container .ant-form-item-extra {
+  font-size: 0.8125rem;
+  color: var(--vemoki-muted);
+}
+
+.portal-page-container .ant-pro-form-group-title {
+  font-size: 1rem;
+  font-weight: 650;
+}
+
+.portal-narrow-form {
+  max-width: 560px;
+}
+
+.ant-pro-global-header {
+  border-bottom: 1px solid var(--vemoki-line);
+  box-shadow: none !important;
+}
+
+.ant-layout-sider.ant-pro-sider {
+  border-inline-end: 1px solid color-mix(in srgb, #faf9ff 8%, transparent);
+}
+
+.ant-pro-sider-menu .ant-menu-submenu-title,
+.ant-pro-sider-menu .ant-menu-item,
+.ant-pro-sider-menu .ant-menu-submenu .ant-menu {
+  transition: none !important;
+}
+
 @media (min-width: 1024px) {
   .portal-main-surface {
     padding: 24px;

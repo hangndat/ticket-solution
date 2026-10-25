@@ -28,7 +28,8 @@ const PORTAL_ANTD = {
 test('portal Ant theme uses enterprise violet primary (DEC-02), not signal red', () => {
   assert.equal(vemokiTheme.token?.colorPrimary, PORTAL_ANTD.colorPrimary);
   assert.equal(VEMOKI_COLORS.primary, PORTAL_ANTD.colorPrimary);
-  assert.equal(vemokiTheme.components?.Button?.borderRadius, 12);
+  assert.equal(vemokiTheme.components?.Button?.borderRadius, 10);
+  assert.equal(vemokiTheme.token?.colorInfo, '#397DFF');
   assert.equal(vemokiTheme.token?.borderRadius, 12);
 });
 
