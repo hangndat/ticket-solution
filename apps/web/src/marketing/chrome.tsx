@@ -105,6 +105,17 @@ export function MarketingChrome({
       {children}
       <footer className={marketingFooter(onSales)} data-testid="mkt-footer">
         <div className={marketingWrap}>
+          {onSales ? (
+            <Link
+              className={`${marketingWordmark} mkt-neon-wordmark-link mb-4 inline-flex`}
+              href={sales}
+              aria-label={t(locale, 'nav.brand')}
+              data-testid="mkt-footer-wordmark"
+            >
+              <MarketingNeonLogo />
+              <span className="sr-only">{t(locale, 'nav.brand')}</span>
+            </Link>
+          ) : null}
           <div>
             <Link href={privacyHref(locale)}>{t(locale, 'nav.privacy')}</Link>
             {' · '}
