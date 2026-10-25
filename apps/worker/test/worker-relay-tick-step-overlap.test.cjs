@@ -46,6 +46,7 @@ test('overlapping tick skips step still running after timeout', async () => {
         WORKER_TEST_HANG_TICK_STEP: 'reconcile_pending_redemptions',
       },
       tickStepTimeoutMs: 40,
+      shutdownTickTimeoutMs: 30,
       pollMs: 0,
       logging: false,
       database: mockDb(),
