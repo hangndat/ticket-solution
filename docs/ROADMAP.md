@@ -1,5 +1,7 @@
 # Roadmap — Event Ticketing Platform
 
+> **Mới 26/10/2026 — O25 / Epic [#914](https://github.com/hangndat/ticket-solution/issues/914):** hoàn thiện sản phẩm cốt lõi và UX tự phục vụ. Roadmap thực thi canonical: [`plans/VEMOKI-CORE-UX-ROADMAP-2026-10-26.md`](./plans/VEMOKI-CORE-UX-ROADMAP-2026-10-26.md). `apps/portal` và `apps/web` là hai slice riêng; attendee web không cold-offline trong Epic này. Nợ #901/#903/#904/AR891-INT-F01 vẫn hoãn.
+
 > **Quyết định mới 24/10/2026 — O23:** bỏ Web Gate, Gate admission chỉ trên iOS Staff. Hướng thiết kế tại [`vemoki-unified-v1`](./design/vemoki-unified-v1/README.md) được chốt ở mức design; các checkpoint Web Gate lịch sử bên dưới giữ làm bằng chứng phạm vi cũ. D-6 đã xóa route `/gate` web; các link/copy cũ và direct-route behavior cần Task Spec, contract/ADR, review và nghiệm thu riêng trước khi coi migration hoàn tất. Chưa coi là acceptance complete hay pilot ready.
 
 > **Cập nhật phát hành 24/10/2026:** [Production đã triển khai và iOS đã build](reviews/DEPLOY-PROD-UI859-2026-10-24.md); [build 1.0.0 (27) đã lên Internal TestFlight](reviews/TESTFLIGHT-UI859-BUILD27-2026-10-24.md). Web có hotfix CSS `0304364`, đã kiểm tra trực tiếp marketing/app/redeem ở 1280px và 390px. Các dòng “chưa deploy/store” bên dưới là checkpoint trước phát hành; chưa có public App Store release hoặc kết luận pilot ready.
