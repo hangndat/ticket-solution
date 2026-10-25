@@ -24,6 +24,7 @@ import {
   isMinimalBrandOk,
 } from '../../../../../../src/prep/default-config';
 import { bffEvent, bffEventAction } from '../../../../../../src/prep/bff-urls';
+import { isEventPagePermitted } from '../../../../../../src/prep/event-access-resolver';
 import { useEventAccess } from '../../../../../../src/prep/use-event-access';
 import { SurfaceState } from '../../../../../../src/components/surface-state';
 import { usePortalLocale } from '../../../../../../src/i18n';
@@ -144,6 +145,17 @@ export default function ConfigBrandPage() {
         description={t('config.h_g7fjbz')}
         onRetry={() => {
           window.location.href = `/t/${tenantId}`;
+        }}
+      />
+    );
+  }
+  if (!isEventPagePermitted('config', access.permissions)) {
+    return (
+      <SurfaceState
+        kind="permission-denied"
+        description={t('config.h_g7fjbz')}
+        onRetry={() => {
+          window.location.href = `/t/${tenantId}/e/${eventId}`;
         }}
       />
     );

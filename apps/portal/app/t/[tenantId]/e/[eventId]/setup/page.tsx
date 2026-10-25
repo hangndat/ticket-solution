@@ -17,6 +17,7 @@ import {
   portalMutate,
 } from '../../../../../../src/client/portal-fetch';
 import { bffEvent, bffEventAction } from '../../../../../../src/prep/bff-urls';
+import { isEventPagePermitted } from '../../../../../../src/prep/event-access-resolver';
 import { useEventAccess } from '../../../../../../src/prep/use-event-access';
 import { SurfaceState } from '../../../../../../src/components/surface-state';
 import { usePortalLocale } from '../../../../../../src/i18n';
@@ -89,6 +90,17 @@ export default function EventSetupPage() {
         description={t('config.h_g7fjbz')}
         onRetry={() => {
           window.location.href = `/t/${tenantId}`;
+        }}
+      />
+    );
+  }
+  if (!isEventPagePermitted('setup', access.permissions)) {
+    return (
+      <SurfaceState
+        kind="permission-denied"
+        description={t('config.h_g7fjbz')}
+        onRetry={() => {
+          window.location.href = `/t/${tenantId}/e/${eventId}`;
         }}
       />
     );
