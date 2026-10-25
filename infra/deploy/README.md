@@ -40,8 +40,8 @@ Local demo seed (không prod): `D9_MEDIA_STACK_UP=1 ./scripts/d9-seed-media.sh` 
 Prod từng trả `MINIO_MISCONFIGURED` vì api/worker thiếu endpoint + không có container. Sau khi merge:
 
 1. Thêm vào `/opt/vemoki/.env`: `MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD`, `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`, buckets (`vemoki-exports` / `vemoki-assets` / `vemoki-imports`). **Không** commit giá trị thật.
-2. Từ `infra/deploy`: `docker compose --env-file /opt/vemoki/.env up -d minio minio-init` (đợi minio-init exit 0).
-3. `docker compose --env-file /opt/vemoki/.env up -d --no-deps api worker` (hoặc `restart` sau rebuild).
+2. Từ `infra/deploy`: `docker compose --env-file /opt/vemoki/.env --env-file /opt/vemoki/release-pins.env up -d minio minio-init` (đợi minio-init exit 0).
+3. `docker compose --env-file /opt/vemoki/.env --env-file /opt/vemoki/release-pins.env up -d --no-deps --force-recreate api worker` sau khi pin release đã verify.
 4. Verify: tạo CSV export trên admin → job READY + download; `docker compose … logs api` không còn `MINIO_MISCONFIGURED`.
 
 Thiếu `MINIO_ENDPOINT` / keys → API **fail-closed** (`MINIO_MISCONFIGURED`, HTTP 503). Không fallback memory store trên production path.
