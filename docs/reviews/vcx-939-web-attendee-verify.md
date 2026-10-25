@@ -6,7 +6,7 @@
 | Baseline canonical | `a04e71afbc53af4490d0683c1ff680b37a96315a` (roadmap O25 trên `main`) |
 | Phạm vi đọc | `apps/web/**`, `@ticket/contracts` (discriminator redeem/claim), BFF `app/api/bff/{claim,redeem,tickets}` |
 | Dispatch | Verify-first **chỉ tài liệu** — không sửa `apps/web` |
-| Runtime UAT | **Pending** — chờ fixture OIDC / #925 (không chặn ma trận code/test) |
+| Runtime UAT | **Đạt** (SHA `d00a265cca1206b68601c75d445b633f7d590b57`, UI869, Orca browser) — mục [Runtime UAT](#runtime-uat-d00a265) |
 
 ## O25 / ngoài scope
 
@@ -104,8 +104,35 @@ Discriminator chung: `RedeemDecision` (`src/redeem/decide.ts`) + `decideClaimBod
 
 ---
 
+## Runtime UAT (`d00a265`)
+
+**Stack:** `ui869dev` — API `http://127.0.0.1:3498`, Keycloak `http://127.0.0.1:8080`, web worktree `pnpm exec next dev --port 3000` + `apps/web/.env.local` (gitignored, `API_BASE_URL` → 3498). **Không** seed `--reset`, không restart compose.
+
+**Preflight:** `orca ports --worktree path:…/vcx-939-runtime` → không listener trong worktree; HTTP probe API/OIDC ngoài band. **HTTP OIDC:** `pnpm uat:p4-oidc` (12/12 PASS, `OIDC_REDIRECT_URI=http://localhost:3000/api/auth/callback`, `API_BASE_URL=http://127.0.0.1:3498`).
+
+**Orca browser:** `orca tab create` → `browserPageId` `044827fd-95e6-4a3c-872c-f6d8e40489d5`; `set viewport` 390 / 1024 / 1440; `snapshot` + `screenshot` → `apps/web/.uat-artifacts/vcx-939/*.png` (gitignored). **Phiên owner:** Keycloak form trong Orca không hoàn tất POST (fill/click không redirect); bootstrap **chỉ cho UAT** — `cookies set` `oidc_pkce_verifier` + `oidc_oauth_state`, curl login form (cùng `audience=ticket-api`), `goto` callback → `/redeem` (không phải gap sản phẩm).
+
+### Ma trận runtime (tóm tắt)
+
+| Luồng | Viewport | Kết quả | Artifact / ghi chú |
+| --- | --- | --- | --- |
+| `/redeem` guest (auth gate) | 390 | **PASS** | `redeem-auth-gate-390.png` — «Đăng nhập để đổi mã», không bắt app |
+| `/redeem` signed-in form | 390 | **PASS** | `redeem-signed-in-390.png` |
+| `/redeem` mã không tồn tại `DEMO-NOT-FOUND` | 390 | **PASS** (denied) | `redeem-unknown-390.png` — «Mã không hợp lệ», không success ring; *không* mô phỏng 5xx «unknown» (cần outage BFF) |
+| `/redeem` mã hợp lệ `DEMO-MFEST-002` | 1024 | **PASS** (issued) | `redeem-issued-1024.png` |
+| `/wallet` owner | 1024 | **PASS** | `wallet-1024.png` — 6 vé, «Sẵn sàng», CTA QR |
+| `/t/mfest-demo/tickets/{id}` QR | 390 | **PASS** | `ticket-qr-390.png` — QR + demo gate notice, không copy cài app |
+| `/claim?token=invalid…` guest | 390 | **PASS** | `claim-guest-invalid-390.png` — hướng dẫn link email, không auth wall |
+| `/account` signed-in | 390 | **PASS** | `account-390.png` |
+| `/` marketing | 1440 | **PASS** | `home-no-app-1440.png` — không copy «cài app» |
+| Public catalog | — | **PASS** | `GET …/v1/public/tenants/mfest-demo/events/mfest` → 200 (không AR891-INT-F01 trên SHA này) |
+| Cold-offline / PWA | — | **Ngoài scope O25** | Không chạy |
+
+**Unit (cùng SHA):** `pnpm --filter @ticket/web test` — 293 PASS (gồm `redeem-decide`, `guest-claim`, `redeem-messages`, `live-region`).
+
+**Findings runtime:** Không gap tái hiện trong `apps/web` — F-939-01 đóng (OIDC owner + guest claim surface); F-939-02..04 giữ như verify-first. **Còn lại:** visual `#881` product chrome; E2E pending/rejected poll trên fixture staff (không chặn #939); reviewer `dod+sec+ux`.
+
 ## Việc còn lại (dispatch sau)
 
-1. Runtime + Orca browser UAT (#925, OIDC) trên cùng ma trận viewport 390/1024/1440.
-2. Fix chỉ khi gap **tái hiện** (policy Issue #939).
-3. Reviewer James `dod+sec+ux` trên SHA PR docs.
+1. Reviewer James `dod+sec+ux` trên SHA PR docs.
+2. (Tuỳ chọn) E2E pending/rejected refresh UI với persona staff trên UI869.
