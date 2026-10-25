@@ -519,10 +519,26 @@ export function createDatabase(
   connectionString: string,
   max = 5,
   observePoolWait = false,
+  workerLimits?: {
+    statementTimeoutMs: number;
+    lockTimeoutMs: number;
+    poolWaitTimeoutMs: number;
+  },
 ): PrismaClient {
   validateDatabaseUrl(connectionString);
   if (observePoolWait) {
-    const pool = new Pool({ connectionString, max });
+    const pool = new Pool({
+      connectionString,
+      max,
+      ...(workerLimits
+        ? {
+            // Server-side cancellation ends the query on this connection before
+            // pg releases it; no PID-based cancel can hit a reused connection.
+            options: `-c statement_timeout=${workerLimits.statementTimeoutMs} -c lock_timeout=${workerLimits.lockTimeoutMs}`,
+            connectionTimeoutMillis: workerLimits.poolWaitTimeoutMs,
+          }
+        : {}),
+    });
     const connect = pool.connect.bind(pool);
     type ConnectCallback = Parameters<typeof pool.connect>[0];
     pool.connect = ((callback?: ConnectCallback) => {

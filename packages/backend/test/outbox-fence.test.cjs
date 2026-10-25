@@ -328,6 +328,14 @@ test(
             runtime.query('SELECT * FROM public.worker_job_reclaim_counters'),
           /permission denied/i,
         );
+        await assert.rejects(
+          () => runtime.query("INSERT INTO public.worker_job_reclaim_counters(job_class,reclaim_count) VALUES('relay_outbox',999)"),
+          /permission denied/i,
+        );
+        await assert.rejects(
+          () => runtime.query("UPDATE public.worker_job_reclaim_counters SET reclaim_count=999 WHERE job_class='relay_outbox'"),
+          /permission denied/i,
+        );
         await runtime.query('RESET ROLE');
         await runtime.query('SET ROLE ticket_platform_runtime');
         await assert.rejects(
