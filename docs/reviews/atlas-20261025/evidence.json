@@ -1,0 +1,134 @@
+{
+  "date": "2026-10-25",
+  "runtimeSourceSha": "152b6383d0127c13b9373dfd9ead3105bb510409",
+  "testWorkingDiff": [
+    "packages/backend/test/apns-atleast-once.test.cjs",
+    "packages/backend/test/approval.test.cjs",
+    "packages/backend/package.json"
+  ],
+  "productionClaim": false,
+  "environment": {
+    "node": "26.11.0",
+    "pnpm": "10.32.1",
+    "docker": "29.8.2",
+    "k6": "1.6.1",
+    "hostCpuCount": 14,
+    "hostMemoryGiB": 36,
+    "dockerMemoryGiBApprox": 15.66
+  },
+  "tests": [
+    {
+      "command": "pnpm --filter @ticket/backend test:db",
+      "pass": 55,
+      "fail": 0,
+      "skip": 0,
+      "durationMs": 45935.601333,
+      "exitCode": 0
+    },
+    {
+      "command": "pnpm --filter @ticket/worker test",
+      "pass": 16,
+      "fail": 0,
+      "skip": 0,
+      "durationMs": 1313.773542,
+      "exitCode": 0
+    },
+    {
+      "command": "pnpm --filter @ticket/backend test:architecture-recovery",
+      "pass": 14,
+      "fail": 1,
+      "skip": 0,
+      "durationMs": 16163.952084,
+      "exitCode": 1,
+      "finding": "F02"
+    },
+    {
+      "command": "pnpm --filter @ticket/backend test:architecture-quota",
+      "pass": 1,
+      "fail": 0,
+      "skip": 0,
+      "durationMs": 5217.4345,
+      "exitCode": 0,
+      "finding": "F01 remains open: no deterministic lock-order proof"
+    },
+    {
+      "command": "pnpm --filter @ticket/backend test",
+      "pass": 52,
+      "fail": 0,
+      "skip": 0,
+      "durationMs": 604.136667,
+      "exitCode": 0
+    }
+  ],
+  "f02Observed": {
+    "faultModel": "durable state after APNs send before ack, email already committed, PROCESSING lease expired",
+    "realProcessKill": false,
+    "realProvider": false,
+    "emailSends": 1,
+    "pushSends": 1,
+    "emailState": "ACCEPTED",
+    "pushState": "PENDING",
+    "outboxStatus": "COMPLETE",
+    "expectedPushSends": 2,
+    "expectedPushState": "ACCEPTED"
+  },
+  "quotaStress": {
+    "events": 5,
+    "concurrentOperationsPerEvent": 20,
+    "capacityPerEvent": 7,
+    "initialOperations": 100,
+    "replayOperations": 100,
+    "tickets": 35,
+    "unexpectedExceptions": 0,
+    "counterAndOutboxChecks": "PASS",
+    "deadlockReproduced": false
+  },
+  "benchmark": {
+    "runId": "b649bf92",
+    "exitCode": 2,
+    "pass": false,
+    "events": 2,
+    "ticketsPerEventSqlSeed": 20000,
+    "volumeSeedMs": 131381,
+    "sessionsPerEvent": 50,
+    "distinctStaffIdentities": 1,
+    "distinctStaffSessions": 100,
+    "confirmJobs": 1300,
+    "issueJobs": 3000,
+    "targetIssueRps": 50,
+    "targetConfirmRps": 20,
+    "elapsedSeconds": 60.71,
+    "issueHttpSuccesses": 3001,
+    "issueAchievedRpsRounded": 50.02,
+    "issueP95Ms": 19,
+    "issueErrorRate": 0,
+    "confirmHttpSuccesses": 240,
+    "confirmAchievedRps": 4,
+    "confirmP95Ms": 16.1,
+    "s3StatusCounts": {
+      "issue201": 3001,
+      "reserve200": 240,
+      "confirm200": 240,
+      "reserve429": 961
+    },
+    "scannerProbeStatusCounts": {
+      "reserve429": 200
+    },
+    "healthPass": true,
+    "invariantsOk": false,
+    "businessCounterChecksPass": true,
+    "noDoubleConfirmChecksPass": true,
+    "failedInvariant": "second event checkinsMeetExpected: 0 checkins",
+    "reason": "Shared staff identity exhausted 240 reserve/user/hour cap; not a measurement of DB saturation or maximum Gate throughput",
+    "rawSummary": "/tmp/atlas-20261025-benchmark/load-summary-b649bf92.json",
+    "rawDirectory": "/tmp/atlas-20261025-benchmark"
+  },
+  "fileSha256": {
+    "packages/backend/test/apns-atleast-once.test.cjs": "783cb85e1acf423fda698dbf871b12b97f19271911aa4efe90f11d5a26c70a99",
+    "packages/backend/test/approval.test.cjs": "a49ea1af08bec5fa437e527a384e79afeeb0610cd27aa148f514c40d86501619",
+    "packages/backend/package.json": "0802525dc07e834917561ce59ae0ea75bf4158466d9c68712e4265d9b6152596",
+    "scripts/d5-load-baseline.sh": "58df11be941c7fb4b90bba3446866903f94a5cab074c1097ba9a5d3105c2d9e9",
+    "scripts/load/s3-issue-confirm.js": "8fa370ed763d036535db4f2d44f7e97f7fcee7342b4fac4c5290954a3c580445",
+    "scripts/load/gate-scanners.js": "15634e9b01c31f36ba1c14b6b9d1a92cb84855041a7a8364d0236bcc5e35d077"
+  }
+}
