@@ -24,6 +24,7 @@ import { privacyHref, salesHref, supportHref } from './links';
 import { MarketingNeonEdgeDecor } from './marketing-neon-edge-decor';
 import { MarketingNeonScope } from './marketing-neon-scope';
 import { MarketingNeonLogo } from './marketing-neon-logo';
+import { MarketingNeonPrimaryButton } from './marketing-neon-primary-button';
 
 export function MarketingChrome({
   locale,
@@ -97,9 +98,9 @@ export function MarketingChrome({
             <a href={login}>{t(locale, 'nav.login')}</a>
           </Button>
           {!onSales ? (
-            <Button asChild variant="primary">
+            <MarketingNeonPrimaryButton asChild data-testid="mkt-chrome-demo">
               <a href={demo}>{t(locale, 'nav.demo')}</a>
-            </Button>
+            </MarketingNeonPrimaryButton>
           ) : null}
         </nav>
         <LocaleSwitch locale={locale} pageKind={pageKind} onInk={onInk} />

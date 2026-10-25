@@ -12,6 +12,7 @@ import { useId, useState, type FormEvent } from 'react';
 import { t, type CopyKey } from './copy';
 import type { MarketingLocale } from './hosts';
 import { privacyHref } from './links';
+import { MarketingNeonPrimaryButton } from './marketing-neon-primary-button';
 import { trackLeadSubmitted } from './analytics/client';
 import { controlClass } from '../ui/control-classes';
 import {
@@ -139,7 +140,12 @@ export function InterestForm({
       {banner ? (
         <Alert variant="destructive">
           <p>{banner}</p>
-          <Button type="submit" variant="secondary" disabled={busy}>
+          <Button
+            type="submit"
+            variant="secondary"
+            className="mkt-neon-interest-retry"
+            disabled={busy}
+          >
             {t(locale, 'interest.retry')}
           </Button>
         </Alert>
@@ -346,16 +352,15 @@ export function InterestForm({
         {fieldErrors.consent}
       </FieldError>
 
-      <Button
+      <MarketingNeonPrimaryButton
         type="submit"
-        variant="primary"
         disabled={busy}
         loading={busy}
         loadingLabel={t(locale, 'interest.sending')}
         data-testid="interest-submit"
       >
         {t(locale, 'interest.submit')}
-      </Button>
+      </MarketingNeonPrimaryButton>
       <p>
         <a href={demo}>{t(locale, 'interest.secondary_demo')}</a>
       </p>
