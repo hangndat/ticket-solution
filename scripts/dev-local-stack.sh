@@ -175,6 +175,10 @@ cmd_up() {
 
   wait_http "http://127.0.0.1:${OIDC_PORT}/realms/ticket/.well-known/openid-configuration" 90 \
     || die "Keycloak (ui869dev, isolated) not ready on :${OIDC_PORT} — check: docker compose -p ${COMPOSE_PROJECT} logs keycloak"
+  local keycloak_project
+  keycloak_project="$(docker inspect --format '{{ index .Config.Labels "com.docker.compose.project" }}' "${COMPOSE_PROJECT}-keycloak-1")"
+  [[ "${keycloak_project}" == "${COMPOSE_PROJECT}" ]] || die "isolated Keycloak container required before applying local MFA flow"
+  (cd "${ROOT}" && D5_PLATFORM_OIDC_ISSUER="http://127.0.0.1:${OIDC_PORT}/realms/ticket" ./scripts/platform-keycloak-apply-realm.sh)
   pg_isready -h 127.0.0.1 -p "${POSTGRES_PORT}" >/dev/null 2>&1 \
     || die "Postgres (ui869dev, isolated) not ready on :${POSTGRES_PORT}"
 
@@ -185,6 +189,13 @@ cmd_up() {
 
   # shellcheck source=/dev/null
   source "${ENV_FILE}"
+  if [[ -z "${UI869_TOMBSTONE_KEY_B64:-}" ]]; then
+    UI869_TOMBSTONE_KEY_B64="$(node -e 'process.stdout.write(require("node:crypto").randomBytes(32).toString("base64"))')"
+    printf "export UI869_TOMBSTONE_KEY_B64='%s'\n" "${UI869_TOMBSTONE_KEY_B64}" >>"${ENV_FILE}"
+    chmod 600 "${ENV_FILE}"
+  fi
+  export ACCOUNT_DELETION_TOMBSTONE_CURRENT_KEY_ID=local-k1
+  export ACCOUNT_DELETION_TOMBSTONE_KEYRING_JSON="$(printf '[{"keyId":"local-k1","secretBase64":"%s"}]' "${UI869_TOMBSTONE_KEY_B64}")"
 
   # --- API ---
   local api_pid_file="${PID_DIR}/api.pid"
@@ -207,7 +218,7 @@ cmd_up() {
       export OIDC_AUDIENCE=ticket-api OIDC_JWKS_URL="${UI869_OIDC_ISSUER}/protocol/openid-connect/certs"
       export CODE_HMAC_PEPPER="${UI869_CODE_HMAC_PEPPER}" CODE_HMAC_VERSION="${UI869_CODE_HMAC_VERSION}"
       export TICKET_CREDENTIAL_KEY="${UI869_TICKET_CREDENTIAL_KEY}"
-      export EMAIL_ALLOW_NOOP=1
+      export SMTP_URL="smtp://127.0.0.1:${MAILPIT_SMTP_PORT}"
       export SINGLE_CODE_RESOLVE_GLOBAL=1
       export MINIO_ENDPOINT="http://127.0.0.1:${MINIO_API_PORT}" MINIO_ACCESS_KEY=minioadmin MINIO_SECRET_KEY=minioadmin MINIO_BUCKET_ASSETS=vemoki-assets
       python3 "${ROOT}/scripts/dev-local-process.py" start "${api_pid_file}" "${LOG_DIR}/api.log" "${ROOT}/apps/api" node dist/main.js
@@ -220,7 +231,32 @@ cmd_up() {
     cmd_fixtures
   fi
   cmd_oidc_personas
+  ensure_worker
   ensure_web
+}
+
+ensure_worker() {
+  local worker_pid_file="${PID_DIR}/worker.pid"
+  if is_our_pid "${worker_pid_file}"; then
+    log "worker already running (PID $(cat "${worker_pid_file}")); email → Mailpit :${MAILPIT_UI_PORT}"
+    return 0
+  fi
+  log "building worker (pnpm --filter @ticket/worker... build)"
+  (cd "${ROOT}" && pnpm --filter @ticket/worker... build)
+  log "starting worker with Mailpit SMTP :${MAILPIT_SMTP_PORT}"
+  (
+    cd "${ROOT}/apps/worker"
+    export DATABASE_URL="${UI869_RUNTIME_DATABASE_URL}" NODE_ENV=development
+    export OIDC_ISSUER="${UI869_OIDC_ISSUER}"
+    export TICKET_CREDENTIAL_KEY="${UI869_TICKET_CREDENTIAL_KEY}"
+    export SMTP_URL="smtp://127.0.0.1:${MAILPIT_SMTP_PORT}" SMTP_FROM=tickets@vemoki.local
+    export PUBLIC_WEB_BASE_URL="http://${PRODUCT_HOST}:${WEB_PORT}"
+    export OUTBOX_POLL_MS=1000 APNS_ENABLED=false
+    export MINIO_ENDPOINT="http://127.0.0.1:${MINIO_API_PORT}" MINIO_ACCESS_KEY=minioadmin MINIO_SECRET_KEY=minioadmin
+    export MINIO_BUCKET_ASSETS=vemoki-assets MINIO_BUCKET_EXPORTS=vemoki-exports MINIO_BUCKET_IMPORTS=vemoki-imports
+    python3 "${ROOT}/scripts/dev-local-process.py" start "${worker_pid_file}" "${LOG_DIR}/worker.log" "${ROOT}/apps/worker" node dist/main.js
+  )
+  is_our_pid "${worker_pid_file}" || die "worker failed to start — see ${LOG_DIR}/worker.log"
 }
 
 cmd_oidc_personas() {
@@ -289,6 +325,7 @@ dev-local-stack: UP
   product:   http://${PRODUCT_HOST}:${WEB_PORT}
   API:       http://127.0.0.1:${API_PORT}
   OIDC:      ${UI869_OIDC_ISSUER} (isolated ui869dev Keycloak)
+  Mailpit:   http://127.0.0.1:${MAILPIT_UI_PORT} (all local email)
   DB:        ${D9_DEMO_DB} (runtime user: ${D9_DEMO_RT_USER}, isolated ui869dev Postgres :${POSTGRES_PORT})
   logs:      ${LOG_DIR}
   NOTE: accounts/codes printed by 'seed' output — local fixture only, not secret.
@@ -374,7 +411,7 @@ cmd_status() {
   compose ps 2>/dev/null || true
   echo
   echo "== processes (owned by this script) =="
-  for svc in api web; do
+  for svc in api worker web; do
     local pf="${PID_DIR}/${svc}.pid"
     if is_our_pid "${pf}"; then
       echo "${svc}: PID $(cat "${pf}") — RUNNING"
@@ -402,9 +439,10 @@ cmd_logs() {
   local which="${1:-all}"
   case "${which}" in
     api) tail -n 200 -f "${LOG_DIR}/api.log" ;;
+    worker) tail -n 200 -f "${LOG_DIR}/worker.log" ;;
     web) tail -n 200 -f "${LOG_DIR}/web.log" ;;
-    all|"") tail -n 100 -f "${LOG_DIR}/api.log" "${LOG_DIR}/web.log" ;;
-    *) die "logs: unknown target ${which} (api|web)" ;;
+    all|"") tail -n 100 -f "${LOG_DIR}/api.log" "${LOG_DIR}/worker.log" "${LOG_DIR}/web.log" ;;
+    *) die "logs: unknown target ${which} (api|worker|web)" ;;
   esac
 }
 
@@ -418,6 +456,7 @@ cmd_down() {
   touch "${STATE_DIR}/paused"
   local failed=0
   stop_pid "${PID_DIR}/web.pid" "web" || failed=1
+  stop_pid "${PID_DIR}/worker.pid" "worker" || failed=1
   stop_pid "${PID_DIR}/api.pid" "api" || failed=1
   log "stopping isolated compose project '${COMPOSE_PROJECT}' containers (volumes preserved, not destroyed)"
   if ! compose stop; then
@@ -427,7 +466,7 @@ cmd_down() {
   return "${failed}"
 }
 
-# Foreground supervisor: ensures infra/API/web are up and restarts API/web if
+# Foreground supervisor: ensures infra/API/worker/web are up and restarts processes if
 # they crash. This is the launchd Program (keeps a foreground process alive,
 # required for RunAtLoad + KeepAlive to actually supervise, instead of
 # launchd repeatedly relaunching the short-lived `up` command).
@@ -441,6 +480,9 @@ cmd_supervisor() {
     [[ -f "${STATE_DIR}/paused" ]] && continue
     if ! is_our_pid "${PID_DIR}/api.pid"; then
       log "API not running — restarting"
+      cmd_up || log "supervisor: cmd_up failed, will retry next tick"
+    elif ! is_our_pid "${PID_DIR}/worker.pid"; then
+      log "worker not running — restarting"
       cmd_up || log "supervisor: cmd_up failed, will retry next tick"
     elif ! is_our_pid "${PID_DIR}/web.pid"; then
       log "web not running — restarting"
@@ -513,10 +555,10 @@ usage() {
 dev-local-stack — isolated always-on local dev stack for Issue #869 fullflow
 
 Commands:
-  up                     Bring up isolated infra (compose -p ui869dev) + API (:3498) + web (:3417), idempotent
+  up                     Bring up isolated infra (compose -p ui869dev) + API + worker (Mailpit) + web, idempotent
   status                 Containers, owned PIDs, ports, health
-  logs [api|web]         Tail logs (default: both)
-  down                   Stop owned API/web PIDs + isolated compose containers (volumes preserved)
+  logs [api|worker|web]  Tail logs (default: all)
+  down                   Stop owned API/worker/web PIDs + isolated compose containers (volumes preserved)
   seed --reset           Explicit-only: bootstrap/reseed isolated DB ticket_ui869_dev
   fixtures               Additive scenarios + routing + tickets, preserving existing data
   supervisor             Foreground ensure/restart loop (launchd Program target)

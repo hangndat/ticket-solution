@@ -8,7 +8,8 @@
 #   ./scripts/fe-uat-stack.sh check-ui    # Playwright markers (API + web up)
 #   ./scripts/fe-uat-stack.sh check       # bootstrap + check-api (no UI)
 #
-# Infra: compose Postgres @127.0.0.1:55432 + Keycloak @127.0.0.1:8080 healthy.
+# Infra: compose Postgres @127.0.0.1:55432 + Keycloak @127.0.0.1:8080
+# + Mailpit SMTP @127.0.0.1:1025 healthy.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -114,7 +115,7 @@ export OIDC_PROVIDER=keycloak OIDC_ISSUER='${FE_UAT_ISSUER}'
 export OIDC_AUDIENCE=ticket-api OIDC_JWKS_URL='${FE_UAT_ISSUER}/protocol/openid-connect/certs'
 export CODE_HMAC_PEPPER='${CODE_HMAC_PEPPER}' CODE_HMAC_VERSION='${CODE_HMAC_VERSION}'
 export TICKET_CREDENTIAL_KEY='${TICKET_CREDENTIAL_KEY}'
-export EMAIL_ALLOW_NOOP=1
+export SMTP_URL='smtp://127.0.0.1:${FE_UAT_MAILPIT_SMTP_PORT:-1025}'
 export SINGLE_CODE_RESOLVE_GLOBAL='${SINGLE_CODE_RESOLVE_GLOBAL}'
 
 # Web (next dev :3000) — copy apps/web/.env.example then override:
