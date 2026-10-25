@@ -7,13 +7,18 @@ import {
 } from '../../src/attendee-surface';
 import { ConsumerSiteHeader } from '../../src/consumer-site-header';
 import { FooterBrand } from '../../src/site-chrome';
+import { readSubject } from '../../src/oidc/cookies';
+import { PrivateContentBoundary } from '../../src/private-content-boundary';
 
 /** Consumer product routes — attendee footer; marketing uses its own chrome (no double footer). */
-export default function ConsumerLayout({ children }: { children: ReactNode }) {
+export default async function ConsumerLayout({ children }: { children: ReactNode }) {
+  const initialSubject = await readSubject();
   return (
     <>
       <ConsumerSiteHeader />
-      {children}
+      <PrivateContentBoundary initialSubject={initialSubject}>
+        {children}
+      </PrivateContentBoundary>
       <footer className={attendeeFooter} data-testid="site-footer">
         <FooterBrand />
         <span className={attendeeFooterTagline}>Sự kiện & vé</span>

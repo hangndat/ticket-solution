@@ -182,13 +182,12 @@ test('production routes isolate tenant content and reject unknown pairs', async 
     assert.ok(!redeemHtml.includes('Clerk'));
     assert.ok(!redeemHtml.includes('Keycloak'));
 
-    // Guest claim chrome: plain VI, no OIDC/C-I jargon, not route error.tsx.
+    // Private claim flow starts behind session discovery even for guests.
     const claim = await fetch(base + '/claim');
     assert.equal(claim.status, 200);
     const claimHtml = await claim.text();
-    assert.ok(claimHtml.includes('Nhận lời mời sự kiện'));
-    assert.ok(claimHtml.includes('Mở liên kết trong email'));
-    assert.ok(claimHtml.includes('data-testid="claim-token-empty"'));
+    assert.ok(claimHtml.includes('data-testid="consumer-private-pending"'));
+    assert.ok(!claimHtml.includes('data-testid="claim-token-empty"'));
     assert.ok(!claimHtml.includes('OIDC'));
     assert.ok(!claimHtml.includes('C-I'));
     assert.ok(!claimHtml.includes('C-F'));

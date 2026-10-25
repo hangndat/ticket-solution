@@ -14,6 +14,7 @@ const attendee = {
 };
 const avatarA = { initials: 'AA', displayHint: 'attendee-a@example.test' };
 const avatarB = { initials: 'BB', displayHint: 'attendee-b@example.test' };
+const flushAsync = () => new Promise<void>((resolve) => setImmediate(resolve));
 
 test('SSR A to authenticated B hides A throughout deferred focus discovery and loads B', async () => {
   let resolveNav!: (value: typeof attendee) => void;
@@ -33,7 +34,7 @@ test('SSR A to authenticated B hides A throughout deferred focus discovery and l
   assert.equal(nav.getSnapshot().caps.authenticated, false);
   assert.ok(!nav.getSnapshot().links.some((link) => link.href === '/wallet'));
   resolveNav(attendee); // new cookie B is authenticated too
-  await Promise.resolve();
+  await flushAsync();
   assert.equal(identity.getAvatar(), null, 'old SSR avatar must stay hidden during /me');
   resolveAvatar(avatarB);
   await pending;
@@ -50,9 +51,9 @@ test('late avatar response from the previous identity probe cannot overwrite a n
   nav.subscribe(() => { if (!nav.getSnapshot().caps.authenticated) identity.clear(); });
 
   const first = identity.revalidate();
-  await Promise.resolve();
+  await flushAsync();
   const second = identity.revalidate();
-  await Promise.resolve();
+  await flushAsync();
   assert.equal(identity.getAvatar(), null);
   assert.equal(resolvers.length, 2);
   resolvers[1]!(avatarB);
