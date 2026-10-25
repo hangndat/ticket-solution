@@ -28,17 +28,13 @@ import {
   loadShellContext,
   type ShellLoadState,
 } from '../nav/load-shell-context';
+import { resolveShellEffectiveEventId } from '../nav/portal-context-routes';
 import { PortalProLayout } from './portal-pro-layout';
 import { SurfaceState } from './surface-state';
 import { usePortalLocale } from '../i18n';
 
 function tenantFromPath(pathname: string): string | null {
   const m = pathname.match(/^\/t\/([^/]+)/);
-  return m?.[1] ?? null;
-}
-
-function eventFromPath(pathname: string): string | null {
-  const m = pathname.match(/^\/t\/[^/]+\/e\/([^/]+)/);
   return m?.[1] ?? null;
 }
 
@@ -67,11 +63,8 @@ export function PortalShell({
     identity.status === 'ready' ? identity.userId : null;
 
   const pathTenantId = tenantFromPath(pathname);
-  const pathEventId = eventFromPath(pathname);
-  const [selectedTenantId] = useState<string | null>(pathTenantId);
-  const [selectedEventId] = useState<string | null>(pathEventId);
 
-  const effectiveTenantId = pathTenantId ?? selectedTenantId;
+  const effectiveTenantId = pathTenantId;
 
   const reload = useCallback(() => {
     setShell({ status: 'loading' });
@@ -130,8 +123,10 @@ export function PortalShell({
         })
       : null;
 
-  const effectiveEventId =
-    pathEventId ?? cachedEventId ?? selectedEventId;
+  const effectiveEventId = resolveShellEffectiveEventId(
+    pathname,
+    cachedEventId,
+  );
 
   useEffect(() => {
     if (!identityUserId || shell.status !== 'ready' || !pathTenantId) return;
