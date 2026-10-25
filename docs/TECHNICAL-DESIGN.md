@@ -5,9 +5,11 @@ Ngày: 2026-10-16
 Đặc tả sản phẩm: [PRD v0.3](./PRD.md) — thương hiệu **Vemoki**, domain `vemoki.com`.  
 Phạm vi: web + app iOS; backend NestJS. Android native **ngoài phạm vi có chủ đích** (O10 — không làm trong MVP). MVP mở rộng gồm D7 Offline Gate multi-device, D8 White-label cấu hình, D9 demo/media, D10 App Store metadata (không submit trừ ủy quyền) — xem [ROADMAP](./ROADMAP.md), [DECISION-LOG](./DECISION-LOG.md) O10.
 
+**Hiện trạng canonical (deployed / tested / proposed):** [`docs/architecture/ar891-current-architecture.md`](./architecture/ar891-current-architecture.md) — cập nhật theo SHA và evidence Epic [#891](https://github.com/hangndat/ticket-solution/issues/891). Tài liệu này giữ bản **đề xuất**; khi mâu thuẫn, đọc trang hiện trạng trước.
+
 ## 1. Kết luận thiết kế
 
-Dùng modular monolith NestJS, PostgreSQL làm nguồn dữ liệu chuẩn, Redis/BullMQ cho tác vụ nền. API và worker có deployment riêng; cùng repository và domain modules. Web Next.js và iOS React Native/Expo dùng cùng REST API có OpenAPI contract.
+Dùng modular monolith NestJS, PostgreSQL làm nguồn dữ liệu chuẩn. **MVP thực tế:** tác vụ nền qua leased PostgreSQL outbox + worker poll ([ADR-17](./ops/ADR-17-OUTBOX-PG-DIRECT.md)) — **không** BullMQ relay. Hàng «Redis/BullMQ cho job nền» trong bản đề xuất ban đầu **superseded** bởi ADR-17; Redis chỉ cache/admission/rate-limit không quyết định vé. API và worker có deployment riêng; cùng repository và domain modules. Web Next.js và iOS React Native/Expo dùng cùng REST API có OpenAPI contract.
 
 Không tách microservices trong bản đầu. Cấp vé, quota, idempotency, audit và outbox phải commit cùng một transaction PostgreSQL. Check-in có giao thức reserve/confirm với kết quả bền vững để khôi phục sau timeout. Không dùng distributed lock Redis để bảo đảm tính đúng của vé.
 
@@ -42,21 +44,23 @@ Pin version framework/SDK/Keycloak trong lockfile và Compose. Không phụ thu�
 
 ### 3.1 Thành phần triển khai
 
-| Thành phần                   | Vai trò                                        | Scale / lưu trạng thái                   |
-| ---------------------------- | ---------------------------------------------- | ---------------------------------------- |
-| Caddy (TLS + rate limit)     | Public event pages, assets, bot/rate controls  | Không cache API cá nhân; không CDN SaaS  |
-| Next.js public web           | Portal và web ticket view                      | Cache theo tenant/event/config version   |
-| Next.js admin/Gate           | Tenant admin, platform console, Gate dự phòng  | Authenticated, no-store                  |
-| NestJS API                   | Authz, tenant context, domain commands/queries | Stateless, nhiều instance                |
-| Gate API pool                | Cùng code API, ưu tiên tài nguyên cho check-in | Deployment và DB connection budget riêng |
-| Outbox relay                 | Claim outbox rồi enqueue                       | Lease ngắn, retry và reconciliation      |
-| Workers                      | Email, push, import/export, aggregate          | Queue/concurrency riêng từng nhóm        |
-| PostgreSQL primary + standby | Vé, quota, check-in, audit                     | Read/write critical qua primary          |
-| Redis                        | Rate limit / admission / cache không quan trọng; **MVP không BullMQ** ([ADR-17](./ops/ADR-17-OUTBOX-PG-DIRECT.md)) | Không quyết định vé đã cấp/đã vào / outbox |
-| Object storage               | Asset, import, export, bản render nếu cần      | Private, URL ký ngắn hạn                 |
-| Keycloak (self-host)         | Identity, verification, MFA TOTP               | Backend kiểm tra JWT qua JWKS            |
+Bảng dưới trộn **mục tiêu thiết kế** và **hiện trạng**; cột «Ghi chú hiện trạng» tránh đọc nhầm là đã vận hành HA/pool. Chi tiết: [ar891-current-architecture](./architecture/ar891-current-architecture.md).
 
-Gate API pool giảm cạnh tranh CPU/connection nhưng vẫn dùng cùng PostgreSQL; không coi đây là cách ly hoàn toàn. Import/export và dashboard phải có statement timeout, concurrency cap và cơ chế giảm tải khi cổng bận.
+| Thành phần                   | Vai trò                                        | Scale / lưu trạng thái                   | Ghi chú hiện trạng |
+| ---------------------------- | ---------------------------------------------- | ---------------------------------------- | ------------------- |
+| Caddy (TLS + rate limit)     | Public event pages, assets, bot/rate controls  | Không cache API cá nhân; không CDN SaaS  | Mục tiêu ADR-15; VPS dùng nginx host ([deploy README](../infra/deploy/README.md)) |
+| Next.js public web           | Consumer marketing + attendee (vé)             | Cache theo tenant/event/config version   | **Deployed** — không Web Gate admission ([O23](./DECISION-LOG.md)) |
+| Next.js portal               | Tenant admin, platform console, báo cáo Gate   | Authenticated, no-store                  | **Deployed** — Gate report read-only |
+| NestJS API                   | Authz, tenant context, domain commands/queries | Stateless, nhiều instance                | **Deployed**; số replica production chưa ghi evidence ở đây |
+| Gate API pool                | Cùng code API, ưu tiên tài nguyên cho check-in | Deployment và DB connection budget riêng | **Mục tiêu — chưa xác minh deployed** |
+| Outbox worker                | Claim outbox trong PG rồi xử lý                | Lease, retry, reconciliation             | **Deployed** [ADR-17](./ops/ADR-17-OUTBOX-PG-DIRECT.md) — **không** enqueue BullMQ |
+| Workers                      | Email, push, import/export, aggregate          | Concurrency/budget theo class            | **Deployed** một process; budget **tested** local [#898 evidence](./reviews/ar891-t4-worker-budget-evidence.md) |
+| PostgreSQL primary + standby | Vé, quota, check-in, audit                     | Read/write critical qua primary          | **Mục tiêu ops** — không tuyên bố standby đang chạy từ deploy doc |
+| Redis                        | Rate limit / admission / cache không quan trọng; **MVP không BullMQ** ([ADR-17](./ops/ADR-17-OUTBOX-PG-DIRECT.md)) | Không quyết định vé đã cấp/đã vào / outbox | **Deployed** auxiliary; không SoT job |
+| Object storage               | Asset, import, export, bản render nếu cần      | Private, URL ký ngắn hạn                 | MinIO self-host |
+| Keycloak (self-host)         | Identity, verification, MFA TOTP               | Backend kiểm tra JWT qua JWKS            | **Deployed** |
+
+Gate API pool (khi triển khai) giảm cạnh tranh CPU/connection nhưng vẫn dùng cùng PostgreSQL; không coi đây là cách ly hoàn toàn. Import/export và dashboard phải có statement timeout, concurrency cap và cơ chế giảm tải khi cổng bận.
 
 Public directory chỉ chứa tenant/event đã publish và metadata công khai. Không mở anonymous RLS read trên bảng chứa draft hoặc PII. Asset công khai có bước publish riêng; file import/export luôn private.
 
@@ -73,7 +77,8 @@ Public directory chỉ chứa tenant/event đã publish và metadata công khai.
 
 ```text
 apps/
-  web/                 Next.js: portal, admin, platform console, web Gate
+  web/                 Next.js: consumer marketing + attendee (không Gate admission sau O23)
+  portal/              Next.js: tenant admin, platform console, báo cáo Gate read-only
   mobile/              Expo iOS: attendee và staff mode
   api/                 NestJS HTTP bootstrap
   worker/              NestJS background bootstrap
