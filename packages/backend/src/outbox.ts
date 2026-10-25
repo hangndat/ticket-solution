@@ -91,6 +91,7 @@ export async function processClaimedOutbox(
     readPublicWebBaseUrl(options.env ?? process.env);
 
   for (const row of rows) {
+    let emailAttempted = false;
     try {
       if (row.type === 'MembershipInvite') {
         const invitePayload = await withTenant(
@@ -565,6 +566,7 @@ export async function processClaimedOutbox(
       }
 
       // Provider I/O outside tenant transaction (H2); ack in a follow-up tx.
+      emailAttempted = true;
       const result = await email.sendTicketIssued(prep.sendPayload);
 
       const outcome = await withTenant(db, row.tenant_id, async (tx) => {
@@ -688,6 +690,7 @@ export async function processClaimedOutbox(
             retry,
             message,
             'FAILED',
+            emailAttempted,
           );
         });
       } catch {
@@ -1125,6 +1128,7 @@ async function scheduleRetryFenced(
   retry: RetryConfig,
   message: string,
   noteState: 'FAILED' | 'UNKNOWN' | 'DEAD',
+  emailAttempted = false,
 ): Promise<void> {
   if (!(await lockOutboxLease(tx, row, leaseOwner))) return;
   const businessKey = `ticket:${row.aggregate_id}:issued:email`;
@@ -1138,60 +1142,44 @@ async function scheduleRetryFenced(
     FOR UPDATE
   `;
   const notification = notes[0];
-  const emailPending = notification?.state !== 'ACCEPTED';
+  const emailPending = notification?.state !== 'ACCEPTED' && notification?.state !== 'DEAD';
   const ordinal = (notification?.attempts ?? 0) + 1;
-  // Claim count is not a delivery budget. Once email is accepted, charge an
-  // unexpected push-path failure only to unfinished push notifications.
+  // A claim/control failure is not a provider attempt. Push attempts are
+  // recorded at their own fenced ack; this catch cannot identify an unsent
+  // device as the source of a control-plane failure.
   let pushDead = false;
   let pushPending = false;
-  let pushBackoffSeconds: number | null = null;
+  let pushReady = false;
+  let pushDue: Date | null = null;
   if (!emailPending) {
-    const push = await tx.$queryRaw<Array<{ id: string; state: string; attempts: number }>>`
-      SELECT id, state, attempts FROM notifications
+    const push = await tx.$queryRaw<Array<{ state: string; next_attempt_at: Date | null }>>`
+      SELECT state, next_attempt_at FROM notifications
       WHERE tenant_id = ${row.tenant_id}::uuid AND channel = 'push'
         AND business_key LIKE ${`ticket:${row.aggregate_id}:issued:push:%`}
       FOR UPDATE
     `;
     for (const delivery of push) {
-      if (delivery.state === 'DEAD') {
-        pushDead = true;
-        continue;
-      }
+      if (delivery.state === 'DEAD') pushDead = true;
       if (delivery.state === 'ACCEPTED') continue;
-      const pushOrdinal = delivery.attempts + 1;
-      const terminal = pushOrdinal >= retry.maxAttempts;
-      const delay = pushBackoff(pushOrdinal, retry);
-      pushBackoffSeconds = pushBackoffSeconds === null
-        ? delay : Math.min(pushBackoffSeconds, delay);
-      await appendAttempt(tx, {
-        tenantId: row.tenant_id,
-        notificationId: delivery.id,
-        ordinal: pushOrdinal,
-        channel: 'push',
-        leaseOwner,
-        leaseToken: row.lease_token,
-        providerStatus: terminal ? 'DEAD' : noteState,
-        providerRef: null,
-        sanitizedError: message,
-      });
-      await tx.$executeRaw`
-        UPDATE notifications SET state = ${terminal ? 'DEAD' : noteState},
-          attempts = ${pushOrdinal}::integer, last_error = ${message},
-          next_attempt_at = CASE WHEN ${terminal}::boolean THEN NULL
-            ELSE clock_timestamp() + make_interval(secs => ${delay}::integer) END,
-          updated_at = now()
-        WHERE tenant_id = ${row.tenant_id}::uuid AND id = ${delivery.id}::uuid
-      `;
-      if (terminal) pushDead = true;
-      else pushPending = true;
+      if (delivery.state !== 'DEAD') {
+        pushPending = true;
+        if (!delivery.next_attempt_at || delivery.next_attempt_at <= new Date()) {
+          pushReady = true;
+        } else if (!pushDue || delivery.next_attempt_at < pushDue) {
+          pushDue = delivery.next_attempt_at;
+        }
+      }
     }
   }
-  const dead = emailPending && ordinal >= retry.maxAttempts;
+  const dead = emailPending && emailAttempted && ordinal >= retry.maxAttempts;
   const state = dead ? 'DEAD' : noteState;
-  const computed = computeBackoffSeconds(ordinal, retry);
+  const computed = computeBackoffSeconds(
+    emailPending && emailAttempted ? ordinal : Math.max(1, row.attempts),
+    retry,
+  );
   const backoff = Number.isFinite(computed) ? computed : 1;
 
-  if (notification && emailPending && notification.state !== 'DEAD') {
+  if (notification && emailPending && emailAttempted) {
     await appendAttempt(tx, {
       tenantId: row.tenant_id,
       notificationId: notification.id,
@@ -1227,13 +1215,15 @@ async function scheduleRetryFenced(
     return;
   }
 
+  const fallbackDue = new Date(Date.now() + backoff * 1000);
+  const nextDue = !pushReady && pushDue ? pushDue : fallbackDue;
   await tx.$executeRaw`
     UPDATE outbox
     SET status = 'PENDING',
         lease_owner = NULL,
         lease_token = NULL,
         lease_expires_at = NULL,
-        next_attempt_at = clock_timestamp() + make_interval(secs => ${pushBackoffSeconds ?? backoff}::integer),
+        next_attempt_at = ${nextDue}::timestamptz,
         updated_at = now()
     WHERE tenant_id = ${row.tenant_id}::uuid
       AND id = ${row.outbox_id}::uuid
