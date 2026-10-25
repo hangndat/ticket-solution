@@ -1,0 +1,16 @@
+{
+  "reviewSha": "e8eeb584ba4438f215c68741c4fa66e031555088",
+  "capturedAt": "2026-10-25T08:43:29.115Z",
+  "webBase": "http://127.0.0.1:3000",
+  "portalBase": "http://127.0.0.1:3013",
+  "computedStyles": {
+    "redeemPrimaryButtonBg": "#7C4DED",
+    "marketingRootColorSignal": "#e11d48",
+    "redeemValidationErrorText": "#8a1f1f"
+  },
+  "marketingSha256": {
+    "reviewerMarketingNeon1440": "1fe54a7eb89223d38c4cbf66ab5ddb6bbfee1e122283125317a48e04c161e283",
+    "implementerMarketingNeon1440": "8028819ca2bfe7510838fb2b7c98a0e608b7499dc2f58d0218a0eb67f398d1bb",
+    "note": "Full-page marketing captures differ by timestamp/animation; git diff 5b800bda..e8eeb584 has zero changes under apps/web/src/marketing."
+  }
+}

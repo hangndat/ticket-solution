@@ -1,0 +1,137 @@
+{
+  "base": "http://127.0.0.1:3000",
+  "capturedAt": "2026-10-25T08:43:29.115Z",
+  "reviewSha": "e8eeb584ba4438f215c68741c4fa66e031555088",
+  "shots": [
+    {
+      "surface": "home",
+      "viewport": "1440",
+      "file": "home-1440.png",
+      "sha256": "45875178dd237b385f91ef220797e574251a2594097bc42e9b7154b26c3c4dc0"
+    },
+    {
+      "surface": "home",
+      "viewport": "390",
+      "file": "home-390.png",
+      "sha256": "0cf3004d1d9fc7fdb324e1d48f405eefde2e0473aea61a4c309d8cb250d6a4f2"
+    },
+    {
+      "surface": "redeem",
+      "viewport": "1440",
+      "file": "redeem-1440.png",
+      "sha256": "fcdef9cd7dfbd48d2e961f4f381a26d8859169d625547753dfb3df6c65190c78"
+    },
+    {
+      "surface": "redeem",
+      "viewport": "390",
+      "file": "redeem-390.png",
+      "sha256": "8e30f5efae6b74257634f0c61b36758783d0aa389cb06af57e58200a4ed1b573"
+    },
+    {
+      "surface": "wallet",
+      "viewport": "1440",
+      "file": "wallet-1440.png",
+      "sha256": "115c6d07721911de4abe45769c8293c68ad0ca5828e55a6ae9e8b86c6bbbb55a"
+    },
+    {
+      "surface": "wallet",
+      "viewport": "390",
+      "file": "wallet-390.png",
+      "sha256": "e071186384c04ad0627aabcf985c2a5cf4fce2839dabc211afd5546c786d73d9"
+    },
+    {
+      "surface": "account",
+      "viewport": "1440",
+      "file": "account-1440.png",
+      "sha256": "4ffd8958886fc9e8b2a52ab9e6e8f6ffeabd52fc0fdc1eddf3919cdb1a5adb02"
+    },
+    {
+      "surface": "account",
+      "viewport": "390",
+      "file": "account-390.png",
+      "sha256": "d6e463bfc348d438894a4758f064a163231488c0e9bf664ee77c3ba2b2e6bf11"
+    },
+    {
+      "surface": "claim",
+      "viewport": "1440",
+      "file": "claim-1440.png",
+      "sha256": "3282fadff6a88b553465ebe37b78e8720a932ffd88b1f385411c882e3014e9fd"
+    },
+    {
+      "surface": "claim",
+      "viewport": "390",
+      "file": "claim-390.png",
+      "sha256": "8ef6040207a9a444f44c25852c9ae15e5068dd99d329e8de2eac767e811743ca"
+    },
+    {
+      "surface": "invite",
+      "viewport": "1440",
+      "file": "invite-1440.png",
+      "sha256": "bfac3761d541afb996a3529e6ade8ee95dc93a7cd239867cbbf32f85b89ad559"
+    },
+    {
+      "surface": "invite",
+      "viewport": "390",
+      "file": "invite-390.png",
+      "sha256": "7600eceae4241a2360cd696ca8253ed9845613c9587039a4f36dfa2475f0fc0a"
+    },
+    {
+      "surface": "not-found",
+      "viewport": "1440",
+      "file": "not-found-1440.png",
+      "sha256": "eda36f7e0c7f1d9c0bee597ffb3b01983eb4015b2c042d93ed222a51312c6af4"
+    },
+    {
+      "surface": "not-found",
+      "viewport": "390",
+      "file": "not-found-390.png",
+      "sha256": "0b2e5d9d870a8fbea811a95f273987115541b82afd84874661028f008c1bbb1c"
+    },
+    {
+      "surface": "marketing-neon",
+      "viewport": "1440",
+      "file": "marketing-neon-1440.png",
+      "sha256": "1fe54a7eb89223d38c4cbf66ab5ddb6bbfee1e122283125317a48e04c161e283"
+    },
+    {
+      "surface": "marketing-neon",
+      "viewport": "390",
+      "file": "marketing-neon-390.png",
+      "sha256": "24b545960c6ce453e93e4b1bcc143d5c5ac204cbffa56ab7e1c8e062c5f4fa8b"
+    },
+    {
+      "surface": "ticket-qr",
+      "viewport": "1440",
+      "file": "ticket-qr-1440.png",
+      "sha256": "e68be2a4e8ee38ed17fffc9dc1c9bc56588c7a2cdf31a1a1257de0aaa293b234"
+    },
+    {
+      "surface": "ticket-qr",
+      "viewport": "390",
+      "file": "ticket-qr-390.png",
+      "sha256": "779cecc48fbc08a22b83bba8d37384808e6e3fcbd73db207ee98c89e1992e8aa"
+    },
+    {
+      "surface": "event-detail",
+      "viewport": "1440",
+      "file": "event-detail-1440.png",
+      "sha256": "45ce875e57a22d49bc93becc498b9d9668bb467e08a2f3f4f3d8a4835ab60822"
+    },
+    {
+      "surface": "event-detail",
+      "viewport": "390",
+      "file": "event-detail-390.png",
+      "sha256": "ab8d9a6a6eb82908155d8258fa4a98ff067cd25ec9ce2c6d95789f1b1d869f23"
+    }
+  ],
+  "probes": [
+    {
+      "probe": "redeem-first-primary-bg",
+      "value": "#7C4DED",
+      "expected": "#7C4DED"
+    }
+  ],
+  "marketingCompare": {
+    "error": "baseline missing"
+  }
+}
