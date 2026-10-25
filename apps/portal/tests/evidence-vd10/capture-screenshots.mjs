@@ -63,7 +63,7 @@ const CONFIG_VERSIONS = { items: [] };
 
 const BRANDING = {
   displayName: 'Evidence Org',
-  primaryColor: '#E11D48',
+  primaryColor: '#7C4DED',
   secondaryColor: null,
   version: 1,
 };

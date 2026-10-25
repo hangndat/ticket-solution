@@ -8,8 +8,8 @@
 | DS-PORTAL-04 | Fixed | `PortalAuthTemplate` + `.portal-auth-page` (no inline card margin) |
 | DS-PORTAL-05 | Kept | `PortalDualRunBanner` Alert unchanged |
 | DS-PORTAL-06 | Fixed | ops panels + platform filters use `portalFieldMin` density classes |
-| DS-PORTAL-07 | Fixed | config defaults → `DEFAULT_TENANT_PRIMARY_COLOR` (`#E11D48`) |
-| DS-PORTAL-08 | Fixed | onboarding/settings placeholders → `#E11D48` |
+| DS-PORTAL-07 | Fixed | config defaults → `DEFAULT_TENANT_PRIMARY_COLOR` (`#7C4DED`) |
+| DS-PORTAL-08 | Fixed | onboarding/settings placeholders → `#7C4DED` via constant |
 | DS-PORTAL-09 | Fixed | `readiness.test.ts` uses `DEFAULT_TENANT_PRIMARY_COLOR` |
 
 Danger buttons: `colorError` `#B3213A` on theme token; `Button danger` unchanged (semantic red).

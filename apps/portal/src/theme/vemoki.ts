@@ -1,8 +1,8 @@
 import type { ThemeConfig } from 'antd';
 
 /**
- * Portal enterprise surface + Live Pulse tenant signal.
- * Ant `colorPrimary` follows portal-antd-theme (violet); tenant brand default uses `signal` (DEC-04).
+ * Portal enterprise surface — solid violet product primary (#7C4DED).
+ * Ant `colorPrimary` and default tenant brand both use `primary`; `signal` is legacy token red for CSS vars only.
  */
 export const VEMOKI_COLORS = {
   ink: '#172039',
@@ -19,8 +19,8 @@ export const VEMOKI_COLORS = {
   siderTextActive: '#FFFFFF',
 } as const;
 
-/** Default tenant/event brand color placeholder and fallback (Live Pulse signal). */
-export const DEFAULT_TENANT_PRIMARY_COLOR = VEMOKI_COLORS.signal;
+/** Default tenant/event brand color placeholder and fallback (enterprise violet). */
+export const DEFAULT_TENANT_PRIMARY_COLOR = VEMOKI_COLORS.primary;
 
 /** Light-surface alert fills — WCAG AA body text on paper layout (VD10-R-01). */
 export const PORTAL_ALERT_TOKENS = {
