@@ -97,9 +97,6 @@ export default function EventsListPage() {
     };
   }, [access.kind, load]);
 
-  if (access.kind === 'loading' || list.kind === 'loading') {
-    return <SurfaceState kind="loading" />;
-  }
   if (access.kind === 'error') {
     return (
       <SurfaceState
@@ -119,6 +116,9 @@ export default function EventsListPage() {
         }}
       />
     );
+  }
+  if (access.kind === 'loading' || list.kind === 'loading') {
+    return <SurfaceState kind="loading" />;
   }
 
   const canCreate = access.tenant.tenantPermissions.includes('event.create');
