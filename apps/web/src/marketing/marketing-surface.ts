@@ -74,7 +74,8 @@ export const marketingNavMobileActions =
 const sectionPad =
   'scroll-mt-24 px-[clamp(1.25rem,4vw,2rem)] py-[clamp(4rem,8vw,6.5rem)] max-md:max-w-full max-md:overflow-x-clip';
 
-export const marketingWrap = 'relative z-[1] mx-auto max-w-[1120px]';
+export const marketingWrap =
+  'relative z-[1] mx-auto w-[min(100%-40px,var(--vm-max-content,1120px))] max-w-[var(--vm-max-content,1120px)]';
 
 export function marketingSection(
   variant: 'ink' | 'paper' | 'paperAlt' | 'interest',

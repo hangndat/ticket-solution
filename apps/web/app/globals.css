@@ -3,6 +3,7 @@
  * Cascade (D-1 / ADR-22): theme → base → components → utilities; utilities win on clashes.
  */
 @import '@ticket/ui/vemoki-theme.css';
+@import '../src/marketing/marketing-neon.css';
 @import 'tw-animate-css';
 @layer theme, base, components, utilities;
 @theme inline {
