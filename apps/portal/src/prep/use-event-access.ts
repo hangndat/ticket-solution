@@ -3,10 +3,8 @@
 import { useEffect, useState } from 'react';
 import type { MeEventItem, MeTenantItem } from '@ticket/contracts';
 import { loadShellContext } from '../nav/load-shell-context';
-import {
-  tenantHasAdminChrome,
-  tenantHasAnalytics,
-} from '../nav/capabilities';
+import { tenantHasAdminChrome, tenantHasAnalytics } from '../nav/capabilities';
+import { isEventAssigned } from './event-access-resolver';
 import type { MessageKey } from '../i18n/messages';
 
 export type EventAccessState =
@@ -46,7 +44,7 @@ export function useEventAccess(
         shell.meEvents?.items.find(
           (e) => e.tenantId === tenantId && e.eventId === eventId,
         ) ?? null;
-      if (!tenant || !event || !tenantHasAdminChrome(tenant)) {
+      if (!isEventAssigned(tenant, event) || tenant == null || event == null) {
         setState({ kind: 'permission-denied' });
         return;
       }

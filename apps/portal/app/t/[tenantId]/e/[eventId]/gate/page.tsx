@@ -18,6 +18,7 @@ import {
   reportShowsPendingApprovalCta,
   type EventReportView,
 } from '../../../../../../src/ops/report';
+import { isEventPagePermitted } from '../../../../../../src/prep/event-access-resolver';
 import { useEventAccess } from '../../../../../../src/prep/use-event-access';
 import { GateStayAppNotice } from '../../../../../../src/components/gate-deeplink';
 import { EventReportAsOfLine } from '../../../../../../src/components/event-report-as-of';
@@ -73,10 +74,16 @@ export default function EventGateReportPage() {
       />
     );
   }
-  if (
-    access.kind === 'permission-denied' ||
-    !access.permissions.includes('report.read')
-  ) {
+  if (access.kind === 'permission-denied') {
+    return (
+      <Result
+        status="403"
+        title={t('gate.h_iosgib')}
+        subTitle={t('gate.needReportRead')}
+      />
+    );
+  }
+  if (!isEventPagePermitted('gate', access.permissions)) {
     return (
       <Result
         status="403"
