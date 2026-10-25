@@ -27,6 +27,7 @@ test('consumer layout boundary does not server-render private children before tr
   assert.doesNotMatch(privateHtml, /A ticket|\/t\/demo\/tickets\/a/);
   assert.match(privateHtml, /consumer-private-pending/);
   assert.match(privateHtml, /class="min-w-0 w-full flex-1"/);
+  assert.match(privateHtml, /max-w-\[64rem\]/);
   assert.equal(isPrivateConsumerPath('/wallet'), true);
   assert.equal(isPrivateConsumerPath('/account'), true);
   assert.equal(isPrivateConsumerPath('/redeem'), true);
