@@ -66,12 +66,16 @@ test('marketing layout does not hide footer via runtime CSS hack', () => {
   assert.doesNotMatch(layout, /marketing-surface/);
 });
 
-test('consumer page shell keeps SiteNav outside padded main', () => {
+test('consumer layout keeps SiteNav outside padded main', () => {
+  const layout = readFileSync(
+    join(WEB_ROOT, 'app/(consumer)/layout.tsx'),
+    'utf8',
+  );
+  assert.match(layout, /ConsumerSiteHeader/);
   const shell = readFileSync(
     join(WEB_ROOT, 'src/consumer-page-shell.tsx'),
     'utf8',
   );
-  assert.match(shell, /SiteNav/);
+  assert.doesNotMatch(shell, /SiteNav/);
   assert.match(shell, /id="main"/);
-  assert.match(shell, /SiteNav trailing={navTrailing}/);
 });
