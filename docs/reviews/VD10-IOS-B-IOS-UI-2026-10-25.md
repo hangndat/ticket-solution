@@ -10,21 +10,23 @@
 | DS-IOS-01 | High | **Fixed** | `Button` destructive border/label/spinner → `colors.deny` (#B3213A) |
 | DS-IOS-02 | Med | **Fixed** | `colors.deny` + `themeColors().deny` → #B3213A (not `brand.signal`) |
 | DS-IOS-03 | Med | **Fixed** | `PublishedEventCard` primary CTA → shared `Button` + `eventsCopy.cardPrimaryCta` |
-| DS-IOS-04 | Low | **Deferred** | `expo-linear-gradient` not in `apps/mobile` deps — primary stays solid `colors.accent` per coordinator rule |
+| DS-IOS-04 | Low | **Fixed** | `expo-linear-gradient` + `attendeePrimaryGradient` (signal → color-mix(signal 88%, ink)); primary `Button` matches web `attendeePrimary` |
 | DS-IOS-05 | Low | **Fixed** | Focus ring `borderWidth` 2 → 3 on non-ghost `Button` |
-| DS-IOS-06 | Low | **Partial** | Simulator PNGs under `.uat-artifacts/vd10/` + `docs/reviews/assets/vd10-ios/`; embedded binary did not attach Metro — card CTA not visible in shots |
+| DS-IOS-06 | Low | **Fixed** | Debug sim + Metro 8083; PNGs refreshed with gradient CTAs visible on events card, redeem, fixture event, staff deny |
 
 ## Simulator evidence (local)
 
 | File | Screen |
 | --- | --- |
-| `docs/reviews/assets/vd10-ios/ios-events-feed.png` | Events catalog |
+| `docs/reviews/assets/vd10-ios/ios-events-feed.png` | Events catalog (card primary CTA) |
 | `docs/reviews/assets/vd10-ios/ios-redeem-global.png` | Redeem global |
-| `docs/reviews/assets/vd10-ios/ios-ticket-detail-fixture.png` | Fixture event route |
+| `docs/reviews/assets/vd10-ios/ios-ticket-detail-fixture.png` | Fixture event detail (`vemoki://events/demo-mfest`) |
 | `docs/reviews/assets/vd10-ios/ios-staff-access-deny.png` | Staff gate soft-deny |
 
-Full set (gitignored): `apps/mobile/.uat-artifacts/vd10/`.
+Capture: `xcodebuild` Debug + `expo start --port 8083 --dev-client`; `xcrun simctl openurl` + `simctl io screenshot`. Full set (gitignored): `apps/mobile/.uat-artifacts/vd10/`.
 
-## DS-IOS-04 follow-up
+## Implementation notes (DS-IOS-04)
 
-Add `expo-linear-gradient` (coordinator-approved) and map primary `Button` to restrained signal gradient aligned with web `attendeeEventSideboxCta` (signal → ink mix), not marketing neon.
+- Dependency: `expo-linear-gradient` (Expo SDK 58, via `expo install`).
+- Tokens: `src/theme/color-mix.ts`, `src/theme/attendee-primary.ts` — DEC-01 parity with `packages/ui` `attendeePrimary` gradient stop.
+- Destructive variant unchanged (deny red outline); disabled/loading/pressed use existing opacity on shell.
