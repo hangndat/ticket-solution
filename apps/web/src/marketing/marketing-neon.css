@@ -400,28 +400,28 @@ html[data-vemoki-marketing='neon-v1'] .mkt-neon-wordmark-link:focus-visible {
 html[data-vemoki-marketing='neon-v1'] .mkt-neon-wordmark {
   display: inline-flex;
   align-items: center;
-  gap: 0.55rem;
+  gap: 0.4rem;
   line-height: 1;
 }
 
 html[data-vemoki-marketing='neon-v1'] .mkt-neon-wordmark-mark {
   display: block;
   flex: none;
-  width: 2rem;
-  height: 2rem;
+  width: 2.125rem;
+  height: 2.125rem;
 }
 
 @media (min-width: 390px) {
   html[data-vemoki-marketing='neon-v1'] .mkt-neon-wordmark-mark {
-    width: 2.125rem;
-    height: 2.125rem;
+    width: 2.375rem;
+    height: 2.375rem;
   }
 }
 
 @media (min-width: 1440px) {
   html[data-vemoki-marketing='neon-v1'] .mkt-neon-wordmark-mark {
-    width: 2.25rem;
-    height: 2.25rem;
+    width: 2.5rem;
+    height: 2.5rem;
   }
 }
 

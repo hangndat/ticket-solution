@@ -20,6 +20,38 @@ const SHOTS = [
   { name: 'marketing-vi-320-overflow', path: '/marketing', width: 320, height: 568, fullPage: false },
 ];
 
+/** Header lockup crops — aligned with UI/UX review evidence names. */
+const LOGO_SHOTS = [
+  {
+    name: 'logo-1440-wordmark',
+    path: '/marketing',
+    width: 1440,
+    height: 900,
+    selector: '[data-testid="mkt-wordmark"]',
+  },
+  {
+    name: 'logo-390-wordmark',
+    path: '/marketing',
+    width: 390,
+    height: 844,
+    selector: '[data-testid="mkt-wordmark"]',
+  },
+  {
+    name: 'logo-1440-mark-only',
+    path: '/marketing',
+    width: 1440,
+    height: 900,
+    selector: '.mkt-neon-wordmark-mark',
+  },
+  {
+    name: 'logo-320-wordmark',
+    path: '/marketing',
+    width: 320,
+    height: 568,
+    selector: '[data-testid="mkt-wordmark"]',
+  },
+];
+
 const browser = await chromium.launch({ channel: 'chrome' });
 const page = await browser.newPage();
 
@@ -34,6 +66,15 @@ for (const shot of SHOTS) {
   const file = join(OUT, `${shot.name}.png`);
   await page.screenshot({ path: file, fullPage: shot.fullPage ?? false });
   console.log(JSON.stringify({ file, width: shot.width, overflowPx: overflow }));
+}
+
+for (const shot of LOGO_SHOTS) {
+  await page.setViewportSize({ width: shot.width, height: shot.height });
+  await page.goto(`${BASE}${shot.path}`, { waitUntil: 'networkidle' });
+  await page.waitForSelector(shot.selector, { timeout: 30_000 });
+  const file = join(OUT, `${shot.name}.png`);
+  await page.locator(shot.selector).screenshot({ path: file });
+  console.log(JSON.stringify({ file, width: shot.width, kind: 'logo-crop' }));
 }
 
 await browser.close();
