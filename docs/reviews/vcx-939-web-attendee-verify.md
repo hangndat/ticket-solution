@@ -119,7 +119,7 @@ Discriminator chung: `RedeemDecision` (`src/redeem/decide.ts`) + `decideClaimBod
 | `/redeem` guest (auth gate) | 390 | **PASS** | `redeem-auth-gate-390.png` — «Đăng nhập để đổi mã», không bắt app |
 | `/redeem` signed-in form | 390 | **PASS** | `redeem-signed-in-390.png` |
 | `/redeem` mã không tồn tại `DEMO-NOT-FOUND` | 390 | **PASS** (denied) | `redeem-unknown-390.png` — «Mã không hợp lệ», không success ring; *không* mô phỏng 5xx «unknown» (cần outage BFF) |
-| `/redeem` mã hợp lệ `DEMO-MFEST-002` | 1024 | **PASS** (issued) | `redeem-issued-1024.png` |
+| `/redeem` mã hợp lệ `DEMO-MFEST-002` | 1024 | **GAP** (ảnh success chưa chứng minh) | `redeem-issued-1024.png` chủ yếu là form trống theo review James; wallet có vé nhưng không thay ảnh chuyển trạng thái issued |
 | `/wallet` owner | 1024 | **PASS** | `wallet-1024.png` — 6 vé, «Sẵn sàng», CTA QR |
 | `/t/mfest-demo/tickets/{id}` QR | 390 | **PASS** | `ticket-qr-390.png` — QR + demo gate notice, không copy cài app |
 | `/claim?token=invalid…` guest | 390 | **PASS** | `claim-guest-invalid-390.png` — hướng dẫn link email, không auth wall |
@@ -130,9 +130,9 @@ Discriminator chung: `RedeemDecision` (`src/redeem/decide.ts`) + `decideClaimBod
 
 **Unit (cùng SHA):** `pnpm --filter @ticket/web test` — 293 PASS (gồm `redeem-decide`, `guest-claim`, `redeem-messages`, `live-region`).
 
-**Findings runtime:** Không gap tái hiện trong `apps/web` — F-939-01 đóng (OIDC owner + guest claim surface); F-939-02..04 giữ như verify-first. **Còn lại:** visual `#881` product chrome; E2E pending/rejected poll trên fixture staff (không chặn #939); reviewer `dod+sec+ux`.
+**Findings runtime:** Không gap code tái hiện trong `apps/web` — F-939-01 đóng phần OIDC owner + guest claim surface; F-939-02..04 giữ như verify-first. **F-939-05 (evidence):** acceptance runtime chưa hoàn tất: còn pending/rejected poll, unknown timeout, email lỗi không làm mất vé đã phát và ảnh success issued rõ. Merge tài liệu không đóng các gap này hoặc chứng minh pilot ready; visual product chrome tiếp tục theo `#881`.
 
 ## Việc còn lại (dispatch sau)
 
 1. Reviewer James `dod+sec+ux` trên SHA PR docs.
-2. (Tuỳ chọn) E2E pending/rejected refresh UI với persona staff trên UI869.
+2. Hoàn tất evidence runtime còn thiếu ở F-939-05 với persona fixture, hoặc ghi blocker/điều kiện mở cụ thể; không gọi phần thiếu là PASS.

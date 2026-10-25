@@ -7,7 +7,7 @@
 - Task / Dispatch: `task_c17695de40e1` / `ctx_0e4f837978c5`
 - Base → head: `d00a265cca1206b68601c75d445b633f7d590b57`; working tree: thay đổi docs (chưa commit khi ghi báo cáo)
 - Paths: `docs/reviews/vcx-939-web-attendee-verify.md`, `docs/reviews/vcx-939-runtime-worker-report.md`
-- Trạng thái: code complete Không (không sửa code); acceptance complete Có (runtime evidence); pilot ready Chưa đánh giá
+- Trạng thái: không có thay đổi code; đã bàn giao evidence runtime một phần; acceptance complete Chưa (pending/rejected, unknown timeout và email lỗi → vé đã phát chưa có E2E); pilot ready Chưa đánh giá.
 
 | Check | SHA / input | Kết quả | Evidence |
 | --- | --- | --- | --- |
