@@ -193,8 +193,12 @@ body {
 }
 
 @media (max-width: 479px) {
-  .portal-page-container .ant-pro-page-container-warp-page-header {
+  .portal-main-surface {
     padding-inline: 12px;
+  }
+
+  .portal-page-container .ant-pro-page-container-warp-page-header {
+    padding-inline: 0;
   }
 
   .portal-page-container .ant-page-header-heading {
@@ -202,10 +206,27 @@ body {
     width: 100%;
   }
 
-  .portal-page-container .ant-page-header-heading-title {
+  .portal-page-container .ant-page-header-heading-left,
+  .portal-page-container .ant-pro-page-header-heading-left {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+  }
+
+  .portal-page-container .ant-page-header-heading-title,
+  .portal-page-container .ant-pro-page-header-heading-title {
     font-size: 1.125rem;
     width: 100%;
+    max-width: 100%;
     min-width: 0;
+    flex: none;
+  }
+
+  .portal-page-container .ant-page-header-heading-extra {
+    margin-top: 8px;
+    margin-inline-start: 0 !important;
+    width: 100%;
+    max-width: 100%;
   }
 
   .portal-page-container .ant-page-header-heading-sub-title {
@@ -231,22 +252,57 @@ body {
 
 .portal-main-surface {
   padding: 16px;
+  max-width: 100%;
 }
 
-.portal-main-surface .ant-input,
+/* Touch targets: outer controls only — inner .ant-input inside affix-wrapper follows AntD height */
 .portal-main-surface .ant-input-affix-wrapper,
 .portal-main-surface .ant-select-selector,
 .portal-main-surface .ant-picker,
-.portal-main-surface .ant-btn {
+.portal-main-surface .ant-btn:not(.ant-btn-sm) {
   min-height: 44px;
+}
+
+.portal-main-surface .ant-input:not(.ant-input-affix-wrapper .ant-input) {
+  min-height: 44px;
+}
+
+.portal-page-container {
+  max-width: 100%;
+}
+
+.portal-page-container .ant-pro-page-container-children-content {
+  max-width: 100%;
+}
+
+.portal-page-container .ant-table-wrapper,
+.portal-page-container .ant-table-container {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.ant-pro-layout .ant-pro-layout-content {
+  min-width: 0;
+}
+
+.portal-page-title {
+  display: block;
+  width: 100%;
+  min-width: 0;
 }
 
 .portal-page-container .ant-page-header-heading-title,
 .portal-page-container .ant-pro-page-header-heading-title {
-  font-size: 1.75rem;
   font-weight: 650;
   letter-spacing: -0.02em;
   color: var(--vemoki-ink);
+}
+
+@media (min-width: 480px) {
+  .portal-page-container .ant-page-header-heading-title,
+  .portal-page-container .ant-pro-page-header-heading-title {
+    font-size: 1.75rem;
+  }
 }
 
 .portal-page-container .ant-page-header-heading-sub-title,
