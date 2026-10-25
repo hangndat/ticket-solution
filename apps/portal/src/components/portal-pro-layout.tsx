@@ -2,12 +2,17 @@
 
 import { ProLayout } from '@ant-design/pro-components';
 import type { MenuDataItem } from '@ant-design/pro-components';
-import { Button, Dropdown, theme } from 'antd';
+import { Button, Dropdown } from 'antd';
 import type { MenuProps } from 'antd';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { resolvePortalMenuKeys } from '../nav/portal-menu-keys';
+import {
+  mergePortalSiderOpenKeys,
+  readPersistedSiderOpenKeys,
+  writePersistedSiderOpenKeys,
+} from '../nav/portal-sider-open-keys';
 import type { MeTenantItem } from '@ticket/contracts';
 import type { PortalShellCapabilities } from '../nav/capabilities';
 import { VEMOKI_COLORS } from '../theme/vemoki';
@@ -45,19 +50,36 @@ export function PortalProLayout({
 }: PortalProLayoutProps) {
   const { t, locale, setLocale } = usePortalLocale();
   const pathname = usePathname();
-  const { token } = theme.useToken();
 
   const { selectedKeys, openKeys: pathOpenKeys } = useMemo(
     () => resolvePortalMenuKeys(pathname, menuData),
     [pathname, menuData],
   );
-  const [userOpenKeys, setUserOpenKeys] = useState<string[]>([]);
+  const [persistedOpenKeys, setPersistedOpenKeys] = useState<string[]>([]);
   const [siderCollapsed, setSiderCollapsed] = useState(false);
-  const openKeys = useMemo(() => {
-    const merged = new Set(userOpenKeys);
-    for (const key of pathOpenKeys) merged.add(key);
-    return [...merged];
-  }, [userOpenKeys, pathOpenKeys]);
+  const routeSyncRef = useRef(false);
+
+  useEffect(() => {
+    setPersistedOpenKeys(readPersistedSiderOpenKeys());
+  }, []);
+
+  useEffect(() => {
+    routeSyncRef.current = true;
+    setPersistedOpenKeys((prev) => {
+      const merged = mergePortalSiderOpenKeys(pathOpenKeys, prev);
+      writePersistedSiderOpenKeys(merged);
+      return merged;
+    });
+    const id = requestAnimationFrame(() => {
+      routeSyncRef.current = false;
+    });
+    return () => cancelAnimationFrame(id);
+  }, [pathname, pathOpenKeys]);
+
+  const openKeys = useMemo(
+    () => mergePortalSiderOpenKeys(pathOpenKeys, persistedOpenKeys),
+    [pathOpenKeys, persistedOpenKeys],
+  );
 
   const accountMenu: MenuProps = {
     selectable: true,
@@ -143,7 +165,9 @@ export function PortalProLayout({
       ]}
       token={{
         header: {
-          colorBgHeader: token.colorBgContainer,
+          colorBgHeader: '#ffffff',
+          colorHeaderTitle: VEMOKI_COLORS.ink,
+          heightLayoutHeader: 64,
         },
         sider: {
           colorMenuBackground: VEMOKI_COLORS.siderBg,
@@ -156,8 +180,12 @@ export function PortalProLayout({
       menuProps={
         {
           openKeys,
+          motion: { motionName: undefined },
           onOpenChange: (keys: string[]) => {
-            setUserOpenKeys(keys);
+            if (routeSyncRef.current) return;
+            const next = mergePortalSiderOpenKeys(pathOpenKeys, keys);
+            setPersistedOpenKeys(next);
+            writePersistedSiderOpenKeys(next);
           },
           'data-testid': 'portal-sider',
         } as MenuProps & { 'data-testid': string }
