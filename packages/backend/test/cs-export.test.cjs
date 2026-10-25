@@ -477,7 +477,10 @@ test(
           'worker-claim-a',
           5,
         );
-        assert.ok(relayed.claimed >= 1, 'claim must see PENDING under FORCE RLS');
+        assert.ok(
+          relayed.claimed >= 1,
+          'claim must see PENDING under FORCE RLS',
+        );
         assert.ok(relayed.completed >= 1);
         const claimedFile = await downloadExport(db, minio.cfg, {
           tenantId,
@@ -547,13 +550,12 @@ test(
             WHERE tenant_id = ${tenantId}::uuid AND id = ${liveId}::uuid
           `;
         });
-        const stolen = await relayExportsOnce(
-          db,
-          minioEnv,
-          'worker-thief',
-          5,
+        const stolen = await relayExportsOnce(db, minioEnv, 'worker-thief', 5);
+        assert.equal(
+          stolen.claimed,
+          0,
+          'live unexpired lease must not be claimed',
         );
-        assert.equal(stolen.claimed, 0, 'live unexpired lease must not be claimed');
         await processExportJob(
           db,
           minio.cfg,
@@ -849,8 +851,7 @@ test(
               ownerUserId: attendee.userId,
               email: 'attendee@example.com',
               eventId,
-              businessKey:
-                'ticket:' + ticket.ticketId + ':issued:email:nodev',
+              businessKey: 'ticket:' + ticket.ticketId + ':issued:email:nodev',
             })}::jsonb,
             'PENDING', 0, now(), now()
           )
@@ -874,7 +875,11 @@ test(
         5,
         { apns: null, credentialKeyMaterial: CREDENTIAL_KEY },
       );
-      assert.equal(completedNoPush.failed, 0, 'no-device path must not fail-closed');
+      assert.equal(
+        completedNoPush.failed,
+        0,
+        'no-device path must not fail-closed',
+      );
       assert.ok(completedNoPush.completed >= 1);
       await withTenant(db, tenantId, async (tx) => {
         const rows = await tx.$queryRaw`
@@ -931,7 +936,7 @@ test(
       );
       assert.ok(failClosed.failed >= 1);
 
-      // APNs invalid token → revoke; retryable → leave pending
+      // APNs invalid token is terminal for that required device delivery.
       const invalidAdapter = {
         async send() {
           return {
@@ -955,6 +960,11 @@ test(
           WHERE tenant_id = ${tenantId}::uuid
             AND business_key = ${'ticket:' + ticket.ticketId + ':issued:email:test'}
         `;
+        await tx.$executeRaw`
+          UPDATE notifications SET next_attempt_at = clock_timestamp()
+          WHERE tenant_id = ${tenantId}::uuid AND channel = 'push'
+            AND business_key LIKE ${'ticket:' + ticket.ticketId + ':issued:push:%'}
+        `;
       });
       const invalidated = await relayOutboxOnce(
         db,
@@ -963,7 +973,15 @@ test(
         5,
         { apns: invalidAdapter, credentialKeyMaterial: CREDENTIAL_KEY },
       );
-      assert.ok(invalidated.completed >= 1);
+      assert.ok(invalidated.failed >= 1);
+      const deadOutbox = await withTenant(db, tenantId, async (tx) => {
+        const rows = await tx.$queryRaw`
+          SELECT status FROM outbox WHERE tenant_id = ${tenantId}::uuid
+            AND id = ${outboxId}::uuid
+        `;
+        return rows[0].status;
+      });
+      assert.equal(deadOutbox, 'DEAD');
       const still = await listActiveDeviceTokensForUser(db, attendee.userId);
       assert.ok(!still.some((r) => r.token === pushToken));
     } finally {
