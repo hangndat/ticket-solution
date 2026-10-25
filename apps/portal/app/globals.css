@@ -268,6 +268,27 @@ a {
   color: #faf9ff;
 }
 
+/* Mix layout: logo renders in ant-pro-global-header, not the sider. */
+.ant-pro-global-header .portal-brand-link--mark-only {
+  max-width: 48px;
+  justify-content: center;
+}
+
+.ant-pro-global-header .portal-brand-link--mark-only .portal-brand-text {
+  display: none;
+}
+
+@media (max-width: 991px) {
+  .ant-pro-global-header .portal-brand-link {
+    max-width: 48px;
+    justify-content: center;
+  }
+
+  .ant-pro-global-header .portal-brand-text {
+    display: none;
+  }
+}
+
 .ant-layout-sider-collapsed .portal-brand-link {
   max-width: 48px;
   justify-content: center;
