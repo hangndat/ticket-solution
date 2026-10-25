@@ -8,7 +8,7 @@
 
 ## Exact SHA
 
-_Pending commit — coordinator: run `git rev-parse HEAD` on branch `hangndat/vd11-integration` after worker commit._
+`376306abd77142819405545b03ad9fb6a313ea8e` (`git rev-parse HEAD` @ `hangndat/vd11-integration`)
 
 ## Checks (worker)
 
