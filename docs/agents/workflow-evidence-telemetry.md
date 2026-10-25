@@ -72,6 +72,14 @@ node scripts/agent-role-monitor/telemetry.mjs report --run-id RUN --out .orca-me
 
 Wrapper chỉ collect/release dispatch completed/failed đúng run, không tự giả settlement hay ack mailbox. Coordinator vẫn xử lý delivery, findings và quyết định terminal. Transcript lưu metadata cấu trúc + sourceExact/contentComplete/clipping, không lưu prompt/response hoặc secrets. Terminal fallback/nguồn thiếu phải ghi partial/unknown.
 
+### Recovery khi worker lỗi / quota trước `worker_done`
+
+Thông báo mailbox (`worker_done`, heartbeat, escalation) **không** bằng settlement Orca. Coordinator phải quan sát **exact dispatch** (`worker-show`, terminal projection) và giữ phân loại `live` / `unverifiable` / `exited` — timeout hoặc inbox rỗng không chứng minh worker đã dừng ([orca-coordinator-mailbox](../../.cursor/rules/orca-coordinator-mailbox.mdc)). Đọc recovery guide version-matched (`ORCA skills get orca-cli` / orchestration skill trên host); **không** tự `worker-start` lại khi dispatch còn live.
+
+Chỉ khi có positive proof (receipt exited, hoặc dispatch `completed`/`failed` khớp run) mới `stop`/`abandon` theo guide, rồi `agent-workflow-run.mjs settle` (collect, `--release` chỉ khi receipt `released`). Retry cùng `--employee` và `--retry-of <dispatch cũ>`; không ack delivery trước khi xử lý batch. Start thất bại sau agent ready → `observe_existing_dispatch_do_not_restart`, không implicit retry.
+
+Trước batch UAT web: `node scripts/uat-orca-runtime.mjs --worktree <abs> --json` (ports read-only; port không chứng minh SHA).
+
 Cursor hook `stop`/`afterAgentResponse` dedupe theo generation; conversation ↔ dispatch phải join đúng. Shared worktree có nhiều worker thì dùng `record-join` với conversation ID thật; không suy từ một active-dispatch.json dùng chung. Provider không đưa token/cache thì giữ null, không báo bằng 0.
 
 ## Codex: mốc đo cho coordinator và worker
