@@ -19,10 +19,7 @@ import {
   renderTemplate,
   resolveTicketIssuedTemplate,
 } from './notification-templates';
-import {
-  openCurrentCredentialForQr,
-  renderCredentialQrPng,
-} from './qr-ticket';
+import { openCurrentCredentialForQr, renderCredentialQrPng } from './qr-ticket';
 import {
   buildGuestInvitationClaimLink,
   buildInviteAcceptLink,
@@ -147,9 +144,10 @@ export async function processClaimedOutbox(
           expiresAt: invitePayload.expiresAt ?? '',
           acceptUrl,
         });
-        await withTenant(db, row.tenant_id, async (tx) => {
-          await markOutboxCompleteFenced(tx, row, options.leaseOwner);
-        });
+        const completedInvite = await withTenant(db, row.tenant_id, (tx) =>
+          markOutboxCompleteFenced(tx, row, options.leaseOwner),
+        );
+        if (!completedInvite) continue;
         metricsInc('notification_provider_total', {
           channel: 'email_invite',
           result: 'accepted',
@@ -171,8 +169,7 @@ export async function processClaimedOutbox(
           if (!fenced) {
             return false;
           }
-          await markOutboxCompleteFenced(tx, row, options.leaseOwner);
-          return true;
+          return markOutboxCompleteFenced(tx, row, options.leaseOwner);
         });
         if (!done) {
           continue;
@@ -259,9 +256,10 @@ export async function processClaimedOutbox(
           eventName: meta.eventName || undefined,
           ttlHours: readyPayload.ttlHours,
         });
-        await withTenant(db, row.tenant_id, async (tx) => {
-          await markOutboxCompleteFenced(tx, row, options.leaseOwner);
-        });
+        const completedReady = await withTenant(db, row.tenant_id, (tx) =>
+          markOutboxCompleteFenced(tx, row, options.leaseOwner),
+        );
+        if (!completedReady) continue;
         metricsInc('notification_provider_total', {
           channel: 'email_guest_invite',
           result: 'accepted',
@@ -278,20 +276,6 @@ export async function processClaimedOutbox(
             row,
             options.leaseOwner,
             'unsupported type',
-          );
-        });
-        failed += 1;
-        continue;
-      }
-
-      if (row.attempts > retry.maxAttempts) {
-        await withTenant(db, row.tenant_id, async (tx) => {
-          await markChannelDead(tx, row, options.leaseOwner, 'max attempts');
-          await markOutboxDeadFenced(
-            tx,
-            row,
-            options.leaseOwner,
-            'max attempts',
           );
         });
         failed += 1;
@@ -344,11 +328,7 @@ export async function processClaimedOutbox(
           FOR UPDATE
         `;
         const notification = notes[0];
-        if (notification?.state === 'ACCEPTED') {
-          await markOutboxCompleteFenced(tx, row, options.leaseOwner);
-          return 'completed' as const;
-        }
-
+        if (!notification) throw new Error('email_notification_missing');
         const tickets = await tx.$queryRaw<
           Array<{
             id: string;
@@ -367,21 +347,22 @@ export async function processClaimedOutbox(
           throw new Error('ticket missing for outbox aggregate');
         }
         if (ticket.state === 'REVOKED' || ticket.state === 'CANCELLED') {
-          await appendAttempt(tx, {
-            tenantId: row.tenant_id,
-            notificationId: notification?.id ?? randomUUID(),
-            ordinal: row.attempts,
-            channel: 'email',
-            leaseOwner: options.leaseOwner,
-            leaseToken: row.lease_token,
-            providerStatus: 'DEAD',
-            providerRef: null,
-            sanitizedError: 'ticket revoked/cancelled — not sending QR',
-          });
-          if (notification) {
+          if (notification.state !== 'ACCEPTED') {
+            await appendAttempt(tx, {
+              tenantId: row.tenant_id,
+              notificationId: notification.id,
+              ordinal: notification.attempts + 1,
+              channel: 'email',
+              leaseOwner: options.leaseOwner,
+              leaseToken: row.lease_token,
+              providerStatus: 'DEAD',
+              providerRef: null,
+              sanitizedError: 'ticket revoked/cancelled — not sending QR',
+            });
             await tx.$executeRaw`
               UPDATE notifications
               SET state = 'DEAD',
+                  attempts = ${notification.attempts + 1}::integer,
                   last_error = 'ticket revoked/cancelled',
                   lease_owner = NULL,
                   lease_token = NULL,
@@ -392,13 +373,35 @@ export async function processClaimedOutbox(
                 AND channel = 'email'
             `;
           }
+          await tx.$executeRaw`
+            UPDATE notifications SET state = 'DEAD',
+              last_error = 'ticket revoked/cancelled', next_attempt_at = NULL,
+              updated_at = now()
+            WHERE tenant_id = ${row.tenant_id}::uuid AND channel = 'push'
+              AND business_key LIKE ${`ticket:${ticketId}:issued:push:%`}
+              AND state NOT IN ('ACCEPTED', 'DEAD')
+          `;
           await markOutboxDeadFenced(
             tx,
             row,
             options.leaseOwner,
             'ticket revoked/cancelled',
           );
-          return 'completed' as const;
+          return 'dead' as const;
+        }
+        await snapshotTicketIssuedPush(tx, row, options, payload, ticket);
+        if (notification.state === 'ACCEPTED') {
+          return {
+            kind: 'push_pending' as const,
+            ticketId,
+            eventId,
+            payload,
+            ticket,
+          };
+        }
+        if (notification.state === 'DEAD') {
+          await markOutboxDeadFenced(tx, row, options.leaseOwner, 'email dead');
+          return 'dead' as const;
         }
 
         const creds = await tx.$queryRaw<
@@ -452,7 +455,9 @@ export async function processClaimedOutbox(
 
         let publishedPayload: unknown = {};
         if (event.published_config_version != null) {
-          const configs = await tx.$queryRaw<Array<{ payload: Prisma.JsonValue }>>`
+          const configs = await tx.$queryRaw<
+            Array<{ payload: Prisma.JsonValue }>
+          >`
             SELECT payload FROM event_config_versions
             WHERE tenant_id = ${row.tenant_id}::uuid
               AND event_id = ${eventId}::uuid
@@ -539,8 +544,20 @@ export async function processClaimedOutbox(
       if (prep === 'stale') {
         continue;
       }
-      if (prep === 'completed') {
-        completed += 1;
+      if (prep === 'dead') {
+        failed += 1;
+        continue;
+      }
+      if (prep.kind === 'push_pending') {
+        const pushOutcome = await deliverTicketIssuedApns(
+          db,
+          row,
+          options,
+          prep,
+          retry,
+        );
+        if (pushOutcome === 'completed') completed += 1;
+        if (pushOutcome === 'failed') failed += 1;
         continue;
       }
       if (prep.kind !== 'send') {
@@ -551,6 +568,9 @@ export async function processClaimedOutbox(
       const result = await email.sendTicketIssued(prep.sendPayload);
 
       const outcome = await withTenant(db, row.tenant_id, async (tx) => {
+        if (!(await lockOutboxLease(tx, row, options.leaseOwner))) {
+          return 'stale' as const;
+        }
         const notification = prep.notification;
         const template = prep.template;
         const ticketId = prep.ticketId;
@@ -560,23 +580,11 @@ export async function processClaimedOutbox(
 
         const providerStatus = result.providerStatus ?? 'ACCEPTED';
         if (notification) {
-          await appendAttempt(tx, {
-            tenantId: row.tenant_id,
-            notificationId: notification.id,
-            ordinal: row.attempts,
-            channel: 'email',
-            leaseOwner: options.leaseOwner,
-            leaseToken: row.lease_token,
-            providerStatus,
-            providerRef: result.providerRef,
-            sanitizedError: null,
-          });
-
           const updated = await tx.$executeRaw`
             UPDATE notifications
             SET state = ${providerStatus},
                 provider_ref = ${result.providerRef},
-                attempts = ${row.attempts}::integer,
+                attempts = ${notification.attempts + 1}::integer,
                 last_error = NULL,
                 template_version = ${template.version},
                 lease_owner = NULL,
@@ -593,25 +601,51 @@ export async function processClaimedOutbox(
             // Stale lease — do not complete outbox; another worker owns it.
             return 'stale' as const;
           }
+          await appendAttempt(tx, {
+            tenantId: row.tenant_id,
+            notificationId: notification.id,
+            ordinal: notification.attempts + 1,
+            channel: 'email',
+            leaseOwner: options.leaseOwner,
+            leaseToken: row.lease_token,
+            providerStatus,
+            providerRef: result.providerRef,
+            sanitizedError: null,
+          });
         }
 
         if (providerStatus === 'UNKNOWN') {
-          await scheduleRetryFenced(
-            tx,
-            row,
-            options.leaseOwner,
-            retry,
-            'provider timeout unknown',
-            'UNKNOWN',
-          );
+          const ordinal = notification.attempts + 1;
+          const dead = ordinal >= retry.maxAttempts;
+          const backoff = pushBackoff(ordinal, retry);
+          await tx.$executeRaw`
+            UPDATE notifications SET state = ${dead ? 'DEAD' : 'UNKNOWN'},
+              next_attempt_at = CASE WHEN ${dead}::boolean THEN NULL
+                ELSE clock_timestamp() + make_interval(secs => ${backoff}::integer) END,
+              last_error = 'provider_result_unknown', updated_at = now()
+            WHERE tenant_id = ${row.tenant_id}::uuid AND id = ${notification.id}::uuid
+          `;
+          if (dead) {
+            await markOutboxDeadFenced(
+              tx,
+              row,
+              options.leaseOwner,
+              'email result unknown',
+            );
+          } else {
+            await tx.$executeRaw`
+              UPDATE outbox SET status = 'PENDING',
+                next_attempt_at = clock_timestamp() + make_interval(secs => ${backoff}::integer),
+                lease_owner = NULL, lease_token = NULL, lease_expires_at = NULL,
+                updated_at = now()
+              WHERE tenant_id = ${row.tenant_id}::uuid AND id = ${row.outbox_id}::uuid
+                AND lease_owner = ${options.leaseOwner} AND lease_token = ${row.lease_token}
+            `;
+          }
           return 'failed' as const;
         }
 
-        // APNs (ADR-12): defer provider I/O until after this tx (mirror H2 email).
-        if (!Object.prototype.hasOwnProperty.call(options, 'apns')) {
-          await markOutboxCompleteFenced(tx, row, options.leaseOwner);
-          return 'completed' as const;
-        }
+        // APNs I/O follows the fenced email ack; completion checks every intent.
         return {
           kind: 'push_pending' as const,
           ticketId,
@@ -628,16 +662,16 @@ export async function processClaimedOutbox(
         failed += 1;
         continue;
       }
-      if (outcome === 'completed') {
-        completed += 1;
-        continue;
-      }
       if (outcome.kind === 'push_pending') {
-        await deliverTicketIssuedApns(db, row, options, outcome);
-        await withTenant(db, row.tenant_id, async (tx) => {
-          await markOutboxCompleteFenced(tx, row, options.leaseOwner);
-        });
-        completed += 1;
+        const pushOutcome = await deliverTicketIssuedApns(
+          db,
+          row,
+          options,
+          outcome,
+          retry,
+        );
+        if (pushOutcome === 'completed') completed += 1;
+        if (pushOutcome === 'failed') failed += 1;
         continue;
       }
     } catch (error) {
@@ -685,177 +719,312 @@ type TicketIssuedPushContext = {
   };
 };
 
-/** APNs provider I/O outside tenant transactions (H2); DB ack per device in follow-up txs. */
+type PushDelivery = {
+  id: string;
+  business_key: string;
+  state: string;
+  attempts: number;
+  next_attempt_at: Date | null;
+  payload: { deviceRegistrationId?: string };
+};
+
+async function snapshotTicketIssuedPush(
+  tx: Prisma.TransactionClient,
+  row: ClaimedOutboxRow,
+  options: ProcessOutboxOptions,
+  payload: { ticketId?: string },
+  ticket: { owner_user_id: string },
+): Promise<void> {
+  const storedRows = await tx.$queryRaw<Array<{ payload: Prisma.JsonValue }>>`
+    SELECT payload FROM outbox WHERE tenant_id = ${row.tenant_id}::uuid
+      AND id = ${row.outbox_id}::uuid FOR UPDATE
+  `;
+  const stored = (storedRows[0]?.payload ?? {}) as Record<string, unknown>;
+  if (stored['deliverySnapshot']) return;
+  const ticketId = payload.ticketId ?? row.aggregate_id;
+  const prefix = `ticket:${ticketId}:issued:push:%`;
+  const prior = await tx.$queryRaw<Array<{ id: string }>>`
+    SELECT id FROM notifications WHERE tenant_id = ${row.tenant_id}::uuid
+      AND channel = 'push' AND business_key LIKE ${prefix}
+  `;
+  const enabled =
+    Object.prototype.hasOwnProperty.call(options, 'apns') || prior.length > 0;
+  if (enabled) {
+    const devices = await tx.$queryRaw<Array<{ id: string }>>`
+      SELECT id FROM list_active_device_tokens_for_user(${ticket.owner_user_id}::uuid)
+    `;
+    for (const device of devices) {
+      const key = `ticket:${ticketId}:issued:push:${device.id}`;
+      await tx.$executeRaw`
+        INSERT INTO notifications (
+          tenant_id, event_id, id, business_key, channel, state,
+          attempts, payload, created_at, updated_at
+        ) VALUES (
+          ${row.tenant_id}::uuid, ${row.event_id}::uuid, ${randomUUID()}::uuid,
+          ${key}, 'push', 'PENDING', 0,
+          ${JSON.stringify({ ticketId, deviceRegistrationId: device.id })}::jsonb,
+          now(), now()
+        ) ON CONFLICT (tenant_id, business_key) DO NOTHING
+      `;
+    }
+  }
+  const count = await tx.$queryRaw<Array<{ count: bigint }>>`
+    SELECT count(*)::bigint AS count FROM notifications
+    WHERE tenant_id = ${row.tenant_id}::uuid
+      AND channel = 'push' AND business_key LIKE ${prefix}
+  `;
+  const snapshot = {
+    version: 1,
+    push: enabled ? 'enabled' : 'disabled',
+    count: Number(count[0]?.count ?? 0),
+  };
+  await tx.$executeRaw`
+    UPDATE outbox SET payload = payload || ${JSON.stringify({ deliverySnapshot: snapshot })}::jsonb,
+      updated_at = now()
+    WHERE tenant_id = ${row.tenant_id}::uuid AND id = ${row.outbox_id}::uuid
+      AND lease_owner = ${options.leaseOwner} AND lease_token = ${row.lease_token}
+  `;
+}
+
+function pushBackoff(attempt: number, retry: RetryConfig): number {
+  const seconds = computeBackoffSeconds(attempt, retry);
+  return Number.isFinite(seconds) ? seconds : 1;
+}
+
+/** Provider I/O is outside transactions; each DB acknowledgement holds the outbox fence. */
 async function deliverTicketIssuedApns(
   db: PrismaClient,
   row: ClaimedOutboxRow,
   options: ProcessOutboxOptions,
   ctx: TicketIssuedPushContext,
-): Promise<void> {
-  const ownerForPush =
-    ctx.payload.ownerUserId ?? ctx.ticket.owner_user_id ?? null;
-  if (!ownerForPush) {
-    return;
-  }
-
-  const jobs = await withTenant(db, row.tenant_id, async (tx) => {
-    const devices = await tx.$queryRaw<
-      Array<{ id: string; token: string; environment: string }>
-    >`
-      SELECT id, token, environment
-      FROM list_active_device_tokens_for_user(${ownerForPush}::uuid)
+  retry: RetryConfig,
+): Promise<'completed' | 'failed' | 'stale'> {
+  const prefix = `ticket:${ctx.ticketId}:issued:push:%`;
+  const initial = await withTenant(db, row.tenant_id, async (tx) => {
+    if (!(await lockOutboxLease(tx, row, options.leaseOwner))) return null;
+    const outbox = await tx.$queryRaw<Array<{ payload: Prisma.JsonValue }>>`
+      SELECT payload FROM outbox WHERE tenant_id = ${row.tenant_id}::uuid
+        AND id = ${row.outbox_id}::uuid
     `;
-    if (devices.length === 0) {
-      return [] as Array<{
-        pushKey: string;
-        device: { id: string; token: string; environment: string };
-      }>;
-    }
-    const apns = options.apns;
-    if (!apns) {
-      throw new Error('apns_misconfigured');
-    }
-    const pending: Array<{
-      pushKey: string;
-      device: { id: string; token: string; environment: string };
-    }> = [];
-    for (const device of devices) {
-      const pushKey = `ticket:${ctx.ticketId}:issued:push:${device.id}`;
-      const existingPush = await tx.$queryRaw<Array<{ id: string; state: string }>>`
-        SELECT id, state FROM notifications
-        WHERE tenant_id = ${row.tenant_id}::uuid
-          AND business_key = ${pushKey}
-        FOR UPDATE
-      `;
-      const existing = existingPush[0];
-      if (existing?.state === 'SENT' || existing?.state === 'ACCEPTED') {
-        continue;
+    const snapshot = (
+      outbox[0]?.payload as {
+        deliverySnapshot?: { push: string; count: number };
       }
-      if (!existing) {
-        const notificationId = randomUUID();
-        await tx.$executeRaw`
-          INSERT INTO notifications (
-            tenant_id, event_id, id, business_key, channel, state,
-            attempts, payload, created_at, updated_at
-          ) VALUES (
-            ${row.tenant_id}::uuid,
-            ${ctx.eventId}::uuid,
-            ${notificationId}::uuid,
-            ${pushKey},
-            'push',
-            'PENDING',
-            0,
-            ${JSON.stringify({
-              ticketId: ctx.ticketId,
-              deviceRegistrationId: device.id,
-            })}::jsonb,
-            now(),
-            now()
-          )
-          ON CONFLICT (tenant_id, business_key) DO NOTHING
-        `;
-      }
-      pending.push({ pushKey, device });
-    }
-    return pending;
+    )?.deliverySnapshot;
+    if (!snapshot) throw new Error('push_snapshot_missing');
+    const deliveries = await tx.$queryRaw<PushDelivery[]>`
+      SELECT id, business_key, state, attempts, next_attempt_at, payload
+      FROM notifications WHERE tenant_id = ${row.tenant_id}::uuid
+        AND channel = 'push' AND business_key LIKE ${prefix}
+      ORDER BY business_key
+    `;
+    if (deliveries.length !== snapshot.count)
+      throw new Error('push_snapshot_incomplete');
+    return deliveries;
   });
+  if (!initial) return 'stale';
 
-  if (jobs.length === 0) {
-    return;
-  }
-
-  const apns = options.apns;
-  if (!apns) {
-    throw new Error('apns_misconfigured');
-  }
-
-  for (const { pushKey, device } of jobs) {
-    const sendResult = await apns.send({
-      deviceToken: device.token,
-      environment: device.environment as 'sandbox' | 'production',
-      title: 'Vé đã sẵn sàng',
-      body: 'Vé của bạn đã được cấp.',
-      data: { ticketId: ctx.ticketId },
+  for (const delivery of initial) {
+    if (delivery.state === 'ACCEPTED' || delivery.state === 'DEAD') continue;
+    if (delivery.next_attempt_at && delivery.next_attempt_at > new Date())
+      continue;
+    const beforeSend = await withTenant(db, row.tenant_id, async (tx) => {
+      if (!(await lockOutboxLease(tx, row, options.leaseOwner))) return null;
+      const fresh = await tx.$queryRaw<
+        Array<{ state: string; attempts: number }>
+      >`
+        SELECT state, attempts FROM notifications
+        WHERE tenant_id = ${row.tenant_id}::uuid AND id = ${delivery.id}::uuid FOR UPDATE
+      `;
+      if (
+        !fresh[0] ||
+        fresh[0].state === 'ACCEPTED' ||
+        fresh[0].state === 'DEAD'
+      ) {
+        return { skip: true } as const;
+      }
+      const active = await tx.$queryRaw<
+        Array<{ id: string; token: string; environment: string }>
+      >`
+        SELECT id, token, environment
+        FROM list_active_device_tokens_for_user(${ctx.ticket.owner_user_id}::uuid)
+      `;
+      const device = active.find(
+        (item) => item.id === delivery.payload.deviceRegistrationId,
+      );
+      if (!device) {
+        const ordinal = fresh[0].attempts + 1;
+        await tx.$executeRaw`
+          UPDATE notifications SET state = 'DEAD', attempts = ${ordinal}::integer,
+            last_error = 'device_revoked_or_reassigned', next_attempt_at = NULL, updated_at = now()
+          WHERE tenant_id = ${row.tenant_id}::uuid AND id = ${delivery.id}::uuid
+        `;
+        await appendAttempt(tx, {
+          tenantId: row.tenant_id,
+          notificationId: delivery.id,
+          ordinal,
+          channel: 'push',
+          leaseOwner: options.leaseOwner,
+          leaseToken: row.lease_token,
+          providerStatus: 'DEAD',
+          providerRef: null,
+          sanitizedError: 'device_revoked_or_reassigned',
+        });
+        return { skip: true } as const;
+      }
+      return { skip: false, device } as const;
     });
+    if (!beforeSend) return 'stale';
+    if (beforeSend.skip) continue;
 
-    if (!sendResult.ok && sendResult.invalidateToken) {
-      await revokeDeviceTokenByValue(db, device.token);
+    let result: Awaited<
+      ReturnType<NonNullable<ProcessOutboxOptions['apns']>['send']>
+    > | null = null;
+    let errorState: 'UNKNOWN' | 'FAILED' | 'DEAD' | null = null;
+    if (!options.apns) {
+      errorState = 'FAILED';
+    } else {
+      try {
+        result = await options.apns.send({
+          deviceToken: beforeSend.device.token,
+          environment: beforeSend.device.environment as
+            'sandbox' | 'production',
+          title: 'Vé đã sẵn sàng',
+          body: 'Vé của bạn đã được cấp.',
+          data: { ticketId: ctx.ticketId },
+        });
+      } catch {
+        errorState = 'UNKNOWN';
+      }
     }
-
+    if (result && !result.ok) {
+      errorState =
+        result.invalidateToken || !result.retryable ? 'DEAD' : 'FAILED';
+    }
+    const ack = await withTenant(db, row.tenant_id, async (tx) => {
+      if (!(await lockOutboxLease(tx, row, options.leaseOwner))) return false;
+      const fresh = await tx.$queryRaw<
+        Array<{ state: string; attempts: number }>
+      >`
+        SELECT state, attempts FROM notifications
+        WHERE tenant_id = ${row.tenant_id}::uuid AND id = ${delivery.id}::uuid FOR UPDATE
+      `;
+      if (
+        !fresh[0] ||
+        fresh[0].state === 'ACCEPTED' ||
+        fresh[0].state === 'DEAD'
+      )
+        return false;
+      const ordinal = fresh[0].attempts + 1;
+      const terminal =
+        errorState === 'DEAD' || (!!errorState && ordinal >= retry.maxAttempts);
+      const state = result?.ok
+        ? 'ACCEPTED'
+        : terminal
+          ? 'DEAD'
+          : (errorState ?? 'UNKNOWN');
+      const backoff =
+        state === 'ACCEPTED' || state === 'DEAD'
+          ? null
+          : pushBackoff(ordinal, retry);
+      const providerRef = result?.ok ? result.providerRef : null;
+      const error =
+        state === 'ACCEPTED'
+          ? null
+          : errorState === 'UNKNOWN'
+            ? 'provider_result_unknown'
+            : !options.apns
+              ? 'apns_misconfigured'
+              : 'provider_error';
+      await tx.$executeRaw`
+        UPDATE notifications SET state = ${state}, attempts = ${ordinal}::integer,
+          provider_ref = ${providerRef}, last_error = ${error},
+          next_attempt_at = CASE WHEN ${backoff}::integer IS NULL THEN NULL
+            ELSE clock_timestamp() + make_interval(secs => ${backoff}::integer) END,
+          updated_at = now()
+        WHERE tenant_id = ${row.tenant_id}::uuid AND id = ${delivery.id}::uuid
+      `;
+      await appendAttempt(tx, {
+        tenantId: row.tenant_id,
+        notificationId: delivery.id,
+        ordinal,
+        channel: 'push',
+        leaseOwner: options.leaseOwner,
+        leaseToken: row.lease_token,
+        providerStatus: state,
+        providerRef,
+        sanitizedError: error,
+      });
+      return true;
+    });
+    if (!ack) return 'stale';
     if (
-      sendResult.ok &&
-      sendResult.resolvedEnvironment &&
-      sendResult.resolvedEnvironment !== device.environment
+      result?.ok &&
+      result.resolvedEnvironment !== beforeSend.device.environment
     ) {
       await correctDeviceTokenEnvironment(db, {
-        userId: ownerForPush,
-        registrationId: device.id,
-        environment: sendResult.resolvedEnvironment,
+        userId: ctx.ticket.owner_user_id,
+        registrationId: beforeSend.device.id,
+        environment: result.resolvedEnvironment,
       });
       metricsInc('notification_provider_total', {
         channel: 'push',
         result: 'env_corrected',
       });
     }
-
-    await withTenant(db, row.tenant_id, async (tx) => {
-      if (sendResult.ok) {
-        await tx.$executeRaw`
-          UPDATE notifications
-          SET state = 'ACCEPTED',
-              provider_ref = ${sendResult.providerRef},
-              attempts = attempts + 1,
-              last_error = NULL,
-              updated_at = now()
-          WHERE tenant_id = ${row.tenant_id}::uuid
-            AND business_key = ${pushKey}
-        `;
-        metricsInc('notification_provider_total', {
-          channel: 'push',
-          result: 'accepted',
-        });
-        return;
-      }
-      if (!sendResult.ok && sendResult.invalidateToken) {
-        await tx.$executeRaw`
-          UPDATE notifications
-          SET state = 'FAILED',
-              attempts = attempts + 1,
-              last_error = 'provider_error',
-              updated_at = now()
-          WHERE tenant_id = ${row.tenant_id}::uuid
-            AND business_key = ${pushKey}
-        `;
-        metricsInc('notification_provider_total', {
-          channel: 'push',
-          result: 'invalidated',
-        });
-        return;
-      }
-      if (!sendResult.ok && sendResult.retryable) {
-        metricsInc('notification_provider_total', {
-          channel: 'push',
-          result: 'retryable',
-        });
-        throw new Error('provider_error');
-      }
-      await tx.$executeRaw`
-        UPDATE notifications
-        SET state = 'FAILED',
-            attempts = attempts + 1,
-            last_error = 'provider_error',
-            updated_at = now()
-        WHERE tenant_id = ${row.tenant_id}::uuid
-          AND business_key = ${pushKey}
-      `;
-      metricsInc('notification_provider_total', {
-        channel: 'push',
-        result: 'failed',
-      });
+    if (result && !result.ok && result.invalidateToken) {
+      await revokeDeviceTokenByValue(db, beforeSend.device.token);
+    }
+    metricsInc('notification_provider_total', {
+      channel: 'push',
+      result: result?.ok
+        ? 'accepted'
+        : errorState === 'UNKNOWN'
+          ? 'unknown'
+          : 'failed',
     });
   }
-}
 
+  return withTenant(db, row.tenant_id, async (tx) => {
+    if (!(await lockOutboxLease(tx, row, options.leaseOwner)))
+      return 'stale' as const;
+    const states = await tx.$queryRaw<
+      Array<{ state: string; next_attempt_at: Date | null }>
+    >`
+      SELECT state, next_attempt_at FROM notifications
+      WHERE tenant_id = ${row.tenant_id}::uuid
+        AND channel = 'push' AND business_key LIKE ${prefix}
+    `;
+    const pending = states.filter(
+      (item) => item.state !== 'ACCEPTED' && item.state !== 'DEAD',
+    );
+    if (pending.length === 0) {
+      if (states.some((item) => item.state === 'DEAD')) {
+        await markOutboxDeadFenced(
+          tx,
+          row,
+          options.leaseOwner,
+          'push delivery dead',
+        );
+        return 'failed' as const;
+      }
+      return (await markOutboxCompleteFenced(tx, row, options.leaseOwner))
+        ? ('completed' as const)
+        : ('stale' as const);
+    }
+    const next = pending.map(
+      (item) => item.next_attempt_at?.getTime() ?? Date.now(),
+    );
+    const due = new Date(Math.min(...next));
+    await tx.$executeRaw`
+      UPDATE outbox SET status = 'PENDING', next_attempt_at = ${due}::timestamptz,
+        lease_owner = NULL, lease_token = NULL, lease_expires_at = NULL, updated_at = now()
+      WHERE tenant_id = ${row.tenant_id}::uuid AND id = ${row.outbox_id}::uuid
+        AND lease_owner = ${options.leaseOwner} AND lease_token = ${row.lease_token}
+    `;
+    return 'failed' as const;
+  });
+}
 async function appendAttempt(
   tx: Prisma.TransactionClient,
   input: {
@@ -895,24 +1064,34 @@ async function scheduleRetryFenced(
   message: string,
   noteState: 'FAILED' | 'UNKNOWN' | 'DEAD',
 ): Promise<void> {
+  if (!(await lockOutboxLease(tx, row, leaseOwner))) return;
   const businessKey = `ticket:${row.aggregate_id}:issued:email`;
-  const notes = await tx.$queryRaw<Array<{ id: string; attempts: number }>>`
-    SELECT id, attempts FROM notifications
+  const notes = await tx.$queryRaw<
+    Array<{ id: string; attempts: number; state: string }>
+  >`
+    SELECT id, attempts, state FROM notifications
     WHERE tenant_id = ${row.tenant_id}::uuid
       AND business_key = ${businessKey}
       AND channel = 'email'
     FOR UPDATE
   `;
   const notification = notes[0];
-  const dead = row.attempts >= retry.maxAttempts;
+  const emailPending = notification?.state !== 'ACCEPTED';
+  const ordinal = (notification?.attempts ?? 0) + 1;
+  // Unexpected push-path errors still need a bounded dead letter, while an
+  // accepted email must never be reopened to retry push.
+  const dead = emailPending
+    ? ordinal >= retry.maxAttempts
+    : row.attempts >= retry.maxAttempts;
   const state = dead ? 'DEAD' : noteState;
-  const backoff = computeBackoffSeconds(row.attempts, retry);
+  const computed = computeBackoffSeconds(ordinal, retry);
+  const backoff = Number.isFinite(computed) ? computed : 1;
 
-  if (notification) {
+  if (notification && emailPending && notification.state !== 'DEAD') {
     await appendAttempt(tx, {
       tenantId: row.tenant_id,
       notificationId: notification.id,
-      ordinal: row.attempts,
+      ordinal,
       channel: 'email',
       leaseOwner,
       leaseToken: row.lease_token,
@@ -923,7 +1102,7 @@ async function scheduleRetryFenced(
     await tx.$executeRaw`
       UPDATE notifications
       SET state = ${state},
-          attempts = ${row.attempts}::integer,
+          attempts = ${ordinal}::integer,
           last_error = ${message},
           next_attempt_at = CASE
             WHEN ${dead}::boolean THEN NULL
@@ -939,7 +1118,7 @@ async function scheduleRetryFenced(
     `;
   }
 
-  if (dead) {
+  if (dead || notification?.state === 'DEAD') {
     await markOutboxDeadFenced(tx, row, leaseOwner, message);
     return;
   }
@@ -959,47 +1138,6 @@ async function scheduleRetryFenced(
   `;
 }
 
-async function markChannelDead(
-  tx: Prisma.TransactionClient,
-  row: ClaimedOutboxRow,
-  leaseOwner: string,
-  reason: string,
-): Promise<void> {
-  const businessKey = `ticket:${row.aggregate_id}:issued:email`;
-  const notes = await tx.$queryRaw<Array<{ id: string }>>`
-    SELECT id FROM notifications
-    WHERE tenant_id = ${row.tenant_id}::uuid
-      AND business_key = ${businessKey}
-      AND channel = 'email'
-  `;
-  if (notes[0]) {
-    await appendAttempt(tx, {
-      tenantId: row.tenant_id,
-      notificationId: notes[0].id,
-      ordinal: row.attempts,
-      channel: 'email',
-      leaseOwner,
-      leaseToken: row.lease_token,
-      providerStatus: 'DEAD',
-      providerRef: null,
-      sanitizedError: reason,
-    });
-    await tx.$executeRaw`
-      UPDATE notifications
-      SET state = 'DEAD',
-          last_error = ${reason},
-          lease_owner = NULL,
-          lease_token = NULL,
-          lease_expires_at = NULL,
-          updated_at = now()
-      WHERE tenant_id = ${row.tenant_id}::uuid
-        AND id = ${notes[0].id}::uuid
-        AND channel = 'email'
-    `;
-  }
-}
-
-
 async function fenceOutboxToProcessing(
   tx: Prisma.TransactionClient,
   row: ClaimedOutboxRow,
@@ -1013,16 +1151,32 @@ async function fenceOutboxToProcessing(
       AND status = 'LEASED'
       AND lease_owner = ${leaseOwner}
       AND lease_token = ${row.lease_token}
+       AND lease_expires_at > clock_timestamp()
   `;
   return Number(fenced) > 0;
+}
+
+async function lockOutboxLease(
+  tx: Prisma.TransactionClient,
+  row: ClaimedOutboxRow,
+  leaseOwner: string,
+): Promise<boolean> {
+  const current = await tx.$queryRaw<Array<{ id: string }>>`
+    SELECT id FROM outbox WHERE tenant_id = ${row.tenant_id}::uuid
+      AND id = ${row.outbox_id}::uuid
+      AND status IN ('LEASED', 'PROCESSING')
+      AND lease_owner = ${leaseOwner} AND lease_token = ${row.lease_token}
+      AND lease_expires_at > clock_timestamp() FOR UPDATE
+  `;
+  return current.length === 1;
 }
 
 async function markOutboxCompleteFenced(
   tx: Prisma.TransactionClient,
   row: ClaimedOutboxRow,
   leaseOwner: string,
-): Promise<void> {
-  await tx.$executeRaw`
+): Promise<boolean> {
+  const changed = await tx.$executeRaw`
     UPDATE outbox
     SET status = 'COMPLETE',
         lease_owner = NULL,
@@ -1033,7 +1187,9 @@ async function markOutboxCompleteFenced(
       AND id = ${row.outbox_id}::uuid
       AND lease_owner = ${leaseOwner}
       AND lease_token = ${row.lease_token}
+      AND lease_expires_at > clock_timestamp()
   `;
+  return Number(changed) === 1;
 }
 
 async function markOutboxDeadFenced(
@@ -1052,10 +1208,9 @@ async function markOutboxDeadFenced(
         updated_at = now()
     WHERE tenant_id = ${row.tenant_id}::uuid
       AND id = ${row.outbox_id}::uuid
-      AND (
-        (lease_owner = ${leaseOwner} AND lease_token = ${row.lease_token})
-        OR lease_token IS NULL
-      )
+      AND lease_owner = ${leaseOwner}
+      AND lease_token = ${row.lease_token}
+      AND lease_expires_at > clock_timestamp()
   `;
 }
 
