@@ -267,7 +267,31 @@ export const marketingInterestGrid =
   'grid items-start gap-10 lg:grid-cols-2';
 
 export const marketingForm = cn(
-  'grid gap-3.5 rounded-lg border border-line bg-paper p-6 shadow-soft',
+  'mkt-interest-form grid gap-3.5 rounded-lg border border-line bg-paper p-6 shadow-soft',
+);
+
+/** WCAG AA body/secondary copy on paper (interest modal + inline lead form). */
+export const marketingInterestBodyMuted = cn(
+  'text-[color-mix(in_srgb,var(--color-ink)_82%,var(--color-muted))]',
+);
+
+export const marketingInterestLead = cn(
+  'text-sm leading-relaxed',
+  marketingInterestBodyMuted,
+);
+
+export const marketingInterestSecondary = cn(
+  'text-sm',
+  marketingInterestBodyMuted,
+  '[&_a]:font-semibold [&_a]:text-ink [&_a]:underline [&_a]:decoration-1 [&_a]:underline-offset-[3px] hover:[&_a]:text-focus',
+);
+
+export const marketingInterestShell = cn(
+  'border-line bg-paper text-ink scheme-light',
+  '[&_[data-slot=dialog-title]]:text-ink',
+  '[&_[data-slot=dialog-description]]:text-[color-mix(in_srgb,var(--color-ink)_82%,var(--color-muted))]',
+  '[&_[data-slot=sheet-title]]:text-ink',
+  '[&_[data-slot=sheet-description]]:text-[color-mix(in_srgb,var(--color-ink)_82%,var(--color-muted))]',
 );
 
 export const marketingFormField = 'grid gap-1.5';
