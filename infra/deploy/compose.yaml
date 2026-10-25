@@ -99,7 +99,7 @@ services:
     image: vemoki-runtime:local
     working_dir: /app
     volumes:
-      - /opt/vemoki/src:/app
+      - ${RELEASE_MIGRATE_DIR:?pin a verified release}:/app:ro
     restart: "no"
     environment:
       MIGRATION_DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
@@ -147,7 +147,7 @@ services:
     image: vemoki-runtime:local
     working_dir: /app
     volumes:
-      - /opt/vemoki/src:/app
+      - ${RELEASE_API_DIR:?pin a verified release}:/app:ro
     restart: unless-stopped
     environment:
       NODE_ENV: production
@@ -199,7 +199,9 @@ services:
     image: vemoki-runtime:local
     working_dir: /app
     volumes:
-      - /opt/vemoki/src:/app
+      - ${RELEASE_WEB_DIR:?pin a verified release}:/app:ro
+      - /opt/vemoki/state/web-data:/app/apps/web/.data
+      - /opt/vemoki/state/web-next-cache:/app/apps/web/.next/cache
     restart: unless-stopped
     environment:
       NODE_ENV: production
@@ -248,7 +250,8 @@ services:
     image: vemoki-runtime:local
     working_dir: /app
     volumes:
-      - /opt/vemoki/src:/app
+      - ${RELEASE_PORTAL_DIR:?pin a verified release}:/app:ro
+      - /opt/vemoki/state/portal-next-cache:/app/apps/portal/.next/cache
     restart: unless-stopped
     environment:
       NODE_ENV: production
@@ -292,7 +295,7 @@ services:
     image: vemoki-runtime:local
     working_dir: /app
     volumes:
-      - /opt/vemoki/src:/app
+      - ${RELEASE_WORKER_DIR:?pin a verified release}:/app:ro
       # When enabling APNs: create /opt/vemoki/secrets/apns/AuthKey.p8 (mode 400),
       # set APNS_ENABLED=true + APNS_KEY_ID in /opt/vemoki/.env, then uncomment:
       - /opt/vemoki/secrets/apns:/run/secrets/apns:ro
