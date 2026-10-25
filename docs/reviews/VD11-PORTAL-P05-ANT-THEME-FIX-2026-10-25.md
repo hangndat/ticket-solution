@@ -8,7 +8,7 @@
 
 ## Exact SHA
 
-`376306abd77142819405545b03ad9fb6a313ea8e` (`git rev-parse HEAD` @ `hangndat/vd11-integration`)
+`8e3b7931c57dee0f76da1cf5d95fb22fd80a36dc` (implementation `376306abd77142819405545b03ad9fb6a313ea8e` + handoff SHA line)
 
 ## Checks (worker)
 
