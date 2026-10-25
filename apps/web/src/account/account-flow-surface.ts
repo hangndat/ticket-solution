@@ -12,7 +12,7 @@ import {
 
 export const accountPageMain = cn(
   lpPageShell,
-  '[--brand:var(--color-signal)]',
+  '[--brand:var(--color-primary)]',
 );
 
 export const accountPageTitle =

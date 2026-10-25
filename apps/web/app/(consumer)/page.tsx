@@ -79,7 +79,7 @@ export default async function Home({ searchParams }: Props) {
         intro="Tìm sự kiện và xem thông tin tham dự."
       >
         <p className="m-0 mt-3 max-w-[36rem] text-[0.95rem] text-muted">
-          <Link href="/redeem" className="font-semibold text-signal hover:underline">
+          <Link href="/redeem" className="font-semibold text-primary hover:underline">
             Có mã mời? Đổi mã lấy vé
           </Link>
         </p>

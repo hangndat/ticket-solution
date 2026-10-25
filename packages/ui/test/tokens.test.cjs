@@ -73,7 +73,7 @@ describe('@ticket/ui token generator', () => {
     for (const key of Object.keys(tokens.breakpoints)) {
       assert.equal(readThemeVar(themeCss, `breakpoint-${key}`), `${tokens.breakpoints[key]}px`);
     }
-    for (const key of ['line', 'muted', 'destructive', 'admit', 'unknown']) {
+    for (const key of ['line', 'muted', 'destructive', 'admit', 'unknown', 'primary']) {
       assert.equal(
         readThemeVar(themeCss, `color-${key}`).toUpperCase(),
         tokens.colors[key].toUpperCase(),

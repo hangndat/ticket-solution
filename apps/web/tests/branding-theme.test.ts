@@ -15,7 +15,7 @@ test('Vemoki defaults match Live Pulse v2 tokens', () => {
   assert.equal(VEMOKI_BRANDING.signalGlyph, '');
   assert.equal(VEMOKI_BRANDING.colors.ink, '#0B1220');
   assert.equal(VEMOKI_BRANDING.colors.paper, '#F4F6F8');
-  assert.equal(VEMOKI_BRANDING.colors.signal, '#E11D48');
+  assert.equal(VEMOKI_BRANDING.colors.signal, '#7C4DED');
   assert.equal(VEMOKI_BRANDING.colors.focus, '#2563EB');
   assert.equal(VEMOKI_BRANDING.source, 'vemoki-default');
   assert.equal(VEMOKI_BRANDING.logoUrl, null);
@@ -66,9 +66,9 @@ test('brandingCssVarEntries expose Live Pulse token names', () => {
   const entries = Object.fromEntries(brandingCssVarEntries(VEMOKI_BRANDING));
   assert.equal(entries['--ink'], '#0B1220');
   assert.equal(entries['--paper'], '#F4F6F8');
-  assert.equal(entries['--signal'], '#E11D48');
+  assert.equal(entries['--signal'], '#7C4DED');
   assert.equal(entries['--focus'], '#2563EB');
-  assert.equal(entries['--brand'], '#E11D48');
+  assert.equal(entries['--brand'], '#7C4DED');
 });
 
 test('brandingFromEventBrand scopes demo event chrome', () => {
@@ -87,6 +87,6 @@ test('toBrandingDto is JSON-safe for BFF responses', () => {
   const dto = toBrandingDto(VEMOKI_BRANDING);
   assert.equal(dto.wordmark, 'Vemoki');
   assert.equal(dto.signalGlyph, '');
-  assert.equal(dto.primaryColor, '#E11D48');
+  assert.equal(dto.primaryColor, '#7C4DED');
   assert.equal(dto.logoUrl, null);
 });

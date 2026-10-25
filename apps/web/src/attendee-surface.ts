@@ -23,13 +23,13 @@ export const attendeeFooterLinks =
 
 export const attendeeFooterBrand = cn(
   'font-display text-[1.35rem] font-bold tracking-[-0.06em] text-ink',
-  '[&_span]:text-signal',
+  '[&_span]:text-primary',
 );
 
 /** Light paper wash — product routes only (not marketing neon). */
 export const attendeeProductAtmosphere = cn(
   'relative bg-paper',
-  'bg-[radial-gradient(ellipse_120%_80%_at_50%_-20%,color-mix(in_srgb,var(--color-signal)_7%,transparent),transparent_55%),radial-gradient(ellipse_90%_60%_at_100%_0%,color-mix(in_srgb,var(--color-focus)_6%,transparent),transparent_50%)]',
+  'bg-[radial-gradient(ellipse_120%_80%_at_50%_-20%,color-mix(in_srgb,var(--color-primary)_7%,transparent),transparent_55%),radial-gradient(ellipse_90%_60%_at_100%_0%,color-mix(in_srgb,var(--color-focus)_6%,transparent),transparent_50%)]',
 );
 
 export const attendeeHomeMain = cn(
@@ -49,7 +49,7 @@ export const attendeeTopNav = cn(
 
 export const attendeeWordmark = cn(
   'inline-flex items-center gap-2 font-display text-[1.35rem] font-bold tracking-[-0.06em] text-ink no-underline',
-  '[&_span]:text-signal',
+  '[&_span]:text-primary',
 );
 
 export const attendeeBrandMark = 'size-8 shrink-0 text-ink';
@@ -62,7 +62,7 @@ export function attendeeNavLink(active: boolean) {
   return cn(
     'inline-flex min-h-11 items-center justify-center rounded-md px-3.5 font-medium text-muted no-underline transition-colors motion-reduce:transition-none',
     'hover:bg-ink/[0.04] hover:text-ink',
-    active && 'font-semibold text-ink shadow-[inset_0_-2px_0_var(--color-signal)]',
+    active && 'font-semibold text-ink shadow-[inset_0_-2px_0_var(--color-primary)]',
   );
 }
 
@@ -71,7 +71,7 @@ export const attendeeNavAvatar = cn(
 );
 
 export const attendeeNavAvatarBadge = cn(
-  'grid size-8 shrink-0 place-items-center rounded-full bg-[color-mix(in_srgb,var(--color-signal)_14%,var(--color-paper))] text-[0.68rem] font-bold text-[color-mix(in_srgb,var(--color-ink)_28%,var(--color-signal))]',
+  'grid size-8 shrink-0 place-items-center rounded-full bg-[color-mix(in_srgb,var(--color-primary)_14%,var(--color-paper))] text-[0.68rem] font-bold text-[color-mix(in_srgb,var(--color-ink)_28%,var(--color-primary))]',
 );
 
 export const attendeeNavAvatarLabel =
@@ -88,7 +88,7 @@ export function attendeeSheetNavLink(active: boolean) {
     attendeeNavLink(active),
     'w-full justify-start shadow-none',
     active &&
-      'bg-[color-mix(in_srgb,var(--color-focus)_8%,var(--color-paper))] shadow-[inset_3px_0_0_var(--color-signal)]',
+      'bg-[color-mix(in_srgb,var(--color-focus)_8%,var(--color-paper))] shadow-[inset_3px_0_0_var(--color-primary)]',
   );
 }
 
