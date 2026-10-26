@@ -51,7 +51,7 @@
       "sha256": "4e22af99136d66d085fb6ed3fe86cc293eb74f8da0b3149a0c8abb44ef11cd12"
     },
     {
-      "path": "build.log",
+      "path": "build.txt",
       "bytes": 3918,
       "sha256": "3d6412cf2ad45623d16a270f38b644c53bee59ca0918a8264159bfec54d71c99"
     },
@@ -251,7 +251,7 @@
       "sha256": "921622ea308bad7441c20893f6c9fd3a360bef2a5d02a60cbaaa1b81e08bf465"
     },
     {
-      "path": "lint.log",
+      "path": "lint.txt",
       "bytes": 124,
       "sha256": "0e7b312b4228ab273a35c667f3a97d413ff4534f523fc9841148b9b8ebd022df"
     },
@@ -381,14 +381,19 @@
       "sha256": "28c20aef0c37d935aff35daaa593989cd250ab8652cff8abc790c6b91dfb18d5"
     },
     {
-      "path": "tests.log",
+      "path": "tests.txt",
       "bytes": 23557,
       "sha256": "9548e8f8ea9ae5cfb03efbe13afe114723fee1e8d2f41115092b69461b768900"
     },
     {
-      "path": "typecheck.log",
+      "path": "typecheck.txt",
       "bytes": 402,
       "sha256": "9e0be34af4efa70beedaf4fff6c96bb4d2e48b58dd8ba08b3373a1f72650cea8"
+    },
+    {
+      "path": "ui-budget.txt",
+      "bytes": 572,
+      "sha256": "0b35552e5167f604c5c7a7986c7aa382a55b4f35be54db667bd4db3f7381987b"
     },
     {
       "path": "ui-detector.json",
