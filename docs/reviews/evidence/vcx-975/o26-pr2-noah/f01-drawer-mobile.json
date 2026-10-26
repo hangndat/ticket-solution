@@ -44,9 +44,12 @@
     "innerWidth": 390,
     "pixelPass": true
   },
-  "productPass": true,
+  "productPass": false,
   "orcaClickOpensDrawer": false,
   "note": "Product F01 judged on native trigger click + drawer DOM; Orca selector/ref click may not open antd Drawer (automation delivery only).",
   "pass": true,
-  "verdict": "PASS"
+  "verdict": "PASS",
+  "visualPass": false,
+  "productF01Verdict": "FAIL",
+  "visualVerify": "f01-visual-verify.json"
 }
