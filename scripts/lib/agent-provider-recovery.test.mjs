@@ -121,9 +121,26 @@ test('parseClaudeAuth rejects profile plus config dir without account identity',
   assert.equal(r.reason, 'auth_identity_unknown');
 });
 
-test('parseIsoInstant requires timezone', () => {
-  assert.throws(() => parseIsoInstant('2026-10-25T10:00:00'), /invalid_instant_iso/);
-  assert.equal(parseIsoInstant('2026-10-25T10:00:00.000Z'), Date.parse('2026-10-25T10:00:00.000Z'));
+test('parseIsoInstant validates calendar, clock, and offset before parsing', () => {
+  for (const value of [
+    '2026-10-25T10:00:00', '2026-2-05T10:00:00Z',
+    '2026-00-01T00:00:00Z', '2026-13-01T00:00:00Z',
+    '2026-01-00T00:00:00Z', '2026-01-32T00:00:00Z',
+    '2026-04-31T00:00:00Z', '2026-02-29T00:00:00Z',
+    '2026-02-30T00:00:00Z', '1900-02-29T00:00:00Z',
+    '2000-02-30T00:00:00Z', '2026-10-25T24:00:00Z',
+    '2026-10-25T23:60:00Z', '2026-10-25T23:59:60Z',
+    '2026-10-25T10:00:00+24:00', '2026-10-25T10:00:00-02:60',
+  ]) {
+    assert.throws(() => parseIsoInstant(value), { message: 'invalid_instant_iso' }, value);
+  }
+  for (const value of [
+    '2000-02-29T00:00:00Z', '2024-02-29T12:30:45.123Z',
+    '2400-02-29T00:00:00+05:30', '1900-02-28T23:59:59-03:45',
+    '2026-04-30T10:00:00+00:00',
+  ]) {
+    assert.equal(parseIsoInstant(value), Date.parse(value), value);
+  }
 });
 
 test('record-limit requires ISO limited-at with timezone and registered route', () => {
@@ -172,45 +189,50 @@ test('record-limit rejects malformed dates before auth, telemetry, or state chan
     `import { writeFileSync } from 'node:fs';\nwriteFileSync(${JSON.stringify(telemetryMarker)}, 'called');\n`,
   );
   try {
-    for (const [field, value, expected] of [
-      ['limitedAt', 'invalid', 'invalid_limited_at_iso'],
-      ['resetAt', 'invalid', 'invalid_reset_at_iso'],
-    ]) {
-      assert.throws(
-        () =>
-          recordProviderLimit(
-            { provider: 'claude', model: 'claude-sonnet-5', effort: 'medium', limitedAt: validAt, [field]: value },
-            { root, deps: { claudeAuthBin: authBin } },
-          ),
-        { message: expected },
-      );
-      assert.equal(existsSync(authMarker), false);
-      assert.equal(existsSync(root), false);
+    for (const [provider, model] of [['claude', 'claude-sonnet-5'], ['codex', 'gpt-6-sol']]) {
+      for (const [field, expected] of [
+        ['limitedAt', 'invalid_limited_at_iso'],
+        ['resetAt', 'invalid_reset_at_iso'],
+      ]) {
+        for (const value of ['invalid', '2026-02-30T00:00:00Z']) {
+          assert.throws(
+            () => recordProviderLimit(
+              { provider, model, effort: 'medium', limitedAt: validAt, [field]: value },
+              { root, deps: { claudeAuthBin: authBin } },
+            ),
+            { message: expected },
+          );
+          assert.equal(existsSync(authMarker), false);
+          assert.equal(existsSync(root), false);
+        }
+      }
     }
 
     for (const [provider, model, effort] of [
       ['claude', 'claude-sonnet-5', 'medium'],
       ['codex', 'gpt-6-sol', 'medium'],
     ]) {
-      for (const [flag, value, expected] of [
-        ['--limited-at', 'invalid', 'invalid_limited_at_iso'],
-        ['--reset-at', 'invalid', 'invalid_reset_at_iso'],
+      for (const [flag, expected] of [
+        ['--limited-at', 'invalid_limited_at_iso'],
+        ['--reset-at', 'invalid_reset_at_iso'],
       ]) {
-        const args = [
-          'record-limit', '--provider', provider, '--model', model, '--effort', effort,
-          '--limited-at', validAt, '--reset-at', validAt, '--root', root,
-        ];
-        args[args.indexOf(flag) + 1] = value;
-        const result = spawnSync(process.execPath, [cli, ...args], {
-          encoding: 'utf8',
-          env: { ...process.env, AGENT_PROVIDER_CLAUDE_AUTH_BIN: authBin, AGENT_TELEMETRY_CLI: telemetryBin },
-        });
-        assert.equal(result.status, 1, `${provider} ${flag}: ${result.stderr}`);
-        assert.equal(JSON.parse(result.stderr.trim()).errorCode, expected);
-        assert.equal(result.stdout, '');
-        assert.equal(existsSync(authMarker), false);
-        assert.equal(existsSync(telemetryMarker), false);
-        assert.equal(existsSync(root), false);
+        for (const value of ['invalid', '2026-02-30T00:00:00Z']) {
+          const args = [
+            'record-limit', '--provider', provider, '--model', model, '--effort', effort,
+            '--limited-at', validAt, '--reset-at', validAt, '--root', root,
+          ];
+          args[args.indexOf(flag) + 1] = value;
+          const result = spawnSync(process.execPath, [cli, ...args], {
+            encoding: 'utf8',
+            env: { ...process.env, AGENT_PROVIDER_CLAUDE_AUTH_BIN: authBin, AGENT_TELEMETRY_CLI: telemetryBin },
+          });
+          assert.equal(result.status, 1, `${provider} ${flag} ${value}: ${result.stderr}`);
+          assert.equal(JSON.parse(result.stderr.trim()).errorCode, expected);
+          assert.equal(result.stdout, '');
+          assert.equal(existsSync(authMarker), false);
+          assert.equal(existsSync(telemetryMarker), false);
+          assert.equal(existsSync(root), false);
+        }
       }
     }
 
@@ -228,6 +250,22 @@ test('record-limit rejects malformed dates before auth, telemetry, or state chan
     assert.equal(existsSync(authMarker), true);
     assert.equal(existsSync(telemetryMarker), false);
     assert.equal(readdirSync(root).length, 1);
+
+    const snapshotPath = join(dir, 'codex-snapshot.json');
+    writeFileSync(snapshotPath, JSON.stringify(codexSnapshot()));
+    const validCodex = spawnSync(
+      process.execPath,
+      [cli, 'record-limit', '--provider', 'codex', '--model', 'gpt-6-sol', '--effort', 'medium',
+        '--limited-at', '2024-02-29T12:30:00+05:30', '--reset-at', '2024-03-01T00:00:00-03:45',
+        '--codex-snapshot', snapshotPath, '--root', root],
+      { encoding: 'utf8', env: { ...process.env, AGENT_TELEMETRY_CLI: telemetryBin } },
+    );
+    assert.equal(validCodex.status, 0, validCodex.stderr);
+    const codexRecord = JSON.parse(validCodex.stdout.trim()).record;
+    assert.equal(codexRecord.limitedAt, '2024-02-29T07:00:00.000Z');
+    assert.equal(codexRecord.resetAt, '2024-03-01T03:45:00.000Z');
+    assert.equal(existsSync(telemetryMarker), false);
+    assert.equal(readdirSync(root).length, 2);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
