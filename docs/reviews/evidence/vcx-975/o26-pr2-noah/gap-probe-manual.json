@@ -1,0 +1,96 @@
+{
+  "at": "2026-10-26T13:54:52.789Z",
+  "sha": "c8130ba7d966f7b3565365f7c73996ea79281e83",
+  "base": "http://uat975shell.localhost:3019",
+  "locale": {
+    "before": {
+      "accountLabel": "Tài khoản ▾",
+      "lang": "vi"
+    },
+    "menuDom": {
+      "dropdownOpen": false,
+      "localeEnInDom": false,
+      "localeEnVisible": false,
+      "localeViInDom": false,
+      "localeViVisible": false,
+      "menuItems": []
+    },
+    "enClickMethod": "eval_fallback:{\"clicked\":false,\"popupItems\":[]}",
+    "enAfter": {
+      "accountLabel": "Tài khoản ▾",
+      "lang": "vi"
+    },
+    "enWorked": false,
+    "classification": "harness_menu_not_open"
+  },
+  "unsaved": {
+    "onConfig": true,
+    "fieldScan": {
+      "inputs": [
+        {
+          "id": "_r_f_",
+          "name": "",
+          "type": "text",
+          "visible": true
+        },
+        {
+          "id": "_r_h_",
+          "name": "",
+          "type": "text",
+          "visible": true
+        },
+        {
+          "id": "",
+          "name": "",
+          "type": "text",
+          "visible": false
+        },
+        {
+          "id": "7521c55f-af1f-47d7-ad70-ac8a024e2496_organizationName",
+          "name": "",
+          "type": "text",
+          "visible": true
+        },
+        {
+          "id": "7521c55f-af1f-47d7-ad70-ac8a024e2496_primaryColor",
+          "name": "",
+          "type": "text",
+          "visible": true
+        }
+      ],
+      "links": [],
+      "orgSuffix": true,
+      "path": "/t/d9d9f001-0001-4000-8000-000000000001/e/d9d9f001-0002-4000-8000-000000000001/config"
+    },
+    "result": {
+      "confirmLog": [],
+      "dirty": true,
+      "value": "NoahManualGapProbe"
+    },
+    "afterNav": {
+      "confirmLog": [],
+      "path": "/t/d9d9f001-0001-4000-8000-000000000001/e/d9d9f001-0002-4000-8000-000000000001/config",
+      "tried": "link_click"
+    },
+    "final": {
+      "confirmLog": [],
+      "path": "/t/d9d9f001-0001-4000-8000-000000000001/e/d9d9f001-0002-4000-8000-000000000001/config",
+      "stayedOnConfig": true
+    },
+    "cancelOk": false,
+    "classification": "product_regression_unsaved_guard"
+  },
+  "logout": {
+    "meB": 200,
+    "menuItems": [],
+    "logoutMethod": "assign_logout_url",
+    "clicked": true,
+    "meAfter": 401,
+    "classification": "harness_prior_probe_wrong_selector"
+  },
+  "summary": {
+    "locale": "harness_menu_not_open",
+    "unsaved": "product_regression_unsaved_guard",
+    "logout": "harness_prior_probe_wrong_selector"
+  }
+}

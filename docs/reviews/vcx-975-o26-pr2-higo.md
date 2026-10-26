@@ -9,8 +9,11 @@
 - `portal-shell.tsx` = composition root: antd `Layout` / `Header` / `Sider` / `Menu` / `Content`, account `Dropdown` (VI/EN, logout), context strip (tenant/event + unsaved guard), dual-run `Alert`, trạng thái tenant SUSPENDED/PENDING.
 - Xóa wrapper hết caller: `portal-context-strip.tsx`, `dual-run-banner.tsx`.
 - `portal-menu-keys.ts`: type menu antd (`PortalMenuGroup` / `PortalMenuLeaf`), bỏ `MenuDataItem` Pro.
+- **F01 (Mira #980):** viewport ≤1023px → `Drawer` + `portal-nav-trigger` trong `Header`; desktop giữ `Sider` cố định (bỏ `breakpoint`/`collapsedWidth=0`). Menu capability dùng chung; `aria-expanded` / `aria-controls` trên trigger.
 
 **Không đụng:** BFF/OIDC/API, permissions business, theme/token mới, PR3+ / #928.
+
+**UAT Noah (trước F01):** `docs/reviews/evidence/vcx-975/o26-pr2-noah/uat-results.json` @ `c8130ba7` — shell matrix PASS; F01 cần re-probe `portal-nav-trigger` + mở drawer tại 390/1024.
 
 ## Checks (local)
 
