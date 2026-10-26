@@ -1,0 +1,240 @@
+{
+  "case": "F01-visual-verify",
+  "codeSha": "af6374bd06b19469cd3e2454819b28f9a6785404",
+  "at": "2026-10-26T14:14:41.627Z",
+  "screenshot": "f01-drawer-visual-390x844.png",
+  "supersedesDomOnly": "f01-drawer-open-390x844.png / productPass from DOM-only",
+  "beforeOpen": {
+    "domOpen": false,
+    "drawerClassName": "",
+    "firstItem": null,
+    "items": [],
+    "mask": null,
+    "menu": null,
+    "menuInViewport": false,
+    "viewport": {
+      "h": 844,
+      "w": 390
+    },
+    "visibleClickableMenuItems": 0,
+    "wrapper": null,
+    "wrapperInViewport": false
+  },
+  "midAnimation": {
+    "domOpen": true,
+    "drawerClassName": "ant-drawer-section",
+    "firstItem": {
+      "bottom": 149,
+      "display": "flex",
+      "height": 40,
+      "opacity": "1",
+      "right": -4,
+      "transform": "none",
+      "visibility": "visible",
+      "width": 232,
+      "x": -236,
+      "y": 109
+    },
+    "hasPortalShellNavDrawerClass": true,
+    "items": [
+      {
+        "clickable": true,
+        "height": 40,
+        "i": 0,
+        "inViewport": false,
+        "text": "Tổng quan tổ chức",
+        "width": 232,
+        "x": -236
+      },
+      {
+        "clickable": true,
+        "height": 40,
+        "i": 1,
+        "inViewport": false,
+        "text": "Sự kiện",
+        "width": 232,
+        "x": -236
+      },
+      {
+        "clickable": true,
+        "height": 40,
+        "i": 2,
+        "inViewport": false,
+        "text": "Phân tích",
+        "width": 232,
+        "x": -236
+      },
+      {
+        "clickable": true,
+        "height": 40,
+        "i": 3,
+        "inViewport": false,
+        "text": "Thành viên",
+        "width": 232,
+        "x": -236
+      },
+      {
+        "clickable": true,
+        "height": 40,
+        "i": 4,
+        "inViewport": false,
+        "text": "Cấu hình",
+        "width": 232,
+        "x": -236
+      }
+    ],
+    "mask": {
+      "bottom": 844,
+      "display": "block",
+      "height": 844,
+      "opacity": "0",
+      "right": 390,
+      "transform": "none",
+      "visibility": "visible",
+      "width": 390,
+      "x": 0,
+      "y": 0
+    },
+    "menu": {
+      "bottom": 329,
+      "display": "block",
+      "height": 272,
+      "opacity": "1",
+      "right": 0,
+      "transform": "none",
+      "visibility": "visible",
+      "width": 240,
+      "x": -240,
+      "y": 57
+    },
+    "menuInViewport": false,
+    "viewport": {
+      "h": 844,
+      "w": 390
+    },
+    "visibleClickableMenuItems": 0,
+    "wrapper": {
+      "bottom": 844,
+      "display": "block",
+      "height": 844,
+      "opacity": "0.7",
+      "right": 0,
+      "transform": "matrix(1, 0, 0, 1, -240, 0)",
+      "visibility": "visible",
+      "width": 240,
+      "x": -240,
+      "y": 0
+    },
+    "wrapperInViewport": false
+  },
+  "afterAnimation": {
+    "domOpen": true,
+    "drawerClassName": "ant-drawer-section",
+    "firstItem": {
+      "bottom": 149,
+      "display": "flex",
+      "height": 40,
+      "opacity": "1",
+      "right": -4,
+      "transform": "none",
+      "visibility": "visible",
+      "width": 232,
+      "x": -236,
+      "y": 109
+    },
+    "hasPortalShellNavDrawerClass": true,
+    "items": [
+      {
+        "clickable": true,
+        "height": 40,
+        "i": 0,
+        "inViewport": false,
+        "text": "Tổng quan tổ chức",
+        "width": 232,
+        "x": -236
+      },
+      {
+        "clickable": true,
+        "height": 40,
+        "i": 1,
+        "inViewport": false,
+        "text": "Sự kiện",
+        "width": 232,
+        "x": -236
+      },
+      {
+        "clickable": true,
+        "height": 40,
+        "i": 2,
+        "inViewport": false,
+        "text": "Phân tích",
+        "width": 232,
+        "x": -236
+      },
+      {
+        "clickable": true,
+        "height": 40,
+        "i": 3,
+        "inViewport": false,
+        "text": "Thành viên",
+        "width": 232,
+        "x": -236
+      },
+      {
+        "clickable": true,
+        "height": 40,
+        "i": 4,
+        "inViewport": false,
+        "text": "Cấu hình",
+        "width": 232,
+        "x": -236
+      }
+    ],
+    "mask": {
+      "bottom": 844,
+      "display": "block",
+      "height": 844,
+      "opacity": "0",
+      "right": 390,
+      "transform": "none",
+      "visibility": "visible",
+      "width": 390,
+      "x": 0,
+      "y": 0
+    },
+    "menu": {
+      "bottom": 329,
+      "display": "block",
+      "height": 272,
+      "opacity": "1",
+      "right": 0,
+      "transform": "none",
+      "visibility": "visible",
+      "width": 240,
+      "x": -240,
+      "y": 57
+    },
+    "menuInViewport": false,
+    "viewport": {
+      "h": 844,
+      "w": 390
+    },
+    "visibleClickableMenuItems": 0,
+    "wrapper": {
+      "bottom": 844,
+      "display": "block",
+      "height": 844,
+      "opacity": "0.7",
+      "right": 0,
+      "transform": "matrix(1, 0, 0, 1, -240, 0)",
+      "visibility": "visible",
+      "width": 240,
+      "x": -240,
+      "y": 0
+    },
+    "wrapperInViewport": false
+  },
+  "visualPass": false,
+  "productF01Verdict": "FAIL",
+  "ownerToHigo": "Drawer DOM reports open but panel ~8px strip / menu not in viewport — fix CSS placement (portal-shell-nav-drawer wrapper width/transform) before accepting F01."
+}

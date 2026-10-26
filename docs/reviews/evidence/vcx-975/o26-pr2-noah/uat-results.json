@@ -1,8 +1,8 @@
 {
-  "codeSha": "af6374bd06b19469cd3e2454819b28f9a6785404",
-  "verdict": "FAIL",
-  "pr2Acceptance": "Blocked on F01 visual",
-  "f01": "f01-visual-verify.json",
-  "pr2Closure": "pr2-closure-af6374.json",
-  "productF01Verdict": "FAIL"
+  "codeSha": "ebb2fa3fdbdd4dc7d6ec4e38466e2a0e42f39bbc",
+  "verdict": "PASS",
+  "pr2Acceptance": "PASS",
+  "f01": "f01-visual-verify-ebb2fa3f.json",
+  "pr2Closure": "pr2-closure-ebb2fa3f.json",
+  "productF01Verdict": "PASS"
 }
