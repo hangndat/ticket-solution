@@ -22,6 +22,8 @@ import {
 } from '../export-job';
 import { usePortalLocale } from '../../i18n';
 import { SavedViewsToolbar } from '../../views';
+import { useMutationIntent } from '../../client/use-mutation-intent';
+import { MutationIntentAlert } from '../../client/mutation-intent-alert';
 
 type Props = {
   tenantId: string;
@@ -57,6 +59,7 @@ export function ExportPanel({
     ExportHistoryItem['status'] | undefined
   >();
   const [notice, setNotice] = useState<string | null>(null);
+  const intent = useMutationIntent(tenantId, eventId, 'create-export');
 
   const loadHistory = useCallback(async () => {
     const params = new URLSearchParams();
@@ -93,9 +96,16 @@ export function ExportPanel({
       return;
     }
     setBusy(true);
-    const result = await portalMutate(bffExports(tenantId, eventId), {
-      idempotencyKey: crypto.randomUUID(),
-    });
+    const outcome = await intent.run({ format: 'csv' },
+      (body) => portalMutate(bffExports(tenantId, eventId), body),
+      (response) => interpretExportCreate(response.status, response.json,
+        response.networkError || response.timedOut, locale).kind === 'created');
+    if (outcome.kind === 'blocked') {
+      setNotice('Lần tạo export trước chưa rõ kết quả. Kiểm tra lịch sử export trước khi tiếp tục.');
+      setBusy(false);
+      return;
+    }
+    const result = outcome.response;
     const next = interpretExportCreate(
       result.status,
       result.json,
@@ -273,6 +283,8 @@ export function ExportPanel({
           role="status"
         />
       ) : null}
+      <MutationIntentAlert pending={intent.pending} needsReconciliation={intent.needsReconciliation}
+        onCheck={() => void loadHistory()} onStartNew={intent.release} />
       <Table
         size="small"
         rowKey="exportId"

@@ -56,6 +56,12 @@ export type ImportView =
   | { kind: 'rejected'; code: string; message: string }
   | { kind: 'unknown'; message: string };
 
+export function importAlertType(view: ImportView): 'error' | 'warning' | 'success' {
+  if (view.kind === 'rejected' || (view.kind === 'job' && view.job.status === 'FAILED')) return 'error';
+  if (view.kind === 'unknown' || (view.kind === 'job' && view.job.status !== 'COMPLETED')) return 'warning';
+  return 'success';
+}
+
 const JOB_STATUSES = new Set<ImportJobStatus>([
   'CREATED',
   'PREVIEW_READY',
@@ -396,7 +402,7 @@ export function interpretImportCreate(
   networkError: boolean,
   locale: PortalLocale = DEFAULT_PORTAL_LOCALE,
 ): ImportView {
-  if (networkError || status === 0 || status >= 500) {
+  if (networkError || status === 0 || status === 429 || status >= 500) {
     return { kind: 'unknown', message: t(locale, 'ops.import.unknown') };
   }
   if (status === 200 || status === 201) {
@@ -443,7 +449,7 @@ export function interpretImportCommit(
   networkError: boolean,
   locale: PortalLocale = DEFAULT_PORTAL_LOCALE,
 ): ImportView {
-  if (networkError || status === 0 || status >= 500) {
+  if (networkError || status === 0 || status === 429 || status >= 500) {
     return { kind: 'unknown', message: t(locale, 'ops.import.unknown') };
   }
   if (status === 200 || status === 201) {
