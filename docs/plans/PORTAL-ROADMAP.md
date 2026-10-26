@@ -21,7 +21,7 @@ Portal cần đủ luồng vận hành từ chuẩn bị sự kiện đến hỗ
 | Quản trị tổ chức/sự kiện | `portal.vemoki.com`, app Next riêng **`apps/portal` trong monorepo** | Cô lập antd, CSS, CSP, bundle và vòng phát hành |
 | Web Gate | **Giữ `app.vemoki.com/gate` trong đợt đầu**, iOS Gate giữ nguyên; portal có báo cáo và liên kết theo quyền | Tránh thay host/login/check-in đồng thời với migration back-office |
 | Platform Operator | Đề xuất chuyển vào **`portal.vemoki.com/platform` ở wave riêng**, giữ client/audience/session và navigation Operator riêng | Một host vận hành; tenant Owner không được cấp quyền platform |
-| UI | AntD thuần: Layout/Menu/Table/Form/Drawer/Modal/Steps/Upload; theme Vemoki, tiếng Việt | Không bắt buộc Umi hoặc Ant Design Pro; chưa dùng ProComponents mặc định |
+| UI | Chỉ UI component `antd` với giao diện/token mặc định, tiếng Việt | O26 thay yêu cầu theme Vemoki và ProComponents của O18; migration phần hiện có theo Task riêng |
 | Identity | Hoàn thiện client staff portal + PKCE; BFF cookie **host-only từng host**, Operator giữ client riêng | Không share `Domain=.vemoki.com`; Keycloak IdP SSO có thể tiếp tục, không đồng nghĩa chia sẻ BFF cookie |
 
 Đây là **khuyến nghị tổng hợp** sau đối chiếu chuyên môn: giữ Gate ở đợt đầu để giảm rủi ro, xem lại migration Gate bằng Task riêng nếu có nhu cầu. Chọn **app riêng** làm đích cho portal lâu dài; host-aware trong `apps/web` là phương án thay thế ít chi phí khởi đầu. Spike phải kiểm chứng chi phí auth/BFF/CI trước khi mở rộng.
