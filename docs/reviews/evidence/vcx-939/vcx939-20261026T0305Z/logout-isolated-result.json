@@ -1,0 +1,17 @@
+{
+  "issuer": "http://127.0.0.1:8180/realms/ticket",
+  "adminOrigin": "http://127.0.0.1:8180",
+  "realm": "ticket",
+  "client": "ticket-web",
+  "subjectMatched": true,
+  "adminUserLookupHttp": 200,
+  "sessionsBeforeHttp": 200,
+  "sessionsBeforeCount": 1,
+  "logoutHttp": 204,
+  "sessionsAfterHttp": 200,
+  "sessionsAfterCount": 0,
+  "refreshHttp": 400,
+  "refreshError": "invalid_grant",
+  "expected": "HTTP >=400 after logout-all",
+  "pass": true
+}

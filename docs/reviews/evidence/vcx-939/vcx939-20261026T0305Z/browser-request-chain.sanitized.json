@@ -1,0 +1,119 @@
+{
+  "source": "Orca embedded browser window.fetch observer; response metadata only",
+  "pageId": "b92eeebd-57cc-452d-9675-8f900cd7ff8c",
+  "validAndInvalid": [
+    {
+      "at": 1792983309570,
+      "code": "CODE_INVALID",
+      "httpStatus": 422,
+      "key": null,
+      "method": "POST",
+      "requestId": "e616f374-70ae-4ee7-9db9-23c5921659fd",
+      "status": null,
+      "ticketId": null,
+      "url": "/api/bff/redeem/resolve"
+    },
+    {
+      "at": 1792983371870,
+      "code": null,
+      "httpStatus": 201,
+      "key": null,
+      "method": "POST",
+      "requestId": null,
+      "status": null,
+      "ticketId": null,
+      "url": "/api/bff/redeem/resolve"
+    },
+    {
+      "at": 1792983438427,
+      "code": "APPROVAL_PENDING",
+      "httpStatus": 201,
+      "key": "c0c815af-1c39-43ed-ae1f-b185197c60fc",
+      "method": "POST",
+      "requestId": "55d589a1-7d82-4bbe-8c9f-13b4204e3758",
+      "status": "PENDING_REVIEW",
+      "ticketId": null,
+      "url": "/api/bff/redeem"
+    },
+    {
+      "at": 1792983566906,
+      "code": null,
+      "httpStatus": 200,
+      "key": null,
+      "method": "GET",
+      "requestId": "55d589a1-7d82-4bbe-8c9f-13b4204e3758",
+      "status": "ISSUED",
+      "ticketId": "f1848460-b8de-4c9f-9268-ff481da5a560",
+      "url": "/api/bff/redemptions/55d589a1-7d82-4bbe-8c9f-13b4204e3758?tenantId=d9d9f001-0001-4000-8000-000000000001"
+    },
+    {
+      "at": 1792983592483,
+      "code": null,
+      "httpStatus": 201,
+      "key": null,
+      "method": "POST",
+      "requestId": null,
+      "status": null,
+      "ticketId": null,
+      "url": "/api/bff/redeem/resolve"
+    },
+    {
+      "at": 1792983600578,
+      "code": "APPROVAL_PENDING",
+      "httpStatus": 201,
+      "key": "421c64d8-4cc3-4eab-9e59-ad62f2fecc0f",
+      "method": "POST",
+      "requestId": "954ee209-3220-4f96-a10d-b6f3e9644f9c",
+      "status": "PENDING_REVIEW",
+      "ticketId": null,
+      "url": "/api/bff/redeem"
+    },
+    {
+      "at": 1792983617612,
+      "code": null,
+      "httpStatus": 200,
+      "key": null,
+      "method": "GET",
+      "requestId": "954ee209-3220-4f96-a10d-b6f3e9644f9c",
+      "status": "REJECTED",
+      "ticketId": null,
+      "url": "/api/bff/redemptions/954ee209-3220-4f96-a10d-b6f3e9644f9c?tenantId=d9d9f001-0001-4000-8000-000000000001"
+    }
+  ],
+  "outagePageId": "c7f525b7-326b-463f-b01d-be014ed16804",
+  "outage": [
+    {
+      "at": 1792983881397,
+      "code": null,
+      "httpStatus": 201,
+      "key": null,
+      "method": "POST",
+      "requestId": null,
+      "status": null,
+      "ticketId": null,
+      "url": "/api/bff/redeem/resolve"
+    },
+    {
+      "at": 1792983897196,
+      "code": "UPSTREAM_UNAVAILABLE",
+      "httpStatus": 502,
+      "key": "892cb81d-ea07-404d-a39b-ca4bea2857e1",
+      "method": "POST",
+      "requestId": "c0fc4bf8-8d5b-46e0-9c10-019c65a91c9f",
+      "status": null,
+      "ticketId": null,
+      "url": "/api/bff/redeem"
+    },
+    {
+      "at": 1792983897217,
+      "code": "UPSTREAM_UNAVAILABLE",
+      "httpStatus": 502,
+      "key": null,
+      "method": "GET",
+      "requestId": "11aa6cc5-88bc-4a10-939c-56a5efacb661",
+      "status": null,
+      "ticketId": null,
+      "url": "/api/bff/operations/892cb81d-ea07-404d-a39b-ca4bea2857e1?tenantId=d9d9f001-0001-4000-8000-000000000001&eventId=d9d9f001-0002-4000-8000-000000000001&command=redemption.redeem"
+    }
+  ]
+}
