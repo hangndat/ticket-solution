@@ -11,6 +11,10 @@ import { portalGet } from '../../../../src/client/portal-fetch';
 import { PortalPage } from '../../../../src/components/portal-page';
 import { bffEvents } from '../../../../src/prep/bff-urls';
 import { useTenantAccess } from '../../../../src/prep/use-event-access';
+import {
+  canPerformTenantAction,
+  firstAllowedEventPath,
+} from '../../../../src/nav/capability-policy';
 import { SurfaceState } from '../../../../src/components/surface-state';
 import { usePortalLocale } from '../../../../src/i18n';
 
@@ -50,7 +54,12 @@ export default function EventsListPage() {
       const qs = new URLSearchParams({ limit: '20' });
       if (next) qs.set('cursor', next);
       const res = await portalGet(`${bffEvents(tenantId)}?${qs}`);
-      if (res.networkError || res.timedOut || res.status === 0 || res.status >= 500) {
+      if (
+        res.networkError ||
+        res.timedOut ||
+        res.status === 0 ||
+        res.status >= 500
+      ) {
         setList({
           kind: 'unknown',
           message: t('events.h_byq509'),
@@ -80,7 +89,11 @@ export default function EventsListPage() {
       setList(
         parsed.items.length === 0
           ? { kind: 'empty' }
-          : { kind: 'ready', items: parsed.items, nextCursor: parsed.nextCursor },
+          : {
+              kind: 'ready',
+              items: parsed.items,
+              nextCursor: parsed.nextCursor,
+            },
       );
     },
     [tenantId, t],
@@ -121,15 +134,26 @@ export default function EventsListPage() {
     return <SurfaceState kind="loading" />;
   }
 
-  const canCreate = access.tenant.tenantPermissions.includes('event.create');
+  const canCreate = canPerformTenantAction(
+    'createEvent',
+    access.tenant.tenantPermissions,
+  );
 
   const columns: ProColumns<EventDetail>[] = [
     {
       title: t('sources.ten'),
       dataIndex: 'name',
-      render: (_, row) => (
-        <Link href={`/t/${tenantId}/e/${row.eventId}`}>{row.name}</Link>
-      ),
+      render: (_, row) => {
+        const event = access.events.find(
+          (item) => item.eventId === row.eventId,
+        );
+        const destination = event && firstAllowedEventPath(event);
+        return destination ? (
+          <Link href={destination}>{row.name}</Link>
+        ) : (
+          row.name
+        );
+      },
     },
     { title: 'Slug', dataIndex: 'slug' },
     { title: t('common.h_fe18yl'), dataIndex: 'contentStatus' },
@@ -155,7 +179,9 @@ export default function EventsListPage() {
           message={t('surface.unknown.title')}
           description={list.message}
           action={
-            <Button size="small" onClick={() => void load(null)}>{t('surface.action.recheck')}</Button>
+            <Button size="small" onClick={() => void load(null)}>
+              {t('surface.action.recheck')}
+            </Button>
           }
         />
       ) : null}
@@ -199,7 +225,9 @@ export default function EventsListPage() {
             }
           />
           {cursor ? (
-            <Button onClick={() => void load(cursor)}>{t('sources.h_1w8bpuo')}</Button>
+            <Button onClick={() => void load(cursor)}>
+              {t('sources.h_1w8bpuo')}
+            </Button>
           ) : null}
         </>
       ) : null}

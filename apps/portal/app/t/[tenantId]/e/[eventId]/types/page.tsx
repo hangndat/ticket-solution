@@ -17,6 +17,7 @@ import { isEventPagePermitted } from '../../../../../../src/prep/event-access-re
 import { useEventAccess } from '../../../../../../src/prep/use-event-access';
 import { SurfaceState } from '../../../../../../src/components/surface-state';
 import { usePortalLocale } from '../../../../../../src/i18n';
+import { canPerformEventAction } from '../../../../../../src/nav/capability-policy';
 
 export default function TicketTypesPage() {
   const { t } = usePortalLocale();
@@ -25,9 +26,9 @@ export default function TicketTypesPage() {
   const access = useEventAccess(tenantId, eventId);
   const [items, setItems] = useState<PortalTicketTypeSummary[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
-  const [kind, setKind] = useState<'loading' | 'ready' | 'empty' | 'error' | 'unknown'>(
-    'loading',
-  );
+  const [kind, setKind] = useState<
+    'loading' | 'ready' | 'empty' | 'error' | 'unknown'
+  >('loading');
   const [message, setMessage] = useState<string | undefined>();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -49,11 +50,17 @@ export default function TicketTypesPage() {
       }
       if (res.status !== 200 || !res.json || typeof res.json !== 'object') {
         setKind('error');
-        setMessage(apiErrorMessage(res.json, t('common.httpStatus', { status: res.status })));
+        setMessage(
+          apiErrorMessage(
+            res.json,
+            t('common.httpStatus', { status: res.status }),
+          ),
+        );
         return;
       }
       const list = Array.isArray((res.json as { items?: unknown }).items)
-        ? ((res.json as { items: PortalTicketTypeSummary[] }).items as PortalTicketTypeSummary[])
+        ? ((res.json as { items: PortalTicketTypeSummary[] })
+            .items as PortalTicketTypeSummary[])
         : [];
       const nextCursor =
         typeof (res.json as { nextCursor?: unknown }).nextCursor === 'string'
@@ -110,6 +117,8 @@ export default function TicketTypesPage() {
     );
   }
 
+  const canCreateType = canPerformEventAction('createType', access.permissions);
+
   const columns: ProColumns<PortalTicketTypeSummary>[] = [
     { title: t('types.nhan'), dataIndex: 'label' },
     {
@@ -127,7 +136,11 @@ export default function TicketTypesPage() {
     <PortalPage
       title={t('nav.event.types')}
       extra={
-        <Button type="primary" onClick={() => setOpen(true)}>{t('types.h_1caa9m7')}</Button>
+        canCreateType ? (
+          <Button type="primary" onClick={() => setOpen(true)}>
+            {t('types.h_1caa9m7')}
+          </Button>
+        ) : undefined
       }
       loading={kind === 'loading'}
     >
@@ -138,7 +151,9 @@ export default function TicketTypesPage() {
           message={t('surface.unknown.title')}
           description={message}
           action={
-            <Button size="small" onClick={() => void load(null)}>{t('surface.action.recheck')}</Button>
+            <Button size="small" onClick={() => void load(null)}>
+              {t('surface.action.recheck')}
+            </Button>
           }
         />
       ) : null}
@@ -154,7 +169,11 @@ export default function TicketTypesPage() {
           kind="empty"
           description={t('types.h_xnio89')}
           emptyAction={
-            <Button type="primary" onClick={() => setOpen(true)}>{t('types.h_1caa9m7')}</Button>
+            canCreateType ? (
+              <Button type="primary" onClick={() => setOpen(true)}>
+                {t('types.h_1caa9m7')}
+              </Button>
+            ) : undefined
           }
         />
       ) : null}
@@ -169,20 +188,30 @@ export default function TicketTypesPage() {
             pagination={false}
           />
           {cursor ? (
-            <Button onClick={() => void load(cursor)}>{t('sources.h_1w8bpuo')}</Button>
+            <Button onClick={() => void load(cursor)}>
+              {t('sources.h_1w8bpuo')}
+            </Button>
           ) : null}
         </>
       ) : null}
 
-      {notice ? <Alert type="info" showIcon message={notice} style={{ marginTop: 16 }} /> : null}
+      {notice ? (
+        <Alert
+          type="info"
+          showIcon
+          message={notice}
+          style={{ marginTop: 16 }}
+        />
+      ) : null}
 
       <ModalForm<{ label: string }>
         title={t('types.h_1caa9m7')}
-        open={open}
+        open={open && canCreateType}
         onOpenChange={setOpen}
         modalProps={{ destroyOnHidden: true }}
         submitter={{ submitButtonProps: { loading: busy } }}
         onFinish={async (values) => {
+          if (!canCreateType) return false;
           setBusy(true);
           setNotice(null);
           try {

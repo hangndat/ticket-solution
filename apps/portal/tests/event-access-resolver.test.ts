@@ -29,15 +29,15 @@ describe('isEventAssigned', () => {
   test('denies when tenant or event missing', () => {
     assert.equal(isEventAssigned(null, eventStub(['cs.lookup'])), false);
     assert.equal(isEventAssigned(tenantStub(), null), false);
-    assert.equal(
-      isEventAssigned(tenantStub(), eventStub(['cs.lookup'])),
-      true,
-    );
+    assert.equal(isEventAssigned(tenantStub(), eventStub(['cs.lookup'])), true);
   });
 
   test('does not require tenant admin chrome', () => {
     assert.equal(
-      isEventAssigned(tenantStub({ tenantPermissions: [] }), eventStub(['cs.lookup'])),
+      isEventAssigned(
+        tenantStub({ tenantPermissions: [] }),
+        eventStub(['cs.lookup']),
+      ),
       true,
     );
   });
@@ -49,13 +49,19 @@ describe('isEventPagePermitted — menu-aligned matrix', () => {
     permissions: string[];
     expected: boolean;
   }[] = [
-    { page: 'overview', permissions: [], expected: true },
-    { page: 'overview', permissions: ['cs.lookup'], expected: true },
+    { page: 'overview', permissions: [], expected: false },
+    { page: 'overview', permissions: ['cs.lookup'], expected: false },
+    {
+      page: 'overview',
+      permissions: ['event.config', 'report.read'],
+      expected: true,
+    },
     { page: 'support', permissions: ['cs.lookup'], expected: true },
     { page: 'support', permissions: ['report.read'], expected: false },
     { page: 'setup', permissions: ['cs.lookup'], expected: false },
     { page: 'setup', permissions: ['event.update'], expected: true },
-    { page: 'types', permissions: ['config.publish'], expected: true },
+    { page: 'types', permissions: ['config.publish'], expected: false },
+    { page: 'types', permissions: ['event.config'], expected: true },
     { page: 'gate', permissions: ['report.read'], expected: true },
     { page: 'gate', permissions: ['gate.confirm'], expected: false },
     { page: 'guests', permissions: ['inventory.import'], expected: true },

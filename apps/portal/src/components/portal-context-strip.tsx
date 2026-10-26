@@ -2,12 +2,17 @@
 
 import { Select, Typography } from 'antd';
 import { useRouter } from 'next/navigation';
-import type { MeTenantItem } from '@ticket/contracts';
+import type { MeEventItem, MeTenantItem } from '@ticket/contracts';
 import { usePortalLocale } from '../i18n';
+import {
+  firstAllowedEventPath,
+  firstAllowedTenantPath,
+} from '../nav/capability-policy';
 
 export type PortalContextStripProps = {
   tenants: MeTenantItem[];
-  tenantEvents: Array<{ eventId: string; name: string; tenantId: string }>;
+  events: MeEventItem[];
+  tenantEvents: MeEventItem[];
   resolvedTenantId: string | null;
   effectiveEventId: string | null;
   showGateScanHint: boolean;
@@ -15,6 +20,7 @@ export type PortalContextStripProps = {
 
 export function PortalContextStrip({
   tenants,
+  events,
   tenantEvents,
   resolvedTenantId,
   effectiveEventId,
@@ -22,15 +28,18 @@ export function PortalContextStrip({
 }: PortalContextStripProps) {
   const { t } = usePortalLocale();
   const router = useRouter();
+  const selectableTenants = tenants.filter((tenant) =>
+    firstAllowedTenantPath(tenant, events),
+  );
+  const selectableEvents = tenantEvents.filter((event) =>
+    firstAllowedEventPath(event),
+  );
 
   const tenantLabelId = 'portal-context-tenant-label';
   const eventLabelId = 'portal-context-event-label';
 
   return (
-    <div
-      className="portal-context-strip"
-      data-testid="portal-context-strip"
-    >
+    <div className="portal-context-strip" data-testid="portal-context-strip">
       <div className="portal-context-strip__row">
         <div className="portal-context-strip__field">
           <label id={tenantLabelId} className="portal-context-strip__label">
@@ -39,20 +48,23 @@ export function PortalContextStrip({
           <Select
             aria-labelledby={tenantLabelId}
             placeholder={
-              tenants.length === 0
+              selectableTenants.length === 0
                 ? t('shell.tenant.empty')
                 : t('shell.tenant.placeholder')
             }
             value={resolvedTenantId ?? undefined}
-            options={tenants.map((tenant) => ({
+            options={selectableTenants.map((tenant) => ({
               value: tenant.tenantId,
               label: `${tenant.name} (${tenant.slug})`,
               title: `${tenant.name} (${tenant.slug})`,
             }))}
             onChange={(value) => {
-              router.push(`/t/${value}`);
+              const tenant = tenants.find((item) => item.tenantId === value);
+              const destination =
+                tenant && firstAllowedTenantPath(tenant, events);
+              if (destination) router.push(destination);
             }}
-            disabled={tenants.length === 0}
+            disabled={selectableTenants.length === 0}
             data-testid="tenant-switcher"
           />
         </div>
@@ -65,26 +77,35 @@ export function PortalContextStrip({
             placeholder={
               !resolvedTenantId
                 ? t('shell.event.selectTenantFirst')
-                : tenantEvents.length === 0
+                : selectableEvents.length === 0
                   ? t('shell.event.empty')
                   : t('shell.event.placeholder')
             }
             value={effectiveEventId ?? undefined}
-            options={tenantEvents.map((e) => ({
+            options={selectableEvents.map((e) => ({
               value: e.eventId,
               label: e.name,
               title: e.name,
             }))}
             onChange={(value) => {
               if (resolvedTenantId) {
-                router.push(`/t/${resolvedTenantId}/e/${value}`);
+                const event = tenantEvents.find(
+                  (item) => item.eventId === value,
+                );
+                const destination = event && firstAllowedEventPath(event);
+                if (destination) router.push(destination);
               }
             }}
-            disabled={!resolvedTenantId || tenantEvents.length === 0}
+            disabled={!resolvedTenantId || selectableEvents.length === 0}
             data-testid="event-switcher"
             allowClear
             onClear={() => {
-              if (resolvedTenantId) router.push(`/t/${resolvedTenantId}`);
+              const tenant = tenants.find(
+                (item) => item.tenantId === resolvedTenantId,
+              );
+              const destination =
+                tenant && firstAllowedTenantPath(tenant, tenantEvents);
+              if (destination) router.push(destination);
             }}
           />
         </div>
