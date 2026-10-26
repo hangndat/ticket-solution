@@ -13,6 +13,8 @@ const {
   acceptMembershipInvite,
   createMembershipInvite,
   createEvent,
+  updateEvent,
+  listMyEvents,
   listPortalMembers,
   listPortalInvites,
   changePortalMemberRole,
@@ -24,6 +26,8 @@ const {
   readPlatformSecurityConfig,
   withTenant,
   eventPermissionsForRole,
+  grantEventAssignment,
+  PERMISSION_CATALOG,
   PLATFORM_ERROR_CODES,
   AuthzError,
 } = require('../dist');
@@ -96,16 +100,31 @@ async function startIsolatedPostgres() {
       await new Promise((r) => setTimeout(r, 400));
     }
   }
-  await admin.query('CREATE ROLE ticket_runtime NOLOGIN NOSUPERUSER NOBYPASSRLS');
+  await admin.query(
+    'CREATE ROLE ticket_runtime NOLOGIN NOSUPERUSER NOBYPASSRLS',
+  );
   await admin.query(
     'CREATE ROLE ticket_platform_runtime NOLOGIN NOSUPERUSER NOBYPASSRLS',
   );
-  await admin.query('CREATE ROLE migration_owner NOLOGIN NOSUPERUSER NOBYPASSRLS');
+  await admin.query(
+    'CREATE ROLE migration_owner NOLOGIN NOSUPERUSER NOBYPASSRLS',
+  );
   await admin.query('GRANT CREATE, USAGE ON SCHEMA public TO migration_owner');
   await admin.query('SET ROLE migration_owner');
   for (const file of migrationFiles()) {
     await admin.query(readFileSync(file, 'utf8'));
   }
+  // Function replacement must be safe to deploy again without changing grants.
+  await admin.query(
+    readFileSync(
+      path.join(
+        MIGRATIONS_DIR,
+        '202610260001_vcx969_event_update_grants',
+        'migration.sql',
+      ),
+      'utf8',
+    ),
+  );
   await admin.query('RESET ROLE');
   await admin.query(
     "CREATE ROLE pm_login LOGIN PASSWORD '" +
@@ -269,6 +288,222 @@ test(
         (e) => e instanceof AuthzError || e.code === 'MEMBERSHIP_REQUIRED',
       );
 
+      // The stored event grant, not the membership role label, controls PATCH.
+      assert.ok(PERMISSION_CATALOG.includes('event.update'));
+      assert.ok(eventPermissionsForRole('Manager').includes('event.update'));
+      assert.ok(eventPermissionsForRole('Owner').includes('event.update'));
+      assert.ok(!eventPermissionsForRole('CS').includes('event.update'));
+      const patchAs = (actorUserId, tenantId, expectedRevision, name) =>
+        withTenant(db, tenantId, (tx) =>
+          updateEvent(tx, {
+            tenantId,
+            eventId,
+            actorUserId,
+            idempotencyKey: randomUUID(),
+            body: { expectedRevision, name },
+          }),
+        );
+      await assert.rejects(
+        () => patchAs(manager.userId, tenantA.tenantId, 1, 'Unassigned'),
+        (e) => e instanceof AuthzError,
+      );
+
+      // Legacy materialized Manager grant remains denied until explicit reassign.
+      await withTenant(db, tenantA.tenantId, (tx) =>
+        grantEventAssignment(tx, {
+          tenantId: tenantA.tenantId,
+          eventId,
+          membershipId: mgrAccepted.membershipId,
+          permissions: eventPermissionsForRole('Manager').filter(
+            (p) => p !== 'event.update',
+          ),
+        }),
+      );
+      const legacyDiscovery = await listMyEvents(db, manager.userId);
+      assert.ok(!legacyDiscovery.items[0].permissions.includes('event.update'));
+      await assert.rejects(
+        () => patchAs(manager.userId, tenantA.tenantId, 1, 'Legacy Manager'),
+        (e) => e instanceof AuthzError,
+      );
+
+      await putPortalEventAssignment(db, {
+        tenantId: tenantA.tenantId,
+        actorUserId: ownerA.userId,
+        membershipId: mgrAccepted.membershipId,
+        eventId,
+        role: 'Manager',
+        reason: 'manage event',
+      });
+      const managerDiscovery = await listMyEvents(db, manager.userId);
+      assert.ok(managerDiscovery.items[0].permissions.includes('event.update'));
+      const managerUpdated = await patchAs(
+        manager.userId,
+        tenantA.tenantId,
+        1,
+        'Managed Event',
+      );
+      assert.equal(managerUpdated.event.name, 'Managed Event');
+
+      // A Manager membership may deliberately hold a restricted assignment.
+      await putPortalEventAssignment(db, {
+        tenantId: tenantA.tenantId,
+        actorUserId: ownerA.userId,
+        membershipId: mgrAccepted.membershipId,
+        eventId,
+        role: 'CS',
+        reason: 'restrict event to CS',
+      });
+      const restrictedDiscovery = await listMyEvents(db, manager.userId);
+      assert.ok(
+        !restrictedDiscovery.items[0].permissions.includes('event.update'),
+      );
+      await assert.rejects(
+        () => patchAs(manager.userId, tenantA.tenantId, 2, 'Forged Manager'),
+        (e) => e instanceof AuthzError,
+      );
+      await withTenant(
+        db,
+        tenantA.tenantId,
+        (tx) =>
+          tx.$executeRaw`
+          UPDATE event_assignments
+          SET permissions = ARRAY['report.read']::text[]
+          WHERE tenant_id = ${tenantA.tenantId}::uuid
+            AND membership_id = ${mgrAccepted.membershipId}::uuid
+            AND event_id = ${eventId}::uuid
+        `,
+      );
+      const reportOnlyDiscovery = await listMyEvents(db, manager.userId);
+      assert.deepEqual(reportOnlyDiscovery.items[0].permissions, [
+        'report.read',
+      ]);
+      await assert.rejects(
+        () => patchAs(manager.userId, tenantA.tenantId, 2, 'Report Only'),
+        (e) => e instanceof AuthzError,
+      );
+
+      // SQL invite acceptance materializes the new grant for fresh assignments.
+      const invitedManager = await users.upsertFromVerifiedIdentity({
+        issuer: 'http://localhost/realms/ticket',
+        subject: 'invited-manager-pm',
+        email: 'invited-manager-pm@example.com',
+        emailVerified: true,
+      });
+      const managerWithAssignment = await createMembershipInvite(db, security, {
+        tenantId: tenantA.tenantId,
+        actorUserId: ownerA.userId,
+        email: 'invited-manager-pm@example.com',
+        role: 'Manager',
+        eventAssignments: [{ eventId, role: 'Manager' }],
+        clientKey: 'pm-inv-mgr-assigned',
+      });
+      await acceptMembershipInvite(db, {
+        userId: invitedManager.userId,
+        email: 'invited-manager-pm@example.com',
+        emailVerified: true,
+        token: managerWithAssignment.rawToken,
+      });
+      const invitedDiscovery = await listMyEvents(db, invitedManager.userId);
+      assert.ok(invitedDiscovery.items[0].permissions.includes('event.update'));
+      const invitedUpdated = await patchAs(
+        invitedManager.userId,
+        tenantA.tenantId,
+        2,
+        'Invite Managed',
+      );
+      assert.equal(invitedUpdated.event.name, 'Invite Managed');
+      await assert.rejects(
+        () =>
+          patchAs(invitedManager.userId, tenantB.tenantId, 3, 'Other Tenant'),
+        (e) => e instanceof AuthzError,
+      );
+
+      const csUser = await users.upsertFromVerifiedIdentity({
+        issuer: 'http://localhost/realms/ticket',
+        subject: 'cs-pm',
+        email: 'cs-pm@example.com',
+        emailVerified: true,
+      });
+      const csInvite = await createMembershipInvite(db, security, {
+        tenantId: tenantA.tenantId,
+        actorUserId: ownerA.userId,
+        email: 'cs-pm@example.com',
+        role: 'CS',
+        eventAssignments: [{ eventId, role: 'CS' }],
+        clientKey: 'pm-inv-cs-assigned',
+      });
+      await acceptMembershipInvite(db, {
+        userId: csUser.userId,
+        email: 'cs-pm@example.com',
+        emailVerified: true,
+        token: csInvite.rawToken,
+      });
+      const csDiscovery = await listMyEvents(db, csUser.userId);
+      assert.ok(!csDiscovery.items[0].permissions.includes('event.update'));
+      await assert.rejects(
+        () => patchAs(csUser.userId, tenantA.tenantId, 3, 'CS Update'),
+        (e) => e instanceof AuthzError,
+      );
+
+      const otherOwner = await users.upsertFromVerifiedIdentity({
+        issuer: 'http://localhost/realms/ticket',
+        subject: 'unassigned-owner-pm',
+        email: 'unassigned-owner-pm@example.com',
+        emailVerified: true,
+      });
+      const ownerInvite = await createMembershipInvite(db, security, {
+        tenantId: tenantA.tenantId,
+        actorUserId: ownerA.userId,
+        email: 'unassigned-owner-pm@example.com',
+        role: 'Owner',
+        clientKey: 'pm-inv-owner-unassigned',
+      });
+      const ownerAccepted = await acceptMembershipInvite(db, {
+        userId: otherOwner.userId,
+        email: 'unassigned-owner-pm@example.com',
+        emailVerified: true,
+        token: ownerInvite.rawToken,
+      });
+      await assert.rejects(
+        () =>
+          patchAs(otherOwner.userId, tenantA.tenantId, 3, 'Owner Unassigned'),
+        (e) => e instanceof AuthzError,
+      );
+      await putPortalEventAssignment(db, {
+        tenantId: tenantA.tenantId,
+        actorUserId: ownerA.userId,
+        membershipId: ownerAccepted.membershipId,
+        eventId,
+        role: 'Owner',
+        reason: 'assign owner',
+      });
+      const ownerUpdated = await patchAs(
+        otherOwner.userId,
+        tenantA.tenantId,
+        3,
+        'Assigned Owner',
+      );
+      assert.equal(ownerUpdated.event.name, 'Assigned Owner');
+      await putPortalEventAssignment(db, {
+        tenantId: tenantA.tenantId,
+        actorUserId: ownerA.userId,
+        membershipId: ownerAccepted.membershipId,
+        eventId,
+        role: 'CS',
+        reason: 'restrict owner event permission',
+      });
+      await assert.rejects(
+        () =>
+          patchAs(otherOwner.userId, tenantA.tenantId, 4, 'Owner Restricted'),
+        (e) => e instanceof AuthzError,
+      );
+      await revokeMembershipKeepingLastOwner(db, {
+        tenantId: tenantA.tenantId,
+        actorUserId: ownerA.userId,
+        membershipId: ownerAccepted.membershipId,
+        reason: 'finish owner permission test',
+      });
+
       // List members: masked email, no raw PII
       const membersPage = await listPortalMembers(db, {
         tenantId: tenantA.tenantId,
@@ -320,7 +555,7 @@ test(
         reason: 'demote after co-owner',
       });
 
-      // Concurrent last-owner demotion race: only one Owner left after demote above? 
+      // Concurrent last-owner demotion race: only one Owner left after demote above?
       // Re-promote ownerA, demote manager back so one Owner; then race two demotions.
       await changePortalMemberRole(db, {
         tenantId: tenantA.tenantId,
@@ -391,7 +626,9 @@ test(
         actorUserId: ownerA.userId,
         state: 'PENDING',
       });
-      assert.ok(invites.items.some((i) => i.inviteId === pendingInvite.inviteId));
+      assert.ok(
+        invites.items.some((i) => i.inviteId === pendingInvite.inviteId),
+      );
       const invBlob = JSON.stringify(invites);
       assert.ok(!invBlob.includes('pending-staff@example.com'));
       assert.ok(!invBlob.includes(pendingInvite.rawToken));
