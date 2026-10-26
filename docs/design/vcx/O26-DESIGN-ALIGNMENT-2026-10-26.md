@@ -5,7 +5,7 @@
 | Epic / Story | [#914](https://github.com/hangndat/ticket-solution/issues/914) · handoff gốc [#923](https://github.com/hangndat/ticket-solution/issues/923) (S0-T02) |
 | Role | `product-design` · Persona **Liv** |
 | Baseline code | `origin/main` @ `f3a515a46e3c43fe8c78017afdb00c0949d88fb0` |
-| Quyết định UI | [O26](../DECISION-LOG.md#o26--portal-dùng-giao-diện-mặc định-ant-design-26102026) + **bổ sung ProComponents** (cùng ngày) |
+| Quyết định UI | [O26](../../DECISION-LOG.md#o26--portal-dùng-giao-diện-mặc định-ant-design-26102026) + **bổ sung ProComponents** (cùng ngày) |
 | Workflow | [ui-workflow.md](../../agents/ui-workflow.md) — Portal: ProComponents ưu tiên, `antd` nền tảng/fallback, **token/theme Ant mặc định**, **không** Vemoki DS |
 | Artifact gốc | [`docs/design/vcx/`](./README.md) (flows, states, copy, prototype) |
 | Visual budget | **Không** — không invent brand/token Portal; consumer web/iOS không đổi |
@@ -17,22 +17,22 @@
 
 ## 1. Bảng Task / Issue (phạm vi alignment)
 
-Roadmap canonical: [`VEMOKI-CORE-UX-ROADMAP-2026-10-26.md`](../../plans/VEMOKI-CORE-UX-ROADMAP-2026-10-26.md). Cột «Handoff #923» = flow/states/copy trong `docs/design/vcx/*` vẫn là nguồn UX; cột «Điều chỉnh O26» = chỉ rõ pattern component theo bổ sung O26.
+Roadmap canonical: [`VEMOKI-CORE-UX-ROADMAP-2026-10-26.md`](../../plans/VEMOKI-CORE-UX-ROADMAP-2026-10-26.md). Cột bắt buộc: **Task/Issue**, **UI hiện có**, **Ant Design Pro phù hợp**, **Mâu thuẫn handoff #923 (có/không)**, **Điều chỉnh tối thiểu**, **Chặn coding?** — ghi **Reuse** khi #923 đủ, không cần PD thêm.
 
-| Mã | Issue | Gap / nội dung UX | UI hiện có (`f3a515a`) | Handoff #923 | Điều chỉnh O26 (tối thiểu) | Chặn coding? |
-| --- | --- | --- | --- | --- | --- | --- |
-| S2-T01 | [#930](https://github.com/hangndat/ticket-solution/issues/930) | G-05 wizard: review thật, slug, payload đầy đủ | `events/new`: `Steps` + `Form`; bước 3 = `Alert` tĩnh; `PortalPage` | M3 + prototype màn 3 | Bước 3 → `ProDescriptions` hoặc `Descriptions` đọc form; giữ `PortalPage` + `Steps`; slug gợi ý ở bước 1 | Chờ **S1-T04** (idempotency) cho retry submit; không chặn bắt đầu layout review |
-| S2-T02 | [#931](https://github.com/hangndat/ticket-solution/issues/931) | Loại vé / nguồn / quota — nhãn & trạng thái | `types/page`, `sources/page`, `quota/page`: `PortalPage` + `ProTable` / form | Không chi tiết riêng trong #923 | Giữ ProTable/ProForm; không đổi IA | **S1-T01** (#926) nếu gate event sai ảnh hưởng menu |
-| S2-T03 | [#932](https://github.com/hangndat/ticket-solution/issues/932) | G-06 config: không ghi đè phần không chỉnh | `config/page`: `ProForm`, `ProTable`, `buildMinimalConfigPayload` | Conflict pattern §5 #923 | `Modal` conflict + sticky unsaved — đã có pattern setup; map copy [copy-vi.md](./copy-vi.md) | **S1-T01** (gate event) |
-| S2-T04 | [#933](https://github.com/hangndat/ticket-solution/issues/933) | G-07 draft/preview/publish, readiness vs 403/mạng | `e/[eventId]/page`: readiness checklist, publish; `setup` drafts | M4 conflict, M5 limits | `ReadinessChecklist` + `Alert`/`Result`; conflict → `Modal` như #923; phân biệt forbidden vs thiếu cấu hình | Verify-first; phụ thuộc **S2-T03** cho payload config đúng |
-| S3-T02 | [#935](https://github.com/hangndat/ticket-solution/issues/935) | G-08 workspace Lời mời / Yêu cầu / Vé + drawer | `guests/page`: **chỉ** tab Import · Pending · Notifications · Export (`ProCard` tabs) | M1 IA §1 #923 — **chưa** có tab Danh sách | Thêm `Segmented` hoặc tab lồng: 3× `ProTable` (`portal-pro-table` hoặc `ProTable`); `Drawer` timeline; `PortalPage` | **S0-T03** nếu cần `q` invitations; không chặn skeleton tab nếu filter client + banner OQ-2 |
-| S3-T03 | [#936](https://github.com/hangndat/ticket-solution/issues/936) | G-09 import 4 bước, không UUID luồng chính | `import-invitations-panel`: form dài + **ô Import ID** | M2 wizard `Steps` | Refactor tab Import → `Steps` 1–4; ẩn UUID khỏi luồng chính; `sessionStorage` + block «Việc nhập gần đây» khi có list API | **S0-T03** → **S3-T01** cho list imports; **S1-T04** cho commit retry |
-| S3-T04 | [#937](https://github.com/hangndat/ticket-solution/issues/937) | Pending approve/reject + quota | `pending-panel` | Copy trong [copy-vi.md](./copy-vi.md) | `ProTable` + `Modal` lý do; map `PENDING_LIMIT` khi có | **S1-T04** |
-| S3-T05 | [#938](https://github.com/hangndat/ticket-solution/issues/938) | CS / export | `cs-panel`, `export-panel` | CS route riêng — không đổi | Giữ panel pattern; resend cooldown → M5 | — |
-| S5-T01 | [#942](https://github.com/hangndat/ticket-solution/issues/942) | Onboarding / members | `onboarding/*`, `members/page` (`ProTable`) | Limit touchpoint §5 | `Card`/`Form` antd; `Result` PENDING; không gradient brand (đã bỏ trên một số route) | — |
-| S5-T02 | [#943](https://github.com/hangndat/ticket-solution/issues/943) | G-10 limits / rate | Chưa map error code toàn cục | M5 | `Result`/`Alert` theo code; **không** dashboard usage nếu không có endpoint (OQ-3) | **S0-T03** chọn contract |
-| S5-T03 | [#944](https://github.com/hangndat/ticket-solution/issues/944) | Overview tenant / `asOf` stale | `t/[tenantId]/page`: `ProList`, `StatisticCard`, `PortalPage` | Stale banner §states | Giữ ProComponents; `report-stale-alert` / pattern `asOf` đã có trên analytics | — |
-| S5-T04 | [#945](https://github.com/hangndat/ticket-solution/issues/945) | Help in-context | `support/page` | — | `Typography` + `Alert` — không upsell | — |
+| Task/Issue | UI hiện có (`f3a515a`) | Ant Design Pro phù hợp | Mâu thuẫn #923 | Điều chỉnh tối thiểu | Chặn coding? |
+| --- | --- | --- | --- | --- | --- |
+| S2-T01 · [#930](https://github.com/hangndat/ticket-solution/issues/930) | `events/new`: `Steps` + `Form`; bước 3 = `Alert` tĩnh; `PortalPage` | `PageContainer`, `Steps`, `ProDescriptions` (fallback `Descriptions`) | **Có** — M3 thiếu review thật | Bước 3 đọc form; slug gợi ý bước 1 | **Không** cho layout; retry submit idempotent chờ [#929](https://github.com/hangndat/ticket-solution/issues/929) **group1** (đang làm) |
+| S2-T02 · [#931](https://github.com/hangndat/ticket-solution/issues/931) | `types` / `sources` / `quota`: `PortalPage` + `ProTable` / form | `ProTable`, `ProForm` | Không | Giữ IA + nhãn/trạng thái | **Không** — không phụ thuộc kỹ thuật |
+| S2-T03 · [#932](https://github.com/hangndat/ticket-solution/issues/932) *(Hoàn thành)* | `config/page`: `ProForm`, `ProTable`, conflict `Modal` | `ProForm`, `ProTable` | Không | **Reuse #923** — map [copy-vi.md](./copy-vi.md); pattern conflict đã khớp | **Không** — prerequisite đã đóng |
+| S2-T04 · [#933](https://github.com/hangndat/ticket-solution/issues/933) | `e/[eventId]/page`: readiness, publish; `setup` drafts | `Alert` / `Result`, `Modal` (conflict) | **Có** — 403 vs thiếu cấu hình | `ReadinessChecklist` + conflict như #923 | **Không** PD; cần payload config từ **#932** (đã xong) |
+| S3-T02 · [#935](https://github.com/hangndat/ticket-solution/issues/935) | `guests/page`: tab ops Import · Pending · Notifications · Export | `ProTable` ×3, `Drawer`, `Segmented` hoặc tab lồng | **Có** — chưa workspace Lời mời / Yêu cầu / Vé | Thêm workspace + timeline drawer | **Không** — filter `q` invitations có qua [#924](https://github.com/hangndat/ticket-solution/issues/924) / [#934](https://github.com/hangndat/ticket-solution/issues/934) *(đóng)* |
+| S3-T03 · [#936](https://github.com/hangndat/ticket-solution/issues/936) | `import-invitations-panel`: form dài + **Import ID** | `Steps` + `ProForm` trong `ProCard` | **Có** — cấm UUID luồng chính (M2) | Wizard 4 bước; ẩn UUID; «Việc nhập gần đây» | **Không** list API — [#934](https://github.com/hangndat/ticket-solution/issues/934) đã merge; commit retry chờ **#929** |
+| S3-T04 · [#937](https://github.com/hangndat/ticket-solution/issues/937) | `pending-panel` | `ProTable`, `Modal` | Không | Map `PENDING_LIMIT`; copy [copy-vi.md](./copy-vi.md) | **Không** shell UI; mutation retry chờ **#929** |
+| S3-T05 · [#938](https://github.com/hangndat/ticket-solution/issues/938) | `cs-panel`, `export-panel` | Giữ `ProCard` / panel ops | Không | Resend cooldown → M5 | **Có** — sau **#929** và S3-T02–T04 trong serial portal |
+| S5-T01 · [#942](https://github.com/hangndat/ticket-solution/issues/942) | `onboarding/*`, `members/page` (`ProTable`) | `ProTable`; `Card`/`Form` antd | Không | `Result` PENDING; không brand gradient Portal | **Có** — sau **#938** |
+| S5-T02 · [#943](https://github.com/hangndat/ticket-solution/issues/943) | Chưa map error code toàn cục | `Result`, `Alert` | Không (M5 copy) | Map code G-10; không dashboard usage (OQ-3) | **Không** contract — API limits [#958](https://github.com/hangndat/ticket-solution/issues/958) *(đóng)*; còn wiring UI |
+| S5-T03 · [#944](https://github.com/hangndat/ticket-solution/issues/944) | `t/[tenantId]/page`: `ProList`, `StatisticCard`, `PortalPage` | `PageContainer`, `ProList`, `StatisticCard` | Không | `asOf` stale / `report-stale-alert` | **Có** — sau **#943** |
+| S5-T04 · [#945](https://github.com/hangndat/ticket-solution/issues/945) | `support/page` | — (`Typography`, `Alert` antd) | Không | Help in-context; không upsell | **Có** — sau **#944** |
 
 **Không phát sinh Task mới:** reuse #923 + bảng trên; spike OQ-5 timeline aggregate gắn S3-T02/S3-T05 hoặc backend hiện có, không mở Issue PD.
 
@@ -52,7 +52,7 @@ Roadmap canonical: [`VEMOKI-CORE-UX-ROADMAP-2026-10-26.md`](../../plans/VEMOKI-C
 | Wizard tạo event | `events/new` | `PortalPage`, `Steps`, `Form` | **Lệch** #923: thiếu review thật (Alert tĩnh) |
 | Khách & vé | `guests/page` + ops panels | `ProCard` tabs ops only; import = form + Import ID | **Lệch** #923: chưa workspace 3 tab + chưa wizard 4 bước |
 | Onboarding | `onboarding/page` | antd `Card`/`Form` | Khớp «không brand gradient» hướng O26 |
-| Tenant overview | `t/[tenantId]/page` | `PortalPage`, `ProList`, `StatisticCard` | Khớp S5-T03; PR #983 muốn gỡ Pro ở đây — **không** bắt buộc theo bổ sung O26 |
+| Tenant overview | `t/[tenantId]/page` | `PortalPage`, `ProList`, `StatisticCard` | Khớp S5-T03; PR [#983](https://github.com/hangndat/ticket-solution/pull/983) (OPEN) là slice migration #975 — **không** tự động cấm Pro; cần lý do UX/a11y/kỹ thuật cụ thể |
 | States chung | `surface-copy.ts` | `Alert` / `Result` / `Spin` + i18n keys | Không còn component `SurfaceState` (xem §4) |
 | Theme | `providers.tsx` | `ConfigProvider` + `ProConfigProvider`, locale VI/EN | **Ant mặc định** — không `vemoki.ts` |
 
@@ -83,7 +83,7 @@ Implementer **web** (`apps/portal`): ưu tiên `@ant-design/pro-components` khi 
 | Tham chiếu #923 | Trạng thái trên `f3a515a` / O26 | Hướng xử lý cho coding |
 | --- | --- | --- |
 | `SurfaceState` (`surface-state.tsx`) | **Đã gỡ** — logic copy tại `SURFACE_MESSAGE_KEYS`; UI = `Spin`/`Alert`/`Result` inline | Implementer đọc [states.md](./states.md) nhưng **thay** «SurfaceState» → pattern antd ở cột trên; không khôi phục wrapper riêng (trái O26 gốc, không cần sau bổ sung Pro) |
-| `PortalPage` | **Còn**, đang dùng rộng | **Giữ** — không theo nhánh #983 gỡ Pro khỏi overview trừ khi Task #975 slice được reviewer chốt riêng |
+| `PortalPage` | **Còn**, đang dùng rộng | **Giữ** — PR [#983](https://github.com/hangndat/ticket-solution/pull/983) chỉ áp dụng khi slice #975 có AC UX/a11y/kỹ thuật rõ, không phải cấm Pro mặc định |
 | `apps/portal/src/theme/vemoki.ts` + Live Pulse (VD-03 §0) | **Không tồn tại** trên baseline; README #923 dòng Visual budget **stale** | Bỏ qua Live Pulse; theme = Ant default qua `providers.tsx` |
 | Mẫu «Ant + Live Pulse scoped» (README #923) | Lịch sử O16/O18; **O26 bổ sung** thắng | Consumer link **artifact này** + O26, không VD-03 cho Portal |
 | Import: cấm UUID luồng chính | UI **còn** `Form.Item` Import ID | S3-T03 — bám M2 #923 |
@@ -94,20 +94,35 @@ Implementer **web** (`apps/portal`): ưu tiên `@ant-design/pro-components` khi 
 
 ---
 
-## 5. #975 và #983 — trạng thái & blocker thực sự
+## 5. #975 / #982 / #983 và prerequisite vs runtime
 
-| Issue | Trạng thái (26/10) | Ý nghĩa cho design |
+| Tham chiếu | Trạng thái (Project #3 · 26/10) | Ý nghĩa cho design |
 | --- | --- | --- |
-| [#975](https://github.com/hangndat/ticket-solution/issues/975) | **OPEN** — policy: ProComponents chuẩn Portal; PR [#977](https://github.com/hangndat/ticket-solution/pull/977)/[#980](https://github.com/hangndat/ticket-solution/pull/980) merged; [#982](https://github.com/hangndat/ticket-solution/pull/982) cần đối chiếu O26 trước merge | **Không chặn** implement #930–#945 theo #923 + bảng §1. Là track migration **tùy chọn** từng slice — không đảo PR đã merge |
-| [#983](https://github.com/hangndat/ticket-solution/issues/983) | **OPEN** — O26-PR4: gỡ `PortalPage`/`ProList`/`StatisticCard` khỏi tenant home | **Mâu thuẫn policy** với bổ sung O26 («không thay component đang hoạt động chỉ vì tên thư viện»). **Không** coi #983 là yêu cầu UX cho S5-T03 cho đến khi coordinator/user chốt lại scope #975 |
+| [#975](https://github.com/hangndat/ticket-solution/issues/975) | **OPEN** — policy ProComponents Portal | Track migration **tùy slice**; **không chặn** #930–#945 theo #923 + §1 |
+| [#982](https://github.com/hangndat/ticket-solution/pull/982) | **MERGED** @ `117a741bab815dee392f7b5cecfcff517de438c7` — dissolve `SurfaceState` | Khớp §4; không còn wrapper `SurfaceState` trên main sau merge |
+| [#983](https://github.com/hangndat/ticket-solution/pull/983) | **PR OPEN** (SHA đầu PR thay đổi; đối chiếu head khi review) — O26-PR4 inline chrome batch 1 | **Không** coi là Issue; **không** cấm Pro tự động — chỉ merge khi slice #975 có lý do UX/a11y/kỹ thuật cụ thể, không đổi chrome «vì tên thư viện» |
 
-**Blocker thực sự cho acceptance runtime (không phải PD):**
+**Prerequisite đã đóng (không gọi là blocker coding UI):**
 
-| ID | Chặn | Không chặn handoff / coding UI thuần |
+| ID | GitHub / Project | Ghi chú |
 | --- | --- | --- |
-| B-01 | Persona fixture S0-T04 — runtime UAT S1–S6 | Spec + implement local |
-| S0-T03 | List imports, limits contract — G-09/G-10 đầy đủ | UI import có session fallback; error-only limits |
-| S1-T01 | Gate event #926 — menu vs route | S2-T03 có thể ưu tiên sớm sau T01 |
+| [#925](https://github.com/hangndat/ticket-solution/issues/925) S0-T04 fixture persona | CLOSED · **Hoàn thành** | Fixture UAT local có; **runtime acceptance** S1–S6 vẫn tách (B-01) |
+| [#926](https://github.com/hangndat/ticket-solution/issues/926) S1-T01 gate event | CLOSED · **Hoàn thành** | Không chặn #931 / guests skeleton |
+| [#932](https://github.com/hangndat/ticket-solution/issues/932) S2-T03 config | CLOSED · **Hoàn thành** | **Reuse** #923 — không chặn #933 |
+| [#934](https://github.com/hangndat/ticket-solution/issues/934) S3-T01 list imports | CLOSED · **Hoàn thành** | #936 dùng list API; không chờ S0-T03 |
+| [#924](https://github.com/hangndat/ticket-solution/issues/924) S0-T03 contract | CLOSED | `q` invitations + import/limits contract — #935/#936/#943 wiring |
+| [#958](https://github.com/hangndat/ticket-solution/issues/958) G-10 limits API | CLOSED · **Hoàn thành** | #943 map error — prerequisite API có |
+
+**Còn ảnh hưởng coding / serial:**
+
+| ID | Trạng thái | Chặn gì | Không chặn |
+| --- | --- | --- | --- |
+| [#929](https://github.com/hangndat/ticket-solution/issues/929) S1-T04 idempotency | **Đang làm** (group1 mutation) | Retry/commit idempotent đầy đủ trên mutation | Layout wizard, workspace tabs, ProTable shell |
+| S3-T05 **#938** | Sẵn sàng / chờ serial | Sau **#929** + guests slice | — |
+| S5-T01 **#942** | Phụ thuộc | Sau **#938** | — |
+| S5-T02 **#943** | Wiring UI | — (API #958 xong) | Handoff limits copy |
+| S5-T03 **#944** | Phụ thuộc | Sau **#943** | — |
+| S5-T04 **#945** | Phụ thuộc | Sau **#944** | — |
 
 Deferred #901/#903/#904 — không đưa vào alignment Portal ops.
 
@@ -119,7 +134,7 @@ Deferred #901/#903/#904 — không đưa vào alignment Portal ops.
 2. **States:** Dùng ma trận [states.md](./states.md) với mapping §3 (không tìm `SurfaceState` trong repo).
 3. **Ưu tiên product:** event wizard review → guests workspace + import wizard → setup/config/publish conflict → onboarding/limit touchpoints → overview stale (đúng thứ tự coordinator portal serial).
 4. **A11y:** Giữ `role="status"`, `aria-busy`, label tab rút gọn responsive (đã có trên guests) — không đổi locale VI mặc định.
-5. **#975/#983:** Implement feature theo #923; migration Pro↔antd chỉ trong Task #975 được giao riêng, có evidence — không song song đổi chrome vì #983 khi chưa chốt.
+5. **#975 / PR #983:** Feature theo #923; PR #983 chỉ khi slice có AC UX/a11y/kỹ thuật — không prohibition tự động lên `PortalPage`/`ProList`.
 
 ---
 
@@ -130,13 +145,13 @@ Deferred #901/#903/#904 — không đưa vào alignment Portal ops.
 | Handoff đủ unblock #930–#945? | **Có** — với artifact này làm lớp O26 trên #923 |
 | Cần PD thêm trước code? | **Không** — trừ màn ngoài bảng §1 hoặc đổi IA lớn (escalate coordinator) |
 | Review bắt buộc | Mira · `ux` — đối chiếu §1–4 + prototype HTML |
-| Code complete = acceptance? | **Không** — B-01 và CI/UAT persona vẫn theo roadmap §3 |
+| Code complete = acceptance? | **Không** — runtime UAT persona (B-01) tách khỏi prerequisite #925 đã Hoàn thành |
 
 ---
 
 ## 8. Liên kết nội bộ (kiểm tra tồn tại)
 
-- [DECISION-LOG O26](../DECISION-LOG.md)
+- [DECISION-LOG O26](../../DECISION-LOG.md)
 - [ui-workflow.md](../../agents/ui-workflow.md)
 - [vcx/README.md](./README.md) · [flows.md](./flows.md) · [states.md](./states.md) · [copy-vi.md](./copy-vi.md) · [open-questions.md](./open-questions.md)
 - [prototype/vcx-portal-handoff.html](./prototype/vcx-portal-handoff.html)
