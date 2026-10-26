@@ -12,6 +12,7 @@ import {
   portalMutate,
 } from '../../../../../../src/client/portal-fetch';
 import { PortalPage } from '../../../../../../src/components/portal-page';
+import { EventSetupNav } from '../../../../../../src/components/event-setup-nav';
 import { bffEventAction } from '../../../../../../src/prep/bff-urls';
 import { isEventPagePermitted } from '../../../../../../src/prep/event-access-resolver';
 import { useEventAccess } from '../../../../../../src/prep/use-event-access';
@@ -31,7 +32,7 @@ export default function TicketTypesPage() {
   const [items, setItems] = useState<PortalTicketTypeSummary[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
   const [kind, setKind] = useState<
-    'loading' | 'ready' | 'empty' | 'error' | 'unknown'
+    'loading' | 'ready' | 'empty' | 'error' | 'unknown' | 'forbidden'
   >('loading');
   const [message, setMessage] = useState<string | undefined>();
   const [open, setOpen] = useState(false);
@@ -53,6 +54,10 @@ export default function TicketTypesPage() {
       if (res.networkError || res.timedOut || res.status >= 500) {
         setKind('unknown');
         setMessage(t('types.h_1j8nzaz'));
+        return;
+      }
+      if (res.status === 403) {
+        setKind('forbidden');
         return;
       }
       if (res.status !== 200 || !res.json || typeof res.json !== 'object') {
@@ -188,6 +193,10 @@ export default function TicketTypesPage() {
       }
       loading={kind === 'loading'}
     >
+      <EventSetupNav tenantId={tenantId} eventId={eventId} current="types" />
+      {kind === 'forbidden' ? (
+        <Result status="403" title={t(SURFACE_MESSAGE_KEYS.permissionTitle)} subTitle={t('surface.permission.defaultDescription')} />
+      ) : null}
       {kind === 'unknown' ? (
         <Alert
           type="warning"
