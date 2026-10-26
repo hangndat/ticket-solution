@@ -33,8 +33,8 @@
 
 | Trường | Giá trị |
 | --- | --- |
-| **codeSha** | `0b49115e5aea17a6e8df95ae554d5d401d1fa961` |
-| **evidenceSha** | `0b49115e5aea17a6e8df95ae554d5d401d1fa961` |
+| **codeSha** | `7e4c5fc784d83402e74c4d834c5935a8d0fd6fa2` |
+| **evidenceSha** | `7e4c5fc784d83402e74c4d834c5935a8d0fd6fa2` |
 
 ## Verdict worker
 
