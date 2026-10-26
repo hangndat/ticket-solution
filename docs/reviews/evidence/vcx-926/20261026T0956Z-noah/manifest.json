@@ -5,7 +5,29 @@
   "reviewedSHA": null,
   "previousMeasuredSHA": "d00a265cca1206b68601c75d445b633f7d590b57",
   "testedSHA": "33713db2cfffed29cad98ce9b2077490be5987b6",
-  "buildProof": "pnpm --filter @ticket/api... build + portal NODE_ENV=production next build @ testedSHA",
+  "provenance": {
+    "orchestrationRun": "run_e692fc90e0f0",
+    "dispatchId": "ctx_4fd887c2abcd",
+    "taskId": "task_c12844502242",
+    "priorEvidenceCommit": "a4d81aaff28cb2486f6681e06f11ed6726936301",
+    "buildProof": {
+      "commands": [
+        "git -C vcx-926-uat rev-parse HEAD → testedSHA",
+        "pnpm --filter @ticket/api... build",
+        "cd apps/portal && NODE_ENV=production pnpm exec next build"
+      ],
+      "testedSHAVerified": "33713db2cfffed29cad98ce9b2077490be5987b6"
+    },
+    "portMap926": {
+      "portal": 3013,
+      "apiReserved": 3598,
+      "apiActualAtProbe": 3499,
+      "apiForeignIgnored": 3498,
+      "evidenceFile": "ports-orca.json"
+    },
+    "manifestDigestSidecar": "manifest.sha256"
+  },
+  "buildProof": "see provenance.buildProof",
   "harnessDirty": "apps/portal/.uat-artifacts/vcx-926/run-vcx-926-uat.mjs (login wait fix)",
   "env": {
     "portal": "http://127.0.0.1:3013",
@@ -25,9 +47,9 @@
   },
   "artifactHashes": {
     "manual-probe-results.json": "sha256:1ace11e60a27266c15b9f87021edcfe638212093a001fb3b72a0d08f5e495818",
-    "probe-results.json": "sha256:3eebaa02e5b804dca1ccb3115f7a33f9a1cf83bb911161fd649209ff81c2a2e4",
-    "RUN-REPORT.md": "sha256:629149b583aee526e2f0a2bf411de2d9e479727640a1bd4bf91093b8768cadce",
-    "ports-orca.json": "sha256:3a02939e981eb645524cefa98c3dc12dcfa7ad165206c51992faf0b50507dc1f",
+    "probe-results.json": "sha256:9ea70ae0d61d31ea3fbebb0d6bd401657a8701bc4b98467ebe3dfbde015021c2",
+    "RUN-REPORT.md": "sha256:4d22cfaa73a59e22f3f29fd53ed6d00b0fdf3333a85c1458bc37f4bb76930b30",
+    "ports-orca.json": "sha256:41bef3f3be175b61ad6c28fd2f30e75e318198cee6508bf536033f1338e6ca57",
     "1024-cs-setup.png": "sha256:e6d7937c0f7afe6b0f8a8cc85cf72dc0eb65957d34595a049a86ae3058ded558",
     "1024-cs-support.png": "sha256:5179e4cc942c7f67e03f6522ee6514c26db66596c20cfaca4a2dc7eef77a88cb",
     "1024-manager-cross-studio.png": "sha256:a5d448773564c8d31b8d2dac89aebb74770f85d82d9a8431e4ce689860566d05",

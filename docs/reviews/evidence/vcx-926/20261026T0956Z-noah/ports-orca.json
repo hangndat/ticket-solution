@@ -1,27 +1,40 @@
 {
-  "scannedAt": 1792980311882,
+  "orchestrationRun": "run_e692fc90e0f0",
   "worktree": "/Users/admin/SideProject/ticket-solution/vcx-926-uat",
-  "owned": [
+  "scannedAtEpochMs": 1792980370741,
+  "scannedAtIso": "2026-10-26T02:06:10.741Z",
+  "tool": "orca ports --worktree path:<vcx-926-uat> --json",
+  "ownedBy926": [
     {
+      "service": "portal",
       "port": 3013,
       "pid": 51574,
       "protocol": "http",
+      "ownerPath": "/Users/admin/SideProject/ticket-solution/vcx-926-uat",
       "ownerConfidence": "cwd",
       "advertisedUrl": "http://127.0.0.1:3013"
     },
     {
+      "service": "api",
       "port": 3499,
       "pid": 37930,
       "protocol": "http",
+      "ownerPath": "/Users/admin/SideProject/ticket-solution/vcx-926-uat",
       "ownerConfidence": "cwd",
-      "advertisedUrl": "http://127.0.0.1:3499"
+      "advertisedUrl": "http://127.0.0.1:3499",
+      "reservationNote": "Coordinator reserved API :3598 for #926; :3499 used at probe time (free + cwd-owned). :3498 foreign not used."
     }
   ],
-  "sharedNotOwnedBy926": {
-    "keycloak": 8080,
-    "postgres": 55433
+  "sharedInfrastructure": {
+    "keycloak": { "port": 8080, "ownership": "ui869dev compose (not 926-exclusive)" },
+    "postgres": { "port": 55433, "ownership": "ui869dev compose (not 926-exclusive)" }
   },
   "foreignNotUsed": {
-    "api3498": "PID 89392 cwd .Trash/ticket-solution-vd08-local-oidc-20261025/apps/api"
+    "api3498": {
+      "note": "PID 89392, cwd .Trash/ticket-solution-vd08-local-oidc-20261025/apps/api"
+    }
+  },
+  "isolation939": {
+    "note": "Linh939 stack API :3698 / web :3014 prefix vcx939 — no overlap with 3013/3499"
   }
 }
