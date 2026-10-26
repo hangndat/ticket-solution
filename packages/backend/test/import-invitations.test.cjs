@@ -1031,7 +1031,7 @@ test(
       );
       for (const query of [
         { cursor: 'garbage' },
-        { cursor: first.nextCursor.slice(0, -1) + 'x' },
+        { cursor: (first.nextCursor[0] === 'A' ? 'B' : 'A') + first.nextCursor.slice(1) },
         { cursor: first.nextCursor, kind: 'GUESTS' },
         { cursor: first.nextCursor, status: 'COMPLETED' },
       ]) {
