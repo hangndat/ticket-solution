@@ -111,6 +111,8 @@ export function GuestClaimForm() {
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [decision, setDecision] = useState<RedeemDecision | null>(null);
+  // Pending refresh must survive clearing the invitation token and parked intent.
+  const [pendingTenantId, setPendingTenantId] = useState('');
   const [ux, setUx] = useState<RedeemUxMessage | null>(null);
   const [resultContextKey, setResultContextKey] = useState('');
   const [busy, setBusy] = useState(false);
@@ -172,6 +174,7 @@ export function GuestClaimForm() {
       setTermsAccepted(false);
       setFieldErrors({});
       setDecision(null);
+      setPendingTenantId('');
       setUx(null);
       setResultContextKey('');
       setCompleted(false);
@@ -316,6 +319,7 @@ export function GuestClaimForm() {
     );
     const nextUx = messageForDecision(next);
     setDecision(next);
+    setPendingTenantId(next.kind === 'pending' ? displayTenantId.trim() : '');
     setUx(nextUx);
 
     if (next.kind === 'issued' || next.kind === 'pending') {
@@ -338,7 +342,7 @@ export function GuestClaimForm() {
     const requestId = decision.requestId;
     const activeKey = activeContext.current;
     setBusy(true);
-    const result = await fetchOwnerRedemptionStatus(requestId, displayTenantId);
+    const result = await fetchOwnerRedemptionStatus(requestId, pendingTenantId);
     if (activeContext.current !== activeKey ||
         claimLocationKey(readClaimTokenFromLocation()) !== activeKey) return;
     if (result.status === 'ok') {
