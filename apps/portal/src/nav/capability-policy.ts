@@ -18,6 +18,7 @@ export const EVENT_ROUTES = {
   guests: [
     'inventory.import',
     'redemption.approve',
+    'cs.lookup',
     'event.config',
     'export.create',
     'export.download',
