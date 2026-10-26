@@ -193,10 +193,23 @@ export function firstAllowedTenantPath(
   const tenantEvents = events.filter(
     (event) => event.tenantId === tenant.tenantId,
   );
+  const eventPath = tenantEvents.map(firstAllowedEventPath).find(Boolean) ?? null;
   // Event-only staff land on their assigned event, not a denied tenant dashboard.
   if (!canAccessTenantRoute('overview', tenant.tenantPermissions)) {
-    const eventPath = tenantEvents.map(firstAllowedEventPath).find(Boolean);
     if (eventPath) return eventPath;
+  }
+  // event.create alone exposes the tenant overview, but an assigned event's
+  // usable route is a better entry for staff without org management access.
+  if (
+    eventPath &&
+    !tenantEvents.some(
+      (event) => eventPath === `/t/${event.tenantId}/e/${event.eventId}`,
+    ) &&
+    !canAccessTenantRoute('events', tenant.tenantPermissions) &&
+    !canAccessTenantRoute('members', tenant.tenantPermissions) &&
+    !canAccessTenantRoute('settings', tenant.tenantPermissions)
+  ) {
+    return eventPath;
   }
   if (
     canAccessTenantRoute(
@@ -212,5 +225,5 @@ export function firstAllowedTenantPath(
   ) {
     return `/t/${tenant.tenantId}`;
   }
-  return tenantEvents.map(firstAllowedEventPath).find(Boolean) ?? null;
+  return eventPath;
 }
