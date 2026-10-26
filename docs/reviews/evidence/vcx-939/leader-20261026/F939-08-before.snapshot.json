@@ -1,0 +1,71 @@
+{
+  "origin": "http://localhost:3417/claim",
+  "refs": {
+    "e1": {
+      "name": "Bỏ qua đến nội dung",
+      "role": "link"
+    },
+    "e10": {
+      "name": "Nhận lời mời sự kiện",
+      "role": "heading"
+    },
+    "e11": {
+      "name": "Chưa đọc được trạng thái",
+      "role": "heading"
+    },
+    "e12": {
+      "name": "← Trang chủ",
+      "role": "link"
+    },
+    "e13": {
+      "name": "Khám phá",
+      "role": "link"
+    },
+    "e14": {
+      "name": "Đổi mã",
+      "role": "link"
+    },
+    "e15": {
+      "name": "Tài khoản",
+      "role": "link"
+    },
+    "e16": {
+      "name": "Kiểm tra trạng thái",
+      "role": "button"
+    },
+    "e2": {
+      "name": "Điều hướng chính",
+      "role": "navigation"
+    },
+    "e3": {
+      "name": "Liên kết chân trang",
+      "role": "navigation"
+    },
+    "e4": {
+      "name": "Vemoki — trang chủ",
+      "role": "link"
+    },
+    "e5": {
+      "name": "Khám phá",
+      "role": "link"
+    },
+    "e6": {
+      "name": "Đổi mã",
+      "role": "link"
+    },
+    "e7": {
+      "name": "Vé của tôi",
+      "role": "link"
+    },
+    "e8": {
+      "name": "Tài khoản",
+      "role": "link"
+    },
+    "e9": {
+      "name": "attendee@example.com",
+      "role": "link"
+    }
+  },
+  "snapshot": "- link \"Bỏ qua đến nội dung\" [ref=e1]\n- banner\n  - navigation \"Điều hướng chính\" [ref=e2]\n    - link \"Vemoki — trang chủ\" [ref=e4]\n      - StaticText \"vemoki\"\n    - link \"Khám phá\" [ref=e5]\n    - link \"Đổi mã\" [ref=e6]\n    - link \"Vé của tôi\" [ref=e7]\n    - link \"Tài khoản\" [ref=e8]\n    - link \"attendee@example.com\" [ref=e9]\n      - StaticText \"attendee@example.com\"\n- main\n  - sectionheader\n    - heading \"Nhận lời mời sự kiện\" [level=1, ref=e10]\n    - paragraph\n      - StaticText \"Lời mời nhận vé được gửi qua email. Email đã xác minh phải khớp lời mời.\"\n  - alert\n    - heading \"Chưa đọc được trạng thái\" [level=2, ref=e11]\n    - paragraph\n      - StaticText \"Chưa xác nhận được trạng thái mới. Thử kiểm tra lại sau.\"\n    - paragraph\n      - StaticText \"Chưa phải vé — kiểm tra lại khi có cập nhật.\"\n    - paragraph\n      - button \"Kiểm tra trạng thái\" [ref=e16]\n  - paragraph\n    - link \"← Trang chủ\" [ref=e12]\n- contentinfo\n  - StaticText \"vemoki\"\n  - StaticText \"Sự kiện & vé\"\n  - navigation \"Liên kết chân trang\" [ref=e3]\n    - link \"Khám phá\" [ref=e13]\n    - link \"Đổi mã\" [ref=e14]\n    - link \"Tài khoản\" [ref=e15]\n- alert",
+  "browserPageId": "ae824b11-08d2-49f2-b7e6-8af27ad3b0c0"
+}

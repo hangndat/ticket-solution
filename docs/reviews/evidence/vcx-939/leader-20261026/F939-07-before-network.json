@@ -1,0 +1,16 @@
+[
+  {
+    "url": "http://localhost:3417/api/bff/redeem",
+    "method": "POST",
+    "status": 201,
+    "timestamp": 1793009885685,
+    "requestId": "95722.156"
+  },
+  {
+    "url": "http://localhost:3417/api/bff/redemptions/da22c4d4-cfc8-4c5e-b794-59876e405ab8",
+    "method": "GET",
+    "status": 422,
+    "timestamp": 1793009936483,
+    "requestId": "95722.157"
+  }
+]

@@ -1,0 +1,11 @@
+{
+  "sha": "1f4ce0be70edfe864e399007bff2cf392285b086",
+  "sourceTree": "eccf9dadd81b2e1db01e2d784036a184aedba7b3",
+  "buildId": "FBtTotHjh3LNaWJJ8TiMh",
+  "url": "http://localhost:3417/_next/static/FBtTotHjh3LNaWJJ8TiMh/_buildManifest.js",
+  "http": 200,
+  "matchesDisk": true,
+  "assetSha256": "9476e0afd3f9da68a64e6ec58631191fd3eaca62c9f5a377e7517fe9a89e59ea",
+  "method": "Controlled local build/start in owned cwd; HTTP build manifest matches disk. Build commit is filesystem/process provenance, not a DOM marker.",
+  "at": "2026-10-26T10:38:15.675Z"
+}

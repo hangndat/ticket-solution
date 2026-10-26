@@ -1,0 +1,65 @@
+{
+  "id": "3d081b29-b51b-4ce3-ae0d-0fc356467d28",
+  "ok": true,
+  "result": {
+    "platform": "darwin",
+    "scannedAt": 1793010769083,
+    "ports": [
+      {
+        "id": "127.0.0.1:3417:18016",
+        "bindHost": "127.0.0.1",
+        "connectHost": "127.0.0.1",
+        "port": 3417,
+        "pid": 18016,
+        "processName": "node",
+        "protocol": "unknown",
+        "kind": "workspace",
+        "owner": {
+          "worktreeId": "909e450c-287a-413f-ad47-10304625422c::/Users/admin/SideProject/ticket-solution/vcx-939-uat-leader",
+          "repoId": "909e450c-287a-413f-ad47-10304625422c",
+          "displayName": "vcx-939-uat-leader",
+          "path": "/Users/admin/SideProject/ticket-solution/vcx-939-uat-leader",
+          "confidence": "cwd"
+        }
+      },
+      {
+        "id": "127.0.0.1:3540:94316",
+        "bindHost": "127.0.0.1",
+        "connectHost": "127.0.0.1",
+        "port": 3540,
+        "pid": 94316,
+        "processName": "node",
+        "protocol": "unknown",
+        "kind": "workspace",
+        "owner": {
+          "worktreeId": "909e450c-287a-413f-ad47-10304625422c::/Users/admin/SideProject/ticket-solution/vcx-939-uat-leader",
+          "repoId": "909e450c-287a-413f-ad47-10304625422c",
+          "displayName": "vcx-939-uat-leader",
+          "path": "/Users/admin/SideProject/ticket-solution/vcx-939-uat-leader",
+          "confidence": "cwd"
+        }
+      },
+      {
+        "id": "127.0.0.1:3541:7827",
+        "bindHost": "127.0.0.1",
+        "connectHost": "127.0.0.1",
+        "port": 3541,
+        "pid": 7827,
+        "processName": "node",
+        "protocol": "unknown",
+        "kind": "workspace",
+        "owner": {
+          "worktreeId": "909e450c-287a-413f-ad47-10304625422c::/Users/admin/SideProject/ticket-solution/vcx-939-uat-leader",
+          "repoId": "909e450c-287a-413f-ad47-10304625422c",
+          "displayName": "vcx-939-uat-leader",
+          "path": "/Users/admin/SideProject/ticket-solution/vcx-939-uat-leader",
+          "confidence": "cwd"
+        }
+      }
+    ],
+    "executionHostId": "local"
+  },
+  "_meta": {
+    "runtimeId": "afdfcca3-c341-421d-bc06-fd36ebaa692c"
+  }
+}

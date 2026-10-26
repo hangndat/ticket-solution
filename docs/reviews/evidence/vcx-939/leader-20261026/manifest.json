@@ -1,0 +1,127 @@
+{
+  "schema": "agent-workflow-guard/manifest/v1",
+  "capturedAt": "2026-10-26T10:40:02.668644+00:00",
+  "preflight": {
+    "fingerprint": "sha256:27888461bde02dfd9efb394e6bf6c65e60a30b807fab8a35390a09b65b9474e2",
+    "at": "2026-10-26T10:38:15.655Z",
+    "ok": true,
+    "kind": "integrity_expect_observation"
+  },
+  "expect": {
+    "route": {
+      "exact": "/claim"
+    },
+    "htmlLang": "vi",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "authMode": "public",
+    "dom": [
+      {
+        "selector": "[data-testid=guest-claim-result]",
+        "visible": true
+      }
+    ],
+    "build": {
+      "commit": "1f4ce0be70edfe864e399007bff2cf392285b086",
+      "id": "FBtTotHjh3LNaWJJ8TiMh"
+    },
+    "states": [
+      {
+        "id": "guest-rejected-1024",
+        "screenshot": "docs/reviews/evidence/vcx-939/leader-20261026/guest-rejected-fixed-1024.png",
+        "viewport": {
+          "width": 1024,
+          "height": 900
+        }
+      },
+      {
+        "id": "guest-rejected-1440",
+        "screenshot": "docs/reviews/evidence/vcx-939/leader-20261026/guest-rejected-fixed-1440.png",
+        "viewport": {
+          "width": 1440,
+          "height": 900
+        }
+      },
+      {
+        "id": "guest-rejected-390",
+        "screenshot": "docs/reviews/evidence/vcx-939/leader-20261026/guest-rejected-fixed-390.png",
+        "viewport": {
+          "width": 390,
+          "height": 844
+        }
+      }
+    ]
+  },
+  "observations": {
+    "schema": "workflow-guard-observation/v1",
+    "route": {
+      "pathname": "/claim"
+    },
+    "htmlLang": "vi",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "build": {
+      "commit": "1f4ce0be70edfe864e399007bff2cf392285b086",
+      "id": "FBtTotHjh3LNaWJJ8TiMh"
+    },
+    "dom": {
+      "[data-testid=guest-claim-result]": {
+        "found": true,
+        "visible": true
+      }
+    },
+    "authProbe": {
+      "status": "skipped"
+    },
+    "capturedAt": "2026-10-26T10:38:15.655Z"
+  },
+  "git": {
+    "commit": {
+      "ref": "1f4ce0be70edfe864e399007bff2cf392285b086",
+      "sha": "1f4ce0be70edfe864e399007bff2cf392285b086",
+      "dirty": false
+    },
+    "sourceTree": {
+      "path": "apps/web",
+      "sha": "eccf9dadd81b2e1db01e2d784036a184aedba7b3"
+    },
+    "build": {
+      "id": "FBtTotHjh3LNaWJJ8TiMh"
+    },
+    "scope": {
+      "base": "8a2a532d2e45fa5d59aba1f78345f477f3d10ea4",
+      "head": "1f4ce0be70edfe864e399007bff2cf392285b086",
+      "mode": "implementation"
+    }
+  },
+  "artifacts": [
+    {
+      "path": "docs/reviews/evidence/vcx-939/leader-20261026/guest-rejected-fixed-1024.png",
+      "sha256": "a6a4d835461c9151c23081cd49708dd24e3108193eb26c4e9a3061ba38a6a599",
+      "viewport": {
+        "width": 1024,
+        "height": 900
+      }
+    },
+    {
+      "path": "docs/reviews/evidence/vcx-939/leader-20261026/guest-rejected-fixed-1440.png",
+      "sha256": "a6217b0fbcd7b56b13f245db2b15c8424eb67d9fd9eff4a2a0f2ad469d9b0a70",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "path": "docs/reviews/evidence/vcx-939/leader-20261026/guest-rejected-fixed-390.png",
+      "sha256": "6839a24c6b9264d57ccd5a86ab44e05d700eb83b5c6b489680c5d47a48e5a71a",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    }
+  ]
+}
