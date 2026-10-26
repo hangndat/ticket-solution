@@ -3,7 +3,7 @@
 **PR:** [#982](https://github.com/hangndat/ticket-solution/pull/982) · **Epic:** [#914](https://github.com/hangndat/ticket-solution/issues/914)
 **Code SHA (runtime + build):** `ecda980af0231466c62164d9c77f308e779d0291`
 
-## Verdict: PASS with GAP
+## Verdict: PASS cho PR3 UI; giới hạn backend deny thật
 
 | Hạng mục | Kết quả |
 | --- | --- |
@@ -13,8 +13,8 @@
 | Onboarding `/onboarding/{tenantId}` | **PASS** — first-run/pending copy, không crash |
 | Permission (report-only @ guests) | **PASS** — `Result` 403, title «Không có quyền», CTA «Về trang được phép» |
 | Loading sau điều hướng events | **PASS** — không kẹt Spin |
-| BFF error + nút «Thử lại» | **GAP** — không gây fault trên API read-only |
-| Analytics deny title runtime | **GAP** — persona `report.fixture` có `report.read`, nên analytics được phép; không có fixture deny phù hợp |
+| BFF error + nút «Thử lại» | **PASS, fault cô lập** — intercept GET portfolio trong tab Orca trả 400 có mã lỗi; `Alert` và nút retry hiển thị, retry sau khi bỏ fault trở lại trạng thái ready |
+| Analytics deny title runtime | **PASS, fault cô lập** — intercept GET portfolio trong tab Orca trả 403; `Result` 403 hiển thị title «Không có quyền» và CTA «Về trang được phép» |
 
 ## Runtime và evidence
 
@@ -24,6 +24,6 @@
 | API read-only | `http://127.0.0.1:3542` |
 | Keycloak | `http://127.0.0.1:8180/realms/ticket` |
 
-Orca `tab create` + `exec` (goto, viewport, screenshot, eval). Tab đóng sau run. Kết quả máy: [`uat-results-ecda980a.json`](evidence/vcx-975/o26-pr3-noah/uat-results-ecda980a.json); [ports snapshot](evidence/vcx-975/o26-pr3-noah/ports-orca.json); [provenance](evidence/vcx-975/o26-pr3-noah/evidence-provenance.md). Screenshot và runner giữ gitignored trong `apps/portal/.uat-artifacts/vcx975-pr3/` và `.local-dev/.uat-artifacts/vcx975-noah-pr3/`.
+Orca `tab create` + `exec` (goto, viewport, screenshot, eval). Tab đóng sau run. Kết quả máy: [matrix ban đầu](evidence/vcx-975/o26-pr3-noah/uat-results-ecda980a.json), [bổ sung error/retry/403](evidence/vcx-975/o26-pr3-noah/uat-gaps-ecda980a.json), [ports snapshot](evidence/vcx-975/o26-pr3-noah/ports-orca.json), [provenance](evidence/vcx-975/o26-pr3-noah/evidence-provenance.md). Screenshot `analytics-error-retry-ecda980a.png` và `analytics-403-title-ecda980a.png` cùng runner giữ gitignored trong `apps/portal/.uat-artifacts/vcx975-pr3/` và `.local-dev/.uat-artifacts/vcx975-noah-pr3/`.
 
-Không bootstrap/drop DB `ticket_d9_demo`, không sửa client hoặc dữ liệu #928, không sửa product code trong phiên UAT. Hai GAP giới hạn kết luận runtime của PR3; #975 vẫn mở.
+Fault injection chỉ thay `window.fetch` trong một tab đã auth, phục hồi trước khi đóng; không mutate API hoặc DB. Probe 403 chứng minh UI Analytics trên response 403 giả lập, chưa phải bằng chứng một persona thực bị backend từ chối. Không bootstrap/drop DB `ticket_d9_demo`, không sửa client hoặc dữ liệu #928, không sửa product code trong phiên UAT. #975 vẫn mở.

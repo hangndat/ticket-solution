@@ -10,7 +10,7 @@
 | API | `http://127.0.0.1:3542` read-only (reuse `vcx932-noah`) |
 | Driver | Orca `tab create` + `exec` (snapshot/screenshot/viewport) |
 | Screenshot (gitignored) | `apps/portal/.uat-artifacts/vcx975-pr3/*` |
-| Machine JSON | **`uat-results-ecda980a.json`** (matrix 3 viewport và route, PASS with GAP) |
+| Machine JSON | `uat-results-ecda980a.json` (matrix 3 viewport và route); **`uat-gaps-ecda980a.json`** (fault cô lập 400/retry/403, PASS) |
 | Harness | `.local-dev/.uat-artifacts/vcx975-noah-pr3/` — fork `vcx975-noah-shell` scripts, env port **3021** |
 
 Không bootstrap/drop `ticket_d9_demo`. Không sửa product code trong phiên này.
