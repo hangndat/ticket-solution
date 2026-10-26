@@ -1,0 +1,44 @@
+{
+  "runId": "20261026T1200Z-noah-actor",
+  "issue": 926,
+  "pr": 959,
+  "sourceSHA": "aaafad413f8c3071e5558405203f5d57fe0484ff",
+  "previousPacket": "20261026T0956Z-noah",
+  "previousMeasuredSHA": "d00a265cca1206b68601c75d445b633f7d590b57",
+  "provenance": {
+    "dispatchId": "ctx_28ba487f14f4",
+    "taskId": "task_be515036a983",
+    "harnessNote": "manual-context-probe.mjs gitignored; subject sanitizer + actorVerification delta",
+    "portMap926": {
+      "portal": 3013,
+      "apiActualAtProbe": 3499,
+      "evidenceFile": "ports-orca.json"
+    }
+  },
+  "env": {
+    "portal": "http://127.0.0.1:3013",
+    "api": "http://127.0.0.1:3499",
+    "oidc": "http://127.0.0.1:8080/realms/ticket"
+  },
+  "artifactHashes": {
+    "RUN-REPORT.md": "cfbf7f579bb78b4f1d1d5e1d835ffa218bb6c486d2fb19b42e7d8227972003dd",
+    "actor-delta.json": "8fa1b2427e9013da42ec27dcc1de96d7b9ee4c250d30e67623223a4acebde3f2",
+    "context-owner-audit.png": "fd2781e802d9dd07b3fc179e7dd0bfaa2831952fab5b31ff08f765a40fd39be4",
+    "context-owner-gate.png": "2e99aca9396c3bf81ccdfcfd89cc0f8fdf79c8b6ee3fb9570df803c4a1756517",
+    "context-owner-guests.png": "516b7dab953012bec26f1653dfcb9e819281ec5fbab4250daa948fa54fd81238",
+    "context-owner-overview.png": "24988c0e973535b53600fce7b92fa0329c7cb3d21a8e01563596fda339669afe",
+    "context-probe-owner.json": "09824f0ac724f82c45ba0d0f78fe262e767e28576f1a11503949e4dfa97004c8",
+    "context-probe-report-only.json": "4748379262351fdaf5e06ec0abf413f4dac0dc4cafc3a3a690617853873c6a38",
+    "context-report-only-audit.png": "913c309e91fa55d94ce802f427d06bf616d15ce5c5b2e7b1c0b4a5f8ff6add59",
+    "context-report-only-gate.png": "5c2724467db9d8792d836794947d95f5d1d5cc390c21977fa2e5f42bbbb3c4e8",
+    "context-report-only-guests.png": "4fa832636f7cf984cec95fc3e7a4a288f0743a17fedb069793a9bc91c29d9db2",
+    "context-report-only-overview.png": "1aa93f5fd0ba31b4df16283c54e37b8b0aeccb6322f7b64c86d4390da487d0b6",
+    "ports-orca.json": "30f363f30f38bfe841eecad9d4960059b513ed6b8f415467dc15d6610c46bc46"
+  },
+  "secretsExcluded": [
+    "totp-secrets.json",
+    "cookies",
+    "OIDC tokens",
+    "raw userId/sub"
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "testedSHA": "5136c92a6b1d2c52d95399a096002f44fb910756",
+  "at": "2026-10-26T21:20:00+08:00",
+  "summary": "Đối chiếu AC #926 với O23: Scanner Portal /gate không thuộc AC; denied = PASS expected-deny.",
+  "adjustments": [
+    {
+      "source": "f01-f05-probe-results.json",
+      "persona": "scanner",
+      "route": "overview",
+      "probeAc": "FAIL",
+      "acVerdict": "N/A",
+      "reason": "Probe cũ dùng /overview; AC Scanner Portal không yêu cầu. Thay bằng scanner-gate-viewports.json."
+    },
+    {
+      "source": "scanner-gate-viewports.json",
+      "persona": "scanner",
+      "route": "gate",
+      "probeAc": "denied",
+      "acVerdict": "PASS",
+      "reason": "expected-deny-O23"
+    }
+  ],
+  "runtimeVerdict": "PASS"
+}
