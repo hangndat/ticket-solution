@@ -1,0 +1,393 @@
+{
+  "at": "2026-10-26T14:57:20.962Z",
+  "runner": "Noah",
+  "issue": 975,
+  "pr": 982,
+  "slice": "O26-PR3",
+  "codeSha": "ecda980af0231466c62164d9c77f308e779d0291",
+  "buildId": "",
+  "origin": "http://uat975pr3.localhost:3021",
+  "api": "http://127.0.0.1:3542",
+  "oidcClient": "ticket-admin-web-vcx975-uat975pr3",
+  "fixturePolicy": "read-only API :3542; no ticket_d9_demo bootstrap; no #928 client",
+  "orca": {
+    "executionHostId": "local",
+    "portsScan": {
+      "platform": "darwin",
+      "scannedAt": 1793026566065,
+      "ports": [
+        {
+          "id": "*:3021:91469",
+          "bindHost": "*",
+          "connectHost": "localhost",
+          "port": 3021,
+          "pid": 91469,
+          "processName": "node",
+          "protocol": "http",
+          "kind": "workspace",
+          "owner": {
+            "worktreeId": "909e450c-287a-413f-ad47-10304625422c::/Users/admin/SideProject/ticket-solution/vcx-975-antd-surface",
+            "repoId": "909e450c-287a-413f-ad47-10304625422c",
+            "displayName": "vcx-975-antd-surface",
+            "path": "/Users/admin/SideProject/ticket-solution/vcx-975-antd-surface",
+            "confidence": "cwd"
+          },
+          "advertisedUrl": "http://uat975pr3.localhost:3021"
+        }
+      ],
+      "executionHostId": "local"
+    },
+    "browserPageId": "6282a35c-cc13-47cd-a269-6bea0c491eb6"
+  },
+  "viewports": [
+    "390x844",
+    "1024x900",
+    "1440x900"
+  ],
+  "routes": {
+    "events": "http://uat975pr3.localhost:3021/t/d9d9f001-0001-4000-8000-000000000001/events",
+    "overview": "http://uat975pr3.localhost:3021/t/d9d9f001-0001-4000-8000-000000000001/e/d9d9f001-0002-4000-8000-000000000001",
+    "analytics": "http://uat975pr3.localhost:3021/t/d9d9f001-0001-4000-8000-000000000001/analytics",
+    "onboarding": "http://uat975pr3.localhost:3021/onboarding/d9d9f001-0001-4000-8000-000000000001",
+    "guestsDenied": "http://uat975pr3.localhost:3021/t/d9d9f001-0001-4000-8000-000000000001/e/d9d9f001-0002-4000-8000-000000000001/guests"
+  },
+  "checks": [
+    {
+      "id": "auth-owner",
+      "verdict": "PASS",
+      "note": "OIDC + BFF /me/tenants 200",
+      "probe": {},
+      "shot": null
+    },
+    {
+      "id": "shell-events-390x844",
+      "verdict": "PASS",
+      "note": "shell DOM OK, no legacy SurfaceState",
+      "probe": {
+        "accountMenu": true,
+        "analyticsTable": true,
+        "brand": true,
+        "contextStrip": true,
+        "dpr": 1,
+        "emptyState": false,
+        "goAllowedBtn": false,
+        "href": "http://uat975pr3.localhost:3021/t/d9d9f001-0001-4000-8000-000000000001/events",
+        "innerHeight": 844,
+        "innerWidth": 390,
+        "legacySurfaceState": false,
+        "onboardingMarker": false,
+        "permissionTitle": false,
+        "portalMain": true,
+        "portfolioAsOf": false,
+        "reactError": false,
+        "recheckBtn": false,
+        "result403": false,
+        "result403Title": "",
+        "retryBtn": false,
+        "shell": true,
+        "spinLoading": false,
+        "title": "Vemoki Portal"
+      },
+      "shot": "owner-shell-events-390x844-ecda980a.png"
+    },
+    {
+      "id": "shell-events-1024x900",
+      "verdict": "PASS",
+      "note": "shell DOM OK, no legacy SurfaceState",
+      "probe": {
+        "accountMenu": true,
+        "analyticsTable": true,
+        "brand": true,
+        "contextStrip": true,
+        "dpr": 1,
+        "emptyState": false,
+        "goAllowedBtn": false,
+        "href": "http://uat975pr3.localhost:3021/t/d9d9f001-0001-4000-8000-000000000001/events",
+        "innerHeight": 900,
+        "innerWidth": 1024,
+        "legacySurfaceState": false,
+        "onboardingMarker": false,
+        "permissionTitle": false,
+        "portalMain": true,
+        "portfolioAsOf": false,
+        "reactError": false,
+        "recheckBtn": false,
+        "result403": false,
+        "result403Title": "",
+        "retryBtn": false,
+        "shell": true,
+        "spinLoading": false,
+        "title": "Vemoki Portal"
+      },
+      "shot": "owner-shell-events-1024x900-ecda980a.png"
+    },
+    {
+      "id": "shell-events-1440x900",
+      "verdict": "PASS",
+      "note": "shell DOM OK, no legacy SurfaceState",
+      "probe": {
+        "accountMenu": true,
+        "analyticsTable": true,
+        "brand": true,
+        "contextStrip": true,
+        "dpr": 1,
+        "emptyState": false,
+        "goAllowedBtn": false,
+        "href": "http://uat975pr3.localhost:3021/t/d9d9f001-0001-4000-8000-000000000001/events",
+        "innerHeight": 900,
+        "innerWidth": 1440,
+        "legacySurfaceState": false,
+        "onboardingMarker": false,
+        "permissionTitle": false,
+        "portalMain": true,
+        "portfolioAsOf": false,
+        "reactError": false,
+        "recheckBtn": false,
+        "result403": false,
+        "result403Title": "",
+        "retryBtn": false,
+        "shell": true,
+        "spinLoading": false,
+        "title": "Vemoki Portal"
+      },
+      "shot": "owner-shell-events-1440x900-ecda980a.png"
+    },
+    {
+      "id": "event-overview",
+      "verdict": "PASS",
+      "note": "overview rendered",
+      "probe": {
+        "accountMenu": true,
+        "analyticsTable": false,
+        "brand": true,
+        "contextStrip": true,
+        "dpr": 1,
+        "emptyState": false,
+        "goAllowedBtn": false,
+        "href": "http://uat975pr3.localhost:3021/t/d9d9f001-0001-4000-8000-000000000001/e/d9d9f001-0002-4000-8000-000000000001",
+        "innerHeight": 900,
+        "innerWidth": 1024,
+        "legacySurfaceState": false,
+        "onboardingMarker": true,
+        "permissionTitle": false,
+        "portalMain": true,
+        "portfolioAsOf": false,
+        "reactError": false,
+        "recheckBtn": false,
+        "result403": false,
+        "result403Title": "",
+        "retryBtn": false,
+        "shell": true,
+        "spinLoading": false,
+        "title": "Vemoki Portal"
+      },
+      "shot": "owner-event-overview-1024x900-ecda980a.png"
+    },
+    {
+      "id": "analytics-owner",
+      "verdict": "PASS",
+      "note": "portfolio/table or empty antd surface",
+      "probe": {
+        "accountMenu": true,
+        "analyticsTable": true,
+        "brand": true,
+        "contextStrip": true,
+        "dpr": 1,
+        "emptyState": false,
+        "goAllowedBtn": false,
+        "href": "http://uat975pr3.localhost:3021/t/d9d9f001-0001-4000-8000-000000000001/analytics",
+        "innerHeight": 900,
+        "innerWidth": 1440,
+        "legacySurfaceState": false,
+        "onboardingMarker": false,
+        "permissionTitle": false,
+        "portalMain": true,
+        "portfolioAsOf": true,
+        "reactError": false,
+        "recheckBtn": false,
+        "result403": false,
+        "result403Title": "",
+        "retryBtn": false,
+        "shell": true,
+        "spinLoading": false,
+        "title": "Vemoki Portal"
+      },
+      "shot": "owner-analytics-1440x900-ecda980a.png"
+    },
+    {
+      "id": "onboarding-route",
+      "verdict": "PASS",
+      "note": "onboarding/pending/first-run copy visible",
+      "probe": {
+        "accountMenu": true,
+        "analyticsTable": false,
+        "brand": true,
+        "contextStrip": true,
+        "dpr": 1,
+        "emptyState": false,
+        "goAllowedBtn": false,
+        "href": "http://uat975pr3.localhost:3021/onboarding/d9d9f001-0001-4000-8000-000000000001",
+        "innerHeight": 900,
+        "innerWidth": 1440,
+        "legacySurfaceState": false,
+        "onboardingMarker": true,
+        "permissionTitle": false,
+        "portalMain": true,
+        "portfolioAsOf": false,
+        "reactError": false,
+        "recheckBtn": false,
+        "result403": false,
+        "result403Title": "",
+        "retryBtn": false,
+        "shell": true,
+        "spinLoading": false,
+        "title": "Vemoki Portal"
+      },
+      "shot": "owner-onboarding-1024x900-ecda980a.png"
+    },
+    {
+      "id": "permission-guests-report-only",
+      "verdict": "PASS",
+      "note": "permission copy + safe exit/retry affordance",
+      "probe": {
+        "accountMenu": false,
+        "analyticsTable": false,
+        "brand": false,
+        "contextStrip": false,
+        "dpr": 2,
+        "emptyState": false,
+        "goAllowedBtn": true,
+        "href": "http://uat975pr3.localhost:3021/t/d9d9f001-0001-4000-8000-000000000001/e/d9d9f001-0002-4000-8000-000000000001/guests",
+        "innerHeight": 917,
+        "innerWidth": 731,
+        "legacySurfaceState": false,
+        "onboardingMarker": false,
+        "permissionTitle": true,
+        "portalMain": false,
+        "portfolioAsOf": false,
+        "reactError": false,
+        "recheckBtn": false,
+        "result403": true,
+        "result403Title": "Không có quyền",
+        "retryBtn": false,
+        "shell": false,
+        "spinLoading": false,
+        "title": "Vemoki Portal"
+      },
+      "shot": "report-only-guests-deny-1024x900-ecda980a.png"
+    },
+    {
+      "id": "analytics-403-title",
+      "verdict": "GAP",
+      "note": "report.fixture có report.read — analytics load; không tái hiện Result deny analytics trên fixture read-only",
+      "probe": {
+        "accountMenu": true,
+        "analyticsTable": true,
+        "brand": true,
+        "contextStrip": true,
+        "dpr": 1,
+        "emptyState": false,
+        "goAllowedBtn": false,
+        "href": "http://uat975pr3.localhost:3021/t/d9d9f001-0001-4000-8000-000000000001/analytics",
+        "innerHeight": 900,
+        "innerWidth": 1024,
+        "legacySurfaceState": false,
+        "onboardingMarker": false,
+        "permissionTitle": false,
+        "portalMain": true,
+        "portfolioAsOf": true,
+        "reactError": false,
+        "recheckBtn": false,
+        "result403": false,
+        "result403Title": "",
+        "retryBtn": false,
+        "shell": true,
+        "spinLoading": false,
+        "title": "Vemoki Portal"
+      },
+      "shot": "report-only-analytics-403-1024x900-ecda980a.png"
+    },
+    {
+      "id": "error-retry-runtime",
+      "verdict": "GAP",
+      "note": "Không kích hoạt lỗi mạng/BFF có chủ đích (read-only API :3542) — retry/exit qua permission surfaces",
+      "probe": {
+        "retryAffordanceOnDeny": true
+      },
+      "shot": null
+    },
+    {
+      "id": "loading-settled",
+      "verdict": "PASS",
+      "note": "Không kẹt Spin sau load events (3 viewport)",
+      "probe": {},
+      "shot": null
+    }
+  ],
+  "shots": [
+    {
+      "file": "owner-shell-events-390x844-ecda980a.png",
+      "privatePath": "/Users/admin/SideProject/ticket-solution/vcx-975-antd-surface/apps/portal/.uat-artifacts/vcx975-pr3/owner-shell-events-390x844-ecda980a.png",
+      "dims": {
+        "dpr": 1,
+        "innerHeight": 844,
+        "innerWidth": 390
+      },
+      "ih": {
+        "width": 390,
+        "height": 844
+      },
+      "pixelPass": true,
+      "route": "events",
+      "viewport": "390x844",
+      "privateDir": "apps/portal/.uat-artifacts/vcx975-pr3"
+    },
+    {
+      "file": "owner-shell-events-1024x900-ecda980a.png",
+      "privatePath": "/Users/admin/SideProject/ticket-solution/vcx-975-antd-surface/apps/portal/.uat-artifacts/vcx975-pr3/owner-shell-events-1024x900-ecda980a.png",
+      "dims": {
+        "dpr": 1,
+        "innerHeight": 900,
+        "innerWidth": 1024
+      },
+      "ih": {
+        "width": 1024,
+        "height": 900
+      },
+      "pixelPass": true,
+      "route": "events",
+      "viewport": "1024x900",
+      "privateDir": "apps/portal/.uat-artifacts/vcx975-pr3"
+    },
+    {
+      "file": "owner-shell-events-1440x900-ecda980a.png",
+      "privatePath": "/Users/admin/SideProject/ticket-solution/vcx-975-antd-surface/apps/portal/.uat-artifacts/vcx975-pr3/owner-shell-events-1440x900-ecda980a.png",
+      "dims": {
+        "dpr": 1,
+        "innerHeight": 900,
+        "innerWidth": 1440
+      },
+      "ih": {
+        "width": 1440,
+        "height": 900
+      },
+      "pixelPass": true,
+      "route": "events",
+      "viewport": "1440x900",
+      "privateDir": "apps/portal/.uat-artifacts/vcx975-pr3"
+    },
+    {
+      "file": "owner-event-overview-1024x900-ecda980a.png",
+      "route": "overview",
+      "viewport": "1024x900",
+      "privateDir": "apps/portal/.uat-artifacts/vcx975-pr3"
+    },
+    {
+      "file": "owner-analytics-1440x900-ecda980a.png",
+      "route": "analytics",
+      "viewport": "1440x900",
+      "privateDir": "apps/portal/.uat-artifacts/vcx975-pr3"
+    }
+  ],
+  "verdict": "PASS with GAP"
+}
