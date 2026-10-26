@@ -1,0 +1,11 @@
+{
+  "testedSha": "3ef94f89b89ee519e98344eefe69c82450ccc406",
+  "form_submit_probe": "PASS",
+  "pending_to_issued": "PARTIAL",
+  "pending_to_rejected": "PASS",
+  "outage_unknown": "GAP",
+  "email_failure": "GAP",
+  "refresh_after_logout_all": "FAIL",
+  "refresh_after_logout_all_owner": "environment",
+  "f939_05": "open"
+}

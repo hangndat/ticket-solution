@@ -1,0 +1,10 @@
+{"ts": "2026-10-26T02:44:50.134371+00:00", "label": "form_submit_probe_bff", "httpStatus": 422, "code": "CODE_INVALID"}
+{"ts": "2026-10-26T02:44:58.136618+00:00", "label": "form_submit_probe_ui", "pass": true}
+{"ts": "2026-10-26T02:44:58.171495+00:00", "label": "resolve_before_browser", "code": "DEMO-V939-PEND-ISSUE-2", "httpStatus": 201, "approvalMode": "MANUAL"}
+{"ts": "2026-10-26T02:45:16.523630+00:00", "label": "redeem_manual_pending", "httpStatus": 201, "requestId": "5d143aba-a3d6-4ea4-ba43-19798d5d1075", "status": "PENDING_REVIEW"}
+{"ts": "2026-10-26T02:45:16.549557+00:00", "label": "staff_approve", "httpStatus": 201, "requestId": "5d143aba-a3d6-4ea4-ba43-19798d5d1075", "ticketId": "b4f15618-e6a8-4ed7-8b9d-1e3b956501d4"}
+{"ts": "2026-10-26T02:45:21.617478+00:00", "label": "browser_poll_issued", "pass": false, "browserPending": false}
+{"ts": "2026-10-26T02:45:21.654927+00:00", "label": "redeem_manual_pending_reject", "httpStatus": 201, "requestId": "1790956f-69c1-4930-b18e-02a9590085a4"}
+{"ts": "2026-10-26T02:45:40.054162+00:00", "label": "staff_deny", "httpStatus": 201, "status": "REJECTED"}
+{"ts": "2026-10-26T02:45:44.869747+00:00", "label": "browser_rejected", "pass": true}
+{"ts": "2026-10-26T02:47:36.504031+00:00", "label": "api_outage_unknown", "pass": false}
