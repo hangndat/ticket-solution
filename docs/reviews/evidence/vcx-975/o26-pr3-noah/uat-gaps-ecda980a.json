@@ -1,0 +1,50 @@
+{
+  "codeSha": "ecda980af0231466c62164d9c77f308e779d0291",
+  "method": "browser fetch fault injection, isolated dedicated Portal origin; no API/DB mutation",
+  "checks": [
+    {
+      "id": "analytics-initial",
+      "verdict": "PASS",
+      "probe": {
+        "asof": true,
+        "href": "http://uat975pr3.localhost:3021/t/d9d9f001-0001-4000-8000-000000000001/analytics",
+        "refresh": true
+      }
+    },
+    {
+      "id": "analytics-bff-error-retry",
+      "verdict": "PASS",
+      "probe": {
+        "alert": true,
+        "hits": 1,
+        "href": "http://uat975pr3.localhost:3021/t/d9d9f001-0001-4000-8000-000000000001/analytics",
+        "log": [
+          "/api/bff/tenants/d9d9f001-0001-4000-8000-000000000001/reports/portfolio?limit=20"
+        ],
+        "mode": "400",
+        "retry": true,
+        "title": ""
+      }
+    },
+    {
+      "id": "analytics-retry-recovery",
+      "verdict": "PASS",
+      "probe": {
+        "asof": true,
+        "error": false,
+        "refresh": true
+      }
+    },
+    {
+      "id": "analytics-403-title",
+      "verdict": "PASS",
+      "probe": {
+        "goAllowed": true,
+        "hits": 1,
+        "result403": true,
+        "title": "Không có quyền"
+      }
+    }
+  ],
+  "verdict": "PASS"
+}
