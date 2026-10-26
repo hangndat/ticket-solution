@@ -20,6 +20,7 @@ import {
 } from '@ticket/backend';
 import { ConfigPublishController, ConfigPublishService } from './config';
 import { InventoryController, InventoryService } from './inventory';
+import { TenantLimitsController, TenantLimitsService } from './tenant-limits';
 import { ApprovalController, ApprovalService } from './approval';
 import { ReportController, ReportService } from './reporting';
 import { GateController, GateService } from './gate';
@@ -147,6 +148,7 @@ export async function createApp(
       GateController,
       ConfigPublishController,
       InventoryController,
+      TenantLimitsController,
       ApprovalController,
       ReportController,
       CsController,
@@ -196,6 +198,10 @@ export async function createApp(
       {
         provide: InventoryService,
         useValue: new InventoryService({ ...ticketDeps, env }),
+      },
+      {
+        provide: TenantLimitsService,
+        useValue: new TenantLimitsService(ticketDeps),
       },
       {
         provide: ApprovalService,
