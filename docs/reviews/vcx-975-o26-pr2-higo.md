@@ -34,7 +34,7 @@
 | Trường | Giá trị |
 | --- | --- |
 | **codeSha** | `7e4c5fc784d83402e74c4d834c5935a8d0fd6fa2` |
-| **evidenceSha** | `7e4c5fc784d83402e74c4d834c5935a8d0fd6fa2` |
+| **evidenceSha** | `1ace3bb6f24555843f6e84460a54261f363f46ea` |
 
 ## Verdict worker
 
