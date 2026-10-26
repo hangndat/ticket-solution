@@ -1,0 +1,65 @@
+[
+  {
+    "url": "http://localhost:3417/api/bff/me/events",
+    "method": "GET",
+    "status": 200,
+    "timestamp": 1793010052409,
+    "requestId": "3385.79"
+  },
+  {
+    "url": "http://localhost:3417/api/bff/me/tenants",
+    "method": "GET",
+    "status": 200,
+    "timestamp": 1793010052409,
+    "requestId": "3385.80"
+  },
+  {
+    "url": "http://localhost:3417/api/bff/public/tenants/mfest-demo/events/mfest",
+    "method": "GET",
+    "status": 200,
+    "timestamp": 1793010052409,
+    "requestId": "3385.81"
+  },
+  {
+    "url": "http://localhost:3417/api/bff/me/events",
+    "method": "GET",
+    "status": 200,
+    "timestamp": 1793010052410,
+    "requestId": "3385.82"
+  },
+  {
+    "url": "http://localhost:3417/api/bff/me/tenants",
+    "method": "GET",
+    "status": 200,
+    "timestamp": 1793010052410,
+    "requestId": "3385.83"
+  },
+  {
+    "url": "http://localhost:3417/api/bff/public/tenants/mfest-demo/events/mfest",
+    "method": "GET",
+    "status": 200,
+    "timestamp": 1793010052410,
+    "requestId": "3385.84"
+  },
+  {
+    "url": "http://localhost:3417/api/bff/me",
+    "method": "GET",
+    "status": 200,
+    "timestamp": 1793010052410,
+    "requestId": "3385.85"
+  },
+  {
+    "url": "http://localhost:3417/api/bff/redeem",
+    "method": "POST",
+    "status": 201,
+    "timestamp": 1793010054700,
+    "requestId": "3385.86"
+  },
+  {
+    "url": "http://localhost:3417/api/bff/redemptions/afdadc9b-313a-4ddd-9d8f-33cad641f05c?tenantId=d9d9f001-0001-4000-8000-000000000001",
+    "method": "GET",
+    "status": 200,
+    "timestamp": 1793010074601,
+    "requestId": "3385.87"
+  }
+]

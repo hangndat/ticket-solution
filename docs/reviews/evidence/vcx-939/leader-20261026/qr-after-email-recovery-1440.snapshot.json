@@ -1,0 +1,67 @@
+{
+  "origin": "http://localhost:3417/t/mfest-demo/tickets/73894c9c-3b93-421d-bc05-b46f3a499024?tenantId=d9d9f001-0001-4000-8000-000000000001",
+  "refs": {
+    "e1": {
+      "name": "Bỏ qua đến nội dung",
+      "role": "link"
+    },
+    "e10": {
+      "name": "attendee@example.com",
+      "role": "link"
+    },
+    "e11": {
+      "name": "Đăng nhập",
+      "role": "link"
+    },
+    "e12": {
+      "name": "Đổi mã lấy vé",
+      "role": "link"
+    },
+    "e13": {
+      "name": "Khám phá",
+      "role": "link"
+    },
+    "e14": {
+      "name": "Đổi mã",
+      "role": "link"
+    },
+    "e15": {
+      "name": "Tài khoản",
+      "role": "link"
+    },
+    "e2": {
+      "name": "Điều hướng chính",
+      "role": "navigation"
+    },
+    "e3": {
+      "name": "Vé của bạn",
+      "role": "heading"
+    },
+    "e4": {
+      "name": "Liên kết chân trang",
+      "role": "navigation"
+    },
+    "e5": {
+      "name": "Vemoki — trang chủ",
+      "role": "link"
+    },
+    "e6": {
+      "name": "Khám phá",
+      "role": "link"
+    },
+    "e7": {
+      "name": "Đổi mã",
+      "role": "link"
+    },
+    "e8": {
+      "name": "Vé của tôi",
+      "role": "link"
+    },
+    "e9": {
+      "name": "Tài khoản",
+      "role": "link"
+    }
+  },
+  "snapshot": "- link \"Bỏ qua đến nội dung\" [ref=e1]\n- banner\n  - navigation \"Điều hướng chính\" [ref=e2]\n    - link \"Vemoki — trang chủ\" [ref=e5]\n      - StaticText \"vemoki\"\n    - link \"Khám phá\" [ref=e6]\n    - link \"Đổi mã\" [ref=e7]\n    - link \"Vé của tôi\" [ref=e8]\n    - link \"Tài khoản\" [ref=e9]\n    - link \"attendee@example.com\" [ref=e10]\n      - StaticText \"attendee@example.com\"\n- main\n  - heading \"Vé của bạn\" [level=1, ref=e3]\n  - status\n    - strong\n      - StaticText \"Cần đăng nhập\"\n    - paragraph\n      - StaticText \"Liên kết vé yêu cầu phiên đăng nhập của chủ vé. Đăng nhập để tiếp tục — chúng tôi không hiển thị chi tiết vé khi chưa xác minh.\"\n    - link \"Đăng nhập\" [ref=e11]\n    - link \"Đổi mã lấy vé\" [ref=e12]\n- contentinfo\n  - StaticText \"vemoki\"\n  - StaticText \"Sự kiện & vé\"\n  - navigation \"Liên kết chân trang\" [ref=e4]\n    - link \"Khám phá\" [ref=e13]\n    - link \"Đổi mã\" [ref=e14]\n    - link \"Tài khoản\" [ref=e15]\n- alert",
+  "browserPageId": "cc92b30a-bfe0-4d70-9a66-93207bf8544a"
+}

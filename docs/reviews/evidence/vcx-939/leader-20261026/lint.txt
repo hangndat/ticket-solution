@@ -1,0 +1,4 @@
+
+> @ticket/web@0.1.0 lint /Users/admin/SideProject/ticket-solution/vcx-939-uat-leader/apps/web
+> eslint . --max-warnings 0
+

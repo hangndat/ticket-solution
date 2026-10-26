@@ -1,0 +1,104 @@
+
+> @ticket/web@0.1.0 build /Users/admin/SideProject/ticket-solution/vcx-939-uat-leader/apps/web
+> next build
+
+▲ Next.js 16.4.2 (Turbopack)
+✓ Running next.config.ts took 17ms
+
+  Creating an optimized production build ...
+(node:24409) [DEP0205] DeprecationWarning: `module.register()` is deprecated. Use `module.registerHooks()` instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+✓ Compiled successfully in 1332ms
+  Running TypeScript ...
+  Finished TypeScript in 1060ms ...
+  Collecting page data using 13 workers ...
+  Generating static pages using 13 workers (0/32) ...
+  Generating static pages using 13 workers (8/32) 
+  Generating static pages using 13 workers (16/32) 
+  Generating static pages using 13 workers (24/32) 
+✓ Generating static pages using 13 workers (32/32) in 185ms
+Turbopack build encountered 1 warning:
+./apps/web/src/marketing/lead/idempotency.ts:38:23
+Warning: Dynamic filesystem access causes tracing of the whole project
+  [90m36 |[0m   [36mconst[0m path = resolveIdempotencyStorePath();
+  [90m37 |[0m   [36mtry[0m {
+[33m[1m>[0m [90m38 |[0m     [36mconst[0m raw = [36mawait[0m readFile(path, [32m'utf8'[0m);
+  [90m   |[0m                       [33m[1m^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m39 |[0m     [36mconst[0m parsed = [33mJSON[0m.parse(raw) [36mas[0m [33mIdempotencyStore[0m;
+  [90m40 |[0m     [36mreturn[0m parsed && [36mtypeof[0m parsed === [32m'object'[0m ? parsed : {};
+  [90m41 |[0m   } [36mcatch[0m {
+
+Static analysis determined that this filesystem access causes the whole project to be traced and included in the output.
+This is usually unintentional and leads to all source files (including the public folder) to be deployed as part of the server code.
+This can slow down deployments or lead to failures when size limits are exceeded.
+To resolve this, you can
+- make sure the path is statically scoped to some subfolder, for example path.join(process.cwd(), 'data', bar), or
+- only use them in development, or
+- opt out by adding an ignore comment to the highlighted call: fs.readFile(/*turbopackIgnore: true*/ ...), or
+- remove them.
+
+Import trace:
+  App Route:
+    ./apps/web/src/marketing/lead/idempotency.ts
+    ./apps/web/src/marketing/lead/accept-lead.ts
+    ./apps/web/app/api/marketing/interest/route.ts
+
+
+  Finalizing page optimization ...
+
+Route (app)
+┌ ƒ /
+├ ○ /_not-found
+├ ○ /account
+├ ƒ /api/auth/callback
+├ ƒ /api/auth/login
+├ ƒ /api/auth/logout
+├ ƒ /api/auth/refresh
+├ ƒ /api/bff/claim
+├ ƒ /api/bff/me
+├ ƒ /api/bff/me/account-deletion-requests
+├ ƒ /api/bff/me/events
+├ ƒ /api/bff/me/membership-invites/accept
+├ ƒ /api/bff/me/tenants
+├ ƒ /api/bff/operations/[clientKey]
+├ ƒ /api/bff/public/tenants/[tenantSlug]/branding
+├ ƒ /api/bff/public/tenants/[tenantSlug]/events
+├ ƒ /api/bff/public/tenants/[tenantSlug]/events/[eventSlug]
+├ ƒ /api/bff/redeem
+├ ƒ /api/bff/redeem/resolve
+├ ƒ /api/bff/redemptions/[requestId]
+├ ƒ /api/bff/tenants/[tenantId]/invites
+├ ƒ /api/bff/tenants/[tenantId]/invites/[inviteId]/revoke
+├ ƒ /api/bff/tenants/[tenantId]/members
+├ ƒ /api/bff/tenants/[tenantId]/members/[membershipId]/revoke
+├ ƒ /api/bff/tickets
+├ ƒ /api/bff/tickets/[ticketId]
+├ ƒ /api/marketing/events
+├ ƒ /api/marketing/interest
+├ ○ /apple-icon.png
+├ ƒ /auth
+├ ƒ /claim
+├ ○ /dev/design-system
+├ ○ /icon.png
+├ ○ /invite
+├ ƒ /marketing
+├ ƒ /marketing/en
+├ ƒ /marketing/en/privacy
+├ ƒ /marketing/en/support
+├ ƒ /marketing/privacy
+├ ƒ /marketing/support
+├ ○ /opengraph-image.png
+├ ○ /privacy
+├ ƒ /redeem
+├ ƒ /robots.txt
+├ ƒ /sitemap.xml
+├ ƒ /t/[tenantSlug]/events/[eventSlug]
+├ ƒ /t/[tenantSlug]/tickets/[ticketId]
+└ ƒ /wallet
+
+
+ƒ Proxy (Middleware)
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+

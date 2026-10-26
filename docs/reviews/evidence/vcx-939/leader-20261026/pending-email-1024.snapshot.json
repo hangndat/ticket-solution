@@ -1,0 +1,91 @@
+{
+  "origin": "http://localhost:3417/redeem?tenantSlug=mfest-demo&eventSlug=mfest&uat939=75d47771-9100-4f09-b68f-7384358e926d",
+  "refs": {
+    "e1": {
+      "name": "Bỏ qua đến nội dung",
+      "role": "link"
+    },
+    "e10": {
+      "name": "Đổi mã lấy vé",
+      "role": "heading"
+    },
+    "e11": {
+      "name": "Đổi mã lấy vé",
+      "role": "heading"
+    },
+    "e12": {
+      "name": "Đổi mã lấy vé",
+      "role": "button"
+    },
+    "e13": {
+      "name": "Kiểm tra trạng thái yêu cầu",
+      "role": "button"
+    },
+    "e14": {
+      "name": "Đang chờ duyệt — chưa phải vé",
+      "role": "heading"
+    },
+    "e15": {
+      "name": "Khám phá",
+      "role": "link"
+    },
+    "e16": {
+      "name": "Đổi mã",
+      "role": "link"
+    },
+    "e17": {
+      "name": "Tài khoản",
+      "role": "link"
+    },
+    "e18": {
+      "name": "Mã đổi vé",
+      "role": "textbox"
+    },
+    "e19": {
+      "name": "",
+      "role": "generic"
+    },
+    "e2": {
+      "name": "Điều hướng chính",
+      "role": "navigation"
+    },
+    "e20": {
+      "name": "Tôi đã đọc và đồng ý điều khoản sự kiện",
+      "role": "checkbox"
+    },
+    "e21": {
+      "name": "Open Next.js Dev Tools",
+      "role": "button"
+    },
+    "e3": {
+      "name": "Liên kết chân trang",
+      "role": "navigation"
+    },
+    "e4": {
+      "name": "Vemoki — trang chủ",
+      "role": "link"
+    },
+    "e5": {
+      "name": "Khám phá",
+      "role": "link"
+    },
+    "e6": {
+      "name": "Đổi mã",
+      "role": "link"
+    },
+    "e7": {
+      "name": "Vé của tôi",
+      "role": "link"
+    },
+    "e8": {
+      "name": "Tài khoản",
+      "role": "link"
+    },
+    "e9": {
+      "name": "attendee@example.com",
+      "role": "link"
+    }
+  },
+  "snapshot": "- link \"Bỏ qua đến nội dung\" [ref=e1]\n- banner\n  - navigation \"Điều hướng chính\" [ref=e2]\n    - link \"Vemoki — trang chủ\" [ref=e4]\n      - StaticText \"vemoki\"\n    - link \"Khám phá\" [ref=e5]\n    - link \"Đổi mã\" [ref=e6]\n    - link \"Vé của tôi\" [ref=e7]\n    - link \"Tài khoản\" [ref=e8]\n    - link \"attendee@example.com\" [ref=e9]\n      - StaticText \"attendee@example.com\"\n- main\n  - sectionheader\n    - paragraph\n      - StaticText \"NHẬP MÃ MỜI\"\n    - heading \"Đổi mã lấy vé\" [level=1, ref=e10]\n    - paragraph\n      - StaticText \"Một mã mời duy nhất. Không cần chọn sự kiện hay tổ chức.\"\n  - form \"Đổi mã lấy vé\"\n    - heading \"Đổi mã lấy vé\" [level=2, ref=e11]\n    - paragraph\n      - StaticText \"Nhập mã và đồng ý điều khoản của sự kiện. Trạng thái chờ duyệt chưa phải vé.\"\n    - status\n      - strong\n        - StaticText \"Biểu mẫu sẵn sàng\"\n      - paragraph\n        - StaticText \"Đã tải biểu mẫu mới. Điền lại và đồng ý điều khoản trước khi gửi.\"\n    - group\n      - DisclosureTriangle \"Tùy chọn nâng cao (đường dẫn / mã kỹ thuật)\" [expanded=false]\n    - LabelText\n      - StaticText \"Mã đổi vé\"\n      - textbox \"Mã đổi vé\" [required, ref=e18]: VCX939-LEADER-EMAIL\n        - StaticText \"VCX939-LEADER-EMAIL\"\n    - paragraph\n      - StaticText \"Sự kiện này không có trường biểu mẫu — nhập mã và đồng ý điều khoản bên dưới để đổi vé.\"\n    - group \"Điều khoản\"\n      - Legend\n        - StaticText \"Điều khoản\"\n      - paragraph\n        - StaticText \"Nội dung dưới đây do ban tổ chức ban hành (có thể khác ngôn ngữ giao diện).\"\n      - generic [ref=e19] focusable [tabindex]\n        - StaticText \"By attending you agree to venue house rules, age and safety policies, and the organizer’s ticketing terms. Tickets are non-transferable except where the organizer permits. Photography for personal use is welcome; commercial filming requires prior approval.\"\n      - LabelText\n        - checkbox \"Tôi đã đọc và đồng ý điều khoản sự kiện\" [checked=true, ref=e20]\n        - StaticText \"Tôi đã đọc và đồng ý điều khoản sự kiện\"\n    - button \"Đổi mã lấy vé\" [disabled, ref=e12]\n    - button \"Kiểm tra trạng thái yêu cầu\" [ref=e13]\n  - status\n    - heading \"Đang chờ duyệt — chưa phải vé\" [level=3, ref=e14]\n    - paragraph\n      - StaticText \"Yêu cầu đang chờ duyệt (hết hạn: 2026-10-27T10:24:56.876Z). Chưa có vé.\"\n- contentinfo\n  - StaticText \"vemoki\"\n  - StaticText \"Sự kiện & vé\"\n  - navigation \"Liên kết chân trang\" [ref=e3]\n    - link \"Khám phá\" [ref=e15]\n    - link \"Đổi mã\" [ref=e16]\n    - link \"Tài khoản\" [ref=e17]\n- button \"Open Next.js Dev Tools\" [expanded=false, ref=e21]\n  - image\n- alert",
+  "browserPageId": "1a0079ad-004d-443a-bd19-ca004c6eb810"
+}

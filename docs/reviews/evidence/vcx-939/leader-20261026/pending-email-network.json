@@ -1,0 +1,9 @@
+[
+  {
+    "url": "http://localhost:3417/api/bff/redeem",
+    "method": "POST",
+    "status": 201,
+    "timestamp": 1793010296896,
+    "requestId": "10508.86"
+  }
+]
