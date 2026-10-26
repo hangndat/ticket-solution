@@ -1,0 +1,27 @@
+{
+  "scannedAt": 1792980311882,
+  "worktree": "/Users/admin/SideProject/ticket-solution/vcx-926-uat",
+  "owned": [
+    {
+      "port": 3013,
+      "pid": 51574,
+      "protocol": "http",
+      "ownerConfidence": "cwd",
+      "advertisedUrl": "http://127.0.0.1:3013"
+    },
+    {
+      "port": 3499,
+      "pid": 37930,
+      "protocol": "http",
+      "ownerConfidence": "cwd",
+      "advertisedUrl": "http://127.0.0.1:3499"
+    }
+  ],
+  "sharedNotOwnedBy926": {
+    "keycloak": 8080,
+    "postgres": 55433
+  },
+  "foreignNotUsed": {
+    "api3498": "PID 89392 cwd .Trash/ticket-solution-vd08-local-oidc-20261025/apps/api"
+  }
+}
