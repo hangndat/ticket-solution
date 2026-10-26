@@ -1,0 +1,109 @@
+{
+  "runId": "20261026T0956Z-noah",
+  "previousMeasuredSHA": "d00a265cca1206b68601c75d445b633f7d590b57",
+  "testedSHA": "33713db2cfffed29cad98ce9b2077490be5987b6",
+  "f03RootCause": "Harness polled /api/bff/me/tenants before OIDC redirect completed (Keycloak origin) → spurious 404; not product deny.",
+  "f04Status": "Staff ticket-admin-web requires enrolled TOTP; enroll-staff-totp.mjs idempotent (secrets gitignored).",
+  "rows": [
+    {
+      "persona": "manager",
+      "login": {
+        "tenants": 200,
+        "evidence": "authenticated-200"
+      }
+    },
+    {
+      "key": "manager-cross-studio",
+      "path": "/t/d9d9f001-0001-4000-8000-000000000002/events",
+      "probe": {
+        "content": false,
+        "denied": true,
+        "spin": false,
+        "title": "Không có quyền"
+      },
+      "shot": "1024-manager-cross-studio.png"
+    },
+    {
+      "key": "manager-overview",
+      "path": "/t/d9d9f001-0001-4000-8000-000000000001/e/d9d9f001-0002-4000-8000-000000000001",
+      "probe": {
+        "content": true,
+        "denied": false,
+        "spin": false,
+        "title": ""
+      },
+      "shot": "1024-manager-overview.png"
+    },
+    {
+      "persona": "cs",
+      "login": {
+        "tenants": 200,
+        "evidence": "authenticated-200"
+      }
+    },
+    {
+      "key": "cs-support",
+      "path": "/t/d9d9f001-0001-4000-8000-000000000001/e/d9d9f001-0002-4000-8000-000000000001/support",
+      "probe": {
+        "content": true,
+        "denied": false,
+        "spin": false,
+        "title": ""
+      },
+      "shot": "1024-cs-support.png"
+    },
+    {
+      "key": "cs-setup",
+      "path": "/t/d9d9f001-0001-4000-8000-000000000001/e/d9d9f001-0002-4000-8000-000000000001/setup",
+      "probe": {
+        "content": false,
+        "denied": true,
+        "spin": false,
+        "title": "Không có quyền"
+      },
+      "shot": "1024-cs-setup.png"
+    }
+  ],
+  "f05Extra": [
+    {
+      "key": "report-only-gate",
+      "path": "/t/d9d9f001-0001-4000-8000-000000000001/e/d9d9f001-0002-4000-8000-000000000001/gate",
+      "probe": {
+        "adminChrome": false,
+        "content": false,
+        "denied": true,
+        "title": "Không có quyền báo cáo cổng"
+      }
+    },
+    {
+      "key": "scanner-overview",
+      "path": "/t/d9d9f001-0001-4000-8000-000000000001/e/d9d9f001-0002-4000-8000-000000000001",
+      "probe": {
+        "adminChrome": false,
+        "content": true,
+        "denied": false,
+        "title": ""
+      }
+    },
+    {
+      "key": "owner-guests",
+      "path": "/t/d9d9f001-0001-4000-8000-000000000001/e/d9d9f001-0002-4000-8000-000000000001/guests",
+      "probe": {
+        "adminChrome": false,
+        "content": false,
+        "denied": true,
+        "title": "Không có quyền"
+      }
+    },
+    {
+      "key": "owner-audit",
+      "path": "/t/d9d9f001-0001-4000-8000-000000000001/e/d9d9f001-0002-4000-8000-000000000001/audit",
+      "probe": {
+        "adminChrome": false,
+        "content": false,
+        "denied": true,
+        "title": "Không có quyền"
+      }
+    }
+  ]
+}
