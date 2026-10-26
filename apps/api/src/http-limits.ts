@@ -14,6 +14,7 @@ export const API_RATE_BUCKETS = {
   publicRead: 'api.public.read',
   tenantRegistration: 'api.public.tenant-registration',
   importJobsList: 'api.import-jobs.list',
+  tenantLimitsRead: 'api.tenant-limits.read',
 } as const;
 
 /** Hourly caps via notification_rate_counters (same window as resolve). */
@@ -27,4 +28,5 @@ export const API_RATE_LIMITS = {
   publicReadPerIp: 600,
   tenantRegistrationPerIp: 20,
   importJobsListPerUser: 240,
+  tenantLimitsReadPerUser: 240,
 } as const;
