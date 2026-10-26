@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useSyncExternalStore, type PropsWithChildren } from 'react';
+import { useEffect, useSyncExternalStore, type PropsWithChildren } from 'react';
 import { Redirect, useFocusEffect } from 'expo-router';
 import { Page } from '@/components/page';
 import { LoadingState } from '@/components/screen-state';
@@ -6,14 +6,11 @@ import { useStaffGateWorkspace } from '@/gate/staff-gate-workspace-context';
 import { session } from '@/identity/session';
 import { staffEligibility } from '@/identity/staff-eligibility';
 import { resolveStaffGateTabPhase } from './staff-gate-tab-guard-policy';
+import { useStableFocusAction } from './stable-focus-action';
 
 function StaffGateTabFocusSync() {
   const gate = useStaffGateWorkspace();
-  useFocusEffect(
-    useCallback(() => {
-      void gate.focusSync();
-    }, [gate.focusSync]),
-  );
+  useFocusEffect(useStableFocusAction(gate.focusSync));
   return null;
 }
 
