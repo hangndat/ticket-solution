@@ -948,6 +948,20 @@ test(
       assert.equal(allocatedAfterReuse, allocatedBefore + 1);
 
       // G-09: runtime role, tenant/event RLS, permission and signed keyset cursor.
+      const keysetIndexes = await db.$queryRaw`
+        SELECT indexname, indexdef FROM pg_indexes
+        WHERE schemaname = 'public' AND tablename = 'import_jobs'
+          AND indexname IN ('import_jobs_event_created_id_idx', 'import_jobs_event_idx')
+      `;
+      assert.equal(keysetIndexes.length, 1);
+      assert.equal(
+        keysetIndexes[0].indexname,
+        'import_jobs_event_created_id_idx',
+      );
+      assert.match(
+        keysetIndexes[0].indexdef,
+        /tenant_id, event_id, created_at DESC, id DESC/,
+      );
       const listInput = (tenantId, eventId, actorUserId, query = {}) => ({
         tenantId,
         eventId,
@@ -1197,7 +1211,9 @@ test(
             }),
             HMAC.pepper,
           ),
-        (e) => e instanceof ImportError && e.code === IMPORT_ERROR_CODES.EVENT_NOT_FOUND,
+        (e) =>
+          e instanceof ImportError &&
+          e.code === IMPORT_ERROR_CODES.EVENT_NOT_FOUND,
       );
       await withTenant(db, tenantA, (tx) =>
         revokeMembership(tx, tenantA, revocableMembershipId),

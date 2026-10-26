@@ -63,6 +63,11 @@ import {
   type PrismaClient,
 } from '@ticket/backend';
 import { identityErrorHttpStatus } from './identity-http-status';
+import { API_RATE_BUCKETS, API_RATE_LIMITS } from './http-limits';
+import {
+  consumeUserRateLimitWithRetryAfter,
+  RateLimitedWithRetryAfter,
+} from './http-rate-limit';
 
 /** Minimal multipart surface from @fastify/multipart (avoid direct fastify dep). */
 type MultipartRequest = {
@@ -402,6 +407,12 @@ export class InventoryService {
     requestId: string | undefined,
   ) {
     const user = await this.actor(authorization);
+    await consumeUserRateLimitWithRetryAfter(
+      this.deps.db!,
+      user.userId,
+      API_RATE_BUCKETS.importJobsList,
+      API_RATE_LIMITS.importJobsListPerUser,
+    );
     const page = await listImportJobs(
       this.deps.db!,
       {
@@ -774,6 +785,8 @@ export class InventoryController {
     @Param('tenantId') tenantId: string,
     @Param('eventId') eventId: string,
     @Req() req: { id?: string; raw: { url?: string } },
+    @Res({ passthrough: true })
+    reply: { header: (name: string, value: string) => void },
   ) {
     const tenant = requireUuid(tenantId, 'tenantId');
     const event = requireUuid(eventId, 'eventId');
@@ -781,7 +794,12 @@ export class InventoryController {
       const query = parseImportListQuery(req.raw.url ?? '');
       return this.inventory
         .listJobs(authorization, tenant, event, query, req.id)
-        .catch((error) => this.fail(error));
+        .catch((error) => {
+          if (error instanceof RateLimitedWithRetryAfter) {
+            reply.header('Retry-After', String(error.retryAfterSeconds));
+          }
+          this.fail(error);
+        });
     } catch (error) {
       this.fail(error);
     }

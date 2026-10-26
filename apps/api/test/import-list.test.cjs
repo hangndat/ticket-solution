@@ -68,8 +68,11 @@ test('G-09 API requires bearer on every page and sends an empty private page', a
   const database = {
     $transaction: async (operation) =>
       operation({
+        $executeRaw: async () => 1,
         $queryRaw: async (strings) => {
           const sql = strings.join('?');
+          if (sql.includes('UPDATE notification_rate_counters'))
+            return [{ count: 1 }];
           if (sql.includes('FROM memberships'))
             return [
               {
@@ -131,6 +134,105 @@ test('G-09 API requires bearer on every page and sends an empty private page', a
     assert.equal(response.headers['cache-control'], 'private, no-store');
     assert.deepEqual(response.json(), { items: [], nextCursor: null });
     assert.equal(listQueries, 1);
+  } finally {
+    await app.close();
+  }
+});
+
+test('G-09 API limits authenticated list reads per user and returns Retry-After', async () => {
+  const actorId = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+  const membershipId = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
+  let consumed = 0;
+  let listQueries = 0;
+  const database = {
+    $transaction: async (operation) =>
+      operation({
+        $executeRaw: async () => 1,
+        $queryRaw: async (strings, ...values) => {
+          const sql = strings.join('?');
+          if (sql.includes('UPDATE notification_rate_counters')) {
+            assert.equal(values[0], actorId);
+            assert.equal(values[1], 'api.import-jobs.list');
+            assert.equal(values[3], 240);
+            consumed++;
+            return consumed <= 240 ? [{ count: consumed }] : [];
+          }
+          if (sql.includes('FROM memberships'))
+            return [
+              {
+                id: membershipId,
+                tenant_id: tenantId,
+                user_id: actorId,
+                role: 'OWNER',
+                permissions: [],
+                activated_at: new Date(0),
+                revoked_at: null,
+              },
+            ];
+          if (sql.includes('FROM event_assignments'))
+            return [
+              {
+                id: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
+                tenant_id: tenantId,
+                event_id: eventId,
+                membership_id: membershipId,
+                permissions: ['inventory.import'],
+                activated_at: new Date(0),
+                revoked_at: null,
+              },
+            ];
+          if (sql.includes('FROM import_jobs')) {
+            listQueries++;
+            return [];
+          }
+          return [];
+        },
+      }),
+  };
+  const app = await createApp({
+    logging: false,
+    database,
+    hmac: { pepper: 'fixture-cursor-signing-key', version: 1 },
+    oidcVerifier: {
+      verifyBearerToken: async (authorization) => {
+        if (authorization !== 'Bearer fixture') {
+          throw new IdentityError('UNAUTHENTICATED', 'Bearer required');
+        }
+        return { subject: 'fixture' };
+      },
+    },
+    users: { upsertFromVerifiedIdentity: async () => ({ userId: actorId }) },
+  });
+  try {
+    await app.init();
+    await app.getHttpAdapter().getInstance().ready();
+    const unauthorized = await app.inject({ method: 'GET', url: path });
+    assert.equal(unauthorized.statusCode, 401);
+    assert.equal(consumed, 0, 'bearer auth precedes the limiter');
+    for (let i = 0; i < 240; i++) {
+      const response = await app.inject({
+        method: 'GET',
+        url: path,
+        headers: { authorization: 'Bearer fixture' },
+      });
+      assert.equal(response.statusCode, 200, `request ${i + 1}`);
+    }
+    const denied = await app.inject({
+      method: 'GET',
+      url: path,
+      headers: { authorization: 'Bearer fixture' },
+    });
+    assert.equal(denied.statusCode, 429);
+    assert.equal(denied.json().code, 'RATE_LIMITED');
+    assert.equal(denied.json().retryable, true);
+    assert.match(denied.headers['retry-after'], /^[1-9][0-9]*$/);
+    assert.ok(Number(denied.headers['retry-after']) <= 3600);
+    assert.equal(denied.headers['cache-control'], 'private, no-store');
+    assert.equal(
+      listQueries,
+      240,
+      'denied request must not run the list query',
+    );
   } finally {
     await app.close();
   }

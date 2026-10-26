@@ -13,6 +13,7 @@ export const API_RATE_BUCKETS = {
   gateOfflineSyncReceipt: 'api.gate.offline-sync.receipt',
   publicRead: 'api.public.read',
   tenantRegistration: 'api.public.tenant-registration',
+  importJobsList: 'api.import-jobs.list',
 } as const;
 
 /** Hourly caps via notification_rate_counters (same window as resolve). */
@@ -25,4 +26,5 @@ export const API_RATE_LIMITS = {
   gateOfflineSyncReceiptPerUser: 240,
   publicReadPerIp: 600,
   tenantRegistrationPerIp: 20,
+  importJobsListPerUser: 240,
 } as const;
