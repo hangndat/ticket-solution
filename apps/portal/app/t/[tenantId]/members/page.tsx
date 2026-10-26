@@ -1,6 +1,11 @@
 'use client';
 
-import { ProForm, ProFormSelect, ProFormText, ProTable } from '@ant-design/pro-components';
+import {
+  ProForm,
+  ProFormSelect,
+  ProFormText,
+  ProTable,
+} from '@ant-design/pro-components';
 import type { ProColumns } from '@ant-design/pro-components';
 import {
   Alert,
@@ -37,8 +42,10 @@ import {
   bffRolePresets,
 } from '../../../../src/prep/bff-urls';
 import { useTenantAccess } from '../../../../src/prep/use-event-access';
+import { canPerformTenantAction } from '../../../../src/nav/capability-policy';
 import { SurfaceState } from '../../../../src/components/surface-state';
 import { usePortalLocale } from '../../../../src/i18n';
+import { useUnsavedChanges } from '../../../../src/nav/unsaved-changes';
 import { SavedViewsToolbar } from '../../../../src/views';
 import {
   SYSTEM_MEMBERSHIP_ROLES,
@@ -70,6 +77,8 @@ export default function MembersPage() {
   const [message, setMessage] = useState<string | undefined>();
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [dirty, setDirty] = useState(false);
+  useUnsavedChanges(dirty, t('shell.unsaved.confirm'));
   const [roleFilter, setRoleFilter] = useState<MembershipRole | undefined>();
   const [statusFilter, setStatusFilter] = useState<
     'ACTIVE' | 'REVOKED' | undefined
@@ -219,7 +228,9 @@ export default function MembersPage() {
       />
     );
   }
-  if (!access.tenant.tenantPermissions.includes('members.manage')) {
+  if (
+    !canPerformTenantAction('manageMembers', access.tenant.tenantPermissions)
+  ) {
     return (
       <SurfaceState
         kind="permission-denied"
@@ -258,6 +269,7 @@ export default function MembersPage() {
         return;
       }
       if (res.status === 200 || res.status === 201) {
+        setDirty(false);
         setNotice(t('members.h_xg2gwp'));
         form.resetFields(['email']);
         void reload();
@@ -285,7 +297,9 @@ export default function MembersPage() {
   function openAssign(row: PortalMemberSummary) {
     setAssignTarget(row);
     setAssignRole(
-      isSystemMembershipRole(row.role) ? row.role : ('Manager' as MembershipRole),
+      isSystemMembershipRole(row.role)
+        ? row.role
+        : ('Manager' as MembershipRole),
     );
     setAssignOpen(true);
   }
@@ -330,10 +344,13 @@ export default function MembersPage() {
       okButtonProps: { danger: true },
       cancelText: t('config.huy'),
       onOk: async () => {
-        const res = await portalMutate(bffRevokeMember(tenantId, membershipId), {
-          reason: t('members.h_tzdfji'),
-          idempotencyKey: crypto.randomUUID(),
-        });
+        const res = await portalMutate(
+          bffRevokeMember(tenantId, membershipId),
+          {
+            reason: t('members.h_tzdfji'),
+            idempotencyKey: crypto.randomUUID(),
+          },
+        );
         if (res.status >= 200 && res.status < 300) {
           setNotice(t('members.h_o8fp08'));
           void reload();
@@ -395,8 +412,10 @@ export default function MembersPage() {
   ];
 
   return (
-    <PortalPage title={t('members.h_i0adgn')} subTitle={t('members.inviteEventsHint')}>
-
+    <PortalPage
+      title={t('members.h_i0adgn')}
+      subTitle={t('members.inviteEventsHint')}
+    >
       <Alert
         type="info"
         showIcon
@@ -405,6 +424,7 @@ export default function MembersPage() {
 
       <ProForm
         form={form}
+        onValuesChange={() => setDirty(true)}
         layout="inline"
         initialValues={{
           roleKey: 'Manager',
@@ -422,7 +442,10 @@ export default function MembersPage() {
           rules={[
             { required: true, type: 'email', message: t('members.h_1rjw0n9') },
           ]}
-          fieldProps={{ placeholder: 'email@example.com', style: { width: 220 } }}
+          fieldProps={{
+            placeholder: 'email@example.com',
+            style: { width: 220 },
+          }}
         />
         <ProFormSelect
           name="roleKey"
@@ -543,13 +566,18 @@ export default function MembersPage() {
                       render: (_, row) =>
                         row.revokedAt ? null : (
                           <Space>
-                            <Button size="small" onClick={() => openAssign(row)}>
+                            <Button
+                              size="small"
+                              onClick={() => openAssign(row)}
+                            >
                               {t('members.roles.assignCta')}
                             </Button>
                             <Button
                               danger
                               size="small"
-                              onClick={() => confirmRevokeMember(row.membershipId)}
+                              onClick={() =>
+                                confirmRevokeMember(row.membershipId)
+                              }
                             >
                               {t('members.h_1w0agno')}
                             </Button>
@@ -604,7 +632,11 @@ export default function MembersPage() {
               key: 'roles',
               label: t('members.tabRoles'),
               children: (
-                <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+                <Space
+                  direction="vertical"
+                  size="middle"
+                  style={{ width: '100%' }}
+                >
                   <Alert
                     type="info"
                     showIcon
@@ -657,8 +689,7 @@ export default function MembersPage() {
                       },
                       {
                         title: t('members.roles.colSchema'),
-                        render: (_: unknown, row) =>
-                          row.schemaVersion ?? '—',
+                        render: (_: unknown, row) => row.schemaVersion ?? '—',
                       },
                       {
                         title: t('members.roles.colUpdated'),

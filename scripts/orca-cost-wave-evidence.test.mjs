@@ -22,30 +22,62 @@ const cases = [
   { name: "explicit title used when task has no declaration", spec: "Review contract", title: "James · Cost focused", expectedTier: "focused" },
   { name: "requested does not prove effective", effective: null, expectedPinned: 0, expectedExit: 2 },
   { name: "auto is inherited", effective: "auto", expectedPinned: 0, expectedExit: 2 },
-  { name: "no active workers does not scan unrelated comments", active: false, expectedPinned: 0 },
+  { name: "no active workers does not scan unrelated comments", active: false, commentsOnly: true, expectedPinned: 0 },
 ];
 for (const options of cases) {
-  const { name, effective = "gpt-6-sol", active = true, tier = "advanced", expectedTier = tier, expectedPinned = 1, expectedExit = 0, spec = `Cost tier: ${tier}`, comment = "model composer-2.5", title = "" } = options;
+  const { name, effective = "gpt-6-sol", active = true, commentsOnly = false, tier = "advanced", expectedTier = tier, expectedPinned = 1, expectedExit = 0, spec = `Cost tier: ${tier}`, comment = "model composer-2.5", title = "" } = options;
   test(name, () => {
     const dir = mkdtempSync(join(tmpdir(), "orca-wave-test-"));
     const cli = join(dir, "orca-fixture");
     writeFileSync(cli, `#!/usr/bin/env node
 const a = process.argv.slice(2);
 let result = {};
-if (a[1] === 'worker-list') result = {workers: ${JSON.stringify(active ? [{dispatchId:"dispatch",taskId:"task",taskTitle:title,runId:"run",terminalState:"active",resource:{worktreeId:"repo::/fixture"},projection:{liveness:{verdict:"unverifiable"}}}] : [])}};
+if ((a[1] === 'worker-list' || a[1] === 'task-list') && a[a.indexOf('--run') + 1] !== 'run_test') process.exit(7);
+if (a[1] === 'worker-list') result = {workers: ${JSON.stringify(active ? [{dispatchId:"ctx_test",taskId:"task",taskTitle:title,runId:"run_test",terminalState:"active",resource:{worktreeId:"repo::/fixture"},projection:{liveness:{verdict:"unverifiable"}}}] : [])}};
 if (a[1] === 'task-list') result = {tasks:[{id:'task',spec:${JSON.stringify(spec)}}]};
 if (a[0] === 'worktree') result = {worktrees:[{path:'/fixture',comment:${JSON.stringify(comment)},isMainWorktree:false}]};
 if (a[1] === 'worker-show') result = {worker:{startOptions:{launch:{requested:{model:'gpt-6-sol'},effective:{model:${JSON.stringify(effective)}}}}}};
 console.log(JSON.stringify({ok:true,result}));
 `, { mode: 0o700 });
     try {
-      const result = spawnSync(process.execPath, [script], { encoding: "utf8", env: { ...process.env, ORCA_CLI_COMMAND: cli } });
+      const args = [script, "--run", "run_test", ...(commentsOnly ? ["--comments-only"] : ["--dispatch", "ctx_test"])];
+      const result = spawnSync(process.execPath, args, { encoding: "utf8", env: { ...process.env, ORCA_CLI_COMMAND: cli } });
       assert.equal(result.status, expectedExit, result.stderr);
       assert.match(result.stdout, new RegExp(`pinned=${expectedPinned} inherit=`));
-      assert.match(result.stdout, new RegExp(`n=${active ? 1 : 0} active`));
+      assert.match(result.stdout, new RegExp(`n=${active ? 1 : 0} ${commentsOnly ? "active" : "dispatches"}`));
       if (active) assert.match(result.stdout, new RegExp(`(?:\\s|\\|)${expectedTier}=1(?:\\s|\\|)`));
     } finally {
       rmSync(dir, { recursive: true });
     }
   });
 }
+
+test("requires an explicit Run before calling Orca", () => {
+  const result = spawnSync(process.execPath, [script, "--dispatch", "ctx_test"], { encoding: "utf8" });
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /Usage:/);
+});
+
+test("uses a matching local start receipt without worker-show", () => {
+  const dir = mkdtempSync(join(tmpdir(), "orca-wave-receipt-"));
+  const cli = join(dir, "orca-fixture");
+  const receipt = join(dir, "start-receipt.json");
+  writeFileSync(cli, `#!/usr/bin/env node
+const a = process.argv.slice(2);
+let result = {};
+if (a[1] === 'worker-list') result = {workers:[{dispatchId:'ctx_test',taskId:'task',runId:'run_test',terminalState:'active',resource:{worktreeId:'repo::/fixture'}}]};
+if (a[1] === 'task-list') result = {tasks:[{id:'task',spec:'Cost tier: standard'}]};
+if (a[0] === 'worktree') result = {worktrees:[{path:'/fixture',comment:'',isMainWorktree:false}]};
+if (a[1] === 'worker-show') process.exit(7);
+console.log(JSON.stringify({ok:true,result}));
+`, { mode: 0o700 });
+  writeFileSync(receipt, JSON.stringify({ result: {runId:"run_test",dispatchId:"ctx_test",taskId:"task",launch:{effective:{model:"composer-2.5"}}} }));
+  try {
+    const result = spawnSync(process.execPath, [script, "--run", "run_test", "--dispatch", "ctx_test", "--receipt-file", receipt], { encoding: "utf8", env: { ...process.env, ORCA_CLI_COMMAND: cli } });
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stdout, /scope=wave \| n=1 dispatches/);
+    assert.match(result.stdout, /pinned=1 inherit=0/);
+  } finally {
+    rmSync(dir, { recursive: true });
+  }
+});

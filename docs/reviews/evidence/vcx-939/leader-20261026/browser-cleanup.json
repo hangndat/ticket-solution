@@ -1,0 +1,49 @@
+{
+  "closed": [
+    {
+      "page": "2f9a8738-262d-43eb-a2f5-1e03f784f5ab",
+      "closed": true
+    },
+    {
+      "page": "ab066d1b-454a-430a-beb7-f8fe8c52073a",
+      "closed": true
+    },
+    {
+      "page": "7cc7c0b6-708a-4f90-a806-c7ab06d7e289",
+      "closed": true
+    },
+    {
+      "page": "38be0626-3e31-49c0-8b9d-4c4ba506a432",
+      "closed": true
+    },
+    {
+      "page": "deb4f30b-354b-4d72-9313-f75532a21d4c",
+      "closed": true
+    },
+    {
+      "page": "1a0079ad-004d-443a-bd19-ca004c6eb810",
+      "closed": true
+    },
+    {
+      "page": "367467d9-6808-474c-8bc6-ecc26bce4eba",
+      "closed": true
+    },
+    {
+      "page": "cc92b30a-bfe0-4d70-9a66-93207bf8544a",
+      "closed": true
+    },
+    {
+      "page": "ae824b11-08d2-49f2-b7e6-8af27ad3b0c0",
+      "closed": true
+    },
+    {
+      "page": "908b2639-cf3e-41a4-aeaf-923d429c11ec",
+      "closed": true
+    }
+  ],
+  "earlierClosed": [
+    "66613d74-e256-4217-98ed-bbf5179f8566",
+    "a0d4e185-4c18-4f45-9ef6-00e75e207c6d"
+  ],
+  "userTabsTouched": false
+}

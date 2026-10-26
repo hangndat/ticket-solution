@@ -1759,6 +1759,92 @@
         "tags": [
           "inventory"
         ]
+      },
+      "get": {
+        "operationId": "InventoryController_listJobs",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "eventId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "kind",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "CODES",
+                "GUESTS"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "CREATED",
+                "PREVIEW_READY",
+                "COMMITTING",
+                "COMPLETED",
+                "FAILED"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportJobListPageDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "inventory"
+        ]
       }
     },
     "/v1/tenants/{tenantId}/events/{eventId}/imports/{importId}": {
@@ -4732,6 +4818,110 @@
           "gate"
         ]
       }
+    },
+    "/v1/tenants/{tenantId}/limits": {
+      "get": {
+        "operationId": "TenantLimitsController_read",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantLimitsUsageReadResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the current UTC hour window ends",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            },
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "tenant-limits"
+        ]
+      }
     }
   },
   "info": {
@@ -4816,6 +5006,9 @@
             "type": "string"
           },
           "requestId": {
+            "type": "string"
+          },
+          "operationId": {
             "type": "string"
           },
           "retryable": {
@@ -7835,6 +8028,181 @@
           "staffSessionId",
           "appliedAt",
           "checkinState"
+        ]
+      },
+      "ImportJobSummaryDto": {
+        "type": "object",
+        "properties": {
+          "importId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "CODES",
+              "GUESTS"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "CREATED",
+              "PREVIEW_READY",
+              "COMMITTING",
+              "COMPLETED",
+              "FAILED"
+            ]
+          },
+          "sourceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "ticketTypeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "mappingRevision": {
+            "type": "number",
+            "nullable": true
+          },
+          "previewRevision": {
+            "type": "number",
+            "nullable": true
+          },
+          "validRowCount": {
+            "type": "number",
+            "nullable": true
+          },
+          "errorRowCount": {
+            "type": "number",
+            "nullable": true
+          },
+          "invitationCount": {
+            "type": "number",
+            "nullable": true
+          },
+          "estimatedQuota": {
+            "type": "number",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "importId",
+          "kind",
+          "status",
+          "sourceId",
+          "ticketTypeId",
+          "mappingRevision",
+          "previewRevision",
+          "validRowCount",
+          "errorRowCount",
+          "invitationCount",
+          "estimatedQuota",
+          "createdAt"
+        ]
+      },
+      "ImportJobListPageDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ImportJobSummaryDto"
+            }
+          },
+          "nextCursor": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor"
+        ]
+      },
+      "TenantLimitCapsDto": {
+        "type": "object",
+        "properties": {
+          "maxEvents": {
+            "type": "number",
+            "nullable": true
+          },
+          "maxStaff": {
+            "type": "number",
+            "nullable": true
+          },
+          "emailPerDay": {
+            "type": "number",
+            "nullable": true
+          },
+          "importRowsPerJob": {
+            "type": "number",
+            "nullable": true
+          }
+        },
+        "required": [
+          "maxEvents",
+          "maxStaff",
+          "emailPerDay",
+          "importRowsPerJob"
+        ]
+      },
+      "TenantLimitUsageDto": {
+        "type": "object",
+        "properties": {
+          "events": {
+            "type": "number"
+          },
+          "staffActive": {
+            "type": "number"
+          },
+          "staffPendingInvites": {
+            "type": "number"
+          },
+          "emailToday": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "events",
+          "staffActive",
+          "staffPendingInvites",
+          "emailToday"
+        ]
+      },
+      "TenantLimitsUsageReadResponseDto": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "limits": {
+            "$ref": "#/components/schemas/TenantLimitCapsDto"
+          },
+          "usage": {
+            "$ref": "#/components/schemas/TenantLimitUsageDto"
+          },
+          "asOf": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "emailUsageDate": {
+            "type": "string",
+            "format": "date"
+          }
+        },
+        "required": [
+          "tenantId",
+          "limits",
+          "usage",
+          "asOf",
+          "emailUsageDate"
         ]
       }
     }

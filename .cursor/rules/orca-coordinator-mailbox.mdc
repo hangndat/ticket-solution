@@ -7,17 +7,21 @@ alwaysApply: false
 
 Chỉ đọc khi supervise Orca Run; dùng guide phiên bản host và preamble thật.
 
-1. Start các task độc lập trong budget → một `check --wait --types "worker_done,escalation,question" --timeout-ms 45000`.
+1. Start các task độc lập trong budget → một `check --wait --types "worker_done,escalation,question" --timeout-ms 300000`. Chờ tối đa tới mốc liveness 5 phút đã ghi trong checkpoint; nếu mốc sớm hơn thì giảm timeout tương ứng. CLI host hỗ trợ long-poll; timeout chỉ là checkpoint, không phải lý do gọi model để báo tiến độ.
 2. Process toàn bộ delivery: reply câu hỏi; xác minh task/dispatch/outcome của worker_done; lưu evidence/checkpoint và quyết định reuse ngay, retain khi user yêu cầu, hoặc release.
 3. Ack sau khi xử lý hết batch; xét ready queue trong scope và budget rồi tiếp tục chờ nếu còn dispatch live.
 4. Không kết thúc turn khi còn live/unsettled, câu hỏi chưa trả lời, delivery chưa ack hoặc reclaimable chưa xử lý. Không chờ user nhắc check.
-5. Timeout/heartbeat/inbox rỗng không chứng minh worker đã dừng. Sau 3 lần chờ rỗng liên tiếp, enumerate worker-list có scope Run; đọc projection/nextAction, theo guide recovery. Liveness unverifiable không cho phép stop/retry. Chỉ positive proof exited hoặc settlement hợp lệ mới cho hành động tương ứng.
+5. Timeout/heartbeat/inbox rỗng không chứng minh worker đã dừng. Không enumerate theo số lần timeout. Chỉ kiểm liveness khi có lỗi/escalation, quá hạn budget của task, hoặc đã hơn 5 phút không có tín hiệu và đến mốc liveness đã ghi trong checkpoint; tối đa một lần mỗi 5 phút khi không có thay đổi. Dùng worker-list có scope Run và chỉ lấy dispatch/state/liveness/nextAction cần xử lý. Liveness unverifiable không cho phép stop/retry. Chỉ positive proof exited hoặc settlement hợp lệ mới cho hành động tương ứng.
 6. worker_done không thay DoD. Release đúng tài nguyên owned sau settlement, kiểm receipt; reuse chuyển ownership cleanup sang dispatch mới. Không xóa branch/worktree hoặc kill process không thuộc task.
 7. Trước kết thúc, xác minh không còn reclaimable và delivery/question tồn đọng. Chỉ còn task bị chặn, không dispatch live/cleanup tồn đọng → báo checkpoint rồi dừng; không chờ vô hạn một quyết định chưa có.
 
 ## Tránh vòng model không có thông tin mới
 
-- Trong lúc một check đang chờ, không mở check/list/read thứ hai để hỏi cùng trạng thái. Nếu tool trả session/cell ID, resume đúng ID bằng wait dài 30–45 giây (không quá 60 giây); không poll 1 giây liên tục.
+- Heartbeat bình thường chỉ cập nhật liveness và ack; không kéo theo worker-read, GitHub query, review hoặc báo cáo tiến độ mới. Khi user yêu cầu check, trả trạng thái ngắn nếu không có delta.
+- Ưu tiên notification sẵn có của host để đánh thức coordinator; không tạo cron/job gọi model chỉ để hỏi trạng thái. Nếu host không hỗ trợ chờ theo sự kiện, dùng một long-poll theo mục 1, giữ supervision/lifecycle; không giả định đã cài event listener hoặc bỏ worker live.
+- CI dùng một watcher CLI cho exact run/SHA, ví dụ `./scripts/gh-dod-evidence.sh <PR> --watch <FULL_SHA>`; progress lưu ngoài context, chỉ đọc kết quả cuối hoặc lỗi cần quyết định. Không song song watcher và gh poll cùng CI; không gọi model theo mỗi tick. Không auto-merge bằng watcher.
+- Trước trả output tool: lọc JSON bằng jq hoặc công cụ đọc có giới hạn. Không dump toàn bộ worker-list, PR checks hay transcript rồi mới tóm tắt; vẫn giữ count/omitted và mở phần thiếu khi cần quyết định.
+- Trong lúc một check đang chờ, không mở check/list/read thứ hai để hỏi cùng trạng thái. Nếu tool trả session/cell ID, resume đúng ID bằng wait dài 30–45 giây (không quá 60 giây); không poll 1 giây liên tục. Dòng `_keepalive` trên stderr mỗi 15 giây là tín hiệu transport của CLI, không phải delivery hay lý do đánh thức leader để suy luận; chỉ đưa kết quả cuối/lỗi cần xử lý vào context.
 - Không worker-read transcript sau mỗi timeout. Chỉ đọc khi có escalation, sai receipt, bằng chứng stall hoặc cần xác minh một kết quả cụ thể; đọc phần mới bằng cursor, giới hạn output.
 - Không tự động đọc raw log để viết progress. Cập nhật user ngắn theo thông tin mới; không gọi thêm tools chỉ để có nội dung báo cáo.
 - Có user steer/message thì xử lý sớm; giữ lifecycle và giới hạn review/fix trong [review-convergence](orca-review-convergence.mdc).

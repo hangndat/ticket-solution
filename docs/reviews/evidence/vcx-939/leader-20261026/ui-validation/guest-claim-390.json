@@ -1,0 +1,17 @@
+{
+  "persona": "guest-claim",
+  "route": "/claim",
+  "page": "b2e10b80-168f-42c7-bd7b-43af1ebd4d80",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "probe": {
+    "frame": null,
+    "frameWidth": 390,
+    "issues": [],
+    "viewport": 390
+  },
+  "at": "2026-10-26T11:28:40.775003+00:00",
+  "sourceCodeSha": "1f4ce0be70edfe864e399007bff2cf392285b086"
+}

@@ -37,8 +37,10 @@ import {
 import { bffEvent, bffEventAction } from '../../../../../../src/prep/bff-urls';
 import { isEventPagePermitted } from '../../../../../../src/prep/event-access-resolver';
 import { useEventAccess } from '../../../../../../src/prep/use-event-access';
+import { canPerformEventAction } from '../../../../../../src/nav/capability-policy';
 import { SurfaceState } from '../../../../../../src/components/surface-state';
 import { usePortalLocale } from '../../../../../../src/i18n';
+import { useUnsavedChanges } from '../../../../../../src/nav/unsaved-changes';
 
 export default function ConfigBrandPage() {
   const { t } = usePortalLocale();
@@ -53,6 +55,8 @@ export default function ConfigBrandPage() {
   const [message, setMessage] = useState<string | undefined>();
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [dirty, setDirty] = useState(false);
+  useUnsavedChanges(dirty, t('shell.unsaved.confirm'));
   const [baseConfig, setBaseConfig] = useState<{
     version: number | null;
     payload: ConfigPreviewResponse['payload'] | null;
@@ -196,9 +200,7 @@ export default function ConfigBrandPage() {
     );
   }
 
-  const canConfig = access.permissions.some((p) =>
-    ['event.config', 'config.publish', 'event.update'].includes(p),
-  );
+  const canConfig = canPerformEventAction('saveConfig', access.permissions);
   const publishedVersion = versions.find((v) => v.published)?.version ?? null;
 
   async function saveDraft() {
@@ -243,6 +245,7 @@ export default function ConfigBrandPage() {
         return;
       }
       if (res.status >= 200 && res.status < 300) {
+        setDirty(false);
         const savedVersion = (res.json as { version?: unknown } | null)
           ?.version;
         const loaded = await load(
@@ -394,6 +397,7 @@ export default function ConfigBrandPage() {
         <>
           <ProForm
             form={form}
+            onValuesChange={() => setDirty(true)}
             layout="vertical"
             style={{ maxWidth: 480 }}
             disabled={!canConfig}
@@ -433,7 +437,7 @@ export default function ConfigBrandPage() {
               </Button>
               <Button
                 disabled={
-                  !canConfig || !access.permissions.includes('config.publish')
+                  !canPerformEventAction('publishConfig', access.permissions)
                 }
                 onClick={() => void publishTip()}
               >

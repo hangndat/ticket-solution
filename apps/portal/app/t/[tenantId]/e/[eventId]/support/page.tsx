@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import { CsPanel } from '../../../../../../src/ops/panels/cs-panel';
 import { isEventPagePermitted } from '../../../../../../src/prep/event-access-resolver';
 import { useEventAccess } from '../../../../../../src/prep/use-event-access';
+import { canPerformEventAction } from '../../../../../../src/nav/capability-policy';
 import { SurfaceState } from '../../../../../../src/components/surface-state';
 import { usePortalLocale } from '../../../../../../src/i18n';
 
@@ -47,7 +48,7 @@ export default function EventSupportPage() {
     );
   }
 
-  const canCs = access.permissions.includes('cs.lookup');
+  const canCs = canPerformEventAction('lookupSupport', access.permissions);
 
   return (
     <PortalPage title={t('nav.event.support')}>

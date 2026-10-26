@@ -2,7 +2,13 @@
  * H-I1 multi-step CSV import jobs — quarantine upload → preview → commit.
  * Preview never reserves quota. CODES commit inserts AVAILABLE codes only.
  */
-import { createHash, randomBytes, randomUUID } from 'node:crypto';
+import {
+  createHash,
+  createHmac,
+  randomBytes,
+  randomUUID,
+  timingSafeEqual,
+} from 'node:crypto';
 import {
   CURSOR_PAGE_LIMIT,
   IMPORT_ERROR_REPORT_TTL_HOURS_DEV,
@@ -14,18 +20,19 @@ import {
   type ImportCreateBody,
   type ImportFileUploadResponse,
   type ImportJob,
+  type ImportJobListPage,
+  type ImportJobListQuery,
+  type ImportJobSummary,
   type ImportJobStatus,
   type ImportKind,
   type ImportPreviewBody,
   type ImportPreviewResponse,
 } from '@ticket/contracts';
 import type { Prisma, PrismaClient } from './generated/prisma/client';
+import { AuthzError, AUTHZ_ERROR_CODES } from './authz-error';
 import { hashRedemptionCode, type CodeHmacConfig } from './code-hmac';
 import { toCsvRow } from './csv-guard';
-import {
-  IMPORT_ERROR_CODES,
-  ImportError,
-} from './import-error';
+import { IMPORT_ERROR_CODES, ImportError } from './import-error';
 import { requireTenantPermission } from './membership';
 import type { ObjectStore } from './minio';
 import { withTenant } from './tenant-context';
@@ -36,7 +43,72 @@ const SAMPLE_ERROR_LIMIT = 20;
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-void CURSOR_PAGE_LIMIT;
+type JobCursor = [
+  number,
+  string,
+  string,
+  ImportJobStatus | null,
+  ImportKind | null,
+  string,
+  string,
+];
+
+function invalidCursor(): never {
+  throw new ImportError(
+    IMPORT_ERROR_CODES.INVALID_CURSOR,
+    'Invalid import cursor',
+  );
+}
+
+function cursorSignature(payload: string, secret: string): Buffer {
+  return createHmac('sha256', secret)
+    .update('import-jobs:v1:')
+    .update(payload)
+    .digest();
+}
+
+function encodeJobCursor(value: JobCursor, secret: string): string {
+  const payload = Buffer.from(JSON.stringify(value)).toString('base64url');
+  return `${payload}.${cursorSignature(payload, secret).toString('base64url')}`;
+}
+
+function decodeJobCursor(
+  raw: string,
+  secret: string,
+  tenantId: string,
+  eventId: string,
+  status: ImportJobStatus | null,
+  kind: ImportKind | null,
+): { createdAt: string; id: string } {
+  if (raw.length > 2048 || !/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(raw))
+    invalidCursor();
+  const [payload, mac] = raw.split('.');
+  const given = Buffer.from(mac!, 'base64url');
+  const expected = cursorSignature(payload!, secret);
+  if (given.length !== expected.length || !timingSafeEqual(given, expected))
+    invalidCursor();
+  let value: unknown;
+  try {
+    value = JSON.parse(Buffer.from(payload!, 'base64url').toString('utf8'));
+  } catch {
+    invalidCursor();
+  }
+  if (
+    !Array.isArray(value) ||
+    value.length !== 7 ||
+    value[0] !== 1 ||
+    value[1] !== tenantId ||
+    value[2] !== eventId ||
+    value[3] !== status ||
+    value[4] !== kind ||
+    typeof value[5] !== 'string' ||
+    !Number.isFinite(Date.parse(value[5])) ||
+    typeof value[6] !== 'string' ||
+    !UUID_RE.test(value[6])
+  )
+    invalidCursor();
+  return { createdAt: value[5], id: value[6] };
+}
 
 type JobRow = {
   id: string;
@@ -471,7 +543,12 @@ function parsePayload(
       };
       errors.push(err);
       csvLines.push(
-        toCsvRow([line, fieldId, err.code, `${err.message} (${maskCodeHint(code)})`]),
+        toCsvRow([
+          line,
+          fieldId,
+          err.code,
+          `${err.message} (${maskCodeHint(code)})`,
+        ]),
       );
       continue;
     }
@@ -840,6 +917,138 @@ export async function getImportJob(
   });
 }
 
+/** Read-only projection. Authorization and the keyset query share one tenant RLS transaction. */
+export async function listImportJobs(
+  db: PrismaClient,
+  input: {
+    tenantId: string;
+    eventId: string;
+    actorUserId: string;
+    query: ImportJobListQuery;
+  },
+  cursorSecret: string,
+): Promise<ImportJobListPage> {
+  const { tenantId, eventId, actorUserId, query } = input;
+  const limit = query.limit ?? CURSOR_PAGE_LIMIT.default;
+  if (
+    !Number.isInteger(limit) ||
+    limit < 1 ||
+    limit > CURSOR_PAGE_LIMIT.max ||
+    (query.status !== undefined &&
+      ![
+        'CREATED',
+        'PREVIEW_READY',
+        'COMMITTING',
+        'COMPLETED',
+        'FAILED',
+      ].includes(query.status)) ||
+    (query.kind !== undefined && !['CODES', 'GUESTS'].includes(query.kind))
+  ) {
+    throw new ImportError(
+      IMPORT_ERROR_CODES.INVALID_FILTER,
+      'Invalid import list filter',
+    );
+  }
+  const status = query.status ?? null;
+  const kind = query.kind ?? null;
+  return withTenant(db, tenantId, async (tx) => {
+    try {
+      await requireTenantPermission(tx, {
+        tenantId,
+        eventId,
+        userId: actorUserId,
+        permission: PERMISSION_IMPORT,
+      });
+    } catch (error) {
+      if (
+        error instanceof AuthzError &&
+        error.code === AUTHZ_ERROR_CODES.EVENT_ASSIGNMENT_REQUIRED
+      ) {
+        throw new ImportError(
+          IMPORT_ERROR_CODES.EVENT_NOT_FOUND,
+          'Event not found',
+          404,
+        );
+      }
+      throw error;
+    }
+    const anchor =
+      query.cursor === undefined
+        ? null
+        : decodeJobCursor(
+            query.cursor,
+            cursorSecret,
+            tenantId,
+            eventId,
+            status,
+            kind,
+          );
+    const rows = await tx.$queryRaw<
+      Array<{
+        id: string;
+        kind: ImportKind;
+        status: ImportJobStatus;
+        source_id: string;
+        ticket_type_id: string;
+        mapping_revision: number | null;
+        preview_revision: number | null;
+        valid_row_count: number | null;
+        error_row_count: number | null;
+        invitation_count: number | null;
+        estimated_quota: number | null;
+        created_at: Date;
+        cursor_created_at: string;
+      }>
+    >`
+      SELECT id, kind, status, source_id, ticket_type_id, mapping_revision,
+             preview_revision, valid_row_count, error_row_count, invitation_count,
+             estimated_quota, created_at, created_at::text AS cursor_created_at
+      FROM import_jobs
+      WHERE tenant_id = ${tenantId}::uuid AND event_id = ${eventId}::uuid
+        AND (${status}::text IS NULL OR status = ${status})
+        AND (${kind}::text IS NULL OR kind = ${kind})
+        AND (${anchor?.createdAt ?? null}::text IS NULL OR
+             (created_at, id) < (${anchor?.createdAt ?? null}::timestamptz, ${anchor?.id ?? null}::uuid))
+      ORDER BY created_at DESC, id DESC
+      LIMIT ${limit + 1}
+    `;
+    const page = rows.slice(0, limit);
+    const items: ImportJobSummary[] = page.map((row) => ({
+      importId: row.id,
+      kind: row.kind,
+      status: row.status,
+      sourceId: row.source_id,
+      ticketTypeId: row.ticket_type_id,
+      mappingRevision: row.mapping_revision,
+      previewRevision: row.preview_revision,
+      validRowCount: row.valid_row_count,
+      errorRowCount: row.error_row_count,
+      invitationCount: row.invitation_count,
+      estimatedQuota: row.estimated_quota,
+      createdAt: row.created_at.toISOString(),
+    }));
+    const last = page.at(-1);
+    return {
+      items,
+      nextCursor:
+        rows.length > limit && last
+          ? encodeJobCursor(
+              [
+                1,
+                tenantId,
+                eventId,
+                status,
+                kind,
+                last.cursor_created_at,
+                last.id,
+              ],
+              cursorSecret,
+            )
+          : null,
+    };
+  });
+}
+
 export async function previewImportJob(
   db: PrismaClient,
   store: ObjectStore,
@@ -937,8 +1146,7 @@ export async function previewImportJob(
     );
     const estimatedQuota = Math.min(filteredValid.length, remaining);
     const previewRevision = (job.preview_revision ?? 0) + 1;
-    const invitationCount =
-      job.kind === 'GUESTS' ? filteredValid.length : 0;
+    const invitationCount = job.kind === 'GUESTS' ? filteredValid.length : 0;
     const sampleErrors = parsed.errors.slice(0, SAMPLE_ERROR_LIMIT);
     const errorExpires = new Date(
       Date.now() + IMPORT_ERROR_REPORT_TTL_HOURS_DEV * 3600 * 1000,

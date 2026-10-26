@@ -1,0 +1,48 @@
+{
+  "id": "d71c7fa7-91e0-4e73-9c33-74e91116568e",
+  "ok": true,
+  "result": {
+    "platform": "darwin",
+    "scannedAt": 1793009857412,
+    "ports": [
+      {
+        "id": "127.0.0.1:3417:94561",
+        "bindHost": "127.0.0.1",
+        "connectHost": "127.0.0.1",
+        "port": 3417,
+        "pid": 94561,
+        "processName": "node",
+        "protocol": "unknown",
+        "kind": "workspace",
+        "owner": {
+          "worktreeId": "909e450c-287a-413f-ad47-10304625422c::/Users/admin/SideProject/ticket-solution/vcx-939-uat-leader",
+          "repoId": "909e450c-287a-413f-ad47-10304625422c",
+          "displayName": "vcx-939-uat-leader",
+          "path": "/Users/admin/SideProject/ticket-solution/vcx-939-uat-leader",
+          "confidence": "cwd"
+        }
+      },
+      {
+        "id": "127.0.0.1:3540:94316",
+        "bindHost": "127.0.0.1",
+        "connectHost": "127.0.0.1",
+        "port": 3540,
+        "pid": 94316,
+        "processName": "node",
+        "protocol": "unknown",
+        "kind": "workspace",
+        "owner": {
+          "worktreeId": "909e450c-287a-413f-ad47-10304625422c::/Users/admin/SideProject/ticket-solution/vcx-939-uat-leader",
+          "repoId": "909e450c-287a-413f-ad47-10304625422c",
+          "displayName": "vcx-939-uat-leader",
+          "path": "/Users/admin/SideProject/ticket-solution/vcx-939-uat-leader",
+          "confidence": "cwd"
+        }
+      }
+    ],
+    "executionHostId": "local"
+  },
+  "_meta": {
+    "runtimeId": "afdfcca3-c341-421d-bc06-fd36ebaa692c"
+  }
+}

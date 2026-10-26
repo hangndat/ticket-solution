@@ -19,7 +19,7 @@ SideProject: `gh auth switch --user hangndat` trước mọi `gh` mutation hoặ
 ## SHA & CI evidence (DoD)
 
 1. **SHA:** `git rev-parse HEAD` trên worktree đang review (khớp tip thì cite SHA đó).
-2. **CI trên SHA:** `./scripts/gh-dod-evidence.sh <pr>` — không gọi `gh pr checks` trừ khi script fail và cần debug.
+2. **CI trên SHA:** `./scripts/gh-dod-evidence.sh <pr>`; nếu CI đang chạy, một `./scripts/gh-dod-evidence.sh <pr> --watch <full-sha>` lọc progress và xác nhận head vẫn đúng SHA ở cuối. Không gọi `gh pr checks` riêng khi script đang watch.
 3. Ghi evidence vào `docs/reviews/*` / PR table: paste output script hoặc `--json`, không spawn thêm `gh` chỉ để “xác nhận lại”.
 
 ## Coordinator / Project #3

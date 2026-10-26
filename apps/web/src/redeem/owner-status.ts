@@ -55,13 +55,15 @@ export function isOwnerRedemptionStatus(
 /** Live owner status via BFF — receipt operations stay historical. */
 export async function fetchOwnerRedemptionStatus(
   requestId: string,
+  tenantId: string,
   fetchImpl: typeof fetch = fetch,
 ): Promise<FetchOwnerRedemptionResult> {
   const id = requestId.trim();
-  if (!id) return { status: 'invalid' };
+  const tenant = tenantId.trim();
+  if (!id || !tenant) return { status: 'invalid' };
   try {
     const response = await fetchImpl(
-      `/api/bff/redemptions/${encodeURIComponent(id)}`,
+      `/api/bff/redemptions/${encodeURIComponent(id)}?tenantId=${encodeURIComponent(tenant)}`,
       { method: 'GET', headers: { Accept: 'application/json' }, cache: 'no-store' },
     );
     if (response.status === 401 || response.status === 403) {

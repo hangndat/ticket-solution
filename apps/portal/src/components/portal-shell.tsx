@@ -3,7 +3,14 @@
 import type { MenuDataItem } from '@ant-design/pro-components';
 import { Button } from 'antd';
 import { usePathname } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import type { MeEventItem, MeTenantItem } from '@ticket/contracts';
 import { isStaffPortalTenant } from '../onboarding';
 import {
@@ -19,6 +26,18 @@ import {
 import { PortalProLayout } from './portal-pro-layout';
 import { SurfaceState } from './surface-state';
 import { usePortalLocale } from '../i18n';
+import {
+  PORTAL_FORBIDDEN_EVENT,
+  forbiddenScopeAffectsPath,
+  forbiddenScopeFromBffPath,
+  type ForbiddenScope,
+} from '../client/portal-fetch';
+import {
+  canAccessPortalPath,
+  firstAllowedTenantPath,
+} from '../nav/capability-policy';
+import { createContextRequestGate } from '../nav/context-request-gate';
+import { installUnsavedNavigation } from '../nav/unsaved-changes';
 
 function tenantFromPath(pathname: string): string | null {
   const m = pathname.match(/^\/t\/([^/]+)/);
@@ -50,24 +69,55 @@ export function PortalShell({
   const { t } = usePortalLocale();
   const pathname = usePathname();
   const [shell, setShell] = useState<ShellLoadState>({ status: 'loading' });
+  const [forbiddenScopes, setForbiddenScopes] = useState<ForbiddenScope[]>([]);
+  const requestGate = useRef(createContextRequestGate());
+
+  useEffect(() => installUnsavedNavigation(), []);
+
+  useEffect(() => {
+    const deny = (event: Event) => {
+      const scope = forbiddenScopeFromBffPath(
+        (event as CustomEvent<string>).detail,
+      );
+      if (!scope) return;
+      setForbiddenScopes((previous) =>
+        previous.some(
+          (item) =>
+            item.tenantId === scope.tenantId && item.eventId === scope.eventId,
+        )
+          ? previous
+          : [...previous, scope],
+      );
+    };
+    window.addEventListener(PORTAL_FORBIDDEN_EVENT, deny);
+    return () => window.removeEventListener(PORTAL_FORBIDDEN_EVENT, deny);
+  }, []);
 
   const pathTenantId = tenantFromPath(pathname);
   const pathEventId = eventFromPath(pathname);
-  const [selectedTenantId] = useState<string | null>(pathTenantId);
-  const [selectedEventId] = useState<string | null>(pathEventId);
-
-  // Keep switcher selection aligned with the URL without an effect round-trip.
-  const effectiveTenantId = pathTenantId ?? selectedTenantId;
-  const effectiveEventId = pathEventId ?? selectedEventId;
+  // The URL is the only source for a selected context.
+  const effectiveTenantId = pathTenantId;
+  const effectiveEventId = pathEventId;
 
   const reload = useCallback(() => {
+    const request = requestGate.current.begin('shell');
     setShell({ status: 'loading' });
-    void loadShellContext().then(setShell);
+    void loadShellContext().then((result) => {
+      if (request.isCurrent()) setShell(result);
+    });
   }, []);
 
   useEffect(() => {
-    void loadShellContext().then(setShell);
-  }, []);
+    const gate = requestGate.current;
+    let active = true;
+    queueMicrotask(() => {
+      if (active) reload();
+    });
+    return () => {
+      active = false;
+      gate.invalidate();
+    };
+  }, [reload]);
 
   const staffLoginUrl =
     shell.status === 'unauthenticated' ? staffLoginUrlForPath(pathname) : null;
@@ -100,8 +150,7 @@ export function PortalShell({
   );
 
   const resolvedTenantId =
-    effectiveTenantId ??
-    (tenants.length === 1 ? tenants[0]!.tenantId : null);
+    effectiveTenantId ?? (tenants.length === 1 ? tenants[0]!.tenantId : null);
 
   const activeTenant =
     tenants.find((tenant) => tenant.tenantId === resolvedTenantId) ?? null;
@@ -188,6 +237,39 @@ export function PortalShell({
     caps?.showOrgChrome || caps?.showPlatform || showAnalyticsNav,
   );
 
+  const routeForbidden = !canAccessPortalPath(pathname, {
+    tenantId: activeTenant?.tenantId ?? null,
+    tenantPermissions: activeTenant?.tenantPermissions ?? [],
+    eventId: activeEvent?.eventId ?? null,
+    eventPermissions: activeEvent?.permissions ?? [],
+    tenantEventPermissions: tenantEvents.map((event) => event.permissions),
+  });
+  const bffForbidden = forbiddenScopes.some((scope) =>
+    forbiddenScopeAffectsPath(scope, pathname),
+  );
+  const recoveryPath = tenants
+    .filter(
+      (tenant) =>
+        !forbiddenScopes.some(
+          (scope) =>
+            scope.tenantId === tenant.tenantId && scope.eventId === null,
+        ),
+    )
+    .map((tenant) =>
+      firstAllowedTenantPath(
+        tenant,
+        events.filter(
+          (event) =>
+            !forbiddenScopes.some(
+              (scope) =>
+                scope.tenantId === event.tenantId &&
+                scope.eventId === event.eventId,
+            ),
+        ),
+      ),
+    )
+    .find((destination) => destination !== null && destination !== pathname);
+
   if (pathname.startsWith('/auth')) {
     return <>{children}</>;
   }
@@ -237,6 +319,21 @@ export function PortalShell({
     );
   }
 
+  if (bffForbidden || routeForbidden) {
+    return (
+      <SurfaceState
+        kind="permission-denied"
+        onRetry={() => {
+          if (recoveryPath) {
+            window.location.assign(recoveryPath);
+          } else {
+            window.location.reload();
+          }
+        }}
+      />
+    );
+  }
+
   return (
     <PortalProLayout
       productOrigin={productOrigin}
@@ -244,6 +341,7 @@ export function PortalShell({
       showSider={showSider}
       caps={caps}
       tenants={tenants}
+      events={events}
       tenantEvents={tenantEvents}
       resolvedTenantId={resolvedTenantId}
       effectiveEventId={effectiveEventId}

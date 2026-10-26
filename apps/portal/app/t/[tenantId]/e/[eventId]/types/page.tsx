@@ -4,7 +4,7 @@ import { ModalForm, ProFormText, ProTable } from '@ant-design/pro-components';
 import type { ProColumns } from '@ant-design/pro-components';
 import { Alert, Button, Typography } from 'antd';
 import { useParams } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { PortalTicketTypeSummary } from '@ticket/contracts';
 import {
   apiErrorMessage,
@@ -17,6 +17,11 @@ import { isEventPagePermitted } from '../../../../../../src/prep/event-access-re
 import { useEventAccess } from '../../../../../../src/prep/use-event-access';
 import { SurfaceState } from '../../../../../../src/components/surface-state';
 import { usePortalLocale } from '../../../../../../src/i18n';
+import { canPerformEventAction } from '../../../../../../src/nav/capability-policy';
+import {
+  confirmDiscardIfDirty,
+  useUnsavedChanges,
+} from '../../../../../../src/nav/unsaved-changes';
 
 export default function TicketTypesPage() {
   const { t } = usePortalLocale();
@@ -25,13 +30,16 @@ export default function TicketTypesPage() {
   const access = useEventAccess(tenantId, eventId);
   const [items, setItems] = useState<PortalTicketTypeSummary[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
-  const [kind, setKind] = useState<'loading' | 'ready' | 'empty' | 'error' | 'unknown'>(
-    'loading',
-  );
+  const [kind, setKind] = useState<
+    'loading' | 'ready' | 'empty' | 'error' | 'unknown'
+  >('loading');
   const [message, setMessage] = useState<string | undefined>();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [dirty, setDirty] = useState(false);
+  const savedForm = useRef(false);
+  useUnsavedChanges(dirty, t('shell.unsaved.confirm'));
 
   const load = useCallback(
     async (next?: string | null) => {
@@ -49,11 +57,17 @@ export default function TicketTypesPage() {
       }
       if (res.status !== 200 || !res.json || typeof res.json !== 'object') {
         setKind('error');
-        setMessage(apiErrorMessage(res.json, t('common.httpStatus', { status: res.status })));
+        setMessage(
+          apiErrorMessage(
+            res.json,
+            t('common.httpStatus', { status: res.status }),
+          ),
+        );
         return;
       }
       const list = Array.isArray((res.json as { items?: unknown }).items)
-        ? ((res.json as { items: PortalTicketTypeSummary[] }).items as PortalTicketTypeSummary[])
+        ? ((res.json as { items: PortalTicketTypeSummary[] })
+            .items as PortalTicketTypeSummary[])
         : [];
       const nextCursor =
         typeof (res.json as { nextCursor?: unknown }).nextCursor === 'string'
@@ -110,6 +124,8 @@ export default function TicketTypesPage() {
     );
   }
 
+  const canCreateType = canPerformEventAction('createType', access.permissions);
+
   const columns: ProColumns<PortalTicketTypeSummary>[] = [
     { title: t('types.nhan'), dataIndex: 'label' },
     {
@@ -127,7 +143,17 @@ export default function TicketTypesPage() {
     <PortalPage
       title={t('nav.event.types')}
       extra={
-        <Button type="primary" onClick={() => setOpen(true)}>{t('types.h_1caa9m7')}</Button>
+        canCreateType ? (
+          <Button
+            type="primary"
+            onClick={() => {
+              savedForm.current = false;
+              setOpen(true);
+            }}
+          >
+            {t('types.h_1caa9m7')}
+          </Button>
+        ) : undefined
       }
       loading={kind === 'loading'}
     >
@@ -138,7 +164,9 @@ export default function TicketTypesPage() {
           message={t('surface.unknown.title')}
           description={message}
           action={
-            <Button size="small" onClick={() => void load(null)}>{t('surface.action.recheck')}</Button>
+            <Button size="small" onClick={() => void load(null)}>
+              {t('surface.action.recheck')}
+            </Button>
           }
         />
       ) : null}
@@ -154,7 +182,17 @@ export default function TicketTypesPage() {
           kind="empty"
           description={t('types.h_xnio89')}
           emptyAction={
-            <Button type="primary" onClick={() => setOpen(true)}>{t('types.h_1caa9m7')}</Button>
+            canCreateType ? (
+              <Button
+                type="primary"
+                onClick={() => {
+                  savedForm.current = false;
+                  setOpen(true);
+                }}
+              >
+                {t('types.h_1caa9m7')}
+              </Button>
+            ) : undefined
           }
         />
       ) : null}
@@ -169,20 +207,41 @@ export default function TicketTypesPage() {
             pagination={false}
           />
           {cursor ? (
-            <Button onClick={() => void load(cursor)}>{t('sources.h_1w8bpuo')}</Button>
+            <Button onClick={() => void load(cursor)}>
+              {t('sources.h_1w8bpuo')}
+            </Button>
           ) : null}
         </>
       ) : null}
 
-      {notice ? <Alert type="info" showIcon message={notice} style={{ marginTop: 16 }} /> : null}
+      {notice ? (
+        <Alert
+          type="info"
+          showIcon
+          message={notice}
+          style={{ marginTop: 16 }}
+        />
+      ) : null}
 
       <ModalForm<{ label: string }>
         title={t('types.h_1caa9m7')}
-        open={open}
-        onOpenChange={setOpen}
+        open={open && canCreateType}
+        onOpenChange={(next) => {
+          if (
+            !next &&
+            !savedForm.current &&
+            !confirmDiscardIfDirty(t('shell.unsaved.confirm'))
+          )
+            return;
+          savedForm.current = false;
+          setOpen(next);
+          if (!next) setDirty(false);
+        }}
+        onValuesChange={() => setDirty(true)}
         modalProps={{ destroyOnHidden: true }}
         submitter={{ submitButtonProps: { loading: busy } }}
         onFinish={async (values) => {
+          if (!canCreateType) return false;
           setBusy(true);
           setNotice(null);
           try {
@@ -195,6 +254,8 @@ export default function TicketTypesPage() {
               return false;
             }
             if (res.status === 200 || res.status === 201) {
+              savedForm.current = true;
+              setDirty(false);
               setNotice(t('types.h_13e0npu'));
               void load(null);
               return true;

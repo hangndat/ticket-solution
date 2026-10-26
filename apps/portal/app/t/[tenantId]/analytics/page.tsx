@@ -34,10 +34,7 @@ type PageState =
   | { kind: 'unknown'; message: string }
   | { kind: 'rejected'; message: string };
 
-function metricCell(
-  item: PortfolioItemView,
-  value: number | null,
-): ReactNode {
+function metricCell(item: PortfolioItemView, value: number | null): ReactNode {
   if (item.kind === 'unknown') {
     return (
       <Tooltip title={item.message}>
@@ -58,6 +55,15 @@ export default function AnalyticsPortfolioPage() {
   const params = useParams<{ tenantId: string }>();
   const tenantId = params.tenantId;
   const access = useAnalyticsAccess(tenantId);
+  const eventPath = (eventId: string): string | null => {
+    const event =
+      access.kind === 'ready'
+        ? access.events.find((item) => item.eventId === eventId)
+        : null;
+    return event
+      ? portfolioEventHref(tenantId, eventId, event.permissions)
+      : null;
+  };
   const [page, setPage] = useState<PageState>({ kind: 'loading' });
 
   const load = useCallback(
@@ -186,7 +192,6 @@ export default function AnalyticsPortfolioPage() {
         </Button>
       }
     >
-
       {page.kind === 'ready' && page.hasPartial ? (
         <Alert
           type="warning"
@@ -242,12 +247,14 @@ export default function AnalyticsPortfolioPage() {
             pagination={false}
             data-testid="portfolio-table"
             onRow={(row) => ({
-              style: { cursor: row.eventId ? 'pointer' : 'default' },
+              style: {
+                cursor:
+                  row.eventId && eventPath(row.eventId) ? 'pointer' : 'default',
+              },
               onClick: () => {
                 if (!row.eventId) return;
-                window.location.assign(
-                  portfolioEventHref(tenantId, row.eventId),
-                );
+                const destination = eventPath(row.eventId);
+                if (destination) window.location.assign(destination);
               },
             })}
             columns={[
@@ -259,17 +266,17 @@ export default function AnalyticsPortfolioPage() {
                   if (!row.eventId) {
                     return (
                       <Tooltip
-                        title={
-                          row.kind === 'unknown' ? row.message : undefined
-                        }
+                        title={row.kind === 'unknown' ? row.message : undefined}
                       >
                         <span>{label}</span>
                       </Tooltip>
                     );
                   }
+                  const destination = eventPath(row.eventId);
+                  if (!destination) return <span>{label}</span>;
                   return (
                     <Link
-                      href={portfolioEventHref(tenantId, row.eventId)}
+                      href={destination}
                       onClick={(e) => e.stopPropagation()}
                     >
                       {label}

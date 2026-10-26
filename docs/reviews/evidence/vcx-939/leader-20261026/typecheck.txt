@@ -1,0 +1,10 @@
+
+> @ticket/web@0.1.0 typecheck /Users/admin/SideProject/ticket-solution/vcx-939-uat-leader/apps/web
+> pnpm run typegen && tsc --noEmit
+
+
+> @ticket/web@0.1.0 typegen /Users/admin/SideProject/ticket-solution/vcx-939-uat-leader/apps/web
+> node -e "require('fs').mkdirSync(require('path').join('.next','types'),{recursive:true})" && next typegen
+
+Generating route types...
+✓ Types generated successfully
