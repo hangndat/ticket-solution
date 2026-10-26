@@ -8,7 +8,10 @@ import {
   providerStatusFromDbState,
   type ProviderStatus,
 } from './notification-status';
-import { assertTenantAllowsAdminMutation, lockTenantPolicyForShare } from './tenant-policy';
+import {
+  assertTenantAllowsAdminMutation,
+  lockTenantPolicyForShare,
+} from './tenant-policy';
 
 const PERMISSION_LOOKUP = 'cs.lookup';
 const PERMISSION_RESEND = 'cs.resend';
@@ -57,24 +60,39 @@ type TicketRow = {
   owner_user_id: string;
   email: string | null;
 };
+type TicketListRow = TicketRow & { cursor_created_at: string };
 
-function encodeCursor(createdAt: Date, ticketId: string): string {
-  return Buffer.from(`${createdAt.toISOString()}|${ticketId}`, 'utf8').toString(
+// Cursor timestamps come from PostgreSQL text; a JS Date would drop microseconds.
+function encodeCursor(createdAt: string, ticketId: string): string {
+  return Buffer.from(`v1|${createdAt}|${ticketId}`, 'utf8').toString(
     'base64url',
   );
 }
 
 function decodeCursor(
   cursor: string | undefined,
-): { createdAt: Date; ticketId: string } | null {
+): { createdAt: string; ticketId: string; legacy: boolean } | null {
   if (!cursor) return null;
   try {
     const raw = Buffer.from(cursor, 'base64url').toString('utf8');
-    const [iso, ticketId] = raw.split('|');
+    const parts = raw.split('|');
+    if (parts[0] === 'v1') {
+      const [, createdAt, ticketId] = parts;
+      if (
+        parts.length !== 3 ||
+        !createdAt ||
+        !ticketId ||
+        !/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{6}Z$/.test(createdAt) ||
+        Number.isNaN(Date.parse(createdAt))
+      )
+        return null;
+      return { createdAt, ticketId, legacy: false };
+    }
+    const [iso, ticketId] = parts;
     if (!iso || !ticketId) return null;
     const createdAt = new Date(iso);
     if (Number.isNaN(createdAt.getTime())) return null;
-    return { createdAt, ticketId };
+    return { createdAt: createdAt.toISOString(), ticketId, legacy: true };
   } catch {
     return null;
   }
@@ -180,11 +198,12 @@ export async function listCsTickets(
   const limit = Math.min(Math.max(input.limit ?? 20, 1), MAX_LIMIT);
   const cursor = decodeCursor(input.cursor);
 
-  let rows: TicketRow[];
+  let rows: TicketListRow[];
 
   if (q && /^[0-9a-f-]{36}$/i.test(q)) {
-    rows = await tx.$queryRaw<TicketRow[]>`
+    rows = await tx.$queryRaw<TicketListRow[]>`
       SELECT t.id, t.state, t.ticket_type_id, t.source_id, t.created_at,
+             to_char(t.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS cursor_created_at,
              t.owner_user_id, u.email
       FROM tickets t
       LEFT JOIN users u ON u.id = t.owner_user_id
@@ -194,8 +213,9 @@ export async function listCsTickets(
       LIMIT ${limit + 1}
     `;
   } else if (q.includes('@')) {
-    rows = await tx.$queryRaw<TicketRow[]>`
+    rows = await tx.$queryRaw<TicketListRow[]>`
       SELECT t.id, t.state, t.ticket_type_id, t.source_id, t.created_at,
+             to_char(t.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS cursor_created_at,
              t.owner_user_id, u.email
       FROM tickets t
       JOIN users u ON u.id = t.owner_user_id
@@ -207,8 +227,9 @@ export async function listCsTickets(
     `;
   } else if (q.length >= 4) {
     const codeHmac = hashRedemptionCode(hmac, q);
-    rows = await tx.$queryRaw<TicketRow[]>`
+    rows = await tx.$queryRaw<TicketListRow[]>`
       SELECT t.id, t.state, t.ticket_type_id, t.source_id, t.created_at,
+             to_char(t.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS cursor_created_at,
              t.owner_user_id, u.email
       FROM tickets t
       LEFT JOIN users u ON u.id = t.owner_user_id
@@ -221,8 +242,9 @@ export async function listCsTickets(
       LIMIT ${limit + 1}
     `;
     if (rows.length === 0) {
-      rows = await tx.$queryRaw<TicketRow[]>`
+      rows = await tx.$queryRaw<TicketListRow[]>`
         SELECT t.id, t.state, t.ticket_type_id, t.source_id, t.created_at,
+               to_char(t.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS cursor_created_at,
                t.owner_user_id, u.email
         FROM tickets t
         JOIN users u ON u.id = t.owner_user_id
@@ -234,20 +256,30 @@ export async function listCsTickets(
       `;
     }
   } else if (cursor) {
-    rows = await tx.$queryRaw<TicketRow[]>`
+    rows = await tx.$queryRaw<TicketListRow[]>`
       SELECT t.id, t.state, t.ticket_type_id, t.source_id, t.created_at,
+             to_char(t.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS cursor_created_at,
              t.owner_user_id, u.email
       FROM tickets t
       LEFT JOIN users u ON u.id = t.owner_user_id
       WHERE t.tenant_id = ${input.tenantId}::uuid
         AND t.event_id = ${input.eventId}::uuid
-        AND (t.created_at, t.id) < (${cursor.createdAt}::timestamptz, ${cursor.ticketId}::uuid)
+        AND (t.created_at, t.id) < (
+          COALESCE(
+            -- Legacy cursors lost microseconds; recover the anchor within this scope.
+            (SELECT anchor.created_at FROM tickets anchor
+             WHERE ${cursor.legacy} AND anchor.tenant_id = ${input.tenantId}::uuid
+               AND anchor.event_id = ${input.eventId}::uuid
+               AND anchor.id = ${cursor.ticketId}::uuid),
+            ${cursor.createdAt}::timestamptz
+          ), ${cursor.ticketId}::uuid)
       ORDER BY t.created_at DESC, t.id DESC
       LIMIT ${limit + 1}
     `;
   } else {
-    rows = await tx.$queryRaw<TicketRow[]>`
+    rows = await tx.$queryRaw<TicketListRow[]>`
       SELECT t.id, t.state, t.ticket_type_id, t.source_id, t.created_at,
+             to_char(t.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS cursor_created_at,
              t.owner_user_id, u.email
       FROM tickets t
       LEFT JOIN users u ON u.id = t.owner_user_id
@@ -264,7 +296,7 @@ export async function listCsTickets(
   const last = page[page.length - 1];
   const nextCursor =
     rows.length > limit && last
-      ? encodeCursor(last.created_at, last.id)
+      ? encodeCursor(last.cursor_created_at, last.id)
       : null;
   return { items, nextCursor };
 }
@@ -321,7 +353,9 @@ export async function getCsTicket(
     ORDER BY created_at ASC
     LIMIT 50
   `;
-  const checkins = await tx.$queryRaw<{ confirmed_at: Date; undone_at: Date | null }[]>`
+  const checkins = await tx.$queryRaw<
+    { confirmed_at: Date; undone_at: Date | null }[]
+  >`
     SELECT confirmed_at, undone_at
     FROM checkins
     WHERE tenant_id = ${input.tenantId}::uuid
@@ -395,7 +429,6 @@ export async function resendTicketEmail(
   const policy = await lockTenantPolicyForShare(tx, input.tenantId);
   assertTenantAllowsAdminMutation(policy.status);
 
-
   const existing = await tx.$queryRaw<
     { id: string; status: string; response_json: Prisma.JsonValue }[]
   >`
@@ -432,9 +465,7 @@ export async function resendTicketEmail(
     );
   }
 
-  const tickets = await tx.$queryRaw<
-    { id: string; owner_user_id: string }[]
-  >`
+  const tickets = await tx.$queryRaw<{ id: string; owner_user_id: string }[]>`
     SELECT t.id, t.owner_user_id
     FROM tickets t
     WHERE t.tenant_id = ${input.tenantId}::uuid
