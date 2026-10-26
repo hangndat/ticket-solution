@@ -15,8 +15,8 @@ test('surface message keys are registered MessageKey values', () => {
 
 test('surface defaults resolve in vi and en', () => {
   for (const key of surfaceMessageKeys()) {
-    const vi = t(key, 'vi');
-    const en = t(key, 'en');
+    const vi = t('vi', key);
+    const en = t('en', key);
     assert.ok(vi.length > 0, `${key} vi empty`);
     assert.ok(en.length > 0, `${key} en empty`);
   }
