@@ -132,15 +132,15 @@ cost-wave | run=<id> | n=<spawned> | cheap=<c> standard=<s> focused=<l> advanced
 | `pinned`         | `launch.effective.model` khác null và không `auto`; requested không chứng minh effective                                                                         |
 | `inherit`        | omit `--model`, `--model auto`, hoặc receipt `effective.model` **null**                                                                       |
 | `models`         | `launch.effective.model` (ưu tiên). Comment wt chỉ là soft signal (`source=mixed` / `wt-comment-estimate`)                                    |
-| `source`         | `receipt` = chỉ worker-show; `receipt+mixed` = null effective nhưng comment có pin; `wt-comment-estimate` = `--comments-only` hoặc không live |
+| `source`         | `receipt` = start receipt local hoặc worker-show; `receipt+mixed` = null effective nhưng comment có pin; `wt-comment-estimate` = `--comments-only` hoặc không có receipt |
 
 **Ngưỡng hành động:** `inherit%` > **20%** trong một đợt → refresh `agent models`, sửa pin stale, **không spawn thêm** cho đến khi wave kế có `--model` (Wave E). Comment wt **không** đủ để hạ `inherit%`.
 
 Helper:
 
 ```text
-node scripts/orca-cost-wave-evidence.mjs              # Wave E: receipts trước
-node scripts/orca-cost-wave-evidence.mjs --comments-only  # ước lượng cũ (Wave D)
+node scripts/orca-cost-wave-evidence.mjs --run RUN --dispatch DISPATCH --receipt-file .orca-metrics/lifecycle/.../start-receipt.json  # Wave E; lặp --dispatch/--receipt-file cho cả wave
+node scripts/orca-cost-wave-evidence.mjs --run RUN --comments-only  # ước lượng cũ (Wave D), chỉ worker active của Run
 ```
 
 Weekday automation ticket-solution báo `inherit%` (comment) — leader vẫn chạy helper receipt sau mỗi wave spawn.

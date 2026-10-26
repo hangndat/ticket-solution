@@ -39,7 +39,7 @@ Giới hạn đo: lịch sử dài của phiên hiện tại vẫn tồn tại; 
 - Template review đầy đủ chỉ dành cho coordinator, đọc một lần rồi gửi spec đã điền khoảng 150–250 từ. Reviewer không nạp template trống/task-spec/worker-report; vẫn đọc role/rules và source/evidence cần thiết. Báo cáo ≤3 câu tóm tắt + checks + findings mới/mở đủ bằng chứng; findings đóng dẫn ID/report trước. Coordinator chỉ ghi trạng thái/decision mới và link báo cáo để tránh phát sinh bản sao.
 
 - Theo điều chỉnh mới nhất của user: giữ max fan-out task ready trong scope, một planner/Epic, trần 5 non-review + 3 reviewer theo `orca-parallel-workers.mdc`. Tối ưu token bằng context/reuse/review theo diff, không hạ concurrency.
-- Chờ một `check --wait` 45 giây; resume đúng tool session với wait dài, không poll 1 giây/đọc transcript liên tục. Ba lần timeout mới enumerate nếu chưa có tín hiệu cần xử lý sớm.
+- Chờ theo sự kiện và mốc liveness trong [mailbox](../../.cursor/rules/orca-coordinator-mailbox.mdc); fallback một `check --wait` tối đa 5 phút (CLI `--timeout-ms 300000`, rút ngắn nếu mốc liveness sớm hơn). Không enumerate theo số timeout, không poll 1 giây/đọc transcript liên tục.
 - Guide/rules coordinator nạp theo hành động trong `orca-leader-activation.mdc`; business docs đọc phần liên quan theo AGENTS. Không nạp tài liệu sản phẩm đầy đủ cho task docs/tooling thuần.
 - Các con số dưới đây là **ước lượng bytes/3.5 trên đĩa**, không phải token usage thực tế hay chi phí quota. Cursor alwaysApply không chứng minh Codex nạp cùng nội dung; runtime có thể thêm instructions/skills/history và cache. Không cộng toàn bộ requestable rules thành chi phí thực của mỗi turn.
 
@@ -49,7 +49,8 @@ Giới hạn đo: lịch sử dài của phiên hiện tại vẫn tồn tại; 
 - Gộp công việc nhỏ cùng ownership, đầu vào và mục tiêu; không gộp các slice độc lập hoặc giữ worker rảnh. Không spawn chỉ để chạy một lệnh thu evidence.
 - Reviewer độc lập với implementer. Revalidation dùng SHA cũ → mới, findings còn mở và vùng regression; auth/tenant/contract/migration đổi thì mở rộng phạm vi. Chưa đổi SHA/input/evidence thì tái sử dụng kết quả với nguồn và lý do, không gọi là test mới.
 - Chọn checks theo tác động, chạy một lần và lưu artifact; không lặp khi không có thay đổi hoặc giả thuyết mới. CI/gate bắt buộc trên SHA tích hợp vẫn giữ nguyên.
-- Coordinator giữ checkpoint ngắn: `Task | owner/dispatch | SHA | AC còn thiếu | findings/lượt fix | quyết định | bước tiếp`. Raw logs ở artifact, chỉ mở đoạn cần điều tra. Không chứa secrets hoặc dữ liệu người dùng thật.
+- Coordinator giữ một checkpoint ngắn theo run: `Task | owner/dispatch | PR/SHA | CI run/status | AC vừa đóng/còn thiếu | findings/lượt fix | evidence | bước tiếp | hạn task/mốc liveness`. Cập nhật khi trạng thái đổi, không tạo checkpoint theo heartbeat. Raw logs ở artifact, chỉ mở đoạn cần điều tra. Không chứa secrets hoặc dữ liệu người dùng thật.
+- Trước tool call xác định quyết định cần dữ liệu nào và chỉ lấy trường/delta đó. Rules đã đọc và không đổi không đọc lại; phiên mới vẫn nạp instructions áp dụng. Chuyển phiên chỉ ở boundary an toàn sau settlement/handoff, không tách mỗi task nhỏ và không tự đổi leader/provider.
 
 ### Evidence packet
 

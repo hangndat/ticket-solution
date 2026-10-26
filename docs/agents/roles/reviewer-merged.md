@@ -15,7 +15,7 @@ Nhận spec ngắn đã điền từ coordinator; **không đọc template revie
 | Gate                                                                              | Nguồn                  | Bắt buộc khi                   |
 | --------------------------------------------------------------------------------- | ---------------------- | ------------------------------ |
 | Independence (session ≠ implementer)                                              | dod · sec · uiux       | Luôn                           |
-| Exact SHA + scope paths + verdict riêng DoD / UI / security                       | dod · uiux · sec       | Luôn                           |
+| Exact SHA + scope paths + verdict DoD; UI/security khi áp dụng, N/A kèm lý do khi không áp dụng | dod · uiux · sec | Luôn |
 | AC correctness, CI/tests/UAT trên SHA, skeptical claims                           | dod § Cách làm 1–3     | Luôn                           |
 | Automation vs physical-device (headless ≠ thay device AC)                         | dod § 4                | Khi AC/ROADMAP yêu cầu         |
 | Architecture impact ↔ handoff/ADR                                                 | dod § 5                | Spec `Architecture impact: Có` |

@@ -9,7 +9,7 @@ Khi user **start agent mới** (hoặc message đầu) và gọi: `leader` · `b
 
 ## Turn đầu (leader)
 
-1. Xác nhận vai coordinator gốc (dispatch, mailbox, settlement, WIP).
+1. Xác nhận vai coordinator gốc (dispatch, mailbox, settlement, WIP). Đọc mục “Leader mặc định và cảnh báo chi phí” trong `orca-agent-routing-coordinator.mdc`: leader nhẹ mặc định, chủ động cảnh báo khi cần điều chỉnh model/context/quy trình; không tự nhận đã đổi model hay bàn giao khi chưa có receipt.
 2. Chỉ khi supervise/spawn: load skill `orchestration` — `ORCA skills get orchestration`; không nạp lại cùng guide trong session nếu phiên bản không đổi.
 3. **Read theo hành động**, không đọc toàn bộ coordinator rules ngay đầu phiên:
    - Trước dispatch: `orca-agent-routing-coordinator.mdc`, `orca-parallel-workers.mdc`, `orca-coordinator-mailbox.mdc`.

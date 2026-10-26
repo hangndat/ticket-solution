@@ -22,5 +22,5 @@ Fix CI hẹp không chiếm bucket feature; vẫn tôn scope và cost tier. User
 - WIP đầy: ưu tiên review → fix → integration trước feature. Không dùng slot trống để mở backlog ngoài ủy quyền.
 - Nhiều PR độc lập: review song song dưới cap. Cùng PR/SHA: gộp DoD/security/UI phù hợp trong một session độc lập; không đối chứng hai model khi không được yêu cầu. Revalidation theo findings + diff.
 - Reuse worker đã settle khi có task ngay, cùng domain/context, model/effort phù hợp và giữ độc lập reviewer. Cheap/standard cùng Composer không tự buộc tạo session mới; không giữ session rảnh.
-- Spawn qua preflight + Persona + receipt theo routing-coordinator; sau wave ghi một dòng cost-wave, không đo lại khi không có spawn/model thay đổi.
+- Spawn qua preflight + Persona + receipt theo routing-coordinator; sau wave ghi một dòng cost-wave theo `--run` và các `--dispatch` vừa spawn, không đo lại khi không có spawn/model thay đổi.
 - Sau settlement xét fill mọi slot còn task ready trong scope; supervise và cleanup theo mailbox. Không bỏ worker live để tiết kiệm token.

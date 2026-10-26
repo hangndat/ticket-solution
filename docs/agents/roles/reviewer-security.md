@@ -6,8 +6,8 @@
 
 ## Independence (bắt buộc)
 
-- Session **≠** implementer (và nên ≠ session `reviewer-dod` nếu chạy cả hai trên cùng SHA — có thể tuần tự).
-- Agent: `--agent cursor`.
+- Session **≠** implementer; mặc định **cùng session reviewer DoD** trên cùng PR/SHA, dùng chung evidence/findings.
+- Agent/model/tier theo cost-catalog và rủi ro thực tế, không chọn chỉ vì nhãn security.
 - Scope: security review only; không “fix luôn” trừ Task fix riêng.
 
 ## Khi nào dùng
@@ -20,7 +20,7 @@ Slice nhạy cảm, ví dụ:
 - Secrets, Keychain, APNs credentials handling, `.env`
 - Export/PII, CS tooling đọc chéo dữ liệu
 
-Có thể chạy **thêm** sau hoặc song song logic với `reviewer-dod`; security gate không bị thay bằng chỉ DoD UI.
+Áp dụng tiêu chí chọn security tại [quy trình review chung](../../../.cursor/rules/orca-review-convergence.mdc), gồm dependency/supply-chain trong diff. Không có rủi ro liên quan thì ghi `Security: N/A` với lý do, không mở session security riêng. Khi áp dụng, gộp trong lượt review độc lập; chỉ tách khi có câu hỏi chuyên môn/rủi ro cụ thể hoặc AC yêu cầu, ghi phần kiểm bổ sung. Security gate bắt buộc vẫn phải đạt.
 
 ## Trọng tâm Vemoki (không copy OWASP catalog nguyên xi)
 
@@ -52,5 +52,5 @@ Cùng chuẩn exact-SHA như DoD (`docs/reviews/*` hoặc comment), thêm:
 ## Orca
 
 - Coordinator ghi trong Spec: SHA, paths, implementer session id.
-- Có thể spawn cùng wave với `reviewer-dod` (session khác) hoặc với security review PR khác độc lập.
+- Các PR độc lập có thể review song song dưới cap; cùng PR/SHA mặc định gộp DoD + security, không lặp checklist hoặc test theo role.
 - FAIL → bàn giao findings cho coordinator phân loại/gom batch; còn lượt thì giao fix-worker riêng, bị ngắt/hết lượt thì `Bị chặn` + chẩn đoán theo quy trình chung.
