@@ -13,12 +13,16 @@ const {
   createRolePreset,
   getRolePreset,
   listRolePresets,
+  createEvent,
+  updateEvent,
+  listMyEvents,
   provisionTenant,
   readPlatformSecurityConfig,
   bootstrapPlatformOperator,
   PLATFORM_ERROR_CODES,
   ROLE_SCHEMA_VERSION,
   withTenant,
+  AuthzError,
 } = require('../dist');
 
 const docker = (...args) =>
@@ -317,6 +321,78 @@ test(
         assert.deepEqual(rows[0].permissions ?? [], []);
         assert.ok(!(rows[0].permissions ?? []).includes('export.download'));
       });
+
+      // F01 (#969): custom preset event grant — discovery must not promote event.update.
+      const eventOpsPreset = await createRolePreset(db, {
+        tenantId: tenantA.tenantId,
+        actorUserId: ownerA.userId,
+        name: 'EventOpsNoUpdate',
+        tenantPermissions: [],
+        eventPermissions: ['report.read', 'gate.confirm'],
+      });
+      assert.ok(!eventOpsPreset.eventPermissions.includes('event.update'));
+
+      let customPresetEventId;
+      await withTenant(db, tenantA.tenantId, async (tx) => {
+        const ev = await createEvent(tx, {
+          tenantId: tenantA.tenantId,
+          actorUserId: ownerA.userId,
+          idempotencyKey: randomUUID(),
+          body: {
+            slug: 'rp-custom-preset-event',
+            name: 'Custom Preset Event',
+            timezone: 'Asia/Ho_Chi_Minh',
+          },
+        });
+        customPresetEventId = ev.event.eventId;
+      });
+
+      const customStaff = await users.upsertFromVerifiedIdentity({
+        issuer: 'http://localhost/realms/ticket',
+        subject: 'custom-event-ops',
+        email: 'custom-event-ops@example.com',
+        emailVerified: true,
+      });
+      const staffInv = await createMembershipInvite(db, security, {
+        tenantId: tenantA.tenantId,
+        actorUserId: ownerA.userId,
+        email: 'custom-event-ops@example.com',
+        role: 'Manager',
+        eventAssignments: [
+          { eventId: customPresetEventId, role: eventOpsPreset.presetId },
+        ],
+        clientKey: 'inv-custom-event-ops',
+      });
+      const staffAccepted = await acceptMembershipInvite(db, {
+        userId: customStaff.userId,
+        email: 'custom-event-ops@example.com',
+        emailVerified: true,
+        token: staffInv.rawToken,
+      });
+      assert.equal(staffAccepted.tenantId, tenantA.tenantId);
+
+      const customDiscovery = await listMyEvents(db, customStaff.userId);
+      assert.equal(customDiscovery.items.length, 1);
+      assert.equal(customDiscovery.items[0].eventId, customPresetEventId);
+      assert.deepEqual(
+        [...customDiscovery.items[0].permissions].sort(),
+        [...eventOpsPreset.eventPermissions].sort(),
+      );
+      assert.ok(!customDiscovery.items[0].permissions.includes('event.update'));
+
+      await assert.rejects(
+        () =>
+          withTenant(db, tenantA.tenantId, (tx) =>
+            updateEvent(tx, {
+              tenantId: tenantA.tenantId,
+              eventId: customPresetEventId,
+              actorUserId: customStaff.userId,
+              idempotencyKey: randomUUID(),
+              body: { expectedRevision: 1, name: 'Denied Custom Preset' },
+            }),
+          ),
+        (e) => e instanceof AuthzError,
+      );
 
       // Built-in roles still work (AC-D3)
       const invMgr = await createMembershipInvite(db, security, {

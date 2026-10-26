@@ -1,10 +1,10 @@
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import type { PrismaClient } from './generated/prisma/client';
-import type { MembershipRole } from '@ticket/contracts';
 import { PlatformError, PLATFORM_ERROR_CODES } from './platform-error';
 import {
   inviteRoleStorageKey,
   isMembershipRole,
+  isMembershipRoleOrPresetId,
   parseInviteRole,
   ROLE_SCHEMA_VERSION,
   type InviteRoleRef,
@@ -111,7 +111,7 @@ export async function createMembershipInvite(
     actorUserId: string;
     email: string;
     role: InviteRoleRef;
-    eventAssignments?: Array<{ eventId: string; role: MembershipRole }>;
+    eventAssignments?: Array<{ eventId: string; role: string }>;
     clientKey: string;
     /** Reject forged client permission arrays (ADR §7). */
     forgedPermissions?: unknown;
@@ -140,7 +140,7 @@ export async function createMembershipInvite(
     );
   }
   for (const a of input.eventAssignments ?? []) {
-    if (!isMembershipRole(a.role)) {
+    if (!isMembershipRoleOrPresetId(a.role)) {
       throw new PlatformError(
         PLATFORM_ERROR_CODES.INVALID_INPUT,
         'Invalid event assignment role',
@@ -161,6 +161,11 @@ export async function createMembershipInvite(
     if (typeof parsedRole !== 'string') {
       // Unknown / cross-tenant preset → 404 (RLS + explicit load).
       await loadPresetInTenant(tx, parsedRole.presetId);
+    }
+    for (const a of input.eventAssignments ?? []) {
+      if (!isMembershipRole(a.role)) {
+        await loadPresetInTenant(tx, a.role);
+      }
     }
 
     const limits = await tx.$queryRaw<{ max_staff: number | null }[]>`

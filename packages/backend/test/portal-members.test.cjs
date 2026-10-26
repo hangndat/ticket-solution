@@ -27,6 +27,7 @@ const {
   withTenant,
   eventPermissionsForRole,
   grantEventAssignment,
+  createRolePreset,
   PERMISSION_CATALOG,
   PLATFORM_ERROR_CODES,
   AuthzError,
@@ -305,6 +306,74 @@ test(
         );
       await assert.rejects(
         () => patchAs(manager.userId, tenantA.tenantId, 1, 'Unassigned'),
+        (e) => e instanceof AuthzError,
+      );
+
+      // F01 (#969): custom preset permissions on assignment — discovery must not add event.update.
+      const customEventPreset = await createRolePreset(db, {
+        tenantId: tenantA.tenantId,
+        actorUserId: ownerA.userId,
+        name: 'PmEventOpsNoUpdate',
+        tenantPermissions: [],
+        eventPermissions: ['report.read', 'gate.confirm'],
+      });
+      assert.ok(!customEventPreset.eventPermissions.includes('event.update'));
+      const customPresetStaff = await users.upsertFromVerifiedIdentity({
+        issuer: 'http://localhost/realms/ticket',
+        subject: 'custom-preset-pm',
+        email: 'custom-preset-pm@example.com',
+        emailVerified: true,
+      });
+      let customPresetEventId;
+      await withTenant(db, tenantA.tenantId, async (tx) => {
+        const ev = await createEvent(tx, {
+          tenantId: tenantA.tenantId,
+          actorUserId: ownerA.userId,
+          idempotencyKey: randomUUID(),
+          body: {
+            slug: 'pm-custom-preset-event',
+            name: 'PM Custom Preset Event',
+            timezone: 'Asia/Ho_Chi_Minh',
+          },
+        });
+        customPresetEventId = ev.event.eventId;
+      });
+      const customPresetInv = await createMembershipInvite(db, security, {
+        tenantId: tenantA.tenantId,
+        actorUserId: ownerA.userId,
+        email: 'custom-preset-pm@example.com',
+        role: 'Manager',
+        eventAssignments: [
+          {
+            eventId: customPresetEventId,
+            role: customEventPreset.presetId,
+          },
+        ],
+        clientKey: 'pm-inv-custom-preset',
+      });
+      await acceptMembershipInvite(db, {
+        userId: customPresetStaff.userId,
+        email: 'custom-preset-pm@example.com',
+        emailVerified: true,
+        token: customPresetInv.rawToken,
+      });
+      const customPresetDiscovery = await listMyEvents(db, customPresetStaff.userId);
+      assert.equal(customPresetDiscovery.items.length, 1);
+      assert.deepEqual(
+        [...customPresetDiscovery.items[0].permissions].sort(),
+        [...customEventPreset.eventPermissions].sort(),
+      );
+      assert.ok(
+        !customPresetDiscovery.items[0].permissions.includes('event.update'),
+      );
+      await assert.rejects(
+        () =>
+          patchAs(
+            customPresetStaff.userId,
+            tenantA.tenantId,
+            1,
+            'Custom Preset Denied',
+          ),
         (e) => e instanceof AuthzError,
       );
 
