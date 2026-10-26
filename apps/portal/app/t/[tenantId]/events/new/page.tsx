@@ -1,6 +1,6 @@
 'use client';
 
-import { Alert, Button, Form, Input, Select, Space, Steps } from 'antd';
+import { Alert, Button, Flex, Form, Input, Result, Select, Space, Spin, Steps } from 'antd';
 import { PortalPage } from '../../../../../src/components/portal-page';
 import { useParams, useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -12,8 +12,8 @@ import {
 import { bffEvents } from '../../../../../src/prep/bff-urls';
 import { useTenantAccess } from '../../../../../src/prep/use-event-access';
 import { canPerformTenantAction } from '../../../../../src/nav/capability-policy';
-import { SurfaceState } from '../../../../../src/components/surface-state';
 import { usePortalLocale } from '../../../../../src/i18n';
+import { SURFACE_MESSAGE_KEYS } from '../../../../../src/prep/surface-copy';
 import { useUnsavedChanges } from '../../../../../src/nav/unsaved-changes';
 
 type WizardValues = {
@@ -42,35 +42,66 @@ export default function CreateEventWizardPage() {
   const [dirty, setDirty] = useState(false);
   useUnsavedChanges(dirty, t('shell.unsaved.confirm'));
 
-  if (access.kind === 'loading') return <SurfaceState kind="loading" />;
+  if (access.kind === 'loading') return (
+    <Flex
+      vertical
+      align="center"
+      gap="middle"
+      role="status"
+      aria-busy="true"
+      aria-label={t(SURFACE_MESSAGE_KEYS.loading)}
+      suppressHydrationWarning
+      style={{ padding: 48 }}
+    >
+      <Spin size="large" />
+      <span>{t(SURFACE_MESSAGE_KEYS.loading)}</span>
+    </Flex>
+  );
   if (access.kind === 'error') {
     return (
-      <SurfaceState
-        kind="error"
+      <Alert
+        type="error"
+        showIcon
+        message={t(SURFACE_MESSAGE_KEYS.errorLoadFailed)}
         description={access.messageKey ? t(access.messageKey) : undefined}
-        onRetry={() => window.location.reload()}
+        action={
+          <Button size="small" onClick={() => window.location.reload()}>
+            {t(SURFACE_MESSAGE_KEYS.retry)}
+          </Button>
+        }
+        style={{ margin: 24 }}
       />
     );
   }
   if (access.kind === 'permission-denied') {
     return (
-      <SurfaceState
-        kind="permission-denied"
-        description={t('events.h_ekk31m')}
-        onRetry={() => {
+      <Result
+        status="403"
+        title={t(SURFACE_MESSAGE_KEYS.permissionTitle)}
+        subTitle={t('events.h_ekk31m')}
+        extra={
+          <Button type="primary" onClick={() => {
           window.location.href = `/t/${tenantId}`;
-        }}
+        }}>
+            {t(SURFACE_MESSAGE_KEYS.permissionGoAllowed)}
+          </Button>
+        }
       />
     );
   }
   if (!canPerformTenantAction('createEvent', access.tenant.tenantPermissions)) {
     return (
-      <SurfaceState
-        kind="permission-denied"
-        description={t('events.h_1ognyxu')}
-        onRetry={() => {
+      <Result
+        status="403"
+        title={t(SURFACE_MESSAGE_KEYS.permissionTitle)}
+        subTitle={t('events.h_1ognyxu')}
+        extra={
+          <Button type="primary" onClick={() => {
           window.location.href = `/t/${tenantId}/events`;
-        }}
+        }}>
+            {t(SURFACE_MESSAGE_KEYS.permissionGoAllowed)}
+          </Button>
+        }
       />
     );
   }
