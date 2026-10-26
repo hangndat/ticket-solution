@@ -19,7 +19,10 @@ import {
   readinessSummary,
 } from '../../../../../src/prep/readiness';
 import { useEventAccess } from '../../../../../src/prep/use-event-access';
-import { canPerformEventAction } from '../../../../../src/nav/capability-policy';
+import {
+  canAccessEventRoute,
+  canPerformEventAction,
+} from '../../../../../src/nav/capability-policy';
 import {
   interpretEventReport,
   reportEmailCsHref,
@@ -330,9 +333,11 @@ export default function EventOverviewPage() {
       subTitle={t('common.h_1nl7gld')}
       extra={
         <Space>
-          <Link href={`/t/${tenantId}/e/${eventId}/setup`}>
-            <Button>{t('nav.event.setup')}</Button>
-          </Link>
+          {canAccessEventRoute('setup', access.permissions) ? (
+            <Link href={`/t/${tenantId}/e/${eventId}/setup`}>
+              <Button>{t('nav.event.setup')}</Button>
+            </Link>
+          ) : null}
           <Link href={`/t/${tenantId}/e/${eventId}/config`}>
             <Button>{t('nav.org.settings')}</Button>
           </Link>

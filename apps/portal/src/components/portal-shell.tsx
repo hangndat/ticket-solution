@@ -25,8 +25,16 @@ import {
 import { PortalProLayout } from './portal-pro-layout';
 import { SurfaceState } from './surface-state';
 import { usePortalLocale } from '../i18n';
-import { PORTAL_FORBIDDEN_EVENT } from '../client/portal-fetch';
-import { canAccessPortalPath } from '../nav/capability-policy';
+import {
+  PORTAL_FORBIDDEN_EVENT,
+  forbiddenScopeAffectsPath,
+  forbiddenScopeFromBffPath,
+  type ForbiddenScope,
+} from '../client/portal-fetch';
+import {
+  canAccessPortalPath,
+  firstAllowedTenantPath,
+} from '../nav/capability-policy';
 
 function tenantFromPath(pathname: string): string | null {
   const m = pathname.match(/^\/t\/([^/]+)/);
@@ -58,10 +66,23 @@ export function PortalShell({
   const { t } = usePortalLocale();
   const pathname = usePathname();
   const [shell, setShell] = useState<ShellLoadState>({ status: 'loading' });
-  const [bffForbidden, setBffForbidden] = useState(false);
+  const [forbiddenScopes, setForbiddenScopes] = useState<ForbiddenScope[]>([]);
 
   useEffect(() => {
-    const deny = () => setBffForbidden(true);
+    const deny = (event: Event) => {
+      const scope = forbiddenScopeFromBffPath(
+        (event as CustomEvent<string>).detail,
+      );
+      if (!scope) return;
+      setForbiddenScopes((previous) =>
+        previous.some(
+          (item) =>
+            item.tenantId === scope.tenantId && item.eventId === scope.eventId,
+        )
+          ? previous
+          : [...previous, scope],
+      );
+    };
     window.addEventListener(PORTAL_FORBIDDEN_EVENT, deny);
     return () => window.removeEventListener(PORTAL_FORBIDDEN_EVENT, deny);
   }, []);
@@ -209,6 +230,31 @@ export function PortalShell({
     eventPermissions: activeEvent?.permissions ?? [],
     tenantEventPermissions: tenantEvents.map((event) => event.permissions),
   });
+  const bffForbidden = forbiddenScopes.some((scope) =>
+    forbiddenScopeAffectsPath(scope, pathname),
+  );
+  const recoveryPath = tenants
+    .filter(
+      (tenant) =>
+        !forbiddenScopes.some(
+          (scope) =>
+            scope.tenantId === tenant.tenantId && scope.eventId === null,
+        ),
+    )
+    .map((tenant) =>
+      firstAllowedTenantPath(
+        tenant,
+        events.filter(
+          (event) =>
+            !forbiddenScopes.some(
+              (scope) =>
+                scope.tenantId === event.tenantId &&
+                scope.eventId === event.eventId,
+            ),
+        ),
+      ),
+    )
+    .find((destination) => destination !== null && destination !== pathname);
 
   if (pathname.startsWith('/auth')) {
     return <>{children}</>;
@@ -260,7 +306,18 @@ export function PortalShell({
   }
 
   if (bffForbidden || routeForbidden) {
-    return <SurfaceState kind="permission-denied" />;
+    return (
+      <SurfaceState
+        kind="permission-denied"
+        onRetry={() => {
+          if (recoveryPath) {
+            window.location.assign(recoveryPath);
+          } else {
+            window.location.reload();
+          }
+        }}
+      />
+    );
   }
 
   return (
@@ -270,6 +327,7 @@ export function PortalShell({
       showSider={showSider}
       caps={caps}
       tenants={tenants}
+      events={events}
       tenantEvents={tenantEvents}
       resolvedTenantId={resolvedTenantId}
       effectiveEventId={effectiveEventId}

@@ -6,7 +6,10 @@ import { PortalPage } from '../../../src/components/portal-page';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useTenantAccess } from '../../../src/prep/use-event-access';
-import { canPerformTenantAction } from '../../../src/nav/capability-policy';
+import {
+  canPerformTenantAction,
+  firstAllowedEventPath,
+} from '../../../src/nav/capability-policy';
 import { SurfaceState } from '../../../src/components/surface-state';
 import {
   formatTenantRole,
@@ -131,9 +134,11 @@ export default function TenantOverviewPage() {
             },
             actions: {
               render: (_, row) => [
-                <Link key="open" href={`/t/${row.tenantId}/e/${row.eventId}`}>
-                  {t('common.mo')}
-                </Link>,
+                firstAllowedEventPath(row) ? (
+                  <Link key="open" href={firstAllowedEventPath(row)!}>
+                    {t('common.mo')}
+                  </Link>
+                ) : null,
               ],
             },
           }}

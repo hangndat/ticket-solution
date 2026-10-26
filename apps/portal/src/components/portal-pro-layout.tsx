@@ -8,7 +8,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useMemo, useState, type ReactNode } from 'react';
 import { resolvePortalMenuKeys } from '../nav/portal-menu-keys';
-import type { MeTenantItem } from '@ticket/contracts';
+import type { MeEventItem, MeTenantItem } from '@ticket/contracts';
 import type { PortalShellCapabilities } from '../nav/capabilities';
 import { VEMOKI_COLORS } from '../theme/vemoki';
 import { PortalContextStrip } from './portal-context-strip';
@@ -23,7 +23,8 @@ export type PortalProLayoutProps = {
   showSider: boolean;
   caps: PortalShellCapabilities | null;
   tenants: MeTenantItem[];
-  tenantEvents: Array<{ eventId: string; name: string; tenantId: string }>;
+  events: MeEventItem[];
+  tenantEvents: MeEventItem[];
   resolvedTenantId: string | null;
   effectiveEventId: string | null;
   activeTenant: MeTenantItem | null;
@@ -36,6 +37,7 @@ export function PortalProLayout({
   showSider,
   caps,
   tenants,
+  events,
   tenantEvents,
   resolvedTenantId,
   effectiveEventId,
@@ -62,7 +64,9 @@ export function PortalProLayout({
     items: [
       {
         key: 'security',
-        label: <Link href="/account/security">{t('shell.account.security')}</Link>,
+        label: (
+          <Link href="/account/security">{t('shell.account.security')}</Link>
+        ),
       },
       {
         key: 'language',
@@ -117,11 +121,7 @@ export function PortalProLayout({
       menuRender={showSider ? undefined : false}
       fixSiderbar
       logo={
-        <Link
-          href="/"
-          className="portal-brand-link"
-          data-testid="portal-brand"
-        >
+        <Link href="/" className="portal-brand-link" data-testid="portal-brand">
           Vemoki Portal
         </Link>
       }
@@ -129,7 +129,9 @@ export function PortalProLayout({
       headerContentRender={false}
       actionsRender={() => [
         <Dropdown key="account" menu={accountMenu} trigger={['click']}>
-          <Button type="text" data-testid="account-menu">{t('shell.account.menu')}</Button>
+          <Button type="text" data-testid="account-menu">
+            {t('shell.account.menu')}
+          </Button>
         </Dropdown>,
       ]}
       token={{
@@ -154,9 +156,12 @@ export function PortalProLayout({
         } as MenuProps & { 'data-testid': string }
       }
     >
-      <a href="#portal-main" className="portal-skip-link">{t('shell.skipNav')}</a>
+      <a href="#portal-main" className="portal-skip-link">
+        {t('shell.skipNav')}
+      </a>
       <PortalContextStrip
         tenants={tenants}
+        events={events}
         tenantEvents={tenantEvents}
         resolvedTenantId={resolvedTenantId}
         effectiveEventId={effectiveEventId}
@@ -164,7 +169,9 @@ export function PortalProLayout({
       />
       <div id="portal-main" tabIndex={-1} className="portal-main-surface">
         <PortalDualRunBanner productOrigin={productOrigin} />
-        {activeTenant?.status === 'SUSPENDED' ? <SurfaceState kind="suspended" /> : null}
+        {activeTenant?.status === 'SUSPENDED' ? (
+          <SurfaceState kind="suspended" />
+        ) : null}
         {activeTenant?.status === 'PENDING' ? (
           <SurfaceState
             kind="pending-activation"

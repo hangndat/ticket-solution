@@ -6,7 +6,11 @@ import { useEffect, useState } from 'react';
 import { loadShellContext } from '../src/nav/load-shell-context';
 import { SurfaceState } from '../src/components/surface-state';
 import { usePortalLocale, type MessageKey } from '../src/i18n';
-import { resolveOnboardingSurface } from '../src/onboarding';
+import {
+  isStaffPortalTenant,
+  resolveOnboardingSurface,
+} from '../src/onboarding';
+import { firstAllowedTenantPath } from '../src/nav/capability-policy';
 import { usePortalUserId } from '../src/views/use-portal-user-id';
 
 function redirectFromHome(path: string) {
@@ -24,8 +28,7 @@ export default function PortalHomePage() {
   >('loading');
   const [messageKey, setMessageKey] = useState<MessageKey | undefined>();
 
-  const identityUserId =
-    identity.status === 'ready' ? identity.userId : null;
+  const identityUserId = identity.status === 'ready' ? identity.userId : null;
 
   useEffect(() => {
     if (identity.status === 'loading') {
@@ -68,11 +71,40 @@ export default function PortalHomePage() {
         return;
       }
       setState('redirecting');
-      if (surface.kind === 'pending-activation' || surface.kind === 'first-run') {
+      const events = shell.meEvents?.items ?? [];
+      const allowedDestination = [
+        surface.tenant,
+        ...(shell.meTenants?.items ?? []).filter(
+          (tenant) =>
+            isStaffPortalTenant(tenant) &&
+            tenant.tenantId !== surface.tenant.tenantId,
+        ),
+      ]
+        .map((tenant) => firstAllowedTenantPath(tenant, events))
+        .find((path) => path !== null);
+      if (
+        surface.kind === 'pending-activation' ||
+        surface.kind === 'first-run'
+      ) {
+        if (
+          surface.kind === 'first-run' &&
+          surface.tenant.tenantPermissions.length === 0
+        ) {
+          if (allowedDestination) {
+            redirectFromHome(allowedDestination);
+            return;
+          }
+          setState('empty');
+          return;
+        }
         redirectFromHome(`/onboarding/${surface.tenant.tenantId}`);
         return;
       }
-      redirectFromHome(`/t/${surface.tenant.tenantId}`);
+      if (allowedDestination) {
+        redirectFromHome(allowedDestination);
+      } else {
+        setState('empty');
+      }
     });
     return () => {
       cancelled = true;

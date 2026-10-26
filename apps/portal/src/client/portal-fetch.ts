@@ -11,11 +11,43 @@ export type PortalFetchResult = {
 
 export const PORTAL_FORBIDDEN_EVENT = 'portal:bff-forbidden';
 
+export type ForbiddenScope = { tenantId: string; eventId: string | null };
+
+export function forbiddenScopeFromBffPath(path: string): ForbiddenScope | null {
+  const parts = new URL(path, 'http://portal.local').pathname
+    .split('/')
+    .filter(Boolean);
+  if (
+    parts[0] !== 'api' ||
+    parts[1] !== 'bff' ||
+    parts[2] !== 'tenants' ||
+    !parts[3]
+  ) {
+    return null;
+  }
+  return {
+    tenantId: parts[3],
+    eventId: parts[4] === 'events' && parts[5] ? parts[5] : null,
+  };
+}
+
+export function forbiddenScopeAffectsPath(
+  scope: ForbiddenScope,
+  pathname: string,
+): boolean {
+  const parts = pathname.split('/').filter(Boolean);
+  return (
+    parts[0] === 't' &&
+    parts[1] === scope.tenantId &&
+    (scope.eventId === null || (parts[2] === 'e' && parts[3] === scope.eventId))
+  );
+}
+
 function reportForbidden(path: string, status: number): void {
   if (
     typeof window !== 'undefined' &&
     status === 403 &&
-    path.startsWith('/api/bff/tenants/')
+    forbiddenScopeFromBffPath(path) !== null
   ) {
     window.dispatchEvent(
       new CustomEvent(PORTAL_FORBIDDEN_EVENT, { detail: path }),

@@ -18,7 +18,6 @@ export const EVENT_ROUTES = {
   guests: [
     'inventory.import',
     'redemption.approve',
-    'notify.send',
     'event.config',
     'export.create',
     'export.download',
@@ -41,10 +40,10 @@ export const EVENT_ACTIONS = {
   createType: ['event.config'],
   createSource: ['event.config'],
   updateEvent: ['event.update'],
-  publishConfig: ['config.publish'],
+  publishConfig: ['event.publish'],
   importInventory: ['inventory.import'],
   approveRedemption: ['redemption.approve'],
-  sendNotification: ['notify.send', 'event.config'],
+  sendNotification: ['event.config'],
   createExport: ['export.create'],
   downloadExport: ['export.download'],
 } as const;
@@ -151,4 +150,67 @@ export function canAccessPortalPath(
       context.tenantPermissions,
     )
   );
+}
+
+type DiscoveredEvent = {
+  tenantId: string;
+  eventId: string;
+  permissions: readonly string[];
+};
+
+type DiscoveredTenant = {
+  tenantId: string;
+  tenantPermissions: readonly string[];
+};
+
+const EVENT_ENTRY_ROUTES = [
+  'overview',
+  'support',
+  'gate',
+  'audit',
+  'guests',
+  'setup',
+  'config',
+  'types',
+  'sources',
+  'quota',
+] as const;
+
+/** Choose an actual web route from discovery; role names never grant access. */
+export function firstAllowedEventPath(event: DiscoveredEvent): string | null {
+  const route = EVENT_ENTRY_ROUTES.find((candidate) =>
+    canAccessEventRoute(candidate, event.permissions),
+  );
+  if (!route) return null;
+  const base = `/t/${event.tenantId}/e/${event.eventId}`;
+  return route === 'overview' ? base : `${base}/${route}`;
+}
+
+export function firstAllowedTenantPath(
+  tenant: DiscoveredTenant,
+  events: readonly DiscoveredEvent[],
+): string | null {
+  const tenantEvents = events.filter(
+    (event) => event.tenantId === tenant.tenantId,
+  );
+  // Event-only staff land on their assigned event, not a denied tenant dashboard.
+  if (!canAccessTenantRoute('overview', tenant.tenantPermissions)) {
+    const eventPath = tenantEvents.map(firstAllowedEventPath).find(Boolean);
+    if (eventPath) return eventPath;
+  }
+  if (
+    canAccessTenantRoute(
+      'overview',
+      tenant.tenantPermissions,
+      tenantEvents.map((event) => event.permissions),
+    ) ||
+    canAccessTenantRoute(
+      'analytics',
+      tenant.tenantPermissions,
+      tenantEvents.map((event) => event.permissions),
+    )
+  ) {
+    return `/t/${tenant.tenantId}`;
+  }
+  return tenantEvents.map(firstAllowedEventPath).find(Boolean) ?? null;
 }

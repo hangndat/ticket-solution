@@ -11,7 +11,10 @@ import { portalGet } from '../../../../src/client/portal-fetch';
 import { PortalPage } from '../../../../src/components/portal-page';
 import { bffEvents } from '../../../../src/prep/bff-urls';
 import { useTenantAccess } from '../../../../src/prep/use-event-access';
-import { canPerformTenantAction } from '../../../../src/nav/capability-policy';
+import {
+  canPerformTenantAction,
+  firstAllowedEventPath,
+} from '../../../../src/nav/capability-policy';
 import { SurfaceState } from '../../../../src/components/surface-state';
 import { usePortalLocale } from '../../../../src/i18n';
 
@@ -140,9 +143,17 @@ export default function EventsListPage() {
     {
       title: t('sources.ten'),
       dataIndex: 'name',
-      render: (_, row) => (
-        <Link href={`/t/${tenantId}/e/${row.eventId}`}>{row.name}</Link>
-      ),
+      render: (_, row) => {
+        const event = access.events.find(
+          (item) => item.eventId === row.eventId,
+        );
+        const destination = event && firstAllowedEventPath(event);
+        return destination ? (
+          <Link href={destination}>{row.name}</Link>
+        ) : (
+          row.name
+        );
+      },
     },
     { title: 'Slug', dataIndex: 'slug' },
     { title: t('common.h_fe18yl'), dataIndex: 'contentStatus' },
