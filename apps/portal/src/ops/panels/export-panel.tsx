@@ -96,7 +96,7 @@ export function ExportPanel({
       return;
     }
     setBusy(true);
-    const outcome = await intent.run({},
+    const outcome = await intent.run({ format: 'csv' },
       (body) => portalMutate(bffExports(tenantId, eventId), body),
       (response) => interpretExportCreate(response.status, response.json,
         response.networkError || response.timedOut, locale).kind === 'created');
