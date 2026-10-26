@@ -17,6 +17,7 @@ import { SURFACE_MESSAGE_KEYS } from '../../../../../src/prep/surface-copy';
 import { useUnsavedChanges } from '../../../../../src/nav/unsaved-changes';
 import { useMutationIntent } from '../../../../../src/client/use-mutation-intent';
 import { MutationIntentAlert } from '../../../../../src/client/mutation-intent-alert';
+import { eventFromMutation } from '../../../../../src/client/event-mutation-result';
 
 type WizardValues = {
   slug: string;
@@ -115,8 +116,7 @@ export default function CreateEventWizardPage() {
     try {
       const values = await form.validateFields();
       const outcome = await intent.run(values, (body) => portalMutate(bffEvents(tenantId), body),
-        (result) => result.status >= 200 && result.status < 300 && !!result.json &&
-          typeof result.json === 'object' && typeof (result.json as { eventId?: unknown }).eventId === 'string');
+        (result) => eventFromMutation(result) !== null);
       if (outcome.kind === 'blocked') {
         setNotice({ type: 'warning', text: 'Thao tác trước chưa xác định. Kiểm tra sự kiện trước khi tạo ý định mới.' });
         return;
@@ -136,12 +136,7 @@ export default function CreateEventWizardPage() {
         return;
       }
       if (res.status === 200 || res.status === 201) {
-        const eventId =
-          res.json &&
-          typeof res.json === 'object' &&
-          typeof (res.json as { eventId?: unknown }).eventId === 'string'
-            ? ((res.json as { eventId: string }).eventId as string)
-            : null;
+        const eventId = eventFromMutation(res)?.eventId ?? null;
         if (!eventId) {
           setNotice({
             type: 'warning',

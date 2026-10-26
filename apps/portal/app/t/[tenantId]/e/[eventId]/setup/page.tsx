@@ -20,6 +20,7 @@ import { SURFACE_MESSAGE_KEYS } from '../../../../../../src/prep/surface-copy';
 import { useUnsavedChanges } from '../../../../../../src/nav/unsaved-changes';
 import { useMutationIntent } from '../../../../../../src/client/use-mutation-intent';
 import { MutationIntentAlert } from '../../../../../../src/client/mutation-intent-alert';
+import { eventFromMutation } from '../../../../../../src/client/event-mutation-result';
 import {
   applySetupReload,
   hasUnsavedSetupChanges,
@@ -189,7 +190,7 @@ export default function EventSetupPage() {
       pendingMetaRef.current = inFlight;
       const outcome = await metaIntent.run(pending, (body) => portalMutate(
         bffEvent(tenantId, eventId), body, 'PATCH',
-      ), (result) => result.status >= 200 && result.status < 300 && !!result.json);
+      ), (result) => eventFromMutation(result)?.eventId === eventId);
       if (pendingMetaRef.current !== inFlight) return;
       if (outcome.kind === 'blocked') {
         setNotice('Thao tác trước chưa xác định. Kiểm tra sự kiện trước khi tiếp tục.');
@@ -203,7 +204,7 @@ export default function EventSetupPage() {
       }
       pendingMetaRef.current = null;
       setMetaUnknownScope(null);
-      if (res.status >= 200 && res.status < 300) {
+      if (eventFromMutation(res)?.eventId === eventId) {
         if (metaForm.getFieldValue('name')?.trim() === pending.name) {
           metaDirtyRef.current = false;
           setMetaDirty(false);
@@ -212,7 +213,9 @@ export default function EventSetupPage() {
         void load();
         return;
       }
-      setNotice(apiErrorMessage(res.json, t('setup.h_rezx8n')));
+      setNotice(res.status >= 200 && res.status < 300
+        ? 'Cập nhật chưa xác định. Kiểm tra sự kiện trước khi tiếp tục.'
+        : apiErrorMessage(res.json, t('setup.h_rezx8n')));
     } finally {
       setBusy(false);
     }
@@ -228,8 +231,7 @@ export default function EventSetupPage() {
           name: values.name.trim(),
           copyConfig: true,
         }, (body) => portalMutate(bffEventAction(tenantId, eventId, 'clone'), body),
-        (result) => result.status >= 200 && result.status < 300 && !!result.json &&
-          typeof result.json === 'object' && typeof (result.json as { eventId?: unknown }).eventId === 'string');
+        (result) => eventFromMutation(result) !== null);
       if (outcome.kind === 'blocked') {
         setNotice('Thao tác clone trước chưa xác định. Kiểm tra danh sách sự kiện.');
         return;
@@ -239,13 +241,8 @@ export default function EventSetupPage() {
         setNotice(t('setup.h_mfkouj'));
         return;
       }
-      if (res.status >= 200 && res.status < 300) {
-        const newId =
-          res.json &&
-          typeof res.json === 'object' &&
-          typeof (res.json as { eventId?: unknown }).eventId === 'string'
-            ? ((res.json as { eventId: string }).eventId as string)
-            : null;
+        if (res.status >= 200 && res.status < 300) {
+        const newId = eventFromMutation(res)?.eventId ?? null;
         if (newId) {
           cloneDirtyRef.current = false;
           setCloneDirty(false);
@@ -273,7 +270,8 @@ export default function EventSetupPage() {
       onOk: async () => {
         const outcome = await archiveIntent.run({
             expectedRevision: detail.revision,
-          }, (body) => portalMutate(bffEventAction(tenantId, eventId, 'archive'), body));
+          }, (body) => portalMutate(bffEventAction(tenantId, eventId, 'archive'), body),
+          (result) => eventFromMutation(result)?.contentStatus === 'ARCHIVED');
         if (outcome.kind === 'blocked') {
           setNotice('Thao tác archive trước chưa xác định. Kiểm tra trạng thái sự kiện.');
           return;
@@ -283,12 +281,14 @@ export default function EventSetupPage() {
           setNotice(t('setup.h_uafnux'));
           return;
         }
-        if (res.status >= 200 && res.status < 300) {
+        if (eventFromMutation(res)?.contentStatus === 'ARCHIVED') {
           setNotice(t('setup.h_1dze9ux'));
           void load();
           return;
         }
-        setNotice(apiErrorMessage(res.json, t('events.archive.failed')));
+        setNotice(res.status >= 200 && res.status < 300
+          ? 'Lưu trữ chưa xác định. Kiểm tra trạng thái sự kiện trước khi tiếp tục.'
+          : apiErrorMessage(res.json, t('events.archive.failed')));
       },
     });
   }
