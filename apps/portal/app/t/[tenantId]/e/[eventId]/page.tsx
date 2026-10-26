@@ -1,14 +1,7 @@
 'use client';
 
 import { ProCard, StatisticCard } from '@ant-design/pro-components';
-import {
-  Alert,
-  Button,
-  Descriptions,
-  Modal,
-  Space,
-  Typography,
-} from 'antd';
+import { Alert, Button, Descriptions, Modal, Space, Typography } from 'antd';
 import { PortalPage } from '../../../../../src/components/portal-page';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
@@ -26,6 +19,7 @@ import {
   readinessSummary,
 } from '../../../../../src/prep/readiness';
 import { useEventAccess } from '../../../../../src/prep/use-event-access';
+import { canPerformEventAction } from '../../../../../src/nav/capability-policy';
 import {
   interpretEventReport,
   reportEmailCsHref,
@@ -86,24 +80,23 @@ export default function EventOverviewPage() {
     const [d, r, ty, s, c] = await Promise.all([
       portalGet(bffEvent(tenantId, eventId)),
       portalGet(bffEventAction(tenantId, eventId, 'report')),
-      portalGet(`${bffEventAction(tenantId, eventId, 'ticket-types')}?limit=20`),
+      portalGet(
+        `${bffEventAction(tenantId, eventId, 'ticket-types')}?limit=20`,
+      ),
       portalGet(`${bffEventAction(tenantId, eventId, 'sources')}?limit=20`),
       portalGet(bffEventAction(tenantId, eventId, 'config-versions')),
     ]);
 
-    if (
-      d.networkError ||
-      d.timedOut ||
-      d.status >= 500 ||
-      d.status === 0
-    ) {
+    if (d.networkError || d.timedOut || d.status >= 500 || d.status === 0) {
       setLoadKind('unknown');
       setMessage(t('common.h_1hj59zg'));
       return;
     }
     if (d.status !== 200 || !d.json || typeof d.json !== 'object') {
       setLoadKind('error');
-      setMessage(apiErrorMessage(d.json, t('common.httpStatus', { status: d.status })));
+      setMessage(
+        apiErrorMessage(d.json, t('common.httpStatus', { status: d.status })),
+      );
       return;
     }
     setDetail(d.json as EventDetail);
@@ -112,7 +105,8 @@ export default function EventOverviewPage() {
       interpretEventReport(
         r.status,
         r.json,
-        r.networkError || r.timedOut, locale,
+        r.networkError || r.timedOut,
+        locale,
       ),
     );
 
@@ -135,7 +129,8 @@ export default function EventOverviewPage() {
 
     if (c.status === 200 && c.json && typeof c.json === 'object') {
       const items = Array.isArray((c.json as { items?: unknown }).items)
-        ? ((c.json as { items: ConfigVersionSummary[] }).items as ConfigVersionSummary[])
+        ? ((c.json as { items: ConfigVersionSummary[] })
+            .items as ConfigVersionSummary[])
         : [];
       const published = items.find((i) => i.published);
       setPublishedVersion(published?.version ?? null);
@@ -151,23 +146,32 @@ export default function EventOverviewPage() {
         ) {
           const payload = (preview.json as { payload?: unknown }).payload;
           if (payload && typeof payload === 'object') {
-            const brand = (payload as { brand?: { organizationName?: string; primaryColor?: string } })
-              .brand;
+            const brand = (
+              payload as {
+                brand?: { organizationName?: string; primaryColor?: string };
+              }
+            ).brand;
             setHasBrand(
               Boolean(
                 brand?.organizationName?.trim() && brand?.primaryColor?.trim(),
               ),
             );
-            const sections = (payload as { sections?: Array<{ kind: string; body?: Record<string, unknown> }> })
-              .sections;
+            const sections = (
+              payload as {
+                sections?: Array<{
+                  kind: string;
+                  body?: Record<string, unknown>;
+                }>;
+              }
+            ).sections;
             const terms = sections?.find((sec) => sec.kind === 'terms');
             const body = terms?.body ?? {};
             setHasTerms(
               Boolean(
                 (typeof body.termsVersion === 'string' &&
                   body.termsVersion.trim()) ||
-                  (typeof body.text === 'string' && body.text.trim()) ||
-                  published,
+                (typeof body.text === 'string' && body.text.trim()) ||
+                published,
               ),
             );
           }
@@ -192,22 +196,33 @@ export default function EventOverviewPage() {
   const shownReport = report?.kind === 'shown' ? report : null;
   const readiness = useMemo(
     () =>
-      derivePrepReadiness({
-        hasEventContext: true,
-        hasTicketType: typesCount > 0,
-        hasSource: sourcesCount > 0,
-        quotaKnown: shownReport?.quota !== undefined,
-        quotaCapacity: shownReport?.quota?.capacity ?? null,
-        hasTermsOrPublished: hasTerms || publishedVersion != null,
-        hasBrand,
-      }, locale),
-    [typesCount, sourcesCount, shownReport, hasTerms, publishedVersion, hasBrand, locale],
+      derivePrepReadiness(
+        {
+          hasEventContext: true,
+          hasTicketType: typesCount > 0,
+          hasSource: sourcesCount > 0,
+          quotaKnown: shownReport?.quota !== undefined,
+          quotaCapacity: shownReport?.quota?.capacity ?? null,
+          hasTermsOrPublished: hasTerms || publishedVersion != null,
+          hasBrand,
+        },
+        locale,
+      ),
+    [
+      typesCount,
+      sourcesCount,
+      shownReport,
+      hasTerms,
+      publishedVersion,
+      hasBrand,
+      locale,
+    ],
   );
   const canPublish =
     readinessAllOk(readiness) &&
     draftVersion != null &&
     access.kind === 'ready' &&
-    access.permissions.includes('config.publish');
+    canPerformEventAction('publishConfig', access.permissions);
 
   async function publish() {
     if (draftVersion == null) return;
@@ -237,9 +252,7 @@ export default function EventOverviewPage() {
             { expectedVersion: draftVersion },
           );
           if (res.networkError || res.timedOut || res.status >= 500) {
-            setNotice(
-              t('common.h_1d5xf37'),
-            );
+            setNotice(t('common.h_1d5xf37'));
             return;
           }
           if (res.status >= 200 && res.status < 300) {
@@ -247,7 +260,12 @@ export default function EventOverviewPage() {
             void load();
             return;
           }
-          setNotice(apiErrorMessage(res.json, t('config.publishFailedStatus', { status: res.status })));
+          setNotice(
+            apiErrorMessage(
+              res.json,
+              t('config.publishFailedStatus', { status: res.status }),
+            ),
+          );
         } finally {
           setBusy(false);
         }
@@ -286,7 +304,9 @@ export default function EventOverviewPage() {
         message={t('surface.unknown.title')}
         description={message}
         action={
-          <Button size="small" onClick={() => void load()}>{t('surface.action.recheck')}</Button>
+          <Button size="small" onClick={() => void load()}>
+            {t('surface.action.recheck')}
+          </Button>
         }
       />
     );
@@ -321,16 +341,18 @@ export default function EventOverviewPage() {
             disabled={!canPublish || busy}
             loading={busy}
             onClick={() => void publish()}
-            title={
-              canPublish
-                ? undefined
-                : readinessSummary(readiness, locale)
-            }
-          >{t('config.h_lofnqs')}</Button>
+            title={canPublish ? undefined : readinessSummary(readiness, locale)}
+          >
+            {t('config.h_lofnqs')}
+          </Button>
         </Space>
       }
     >
-      <ProCard size="small" title={t('ops.export.statusButton')} style={{ marginBottom: 16 }}>
+      <ProCard
+        size="small"
+        title={t('ops.export.statusButton')}
+        style={{ marginBottom: 16 }}
+      >
         <Descriptions bordered size="small" column={1}>
           <Descriptions.Item label={t('common.label.slug')}>
             {detail.slug}
@@ -403,7 +425,9 @@ export default function EventOverviewPage() {
             />
           </StatisticCard.Group>
           <Space wrap style={{ marginTop: 8 }}>
-            <Button size="small" onClick={() => void load()}>{t('gate.h_3keb7')}</Button>
+            <Button size="small" onClick={() => void load()}>
+              {t('gate.h_3keb7')}
+            </Button>
             {reportShowsPendingApprovalCta(shownReport) ? (
               <Link href={reportPendingApprovalHref(tenantId, eventId)}>
                 <Button size="small">{t('common.h_wa3fk5')}</Button>
@@ -426,7 +450,10 @@ export default function EventOverviewPage() {
           message={t('common.h_1cdrhuc')}
           description={
             report?.kind === 'rejected'
-              ? t('ops.export.apiRejected', { code: report.code, message: report.message })
+              ? t('ops.export.apiRejected', {
+                  code: report.code,
+                  message: report.message,
+                })
               : report?.kind === 'unknown'
                 ? report.message
                 : undefined
@@ -441,7 +468,11 @@ export default function EventOverviewPage() {
       {canReport ? (
         <Typography.Paragraph>
           {t('event.home.gateReportDetail')}{' '}
-          <Link href={`/t/${tenantId}/e/${eventId}/gate`}>{t('common.h_1iov4lt')}</Link>{t('gateDeeplink.h_k7571i')}</Typography.Paragraph>
+          <Link href={`/t/${tenantId}/e/${eventId}/gate`}>
+            {t('common.h_1iov4lt')}
+          </Link>
+          {t('gateDeeplink.h_k7571i')}
+        </Typography.Paragraph>
       ) : null}
     </PortalPage>
   );

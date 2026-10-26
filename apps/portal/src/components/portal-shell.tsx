@@ -3,7 +3,13 @@
 import type { MenuDataItem } from '@ant-design/pro-components';
 import { Button } from 'antd';
 import { usePathname } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react';
 import type { MeEventItem, MeTenantItem } from '@ticket/contracts';
 import { isStaffPortalTenant } from '../onboarding';
 import {
@@ -19,6 +25,8 @@ import {
 import { PortalProLayout } from './portal-pro-layout';
 import { SurfaceState } from './surface-state';
 import { usePortalLocale } from '../i18n';
+import { PORTAL_FORBIDDEN_EVENT } from '../client/portal-fetch';
+import { canAccessPortalPath } from '../nav/capability-policy';
 
 function tenantFromPath(pathname: string): string | null {
   const m = pathname.match(/^\/t\/([^/]+)/);
@@ -50,6 +58,13 @@ export function PortalShell({
   const { t } = usePortalLocale();
   const pathname = usePathname();
   const [shell, setShell] = useState<ShellLoadState>({ status: 'loading' });
+  const [bffForbidden, setBffForbidden] = useState(false);
+
+  useEffect(() => {
+    const deny = () => setBffForbidden(true);
+    window.addEventListener(PORTAL_FORBIDDEN_EVENT, deny);
+    return () => window.removeEventListener(PORTAL_FORBIDDEN_EVENT, deny);
+  }, []);
 
   const pathTenantId = tenantFromPath(pathname);
   const pathEventId = eventFromPath(pathname);
@@ -100,8 +115,7 @@ export function PortalShell({
   );
 
   const resolvedTenantId =
-    effectiveTenantId ??
-    (tenants.length === 1 ? tenants[0]!.tenantId : null);
+    effectiveTenantId ?? (tenants.length === 1 ? tenants[0]!.tenantId : null);
 
   const activeTenant =
     tenants.find((tenant) => tenant.tenantId === resolvedTenantId) ?? null;
@@ -188,6 +202,14 @@ export function PortalShell({
     caps?.showOrgChrome || caps?.showPlatform || showAnalyticsNav,
   );
 
+  const routeForbidden = !canAccessPortalPath(pathname, {
+    tenantId: activeTenant?.tenantId ?? null,
+    tenantPermissions: activeTenant?.tenantPermissions ?? [],
+    eventId: activeEvent?.eventId ?? null,
+    eventPermissions: activeEvent?.permissions ?? [],
+    tenantEventPermissions: tenantEvents.map((event) => event.permissions),
+  });
+
   if (pathname.startsWith('/auth')) {
     return <>{children}</>;
   }
@@ -235,6 +257,10 @@ export function PortalShell({
         }
       />
     );
+  }
+
+  if (bffForbidden || routeForbidden) {
+    return <SurfaceState kind="permission-denied" />;
   }
 
   return (

@@ -9,6 +9,20 @@ export type PortalFetchResult = {
   timedOut: boolean;
 };
 
+export const PORTAL_FORBIDDEN_EVENT = 'portal:bff-forbidden';
+
+function reportForbidden(path: string, status: number): void {
+  if (
+    typeof window !== 'undefined' &&
+    status === 403 &&
+    path.startsWith('/api/bff/tenants/')
+  ) {
+    window.dispatchEvent(
+      new CustomEvent(PORTAL_FORBIDDEN_EVENT, { detail: path }),
+    );
+  }
+}
+
 function readCsrfFromDocument(): string {
   if (typeof document === 'undefined') return '';
   const match = document.cookie.match(
@@ -41,6 +55,7 @@ export async function portalGet(
       cache: 'no-store',
       signal: controller.signal,
     });
+    reportForbidden(path, res.status);
     return {
       status: res.status,
       json: await parseJsonSafe(res),
@@ -76,6 +91,7 @@ export async function portalMutate(
       body: JSON.stringify(body),
       signal: controller.signal,
     });
+    reportForbidden(path, res.status);
     return {
       status: res.status,
       json: await parseJsonSafe(res),
@@ -126,6 +142,7 @@ export async function portalMultipart(
       body: form,
       signal: controller.signal,
     });
+    reportForbidden(path, res.status);
     return {
       status: res.status,
       json: await parseJsonSafe(res),
@@ -161,6 +178,7 @@ export async function portalDownload(
       cache: 'no-store',
       signal: controller.signal,
     });
+    reportForbidden(path, res.status);
     if (!res.ok) {
       return {
         status: res.status,

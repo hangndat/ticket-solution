@@ -1,12 +1,7 @@
 'use client';
 
 import { ProCard, ProForm, ProFormText } from '@ant-design/pro-components';
-import {
-  Alert,
-  Button,
-  Form,
-  Modal,
-} from 'antd';
+import { Alert, Button, Form, Modal } from 'antd';
 import { PortalPage } from '../../../../../../src/components/portal-page';
 import { useParams, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
@@ -19,6 +14,7 @@ import {
 import { bffEvent, bffEventAction } from '../../../../../../src/prep/bff-urls';
 import { isEventPagePermitted } from '../../../../../../src/prep/event-access-resolver';
 import { useEventAccess } from '../../../../../../src/prep/use-event-access';
+import { canPerformEventAction } from '../../../../../../src/nav/capability-policy';
 import { SurfaceState } from '../../../../../../src/components/surface-state';
 import { usePortalLocale } from '../../../../../../src/i18n';
 
@@ -49,7 +45,12 @@ export default function EventSetupPage() {
     }
     if (res.status !== 200 || !res.json || typeof res.json !== 'object') {
       setKind('error');
-      setMessage(apiErrorMessage(res.json, t('common.httpStatus', { status: res.status })));
+      setMessage(
+        apiErrorMessage(
+          res.json,
+          t('common.httpStatus', { status: res.status }),
+        ),
+      );
       return;
     }
     const event = res.json as EventDetail;
@@ -106,7 +107,7 @@ export default function EventSetupPage() {
     );
   }
 
-  const canUpdate = access.permissions.includes('event.update');
+  const canUpdate = canPerformEventAction('updateEvent', access.permissions);
 
   async function saveMeta() {
     if (!detail) return;
@@ -180,8 +181,7 @@ export default function EventSetupPage() {
     if (!detail) return;
     Modal.confirm({
       title: t('setup.h_4dggx3'),
-      content:
-        t('events.archive.hint'),
+      content: t('events.archive.hint'),
       okText: t('setup.h_1fmwr17'),
       okButtonProps: { danger: true },
       cancelText: t('config.huy'),
@@ -208,7 +208,11 @@ export default function EventSetupPage() {
   }
 
   return (
-    <PortalPage title={t('setup.title')} subTitle={t('setup.metadataHint')} loading={kind === 'loading'}>
+    <PortalPage
+      title={t('setup.title')}
+      subTitle={t('setup.metadataHint')}
+      loading={kind === 'loading'}
+    >
       {kind === 'loading' ? <SurfaceState kind="loading" /> : null}
       {kind === 'unknown' ? (
         <Alert
@@ -217,7 +221,9 @@ export default function EventSetupPage() {
           message={t('surface.unknown.title')}
           description={message}
           action={
-            <Button size="small" onClick={() => void load()}>{t('surface.action.recheck')}</Button>
+            <Button size="small" onClick={() => void load()}>
+              {t('surface.action.recheck')}
+            </Button>
           }
         />
       ) : null}
@@ -248,7 +254,11 @@ export default function EventSetupPage() {
               }}
               onFinish={() => void saveMeta()}
             >
-              <ProFormText name="name" rules={[{ required: true }]} width={320} />
+              <ProFormText
+                name="name"
+                rules={[{ required: true }]}
+                width={320}
+              />
             </ProForm>
           </ProCard>
 
@@ -263,8 +273,16 @@ export default function EventSetupPage() {
               }}
               onFinish={() => void cloneEvent()}
             >
-              <ProFormText name="name" label={t('setup.h_1ps26zd')} rules={[{ required: true }]} />
-              <ProFormText name="slug" label={t('setup.h_1mbcc7c')} rules={[{ required: true }]} />
+              <ProFormText
+                name="name"
+                label={t('setup.h_1ps26zd')}
+                rules={[{ required: true }]}
+              />
+              <ProFormText
+                name="slug"
+                label={t('setup.h_1mbcc7c')}
+                rules={[{ required: true }]}
+              />
             </ProForm>
           </ProCard>
 

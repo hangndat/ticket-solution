@@ -6,6 +6,7 @@ import { PortalPage } from '../../../src/components/portal-page';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useTenantAccess } from '../../../src/prep/use-event-access';
+import { canPerformTenantAction } from '../../../src/nav/capability-policy';
 import { SurfaceState } from '../../../src/components/surface-state';
 import {
   formatTenantRole,
@@ -63,8 +64,14 @@ export default function TenantOverviewPage() {
     );
   }
 
-  const canCreate = tenant.tenantPermissions.includes('event.create');
-  const canList = tenant.tenantPermissions.includes('event.list');
+  const canCreate = canPerformTenantAction(
+    'createEvent',
+    tenant.tenantPermissions,
+  );
+  const canList = canPerformTenantAction(
+    'listEvents',
+    tenant.tenantPermissions,
+  );
 
   return (
     <PortalPage
@@ -76,26 +83,28 @@ export default function TenantOverviewPage() {
       })}
       extra={
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        {canList ? (
-          <Link href={`/t/${tenantId}/events`}>
-            <Button>{t('common.h_8mpr7p')}</Button>
-          </Link>
-        ) : null}
-        {canCreate ? (
-          <Link href={`/t/${tenantId}/events/new`}>
-            <Button type="primary">{t('events.h_ek93o2')}</Button>
-          </Link>
-        ) : null}
-        {tenant.tenantPermissions.includes('members.manage') ? (
-          <Link href={`/t/${tenantId}/members`}>
-            <Button>{t('nav.org.members')}</Button>
-          </Link>
-        ) : null}
+          {canList ? (
+            <Link href={`/t/${tenantId}/events`}>
+              <Button>{t('common.h_8mpr7p')}</Button>
+            </Link>
+          ) : null}
+          {canCreate ? (
+            <Link href={`/t/${tenantId}/events/new`}>
+              <Button type="primary">{t('events.h_ek93o2')}</Button>
+            </Link>
+          ) : null}
+          {canPerformTenantAction('manageMembers', tenant.tenantPermissions) ? (
+            <Link href={`/t/${tenantId}/members`}>
+              <Button>{t('nav.org.members')}</Button>
+            </Link>
+          ) : null}
         </div>
       }
     >
       <StatisticCard.Group style={{ marginBottom: 16 }}>
-        <StatisticCard statistic={{ title: t('nav.org.events'), value: events.length }} />
+        <StatisticCard
+          statistic={{ title: t('nav.org.events'), value: events.length }}
+        />
       </StatisticCard.Group>
 
       {events.length === 0 ? (
