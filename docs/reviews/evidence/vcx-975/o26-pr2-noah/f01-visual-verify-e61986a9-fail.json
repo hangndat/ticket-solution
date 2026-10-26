@@ -1,0 +1,20 @@
+{
+  "case": "F01-visual-verify",
+  "codeSha": "e61986a94fa213f120a8698ea96ba9cb5e375d29",
+  "headSha": "e61986a94fa213f120a8698ea96ba9cb5e375d29",
+  "at": "2026-10-26T14:18:13.724Z",
+  "note": "Stale apps/portal .next served pre-fix bundle; off-screen panel before ebb2fa3f CSS. Do not use for acceptance.",
+  "screenshot": "f01-drawer-visual-390x844-e61986a9.png",
+  "productF01Verdict": "FAIL",
+  "visualPass": false,
+  "afterAnimation": {
+    "visibleClickableMenuItems": 0,
+    "wrapper": {
+      "width": 240,
+      "x": -240,
+      "transform": "matrix(1, 0, 0, 1, -240, 0)"
+    }
+  },
+  "navPass": true,
+  "supersededBy": "ebb2fa3fdbdd4dc7d6ec4e38466e2a0e42f39bbc"
+}

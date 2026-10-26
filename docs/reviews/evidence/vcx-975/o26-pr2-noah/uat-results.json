@@ -1,0 +1,9 @@
+{
+  "codeSha": "7b0ce31a6d6a58aa046c6a3f616fa9ab7f900864",
+  "verdict": "PASS",
+  "pr2Acceptance": "PASS",
+  "f01": "f01-visual-verify-7b0ce31a.json",
+  "f01IntermediateGeometry": "f01-visual-verify-ebb2fa3f.json",
+  "pr2Closure": "pr2-closure-7b0ce31a.json",
+  "productF01Verdict": "PASS"
+}
