@@ -2,6 +2,7 @@ import { IMPORT_LIMITS, type ImportKind } from '@ticket/contracts';
 import { assertMutatingBrowser } from '../../../../../../../../src/bff/csrf';
 import {
   isEventParams,
+  pickSearchParams,
   requireEventParams,
 } from '../../../../../../../../src/bff/event-params';
 import { isUuid } from '../../../../../../../../src/bff/ids';
@@ -12,6 +13,22 @@ import {
 } from '../../../../../../../../src/bff/upstream';
 
 type Props = { params: Promise<{ tenantId: string; eventId: string }> };
+
+/** List existing jobs so an operator can resume after a reload. */
+export async function GET(request: Request, { params }: Props) {
+  const scope = await requireEventParams(params);
+  if (!isEventParams(scope)) return scope;
+  const qs = pickSearchParams(new URL(request.url), [
+    'cursor',
+    'limit',
+    'status',
+    'kind',
+  ]);
+  return forwardStaffBearer(
+    `${PORTAL_UPSTREAM.imports(scope.tenantId, scope.eventId)}${qs}`,
+    { method: 'GET' },
+  );
+}
 
 type Body = {
   kind?: string;
