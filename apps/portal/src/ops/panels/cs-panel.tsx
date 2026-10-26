@@ -1,7 +1,7 @@
 'use client';
 
 import { Alert, Button, Input, Space, Table, Timeline, Typography } from 'antd';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { portalGet, portalMutate } from '../../client/portal-fetch';
 import { bffTickets } from '../../prep/bff-urls';
 import { useMutationIntent } from '../../client/use-mutation-intent';
@@ -9,6 +9,7 @@ import { MutationIntentAlert } from '../../client/mutation-intent-alert';
 import {
   csProviderStatusLabel,
   csResendRejectedLabel,
+  CS_RESEND_COOLDOWN_SECONDS,
   interpretCsDetail,
   interpretCsList,
   interpretCsResend,
@@ -32,7 +33,36 @@ export function CsPanel({ tenantId, eventId, canCs }: Props) {
   const [list, setList] = useState<CsTicketSummary[]>([]);
   const [detail, setDetail] = useState<CsTicketDetail | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [cooldownUntil, setCooldownUntil] = useState<number | null>(null);
+  const [nowMs, setNowMs] = useState(() => Date.now());
   const intent = useMutationIntent(tenantId, eventId, 'cs-resend');
+
+  useEffect(() => {
+    if (cooldownUntil === null) return;
+    const timer = window.setInterval(() => {
+      const now = Date.now();
+      setNowMs(now);
+      if (now >= cooldownUntil) setCooldownUntil(null);
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [cooldownUntil]);
+
+  const cooldownSeconds = cooldownUntil === null
+    ? 0 : Math.max(0, Math.ceil((cooldownUntil - nowMs) / 1000));
+
+  function updateCooldown(ticket: CsTicketDetail) {
+    const lastResend = ticket.timeline
+      .filter((item) => item.kind === 'ticket.email_resend')
+      .map((item) => Date.parse(item.at))
+      .filter(Number.isFinite)
+      .reduce((latest, at) => Math.max(latest, at), 0);
+    const until = lastResend + CS_RESEND_COOLDOWN_SECONDS * 1000;
+    setCooldownUntil((current) => {
+      const latest = Math.max(until, current ?? 0);
+      return latest > Date.now() ? latest : null;
+    });
+    setNowMs(Date.now());
+  }
 
   function applyView(view: CsView) {
     if (view.kind === 'list') {
@@ -65,6 +95,7 @@ export function CsPanel({ tenantId, eventId, canCs }: Props) {
     if (!canCs) return;
     setBusy(true);
     setDetail(null);
+    setCooldownUntil(null);
     const params = new URLSearchParams({ limit: '20' });
     if (q.trim()) params.set('q', q.trim());
     const result = await portalGet(
@@ -79,8 +110,9 @@ export function CsPanel({ tenantId, eventId, canCs }: Props) {
     setBusy(false);
   }
 
-  async function openDetail(ticketId: string) {
+  async function openDetail(ticketId: string, preserveNotice = false) {
     setBusy(true);
+    if (detail?.ticketId !== ticketId) setCooldownUntil(null);
     const result = await portalGet(
       `${bffTickets(tenantId, eventId)}/${encodeURIComponent(ticketId)}`,
     );
@@ -90,7 +122,11 @@ export function CsPanel({ tenantId, eventId, canCs }: Props) {
       result.networkError || result.timedOut,
       ticketId, locale,
     );
-    applyView(view);
+    if (view.kind === 'detail') {
+      setDetail(view.ticket);
+      updateCooldown(view.ticket);
+      if (!preserveNotice) setNotice(t('events.ticketDetailTitle', { ticketId }));
+    } else applyView(view);
     setBusy(false);
   }
 
@@ -114,8 +150,15 @@ export function CsPanel({ tenantId, eventId, canCs }: Props) {
       ticketId, locale,
     );
     applyView(view);
-    if (view.kind === 'resent') void openDetail(ticketId);
-    else setBusy(false);
+    if (view.kind === 'resent') {
+      setCooldownUntil(Date.now() + CS_RESEND_COOLDOWN_SECONDS * 1000);
+      setNowMs(Date.now());
+      void openDetail(ticketId, true);
+    } else if (view.kind === 'rejected' &&
+      (view.code === 'RESEND_COOLDOWN' || view.code === 'RESEND_LIMIT')) {
+      intent.release();
+      void openDetail(ticketId, true);
+    } else setBusy(false);
   }
 
   return (
@@ -209,8 +252,14 @@ export function CsPanel({ tenantId, eventId, canCs }: Props) {
             />
             <Button
               loading={busy}
+              disabled={cooldownSeconds > 0 || !canCs}
               onClick={() => void resend(detail.ticketId)}
             >{t('ops.h_e1ks86')}</Button>
+            {cooldownSeconds > 0 ? (
+              <Typography.Text type="secondary" role="status">
+                {t('ops.cs.cooldownRemaining', { seconds: cooldownSeconds })}
+              </Typography.Text>
+            ) : null}
             <Typography.Paragraph type="secondary" data-testid="cs-resend-pending">{t('ops.h_mag360')}</Typography.Paragraph>
           </Space>
         ) : null}
