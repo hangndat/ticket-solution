@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import type { MeEventItem, MeTenantItem } from '@ticket/contracts';
 import { loadShellContext, refreshShellContext } from '../nav/load-shell-context';
-import { shouldRefreshEventDiscovery } from './event-discovery';
+import { refreshUntilEventAssigned, shouldRefreshEventDiscovery } from './event-discovery';
 import { tenantHasAdminChrome, tenantHasAnalytics } from '../nav/capabilities';
 import { isEventAssigned } from './event-access-resolver';
 import type { MessageKey } from '../i18n/messages';
@@ -57,12 +57,12 @@ export function useEventAccess(
       });
     };
     void (async () => {
-      const shell = await loadShellContext();
+      let shell = await loadShellContext();
       if (cancelled) return;
       if (shouldRefreshEventDiscovery(shell, tenantId, eventId)) {
-        apply(await refreshShellContext());
-        return;
+        shell = await refreshUntilEventAssigned(tenantId, eventId, refreshShellContext);
       }
+      if (cancelled) return;
       apply(shell);
     })();
     return () => {

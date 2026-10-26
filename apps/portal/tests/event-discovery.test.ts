@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { ShellLoadState } from '../src/nav/load-shell-context';
-import { shouldRefreshEventDiscovery } from '../src/prep/event-discovery';
+import {
+  refreshUntilEventAssigned,
+  shouldRefreshEventDiscovery,
+} from '../src/prep/event-discovery';
 
 const tenantId = '11111111-1111-4111-8111-111111111111';
 const eventId = '31bba69d-fdaa-4ce2-ba65-d34dddacbfe7';
@@ -51,4 +54,14 @@ test('shouldRefreshEventDiscovery false while shell not ready', () => {
     shouldRefreshEventDiscovery({ status: 'loading' }, tenantId, eventId),
     false,
   );
+});
+
+test('refreshUntilEventAssigned retries until MeEvents contains the new assignment', async () => {
+  let calls = 0;
+  const result = await refreshUntilEventAssigned(tenantId, eventId, async () => {
+    calls += 1;
+    return calls < 3 ? readyShell([]) : readyShell([{ tenantId, eventId }]);
+  });
+  assert.equal(calls, 3);
+  assert.equal(shouldRefreshEventDiscovery(result, tenantId, eventId), false);
 });

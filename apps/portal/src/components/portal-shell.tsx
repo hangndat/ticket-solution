@@ -21,12 +21,16 @@ import {
   tenantHasAnalytics,
   type PortalShellCapabilities,
 } from '../nav/capabilities';
+import { loadShellContext, refreshShellContext } from '../nav/load-shell-context';
 import {
-  loadShellContext,
-  refreshShellContext,
-  type ShellLoadState,
-} from '../nav/load-shell-context';
-import { shouldRefreshEventDiscovery } from '../prep/event-discovery';
+  getPortalShellSnapshot,
+  markPortalShellLoading,
+  subscribePortalShellSnapshot,
+} from '../nav/portal-shell-snapshot';
+import {
+  refreshUntilEventAssigned,
+  shouldRefreshEventDiscovery,
+} from '../prep/event-discovery';
 import { usePortalLocale } from '../i18n';
 import { SURFACE_MESSAGE_KEYS } from '../prep/surface-copy';
 import {
@@ -509,12 +513,17 @@ export function PortalShell({
 }) {
   const { t } = usePortalLocale();
   const pathname = usePathname();
-  const [shell, setShell] = useState<ShellLoadState>({ status: 'loading' });
+  const shell = useSyncExternalStore(
+    subscribePortalShellSnapshot,
+    getPortalShellSnapshot,
+    getPortalShellSnapshot,
+  );
   const [forbiddenScopes, setForbiddenScopes] = useState<ForbiddenScope[]>([]);
   const [eventDiscoverySettledKey, setEventDiscoverySettledKey] = useState<
     string | null
   >(null);
   const requestGate = useRef(createContextRequestGate());
+  const discoveryGate = useRef(createContextRequestGate());
 
   useEffect(() => installUnsavedNavigation(), []);
 
@@ -543,11 +552,9 @@ export function PortalShell({
   const effectiveEventId = pathEventId;
 
   const reload = useCallback(() => {
-    const request = requestGate.current.begin('shell');
-    setShell({ status: 'loading' });
-    void loadShellContext().then((result) => {
-      if (request.isCurrent()) setShell(result);
-    });
+    requestGate.current.begin('shell');
+    markPortalShellLoading();
+    void loadShellContext();
   }, []);
 
   useEffect(() => {
@@ -615,17 +622,22 @@ export function PortalShell({
   useEffect(() => {
     if (!needsEventDiscoveryRefresh || !eventDiscoveryKey) return;
     if (eventDiscoverySettledKey === eventDiscoveryKey) return;
-    const request = requestGate.current.begin('event-discovery');
-    void refreshShellContext().then((result) => {
-      if (request.isCurrent()) {
-        setShell(result);
-        setEventDiscoverySettledKey(eventDiscoveryKey);
-      }
-    });
+    const tenantId = resolvedTenantId!;
+    const eventId = effectiveEventId!;
+    const request = discoveryGate.current.begin(eventDiscoveryKey);
+    void refreshUntilEventAssigned(tenantId, eventId, refreshShellContext).then(
+      () => {
+        if (request.isCurrent()) {
+          setEventDiscoverySettledKey(eventDiscoveryKey);
+        }
+      },
+    );
   }, [
     needsEventDiscoveryRefresh,
     eventDiscoveryKey,
     eventDiscoverySettledKey,
+    resolvedTenantId,
+    effectiveEventId,
   ]);
 
   const eventDiscoveryLoading =
