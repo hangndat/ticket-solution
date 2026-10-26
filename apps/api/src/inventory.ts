@@ -26,6 +26,7 @@ import {
   type ApiError,
   type ImportKind,
   type ImportJobListQuery,
+  type InvitationListQuery,
 } from '@ticket/contracts';
 import {
   AuthzError,
@@ -175,6 +176,24 @@ class ImportJobListPageDto {
   @ApiProperty({ nullable: true, type: String }) nextCursor!: string | null;
 }
 
+class InvitationSummaryDto {
+  @ApiProperty({ format: 'uuid' }) invitationId!: string;
+  @ApiProperty({ format: 'uuid' }) eventId!: string;
+  @ApiProperty({ format: 'uuid' }) sourceId!: string;
+  @ApiProperty({ format: 'uuid' }) ticketTypeId!: string;
+  @ApiProperty() invitedEmailMasked!: string;
+  @ApiProperty({
+    enum: ['PENDING', 'DISPATCHED', 'CLAIMED', 'EXPIRED', 'REVOKED'],
+  })
+  state!: string;
+  @ApiProperty({ format: 'date-time' }) expiresAt!: string;
+}
+
+class InvitationListPageDto {
+  @ApiProperty({ type: [InvitationSummaryDto] }) items!: InvitationSummaryDto[];
+  @ApiProperty({ nullable: true, type: String }) nextCursor!: string | null;
+}
+
 /** Parse the original URL so duplicate keys cannot be collapsed by Nest query decorators. */
 export function parseImportListQuery(rawUrl: string): ImportJobListQuery {
   const params = new URL(rawUrl, 'http://localhost').searchParams;
@@ -242,6 +261,73 @@ export function parseImportListQuery(rawUrl: string): ImportJobListQuery {
     query.kind = kind;
   }
   return query;
+}
+
+/** Validate the original URL before Nest can collapse repeated query keys. */
+export function parseInvitationListQuery(rawUrl: string): InvitationListQuery {
+  const params = new URL(rawUrl, 'http://localhost').searchParams;
+  const allowed = new Set(['cursor', 'limit', 'state', 'q']);
+  for (const [key, value] of params) {
+    if (!allowed.has(key) || params.getAll(key).length !== 1) {
+      throw new ImportError(
+        IMPORT_ERROR_CODES.INVALID_FILTER,
+        'Invalid invitation list query',
+      );
+    }
+    if (value === '' && key !== 'cursor') {
+      throw new ImportError(
+        IMPORT_ERROR_CODES.INVALID_FILTER,
+        'Invalid invitation list query',
+      );
+    }
+  }
+  const q = params.get('q');
+  const cursor = params.get('cursor');
+  if (q !== null && cursor !== null) {
+    throw new ImportError(
+      IMPORT_ERROR_CODES.INVALID_CURSOR,
+      'Cursor cannot be used with q',
+    );
+  }
+  if (cursor !== null && !UUID.test(cursor)) {
+    throw new ImportError(
+      IMPORT_ERROR_CODES.INVALID_CURSOR,
+      'Invalid invitation list cursor',
+    );
+  }
+  if (q !== null && !UUID.test(q)) {
+    throw new ImportError(
+      IMPORT_ERROR_CODES.INVALID_FILTER,
+      'q must be an invitation UUID',
+    );
+  }
+  const rawLimit = params.get('limit');
+  let limit: number | undefined;
+  if (rawLimit !== null) {
+    if (!/^[1-9][0-9]*$/.test(rawLimit) || Number(rawLimit) > 100) {
+      throw new ImportError(
+        IMPORT_ERROR_CODES.INVALID_FILTER,
+        'Invalid invitation list limit',
+      );
+    }
+    limit = Number(rawLimit);
+  }
+  const rawState = params.get('state');
+  if (
+    rawState !== null &&
+    !['PENDING', 'DISPATCHED', 'CLAIMED', 'EXPIRED', 'REVOKED'].includes(
+      rawState,
+    )
+  ) {
+    throw new ImportError(
+      IMPORT_ERROR_CODES.INVALID_FILTER,
+      'Invalid invitation list state',
+    );
+  }
+  const state = rawState as InvitationListQuery['state'] | null;
+  return q !== null
+    ? { q, limit, state: state ?? undefined }
+    : { cursor: cursor ?? undefined, limit, state: state ?? undefined };
 }
 
 type Deps = {
@@ -498,25 +584,35 @@ export class InventoryService {
     authorization: string | undefined,
     tenantId: string,
     eventId: string,
-    cursor: string | undefined,
-    limit: string | undefined,
-    state: string | undefined,
+    query: InvitationListQuery,
+    requestId: string | undefined,
   ) {
     const user = await this.actor(authorization);
-    return listGuestInvitations(this.deps.db!, {
+    await consumeUserRateLimitWithRetryAfter(
+      this.deps.db!,
+      user.userId,
+      API_RATE_BUCKETS.invitationsList,
+      API_RATE_LIMITS.invitationsListPerUser,
+    );
+    const page = await listGuestInvitations(this.deps.db!, {
       tenantId,
       eventId,
       actorUserId: user.userId,
-      cursor,
-      limit: limit ? Number(limit) : undefined,
-      state: state as
-        | 'PENDING'
-        | 'DISPATCHED'
-        | 'CLAIMED'
-        | 'EXPIRED'
-        | 'REVOKED'
-        | undefined,
+      ...query,
     });
+    this.logger.log(
+      JSON.stringify({
+        action: 'guest_invitations.list',
+        requestId,
+        actorUserId: user.userId,
+        tenantId,
+        eventId,
+        filteredById: query.q !== undefined,
+        state: query.state ?? null,
+        count: page.items.length,
+      }),
+    );
+    return page;
   }
 
   async dispatchPreview(
@@ -887,19 +983,51 @@ export class InventoryController {
 
   @Get('tenants/:tenantId/events/:eventId/invitations')
   @ApiBearerAuth()
+  @ApiQuery({ name: 'cursor', required: false, type: String, format: 'uuid' })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    minimum: 1,
+    maximum: 100,
+  })
+  @ApiQuery({
+    name: 'state',
+    required: false,
+    enum: ['PENDING', 'DISPATCHED', 'CLAIMED', 'EXPIRED', 'REVOKED'],
+  })
+  @ApiQuery({
+    name: 'q',
+    required: false,
+    type: String,
+    format: 'uuid',
+    description: 'Exact invitationId',
+  })
+  @ApiOkResponse({ type: InvitationListPageDto })
+  @Header('Cache-Control', 'private, no-store')
   listInvitations(
     @Headers('authorization') authorization: string | undefined,
     @Param('tenantId') tenantId: string,
     @Param('eventId') eventId: string,
-    @Query('cursor') cursor?: string,
-    @Query('limit') limit?: string,
-    @Query('state') state?: string,
+    @Req() req: { id?: string; raw: { url?: string } },
+    @Res({ passthrough: true })
+    reply: { header: (name: string, value: string) => void },
   ) {
     const tenant = requireUuid(tenantId, 'tenantId');
     const event = requireUuid(eventId, 'eventId');
-    return this.inventory
-      .listInvitations(authorization, tenant, event, cursor, limit, state)
-      .catch((error) => this.fail(error));
+    try {
+      const query = parseInvitationListQuery(req.raw.url ?? '');
+      return this.inventory
+        .listInvitations(authorization, tenant, event, query, req.id)
+        .catch((error) => {
+          if (error instanceof RateLimitedWithRetryAfter) {
+            reply.header('Retry-After', String(error.retryAfterSeconds));
+          }
+          this.fail(error);
+        });
+    } catch (error) {
+      this.fail(error);
+    }
   }
 
   @Post('tenants/:tenantId/events/:eventId/invitations/dispatch-preview')
