@@ -3,16 +3,24 @@
   "runId": "vcx939-20261026T0158Z",
   "issue": 939,
   "pr": 954,
-  "reviewedSha": "e76414a120e9a60ca687b47b4a5afe1f1ea66c2f",
+  "reviewedSha": null,
   "priorTestedShaLabel": "d00a265cca1206b68601c75d445b633f7d590b57",
   "executionHostId": "local",
   "persona": {
     "attendee": "attendee@example.com (fixture)",
     "staffApproval": "manager.fixture@example.com (fixture)"
   },
-  "viewports": ["390x844", "1024x900", "1440x900"],
+  "viewports": [
+    "390x844",
+    "1024x900",
+    "1440x900"
+  ],
   "reservedPorts": {
-    "noah926": { "web": 3013, "api": 3498, "oidc": 8080 },
+    "noah926": {
+      "web": 3013,
+      "api": 3498,
+      "oidc": 8080
+    },
     "vcx939": {
       "web": 3417,
       "api": 3539,
@@ -21,7 +29,10 @@
       "redis": 56391,
       "mailpitSmtp": 1039,
       "mailpitUi": 8039,
-      "minio": [9039, 9040]
+      "minio": [
+        9039,
+        9040
+      ]
     }
   },
   "stack": {
@@ -41,5 +52,19 @@
     "screenshotsGitignored": "apps/web/.uat-artifacts/vcx-939/vcx939-20261026T0158Z/",
     "screenshotsCommitted": "docs/reviews/evidence/vcx-939/vcx939-20261026T0158Z/screenshots/"
   },
-  "privacy": "No tokens, cookies, passwords, QR bearer URLs, or invitation links in committed files."
+  "privacy": "No tokens, cookies, passwords, QR bearer URLs, or invitation links in committed files.",
+  "workerReportedTestedSha": "e76414a120e9a60ca687b47b4a5afe1f1ea66c2f",
+  "buildProvenanceVerified": false,
+  "limitations": [
+    "Packet chưa được reviewer độc lập xác minh.",
+    "API transition chỉ do worker báo cáo; chưa có log sanitized trong packet để xác minh độc lập.",
+    "Thiếu runtime browser proof cho bốn scenario bắt buộc; không acceptance complete."
+  ],
+  "artifactHashes": {
+    "screenshots/redeem-resolve-1024.png": "d4f4c2544c6ca30b465ae85c3f362cf019bedbcdfca9a8d6ce431e55b1c121eb",
+    "screenshots/wallet-1024.png": "c2b4e129f43fe3f16e5cf1c526cd2db5205e9bedb1f80c429296d45cc486d347",
+    "screenshots/wallet-1440.png": "50dc80b31f8c6844e2091140fc44a4b6a34272ff5a97d920f39d83990dcde475",
+    "screenshots/wallet-390.png": "c7940f0a573262ce5099a51ce90113a3f4b3d8c8ae402d6703f4d8209de1c000",
+    "RUN.md": "f3b5535b5c56e06096ee7ea9c818cc982878ca17853663a019c779b35f9c179b"
+  }
 }
