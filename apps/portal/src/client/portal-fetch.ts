@@ -7,6 +7,7 @@ export type PortalFetchResult = {
   json: unknown;
   networkError: boolean;
   timedOut: boolean;
+  retryAfter?: string | null;
 };
 
 export const PORTAL_FORBIDDEN_EVENT = 'portal:bff-forbidden';
@@ -93,6 +94,7 @@ export async function portalGet(
       json: await parseJsonSafe(res),
       networkError: false,
       timedOut: false,
+      retryAfter: res.headers.get('Retry-After'),
     };
   } catch (err) {
     const timedOut = err instanceof Error && err.name === 'AbortError';
@@ -129,6 +131,7 @@ export async function portalMutate(
       json: await parseJsonSafe(res),
       networkError: false,
       timedOut: false,
+      retryAfter: res.headers.get('Retry-After'),
     };
   } catch (err) {
     const timedOut = err instanceof Error && err.name === 'AbortError';
@@ -180,6 +183,7 @@ export async function portalMultipart(
       json: await parseJsonSafe(res),
       networkError: false,
       timedOut: false,
+      retryAfter: res.headers.get('Retry-After'),
     };
   } catch (err) {
     const timedOut = err instanceof Error && err.name === 'AbortError';
