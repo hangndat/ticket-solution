@@ -2,8 +2,8 @@ import { bffApiError, forwardWithBearer, isUuid } from '../../../../../src/bff/u
 
 type Params = { params: Promise<{ requestId: string }> };
 
-/** Owner current status: GET /v1/me/redemptions/{requestId} */
-export async function GET(_request: Request, { params }: Params) {
+/** Owner current status requires explicit tenant scope; the API enforces ownership. */
+export async function GET(request: Request, { params }: Params) {
   const { requestId } = await params;
   const id = requestId?.trim() ?? '';
   if (!id || !isUuid(id)) {
@@ -13,8 +13,12 @@ export async function GET(_request: Request, { params }: Params) {
       422,
     );
   }
+  const tenantId = new URL(request.url).searchParams.get('tenantId')?.trim() ?? '';
+  if (!isUuid(tenantId)) {
+    return bffApiError('SCOPE_REQUIRED', 'tenantId must be a UUID.', 422);
+  }
   return forwardWithBearer(
-    `/v1/me/redemptions/${encodeURIComponent(id)}`,
+    `/v1/me/redemptions/${encodeURIComponent(id)}?tenantId=${encodeURIComponent(tenantId)}`,
     { method: 'GET' },
   );
 }
