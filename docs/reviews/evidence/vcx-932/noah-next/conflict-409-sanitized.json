@@ -1,0 +1,12 @@
+{
+  "at": "2026-10-26T11:40:01.875Z",
+  "latestVersion": 1,
+  "request": {
+    "expectedVersion": 0
+  },
+  "response": {
+    "status": 422,
+    "code": "CONFIG_INCOMPATIBLE",
+    "message": "Exactly 6 fixed section kinds required"
+  }
+}
