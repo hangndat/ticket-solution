@@ -1,0 +1,23 @@
+{
+  "worktree": "/Users/admin/SideProject/ticket-solution/vcx-975-antd-shell",
+  "sha": "c8130ba7d966f7b3565365f7c73996ea79281e83",
+  "scannedAt": "2026-10-26T13:52:17.567Z",
+  "executionHostId": "local",
+  "ports": [
+    {
+      "port": 3019,
+      "pid": 17037,
+      "kind": "workspace",
+      "advertisedUrl": "http://uat975shell.localhost:3019",
+      "owner": {
+        "path": "/Users/admin/SideProject/ticket-solution/vcx-975-antd-shell",
+        "confidence": "cwd"
+      }
+    },
+    {
+      "port": 3542,
+      "note": "reuse vcx932-noah API — read-only fixture path",
+      "advertisedUrl": "http://127.0.0.1:3542"
+    }
+  ]
+}
