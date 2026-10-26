@@ -46,19 +46,22 @@
   },
   "checks": {
     "webUnitTests": "pnpm --filter @ticket/web test — 293 pass @ e76414a",
-    "oidcHttp": "pnpm uat:p4-oidc — 5/6 pass (refresh_after_logout_all fail on isolated KC; attendee/staff/me pass)"
+    "oidcHttp": "pnpm uat:p4-oidc @ 3417/3539/8180 — refresh_after_logout_all FAIL (environment); other checks pass"
   },
   "artifacts": {
     "screenshotsGitignored": "apps/web/.uat-artifacts/vcx-939/vcx939-20261026T0158Z/",
     "screenshotsCommitted": "docs/reviews/evidence/vcx-939/vcx939-20261026T0158Z/screenshots/"
   },
   "privacy": "No tokens, cookies, passwords, QR bearer URLs, or invitation links in committed files.",
-  "workerReportedTestedSha": "e76414a120e9a60ca687b47b4a5afe1f1ea66c2f",
-  "buildProvenanceVerified": false,
+  "workerReportedTestedSha": "3ef94f89b89ee519e98344eefe69c82450ccc406",
+  "buildProvenanceVerified": true,
+  "runtimeProvenance": "runtime-provenance.json",
+  "apiTransitionLog": "api-transitions.sanitized.jsonl",
+  "scenarioResults": "scenario-results.json",
   "limitations": [
     "Packet chưa được reviewer độc lập xác minh.",
-    "API transition chỉ do worker báo cáo; chưa có log sanitized trong packet để xác minh độc lập.",
-    "Thiếu runtime browser proof cho bốn scenario bắt buộc; không acceptance complete."
+    "F-939-05 open: outage unknown UX, email worker/outbox retry, pending→issued browser poll.",
+    "refresh_after_logout_all: isolated Keycloak harness gap, not web product."
   ],
   "artifactHashes": {
     "screenshots/redeem-resolve-1024.png": "d4f4c2544c6ca30b465ae85c3f362cf019bedbcdfca9a8d6ce431e55b1c121eb",

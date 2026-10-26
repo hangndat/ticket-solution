@@ -1,0 +1,61 @@
+{
+  "testedSha": "3ef94f89b89ee519e98344eefe69c82450ccc406",
+  "dirty": false,
+  "webBase": "http://localhost:3417",
+  "apiBase": "http://127.0.0.1:3539",
+  "oidcIssuer": "http://127.0.0.1:8180/realms/ticket",
+  "oidcClient": "ticket-web",
+  "fixtureDb": "ticket_ui869_dev@127.0.0.1:55439",
+  "orcaPageId": "e8de6720-fbb2-4e9d-a074-e31fb97bc545",
+  "portsScan": {
+    "id": "4177d062-5dba-4aec-a87c-bc1dc187049a",
+    "ok": true,
+    "result": {
+      "platform": "darwin",
+      "scannedAt": 1792982687190,
+      "ports": [
+        {
+          "id": "127.0.0.1:3417:98957",
+          "bindHost": "127.0.0.1",
+          "connectHost": "127.0.0.1",
+          "port": 3417,
+          "pid": 98957,
+          "processName": "node",
+          "protocol": "http",
+          "kind": "workspace",
+          "owner": {
+            "worktreeId": "909e450c-287a-413f-ad47-10304625422c::/Users/admin/SideProject/ticket-solution/vcx-939-runtime",
+            "repoId": "909e450c-287a-413f-ad47-10304625422c",
+            "displayName": "vcx-939-runtime",
+            "path": "/Users/admin/SideProject/ticket-solution/vcx-939-runtime",
+            "confidence": "cwd"
+          },
+          "advertisedUrl": "http://localhost:3417"
+        },
+        {
+          "id": "127.0.0.1:3539:43772",
+          "bindHost": "127.0.0.1",
+          "connectHost": "127.0.0.1",
+          "port": 3539,
+          "pid": 43772,
+          "processName": "node",
+          "protocol": "http",
+          "kind": "workspace",
+          "owner": {
+            "worktreeId": "909e450c-287a-413f-ad47-10304625422c::/Users/admin/SideProject/ticket-solution/vcx-939-runtime",
+            "repoId": "909e450c-287a-413f-ad47-10304625422c",
+            "displayName": "vcx-939-runtime",
+            "path": "/Users/admin/SideProject/ticket-solution/vcx-939-runtime",
+            "confidence": "cwd"
+          },
+          "advertisedUrl": "http://127.0.0.1:3539"
+        }
+      ],
+      "executionHostId": "local"
+    },
+    "_meta": {
+      "runtimeId": "afdfcca3-c341-421d-bc06-fd36ebaa692c"
+    }
+  },
+  "capturedAt": "2026-10-26T02:44:47.196672+00:00"
+}
