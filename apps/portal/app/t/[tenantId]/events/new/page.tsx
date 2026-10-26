@@ -379,6 +379,8 @@ export default function CreateEventWizardPage() {
                     'timezone',
                     'visibility',
                   ]);
+                } else if (step === 1) {
+                  await form.validateFields(['contactEmail']);
                 }
                 setStep((s) => s + 1);
               } catch {
