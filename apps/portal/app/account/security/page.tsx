@@ -1,10 +1,10 @@
 'use client';
 
-import { Button, Card, Descriptions, Space, Typography } from 'antd';
+import { Alert, Button, Card, Descriptions, Flex, Space, Spin, Typography } from 'antd';
 import { useEffect, useState } from 'react';
 import { loadShellContext } from '../../../src/nav/load-shell-context';
-import { SurfaceState } from '../../../src/components/surface-state';
 import { usePortalLocale, type MessageKey } from '../../../src/i18n';
+import { SURFACE_MESSAGE_KEYS } from '../../../src/prep/surface-copy';
 
 export default function AccountSecurityPage() {
   const { t } = usePortalLocale();
@@ -31,13 +31,34 @@ export default function AccountSecurityPage() {
     });
   }, []);
 
-  if (kind === 'loading') return <SurfaceState kind="loading" />;
+  if (kind === 'loading') return (
+    <Flex
+      vertical
+      align="center"
+      gap="middle"
+      role="status"
+      aria-busy="true"
+      aria-label={t(SURFACE_MESSAGE_KEYS.loading)}
+      suppressHydrationWarning
+      style={{ padding: 48 }}
+    >
+      <Spin size="large" />
+      <span>{t(SURFACE_MESSAGE_KEYS.loading)}</span>
+    </Flex>
+  );
   if (kind === 'error') {
     return (
-      <SurfaceState
-        kind="error"
+      <Alert
+        type="error"
+        showIcon
+        message={t(SURFACE_MESSAGE_KEYS.errorLoadFailed)}
         description={messageKey ? t(messageKey) : undefined}
-        onRetry={() => window.location.reload()}
+        action={
+          <Button size="small" onClick={() => window.location.reload()}>
+            {t(SURFACE_MESSAGE_KEYS.retry)}
+          </Button>
+        }
+        style={{ margin: 24 }}
       />
     );
   }

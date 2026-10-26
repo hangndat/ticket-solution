@@ -1,0 +1,19 @@
+{
+  "worktree": "/Users/admin/SideProject/ticket-solution/vcx-975-antd-surface",
+  "sha": "ecda980af0231466c62164d9c77f308e779d0291",
+  "scannedAt": "2026-10-26T14:57:20.966Z",
+  "executionHostId": "local",
+  "ports": [
+    {
+      "port": 3021,
+      "advertisedUrl": "http://uat975pr3.localhost:3021",
+      "kind": "workspace",
+      "note": "portal PR3 UAT"
+    },
+    {
+      "port": 3542,
+      "advertisedUrl": "http://127.0.0.1:3542",
+      "note": "reuse vcx932-noah API read-only"
+    }
+  ]
+}

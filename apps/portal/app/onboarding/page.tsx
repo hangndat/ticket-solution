@@ -1,6 +1,6 @@
 'use client';
 
-import { Alert, Button, Card, Form, Input, Select, Space, Typography } from 'antd';
+import { Alert, Button, Card, Flex, Form, Input, Result, Select, Space, Spin, Typography } from 'antd';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -9,8 +9,8 @@ import {
   apiErrorMessage,
   portalMutate,
 } from '../../src/client/portal-fetch';
-import { SurfaceState } from '../../src/components/surface-state';
 import { usePortalLocale } from '../../src/i18n';
+import { SURFACE_MESSAGE_KEYS } from '../../src/prep/surface-copy';
 import { loadShellContext } from '../../src/nav/load-shell-context';
 import {
   normalizeRegistrationBody,
@@ -140,16 +140,26 @@ export default function OnboardingEntryPage() {
   }
 
   if (phase === 'loading' || phase === 'redirecting') {
-    return <SurfaceState kind="loading" />;
+    return (
+    <Flex
+      vertical
+      align="center"
+      gap="middle"
+      role="status"
+      aria-busy="true"
+      aria-label={t(SURFACE_MESSAGE_KEYS.loading)}
+      suppressHydrationWarning
+      style={{ padding: 48 }}
+    >
+      <Spin size="large" />
+      <span>{t(SURFACE_MESSAGE_KEYS.loading)}</span>
+    </Flex>
+  );
   }
 
   if (phase === 'customer') {
     return (
-      <SurfaceState
-        kind="permission-denied"
-        title={t('shell.auth.attendeeDeniedTitle')}
-        description={t('shell.auth.attendeeDeniedBody')}
-      />
+      <Result status="403" title={t('shell.auth.attendeeDeniedTitle')} subTitle={t('shell.auth.attendeeDeniedBody')} />
     );
   }
 

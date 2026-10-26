@@ -1,11 +1,11 @@
 'use client';
 
-import { Button, Card, Typography } from 'antd';
+import { Alert, Button, Card, Flex, Result, Spin, Typography } from 'antd';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { loadShellContext } from '../src/nav/load-shell-context';
-import { SurfaceState } from '../src/components/surface-state';
 import { usePortalLocale, type MessageKey } from '../src/i18n';
+import { SURFACE_MESSAGE_KEYS } from '../src/prep/surface-copy';
 import { resolveOnboardingSurface } from '../src/onboarding';
 import { resolveHomeEntry } from '../src/nav/home-entry';
 import { usePortalUserId } from '../src/views/use-portal-user-id';
@@ -85,23 +85,40 @@ export default function PortalHomePage() {
   }, [identity.status, identityUserId]);
 
   if (state === 'loading' || state === 'redirecting') {
-    return <SurfaceState kind="loading" />;
+    return (
+    <Flex
+      vertical
+      align="center"
+      gap="middle"
+      role="status"
+      aria-busy="true"
+      aria-label={t(SURFACE_MESSAGE_KEYS.loading)}
+      suppressHydrationWarning
+      style={{ padding: 48 }}
+    >
+      <Spin size="large" />
+      <span>{t(SURFACE_MESSAGE_KEYS.loading)}</span>
+    </Flex>
+  );
   }
   if (state === 'customer') {
     return (
-      <SurfaceState
-        kind="permission-denied"
-        title={t('shell.auth.attendeeDeniedTitle')}
-        description={t('shell.auth.attendeeDeniedBody')}
-      />
+      <Result status="403" title={t('shell.auth.attendeeDeniedTitle')} subTitle={t('shell.auth.attendeeDeniedBody')} />
     );
   }
   if (state === 'error') {
     return (
-      <SurfaceState
-        kind="unknown"
+      <Alert
+        type="warning"
+        showIcon
+        message={t(SURFACE_MESSAGE_KEYS.unknownTitle)}
         description={messageKey ? t(messageKey) : undefined}
-        onRetry={() => window.location.reload()}
+        action={
+          <Button size="small" onClick={() => window.location.reload()}>
+            {t(SURFACE_MESSAGE_KEYS.recheck)}
+          </Button>
+        }
+        style={{ margin: 24 }}
       />
     );
   }

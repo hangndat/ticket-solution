@@ -1,7 +1,7 @@
 'use client';
 
 import { ProList, StatisticCard } from '@ant-design/pro-components';
-import { Button } from 'antd';
+import { Alert, Button, Empty, Flex, Result, Spin } from 'antd';
 import { PortalPage } from '../../../src/components/portal-page';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
@@ -10,12 +10,12 @@ import {
   canPerformTenantAction,
   firstAllowedEventPath,
 } from '../../../src/nav/capability-policy';
-import { SurfaceState } from '../../../src/components/surface-state';
 import {
   formatTenantRole,
   formatTenantStatus,
   usePortalLocale,
 } from '../../../src/i18n';
+import { SURFACE_MESSAGE_KEYS } from '../../../src/prep/surface-copy';
 import { isPendingActivationStatus } from '../../../src/onboarding';
 
 export default function TenantOverviewPage() {
@@ -24,24 +24,50 @@ export default function TenantOverviewPage() {
   const tenantId = params.tenantId;
   const access = useTenantAccess(tenantId);
 
-  if (access.kind === 'loading') return <SurfaceState kind="loading" />;
+  if (access.kind === 'loading') return (
+    <Flex
+      vertical
+      align="center"
+      gap="middle"
+      role="status"
+      aria-busy="true"
+      aria-label={t(SURFACE_MESSAGE_KEYS.loading)}
+      suppressHydrationWarning
+      style={{ padding: 48 }}
+    >
+      <Spin size="large" />
+      <span>{t(SURFACE_MESSAGE_KEYS.loading)}</span>
+    </Flex>
+  );
   if (access.kind === 'error') {
     return (
-      <SurfaceState
-        kind="error"
+      <Alert
+        type="error"
+        showIcon
+        message={t(SURFACE_MESSAGE_KEYS.errorLoadFailed)}
         description={access.messageKey ? t(access.messageKey) : undefined}
-        onRetry={() => window.location.reload()}
+        action={
+          <Button size="small" onClick={() => window.location.reload()}>
+            {t(SURFACE_MESSAGE_KEYS.retry)}
+          </Button>
+        }
+        style={{ margin: 24 }}
       />
     );
   }
   if (access.kind === 'permission-denied') {
     return (
-      <SurfaceState
-        kind="permission-denied"
-        description={t('common.h_yw94nu')}
-        onRetry={() => {
+      <Result
+        status="403"
+        title={t(SURFACE_MESSAGE_KEYS.permissionTitle)}
+        subTitle={t('common.h_yw94nu')}
+        extra={
+          <Button type="primary" onClick={() => {
           window.location.href = '/';
-        }}
+        }}>
+            {t(SURFACE_MESSAGE_KEYS.permissionGoAllowed)}
+          </Button>
+        }
       />
     );
   }
@@ -51,19 +77,12 @@ export default function TenantOverviewPage() {
   // PENDING: no admin chrome mutations — send Owner to wait Result (AC-PS5).
   if (isPendingActivationStatus(tenant.status)) {
     return (
-      <SurfaceState
-        kind="pending-activation"
-        title={t('onboarding.pending.title')}
-        description={t('onboarding.pending.body', {
+      <Result status="info" title={t('onboarding.pending.title')} subTitle={t('onboarding.pending.body', {
           name: tenant.name,
           slug: tenant.slug,
-        })}
-        emptyAction={
-          <Link href={`/onboarding/${tenantId}`}>
+        })} extra={<Link href={`/onboarding/${tenantId}`}>
             <Button type="primary">{t('onboarding.pending.openWait')}</Button>
-          </Link>
-        }
-      />
+          </Link>} />
     );
   }
 
@@ -111,17 +130,15 @@ export default function TenantOverviewPage() {
       </StatisticCard.Group>
 
       {events.length === 0 ? (
-        <SurfaceState
-          kind="empty"
-          description={t('common.h_1bzxqwd')}
-          emptyAction={
+        <Empty description={t('common.h_1bzxqwd')} style={{ padding: 48 }}>
+          {
             canCreate ? (
               <Link href={`/t/${tenantId}/events/new`}>
                 <Button type="primary">{t('events.h_ek93o2')}</Button>
               </Link>
             ) : undefined
           }
-        />
+        </Empty>
       ) : (
         <ProList
           headerTitle={t('common.h_6izk0k')}
