@@ -10,7 +10,7 @@
 | **F01** | `listGuestInvitations` bắt `EVENT_ASSIGNMENT_REQUIRED` → `ImportError` `EVENT_NOT_FOUND` (404), giữ `PERMISSION_DENIED` (403) khi assignment còn hiệu lực nhưng thiếu `inventory.import`. API test xác nhận 404/403 và không đọc `guest_invitations` khi authz chặn. |
 | **F02** | PostgreSQL `import-invitations.test.cjs`: `q` trước/sau `revokeEventAssignment` và `revokeMembership`; event UUID ngẫu nhiên → 404; reader thiếu quyền → `PERMISSION_DENIED`. |
 
-**Exact SHA (fix round 1):** `2b9b71f592cb4c02ff3f3563bf5574fa3dec5609`
+**Exact SHA (fix round 1):** `c5f18b90dbeb55ab0d56ac7be0a4cd94db886aa6`
 
 ## Checks local
 
