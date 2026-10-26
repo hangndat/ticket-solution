@@ -1,18 +1,7 @@
 'use client';
 
-import {
-  NOTIFICATION_KINDS,
-  type NotificationKind,
-} from '@ticket/contracts';
-import {
-  Alert,
-  Button,
-  Input,
-  Modal,
-  Select,
-  Space,
-  Typography,
-} from 'antd';
+import { NOTIFICATION_KINDS, type NotificationKind } from '@ticket/contracts';
+import { Alert, Button, Input, Modal, Select, Space, Typography } from 'antd';
 import { useCallback, useEffect, useState } from 'react';
 import { portalGet, portalMutate } from '../../client/portal-fetch';
 import {
@@ -24,6 +13,7 @@ import {
   bffReminders,
 } from '../../prep/bff-urls';
 import { usePortalLocale } from '../../i18n';
+import { useUnsavedChanges } from '../../nav/unsaved-changes';
 import {
   DEFAULT_TICKET_ISSUED_DRAFT,
   TEMPLATE_VARIABLES_BY_KIND,
@@ -78,8 +68,13 @@ export function NotificationsTemplatesSection({
   const [revisionLoadError, setRevisionLoadError] = useState(false);
   const [kind, setKind] = useState<NotificationKind>('TicketIssued');
   const [subject, setSubject] = useState(DEFAULT_TICKET_ISSUED_DRAFT.subject);
-  const [bodyText, setBodyText] = useState(DEFAULT_TICKET_ISSUED_DRAFT.bodyText);
-  const [bodyHtml, setBodyHtml] = useState(DEFAULT_TICKET_ISSUED_DRAFT.bodyHtml);
+  const [bodyText, setBodyText] = useState(
+    DEFAULT_TICKET_ISSUED_DRAFT.bodyText,
+  );
+  const [bodyHtml, setBodyHtml] = useState(
+    DEFAULT_TICKET_ISSUED_DRAFT.bodyHtml,
+  );
+  const [dirtyDraft, setDirtyDraft] = useState(false);
   const [previewView, setPreviewView] = useState<TemplatePreviewView | null>(
     null,
   );
@@ -87,6 +82,8 @@ export function NotificationsTemplatesSection({
     null,
   );
   const [localSchedule, setLocalSchedule] = useState('');
+  const [dirtySchedule, setDirtySchedule] = useState(false);
+  useUnsavedChanges(dirtyDraft || dirtySchedule, t('shell.unsaved.confirm'));
   const [reminderPreview, setReminderPreview] =
     useState<ReminderPreviewView | null>(null);
   const [reminderCreate, setReminderCreate] =
@@ -209,6 +206,7 @@ export function NotificationsTemplatesSection({
       locale,
     );
     setPublishView(view);
+    if (view.kind === 'published') setDirtyDraft(false);
     setPublishAttempt({
       key,
       fingerprint,
@@ -302,6 +300,7 @@ export function NotificationsTemplatesSection({
       unclear: view.kind === 'unknown',
     });
     if (view.kind === 'created') {
+      setDirtySchedule(false);
       setCancelReminderId(view.reminder.reminderId);
     }
     onBusy(false);
@@ -382,7 +381,10 @@ export function NotificationsTemplatesSection({
           value: k,
           label: k,
         }))}
-        onChange={(v) => setKind(v)}
+        onChange={(v) => {
+          setKind(v);
+          setDirtyDraft(true);
+        }}
         aria-label={t('ops.notifications.templateEditorTitle')}
         aria-describedby="portal-template-vars-hint"
       />
@@ -392,21 +394,30 @@ export function NotificationsTemplatesSection({
       <Input
         value={subject}
         disabled={busy || !canNotify}
-        onChange={(e) => setSubject(e.target.value)}
+        onChange={(e) => {
+          setSubject(e.target.value);
+          setDirtyDraft(true);
+        }}
         placeholder="Subject"
         aria-label={t('ops.notifications.templateSubjectAria')}
       />
       <Input.TextArea
         value={bodyText}
         disabled={busy || !canNotify}
-        onChange={(e) => setBodyText(e.target.value)}
+        onChange={(e) => {
+          setBodyText(e.target.value);
+          setDirtyDraft(true);
+        }}
         rows={5}
         aria-label={t('ops.notifications.templateBodyTextAria')}
       />
       <Input.TextArea
         value={bodyHtml}
         disabled={busy || !canNotify}
-        onChange={(e) => setBodyHtml(e.target.value)}
+        onChange={(e) => {
+          setBodyHtml(e.target.value);
+          setDirtyDraft(true);
+        }}
         rows={4}
         aria-label={t('ops.notifications.templateBodyHtmlAria')}
       />
@@ -464,7 +475,10 @@ export function NotificationsTemplatesSection({
         type="datetime-local"
         value={localSchedule}
         disabled={busy || !canNotify}
-        onChange={(e) => setLocalSchedule(e.target.value)}
+        onChange={(e) => {
+          setLocalSchedule(e.target.value);
+          setDirtySchedule(true);
+        }}
         aria-label={t('ops.notifications.reminderScheduleLabel')}
       />
       <Space wrap>

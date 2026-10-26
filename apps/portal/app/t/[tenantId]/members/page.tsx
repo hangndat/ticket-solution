@@ -45,6 +45,7 @@ import { useTenantAccess } from '../../../../src/prep/use-event-access';
 import { canPerformTenantAction } from '../../../../src/nav/capability-policy';
 import { SurfaceState } from '../../../../src/components/surface-state';
 import { usePortalLocale } from '../../../../src/i18n';
+import { useUnsavedChanges } from '../../../../src/nav/unsaved-changes';
 import { SavedViewsToolbar } from '../../../../src/views';
 import {
   SYSTEM_MEMBERSHIP_ROLES,
@@ -76,6 +77,8 @@ export default function MembersPage() {
   const [message, setMessage] = useState<string | undefined>();
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [dirty, setDirty] = useState(false);
+  useUnsavedChanges(dirty, t('shell.unsaved.confirm'));
   const [roleFilter, setRoleFilter] = useState<MembershipRole | undefined>();
   const [statusFilter, setStatusFilter] = useState<
     'ACTIVE' | 'REVOKED' | undefined
@@ -266,6 +269,7 @@ export default function MembersPage() {
         return;
       }
       if (res.status === 200 || res.status === 201) {
+        setDirty(false);
         setNotice(t('members.h_xg2gwp'));
         form.resetFields(['email']);
         void reload();
@@ -420,6 +424,7 @@ export default function MembersPage() {
 
       <ProForm
         form={form}
+        onValuesChange={() => setDirty(true)}
         layout="inline"
         initialValues={{
           roleKey: 'Manager',

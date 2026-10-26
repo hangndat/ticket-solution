@@ -10,7 +10,7 @@ import type { ProColumns } from '@ant-design/pro-components';
 import { Alert, Button, Form } from 'antd';
 import { PortalPage } from '../../../../../../src/components/portal-page';
 import { useParams } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type {
   PortalSourceSummary,
   PortalTicketTypeSummary,
@@ -26,6 +26,10 @@ import { useEventAccess } from '../../../../../../src/prep/use-event-access';
 import { SurfaceState } from '../../../../../../src/components/surface-state';
 import { usePortalLocale } from '../../../../../../src/i18n';
 import { canPerformEventAction } from '../../../../../../src/nav/capability-policy';
+import {
+  confirmDiscardIfDirty,
+  useUnsavedChanges,
+} from '../../../../../../src/nav/unsaved-changes';
 
 export default function SourcesPage() {
   const { t } = usePortalLocale();
@@ -42,6 +46,9 @@ export default function SourcesPage() {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [dirty, setDirty] = useState(false);
+  const savedForm = useRef(false);
+  useUnsavedChanges(dirty, t('shell.unsaved.confirm'));
   const [form] = Form.useForm<{
     name: string;
     approvalMode: 'AUTO' | 'MANUAL';
@@ -150,8 +157,8 @@ export default function SourcesPage() {
     access.permissions,
   );
 
-  async function createSource() {
-    if (!canCreateSource) return;
+  async function createSource(): Promise<boolean> {
+    if (!canCreateSource) return false;
     setBusy(true);
     setNotice(null);
     try {
@@ -166,16 +173,18 @@ export default function SourcesPage() {
       );
       if (res.networkError || res.timedOut || res.status >= 500) {
         setNotice(t('sources.h_duauzj'));
-        return;
+        return false;
       }
       if (res.status === 200 || res.status === 201) {
+        savedForm.current = true;
+        setDirty(false);
         setNotice(t('sources.h_1p3knph'));
-        setOpen(false);
         form.resetFields();
         void load(null);
-        return;
+        return true;
       }
       setNotice(apiErrorMessage(res.json, t('sources.h_q0wodv')));
+      return false;
     } finally {
       setBusy(false);
     }
@@ -202,7 +211,13 @@ export default function SourcesPage() {
       title={t('nav.event.sources')}
       extra={
         canCreateSource ? (
-          <Button type="primary" onClick={() => setOpen(true)}>
+          <Button
+            type="primary"
+            onClick={() => {
+              savedForm.current = false;
+              setOpen(true);
+            }}
+          >
             {t('sources.h_1hplg8o')}
           </Button>
         ) : undefined
@@ -236,7 +251,13 @@ export default function SourcesPage() {
           description={t('sources.h_1850hrg')}
           emptyAction={
             canCreateSource ? (
-              <Button type="primary" onClick={() => setOpen(true)}>
+              <Button
+                type="primary"
+                onClick={() => {
+                  savedForm.current = false;
+                  setOpen(true);
+                }}
+              >
                 {t('sources.h_1hplg8o')}
               </Button>
             ) : undefined
@@ -273,15 +294,25 @@ export default function SourcesPage() {
       <ModalForm
         title={t('sources.h_8t861g')}
         open={open && canCreateSource}
-        onOpenChange={setOpen}
+        onOpenChange={(next) => {
+          if (
+            !next &&
+            !savedForm.current &&
+            !confirmDiscardIfDirty(t('shell.unsaved.confirm'))
+          )
+            return;
+          savedForm.current = false;
+          setOpen(next);
+          if (!next) setDirty(false);
+        }}
+        onValuesChange={() => setDirty(true)}
         form={form}
         initialValues={{ approvalMode: 'MANUAL' }}
         modalProps={{ destroyOnHidden: true }}
         submitter={{ submitButtonProps: { loading: busy } }}
         onFinish={async () => {
           if (!canCreateSource) return false;
-          await createSource();
-          return true;
+          return createSource();
         }}
       >
         <ProFormText

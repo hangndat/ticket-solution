@@ -15,6 +15,7 @@ import { useTenantAccess } from '../../../../src/prep/use-event-access';
 import { canPerformTenantAction } from '../../../../src/nav/capability-policy';
 import { SurfaceState } from '../../../../src/components/surface-state';
 import { usePortalLocale } from '../../../../src/i18n';
+import { useUnsavedChanges } from '../../../../src/nav/unsaved-changes';
 
 type Branding = {
   displayName: string;
@@ -35,6 +36,8 @@ export default function OrgSettingsPage() {
   const [message, setMessage] = useState<string | undefined>();
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [dirty, setDirty] = useState(false);
+  useUnsavedChanges(dirty, t('shell.unsaved.confirm'));
   const [form] = Form.useForm<{
     displayName: string;
     primaryColor: string;
@@ -150,6 +153,7 @@ export default function OrgSettingsPage() {
         return;
       }
       if (res.status === 200) {
+        setDirty(false);
         setNotice(t('settings.h_17g3cj6'));
         void load();
         return;
@@ -192,6 +196,7 @@ export default function OrgSettingsPage() {
         <>
           <ProForm
             form={form}
+            onValuesChange={() => setDirty(true)}
             layout="vertical"
             style={{ maxWidth: 480 }}
             submitter={{

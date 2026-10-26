@@ -4,7 +4,7 @@ import { ProCard, ProForm, ProFormText } from '@ant-design/pro-components';
 import { Alert, Button, Form, Modal } from 'antd';
 import { PortalPage } from '../../../../../../src/components/portal-page';
 import { useParams, useRouter } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { EventDetail } from '@ticket/contracts';
 import {
   apiErrorMessage,
@@ -17,6 +17,14 @@ import { useEventAccess } from '../../../../../../src/prep/use-event-access';
 import { canPerformEventAction } from '../../../../../../src/nav/capability-policy';
 import { SurfaceState } from '../../../../../../src/components/surface-state';
 import { usePortalLocale } from '../../../../../../src/i18n';
+import { useUnsavedChanges } from '../../../../../../src/nav/unsaved-changes';
+import {
+  applySetupReload,
+  hasUnsavedSetupChanges,
+  metadataOutcomeUnknown,
+  metadataSaveRequest,
+  type MetadataSaveRequest,
+} from '../../../../../../src/setup/setup-drafts';
 
 export default function EventSetupPage() {
   const { t } = usePortalLocale();
@@ -31,35 +39,54 @@ export default function EventSetupPage() {
   const [message, setMessage] = useState<string | undefined>();
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [metaDirty, setMetaDirty] = useState(false);
+  const [cloneDirty, setCloneDirty] = useState(false);
+  const [metaUnknownScope, setMetaUnknownScope] = useState<string | null>(null);
+  const metaOutcomeUnknown = metaUnknownScope === `${tenantId}/${eventId}`;
+  const metaDirtyRef = useRef(false);
+  const cloneDirtyRef = useRef(false);
+  const pendingMetaRef = useRef<{
+    tenantId: string;
+    eventId: string;
+    request: MetadataSaveRequest;
+  } | null>(null);
+  useUnsavedChanges(
+    hasUnsavedSetupChanges(metaDirty, cloneDirty),
+    t('shell.unsaved.confirm'),
+  );
   const [metaForm] = Form.useForm<{ name: string }>();
   const [cloneForm] = Form.useForm<{ slug: string; name: string }>();
 
   const load = useCallback(async () => {
     await Promise.resolve();
-    setKind('loading');
+    setKind((current) => (current === 'ready' ? current : 'loading'));
     const res = await portalGet(bffEvent(tenantId, eventId));
     if (res.networkError || res.timedOut || res.status >= 500) {
-      setKind('unknown');
-      setMessage(t('setup.h_1ygq73d'));
+      const failure = t('setup.h_1ygq73d');
+      setKind((current) => (current === 'ready' ? current : 'unknown'));
+      setNotice(failure);
+      setMessage(failure);
       return;
     }
     if (res.status !== 200 || !res.json || typeof res.json !== 'object') {
-      setKind('error');
-      setMessage(
-        apiErrorMessage(
-          res.json,
-          t('common.httpStatus', { status: res.status }),
-        ),
+      const failure = apiErrorMessage(
+        res.json,
+        t('common.httpStatus', { status: res.status }),
       );
+      setKind((current) => (current === 'ready' ? current : 'error'));
+      setNotice(failure);
+      setMessage(failure);
       return;
     }
     const event = res.json as EventDetail;
     setDetail(event);
-    metaForm.setFieldsValue({ name: event.name });
-    cloneForm.setFieldsValue({
-      slug: `${event.slug}-copy`,
-      name: t('common.cloneName', { name: event.name }),
-    });
+    applySetupReload(
+      event,
+      metaForm,
+      cloneForm,
+      { meta: metaDirtyRef.current, clone: cloneDirtyRef.current },
+      t('common.cloneName', { name: event.name }),
+    );
     setKind('ready');
   }, [tenantId, eventId, metaForm, cloneForm, t]);
 
@@ -114,20 +141,38 @@ export default function EventSetupPage() {
     setBusy(true);
     setNotice(null);
     try {
-      const values = await metaForm.validateFields();
+      // An unknown outcome must retry the exact request, including its key and revision.
+      const previous = pendingMetaRef.current;
+      const retry =
+        previous?.tenantId === tenantId && previous.eventId === eventId
+          ? previous.request
+          : null;
+      const pending = metadataSaveRequest(
+        retry,
+        detail.revision,
+        retry ? retry.name : (await metaForm.validateFields()).name,
+        () => crypto.randomUUID(),
+      );
+      const inFlight = { tenantId, eventId, request: pending };
+      pendingMetaRef.current = inFlight;
       const res = await portalMutate(
         bffEvent(tenantId, eventId),
-        {
-          expectedRevision: detail.revision,
-          name: values.name.trim(),
-        },
+        pending,
         'PATCH',
       );
-      if (res.networkError || res.timedOut || res.status >= 500) {
+      if (pendingMetaRef.current !== inFlight) return;
+      if (metadataOutcomeUnknown(res)) {
+        setMetaUnknownScope(`${tenantId}/${eventId}`);
         setNotice(t('setup.h_197dgrj'));
         return;
       }
+      pendingMetaRef.current = null;
+      setMetaUnknownScope(null);
       if (res.status >= 200 && res.status < 300) {
+        if (metaForm.getFieldValue('name')?.trim() === pending.name) {
+          metaDirtyRef.current = false;
+          setMetaDirty(false);
+        }
         setNotice(t('setup.h_1s3ht28'));
         void load();
         return;
@@ -164,6 +209,8 @@ export default function EventSetupPage() {
             ? ((res.json as { eventId: string }).eventId as string)
             : null;
         if (newId) {
+          cloneDirtyRef.current = false;
+          setCloneDirty(false);
           setNotice(t('setup.h_1sj85ay'));
           router.push(`/t/${tenantId}/e/${newId}`);
           return;
@@ -245,6 +292,10 @@ export default function EventSetupPage() {
 
           <ProCard title={t('setup.h_y3j37s')} style={{ marginBottom: 16 }}>
             <ProForm
+              onValuesChange={() => {
+                metaDirtyRef.current = true;
+                setMetaDirty(true);
+              }}
               form={metaForm}
               layout="inline"
               disabled={!canUpdate || busy}
@@ -258,12 +309,17 @@ export default function EventSetupPage() {
                 name="name"
                 rules={[{ required: true }]}
                 width={320}
+                disabled={metaOutcomeUnknown}
               />
             </ProForm>
           </ProCard>
 
           <ProCard title="Clone" style={{ marginBottom: 16 }}>
             <ProForm
+              onValuesChange={() => {
+                cloneDirtyRef.current = true;
+                setCloneDirty(true);
+              }}
               form={cloneForm}
               layout="vertical"
               style={{ maxWidth: 420 }}
@@ -298,7 +354,9 @@ export default function EventSetupPage() {
         </>
       ) : null}
 
-      {notice ? <Alert type="info" showIcon message={notice} /> : null}
+      {kind === 'ready' && notice ? (
+        <Alert type="info" showIcon message={notice} />
+      ) : null}
     </PortalPage>
   );
 }

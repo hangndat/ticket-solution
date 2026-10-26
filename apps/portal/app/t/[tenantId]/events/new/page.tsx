@@ -14,6 +14,7 @@ import { useTenantAccess } from '../../../../../src/prep/use-event-access';
 import { canPerformTenantAction } from '../../../../../src/nav/capability-policy';
 import { SurfaceState } from '../../../../../src/components/surface-state';
 import { usePortalLocale } from '../../../../../src/i18n';
+import { useUnsavedChanges } from '../../../../../src/nav/unsaved-changes';
 
 type WizardValues = {
   slug: string;
@@ -38,6 +39,8 @@ export default function CreateEventWizardPage() {
     text: string;
   } | null>(null);
   const [form] = Form.useForm<WizardValues>();
+  const [dirty, setDirty] = useState(false);
+  useUnsavedChanges(dirty, t('shell.unsaved.confirm'));
 
   if (access.kind === 'loading') return <SurfaceState kind="loading" />;
   if (access.kind === 'error') {
@@ -111,6 +114,7 @@ export default function CreateEventWizardPage() {
           type: 'success',
           text: t('events.h_rpomry'),
         });
+        setDirty(false);
         router.push(`/t/${tenantId}/e/${eventId}`);
         return;
       }
@@ -138,6 +142,7 @@ export default function CreateEventWizardPage() {
       />
       <Form
         form={form}
+        onValuesChange={() => setDirty(true)}
         layout="vertical"
         initialValues={{
           timezone: 'Asia/Ho_Chi_Minh',
