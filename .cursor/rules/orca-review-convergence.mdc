@@ -9,6 +9,14 @@ Coordinator đọc trước khi giao review/fix; reviewer và fix-worker đọc 
 
 ## 1. Đầu vào và bàn giao
 
+### Một lượt review, phạm vi theo rủi ro
+
+- Mặc định **một reviewer độc lập trên mỗi PR/SHA**, gộp code review, đối chiếu AC/DoD và security/UI khi áp dụng. DoD là checklist nghiệm thu và tổng hợp evidence, không phải một lượt đọc code thứ hai sau code review. Coordinator xác nhận các gate còn lại từ evidence, không tự audit lại toàn diff đã được review.
+- Trước dispatch, coordinator ghi `Security: Có|Không + lý do từ diff/vùng ảnh hưởng`. Đào sâu khi thay đổi auth/authz, tenant/RLS, secrets, dữ liệu nhạy cảm, idempotency/replay/transaction nhạy cảm, dependency hoặc cơ chế tải/chạy mã bên thứ ba. Contract/policy về các vùng này cũng cần security design review; tài liệu thuần, copy/layout hoặc evidence không đổi các vùng đó chỉ cần kiểm nội dung/secret liên quan, ghi security `N/A` có lý do. Không dùng nhãn docs/UI để tự miễn rủi ro thực tế.
+- Security và UI áp dụng dùng chung session, findings và checks với DoD. Chỉ tách reviewer khi có câu hỏi chuyên môn/rủi ro cụ thể chưa được lượt gộp giải quyết, hoặc AC/ủy quyền yêu cầu; ghi lý do và phần việc bổ sung, không giao hai reviewer cùng checklist mặc định.
+- Chọn model/tier theo phần phán đoán còn lại và cost-catalog, không nâng tier chỉ vì nhãn DoD/security hoặc tên giai đoạn. Checklist, thu log và xác minh máy móc không tự cần model mạnh.
+- Đọc và kiểm theo câu hỏi cần kết luận. Không nạp lại tài liệu chưa đổi, chép log/lịch sử đã đóng hoặc tạo thêm báo cáo chỉ để đánh dấu đã làm. Khi probe không tạo evidence mới, ghi nguyên nhân, giả thuyết cần kiểm và điều kiện thử tiếp; không lặp full matrix theo mặc định.
+
 - Trước implementation: chốt AC, paths, ngoài phạm vi, checks bắt buộc và Decision/ADR áp dụng. Thay đổi AC cần quyết định của đúng owner; không thêm yêu cầu ngầm qua review.
 - Trước review: worker bàn giao exact SHA, diff/phạm vi, checks + kết quả, evidence và hạn chế. Với fix, ghi từng finding ID đã xử lý và cách xác minh; không chỉ ghi “đã fix”.
 - Evidence-only/UI: probe journey đại diện trước batch UAT; kiểm manifest/provenance và scope bằng `scripts/agent-workflow-guard.mjs handoff` trước bàn giao. Probe lỗi thì chẩn đoán môi trường/auth/automation, không lặp chụp hoặc lặng lẽ sửa runtime. Xem [hướng dẫn](../../docs/agents/workflow-evidence-telemetry.md) khi áp dụng.
@@ -29,6 +37,7 @@ Review đầu tiên đưa feedback đầy đủ trong scope. Mỗi finding giữ
 | Diễn tiến | SHA phát hiện/sửa/xác minh; owner; Mở / Đã sửa chờ xác minh / Đã xác minh / Mở lại / Hoãn có quyết định |
 
 - Lỗi correctness/security/invariant và thiếu acceptance bắt buộc phải chặn. `should-fix` phải ghi rõ có chặn hay không; nhãn mơ hồ không đủ làm căn cứ giao fix.
+- Blocker phải gắn AC/contract/invariant bắt buộc cùng repro hoặc đường đi code chứng minh lỗi; giả thuyết chưa xác minh ghi rõ là cần kiểm, không gọi là lỗi đã xác nhận. Phân loại đúng correctness, security, môi trường hay thiếu evidence; không gắn mọi validation bug thành security. Thiếu evidence bắt buộc vẫn chặn acceptance dù chưa chứng minh có bug sản phẩm.
 - Nit, sở thích refactor và cải thiện ngoài AC không chặn; ghi follow-up, không tự mở feature ngoài roadmap đã duyệt.
 - Finding mới ở lượt sau vẫn phải báo, kể cả lỗi cũ bị bỏ sót. Ghi rõ: regression từ bản sửa, lỗi bỏ sót hay bằng chứng mới; không che lỗi để đạt giới hạn lượt. Không mở lại finding đã xác minh khi không có thay đổi liên quan hoặc bằng chứng mới.
 - Lỗi môi trường/CI cần owner và cách khôi phục riêng; không sửa business code chỉ để vượt lỗi hạ tầng. Cùng lỗi hạ tầng chỉ retry tự động tối đa một lần khi có căn cứ lỗi tạm thời; tiếp tục lỗi thì chẩn đoán. CI đang chạy không phải một lượt thất bại.
@@ -39,6 +48,8 @@ Review đầu tiên đưa feedback đầy đủ trong scope. Mỗi finding giữ
 - Mở rộng review khi diff đổi contract, auth/tenant, dependency, migration, hoặc thay đổi nền ảnh hưởng kết luận trước; ghi lý do và phạm vi. Không audit toàn repo mặc định mỗi lần SHA đổi.
 - Mỗi SHA mới có kết luận mới ghi SHA cũ/mới, diff đã kiểm, findings còn lại, checks đã chạy và evidence tái sử dụng cùng lý do. Không gọi kết quả test SHA cũ là đã chạy trên SHA mới; không tự kế thừa PASS.
 - SHA, scope và evidence không đổi thì dùng kết luận hiện có; chỉ review lại khi có bằng chứng mới, gate hết hiệu lực hoặc phát hiện sai sót, kèm lý do.
+- Không chạy lại cùng test/suite/UAT vì có nhiều vai reviewer. Dùng evidence còn hiệu lực, ghi source/tested SHA và lý do tái sử dụng; chỉ chạy phần bị ảnh hưởng hoặc còn thiếu. Full suite/matrix chỉ khi gate bắt buộc yêu cầu hoặc có thay đổi/failure/rủi ro cụ thể cần kiểm rộng, nêu lý do trước khi chạy. CI trên integrated commit theo DoD vẫn bắt buộc.
+- Runtime acceptance là gate riêng khi AC yêu cầu hành vi chạy thật: review code, merge hoặc CI xanh không thay bằng chứng runtime. Không đổi scenario bắt buộc thành optional/known gap để PASS; chỉ owner có thẩm quyền mới đổi AC. Không đổi nhãn SHA của lần đo cũ thành HEAD mới.
 - Ưu tiên comment PR/Issue gắn exact SHA cho evidence. Nếu commit báo cáo trong `docs/reviews/*` làm đổi SHA: reviewer kiểm diff báo cáo, xác nhận không đổi hành vi/gate và ghi revalidation SHA mới bằng comment. Không tạo chuỗi commit chỉ để cập nhật SHA trong chính báo cáo. Docs về AC, policy, cấu hình hay hướng dẫn thực thi không mặc định là “chỉ evidence”.
 - Báo cáo canonical trên PR, Issue/Project chỉ link + thay đổi trạng thái; không copy nguyên review qua nhiều nơi. `scripts/agent-review-publish.mjs` mặc định read-only; chỉ `--apply` khi task authorize đăng GitHub.
 - Merge/rebase/conflict không tự miễn revalidation phần thay đổi; CI trên integrated commit vẫn bắt buộc theo DoD.
