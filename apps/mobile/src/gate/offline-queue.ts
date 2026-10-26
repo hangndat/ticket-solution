@@ -11,6 +11,7 @@ import {
   type OfflineSyncResponse,
 } from './offline-sync-contract.ts';
 import type { OfflineQueueStore } from './offline-queue-types.ts';
+import type { StaffGateScope } from './staff-gate-events.ts';
 import { randomId } from '../lib/random-id.ts';
 
 export type OfflineLocalStatus =
@@ -798,7 +799,7 @@ export function offlineBannerCopy(input: {
   if (input.conflictCount > 0) {
     return {
       title: 'Có xung đột đồng bộ',
-      body: `${input.conflictCount} mục bị từ chối/xung đột. Xem chi tiết bên dưới — không cho vào theo bản thua.`,
+      body: `${input.conflictCount} mục bị từ chối/xung đột. Mở tab Lịch sử của sự kiện này để xem chi tiết — không cho vào theo bản thua.`,
       tone: 'deny',
     };
   }
@@ -846,4 +847,27 @@ export function offlineBannerCopy(input: {
     body: 'Chưa xác nhận được kết nối máy chủ.',
     tone: 'default',
   };
+}
+
+/** The sticky sits under one event name; its conflict count must use that event. */
+export function offlineConflictBannerForScope(
+  snapshot: OfflineQueueSnapshot,
+  scope: Pick<StaffGateScope, 'tenantId' | 'eventId'> | null,
+  connectivity: ConnectivityState,
+): ReturnType<typeof offlineBannerCopy> | null {
+  if (!scope) return null;
+  const conflictCount = snapshot.items.filter(
+    (item) =>
+      item.tenantId === scope.tenantId &&
+      item.eventId === scope.eventId &&
+      (item.localStatus === 'conflict' || item.localStatus === 'rejected'),
+  ).length;
+  if (conflictCount === 0) return null;
+  return offlineBannerCopy({
+    connectivity,
+    pendingCount: snapshot.pendingCount,
+    conflictCount,
+    syncing: snapshot.syncing,
+    lastSyncError: snapshot.lastSyncError,
+  });
 }
