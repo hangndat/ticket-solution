@@ -3,9 +3,11 @@ import {
   Body,
   Controller,
   Get,
+  Header,
   Headers,
   HttpException,
   Injectable,
+  Logger,
   Param,
   Post,
   Query,
@@ -20,7 +22,11 @@ import {
   ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
-import { type ApiError, type ImportKind } from '@ticket/contracts';
+import {
+  type ApiError,
+  type ImportKind,
+  type ImportJobListQuery,
+} from '@ticket/contracts';
 import {
   AuthzError,
   IdentityError,
@@ -38,6 +44,7 @@ import {
   dispatchGuestInvitations,
   downloadImportErrors,
   getImportJob,
+  listImportJobs,
   importRedemptionCodes,
   readRoutingFingerprintSecret,
   readSupportedPepperConfigs,
@@ -75,13 +82,13 @@ type CsvReply = {
   send: (body: string) => void;
 };
 
-const UUID =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 class ImportBodyDto {
   @ApiProperty({ type: [String], required: false }) codes?: string[];
   @ApiProperty({ required: false }) eventQuota?: number;
-  @ApiProperty({ required: false, enum: ['CODES', 'GUESTS'] }) kind?: ImportKind;
+  @ApiProperty({ required: false, enum: ['CODES', 'GUESTS'] })
+  kind?: ImportKind;
   @ApiProperty({ required: false }) sourceId?: string;
   @ApiProperty({ required: false }) ticketTypeId?: string;
   @ApiProperty({ required: false }) fileId?: string;
@@ -137,6 +144,101 @@ class PortalCodesPageDto {
   @ApiProperty({ nullable: true, type: String }) nextCursor!: string | null;
 }
 
+class ImportJobSummaryDto {
+  @ApiProperty({ format: 'uuid' }) importId!: string;
+  @ApiProperty({ enum: ['CODES', 'GUESTS'] }) kind!: string;
+  @ApiProperty({
+    enum: ['CREATED', 'PREVIEW_READY', 'COMMITTING', 'COMPLETED', 'FAILED'],
+  })
+  status!: string;
+  @ApiProperty({ format: 'uuid' }) sourceId!: string;
+  @ApiProperty({ format: 'uuid' }) ticketTypeId!: string;
+  @ApiProperty({ nullable: true, type: Number }) mappingRevision!:
+    number | null;
+  @ApiProperty({ nullable: true, type: Number }) previewRevision!:
+    number | null;
+  @ApiProperty({ nullable: true, type: Number }) validRowCount!: number | null;
+  @ApiProperty({ nullable: true, type: Number }) errorRowCount!: number | null;
+  @ApiProperty({ nullable: true, type: Number }) invitationCount!:
+    number | null;
+  @ApiProperty({ nullable: true, type: Number }) estimatedQuota!: number | null;
+  @ApiProperty({ format: 'date-time' }) createdAt!: string;
+}
+
+class ImportJobListPageDto {
+  @ApiProperty({ type: [ImportJobSummaryDto] }) items!: ImportJobSummaryDto[];
+  @ApiProperty({ nullable: true, type: String }) nextCursor!: string | null;
+}
+
+/** Parse the original URL so duplicate keys cannot be collapsed by Nest query decorators. */
+export function parseImportListQuery(rawUrl: string): ImportJobListQuery {
+  const params = new URL(rawUrl, 'http://localhost').searchParams;
+  const allowed = new Set(['cursor', 'limit', 'status', 'kind']);
+  const query: ImportJobListQuery = {};
+  for (const [key, value] of params) {
+    if (!allowed.has(key) || params.getAll(key).length !== 1 || value === '') {
+      throw new ImportError(
+        key === 'cursor' && value === ''
+          ? IMPORT_ERROR_CODES.INVALID_CURSOR
+          : IMPORT_ERROR_CODES.INVALID_FILTER,
+        'Invalid import list query',
+      );
+    }
+  }
+  const cursor = params.get('cursor');
+  if (cursor !== null) {
+    if (
+      cursor.length > 2048 ||
+      !/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(cursor)
+    ) {
+      throw new ImportError(
+        IMPORT_ERROR_CODES.INVALID_CURSOR,
+        'Invalid import list cursor',
+      );
+    }
+    query.cursor = cursor;
+  }
+  const limit = params.get('limit');
+  if (limit !== null) {
+    if (!/^[1-9][0-9]*$/.test(limit) || Number(limit) > 100) {
+      throw new ImportError(
+        IMPORT_ERROR_CODES.INVALID_FILTER,
+        'Invalid import list limit',
+      );
+    }
+    query.limit = Number(limit);
+  }
+  const status = params.get('status');
+  if (status !== null) {
+    if (
+      ![
+        'CREATED',
+        'PREVIEW_READY',
+        'COMMITTING',
+        'COMPLETED',
+        'FAILED',
+      ].includes(status)
+    ) {
+      throw new ImportError(
+        IMPORT_ERROR_CODES.INVALID_FILTER,
+        'Invalid import list status',
+      );
+    }
+    query.status = status as ImportJobListQuery['status'];
+  }
+  const kind = params.get('kind');
+  if (kind !== null) {
+    if (kind !== 'CODES' && kind !== 'GUESTS') {
+      throw new ImportError(
+        IMPORT_ERROR_CODES.INVALID_FILTER,
+        'Invalid import list kind',
+      );
+    }
+    query.kind = kind;
+  }
+  return query;
+}
+
 type Deps = {
   db: PrismaClient | null;
   verifier: OidcVerifier | null;
@@ -180,11 +282,17 @@ function resolveStore(deps: Deps): ObjectStore {
 
 @Injectable()
 export class InventoryService {
+  private readonly logger = new Logger(InventoryService.name);
   constructor(private readonly deps: Deps) {}
 
   private async actor(authorization: string | undefined) {
     if (this.deps.bootError) throw this.deps.bootError;
-    if (!this.deps.db || !this.deps.verifier || !this.deps.users || !this.deps.hmac) {
+    if (
+      !this.deps.db ||
+      !this.deps.verifier ||
+      !this.deps.users ||
+      !this.deps.hmac
+    ) {
       throw new IdentityError(
         IDENTITY_ERROR_CODES.OIDC_MISCONFIGURED,
         'Inventory services are not configured',
@@ -201,7 +309,8 @@ export class InventoryService {
     body: ImportBodyDto,
   ) {
     const user = await this.actor(authorization);
-    let routingRegistry: { peppers: CodeHmacConfig[]; fpSecret: string } | undefined;
+    let routingRegistry:
+      { peppers: CodeHmacConfig[]; fpSecret: string } | undefined;
     try {
       const env = this.deps.env ?? process.env;
       routingRegistry = {
@@ -283,6 +392,39 @@ export class InventoryService {
       actorUserId: user.userId,
       importId,
     });
+  }
+
+  async listJobs(
+    authorization: string | undefined,
+    tenantId: string,
+    eventId: string,
+    query: ImportJobListQuery,
+    requestId: string | undefined,
+  ) {
+    const user = await this.actor(authorization);
+    const page = await listImportJobs(
+      this.deps.db!,
+      {
+        tenantId,
+        eventId,
+        actorUserId: user.userId,
+        query,
+      },
+      this.deps.hmac!.pepper,
+    );
+    this.logger.log(
+      JSON.stringify({
+        action: 'import_jobs.list',
+        requestId,
+        actorUserId: user.userId,
+        tenantId,
+        eventId,
+        status: query.status ?? null,
+        kind: query.kind ?? null,
+        count: page.items.length,
+      }),
+    );
+    return page;
   }
 
   async preview(
@@ -435,7 +577,11 @@ export class InventoryService {
     );
   }
 
-  async quota(authorization: string | undefined, tenantId: string, eventId: string) {
+  async quota(
+    authorization: string | undefined,
+    tenantId: string,
+    eventId: string,
+  ) {
     const user = await this.actor(authorization);
     return withTenant(this.deps.db!, tenantId, (tx) =>
       readEventQuota(tx, { tenantId, eventId, actorUserId: user.userId }),
@@ -605,6 +751,42 @@ export class InventoryController {
       .catch((error) => this.fail(error));
   }
 
+  @Get('tenants/:tenantId/events/:eventId/imports')
+  @ApiBearerAuth()
+  @ApiQuery({ name: 'cursor', required: false, type: String })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    minimum: 1,
+    maximum: 100,
+  })
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    enum: ['CREATED', 'PREVIEW_READY', 'COMMITTING', 'COMPLETED', 'FAILED'],
+  })
+  @ApiQuery({ name: 'kind', required: false, enum: ['CODES', 'GUESTS'] })
+  @ApiOkResponse({ type: ImportJobListPageDto })
+  @Header('Cache-Control', 'private, no-store')
+  listJobs(
+    @Headers('authorization') authorization: string | undefined,
+    @Param('tenantId') tenantId: string,
+    @Param('eventId') eventId: string,
+    @Req() req: { id?: string; raw: { url?: string } },
+  ) {
+    const tenant = requireUuid(tenantId, 'tenantId');
+    const event = requireUuid(eventId, 'eventId');
+    try {
+      const query = parseImportListQuery(req.raw.url ?? '');
+      return this.inventory
+        .listJobs(authorization, tenant, event, query, req.id)
+        .catch((error) => this.fail(error));
+    } catch (error) {
+      this.fail(error);
+    }
+  }
+
   @Get('tenants/:tenantId/events/:eventId/imports/:importId')
   @ApiBearerAuth()
   getJob(
@@ -758,7 +940,9 @@ export class InventoryController {
   ) {
     const tenant = requireUuid(tenantId, 'tenantId');
     const event = requireUuid(eventId, 'eventId');
-    return this.inventory.quota(authorization, tenant, event).catch((error) => this.fail(error));
+    return this.inventory
+      .quota(authorization, tenant, event)
+      .catch((error) => this.fail(error));
   }
 
   @Get('tenants/:tenantId/events/:eventId/codes')
