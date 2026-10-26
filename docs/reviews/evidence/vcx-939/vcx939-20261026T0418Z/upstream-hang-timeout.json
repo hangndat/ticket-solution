@@ -1,0 +1,20 @@
+{
+  "fault": "upstream_tcp_accept_no_response",
+  "notConnectionRefused": true,
+  "healthProbeBeforeHang": {
+    "result": "URLError",
+    "seconds": 0.001
+  },
+  "healthProbeDuringHang": {
+    "result": "timeout",
+    "seconds": 2.502
+  },
+  "code": "DEMO-V939-OUTAGE-1",
+  "resolveHttp": 201,
+  "wallElapsedMsAfterSubmit": 22582,
+  "bffConfiguredTimeoutMs": 20000,
+  "uiUnknown": false,
+  "snapHasUnknownCopy": false,
+  "snapExcerpt": " banner\n  - navigation \"Điều hướng chính\" [ref=e2]\n    - link \"Vemoki — trang chủ\" [ref=e4]\n      - StaticText \"vemoki\"\n    - button \"Menu\" [expanded=false, ref=e5]\n      - StaticText \"Menu\"\n- main\n  - sectionheader\n    - paragraph\n      - StaticText \"NHẬP MÃ MỜI\"\n    - heading \"Đổi mã lấy vé\" [level=1, ref=e6]\n    - paragraph\n      - StaticText \"Một mã mời duy nhất. Không cần chọn sự kiện hay tổ chức.\"\n  - form \"Đổi mã lấy vé\"\n    - heading \"Đổi mã lấy vé\" [level=2, ref=e7]\n    - paragraph\n      - StaticText \"Kiểm tra thông tin sự kiện, điền biểu mẫu và đồng ý điều khoản trước khi đổi vé.\"\n    - region \"Sự kiện từ mã của bạn\" [ref=e8]\n      - heading \"Sự kiện từ mã của bạn\" [level=3, ref=e13]\n      - DescriptionList\n        - term \"TỔ CHỨC\"\n        - definition\n          - StaticText \"MFest\"\n        - term \"SỰ KIỆN\"\n        - definition\n          - StaticText \"MFest · Demo\"\n        - term \"LOẠI VÉ\"\n        - definition\n          - StaticText \"General\"\n      - button \"Nhập mã khác\" [ref=e14]\n    - status\n      - strong\n        - StaticText \"Đã xác định sự kiện\"\n      - paragraph\n        - StaticText \"Đã xác định: MFest · Demo · General. Điền biểu mẫu và đồng ý điều khoản trước khi đổi vé.\"\n    - LabelText\n      - StaticText \"Mã đổi vé\"\n      - textbox \"Mã đổi vé\" [required, ref=e15]: DEMO-V939-OUTAGE-1\n        - StaticText \"DEMO-V939-OUTAGE-1\"\n    - paragraph\n      - StaticText \"Sự kiện này không có trường biểu mẫu — nhập mã và đồng ý điều khoản bên dưới để đổi vé.\"\n    - group \"Điều khoản\"\n      - Legend\n        - StaticText \"Điều khoản\"\n      - paragraph\n        - StaticText \"Nội dung dưới đây do ban tổ chức ban hành (có thể khác ngôn ngữ giao diện).\"\n      - generic [ref=e16] focusable [tabindex]\n        - StaticText \"By attending you agree to venue house rules, age and safety policies, and the organizer’s ticketing terms. Tickets are non-transferable except where the organizer permits. Photography for personal use is welcome; commercial filming requires prior approval.\"\n      - LabelText\n        - checkbox \"Tôi đã đọc và đồng ý điều khoản sự kiện\" [checked=false, ref=e17]\n        - StaticText \"Tôi đã đọc và đồng ý điều khoản sự kiện\"\n    - button \"Đổi mã lấy vé\" [ref=e9]\n- contentinfo\n  - StaticText \"vemoki\"\n  - StaticText \"Sự kiện & vé\"\n  - navigation \"Liên kết chân trang\" [ref=e3]\n    - link \"Khám phá\" [ref=e10]\n    - link \"Đổi mã\" [ref=e11]\n    - link \"Tài khoản\" [ref=e12]\n- button \"Open Next.js Dev Tools\" [expanded=false, ref=e18]\n  - image\n- alert",
+  "bffTrace": []
+}

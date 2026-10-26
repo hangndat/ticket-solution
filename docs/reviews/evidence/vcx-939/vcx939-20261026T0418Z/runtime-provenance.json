@@ -1,0 +1,45 @@
+{
+  "capturedAt": "2026-10-26T03:19:43.911934+00:00",
+  "sourceSha": "314a5ac008cbec5f77fed79171ce72f4fd619c30",
+  "priorPacket": "vcx939-20261026T0305Z",
+  "runId": "vcx939-20261026T0418Z",
+  "web": "http://localhost:3417",
+  "api": "http://127.0.0.1:3539",
+  "bffUpstreamTimeoutMs": 20000,
+  "hangProbe": {
+    "fault": "upstream_tcp_accept_no_response",
+    "notConnectionRefused": true,
+    "code": "DEMO-V939-OUTAGE-1",
+    "resolveHttp": 201,
+    "wallElapsedMs": 290,
+    "bffExpectedTimeoutMs": 20000,
+    "uiUnknown": false,
+    "ticketCountAfter": 0,
+    "snapExcerpt": "- link \"Bỏ qua đến nội dung\" [ref=e1]\n- banner\n  - navigation \"Điều hướng chính\" [ref=e2]\n    - link \"Vemoki — trang chủ\" [ref=e4]\n      - StaticText \"vemoki\"\n    - button \"Menu\" [expanded=false, ref=e5]\n      - StaticText \"Menu\"\n- main\n  - sectionheader\n    - paragraph\n      - StaticText \"NHẬP MÃ MỜI\"\n    - heading \"Đổi mã lấy vé\" [level=1, ref=e6]\n    - paragraph\n      - StaticText \"Một mã mời duy nhất. Không cần chọn sự kiện hay tổ chức.\"\n  - form \"Đổi mã lấy vé\"\n    - heading \"Đổi mã lấy vé\" [level=2, ref=e7]\n    - paragraph\n      - StaticText \"Kiểm tra thông tin sự kiện, điền biểu mẫu và đồng ý điều khoản trước khi đổi vé.\"\n    - region \"Sự kiện từ mã của bạn\" [ref=e8]\n      - heading \"Sự kiện từ mã của bạn\" [level=3, ref=e13]\n      - DescriptionList\n        - term \"TỔ CHỨC\"\n        - definition\n          - StaticText \"MFest\"\n        - term \"SỰ KIỆN\"\n        - definition\n          - StaticText \"MFest · Demo\"\n        - term \"LOẠI VÉ\"\n        - definition\n          - StaticText \"General\"\n      - button \"Nhập mã khác\" [ref=e14]\n    - status\n      - strong\n        - StaticText \"Đã xác định sự kiện\"\n      - paragraph\n        - StaticText \"Đã xác định: MFest · Demo · General. Điền b",
+    "outcomeScreenshots": {
+      "uxHint": null,
+      "screenshots": {
+        "390": "screenshots/outcomes/unknown-hang-390.png",
+        "1024": "screenshots/outcomes/unknown-hang-1024.png",
+        "1440": "screenshots/outcomes/unknown-hang-1440.png"
+      }
+    }
+  },
+  "outcomePanels": {
+    "pending": {
+      "390": "screenshots/outcomes/pending-390.png",
+      "1024": "screenshots/outcomes/pending-1024.png",
+      "1440": "screenshots/outcomes/pending-1440.png"
+    },
+    "issued": {
+      "390": "screenshots/outcomes/issued-390.png",
+      "1024": "screenshots/outcomes/issued-1024.png",
+      "1440": "screenshots/outcomes/issued-1440.png"
+    },
+    "rejected": {
+      "390": "screenshots/outcomes/rejected-390.png",
+      "1024": "screenshots/outcomes/rejected-1024.png",
+      "1440": "screenshots/outcomes/rejected-1440.png"
+    }
+  }
+}
