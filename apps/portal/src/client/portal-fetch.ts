@@ -192,6 +192,7 @@ export async function portalMultipart(
       json: await parseJsonSafe(res),
       networkError: false,
       timedOut: false,
+      retryAfterMs: retryAfterMs(res),
     };
   } catch (err) {
     const timedOut = err instanceof Error && err.name === 'AbortError';
