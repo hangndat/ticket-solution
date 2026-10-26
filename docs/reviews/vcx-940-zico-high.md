@@ -5,6 +5,7 @@
 | Nhân viên / role | Zico (`zico`) · `ios`; cost tier `high` vì race/idempotency Gate |
 | Route yêu cầu | Codex `gpt-6-sol/high` vì quota Claude Sonnet 5 chưa xác minh; effective model không có receipt để tự xác nhận |
 | Base / code SHA | `ddb7428b6e266d4ea406ff74478cc71cf30c5055` → `a633b687cfc71ce9bab4436357589e0b6d6fef04` (sửa review trên `ff2c1df370fdc4c76b3964f583beaca46115417b`) |
+| Evidence SHA | `6e015509ec28f78d56d49deb064803ba9f499387` (commit cập nhật chẩn đoán, test và runtime evidence; dòng metadata này được ghi sau commit đó) |
 | Scope | `apps/mobile/**`; không đổi backend, contract, #928 hay fixture DB khác |
 | Kiến trúc | Không đổi ADR-18 hoặc admission invariant; sửa lifecycle client và hiển thị conflict |
 | Trạng thái | Code complete; ba finding simulator trước có evidence. Batch F-979 đã sửa, **chờ James revalidate diff và CI exact PR tip mới**. Chưa gán acceptance complete / pilot ready. |
