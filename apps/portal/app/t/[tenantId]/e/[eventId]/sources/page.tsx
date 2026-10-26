@@ -9,6 +9,7 @@ import {
 import type { ProColumns } from '@ant-design/pro-components';
 import { Alert, Button, Empty, Flex, Form, Result, Spin } from 'antd';
 import { PortalPage } from '../../../../../../src/components/portal-page';
+import { EventSetupNav } from '../../../../../../src/components/event-setup-nav';
 import { useParams } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type {
@@ -40,7 +41,7 @@ export default function SourcesPage() {
   const [types, setTypes] = useState<PortalTicketTypeSummary[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
   const [kind, setKind] = useState<
-    'loading' | 'ready' | 'empty' | 'error' | 'unknown'
+    'loading' | 'ready' | 'empty' | 'error' | 'unknown' | 'forbidden'
   >('loading');
   const [message, setMessage] = useState<string | undefined>();
   const [open, setOpen] = useState(false);
@@ -70,6 +71,10 @@ export default function SourcesPage() {
       if (res.networkError || res.timedOut || res.status >= 500) {
         setKind('unknown');
         setMessage(t('sources.h_67axiu'));
+        return;
+      }
+      if (res.status === 403) {
+        setKind('forbidden');
         return;
       }
       if (res.status !== 200 || !res.json || typeof res.json !== 'object') {
@@ -231,7 +236,7 @@ export default function SourcesPage() {
         (row.ticketTypeIds ?? [])
           .map((id) => {
             const ty = types.find((x) => x.ticketTypeId === id);
-            return ty?.label ?? id.slice(0, 8);
+            return ty?.label ?? t('sources.typeLabelUnavailable');
           })
           .join(', ') || '—',
     },
@@ -255,6 +260,10 @@ export default function SourcesPage() {
       }
       loading={kind === 'loading'}
     >
+      <EventSetupNav tenantId={tenantId} eventId={eventId} current="sources" />
+      {kind === 'forbidden' ? (
+        <Result status="403" title={t(SURFACE_MESSAGE_KEYS.permissionTitle)} subTitle={t('surface.permission.defaultDescription')} />
+      ) : null}
       {kind === 'loading' ? (
     <Flex
       vertical
