@@ -21,6 +21,13 @@ body {
 .portal-shell-nav-drawer.ant-drawer-open > .ant-drawer-content-wrapper {
   transform: translate3d(0, 0, 0) !important;
   width: min(240px, 85vw) !important;
+  opacity: 1 !important;
+  transition: none !important;
+}
+
+.portal-shell-nav-drawer.ant-drawer-open .ant-drawer-section {
+  opacity: 1 !important;
+  background: var(--ant-color-bg-elevated, #ffffff);
 }
 
 .portal-shell-nav-drawer.ant-drawer-open .ant-drawer-mask {
