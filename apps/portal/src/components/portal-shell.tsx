@@ -252,7 +252,25 @@ function PortalShellChrome({
   const legacyAdmin = `${productOrigin}/admin`;
 
   return (
-    <Layout className="portal-app-shell" style={{ minHeight: '100vh' }}>
+    <>
+      {useDrawerNav ? (
+        <Drawer
+          id="portal-nav-drawer"
+          rootClassName="portal-shell-nav-drawer"
+          getContainer={() => document.body}
+          title={t('shell.nav.drawerTitle')}
+          placement="left"
+          size={240}
+          push={false}
+          open={navDrawerOpen}
+          onClose={closeNavDrawer}
+          destroyOnClose={false}
+          styles={{ body: { padding: 0 } }}
+        >
+          {capabilityNavMenu}
+        </Drawer>
+      ) : null}
+      <Layout className="portal-app-shell" style={{ minHeight: '100vh' }}>
       <Header
         style={{
           display: 'flex',
@@ -297,23 +315,10 @@ function PortalShellChrome({
           </Button>
         </Dropdown>
       </Header>
-      {useDrawerNav ? (
-        <Drawer
-          id="portal-nav-drawer"
-          title={t('shell.nav.drawerTitle')}
-          placement="left"
-          width={240}
-          open={navDrawerOpen}
-          onClose={closeNavDrawer}
-          destroyOnClose={false}
-          styles={{ body: { padding: 0 } }}
-        >
-          {capabilityNavMenu}
-        </Drawer>
-      ) : null}
       <Layout>
         {showSider && !useDrawerNav ? (
           <Sider
+            className="portal-desktop-sider"
             theme="dark"
             width={240}
             collapsible={false}
@@ -492,6 +497,7 @@ function PortalShellChrome({
         </Layout>
       </Layout>
     </Layout>
+    </>
   );
 }
 
