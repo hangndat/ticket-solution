@@ -27,6 +27,7 @@ import { canPerformTenantAction } from '../../../../../src/nav/capability-policy
 import { usePortalLocale } from '../../../../../src/i18n';
 import { SURFACE_MESSAGE_KEYS } from '../../../../../src/prep/surface-copy';
 import { useUnsavedChanges } from '../../../../../src/nav/unsaved-changes';
+import { refreshShellContext } from '../../../../../src/nav/load-shell-context';
 import { useIntentMutation } from '../../../../../src/client/use-intent-mutation';
 import { intentBlockMessageKey, intentBlockPresentation } from '../../../../../src/client/intent-mutation';
 import { eventFromMutation } from '../../../../../src/client/event-mutation-result';
@@ -206,6 +207,7 @@ export default function CreateEventWizardPage() {
         });
         setCreatedScope(tenantId);
         setDirty(false);
+        await refreshShellContext();
         router.push(`/t/${tenantId}/e/${event.eventId}`);
         return;
       }

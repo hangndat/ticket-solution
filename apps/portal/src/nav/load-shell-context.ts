@@ -161,3 +161,9 @@ export function loadShellContext(): Promise<ShellLoadState> {
   }
   return shellContextInflight;
 }
+
+/** Force a new discovery round (e.g. after create/clone when MeEvents was stale). */
+export function refreshShellContext(): Promise<ShellLoadState> {
+  shellContextInflight = null;
+  return loadShellContext();
+}

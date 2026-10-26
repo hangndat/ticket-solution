@@ -23,8 +23,10 @@ import {
 } from '../nav/capabilities';
 import {
   loadShellContext,
+  refreshShellContext,
   type ShellLoadState,
 } from '../nav/load-shell-context';
+import { shouldRefreshEventDiscovery } from '../prep/event-discovery';
 import { usePortalLocale } from '../i18n';
 import { SURFACE_MESSAGE_KEYS } from '../prep/surface-copy';
 import {
@@ -509,6 +511,9 @@ export function PortalShell({
   const pathname = usePathname();
   const [shell, setShell] = useState<ShellLoadState>({ status: 'loading' });
   const [forbiddenScopes, setForbiddenScopes] = useState<ForbiddenScope[]>([]);
+  const [eventDiscoverySettledKey, setEventDiscoverySettledKey] = useState<
+    string | null
+  >(null);
   const requestGate = useRef(createContextRequestGate());
 
   useEffect(() => installUnsavedNavigation(), []);
@@ -598,6 +603,34 @@ export function PortalShell({
   );
   const activeEvent =
     tenantEvents.find((e) => e.eventId === effectiveEventId) ?? null;
+
+  const eventDiscoveryKey =
+    shell.status === 'ready' && effectiveEventId && resolvedTenantId
+      ? `${resolvedTenantId}/${effectiveEventId}`
+      : null;
+  const needsEventDiscoveryRefresh =
+    eventDiscoveryKey != null &&
+    shouldRefreshEventDiscovery(shell, resolvedTenantId!, effectiveEventId!);
+
+  useEffect(() => {
+    if (!needsEventDiscoveryRefresh || !eventDiscoveryKey) return;
+    if (eventDiscoverySettledKey === eventDiscoveryKey) return;
+    const request = requestGate.current.begin('event-discovery');
+    void refreshShellContext().then((result) => {
+      if (request.isCurrent()) {
+        setShell(result);
+        setEventDiscoverySettledKey(eventDiscoveryKey);
+      }
+    });
+  }, [
+    needsEventDiscoveryRefresh,
+    eventDiscoveryKey,
+    eventDiscoverySettledKey,
+  ]);
+
+  const eventDiscoveryLoading =
+    needsEventDiscoveryRefresh &&
+    eventDiscoverySettledKey !== eventDiscoveryKey;
 
   const orgMenu = useMemo(() => {
     if (!resolvedTenantId || !activeTenant) return [];
@@ -712,7 +745,7 @@ export function PortalShell({
     return <>{children}</>;
   }
 
-  if (shell.status === 'loading') {
+  if (shell.status === 'loading' || eventDiscoveryLoading) {
     return (
     <Flex
       vertical
