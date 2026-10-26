@@ -29,6 +29,8 @@ function passthroughUpstream(upstream: Response, body: ArrayBuffer): Response {
   else outHeaders.set('Cache-Control', 'private, no-store');
   const disposition = upstream.headers.get('Content-Disposition');
   if (disposition) outHeaders.set('Content-Disposition', disposition);
+  const retryAfter = upstream.headers.get('Retry-After');
+  if (retryAfter) outHeaders.set('Retry-After', retryAfter);
   return new Response(body, {
     status: upstream.status,
     headers: outHeaders,

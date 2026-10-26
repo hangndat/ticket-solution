@@ -83,3 +83,34 @@ test('expired key and payload conflict stay blocked for reconciliation; explicit
     assert.equal(keys, 2);
   }
 });
+
+test('429 respects Retry-After without changing key; 202 remains pending until job reconciliation', async () => {
+  const storage = memoryStorage();
+  let now = 1000;
+  let keys = 0;
+  const client = new MutationIntent(scope, storage, () => `key-${++keys}`, () => now);
+  const response: PortalFetchResult = { status: 429, json: { code: 'RATE_LIMITED' }, networkError: false, timedOut: false, retryAfterMs: 3000 };
+  await client.run({ requestId: 'r1' }, async () => response);
+  assert.deepEqual(await client.run({ requestId: 'r1' }, async () => ok()), { kind: 'blocked', reason: 'backoff' });
+  now = 4000;
+  const accepted = await client.run({ requestId: 'r1' }, async (body) => {
+    assert.equal(body.idempotencyKey, 'key-1');
+    return { status: 202, json: { jobId: 'j1', status: 'PENDING' }, networkError: false, timedOut: false };
+  });
+  assert.equal(accepted.kind, 'response');
+  assert.equal(client.status?.state, 'accepted');
+  assert.deepEqual(await client.run({ requestId: 'r1' }, async () => ok()), { kind: 'blocked', reason: 'accepted' });
+  assert.equal(keys, 1);
+});
+
+test('an old or unreadable stored intent cannot silently become a fresh operation', async () => {
+  const storage = memoryStorage();
+  let now = 1000;
+  const client = new MutationIntent(scope, storage, () => 'key-1', () => now);
+  await client.run({ requestId: 'r1' }, async () => lost);
+  now += 6 * 60_000;
+  assert.deepEqual(await client.run({ requestId: 'r1' }, async () => ok()), { kind: 'blocked', reason: 'stale' });
+  storage.setItem(intentStorageKey(scope), '{broken');
+  const unreadable = new MutationIntent(scope, storage);
+  assert.deepEqual(await unreadable.run({ requestId: 'r1' }, async () => ok()), { kind: 'blocked', reason: 'conflict' });
+});
