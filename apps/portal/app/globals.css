@@ -13,9 +13,17 @@ body {
 }
 
 @media (max-width: 1023px) {
-  .portal-app-shell > .ant-layout > .ant-layout-has-sider > .ant-layout-sider {
+  .portal-app-shell .portal-desktop-sider {
     display: none !important;
   }
+}
+
+.portal-shell-nav-drawer .ant-drawer-content-wrapper {
+  width: min(240px, 85vw) !important;
+}
+
+.portal-shell-nav-drawer .ant-drawer-body {
+  padding: 0;
 }
 
 .portal-skip-link {
