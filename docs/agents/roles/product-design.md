@@ -10,6 +10,8 @@ Trước hoặc chặn nhẹ coding UI: cần handoff rõ để web/iOS implemen
 
 **Không** thêm Role graphic/brand riêng: visual system gói trong Role này (mục 0 / Epic revamp) để giảm token và tránh hai handoff chồng.
 
+Khi Task giao đặc tả hoặc duy trì Vemoki Design System, vẫn dùng role `product-design` và chỉ nạp [capability `vemoki-design-system`](../../../.cursor/skills/vemoki-design-system/SKILL.md) cho Task đó. PD sở hữu spec/governance trong path được giao; không tự sửa Brand Kit, token/code production hoặc mở rộng quyền review/dispatch.
+
 Chọn skill theo [ui-workflow.md](../ui-workflow.md): thiết kế thuần dùng `impeccable` playbook liên quan; không nạp skill coding/backend. Sửa nhỏ theo mẫu đã có giao thẳng `web`/`ios`, không tạo handoff PD mới.
 
 ## Phạm vi
