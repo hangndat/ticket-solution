@@ -41,10 +41,13 @@ export function StaffManualConfirmSheet({
           padding: space.xl
         }}
         onPress={onCancel}
-        accessibilityLabel="Đóng xác nhận vé"
+        accessible={false}
       >
         <Pressable
           onPress={(e) => e.stopPropagation()}
+          accessible={false}
+          accessibilityViewIsModal
+          onAccessibilityEscape={onCancel}
           style={{
             backgroundColor: brand.paper,
             borderRadius: radius.xl,
