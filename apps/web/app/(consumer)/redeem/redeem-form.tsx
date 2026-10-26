@@ -646,7 +646,7 @@ export function RedeemForm({
     if (!pendingRequestId || busy) return;
     const generation = generationRef.current;
     startTransition(async () => {
-      const result = await fetchOwnerRedemptionStatus(pendingRequestId);
+      const result = await fetchOwnerRedemptionStatus(pendingRequestId, tenantId);
       if (isStale(generation)) return;
       if (result.status === 'ok') {
         setUx(messageForOwnerStatus(result.body));

@@ -1,0 +1,11 @@
+ok    web.css_lines                         0 → 0
+ok    web.module_css_files                  0 → 0
+ok    web.tsx_hex_literals                  6 → 6
+ok    web.css_media_px                      0 → 0
+ok    web.css_important                     0 → 0
+ok    web.ui_prefix_literals                0 → 0
+ok    mobile.spacing_literals               9 → 9
+ok    mobile.font_literals                  0 → 0
+ok    mobile.tsx_hex_literals               0 → 0
+ok    mobile.pressable_outside_ui           4 → 4
+ok    mobile.rn_modal                       1 → 1

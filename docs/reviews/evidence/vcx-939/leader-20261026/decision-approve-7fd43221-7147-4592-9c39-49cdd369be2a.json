@@ -1,0 +1,37 @@
+{
+  "requestId": "7fd43221-7147-4592-9c39-49cdd369be2a",
+  "before": [
+    200,
+    {
+      "status": "PENDING_REVIEW",
+      "requestId": "7fd43221-7147-4592-9c39-49cdd369be2a",
+      "eventId": "d9d9f001-0002-4000-8000-000000000001",
+      "ticketTypeId": "d9d9f001-0003-4000-8000-000000000001",
+      "sourceId": "d9d9f001-0004-4000-8000-000000000001",
+      "expiresAt": "2026-10-27T10:24:56.876Z",
+      "submittedAt": "2026-10-26T10:24:56.868Z"
+    }
+  ],
+  "decisionHttp": 201,
+  "decision": {
+    "decision": "approve",
+    "requestId": "7fd43221-7147-4592-9c39-49cdd369be2a",
+    "status": "ISSUED",
+    "ticketId": "73894c9c-3b93-421d-bc05-b46f3a499024",
+    "operationId": "dee6a916-9b2d-4298-826d-d1879a9ce292",
+    "ownerUserId": "21ab1e0f-68a1-462a-b207-5a61d1cb2eb3",
+    "replayed": false
+  },
+  "after": [
+    200,
+    {
+      "status": "ISSUED",
+      "requestId": "7fd43221-7147-4592-9c39-49cdd369be2a",
+      "eventId": "d9d9f001-0002-4000-8000-000000000001",
+      "ticketId": "73894c9c-3b93-421d-bc05-b46f3a499024",
+      "ticketTypeId": "d9d9f001-0003-4000-8000-000000000001",
+      "sourceId": "d9d9f001-0004-4000-8000-000000000001",
+      "issuedAt": "2026-10-26T10:25:38.426Z"
+    }
+  ]
+}
