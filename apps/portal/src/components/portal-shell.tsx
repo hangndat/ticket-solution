@@ -37,6 +37,7 @@ import {
   firstAllowedTenantPath,
 } from '../nav/capability-policy';
 import { createContextRequestGate } from '../nav/context-request-gate';
+import { installUnsavedNavigation } from '../nav/unsaved-changes';
 
 function tenantFromPath(pathname: string): string | null {
   const m = pathname.match(/^\/t\/([^/]+)/);
@@ -70,6 +71,8 @@ export function PortalShell({
   const [shell, setShell] = useState<ShellLoadState>({ status: 'loading' });
   const [forbiddenScopes, setForbiddenScopes] = useState<ForbiddenScope[]>([]);
   const requestGate = useRef(createContextRequestGate());
+
+  useEffect(() => installUnsavedNavigation(), []);
 
   useEffect(() => {
     const deny = (event: Event) => {

@@ -3,8 +3,7 @@
 import { useEffect } from 'react';
 
 const dirtyForms = new Map<symbol, string>();
-let installed = false;
-let skipNextPop = false;
+const HISTORY_POSITION = '__portalHistoryPosition';
 
 export function confirmDiscardIfDirty(prompt?: string): boolean {
   if (dirtyForms.size === 0) return true;
@@ -51,36 +50,71 @@ function clickLink(event: MouseEvent) {
   }
 }
 
-function popState() {
-  if (skipNextPop) {
-    skipNextPop = false;
-    return;
-  }
-  if (!confirmDiscardIfDirty()) {
-    skipNextPop = true;
-    window.history.forward();
-  }
-}
+/** Track same-document entries before a form becomes dirty, including Forward. */
+export function installUnsavedNavigation(): () => void {
+  const history = window.history;
+  const originalPush = history.pushState;
+  const originalReplace = history.replaceState;
+  let position = 0;
+  let restoring = false;
+  const initial = history.state?.[HISTORY_POSITION];
+  if (typeof initial === 'number') position = initial;
+  originalReplace.call(
+    history,
+    { ...history.state, [HISTORY_POSITION]: position },
+    '',
+  );
 
-function install() {
-  if (
-    installed ||
-    typeof window === 'undefined' ||
-    typeof document === 'undefined'
-  )
-    return;
-  installed = true;
+  const push: History['pushState'] = function (data, unused, url) {
+    const next = position + 1;
+    originalPush.call(
+      history,
+      { ...data, [HISTORY_POSITION]: next },
+      unused,
+      url,
+    );
+    position = next;
+  };
+  const replace: History['replaceState'] = function (data, unused, url) {
+    originalReplace.call(
+      history,
+      { ...data, [HISTORY_POSITION]: position },
+      unused,
+      url,
+    );
+  };
+  history.pushState = push;
+  history.replaceState = replace;
+
+  const popState = (event: PopStateEvent) => {
+    if (restoring) {
+      restoring = false;
+      event.stopImmediatePropagation();
+      return;
+    }
+    const destination = event.state?.[HISTORY_POSITION];
+    if (typeof destination !== 'number') return;
+    const delta = destination - position;
+    if (delta !== 0 && !confirmDiscardIfDirty()) {
+      // Next must not render the rejected route or unmount the dirty form.
+      event.stopImmediatePropagation();
+      restoring = true;
+      history.go(-delta);
+      return;
+    }
+    position = destination;
+  };
   window.addEventListener('beforeunload', beforeUnload);
   document.addEventListener('click', clickLink, true);
   window.addEventListener('popstate', popState, true);
-}
-
-function uninstallIfEmpty() {
-  if (!installed || dirtyForms.size !== 0) return;
-  installed = false;
-  window.removeEventListener('beforeunload', beforeUnload);
-  document.removeEventListener('click', clickLink, true);
-  window.removeEventListener('popstate', popState, true);
+  return () => {
+    window.removeEventListener('beforeunload', beforeUnload);
+    document.removeEventListener('click', clickLink, true);
+    window.removeEventListener('popstate', popState, true);
+    if (history.pushState === push) history.pushState = originalPush;
+    if (history.replaceState === replace)
+      history.replaceState = originalReplace;
+  };
 }
 
 /** Register only actual editable data forms; filter and search inputs do not count. */
@@ -94,9 +128,7 @@ export function useUnsavedChanges(dirty: boolean, prompt: string) {
 export function registerDirtyForm(prompt: string): () => void {
   const id = Symbol('dirty-form');
   dirtyForms.set(id, prompt);
-  install();
   return () => {
     dirtyForms.delete(id);
-    uninstallIfEmpty();
   };
 }
