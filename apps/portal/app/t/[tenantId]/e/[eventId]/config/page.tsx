@@ -22,12 +22,15 @@ import {
   portalMutate,
 } from '../../../../../../src/client/portal-fetch';
 import {
+  canPublishSavedVersion,
+  configFieldDifferences,
   configFields,
   configSaveNoticeKey,
   hasConfigVersionConflict,
   isConfigPreview,
   mergeConfigFields,
   type ConfigFields,
+  type ConfigFieldDifference,
 } from '../../../../../../src/prep/config-editor';
 import {
   buildMinimalConfigPayload,
@@ -49,7 +52,7 @@ export default function ConfigBrandPage() {
   const access = useEventAccess(tenantId, eventId);
   const [versions, setVersions] = useState<ConfigVersionSummary[]>([]);
   const [detail, setDetail] = useState<EventDetail | null>(null);
-  const [kind, setKind] = useState<'loading' | 'ready' | 'error' | 'unknown'>(
+  const [kind, setKind] = useState<'loading' | 'ready' | 'error' | 'unknown' | 'forbidden'>(
     'loading',
   );
   const [message, setMessage] = useState<string | undefined>();
@@ -65,6 +68,7 @@ export default function ConfigBrandPage() {
   const [selectedPreview, setSelectedPreview] =
     useState<ConfigPreviewResponse | null>(null);
   const [conflict, setConflict] = useState(false);
+  const [conflictDifferences, setConflictDifferences] = useState<ConfigFieldDifference[] | null>(null);
   const [form] = Form.useForm<ConfigFields>();
 
   const configVersionsUrl = bffEventAction(
@@ -79,6 +83,7 @@ export default function ConfigBrandPage() {
       setKind('loading');
       setBaseConfig(null);
       setConflict(false);
+      setConflictDifferences(null);
       const [c, d] = await Promise.all([
         portalGet(configVersionsUrl),
         portalGet(bffEvent(tenantId, eventId)),
@@ -88,6 +93,15 @@ export default function ConfigBrandPage() {
         setMessage(t('config.h_194o8da'));
         return { loaded: false, latestVersion: undefined };
       }
+      if (d.networkError || d.timedOut || d.status >= 500 || d.status === 0) {
+        setKind('unknown');
+        setMessage(t('surface.unknown.title'));
+        return { loaded: false, latestVersion: undefined };
+      }
+      if (c.status === 403 || d.status === 403) {
+        setKind('forbidden');
+        return { loaded: false, latestVersion: undefined };
+      }
       if (c.status !== 200 || !c.json || typeof c.json !== 'object') {
         setKind('error');
         setMessage(
@@ -95,20 +109,32 @@ export default function ConfigBrandPage() {
         );
         return { loaded: false, latestVersion: undefined };
       }
+      if (d.status !== 200 || !d.json || typeof d.json !== 'object') {
+        setKind('error');
+        setMessage(apiErrorMessage(d.json, t('common.httpStatus', { status: d.status })));
+        return { loaded: false, latestVersion: undefined };
+      }
+      if (!Array.isArray((c.json as { items?: unknown }).items)) {
+        setKind('unknown');
+        setMessage(t('surface.unknown.title'));
+        return { loaded: false, latestVersion: undefined };
+      }
       const items = Array.isArray((c.json as { items?: unknown }).items)
         ? ((c.json as { items: ConfigVersionSummary[] })
             .items as ConfigVersionSummary[])
         : [];
       setVersions(items);
-      if (d.status === 200 && d.json && typeof d.json === 'object') {
-        setDetail(d.json as EventDetail);
-      }
+      setDetail(d.json as EventDetail);
 
       const tip = items[0];
       if (tip) {
         const preview = await portalGet(
           `${configVersionsUrl}/${tip.version}/preview`,
         );
+        if (preview.status === 403) {
+          setKind('forbidden');
+          return { loaded: false, latestVersion: tip.version };
+        }
         if (
           preview.status !== 200 ||
           !isConfigPreview(preview.json, tip.version)
@@ -151,6 +177,7 @@ export default function ConfigBrandPage() {
         form.setFieldsValue(fields);
       }
       setKind('ready');
+      setDirty(false);
       return { loaded: true, latestVersion: tip?.version ?? null };
     },
     [tenantId, eventId, form, t, configVersionsUrl],
@@ -233,6 +260,34 @@ export default function ConfigBrandPage() {
 
   const canConfig = canPerformEventAction('saveConfig', access.permissions);
   const publishedVersion = versions.find((v) => v.published)?.version ?? null;
+  const publishVersionReady = canPublishSavedVersion({
+    latestVersion: versions[0]?.version ?? null,
+    previewVersion: selectedPreview?.version ?? null,
+    dirty,
+    conflict,
+  });
+
+  async function showVersionConflict(latestVersion?: number | null) {
+    setConflictDifferences(null);
+    let version = latestVersion;
+    if (version === undefined) {
+      const response = await portalGet(configVersionsUrl);
+      if (response.status === 200 && response.json && typeof response.json === 'object' &&
+          Array.isArray((response.json as { items?: unknown }).items)) {
+        version = (response.json as { items: ConfigVersionSummary[] }).items[0]?.version ?? null;
+      }
+    }
+    if (version != null) {
+      const preview = await portalGet(`${configVersionsUrl}/${version}/preview`);
+      if (preview.status === 200 && isConfigPreview(preview.json, version)) {
+        setConflictDifferences(configFieldDifferences(
+          form.getFieldsValue(true) as ConfigFields,
+          configFields(preview.json.payload),
+        ));
+      }
+    }
+    setConflict(true);
+  }
 
   async function saveDraft() {
     setBusy(true);
@@ -256,7 +311,7 @@ export default function ConfigBrandPage() {
         (latest.json as { items: ConfigVersionSummary[] }).items[0]?.version ??
         null;
       if (hasConfigVersionConflict(baseConfig.version, latestVersion)) {
-        setConflict(true);
+        await showVersionConflict(latestVersion);
         return;
       }
       const payload = baseConfig.payload
@@ -300,7 +355,7 @@ export default function ConfigBrandPage() {
           apiErrorCode(res.json) ?? '',
         )
       ) {
-        setConflict(true);
+        await showVersionConflict();
         return;
       }
       setNotice(apiErrorMessage(res.json, t('config.h_13x41d8')));
@@ -325,6 +380,10 @@ export default function ConfigBrandPage() {
       setNotice(t('config.h_1ylm4kq'));
       return;
     }
+    if (!publishVersionReady) {
+      setNotice(t('config.saveBeforePublish'));
+      return;
+    }
     Modal.confirm({
       title: t('config.h_14ib82o'),
       content: (
@@ -338,20 +397,35 @@ export default function ConfigBrandPage() {
       okText: t('config.h_lofnqs'),
       cancelText: t('config.huy'),
       onOk: async () => {
-        const res = await portalMutate(
-          bffEventAction(tenantId, eventId, 'publish'),
-          { expectedVersion: tip.version },
-        );
-        if (res.networkError || res.status >= 500) {
-          setNotice(t('config.h_1b1xmvu'));
+        const currentFields = form.getFieldsValue(true) as ConfigFields;
+        if (!selectedPreview ||
+          configFieldDifferences(currentFields, configFields(selectedPreview.payload)).length > 0) {
+          setNotice(t('config.saveBeforePublish'));
           return;
         }
-        if (res.status >= 200 && res.status < 300) {
-          setNotice(t('config.h_1ec27qs'));
-          void load();
-          return;
+        setBusy(true);
+        try {
+          const res = await portalMutate(
+            bffEventAction(tenantId, eventId, 'publish'),
+            { expectedVersion: tip.version },
+          );
+          if (res.networkError || res.timedOut || res.status >= 500) {
+            setNotice(t('config.h_1b1xmvu'));
+            return;
+          }
+          if (res.status === 409 && ['REVISION_CONFLICT', 'CONFIG_VERSION_MISMATCH'].includes(apiErrorCode(res.json) ?? '')) {
+            await showVersionConflict();
+            return;
+          }
+          if (res.status >= 200 && res.status < 300) {
+            setNotice(t('config.h_1ec27qs'));
+            void load();
+            return;
+          }
+          setNotice(apiErrorMessage(res.json, t('config.h_ez5uf1')));
+        } finally {
+          setBusy(false);
         }
-        setNotice(apiErrorMessage(res.json, t('config.h_ez5uf1')));
       },
     });
   }
@@ -444,6 +518,13 @@ export default function ConfigBrandPage() {
         style={{ margin: 24 }}
       />
       ) : null}
+      {kind === 'forbidden' ? (
+        <Result
+          status="403"
+          title={t(SURFACE_MESSAGE_KEYS.permissionTitle)}
+          subTitle={t('surface.permission.defaultDescription')}
+        />
+      ) : null}
 
       {kind === 'ready' ? (
         <>
@@ -452,7 +533,7 @@ export default function ConfigBrandPage() {
             onValuesChange={() => setDirty(true)}
             layout="vertical"
             style={{ maxWidth: 480 }}
-            disabled={!canConfig}
+            disabled={!canConfig || busy}
             submitter={false}
           >
             <ProFormText
@@ -489,8 +570,11 @@ export default function ConfigBrandPage() {
               </Button>
               <Button
                 disabled={
-                  !canPerformEventAction('publishConfig', access.permissions)
+                  !canPerformEventAction('publishConfig', access.permissions) ||
+                  busy || !publishVersionReady
                 }
+                title={!publishVersionReady
+                  ? t('config.saveBeforePublish') : undefined}
                 onClick={() => void publishTip()}
               >
                 {t('config.h_19gwi7d')}
@@ -503,9 +587,41 @@ export default function ConfigBrandPage() {
               type="warning"
               showIcon
               message={t('config.versionConflict')}
-              description={t('config.reloadDiscard')}
+              description={
+                <div>
+                  <p>{t('config.reloadDiscard')}</p>
+                  {conflictDifferences === null ? (
+                    <p>{t('config.conflictDiffUnavailable')}</p>
+                  ) : conflictDifferences.length === 0 ? (
+                    <p>{t('config.conflictOtherFields')}</p>
+                  ) : (
+                    <ul>
+                      {conflictDifferences.map((difference) => {
+                        const label = {
+                          organizationName: t('config.h_15mcx85'),
+                          primaryColor: t('config.h_1fbsj7r'),
+                          termsText: t('config.h_6ccvfx'),
+                        }[difference.key];
+                        return (
+                          <li key={difference.key}>
+                            <strong>{label}</strong>
+                            <div>{t('config.conflictEdited')}: {difference.edited.slice(0, 160)}</div>
+                            <div>{t('config.conflictLatest')}: {difference.latest.slice(0, 160)}</div>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </div>
+              }
               action={
-                <Button onClick={() => void load()}>
+                <Button onClick={() => Modal.confirm({
+                  title: t('config.versionConflict'),
+                  content: t('config.reloadDiscard'),
+                  okText: t('config.reloadLatest'),
+                  cancelText: t('config.huy'),
+                  onOk: () => { void load(); },
+                })}>
                   {t('config.reloadLatest')}
                 </Button>
               }
@@ -591,6 +707,7 @@ export default function ConfigBrandPage() {
             search={false}
             options={false}
             pagination={false}
+            scroll={{ x: 'max-content' }}
             columns={[
               { title: 'Version', dataIndex: 'version' },
               {

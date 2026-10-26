@@ -275,6 +275,10 @@ a {
   color: #a86a12;
 }
 
+.portal-ready-item--forbidden .portal-ready-item__mark {
+  color: #a61d24;
+}
+
 .portal-ready-item__body strong {
   display: block;
   font-weight: 600;

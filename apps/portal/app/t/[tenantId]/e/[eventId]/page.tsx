@@ -1,7 +1,7 @@
 'use client';
 
 import { ProCard, StatisticCard } from '@ant-design/pro-components';
-import { Alert, Button, Descriptions, Flex, Modal, Result, Space, Spin, Typography } from 'antd';
+import { Alert, Button, Descriptions, Flex, Result, Space, Spin, Typography } from 'antd';
 import { PortalPage } from '../../../../../src/components/portal-page';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
@@ -10,13 +10,13 @@ import type { ConfigVersionSummary, EventDetail } from '@ticket/contracts';
 import {
   apiErrorMessage,
   portalGet,
-  portalMutate,
 } from '../../../../../src/client/portal-fetch';
 import { bffEvent, bffEventAction } from '../../../../../src/prep/bff-urls';
 import {
   derivePrepReadiness,
   readinessAllOk,
   readinessSummary,
+  type PrepReadinessKey,
 } from '../../../../../src/prep/readiness';
 import { useEventAccess } from '../../../../../src/prep/use-event-access';
 import {
@@ -49,19 +49,18 @@ export default function EventOverviewPage() {
   const access = useEventAccess(tenantId, eventId);
   const [detail, setDetail] = useState<EventDetail | null>(null);
   const [report, setReport] = useState<EventReportView | null>(null);
-  const [typesCount, setTypesCount] = useState(0);
-  const [sourcesCount, setSourcesCount] = useState(0);
+  const [typesCount, setTypesCount] = useState<number | null>(null);
+  const [sourcesCount, setSourcesCount] = useState<number | null>(null);
   const [publishedVersion, setPublishedVersion] = useState<number | null>(null);
   const [draftVersion, setDraftVersion] = useState<number | null>(null);
-  const [hasBrand, setHasBrand] = useState(false);
-  const [hasTerms, setHasTerms] = useState(false);
+  const [hasBrand, setHasBrand] = useState<boolean | null>(null);
+  const [hasTerms, setHasTerms] = useState<boolean | null>(null);
+  const [forbiddenReadiness, setForbiddenReadiness] = useState<PrepReadinessKey[]>([]);
   const [loadKind, setLoadKind] = useState<
-    'loading' | 'ready' | 'error' | 'unknown'
+    'loading' | 'ready' | 'error' | 'unknown' | 'forbidden'
   >('loading');
   const [message, setMessage] = useState<string | undefined>();
-  const [busy, setBusy] = useState(false);
   const [reportBusy, setReportBusy] = useState(false);
-  const [notice, setNotice] = useState<string | null>(null);
 
   const refreshReport = useCallback(async () => {
     setReportBusy(true);
@@ -80,6 +79,13 @@ export default function EventOverviewPage() {
   const load = useCallback(async () => {
     await Promise.resolve();
     setLoadKind('loading');
+    setTypesCount(null);
+    setSourcesCount(null);
+    setPublishedVersion(null);
+    setDraftVersion(null);
+    setHasBrand(null);
+    setHasTerms(null);
+    setForbiddenReadiness([]);
     const [d, r, ty, s, c] = await Promise.all([
       portalGet(bffEvent(tenantId, eventId)),
       portalGet(bffEventAction(tenantId, eventId, 'report')),
@@ -93,6 +99,10 @@ export default function EventOverviewPage() {
     if (d.networkError || d.timedOut || d.status >= 500 || d.status === 0) {
       setLoadKind('unknown');
       setMessage(t('common.h_1hj59zg'));
+      return;
+    }
+    if (d.status === 403) {
+      setLoadKind('forbidden');
       return;
     }
     if (d.status !== 200 || !d.json || typeof d.json !== 'object') {
@@ -127,22 +137,41 @@ export default function EventOverviewPage() {
       Array.isArray((s.json as { items?: unknown }).items)
         ? ((s.json as { items: unknown[] }).items as unknown[])
         : [];
-    setTypesCount(tItems.length);
-    setSourcesCount(sItems.length);
+    if (ty.status === 200 && Array.isArray((ty.json as { items?: unknown } | null)?.items)) {
+      setTypesCount(tItems.length);
+    }
+    if (s.status === 200 && Array.isArray((s.json as { items?: unknown } | null)?.items)) {
+      setSourcesCount(sItems.length);
+    }
+
+    const forbidden: PrepReadinessKey[] = [];
+    if (r.status === 403) forbidden.push('quota');
+    if (ty.status === 403) forbidden.push('types');
+    if (s.status === 403) forbidden.push('sources');
+    if (c.status === 403) forbidden.push('form', 'brand');
 
     if (c.status === 200 && c.json && typeof c.json === 'object') {
-      const items = Array.isArray((c.json as { items?: unknown }).items)
+      const validItems = Array.isArray((c.json as { items?: unknown }).items);
+      const items = validItems
         ? ((c.json as { items: ConfigVersionSummary[] })
             .items as ConfigVersionSummary[])
         : [];
       const published = items.find((i) => i.published);
-      setPublishedVersion(published?.version ?? null);
-      setDraftVersion(items[0]?.version ?? null);
-      if (items[0]) {
+      if (validItems) {
+        setPublishedVersion(published?.version ?? null);
+        setDraftVersion(items[0]?.version ?? null);
+        if (!items[0]) {
+          setHasBrand(false);
+          setHasTerms(false);
+        }
+      }
+      if (validItems && items[0]) {
         const preview = await portalGet(
           `${bffEventAction(tenantId, eventId, 'config-versions')}/${items[0].version}/preview`,
         );
-        if (
+        if (preview.status === 403) {
+          forbidden.push('form', 'brand');
+        } else if (
           preview.status === 200 &&
           preview.json &&
           typeof preview.json === 'object'
@@ -181,6 +210,7 @@ export default function EventOverviewPage() {
         }
       }
     }
+    setForbiddenReadiness(forbidden);
 
     setLoadKind('ready');
   }, [tenantId, eventId, locale, t]);
@@ -202,12 +232,16 @@ export default function EventOverviewPage() {
       derivePrepReadiness(
         {
           hasEventContext: true,
-          hasTicketType: typesCount > 0,
-          hasSource: sourcesCount > 0,
+          hasTicketType: typesCount == null ? 'unknown' : typesCount > 0,
+          hasSource: sourcesCount == null ? 'unknown' : sourcesCount > 0,
           quotaKnown: shownReport?.quota !== undefined,
           quotaCapacity: shownReport?.quota?.capacity ?? null,
-          hasTermsOrPublished: hasTerms || publishedVersion != null,
-          hasBrand,
+          hasTermsOrPublished:
+            hasTerms == null && publishedVersion == null
+              ? 'unknown'
+              : Boolean(hasTerms || publishedVersion != null),
+          hasBrand: hasBrand == null ? 'unknown' : hasBrand,
+          forbiddenKeys: forbiddenReadiness,
         },
         locale,
       ),
@@ -218,6 +252,7 @@ export default function EventOverviewPage() {
       hasTerms,
       publishedVersion,
       hasBrand,
+      forbiddenReadiness,
       locale,
     ],
   );
@@ -226,55 +261,6 @@ export default function EventOverviewPage() {
     draftVersion != null &&
     access.kind === 'ready' &&
     canPerformEventAction('publishConfig', access.permissions);
-
-  async function publish() {
-    if (draftVersion == null) return;
-    Modal.confirm({
-      title: t('common.h_cdxaaj'),
-      content: (
-        <Space direction="vertical">
-          <Typography.Text>
-            {t('event.home.publishLockVersion', { version: draftVersion })}
-          </Typography.Text>
-          <Alert
-            type="warning"
-            showIcon
-            message={t('config.h_1hh7j6r')}
-            description={t('common.h_1lb5yey')}
-          />
-        </Space>
-      ),
-      okText: t('config.h_lofnqs'),
-      cancelText: t('config.huy'),
-      onOk: async () => {
-        setBusy(true);
-        setNotice(null);
-        try {
-          const res = await portalMutate(
-            bffEventAction(tenantId, eventId, 'publish'),
-            { expectedVersion: draftVersion },
-          );
-          if (res.networkError || res.timedOut || res.status >= 500) {
-            setNotice(t('common.h_1d5xf37'));
-            return;
-          }
-          if (res.status >= 200 && res.status < 300) {
-            setNotice(t('common.h_5q8fa1'));
-            void load();
-            return;
-          }
-          setNotice(
-            apiErrorMessage(
-              res.json,
-              t('config.publishFailedStatus', { status: res.status }),
-            ),
-          );
-        } finally {
-          setBusy(false);
-        }
-      },
-    });
-  }
 
   if (access.kind === 'error') {
     return (
@@ -340,6 +326,15 @@ export default function EventOverviewPage() {
       />
     );
   }
+  if (loadKind === 'forbidden') {
+    return (
+      <Result
+        status="403"
+        title={t(SURFACE_MESSAGE_KEYS.permissionTitle)}
+        subTitle={t('surface.permission.defaultDescription')}
+      />
+    );
+  }
   if (loadKind === 'error' || !detail) {
     return (
       <Alert
@@ -374,15 +369,15 @@ export default function EventOverviewPage() {
           <Link href={`/t/${tenantId}/e/${eventId}/config`}>
             <Button>{t('nav.org.settings')}</Button>
           </Link>
-          <Button
-            type="primary"
-            disabled={!canPublish || busy}
-            loading={busy}
-            onClick={() => void publish()}
-            title={canPublish ? undefined : readinessSummary(readiness, locale)}
-          >
-            {t('config.h_lofnqs')}
-          </Button>
+          {canPublish ? (
+            <Link href={`/t/${tenantId}/e/${eventId}/config`}>
+              <Button type="primary">{t('event.home.openPublish')}</Button>
+            </Link>
+          ) : (
+            <Button type="primary" disabled title={readinessSummary(readiness, locale)}>
+              {t('event.home.openPublish')}
+            </Button>
+          )}
         </Space>
       }
     >
@@ -499,7 +494,6 @@ export default function EventOverviewPage() {
         />
       ) : null}
 
-      {notice ? <Alert type="info" showIcon message={notice} /> : null}
 
       {canScan ? <GateStayAppNotice /> : null}
 
