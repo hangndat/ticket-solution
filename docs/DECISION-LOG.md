@@ -12,11 +12,11 @@ User quyết định **toàn bộ UI component của `apps/portal` dùng compone
 
 Architecture impact: **Có** — thay đổi dependency/component boundary của Portal, không đổi API hoặc nghiệp vụ. Việc gỡ ProComponents, custom component/theme/CSS hiện có cần Task migration với bằng chứng giao diện và regression trước khi coi là code complete; quyết định này tự nó chưa xác nhận implementation.
 
-### Bổ sung O26 — Cho phép ProComponents cho UI Portal mới (26/10/2026)
+### Bổ sung O26 — ProComponents là chuẩn UI Portal (26/10/2026)
 
-User xác nhận **ProComponents được phép dùng cho UI Portal mới**. Bổ sung này thay phần O26 yêu cầu chỉ ghép component `antd` và chuyển toàn bộ ProComponents hiện có sang `antd`; giữ nguyên định hướng Ant Design, giao diện/token mặc định, tiếng Việt và accessibility. Dùng component chính thức từ `antd` hoặc `@ant-design/pro-components` đã có trong stack theo nhu cầu màn; không tự tạo wrapper/component, theme/token/CSS tùy biến hoặc thêm dependency chỉ vì quyết định này. ProComponents hiện có có thể giữ, còn migration đã được giao cụ thể phải đối chiếu lại scope trước khi làm; quyết định này không tự hoàn tác code hay đóng acceptance.
+User chốt `@ant-design/pro-components` làm **chuẩn UI của `apps/portal`**, ưu tiên cho pattern phù hợp; dùng `antd` cho component nền tảng hoặc khi ProComponents không đáp ứng. Giữ theme và design tokens **mặc định của Ant Design**. Không áp Vemoki Design System mới lên Portal, không xây custom design system, token pipeline hoặc component library riêng cho Portal. Không bắt buộc thay component đang hoạt động chỉ vì tên thư viện. Bổ sung này thay phần O26 yêu cầu UI mới chỉ ghép `antd` và chuyển toàn bộ ProComponents hiện có sang `antd`; văn bản O26 gốc giữ làm lịch sử. Giữ tiếng Việt, accessibility, nghiệp vụ/quyền và các acceptance gate hiện có; không đổi quyết định thiết kế consumer web hoặc iOS.
 
-Architecture impact: **Không** cho thay đổi chính sách sử dụng component đã có; Task nào đổi dependency/contract hoặc kiến trúc UI đáng kể vẫn phân loại impact riêng.
+Issue/Task migration cũ nhằm gỡ ProComponents (đặc biệt [#975](https://github.com/hangndat/ticket-solution/issues/975)) phải được đối chiếu lại scope. Các PR đã merge giữ nguyên evidence; phần chưa làm chỉ tiếp tục khi có lý do UX/a11y/kỹ thuật cụ thể, không vì yêu cầu đồng nhất tên thư viện. Architecture impact: **Không** cho quyết định policy này; Task nào đổi dependency/contract hoặc kiến trúc UI đáng kể vẫn phân loại impact riêng. Quyết định này không tự sửa runtime hoặc đóng acceptance.
 
 ## O25 — Epic #914: tách slice portal/web và chốt phạm vi offline (26/10/2026)
 
