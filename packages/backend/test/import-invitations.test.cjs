@@ -12,6 +12,9 @@ const {
   withTenant,
   createPrismaIdentityUserRepository,
   grantMembership,
+  grantEventAssignment,
+  revokeEventAssignment,
+  revokeMembership,
   createEvent,
   createTicketType,
   createIssuanceSource,
@@ -23,6 +26,7 @@ const {
   commitImportJob,
   downloadImportErrors,
   getImportJob,
+  listImportJobs,
   listGuestInvitations,
   previewInvitationDispatch,
   dispatchGuestInvitations,
@@ -343,14 +347,18 @@ test(
       assert.equal(preview.estimatedQuota, 2);
       assert.ok(preview.fileHash);
 
-      const allocatedAfterPreview = await withTenant(db, tenantA, async (tx) => {
-        const rows = await tx.$queryRaw`
+      const allocatedAfterPreview = await withTenant(
+        db,
+        tenantA,
+        async (tx) => {
+          const rows = await tx.$queryRaw`
           SELECT allocated FROM quota_buckets
           WHERE tenant_id = ${tenantA}::uuid AND event_id = ${eventA}::uuid
             AND scope = 'EVENT'
         `;
-        return rows[0].allocated;
-      });
+          return rows[0].allocated;
+        },
+      );
       assert.equal(allocatedAfterPreview, allocatedBefore);
 
       // I3c / I9 — errors CSV stream metadata (no URL)
@@ -637,14 +645,18 @@ test(
       });
       assert.equal(dispatchReplay.replayed, true);
 
-      const allocatedAfterDispatch = await withTenant(db, tenantA, async (tx) => {
-        const rows = await tx.$queryRaw`
+      const allocatedAfterDispatch = await withTenant(
+        db,
+        tenantA,
+        async (tx) => {
+          const rows = await tx.$queryRaw`
           SELECT allocated FROM quota_buckets
           WHERE tenant_id = ${tenantA}::uuid AND event_id = ${eventA}::uuid
             AND scope = 'EVENT'
         `;
-        return rows[0].allocated;
-      });
+          return rows[0].allocated;
+        },
+      );
       assert.equal(allocatedAfterDispatch, allocatedBefore);
 
       const mintedAda = await withTenant(db, tenantA, async (tx) => {
@@ -687,7 +699,10 @@ test(
           {
             credentialKeyMaterial: CRED,
             publicWebBaseUrl: 'https://app.vemoki.com',
-            env: { NODE_ENV: 'test', PUBLIC_WEB_BASE_URL: 'https://app.vemoki.com' },
+            env: {
+              NODE_ENV: 'test',
+              PUBLIC_WEB_BASE_URL: 'https://app.vemoki.com',
+            },
           },
         );
         relayed = {
@@ -931,6 +946,287 @@ test(
         return rows[0].allocated;
       });
       assert.equal(allocatedAfterReuse, allocatedBefore + 1);
+
+      // G-09: runtime role, tenant/event RLS, permission and signed keyset cursor.
+      const keysetIndexes = await db.$queryRaw`
+        SELECT indexname, indexdef FROM pg_indexes
+        WHERE schemaname = 'public' AND tablename = 'import_jobs'
+          AND indexname IN ('import_jobs_event_created_id_idx', 'import_jobs_event_idx')
+      `;
+      assert.equal(keysetIndexes.length, 1);
+      assert.equal(
+        keysetIndexes[0].indexname,
+        'import_jobs_event_created_id_idx',
+      );
+      assert.match(
+        keysetIndexes[0].indexdef,
+        /tenant_id, event_id, created_at DESC, id DESC/,
+      );
+      const listInput = (tenantId, eventId, actorUserId, query = {}) => ({
+        tenantId,
+        eventId,
+        actorUserId,
+        query,
+      });
+      const listA = (query = {}) =>
+        listImportJobs(
+          db,
+          listInput(tenantA, eventA, manager.userId, query),
+          HMAC.pepper,
+        );
+      const first = await listA({ limit: 1 });
+      assert.equal(first.items.length, 1);
+      assert.ok(first.nextCursor);
+      assert.deepEqual(
+        Object.keys(first.items[0]).sort(),
+        [
+          'createdAt',
+          'errorRowCount',
+          'estimatedQuota',
+          'importId',
+          'invitationCount',
+          'kind',
+          'mappingRevision',
+          'previewRevision',
+          'sourceId',
+          'status',
+          'ticketTypeId',
+          'validRowCount',
+        ].sort(),
+      );
+      assert.ok(!JSON.stringify(first).includes(uploaded.fileHash));
+      const lateJob = await createImportJob(db, {
+        tenantId: tenantA,
+        eventId: eventA,
+        actorUserId: manager.userId,
+        idempotencyKey: randomUUID(),
+        body: {
+          kind: 'CODES',
+          sourceId,
+          ticketTypeId,
+          fileId: uploaded.fileId,
+        },
+      });
+      const seen = new Set(first.items.map((item) => item.importId));
+      let cursor = first.nextCursor;
+      while (cursor) {
+        const page = await listA({ limit: 1, cursor });
+        assert.equal(page.items.length, 1);
+        assert.ok(
+          !seen.has(page.items[0].importId),
+          'keyset never duplicates a row',
+        );
+        seen.add(page.items[0].importId);
+        cursor = page.nextCursor;
+      }
+      assert.ok(
+        !seen.has(lateJob.importId),
+        'new head is only visible on refresh',
+      );
+      assert.equal((await listA()).items[0].importId, lateJob.importId);
+      assert.ok(
+        (await listA({ status: 'COMPLETED', kind: 'GUESTS' })).items.every(
+          (item) => item.status === 'COMPLETED' && item.kind === 'GUESTS',
+        ),
+      );
+      for (const query of [
+        { cursor: 'garbage' },
+        { cursor: first.nextCursor.slice(0, -1) + 'x' },
+        { cursor: first.nextCursor, kind: 'GUESTS' },
+        { cursor: first.nextCursor, status: 'COMPLETED' },
+      ]) {
+        await assert.rejects(
+          () => listA(query),
+          (e) =>
+            e instanceof ImportError &&
+            e.code === IMPORT_ERROR_CODES.INVALID_CURSOR,
+        );
+      }
+
+      let eventOther;
+      await withTenant(db, tenantA, async (tx) => {
+        const ev = await createEvent(tx, {
+          tenantId: tenantA,
+          actorUserId: manager.userId,
+          idempotencyKey: randomUUID(),
+          body: {
+            slug: 'other',
+            name: 'Other',
+            timezone: 'UTC',
+            visibility: 'UNLISTED',
+          },
+        });
+        eventOther = ev.event.eventId;
+      });
+      const empty = await listImportJobs(
+        db,
+        listInput(tenantA, eventOther, manager.userId),
+        HMAC.pepper,
+      );
+      assert.deepEqual(empty, { items: [], nextCursor: null });
+      await assert.rejects(
+        () =>
+          listImportJobs(
+            db,
+            listInput(tenantA, eventOther, manager.userId, {
+              cursor: first.nextCursor,
+            }),
+            HMAC.pepper,
+          ),
+        (e) =>
+          e instanceof ImportError &&
+          e.code === IMPORT_ERROR_CODES.INVALID_CURSOR,
+      );
+
+      let eventTenantB;
+      await withTenant(db, tenantB, async (tx) => {
+        const ev = await createEvent(tx, {
+          tenantId: tenantB,
+          actorUserId: outsider.userId,
+          idempotencyKey: randomUUID(),
+          body: {
+            slug: 'other-b',
+            name: 'Other B',
+            timezone: 'UTC',
+            visibility: 'UNLISTED',
+          },
+        });
+        eventTenantB = ev.event.eventId;
+      });
+      assert.deepEqual(
+        await listImportJobs(
+          db,
+          listInput(tenantB, eventTenantB, outsider.userId),
+          HMAC.pepper,
+        ),
+        { items: [], nextCursor: null },
+      );
+      const leakedRows = await withTenant(
+        db,
+        tenantB,
+        (tx) => tx.$queryRaw`
+        SELECT id FROM import_jobs WHERE tenant_id = ${tenantA}::uuid
+      `,
+      );
+      assert.deepEqual(
+        leakedRows,
+        [],
+        'runtime RLS excludes tenant A rows in tenant B context',
+      );
+      await assert.rejects(
+        () =>
+          listImportJobs(
+            db,
+            listInput(tenantB, eventTenantB, outsider.userId, {
+              cursor: first.nextCursor,
+            }),
+            HMAC.pepper,
+          ),
+        (e) =>
+          e instanceof ImportError &&
+          e.code === IMPORT_ERROR_CODES.INVALID_CURSOR,
+      );
+
+      const reader = await users.upsertFromVerifiedIdentity({
+        issuer,
+        subject: 'imp-reader',
+        email: 'reader@import.test',
+        emailVerified: true,
+      });
+      const revocable = await users.upsertFromVerifiedIdentity({
+        issuer,
+        subject: 'imp-revocable',
+        email: 'revocable@import.test',
+        emailVerified: true,
+      });
+      let assignmentId;
+      let revocableMembershipId;
+      await withTenant(db, tenantA, async (tx) => {
+        const readMembership = await grantMembership(tx, {
+          tenantId: tenantA,
+          userId: reader.userId,
+          role: 'CS',
+          permissions: [],
+        });
+        await grantEventAssignment(tx, {
+          tenantId: tenantA,
+          eventId: eventA,
+          membershipId: readMembership.membershipId,
+          permissions: ['report.read'],
+        });
+        const revocableMembership = await grantMembership(tx, {
+          tenantId: tenantA,
+          userId: revocable.userId,
+          role: 'MANAGER',
+          permissions: [],
+        });
+        revocableMembershipId = revocableMembership.membershipId;
+        const assignment = await grantEventAssignment(tx, {
+          tenantId: tenantA,
+          eventId: eventA,
+          membershipId: revocableMembership.membershipId,
+          permissions: ['inventory.import'],
+        });
+        assignmentId = assignment.assignmentId;
+      });
+      await assert.rejects(
+        () =>
+          listImportJobs(
+            db,
+            listInput(tenantA, eventA, reader.userId),
+            HMAC.pepper,
+          ),
+        (e) => e instanceof AuthzError,
+      );
+      await assert.rejects(
+        () =>
+          listImportJobs(
+            db,
+            listInput(tenantA, randomUUID(), manager.userId),
+            HMAC.pepper,
+          ),
+        (e) =>
+          e instanceof ImportError &&
+          e.code === IMPORT_ERROR_CODES.EVENT_NOT_FOUND,
+      );
+      assert.equal(
+        (
+          await listImportJobs(
+            db,
+            listInput(tenantA, eventA, revocable.userId),
+            HMAC.pepper,
+          )
+        ).items.length > 0,
+        true,
+      );
+      await withTenant(db, tenantA, (tx) =>
+        revokeEventAssignment(tx, tenantA, assignmentId),
+      );
+      await assert.rejects(
+        () =>
+          listImportJobs(
+            db,
+            listInput(tenantA, eventA, revocable.userId, {
+              cursor: first.nextCursor,
+            }),
+            HMAC.pepper,
+          ),
+        (e) =>
+          e instanceof ImportError &&
+          e.code === IMPORT_ERROR_CODES.EVENT_NOT_FOUND,
+      );
+      await withTenant(db, tenantA, (tx) =>
+        revokeMembership(tx, tenantA, revocableMembershipId),
+      );
+      await assert.rejects(
+        () =>
+          listImportJobs(
+            db,
+            listInput(tenantA, eventA, revocable.userId),
+            HMAC.pepper,
+          ),
+        (e) => e instanceof AuthzError && e.code === 'MEMBERSHIP_REVOKED',
+      );
     } finally {
       if (db) await db.$disconnect().catch(() => {});
       if (name) {
