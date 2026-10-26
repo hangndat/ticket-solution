@@ -23,6 +23,7 @@ import {
 } from '../../../../../../src/client/portal-fetch';
 import {
   configFields,
+  configSaveNoticeKey,
   hasConfigVersionConflict,
   isConfigPreview,
   mergeConfigFields,
@@ -81,14 +82,14 @@ export default function ConfigBrandPage() {
       if (c.networkError || c.timedOut || c.status >= 500) {
         setKind('unknown');
         setMessage(t('config.h_194o8da'));
-        return false;
+        return { loaded: false, latestVersion: undefined };
       }
       if (c.status !== 200 || !c.json || typeof c.json !== 'object') {
         setKind('error');
         setMessage(
           apiErrorMessage(c.json, t('common.httpStatus', { status: c.status })),
         );
-        return false;
+        return { loaded: false, latestVersion: undefined };
       }
       const items = Array.isArray((c.json as { items?: unknown }).items)
         ? ((c.json as { items: ConfigVersionSummary[] })
@@ -110,7 +111,7 @@ export default function ConfigBrandPage() {
         ) {
           setKind('error');
           setMessage(t('config.previewLoadFailed'));
-          return false;
+          return { loaded: false, latestVersion: tip.version };
         }
         const fields = configFields(preview.json.payload);
         setBaseConfig({
@@ -129,7 +130,7 @@ export default function ConfigBrandPage() {
           ) {
             setSelectedPreview(null);
             setKind('ready');
-            return false;
+            return { loaded: false, latestVersion: tip.version };
           }
           setSelectedPreview(saved.json);
         } else {
@@ -146,7 +147,7 @@ export default function ConfigBrandPage() {
         form.setFieldsValue(fields);
       }
       setKind('ready');
-      return true;
+      return { loaded: true, latestVersion: tip?.version ?? null };
     },
     [tenantId, eventId, form, t, configVersionsUrl],
   );
@@ -235,6 +236,7 @@ export default function ConfigBrandPage() {
       const res = await portalMutate(configVersionsUrl, {
         payload,
         schemaVersion: payload.schemaVersion,
+        expectedVersion: baseConfig.version ?? 0,
       });
       if (res.networkError || res.timedOut || res.status >= 500) {
         setNotice(t('config.h_1irt9z3'));
@@ -247,9 +249,13 @@ export default function ConfigBrandPage() {
           typeof savedVersion === 'number' ? savedVersion : undefined,
         );
         setNotice(
-          typeof savedVersion === 'number' && loaded
-            ? t('config.h_1qavkda')
-            : t('config.previewLoadFailed'),
+          t(
+            configSaveNoticeKey(
+              typeof savedVersion === 'number' ? savedVersion : undefined,
+              loaded.latestVersion,
+              loaded.loaded,
+            ),
+          ),
         );
         if (typeof savedVersion !== 'number') setSelectedPreview(null);
         return;

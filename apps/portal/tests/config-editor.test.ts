@@ -3,6 +3,7 @@ import test from 'node:test';
 import type { EventConfigPayload } from '@ticket/contracts';
 import {
   configFields,
+  configSaveNoticeKey,
   hasConfigVersionConflict,
   isConfigPreview,
   mergeConfigFields,
@@ -117,5 +118,23 @@ test('version change blocks save preflight and preview must match exact saved ve
       4,
     ),
     false,
+  );
+});
+
+test('save notice distinguishes confirmed save from a newer tip or missing preview', () => {
+  assert.equal(configSaveNoticeKey(4, 4, true), 'config.h_1qavkda');
+  assert.equal(configSaveNoticeKey(4, 5, true), 'config.savedNewerVersion');
+  assert.equal(configSaveNoticeKey(4, 5, false), 'config.savedNewerVersion');
+  assert.equal(
+    configSaveNoticeKey(4, 4, false),
+    'config.savedPreviewUnavailable',
+  );
+  assert.equal(
+    configSaveNoticeKey(4, 3, true),
+    'config.savedPreviewUnavailable',
+  );
+  assert.equal(
+    configSaveNoticeKey(undefined, undefined, false),
+    'config.savedPreviewUnavailable',
   );
 });

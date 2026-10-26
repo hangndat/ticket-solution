@@ -17,6 +17,27 @@ export function hasConfigVersionConflict(
   return loadedVersion !== latestVersion;
 }
 
+export function configSaveNoticeKey(
+  savedVersion: number | undefined,
+  latestVersion: number | null | undefined,
+  loaded: boolean,
+):
+  | 'config.h_1qavkda'
+  | 'config.savedNewerVersion'
+  | 'config.savedPreviewUnavailable' {
+  if (
+    savedVersion !== undefined &&
+    latestVersion !== null &&
+    latestVersion !== undefined &&
+    latestVersion > savedVersion
+  ) {
+    return 'config.savedNewerVersion';
+  }
+  return savedVersion !== undefined && latestVersion === savedVersion && loaded
+    ? 'config.h_1qavkda'
+    : 'config.savedPreviewUnavailable';
+}
+
 export function configFields(payload: EventConfigPayload): ConfigFields {
   const terms = payload.sections.find((section) => section.kind === 'terms');
   return {
