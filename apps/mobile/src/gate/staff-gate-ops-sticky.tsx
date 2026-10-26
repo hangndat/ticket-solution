@@ -2,7 +2,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { Button } from '@/components/ui/button';
 import { radius, space } from '@/theme/tokens';
 import { GateStatusStrip, StaffEventPicker } from './staff-gate-chrome.tsx';
-import { offlineBannerCopy, type ConnectivityState, type OfflineQueueSnapshot } from './offline-queue.ts';
+import { offlineConflictBannerForScope, type ConnectivityState, type OfflineQueueSnapshot } from './offline-queue.ts';
 import type { GateOp } from './gate-scan.ts';
 import type { StaffGateScope } from './staff-gate-events.ts';
 import { shortId } from './gate-outcome-copy.ts';
@@ -51,15 +51,7 @@ export function StaffGateOpsSticky({
     pendingOp !== null && (reconcileEnabled || onContinueScan);
   const sticky = scanStickyStatusFromMachineLabel(machineLabel);
   const title = eventName?.trim() || 'Chưa chọn sự kiện';
-  const conflictBanner = queueSnap.conflictCount > 0
-    ? offlineBannerCopy({
-        connectivity,
-        pendingCount: queueSnap.pendingCount,
-        conflictCount: queueSnap.conflictCount,
-        syncing: queueSnap.syncing,
-        lastSyncError: queueSnap.lastSyncError,
-      })
-    : null;
+  const conflictBanner = offlineConflictBannerForScope(queueSnap, gateScope, connectivity);
 
   return (
     <View
