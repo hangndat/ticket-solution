@@ -48,12 +48,29 @@ Chứng minh: `ports-orca.json` (scan `orca ports --worktree path:vcx-926-uat`).
 
 ## F01 — guests/audit (regression nghi ngờ)
 
-Tại **testedSHA** `33713db2`, Owner đăng nhập hợp lệ (TOTP) nhưng `/guests` và `/audit` → **«Không có quyền»** (khác run James @ `d00a265` PASS). **Báo coordinator — có thể bug sản phẩm hoặc drift fixture**, không sửa auth policy trong task.
+Tại **testedSHA** `33713db2`, Owner đăng nhập hợp lệ (TOTP) nhưng `/guests` và `/audit` → **«Không có quyền»** (khác run James @ `d00a265` PASS). **Không đổi nhãn kết quả manual cũ** — xem phân loại probe mới bên dưới.
+
+## Context probe (cùng tab Orca, một phiên OIDC → portal)
+
+Script gitignored: `apps/portal/.uat-artifacts/vcx-926/manual-context-probe.mjs` (logout → login, chờ `bff/me/tenants` **200** trên origin **3013**, rồi discovery + route trong **cùng tab**).
+
+| Persona | `me/events` mfest | BFF `…/report` | `/gate` UI | `/guests` | `/audit` | Phân loại deny cũ |
+| --- | --- | --- | --- | --- | --- | --- |
+| Owner @ probe `6c16d054` | 200, full Owner perms incl. `inventory.import`, `report.read` | 200 | content | content | content | **session/harness** (tab/login không chờ portal; không phải backend deny) |
+| report-only @ probe `6c16d054` | 200, chỉ `report.read` | 200 | content | denied (đúng AC) | content | **session/harness** cho gate deny cũ; API/BFF + gate **cho phép** khi session đúng |
+
+Artifact: `context-probe-owner.json`, `context-probe-report-only.json`, screenshots `context-*.png` (sanitized JSON, không token).
+
+**Root cause (hẹp):** `manual-f05-extra.mjs` / tab riêng từng persona, BFF có thể chạy trên origin Keycloak hoặc shell chưa `ready` → `useEventAccess` → `permission-denied` / tiêu đề «Không có quyền báo cáo cổng» **giả**.
+
+**Test delta:** thêm context probe; runner chính nên reuse wait portal như `manual-context-probe.mjs` / `run-vcx-926-uat.mjs`.
+
+**Còn lại:** viewport 390/1440, Supervisor @1024 — chưa chạy sau context probe (không full batch).
 
 ## Artifacts
 
-- `manifest.json`, `manual-probe-results.json`, `probe-results.json`
-- Screenshots `1024-*.png` (đã redact, không cookie/TOTP)
+- `manifest.json`, `manual-probe-results.json`, `probe-results.json`, `context-probe-*.json`
+- Screenshots `1024-*.png` + `context-*.png` (đã redact, không cookie/TOTP)
 
 ## Orca
 
