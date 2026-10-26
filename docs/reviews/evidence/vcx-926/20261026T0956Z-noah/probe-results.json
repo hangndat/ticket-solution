@@ -1,0 +1,29 @@
+{
+  "runId": "20261026T0956Z-noah",
+  "sourceSHA": "d00a265cca1206b68601c75d445b633f7d590b57",
+  "testedSHA": "33713db2cfffed29cad98ce9b2077490be5987b6",
+  "portalBase": "http://127.0.0.1:3013",
+  "apiBase": "http://127.0.0.1:3499",
+  "stackNote": "vcx-926-uat owned API :3499; shared ui869dev KC :8080/pg :55433",
+  "f03Hypothesis": "shared-tab reuse caused bff-tenants-404; isolated tab + storage clear",
+  "rows": [
+    {
+      "kind": "login",
+      "persona": "manager",
+      "viewport": 1024,
+      "tenantsStatus": 404,
+      "tenantsSnippet": "[object Object]",
+      "href": "http://127.0.0.1:8080/realms/ticket/login-actions/authenticate?execution=4023280c-94f8-4dbf-90af-6711899201f1&client_id=ticket-admin-web&tab",
+      "sessionEvidence": "bff-tenants-404"
+    },
+    {
+      "kind": "login",
+      "persona": "cs",
+      "viewport": 1024,
+      "tenantsStatus": 404,
+      "tenantsSnippet": "[object Object]",
+      "href": "http://127.0.0.1:8080/realms/ticket/login-actions/authenticate?execution=4023280c-94f8-4dbf-90af-6711899201f1&client_id=ticket-admin-web&tab",
+      "sessionEvidence": "bff-tenants-404"
+    }
+  ]
+}
