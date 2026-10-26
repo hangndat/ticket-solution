@@ -1,0 +1,28 @@
+{
+  "at": "2026-10-26T14:06:00.000Z",
+  "branch": "hangndat/vcx-975-antd-shell",
+  "shellMatrixSha": "c8130ba7d966f7b3565365f7c73996ea79281e83",
+  "gapProbeSha": "af6374bd06b19469cd3e2454819b28f9a6785404",
+  "f01Sha": "af6374bd06b19469cd3e2454819b28f9a6785404",
+  "note": "No UAT on 2f233667. Interactive gaps remain inconclusive unless a valid nav/locale action is proven.",
+  "exactGaps": {
+    "locale": {
+      "id": "G-975-LOCALE",
+      "classification": "inconclusive",
+      "productRegression": false,
+      "note": "Automated probe enActive false; Orca menu click did not establish EN switch. Do not assume product bug without successful Orca AX path."
+    },
+    "unsaved": {
+      "id": "G-975-UNSAVED",
+      "classification": "inconclusive",
+      "productRegression": false,
+      "note": "Prior afterNav tried=link_click with links=[] and confirmLog=[] — no valid navigation trigger; does NOT establish product regression. Guard not exercised until dirty + tenant/event/sider nav succeeds."
+    },
+    "logout": {
+      "id": "G-975-LOGOUT",
+      "classification": "inconclusive",
+      "productRegression": false,
+      "note": "Orca account-menu click failed to open dropdown; not used as product signal. Session clear not re-run in final scope."
+    }
+  }
+}
