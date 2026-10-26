@@ -127,7 +127,7 @@ describe('unknown ≠ success', () => {
           replayed: false,
         },
       }),
-      'success',
+      'warning',
     );
   });
 
