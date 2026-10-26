@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Text, View } from 'react-native';
+import { Text } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/ui/button';
 import { router } from 'expo-router';
 import { Stack } from 'expo-router/stack';
@@ -105,6 +106,14 @@ export default function RootLayout() {
   const configured = isOidcConfigured();
   const [restoreRetry, setRestoreRetry] = useState(0);
   const [restoreError, setRestoreError] = useState(false);
+  const [restoreUnreachable, setRestoreUnreachable] = useState(false);
+  const [restoring, setRestoring] = useState(false);
+  useEffect(() => session.subscribe(() => {
+    if (session.getSnapshot().status === 'verified') {
+      setRestoreUnreachable(false);
+      setRestoreError(false);
+    }
+  }), []);
 
   useEffect(() => {
     let stopRouting: (() => void) | undefined;
@@ -161,6 +170,8 @@ export default function RootLayout() {
       }
 
       try {
+        setRestoring(true);
+        setRestoreUnreachable(false);
         const tenantId = getTenantId();
         // Capture before async restore so a concurrent logout cannot be bypassed.
         const bindingEpoch = captureOfflineBindingEpoch();
@@ -182,6 +193,7 @@ export default function RootLayout() {
 
         if (outcome === 'unreachable') {
           // Keep prior offline binding for display-only wallet. No API auth.
+          setRestoreUnreachable(true);
           return;
         }
 
@@ -191,6 +203,8 @@ export default function RootLayout() {
         }
       } catch {
         setRestoreError(true);
+      } finally {
+        setRestoring(false);
       }
     })();
   }, [configured, restoreRetry]);
@@ -198,8 +212,9 @@ export default function RootLayout() {
   return (
     <BrandFontsGate>
       <ThemeProvider>
-        {restoreError ? (
-          <View
+        {restoreError || restoreUnreachable ? (
+          <SafeAreaView
+            edges={['top']}
             accessibilityRole="alert"
             style={{
               padding: space.lg,
@@ -208,10 +223,14 @@ export default function RootLayout() {
             }}
           >
             <Text style={{ ...typography.footnote, color: colors.label }}>
-              Chưa thể khôi phục phiên và dữ liệu cổng. Vui lòng thử lại.
+              {restoreUnreachable
+                ? 'Chưa kết nối được máy chủ để xác minh phiên. Dữ liệu cổng đã lưu vẫn được giữ. Kết nối lại rồi thử khôi phục phiên.'
+                : 'Chưa thể khôi phục phiên và dữ liệu cổng. Vui lòng thử lại.'}
             </Text>
             <Button
-              label="Thử lại"
+              label="Khôi phục phiên"
+              loading={restoring}
+              disabled={restoring}
               variant="secondary"
               accessibilityLabel="Thử khôi phục phiên"
               onPress={() => {
@@ -219,7 +238,7 @@ export default function RootLayout() {
                 setRestoreRetry((value) => value + 1);
               }}
             />
-          </View>
+          </SafeAreaView>
         ) : null}
         <AppStack />
       </ThemeProvider>

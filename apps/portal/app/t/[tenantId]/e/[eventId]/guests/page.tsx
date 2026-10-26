@@ -13,6 +13,10 @@ import { NotificationsOpsPanel } from '../../../../../../src/ops/panels/notifica
 import { PendingPanel } from '../../../../../../src/ops/panels/pending-panel';
 import { bffEventAction } from '../../../../../../src/prep/bff-urls';
 import { useEventAccess } from '../../../../../../src/prep/use-event-access';
+import {
+  canAccessEventRoute,
+  canPerformEventAction,
+} from '../../../../../../src/nav/capability-policy';
 import { SurfaceState } from '../../../../../../src/components/surface-state';
 import { usePortalLocale } from '../../../../../../src/i18n';
 import { useCompactChrome } from '../../../../../../src/hooks/use-compact-chrome';
@@ -31,6 +35,8 @@ export default function EventGuestsPage() {
   const [ticketTypeId, setTicketTypeId] = useState('');
   const [catalogError, setCatalogError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('import');
+  const canLoadCatalog =
+    access.kind === 'ready' && canAccessEventRoute('types', access.permissions);
 
   useEffect(() => {
     const syncTabFromHash = () => {
@@ -50,13 +56,11 @@ export default function EventGuestsPage() {
   }, []);
 
   useEffect(() => {
-    if (access.kind !== 'ready') return;
+    if (!canLoadCatalog) return;
     let cancelled = false;
     void (async () => {
       const [s, ty] = await Promise.all([
-        portalGet(
-          `${bffEventAction(tenantId, eventId, 'sources')}?limit=50`,
-        ),
+        portalGet(`${bffEventAction(tenantId, eventId, 'sources')}?limit=50`),
         portalGet(
           `${bffEventAction(tenantId, eventId, 'ticket-types')}?limit=50`,
         ),
@@ -64,8 +68,8 @@ export default function EventGuestsPage() {
       if (cancelled) return;
       if (s.status === 200 && s.json && typeof s.json === 'object') {
         const items = Array.isArray((s.json as { items?: unknown }).items)
-          ? ((s.json as { items: Array<{ sourceId?: string; name?: string }> })
-              .items)
+          ? (s.json as { items: Array<{ sourceId?: string; name?: string }> })
+              .items
           : [];
         const mapped = items
           .filter((i) => typeof i.sourceId === 'string')
@@ -80,11 +84,11 @@ export default function EventGuestsPage() {
       }
       if (ty.status === 200 && ty.json && typeof ty.json === 'object') {
         const items = Array.isArray((ty.json as { items?: unknown }).items)
-          ? ((
+          ? (
               ty.json as {
                 items: Array<{ ticketTypeId?: string; label?: string }>;
               }
-            ).items)
+            ).items
           : [];
         const mapped = items
           .filter((i) => typeof i.ticketTypeId === 'string')
@@ -99,22 +103,22 @@ export default function EventGuestsPage() {
     return () => {
       cancelled = true;
     };
-  }, [access.kind, tenantId, eventId, t]);
+  }, [canLoadCatalog, tenantId, eventId, t]);
 
   const permissions = useMemo(
     () => (access.kind === 'ready' ? access.permissions : []),
     [access],
   );
-  const canImport = permissions.includes('inventory.import');
-  const canApprove = permissions.includes('redemption.approve');
-  const canNotify =
-    permissions.includes('notify.send') ||
-    permissions.includes('event.config');
-  const canExportCreate = permissions.includes('export.create');
-  const canExportDownload = permissions.includes('export.download');
+  const canImport = canPerformEventAction('importInventory', permissions);
+  const canApprove = canPerformEventAction('approveRedemption', permissions);
+  const canNotify = canPerformEventAction('sendNotification', permissions);
+  const canExportCreate = canPerformEventAction('createExport', permissions);
+  const canExportDownload = canPerformEventAction(
+    'downloadExport',
+    permissions,
+  );
   const canExport = canExportCreate || canExportDownload;
-  const canOps =
-    canImport || canApprove || canNotify || canExport;
+  const canOps = canImport || canApprove || canNotify || canExport;
 
   if (access.kind === 'loading') return <SurfaceState kind="loading" />;
   if (access.kind === 'error') {
@@ -141,7 +145,10 @@ export default function EventGuestsPage() {
   const catalogSources = sources;
   const catalogTypes = types;
 
-  const tabLabel = (fullKey: Parameters<typeof t>[0], shortKey: Parameters<typeof t>[0]) => {
+  const tabLabel = (
+    fullKey: Parameters<typeof t>[0],
+    shortKey: Parameters<typeof t>[0],
+  ) => {
     const full = t(fullKey);
     const short = t(shortKey);
     const text = compactChrome ? short : full;
@@ -180,7 +187,10 @@ export default function EventGuestsPage() {
             />
             <span>{t('nav.event.types')}</span>
             <Select
-              style={{ minWidth: compactChrome ? undefined : 220, width: compactChrome ? '100%' : undefined }}
+              style={{
+                minWidth: compactChrome ? undefined : 220,
+                width: compactChrome ? '100%' : undefined,
+              }}
               value={ticketTypeId || undefined}
               placeholder={t('ops.import.chooseTicketType')}
               options={types.map((t) => ({ value: t.id, label: t.label }))}
@@ -252,10 +262,9 @@ export default function EventGuestsPage() {
       <ProCard
         className="portal-guests-tabs"
         tabs={{
-          activeKey:
-            tabItems.some((tab) => tab.key === activeTab)
-              ? activeTab
-              : tabItems[0]?.key,
+          activeKey: tabItems.some((tab) => tab.key === activeTab)
+            ? activeTab
+            : tabItems[0]?.key,
           onChange: (key) => {
             setActiveTab(key);
             window.location.hash = key;

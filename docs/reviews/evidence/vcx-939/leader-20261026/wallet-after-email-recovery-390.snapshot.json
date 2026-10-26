@@ -1,0 +1,99 @@
+{
+  "origin": "http://localhost:3417/wallet?uat939=post-recovery",
+  "refs": {
+    "e1": {
+      "name": "Bỏ qua đến nội dung",
+      "role": "link"
+    },
+    "e10": {
+      "name": "MFest · Demo 2",
+      "role": "link"
+    },
+    "e11": {
+      "name": "Studio Night — Đêm nhạc mùa trước · Demo 1",
+      "role": "link"
+    },
+    "e12": {
+      "name": "Studio Night · Demo 1",
+      "role": "link"
+    },
+    "e13": {
+      "name": "Mở vé MFest · Demo",
+      "role": "listitem"
+    },
+    "e14": {
+      "name": "Mở vé MFest · Demo",
+      "role": "listitem"
+    },
+    "e15": {
+      "name": "Mở vé Studio Night — Đêm nhạc mùa trước · Demo",
+      "role": "listitem"
+    },
+    "e16": {
+      "name": "Mở vé Studio Night · Demo",
+      "role": "listitem"
+    },
+    "e17": {
+      "name": "Khám phá",
+      "role": "link"
+    },
+    "e18": {
+      "name": "Đổi mã",
+      "role": "link"
+    },
+    "e19": {
+      "name": "Tài khoản",
+      "role": "link"
+    },
+    "e2": {
+      "name": "Điều hướng chính",
+      "role": "navigation"
+    },
+    "e20": {
+      "name": "MFest · Demo",
+      "role": "heading"
+    },
+    "e21": {
+      "name": "MFest · Demo",
+      "role": "heading"
+    },
+    "e22": {
+      "name": "Studio Night — Đêm nhạc mùa trước · Demo",
+      "role": "heading"
+    },
+    "e23": {
+      "name": "Studio Night · Demo",
+      "role": "heading"
+    },
+    "e3": {
+      "name": "Lọc vé theo sự kiện",
+      "role": "navigation"
+    },
+    "e4": {
+      "name": "Liên kết chân trang",
+      "role": "navigation"
+    },
+    "e5": {
+      "name": "Vemoki — trang chủ",
+      "role": "link"
+    },
+    "e6": {
+      "name": "Menu",
+      "role": "button"
+    },
+    "e7": {
+      "name": "Vé của tôi",
+      "role": "heading"
+    },
+    "e8": {
+      "name": "Đổi mã lấy vé",
+      "role": "link"
+    },
+    "e9": {
+      "name": "Tất cả 4",
+      "role": "link"
+    }
+  },
+  "snapshot": "- link \"Bỏ qua đến nội dung\" [ref=e1]\n- banner\n  - navigation \"Điều hướng chính\" [ref=e2]\n    - link \"Vemoki — trang chủ\" [ref=e5]\n      - StaticText \"vemoki\"\n    - button \"Menu\" [expanded=false, ref=e6]\n      - StaticText \"Menu\"\n- main\n  - sectionheader\n    - heading \"Vé của tôi\" [level=1, ref=e7]\n    - paragraph\n      - StaticText \"Quản lý vé đã cấp theo sự kiện. Mở vé để xem mã QR tại cổng — không chia sẻ ảnh chụp màn hình.\"\n    - link \"Đổi mã lấy vé\" [ref=e8]\n  - navigation \"Lọc vé theo sự kiện\" [ref=e3]\n    - link \"Tất cả 4\" [ref=e9]\n      - StaticText \"Tất cả\"\n      - StaticText \"4\"\n    - link \"MFest · Demo 2\" [ref=e10]\n      - StaticText \"MFest · Demo\"\n      - StaticText \"2\"\n    - link \"Studio Night — Đêm nhạc mùa trước · Demo 1\" [ref=e11]\n      - StaticText \"Studio Night — Đêm nhạc mùa trước · Demo\"\n      - StaticText \"1\"\n    - link \"Studio Night · Demo 1\" [ref=e12]\n      - StaticText \"Studio Night · Demo\"\n      - StaticText \"1\"\n  - list\n    - listitem \"Mở vé MFest · Demo\" [level=1, ref=e13]\n      - StaticText \"Sẵn sàng\"\n      - time\n        - StaticText \"2026-10-26\"\n      - heading \"MFest · Demo\" [level=3, ref=e20]\n      - paragraph\n        - StaticText \"Mã vé \"\n        - code\n          - StaticText \"73894C9C\"\n      - StaticText \"Mở vé \"\n    - listitem \"Mở vé MFest · Demo\" [level=1, ref=e14]\n      - StaticText \"Sẵn sàng\"\n      - time\n        - StaticText \"2026-10-26\"\n      - heading \"MFest · Demo\" [level=3, ref=e21]\n      - paragraph\n        - StaticText \"Mã vé \"\n        - code\n          - StaticText \"6676D0F8\"\n      - StaticText \"Mở vé \"\n    - listitem \"Mở vé Studio Night — Đêm nhạc mùa trước · Demo\" [level=1, ref=e15]\n      - StaticText \"Sẵn sàng\"\n      - time\n        - StaticText \"2026-10-26\"\n      - heading \"Studio Night — Đêm nhạc mùa trước · Demo\" [level=3, ref=e22]\n      - paragraph\n        - StaticText \"Mã vé \"\n        - code\n          - StaticText \"5EC56806\"\n      - StaticText \"Mở vé \"\n    - listitem \"Mở vé Studio Night · Demo\" [level=1, ref=e16]\n      - StaticText \"Sẵn sàng\"\n      - time\n        - StaticText \"2026-10-26\"\n      - heading \"Studio Night · Demo\" [level=3, ref=e23]\n      - paragraph\n        - StaticText \"Mã vé \"\n        - code\n          - StaticText \"3D8F93CD\"\n      - StaticText \"Mở vé \"\n- contentinfo\n  - StaticText \"vemoki\"\n  - StaticText \"Sự kiện & vé\"\n  - navigation \"Liên kết chân trang\" [ref=e4]\n    - link \"Khám phá\" [ref=e17]\n    - link \"Đổi mã\" [ref=e18]\n    - link \"Tài khoản\" [ref=e19]\n- alert",
+  "browserPageId": "367467d9-6808-474c-8bc6-ecc26bce4eba"
+}

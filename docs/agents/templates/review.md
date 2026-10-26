@@ -12,6 +12,7 @@ Checkout: <đường dẫn tuyệt đối worktree>; tìm/đọc ban đầu: <sl
 Base → head: <full SHAs>; SHA đã review: <nếu revalidate>.
 Role/file + Persona: <...>; reviewer khác implementer <session/dispatch>.
 Agent/model/effort + Cost tier: <...>; Architecture impact: <Có|Không + ADR>.
+Security: <Có|Không + lý do từ diff>; gộp cùng reviewer, nếu tách ghi câu hỏi bổ sung.
 AC/Decision/skills/UI mẫu: <IDs + links/sections áp dụng>.
 Evidence: <packet/report path + SHA/time>; gate/checks còn thiếu: <...>.
 Revalidate: <findings mở + report trước>; fix <n/2>.
@@ -33,6 +34,7 @@ Coordinator giữ hướng dẫn chi tiết dưới đây để soạn đủ đ�
 - AC/Decision/ADR: <link + section/IDs>; skills/mẫu UI: <khi áp dụng>
 - Evidence packet: <path + thời điểm>; findings trước/lượt fix: <link, 0|1|2 / 2>
 - Gate/checks bắt buộc và evidence còn thiếu: <chỉ rõ; không chỉ ghi “CI xanh”>
+- Security Có/Không + lý do theo quy trình review chung; checks tái dùng và test delta cần chạy. Full suite/matrix hoặc reviewer tách riêng phải có căn cứ cụ thể.
 - Ownership: review only; output: <một artifact hoặc comment được authorize>; worker_done theo preamble thật.
 
 ## Phạm vi đọc và kiểm
