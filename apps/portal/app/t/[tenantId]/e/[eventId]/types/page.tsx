@@ -4,7 +4,7 @@ import { ModalForm, ProFormText, ProTable } from '@ant-design/pro-components';
 import type { ProColumns } from '@ant-design/pro-components';
 import { Alert, Button, Typography } from 'antd';
 import { useParams } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { PortalTicketTypeSummary } from '@ticket/contracts';
 import {
   apiErrorMessage,
@@ -38,6 +38,7 @@ export default function TicketTypesPage() {
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
+  const savedForm = useRef(false);
   useUnsavedChanges(dirty, t('shell.unsaved.confirm'));
 
   const load = useCallback(
@@ -143,7 +144,13 @@ export default function TicketTypesPage() {
       title={t('nav.event.types')}
       extra={
         canCreateType ? (
-          <Button type="primary" onClick={() => setOpen(true)}>
+          <Button
+            type="primary"
+            onClick={() => {
+              savedForm.current = false;
+              setOpen(true);
+            }}
+          >
             {t('types.h_1caa9m7')}
           </Button>
         ) : undefined
@@ -176,7 +183,13 @@ export default function TicketTypesPage() {
           description={t('types.h_xnio89')}
           emptyAction={
             canCreateType ? (
-              <Button type="primary" onClick={() => setOpen(true)}>
+              <Button
+                type="primary"
+                onClick={() => {
+                  savedForm.current = false;
+                  setOpen(true);
+                }}
+              >
                 {t('types.h_1caa9m7')}
               </Button>
             ) : undefined
@@ -214,8 +227,13 @@ export default function TicketTypesPage() {
         title={t('types.h_1caa9m7')}
         open={open && canCreateType}
         onOpenChange={(next) => {
-          if (!next && !confirmDiscardIfDirty(t('shell.unsaved.confirm')))
+          if (
+            !next &&
+            !savedForm.current &&
+            !confirmDiscardIfDirty(t('shell.unsaved.confirm'))
+          )
             return;
+          savedForm.current = false;
           setOpen(next);
           if (!next) setDirty(false);
         }}
@@ -236,6 +254,7 @@ export default function TicketTypesPage() {
               return false;
             }
             if (res.status === 200 || res.status === 201) {
+              savedForm.current = true;
               setDirty(false);
               setNotice(t('types.h_13e0npu'));
               void load(null);
