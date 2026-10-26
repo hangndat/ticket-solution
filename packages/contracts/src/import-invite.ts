@@ -74,6 +74,28 @@ export interface ImportJob {
   replayed?: boolean;
 }
 
+/** VCX #924 list projection: no file metadata, raw rows, PII or replay flag. */
+export type ImportJobSummary = Pick<ImportJob,
+  | 'importId' | 'kind' | 'status' | 'sourceId' | 'ticketTypeId'
+  | 'mappingRevision' | 'previewRevision' | 'validRowCount' | 'errorRowCount'
+  | 'invitationCount' | 'estimatedQuota'
+> & {
+  /** UTC ISO 8601; stable ordering uses createdAt DESC, importId DESC. */
+  createdAt: string;
+};
+
+export type ImportJobListPage = CursorPage<ImportJobSummary>;
+
+/** Parsed filters; API and BFF must independently validate the raw query. */
+export interface ImportJobListQuery {
+  /** Opaque cursor bound to tenant, event and filters; not an authorization grant. */
+  cursor?: string;
+  /** Integer 1–100; omitted means 20. */
+  limit?: number;
+  status?: ImportJobStatus;
+  kind?: ImportKind;
+}
+
 export interface ImportPreviewResponse {
   importId: string;
   previewRevision: number;
@@ -104,6 +126,19 @@ export interface ImportCommitResponse {
 
 export type InvitationState =
   'PENDING' | 'DISPATCHED' | 'CLAIMED' | 'EXPIRED' | 'REVOKED';
+
+/**
+ * Without q, preserve legacy UUID pagination. With q, exact invitation UUID
+ * lookup only (not attendee search): at most one row and nextCursor is null.
+ * Raw duplicate/unknown/empty query keys still require runtime validation.
+ */
+export type InvitationListQuery = {
+  limit?: number;
+  state?: InvitationState;
+} & (
+  | { q?: never; cursor?: string }
+  | { q: string; cursor?: never }
+);
 
 /** Technical default invitation TTL (may shorten to redemption close). */
 export const INVITATION_TTL_HOURS_DEFAULT = 48;
@@ -150,6 +185,8 @@ export interface InvitationClaimBody {
 }
 
 export const IMPORT_ERROR_CODES = {
+  INVALID_FILTER: 'INVALID_FILTER',
+  INVALID_CURSOR: 'INVALID_CURSOR',
   EVENT_NOT_FOUND: 'EVENT_NOT_FOUND',
   IMPORT_NOT_FOUND: 'IMPORT_NOT_FOUND',
   IMPORT_STALE_PREVIEW: 'IMPORT_STALE_PREVIEW',
@@ -173,6 +210,7 @@ export type ImportErrorCode =
 export const IMPORT_ENDPOINTS = {
   upload: 'POST /tenants/:tenantId/events/:eventId/imports/files',
   create: 'POST /tenants/:tenantId/events/:eventId/imports',
+  list: 'GET /tenants/:tenantId/events/:eventId/imports',
   get: 'GET /tenants/:tenantId/events/:eventId/imports/:importId',
   preview: 'POST /tenants/:tenantId/events/:eventId/imports/:importId/preview',
   commit: 'POST /tenants/:tenantId/events/:eventId/imports/:importId/commit',

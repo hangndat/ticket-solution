@@ -47,6 +47,8 @@ class ConfigBodyDto {
   @ApiProperty({ type: 'object', additionalProperties: true })
   payload!: Record<string, unknown>;
   @ApiProperty({ required: false }) schemaVersion?: number;
+  /** Latest draft version the caller read; 0 before the first save. Omitted keeps legacy unconditional-save semantics. */
+  @ApiProperty({ required: false }) expectedVersion?: number;
 }
 
 class PublishBodyDto {
@@ -138,6 +140,7 @@ export class ConfigPublishService {
         actorUserId: user.userId,
         schemaVersion: body.schemaVersion,
         payload: body.payload,
+        expectedVersion: body.expectedVersion,
       }),
     );
     return {
@@ -328,6 +331,12 @@ export class ConfigPublishController {
       Array.isArray(body.payload)
     ) {
       throw scopeError('payload object is required');
+    }
+    if (
+      body.expectedVersion !== undefined &&
+      (!Number.isInteger(body.expectedVersion) || body.expectedVersion < 0)
+    ) {
+      throw scopeError('expectedVersion must be a non-negative integer');
     }
     return this.configs
       .save(authorization, tenant, event, body)
