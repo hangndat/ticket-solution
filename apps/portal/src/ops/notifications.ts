@@ -567,7 +567,7 @@ export function interpretNotificationRetry(
   networkError: boolean,
   locale: PortalLocale = DEFAULT_PORTAL_LOCALE,
 ): NotificationRetryView {
-  if (networkError || status === 0 || status >= 500) {
+  if (networkError || status === 0 || status === 429 || status >= 500) {
     return { kind: 'unknown', message: t(locale, 'ops.notifications.unknown') };
   }
   const body = asRecord(json);

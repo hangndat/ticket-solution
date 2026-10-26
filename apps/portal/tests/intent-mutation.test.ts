@@ -181,7 +181,7 @@ test('Retry-After delays 429 replay with the same key and payload', async () => 
   const send = async (body: { slug: string; idempotencyKey: string }): Promise<PortalFetchResult> => {
     bodies.push(body);
     return bodies.length === 1
-      ? { status: 429, json: { code: 'RATE_LIMITED' }, networkError: false, timedOut: false, retryAfter: '3' }
+      ? { status: 429, json: { code: 'RATE_LIMITED' }, networkError: false, timedOut: false, retryAfterMs: 3000 }
       : ok();
   };
   assert.equal((await intent.run({ slug: 'clone' }, send, () => true)).kind, 'unknown');
@@ -200,7 +200,7 @@ test('Retry-After beyond the safe window stops unknown and retains recovery mark
   const storage = memoryStorage();
   const clock = { now: 1_000 };
   const intent = new IntentMutation(scope, storage, () => 'key-a', () => clock.now);
-  const response: PortalFetchResult = { status: 503, json: { retryable: true }, networkError: false, timedOut: false, retryAfter: '3600' };
+  const response: PortalFetchResult = { status: 503, json: { retryable: true }, networkError: false, timedOut: false, retryAfterMs: 3_600_000 };
   assert.equal((await intent.run({ slug: 'clone' }, async () => response, () => true)).kind, 'unknown');
   assert.equal(intent.state, 'blocked');
   let sends = 0;

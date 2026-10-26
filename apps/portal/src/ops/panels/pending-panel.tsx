@@ -13,6 +13,8 @@ import {
 } from '../pending';
 import { usePortalLocale } from '../../i18n';
 import { SavedViewsToolbar } from '../../views';
+import { useMutationIntent } from '../../client/use-mutation-intent';
+import { MutationIntentAlert } from '../../client/mutation-intent-alert';
 
 type CatalogItem = { id: string; label: string };
 
@@ -50,6 +52,7 @@ export function PendingPanel({
   const [view, setView] = useState<PendingView | null>(null);
   const [denyReason, setDenyReason] = useState('');
   const [notice, setNotice] = useState<string | null>(null);
+  const intent = useMutationIntent(tenantId, eventId, 'pending-decision');
   const [sourceId, setSourceId] = useState<string | undefined>();
   const [ticketTypeId, setTicketTypeId] = useState<string | undefined>();
   const [q, setQ] = useState('');
@@ -87,10 +90,19 @@ export function PendingPanel({
 
   async function approve(requestId: string) {
     setBusy(true);
-    const result = await portalMutate(
-      `${bffRedemptions(tenantId, eventId)}/${encodeURIComponent(requestId)}/approve`,
-      { idempotencyKey: crypto.randomUUID() },
+    const outcome = await intent.run(
+      { requestId, decision: 'approve' },
+      (body) => portalMutate(`${bffRedemptions(tenantId, eventId)}/${encodeURIComponent(requestId)}/approve`,
+        { idempotencyKey: body.idempotencyKey }),
+      (response) => decideAdmin('approve', response.status, response.json,
+        response.networkError || response.timedOut, locale).kind === 'approved',
     );
+    if (outcome.kind === 'blocked') {
+      setNotice('Quyết định trước chưa rõ kết quả. Kiểm tra yêu cầu trước khi tiếp tục.');
+      setBusy(false);
+      return;
+    }
+    const result = outcome.response;
     const decision = decideAdmin(
       'approve',
       result.status,
@@ -110,10 +122,19 @@ export function PendingPanel({
       return;
     }
     setBusy(true);
-    const result = await portalMutate(
-      `${bffRedemptions(tenantId, eventId)}/${encodeURIComponent(requestId)}/deny`,
-      { reason, idempotencyKey: crypto.randomUUID() },
+    const outcome = await intent.run(
+      { requestId, decision: 'deny', reason },
+      (body) => portalMutate(`${bffRedemptions(tenantId, eventId)}/${encodeURIComponent(requestId)}/deny`,
+        { reason: body.reason, idempotencyKey: body.idempotencyKey }),
+      (response) => decideAdmin('deny', response.status, response.json,
+        response.networkError || response.timedOut, locale).kind === 'denied',
     );
+    if (outcome.kind === 'blocked') {
+      setNotice('Quyết định trước chưa rõ kết quả. Kiểm tra yêu cầu trước khi tiếp tục.');
+      setBusy(false);
+      return;
+    }
+    const result = outcome.response;
     const decision = decideAdmin(
       'deny',
       result.status,
@@ -212,6 +233,8 @@ export function PendingPanel({
             role="status"
           />
         ) : null}
+        <MutationIntentAlert pending={intent.pending} needsReconciliation={intent.needsReconciliation}
+          onCheck={() => void load()} onStartNew={intent.release} />
         <Table
           size="small"
           loading={busy}

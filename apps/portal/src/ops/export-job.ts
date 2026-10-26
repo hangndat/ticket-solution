@@ -111,7 +111,7 @@ export function interpretExportCreate(
   networkError: boolean,
   locale: PortalLocale = DEFAULT_PORTAL_LOCALE,
 ): ExportView {
-  if (networkError || status === 0 || status >= 500) {
+  if (networkError || status === 0 || status === 429 || status >= 500) {
     return { kind: 'unknown', message: t(locale, 'ops.export.unknown') };
   }
   if (status === 200 || status === 201) {
@@ -240,6 +240,10 @@ export function exportAlertType(
 ): 'success' | 'warning' | 'error' {
   if (view.kind === 'rejected') return 'error';
   if (view.kind === 'unknown') return 'warning';
+  if (view.kind === 'created' || view.kind === 'status') {
+    if (view.job.status === 'FAILED') return 'error';
+    if (view.job.status !== 'READY') return 'warning';
+  }
   return 'success';
 }
 

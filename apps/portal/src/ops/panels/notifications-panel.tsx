@@ -16,6 +16,8 @@ import {
 import { usePortalLocale, type MessageKey } from '../../i18n';
 import { SavedViewsToolbar } from '../../views';
 import { NotificationsTemplatesSection } from './notifications-templates-section';
+import { useMutationIntent } from '../../client/use-mutation-intent';
+import { MutationIntentAlert } from '../../client/mutation-intent-alert';
 
 type Props = {
   tenantId: string;
@@ -50,6 +52,7 @@ export function NotificationsOpsPanel({
   const setPanelBusy = useCallback((next: boolean) => setBusy(next), []);
   const [view, setView] = useState<NotificationListView | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const intent = useMutationIntent(tenantId, eventId, 'notification-retry');
   const [state, setState] = useState<NotificationProviderStatus | undefined>();
   const [channel, setChannel] = useState<NotificationChannel | undefined>();
 
@@ -85,10 +88,17 @@ export function NotificationsOpsPanel({
   async function retry(notificationId: string) {
     if (!canNotify) return;
     setBusy(true);
-    const result = await portalMutate(
-      `${bffNotifications(tenantId, eventId)}/${encodeURIComponent(notificationId)}/retry`,
-      { reason: 'portal retry', idempotencyKey: crypto.randomUUID() },
-    );
+    const outcome = await intent.run({ notificationId, reason: 'portal retry' },
+      (body) => portalMutate(`${bffNotifications(tenantId, eventId)}/${encodeURIComponent(notificationId)}/retry`,
+        { reason: body.reason, idempotencyKey: body.idempotencyKey }),
+      (response) => interpretNotificationRetry(response.status, response.json,
+        response.networkError || response.timedOut, locale).kind === 'requeued');
+    if (outcome.kind === 'blocked') {
+      setNotice('Lần retry trước chưa rõ kết quả. Kiểm tra trạng thái notification trước khi tiếp tục.');
+      setBusy(false);
+      return;
+    }
+    const result = outcome.response;
     const next = interpretNotificationRetry(
       result.status,
       result.json,
@@ -162,6 +172,8 @@ export function NotificationsOpsPanel({
           role="status"
         />
       ) : null}
+      <MutationIntentAlert pending={intent.pending} needsReconciliation={intent.needsReconciliation}
+        onCheck={() => void load()} onStartNew={intent.release} />
       <Table
         size="small"
         loading={busy}

@@ -4,6 +4,8 @@ import { Alert, Button, Input, Space, Table, Timeline, Typography } from 'antd';
 import { useState } from 'react';
 import { portalGet, portalMutate } from '../../client/portal-fetch';
 import { bffTickets } from '../../prep/bff-urls';
+import { useMutationIntent } from '../../client/use-mutation-intent';
+import { MutationIntentAlert } from '../../client/mutation-intent-alert';
 import {
   csProviderStatusLabel,
   csResendRejectedLabel,
@@ -30,6 +32,7 @@ export function CsPanel({ tenantId, eventId, canCs }: Props) {
   const [list, setList] = useState<CsTicketSummary[]>([]);
   const [detail, setDetail] = useState<CsTicketDetail | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const intent = useMutationIntent(tenantId, eventId, 'cs-resend');
 
   function applyView(view: CsView) {
     if (view.kind === 'list') {
@@ -93,10 +96,17 @@ export function CsPanel({ tenantId, eventId, canCs }: Props) {
 
   async function resend(ticketId: string) {
     setBusy(true);
-    const result = await portalMutate(
-      `${bffTickets(tenantId, eventId)}/${encodeURIComponent(ticketId)}/resend`,
-      { idempotencyKey: crypto.randomUUID() },
-    );
+    const outcome = await intent.run({ ticketId },
+      (body) => portalMutate(`${bffTickets(tenantId, eventId)}/${encodeURIComponent(ticketId)}/resend`,
+        { idempotencyKey: body.idempotencyKey }),
+      (response) => interpretCsResend(response.status, response.json,
+        response.networkError || response.timedOut, ticketId, locale).kind === 'resent');
+    if (outcome.kind === 'blocked') {
+      setNotice('Lần gửi lại trước chưa rõ kết quả. Kiểm tra timeline trước khi tiếp tục.');
+      setBusy(false);
+      return;
+    }
+    const result = outcome.response;
     const view = interpretCsResend(
       result.status,
       result.json,
@@ -207,6 +217,8 @@ export function CsPanel({ tenantId, eventId, canCs }: Props) {
         {notice ? (
           <Typography.Text type="secondary">{notice}</Typography.Text>
         ) : null}
+        <MutationIntentAlert pending={intent.pending} needsReconciliation={intent.needsReconciliation}
+          onCheck={() => { if (detail) void openDetail(detail.ticketId); }} onStartNew={intent.release} />
       </Space>
     </div>
   );
