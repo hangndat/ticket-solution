@@ -5,14 +5,16 @@ import {
   Button,
   Form,
   Input,
+  Segmented,
   Select,
   Space,
+  Steps,
   Table,
   Typography,
   Upload,
 } from 'antd';
-import type { ImportKind } from '@ticket/contracts';
-import { useRef, useState, type Key } from 'react';
+import type { ImportJobSummary, ImportKind } from '@ticket/contracts';
+import { useCallback, useEffect, useRef, useState, type Key } from 'react';
 import {
   portalDownload,
   portalGet,
@@ -33,12 +35,14 @@ import {
   importViewLabel,
   interpretImportCommit,
   interpretImportCreate,
+  interpretImportJobs,
   interpretImportErrorsDownload,
   interpretImportPreview,
   interpretImportStatus,
   interpretImportUpload,
   parseCsvForImport,
   type ImportView,
+  type ImportJobsView,
 } from '../import-job';
 import {
   interpretDispatch,
@@ -66,6 +70,7 @@ export function ImportInvitationsPanel({
 }: Props) {
   const { t, locale } = usePortalLocale();
   const [busy, setBusy] = useState(false);
+  const [workflow, setWorkflow] = useState<'import' | 'dispatch'>('import');
   const [notice, setNotice] = useState<string | null>(null);
   const [kind, setKind] = useState<ImportKind>('CODES');
   const [csvText, setCsvText] = useState('');
@@ -74,6 +79,9 @@ export function ImportInvitationsPanel({
   const [emailColumn, setEmailColumn] = useState('email');
   const [mappingRevision, setMappingRevision] = useState(1);
   const [importId, setImportId] = useState('');
+  const [recoveredJob, setRecoveredJob] = useState(false);
+  const [jobsView, setJobsView] = useState<ImportJobsView | null>(null);
+  const [jobsBusy, setJobsBusy] = useState(false);
   const [fileId, setFileId] = useState('');
   const [fileHash, setFileHash] = useState('');
   const submittedCsv = useRef<string | null>(null);
@@ -87,6 +95,60 @@ export function ImportInvitationsPanel({
   const [dispatchPreviewRevision, setDispatchPreviewRevision] = useState<
     number | null
   >(null);
+
+  const loadJobs = useCallback(async (cursor?: string | null) => {
+    await Promise.resolve();
+    setJobsBusy(true);
+    try {
+      const qs = new URLSearchParams({ limit: '20' });
+      if (cursor) qs.set('cursor', cursor);
+      const result = await portalGet(`${bffImports(tenantId, eventId)}?${qs}`);
+      setJobsView(interpretImportJobs(
+        result.status,
+        result.json,
+        result.networkError || result.timedOut,
+        locale,
+      ));
+    } finally {
+      setJobsBusy(false);
+    }
+  }, [tenantId, eventId, locale]);
+
+  useEffect(() => {
+    let cancelled = false;
+    queueMicrotask(() => { if (!cancelled) void loadJobs(); });
+    return () => { cancelled = true; };
+  }, [loadJobs]);
+
+  async function selectJob(row: ImportJobSummary) {
+    setBusy(true);
+    try {
+      const result = await portalGet(bffImportJob(tenantId, eventId, row.importId));
+      const next = interpretImportStatus(
+        result.status,
+        result.json,
+        result.networkError || result.timedOut,
+        locale,
+      );
+      setImportView(next);
+      if (next.kind !== 'job') {
+        setNotice(importViewLabel(next, locale));
+        return;
+      }
+      setImportId(next.job.importId);
+      setKind(next.job.kind);
+      setRecoveredJob(true);
+      setCsvText('');
+      setFileName('');
+      setFileId('');
+      setFileHash(next.job.fileHash ?? '');
+      setPreviewRevision(next.job.previewRevision);
+      setMappingRevision(next.job.mappingRevision ?? 1);
+      setNotice(t('ops.import.resumedJob'));
+    } finally {
+      setBusy(false);
+    }
+  }
 
   function downloadTemplate() {
     const blob = new Blob([csvTemplateForKind(kind)], {
@@ -102,6 +164,12 @@ export function ImportInvitationsPanel({
   }
 
   async function onFileChosen(file: File) {
+    setImportId('');
+    setRecoveredJob(false);
+    setPreviewRevision(null);
+    setFileId('');
+    setFileHash('');
+    submittedCsv.current = null;
     setFileName(file.name);
     const text = await file.text();
     setCsvText(text);
@@ -200,7 +268,9 @@ export function ImportInvitationsPanel({
     setImportView(next);
     if (next.kind === 'job') {
       setImportId(next.job.importId);
+      setRecoveredJob(false);
       if (next.job.fileHash) setFileHash(next.job.fileHash);
+      void loadJobs();
     }
     setNotice(importViewLabel(next, locale));
     setBusy(false);
@@ -215,7 +285,7 @@ export function ImportInvitationsPanel({
     setBusy(true);
     const result = await portalMutate(
       `${bffImportJob(tenantId, eventId, importId.trim())}/preview`,
-      {
+      recoveredJob ? {} : {
         mappingRevision,
         columnMapping:
           kind === 'GUESTS' ? { email: emailColumn } : { code: codeColumn },
@@ -231,6 +301,7 @@ export function ImportInvitationsPanel({
       setPreviewRevision(next.preview.previewRevision);
       setFileHash(next.preview.fileHash);
       setMappingRevision(next.preview.mappingRevision);
+      void loadJobs();
     }
     setNotice(importViewLabel(next, locale));
     setBusy(false);
@@ -263,6 +334,7 @@ export function ImportInvitationsPanel({
     );
     setImportView(next);
     setNotice(importViewLabel(next, locale));
+    if (next.kind === 'commit') void loadJobs();
     setBusy(false);
   }
 
@@ -279,6 +351,12 @@ export function ImportInvitationsPanel({
     );
     setImportView(next);
     setNotice(importViewLabel(next, locale));
+    if (next.kind === 'job') {
+      setFileHash(next.job.fileHash ?? '');
+      setPreviewRevision(next.job.previewRevision);
+      setMappingRevision(next.job.mappingRevision ?? 1);
+      void loadJobs();
+    }
     setBusy(false);
   }
 
@@ -387,8 +465,33 @@ export function ImportInvitationsPanel({
       ? inviteView.items.map((item) => ({ key: item.invitationId, ...item }))
       : [];
 
+  const currentStep =
+    importView?.kind === 'commit' ||
+    (importView?.kind === 'job' && importView.job.status === 'COMPLETED')
+      ? 3
+      : previewRevision !== null
+        ? 3
+        : importId
+          ? 2
+          : csvText
+            ? 1
+            : 0;
+  const jobTerminalOrCommitting =
+    importView?.kind === 'commit' ||
+    (importView?.kind === 'job' &&
+      ['COMMITTING', 'COMPLETED', 'FAILED'].includes(importView.job.status));
+
   return (
     <Space direction="vertical" size="large" style={{ width: '100%' }}>
+      <Segmented
+        value={workflow}
+        onChange={(value) => setWorkflow(value as 'import' | 'dispatch')}
+        options={[
+          { value: 'import', label: t('ops.import.tabLabel') },
+          { value: 'dispatch', label: t('ops.import.dispatchTab') },
+        ]}
+      />
+      {workflow === 'import' ? <>
       <Alert
         type="info"
         showIcon
@@ -396,11 +499,52 @@ export function ImportInvitationsPanel({
         description={t('ops.import.panelDescription')}
       />
 
+      <Steps
+        current={currentStep}
+        responsive
+        items={[
+          { title: t('ops.import.chooseCsv') },
+          { title: t('ops.import.mappingStep') },
+          { title: t('ops.import.action.preview') },
+          { title: t('ops.import.action.commit') },
+        ]}
+      />
+
+      <section aria-label={t('ops.import.jobsTitle')}>
+        <Space wrap style={{ marginBottom: 12 }}>
+          <Typography.Title level={5} style={{ margin: 0 }}>{t('ops.import.jobsTitle')}</Typography.Title>
+          <Button loading={jobsBusy} onClick={() => void loadJobs()}>{t('gate.h_3keb7')}</Button>
+        </Space>
+        {jobsView?.kind === 'list' ? (
+          <>
+            <Table<ImportJobSummary>
+              size="small"
+              rowKey="importId"
+              loading={jobsBusy}
+              dataSource={jobsView.items}
+              pagination={false}
+              scroll={{ x: 'max-content' }}
+              columns={[
+                { title: t('ops.import.jobType'), render: (_, row) => formatImportKind(locale, row.kind) },
+                { title: t('ops.table.state'), dataIndex: 'status' },
+                { title: t('ops.import.errorsCount'), dataIndex: 'errorRowCount', render: (value: number | null) => value ?? '—' },
+                { title: t('ops.import.createdAt'), dataIndex: 'createdAt' },
+                { title: '', render: (_, row) => <Button size="small" loading={busy} onClick={() => void selectJob(row)}>{t('ops.import.resume')}</Button> },
+              ]}
+            />
+            {jobsView.nextCursor ? <Button onClick={() => void loadJobs(jobsView.nextCursor)}>{t('sources.h_1w8bpuo')}</Button> : null}
+          </>
+        ) : jobsView ? (
+          <Alert type={jobsView.kind === 'rejected' ? 'error' : 'warning'} showIcon message={jobsView.message} />
+        ) : null}
+      </section>
+
       <Form layout="vertical">
         <Form.Item label={t('ops.import.jobType')}>
           <Select
             value={kind}
             onChange={(v) => setKind(v)}
+            disabled={Boolean(importId)}
             options={[
               { value: 'CODES', label: formatImportKind(locale, 'CODES') },
               { value: 'GUESTS', label: formatImportKind(locale, 'GUESTS') },
@@ -412,6 +556,7 @@ export function ImportInvitationsPanel({
           <Button onClick={downloadTemplate}>{t('ops.h_15064q7')}</Button>
           <Upload
             accept=".csv,text/csv"
+            disabled={busy || Boolean(createIntent.pending) || Boolean(commitIntent.pending)}
             showUploadList={false}
             beforeUpload={(file) => {
               void onFileChosen(file);
@@ -449,25 +594,23 @@ export function ImportInvitationsPanel({
           {t('ops.import.catalogHint')}{mappingRevision}
           {fileId ? ` · fileId ${fileId.slice(0, 8)}…` : ''}
         </Typography.Paragraph>
-        <Form.Item label={t('ops.import.importIdLabel')}>
-          <Input
-            value={importId}
-            onChange={(e) => setImportId(e.target.value)}
-            spellCheck={false}
-          />
-        </Form.Item>
+        {importId ? (
+          <Typography.Paragraph>
+            {t('ops.import.selectedJob')}: <Typography.Text copyable={{ text: importId }}>{importId.slice(0, 8)}…</Typography.Text>
+          </Typography.Paragraph>
+        ) : null}
         <Space wrap>
           <Button
             type="primary"
             loading={busy}
             disabled={
-              !csvText.trim() || !sourceId.trim() || !ticketTypeId.trim()
+              !csvText.trim() || !sourceId.trim() || !ticketTypeId.trim() || Boolean(importId)
             }
             onClick={() => void uploadAndCreate()}
           >{t('ops.import.uploadJob')}</Button>
           <Button
             loading={busy}
-            disabled={!importId.trim()}
+            disabled={!importId.trim() || jobTerminalOrCommitting}
             onClick={() => void runPreview()}
           >
             {t('ops.import.action.preview')}
@@ -475,7 +618,7 @@ export function ImportInvitationsPanel({
           <Button
             loading={busy}
             disabled={
-              !importId.trim() || previewRevision === null || !fileHash
+              !importId.trim() || previewRevision === null || !fileHash || jobTerminalOrCommitting
             }
             onClick={() => void runCommit()}
           >
@@ -504,12 +647,33 @@ export function ImportInvitationsPanel({
           data-testid="import-job-result"
         />
       ) : null}
+      {importView?.kind === 'preview' && importView.preview.sampleErrors.length > 0 ? (
+        <section aria-label={t('ops.import.sampleErrors')}>
+          <Typography.Title level={5}>{t('ops.import.sampleErrors')}</Typography.Title>
+          <Table
+            size="small"
+            rowKey={(_, index) => String(index)}
+            pagination={false}
+            scroll={{ x: 'max-content' }}
+            dataSource={importView.preview.sampleErrors}
+            columns={[
+              { title: t('ops.import.line'), dataIndex: 'fieldId', render: (value: string) => /^row:(\d+):/.exec(value)?.[1] ?? '—' },
+              { title: t('ops.import.field'), dataIndex: 'fieldId', render: (value: string) => /^row:\d+:(.+)$/.exec(value)?.[1] ?? value },
+              { title: t('ops.table.state'), dataIndex: 'code' },
+              { title: t('ops.import.errorMessage'), dataIndex: 'message' },
+            ]}
+          />
+        </section>
+      ) : null}
       <MutationIntentAlert pending={createIntent.pending} needsReconciliation={createIntent.needsReconciliation}
-        onCheck={() => setNotice('Mở danh sách import jobs để đối soát; chưa có BFF GET list import trong portal.')}
+        onCheck={() => void loadJobs()}
         onStartNew={() => { createIntent.release(); submittedCsv.current = null; setFileId(''); }} />
       <MutationIntentAlert pending={commitIntent.pending} needsReconciliation={commitIntent.needsReconciliation}
         onCheck={() => void refreshStatus()} onStartNew={commitIntent.release} />
 
+      </> : null}
+
+      {workflow === 'dispatch' ? <>
       <Typography.Title level={4}>
         {t('ops.invitation.sectionTitle')}
       </Typography.Title>
@@ -574,6 +738,7 @@ export function ImportInvitationsPanel({
           data-testid="invitation-dispatch-result"
         />
       ) : null}
+      </> : null}
       {notice ? (
         <Typography.Text type="secondary">
           {notice}
