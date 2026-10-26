@@ -10,6 +10,34 @@ export type ConfigFields = {
   termsText: string;
 };
 
+export type ConfigFieldDifference = {
+  key: keyof ConfigFields;
+  edited: string;
+  latest: string;
+};
+
+/** Show only fields whose latest server value differs from the operator's draft. */
+export function configFieldDifferences(
+  edited: ConfigFields,
+  latest: ConfigFields,
+): ConfigFieldDifference[] {
+  return (Object.keys(edited) as Array<keyof ConfigFields>)
+    .filter((key) => edited[key].trim() !== latest[key].trim())
+    .map((key) => ({ key, edited: edited[key], latest: latest[key] }));
+}
+
+/** An unsaved or unpreviewed version must never be the publish target. */
+export function canPublishSavedVersion(input: {
+  latestVersion: number | null;
+  previewVersion: number | null;
+  dirty: boolean;
+  conflict: boolean;
+}): boolean {
+  return input.latestVersion !== null &&
+    input.previewVersion === input.latestVersion &&
+    !input.dirty && !input.conflict;
+}
+
 export function hasConfigVersionConflict(
   loadedVersion: number | null,
   latestVersion: number | null,
