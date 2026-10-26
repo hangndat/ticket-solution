@@ -210,7 +210,7 @@ export default function QuotaPage() {
             />
             <StatisticCard
               statistic={{
-                title: 'Capacity',
+                title: t('gate.stat.capacity'),
                 value:
                   quota.capacity === null
                     ? t('quota.h_1tnoz3k')
