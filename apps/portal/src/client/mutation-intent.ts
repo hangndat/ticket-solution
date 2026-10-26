@@ -148,8 +148,13 @@ export class MutationIntent {
       response = { status: 0, json: null, networkError: true, timedOut: false };
     }
     const code = apiErrorCode(response.json) ?? '';
-    if (response.status === 409 || code === 'IDEMPOTENCY_CONFLICT' || /IDEMPOTENCY.*(EXPIRED|MISMATCH)/.test(code)) {
+    const keyConflict = response.status === 409 &&
+      (code === 'IDEMPOTENCY_CONFLICT' || /IDEMPOTENCY.*(EXPIRED|MISMATCH)/.test(code));
+    if (keyConflict) {
       this.save({ ...intent, state: 'conflict' });
+    } else if (response.status === 409 && (!code || code.startsWith('IDEMPOTENCY_'))) {
+      // An unrecognized 409 cannot prove either a key conflict or a terminal rejection.
+      this.save({ ...intent, state: 'unknown' });
     } else if (response.status === 202) {
       this.save({ ...intent, state: 'accepted' });
     } else if (response.status === 429) {
