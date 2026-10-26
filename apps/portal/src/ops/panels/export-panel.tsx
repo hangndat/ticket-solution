@@ -42,6 +42,8 @@ const STATUS_OPTIONS: {
   { value: 'FAILED', label: 'FAILED' },
 ];
 
+const TICKET_STATE_OPTIONS = ['ACTIVE', 'REVOKED', 'CANCELLED', 'USED'].map((value) => ({ value, label: value }));
+
 export function ExportPanel({
   tenantId,
   eventId,
@@ -59,6 +61,9 @@ export function ExportPanel({
     ExportHistoryItem['status'] | undefined
   >();
   const [notice, setNotice] = useState<string | null>(null);
+  const [ticketStates, setTicketStates] = useState<string[]>([]);
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
   const intent = useMutationIntent(tenantId, eventId, 'create-export');
 
   const loadHistory = useCallback(async () => {
@@ -95,8 +100,17 @@ export function ExportPanel({
       setNotice(t('ops.export.needCreateServer'));
       return;
     }
+    if (fromDate && toDate && fromDate > toDate) {
+      setNotice(t('ops.export.invalidRange'));
+      return;
+    }
+    const filter = {
+      ...(ticketStates.length ? { states: ticketStates } : {}),
+      ...(fromDate ? { from: `${fromDate}T00:00:00.000Z` } : {}),
+      ...(toDate ? { to: `${toDate}T23:59:59.999Z` } : {}),
+    };
     setBusy(true);
-    const outcome = await intent.run({ format: 'csv' },
+    const outcome = await intent.run({ format: 'csv', filter },
       (body) => portalMutate(bffExports(tenantId, eventId), body),
       (response) => interpretExportCreate(response.status, response.json,
         response.networkError || response.timedOut, locale).kind === 'created');
@@ -176,7 +190,7 @@ export function ExportPanel({
     } else {
       const next = interpretExportDownload(
         res.status,
-        null,
+        res.json,
         res.networkError || res.timedOut,
         id,
         res.contentType,
@@ -211,6 +225,18 @@ export function ExportPanel({
           );
         }}
       />
+      {canCreate ? (
+        <Space wrap role="group" aria-label={t('ops.export.ticketFilters')}>
+          <Select mode="multiple" allowClear value={ticketStates} onChange={setTicketStates}
+            options={TICKET_STATE_OPTIONS} placeholder={t('ops.export.ticketStates')}
+            style={{ minWidth: 220 }} aria-label={t('ops.export.ticketStates')} />
+          <Input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)}
+            aria-label={t('ops.export.fromUtc')} style={{ minWidth: 170 }} />
+          <Input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)}
+            aria-label={t('ops.export.toUtc')} style={{ minWidth: 170 }} />
+          <Typography.Text type="secondary">{t('ops.export.dateUtcHint')}</Typography.Text>
+        </Space>
+      ) : null}
       <Space wrap role="search" aria-label={t('ops.export.filterHistoryAria')}>
         <Select
           allowClear
@@ -283,6 +309,14 @@ export function ExportPanel({
           role="status"
         />
       ) : null}
+      {view?.kind === 'rejected' && view.code === 'EXPORT_EXPIRED' && canCreate ? (
+        <Space wrap>
+          <Typography.Text>{t('ops.export.expiredRecovery')}</Typography.Text>
+          <Button type="primary" loading={busy} onClick={() => void createExport()}>
+            {t('ops.export.createAgain')}
+          </Button>
+        </Space>
+      ) : null}
       <MutationIntentAlert pending={intent.pending} needsReconciliation={intent.needsReconciliation}
         onCheck={() => void loadHistory()} onStartNew={intent.release} />
       <Table
@@ -290,6 +324,7 @@ export function ExportPanel({
         rowKey="exportId"
         dataSource={history}
         pagination={false}
+        scroll={{ x: 'max-content' }}
         locale={{ emptyText: t('ops.export.historyEmpty') }}
         columns={[
           {

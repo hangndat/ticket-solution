@@ -209,6 +209,7 @@ export async function portalDownload(
 ): Promise<{
   status: number;
   blob: Blob | null;
+  json: unknown;
   contentType: string | null;
   contentDisposition: string | null;
   networkError: boolean;
@@ -228,6 +229,7 @@ export async function portalDownload(
       return {
         status: res.status,
         blob: null,
+        json: await parseJsonSafe(res),
         contentType: res.headers.get('Content-Type'),
         contentDisposition: res.headers.get('Content-Disposition'),
         networkError: false,
@@ -237,6 +239,7 @@ export async function portalDownload(
     return {
       status: res.status,
       blob: await res.blob(),
+      json: null,
       contentType: res.headers.get('Content-Type'),
       contentDisposition: res.headers.get('Content-Disposition'),
       networkError: false,
@@ -247,6 +250,7 @@ export async function portalDownload(
     return {
       status: 0,
       blob: null,
+      json: null,
       contentType: null,
       contentDisposition: null,
       networkError: true,
