@@ -21,7 +21,7 @@ const run = values("--run")[0];
 const dispatchIds = values("--dispatch");
 const receiptFiles = values("--receipt-file");
 if (!run || !/^run_[\w-]+$/.test(run) || values("--run").length !== 1 ||
-    dispatchIds.some((id) => !/^dispatch_[\w-]+$/.test(id)) ||
+    dispatchIds.some((id) => !/^(?:ctx|dispatch)_[\w-]+$/.test(id)) ||
     new Set(dispatchIds).size !== dispatchIds.length ||
     (!commentsOnly && dispatchIds.length === 0) ||
     (commentsOnly && (dispatchIds.length || receiptFiles.length))) {
