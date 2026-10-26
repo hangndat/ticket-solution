@@ -60,6 +60,19 @@ export interface EventConfigPayload {
   termsVersion?: string;
 }
 
+/** Append a draft version; Portal callers should always send expectedVersion. */
+export interface ConfigSaveBody {
+  schemaVersion?: number;
+  payload: EventConfigPayload;
+  /**
+   * Latest draft/config version read by the caller (0 before the first save).
+   * Backend compares under the event lock before appending; stale => 409
+   * REVISION_CONFLICT. Not the event revision or published config version.
+   * Omitted preserves legacy unconditional-save semantics.
+   */
+  expectedVersion?: number;
+}
+
 export interface ConfigVersionSummary {
   version: number;
   schemaVersion: number;

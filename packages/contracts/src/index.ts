@@ -226,6 +226,7 @@ export {
   type EventContentSection,
   type EventConfigPayload,
   type ConfigVersionSummary,
+  type ConfigSaveBody,
   type ConfigVersionListPage,
   type ConfigPreviewResponse,
   type ConfigRollbackBody,
