@@ -1,23 +1,33 @@
 'use client';
 
-import { ProForm, ProFormText, ProFormTextArea, ProTable } from '@ant-design/pro-components';
 import {
-  Alert,
-  Button,
-  Form,
-  Modal,
-  Space,
-  Typography,
-} from 'antd';
+  ProForm,
+  ProFormText,
+  ProFormTextArea,
+  ProTable,
+} from '@ant-design/pro-components';
+import { Alert, Button, Form, Modal, Space, Typography } from 'antd';
 import { PortalPage } from '../../../../../../src/components/portal-page';
 import { useParams } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
-import type { ConfigVersionSummary, EventDetail } from '@ticket/contracts';
+import type {
+  ConfigPreviewResponse,
+  ConfigVersionSummary,
+  EventDetail,
+} from '@ticket/contracts';
 import {
+  apiErrorCode,
   apiErrorMessage,
   portalGet,
   portalMutate,
 } from '../../../../../../src/client/portal-fetch';
+import {
+  configFields,
+  hasConfigVersionConflict,
+  isConfigPreview,
+  mergeConfigFields,
+  type ConfigFields,
+} from '../../../../../../src/prep/config-editor';
 import {
   buildMinimalConfigPayload,
   hasTermsContent,
@@ -42,80 +52,104 @@ export default function ConfigBrandPage() {
   const [message, setMessage] = useState<string | undefined>();
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
-  const [form] = Form.useForm<{
-    organizationName: string;
-    primaryColor: string;
-    termsText: string;
-  }>();
+  const [baseConfig, setBaseConfig] = useState<{
+    version: number | null;
+    payload: ConfigPreviewResponse['payload'] | null;
+    fields: ConfigFields;
+  } | null>(null);
+  const [selectedPreview, setSelectedPreview] =
+    useState<ConfigPreviewResponse | null>(null);
+  const [conflict, setConflict] = useState(false);
+  const [form] = Form.useForm<ConfigFields>();
 
-  const load = useCallback(async () => {
-    await Promise.resolve();
-    setKind('loading');
-    const [c, d] = await Promise.all([
-      portalGet(bffEventAction(tenantId, eventId, 'config-versions')),
-      portalGet(bffEvent(tenantId, eventId)),
-    ]);
-    if (c.networkError || c.timedOut || c.status >= 500) {
-      setKind('unknown');
-      setMessage(t('config.h_194o8da'));
-      return;
-    }
-    if (c.status !== 200 || !c.json || typeof c.json !== 'object') {
-      setKind('error');
-      setMessage(apiErrorMessage(c.json, t('common.httpStatus', { status: c.status })));
-      return;
-    }
-    const items = Array.isArray((c.json as { items?: unknown }).items)
-      ? ((c.json as { items: ConfigVersionSummary[] }).items as ConfigVersionSummary[])
-      : [];
-    setVersions(items);
-    if (d.status === 200 && d.json && typeof d.json === 'object') {
-      setDetail(d.json as EventDetail);
-    }
+  const configVersionsUrl = bffEventAction(
+    tenantId,
+    eventId,
+    'config-versions',
+  );
 
-    const published = items.find((i) => i.published);
-    const tip = items[0];
-    if (tip) {
-      const preview = await portalGet(
-        `${bffEventAction(tenantId, eventId, 'config-versions')}/${tip.version}/preview`,
-      );
-      if (
-        preview.status === 200 &&
-        preview.json &&
-        typeof preview.json === 'object'
-      ) {
-        const payload = (preview.json as { payload?: unknown }).payload;
-        if (payload && typeof payload === 'object') {
-          const brand = (payload as {
-            brand?: { organizationName?: string; primaryColor?: string };
-          }).brand;
-          const sections = (payload as {
-            sections?: Array<{ kind: string; body?: { text?: string } }>;
-          }).sections;
-          const terms = sections?.find((s) => s.kind === 'terms');
-          form.setFieldsValue({
-            organizationName: brand?.organizationName ?? '',
-            primaryColor: brand?.primaryColor ?? '#9b3a18',
-            termsText:
-              typeof terms?.body?.text === 'string' ? terms.body.text : '',
-          });
+  const load = useCallback(
+    async (previewVersion?: number) => {
+      await Promise.resolve();
+      setKind('loading');
+      setBaseConfig(null);
+      setConflict(false);
+      const [c, d] = await Promise.all([
+        portalGet(configVersionsUrl),
+        portalGet(bffEvent(tenantId, eventId)),
+      ]);
+      if (c.networkError || c.timedOut || c.status >= 500) {
+        setKind('unknown');
+        setMessage(t('config.h_194o8da'));
+        return false;
+      }
+      if (c.status !== 200 || !c.json || typeof c.json !== 'object') {
+        setKind('error');
+        setMessage(
+          apiErrorMessage(c.json, t('common.httpStatus', { status: c.status })),
+        );
+        return false;
+      }
+      const items = Array.isArray((c.json as { items?: unknown }).items)
+        ? ((c.json as { items: ConfigVersionSummary[] })
+            .items as ConfigVersionSummary[])
+        : [];
+      setVersions(items);
+      if (d.status === 200 && d.json && typeof d.json === 'object') {
+        setDetail(d.json as EventDetail);
+      }
+
+      const tip = items[0];
+      if (tip) {
+        const preview = await portalGet(
+          `${configVersionsUrl}/${tip.version}/preview`,
+        );
+        if (
+          preview.status !== 200 ||
+          !isConfigPreview(preview.json, tip.version)
+        ) {
+          setKind('error');
+          setMessage(t('config.previewLoadFailed'));
+          return false;
         }
-      } else if (!published) {
-        form.setFieldsValue({
+        const fields = configFields(preview.json.payload);
+        setBaseConfig({
+          version: tip.version,
+          payload: preview.json.payload,
+          fields,
+        });
+        form.setFieldsValue(fields);
+        if (previewVersion != null && previewVersion !== tip.version) {
+          const saved = await portalGet(
+            `${configVersionsUrl}/${previewVersion}/preview`,
+          );
+          if (
+            saved.status !== 200 ||
+            !isConfigPreview(saved.json, previewVersion)
+          ) {
+            setSelectedPreview(null);
+            setKind('ready');
+            return false;
+          }
+          setSelectedPreview(saved.json);
+        } else {
+          setSelectedPreview(preview.json);
+        }
+      } else {
+        const fields = {
           organizationName: '',
           primaryColor: '#9b3a18',
           termsText: '',
-        });
+        };
+        setBaseConfig({ version: null, payload: null, fields });
+        setSelectedPreview(null);
+        form.setFieldsValue(fields);
       }
-    } else {
-      form.setFieldsValue({
-        organizationName: '',
-        primaryColor: '#9b3a18',
-        termsText: '',
-      });
-    }
-    setKind('ready');
-  }, [tenantId, eventId, form, t]);
+      setKind('ready');
+      return true;
+    },
+    [tenantId, eventId, form, t, configVersionsUrl],
+  );
 
   useEffect(() => {
     if (access.kind !== 'ready') return;
@@ -164,40 +198,85 @@ export default function ConfigBrandPage() {
   const canConfig = access.permissions.some((p) =>
     ['event.config', 'config.publish', 'event.update'].includes(p),
   );
-  const publishedVersion =
-    versions.find((v) => v.published)?.version ?? null;
+  const publishedVersion = versions.find((v) => v.published)?.version ?? null;
 
   async function saveDraft() {
     setBusy(true);
     setNotice(null);
     try {
       const values = await form.validateFields();
-      const payload = buildMinimalConfigPayload({
-        organizationName: values.organizationName,
-        primaryColor: values.primaryColor,
-        termsText: values.termsText,
-      });
+      if (!baseConfig) return;
+      const latest = await portalGet(configVersionsUrl);
+      if (
+        latest.networkError ||
+        latest.timedOut ||
+        latest.status !== 200 ||
+        !latest.json ||
+        typeof latest.json !== 'object' ||
+        !Array.isArray((latest.json as { items?: unknown }).items)
+      ) {
+        setNotice(t('config.latestCheckFailed'));
+        return;
+      }
+      const latestVersion =
+        (latest.json as { items: ConfigVersionSummary[] }).items[0]?.version ??
+        null;
+      if (hasConfigVersionConflict(baseConfig.version, latestVersion)) {
+        setConflict(true);
+        return;
+      }
+      const payload = baseConfig.payload
+        ? mergeConfigFields(baseConfig.payload, baseConfig.fields, values)
+        : buildMinimalConfigPayload(values);
       if (!isMinimalBrandOk(payload) || !hasTermsContent(payload)) {
         setNotice(t('config.h_ve7ob6'));
         return;
       }
-      const res = await portalMutate(
-        bffEventAction(tenantId, eventId, 'config-versions'),
-        { payload, schemaVersion: 1 },
-      );
+      const res = await portalMutate(configVersionsUrl, {
+        payload,
+        schemaVersion: payload.schemaVersion,
+      });
       if (res.networkError || res.timedOut || res.status >= 500) {
         setNotice(t('config.h_1irt9z3'));
         return;
       }
       if (res.status >= 200 && res.status < 300) {
-        setNotice(t('config.h_1qavkda'));
-        void load();
+        const savedVersion = (res.json as { version?: unknown } | null)
+          ?.version;
+        const loaded = await load(
+          typeof savedVersion === 'number' ? savedVersion : undefined,
+        );
+        setNotice(
+          typeof savedVersion === 'number' && loaded
+            ? t('config.h_1qavkda')
+            : t('config.previewLoadFailed'),
+        );
+        if (typeof savedVersion !== 'number') setSelectedPreview(null);
+        return;
+      }
+      if (
+        res.status === 409 &&
+        ['REVISION_CONFLICT', 'CONFIG_VERSION_MISMATCH'].includes(
+          apiErrorCode(res.json) ?? '',
+        )
+      ) {
+        setConflict(true);
         return;
       }
       setNotice(apiErrorMessage(res.json, t('config.h_13x41d8')));
     } finally {
       setBusy(false);
     }
+  }
+
+  async function showPreview(version: number) {
+    const response = await portalGet(`${configVersionsUrl}/${version}/preview`);
+    if (response.status !== 200 || !isConfigPreview(response.json, version)) {
+      setNotice(t('config.previewLoadFailed'));
+      return;
+    }
+    setSelectedPreview(response.json);
+    setNotice(null);
   }
 
   async function publishTip() {
@@ -244,8 +323,7 @@ export default function ConfigBrandPage() {
     }
     Modal.confirm({
       title: t('config.rollbackConfirm', { targetVersion }),
-      content:
-        t('config.h_1djtg5w'),
+      content: t('config.h_1djtg5w'),
       okText: 'Rollback',
       okButtonProps: { danger: true },
       cancelText: t('config.huy'),
@@ -292,7 +370,9 @@ export default function ConfigBrandPage() {
           message={t('surface.unknown.title')}
           description={message}
           action={
-            <Button size="small" onClick={() => void load()}>{t('surface.action.recheck')}</Button>
+            <Button size="small" onClick={() => void load()}>
+              {t('surface.action.recheck')}
+            </Button>
           }
         />
       ) : null}
@@ -321,7 +401,13 @@ export default function ConfigBrandPage() {
             <ProFormText
               name="primaryColor"
               label={t('config.h_1fbsj7r')}
-              rules={[{ required: true }]}
+              rules={[
+                { required: true },
+                {
+                  pattern: /^#[0-9a-fA-F]{3}(?:[0-9a-fA-F]{3})?$/,
+                  message: t('config.invalidColor'),
+                },
+              ]}
               fieldProps={{ placeholder: '#9b3a18' }}
             />
             <ProFormTextArea
@@ -334,15 +420,107 @@ export default function ConfigBrandPage() {
               <Button
                 type="primary"
                 loading={busy}
-                disabled={!canConfig}
+                disabled={!canConfig || conflict || !baseConfig}
                 onClick={() => void saveDraft()}
-              >{t('config.h_q8yg9j')}</Button>
+              >
+                {t('config.h_q8yg9j')}
+              </Button>
               <Button
-                disabled={!canConfig || !access.permissions.includes('config.publish')}
+                disabled={
+                  !canConfig || !access.permissions.includes('config.publish')
+                }
                 onClick={() => void publishTip()}
-              >{t('config.h_19gwi7d')}</Button>
+              >
+                {t('config.h_19gwi7d')}
+              </Button>
             </Space>
           </ProForm>
+
+          {conflict ? (
+            <Alert
+              type="warning"
+              showIcon
+              message={t('config.versionConflict')}
+              description={t('config.reloadDiscard')}
+              action={
+                <Button onClick={() => void load()}>
+                  {t('config.reloadLatest')}
+                </Button>
+              }
+              style={{ marginTop: 16 }}
+            />
+          ) : null}
+
+          {selectedPreview ? (
+            <section
+              aria-label={t('config.previewTitle', {
+                version: selectedPreview.version,
+              })}
+              style={{
+                border: '1px solid #d9d9d9',
+                borderRadius: 8,
+                padding: 16,
+                marginTop: 24,
+              }}
+            >
+              <Typography.Title level={5}>
+                {t('config.previewTitle', { version: selectedPreview.version })}
+              </Typography.Title>
+              <Typography.Paragraph>
+                <span
+                  aria-hidden="true"
+                  style={{
+                    backgroundColor: selectedPreview.payload.brand.primaryColor,
+                    display: 'inline-block',
+                    width: 14,
+                    height: 14,
+                    marginRight: 8,
+                    verticalAlign: 'middle',
+                  }}
+                />
+                {selectedPreview.payload.brand.organizationName}
+              </Typography.Paragraph>
+              <Typography.Paragraph>
+                {t('config.previewSections', {
+                  count: selectedPreview.payload.sections.filter(
+                    (section) => section.visible,
+                  ).length,
+                })}
+              </Typography.Paragraph>
+              {selectedPreview.payload.sections
+                .filter((section) => section.visible)
+                .sort((a, b) => a.order - b.order)
+                .map((section) => (
+                  <div key={section.id}>
+                    <Typography.Title level={5}>
+                      {typeof section.body.title === 'string'
+                        ? section.body.title
+                        : section.kind}
+                    </Typography.Title>
+                    {typeof section.body.text === 'string' ? (
+                      <Typography.Paragraph>
+                        {section.body.text}
+                      </Typography.Paragraph>
+                    ) : null}
+                    {section.kind === 'faq' && Array.isArray(section.body.items)
+                      ? section.body.items.map((item, index) => {
+                          if (!item || typeof item !== 'object') return null;
+                          const faq = item as {
+                            question?: unknown;
+                            answer?: unknown;
+                          };
+                          return typeof faq.question === 'string' &&
+                            typeof faq.answer === 'string' ? (
+                            <Typography.Paragraph key={index}>
+                              <strong>{faq.question}</strong> {faq.answer}
+                            </Typography.Paragraph>
+                          ) : null;
+                        })
+                      : null}
+                  </div>
+                ))}
+            </section>
+          ) : null}
 
           <Typography.Title level={5}>{t('config.h_qavzgt')}</Typography.Title>
           <ProTable<ConfigVersionSummary>
@@ -360,6 +538,17 @@ export default function ConfigBrandPage() {
               },
               { title: t('config.h_1c1wh3g'), dataIndex: 'createdAt' },
               {
+                title: t('config.previewAction'),
+                render: (_: unknown, row: ConfigVersionSummary) => (
+                  <Button
+                    size="small"
+                    onClick={() => void showPreview(row.version)}
+                  >
+                    {t('config.previewAction')}
+                  </Button>
+                ),
+              },
+              {
                 title: '',
                 render: (_: unknown, row: ConfigVersionSummary) =>
                   !row.published && publishedVersion != null ? (
@@ -368,7 +557,9 @@ export default function ConfigBrandPage() {
                       danger
                       disabled={!canConfig}
                       onClick={() => rollbackTo(row.version)}
-                    >{t('config.h_wotjs8')}</Button>
+                    >
+                      {t('config.h_wotjs8')}
+                    </Button>
                   ) : null,
               },
             ]}
