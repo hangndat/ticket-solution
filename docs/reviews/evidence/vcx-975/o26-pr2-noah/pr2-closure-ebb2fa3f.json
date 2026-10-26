@@ -1,0 +1,14 @@
+{
+  "closure": "PR2-acceptance",
+  "codeSha": "ebb2fa3fdbdd4dc7d6ec4e38466e2a0e42f39bbc",
+  "at": "2026-10-26T14:24:00.000Z",
+  "verdict": "PASS",
+  "f01Visual": {
+    "artifact": "f01-visual-verify-ebb2fa3f.json",
+    "screenshot": "f01-drawer-visual-390x844-ebb2fa3f.png",
+    "wrapperWidth": 240,
+    "wrapperX": 0,
+    "visibleClickableMenuItems": 5,
+    "navPass": true
+  }
+}
