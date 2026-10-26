@@ -51,6 +51,6 @@
   "verdict": "FAIL",
   "visualPass": true,
   "productF01Verdict": "PASS",
-  "visualVerify": "f01-visual-verify-ebb2fa3f.json",
+  "visualVerify": "f01-visual-verify-7b0ce31a.json",
   "navPass": true
 }
