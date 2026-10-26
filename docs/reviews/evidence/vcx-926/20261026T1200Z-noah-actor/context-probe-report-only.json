@@ -1,0 +1,134 @@
+{
+  "runId": "20261026T1200Z-noah-actor",
+  "probe": "context-single-session",
+  "at": "2026-10-26T03:55:56.514Z",
+  "persona": "report-only",
+  "emailRedacted": "report.fixture@…",
+  "testedSHA": "aaafad413f8c3071e5558405203f5d57fe0484ff",
+  "tenantId": "d9d9f001-0001-4000-8000-000000000001",
+  "eventId": "d9d9f001-0002-4000-8000-000000000001",
+  "actorVerification": {
+    "personaId": "report-only",
+    "emailMapped": "report.fixture@…",
+    "userIdPresent": true,
+    "actorMatch": true,
+    "liveUserIdSha256Prefix": "f8473d0f23ff2748",
+    "expectedSubSha256Prefix": "f8473d0f23ff2748"
+  },
+  "discovery": {
+    "hrefOnPortal": true,
+    "hrefHost": "127.0.0.1:3013",
+    "subject": {
+      "path": "/api/bff/me/subject",
+      "status": 200,
+      "body": {
+        "userIdPresent": true,
+        "userIdSha256Prefix": "f8473d0f23ff2748"
+      }
+    },
+    "tenants": {
+      "path": "/api/bff/me/tenants",
+      "status": 200,
+      "body": {
+        "itemCount": 1,
+        "items": [
+          {
+            "tenantId": "d9d9f001-0001-4000-8000-000000000001",
+            "tenantPermissions": [
+              "event.create"
+            ],
+            "slug": "mfest-demo"
+          }
+        ]
+      }
+    },
+    "events": {
+      "path": "/api/bff/me/events",
+      "status": 200,
+      "body": {
+        "staffEligible": true,
+        "itemCount": 1,
+        "mfestEvent": {
+          "tenantId": "d9d9f001-0001-4000-8000-000000000001",
+          "eventId": "d9d9f001-0002-4000-8000-000000000001",
+          "permissions": [
+            "report.read"
+          ],
+          "role": null
+        },
+        "permissionsSample": [
+          "report.read"
+        ]
+      }
+    },
+    "eventReport": {
+      "path": "/api/bff/tenants/d9d9f001-0001-4000-8000-000000000001/events/d9d9f001-0002-4000-8000-000000000001/report",
+      "status": 200,
+      "bodyKeys": [
+        "asOf",
+        "checkInSuccessCount",
+        "emailNeedsCsCount",
+        "eventId",
+        "pendingApprovalCount",
+        "quota",
+        "quotaCapacityState",
+        "quotaRemaining",
+        "rejectByReason",
+        "ticketsByState"
+      ],
+      "errorCode": null
+    }
+  },
+  "pages": [
+    {
+      "key": "overview",
+      "path": "/t/d9d9f001-0001-4000-8000-000000000001/e/d9d9f001-0002-4000-8000-000000000001",
+      "probe": {
+        "content": true,
+        "denied": false,
+        "subTitle": "",
+        "title": ""
+      },
+      "shot": "context-report-only-overview.png"
+    },
+    {
+      "key": "gate",
+      "path": "/t/d9d9f001-0001-4000-8000-000000000001/e/d9d9f001-0002-4000-8000-000000000001/gate",
+      "probe": {
+        "content": true,
+        "denied": false,
+        "subTitle": "",
+        "title": ""
+      },
+      "shot": "context-report-only-gate.png"
+    },
+    {
+      "key": "guests",
+      "path": "/t/d9d9f001-0001-4000-8000-000000000001/e/d9d9f001-0002-4000-8000-000000000001/guests",
+      "probe": {
+        "content": false,
+        "denied": true,
+        "subTitle": "Cần quyền quản lý khách (nhập, duyệt, thông báo hoặc xuất) từ máy chủ.",
+        "title": "Không có quyền"
+      },
+      "shot": "context-report-only-guests.png"
+    },
+    {
+      "key": "audit",
+      "path": "/t/d9d9f001-0001-4000-8000-000000000001/e/d9d9f001-0002-4000-8000-000000000001/audit",
+      "probe": {
+        "content": true,
+        "denied": false,
+        "subTitle": "",
+        "title": ""
+      },
+      "shot": "context-report-only-audit.png"
+    }
+  ],
+  "classificationHints": {
+    "assignmentMissing": false,
+    "reportReadOnEvent": true,
+    "guestsPermExpected": false
+  },
+  "previousPacket": "20261026T0956Z-noah"
+}

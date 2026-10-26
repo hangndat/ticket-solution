@@ -1,0 +1,78 @@
+{
+  "runId": "20261026T0956Z-noah",
+  "issue": 926,
+  "pr": 952,
+  "reviewedSHA": null,
+  "previousMeasuredSHA": "d00a265cca1206b68601c75d445b633f7d590b57",
+  "testedSHA": "33713db2cfffed29cad98ce9b2077490be5987b6",
+  "contextProbeSHA": "6c16d054d8ebc6bcf6c8a7fb1c4c041982f4c4e5",
+  "provenance": {
+    "orchestrationRun": "run_e692fc90e0f0",
+    "dispatchId": "ctx_4fd887c2abcd",
+    "taskId": "task_c12844502242",
+    "priorEvidenceCommit": "a4d81aaff28cb2486f6681e06f11ed6726936301",
+    "buildProof": {
+      "commands": [
+        "git -C vcx-926-uat rev-parse HEAD → testedSHA",
+        "pnpm --filter @ticket/api... build",
+        "cd apps/portal && NODE_ENV=production pnpm exec next build"
+      ],
+      "testedSHAVerified": "33713db2cfffed29cad98ce9b2077490be5987b6"
+    },
+    "portMap926": {
+      "portal": 3013,
+      "apiReserved": 3598,
+      "apiActualAtProbe": 3499,
+      "apiForeignIgnored": 3498,
+      "evidenceFile": "ports-orca.json"
+    },
+    "manifestDigestSidecar": "manifest.sha256"
+  },
+  "buildProof": "see provenance.buildProof",
+  "harnessDirty": "apps/portal/.uat-artifacts/vcx-926/run-vcx-926-uat.mjs (login wait fix)",
+  "env": {
+    "portal": "http://127.0.0.1:3013",
+    "api": "http://127.0.0.1:3499",
+    "apiNote": "3498 foreign (.Trash/vd08); coordinator reserved 3598 — 3499 chosen free, vcx-926-uat owned PID",
+    "oidc": "http://127.0.0.1:8080/realms/ticket",
+    "locale": "vi",
+    "tenantId": "d9d9f001-0001-4000-8000-000000000001",
+    "eventId": "d9d9f001-0002-4000-8000-000000000001",
+    "studioTenantId": "d9d9f001-0001-4000-8000-000000000002"
+  },
+  "stackOwnership": {
+    "api3499": "vcx-926-uat apps/api dist/main.js via .local-dev/ui869-926/pid",
+    "api3498": "foreign PID 89392 (.Trash/vd08) — not used",
+    "keycloak8080": "shared ui869dev compose",
+    "portal3013": "vcx-926-uat next start"
+  },
+  "artifactHashes": {
+    "1024-cs-setup.png": "e6d7937c0f7afe6b0f8a8cc85cf72dc0eb65957d34595a049a86ae3058ded558",
+    "1024-cs-support.png": "5179e4cc942c7f67e03f6522ee6514c26db66596c20cfaca4a2dc7eef77a88cb",
+    "1024-manager-cross-studio.png": "a5d448773564c8d31b8d2dac89aebb74770f85d82d9a8431e4ce689860566d05",
+    "1024-manager-overview.png": "3aedba07269623c0a236a84c9abcfa5a8512ed7f744a36cc9798e8b860803215",
+    "1024-owner-audit.png": "beb4bc0b9c3bb825527193dcf06c5c88815ba367ceb3c04005c55505116b93b4",
+    "1024-owner-guests.png": "1657dbd806e455217527e90fcf8411b6601fca10e2c2e05f010dba50277424ab",
+    "1024-report-only-gate.png": "8497626ad802586c68341b02d2ac1dbf55410ac08ed4d0c9ed38534b0ba73240",
+    "1024-scanner-overview.png": "62dc4333333f98bf7963550396160032d07d0c9334560c3864e62870db92ca56",
+    "RUN-REPORT.md": "85df571f7de348f87ccebd6db28814614c7d694b3f91e81a83498d82e6db3a99",
+    "manual-probe-results.json": "1ace11e60a27266c15b9f87021edcfe638212093a001fb3b72a0d08f5e495818",
+    "ports-orca.json": "41bef3f3be175b61ad6c28fd2f30e75e318198cee6508bf536033f1338e6ca57",
+    "probe-results.json": "9ea70ae0d61d31ea3fbebb0d6bd401657a8701bc4b98467ebe3dfbde015021c2",
+    "context-probe-owner.json": "971dee5c283ddde2e2e932d9c37c2d443487c982571d230d3579800fa5097b98",
+    "context-probe-report-only.json": "e5e3b32e17e71a2aa8470edd82492bc4fe7390fec09d344defefdc127102f072",
+    "context-owner-overview.png": "24988c0e973535b53600fce7b92fa0329c7cb3d21a8e01563596fda339669afe",
+    "context-owner-gate.png": "2e99aca9396c3bf81ccdfcfd89cc0f8fdf79c8b6ee3fb9570df803c4a1756517",
+    "context-owner-guests.png": "516b7dab953012bec26f1653dfcb9e819281ec5fbab4250daa948fa54fd81238",
+    "context-owner-audit.png": "fd2781e802d9dd07b3fc179e7dd0bfaa2831952fab5b31ff08f765a40fd39be4",
+    "context-report-only-overview.png": "1aa93f5fd0ba31b4df16283c54e37b8b0aeccb6322f7b64c86d4390da487d0b6",
+    "context-report-only-gate.png": "5c2724467db9d8792d836794947d95f5d1d5cc390c21977fa2e5f42bbbb3c4e8",
+    "context-report-only-guests.png": "4fa832636f7cf984cec95fc3e7a4a288f0743a17fedb069793a9bc91c29d9db2",
+    "context-report-only-audit.png": "44d40fb982067954057b2f36a3b07cbad33202ab345bb133c101ac69174c582f"
+  },
+  "secretsExcluded": [
+    "totp-secrets.json",
+    "cookies",
+    "OIDC tokens"
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "runId": "20261026T1200Z-noah-actor",
+  "previousPacket": "20261026T0956Z-noah",
+  "sourceSHA": "aaafad413f8c3071e5558405203f5d57fe0484ff",
+  "harnessChange": "manual-context-probe.mjs sanitize /me/subject reads body.userId (BFF contract); actorVerification compares live userId to Keycloak fixture sub via sha256 prefix (no raw sub in artifact).",
+  "priorNullRootCause": "Probe read body.sub/portalUserId; route returns { userId } only → sanitized null despite HTTP 200.",
+  "actorResults": {
+    "owner": { "actorMatch": true, "userIdSha256Prefix": "6bba46b9281c6f80" },
+    "report-only": { "actorMatch": true, "userIdSha256Prefix": "f8473d0f23ff2748" }
+  },
+  "immutablePriorMeasurements": "20261026T0956Z-noah/* unchanged; this packet is delta only.",
+  "findingIDsPreserved": ["F01", "F05"]
+}

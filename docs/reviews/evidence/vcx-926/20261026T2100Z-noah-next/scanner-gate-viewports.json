@@ -1,0 +1,41 @@
+{
+  "testedSHA": "5136c92a6b1d2c52d95399a096002f44fb910756",
+  "at": "2026-10-26T13:12:24.332Z",
+  "reconciledAt": "2026-10-26T21:20:00+08:00",
+  "interpretation": "Scanner Portal /gate denied = PASS expected-deny theo O23/G-14; AC #926 không yêu cầu Scanner xem báo cáo Portal.",
+  "policyRefs": ["O23", "G-14", "PRD L5", "TECHNICAL-DESIGN L80-82"],
+  "rows": [
+    {
+      "viewport": "390",
+      "expectedViewport": { "w": 390, "h": 844 },
+      "actualViewport": { "w": 390, "h": 844 },
+      "uiObserved": { "content": false, "denied": true, "forbiddenNav": false },
+      "acRawProbe": "denied",
+      "acVerdict": "PASS",
+      "acWhy": "expected-deny-O23",
+      "shot": "390-scanner-gate.png"
+    },
+    {
+      "viewport": "1024",
+      "expectedViewport": { "w": 1024, "h": 900 },
+      "actualViewport": { "w": 1024, "h": 900 },
+      "uiObserved": { "content": false, "denied": true, "forbiddenNav": false },
+      "acRawProbe": "denied",
+      "acVerdict": "PASS",
+      "acWhy": "expected-deny-O23",
+      "shot": "1024-scanner-gate.png"
+    },
+    {
+      "viewport": "1440",
+      "expectedViewport": { "w": 1440, "h": 900 },
+      "actualViewport": { "w": 1440, "h": 900 },
+      "uiObserved": { "content": false, "denied": true, "forbiddenNav": false },
+      "acRawProbe": "denied",
+      "acVerdict": "PASS",
+      "acWhy": "expected-deny-O23",
+      "shot": "1440-scanner-gate.png"
+    }
+  ],
+  "pass": 3,
+  "fail": 0
+}
