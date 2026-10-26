@@ -1,18 +1,10 @@
 import type { Metadata } from 'next';
-import { Be_Vietnam_Pro } from 'next/font/google';
 import { AntdRegistry } from '@ant-design/nextjs-registry';
 import { PortalProviders } from '../src/components/providers';
 import { PortalShell } from '../src/components/portal-shell';
 import { readPortalLocaleFromServerCookies } from '../src/i18n/locale-server';
 import { productOrigin } from '../src/oidc/config';
 import './globals.css';
-
-const beVietnam = Be_Vietnam_Pro({
-  subsets: ['latin', 'vietnamese'],
-  weight: ['400', '500', '600', '700'],
-  display: 'swap',
-  variable: '--font-portal',
-});
 
 export const metadata: Metadata = {
   title: 'Vemoki Portal',
@@ -26,8 +18,8 @@ export default async function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   const locale = await readPortalLocaleFromServerCookies();
   return (
-    <html lang={locale} className={beVietnam.variable} suppressHydrationWarning>
-      <body className={beVietnam.className} suppressHydrationWarning>
+    <html lang={locale} suppressHydrationWarning>
+      <body suppressHydrationWarning>
         <AntdRegistry>
           <PortalProviders initialLocale={locale}>
             <PortalShell productOrigin={productOrigin()}>{children}</PortalShell>
