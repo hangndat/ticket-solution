@@ -1,14 +1,14 @@
 'use client';
 
 import { ProTable } from '@ant-design/pro-components';
-import { Alert, Button, Tag, Tooltip } from 'antd';
+import { Alert, Button, Empty, Flex, Result, Spin, Tag, Tooltip } from 'antd';
 import { PortalPage } from '../../../../src/components/portal-page';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { portalGet } from '../../../../src/client/portal-fetch';
-import { SurfaceState } from '../../../../src/components/surface-state';
 import { usePortalLocale } from '../../../../src/i18n';
+import { SURFACE_MESSAGE_KEYS } from '../../../../src/prep/surface-copy';
 import {
   formatPortfolioMetric,
   formatQuotaRemaining,
@@ -143,29 +143,52 @@ export default function AnalyticsPortfolioPage() {
 
   if (access.kind === 'error') {
     return (
-      <SurfaceState
-        kind="error"
+      <Alert
+        type="error"
+        showIcon
+        message={t(SURFACE_MESSAGE_KEYS.errorLoadFailed)}
         description={access.messageKey ? t(access.messageKey) : undefined}
-        onRetry={() => window.location.reload()}
+        action={
+          <Button size="small" onClick={() => window.location.reload()}>
+            {t(SURFACE_MESSAGE_KEYS.retry)}
+          </Button>
+        }
+        style={{ margin: 24 }}
       />
     );
   }
   if (access.kind === 'permission-denied' || page.kind === 'rejected') {
     return (
-      <SurfaceState
-        kind="permission-denied"
-        title="403"
-        description={
-          page.kind === 'rejected' ? page.message : t('analytics.deniedAccess')
-        }
-        onRetry={() => {
+      <Result
+        status="403"
+        title={t(SURFACE_MESSAGE_KEYS.permissionTitle)}
+        subTitle={page.kind === 'rejected' ? page.message : t('analytics.deniedAccess')}
+        extra={
+          <Button type="primary" onClick={() => {
           window.location.href = `/t/${tenantId}`;
-        }}
+        }}>
+            {t(SURFACE_MESSAGE_KEYS.permissionGoAllowed)}
+          </Button>
+        }
       />
     );
   }
   if (access.kind === 'loading' || page.kind === 'loading') {
-    return <SurfaceState kind="loading" />;
+    return (
+    <Flex
+      vertical
+      align="center"
+      gap="middle"
+      role="status"
+      aria-busy="true"
+      aria-label={t(SURFACE_MESSAGE_KEYS.loading)}
+      suppressHydrationWarning
+      style={{ padding: 48 }}
+    >
+      <Spin size="large" />
+      <span>{t(SURFACE_MESSAGE_KEYS.loading)}</span>
+    </Flex>
+  );
   }
 
   const canListEvents = access.tenant.tenantPermissions.includes('event.list');
@@ -216,25 +239,30 @@ export default function AnalyticsPortfolioPage() {
       ) : null}
 
       {page.kind === 'error' ? (
-        <SurfaceState
-          kind="error"
-          description={page.message}
-          onRetry={() => void load(null, false)}
-        />
+        <Alert
+        type="error"
+        showIcon
+        message={t(SURFACE_MESSAGE_KEYS.errorLoadFailed)}
+        description={page.message}
+        action={
+          <Button size="small" onClick={() => void load(null, false)}>
+            {t(SURFACE_MESSAGE_KEYS.retry)}
+          </Button>
+        }
+        style={{ margin: 24 }}
+      />
       ) : null}
 
       {page.kind === 'empty' ? (
-        <SurfaceState
-          kind="empty"
-          description={t('analytics.empty')}
-          emptyAction={
+        <Empty description={t('analytics.empty')} style={{ padding: 48 }}>
+          {
             canListEvents ? (
               <Link href={`/t/${tenantId}/events`}>
                 <Button type="primary">{t('analytics.viewEvents')}</Button>
               </Link>
             ) : undefined
           }
-        />
+        </Empty>
       ) : null}
 
       {page.kind === 'ready' ? (

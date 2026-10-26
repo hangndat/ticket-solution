@@ -2,7 +2,7 @@
 
 import { ProTable } from '@ant-design/pro-components';
 import type { ProColumns } from '@ant-design/pro-components';
-import { Alert, Button } from 'antd';
+import { Alert, Button, Empty, Flex, Result, Spin } from 'antd';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
@@ -15,8 +15,8 @@ import {
   canPerformTenantAction,
   firstAllowedEventPath,
 } from '../../../../src/nav/capability-policy';
-import { SurfaceState } from '../../../../src/components/surface-state';
 import { usePortalLocale } from '../../../../src/i18n';
+import { SURFACE_MESSAGE_KEYS } from '../../../../src/prep/surface-copy';
 
 type ListState =
   | { kind: 'loading' }
@@ -112,26 +112,52 @@ export default function EventsListPage() {
 
   if (access.kind === 'error') {
     return (
-      <SurfaceState
-        kind="error"
+      <Alert
+        type="error"
+        showIcon
+        message={t(SURFACE_MESSAGE_KEYS.errorLoadFailed)}
         description={access.messageKey ? t(access.messageKey) : undefined}
-        onRetry={() => window.location.reload()}
+        action={
+          <Button size="small" onClick={() => window.location.reload()}>
+            {t(SURFACE_MESSAGE_KEYS.retry)}
+          </Button>
+        }
+        style={{ margin: 24 }}
       />
     );
   }
   if (access.kind === 'permission-denied') {
     return (
-      <SurfaceState
-        kind="permission-denied"
-        description={t('events.h_1xuhi5j')}
-        onRetry={() => {
+      <Result
+        status="403"
+        title={t(SURFACE_MESSAGE_KEYS.permissionTitle)}
+        subTitle={t('events.h_1xuhi5j')}
+        extra={
+          <Button type="primary" onClick={() => {
           window.location.href = `/t/${tenantId}`;
-        }}
+        }}>
+            {t(SURFACE_MESSAGE_KEYS.permissionGoAllowed)}
+          </Button>
+        }
       />
     );
   }
   if (access.kind === 'loading' || list.kind === 'loading') {
-    return <SurfaceState kind="loading" />;
+    return (
+    <Flex
+      vertical
+      align="center"
+      gap="middle"
+      role="status"
+      aria-busy="true"
+      aria-label={t(SURFACE_MESSAGE_KEYS.loading)}
+      suppressHydrationWarning
+      style={{ padding: 48 }}
+    >
+      <Spin size="large" />
+      <span>{t(SURFACE_MESSAGE_KEYS.loading)}</span>
+    </Flex>
+  );
   }
 
   const canCreate = canPerformTenantAction(
@@ -186,24 +212,29 @@ export default function EventsListPage() {
         />
       ) : null}
       {list.kind === 'error' ? (
-        <SurfaceState
-          kind="error"
-          description={list.message}
-          onRetry={() => void load(null)}
-        />
+        <Alert
+        type="error"
+        showIcon
+        message={t(SURFACE_MESSAGE_KEYS.errorLoadFailed)}
+        description={list.message}
+        action={
+          <Button size="small" onClick={() => void load(null)}>
+            {t(SURFACE_MESSAGE_KEYS.retry)}
+          </Button>
+        }
+        style={{ margin: 24 }}
+      />
       ) : null}
       {list.kind === 'empty' ? (
-        <SurfaceState
-          kind="empty"
-          description={t('events.h_ssqyjm')}
-          emptyAction={
+        <Empty description={t('events.h_ssqyjm')} style={{ padding: 48 }}>
+          {
             canCreate ? (
               <Link href={`/t/${tenantId}/events/new`}>
                 <Button type="primary">{t('events.h_ek93o2')}</Button>
               </Link>
             ) : undefined
           }
-        />
+        </Empty>
       ) : null}
       {list.kind === 'ready' ? (
         <>
