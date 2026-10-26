@@ -12,7 +12,7 @@ import {
   Upload,
 } from 'antd';
 import type { ImportKind } from '@ticket/contracts';
-import { useState, type Key } from 'react';
+import { useRef, useState, type Key } from 'react';
 import {
   portalDownload,
   portalGet,
@@ -29,6 +29,7 @@ import {
 import {
   csvTemplateFilename,
   csvTemplateForKind,
+  importAlertType,
   importViewLabel,
   interpretImportCommit,
   interpretImportCreate,
@@ -47,6 +48,8 @@ import {
   type InvitationView,
 } from '../invitation';
 import { formatImportKind, usePortalLocale } from '../../i18n';
+import { useMutationIntent } from '../../client/use-mutation-intent';
+import { MutationIntentAlert } from '../../client/mutation-intent-alert';
 
 type Props = {
   tenantId: string;
@@ -73,6 +76,10 @@ export function ImportInvitationsPanel({
   const [importId, setImportId] = useState('');
   const [fileId, setFileId] = useState('');
   const [fileHash, setFileHash] = useState('');
+  const submittedCsv = useRef<string | null>(null);
+  const uploadFlight = useRef(false);
+  const createIntent = useMutationIntent(tenantId, eventId, 'create-import');
+  const commitIntent = useMutationIntent(tenantId, eventId, 'commit-import');
   const [previewRevision, setPreviewRevision] = useState<number | null>(null);
   const [importView, setImportView] = useState<ImportView | null>(null);
   const [inviteView, setInviteView] = useState<InvitationView | null>(null);
@@ -121,8 +128,16 @@ export function ImportInvitationsPanel({
   }
 
   async function uploadAndCreate() {
+    if (uploadFlight.current) return;
+    uploadFlight.current = true;
     setBusy(true);
     setImportView(null);
+    try {
+    if (createIntent.pending && (!fileId || submittedCsv.current !== csvText)) {
+      setNotice('Lần tạo import trước chưa rõ kết quả. Không tải file khác lên; kiểm tra danh sách import trước.');
+      setBusy(false);
+      return;
+    }
     const parsed = parseCsvForImport({
       kind,
       text: csvText,
@@ -141,41 +156,42 @@ export function ImportInvitationsPanel({
       return;
     }
 
-    const form = new FormData();
-    form.set('kind', kind);
-    form.set(
-      'file',
-      new File([csvText], fileName || 'import.csv', { type: 'text/csv' }),
-    );
-
-    const upload = await portalMultipart(
-      bffImportsUpload(tenantId, eventId),
-      form,
-    );
-    const uploadView = interpretImportUpload(
-      upload.status,
-      upload.json,
-      upload.networkError || upload.timedOut, locale,
-    );
-    if (uploadView.kind !== 'upload') {
-      setImportView(uploadView);
-      setNotice(importViewLabel(uploadView, locale));
-      setBusy(false);
-      return;
+    let uploadFileId = fileId;
+    if (!createIntent.pending) {
+      const form = new FormData();
+      form.set('kind', kind);
+      form.set('file', new File([csvText], fileName || 'import.csv', { type: 'text/csv' }));
+      const upload = await portalMultipart(bffImportsUpload(tenantId, eventId), form);
+      const uploadView = interpretImportUpload(upload.status, upload.json,
+        upload.networkError || upload.timedOut, locale);
+      if (uploadView.kind !== 'upload') {
+        setImportView(uploadView);
+        setNotice(importViewLabel(uploadView, locale));
+        setBusy(false);
+        return;
+      }
+      uploadFileId = uploadView.file.fileId;
+      setFileId(uploadFileId);
+      setFileHash(uploadView.file.fileHash);
+      submittedCsv.current = csvText;
     }
-    setFileId(uploadView.file.fileId);
-    setFileHash(uploadView.file.fileHash);
-
-    const create = await portalMutate(bffImports(tenantId, eventId), {
+    const outcome = await createIntent.run({
       kind,
       sourceId: sourceId.trim(),
       ticketTypeId: ticketTypeId.trim(),
-      fileId: uploadView.file.fileId,
+      fileId: uploadFileId,
       mappingRevision: parsed.mappingRevision,
       columnMapping:
         kind === 'GUESTS' ? { email: emailColumn } : { code: codeColumn },
-      idempotencyKey: crypto.randomUUID(),
-    });
+    }, (body) => portalMutate(bffImports(tenantId, eventId), body),
+    (response) => interpretImportCreate(response.status, response.json,
+      response.networkError || response.timedOut, locale).kind === 'job');
+    if (outcome.kind === 'blocked') {
+      setNotice('Lần tạo import trước chưa rõ kết quả. Kiểm tra import jobs trước khi tiếp tục.');
+      setBusy(false);
+      return;
+    }
+    const create = outcome.response;
     const next = interpretImportCreate(
       create.status,
       create.json,
@@ -188,6 +204,10 @@ export function ImportInvitationsPanel({
     }
     setNotice(importViewLabel(next, locale));
     setBusy(false);
+    } finally {
+      uploadFlight.current = false;
+      setBusy(false);
+    }
   }
 
   async function runPreview() {
@@ -219,15 +239,23 @@ export function ImportInvitationsPanel({
   async function runCommit() {
     if (!importId.trim() || previewRevision === null || !fileHash) return;
     setBusy(true);
-    const result = await portalMutate(
-      `${bffImportJob(tenantId, eventId, importId.trim())}/commit`,
-      {
+    const id = importId.trim();
+    const outcome = await commitIntent.run({
+        importId: id,
         previewRevision,
         mappingRevision,
         fileHash,
-        idempotencyKey: crypto.randomUUID(),
-      },
-    );
+      }, (body) => portalMutate(`${bffImportJob(tenantId, eventId, id)}/commit`,
+        { previewRevision: body.previewRevision, mappingRevision: body.mappingRevision,
+          fileHash: body.fileHash, idempotencyKey: body.idempotencyKey }),
+      (response) => interpretImportCommit(response.status, response.json,
+        response.networkError || response.timedOut, locale).kind === 'commit');
+    if (outcome.kind === 'blocked') {
+      setNotice('Commit import trước chưa rõ kết quả. Kiểm tra job trước khi tiếp tục.');
+      setBusy(false);
+      return;
+    }
+    const result = outcome.response;
     const next = interpretImportCommit(
       result.status,
       result.json,
@@ -470,12 +498,17 @@ export function ImportInvitationsPanel({
 
       {importView ? (
         <Alert
-          type={importView.kind === 'rejected' ? 'error' : 'success'}
+          type={importAlertType(importView)}
           showIcon
           message={importViewLabel(importView, locale)}
           data-testid="import-job-result"
         />
       ) : null}
+      <MutationIntentAlert pending={createIntent.pending} needsReconciliation={createIntent.needsReconciliation}
+        onCheck={() => setNotice('Mở danh sách import jobs để đối soát; chưa có BFF GET list import trong portal.')}
+        onStartNew={() => { createIntent.release(); submittedCsv.current = null; setFileId(''); }} />
+      <MutationIntentAlert pending={commitIntent.pending} needsReconciliation={commitIntent.needsReconciliation}
+        onCheck={() => void refreshStatus()} onStartNew={commitIntent.release} />
 
       <Typography.Title level={4}>
         {t('ops.invitation.sectionTitle')}

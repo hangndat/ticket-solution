@@ -43,7 +43,7 @@ test('portal mutation exposes BFF Retry-After', async () => {
   }));
   try {
     const result = await portalMutate('/api/bff/tenants/t1/events', { idempotencyKey: 'key-a' });
-    assert.equal(result.retryAfter, '3');
+    assert.equal(result.retryAfterMs, 3000);
     assert.equal(result.status, 429);
   } finally {
     fetchMock.mock.restore();

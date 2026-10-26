@@ -1,0 +1,29 @@
+@media (max-width: 600px) {
+  .intentAlert.intentAlert {
+    display: grid;
+    grid-template-columns: 24px minmax(0, 1fr);
+    column-gap: 8px;
+    align-items: start;
+  }
+
+  .intentAlert.intentAlert :global(.ant-alert-icon) {
+    grid-column: 1;
+    grid-row: 1;
+    margin-inline-end: 0;
+  }
+
+  .intentAlert.intentAlert :global(.ant-alert-section) {
+    grid-column: 2;
+    grid-row: 1;
+    min-width: 0;
+  }
+
+  .intentAlert.intentAlert :global(.ant-alert-actions) {
+    grid-column: 2;
+    grid-row: 2;
+    width: 100%;
+    min-width: 0;
+    margin-block-start: 12px;
+    margin-inline-start: 0;
+  }
+}

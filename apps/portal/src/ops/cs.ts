@@ -244,7 +244,7 @@ export function interpretCsResend(
   ticketId: string,
   locale: PortalLocale = DEFAULT_PORTAL_LOCALE,
 ): CsView {
-  if (networkError || status === 0 || status >= 500) {
+  if (networkError || status === 0 || status === 429 || status >= 500) {
     return { kind: 'unknown', message: t(locale, 'ops.h_gafwuk') };
   }
   const body = asRecord(json);
