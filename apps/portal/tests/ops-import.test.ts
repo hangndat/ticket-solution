@@ -14,6 +14,7 @@ import {
   interpretImportCommit,
   interpretImportCreate,
   interpretImportErrorsDownload,
+  interpretImportJobs,
   interpretImportPreview,
   interpretImportUpload,
   parseCsvForImport,
@@ -64,6 +65,29 @@ describe('portal import / invitation helpers', () => {
     if (!over.ok) assert.equal(over.code, IMPORT_ERROR_CODES.IMPORT_ROW_LIMIT);
   });
 
+  it('lists resumable jobs but never treats a denied or malformed read as empty', () => {
+    const summary = {
+      importId,
+      kind: 'GUESTS',
+      status: 'PREVIEW_READY',
+      sourceId: '55555555-5555-4555-8555-555555555555',
+      ticketTypeId: '66666666-6666-4666-8666-666666666666',
+      mappingRevision: 2,
+      previewRevision: 3,
+      validRowCount: 4,
+      errorRowCount: 1,
+      invitationCount: 4,
+      estimatedQuota: 4,
+      createdAt: '2026-10-26T12:00:00.000Z',
+    };
+    const listed = interpretImportJobs(200, { items: [summary], nextCursor: null }, false);
+    assert.equal(listed.kind, 'list');
+    if (listed.kind === 'list') assert.equal(listed.items[0]?.previewRevision, 3);
+    assert.equal(interpretImportJobs(403, { code: 'FORBIDDEN', message: 'Denied' }, false).kind, 'rejected');
+    assert.equal(interpretImportJobs(200, { items: null, nextCursor: null }, false).kind, 'unknown');
+    assert.equal(interpretImportJobs(200, { items: [{ ...summary, invitedEmail: 'guest@example.com' }], nextCursor: null }, false).kind, 'unknown');
+  });
+
   it('interprets upload/create/preview/commit; fail-closed on PII', () => {
     const upload = interpretImportUpload(
       201,
@@ -111,7 +135,7 @@ describe('portal import / invitation helpers', () => {
     assert.equal(leak.kind, 'unknown');
 
     const preview = interpretImportPreview(
-      200,
+      201,
       {
         importId,
         previewRevision: 1,
