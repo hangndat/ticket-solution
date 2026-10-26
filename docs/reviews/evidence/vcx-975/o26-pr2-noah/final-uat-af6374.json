@@ -1,0 +1,162 @@
+{
+  "supersedes": "pre-F01 shell matrix (c8130ba uat-results shots)",
+  "pr": 980,
+  "codeSha": "af6374bd06b19469cd3e2454819b28f9a6785404",
+  "buildId": "5xdXYoXU-ia30CkqQ01hM",
+  "base": "http://uat975shell.localhost:3019",
+  "at": "2026-10-26T14:10:18.136Z",
+  "actor": "owner.fixture@example.com",
+  "browserPageId": "b5f37af9-ea4c-4727-9aad-62837908cad0",
+  "viewportResults": [
+    {
+      "viewport": "390x844",
+      "mode": "drawer",
+      "probe": {
+        "contextStrip": true,
+        "denied": false,
+        "desktopSider": false,
+        "drawerTrigger": true,
+        "eventSwitcher": true,
+        "href": "http://uat975shell.localhost:3019/t/d9d9f001-0001-4000-8000-000000000001/events",
+        "innerHeight": 844,
+        "innerWidth": 390,
+        "portalMain": true,
+        "tenantSwitcher": true,
+        "zeroWidthTriggerVisible": false
+      },
+      "screenshot": {
+        "file": "final-shell-390x844.png",
+        "dpr": 1,
+        "innerHeight": 844,
+        "innerWidth": 390,
+        "pngWidth": 390,
+        "pngHeight": 844,
+        "pixelPass": true
+      },
+      "pass": true
+    },
+    {
+      "viewport": "1024x900",
+      "mode": "sider",
+      "probe": {
+        "contextStrip": true,
+        "denied": false,
+        "desktopSider": true,
+        "drawerTrigger": false,
+        "eventSwitcher": true,
+        "href": "http://uat975shell.localhost:3019/t/d9d9f001-0001-4000-8000-000000000001/events",
+        "innerHeight": 900,
+        "innerWidth": 1024,
+        "portalMain": true,
+        "tenantSwitcher": true,
+        "zeroWidthTriggerVisible": false
+      },
+      "screenshot": {
+        "file": "final-shell-1024x900.png",
+        "dpr": 1,
+        "innerHeight": 900,
+        "innerWidth": 1024,
+        "pngWidth": 1024,
+        "pngHeight": 900,
+        "pixelPass": true
+      },
+      "pass": true
+    },
+    {
+      "viewport": "1440x900",
+      "mode": "sider",
+      "probe": {
+        "contextStrip": true,
+        "denied": false,
+        "desktopSider": true,
+        "drawerTrigger": false,
+        "eventSwitcher": true,
+        "href": "http://uat975shell.localhost:3019/t/d9d9f001-0001-4000-8000-000000000001/events",
+        "innerHeight": 900,
+        "innerWidth": 1440,
+        "portalMain": true,
+        "tenantSwitcher": true,
+        "zeroWidthTriggerVisible": false
+      },
+      "screenshot": {
+        "file": "final-shell-1440x900.png",
+        "dpr": 1,
+        "innerHeight": 900,
+        "innerWidth": 1440,
+        "pngWidth": 1440,
+        "pngHeight": 900,
+        "pixelPass": true
+      },
+      "pass": true
+    }
+  ],
+  "mobileDrawer": {
+    "before": {
+      "contextStrip": true,
+      "denied": false,
+      "desktopSider": false,
+      "drawerTrigger": true,
+      "eventSwitcher": true,
+      "href": "http://uat975shell.localhost:3019/t/d9d9f001-0001-4000-8000-000000000001/events",
+      "innerHeight": 844,
+      "innerWidth": 390,
+      "portalMain": true,
+      "tenantSwitcher": true,
+      "zeroWidthTriggerVisible": false
+    },
+    "selectorLimits": {
+      "orcaClickOpensDrawer": false,
+      "nativeClickOpensDrawer": true,
+      "orcaOpen": {
+        "ok": true
+      },
+      "note": "Orca click on portal-nav-trigger often does not open antd Drawer; native .click() used for product nav proof."
+    },
+    "afterNative": {
+      "items": [
+        "Tổng quan tổ chức",
+        "Sự kiện",
+        "Phân tích",
+        "Thành viên",
+        "Cấu hình"
+      ],
+      "open": true
+    },
+    "drawerNavToAnalytics": false,
+    "pass": true
+  },
+  "unsavedTenantSwitch": {
+    "dirty": {
+      "ok": true,
+      "value": "NoahFinalDirty"
+    },
+    "orcaOpenTenant": {
+      "ok": true
+    },
+    "tenantSwitchAttempt": {
+      "method": "tenant_select",
+      "count": 0,
+      "reason": "single_tenant_fixture",
+      "skipped": true
+    },
+    "state": {
+      "confirmLog": [],
+      "path": "/t/d9d9f001-0001-4000-8000-000000000001/e/d9d9f001-0002-4000-8000-000000000001/config",
+      "stayedOnConfig": true
+    },
+    "cancelOk": false,
+    "verdict": "inconclusive",
+    "note": "Fixture has single selectable tenant — cannot complete real tenant value change; confirm not observed (inconclusive for tenant-switch AC, not product fail).",
+    "selectorLimits": {
+      "orcaTenantOpen": true,
+      "note": "Tenant switch proof requires ant-select options in DOM; Orca click may only open dropdown."
+    }
+  },
+  "selectorLimitsSummary": [
+    "Orca click [data-testid=portal-nav-trigger] typically does not open Drawer; native click does.",
+    "Orca click [data-testid=account-menu] typically does not open Dropdown (not re-tested this run).",
+    "Unsaved tenant switch limited by fixture tenant count when < 2 options."
+  ],
+  "pngPixelPassAll": true,
+  "verdict": "PASS with known gap"
+}

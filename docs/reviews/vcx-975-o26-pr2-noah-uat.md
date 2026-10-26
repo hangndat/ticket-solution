@@ -1,58 +1,55 @@
-# VCX-975 O26-PR2 — Owner shell UAT (Noah · fixture)
+# VCX-975 O26-PR2 — Final UAT (Noah · fixture)
 
-**Ngày:** 26/10/2026 · **Issue:** [#975](https://github.com/hangndat/ticket-solution/issues/975) · **PR:** [#980](https://github.com/hangndat/ticket-solution/pull/980) · **Epic:** [#914](https://github.com/hangndat/ticket-solution/issues/914)  
-**Branch:** `hangndat/vcx-975-antd-shell` @ **`af6374bd06b19469cd3e2454819b28f9a6785404`** (không UAT trên `2f233667`)  
-**Shell matrix SHA:** `c8130ba7d966f7b3565365f7c73996ea79281e83` · **F01 SHA:** `af6374bd…` · **Build ID (F01):** `nCGzARPt2xhorwFPh1kKh`  
-**Runner:** Noah (fixture/runtime) — không sửa `apps/portal` product code.
+**Ngày:** 26/10/2026 · **Issue:** [#975](https://github.com/hangndat/ticket-solution/issues/975) · **PR:** [#980](https://github.com/hangndat/ticket-solution/pull/980)  
+**Code SHA (canonical):** `af6374bd06b19469cd3e2454819b28f9a6785404` · **Build ID:** `5xdXYoXU-ia30CkqQ01hM`  
+**Branch:** `hangndat/vcx-975-antd-shell` · **Higo product edits:** done (Drawer header trigger + CSS zero-width overlay hide).
 
-## Verdict
+**Supersedes:** pre-F01 shell matrix @ `c8130ba` và evidence PNG `owner-shell-*` — verdict cuối lấy từ [`final-uat-af6374.json`](evidence/vcx-975/o26-pr2-noah/final-uat-af6374.json).
 
-| Phạm vi | Kết luận |
+## Final verdict
+
+**`PASS with known gap`** @ `af6374bd`
+
+| Phạm vi | Kết quả |
 | --- | --- |
-| **Shell Owner sau OIDC (blocker PR #980)** | **PASS** @ `c8130ba` — matrix 390 / 1024 / 1440 (`uat-results.json`) |
-| **F01 mobile Drawer** | **PASS** @ `af6374bd` — [`f01-drawer-mobile.json`](evidence/vcx-975/o26-pr2-noah/f01-drawer-mobile.json) |
-| Locale / unsaved / logout (interactive) | **Inconclusive** — không đủ trigger hợp lệ; **không** claim regression sản phẩm |
+| Authenticated shell @ 390 / 1024 / 1440 | **PASS** — `#portal-main`, context strip, tenant/event switchers; PNG IHDR khớp |
+| F01 mobile @ 390 — Drawer + context | **PASS** — header trigger; `zeroWidthTriggerVisible: false`; drawer mở (native click) |
+| Drawer → nav (analytics) | **Inconclusive** — eval `link.click()` trong drawer không đổi route (harness); mở drawer + menu items OK |
+| Unsaved + **tenant switch** | **Inconclusive** — fixture **1** tenant selectable; không đổi giá trị tenant → `confirm` không quan sát được |
+| Orca automation | **Giới hạn** — xem § Selector limits |
 
-**Verdict Noah:** `PASS` shell + F01; interactive gaps **inconclusive** (harness/Orca delivery).
+## Viewport matrix (final)
 
-## F01 — mobile Drawer (@ 390×844)
+| Viewport | Mode | Pass | Ghi chú |
+| --- | --- | --- | --- |
+| 390×844 | Drawer | ✅ | `portal-nav-trigger`; không desktop sider; không zero-width overlay |
+| 1024×900 | Sider | ✅ | `desktopSider`; không drawer trigger |
+| 1440×900 | Sider | ✅ | Cùng 1024 |
 
-| Kiểm tra | Kết quả |
-| --- | --- |
-| `innerWidth` 390, trigger `portal-nav-trigger` | **PASS** — width ≈ 44.3px, height 32px (không zero-width overlap) |
-| Desktop sider ẩn @ narrow | **PASS** — `siderVisible: false` |
-| Drawer mở + menu | **PASS** — 5 items (Tổng quan tổ chức … Cấu hình), `aria-expanded=true` |
-| PNG IHDR | **PASS** — `390×844` (`f01-drawer-open-390x844.png`) |
-| Orca `click` trên trigger | **Không mở drawer** (`orcaClickOpensDrawer: false`) — chỉ ghi nhận automation; **không** fail F01 sản phẩm |
+Screenshots: `final-shell-390x844.png`, `final-shell-1024x900.png`, `final-shell-1440x900.png`.
 
-## Exact gaps (interactive — inconclusive)
+## Selector limits (ghi thật)
 
-Artifact: [`gap-probe-manual.json`](evidence/vcx-975/o26-pr2-noah/gap-probe-manual.json).
-
-| ID | Kết luận |
-| --- | --- |
-| **G-975-LOCALE** | **Inconclusive** — menu/EN chưa chứng minh qua Orca AX; không assume product |
-| **G-975-UNSAVED** | **Inconclusive** — `link_click` với `links=[]`, `confirmLog=[]` **không** chứng minh regression; cần dirty + tenant/event/sider nav thật |
-| **G-975-LOGOUT** | **Inconclusive** — không dùng làm signal sản phẩm trong scope cuối |
+1. **`orca click [data-testid=portal-nav-trigger]`** — `orcaClickOpensDrawer: false` dù `ok: true`; **native** `HTMLElement.click()` mở drawer (`nativeClickOpensDrawer: true`).
+2. **`orca click` tenant `.ant-select-selector`** — mở dropdown (`orcaOpenTenant.ok`); fixture chỉ 1 tenant → không test đổi tenant.
+3. **Account dropdown / locale** — không retest trong lượt final; gap trước vẫn **inconclusive**, không assume product.
 
 ## Stack
 
-| Thành phần | Giá trị |
+`http://uat975shell.localhost:3019` + API `127.0.0.1:3542` (read-only vcx932-noah) · OIDC `ticket-admin-web-vcx975-uat975shell` · Owner fixture (TOTP private, không commit).
+
+Fixture: `.local-dev/.uat-artifacts/vcx975-noah-shell/` (gitignored).
+
+## Artifacts
+
+| File | Mô tả |
 | --- | --- |
-| Portal fixture | `http://uat975shell.localhost:3019` |
-| API | `http://127.0.0.1:3542` (read-only reuse vcx932-noah) |
-| OIDC client | `ticket-admin-web-vcx975-uat975shell` (riêng; không #928) |
-
-Fixture gitignored: `.local-dev/.uat-artifacts/vcx975-noah-shell/` — **không commit**.
-
-## Evidence packet
-
-- [`uat-results.json`](evidence/vcx-975/o26-pr2-noah/uat-results.json) + `owner-shell-*.png`
-- [`f01-drawer-mobile.json`](evidence/vcx-975/o26-pr2-noah/f01-drawer-mobile.json) + `f01-drawer-open-390x844.png`
-- [`gap-probe-manual.json`](evidence/vcx-975/o26-pr2-noah/gap-probe-manual.json)
-- [`ports-orca.json`](evidence/vcx-975/o26-pr2-noah/ports-orca.json)
+| [`final-uat-af6374.json`](evidence/vcx-975/o26-pr2-noah/final-uat-af6374.json) | Packet canonical |
+| [`uat-results.json`](evidence/vcx-975/o26-pr2-noah/uat-results.json) | Bản sao packet final |
+| [`gap-probe-manual.json`](evidence/vcx-975/o26-pr2-noah/gap-probe-manual.json) | Interactive gaps — inconclusive |
+| `f01-drawer-mobile.json` | Lịch sử F01 sớm (tham chiếu); superseded bởi final matrix |
 
 ## Coordinator
 
-- **Blocker PR2 shell:** không.
-- **Không** retest / evidence trên `2f233667` trong phiên Noah.
+- **Blocker PR #980 shell/F01:** không.
+- **Gap biết:** unsaved tenant-switch cần fixture ≥2 tenant hoặc event/sider nav probe riêng nếu Epic bắt buộc; drawer in-menu nav cần Orca ref/text click follow-up nếu cần automation proof.
