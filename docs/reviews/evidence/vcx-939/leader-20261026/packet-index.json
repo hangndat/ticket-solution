@@ -401,6 +401,51 @@
       "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
     },
     {
+      "path": "ui-validation/README.md",
+      "bytes": 1634,
+      "sha256": "9ea1dd7ff3eba35d2344d890309f762176bf7e7c701b51be623c80985653a7a9"
+    },
+    {
+      "path": "ui-validation/cleanup.json",
+      "bytes": 162,
+      "sha256": "76c4cc68c40f716d7f562edc64de46b328102e52170be8f1488fc9a0debdb2ab"
+    },
+    {
+      "path": "ui-validation/guest-claim-1024.json",
+      "bytes": 366,
+      "sha256": "aaf9c193207fb4098f5ab6489b1c01fd5728e42174afd3d9d8b5c41e6267ca06"
+    },
+    {
+      "path": "ui-validation/guest-claim-1440.json",
+      "bytes": 366,
+      "sha256": "3c24bb05aa7053fa329b04d6cc7b18700e19b5bec99b38bcc189177fc247c2ba"
+    },
+    {
+      "path": "ui-validation/guest-claim-390.json",
+      "bytes": 363,
+      "sha256": "ab65dbb7e9574ff2dd2526f852acb2e626f868bdbef9102d10b1d02df279a9b4"
+    },
+    {
+      "path": "ui-validation/manifest-check.json",
+      "bytes": 63,
+      "sha256": "921622ea308bad7441c20893f6c9fd3a360bef2a5d02a60cbaaa1b81e08bf465"
+    },
+    {
+      "path": "ui-validation/owner-redeem-1024.json",
+      "bytes": 368,
+      "sha256": "b6e1a2c5136f86f53f44813fd82023549eab57de36dc092fb14f35214433f509"
+    },
+    {
+      "path": "ui-validation/owner-redeem-1440.json",
+      "bytes": 368,
+      "sha256": "e3e4c3ff49316dd89cc99f2c34b10870108bbbe2249dfde8249845b74aa0d7a9"
+    },
+    {
+      "path": "ui-validation/owner-redeem-390.json",
+      "bytes": 365,
+      "sha256": "e0dbb5df1cee3cf070003b72cb4a77390f373fc4bf6765dca079c2a12ca03138"
+    },
+    {
       "path": "unknown-after-commit-1024.png",
       "bytes": 63197,
       "sha256": "5d6bd05d9c99ffc184bded1a605c677f4d47011f3fa02b3e5b1a39b5faff306c"
