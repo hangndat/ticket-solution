@@ -41,7 +41,8 @@ export async function POST(request: Request, { params }: Props) {
   } catch {
     body = {};
   }
-  const idempotencyKey = body.idempotencyKey?.trim() || crypto.randomUUID();
+  const idempotencyKey = typeof body?.idempotencyKey === 'string'
+    ? body.idempotencyKey.trim() : '';
   if (!isUuid(idempotencyKey)) {
     return bffApiError(
       'IDEMPOTENCY_KEY_REQUIRED',
