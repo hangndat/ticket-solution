@@ -14,6 +14,8 @@ const {
   grantEventAssignment,
   ConfigError,
   CONFIG_ERROR_CODES,
+  AuthzError,
+  AUTHZ_ERROR_CODES,
   saveEventConfigVersion,
   publishEventConfig,
   listEventConfigVersions,
@@ -136,7 +138,9 @@ async function seedManager(db, tenantId, eventId) {
     emailVerified: true,
   });
   await withTenant(db, tenantId, async (tx) => {
-    await tx.tenant.create({ data: { id: tenantId, slug: 'cfg', name: 'Cfg Tenant Org' } });
+    await tx.tenant.create({
+      data: { id: tenantId, slug: 'cfg-' + tenantId.slice(0, 8), name: 'Cfg Tenant Org' },
+    });
     await tx.event.create({
       data: { tenantId, id: eventId, slug: 'launch', name: 'Launch', status: 'DRAFT' },
     });
@@ -525,6 +529,194 @@ test('asset quarantine finalize rejects fake MIME/HTML and accepts reencoded PNG
         error instanceof ConfigError &&
         error.code === CONFIG_ERROR_CODES.REVISION_CONFLICT,
     );
+  } finally {
+    if (db) await db.$disconnect();
+    if (name) execFileSync('docker', ['rm', '-f', name], { stdio: 'ignore' });
+  }
+});
+
+test('config save CAS: expectedVersion precondition rejects stale/invalid writers and serializes concurrent saves', { timeout: 180000 }, async () => {
+  let name;
+  let db;
+  try {
+    const boot = await startIsolatedPostgres();
+    name = boot.name;
+    db = createDatabase(boot.url, 2);
+    const tenantId = 'ffffffff-ffff-4fff-8fff-ffffffffffff';
+    const eventId = '11111111-1111-4111-8111-111111111111';
+    const manager = await seedManager(db, tenantId, eventId);
+
+    // first0: expectedVersion 0 is valid before any save exists.
+    const first = await withTenant(db, tenantId, (tx) =>
+      saveEventConfigVersion(tx, {
+        tenantId,
+        eventId,
+        actorUserId: manager.userId,
+        payload: typedPayload({ title: 'v1' }),
+        expectedVersion: 0,
+      }),
+    );
+    assert.equal(first.version, 1);
+
+    // stale: caller read version 0 but version 1 already exists.
+    await assert.rejects(
+      () =>
+        withTenant(db, tenantId, (tx) =>
+          saveEventConfigVersion(tx, {
+            tenantId,
+            eventId,
+            actorUserId: manager.userId,
+            payload: typedPayload({ title: 'stale' }),
+            expectedVersion: 0,
+          }),
+        ),
+      (error) =>
+        error instanceof ConfigError &&
+        error.code === CONFIG_ERROR_CODES.REVISION_CONFLICT,
+    );
+
+    // invalid shapes must reject, not silently coerce.
+    for (const invalid of [-1, 1.5, null, 'latest']) {
+      await assert.rejects(
+        () =>
+          withTenant(db, tenantId, (tx) =>
+            saveEventConfigVersion(tx, {
+              tenantId,
+              eventId,
+              actorUserId: manager.userId,
+              payload: typedPayload({ title: 'invalid' }),
+              expectedVersion: invalid,
+            }),
+          ),
+        (error) =>
+          error instanceof ConfigError &&
+          error.code === CONFIG_ERROR_CODES.CONFIG_VERSION_INVALID,
+      );
+    }
+
+    // legacy compat: omitted expectedVersion keeps unconditional-save semantics
+    // even though the caller's view (version 1) is already stale.
+    const legacy = await withTenant(db, tenantId, (tx) =>
+      saveEventConfigVersion(tx, {
+        tenantId,
+        eventId,
+        actorUserId: manager.userId,
+        payload: typedPayload({ title: 'legacy-caller' }),
+      }),
+    );
+    assert.equal(legacy.version, 2);
+
+    // concurrent same expectedVersion: exactly one append succeeds, the other
+    // observes the conflict instead of appending a stale payload.
+    const baseline = 2;
+    const results = await Promise.allSettled([
+      withTenant(db, tenantId, (tx) =>
+        saveEventConfigVersion(tx, {
+          tenantId,
+          eventId,
+          actorUserId: manager.userId,
+          payload: typedPayload({ title: 'racer-A' }),
+          expectedVersion: baseline,
+        }),
+      ),
+      withTenant(db, tenantId, (tx) =>
+        saveEventConfigVersion(tx, {
+          tenantId,
+          eventId,
+          actorUserId: manager.userId,
+          payload: typedPayload({ title: 'racer-B' }),
+          expectedVersion: baseline,
+        }),
+      ),
+    ]);
+    const fulfilled = results.filter((r) => r.status === 'fulfilled');
+    const rejected = results.filter((r) => r.status === 'rejected');
+    assert.equal(fulfilled.length, 1, 'exactly one concurrent save must win');
+    assert.equal(rejected.length, 1, 'exactly one concurrent save must conflict');
+    assert.ok(
+      rejected[0].reason instanceof ConfigError &&
+        rejected[0].reason.code === CONFIG_ERROR_CODES.REVISION_CONFLICT,
+    );
+    assert.equal(fulfilled[0].value.version, baseline + 1);
+
+    const rows = await withTenant(db, tenantId, (tx) =>
+      tx.$queryRaw`SELECT version, payload FROM event_config_versions WHERE tenant_id = ${tenantId}::uuid AND event_id = ${eventId}::uuid ORDER BY version`,
+    );
+    assert.equal(rows.length, baseline + 1, 'no stale payload was appended');
+    const winnerTitle = rows[rows.length - 1].payload.sections[0].body.title;
+    assert.ok(winnerTitle === 'racer-A' || winnerTitle === 'racer-B');
+
+    // auth negative: RBAC — a membership without event.config must still be
+    // denied even when it supplies a correct expectedVersion.
+    const viewer = await createPrismaIdentityUserRepository(
+      db,
+    ).upsertFromVerifiedIdentity({
+      issuer: 'http://127.0.0.1:8080/realms/ticket',
+      subject: 'viewer',
+      email: 'viewer@example.com',
+      emailVerified: true,
+    });
+    await withTenant(db, tenantId, async (tx) => {
+      const viewerMembership = await grantMembership(tx, {
+        tenantId,
+        userId: viewer.userId,
+        role: 'VIEWER',
+        permissions: ['event.publish'],
+      });
+      await grantEventAssignment(tx, {
+        tenantId,
+        eventId,
+        membershipId: viewerMembership.membershipId,
+        permissions: ['event.publish'],
+      });
+    });
+    const currentLatest = rows.length;
+    await assert.rejects(
+      () =>
+        withTenant(db, tenantId, (tx) =>
+          saveEventConfigVersion(tx, {
+            tenantId,
+            eventId,
+            actorUserId: viewer.userId,
+            payload: typedPayload({ title: 'no-permission' }),
+            expectedVersion: currentLatest,
+          }),
+        ),
+      (error) =>
+        error instanceof AuthzError &&
+        error.code === AUTHZ_ERROR_CODES.PERMISSION_DENIED,
+    );
+
+    // auth negative: tenant isolation under real RLS runtime role — a manager
+    // from a second tenant has no membership/assignment row scoped to the
+    // first tenant's event, so deny-by-default rejects before any row lock.
+    const otherTenantId = '22222222-2222-4222-8222-222222222222';
+    const otherManager = await seedManager(
+      db,
+      otherTenantId,
+      '33333333-3333-4333-8333-333333333333',
+    );
+    await assert.rejects(
+      () =>
+        withTenant(db, otherTenantId, (tx) =>
+          saveEventConfigVersion(tx, {
+            tenantId: otherTenantId,
+            eventId,
+            actorUserId: otherManager.userId,
+            payload: typedPayload({ title: 'cross-tenant' }),
+            expectedVersion: currentLatest,
+          }),
+        ),
+      (error) =>
+        error instanceof AuthzError &&
+        error.code === AUTHZ_ERROR_CODES.EVENT_ASSIGNMENT_REQUIRED,
+    );
+
+    // no stale append from any of the rejected negative-path attempts above.
+    const finalRows = await withTenant(db, tenantId, (tx) =>
+      tx.$queryRaw`SELECT COUNT(*)::int AS n FROM event_config_versions WHERE tenant_id = ${tenantId}::uuid AND event_id = ${eventId}::uuid`,
+    );
+    assert.equal(finalRows[0].n, baseline + 1);
   } finally {
     if (db) await db.$disconnect();
     if (name) execFileSync('docker', ['rm', '-f', name], { stdio: 'ignore' });

@@ -226,6 +226,7 @@ export {
   type EventContentSection,
   type EventConfigPayload,
   type ConfigVersionSummary,
+  type ConfigSaveBody,
   type ConfigVersionListPage,
   type ConfigPreviewResponse,
   type ConfigRollbackBody,
@@ -247,6 +248,9 @@ export {
   type ImportJobStatus,
   type ImportCreateBody,
   type ImportJob,
+  type ImportJobSummary,
+  type ImportJobListPage,
+  type ImportJobListQuery,
   type ImportPreviewResponse,
   type ImportCommitBody,
   type ImportCommitResponse,
@@ -259,6 +263,7 @@ export {
   type InvitationClaimBody,
   type ImportErrorCode,
   type InvitationListPage,
+  type InvitationListQuery,
 } from './import-invite';
 
 export {
@@ -559,6 +564,24 @@ export interface TenantLimitsDto {
   maxStaff: number | null;
   emailPerDay: number | null;
   importRowsPerJob: number | null;
+}
+
+/** Tenant read-only snapshot (#924/#958); not the Platform Operator DTO. */
+export interface TenantLimitsUsageReadDto {
+  tenantId: string;
+  /** null means no configured cap, not a commercial unlimited promise. */
+  limits: TenantLimitsDto;
+  usage: {
+    events: number;
+    staffActive: number;
+    staffPendingInvites: number;
+    /** Existing usage counter for emailUsageDate in UTC. */
+    emailToday: number;
+  };
+  /** UTC ISO 8601 database snapshot time, not a client refresh timestamp. */
+  asOf: string;
+  /** YYYY-MM-DD UTC. */
+  emailUsageDate: string;
 }
 
 export interface TenantFlagsDto {

@@ -88,6 +88,22 @@ async function lockEvent(
   return row;
 }
 
+/**
+ * expectedVersion is the latest draft/config version the caller last read
+ * (0 before any save). It is distinct from event.revision, which only
+ * increments on publish/rollback and does not move on draft save.
+ */
+function requireValidExpectedVersion(value: unknown): number | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== 'number' || !Number.isInteger(value) || value < 0) {
+    throw new ConfigError(
+      CONFIG_ERROR_CODES.CONFIG_VERSION_INVALID,
+      'expectedVersion must be a non-negative integer',
+    );
+  }
+  return value;
+}
+
 function assertConfigMutable(event: LockedEvent): void {
   if (
     event.content_status === 'ARCHIVED' ||
@@ -230,8 +246,11 @@ export async function saveEventConfigVersion(
     actorUserId: string;
     schemaVersion?: number;
     payload: Record<string, unknown>;
+    /** Omitted preserves legacy unconditional-save semantics. */
+    expectedVersion?: number;
   },
 ): Promise<ConfigVersionResult> {
+  const expectedVersion = requireValidExpectedVersion(input.expectedVersion);
   if (!input.payload || Array.isArray(input.payload)) {
     throw new ConfigError(
       CONFIG_ERROR_CODES.CONFIG_PAYLOAD_REQUIRED,
@@ -252,6 +271,25 @@ export async function saveEventConfigVersion(
   });
   const event = await lockEvent(tx, input.tenantId, input.eventId);
   assertConfigMutable(event);
+
+  if (expectedVersion !== undefined) {
+    // event row is FOR UPDATE-locked above, so concurrent saves for the same
+    // event serialize here: the loser re-reads MAX(version) after the winner
+    // committed and observes the mismatch instead of appending stale payload.
+    const latest = await tx.$queryRaw<Array<{ version: number }>>`
+      SELECT COALESCE(MAX(version), 0) AS version
+      FROM event_config_versions
+      WHERE tenant_id = ${input.tenantId}::uuid
+        AND event_id = ${input.eventId}::uuid
+    `;
+    const latestVersion = latest[0]?.version ?? 0;
+    if (latestVersion !== expectedVersion) {
+      throw new ConfigError(
+        CONFIG_ERROR_CODES.REVISION_CONFLICT,
+        'expectedVersion is not the latest config version',
+      );
+    }
+  }
 
   await assertAssetsReadyForBrand(tx, {
     tenantId: input.tenantId,
