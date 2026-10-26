@@ -9,6 +9,7 @@ import {
   type FieldValidationError,
   type ImportCommitResponse,
   type ImportJob,
+  type ImportJobSummary,
   type ImportJobStatus,
   type ImportKind,
   type ImportPreviewResponse,
@@ -55,6 +56,60 @@ export type ImportView =
   | { kind: 'upload'; file: ImportFileUploadResponse }
   | { kind: 'rejected'; code: string; message: string }
   | { kind: 'unknown'; message: string };
+
+export type ImportJobsView =
+  | { kind: 'list'; items: ImportJobSummary[]; nextCursor: string | null }
+  | { kind: 'rejected'; code: string; message: string }
+  | { kind: 'unknown'; message: string };
+
+/** A failed or malformed list must never appear as an empty job history. */
+export function interpretImportJobs(
+  status: number,
+  json: unknown,
+  networkError: boolean,
+  locale: PortalLocale = DEFAULT_PORTAL_LOCALE,
+): ImportJobsView {
+  if (networkError || status === 0 || status >= 500) {
+    return { kind: 'unknown', message: t(locale, 'ops.import.unknown') };
+  }
+  const body = asRecord(json);
+  if (status === 200) {
+    if (!body || !Array.isArray(body.items) ||
+      (body.nextCursor !== null && typeof body.nextCursor !== 'string')) {
+      return { kind: 'unknown', message: t(locale, 'ops.import.unknown') };
+    }
+    const items: ImportJobSummary[] = [];
+    for (const raw of body.items) {
+      const item = asRecord(raw);
+      if (!item || !isNonEmptyString(item.importId) || !isImportKind(item.kind) ||
+        !isJobStatus(item.status) || !isNonEmptyString(item.sourceId) ||
+        !isNonEmptyString(item.ticketTypeId) ||
+        !isNonEmptyString(item.createdAt) || Number.isNaN(Date.parse(item.createdAt)) ||
+        'token' in item || 'rawToken' in item || 'ownerEmail' in item || 'invitedEmail' in item) {
+        return { kind: 'unknown', message: t(locale, 'ops.import.unknown') };
+      }
+      items.push({
+        importId: item.importId,
+        kind: item.kind,
+        status: item.status,
+        sourceId: item.sourceId,
+        ticketTypeId: item.ticketTypeId,
+        mappingRevision: optionalNumber(item.mappingRevision),
+        previewRevision: optionalNumber(item.previewRevision),
+        validRowCount: optionalNumber(item.validRowCount),
+        errorRowCount: optionalNumber(item.errorRowCount),
+        invitationCount: optionalNumber(item.invitationCount),
+        estimatedQuota: optionalNumber(item.estimatedQuota),
+        createdAt: item.createdAt,
+      });
+    }
+    return { kind: 'list', items, nextCursor: body.nextCursor };
+  }
+  const error = apiErrorFrom(body);
+  return error
+    ? { kind: 'rejected', ...error }
+    : { kind: 'unknown', message: t(locale, 'ops.import.unknown') };
+}
 
 export function importAlertType(view: ImportView): 'error' | 'warning' | 'success' {
   if (view.kind === 'rejected' || (view.kind === 'job' && view.job.status === 'FAILED')) return 'error';
@@ -433,7 +488,7 @@ export function interpretImportPreview(
   if (networkError || status === 0 || status >= 500) {
     return { kind: 'unknown', message: t(locale, 'ops.import.unknown') };
   }
-  if (status === 200) {
+  if (status === 200 || status === 201) {
     const preview = parsePreview(json);
     if (preview) return { kind: 'preview', preview };
     return { kind: 'unknown', message: t(locale, 'ops.import.unknown') };
