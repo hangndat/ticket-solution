@@ -3,6 +3,7 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { createApp, createOpenApi } = require('../dist/app');
 const { IdentityError } = require('@ticket/backend');
+const { Logger } = require('@nestjs/common');
 
 const tenantId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const actorId = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
@@ -14,6 +15,7 @@ function fixture() {
   let present = true;
   let consumed = 0;
   let snapshots = 0;
+  let failSnapshot = false;
   const db = {
     $transaction: async (operation) => operation({
       $executeRaw: async () => 1,
@@ -35,6 +37,7 @@ function fixture() {
           }] : [];
         }
         if (sql.includes('FROM tenant_limits lim')) {
+          if (failSnapshot) throw new Error('fixture email member token must stay out of logs');
           snapshots++;
           return [{
             max_events: 10, max_staff: null, email_per_day: 20,
@@ -52,6 +55,7 @@ function fixture() {
     setRole: (value) => { role = value; },
     setRevoked: (value) => { revoked = value; },
     setPresent: (value) => { present = value; },
+    setFailSnapshot: (value) => { failSnapshot = value; },
     get consumed() { return consumed; },
     get snapshots() { return snapshots; },
   };
@@ -120,6 +124,47 @@ test('G-10 API raw query, bearer, RBAC, non-enumeration and DTO', async () => {
       ['200', '401', '403', '404', '422', '429', '503']);
     assert.ok(operation.responses['429'].headers['Retry-After']);
   } finally { await app.close(); }
+});
+
+test('G-10 access logs record status and IDs without request data or PII', async () => {
+  const f = fixture();
+  const app = await appFor(f);
+  const originalLog = Logger.prototype.log;
+  const entries = [];
+  Logger.prototype.log = function (message) {
+    if (typeof message === 'string' && message.includes('tenant_limits.read')) {
+      entries.push(JSON.parse(message));
+    }
+  };
+  try {
+    const call = (url = path, authorization = 'Bearer fixture') => app.inject({
+      method: 'GET', url, headers: { authorization },
+    });
+    assert.equal((await call(path + '?email=private@example.test')).statusCode, 422);
+    assert.equal((await call(path, 'Bearer private-token')).statusCode, 401);
+    f.setRole('Manager');
+    assert.equal((await call()).statusCode, 403);
+    f.setRole('Owner');
+    f.setPresent(false);
+    assert.equal((await call()).statusCode, 404);
+    f.setPresent(true);
+    assert.equal((await call()).statusCode, 200);
+    f.setFailSnapshot(true);
+    assert.equal((await call()).statusCode, 503);
+    assert.deepEqual(entries.map((entry) => entry.httpStatus), [422, 401, 403, 404, 200, 503]);
+    for (const [index, entry] of entries.entries()) {
+      assert.deepEqual(Object.keys(entry).sort(),
+        ['action', 'actorUserId', 'httpStatus', 'requestId', 'tenantId']);
+      assert.equal(entry.action, 'tenant_limits.read');
+      assert.match(entry.requestId, /^req-/);
+      assert.equal(entry.tenantId, tenantId);
+      assert.equal(entry.actorUserId, index < 2 ? null : actorId);
+    }
+    assert.doesNotMatch(JSON.stringify(entries), /private|email|member|token|fixture/i);
+  } finally {
+    Logger.prototype.log = originalLog;
+    await app.close();
+  }
 });
 
 test('G-10 API limiter runs after authorization and returns its UTC window retry', async () => {
