@@ -21,6 +21,9 @@ import { useUnsavedChanges } from '../../../../../../src/nav/unsaved-changes';
 import {
   applySetupReload,
   hasUnsavedSetupChanges,
+  metadataOutcomeUnknown,
+  metadataSaveRequest,
+  type MetadataSaveRequest,
 } from '../../../../../../src/setup/setup-drafts';
 
 export default function EventSetupPage() {
@@ -38,8 +41,15 @@ export default function EventSetupPage() {
   const [notice, setNotice] = useState<string | null>(null);
   const [metaDirty, setMetaDirty] = useState(false);
   const [cloneDirty, setCloneDirty] = useState(false);
+  const [metaUnknownScope, setMetaUnknownScope] = useState<string | null>(null);
+  const metaOutcomeUnknown = metaUnknownScope === `${tenantId}/${eventId}`;
   const metaDirtyRef = useRef(false);
   const cloneDirtyRef = useRef(false);
+  const pendingMetaRef = useRef<{
+    tenantId: string;
+    eventId: string;
+    request: MetadataSaveRequest;
+  } | null>(null);
   useUnsavedChanges(
     hasUnsavedSetupChanges(metaDirty, cloneDirty),
     t('shell.unsaved.confirm'),
@@ -131,22 +141,38 @@ export default function EventSetupPage() {
     setBusy(true);
     setNotice(null);
     try {
-      const values = await metaForm.validateFields();
+      // An unknown outcome must retry the exact request, including its key and revision.
+      const previous = pendingMetaRef.current;
+      const retry =
+        previous?.tenantId === tenantId && previous.eventId === eventId
+          ? previous.request
+          : null;
+      const pending = metadataSaveRequest(
+        retry,
+        detail.revision,
+        retry ? retry.name : (await metaForm.validateFields()).name,
+        () => crypto.randomUUID(),
+      );
+      const inFlight = { tenantId, eventId, request: pending };
+      pendingMetaRef.current = inFlight;
       const res = await portalMutate(
         bffEvent(tenantId, eventId),
-        {
-          expectedRevision: detail.revision,
-          name: values.name.trim(),
-        },
+        pending,
         'PATCH',
       );
-      if (res.networkError || res.timedOut || res.status >= 500) {
+      if (pendingMetaRef.current !== inFlight) return;
+      if (metadataOutcomeUnknown(res)) {
+        setMetaUnknownScope(`${tenantId}/${eventId}`);
         setNotice(t('setup.h_197dgrj'));
         return;
       }
+      pendingMetaRef.current = null;
+      setMetaUnknownScope(null);
       if (res.status >= 200 && res.status < 300) {
-        metaDirtyRef.current = false;
-        setMetaDirty(false);
+        if (metaForm.getFieldValue('name')?.trim() === pending.name) {
+          metaDirtyRef.current = false;
+          setMetaDirty(false);
+        }
         setNotice(t('setup.h_1s3ht28'));
         void load();
         return;
@@ -283,6 +309,7 @@ export default function EventSetupPage() {
                 name="name"
                 rules={[{ required: true }]}
                 width={320}
+                disabled={metaOutcomeUnknown}
               />
             </ProForm>
           </ProCard>

@@ -1,6 +1,37 @@
 import type { EventDetail } from '@ticket/contracts';
+import type { PortalFetchResult } from '../client/portal-fetch';
 
 type FormFields<T> = { setFieldsValue: (values: T) => void };
+
+export type MetadataSaveRequest = {
+  expectedRevision: number;
+  name: string;
+  idempotencyKey: string;
+};
+
+export function metadataSaveRequest(
+  pending: MetadataSaveRequest | null,
+  revision: number,
+  name: string,
+  newKey: () => string,
+): MetadataSaveRequest {
+  return pending ?? {
+    expectedRevision: revision,
+    name: name.trim(),
+    idempotencyKey: newKey(),
+  };
+}
+
+export function metadataOutcomeUnknown(res: PortalFetchResult): boolean {
+  return (
+    res.networkError ||
+    res.timedOut ||
+    res.status >= 500 ||
+    (res.json !== null &&
+      typeof res.json === 'object' &&
+      (res.json as { retryable?: unknown }).retryable === true)
+  );
+}
 
 export function hasUnsavedSetupChanges(
   metaDirty: boolean,

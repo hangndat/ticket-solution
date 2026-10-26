@@ -3,11 +3,42 @@ import test from 'node:test';
 import {
   applySetupReload,
   hasUnsavedSetupChanges,
+  metadataOutcomeUnknown,
+  metadataSaveRequest,
 } from '../src/setup/setup-drafts';
 import {
   confirmDiscardIfDirty,
   registerDirtyForm,
 } from '../src/nav/unsaved-changes';
+
+test('metadata unknown outcome retries the same body and key; known outcome starts a new request', () => {
+  let keys = 0;
+  const nextKey = () => `00000000-0000-4000-8000-${String(++keys).padStart(12, '0')}`;
+  const first = metadataSaveRequest(null, 2, ' First ', nextKey);
+  assert.deepEqual(first, {
+    expectedRevision: 2,
+    name: 'First',
+    idempotencyKey: '00000000-0000-4000-8000-000000000001',
+  });
+  assert.equal(
+    metadataOutcomeUnknown({ status: 0, json: null, networkError: true, timedOut: false }),
+    true,
+  );
+  assert.equal(metadataSaveRequest(first, 3, 'Changed', nextKey), first);
+  assert.equal(keys, 1);
+  assert.equal(
+    metadataOutcomeUnknown({ status: 409, json: { retryable: true }, networkError: false, timedOut: false }),
+    true,
+  );
+  assert.equal(
+    metadataOutcomeUnknown({ status: 409, json: { retryable: false }, networkError: false, timedOut: false }),
+    false,
+  );
+  const next = metadataSaveRequest(null, 3, 'Changed', nextKey);
+  assert.notEqual(next.idempotencyKey, first.idempotencyKey);
+  assert.equal(next.expectedRevision, 3);
+  assert.equal(next.name, 'Changed');
+});
 
 test('edit Clone → save Metadata → Clone draft and guard remain', () => {
   const previousWindow = globalThis.window;
