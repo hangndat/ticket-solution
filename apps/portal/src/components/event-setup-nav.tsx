@@ -1,7 +1,6 @@
 'use client';
 
 import { Button, Space } from 'antd';
-import Link from 'next/link';
 import { usePortalLocale } from '../i18n';
 
 type SetupPage = 'types' | 'sources' | 'quota';
@@ -26,15 +25,14 @@ export function EventSetupNav({
     <nav aria-label={t('event.setupNavigation')} style={{ marginBottom: 16 }}>
       <Space wrap>
         {pages.map(({ key, label }) => (
-          <Link
+          <Button
             key={key}
             href={`/t/${tenantId}/e/${eventId}/${key}`}
             aria-current={current === key ? 'page' : undefined}
+            type={current === key ? 'primary' : 'default'}
           >
-            <Button type={current === key ? 'primary' : 'default'}>
-              {label}
-            </Button>
-          </Link>
+            {label}
+          </Button>
         ))}
       </Space>
     </nav>
