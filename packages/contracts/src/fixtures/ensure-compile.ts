@@ -2,6 +2,7 @@
  * Pulls fixture modules into the compilation unit without exporting them
  * from the public package entry.
  */
+import './vcx-read-contracts';
 import {
   assertOfflineSyncCommandFrozen,
   assertRedemptionCommandFrozen,
