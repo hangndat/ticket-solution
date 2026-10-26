@@ -29,7 +29,7 @@ Reviewer UI độc lập với tác giả phần đang duyệt, kể cả tác g
 
 Task Spec ghi tên skill + mục đích; chỉ đọc `SKILL.md` và reference cần cho bước đang làm. Không nạp toàn bộ catalog, không biến skill thành `alwaysApply`. Các yêu cầu nền tảng bắt buộc vẫn áp dụng khi đọc/sửa code; “chỉ UI” không miễn accessibility hoặc checks liên quan.
 
-Marketing ưu tiên thông điệp/nhận diện; consumer web bám brand tokens và O22; portal bám Ant Design/ProComponents theo O18; iOS bám hành vi native. Token SoT vẫn là `brand/vemoki/tokens.json` và quyết định hiện hành. Hướng dẫn thẩm mỹ của skill không được tự thay font native, locale tiếng Việt, component hay brand đã chốt. Nếu skill dùng `PRODUCT.md`/`DESIGN.md`, tham chiếu PRD/handoff hiện có, không tạo nguồn quyết định cạnh tranh.
+Marketing ưu tiên thông điệp/nhận diện; consumer web bám brand tokens và O22; portal chỉ dùng UI component và giao diện/token mặc định của `antd` theo O26, không tạo wrapper/UI component/CSS riêng; iOS bám hành vi native. ProComponents hiện có cần migration theo O26, không dùng cho UI mới. `brand/vemoki/tokens.json` vẫn là token SoT cho các bề mặt Vemoki khác, không áp vào Portal. Hướng dẫn thẩm mỹ của skill không được tự thay font native, locale tiếng Việt, component hay brand đã chốt. Nếu skill dùng `PRODUCT.md`/`DESIGN.md`, tham chiếu PRD/handoff hiện có, không tạo nguồn quyết định cạnh tranh.
 
 Thiếu skill: kiểm tra catalog/path trước khi spawn, ghi limitation và chuẩn bị skill cần thiết; không nhận đã dùng skill khi chưa đọc. Việc cài skill không tự cấp quyền chạy installer hooks, đổi policy repo hay dùng browser ngoài quy tắc UAT.
 
