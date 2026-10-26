@@ -5754,6 +5754,9 @@
           },
           "schemaVersion": {
             "type": "number"
+          },
+          "expectedVersion": {
+            "type": "number"
           }
         },
         "required": [
