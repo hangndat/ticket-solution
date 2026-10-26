@@ -1,81 +1,21 @@
 {
   "closure": "PR2-acceptance",
   "codeSha": "af6374bd06b19469cd3e2454819b28f9a6785404",
-  "buildId": "uVIU381nMh3gHUaHwTT9v",
-  "at": "2026-10-26T14:13:33.948Z",
-  "priority": {
-    "mobile390": {
-      "context": {
-        "contextStrip": true,
-        "desktopSider": false,
-        "drawerTrigger": true,
-        "eventSwitcher": true,
-        "innerWidth": 390,
-        "tenantSwitcher": true,
-        "zeroOverlay": false
-      },
-      "drawerOpen": true,
-      "openAttempt": "orca_ref",
-      "menuNav": {
-        "method": "orca_ref_analytics",
-        "ok": false,
-        "path": "/t/d9d9f001-0001-4000-8000-000000000001/events"
-      },
-      "corePass": true,
-      "gap": "G-390-NAV: single Orca menuitem ref did not reach /analytics"
-    },
-    "smoke1024": {
-      "viewport": "1024x900",
-      "probe": {
-        "contextStrip": true,
-        "desktopSider": true,
-        "drawerTrigger": false,
-        "eventSwitcher": true,
-        "innerWidth": 1024,
-        "tenantSwitcher": true,
-        "zeroOverlay": false
-      },
-      "pass": true
-    },
-    "smoke1440": {
-      "viewport": "1440x900",
-      "probe": {
-        "contextStrip": true,
-        "desktopSider": true,
-        "drawerTrigger": false,
-        "eventSwitcher": true,
-        "innerWidth": 1440,
-        "tenantSwitcher": true,
-        "zeroOverlay": false
-      },
-      "pass": true
-    }
+  "at": "2026-10-26T14:15:00.000Z",
+  "verdict": "FAIL",
+  "pr2Acceptance": "Blocked — F01 mobile drawer visually off-screen despite DOM open",
+  "f01Visual": {
+    "artifact": "f01-visual-verify.json",
+    "screenshot": "f01-drawer-visual-390x844.png",
+    "productF01Verdict": "FAIL",
+    "wrapperX": -240,
+    "visibleClickableMenuItems": 0,
+    "higoAction": "Fix portal-shell-nav-drawer / Drawer transform so open panel is in viewport"
   },
-  "optionalOneShot": {
-    "locale": {
-      "id": "G-975-LOCALE",
-      "gap": true,
-      "note": "Single Orca account ref click did not open menu — stop"
-    },
-    "unsaved": {
-      "id": "G-975-UNSAVED",
-      "gap": true,
-      "note": "Single interaction: only one tenant option — cannot trigger switch — stop"
-    }
+  "desktopSmoke": {
+    "1024": "PASS",
+    "1440": "PASS",
+    "note": "Does not override F01 FAIL"
   },
-  "gaps": [
-    "G-390-NAV: single Orca menuitem ref did not reach /analytics",
-    {
-      "id": "G-975-LOCALE",
-      "gap": true,
-      "note": "Single Orca account ref click did not open menu — stop"
-    },
-    {
-      "id": "G-975-UNSAVED",
-      "gap": true,
-      "note": "Single interaction: only one tenant option — cannot trigger switch — stop"
-    }
-  ],
-  "verdict": "PASS",
-  "pr2Acceptance": "Shell + F01 drawer/context @ af6374bd — closure OK; optional gaps documented"
+  "priorPassRevoked": "f01-drawer-mobile.json productPass; pr2-closure PASS before visual verify"
 }
