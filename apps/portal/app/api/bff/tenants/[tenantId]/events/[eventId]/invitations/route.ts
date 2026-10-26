@@ -21,6 +21,7 @@ export async function GET(request: Request, { params }: Props) {
     'cursor',
     'limit',
     'state',
+    'q',
   ]);
   return forwardStaffBearer(
     `${PORTAL_UPSTREAM.invitations(scope.tenantId, scope.eventId)}${qs}`,
