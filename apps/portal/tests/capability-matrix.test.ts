@@ -157,7 +157,7 @@ const rows = [
     tenant: [],
     event: ['cs.lookup', 'cs.resend'],
     tenantRoutes: [],
-    eventRoutes: ['support'],
+    eventRoutes: ['support', 'guests'],
     tenantActions: [],
     eventActions: ['lookupSupport'],
     entry: '/t/t1/e/e1/support',
