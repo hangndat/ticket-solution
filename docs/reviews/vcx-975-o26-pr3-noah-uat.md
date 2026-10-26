@@ -14,7 +14,7 @@
 | Permission (report-only @ guests) | **PASS** — `Result` 403, title «Không có quyền», CTA «Về trang được phép» |
 | Loading sau điều hướng events | **PASS** — không kẹt Spin |
 | BFF error + nút «Thử lại» | **PASS, fault cô lập** — intercept GET portfolio trong tab Orca trả 400 có mã lỗi; `Alert` và nút retry hiển thị, retry sau khi bỏ fault trở lại trạng thái ready |
-| Analytics deny title runtime | **PASS, fault cô lập** — intercept GET portfolio trong tab Orca trả 403; `Result` 403 hiển thị title «Không có quyền» và CTA «Về trang được phép» |
+| 403 trên route Analytics | **PASS, fault cô lập** — intercept GET portfolio trong tab Orca trả 403; `PortalShell` hiển thị `Result` 403 với title «Không có quyền» và CTA «Về trang được phép» |
 
 ## Runtime và evidence
 
@@ -26,4 +26,4 @@
 
 Orca `tab create` + `exec` (goto, viewport, screenshot, eval). Tab đóng sau run. Kết quả máy: [matrix ban đầu](evidence/vcx-975/o26-pr3-noah/uat-results-ecda980a.json), [bổ sung error/retry/403](evidence/vcx-975/o26-pr3-noah/uat-gaps-ecda980a.json), [ports snapshot](evidence/vcx-975/o26-pr3-noah/ports-orca.json), [provenance](evidence/vcx-975/o26-pr3-noah/evidence-provenance.md). Screenshot `analytics-error-retry-ecda980a.png` và `analytics-403-title-ecda980a.png` cùng runner giữ gitignored trong `apps/portal/.uat-artifacts/vcx975-pr3/` và `.local-dev/.uat-artifacts/vcx975-noah-pr3/`.
 
-Fault injection chỉ thay `window.fetch` trong một tab đã auth, phục hồi trước khi đóng; không mutate API hoặc DB. Probe 403 chứng minh UI Analytics trên response 403 giả lập, chưa phải bằng chứng một persona thực bị backend từ chối. Không bootstrap/drop DB `ticket_d9_demo`, không sửa client hoặc dữ liệu #928, không sửa product code trong phiên UAT. #975 vẫn mở.
+Fault injection chỉ thay `window.fetch` trong một tab đã auth, phục hồi trước khi đóng; không mutate API hoặc DB. Probe 403 đi qua `PortalShell` trên route Analytics; nó không chứng minh nhánh 403 nội bộ của trang Analytics hoặc một persona thực bị backend từ chối. Không bootstrap/drop DB `ticket_d9_demo`, không sửa client hoặc dữ liệu #928, không sửa product code trong phiên UAT. #975 vẫn mở.
