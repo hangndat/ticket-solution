@@ -18,12 +18,12 @@ import { canPerformEventAction } from '../../../../../../src/nav/capability-poli
 import { usePortalLocale } from '../../../../../../src/i18n';
 import { SURFACE_MESSAGE_KEYS } from '../../../../../../src/prep/surface-copy';
 import { useUnsavedChanges } from '../../../../../../src/nav/unsaved-changes';
+import { useMutationIntent } from '../../../../../../src/client/use-mutation-intent';
+import { MutationIntentAlert } from '../../../../../../src/client/mutation-intent-alert';
 import {
   applySetupReload,
   hasUnsavedSetupChanges,
   metadataOutcomeUnknown,
-  metadataSaveRequest,
-  type MetadataSaveRequest,
 } from '../../../../../../src/setup/setup-drafts';
 
 export default function EventSetupPage() {
@@ -41,6 +41,9 @@ export default function EventSetupPage() {
   const [notice, setNotice] = useState<string | null>(null);
   const [metaDirty, setMetaDirty] = useState(false);
   const [cloneDirty, setCloneDirty] = useState(false);
+  const metaIntent = useMutationIntent(tenantId, eventId, 'update-event-metadata');
+  const cloneIntent = useMutationIntent(tenantId, eventId, 'clone-event');
+  const archiveIntent = useMutationIntent(tenantId, eventId, 'archive-event');
   const [metaUnknownScope, setMetaUnknownScope] = useState<string | null>(null);
   const metaOutcomeUnknown = metaUnknownScope === `${tenantId}/${eventId}`;
   const metaDirtyRef = useRef(false);
@@ -48,7 +51,7 @@ export default function EventSetupPage() {
   const pendingMetaRef = useRef<{
     tenantId: string;
     eventId: string;
-    request: MetadataSaveRequest;
+    request: { expectedRevision: number; name: string };
   } | null>(null);
   useUnsavedChanges(
     hasUnsavedSetupChanges(metaDirty, cloneDirty),
@@ -178,20 +181,21 @@ export default function EventSetupPage() {
         previous?.tenantId === tenantId && previous.eventId === eventId
           ? previous.request
           : null;
-      const pending = metadataSaveRequest(
-        retry,
-        detail.revision,
-        retry ? retry.name : (await metaForm.validateFields()).name,
-        () => crypto.randomUUID(),
-      );
+      const pending = retry ?? {
+        expectedRevision: detail.revision,
+        name: (await metaForm.validateFields()).name.trim(),
+      };
       const inFlight = { tenantId, eventId, request: pending };
       pendingMetaRef.current = inFlight;
-      const res = await portalMutate(
-        bffEvent(tenantId, eventId),
-        pending,
-        'PATCH',
-      );
+      const outcome = await metaIntent.run(pending, (body) => portalMutate(
+        bffEvent(tenantId, eventId), body, 'PATCH',
+      ), (result) => result.status >= 200 && result.status < 300 && !!result.json);
       if (pendingMetaRef.current !== inFlight) return;
+      if (outcome.kind === 'blocked') {
+        setNotice('Thao tác trước chưa xác định. Kiểm tra sự kiện trước khi tiếp tục.');
+        return;
+      }
+      const res = outcome.response;
       if (metadataOutcomeUnknown(res)) {
         setMetaUnknownScope(`${tenantId}/${eventId}`);
         setNotice(t('setup.h_197dgrj'));
@@ -219,15 +223,18 @@ export default function EventSetupPage() {
     setNotice(null);
     try {
       const values = await cloneForm.validateFields();
-      const res = await portalMutate(
-        bffEventAction(tenantId, eventId, 'clone'),
-        {
+      const outcome = await cloneIntent.run({
           slug: values.slug.trim(),
           name: values.name.trim(),
           copyConfig: true,
-          idempotencyKey: crypto.randomUUID(),
-        },
-      );
+        }, (body) => portalMutate(bffEventAction(tenantId, eventId, 'clone'), body),
+        (result) => result.status >= 200 && result.status < 300 && !!result.json &&
+          typeof result.json === 'object' && typeof (result.json as { eventId?: unknown }).eventId === 'string');
+      if (outcome.kind === 'blocked') {
+        setNotice('Thao tác clone trước chưa xác định. Kiểm tra danh sách sự kiện.');
+        return;
+      }
+      const res = outcome.response;
       if (res.networkError || res.timedOut || res.status >= 500) {
         setNotice(t('setup.h_mfkouj'));
         return;
@@ -264,13 +271,14 @@ export default function EventSetupPage() {
       okButtonProps: { danger: true },
       cancelText: t('config.huy'),
       onOk: async () => {
-        const res = await portalMutate(
-          bffEventAction(tenantId, eventId, 'archive'),
-          {
+        const outcome = await archiveIntent.run({
             expectedRevision: detail.revision,
-            idempotencyKey: crypto.randomUUID(),
-          },
-        );
+          }, (body) => portalMutate(bffEventAction(tenantId, eventId, 'archive'), body));
+        if (outcome.kind === 'blocked') {
+          setNotice('Thao tác archive trước chưa xác định. Kiểm tra trạng thái sự kiện.');
+          return;
+        }
+        const res = outcome.response;
         if (res.networkError || res.status >= 500) {
           setNotice(t('setup.h_uafnux'));
           return;
@@ -409,6 +417,12 @@ export default function EventSetupPage() {
       {kind === 'ready' && notice ? (
         <Alert type="info" showIcon message={notice} />
       ) : null}
+      <MutationIntentAlert pending={metaIntent.pending} needsReconciliation={metaIntent.needsReconciliation}
+        onCheck={() => void load()} onStartNew={() => { metaIntent.release(); pendingMetaRef.current = null; setMetaUnknownScope(null); }} />
+      <MutationIntentAlert pending={cloneIntent.pending} needsReconciliation={cloneIntent.needsReconciliation}
+        onCheck={() => router.push(`/t/${tenantId}/events`)} onStartNew={cloneIntent.release} />
+      <MutationIntentAlert pending={archiveIntent.pending} needsReconciliation={archiveIntent.needsReconciliation}
+        onCheck={() => void load()} onStartNew={archiveIntent.release} />
     </PortalPage>
   );
 }

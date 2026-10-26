@@ -15,6 +15,8 @@ import { canPerformTenantAction } from '../../../../../src/nav/capability-policy
 import { usePortalLocale } from '../../../../../src/i18n';
 import { SURFACE_MESSAGE_KEYS } from '../../../../../src/prep/surface-copy';
 import { useUnsavedChanges } from '../../../../../src/nav/unsaved-changes';
+import { useMutationIntent } from '../../../../../src/client/use-mutation-intent';
+import { MutationIntentAlert } from '../../../../../src/client/mutation-intent-alert';
 
 type WizardValues = {
   slug: string;
@@ -40,6 +42,7 @@ export default function CreateEventWizardPage() {
   } | null>(null);
   const [form] = Form.useForm<WizardValues>();
   const [dirty, setDirty] = useState(false);
+  const intent = useMutationIntent(tenantId, undefined, 'create-event');
   useUnsavedChanges(dirty, t('shell.unsaved.confirm'));
 
   if (access.kind === 'loading') return (
@@ -111,14 +114,19 @@ export default function CreateEventWizardPage() {
     setNotice(null);
     try {
       const values = await form.validateFields();
-      const res = await portalMutate(bffEvents(tenantId), {
-        ...values,
-        idempotencyKey: crypto.randomUUID(),
-      });
+      const outcome = await intent.run(values, (body) => portalMutate(bffEvents(tenantId), body),
+        (result) => result.status >= 200 && result.status < 300 && !!result.json &&
+          typeof result.json === 'object' && typeof (result.json as { eventId?: unknown }).eventId === 'string');
+      if (outcome.kind === 'blocked') {
+        setNotice({ type: 'warning', text: 'Thao tác trước chưa xác định. Kiểm tra sự kiện trước khi tạo ý định mới.' });
+        return;
+      }
+      const res = outcome.response;
       if (
         res.networkError ||
         res.timedOut ||
         res.status === 0 ||
+        res.status === 429 ||
         res.status >= 500
       ) {
         setNotice({
@@ -249,6 +257,8 @@ export default function CreateEventWizardPage() {
       {notice ? (
         <Alert type={notice.type} showIcon message={notice.text} />
       ) : null}
+      <MutationIntentAlert pending={intent.pending} needsReconciliation={intent.needsReconciliation}
+        onCheck={() => router.push(`/t/${tenantId}/events`)} onStartNew={intent.release} />
       <Space>
         <Button
           disabled={step === 0 || busy}
