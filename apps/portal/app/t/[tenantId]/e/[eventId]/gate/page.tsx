@@ -20,6 +20,7 @@ import {
 } from '../../../../../../src/ops/report';
 import { isEventPagePermitted } from '../../../../../../src/prep/event-access-resolver';
 import { useEventAccess } from '../../../../../../src/prep/use-event-access';
+import { canPerformEventAction } from '../../../../../../src/nav/capability-policy';
 import { GateStayAppNotice } from '../../../../../../src/components/gate-deeplink';
 import { EventReportAsOfLine } from '../../../../../../src/components/event-report-as-of';
 import { ReportStaleAlert } from '../../../../../../src/components/report-stale-alert';
@@ -54,7 +55,7 @@ export default function EventGateReportPage() {
 
   useEffect(() => {
     if (access.kind !== 'ready') return;
-    if (!access.permissions.includes('report.read')) return;
+    if (!canPerformEventAction('readReport', access.permissions)) return;
     let cancelled = false;
     queueMicrotask(() => {
       if (!cancelled) void load();
@@ -143,7 +144,8 @@ export default function EventGateReportPage() {
             <StatisticCard
               statistic={{
                 title: t('gate.stat.capacity'),
-                value: shown.quota.capacity === null ? '∞' : shown.quota.capacity,
+                value:
+                  shown.quota.capacity === null ? '∞' : shown.quota.capacity,
               }}
             />
             <StatisticCard
@@ -159,7 +161,12 @@ export default function EventGateReportPage() {
               }}
             />
           </StatisticCard.Group>
-          <Descriptions bordered size="small" column={2} style={{ marginTop: 16 }}>
+          <Descriptions
+            bordered
+            size="small"
+            column={2}
+            style={{ marginTop: 16 }}
+          >
             <Descriptions.Item label={t('gate.report.capacityState')}>
               {formatQuotaCapacityState(shown.quotaCapacityState, locale)}
             </Descriptions.Item>
@@ -202,7 +209,6 @@ export default function EventGateReportPage() {
       ) : report === null ? (
         <SurfaceState kind="loading" />
       ) : null}
-
     </PortalPage>
   );
 }

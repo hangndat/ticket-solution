@@ -1,14 +1,12 @@
 'use client';
 
-import { ProForm, ProFormText, ProFormTextArea, ProTable } from '@ant-design/pro-components';
 import {
-  Alert,
-  Button,
-  Form,
-  Modal,
-  Space,
-  Typography,
-} from 'antd';
+  ProForm,
+  ProFormText,
+  ProFormTextArea,
+  ProTable,
+} from '@ant-design/pro-components';
+import { Alert, Button, Form, Modal, Space, Typography } from 'antd';
 import { PortalPage } from '../../../../../../src/components/portal-page';
 import { useParams } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
@@ -26,6 +24,7 @@ import {
 import { bffEvent, bffEventAction } from '../../../../../../src/prep/bff-urls';
 import { isEventPagePermitted } from '../../../../../../src/prep/event-access-resolver';
 import { useEventAccess } from '../../../../../../src/prep/use-event-access';
+import { canPerformEventAction } from '../../../../../../src/nav/capability-policy';
 import { SurfaceState } from '../../../../../../src/components/surface-state';
 import { usePortalLocale } from '../../../../../../src/i18n';
 
@@ -62,11 +61,14 @@ export default function ConfigBrandPage() {
     }
     if (c.status !== 200 || !c.json || typeof c.json !== 'object') {
       setKind('error');
-      setMessage(apiErrorMessage(c.json, t('common.httpStatus', { status: c.status })));
+      setMessage(
+        apiErrorMessage(c.json, t('common.httpStatus', { status: c.status })),
+      );
       return;
     }
     const items = Array.isArray((c.json as { items?: unknown }).items)
-      ? ((c.json as { items: ConfigVersionSummary[] }).items as ConfigVersionSummary[])
+      ? ((c.json as { items: ConfigVersionSummary[] })
+          .items as ConfigVersionSummary[])
       : [];
     setVersions(items);
     if (d.status === 200 && d.json && typeof d.json === 'object') {
@@ -86,12 +88,16 @@ export default function ConfigBrandPage() {
       ) {
         const payload = (preview.json as { payload?: unknown }).payload;
         if (payload && typeof payload === 'object') {
-          const brand = (payload as {
-            brand?: { organizationName?: string; primaryColor?: string };
-          }).brand;
-          const sections = (payload as {
-            sections?: Array<{ kind: string; body?: { text?: string } }>;
-          }).sections;
+          const brand = (
+            payload as {
+              brand?: { organizationName?: string; primaryColor?: string };
+            }
+          ).brand;
+          const sections = (
+            payload as {
+              sections?: Array<{ kind: string; body?: { text?: string } }>;
+            }
+          ).sections;
           const terms = sections?.find((s) => s.kind === 'terms');
           form.setFieldsValue({
             organizationName: brand?.organizationName ?? '',
@@ -161,11 +167,8 @@ export default function ConfigBrandPage() {
     );
   }
 
-  const canConfig = access.permissions.some((p) =>
-    ['event.config', 'config.publish', 'event.update'].includes(p),
-  );
-  const publishedVersion =
-    versions.find((v) => v.published)?.version ?? null;
+  const canConfig = canPerformEventAction('saveConfig', access.permissions);
+  const publishedVersion = versions.find((v) => v.published)?.version ?? null;
 
   async function saveDraft() {
     setBusy(true);
@@ -244,8 +247,7 @@ export default function ConfigBrandPage() {
     }
     Modal.confirm({
       title: t('config.rollbackConfirm', { targetVersion }),
-      content:
-        t('config.h_1djtg5w'),
+      content: t('config.h_1djtg5w'),
       okText: 'Rollback',
       okButtonProps: { danger: true },
       cancelText: t('config.huy'),
@@ -292,7 +294,9 @@ export default function ConfigBrandPage() {
           message={t('surface.unknown.title')}
           description={message}
           action={
-            <Button size="small" onClick={() => void load()}>{t('surface.action.recheck')}</Button>
+            <Button size="small" onClick={() => void load()}>
+              {t('surface.action.recheck')}
+            </Button>
           }
         />
       ) : null}
@@ -336,11 +340,17 @@ export default function ConfigBrandPage() {
                 loading={busy}
                 disabled={!canConfig}
                 onClick={() => void saveDraft()}
-              >{t('config.h_q8yg9j')}</Button>
+              >
+                {t('config.h_q8yg9j')}
+              </Button>
               <Button
-                disabled={!canConfig || !access.permissions.includes('config.publish')}
+                disabled={
+                  !canPerformEventAction('publishConfig', access.permissions)
+                }
                 onClick={() => void publishTip()}
-              >{t('config.h_19gwi7d')}</Button>
+              >
+                {t('config.h_19gwi7d')}
+              </Button>
             </Space>
           </ProForm>
 
@@ -368,7 +378,9 @@ export default function ConfigBrandPage() {
                       danger
                       disabled={!canConfig}
                       onClick={() => rollbackTo(row.version)}
-                    >{t('config.h_wotjs8')}</Button>
+                    >
+                      {t('config.h_wotjs8')}
+                    </Button>
                   ) : null,
               },
             ]}

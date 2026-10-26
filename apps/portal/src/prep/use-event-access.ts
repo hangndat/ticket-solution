@@ -92,7 +92,11 @@ export function useTenantAccess(tenantId: string): TenantAccessState {
       const tenant =
         shell.meTenants?.items.find((tenant) => tenant.tenantId === tenantId) ??
         null;
-      if (!tenant || !tenantHasAdminChrome(tenant)) {
+      if (
+        !tenant ||
+        (!tenantHasAdminChrome(tenant) &&
+          !tenantHasAnalytics(tenantId, shell.meEvents))
+      ) {
         setState({ kind: 'permission-denied' });
         return;
       }
