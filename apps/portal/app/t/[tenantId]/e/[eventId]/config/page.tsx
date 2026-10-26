@@ -27,6 +27,7 @@ import { useEventAccess } from '../../../../../../src/prep/use-event-access';
 import { canPerformEventAction } from '../../../../../../src/nav/capability-policy';
 import { SurfaceState } from '../../../../../../src/components/surface-state';
 import { usePortalLocale } from '../../../../../../src/i18n';
+import { useUnsavedChanges } from '../../../../../../src/nav/unsaved-changes';
 
 export default function ConfigBrandPage() {
   const { t } = usePortalLocale();
@@ -41,6 +42,8 @@ export default function ConfigBrandPage() {
   const [message, setMessage] = useState<string | undefined>();
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [dirty, setDirty] = useState(false);
+  useUnsavedChanges(dirty, t('shell.unsaved.confirm'));
   const [form] = Form.useForm<{
     organizationName: string;
     primaryColor: string;
@@ -193,6 +196,7 @@ export default function ConfigBrandPage() {
         return;
       }
       if (res.status >= 200 && res.status < 300) {
+        setDirty(false);
         setNotice(t('config.h_1qavkda'));
         void load();
         return;
@@ -312,6 +316,7 @@ export default function ConfigBrandPage() {
         <>
           <ProForm
             form={form}
+            onValuesChange={() => setDirty(true)}
             layout="vertical"
             style={{ maxWidth: 480 }}
             disabled={!canConfig}
