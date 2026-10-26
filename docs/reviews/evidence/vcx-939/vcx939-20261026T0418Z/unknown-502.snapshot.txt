@@ -1,0 +1,41 @@
+- link "Bỏ qua đến nội dung" [ref=e1]
+- banner
+  - navigation "Điều hướng chính" [ref=e2]
+    - link "Vemoki — trang chủ" [ref=e4]
+      - StaticText "vemoki"
+    - button "Menu" [expanded=false, ref=e5]
+      - StaticText "Menu"
+- main
+  - sectionheader
+    - paragraph
+      - StaticText "NHẬP MÃ MỜI"
+    - heading "Đổi mã lấy vé" [level=1, ref=e6]
+    - paragraph
+      - StaticText "Một mã mời duy nhất. Không cần chọn sự kiện hay tổ chức."
+  - form "Nhập mã đổi vé"
+    - heading "Nhập mã đổi vé" [level=2, ref=e7]
+    - paragraph
+      - StaticText "Thông tin sự kiện và loại vé sẽ hiện ở bước tiếp theo."
+    - LabelText
+      - StaticText "Mã đổi vé"
+      - textbox "Mã đổi vé" [required, ref=e14]: DEMO-MFEST-003
+        - StaticText "DEMO-MFEST-003"
+    - paragraph
+      - StaticText "Nhập mã trong email hoặc trên vé của bạn."
+    - button "Tiếp tục" [ref=e8]
+  - paragraph
+    - link "Vé của tôi" [ref=e9]
+  - status
+    - heading "Không kết nối được" [level=3, ref=e10]
+    - paragraph
+      - StaticText "Không tới được dịch vụ cấp vé. Thử lại sau vài phút."
+- contentinfo
+  - StaticText "vemoki"
+  - StaticText "Sự kiện & vé"
+  - navigation "Liên kết chân trang" [ref=e3]
+    - link "Khám phá" [ref=e11]
+    - link "Đổi mã" [ref=e12]
+    - link "Tài khoản" [ref=e13]
+- button "Open Next.js Dev Tools" [expanded=false, ref=e15]
+  - image
+- alert

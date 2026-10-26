@@ -1,0 +1,12 @@
+{
+  "fault": "upstream_tcp_accept_no_response",
+  "resolveHttp": 201,
+  "apiPostDuringHang": {
+    "curlExit": 28,
+    "httpCode": "000",
+    "elapsedMs": 25016,
+    "notInstantRefused": true
+  },
+  "bffConfiguredTimeoutMs": 20000,
+  "note": "Nest client on same port as BFF upstream; hang accepts TCP then never responds."
+}

@@ -1,0 +1,20 @@
+{
+  "pending": {
+    "code": "DEMO-V939-PEND-EMAIL-1",
+    "uxHint": null,
+    "screenshots": {
+      "390": "screenshots/outcomes/pending-390.png",
+      "1024": "screenshots/outcomes/pending-1024.png",
+      "1440": "screenshots/outcomes/pending-1440.png"
+    }
+  },
+  "rejected": {
+    "code": "DEMO-V939-PEND-REJECT-2",
+    "uxHint": null,
+    "screenshots": {
+      "390": "screenshots/outcomes/rejected-390.png",
+      "1024": "screenshots/outcomes/rejected-1024.png",
+      "1440": "screenshots/outcomes/rejected-1440.png"
+    }
+  }
+}
