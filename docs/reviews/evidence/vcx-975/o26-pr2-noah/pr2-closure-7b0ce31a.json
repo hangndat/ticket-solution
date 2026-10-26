@@ -1,0 +1,16 @@
+{
+  "closure": "PR2-acceptance",
+  "codeSha": "7b0ce31a6d6a58aa046c6a3f616fa9ab7f900864",
+  "verdict": "PASS",
+  "f01Visual": {
+    "artifact": "f01-visual-verify-7b0ce31a.json",
+    "screenshot": "f01-drawer-visual-390x844-7b0ce31a.png",
+    "wrapperX": 0,
+    "wrapperWidth": 240,
+    "wrapperOpacity": 1,
+    "sectionOpacity": 1,
+    "visibleClickableMenuItems": 5,
+    "navPass": true,
+    "intermediateGeometryOnly": "f01-visual-verify-ebb2fa3f.json"
+  }
+}
