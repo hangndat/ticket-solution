@@ -266,6 +266,8 @@ jobs:
             files: test/published-events.test.cjs
           - shard: import-invitations
             files: test/import-invitations.test.cjs
+          - shard: tenant-limits-usage
+            files: test/tenant-limits-usage.test.cjs
           - shard: offline-sync-apply
             files: test/offline-sync-apply.test.cjs test/offline-sync-receipt.test.cjs
           - shard: cs-export
