@@ -2,7 +2,7 @@
 
 import { ModalForm, ProFormText, ProTable } from '@ant-design/pro-components';
 import type { ProColumns } from '@ant-design/pro-components';
-import { Alert, Button, Typography } from 'antd';
+import { Alert, Button, Empty, Flex, Result, Spin, Typography } from 'antd';
 import { useParams } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { PortalTicketTypeSummary } from '@ticket/contracts';
@@ -15,8 +15,8 @@ import { PortalPage } from '../../../../../../src/components/portal-page';
 import { bffEventAction } from '../../../../../../src/prep/bff-urls';
 import { isEventPagePermitted } from '../../../../../../src/prep/event-access-resolver';
 import { useEventAccess } from '../../../../../../src/prep/use-event-access';
-import { SurfaceState } from '../../../../../../src/components/surface-state';
 import { usePortalLocale } from '../../../../../../src/i18n';
+import { SURFACE_MESSAGE_KEYS } from '../../../../../../src/prep/surface-copy';
 import { canPerformEventAction } from '../../../../../../src/nav/capability-policy';
 import {
   confirmDiscardIfDirty,
@@ -91,35 +91,66 @@ export default function TicketTypesPage() {
     };
   }, [access.kind, load]);
 
-  if (access.kind === 'loading') return <SurfaceState kind="loading" />;
+  if (access.kind === 'loading') return (
+    <Flex
+      vertical
+      align="center"
+      gap="middle"
+      role="status"
+      aria-busy="true"
+      aria-label={t(SURFACE_MESSAGE_KEYS.loading)}
+      suppressHydrationWarning
+      style={{ padding: 48 }}
+    >
+      <Spin size="large" />
+      <span>{t(SURFACE_MESSAGE_KEYS.loading)}</span>
+    </Flex>
+  );
   if (access.kind === 'error') {
     return (
-      <SurfaceState
-        kind="error"
+      <Alert
+        type="error"
+        showIcon
+        message={t(SURFACE_MESSAGE_KEYS.errorLoadFailed)}
         description={access.messageKey ? t(access.messageKey) : undefined}
-        onRetry={() => window.location.reload()}
+        action={
+          <Button size="small" onClick={() => window.location.reload()}>
+            {t(SURFACE_MESSAGE_KEYS.retry)}
+          </Button>
+        }
+        style={{ margin: 24 }}
       />
     );
   }
   if (access.kind === 'permission-denied') {
     return (
-      <SurfaceState
-        kind="permission-denied"
-        description={t('config.h_g7fjbz')}
-        onRetry={() => {
+      <Result
+        status="403"
+        title={t(SURFACE_MESSAGE_KEYS.permissionTitle)}
+        subTitle={t('config.h_g7fjbz')}
+        extra={
+          <Button type="primary" onClick={() => {
           window.location.href = `/t/${tenantId}`;
-        }}
+        }}>
+            {t(SURFACE_MESSAGE_KEYS.permissionGoAllowed)}
+          </Button>
+        }
       />
     );
   }
   if (!isEventPagePermitted('types', access.permissions)) {
     return (
-      <SurfaceState
-        kind="permission-denied"
-        description={t('config.h_g7fjbz')}
-        onRetry={() => {
+      <Result
+        status="403"
+        title={t(SURFACE_MESSAGE_KEYS.permissionTitle)}
+        subTitle={t('config.h_g7fjbz')}
+        extra={
+          <Button type="primary" onClick={() => {
           window.location.href = `/t/${tenantId}/e/${eventId}`;
-        }}
+        }}>
+            {t(SURFACE_MESSAGE_KEYS.permissionGoAllowed)}
+          </Button>
+        }
       />
     );
   }
@@ -171,17 +202,22 @@ export default function TicketTypesPage() {
         />
       ) : null}
       {kind === 'error' ? (
-        <SurfaceState
-          kind="error"
-          description={message}
-          onRetry={() => void load(null)}
-        />
+        <Alert
+        type="error"
+        showIcon
+        message={t(SURFACE_MESSAGE_KEYS.errorLoadFailed)}
+        description={message}
+        action={
+          <Button size="small" onClick={() => void load(null)}>
+            {t(SURFACE_MESSAGE_KEYS.retry)}
+          </Button>
+        }
+        style={{ margin: 24 }}
+      />
       ) : null}
       {kind === 'empty' ? (
-        <SurfaceState
-          kind="empty"
-          description={t('types.h_xnio89')}
-          emptyAction={
+        <Empty description={t('types.h_xnio89')} style={{ padding: 48 }}>
+          {
             canCreateType ? (
               <Button
                 type="primary"
@@ -194,7 +230,7 @@ export default function TicketTypesPage() {
               </Button>
             ) : undefined
           }
-        />
+        </Empty>
       ) : null}
       {kind === 'ready' ? (
         <>

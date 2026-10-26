@@ -1,17 +1,6 @@
 'use client';
 
-import {
-  Alert,
-  Button,
-  Card,
-  Form,
-  Input,
-  Result,
-  Select,
-  Space,
-  Steps,
-  Typography,
-} from 'antd';
+import { Alert, Button, Card, Flex, Form, Input, Result, Select, Space, Spin, Steps, Typography } from 'antd';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -22,8 +11,8 @@ import {
   portalGet,
   portalMutate,
 } from '../../../src/client/portal-fetch';
-import { SurfaceState } from '../../../src/components/surface-state';
 import { usePortalLocale } from '../../../src/i18n';
+import { SURFACE_MESSAGE_KEYS } from '../../../src/prep/surface-copy';
 import { loadShellContext } from '../../../src/nav/load-shell-context';
 import {
   firstRunCurrentStep,
@@ -303,29 +292,53 @@ export default function TenantOnboardingPage() {
   }
 
   if (mode.kind === 'loading' || mode.kind === 'done') {
-    return <SurfaceState kind="loading" />;
+    return (
+    <Flex
+      vertical
+      align="center"
+      gap="middle"
+      role="status"
+      aria-busy="true"
+      aria-label={t(SURFACE_MESSAGE_KEYS.loading)}
+      suppressHydrationWarning
+      style={{ padding: 48 }}
+    >
+      <Spin size="large" />
+      <span>{t(SURFACE_MESSAGE_KEYS.loading)}</span>
+    </Flex>
+  );
   }
   if (mode.kind === 'error') {
     return (
-      <SurfaceState
-        kind="error"
+      <Alert
+        type="error"
+        showIcon
+        message={t(SURFACE_MESSAGE_KEYS.errorLoadFailed)}
         description={mode.message}
-        onRetry={() => void reload()}
+        action={
+          <Button size="small" onClick={() => void reload()}>
+            {t(SURFACE_MESSAGE_KEYS.retry)}
+          </Button>
+        }
+        style={{ margin: 24 }}
       />
     );
   }
   if (mode.kind === 'denied') {
     return (
-      <SurfaceState
-        kind="permission-denied"
-        description={
-          mode.reason === 'attendee'
+      <Result
+        status="403"
+        title={t(SURFACE_MESSAGE_KEYS.permissionTitle)}
+        subTitle={mode.reason === 'attendee'
             ? t('shell.auth.attendeeDeniedBody')
-            : t('onboarding.denied')
-        }
-        onRetry={() => {
+            : t('onboarding.denied')}
+        extra={
+          <Button type="primary" onClick={() => {
           window.location.href = '/onboarding';
-        }}
+        }}>
+            {t(SURFACE_MESSAGE_KEYS.permissionGoAllowed)}
+          </Button>
+        }
       />
     );
   }
@@ -333,24 +346,17 @@ export default function TenantOnboardingPage() {
   if (mode.kind === 'pending') {
     return (
       <Card style={{ maxWidth: 640, margin: '48px auto' }}>
-        <SurfaceState
-          kind="pending-activation"
-          title={t('onboarding.pending.title')}
-          description={t('onboarding.pending.body', {
+        <Result status="info" title={t('onboarding.pending.title')} subTitle={t('onboarding.pending.body', {
             name: mode.tenant.name,
             slug: mode.tenant.slug,
-          })}
-          emptyAction={
-            <Space>
+          })} extra={<Space>
               <Button onClick={() => void reload()}>
                 {t('onboarding.pending.refresh')}
               </Button>
               <Link href="/account/security">
                 <Button type="default">{t('home.h_cb3p8s')}</Button>
               </Link>
-            </Space>
-          }
-        />
+            </Space>} />
         <Alert
           type="warning"
           showIcon
