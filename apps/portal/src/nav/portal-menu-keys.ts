@@ -1,4 +1,14 @@
-import type { MenuDataItem } from '@ant-design/pro-components';
+export type PortalMenuLeaf = {
+  key: string;
+  path: string;
+  name: string;
+};
+
+export type PortalMenuGroup = {
+  key: string;
+  name: string;
+  children: PortalMenuLeaf[];
+};
 
 export const PORTAL_NAV_GROUP_KEYS = [
   'nav-org',
@@ -13,18 +23,18 @@ type MenuChildRef = {
   key: string;
 };
 
-function collectMenuChildren(menuData: MenuDataItem[]): MenuChildRef[] {
+function collectMenuChildren(menuData: PortalMenuGroup[]): MenuChildRef[] {
   const out: MenuChildRef[] = [];
   for (const group of menuData) {
-    const groupKey = String(group.key ?? '');
-    if (!group.children?.length) continue;
+    const groupKey = group.key;
+    if (!group.children.length) continue;
     for (const child of group.children) {
       const path = child.path;
       if (!path) continue;
       out.push({
         groupKey,
         path,
-        key: String(child.key ?? path),
+        key: child.key ?? path,
       });
     }
   }
@@ -47,7 +57,7 @@ export function pathnameMatchesMenuPath(pathname: string, menuPath: string): boo
 
 export function resolvePortalMenuKeys(
   pathname: string,
-  menuData: MenuDataItem[],
+  menuData: PortalMenuGroup[],
 ): { selectedKeys: string[]; openKeys: string[] } {
   if (pathname === '/platform' || pathname.startsWith('/platform/')) {
     return { selectedKeys: ['/platform'], openKeys: ['nav-platform'] };

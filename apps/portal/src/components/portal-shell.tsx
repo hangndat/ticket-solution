@@ -1,8 +1,19 @@
 'use client';
 
-import type { MenuDataItem } from '@ant-design/pro-components';
-import { Button } from 'antd';
-import { usePathname } from 'next/navigation';
+import {
+  Alert,
+  Button,
+  Dropdown,
+  Layout,
+  Menu,
+  message,
+  Select,
+  Typography,
+  theme,
+} from 'antd';
+import type { MenuProps } from 'antd';
+import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   useCallback,
   useEffect,
@@ -23,7 +34,6 @@ import {
   loadShellContext,
   type ShellLoadState,
 } from '../nav/load-shell-context';
-import { PortalProLayout } from './portal-pro-layout';
 import { SurfaceState } from './surface-state';
 import { usePortalLocale } from '../i18n';
 import {
@@ -34,10 +44,26 @@ import {
 } from '../client/portal-fetch';
 import {
   canAccessPortalPath,
+  canAccessTenantRoute,
+  firstAllowedEventPath,
   firstAllowedTenantPath,
 } from '../nav/capability-policy';
 import { createContextRequestGate } from '../nav/context-request-gate';
-import { installUnsavedNavigation } from '../nav/unsaved-changes';
+import {
+  confirmDiscardIfDirty,
+  installUnsavedNavigation,
+} from '../nav/unsaved-changes';
+import {
+  resolvePortalMenuKeys,
+  type PortalMenuGroup,
+} from '../nav/portal-menu-keys';
+import {
+  eventSwitchDestination,
+  tenantSwitchDestination,
+} from '../nav/context-destination';
+import { isPortalDualRunBannerEnabled } from '../dual-run/allowlist';
+
+const { Header, Sider, Content } = Layout;
 
 function tenantFromPath(pathname: string): string | null {
   const m = pathname.match(/^\/t\/([^/]+)/);
@@ -57,6 +83,347 @@ function staffLoginUrlForPath(pathname: string): string | null {
     return `/api/auth/login?return=${encodeURIComponent(pathname)}`;
   }
   return null;
+}
+
+type PortalShellChromeProps = {
+  children: ReactNode;
+  productOrigin: string;
+  menuData: PortalMenuGroup[];
+  showSider: boolean;
+  caps: PortalShellCapabilities | null;
+  tenants: MeTenantItem[];
+  events: MeEventItem[];
+  tenantEvents: MeEventItem[];
+  resolvedTenantId: string | null;
+  effectiveEventId: string | null;
+  activeTenant: MeTenantItem | null;
+};
+
+function PortalShellChrome({
+  children,
+  productOrigin,
+  menuData,
+  showSider,
+  caps,
+  tenants,
+  events,
+  tenantEvents,
+  resolvedTenantId,
+  effectiveEventId,
+  activeTenant,
+}: PortalShellChromeProps) {
+  const { t, locale, setLocale } = usePortalLocale();
+  const pathname = usePathname();
+  const router = useRouter();
+  const { token } = theme.useToken();
+
+  const { selectedKeys, openKeys: pathOpenKeys } = useMemo(
+    () => resolvePortalMenuKeys(pathname, menuData),
+    [pathname, menuData],
+  );
+  const [userOpenKeys, setUserOpenKeys] = useState<string[]>([]);
+  const openKeys = useMemo(() => {
+    const merged = new Set(userOpenKeys);
+    for (const key of pathOpenKeys) merged.add(key);
+    return [...merged];
+  }, [userOpenKeys, pathOpenKeys]);
+
+  const menuItems: MenuProps['items'] = useMemo(
+    () =>
+      menuData.map((group) => ({
+        key: group.key,
+        label: group.name,
+        children: group.children.map((child) => ({
+          key: child.key,
+          label: <Link href={child.path}>{child.name}</Link>,
+        })),
+      })),
+    [menuData],
+  );
+
+  const accountMenu: MenuProps = {
+    selectable: true,
+    selectedKeys: [`locale-${locale}`],
+    items: [
+      {
+        key: 'security',
+        label: (
+          <Link href="/account/security">{t('shell.account.security')}</Link>
+        ),
+      },
+      {
+        key: 'language',
+        label: t('locale.label'),
+        children: [
+          {
+            key: 'locale-vi',
+            label: (
+              <span data-testid="portal-locale-vi">
+                {`${locale === 'vi' ? '✓ ' : ''}${t('locale.vi')}`}
+              </span>
+            ),
+            onClick: () => setLocale('vi'),
+          },
+          {
+            key: 'locale-en',
+            label: (
+              <span data-testid="portal-locale-en">
+                {`${locale === 'en' ? '✓ ' : ''}${t('locale.en')}`}
+              </span>
+            ),
+            onClick: () => setLocale('en'),
+          },
+        ],
+      },
+      {
+        key: 'logout',
+        label: t('shell.account.logout'),
+        onClick: () => {
+          window.location.assign('/api/auth/logout');
+        },
+      },
+    ],
+  };
+
+  const selectableTenants = tenants.filter((tenant) =>
+    firstAllowedTenantPath(tenant, events),
+  );
+  const selectableEvents = tenantEvents.filter((event) =>
+    firstAllowedEventPath(event),
+  );
+  const canClearEvent = Boolean(
+    activeTenant &&
+      (canAccessTenantRoute(
+        'overview',
+        activeTenant.tenantPermissions,
+        tenantEvents.map((event) => event.permissions),
+      ) ||
+        canAccessTenantRoute(
+          'analytics',
+          activeTenant.tenantPermissions,
+          tenantEvents.map((event) => event.permissions),
+        )),
+  );
+  const tenantLabelId = 'portal-context-tenant-label';
+  const eventLabelId = 'portal-context-event-label';
+  const showGateScanHint = Boolean(caps?.showGateScanHint);
+  const dualRunEnabled = isPortalDualRunBannerEnabled();
+  const legacyAdmin = `${productOrigin}/admin`;
+
+  return (
+    <Layout style={{ minHeight: '100vh' }}>
+      <Header
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          paddingInline: 16,
+          background: token.colorBgContainer,
+        }}
+      >
+        <Link
+          href="/"
+          className="portal-brand-link"
+          data-testid="portal-brand"
+        >
+          Vemoki Portal
+        </Link>
+        <Dropdown menu={accountMenu} trigger={['click']}>
+          <Button type="text" data-testid="account-menu">
+            {t('shell.account.menu')}
+          </Button>
+        </Dropdown>
+      </Header>
+      <Layout>
+        {showSider ? (
+          <Sider
+            theme="dark"
+            width={240}
+            breakpoint="lg"
+            collapsedWidth={0}
+            style={{ minHeight: 'calc(100vh - 64px)' }}
+          >
+            <Menu
+              mode="inline"
+              theme="dark"
+              items={menuItems}
+              selectedKeys={selectedKeys}
+              openKeys={openKeys}
+              onOpenChange={(keys) => setUserOpenKeys(keys as string[])}
+              data-testid="portal-sider"
+            />
+          </Sider>
+        ) : null}
+        <Layout>
+          <Content style={{ padding: 0 }}>
+            <a href="#portal-main" className="portal-skip-link">
+              {t('shell.skipNav')}
+            </a>
+            <div
+              className="portal-context-strip"
+              data-testid="portal-context-strip"
+            >
+              <div className="portal-context-strip__row">
+                <div className="portal-context-strip__field">
+                  <label
+                    id={tenantLabelId}
+                    className="portal-context-strip__label"
+                  >
+                    {t('shell.tenant.label')}
+                  </label>
+                  <Select
+                    aria-labelledby={tenantLabelId}
+                    placeholder={
+                      selectableTenants.length === 0
+                        ? t('shell.tenant.empty')
+                        : t('shell.tenant.placeholder')
+                    }
+                    value={resolvedTenantId ?? undefined}
+                    options={selectableTenants.map((tenant) => ({
+                      value: tenant.tenantId,
+                      label: `${tenant.name} (${tenant.slug})`,
+                      title: `${tenant.name} (${tenant.slug})`,
+                    }))}
+                    onChange={(value) => {
+                      const tenant = tenants.find(
+                        (item) => item.tenantId === value,
+                      );
+                      const destination =
+                        tenant &&
+                        tenantSwitchDestination(pathname, tenant, events);
+                      if (
+                        destination &&
+                        confirmDiscardIfDirty(t('shell.unsaved.confirm'))
+                      ) {
+                        if (!destination.preserved)
+                          void message.info(t('shell.context.fallback'));
+                        router.push(destination.path);
+                      }
+                    }}
+                    disabled={selectableTenants.length === 0}
+                    data-testid="tenant-switcher"
+                  />
+                </div>
+                <div className="portal-context-strip__field">
+                  <label
+                    id={eventLabelId}
+                    className="portal-context-strip__label"
+                  >
+                    {t('nav.org.events')}
+                  </label>
+                  <Select
+                    aria-labelledby={eventLabelId}
+                    placeholder={
+                      !resolvedTenantId
+                        ? t('shell.event.selectTenantFirst')
+                        : selectableEvents.length === 0
+                          ? t('shell.event.empty')
+                          : t('shell.event.placeholder')
+                    }
+                    value={effectiveEventId ?? undefined}
+                    options={selectableEvents.map((e) => ({
+                      value: e.eventId,
+                      label: e.name,
+                      title: e.name,
+                    }))}
+                    onChange={(value) => {
+                      if (resolvedTenantId) {
+                        const event = tenantEvents.find(
+                          (item) => item.eventId === value,
+                        );
+                        const destination =
+                          event && eventSwitchDestination(pathname, event);
+                        if (
+                          destination &&
+                          confirmDiscardIfDirty(t('shell.unsaved.confirm'))
+                        ) {
+                          if (!destination.preserved)
+                            void message.info(t('shell.context.fallback'));
+                          router.push(destination.path);
+                        }
+                      }
+                    }}
+                    disabled={
+                      !resolvedTenantId || selectableEvents.length === 0
+                    }
+                    data-testid="event-switcher"
+                    allowClear={canClearEvent}
+                    onClear={() => {
+                      if (
+                        !activeTenant ||
+                        !confirmDiscardIfDirty(t('shell.unsaved.confirm'))
+                      )
+                        return;
+                      const base = `/t/${activeTenant.tenantId}`;
+                      const destination = canAccessTenantRoute(
+                        'overview',
+                        activeTenant.tenantPermissions,
+                        tenantEvents.map((event) => event.permissions),
+                      )
+                        ? base
+                        : `${base}/analytics`;
+                      router.push(destination);
+                    }}
+                  />
+                </div>
+                {showGateScanHint ? (
+                  <Typography.Text
+                    type="secondary"
+                    className="portal-context-strip__hint"
+                    data-testid="gate-ios-scan-hint"
+                  >
+                    {t('gateDeeplink.h_iosHint')}
+                  </Typography.Text>
+                ) : null}
+              </div>
+            </div>
+            <div
+              id="portal-main"
+              key={pathname}
+              tabIndex={-1}
+              className="portal-main-surface"
+            >
+              {dualRunEnabled ? (
+                <Alert
+                  type="info"
+                  showIcon
+                  banner
+                  data-testid="portal-dual-run-banner"
+                  style={{ marginBottom: 16 }}
+                  message={t('dualRun.h_ekkubx')}
+                  description={
+                    <>
+                      {t('dualRun.h_16lfg67_2')}
+                      <a href={legacyAdmin} rel="noopener noreferrer">
+                        {legacyAdmin}
+                      </a>
+                      {t('dualRun.h_l9n5m3')}
+                    </>
+                  }
+                />
+              ) : null}
+              {activeTenant?.status === 'SUSPENDED' ? (
+                <SurfaceState kind="suspended" />
+              ) : null}
+              {activeTenant?.status === 'PENDING' ? (
+                <SurfaceState
+                  kind="pending-activation"
+                  emptyAction={
+                    <Link href={`/onboarding/${activeTenant.tenantId}`}>
+                      <Button type="link">
+                        {t('onboarding.pending.openWait')}
+                      </Button>
+                    </Link>
+                  }
+                />
+              ) : null}
+              {children}
+            </div>
+          </Content>
+        </Layout>
+      </Layout>
+    </Layout>
+  );
 }
 
 export function PortalShell({
@@ -95,7 +462,6 @@ export function PortalShell({
 
   const pathTenantId = tenantFromPath(pathname);
   const pathEventId = eventFromPath(pathname);
-  // The URL is the only source for a selected context.
   const effectiveTenantId = pathTenantId;
   const effectiveEventId = pathEventId;
 
@@ -180,8 +546,8 @@ export function PortalShell({
     return buildEventMenuItems(resolvedTenantId, activeEventId, permissions, t);
   }, [resolvedTenantId, activeEventId, activeEventPermKey, t]);
 
-  const menuData = useMemo((): MenuDataItem[] => {
-    const items: MenuDataItem[] = [];
+  const menuData = useMemo((): PortalMenuGroup[] => {
+    const items: PortalMenuGroup[] = [];
     if (orgMenu.length > 0) {
       items.push({
         key: 'nav-org',
@@ -335,7 +701,7 @@ export function PortalShell({
   }
 
   return (
-    <PortalProLayout
+    <PortalShellChrome
       productOrigin={productOrigin}
       menuData={menuData}
       showSider={showSider}
@@ -348,6 +714,6 @@ export function PortalShell({
       activeTenant={activeTenant}
     >
       {children}
-    </PortalProLayout>
+    </PortalShellChrome>
   );
 }
