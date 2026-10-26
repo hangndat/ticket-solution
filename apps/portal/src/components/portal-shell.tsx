@@ -3,6 +3,7 @@
 import {
   Alert,
   Button,
+  Drawer,
   Dropdown,
   Layout,
   Menu,
@@ -65,6 +66,21 @@ import { isPortalDualRunBannerEnabled } from '../dual-run/allowlist';
 
 const { Header, Sider, Content } = Layout;
 
+/** Align with portal context-strip layout (`globals.css` @1024). */
+const NARROW_NAV_MEDIA = '(max-width: 1023px)';
+
+function useNarrowNavLayout(): boolean {
+  const [narrow, setNarrow] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia(NARROW_NAV_MEDIA);
+    const sync = () => setNarrow(mq.matches);
+    sync();
+    mq.addEventListener('change', sync);
+    return () => mq.removeEventListener('change', sync);
+  }, []);
+  return narrow;
+}
+
 function tenantFromPath(pathname: string): string | null {
   const m = pathname.match(/^\/t\/([^/]+)/);
   return m?.[1] ?? null;
@@ -116,6 +132,9 @@ function PortalShellChrome({
   const pathname = usePathname();
   const router = useRouter();
   const { token } = theme.useToken();
+  const narrowNav = useNarrowNavLayout();
+  const [navDrawerOpen, setNavDrawerOpen] = useState(false);
+  const useDrawerNav = showSider && narrowNav;
 
   const { selectedKeys, openKeys: pathOpenKeys } = useMemo(
     () => resolvePortalMenuKeys(pathname, menuData),
@@ -139,6 +158,21 @@ function PortalShellChrome({
         })),
       })),
     [menuData],
+  );
+
+  const closeNavDrawer = useCallback(() => setNavDrawerOpen(false), []);
+
+  const capabilityNavMenu = (
+    <Menu
+      mode="inline"
+      theme="dark"
+      items={menuItems}
+      selectedKeys={selectedKeys}
+      openKeys={openKeys}
+      onOpenChange={(keys) => setUserOpenKeys(keys as string[])}
+      onClick={closeNavDrawer}
+      data-testid="portal-sider"
+    />
   );
 
   const accountMenu: MenuProps = {
@@ -221,37 +255,62 @@ function PortalShellChrome({
           background: token.colorBgContainer,
         }}
       >
-        <Link
-          href="/"
-          className="portal-brand-link"
-          data-testid="portal-brand"
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            minWidth: 0,
+          }}
         >
-          Vemoki Portal
-        </Link>
+          {useDrawerNav ? (
+            <Button
+              type="text"
+              aria-expanded={navDrawerOpen}
+              aria-controls="portal-nav-drawer"
+              aria-haspopup="dialog"
+              onClick={() => setNavDrawerOpen(true)}
+              data-testid="portal-nav-trigger"
+            >
+              {t('shell.nav.open')}
+            </Button>
+          ) : null}
+          <Link
+            href="/"
+            className="portal-brand-link"
+            data-testid="portal-brand"
+          >
+            Vemoki Portal
+          </Link>
+        </div>
         <Dropdown menu={accountMenu} trigger={['click']}>
           <Button type="text" data-testid="account-menu">
             {t('shell.account.menu')}
           </Button>
         </Dropdown>
       </Header>
+      {useDrawerNav ? (
+        <Drawer
+          id="portal-nav-drawer"
+          title={t('shell.nav.drawerTitle')}
+          placement="left"
+          width={240}
+          open={navDrawerOpen}
+          onClose={closeNavDrawer}
+          destroyOnClose={false}
+          styles={{ body: { padding: 0 } }}
+        >
+          {capabilityNavMenu}
+        </Drawer>
+      ) : null}
       <Layout>
-        {showSider ? (
+        {showSider && !useDrawerNav ? (
           <Sider
             theme="dark"
             width={240}
-            breakpoint="lg"
-            collapsedWidth={0}
             style={{ minHeight: 'calc(100vh - 64px)' }}
           >
-            <Menu
-              mode="inline"
-              theme="dark"
-              items={menuItems}
-              selectedKeys={selectedKeys}
-              openKeys={openKeys}
-              onOpenChange={(keys) => setUserOpenKeys(keys as string[])}
-              data-testid="portal-sider"
-            />
+            {capabilityNavMenu}
           </Sider>
         ) : null}
         <Layout>

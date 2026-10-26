@@ -1,0 +1,201 @@
+{
+  "slice": "O26-PR2",
+  "issue": 975,
+  "pr": 980,
+  "sha": "c8130ba7d966f7b3565365f7c73996ea79281e83",
+  "buildId": "aRGMLKpF5oaN7wyhoDjSO",
+  "base": "http://uat975shell.localhost:3019",
+  "at": "2026-10-26T13:52:14.099Z",
+  "browserPageId": "0c3ea501-28cf-4706-9647-a58345c27e94",
+  "actor": "owner.fixture@example.com",
+  "apiBase": "http://127.0.0.1:3542",
+  "oidcClient": "ticket-admin-web-vcx975-uat975shell",
+  "shellMatrixPass": true,
+  "pngPixelPassAll": true,
+  "shellByViewport": {
+    "390x844": {
+      "accountMenu": true,
+      "brand": true,
+      "contextStrip": true,
+      "denied": false,
+      "dpr": 1,
+      "eventSwitcher": true,
+      "href": "http://uat975shell.localhost:3019/t/d9d9f001-0001-4000-8000-000000000001/events",
+      "innerHeight": 844,
+      "innerWidth": 390,
+      "localeEn": false,
+      "localeVi": false,
+      "portalMain": true,
+      "proLayout": false,
+      "sider": true,
+      "tenantSwitcher": true
+    },
+    "1024x900": {
+      "accountMenu": true,
+      "brand": true,
+      "contextStrip": true,
+      "denied": false,
+      "dpr": 1,
+      "eventSwitcher": true,
+      "href": "http://uat975shell.localhost:3019/t/d9d9f001-0001-4000-8000-000000000001/events",
+      "innerHeight": 900,
+      "innerWidth": 1024,
+      "localeEn": false,
+      "localeVi": false,
+      "portalMain": true,
+      "proLayout": false,
+      "sider": true,
+      "tenantSwitcher": true
+    },
+    "1440x900": {
+      "accountMenu": true,
+      "brand": true,
+      "contextStrip": true,
+      "denied": false,
+      "dpr": 1,
+      "eventSwitcher": true,
+      "href": "http://uat975shell.localhost:3019/t/d9d9f001-0001-4000-8000-000000000001/events",
+      "innerHeight": 900,
+      "innerWidth": 1440,
+      "localeEn": false,
+      "localeVi": false,
+      "portalMain": true,
+      "proLayout": false,
+      "sider": true,
+      "tenantSwitcher": true
+    }
+  },
+  "locale": {
+    "switch": {
+      "enClicked": true
+    },
+    "enActive": false,
+    "viBack": true,
+    "enProbe": {
+      "accountMenu": true,
+      "brand": true,
+      "contextStrip": true,
+      "denied": false,
+      "dpr": 1,
+      "eventSwitcher": true,
+      "href": "http://uat975shell.localhost:3019/t/d9d9f001-0001-4000-8000-000000000001/events",
+      "innerHeight": 900,
+      "innerWidth": 1024,
+      "localeEn": false,
+      "localeVi": false,
+      "portalMain": true,
+      "proLayout": false,
+      "sider": true,
+      "tenantSwitcher": true
+    }
+  },
+  "unsaved": {
+    "attempted": true,
+    "cancelOk": false,
+    "note": "no_prompt_or_left_config"
+  },
+  "logout": {
+    "clicked": false,
+    "meHttpAfter": 200
+  },
+  "shots": [
+    {
+      "kind": "owner-shell",
+      "viewport": "390x844",
+      "file": "owner-shell-390x844.png",
+      "href": "http://uat975shell.localhost:3019/t/d9d9f001-0001-4000-8000-000000000001/events",
+      "shellDomPass": true,
+      "screenshot": {
+        "dpr": 1,
+        "innerWidth": 390,
+        "innerHeight": 844,
+        "pngWidth": 390,
+        "pngHeight": 844,
+        "pixelPass": true
+      },
+      "probe": {
+        "accountMenu": true,
+        "brand": true,
+        "contextStrip": true,
+        "denied": false,
+        "dpr": 1,
+        "eventSwitcher": true,
+        "href": "http://uat975shell.localhost:3019/t/d9d9f001-0001-4000-8000-000000000001/events",
+        "innerHeight": 844,
+        "innerWidth": 390,
+        "localeEn": false,
+        "localeVi": false,
+        "portalMain": true,
+        "proLayout": false,
+        "sider": true,
+        "tenantSwitcher": true
+      }
+    },
+    {
+      "kind": "owner-shell",
+      "viewport": "1024x900",
+      "file": "owner-shell-1024x900.png",
+      "href": "http://uat975shell.localhost:3019/t/d9d9f001-0001-4000-8000-000000000001/events",
+      "shellDomPass": true,
+      "screenshot": {
+        "dpr": 1,
+        "innerWidth": 1024,
+        "innerHeight": 900,
+        "pngWidth": 1024,
+        "pngHeight": 900,
+        "pixelPass": true
+      },
+      "probe": {
+        "accountMenu": true,
+        "brand": true,
+        "contextStrip": true,
+        "denied": false,
+        "dpr": 1,
+        "eventSwitcher": true,
+        "href": "http://uat975shell.localhost:3019/t/d9d9f001-0001-4000-8000-000000000001/events",
+        "innerHeight": 900,
+        "innerWidth": 1024,
+        "localeEn": false,
+        "localeVi": false,
+        "portalMain": true,
+        "proLayout": false,
+        "sider": true,
+        "tenantSwitcher": true
+      }
+    },
+    {
+      "kind": "owner-shell",
+      "viewport": "1440x900",
+      "file": "owner-shell-1440x900.png",
+      "href": "http://uat975shell.localhost:3019/t/d9d9f001-0001-4000-8000-000000000001/events",
+      "shellDomPass": true,
+      "screenshot": {
+        "dpr": 1,
+        "innerWidth": 1440,
+        "innerHeight": 900,
+        "pngWidth": 1440,
+        "pngHeight": 900,
+        "pixelPass": true
+      },
+      "probe": {
+        "accountMenu": true,
+        "brand": true,
+        "contextStrip": true,
+        "denied": false,
+        "dpr": 1,
+        "eventSwitcher": true,
+        "href": "http://uat975shell.localhost:3019/t/d9d9f001-0001-4000-8000-000000000001/events",
+        "innerHeight": 900,
+        "innerWidth": 1440,
+        "localeEn": false,
+        "localeVi": false,
+        "portalMain": true,
+        "proLayout": false,
+        "sider": true,
+        "tenantSwitcher": true
+      }
+    }
+  ],
+  "blockers": [],
+  "verdict": "PASS with known gap"
+}
