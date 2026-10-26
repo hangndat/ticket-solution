@@ -2,7 +2,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { Button } from '@/components/ui/button';
 import { radius, space } from '@/theme/tokens';
 import { GateStatusStrip, StaffEventPicker } from './staff-gate-chrome.tsx';
-import type { ConnectivityState } from './offline-queue.ts';
+import { offlineBannerCopy, type ConnectivityState, type OfflineQueueSnapshot } from './offline-queue.ts';
 import type { GateOp } from './gate-scan.ts';
 import type { StaffGateScope } from './staff-gate-events.ts';
 import { shortId } from './gate-outcome-copy.ts';
@@ -14,8 +14,7 @@ export function StaffGateOpsSticky({
   connectivity,
   hasSession,
   sessionId,
-  queueAttention,
-  syncing,
+  queueSnap,
   onSync,
   machineLabel,
   eventName,
@@ -33,8 +32,7 @@ export function StaffGateOpsSticky({
   connectivity: ConnectivityState;
   hasSession: boolean;
   sessionId?: string | null;
-  queueAttention: boolean;
-  syncing: boolean;
+  queueSnap: OfflineQueueSnapshot;
   onSync?: () => void;
   machineLabel: string;
   eventName: string | null;
@@ -53,6 +51,15 @@ export function StaffGateOpsSticky({
     pendingOp !== null && (reconcileEnabled || onContinueScan);
   const sticky = scanStickyStatusFromMachineLabel(machineLabel);
   const title = eventName?.trim() || 'Chưa chọn sự kiện';
+  const conflictBanner = queueSnap.conflictCount > 0
+    ? offlineBannerCopy({
+        connectivity,
+        pendingCount: queueSnap.pendingCount,
+        conflictCount: queueSnap.conflictCount,
+        syncing: queueSnap.syncing,
+        lastSyncError: queueSnap.lastSyncError,
+      })
+    : null;
 
   return (
     <View
@@ -131,10 +138,33 @@ export function StaffGateOpsSticky({
       <GateStatusStrip
         connectivity={connectivity}
         hasSession={hasSession}
-        queueAttention={queueAttention}
-        syncing={syncing}
+        queueAttention={queueSnap.pendingCount > 0 || queueSnap.conflictCount > 0}
+        syncing={queueSnap.syncing}
         onSync={onSync}
       />
+      {conflictBanner ? (
+        <View
+          accessible
+          accessibilityRole="alert"
+          accessibilityLabel={`${conflictBanner.title}. ${conflictBanner.body}`}
+          style={{
+            padding: space.sm,
+            gap: space.xxs,
+            backgroundColor: colors.card,
+            borderLeftWidth: 3,
+            borderLeftColor: colors.deny,
+            borderRadius: radius.sm,
+            borderCurve: 'continuous',
+          }}
+        >
+          <Text style={{ ...typography.subheadSemibold, color: colors.deny }}>
+            {conflictBanner.title}
+          </Text>
+          <Text style={{ ...typography.caption, color: colors.secondary }}>
+            {conflictBanner.body}
+          </Text>
+        </View>
+      ) : null}
       {eventPickerOpen && canSwitchEvent ? (
         <StaffEventPicker
           choices={gateEventChoices}

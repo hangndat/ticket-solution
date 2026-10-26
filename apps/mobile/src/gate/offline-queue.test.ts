@@ -318,6 +318,15 @@ test('banner copy is Vietnamese for offline/sync/conflict', () => {
   });
   assert.equal(conflict.title, 'Có xung đột đồng bộ');
   assert.equal(conflict.tone, 'deny');
+  const conflictWhileOffline = offlineBannerCopy({
+    connectivity: 'offline',
+    pendingCount: 1,
+    conflictCount: 1,
+    syncing: true,
+    lastSyncError: null,
+  });
+  assert.equal(conflictWhileOffline.title, 'Có xung đột đồng bộ');
+  assert.match(conflictWhileOffline.body, /không cho vào/);
 
   const online = offlineBannerCopy({
     connectivity: 'online',

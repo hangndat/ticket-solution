@@ -795,6 +795,13 @@ export function offlineBannerCopy(input: {
   syncing: boolean;
   lastSyncError: string | null;
 }): { title: string; body: string; tone: 'default' | 'unknown' | 'deny' | 'admit' } {
+  if (input.conflictCount > 0) {
+    return {
+      title: 'Có xung đột đồng bộ',
+      body: `${input.conflictCount} mục bị từ chối/xung đột. Xem chi tiết bên dưới — không cho vào theo bản thua.`,
+      tone: 'deny',
+    };
+  }
   if (input.connectivity === 'offline') {
     return {
       title: 'Đang ngoại tuyến',
@@ -810,13 +817,6 @@ export function offlineBannerCopy(input: {
       title: 'Đang đồng bộ',
       body: `Đang gửi ${input.pendingCount || '…'} lượt offline lên máy chủ…`,
       tone: 'default',
-    };
-  }
-  if (input.conflictCount > 0) {
-    return {
-      title: 'Có xung đột đồng bộ',
-      body: `${input.conflictCount} mục bị từ chối/xung đột. Xem chi tiết bên dưới — không cho vào theo bản thua.`,
-      tone: 'deny',
     };
   }
   if (input.pendingCount > 0) {

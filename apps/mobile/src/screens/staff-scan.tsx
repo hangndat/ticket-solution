@@ -53,8 +53,7 @@ export function StaffScanScreen() {
             connectivity={gate.connectivity}
             hasSession={Boolean(gate.sessionId)}
             sessionId={gate.sessionId}
-            queueAttention={gate.queueAttention}
-            syncing={gate.queueSnap.syncing}
+            queueSnap={gate.queueSnap}
             onSync={() => void gate.syncNow()}
             machineLabel={gate.machineLabel}
             eventName={gate.gateScope?.name ?? null}

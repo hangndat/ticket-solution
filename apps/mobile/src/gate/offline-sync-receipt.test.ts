@@ -267,6 +267,23 @@ test('fetchOfflineSyncReceipt aborts hung fetch without blocking chain', async (
   assert.equal(sawAbort, true);
 });
 
+for (const status of [429, 503]) {
+  test(`receipt HTTP ${status} leaves queued operation pending without invalid-receipt copy`, async () => {
+    const op = queuedOp();
+    const next = await reconcileOpsWithHistoricalReceipts({
+      ops: [op],
+      queueItems: [queueRow('pending')],
+      bearer: 'tok',
+      apiBase: 'https://api.example',
+      shouldContinue: () => true,
+      fetchImpl: async () => new Response(JSON.stringify({ code: 'TEMPORARY' }), { status }),
+    });
+    assert.equal(next[0], op);
+    assert.equal(next[0]?.phase, 'queued');
+    assert.doesNotMatch(next[0]?.message ?? '', /biên nhận không hợp lệ/);
+  });
+}
+
 test('opNeedsHistoricalReceiptLookup respects terminal queue rows', () => {
   const op = queuedOp();
   const byId = new Map([[clientEventId, queueRow('applied')]]);
