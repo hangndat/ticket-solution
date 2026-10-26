@@ -21,6 +21,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
   type ReactNode,
 } from 'react';
 import type { MeEventItem, MeTenantItem } from '@ticket/contracts';
@@ -69,16 +70,22 @@ const { Header, Sider, Content } = Layout;
 /** Align with portal context-strip layout (`globals.css` @1024). */
 const NARROW_NAV_MEDIA = '(max-width: 1023px)';
 
+function subscribeNarrowNav(onChange: () => void): () => void {
+  const mq = window.matchMedia(NARROW_NAV_MEDIA);
+  mq.addEventListener('change', onChange);
+  return () => mq.removeEventListener('change', onChange);
+}
+
+function getNarrowNavSnapshot(): boolean {
+  return window.matchMedia(NARROW_NAV_MEDIA).matches;
+}
+
 function useNarrowNavLayout(): boolean {
-  const [narrow, setNarrow] = useState(false);
-  useEffect(() => {
-    const mq = window.matchMedia(NARROW_NAV_MEDIA);
-    const sync = () => setNarrow(mq.matches);
-    sync();
-    mq.addEventListener('change', sync);
-    return () => mq.removeEventListener('change', sync);
-  }, []);
-  return narrow;
+  return useSyncExternalStore(
+    subscribeNarrowNav,
+    getNarrowNavSnapshot,
+    () => false,
+  );
 }
 
 function tenantFromPath(pathname: string): string | null {
@@ -245,7 +252,7 @@ function PortalShellChrome({
   const legacyAdmin = `${productOrigin}/admin`;
 
   return (
-    <Layout style={{ minHeight: '100vh' }}>
+    <Layout className="portal-app-shell" style={{ minHeight: '100vh' }}>
       <Header
         style={{
           display: 'flex',
@@ -269,10 +276,11 @@ function PortalShellChrome({
               aria-expanded={navDrawerOpen}
               aria-controls="portal-nav-drawer"
               aria-haspopup="dialog"
+              aria-label={t('shell.nav.open')}
               onClick={() => setNavDrawerOpen(true)}
               data-testid="portal-nav-trigger"
             >
-              {t('shell.nav.open')}
+              ☰
             </Button>
           ) : null}
           <Link
@@ -308,6 +316,8 @@ function PortalShellChrome({
           <Sider
             theme="dark"
             width={240}
+            collapsible={false}
+            trigger={null}
             style={{ minHeight: 'calc(100vh - 64px)' }}
           >
             {capabilityNavMenu}

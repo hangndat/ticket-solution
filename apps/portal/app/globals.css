@@ -6,6 +6,18 @@ body {
   min-height: 100%;
 }
 
+/* Narrow shell: navigation only via Header Drawer — never antd zero-width Sider trigger. */
+.portal-app-shell .ant-layout-sider-zero-width-trigger,
+.portal-app-shell .ant-layout-sider-zero-width-trigger-left {
+  display: none !important;
+}
+
+@media (max-width: 1023px) {
+  .portal-app-shell > .ant-layout > .ant-layout-has-sider > .ant-layout-sider {
+    display: none !important;
+  }
+}
+
 .portal-skip-link {
   position: absolute;
   left: -9999px;
