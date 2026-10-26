@@ -7,13 +7,37 @@
  * when receipt model is null and comment has an explicit pin (mixed).
  *
  * Usage:
- *   node scripts/orca-cost-wave-evidence.mjs
- *   node scripts/orca-cost-wave-evidence.mjs --comments-only
+ *   node scripts/orca-cost-wave-evidence.mjs --run RUN --dispatch DISPATCH [--dispatch DISPATCH ...]
+ *     [--receipt-file .orca-metrics/lifecycle/.../start-receipt.json ...]
+ *   node scripts/orca-cost-wave-evidence.mjs --run RUN --comments-only
  */
 import { execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { COST_TIERS, LEGACY_COST_TIERS } from "./lib/agent-cost-tiers.mjs";
 
 const commentsOnly = process.argv.includes("--comments-only");
+const values = (flag) => process.argv.flatMap((arg, index, argv) => arg === flag ? [argv[index + 1]] : []);
+const run = values("--run")[0];
+const dispatchIds = values("--dispatch");
+const receiptFiles = values("--receipt-file");
+if (!run || !/^run_[\w-]+$/.test(run) || values("--run").length !== 1 ||
+    dispatchIds.some((id) => !/^(?:ctx|dispatch)_[\w-]+$/.test(id)) ||
+    new Set(dispatchIds).size !== dispatchIds.length ||
+    (!commentsOnly && dispatchIds.length === 0) ||
+    (commentsOnly && (dispatchIds.length || receiptFiles.length))) {
+  console.error("Usage: orca-cost-wave-evidence.mjs --run RUN --dispatch DISPATCH [--dispatch DISPATCH ...] [--receipt-file PATH ...] | --run RUN --comments-only");
+  process.exit(1);
+}
+const receipts = new Map();
+for (const file of receiptFiles) {
+  const data = JSON.parse(readFileSync(file, "utf8"));
+  const receipt = data.result ?? data.receipt?.result ?? data;
+  if (receipt.runId !== run || !dispatchIds.includes(receipt.dispatchId) ||
+      !receipt.taskId || !receipt.launch || receipts.has(receipt.dispatchId)) {
+    throw Error(`Receipt scope mismatch or duplicate: ${file}`);
+  }
+  receipts.set(receipt.dispatchId, receipt);
+}
 
 function orcaJson(args) {
   const out = execFileSync(process.env.ORCA_CLI_COMMAND || "orca", args, { encoding: "utf8", maxBuffer: 20e6 });
@@ -43,11 +67,19 @@ function commentPin(blob) {
   return { kind: "unpinned", model: "unpinned" };
 }
 
-const wl = orcaJson(["orchestration", "worker-list", "--include-remote", "--json"]);
+const wl = orcaJson(["orchestration", "worker-list", "--run", run, "--include-remote", "--json"]);
 const workers = wl.result?.workers ?? [];
 // A missing structured-session status does not mean the dispatch stopped.
 const live = workers.filter((w) => w.terminalState === "active" || w.projection?.liveness?.verdict === "live");
-const tasks = orcaJson(["orchestration", "task-list", "--json"]).result?.tasks ?? [];
+const selected = commentsOnly ? live : workers.filter((w) => dispatchIds.includes(w.dispatchId));
+if (!commentsOnly && selected.length !== dispatchIds.length) {
+  throw Error(`Missing dispatches in Run ${run}: ${dispatchIds.filter((id) => !selected.some((w) => w.dispatchId === id)).join(", ")}`);
+}
+if (new Set(selected.map((w) => w.dispatchId)).size !== selected.length ||
+    selected.some((w) => w.runId !== run || (receipts.has(w.dispatchId) && receipts.get(w.dispatchId).taskId !== w.taskId))) {
+  throw Error(`Worker-list or receipt identity mismatch in Run ${run}`);
+}
+const tasks = orcaJson(["orchestration", "task-list", "--run", run, "--json"]).result?.tasks ?? [];
 const taskById = new Map(tasks.map((t) => [t.id, t]));
 
 const list = orcaJson(["worktree", "list", "--json"]);
@@ -96,15 +128,12 @@ function classifyReceipt(launch, wtBlob) {
 
 if (commentsOnly) {
   const paths = new Set();
-  for (const w of live) {
+  for (const w of selected) {
     const id = w.resource?.worktreeId ?? "";
     const path = id.includes("::") ? id.split("::").pop() : id;
     if (path) paths.add(path);
   }
-  const scan =
-    live.length === 0
-      ? [...wtByPath.values()].filter((w) => !w.isMainWorktree)
-      : [...paths].map((p) => wtByPath.get(p)).filter(Boolean);
+  const scan = [...paths].map((p) => wtByPath.get(p)).filter(Boolean);
 
   for (const w of scan) {
     if (!w || w.isMainWorktree) continue;
@@ -122,7 +151,7 @@ if (commentsOnly) {
     }
   }
 } else {
-  for (const w of live) {
+  for (const w of selected) {
     const id = w.resource?.worktreeId ?? "";
     const path = id.includes("::") ? id.split("::").pop() : id;
     const wt = path ? wtByPath.get(path) : null;
@@ -133,18 +162,20 @@ if (commentsOnly) {
     // Task declarations take precedence over stale worktree comments.
     bumpTier(tierFromBlob(spec) || tierFromName(title) || tierFromBlob(wtBlob) || tierFromName(wt?.displayName || ""));
 
-    let launch = null;
-    try {
-      const show = orcaJson([
-        "orchestration",
-        "worker-show",
-        "--dispatch",
-        w.dispatchId,
-        "--json",
-      ]);
-      launch = show.result?.worker?.startOptions?.launch ?? null;
-    } catch {
-      launch = null;
+    let launch = receipts.get(w.dispatchId)?.launch ?? null;
+    if (!launch) {
+      try {
+        const show = orcaJson([
+          "orchestration",
+          "worker-show",
+          "--dispatch",
+          w.dispatchId,
+          "--json",
+        ]);
+        launch = show.result?.worker?.startOptions?.launch ?? null;
+      } catch {
+        launch = null;
+      }
     }
 
     const row = launch
@@ -171,16 +202,14 @@ if (commentsOnly) {
 
 const n = Object.values(tiers).reduce((sum, count) => sum + count, 0) + unknown;
 const inheritPct = n ? Math.round((inherit * 1000) / n) / 10 : 0;
-const run = live[0]?.runId ?? workers[0]?.runId ?? "run_?";
-
 let source = "wt-comment-estimate";
-if (!commentsOnly && live.length) {
+if (!commentsOnly && selected.length) {
   if (receiptRows && !mixedRows && !commentRows) source = "receipt";
   else if (receiptRows || mixedRows) source = "receipt+mixed";
   else source = "wt-comment-estimate";
 }
 
-const line = `cost-wave | run=${run} | n=${n} active | ${Object.entries(tiers).map(([tier, count]) => `${tier}=${count}`).join(" ")} unknown=${unknown} | pinned=${pinned} inherit=${inherit} | inherit%=${inheritPct} | models=${[...new Set(models)].join(",") || "-"} | source=${source}`;
+const line = `cost-wave | run=${run} | scope=${commentsOnly ? "run-active" : "wave"} | n=${n} ${commentsOnly ? "active" : "dispatches"} | ${Object.entries(tiers).map(([tier, count]) => `${tier}=${count}`).join(" ")} unknown=${unknown} | pinned=${pinned} inherit=${inherit} | inherit%=${inheritPct} | models=${[...new Set(models)].join(",") || "-"} | source=${source}`;
 
 console.log(line);
 if (inheritPct > 20) {
