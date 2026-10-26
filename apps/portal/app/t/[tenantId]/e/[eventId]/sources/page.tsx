@@ -10,7 +10,7 @@ import type { ProColumns } from '@ant-design/pro-components';
 import { Alert, Button, Form } from 'antd';
 import { PortalPage } from '../../../../../../src/components/portal-page';
 import { useParams } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type {
   PortalSourceSummary,
   PortalTicketTypeSummary,
@@ -25,6 +25,11 @@ import { isEventPagePermitted } from '../../../../../../src/prep/event-access-re
 import { useEventAccess } from '../../../../../../src/prep/use-event-access';
 import { SurfaceState } from '../../../../../../src/components/surface-state';
 import { usePortalLocale } from '../../../../../../src/i18n';
+import { canPerformEventAction } from '../../../../../../src/nav/capability-policy';
+import {
+  confirmDiscardIfDirty,
+  useUnsavedChanges,
+} from '../../../../../../src/nav/unsaved-changes';
 
 export default function SourcesPage() {
   const { t } = usePortalLocale();
@@ -34,13 +39,16 @@ export default function SourcesPage() {
   const [items, setItems] = useState<PortalSourceSummary[]>([]);
   const [types, setTypes] = useState<PortalTicketTypeSummary[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
-  const [kind, setKind] = useState<'loading' | 'ready' | 'empty' | 'error' | 'unknown'>(
-    'loading',
-  );
+  const [kind, setKind] = useState<
+    'loading' | 'ready' | 'empty' | 'error' | 'unknown'
+  >('loading');
   const [message, setMessage] = useState<string | undefined>();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [dirty, setDirty] = useState(false);
+  const savedForm = useRef(false);
+  useUnsavedChanges(dirty, t('shell.unsaved.confirm'));
   const [form] = Form.useForm<{
     name: string;
     approvalMode: 'AUTO' | 'MANUAL';
@@ -55,7 +63,9 @@ export default function SourcesPage() {
       if (next) qs.set('cursor', next);
       const [res, typesRes] = await Promise.all([
         portalGet(`${bffEventAction(tenantId, eventId, 'sources')}?${qs}`),
-        portalGet(`${bffEventAction(tenantId, eventId, 'ticket-types')}?limit=50`),
+        portalGet(
+          `${bffEventAction(tenantId, eventId, 'ticket-types')}?limit=50`,
+        ),
       ]);
       if (res.networkError || res.timedOut || res.status >= 500) {
         setKind('unknown');
@@ -64,11 +74,17 @@ export default function SourcesPage() {
       }
       if (res.status !== 200 || !res.json || typeof res.json !== 'object') {
         setKind('error');
-        setMessage(apiErrorMessage(res.json, t('common.httpStatus', { status: res.status })));
+        setMessage(
+          apiErrorMessage(
+            res.json,
+            t('common.httpStatus', { status: res.status }),
+          ),
+        );
         return;
       }
       const list = Array.isArray((res.json as { items?: unknown }).items)
-        ? ((res.json as { items: PortalSourceSummary[] }).items as PortalSourceSummary[])
+        ? ((res.json as { items: PortalSourceSummary[] })
+            .items as PortalSourceSummary[])
         : [];
       const nextCursor =
         typeof (res.json as { nextCursor?: unknown }).nextCursor === 'string'
@@ -136,7 +152,13 @@ export default function SourcesPage() {
     );
   }
 
-  async function createSource() {
+  const canCreateSource = canPerformEventAction(
+    'createSource',
+    access.permissions,
+  );
+
+  async function createSource(): Promise<boolean> {
+    if (!canCreateSource) return false;
     setBusy(true);
     setNotice(null);
     try {
@@ -151,16 +173,18 @@ export default function SourcesPage() {
       );
       if (res.networkError || res.timedOut || res.status >= 500) {
         setNotice(t('sources.h_duauzj'));
-        return;
+        return false;
       }
       if (res.status === 200 || res.status === 201) {
+        savedForm.current = true;
+        setDirty(false);
         setNotice(t('sources.h_1p3knph'));
-        setOpen(false);
         form.resetFields();
         void load(null);
-        return;
+        return true;
       }
       setNotice(apiErrorMessage(res.json, t('sources.h_q0wodv')));
+      return false;
     } finally {
       setBusy(false);
     }
@@ -185,7 +209,19 @@ export default function SourcesPage() {
   return (
     <PortalPage
       title={t('nav.event.sources')}
-      extra={<Button type="primary" onClick={() => setOpen(true)}>{t('sources.h_1hplg8o')}</Button>}
+      extra={
+        canCreateSource ? (
+          <Button
+            type="primary"
+            onClick={() => {
+              savedForm.current = false;
+              setOpen(true);
+            }}
+          >
+            {t('sources.h_1hplg8o')}
+          </Button>
+        ) : undefined
+      }
       loading={kind === 'loading'}
     >
       {kind === 'loading' ? <SurfaceState kind="loading" /> : null}
@@ -196,7 +232,9 @@ export default function SourcesPage() {
           message={t('surface.unknown.title')}
           description={message}
           action={
-            <Button size="small" onClick={() => void load(null)}>{t('surface.action.recheck')}</Button>
+            <Button size="small" onClick={() => void load(null)}>
+              {t('surface.action.recheck')}
+            </Button>
           }
         />
       ) : null}
@@ -212,7 +250,17 @@ export default function SourcesPage() {
           kind="empty"
           description={t('sources.h_1850hrg')}
           emptyAction={
-            <Button type="primary" onClick={() => setOpen(true)}>{t('sources.h_1hplg8o')}</Button>
+            canCreateSource ? (
+              <Button
+                type="primary"
+                onClick={() => {
+                  savedForm.current = false;
+                  setOpen(true);
+                }}
+              >
+                {t('sources.h_1hplg8o')}
+              </Button>
+            ) : undefined
           }
         />
       ) : null}
@@ -227,27 +275,52 @@ export default function SourcesPage() {
             pagination={false}
           />
           {cursor ? (
-            <Button onClick={() => void load(cursor)}>{t('sources.h_1w8bpuo')}</Button>
+            <Button onClick={() => void load(cursor)}>
+              {t('sources.h_1w8bpuo')}
+            </Button>
           ) : null}
         </>
       ) : null}
 
-      {notice ? <Alert type="info" showIcon message={notice} style={{ marginTop: 16 }} /> : null}
+      {notice ? (
+        <Alert
+          type="info"
+          showIcon
+          message={notice}
+          style={{ marginTop: 16 }}
+        />
+      ) : null}
 
       <ModalForm
         title={t('sources.h_8t861g')}
-        open={open}
-        onOpenChange={setOpen}
+        open={open && canCreateSource}
+        onOpenChange={(next) => {
+          if (
+            !next &&
+            !savedForm.current &&
+            !confirmDiscardIfDirty(t('shell.unsaved.confirm'))
+          )
+            return;
+          savedForm.current = false;
+          setOpen(next);
+          if (!next) setDirty(false);
+        }}
+        onValuesChange={() => setDirty(true)}
         form={form}
         initialValues={{ approvalMode: 'MANUAL' }}
         modalProps={{ destroyOnHidden: true }}
         submitter={{ submitButtonProps: { loading: busy } }}
         onFinish={async () => {
-          await createSource();
-          return true;
+          if (!canCreateSource) return false;
+          return createSource();
         }}
       >
-        <ProFormText name="name" label={t('sources.ten')} rules={[{ required: true }]} fieldProps={{ maxLength: 80 }} />
+        <ProFormText
+          name="name"
+          label={t('sources.ten')}
+          rules={[{ required: true }]}
+          fieldProps={{ maxLength: 80 }}
+        />
         <ProFormSelect
           name="approvalMode"
           label={t('guests.approvalMode')}
@@ -260,7 +333,12 @@ export default function SourcesPage() {
         <ProFormSelect
           name="ticketTypeId"
           label={t('nav.event.types')}
-          rules={[{ required: true, message: t('ops.import.chooseTicketTypeCatalog') }]}
+          rules={[
+            {
+              required: true,
+              message: t('ops.import.chooseTicketTypeCatalog'),
+            },
+          ]}
           options={types.map((ty) => ({
             value: ty.ticketTypeId,
             label: ty.label,

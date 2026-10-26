@@ -21,18 +21,52 @@ export function rateLimitedException(): HttpException {
   );
 }
 
+export class RateLimitedWithRetryAfter extends HttpException {
+  constructor(readonly retryAfterSeconds: number) {
+    super(rateLimitedException().getResponse(), 429);
+  }
+}
+
+/** The counter uses UTC hour windows; pass this same clock value to the counter. */
+export function secondsUntilNextRateLimitWindow(now: Date): number {
+  return Math.max(
+    1,
+    Math.ceil((3_600_000 - (now.getTime() % 3_600_000)) / 1000),
+  );
+}
+
 async function consumeRateLimitInTenantContext(
   db: PrismaClient,
   tenantId: string,
   bucketKey: string,
   limit: number,
+  now?: Date,
 ): Promise<boolean> {
   return db.$transaction(async (tx) => {
     // notification_rate_counters is RLS-scoped; counter tenant_id is synthetic
     // (userId or IP-derived UUID), not the event tenant — bind session for writes.
     await tx.$queryRaw`SELECT set_config('app.tenant_id', ${tenantId}, true)`;
-    return tryConsumeRateLimit(tx, { tenantId, bucketKey, limit });
+    return tryConsumeRateLimit(tx, { tenantId, bucketKey, limit, now });
   });
+}
+
+export async function consumeUserRateLimitWithRetryAfter(
+  db: PrismaClient,
+  userId: string,
+  bucketKey: string,
+  limit: number,
+): Promise<void> {
+  const now = new Date();
+  const allowed = await consumeRateLimitInTenantContext(
+    db,
+    userId,
+    bucketKey,
+    limit,
+    now,
+  );
+  if (!allowed) {
+    throw new RateLimitedWithRetryAfter(secondsUntilNextRateLimitWindow(now));
+  }
 }
 
 export async function consumeUserRateLimit(

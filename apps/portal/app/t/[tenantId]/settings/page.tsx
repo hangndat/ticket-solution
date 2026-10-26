@@ -12,8 +12,10 @@ import {
 } from '../../../../src/client/portal-fetch';
 import { bffBranding } from '../../../../src/prep/bff-urls';
 import { useTenantAccess } from '../../../../src/prep/use-event-access';
+import { canPerformTenantAction } from '../../../../src/nav/capability-policy';
 import { SurfaceState } from '../../../../src/components/surface-state';
 import { usePortalLocale } from '../../../../src/i18n';
+import { useUnsavedChanges } from '../../../../src/nav/unsaved-changes';
 
 type Branding = {
   displayName: string;
@@ -34,6 +36,8 @@ export default function OrgSettingsPage() {
   const [message, setMessage] = useState<string | undefined>();
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [dirty, setDirty] = useState(false);
+  useUnsavedChanges(dirty, t('shell.unsaved.confirm'));
   const [form] = Form.useForm<{
     displayName: string;
     primaryColor: string;
@@ -54,7 +58,12 @@ export default function OrgSettingsPage() {
     }
     if (res.status !== 200 || !res.json || typeof res.json !== 'object') {
       setKind('error');
-      setMessage(apiErrorMessage(res.json, t('common.httpStatus', { status: res.status })));
+      setMessage(
+        apiErrorMessage(
+          res.json,
+          t('common.httpStatus', { status: res.status }),
+        ),
+      );
       return;
     }
     const b = res.json as Branding;
@@ -99,7 +108,9 @@ export default function OrgSettingsPage() {
       />
     );
   }
-  if (!access.tenant.tenantPermissions.includes('tenant.profile')) {
+  if (
+    !canPerformTenantAction('editSettings', access.tenant.tenantPermissions)
+  ) {
     return (
       <SurfaceState
         kind="permission-denied"
@@ -142,11 +153,17 @@ export default function OrgSettingsPage() {
         return;
       }
       if (res.status === 200) {
+        setDirty(false);
         setNotice(t('settings.h_17g3cj6'));
         void load();
         return;
       }
-      setNotice(apiErrorMessage(res.json, t('settings.saveFailedHttp', { status: res.status })));
+      setNotice(
+        apiErrorMessage(
+          res.json,
+          t('settings.saveFailedHttp', { status: res.status }),
+        ),
+      );
     } finally {
       setBusy(false);
     }
@@ -162,7 +179,9 @@ export default function OrgSettingsPage() {
           message={t('surface.unknown.title')}
           description={message}
           action={
-            <Button size="small" onClick={() => void load()}>{t('surface.action.recheck')}</Button>
+            <Button size="small" onClick={() => void load()}>
+              {t('surface.action.recheck')}
+            </Button>
           }
         />
       ) : null}
@@ -177,6 +196,7 @@ export default function OrgSettingsPage() {
         <>
           <ProForm
             form={form}
+            onValuesChange={() => setDirty(true)}
             layout="vertical"
             style={{ maxWidth: 480 }}
             submitter={{
@@ -198,7 +218,8 @@ export default function OrgSettingsPage() {
             />
             <ProFormText name="secondaryColor" label={t('settings.h_me7m5c')} />
             <Typography.Text type="secondary">
-              {t('settings.currentVersion')}{branding?.version ?? '—'}
+              {t('settings.currentVersion')}
+              {branding?.version ?? '—'}
             </Typography.Text>
           </ProForm>
           {notice ? <Alert type="info" showIcon message={notice} /> : null}

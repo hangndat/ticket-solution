@@ -7,6 +7,15 @@ alwaysApply: false
 
 Bổ sung [orca-agent-routing-core.mdc](./orca-agent-routing-core.mdc). Leader **Read** khi kích hoạt (`orca-leader-activation.mdc`).
 
+## Leader mặc định và cảnh báo chi phí
+
+- Leader dùng Codex với model/effort thấp nhất trong catalog đáp ứng phần quyết định còn lại; điều phối dependency/WIP rõ, CI/tracking và dispatch thường lệ mặc định đề xuất `gpt-6-sol` / `low`. Đây là cấu hình cho lần khởi chạy/bàn giao được host hỗ trợ, không tự nhận đã đổi model của phiên hiện tại. User chỉ định model khác thì giữ chỉ định đó và cảnh báo trade-off khi cần.
+- Script/Orca xử lý chờ sự kiện, thu CI/tracking; Composer thực thi việc đã rõ. Giao chuyên gia/reviewer mạnh cho kiến trúc, auth/RLS, race và chẩn đoán khó theo cost-catalog. Chỉ nâng leader khi chính quyết định điều phối còn mơ hồ hoặc nhiều nhánh xung đột, không vì worker cần model mạnh. Reviewer vẫn độc lập, caps/ownership/gates không đổi.
+- **Bắt buộc chủ động cảnh báo user** khi có cơ hội điều chỉnh cụ thể: leader mạnh chỉ còn việc thường lệ; context dài tiếp tục bị đọc lại; polling/review/probe không tạo delta; hoặc model/tier cao hơn phần việc còn lại. Đánh giá ở đầu phase, sau wave và khi phát hiện vòng lặp, không tạo job/model call chỉ để đánh giá chi phí.
+- Cảnh báo ngắn: `Dấu hiệu/evidence → điều chỉnh đề xuất (model/effort hoặc quy trình) → thời điểm an toàn → đánh đổi/giới hạn`. Không hứa % tiền/quota tiết kiệm khi thiếu billing/baseline. Cùng nguyên nhân chỉ cảnh báo lại khi có delta hoặc đến thời điểm có thể hành động; không nhắc theo heartbeat, không dừng công việc đã authorize để chờ một khuyến nghị tùy chọn.
+- Ưu tiên một leader nhẹ ổn định, hạn chế đổi qua lại từng task. Khi cần phiên mới: lưu checkpoint run/task/dispatch/SHA/CI/findings/budget/bước tiếp; xác minh host hỗ trợ tiếp quản cùng Run, model effective và mailbox; chỉ dừng phiên cũ sau khi phiên mới xác nhận nhận trách nhiệm. Chọn boundary không còn worker live, pending question/delivery hay cleanup. Không hai leader cùng dispatch, không tự đóng/reset phiên để thử khả năng chưa xác minh. Nếu host không hỗ trợ, nêu thao tác user cần làm và tiếp tục giữ trách nhiệm hiện tại.
+- User đã ủy quyền chủ động bàn giao sang leader nhẹ khi đủ điều kiện trên và còn đủ việc để đáng chi phí chuyển phiên; báo ngắn trước khi chuyển, không hỏi duyệt lại từng lần. Phiên cũ ngừng dispatch trong lúc bàn giao, phiên mới xác nhận bind Run và nhận checkpoint trước khi bắt đầu điều phối. Launch thành công không thay xác nhận tiếp quản; lỗi/unknown thì giữ checkpoint, không launch trùng hoặc tự đóng phiên cũ. Chỉ kết thúc lượt điều phối cũ, không xóa lịch sử chat hay worktree.
+
 ## Spawn evidence
 
 Trước mỗi spawn: ghi agent, Cost tier, Persona, model requested/effective, lý do. Codex quota không gate Cursor spawn.
@@ -28,10 +37,10 @@ Trước spawn, Spec phải có `Skills cần nạp` (tên/mục đích), mẫu 
 1. Đọc cost-catalog → `--model <pin>`; không `--effort` đơn lẻ.
 2. Cấm inherit UI; inherit chỉ sau reject pin cùng band — ghi limitation.
 3. Reuse khi cùng context và pin/effort phù hợp; cheap/standard cùng Composer không buộc spawn mới. Không reuse pane có model/effort cao hơn budget task.
-4. **Wave D:** sau wave `node scripts/orca-cost-wave-evidence.mjs` — `inherit%` > 20% → refresh pin, dừng spawn.
+4. **Wave D:** sau wave `node scripts/orca-cost-wave-evidence.mjs --run <RUN> --dispatch <DISPATCH> [--dispatch <DISPATCH> ...]` (thêm `--receipt-file <start-receipt.json>` khi có) — `inherit%` > 20% → refresh pin, dừng spawn. Chỉ đo dispatch vừa spawn; không quét Run khác.
 5. **Wave E:** preflight và `agent-workflow-run.mjs start` bắt buộc `--cost-tier <tier>` khớp Task Spec và một mapping agent/model/effort trong catalog. Ví dụ mapping hiện tại: `--cost-tier advanced --agent codex --model gpt-6-sol --effort medium`. Preflight từ chối tổ hợp chưa đăng ký; wrapper giữ `--cost-tier` local, không gửi flag này vào Orca.
 6. Fan-out tối đa task ready theo `orca-parallel-workers.mdc`: ≤5 non-review + ≤3 reviewer; ≤1 feature/slice. CI evidence: `./scripts/gh-dod-evidence.sh` — stagger nếu ≥2 reviewer cùng gọi `gh` (`github-api-hygiene.mdc`).
-7. Giao Composer phần thực thi ít cần suy luận, gộp vào task phù hợp; lifecycle/hygiene vài lệnh coordinator làm inline, không spawn chỉ để đổi vài dòng.
+7. Giao Composer phần thực thi ít cần suy luận, gộp vào task phù hợp; lifecycle/hygiene vài lệnh coordinator làm inline, không spawn chỉ để đổi vài dòng. CI/tracking/generate schema dùng script hiện có; nếu cần worker theo ownership thì Composer cho sửa cơ học đã rõ nguyên nhân. Revalidate generated-artifact-only không đổi logic được phân loại standard và tái dùng security verdict cũ; nếu diff vượt artifact hoặc invariant thay đổi thì dừng để phân loại lại. Không hạ tier cho phán đoán transaction/auth/RLS còn mở.
 
 Worker/reviewer `focused|advanced|high` ưu tiên Claude Sonnet 5 trước Codex theo catalog; Codex là fallback cùng tier khi Claude không khả dụng/quota không đủ hoặc unknown, có evidence cần đổi provider hoặc user chỉ định, và phải ghi lý do; không đổi coordinator, không tăng caps. Claude chưa có quota adapter: kiểm `/usage` đúng tài khoản và ghi evidence trước dispatch; unknown thì hoãn Claude và xét quota Codex riêng, không lấy snapshot Codex làm quota Claude.
 

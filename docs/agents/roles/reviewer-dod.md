@@ -14,6 +14,8 @@
 
 Issue/PR ở `Chờ duyệt`; hoặc coordinator ưu tiên review khi hàng đợi duyệt đầy. Scope = review only — không drive-by refactor, không implement fix trừ khi Task riêng là fix-worker.
 
+DoD là checklist nghiệm thu **trong lượt review độc lập**, không mở thêm vòng đọc code nếu PR đã có reviewer độc lập kiểm đủ scope. Áp dụng [quy trình review chung](../../../.cursor/rules/orca-review-convergence.mdc) để chọn security/UI và tái dùng checks; coordinator kiểm gate từ evidence, không lặp toàn bộ review.
+
 ## Đầu vào Spec phải có
 
 Nhận spec đã điền (initial/revalidate), AC/evidence/findings từ coordinator; không đọc các template review/task-spec/worker-report trống. Ghi một báo cáo theo spec và yêu cầu artifact bên dưới. Tóm tắt ≤3 câu; findings mới/mở ghi đủ bằng chứng/điều kiện đóng, findings đã xác minh chỉ dẫn ID/report trước. Không chép lại log CI cho từng checklist.

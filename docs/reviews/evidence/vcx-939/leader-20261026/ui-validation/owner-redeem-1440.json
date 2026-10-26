@@ -1,0 +1,17 @@
+{
+  "persona": "owner-redeem",
+  "route": "/redeem",
+  "page": "b9b7ce1a-1d53-4b3b-812a-9b08ccd17256",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "probe": {
+    "frame": null,
+    "frameWidth": 1440,
+    "issues": [],
+    "viewport": 1440
+  },
+  "at": "2026-10-26T11:28:39.553570+00:00",
+  "sourceCodeSha": "1f4ce0be70edfe864e399007bff2cf392285b086"
+}

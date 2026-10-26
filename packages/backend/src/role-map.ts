@@ -11,6 +11,7 @@ const OWNER: readonly string[] = [
 ];
 
 const MANAGER_EVENT: readonly string[] = [
+  'event.update',
   'event.config',
   'event.publish',
   'inventory.import',
@@ -76,11 +77,7 @@ export function eventPermissionsForRole(role: MembershipRole): string[] {
   switch (role) {
     case 'Owner':
       // Owner still needs explicit assignment for ops on others' events.
-      return [
-        ...MANAGER_EVENT,
-        ...CS_EVENT,
-        ...SUPERVISOR_EVENT,
-      ];
+      return [...MANAGER_EVENT, ...CS_EVENT, ...SUPERVISOR_EVENT];
     case 'Manager':
       return [...MANAGER_EVENT];
     case 'CS':

@@ -1,0 +1,51 @@
+[
+  {
+    "url": "http://localhost:3417/api/bff/me/events",
+    "method": "GET",
+    "status": 200,
+    "timestamp": 1793010689595,
+    "requestId": "20420.65"
+  },
+  {
+    "url": "http://localhost:3417/api/bff/me/tenants",
+    "method": "GET",
+    "status": 200,
+    "timestamp": 1793010689595,
+    "requestId": "20420.66"
+  },
+  {
+    "url": "http://localhost:3417/api/bff/me",
+    "method": "GET",
+    "status": 200,
+    "timestamp": 1793010689595,
+    "requestId": "20420.67"
+  },
+  {
+    "url": "http://localhost:3417/api/bff/me/events",
+    "method": "GET",
+    "status": 200,
+    "timestamp": 1793010700849,
+    "requestId": "20420.68"
+  },
+  {
+    "url": "http://localhost:3417/api/bff/me/tenants",
+    "method": "GET",
+    "status": 200,
+    "timestamp": 1793010700849,
+    "requestId": "20420.69"
+  },
+  {
+    "url": "http://localhost:3417/api/bff/me",
+    "method": "GET",
+    "status": 200,
+    "timestamp": 1793010700994,
+    "requestId": "20420.70"
+  },
+  {
+    "url": "http://localhost:3417/api/bff/claim",
+    "method": "POST",
+    "status": 201,
+    "timestamp": 1793010706295,
+    "requestId": "20420.71"
+  }
+]

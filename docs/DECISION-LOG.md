@@ -1,10 +1,16 @@
 # Decision log — sản phẩm & kỹ thuật
 
-Ngày cập nhật: 2026-10-25
+Ngày cập nhật: 2026-10-26
 Nguồn: [PRD](./PRD.md) mục 15, [Technical Design](./TECHNICAL-DESIGN.md) mục 2 & 18, [ROADMAP](./ROADMAP.md)
 Tracking: Issues [#10](https://github.com/hangndat/ticket-solution/issues/10), [#11](https://github.com/hangndat/ticket-solution/issues/11)
 
 **Kiến trúc hiện trạng (canonical, Epic [#891](https://github.com/hangndat/ticket-solution/issues/891) / F06):** [`docs/architecture/ar891-current-architecture.md`](./architecture/ar891-current-architecture.md) — deployed / tested / proposed; không thay nội dung quyết định lịch sử bên dưới.
+
+## O26 — Portal dùng giao diện mặc định Ant Design (26/10/2026)
+
+User quyết định **toàn bộ UI component của `apps/portal` dùng component có sẵn của `antd` với giao diện/token mặc định**. Không tạo thêm UI component hoặc wrapper riêng, design system, token, theme hay CSS tùy biến cho Portal. Khi cần một UI mới, ghép các component chính thức của `antd`; logic nghiệp vụ, dữ liệu, quyền và điều hướng vẫn có thể nằm trong module/hook riêng. Quyết định này thay yêu cầu “theme Vemoki” của O16 và thay định hướng dùng ProComponents của O18 đối với UI Portal; component ProComponents/custom hiện có phải được kiểm kê và chuyển dần sang `antd` trong Task migration, không coi là đã hoàn tất từ quyết định này. Không đổi design system của `apps/web` hoặc iOS; giữ tiếng Việt và accessibility.
+
+Architecture impact: **Có** — thay đổi dependency/component boundary của Portal, không đổi API hoặc nghiệp vụ. Việc gỡ ProComponents, custom component/theme/CSS hiện có cần Task migration với bằng chứng giao diện và regression trước khi coi là code complete; quyết định này tự nó chưa xác nhận implementation.
 
 ## O25 — Epic #914: tách slice portal/web và chốt phạm vi offline (26/10/2026)
 

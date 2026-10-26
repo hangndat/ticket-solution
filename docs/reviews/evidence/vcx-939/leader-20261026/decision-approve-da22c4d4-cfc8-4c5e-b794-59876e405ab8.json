@@ -1,0 +1,31 @@
+{
+  "requestId": "da22c4d4-cfc8-4c5e-b794-59876e405ab8",
+  "before": [
+    422,
+    {
+      "code": "TENANT_REQUIRED",
+      "message": "tenantId query parameter is required",
+      "requestId": "2080598b-95a0-4582-801a-dad007774e18",
+      "retryable": false
+    }
+  ],
+  "decisionHttp": 201,
+  "decision": {
+    "decision": "approve",
+    "requestId": "da22c4d4-cfc8-4c5e-b794-59876e405ab8",
+    "status": "ISSUED",
+    "ticketId": "6676d0f8-9e02-4057-90f2-3c787f681f30",
+    "operationId": "ca803e61-0946-4b02-852f-12aa3165ff3e",
+    "ownerUserId": "21ab1e0f-68a1-462a-b207-5a61d1cb2eb3",
+    "replayed": false
+  },
+  "after": [
+    422,
+    {
+      "code": "TENANT_REQUIRED",
+      "message": "tenantId query parameter is required",
+      "requestId": "c056affc-ab12-47b3-8f75-1e896bd7d105",
+      "retryable": false
+    }
+  ]
+}

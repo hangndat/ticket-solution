@@ -9,6 +9,7 @@ import { AuditPanel } from '../../../../../../src/ops/panels/audit-panel';
 import { CodesPanel } from '../../../../../../src/ops/panels/codes-panel';
 import { ExportPanel } from '../../../../../../src/ops/panels/export-panel';
 import { useEventAccess } from '../../../../../../src/prep/use-event-access';
+import { canPerformEventAction } from '../../../../../../src/nav/capability-policy';
 import { SurfaceState } from '../../../../../../src/components/surface-state';
 import { usePortalLocale } from '../../../../../../src/i18n';
 
@@ -23,10 +24,13 @@ export default function EventAuditPage() {
     () => (access.kind === 'ready' ? access.permissions : []),
     [access],
   );
-  const canAudit = permissions.includes('report.read');
-  const canCodes = permissions.includes('inventory.import');
-  const canExportCreate = permissions.includes('export.create');
-  const canExportDownload = permissions.includes('export.download');
+  const canAudit = canPerformEventAction('readReport', permissions);
+  const canCodes = canPerformEventAction('readCodes', permissions);
+  const canExportCreate = canPerformEventAction('createExport', permissions);
+  const canExportDownload = canPerformEventAction(
+    'downloadExport',
+    permissions,
+  );
   const canExport = canExportCreate || canExportDownload;
   const canJobs = canAudit || canCodes || canExport;
 
@@ -98,10 +102,9 @@ export default function EventAuditPage() {
     >
       <ProCard
         tabs={{
-          activeKey:
-            tabItems.some((tab) => tab.key === activeTab)
-              ? activeTab
-              : tabItems[0]?.key,
+          activeKey: tabItems.some((tab) => tab.key === activeTab)
+            ? activeTab
+            : tabItems[0]?.key,
           onChange: (key) => {
             setActiveTab(key);
             window.location.hash = key;
