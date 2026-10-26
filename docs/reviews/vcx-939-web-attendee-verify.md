@@ -130,9 +130,27 @@ Discriminator chung: `RedeemDecision` (`src/redeem/decide.ts`) + `decideClaimBod
 
 **Unit (cùng SHA):** `pnpm --filter @ticket/web test` — 293 PASS (gồm `redeem-decide`, `guest-claim`, `redeem-messages`, `live-region`).
 
-**Findings runtime:** Không gap code tái hiện trong `apps/web` — F-939-01 đóng phần OIDC owner + guest claim surface; F-939-02..04 giữ như verify-first. **F-939-05 (evidence):** acceptance runtime chưa hoàn tất: còn pending/rejected poll, unknown timeout, email lỗi không làm mất vé đã phát và ảnh success issued rõ. Merge tài liệu không đóng các gap này hoặc chứng minh pilot ready; visual product chrome tiếp tục theo `#881`.
+**Findings runtime (`d00a265` batch):** Không gap code tái hiện trong `apps/web` — F-939-01 đóng phần OIDC owner + guest claim surface; F-939-02..04 giữ như verify-first.
+
+### Runtime UAT (`e76414a` / packet `vcx939-20261026T0158Z`)
+
+**Label:** prior testedSHA `d00a265` giữ làm nhãn nguồn; build/evidence run trên PR HEAD `e76414a`. Packet: [`evidence/vcx-939/vcx939-20261026T0158Z/`](evidence/vcx-939/vcx939-20261026T0158Z/).
+
+**Stack:** loopback tách Noah926 (`3013`/`3498`/`8080`) — web `:3417`, API `:3539`, OIDC `:8180`, Mailpit `:8039` (SMTP `:1039`), DB `ticket_ui869_dev` @ Postgres `:55439`. Real Keycloak + Postgres; không email thật.
+
+| Luồng bắt buộc | Kết quả | Ghi chú |
+| --- | --- | --- |
+| pending → issued | **API PASS** / **UI GAP** | `DEMO-V939-PEND-ISSUE` → staff approve → ticket `38d18d02…`; Orca chưa chứng minh poll pending→issued |
+| pending → rejected | **API PASS** / **UI GAP** | `DEMO-V939-PEND-REJECT` → staff deny `REJECTED` |
+| timeout/5xx → unknown | **GAP** | API stop fault injection; chưa ảnh unknown hợp lệ (không dùng mã denied); unit tests vẫn PASS |
+| email lỗi sau issuance | **GAP** | SMTP sink `:19999` attempted; chưa hoàn tất outbox retry/no-duplicate E2E |
+| issued (success, không form trống) | **PARTIAL** | Wallet `wallet-1024.png` 4 vé «Sẵn sàng»; resolve step `redeem-resolve-1024.png`; **chưa** `redeem-ux-success` |
+
+**Checks:** `pnpm --filter @ticket/web test` 293 PASS @ `e76414a`; `pnpm uat:p4-oidc` attendee/staff/me PASS (1 check logout refresh fail trên KC isolated).
+
+**F-939-05:** vẫn **mở** — runtime acceptance chưa đủ mandatory browser scenarios; không pilot ready.
 
 ## Việc còn lại (dispatch sau)
 
-1. Reviewer James `dod+sec+ux` trên SHA PR docs.
-2. Hoàn tất evidence runtime còn thiếu ở F-939-05 với persona fixture, hoặc ghi blocker/điều kiện mở cụ thể; không gọi phần thiếu là PASS.
+1. Reviewer James `dod+sec+ux` trên SHA PR docs (`e76414a`).
+2. Đóng F-939-05: Orca poll pending/rejected, unknown outage có ảnh, email-outbox retry, `redeem-ux-success` — hoặc ghi blocker cụ thể; không gọi partial là PASS.

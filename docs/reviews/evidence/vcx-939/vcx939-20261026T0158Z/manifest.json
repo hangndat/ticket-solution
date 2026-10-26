@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "runId": "vcx939-20261026T0158Z",
+  "issue": 939,
+  "pr": 954,
+  "reviewedSha": "e76414a120e9a60ca687b47b4a5afe1f1ea66c2f",
+  "priorTestedShaLabel": "d00a265cca1206b68601c75d445b633f7d590b57",
+  "executionHostId": "local",
+  "persona": {
+    "attendee": "attendee@example.com (fixture)",
+    "staffApproval": "manager.fixture@example.com (fixture)"
+  },
+  "viewports": ["390x844", "1024x900", "1440x900"],
+  "reservedPorts": {
+    "noah926": { "web": 3013, "api": 3498, "oidc": 8080 },
+    "vcx939": {
+      "web": 3417,
+      "api": 3539,
+      "oidc": 8180,
+      "postgres": 55439,
+      "redis": 56391,
+      "mailpitSmtp": 1039,
+      "mailpitUi": 8039,
+      "minio": [9039, 9040]
+    }
+  },
+  "stack": {
+    "composeProject": "ui869dev",
+    "stateDir": ".local-dev/vcx-939",
+    "database": "ticket_ui869_dev",
+    "faultInjection": {
+      "apiOutage": "dev-local-process.py stop api.pid during redeem resolve",
+      "smtpFailure": "API restarted with SMTP_URL=smtp://127.0.0.1:19999 (no EMAIL_ALLOW_NOOP)"
+    }
+  },
+  "checks": {
+    "webUnitTests": "pnpm --filter @ticket/web test — 293 pass @ e76414a",
+    "oidcHttp": "pnpm uat:p4-oidc — 5/6 pass (refresh_after_logout_all fail on isolated KC; attendee/staff/me pass)"
+  },
+  "artifacts": {
+    "screenshotsGitignored": "apps/web/.uat-artifacts/vcx-939/vcx939-20261026T0158Z/",
+    "screenshotsCommitted": "docs/reviews/evidence/vcx-939/vcx939-20261026T0158Z/screenshots/"
+  },
+  "privacy": "No tokens, cookies, passwords, QR bearer URLs, or invitation links in committed files."
+}
