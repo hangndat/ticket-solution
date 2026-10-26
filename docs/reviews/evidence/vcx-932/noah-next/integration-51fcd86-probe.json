@@ -1,0 +1,49 @@
+{
+  "integrationSha": "51fcd86f7acf95b3a7362a0bc6310707c1aee0a6",
+  "priorTestedSha": "6b2a5ffa5c5fe6bec321d7d64079147ef788994b",
+  "portalBuildId": "_8PxUE1nhvhw-KLm-X__p",
+  "at": "2026-10-26T12:03:22.828Z",
+  "hostProfile": {
+    "portalOrigin": "http://uat932.localhost:3016",
+    "actor": "owner.fixture@example.com",
+    "oidcClient": "ticket-admin-web-vcx932-uat932"
+  },
+  "matrixReuse": "Viewport 390/1024/1440 VI unchanged — logic/UI shell không đổi trong merge; chỉ re-probe hành vi CAS/preview/unsaved.",
+  "checks": {
+    "firstSaveUi": {
+      "ok": true
+    },
+    "cas409": {
+      "ok": true,
+      "status": 409,
+      "code": "REVISION_CONFLICT"
+    },
+    "reload": {
+      "ok": true
+    },
+    "preview": {
+      "ok": true,
+      "bff": {
+        "brand": "bump",
+        "sections": 6,
+        "status": 200,
+        "version": 2
+      },
+      "dom": {
+        "title": "Xem trước bản đã lưu v2",
+        "visible": true
+      }
+    },
+    "unsavedCancel": {
+      "ok": false,
+      "confirms": [],
+      "path": "/t/d9d9f001-0001-4000-8000-000000000001/e/d9d9f001-0002-4000-8000-000000000001/config"
+    },
+    "unsavedConfirm": {
+      "ok": false,
+      "path": "/t/d9d9f001-0001-4000-8000-000000000001/e/d9d9f001-0002-4000-8000-000000000001/config"
+    }
+  },
+  "pageId": "4dc5c6cf-7d9d-418e-94eb-e420c4141f66",
+  "verdict": "PARTIAL"
+}

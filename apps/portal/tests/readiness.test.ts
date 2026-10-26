@@ -64,6 +64,10 @@ test('minimal config payload has brand + terms', () => {
   assert.equal(isMinimalBrandOk(payload), true);
   assert.equal(hasTermsContent(payload), true);
   assert.equal(payload.schemaVersion, 1);
+  assert.deepEqual(
+    payload.sections.map((section) => section.kind),
+    ['hero', 'info', 'redeem', 'guide', 'faq', 'terms'],
+  );
 });
 
 test('create event body allowlists visibility and venue pair', () => {

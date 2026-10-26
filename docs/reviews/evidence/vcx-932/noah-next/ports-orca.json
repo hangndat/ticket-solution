@@ -1,0 +1,43 @@
+{
+  "platform": "darwin",
+  "scannedAt": 1793014970842,
+  "ports": [
+    {
+      "id": "127.0.0.1:3016:62143",
+      "bindHost": "127.0.0.1",
+      "connectHost": "127.0.0.1",
+      "port": 3016,
+      "pid": 62143,
+      "processName": "node",
+      "protocol": "http",
+      "kind": "workspace",
+      "owner": {
+        "worktreeId": "909e450c-287a-413f-ad47-10304625422c::/Users/admin/SideProject/ticket-solution/vcx-932-uat-next",
+        "repoId": "909e450c-287a-413f-ad47-10304625422c",
+        "displayName": "vcx-932-uat-next",
+        "path": "/Users/admin/SideProject/ticket-solution/vcx-932-uat-next",
+        "confidence": "cwd"
+      },
+      "advertisedUrl": "http://uat932.localhost:3016"
+    },
+    {
+      "id": "127.0.0.1:3542:78593",
+      "bindHost": "127.0.0.1",
+      "connectHost": "127.0.0.1",
+      "port": 3542,
+      "pid": 78593,
+      "processName": "node",
+      "protocol": "http",
+      "kind": "workspace",
+      "owner": {
+        "worktreeId": "909e450c-287a-413f-ad47-10304625422c::/Users/admin/SideProject/ticket-solution/vcx-932-uat-next",
+        "repoId": "909e450c-287a-413f-ad47-10304625422c",
+        "displayName": "vcx-932-uat-next",
+        "path": "/Users/admin/SideProject/ticket-solution/vcx-932-uat-next",
+        "confidence": "cwd"
+      },
+      "advertisedUrl": "http://127.0.0.1:3542"
+    }
+  ],
+  "executionHostId": "local"
+}

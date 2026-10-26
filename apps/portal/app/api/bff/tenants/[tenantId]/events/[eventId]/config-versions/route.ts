@@ -2,7 +2,10 @@ import type { EventConfigPayload } from '@ticket/contracts';
 import { assertMutatingBrowser } from '../../../../../../../../src/bff/csrf';
 import { isUuid } from '../../../../../../../../src/bff/ids';
 import { PORTAL_UPSTREAM } from '../../../../../../../../src/bff/paths';
-import { bffApiError, forwardStaffBearer } from '../../../../../../../../src/bff/upstream';
+import {
+  bffApiError,
+  forwardStaffBearer,
+} from '../../../../../../../../src/bff/upstream';
 
 type Props = { params: Promise<{ tenantId: string; eventId: string }> };
 
@@ -64,11 +67,27 @@ export async function POST(request: Request, { params }: Props) {
       422,
     );
   }
-  let body: { payload?: unknown; schemaVersion?: number };
+  let body: {
+    payload?: unknown;
+    schemaVersion?: number;
+    expectedVersion?: number;
+  };
   try {
     body = (await request.json()) as typeof body;
   } catch {
     return bffApiError('INVALID_JSON', 'Request body must be JSON.', 400);
+  }
+  const expectedVersion = body?.expectedVersion;
+  if (
+    typeof expectedVersion !== 'number' ||
+    !Number.isInteger(expectedVersion) ||
+    expectedVersion < 0
+  ) {
+    return bffApiError(
+      'EXPECTED_VERSION_REQUIRED',
+      'expectedVersion must be a non-negative integer.',
+      422,
+    );
   }
   const payload = parsePayload(body.payload);
   if (payload instanceof Response) return payload;
@@ -79,6 +98,6 @@ export async function POST(request: Request, { params }: Props) {
   return forwardStaffBearer(PORTAL_UPSTREAM.configVersions(tenantId, eventId), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ payload, schemaVersion }),
+    body: JSON.stringify({ payload, schemaVersion, expectedVersion }),
   });
 }
