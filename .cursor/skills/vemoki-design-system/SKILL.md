@@ -10,7 +10,7 @@ Dùng skill này **chỉ khi Task Spec giao Design System** cho `product-design`
 ## Xác định nguồn trước khi đặc tả
 
 1. Đọc `AGENTS.md`, Task/AC, các mục áp dụng trong `docs/DECISION-LOG.md`, `docs/agents/ui-workflow.md` và [bản đồ nguồn/migration](references/source-and-migration.md). Xác minh đường dẫn, version/SHA và trạng thái tracked của Brand Guidelines v1.0, Design System 0.1, `brand/vemoki/tokens.json` và handoff trước. Thiếu Brand Kit/draft được giao thì báo Coordinator bổ sung nguồn trước phần đặc tả phụ thuộc; không gọi một draft hoặc file untracked là SoT đã tích hợp.
-2. Phân biệt **brand direction**, **design specification đã duyệt** và **token/component đang chạy**. Khi nguồn xung đột, lập bảng khác biệt và chuyển Coordinator quyết định trong thẩm quyền; không tự viết lại O22/O23/O26, Brand Kit hoặc Issue AC. Giữ Portal theo quyết định UI mới nhất; ProComponents hiện có chỉ đổi qua Task migration được giao.
+2. Phân biệt **brand direction**, **design specification đã duyệt** và **token/component đang chạy**. Khi nguồn xung đột, lập bảng khác biệt và chuyển Coordinator quyết định trong thẩm quyền; không tự viết lại O22/O23/O26, Brand Kit hoặc Issue AC. Portal dùng `antd` hoặc ProComponents chính thức theo bổ sung O26, vẫn giữ giao diện/token mặc định và ownership hiện hành.
 3. Không suy ra brand mới đã triển khai từ prototype. Không tạo token SoT thứ hai, shared component package hoặc token generator mới khi chưa có quyết định kiến trúc và evidence cần thiết.
 
 ## Handoff cần tạo trong path Task giao
