@@ -68,7 +68,7 @@ test('changed payload, context switch and reload cannot silently reuse or replac
 });
 
 test('expired key and payload conflict stay blocked for reconciliation; explicit release starts new intent', async () => {
-  for (const code of ['IDEMPOTENCY_EXPIRED', 'IDEMPOTENCY_CONFLICT']) {
+  for (const code of ['IDEMPOTENCY_EXPIRED', 'IDEMPOTENCY_CONFLICT', 'EVENT_CLOSED']) {
     const storage = memoryStorage();
     let keys = 0;
     const client = new MutationIntent(scope, storage, () => `key-${++keys}`);

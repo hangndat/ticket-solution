@@ -148,7 +148,7 @@ export class MutationIntent {
       response = { status: 0, json: null, networkError: true, timedOut: false };
     }
     const code = apiErrorCode(response.json) ?? '';
-    if (code === 'IDEMPOTENCY_CONFLICT' || /IDEMPOTENCY.*(EXPIRED|MISMATCH)/.test(code)) {
+    if (response.status === 409 || code === 'IDEMPOTENCY_CONFLICT' || /IDEMPOTENCY.*(EXPIRED|MISMATCH)/.test(code)) {
       this.save({ ...intent, state: 'conflict' });
     } else if (response.status === 202) {
       this.save({ ...intent, state: 'accepted' });
