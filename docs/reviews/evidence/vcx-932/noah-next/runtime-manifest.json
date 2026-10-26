@@ -1,0 +1,38 @@
+{
+  "at": "2026-10-26T19:40:00+08:00",
+  "worktree": "/Users/admin/SideProject/ticket-solution/vcx-932-uat-next",
+  "testedPortalSha": "6b2a5ffa5c5fe6bec321d7d64079147ef788994b",
+  "testedApiSha": "6b2a5ffa5c5fe6bec321d7d64079147ef788994b",
+  "pr": 963,
+  "issue": 932,
+  "actor": {
+    "persona": "owner.fixture@example.com",
+    "role": "Owner",
+    "permission": "event.config (mfest event fixture)",
+    "mfa": "ticket-admin-web TOTP enrolled (fixture cache, không bypass)"
+  },
+  "database": {
+    "sourceReadOnly": "ticket_ui869_dev@127.0.0.1:55439",
+    "isolated": "ticket_vcx932_leader_20261026",
+    "runtimeRole": "vcx932_leader_rt"
+  },
+  "ports": {
+    "api": 3542,
+    "portal": 3016,
+    "portalHost": "uat932.localhost",
+    "portalOrigin": "http://uat932.localhost:3016",
+    "oidc": 8180,
+    "note3015": ":3015 bị vcx-928-context (Portal #928) — không dừng; cookie isolate qua host uat932.localhost (không jar localhost chung)",
+    "cookieIsolation": "Same cookie names; registrable host uat932.localhost vs 127.0.0.1 — see cookie-isolation-probe.json"
+  },
+  "oidcClient": "ticket-admin-web-vcx932-uat932",
+  "locale": "vi",
+  "viewports": ["390x844", "1024x900", "1440x900"],
+  "orca": {
+    "executionHostId": "local",
+    "commands": [
+      "orca tab create --worktree path:<vcx-932-uat-next> --url http://127.0.0.1:3016/",
+      "orca exec --page <id> goto|fill|click|screenshot|set viewport"
+    ]
+  }
+}

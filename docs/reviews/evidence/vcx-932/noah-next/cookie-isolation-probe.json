@@ -1,0 +1,19 @@
+{
+  "at": "2026-10-26T12:03:22.776Z",
+  "rationale": "Cookie names unchanged; isolation via registrable host uat932.localhost vs 127.0.0.1 — không chia sẻ jar với #928 :3015.",
+  "uat932": {
+    "label": "uat932_portal",
+    "url": "http://uat932.localhost:3016/",
+    "status": 200,
+    "cookieNames": [],
+    "cookieCount": 0
+  },
+  "foreign3015": {
+    "label": "loopback_3015_foreign",
+    "url": "http://127.0.0.1:3015/",
+    "status": 200,
+    "cookieNames": [],
+    "cookieCount": 0
+  },
+  "note": "Orca UAT must use only uat932 origin; không login #928 persona trong cùng jar."
+}

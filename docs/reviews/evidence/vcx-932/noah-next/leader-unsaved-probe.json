@@ -1,0 +1,45 @@
+{
+  "sha": "51fcd86f7acf95b3a7362a0bc6310707c1aee0a6",
+  "buildId": "_8PxUE1nhvhw-KLm-X__p",
+  "page": "ccaa9ee0-bd08-43e4-9b45-f8731db943d3",
+  "actor": "owner.fixture@example.com",
+  "origin": "http://uat932.localhost:3016",
+  "viewport": [
+    1024,
+    900
+  ],
+  "method": "Orca eval: native HTML input setter + bubbling input/change; actual DOM anchor/button click. window.confirm records prompt and supplies cancel/confirm choice; no app state, API response or auth mocked.",
+  "checks": {
+    "unsavedCancel": {
+      "ok": true,
+      "calls": [
+        "Thay đổi chưa lưu sẽ bị mất. Bạn có muốn rời màn này?"
+      ],
+      "path": "/t/d9d9f001-0001-4000-8000-000000000001/e/d9d9f001-0002-4000-8000-000000000001/config",
+      "value": "Leader932DirtyNative"
+    },
+    "unsavedConfirm": {
+      "ok": true,
+      "path": "/onboarding/d9d9f001-0001-4000-8000-000000000001",
+      "prompt": "Thay đổi chưa lưu sẽ bị mất. Bạn có muốn rời màn này?"
+    },
+    "saveUiAfterDirty": {
+      "ok": true,
+      "trace": [
+        {
+          "expectedVersion": 4,
+          "organizationName": "Leader932Saved",
+          "status": 201,
+          "version": 5
+        }
+      ],
+      "preview": "Xem trước bản đã lưu v5"
+    },
+    "savedNavigationNoPrompt": {
+      "ok": true,
+      "calls": [],
+      "path": "/onboarding/d9d9f001-0001-4000-8000-000000000001"
+    }
+  },
+  "verdict": "PASS"
+}

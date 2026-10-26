@@ -1,0 +1,319 @@
+{
+  "origin": "http://uat932.localhost:3016/t/d9d9f001-0001-4000-8000-000000000001/e/d9d9f001-0002-4000-8000-000000000001/config",
+  "refs": {
+    "e1": {
+      "name": "",
+      "role": "menu"
+    },
+    "e10": {
+      "name": "Tài khoản ▾",
+      "role": "button"
+    },
+    "e11": {
+      "name": "Clear",
+      "role": "button"
+    },
+    "e12": {
+      "name": "Loại vé",
+      "role": "menuitem"
+    },
+    "e13": {
+      "name": "Nguồn mã",
+      "role": "menuitem"
+    },
+    "e14": {
+      "name": "Hạn mức",
+      "role": "menuitem"
+    },
+    "e15": {
+      "name": "Cấu hình / xuất bản",
+      "role": "menuitem"
+    },
+    "e16": {
+      "name": "Khách & mã",
+      "role": "menuitem"
+    },
+    "e17": {
+      "name": "Vemoki Portal",
+      "role": "link"
+    },
+    "e18": {
+      "name": "Tổ chức",
+      "role": "combobox"
+    },
+    "e19": {
+      "name": "Sự kiện",
+      "role": "combobox"
+    },
+    "e2": {
+      "name": "collapse",
+      "role": "generic"
+    },
+    "e20": {
+      "name": "Xem trước bản đã lưu v4",
+      "role": "region"
+    },
+    "e21": {
+      "name": "Lịch sử phiên bản",
+      "role": "heading"
+    },
+    "e22": {
+      "name": "Loại vé",
+      "role": "link"
+    },
+    "e23": {
+      "name": "Nguồn mã",
+      "role": "link"
+    },
+    "e24": {
+      "name": "Hạn mức",
+      "role": "link"
+    },
+    "e25": {
+      "name": "Cấu hình / xuất bản",
+      "role": "link"
+    },
+    "e26": {
+      "name": "Khách & mã",
+      "role": "link"
+    },
+    "e27": {
+      "name": "Xem trước bản đã lưu v4",
+      "role": "heading"
+    },
+    "e28": {
+      "name": "",
+      "role": "generic"
+    },
+    "e29": {
+      "name": "",
+      "role": "generic"
+    },
+    "e3": {
+      "name": "Bỏ qua điều hướng",
+      "role": "link"
+    },
+    "e30": {
+      "name": "hero",
+      "role": "heading"
+    },
+    "e31": {
+      "name": "",
+      "role": "generic"
+    },
+    "e32": {
+      "name": "info",
+      "role": "heading"
+    },
+    "e33": {
+      "name": "",
+      "role": "generic"
+    },
+    "e34": {
+      "name": "redeem",
+      "role": "heading"
+    },
+    "e35": {
+      "name": "",
+      "role": "generic"
+    },
+    "e36": {
+      "name": "guide",
+      "role": "heading"
+    },
+    "e37": {
+      "name": "",
+      "role": "generic"
+    },
+    "e38": {
+      "name": "FAQ",
+      "role": "heading"
+    },
+    "e39": {
+      "name": "",
+      "role": "generic"
+    },
+    "e4": {
+      "name": "",
+      "role": "generic"
+    },
+    "e40": {
+      "name": "Điều khoản",
+      "role": "heading"
+    },
+    "e41": {
+      "name": "",
+      "role": "generic"
+    },
+    "e42": {
+      "name": "Lưu draft",
+      "role": "button"
+    },
+    "e43": {
+      "name": "Xuất bản tip",
+      "role": "button"
+    },
+    "e44": {
+      "name": "",
+      "role": "generic"
+    },
+    "e45": {
+      "name": "",
+      "role": "generic"
+    },
+    "e46": {
+      "name": "* Điều khoản (plain text)",
+      "role": "textbox"
+    },
+    "e47": {
+      "name": "",
+      "role": "row"
+    },
+    "e48": {
+      "name": "",
+      "role": "row"
+    },
+    "e49": {
+      "name": "",
+      "role": "row"
+    },
+    "e5": {
+      "name": "",
+      "role": "generic"
+    },
+    "e50": {
+      "name": "",
+      "role": "row"
+    },
+    "e51": {
+      "name": "* Tên tổ chức (brand)",
+      "role": "textbox"
+    },
+    "e52": {
+      "name": "close-circle",
+      "role": "button"
+    },
+    "e53": {
+      "name": "* Màu chính",
+      "role": "textbox"
+    },
+    "e54": {
+      "name": "close-circle",
+      "role": "button"
+    },
+    "e55": {
+      "name": "4",
+      "role": "cell"
+    },
+    "e56": {
+      "name": "no",
+      "role": "cell"
+    },
+    "e57": {
+      "name": "2026-10-26T12:52:48.747Z",
+      "role": "cell"
+    },
+    "e58": {
+      "name": "Xem trước",
+      "role": "cell"
+    },
+    "e59": {
+      "name": "3",
+      "role": "cell"
+    },
+    "e6": {
+      "name": "",
+      "role": "generic"
+    },
+    "e60": {
+      "name": "no",
+      "role": "cell"
+    },
+    "e61": {
+      "name": "2026-10-26T12:52:12.608Z",
+      "role": "cell"
+    },
+    "e62": {
+      "name": "Xem trước",
+      "role": "cell"
+    },
+    "e63": {
+      "name": "2",
+      "role": "cell"
+    },
+    "e64": {
+      "name": "no",
+      "role": "cell"
+    },
+    "e65": {
+      "name": "2026-10-26T12:03:43.791Z",
+      "role": "cell"
+    },
+    "e66": {
+      "name": "Xem trước",
+      "role": "cell"
+    },
+    "e67": {
+      "name": "1",
+      "role": "cell"
+    },
+    "e68": {
+      "name": "no",
+      "role": "cell"
+    },
+    "e69": {
+      "name": "2026-10-26T12:03:43.780Z",
+      "role": "cell"
+    },
+    "e7": {
+      "name": "Tổ chức này",
+      "role": "menuitem"
+    },
+    "e70": {
+      "name": "Xem trước",
+      "role": "cell"
+    },
+    "e71": {
+      "name": "Version",
+      "role": "columnheader"
+    },
+    "e72": {
+      "name": "Published",
+      "role": "columnheader"
+    },
+    "e73": {
+      "name": "Tạo lúc",
+      "role": "columnheader"
+    },
+    "e74": {
+      "name": "Xem trước",
+      "role": "columnheader"
+    },
+    "e75": {
+      "name": "Xem trước",
+      "role": "button"
+    },
+    "e76": {
+      "name": "Xem trước",
+      "role": "button"
+    },
+    "e77": {
+      "name": "Xem trước",
+      "role": "button"
+    },
+    "e78": {
+      "name": "Xem trước",
+      "role": "button"
+    },
+    "e8": {
+      "name": "MFest · Demo",
+      "role": "menuitem"
+    },
+    "e9": {
+      "name": "Thiết lập sự kiện",
+      "role": "menuitem"
+    }
+  },
+  "snapshot": "- generic\n  - complementary\n    - generic\n      - menu [ref=e1] focusable [tabindex]\n        - menuitem \"Tổ chức này\" [expanded=false, ref=e7]\n          - StaticText \"Tổ chức này\"\n        - menuitem \"MFest · Demo\" [expanded=false, ref=e8]\n          - StaticText \"MFest · Demo\"\n        - menuitem \"Thiết lập sự kiện\" [expanded=true, ref=e9]\n          - StaticText \"Thiết lập sự kiện\"\n        - menu\n          - menuitem \"Loại vé\" [ref=e12]\n            - link \"Loại vé\" [ref=e22]\n              - StaticText \"Loại vé\"\n          - menuitem \"Nguồn mã\" [ref=e13]\n            - link \"Nguồn mã\" [ref=e23]\n              - StaticText \"Nguồn mã\"\n          - menuitem \"Hạn mức\" [ref=e14]\n            - link \"Hạn mức\" [ref=e24]\n              - StaticText \"Hạn mức\"\n          - menuitem \"Cấu hình / xuất bản\" [ref=e15]\n            - link \"Cấu hình / xuất bản\" [ref=e25]\n              - StaticText \"Cấu hình / xuất bản\"\n          - menuitem \"Khách & mã\" [ref=e16]\n            - link \"Khách & mã\" [ref=e26]\n              - StaticText \"Khách & mã\"\n      - generic \"collapse\" [ref=e2] clickable [cursor:pointer, onclick]\n  - generic\n    - banner\n    - banner\n      - generic\n        - link \"Vemoki Portal\" [ref=e17]\n        - heading [level=1]\n        - button \"Tài khoản ▾\" [ref=e10]\n          - StaticText \"Tài khoản ▾\"\n    - main\n      - link \"Bỏ qua điều hướng\" [ref=e3]\n      - LabelText\n        - StaticText \"Tổ chức\"\n      - generic [ref=e4] clickable [cursor:pointer]\n        - generic\n          - StaticText \"MFest (mfest-demo)\"\n          - combobox \"Tổ chức\" [expanded=false, ref=e18]\n        - image \"down\"\n      - LabelText\n        - StaticText \"Sự kiện\"\n      - generic [ref=e5] clickable [cursor:pointer]\n        - generic\n          - StaticText \"MFest · Demo\"\n          - combobox \"Sự kiện\" [expanded=false, ref=e19]\n        - image \"down\"\n        - button \"Clear\" [ref=e11]\n          - image \"close-circle\"\n      - generic [ref=e6] clickable [onclick]\n        - StaticText \"Soát vé bằng app Vemoki trên iPhone\"\n      - generic\n        - StaticText \"Cấu hình / brand / xuất bản\"\n        - StaticText \"Lưu draft và publish khóa nội dung sự kiện. Không mở cửa sổ redeem khách và không bật cổng quét trên portal.\"\n        - alert\n          - image \"info-circle\"\n          - StaticText \"Publish ≠ redeem ≠ Gate\"\n        - form\n          - LabelText\n            - StaticText \"*\"\n            - StaticText \"Tên tổ chức (brand)\"\n          - generic [ref=e44] clickable [onclick]\n            - textbox \"* Tên tổ chức (brand)\" [ref=e51]: Leader932DirtyNative\n              - StaticText \"Leader932DirtyNative\"\n            - button \"close-circle\" [ref=e52]\n              - image \"close-circle\"\n          - LabelText\n            - StaticText \"*\"\n            - StaticText \"Màu chính\"\n          - generic [ref=e45] clickable [onclick]\n            - textbox \"* Màu chính\" [ref=e53]: #112233\n              - StaticText \"#112233\"\n            - button \"close-circle\" [ref=e54]\n              - image \"close-circle\"\n          - LabelText\n            - StaticText \"*\"\n            - StaticText \"Điều khoản (plain text)\"\n          - textbox \"* Điều khoản (plain text)\" [ref=e46]: T\n            - StaticText \"T\"\n          - generic\n            - button \"Lưu draft\" [ref=e42]\n              - StaticText \"Lưu draft\"\n            - button \"Xuất bản tip\" [ref=e43]\n              - StaticText \"Xuất bản tip\"\n        - region \"Xem trước bản đã lưu v4\" [ref=e20]\n          - heading \"Xem trước bản đã lưu v4\" [level=5, ref=e27] clickable [onclick]\n          - generic [ref=e28] clickable [onclick]\n            - StaticText \"Leader932Saved\"\n          - generic [ref=e29] clickable [onclick]\n            - StaticText \"6 mục nội dung\"\n          - heading \"hero\" [level=5, ref=e30] clickable [onclick]\n          - generic [ref=e31] clickable [onclick]\n            - StaticText \"bump\"\n          - heading \"info\" [level=5, ref=e32] clickable [onclick]\n          - generic [ref=e33] clickable [onclick]\n            - StaticText \"bump\"\n          - heading \"redeem\" [level=5, ref=e34] clickable [onclick]\n          - generic [ref=e35] clickable [onclick]\n            - StaticText \"bump\"\n          - heading \"guide\" [level=5, ref=e36] clickable [onclick]\n          - generic [ref=e37] clickable [onclick]\n            - StaticText \"bump\"\n          - heading \"FAQ\" [level=5, ref=e38] clickable [onclick]\n          - generic [ref=e39] clickable [onclick]\n            - strong\n              - StaticText \"Q\"\n            - StaticText \" A\"\n          - heading \"Điều khoản\" [level=5, ref=e40] clickable [onclick]\n          - generic [ref=e41] clickable [onclick]\n            - StaticText \"T\"\n        - heading \"Lịch sử phiên bản\" [level=5, ref=e21] clickable [onclick]\n        - table\n          - rowgroup\n            - row\n              - columnheader \"Version\" [ref=e71]\n              - columnheader \"Published\" [ref=e72]\n              - columnheader \"Tạo lúc\" [ref=e73]\n              - columnheader \"Xem trước\" [ref=e74]\n              - columnheader\n          - row [ref=e47] clickable [onclick]\n            - cell \"4\" [ref=e55]\n            - cell \"no\" [ref=e56]\n            - cell \"2026-10-26T12:52:48.747Z\" [ref=e57]\n            - cell \"Xem trước\" [ref=e58]\n              - button \"Xem trước\" [ref=e75]\n                - StaticText \"Xem trước\"\n            - cell\n          - row [ref=e48] clickable [onclick]\n            - cell \"3\" [ref=e59]\n            - cell \"no\" [ref=e60]\n            - cell \"2026-10-26T12:52:12.608Z\" [ref=e61]\n            - cell \"Xem trước\" [ref=e62]\n              - button \"Xem trước\" [ref=e76]\n                - StaticText \"Xem trước\"\n            - cell\n          - row [ref=e49] clickable [onclick]\n            - cell \"2\" [ref=e63]\n            - cell \"no\" [ref=e64]\n            - cell \"2026-10-26T12:03:43.791Z\" [ref=e65]\n            - cell \"Xem trước\" [ref=e66]\n              - button \"Xem trước\" [ref=e77]\n                - StaticText \"Xem trước\"\n            - cell\n          - row [ref=e50] clickable [onclick]\n            - cell \"1\" [ref=e67]\n            - cell \"no\" [ref=e68]\n            - cell \"2026-10-26T12:03:43.780Z\" [ref=e69]\n            - cell \"Xem trước\" [ref=e70]\n              - button \"Xem trước\" [ref=e78]\n                - StaticText \"Xem trước\"\n            - cell\n  - alert",
+  "browserPageId": "ccaa9ee0-bd08-43e4-9b45-f8731db943d3"
+}
