@@ -34,7 +34,7 @@ export function decideAdmin(
   networkError: boolean,
   locale: PortalLocale = DEFAULT_PORTAL_LOCALE,
 ): AdminDecision {
-  if (networkError || status === 0 || status >= 500) {
+  if (networkError || status === 0 || status === 429 || status >= 500) {
     return { kind: 'unknown', message: t(locale, 'ops.decide.unknown') };
   }
   const body = record(json);
