@@ -50,4 +50,4 @@ Roadmap, Project, Issue, status, progress: **Tiếng Việt** (giữ ID/API/comm
 - **Worker/reviewer** không spawn con; không Read mailbox/parallel/idle-fill/epic-orchestrator trừ khi được giao coordinator.
 - Mỗi Task Spec: `Architecture impact: Có|Không`, `Cost tier: cheap|standard|focused|advanced|high`, Role ID + `docs/agents/roles/<id>.md` khi spawn chuyên môn.
 - Task UI: ghi `Skills cần nạp`, mẫu thiết kế chuẩn và evidence; chọn role theo `docs/agents/ui-workflow.md`, chỉ nạp skill liên quan.
-- DoD: reviewer ≠ implementer; exact SHA → `docs/reviews/*` hoặc comment Issue/PR — Wave C `dod+sec` một session/SHA.
+- Review: reviewer ≠ implementer; mặc định một lượt gộp code review + checklist DoD, security/UI theo rủi ro; exact SHA → `docs/reviews/*` hoặc comment Issue/PR. Revalidate diff/findings, tái dùng evidence còn hiệu lực theo `orca-review-convergence.mdc`; không thêm vòng DoD hoặc security riêng mặc định, không miễn runtime acceptance.

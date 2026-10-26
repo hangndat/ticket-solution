@@ -200,7 +200,7 @@ ORCA orchestration worker-start \
 | cheap    | `composer-2.5` (Composer Standard; cấm `composer-2.5-fast`)                                     |
 | standard | `composer-2.5` (fallback `claude-sonnet-5-thinking-low`; cấm `claude-sonnet-5-thinking-medium`) |
 
-Sau wave: `node scripts/orca-cost-wave-evidence.mjs` → ghi dòng `cost-wave` (`source=receipt`). Comment wt `Cost … · model …` **không** thay `--model` argv.
+Sau wave: `node scripts/orca-cost-wave-evidence.mjs --run <RUN> --dispatch <DISPATCH> [--receipt-file <start-receipt.json>]` (lặp flag cho từng dispatch) → ghi dòng `cost-wave` (`source=receipt`). Comment wt `Cost … · model …` **không** thay `--model` argv.
 
 UAT / milestone gate (a): Read `.cursor/rules/uat-headless.mdc` (Wave G — không alwaysApply).
 
