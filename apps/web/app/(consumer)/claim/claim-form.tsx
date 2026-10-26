@@ -338,7 +338,7 @@ export function GuestClaimForm() {
     const requestId = decision.requestId;
     const activeKey = activeContext.current;
     setBusy(true);
-    const result = await fetchOwnerRedemptionStatus(requestId);
+    const result = await fetchOwnerRedemptionStatus(requestId, displayTenantId);
     if (activeContext.current !== activeKey ||
         claimLocationKey(readClaimTokenFromLocation()) !== activeKey) return;
     if (result.status === 'ok') {
