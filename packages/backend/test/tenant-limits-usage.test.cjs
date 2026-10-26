@@ -71,7 +71,7 @@ test('G-10 runtime role reads only authorized tenant counters and UTC day',
       const manager = await users.upsertFromVerifiedIdentity({ issuer, subject: 'manager', email: 'manager@example.test', emailVerified: true });
       const revoked = await users.upsertFromVerifiedIdentity({ issuer, subject: 'revoked', email: 'revoked@example.test', emailVerified: true });
       const foreignOwner = await users.upsertFromVerifiedIdentity({ issuer, subject: 'foreign', email: 'foreign@example.test', emailVerified: true });
-      const a = randomUUID(), b = randomUUID(), empty = randomUUID();
+      const a = randomUUID(), b = randomUUID(), empty = randomUUID(), midnight = randomUUID();
       const today = new Date().toISOString().slice(0, 10);
       const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
       await withTenant(db, a, async (tx) => {
@@ -100,12 +100,31 @@ test('G-10 runtime role reads only authorized tenant counters and UTC day',
         await tx.$executeRaw`INSERT INTO tenant_limits (tenant_id) VALUES (${empty}::uuid)`;
         await grantMembership(tx, { tenantId: empty, userId: owner.userId, role: 'Owner', permissions: ['tenant.profile'] });
       });
+      await withTenant(db, midnight, async (tx) => {
+        await tx.tenant.create({ data: { id: midnight, slug: 'limits-midnight', name: 'Midnight' } });
+        await tx.$executeRaw`INSERT INTO tenant_limits (tenant_id) VALUES (${midnight}::uuid)`;
+        await grantMembership(tx, { tenantId: midnight, userId: owner.userId, role: 'Owner', permissions: ['tenant.profile'] });
+        await tx.$executeRaw`INSERT INTO tenant_email_usage (tenant_id, usage_date, sent_count)
+          VALUES (${midnight}::uuid, '2030-04-03'::date, 11),
+                 (${midnight}::uuid, '2030-04-04'::date, 23)`;
+        const zone = await tx.$queryRaw`SHOW TIME ZONE`;
+        assert.equal(zone[0].TimeZone, 'Pacific/Auckland');
+      });
       const snapshot = await readTenantLimitsUsage(db, a, owner.userId);
       assert.deepEqual(snapshot.limits, { maxEvents: 9, maxStaff: null, emailPerDay: 50, importRowsPerJob: null });
       assert.deepEqual(snapshot.usage, { events: 1, staffActive: 2, staffPendingInvites: 1, emailToday: 7 });
       assert.equal(snapshot.emailUsageDate, today, 'UTC day despite non-UTC DB session');
       assert.equal(snapshot.asOf.slice(0, 10), today);
       assert.equal(new Date(snapshot.asOf).toISOString(), snapshot.asOf);
+      for (const [at, day, count] of [
+        ['2030-04-03T23:59:59.000Z', '2030-04-03', 11],
+        ['2030-04-04T00:00:01.000Z', '2030-04-04', 23],
+      ]) {
+        const boundary = await readTenantLimitsUsage(db, midnight, owner.userId, new Date(at));
+        assert.equal(boundary.asOf, at);
+        assert.equal(boundary.emailUsageDate, day, JSON.stringify(boundary));
+        assert.equal(boundary.usage.emailToday, count);
+      }
       assert.deepEqual(Object.keys(snapshot).sort(), ['asOf', 'emailUsageDate', 'limits', 'tenantId', 'usage']);
       assert.doesNotMatch(JSON.stringify(snapshot), /example\.test|SUSPENDED|pending-a/);
       const blank = await readTenantLimitsUsage(db, empty, owner.userId);
