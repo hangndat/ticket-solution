@@ -1,0 +1,37 @@
+{
+  "requestId": "b58e3511-aa39-4c1d-a263-227e604d2876",
+  "before": [
+    200,
+    {
+      "status": "PENDING_REVIEW",
+      "requestId": "b58e3511-aa39-4c1d-a263-227e604d2876",
+      "eventId": "d9d9f001-0002-4000-8000-000000000001",
+      "ticketTypeId": "d9d9f001-0003-4000-8000-000000000001",
+      "sourceId": "d9d9f001-0004-4000-8000-000000000001",
+      "expiresAt": "2026-10-27T10:31:46.317Z",
+      "submittedAt": "2026-10-26T10:31:46.275Z"
+    }
+  ],
+  "decisionHttp": 201,
+  "decision": {
+    "decision": "deny",
+    "requestId": "b58e3511-aa39-4c1d-a263-227e604d2876",
+    "status": "REJECTED",
+    "ticketId": null,
+    "operationId": "2ad402bd-3afa-4d02-911c-a1ba1764cdec",
+    "ownerUserId": "21ab1e0f-68a1-462a-b207-5a61d1cb2eb3",
+    "replayed": false
+  },
+  "after": [
+    200,
+    {
+      "status": "REJECTED",
+      "requestId": "b58e3511-aa39-4c1d-a263-227e604d2876",
+      "eventId": "d9d9f001-0002-4000-8000-000000000001",
+      "ticketTypeId": "d9d9f001-0003-4000-8000-000000000001",
+      "sourceId": "d9d9f001-0004-4000-8000-000000000001",
+      "reason": "VCX939 isolated UAT rejection",
+      "decidedAt": "2026-10-26T10:32:25.064Z"
+    }
+  ]
+}

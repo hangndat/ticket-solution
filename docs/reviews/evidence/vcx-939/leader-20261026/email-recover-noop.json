@@ -1,0 +1,44 @@
+{
+  "mode": "recover",
+  "requestId": "7fd43221-7147-4592-9c39-49cdd369be2a",
+  "ticketId": "73894c9c-3b93-421d-bc05-b46f3a499024",
+  "tick": {
+    "claimed": 0,
+    "completed": 0,
+    "failed": 0
+  },
+  "tickets": [
+    {
+      "id": "73894c9c-3b93-421d-bc05-b46f3a499024",
+      "state": "ACTIVE"
+    }
+  ],
+  "outbox": [
+    {
+      "id": "d32662ea-e39d-4db8-9325-a380cc36a1ae",
+      "type": "TicketIssued",
+      "status": "COMPLETE",
+      "attempts": 2
+    }
+  ],
+  "notifications": [
+    {
+      "id": "b8bf2b67-01eb-47e7-b1db-4f42cf467834",
+      "channel": "email",
+      "state": "ACCEPTED",
+      "attempts": 2
+    }
+  ],
+  "attempts": [
+    {
+      "ordinal": 1,
+      "provider_status": "FAILED",
+      "sanitized_error": "connect ECONNREFUSED 127.0.0.1:1"
+    },
+    {
+      "ordinal": 2,
+      "provider_status": "ACCEPTED",
+      "sanitized_error": null
+    }
+  ]
+}

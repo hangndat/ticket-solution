@@ -1,0 +1,99 @@
+{
+  "origin": "http://localhost:3417/redeem?tenantSlug=mfest-demo&eventSlug=mfest&uat939=75d47771-9100-4f09-b68f-7384358e926d",
+  "refs": {
+    "e1": {
+      "name": "Bỏ qua đến nội dung",
+      "role": "link"
+    },
+    "e10": {
+      "name": "attendee@example.com",
+      "role": "link"
+    },
+    "e11": {
+      "name": "Đổi mã lấy vé",
+      "role": "heading"
+    },
+    "e12": {
+      "name": "Đổi mã lấy vé",
+      "role": "heading"
+    },
+    "e13": {
+      "name": "Đổi mã lấy vé",
+      "role": "button"
+    },
+    "e14": {
+      "name": "Đổi mã thành công",
+      "role": "heading"
+    },
+    "e15": {
+      "name": "Xem vé của tôi",
+      "role": "link"
+    },
+    "e16": {
+      "name": "Vé của bạn",
+      "role": "heading"
+    },
+    "e17": {
+      "name": "Khám phá",
+      "role": "link"
+    },
+    "e18": {
+      "name": "Đổi mã",
+      "role": "link"
+    },
+    "e19": {
+      "name": "Tài khoản",
+      "role": "link"
+    },
+    "e2": {
+      "name": "Điều hướng chính",
+      "role": "navigation"
+    },
+    "e20": {
+      "name": "Mã đổi vé",
+      "role": "textbox"
+    },
+    "e21": {
+      "name": "",
+      "role": "generic"
+    },
+    "e22": {
+      "name": "Tôi đã đọc và đồng ý điều khoản sự kiện",
+      "role": "checkbox"
+    },
+    "e23": {
+      "name": "Open Next.js Dev Tools",
+      "role": "button"
+    },
+    "e3": {
+      "name": "Vé của bạn",
+      "role": "region"
+    },
+    "e4": {
+      "name": "Liên kết chân trang",
+      "role": "navigation"
+    },
+    "e5": {
+      "name": "Vemoki — trang chủ",
+      "role": "link"
+    },
+    "e6": {
+      "name": "Khám phá",
+      "role": "link"
+    },
+    "e7": {
+      "name": "Đổi mã",
+      "role": "link"
+    },
+    "e8": {
+      "name": "Vé của tôi",
+      "role": "link"
+    },
+    "e9": {
+      "name": "Tài khoản",
+      "role": "link"
+    }
+  },
+  "snapshot": "- link \"Bỏ qua đến nội dung\" [ref=e1]\n- banner\n  - navigation \"Điều hướng chính\" [ref=e2]\n    - link \"Vemoki — trang chủ\" [ref=e5]\n      - StaticText \"vemoki\"\n    - link \"Khám phá\" [ref=e6]\n    - link \"Đổi mã\" [ref=e7]\n    - link \"Vé của tôi\" [ref=e8]\n    - link \"Tài khoản\" [ref=e9]\n    - link \"attendee@example.com\" [ref=e10]\n      - StaticText \"attendee@example.com\"\n- main\n  - sectionheader\n    - paragraph\n      - StaticText \"NHẬP MÃ MỜI\"\n    - heading \"Đổi mã lấy vé\" [level=1, ref=e11]\n    - paragraph\n      - StaticText \"Một mã mời duy nhất. Không cần chọn sự kiện hay tổ chức.\"\n  - form \"Đổi mã lấy vé\"\n    - heading \"Đổi mã lấy vé\" [level=2, ref=e12]\n    - paragraph\n      - StaticText \"Nhập mã và đồng ý điều khoản của sự kiện. Trạng thái chờ duyệt chưa phải vé.\"\n    - status\n      - strong\n        - StaticText \"Biểu mẫu sẵn sàng\"\n      - paragraph\n        - StaticText \"Đã tải biểu mẫu mới. Điền lại và đồng ý điều khoản trước khi gửi.\"\n    - group\n      - DisclosureTriangle \"Tùy chọn nâng cao (đường dẫn / mã kỹ thuật)\" [expanded=false]\n    - LabelText\n      - StaticText \"Mã đổi vé\"\n      - textbox \"Mã đổi vé\" [required, ref=e20]: VCX939-LEADER-EMAIL\n        - StaticText \"VCX939-LEADER-EMAIL\"\n    - paragraph\n      - StaticText \"Sự kiện này không có trường biểu mẫu — nhập mã và đồng ý điều khoản bên dưới để đổi vé.\"\n    - group \"Điều khoản\"\n      - Legend\n        - StaticText \"Điều khoản\"\n      - paragraph\n        - StaticText \"Nội dung dưới đây do ban tổ chức ban hành (có thể khác ngôn ngữ giao diện).\"\n      - generic [ref=e21] focusable [tabindex]\n        - StaticText \"By attending you agree to venue house rules, age and safety policies, and the organizer’s ticketing terms. Tickets are non-transferable except where the organizer permits. Photography for personal use is welcome; commercial filming requires prior approval.\"\n      - LabelText\n        - checkbox \"Tôi đã đọc và đồng ý điều khoản sự kiện\" [checked=true, ref=e22]\n        - StaticText \"Tôi đã đọc và đồng ý điều khoản sự kiện\"\n    - button \"Đổi mã lấy vé\" [disabled, ref=e13]\n  - status\n    - heading \"Đổi mã thành công\" [level=3, ref=e14]\n    - paragraph\n      - StaticText \"Vé của bạn đã được cấp — mã vé 73894c9c-3b93-421d-bc05-b46f3a499024.\"\n    - link \"Xem vé của tôi\" [ref=e15]\n  - region \"Vé của bạn\" [ref=e3]\n    - heading \"Vé của bạn\" [level=3, ref=e16]\n    - DescriptionList\n      - term \"Mã vé\"\n      - definition\n        - StaticText \"73894c9c-3b93-421d-bc05-b46f3a499024\"\n      - term \"Trạng thái\"\n      - definition\n        - StaticText \"Sẵn sàng\"\n      - term \"Mã yêu cầu\"\n      - definition\n        - StaticText \"7fd43221-7147-4592-9c39-49cdd369be2a\"\n- contentinfo\n  - StaticText \"vemoki\"\n  - StaticText \"Sự kiện & vé\"\n  - navigation \"Liên kết chân trang\" [ref=e4]\n    - link \"Khám phá\" [ref=e17]\n    - link \"Đổi mã\" [ref=e18]\n    - link \"Tài khoản\" [ref=e19]\n- button \"Open Next.js Dev Tools\" [expanded=false, ref=e23]\n  - image\n- alert",
+  "browserPageId": "1a0079ad-004d-443a-bd19-ca004c6eb810"
+}

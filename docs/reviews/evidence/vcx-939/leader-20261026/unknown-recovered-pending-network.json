@@ -1,0 +1,72 @@
+[
+  {
+    "url": "http://localhost:3417/api/bff/me/events",
+    "method": "GET",
+    "status": 200,
+    "timestamp": 1793010235680,
+    "requestId": "7892.152"
+  },
+  {
+    "url": "http://localhost:3417/api/bff/me/tenants",
+    "method": "GET",
+    "status": 200,
+    "timestamp": 1793010235680,
+    "requestId": "7892.153"
+  },
+  {
+    "url": "http://localhost:3417/api/bff/public/tenants/mfest-demo/events/mfest",
+    "method": "GET",
+    "status": 200,
+    "timestamp": 1793010235680,
+    "requestId": "7892.154"
+  },
+  {
+    "url": "http://localhost:3417/api/bff/me/events",
+    "method": "GET",
+    "status": 200,
+    "timestamp": 1793010235680,
+    "requestId": "7892.155"
+  },
+  {
+    "url": "http://localhost:3417/api/bff/me/tenants",
+    "method": "GET",
+    "status": 200,
+    "timestamp": 1793010235680,
+    "requestId": "7892.156"
+  },
+  {
+    "url": "http://localhost:3417/api/bff/public/tenants/mfest-demo/events/mfest",
+    "method": "GET",
+    "status": 200,
+    "timestamp": 1793010235680,
+    "requestId": "7892.157"
+  },
+  {
+    "url": "http://localhost:3417/api/bff/me",
+    "method": "GET",
+    "status": 200,
+    "timestamp": 1793010235681,
+    "requestId": "7892.158"
+  },
+  {
+    "url": "http://localhost:3417/api/bff/redeem",
+    "method": "POST",
+    "status": 500,
+    "timestamp": 1793010237774,
+    "requestId": "7892.159"
+  },
+  {
+    "url": "http://localhost:3417/api/bff/operations/dee8e471-1301-47f9-bb51-41b3c75094de?tenantId=d9d9f001-0001-4000-8000-000000000001&eventId=d9d9f001-0002-4000-8000-000000000001&command=redemption.redeem",
+    "method": "GET",
+    "status": 500,
+    "timestamp": 1793010237873,
+    "requestId": "7892.160"
+  },
+  {
+    "url": "http://localhost:3417/api/bff/operations/dee8e471-1301-47f9-bb51-41b3c75094de?tenantId=d9d9f001-0001-4000-8000-000000000001&eventId=d9d9f001-0002-4000-8000-000000000001&command=redemption.redeem",
+    "method": "GET",
+    "status": 200,
+    "timestamp": 1793010285974,
+    "requestId": "7892.161"
+  }
+]
