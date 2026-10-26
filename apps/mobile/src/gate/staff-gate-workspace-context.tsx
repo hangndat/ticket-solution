@@ -391,7 +391,17 @@ export function StaffGateWorkspaceProvider({
     if (!replayGuard()) return;
     const replayResult = await offlineScanQueue.replay({ bearer, apiBase, shouldContinue: replayGuard });
     const identity = session.getSnapshot();
-    if (!session.isEpochCurrent(epoch) || !canApplyOfflineReplay({
+    if (!session.isEpochCurrent(epoch)) return;
+    if (
+      replayResult.authzDenial &&
+      identity.status === 'verified' &&
+      identity.userId === userId &&
+      offlineScanQueue.ownerUserIdOrNull() === userId
+    ) {
+      clearStaffChromeAfterAuthzDenial();
+      return;
+    }
+    if (!canApplyOfflineReplay({
       replayUserId: userId,
       verifiedUserId: identity.status === 'verified' ? identity.userId : null,
       queueOwnerUserId: offlineScanQueue.ownerUserIdOrNull(),

@@ -268,6 +268,60 @@ test('NOT_IMPLEMENTED keeps pending so queue survives stub BE', async () => {
   assert.match(q.getSnapshot().lastSyncError ?? '', /stub|chưa bật/i);
 });
 
+test('offline replay keeps queued ticket on 401 or membership 403, but not a ticket-level 403', async () => {
+  for (const scenario of [
+    { status: 401, code: 'UNAUTHORIZED', authz: true },
+    { status: 403, code: 'MEMBERSHIP_REVOKED', authz: true },
+    { status: 403, code: 'ALREADY_CHECKED_IN', authz: false },
+  ]) {
+    const store = createMemoryOfflineQueueStore([], userA);
+    const q = await queueFor(store, userA, {
+      createId: () => '00000000-0000-4000-8000-000000000001',
+      nowIso: () => '2026-10-17T08:00:00.000Z',
+    });
+    await q.enqueue({ ticketId, tenantId, eventId, staffSessionId });
+    if (scenario.authz) {
+      store.writeQueue = async () => { throw new Error('SecureStore unavailable after POST'); };
+    }
+    const outcome = await q.replay({
+      bearer: 't',
+      apiBase: 'https://api.example',
+      fetchImpl: async () => jsonResponse(scenario.status, {
+        code: scenario.code,
+        retryable: false,
+      }),
+    });
+    assert.equal(outcome.authzDenial?.status === scenario.status, scenario.authz);
+    assert.equal(outcome.results.length, 0);
+    assert.equal(q.getSnapshot().items[0]?.localStatus, scenario.authz ? 'pending' : 'rejected');
+    assert.equal(q.getSnapshot().conflictCount, scenario.authz ? 0 : 1);
+    const restored = await queueFor(store, userA);
+    assert.equal(restored.getSnapshot().items[0]?.localStatus, scenario.authz ? 'pending' : 'rejected');
+  }
+});
+
+test('membership denial still reaches workspace when event scope changes during POST', async () => {
+  const store = createMemoryOfflineQueueStore([], userA);
+  const q = await queueFor(store, userA, {
+    createId: () => '00000000-0000-4000-8000-000000000001',
+    nowIso: () => '2026-10-17T08:00:00.000Z',
+  });
+  await q.enqueue({ ticketId, tenantId, eventId, staffSessionId });
+  let sameScope = true;
+  const outcome = await q.replay({
+    bearer: 't',
+    apiBase: 'https://api.example',
+    shouldContinue: () => sameScope,
+    fetchImpl: async () => {
+      sameScope = false;
+      return jsonResponse(403, { code: 'MEMBERSHIP_REVOKED', retryable: false });
+    },
+  });
+  assert.equal(outcome.authzDenial?.code, 'MEMBERSHIP_REVOKED');
+  assert.equal(q.getSnapshot().items[0]?.localStatus, 'pending');
+  assert.equal(q.getSnapshot().conflictCount, 0);
+});
+
 test('network failure during replay keeps pending', async () => {
   const store = createMemoryOfflineQueueStore([], userA);
   let n = 0;
