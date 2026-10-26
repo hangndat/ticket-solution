@@ -1,0 +1,41 @@
+{
+  "runId": "20261026T0956Z-noah",
+  "issue": 926,
+  "pr": 952,
+  "reviewedSHA": null,
+  "previousMeasuredSHA": "d00a265cca1206b68601c75d445b633f7d590b57",
+  "testedSHA": "33713db2cfffed29cad98ce9b2077490be5987b6",
+  "buildProof": "pnpm --filter @ticket/api... build + portal NODE_ENV=production next build @ testedSHA",
+  "harnessDirty": "apps/portal/.uat-artifacts/vcx-926/run-vcx-926-uat.mjs (login wait fix)",
+  "env": {
+    "portal": "http://127.0.0.1:3013",
+    "api": "http://127.0.0.1:3499",
+    "apiNote": "3498 foreign (.Trash/vd08); coordinator reserved 3598 — 3499 chosen free, vcx-926-uat owned PID",
+    "oidc": "http://127.0.0.1:8080/realms/ticket",
+    "locale": "vi",
+    "tenantId": "d9d9f001-0001-4000-8000-000000000001",
+    "eventId": "d9d9f001-0002-4000-8000-000000000001",
+    "studioTenantId": "d9d9f001-0001-4000-8000-000000000002"
+  },
+  "stackOwnership": {
+    "api3499": "vcx-926-uat apps/api dist/main.js via .local-dev/ui869-926/pid",
+    "api3498": "foreign PID 89392 (.Trash/vd08) — not used",
+    "keycloak8080": "shared ui869dev compose",
+    "portal3013": "vcx-926-uat next start"
+  },
+  "artifactHashes": {
+    "manual-probe-results.json": "sha256:1ace11e60a27266c15b9f87021edcfe638212093a001fb3b72a0d08f5e495818",
+    "probe-results.json": "sha256:3eebaa02e5b804dca1ccb3115f7a33f9a1cf83bb911161fd649209ff81c2a2e4",
+    "RUN-REPORT.md": "sha256:629149b583aee526e2f0a2bf411de2d9e479727640a1bd4bf91093b8768cadce",
+    "ports-orca.json": "sha256:3a02939e981eb645524cefa98c3dc12dcfa7ad165206c51992faf0b50507dc1f",
+    "1024-cs-setup.png": "sha256:e6d7937c0f7afe6b0f8a8cc85cf72dc0eb65957d34595a049a86ae3058ded558",
+    "1024-cs-support.png": "sha256:5179e4cc942c7f67e03f6522ee6514c26db66596c20cfaca4a2dc7eef77a88cb",
+    "1024-manager-cross-studio.png": "sha256:a5d448773564c8d31b8d2dac89aebb74770f85d82d9a8431e4ce689860566d05",
+    "1024-manager-overview.png": "sha256:3aedba07269623c0a236a84c9abcfa5a8512ed7f744a36cc9798e8b860803215",
+    "1024-report-only-gate.png": "sha256:8497626ad802586c68341b02d2ac1dbf55410ac08ed4d0c9ed38534b0ba73240",
+    "1024-scanner-overview.png": "sha256:62dc4333333f98bf7963550396160032d07d0c9334560c3864e62870db92ca56",
+    "1024-owner-guests.png": "sha256:1657dbd806e455217527e90fcf8411b6601fca10e2c2e05f010dba50277424ab",
+    "1024-owner-audit.png": "sha256:beb4bc0b9c3bb825527193dcf06c5c88815ba367ceb3c04005c55505116b93b4"
+  },
+  "secretsExcluded": ["totp-secrets.json", "cookies", "OIDC tokens"]
+}
