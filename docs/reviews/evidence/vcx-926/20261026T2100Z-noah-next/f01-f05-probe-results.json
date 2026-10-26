@@ -1,0 +1,410 @@
+{
+  "runId": "20261026T2100Z-noah-next",
+  "testedSHA": "5136c92a6b1d2c52d95399a096002f44fb910756",
+  "base": "http://uat926.localhost:3018",
+  "at": "2026-10-26T13:07:59.653Z",
+  "pass": 13,
+  "fail": 6,
+  "blocked": 0,
+  "rows": [
+    {
+      "persona": "cs",
+      "viewport": "1024",
+      "route": "lookup",
+      "path": "/t/d9d9f001-0001-4000-8000-000000000001/e/d9d9f001-0002-4000-8000-000000000001/support",
+      "ac": "PASS",
+      "why": "cs.lookup",
+      "domPhase": "content",
+      "domTitle": null,
+      "shot": "1024-cs-lookup.png",
+      "perms": [
+        "cs.lookup",
+        "cs.resend"
+      ],
+      "vpCheck": {
+        "h": 917,
+        "w": 731
+      },
+      "innerWidth": 731,
+      "innerHeight": 917
+    },
+    {
+      "persona": "cs",
+      "viewport": "1024",
+      "route": "support",
+      "path": "/t/d9d9f001-0001-4000-8000-000000000001/e/d9d9f001-0002-4000-8000-000000000001/support",
+      "ac": "PASS",
+      "why": "cs.support",
+      "domPhase": "content",
+      "domTitle": null,
+      "shot": "1024-cs-support.png",
+      "perms": [
+        "cs.lookup",
+        "cs.resend"
+      ],
+      "vpCheck": {
+        "h": 917,
+        "w": 731
+      },
+      "innerWidth": 731,
+      "innerHeight": 917
+    },
+    {
+      "persona": "cs",
+      "viewport": "1024",
+      "route": "setup",
+      "path": "/t/d9d9f001-0001-4000-8000-000000000001/e/d9d9f001-0002-4000-8000-000000000001/setup",
+      "ac": "PASS",
+      "why": "cs.setup-denied",
+      "domPhase": "denied",
+      "domTitle": "Không có quyền",
+      "shot": "1024-cs-setup.png",
+      "perms": [
+        "cs.lookup",
+        "cs.resend"
+      ],
+      "vpCheck": {
+        "h": 917,
+        "w": 731
+      }
+    },
+    {
+      "persona": "report-only",
+      "viewport": "1024",
+      "route": "gate",
+      "path": "/t/d9d9f001-0001-4000-8000-000000000001/e/d9d9f001-0002-4000-8000-000000000001/gate",
+      "ac": "PASS",
+      "why": "gate-content",
+      "domPhase": "content",
+      "domTitle": null,
+      "shot": "1024-report-only-gate.png",
+      "perms": [
+        "report.read"
+      ],
+      "vpCheck": {
+        "h": 917,
+        "w": 731
+      },
+      "innerWidth": 731,
+      "innerHeight": 917
+    },
+    {
+      "persona": "report-only",
+      "viewport": "1024",
+      "route": "guests",
+      "path": "/t/d9d9f001-0001-4000-8000-000000000001/e/d9d9f001-0002-4000-8000-000000000001/guests",
+      "ac": "PASS",
+      "why": "report-only-guests-deny",
+      "domPhase": "denied",
+      "domTitle": "Không có quyền",
+      "shot": "1024-report-only-guests.png",
+      "perms": [
+        "report.read"
+      ],
+      "vpCheck": {
+        "h": 917,
+        "w": 731
+      }
+    },
+    {
+      "persona": "report-only",
+      "viewport": "1024",
+      "route": "audit",
+      "path": "/t/d9d9f001-0001-4000-8000-000000000001/e/d9d9f001-0002-4000-8000-000000000001/audit",
+      "ac": "FAIL",
+      "why": "report-only-audit-deny",
+      "domPhase": "content",
+      "domTitle": null,
+      "shot": "1024-report-only-audit.png",
+      "perms": [
+        "report.read"
+      ],
+      "vpCheck": {
+        "h": 917,
+        "w": 731
+      },
+      "innerWidth": 731,
+      "innerHeight": 917
+    },
+    {
+      "persona": "report-only",
+      "viewport": "390",
+      "route": "gate",
+      "path": "/t/d9d9f001-0001-4000-8000-000000000001/e/d9d9f001-0002-4000-8000-000000000001/gate",
+      "ac": "PASS",
+      "why": "gate-content",
+      "domPhase": "content",
+      "domTitle": null,
+      "shot": "390-report-only-gate.png",
+      "perms": [
+        "report.read"
+      ],
+      "vpCheck": {
+        "h": 917,
+        "w": 731
+      },
+      "innerWidth": 731,
+      "innerHeight": 917
+    },
+    {
+      "persona": "report-only",
+      "viewport": "390",
+      "route": "guests",
+      "path": "/t/d9d9f001-0001-4000-8000-000000000001/e/d9d9f001-0002-4000-8000-000000000001/guests",
+      "ac": "PASS",
+      "why": "report-only-guests-deny",
+      "domPhase": "denied",
+      "domTitle": "Không có quyền",
+      "shot": "390-report-only-guests.png",
+      "perms": [
+        "report.read"
+      ],
+      "vpCheck": {
+        "h": 917,
+        "w": 731
+      }
+    },
+    {
+      "persona": "report-only",
+      "viewport": "390",
+      "route": "audit",
+      "path": "/t/d9d9f001-0001-4000-8000-000000000001/e/d9d9f001-0002-4000-8000-000000000001/audit",
+      "ac": "FAIL",
+      "why": "report-only-audit-deny",
+      "domPhase": "content",
+      "domTitle": null,
+      "shot": "390-report-only-audit.png",
+      "perms": [
+        "report.read"
+      ],
+      "vpCheck": {
+        "h": 917,
+        "w": 731
+      },
+      "innerWidth": 731,
+      "innerHeight": 917
+    },
+    {
+      "persona": "report-only",
+      "viewport": "1440",
+      "route": "gate",
+      "path": "/t/d9d9f001-0001-4000-8000-000000000001/e/d9d9f001-0002-4000-8000-000000000001/gate",
+      "ac": "PASS",
+      "why": "gate-content",
+      "domPhase": "content",
+      "domTitle": null,
+      "shot": "1440-report-only-gate.png",
+      "perms": [
+        "report.read"
+      ],
+      "vpCheck": {
+        "h": 917,
+        "w": 731
+      },
+      "innerWidth": 731,
+      "innerHeight": 917
+    },
+    {
+      "persona": "report-only",
+      "viewport": "1440",
+      "route": "guests",
+      "path": "/t/d9d9f001-0001-4000-8000-000000000001/e/d9d9f001-0002-4000-8000-000000000001/guests",
+      "ac": "PASS",
+      "why": "report-only-guests-deny",
+      "domPhase": "denied",
+      "domTitle": "Không có quyền",
+      "shot": "1440-report-only-guests.png",
+      "perms": [
+        "report.read"
+      ],
+      "vpCheck": {
+        "h": 917,
+        "w": 731
+      }
+    },
+    {
+      "persona": "report-only",
+      "viewport": "1440",
+      "route": "audit",
+      "path": "/t/d9d9f001-0001-4000-8000-000000000001/e/d9d9f001-0002-4000-8000-000000000001/audit",
+      "ac": "FAIL",
+      "why": "report-only-audit-deny",
+      "domPhase": "content",
+      "domTitle": null,
+      "shot": "1440-report-only-audit.png",
+      "perms": [
+        "report.read"
+      ],
+      "vpCheck": {
+        "h": 917,
+        "w": 731
+      },
+      "innerWidth": 731,
+      "innerHeight": 917
+    },
+    {
+      "persona": "manager",
+      "viewport": "1024",
+      "route": "cross-studio-events",
+      "path": "/t/d9d9f001-0001-4000-8000-000000000002/events",
+      "ac": "PASS",
+      "why": "cross-tenant-deny",
+      "domPhase": "denied",
+      "domTitle": "Không có quyền",
+      "shot": "1024-manager-cross-studio-events.png",
+      "perms": [
+        "event.config",
+        "event.publish",
+        "inventory.import",
+        "redemption.approve",
+        "report.read",
+        "export.create",
+        "export.download"
+      ],
+      "vpCheck": {
+        "h": 917,
+        "w": 731
+      }
+    },
+    {
+      "persona": "manager",
+      "viewport": "1024",
+      "route": "cross-studio-event",
+      "path": "/t/d9d9f001-0001-4000-8000-000000000002/e/d9d9f001-0002-4000-8000-000000000002",
+      "ac": "PASS",
+      "why": "cross-tenant-deny",
+      "domPhase": "denied",
+      "domTitle": "Không có quyền",
+      "shot": "1024-manager-cross-studio-event.png",
+      "perms": [
+        "event.config",
+        "event.publish",
+        "inventory.import",
+        "redemption.approve",
+        "report.read",
+        "export.create",
+        "export.download"
+      ],
+      "vpCheck": {
+        "h": 917,
+        "w": 731
+      }
+    },
+    {
+      "persona": "scanner",
+      "viewport": "390",
+      "route": "overview",
+      "path": "/t/d9d9f001-0001-4000-8000-000000000001/e/d9d9f001-0002-4000-8000-000000000001",
+      "ac": "FAIL",
+      "why": "scanner-chrome",
+      "domPhase": "denied",
+      "domTitle": "Không có quyền",
+      "shot": "390-scanner-overview.png",
+      "perms": [
+        "gate.confirm"
+      ],
+      "vpCheck": {
+        "h": 917,
+        "w": 731
+      }
+    },
+    {
+      "persona": "scanner",
+      "viewport": "1024",
+      "route": "overview",
+      "path": "/t/d9d9f001-0001-4000-8000-000000000001/e/d9d9f001-0002-4000-8000-000000000001",
+      "ac": "FAIL",
+      "why": "scanner-chrome",
+      "domPhase": "denied",
+      "domTitle": "Không có quyền",
+      "shot": "1024-scanner-overview.png",
+      "perms": [
+        "gate.confirm"
+      ],
+      "vpCheck": {
+        "h": 900,
+        "w": 1024
+      }
+    },
+    {
+      "persona": "scanner",
+      "viewport": "1440",
+      "route": "overview",
+      "path": "/t/d9d9f001-0001-4000-8000-000000000001/e/d9d9f001-0002-4000-8000-000000000001",
+      "ac": "FAIL",
+      "why": "scanner-chrome",
+      "domPhase": "denied",
+      "domTitle": "Không có quyền",
+      "shot": "1440-scanner-overview.png",
+      "perms": [
+        "gate.confirm"
+      ],
+      "vpCheck": {
+        "h": 900,
+        "w": 1440
+      }
+    },
+    {
+      "persona": "owner",
+      "viewport": "1024",
+      "route": "guests",
+      "path": "/t/d9d9f001-0001-4000-8000-000000000001/e/d9d9f001-0002-4000-8000-000000000001/guests",
+      "ac": "PASS",
+      "why": "owner-guests",
+      "domPhase": "content",
+      "domTitle": null,
+      "shot": "1024-owner-guests.png",
+      "perms": [
+        "event.config",
+        "event.publish",
+        "inventory.import",
+        "redemption.approve",
+        "report.read",
+        "export.create",
+        "export.download",
+        "cs.lookup",
+        "cs.resend",
+        "gate.confirm",
+        "gate.undo",
+        "ticket.revoke"
+      ],
+      "vpCheck": {
+        "h": 917,
+        "w": 731
+      },
+      "innerWidth": 731,
+      "innerHeight": 917
+    },
+    {
+      "persona": "owner",
+      "viewport": "1024",
+      "route": "audit",
+      "path": "/t/d9d9f001-0001-4000-8000-000000000001/e/d9d9f001-0002-4000-8000-000000000001/audit",
+      "ac": "PASS",
+      "why": "owner-audit",
+      "domPhase": "content",
+      "domTitle": null,
+      "shot": "1024-owner-audit.png",
+      "perms": [
+        "event.config",
+        "event.publish",
+        "inventory.import",
+        "redemption.approve",
+        "report.read",
+        "export.create",
+        "export.download",
+        "cs.lookup",
+        "cs.resend",
+        "gate.confirm",
+        "gate.undo",
+        "ticket.revoke"
+      ],
+      "vpCheck": {
+        "h": 917,
+        "w": 731
+      },
+      "innerWidth": 731,
+      "innerHeight": 917
+    }
+  ]
+}
