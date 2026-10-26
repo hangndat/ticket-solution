@@ -174,3 +174,73 @@ test('G-08 API requires bearer, masks q result, and bounds reads with Retry-Afte
     await app.close();
   }
 });
+
+test('G-08 API hides missing event assignments without hiding permission failures', async () => {
+  const actorId = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
+  const membershipId = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee';
+  let assignment = 'missing';
+  let invitationReads = 0;
+  const database = {
+    $transaction: async (operation) =>
+      operation({
+        $executeRaw: async () => 1,
+        $queryRaw: async (strings) => {
+          const sql = strings.join('?');
+          if (sql.includes('UPDATE notification_rate_counters'))
+            return [{ count: 1 }];
+          if (sql.includes('FROM memberships'))
+            return [{
+              id: membershipId,
+              tenant_id: tenantId,
+              user_id: actorId,
+              role: 'OWNER',
+              permissions: [],
+              activated_at: new Date(0),
+              revoked_at: null,
+            }];
+          if (sql.includes('FROM event_assignments')) {
+            if (assignment === 'missing') return [];
+            return [{
+              id: 'ffffffff-ffff-4fff-8fff-ffffffffffff',
+              tenant_id: tenantId,
+              event_id: eventId,
+              membership_id: membershipId,
+              permissions: assignment === 'denied' ? ['report.read'] : ['inventory.import'],
+              activated_at: new Date(0),
+              revoked_at: assignment === 'revoked' ? new Date() : null,
+            }];
+          }
+          if (sql.includes('FROM guest_invitations')) invitationReads++;
+          return [];
+        },
+      }),
+  };
+  const app = await createApp({
+    logging: false,
+    database,
+    hmac: { pepper: 'fixture-key', version: 1 },
+    oidcVerifier: {
+      verifyBearerToken: async () => ({ subject: 'fixture' }),
+    },
+    users: { upsertFromVerifiedIdentity: async () => ({ userId: actorId }) },
+  });
+  try {
+    await app.init();
+    await app.getHttpAdapter().getInstance().ready();
+    for (const state of ['missing', 'revoked', 'denied']) {
+      assignment = state;
+      const response = await app.inject({
+        method: 'GET',
+        url: path + `?q=${invitationId}`,
+        headers: { authorization: 'Bearer fixture' },
+      });
+      assert.equal(response.statusCode, state === 'denied' ? 403 : 404, state);
+      assert.equal(response.json().code, state === 'denied' ? 'PERMISSION_DENIED' : 'EVENT_NOT_FOUND', state);
+      assert.equal(response.headers['cache-control'], 'private, no-store');
+      assert.ok(!response.body.includes(invitationId));
+    }
+    assert.equal(invitationReads, 0);
+  } finally {
+    await app.close();
+  }
+});

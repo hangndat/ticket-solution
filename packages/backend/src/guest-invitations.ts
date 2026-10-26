@@ -30,6 +30,7 @@ import {
   type RedeemOutcome,
 } from './issue';
 import { requireTenantPermission } from './membership';
+import { AUTHZ_ERROR_CODES, AuthzError } from './authz-error';
 import { maskEmail } from './notification-status';
 import { withTenant } from './tenant-context';
 
@@ -140,12 +141,26 @@ export async function listGuestInvitations(
   }
   const limit = parseLimit(input.limit);
   return withTenant(db, input.tenantId, async (tx) => {
-    await requireTenantPermission(tx, {
-      tenantId: input.tenantId,
-      userId: input.actorUserId,
-      permission: PERMISSION_IMPORT,
-      eventId: input.eventId,
-    });
+    try {
+      await requireTenantPermission(tx, {
+        tenantId: input.tenantId,
+        userId: input.actorUserId,
+        permission: PERMISSION_IMPORT,
+        eventId: input.eventId,
+      });
+    } catch (error) {
+      if (
+        error instanceof AuthzError &&
+        error.code === AUTHZ_ERROR_CODES.EVENT_ASSIGNMENT_REQUIRED
+      ) {
+        throw new ImportError(
+          IMPORT_ERROR_CODES.EVENT_NOT_FOUND,
+          'Event not found',
+          404,
+        );
+      }
+      throw error;
+    }
 
     // Expire due rows opportunistically (no quota side effects).
     await tx.$executeRaw`
