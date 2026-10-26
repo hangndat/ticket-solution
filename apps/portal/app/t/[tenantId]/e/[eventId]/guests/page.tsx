@@ -1,7 +1,7 @@
 'use client';
 
 import { ProCard } from '@ant-design/pro-components';
-import { Alert, Button, Flex, Result, Select, Space, Spin } from 'antd';
+import { Alert, Button, Flex, Result, Segmented, Select, Space, Spin } from 'antd';
 import { PortalPage } from '../../../../../../src/components/portal-page';
 import type { ReactNode } from 'react';
 import { useParams } from 'next/navigation';
@@ -20,6 +20,7 @@ import {
 import { usePortalLocale } from '../../../../../../src/i18n';
 import { SURFACE_MESSAGE_KEYS } from '../../../../../../src/prep/surface-copy';
 import { useCompactChrome } from '../../../../../../src/hooks/use-compact-chrome';
+import { GuestWorkspace } from '../../../../../../src/guests/guest-workspace';
 
 type CatalogItem = { id: string; label: string };
 
@@ -35,6 +36,7 @@ export default function EventGuestsPage() {
   const [ticketTypeId, setTicketTypeId] = useState('');
   const [catalogError, setCatalogError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('import');
+  const [section, setSection] = useState<'list' | 'ops'>('list');
   const canLoadCatalog =
     access.kind === 'ready' && canAccessEventRoute('types', access.permissions);
 
@@ -48,6 +50,7 @@ export default function EventGuestsPage() {
         hash === 'import'
       ) {
         setActiveTab(hash);
+        setSection('ops');
       }
     };
     queueMicrotask(syncTabFromHash);
@@ -118,6 +121,10 @@ export default function EventGuestsPage() {
     permissions,
   );
   const canExport = canExportCreate || canExportDownload;
+  const canReadInvitations = canImport;
+  const canReadRequests = canApprove;
+  const canReadTickets = permissions.includes('cs.lookup');
+  const canRead = canReadInvitations || canReadRequests || canReadTickets;
   const canOps = canImport || canApprove || canNotify || canExport;
 
   if (access.kind === 'loading') return (
@@ -151,7 +158,7 @@ export default function EventGuestsPage() {
       />
     );
   }
-  if (access.kind === 'permission-denied' || !canOps) {
+  if (access.kind === 'permission-denied' || (!canOps && !canRead)) {
     return (
       <Result
         status="403"
@@ -285,7 +292,21 @@ export default function EventGuestsPage() {
       {catalogError ? (
         <Alert type="warning" showIcon message={catalogError} />
       ) : null}
-      <ProCard
+      {canRead && canOps ? (
+        <Segmented
+          style={{ marginBottom: 16 }}
+          value={section}
+          options={[
+            { label: 'Danh sách', value: 'list' },
+            { label: 'Vận hành', value: 'ops' },
+          ]}
+          onChange={(value) => setSection(value as 'list' | 'ops')}
+        />
+      ) : null}
+      {canRead && (section === 'list' || !canOps) ? (
+        <GuestWorkspace tenantId={tenantId} eventId={eventId} permissions={permissions} />
+      ) : null}
+      {canOps && (section === 'ops' || !canRead) ? <ProCard
         className="portal-guests-tabs"
         tabs={{
           activeKey: tabItems.some((tab) => tab.key === activeTab)
@@ -297,7 +318,7 @@ export default function EventGuestsPage() {
           },
           items: tabItems,
         }}
-      />
+      /> : null}
     </PortalPage>
   );
 }
