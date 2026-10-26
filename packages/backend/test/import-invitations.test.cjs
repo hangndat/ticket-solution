@@ -592,6 +592,82 @@ test(
         assert.ok(!('token' in item));
         assert.ok(!('invitedEmail' in item));
       }
+      const invitationInput = (tenantId, eventId, actorUserId, query = {}) => ({
+        tenantId,
+        eventId,
+        actorUserId,
+        ...query,
+      });
+      const targetId = listed.items[0].invitationId;
+      const exact = await listGuestInvitations(
+        db,
+        invitationInput(tenantA, eventA, manager.userId, {
+          q: targetId,
+          limit: 100,
+        }),
+      );
+      assert.deepEqual(exact, { items: [listed.items[0]], nextCursor: null });
+      assert.deepEqual(
+        await listGuestInvitations(
+          db,
+          invitationInput(tenantA, eventA, manager.userId, { q: randomUUID() }),
+        ),
+        { items: [], nextCursor: null },
+      );
+      assert.deepEqual(
+        await listGuestInvitations(
+          db,
+          invitationInput(tenantA, eventA, manager.userId, {
+            q: targetId,
+            state: 'CLAIMED',
+          }),
+        ),
+        { items: [], nextCursor: null },
+      );
+      const legacyFirst = await listGuestInvitations(
+        db,
+        invitationInput(tenantA, eventA, manager.userId, { limit: 1 }),
+      );
+      assert.equal(legacyFirst.items.length, 1);
+      assert.equal(legacyFirst.nextCursor, legacyFirst.items[0].invitationId);
+      const legacySecond = await listGuestInvitations(
+        db,
+        invitationInput(tenantA, eventA, manager.userId, {
+          limit: 1,
+          cursor: legacyFirst.nextCursor,
+        }),
+      );
+      assert.equal(legacySecond.items.length, 1);
+      assert.notEqual(
+        legacySecond.items[0].invitationId,
+        legacyFirst.items[0].invitationId,
+      );
+      assert.equal(legacySecond.nextCursor, null);
+      await assert.rejects(
+        () =>
+          listGuestInvitations(
+            db,
+            invitationInput(tenantA, eventA, manager.userId, {
+              q: targetId,
+              cursor: legacyFirst.nextCursor,
+            }),
+          ),
+        (e) =>
+          e instanceof ImportError &&
+          e.code === IMPORT_ERROR_CODES.INVALID_CURSOR,
+      );
+      await assert.rejects(
+        () =>
+          listGuestInvitations(
+            db,
+            invitationInput(tenantA, eventA, manager.userId, {
+              q: 'ada@example.com',
+            }),
+          ),
+        (e) =>
+          e instanceof ImportError &&
+          e.code === IMPORT_ERROR_CODES.INVALID_FILTER,
+      );
 
       const allocatedMid = await withTenant(db, tenantA, async (tx) => {
         const rows = await tx.$queryRaw`
@@ -1064,6 +1140,13 @@ test(
         HMAC.pepper,
       );
       assert.deepEqual(empty, { items: [], nextCursor: null });
+      assert.deepEqual(
+        await listGuestInvitations(
+          db,
+          invitationInput(tenantA, eventOther, manager.userId, { q: targetId }),
+        ),
+        { items: [], nextCursor: null },
+      );
       await assert.rejects(
         () =>
           listImportJobs(
@@ -1098,6 +1181,15 @@ test(
           db,
           listInput(tenantB, eventTenantB, outsider.userId),
           HMAC.pepper,
+        ),
+        { items: [], nextCursor: null },
+      );
+      assert.deepEqual(
+        await listGuestInvitations(
+          db,
+          invitationInput(tenantB, eventTenantB, outsider.userId, {
+            q: targetId,
+          }),
         ),
         { items: [], nextCursor: null },
       );
@@ -1175,6 +1267,14 @@ test(
             db,
             listInput(tenantA, eventA, reader.userId),
             HMAC.pepper,
+          ),
+        (e) => e instanceof AuthzError,
+      );
+      await assert.rejects(
+        () =>
+          listGuestInvitations(
+            db,
+            invitationInput(tenantA, eventA, reader.userId, { q: targetId }),
           ),
         (e) => e instanceof AuthzError,
       );
