@@ -7,7 +7,17 @@ export type PortalFetchResult = {
   json: unknown;
   networkError: boolean;
   timedOut: boolean;
+  retryAfterMs?: number;
 };
+
+function retryAfterMs(res: Response): number | undefined {
+  const value = res.headers.get('Retry-After');
+  if (!value) return undefined;
+  const seconds = Number(value);
+  if (Number.isFinite(seconds) && seconds >= 0) return Math.min(seconds * 1000, 60_000);
+  const date = Date.parse(value);
+  return Number.isFinite(date) ? Math.min(Math.max(date - Date.now(), 0), 60_000) : undefined;
+}
 
 export const PORTAL_FORBIDDEN_EVENT = 'portal:bff-forbidden';
 
@@ -93,6 +103,7 @@ export async function portalGet(
       json: await parseJsonSafe(res),
       networkError: false,
       timedOut: false,
+      retryAfterMs: retryAfterMs(res),
     };
   } catch (err) {
     const timedOut = err instanceof Error && err.name === 'AbortError';
@@ -129,6 +140,7 @@ export async function portalMutate(
       json: await parseJsonSafe(res),
       networkError: false,
       timedOut: false,
+      retryAfterMs: retryAfterMs(res),
     };
   } catch (err) {
     const timedOut = err instanceof Error && err.name === 'AbortError';
