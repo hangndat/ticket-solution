@@ -15,6 +15,7 @@ import {
   derivePortalShellCapabilities,
   type PortalShellCapabilities,
 } from './capabilities';
+import { publishPortalShellSnapshot } from './portal-shell-snapshot';
 
 const REQUEST_TIMEOUT_MS = 8_000;
 
@@ -152,12 +153,25 @@ async function loadShellContextOnce(): Promise<ShellLoadState> {
   }
 }
 
+function trackShellLoad(promise: Promise<ShellLoadState>): Promise<ShellLoadState> {
+  return promise.then((result) => {
+    publishPortalShellSnapshot(result);
+    return result;
+  });
+}
+
 /** Dedupe parallel discovery calls (shell + route guards share one flight). */
 export function loadShellContext(): Promise<ShellLoadState> {
   if (!shellContextInflight) {
-    shellContextInflight = loadShellContextOnce().finally(() => {
+    shellContextInflight = trackShellLoad(loadShellContextOnce()).finally(() => {
       shellContextInflight = null;
     });
   }
   return shellContextInflight;
+}
+
+/** Force a new discovery round (e.g. after create/clone when MeEvents was stale). */
+export function refreshShellContext(): Promise<ShellLoadState> {
+  shellContextInflight = null;
+  return loadShellContext();
 }

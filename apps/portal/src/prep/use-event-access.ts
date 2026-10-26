@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import type { MeEventItem, MeTenantItem } from '@ticket/contracts';
-import { loadShellContext } from '../nav/load-shell-context';
+import { loadShellContext, refreshShellContext } from '../nav/load-shell-context';
+import { refreshUntilEventAssigned, shouldRefreshEventDiscovery } from './event-discovery';
 import { tenantHasAdminChrome, tenantHasAnalytics } from '../nav/capabilities';
 import { isEventAssigned } from './event-access-resolver';
 import type { MessageKey } from '../i18n/messages';
@@ -26,7 +27,7 @@ export function useEventAccess(
 
   useEffect(() => {
     let cancelled = false;
-    void loadShellContext().then((shell) => {
+    const apply = (shell: Awaited<ReturnType<typeof loadShellContext>>) => {
       if (cancelled) return;
       if (shell.status === 'unauthenticated') {
         window.location.href = `/api/auth/login?return=/t/${tenantId}/e/${eventId}`;
@@ -54,7 +55,16 @@ export function useEventAccess(
         event,
         permissions: event.permissions,
       });
-    });
+    };
+    void (async () => {
+      let shell = await loadShellContext();
+      if (cancelled) return;
+      if (shouldRefreshEventDiscovery(shell, tenantId, eventId)) {
+        shell = await refreshUntilEventAssigned(tenantId, eventId, refreshShellContext);
+      }
+      if (cancelled) return;
+      apply(shell);
+    })();
     return () => {
       cancelled = true;
     };
