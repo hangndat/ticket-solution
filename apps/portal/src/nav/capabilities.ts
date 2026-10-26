@@ -6,17 +6,10 @@ import type {
   PlatformMeResponse,
 } from '@ticket/contracts';
 import type { MessageKey } from '../i18n/messages';
+import { canAccessEventRoute, canAccessTenantRoute } from './capability-policy';
 
 /** Message translator injected by UI (`usePortalLocale().t`) or tests. */
 export type PortalTranslate = (key: MessageKey) => string;
-
-/** Tenant permissions that unlock org chrome (O02 / handoff §3.3). */
-export const ADMIN_TENANT_PERMISSIONS = [
-  'event.create',
-  'event.list',
-  'members.manage',
-  'tenant.profile',
-] as const;
 
 export type PortalShellCapabilities = {
   authenticated: boolean;
@@ -71,9 +64,7 @@ export function derivePortalShellCapabilities(input: {
   const showOrgChrome =
     staffEligible &&
     (input.meTenants?.items.some((tenant) =>
-      tenant.tenantPermissions.some((perm) =>
-        (ADMIN_TENANT_PERMISSIONS as readonly string[]).includes(perm),
-      ),
+      canAccessTenantRoute('overview', tenant.tenantPermissions),
     ) ??
       false);
 
@@ -103,9 +94,7 @@ export function derivePortalShellCapabilities(input: {
 }
 
 export function tenantHasAdminChrome(tenant: MeTenantItem): boolean {
-  return tenant.tenantPermissions.some((perm) =>
-    (ADMIN_TENANT_PERMISSIONS as readonly string[]).includes(perm),
-  );
+  return canAccessTenantRoute('overview', tenant.tenantPermissions);
 }
 
 function meEventItems(
@@ -124,10 +113,12 @@ export function tenantHasAnalytics(
   tenantId: string,
   meEvents: MeEventsResponse | null | readonly MeEventItem[],
 ): boolean {
-  return meEventItems(meEvents).some(
-    (event) =>
-      event.tenantId === tenantId &&
-      event.permissions.includes('report.read'),
+  return canAccessTenantRoute(
+    'analytics',
+    [],
+    meEventItems(meEvents)
+      .filter((event) => event.tenantId === tenantId)
+      .map((event) => event.permissions),
   );
 }
 
@@ -146,7 +137,7 @@ export function buildOrgMenuItems(
   const items: OrgMenuItem[] = [
     { key: 'overview', href: base, label: translate('nav.org.overview') },
   ];
-  if (hasAdmin && tenant.tenantPermissions.includes('event.list')) {
+  if (canAccessTenantRoute('events', tenant.tenantPermissions)) {
     items.push({
       key: 'events',
       href: `${base}/events`,
@@ -162,7 +153,7 @@ export function buildOrgMenuItems(
       permission: 'report.read',
     });
   }
-  if (hasAdmin && tenant.tenantPermissions.includes('members.manage')) {
+  if (canAccessTenantRoute('members', tenant.tenantPermissions)) {
     items.push({
       key: 'members',
       href: `${base}/members`,
@@ -170,7 +161,7 @@ export function buildOrgMenuItems(
       permission: 'members.manage',
     });
   }
-  if (hasAdmin && tenant.tenantPermissions.includes('tenant.profile')) {
+  if (canAccessTenantRoute('settings', tenant.tenantPermissions)) {
     items.push({
       key: 'settings',
       href: `${base}/settings`,
@@ -192,44 +183,48 @@ export function buildEventMenuItems(
   translate: PortalTranslate,
 ): EventMenuItem[] {
   const base = `/t/${tenantId}/e/${eventId}`;
-  const items: EventMenuItem[] = [
-    {
+  const items: EventMenuItem[] = [];
+  if (canAccessEventRoute('overview', permissions)) {
+    items.push({
       key: 'overview',
       href: base,
       label: translate('nav.event.overview'),
       group: 'run',
-    },
-  ];
-  const canSetup = permissions.some((p) =>
-    ['event.update', 'config.publish', 'inventory.import', 'event.config'].includes(
-      p,
-    ),
-  );
-  if (canSetup) {
+    });
+  }
+  if (canAccessEventRoute('setup', permissions)) {
     items.push({
       key: 'setup',
       href: `${base}/setup`,
       label: translate('nav.event.setup'),
       group: 'setup',
     });
+  }
+  if (canAccessEventRoute('types', permissions)) {
     items.push({
       key: 'types',
       href: `${base}/types`,
       label: translate('nav.event.types'),
       group: 'setup',
     });
+  }
+  if (canAccessEventRoute('sources', permissions)) {
     items.push({
       key: 'sources',
       href: `${base}/sources`,
       label: translate('nav.event.sources'),
       group: 'setup',
     });
+  }
+  if (canAccessEventRoute('quota', permissions)) {
     items.push({
       key: 'quota',
       href: `${base}/quota`,
       label: translate('nav.event.quota'),
       group: 'setup',
     });
+  }
+  if (canAccessEventRoute('config', permissions)) {
     items.push({
       key: 'config',
       href: `${base}/config`,
@@ -237,11 +232,7 @@ export function buildEventMenuItems(
       group: 'setup',
     });
   }
-  if (
-    permissions.some((p) =>
-      ['inventory.import', 'redemption.approve', 'notify.send'].includes(p),
-    )
-  ) {
+  if (canAccessEventRoute('guests', permissions)) {
     items.push({
       key: 'guests',
       href: `${base}/guests`,
@@ -249,7 +240,7 @@ export function buildEventMenuItems(
       group: 'setup',
     });
   }
-  if (permissions.includes('report.read')) {
+  if (canAccessEventRoute('gate', permissions)) {
     items.push({
       key: 'gate',
       href: `${base}/gate`,
@@ -258,10 +249,7 @@ export function buildEventMenuItems(
       permission: 'report.read',
     });
   }
-  if (
-    permissions.includes('report.read') ||
-    permissions.includes('inventory.import')
-  ) {
+  if (canAccessEventRoute('audit', permissions)) {
     items.push({
       key: 'audit',
       href: `${base}/audit`,
@@ -269,7 +257,7 @@ export function buildEventMenuItems(
       group: 'run',
     });
   }
-  if (permissions.includes('cs.lookup')) {
+  if (canAccessEventRoute('support', permissions)) {
     items.push({
       key: 'support',
       href: `${base}/support`,

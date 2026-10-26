@@ -3,7 +3,13 @@
 import type { MenuDataItem } from '@ant-design/pro-components';
 import { Button } from 'antd';
 import { usePathname } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react';
 import type { MeEventItem, MeTenantItem } from '@ticket/contracts';
 import { isStaffPortalTenant } from '../onboarding';
 import {
@@ -19,6 +25,16 @@ import {
 import { PortalProLayout } from './portal-pro-layout';
 import { SurfaceState } from './surface-state';
 import { usePortalLocale } from '../i18n';
+import {
+  PORTAL_FORBIDDEN_EVENT,
+  forbiddenScopeAffectsPath,
+  forbiddenScopeFromBffPath,
+  type ForbiddenScope,
+} from '../client/portal-fetch';
+import {
+  canAccessPortalPath,
+  firstAllowedTenantPath,
+} from '../nav/capability-policy';
 
 function tenantFromPath(pathname: string): string | null {
   const m = pathname.match(/^\/t\/([^/]+)/);
@@ -50,6 +66,26 @@ export function PortalShell({
   const { t } = usePortalLocale();
   const pathname = usePathname();
   const [shell, setShell] = useState<ShellLoadState>({ status: 'loading' });
+  const [forbiddenScopes, setForbiddenScopes] = useState<ForbiddenScope[]>([]);
+
+  useEffect(() => {
+    const deny = (event: Event) => {
+      const scope = forbiddenScopeFromBffPath(
+        (event as CustomEvent<string>).detail,
+      );
+      if (!scope) return;
+      setForbiddenScopes((previous) =>
+        previous.some(
+          (item) =>
+            item.tenantId === scope.tenantId && item.eventId === scope.eventId,
+        )
+          ? previous
+          : [...previous, scope],
+      );
+    };
+    window.addEventListener(PORTAL_FORBIDDEN_EVENT, deny);
+    return () => window.removeEventListener(PORTAL_FORBIDDEN_EVENT, deny);
+  }, []);
 
   const pathTenantId = tenantFromPath(pathname);
   const pathEventId = eventFromPath(pathname);
@@ -100,8 +136,7 @@ export function PortalShell({
   );
 
   const resolvedTenantId =
-    effectiveTenantId ??
-    (tenants.length === 1 ? tenants[0]!.tenantId : null);
+    effectiveTenantId ?? (tenants.length === 1 ? tenants[0]!.tenantId : null);
 
   const activeTenant =
     tenants.find((tenant) => tenant.tenantId === resolvedTenantId) ?? null;
@@ -188,6 +223,39 @@ export function PortalShell({
     caps?.showOrgChrome || caps?.showPlatform || showAnalyticsNav,
   );
 
+  const routeForbidden = !canAccessPortalPath(pathname, {
+    tenantId: activeTenant?.tenantId ?? null,
+    tenantPermissions: activeTenant?.tenantPermissions ?? [],
+    eventId: activeEvent?.eventId ?? null,
+    eventPermissions: activeEvent?.permissions ?? [],
+    tenantEventPermissions: tenantEvents.map((event) => event.permissions),
+  });
+  const bffForbidden = forbiddenScopes.some((scope) =>
+    forbiddenScopeAffectsPath(scope, pathname),
+  );
+  const recoveryPath = tenants
+    .filter(
+      (tenant) =>
+        !forbiddenScopes.some(
+          (scope) =>
+            scope.tenantId === tenant.tenantId && scope.eventId === null,
+        ),
+    )
+    .map((tenant) =>
+      firstAllowedTenantPath(
+        tenant,
+        events.filter(
+          (event) =>
+            !forbiddenScopes.some(
+              (scope) =>
+                scope.tenantId === event.tenantId &&
+                scope.eventId === event.eventId,
+            ),
+        ),
+      ),
+    )
+    .find((destination) => destination !== null && destination !== pathname);
+
   if (pathname.startsWith('/auth')) {
     return <>{children}</>;
   }
@@ -237,6 +305,21 @@ export function PortalShell({
     );
   }
 
+  if (bffForbidden || routeForbidden) {
+    return (
+      <SurfaceState
+        kind="permission-denied"
+        onRetry={() => {
+          if (recoveryPath) {
+            window.location.assign(recoveryPath);
+          } else {
+            window.location.reload();
+          }
+        }}
+      />
+    );
+  }
+
   return (
     <PortalProLayout
       productOrigin={productOrigin}
@@ -244,6 +327,7 @@ export function PortalShell({
       showSider={showSider}
       caps={caps}
       tenants={tenants}
+      events={events}
       tenantEvents={tenantEvents}
       resolvedTenantId={resolvedTenantId}
       effectiveEventId={effectiveEventId}

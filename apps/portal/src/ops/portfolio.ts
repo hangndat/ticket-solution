@@ -6,6 +6,7 @@ import {
 } from './report';
 import { DEFAULT_PORTAL_LOCALE, type PortalLocale } from '../i18n/locale';
 import { t } from '../i18n/t';
+import { firstAllowedEventPath } from '../nav/capability-policy';
 
 /** GET path — ReportController_portfolio (ADR P2-PORTFOLIO-REOPEN). */
 export const PORTFOLIO_OPENAPI_PATH =
@@ -88,9 +89,7 @@ function parseQuotaCapacityState(value: unknown): QuotaCapacityState | null {
     : null;
 }
 
-function parseRejectByReason(
-  value: unknown,
-): Record<string, number> | null {
+function parseRejectByReason(value: unknown): Record<string, number> | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
   const out: Record<string, number> = {};
   for (const [key, raw] of Object.entries(value as Record<string, unknown>)) {
@@ -121,10 +120,7 @@ function parseUuid(value: unknown): string | null {
   return trimmed;
 }
 
-function parseItem(
-  raw: unknown,
-  locale: PortalLocale,
-): PortfolioItemView {
+function parseItem(raw: unknown, locale: PortalLocale): PortfolioItemView {
   const body = record(raw);
   if (!body) {
     return {
@@ -259,11 +255,14 @@ export function interpretPortfolio(
 export function portfolioEventHref(
   tenantId: string,
   eventId: string,
-): string {
-  return `/t/${tenantId}/e/${eventId}`;
+  permissions: readonly string[],
+): string | null {
+  return firstAllowedEventPath({ tenantId, eventId, permissions });
 }
 
-export function formatPortfolioMetric(value: number | null | undefined): string {
+export function formatPortfolioMetric(
+  value: number | null | undefined,
+): string {
   if (value === null || value === undefined) return '—';
   if (typeof value !== 'number' || !Number.isFinite(value)) return '—';
   return String(value);

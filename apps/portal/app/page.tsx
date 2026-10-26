@@ -7,6 +7,7 @@ import { loadShellContext } from '../src/nav/load-shell-context';
 import { SurfaceState } from '../src/components/surface-state';
 import { usePortalLocale, type MessageKey } from '../src/i18n';
 import { resolveOnboardingSurface } from '../src/onboarding';
+import { resolveHomeEntry } from '../src/nav/home-entry';
 import { usePortalUserId } from '../src/views/use-portal-user-id';
 
 function redirectFromHome(path: string) {
@@ -24,8 +25,7 @@ export default function PortalHomePage() {
   >('loading');
   const [messageKey, setMessageKey] = useState<MessageKey | undefined>();
 
-  const identityUserId =
-    identity.status === 'ready' ? identity.userId : null;
+  const identityUserId = identity.status === 'ready' ? identity.userId : null;
 
   useEffect(() => {
     if (identity.status === 'loading') {
@@ -68,11 +68,16 @@ export default function PortalHomePage() {
         return;
       }
       setState('redirecting');
-      if (surface.kind === 'pending-activation' || surface.kind === 'first-run') {
-        redirectFromHome(`/onboarding/${surface.tenant.tenantId}`);
-        return;
+      const destination = resolveHomeEntry(
+        surface,
+        shell.meTenants?.items ?? [],
+        shell.meEvents?.items ?? [],
+      );
+      if (destination) {
+        redirectFromHome(destination);
+      } else {
+        setState('empty');
       }
-      redirectFromHome(`/t/${surface.tenant.tenantId}`);
     });
     return () => {
       cancelled = true;

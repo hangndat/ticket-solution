@@ -25,6 +25,7 @@ import { isEventPagePermitted } from '../../../../../../src/prep/event-access-re
 import { useEventAccess } from '../../../../../../src/prep/use-event-access';
 import { SurfaceState } from '../../../../../../src/components/surface-state';
 import { usePortalLocale } from '../../../../../../src/i18n';
+import { canPerformEventAction } from '../../../../../../src/nav/capability-policy';
 
 export default function SourcesPage() {
   const { t } = usePortalLocale();
@@ -34,9 +35,9 @@ export default function SourcesPage() {
   const [items, setItems] = useState<PortalSourceSummary[]>([]);
   const [types, setTypes] = useState<PortalTicketTypeSummary[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
-  const [kind, setKind] = useState<'loading' | 'ready' | 'empty' | 'error' | 'unknown'>(
-    'loading',
-  );
+  const [kind, setKind] = useState<
+    'loading' | 'ready' | 'empty' | 'error' | 'unknown'
+  >('loading');
   const [message, setMessage] = useState<string | undefined>();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -55,7 +56,9 @@ export default function SourcesPage() {
       if (next) qs.set('cursor', next);
       const [res, typesRes] = await Promise.all([
         portalGet(`${bffEventAction(tenantId, eventId, 'sources')}?${qs}`),
-        portalGet(`${bffEventAction(tenantId, eventId, 'ticket-types')}?limit=50`),
+        portalGet(
+          `${bffEventAction(tenantId, eventId, 'ticket-types')}?limit=50`,
+        ),
       ]);
       if (res.networkError || res.timedOut || res.status >= 500) {
         setKind('unknown');
@@ -64,11 +67,17 @@ export default function SourcesPage() {
       }
       if (res.status !== 200 || !res.json || typeof res.json !== 'object') {
         setKind('error');
-        setMessage(apiErrorMessage(res.json, t('common.httpStatus', { status: res.status })));
+        setMessage(
+          apiErrorMessage(
+            res.json,
+            t('common.httpStatus', { status: res.status }),
+          ),
+        );
         return;
       }
       const list = Array.isArray((res.json as { items?: unknown }).items)
-        ? ((res.json as { items: PortalSourceSummary[] }).items as PortalSourceSummary[])
+        ? ((res.json as { items: PortalSourceSummary[] })
+            .items as PortalSourceSummary[])
         : [];
       const nextCursor =
         typeof (res.json as { nextCursor?: unknown }).nextCursor === 'string'
@@ -136,7 +145,13 @@ export default function SourcesPage() {
     );
   }
 
+  const canCreateSource = canPerformEventAction(
+    'createSource',
+    access.permissions,
+  );
+
   async function createSource() {
+    if (!canCreateSource) return;
     setBusy(true);
     setNotice(null);
     try {
@@ -185,7 +200,13 @@ export default function SourcesPage() {
   return (
     <PortalPage
       title={t('nav.event.sources')}
-      extra={<Button type="primary" onClick={() => setOpen(true)}>{t('sources.h_1hplg8o')}</Button>}
+      extra={
+        canCreateSource ? (
+          <Button type="primary" onClick={() => setOpen(true)}>
+            {t('sources.h_1hplg8o')}
+          </Button>
+        ) : undefined
+      }
       loading={kind === 'loading'}
     >
       {kind === 'loading' ? <SurfaceState kind="loading" /> : null}
@@ -196,7 +217,9 @@ export default function SourcesPage() {
           message={t('surface.unknown.title')}
           description={message}
           action={
-            <Button size="small" onClick={() => void load(null)}>{t('surface.action.recheck')}</Button>
+            <Button size="small" onClick={() => void load(null)}>
+              {t('surface.action.recheck')}
+            </Button>
           }
         />
       ) : null}
@@ -212,7 +235,11 @@ export default function SourcesPage() {
           kind="empty"
           description={t('sources.h_1850hrg')}
           emptyAction={
-            <Button type="primary" onClick={() => setOpen(true)}>{t('sources.h_1hplg8o')}</Button>
+            canCreateSource ? (
+              <Button type="primary" onClick={() => setOpen(true)}>
+                {t('sources.h_1hplg8o')}
+              </Button>
+            ) : undefined
           }
         />
       ) : null}
@@ -227,27 +254,42 @@ export default function SourcesPage() {
             pagination={false}
           />
           {cursor ? (
-            <Button onClick={() => void load(cursor)}>{t('sources.h_1w8bpuo')}</Button>
+            <Button onClick={() => void load(cursor)}>
+              {t('sources.h_1w8bpuo')}
+            </Button>
           ) : null}
         </>
       ) : null}
 
-      {notice ? <Alert type="info" showIcon message={notice} style={{ marginTop: 16 }} /> : null}
+      {notice ? (
+        <Alert
+          type="info"
+          showIcon
+          message={notice}
+          style={{ marginTop: 16 }}
+        />
+      ) : null}
 
       <ModalForm
         title={t('sources.h_8t861g')}
-        open={open}
+        open={open && canCreateSource}
         onOpenChange={setOpen}
         form={form}
         initialValues={{ approvalMode: 'MANUAL' }}
         modalProps={{ destroyOnHidden: true }}
         submitter={{ submitButtonProps: { loading: busy } }}
         onFinish={async () => {
+          if (!canCreateSource) return false;
           await createSource();
           return true;
         }}
       >
-        <ProFormText name="name" label={t('sources.ten')} rules={[{ required: true }]} fieldProps={{ maxLength: 80 }} />
+        <ProFormText
+          name="name"
+          label={t('sources.ten')}
+          rules={[{ required: true }]}
+          fieldProps={{ maxLength: 80 }}
+        />
         <ProFormSelect
           name="approvalMode"
           label={t('guests.approvalMode')}
@@ -260,7 +302,12 @@ export default function SourcesPage() {
         <ProFormSelect
           name="ticketTypeId"
           label={t('nav.event.types')}
-          rules={[{ required: true, message: t('ops.import.chooseTicketTypeCatalog') }]}
+          rules={[
+            {
+              required: true,
+              message: t('ops.import.chooseTicketTypeCatalog'),
+            },
+          ]}
           options={types.map((ty) => ({
             value: ty.ticketTypeId,
             label: ty.label,

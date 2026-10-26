@@ -102,7 +102,13 @@ test('Gate report nav requires report.read — gate.confirm only unlocks deeplin
   const withSetup = buildEventMenuItems(
     't1',
     'e1',
-    ['event.update', 'config.publish'],
+    [
+      'event.update',
+      'event.config',
+      'inventory.import',
+      'config.publish',
+      'report.read',
+    ],
     keyStub,
   );
   for (const key of ['setup', 'types', 'sources', 'quota', 'config']) {
@@ -111,10 +117,7 @@ test('Gate report nav requires report.read — gate.confirm only unlocks deeplin
       true,
       `expected event menu key ${key}`,
     );
-    assert.equal(
-      withSetup.find((m) => m.key === key)?.group,
-      'setup',
-    );
+    assert.equal(withSetup.find((m) => m.key === key)?.group, 'setup');
   }
   assert.equal(withSetup.find((m) => m.key === 'overview')?.group, 'run');
 });
@@ -125,6 +128,7 @@ test('event menu splits live ops from setup', () => {
     'e1',
     [
       'event.update',
+      'event.config',
       'config.publish',
       'inventory.import',
       'report.read',

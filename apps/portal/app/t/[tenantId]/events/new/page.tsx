@@ -1,14 +1,6 @@
 'use client';
 
-import {
-  Alert,
-  Button,
-  Form,
-  Input,
-  Select,
-  Space,
-  Steps,
-} from 'antd';
+import { Alert, Button, Form, Input, Select, Space, Steps } from 'antd';
 import { PortalPage } from '../../../../../src/components/portal-page';
 import { useParams, useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -19,6 +11,7 @@ import {
 } from '../../../../../src/client/portal-fetch';
 import { bffEvents } from '../../../../../src/prep/bff-urls';
 import { useTenantAccess } from '../../../../../src/prep/use-event-access';
+import { canPerformTenantAction } from '../../../../../src/nav/capability-policy';
 import { SurfaceState } from '../../../../../src/components/surface-state';
 import { usePortalLocale } from '../../../../../src/i18n';
 
@@ -67,7 +60,7 @@ export default function CreateEventWizardPage() {
       />
     );
   }
-  if (!access.tenant.tenantPermissions.includes('event.create')) {
+  if (!canPerformTenantAction('createEvent', access.tenant.tenantPermissions)) {
     return (
       <SurfaceState
         kind="permission-denied"
@@ -88,7 +81,12 @@ export default function CreateEventWizardPage() {
         ...values,
         idempotencyKey: crypto.randomUUID(),
       });
-      if (res.networkError || res.timedOut || res.status === 0 || res.status >= 500) {
+      if (
+        res.networkError ||
+        res.timedOut ||
+        res.status === 0 ||
+        res.status >= 500
+      ) {
         setNotice({
           type: 'warning',
           text: t('events.h_npdcvo'),
@@ -118,10 +116,10 @@ export default function CreateEventWizardPage() {
       }
       setNotice({
         type: 'error',
-        text: t('ops.export.apiRejected', { code: apiErrorCode(res.json) ?? `HTTP ${res.status}`, message: apiErrorMessage(
-          res.json,
-          t('events.h_hnm91l'),
-        ) }),
+        text: t('ops.export.apiRejected', {
+          code: apiErrorCode(res.json) ?? `HTTP ${res.status}`,
+          message: apiErrorMessage(res.json, t('events.h_hnm91l')),
+        }),
       });
     } finally {
       setBusy(false);
@@ -169,10 +167,18 @@ export default function CreateEventWizardPage() {
             >
               <Input maxLength={64} autoComplete="off" spellCheck={false} />
             </Form.Item>
-            <Form.Item name="timezone" label={t('events.h_8g8c9u')} rules={[{ required: true }]}>
+            <Form.Item
+              name="timezone"
+              label={t('events.h_8g8c9u')}
+              rules={[{ required: true }]}
+            >
               <Input />
             </Form.Item>
-            <Form.Item name="visibility" label={t('common.h_wqd4fq')} rules={[{ required: true }]}>
+            <Form.Item
+              name="visibility"
+              label={t('common.h_wqd4fq')}
+              rules={[{ required: true }]}
+            >
               <Select
                 options={[
                   { value: 'UNLISTED', label: 'UNLISTED' },
@@ -208,7 +214,12 @@ export default function CreateEventWizardPage() {
         <Alert type={notice.type} showIcon message={notice.text} />
       ) : null}
       <Space>
-        <Button disabled={step === 0 || busy} onClick={() => setStep((s) => s - 1)}>{t('events.h_rft49v')}</Button>
+        <Button
+          disabled={step === 0 || busy}
+          onClick={() => setStep((s) => s - 1)}
+        >
+          {t('events.h_rft49v')}
+        </Button>
         {step < 2 ? (
           <Button
             type="primary"
@@ -216,16 +227,25 @@ export default function CreateEventWizardPage() {
             onClick={async () => {
               try {
                 if (step === 0) {
-                  await form.validateFields(['name', 'slug', 'timezone', 'visibility']);
+                  await form.validateFields([
+                    'name',
+                    'slug',
+                    'timezone',
+                    'visibility',
+                  ]);
                 }
                 setStep((s) => s + 1);
               } catch {
                 /* field errors shown */
               }
             }}
-          >{t('events.new.tiep')}</Button>
+          >
+            {t('events.new.tiep')}
+          </Button>
         ) : (
-          <Button type="primary" loading={busy} onClick={() => void submit()}>{t('events.h_ek93o2')}</Button>
+          <Button type="primary" loading={busy} onClick={() => void submit()}>
+            {t('events.h_ek93o2')}
+          </Button>
         )}
       </Space>
     </PortalPage>
