@@ -2,12 +2,33 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { EventConfigPayload } from '@ticket/contracts';
 import {
+  canPublishSavedVersion,
+  configFieldDifferences,
   configFields,
   configSaveNoticeKey,
   hasConfigVersionConflict,
   isConfigPreview,
   mergeConfigFields,
 } from '../src/prep/config-editor';
+
+test('revision conflict identifies changed visible fields without replacing the draft', () => {
+  const edited = { organizationName: 'My draft', primaryColor: '#123456', termsText: 'Old terms' };
+  const latest = { organizationName: 'Server update', primaryColor: '#123456', termsText: 'New terms' };
+  assert.deepEqual(configFieldDifferences(edited, latest), [
+    { key: 'organizationName', edited: 'My draft', latest: 'Server update' },
+    { key: 'termsText', edited: 'Old terms', latest: 'New terms' },
+  ]);
+  assert.equal(edited.organizationName, 'My draft');
+});
+
+test('publish requires the current saved version to be previewed with no unsaved edits', () => {
+  const ready = { latestVersion: 7, previewVersion: 7, dirty: false, conflict: false };
+  assert.equal(canPublishSavedVersion(ready), true);
+  assert.equal(canPublishSavedVersion({ ...ready, previewVersion: 6 }), false);
+  assert.equal(canPublishSavedVersion({ ...ready, dirty: true }), false);
+  assert.equal(canPublishSavedVersion({ ...ready, conflict: true }), false);
+  assert.equal(canPublishSavedVersion({ ...ready, latestVersion: null, previewVersion: null }), false);
+});
 
 const previous: EventConfigPayload = {
   schemaVersion: 1,

@@ -14,7 +14,8 @@ export type PrepReadinessKey =
   | 'form'
   | 'brand';
 
-export type PrepReadinessStatus = 'ok' | 'missing' | 'unknown';
+export type PrepReadinessStatus = 'ok' | 'missing' | 'unknown' | 'forbidden';
+export type ReadinessSignal = boolean | 'unknown';
 
 export type PrepReadinessItem = {
   key: PrepReadinessKey;
@@ -25,13 +26,34 @@ export type PrepReadinessItem = {
 
 export type PrepReadinessInput = {
   hasEventContext: boolean;
-  hasTicketType: boolean;
-  hasSource: boolean;
+  hasTicketType: ReadinessSignal;
+  hasSource: ReadinessSignal;
   quotaKnown: boolean;
   quotaCapacity: number | null;
-  hasTermsOrPublished: boolean;
-  hasBrand: boolean;
+  hasTermsOrPublished: ReadinessSignal;
+  hasBrand: ReadinessSignal;
+  forbiddenKeys?: ReadonlyArray<PrepReadinessKey>;
 };
+
+function readinessStatus(
+  key: PrepReadinessKey,
+  signal: ReadinessSignal,
+  forbiddenKeys: ReadonlyArray<PrepReadinessKey>,
+): PrepReadinessStatus {
+  if (forbiddenKeys.includes(key)) return 'forbidden';
+  if (signal === 'unknown') return 'unknown';
+  return signal ? 'ok' : 'missing';
+}
+
+function readinessDetail(
+  key: PrepReadinessKey,
+  status: PrepReadinessStatus,
+  locale: PortalLocale,
+): string {
+  if (status === 'forbidden') return t(locale, 'readiness.forbidden');
+  if (status === 'unknown') return t(locale, 'readiness.unknown');
+  return t(locale, `readiness.${key}.${status}` as MessageKey);
+}
 
 const LABEL_KEYS: Record<PrepReadinessKey, MessageKey> = {
   types: 'nav.event.types',
@@ -60,9 +82,15 @@ export function derivePrepReadiness(
     }));
   }
 
-  let quotaStatus: PrepReadinessStatus = 'unknown';
+  const forbiddenKeys = input.forbiddenKeys ?? [];
+
+  let quotaStatus: PrepReadinessStatus = forbiddenKeys.includes('quota')
+    ? 'forbidden'
+    : 'unknown';
   let quotaDetail = t(locale, 'readiness.quota.unknown');
-  if (input.quotaKnown) {
+  if (quotaStatus === 'forbidden') {
+    quotaDetail = t(locale, 'readiness.forbidden');
+  } else if (input.quotaKnown) {
     quotaStatus = 'ok';
     quotaDetail =
       input.quotaCapacity === null
@@ -76,18 +104,22 @@ export function derivePrepReadiness(
     {
       key: 'types',
       label: LABELS.types,
-      status: input.hasTicketType ? 'ok' : 'missing',
-      detail: input.hasTicketType
-        ? t(locale, 'readiness.types.ok')
-        : t(locale, 'readiness.types.missing'),
+      status: readinessStatus('types', input.hasTicketType, forbiddenKeys),
+      detail: readinessDetail(
+        'types',
+        readinessStatus('types', input.hasTicketType, forbiddenKeys),
+        locale,
+      ),
     },
     {
       key: 'sources',
       label: LABELS.sources,
-      status: input.hasSource ? 'ok' : 'missing',
-      detail: input.hasSource
-        ? t(locale, 'readiness.sources.ok')
-        : t(locale, 'readiness.sources.missing'),
+      status: readinessStatus('sources', input.hasSource, forbiddenKeys),
+      detail: readinessDetail(
+        'sources',
+        readinessStatus('sources', input.hasSource, forbiddenKeys),
+        locale,
+      ),
     },
     {
       key: 'quota',
@@ -98,18 +130,22 @@ export function derivePrepReadiness(
     {
       key: 'form',
       label: LABELS.form,
-      status: input.hasTermsOrPublished ? 'ok' : 'missing',
-      detail: input.hasTermsOrPublished
-        ? t(locale, 'readiness.form.ok')
-        : t(locale, 'readiness.form.missing'),
+      status: readinessStatus('form', input.hasTermsOrPublished, forbiddenKeys),
+      detail: readinessDetail(
+        'form',
+        readinessStatus('form', input.hasTermsOrPublished, forbiddenKeys),
+        locale,
+      ),
     },
     {
       key: 'brand',
       label: LABELS.brand,
-      status: input.hasBrand ? 'ok' : 'missing',
-      detail: input.hasBrand
-        ? t(locale, 'readiness.brand.ok')
-        : t(locale, 'readiness.brand.missing'),
+      status: readinessStatus('brand', input.hasBrand, forbiddenKeys),
+      detail: readinessDetail(
+        'brand',
+        readinessStatus('brand', input.hasBrand, forbiddenKeys),
+        locale,
+      ),
     },
   ];
 }
@@ -124,7 +160,8 @@ export function readinessSummary(
 ): string {
   const missing = items.filter((i) => i.status === 'missing');
   const unknown = items.filter((i) => i.status === 'unknown');
-  if (missing.length === 0 && unknown.length === 0) {
+  const forbidden = items.filter((i) => i.status === 'forbidden');
+  if (missing.length === 0 && unknown.length === 0 && forbidden.length === 0) {
     return t(locale, 'readiness.summary.allReady');
   }
   const parts: string[] = [];
@@ -141,6 +178,11 @@ export function readinessSummary(
         items: unknown.map((u) => u.label).join(', '),
       }),
     );
+  }
+  if (forbidden.length) {
+    parts.push(t(locale, 'readiness.summary.forbidden', {
+      items: forbidden.map((item) => item.label).join(', '),
+    }));
   }
   return t(locale, 'readiness.summary.tail', { parts: parts.join(' · ') });
 }
