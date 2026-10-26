@@ -15,10 +15,15 @@ const bytes = globalThis.__f02SecureBytes ??= new Map();
 const { session } = await import('../identity/session.ts');
 const { verifyViaMe } = await import('../identity/fetch-me.ts');
 const { StaffGateWorkspaceProvider, useStaffGateWorkspace } = await import('./staff-gate-workspace-context.tsx');
+const { offlineScanQueue } = await import('./offline-queue-session.ts');
+const { staffEligibility } = await import('../identity/staff-eligibility.ts');
+const { useStaffWorkspace } = await import('../navigation/use-staff-workspace.ts');
 const { logoutAndClearWalletArtifacts } = await import('../tickets/wallet-logout.ts');
 const { registerApnsDeviceToken } = await import('../push/apns-device-token.ts');
 
 let unreachableA = false;
+let replayRevoked = false;
+let replayPostCount = 0;
 const deletedRegistrations = [];
 globalThis.fetch = async (url, init) => {
   const token = new Headers(init?.headers).get('Authorization')?.replace('Bearer ', '');
@@ -27,9 +32,16 @@ globalThis.fetch = async (url, init) => {
     return Response.json({ userId: token?.slice(0, 1) ?? 'A' });
   }
   if (String(url).endsWith('/v1/me/events')) {
-    return Response.json({ staffEligible: true, items: [
+    return Response.json({ staffEligible: !replayRevoked, items: replayRevoked ? [] : [
       { tenantId: 'tenant', eventId: 'event', name: 'Event', permissions: ['gate.confirm'] },
     ] });
+  }
+  if (init?.method === 'POST' && String(url).endsWith('/offline-sync')) {
+    replayPostCount += 1;
+    if (replayRevoked) {
+      return Response.json({ code: 'MEMBERSHIP_REVOKED', retryable: false }, { status: 403 });
+    }
+    throw new Error('unexpected offline replay before revoke');
   }
   if (init?.method === 'POST' && String(url).endsWith('/v1/me/device-tokens')) {
     return Response.json({ registrationId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
@@ -43,8 +55,10 @@ globalThis.fetch = async (url, init) => {
 };
 
 let latest;
+let staffChromeVisible;
 function Probe() {
   latest = useStaffGateWorkspace();
+  staffChromeVisible = useStaffWorkspace();
   return React.createElement('Probe', { ready: latest.ready, historyCount: latest.deviceHistory.length });
 }
 const tree = () => React.createElement(StaffGateWorkspaceProvider, { active: true }, React.createElement(Probe));
@@ -167,4 +181,47 @@ test('production verified hook and logout remain closed on intent, readback, com
   await flush();
   assert.equal(latest?.ready, true);
   await act(async () => { renderer.unmount(); });
+});
+
+test('active Staff pending queue + membership revoke + sync hides chrome without ticket rejection', async () => {
+  const scope = { tenantId: 'tenant', eventId: 'event', name: 'Event' };
+  const gateSessionId = '44444444-4444-4444-8444-444444444444';
+  bytes.set('app:ticket.gate.workspace.v2.E', JSON.stringify({
+    v: 2,
+    selected: scope,
+    sessionsByScope: { 'tenant::event': gateSessionId },
+    opsByScope: {},
+  }));
+  replayRevoked = false;
+  replayPostCount = 0;
+  let renderer;
+  await act(async () => { renderer = TestRenderer.create(tree()); });
+  await act(async () => { await session.establish('E-token', verifyViaMe); });
+  await flush();
+  await act(async () => { await staffEligibility.refresh(session); });
+  assert.equal(latest?.ready, true);
+  assert.equal(latest?.sessionId, gateSessionId);
+  assert.equal(staffChromeVisible, true);
+
+  await act(async () => {
+    await offlineScanQueue.enqueue({
+      ticketId: '11111111-1111-4111-8111-111111111111',
+      tenantId: scope.tenantId,
+      eventId: scope.eventId,
+      staffSessionId: gateSessionId,
+    });
+  });
+  assert.equal(latest?.queueSnap.pendingCount, 1);
+
+  replayRevoked = true;
+  await act(async () => { await latest.syncNow(); });
+  await flush();
+  assert.equal(replayPostCount, 1);
+  assert.equal(staffEligibility.getSnapshot().staffEligible, false);
+  assert.equal(staffChromeVisible, false);
+  assert.equal(offlineScanQueue.getSnapshot().items[0]?.localStatus, 'pending');
+  assert.equal(offlineScanQueue.getSnapshot().conflictCount, 0);
+  assert.equal(latest?.ops.some((op) => op.phase === 'admitted'), false);
+  await act(async () => { renderer.unmount(); });
+  replayRevoked = false;
 });
