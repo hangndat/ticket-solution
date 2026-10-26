@@ -11,17 +11,40 @@ export const TICKET_ID_UUID =
 export const TICKET_SEARCH_VALIDATION_MESSAGE =
   'Nhập mã vé (UUID) chính xác để tìm. Tìm theo email hoặc mã đổi chưa hỗ trợ trong phiên bản này.';
 
+export const INVITATION_SEARCH_VALIDATION_MESSAGE =
+  'Nhập mã lời mời (UUID) chính xác để tìm. Tìm theo email chưa hỗ trợ trong phiên bản này.';
+
+function validateExactUuidSearch(
+  value: string,
+  message: string,
+): { ok: true; id: string } | { ok: false; message: string } {
+  const id = value.trim();
+  if (!id) {
+    return { ok: false, message };
+  }
+  if (!TICKET_ID_UUID.test(id)) {
+    return { ok: false, message };
+  }
+  return { ok: true, id };
+}
+
 export function validateTicketIdSearch(
   value: string,
 ): { ok: true; ticketId: string } | { ok: false; message: string } {
-  const ticketId = value.trim();
-  if (!ticketId) {
-    return { ok: false, message: TICKET_SEARCH_VALIDATION_MESSAGE };
-  }
-  if (!TICKET_ID_UUID.test(ticketId)) {
-    return { ok: false, message: TICKET_SEARCH_VALIDATION_MESSAGE };
-  }
-  return { ok: true, ticketId };
+  const result = validateExactUuidSearch(value, TICKET_SEARCH_VALIDATION_MESSAGE);
+  if (!result.ok) return result;
+  return { ok: true, ticketId: result.id };
+}
+
+export function validateInvitationIdSearch(
+  value: string,
+): { ok: true; invitationId: string } | { ok: false; message: string } {
+  const result = validateExactUuidSearch(
+    value,
+    INVITATION_SEARCH_VALIDATION_MESSAGE,
+  );
+  if (!result.ok) return result;
+  return { ok: true, invitationId: result.id };
 }
 
 export function defaultGuestListKind(
@@ -45,7 +68,7 @@ export function guestListKindToHash(kind: GuestListKind): string {
   return kind === 'redemptions' ? 'requests' : kind;
 }
 
-/** Server cursor pagination; ticket UUID search is at most one row — never send cursor with q. */
+/** Server cursor pagination; exact UUID lookup is at most one row — never send cursor with q. */
 export function buildGuestListQueryPath(
   tenantId: string,
   eventId: string,
@@ -56,7 +79,10 @@ export function buildGuestListQueryPath(
 ): string {
   const params = new URLSearchParams({ limit: String(GUEST_LIST_PAGE_SIZE) });
   const ticketSearch = kind === 'tickets' && search.trim() ? search.trim() : '';
-  const effectiveCursor = ticketSearch ? null : cursor;
+  const invitationSearch =
+    kind === 'invitations' && search.trim() ? search.trim() : '';
+  const uuidLookup = ticketSearch || invitationSearch;
+  const effectiveCursor = uuidLookup ? null : cursor;
   if (effectiveCursor) params.set('cursor', effectiveCursor);
   if (kind === 'invitations' && state) params.set('state', state);
   if (kind === 'redemptions') {
@@ -64,9 +90,14 @@ export function buildGuestListQueryPath(
     if (search.trim()) params.set('q', search.trim());
   }
   if (ticketSearch) params.set('q', ticketSearch);
+  if (invitationSearch) params.set('q', invitationSearch);
   return `${bffEventAction(tenantId, eventId, kind)}?${params}`;
 }
 
 export function ticketSearchBlocksPagination(search: string): boolean {
+  return Boolean(search.trim());
+}
+
+export function invitationSearchBlocksPagination(search: string): boolean {
   return Boolean(search.trim());
 }
