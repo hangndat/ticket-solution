@@ -1,0 +1,52 @@
+{
+  "case": "F01-mobile-drawer",
+  "pr": 980,
+  "sha": "af6374bd06b19469cd3e2454819b28f9a6785404",
+  "buildId": "nCGzARPt2xhorwFPh1kKh",
+  "base": "http://uat975shell.localhost:3019",
+  "viewport": "390x844",
+  "at": "2026-10-26T14:07:33.249Z",
+  "beforeOpen": {
+    "desktopSider": false,
+    "innerHeight": 844,
+    "innerWidth": 390,
+    "siderVisible": false,
+    "triggerHeight": 32,
+    "triggerPresent": true,
+    "triggerWidth": 44.3125
+  },
+  "orcaClick": {
+    "ok": true
+  },
+  "afterOrcaClick": {
+    "expanded": "false",
+    "open": false
+  },
+  "afterOpen": {
+    "ariaExpanded": "true",
+    "drawerInDom": true,
+    "drawerOpenClass": true,
+    "menuItemCount": 5,
+    "menuSample": [
+      "Tổng quan tổ chức",
+      "Sự kiện",
+      "Phân tích",
+      "Thành viên",
+      "Cấu hình"
+    ]
+  },
+  "screenshot": {
+    "file": "f01-drawer-open-390x844.png",
+    "pngWidth": 390,
+    "pngHeight": 844,
+    "dpr": 1,
+    "innerHeight": 844,
+    "innerWidth": 390,
+    "pixelPass": true
+  },
+  "productPass": true,
+  "orcaClickOpensDrawer": false,
+  "note": "Product F01 judged on native trigger click + drawer DOM; Orca selector/ref click may not open antd Drawer (automation delivery only).",
+  "pass": true,
+  "verdict": "PASS"
+}

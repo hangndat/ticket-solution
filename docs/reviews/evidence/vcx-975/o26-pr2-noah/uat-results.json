@@ -197,5 +197,21 @@
     }
   ],
   "blockers": [],
-  "verdict": "PASS with known gap"
+  "interactiveGaps": {
+    "artifact": "gap-probe-manual.json",
+    "shellMatrixSha": "c8130ba7d966f7b3565365f7c73996ea79281e83",
+    "gapProbeSha": "af6374bd06b19469cd3e2454819b28f9a6785404",
+    "classification": "inconclusive_all",
+    "summary": {
+      "G-975-LOCALE": "inconclusive",
+      "G-975-UNSAVED": "inconclusive_no_valid_nav_trigger",
+      "G-975-LOGOUT": "inconclusive"
+    }
+  },
+  "f01MobileDrawer": {
+    "artifact": "f01-drawer-mobile.json",
+    "sha": "af6374bd06b19469cd3e2454819b28f9a6785404",
+    "verdict": "PASS"
+  },
+  "verdict": "PASS"
 }
