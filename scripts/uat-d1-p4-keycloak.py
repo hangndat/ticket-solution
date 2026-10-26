@@ -27,6 +27,16 @@ import urllib.parse
 import urllib.request
 
 ISSUER = os.environ.get("OIDC_ISSUER", "http://127.0.0.1:8080/realms/ticket").rstrip("/")
+# Admin mutations must target the same Keycloak instance and realm as the tokens.
+_issuer_url = urllib.parse.urlsplit(ISSUER)
+_base_path, _realm_marker, REALM = _issuer_url.path.rpartition("/realms/")
+if (_issuer_url.scheme not in ("http", "https") or not _issuer_url.netloc
+        or _issuer_url.query or _issuer_url.fragment or not _realm_marker
+        or not REALM or "/" in REALM):
+    raise ValueError("OIDC_ISSUER must be a Keycloak URL ending in /realms/<realm>")
+KEYCLOAK_BASE = urllib.parse.urlunsplit(
+    (_issuer_url.scheme, _issuer_url.netloc, _base_path, "", "")
+)
 CLIENT_ID = os.environ.get("OIDC_CLIENT_ID", "ticket-web")
 CLIENT_SECRET = os.environ.get("OIDC_CLIENT_SECRET", "dev-web-secret-change-me")
 REDIRECT_URI = os.environ.get(
@@ -77,7 +87,7 @@ def http_json(method: str, url: str, data: dict | None = None, headers: dict | N
 def admin_token() -> str:
     status, payload = http_json(
         "POST",
-        "http://127.0.0.1:8080/realms/master/protocol/openid-connect/token",
+        f"{KEYCLOAK_BASE}/realms/master/protocol/openid-connect/token",
         {
             "client_id": "admin-cli",
             "username": ADMIN_USER,
@@ -96,7 +106,7 @@ def admin_api(method: str, path: str, token: str, body: dict | list | None = Non
     if body is not None:
         data = json.dumps(body).encode()
     req = urllib.request.Request(
-        f"http://127.0.0.1:8080{path}", data=data, headers=headers, method=method
+        f"{KEYCLOAK_BASE}{path}", data=data, headers=headers, method=method
     )
     try:
         with urllib.request.urlopen(req, timeout=30) as resp:
@@ -248,7 +258,7 @@ def decode_jwt_payload(token: str) -> dict:
 def find_user(token: str, email: str) -> dict:
     status, users = admin_api(
         "GET",
-        f"/admin/realms/ticket/users?email={urllib.parse.quote(email)}&exact=true",
+        f"/admin/realms/{REALM}/users?email={urllib.parse.quote(email)}&exact=true",
         token,
     )
     if status != 200 or not users:
@@ -257,15 +267,15 @@ def find_user(token: str, email: str) -> dict:
 
 
 def set_required_actions(token: str, user_id: str, actions: list[str]) -> None:
-    status, user = admin_api("GET", f"/admin/realms/ticket/users/{user_id}", token)
+    status, user = admin_api("GET", f"/admin/realms/{REALM}/users/{user_id}", token)
     if status != 200:
         raise Fail(f"get user {user_id}: {status}")
     user["requiredActions"] = actions
-    admin_api("PUT", f"/admin/realms/ticket/users/{user_id}", token, user)
+    admin_api("PUT", f"/admin/realms/{REALM}/users/{user_id}", token, user)
 
 
 def logout_all_sessions(token: str, user_id: str) -> None:
-    admin_api("POST", f"/admin/realms/ticket/users/{user_id}/logout", token, {})
+    admin_api("POST", f"/admin/realms/{REALM}/users/{user_id}/logout", token, {})
 
 
 def main() -> int:
