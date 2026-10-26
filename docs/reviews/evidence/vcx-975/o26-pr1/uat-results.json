@@ -1,0 +1,157 @@
+{
+  "slice": "O26-PR1",
+  "issue": 975,
+  "sha": "132e93ebf641223b240cf25b7ac31d1e2284cf40",
+  "buildId": "oKrZEAOer5DOU_9r7u7xb",
+  "base": "http://uat975.localhost:3017",
+  "at": "2026-10-26T13:00:38.408Z",
+  "browserPageId": "98a6008c-0b45-425b-8bd6-30df6d186268",
+  "shots": [
+    {
+      "kind": "landing",
+      "viewport": "390x844",
+      "file": "landing-390x844.png",
+      "href": "http://127.0.0.1:8180/realms/ticket/protocol/openid-connect/auth?client_id=ticket-admin-web-vcx975-uat975&redirect_uri=http%3A%2F%2Fuat975.localhost%3A3017%2Fapi%2Fauth%2Fcallback&response_type=code&scope=openid+profile+email&state=NeZMlc92rLuHLfjgCmcFyQ&nonce=yTf8eymxwd7Rv5cpjBJAZg&code_challenge=Y2t4lbRs_HE8NshSvfK8w7LjnPghqCFO9_Ix2Kxk9Qo&code_challenge_method=S256"
+    },
+    {
+      "kind": "auth",
+      "viewport": "390x844",
+      "file": "auth-390x844.png",
+      "href": "http://127.0.0.1:8180/realms/ticket/protocol/openid-connect/auth?client_id=ticket-admin-web-vcx975-uat975&redirect_uri=http%3A%2F%2Fuat975.localhost%3A3017%2Fapi%2Fauth%2Fcallback&response_type=code&scope=openid+profile+email&state=T65RqvLaJ0JH_Gv0vrJEvw&nonce=5Nqks__aab5C4tKyvey1Qw&code_challenge=NJRvirI4ADLDPokE8QCCuWu-ea8xPRt43hW61dBsG5s&code_challenge_method=S256"
+    },
+    {
+      "kind": "landing",
+      "viewport": "1024x900",
+      "file": "landing-1024x900.png",
+      "href": "http://127.0.0.1:8180/realms/ticket/protocol/openid-connect/auth?client_id=ticket-admin-web-vcx975-uat975&redirect_uri=http%3A%2F%2Fuat975.localhost%3A3017%2Fapi%2Fauth%2Fcallback&response_type=code&scope=openid+profile+email&state=R-o0o_sMBe3d1qiEcf3o6w&nonce=7F1tfQT1m9492SVg49wbwQ&code_challenge=7NSrDLGONkhzD6g4zhBmRbvzDjgVYzIoR6V_yr60O60&code_challenge_method=S256"
+    },
+    {
+      "kind": "auth",
+      "viewport": "1024x900",
+      "file": "auth-1024x900.png",
+      "href": "http://127.0.0.1:8180/realms/ticket/protocol/openid-connect/auth?client_id=ticket-admin-web-vcx975-uat975&redirect_uri=http%3A%2F%2Fuat975.localhost%3A3017%2Fapi%2Fauth%2Fcallback&response_type=code&scope=openid+profile+email&state=r4-nOL9BQD36mgaMLwl0GA&nonce=Y967JuRqkoG9rP6IuYlAng&code_challenge=6BZEKmKZKYkfewQW0uOgdOJA5QzboKjpkfSH3maOWro&code_challenge_method=S256"
+    },
+    {
+      "kind": "landing",
+      "viewport": "1440x900",
+      "file": "landing-1440x900.png",
+      "href": "http://127.0.0.1:8180/realms/ticket/protocol/openid-connect/auth?client_id=ticket-admin-web-vcx975-uat975&redirect_uri=http%3A%2F%2Fuat975.localhost%3A3017%2Fapi%2Fauth%2Fcallback&response_type=code&scope=openid+profile+email&state=VmWCPTneydRDlOA5oEToJg&nonce=zhkZsyVWXkg1NSEsQj85BQ&code_challenge=alJqxbHb2eJqFhdabBKd7MLnm9o2hHj6MVVWCS2eguw&code_challenge_method=S256"
+    },
+    {
+      "kind": "auth",
+      "viewport": "1440x900",
+      "file": "auth-1440x900.png",
+      "href": "http://127.0.0.1:8180/realms/ticket/protocol/openid-connect/auth?client_id=ticket-admin-web-vcx975-uat975&redirect_uri=http%3A%2F%2Fuat975.localhost%3A3017%2Fapi%2Fauth%2Fcallback&response_type=code&scope=openid+profile+email&state=EEHFuJWSKpiRwAKtyX4KAA&nonce=wH35Agp2FM2ZZPIm-H8IpA&code_challenge=wt1T-hK4n1xlpv0mqUI6z8w25dJKGf-K_NuiiZkTgiQ&code_challenge_method=S256"
+    },
+    {
+      "kind": "owner_events",
+      "viewport": "390x844",
+      "file": "owner-events-390x844.png",
+      "href": "http://uat975.localhost:3017/t/d9d9f001-0001-4000-8000-000000000001/events"
+    },
+    {
+      "kind": "owner_events",
+      "viewport": "1024x900",
+      "file": "owner-events-1024x900.png",
+      "href": "http://uat975.localhost:3017/t/d9d9f001-0001-4000-8000-000000000001/events"
+    },
+    {
+      "kind": "owner_events",
+      "viewport": "1440x900",
+      "file": "owner-events-1440x900.png",
+      "href": "http://uat975.localhost:3017/t/d9d9f001-0001-4000-8000-000000000001/events"
+    }
+  ],
+  "probes": [
+    {
+      "kind": "landing",
+      "viewport": "390x844",
+      "clientWidth": 390,
+      "hasMain": false,
+      "innerWidth": 390,
+      "overflowX": false,
+      "scrollWidth": 390,
+      "title": "Sign in to Vemoki"
+    },
+    {
+      "kind": "auth",
+      "viewport": "390x844",
+      "clientWidth": 390,
+      "hasMain": false,
+      "innerWidth": 390,
+      "overflowX": false,
+      "scrollWidth": 390,
+      "title": "Sign in to Vemoki"
+    },
+    {
+      "kind": "landing",
+      "viewport": "1024x900",
+      "clientWidth": 1024,
+      "hasMain": false,
+      "innerWidth": 1024,
+      "overflowX": false,
+      "scrollWidth": 1024,
+      "title": "Sign in to Vemoki"
+    },
+    {
+      "kind": "auth",
+      "viewport": "1024x900",
+      "clientWidth": 1024,
+      "hasMain": false,
+      "innerWidth": 1024,
+      "overflowX": false,
+      "scrollWidth": 1024,
+      "title": "Sign in to Vemoki"
+    },
+    {
+      "kind": "landing",
+      "viewport": "1440x900",
+      "clientWidth": 1440,
+      "hasMain": false,
+      "innerWidth": 1440,
+      "overflowX": false,
+      "scrollWidth": 1440,
+      "title": "Sign in to Vemoki"
+    },
+    {
+      "kind": "auth",
+      "viewport": "1440x900",
+      "clientWidth": 1440,
+      "hasMain": false,
+      "innerWidth": 1440,
+      "overflowX": false,
+      "scrollWidth": 1440,
+      "title": "Sign in to Vemoki"
+    },
+    {
+      "kind": "owner_events",
+      "viewport": "390x844",
+      "clientWidth": 390,
+      "hasMain": true,
+      "innerWidth": 390,
+      "overflowX": true,
+      "scrollWidth": 618,
+      "title": "Sự kiện"
+    },
+    {
+      "kind": "owner_events",
+      "viewport": "1024x900",
+      "clientWidth": 1024,
+      "hasMain": true,
+      "innerWidth": 1024,
+      "overflowX": false,
+      "scrollWidth": 1024,
+      "title": "Sự kiện"
+    },
+    {
+      "kind": "owner_events",
+      "viewport": "1440x900",
+      "clientWidth": 1440,
+      "hasMain": true,
+      "innerWidth": 1440,
+      "overflowX": false,
+      "scrollWidth": 1440,
+      "title": "Sự kiện"
+    }
+  ]
+}
