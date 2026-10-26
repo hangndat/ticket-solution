@@ -36,8 +36,8 @@
 
 | Trường | Giá trị |
 | --- | --- |
-| **codeSha** | `7e4c5fc784d83402e74c4d834c5935a8d0fd6fa2` |
-| **evidenceSha** | `2bb09196243ef9d89c312c5b8d0e73019db8fe9f` |
+| **codeSha** | `6253e73b34d874ca7a2c1f844c9a68947a727ce2` (gồm F01 drawer) |
+| **evidenceSha** | `6253e73b34d874ca7a2c1f844c9a68947a727ce2` |
 
 ## Verdict worker
 
