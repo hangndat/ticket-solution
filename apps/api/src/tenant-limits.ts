@@ -6,6 +6,7 @@ import {
   Headers,
   HttpException,
   Injectable,
+  Logger,
   Param,
   Req,
   Res,
@@ -17,7 +18,10 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { type ApiError, type TenantLimitsUsageReadDto } from '@ticket/contracts';
+import {
+  type ApiError,
+  type TenantLimitsUsageReadDto,
+} from '@ticket/contracts';
 import {
   AuthzError,
   AUTHZ_ERROR_CODES,
@@ -42,7 +46,8 @@ class TenantLimitCapsDto {
   @ApiProperty({ nullable: true, type: Number }) maxEvents!: number | null;
   @ApiProperty({ nullable: true, type: Number }) maxStaff!: number | null;
   @ApiProperty({ nullable: true, type: Number }) emailPerDay!: number | null;
-  @ApiProperty({ nullable: true, type: Number }) importRowsPerJob!: number | null;
+  @ApiProperty({ nullable: true, type: Number }) importRowsPerJob!:
+    number | null;
 }
 
 class TenantLimitUsageDto {
@@ -69,7 +74,10 @@ type Deps = {
 
 export function assertNoLimitsQuery(rawUrl: string): void {
   if (rawUrl.includes('?')) {
-    throw validationError('INVALID_FILTER', 'This endpoint does not accept query parameters');
+    throw validationError(
+      'INVALID_FILTER',
+      'This endpoint does not accept query parameters',
+    );
   }
 }
 
@@ -77,7 +85,11 @@ export function assertNoLimitsQuery(rawUrl: string): void {
 export class TenantLimitsService {
   constructor(private readonly deps: Deps) {}
 
-  async read(authorization: string | undefined, tenantId: string) {
+  async read(
+    authorization: string | undefined,
+    tenantId: string,
+    onActor: (userId: string) => void,
+  ) {
     if (this.deps.bootError) throw this.deps.bootError;
     if (!this.deps.db || !this.deps.verifier || !this.deps.users) {
       throw new IdentityError(
@@ -87,6 +99,7 @@ export class TenantLimitsService {
     }
     const verified = await this.deps.verifier.verifyBearerToken(authorization);
     const actor = await this.deps.users.upsertFromVerifiedIdentity(verified);
+    onActor(actor.userId);
     await authorizeTenantLimitsRead(this.deps.db, tenantId, actor.userId);
     await consumeUserRateLimitWithRetryAfter(
       this.deps.db,
@@ -94,7 +107,11 @@ export class TenantLimitsService {
       API_RATE_BUCKETS.tenantLimitsRead,
       API_RATE_LIMITS.tenantLimitsReadPerUser,
     );
-    const snapshot = await readTenantLimitsUsage(this.deps.db, tenantId, actor.userId);
+    const snapshot = await readTenantLimitsUsage(
+      this.deps.db,
+      tenantId,
+      actor.userId,
+    );
     if (!snapshot) {
       throw validationError('TENANT_NOT_FOUND', 'Tenant not found', 404);
     }
@@ -105,6 +122,7 @@ export class TenantLimitsService {
 @ApiTags('tenant-limits')
 @Controller()
 export class TenantLimitsController {
+  private readonly logger = new Logger(TenantLimitsController.name);
   constructor(private readonly limits: TenantLimitsService) {}
 
   @Get('tenants/:tenantId/limits')
@@ -129,21 +147,31 @@ export class TenantLimitsController {
   async read(
     @Headers('authorization') authorization: string | undefined,
     @Param('tenantId') tenantId: string,
-    @Req() req: { raw: { url?: string } },
-    @Res({ passthrough: true }) reply: { header: (name: string, value: string) => void },
+    @Req() req: { id: string; raw: { url?: string } },
+    @Res({ passthrough: true })
+    reply: { header: (name: string, value: string) => void },
   ) {
+    let actorUserId: string | null = null;
+    let httpStatus = 200;
     try {
       // Inspect the original URL: parsed query objects can collapse duplicate keys.
       assertNoLimitsQuery(req.raw.url ?? '');
       const id = requireUuidParam(tenantId, 'tenantId');
-      return await this.limits.read(authorization, id);
+      return await this.limits.read(authorization, id, (userId) => {
+        actorUserId = userId;
+      });
     } catch (error) {
       if (error instanceof RateLimitedWithRetryAfter) {
         reply.header('Retry-After', String(error.retryAfterSeconds));
+        httpStatus = error.getStatus();
         throw error;
       }
-      if (error instanceof HttpException) throw error;
+      if (error instanceof HttpException) {
+        httpStatus = error.getStatus();
+        throw error;
+      }
       if (error instanceof IdentityError) {
+        httpStatus = identityErrorHttpStatus(error.code);
         throw new HttpException(
           {
             code: error.code,
@@ -151,11 +179,12 @@ export class TenantLimitsController {
             requestId: randomUUID(),
             retryable: error.retryable,
           } satisfies ApiError,
-          identityErrorHttpStatus(error.code),
+          httpStatus,
         );
       }
       if (error instanceof AuthzError) {
         const hidden = error.code !== AUTHZ_ERROR_CODES.PERMISSION_DENIED;
+        httpStatus = hidden ? 404 : 403;
         throw new HttpException(
           {
             code: hidden ? 'TENANT_NOT_FOUND' : error.code,
@@ -163,9 +192,10 @@ export class TenantLimitsController {
             requestId: randomUUID(),
             retryable: false,
           } satisfies ApiError,
-          hidden ? 404 : 403,
+          httpStatus,
         );
       }
+      httpStatus = 503;
       throw new HttpException(
         {
           code: 'DEPENDENCY_UNAVAILABLE',
@@ -173,7 +203,20 @@ export class TenantLimitsController {
           requestId: randomUUID(),
           retryable: true,
         } satisfies ApiError,
-        503,
+        httpStatus,
+      );
+    } finally {
+      // Fixed fields only: never include headers, query strings, members or emails.
+      this.logger.log(
+        JSON.stringify({
+          action: 'tenant_limits.read',
+          requestId: req.id,
+          actorUserId,
+          tenantId: /^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(tenantId)
+            ? tenantId
+            : null,
+          httpStatus,
+        }),
       );
     }
   }

@@ -21,6 +21,7 @@ export async function authorizeTenantLimitsRead(
 async function readSnapshot(
   tx: Prisma.TransactionClient,
   tenantId: string,
+  asOfOverride?: Date,
 ): Promise<TenantLimitsUsageReadDto | null> {
   const rows = await tx.$queryRaw<
     {
@@ -32,11 +33,11 @@ async function readSnapshot(
       staff_active: number;
       staff_pending: number;
       email_today: number;
-      as_of: Date;
+      as_of: string;
       email_usage_date: string;
     }[]
   >`
-    WITH snapshot AS (SELECT clock_timestamp() AS as_of)
+    WITH snapshot AS (SELECT COALESCE(${asOfOverride?.toISOString() ?? null}::timestamptz, clock_timestamp()) AS as_of)
     SELECT
       lim.max_events, lim.max_staff, lim.email_per_day, lim.import_rows_per_job,
       (SELECT count(*)::integer FROM events e
@@ -54,7 +55,7 @@ async function readSnapshot(
         WHERE eu.tenant_id = ${tenantId}::uuid
           AND eu.usage_date = (snapshot.as_of AT TIME ZONE 'UTC')::date
       ), 0)::integer AS email_today,
-      snapshot.as_of AS as_of,
+      to_char(snapshot.as_of AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS as_of,
       to_char(snapshot.as_of AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS email_usage_date
     FROM tenant_limits lim CROSS JOIN snapshot
     WHERE lim.tenant_id = ${tenantId}::uuid
@@ -75,7 +76,7 @@ async function readSnapshot(
       staffPendingInvites: row.staff_pending,
       emailToday: row.email_today,
     },
-    asOf: row.as_of.toISOString(),
+    asOf: row.as_of,
     emailUsageDate: row.email_usage_date,
   };
 }
@@ -84,6 +85,8 @@ export async function readTenantLimitsUsage(
   db: PrismaClient,
   tenantId: string,
   actorUserId: string,
+  // Controlled clock for DB boundary tests; API callers use the DB clock.
+  asOfOverride?: Date,
 ): Promise<TenantLimitsUsageReadDto | null> {
   return withTenant(db, tenantId, async (tx) => {
     // Recheck after the limiter in this transaction; a concurrent revoke cannot
@@ -93,6 +96,6 @@ export async function readTenantLimitsUsage(
       userId: actorUserId,
       permission: 'tenant.profile',
     });
-    return readSnapshot(tx, tenantId);
+    return readSnapshot(tx, tenantId, asOfOverride);
   });
 }
