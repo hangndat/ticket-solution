@@ -1,20 +1,29 @@
 # Worker report — VCX-939 runtime UAT (Linh · web)
 
-## Tóm tắt ba câu
+## Summary
 
-Đã chạy runtime UAT ma trận attendee trên UI869 với `apps/web` tại SHA `d00a265cca1206b68601c75d445b633f7d590b57`: Orca browser (390/1024/1440), HTTP `pnpm uat:p4-oidc` 12/12 PASS, ảnh trong `apps/web/.uat-artifacts/vcx-939/`. Không tái hiện gap sản phẩm trong `apps/web` — chỉ cập nhật `docs/reviews/vcx-939-web-attendee-verify.md` (mục Runtime). PR docs Refs #939, không merge.
+Isolated stack (ports away from Noah926) + Orca browser + API-backed approval flows on PR HEAD `e76414a`; evidence packet `docs/reviews/evidence/vcx-939/vcx939-20261026T0158Z/`. Mandatory browser scenarios still incomplete (F-939-05).
 
-- Task / Dispatch: `task_c17695de40e1` / `ctx_0e4f837978c5`
-- Base → head: `d00a265cca1206b68601c75d445b633f7d590b57`; working tree: thay đổi docs (chưa commit khi ghi báo cáo)
-- Paths: `docs/reviews/vcx-939-web-attendee-verify.md`, `docs/reviews/vcx-939-runtime-worker-report.md`
-- Trạng thái: không có thay đổi code; đã bàn giao evidence runtime một phần; acceptance complete Chưa (pending/rejected, unknown timeout và email lỗi → vé đã phát chưa có E2E); pilot ready Chưa đánh giá.
+## Traceability
 
-| Check | SHA / input | Kết quả | Evidence |
-| --- | --- | --- | --- |
-| `pnpm uat:p4-oidc` | `d00a265` + UI869 | PASS (12) | terminal session |
-| `pnpm --filter @ticket/web test` | `d00a265` | PASS (293) | terminal session |
-| Orca browser UAT | `d00a265`, tab `044827fd-…` | PASS (bảng runtime trong verify doc) | `apps/web/.uat-artifacts/vcx-939/*.png` |
-| Public catalog | API :3498 | PASS 200 | curl |
+| Field | Value |
+| --- | --- |
+| Issue | #939 |
+| PR | #954 |
+| reviewedSHA | `e76414a120e9a60ca687b47b4a5afe1f1ea66c2f` |
+| prior testedSHA label | `d00a265cca1206b68601c75d445b633f7d590b57` |
+| Paths | `docs/reviews/vcx-939-web-attendee-verify.md`, `docs/reviews/evidence/vcx-939/vcx939-20261026T0158Z/*` |
+| `apps/web` code | none |
 
-- Findings: không gap mới; F-939-01 đóng runtime; UAT limitation — Keycloak form Orca (bootstrap curl PKCE + `goto` callback, không sửa app)
-- Evidence packet: `docs/reviews/vcx-939-web-attendee-verify.md` § Runtime; PNG gitignored dưới `apps/web/.uat-artifacts/vcx-939/`
+## Checks
+
+| Check | SHA | Result |
+| --- | --- | --- |
+| `pnpm --filter @ticket/web test` | `e76414a` | PASS 293 |
+| `pnpm uat:p4-oidc` (3539/8180/3417) | `e76414a` | PARTIAL (refresh_after_logout_all fail) |
+| Staff approve/deny (API) | local | PASS |
+| Orca wallet / redeem resolve | local | PARTIAL |
+
+## Status
+
+Code complete: N/A (docs/evidence only). Acceptance complete: **No** (F-939-05 open). Pilot ready: **No**.
