@@ -1,0 +1,23 @@
+{
+  "scannedAt": "2026-10-26T03:56:00.000Z",
+  "worktree": "/Users/admin/SideProject/ticket-solution/vcx-926-uat",
+  "executionHostId": "local",
+  "ports": [
+    {
+      "port": 3013,
+      "pid": 51574,
+      "processName": "node",
+      "kind": "workspace",
+      "owner": { "path": "/Users/admin/SideProject/ticket-solution/vcx-926-uat", "confidence": "cwd" }
+    },
+    {
+      "port": 3499,
+      "pid": 37930,
+      "processName": "node",
+      "kind": "workspace",
+      "owner": { "path": "/Users/admin/SideProject/ticket-solution/vcx-926-uat", "confidence": "cwd" }
+    }
+  ],
+  "oidc": "http://127.0.0.1:8080/realms/ticket",
+  "note": "3498 foreign ignored; 3598 reserved not bound at probe"
+}
