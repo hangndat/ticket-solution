@@ -1,0 +1,53 @@
+{
+  "codeSha": "02522b5ab86e87e2696ab1b400e177781fa57851",
+  "origin": "http://uat975pr4.localhost:3023",
+  "fixture": "dedicated Keycloak user with no tenant membership; no registration submit",
+  "checks": [
+    {
+      "id": "signup-390x844",
+      "verdict": "PASS",
+      "probe": {
+        "card": true,
+        "documentWidth": 390,
+        "form": true,
+        "href": "http://uat975pr4.localhost:3023/onboarding",
+        "name": true,
+        "reactError": false,
+        "slug": true,
+        "width": 390
+      },
+      "shot": "private:signup-390x844-02522b5a.png"
+    },
+    {
+      "id": "signup-1024x900",
+      "verdict": "PASS",
+      "probe": {
+        "card": true,
+        "documentWidth": 1024,
+        "form": true,
+        "href": "http://uat975pr4.localhost:3023/onboarding",
+        "name": true,
+        "reactError": false,
+        "slug": true,
+        "width": 1024
+      },
+      "shot": "private:signup-1024x900-02522b5a.png"
+    },
+    {
+      "id": "signup-1440x900",
+      "verdict": "PASS",
+      "probe": {
+        "card": true,
+        "documentWidth": 1440,
+        "form": true,
+        "href": "http://uat975pr4.localhost:3023/onboarding",
+        "name": true,
+        "reactError": false,
+        "slug": true,
+        "width": 1440
+      },
+      "shot": "private:signup-1440x900-02522b5a.png"
+    }
+  ],
+  "verdict": "PASS"
+}
