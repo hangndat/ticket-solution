@@ -1,0 +1,26 @@
+[
+  {
+    "id": "7fd43221-7147-4592-9c39-49cdd369be2a",
+    "status": "ISSUED",
+    "codeId": "4b5ff23e-3643-4db4-83af-d07c4def3d14",
+    "ticketCount": 1
+  },
+  {
+    "id": "114b94a3-ae4a-4a23-89d7-bcf85f24795d",
+    "status": "PENDING_REVIEW",
+    "codeId": "62e22855-4fc3-4b04-9d25-fd9ba01af34f",
+    "ticketCount": 0
+  },
+  {
+    "id": "afdadc9b-313a-4ddd-9d8f-33cad641f05c",
+    "status": "REJECTED",
+    "codeId": "48dcc902-6c81-4c60-8f39-f8bf72270194",
+    "ticketCount": 0
+  },
+  {
+    "id": "da22c4d4-cfc8-4c5e-b794-59876e405ab8",
+    "status": "ISSUED",
+    "codeId": "2efffde4-0d30-438a-a008-0df7529589ef",
+    "ticketCount": 1
+  }
+]
