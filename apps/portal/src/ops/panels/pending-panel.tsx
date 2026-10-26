@@ -1,10 +1,11 @@
 'use client';
 
-import { Alert, Button, Input, Select, Space, Table, Typography } from 'antd';
+import { Alert, Button, Input, Modal, Select, Space, Table, Typography } from 'antd';
 import { useCallback, useEffect, useState } from 'react';
 import { portalGet, portalMutate } from '../../client/portal-fetch';
+import { isUuid } from '../../bff/ids';
 import { bffRedemptions } from '../../prep/bff-urls';
-import { decideAdmin, adminDecisionLabel } from '../decide';
+import { decideAdmin, adminDecisionLabel, type AdminDecision } from '../decide';
 import {
   interpretPendingList,
   pendingListLabel,
@@ -51,21 +52,25 @@ export function PendingPanel({
   const [busy, setBusy] = useState(false);
   const [view, setView] = useState<PendingView | null>(null);
   const [denyReason, setDenyReason] = useState('');
+  const [denyRequestId, setDenyRequestId] = useState<string | null>(null);
+  const [decision, setDecision] = useState<AdminDecision | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const intent = useMutationIntent(tenantId, eventId, 'pending-decision');
   const [sourceId, setSourceId] = useState<string | undefined>();
   const [ticketTypeId, setTicketTypeId] = useState<string | undefined>();
   const [q, setQ] = useState('');
+  const [applied, setApplied] = useState<{ sourceId?: string; ticketTypeId?: string; q?: string }>({});
+  const [cursor, setCursor] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (preserveNotice = false) => {
     setBusy(true);
     const qs = buildBffQuery({
-      sourceId,
-      ticketTypeId,
-      q: q.trim() || undefined,
+      ...applied,
     });
+    const url = new URLSearchParams(qs);
+    if (cursor) url.set('cursor', cursor);
     const result = await portalGet(
-      `${bffRedemptions(tenantId, eventId)}?${qs}`,
+      `${bffRedemptions(tenantId, eventId)}?${url}`,
     );
     const next = interpretPendingList(
       result.status,
@@ -74,9 +79,26 @@ export function PendingPanel({
       locale,
     );
     setView(next);
-    setNotice(pendingListLabel(next, locale));
+    if (!preserveNotice) setNotice(pendingListLabel(next, locale));
     setBusy(false);
-  }, [tenantId, eventId, sourceId, ticketTypeId, q, locale]);
+  }, [tenantId, eventId, applied, cursor, locale]);
+
+  function applyFilters() {
+    const requestId = q.trim();
+    if (requestId && !isUuid(requestId)) {
+      setNotice(t('ops.pending.invalidRequestId'));
+      return;
+    }
+    const next = { sourceId, ticketTypeId, q: requestId || undefined };
+    const unchanged = sourceId === applied.sourceId && ticketTypeId === applied.ticketTypeId &&
+      next.q === applied.q;
+    if (unchanged && !cursor) {
+      void load();
+      return;
+    }
+    setCursor(null);
+    if (!unchanged) setApplied(next);
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -89,6 +111,7 @@ export function PendingPanel({
   }, [load]);
 
   async function approve(requestId: string) {
+    setDecision(null);
     setBusy(true);
     const outcome = await intent.run(
       { requestId, decision: 'approve' },
@@ -110,8 +133,9 @@ export function PendingPanel({
       result.networkError || result.timedOut,
       locale,
     );
+    setDecision(decision);
     setNotice(adminDecisionLabel(decision, locale));
-    if (decision.kind === 'approved') void load();
+    if (decision.kind === 'approved') void load(true);
     else setBusy(false);
   }
 
@@ -122,6 +146,7 @@ export function PendingPanel({
       return;
     }
     setBusy(true);
+    setDecision(null);
     const outcome = await intent.run(
       { requestId, decision: 'deny', reason },
       (body) => portalMutate(`${bffRedemptions(tenantId, eventId)}/${encodeURIComponent(requestId)}/deny`,
@@ -142,10 +167,13 @@ export function PendingPanel({
       result.networkError || result.timedOut,
       locale,
     );
+    setDecision(decision);
     setNotice(adminDecisionLabel(decision, locale));
     if (decision.kind === 'denied') {
       setDenyReason('');
-      void load();
+      setDenyRequestId(null);
+      setBusy(false);
+      void load(true);
     } else setBusy(false);
   }
 
@@ -175,6 +203,9 @@ export function PendingPanel({
             setSourceId(next.filters.sourceId);
             setTicketTypeId(next.filters.ticketTypeId);
             setQ(next.filters.q ?? '');
+            setCursor(null);
+            setApplied({ sourceId: next.filters.sourceId, ticketTypeId: next.filters.ticketTypeId,
+              q: next.filters.q });
           }}
         />
         <Space wrap role="search" aria-label={t('ops.pending.filtersTitle')}>
@@ -197,18 +228,18 @@ export function PendingPanel({
             aria-label={t('ops.h_1wib0ad')}
           />
           <Input
-            placeholder={t('ops.h_k67vfi')}
+            placeholder={t('ops.pending.requestUuidHint')}
             value={q}
             onChange={(e) => setQ(e.target.value)}
             style={{ minWidth: 280 }}
             spellCheck={false}
             maxLength={64}
-            aria-label={t('ops.h_1syu2ee')}
+            aria-label={t('ops.pending.requestUuidHint')}
           />
           <Button
             type="primary"
             loading={busy}
-            onClick={() => void load()}
+            onClick={applyFilters}
             aria-label={t('ops.pending.applyFilters')}
           >
             {t('platform.loc')}
@@ -216,15 +247,14 @@ export function PendingPanel({
           <Button loading={busy} onClick={() => void load()}>
             {t('gate.h_3keb7')}
           </Button>
-          <Input
-            placeholder={t('ops.h_1ga5au4')}
-            value={denyReason}
-            onChange={(e) => setDenyReason(e.target.value)}
-            style={{ minWidth: 280 }}
-            maxLength={500}
-            aria-label={t('ops.h_1qz57kh')}
-          />
         </Space>
+        {decision?.kind === 'rejected' && decision.code === 'QUOTA_EXHAUSTED' ? (
+          <Alert type="error" showIcon message="QUOTA_EXHAUSTED"
+            description={<Space wrap><span>{t('ops.pending.quotaExhausted')}</span>
+              <Button href={`/t/${encodeURIComponent(tenantId)}/e/${encodeURIComponent(eventId)}/quota`}>
+                {t('ops.pending.openQuota')}
+              </Button></Space>} />
+        ) : null}
         {alertType ? (
           <Alert
             type={alertType}
@@ -241,6 +271,7 @@ export function PendingPanel({
           rowKey="requestId"
           dataSource={items}
           pagination={false}
+          scroll={{ x: 'max-content' }}
           locale={{ emptyText: t('ops.h_2gkw85') }}
           columns={[
             {
@@ -252,11 +283,17 @@ export function PendingPanel({
               title: t('ops.pending.col.source'),
               dataIndex: 'sourceId',
               ellipsis: true,
+              render: (id: string | null) => id
+                ? sources.find((source) => source.id === id)?.label ?? t('ops.pending.catalogUnavailable')
+                : '—',
             },
             {
               title: t('ops.pending.col.type'),
               dataIndex: 'ticketTypeId',
               ellipsis: true,
+              render: (id: string | null) => id
+                ? ticketTypes.find((type) => type.id === id)?.label ?? t('ops.pending.catalogUnavailable')
+                : '—',
             },
             {
               title: t('ops.pending.col.created'),
@@ -281,7 +318,7 @@ export function PendingPanel({
                       size="small"
                       danger
                       disabled={busy}
-                      onClick={() => void deny(row.requestId)}
+                      onClick={() => { setDenyRequestId(row.requestId); setDenyReason(''); }}
                     >
                       {t('ops.pending.deny')}
                     </Button>
@@ -294,6 +331,21 @@ export function PendingPanel({
             },
           ]}
         />
+        {view?.kind === 'list' && view.nextCursor ? (
+          <Button disabled={busy} onClick={() => setCursor(view.nextCursor)}>
+            {t('ops.pending.nextPage')}
+          </Button>
+        ) : null}
+        <Modal key={denyRequestId ?? 'closed'} title={t('ops.pending.deny')}
+          open={denyRequestId !== null} destroyOnHidden
+          onCancel={() => { if (!busy) setDenyRequestId(null); }}
+          onOk={() => { if (denyRequestId) void deny(denyRequestId); }}
+          okText={t('ops.pending.deny')} okButtonProps={{ danger: true, disabled: !denyReason.trim(), loading: busy }}
+          cancelButtonProps={{ disabled: busy }}>
+          <Typography.Paragraph>{t('ops.pending.denyReasonHelp')}</Typography.Paragraph>
+          <Input.TextArea value={denyReason} onChange={(e) => setDenyReason(e.target.value)}
+            rows={3} maxLength={500} showCount aria-label={t('ops.pending.denyReasonHelp')} />
+        </Modal>
         {notice ? (
           <Typography.Text type="secondary" data-testid="pending-notice">
             {notice}
