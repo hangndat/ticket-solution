@@ -5,6 +5,7 @@ import {
   forbiddenScopeAffectsPath,
   forbiddenScopeFromBffPath,
   portalGet,
+  portalMutate,
 } from '../src/client/portal-fetch';
 
 test('a BFF 403 signals the shell to replace stale tenant content with forbidden', async () => {
@@ -32,6 +33,20 @@ test('a BFF 403 signals the shell to replace stale tenant content with forbidden
     } else {
       (globalThis as { window?: Window }).window = previousWindow;
     }
+  }
+});
+
+test('portal mutation exposes BFF Retry-After', async () => {
+  const fetchMock = mock.method(globalThis, 'fetch', async () => new Response('{"retryable":true}', {
+    status: 429,
+    headers: { 'Retry-After': '3' },
+  }));
+  try {
+    const result = await portalMutate('/api/bff/tenants/t1/events', { idempotencyKey: 'key-a' });
+    assert.equal(result.retryAfterMs, 3000);
+    assert.equal(result.status, 429);
+  } finally {
+    fetchMock.mock.restore();
   }
 });
 

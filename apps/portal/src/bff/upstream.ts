@@ -20,7 +20,7 @@ export function apiBaseUrl(env: NodeJS.ProcessEnv = process.env): string {
   return (env.API_BASE_URL ?? 'http://127.0.0.1:3100').replace(/\/$/, '');
 }
 
-function passthroughUpstream(upstream: Response, body: ArrayBuffer): Response {
+export function passthroughUpstream(upstream: Response, body: ArrayBuffer): Response {
   const contentType =
     upstream.headers.get('Content-Type') ?? 'application/json';
   const outHeaders = new Headers({ 'Content-Type': contentType });
