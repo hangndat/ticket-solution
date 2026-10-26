@@ -28,8 +28,18 @@ import {
   type CsTicketDetail,
   type CsTicketSummary,
 } from '../ops/cs';
+import {
+  TICKET_ID_UUID,
+  buildGuestListQueryPath,
+  defaultGuestListKind,
+  guestListKindFromHash,
+  guestListKindToHash,
+  ticketSearchBlocksPagination,
+  type GuestListKind,
+  validateTicketIdSearch,
+} from './guest-list-query';
 
-type Kind = 'invitations' | 'redemptions' | 'tickets';
+type Kind = GuestListKind;
 type Row = {
   key: string;
   state: string;
@@ -47,9 +57,6 @@ type Props = {
   eventId: string;
   permissions: readonly string[];
 };
-
-const PAGE_SIZE = 20;
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** Mask again at the view boundary even when an upstream masked field is malformed. */
 function safeEmail(value: string | null): string {
@@ -167,25 +174,6 @@ function readPage(
   return { rows: rows as Row[], nextCursor: body.nextCursor };
 }
 
-function queryPath(
-  tenantId: string,
-  eventId: string,
-  kind: Kind,
-  cursor: string | null,
-  state: string,
-  search: string,
-): string {
-  const params = new URLSearchParams({ limit: String(PAGE_SIZE) });
-  if (cursor) params.set('cursor', cursor);
-  if (kind === 'invitations' && state) params.set('state', state);
-  if (kind === 'redemptions') {
-    params.set('status', 'PENDING_REVIEW');
-    if (search) params.set('q', search);
-  }
-  if (kind === 'tickets' && search) params.set('q', search);
-  return `${bffEventAction(tenantId, eventId, kind)}?${params}`;
-}
-
 export function GuestWorkspace({ tenantId, eventId, permissions }: Props) {
   const allowed = useMemo(
     () =>
@@ -202,7 +190,9 @@ export function GuestWorkspace({ tenantId, eventId, permissions }: Props) {
       ] as { key: Kind; label: string }[],
     [permissions],
   );
-  const [kind, setKind] = useState<Kind>(allowed[0]?.key ?? 'tickets');
+  const [kind, setKind] = useState<Kind>(() =>
+    defaultGuestListKind(permissions),
+  );
   const [state, setState] = useState('');
   const [draft, setDraft] = useState('');
   const [search, setSearch] = useState('');
@@ -218,6 +208,20 @@ export function GuestWorkspace({ tenantId, eventId, permissions }: Props) {
   const [detailError, setDetailError] = useState(false);
   const detailRequest = useRef(0);
   const cursor = cursors[index] ?? null;
+  const ticketSearchActive =
+    kind === 'tickets' && ticketSearchBlocksPagination(search);
+
+  useEffect(() => {
+    const syncKindFromHash = () => {
+      const fromHash = guestListKindFromHash(window.location.hash);
+      if (fromHash && allowed.some((tab) => tab.key === fromHash)) {
+        setKind(fromHash);
+      }
+    };
+    queueMicrotask(syncKindFromHash);
+    window.addEventListener('hashchange', syncKindFromHash);
+    return () => window.removeEventListener('hashchange', syncKindFromHash);
+  }, [allowed]);
 
   useEffect(() => {
     if (!allowed.some((tab) => tab.key === kind)) return;
@@ -229,7 +233,14 @@ export function GuestWorkspace({ tenantId, eventId, permissions }: Props) {
       }
     });
     void portalGet(
-      queryPath(tenantId, eventId, kind, cursor, state, search),
+      buildGuestListQueryPath(
+        tenantId,
+        eventId,
+        kind,
+        cursor,
+        state,
+        search,
+      ),
     ).then((result) => {
       if (!active) return;
       const next = readPage(
@@ -372,6 +383,7 @@ export function GuestWorkspace({ tenantId, eventId, permissions }: Props) {
           setSearch('');
           setDraft('');
           reset();
+          window.location.hash = guestListKindToHash(value as Kind);
         }}
         items={allowed.map((tab) => ({ ...tab, children: null }))}
       />
@@ -400,14 +412,29 @@ export function GuestWorkspace({ tenantId, eventId, permissions }: Props) {
             }
             placeholder={
               kind === 'tickets'
-                ? 'Email, mã vé hoặc mã đổi'
+                ? 'Mã vé (UUID) chính xác'
                 : 'Mã yêu cầu đầy đủ'
             }
             value={draft}
-            onChange={(event) => setDraft(event.target.value)}
+            onChange={(event) => {
+              setDraft(event.target.value);
+              if (error) setError(null);
+            }}
             onSearch={(value) => {
               const next = value.trim();
-              if (kind === 'redemptions' && next && !UUID.test(next)) {
+              if (kind === 'tickets' && next) {
+                const validated = validateTicketIdSearch(next);
+                if (!validated.ok) {
+                  setError(validated.message);
+                  return;
+                }
+                setError(null);
+                setSearch(validated.ticketId);
+                reset();
+                setRevision((current) => current + 1);
+                return;
+              }
+              if (kind === 'redemptions' && next && !TICKET_ID_UUID.test(next)) {
                 setError('Nhập mã yêu cầu đầy đủ để tìm kiếm.');
                 return;
               }
@@ -433,6 +460,12 @@ export function GuestWorkspace({ tenantId, eventId, permissions }: Props) {
         <Typography.Text type="secondary">
           Danh sách lời mời hỗ trợ lọc trạng thái; tìm theo mã lời mời đang chờ
           API.
+        </Typography.Text>
+      ) : null}
+      {kind === 'tickets' ? (
+        <Typography.Text type="secondary">
+          Tìm vé chỉ theo mã vé (UUID) chính xác; tìm email hoặc mã đổi chưa hỗ
+          trợ. Danh sách không lọc vẫn phân trang trên máy chủ.
         </Typography.Text>
       ) : null}
       {error ? (
@@ -478,9 +511,11 @@ export function GuestWorkspace({ tenantId, eventId, permissions }: Props) {
           </Button>
           <Typography.Text>Trang {index + 1}</Typography.Text>
           <Button
-            disabled={loading || !page.nextCursor}
+            disabled={
+              loading || !page.nextCursor || ticketSearchActive
+            }
             onClick={() => {
-              if (!page.nextCursor) return;
+              if (!page.nextCursor || ticketSearchActive) return;
               setCursors((value) => [
                 ...value.slice(0, index + 1),
                 page.nextCursor,
