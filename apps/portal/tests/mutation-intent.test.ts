@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { MutationIntent, intentStorageKey, type IntentScope, type IntentStorage } from '../src/client/mutation-intent';
+import { mutationIntentAlertCopy } from '../src/client/mutation-intent-copy';
 import type { PortalFetchResult } from '../src/client/portal-fetch';
+import { adminDecisionLabel, decideAdmin } from '../src/ops/decide';
 
 const scope: IntentScope = { actorId: 'staff-a', tenantId: 'tenant-a', eventId: 'event-a', command: 'approve' };
 const ok = (json: unknown = { status: 'APPROVED' }): PortalFetchResult => ({ status: 200, json, networkError: false, timedOut: false });
@@ -67,14 +69,16 @@ test('changed payload, context switch and reload cannot silently reuse or replac
   assert.equal(sends, 1);
 });
 
-test('expired key and payload conflict stay blocked for reconciliation; explicit release starts new intent', async () => {
-  for (const code of ['IDEMPOTENCY_EXPIRED', 'IDEMPOTENCY_CONFLICT', 'EVENT_CLOSED']) {
+test('409 key conflict, expiry and payload mismatch persist for reconciliation', async () => {
+  for (const code of ['IDEMPOTENCY_CONFLICT', 'IDEMPOTENCY_EXPIRED', 'IDEMPOTENCY_PAYLOAD_MISMATCH']) {
     const storage = memoryStorage();
     let keys = 0;
     const client = new MutationIntent(scope, storage, () => `key-${++keys}`);
     const response: PortalFetchResult = { status: 409, json: { code }, networkError: false, timedOut: false };
     await client.run({ requestId: 'r1' }, async () => response);
     assert.equal(client.status?.state, 'conflict');
+    assert.equal(JSON.parse(storage.getItem(intentStorageKey(scope))!).state, 'conflict');
+    assert.match(mutationIntentAlertCopy(client.status!.state, false).message, /Idempotency key/);
     assert.deepEqual(await client.run({ requestId: 'r1' }, async () => ok()), { kind: 'blocked', reason: 'conflict' });
     assert.equal(keys, 1);
     client.release(); // Called only after operator's explicit reconciliation/confirmation.
@@ -82,6 +86,42 @@ test('expired key and payload conflict stay blocked for reconciliation; explicit
     assert.equal(next.kind, 'response');
     assert.equal(keys, 2);
   }
+});
+
+test('409 business rejection keeps its domain message, clears intent, and allows a new key', async () => {
+  const storage = memoryStorage();
+  let keys = 0;
+  const client = new MutationIntent(scope, storage, () => `key-${++keys}`);
+  const response: PortalFetchResult = {
+    status: 409, json: { code: 'EVENT_CLOSED', message: 'Event is not open for redemption' },
+    networkError: false, timedOut: false,
+  };
+  const result = await client.run({ requestId: 'r1' }, async () => response);
+  assert.equal(result.kind, 'response');
+  assert.equal(client.status, null);
+  assert.equal(storage.getItem(intentStorageKey(scope)), null);
+  const decision = decideAdmin('approve', response.status, response.json, false);
+  assert.equal(decision.kind, 'rejected');
+  const label = adminDecisionLabel(decision);
+  assert.match(label, /EVENT_CLOSED.*Event is not open for redemption/);
+  assert.doesNotMatch(label, /Idempotency key|thành công/i);
+  const next = await client.run({ requestId: 'r2' }, async (body) => {
+    assert.equal(body.idempotencyKey, 'key-2');
+    return ok();
+  });
+  assert.equal(next.kind, 'response');
+  assert.equal(keys, 2);
+});
+
+test('409 without a recognized code remains unknown instead of claiming a key conflict', async () => {
+  const storage = memoryStorage();
+  const client = new MutationIntent(scope, storage, () => 'key-1');
+  await client.run({ requestId: 'r1' }, async () => ({
+    status: 409, json: null, networkError: false, timedOut: false,
+  }));
+  assert.equal(client.status?.state, 'unknown');
+  assert.equal(JSON.parse(storage.getItem(intentStorageKey(scope))!).key, 'key-1');
+  assert.match(mutationIntentAlertCopy(client.status!.state, false).message, /chưa xác định/);
 });
 
 test('429 respects Retry-After without changing key; 202 remains pending until job reconciliation', async () => {
