@@ -2,16 +2,7 @@
 
 import { ProCard, ProTable } from '@ant-design/pro-components';
 import type { ProColumns } from '@ant-design/pro-components';
-import {
-  Alert,
-  Button,
-  Card,
-  Descriptions,
-  Input,
-  Result,
-  Space,
-  Typography,
-} from 'antd';
+import { Alert, Button, Card, Descriptions, Flex, Input, Result, Space, Spin, Typography } from 'antd';
 import { PortalPage } from '../../src/components/portal-page';
 import { useCallback, useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
@@ -21,7 +12,6 @@ import type {
   PortalPlatformTenantSummary,
 } from '@ticket/contracts';
 import { loadShellContext } from '../../src/nav/load-shell-context';
-import { SurfaceState } from '../../src/components/surface-state';
 import { portalGet, portalMutate } from '../../src/client/portal-fetch';
 import {
   bffPlatformAudit,
@@ -49,6 +39,7 @@ import {
   PlatformProvisionPanel,
 } from '../../src/ops/platform-mutate-panels';
 import { usePortalLocale, type MessageKey } from '../../src/i18n';
+import { SURFACE_MESSAGE_KEYS } from '../../src/prep/surface-copy';
 
 function PlatformInner() {
   const { t, locale } = usePortalLocale();
@@ -250,13 +241,34 @@ function PlatformInner() {
     );
   }
 
-  if (kind === 'loading') return <SurfaceState kind="loading" />;
+  if (kind === 'loading') return (
+    <Flex
+      vertical
+      align="center"
+      gap="middle"
+      role="status"
+      aria-busy="true"
+      aria-label={t(SURFACE_MESSAGE_KEYS.loading)}
+      suppressHydrationWarning
+      style={{ padding: 48 }}
+    >
+      <Spin size="large" />
+      <span>{t(SURFACE_MESSAGE_KEYS.loading)}</span>
+    </Flex>
+  );
   if (kind === 'error') {
     return (
-      <SurfaceState
-        kind="unknown"
+      <Alert
+        type="warning"
+        showIcon
+        message={t(SURFACE_MESSAGE_KEYS.unknownTitle)}
         description={messageKey ? t(messageKey) : undefined}
-        onRetry={() => window.location.reload()}
+        action={
+          <Button size="small" onClick={() => window.location.reload()}>
+            {t(SURFACE_MESSAGE_KEYS.recheck)}
+          </Button>
+        }
+        style={{ margin: 24 }}
       />
     );
   }
@@ -271,13 +283,17 @@ function PlatformInner() {
   }
   if (kind === 'denied') {
     return (
-      <SurfaceState
-        kind="permission-denied"
+      <Result
+        status="403"
         title={t('platform.h_1xkaqi6')}
-        description={t('platform.h_rvf1a3')}
-        onRetry={() => {
+        subTitle={t('platform.h_rvf1a3')}
+        extra={
+          <Button type="primary" onClick={() => {
           window.location.href = '/';
-        }}
+        }}>
+            {t(SURFACE_MESSAGE_KEYS.permissionGoAllowed)}
+          </Button>
+        }
       />
     );
   }
@@ -637,9 +653,28 @@ function PlatformInner() {
   );
 }
 
+function PlatformLoadingFallback() {
+  const { t } = usePortalLocale();
+  return (
+    <Flex
+      vertical
+      align="center"
+      gap="middle"
+      role="status"
+      aria-busy="true"
+      aria-label={t(SURFACE_MESSAGE_KEYS.loading)}
+      suppressHydrationWarning
+      style={{ padding: 48 }}
+    >
+      <Spin size="large" />
+      <span>{t(SURFACE_MESSAGE_KEYS.loading)}</span>
+    </Flex>
+  );
+}
+
 export default function PlatformPage() {
   return (
-    <Suspense fallback={<SurfaceState kind="loading" />}>
+    <Suspense fallback={<PlatformLoadingFallback />}>
       <PlatformInner />
     </Suspense>
   );

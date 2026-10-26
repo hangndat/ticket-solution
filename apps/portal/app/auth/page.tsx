@@ -1,10 +1,10 @@
 'use client';
 
-import { Alert, Button, Card, Result, Space, Typography } from 'antd';
+import { Alert, Button, Card, Flex, Result, Space, Spin, Typography } from 'antd';
 import { useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
-import { SurfaceState } from '../../src/components/surface-state';
 import { usePortalLocale, type MessageKey } from '../../src/i18n';
+import { SURFACE_MESSAGE_KEYS } from '../../src/prep/surface-copy';
 
 const ERROR_COPY_KEYS: Record<string, MessageKey> = {
   misconfigured: 'auth.h_1l6yc4c',
@@ -59,9 +59,28 @@ function AuthInner() {
   );
 }
 
+function AuthLoadingFallback() {
+  const { t } = usePortalLocale();
+  return (
+    <Flex
+      vertical
+      align="center"
+      gap="middle"
+      role="status"
+      aria-busy="true"
+      aria-label={t(SURFACE_MESSAGE_KEYS.loading)}
+      suppressHydrationWarning
+      style={{ padding: 48 }}
+    >
+      <Spin size="large" />
+      <span>{t(SURFACE_MESSAGE_KEYS.loading)}</span>
+    </Flex>
+  );
+}
+
 export default function AuthPage() {
   return (
-    <Suspense fallback={<SurfaceState kind="loading" />}>
+    <Suspense fallback={<AuthLoadingFallback />}>
       <AuthInner />
     </Suspense>
   );

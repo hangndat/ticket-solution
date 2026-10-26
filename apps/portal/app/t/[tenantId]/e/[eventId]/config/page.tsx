@@ -6,7 +6,7 @@ import {
   ProFormTextArea,
   ProTable,
 } from '@ant-design/pro-components';
-import { Alert, Button, Form, Modal, Space, Typography } from 'antd';
+import { Alert, Button, Flex, Form, Modal, Result, Space, Spin, Typography } from 'antd';
 import { PortalPage } from '../../../../../../src/components/portal-page';
 import { useParams } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
@@ -38,8 +38,8 @@ import { bffEvent, bffEventAction } from '../../../../../../src/prep/bff-urls';
 import { isEventPagePermitted } from '../../../../../../src/prep/event-access-resolver';
 import { useEventAccess } from '../../../../../../src/prep/use-event-access';
 import { canPerformEventAction } from '../../../../../../src/nav/capability-policy';
-import { SurfaceState } from '../../../../../../src/components/surface-state';
 import { usePortalLocale } from '../../../../../../src/i18n';
+import { SURFACE_MESSAGE_KEYS } from '../../../../../../src/prep/surface-copy';
 import { useUnsavedChanges } from '../../../../../../src/nav/unsaved-changes';
 
 export default function ConfigBrandPage() {
@@ -167,35 +167,66 @@ export default function ConfigBrandPage() {
     };
   }, [access.kind, load]);
 
-  if (access.kind === 'loading') return <SurfaceState kind="loading" />;
+  if (access.kind === 'loading') return (
+    <Flex
+      vertical
+      align="center"
+      gap="middle"
+      role="status"
+      aria-busy="true"
+      aria-label={t(SURFACE_MESSAGE_KEYS.loading)}
+      suppressHydrationWarning
+      style={{ padding: 48 }}
+    >
+      <Spin size="large" />
+      <span>{t(SURFACE_MESSAGE_KEYS.loading)}</span>
+    </Flex>
+  );
   if (access.kind === 'error') {
     return (
-      <SurfaceState
-        kind="error"
+      <Alert
+        type="error"
+        showIcon
+        message={t(SURFACE_MESSAGE_KEYS.errorLoadFailed)}
         description={access.messageKey ? t(access.messageKey) : undefined}
-        onRetry={() => window.location.reload()}
+        action={
+          <Button size="small" onClick={() => window.location.reload()}>
+            {t(SURFACE_MESSAGE_KEYS.retry)}
+          </Button>
+        }
+        style={{ margin: 24 }}
       />
     );
   }
   if (access.kind === 'permission-denied') {
     return (
-      <SurfaceState
-        kind="permission-denied"
-        description={t('config.h_g7fjbz')}
-        onRetry={() => {
+      <Result
+        status="403"
+        title={t(SURFACE_MESSAGE_KEYS.permissionTitle)}
+        subTitle={t('config.h_g7fjbz')}
+        extra={
+          <Button type="primary" onClick={() => {
           window.location.href = `/t/${tenantId}`;
-        }}
+        }}>
+            {t(SURFACE_MESSAGE_KEYS.permissionGoAllowed)}
+          </Button>
+        }
       />
     );
   }
   if (!isEventPagePermitted('config', access.permissions)) {
     return (
-      <SurfaceState
-        kind="permission-denied"
-        description={t('config.h_g7fjbz')}
-        onRetry={() => {
+      <Result
+        status="403"
+        title={t(SURFACE_MESSAGE_KEYS.permissionTitle)}
+        subTitle={t('config.h_g7fjbz')}
+        extra={
+          <Button type="primary" onClick={() => {
           window.location.href = `/t/${tenantId}/e/${eventId}`;
-        }}
+        }}>
+            {t(SURFACE_MESSAGE_KEYS.permissionGoAllowed)}
+          </Button>
+        }
       />
     );
   }
@@ -371,7 +402,21 @@ export default function ConfigBrandPage() {
         style={{ marginBottom: 16 }}
       />
 
-      {kind === 'loading' ? <SurfaceState kind="loading" /> : null}
+      {kind === 'loading' ? (
+    <Flex
+      vertical
+      align="center"
+      gap="middle"
+      role="status"
+      aria-busy="true"
+      aria-label={t(SURFACE_MESSAGE_KEYS.loading)}
+      suppressHydrationWarning
+      style={{ padding: 48 }}
+    >
+      <Spin size="large" />
+      <span>{t(SURFACE_MESSAGE_KEYS.loading)}</span>
+    </Flex>
+  ) : null}
       {kind === 'unknown' ? (
         <Alert
           type="warning"
@@ -386,11 +431,18 @@ export default function ConfigBrandPage() {
         />
       ) : null}
       {kind === 'error' ? (
-        <SurfaceState
-          kind="error"
-          description={message}
-          onRetry={() => void load()}
-        />
+        <Alert
+        type="error"
+        showIcon
+        message={t(SURFACE_MESSAGE_KEYS.errorLoadFailed)}
+        description={message}
+        action={
+          <Button size="small" onClick={() => void load()}>
+            {t(SURFACE_MESSAGE_KEYS.retry)}
+          </Button>
+        }
+        style={{ margin: 24 }}
+      />
       ) : null}
 
       {kind === 'ready' ? (

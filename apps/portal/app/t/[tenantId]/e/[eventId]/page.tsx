@@ -1,7 +1,7 @@
 'use client';
 
 import { ProCard, StatisticCard } from '@ant-design/pro-components';
-import { Alert, Button, Descriptions, Modal, Space, Typography } from 'antd';
+import { Alert, Button, Descriptions, Flex, Modal, Result, Space, Spin, Typography } from 'antd';
 import { PortalPage } from '../../../../../src/components/portal-page';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
@@ -35,13 +35,13 @@ import { GateStayAppNotice } from '../../../../../src/components/gate-deeplink';
 import { EventReportAsOfLine } from '../../../../../src/components/event-report-as-of';
 import { ReadinessChecklist } from '../../../../../src/components/readiness-checklist';
 import { ReportStaleAlert } from '../../../../../src/components/report-stale-alert';
-import { SurfaceState } from '../../../../../src/components/surface-state';
 import {
   formatEventBusinessStatus,
   formatEventContentStatus,
   formatEventVisibility,
   usePortalLocale,
 } from '../../../../../src/i18n';
+import { SURFACE_MESSAGE_KEYS } from '../../../../../src/prep/surface-copy';
 export default function EventOverviewPage() {
   const { t, locale } = usePortalLocale();
   const params = useParams<{ tenantId: string; eventId: string }>();
@@ -278,26 +278,52 @@ export default function EventOverviewPage() {
 
   if (access.kind === 'error') {
     return (
-      <SurfaceState
-        kind="error"
+      <Alert
+        type="error"
+        showIcon
+        message={t(SURFACE_MESSAGE_KEYS.errorLoadFailed)}
         description={access.messageKey ? t(access.messageKey) : undefined}
-        onRetry={() => window.location.reload()}
+        action={
+          <Button size="small" onClick={() => window.location.reload()}>
+            {t(SURFACE_MESSAGE_KEYS.retry)}
+          </Button>
+        }
+        style={{ margin: 24 }}
       />
     );
   }
   if (access.kind === 'permission-denied') {
     return (
-      <SurfaceState
-        kind="permission-denied"
-        description={t('common.h_1rsax7j')}
-        onRetry={() => {
+      <Result
+        status="403"
+        title={t(SURFACE_MESSAGE_KEYS.permissionTitle)}
+        subTitle={t('common.h_1rsax7j')}
+        extra={
+          <Button type="primary" onClick={() => {
           window.location.href = `/t/${tenantId}`;
-        }}
+        }}>
+            {t(SURFACE_MESSAGE_KEYS.permissionGoAllowed)}
+          </Button>
+        }
       />
     );
   }
   if (access.kind === 'loading' || loadKind === 'loading') {
-    return <SurfaceState kind="loading" />;
+    return (
+    <Flex
+      vertical
+      align="center"
+      gap="middle"
+      role="status"
+      aria-busy="true"
+      aria-label={t(SURFACE_MESSAGE_KEYS.loading)}
+      suppressHydrationWarning
+      style={{ padding: 48 }}
+    >
+      <Spin size="large" />
+      <span>{t(SURFACE_MESSAGE_KEYS.loading)}</span>
+    </Flex>
+  );
   }
   if (loadKind === 'unknown') {
     return (
@@ -316,10 +342,17 @@ export default function EventOverviewPage() {
   }
   if (loadKind === 'error' || !detail) {
     return (
-      <SurfaceState
-        kind="error"
+      <Alert
+        type="error"
+        showIcon
+        message={t(SURFACE_MESSAGE_KEYS.errorLoadFailed)}
         description={message}
-        onRetry={() => void load()}
+        action={
+          <Button size="small" onClick={() => void load()}>
+            {t(SURFACE_MESSAGE_KEYS.retry)}
+          </Button>
+        }
+        style={{ margin: 24 }}
       />
     );
   }

@@ -1,7 +1,7 @@
 'use client';
 
 import { ProCard } from '@ant-design/pro-components';
-import { Alert, Select, Space } from 'antd';
+import { Alert, Button, Flex, Result, Select, Space, Spin } from 'antd';
 import { PortalPage } from '../../../../../../src/components/portal-page';
 import type { ReactNode } from 'react';
 import { useParams } from 'next/navigation';
@@ -17,8 +17,8 @@ import {
   canAccessEventRoute,
   canPerformEventAction,
 } from '../../../../../../src/nav/capability-policy';
-import { SurfaceState } from '../../../../../../src/components/surface-state';
 import { usePortalLocale } from '../../../../../../src/i18n';
+import { SURFACE_MESSAGE_KEYS } from '../../../../../../src/prep/surface-copy';
 import { useCompactChrome } from '../../../../../../src/hooks/use-compact-chrome';
 
 type CatalogItem = { id: string; label: string };
@@ -120,24 +120,50 @@ export default function EventGuestsPage() {
   const canExport = canExportCreate || canExportDownload;
   const canOps = canImport || canApprove || canNotify || canExport;
 
-  if (access.kind === 'loading') return <SurfaceState kind="loading" />;
+  if (access.kind === 'loading') return (
+    <Flex
+      vertical
+      align="center"
+      gap="middle"
+      role="status"
+      aria-busy="true"
+      aria-label={t(SURFACE_MESSAGE_KEYS.loading)}
+      suppressHydrationWarning
+      style={{ padding: 48 }}
+    >
+      <Spin size="large" />
+      <span>{t(SURFACE_MESSAGE_KEYS.loading)}</span>
+    </Flex>
+  );
   if (access.kind === 'error') {
     return (
-      <SurfaceState
-        kind="error"
+      <Alert
+        type="error"
+        showIcon
+        message={t(SURFACE_MESSAGE_KEYS.errorLoadFailed)}
         description={access.messageKey ? t(access.messageKey) : undefined}
-        onRetry={() => window.location.reload()}
+        action={
+          <Button size="small" onClick={() => window.location.reload()}>
+            {t(SURFACE_MESSAGE_KEYS.retry)}
+          </Button>
+        }
+        style={{ margin: 24 }}
       />
     );
   }
   if (access.kind === 'permission-denied' || !canOps) {
     return (
-      <SurfaceState
-        kind="permission-denied"
-        description={t('ops.guests.needPermissions')}
-        onRetry={() => {
+      <Result
+        status="403"
+        title={t(SURFACE_MESSAGE_KEYS.permissionTitle)}
+        subTitle={t('ops.guests.needPermissions')}
+        extra={
+          <Button type="primary" onClick={() => {
           window.location.href = `/t/${tenantId}/e/${eventId}`;
-        }}
+        }}>
+            {t(SURFACE_MESSAGE_KEYS.permissionGoAllowed)}
+          </Button>
+        }
       />
     );
   }

@@ -1,7 +1,7 @@
 'use client';
 
 import { StatisticCard } from '@ant-design/pro-components';
-import { Alert, Button, Descriptions, Result, Space } from 'antd';
+import { Alert, Button, Descriptions, Flex, Result, Space, Spin } from 'antd';
 import { PortalPage } from '../../../../../../src/components/portal-page';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
@@ -24,11 +24,11 @@ import { canPerformEventAction } from '../../../../../../src/nav/capability-poli
 import { GateStayAppNotice } from '../../../../../../src/components/gate-deeplink';
 import { EventReportAsOfLine } from '../../../../../../src/components/event-report-as-of';
 import { ReportStaleAlert } from '../../../../../../src/components/report-stale-alert';
-import { SurfaceState } from '../../../../../../src/components/surface-state';
 import {
   formatTicketStateCountLabel,
   usePortalLocale,
 } from '../../../../../../src/i18n';
+import { SURFACE_MESSAGE_KEYS } from '../../../../../../src/prep/surface-copy';
 
 /** O12 report surface only — staff scan on Vemoki iOS app (D-6). */
 export default function EventGateReportPage() {
@@ -65,13 +65,34 @@ export default function EventGateReportPage() {
     };
   }, [access, load]);
 
-  if (access.kind === 'loading') return <SurfaceState kind="loading" />;
+  if (access.kind === 'loading') return (
+    <Flex
+      vertical
+      align="center"
+      gap="middle"
+      role="status"
+      aria-busy="true"
+      aria-label={t(SURFACE_MESSAGE_KEYS.loading)}
+      suppressHydrationWarning
+      style={{ padding: 48 }}
+    >
+      <Spin size="large" />
+      <span>{t(SURFACE_MESSAGE_KEYS.loading)}</span>
+    </Flex>
+  );
   if (access.kind === 'error') {
     return (
-      <SurfaceState
-        kind="error"
+      <Alert
+        type="error"
+        showIcon
+        message={t(SURFACE_MESSAGE_KEYS.errorLoadFailed)}
         description={access.messageKey ? t(access.messageKey) : undefined}
-        onRetry={() => window.location.reload()}
+        action={
+          <Button size="small" onClick={() => window.location.reload()}>
+            {t(SURFACE_MESSAGE_KEYS.retry)}
+          </Button>
+        }
+        style={{ margin: 24 }}
       />
     );
   }
@@ -207,7 +228,21 @@ export default function EventGateReportPage() {
           </Space>
         </>
       ) : report === null ? (
-        <SurfaceState kind="loading" />
+        (
+    <Flex
+      vertical
+      align="center"
+      gap="middle"
+      role="status"
+      aria-busy="true"
+      aria-label={t(SURFACE_MESSAGE_KEYS.loading)}
+      suppressHydrationWarning
+      style={{ padding: 48 }}
+    >
+      <Spin size="large" />
+      <span>{t(SURFACE_MESSAGE_KEYS.loading)}</span>
+    </Flex>
+  )
       ) : null}
     </PortalPage>
   );

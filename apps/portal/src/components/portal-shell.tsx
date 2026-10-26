@@ -1,17 +1,6 @@
 'use client';
 
-import {
-  Alert,
-  Button,
-  Drawer,
-  Dropdown,
-  Layout,
-  Menu,
-  message,
-  Select,
-  Typography,
-  theme,
-} from 'antd';
+import { Alert, Button, Drawer, Dropdown, Flex, Layout, Menu, Result, Select, Spin, Typography, message, theme } from 'antd';
 import type { MenuProps } from 'antd';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -36,8 +25,8 @@ import {
   loadShellContext,
   type ShellLoadState,
 } from '../nav/load-shell-context';
-import { SurfaceState } from './surface-state';
 import { usePortalLocale } from '../i18n';
+import { SURFACE_MESSAGE_KEYS } from '../prep/surface-copy';
 import {
   PORTAL_FORBIDDEN_EVENT,
   forbiddenScopeAffectsPath,
@@ -477,19 +466,27 @@ function PortalShellChrome({
                 />
               ) : null}
               {activeTenant?.status === 'SUSPENDED' ? (
-                <SurfaceState kind="suspended" />
+                <Alert
+        type="error"
+        showIcon
+        banner
+        message={t(SURFACE_MESSAGE_KEYS.suspendedTitle)}
+        description={t(SURFACE_MESSAGE_KEYS.suspendedDescription)}
+      />
               ) : null}
               {activeTenant?.status === 'PENDING' ? (
-                <SurfaceState
-                  kind="pending-activation"
-                  emptyAction={
+                <Result
+        status="info"
+        title={t(SURFACE_MESSAGE_KEYS.pendingActivationTitle)}
+        subTitle={t(SURFACE_MESSAGE_KEYS.pendingActivationDescription)}
+        extra={
                     <Link href={`/onboarding/${activeTenant.tenantId}`}>
                       <Button type="link">
                         {t('onboarding.pending.openWait')}
                       </Button>
                     </Link>
                   }
-                />
+      />
               ) : null}
               {children}
             </div>
@@ -716,61 +713,101 @@ export function PortalShell({
   }
 
   if (shell.status === 'loading') {
-    return <SurfaceState kind="loading" />;
+    return (
+    <Flex
+      vertical
+      align="center"
+      gap="middle"
+      role="status"
+      aria-busy="true"
+      aria-label={t(SURFACE_MESSAGE_KEYS.loading)}
+      suppressHydrationWarning
+      style={{ padding: 48 }}
+    >
+      <Spin size="large" />
+      <span>{t(SURFACE_MESSAGE_KEYS.loading)}</span>
+    </Flex>
+  );
   }
 
   if (shell.status === 'unauthenticated') {
     if (staffLoginUrl) {
-      return <SurfaceState kind="loading" />;
+      return (
+    <Flex
+      vertical
+      align="center"
+      gap="middle"
+      role="status"
+      aria-busy="true"
+      aria-label={t(SURFACE_MESSAGE_KEYS.loading)}
+      suppressHydrationWarning
+      style={{ padding: 48 }}
+    >
+      <Spin size="large" />
+      <span>{t(SURFACE_MESSAGE_KEYS.loading)}</span>
+    </Flex>
+  );
     }
     return (
-      <SurfaceState
-        kind="permission-denied"
+      <Result
+        status="403"
         title={t('shell.auth.requiredTitle')}
-        description={t('shell.auth.staffDescription')}
-        onRetry={() => {
+        subTitle={t('shell.auth.staffDescription')}
+        extra={
+          <Button type="primary" onClick={() => {
           window.location.assign('/api/auth/login?return=/');
-        }}
-      />
-    );
-  }
-
-  if (shell.status === 'error') {
-    return (
-      <SurfaceState
-        kind="unknown"
-        description={t(shell.messageKey)}
-        onRetry={reload}
-      />
-    );
-  }
-
-  if (attendeeOnly) {
-    return (
-      <SurfaceState
-        kind="permission-denied"
-        title={t('shell.auth.attendeeDeniedTitle')}
-        description={t('shell.auth.attendeeDeniedBody')}
-        emptyAction={
-          <Button type="primary" href={productOrigin}>
-            {t('shell.auth.openCustomerApp')}
+        }}>
+            {t(SURFACE_MESSAGE_KEYS.permissionGoAllowed)}
           </Button>
         }
       />
     );
   }
 
+  if (shell.status === 'error') {
+    return (
+      <Alert
+        type="warning"
+        showIcon
+        message={t(SURFACE_MESSAGE_KEYS.unknownTitle)}
+        description={t(shell.messageKey)}
+        action={
+          <Button size="small" onClick={reload}>
+            {t(SURFACE_MESSAGE_KEYS.recheck)}
+          </Button>
+        }
+        style={{ margin: 24 }}
+      />
+    );
+  }
+
+  if (attendeeOnly) {
+    return (
+      <Result status="403" title={t('shell.auth.attendeeDeniedTitle')} subTitle={t('shell.auth.attendeeDeniedBody')} extra={
+          <Button type="primary" href={productOrigin}>
+            {t('shell.auth.openCustomerApp')}
+          </Button>
+        } />
+    );
+  }
+
   if (bffForbidden || routeForbidden) {
     return (
-      <SurfaceState
-        kind="permission-denied"
-        onRetry={() => {
+      <Result
+        status="403"
+        title={t(SURFACE_MESSAGE_KEYS.permissionTitle)}
+        subTitle={t(SURFACE_MESSAGE_KEYS.permissionDefaultDescription)}
+        extra={
+          <Button type="primary" onClick={() => {
           if (recoveryPath) {
             window.location.assign(recoveryPath);
           } else {
             window.location.reload();
           }
-        }}
+        }}>
+            {t(SURFACE_MESSAGE_KEYS.permissionGoAllowed)}
+          </Button>
+        }
       />
     );
   }
