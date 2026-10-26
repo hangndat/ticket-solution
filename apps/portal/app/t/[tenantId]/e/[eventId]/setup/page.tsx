@@ -23,7 +23,7 @@ import {
   hasUnsavedSetupChanges,
 } from '../../../../../../src/setup/setup-drafts';
 import { useIntentMutation } from '../../../../../../src/client/use-intent-mutation';
-import { intentBlockMessageKey } from '../../../../../../src/client/intent-mutation';
+import { intentBlockMessageKey, intentBlockPresentation } from '../../../../../../src/client/intent-mutation';
 
 export default function EventSetupPage() {
   const { t } = usePortalLocale();
@@ -162,6 +162,11 @@ export default function EventSetupPage() {
   }
 
   const canUpdate = canPerformEventAction('updateEvent', access.permissions);
+  const blockedReasons = [metaIntent, cloneIntent, archiveIntent]
+    .filter((intent) => intent.state === 'blocked')
+    .map((intent) => intent.reason);
+  const blockedReason = blockedReasons.includes('identity') ? 'identity' : blockedReasons[0] ?? null;
+  const blockedPresentation = intentBlockPresentation(blockedReason);
 
   async function saveMeta() {
     if (!detail || busy || metaIntent.state === 'loading' || metaIntent.state === 'blocked') return;
@@ -330,9 +335,12 @@ export default function EventSetupPage() {
       {kind === 'ready' && detail ? (
         <>
           {(metaIntent.state === 'blocked' || cloneIntent.state === 'blocked' || archiveIntent.state === 'blocked') ? (
-            <Alert type="warning" showIcon message={t('surface.unknown.title')}
-              description={t(intentBlockMessageKey(metaIntent.reason ?? cloneIntent.reason ?? archiveIntent.reason))}
-              action={<Button size="small" onClick={() => void load()}>{t('surface.action.recheck')}</Button>}
+            <Alert type="warning" showIcon message={t(blockedPresentation.title)}
+              description={t(blockedPresentation.description)}
+              action={<Button size="small" onClick={() => {
+                if (blockedPresentation.reload) window.location.reload();
+                else void load();
+              }}>{t(blockedPresentation.action)}</Button>}
             />
           ) : null}
           <Alert

@@ -8,12 +8,18 @@ export type IntentScope = {
 };
 
 type Marker = { version: 1; key: string; createdAt: number };
-type Pending = { marker: Marker; serialized: string; attempts: number };
+type Pending = { marker: Marker; serialized: string; attempts: number; nextRetryAt: number };
 export type IntentOutcome =
   | { kind: 'confirmed'; response: PortalFetchResult }
   | { kind: 'rejected'; response: PortalFetchResult }
   | { kind: 'unknown'; response?: PortalFetchResult }
-  | { kind: 'blocked'; reason: 'recovery' | 'expired' | 'mismatch' | 'conflict' | 'storage' };
+  | { kind: 'blocked'; reason: 'recovery' | 'expired' | 'mismatch' | 'conflict' | 'storage' | 'identity' };
+
+export function intentBlockPresentation(reason: string | null) {
+  return reason === 'identity'
+    ? { title: 'intent.identity.title' as const, description: 'intent.identity' as const, action: 'intent.identity.action' as const, reload: true }
+    : { title: 'surface.unknown.title' as const, description: intentBlockMessageKey(reason), action: 'surface.action.recheck' as const, reload: false };
+}
 
 export function intentBlockMessageKey(reason: string | null) {
   switch (reason) {
@@ -28,6 +34,7 @@ export function intentBlockMessageKey(reason: string | null) {
 
 // A conservative client stop, not a promise about backend retention.
 export const MAX_INTENT_RETRY_AGE_MS = 5 * 60_000;
+export const INTENT_RETRY_BACKOFF_MS = 1_000;
 const MAX_ATTEMPTS = 2;
 
 export function intentStorageKey(scope: IntentScope): string {
@@ -94,6 +101,9 @@ export class IntentMutation<T> {
       this.blocked = { kind: 'blocked', reason: 'expired' };
       return Promise.resolve(this.blocked);
     }
+    if (this.pending && this.now() < this.pending.nextRetryAt) {
+      return Promise.resolve({ kind: 'unknown' });
+    }
     if (!this.pending) {
       const marker: Marker = { version: 1, key: this.newKey(), createdAt: this.now() };
       try {
@@ -102,7 +112,7 @@ export class IntentMutation<T> {
         this.blocked = { kind: 'blocked', reason: 'storage' };
         return Promise.resolve(this.blocked);
       }
-      this.pending = { marker, serialized, attempts: 0 };
+      this.pending = { marker, serialized, attempts: 0, nextRetryAt: 0 };
     }
     const pending = this.pending;
     pending.attempts += 1;
@@ -135,7 +145,12 @@ export class IntentMutation<T> {
       }
       this.clear();
       return { kind: 'rejected', response };
-    })().finally(() => { this.flight = null; });
+    })().then((outcome) => {
+      if (outcome.kind === 'unknown' && this.pending === pending) {
+        pending.nextRetryAt = Math.min(pending.marker.createdAt + MAX_INTENT_RETRY_AGE_MS, this.now() + INTENT_RETRY_BACKOFF_MS);
+      }
+      return outcome;
+    }).finally(() => { this.flight = null; });
     return this.flight;
   }
 

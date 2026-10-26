@@ -16,7 +16,7 @@ import { usePortalLocale } from '../../../../../src/i18n';
 import { SURFACE_MESSAGE_KEYS } from '../../../../../src/prep/surface-copy';
 import { useUnsavedChanges } from '../../../../../src/nav/unsaved-changes';
 import { useIntentMutation } from '../../../../../src/client/use-intent-mutation';
-import { intentBlockMessageKey } from '../../../../../src/client/intent-mutation';
+import { intentBlockMessageKey, intentBlockPresentation } from '../../../../../src/client/intent-mutation';
 
 type WizardValues = {
   slug: string;
@@ -179,9 +179,12 @@ export default function CreateEventWizardPage() {
         ]}
       />
       {createIntent.state === 'blocked' ? (
-        <Alert type="warning" showIcon message={t('surface.unknown.title')}
-          description={t(intentBlockMessageKey(createIntent.reason))}
-          action={<Button size="small" onClick={() => router.push(`/t/${tenantId}/events`)}>{t('surface.action.recheck')}</Button>}
+        <Alert type="warning" showIcon message={t(intentBlockPresentation(createIntent.reason).title)}
+          description={t(intentBlockPresentation(createIntent.reason).description)}
+          action={<Button size="small" onClick={() => {
+            if (createIntent.reason === 'identity') window.location.reload();
+            else router.push(`/t/${tenantId}/events`);
+          }}>{t(intentBlockPresentation(createIntent.reason).action)}</Button>}
         />
       ) : null}
       <Form

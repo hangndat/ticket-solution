@@ -3,6 +3,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { portalGet, type PortalFetchResult } from './portal-fetch';
 import { IntentMutation, type IntentOutcome } from './intent-mutation';
+import { ActorBoundIntent, actorFromSubject } from './actor-bound-intent';
+
+async function currentActor(): Promise<string | null> {
+  return actorFromSubject(await portalGet('/api/bff/me/subject'));
+}
 
 export function useIntentMutation<T extends object>(
   tenantId: string,
@@ -10,7 +15,7 @@ export function useIntentMutation<T extends object>(
   command: string,
 ) {
   const scope = `${tenantId}/${eventId ?? ''}/${command}`;
-  const controller = useRef<{ scope: string; value: IntentMutation<T> } | null>(null);
+  const controller = useRef<{ scope: string; value: ActorBoundIntent<T> } | null>(null);
   const [state, setState] = useState<'loading' | 'idle' | 'in-flight' | 'unknown' | 'blocked'>('loading');
   const [reason, setReason] = useState<string | null>(null);
 
@@ -18,11 +23,9 @@ export function useIntentMutation<T extends object>(
     let active = true;
     queueMicrotask(() => { if (active) setState('loading'); });
     controller.current = null;
-    void portalGet('/api/bff/me/subject').then((res) => {
+    void currentActor().then((actorId) => {
       if (!active) return;
-      const actorId = res.status === 200 && res.json && typeof res.json === 'object'
-        ? (res.json as { userId?: unknown }).userId : null;
-      if (typeof actorId !== 'string' || !actorId.trim()) {
+      if (!actorId) {
         setReason('identity');
         setState('blocked');
         return;
@@ -38,9 +41,10 @@ export function useIntentMutation<T extends object>(
         setState('blocked');
         return;
       }
-      controller.current = { scope, value };
-      setState(value.state);
-      setReason(value.blockReason?.kind === 'blocked' ? value.blockReason.reason : null);
+      const bound = new ActorBoundIntent(actorId, value, currentActor);
+      controller.current = { scope, value: bound };
+      setState(bound.state);
+      setReason(bound.reason);
     });
     return () => {
       active = false;
@@ -54,13 +58,13 @@ export function useIntentMutation<T extends object>(
     confirmed: (response: PortalFetchResult) => boolean,
   ): Promise<IntentOutcome> => {
     const current = controller.current;
-    if (!current || current.scope !== scope) return { kind: 'blocked', reason: 'storage' };
+    if (!current || current.scope !== scope) return { kind: 'blocked', reason: 'identity' };
     const promise = current.value.run(payload, send, confirmed);
     setState(current.value.state);
     const outcome = await promise;
     if (controller.current !== current) return { kind: 'blocked', reason: 'recovery' };
     setState(current.value.state);
-    setReason(outcome.kind === 'blocked' ? outcome.reason : null);
+    setReason(current.value.reason);
     return outcome;
   }, [scope]);
 
