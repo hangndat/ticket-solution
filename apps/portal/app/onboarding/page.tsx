@@ -164,14 +164,7 @@ export default function OnboardingEntryPage() {
   }
 
   return (
-    <Card
-      style={{
-        maxWidth: 560,
-        margin: '48px auto',
-        background:
-          'linear-gradient(165deg, rgba(155,58,24,0.06) 0%, rgba(250,247,242,1) 42%, #fff 100%)',
-      }}
-    >
+    <Card style={{ maxWidth: 560, margin: '48px auto' }}>
       <Space direction="vertical" size="large" style={{ width: '100%' }}>
         <div>
           <Typography.Title level={2} style={{ marginTop: 0, marginBottom: 8 }}>
