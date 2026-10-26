@@ -49,7 +49,7 @@ Locale (`usePortalLocale`), permission (`useTenantAccess`, `canPerformTenantActi
 | Trường | Giá trị |
 | --- | --- |
 | **codeSha** | `02522b5ab86e87e2696ab1b400e177781fa57851` |
-| **evidenceSha** | `1d0fc40d4792f3458ac0d26e2e736c2c167eba57` |
+| **evidenceSha** | `465ab3e7725f5b996323276f77c316b18dca4c31` (branch tip; code impl `02522b5a`) |
 
 ## Verdict worker
 
