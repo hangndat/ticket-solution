@@ -12,6 +12,12 @@ User quyết định **toàn bộ UI component của `apps/portal` dùng compone
 
 Architecture impact: **Có** — thay đổi dependency/component boundary của Portal, không đổi API hoặc nghiệp vụ. Việc gỡ ProComponents, custom component/theme/CSS hiện có cần Task migration với bằng chứng giao diện và regression trước khi coi là code complete; quyết định này tự nó chưa xác nhận implementation.
 
+### Bổ sung O26 — Cho phép ProComponents cho UI Portal mới (26/10/2026)
+
+User xác nhận **ProComponents được phép dùng cho UI Portal mới**. Bổ sung này thay phần O26 yêu cầu chỉ ghép component `antd` và chuyển toàn bộ ProComponents hiện có sang `antd`; giữ nguyên định hướng Ant Design, giao diện/token mặc định, tiếng Việt và accessibility. Dùng component chính thức từ `antd` hoặc `@ant-design/pro-components` đã có trong stack theo nhu cầu màn; không tự tạo wrapper/component, theme/token/CSS tùy biến hoặc thêm dependency chỉ vì quyết định này. ProComponents hiện có có thể giữ, còn migration đã được giao cụ thể phải đối chiếu lại scope trước khi làm; quyết định này không tự hoàn tác code hay đóng acceptance.
+
+Architecture impact: **Không** cho thay đổi chính sách sử dụng component đã có; Task nào đổi dependency/contract hoặc kiến trúc UI đáng kể vẫn phân loại impact riêng.
+
 ## O25 — Epic #914: tách slice portal/web và chốt phạm vi offline (26/10/2026)
 
 User duyệt định hướng/phạm vi Epic [#914](https://github.com/hangndat/ticket-solution/issues/914) ngày 26/10/2026. Roadmap thực thi canonical: [`docs/plans/VEMOKI-CORE-UX-ROADMAP-2026-10-26.md`](./plans/VEMOKI-CORE-UX-ROADMAP-2026-10-26.md); [`docs/vemoki-core-roadmap-agents.md`](./vemoki-core-roadmap-agents.md) chỉ là reference. (Số O24 đang được đề xuất trên nhánh PP1 chưa merge nên không dùng.)
