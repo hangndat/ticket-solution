@@ -12,6 +12,7 @@ import {
 } from './offline-sync-contract.ts';
 import type { OfflineQueueStore } from './offline-queue-types.ts';
 import type { StaffGateScope } from './staff-gate-events.ts';
+import { isMembershipAuthzDenial } from '../identity/staff-eligibility.ts';
 import { randomId } from '../lib/random-id.ts';
 
 export type OfflineLocalStatus =
@@ -496,7 +497,11 @@ export class OfflineScanQueue {
     apiBase: string;
     fetchImpl?: typeof fetch;
     shouldContinue?: () => boolean;
-  }): Promise<{ flushed: number; results: OfflineSyncItemResult[] }> {
+  }): Promise<{
+    flushed: number;
+    results: OfflineSyncItemResult[];
+    authzDenial?: { status: number; code?: string };
+  }> {
     await this.hydrate();
     const ownerUserId = this.ownerUserId;
     const bindGeneration = this.bindGeneration;
@@ -595,10 +600,19 @@ export class OfflineScanQueue {
               bearer: input.bearer,
               body,
             });
+            const authzDenial =
+              outcome.kind === 'batch_error' &&
+              isMembershipAuthzDenial(outcome.status, { code: outcome.code })
+                ? { status: outcome.status, code: outcome.code }
+                : null;
 
             if (input.shouldContinue && !input.shouldContinue()) {
               this.items = this.items.map((row) => ids.has(row.clientEventId) ? { ...row, localStatus: 'pending' as const } : row);
-              return { flushed, results: allResults };
+              return {
+                flushed,
+                results: allResults,
+                ...(authzDenial ? { authzDenial } : {}),
+              };
             }
 
             if (
@@ -630,6 +644,24 @@ export class OfflineScanQueue {
             }
 
             if (outcome.kind === 'batch_error') {
+              if (authzDenial) {
+                // Membership denial is not a ticket outcome. Keep every row
+                // available for a later authorized replay, and stop this batch.
+                const message = 'Quyền nhân viên đã đổi. Giữ hàng đợi — cần xác minh lại quyền trước khi đồng bộ.';
+                this.items = this.items.map((row) =>
+                  ids.has(row.clientEventId)
+                    ? { ...row, localStatus: 'pending' as const, lastMessage: message }
+                    : row,
+                );
+                this.lastSyncError = message;
+                // Durable rows were already pending before POST. Return the
+                // denial even if SecureStore cannot accept another write.
+                return {
+                  flushed,
+                  results: allResults,
+                  authzDenial,
+                };
+              }
               const vi = offlineConflictMessageVi(
                 outcome.code,
                 outcome.message,
