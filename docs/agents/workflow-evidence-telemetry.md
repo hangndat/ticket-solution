@@ -101,6 +101,10 @@ Worker có thể truyền các flags provider/thread/baseline/comparison-key nà
 
 ## Diễn giải chi phí
 
+Đánh giá sau mỗi wave có kết quả hoặc sau 5–10 task tương đương, không tạo worker chỉ để thống kê. Dùng ledger/receipt hiện có, join bằng run/task/dispatch/thread thật và giữ một dòng trong checkpoint/report: `Task/dispatch | model requested/effective | khoảng đo/source/coverage | input/cache/output | tiền thực nếu có | AC vừa đóng | finding hữu ích | lượt rework/nguyên nhân | bước tiếp`. Reviewer ghi finding đã chứng minh; không lấy số finding làm mục tiêu để sinh thêm review. Task bị chặn vẫn ghi outcome, không chia token cho 0 AC để tạo ROI giả.
+
+Missing token phải ghi unknown cùng nguyên nhân (thiếu provider file/baseline/join), không coi telemetryCollected là đã có token. Chỉ truyền provider file/thread/baseline đã xác minh vào collect/settle; không đoán file mới nhất. company/work-events.jsonl giữ vai trò join nhân viên/lifecycle, không phải nguồn usage. Không đọc toàn bộ transcript để lấy số đo; đọc counters/metadata và khử trùng session/event. Cursor terminal display là chỉ số riêng, không cộng với provider totals. Tiền chỉ lấy từ billing/receipt có attribution; không đổi token/cache thành tiền subscription hay quota tiết kiệm. Không mở dashboard/tooling mới chỉ để đo.
+
 | Số đo | Ý nghĩa / giới hạn |
 | --- | --- |
 | input / output | Provider counters; input có thể tính lại cùng context qua nhiều request, không phải số token duy nhất |

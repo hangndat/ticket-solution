@@ -21,5 +21,6 @@ Mục tiêu khoảng 150–300 từ cho phần tóm tắt; findings cần đủ 
 - Checkpoint: <lượt fix đã dùng, quyết định đã chốt, owner tiếp theo>
 - Evidence packet / raw artifact: <path; thời điểm, SHA; không chứa secrets/PII>
 - Allowance/thời gian nếu đo: <source + cửa sổ đo; unknown nếu không có; account delta không phải chi phí riêng task>
+- Hiệu quả delta: <AC vừa đóng / finding mới đã chứng minh / không có evidence mới + nguyên nhân; lượt rework và điều kiện thử tiếp>. Usage nếu provider cung cấp: <source/boundary/coverage, input/cache/output; thiếu = unknown, không tự ước lượng>; coordinator join receipt, không yêu cầu worker đọc transcript hay billing để điền.
 
 Coordinator đọc phần tóm tắt trước, mở artifact khi cần kiểm AC, blocker hoặc quyết định rủi ro. Reviewer vẫn phải đọc code/evidence cần thiết; báo cáo worker không thay review độc lập.
