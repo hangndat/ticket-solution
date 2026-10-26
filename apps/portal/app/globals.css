@@ -1,10 +1,11 @@
+/* O26-PR1: gỡ declaration phụ thuộc --vemoki (brand); helpers layout giữ tạm — dissolve PR2–PR3. */
+
 html,
 body {
   margin: 0;
   min-height: 100%;
 }
 
-/* Legacy shell/page helpers — dissolve in O26-PR2–PR3 (Pro layout + SurfaceState). */
 .portal-skip-link {
   position: absolute;
   left: -9999px;
@@ -12,13 +13,11 @@ body {
   z-index: 1000;
   padding: 8px 12px;
   background: #fff;
-  color: inherit;
 }
 
 .portal-skip-link:focus {
   left: 8px;
   top: 8px;
-  outline: 2px solid #1677ff;
   outline-offset: 2px;
 }
 
@@ -41,7 +40,6 @@ body {
 
 .portal-context-strip {
   background: #fff;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
   padding: 12px 16px;
 }
 
@@ -66,7 +64,6 @@ body {
 .portal-context-strip__label {
   font-size: 12px;
   line-height: 1.2;
-  color: rgba(0, 0, 0, 0.45);
 }
 
 .portal-context-strip__field .ant-select {
@@ -201,43 +198,8 @@ a {
   color: inherit;
 }
 
-.portal-surface-loading {
-  padding: 48px;
-  text-align: center;
-}
-
-.portal-surface-loading__spinner {
-  width: 40px;
-  height: 40px;
-  margin: 0 auto;
-  border: 3px solid rgba(0, 0, 0, 0.06);
-  border-top-color: #1677ff;
-  border-radius: 50%;
-  animation: portal-surface-loading-spin 0.8s linear infinite;
-}
-
-.portal-surface-loading__label {
-  margin: 16px 0 0;
-  color: rgba(0, 0, 0, 0.65);
-}
-
-@keyframes portal-surface-loading-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .portal-surface-loading__spinner {
-    animation: none;
-    border-top-color: #1677ff;
-    opacity: 0.85;
-  }
-}
-
 .portal-readiness {
-  border: 1px solid #d9d9d9;
-  border-radius: 8px;
+  border-radius: 14px;
   background: #fff;
   padding: 18px 20px;
 }
@@ -246,14 +208,12 @@ a {
   margin: 0 0 4px;
   font-size: 1.0625rem;
   font-weight: 650;
-  color: rgba(0, 0, 0, 0.88);
 }
 
 .portal-readiness__summary {
   margin: 0 0 14px;
   font-size: 0.875rem;
   line-height: 1.45;
-  color: rgba(0, 0, 0, 0.45);
 }
 
 .portal-ready-item {
@@ -263,11 +223,9 @@ a {
   padding: 10px 0;
   font-size: 0.9375rem;
   line-height: 1.4;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
 }
 
 .portal-ready-item:last-child {
-  border-bottom: none;
   padding-bottom: 0;
 }
 
@@ -285,21 +243,15 @@ a {
   color: #a86a12;
 }
 
-.portal-ready-item--unknown .portal-ready-item__mark {
-  color: rgba(0, 0, 0, 0.45);
-}
-
 .portal-ready-item__body strong {
   display: block;
   font-weight: 600;
-  color: rgba(0, 0, 0, 0.88);
 }
 
 .portal-ready-item__body span {
   display: block;
   margin-top: 2px;
   font-size: 0.8125rem;
-  color: rgba(0, 0, 0, 0.45);
 }
 
 .portal-gate-report-compact .ant-statistic-card {

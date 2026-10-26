@@ -1,21 +1,24 @@
 'use client';
 
-import { Alert, Button, Empty, Result } from 'antd';
+import { Alert, Button, Empty, Flex, Result, Spin } from 'antd';
 import type { ReactNode } from 'react';
 import { usePortalLocale } from '../i18n';
 
 function LoadingSurface({ label }: { label: string }) {
   return (
-    <div
+    <Flex
+      vertical
+      align="center"
+      gap="middle"
       role="status"
       aria-busy="true"
       aria-label={label}
-      className="portal-surface-loading"
       suppressHydrationWarning
+      style={{ padding: 48 }}
     >
-      <div className="portal-surface-loading__spinner" aria-hidden />
-      <p className="portal-surface-loading__label">{label}</p>
-    </div>
+      <Spin size="large" />
+      <span>{label}</span>
+    </Flex>
   );
 }
 
