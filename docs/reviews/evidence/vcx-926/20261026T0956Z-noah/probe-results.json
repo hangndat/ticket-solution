@@ -1,6 +1,7 @@
 {
   "runId": "20261026T0956Z-noah",
-  "sourceSHA": "d00a265cca1206b68601c75d445b633f7d590b57",
+  "previousMeasuredSHA": "d00a265cca1206b68601c75d445b633f7d590b57",
+  "supersededBy": "manual-probe-results.json (F03 mis-probe on KC origin)",
   "testedSHA": "33713db2cfffed29cad98ce9b2077490be5987b6",
   "portalBase": "http://127.0.0.1:3013",
   "apiBase": "http://127.0.0.1:3499",
