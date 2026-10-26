@@ -47,8 +47,8 @@
   "productPass": false,
   "orcaClickOpensDrawer": false,
   "note": "Product F01 judged on native trigger click + drawer DOM; Orca selector/ref click may not open antd Drawer (automation delivery only).",
-  "pass": true,
-  "verdict": "PASS",
+  "pass": false,
+  "verdict": "FAIL",
   "visualPass": false,
   "productF01Verdict": "FAIL",
   "visualVerify": "f01-visual-verify.json"
