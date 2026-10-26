@@ -2064,33 +2064,60 @@
             }
           },
           {
-            "name": "cursor",
-            "required": true,
+            "name": "q",
+            "required": false,
             "in": "query",
+            "description": "Exact invitationId",
             "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "limit",
-            "required": true,
-            "in": "query",
-            "schema": {
+              "format": "uuid",
               "type": "string"
             }
           },
           {
             "name": "state",
-            "required": true,
+            "required": false,
             "in": "query",
             "schema": {
+              "enum": [
+                "PENDING",
+                "DISPATCHED",
+                "CLAIMED",
+                "EXPIRED",
+                "REVOKED"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
               "type": "string"
             }
           }
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvitationListPageDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -8203,6 +8230,72 @@
           "usage",
           "asOf",
           "emailUsageDate"
+        ]
+      },
+      "InvitationSummaryDto": {
+        "type": "object",
+        "properties": {
+          "invitationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "eventId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sourceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "ticketTypeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "invitedEmailMasked": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "DISPATCHED",
+              "CLAIMED",
+              "EXPIRED",
+              "REVOKED"
+            ]
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "invitationId",
+          "eventId",
+          "sourceId",
+          "ticketTypeId",
+          "invitedEmailMasked",
+          "state",
+          "expiresAt"
+        ]
+      },
+      "InvitationListPageDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/InvitationSummaryDto"
+            }
+          },
+          "nextCursor": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor"
         ]
       }
     }
