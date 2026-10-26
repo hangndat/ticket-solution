@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { MutationIntent, type IntentStorage } from '../src/client/mutation-intent';
+import { IntentMutation, INTENT_RETRY_BACKOFF_MS } from '../src/client/intent-mutation';
 import type { PortalFetchResult } from '../src/client/portal-fetch';
 import { eventFromMutation } from '../src/client/event-mutation-result';
 import { collectEventWizardValues, type EventWizardValues } from '../src/client/event-wizard-values';
@@ -50,6 +51,43 @@ test('event mutation parses the nested event contract, including clone and archi
   assert.equal(eventFromMutation(response)?.eventId, 'clone-1');
   assert.equal(eventFromMutation({ ...response, json: { eventId: 'wrong-shape' } }), null);
   assert.equal(eventFromMutation({ ...response, json: { event: { ...((response.json as { event: object }).event), contentStatus: 'ARCHIVED' } } })?.contentStatus, 'ARCHIVED');
+});
+
+test('event.create (IntentMutation) stays unknown until nested event contract is present', async () => {
+  const storage = (() => {
+    const values = new Map<string, string>();
+    return {
+      getItem: (key: string) => values.get(key) ?? null,
+      setItem: (key: string, value: string) => { values.set(key, value); },
+      removeItem: (key: string) => { values.delete(key); },
+    };
+  })();
+  const clock = { now: 1_000 };
+  const intent = new IntentMutation<EventWizardValues>(
+    { actorId: 'staff', tenantId: 'tenant', command: 'event.create' },
+    storage,
+    () => 'event-key',
+    () => clock.now,
+  );
+  const payload: EventWizardValues = {
+    name: 'Festival', slug: 'festival', timezone: 'UTC', visibility: 'UNLISTED',
+  };
+  const definitive = (result: PortalFetchResult) => eventFromMutation(result) !== null;
+  const incomplete: PortalFetchResult = { status: 201, json: {}, networkError: false, timedOut: false };
+  assert.equal((await intent.run(payload, async () => incomplete, definitive)).kind, 'unknown');
+  clock.now += INTENT_RETRY_BACKOFF_MS;
+  const full: PortalFetchResult = {
+    status: 201,
+    json: { event: { eventId: 'event-1', revision: 1, contentStatus: 'DRAFT', name: 'Festival' } },
+    networkError: false,
+    timedOut: false,
+  };
+  const outcome = await intent.run(payload, async (body) => {
+    assert.equal(body.idempotencyKey, 'event-key');
+    return full;
+  }, definitive);
+  assert.equal(outcome.kind, 'confirmed');
+  assert.equal(eventFromMutation(outcome.response)?.eventId, 'event-1');
 });
 
 test('setup metadata retry cannot send a changed revision/name with the old operation', async () => {
