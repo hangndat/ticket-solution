@@ -34,8 +34,10 @@ import {
   defaultGuestListKind,
   guestListKindFromHash,
   guestListKindToHash,
+  invitationSearchBlocksPagination,
   ticketSearchBlocksPagination,
   type GuestListKind,
+  validateInvitationIdSearch,
   validateTicketIdSearch,
 } from './guest-list-query';
 
@@ -210,6 +212,9 @@ export function GuestWorkspace({ tenantId, eventId, permissions }: Props) {
   const cursor = cursors[index] ?? null;
   const ticketSearchActive =
     kind === 'tickets' && ticketSearchBlocksPagination(search);
+  const invitationSearchActive =
+    kind === 'invitations' && invitationSearchBlocksPagination(search);
+  const uuidLookupActive = ticketSearchActive || invitationSearchActive;
 
   useEffect(() => {
     const syncKindFromHash = () => {
@@ -405,6 +410,38 @@ export function GuestWorkspace({ tenantId, eventId, permissions }: Props) {
             ]}
           />
         ) : null}
+        {kind === 'invitations' ? (
+          <Input.Search
+            aria-label="Tìm lời mời theo mã trên máy chủ"
+            placeholder="Mã lời mời (UUID) chính xác"
+            value={draft}
+            onChange={(event) => {
+              setDraft(event.target.value);
+              if (error) setError(null);
+            }}
+            onSearch={(value) => {
+              const next = value.trim();
+              if (!next) {
+                setError(null);
+                setSearch('');
+                reset();
+                setRevision((current) => current + 1);
+                return;
+              }
+              const validated = validateInvitationIdSearch(next);
+              if (!validated.ok) {
+                setError(validated.message);
+                return;
+              }
+              setError(null);
+              setSearch(validated.invitationId);
+              reset();
+              setRevision((current) => current + 1);
+            }}
+            allowClear
+            style={{ width: 260 }}
+          />
+        ) : null}
         {kind !== 'invitations' ? (
           <Input.Search
             aria-label={
@@ -458,8 +495,8 @@ export function GuestWorkspace({ tenantId, eventId, permissions }: Props) {
       </Space>
       {kind === 'invitations' ? (
         <Typography.Text type="secondary">
-          Danh sách lời mời hỗ trợ lọc trạng thái; tìm theo mã lời mời đang chờ
-          API.
+          Tìm lời mời chỉ theo mã lời mời (UUID) chính xác; tìm email chưa hỗ
+          trợ. Danh sách không lọc vẫn phân trang trên máy chủ.
         </Typography.Text>
       ) : null}
       {kind === 'tickets' ? (
@@ -512,10 +549,10 @@ export function GuestWorkspace({ tenantId, eventId, permissions }: Props) {
           <Typography.Text>Trang {index + 1}</Typography.Text>
           <Button
             disabled={
-              loading || !page.nextCursor || ticketSearchActive
+              loading || !page.nextCursor || uuidLookupActive
             }
             onClick={() => {
-              if (!page.nextCursor || ticketSearchActive) return;
+              if (!page.nextCursor || uuidLookupActive) return;
               setCursors((value) => [
                 ...value.slice(0, index + 1),
                 page.nextCursor,
