@@ -1,0 +1,97 @@
+- link "Bỏ qua đến nội dung" [ref=e1]
+- banner
+  - navigation "Điều hướng chính" [ref=e2]
+    - link "Vemoki — trang chủ" [ref=e5]
+      - StaticText "vemoki"
+    - button "Menu" [expanded=false, ref=e6]
+      - StaticText "Menu"
+- main
+  - sectionheader
+    - heading "Vé của tôi" [level=1, ref=e7]
+    - paragraph
+      - StaticText "Quản lý vé đã cấp theo sự kiện. Mở vé để xem mã QR tại cổng — không chia sẻ ảnh chụp màn hình."
+    - link "Đổi mã lấy vé" [ref=e8]
+  - navigation "Lọc vé theo sự kiện" [ref=e3]
+    - link "Tất cả 6" [ref=e9]
+      - StaticText "Tất cả"
+      - StaticText "6"
+    - link "MFest · Demo 4" [ref=e10]
+      - StaticText "MFest · Demo"
+      - StaticText "4"
+    - link "Studio Night — Đêm nhạc mùa trước · Demo 1" [ref=e11]
+      - StaticText "Studio Night — Đêm nhạc mùa trước · Demo"
+      - StaticText "1"
+    - link "Studio Night · Demo 1" [ref=e12]
+      - StaticText "Studio Night · Demo"
+      - StaticText "1"
+  - list
+    - listitem "Mở vé MFest · Demo" [level=1, ref=e13]
+      - StaticText "Sẵn sàng"
+      - time
+        - StaticText "2026-10-26"
+      - heading "MFest · Demo" [level=3, ref=e22]
+      - paragraph
+        - StaticText "Mã vé "
+        - code
+          - StaticText "F1848460"
+      - StaticText "Mở vé "
+    - listitem "Mở vé MFest · Demo" [level=1, ref=e14]
+      - StaticText "Sẵn sàng"
+      - time
+        - StaticText "2026-10-26"
+      - heading "MFest · Demo" [level=3, ref=e23]
+      - paragraph
+        - StaticText "Mã vé "
+        - code
+          - StaticText "B4F15618"
+      - StaticText "Mở vé "
+    - listitem "Mở vé MFest · Demo" [level=1, ref=e15]
+      - StaticText "Sẵn sàng"
+      - time
+        - StaticText "2026-10-26"
+      - heading "MFest · Demo" [level=3, ref=e24]
+      - paragraph
+        - StaticText "Mã vé "
+        - code
+          - StaticText "38D18D02"
+      - StaticText "Mở vé "
+    - listitem "Mở vé MFest · Demo" [level=1, ref=e16]
+      - StaticText "Sẵn sàng"
+      - time
+        - StaticText "2026-10-26"
+      - heading "MFest · Demo" [level=3, ref=e25]
+      - paragraph
+        - StaticText "Mã vé "
+        - code
+          - StaticText "EFE719B9"
+      - StaticText "Mở vé "
+    - listitem "Mở vé Studio Night — Đêm nhạc mùa trước · Demo" [level=1, ref=e17]
+      - StaticText "Sẵn sàng"
+      - time
+        - StaticText "2026-10-26"
+      - heading "Studio Night — Đêm nhạc mùa trước · Demo" [level=3, ref=e26]
+      - paragraph
+        - StaticText "Mã vé "
+        - code
+          - StaticText "BA89E6A0"
+      - StaticText "Mở vé "
+    - listitem "Mở vé Studio Night · Demo" [level=1, ref=e18]
+      - StaticText "Sẵn sàng"
+      - time
+        - StaticText "2026-10-26"
+      - heading "Studio Night · Demo" [level=3, ref=e27]
+      - paragraph
+        - StaticText "Mã vé "
+        - code
+          - StaticText "FC0735AB"
+      - StaticText "Mở vé "
+- contentinfo
+  - StaticText "vemoki"
+  - StaticText "Sự kiện & vé"
+  - navigation "Liên kết chân trang" [ref=e4]
+    - link "Khám phá" [ref=e19]
+    - link "Đổi mã" [ref=e20]
+    - link "Tài khoản" [ref=e21]
+- button "Open Next.js Dev Tools" [expanded=false, ref=e28]
+  - image
+- alert

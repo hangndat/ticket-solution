@@ -1,0 +1,41 @@
+{
+  "requestId": "55d589a1-7d82-4bbe-8c9f-13b4204e3758",
+  "request": [
+    {
+      "id": "55d589a1-7d82-4bbe-8c9f-13b4204e3758",
+      "status": "ISSUED"
+    }
+  ],
+  "ticketCount": 1,
+  "tickets": [
+    {
+      "id": "f1848460-b8de-4c9f-9268-ff481da5a560",
+      "state": "ACTIVE"
+    }
+  ],
+  "outbox": [
+    {
+      "id": "63d2cb31-acac-4825-8aa5-65b377ec809e",
+      "type": "TicketIssued",
+      "status": "PENDING",
+      "attempts": 1,
+      "next_attempt_at": "2026-10-26T03:02:07.090Z"
+    }
+  ],
+  "notifications": [
+    {
+      "id": "ac32f29a-7118-497b-9fef-0663fb94ef2e",
+      "channel": "email",
+      "state": "FAILED",
+      "attempts": 1,
+      "next_attempt_at": "2026-10-26T03:02:07.090Z"
+    }
+  ],
+  "attempts": [
+    {
+      "ordinal": 1,
+      "provider_status": "FAILED",
+      "sanitized_error": "connect ECONNREFUSED 127.0.0.1:19999"
+    }
+  ]
+}

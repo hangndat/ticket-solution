@@ -1,0 +1,69 @@
+- link "Bỏ qua đến nội dung" [ref=e1]
+- banner
+  - navigation "Điều hướng chính" [ref=e2]
+    - link "Vemoki — trang chủ" [ref=e4]
+      - StaticText "vemoki"
+    - button "Menu" [expanded=false, ref=e5]
+      - StaticText "Menu"
+- main
+  - sectionheader
+    - paragraph
+      - StaticText "NHẬP MÃ MỜI"
+    - heading "Đổi mã lấy vé" [level=1, ref=e6]
+    - paragraph
+      - StaticText "Một mã mời duy nhất. Không cần chọn sự kiện hay tổ chức."
+  - form "Đổi mã lấy vé"
+    - heading "Đổi mã lấy vé" [level=2, ref=e7]
+    - paragraph
+      - StaticText "Kiểm tra thông tin sự kiện, điền biểu mẫu và đồng ý điều khoản trước khi đổi vé."
+    - region "Sự kiện từ mã của bạn" [ref=e8]
+      - heading "Sự kiện từ mã của bạn" [level=3, ref=e16]
+      - DescriptionList
+        - term "TỔ CHỨC"
+        - definition
+          - StaticText "MFest"
+        - term "SỰ KIỆN"
+        - definition
+          - StaticText "MFest · Demo"
+        - term "LOẠI VÉ"
+        - definition
+          - StaticText "General"
+      - button "Nhập mã khác" [ref=e17]
+    - status
+      - strong
+        - StaticText "Đã xác định sự kiện"
+      - paragraph
+        - StaticText "Đã xác định: MFest · Demo · General. Điền biểu mẫu và đồng ý điều khoản trước khi đổi vé."
+    - LabelText
+      - StaticText "Mã đổi vé"
+      - textbox "Mã đổi vé" [required, ref=e18]: DEMO-V939-PEND-REJECT-2
+        - StaticText "DEMO-V939-PEND-REJECT-2"
+    - paragraph
+      - StaticText "Sự kiện này không có trường biểu mẫu — nhập mã và đồng ý điều khoản bên dưới để đổi vé."
+    - group "Điều khoản"
+      - Legend
+        - StaticText "Điều khoản"
+      - paragraph
+        - StaticText "Nội dung dưới đây do ban tổ chức ban hành (có thể khác ngôn ngữ giao diện)."
+      - generic [ref=e19] focusable [tabindex]
+        - StaticText "By attending you agree to venue house rules, age and safety policies, and the organizer’s ticketing terms. Tickets are non-transferable except where the organizer permits. Photography for personal use is welcome; commercial filming requires prior approval."
+      - LabelText
+        - checkbox "Tôi đã đọc và đồng ý điều khoản sự kiện" [checked=true, ref=e20]
+        - StaticText "Tôi đã đọc và đồng ý điều khoản sự kiện"
+    - button "Đổi mã lấy vé" [ref=e9]
+  - alert
+    - heading "Yêu cầu bị từ chối" [level=3, ref=e10]
+    - paragraph
+      - StaticText "vcx939-uat-deny"
+    - button "Thử mã khác" [ref=e11]
+    - link "Vé của tôi" [ref=e12]
+- contentinfo
+  - StaticText "vemoki"
+  - StaticText "Sự kiện & vé"
+  - navigation "Liên kết chân trang" [ref=e3]
+    - link "Khám phá" [ref=e13]
+    - link "Đổi mã" [ref=e14]
+    - link "Tài khoản" [ref=e15]
+- button "Open Next.js Dev Tools" [expanded=false, ref=e21]
+  - image
+- alert

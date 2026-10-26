@@ -1,0 +1,88 @@
+{
+  "capturedAt": "2026-10-26T03:08:18.003451+00:00",
+  "sourceSha": "b37382f09381401903267785a888b131a2a2b0ea",
+  "dirty": true,
+  "dirtyWebDiffSha256BeforePacket": "243d7d2a43f62ca837dac18d678c7da9f3afe27ab77747efefdf3c77e7b76218",
+  "dirtyPathsBeforePacket": [
+    "apps/web/app/(consumer)/redeem/redeem-form.tsx",
+    "apps/web/app/api/bff/redemptions/[requestId]/route.ts",
+    "apps/web/package.json",
+    "apps/web/src/redeem/owner-status.ts",
+    "apps/web/tests/redeem-poll.test.ts"
+  ],
+  "executionHostId": "local",
+  "portsScannedAt": 1792984097942,
+  "web": {
+    "port": 3417,
+    "pid": 98957,
+    "cwd": "/Users/admin/SideProject/ticket-solution/vcx-939-runtime/apps/web",
+    "command": "pnpm exec next dev --port 3417 --hostname 127.0.0.1"
+  },
+  "api": {
+    "port": 3539,
+    "pidBeforeOutage": 61850,
+    "pidAfterRestart": 89212,
+    "cwd": "/Users/admin/SideProject/ticket-solution/vcx-939-runtime/apps/api",
+    "command": "node dist/main.js"
+  },
+  "workerFault": {
+    "pidFromNestLog": 86162,
+    "cwdFromLaunch": "/Users/admin/SideProject/ticket-solution/vcx-939-runtime/apps/worker",
+    "command": "node dist/main.js",
+    "smtp": "smtp://127.0.0.1:19999",
+    "stopped": true
+  },
+  "workerRetry": {
+    "pidFromNestLog": 86496,
+    "cwdFromLaunch": "/Users/admin/SideProject/ticket-solution/vcx-939-runtime/apps/worker",
+    "command": "node dist/main.js",
+    "smtp": "smtp://127.0.0.1:1039",
+    "stopped": true
+  },
+  "oidc": {
+    "issuer": "http://127.0.0.1:8180/realms/ticket",
+    "realm": "ticket",
+    "client": "ticket-web"
+  },
+  "fixtureNamespace": {
+    "database": "ticket_ui869_dev@127.0.0.1:55439",
+    "composeProject": "ui869dev",
+    "stateDir": ".local-dev/vcx-939"
+  },
+  "ports": [
+    {
+      "id": "127.0.0.1:3417:98957",
+      "bindHost": "127.0.0.1",
+      "connectHost": "127.0.0.1",
+      "port": 3417,
+      "pid": 98957,
+      "processName": "node",
+      "protocol": "unknown",
+      "kind": "workspace",
+      "owner": {
+        "worktreeId": "909e450c-287a-413f-ad47-10304625422c::/Users/admin/SideProject/ticket-solution/vcx-939-runtime",
+        "repoId": "909e450c-287a-413f-ad47-10304625422c",
+        "displayName": "vcx-939-runtime",
+        "path": "/Users/admin/SideProject/ticket-solution/vcx-939-runtime",
+        "confidence": "cwd"
+      }
+    },
+    {
+      "id": "127.0.0.1:3539:89212",
+      "bindHost": "127.0.0.1",
+      "connectHost": "127.0.0.1",
+      "port": 3539,
+      "pid": 89212,
+      "processName": "node",
+      "protocol": "unknown",
+      "kind": "workspace",
+      "owner": {
+        "worktreeId": "909e450c-287a-413f-ad47-10304625422c::/Users/admin/SideProject/ticket-solution/vcx-939-runtime",
+        "repoId": "909e450c-287a-413f-ad47-10304625422c",
+        "displayName": "vcx-939-runtime",
+        "path": "/Users/admin/SideProject/ticket-solution/vcx-939-runtime",
+        "confidence": "cwd"
+      }
+    }
+  ]
+}

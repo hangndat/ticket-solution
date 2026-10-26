@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "runId": "vcx939-20261026T0305Z",
+  "issue": 939,
+  "pr": 954,
+  "sourceSha": "b37382f09381401903267785a888b131a2a2b0ea",
+  "dirtyWebDiffSha256": "243d7d2a43f62ca837dac18d678c7da9f3afe27ab77747efefdf3c77e7b76218",
+  "acceptance": "Partial Acceptance",
+  "reviewedSha": null,
+  "priorPacket": "vcx939-20261026T0158Z",
+  "artifactSha256": {
+    "RUN.md": "e8fd8d049f887efacd78b6388d6ef3b3481f1d59664df72566b93a4b2956f00d",
+    "browser-request-chain.sanitized.json": "582d4398880f7fc4629fd0f3894dc2562e06dc33e944b495a41518f76cad2082",
+    "issued-before-worker.json": "f7bb3bb884ec98c5fc76ea25e4e46ca196f2992e82dea844066f9c93907a058f",
+    "issued-worker-fault.json": "b8502311881b37e70c7dfcdd3f3b40d62bd3db4c9adb5d9ccb5e6d8d6ce25339",
+    "issued-worker-retry.json": "0f1ceb7fbfd3eef5fab3302b67e03f4465f08335d128b877514256e453cbdca9",
+    "issued.snapshot.txt": "600abf0b78759ca4538ab3abf4024c2114bc575a46fd0fb8bfe4dd5e2885300e",
+    "logout-isolated-result.json": "ac8258bb2582d73f799189d589e3e8e603532a74fc11b9666aad377bb9b892c3",
+    "pending.snapshot.txt": "d04d2a542e4c6fbb53fe06014993315c9d777617d092bf26fa71b279f12e2d6e",
+    "rejected.snapshot.txt": "26f4be5993543fbba6b2c801908399919bf9582914c9967a2c638318fff17800",
+    "runtime-provenance.json": "6701485a58edf021055c70fded85356d9eaab52c0a7e5a11805bd02ed44fca53",
+    "screenshots/issued.png": "b5594053e3ddd2cf8c12f6ed772cc748752d4ad208d89db6b382fcfac236d291",
+    "screenshots/pending.png": "88d1e213499a2cea9a356e97c64ae78e8732daf904907262a04b155a1a808e3d",
+    "screenshots/rejected.png": "ceac2cc2a427420757924e1ccbf4cbf700e6b19545aa94c5b5334fbe4bacea24",
+    "screenshots/unknown.png": "e25961cce0fe3dd5d74552a75191401c7b6e703d6a0a139b404bc935fd02203b",
+    "screenshots/wallet.png": "42db3e235aba6039bedfdfc73d9e063ab95969c3bfdcd006720eb5b94673373f",
+    "unknown.snapshot.txt": "a704829eef3c4e7786e8e97060a76e97932034d3eb0e40f5522a7cd10c8006af",
+    "wallet.snapshot.txt": "1dc1aed4099205b7c5e59d808a8d60956a9da04bc63f2eee8c29ff4231777e4a"
+  },
+  "privacy": "No tokens, cookies, passwords, QR bearer URLs, raw email payloads, or real user data."
+}

@@ -12,8 +12,34 @@ import {
   timeoutMessage,
 } from '../src/redeem/messages';
 import { pollOperation } from '../src/redeem/poll-operation';
+import { fetchOwnerRedemptionStatus } from '../src/redeem/owner-status';
 import type { FetchJsonResult } from '../src/redeem/fetch-json';
 import type { RedeemDecision } from '../src/redeem/decide';
+
+test('owner redemption status sends tenant scope required by API', async () => {
+  let requestedUrl = '';
+  const result = await fetchOwnerRedemptionStatus(
+    '55555555-5555-4555-8555-555555555555',
+    '11111111-1111-4111-8111-111111111111',
+    async (input) => {
+      requestedUrl = String(input);
+      return new Response(JSON.stringify({
+        status: 'ISSUED',
+        requestId: '55555555-5555-4555-8555-555555555555',
+        eventId: '22222222-2222-4222-8222-222222222222',
+        ticketId: '33333333-3333-4333-8333-333333333333',
+        ticketTypeId: '44444444-4444-4444-8444-444444444444',
+        sourceId: '66666666-6666-4666-8666-666666666666',
+        issuedAt: '2026-10-26T00:00:00.000Z',
+      }), { status: 200 });
+    },
+  );
+  assert.equal(
+    requestedUrl,
+    '/api/bff/redemptions/55555555-5555-4555-8555-555555555555?tenantId=11111111-1111-4111-8111-111111111111',
+  );
+  assert.equal(result.status, 'ok');
+});
 
 test('fetchJson maps TypeError network failure without throwing', async () => {
   const result = await fetchJson(
