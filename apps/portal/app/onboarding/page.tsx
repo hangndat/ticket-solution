@@ -19,6 +19,8 @@ import {
 } from '../../src/onboarding';
 import { bffTenantRegistrations } from '../../src/prep/bff-urls';
 import { usePortalUserId } from '../../src/views/use-portal-user-id';
+import { useMutationIntent } from '../../src/client/use-mutation-intent';
+import { MutationIntentAlert } from '../../src/client/mutation-intent-alert';
 
 const TIMEZONES = [
   'Asia/Ho_Chi_Minh',
@@ -40,6 +42,7 @@ export default function OnboardingEntryPage() {
   >('loading');
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const signupIntent = useMutationIntent('new-tenant', undefined, 'register-tenant');
   const [form] = Form.useForm<{
     slug: string;
     name: string;
@@ -110,10 +113,12 @@ export default function OnboardingEntryPage() {
         setNotice(t('onboarding.signup.invalid'));
         return;
       }
-      const res = await portalMutate(bffTenantRegistrations(), {
-        ...body,
-        idempotencyKey: crypto.randomUUID(),
-      });
+      const outcome = await signupIntent.run(body, (request) => portalMutate(bffTenantRegistrations(), request));
+      if (outcome.kind === 'blocked') {
+        setNotice('Đăng ký trước chưa rõ kết quả. Kiểm tra danh sách tổ chức trước khi tiếp tục.');
+        return;
+      }
+      const res = outcome.response;
       if (res.networkError || res.timedOut || res.status >= 500) {
         setNotice(t('onboarding.signup.unknown'));
         return;
@@ -185,6 +190,8 @@ export default function OnboardingEntryPage() {
         {notice ? (
           <Alert type="error" showIcon message={notice} role="alert" />
         ) : null}
+        <MutationIntentAlert pending={signupIntent.pending} needsReconciliation={signupIntent.needsReconciliation}
+          onCheck={() => window.location.reload()} onStartNew={signupIntent.release} />
 
         <Form
           form={form}
