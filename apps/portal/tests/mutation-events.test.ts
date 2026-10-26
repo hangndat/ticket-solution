@@ -3,12 +3,30 @@ import test from 'node:test';
 import { MutationIntent, type IntentStorage } from '../src/client/mutation-intent';
 import type { PortalFetchResult } from '../src/client/portal-fetch';
 import { eventFromMutation } from '../src/client/event-mutation-result';
+import { collectEventWizardValues, type EventWizardValues } from '../src/client/event-wizard-values';
 
 function storage(): IntentStorage {
   const values = new Map<string, string>();
   return { getItem: (key) => values.get(key) ?? null, setItem: (key, value) => { values.set(key, value); }, removeItem: (key) => { values.delete(key); } };
 }
 const scope = { actorId: 'staff', tenantId: 'tenant', eventId: 'event', command: 'update-event-metadata' };
+
+test('event wizard sends preserved fields from earlier unmounted steps', async () => {
+  const preserved: EventWizardValues = {
+    name: 'Festival', slug: 'festival', timezone: 'UTC', visibility: 'UNLISTED',
+  };
+  const values = await collectEventWizardValues({
+    validateFields: async (names) => {
+      assert.ok(names?.includes('name'));
+      return {};
+    },
+    getFieldsValue: (all) => {
+      assert.equal(all, true);
+      return preserved;
+    },
+  });
+  assert.deepEqual(values, preserved);
+});
 
 test('event create keeps the key when 201 has no eventId and permits exact replay', async () => {
   const intent = new MutationIntent({ ...scope, eventId: undefined, command: 'create-event' }, storage(), () => 'event-key');
