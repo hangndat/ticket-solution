@@ -17,6 +17,7 @@ import { useEventAccess } from '../../../../../../src/prep/use-event-access';
 import { canPerformEventAction } from '../../../../../../src/nav/capability-policy';
 import { SurfaceState } from '../../../../../../src/components/surface-state';
 import { usePortalLocale } from '../../../../../../src/i18n';
+import { useUnsavedChanges } from '../../../../../../src/nav/unsaved-changes';
 
 export default function EventSetupPage() {
   const { t } = usePortalLocale();
@@ -31,6 +32,8 @@ export default function EventSetupPage() {
   const [message, setMessage] = useState<string | undefined>();
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [dirty, setDirty] = useState(false);
+  useUnsavedChanges(dirty, t('shell.unsaved.confirm'));
   const [metaForm] = Form.useForm<{ name: string }>();
   const [cloneForm] = Form.useForm<{ slug: string; name: string }>();
 
@@ -128,6 +131,7 @@ export default function EventSetupPage() {
         return;
       }
       if (res.status >= 200 && res.status < 300) {
+        setDirty(false);
         setNotice(t('setup.h_1s3ht28'));
         void load();
         return;
@@ -164,6 +168,7 @@ export default function EventSetupPage() {
             ? ((res.json as { eventId: string }).eventId as string)
             : null;
         if (newId) {
+          setDirty(false);
           setNotice(t('setup.h_1sj85ay'));
           router.push(`/t/${tenantId}/e/${newId}`);
           return;
@@ -245,6 +250,7 @@ export default function EventSetupPage() {
 
           <ProCard title={t('setup.h_y3j37s')} style={{ marginBottom: 16 }}>
             <ProForm
+              onValuesChange={() => setDirty(true)}
               form={metaForm}
               layout="inline"
               disabled={!canUpdate || busy}
@@ -264,6 +270,7 @@ export default function EventSetupPage() {
 
           <ProCard title="Clone" style={{ marginBottom: 16 }}>
             <ProForm
+              onValuesChange={() => setDirty(true)}
               form={cloneForm}
               layout="vertical"
               style={{ maxWidth: 420 }}

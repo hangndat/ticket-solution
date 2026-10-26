@@ -7,6 +7,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react';
@@ -35,6 +36,7 @@ import {
   canAccessPortalPath,
   firstAllowedTenantPath,
 } from '../nav/capability-policy';
+import { createContextRequestGate } from '../nav/context-request-gate';
 
 function tenantFromPath(pathname: string): string | null {
   const m = pathname.match(/^\/t\/([^/]+)/);
@@ -67,6 +69,7 @@ export function PortalShell({
   const pathname = usePathname();
   const [shell, setShell] = useState<ShellLoadState>({ status: 'loading' });
   const [forbiddenScopes, setForbiddenScopes] = useState<ForbiddenScope[]>([]);
+  const requestGate = useRef(createContextRequestGate());
 
   useEffect(() => {
     const deny = (event: Event) => {
@@ -89,21 +92,29 @@ export function PortalShell({
 
   const pathTenantId = tenantFromPath(pathname);
   const pathEventId = eventFromPath(pathname);
-  const [selectedTenantId] = useState<string | null>(pathTenantId);
-  const [selectedEventId] = useState<string | null>(pathEventId);
-
-  // Keep switcher selection aligned with the URL without an effect round-trip.
-  const effectiveTenantId = pathTenantId ?? selectedTenantId;
-  const effectiveEventId = pathEventId ?? selectedEventId;
+  // The URL is the only source for a selected context.
+  const effectiveTenantId = pathTenantId;
+  const effectiveEventId = pathEventId;
 
   const reload = useCallback(() => {
+    const request = requestGate.current.begin('shell');
     setShell({ status: 'loading' });
-    void loadShellContext().then(setShell);
+    void loadShellContext().then((result) => {
+      if (request.isCurrent()) setShell(result);
+    });
   }, []);
 
   useEffect(() => {
-    void loadShellContext().then(setShell);
-  }, []);
+    const gate = requestGate.current;
+    let active = true;
+    queueMicrotask(() => {
+      if (active) reload();
+    });
+    return () => {
+      active = false;
+      gate.invalidate();
+    };
+  }, [reload]);
 
   const staffLoginUrl =
     shell.status === 'unauthenticated' ? staffLoginUrlForPath(pathname) : null;

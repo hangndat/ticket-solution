@@ -26,6 +26,10 @@ import { useEventAccess } from '../../../../../../src/prep/use-event-access';
 import { SurfaceState } from '../../../../../../src/components/surface-state';
 import { usePortalLocale } from '../../../../../../src/i18n';
 import { canPerformEventAction } from '../../../../../../src/nav/capability-policy';
+import {
+  confirmDiscardIfDirty,
+  useUnsavedChanges,
+} from '../../../../../../src/nav/unsaved-changes';
 
 export default function SourcesPage() {
   const { t } = usePortalLocale();
@@ -42,6 +46,8 @@ export default function SourcesPage() {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [dirty, setDirty] = useState(false);
+  useUnsavedChanges(dirty, t('shell.unsaved.confirm'));
   const [form] = Form.useForm<{
     name: string;
     approvalMode: 'AUTO' | 'MANUAL';
@@ -169,6 +175,7 @@ export default function SourcesPage() {
         return;
       }
       if (res.status === 200 || res.status === 201) {
+        setDirty(false);
         setNotice(t('sources.h_1p3knph'));
         setOpen(false);
         form.resetFields();
@@ -273,7 +280,13 @@ export default function SourcesPage() {
       <ModalForm
         title={t('sources.h_8t861g')}
         open={open && canCreateSource}
-        onOpenChange={setOpen}
+        onOpenChange={(next) => {
+          if (!next && !confirmDiscardIfDirty(t('shell.unsaved.confirm')))
+            return;
+          setOpen(next);
+          if (!next) setDirty(false);
+        }}
+        onValuesChange={() => setDirty(true)}
         form={form}
         initialValues={{ approvalMode: 'MANUAL' }}
         modalProps={{ destroyOnHidden: true }}

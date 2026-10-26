@@ -1,13 +1,19 @@
 'use client';
 
-import { Select, Typography } from 'antd';
-import { useRouter } from 'next/navigation';
+import { message, Select, Typography } from 'antd';
+import { usePathname, useRouter } from 'next/navigation';
 import type { MeEventItem, MeTenantItem } from '@ticket/contracts';
 import { usePortalLocale } from '../i18n';
 import {
+  canAccessTenantRoute,
   firstAllowedEventPath,
   firstAllowedTenantPath,
 } from '../nav/capability-policy';
+import {
+  eventSwitchDestination,
+  tenantSwitchDestination,
+} from '../nav/context-destination';
+import { confirmDiscardIfDirty } from '../nav/unsaved-changes';
 
 export type PortalContextStripProps = {
   tenants: MeTenantItem[];
@@ -28,11 +34,28 @@ export function PortalContextStrip({
 }: PortalContextStripProps) {
   const { t } = usePortalLocale();
   const router = useRouter();
+  const pathname = usePathname();
   const selectableTenants = tenants.filter((tenant) =>
     firstAllowedTenantPath(tenant, events),
   );
   const selectableEvents = tenantEvents.filter((event) =>
     firstAllowedEventPath(event),
+  );
+  const activeTenant = tenants.find(
+    (item) => item.tenantId === resolvedTenantId,
+  );
+  const canClearEvent = Boolean(
+    activeTenant &&
+    (canAccessTenantRoute(
+      'overview',
+      activeTenant.tenantPermissions,
+      tenantEvents.map((event) => event.permissions),
+    ) ||
+      canAccessTenantRoute(
+        'analytics',
+        activeTenant.tenantPermissions,
+        tenantEvents.map((event) => event.permissions),
+      )),
   );
 
   const tenantLabelId = 'portal-context-tenant-label';
@@ -61,8 +84,15 @@ export function PortalContextStrip({
             onChange={(value) => {
               const tenant = tenants.find((item) => item.tenantId === value);
               const destination =
-                tenant && firstAllowedTenantPath(tenant, events);
-              if (destination) router.push(destination);
+                tenant && tenantSwitchDestination(pathname, tenant, events);
+              if (
+                destination &&
+                confirmDiscardIfDirty(t('shell.unsaved.confirm'))
+              ) {
+                if (!destination.preserved)
+                  void message.info(t('shell.context.fallback'));
+                router.push(destination.path);
+              }
             }}
             disabled={selectableTenants.length === 0}
             data-testid="tenant-switcher"
@@ -92,20 +122,36 @@ export function PortalContextStrip({
                 const event = tenantEvents.find(
                   (item) => item.eventId === value,
                 );
-                const destination = event && firstAllowedEventPath(event);
-                if (destination) router.push(destination);
+                const destination =
+                  event && eventSwitchDestination(pathname, event);
+                if (
+                  destination &&
+                  confirmDiscardIfDirty(t('shell.unsaved.confirm'))
+                ) {
+                  if (!destination.preserved)
+                    void message.info(t('shell.context.fallback'));
+                  router.push(destination.path);
+                }
               }
             }}
             disabled={!resolvedTenantId || selectableEvents.length === 0}
             data-testid="event-switcher"
-            allowClear
+            allowClear={canClearEvent}
             onClear={() => {
-              const tenant = tenants.find(
-                (item) => item.tenantId === resolvedTenantId,
-              );
-              const destination =
-                tenant && firstAllowedTenantPath(tenant, tenantEvents);
-              if (destination) router.push(destination);
+              if (
+                !activeTenant ||
+                !confirmDiscardIfDirty(t('shell.unsaved.confirm'))
+              )
+                return;
+              const base = `/t/${activeTenant.tenantId}`;
+              const destination = canAccessTenantRoute(
+                'overview',
+                activeTenant.tenantPermissions,
+                tenantEvents.map((event) => event.permissions),
+              )
+                ? base
+                : `${base}/analytics`;
+              router.push(destination);
             }}
           />
         </div>

@@ -18,6 +18,10 @@ import { useEventAccess } from '../../../../../../src/prep/use-event-access';
 import { SurfaceState } from '../../../../../../src/components/surface-state';
 import { usePortalLocale } from '../../../../../../src/i18n';
 import { canPerformEventAction } from '../../../../../../src/nav/capability-policy';
+import {
+  confirmDiscardIfDirty,
+  useUnsavedChanges,
+} from '../../../../../../src/nav/unsaved-changes';
 
 export default function TicketTypesPage() {
   const { t } = usePortalLocale();
@@ -33,6 +37,8 @@ export default function TicketTypesPage() {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [dirty, setDirty] = useState(false);
+  useUnsavedChanges(dirty, t('shell.unsaved.confirm'));
 
   const load = useCallback(
     async (next?: string | null) => {
@@ -207,7 +213,13 @@ export default function TicketTypesPage() {
       <ModalForm<{ label: string }>
         title={t('types.h_1caa9m7')}
         open={open && canCreateType}
-        onOpenChange={setOpen}
+        onOpenChange={(next) => {
+          if (!next && !confirmDiscardIfDirty(t('shell.unsaved.confirm')))
+            return;
+          setOpen(next);
+          if (!next) setDirty(false);
+        }}
+        onValuesChange={() => setDirty(true)}
         modalProps={{ destroyOnHidden: true }}
         submitter={{ submitButtonProps: { loading: busy } }}
         onFinish={async (values) => {
@@ -224,6 +236,7 @@ export default function TicketTypesPage() {
               return false;
             }
             if (res.status === 200 || res.status === 201) {
+              setDirty(false);
               setNotice(t('types.h_13e0npu'));
               void load(null);
               return true;

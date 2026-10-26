@@ -167,7 +167,12 @@ export function PortalProLayout({
         effectiveEventId={effectiveEventId}
         showGateScanHint={Boolean(caps?.showGateScanHint)}
       />
-      <div id="portal-main" tabIndex={-1} className="portal-main-surface">
+      <div
+        id="portal-main"
+        key={pathname}
+        tabIndex={-1}
+        className="portal-main-surface"
+      >
         <PortalDualRunBanner productOrigin={productOrigin} />
         {activeTenant?.status === 'SUSPENDED' ? (
           <SurfaceState kind="suspended" />
