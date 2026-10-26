@@ -37,6 +37,8 @@ import { usePortalLocale } from '../../../../src/i18n';
 import { SURFACE_MESSAGE_KEYS } from '../../../../src/prep/surface-copy';
 import { useUnsavedChanges } from '../../../../src/nav/unsaved-changes';
 import { SavedViewsToolbar } from '../../../../src/views';
+import { useMutationIntent } from '../../../../src/client/use-mutation-intent';
+import { MutationIntentAlert } from '../../../../src/client/mutation-intent-alert';
 import {
   SYSTEM_MEMBERSHIP_ROLES,
   asRolePresetItems,
@@ -67,6 +69,9 @@ export default function MembersPage() {
   const [message, setMessage] = useState<string | undefined>();
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const inviteIntent = useMutationIntent(tenantId, undefined, 'invite-member');
+  const revokeMemberIntent = useMutationIntent(tenantId, undefined, 'revoke-member');
+  const revokeInviteIntent = useMutationIntent(tenantId, undefined, 'revoke-invite');
   const [dirty, setDirty] = useState(false);
   useUnsavedChanges(dirty, t('shell.unsaved.confirm'));
   const [roleFilter, setRoleFilter] = useState<MembershipRole | undefined>();
@@ -276,7 +281,6 @@ export default function MembersPage() {
       const body: Record<string, unknown> = {
         email: values.email.trim(),
         role,
-        idempotencyKey: crypto.randomUUID(),
       };
       const eventId = values.eventId?.trim();
       if (eventId) {
@@ -284,7 +288,12 @@ export default function MembersPage() {
           { eventId, role: values.eventRole ?? 'Manager' },
         ];
       }
-      const res = await portalMutate(bffInvites(tenantId), body);
+      const outcome = await inviteIntent.run(body, (request) => portalMutate(bffInvites(tenantId), request));
+      if (outcome.kind === 'blocked') {
+        setNotice('Lời mời trước chưa rõ kết quả. Kiểm tra danh sách lời mời trước khi tiếp tục.');
+        return;
+      }
+      const res = outcome.response;
       if (res.networkError || res.timedOut || res.status >= 500) {
         setNotice(t('members.h_aa8wpg'));
         return;
@@ -365,13 +374,16 @@ export default function MembersPage() {
       okButtonProps: { danger: true },
       cancelText: t('config.huy'),
       onOk: async () => {
-        const res = await portalMutate(
-          bffRevokeMember(tenantId, membershipId),
-          {
-            reason: t('members.h_tzdfji'),
-            idempotencyKey: crypto.randomUUID(),
-          },
+        const outcome = await revokeMemberIntent.run(
+          { membershipId, reason: t('members.h_tzdfji') },
+          (body) => portalMutate(bffRevokeMember(tenantId, membershipId),
+            { reason: body.reason, idempotencyKey: body.idempotencyKey }),
         );
+        if (outcome.kind === 'blocked') {
+          setNotice('Thu hồi thành viên trước chưa rõ kết quả. Kiểm tra danh sách thành viên.');
+          return;
+        }
+        const res = outcome.response;
         if (res.status >= 200 && res.status < 300) {
           setNotice(t('members.h_o8fp08'));
           void reload();
@@ -394,10 +406,16 @@ export default function MembersPage() {
       okButtonProps: { danger: true },
       cancelText: t('config.huy'),
       onOk: async () => {
-        const res = await portalMutate(bffRevokeInvite(tenantId, inviteId), {
-          reason: t('members.h_1p47lt5'),
-          idempotencyKey: crypto.randomUUID(),
-        });
+        const outcome = await revokeInviteIntent.run(
+          { inviteId, reason: t('members.h_1p47lt5') },
+          (body) => portalMutate(bffRevokeInvite(tenantId, inviteId),
+            { reason: body.reason, idempotencyKey: body.idempotencyKey }),
+        );
+        if (outcome.kind === 'blocked') {
+          setNotice('Thu hồi lời mời trước chưa rõ kết quả. Kiểm tra danh sách lời mời.');
+          return;
+        }
+        const res = outcome.response;
         if (res.status >= 200 && res.status < 300) {
           setNotice(t('members.h_2cjh4e'));
           void reload();
@@ -511,6 +529,12 @@ export default function MembersPage() {
       ) : null}
 
       {notice ? <Alert type="info" showIcon message={notice} /> : null}
+      <MutationIntentAlert pending={inviteIntent.pending} needsReconciliation={inviteIntent.needsReconciliation}
+        onCheck={() => void reload()} onStartNew={inviteIntent.release} />
+      <MutationIntentAlert pending={revokeMemberIntent.pending} needsReconciliation={revokeMemberIntent.needsReconciliation}
+        onCheck={() => void reload()} onStartNew={revokeMemberIntent.release} />
+      <MutationIntentAlert pending={revokeInviteIntent.pending} needsReconciliation={revokeInviteIntent.needsReconciliation}
+        onCheck={() => void reload()} onStartNew={revokeInviteIntent.release} />
 
       <SavedViewsToolbar
         tenantId={tenantId}

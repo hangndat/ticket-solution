@@ -28,6 +28,8 @@ import {
   bffRolePresets,
 } from '../../../src/prep/bff-urls';
 import { usePortalUserId } from '../../../src/views/use-portal-user-id';
+import { useMutationIntent } from '../../../src/client/use-mutation-intent';
+import { MutationIntentAlert } from '../../../src/client/mutation-intent-alert';
 
 type Branding = {
   displayName: string;
@@ -65,6 +67,7 @@ export default function TenantOnboardingPage() {
   const [mode, setMode] = useState<PageMode>({ kind: 'loading' });
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const inviteIntent = useMutationIntent(tenantId, undefined, 'first-run-invite-manager');
   const [presets, setPresets] = useState<RolePresetDto[]>([]);
   const [branding, setBranding] = useState<Branding | null>(null);
   const [orgForm] = Form.useForm<{ displayName: string; primaryColor: string }>();
@@ -248,11 +251,15 @@ export default function TenantOnboardingPage() {
       } else if (roleKey.startsWith('role:')) {
         role = roleKey.slice('role:'.length);
       }
-      const res = await portalMutate(bffInvites(tenantId), {
+      const outcome = await inviteIntent.run({
         email: values.email.trim(),
         role,
-        idempotencyKey: crypto.randomUUID(),
-      });
+      }, (body) => portalMutate(bffInvites(tenantId), body));
+      if (outcome.kind === 'blocked') {
+        setNotice('Lời mời trước chưa rõ kết quả. Kiểm tra danh sách lời mời trước khi tiếp tục.');
+        return;
+      }
+      const res = outcome.response;
       if (res.networkError || res.timedOut || res.status >= 500) {
         setNotice(t('onboarding.firstRun.inviteUnknown'));
         return;
@@ -398,6 +405,8 @@ export default function TenantOnboardingPage() {
         {notice ? (
           <Alert type="error" showIcon message={notice} role="alert" />
         ) : null}
+        <MutationIntentAlert pending={inviteIntent.pending} needsReconciliation={inviteIntent.needsReconciliation}
+          onCheck={() => void reload()} onStartNew={inviteIntent.release} />
 
         {current === 0 ? (
           <Space direction="vertical" style={{ width: '100%' }}>
