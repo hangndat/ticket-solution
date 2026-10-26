@@ -48,8 +48,8 @@ Locale (`usePortalLocale`), permission (`useTenantAccess`, `canPerformTenantActi
 
 | Trường | Giá trị |
 | --- | --- |
-| **codeSha** | _(cập nhật sau commit)_ |
-| **evidenceSha** | _(cùng codeSha)_ |
+| **codeSha** | `02522b5ab86e87e2696ab1b400e177781fa57851` |
+| **evidenceSha** | `02522b5ab86e87e2696ab1b400e177781fa57851` |
 
 ## Verdict worker
 
