@@ -1,6 +1,6 @@
 import type { EventConfigPayload } from '@ticket/contracts';
 
-/** Minimal allowlisted draft for brand/config PREP (no HTML). */
+/** Fixed-schema first draft for brand/config PREP (no HTML). */
 export function buildMinimalConfigPayload(input: {
   organizationName: string;
   primaryColor: string;
@@ -22,6 +22,34 @@ export function buildMinimalConfigPayload(input: {
         visible: true,
         order: 0,
         body: { title: input.organizationName.trim() || 'Sự kiện' },
+      },
+      {
+        kind: 'info',
+        id: 'info-1',
+        visible: false,
+        order: 1,
+        body: { title: 'Thông tin' },
+      },
+      {
+        kind: 'redeem',
+        id: 'redeem-1',
+        visible: false,
+        order: 2,
+        body: { title: 'Nhận vé' },
+      },
+      {
+        kind: 'guide',
+        id: 'guide-1',
+        visible: false,
+        order: 3,
+        body: { title: 'Hướng dẫn' },
+      },
+      {
+        kind: 'faq',
+        id: 'faq-1',
+        visible: false,
+        order: 4,
+        body: { title: 'FAQ', items: [] },
       },
       {
         kind: 'terms',

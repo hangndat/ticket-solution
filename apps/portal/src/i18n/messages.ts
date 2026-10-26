@@ -7,7 +7,8 @@ import type { PortalLocale } from './locale';
 export const VI = {
   'account.h_11eq8uu': 'Đăng xuất portal (staff)',
   'account.h_17x4t4d': 'Phiên Platform Operator',
-  'account.h_19guouj': 'Đăng xuất từng bề mặt riêng (ADR-20). Đăng xuất portal không xóa cookie Platform Operator và ngược lại.',
+  'account.h_19guouj':
+    'Đăng xuất từng bề mặt riêng (ADR-20). Đăng xuất portal không xóa cookie Platform Operator và ngược lại.',
   'account.h_1a6mmbo': 'Đang hoạt động',
   'account.h_1cuqgz1': 'Không có',
   'account.h_1med0c4': 'Operator (audience riêng)',
@@ -33,27 +34,33 @@ export const VI = {
   'audit.filter.actionOptional': 'action (tuỳ chọn)',
   'audit.h_1psplgo': 'Mã tồn kho',
   'audit.h_pug8u': 'Nhật ký',
-  'auth.error.accessDenied': 'Bạn đã từ chối ủy quyền tại nhà cung cấp danh tính.',
+  'auth.error.accessDenied':
+    'Bạn đã từ chối ủy quyền tại nhà cung cấp danh tính.',
   'auth.error.notAllowed':
     'Keycloak từ chối đăng nhập (not_allowed). Thường do scope offline_access khi client chưa bật refresh token dài — dùng OIDC_SCOPES=openid profile email (xem apps/portal/.env.example). Local: staff@example.com / staff-demo sau khi API :3100 và Keycloak :8080 chạy.',
   'auth.error.generic': 'Lỗi: {{error}}',
   'auth.h_179sno0': 'Không đổi được mã ủy quyền. Thử đăng nhập lại.',
   'auth.h_18eyu7o': 'Thử đăng nhập lại',
-  'auth.h_1dyukbi': 'Đăng nhập nhân sự qua nhà cung cấp danh tính. Không dùng phiên khách (app) trên portal.',
+  'auth.h_1dyukbi':
+    'Đăng nhập nhân sự qua nhà cung cấp danh tính. Không dùng phiên khách (app) trên portal.',
   'auth.h_1g2rg2o': 'Đăng nhập nhân sự',
   'auth.h_1l6yc4c': 'OIDC chưa cấu hình trên portal — không thể đăng nhập.',
   'auth.h_1tfddzd': 'Phiên đăng nhập không hợp lệ (state/PKCE). Thử lại.',
   'auth.h_85v7iu': 'Đăng nhập không thành công',
   'auth.h_w7m30b': 'Cookie phiên chỉ thuộc portal — không chia sẻ với app.',
-  'common.apiForbiddenResend': '{{code}}: không có quyền trên tenant/event này — không gửi lại email.',
+  'common.apiForbiddenResend':
+    '{{code}}: không có quyền trên tenant/event này — không gửi lại email.',
   'common.cloneName': '{{name}} (bản sao)',
   'common.h_1bzxqwd': 'Chưa có sự kiện được gán trong khám phá.',
   'common.h_1cdrhuc': 'Chưa tải được báo cáo — không giả định số liệu xanh.',
-  'common.h_1d5xf37': 'Chưa rõ kết quả xuất bản — không đánh dấu thành công. Kiểm tra lại.',
+  'common.h_1d5xf37':
+    'Chưa rõ kết quả xuất bản — không đánh dấu thành công. Kiểm tra lại.',
   'common.h_1hj59zg': 'Chưa rõ kết quả tải sự kiện.',
   'common.h_1iov4lt': 'mở Cổng (report)',
-  'common.h_1lb5yey': 'Xuất bản nội dung không tự mở cửa sổ redeem cho khách và không bật cổng quét. Gate scan vẫn trên app.vemoki.com.',
-  'common.h_1nl7gld': 'Xuất bản cấu hình không mở redeem cho khách và không thay cổng quét. Soát vé staff chỉ trên app Vemoki (iPhone).',
+  'common.h_1lb5yey':
+    'Xuất bản nội dung không tự mở cửa sổ redeem cho khách và không bật cổng quét. Gate scan vẫn trên app.vemoki.com.',
+  'common.h_1nl7gld':
+    'Xuất bản cấu hình không mở redeem cho khách và không thay cổng quét. Soát vé staff chỉ trên app Vemoki (iPhone).',
   'common.h_1pfzepi': 'Đi tới hỗ trợ CS',
   'common.h_1rsax7j': 'Sự kiện không nằm trong khám phá máy chủ của bạn.',
   'common.h_1t15e7z': 'Nghiệp vụ',
@@ -67,10 +74,12 @@ export const VI = {
   'common.h_qqix4u': 'Config đã publish',
   'common.h_wa3fk5': 'Đi tới chờ duyệt',
   'common.h_wqd4fq': 'Hiển thị',
-  'common.h_yw94nu': 'Tổ chức không tồn tại trong khám phá của bạn hoặc thiếu quyền quản trị.',
+  'common.h_yw94nu':
+    'Tổ chức không tồn tại trong khám phá của bạn hoặc thiếu quyền quản trị.',
   'common.httpStatus': 'HTTP {{status}}',
   'common.loginRequired': '(đăng nhập bắt buộc)',
-  'common.mappedStatus': '{{status}} (trạng thái chưa map — không khẳng định đã giao)',
+  'common.mappedStatus':
+    '{{status}} (trạng thái chưa map — không khẳng định đã giao)',
   'common.mo': 'Mở',
   'common.pagination.more': '(còn trang)',
   'common.pagination.moreAfter': '· còn trang sau',
@@ -156,7 +165,8 @@ export const VI = {
   'config.h_19gwi7d': 'Xuất bản tip',
   'config.h_1b1xmvu': 'Chưa rõ kết quả publish.',
   'config.h_1c1wh3g': 'Tạo lúc',
-  'config.h_1djtg5w': 'Rollback tạo version mới (append-only), không rewind lịch sử. Cần xác nhận.',
+  'config.h_1djtg5w':
+    'Rollback tạo version mới (append-only), không rewind lịch sử. Cần xác nhận.',
   'config.h_1ec27qs': 'Đã publish cấu hình.',
   'config.h_1eg9ac0': 'Thiếu revision hoặc published version để rollback.',
   'config.h_1fbsj7r': 'Màu chính',
@@ -166,7 +176,8 @@ export const VI = {
   'config.h_1xteu8h': 'Chưa rõ kết quả rollback.',
   'config.h_1ylm4kq': 'Chưa có phiên bản để xuất bản — lưu draft trước.',
   'config.h_6ccvfx': 'Điều khoản (plain text)',
-  'config.h_bji8yr': 'Lưu draft và publish khóa nội dung sự kiện. Không mở cửa sổ redeem khách và không bật cổng quét trên portal.',
+  'config.h_bji8yr':
+    'Lưu draft và publish khóa nội dung sự kiện. Không mở cửa sổ redeem khách và không bật cổng quét trên portal.',
   'config.h_ez5uf1': 'Publish thất bại.',
   'config.h_g7fjbz': 'Không có quyền sự kiện này.',
   'config.h_gyyhq3': 'Publish ≠ redeem ≠ Gate',
@@ -176,45 +187,68 @@ export const VI = {
   'config.h_ve7ob6': 'Thiếu brand tối thiểu hoặc điều khoản.',
   'config.h_wotjs8': 'Rollback về đây',
   'config.huy': 'Huỷ',
-  'config.publishConfirm': 'Sẽ publish version {{version}}. Không tự mở redeem/Gate.',
+  'config.publishConfirm':
+    'Sẽ publish version {{version}}. Không tự mở redeem/Gate.',
   'config.publishFailedStatus': 'Publish thất bại ({{status}}).',
+  'config.latestCheckFailed':
+    'Chưa kiểm tra được phiên bản mới nhất. Chưa lưu bản nháp; thử lại sau.',
+  'config.versionConflict':
+    'Cấu hình đã có phiên bản mới. Bản nháp của bạn chưa được lưu.',
+  'config.reloadDiscard':
+    'Tải lại phiên bản mới nhất sẽ bỏ các thay đổi chưa lưu trên biểu mẫu này.',
+  'config.reloadLatest': 'Tải lại phiên bản mới nhất',
+  'config.previewAction': 'Xem trước',
+  'config.previewTitle': 'Xem trước bản đã lưu v{{version}}',
+  'config.previewSections': '{{count}} mục nội dung',
+  'config.previewLoadFailed':
+    'Chưa tải được bản xem trước đúng phiên bản. Thử tải lại.',
+  'config.invalidColor': 'Nhập màu dạng #RGB hoặc #RRGGBB.',
   'config.rollbackConfirm': 'Rollback về version {{targetVersion}}?',
-  'dualRun.h_16lfg67': 'Portal và legacy admin trên app đang chạy song song. Redirect app→portal mặc định tắt. Soát vé staff chỉ trên app Vemoki (iPhone). Legacy: ',
-  'dualRun.h_16lfg67_2': 'Portal và legacy admin trên app đang chạy song song. Redirect app→portal mặc định tắt. Soát vé staff chỉ trên app Vemoki (iPhone). Legacy: ',
+  'dualRun.h_16lfg67':
+    'Portal và legacy admin trên app đang chạy song song. Redirect app→portal mặc định tắt. Soát vé staff chỉ trên app Vemoki (iPhone). Legacy: ',
+  'dualRun.h_16lfg67_2':
+    'Portal và legacy admin trên app đang chạy song song. Redirect app→portal mặc định tắt. Soát vé staff chỉ trên app Vemoki (iPhone). Legacy: ',
   'dualRun.h_ekkubx': 'Chế độ dual-run (local / prep)',
   'dualRun.h_l9n5m3': '. Không DNS/deploy prod từ banner này.',
   'events.archive.failed': 'Archive thất bại.',
-  'events.archive.hint': 'Archive đổi contentStatus — không mở/đóng Gate và không thu hồi vé đã phát.',
+  'events.archive.hint':
+    'Archive đổi contentStatus — không mở/đóng Gate và không thu hồi vé đã phát.',
   'events.h_13e7ycb': 'Slug chỉ gồm a-z, 0-9 và dấu gạch ngang',
   'events.h_1dipstx': 'Địa chỉ',
   'events.h_1gq5nm': 'Địa điểm / liên hệ',
   'events.h_1o08rig': 'Xác nhận tạo',
   'events.h_1ognyxu': 'Thiếu quyền tạo sự kiện (event.create).',
   'events.h_1q9os0g': 'Xác nhận',
-  'events.h_1qeuedv': 'Sự kiện mới ở trạng thái DRAFT. Publish cấu hình ≠ mở redeem ≠ mở Gate quét.',
+  'events.h_1qeuedv':
+    'Sự kiện mới ở trạng thái DRAFT. Publish cấu hình ≠ mở redeem ≠ mở Gate quét.',
   'events.h_1x97hc6': 'Tên sự kiện',
   'events.h_1xl1825': 'Nhập slug',
   'events.h_1xm22zn': 'Email liên hệ',
   'events.h_1xuhi5j': 'Thiếu quyền xem sự kiện của tổ chức này.',
   'events.h_1y0cdxe': 'Cơ bản',
-  'events.h_5zs7cf': 'Tổ chức đã chọn từ ngữ cảnh route — không cần dán UUID tenant.',
-  'events.h_74jvni': 'Máy chủ trả về thành công nhưng thiếu eventId — chưa rõ sự kiện mới.',
+  'events.h_5zs7cf':
+    'Tổ chức đã chọn từ ngữ cảnh route — không cần dán UUID tenant.',
+  'events.h_74jvni':
+    'Máy chủ trả về thành công nhưng thiếu eventId — chưa rõ sự kiện mới.',
   'events.h_8g8c9u': 'Múi giờ',
   'events.h_b8z0sy': 'Tên địa điểm',
-  'events.h_byq509': 'Chưa rõ kết quả tải danh sách sự kiện. Không giả định danh sách trống.',
+  'events.h_byq509':
+    'Chưa rõ kết quả tải danh sách sự kiện. Không giả định danh sách trống.',
   'events.h_ek93o2': 'Tạo sự kiện',
   'events.h_ekk31m': 'Thiếu quyền tổ chức.',
   'events.h_hnm91l': 'Không tạo được sự kiện.',
   'events.h_j7agy6': 'Phản hồi danh sách không đúng schema — chưa rõ.',
   'events.h_jq4yo3': 'Nhập tên sự kiện',
-  'events.h_npdcvo': 'Chưa rõ kết quả tạo sự kiện. Không coi là đã tạo — kiểm tra lại danh sách.',
+  'events.h_npdcvo':
+    'Chưa rõ kết quả tạo sự kiện. Không coi là đã tạo — kiểm tra lại danh sách.',
   'events.h_o2hfl2': 'Không có quyền xem danh sách sự kiện.',
   'events.h_rft49v': 'Quay lại',
   'events.h_rpomry': 'Đã tạo sự kiện. Đang chuyển tới tổng quan…',
   'events.h_ssqyjm': 'Chưa có sự kiện.',
   'events.new.tiep': 'Tiếp',
   'events.ticketDetailTitle': 'Chi tiết vé {{ticketId}}.',
-  'events.ticketIssuedEmail': 'Vé {{ticketId}} đã được cấp cho sự kiện {{eventName}}.',
+  'events.ticketIssuedEmail':
+    'Vé {{ticketId}} đã được cấp cho sự kiện {{eventName}}.',
   'events.ticketIssuedTitle': 'Vé đã cấp — {{eventName}}',
   'gate.h_1klnels': 'Cổng — báo cáo (O12)',
   'gate.h_1n09r0f': 'Đi tới duyệt khách và mã đang chờ',
@@ -225,11 +259,14 @@ export const VI = {
   'gate.h_cq4fvf': 'Quét vé chỉ trên app — không gắn camera trên portal.',
   'gate.h_icax5j': 'Email cần CS',
   'gate.h_iosgib': 'Không có quyền báo cáo cổng',
-  'gate.needReportRead': 'Cần report.read từ máy chủ — không suy từ gate.confirm / Scanner.',
+  'gate.needReportRead':
+    'Cần report.read từ máy chủ — không suy từ gate.confirm / Scanner.',
   'gate.reportQuickTitle': 'Báo cáo nhanh (O12)',
   'gateDeeplink.h_4pqjik': 'Mở cổng quét trên app',
-  'gateDeeplink.h_9xk8eh': 'Soát vé bằng app Vemoki trên iPhone — không quét trên portal. Portal chỉ hiển thị báo cáo khi máy chủ cấp quyền báo cáo sự kiện.',
-  'gateDeeplink.h_9xk8eh_2': 'Soát vé bằng app Vemoki trên iPhone — không quét trên portal. Portal chỉ hiển thị báo cáo khi máy chủ cấp quyền báo cáo sự kiện.',
+  'gateDeeplink.h_9xk8eh':
+    'Soát vé bằng app Vemoki trên iPhone — không quét trên portal. Portal chỉ hiển thị báo cáo khi máy chủ cấp quyền báo cáo sự kiện.',
+  'gateDeeplink.h_9xk8eh_2':
+    'Soát vé bằng app Vemoki trên iPhone — không quét trên portal. Portal chỉ hiển thị báo cáo khi máy chủ cấp quyền báo cáo sự kiện.',
   'gateDeeplink.h_iosHint': 'Soát vé bằng app Vemoki trên iPhone',
   'gateDeeplink.h_k7571i': '— không gắn camera trên portal.',
   'guests.approvalMode': 'Chế độ duyệt',
@@ -241,9 +278,11 @@ export const VI = {
   'guests.pendingTitle': 'Chờ duyệt',
   'guests.pendingTabLabel': 'Chờ',
   'guests.notificationsTabLabel': 'TB',
-  'home.h_1g841dv': 'Tài khoản đã đăng nhập nhưng chưa được gán vào tổ chức nào. Liên hệ chủ tổ chức để nhận lời mời nhân sự (portal), không dùng luồng khách trên app.',
+  'home.h_1g841dv':
+    'Tài khoản đã đăng nhập nhưng chưa được gán vào tổ chức nào. Liên hệ chủ tổ chức để nhận lời mời nhân sự (portal), không dùng luồng khách trên app.',
   'home.h_cb3p8s': 'Xem phiên đăng nhập',
-  'home.noOrgBody': 'Tài khoản đã đăng nhập nhưng chưa được gán vào tổ chức nào. Liên hệ chủ tổ chức để nhận lời mời nhân sự (portal), không dùng luồng khách trên app.',
+  'home.noOrgBody':
+    'Tài khoản đã đăng nhập nhưng chưa được gán vào tổ chức nào. Liên hệ chủ tổ chức để nhận lời mời nhân sự (portal), không dùng luồng khách trên app.',
   'locale.en': 'English',
   'locale.label': 'Ngôn ngữ',
   'locale.vi': 'Tiếng Việt',
@@ -259,26 +298,33 @@ export const VI = {
   'members.h_47dn03': 'Gửi lời mời',
   'members.h_5ptlts': 'Thiếu quyền members.manage.',
   'members.h_7tkx6u': 'Không thu hồi được thành viên.',
-  'members.h_aa8wpg': 'Chưa rõ kết quả gửi lời mời. Không coi là đã gửi — kiểm tra lại.',
+  'members.h_aa8wpg':
+    'Chưa rõ kết quả gửi lời mời. Không coi là đã gửi — kiểm tra lại.',
   'members.h_aeura8': 'Thu hồi lời mời?',
   'members.h_d390z8': 'Thiếu quyền quản lý thành viên (members.manage).',
   'members.h_i0adgn': 'Thành viên & lời mời',
-  'members.h_kwv0j7': 'Email được che (masked). Vai trò theo allowlist máy chủ — không gửi quyền tùy ý. Gán sự kiện: chọn từ danh sách đã khám phá, tránh dán UUID tay.',
-  'members.h_ltgqwp': 'Yêu cầu tiếp theo của thành viên sẽ bị chặn. Không khẳng định đã xóa phiên trên mọi thiết bị.',
+  'members.h_kwv0j7':
+    'Email được che (masked). Vai trò theo allowlist máy chủ — không gửi quyền tùy ý. Gán sự kiện: chọn từ danh sách đã khám phá, tránh dán UUID tay.',
+  'members.h_ltgqwp':
+    'Yêu cầu tiếp theo của thành viên sẽ bị chặn. Không khẳng định đã xóa phiên trên mọi thiết bị.',
   'members.h_o8fp08': 'Đã thu hồi thành viên.',
-  'members.h_oiatvx': 'Chưa rõ kết quả tải thành viên/lời mời. Không giả định danh sách trống.',
+  'members.h_oiatvx':
+    'Chưa rõ kết quả tải thành viên/lời mời. Không giả định danh sách trống.',
   'members.h_ov3797': 'Hết hạn',
   'members.h_r0iic4': 'Sự kiện gán',
   'members.h_suvvlr': 'Chưa rõ kết quả thu hồi — kiểm tra lại.',
   'members.h_tzdfji': 'Owner revoke từ portal staff directory',
   'members.h_xg2gwp': 'Đã tạo lời mời (ACCEPTED ≠ đã giao email).',
-  'members.inviteEventsHint': 'Email được che (masked). Vai trò theo allowlist máy chủ — không gửi quyền tùy ý. Gán sự kiện: chọn từ danh sách đã khám phá, tránh dán UUID tay.',
+  'members.inviteEventsHint':
+    'Email được che (masked). Vai trò theo allowlist máy chủ — không gửi quyền tùy ý. Gán sự kiện: chọn từ danh sách đã khám phá, tránh dán UUID tay.',
   'members.invitesCount': 'Lời mời ({{count}})',
   'members.membersCount': 'Thành viên ({{count}})',
-  'members.roles.assignBuiltInOnly': 'Gán lại thành viên hiện tại chỉ hỗ trợ role-map hệ thống (PATCH). Mời mới có thể chọn named server preset.',
+  'members.roles.assignBuiltInOnly':
+    'Gán lại thành viên hiện tại chỉ hỗ trợ role-map hệ thống (PATCH). Mời mới có thể chọn named server preset.',
   'members.roles.assignCta': 'Gán vai trò',
   'members.roles.assignTitle': 'Gán vai trò hệ thống',
-  'members.roles.catalogHint': 'Role-map cố định và named server presets — không có ma trận checkbox quyền tùy ý.',
+  'members.roles.catalogHint':
+    'Role-map cố định và named server presets — không có ma trận checkbox quyền tùy ý.',
   'members.roles.changeFailed': 'Không đổi được vai trò.',
   'members.roles.changeOk': 'Đã cập nhật vai trò.',
   'members.roles.changeReason': 'Đổi vai trò từ portal (P2-ROLES-PRESET)',
@@ -290,20 +336,26 @@ export const VI = {
   'members.roles.colUpdated': 'Cập nhật',
   'members.roles.groupPreset': 'Preset máy chủ',
   'members.roles.groupSystem': 'Role-map hệ thống',
-  'members.roles.invalidRole': 'Vai trò không hợp lệ — chỉ MembershipRole hoặc preset máy chủ.',
+  'members.roles.invalidRole':
+    'Vai trò không hợp lệ — chỉ MembershipRole hoặc preset máy chủ.',
   'members.roles.kindPreset': 'Preset',
   'members.roles.kindSystem': 'Hệ thống',
-  'members.roles.lastOwnerBody': 'Tổ chức phải giữ ít nhất một Owner đang hoạt động (LAST_OWNER_REQUIRED).',
+  'members.roles.lastOwnerBody':
+    'Tổ chức phải giữ ít nhất một Owner đang hoạt động (LAST_OWNER_REQUIRED).',
   'members.roles.lastOwnerTitle': 'Không thể gỡ Owner cuối',
   'members.roles.noPermList': 'Máy chủ không trả danh sách quyền cho hàng này.',
   'members.roles.pickPlaceholder': 'Vai trò / preset',
   'members.roles.pickRequired': 'Chọn vai trò hoặc preset',
-  'members.roles.presetMissingBody': 'Preset ngoài catalog hoặc không thuộc tenant — không silent strip.',
+  'members.roles.presetMissingBody':
+    'Preset ngoài catalog hoặc không thuộc tenant — không silent strip.',
   'members.roles.presetMissingTitle': 'Preset không có trong catalog',
-  'members.roles.presetReadonly': 'Preset «{{name}}» (schema {{version}}) — quyền chỉ đọc từ máy chủ.',
+  'members.roles.presetReadonly':
+    'Preset «{{name}}» (schema {{version}}) — quyền chỉ đọc từ máy chủ.',
   'members.roles.save': 'Lưu',
-  'members.roles.serverDefinedAlert': 'Quyền do máy chủ định nghĩa theo preset; không chỉnh từng quyền trên portal.',
-  'members.roles.systemMapHint': 'Role-map hệ thống — quyền do máy chủ materialize; không tick trên portal.',
+  'members.roles.serverDefinedAlert':
+    'Quyền do máy chủ định nghĩa theo preset; không chỉnh từng quyền trên portal.',
+  'members.roles.systemMapHint':
+    'Role-map hệ thống — quyền do máy chủ materialize; không tick trên portal.',
   'members.tabInvites': 'Lời mời ({{count}})',
   'members.tabRoles': 'Vai trò',
   'members.tabUsers': 'Người dùng ({{count}})',
@@ -329,37 +381,52 @@ export const VI = {
   'nav.org.settings': 'Cấu hình',
   'notify.acceptedDelimitedFilters':
     'Đã chấp nhận từ nhà cung cấp không đồng nghĩa khách đã nhận email — lọc theo trạng thái gửi.',
-  'notify.acceptedLegend': 'ACCEPTED chỉ nghĩa nhà cung cấp đã nhận — không chứng minh đã giao tới người nhận. Lọc state/channel optional (omit = legacy).',
+  'notify.acceptedLegend':
+    'ACCEPTED chỉ nghĩa nhà cung cấp đã nhận — không chứng minh đã giao tới người nhận. Lọc state/channel optional (omit = legacy).',
   'notify.acceptedNotDelivered': 'ACCEPTED (≠ delivered)',
-  'notify.acceptedProviderHint': 'ACCEPTED (nhà cung cấp nhận — ≠ đã giao tới người nhận)',
-  'ops.audit.capabilityHint': 'Audit = report.read. Codes = inventory.import (masked). Export history không chứa object key / URL ký sẵn. Platform audit nằm ở /platform (Operator riêng).',
-  'ops.audit.filterHint': 'Cần report.read + phân công. Không hiển thị reason / sanitizedDiff / PII. Instant from/to phải có timezone (Z hoặc ±offset).',
-  'ops.audit.needReportReadAssignment': 'Cần report.read + phân công sự kiện — không suy từ tên role.',
+  'notify.acceptedProviderHint':
+    'ACCEPTED (nhà cung cấp nhận — ≠ đã giao tới người nhận)',
+  'ops.audit.capabilityHint':
+    'Audit = report.read. Codes = inventory.import (masked). Export history không chứa object key / URL ký sẵn. Platform audit nằm ở /platform (Operator riêng).',
+  'ops.audit.filterHint':
+    'Cần report.read + phân công. Không hiển thị reason / sanitizedDiff / PII. Instant from/to phải có timezone (Z hoặc ±offset).',
+  'ops.audit.needReportReadAssignment':
+    'Cần report.read + phân công sự kiện — không suy từ tên role.',
   'ops.codes.lookupHint':
     'Chỉ hiển thị thông tin mã an toàn (đã che). Tra cứu theo loại mã có trong danh sách — không nhập mã thô.',
-  'ops.codes.needImport': 'Cần inventory.import + phân công sự kiện — không suy từ tên role.',
-  'ops.cs.listSummary': 'CS: {{count}} kết quả{{pageSuffix}}. PII mặc định đã che.',
+  'ops.codes.needImport':
+    'Cần inventory.import + phân công sự kiện — không suy từ tên role.',
+  'ops.cs.listSummary':
+    'CS: {{count}} kết quả{{pageSuffix}}. PII mặc định đã che.',
   'ops.cs.needLookup': 'Cần quyền cs.lookup từ máy chủ.',
-  'ops.cs.resendLabel': 'CS: đã yêu cầu gửi lại email cho {{ticketId}} (provider=PENDING, replayed={{replayed}}). PENDING ≠ đã giao.',
+  'ops.cs.resendLabel':
+    'CS: đã yêu cầu gửi lại email cho {{ticketId}} (provider=PENDING, replayed={{replayed}}). PENDING ≠ đã giao.',
   'ops.cs.resendQueued':
     'Đã xếp gửi lại · trạng thái {{status}}{{replaySuffix}}. Đã chấp nhận từ nhà cung cấp chưa đồng nghĩa khách đã nhận email.',
   'ops.cs.ticketCount': 'CS: {{count}} vé.',
-  'ops.cs.ticketDetail': 'CS: chi tiết vé {{ticketId}} · {{timelineCount}} timeline · email={{ownerEmailMasked}} · {{delivery}}.',
-  'ops.cs.unknown': 'Kết quả CS chưa biết. Không coi là đã tìm thấy hoặc đã gửi lại email.',
-  'ops.decide.approvedRequest': 'Đã duyệt yêu cầu {{requestId}}.{{replaySuffix}}',
-  'ops.decide.deniedRequest': 'Đã từ chối yêu cầu {{requestId}}.{{replaySuffix}}',
+  'ops.cs.ticketDetail':
+    'CS: chi tiết vé {{ticketId}} · {{timelineCount}} timeline · email={{ownerEmailMasked}} · {{delivery}}.',
+  'ops.cs.unknown':
+    'Kết quả CS chưa biết. Không coi là đã tìm thấy hoặc đã gửi lại email.',
+  'ops.decide.approvedRequest':
+    'Đã duyệt yêu cầu {{requestId}}.{{replaySuffix}}',
+  'ops.decide.deniedRequest':
+    'Đã từ chối yêu cầu {{requestId}}.{{replaySuffix}}',
   'ops.decide.importedCount': 'Đã nhập {{count}} mã. Mã gốc không được lưu.',
-  'ops.decide.publishedVersion': 'Đã publish phiên bản {{version}}. Payload này không sửa được.',
+  'ops.decide.publishedVersion':
+    'Đã publish phiên bản {{version}}. Payload này không sửa được.',
   'ops.decide.quotaSummary': 'Quota event: {{allocated}} / {{capacity}}.',
   'ops.decide.rejectedApi': '{{code}}: {{message}}{{requestIdSuffix}}',
   'ops.decide.replaySuffix': ' Kết quả lặp lại.',
   'ops.decide.requestIdSuffix': ' · requestId {{requestId}}',
   'ops.decide.savedVersion': 'Đã lưu phiên bản {{version}}. Chưa publish.',
-  'ops.decide.unknown': 'Kết quả chưa biết. Không coi là đã lưu, đã publish, đã nhập mã, đã duyệt, hoặc đã từ chối.',
+  'ops.decide.unknown':
+    'Kết quả chưa biết. Không coi là đã lưu, đã publish, đã nhập mã, đã duyệt, hoặc đã từ chối.',
   'ops.export.apiRejected': '{{code}}: {{message}}',
   'ops.export.createButton': 'Tạo export',
   'ops.export.downloadCsv': 'Tải CSV',
-  'ops.export.downloadLabel': 'Export {{exportId}}: đã tải CSV xuống máy ({{contentType}}, {{byteLength}} bytes){{filenameSuffix}}. Không lưu URL dài hạn.',
+  'ops.export.downloadLabel':
+    'Export {{exportId}}: đã tải CSV xuống máy ({{contentType}}, {{byteLength}} bytes){{filenameSuffix}}. Không lưu URL dài hạn.',
   'ops.export.expiresSuffix': ' · hết hạn {{expiresAt}}',
   'ops.export.filterHistory': 'Lọc lịch sử',
   'ops.export.filterHistoryApply': 'Áp dụng bộ lọc lịch sử export',
@@ -367,7 +434,8 @@ export const VI = {
   'ops.export.filterStatusAria': 'Lọc lịch sử theo status',
   'ops.export.historyEmpty': 'Chưa có lịch sử export (hoặc list lỗi).',
   'ops.export.historyLabel': 'Lịch sử export: {{count}} job{{pageSuffix}}.',
-  'ops.export.jobLabel': 'Export {{exportId}}: {{status}}{{rowsSuffix}}{{expiresSuffix}}. Link tải có hạn; READY mới tải được.',
+  'ops.export.jobLabel':
+    'Export {{exportId}}: {{status}}{{rowsSuffix}}{{expiresSuffix}}. Link tải có hạn; READY mới tải được.',
   'ops.export.needCreate': 'Cần export.create',
   'ops.export.needCreateServer': 'Cần export.create từ máy chủ.',
   'ops.export.needDownloadServer': 'Cần export.download từ máy chủ.',
@@ -379,16 +447,19 @@ export const VI = {
   'ops.export.tabLabel': 'Xuất',
   'ops.export.rowsSuffix': ' · {{rowCount}} dòng',
   'ops.export.statusButton': 'Trạng thái',
-  'ops.export.unknown': 'Kết quả export chưa biết. Không coi là đã tạo hoặc đã tải xong.',
+  'ops.export.unknown':
+    'Kết quả export chưa biết. Không coi là đã tạo hoặc đã tải xong.',
   'ops.guests.needPermissions':
     'Cần quyền quản lý khách (nhập, duyệt, thông báo hoặc xuất) từ máy chủ.',
   'ops.h_106x23o': 'Hữu hạn',
-  'ops.h_11ovicf': 'RESEND_LIMIT: đã hết hạn mức gửi lại trong cửa sổ hiện tại. Không tạo vé mới.',
+  'ops.h_11ovicf':
+    'RESEND_LIMIT: đã hết hạn mức gửi lại trong cửa sổ hiện tại. Không tạo vé mới.',
   'ops.h_142nqqm': 'Chưa có kết quả.',
   'ops.h_15064q7': 'Tải template CSV',
   'ops.h_16do87c': 'Không có mã khớp bộ lọc.',
   'ops.h_17ccgto': 'CSV cần ít nhất một dòng mã.',
-  'ops.h_19boowo': 'Kết quả thông báo chưa biết. Không coi là đã gửi, đã lên lịch, hoặc đã huỷ.',
+  'ops.h_19boowo':
+    'Kết quả thông báo chưa biết. Không coi là đã gửi, đã lên lịch, hoặc đã huỷ.',
   'ops.h_1abuzle': 'Liệt kê invitations',
   'ops.h_1bq4c1u': 'Danh sách mã trong kho',
   'ops.h_1bzuwr': 'Liên hệ:',
@@ -404,9 +475,11 @@ export const VI = {
   'ops.h_1oi6f3o': 'không có kết quả từ server',
   'ops.h_1oi8zqp': 'Đã xác nhận vào cổng',
   'ops.h_1pbxt75': 'Thao tác',
-  'ops.h_1plfzsb': 'Không đọc được nhật ký. Không coi danh sách đã tải thành công.',
+  'ops.h_1plfzsb':
+    'Không đọc được nhật ký. Không coi danh sách đã tải thành công.',
   'ops.h_1qz57kh': 'Lý do từ chối',
-  'ops.h_1rrwe0k': 'Không đọc được danh sách mã. Không coi inventory đã tải thành công.',
+  'ops.h_1rrwe0k':
+    'Không đọc được danh sách mã. Không coi inventory đã tải thành công.',
   'ops.h_1rulq3': 'PENDING (đang chờ gửi)',
   'ops.h_1seddb9': 'Nhật ký sự kiện (H-A1)',
   'ops.h_1syu2ee': 'Lọc theo requestId exact',
@@ -435,19 +508,22 @@ export const VI = {
   'ops.h_efcdx8': 'Hướng dẫn',
   'ops.h_ern79n': 'Không tìm thấy job/báo cáo lỗi.',
   'ops.h_fzjokh': 'UNKNOWN (timeout/không rõ — không khẳng định đã gửi)',
-  'ops.h_gafwuk': 'Kết quả CS chưa biết. Không coi là đã tìm thấy hoặc đã gửi lại email.',
+  'ops.h_gafwuk':
+    'Kết quả CS chưa biết. Không coi là đã tìm thấy hoặc đã gửi lại email.',
   'ops.h_gelxe4': 'Chọn nguồn từ danh mục',
   'ops.h_grfc8d': 'đã được cấp cho sự kiện',
   'ops.h_jr40gu': 'CSV phải là UTF-8 text, không chứa null byte.',
   'ops.h_k67vfi': 'Mã yêu cầu',
   'ops.h_lygmrv': 'DEAD (hết retry)',
   'ops.h_m88eni': 'Chưa có bản ghi gửi email trên server',
-  'ops.h_mag360': 'Resend thành công chỉ nghĩa queue/ACCEPTED phía nhà cung cấp — không khẳng định DELIVERED.',
+  'ops.h_mag360':
+    'Resend thành công chỉ nghĩa queue/ACCEPTED phía nhà cung cấp — không khẳng định DELIVERED.',
   'ops.h_mfwl9g': 'PENDING (chờ gửi)',
   'ops.h_n3x4mp': 'Tra cứu',
   'ops.h_qdkb51': 'REASON_REQUIRED: Cần lý do từ chối.',
   'ops.h_r3tltl': 'UNKNOWN (không rõ — không khẳng định đã gửi)',
-  'ops.h_r6ag2k': 'PERMISSION_DENIED: thiếu quyền CS (cs.lookup / cs.resend) — không tra cứu hoặc gửi lại email.',
+  'ops.h_r6ag2k':
+    'PERMISSION_DENIED: thiếu quyền CS (cs.lookup / cs.resend) — không tra cứu hoặc gửi lại email.',
   'ops.h_slukee': 'Upload + tạo job',
   'ops.h_tb6idf': 'Liên hệ',
   'ops.h_tn7vf3': 'DEAD (hết retry hữu ích — cần CS xử lý)',
@@ -465,51 +541,73 @@ export const VI = {
     'Đã ghi nhận: {{committedRowCount}} dòng · bỏ qua {{skippedRowCount}} · lỗi {{errorRowCount}} · lời mời {{invitationCount}}{{replaySuffix}}.',
   'ops.import.csvMaxBytes': 'CSV vượt {{maxBytes}} bytes.',
   'ops.import.csvMaxRows': 'CSV vượt {{maxRows}} dòng.',
-  'ops.import.errorsDownloadLabel': 'Đã tải báo cáo lỗi private ({{contentType}}, {{byteLength}} bytes){{filenameSuffix}}. Không lưu URL dài hạn.',
+  'ops.import.errorsDownloadLabel':
+    'Đã tải báo cáo lỗi private ({{contentType}}, {{byteLength}} bytes){{filenameSuffix}}. Không lưu URL dài hạn.',
   'ops.import.errorsExpired': 'Báo cáo lỗi đã hết hạn.',
-  'ops.import.jobLabel': 'Import {{importId}}: {{status}}{{quotaSuffix}}{{replaySuffix}}. Preview không ghi dữ liệu nghiệp vụ.',
-  'ops.import.legacyRawCodesMax': 'Legacy rawCodes tối đa {{max}}; dùng CSV job + fileId.',
+  'ops.import.jobLabel':
+    'Import {{importId}}: {{status}}{{quotaSuffix}}{{replaySuffix}}. Preview không ghi dữ liệu nghiệp vụ.',
+  'ops.import.legacyRawCodesMax':
+    'Legacy rawCodes tối đa {{max}}; dùng CSV job + fileId.',
   'ops.import.listInvitations': 'Liệt kê invitations',
-  'ops.import.localCsvSummary': 'CSV cục bộ: {{rowCount}} dòng · {{byteLength}} bytes · chưa ghi backend.',
-  'ops.import.missingColumn': 'Thiếu cột bắt buộc «{{field}}» (template/mapping).',
-  'ops.import.previewLabel': 'Preview rev {{previewRevision}}: {{validRowCount}} hợp lệ · {{errorRowCount}} lỗi · invitation {{invitationCount}} · ước tính quota {{estimatedQuota}} (không reserve).',
-  'ops.import.quarantineReady': 'File quarantine sẵn sàng · fileId {{fileId}} · {{byteLength}} bytes.',
-  'ops.import.quotaEstimateSuffix': ' · ước tính quota {{estimatedQuota}} (không giữ suất)',
+  'ops.import.localCsvSummary':
+    'CSV cục bộ: {{rowCount}} dòng · {{byteLength}} bytes · chưa ghi backend.',
+  'ops.import.missingColumn':
+    'Thiếu cột bắt buộc «{{field}}» (template/mapping).',
+  'ops.import.previewLabel':
+    'Preview rev {{previewRevision}}: {{validRowCount}} hợp lệ · {{errorRowCount}} lỗi · invitation {{invitationCount}} · ước tính quota {{estimatedQuota}} (không reserve).',
+  'ops.import.quarantineReady':
+    'File quarantine sẵn sàng · fileId {{fileId}} · {{byteLength}} bytes.',
+  'ops.import.quotaEstimateSuffix':
+    ' · ước tính quota {{estimatedQuota}} (không giữ suất)',
   'ops.import.replaySuffix': ' · replay',
   'ops.import.templateDownloaded': 'Đã tải template {{filename}}.',
   'ops.import.that': 'thất',
-  'ops.import.unknown': 'Kết quả import chưa biết. Không coi là đã preview hoặc đã commit.',
+  'ops.import.unknown':
+    'Kết quả import chưa biết. Không coi là đã preview hoặc đã commit.',
   'ops.import.uploadJob': 'Upload + tạo job',
-  'ops.invitation.dispatchLabel': 'Đã dispatch {{dispatchedCount}} · rev {{previewRevision}}{{replaySuffix}}. Claim-time issue — chưa cấp vé.',
-  'ops.invitation.listSummary': 'Invitations: {{count}} mục{{pageSuffix}}. Email chỉ masked; không auto-account.',
+  'ops.invitation.dispatchLabel':
+    'Đã dispatch {{dispatchedCount}} · rev {{previewRevision}}{{replaySuffix}}. Claim-time issue — chưa cấp vé.',
+  'ops.invitation.listSummary':
+    'Invitations: {{count}} mục{{pageSuffix}}. Email chỉ masked; không auto-account.',
   'ops.invitation.previewDispatch':
     'Xem trước gửi thử (phiên {{previewRevision}}): {{selectedCount}} đã chọn · ước tính suất {{estimatedQuota}} (không giữ suất).',
-  'ops.invitation.unknown': 'Kết quả invitation chưa biết. Không coi là đã dispatch.',
+  'ops.invitation.unknown':
+    'Kết quả invitation chưa biết. Không coi là đã dispatch.',
   'ops.notifications.applyFilters': 'Áp dụng bộ lọc thông báo',
   'ops.notifications.filtersTitle': 'Bộ lọc thông báo',
   'ops.notifications.listSummary':
     'Thông báo: {{count}} mục{{pageSuffix}}. Nhà cung cấp tiếp nhận chưa chứng minh khách đã nhận.',
-  'ops.notifications.previewReminder': 'Preview nhắc: {{recipientCount}} chủ vé · UTC {{scheduledAt}} · rev {{eventRevision}}. Không lộ PII.',
-  'ops.notifications.publishTemplate': 'Đã publish template {{templateId}} · version {{version}}.',
+  'ops.notifications.previewReminder':
+    'Preview nhắc: {{recipientCount}} chủ vé · UTC {{scheduledAt}} · rev {{eventRevision}}. Không lộ PII.',
+  'ops.notifications.publishTemplate':
+    'Đã publish template {{templateId}} · version {{version}}.',
   'ops.notifications.reminderCancelled': 'Đã huỷ nhắc {{reminderId}}.',
-  'ops.notifications.reminderCreated': 'Đã tạo nhắc {{reminderId}} · {{status}} · rev {{eventRevision}}.',
-  'ops.notifications.requeued': 'Đã xếp lại gửi {{notificationId}} (PENDING — ≠ delivered).',
-  'ops.notifications.resendCooldown': 'RESEND_COOLDOWN: đang trong thời gian chờ gửi lại (~{{seconds}}s). Chưa tạo vé mới — thử lại sau.',
+  'ops.notifications.reminderCreated':
+    'Đã tạo nhắc {{reminderId}} · {{status}} · rev {{eventRevision}}.',
+  'ops.notifications.requeued':
+    'Đã xếp lại gửi {{notificationId}} (PENDING — ≠ delivered).',
+  'ops.notifications.resendCooldown':
+    'RESEND_COOLDOWN: đang trong thời gian chờ gửi lại (~{{seconds}}s). Chưa tạo vé mới — thử lại sau.',
   'ops.notifications.revokeGrantDone': 'Đã thu hồi {{grantId}}',
   'ops.notifications.sendChannel': 'Gửi {{channel}}',
-  'ops.notifications.unknown': 'Kết quả thông báo chưa biết. Không coi là đã gửi, đã lên lịch, hoặc đã huỷ.',
+  'ops.notifications.unknown':
+    'Kết quả thông báo chưa biết. Không coi là đã gửi, đã lên lịch, hoặc đã huỷ.',
   'ops.notifications.allowlistedVars': 'Biến allowlist: {{vars}}',
   'ops.notifications.cancelReminderAction': 'Huỷ nhắc',
-  'ops.notifications.cancelReminderBody': 'Huỷ lịch nhắc giao dịch — không gửi marketing. Kết quả unknown phải giữ Idempotency-Key.',
+  'ops.notifications.cancelReminderBody':
+    'Huỷ lịch nhắc giao dịch — không gửi marketing. Kết quả unknown phải giữ Idempotency-Key.',
   'ops.notifications.cancelReminderIdPlaceholder': 'Reminder ID (huỷ)',
   'ops.notifications.cancelReminderOk': 'Xác nhận huỷ nhắc',
   'ops.notifications.cancelReminderTitle': 'Huỷ nhắc giao dịch?',
   'ops.notifications.createReminderAction': 'Tạo nhắc',
-  'ops.notifications.invalidSchedule': 'Thời gian local không hợp lệ — dùng datetime-local.',
-  'ops.notifications.needRevision': 'Tải chi tiết event để lấy revision trước khi nhắc.',
+  'ops.notifications.invalidSchedule':
+    'Thời gian local không hợp lệ — dùng datetime-local.',
+  'ops.notifications.needRevision':
+    'Tải chi tiết event để lấy revision trước khi nhắc.',
   'ops.notifications.previewReminderAction': 'Preview nhắc',
   'ops.notifications.previewTemplate': 'Preview template',
-  'ops.notifications.publishConfirmBody': 'Publish template {{kind}} — chỉ biến allowlist, không marketing.',
+  'ops.notifications.publishConfirmBody':
+    'Publish template {{kind}} — chỉ biến allowlist, không marketing.',
   'ops.notifications.publishConfirmOk': 'Publish',
   'ops.notifications.publishConfirmTitle': 'Xác nhận publish template',
   'ops.notifications.publishTemplateAction': 'Publish template',
@@ -520,19 +618,24 @@ export const VI = {
   'ops.notifications.templateSubjectAria': 'Tiêu đề template',
   'ops.notifications.templateBodyTextAria': 'Nội dung template (văn bản)',
   'ops.notifications.templateBodyHtmlAria': 'Nội dung template (HTML)',
-  'ops.notifications.templateSectionHint': 'Revision hiện tại: {{revision}}. Preview server-escaped; ACCEPTED ≠ delivered.',
+  'ops.notifications.templateSectionHint':
+    'Revision hiện tại: {{revision}}. Preview server-escaped; ACCEPTED ≠ delivered.',
   'ops.notifications.templateSectionTitle': 'Template & nhắc (C-N)',
   'ops.notifications.ve': 'Vé',
   'ops.pending.applyFilters': 'Áp dụng bộ lọc chờ duyệt',
   'ops.pending.filtersTitle': 'Bộ lọc chờ duyệt',
   'ops.pending.listSummary': 'Chờ duyệt: {{count}} yêu cầu{{pageSuffix}}.',
-  'ops.pending.unknown': 'Kết quả danh sách chờ duyệt chưa biết. Không coi là đã tải.',
-  'ops.report.needPermissions': 'Cần report.read / inventory.import / export.* từ máy chủ — không suy từ tên role.',
+  'ops.pending.unknown':
+    'Kết quả danh sách chờ duyệt chưa biết. Không coi là đã tải.',
+  'ops.report.needPermissions':
+    'Cần report.read / inventory.import / export.* từ máy chủ — không suy từ tên role.',
   'ops.portfolio.itemUnknown': 'Không tải được',
-  'ops.portfolio.partial': 'Một số sự kiện chưa tải được — không dùng số 0 giả.',
+  'ops.portfolio.partial':
+    'Một số sự kiện chưa tải được — không dùng số 0 giả.',
   'ops.portfolio.unknown':
     'Chưa tải được phân tích tổ chức. Không hiện số check-in / pending / quota như thể chúng đang đúng.',
-  'ops.report.unknown': 'Báo cáo chưa biết. Không hiện số vé, quota, hoặc số chờ duyệt như thể chúng đang đúng.',
+  'ops.report.unknown':
+    'Báo cáo chưa biết. Không hiện số vé, quota, hoặc số chờ duyệt như thể chúng đang đúng.',
   'platform.h_11v4ibm': 'Thu hồi grant',
   'platform.h_1541rk1': 'Thu hồi support grant',
   'platform.h_19s5r5m': 'Revoke support grant',
@@ -542,35 +645,50 @@ export const VI = {
   'platform.h_1rlo1g2': 'Đăng nhập Platform thất bại',
   'platform.h_1sfcojp': 'Đăng nhập Platform',
   'platform.h_1sthjos': 'Lọc audit',
-  'platform.h_1vi2x57': 'Không thu hồi được support grant. Không coi revoke đã thành công.',
+  'platform.h_1vi2x57':
+    'Không thu hồi được support grant. Không coi revoke đã thành công.',
   'platform.h_1vlqd43': 'Chưa có tenant (hoặc list lỗi).',
   'platform.h_1xkaqi6': 'Không phải Platform Operator',
   'platform.h_3nfdgm': 'Platform Operator',
   'platform.h_4cj11z': 'Trang tiếp',
   'platform.h_5wjoae': 'Chưa có bản ghi platform audit.',
-  'platform.h_9c63t5': 'Vùng Platform dùng client/audience/cookie riêng (`platform_oidc_*`) — không dùng token nhân sự / Owner.',
-  'platform.h_de965r': 'Không đọc được sức khỏe tenant. Không bịa SLA / delivery confirmation.',
-  'platform.h_ed3cdu': 'Client/cookie/audience tách khỏi staff. Owner ≠ Operator. Health = counter sanitize (H-P2) — không SLA / payload / Redis-up giả.',
+  'platform.h_9c63t5':
+    'Vùng Platform dùng client/audience/cookie riêng (`platform_oidc_*`) — không dùng token nhân sự / Owner.',
+  'platform.h_de965r':
+    'Không đọc được sức khỏe tenant. Không bịa SLA / delivery confirmation.',
+  'platform.h_ed3cdu':
+    'Client/cookie/audience tách khỏi staff. Owner ≠ Operator. Health = counter sanitize (H-P2) — không SLA / payload / Redis-up giả.',
   'platform.h_ggf21i': 'tenantId (UUID)',
   'platform.h_hcpyf4': 'Thử lại Platform login',
   'platform.h_qo8t9w': 'Không reason/diff. Tách khỏi staff report.read.',
-  'platform.h_rvf1a3': 'Tài khoản staff tenant (kể cả Owner) không thấy dữ liệu Platform. Cần phiên Operator MFA riêng.',
-  'platform.h_usltan': 'Không đọc được danh sách tenant platform. Không coi list đã tải thành công.',
+  'platform.h_rvf1a3':
+    'Tài khoản staff tenant (kể cả Owner) không thấy dữ liệu Platform. Cần phiên Operator MFA riêng.',
+  'platform.h_usltan':
+    'Không đọc được danh sách tenant platform. Không coi list đã tải thành công.',
   'platform.h_zdynbv': 'Thời điểm',
-  'platform.health.hint': 'Chỉ counter notifications/outbox/usage đã sanitize. Không payload email, raw error, hay trạng thái Redis/SMTP.',
+  'platform.health.hint':
+    'Chỉ counter notifications/outbox/usage đã sanitize. Không payload email, raw error, hay trạng thái Redis/SMTP.',
   'platform.loc': 'Lọc',
-  'platform.operatorMfaOnly': 'Chỉ Operator MFA (ticket-platform-api) — Owner/staff token bị từ chối.',
+  'platform.operatorMfaOnly':
+    'Chỉ Operator MFA (ticket-platform-api) — Owner/staff token bị từ chối.',
   'platform.pickTenant': 'Chọn tenant hoặc nhập tenantId (UUID).',
-  'platform.revokeGrantHint': 'Chỉ Operator MFA. Reason bắt buộc (audit platform.support.revoked). Không dùng token staff.',
-  'platform.staffTokenRejected': 'Chỉ Platform Operator (MFA / audience platform) — không dùng token nhân sự.',
-  'platform.zoneLabel': 'PLATFORM-PORTAL-ZONE · Operator · assurance={{assurance}}',
-  'platform.mutate.unknown': 'Không rõ kết quả thao tác platform — không coi là đã thành công.',
-  'platform.mutate.detailUnknown': 'Không đọc được chi tiết tenant. Tải lại trước khi suspend/limits.',
-  'platform.mutate.grantUnknown': 'Không tạo được support grant — không coi grant đã cấp.',
+  'platform.revokeGrantHint':
+    'Chỉ Operator MFA. Reason bắt buộc (audit platform.support.revoked). Không dùng token staff.',
+  'platform.staffTokenRejected':
+    'Chỉ Platform Operator (MFA / audience platform) — không dùng token nhân sự.',
+  'platform.zoneLabel':
+    'PLATFORM-PORTAL-ZONE · Operator · assurance={{assurance}}',
+  'platform.mutate.unknown':
+    'Không rõ kết quả thao tác platform — không coi là đã thành công.',
+  'platform.mutate.detailUnknown':
+    'Không đọc được chi tiết tenant. Tải lại trước khi suspend/limits.',
+  'platform.mutate.grantUnknown':
+    'Không tạo được support grant — không coi grant đã cấp.',
   'platform.mutate.provisionTitle': 'Tạo tenant (PENDING + owner invite)',
   'platform.mutate.manageTitle': 'Chi tiết / status / limits',
   'platform.mutate.grantCreateTitle': 'Cấp support grant (cs.read)',
-  'platform.mutate.confirmSuspend': 'Tạm ngưng tenant này? Vé/cổng/recovery vẫn hoạt động.',
+  'platform.mutate.confirmSuspend':
+    'Tạm ngưng tenant này? Vé/cổng/recovery vẫn hoạt động.',
   'platform.mutate.confirmActivate': 'Kích hoạt lại tenant này?',
   'platform.mutate.confirmGrant':
     'Tạo support grant cs.read cho tenant/event này?',
@@ -591,7 +709,8 @@ export const VI = {
   'platform.mutate.phExpiresAt': 'expiresAt ISO (trống = +1h)',
   'platform.mutate.importsEnabled': 'importsEnabled',
   'platform.mutate.exportsEnabled': 'exportsEnabled',
-  'quota.capacityUnlimited': 'Capacity không giới hạn hoặc chưa xác định phần trăm.',
+  'quota.capacityUnlimited':
+    'Capacity không giới hạn hoặc chưa xác định phần trăm.',
   'quota.h_1h6b62d': 'Đã cấp phát',
   'quota.h_1tnoz3k': 'Không giới hạn',
   'quota.h_dn1nvv': 'Phản hồi quota thiếu allocated — không giả định số.',
@@ -660,12 +779,15 @@ export const VI = {
   'surface.empty.default': 'Chưa có dữ liệu',
   'surface.error.loadFailed': 'Không tải được dữ liệu',
   'surface.loading': 'Đang tải…',
-  'surface.permission.defaultDescription': 'Bạn không có quyền xem nội dung này. Quyền do máy chủ quyết định.',
+  'surface.permission.defaultDescription':
+    'Bạn không có quyền xem nội dung này. Quyền do máy chủ quyết định.',
   'surface.permission.goAllowed': 'Về trang được phép',
   'surface.permission.title': 'Không có quyền',
-  'surface.suspended.description': 'Không thể thao tác khi tổ chức ở trạng thái SUSPENDED.',
+  'surface.suspended.description':
+    'Không thể thao tác khi tổ chức ở trạng thái SUSPENDED.',
   'surface.suspended.title': 'Tổ chức đã tạm ngưng',
-  'surface.unknown.defaultDescription': 'Phản hồi không xác định — kiểm tra lại trước khi coi là thành công.',
+  'surface.unknown.defaultDescription':
+    'Phản hồi không xác định — kiểm tra lại trước khi coi là thành công.',
   'surface.unknown.title': 'Chưa rõ kết quả',
   'types.h_13e0npu': 'Đã tạo loại vé.',
   'types.h_1caa9m7': 'Tạo loại vé',
@@ -677,14 +799,18 @@ export const VI = {
   'platform.readHealth': 'Đọc health',
   'settings.saveFailedHttp': 'Không lưu được (HTTP {{status}}).',
   'settings.currentVersion': 'Phiên bản hiện tại: ',
-  'members.loadFailedStatus': 'Không tải được danh sách (members {{members}}, invites {{invites}}).',
+  'members.loadFailedStatus':
+    'Không tải được danh sách (members {{members}}, invites {{invites}}).',
   'events.loadFailedHttp': 'Không tải được danh sách (HTTP {{status}}).',
   'tenant.home.meta': '{{slug}} · vai trò {{role}} · trạng thái {{status}}',
-  'setup.metadataHint': 'Metadata / clone / archive. UUID lấy từ route — không dán tay.',
+  'setup.metadataHint':
+    'Metadata / clone / archive. UUID lấy từ route — không dán tay.',
   'audit.tab.exportHistory': 'Lịch sử export',
-  'event.home.publishLockVersion': 'Publish khóa phiên bản cấu hình (expectedVersion {{version}}).',
+  'event.home.publishLockVersion':
+    'Publish khóa phiên bản cấu hình (expectedVersion {{version}}).',
   'event.home.gateReportDetail': 'Báo cáo cổng chi tiết:',
-  'account.cookieAttrs': 'Host-only · HttpOnly · SameSite=Lax · không Domain=.vemoki.com',
+  'account.cookieAttrs':
+    'Host-only · HttpOnly · SameSite=Lax · không Domain=.vemoki.com',
   'ops.import.panelTitle': 'Nhập khách và mã từ CSV',
   'ops.import.tabLabel': 'Nhập',
   'ops.import.panelDescription':
@@ -710,10 +836,12 @@ export const VI = {
   'readiness.form.missing': 'Thiếu điều khoản hoặc chưa publish cấu hình.',
   'readiness.brand.ok': 'Đã có tên tổ chức và màu nhận diện.',
   'readiness.brand.missing': 'Thiếu tên tổ chức hoặc màu nhận diện tối thiểu.',
-  'readiness.summary.allReady': 'Đủ sẵn sàng theo dữ liệu form — xuất bản vẫn do backend enforce. Publish ≠ mở redeem ≠ mở Gate.',
+  'readiness.summary.allReady':
+    'Đủ sẵn sàng theo dữ liệu form — xuất bản vẫn do backend enforce. Publish ≠ mở redeem ≠ mở Gate.',
   'readiness.summary.missing': 'Thiếu: {{items}}',
   'readiness.summary.unknown': 'Chưa rõ: {{items}}',
-  'readiness.summary.tail': '{{parts}} — không đánh dấu xuất bản thành công khi còn thiếu/chưa rõ.',
+  'readiness.summary.tail':
+    '{{parts}} — không đánh dấu xuất bản thành công khi còn thiếu/chưa rõ.',
   'common.pagination.dotMoreAfter': ' · còn trang sau',
   'views.toolbar.label': 'View',
   'views.toolbar.aria': 'Chọn hoặc lưu view danh sách',
@@ -724,7 +852,8 @@ export const VI = {
   'views.action.manage': 'Quản lý view',
   'views.action.automationSoon': 'Quy tắc (sắp có)',
   'views.stale.title': 'View đã lỗi thời',
-  'views.stale.body': 'Một số bộ lọc/cột không còn trong allowlist. Đặt lại view hoặc lưu lại.',
+  'views.stale.body':
+    'Một số bộ lọc/cột không còn trong allowlist. Đặt lại view hoặc lưu lại.',
   'views.stale.reset': 'Đặt lại view',
   'views.save.title': 'Lưu view',
   'views.save.name': 'Tên',
@@ -733,7 +862,8 @@ export const VI = {
   'views.save.scopeEvent': 'Sự kiện này',
   'views.save.scopeOrg': 'Tổ chức',
   'views.save.setDefault': 'Đặt làm mặc định',
-  'views.save.privateHint': 'View riêng tư theo tài khoản (local). Chưa chia sẻ trong tổ chức (P2b).',
+  'views.save.privateHint':
+    'View riêng tư theo tài khoản (local). Chưa chia sẻ trong tổ chức (P2b).',
   'views.save.confirm': 'Lưu',
   'views.save.cancel': 'Hủy',
   'views.manage.title': 'Quản lý view',
@@ -742,60 +872,75 @@ export const VI = {
   'views.manage.delete': 'Xóa',
   'views.automation.title': 'Quy tắc automation',
   'views.automation.disabled': 'Sắp có',
-  'views.automation.body': 'Automation / share server (P2b) chưa có contract OpenAPI. Không gửi email khách từ view.',
+  'views.automation.body':
+    'Automation / share server (P2b) chưa có contract OpenAPI. Không gửi email khách từ view.',
   'views.members.roleFilter': 'Lọc theo vai trò',
   'views.members.statusFilter': 'Lọc theo trạng thái',
   'home.startOnboarding': 'Đăng ký tổ chức (self-serve)',
   'surface.pendingActivation.title': 'Đang chờ kích hoạt',
-  'surface.pendingActivation.description': 'Tổ chức đang ở trạng thái PENDING. Operator sẽ kích hoạt — không giả ACTIVE và không mở mutation admin.',
+  'surface.pendingActivation.description':
+    'Tổ chức đang ở trạng thái PENDING. Operator sẽ kích hoạt — không giả ACTIVE và không mở mutation admin.',
   'onboarding.backHome': 'Về trang chủ',
   'onboarding.denied': 'Không tìm thấy tổ chức trong khám phá của bạn.',
   'onboarding.signup.title': 'Tạo tổ chức',
-  'onboarding.signup.lead': 'Đăng ký self-serve tạo tenant PENDING. ACTIVE chỉ sau khi Operator duyệt — không tự kích hoạt.',
+  'onboarding.signup.lead':
+    'Đăng ký self-serve tạo tenant PENDING. ACTIVE chỉ sau khi Operator duyệt — không tự kích hoạt.',
   'onboarding.signup.name': 'Tên tổ chức',
   'onboarding.signup.nameRequired': 'Nhập tên tổ chức',
   'onboarding.signup.slug': 'Slug',
   'onboarding.signup.slugRequired': 'Nhập slug tổ chức',
   'onboarding.signup.slugPattern': 'Slug: chữ thường, số, gạch ngang (kebab)',
-  'onboarding.signup.slugHint': 'Dùng trong URL công khai — không đổi dễ dàng sau này.',
+  'onboarding.signup.slugHint':
+    'Dùng trong URL công khai — không đổi dễ dàng sau này.',
   'onboarding.signup.timezone': 'Múi giờ mặc định',
   'onboarding.signup.contact': 'Liên hệ (tuỳ chọn)',
-  'onboarding.signup.pendingPolicy': 'Sau khi gửi, bạn sẽ thấy màn «đang chờ kích hoạt». Không có admin ACTIVE cho đến khi Operator duyệt.',
+  'onboarding.signup.pendingPolicy':
+    'Sau khi gửi, bạn sẽ thấy màn «đang chờ kích hoạt». Không có admin ACTIVE cho đến khi Operator duyệt.',
   'onboarding.signup.submit': 'Gửi đăng ký',
   'onboarding.signup.invalid': 'Slug hoặc tên không hợp lệ.',
-  'onboarding.signup.unknown': 'Chưa rõ kết quả đăng ký — không coi là đã tạo ACTIVE.',
+  'onboarding.signup.unknown':
+    'Chưa rõ kết quả đăng ký — không coi là đã tạo ACTIVE.',
   'onboarding.signup.failed': 'Không gửi được đăng ký.',
   'onboarding.pending.title': 'Đăng ký đã gửi — đang chờ kích hoạt',
-  'onboarding.pending.body': '{{name}} ({{slug}}) đang PENDING. Liên hệ hỗ trợ nền tảng nếu cần — không mở mutation admin.',
+  'onboarding.pending.body':
+    '{{name}} ({{slug}}) đang PENDING. Liên hệ hỗ trợ nền tảng nếu cần — không mở mutation admin.',
   'onboarding.pending.refresh': 'Kiểm tra lại trạng thái',
   'onboarding.pending.openWait': 'Mở màn chờ kích hoạt',
-  'onboarding.pending.noAdmin': 'Không tạo sự kiện / mời thành viên / đổi branding khi còn PENDING.',
-  'onboarding.pending.mutationBlocked': 'Máy chủ từ chối: tenant còn PENDING (TENANT_PENDING).',
+  'onboarding.pending.noAdmin':
+    'Không tạo sự kiện / mời thành viên / đổi branding khi còn PENDING.',
+  'onboarding.pending.mutationBlocked':
+    'Máy chủ từ chối: tenant còn PENDING (TENANT_PENDING).',
   'onboarding.firstRun.title': 'Thiết lập lần đầu',
-  'onboarding.firstRun.lead': 'Tổ chức {{name}} đã ACTIVE. Hoàn thành các bước dưới — không dán UUID tay.',
+  'onboarding.firstRun.lead':
+    'Tổ chức {{name}} đã ACTIVE. Hoàn thành các bước dưới — không dán UUID tay.',
   'onboarding.firstRun.stepOrg': 'Hồ sơ tổ chức',
   'onboarding.firstRun.stepTeam': 'Đội ngũ',
   'onboarding.firstRun.stepEvent': 'Sự kiện đầu',
   'onboarding.firstRun.stepReady': 'Sẵn sàng',
-  'onboarding.firstRun.orgHint': 'Xác nhận tên hiển thị và màu nhận diện tối thiểu (branding API).',
+  'onboarding.firstRun.orgHint':
+    'Xác nhận tên hiển thị và màu nhận diện tối thiểu (branding API).',
   'onboarding.firstRun.displayName': 'Tên hiển thị tổ chức',
   'onboarding.firstRun.primaryColor': 'Màu nhận diện chính',
   'onboarding.firstRun.saveOrg': 'Lưu hồ sơ tổ chức',
   'onboarding.firstRun.orgUnknown': 'Chưa rõ kết quả lưu hồ sơ — kiểm tra lại.',
   'onboarding.firstRun.orgDenied': 'Không lưu được hồ sơ tổ chức.',
-  'onboarding.firstRun.teamHint': 'Mời một Manager bằng email + preset máy chủ (không gửi mảng quyền tùy ý).',
+  'onboarding.firstRun.teamHint':
+    'Mời một Manager bằng email + preset máy chủ (không gửi mảng quyền tùy ý).',
   'onboarding.firstRun.managerEmail': 'Email Manager',
   'onboarding.firstRun.rolePreset': 'Vai trò / preset',
   'onboarding.firstRun.roleManager': 'Manager (role-map hệ thống)',
   'onboarding.firstRun.inviteSubmit': 'Gửi lời mời Manager',
   'onboarding.firstRun.inviteSkip': 'Bỏ qua bước này',
-  'onboarding.firstRun.inviteUnknown': 'Chưa rõ kết quả mời — không khẳng định đã gửi hộp thư.',
+  'onboarding.firstRun.inviteUnknown':
+    'Chưa rõ kết quả mời — không khẳng định đã gửi hộp thư.',
   'onboarding.firstRun.inviteFailed': 'Không gửi được lời mời Manager.',
-  'onboarding.firstRun.eventHint': 'Tạo sự kiện DRAFT qua wizard — không paste UUID.',
+  'onboarding.firstRun.eventHint':
+    'Tạo sự kiện DRAFT qua wizard — không paste UUID.',
   'onboarding.firstRun.createEvent': 'Tạo sự kiện đầu tiên',
   'onboarding.firstRun.refreshEvents': 'Đã tạo — tải lại danh sách',
   'onboarding.firstRun.readyTitle': 'Sẵn sàng vào portal',
-  'onboarding.firstRun.readyBody': 'Publish ≠ mở redeem ≠ mở Gate. Tiếp tục cấu hình sự kiện khi cần.',
+  'onboarding.firstRun.readyBody':
+    'Publish ≠ mở redeem ≠ mở Gate. Tiếp tục cấu hình sự kiện khi cần.',
   'onboarding.firstRun.openSetup': 'Mở setup sự kiện',
   'onboarding.firstRun.enterPortal': 'Vào portal',
 } as const;
@@ -805,7 +950,8 @@ export type MessageKey = keyof typeof VI;
 export const EN: { [K in MessageKey]: string } = {
   'account.h_11eq8uu': 'Sign out of portal (staff)',
   'account.h_17x4t4d': 'Platform Operator session',
-  'account.h_19guouj': 'Sign out each surface separately (ADR-20). Signing out of the portal does not clear Platform Operator cookies and vice versa.',
+  'account.h_19guouj':
+    'Sign out each surface separately (ADR-20). Signing out of the portal does not clear Platform Operator cookies and vice versa.',
   'account.h_1a6mmbo': 'Active',
   'account.h_1cuqgz1': 'None',
   'account.h_1med0c4': 'Operator (separate audience)',
@@ -831,27 +977,37 @@ export const EN: { [K in MessageKey]: string } = {
   'audit.filter.actionOptional': 'action (optional)',
   'audit.h_1psplgo': 'Code inventory',
   'audit.h_pug8u': 'Audit log',
-  'auth.error.accessDenied': 'You denied authorization at the identity provider.',
+  'auth.error.accessDenied':
+    'You denied authorization at the identity provider.',
   'auth.error.notAllowed':
     'Keycloak rejected sign-in (not_allowed). Often caused by offline_access when offline tokens are not enabled — use OIDC_SCOPES=openid profile email (see apps/portal/.env.example). Local demo: staff@example.com / staff-demo with API :3100 and Keycloak :8080.',
   'auth.error.generic': 'Error: {{error}}',
-  'auth.h_179sno0': 'Could not exchange the authorization code. Try signing in again.',
+  'auth.h_179sno0':
+    'Could not exchange the authorization code. Try signing in again.',
   'auth.h_18eyu7o': 'Try signing in again',
-  'auth.h_1dyukbi': 'Staff sign-in via your identity provider. Do not use guest (app) sessions on the portal.',
+  'auth.h_1dyukbi':
+    'Staff sign-in via your identity provider. Do not use guest (app) sessions on the portal.',
   'auth.h_1g2rg2o': 'Staff sign-in',
-  'auth.h_1l6yc4c': 'OIDC is not configured on the portal — sign-in is unavailable.',
+  'auth.h_1l6yc4c':
+    'OIDC is not configured on the portal — sign-in is unavailable.',
   'auth.h_1tfddzd': 'Invalid sign-in session (state/PKCE). Try again.',
   'auth.h_85v7iu': 'Sign-in failed',
-  'auth.h_w7m30b': 'Session cookies belong to the portal only — not shared with the app.',
-  'common.apiForbiddenResend': '{{code}}: no permission on this tenant/event — email not resent.',
+  'auth.h_w7m30b':
+    'Session cookies belong to the portal only — not shared with the app.',
+  'common.apiForbiddenResend':
+    '{{code}}: no permission on this tenant/event — email not resent.',
   'common.cloneName': '{{name}} (copy)',
   'common.h_1bzxqwd': 'No events assigned in discovery.',
-  'common.h_1cdrhuc': 'Could not load report — do not assume metrics are valid.',
-  'common.h_1d5xf37': 'Publish outcome unclear — do not mark success. Check again.',
+  'common.h_1cdrhuc':
+    'Could not load report — do not assume metrics are valid.',
+  'common.h_1d5xf37':
+    'Publish outcome unclear — do not mark success. Check again.',
   'common.h_1hj59zg': 'Outcome unclear when loading the event.',
   'common.h_1iov4lt': 'Open Gate (report)',
-  'common.h_1lb5yey': 'Publishing content does not open a redeem window for guests and does not enable gate scanning. Gate scan stays on app.vemoki.com.',
-  'common.h_1nl7gld': 'Publishing configuration does not open guest redeem or change scan Gate. Staff ticket scanning is on the Vemoki iPhone app only.',
+  'common.h_1lb5yey':
+    'Publishing content does not open a redeem window for guests and does not enable gate scanning. Gate scan stays on app.vemoki.com.',
+  'common.h_1nl7gld':
+    'Publishing configuration does not open guest redeem or change scan Gate. Staff ticket scanning is on the Vemoki iPhone app only.',
   'common.h_1pfzepi': 'Go to CS support',
   'common.h_1rsax7j': 'Event is not in your server discovery.',
   'common.h_1t15e7z': 'Operations',
@@ -865,10 +1021,12 @@ export const EN: { [K in MessageKey]: string } = {
   'common.h_qqix4u': 'Config published',
   'common.h_wa3fk5': 'Go to pending approval',
   'common.h_wqd4fq': 'Display',
-  'common.h_yw94nu': 'Organization is not in your discovery or you lack admin permissions.',
+  'common.h_yw94nu':
+    'Organization is not in your discovery or you lack admin permissions.',
   'common.httpStatus': 'HTTP {{status}}',
   'common.loginRequired': '(login required)',
-  'common.mappedStatus': '{{status}} (unmapped status — delivery not confirmed)',
+  'common.mappedStatus':
+    '{{status}} (unmapped status — delivery not confirmed)',
   'common.mo': 'Open',
   'common.pagination.more': '(more pages)',
   'common.pagination.moreAfter': '· more pages follow',
@@ -876,7 +1034,7 @@ export const EN: { [K in MessageKey]: string } = {
   'common.pagination.pageSuffix': ' (more pages)',
   'common.pagination.pageSuffixAfter': ' (more pages follow)',
   'common.select': 'Select',
-'common.eventPermissions': '{{count}} permissions on this event',
+  'common.eventPermissions': '{{count}} permissions on this event',
   'common.label.revision': 'Content revision',
   'common.label.slug': 'Slug',
   'enum.businessStatus.ACTIVE': 'In progress',
@@ -954,17 +1112,20 @@ export const EN: { [K in MessageKey]: string } = {
   'config.h_19gwi7d': 'Publish tip',
   'config.h_1b1xmvu': 'Outcome unclear for publish.',
   'config.h_1c1wh3g': 'Created at',
-  'config.h_1djtg5w': 'Rollback creates a new version (append-only); it does not rewind history. Confirmation required.',
+  'config.h_1djtg5w':
+    'Rollback creates a new version (append-only); it does not rewind history. Confirmation required.',
   'config.h_1ec27qs': 'Configuration published.',
   'config.h_1eg9ac0': 'Missing revision or published version to roll back.',
   'config.h_1fbsj7r': 'Primary color',
   'config.h_1hh7j6r': 'Publish ≠ open redeem ≠ open Gate',
-  'config.h_1irt9z3': 'Outcome unclear for saving the draft — do not treat it as saved.',
+  'config.h_1irt9z3':
+    'Outcome unclear for saving the draft — do not treat it as saved.',
   'config.h_1qavkda': 'Configuration draft saved (not published).',
   'config.h_1xteu8h': 'Outcome unclear for rollback.',
   'config.h_1ylm4kq': 'No version to publish — save a draft first.',
   'config.h_6ccvfx': 'Terms (plain text)',
-  'config.h_bji8yr': 'Save a draft and publish to lock the event content. Does not open a guest redeem window and does not enable gate scanning on the portal.',
+  'config.h_bji8yr':
+    'Save a draft and publish to lock the event content. Does not open a guest redeem window and does not enable gate scanning on the portal.',
   'config.h_ez5uf1': 'Publish failed.',
   'config.h_g7fjbz': 'No permission for this event.',
   'config.h_gyyhq3': 'Publish ≠ redeem ≠ Gate',
@@ -974,45 +1135,68 @@ export const EN: { [K in MessageKey]: string } = {
   'config.h_ve7ob6': 'Minimal brand or terms are missing.',
   'config.h_wotjs8': 'Rollback to here',
   'config.huy': 'Cancel',
-  'config.publishConfirm': 'Will publish version {{version}}. Will not auto-open redeem/Gate.',
+  'config.publishConfirm':
+    'Will publish version {{version}}. Will not auto-open redeem/Gate.',
   'config.publishFailedStatus': 'Publish failed ({{status}}).',
+  'config.latestCheckFailed':
+    'Could not check the latest version. Draft was not saved; try again.',
+  'config.versionConflict':
+    'A newer configuration version exists. Your changes were not saved.',
+  'config.reloadDiscard':
+    'Reloading the latest version will discard unsaved changes in this form.',
+  'config.reloadLatest': 'Reload latest version',
+  'config.previewAction': 'Preview',
+  'config.previewTitle': 'Preview saved version v{{version}}',
+  'config.previewSections': '{{count}} content sections',
+  'config.previewLoadFailed':
+    'Could not load the preview for this version. Try reloading.',
+  'config.invalidColor': 'Enter a color as #RGB or #RRGGBB.',
   'config.rollbackConfirm': 'Rollback to version {{targetVersion}}?',
-  'dualRun.h_16lfg67': 'Portal and legacy admin on the app run in parallel. app→portal redirect is off by default. Staff scan tickets on the Vemoki iPhone app only. Legacy: ',
-  'dualRun.h_16lfg67_2': 'Portal and legacy admin on the app run in parallel. app→portal redirect is off by default. Staff scan tickets on the Vemoki iPhone app only. Legacy: ',
+  'dualRun.h_16lfg67':
+    'Portal and legacy admin on the app run in parallel. app→portal redirect is off by default. Staff scan tickets on the Vemoki iPhone app only. Legacy: ',
+  'dualRun.h_16lfg67_2':
+    'Portal and legacy admin on the app run in parallel. app→portal redirect is off by default. Staff scan tickets on the Vemoki iPhone app only. Legacy: ',
   'dualRun.h_ekkubx': 'Dual-run mode (local / prep)',
   'dualRun.h_l9n5m3': ' Do not change DNS or deploy to prod from this banner.',
   'events.archive.failed': 'Archive failed.',
-  'events.archive.hint': 'Archive changes contentStatus — it does not open/close Gate or revoke issued tickets.',
+  'events.archive.hint':
+    'Archive changes contentStatus — it does not open/close Gate or revoke issued tickets.',
   'events.h_13e7ycb': 'Slug may only contain a-z, 0-9, and hyphens',
   'events.h_1dipstx': 'Address',
   'events.h_1gq5nm': 'Venue / contact',
   'events.h_1o08rig': 'Confirm create',
   'events.h_1ognyxu': 'Missing permission to create events (event.create).',
   'events.h_1q9os0g': 'Confirm',
-  'events.h_1qeuedv': 'New events start in DRAFT. Publishing configuration ≠ opening redeem ≠ opening scan Gate.',
+  'events.h_1qeuedv':
+    'New events start in DRAFT. Publishing configuration ≠ opening redeem ≠ opening scan Gate.',
   'events.h_1x97hc6': 'Event name',
   'events.h_1xl1825': 'Enter slug',
   'events.h_1xm22zn': 'Contact email',
-  'events.h_1xuhi5j': 'Missing permission to view this organization\'s events.',
+  'events.h_1xuhi5j': "Missing permission to view this organization's events.",
   'events.h_1y0cdxe': 'Basics',
-  'events.h_5zs7cf': 'Organization is taken from route context — do not paste tenant UUID.',
-  'events.h_74jvni': 'The server returned success but no eventId — the new event is unclear.',
+  'events.h_5zs7cf':
+    'Organization is taken from route context — do not paste tenant UUID.',
+  'events.h_74jvni':
+    'The server returned success but no eventId — the new event is unclear.',
   'events.h_8g8c9u': 'Time zone',
   'events.h_b8z0sy': 'Venue name',
-  'events.h_byq509': 'Outcome unclear for loading the event list. Do not assume the list is empty.',
+  'events.h_byq509':
+    'Outcome unclear for loading the event list. Do not assume the list is empty.',
   'events.h_ek93o2': 'Create event',
   'events.h_ekk31m': 'Missing permission: organization.',
   'events.h_hnm91l': 'Could not create event.',
   'events.h_j7agy6': 'List response schema mismatch — outcome unclear.',
   'events.h_jq4yo3': 'Enter the event name',
-  'events.h_npdcvo': 'Outcome unclear for creating the event. Do not treat it as created — check the list again.',
+  'events.h_npdcvo':
+    'Outcome unclear for creating the event. Do not treat it as created — check the list again.',
   'events.h_o2hfl2': 'No permission to view the event list.',
   'events.h_rft49v': 'Back',
   'events.h_rpomry': 'Event created. Redirecting to overview…',
   'events.h_ssqyjm': 'No event.',
   'events.new.tiep': 'Next',
   'events.ticketDetailTitle': 'Ticket detail {{ticketId}}.',
-  'events.ticketIssuedEmail': 'Ticket {{ticketId}} was issued for event {{eventName}}.',
+  'events.ticketIssuedEmail':
+    'Ticket {{ticketId}} was issued for event {{eventName}}.',
   'events.ticketIssuedTitle': 'Ticket issued — {{eventName}}',
   'gate.h_1klnels': 'Gate — report (O12)',
   'gate.h_1n09r0f': 'Go to pending guest and code approvals',
@@ -1020,14 +1204,18 @@ export const EN: { [K in MessageKey]: string } = {
   'gate.h_1swn6cq': 'Active tickets',
   'gate.h_3keb7': 'Refresh',
   'gate.h_4twiex': 'Go to CS lookup and resend email',
-  'gate.h_cq4fvf': 'Ticket scanning is on the app only — no camera on the portal.',
+  'gate.h_cq4fvf':
+    'Ticket scanning is on the app only — no camera on the portal.',
   'gate.h_icax5j': 'Email needs CS',
   'gate.h_iosgib': 'No permission for the gate report',
-  'gate.needReportRead': 'Requires report.read from the server — do not infer from gate.confirm / Scanner.',
+  'gate.needReportRead':
+    'Requires report.read from the server — do not infer from gate.confirm / Scanner.',
   'gate.reportQuickTitle': 'Quick report (O12)',
   'gateDeeplink.h_4pqjik': 'Open scan Gate on app',
-  'gateDeeplink.h_9xk8eh': 'Scan tickets with the Vemoki app on iPhone — not on the portal. The portal shows reports only when the server grants event report permission.',
-  'gateDeeplink.h_9xk8eh_2': 'Scan tickets with the Vemoki app on iPhone — not on the portal. The portal shows reports only when the server grants event report permission.',
+  'gateDeeplink.h_9xk8eh':
+    'Scan tickets with the Vemoki app on iPhone — not on the portal. The portal shows reports only when the server grants event report permission.',
+  'gateDeeplink.h_9xk8eh_2':
+    'Scan tickets with the Vemoki app on iPhone — not on the portal. The portal shows reports only when the server grants event report permission.',
   'gateDeeplink.h_iosHint': 'Scan tickets with the Vemoki app on iPhone',
   'gateDeeplink.h_k7571i': '— no camera on the portal.',
   'guests.approvalMode': 'Approval mode',
@@ -1039,9 +1227,11 @@ export const EN: { [K in MessageKey]: string } = {
   'guests.pendingTitle': 'Pending approval',
   'guests.pendingTabLabel': 'Pending',
   'guests.notificationsTabLabel': 'Notify',
-  'home.h_1g841dv': 'You are signed in but not assigned to any organization. Contact your organization owner for a staff invitation (portal); do not use the guest flow on the app.',
+  'home.h_1g841dv':
+    'You are signed in but not assigned to any organization. Contact your organization owner for a staff invitation (portal); do not use the guest flow on the app.',
   'home.h_cb3p8s': 'View sign-in session',
-  'home.noOrgBody': 'You are signed in but not assigned to any organization. Contact an org owner for a staff invitation (portal); do not use the guest flow on the app.',
+  'home.noOrgBody':
+    'You are signed in but not assigned to any organization. Contact an org owner for a staff invitation (portal); do not use the guest flow on the app.',
   'locale.en': 'English',
   'locale.label': 'Language',
   'locale.vi': 'Tiếng Việt',
@@ -1057,30 +1247,38 @@ export const EN: { [K in MessageKey]: string } = {
   'members.h_47dn03': 'Send invitation',
   'members.h_5ptlts': 'Missing permission: members.manage.',
   'members.h_7tkx6u': 'Could not revoke member.',
-  'members.h_aa8wpg': 'Outcome unclear for sending the invitation. Do not treat it as sent — check again.',
+  'members.h_aa8wpg':
+    'Outcome unclear for sending the invitation. Do not treat it as sent — check again.',
   'members.h_aeura8': 'Revoke invitation?',
   'members.h_d390z8': 'Missing permission to manage members (members.manage).',
   'members.h_i0adgn': 'Members & invitations',
-  'members.h_kwv0j7': 'Emails are masked. Roles follow the server allowlist — arbitrary permissions are not sent. Assign events: pick from the discovered list; avoid pasting UUIDs by hand.',
-  'members.h_ltgqwp': 'The member\'s next requests will be blocked. This does not confirm sessions were cleared on every device.',
+  'members.h_kwv0j7':
+    'Emails are masked. Roles follow the server allowlist — arbitrary permissions are not sent. Assign events: pick from the discovered list; avoid pasting UUIDs by hand.',
+  'members.h_ltgqwp':
+    "The member's next requests will be blocked. This does not confirm sessions were cleared on every device.",
   'members.h_o8fp08': 'Member revoked.',
-  'members.h_oiatvx': 'Outcome unclear for loading members/invitations. Do not assume the list is empty.',
+  'members.h_oiatvx':
+    'Outcome unclear for loading members/invitations. Do not assume the list is empty.',
   'members.h_ov3797': 'Expired',
   'members.h_r0iic4': 'Assigned event',
   'members.h_suvvlr': 'Outcome unclear for the revoke — check again.',
   'members.h_tzdfji': 'Owner revoke from portal staff directory',
   'members.h_xg2gwp': 'Invitation created (ACCEPTED ≠ email delivered).',
-  'members.inviteEventsHint': 'Email is masked. Roles follow server allowlist — do not send arbitrary permissions. Assign events from discovered list; avoid pasting UUIDs.',
+  'members.inviteEventsHint':
+    'Email is masked. Roles follow server allowlist — do not send arbitrary permissions. Assign events from discovered list; avoid pasting UUIDs.',
   'members.invitesCount': 'Invitations ({{count}})',
   'members.membersCount': 'Members ({{count}})',
-  'members.roles.assignBuiltInOnly': 'Reassigning an existing member supports the built-in role-map only (PATCH). New invites may use a named server preset.',
+  'members.roles.assignBuiltInOnly':
+    'Reassigning an existing member supports the built-in role-map only (PATCH). New invites may use a named server preset.',
   'members.roles.assignCta': 'Assign role',
   'members.roles.assignTitle': 'Assign system role',
-  'members.roles.catalogHint': 'Fixed role-map plus named server presets — no arbitrary permission checkbox matrix.',
+  'members.roles.catalogHint':
+    'Fixed role-map plus named server presets — no arbitrary permission checkbox matrix.',
   'members.roles.changeFailed': 'Could not change role.',
   'members.roles.changeOk': 'Role updated.',
   'members.roles.changeReason': 'Role change from portal (P2-ROLES-PRESET)',
-  'members.roles.changeUnknown': 'Outcome unclear for the role change — check again.',
+  'members.roles.changeUnknown':
+    'Outcome unclear for the role change — check again.',
   'members.roles.colKind': 'Kind',
   'members.roles.colMembers': 'Members',
   'members.roles.colName': 'Name',
@@ -1088,20 +1286,27 @@ export const EN: { [K in MessageKey]: string } = {
   'members.roles.colUpdated': 'Updated',
   'members.roles.groupPreset': 'Server presets',
   'members.roles.groupSystem': 'System role-map',
-  'members.roles.invalidRole': 'Invalid role — only MembershipRole or a server preset.',
+  'members.roles.invalidRole':
+    'Invalid role — only MembershipRole or a server preset.',
   'members.roles.kindPreset': 'Preset',
   'members.roles.kindSystem': 'System',
-  'members.roles.lastOwnerBody': 'The organization must keep at least one active Owner (LAST_OWNER_REQUIRED).',
+  'members.roles.lastOwnerBody':
+    'The organization must keep at least one active Owner (LAST_OWNER_REQUIRED).',
   'members.roles.lastOwnerTitle': 'Cannot remove the last Owner',
-  'members.roles.noPermList': 'Server did not return a permission list for this row.',
+  'members.roles.noPermList':
+    'Server did not return a permission list for this row.',
   'members.roles.pickPlaceholder': 'Role / preset',
   'members.roles.pickRequired': 'Choose a role or preset',
-  'members.roles.presetMissingBody': 'Preset outside the catalog or not in this tenant — no silent strip.',
+  'members.roles.presetMissingBody':
+    'Preset outside the catalog or not in this tenant — no silent strip.',
   'members.roles.presetMissingTitle': 'Preset not in catalog',
-  'members.roles.presetReadonly': 'Preset “{{name}}” (schema {{version}}) — permissions are read-only from the server.',
+  'members.roles.presetReadonly':
+    'Preset “{{name}}” (schema {{version}}) — permissions are read-only from the server.',
   'members.roles.save': 'Save',
-  'members.roles.serverDefinedAlert': 'Permissions are defined by the server preset; do not edit individual permissions on the portal.',
-  'members.roles.systemMapHint': 'Built-in role-map — permissions are materialized by the server; no ticking on the portal.',
+  'members.roles.serverDefinedAlert':
+    'Permissions are defined by the server preset; do not edit individual permissions on the portal.',
+  'members.roles.systemMapHint':
+    'Built-in role-map — permissions are materialized by the server; no ticking on the portal.',
   'members.tabInvites': 'Invitations ({{count}})',
   'members.tabRoles': 'Roles',
   'members.tabUsers': 'Users ({{count}})',
@@ -1127,37 +1332,51 @@ export const EN: { [K in MessageKey]: string } = {
   'nav.org.settings': 'Settings',
   'notify.acceptedDelimitedFilters':
     'Provider accepted does not mean the guest received email — filter by delivery status.',
-  'notify.acceptedLegend': 'ACCEPTED only means the provider accepted the message — it does not prove delivery to the recipient. state/channel filters are optional (omit = legacy).',
+  'notify.acceptedLegend':
+    'ACCEPTED only means the provider accepted the message — it does not prove delivery to the recipient. state/channel filters are optional (omit = legacy).',
   'notify.acceptedNotDelivered': 'ACCEPTED (≠ delivered)',
-  'notify.acceptedProviderHint': 'ACCEPTED (provider accepted — ≠ delivered to recipient)',
-  'ops.audit.capabilityHint': 'Audit = report.read. Codes = inventory.import (masked). Export history does not include object keys or presigned URLs. Platform audit lives at /platform (separate Operator).',
-  'ops.audit.filterHint': 'Requires report.read plus assignment. Do not show reason / sanitizedDiff / PII. Instant from/to must include timezone (Z or ±offset).',
-  'ops.audit.needReportReadAssignment': 'Requires report.read plus event assignment — do not infer from role name.',
+  'notify.acceptedProviderHint':
+    'ACCEPTED (provider accepted — ≠ delivered to recipient)',
+  'ops.audit.capabilityHint':
+    'Audit = report.read. Codes = inventory.import (masked). Export history does not include object keys or presigned URLs. Platform audit lives at /platform (separate Operator).',
+  'ops.audit.filterHint':
+    'Requires report.read plus assignment. Do not show reason / sanitizedDiff / PII. Instant from/to must include timezone (Z or ±offset).',
+  'ops.audit.needReportReadAssignment':
+    'Requires report.read plus event assignment — do not infer from role name.',
   'ops.codes.lookupHint':
     'Only safe masked code fields are shown. Look up by code type available in the list — do not enter raw codes.',
-  'ops.codes.needImport': 'Requires inventory.import plus event assignment — do not infer from role name.',
-  'ops.cs.listSummary': 'CS: {{count}} result(s){{pageSuffix}}. PII masked by default.',
+  'ops.codes.needImport':
+    'Requires inventory.import plus event assignment — do not infer from role name.',
+  'ops.cs.listSummary':
+    'CS: {{count}} result(s){{pageSuffix}}. PII masked by default.',
   'ops.cs.needLookup': 'Requires cs.lookup from the server.',
-  'ops.cs.resendLabel': 'CS: requested resend email for {{ticketId}} (provider=PENDING, replayed={{replayed}}). PENDING ≠ delivered.',
+  'ops.cs.resendLabel':
+    'CS: requested resend email for {{ticketId}} (provider=PENDING, replayed={{replayed}}). PENDING ≠ delivered.',
   'ops.cs.resendQueued':
     'Resend queued · status {{status}}{{replaySuffix}}. Provider accepted does not mean delivered to the guest.',
   'ops.cs.ticketCount': 'CS: {{count}} ticket(s).',
-  'ops.cs.ticketDetail': 'CS: ticket detail {{ticketId}} · {{timelineCount}} timeline · email={{ownerEmailMasked}} · {{delivery}}.',
+  'ops.cs.ticketDetail':
+    'CS: ticket detail {{ticketId}} · {{timelineCount}} timeline · email={{ownerEmailMasked}} · {{delivery}}.',
   'ops.cs.unknown': 'CS outcome unknown. Do not treat as found or resent.',
-  'ops.decide.approvedRequest': 'Approved request {{requestId}}.{{replaySuffix}}',
+  'ops.decide.approvedRequest':
+    'Approved request {{requestId}}.{{replaySuffix}}',
   'ops.decide.deniedRequest': 'Denied request {{requestId}}.{{replaySuffix}}',
-  'ops.decide.importedCount': 'Imported {{count}} codes. Raw codes are not stored.',
-  'ops.decide.publishedVersion': 'Published version {{version}}. This payload cannot be edited.',
+  'ops.decide.importedCount':
+    'Imported {{count}} codes. Raw codes are not stored.',
+  'ops.decide.publishedVersion':
+    'Published version {{version}}. This payload cannot be edited.',
   'ops.decide.quotaSummary': 'Quota event: {{allocated}} / {{capacity}}.',
   'ops.decide.rejectedApi': '{{code}}: {{message}}{{requestIdSuffix}}',
   'ops.decide.replaySuffix': ' Repeated result.',
   'ops.decide.requestIdSuffix': ' · requestId {{requestId}}',
   'ops.decide.savedVersion': 'Saved version {{version}}. Not published yet.',
-  'ops.decide.unknown': 'Outcome unknown. Do not treat as saved, published, codes imported, approved, or denied.',
+  'ops.decide.unknown':
+    'Outcome unknown. Do not treat as saved, published, codes imported, approved, or denied.',
   'ops.export.apiRejected': '{{code}}: {{message}}',
   'ops.export.createButton': 'Create export',
   'ops.export.downloadCsv': 'Download CSV',
-  'ops.export.downloadLabel': 'Export {{exportId}}: downloaded CSV locally ({{contentType}}, {{byteLength}} bytes){{filenameSuffix}}. Do not store long-lived URLs.',
+  'ops.export.downloadLabel':
+    'Export {{exportId}}: downloaded CSV locally ({{contentType}}, {{byteLength}} bytes){{filenameSuffix}}. Do not store long-lived URLs.',
   'ops.export.expiresSuffix': ' · expires {{expiresAt}}',
   'ops.export.filterHistory': 'Filter history',
   'ops.export.filterHistoryApply': 'Apply export history filter',
@@ -1165,7 +1384,8 @@ export const EN: { [K in MessageKey]: string } = {
   'ops.export.filterStatusAria': 'Filter history by status',
   'ops.export.historyEmpty': 'No export history yet (or list failed).',
   'ops.export.historyLabel': 'Export history: {{count}} job{{pageSuffix}}.',
-  'ops.export.jobLabel': 'Export {{exportId}}: {{status}}{{rowsSuffix}}{{expiresSuffix}}. Download link expires; only READY can download.',
+  'ops.export.jobLabel':
+    'Export {{exportId}}: {{status}}{{rowsSuffix}}{{expiresSuffix}}. Download link expires; only READY can download.',
   'ops.export.needCreate': 'Requires export.create',
   'ops.export.needCreateServer': 'Requires export.create from the server.',
   'ops.export.needDownloadServer': 'Requires export.download from the server.',
@@ -1177,16 +1397,19 @@ export const EN: { [K in MessageKey]: string } = {
   'ops.export.tabLabel': 'Export',
   'ops.export.rowsSuffix': ' · {{rowCount}} rows',
   'ops.export.statusButton': 'Status',
-  'ops.export.unknown': 'Export outcome unknown. Do not treat as created or downloaded.',
+  'ops.export.unknown':
+    'Export outcome unknown. Do not treat as created or downloaded.',
   'ops.guests.needPermissions':
     'Requires guest-management permissions (import, approve, notify, or export) from the server.',
   'ops.h_106x23o': 'Finite',
-  'ops.h_11ovicf': 'RESEND_LIMIT: the resend allowance for the current window is used up. No new ticket is created.',
+  'ops.h_11ovicf':
+    'RESEND_LIMIT: the resend allowance for the current window is used up. No new ticket is created.',
   'ops.h_142nqqm': 'No results yet.',
   'ops.h_15064q7': 'Download template CSV',
   'ops.h_16do87c': 'No codes match the filter.',
   'ops.h_17ccgto': 'The CSV needs at least one code row.',
-  'ops.h_19boowo': 'Notification outcome unknown. Do not treat as sent, scheduled, or cancelled.',
+  'ops.h_19boowo':
+    'Notification outcome unknown. Do not treat as sent, scheduled, or cancelled.',
   'ops.h_1abuzle': 'List invitations',
   'ops.h_1bq4c1u': 'Code inventory',
   'ops.h_1bzuwr': 'Contact:',
@@ -1202,9 +1425,11 @@ export const EN: { [K in MessageKey]: string } = {
   'ops.h_1oi6f3o': 'no result from server',
   'ops.h_1oi8zqp': 'Gate entry confirmed',
   'ops.h_1pbxt75': 'Actions',
-  'ops.h_1plfzsb': 'Could not read the audit log. Do not treat the list as loaded successfully.',
+  'ops.h_1plfzsb':
+    'Could not read the audit log. Do not treat the list as loaded successfully.',
   'ops.h_1qz57kh': 'Denial reason',
-  'ops.h_1rrwe0k': 'Could not read the code list. Do not treat inventory as loaded successfully.',
+  'ops.h_1rrwe0k':
+    'Could not read the code list. Do not treat inventory as loaded successfully.',
   'ops.h_1rulq3': 'PENDING (queued to send)',
   'ops.h_1seddb9': 'Event audit log (H-A1)',
   'ops.h_1syu2ee': 'Filter by exact requestId',
@@ -1219,7 +1444,8 @@ export const EN: { [K in MessageKey]: string } = {
   'ops.h_1wzddxz': 'Choose ticket type from catalog',
   'ops.h_2a3kdd': 'No valid codes.',
   'ops.h_2gkw85': 'No pending approval requests.',
-  'ops.h_4dblwu': 'Pending approvals list outcome unknown. Do not treat as loaded.',
+  'ops.h_4dblwu':
+    'Pending approvals list outcome unknown. Do not treat as loaded.',
   'ops.h_6lgtz':
     'Enter an exact ticket or request ID. Provider accepted does not mean the guest received email.',
   'ops.h_705wl6': 'FAILED (send error — retry may be allowed)',
@@ -1233,19 +1459,22 @@ export const EN: { [K in MessageKey]: string } = {
   'ops.h_efcdx8': 'Guide',
   'ops.h_ern79n': 'Job/error report not found.',
   'ops.h_fzjokh': 'UNKNOWN (timeout/unclear — does not confirm it was sent)',
-  'ops.h_gafwuk': 'CS outcome unknown. Do not treat as found or as email resent.',
+  'ops.h_gafwuk':
+    'CS outcome unknown. Do not treat as found or as email resent.',
   'ops.h_gelxe4': 'Choose source from catalog',
   'ops.h_grfc8d': 'has been issued for the event',
   'ops.h_jr40gu': 'The CSV must be UTF-8 text with no null bytes.',
   'ops.h_k67vfi': 'Request ID',
   'ops.h_lygmrv': 'DEAD (retries exhausted)',
   'ops.h_m88eni': 'No email send records on the server yet',
-  'ops.h_mag360': 'Resend success only means provider queue/ACCEPTED — not DELIVERED.',
+  'ops.h_mag360':
+    'Resend success only means provider queue/ACCEPTED — not DELIVERED.',
   'ops.h_mfwl9g': 'PENDING (awaiting send)',
   'ops.h_n3x4mp': 'Lookup',
   'ops.h_qdkb51': 'REASON_REQUIRED: a denial reason is required.',
   'ops.h_r3tltl': 'UNKNOWN (unclear — not confirmed sent)',
-  'ops.h_r6ag2k': 'PERMISSION_DENIED: missing CS permissions (cs.lookup / cs.resend) — no lookup or resend.',
+  'ops.h_r6ag2k':
+    'PERMISSION_DENIED: missing CS permissions (cs.lookup / cs.resend) — no lookup or resend.',
   'ops.h_slukee': 'Upload + create job',
   'ops.h_tb6idf': 'Contact',
   'ops.h_tn7vf3': 'DEAD (retries exhausted — CS action needed)',
@@ -1262,74 +1491,104 @@ export const EN: { [K in MessageKey]: string } = {
     'Recorded: {{committedRowCount}} rows · skipped {{skippedRowCount}} · errors {{errorRowCount}} · invitations {{invitationCount}}{{replaySuffix}}.',
   'ops.import.csvMaxBytes': 'CSV exceeds {{maxBytes}} bytes.',
   'ops.import.csvMaxRows': 'CSV exceeds {{maxRows}} rows.',
-  'ops.import.errorsDownloadLabel': 'Downloaded private error report ({{contentType}}, {{byteLength}} bytes){{filenameSuffix}}. Do not store long-lived URLs.',
+  'ops.import.errorsDownloadLabel':
+    'Downloaded private error report ({{contentType}}, {{byteLength}} bytes){{filenameSuffix}}. Do not store long-lived URLs.',
   'ops.import.errorsExpired': 'Error report has expired.',
-  'ops.import.jobLabel': 'Import {{importId}}: {{status}}{{quotaSuffix}}{{replaySuffix}}. Preview does not write business data.',
-  'ops.import.legacyRawCodesMax': 'Legacy rawCodes max {{max}}; use CSV job + fileId.',
+  'ops.import.jobLabel':
+    'Import {{importId}}: {{status}}{{quotaSuffix}}{{replaySuffix}}. Preview does not write business data.',
+  'ops.import.legacyRawCodesMax':
+    'Legacy rawCodes max {{max}}; use CSV job + fileId.',
   'ops.import.listInvitations': 'List invitations',
-  'ops.import.localCsvSummary': 'Local CSV: {{rowCount}} rows · {{byteLength}} bytes · not written to backend.',
-  'ops.import.missingColumn': 'Missing required column «{{field}}» (template/mapping).',
-  'ops.import.previewLabel': 'Preview rev {{previewRevision}}: {{validRowCount}} valid · {{errorRowCount}} errors · invitation {{invitationCount}} · estimated quota {{estimatedQuota}} (no reserve).',
-  'ops.import.quarantineReady': 'Quarantine file ready · fileId {{fileId}} · {{byteLength}} bytes.',
-  'ops.import.quotaEstimateSuffix': ' · estimated quota {{estimatedQuota}} (no hold)',
+  'ops.import.localCsvSummary':
+    'Local CSV: {{rowCount}} rows · {{byteLength}} bytes · not written to backend.',
+  'ops.import.missingColumn':
+    'Missing required column «{{field}}» (template/mapping).',
+  'ops.import.previewLabel':
+    'Preview rev {{previewRevision}}: {{validRowCount}} valid · {{errorRowCount}} errors · invitation {{invitationCount}} · estimated quota {{estimatedQuota}} (no reserve).',
+  'ops.import.quarantineReady':
+    'Quarantine file ready · fileId {{fileId}} · {{byteLength}} bytes.',
+  'ops.import.quotaEstimateSuffix':
+    ' · estimated quota {{estimatedQuota}} (no hold)',
   'ops.import.replaySuffix': ' · replay',
   'ops.import.templateDownloaded': 'Downloaded template {{filename}}.',
   'ops.import.that': 'failed',
-  'ops.import.unknown': 'Import outcome unknown. Do not treat as previewed or committed.',
+  'ops.import.unknown':
+    'Import outcome unknown. Do not treat as previewed or committed.',
   'ops.import.uploadJob': 'Upload + create job',
-  'ops.invitation.dispatchLabel': 'Dispatched {{dispatchedCount}} · rev {{previewRevision}}{{replaySuffix}}. Claim-time issue — ticket not issued yet.',
-  'ops.invitation.listSummary': 'Invitations: {{count}} item(s){{pageSuffix}}. Email is masked only; no auto-account.',
+  'ops.invitation.dispatchLabel':
+    'Dispatched {{dispatchedCount}} · rev {{previewRevision}}{{replaySuffix}}. Claim-time issue — ticket not issued yet.',
+  'ops.invitation.listSummary':
+    'Invitations: {{count}} item(s){{pageSuffix}}. Email is masked only; no auto-account.',
   'ops.invitation.previewDispatch':
     'Delivery preview (rev {{previewRevision}}): {{selectedCount}} selected · estimated quota {{estimatedQuota}} (does not hold quota).',
-  'ops.invitation.unknown': 'Invitation outcome unknown. Do not treat as dispatched.',
+  'ops.invitation.unknown':
+    'Invitation outcome unknown. Do not treat as dispatched.',
   'ops.notifications.applyFilters': 'Apply notification filters',
   'ops.notifications.filtersTitle': 'Notification filters',
   'ops.notifications.listSummary':
     'Notifications: {{count}} item(s){{pageSuffix}}. Provider acceptance does not prove the guest received it.',
-  'ops.notifications.previewReminder': 'Reminder preview: {{recipientCount}} ticket holders · UTC {{scheduledAt}} · rev {{eventRevision}}. No PII exposure.',
-  'ops.notifications.publishTemplate': 'Published template {{templateId}} · version {{version}}.',
+  'ops.notifications.previewReminder':
+    'Reminder preview: {{recipientCount}} ticket holders · UTC {{scheduledAt}} · rev {{eventRevision}}. No PII exposure.',
+  'ops.notifications.publishTemplate':
+    'Published template {{templateId}} · version {{version}}.',
   'ops.notifications.reminderCancelled': 'Cancelled reminder {{reminderId}}.',
-  'ops.notifications.reminderCreated': 'Created reminder {{reminderId}} · {{status}} · rev {{eventRevision}}.',
-  'ops.notifications.requeued': 'Requeued send {{notificationId}} (PENDING — ≠ delivered).',
-  'ops.notifications.resendCooldown': 'RESEND_COOLDOWN: resend cooldown active (~{{seconds}}s). No new ticket created — try again later.',
+  'ops.notifications.reminderCreated':
+    'Created reminder {{reminderId}} · {{status}} · rev {{eventRevision}}.',
+  'ops.notifications.requeued':
+    'Requeued send {{notificationId}} (PENDING — ≠ delivered).',
+  'ops.notifications.resendCooldown':
+    'RESEND_COOLDOWN: resend cooldown active (~{{seconds}}s). No new ticket created — try again later.',
   'ops.notifications.revokeGrantDone': 'Revoked {{grantId}}',
   'ops.notifications.sendChannel': 'Send {{channel}}',
-  'ops.notifications.unknown': 'Notification outcome unknown. Do not treat as sent, scheduled, or cancelled.',
+  'ops.notifications.unknown':
+    'Notification outcome unknown. Do not treat as sent, scheduled, or cancelled.',
   'ops.notifications.allowlistedVars': 'Allowlisted variables: {{vars}}',
   'ops.notifications.cancelReminderAction': 'Cancel reminder',
-  'ops.notifications.cancelReminderBody': 'Cancel a transactional reminder — not marketing. Reuse Idempotency-Key if outcome was unknown.',
+  'ops.notifications.cancelReminderBody':
+    'Cancel a transactional reminder — not marketing. Reuse Idempotency-Key if outcome was unknown.',
   'ops.notifications.cancelReminderIdPlaceholder': 'Reminder ID (cancel)',
   'ops.notifications.cancelReminderOk': 'Cancel reminder',
   'ops.notifications.cancelReminderTitle': 'Cancel transactional reminder?',
   'ops.notifications.createReminderAction': 'Create reminder',
-  'ops.notifications.invalidSchedule': 'Invalid local time — use datetime-local.',
-  'ops.notifications.needRevision': 'Load event detail for revision before scheduling reminders.',
+  'ops.notifications.invalidSchedule':
+    'Invalid local time — use datetime-local.',
+  'ops.notifications.needRevision':
+    'Load event detail for revision before scheduling reminders.',
   'ops.notifications.previewReminderAction': 'Preview reminder',
   'ops.notifications.previewTemplate': 'Preview template',
-  'ops.notifications.publishConfirmBody': 'Publish template {{kind}} — allowlisted vars only, transactional.',
+  'ops.notifications.publishConfirmBody':
+    'Publish template {{kind}} — allowlisted vars only, transactional.',
   'ops.notifications.publishConfirmOk': 'Publish',
   'ops.notifications.publishConfirmTitle': 'Confirm publish template',
   'ops.notifications.publishTemplateAction': 'Publish template',
-  'ops.notifications.reminderScheduleLabel': 'Reminder schedule (local browser)',
-  'ops.notifications.reminderSectionTitle': 'Transactional reminder (EventReminder)',
+  'ops.notifications.reminderScheduleLabel':
+    'Reminder schedule (local browser)',
+  'ops.notifications.reminderSectionTitle':
+    'Transactional reminder (EventReminder)',
   'ops.notifications.revisionLoading': 'Loading event revision…',
   'ops.notifications.templateEditorTitle': 'Email template',
   'ops.notifications.templateSubjectAria': 'Template subject',
   'ops.notifications.templateBodyTextAria': 'Template body (plain text)',
   'ops.notifications.templateBodyHtmlAria': 'Template body (HTML)',
-  'ops.notifications.templateSectionHint': 'Current revision: {{revision}}. Server-escaped preview; ACCEPTED ≠ delivered.',
+  'ops.notifications.templateSectionHint':
+    'Current revision: {{revision}}. Server-escaped preview; ACCEPTED ≠ delivered.',
   'ops.notifications.templateSectionTitle': 'Templates & reminders (C-N)',
   'ops.notifications.ve': 'Ticket',
   'ops.pending.applyFilters': 'Apply pending filters',
   'ops.pending.filtersTitle': 'Pending filters',
-  'ops.pending.listSummary': 'Pending approval: {{count}} request(s){{pageSuffix}}.',
-  'ops.pending.unknown': 'Pending list outcome unknown. Do not treat as loaded.',
+  'ops.pending.listSummary':
+    'Pending approval: {{count}} request(s){{pageSuffix}}.',
+  'ops.pending.unknown':
+    'Pending list outcome unknown. Do not treat as loaded.',
   'ops.portfolio.itemUnknown': 'Could not load',
-  'ops.portfolio.partial': 'Some events could not be loaded — do not use fake zeros.',
+  'ops.portfolio.partial':
+    'Some events could not be loaded — do not use fake zeros.',
   'ops.portfolio.unknown':
     'Could not load organization analytics. Do not show check-in / pending / quota counts as if they were correct.',
-  'ops.report.needPermissions': 'Requires report.read / inventory.import / export.* from the server — do not infer from role name.',
-  'ops.report.unknown': 'Report outcome unknown. Do not show ticket counts, quota, or pending totals as if they were correct.',
+  'ops.report.needPermissions':
+    'Requires report.read / inventory.import / export.* from the server — do not infer from role name.',
+  'ops.report.unknown':
+    'Report outcome unknown. Do not show ticket counts, quota, or pending totals as if they were correct.',
   'platform.h_11v4ibm': 'Revoke grant',
   'platform.h_1541rk1': 'Revoke support grant',
   'platform.h_19s5r5m': 'Revoke support grant',
@@ -1339,35 +1598,50 @@ export const EN: { [K in MessageKey]: string } = {
   'platform.h_1rlo1g2': 'Platform sign-in failed',
   'platform.h_1sfcojp': 'Platform sign-in',
   'platform.h_1sthjos': 'Filter audit',
-  'platform.h_1vi2x57': 'Could not revoke the support grant. Do not treat the revoke as successful.',
+  'platform.h_1vi2x57':
+    'Could not revoke the support grant. Do not treat the revoke as successful.',
   'platform.h_1vlqd43': 'No tenants yet (or the list failed).',
   'platform.h_1xkaqi6': 'Not a Platform Operator',
   'platform.h_3nfdgm': 'Platform Operator',
   'platform.h_4cj11z': 'Next page',
   'platform.h_5wjoae': 'No platform audit records yet.',
-  'platform.h_9c63t5': 'The Platform zone uses its own client/audience/cookie (`platform_oidc_*`) — do not use staff / Owner tokens.',
-  'platform.h_de965r': 'Could not read tenant health. Do not invent SLA / delivery confirmation.',
-  'platform.h_ed3cdu': 'Client/cookie/audience are separate from staff. Owner ≠ Operator. Health = sanitized counters (H-P2) — no fake SLA / payload / Redis-up.',
+  'platform.h_9c63t5':
+    'The Platform zone uses its own client/audience/cookie (`platform_oidc_*`) — do not use staff / Owner tokens.',
+  'platform.h_de965r':
+    'Could not read tenant health. Do not invent SLA / delivery confirmation.',
+  'platform.h_ed3cdu':
+    'Client/cookie/audience are separate from staff. Owner ≠ Operator. Health = sanitized counters (H-P2) — no fake SLA / payload / Redis-up.',
   'platform.h_ggf21i': 'tenantId (UUID)',
   'platform.h_hcpyf4': 'Retry Platform sign-in',
   'platform.h_qo8t9w': 'No reason/diff. Separate from staff report.read.',
-  'platform.h_rvf1a3': 'Tenant staff accounts (including Owner) cannot see Platform data. A separate Operator MFA session is required.',
-  'platform.h_usltan': 'Could not read the platform tenant list. Do not treat the list as loaded successfully.',
+  'platform.h_rvf1a3':
+    'Tenant staff accounts (including Owner) cannot see Platform data. A separate Operator MFA session is required.',
+  'platform.h_usltan':
+    'Could not read the platform tenant list. Do not treat the list as loaded successfully.',
   'platform.h_zdynbv': 'Time',
-  'platform.health.hint': 'Counters only (notifications/outbox/usage), sanitized. No email payload, raw errors, or Redis/SMTP status.',
+  'platform.health.hint':
+    'Counters only (notifications/outbox/usage), sanitized. No email payload, raw errors, or Redis/SMTP status.',
   'platform.loc': 'Filter',
-  'platform.operatorMfaOnly': 'Operator MFA only (ticket-platform-api) — Owner/staff tokens are rejected.',
+  'platform.operatorMfaOnly':
+    'Operator MFA only (ticket-platform-api) — Owner/staff tokens are rejected.',
   'platform.pickTenant': 'Select tenant or enter tenantId (UUID).',
-  'platform.revokeGrantHint': 'Operator MFA only. Reason required (audit platform.support.revoked). Do not use staff tokens.',
-  'platform.staffTokenRejected': 'Platform Operator only (MFA / platform audience) — do not use staff tokens.',
-  'platform.zoneLabel': 'PLATFORM-PORTAL-ZONE · Operator · assurance={{assurance}}',
-  'platform.mutate.unknown': 'Platform action outcome unclear — do not treat as success.',
-  'platform.mutate.detailUnknown': 'Could not load tenant detail. Reload before suspend/limits.',
-  'platform.mutate.grantUnknown': 'Could not create support grant — do not treat grant as issued.',
+  'platform.revokeGrantHint':
+    'Operator MFA only. Reason required (audit platform.support.revoked). Do not use staff tokens.',
+  'platform.staffTokenRejected':
+    'Platform Operator only (MFA / platform audience) — do not use staff tokens.',
+  'platform.zoneLabel':
+    'PLATFORM-PORTAL-ZONE · Operator · assurance={{assurance}}',
+  'platform.mutate.unknown':
+    'Platform action outcome unclear — do not treat as success.',
+  'platform.mutate.detailUnknown':
+    'Could not load tenant detail. Reload before suspend/limits.',
+  'platform.mutate.grantUnknown':
+    'Could not create support grant — do not treat grant as issued.',
   'platform.mutate.provisionTitle': 'Create tenant (PENDING + owner invite)',
   'platform.mutate.manageTitle': 'Detail / status / limits',
   'platform.mutate.grantCreateTitle': 'Issue support grant (cs.read)',
-  'platform.mutate.confirmSuspend': 'Suspend this tenant? Tickets/gate/recovery keep working.',
+  'platform.mutate.confirmSuspend':
+    'Suspend this tenant? Tickets/gate/recovery keep working.',
   'platform.mutate.confirmActivate': 'Activate this tenant again?',
   'platform.mutate.confirmGrant':
     'Create cs.read support grant for this tenant/event?',
@@ -1388,17 +1662,20 @@ export const EN: { [K in MessageKey]: string } = {
   'platform.mutate.phExpiresAt': 'expiresAt ISO (empty = +1h)',
   'platform.mutate.importsEnabled': 'importsEnabled',
   'platform.mutate.exportsEnabled': 'exportsEnabled',
-  'quota.capacityUnlimited': 'Capacity is unlimited or percentage is not defined.',
+  'quota.capacityUnlimited':
+    'Capacity is unlimited or percentage is not defined.',
   'quota.h_1h6b62d': 'Allocated',
   'quota.h_1tnoz3k': 'Unlimited',
-  'quota.h_dn1nvv': 'Quota response is missing allocated — do not assume a number.',
+  'quota.h_dn1nvv':
+    'Quota response is missing allocated — do not assume a number.',
   'quota.h_ti22hj': 'Outcome unclear for loading quota.',
   'settings.brandPublishTitle': 'Settings / brand / publish',
   'settings.h_17g3cj6': 'Organization branding updated.',
   'settings.h_1rjs2jo': 'Outcome unclear for saving branding — check again.',
   'settings.h_448wq6': 'Display name',
   'settings.h_6boshw': 'Organization suspended',
-  'settings.h_ch34ez': 'Missing permission to configure the organization (tenant.profile).',
+  'settings.h_ch34ez':
+    'Missing permission to configure the organization (tenant.profile).',
   'settings.h_i7x4fp': 'All branding changes are blocked (fail-closed).',
   'settings.h_k2xz80': 'Outcome unclear for loading branding.',
   'settings.h_me7m5c': 'Secondary color',
@@ -1415,7 +1692,8 @@ export const EN: { [K in MessageKey]: string } = {
   'setup.h_1sj85ay': 'Clone event.',
   'setup.h_1ygq73d': 'Outcome unclear for loading event metadata.',
   'setup.h_4dggx3': 'Archive event?',
-  'setup.h_mfkouj': 'Outcome unclear for clone — do not treat the copy as created.',
+  'setup.h_mfkouj':
+    'Outcome unclear for clone — do not treat the copy as created.',
   'setup.h_rezx8n': 'Could not update.',
   'setup.h_uafnux': 'Outcome unclear for archive.',
   'setup.h_y3j37s': 'Rename',
@@ -1433,7 +1711,8 @@ export const EN: { [K in MessageKey]: string } = {
   'shell.event.empty': 'No events yet',
   'shell.event.placeholder': 'Select event',
   'shell.event.selectTenantFirst': 'Select an organization first',
-  'shell.load.serverUnreachable': 'Could not reach the server. Try again later.',
+  'shell.load.serverUnreachable':
+    'Could not reach the server. Try again later.',
   'shell.load.unknownConnection': 'Outcome unclear — check your connection.',
   'shell.skipNav': 'Skip navigation',
   'shell.tenant.empty': 'No organization yet',
@@ -1443,11 +1722,13 @@ export const EN: { [K in MessageKey]: string } = {
   'sources.h_1850hrg': 'No code sources yet.',
   'sources.h_1hplg8o': 'Create source',
   'sources.h_1p3knph': 'Code source created.',
-  'sources.h_1pcprzj': 'No ticket types yet — create one under Ticket types first',
+  'sources.h_1pcprzj':
+    'No ticket types yet — create one under Ticket types first',
   'sources.h_1w8bpuo': 'Load more',
   'sources.h_67axiu': 'Outcome unclear for loading code sources.',
   'sources.h_8t861g': 'Create code source',
-  'sources.h_duauzj': 'Outcome unclear for creating the source — do not treat it as created.',
+  'sources.h_duauzj':
+    'Outcome unclear for creating the source — do not treat it as created.',
   'sources.h_q0wodv': 'Could not create the source.',
   'sources.tao': 'Create',
   'sources.ten': 'Name',
@@ -1457,36 +1738,45 @@ export const EN: { [K in MessageKey]: string } = {
   'surface.empty.default': 'No data yet',
   'surface.error.loadFailed': 'Could not load data',
   'surface.loading': 'Loading…',
-  'surface.permission.defaultDescription': 'You do not have permission to view this content. Permissions are determined by the server.',
+  'surface.permission.defaultDescription':
+    'You do not have permission to view this content. Permissions are determined by the server.',
   'surface.permission.goAllowed': 'Go to an allowed page',
   'surface.permission.title': 'Permission denied',
-  'surface.suspended.description': 'You cannot perform actions while the organization is SUSPENDED.',
+  'surface.suspended.description':
+    'You cannot perform actions while the organization is SUSPENDED.',
   'surface.suspended.title': 'Organization suspended',
-  'surface.unknown.defaultDescription': 'Unrecognized response — verify before treating as success.',
+  'surface.unknown.defaultDescription':
+    'Unrecognized response — verify before treating as success.',
   'surface.unknown.title': 'Outcome unclear',
   'types.h_13e0npu': 'Ticket type created.',
   'types.h_1caa9m7': 'Create ticket type',
   'types.h_1cxyxe': 'Could not create the ticket type.',
-  'types.h_1ic6dze': 'Outcome unclear for creating the ticket type — do not treat it as created.',
+  'types.h_1ic6dze':
+    'Outcome unclear for creating the ticket type — do not treat it as created.',
   'types.h_1j8nzaz': 'Outcome unclear for loading ticket types.',
   'types.h_xnio89': 'No ticket types yet.',
   'types.nhan': 'Label',
   'platform.readHealth': 'Read health',
   'settings.saveFailedHttp': 'Could not save (HTTP {{status}}).',
   'settings.currentVersion': 'Current version: ',
-  'members.loadFailedStatus': 'Could not load the list (members {{members}}, invites {{invites}}).',
+  'members.loadFailedStatus':
+    'Could not load the list (members {{members}}, invites {{invites}}).',
   'events.loadFailedHttp': 'Could not load the list (HTTP {{status}}).',
   'tenant.home.meta': '{{slug}} · role {{role}} · status {{status}}',
-  'setup.metadataHint': 'Metadata / clone / archive. UUIDs come from the route — do not paste them by hand.',
+  'setup.metadataHint':
+    'Metadata / clone / archive. UUIDs come from the route — do not paste them by hand.',
   'audit.tab.exportHistory': 'Export history',
-  'event.home.publishLockVersion': 'Publish locks the config version (expectedVersion {{version}}).',
+  'event.home.publishLockVersion':
+    'Publish locks the config version (expectedVersion {{version}}).',
   'event.home.gateReportDetail': 'Detailed gate report:',
-  'account.cookieAttrs': 'Host-only · HttpOnly · SameSite=Lax · no Domain=.vemoki.com',
+  'account.cookieAttrs':
+    'Host-only · HttpOnly · SameSite=Lax · no Domain=.vemoki.com',
   'ops.import.panelTitle': 'Import guests and codes from CSV',
   'ops.import.tabLabel': 'Import',
   'ops.import.panelDescription':
     'Upload a CSV, preview (does not hold quota), then confirm import. Error reports download through a secure channel, not a temporary link.',
-  'ops.import.catalogFiltersAria': 'Source and ticket type filters for guest import',
+  'ops.import.catalogFiltersAria':
+    'Source and ticket type filters for guest import',
   'ops.import.jobType': 'Operation type',
   'ops.import.codeColumn': 'Code column',
   'ops.import.emailColumn': 'Email column',
@@ -1507,11 +1797,14 @@ export const EN: { [K in MessageKey]: string } = {
   'readiness.form.ok': 'Terms/draft present or config already published.',
   'readiness.form.missing': 'Terms missing or config not published.',
   'readiness.brand.ok': 'Organization name and brand color present.',
-  'readiness.brand.missing': 'Organization name or minimal brand color missing.',
-  'readiness.summary.allReady': 'Ready per form data — publishing is still enforced by the backend. Publish ≠ open redeem ≠ open Gate.',
+  'readiness.brand.missing':
+    'Organization name or minimal brand color missing.',
+  'readiness.summary.allReady':
+    'Ready per form data — publishing is still enforced by the backend. Publish ≠ open redeem ≠ open Gate.',
   'readiness.summary.missing': 'Missing: {{items}}',
   'readiness.summary.unknown': 'Unknown: {{items}}',
-  'readiness.summary.tail': '{{parts}} — do not mark publish as successful while items are missing/unknown.',
+  'readiness.summary.tail':
+    '{{parts}} — do not mark publish as successful while items are missing/unknown.',
   'common.pagination.dotMoreAfter': ' · more pages',
   'views.toolbar.label': 'View',
   'views.toolbar.aria': 'Choose or save a list view',
@@ -1522,7 +1815,8 @@ export const EN: { [K in MessageKey]: string } = {
   'views.action.manage': 'Manage views',
   'views.action.automationSoon': 'Rules (coming soon)',
   'views.stale.title': 'Stale view',
-  'views.stale.body': 'Some filters/columns are no longer in the allowlist. Reset the view or save again.',
+  'views.stale.body':
+    'Some filters/columns are no longer in the allowlist. Reset the view or save again.',
   'views.stale.reset': 'Reset view',
   'views.save.title': 'Save view',
   'views.save.name': 'Name',
@@ -1531,7 +1825,8 @@ export const EN: { [K in MessageKey]: string } = {
   'views.save.scopeEvent': 'This event',
   'views.save.scopeOrg': 'Organization',
   'views.save.setDefault': 'Set as default',
-  'views.save.privateHint': 'Private to your account (local). Not shared in the org yet (P2b).',
+  'views.save.privateHint':
+    'Private to your account (local). Not shared in the org yet (P2b).',
   'views.save.confirm': 'Save',
   'views.save.cancel': 'Cancel',
   'views.manage.title': 'Manage views',
@@ -1540,60 +1835,75 @@ export const EN: { [K in MessageKey]: string } = {
   'views.manage.delete': 'Delete',
   'views.automation.title': 'Automation rules',
   'views.automation.disabled': 'Coming soon',
-  'views.automation.body': 'Server share/automation (P2b) needs an OpenAPI saved-views contract. Views never email attendees.',
+  'views.automation.body':
+    'Server share/automation (P2b) needs an OpenAPI saved-views contract. Views never email attendees.',
   'views.members.roleFilter': 'Filter by role',
   'views.members.statusFilter': 'Filter by status',
   'home.startOnboarding': 'Register an organization (self-serve)',
   'surface.pendingActivation.title': 'Awaiting activation',
-  'surface.pendingActivation.description': 'The organization is PENDING. An Operator will activate it — do not fake ACTIVE or open admin mutations.',
+  'surface.pendingActivation.description':
+    'The organization is PENDING. An Operator will activate it — do not fake ACTIVE or open admin mutations.',
   'onboarding.backHome': 'Back to home',
   'onboarding.denied': 'Organization not found in your discovery list.',
   'onboarding.signup.title': 'Create organization',
-  'onboarding.signup.lead': 'Self-serve signup creates a PENDING tenant. ACTIVE only after Operator approval — never auto-activated.',
+  'onboarding.signup.lead':
+    'Self-serve signup creates a PENDING tenant. ACTIVE only after Operator approval — never auto-activated.',
   'onboarding.signup.name': 'Organization name',
   'onboarding.signup.nameRequired': 'Enter an organization name',
   'onboarding.signup.slug': 'Slug',
   'onboarding.signup.slugRequired': 'Enter an organization slug',
-  'onboarding.signup.slugPattern': 'Slug: lowercase letters, digits, hyphens (kebab)',
+  'onboarding.signup.slugPattern':
+    'Slug: lowercase letters, digits, hyphens (kebab)',
   'onboarding.signup.slugHint': 'Used in public URLs — hard to change later.',
   'onboarding.signup.timezone': 'Default timezone',
   'onboarding.signup.contact': 'Contact (optional)',
-  'onboarding.signup.pendingPolicy': 'After submit you will see the awaiting-activation screen. No ACTIVE admin until Operator approval.',
+  'onboarding.signup.pendingPolicy':
+    'After submit you will see the awaiting-activation screen. No ACTIVE admin until Operator approval.',
   'onboarding.signup.submit': 'Submit registration',
   'onboarding.signup.invalid': 'Invalid slug or name.',
-  'onboarding.signup.unknown': 'Registration outcome unclear — do not treat as ACTIVE.',
+  'onboarding.signup.unknown':
+    'Registration outcome unclear — do not treat as ACTIVE.',
   'onboarding.signup.failed': 'Could not submit registration.',
   'onboarding.pending.title': 'Registration submitted — awaiting activation',
-  'onboarding.pending.body': '{{name}} ({{slug}}) is PENDING. Contact platform support if needed — no admin mutations.',
+  'onboarding.pending.body':
+    '{{name}} ({{slug}}) is PENDING. Contact platform support if needed — no admin mutations.',
   'onboarding.pending.refresh': 'Recheck status',
   'onboarding.pending.openWait': 'Open awaiting-activation screen',
-  'onboarding.pending.noAdmin': 'Do not create events / invite members / change branding while PENDING.',
-  'onboarding.pending.mutationBlocked': 'Server denied: tenant still PENDING (TENANT_PENDING).',
+  'onboarding.pending.noAdmin':
+    'Do not create events / invite members / change branding while PENDING.',
+  'onboarding.pending.mutationBlocked':
+    'Server denied: tenant still PENDING (TENANT_PENDING).',
   'onboarding.firstRun.title': 'First-run setup',
-  'onboarding.firstRun.lead': 'Organization {{name}} is ACTIVE. Complete the steps below — do not paste UUIDs.',
+  'onboarding.firstRun.lead':
+    'Organization {{name}} is ACTIVE. Complete the steps below — do not paste UUIDs.',
   'onboarding.firstRun.stepOrg': 'Organization profile',
   'onboarding.firstRun.stepTeam': 'Team',
   'onboarding.firstRun.stepEvent': 'First event',
   'onboarding.firstRun.stepReady': 'Ready',
-  'onboarding.firstRun.orgHint': 'Confirm display name and minimal brand color (branding API).',
+  'onboarding.firstRun.orgHint':
+    'Confirm display name and minimal brand color (branding API).',
   'onboarding.firstRun.displayName': 'Organization display name',
   'onboarding.firstRun.primaryColor': 'Primary brand color',
   'onboarding.firstRun.saveOrg': 'Save organization profile',
   'onboarding.firstRun.orgUnknown': 'Save outcome unclear — check again.',
   'onboarding.firstRun.orgDenied': 'Could not save organization profile.',
-  'onboarding.firstRun.teamHint': 'Invite one Manager by email + server preset (never send arbitrary permission arrays).',
+  'onboarding.firstRun.teamHint':
+    'Invite one Manager by email + server preset (never send arbitrary permission arrays).',
   'onboarding.firstRun.managerEmail': 'Manager email',
   'onboarding.firstRun.rolePreset': 'Role / preset',
   'onboarding.firstRun.roleManager': 'Manager (system role-map)',
   'onboarding.firstRun.inviteSubmit': 'Send Manager invite',
   'onboarding.firstRun.inviteSkip': 'Skip this step',
-  'onboarding.firstRun.inviteUnknown': 'Invite outcome unclear — do not claim inbox delivery.',
+  'onboarding.firstRun.inviteUnknown':
+    'Invite outcome unclear — do not claim inbox delivery.',
   'onboarding.firstRun.inviteFailed': 'Could not send Manager invite.',
-  'onboarding.firstRun.eventHint': 'Create a DRAFT event via the wizard — no UUID paste.',
+  'onboarding.firstRun.eventHint':
+    'Create a DRAFT event via the wizard — no UUID paste.',
   'onboarding.firstRun.createEvent': 'Create first event',
   'onboarding.firstRun.refreshEvents': 'Created — reload list',
   'onboarding.firstRun.readyTitle': 'Ready to enter the portal',
-  'onboarding.firstRun.readyBody': 'Publish ≠ open redeem ≠ open Gate. Continue event setup as needed.',
+  'onboarding.firstRun.readyBody':
+    'Publish ≠ open redeem ≠ open Gate. Continue event setup as needed.',
   'onboarding.firstRun.openSetup': 'Open event setup',
   'onboarding.firstRun.enterPortal': 'Enter portal',
 };
@@ -1605,12 +1915,25 @@ export const DICTS: Record<PortalLocale, { [K in MessageKey]: string }> = {
 
 /** VI literal → message key (migration helpers / parity tests). */
 export const VI_TO_KEY: Record<string, MessageKey> = {
+  'Chưa kiểm tra được phiên bản mới nhất. Chưa lưu bản nháp; thử lại sau.':
+    'config.latestCheckFailed',
+  'Cấu hình đã có phiên bản mới. Bản nháp của bạn chưa được lưu.':
+    'config.versionConflict',
+  'Tải lại phiên bản mới nhất sẽ bỏ các thay đổi chưa lưu trên biểu mẫu này.':
+    'config.reloadDiscard',
+  'Tải lại phiên bản mới nhất': 'config.reloadLatest',
+  'Xem trước bản đã lưu v{{version}}': 'config.previewTitle',
+  '{{count}} mục nội dung': 'config.previewSections',
+  'Chưa tải được bản xem trước đúng phiên bản. Thử tải lại.':
+    'config.previewLoadFailed',
+  'Nhập màu dạng #RGB hoặc #RRGGBB.': 'config.invalidColor',
   ' · {{rowCount}} dòng': 'ops.export.rowsSuffix',
   ' · còn trang sau': 'common.pagination.dotMoreAfter',
   ' · hết hạn {{expiresAt}}': 'ops.export.expiresSuffix',
   ' · replay': 'ops.import.replaySuffix',
   ' · requestId {{requestId}}': 'ops.decide.requestIdSuffix',
-  ' · ước tính quota {{estimatedQuota}} (không giữ suất)': 'ops.import.quotaEstimateSuffix',
+  ' · ước tính quota {{estimatedQuota}} (không giữ suất)':
+    'ops.import.quotaEstimateSuffix',
   ' (còn trang sau)': 'common.pagination.pageSuffixAfter',
   ' (còn trang)': 'common.pagination.pageSuffix',
   ' Kết quả lặp lại.': 'ops.decide.replaySuffix',
@@ -1622,17 +1945,24 @@ export const VI_TO_KEY: Record<string, MessageKey> = {
   '(đăng nhập bắt buộc)': 'common.loginRequired',
   '{{code}}: {{message}}': 'ops.export.apiRejected',
   '{{code}}: {{message}}{{requestIdSuffix}}': 'ops.decide.rejectedApi',
-  '{{code}}: không có quyền trên tenant/event này — không gửi lại email.': 'common.apiForbiddenResend',
+  '{{code}}: không có quyền trên tenant/event này — không gửi lại email.':
+    'common.apiForbiddenResend',
   '{{count}} quyền trên sự kiện này': 'common.eventPermissions',
-  '{{name}} ({{slug}}) đang PENDING. Liên hệ hỗ trợ nền tảng nếu cần — không mở mutation admin.': 'onboarding.pending.body',
+  '{{name}} ({{slug}}) đang PENDING. Liên hệ hỗ trợ nền tảng nếu cần — không mở mutation admin.':
+    'onboarding.pending.body',
   '{{name}} (bản sao)': 'common.cloneName',
-  '{{parts}} — không đánh dấu xuất bản thành công khi còn thiếu/chưa rõ.': 'readiness.summary.tail',
+  '{{parts}} — không đánh dấu xuất bản thành công khi còn thiếu/chưa rõ.':
+    'readiness.summary.tail',
   '{{slug}} · vai trò {{role}} · trạng thái {{status}}': 'tenant.home.meta',
-  '{{status}} (trạng thái chưa map — không khẳng định đã giao)': 'common.mappedStatus',
+  '{{status}} (trạng thái chưa map — không khẳng định đã giao)':
+    'common.mappedStatus',
   'ACCEPTED (≠ delivered)': 'notify.acceptedNotDelivered',
-  'ACCEPTED (nhà cung cấp nhận — ≠ đã giao tới người nhận)': 'notify.acceptedProviderHint',
-  'Đã chấp nhận từ nhà cung cấp không đồng nghĩa khách đã nhận email — lọc theo trạng thái gửi.': 'notify.acceptedDelimitedFilters',
-  'ACCEPTED chỉ nghĩa nhà cung cấp đã nhận — không chứng minh đã giao tới người nhận. Lọc state/channel optional (omit = legacy).': 'notify.acceptedLegend',
+  'ACCEPTED (nhà cung cấp nhận — ≠ đã giao tới người nhận)':
+    'notify.acceptedProviderHint',
+  'Đã chấp nhận từ nhà cung cấp không đồng nghĩa khách đã nhận email — lọc theo trạng thái gửi.':
+    'notify.acceptedDelimitedFilters',
+  'ACCEPTED chỉ nghĩa nhà cung cấp đã nhận — không chứng minh đã giao tới người nhận. Lọc state/channel optional (omit = legacy).':
+    'notify.acceptedLegend',
   'action (tuỳ chọn)': 'audit.filter.actionOptional',
   'Ảnh chụp nhanh': 'gate.report.snapshotTitle',
   'Dữ liệu báo cáo có thể đã cũ': 'gate.report.staleTitle',
@@ -1642,14 +1972,20 @@ export const VI_TO_KEY: Record<string, MessageKey> = {
   'Áp dụng bộ lọc chờ duyệt': 'ops.pending.applyFilters',
   'Áp dụng bộ lọc lịch sử export': 'ops.export.filterHistoryApply',
   'Áp dụng bộ lọc thông báo': 'ops.notifications.applyFilters',
-  'Archive đổi contentStatus — không mở/đóng Gate và không thu hồi vé đã phát.': 'events.archive.hint',
+  'Archive đổi contentStatus — không mở/đóng Gate và không thu hồi vé đã phát.':
+    'events.archive.hint',
   'Archive thất bại.': 'events.archive.failed',
-  'Audit = report.read. Codes = inventory.import (masked). Export history không chứa object key / URL ký sẵn. Platform audit nằm ở /platform (Operator riêng).': 'ops.audit.capabilityHint',
-  'Automation / share server (P2b) chưa có contract OpenAPI. Không gửi email khách từ view.': 'views.automation.body',
-  'Bạn đã từ chối ủy quyền tại nhà cung cấp danh tính.': 'auth.error.accessDenied',
-  'Bạn không có quyền xem nội dung này. Quyền do máy chủ quyết định.': 'surface.permission.defaultDescription',
+  'Audit = report.read. Codes = inventory.import (masked). Export history không chứa object key / URL ký sẵn. Platform audit nằm ở /platform (Operator riêng).':
+    'ops.audit.capabilityHint',
+  'Automation / share server (P2b) chưa có contract OpenAPI. Không gửi email khách từ view.':
+    'views.automation.body',
+  'Bạn đã từ chối ủy quyền tại nhà cung cấp danh tính.':
+    'auth.error.accessDenied',
+  'Bạn không có quyền xem nội dung này. Quyền do máy chủ quyết định.':
+    'surface.permission.defaultDescription',
   'Bản nháp': 'enum.contentStatus.DRAFT',
-  'Báo cáo chưa biết. Không hiện số vé, quota, hoặc số chờ duyệt như thể chúng đang đúng.': 'ops.report.unknown',
+  'Báo cáo chưa biết. Không hiện số vé, quota, hoặc số chờ duyệt như thể chúng đang đúng.':
+    'ops.report.unknown',
   'Báo cáo cổng chi tiết:': 'event.home.gateReportDetail',
   'Báo cáo lỗi đã hết hạn.': 'ops.import.errorsExpired',
   'Báo cáo nhanh (O12)': 'gate.reportQuickTitle',
@@ -1661,20 +1997,28 @@ export const VI_TO_KEY: Record<string, MessageKey> = {
   'Bộ lọc lịch sử export': 'ops.export.filterHistoryAria',
   'Biến allowlist: {{vars}}': 'ops.notifications.allowlistedVars',
   'Bộ lọc thông báo': 'ops.notifications.filtersTitle',
-  'Capacity không giới hạn hoặc chưa xác định phần trăm.': 'quota.capacityUnlimited',
+  'Capacity không giới hạn hoặc chưa xác định phần trăm.':
+    'quota.capacityUnlimited',
   'Cần đăng nhập': 'shell.auth.requiredTitle',
   'Cần export.create': 'ops.export.needCreate',
   'Cần export.create từ máy chủ.': 'ops.export.needCreateServer',
   'Cần export.download từ máy chủ.': 'ops.export.needDownloadServer',
-  'Cần quyền quản lý khách (nhập, duyệt, thông báo hoặc xuất) từ máy chủ.': 'ops.guests.needPermissions',
-  'Cần inventory.import + phân công sự kiện — không suy từ tên role.': 'ops.codes.needImport',
+  'Cần quyền quản lý khách (nhập, duyệt, thông báo hoặc xuất) từ máy chủ.':
+    'ops.guests.needPermissions',
+  'Cần inventory.import + phân công sự kiện — không suy từ tên role.':
+    'ops.codes.needImport',
   'Cần quyền cs.lookup từ máy chủ.': 'ops.cs.needLookup',
   'Cần redemption.approve': 'guests.needRedemptionApprove',
-  'Cần report.read / inventory.import / export.* từ máy chủ — không suy từ tên role.': 'ops.report.needPermissions',
-  'Cần report.read + phân công sự kiện — không suy từ tên role.': 'ops.audit.needReportReadAssignment',
-  'Cần report.read + phân công. Không hiển thị reason / sanitizedDiff / PII. Instant from/to phải có timezone (Z hoặc ±offset).': 'ops.audit.filterHint',
-  'Cần report.read từ máy chủ — không suy từ gate.confirm / Scanner.': 'gate.needReportRead',
-  'Cần report.read và phân công ít nhất một sự kiện — không suy từ tên role.': 'analytics.deniedAccess',
+  'Cần report.read / inventory.import / export.* từ máy chủ — không suy từ tên role.':
+    'ops.report.needPermissions',
+  'Cần report.read + phân công sự kiện — không suy từ tên role.':
+    'ops.audit.needReportReadAssignment',
+  'Cần report.read + phân công. Không hiển thị reason / sanitizedDiff / PII. Instant from/to phải có timezone (Z hoặc ±offset).':
+    'ops.audit.filterHint',
+  'Cần report.read từ máy chủ — không suy từ gate.confirm / Scanner.':
+    'gate.needReportRead',
+  'Cần report.read và phân công ít nhất một sự kiện — không suy từ tên role.':
+    'analytics.deniedAccess',
   'Cập nhật': 'members.roles.colUpdated',
   'Cấu hình': 'nav.org.settings',
   'Cấu hình / brand / xuất bản': 'settings.brandPublishTitle',
@@ -1685,15 +2029,20 @@ export const VI_TO_KEY: Record<string, MessageKey> = {
   'Check-in thành công': 'gate.stat.checkInOk',
   'Chế độ dual-run (local / prep)': 'dualRun.h_ekkubx',
   'Chế độ duyệt': 'guests.approvalMode',
-  'Chỉ hiển thị thông tin mã an toàn (đã che). Tra cứu theo loại mã có trong danh sách — không nhập mã thô.': 'ops.codes.lookupHint',
-  'Chỉ counter notifications/outbox/usage đã sanitize. Không payload email, raw error, hay trạng thái Redis/SMTP.': 'platform.health.hint',
-  'Chỉ Operator MFA (ticket-platform-api) — Owner/staff token bị từ chối.': 'platform.operatorMfaOnly',
-  'Chỉ Operator MFA. Reason bắt buộc (audit platform.support.revoked). Không dùng token staff.': 'platform.revokeGrantHint',
-  'Chỉ Platform Operator (MFA / audience platform) — không dùng token nhân sự.': 'platform.staffTokenRejected',
+  'Chỉ hiển thị thông tin mã an toàn (đã che). Tra cứu theo loại mã có trong danh sách — không nhập mã thô.':
+    'ops.codes.lookupHint',
+  'Chỉ counter notifications/outbox/usage đã sanitize. Không payload email, raw error, hay trạng thái Redis/SMTP.':
+    'platform.health.hint',
+  'Chỉ Operator MFA (ticket-platform-api) — Owner/staff token bị từ chối.':
+    'platform.operatorMfaOnly',
+  'Chỉ Operator MFA. Reason bắt buộc (audit platform.support.revoked). Không dùng token staff.':
+    'platform.revokeGrantHint',
+  'Chỉ Platform Operator (MFA / audience platform) — không dùng token nhân sự.':
+    'platform.staffTokenRejected',
   'Chi tiết / status / limits': 'platform.mutate.manageTitle',
   'Chi tiết vé {{ticketId}}.': 'events.ticketDetailTitle',
   'Cấp support grant (cs.read)': 'platform.mutate.grantCreateTitle',
-  'Chọn': 'common.select',
+  Chọn: 'common.select',
   'Chọn file CSV': 'ops.import.chooseCsv',
   'Chọn hoặc lưu view danh sách': 'views.toolbar.aria',
   'Chọn loại vé đã tạo': 'ops.import.chooseTicketTypeCreated',
@@ -1738,53 +2087,67 @@ export const VI_TO_KEY: Record<string, MessageKey> = {
   'Chưa rõ kết quả archive.': 'setup.h_uafnux',
   'Chưa rõ kết quả cập nhật metadata.': 'setup.h_197dgrj',
   'Chưa rõ kết quả clone — không coi là đã tạo bản sao.': 'setup.h_mfkouj',
-  'Chưa rõ kết quả đăng ký — không coi là đã tạo ACTIVE.': 'onboarding.signup.unknown',
+  'Chưa rõ kết quả đăng ký — không coi là đã tạo ACTIVE.':
+    'onboarding.signup.unknown',
   'Chưa rõ kết quả đổi vai trò — kiểm tra lại.': 'members.roles.changeUnknown',
-  'Chưa rõ kết quả gửi lời mời. Không coi là đã gửi — kiểm tra lại.': 'members.h_aa8wpg',
+  'Chưa rõ kết quả gửi lời mời. Không coi là đã gửi — kiểm tra lại.':
+    'members.h_aa8wpg',
   'Chưa rõ kết quả lưu branding — kiểm tra lại.': 'settings.h_1rjs2jo',
   'Chưa rõ kết quả lưu draft — không coi là đã lưu.': 'config.h_1irt9z3',
   'Chưa rõ kết quả lưu hồ sơ — kiểm tra lại.': 'onboarding.firstRun.orgUnknown',
-  'Chưa rõ kết quả mời — không khẳng định đã gửi hộp thư.': 'onboarding.firstRun.inviteUnknown',
+  'Chưa rõ kết quả mời — không khẳng định đã gửi hộp thư.':
+    'onboarding.firstRun.inviteUnknown',
   'Chưa rõ kết quả publish.': 'config.h_1b1xmvu',
   'Chưa rõ kết quả rollback.': 'config.h_1xteu8h',
   'Chưa rõ kết quả tải branding.': 'settings.h_k2xz80',
-  'Chưa rõ kết quả tải danh sách sự kiện. Không giả định danh sách trống.': 'events.h_byq509',
+  'Chưa rõ kết quả tải danh sách sự kiện. Không giả định danh sách trống.':
+    'events.h_byq509',
   'Chưa rõ kết quả tải hạn mức.': 'quota.h_ti22hj',
   'Chưa rõ kết quả tải lịch sử cấu hình.': 'config.h_194o8da',
   'Chưa rõ kết quả tải loại vé.': 'types.h_1j8nzaz',
   'Chưa rõ kết quả tải metadata sự kiện.': 'setup.h_1ygq73d',
   'Chưa rõ kết quả tải nguồn mã.': 'sources.h_67axiu',
   'Chưa rõ kết quả tải sự kiện.': 'common.h_1hj59zg',
-  'Chưa rõ kết quả tải thành viên/lời mời. Không giả định danh sách trống.': 'members.h_oiatvx',
+  'Chưa rõ kết quả tải thành viên/lời mời. Không giả định danh sách trống.':
+    'members.h_oiatvx',
   'Chưa rõ kết quả tạo loại vé — không coi là đã tạo.': 'types.h_1ic6dze',
   'Chưa rõ kết quả tạo nguồn — không coi là đã tạo.': 'sources.h_duauzj',
-  'Chưa rõ kết quả tạo sự kiện. Không coi là đã tạo — kiểm tra lại danh sách.': 'events.h_npdcvo',
+  'Chưa rõ kết quả tạo sự kiện. Không coi là đã tạo — kiểm tra lại danh sách.':
+    'events.h_npdcvo',
   'Chưa rõ kết quả thu hồi — kiểm tra lại.': 'members.h_suvvlr',
-  'Chưa rõ kết quả xuất bản — không đánh dấu thành công. Kiểm tra lại.': 'common.h_1d5xf37',
+  'Chưa rõ kết quả xuất bản — không đánh dấu thành công. Kiểm tra lại.':
+    'common.h_1d5xf37',
   'Chưa rõ: {{items}}': 'readiness.summary.unknown',
   'Chưa tải được báo cáo — không giả định số liệu xanh.': 'common.h_1cdrhuc',
-  'Chưa tải được phân tích tổ chức. Không hiện số check-in / pending / quota như thể chúng đang đúng.': 'ops.portfolio.unknown',
-  'Client/cookie/audience tách khỏi staff. Owner ≠ Operator. Health = counter sanitize (H-P2) — không SLA / payload / Redis-up giả.': 'platform.h_ed3cdu',
+  'Chưa tải được phân tích tổ chức. Không hiện số check-in / pending / quota như thể chúng đang đúng.':
+    'ops.portfolio.unknown',
+  'Client/cookie/audience tách khỏi staff. Owner ≠ Operator. Health = counter sanitize (H-P2) — không SLA / payload / Redis-up giả.':
+    'platform.h_ed3cdu',
   'Clone OK nhưng thiếu eventId — kiểm tra danh sách.': 'setup.h_1okp02m',
   'Clone sự kiện': 'setup.h_1iam0zn',
   'Clone thất bại.': 'setup.h_1mfbkiv',
-  'Đã ghi nhận: {{committedRowCount}} dòng · bỏ qua {{skippedRowCount}} · lỗi {{errorRowCount}} · lời mời {{invitationCount}}{{replaySuffix}}.': 'ops.import.commitLabel',
+  'Đã ghi nhận: {{committedRowCount}} dòng · bỏ qua {{skippedRowCount}} · lỗi {{errorRowCount}} · lời mời {{invitationCount}}{{replaySuffix}}.':
+    'ops.import.commitLabel',
   'Còn lại': 'gate.report.remaining',
   'Config đã publish': 'common.h_qqix4u',
   'Cookie phiên chỉ thuộc portal — không chia sẻ với app.': 'auth.h_w7m30b',
-  'Cổng': 'nav.event.gate',
+  Cổng: 'nav.event.gate',
   'Cổng — báo cáo (O12)': 'gate.h_1klnels',
   'Công khai': 'enum.visibility.PUBLIC',
   'Cổng quản trị nhân sự Vemoki': 'meta.description',
   'Cột mã': 'ops.import.codeColumn',
   'Cột email': 'ops.import.emailColumn',
   'Cơ bản': 'events.h_1y0cdxe',
-  'CS: {{count}} kết quả{{pageSuffix}}. PII mặc định đã che.': 'ops.cs.listSummary',
+  'CS: {{count}} kết quả{{pageSuffix}}. PII mặc định đã che.':
+    'ops.cs.listSummary',
   'CS: {{count}} vé.': 'ops.cs.ticketCount',
-  'CS: chi tiết vé {{ticketId}} · {{timelineCount}} timeline · email={{ownerEmailMasked}} · {{delivery}}.': 'ops.cs.ticketDetail',
-  'CS: đã yêu cầu gửi lại email cho {{ticketId}} (provider=PENDING, replayed={{replayed}}). PENDING ≠ đã giao.': 'ops.cs.resendLabel',
+  'CS: chi tiết vé {{ticketId}} · {{timelineCount}} timeline · email={{ownerEmailMasked}} · {{delivery}}.':
+    'ops.cs.ticketDetail',
+  'CS: đã yêu cầu gửi lại email cho {{ticketId}} (provider=PENDING, replayed={{replayed}}). PENDING ≠ đã giao.':
+    'ops.cs.resendLabel',
   'CSV cần ít nhất một dòng mã.': 'ops.h_17ccgto',
-  'CSV cục bộ: {{rowCount}} dòng · {{byteLength}} bytes · chưa ghi backend.': 'ops.import.localCsvSummary',
+  'CSV cục bộ: {{rowCount}} dòng · {{byteLength}} bytes · chưa ghi backend.':
+    'ops.import.localCsvSummary',
   'CSV phải là UTF-8 text, không chứa null byte.': 'ops.h_jr40gu',
   'CSV trống.': 'ops.h_1v0wxpt',
   'CSV vượt {{maxBytes}} bytes.': 'ops.import.csvMaxBytes',
@@ -1793,10 +2156,13 @@ export const VI_TO_KEY: Record<string, MessageKey> = {
   'DEAD (hết retry hữu ích — cần CS xử lý)': 'ops.h_tn7vf3',
   'DEAD (hết retry)': 'ops.h_lygmrv',
   'DELIVERED (có bằng chứng giao từ server)': 'ops.h_1kyhcv',
-  'Xem trước gửi thử không giữ suất và không gửi email.': 'ops.import.dispatchPreviewNotice',
-  'Xem trước gửi thử (phiên {{previewRevision}}): {{selectedCount}} đã chọn · ước tính suất {{estimatedQuota}} (không giữ suất).': 'ops.invitation.previewDispatch',
-  'Dùng trong URL công khai — không đổi dễ dàng sau này.': 'onboarding.signup.slugHint',
-  'Duyệt': 'ops.pending.approve',
+  'Xem trước gửi thử không giữ suất và không gửi email.':
+    'ops.import.dispatchPreviewNotice',
+  'Xem trước gửi thử (phiên {{previewRevision}}): {{selectedCount}} đã chọn · ước tính suất {{estimatedQuota}} (không giữ suất).':
+    'ops.invitation.previewDispatch',
+  'Dùng trong URL công khai — không đổi dễ dàng sau này.':
+    'onboarding.signup.slugHint',
+  Duyệt: 'ops.pending.approve',
   'Đã cập nhật branding tổ chức.': 'settings.h_17g3cj6',
   'Đã cập nhật tên sự kiện.': 'setup.h_1s3ht28',
   'Đã cập nhật vai trò.': 'members.roles.changeOk',
@@ -1806,8 +2172,10 @@ export const VI_TO_KEY: Record<string, MessageKey> = {
   'Đã có loại vé trong danh mục.': 'readiness.types.ok',
   'Đã có nguồn mã trong danh mục.': 'readiness.sources.ok',
   'Đã có tên tổ chức và màu nhận diện.': 'readiness.brand.ok',
-  'Đã dispatch {{dispatchedCount}} · rev {{previewRevision}}{{replaySuffix}}. Claim-time issue — chưa cấp vé.': 'ops.invitation.dispatchLabel',
-  'Đã duyệt yêu cầu {{requestId}}.{{replaySuffix}}': 'ops.decide.approvedRequest',
+  'Đã dispatch {{dispatchedCount}} · rev {{previewRevision}}{{replaySuffix}}. Claim-time issue — chưa cấp vé.':
+    'ops.invitation.dispatchLabel',
+  'Đã duyệt yêu cầu {{requestId}}.{{replaySuffix}}':
+    'ops.decide.approvedRequest',
   'đã được cấp cho sự kiện': 'ops.h_grfc8d',
   'đã giao / delivered': 'ops.h_wlvv62',
   'Đã hoàn tác check-in': 'ops.h_c242jl',
@@ -1819,23 +2187,29 @@ export const VI_TO_KEY: Record<string, MessageKey> = {
   'Đã lưu trữ sự kiện.': 'setup.h_1dze9ux',
   'Đã nhập {{count}} mã. Mã gốc không được lưu.': 'ops.decide.importedCount',
   'Đã publish cấu hình.': 'config.h_1ec27qs',
-  'Đã publish phiên bản {{version}}. Payload này không sửa được.': 'ops.decide.publishedVersion',
-  'Đã publish template {{templateId}} · version {{version}}.': 'ops.notifications.publishTemplate',
+  'Đã publish phiên bản {{version}}. Payload này không sửa được.':
+    'ops.decide.publishedVersion',
+  'Đã publish template {{templateId}} · version {{version}}.':
+    'ops.notifications.publishTemplate',
   'Đã rollback (version mới đã publish).': 'config.h_145079h',
-  'Đã tải báo cáo lỗi private ({{contentType}}, {{byteLength}} bytes){{filenameSuffix}}. Không lưu URL dài hạn.': 'ops.import.errorsDownloadLabel',
+  'Đã tải báo cáo lỗi private ({{contentType}}, {{byteLength}} bytes){{filenameSuffix}}. Không lưu URL dài hạn.':
+    'ops.import.errorsDownloadLabel',
   'Đã tải template {{filename}}.': 'ops.import.templateDownloaded',
   'Đã tạo — tải lại danh sách': 'onboarding.firstRun.refreshEvents',
   'Đã tạo loại vé.': 'types.h_13e0npu',
   'Đã tạo lời mời (ACCEPTED ≠ đã giao email).': 'members.h_xg2gwp',
   'Đã tạo nguồn mã.': 'sources.h_1p3knph',
-  'Đã tạo nhắc {{reminderId}} · {{status}} · rev {{eventRevision}}.': 'ops.notifications.reminderCreated',
+  'Đã tạo nhắc {{reminderId}} · {{status}} · rev {{eventRevision}}.':
+    'ops.notifications.reminderCreated',
   'Đã tạo sự kiện. Đang chuyển tới tổng quan…': 'events.h_rpomry',
   'Đã thu hồi {{grantId}}': 'ops.notifications.revokeGrantDone',
   'Đã thu hồi lời mời.': 'members.h_2cjh4e',
   'Đã thu hồi thành viên.': 'members.h_o8fp08',
-  'Đã từ chối yêu cầu {{requestId}}.{{replaySuffix}}': 'ops.decide.deniedRequest',
+  'Đã từ chối yêu cầu {{requestId}}.{{replaySuffix}}':
+    'ops.decide.deniedRequest',
   'Đã xác nhận vào cổng': 'ops.h_1oi8zqp',
-  'Đã xếp lại gửi {{notificationId}} (PENDING — ≠ delivered).': 'ops.notifications.requeued',
+  'Đã xếp lại gửi {{notificationId}} (PENDING — ≠ delivered).':
+    'ops.notifications.requeued',
   'Đã xuất bản': 'enum.contentStatus.PUBLISHED',
   'Đã xuất bản cấu hình (publish content).': 'common.h_5q8fa1',
   'Đang chờ kích hoạt': 'surface.pendingActivation.title',
@@ -1843,20 +2217,23 @@ export const VI_TO_KEY: Record<string, MessageKey> = {
   'Đang hoạt động': 'account.h_1a6mmbo',
   'Đang tải revision sự kiện…': 'ops.notifications.revisionLoading',
   'Đang tải…': 'surface.loading',
-  'Đạt': 'readiness.status.ok',
+  Đạt: 'readiness.status.ok',
   'Đăng ký đã gửi — đang chờ kích hoạt': 'onboarding.pending.title',
-  'Đăng ký self-serve tạo tenant PENDING. ACTIVE chỉ sau khi Operator duyệt — không tự kích hoạt.': 'onboarding.signup.lead',
+  'Đăng ký self-serve tạo tenant PENDING. ACTIVE chỉ sau khi Operator duyệt — không tự kích hoạt.':
+    'onboarding.signup.lead',
   'Đăng ký tổ chức (self-serve)': 'home.startOnboarding',
   'Đăng nhập không thành công': 'auth.h_85v7iu',
   'Đăng nhập nhân sự': 'auth.h_1g2rg2o',
   'Đăng nhập nhân sự để mở portal quản trị.': 'shell.auth.staffDescription',
-  'Đăng nhập nhân sự qua nhà cung cấp danh tính. Không dùng phiên khách (app) trên portal.': 'auth.h_1dyukbi',
+  'Đăng nhập nhân sự qua nhà cung cấp danh tính. Không dùng phiên khách (app) trên portal.':
+    'auth.h_1dyukbi',
   'Đăng nhập Platform': 'platform.h_1sfcojp',
   'Đăng nhập Platform thất bại': 'platform.h_1rlo1g2',
   'Đăng xuất Platform': 'account.h_21w6fq',
   'Đăng xuất portal': 'shell.account.logout',
   'Đăng xuất portal (staff)': 'account.h_11eq8uu',
-  'Đăng xuất từng bề mặt riêng (ADR-20). Đăng xuất portal không xóa cookie Platform Operator và ngược lại.': 'account.h_19guouj',
+  'Đăng xuất từng bề mặt riêng (ADR-20). Đăng xuất portal không xóa cookie Platform Operator và ngược lại.':
+    'account.h_19guouj',
   'Đặt lại view': 'views.stale.reset',
   'Đặt làm mặc định': 'views.save.setDefault',
   'Đặt mặc định': 'views.manage.setDefault',
@@ -1871,22 +2248,28 @@ export const VI_TO_KEY: Record<string, MessageKey> = {
   'Đọc health': 'platform.readHealth',
   'Đội ngũ': 'onboarding.firstRun.stepTeam',
   'Đổi vai trò từ portal (P2-ROLES-PRESET)': 'members.roles.changeReason',
-  'Đủ sẵn sàng theo dữ liệu form — xuất bản vẫn do backend enforce. Publish ≠ mở redeem ≠ mở Gate.': 'readiness.summary.allReady',
+  'Đủ sẵn sàng theo dữ liệu form — xuất bản vẫn do backend enforce. Publish ≠ mở redeem ≠ mở Gate.':
+    'readiness.summary.allReady',
   'Đường dẫn (slug)': 'common.label.slug',
   'Email (đã che)': 'ops.table.emailMasked',
   'Email cần CS': 'analytics.col.emailCs',
-  'Email được che (masked). Vai trò theo allowlist máy chủ — không gửi quyền tùy ý. Gán sự kiện: chọn từ danh sách đã khám phá, tránh dán UUID tay.': 'members.h_kwv0j7',
+  'Email được che (masked). Vai trò theo allowlist máy chủ — không gửi quyền tùy ý. Gán sự kiện: chọn từ danh sách đã khám phá, tránh dán UUID tay.':
+    'members.h_kwv0j7',
   'Email hợp lệ': 'members.h_1rjw0n9',
   'Email liên hệ': 'events.h_1xm22zn',
   'Email Manager': 'onboarding.firstRun.managerEmail',
-  'English': 'locale.en',
-  'Export {{exportId}}: {{status}}{{rowsSuffix}}{{expiresSuffix}}. Link tải có hạn; READY mới tải được.': 'ops.export.jobLabel',
-  'Export {{exportId}}: đã tải CSV xuống máy ({{contentType}}, {{byteLength}} bytes){{filenameSuffix}}. Không lưu URL dài hạn.': 'ops.export.downloadLabel',
+  English: 'locale.en',
+  'Export {{exportId}}: {{status}}{{rowsSuffix}}{{expiresSuffix}}. Link tải có hạn; READY mới tải được.':
+    'ops.export.jobLabel',
+  'Export {{exportId}}: đã tải CSV xuống máy ({{contentType}}, {{byteLength}} bytes){{filenameSuffix}}. Không lưu URL dài hạn.':
+    'ops.export.downloadLabel',
   'Xuất danh sách': 'ops.export.panelInfo',
   'FAILED (gửi lỗi — có thể thử lại theo quyền)': 'ops.h_705wl6',
-  'File quarantine sẵn sàng · fileId {{fileId}} · {{byteLength}} bytes.': 'ops.import.quarantineReady',
+  'File quarantine sẵn sàng · fileId {{fileId}} · {{byteLength}} bytes.':
+    'ops.import.quarantineReady',
   'Danh sách chờ duyệt': 'ops.h_1lp1xu6',
-  'Gán lại thành viên hiện tại chỉ hỗ trợ role-map hệ thống (PATCH). Mời mới có thể chọn named server preset.': 'members.roles.assignBuiltInOnly',
+  'Gán lại thành viên hiện tại chỉ hỗ trợ role-map hệ thống (PATCH). Mời mới có thể chọn named server preset.':
+    'members.roles.assignBuiltInOnly',
   'Gán sự kiện (tuỳ chọn)': 'members.h_1fi9vwv',
   'Gán vai trò': 'members.roles.assignCta',
   'Gán vai trò hệ thống': 'members.roles.assignTitle',
@@ -1902,29 +2285,39 @@ export const VI_TO_KEY: Record<string, MessageKey> = {
   'Hệ thống': 'members.roles.kindSystem',
   'Hết hạn': 'ops.table.expires',
   'Hiển thị': 'common.h_wqd4fq',
-  'Host-only · HttpOnly · SameSite=Lax · không Domain=.vemoki.com': 'account.cookieAttrs',
+  'Host-only · HttpOnly · SameSite=Lax · không Domain=.vemoki.com':
+    'account.cookieAttrs',
   'Hồ sơ tổ chức': 'onboarding.firstRun.stepOrg',
   'Hỗ trợ': 'nav.event.support',
   'Hỗ trợ CS — tra cứu / timeline / resend': 'ops.h_1v4ywod',
   'HTTP {{status}}': 'common.httpStatus',
-  'Huỷ lịch nhắc giao dịch — không gửi marketing. Kết quả unknown phải giữ Idempotency-Key.': 'ops.notifications.cancelReminderBody',
+  'Huỷ lịch nhắc giao dịch — không gửi marketing. Kết quả unknown phải giữ Idempotency-Key.':
+    'ops.notifications.cancelReminderBody',
   'Huỷ nhắc': 'ops.notifications.cancelReminderAction',
-  'Huỷ': 'config.huy',
-  'Hủy': 'views.save.cancel',
+  Huỷ: 'config.huy',
+  Hủy: 'views.save.cancel',
   'Hướng dẫn': 'ops.h_efcdx8',
   'Hướng dẫn:': 'ops.h_8nmgxe',
   'Hữu hạn': 'ops.h_106x23o',
-  'Import {{importId}}: {{status}}{{quotaSuffix}}{{replaySuffix}}. Preview không ghi dữ liệu nghiệp vụ.': 'ops.import.jobLabel',
-  'Invitations: {{count}} mục{{pageSuffix}}. Email chỉ masked; không auto-account.': 'ops.invitation.listSummary',
-  'Keycloak từ chối đăng nhập (not_allowed). Thường do scope offline_access khi client chưa bật refresh token dài — dùng OIDC_SCOPES=openid profile email (xem apps/portal/.env.example). Local: staff@example.com / staff-demo sau khi API :3100 và Keycloak :8080 chạy.': 'auth.error.notAllowed',
-  'Kết quả chưa biết. Không coi là đã lưu, đã publish, đã nhập mã, đã duyệt, hoặc đã từ chối.': 'ops.decide.unknown',
-  'Kết quả CS chưa biết. Không coi là đã tìm thấy hoặc đã gửi lại email.': 'ops.cs.unknown',
+  'Import {{importId}}: {{status}}{{quotaSuffix}}{{replaySuffix}}. Preview không ghi dữ liệu nghiệp vụ.':
+    'ops.import.jobLabel',
+  'Invitations: {{count}} mục{{pageSuffix}}. Email chỉ masked; không auto-account.':
+    'ops.invitation.listSummary',
+  'Keycloak từ chối đăng nhập (not_allowed). Thường do scope offline_access khi client chưa bật refresh token dài — dùng OIDC_SCOPES=openid profile email (xem apps/portal/.env.example). Local: staff@example.com / staff-demo sau khi API :3100 và Keycloak :8080 chạy.':
+    'auth.error.notAllowed',
+  'Kết quả chưa biết. Không coi là đã lưu, đã publish, đã nhập mã, đã duyệt, hoặc đã từ chối.':
+    'ops.decide.unknown',
+  'Kết quả CS chưa biết. Không coi là đã tìm thấy hoặc đã gửi lại email.':
+    'ops.cs.unknown',
   'Kết quả danh sách chờ duyệt chưa biết. Không coi là đã tải.': 'ops.h_4dblwu',
-  'Kết quả export chưa biết. Không coi là đã tạo hoặc đã tải xong.': 'ops.export.unknown',
-  'Kết quả import chưa biết. Không coi là đã preview hoặc đã commit.': 'ops.import.unknown',
+  'Kết quả export chưa biết. Không coi là đã tạo hoặc đã tải xong.':
+    'ops.export.unknown',
+  'Kết quả import chưa biết. Không coi là đã preview hoặc đã commit.':
+    'ops.import.unknown',
   'Kết quả invitation chưa biết. Không coi là đã dispatch.': 'ops.h_1utu6nk',
   'Kết quả lặp lại.': 'ops.h_xgxcv3',
-  'Kết quả thông báo chưa biết. Không coi là đã gửi, đã lên lịch, hoặc đã huỷ.': 'ops.h_19boowo',
+  'Kết quả thông báo chưa biết. Không coi là đã gửi, đã lên lịch, hoặc đã huỷ.':
+    'ops.h_19boowo',
   'Khách & mã': 'nav.event.guests',
   'Khách tham dự': 'enum.tenantRole.Attendee',
   'không áp dụng': 'ops.h_1lsqc1u',
@@ -1939,15 +2332,23 @@ export const VI_TO_KEY: Record<string, MessageKey> = {
   'Không có quyền sự kiện này.': 'config.h_g7fjbz',
   'Không có quyền tải báo cáo lỗi (tenant/event).': 'ops.h_1dgs34w',
   'Không có quyền xem danh sách sự kiện.': 'events.h_o2hfl2',
-  'Không có quyền xem phân tích tổ chức — cần report.read và phân công sự kiện.': 'analytics.deniedBff',
+  'Không có quyền xem phân tích tổ chức — cần report.read và phân công sự kiện.':
+    'analytics.deniedBff',
   'Không có yêu cầu chờ duyệt.': 'ops.h_2gkw85',
-  'Không đọc được danh sách mã. Không coi inventory đã tải thành công.': 'ops.h_1rrwe0k',
-  'Không đọc được chi tiết tenant. Tải lại trước khi suspend/limits.': 'platform.mutate.detailUnknown',
-  'Không đọc được danh sách tenant platform. Không coi list đã tải thành công.': 'platform.h_usltan',
-  'Không rõ kết quả thao tác platform — không coi là đã thành công.': 'platform.mutate.unknown',
-  'Không tạo được support grant — không coi grant đã cấp.': 'platform.mutate.grantUnknown',
-  'Không đọc được nhật ký. Không coi danh sách đã tải thành công.': 'ops.h_1plfzsb',
-  'Không đọc được sức khỏe tenant. Không bịa SLA / delivery confirmation.': 'platform.h_de965r',
+  'Không đọc được danh sách mã. Không coi inventory đã tải thành công.':
+    'ops.h_1rrwe0k',
+  'Không đọc được chi tiết tenant. Tải lại trước khi suspend/limits.':
+    'platform.mutate.detailUnknown',
+  'Không đọc được danh sách tenant platform. Không coi list đã tải thành công.':
+    'platform.h_usltan',
+  'Không rõ kết quả thao tác platform — không coi là đã thành công.':
+    'platform.mutate.unknown',
+  'Không tạo được support grant — không coi grant đã cấp.':
+    'platform.mutate.grantUnknown',
+  'Không đọc được nhật ký. Không coi danh sách đã tải thành công.':
+    'ops.h_1plfzsb',
+  'Không đọc được sức khỏe tenant. Không bịa SLA / delivery confirmation.':
+    'platform.h_de965r',
   'Không đổi được mã ủy quyền. Thử đăng nhập lại.': 'auth.h_179sno0',
   'Không đổi được vai trò.': 'members.roles.changeFailed',
   'Không giới hạn': 'quota.h_1tnoz3k',
@@ -1964,17 +2365,21 @@ export const VI_TO_KEY: Record<string, MessageKey> = {
   'Không reason/diff. Tách khỏi staff report.read.': 'platform.h_qo8t9w',
   'Không tải được': 'ops.portfolio.itemUnknown',
   'Không tải được danh sách (HTTP {{status}}).': 'events.loadFailedHttp',
-  'Không tải được danh sách (members {{members}}, invites {{invites}}).': 'members.loadFailedStatus',
+  'Không tải được danh sách (members {{members}}, invites {{invites}}).':
+    'members.loadFailedStatus',
   'Không tải được dữ liệu': 'surface.error.loadFailed',
   'Không tải được sources — không gõ UUID tay.': 'guests.h_me551x',
   'Không tạo được loại vé.': 'types.h_1cxyxe',
   'Không tạo được nguồn.': 'sources.h_q0wodv',
   'Không tạo được sự kiện.': 'events.h_hnm91l',
-  'Không tạo sự kiện / mời thành viên / đổi branding khi còn PENDING.': 'onboarding.pending.noAdmin',
+  'Không tạo sự kiện / mời thành viên / đổi branding khi còn PENDING.':
+    'onboarding.pending.noAdmin',
   'Không thể gỡ Owner cuối': 'members.roles.lastOwnerTitle',
-  'Không thể thao tác khi tổ chức ở trạng thái SUSPENDED.': 'surface.suspended.description',
+  'Không thể thao tác khi tổ chức ở trạng thái SUSPENDED.':
+    'surface.suspended.description',
   'Không thu hồi được lời mời.': 'members.h_1tmqlzc',
-  'Không thu hồi được support grant. Không coi revoke đã thành công.': 'platform.h_1vi2x57',
+  'Không thu hồi được support grant. Không coi revoke đã thành công.':
+    'platform.h_1vi2x57',
   'Không thu hồi được thành viên.': 'members.h_7tkx6u',
   'Không tìm thấy cột code.': 'ops.h_y208dx',
   'Không tìm thấy job/báo cáo lỗi.': 'ops.h_ern79n',
@@ -1984,7 +2389,8 @@ export const VI_TO_KEY: Record<string, MessageKey> = {
   'Kích hoạt lại tenant này?': 'platform.mutate.confirmActivate',
   'Kiểm tra lại trạng thái': 'onboarding.pending.refresh',
   'Làm mới': 'gate.h_3keb7',
-  'Legacy rawCodes tối đa {{max}}; dùng CSV job + fileId.': 'ops.import.legacyRawCodesMax',
+  'Legacy rawCodes tối đa {{max}}; dùng CSV job + fileId.':
+    'ops.import.legacyRawCodesMax',
   'Lịch nhắc (local browser)': 'ops.notifications.reminderScheduleLabel',
   'Lịch sử export': 'audit.tab.exportHistory',
   'Lịch sử export: {{count}} job{{pageSuffix}}.': 'ops.export.historyLabel',
@@ -1993,10 +2399,10 @@ export const VI_TO_KEY: Record<string, MessageKey> = {
   'Liên hệ (tuỳ chọn)': 'onboarding.signup.contact',
   'Liên hệ:': 'ops.h_1bzuwr',
   'Liệt kê invitations': 'ops.h_1abuzle',
-  'Loại': 'members.roles.colKind',
+  Loại: 'members.roles.colKind',
   'Loại thao tác': 'ops.import.jobType',
   'Loại vé': 'ops.pending.col.type',
-  'Lọc': 'platform.loc',
+  Lọc: 'platform.loc',
   'Lọc audit': 'platform.h_1sthjos',
   'Lọc lịch sử': 'ops.export.filterHistory',
   'Lọc lịch sử theo status': 'ops.export.filterStatusAria',
@@ -2010,21 +2416,22 @@ export const VI_TO_KEY: Record<string, MessageKey> = {
   'Lỗi: {{error}}': 'auth.error.generic',
   'Lời mời ({{count}})': 'members.invitesCount',
   'Lời mời khách — gửi hàng loạt': 'ops.invitation.sectionTitle',
-  'Lưu': 'members.roles.save',
+  Lưu: 'members.roles.save',
   'Lưu limits / flags': 'platform.mutate.saveLimits',
-  'defaultTimezone': 'platform.mutate.phTimezone',
+  defaultTimezone: 'platform.mutate.phTimezone',
   'email owner': 'platform.mutate.phOwnerEmail',
-  'eventId': 'platform.mutate.phEventId',
+  eventId: 'platform.mutate.phEventId',
   'expiresAt ISO (trống = +1h)': 'platform.mutate.phExpiresAt',
-  'exportsEnabled': 'platform.mutate.exportsEnabled',
-  'importsEnabled': 'platform.mutate.importsEnabled',
+  exportsEnabled: 'platform.mutate.exportsEnabled',
+  importsEnabled: 'platform.mutate.importsEnabled',
   'lý do': 'platform.mutate.phReason',
   'lý do (status/limits)': 'platform.mutate.phReasonStatusLimits',
-  'slug': 'platform.mutate.phSlug',
-  'tenantId': 'platform.mutate.phTenantId',
-  'tên': 'platform.mutate.phName',
+  slug: 'platform.mutate.phSlug',
+  tenantId: 'platform.mutate.phTenantId',
+  tên: 'platform.mutate.phName',
   'Lưu draft': 'config.h_q8yg9j',
-  'Lưu draft và publish khóa nội dung sự kiện. Không mở cửa sổ redeem khách và không bật cổng quét trên portal.': 'config.h_bji8yr',
+  'Lưu draft và publish khóa nội dung sự kiện. Không mở cửa sổ redeem khách và không bật cổng quét trên portal.':
+    'config.h_bji8yr',
   'Lưu hồ sơ tổ chức': 'onboarding.firstRun.saveOrg',
   'Lưu trữ': 'setup.h_1fmwr17',
   'Lưu trữ sự kiện?': 'setup.h_4dggx3',
@@ -2042,37 +2449,43 @@ export const VI_TO_KEY: Record<string, MessageKey> = {
   'Màu nhận diện chính': 'onboarding.firstRun.primaryColor',
   'Màu phụ': 'settings.h_me7m5c',
   'Máy chủ không trả danh sách quyền cho hàng này.': 'members.roles.noPermList',
-  'Máy chủ trả về thành công nhưng thiếu eventId — chưa rõ sự kiện mới.': 'events.h_74jvni',
-  'Máy chủ từ chối: tenant còn PENDING (TENANT_PENDING).': 'onboarding.pending.mutationBlocked',
+  'Máy chủ trả về thành công nhưng thiếu eventId — chưa rõ sự kiện mới.':
+    'events.h_74jvni',
+  'Máy chủ từ chối: tenant còn PENDING (TENANT_PENDING).':
+    'onboarding.pending.mutationBlocked',
   'mặc định': 'views.badge.default',
   'Mặc định': 'views.menu.default',
-  'Metadata / clone / archive. UUID lấy từ route — không dán tay.': 'setup.metadataHint',
+  'Metadata / clone / archive. UUID lấy từ route — không dán tay.':
+    'setup.metadataHint',
   'Mọi thay đổi branding bị chặn (fail-closed).': 'settings.h_i7x4fp',
-  'Một số bộ lọc/cột không còn trong allowlist. Đặt lại view hoặc lưu lại.': 'views.stale.body',
-  'Một số sự kiện chưa tải được — không dùng số 0 giả.': 'ops.portfolio.partial',
-  'Mở': 'common.mo',
+  'Một số bộ lọc/cột không còn trong allowlist. Đặt lại view hoặc lưu lại.':
+    'views.stale.body',
+  'Một số sự kiện chưa tải được — không dùng số 0 giả.':
+    'ops.portfolio.partial',
+  Mở: 'common.mo',
   'Mở bề mặt khách': 'shell.auth.openCustomerApp',
   'mở Cổng (report)': 'common.h_1iov4lt',
   'Mở cổng quét trên app': 'gateDeeplink.h_4pqjik',
   'Mở màn chờ kích hoạt': 'onboarding.pending.openWait',
   'Mở setup sự kiện': 'onboarding.firstRun.openSetup',
-  'Mời một Manager bằng email + preset máy chủ (không gửi mảng quyền tùy ý).': 'onboarding.firstRun.teamHint',
+  'Mời một Manager bằng email + preset máy chủ (không gửi mảng quyền tùy ý).':
+    'onboarding.firstRun.teamHint',
   'Múi giờ': 'events.h_8g8c9u',
   'Múi giờ mặc định': 'onboarding.signup.timezone',
   'Nền tảng': 'nav.group.platform',
   'Nghiệp vụ': 'common.h_1t15e7z',
   'Ngôn ngữ': 'locale.label',
-  'Nguồn': 'ops.pending.col.source',
+  Nguồn: 'ops.pending.col.source',
   'Nguồn mã': 'nav.event.sources',
   'Người dùng ({{count}})': 'members.tabUsers',
-  'Nhãn': 'types.nhan',
+  Nhãn: 'types.nhan',
   'Nhận diện tối thiểu': 'readiness.label.brand',
   'Nhập khách và mã từ CSV': 'ops.import.panelTitle',
-  'Nhập': 'ops.import.tabLabel',
-  'Khách': 'nav.event.guestsCompact',
-  'Chờ': 'guests.pendingTabLabel',
-  'TB': 'guests.notificationsTabLabel',
-  'Xuất': 'ops.export.tabLabel',
+  Nhập: 'ops.import.tabLabel',
+  Khách: 'nav.event.guestsCompact',
+  Chờ: 'guests.pendingTabLabel',
+  TB: 'guests.notificationsTabLabel',
+  Xuất: 'ops.export.tabLabel',
   'Nhập slug': 'events.h_1xl1825',
   'Nhập slug tổ chức': 'onboarding.signup.slugRequired',
   'Nhập tên sự kiện': 'events.h_jq4yo3',
@@ -2086,13 +2499,15 @@ export const VI_TO_KEY: Record<string, MessageKey> = {
   'OIDC chưa cấu hình trên portal — không thể đăng nhập.': 'auth.h_1l6yc4c',
   'Operator (audience riêng)': 'account.h_1med0c4',
   'Owner revoke từ portal staff directory': 'members.h_tzdfji',
-  'Pending': 'analytics.col.pending',
+  Pending: 'analytics.col.pending',
   'PENDING (chờ gửi)': 'ops.h_mfwl9g',
   'PENDING (đang chờ gửi)': 'ops.h_1rulq3',
-  'PERMISSION_DENIED: thiếu quyền CS (cs.lookup / cs.resend) — không tra cứu hoặc gửi lại email.': 'ops.h_r6ag2k',
+  'PERMISSION_DENIED: thiếu quyền CS (cs.lookup / cs.resend) — không tra cứu hoặc gửi lại email.':
+    'ops.h_r6ag2k',
   'Phạm vi': 'views.save.scope',
   'Phản hồi danh sách không đúng schema — chưa rõ.': 'events.h_j7agy6',
-  'Phản hồi không xác định — kiểm tra lại trước khi coi là thành công.': 'surface.unknown.defaultDescription',
+  'Phản hồi không xác định — kiểm tra lại trước khi coi là thành công.':
+    'surface.unknown.defaultDescription',
   'Phản hồi quota thiếu allocated — không giả định số.': 'quota.h_dn1nvv',
   'Phân tích': 'nav.org.analytics',
   'Phiên bản hiện tại: ': 'settings.currentVersion',
@@ -2101,85 +2516,110 @@ export const VI_TO_KEY: Record<string, MessageKey> = {
   'Phiên nhân sự (staff)': 'account.h_ya8g97',
   'Phiên Platform Operator': 'account.h_17x4t4d',
   'Platform Operator': 'platform.h_3nfdgm',
-  'PLATFORM-PORTAL-ZONE · Operator · assurance={{assurance}}': 'platform.zoneLabel',
+  'PLATFORM-PORTAL-ZONE · Operator · assurance={{assurance}}':
+    'platform.zoneLabel',
   'Portal quản trị chỉ dành cho nhân sự': 'shell.auth.attendeeDeniedTitle',
-  'Portal và legacy admin trên app đang chạy song song. Redirect app→portal mặc định tắt. Soát vé staff chỉ trên app Vemoki (iPhone). Legacy: ': 'dualRun.h_16lfg67_2',
-  'Preset': 'members.roles.kindPreset',
-  'Preset «{{name}}» (schema {{version}}) — quyền chỉ đọc từ máy chủ.': 'members.roles.presetReadonly',
+  'Portal và legacy admin trên app đang chạy song song. Redirect app→portal mặc định tắt. Soát vé staff chỉ trên app Vemoki (iPhone). Legacy: ':
+    'dualRun.h_16lfg67_2',
+  Preset: 'members.roles.kindPreset',
+  'Preset «{{name}}» (schema {{version}}) — quyền chỉ đọc từ máy chủ.':
+    'members.roles.presetReadonly',
   'Preset không có trong catalog': 'members.roles.presetMissingTitle',
   'Preset máy chủ': 'members.roles.groupPreset',
-  'Preset ngoài catalog hoặc không thuộc tenant — không silent strip.': 'members.roles.presetMissingBody',
+  'Preset ngoài catalog hoặc không thuộc tenant — không silent strip.':
+    'members.roles.presetMissingBody',
   'Preview nhắc': 'ops.notifications.previewReminderAction',
-  'Preview nhắc: {{recipientCount}} chủ vé · UTC {{scheduledAt}} · rev {{eventRevision}}. Không lộ PII.': 'ops.notifications.previewReminder',
+  'Preview nhắc: {{recipientCount}} chủ vé · UTC {{scheduledAt}} · rev {{eventRevision}}. Không lộ PII.':
+    'ops.notifications.previewReminder',
   'Preview template': 'ops.notifications.previewTemplate',
-  'Publish template {{kind}} — chỉ biến allowlist, không marketing.': 'ops.notifications.publishConfirmBody',
+  'Publish template {{kind}} — chỉ biến allowlist, không marketing.':
+    'ops.notifications.publishConfirmBody',
   'Publish template': 'ops.notifications.publishTemplateAction',
-  'Publish': 'ops.notifications.publishConfirmOk',
+  Publish: 'ops.notifications.publishConfirmOk',
   'Reminder ID (huỷ)': 'ops.notifications.cancelReminderIdPlaceholder',
-  'Revision hiện tại: {{revision}}. Preview server-escaped; ACCEPTED ≠ delivered.': 'ops.notifications.templateSectionHint',
+  'Revision hiện tại: {{revision}}. Preview server-escaped; ACCEPTED ≠ delivered.':
+    'ops.notifications.templateSectionHint',
   'Tạo nhắc': 'ops.notifications.createReminderAction',
   'Template & nhắc (C-N)': 'ops.notifications.templateSectionTitle',
   'Template email': 'ops.notifications.templateEditorTitle',
   'Tiêu đề template': 'ops.notifications.templateSubjectAria',
   'Nội dung template (văn bản)': 'ops.notifications.templateBodyTextAria',
   'Nội dung template (HTML)': 'ops.notifications.templateBodyHtmlAria',
-  'Thời gian local không hợp lệ — dùng datetime-local.': 'ops.notifications.invalidSchedule',
-  'Tải chi tiết event để lấy revision trước khi nhắc.': 'ops.notifications.needRevision',
+  'Thời gian local không hợp lệ — dùng datetime-local.':
+    'ops.notifications.invalidSchedule',
+  'Tải chi tiết event để lấy revision trước khi nhắc.':
+    'ops.notifications.needRevision',
   'Xác nhận huỷ nhắc': 'ops.notifications.cancelReminderOk',
   'Xác nhận publish template': 'ops.notifications.publishConfirmTitle',
   'Huỷ nhắc giao dịch?': 'ops.notifications.cancelReminderTitle',
-  'Preview rev {{previewRevision}}: {{validRowCount}} hợp lệ · {{errorRowCount}} lỗi · invitation {{invitationCount}} · ước tính quota {{estimatedQuota}} (không reserve).': 'ops.import.previewLabel',
+  'Preview rev {{previewRevision}}: {{validRowCount}} hợp lệ · {{errorRowCount}} lỗi · invitation {{invitationCount}} · ước tính quota {{estimatedQuota}} (không reserve).':
+    'ops.import.previewLabel',
   'Publish ≠ mở redeem ≠ mở Gate': 'config.h_1hh7j6r',
-  'Publish ≠ mở redeem ≠ mở Gate. Tiếp tục cấu hình sự kiện khi cần.': 'onboarding.firstRun.readyBody',
+  'Publish ≠ mở redeem ≠ mở Gate. Tiếp tục cấu hình sự kiện khi cần.':
+    'onboarding.firstRun.readyBody',
   'Publish ≠ redeem ≠ Gate': 'config.h_gyyhq3',
-  'Publish khóa phiên bản cấu hình (expectedVersion {{version}}).': 'event.home.publishLockVersion',
+  'Publish khóa phiên bản cấu hình (expectedVersion {{version}}).':
+    'event.home.publishLockVersion',
   'Publish thất bại ({{status}}).': 'config.publishFailedStatus',
   'Publish thất bại.': 'config.h_ez5uf1',
   'Mã yêu cầu': 'ops.h_k67vfi',
   'Mã vé hoặc mã yêu cầu': 'ops.h_1ehht5k',
-  'Nhập mã vé hoặc mã yêu cầu chính xác. Trạng thái đã chấp nhận từ nhà cung cấp chưa đồng nghĩa email đã gửi đến khách.': 'ops.h_6lgtz',
-  'Tìm theo mã yêu cầu (đúng từng ký tự). Không tìm theo email hay số điện thoại. Duyệt/từ chối có thể lặp an toàn; kết quả chưa rõ không coi là thành công.': 'ops.h_1tlh7rr',
+  'Nhập mã vé hoặc mã yêu cầu chính xác. Trạng thái đã chấp nhận từ nhà cung cấp chưa đồng nghĩa email đã gửi đến khách.':
+    'ops.h_6lgtz',
+  'Tìm theo mã yêu cầu (đúng từng ký tự). Không tìm theo email hay số điện thoại. Duyệt/từ chối có thể lặp an toàn; kết quả chưa rõ không coi là thành công.':
+    'ops.h_1tlh7rr',
   'Quản lý': 'enum.tenantRole.Manager',
   'Quản lý view': 'views.action.manage',
   'Quay lại': 'events.h_rft49v',
   'Quét cổng': 'enum.tenantRole.Scanner',
-  'Soát vé bằng app Vemoki trên iPhone — không quét trên portal. Portal chỉ hiển thị báo cáo khi máy chủ cấp quyền báo cáo sự kiện.': 'gateDeeplink.h_9xk8eh_2',
+  'Soát vé bằng app Vemoki trên iPhone — không quét trên portal. Portal chỉ hiển thị báo cáo khi máy chủ cấp quyền báo cáo sự kiện.':
+    'gateDeeplink.h_9xk8eh_2',
   'Soát vé bằng app Vemoki trên iPhone': 'gateDeeplink.h_iosHint',
   'Quét vé chỉ trên app — không gắn camera trên portal.': 'gate.h_cq4fvf',
   'Quota còn': 'analytics.col.quota',
   'Quota event: {{allocated}} / {{capacity}}.': 'ops.decide.quotaSummary',
   'Quy tắc (sắp có)': 'views.action.automationSoon',
   'Quy tắc automation': 'views.automation.title',
-  'Quyền do máy chủ định nghĩa theo preset; không chỉnh từng quyền trên portal.': 'members.roles.serverDefinedAlert',
+  'Quyền do máy chủ định nghĩa theo preset; không chỉnh từng quyền trên portal.':
+    'members.roles.serverDefinedAlert',
   'reason (bắt buộc, ≤500)': 'platform.h_1jyd8b',
   'REASON_REQUIRED: Cần lý do từ chối.': 'ops.h_qdkb51',
   'Resend email': 'ops.h_e1ks86',
-  'Resend thành công chỉ nghĩa queue/ACCEPTED phía nhà cung cấp — không khẳng định DELIVERED.': 'ops.h_mag360',
-  'RESEND_COOLDOWN: đang trong thời gian chờ gửi lại (~{{seconds}}s). Chưa tạo vé mới — thử lại sau.': 'ops.notifications.resendCooldown',
-  'RESEND_LIMIT: đã hết hạn mức gửi lại trong cửa sổ hiện tại. Không tạo vé mới.': 'ops.h_11ovicf',
+  'Resend thành công chỉ nghĩa queue/ACCEPTED phía nhà cung cấp — không khẳng định DELIVERED.':
+    'ops.h_mag360',
+  'RESEND_COOLDOWN: đang trong thời gian chờ gửi lại (~{{seconds}}s). Chưa tạo vé mới — thử lại sau.':
+    'ops.notifications.resendCooldown',
+  'RESEND_LIMIT: đã hết hạn mức gửi lại trong cửa sổ hiện tại. Không tạo vé mới.':
+    'ops.h_11ovicf',
   'Revoke invite từ portal': 'members.h_1p47lt5',
   'Revoke support grant': 'platform.h_19s5r5m',
-  'Role-map cố định và named server presets — không có ma trận checkbox quyền tùy ý.': 'members.roles.catalogHint',
+  'Role-map cố định và named server presets — không có ma trận checkbox quyền tùy ý.':
+    'members.roles.catalogHint',
   'Role-map hệ thống': 'members.roles.groupSystem',
-  'Role-map hệ thống — quyền do máy chủ materialize; không tick trên portal.': 'members.roles.systemMapHint',
-  'Rollback tạo version mới (append-only), không rewind lịch sử. Cần xác nhận.': 'config.h_1djtg5w',
+  'Role-map hệ thống — quyền do máy chủ materialize; không tick trên portal.':
+    'members.roles.systemMapHint',
+  'Rollback tạo version mới (append-only), không rewind lịch sử. Cần xác nhận.':
+    'config.h_1djtg5w',
   'Rollback thất bại.': 'config.h_14tzacc',
   'Rollback về đây': 'config.h_wotjs8',
   'Rollback về version {{targetVersion}}?': 'config.rollbackConfirm',
-  'Sau khi gửi, bạn sẽ thấy màn «đang chờ kích hoạt». Không có admin ACTIVE cho đến khi Operator duyệt.': 'onboarding.signup.pendingPolicy',
+  'Sau khi gửi, bạn sẽ thấy màn «đang chờ kích hoạt». Không có admin ACTIVE cho đến khi Operator duyệt.':
+    'onboarding.signup.pendingPolicy',
   'Sẵn sàng': 'onboarding.firstRun.stepReady',
   'Sẵn sàng vào portal': 'onboarding.firstRun.readyTitle',
   'Sẵn sàng xuất bản': 'common.h_4nfgg4',
   'Sắp có': 'views.automation.disabled',
-  'schema_version': 'members.roles.colSchema',
-  'Sẽ publish version {{version}}. Không tự mở redeem/Gate.': 'config.publishConfirm',
+  schema_version: 'members.roles.colSchema',
+  'Sẽ publish version {{version}}. Không tự mở redeem/Gate.':
+    'config.publishConfirm',
   'Server ghi nhận {{asOf}}': 'analytics.asOfTag',
-  'Slug': 'onboarding.signup.slug',
+  Slug: 'onboarding.signup.slug',
   'Slug bản sao': 'setup.h_1mbcc7c',
   'Slug chỉ gồm a-z, 0-9 và dấu gạch ngang': 'events.h_13e7ycb',
   'Slug hoặc tên không hợp lệ.': 'onboarding.signup.invalid',
   'Slug: chữ thường, số, gạch ngang (kebab)': 'onboarding.signup.slugPattern',
-  'Nguồn và loại vé lấy từ danh mục sự kiện (không gõ mã tay). Phiên bản danh mục: ': 'ops.import.catalogHint',
+  'Nguồn và loại vé lấy từ danh mục sự kiện (không gõ mã tay). Phiên bản danh mục: ':
+    'ops.import.catalogHint',
   'Số người': 'members.roles.colMembers',
   'Suất đã phân bổ': 'gate.stat.quotaAllocated',
   'Sự kiện': 'analytics.col.event',
@@ -2188,40 +2628,48 @@ export const VI_TO_KEY: Record<string, MessageKey> = {
   'Sự kiện gán': 'members.h_r0iic4',
   'Sự kiện không nằm trong khám phá máy chủ của bạn.': 'common.h_1rsax7j',
   'Sự kiện không nằm trong khám phá máy chủ.': 'support.h_14ecmxf',
-  'Sự kiện mới ở trạng thái DRAFT. Publish cấu hình ≠ mở redeem ≠ mở Gate quét.': 'events.h_1qeuedv',
+  'Sự kiện mới ở trạng thái DRAFT. Publish cấu hình ≠ mở redeem ≠ mở Gate quét.':
+    'events.h_1qeuedv',
   'Sự kiện này': 'views.save.scopeEvent',
   'Sửa tên': 'setup.h_y3j37s',
   'Sức chứa': 'gate.stat.capacity',
   'Tải CSV': 'ops.export.downloadCsv',
   'Tài khoản ▾': 'shell.account.menu',
-  'Tài khoản đã đăng nhập nhưng chưa được gán vào tổ chức nào. Liên hệ chủ tổ chức để nhận lời mời nhân sự (portal), không dùng luồng khách trên app.': 'home.h_1g841dv',
-  'Tài khoản khách không được vào shell quản trị. Tiếp tục trên bề mặt khách.': 'shell.auth.attendeeDeniedBody',
-  'Tài khoản staff tenant (kể cả Owner) không thấy dữ liệu Platform. Cần phiên Operator MFA riêng.': 'platform.h_rvf1a3',
+  'Tài khoản đã đăng nhập nhưng chưa được gán vào tổ chức nào. Liên hệ chủ tổ chức để nhận lời mời nhân sự (portal), không dùng luồng khách trên app.':
+    'home.h_1g841dv',
+  'Tài khoản khách không được vào shell quản trị. Tiếp tục trên bề mặt khách.':
+    'shell.auth.attendeeDeniedBody',
+  'Tài khoản staff tenant (kể cả Owner) không thấy dữ liệu Platform. Cần phiên Operator MFA riêng.':
+    'platform.h_rvf1a3',
   'Tải lỗi': 'ops.h_1h6fj17',
   'Tải template CSV': 'ops.h_15064q7',
   'Tải thêm': 'sources.h_1w8bpuo',
-  'Tạm ngưng tenant này? Vé/cổng/recovery vẫn hoạt động.': 'platform.mutate.confirmSuspend',
+  'Tạm ngưng tenant này? Vé/cổng/recovery vẫn hoạt động.':
+    'platform.mutate.confirmSuspend',
   'Tạm ngưng': 'enum.tenantStatus.SUSPENDED',
-  'Tạo support grant cs.read cho tenant/event này?': 'platform.mutate.confirmGrant',
+  'Tạo support grant cs.read cho tenant/event này?':
+    'platform.mutate.confirmGrant',
   'Tạo tenant': 'platform.mutate.createTenant',
   'Tạo tenant (PENDING + owner invite)': 'platform.mutate.provisionTitle',
   'Tạo grant': 'platform.mutate.createGrant',
   'Tải chi tiết': 'platform.mutate.loadDetail',
   'Tạm ngưng tenant': 'platform.mutate.suspend',
-  'Tạo': 'sources.tao',
+  Tạo: 'sources.tao',
   'Tạo export': 'ops.export.createButton',
-  'Tạo yêu cầu xuất, theo dõi tiến trình và tải file CSV khi sẵn sàng. Lịch sử không hiển thị liên kết tải lâu dài. Kết quả chưa rõ không coi là thành công.': 'ops.export.panelDescription',
+  'Tạo yêu cầu xuất, theo dõi tiến trình và tải file CSV khi sẵn sàng. Lịch sử không hiển thị liên kết tải lâu dài. Kết quả chưa rõ không coi là thành công.':
+    'ops.export.panelDescription',
   'Tạo loại vé': 'types.h_1caa9m7',
   'Tạo lúc': 'ops.pending.col.created',
   'Tạo nguồn': 'sources.h_1hplg8o',
   'Tạo nguồn mã': 'sources.h_8t861g',
   'Tạo sự kiện': 'events.h_ek93o2',
-  'Tạo sự kiện DRAFT qua wizard — không paste UUID.': 'onboarding.firstRun.eventHint',
+  'Tạo sự kiện DRAFT qua wizard — không paste UUID.':
+    'onboarding.firstRun.eventHint',
   'Tạo sự kiện đầu tiên': 'onboarding.firstRun.createEvent',
   'Tạo tổ chức': 'onboarding.signup.title',
   'Tất cả sự kiện': 'common.h_8mpr7p',
   'tenantId (UUID)': 'platform.h_ggf21i',
-  'Tên': 'members.roles.colName',
+  Tên: 'members.roles.colName',
   'Tên bản sao': 'setup.h_1ps26zd',
   'Tên địa điểm': 'events.h_b8z0sy',
   'Tên hiển thị': 'settings.h_448wq6',
@@ -2233,12 +2681,13 @@ export const VI_TO_KEY: Record<string, MessageKey> = {
   'Thành viên ({{count}})': 'members.membersCount',
   'Thành viên & lời mời': 'members.h_i0adgn',
   'Thao tác': 'ops.h_1pbxt75',
-  'thất': 'ops.import.that',
+  thất: 'ops.import.that',
   'Thiết lập lần đầu': 'onboarding.firstRun.title',
   'Thiết lập sự kiện': 'nav.group.eventSetup',
-  'Thiếu': 'readiness.status.missing',
+  Thiếu: 'readiness.status.missing',
   'Thiếu brand tối thiểu hoặc điều khoản.': 'config.h_ve7ob6',
-  'Thiếu cột bắt buộc «{{field}}» (template/mapping).': 'ops.import.missingColumn',
+  'Thiếu cột bắt buộc «{{field}}» (template/mapping).':
+    'ops.import.missingColumn',
   'Thiếu điều khoản hoặc chưa publish cấu hình.': 'readiness.form.missing',
   'Thiếu loại vé — tạo ticket type.': 'readiness.types.missing',
   'Thiếu nguồn mã — tạo source.': 'readiness.sources.missing',
@@ -2252,7 +2701,8 @@ export const VI_TO_KEY: Record<string, MessageKey> = {
   'Thiếu tên tổ chức hoặc màu nhận diện tối thiểu.': 'readiness.brand.missing',
   'Thiếu: {{items}}': 'readiness.summary.missing',
   'Thông báo': 'guests.h_1avy3de',
-  'Thông báo: {{count}} mục{{pageSuffix}}. Nhà cung cấp tiếp nhận chưa chứng minh khách đã nhận.': 'ops.notifications.listSummary',
+  'Thông báo: {{count}} mục{{pageSuffix}}. Nhà cung cấp tiếp nhận chưa chứng minh khách đã nhận.':
+    'ops.notifications.listSummary',
   'Thời điểm': 'platform.h_zdynbv',
   'Thu hồi': 'members.h_1w0agno',
   'Thu hồi grant': 'platform.h_11v4ibm',
@@ -2263,67 +2713,83 @@ export const VI_TO_KEY: Record<string, MessageKey> = {
   'Thử lại': 'surface.action.retry',
   'Thử lại Platform login': 'platform.h_hcpyf4',
   'Tiếng Việt': 'locale.vi',
-  'Tiếp': 'events.new.tiep',
+  Tiếp: 'events.new.tiep',
   'Tổ chức': 'shell.tenant.label',
-  'Tổ chức {{name}} đã ACTIVE. Hoàn thành các bước dưới — không dán UUID tay.': 'onboarding.firstRun.lead',
+  'Tổ chức {{name}} đã ACTIVE. Hoàn thành các bước dưới — không dán UUID tay.':
+    'onboarding.firstRun.lead',
   'Tổ chức bị tạm ngưng': 'settings.h_6boshw',
-  'Tổ chức đã chọn từ ngữ cảnh route — không cần dán UUID tenant.': 'events.h_5zs7cf',
+  'Tổ chức đã chọn từ ngữ cảnh route — không cần dán UUID tenant.':
+    'events.h_5zs7cf',
   'Tổ chức đã tạm ngưng': 'surface.suspended.title',
-  'Tổ chức đang ở trạng thái PENDING. Operator sẽ kích hoạt — không giả ACTIVE và không mở mutation admin.': 'surface.pendingActivation.description',
-  'Tổ chức không tồn tại trong khám phá của bạn hoặc thiếu quyền quản trị.': 'common.h_yw94nu',
+  'Tổ chức đang ở trạng thái PENDING. Operator sẽ kích hoạt — không giả ACTIVE và không mở mutation admin.':
+    'surface.pendingActivation.description',
+  'Tổ chức không tồn tại trong khám phá của bạn hoặc thiếu quyền quản trị.':
+    'common.h_yw94nu',
   'Tổ chức này': 'nav.group.org',
-  'Tổ chức phải giữ ít nhất một Owner đang hoạt động (LAST_OWNER_REQUIRED).': 'members.roles.lastOwnerBody',
+  'Tổ chức phải giữ ít nhất một Owner đang hoạt động (LAST_OWNER_REQUIRED).':
+    'members.roles.lastOwnerBody',
   'Tổng quan': 'nav.event.overview',
   'Tổng quan tổ chức': 'nav.org.overview',
   'Tra cứu': 'ops.h_n3x4mp',
   'Tra cứu mã exact (không lưu)': 'ops.h_uf5xhg',
   'Trạng thái': 'analytics.col.status',
   'Trạng thái job': 'ops.import.action.status',
-  'Trạng thái nội dung không có trên portfolio API — không bịa.': 'analytics.col.statusTip',
+  'Trạng thái nội dung không có trên portfolio API — không bịa.':
+    'analytics.col.statusTip',
   'Trạng thái sức chứa': 'gate.report.capacityState',
   'Trang tiếp': 'platform.h_4cj11z',
   'Từ chối': 'ops.pending.deny',
   'UNKNOWN (không rõ — không khẳng định đã gửi)': 'ops.h_r3tltl',
   'UNKNOWN (timeout/không rõ — không khẳng định đã gửi)': 'ops.h_fzjokh',
-  'Tải lên CSV, xem trước (không giữ suất), rồi xác nhận nhập. Báo cáo lỗi tải qua kênh bảo mật, không phải liên kết tạm.': 'ops.import.panelDescription',
+  'Tải lên CSV, xem trước (không giữ suất), rồi xác nhận nhập. Báo cáo lỗi tải qua kênh bảo mật, không phải liên kết tạm.':
+    'ops.import.panelDescription',
   'Upload + tạo job': 'ops.h_slukee',
   'Vai trò': 'members.h_1mkpx3r',
   'Vai trò / preset': 'members.roles.pickPlaceholder',
-  'Vai trò không hợp lệ — chỉ MembershipRole hoặc preset máy chủ.': 'members.roles.invalidRole',
+  'Vai trò không hợp lệ — chỉ MembershipRole hoặc preset máy chủ.':
+    'members.roles.invalidRole',
   'Vào portal': 'onboarding.firstRun.enterPortal',
-  'Vé': 'ops.notifications.ve',
-  'Vé {{ticketId}} đã được cấp cho sự kiện {{eventName}}.': 'events.ticketIssuedEmail',
+  Vé: 'ops.notifications.ve',
+  'Vé {{ticketId}} đã được cấp cho sự kiện {{eventName}}.':
+    'events.ticketIssuedEmail',
   'Vé đã cấp — {{eventName}}': 'events.ticketIssuedTitle',
   'Vé đang hoạt động': 'gate.h_1swn6cq',
   'Về trang chủ': 'onboarding.backHome',
   'Về trang được phép': 'surface.permission.goAllowed',
-  'View': 'views.toolbar.label',
+  View: 'views.toolbar.label',
   'View đã lỗi thời': 'views.stale.title',
-  'View riêng tư theo tài khoản (local). Chưa chia sẻ trong tổ chức (P2b).': 'views.save.privateHint',
-  'Vùng Platform dùng client/audience/cookie riêng (`platform_oidc_*`) — không dùng token nhân sự / Owner.': 'platform.h_9c63t5',
+  'View riêng tư theo tài khoản (local). Chưa chia sẻ trong tổ chức (P2b).':
+    'views.save.privateHint',
+  'Vùng Platform dùng client/audience/cookie riêng (`platform_oidc_*`) — không dùng token nhân sự / Owner.':
+    'platform.h_9c63t5',
   'Xác nhận': 'events.h_1q9os0g',
   'Xác nhận tạo': 'events.h_1o08rig',
-  'Xác nhận tên hiển thị và màu nhận diện tối thiểu (branding API).': 'onboarding.firstRun.orgHint',
+  'Xác nhận tên hiển thị và màu nhận diện tối thiểu (branding API).':
+    'onboarding.firstRun.orgHint',
   'Xem phiên đăng nhập': 'home.h_cb3p8s',
   'Xem sự kiện': 'analytics.viewEvents',
   'Xem trước': 'ops.import.action.preview',
   'Xem trước gửi': 'ops.invitation.dispatchPreview',
-  'Xem trước không giữ suất. Nhà cung cấp đã tiếp nhận chưa chứng minh khách đã nhận email. Chọn nguồn và loại vé từ danh mục.': 'guests.h_1tkjxlx',
+  'Xem trước không giữ suất. Nhà cung cấp đã tiếp nhận chưa chứng minh khách đã nhận email. Chọn nguồn và loại vé từ danh mục.':
+    'guests.h_1tkjxlx',
   'Xem vé': 'ops.h_a9y51u',
-  'Xóa': 'views.manage.delete',
+  Xóa: 'views.manage.delete',
   'Xuất bản': 'config.h_lofnqs',
-  'Xuất bản cấu hình không mở redeem cho khách và không thay cổng quét. Soát vé staff chỉ trên app Vemoki (iPhone).': 'common.h_1nl7gld',
+  'Xuất bản cấu hình không mở redeem cho khách và không thay cổng quét. Soát vé staff chỉ trên app Vemoki (iPhone).':
+    'common.h_1nl7gld',
   'Xuất bản cấu hình sự kiện?': 'common.h_cdxaaj',
   'Xuất bản cấu hình?': 'config.h_14ib82o',
-  'Xuất bản nội dung không tự mở cửa sổ redeem cho khách và không bật cổng quét. Gate scan vẫn trên app.vemoki.com.': 'common.h_1lb5yey',
+  'Xuất bản nội dung không tự mở cửa sổ redeem cho khách và không bật cổng quét. Gate scan vẫn trên app.vemoki.com.':
+    'common.h_1lb5yey',
   'Xuất bản tip': 'config.h_19gwi7d',
   'Bộ lọc nguồn và loại vé cho nhập khách': 'ops.import.catalogFiltersAria',
   'Chi tiết': 'ops.table.timeline',
-  'Đã xếp gửi lại · trạng thái {{status}}{{replaySuffix}}. Đã chấp nhận từ nhà cung cấp chưa đồng nghĩa khách đã nhận email.': 'ops.cs.resendQueued',
+  'Đã xếp gửi lại · trạng thái {{status}}{{replaySuffix}}. Đã chấp nhận từ nhà cung cấp chưa đồng nghĩa khách đã nhận email.':
+    'ops.cs.resendQueued',
   'Đối tượng': 'ops.table.resource',
-  'Kênh': 'ops.table.channel',
-  'Kiểu': 'ops.table.kind',
-  'Mã': 'ops.table.id',
+  Kênh: 'ops.table.channel',
+  Kiểu: 'ops.table.kind',
+  Mã: 'ops.table.id',
   'Mã đối tượng': 'ops.table.resourceId',
   'Mã kho': 'ops.table.codeId',
   'Mã thao tác': 'ops.table.operation',
@@ -2333,5 +2799,6 @@ export const VI_TO_KEY: Record<string, MessageKey> = {
   'Nhập mã yêu cầu xuất': 'ops.export.exportIdPlaceholder',
   'Trạng thái gửi': 'ops.table.providerStatus',
   'Yêu cầu': 'ops.pending.col.request',
-  'Yêu cầu tiếp theo của thành viên sẽ bị chặn. Không khẳng định đã xóa phiên trên mọi thiết bị.': 'members.h_ltgqwp',
+  'Yêu cầu tiếp theo của thành viên sẽ bị chặn. Không khẳng định đã xóa phiên trên mọi thiết bị.':
+    'members.h_ltgqwp',
 };
