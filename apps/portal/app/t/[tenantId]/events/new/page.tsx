@@ -1,9 +1,21 @@
 'use client';
 
-import { Alert, Button, Flex, Form, Input, Result, Select, Space, Spin, Steps } from 'antd';
+import {
+  Alert,
+  Button,
+  Descriptions,
+  Flex,
+  Form,
+  Input,
+  Result,
+  Select,
+  Space,
+  Spin,
+  Steps,
+} from 'antd';
 import { PortalPage } from '../../../../../src/components/portal-page';
 import { useParams, useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import {
   apiErrorCode,
   apiErrorMessage,
@@ -18,16 +30,13 @@ import { useUnsavedChanges } from '../../../../../src/nav/unsaved-changes';
 import { useMutationIntent } from '../../../../../src/client/use-mutation-intent';
 import { MutationIntentAlert } from '../../../../../src/client/mutation-intent-alert';
 import { eventFromMutation } from '../../../../../src/client/event-mutation-result';
-
-type WizardValues = {
-  slug: string;
-  name: string;
-  timezone: string;
-  visibility: 'PUBLIC' | 'UNLISTED';
-  venueName?: string;
-  venueAddress?: string;
-  contactEmail?: string;
-};
+import {
+  collectEventWizardValues,
+  eventCreateUpstreamFromWizard,
+  suggestEventSlugFromName,
+  wizardReviewRows,
+  type EventWizardValues,
+} from '../../../../../src/client/event-wizard-values';
 
 export default function CreateEventWizardPage() {
   const { t } = usePortalLocale();
@@ -37,14 +46,45 @@ export default function CreateEventWizardPage() {
   const access = useTenantAccess(tenantId);
   const [step, setStep] = useState(0);
   const [busy, setBusy] = useState(false);
+  const [tenantLimit, setTenantLimit] = useState(false);
   const [notice, setNotice] = useState<{
     type: 'success' | 'error' | 'warning';
     text: string;
   } | null>(null);
-  const [form] = Form.useForm<WizardValues>();
+  const [form] = Form.useForm<EventWizardValues>();
   const [dirty, setDirty] = useState(false);
+  const slugEdited = useRef(false);
   const intent = useMutationIntent(tenantId, undefined, 'create-event');
   useUnsavedChanges(dirty, t('shell.unsaved.confirm'));
+  const watched = Form.useWatch([], form);
+
+  const reviewBody = useMemo(
+    () =>
+      eventCreateUpstreamFromWizard({
+        name: watched?.name ?? '',
+        slug: watched?.slug ?? '',
+        timezone: watched?.timezone ?? '',
+        visibility: watched?.visibility ?? 'UNLISTED',
+        venueName: watched?.venueName,
+        venueAddress: watched?.venueAddress,
+        contactEmail: watched?.contactEmail,
+      }),
+    [watched],
+  );
+
+  const reviewRows = useMemo(
+    () =>
+      wizardReviewRows(reviewBody, {
+        name: t('events.h_1x97hc6'),
+        slug: t('common.label.slug'),
+        timezone: t('events.h_8g8c9u'),
+        visibility: t('common.h_wqd4fq'),
+        venue: t('events.h_1gq5nm'),
+        contact: t('events.h_1xm22zn'),
+        empty: t('events.new.reviewEmpty'),
+      }),
+    [reviewBody, t],
+  );
 
   if (access.kind === 'loading') return (
     <Flex
@@ -110,11 +150,28 @@ export default function CreateEventWizardPage() {
     );
   }
 
+  if (tenantLimit) {
+    return (
+      <PortalPage title={t('events.h_ek93o2')} subTitle={t('events.h_5zs7cf')}>
+        <Result
+          status="warning"
+          title={t('events.new.tenantLimitTitle')}
+          subTitle={t('events.new.tenantLimitBody')}
+          extra={
+            <Button type="primary" onClick={() => router.push(`/t/${tenantId}/events`)}>
+              {t('events.new.tenantLimitCta')}
+            </Button>
+          }
+        />
+      </PortalPage>
+    );
+  }
+
   async function submit() {
     setBusy(true);
     setNotice(null);
     try {
-      const values = await form.validateFields();
+      const values = await collectEventWizardValues(form);
       const outcome = await intent.run(values, (body) => portalMutate(bffEvents(tenantId), body),
         (result) => eventFromMutation(result) !== null);
       if (outcome.kind === 'blocked') {
@@ -122,6 +179,21 @@ export default function CreateEventWizardPage() {
         return;
       }
       const res = outcome.response;
+      const code = apiErrorCode(res.json) ?? '';
+      if (code === 'TENANT_LIMIT_REACHED') {
+        setTenantLimit(true);
+        return;
+      }
+      if (res.status === 409 && code === 'SLUG_TAKEN') {
+        setStep(0);
+        form.setFields([
+          {
+            name: 'slug',
+            errors: [t('events.new.slugTaken')],
+          },
+        ]);
+        return;
+      }
       if (
         res.networkError ||
         res.timedOut ||
@@ -164,6 +236,18 @@ export default function CreateEventWizardPage() {
     }
   }
 
+  function suggestSlugFromName() {
+    if (slugEdited.current) return;
+    const name = form.getFieldValue('name');
+    if (typeof name !== 'string' || !name.trim()) return;
+    const suggested = suggestEventSlugFromName(name);
+    if (!suggested) return;
+    form.setFieldValue('slug', suggested);
+  }
+
+  const stepHidden = (index: number) =>
+    step === index ? undefined : { display: 'none' };
+
   return (
     <PortalPage title={t('events.h_ek93o2')} subTitle={t('events.h_5zs7cf')}>
       <Steps
@@ -183,78 +267,99 @@ export default function CreateEventWizardPage() {
           visibility: 'UNLISTED',
         }}
         disabled={busy}
+        preserve
       >
-        {step === 0 ? (
-          <>
-            <Form.Item
-              name="name"
-              label={t('events.h_1x97hc6')}
-              rules={[{ required: true, message: t('events.h_jq4yo3') }]}
-            >
-              <Input maxLength={120} />
-            </Form.Item>
-            <Form.Item
-              name="slug"
-              label="Slug"
-              rules={[
-                { required: true, message: t('events.h_1xl1825') },
-                {
-                  pattern: /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
-                  message: t('events.h_13e7ycb'),
-                },
+        <div style={stepHidden(0)}>
+          <Form.Item
+            name="name"
+            label={t('events.h_1x97hc6')}
+            rules={[{ required: true, message: t('events.h_jq4yo3') }]}
+          >
+            <Input maxLength={120} onBlur={() => suggestSlugFromName()} />
+          </Form.Item>
+          <Form.Item
+            name="slug"
+            label={t('common.label.slug')}
+            extra={t('events.new.slugHint')}
+            rules={[
+              { required: true, message: t('events.h_1xl1825') },
+              {
+                pattern: /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
+                message: t('events.h_13e7ycb'),
+              },
+            ]}
+          >
+            <Input
+              maxLength={64}
+              autoComplete="off"
+              spellCheck={false}
+              onChange={() => {
+                slugEdited.current = true;
+              }}
+            />
+          </Form.Item>
+          <Form.Item
+            name="timezone"
+            label={t('events.h_8g8c9u')}
+            rules={[{ required: true }]}
+          >
+            <Input />
+          </Form.Item>
+          <Form.Item
+            name="visibility"
+            label={t('common.h_wqd4fq')}
+            rules={[{ required: true }]}
+          >
+            <Select
+              options={[
+                { value: 'UNLISTED', label: 'UNLISTED' },
+                { value: 'PUBLIC', label: 'PUBLIC' },
               ]}
-            >
-              <Input maxLength={64} autoComplete="off" spellCheck={false} />
-            </Form.Item>
-            <Form.Item
-              name="timezone"
-              label={t('events.h_8g8c9u')}
-              rules={[{ required: true }]}
-            >
-              <Input />
-            </Form.Item>
-            <Form.Item
-              name="visibility"
-              label={t('common.h_wqd4fq')}
-              rules={[{ required: true }]}
-            >
-              <Select
-                options={[
-                  { value: 'UNLISTED', label: 'UNLISTED' },
-                  { value: 'PUBLIC', label: 'PUBLIC' },
-                ]}
-              />
-            </Form.Item>
-          </>
-        ) : null}
-        {step === 1 ? (
-          <>
-            <Form.Item name="venueName" label={t('events.h_b8z0sy')}>
-              <Input />
-            </Form.Item>
-            <Form.Item name="venueAddress" label={t('events.h_1dipstx')}>
-              <Input />
-            </Form.Item>
-            <Form.Item name="contactEmail" label={t('events.h_1xm22zn')}>
-              <Input type="email" />
-            </Form.Item>
-          </>
-        ) : null}
-        {step === 2 ? (
+            />
+          </Form.Item>
+        </div>
+        <div style={stepHidden(1)}>
+          <Form.Item name="venueName" label={t('events.h_b8z0sy')}>
+            <Input />
+          </Form.Item>
+          <Form.Item name="venueAddress" label={t('events.h_1dipstx')}>
+            <Input />
+          </Form.Item>
+          <Form.Item
+            name="contactEmail"
+            label={t('events.h_1xm22zn')}
+            rules={[{ type: 'email', message: t('events.new.contactEmailInvalid') }]}
+          >
+            <Input type="email" />
+          </Form.Item>
+        </div>
+        <div style={stepHidden(2)}>
           <Alert
             type="info"
             showIcon
             message={t('events.h_1o08rig')}
             description={t('events.h_1qeuedv')}
+            style={{ marginBottom: 16 }}
           />
-        ) : null}
+          <Descriptions
+            bordered
+            size="small"
+            column={1}
+            title={t('events.new.reviewPayloadTitle')}
+            items={reviewRows.map((row) => ({
+              key: row.label,
+              label: row.label,
+              children: row.value,
+            }))}
+          />
+        </div>
       </Form>
       {notice ? (
-        <Alert type={notice.type} showIcon message={notice.text} />
+        <Alert type={notice.type} showIcon message={notice.text} style={{ marginTop: 16 }} />
       ) : null}
       <MutationIntentAlert pending={intent.pending} needsReconciliation={intent.needsReconciliation}
         onCheck={() => router.push(`/t/${tenantId}/events`)} onStartNew={intent.release} />
-      <Space>
+      <Space style={{ marginTop: 16 }}>
         <Button
           disabled={step === 0 || busy}
           onClick={() => setStep((s) => s - 1)}
