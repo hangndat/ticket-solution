@@ -707,6 +707,7 @@ export default function ConfigBrandPage() {
             search={false}
             options={false}
             pagination={false}
+            scroll={{ x: 'max-content' }}
             columns={[
               { title: 'Version', dataIndex: 'version' },
               {
