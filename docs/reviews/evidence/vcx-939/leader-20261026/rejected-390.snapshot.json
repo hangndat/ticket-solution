@@ -1,0 +1,79 @@
+{
+  "origin": "http://localhost:3417/redeem?tenantSlug=mfest-demo&eventSlug=mfest&uat939=70988dd9-203d-4b8d-a687-1aca5b5c003c",
+  "refs": {
+    "e1": {
+      "name": "Bỏ qua đến nội dung",
+      "role": "link"
+    },
+    "e10": {
+      "name": "Thử mã khác",
+      "role": "button"
+    },
+    "e11": {
+      "name": "Vé của tôi",
+      "role": "link"
+    },
+    "e12": {
+      "name": "Khám phá",
+      "role": "link"
+    },
+    "e13": {
+      "name": "Đổi mã",
+      "role": "link"
+    },
+    "e14": {
+      "name": "Tài khoản",
+      "role": "link"
+    },
+    "e15": {
+      "name": "Mã đổi vé",
+      "role": "textbox"
+    },
+    "e16": {
+      "name": "",
+      "role": "generic"
+    },
+    "e17": {
+      "name": "Tôi đã đọc và đồng ý điều khoản sự kiện",
+      "role": "checkbox"
+    },
+    "e18": {
+      "name": "Open Next.js Dev Tools",
+      "role": "button"
+    },
+    "e2": {
+      "name": "Điều hướng chính",
+      "role": "navigation"
+    },
+    "e3": {
+      "name": "Liên kết chân trang",
+      "role": "navigation"
+    },
+    "e4": {
+      "name": "Vemoki — trang chủ",
+      "role": "link"
+    },
+    "e5": {
+      "name": "Menu",
+      "role": "button"
+    },
+    "e6": {
+      "name": "Đổi mã lấy vé",
+      "role": "heading"
+    },
+    "e7": {
+      "name": "Đổi mã lấy vé",
+      "role": "heading"
+    },
+    "e8": {
+      "name": "Đổi mã lấy vé",
+      "role": "button"
+    },
+    "e9": {
+      "name": "Yêu cầu bị từ chối",
+      "role": "heading"
+    }
+  },
+  "snapshot": "- link \"Bỏ qua đến nội dung\" [ref=e1]\n- banner\n  - navigation \"Điều hướng chính\" [ref=e2]\n    - link \"Vemoki — trang chủ\" [ref=e4]\n      - StaticText \"vemoki\"\n    - button \"Menu\" [expanded=false, ref=e5]\n      - StaticText \"Menu\"\n- main\n  - sectionheader\n    - paragraph\n      - StaticText \"NHẬP MÃ MỜI\"\n    - heading \"Đổi mã lấy vé\" [level=1, ref=e6]\n    - paragraph\n      - StaticText \"Một mã mời duy nhất. Không cần chọn sự kiện hay tổ chức.\"\n  - form \"Đổi mã lấy vé\"\n    - heading \"Đổi mã lấy vé\" [level=2, ref=e7]\n    - paragraph\n      - StaticText \"Nhập mã và đồng ý điều khoản của sự kiện. Trạng thái chờ duyệt chưa phải vé.\"\n    - status\n      - strong\n        - StaticText \"Biểu mẫu sẵn sàng\"\n      - paragraph\n        - StaticText \"Đã tải biểu mẫu mới. Điền lại và đồng ý điều khoản trước khi gửi.\"\n    - group\n      - DisclosureTriangle \"Tùy chọn nâng cao (đường dẫn / mã kỹ thuật)\" [expanded=false]\n    - LabelText\n      - StaticText \"Mã đổi vé\"\n      - textbox \"Mã đổi vé\" [required, ref=e15]: VCX939-LEADER-REJECT\n        - StaticText \"VCX939-LEADER-REJECT\"\n    - paragraph\n      - StaticText \"Sự kiện này không có trường biểu mẫu — nhập mã và đồng ý điều khoản bên dưới để đổi vé.\"\n    - group \"Điều khoản\"\n      - Legend\n        - StaticText \"Điều khoản\"\n      - paragraph\n        - StaticText \"Nội dung dưới đây do ban tổ chức ban hành (có thể khác ngôn ngữ giao diện).\"\n      - generic [ref=e16] focusable [tabindex]\n        - StaticText \"By attending you agree to venue house rules, age and safety policies, and the organizer’s ticketing terms. Tickets are non-transferable except where the organizer permits. Photography for personal use is welcome; commercial filming requires prior approval.\"\n      - LabelText\n        - checkbox \"Tôi đã đọc và đồng ý điều khoản sự kiện\" [checked=true, ref=e17]\n        - StaticText \"Tôi đã đọc và đồng ý điều khoản sự kiện\"\n    - button \"Đổi mã lấy vé\" [ref=e8]\n  - alert\n    - heading \"Yêu cầu bị từ chối\" [level=3, ref=e9]\n    - paragraph\n      - StaticText \"VCX939 isolated UAT rejection\"\n    - button \"Thử mã khác\" [ref=e10]\n    - link \"Vé của tôi\" [ref=e11]\n- contentinfo\n  - StaticText \"vemoki\"\n  - StaticText \"Sự kiện & vé\"\n  - navigation \"Liên kết chân trang\" [ref=e3]\n    - link \"Khám phá\" [ref=e12]\n    - link \"Đổi mã\" [ref=e13]\n    - link \"Tài khoản\" [ref=e14]\n- button \"Open Next.js Dev Tools\" [expanded=false, ref=e18]\n  - image\n- alert",
+  "browserPageId": "7cc7c0b6-708a-4f90-a806-c7ab06d7e289"
+}
