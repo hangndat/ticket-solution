@@ -984,6 +984,138 @@ test(
       assert.equal(deadOutbox, 'DEAD');
       const still = await listActiveDeviceTokensForUser(db, attendee.userId);
       assert.ok(!still.some((r) => r.token === pushToken));
+
+      // PostgreSQL keeps six fractional digits even though JS Date keeps three.
+      // Clone the issued request/ticket under the runtime role to reproduce #990.
+      await withTenant(db, tenantId, async (tx) => {
+        await tx.$executeRaw`
+          UPDATE tickets SET created_at = '2026-10-26 17:14:16.465788+00'::timestamptz
+          WHERE tenant_id = ${tenantId}::uuid AND id = ${ticket.ticketId}::uuid
+        `;
+        await tx.$executeRaw`
+          INSERT INTO redemption_requests (
+            tenant_id, event_id, id, actor_user_id, redemption_code_id,
+            status, form_version, terms_version, created_at, updated_at
+          )
+          SELECT r.tenant_id, r.event_id, md5('cs-page-request-' || n)::uuid,
+                 r.actor_user_id, r.redemption_code_id, r.status,
+                 r.form_version, r.terms_version, r.created_at, r.updated_at
+          FROM redemption_requests r CROSS JOIN generate_series(1, 29) AS n
+          WHERE r.tenant_id = ${tenantId}::uuid AND r.id = (
+            SELECT request_id FROM tickets
+            WHERE tenant_id = ${tenantId}::uuid AND id = ${ticket.ticketId}::uuid
+          )
+        `;
+        await tx.$executeRaw`
+          INSERT INTO tickets (
+            tenant_id, event_id, id, owner_user_id, ticket_type_id,
+            source_id, request_id, state, credential_version,
+            entitlement_snapshot, created_at, updated_at
+          )
+          SELECT t.tenant_id, t.event_id, md5('cs-page-ticket-' || n)::uuid,
+                 t.owner_user_id, t.ticket_type_id, t.source_id,
+                 md5('cs-page-request-' || n)::uuid, t.state,
+                 t.credential_version, t.entitlement_snapshot,
+                 '2026-10-26 17:14:16.465788+00'::timestamptz, t.updated_at
+          FROM tickets t CROSS JOIN generate_series(1, 29) AS n
+          WHERE t.tenant_id = ${tenantId}::uuid AND t.id = ${ticket.ticketId}::uuid
+        `;
+      });
+
+      const seen = [];
+      let cursor;
+      let firstPage;
+      for (let pageNumber = 0; pageNumber < 3; pageNumber++) {
+        const page = await withTenant(db, tenantId, (tx) =>
+          listCsTickets(tx, HMAC, {
+            tenantId,
+            eventId,
+            actorUserId: cs.userId,
+            limit: 10,
+            cursor,
+          }),
+        );
+        if (!firstPage) firstPage = page;
+        assert.equal(page.items.length, 10);
+        seen.push(...page.items.map((item) => item.ticketId));
+        assert.deepEqual(
+          page.items.map((item) => item.ticketId),
+          [...page.items.map((item) => item.ticketId)].sort().reverse(),
+        );
+        cursor = page.nextCursor;
+        assert.equal(Boolean(cursor), pageNumber < 2);
+      }
+      assert.equal(new Set(seen).size, 30);
+      assert.equal(seen.includes(ticket.ticketId), true);
+      const [version, timestamp, anchorId] = Buffer.from(
+        firstPage.nextCursor,
+        'base64url',
+      )
+        .toString('utf8')
+        .split('|');
+      assert.equal(version, 'v1');
+      assert.equal(timestamp, '2026-10-26T17:14:16.465788Z');
+      const legacyCursor = Buffer.from(
+        `2026-10-26T17:14:16.465Z|${anchorId}`,
+      ).toString('base64url');
+      const legacyPage = await withTenant(db, tenantId, (tx) =>
+        listCsTickets(tx, HMAC, {
+          tenantId,
+          eventId,
+          actorUserId: cs.userId,
+          limit: 10,
+          cursor: legacyCursor,
+        }),
+      );
+      assert.deepEqual(
+        legacyPage.items.map((item) => item.ticketId),
+        seen.slice(10, 20),
+      );
+      const invalidPage = await withTenant(db, tenantId, (tx) =>
+        listCsTickets(tx, HMAC, {
+          tenantId,
+          eventId,
+          actorUserId: cs.userId,
+          limit: 10,
+          cursor: 'not-a-cursor',
+        }),
+      );
+      assert.deepEqual(invalidPage.items, firstPage.items);
+      const invalidVersionedPage = await withTenant(db, tenantId, (tx) =>
+        listCsTickets(tx, HMAC, {
+          tenantId,
+          eventId,
+          actorUserId: cs.userId,
+          limit: 10,
+          cursor: Buffer.from(`v1|bad-time|${anchorId}`).toString('base64url'),
+        }),
+      );
+      assert.deepEqual(invalidVersionedPage.items, firstPage.items);
+      await assert.rejects(
+        () =>
+          withTenant(db, tenantId, (tx) =>
+            listCsTickets(tx, HMAC, {
+              tenantId,
+              eventId: randomUUID(),
+              actorUserId: cs.userId,
+              cursor: firstPage.nextCursor,
+            }),
+          ),
+        (error) => error instanceof AuthzError,
+      );
+      const otherTenantId = randomUUID();
+      await assert.rejects(
+        () =>
+          withTenant(db, otherTenantId, (tx) =>
+            listCsTickets(tx, HMAC, {
+              tenantId: otherTenantId,
+              eventId,
+              actorUserId: cs.userId,
+              cursor: legacyCursor,
+            }),
+          ),
+        (error) => error instanceof AuthzError,
+      );
     } finally {
       if (db) await db.$disconnect().catch(() => {});
       if (minio) await minio.close();
