@@ -43,6 +43,14 @@ export async function PATCH(request: Request, { params }: Props) {
   if (!body || typeof body !== 'object') {
     return bffApiError('INVALID_JSON', 'Request body must be an object.', 400);
   }
+  const { idempotencyKey, ...payload } = body as Record<string, unknown>;
+  if (typeof idempotencyKey !== 'string' || !isUuid(idempotencyKey.trim())) {
+    return bffApiError(
+      'IDEMPOTENCY_KEY_REQUIRED',
+      'idempotencyKey must be a UUID.',
+      422,
+    );
+  }
   const expectedRevision = (body as { expectedRevision?: unknown })
     .expectedRevision;
   if (
@@ -58,7 +66,10 @@ export async function PATCH(request: Request, { params }: Props) {
   }
   return forwardStaffBearer(PORTAL_UPSTREAM.event(tenantId, eventId), {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
+    headers: {
+      'Content-Type': 'application/json',
+      'Idempotency-Key': idempotencyKey.trim(),
+    },
+    body: JSON.stringify(payload),
   });
 }
