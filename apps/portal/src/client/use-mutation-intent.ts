@@ -24,9 +24,10 @@ export function useMutationIntent(tenantId: string, eventId: string | undefined,
   async function run(
     payload: object,
     send: (body: Record<string, unknown>) => Promise<PortalFetchResult>,
+    definitive?: (response: PortalFetchResult) => boolean,
   ): Promise<IntentResult> {
     if (!controller) return { kind: 'blocked', reason: 'identity' };
-    const result = await controller.run(payload, send);
+    const result = await controller.run(payload, send, definitive);
     if (currentScope.current !== scope) return { kind: 'blocked', reason: 'changed' };
     refresh((n) => n + 1);
     return result;
