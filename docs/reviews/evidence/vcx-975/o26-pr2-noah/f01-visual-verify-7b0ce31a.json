@@ -1,8 +1,8 @@
 {
   "case": "F01-visual-verify",
   "codeSha": "7b0ce31a6d6a58aa046c6a3f616fa9ab7f900864",
-  "headSha": "597a436f03c4e9f016ce1ce5f93b5e9ac2c68341",
-  "at": "2026-10-26T14:28:25.518Z",
+  "headSha": "eb3a22084df3fe0ed7a18698850288d2b3a8e16c",
+  "at": "2026-10-26T14:29:58.928Z",
   "screenshot": "f01-drawer-visual-390x844-7b0ce31a.png",
   "historicalFailAf637": "f01-visual-verify-af6374bd-fail.json",
   "intermediateGeometryPass": "f01-visual-verify-ebb2fa3f.json",
