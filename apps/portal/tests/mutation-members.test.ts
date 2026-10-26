@@ -2,6 +2,16 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { MutationIntent, type IntentStorage } from '../src/client/mutation-intent';
 import type { PortalFetchResult } from '../src/client/portal-fetch';
+import { inviteDeliveryFailed, inviteQueued } from '../src/client/invite-outcome';
+
+test('invite response separates created from provider delivery failure', () => {
+  const base: PortalFetchResult = { status: 201, json: { inviteId: 'i1', state: 'PENDING', deliveryState: 'PENDING' }, networkError: false, timedOut: false };
+  assert.equal(inviteQueued(base), true);
+  const failed = { ...base, json: { inviteId: 'i1', state: 'PENDING', deliveryState: 'FAILED' } };
+  assert.equal(inviteQueued(failed), false);
+  assert.equal(inviteDeliveryFailed(failed), true);
+  assert.equal(inviteQueued({ ...base, status: 202 }), false);
+});
 
 test('invite recovery stores no email and blocks changed recipient after reload', async () => {
   const values = new Map<string, string>();

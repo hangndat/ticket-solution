@@ -30,6 +30,7 @@ import {
 import { usePortalUserId } from '../../../src/views/use-portal-user-id';
 import { useMutationIntent } from '../../../src/client/use-mutation-intent';
 import { MutationIntentAlert } from '../../../src/client/mutation-intent-alert';
+import { inviteDeliveryFailed, inviteQueued } from '../../../src/client/invite-outcome';
 
 type Branding = {
   displayName: string;
@@ -254,7 +255,7 @@ export default function TenantOnboardingPage() {
       const outcome = await inviteIntent.run({
         email: values.email.trim(),
         role,
-      }, (body) => portalMutate(bffInvites(tenantId), body));
+      }, (body) => portalMutate(bffInvites(tenantId), body), inviteQueued);
       if (outcome.kind === 'blocked') {
         setNotice('Lời mời trước chưa rõ kết quả. Kiểm tra danh sách lời mời trước khi tiếp tục.');
         return;
@@ -269,7 +270,11 @@ export default function TenantOnboardingPage() {
         void reload();
         return;
       }
-      if (res.status !== 200 && res.status !== 201) {
+      if (inviteDeliveryFailed(res)) {
+        setNotice('Lời mời đã tạo nhưng email thất bại. Kiểm tra danh sách lời mời trước khi tiếp tục.');
+        return;
+      }
+      if (!inviteQueued(res)) {
         setNotice(
           t('ops.export.apiRejected', {
             code: apiErrorCode(res.json) ?? res.status,
