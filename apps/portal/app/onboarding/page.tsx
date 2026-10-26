@@ -113,7 +113,8 @@ export default function OnboardingEntryPage() {
         setNotice(t('onboarding.signup.invalid'));
         return;
       }
-      const outcome = await signupIntent.run(body, (request) => portalMutate(bffTenantRegistrations(), request));
+      const outcome = await signupIntent.run(body, (request) => portalMutate(bffTenantRegistrations(), request),
+        (result) => parseRegistrationResponse(result.status, result.json) !== null);
       if (outcome.kind === 'blocked') {
         setNotice('Đăng ký trước chưa rõ kết quả. Kiểm tra danh sách tổ chức trước khi tiếp tục.');
         return;

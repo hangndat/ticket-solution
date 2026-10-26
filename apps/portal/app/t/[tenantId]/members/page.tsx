@@ -39,6 +39,7 @@ import { useUnsavedChanges } from '../../../../src/nav/unsaved-changes';
 import { SavedViewsToolbar } from '../../../../src/views';
 import { useMutationIntent } from '../../../../src/client/use-mutation-intent';
 import { MutationIntentAlert } from '../../../../src/client/mutation-intent-alert';
+import { inviteDeliveryFailed, inviteQueued } from '../../../../src/client/invite-outcome';
 import {
   SYSTEM_MEMBERSHIP_ROLES,
   asRolePresetItems,
@@ -288,7 +289,7 @@ export default function MembersPage() {
           { eventId, role: values.eventRole ?? 'Manager' },
         ];
       }
-      const outcome = await inviteIntent.run(body, (request) => portalMutate(bffInvites(tenantId), request));
+      const outcome = await inviteIntent.run(body, (request) => portalMutate(bffInvites(tenantId), request), inviteQueued);
       if (outcome.kind === 'blocked') {
         setNotice('Lời mời trước chưa rõ kết quả. Kiểm tra danh sách lời mời trước khi tiếp tục.');
         return;
@@ -298,7 +299,12 @@ export default function MembersPage() {
         setNotice(t('members.h_aa8wpg'));
         return;
       }
-      if (res.status === 200 || res.status === 201) {
+      if (inviteDeliveryFailed(res)) {
+        setNotice('Lời mời đã được tạo nhưng gửi email thất bại. Kiểm tra lời mời và trạng thái gửi trước khi tiếp tục.');
+        void reload();
+        return;
+      }
+      if (inviteQueued(res)) {
         setDirty(false);
         setNotice(t('members.h_xg2gwp'));
         form.resetFields(['email']);
@@ -378,15 +384,20 @@ export default function MembersPage() {
           { membershipId, reason: t('members.h_tzdfji') },
           (body) => portalMutate(bffRevokeMember(tenantId, membershipId),
             { reason: body.reason, idempotencyKey: body.idempotencyKey }),
+          (res) => res.status >= 200 && res.status < 300 && !!res.json &&
+            typeof res.json === 'object' && (res.json as { membershipId?: unknown }).membershipId === membershipId,
         );
         if (outcome.kind === 'blocked') {
           setNotice('Thu hồi thành viên trước chưa rõ kết quả. Kiểm tra danh sách thành viên.');
           return;
         }
         const res = outcome.response;
-        if (res.status >= 200 && res.status < 300) {
+        if (res.status >= 200 && res.status < 300 && !!res.json &&
+          typeof res.json === 'object' && (res.json as { membershipId?: unknown }).membershipId === membershipId) {
           setNotice(t('members.h_o8fp08'));
           void reload();
+        } else if (res.status >= 200 && res.status < 300) {
+          setNotice('Thu hồi thành viên chưa xác định. Kiểm tra trạng thái trước khi tiếp tục.');
         } else if (res.networkError || res.status >= 500) {
           setNotice(t('members.h_suvvlr'));
         } else {
@@ -410,15 +421,22 @@ export default function MembersPage() {
           { inviteId, reason: t('members.h_1p47lt5') },
           (body) => portalMutate(bffRevokeInvite(tenantId, inviteId),
             { reason: body.reason, idempotencyKey: body.idempotencyKey }),
+          (res) => res.status >= 200 && res.status < 300 && !!res.json &&
+            typeof res.json === 'object' && (res.json as { inviteId?: unknown; state?: unknown }).inviteId === inviteId &&
+            (res.json as { state?: unknown }).state === 'REVOKED',
         );
         if (outcome.kind === 'blocked') {
           setNotice('Thu hồi lời mời trước chưa rõ kết quả. Kiểm tra danh sách lời mời.');
           return;
         }
         const res = outcome.response;
-        if (res.status >= 200 && res.status < 300) {
+        if (res.status >= 200 && res.status < 300 && !!res.json &&
+          typeof res.json === 'object' && (res.json as { inviteId?: unknown; state?: unknown }).inviteId === inviteId &&
+          (res.json as { state?: unknown }).state === 'REVOKED') {
           setNotice(t('members.h_2cjh4e'));
           void reload();
+        } else if (res.status >= 200 && res.status < 300) {
+          setNotice('Thu hồi lời mời chưa xác định. Kiểm tra trạng thái trước khi tiếp tục.');
         } else {
           setNotice(apiErrorMessage(res.json, t('members.h_1tmqlzc')));
         }
