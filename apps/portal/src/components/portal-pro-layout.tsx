@@ -10,7 +10,6 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { resolvePortalMenuKeys } from '../nav/portal-menu-keys';
 import type { MeEventItem, MeTenantItem } from '@ticket/contracts';
 import type { PortalShellCapabilities } from '../nav/capabilities';
-import { VEMOKI_COLORS } from '../theme/vemoki';
 import { PortalContextStrip } from './portal-context-strip';
 import { PortalDualRunBanner } from './dual-run-banner';
 import { SurfaceState } from './surface-state';
@@ -137,12 +136,6 @@ export function PortalProLayout({
       token={{
         header: {
           colorBgHeader: token.colorBgContainer,
-        },
-        sider: {
-          colorMenuBackground: VEMOKI_COLORS.siderBg,
-          colorTextMenu: VEMOKI_COLORS.siderText,
-          colorTextMenuSelected: VEMOKI_COLORS.siderTextActive,
-          colorBgMenuItemSelected: VEMOKI_COLORS.siderItemSelected,
         },
       }}
       contentStyle={{ padding: 0 }}

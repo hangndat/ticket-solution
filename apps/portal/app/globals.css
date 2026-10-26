@@ -2,16 +2,9 @@ html,
 body {
   margin: 0;
   min-height: 100%;
-  background: var(--vemoki-paper);
-  color: var(--vemoki-ink);
-  font-family:
-    'Be Vietnam Pro',
-    'IBM Plex Sans',
-    ui-sans-serif,
-    system-ui,
-    sans-serif;
 }
 
+/* Legacy shell/page helpers — dissolve in O26-PR2–PR3 (Pro layout + SurfaceState). */
 .portal-skip-link {
   position: absolute;
   left: -9999px;
@@ -19,13 +12,13 @@ body {
   z-index: 1000;
   padding: 8px 12px;
   background: #fff;
-  color: var(--vemoki-ink);
+  color: inherit;
 }
 
 .portal-skip-link:focus {
   left: 8px;
   top: 8px;
-  outline: 2px solid var(--vemoki-focus);
+  outline: 2px solid #1677ff;
   outline-offset: 2px;
 }
 
@@ -48,7 +41,7 @@ body {
 
 .portal-context-strip {
   background: #fff;
-  border-bottom: 1px solid color-mix(in srgb, var(--vemoki-ink) 12%, transparent);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
   padding: 12px 16px;
 }
 
@@ -73,7 +66,7 @@ body {
 .portal-context-strip__label {
   font-size: 12px;
   line-height: 1.2;
-  color: color-mix(in srgb, var(--vemoki-ink) 55%, transparent);
+  color: rgba(0, 0, 0, 0.45);
 }
 
 .portal-context-strip__field .ant-select {
@@ -208,11 +201,6 @@ a {
   color: inherit;
 }
 
-*:focus-visible {
-  outline: 2px solid var(--vemoki-focus);
-  outline-offset: 2px;
-}
-
 .portal-surface-loading {
   padding: 48px;
   text-align: center;
@@ -222,15 +210,15 @@ a {
   width: 40px;
   height: 40px;
   margin: 0 auto;
-  border: 3px solid color-mix(in srgb, var(--vemoki-signal) 25%, transparent);
-  border-top-color: var(--vemoki-signal);
+  border: 3px solid rgba(0, 0, 0, 0.06);
+  border-top-color: #1677ff;
   border-radius: 50%;
   animation: portal-surface-loading-spin 0.8s linear infinite;
 }
 
 .portal-surface-loading__label {
   margin: 16px 0 0;
-  color: color-mix(in srgb, var(--vemoki-ink) 72%, transparent);
+  color: rgba(0, 0, 0, 0.65);
 }
 
 @keyframes portal-surface-loading-spin {
@@ -242,18 +230,14 @@ a {
 @media (prefers-reduced-motion: reduce) {
   .portal-surface-loading__spinner {
     animation: none;
-    border-top-color: var(--vemoki-signal);
+    border-top-color: #1677ff;
     opacity: 0.85;
   }
 }
 
-.ant-layout-sider .portal-brand-link {
-  color: #faf9ff;
-}
-
 .portal-readiness {
-  border: 1px solid var(--vemoki-line);
-  border-radius: 14px;
+  border: 1px solid #d9d9d9;
+  border-radius: 8px;
   background: #fff;
   padding: 18px 20px;
 }
@@ -262,14 +246,14 @@ a {
   margin: 0 0 4px;
   font-size: 1.0625rem;
   font-weight: 650;
-  color: var(--vemoki-ink);
+  color: rgba(0, 0, 0, 0.88);
 }
 
 .portal-readiness__summary {
   margin: 0 0 14px;
   font-size: 0.875rem;
   line-height: 1.45;
-  color: var(--vemoki-muted);
+  color: rgba(0, 0, 0, 0.45);
 }
 
 .portal-ready-item {
@@ -279,7 +263,7 @@ a {
   padding: 10px 0;
   font-size: 0.9375rem;
   line-height: 1.4;
-  border-bottom: 1px solid color-mix(in srgb, var(--vemoki-line) 65%, transparent);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
 }
 
 .portal-ready-item:last-child {
@@ -302,20 +286,20 @@ a {
 }
 
 .portal-ready-item--unknown .portal-ready-item__mark {
-  color: var(--vemoki-muted);
+  color: rgba(0, 0, 0, 0.45);
 }
 
 .portal-ready-item__body strong {
   display: block;
   font-weight: 600;
-  color: var(--vemoki-ink);
+  color: rgba(0, 0, 0, 0.88);
 }
 
 .portal-ready-item__body span {
   display: block;
   margin-top: 2px;
   font-size: 0.8125rem;
-  color: var(--vemoki-muted);
+  color: rgba(0, 0, 0, 0.45);
 }
 
 .portal-gate-report-compact .ant-statistic-card {
