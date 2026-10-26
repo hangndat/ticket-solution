@@ -210,6 +210,10 @@ export async function fetchOfflineSyncReceipt(input: {
     if (response.status === 401 || response.status === 403) {
       return { kind: 'auth', status: response.status };
     }
+    // Rate limits and temporary server faults are not malformed receipts.
+    if (response.status === 429 || response.status >= 500) {
+      return { kind: 'network' };
+    }
     if (response.status !== 200) return { kind: 'malformed' };
     const receipt = parseOfflineSyncReceiptResponse(json);
     if (!receipt) return { kind: 'malformed' };

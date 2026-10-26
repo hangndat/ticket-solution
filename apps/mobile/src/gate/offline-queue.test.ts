@@ -3,9 +3,11 @@ import { test } from 'node:test';
 import {
   OfflineScanQueue,
   offlineBannerCopy,
+  offlineConflictBannerForScope,
   probeConnectivity,
 } from './offline-queue.ts';
-import { createMemoryOfflineQueueStore } from './offline-queue-types.ts';
+import { createMemoryOfflineQueueStore, type StoredOfflineScan } from './offline-queue-types.ts';
+import { buildDeviceScanHistory } from './staff-gate-device-history.ts';
 import {
   OFFLINE_SYNC_ERROR_CODES,
   compareOfflineReplayOrder,
@@ -266,6 +268,60 @@ test('NOT_IMPLEMENTED keeps pending so queue survives stub BE', async () => {
   assert.match(q.getSnapshot().lastSyncError ?? '', /stub|chưa bật/i);
 });
 
+test('offline replay keeps queued ticket on 401 or membership 403, but not a ticket-level 403', async () => {
+  for (const scenario of [
+    { status: 401, code: 'UNAUTHORIZED', authz: true },
+    { status: 403, code: 'MEMBERSHIP_REVOKED', authz: true },
+    { status: 403, code: 'ALREADY_CHECKED_IN', authz: false },
+  ]) {
+    const store = createMemoryOfflineQueueStore([], userA);
+    const q = await queueFor(store, userA, {
+      createId: () => '00000000-0000-4000-8000-000000000001',
+      nowIso: () => '2026-10-17T08:00:00.000Z',
+    });
+    await q.enqueue({ ticketId, tenantId, eventId, staffSessionId });
+    if (scenario.authz) {
+      store.writeQueue = async () => { throw new Error('SecureStore unavailable after POST'); };
+    }
+    const outcome = await q.replay({
+      bearer: 't',
+      apiBase: 'https://api.example',
+      fetchImpl: async () => jsonResponse(scenario.status, {
+        code: scenario.code,
+        retryable: false,
+      }),
+    });
+    assert.equal(outcome.authzDenial?.status === scenario.status, scenario.authz);
+    assert.equal(outcome.results.length, 0);
+    assert.equal(q.getSnapshot().items[0]?.localStatus, scenario.authz ? 'pending' : 'rejected');
+    assert.equal(q.getSnapshot().conflictCount, scenario.authz ? 0 : 1);
+    const restored = await queueFor(store, userA);
+    assert.equal(restored.getSnapshot().items[0]?.localStatus, scenario.authz ? 'pending' : 'rejected');
+  }
+});
+
+test('membership denial still reaches workspace when event scope changes during POST', async () => {
+  const store = createMemoryOfflineQueueStore([], userA);
+  const q = await queueFor(store, userA, {
+    createId: () => '00000000-0000-4000-8000-000000000001',
+    nowIso: () => '2026-10-17T08:00:00.000Z',
+  });
+  await q.enqueue({ ticketId, tenantId, eventId, staffSessionId });
+  let sameScope = true;
+  const outcome = await q.replay({
+    bearer: 't',
+    apiBase: 'https://api.example',
+    shouldContinue: () => sameScope,
+    fetchImpl: async () => {
+      sameScope = false;
+      return jsonResponse(403, { code: 'MEMBERSHIP_REVOKED', retryable: false });
+    },
+  });
+  assert.equal(outcome.authzDenial?.code, 'MEMBERSHIP_REVOKED');
+  assert.equal(q.getSnapshot().items[0]?.localStatus, 'pending');
+  assert.equal(q.getSnapshot().conflictCount, 0);
+});
+
 test('network failure during replay keeps pending', async () => {
   const store = createMemoryOfflineQueueStore([], userA);
   let n = 0;
@@ -318,6 +374,17 @@ test('banner copy is Vietnamese for offline/sync/conflict', () => {
   });
   assert.equal(conflict.title, 'Có xung đột đồng bộ');
   assert.equal(conflict.tone, 'deny');
+  assert.match(conflict.body, /tab Lịch sử của sự kiện này/);
+  assert.doesNotMatch(conflict.body, /bên dưới/);
+  const conflictWhileOffline = offlineBannerCopy({
+    connectivity: 'offline',
+    pendingCount: 1,
+    conflictCount: 1,
+    syncing: true,
+    lastSyncError: null,
+  });
+  assert.equal(conflictWhileOffline.title, 'Có xung đột đồng bộ');
+  assert.match(conflictWhileOffline.body, /không cho vào/);
 
   const online = offlineBannerCopy({
     connectivity: 'online',
@@ -328,6 +395,45 @@ test('banner copy is Vietnamese for offline/sync/conflict', () => {
   });
   assert.equal(online.title, 'Trực tuyến');
   assert.notEqual(online.tone, 'admit');
+});
+
+test('conflict banner follows tenant and event after offline restart while sync remains device-wide', async () => {
+  const eventB = '55555555-5555-4555-8555-555555555555';
+  const otherTenant = '66666666-6666-4666-8666-666666666666';
+  const base = {
+    type: 'CHECKIN_OFFLINE' as const,
+    ticketId,
+    staffSessionId,
+    clientOccurredAt: '2026-10-17T08:00:00.000Z',
+    clientSeq: 0,
+    payloadVersion: 1 as const,
+  };
+  const rows: StoredOfflineScan[] = [
+    { ...base, clientEventId: 'a-pending', tenantId, eventId, localStatus: 'pending' },
+    { ...base, clientEventId: 'b-conflict', tenantId, eventId: eventB, localStatus: 'conflict' },
+    { ...base, clientEventId: 'other-tenant-rejected', tenantId: otherTenant, eventId: eventB, localStatus: 'rejected' },
+  ];
+  const store = createMemoryOfflineQueueStore(rows, userA);
+  const eventAScope = { tenantId, eventId, name: 'Sự kiện A' };
+  const eventBScope = { tenantId, eventId: eventB, name: 'Sự kiện B' };
+
+  for (let launch = 0; launch < 2; launch += 1) {
+    const queue = await queueFor(store, userA);
+    const snapshot = queue.getSnapshot();
+    assert.equal(snapshot.pendingCount, 1);
+    assert.equal(snapshot.conflictCount, 2);
+    assert.equal(snapshot.pendingCount > 0 || snapshot.conflictCount > 0, true);
+    assert.equal(offlineConflictBannerForScope(snapshot, eventAScope, 'offline'), null);
+    assert.equal(offlineConflictBannerForScope(snapshot, null, 'offline'), null);
+    const bannerB = offlineConflictBannerForScope(snapshot, eventBScope, 'offline');
+    assert.equal(bannerB?.title, 'Có xung đột đồng bộ');
+    assert.match(bannerB?.body ?? '', /^1 mục .*tab Lịch sử của sự kiện này/);
+    assert.equal(buildDeviceScanHistory(eventAScope, [], snapshot.items).length, 1);
+    const historyB = buildDeviceScanHistory(eventBScope, [], snapshot.items);
+    assert.equal(historyB.length, 1);
+    assert.equal(historyB[0]?.id, 'b-conflict');
+    assert.equal(offlineConflictBannerForScope(snapshot, eventAScope, 'offline'), null);
+  }
 });
 
 test('probeConnectivity treats fetch throw as offline', async () => {
