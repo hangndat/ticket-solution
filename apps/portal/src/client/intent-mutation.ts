@@ -37,6 +37,17 @@ export const MAX_INTENT_RETRY_AGE_MS = 5 * 60_000;
 export const INTENT_RETRY_BACKOFF_MS = 1_000;
 const MAX_ATTEMPTS = 2;
 
+function retryAfterDelayMs(value: string | null | undefined, now: number): number | null {
+  if (!value) return null;
+  const trimmed = value.trim();
+  if (/^\d+$/.test(trimmed)) {
+    const seconds = Number(trimmed);
+    return Number.isFinite(seconds) ? seconds * 1_000 : null;
+  }
+  const date = Date.parse(trimmed);
+  return Number.isFinite(date) ? Math.max(0, date - now) : null;
+}
+
 export function intentStorageKey(scope: IntentScope): string {
   return `portal:intent:v1:${encodeURIComponent(scope.actorId)}:${encodeURIComponent(scope.tenantId)}:${encodeURIComponent(scope.eventId ?? '')}:${encodeURIComponent(scope.command)}`;
 }
@@ -88,7 +99,7 @@ export class IntentMutation<T> {
   run(
     payload: T,
     send: (body: T & { idempotencyKey: string }) => Promise<PortalFetchResult>,
-    confirmed: (response: PortalFetchResult) => boolean,
+    confirmed: (response: PortalFetchResult) => boolean | Promise<boolean>,
   ): Promise<IntentOutcome> {
     if (this.flight) return this.flight;
     if (this.blocked) return Promise.resolve(this.blocked);
@@ -127,7 +138,7 @@ export class IntentMutation<T> {
         this.blocked = { kind: 'blocked', reason: 'conflict' };
         return this.blocked;
       }
-      if (response.networkError || response.timedOut || response.status === 0 || response.status >= 500 || (response.json && typeof response.json === 'object' && (response.json as { retryable?: unknown }).retryable === true)) {
+      if (response.networkError || response.timedOut || response.status === 0 || response.status === 429 || response.status >= 500 || (response.json && typeof response.json === 'object' && (response.json as { retryable?: unknown }).retryable === true)) {
         return { kind: 'unknown', response };
       }
       if (response.json && typeof response.json === 'object' && (response.json as { state?: unknown }).state === 'FAILED') {
@@ -135,7 +146,11 @@ export class IntentMutation<T> {
         return { kind: 'rejected', response };
       }
       if (response.status >= 200 && response.status < 300) {
-        if (!confirmed(response)) return { kind: 'unknown', response };
+        try {
+          if (!await confirmed(response)) return { kind: 'unknown', response };
+        } catch {
+          return { kind: 'unknown', response };
+        }
         this.clear();
         return { kind: 'confirmed', response };
       }
@@ -147,7 +162,11 @@ export class IntentMutation<T> {
       return { kind: 'rejected', response };
     })().then((outcome) => {
       if (outcome.kind === 'unknown' && this.pending === pending) {
-        pending.nextRetryAt = Math.min(pending.marker.createdAt + MAX_INTENT_RETRY_AGE_MS, this.now() + INTENT_RETRY_BACKOFF_MS);
+        const now = this.now();
+        const delay = Math.max(INTENT_RETRY_BACKOFF_MS, retryAfterDelayMs(outcome.response?.retryAfter, now) ?? 0);
+        const deadline = pending.marker.createdAt + MAX_INTENT_RETRY_AGE_MS;
+        if (now + delay >= deadline) this.blocked = { kind: 'blocked', reason: 'expired' };
+        else pending.nextRetryAt = now + delay;
       }
       return outcome;
     }).finally(() => { this.flight = null; });

@@ -68,6 +68,31 @@ test('double click shares one in-flight request', async () => {
   assert.equal((await first).kind, 'confirmed');
 });
 
+test('concurrent actor-bound calls share the lookup, key, and send', async () => {
+  const storage = memoryStorage();
+  let finishLookup!: (actor: string | null) => void;
+  let lookups = 0;
+  let sends = 0;
+  const bound = new ActorBoundIntent('actor-a', new IntentMutation(scope, storage, () => 'key-a'), () => {
+    lookups += 1;
+    return lookups === 1 ? new Promise((resolve) => { finishLookup = resolve; }) : Promise.resolve('actor-a');
+  });
+  const send = async (body: { slug: string; idempotencyKey: string }) => {
+    sends += 1;
+    assert.deepEqual(body, { slug: 'clone', idempotencyKey: 'key-a' });
+    return ok();
+  };
+  const first = bound.run({ slug: 'clone' }, send, () => true);
+  const second = bound.run({ slug: 'clone' }, send, () => true);
+  assert.equal(first, second);
+  assert.equal(lookups, 1);
+  finishLookup('actor-a');
+  assert.equal((await first).kind, 'confirmed');
+  assert.equal(sends, 1);
+  assert.equal(lookups, 2);
+  assert.equal(storage.values.size, 0);
+});
+
 test('context and actor changes cannot reuse an unresolved key', async () => {
   const storage = memoryStorage();
   const first = new IntentMutation(scope, storage, () => 'key-a');
@@ -148,6 +173,43 @@ test('unknown outcome cannot be retried before the bounded deadline', async () =
   assert.deepEqual(keys, ['key-a', 'key-a']);
 });
 
+test('Retry-After delays 429 replay with the same key and payload', async () => {
+  const storage = memoryStorage();
+  const clock = { now: 1_000 };
+  const intent = new IntentMutation(scope, storage, () => 'key-a', () => clock.now);
+  const bodies: unknown[] = [];
+  const send = async (body: { slug: string; idempotencyKey: string }): Promise<PortalFetchResult> => {
+    bodies.push(body);
+    return bodies.length === 1
+      ? { status: 429, json: { code: 'RATE_LIMITED' }, networkError: false, timedOut: false, retryAfter: '3' }
+      : ok();
+  };
+  assert.equal((await intent.run({ slug: 'clone' }, send, () => true)).kind, 'unknown');
+  clock.now += 2_999;
+  assert.equal((await intent.run({ slug: 'clone' }, send, () => true)).kind, 'unknown');
+  assert.equal(bodies.length, 1);
+  clock.now += 1;
+  assert.equal((await intent.run({ slug: 'clone' }, send, () => true)).kind, 'confirmed');
+  assert.deepEqual(bodies, [
+    { slug: 'clone', idempotencyKey: 'key-a' },
+    { slug: 'clone', idempotencyKey: 'key-a' },
+  ]);
+});
+
+test('Retry-After beyond the safe window stops unknown and retains recovery marker', async () => {
+  const storage = memoryStorage();
+  const clock = { now: 1_000 };
+  const intent = new IntentMutation(scope, storage, () => 'key-a', () => clock.now);
+  const response: PortalFetchResult = { status: 503, json: { retryable: true }, networkError: false, timedOut: false, retryAfter: '3600' };
+  assert.equal((await intent.run({ slug: 'clone' }, async () => response, () => true)).kind, 'unknown');
+  assert.equal(intent.state, 'blocked');
+  let sends = 0;
+  assert.deepEqual(await intent.run({ slug: 'clone' }, async () => { sends += 1; return ok(); }, () => true), { kind: 'blocked', reason: 'expired' });
+  assert.equal(sends, 0);
+  assert.equal(storage.values.size, 1);
+  assert.deepEqual(new IntentMutation(scope, storage, () => 'key-b').blockReason, { kind: 'blocked', reason: 'recovery' });
+});
+
 test('mounted controller invalidates A on actor switch before send and never reports A success', async () => {
   const storage = memoryStorage();
   let actor: string | null = 'actor-a';
@@ -162,9 +224,11 @@ test('mounted controller invalidates A on actor switch before send and never rep
   assert.equal(sends, 0);
 
   let resolve!: (result: PortalFetchResult) => void;
+  let signalSend!: () => void;
+  const sendStarted = new Promise<void>((done) => { signalSend = done; });
   const inFlight = new ActorBoundIntent('actor-a', new IntentMutation(scope, storage, () => 'key-b'), async () => actor);
-  const result = inFlight.run({ slug: 'clone' }, async () => new Promise((done) => { resolve = done; }), () => true);
-  await Promise.resolve();
+  const result = inFlight.run({ slug: 'clone' }, async () => new Promise((done) => { resolve = done; signalSend(); }), () => true);
+  await sendStarted;
   actor = 'actor-b';
   resolve(ok());
   assert.deepEqual(await result, { kind: 'blocked', reason: 'identity' });
@@ -182,6 +246,28 @@ test('actor switch preserves an unresolved A marker without sending its key as B
   assert.equal(storage.values.size, 1);
   const restoredA = new IntentMutation(scope, storage, () => 'key-new');
   assert.deepEqual(restoredA.blockReason, { kind: 'blocked', reason: 'recovery' });
+});
+
+test('201 followed by unavailable subject keeps the marker through reload', async () => {
+  const storage = memoryStorage();
+  let lookups = 0;
+  const bound = new ActorBoundIntent('actor-a', new IntentMutation(scope, storage, () => 'key-a'), async () => ++lookups === 1 ? 'actor-a' : null);
+  let sends = 0;
+  assert.deepEqual(await bound.run({ slug: 'clone' }, async () => { sends += 1; return ok(); }, () => true), { kind: 'blocked', reason: 'identity' });
+  assert.equal(sends, 1);
+  assert.equal(storage.values.size, 1);
+  const restored = new IntentMutation(scope, storage, () => 'key-new');
+  assert.deepEqual(restored.blockReason, { kind: 'blocked', reason: 'recovery' });
+  assert.deepEqual(await restored.run({ slug: 'clone' }, async () => { sends += 1; return ok(); }, () => true), { kind: 'blocked', reason: 'recovery' });
+  assert.equal(sends, 1);
+});
+
+test('201 followed by a different actor keeps A marker and hides A success', async () => {
+  const storage = memoryStorage();
+  let lookups = 0;
+  const bound = new ActorBoundIntent('actor-a', new IntentMutation(scope, storage, () => 'key-a'), async () => ++lookups === 1 ? 'actor-a' : 'actor-b');
+  assert.deepEqual(await bound.run({ slug: 'clone' }, async () => ok(), () => true), { kind: 'blocked', reason: 'identity' });
+  assert.equal(storage.values.size, 1);
 });
 
 test('identity unavailable and unresolved prior mutation have distinct recovery copy', () => {
