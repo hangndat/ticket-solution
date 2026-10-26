@@ -7,4 +7,6 @@
 - `getContainer={() => document.body}`
 - `size={240}`, `push={false}`, `rootClassName="portal-shell-nav-drawer"`
 
-**Noah:** rebuild/restart portal `:3019`, native `portal-nav-trigger` click, screenshot open drawer — expect full 240px menu visible, not mask-only.
+**Acceptance SHA:** `ebb2fa3fdbdd4dc7d6ec4e38466e2a0e42f39bbc` (force open panel transform).
+
+**Noah @ `ebb2fa3f`:** PASS — `wrapper` 240×844 @ `x:0`, 5 menu items in viewport, nav click OK. Artifacts: `f01-visual-verify-ebb2fa3f.json`, `f01-drawer-visual-390x844-ebb2fa3f.png`.
