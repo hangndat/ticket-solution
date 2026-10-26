@@ -6,7 +6,8 @@
 | **sourceSHA** | `357ec5c08b43b514391c59d5c0715e3ae406a00e` (`git rev-parse HEAD` trên worktree `vcx-940-staff`) |
 | Persona / process | **Zico** (`company/employees.json`) · role `ios` · verify-first **chỉ tài liệu + checks** — không sửa `apps/mobile` |
 | Mẫu tham chiếu | VD-06 Staff Gate [#884](https://github.com/hangndat/ticket-solution/pull/884) · evidence lịch sử `apps/mobile/VD06-ISSUE-879-EVIDENCE.md` |
-| Fixture runtime | [#925](https://github.com/hangndat/ticket-solution/issues/925) VCX-925 persona OIDC (merged); **chưa chạy** sim UAT OIDC lượt này |
+| Fixture runtime | [#925](https://github.com/hangndat/ticket-solution/issues/925) persona/API matrix **done** (merged); sim OIDC **scanner** chưa đạt — xem [runtime probe](./vcx-940-ios-staff-runtime.md) |
+| **actualSHA** (runtime follow-up) | `a70c9a3e1824f0b24b2f863adaeca3ecd8c34e76` · build/sim probe Zico 2026-10-26 — **không** thay `sourceSHA` checks gốc |
 | Thiết bị thật | **Blocker B-03** (roadmap §3) — camera/VoiceOver/offline thật |
 
 ## O25 / invariant (không đánh giá PASS ngoài scope)
@@ -102,8 +103,8 @@ Sticky queue attention: `queueSnap.pendingCount > 0 || conflictCount > 0` (`staf
 
 | AC | Verify-first | Ghi chú |
 | --- | --- | --- |
-| Ma trận state + evidence simulator | **Đạt** (ma trận + unit); **Thiếu** screenshot/sim OIDC lượt này | VD-06 build PASS lịch sử; runtime #925 chưa chạy |
-| Revoke giữa ca: chặn + policy local | **Có** (code+test); runtime **Pending #925** | Không sửa auth invariant |
+| Ma trận state + evidence simulator | **Chưa đạt acceptance** — ma trận + unit **đủ review**; sim OIDC/scanner + screenshot **chưa đủ AC** | Unit alone ≠ AC; partial sim `staff@` — [runtime](./vcx-940-ios-staff-runtime.md) |
+| Revoke giữa ca: chặn + policy local | Code+test **Có**; runtime revoke **chưa chạy** (blocker acceptance, không optional) | Không reset realm / MFA; F-940-01 |
 
 ---
 
@@ -111,8 +112,8 @@ Sticky queue attention: `queueSnap.pendingCount > 0 || conflictCount > 0` (`staf
 
 | ID | Mức | Chặn AC? | Mô tả |
 | --- | --- | --- | --- |
-| F-940-01 | info | Không | Runtime Staff OIDC + scan E2E chưa chạy trên fixture #925 (scanner persona trong `dev-local-persona-verify.mjs`) |
-| F-940-02 | info | Không | `xcodebuild`/Orca sim UAT không chạy dispatch này — giữ blocker thiết bị B-03 cho camera |
+| F-940-01 | **high** | **Có** | Scanner OIDC #925 + Staff scan/revoke runtime chưa đạt: issuer **8080** (API JWKS) vs persona **8180** (ui869dev) — `scanner.fixture@…` không login; partial sim chỉ `staff@` — [runtime](./vcx-940-ios-staff-runtime.md) |
+| F-940-02 | **high** | **Có** (acceptance) | Thiết bị thật camera/offline (**B-03**). Dispatch runtime: `xcodebuild` Release sim **PASS**; Orca sim **partial** — không thay B-03 |
 | F-940-03 | low | Không | `already-checked-in` dùng tone `admit` (xanh) theo VD-06 — đúng «cho qua theo kết quả đã có», không phải fresh admit |
 
 ---
@@ -127,7 +128,8 @@ Sticky queue attention: `queueSnap.pendingCount > 0 || conflictCount > 0` (`staf
 | Subset staff/gate (explicit files) | **66** tests PASS (`staff-regression`, `gate-outcome-copy`, `offline-queue`, `wallet-logout`, `staff-eligibility`, …) |
 | `pnpm typecheck` (mobile) | PASS |
 | `pnpm lint` (mobile) | PASS (8 warnings pre-existing) |
-| `expo prebuild` / `xcodebuild` | **Không chạy** — verify-first; local build evidence còn VD-06/D11 |
+| `expo prebuild` / `xcodebuild` @ actualSHA | **PASS** Release sim D11-Gate-UAT — [runtime](./vcx-940-ios-staff-runtime.md) · tail [`vcx-940-ios-build-tail.txt`](./vcx-940-ios-build-tail.txt) |
+| Orca sim Staff chrome (partial) | **Partial** — MFest context + tabs; không scanner #925 OIDC |
 
 ### actual vs expected (tóm tắt)
 
@@ -137,14 +139,14 @@ Sticky queue attention: `queueSnap.pendingCount > 0 || conflictCount > 0` (`staf
 | Scan outcomes distinct | pending/unknown/conflict không admit | **Có** (`gate-outcome-copy` + offline queue tests) |
 | Confirm manual | Preview + sheet trước server | **Có** (copy + testIDs) |
 | Logout/revoke | Fail-closed tab + purge | **Có** (logout + eligibility + gate-scan tests) |
-| Simulator proof | Screens + OIDC flow | **Pending** (#925 UAT session) |
+| Simulator proof | Screens + OIDC flow scanner #925 | **Partial** — build OK; OIDC scanner **blocked** B-OIDC-UI869; screenshots gitignored |
 | Device camera | QR live | **Thiết bị** (owner user) |
 
 ---
 
 ## Gap repro (runtime — coordinator route sau)
 
-1. Khởi động stack local + `persona-fixtures` (#925); env mobile trỏ `127.0.0.1:4111` / OIDC `18091` (xem `D11-B4-IOS-STAFF-SCAN-HANDOFF.md`).
+1. Stack UI869: API `127.0.0.1:3498`, OIDC align **8180** (compose) với `OIDC_ISSUER` API — **không** dùng `4111`/`18091` chưa xác minh (`docs/ops/UI925-LOCAL-PERSONA-FIXTURES.md`).
 2. Đăng nhập persona `scanner`; mở `/(tabs)/staff-scan` — xác nhận event title khớp seed.
 3. Quét/ manual một mã fixture; quan sát APPLIED vs DUPLICATE vs CONFLICT (server-driven).
 4. Revoke membership (API/admin) giữa ca — xác nhận tab staff đóng và scan tiếp 403 (không sửa client trước khi có repro).
@@ -153,8 +155,8 @@ Sticky queue attention: `queueSnap.pendingCount > 0 || conflictCount > 0` (`staf
 
 ## Việc còn lại
 
-1. Orca emulator / Release sim UAT trên fixture #925 (cùng ma trận).
-2. Phiên thiết bị thật (camera) — owner user, Zico evidence.
+1. **B-OIDC-UI869** (owner stack): API `:3498` + mobile issuer khớp Keycloak có `scanner.fixture@…`; rồi Orca sim OIDC scanner + revoke giữa ca (không reset realm).
+2. Phiên thiết bị thật (camera) — owner user, Zico evidence (**B-03**).
 3. Reviewer James `dod+sec+ux` trên SHA PR docs (≠ implementer).
 
-**Verdict verify-first (worker):** Ma trận + unit evidence **đủ để review**; acceptance runtime **chưa đạt** (F-940-01/02). Không thay đổi code mobile trên dispatch này.
+**Verdict (cập nhật runtime):** Ma trận + unit **đủ review**; **acceptance chưa đạt** — F-940-01/02 **chặn AC** (không optional). Runtime packet: [`vcx-940-ios-staff-runtime.md`](./vcx-940-ios-staff-runtime.md). Không sửa product code mobile trên dispatch này.
