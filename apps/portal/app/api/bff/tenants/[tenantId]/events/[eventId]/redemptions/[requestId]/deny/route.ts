@@ -35,7 +35,16 @@ export async function POST(request: Request, { params }: Props) {
   } catch {
     return bffApiError('INVALID_JSON', 'Request body must be JSON.', 400);
   }
-  const reason = body.reason?.trim() ?? '';
+  const idempotencyKey = typeof body?.idempotencyKey === 'string'
+    ? body.idempotencyKey.trim() : '';
+  if (!isUuid(idempotencyKey)) {
+    return bffApiError(
+      'IDEMPOTENCY_KEY_REQUIRED',
+      'idempotencyKey must be a UUID.',
+      422,
+    );
+  }
+  const reason = typeof body.reason === 'string' ? body.reason.trim() : '';
   if (!reason) {
     return bffApiError('REASON_REQUIRED', 'Denial reason is required.', 422);
   }
@@ -43,14 +52,6 @@ export async function POST(request: Request, { params }: Props) {
     return bffApiError(
       'REASON_TOO_LONG',
       'Denial reason must be at most 500 characters.',
-      422,
-    );
-  }
-  const idempotencyKey = body.idempotencyKey?.trim() || crypto.randomUUID();
-  if (!isUuid(idempotencyKey)) {
-    return bffApiError(
-      'IDEMPOTENCY_KEY_REQUIRED',
-      'idempotencyKey must be a UUID.',
       422,
     );
   }
