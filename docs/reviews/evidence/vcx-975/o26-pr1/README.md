@@ -1,21 +1,26 @@
 # UAT evidence — O26-PR1 (#975)
 
-**Phạm vi PR1 (incremental):** gỡ `ConfigProvider` theme + module `theme/vemoki*` + root inline vars; **không** claim dissolution toàn bộ `globals.css` / Pro shell (PR2–PR11).
+**Code SHA:** `d0ecaec66e3bef0ee9ab918c3bc02787099eb22e` (branch `hangndat/vcx-975-antd-foundation`)  
+**Build ID:** `7Qfwb2SQSHT43LNsWaG_L`  
+**Origin:** `http://uat975.localhost:3017`
 
-**F-975-ROOT-01:** chỉ xóa declaration phụ thuộc `--vemoki` trong `globals.css` — **không** thay literal palette antd. Helpers layout `.portal-*` giữ structural tạm.
+## Screenshot standard (F-977-ROOT-03)
 
-**F-975-ROOT-02:** bỏ `next/font` Be Vietnam Pro trên `layout.tsx`; loading UI → `Spin` antd trong `SurfaceState` (dissolve wrapper PR3).
+| Field | Rule |
+| --- | --- |
+| **CSS viewport** | Suffix `390x844` / `1024x900` / `1440x900` = `innerWidth`×`innerHeight` asserted before capture |
+| **PNG IHDR** | Must equal CSS viewport when `devicePixelRatio === 1` |
+| **Capture** | Orca `agent-browser screenshot <path>` (viewport, not `--full`) after `set viewport` + retry if pane drift |
+| **Manifest** | Each shot: `screenshot.pngWidth/Height`, `pixelPass`, `dpr` in `uat-results.json` |
+| **Gate** | `pngPixelPassAll: true` required — no PASS if IHDR ≠ suffix (e.g. 1462×1834 pane capture) |
 
-**SHA / build:** xem `uat-results.json` (cập nhật sau mỗi lần chạy UAT).
+**Giới hạn Orca:** nếu CSS viewport chưa khóa, embedded pane có thể chụp bitmap lớn hơn (vd. 1462×1834 @ DPR 2). Driver retry `applyViewport` + đọc IHDR; run fail (`exit 3`) khi `pixelPass: false`.
 
-**Origin:** `http://uat975.localhost:3017` · env `.local-dev/portal975/portal.env` (không commit).
+Verify local: `python3` đọc IHDR hoặc `sips -g pixelWidth -g pixelHeight` trên từng PNG.
 
-**Driver:** `apps/portal/.uat-artifacts/vcx975/o26-pr1-foundation-uat.mjs` — sau mỗi `goto`: `tab switch` → `set viewport` → assert `innerWidth`/`innerHeight`.
+## Owner / fixture
 
-| Surface | 390×844 | 1024×900 | 1440×900 |
-| --- | --- | --- | --- |
-| Landing | `landing-390x844.png` | `landing-1024x900.png` | `landing-1440x900.png` |
-| Auth | `auth-390x844.png` | `auth-1024x900.png` | `auth-1440x900.png` |
-| Owner events | `owner-events-390x844.png` | `owner-events-1024x900.png` | `owner-events-1440x900.png` |
+- `ownerMatrixPass: true` — `#portal-main`, title `Sự kiện`, Pro table, không `Không có quyền`
+- Fixture read-only: `.local-dev/portal975/verify-fixture-readonly.sh`
 
-Owner @ 390×844 có thể `overflowX` do Pro/page chrome hiện có — không scope foundation PR1.
+**Migration #975 chưa đóng** — PR1 foundation only.
