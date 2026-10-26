@@ -217,4 +217,4 @@ Wrapper `agent-workflow-run.mjs start` kiểm snapshot Codex mới (tối đa 5 
 
 Lưu quyết định trong `quota-decision.json` riêng tư. `--tier-reason` và `--essential-reason` là metadata local. Quota là allowance theo tài khoản/bucket, không phải số token còn lại cho từng model; gate không bảo đảm task tiếp theo không dùng hết quota. Coordinator phải xác minh tài khoản CLI snapshot trùng tài khoản worker Orca; wrapper chưa chứng minh được binding này. Reuse terminal cũng cần kiểm quota trước giao việc mới.
 
-Chưa có adapter quota Cursor/Claude trong wrapper: kiểm provider tương ứng thủ công; snapshot Codex không chứng minh quota của provider khác. Không dùng quota Codex để chặn Cursor. Không tự chọn model ngoài route đã đăng ký.
+Claude/Codex recovery (tier `focused|advanced|high`): `scripts/agent-provider-recovery.mjs` + state `.orca-metrics/provider-recovery/` — [provider-recovery.md](./provider-recovery.md). Wrapper chặn start Claude khi probe chưa `serviceAvailable`; không suy phần trăm quota Claude từ probe. Cursor/Composer không bị gate Codex. Không tự chọn model ngoài route đã đăng ký.
