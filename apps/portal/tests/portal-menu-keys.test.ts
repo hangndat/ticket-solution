@@ -1,12 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type { MenuDataItem } from '@ant-design/pro-components';
+import type { PortalMenuGroup } from '../src/nav/portal-menu-keys';
 import {
   pathnameMatchesMenuPath,
   resolvePortalMenuKeys,
 } from '../src/nav/portal-menu-keys';
 
-const sampleMenu: MenuDataItem[] = [
+const sampleMenu: PortalMenuGroup[] = [
   {
     key: 'nav-org',
     name: 'Org',

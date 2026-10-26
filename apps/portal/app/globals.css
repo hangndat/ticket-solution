@@ -6,6 +6,38 @@ body {
   min-height: 100%;
 }
 
+/* Narrow shell: navigation only via Header Drawer — never antd zero-width Sider trigger. */
+.portal-app-shell .ant-layout-sider-zero-width-trigger,
+.portal-app-shell .ant-layout-sider-zero-width-trigger-left {
+  display: none !important;
+}
+
+@media (max-width: 1023px) {
+  .portal-app-shell .portal-desktop-sider {
+    display: none !important;
+  }
+}
+
+.portal-shell-nav-drawer.ant-drawer-open > .ant-drawer-content-wrapper {
+  transform: translate3d(0, 0, 0) !important;
+  width: min(240px, 85vw) !important;
+  opacity: 1 !important;
+  transition: none !important;
+}
+
+.portal-shell-nav-drawer.ant-drawer-open .ant-drawer-section {
+  opacity: 1 !important;
+  background: var(--ant-color-bg-elevated, #ffffff);
+}
+
+.portal-shell-nav-drawer.ant-drawer-open .ant-drawer-mask {
+  opacity: 1 !important;
+}
+
+.portal-shell-nav-drawer .ant-drawer-body {
+  padding: 0;
+}
+
 .portal-skip-link {
   position: absolute;
   left: -9999px;

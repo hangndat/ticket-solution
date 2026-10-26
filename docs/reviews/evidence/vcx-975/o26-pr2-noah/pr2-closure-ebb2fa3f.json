@@ -1,0 +1,15 @@
+{
+  "closure": "PR2-acceptance",
+  "codeSha": "ebb2fa3fdbdd4dc7d6ec4e38466e2a0e42f39bbc",
+  "verdict": "INTERMEDIATE_GEOMETRY_PASS",
+  "note": "Panel in viewport (x=0, 5 items) but wrapper opacity 0.7 — not final acceptance until 7b0ce31a opaque retest",
+  "f01Visual": {
+    "artifact": "f01-visual-verify-ebb2fa3f.json",
+    "screenshot": "f01-drawer-visual-390x844-ebb2fa3f.png",
+    "wrapperWidth": 240,
+    "wrapperX": 0,
+    "visibleClickableMenuItems": 5,
+    "navPass": true,
+    "wrapperOpacity": 0.7
+  }
+}

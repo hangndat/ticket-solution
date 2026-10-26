@@ -1,0 +1,30 @@
+{
+  "closure": "PR2-acceptance",
+  "codeSha": "e61986a94fa213f120a8698ea96ba9cb5e375d29",
+  "at": "2026-10-26T14:21:00.000Z",
+  "verdict": "PASS",
+  "pr2Acceptance": "F01 mobile drawer visible in viewport + nav click @ 390x844",
+  "f01Visual": {
+    "artifact": "f01-visual-verify-e61986a9.json",
+    "screenshot": "f01-drawer-visual-390x844-e61986a9.png",
+    "productF01Verdict": "PASS",
+    "wrapperWidth": 240,
+    "wrapperX": 0,
+    "visibleClickableMenuItems": 5,
+    "navPass": true
+  },
+  "historicalFailAf637": "f01-visual-verify-af6374bd-fail.json",
+  "desktopSmoke": {
+    "1024": "PASS",
+    "1440": "PASS",
+    "artifact": "final-shell-1024x900.png / final-shell-1440x900.png",
+    "codeSha": "af6374bd06b19469cd3e2454819b28f9a6785404",
+    "note": "Not re-run on e61986a9; no regression signal for drawer fix"
+  },
+  "uatFixture": "http://uat975shell.localhost:3019",
+  "checks": [
+    "clean apps/portal .next + pnpm --filter @ticket/portal build",
+    "start-portal.sh :3019",
+    "node f01-visual-verify.mjs (fixture, gitignored)"
+  ]
+}
