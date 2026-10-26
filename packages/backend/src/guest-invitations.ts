@@ -13,6 +13,7 @@ import {
   type InvitationDispatchPreviewResponse,
   type InvitationDispatchResponse,
   type InvitationListPage,
+  type InvitationListQuery,
   type InvitationState,
   type InvitationSummary,
 } from '@ticket/contracts';
@@ -29,6 +30,7 @@ import {
   type RedeemOutcome,
 } from './issue';
 import { requireTenantPermission } from './membership';
+import { AUTHZ_ERROR_CODES, AuthzError } from './authz-error';
 import { maskEmail } from './notification-status';
 import { withTenant } from './tenant-context';
 
@@ -117,19 +119,48 @@ export async function listGuestInvitations(
     tenantId: string;
     eventId: string;
     actorUserId: string;
-    cursor?: string | null;
-    limit?: number;
-    state?: InvitationState;
-  },
+  } & InvitationListQuery,
 ): Promise<InvitationListPage> {
+  if (input.q !== undefined && input.cursor !== undefined) {
+    throw new ImportError(
+      IMPORT_ERROR_CODES.INVALID_CURSOR,
+      'Cursor cannot be used with q',
+    );
+  }
+  if (input.q !== undefined && !UUID_RE.test(input.q)) {
+    throw new ImportError(
+      IMPORT_ERROR_CODES.INVALID_FILTER,
+      'q must be an invitation UUID',
+    );
+  }
+  if (input.cursor !== undefined && !UUID_RE.test(input.cursor)) {
+    throw new ImportError(
+      IMPORT_ERROR_CODES.INVALID_CURSOR,
+      'Invalid invitation list cursor',
+    );
+  }
   const limit = parseLimit(input.limit);
   return withTenant(db, input.tenantId, async (tx) => {
-    await requireTenantPermission(tx, {
-      tenantId: input.tenantId,
-      userId: input.actorUserId,
-      permission: PERMISSION_IMPORT,
-      eventId: input.eventId,
-    });
+    try {
+      await requireTenantPermission(tx, {
+        tenantId: input.tenantId,
+        userId: input.actorUserId,
+        permission: PERMISSION_IMPORT,
+        eventId: input.eventId,
+      });
+    } catch (error) {
+      if (
+        error instanceof AuthzError &&
+        error.code === AUTHZ_ERROR_CODES.EVENT_ASSIGNMENT_REQUIRED
+      ) {
+        throw new ImportError(
+          IMPORT_ERROR_CODES.EVENT_NOT_FOUND,
+          'Event not found',
+          404,
+        );
+      }
+      throw error;
+    }
 
     // Expire due rows opportunistically (no quota side effects).
     await tx.$executeRaw`
@@ -141,8 +172,31 @@ export async function listGuestInvitations(
         AND expires_at < clock_timestamp()
     `;
 
-    const cursor = input.cursor?.trim() || null;
     const stateFilter = input.state ?? null;
+    if (input.q !== undefined) {
+      const rows = await tx.$queryRaw<
+        Array<{
+          id: string;
+          event_id: string;
+          source_id: string;
+          ticket_type_id: string;
+          invited_email: string;
+          state: InvitationState;
+          expires_at: Date;
+        }>
+      >`
+        SELECT id, event_id, source_id, ticket_type_id, invited_email, state, expires_at
+        FROM guest_invitations
+        WHERE tenant_id = ${input.tenantId}::uuid
+          AND event_id = ${input.eventId}::uuid
+          AND id = ${input.q}::uuid
+          AND (${stateFilter}::text IS NULL OR state = ${stateFilter})
+        LIMIT 1
+      `;
+      return { items: rows.map(toSummary), nextCursor: null };
+    }
+
+    const cursor = input.cursor?.trim() || null;
     const rows = await tx.$queryRaw<
       Array<{
         id: string;
