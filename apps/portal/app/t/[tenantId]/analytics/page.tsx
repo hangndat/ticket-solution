@@ -161,7 +161,7 @@ export default function AnalyticsPortfolioPage() {
     return (
       <Result
         status="403"
-        title={t(SURFACE_MESSAGE_KEYS.permissionTitle)}
+        title="403"
         subTitle={page.kind === 'rejected' ? page.message : t('analytics.deniedAccess')}
         extra={
           <Button type="primary" onClick={() => {
