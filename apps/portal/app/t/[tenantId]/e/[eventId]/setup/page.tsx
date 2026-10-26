@@ -21,10 +21,9 @@ import { useUnsavedChanges } from '../../../../../../src/nav/unsaved-changes';
 import {
   applySetupReload,
   hasUnsavedSetupChanges,
-  metadataOutcomeUnknown,
-  metadataSaveRequest,
-  type MetadataSaveRequest,
 } from '../../../../../../src/setup/setup-drafts';
+import { useIntentMutation } from '../../../../../../src/client/use-intent-mutation';
+import { intentBlockMessageKey } from '../../../../../../src/client/intent-mutation';
 
 export default function EventSetupPage() {
   const { t } = usePortalLocale();
@@ -41,15 +40,12 @@ export default function EventSetupPage() {
   const [notice, setNotice] = useState<string | null>(null);
   const [metaDirty, setMetaDirty] = useState(false);
   const [cloneDirty, setCloneDirty] = useState(false);
-  const [metaUnknownScope, setMetaUnknownScope] = useState<string | null>(null);
-  const metaOutcomeUnknown = metaUnknownScope === `${tenantId}/${eventId}`;
+  const [clonedScope, setClonedScope] = useState<string | null>(null);
+  const metaIntent = useIntentMutation<{ expectedRevision: number; name: string }>(tenantId, eventId, 'event.metadata');
+  const cloneIntent = useIntentMutation<{ slug: string; name: string; copyConfig: boolean }>(tenantId, eventId, 'event.clone');
+  const archiveIntent = useIntentMutation<{ expectedRevision: number }>(tenantId, eventId, 'event.archive');
   const metaDirtyRef = useRef(false);
   const cloneDirtyRef = useRef(false);
-  const pendingMetaRef = useRef<{
-    tenantId: string;
-    eventId: string;
-    request: MetadataSaveRequest;
-  } | null>(null);
   useUnsavedChanges(
     hasUnsavedSetupChanges(metaDirty, cloneDirty),
     t('shell.unsaved.confirm'),
@@ -168,39 +164,27 @@ export default function EventSetupPage() {
   const canUpdate = canPerformEventAction('updateEvent', access.permissions);
 
   async function saveMeta() {
-    if (!detail) return;
+    if (!detail || busy || metaIntent.state === 'loading' || metaIntent.state === 'blocked') return;
     setBusy(true);
     setNotice(null);
     try {
-      // An unknown outcome must retry the exact request, including its key and revision.
-      const previous = pendingMetaRef.current;
-      const retry =
-        previous?.tenantId === tenantId && previous.eventId === eventId
-          ? previous.request
-          : null;
-      const pending = metadataSaveRequest(
-        retry,
-        detail.revision,
-        retry ? retry.name : (await metaForm.validateFields()).name,
-        () => crypto.randomUUID(),
+      const values = await metaForm.validateFields();
+      const payload = { expectedRevision: detail.revision, name: values.name.trim() };
+      const outcome = await metaIntent.run(
+        payload,
+        (body) => portalMutate(bffEvent(tenantId, eventId), body, 'PATCH'),
+        () => true,
       );
-      const inFlight = { tenantId, eventId, request: pending };
-      pendingMetaRef.current = inFlight;
-      const res = await portalMutate(
-        bffEvent(tenantId, eventId),
-        pending,
-        'PATCH',
-      );
-      if (pendingMetaRef.current !== inFlight) return;
-      if (metadataOutcomeUnknown(res)) {
-        setMetaUnknownScope(`${tenantId}/${eventId}`);
+      if (outcome.kind === 'blocked') {
+        setNotice(t(intentBlockMessageKey(outcome.reason)));
+        return;
+      }
+      if (outcome.kind === 'unknown') {
         setNotice(t('setup.h_197dgrj'));
         return;
       }
-      pendingMetaRef.current = null;
-      setMetaUnknownScope(null);
-      if (res.status >= 200 && res.status < 300) {
-        if (metaForm.getFieldValue('name')?.trim() === pending.name) {
+      if (outcome.kind === 'confirmed') {
+        if (metaForm.getFieldValue('name')?.trim() === payload.name) {
           metaDirtyRef.current = false;
           setMetaDirty(false);
         }
@@ -208,31 +192,37 @@ export default function EventSetupPage() {
         void load();
         return;
       }
-      setNotice(apiErrorMessage(res.json, t('setup.h_rezx8n')));
+      setNotice(apiErrorMessage(outcome.response.json, t('setup.h_rezx8n')));
     } finally {
       setBusy(false);
     }
   }
 
   async function cloneEvent() {
+    if (busy || clonedScope === `${tenantId}/${eventId}` || cloneIntent.state === 'loading' || cloneIntent.state === 'blocked') return;
     setBusy(true);
     setNotice(null);
     try {
       const values = await cloneForm.validateFields();
-      const res = await portalMutate(
-        bffEventAction(tenantId, eventId, 'clone'),
+      const outcome = await cloneIntent.run(
         {
           slug: values.slug.trim(),
           name: values.name.trim(),
           copyConfig: true,
-          idempotencyKey: crypto.randomUUID(),
         },
+        (body) => portalMutate(bffEventAction(tenantId, eventId, 'clone'), body),
+        (res) => !!(res.json && typeof res.json === 'object' && typeof (res.json as { eventId?: unknown }).eventId === 'string' && (res.json as { eventId: string }).eventId.trim()),
       );
-      if (res.networkError || res.timedOut || res.status >= 500) {
+      if (outcome.kind === 'blocked') {
+        setNotice(t(intentBlockMessageKey(outcome.reason)));
+        return;
+      }
+      if (outcome.kind === 'unknown') {
         setNotice(t('setup.h_mfkouj'));
         return;
       }
-      if (res.status >= 200 && res.status < 300) {
+      const res = outcome.response;
+      if (outcome.kind === 'confirmed') {
         const newId =
           res.json &&
           typeof res.json === 'object' &&
@@ -243,6 +233,7 @@ export default function EventSetupPage() {
           cloneDirtyRef.current = false;
           setCloneDirty(false);
           setNotice(t('setup.h_1sj85ay'));
+          setClonedScope(`${tenantId}/${eventId}`);
           router.push(`/t/${tenantId}/e/${newId}`);
           return;
         }
@@ -256,7 +247,7 @@ export default function EventSetupPage() {
   }
 
   function archiveEvent() {
-    if (!detail) return;
+    if (!detail || archiveIntent.state === 'loading' || archiveIntent.state === 'blocked') return;
     Modal.confirm({
       title: t('setup.h_4dggx3'),
       content: t('events.archive.hint'),
@@ -264,23 +255,25 @@ export default function EventSetupPage() {
       okButtonProps: { danger: true },
       cancelText: t('config.huy'),
       onOk: async () => {
-        const res = await portalMutate(
-          bffEventAction(tenantId, eventId, 'archive'),
-          {
-            expectedRevision: detail.revision,
-            idempotencyKey: crypto.randomUUID(),
-          },
+        const outcome = await archiveIntent.run(
+          { expectedRevision: detail.revision },
+          (body) => portalMutate(bffEventAction(tenantId, eventId, 'archive'), body),
+          () => true,
         );
-        if (res.networkError || res.status >= 500) {
+        if (outcome.kind === 'blocked') {
+          setNotice(t(intentBlockMessageKey(outcome.reason)));
+          return;
+        }
+        if (outcome.kind === 'unknown') {
           setNotice(t('setup.h_uafnux'));
           return;
         }
-        if (res.status >= 200 && res.status < 300) {
+        if (outcome.kind === 'confirmed') {
           setNotice(t('setup.h_1dze9ux'));
           void load();
           return;
         }
-        setNotice(apiErrorMessage(res.json, t('events.archive.failed')));
+        setNotice(apiErrorMessage(outcome.response.json, t('events.archive.failed')));
       },
     });
   }
@@ -336,6 +329,12 @@ export default function EventSetupPage() {
 
       {kind === 'ready' && detail ? (
         <>
+          {(metaIntent.state === 'blocked' || cloneIntent.state === 'blocked' || archiveIntent.state === 'blocked') ? (
+            <Alert type="warning" showIcon message={t('surface.unknown.title')}
+              description={t(intentBlockMessageKey(metaIntent.reason ?? cloneIntent.reason ?? archiveIntent.reason))}
+              action={<Button size="small" onClick={() => void load()}>{t('surface.action.recheck')}</Button>}
+            />
+          ) : null}
           <Alert
             type="info"
             showIcon
@@ -350,10 +349,10 @@ export default function EventSetupPage() {
               }}
               form={metaForm}
               layout="inline"
-              disabled={!canUpdate || busy}
+              disabled={!canUpdate || busy || metaIntent.state === 'loading' || metaIntent.state === 'blocked'}
               submitter={{
                 searchConfig: { submitText: t('setup.luu') },
-                submitButtonProps: { disabled: !canUpdate, loading: busy },
+                 submitButtonProps: { disabled: !canUpdate || metaIntent.state === 'loading' || metaIntent.state === 'blocked', loading: busy },
               }}
               onFinish={() => void saveMeta()}
             >
@@ -361,7 +360,7 @@ export default function EventSetupPage() {
                 name="name"
                 rules={[{ required: true }]}
                 width={320}
-                disabled={metaOutcomeUnknown}
+                disabled={metaIntent.state === 'unknown' || metaIntent.state === 'blocked'}
               />
             </ProForm>
           </ProCard>
@@ -374,10 +373,11 @@ export default function EventSetupPage() {
               }}
               form={cloneForm}
               layout="vertical"
+              disabled={!canUpdate || busy || clonedScope === `${tenantId}/${eventId}` || cloneIntent.state === 'loading' || cloneIntent.state === 'blocked'}
               style={{ maxWidth: 420 }}
               submitter={{
                 searchConfig: { submitText: t('setup.h_1iam0zn') },
-                submitButtonProps: { disabled: !canUpdate, loading: busy },
+                submitButtonProps: { disabled: !canUpdate || clonedScope === `${tenantId}/${eventId}` || cloneIntent.state === 'loading' || cloneIntent.state === 'blocked', loading: busy },
               }}
               onFinish={() => void cloneEvent()}
             >
@@ -397,7 +397,7 @@ export default function EventSetupPage() {
           <ProCard title={t('setup.h_1fmwr17')}>
             <Button
               danger
-              disabled={!canUpdate || detail.contentStatus === 'ARCHIVED'}
+              disabled={!canUpdate || detail.contentStatus === 'ARCHIVED' || archiveIntent.state === 'loading' || archiveIntent.state === 'blocked'}
               onClick={() => archiveEvent()}
             >
               Archive
@@ -407,7 +407,7 @@ export default function EventSetupPage() {
       ) : null}
 
       {kind === 'ready' && notice ? (
-        <Alert type="info" showIcon message={notice} />
+        <Alert type={metaIntent.state === 'unknown' || cloneIntent.state === 'unknown' || archiveIntent.state === 'unknown' || metaIntent.state === 'blocked' || cloneIntent.state === 'blocked' || archiveIntent.state === 'blocked' ? 'warning' : 'info'} showIcon message={notice} />
       ) : null}
     </PortalPage>
   );

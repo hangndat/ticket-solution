@@ -15,6 +15,8 @@ import { canPerformTenantAction } from '../../../../../src/nav/capability-policy
 import { usePortalLocale } from '../../../../../src/i18n';
 import { SURFACE_MESSAGE_KEYS } from '../../../../../src/prep/surface-copy';
 import { useUnsavedChanges } from '../../../../../src/nav/unsaved-changes';
+import { useIntentMutation } from '../../../../../src/client/use-intent-mutation';
+import { intentBlockMessageKey } from '../../../../../src/client/intent-mutation';
 
 type WizardValues = {
   slug: string;
@@ -40,6 +42,8 @@ export default function CreateEventWizardPage() {
   } | null>(null);
   const [form] = Form.useForm<WizardValues>();
   const [dirty, setDirty] = useState(false);
+  const [createdScope, setCreatedScope] = useState<string | null>(null);
+  const createIntent = useIntentMutation<WizardValues>(tenantId, undefined, 'event.create');
   useUnsavedChanges(dirty, t('shell.unsaved.confirm'));
 
   if (access.kind === 'loading') return (
@@ -107,27 +111,29 @@ export default function CreateEventWizardPage() {
   }
 
   async function submit() {
+    if (busy || createdScope === tenantId || createIntent.state === 'loading' || createIntent.state === 'blocked') return;
     setBusy(true);
     setNotice(null);
     try {
       const values = await form.validateFields();
-      const res = await portalMutate(bffEvents(tenantId), {
-        ...values,
-        idempotencyKey: crypto.randomUUID(),
-      });
-      if (
-        res.networkError ||
-        res.timedOut ||
-        res.status === 0 ||
-        res.status >= 500
-      ) {
+      const outcome = await createIntent.run(
+        values,
+        (body) => portalMutate(bffEvents(tenantId), body),
+        (res) => !!(res.json && typeof res.json === 'object' && typeof (res.json as { eventId?: unknown }).eventId === 'string' && (res.json as { eventId: string }).eventId.trim()),
+      );
+      if (outcome.kind === 'blocked') {
+        setNotice({ type: 'warning', text: t(intentBlockMessageKey(outcome.reason)) });
+        return;
+      }
+      if (outcome.kind === 'unknown') {
         setNotice({
           type: 'warning',
           text: t('events.h_npdcvo'),
         });
         return;
       }
-      if (res.status === 200 || res.status === 201) {
+      const res = outcome.response;
+      if (outcome.kind === 'confirmed') {
         const eventId =
           res.json &&
           typeof res.json === 'object' &&
@@ -145,6 +151,7 @@ export default function CreateEventWizardPage() {
           type: 'success',
           text: t('events.h_rpomry'),
         });
+        setCreatedScope(tenantId);
         setDirty(false);
         router.push(`/t/${tenantId}/e/${eventId}`);
         return;
@@ -171,6 +178,12 @@ export default function CreateEventWizardPage() {
           { title: t('events.h_1q9os0g') },
         ]}
       />
+      {createIntent.state === 'blocked' ? (
+        <Alert type="warning" showIcon message={t('surface.unknown.title')}
+          description={t(intentBlockMessageKey(createIntent.reason))}
+          action={<Button size="small" onClick={() => router.push(`/t/${tenantId}/events`)}>{t('surface.action.recheck')}</Button>}
+        />
+      ) : null}
       <Form
         form={form}
         onValuesChange={() => setDirty(true)}
@@ -279,7 +292,7 @@ export default function CreateEventWizardPage() {
             {t('events.new.tiep')}
           </Button>
         ) : (
-          <Button type="primary" loading={busy} onClick={() => void submit()}>
+          <Button type="primary" loading={busy} disabled={createdScope === tenantId || createIntent.state === 'loading' || createIntent.state === 'blocked'} onClick={() => void submit()}>
             {t('events.h_ek93o2')}
           </Button>
         )}
