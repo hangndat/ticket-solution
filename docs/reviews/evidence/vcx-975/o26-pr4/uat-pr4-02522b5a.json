@@ -1,0 +1,101 @@
+{
+  "codeSha": "02522b5ab86e87e2696ab1b400e177781fa57851",
+  "integratedTip": "595dcd8e",
+  "origin": "http://uat975pr4.localhost:3023",
+  "api": "http://127.0.0.1:3542 (read-only)",
+  "clientId": "ticket-admin-web-vcx975-uat975pr4",
+  "checks": [
+    {
+      "id": "auth-owner",
+      "verdict": "PASS"
+    },
+    {
+      "id": "tenant-home-390x844",
+      "verdict": "PASS",
+      "probe": {
+        "context": true,
+        "events": 1,
+        "href": "http://uat975pr4.localhost:3023/t/d9d9f001-0001-4000-8000-000000000001",
+        "main": true,
+        "oldPage": false,
+        "reactError": false,
+        "stats": 1,
+        "width": 390
+      },
+      "shot": "private:tenant-home-390x844-02522b5a.png"
+    },
+    {
+      "id": "tenant-home-1024x900",
+      "verdict": "PASS",
+      "probe": {
+        "context": true,
+        "events": 1,
+        "href": "http://uat975pr4.localhost:3023/t/d9d9f001-0001-4000-8000-000000000001",
+        "main": true,
+        "oldPage": false,
+        "reactError": false,
+        "stats": 1,
+        "width": 1024
+      },
+      "shot": "private:tenant-home-1024x900-02522b5a.png"
+    },
+    {
+      "id": "tenant-home-1440x900",
+      "verdict": "PASS",
+      "probe": {
+        "context": true,
+        "events": 1,
+        "href": "http://uat975pr4.localhost:3023/t/d9d9f001-0001-4000-8000-000000000001",
+        "main": true,
+        "oldPage": false,
+        "reactError": false,
+        "stats": 1,
+        "width": 1440
+      },
+      "shot": "private:tenant-home-1440x900-02522b5a.png"
+    },
+    {
+      "id": "onboarding-390x844",
+      "verdict": "PASS",
+      "probe": {
+        "documentWidth": 390,
+        "href": "http://uat975pr4.localhost:3023/onboarding/d9d9f001-0001-4000-8000-000000000001",
+        "pending": false,
+        "reactError": false,
+        "result403": false,
+        "steps": true,
+        "width": 390
+      },
+      "shot": "private:onboarding-390x844-02522b5a.png"
+    },
+    {
+      "id": "onboarding-1024x900",
+      "verdict": "PASS",
+      "probe": {
+        "documentWidth": 1024,
+        "href": "http://uat975pr4.localhost:3023/onboarding/d9d9f001-0001-4000-8000-000000000001",
+        "pending": false,
+        "reactError": false,
+        "result403": false,
+        "steps": true,
+        "width": 1024
+      },
+      "shot": "private:onboarding-1024x900-02522b5a.png"
+    },
+    {
+      "id": "onboarding-1440x900",
+      "verdict": "PASS",
+      "probe": {
+        "documentWidth": 1440,
+        "href": "http://uat975pr4.localhost:3023/onboarding/d9d9f001-0001-4000-8000-000000000001",
+        "pending": false,
+        "reactError": false,
+        "result403": false,
+        "steps": true,
+        "width": 1440
+      },
+      "shot": "private:onboarding-1440x900-02522b5a.png"
+    }
+  ],
+  "verdict": "PASS"
+}
