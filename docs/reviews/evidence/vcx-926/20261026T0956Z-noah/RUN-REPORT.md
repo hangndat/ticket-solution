@@ -10,14 +10,18 @@
 | CI | Chưa chạy lại trên testedSHA trong task này |
 | Verdict runtime | **GAP / NO-GO** — không claim W1 acceptance |
 
-## Stack (ownership)
+## Stack (ownership) — port map #926
 
-| Dịch vụ | URL | Owner |
-| --- | --- | --- |
-| Portal | `http://127.0.0.1:3013` | vcx-926-uat `next start` |
-| API | `http://127.0.0.1:3499` | vcx-926-uat `apps/api` (PID trong `.local-dev/ui869-926/`) |
-| OIDC / DB | `:8080` / `:55433` | ui869dev compose dùng chung |
-| **Không dùng** | `:3498` | PID 89392 — cwd `.Trash/.../vd08` (đã escalate coordinator) |
+| Dịch vụ | Port | URL | Owner / ghi chú |
+| --- | --- | --- | --- |
+| Portal | **3013** (reserved) | `http://127.0.0.1:3013` | vcx-926-uat — Orca `cwd` |
+| API | **3499** actual / **3598** reserved | `http://127.0.0.1:3499` | vcx-926-uat API; :3598 chưa bind tại probe, :3498 foreign bỏ qua |
+| OIDC | 8080 | shared ui869dev | không exclusive #926 |
+| Postgres | 55433 | shared ui869dev | không exclusive #926 |
+| **Không dùng** | 3498 | — | PID 89392 `.Trash/vd08` |
+| **Isolation #939** | 3014 / 3698 | — | Linh939 — không overlap |
+
+Chứng minh: `ports-orca.json` (scan `orca ports --worktree path:vcx-926-uat`).
 
 ## F03 (Med) — chẩn đoán harness
 
