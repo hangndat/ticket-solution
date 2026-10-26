@@ -9,6 +9,8 @@ function readinessMark(status: PrepReadinessItem['status']): string {
       return '✓';
     case 'missing':
       return '!';
+    case 'forbidden':
+      return '×';
     default:
       return '◷';
   }

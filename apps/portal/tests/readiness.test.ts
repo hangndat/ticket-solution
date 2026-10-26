@@ -55,6 +55,25 @@ test('readinessAllOk only when every gate is ok', () => {
   assert.match(readinessSummary(missing), /Loại vé/);
 });
 
+test('readiness never reports missing after a denied or failed dependency read', () => {
+  const items = derivePrepReadiness({
+    hasEventContext: true,
+    hasTicketType: 'unknown',
+    hasSource: false,
+    quotaKnown: false,
+    quotaCapacity: null,
+    hasTermsOrPublished: 'unknown',
+    hasBrand: 'unknown',
+    forbiddenKeys: ['form', 'brand', 'quota'],
+  });
+  assert.deepEqual(
+    Object.fromEntries(items.map(({ key, status }) => [key, status])),
+    { types: 'unknown', sources: 'missing', quota: 'forbidden', form: 'forbidden', brand: 'forbidden' },
+  );
+  assert.equal(readinessAllOk(items), false);
+  assert.match(readinessSummary(items), /Không đủ quyền/);
+});
+
 test('minimal config payload has brand + terms', () => {
   const payload = buildMinimalConfigPayload({
     organizationName: 'Vemoki',
