@@ -9,7 +9,7 @@
 - `portal-shell.tsx` = composition root: antd `Layout` / `Header` / `Sider` / `Menu` / `Content`, account `Dropdown` (VI/EN, logout), context strip (tenant/event + unsaved guard), dual-run `Alert`, trạng thái tenant SUSPENDED/PENDING.
 - Xóa wrapper hết caller: `portal-context-strip.tsx`, `dual-run-banner.tsx`.
 - `portal-menu-keys.ts`: type menu antd (`PortalMenuGroup` / `PortalMenuLeaf`), bỏ `MenuDataItem` Pro.
-- **F01 (Mira #980):** viewport ≤1023px → `Drawer` (`getContainer={document.body}`, `size={240}`, `push={false}`, `portal-shell-nav-drawer`) + `portal-nav-trigger` trong `Header`. **Visual fix @ `af6374`:** Drawer inline trong `Layout` flex → panel ~8px; portal body + `size` antd v6. Desktop: `portal-desktop-sider`.
+- **F01 (Mira #980):** viewport ≤1023px → `Drawer` (`getContainer={document.body}`, `size={240}`, `push={false}`, `portal-shell-nav-drawer`) + Header trigger. **Visual @ `e61986a9`:** rc-motion kẹt `translateX(-240)` dù open — CSS scoped `.ant-drawer-open > .ant-drawer-content-wrapper { transform: translate3d(0)!important }` + mask opacity. **Chỉ PASS khi Noah `visibleClickableMenuItems` > 0.**
 
 **Không đụng:** BFF/OIDC/API, permissions business, theme/token mới, PR3+ / #928.
 

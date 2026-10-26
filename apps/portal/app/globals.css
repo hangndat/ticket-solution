@@ -18,8 +18,13 @@ body {
   }
 }
 
-.portal-shell-nav-drawer .ant-drawer-content-wrapper {
+.portal-shell-nav-drawer.ant-drawer-open > .ant-drawer-content-wrapper {
+  transform: translate3d(0, 0, 0) !important;
   width: min(240px, 85vw) !important;
+}
+
+.portal-shell-nav-drawer.ant-drawer-open .ant-drawer-mask {
+  opacity: 1 !important;
 }
 
 .portal-shell-nav-drawer .ant-drawer-body {
