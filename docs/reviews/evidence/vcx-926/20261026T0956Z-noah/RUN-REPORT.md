@@ -41,7 +41,7 @@ Chứng minh: `ports-orca.json` (scan `orca ports --worktree path:vcx-926-uat`).
 | CS | setup | denied | «Không có quyền» | auth 200 |
 | Manager | cross-studio events | denied cross-tenant | «Không có quyền» | auth 200 |
 | Manager | overview | allowed | content | auth 200 |
-| report-only | gate | denied / report scope | «Không có quyền báo cáo cổng» | auth (manual) |
+| report-only | gate | allowed với report.read theo AC; hiện CHƯA ĐẠT | «Không có quyền báo cáo cổng» | auth (manual) |
 | Scanner | overview | scanner chrome | content, **adminChrome=false** (cần review UI AC) | auth (manual) |
 
 **Chưa chạy:** viewport 390/1440, Supervisor, ma trận full batch sau fix runner.
@@ -58,3 +58,5 @@ Tại **testedSHA** `33713db2`, Owner đăng nhập hợp lệ (TOTP) nhưng `/g
 ## Orca
 
 `orca tab create --worktree path:.../vcx-926-uat` + `orca exec --page <id> goto|fill|screenshot`.
+
+Coordinator clarification: report-only bị denied không phải PASS F05. Owner guests/audit chưa xác định là regression: diff product giữa d00a265 và33713db2 không đổi, cần kiểm fixture/session/permissions trước khi sửa code. Packet này là partial evidence, không acceptance complete.
