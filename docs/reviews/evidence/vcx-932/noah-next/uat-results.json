@@ -1,0 +1,41 @@
+{
+  "at": "2026-10-26T11:42:12.933Z",
+  "steps": [
+    {
+      "step": "owner_login_mfa",
+      "ok": true
+    },
+    {
+      "step": "first_save_ui",
+      "ok": true
+    },
+    {
+      "step": "api_first_save",
+      "status": 201,
+      "version": 1
+    },
+    {
+      "step": "conditional_save_409",
+      "bumpStatus": 201,
+      "staleStatus": 409,
+      "staleCode": "REVISION_CONFLICT",
+      "ok": true
+    },
+    {
+      "step": "reload",
+      "ok": true
+    },
+    {
+      "step": "preview_copy",
+      "ok": false,
+      "note": "Command failed: orca exec --page 11fb3add-44c8-42f1-b08c-8167289b7f4e --command click \"Xem trước\" --json"
+    },
+    {
+      "step": "viewport_matrix_vi",
+      "ok": true
+    }
+  ],
+  "pageId": "11fb3add-44c8-42f1-b08c-8167289b7f4e",
+  "previewProbe": "PASS",
+  "previewProbeAt": "2026-10-26T11:45:03.805Z"
+}

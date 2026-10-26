@@ -1,0 +1,87 @@
+{
+  "at": "2026-10-26T11:45:03.805Z",
+  "hostProfile": {
+    "portalOrigin": "http://uat932.localhost:3016",
+    "actor": "owner.fixture@example.com",
+    "role": "Owner",
+    "oidcClient": "ticket-admin-web-vcx932-uat932"
+  },
+  "pageId": "65d25959-9042-48e9-9a64-676dc72a50cb",
+  "steps": [
+    {
+      "step": "table_dom",
+      "rows": [
+        {
+          "buttons": [
+            "Xem trước"
+          ],
+          "version": 2
+        },
+        {
+          "buttons": [
+            "Xem trước"
+          ],
+          "version": 1
+        }
+      ]
+    },
+    {
+      "step": "eval_click_preview",
+      "clicked": true,
+      "selector": "ant-table row button Xem trước",
+      "version": 2
+    },
+    {
+      "step": "bff_preview_hook",
+      "log": []
+    },
+    {
+      "step": "bff_preview_fetch",
+      "brandName": "vcx932-api-bump",
+      "path": "/api/bff/.../config-versions/2/preview",
+      "primaryColor": "#112233",
+      "sectionCount": 6,
+      "status": 200,
+      "version": 2
+    },
+    {
+      "step": "preview_dom",
+      "sectionCountLabel": 6,
+      "sectionHeadings": [
+        "hero",
+        "info",
+        "redeem",
+        "guide",
+        "FAQ",
+        "Điều khoản"
+      ],
+      "textSample": "Xem trước bản đã lưu v2vcx932-api-bump6 mục nội dungheroapi-bumpinfoapi-bumpredeemapi-bumpguideapi-bumpFAQQ AĐiều khoảnFixture.",
+      "title": "Xem trước bản đã lưu v2",
+      "visible": true
+    },
+    {
+      "step": "api_preview_reference",
+      "status": 200,
+      "version": 2,
+      "brand": {
+        "primaryColor": "#112233",
+        "organizationName": "vcx932-api-bump"
+      },
+      "sectionKinds": [
+        "hero",
+        "info",
+        "redeem",
+        "guide",
+        "faq",
+        "terms"
+      ]
+    }
+  ],
+  "verdict": "PASS",
+  "checks": {
+    "versionMatch": true,
+    "brandMatch": true,
+    "sectionsOk": true,
+    "targetVersion": 2
+  }
+}
