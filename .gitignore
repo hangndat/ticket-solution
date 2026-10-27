@@ -40,6 +40,11 @@ AuthKey_*.p8
 .fe-uat-stack/
 .local-dev/
 docs/reviews/assets/FE-DS-SLICE0-parity-*/*.png
+# DoD screenshots: keep local / CI artifact; do not add new binaries
+docs/reviews/**/*.png
+docs/reviews/**/*.jpg
+docs/reviews/**/*.jpeg
+docs/reviews/**/*.webp
 
 # Local LeanCTX cache and machine overlays
 .lean-ctx/
