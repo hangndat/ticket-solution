@@ -51,7 +51,6 @@ import {
   parkSignInReturn
 } from '@/navigation/sign-in-return-intent';
 import { sanitizeRedeemCodeParam } from '@/navigation/attendee-redeem-entry';
-import { randomId } from '@/lib/random-id';
 import { colors } from '@/theme/colors';
 import { fontFamilies } from '@/theme/fonts';
 import { typography } from '@/theme/typography';
@@ -280,16 +279,7 @@ export function GlobalRedeemScreen() {
     }
     if (termsIssue) nextErrors.terms = termsIssue.message;
     setFieldErrors(nextErrors);
-    if (!validated.ok || termsIssue) {
-      setDecision({
-        kind: 'denied',
-        code: termsIssue?.code ?? 'FORM_INVALID',
-        message:
-          termsIssue?.message ??
-          'Điền đủ biểu mẫu rồi xác nhận. Chưa gửi lên máy chủ.'
-      });
-      return;
-    }
+    if (!validated.ok || termsIssue) return;
 
     const payload = {
       tenantId: resolveContext.tenantId,
@@ -302,7 +292,7 @@ export function GlobalRedeemScreen() {
     };
     const fingerprint = redeemPayloadFingerprint(payload);
     const { key } = resolveIdempotencyKey(attempt, fingerprint, () =>
-      randomId(),
+      crypto.randomUUID(),
     );
     setAttempt({ key, fingerprint, unclear: true });
     setBusy(true);
@@ -539,14 +529,18 @@ export function GlobalRedeemScreen() {
         </Text>
       ) : null}
 
-      {!resolved ? (
-        <AttendeeCta
-          label={busy ? 'Đang tra cứu…' : redeemCopy.lookupCta}
-          disabled={busy || code.trim().length === 0}
-          onPress={() => void onContinueOrResolve()}
-          testID="global-redeem-cta-resolve"
-        />
-      ) : null}
+      <AttendeeCta
+        label={
+          busy
+            ? 'Đang tra cứu…'
+            : resolved
+              ? redeemCopy.lookupAgainCta
+              : redeemCopy.lookupCta
+        }
+        disabled={busy || code.trim().length === 0}
+        onPress={() => void onContinueOrResolve()}
+        testID="global-redeem-cta-resolve"
+      />
 
       {resolved ? (
         <>

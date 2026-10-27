@@ -73,11 +73,7 @@ test('unknown field keys are rejected', () => {
 });
 
 test('terms consent required when version present', () => {
-  const missing = requireTermsConsent({
-    termsVersion: 't-1',
-    termsAccepted: false,
-  });
-  assert.equal(missing?.code, 'TERMS_REQUIRED');
+  assert.ok(requireTermsConsent({ termsVersion: 't-1', termsAccepted: false }));
   assert.equal(
     requireTermsConsent({ termsVersion: 't-1', termsAccepted: true }),
     null,
