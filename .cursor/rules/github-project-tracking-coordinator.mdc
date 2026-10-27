@@ -9,7 +9,7 @@ Bổ sung [github-project-tracking.mdc](./github-project-tracking.mdc). Leader R
 
 ## Reviewer spawn
 
-Task `Chờ duyệt` → một reviewer độc lập/Task (review only). Nhiều PR độc lập → reviewer song song, cap ≤3 live (`orca-parallel-workers.mdc`). Agent: `orca-agent-routing-coordinator.mdc`.
+Task `Chờ duyệt` **nhánh B** → một reviewer độc lập/PR (review only). Nhánh A: không spawn reviewer. Nhiều PR độc lập → reviewer song song, cap ≤3 live (`orca-parallel-workers.mdc`). Agent: `orca-agent-routing-coordinator.mdc`.
 
 Áp dụng [orca-review-convergence.mdc](./orca-review-convergence.mdc) trước review/fix: lưu findings và số lượt trên Issue/PR; bị ngắt → `Bị chặn` kèm owner/điều kiện mở lại, không tự quay lại ready queue. Revalidation ưu tiên reviewer cũ nếu phù hợp, luôn khác implementer.
 

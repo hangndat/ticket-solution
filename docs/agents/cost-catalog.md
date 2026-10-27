@@ -27,7 +27,7 @@ Nguồn: `agent models` trên máy này. Effort nằm **trong** model id Cursor 
 | Cost tier | `--agent` | `--model` primary | `--effort` | Fallback cùng tier |
 | --- | --- | --- | --- | --- |
 | `cheap` | `cursor` | `composer-2.5` | Không truyền | `grok-4.7-low`, `gemini-3.7-flash-low` |
-| `standard` | `cursor` | `composer-2.5` | Không truyền | `claude-sonnet-5-thinking-low` |
+| `standard` | `cursor` | `composer-2.5` | Không truyền | `grok-4.7-low`, `gemini-3.7-flash-low` |
 | `focused` | `claude` | `claude-sonnet-5` | `low` | Codex `gpt-6-sol` / `low` |
 | `advanced` | `claude` | `claude-sonnet-5` | `medium` | Codex `gpt-6-sol` / `medium` |
 | `high` | `claude` | `claude-sonnet-5` | `high` | Codex `gpt-6-sol` / `high` |
@@ -44,7 +44,7 @@ Thứ tự route trong `agent-cost-tiers.mjs` là thứ tự ưu tiên: Claude t
 
 Tên cũ chỉ dùng khi đọc evidence: `codex-low` → `focused`, `codex-medium` → `advanced`, `heavy` → `standard`. Preflight yêu cầu tên mới cho launch mới; không sửa receipt lịch sử.
 
-**Cấm:** `composer-2.5-fast`; `claude-sonnet-5-thinking-medium`; Cursor vượt `standard`; tier `heavy`; Codex/Claude effort `xhigh|max|ultra`; model ngoài pin trong bảng. Tier `high` không mở các pin Cursor bị cấm.
+**Cấm:** `composer-2.5-fast`; mọi `claude-sonnet-5-thinking-*` trên `--agent cursor` (kể cả `thinking-low`); Cursor vượt `standard`; tier `heavy`; Codex/Claude effort `xhigh|max|ultra`; model ngoài pin trong bảng. Tier `high` không mở các pin Cursor bị cấm. UI/docs/tests thường lệ spawn Composer `standard`; `high` chỉ khi khớp tiêu chí high.
 
 ## Map spawn
 
@@ -114,7 +114,7 @@ Mapping primary của `high` là `--agent claude --model claude-sonnet-5 --effor
 
 ## Soft caps liên quan
 
-Theo user: giữ fan-out tối đa task ready trong scope dưới caps 5 non-review + 3 reviewer; một planner/Epic khi triển khai Epic. Reuse cùng Composer/context dù task chuyển cheap ↔ standard. Cùng model không có nghĩa cùng chi phí: task dài/context lớn vẫn tiêu hao nhiều hơn. Quy tắc hiện hành: `orca-parallel-workers.mdc`.
+Theo user: giữ fan-out tối đa task ready trong scope dưới caps 5 non-review + 3 reviewer; planner chỉ khi Epic ≥2 owner và dep artifact thật. Reuse cùng Composer/context dù task chuyển cheap ↔ standard. Cùng model không có nghĩa cùng chi phí: task dài/context lớn vẫn tiêu hao nhiều hơn. Quy tắc hiện hành: `orca-parallel-workers.mdc`.
 
 - ≤ **3** reviewer (`reviewer-dod`, `reviewer-security`, `reviewer-uiux`) live / Run; gộp nhiều role trong một session tính **một** reviewer — xem `orca-parallel-workers.mdc`.
 

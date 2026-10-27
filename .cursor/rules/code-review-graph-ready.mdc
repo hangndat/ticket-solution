@@ -18,7 +18,7 @@ Trước **coding / explore / impact / review**:
 3. Sau ready → `semantic_search_nodes_tool` / `query_graph_tool` / `get_impact_radius_tool` / `detect_changes_tool`
 4. **Không** Grep/broad-scan thay graph khi MCP available
 
-**Exempt:** docs/rules Q&A thuần; MCP thật sự unavailable (ghi limitation → fallback `rg`/source/Read).
+**Exempt:** docs/rules Q&A thuần; gói chỉ sửa `.cursor/rules`, `AGENTS.md`, `docs/agents`, `docs/plans` (không đụng `apps/`/`packages/`); MCP thật sự unavailable (ghi limitation → fallback `rg`/source/Read). Exempt thì **không** gọi `list_graph_stats_tool` hay rebuild.
 
 ## Tool flow
 
