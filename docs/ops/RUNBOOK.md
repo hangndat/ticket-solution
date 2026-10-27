@@ -172,3 +172,10 @@ D5_PLATFORM_OIDC_ISSUER=http://127.0.0.1:8080/realms/ticket node scripts/lib/pla
 2. Deploy app với `PORTAL_ORIGIN=https://portal.vemoki.com`; smoke GET `/admin?tenantId=…&job=gate` → portal path đúng.
 3. Keycloak prod: thu hồi redirect URI `app.` cho clients admin/platform khi traffic = 0; giữ portal callbacks.
 4. Chi tiết local dual-run: [`PORTAL-LOCAL-CUTOVER-PREP.md`](./PORTAL-LOCAL-CUTOVER-PREP.md) §8.
+
+## 10. Epic #914 / S6 — SHA nghiệm thu và cutover (27/10/2026)
+
+- **SHA giấy S6:** `2645999f0ad535276b63a95c6c96bace9cff025e` (`origin/main` lúc đóng T03). CI commit: 29/29 success. Evidence: Issues [#946](https://github.com/hangndat/ticket-solution/issues/946) [#947](https://github.com/hangndat/ticket-solution/issues/947) [#921](https://github.com/hangndat/ticket-solution/issues/921) [#948](https://github.com/hangndat/ticket-solution/issues/948) [#914](https://github.com/hangndat/ticket-solution/issues/914).
+- **Local UAT:** stack `vcx914s6` + persona [#925](https://github.com/hangndat/ticket-solution/issues/925) (`docs/ops/UI925-LOCAL-PERSONA-FIXTURES.md`). Cold-offline attendee web: ngoài scope O25.
+- **Prod:** cutover bất biến 5 service live **cùng SHA** (comment Epic #914, 27/10). Pin/layout: [`IMMUTABLE-RELEASE.md`](./IMMUTABLE-RELEASE.md). Không suy pilot ready từ cutover.
+- **TestFlight 1.0.0 (28):** catalog public PASS; OIDC Sign in fail-closed trên bake 28 — KEYRING/login là cổng Epic/D13, không phải AC giấy S6.
