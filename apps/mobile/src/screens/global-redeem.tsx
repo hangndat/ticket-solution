@@ -51,6 +51,7 @@ import {
   parkSignInReturn
 } from '@/navigation/sign-in-return-intent';
 import { sanitizeRedeemCodeParam } from '@/navigation/attendee-redeem-entry';
+import { randomId } from '@/lib/random-id';
 import { colors } from '@/theme/colors';
 import { fontFamilies } from '@/theme/fonts';
 import { typography } from '@/theme/typography';
@@ -301,7 +302,7 @@ export function GlobalRedeemScreen() {
     };
     const fingerprint = redeemPayloadFingerprint(payload);
     const { key } = resolveIdempotencyKey(attempt, fingerprint, () =>
-      crypto.randomUUID(),
+      randomId(),
     );
     setAttempt({ key, fingerprint, unclear: true });
     setBusy(true);
