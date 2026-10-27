@@ -1,6 +1,6 @@
 # Agent working agreement
 
-Read your task spec and applicable instructions. Với business code/acceptance: đọc các mục liên quan trong docs/PRD.md, docs/TECHNICAL-DESIGN.md, docs/DECISION-LOG.md; mở rộng khi scope/contract/invariant yêu cầu. Với docs/tooling thuần: chỉ đọc quyết định ảnh hưởng scope, không nạp toàn bộ tài liệu sản phẩm. Trong cùng session không đọc lại nội dung chưa đổi. Work only in assigned scope. **Trạng thái đột:** [GitHub Project #3](https://github.com/users/hangndat/projects/3). Scope/gates: [docs/ROADMAP.md](docs/ROADMAP.md). Phân biệt code complete / acceptance complete / pilot ready.
+Read your task spec and applicable instructions. Với business code/acceptance: đọc các mục liên quan trong docs/PRD.md, docs/TECHNICAL-DESIGN.md, docs/DECISION-LOG.md; mở rộng khi scope/contract/invariant yêu cầu. Với docs/tooling thuần: chỉ đọc quyết định ảnh hưởng scope, không nạp toàn bộ tài liệu sản phẩm. Trong cùng session không đọc lại nội dung chưa đổi. Work only in assigned scope. **Trạng thái đột:** [GitHub Project #3](https://github.com/users/hangndat/projects/3). Scope/gates: [docs/ROADMAP.md](docs/ROADMAP.md). Ba lớp complete bắt buộc ở Epic phát hành, không ở Task docs/tooling. Gói rules/docs thuần: không gọi CRG `list_graph_stats`.
 
 ## Planning and tracking language
 
@@ -50,4 +50,4 @@ Roadmap, Project, Issue, status, progress: **Tiếng Việt** (giữ ID/API/comm
 - **Worker/reviewer** không spawn con; không Read mailbox/parallel/idle-fill/epic-orchestrator trừ khi được giao coordinator.
 - Mỗi Task Spec: `Architecture impact: Có|Không`, `Cost tier: cheap|standard|focused|advanced|high`, Role ID + `docs/agents/roles/<id>.md` khi spawn chuyên môn.
 - Task UI: ghi `Skills cần nạp`, mẫu thiết kế chuẩn và evidence; chọn role theo `docs/agents/ui-workflow.md`, chỉ nạp skill liên quan.
-- Review: reviewer ≠ implementer; mặc định một lượt gộp code review + checklist DoD, security/UI theo rủi ro; exact SHA → `docs/reviews/*` hoặc comment Issue/PR. Revalidate diff/findings, tái dùng evidence còn hiệu lực theo `orca-review-convergence.mdc`; không thêm vòng DoD hoặc security riêng mặc định, không miễn runtime acceptance.
+- DoD: nhánh B (product rủi ro) reviewer ≠ implementer, một session/PR, gộp dod±sec±ux; nhánh A (docs/tooling) không reviewer độc lập. Exact SHA → comment Issue/PR (ưu tiên) hoặc `docs/reviews/*.md` ngắn. Revalidate diff/findings, tái dùng evidence còn hiệu lực theo `orca-review-convergence.mdc`; không thêm vòng DoD/security riêng mặc định.

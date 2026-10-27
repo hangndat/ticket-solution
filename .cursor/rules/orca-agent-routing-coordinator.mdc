@@ -30,7 +30,9 @@ Codex chọn lọc đã được user duyệt: theo cost-catalog; kiểm allowan
 
 Đọc [ui-workflow.md](../../docs/agents/ui-workflow.md) khi dispatch UI. Chọn role theo công việc: sửa nhỏ → `web`/`ios`; đổi visual/flow đáng kể → `product-design` trước consumer phụ thuộc; critique → `reviewer-uiux`; nghiệm thu PR UI → gộp `reviewer-dod` + `reviewer-uiux` trong session độc lập. Chỉ thêm BA/architect/backend/security khi có phạm vi tương ứng; không spawn đủ roster cho mọi Task.
 
-Trước spawn, Spec phải có `Skills cần nạp` (tên/mục đích), mẫu chuẩn và evidence UI; kiểm skill có sẵn cho worker. Persona/labels lấy từ catalog. Cùng PR/SHA ưu tiên `James · dod+ux` hoặc `James · dod+sec+ux`, không thêm reviewer trùng checklist. Sau `worker-start` đọc `result.state` và lỗi nếu có, không coi `ok: true` là đã chạy thành công.
+Trước spawn, Spec phải có `Skills cần nạp` (tên/mục đích), mẫu chuẩn và evidence UI; kiểm skill có sẵn cho worker. Persona/labels lấy từ catalog. Cùng PR/SHA ưu tiên `James · dod+ux` hoặc `James · dod+sec+ux`, không thêm reviewer trùng checklist. UI/docs/tests thường lệ: Composer `standard` — **cấm** spawn `--model claude-sonnet-5-thinking-*` trên Cursor; reviewer UI thường: Composer hoặc Claude `focused`, không Codex/`gpt-6-sol` `high`. Sau `worker-start` đọc `result.state` và lỗi nếu có, không coi `ok: true` là đã chạy thành công.
+
+Dispatch `failed`/`interrupted` trong cùng wave: ghi nguyên nhân; **cấm** `worker-start` lại cùng task cho đến khi có giả thuyết mới (không recover mù).
 
 ## Cost tier — spawn rules
 
@@ -40,7 +42,7 @@ Trước spawn, Spec phải có `Skills cần nạp` (tên/mục đích), mẫu 
 4. **Wave D:** sau wave `node scripts/orca-cost-wave-evidence.mjs --run <RUN> --dispatch <DISPATCH> [--dispatch <DISPATCH> ...]` (thêm `--receipt-file <start-receipt.json>` khi có) — `inherit%` > 20% → refresh pin, dừng spawn. Chỉ đo dispatch vừa spawn; không quét Run khác.
 5. **Wave E:** preflight và `agent-workflow-run.mjs start` bắt buộc `--cost-tier <tier>` khớp Task Spec và một mapping agent/model/effort trong catalog. Ví dụ mapping hiện tại: `--cost-tier advanced --agent codex --model gpt-6-sol --effort medium`. Preflight từ chối tổ hợp chưa đăng ký; wrapper giữ `--cost-tier` local, không gửi flag này vào Orca.
 6. Fan-out tối đa task ready theo `orca-parallel-workers.mdc`: ≤5 non-review + ≤3 reviewer; ≤1 feature/slice. CI evidence: `./scripts/gh-dod-evidence.sh` — stagger nếu ≥2 reviewer cùng gọi `gh` (`github-api-hygiene.mdc`).
-7. Giao Composer phần thực thi ít cần suy luận, gộp vào task phù hợp; lifecycle/hygiene vài lệnh coordinator làm inline, không spawn chỉ để đổi vài dòng. CI/tracking/generate schema dùng script hiện có; nếu cần worker theo ownership thì Composer cho sửa cơ học đã rõ nguyên nhân. Revalidate generated-artifact-only không đổi logic được phân loại standard và tái dùng security verdict cũ; nếu diff vượt artifact hoặc invariant thay đổi thì dừng để phân loại lại. Không hạ tier cho phán đoán transaction/auth/RLS còn mở.
+7. Giao Composer phần thực thi ít cần suy luận, gộp vào Story/PR phù hợp; lifecycle/hygiene vài lệnh coordinator làm inline, không spawn chỉ để đổi vài dòng. Docs/tooling = nhánh A: không spawn reviewer. CI/tracking/generate schema dùng script hiện có; nếu cần worker theo ownership thì Composer cho sửa cơ học đã rõ nguyên nhân. Revalidate generated-artifact-only không đổi logic được phân loại standard và tái dùng security verdict cũ; nếu diff vượt artifact hoặc invariant thay đổi thì dừng để phân loại lại. Không hạ tier cho phán đoán transaction/auth/RLS còn mở.
 
 Worker/reviewer `focused|advanced|high` ưu tiên Claude Sonnet 5 trước Codex theo catalog; Codex là fallback cùng tier khi Claude không khả dụng/quota không đủ hoặc unknown, có evidence cần đổi provider hoặc user chỉ định, và phải ghi lý do; không đổi coordinator, không tăng caps. Claude chưa có quota adapter: kiểm `/usage` đúng tài khoản và ghi evidence trước dispatch; unknown thì hoãn Claude và xét quota Codex riêng, không lấy snapshot Codex làm quota Claude.
 
@@ -52,7 +54,7 @@ Ngừng dispatch Codex; thu checkpoint (git/diff/logs); xác minh attempt đã d
 
 Coordinator dùng `docs/agents/templates/review.md` một lần để soạn **spec đã điền 150–250 từ**, chỉ gửi spec + links/paths cần thiết. Không gửi nguyên template hoặc yêu cầu reviewer đọc template/task-spec/worker-report. Initial kiểm đủ scope, revalidate theo diff/findings; chung evidence nhưng verdict riêng cho từng gate. Không tái chạy suite vì có nhiều role. Báo cáo ngắn, findings/gate bắt buộc không bị giới hạn chữ; coordinator ghi thay đổi trạng thái mới và link review thay vì chép lại báo cáo.
 
-Trước giao review/fix: **Read** [orca-review-convergence.mdc](./orca-review-convergence.mdc); khôi phục bảng findings và bộ đếm theo Issue. `PASS` → merge khi ủy quyền + CI + gates. `FAIL` → phân loại nguyên nhân; còn lượt và không bị ngắt thì giao batch fix (`Đang làm`), chờ xác minh thì `Chờ duyệt`; bị ngắt/hết lượt → `Bị chặn` + chẩn đoán có giới hạn. Không mặc định respawn fix. WIP backpressure: `github-project-tracking-coordinator.mdc`.
+Trước giao review/fix (chỉ nhánh B): **Read** [orca-review-convergence.mdc](./orca-review-convergence.mdc); khôi phục bảng findings và bộ đếm theo Issue. Nhánh A: coordinator tự kiểm + CI/SHA, không James. `PASS` → merge khi ủy quyền + CI + gates. `FAIL` → phân loại nguyên nhân; còn lượt và không bị ngắt thì giao batch fix (`Đang làm`), chờ xác minh thì `Chờ duyệt`; bị ngắt/hết lượt → `Bị chặn` + chẩn đoán có giới hạn. Không mặc định respawn fix. WIP backpressure: `github-project-tracking-coordinator.mdc`.
 
 ## Phân công theo độ khó
 

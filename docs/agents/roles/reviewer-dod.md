@@ -41,7 +41,7 @@ Nhận spec đã điền (initial/revalidate), AC/evidence/findings từ coordin
 
 ## Artifact bắt buộc
 
-Ghi `docs/reviews/<slug>.md` hoặc comment Issue/PR tương đương:
+Ưu tiên **một comment** Issue/PR. File `docs/reviews/<slug>.md` chỉ khi comment không đủ; ≤ ~40 dòng; không commit PNG/JPEG/WebP.
 
 | Trường                 | Bắt buộc                          |
 | ---------------------- | --------------------------------- |
