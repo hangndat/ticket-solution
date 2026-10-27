@@ -10,6 +10,7 @@ test('loginHref uses allowlisted return paths (AC-S2)', () => {
   assert.equal(loginHref('/'), '/api/auth/login?return=/');
   assert.equal(loginHref('/redeem'), '/api/auth/login?return=%2Fredeem');
   assert.equal(loginHref('/account'), '/api/auth/login?return=%2Faccount');
+  assert.equal(loginHref('/wallet'), '/api/auth/login?return=%2Fwallet');
   assert.equal(loginHref('https://evil.example'), '/api/auth/login?return=/');
   assert.equal(sanitizePostLoginPath('/'), '/');
   assert.equal(sanitizePostLoginPath('/wallet'), '/wallet');

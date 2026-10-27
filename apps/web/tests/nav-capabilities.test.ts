@@ -56,7 +56,9 @@ test('guest / unauthenticated never gets portal staff chrome', () => {
     showAccount: false,
   });
   const hrefs = buildNavLinks(caps).map((l) => l.href);
-  assert.deepEqual(hrefs, ['/', '/redeem', '/api/auth/login?return=/account']);
+  assert.deepEqual(hrefs, ['/', '/redeem', '/api/auth/login?return=%2Fwallet']);
+  assert.equal(buildNavLinks(caps).at(-1)?.label, 'Đăng nhập');
+  assert.equal(buildNavLinks(caps).at(-1)?.testId, 'nav-login');
   assert.ok(!hrefs.includes('/admin'));
   assert.ok(!hrefs.includes('/gate'));
   assert.ok(!hrefs.includes('/platform'));
