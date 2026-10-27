@@ -31,6 +31,7 @@ import { navigateAfterEventCreate } from '../../../../../src/client/event-create
 import { useIntentMutation } from '../../../../../src/client/use-intent-mutation';
 import { intentBlockMessageKey, intentBlockPresentation } from '../../../../../src/client/intent-mutation';
 import { eventFromMutation } from '../../../../../src/client/event-mutation-result';
+import { InContextHelp } from '../../../../../src/components/in-context-help';
 import {
   collectEventWizardValues,
   eventCreateUpstreamFromWizard,
@@ -251,6 +252,7 @@ export default function CreateEventWizardPage() {
 
   return (
     <PortalPage title={t('events.h_ek93o2')} subTitle={t('events.h_5zs7cf')}>
+      <InContextHelp messageKey="help.eventsNew" testId="events-new-help" />
       <Steps
         current={step}
         items={[

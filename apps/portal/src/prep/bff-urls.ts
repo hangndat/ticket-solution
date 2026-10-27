@@ -34,6 +34,19 @@ export function bffMemberRole(tenantId: string, membershipId: string): string {
   return `${bffMembers(tenantId)}/${encodeURIComponent(membershipId)}/role`;
 }
 
+export function bffMemberEventAssignment(
+  tenantId: string,
+  membershipId: string,
+  eventId: string,
+): string {
+  return `${bffMembers(tenantId)}/${encodeURIComponent(membershipId)}/event-assignments/${encodeURIComponent(eventId)}`;
+}
+
+/** Staff read-only tenant limits/usage (#958 / G-10). */
+export function bffTenantLimits(tenantId: string): string {
+  return `/api/bff/tenants/${encodeURIComponent(tenantId)}/limits`;
+}
+
 export function bffBranding(tenantId: string): string {
   return `/api/bff/tenants/${encodeURIComponent(tenantId)}/branding`;
 }

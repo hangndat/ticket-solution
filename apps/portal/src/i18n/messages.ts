@@ -293,6 +293,74 @@ export const VI = {
   'locale.en': 'English',
   'locale.label': 'Ngôn ngữ',
   'locale.vi': 'Tiếng Việt',
+  'limits.guidance.attendeeLimitAction': 'Mở hạn mức suất của sự kiện',
+  'limits.guidance.attendeeLimitBody':
+    'Đã hết suất khách cho nguồn hoặc loại vé này. Xem hạn mức sự kiện; danh sách vé và check-in vẫn xem được.',
+  'limits.guidance.attendeeLimitTitle': 'Hết suất khách',
+  'limits.guidance.pendingLimitAction': 'Mở danh sách chờ duyệt',
+  'limits.guidance.pendingLimitBody':
+    'Đã đạt số yêu cầu chờ duyệt cho phép. Xử lý các yêu cầu đang mở rồi thử lại.',
+  'limits.guidance.pendingLimitTitle': 'Hết chỗ chờ duyệt',
+  'limits.guidance.rateLimitedAction': 'Đợi rồi thử lại',
+  'limits.guidance.rateLimitedBody':
+    'Thao tác bị giới hạn tạm thời. Đợi hết thời gian chờ rồi gửi lại — không tạo bản ghi mới.',
+  'limits.guidance.rateLimitedTitle': 'Tạm thời bị giới hạn tốc độ',
+  'limits.guidance.resendLimitAction': 'Mở hỗ trợ gửi lại',
+  'limits.guidance.resendLimitBody':
+    'Đã hết lượt gửi lại trong cửa sổ hiện tại. Không tạo vé mới. Vé và check-in không bị khóa.',
+  'limits.guidance.resendLimitTitle': 'Hết lượt gửi lại email',
+  'limits.guidance.tenantReachedAction': 'Xem danh sách sự kiện',
+  'limits.guidance.tenantReachedBody':
+    'Tổ chức đã dùng hết hạn mức cho thao tác này. Không tự nâng hạn trên portal.',
+  'limits.guidance.tenantReachedTitle': 'Đã đạt hạn mức tổ chức',
+  'limits.usage.asOf': 'Số liệu máy chủ lúc {{asOf}}',
+  'limits.usage.email': 'Email hôm nay',
+  'limits.usage.events': 'Số sự kiện',
+  'limits.usage.forbidden': 'Không có quyền xem hạn mức tổ chức.',
+  'limits.usage.importRows': 'Dòng mỗi lần nhập',
+  'limits.usage.noConfiguredCap': 'Chưa cấu hình hạn mức',
+  'limits.usage.staff': 'Nhân sự (kèm lời mời)',
+  'limits.usage.title': 'Hạn mức hiện tại (chỉ xem)',
+  'limits.usage.unknown': 'Chưa đọc được hạn mức. Không giả định còn dư hay đã hết.',
+  'help.cs':
+    'Gửi lại email chỉ khi máy chủ cho phép. Chưa rõ kết quả thì kiểm tra lại — không coi là đã gửi.',
+  'help.eventsNew':
+    'Tạo sự kiện gửi đủ tên, slug và múi giờ. Hết hạn mức thì dừng, không tự mở rộng.',
+  'help.guests':
+    'Nhập, duyệt và xuất trên dữ liệu máy chủ. Job chưa xong không phải thành công.',
+  'members.help':
+    'Mời thành viên theo vai trò máy chủ, có thể gán một sự kiện. Gỡ Owner cuối cần xác nhận và sẽ bị từ chối rõ ràng.',
+  'members.intent.inviteDeliveryFailed':
+    'Lời mời đã tạo nhưng gửi email thất bại. Kiểm tra danh sách lời mời trước khi tiếp tục.',
+  'members.intent.inviteUnknown':
+    'Lời mời trước chưa rõ kết quả. Kiểm tra danh sách lời mời trước khi tiếp tục.',
+  'members.intent.revokeInviteUnknown':
+    'Thu hồi lời mời trước chưa rõ kết quả. Kiểm tra danh sách lời mời.',
+  'members.intent.revokeMemberUnconfirmed':
+    'Thu hồi thành viên chưa xác định. Kiểm tra trạng thái trước khi tiếp tục.',
+  'members.intent.revokeMemberUnknown':
+    'Thu hồi thành viên trước chưa rõ kết quả. Kiểm tra danh sách thành viên.',
+  'members.assign.eventLabel': 'Sự kiện cần gán',
+  'members.assign.eventRole': 'Vai trò trên sự kiện',
+  'members.status.active': 'Thành viên đang hoạt động',
+  'members.status.revoked': 'Đã thu hồi',
+  'onboarding.help':
+    'Hoàn tất tổ chức, mời đồng nghiệp (tuỳ chọn) rồi tạo sự kiện mẫu. Không SSO hay CRM trong bước này.',
+  'onboarding.intent.inviteUnknown':
+    'Lời mời trước chưa rõ kết quả. Kiểm tra danh sách lời mời trước khi tiếp tục.',
+  'overview.freshness': 'Số liệu tổng quan lấy từ báo cáo máy chủ.',
+  'overview.help':
+    'Việc cần làm theo giai đoạn: chuẩn bị, phát vé, ngày diễn ra, sau sự kiện. Thời điểm số liệu là của máy chủ, không tự chạy tới hiện tại.',
+  'overview.stage.after': 'Sau sự kiện',
+  'overview.stage.dayOf': 'Ngày diễn ra',
+  'overview.stage.issue': 'Phát vé',
+  'overview.stage.prep': 'Giai đoạn chuẩn bị',
+  'overview.work.afterCs': 'Email cần hỗ trợ',
+  'overview.work.dayOfGate': 'Theo dõi check-in',
+  'overview.work.issuePending': 'Duyệt yêu cầu đang chờ',
+  'overview.work.issueQuota': 'Hết suất — kiểm tra hạn mức sự kiện',
+  'overview.work.prepCreate': 'Tạo sự kiện mẫu',
+  'overview.work.prepSetup': 'Hoàn tất thiết lập sự kiện',
   'members.h_1fi9vwv': 'Gán sự kiện (tuỳ chọn)',
   'members.h_1mkpx3r': 'Vai trò',
   'members.h_1p47lt5': 'Revoke invite từ portal',
@@ -332,14 +400,14 @@ export const VI = {
   'members.roles.colKind': 'Loại',
   'members.roles.colMembers': 'Số người',
   'members.roles.colName': 'Tên',
-  'members.roles.colSchema': 'schema_version',
+  'members.roles.colSchema': 'Phiên bản schema',
   'members.roles.colUpdated': 'Cập nhật',
   'members.roles.groupPreset': 'Preset máy chủ',
   'members.roles.groupSystem': 'Role-map hệ thống',
-  'members.roles.invalidRole': 'Vai trò không hợp lệ — chỉ MembershipRole hoặc preset máy chủ.',
+  'members.roles.invalidRole': 'Vai trò không hợp lệ — chỉ vai trò có sẵn hoặc preset máy chủ.',
   'members.roles.kindPreset': 'Preset',
   'members.roles.kindSystem': 'Hệ thống',
-  'members.roles.lastOwnerBody': 'Tổ chức phải giữ ít nhất một Owner đang hoạt động (LAST_OWNER_REQUIRED).',
+  'members.roles.lastOwnerBody': 'Tổ chức phải giữ ít nhất một Owner đang hoạt động.',
   'members.roles.lastOwnerTitle': 'Không thể gỡ Owner cuối',
   'members.roles.noPermList': 'Máy chủ không trả danh sách quyền cho hàng này.',
   'members.roles.pickPlaceholder': 'Vai trò / preset',
@@ -438,7 +506,7 @@ export const VI = {
   'ops.guests.needPermissions':
     'Cần quyền quản lý khách (nhập, duyệt, thông báo hoặc xuất) từ máy chủ.',
   'ops.h_106x23o': 'Hữu hạn',
-  'ops.h_11ovicf': 'RESEND_LIMIT: đã hết hạn mức gửi lại trong cửa sổ hiện tại. Không tạo vé mới.',
+  'ops.h_11ovicf': 'Đã hết lượt gửi lại trong cửa sổ hiện tại. Không tạo vé mới.',
   'ops.h_142nqqm': 'Chưa có kết quả.',
   'ops.h_15064q7': 'Tải template CSV',
   'ops.h_16do87c': 'Không có mã khớp bộ lọc.',
@@ -1166,6 +1234,74 @@ export const EN: { [K in MessageKey]: string } = {
   'locale.en': 'English',
   'locale.label': 'Language',
   'locale.vi': 'Tiếng Việt',
+  'limits.guidance.attendeeLimitAction': 'Open this event’s capacity',
+  'limits.guidance.attendeeLimitBody':
+    'Guest capacity for this source or ticket type is used up. Review event capacity; ticket lists and check-in stay available.',
+  'limits.guidance.attendeeLimitTitle': 'Guest capacity reached',
+  'limits.guidance.pendingLimitAction': 'Open the pending list',
+  'limits.guidance.pendingLimitBody':
+    'The pending-approval allowance is used up. Resolve open requests, then try again.',
+  'limits.guidance.pendingLimitTitle': 'Pending allowance reached',
+  'limits.guidance.rateLimitedAction': 'Wait, then retry',
+  'limits.guidance.rateLimitedBody':
+    'This action is temporarily rate-limited. Wait for the cooldown, then send the same request — no extra record is created.',
+  'limits.guidance.rateLimitedTitle': 'Temporarily rate-limited',
+  'limits.guidance.resendLimitAction': 'Open resend support',
+  'limits.guidance.resendLimitBody':
+    'The resend allowance for the current window is used up. No new ticket is created. Tickets and check-in stay available.',
+  'limits.guidance.resendLimitTitle': 'Resend allowance used up',
+  'limits.guidance.tenantReachedAction': 'View events',
+  'limits.guidance.tenantReachedBody':
+    'This organization has reached the limit for this action. Limits cannot be raised from the portal.',
+  'limits.guidance.tenantReachedTitle': 'Organization limit reached',
+  'limits.usage.asOf': 'Server snapshot at {{asOf}}',
+  'limits.usage.email': 'Email today',
+  'limits.usage.events': 'Event count',
+  'limits.usage.forbidden': 'No permission to view organization limits.',
+  'limits.usage.importRows': 'Rows per import',
+  'limits.usage.noConfiguredCap': 'No configured cap',
+  'limits.usage.staff': 'Staff (including pending invites)',
+  'limits.usage.title': 'Current limits (read-only)',
+  'limits.usage.unknown': 'Limits could not be read. Do not assume remaining or exhausted capacity.',
+  'help.cs':
+    'Resend email only when the server allows it. If the outcome is unclear, check again — do not treat it as sent.',
+  'help.eventsNew':
+    'Create an event with name, slug, and timezone. A reached limit stops the action; the portal cannot raise it.',
+  'help.guests':
+    'Import, approve, and export against server data. An unfinished job is not success.',
+  'members.help':
+    'Invite members with a server role and optionally assign one event. Removing the last Owner needs confirmation and is clearly rejected.',
+  'members.intent.inviteDeliveryFailed':
+    'The invitation was created but email delivery failed. Check the invite list before continuing.',
+  'members.intent.inviteUnknown':
+    'The previous invitation is still unresolved. Check the invite list before continuing.',
+  'members.intent.revokeInviteUnknown':
+    'The previous invite revoke is still unresolved. Check the invite list.',
+  'members.intent.revokeMemberUnconfirmed':
+    'Member revoke is unresolved. Check status before continuing.',
+  'members.intent.revokeMemberUnknown':
+    'The previous member revoke is still unresolved. Check the member list.',
+  'members.assign.eventLabel': 'Event to assign',
+  'members.assign.eventRole': 'Role on the event',
+  'members.status.active': 'Active member',
+  'members.status.revoked': 'Revoked',
+  'onboarding.help':
+    'Finish the organization, optionally invite a colleague, then create a sample event. No SSO or CRM in this step.',
+  'onboarding.intent.inviteUnknown':
+    'The previous invitation is still unresolved. Check the invite list before continuing.',
+  'overview.freshness': 'Overview numbers come from the server report.',
+  'overview.help':
+    'Work by stage: prepare, issue tickets, event day, after the event. The snapshot time is from the server and does not tick forward on its own.',
+  'overview.stage.after': 'After the event',
+  'overview.stage.dayOf': 'Event day',
+  'overview.stage.issue': 'Issue tickets',
+  'overview.stage.prep': 'Prepare stage',
+  'overview.work.afterCs': 'Email needs support',
+  'overview.work.dayOfGate': 'Follow check-in',
+  'overview.work.issuePending': 'Review pending requests',
+  'overview.work.issueQuota': 'Capacity used up — review event limits',
+  'overview.work.prepCreate': 'Create a sample event',
+  'overview.work.prepSetup': 'Finish event setup',
   'members.h_1fi9vwv': 'Assign events (optional)',
   'members.h_1mkpx3r': 'Role',
   'members.h_1p47lt5': 'Revoke invite from portal',
@@ -1205,14 +1341,14 @@ export const EN: { [K in MessageKey]: string } = {
   'members.roles.colKind': 'Kind',
   'members.roles.colMembers': 'Members',
   'members.roles.colName': 'Name',
-  'members.roles.colSchema': 'schema_version',
+  'members.roles.colSchema': 'Schema version',
   'members.roles.colUpdated': 'Updated',
   'members.roles.groupPreset': 'Server presets',
   'members.roles.groupSystem': 'System role-map',
-  'members.roles.invalidRole': 'Invalid role — only MembershipRole or a server preset.',
+  'members.roles.invalidRole': 'Invalid role — only a built-in role or a server preset.',
   'members.roles.kindPreset': 'Preset',
   'members.roles.kindSystem': 'System',
-  'members.roles.lastOwnerBody': 'The organization must keep at least one active Owner (LAST_OWNER_REQUIRED).',
+  'members.roles.lastOwnerBody': 'The organization must keep at least one active Owner.',
   'members.roles.lastOwnerTitle': 'Cannot remove the last Owner',
   'members.roles.noPermList': 'Server did not return a permission list for this row.',
   'members.roles.pickPlaceholder': 'Role / preset',
@@ -1311,7 +1447,7 @@ export const EN: { [K in MessageKey]: string } = {
   'ops.guests.needPermissions':
     'Requires guest-management permissions (import, approve, notify, or export) from the server.',
   'ops.h_106x23o': 'Finite',
-  'ops.h_11ovicf': 'RESEND_LIMIT: the resend allowance for the current window is used up. No new ticket is created.',
+  'ops.h_11ovicf': 'The resend allowance for the current window is used up. No new ticket is created.',
   'ops.h_142nqqm': 'No results yet.',
   'ops.h_15064q7': 'Download template CSV',
   'ops.h_16do87c': 'No codes match the filter.',
@@ -2360,7 +2496,7 @@ export const VI_TO_KEY: Record<string, MessageKey> = {
   'Resend email': 'ops.h_e1ks86',
   'Resend thành công chỉ nghĩa queue/ACCEPTED phía nhà cung cấp — không khẳng định DELIVERED.': 'ops.h_mag360',
   'RESEND_COOLDOWN: đang trong thời gian chờ gửi lại (~{{seconds}}s). Chưa tạo vé mới — thử lại sau.': 'ops.notifications.resendCooldown',
-  'RESEND_LIMIT: đã hết hạn mức gửi lại trong cửa sổ hiện tại. Không tạo vé mới.': 'ops.h_11ovicf',
+  'Đã hết lượt gửi lại trong cửa sổ hiện tại. Không tạo vé mới.': 'ops.h_11ovicf',
   'Revoke invite từ portal': 'members.h_1p47lt5',
   'Revoke support grant': 'platform.h_19s5r5m',
   'Role-map cố định và named server presets — không có ma trận checkbox quyền tùy ý.': 'members.roles.catalogHint',
@@ -2375,7 +2511,7 @@ export const VI_TO_KEY: Record<string, MessageKey> = {
   'Sẵn sàng vào portal': 'onboarding.firstRun.readyTitle',
   'Sẵn sàng xuất bản': 'common.h_4nfgg4',
   'Sắp có': 'views.automation.disabled',
-  'schema_version': 'members.roles.colSchema',
+  'Phiên bản schema': 'members.roles.colSchema',
   'Sẽ publish version {{version}}. Không tự mở redeem/Gate.': 'config.publishConfirm',
   'Server ghi nhận {{asOf}}': 'analytics.asOfTag',
   'Slug': 'onboarding.signup.slug',
@@ -2487,7 +2623,7 @@ export const VI_TO_KEY: Record<string, MessageKey> = {
   'Tổ chức đang ở trạng thái PENDING. Operator sẽ kích hoạt — không giả ACTIVE và không mở mutation admin.': 'surface.pendingActivation.description',
   'Tổ chức không tồn tại trong khám phá của bạn hoặc thiếu quyền quản trị.': 'common.h_yw94nu',
   'Tổ chức này': 'nav.group.org',
-  'Tổ chức phải giữ ít nhất một Owner đang hoạt động (LAST_OWNER_REQUIRED).': 'members.roles.lastOwnerBody',
+  'Tổ chức phải giữ ít nhất một Owner đang hoạt động.': 'members.roles.lastOwnerBody',
   'Tổng quan': 'nav.event.overview',
   'Tổng quan tổ chức': 'nav.org.overview',
   'Tra cứu': 'ops.h_n3x4mp',
@@ -2511,7 +2647,7 @@ export const VI_TO_KEY: Record<string, MessageKey> = {
   'Upload + tạo job': 'ops.h_slukee',
   'Vai trò': 'members.h_1mkpx3r',
   'Vai trò / preset': 'members.roles.pickPlaceholder',
-  'Vai trò không hợp lệ — chỉ MembershipRole hoặc preset máy chủ.': 'members.roles.invalidRole',
+  'Vai trò không hợp lệ — chỉ vai trò có sẵn hoặc preset máy chủ.': 'members.roles.invalidRole',
   'Vào portal': 'onboarding.firstRun.enterPortal',
   'Vé': 'ops.notifications.ve',
   'Vé {{ticketId}} đã được cấp cho sự kiện {{eventName}}.': 'events.ticketIssuedEmail',
@@ -2557,4 +2693,70 @@ export const VI_TO_KEY: Record<string, MessageKey> = {
   'Trạng thái gửi': 'ops.table.providerStatus',
   'Yêu cầu': 'ops.pending.col.request',
   'Yêu cầu tiếp theo của thành viên sẽ bị chặn. Không khẳng định đã xóa phiên trên mọi thiết bị.': 'members.h_ltgqwp',
+  'Mở hạn mức suất của sự kiện': 'limits.guidance.attendeeLimitAction',
+  'Đã hết suất khách cho nguồn hoặc loại vé này. Xem hạn mức sự kiện; danh sách vé và check-in vẫn xem được.':
+    'limits.guidance.attendeeLimitBody',
+  'Hết suất khách': 'limits.guidance.attendeeLimitTitle',
+  'Mở danh sách chờ duyệt': 'limits.guidance.pendingLimitAction',
+  'Đã đạt số yêu cầu chờ duyệt cho phép. Xử lý các yêu cầu đang mở rồi thử lại.':
+    'limits.guidance.pendingLimitBody',
+  'Hết chỗ chờ duyệt': 'limits.guidance.pendingLimitTitle',
+  'Đợi rồi thử lại': 'limits.guidance.rateLimitedAction',
+  'Thao tác bị giới hạn tạm thời. Đợi hết thời gian chờ rồi gửi lại — không tạo bản ghi mới.':
+    'limits.guidance.rateLimitedBody',
+  'Tạm thời bị giới hạn tốc độ': 'limits.guidance.rateLimitedTitle',
+  'Mở hỗ trợ gửi lại': 'limits.guidance.resendLimitAction',
+  'Đã hết lượt gửi lại trong cửa sổ hiện tại. Không tạo vé mới. Vé và check-in không bị khóa.':
+    'limits.guidance.resendLimitBody',
+  'Hết lượt gửi lại email': 'limits.guidance.resendLimitTitle',
+  'Xem danh sách sự kiện': 'limits.guidance.tenantReachedAction',
+  'Tổ chức đã dùng hết hạn mức cho thao tác này. Không tự nâng hạn trên portal.':
+    'limits.guidance.tenantReachedBody',
+  'Đã đạt hạn mức tổ chức': 'limits.guidance.tenantReachedTitle',
+  'Số liệu máy chủ lúc {{asOf}}': 'limits.usage.asOf',
+  'Email hôm nay': 'limits.usage.email',
+  'Số sự kiện': 'limits.usage.events',
+  'Không có quyền xem hạn mức tổ chức.': 'limits.usage.forbidden',
+  'Dòng mỗi lần nhập': 'limits.usage.importRows',
+  'Chưa cấu hình hạn mức': 'limits.usage.noConfiguredCap',
+  'Nhân sự (kèm lời mời)': 'limits.usage.staff',
+  'Hạn mức hiện tại (chỉ xem)': 'limits.usage.title',
+  'Chưa đọc được hạn mức. Không giả định còn dư hay đã hết.': 'limits.usage.unknown',
+  'Gửi lại email chỉ khi máy chủ cho phép. Chưa rõ kết quả thì kiểm tra lại — không coi là đã gửi.':
+    'help.cs',
+  'Tạo sự kiện gửi đủ tên, slug và múi giờ. Hết hạn mức thì dừng, không tự mở rộng.':
+    'help.eventsNew',
+  'Nhập, duyệt và xuất trên dữ liệu máy chủ. Job chưa xong không phải thành công.':
+    'help.guests',
+  'Mời thành viên theo vai trò máy chủ, có thể gán một sự kiện. Gỡ Owner cuối cần xác nhận và sẽ bị từ chối rõ ràng.':
+    'members.help',
+  'Lời mời đã tạo nhưng gửi email thất bại. Kiểm tra danh sách lời mời trước khi tiếp tục.':
+    'members.intent.inviteDeliveryFailed',
+  'Lời mời trước chưa rõ kết quả. Kiểm tra danh sách lời mời trước khi tiếp tục.':
+    'members.intent.inviteUnknown',
+  'Thu hồi lời mời trước chưa rõ kết quả. Kiểm tra danh sách lời mời.':
+    'members.intent.revokeInviteUnknown',
+  'Thu hồi thành viên chưa xác định. Kiểm tra trạng thái trước khi tiếp tục.':
+    'members.intent.revokeMemberUnconfirmed',
+  'Thu hồi thành viên trước chưa rõ kết quả. Kiểm tra danh sách thành viên.':
+    'members.intent.revokeMemberUnknown',
+  'Sự kiện cần gán': 'members.assign.eventLabel',
+  'Vai trò trên sự kiện': 'members.assign.eventRole',
+  'Thành viên đang hoạt động': 'members.status.active',
+  'Đã thu hồi': 'members.status.revoked',
+  'Hoàn tất tổ chức, mời đồng nghiệp (tuỳ chọn) rồi tạo sự kiện mẫu. Không SSO hay CRM trong bước này.':
+    'onboarding.help',
+  'Số liệu tổng quan lấy từ báo cáo máy chủ.': 'overview.freshness',
+  'Việc cần làm theo giai đoạn: chuẩn bị, phát vé, ngày diễn ra, sau sự kiện. Thời điểm số liệu là của máy chủ, không tự chạy tới hiện tại.':
+    'overview.help',
+  'Sau sự kiện': 'overview.stage.after',
+  'Ngày diễn ra': 'overview.stage.dayOf',
+  'Phát vé': 'overview.stage.issue',
+  'Giai đoạn chuẩn bị': 'overview.stage.prep',
+  'Email cần hỗ trợ': 'overview.work.afterCs',
+  'Theo dõi check-in': 'overview.work.dayOfGate',
+  'Duyệt yêu cầu đang chờ': 'overview.work.issuePending',
+  'Hết suất — kiểm tra hạn mức sự kiện': 'overview.work.issueQuota',
+  'Tạo sự kiện mẫu': 'overview.work.prepCreate',
+  'Hoàn tất thiết lập sự kiện': 'overview.work.prepSetup',
 };
