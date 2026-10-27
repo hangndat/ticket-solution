@@ -38,19 +38,63 @@ body {
   padding: 0;
 }
 
+/* WCAG skip-link: clip hide (not left:-9999px). :focus and class both reveal. */
 .portal-skip-link {
   position: absolute;
-  left: -9999px;
   top: 0;
-  z-index: 1000;
-  padding: 8px 12px;
-  background: #fff;
+  left: 0;
+  z-index: 1100;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
 }
 
-.portal-skip-link:focus {
+.portal-skip-link:focus,
+.portal-skip-link:focus-visible,
+.portal-skip-link:active,
+.portal-skip-link.portal-skip-link--visible {
+  position: fixed;
   left: 8px;
   top: 8px;
+  width: auto;
+  height: auto;
+  margin: 0;
+  padding: 8px 12px;
+  overflow: visible;
+  clip: auto;
+  clip-path: none;
+  white-space: normal;
+  background: #fff;
+  color: #000;
+  outline: 2px solid #0958d9;
   outline-offset: 2px;
+}
+
+/* Guests + shell: AA floor for antd secondary/link/placeholder (hashed=false). */
+.portal-main-surface .ant-typography.ant-typography-secondary,
+.portal-main-surface .ant-tabs-tab:not(.ant-tabs-tab-active) .ant-tabs-tab-btn {
+  color: rgba(0, 0, 0, 0.75);
+}
+
+.portal-main-surface .ant-table-thead > tr > th {
+  color: rgba(0, 0, 0, 0.88);
+}
+
+.portal-main-surface .ant-btn-link {
+  color: #0958d9;
+}
+
+.portal-main-surface .ant-select-selection-placeholder,
+.portal-main-surface .ant-input::placeholder,
+.portal-main-surface .ant-input-search .ant-input::placeholder {
+  color: rgba(0, 0, 0, 0.65);
+  opacity: 1;
 }
 
 .portal-header-actions {

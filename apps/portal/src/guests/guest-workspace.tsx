@@ -20,6 +20,7 @@ import type {
   StaffPendingRedemptionItem,
 } from '@ticket/contracts';
 import { portalGet } from '../client/portal-fetch';
+import { isMessageKey, usePortalLocale, type PortalLocale } from '../i18n';
 import { bffEventAction } from '../prep/bff-urls';
 import { interpretInvitationList } from '../ops/invitation';
 import {
@@ -69,12 +70,15 @@ function safeEmail(value: string | null): string {
   return `${local.slice(0, Math.min(2, local.length)).replace(/\*/g, '•')}•••@${parts[1]}`;
 }
 
-function formatAt(value: string | null | undefined): string {
+function formatAt(
+  value: string | null | undefined,
+  locale: PortalLocale,
+): string {
   if (!value) return '—';
   const date = new Date(value);
   return Number.isNaN(date.getTime())
     ? '—'
-    : new Intl.DateTimeFormat('vi-VN', {
+    : new Intl.DateTimeFormat(locale === 'en' ? 'en-GB' : 'vi-VN', {
         dateStyle: 'short',
         timeStyle: 'short',
       }).format(date);
@@ -123,7 +127,7 @@ function requestRow(value: unknown): Row | null {
       {
         at: item.submittedAt,
         kind: 'request',
-        summary: 'Đã gửi yêu cầu đổi mã',
+        summary: 'guests.timeline.redemptionSubmitted',
       },
     ],
   };
@@ -177,20 +181,21 @@ function readPage(
 }
 
 export function GuestWorkspace({ tenantId, eventId, permissions }: Props) {
+  const { t, locale } = usePortalLocale();
   const allowed = useMemo(
     () =>
       [
         ...(permissions.includes('inventory.import')
-          ? [{ key: 'invitations', label: 'Lời mời' }]
+          ? [{ key: 'invitations', label: t('guests.tab.invitations') }]
           : []),
         ...(permissions.includes('redemption.approve')
-          ? [{ key: 'redemptions', label: 'Yêu cầu đổi mã' }]
+          ? [{ key: 'redemptions', label: t('guests.tab.redemptions') }]
           : []),
         ...(permissions.includes('cs.lookup')
-          ? [{ key: 'tickets', label: 'Vé' }]
+          ? [{ key: 'tickets', label: t('guests.tab.tickets') }]
           : []),
       ] as { key: Kind; label: string }[],
-    [permissions],
+    [permissions, t],
   );
   const [kind, setKind] = useState<Kind>(() =>
     defaultGuestListKind(permissions),
@@ -258,15 +263,15 @@ export function GuestWorkspace({ tenantId, eventId, permissions }: Props) {
       else
         setError(
           result.status === 403
-            ? 'Bạn không có quyền xem danh sách này.'
-            : 'Không tải được danh sách. Hãy thử lại.',
+            ? t('guests.list.forbidden')
+            : t('guests.list.loadFailed'),
         );
       setLoading(false);
     });
     return () => {
       active = false;
     };
-  }, [tenantId, eventId, kind, cursor, state, search, revision, allowed]);
+  }, [tenantId, eventId, kind, cursor, state, search, revision, allowed, t]);
 
   const reset = useCallback(() => {
     setCursors([null]);
@@ -303,17 +308,17 @@ export function GuestWorkspace({ tenantId, eventId, permissions }: Props) {
     {
       title:
         kind === 'tickets'
-          ? 'Mã vé'
+          ? t('guests.col.ticketId')
           : kind === 'redemptions'
-            ? 'Mã yêu cầu'
-            : 'Mã lời mời',
+            ? t('ops.h_k67vfi')
+            : t('ops.table.invitationId'),
       dataIndex: 'key',
       ellipsis: true,
       copyable: true,
       search: false,
     },
     {
-      title: 'Email (ẩn một phần)',
+      title: t('guests.col.emailMasked'),
       dataIndex: 'email',
       render: (_, row) => safeEmail(row.email),
       search: false,
@@ -321,16 +326,21 @@ export function GuestWorkspace({ tenantId, eventId, permissions }: Props) {
     {
       title:
         kind === 'tickets'
-          ? 'Trạng thái vé'
+          ? t('ops.export.ticketStates')
           : kind === 'redemptions'
-            ? 'Trạng thái yêu cầu'
-            : 'Trạng thái lời mời',
+            ? t('guests.col.requestState')
+            : t('guests.col.invitationState'),
       dataIndex: 'state',
       search: false,
     },
-    { title: 'Nguồn', dataIndex: 'sourceId', ellipsis: true, search: false },
     {
-      title: 'Loại vé',
+      title: t('ops.table.source'),
+      dataIndex: 'sourceId',
+      ellipsis: true,
+      search: false,
+    },
+    {
+      title: t('ops.table.ticketType'),
       dataIndex: 'ticketTypeId',
       ellipsis: true,
       search: false,
@@ -338,24 +348,24 @@ export function GuestWorkspace({ tenantId, eventId, permissions }: Props) {
     {
       title:
         kind === 'invitations'
-          ? 'Hết hạn'
+          ? t('ops.table.expires')
           : kind === 'redemptions'
-            ? 'Đã gửi'
-            : 'Đã cấp',
+            ? t('guests.col.sentAt')
+            : t('guests.col.issuedAt'),
       dataIndex: 'at',
-      render: (_, row) => formatAt(row.at),
+      render: (_, row) => formatAt(row.at, locale),
       search: false,
     },
     ...(kind === 'tickets'
       ? [
           {
-            title: 'Check-in',
+            title: t('analytics.col.checkIn'),
             dataIndex: 'checkInAt',
-            render: (_: unknown, row: Row) => formatAt(row.checkInAt),
+            render: (_: unknown, row: Row) => formatAt(row.checkInAt, locale),
             search: false,
           } as ProColumns<Row>,
           {
-            title: 'Thông báo',
+            title: t('guests.h_1avy3de'),
             dataIndex: 'notification',
             render: (_: unknown, row: Row) =>
               row.notification
@@ -366,11 +376,11 @@ export function GuestWorkspace({ tenantId, eventId, permissions }: Props) {
         ]
       : []),
     {
-      title: 'Chi tiết',
+      title: t('ops.table.timeline'),
       valueType: 'option',
       render: (_, row) => (
         <Button type="link" onClick={() => open(row)}>
-          Xem chi tiết
+          {t('guests.action.viewDetail')}
         </Button>
       ),
     },
@@ -395,7 +405,7 @@ export function GuestWorkspace({ tenantId, eventId, permissions }: Props) {
       <Space wrap style={{ marginBottom: 16 }}>
         {kind === 'invitations' ? (
           <Select
-            aria-label="Lọc trạng thái lời mời"
+            aria-label={t('guests.filter.invitationStateAria')}
             style={{ minWidth: 180 }}
             value={state}
             onChange={(value) => {
@@ -403,7 +413,7 @@ export function GuestWorkspace({ tenantId, eventId, permissions }: Props) {
               reset();
             }}
             options={[
-              { value: '', label: 'Mọi trạng thái' },
+              { value: '', label: t('guests.filter.allStates') },
               ...['PENDING', 'DISPATCHED', 'CLAIMED', 'EXPIRED', 'REVOKED'].map(
                 (value) => ({ value, label: value }),
               ),
@@ -412,8 +422,8 @@ export function GuestWorkspace({ tenantId, eventId, permissions }: Props) {
         ) : null}
         {kind === 'invitations' ? (
           <Input.Search
-            aria-label="Tìm lời mời theo mã trên máy chủ"
-            placeholder="Mã lời mời (UUID) chính xác"
+            aria-label={t('guests.search.invitationAria')}
+            placeholder={t('guests.search.invitationPlaceholder')}
             value={draft}
             onChange={(event) => {
               setDraft(event.target.value);
@@ -430,7 +440,7 @@ export function GuestWorkspace({ tenantId, eventId, permissions }: Props) {
               }
               const validated = validateInvitationIdSearch(next);
               if (!validated.ok) {
-                setError(validated.message);
+                setError(t('guests.search.invitationUuidHint'));
                 return;
               }
               setError(null);
@@ -445,12 +455,14 @@ export function GuestWorkspace({ tenantId, eventId, permissions }: Props) {
         {kind !== 'invitations' ? (
           <Input.Search
             aria-label={
-              kind === 'tickets' ? 'Tìm vé trên máy chủ' : 'Tìm yêu cầu theo mã'
+              kind === 'tickets'
+                ? t('guests.search.ticketAria')
+                : t('guests.search.redemptionAria')
             }
             placeholder={
               kind === 'tickets'
-                ? 'Mã vé (UUID) chính xác'
-                : 'Mã yêu cầu đầy đủ'
+                ? t('guests.search.ticketPlaceholder')
+                : t('guests.search.redemptionPlaceholder')
             }
             value={draft}
             onChange={(event) => {
@@ -462,7 +474,7 @@ export function GuestWorkspace({ tenantId, eventId, permissions }: Props) {
               if (kind === 'tickets' && next) {
                 const validated = validateTicketIdSearch(next);
                 if (!validated.ok) {
-                  setError(validated.message);
+                  setError(t('guests.search.ticketUuidHint'));
                   return;
                 }
                 setError(null);
@@ -472,7 +484,7 @@ export function GuestWorkspace({ tenantId, eventId, permissions }: Props) {
                 return;
               }
               if (kind === 'redemptions' && next && !TICKET_ID_UUID.test(next)) {
-                setError('Nhập mã yêu cầu đầy đủ để tìm kiếm.');
+                setError(t('guests.search.redemptionIdHint'));
                 return;
               }
               setError(null);
@@ -490,19 +502,17 @@ export function GuestWorkspace({ tenantId, eventId, permissions }: Props) {
             setRevision((value) => value + 1);
           }}
         >
-          Làm mới
+          {t('gate.h_3keb7')}
         </Button>
       </Space>
       {kind === 'invitations' ? (
         <Typography.Text type="secondary">
-          Tìm lời mời chỉ theo mã lời mời (UUID) chính xác; tìm email chưa hỗ
-          trợ. Danh sách không lọc vẫn phân trang trên máy chủ.
+          {t('guests.hint.invitationSearch')}
         </Typography.Text>
       ) : null}
       {kind === 'tickets' ? (
         <Typography.Text type="secondary">
-          Tìm vé chỉ theo mã vé (UUID) chính xác; tìm email hoặc mã đổi chưa hỗ
-          trợ. Danh sách không lọc vẫn phân trang trên máy chủ.
+          {t('guests.hint.ticketSearch')}
         </Typography.Text>
       ) : null}
       {error ? (
@@ -515,7 +525,7 @@ export function GuestWorkspace({ tenantId, eventId, permissions }: Props) {
               size="small"
               onClick={() => setRevision((value) => value + 1)}
             >
-              Thử lại
+              {t('surface.action.retry')}
             </Button>
           }
           style={{ marginTop: 12 }}
@@ -533,7 +543,7 @@ export function GuestWorkspace({ tenantId, eventId, permissions }: Props) {
           scroll={{ x: 1000 }}
           locale={{
             emptyText: (
-              <Empty description="Chưa có dữ liệu trong phạm vi lọc" />
+              <Empty description={t('guests.empty.filtered')} />
             ),
           }}
         />
@@ -544,9 +554,11 @@ export function GuestWorkspace({ tenantId, eventId, permissions }: Props) {
             disabled={loading || index === 0}
             onClick={() => setIndex((value) => value - 1)}
           >
-            Trang trước
+            {t('guests.page.prev')}
           </Button>
-          <Typography.Text>Trang {index + 1}</Typography.Text>
+          <Typography.Text>
+            {t('guests.page.current', { page: index + 1 })}
+          </Typography.Text>
           <Button
             disabled={
               loading || !page.nextCursor || uuidLookupActive
@@ -560,17 +572,17 @@ export function GuestWorkspace({ tenantId, eventId, permissions }: Props) {
               setIndex((value) => value + 1);
             }}
           >
-            Trang sau
+            {t('guests.page.next')}
           </Button>
         </Space>
       ) : null}
       <Drawer
         title={
           kind === 'tickets'
-            ? 'Chi tiết vé'
+            ? t('guests.drawer.ticket')
             : kind === 'redemptions'
-              ? 'Chi tiết yêu cầu'
-              : 'Chi tiết lời mời'
+              ? t('guests.drawer.request')
+              : t('guests.drawer.invitation')
         }
         open={selected !== null}
         onClose={() => {
@@ -587,10 +599,10 @@ export function GuestWorkspace({ tenantId, eventId, permissions }: Props) {
               size="small"
               bordered
               items={[
-                { key: 'id', label: 'Mã', children: selected.key },
+                { key: 'id', label: t('ops.table.id'), children: selected.key },
                 {
                   key: 'email',
-                  label: 'Email (ẩn một phần)',
+                  label: t('guests.col.emailMasked'),
                   children: safeEmail(
                     detail?.ownerEmailMasked ?? selected.email,
                   ),
@@ -599,30 +611,35 @@ export function GuestWorkspace({ tenantId, eventId, permissions }: Props) {
                   key: 'state',
                   label:
                     kind === 'tickets'
-                      ? 'Trạng thái vé'
+                      ? t('ops.export.ticketStates')
                       : kind === 'redemptions'
-                        ? 'Trạng thái yêu cầu'
-                        : 'Trạng thái lời mời',
+                        ? t('guests.col.requestState')
+                        : t('guests.col.invitationState'),
                   children: detail?.state ?? selected.state,
                 },
-                { key: 'source', label: 'Nguồn', children: selected.sourceId },
+                {
+                  key: 'source',
+                  label: t('ops.table.source'),
+                  children: selected.sourceId,
+                },
                 {
                   key: 'type',
-                  label: 'Loại vé',
+                  label: t('ops.table.ticketType'),
                   children: selected.ticketTypeId,
                 },
                 ...(kind === 'tickets'
                   ? [
                       {
                         key: 'checkin',
-                        label: 'Check-in',
+                        label: t('analytics.col.checkIn'),
                         children: formatAt(
                           detail?.lastCheckInAt ?? selected.checkInAt,
+                          locale,
                         ),
                       },
                       {
                         key: 'notification',
-                        label: 'Thông báo',
+                        label: t('guests.h_1avy3de'),
                         children: detail?.notification
                           ? `${detail.notification.channel}: ${detail.notification.providerStatus}`
                           : selected.notification
@@ -634,12 +651,12 @@ export function GuestWorkspace({ tenantId, eventId, permissions }: Props) {
               ]}
             />
             <Typography.Title level={5} style={{ marginTop: 24 }}>
-              Hoạt động
+              {t('guests.activity.title')}
             </Typography.Title>
             {detailLoading ? (
-              <Typography.Text>Đang tải hoạt động…</Typography.Text>
+              <Typography.Text>{t('guests.activity.loading')}</Typography.Text>
             ) : detailError ? (
-              <Alert type="error" message="Không tải được chi tiết vé." />
+              <Alert type="error" message={t('guests.detail.loadFailed')} />
             ) : (detail?.timeline ?? selected.timeline).length ? (
               <Timeline
                 items={(detail?.timeline ?? selected.timeline).map(
@@ -647,10 +664,14 @@ export function GuestWorkspace({ tenantId, eventId, permissions }: Props) {
                     key: `${item.at}-${position}`,
                     children: (
                       <>
-                        <strong>{item.summary}</strong>
+                        <strong>
+                          {isMessageKey(item.summary)
+                            ? t(item.summary)
+                            : item.summary}
+                        </strong>
                         <br />
                         <Typography.Text type="secondary">
-                          {item.kind} · {formatAt(item.at)}
+                          {item.kind} · {formatAt(item.at, locale)}
                         </Typography.Text>
                       </>
                     ),
@@ -658,7 +679,7 @@ export function GuestWorkspace({ tenantId, eventId, permissions }: Props) {
                 )}
               />
             ) : (
-              <Empty description="Chưa có hoạt động ghi nhận" />
+              <Empty description={t('guests.activity.empty')} />
             )}
           </>
         ) : null}
