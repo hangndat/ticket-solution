@@ -4,6 +4,8 @@ import { NOTIFICATION_KINDS, type NotificationKind } from '@ticket/contracts';
 import { Alert, Button, Input, Modal, Select, Space, Typography } from 'antd';
 import { useCallback, useEffect, useState } from 'react';
 import { portalGet, portalMutate } from '../../client/portal-fetch';
+import { useMutationIntent } from '../../client/use-mutation-intent';
+import { MutationIntentAlert } from '../../client/mutation-intent-alert';
 import {
   bffEvent,
   bffNotificationTemplatePreview,
@@ -25,10 +27,8 @@ import {
   isRevisionConflict,
   localDateTimeToUtcIso,
   reminderCancelLabel,
-  reminderCreateFingerprint,
   reminderCreateLabel,
   reminderPreviewLabel,
-  resolveNotificationIdempotencyKey,
   templatePreviewLabel,
   templatePublishLabel,
   type ReminderCancelView,
@@ -45,8 +45,6 @@ type Props = {
   busy: boolean;
   onBusy: (busy: boolean) => void;
 };
-
-type UnclearAttempt = { key: string; fingerprint: string; unclear: boolean };
 
 const SAMPLE_DEFAULTS: Record<string, string> = {
   eventName: 'Demo Event',
@@ -91,15 +89,9 @@ export function NotificationsTemplatesSection({
   const [reminderCancel, setReminderCancel] =
     useState<ReminderCancelView | null>(null);
   const [cancelReminderId, setCancelReminderId] = useState('');
-  const [createAttempt, setCreateAttempt] = useState<UnclearAttempt | null>(
-    null,
-  );
-  const [publishAttempt, setPublishAttempt] = useState<UnclearAttempt | null>(
-    null,
-  );
-  const [cancelAttempt, setCancelAttempt] = useState<UnclearAttempt | null>(
-    null,
-  );
+  const publishIntent = useMutationIntent(tenantId, eventId, 'template-publish');
+  const reminderCreateIntent = useMutationIntent(tenantId, eventId, 'reminder-create');
+  const reminderCancelIntent = useMutationIntent(tenantId, eventId, 'reminder-cancel');
 
   const loadRevision = useCallback(async () => {
     const result = await portalGet(bffEvent(tenantId, eventId));
@@ -175,30 +167,22 @@ export function NotificationsTemplatesSection({
   async function runPublish() {
     onBusy(true);
     setPublishView(null);
-    const fingerprint = [
-      'template.publish',
-      tenantId,
-      eventId,
-      kind,
-      subject,
-      bodyText,
-      bodyHtml,
-    ].join('|');
-    const { key } = resolveNotificationIdempotencyKey(
-      publishAttempt,
-      fingerprint,
-      () => crypto.randomUUID(),
+    const outcome = await publishIntent.run(
+      { kind, subject, bodyText, bodyHtml },
+      (body) => portalMutate(bffNotificationTemplatePublish(tenantId, eventId), body),
+      (response) => interpretTemplatePublish(
+        response.status,
+        response.json,
+        response.networkError || response.timedOut,
+        locale,
+      ).kind === 'published',
     );
-    const result = await portalMutate(
-      bffNotificationTemplatePublish(tenantId, eventId),
-      {
-        kind,
-        subject,
-        bodyText,
-        bodyHtml,
-        idempotencyKey: key,
-      },
-    );
+    if (outcome.kind === 'blocked') {
+      setPublishView({ kind: 'unknown', message: t('intent.blocked') });
+      onBusy(false);
+      return;
+    }
+    const result = outcome.response;
     const view = interpretTemplatePublish(
       result.status,
       result.json,
@@ -207,11 +191,6 @@ export function NotificationsTemplatesSection({
     );
     setPublishView(view);
     if (view.kind === 'published') setDirtyDraft(false);
-    setPublishAttempt({
-      key,
-      fingerprint,
-      unclear: view.kind === 'unknown',
-    });
     onBusy(false);
   }
 
@@ -269,24 +248,27 @@ export function NotificationsTemplatesSection({
       onBusy(false);
       return;
     }
-    const fingerprint = reminderCreateFingerprint({
-      tenantId,
-      eventId,
-      expectedEventRevision: eventRevision,
-      scheduledAt,
-    });
-    const { key } = resolveNotificationIdempotencyKey(
-      createAttempt,
-      fingerprint,
-      () => crypto.randomUUID(),
+    const outcome = await reminderCreateIntent.run(
+      {
+        expectedEventRevision: eventRevision,
+        scheduledAt,
+        kind: 'EventReminder',
+        audience: 'TICKET_OWNERS',
+      },
+      (body) => portalMutate(bffReminders(tenantId, eventId), body),
+      (response) => interpretReminderCreate(
+        response.status,
+        response.json,
+        response.networkError || response.timedOut,
+        locale,
+      ).kind === 'created',
     );
-    const result = await portalMutate(bffReminders(tenantId, eventId), {
-      expectedEventRevision: eventRevision,
-      scheduledAt,
-      kind: 'EventReminder',
-      audience: 'TICKET_OWNERS',
-      idempotencyKey: key,
-    });
+    if (outcome.kind === 'blocked') {
+      setReminderCreate({ kind: 'unknown', message: t('intent.blocked') });
+      onBusy(false);
+      return;
+    }
+    const result = outcome.response;
     const view = interpretReminderCreate(
       result.status,
       result.json,
@@ -294,11 +276,6 @@ export function NotificationsTemplatesSection({
       locale,
     );
     setReminderCreate(view);
-    setCreateAttempt({
-      key,
-      fingerprint,
-      unclear: view.kind === 'unknown',
-    });
     if (view.kind === 'created') {
       setDirtySchedule(false);
       setCancelReminderId(view.reminder.reminderId);
@@ -322,16 +299,24 @@ export function NotificationsTemplatesSection({
     onBusy(true);
     setReminderCancel(null);
     const rid = cancelReminderId.trim();
-    const fingerprint = ['reminder.cancel', tenantId, eventId, rid].join('|');
-    const { key } = resolveNotificationIdempotencyKey(
-      cancelAttempt,
-      fingerprint,
-      () => crypto.randomUUID(),
+    const outcome = await reminderCancelIntent.run(
+      { reminderId: rid },
+      (body) => portalMutate(bffReminderCancel(tenantId, eventId, rid), {
+        idempotencyKey: body.idempotencyKey,
+      }),
+      (response) => interpretReminderCancel(
+        response.status,
+        response.json,
+        response.networkError || response.timedOut,
+        locale,
+      ).kind === 'cancelled',
     );
-    const result = await portalMutate(
-      bffReminderCancel(tenantId, eventId, rid),
-      { idempotencyKey: key },
-    );
+    if (outcome.kind === 'blocked') {
+      setReminderCancel({ kind: 'unknown', message: t('intent.blocked') });
+      onBusy(false);
+      return;
+    }
+    const result = outcome.response;
     const view = interpretReminderCancel(
       result.status,
       result.json,
@@ -339,11 +324,6 @@ export function NotificationsTemplatesSection({
       locale,
     );
     setReminderCancel(view);
-    setCancelAttempt({
-      key,
-      fingerprint,
-      unclear: view.kind === 'unknown',
-    });
     onBusy(false);
   }
 
@@ -356,6 +336,24 @@ export function NotificationsTemplatesSection({
       size="large"
       style={{ width: '100%' }}
     >
+      <MutationIntentAlert
+        pending={publishIntent.pending}
+        needsReconciliation={publishIntent.needsReconciliation}
+        onCheck={() => void loadRevision()}
+        onStartNew={publishIntent.release}
+      />
+      <MutationIntentAlert
+        pending={reminderCreateIntent.pending}
+        needsReconciliation={reminderCreateIntent.needsReconciliation}
+        onCheck={() => void loadRevision()}
+        onStartNew={reminderCreateIntent.release}
+      />
+      <MutationIntentAlert
+        pending={reminderCancelIntent.pending}
+        needsReconciliation={reminderCancelIntent.needsReconciliation}
+        onCheck={() => void loadRevision()}
+        onStartNew={reminderCancelIntent.release}
+      />
       <Alert
         type="info"
         showIcon
