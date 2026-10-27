@@ -7,6 +7,7 @@ import {
 import {
   findOwnedTicket,
   normalizeTicketRouteId,
+  ticketDetailFromMeTicketsProbe,
   ticketDetailVerifiedScopes,
 } from './ticket-detail-lookup.ts';
 
@@ -44,6 +45,35 @@ test('verified owner-wide detail uses list session/cache keys, not last bind ten
   const boundOtherTenant = '99999999-9999-4999-8999-999999999999';
   assert.notEqual(scopes.sessionScope, boundOtherTenant);
   assert.notEqual(scopes.cacheScope, boundOtherTenant);
+});
+
+test('probe ok without the id is missing; probe fail is error not missing', () => {
+  assert.equal(
+    ticketDetailFromMeTicketsProbe(
+      { status: 'ok', body: { tickets: [hoiAn] } },
+      hoiAn.ticketId,
+    ).status,
+    'ready',
+  );
+  assert.equal(
+    ticketDetailFromMeTicketsProbe(
+      { status: 'ok', body: { tickets: [hoiAn] } },
+      '99999999-9999-4999-8999-999999999999',
+    ).status,
+    'missing',
+  );
+  assert.deepEqual(
+    ticketDetailFromMeTicketsProbe({ status: 'unreachable' }, hoiAn.ticketId),
+    { status: 'error', reason: 'unreachable' },
+  );
+  assert.deepEqual(
+    ticketDetailFromMeTicketsProbe({ status: 'unauthorized' }, hoiAn.ticketId),
+    { status: 'error', reason: 'unauthorized' },
+  );
+  assert.deepEqual(
+    ticketDetailFromMeTicketsProbe({ status: 'invalid' }, hoiAn.ticketId),
+    { status: 'error', reason: 'invalid' },
+  );
 });
 
 test('verified tenant-scoped detail keeps env tenant keys', () => {

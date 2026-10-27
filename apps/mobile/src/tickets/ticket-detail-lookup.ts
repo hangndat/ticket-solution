@@ -1,4 +1,5 @@
 import type { TicketSummary } from '@ticket/contracts';
+import type { MeTicketsProbeResult } from './fetch-me-tickets.ts';
 import {
   type MeTicketsFetchScope,
   walletDisplayCacheScope,
@@ -36,4 +37,27 @@ export function ticketDetailVerifiedScopes(fetchScope: MeTicketsFetchScope): {
     sessionScope: walletSessionScope(fetchScope),
     cacheScope: walletDisplayCacheScope(fetchScope),
   };
+}
+
+export type TicketDetailProbeOutcome =
+  | { status: 'ready'; ticket: TicketSummary }
+  | { status: 'missing' }
+  | {
+      status: 'error';
+      reason: 'unreachable' | 'unauthorized' | 'invalid';
+    };
+
+/**
+ * Probe fail is an error, not a silent «ticket not found».
+ * Missing only when GET /v1/me/tickets succeeded and the id is absent.
+ */
+export function ticketDetailFromMeTicketsProbe(
+  probe: MeTicketsProbeResult,
+  ticketId: string,
+): TicketDetailProbeOutcome {
+  if (probe.status === 'ok') {
+    const ticket = findOwnedTicket(probe.body.tickets, ticketId);
+    return ticket ? { status: 'ready', ticket } : { status: 'missing' };
+  }
+  return { status: 'error', reason: probe.status };
 }

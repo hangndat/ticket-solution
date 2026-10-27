@@ -39,8 +39,25 @@ test('wallet first-ticket push card copy has dismiss', () => {
 
 test('redeem global guest copy avoids internal session/memory jargon', () => {
   assert.match(redeemCopy.globalGuestBody, /mã/i);
+  assert.match(redeemCopy.globalGuestBody, /Nhập hoặc dán/);
   assert.doesNotMatch(redeemCopy.globalGuestBody, /bộ nhớ|URL|phiên|slug|UUID/i);
   assert.doesNotMatch(redeemCopy.authRequiredBody, /phiên/i);
+});
+
+test('redeem and events CTAs share Đổi mã lấy vé; lookup stays Tìm vé', () => {
+  assert.equal(redeemCopy.screenTitle, eventsCopy.redeemCta);
+  assert.equal(redeemCopy.screenTitle, 'Đổi mã lấy vé');
+  assert.equal(redeemCopy.lookupCta, 'Tìm vé');
+  assert.equal(redeemCopy.lookupAgainCta, 'Tìm lại');
+  assert.equal(redeemCopy.formSectionTitle, 'Thông tin bắt buộc');
+  assert.equal(redeemCopy.termsTitle, 'Điều khoản');
+  assert.equal(redeemCopy.requiredSuffix, '(bắt buộc)');
+});
+
+test('wallet detail probe error is not silent missing', () => {
+  assert.equal(walletCopy.detailMissingTitle, 'Không tìm thấy vé');
+  assert.equal(walletCopy.detailProbeErrorTitle, 'Không tải được vé');
+  assert.notEqual(walletCopy.detailProbeErrorTitle, walletCopy.detailMissingTitle);
 });
 
 test('events copy is production-facing without demo fallback language', () => {
