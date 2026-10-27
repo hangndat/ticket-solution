@@ -19,7 +19,10 @@ import {
   captureOfflineBindingEpoch
 } from '@/tickets/bind-after-verify';
 import { offlineDisplay } from '@/tickets/offline-display-session';
-import { tabDetailStackScreenOptions } from '@/navigation/tab-stack-options';
+import {
+  tabDetailStackScreenOptions,
+  tabRootStackScreenOptions,
+} from '@/navigation/tab-stack-options';
 
 const stackBackFromTabs = {
   ...tabDetailStackScreenOptions,
@@ -31,7 +34,11 @@ function AppStack() {
     <Stack>
       <Stack.Screen
         name="(tabs)"
-        options={{ headerShown: false, title: 'Sự kiện' }}
+        options={{
+          ...tabDetailStackScreenOptions,
+          headerShown: false,
+          title: 'Sự kiện',
+        }}
       />
       <Stack.Screen
         name="events/[tenantSlug]/[slug]"
@@ -73,23 +80,38 @@ function AppStack() {
       />
       <Stack.Screen
         name="membership-invite"
-        options={{ title: 'Lời mời thành viên' }}
+        options={{ ...stackBackFromTabs, title: 'Lời mời thành viên' }}
       />
       <Stack.Screen
         name="staff-access"
-        options={{ title: 'Nhân viên', headerLargeTitle: true }}
+        options={{
+          ...tabRootStackScreenOptions,
+          title: 'Nhân viên',
+        }}
       />
       <Stack.Screen
         name="staff-account"
-        options={{ headerShown: false, title: 'Tài khoản' }}
+        options={{
+          ...tabDetailStackScreenOptions,
+          headerShown: false,
+          title: 'Tài khoản',
+        }}
       />
       <Stack.Screen
         name="uat/session"
-        options={{ title: 'UAT session', headerShown: false }}
+        options={{
+          ...tabDetailStackScreenOptions,
+          title: 'UAT session',
+          headerShown: false,
+        }}
       />
       <Stack.Screen
         name="uat/gate-expo-ui"
-        options={{ title: 'UAT gate @expo/ui', headerShown: true }}
+        options={{
+          ...tabDetailStackScreenOptions,
+          title: 'UAT gate @expo/ui',
+          headerShown: true,
+        }}
       />
     </Stack>
   );

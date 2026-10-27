@@ -469,9 +469,6 @@ export function GlobalRedeemScreen() {
 
   return (
     <Page>
-      <Text accessibilityRole="header" style={{ color: colors.ink, ...typography.display }}>
-        {redeemCopy.screenTitle}
-      </Text>
       {!verified ? (
         <>
           <Notice title={redeemCopy.globalGuestTitle}>

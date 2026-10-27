@@ -8,7 +8,7 @@ import {
 import { router } from 'expo-router';
 import { AttendeeCta } from '@/components/attendee-cta';
 import { EventBanner, EventLogo } from '@/components/event-media';
-import { BrandWordmark, Notice, Page } from '@/components/page';
+import { Notice, Page } from '@/components/page';
 import {
   EmptyState,
   ErrorState,
@@ -123,7 +123,6 @@ function FixtureDemoDetail({
         >
           Demo · dữ liệu mẫu · chưa xuất bản
         </Text>
-        <BrandWordmark compact />
         <EventBanner
           eventId={event.id}
           tenantSlug={event.tenantSlug}

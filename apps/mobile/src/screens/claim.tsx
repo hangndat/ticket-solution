@@ -13,7 +13,7 @@ import {
 import { presentRedeemDecision } from '@/attendee/attendee-outcome-copy';
 import { useAttendeeSignIn } from '@/attendee/use-attendee-sign-in';
 import { AttendeeCta } from '@/components/attendee-cta';
-import { BrandWordmark, Notice, Page } from '@/components/page';
+import { Notice, Page } from '@/components/page';
 import { getApiBaseUrl } from '@/identity/config';
 import { session } from '@/identity/session';
 import { fetchPublishedEventDetail } from '@/published/published-event-api';
@@ -34,7 +34,7 @@ import { ticketDetailHref } from '@/tickets/ticket-detail-href';
 import { fetchOwnerRedemptionStatus } from '@/redeem/owner-status';
 import type { RedeemDecision } from '@/redeem/redeem-client';
 import { RedeemFormFields } from '@/redeem/redeem-form-fields';
-import { brand, colors } from '@/theme/colors';
+import { colors } from '@/theme/colors';
 import { fontFamilies } from '@/theme/fonts';
 import { typography } from '@/theme/typography';
 import { space } from '@/theme/tokens';
@@ -333,13 +333,6 @@ export function ClaimScreen() {
 
   return (
     <Page>
-      <BrandWordmark compact />
-      <Text
-        accessibilityRole="header"
-        style={{ color: brand.ink, ...typography.display }}
-      >
-        Nhận vé mời
-      </Text>
       <Text style={{ color: colors.secondary, ...typography.body }}>
         Chỉ email đã được mời và xác minh. Sau đăng nhập quay lại đây để hoàn
         tất; dữ liệu tạm xoá khi đăng xuất hoặc đổi tài khoản.
