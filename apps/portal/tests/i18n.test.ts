@@ -193,6 +193,20 @@ test('locale storage round-trip (no DOM: localStorage stub, default without cook
   }
 });
 
+test('S5 user copy on touched screens has no raw API codes', () => {
+  const keys = [
+    'members.roles.lastOwnerBody',
+    'limits.guidance.resendLimitBody',
+    'limits.guidance.tenantReachedBody',
+    'overview.help',
+    'members.help',
+  ] as const;
+  for (const key of keys) {
+    assert.doesNotMatch(t('vi', key), /LAST_OWNER_REQUIRED|RESEND_LIMIT|TENANT_LIMIT_REACHED|MembershipRole/);
+    assert.doesNotMatch(t('en', key), /LAST_OWNER_REQUIRED|RESEND_LIMIT|TENANT_LIMIT_REACHED|MembershipRole/);
+  }
+});
+
 test('ops helpers: locale param switches catalog, default stays vi', async () => {
   const { interpretPendingList, pendingListLabel } = await import('../src/ops/pending');
   const vi = interpretPendingList(503, null, false);

@@ -7,6 +7,7 @@ import {
 } from './contract-shape';
 import { t } from '../i18n/t';
 import { DEFAULT_PORTAL_LOCALE, type PortalLocale } from '../i18n/locale';
+import { formatLimitGuidance } from './limit-guidance';
 
 type EventScope = { tenantId: string; eventId: string };
 
@@ -308,7 +309,8 @@ export function csResendRejectedLabel(code: string, message: string, locale: Por
     return t(locale, 'ops.notifications.resendCooldown', { seconds: CS_RESEND_COOLDOWN_SECONDS });
   }
   if (code === 'RESEND_LIMIT') {
-    return t(locale, 'ops.h_11ovicf');
+    const guided = formatLimitGuidance(code, locale);
+    return guided ? `${guided.title}. ${guided.body}` : t(locale, 'limits.guidance.resendLimitBody');
   }
   if (code === 'PERMISSION_DENIED') {
     return t(locale, 'ops.h_r6ag2k');

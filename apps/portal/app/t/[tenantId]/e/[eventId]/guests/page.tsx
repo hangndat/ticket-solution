@@ -21,6 +21,7 @@ import { usePortalLocale } from '../../../../../../src/i18n';
 import { SURFACE_MESSAGE_KEYS } from '../../../../../../src/prep/surface-copy';
 import { useCompactChrome } from '../../../../../../src/hooks/use-compact-chrome';
 import { GuestWorkspace } from '../../../../../../src/guests/guest-workspace';
+import { InContextHelp } from '../../../../../../src/components/in-context-help';
 
 type CatalogItem = { id: string; label: string };
 
@@ -289,6 +290,7 @@ export default function EventGuestsPage() {
       title={t(compactChrome ? 'nav.event.guestsCompact' : 'nav.event.guests')}
       subTitle={compactChrome ? undefined : t('guests.h_1tkjxlx')}
     >
+      <InContextHelp messageKey="help.guests" testId="guests-help" />
       {catalogError ? (
         <Alert type="warning" showIcon message={catalogError} />
       ) : null}

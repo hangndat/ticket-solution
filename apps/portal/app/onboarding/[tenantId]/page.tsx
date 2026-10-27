@@ -31,6 +31,7 @@ import { usePortalUserId } from '../../../src/views/use-portal-user-id';
 import { useMutationIntent } from '../../../src/client/use-mutation-intent';
 import { MutationIntentAlert } from '../../../src/client/mutation-intent-alert';
 import { inviteDeliveryFailed, inviteQueued } from '../../../src/client/invite-outcome';
+import { InContextHelp } from '../../../src/components/in-context-help';
 
 type Branding = {
   displayName: string;
@@ -257,7 +258,7 @@ export default function TenantOnboardingPage() {
         role,
       }, (body) => portalMutate(bffInvites(tenantId), body), inviteQueued);
       if (outcome.kind === 'blocked') {
-        setNotice('Lời mời trước chưa rõ kết quả. Kiểm tra danh sách lời mời trước khi tiếp tục.');
+        setNotice(t('onboarding.intent.inviteUnknown'));
         return;
       }
       const res = outcome.response;
@@ -271,7 +272,7 @@ export default function TenantOnboardingPage() {
         return;
       }
       if (inviteDeliveryFailed(res)) {
-        setNotice('Lời mời đã tạo nhưng email thất bại. Kiểm tra danh sách lời mời trước khi tiếp tục.');
+        setNotice(t('members.intent.inviteDeliveryFailed'));
         return;
       }
       if (!inviteQueued(res)) {
@@ -407,7 +408,8 @@ export default function TenantOnboardingPage() {
           ]}
         />
 
-        {notice ? (
+        <InContextHelp messageKey="onboarding.help" testId="onboarding-help" />
+         {notice ? (
           <Alert type="error" showIcon message={notice} role="alert" />
         ) : null}
         <MutationIntentAlert pending={inviteIntent.pending} needsReconciliation={inviteIntent.needsReconciliation}

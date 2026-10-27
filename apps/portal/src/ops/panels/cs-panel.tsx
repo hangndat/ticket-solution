@@ -19,6 +19,7 @@ import {
 } from '../cs';
 import { usePortalLocale } from '../../i18n';
 import { SavedViewsToolbar } from '../../views';
+import { InContextHelp } from '../../components/in-context-help';
 
 type Props = {
   tenantId: string;
@@ -164,6 +165,7 @@ export function CsPanel({ tenantId, eventId, canCs }: Props) {
   return (
     <div id="cs">
       <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+        <InContextHelp messageKey="help.cs" testId="cs-help" />
         <Alert
           type="info"
           showIcon
