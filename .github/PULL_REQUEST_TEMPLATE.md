@@ -15,7 +15,7 @@
 - [ ] Một ownership slice (không trộn BE+web+iOS trên cùng PR trừ khi coordinator contract)
 - [ ] Không secrets / `.env` / credential thật
 - [ ] CI kỳ vọng xanh trên SHA tip (hoặc ghi rõ docs-only / không chạy runtime)
-- [ ] Đã hoặc sẽ spawn **Cursor DoD reviewer độc lập** (≠ session implementer) với exact SHA trên
+- [ ] Nhánh B (product rủi ro): spawn reviewer độc lập với exact SHA. Nhánh A (docs/tooling): coordinator tự kiểm + SHA, không reviewer
 - [ ] Security-sensitive (RLS/authz/race): có gate review riêng nếu áp dụng
 
 ## Checklist UI (khi đụng `apps/web`, `packages/ui`, `apps/mobile`)
