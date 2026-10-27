@@ -32,3 +32,5 @@ Chỉ user demo trong catalog. Không tạo user mới trên realm production tr
 ## Kết quả
 
 Một review file mới theo role. Verdict launch là `GO` hoặc `NO-GO`. `PASS with known gap` của DoD cũ không được nâng thành `GO`.
+
+Epic [#914](https://github.com/hangndat/ticket-solution/issues/914) / S6: **iOS VoiceOver ngoài phạm vi / quyết định owner** — không phải case catalog, không known gap, không chặn đóng Epic.

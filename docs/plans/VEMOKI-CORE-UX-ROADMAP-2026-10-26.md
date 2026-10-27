@@ -45,14 +45,14 @@ Cột "Tái hiện": **Có (code)** = kết luận xác định từ luồng cod
 
 - **Trong phạm vi:** S0–S6 theo roadmap user; mọi task bám contract/API hiện có, chỉ thêm endpoint khi S0-T03 chốt contract.
 - **Deferred / On request (không estimate, không dispatch):** payment/refund, kiosk, in thẻ, quay số, quiz, marketplace, editor kéo-thả tổng quát.
-- **Non-goal giữ nguyên:** Android native, Web Gate admission, transfer, seat map, Wallet; không Zalo/ZNS, custom-domain/sender, CRM, SSO; không billing/paywall/pricing tiers, không claim unlimited/trọn đời/SLA.
+- **Non-goal giữ nguyên:** Android native, Web Gate admission, transfer, seat map, Wallet; không Zalo/ZNS, custom-domain/sender, CRM, SSO; không billing/paywall/pricing tiers, không claim unlimited/trọn đời/SLA; **iOS VoiceOver ngoài phạm vi #914 / quyết định owner** (không AC S4/S6).
 - **Nợ hoãn giữ tách biệt:** #901, #903, #904, AR891-INT-F01 — không tạo task cùng việc.
 
 | Blocker | Chặn gì | Owner | Điều kiện mở |
 | --- | --- | --- | --- |
 | B-01 Persona fixture (G-11) | Runtime acceptance S1–S6, #880/#889 | Noah (S0-T04), Minh điều phối | S0-T04 merge + reviewer PASS |
 | B-02 AR891-INT-F01 (hoãn) | Evidence production-like cho public/platform; và **bất kỳ task nào** nếu lỗi tái hiện trên stack local (vd. public event pages, onboarding/platform) | Minh | Nợ giữ hoãn. Khi tái hiện: ghi task `Bị chặn` + bằng chứng (route, role DB, SHA) + owner Minh; resume chỉ khi user ưu tiên lại #901/#904/INT-F01. Không sửa vòng, không cấp thêm role, không owner/BYPASSRLS |
-| B-03 Thiết bị thật | Camera/QR/offline/VoiceOver S4/S6 | User cầm máy + Zico | Có phiên thiết bị; simulator không thay evidence |
+| B-03 Thiết bị thật | Camera/QR/offline S4/S6 | User cầm máy + Zico | Có phiên thiết bị; simulator không thay evidence. **iOS VoiceOver ngoài phạm vi #914 / quyết định owner** — không AC, không known gap, không follow-up Epic này |
 | B-04 Kênh email thật | Evidence inbox S5 | Minh | Task ủy quyền riêng; Mailpit chỉ là evidence local |
 
 ## 4. Roadmap, AC và ownership
@@ -118,7 +118,7 @@ AC: Manager phát vé → attendee thấy vé → Staff xác nhận → Portal p
 ### S6 — Nghiệm thu phạm vi mới
 
 - **T01** (James, `dod+sec`) functional/security/recovery trên exact SHA tích hợp: fixture S0-T04, role matrix, pagination, timeout/retry/recovery, stale, permissions, cross-tenant.
-- **T02** (Mira, `ux`) a11y/responsive/interaction trong browser: keyboard, focus, label, contrast, zoom, 320–1440, empty/error/unknown.
+- **T02** (Mira, `ux`) a11y/responsive/interaction trong browser: keyboard, focus, label, contrast, zoom, 320–1440, empty/error/unknown. Không gồm iOS VoiceOver (ngoài phạm vi #914 / quyết định owner).
 - **T03** (Minh) đóng finding theo review-convergence, CI, docs/runbook/demo script, kết luận code complete / acceptance complete trong scope / release blockers / pilot readiness.
 
 T01 và T02 dùng **chung một evidence matrix** (route × persona × state × viewport/locale × SHA), mỗi bên chỉ kết luận checklist của mình. Evidence chuyển sang Issue cũ (#880/#881/#879/#882/#889) chỉ khi khớp đúng SHA, môi trường, persona, viewport/locale và AC của Issue đó; tiêu chí ngoài scope (vd. cold-offline web) ghi "ngoài scope theo O25", không PASS. S6 không thay #901/#903/#904; nghiệm thu local không là giấy phép pilot.
@@ -163,7 +163,7 @@ WIP đầy (≥3 Chờ duyệt, ≥2 PR/slice chờ merge, ≥4 PR thiếu DoD+C
 | Portal UI khác | James · `dod+ux` | Như trên, states empty/error/unknown/stale |
 | Backend (S3-T01, backend limits nếu có) | James · `dod+sec` | test API + DB/RLS negative tenant; không BYPASSRLS; CI turbo |
 | Web attendee | James · `dod+sec+ux` | `pnpm --filter @ticket/web lint typecheck test build`; Orca browser owner/guest |
-| iOS | James · `dod+sec+ux` | local prebuild + `xcodebuild` (không EAS); Orca emulator; thiết bị thật cho camera/offline |
+| iOS | James · `dod+sec+ux` | local prebuild + `xcodebuild` (không EAS); Orca emulator; thiết bị thật cho camera/offline. Không VoiceOver (#914 ngoài phạm vi / quyết định owner) |
 | Contract (S0-T03) | James · `dod+sec` | Security checklist; đối chiếu contract/DECISION-LOG/API hiện có |
 | Handoff PD (S0-T02) | Mira · `ux` | Đối chiếu O18/O23 |
 | Fixture tooling (S0-T04) | James · `dod+sec` | dữ liệu giả, negative access, reset giới hạn namespace, không secret commit, không đổi role DB |
@@ -195,4 +195,4 @@ Status từng item: xem Project #3 (nguồn duy nhất). Mapping với việc hi
 
 ## 9. Quyết định đã chốt trong vòng duyệt 26/10/2026
 
-Ghi tại [O25](../DECISION-LOG.md): (1) `apps/portal` và `apps/web` là hai slice riêng; (2) attendee web cần mạng để tải vé lần đầu, không cold-offline web/PWA/cache trong Epic #914, iOS offline chỉ dữ liệu đã tải theo contract hiện hành. Không còn quyết định mở chặn W1.
+Ghi tại [O25](../DECISION-LOG.md): (1) `apps/portal` và `apps/web` là hai slice riêng; (2) attendee web cần mạng để tải vé lần đầu, không cold-offline web/PWA/cache trong Epic #914, iOS offline chỉ dữ liệu đã tải theo contract hiện hành; (3) iOS VoiceOver ngoài phạm vi #914. Không còn quyết định mở chặn W1.

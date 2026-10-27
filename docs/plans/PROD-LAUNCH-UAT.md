@@ -4,7 +4,7 @@ Ngày thiết kế: 2026-10-19.
 Trạng thái: **thiết kế, chưa chạy đợt này.**
 Role thực thi: [`launch-uat`](../agents/roles/launch-uat.md) · skill `.cursor/skills/launch-uat/SKILL.md`.
 
-Đợt này trả lời một câu: **có được tuyên bố pilot ready / mở launch production không.** Không thay DoD từng PR (`reviewer-dod`) và không thay review bảo mật code (`reviewer-security`).
+Đợt này trả lời một câu: **có được tuyên bố pilot ready / mở launch production không.** Không thay DoD từng PR (`reviewer-dod`) và không thay review bảo mật code (`reviewer-security`). **iOS VoiceOver ngoài phạm vi Epic #914 / quyết định owner** — không thêm case catalog, không chặn đóng #914.
 
 ## 1. Ba mức — đợt này chỉ chấm mức 3
 
