@@ -76,11 +76,15 @@ async function runViewport(page, label, width, height) {
   await page.goto(`${BASE}/`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
   await page.waitForSelector('[data-testid="site-nav"]', { timeout: 30_000 });
 
-  const account = page.locator('[data-testid="nav-account"]');
-  if ((await account.count()) === 0) die(`${label}: missing nav-account link`);
-  const accountText = (await account.first().textContent())?.trim() ?? '';
-  if (!accountText.includes('Tài khoản')) {
-    die(`${label}: nav-account label expected «Tài khoản», got «${accountText}»`);
+  const login = page.locator('[data-testid="nav-login"]');
+  if ((await login.count()) === 0) die(`${label}: missing nav-login link`);
+  const loginText = (await login.first().textContent())?.trim() ?? '';
+  if (!loginText.includes('Đăng nhập')) {
+    die(`${label}: nav-login label expected «Đăng nhập», got «${loginText}»`);
+  }
+  const loginHref = (await login.first().getAttribute('href')) ?? '';
+  if (!loginHref.startsWith('/api/auth/login')) {
+    die(`${label}: nav-login must start PKCE, got «${loginHref}»`);
   }
 
   const footer = page.locator('[data-testid="site-footer"]');
