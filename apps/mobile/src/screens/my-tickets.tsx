@@ -124,7 +124,13 @@ function TicketRow({ ticket }: { ticket: TicketSummary }) {
   const [focused, setFocused] = useState(false);
   const row = presentTicketRow(ticket);
   return (
-    <Link href={`/my-tickets/${ticket.ticketId}`} asChild>
+    <Link
+      href={{
+        pathname: '/my-tickets/[ticketId]',
+        params: { ticketId: ticket.ticketId },
+      }}
+      asChild
+    >
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={row.accessibilityLabel}
