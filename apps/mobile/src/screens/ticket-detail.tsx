@@ -17,10 +17,16 @@ import { hasDemoMediaForEventId } from '@/data/demo-media';
 import { findDemoEventById } from '@/data/demo-events';
 import { brand, colors } from '@/theme/colors';
 import { typography } from '@/theme/typography';
-import { getTenantId } from '@/identity/config';
 import { session } from '@/identity/session';
 import { buildDisplayQrPayload } from '@/tickets/display-payload';
 import { readTicketDisplayCache } from '@/tickets/display-cache';
+import { probeMeTickets } from '@/tickets/fetch-me-tickets';
+import {
+  findOwnedTicket,
+  normalizeTicketRouteId,
+  ticketDetailVerifiedScopes,
+} from '@/tickets/ticket-detail-lookup';
+import { walletFetchScopeFromEnv } from '@/tickets/wallet-fetch-scope';
 import { offlineDisplay } from '@/tickets/offline-display-session';
 import { walletOfflineNoticeBody } from '@/tickets/wallet-sync-display';
 import { space, radius } from '@/theme/tokens';
@@ -58,7 +64,8 @@ function loadMatchesOwner(
 }
 
 export function TicketDetailScreen() {
-  const { ticketId } = useLocalSearchParams<{ ticketId: string }>();
+  const params = useLocalSearchParams<{ ticketId?: string | string[] }>();
+  const ticketId = normalizeTicketRouteId(params.ticketId);
   const identity = useSyncExternalStore(
     session.subscribe,
     session.getSnapshot,
@@ -69,7 +76,11 @@ export function TicketDetailScreen() {
     offlineDisplay.getSnapshot,
     offlineDisplay.getSnapshot,
   );
-  const envTenantId = getTenantId();
+  const fetchScope = useMemo(() => walletFetchScopeFromEnv(), []);
+  const verifiedScopes = useMemo(
+    () => ticketDetailVerifiedScopes(fetchScope),
+    [fetchScope],
+  );
   const [load, setLoad] = useState<LoadState>({ status: 'idle' });
 
   const verifiedUserId =
@@ -78,8 +89,12 @@ export function TicketDetailScreen() {
   const offlineTenantId = offline.status === 'bound' ? offline.tenantId : null;
 
   const displayUserId = verifiedUserId ?? offlineUserId;
-  const displayTenantId =
-    (verifiedUserId ? envTenantId : null) ?? offlineTenantId;
+  const lookupSessionScope = verifiedUserId
+    ? verifiedScopes.sessionScope
+    : offlineTenantId;
+  const lookupCacheScope = verifiedUserId
+    ? verifiedScopes.cacheScope
+    : offlineTenantId;
   const displayMode: 'verified' | 'offline-display' | null = verifiedUserId
     ? 'verified'
     : offlineUserId
@@ -87,16 +102,16 @@ export function TicketDetailScreen() {
       : null;
 
   const owner = useMemo<LoadOwner | null>(() => {
-    if (!displayUserId || !displayTenantId || !ticketId || !displayMode) {
+    if (!displayUserId || !lookupCacheScope || !ticketId || !displayMode) {
       return null;
     }
     return {
       ownerUserId: displayUserId,
-      ownerTenantId: displayTenantId,
+      ownerTenantId: lookupCacheScope,
       ticketId,
       mode: displayMode
     };
-  }, [displayMode, displayTenantId, displayUserId, ticketId]);
+  }, [displayMode, displayUserId, lookupCacheScope, ticketId]);
 
   // Refuse stale ready state immediately on identity switch — do not wait for
   // useEffect to clear, or one frame can render account A's QR under B.
@@ -106,18 +121,26 @@ export function TicketDetailScreen() {
   );
 
   useEffect(() => {
-    if (!displayUserId || !displayTenantId || !ticketId || !displayMode) {
+    if (
+      !displayUserId ||
+      !lookupCacheScope ||
+      !lookupSessionScope ||
+      !ticketId ||
+      !displayMode
+    ) {
       return;
     }
     const ownerUserId = displayUserId;
-    const ownerTenantId = displayTenantId;
+    const ownerTenantId = lookupCacheScope;
     const id = ticketId;
     const mode = displayMode;
+    const sessionScope = lookupSessionScope;
+    const cacheScope = lookupCacheScope;
     let cancelled = false;
     void (async () => {
       if (mode === 'verified') {
-        const memory = session.read<TicketSummary[]>(ownerTenantId, 'me-tickets');
-        const fromMemory = memory?.find((t) => t.ticketId === id) ?? null;
+        const memory = session.read<TicketSummary[]>(sessionScope, 'me-tickets');
+        const fromMemory = findOwnedTicket(memory, id);
         if (fromMemory) {
           if (!cancelled) {
             setLoad({
@@ -134,8 +157,8 @@ export function TicketDetailScreen() {
           return;
         }
       }
-      const cache = await readTicketDisplayCache(ownerUserId, ownerTenantId);
-      const found = cache?.tickets.find((t) => t.ticketId === id) ?? null;
+      const cache = await readTicketDisplayCache(ownerUserId, cacheScope);
+      const found = findOwnedTicket(cache?.tickets, id);
       if (cancelled) return;
       if (found) {
         setLoad({
@@ -148,20 +171,57 @@ export function TicketDetailScreen() {
           ticketId: id,
           mode
         });
-      } else {
-        setLoad({
-          status: 'missing',
-          ownerUserId,
-          ownerTenantId,
-          ticketId: id,
-          mode
-        });
+        return;
       }
+      if (mode === 'verified') {
+        const credential = await session.resolveCredential();
+        if (cancelled) return;
+        if (credential.status !== 'unavailable') {
+          const probe =
+            credential.status === 'refresh-unreachable'
+              ? ({ status: 'unreachable' } as const)
+              : await probeMeTickets(credential.accessToken, fetchScope);
+          if (cancelled) return;
+          if (probe.status === 'ok') {
+            const live = findOwnedTicket(probe.body.tickets, id);
+            if (live) {
+              await session.load(sessionScope, 'me-tickets', async () => probe.body.tickets);
+              if (cancelled) return;
+              setLoad({
+                status: 'ready',
+                ticket: live,
+                syncedAt: new Date().toISOString(),
+                fromCache: false,
+                ownerUserId,
+                ownerTenantId,
+                ticketId: id,
+                mode
+              });
+              return;
+            }
+          }
+        }
+      }
+      if (cancelled) return;
+      setLoad({
+        status: 'missing',
+        ownerUserId,
+        ownerTenantId,
+        ticketId: id,
+        mode
+      });
     })();
     return () => {
       cancelled = true;
     };
-  }, [displayMode, displayTenantId, displayUserId, ticketId]);
+  }, [
+    displayMode,
+    displayUserId,
+    fetchScope,
+    lookupCacheScope,
+    lookupSessionScope,
+    ticketId,
+  ]);
 
   const qrValue = useMemo(
     () =>

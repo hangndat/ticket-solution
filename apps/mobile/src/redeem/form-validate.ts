@@ -188,7 +188,7 @@ export function requireTermsConsent(input: {
     return {
       fieldId: 'terms',
       code: 'TERMS_REQUIRED',
-      message: 'You must accept the published terms to continue.',
+      message: 'Cần đồng ý điều khoản đã công bố.',
     };
   }
   return null;

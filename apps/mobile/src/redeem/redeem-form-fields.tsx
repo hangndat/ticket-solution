@@ -1,5 +1,4 @@
-import { Host, Switch } from '@expo/ui';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Switch, Text, View } from 'react-native';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { colors } from '@/theme/colors';
@@ -83,14 +82,19 @@ export function RedeemFormFields({
               {termsBody}
             </Text>
           ) : null}
-          <Host matchContents>
+          <View style={styles.switchRow}>
+            <Text
+              style={{ ...typography.callout, color: colors.label, flex: 1 }}
+            >
+              Tôi đồng ý điều khoản đã công bố
+            </Text>
             <Switch
-              label="I accept these published terms"
               value={termsAccepted}
               disabled={disabled}
               onValueChange={onTermsAcceptedChange}
+              accessibilityLabel="Tôi đồng ý điều khoản đã công bố"
             />
-          </Host>
+          </View>
           {fieldErrors?.terms ? (
             <Text
               accessibilityRole="alert"
@@ -124,14 +128,19 @@ function FieldControl({
     const checked = value === true;
     return (
       <View style={{ gap: space.sm }}>
-        <Host matchContents>
+        <View style={styles.switchRow}>
+          <Text
+            style={{ ...typography.callout, color: colors.label, flex: 1 }}
+          >
+            {label}
+          </Text>
           <Switch
-            label={label}
             value={checked}
             disabled={disabled}
             onValueChange={(next) => onChange(next)}
+            accessibilityLabel={label}
           />
-        </Host>
+        </View>
         {error ? <ErrorText message={error} /> : null}
       </View>
     );
@@ -200,6 +209,12 @@ const styles = StyleSheet.create({
   stack: { gap: space.lg },
   section: { gap: space.md },
   termsBlock: { gap: space.sm + 2 },
+  switchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.md,
+    minHeight: 44
+  },
   selectBlock: { gap: space.sm },
   selectOptions: { gap: space.sm },
   selectOption: { alignSelf: 'stretch' },
