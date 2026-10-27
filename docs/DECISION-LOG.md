@@ -19,10 +19,11 @@ Owner chốt trên Epic [#914](https://github.com/hangndat/ticket-solution/issue
 | 5 | Headers | Attendee dùng cùng native large-title chrome như staff History/Manual (`tabRootStackScreenOptions`). |
 | 6 | USB / máy thật | Hai mode (prod extras vs local API) trong [`.cursor/skills/ios-usb-device/SKILL.md`](../.cursor/skills/ios-usb-device/SKILL.md). Không EAS Cloud Build. |
 | 7 | Staff đổi sự kiện | Scan và tab staff khác dùng `StaffGateScreenChrome`: bộ đổi sự kiện **chỉ trên header**, icon SF (không text-only). **Bỏ** picker sự kiện trùng trong body. |
+| 8 | Banner sự kiện | Banner **đơn giản, theo từng sự kiện** (ảnh hoặc brand token của event đó). Catalog **không** tô cả list bằng event đầu. List / detail / ticket dùng **một** nhịp banner khiêm tốn. |
 
-Thay các AC/UAT cũ yêu cầu catalog guest 2–3 tab (Sự kiện/Tài khoản/Vé), privacy WebView, hoặc picker sự kiện staff trong body. Không đảo O23 (Gate chỉ iOS Staff) hay O25 ownership/offline.
+Thay các AC/UAT cũ yêu cầu catalog guest 2–3 tab (Sự kiện/Tài khoản/Vé), privacy WebView, picker sự kiện staff trong body, hoặc catalog nhuộm full-list từ event đầu. Không đảo O23 (Gate chỉ iOS Staff) hay O25 ownership/offline.
 
-Architecture impact: **Có** đối với navigation chrome iOS (IA/header/privacy/staff event switcher); commit docs này **không** đổi runtime. Approval ≠ code complete ≠ acceptance complete ≠ pilot ready.
+Architecture impact: **Có** đối với navigation chrome iOS (IA/header/privacy/staff event switcher/banner per-event); commit docs này **không** đổi runtime. Approval ≠ code complete ≠ acceptance complete ≠ pilot ready.
 
 ## O26 — Portal dùng giao diện mặc định Ant Design (26/10/2026)
 
