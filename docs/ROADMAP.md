@@ -1,6 +1,6 @@
 # Roadmap — Event Ticketing Platform
 
-> **Mới 26/10/2026 — O25 / Epic [#914](https://github.com/hangndat/ticket-solution/issues/914):** hoàn thiện sản phẩm cốt lõi và UX tự phục vụ. Roadmap thực thi canonical: [`plans/VEMOKI-CORE-UX-ROADMAP-2026-10-26.md`](./plans/VEMOKI-CORE-UX-ROADMAP-2026-10-26.md). `apps/portal` và `apps/web` là hai slice riêng; attendee web không cold-offline trong Epic này. Nợ #901/#903/#904/AR891-INT-F01 vẫn hoãn.
+> **Mới 26/10/2026 — O25 / Epic [#914](https://github.com/hangndat/ticket-solution/issues/914):** hoàn thiện sản phẩm cốt lõi và UX tự phục vụ. Roadmap thực thi canonical: [`plans/VEMOKI-CORE-UX-ROADMAP-2026-10-26.md`](./plans/VEMOKI-CORE-UX-ROADMAP-2026-10-26.md). `apps/portal` và `apps/web` là hai slice riêng; attendee web không cold-offline trong Epic này. Nợ #901/#903/#904/AR891-INT-F01 vẫn hoãn. **iOS VoiceOver ngoài phạm vi #914 / quyết định owner** — không AC S6/UAT, không known gap.
 
 > **Quyết định mới 24/10/2026 — O23:** bỏ Web Gate, Gate admission chỉ trên iOS Staff. Hướng thiết kế tại [`vemoki-unified-v1`](./design/vemoki-unified-v1/README.md) được chốt ở mức design; các checkpoint Web Gate lịch sử bên dưới giữ làm bằng chứng phạm vi cũ. D-6 đã xóa route `/gate` web; các link/copy cũ và direct-route behavior cần Task Spec, contract/ADR, review và nghiệm thu riêng trước khi coi migration hoàn tất. Chưa coi là acceptance complete hay pilot ready.
 
