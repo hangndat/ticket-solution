@@ -11,6 +11,7 @@ import {
   LoadingState
 } from '@/components/screen-state';
 import { eventsCopy } from '@/components/screen-state-copy';
+import { TabStackTitle } from '@/navigation/tab-stack-title';
 import { fetchPlatformPublishedEventList } from '@/published/published-event-api';
 import {
   initialPublishedListPhase,
@@ -211,25 +212,14 @@ export function EventsScreen() {
   const listHeader = (
     <View style={{ gap: space.md, paddingBottom: space.xs }}>
       {showCatalogChrome ? (
-        <View style={{ gap: space.xs }}>
-          <Text
-            accessibilityRole="header"
-            maxFontSizeMultiplier={2}
-            style={{ ...typography.hero, color: brand.ink,
-              fontFamily: fontFamilies.display,
-              letterSpacing: -0.5 }}
-          >
-            {eventsCopy.listHeadline}
-          </Text>
-          <Text
-            maxFontSizeMultiplier={2}
-            style={{ ...typography.subhead, color: colors.secondary,
-              fontFamily: fontFamilies.body,
-              lineHeight: 22 }}
-          >
-            {eventsCopy.heroSupport}
-          </Text>
-        </View>
+        <Text
+          maxFontSizeMultiplier={2}
+          style={{ ...typography.subhead, color: colors.secondary,
+            fontFamily: fontFamilies.body,
+            lineHeight: 22 }}
+        >
+          {eventsCopy.heroSupport}
+        </Text>
       ) : null}
       {showCatalogChrome ? (
         <Input
@@ -282,9 +272,10 @@ export function EventsScreen() {
   const bottomInset = tabBarInset;
 
   return (
+    <>
     <ScreenAtmosphere>
       <FlatList
-        contentInsetAdjustmentBehavior="never"
+        contentInsetAdjustmentBehavior="automatic"
         keyboardShouldPersistTaps="handled"
         scrollIndicatorInsets={{ bottom: tabBarInset - insets.bottom }}
         style={{ flex: 1, backgroundColor: 'transparent' }}
@@ -322,6 +313,8 @@ export function EventsScreen() {
         renderItem={({ item }) => <PublishedEventCard item={item} />}
       />
     </ScreenAtmosphere>
+    <TabStackTitle title={eventsCopy.listHeadline} />
+    </>
   );
 }
 
