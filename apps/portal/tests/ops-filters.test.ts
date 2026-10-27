@@ -161,4 +161,15 @@ describe('keyboard / axe sample fixtures', () => {
     const axe = await import('axe-core');
     assert.ok(axe.source || axe.default?.source || typeof axe === 'object');
   });
+
+  it('EN shell fixture is keyboard-first: skip-link then locale then main', () => {
+    const html = readFileSync(
+      join(here, 'fixtures/portal-shell-a11y.html'),
+      'utf8',
+    );
+    assert.match(html, /lang="en"/);
+    assert.match(html, /portal-skip-link/);
+    assert.match(html, /data-testid="portal-locale-en"/);
+    assert.match(html, /role="group" aria-label="Language"/);
+  });
 });

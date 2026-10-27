@@ -15,6 +15,8 @@ import {
 } from 'antd';
 import { useCallback, useEffect, useState } from 'react';
 import { portalGet, portalMutate } from '../client/portal-fetch';
+import { useMutationIntent } from '../client/use-mutation-intent';
+import { MutationIntentAlert } from '../client/mutation-intent-alert';
 import { usePortalLocale } from '../i18n';
 import {
   bffPlatformSupportGrants,
@@ -54,19 +56,34 @@ export function PlatformProvisionPanel({ onTenantCreated }: Props) {
   const [name, setName] = useState('');
   const [ownerEmail, setOwnerEmail] = useState('');
   const [timezone, setTimezone] = useState('Asia/Ho_Chi_Minh');
+  const provisionIntent = useMutationIntent('platform', undefined, 'platform-provision');
 
   const submit = useCallback(async () => {
     setBusy(true);
     setView(null);
-    const res = await portalMutate(bffPlatformTenants(), {
-      slug: slug.trim(),
-      name: name.trim(),
-      defaultTimezone: timezone.trim(),
-      ownerEmail: ownerEmail.trim(),
-      limits: DEFAULT_LIMITS,
-      flags: { importsEnabled: true, exportsEnabled: true },
-      idempotencyKey: crypto.randomUUID(),
-    });
+    const outcome = await provisionIntent.run(
+      {
+        slug: slug.trim(),
+        name: name.trim(),
+        defaultTimezone: timezone.trim(),
+        ownerEmail: ownerEmail.trim(),
+        limits: DEFAULT_LIMITS,
+        flags: { importsEnabled: true, exportsEnabled: true },
+      },
+      (body) => portalMutate(bffPlatformTenants(), body),
+      (res) => interpretPlatformCreateTenant(
+        res.status,
+        res.json,
+        res.networkError || res.timedOut,
+        locale,
+      ).kind === 'ok',
+    );
+    if (outcome.kind === 'blocked') {
+      setView({ kind: 'unknown', message: t('intent.blocked') });
+      setBusy(false);
+      return;
+    }
+    const res = outcome.response;
     const next = interpretPlatformCreateTenant(
       res.status,
       res.json,
@@ -75,10 +92,11 @@ export function PlatformProvisionPanel({ onTenantCreated }: Props) {
     );
     setView(next);
     if (next.kind === 'ok') {
+      provisionIntent.release();
       onTenantCreated?.(next.result.tenantId);
     }
     setBusy(false);
-  }, [slug, name, ownerEmail, timezone, locale, onTenantCreated]);
+  }, [slug, name, ownerEmail, timezone, locale, onTenantCreated, provisionIntent, t]);
 
   return (
     <Space direction="vertical" style={{ width: '100%' }} size="middle">
@@ -118,6 +136,12 @@ export function PlatformProvisionPanel({ onTenantCreated }: Props) {
       >
         {t('platform.mutate.createTenant')}
       </Button>
+      <MutationIntentAlert
+        pending={provisionIntent.pending}
+        needsReconciliation={provisionIntent.needsReconciliation}
+        onCheck={() => undefined}
+        onStartNew={provisionIntent.release}
+      />
       {view?.kind === 'ok' ? (
         <Alert
           type="success"
@@ -154,6 +178,8 @@ export function PlatformManagePanel({ initialManageTenantId = '' }: Props) {
   const [mutateView, setMutateView] = useState<PlatformMutationOkView | null>(
     null,
   );
+  const statusIntent = useMutationIntent(tenantId.trim() || 'platform', undefined, 'platform-status');
+  const limitsIntent = useMutationIntent(tenantId.trim() || 'platform', undefined, 'platform-limits');
 
   const loadDetail = useCallback(async () => {
     const id = tenantId.trim();
@@ -226,12 +252,26 @@ export function PlatformManagePanel({ initialManageTenantId = '' }: Props) {
       if (!detail) return;
       setMutateBusy(true);
       setMutateView(null);
-      const res = await portalMutate(bffPlatformTenantStatus(detail.tenantId), {
-        status,
-        reason: reason.trim() || 'ops',
-        expectedVersion: detail.version,
-        idempotencyKey: crypto.randomUUID(),
-      });
+      const outcome = await statusIntent.run(
+        {
+          status,
+          reason: reason.trim() || 'ops',
+          expectedVersion: detail.version,
+        },
+        (body) => portalMutate(bffPlatformTenantStatus(detail.tenantId), body),
+        (res) => interpretPlatformMutationOk(
+          res.status,
+          res.json,
+          res.networkError || res.timedOut,
+          locale,
+        ).kind === 'ok',
+      );
+      if (outcome.kind === 'blocked') {
+        setMutateView({ kind: 'unknown', message: t('intent.blocked') });
+        setMutateBusy(false);
+        return;
+      }
+      const res = outcome.response;
       const next = interpretPlatformMutationOk(
         res.status,
         res.json,
@@ -240,28 +280,39 @@ export function PlatformManagePanel({ initialManageTenantId = '' }: Props) {
       );
       setMutateView(next);
       if (next.kind === 'ok') {
+        statusIntent.release();
         void loadDetail();
       }
       setMutateBusy(false);
     },
-    [detail, reason, locale, loadDetail],
+    [detail, reason, locale, loadDetail, statusIntent, t],
   );
 
   const saveLimits = useCallback(async () => {
     if (!detail) return;
     setMutateBusy(true);
     setMutateView(null);
-    const res = await portalMutate(
-      bffPlatformTenantLimits(detail.tenantId),
+    const outcome = await limitsIntent.run(
       {
         limits: limitsDraft,
         flags: { importsEnabled, exportsEnabled },
         reason: reason.trim() || 'ops',
         expectedVersion: detail.version,
-        idempotencyKey: crypto.randomUUID(),
       },
-      'PUT',
+      (body) => portalMutate(bffPlatformTenantLimits(detail.tenantId), body, 'PUT'),
+      (res) => interpretPlatformMutationOk(
+        res.status,
+        res.json,
+        res.networkError || res.timedOut,
+        locale,
+      ).kind === 'ok',
     );
+    if (outcome.kind === 'blocked') {
+      setMutateView({ kind: 'unknown', message: t('intent.blocked') });
+      setMutateBusy(false);
+      return;
+    }
+    const res = outcome.response;
     const next = interpretPlatformMutationOk(
       res.status,
       res.json,
@@ -270,6 +321,7 @@ export function PlatformManagePanel({ initialManageTenantId = '' }: Props) {
     );
     setMutateView(next);
     if (next.kind === 'ok') {
+      limitsIntent.release();
       void loadDetail();
     }
     setMutateBusy(false);
@@ -281,6 +333,8 @@ export function PlatformManagePanel({ initialManageTenantId = '' }: Props) {
     reason,
     locale,
     loadDetail,
+    limitsIntent,
+    t,
   ]);
 
   const confirmStatus = (status: 'ACTIVE' | 'SUSPENDED') => {
@@ -411,6 +465,18 @@ export function PlatformManagePanel({ initialManageTenantId = '' }: Props) {
           </Space>
         </>
       ) : null}
+      <MutationIntentAlert
+        pending={statusIntent.pending}
+        needsReconciliation={statusIntent.needsReconciliation}
+        onCheck={() => void loadDetail()}
+        onStartNew={statusIntent.release}
+      />
+      <MutationIntentAlert
+        pending={limitsIntent.pending}
+        needsReconciliation={limitsIntent.needsReconciliation}
+        onCheck={() => void loadDetail()}
+        onStartNew={limitsIntent.release}
+      />
       {mutateView?.kind === 'ok' ? (
         <Alert type="success" showIcon message="OK" data-testid="platform-manage-mutate-status" />
       ) : null}
@@ -434,6 +500,7 @@ export function PlatformGrantCreatePanel() {
   const [eventId, setEventId] = useState('');
   const [grantReason, setGrantReason] = useState('');
   const [expiresAt, setExpiresAt] = useState('');
+  const grantIntent = useMutationIntent('platform', undefined, 'platform-grant');
 
   const submit = useCallback(async () => {
     setBusy(true);
@@ -441,24 +508,38 @@ export function PlatformGrantCreatePanel() {
     const expires =
       expiresAt.trim() ||
       new Date(Date.now() + 60 * 60 * 1000).toISOString();
-    const res = await portalMutate(bffPlatformSupportGrants(), {
-      tenantId: tenantId.trim(),
-      eventId: eventId.trim(),
-      scopes: ['cs.read'],
-      reason: grantReason.trim(),
-      expiresAt: expires,
-      idempotencyKey: crypto.randomUUID(),
-    });
-    setView(
-      interpretPlatformSupportGrantCreate(
+    const outcome = await grantIntent.run(
+      {
+        tenantId: tenantId.trim(),
+        eventId: eventId.trim(),
+        scopes: ['cs.read'],
+        reason: grantReason.trim(),
+        expiresAt: expires,
+      },
+      (body) => portalMutate(bffPlatformSupportGrants(), body),
+      (res) => interpretPlatformSupportGrantCreate(
         res.status,
         res.json,
         res.networkError || res.timedOut,
         locale,
-      ),
+      ).kind === 'ok',
     );
+    if (outcome.kind === 'blocked') {
+      setView({ kind: 'unknown', message: t('intent.blocked') });
+      setBusy(false);
+      return;
+    }
+    const res = outcome.response;
+    const next = interpretPlatformSupportGrantCreate(
+      res.status,
+      res.json,
+      res.networkError || res.timedOut,
+      locale,
+    );
+    setView(next);
+    if (next.kind === 'ok') grantIntent.release();
     setBusy(false);
-  }, [tenantId, eventId, grantReason, expiresAt, locale]);
+  }, [tenantId, eventId, grantReason, expiresAt, locale, grantIntent, t]);
 
   const confirmGrant = () => {
     Modal.confirm({
@@ -507,6 +588,12 @@ export function PlatformGrantCreatePanel() {
       >
         {t('platform.mutate.createGrant')}
       </Button>
+      <MutationIntentAlert
+        pending={grantIntent.pending}
+        needsReconciliation={grantIntent.needsReconciliation}
+        onCheck={() => undefined}
+        onStartNew={grantIntent.release}
+      />
       {view?.kind === 'ok' ? (
         <Alert
           type="success"

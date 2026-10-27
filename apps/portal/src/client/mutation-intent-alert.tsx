@@ -1,6 +1,7 @@
 'use client';
 
 import { Alert, Button, Modal, Space } from 'antd';
+import { usePortalLocale } from '../i18n';
 import type { PendingIntent } from './mutation-intent';
 import { mutationIntentAlertCopy } from './mutation-intent-copy';
 import styles from './mutation-intent-alert.module.css';
@@ -14,9 +15,10 @@ type Props = {
 
 /** The read-side check helps the operator reconcile; it never silently clears an unknown intent. */
 export function MutationIntentAlert({ pending, needsReconciliation, onCheck, onStartNew }: Props) {
+  const { t, locale } = usePortalLocale();
   if (!pending) return null;
   const conflict = pending.state === 'conflict';
-  const copy = mutationIntentAlertCopy(pending.state, needsReconciliation);
+  const copy = mutationIntentAlertCopy(pending.state, needsReconciliation, locale);
   return (
     <Alert
       className={styles.intentAlert}
@@ -27,14 +29,14 @@ export function MutationIntentAlert({ pending, needsReconciliation, onCheck, onS
       description={copy.description}
       action={
         <Space wrap>
-          <Button size="small" onClick={onCheck}>Kiểm tra lại</Button>
+          <Button size="small" onClick={onCheck}>{t('surface.action.recheck')}</Button>
           <Button size="small" danger onClick={() => Modal.confirm({
-            title: 'Tạo ý định mới?',
-            content: 'Thao tác trước có thể đã thành công. Hãy kiểm tra trạng thái trước; tiếp tục có nguy cơ tạo thao tác trùng.',
-            okText: 'Tôi đã kiểm tra, tạo mới',
-            cancelText: 'Quay lại',
+            title: t('intent.newTitle'),
+            content: t('intent.newBody'),
+            okText: t('intent.newOk'),
+            cancelText: t('events.h_rft49v'),
             onOk: onStartNew,
-          })}>Tạo ý định mới</Button>
+          })}>{t('intent.new')}</Button>
         </Space>
       }
     />
