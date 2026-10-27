@@ -78,6 +78,7 @@ Mỗi checkpoint Epic / cuối Run / automation:
 2. Ứng viên dọn: PR **merged**, không agent live, không reviewer đang dùng path, working tree đã bàn giao hoặc sạch theo DoD.
 3. Trước `worktree rm`: xác nhận evidence/SHA đã lưu; không `reset --hard` / force-clean để “dọn”.
 4. Giữ `main` / integration wt; không xóa wt đang `Đang làm` / `Chờ duyệt` còn open PR.
+5. **Trần sống:** sau checkpoint Epic/merge, số git worktree ≤ **8** (`main` + live). Cấm để 50+ wt merged tồn — dọn trong cùng checkpoint. Cursor workspace chỉ mở **một root** repo, không add từng folder `vcx-*`.
 
 `worker-release` (Dispatch settled) **≠** xóa worktree — làm cả hai lớp khi scope cho phép.
 
@@ -96,7 +97,7 @@ Coordinator tạo/sửa qua `ORCA automations …`; không để automation tự
 ❌ Spawn worker trên wt không gắn Issue/PR khi số đã biết
 ❌ Epic ≥3 Task mà không task-create / deps — chỉ nhớ trong transcript
 ❌ Dùng gate thay ask (hoặc ngược lại)
-❌ Để hàng chục wt merged tồn vô hạn không comment / không dọn
+❌ Để hàng chục wt merged tồn vô hạn không comment / không dọn (trần ≤8 sống)
 ❌ Automation merge/deploy/store ngoài ủy quyền
 
 ✅ create/set --issue/--pr/--comment trước coding

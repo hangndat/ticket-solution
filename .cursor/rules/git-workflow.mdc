@@ -9,5 +9,5 @@ alwaysApply: true
 - Task đến PR/CI hoặc Epic end-to-end cho phép commit/push feature branch/mở PR trong scope. Epic end-to-end hoặc yêu cầu integration/merge cho phép coordinator merge sau đủ DoD + CI. Task chỉ local/plan/review không mặc định cấp quyền publish. Không hỏi lại quyền đã có.
 - Cloud resources, production deploy và store cần ủy quyền riêng; trạng thái `Sẵn sàng` không cấp quyền ngoài task.
 - Không bỏ hooks, amend hoặc force-push khi chưa có yêu cầu rõ của user; không reset bỏ công việc. Worker không tự merge; coordinator chỉ merge khi được giao, có reviewer độc lập + CI trên exact SHA.
-- DoD phải dẫn SHA, reviewer/session, checks/findings/limitations; commit mới cần revalidation theo diff. Không coi local pass là acceptance/pilot ready, hoặc thiếu GitHub Approve là thiếu Orca DoD.
+- DoD phải dẫn SHA, checks/findings/limitations; nhánh B thêm reviewer độc lập. Commit mới cần revalidation theo diff. Không coi local pass là acceptance/pilot ready, hoặc thiếu GitHub Approve là thiếu Orca DoD. Docs/tooling (nhánh A) không bắt buộc reviewer độc lập.
 - Trước branch/commit/push/PR/merge: đọc [git-workflow-details.mdc](git-workflow-details.mdc) một lần/session; đọc lại khi thay đổi. Trước GitHub mutation/evidence: đọc [github-api-hygiene-details.mdc](github-api-hygiene-details.mdc).

@@ -1,7 +1,7 @@
 /** Provider-neutral tiers; routes are ordered by dispatch preference (Claude before Codex). */
 export const COST_TIER_ROUTES = {
   cheap: [{ agent: "cursor", models: ["composer-2.5", "grok-4.7-low", "gemini-3.7-flash-low"], effort: null }],
-  standard: [{ agent: "cursor", models: ["composer-2.5", "claude-sonnet-5-thinking-low"], effort: null }],
+  standard: [{ agent: "cursor", models: ["composer-2.5", "grok-4.7-low", "gemini-3.7-flash-low"], effort: null }],
   focused: [
     { agent: "claude", models: ["claude-sonnet-5"], effort: "low" },
     { agent: "codex", models: ["gpt-6-sol"], effort: "low", quotaLimitIds: ["codex"] },
