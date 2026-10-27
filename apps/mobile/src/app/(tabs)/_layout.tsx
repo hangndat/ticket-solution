@@ -1,10 +1,12 @@
 import { useEffect, useSyncExternalStore } from 'react';
 import { AppState } from 'react-native';
+import { Redirect, type Href } from 'expo-router';
 import { NativeTabs } from 'expo-router/native-tabs';
 import { StaffGateWorkspaceProvider } from '@/gate/staff-gate-workspace-context';
 import { session } from '@/identity/session';
 import { staffEligibility } from '@/identity/staff-eligibility';
 import { tryRestoreVerifiedSession } from '@/identity/session-restore-retry';
+import { GUEST_HOME_HREF } from '@/navigation/attendee-account-route';
 import { StaffDefaultTabRedirect } from '@/navigation/staff-default-tab-redirect';
 import { STAFF_TAB_TITLES } from '@/navigation/staff-tab-titles';
 import {
@@ -54,12 +56,22 @@ export default function TabLayout() {
   const showStaffTabs =
     staffWorkspace ||
     (eligibility.resolved && eligibility.staffEligible === true);
+  const guestShell = identity.status !== 'verified';
+  const showEventsTab = showAttendee && !guestShell;
+
+  if (guestShell && !showStaffTabs) {
+    return (
+      <StaffGateWorkspaceProvider active={false}>
+        <Redirect href={GUEST_HOME_HREF as Href} />
+      </StaffGateWorkspaceProvider>
+    );
+  }
 
   return (
     <StaffGateWorkspaceProvider active={identity.status === 'verified'}>
       <StaffDefaultTabRedirect />
       <NativeTabs tintColor={theme.signal}>
-        <NativeTabs.Trigger name="(events)" hidden={!showAttendee}>
+        <NativeTabs.Trigger name="(events)" hidden={!showEventsTab}>
           <NativeTabs.Trigger.Icon sf="calendar" />
           <NativeTabs.Trigger.Label>Sự kiện</NativeTabs.Trigger.Label>
         </NativeTabs.Trigger>
@@ -79,7 +91,7 @@ export default function TabLayout() {
           <NativeTabs.Trigger.Icon sf="clock.arrow.circlepath" />
           <NativeTabs.Trigger.Label>{STAFF_TAB_TITLES.history}</NativeTabs.Trigger.Label>
         </NativeTabs.Trigger>
-        <NativeTabs.Trigger name="account" hidden={showStaffTabs}>
+        <NativeTabs.Trigger name="account" hidden>
           <NativeTabs.Trigger.Icon sf="person.circle" />
           <NativeTabs.Trigger.Label>Tài khoản</NativeTabs.Trigger.Label>
         </NativeTabs.Trigger>

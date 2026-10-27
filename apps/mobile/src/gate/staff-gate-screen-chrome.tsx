@@ -41,7 +41,10 @@ export function StaffGateScreenChrome({
           }}
         />
         {canSwitch ? (
-          <Stack.Toolbar.Menu>
+          <Stack.Toolbar.Menu
+            icon="arrow.triangle.2.circlepath"
+            accessibilityLabel="Đổi sự kiện"
+          >
             <Stack.Toolbar.Menu inline title="Sự kiện">
               {gate.gateEventChoices.map((choice) => {
                 const active =

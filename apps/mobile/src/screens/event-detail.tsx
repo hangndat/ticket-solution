@@ -7,6 +7,7 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { AttendeeCta } from '@/components/attendee-cta';
+import { EVENT_BANNER_HEIGHT_DETAIL } from '@/components/event-banner-metrics';
 import { EventBanner, EventLogo } from '@/components/event-media';
 import { Notice, Page } from '@/components/page';
 import {
@@ -126,9 +127,11 @@ function FixtureDemoDetail({
         <EventBanner
           eventId={event.id}
           tenantSlug={event.tenantSlug}
-          height={200}
+          wordmark={event.name}
+          height={EVENT_BANNER_HEIGHT_DETAIL}
           style={{ marginHorizontal: -20, borderRadius: 0, width: undefined }}
           testID={`fixture-banner-${event.id}`}
+          accessibilityLabel={`Banner ${event.name}`}
         />
         <Text
           accessibilityRole="header"
@@ -299,9 +302,12 @@ function PublishedEventComposition({
           eventId={event.id}
           tenantSlug={event.tenantSlug}
           bannerUrl={event.brand.bannerUrl}
-          height={220}
+          fallbackColor={event.brand.primaryColor}
+          wordmark={event.brand.organizationName}
+          height={EVENT_BANNER_HEIGHT_DETAIL}
           style={{ marginHorizontal: -20, borderRadius: 0, width: undefined }}
           testID={`pub-detail-banner-${event.id}`}
+          accessibilityLabel={`Banner ${event.name}`}
         />
 
         {event.brand.logoUrl || event.brand.organizationName ? (

@@ -33,11 +33,30 @@ function AppStack() {
   return (
     <Stack>
       <Stack.Screen
+        name="index"
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="welcome"
+        options={{
+          ...tabRootStackScreenOptions,
+          title: 'Vemoki',
+        }}
+      />
+      <Stack.Screen
         name="(tabs)"
         options={{
           ...tabDetailStackScreenOptions,
           headerShown: false,
           title: 'Sự kiện',
+        }}
+      />
+      <Stack.Screen
+        name="account"
+        options={{
+          ...tabDetailStackScreenOptions,
+          headerShown: false,
+          title: 'Tài khoản',
         }}
       />
       <Stack.Screen

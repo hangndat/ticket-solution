@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Link, router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AttendeeCta } from '@/components/attendee-cta';
+import { EVENT_BANNER_HEIGHT_LIST } from '@/components/event-banner-metrics';
 import { EventBanner } from '@/components/event-media';
 import {
   EmptyState,
@@ -11,7 +12,7 @@ import {
   LoadingState
 } from '@/components/screen-state';
 import { eventsCopy } from '@/components/screen-state-copy';
-import { TabStackTitle } from '@/navigation/tab-stack-title';
+import { AttendeeScreenChrome } from '@/navigation/attendee-screen-chrome';
 import { fetchPlatformPublishedEventList } from '@/published/published-event-api';
 import {
   initialPublishedListPhase,
@@ -29,7 +30,6 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { useAttendeeTabBarInset } from '@/navigation/use-attendee-tab-bar-inset';
 import { useShowAttendeeTabs } from '@/navigation/use-staff-workspace';
 import { WalletOwnedTicketsLink } from '@/components/wallet-owned-tickets-link';
-import { ScreenAtmosphere } from '@/components/screen-atmosphere';
 import { space, radius } from '@/theme/tokens';
 import { typography } from '@/theme/typography';
 
@@ -77,9 +77,12 @@ function PublishedEventCard({ item }: { item: PublishedEventSummary }) {
             eventId={item.id}
             tenantSlug={item.tenantSlug}
             bannerUrl={item.brand.bannerUrl}
-            height={142}
+            fallbackColor={item.brand.primaryColor}
+            wordmark={item.brand.organizationName}
+            height={EVENT_BANNER_HEIGHT_LIST}
             style={{ borderRadius: 0 }}
             testID={`pub-media-${item.id}-banner`}
+            accessibilityLabel={`Banner ${item.name}`}
           />
           <View style={{ padding: space.lg, gap: space.sm }}>
             <Text
@@ -273,12 +276,11 @@ export function EventsScreen() {
 
   return (
     <>
-    <ScreenAtmosphere>
       <FlatList
         contentInsetAdjustmentBehavior="automatic"
         keyboardShouldPersistTaps="handled"
         scrollIndicatorInsets={{ bottom: tabBarInset - insets.bottom }}
-        style={{ flex: 1, backgroundColor: 'transparent' }}
+        style={{ flex: 1, backgroundColor: brand.paper }}
         contentContainerStyle={{
           paddingHorizontal: space.xl,
           paddingTop: space.sm,
@@ -312,8 +314,7 @@ export function EventsScreen() {
         }
         renderItem={({ item }) => <PublishedEventCard item={item} />}
       />
-    </ScreenAtmosphere>
-    <TabStackTitle title={eventsCopy.listHeadline} />
+    <AttendeeScreenChrome title={eventsCopy.listHeadline} />
     </>
   );
 }
