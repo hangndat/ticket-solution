@@ -1,5 +1,6 @@
 import { t } from '../i18n/t';
 import { DEFAULT_PORTAL_LOCALE, type PortalLocale } from '../i18n/locale';
+import { formatLimitGuidance } from './limit-guidance';
 
 export type AdminAction =
   | 'save'
@@ -164,6 +165,8 @@ export function adminDecisionLabel(decision: AdminDecision, locale: PortalLocale
     return t(locale, 'ops.decide.deniedRequest', { requestId: decision.requestId, replaySuffix: replay });
   }
   if (decision.kind === 'rejected') {
+    const guided = formatLimitGuidance(decision.code, locale);
+    if (guided) return `${guided.title}. ${guided.body}`;
     const id = decision.requestId ? t(locale, 'ops.decide.requestIdSuffix', { requestId: decision.requestId }) : '';
     return t(locale, 'ops.decide.rejectedApi', { code: decision.code, message: decision.message, requestIdSuffix: id });
   }

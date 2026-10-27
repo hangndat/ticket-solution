@@ -1,10 +1,11 @@
 'use client';
 
 import { ProList, StatisticCard } from '@ant-design/pro-components';
-import { Alert, Button, Empty, Flex, Result, Spin } from 'antd';
+import { Alert, Button, Empty, Flex, Result, Spin, Typography } from 'antd';
 import { PortalPage } from '../../../src/components/portal-page';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTenantAccess } from '../../../src/prep/use-event-access';
 import {
   canPerformTenantAction,
@@ -17,12 +18,90 @@ import {
 } from '../../../src/i18n';
 import { SURFACE_MESSAGE_KEYS } from '../../../src/prep/surface-copy';
 import { isPendingActivationStatus } from '../../../src/onboarding';
+import { portalGet } from '../../../src/client/portal-fetch';
+import { bffPortfolio } from '../../../src/prep/bff-urls';
+import {
+  interpretPortfolio,
+  type ShownPortfolioItem,
+} from '../../../src/ops/portfolio';
+import {
+  OVERVIEW_STAGE_ORDER,
+  overviewWorkItems,
+  type OverviewStage,
+} from '../../../src/ops/overview-work';
+import { displayedSnapshotAsOf } from '../../../src/ops/tenant-limits-usage';
+import { formatReportAsOf, isReportDataStale } from '../../../src/ops/report';
+import { ReportStaleAlert } from '../../../src/components/report-stale-alert';
+import { InContextHelp } from '../../../src/components/in-context-help';
+import { TenantLimitsCard } from '../../../src/components/tenant-limits-card';
+
+const STAGE_TITLE: Record<OverviewStage, 'overview.stage.prep' | 'overview.stage.issue' | 'overview.stage.dayOf' | 'overview.stage.after'> = {
+  prep: 'overview.stage.prep',
+  issue: 'overview.stage.issue',
+  dayOf: 'overview.stage.dayOf',
+  after: 'overview.stage.after',
+};
 
 export default function TenantOverviewPage() {
   const { t, locale } = usePortalLocale();
   const params = useParams<{ tenantId: string }>();
   const tenantId = params.tenantId;
   const access = useTenantAccess(tenantId);
+  const [asOf, setAsOf] = useState<string | null>(null);
+  const [portfolioItems, setPortfolioItems] = useState<ShownPortfolioItem[]>([]);
+  const [nowMs, setNowMs] = useState(() => Date.now());
+
+  const loadPortfolio = useCallback(async () => {
+    if (access.kind !== 'ready') return;
+    const canReport = access.events.some((event) =>
+      event.permissions.includes('report.read'),
+    );
+    if (!canReport) {
+      setAsOf(null);
+      setPortfolioItems([]);
+      return;
+    }
+    const res = await portalGet(`${bffPortfolio(tenantId)}?limit=20`);
+    const view = interpretPortfolio(
+      res.status,
+      res.json,
+      res.networkError || res.timedOut,
+      locale,
+    );
+    if (view.kind !== 'shown') {
+      setAsOf(null);
+      setPortfolioItems([]);
+      return;
+    }
+    setAsOf(view.asOf);
+    setPortfolioItems(view.items.filter((item): item is ShownPortfolioItem => item.kind === 'shown'));
+  }, [access, tenantId, locale]);
+
+  useEffect(() => {
+    if (access.kind !== 'ready') return;
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (!cancelled) void loadPortfolio();
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [access.kind, loadPortfolio]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNowMs(Date.now()), 30_000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const work = useMemo(() => {
+    if (access.kind !== 'ready') return [];
+    return overviewWorkItems({
+      tenantId,
+      tenantPermissions: access.tenant.tenantPermissions,
+      events: access.events,
+      portfolioItems,
+    });
+  }, [access, tenantId, portfolioItems]);
 
   if (access.kind === 'loading') return (
     <Flex
@@ -74,7 +153,6 @@ export default function TenantOverviewPage() {
 
   const { tenant, events } = access;
 
-  // PENDING: no admin chrome mutations — send Owner to wait Result (AC-PS5).
   if (isPendingActivationStatus(tenant.status)) {
     return (
       <Result status="info" title={t('onboarding.pending.title')} subTitle={t('onboarding.pending.body', {
@@ -94,6 +172,8 @@ export default function TenantOverviewPage() {
     'listEvents',
     tenant.tenantPermissions,
   );
+  const displayedAsOf = asOf ? displayedSnapshotAsOf(asOf) : null;
+  const stale = displayedAsOf ? isReportDataStale(displayedAsOf, nowMs) : false;
 
   return (
     <PortalPage
@@ -123,11 +203,53 @@ export default function TenantOverviewPage() {
         </div>
       }
     >
+      <InContextHelp messageKey="overview.help" testId="overview-help" />
+      {displayedAsOf ? (
+        <Typography.Paragraph type="secondary" data-testid="overview-asof">
+          {t('overview.freshness')}{' '}
+          {t('analytics.asOfTag', { asOf: formatReportAsOf(displayedAsOf, locale) })}
+        </Typography.Paragraph>
+      ) : null}
+      {displayedAsOf && stale ? (
+        <ReportStaleAlert asOf={displayedAsOf} onRefresh={() => void loadPortfolio()} />
+      ) : null}
+
+      {canPerformTenantAction('editSettings', tenant.tenantPermissions) ? (
+        <TenantLimitsCard tenantId={tenantId} />
+      ) : null}
+
       <StatisticCard.Group style={{ marginBottom: 16 }}>
         <StatisticCard
           statistic={{ title: t('nav.org.events'), value: events.length }}
         />
       </StatisticCard.Group>
+
+      {OVERVIEW_STAGE_ORDER.map((stage) => {
+        const cards = work.filter((item) => item.stage === stage);
+        if (cards.length === 0) return null;
+        return (
+          <ProList
+            key={stage}
+            headerTitle={t(STAGE_TITLE[stage])}
+            dataSource={cards}
+            metas={{
+              title: {
+                render: (_, row) => t(row.titleKey),
+              },
+              description: {
+                render: (_, row) => row.eventTitle,
+              },
+              actions: {
+                render: (_, row) => [
+                  <Link key="open" href={row.href} data-testid={`overview-work-${row.id}`}>
+                    {t('common.mo')}
+                  </Link>,
+                ],
+              },
+            }}
+          />
+        );
+      })}
 
       {events.length === 0 ? (
         <Empty description={t('common.h_1bzxqwd')} style={{ padding: 48 }}>

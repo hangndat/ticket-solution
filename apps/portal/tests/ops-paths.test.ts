@@ -81,5 +81,13 @@ describe('PORTAL_UPSTREAM ops paths', () => {
       PORTAL_UPSTREAM.memberRole(t, m),
       `/v1/tenants/${t}/members/${m}/role`,
     );
+    assert.equal(
+      PORTAL_UPSTREAM.memberEventAssignment(t, m, e),
+      `/v1/tenants/${t}/members/${m}/event-assignments/${e}`,
+    );
+    assert.equal(
+      PORTAL_UPSTREAM.tenantLimits(t),
+      `/v1/tenants/${t}/limits`,
+    );
   });
 });
