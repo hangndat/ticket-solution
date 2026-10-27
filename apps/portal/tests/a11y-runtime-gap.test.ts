@@ -44,6 +44,7 @@ describe('#947 skip-link focus visibility', () => {
     assert.ok(hrefAt > 0 && skipAt > 0 && hrefAt < skipAt);
     assert.ok(skipAt < mainAt);
     assert.match(shell, /portal-skip-link--visible/);
+    assert.match(shell, /document\.activeElement === el/);
   });
 });
 
