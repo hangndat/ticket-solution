@@ -10,6 +10,7 @@ import {
 } from '@/attendee/attendee-outcome-copy';
 import { ErrorState } from '@/components/screen-state';
 import { walletCopy } from '@/components/screen-state-copy';
+import { EVENT_BANNER_HEIGHT_TICKET } from '@/components/event-banner-metrics';
 import { EventBanner, EventLogo } from '@/components/event-media';
 import { Notice, Page } from '@/components/page';
 import { QrCode } from '@/components/qr-code';
@@ -350,15 +351,14 @@ export function TicketDetailScreen() {
             backgroundColor: brand.signal
           }}
         />
-        {hasDemoMediaForEventId(ticket.eventId) ? (
-          <EventBanner
-            eventId={ticket.eventId}
-            height={120}
-            style={{ borderRadius: 0 }}
-            testID="ticket-detail-banner"
-            accessibilityLabel="Banner sự kiện demo trên vé"
-          />
-        ) : null}
+        <EventBanner
+          eventId={ticket.eventId}
+          wordmark={row.eventTitle}
+          height={EVENT_BANNER_HEIGHT_TICKET}
+          style={{ borderRadius: 0 }}
+          testID="ticket-detail-banner"
+          accessibilityLabel={`Banner ${row.eventTitle}`}
+        />
         <View style={{ padding: space.xl, gap: space.lg, alignItems: 'stretch' }}>
           <View style={{ alignItems: 'center', gap: space.md, width: '100%' }}>
             {hasDemoMediaForEventId(ticket.eventId) ? (

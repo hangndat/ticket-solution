@@ -23,3 +23,15 @@ export function showAttendeeTabs(
 ): boolean {
   return !isStaffWorkspace(identity, eligibility);
 }
+
+/** Guest: no NativeTabs. Verified attendee: Sự kiện (+ Vé). */
+export function showAttendeeNativeTabs(
+  identity: IdentityStatus,
+  eligibility: StaffEligibilitySnapshot,
+): boolean {
+  return identity.status === 'verified' && showAttendeeTabs(identity, eligibility);
+}
+
+export function isGuestShell(identity: IdentityStatus): boolean {
+  return identity.status !== 'verified';
+}

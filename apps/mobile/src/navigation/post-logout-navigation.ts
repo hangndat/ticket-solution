@@ -6,7 +6,7 @@ import type { PostLogoutNavigationPlan } from './post-logout-plan.ts';
 export { planPostLogoutNavigation } from './post-logout-plan.ts';
 export type { PostLogoutNavigationPlan } from './post-logout-plan.ts';
 
-export const GUEST_EVENTS_HREF = '/(tabs)/(events)' as const;
+export const GUEST_EVENTS_HREF = '/welcome' as const;
 
 export function runPostLogoutNavigation(plan: PostLogoutNavigationPlan): void {
   staffEligibility.reset();

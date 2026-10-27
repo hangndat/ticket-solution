@@ -41,10 +41,10 @@ test('my-tickets tab hidden for anonymous attendee guest', () => {
   );
 });
 
-test('my-tickets tab visible for offline-bound guest attendee', () => {
+test('my-tickets tab hidden for offline-bound guest (no NativeTabs)', () => {
   assert.equal(
     showMyTicketsTab({ status: 'signed-out' }, eligibilityGuest, offlineBound),
-    true,
+    false,
   );
 });
 

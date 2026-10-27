@@ -1,5 +1,5 @@
 /** Fallback when modal stack has no back entry (should not happen from Account). */
-export const PRIVACY_DISMISS_FALLBACK_PATH = '/(tabs)/account' as const;
+export const PRIVACY_DISMISS_FALLBACK_PATH = '/account' as const;
 
 export type PrivacyDismissAction =
   | { kind: 'back' }

@@ -15,7 +15,6 @@ import {
 } from 'react-native';
 import type { TicketSummary } from '@ticket/contracts';
 import { AttendeeCta } from '@/components/attendee-cta';
-import { ScreenAtmosphere } from '@/components/screen-atmosphere';
 import { TicketStatusPill } from '@/components/ticket-status-pill';
 import { Button } from '@/components/ui/button';
 import { EventLogo } from '@/components/event-media';
@@ -30,7 +29,7 @@ import {
   attendeeWalletCopy,
   presentTicketRow
 } from '@/attendee/attendee-outcome-copy';
-import { TabStackTitle } from '@/navigation/tab-stack-title';
+import { AttendeeScreenChrome } from '@/navigation/attendee-screen-chrome';
 import { hasDemoMediaForEventId } from '@/data/demo-media';
 import { brand, colors } from '@/theme/colors';
 import { space, radius } from '@/theme/tokens';
@@ -209,18 +208,16 @@ export function MyTicketsScreen() {
 
   return (
     <>
-      <ScreenAtmosphere>
         <ScrollView
           contentInsetAdjustmentBehavior="automatic"
-          style={{ flex: 1 }}
+          style={{ flex: 1, backgroundColor: brand.paper }}
           contentContainerStyle={{ padding: space.xl }}
         >
           <EmptyState title={walletCopy.guestWalletBlockedTitle}>
             {walletCopy.guestWalletBlockedBody}
           </EmptyState>
         </ScrollView>
-      </ScreenAtmosphere>
-      <TabStackTitle title="Vé của tôi" />
+      <AttendeeScreenChrome title="Vé của tôi" />
     </>
   );
 }
@@ -278,10 +275,9 @@ function OfflineDisplayWallet({
 
   return (
     <>
-    <ScreenAtmosphere>
     <ScrollView
       contentInsetAdjustmentBehavior="automatic"
-      style={{ flex: 1, backgroundColor: 'transparent' }}
+      style={{ flex: 1, backgroundColor: brand.paper }}
       contentContainerStyle={{ padding: space.xl, paddingBottom: space.huge, gap: space.lg }}
     >
       <Notice title={attendeeWalletCopy.offlineBannerTitle}>
@@ -314,8 +310,7 @@ function OfflineDisplayWallet({
       )}
 
     </ScrollView>
-    </ScreenAtmosphere>
-    <TabStackTitle title="Vé của tôi" />
+    <AttendeeScreenChrome title="Vé của tôi" />
     </>
   );
 }
@@ -544,10 +539,9 @@ function VerifiedWallet({ userId }: { userId: string }) {
 
   return (
     <>
-    <ScreenAtmosphere>
     <ScrollView
       contentInsetAdjustmentBehavior="automatic"
-      style={{ flex: 1, backgroundColor: 'transparent' }}
+      style={{ flex: 1, backgroundColor: brand.paper }}
       contentContainerStyle={{ padding: space.xl, paddingBottom: space.huge, gap: space.lg }}
       refreshControl={
         <RefreshControl refreshing={refreshing} onRefresh={() => void onRefresh()} />
@@ -641,8 +635,7 @@ function VerifiedWallet({ userId }: { userId: string }) {
         />
       ) : null}
     </ScrollView>
-    </ScreenAtmosphere>
-    <TabStackTitle title="Vé của tôi" />
+    <AttendeeScreenChrome title="Vé của tôi" />
     </>
   );
 }

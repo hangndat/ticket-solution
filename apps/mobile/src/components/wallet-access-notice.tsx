@@ -1,7 +1,7 @@
 import { Text, View } from 'react-native';
 import { Notice, Page } from '@/components/page';
 import { walletCopy } from '@/components/screen-state-copy';
-import { TabStackTitle } from '@/navigation/tab-stack-title';
+import { AttendeeScreenChrome } from '@/navigation/attendee-screen-chrome';
 import { brand, colors } from '@/theme/colors';
 import { typography } from '@/theme/typography';
 import { space } from '@/theme/tokens';
@@ -15,7 +15,7 @@ export function WalletAccessNotice() {
           {walletCopy.guestWalletBlockedBody}
         </Notice>
       </Page>
-      <TabStackTitle title="Vé của tôi" />
+      <AttendeeScreenChrome title="Vé của tôi" />
     </>
   );
 }

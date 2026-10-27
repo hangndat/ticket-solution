@@ -1,4 +1,5 @@
 import {
+  Text,
   View,
   type ImageSourcePropType,
   type StyleProp,
@@ -10,11 +11,14 @@ import {
   hasDemoMediaForEventId,
   hasDemoMediaForTenantSlug
 } from '@/data/demo-media';
-import { space, radius } from '@/theme/tokens';
+import { brand, space, radius } from '@/theme/tokens';
+import { fontFamilies } from '@/theme/fonts';
+import { typography } from '@/theme/typography';
 import {
   demoBannerSource,
   demoLogoSource,
 } from '@/data/demo-media-assets';
+import { EVENT_BANNER_HEIGHT_LIST } from './event-banner-metrics.ts';
 
 type BannerProps = {
   /** Fixture / published event id for local demo pack lookup. */
@@ -24,6 +28,10 @@ type BannerProps = {
   bannerUrl?: string | null;
   /** Override local/remote with an explicit source. */
   bannerSource?: ImageSourcePropType | null;
+  /** This event's primary color — never another card's brand. */
+  fallbackColor?: string | null;
+  /** This event's org / name wordmark when there is no image. */
+  wordmark?: string | null;
   height?: number;
   style?: StyleProp<ViewStyle>;
   testID?: string;
@@ -54,16 +62,89 @@ function bundledDemoSource(
   return null;
 }
 
+function isCssHexColor(value: string): boolean {
+  return /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(value.trim());
+}
+
+function EventBrandFallback({
+  height,
+  fallbackColor,
+  wordmark,
+  testID,
+  accessibilityLabel,
+  style,
+}: {
+  height: number;
+  fallbackColor?: string | null;
+  wordmark?: string | null;
+  testID?: string;
+  accessibilityLabel: string;
+  style?: StyleProp<ViewStyle>;
+}) {
+  const wash =
+    fallbackColor && isCssHexColor(fallbackColor)
+      ? fallbackColor
+      : brand.paperDeep;
+  const label = wordmark?.trim() || '';
+
+  return (
+    <View
+      testID={testID}
+      accessibilityRole="image"
+      accessibilityLabel={accessibilityLabel}
+      style={[
+        {
+          height,
+          width: '100%',
+          borderRadius: radius.md,
+          overflow: 'hidden',
+          backgroundColor: brand.paper,
+          justifyContent: 'flex-end',
+          padding: space.md,
+        },
+        style,
+      ]}
+    >
+      <View
+        pointerEvents="none"
+        style={{
+          position: 'absolute',
+          top: 0,
+          right: 0,
+          bottom: 0,
+          left: 0,
+          backgroundColor: wash,
+          opacity: 0.22,
+        }}
+      />
+      {label ? (
+        <Text
+          numberOfLines={1}
+          style={{
+            ...typography.caption,
+            color: brand.ink,
+            fontFamily: fontFamilies.bodySemiBold,
+          }}
+        >
+          {label}
+        </Text>
+      ) : null}
+    </View>
+  );
+}
+
 /**
- * Event banner: prefer explicit source → remote URL → bundled demo pack.
- * Fail-closed — never shows a broken image placeholder.
+ * Simple per-event banner: image if this event has one, else a quiet wash +
+ * wordmark from THIS event's brand — not catalog-wide Vemoki chrome.
  */
 export function EventBanner({
   eventId,
   tenantSlug,
   bannerUrl,
   bannerSource,
-  height = 140,
+  fallbackColor,
+  wordmark,
+  height = EVENT_BANNER_HEIGHT_LIST,
   style,
   testID = 'event-banner',
   accessibilityLabel = 'Ảnh banner sự kiện'
@@ -72,18 +153,32 @@ export function EventBanner({
   const source =
     bannerSource ?? remoteImageSource(bannerUrl) ?? pack?.banner ?? null;
 
+  if (!source) {
+    return (
+      <EventBrandFallback
+        height={height}
+        fallbackColor={fallbackColor}
+        wordmark={wordmark}
+        testID={testID}
+        accessibilityLabel={accessibilityLabel}
+        style={style}
+      />
+    );
+  }
+
   return (
     <SafeEventImage
       source={source}
       accessibilityLabel={accessibilityLabel}
       testID={testID}
       resizeMode="cover"
+      collapseOnFail={false}
       style={[
         {
           height,
           width: '100%',
           borderRadius: radius.md,
-          backgroundColor: 'transparent'
+          backgroundColor: brand.paper
         },
         style,
       ]}
@@ -132,6 +227,8 @@ export function EventMediaHeader({
   tenantSlug,
   bannerUrl,
   logoUrl,
+  fallbackColor,
+  wordmark,
   style,
   testID = 'event-media'
 }: {
@@ -139,6 +236,8 @@ export function EventMediaHeader({
   tenantSlug?: string | null;
   bannerUrl?: string | null;
   logoUrl?: string | null;
+  fallbackColor?: string | null;
+  wordmark?: string | null;
   style?: StyleProp<ViewStyle>;
   testID?: string;
 }) {
@@ -148,6 +247,9 @@ export function EventMediaHeader({
         eventId={eventId}
         tenantSlug={tenantSlug}
         bannerUrl={bannerUrl}
+        fallbackColor={fallbackColor}
+        wordmark={wordmark}
+        height={EVENT_BANNER_HEIGHT_LIST}
         testID={`${testID}-banner`}
       />
       <EventLogo

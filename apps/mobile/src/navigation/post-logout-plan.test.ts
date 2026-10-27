@@ -17,4 +17,11 @@ test('planPostLogoutNavigation guest home after root staff-account logout', () =
     }),
     { kind: 'guest-replace' },
   );
+  assert.deepEqual(
+    planPostLogoutNavigation({
+      segments: ['account'],
+      staffWorkspace: false,
+    }),
+    { kind: 'guest-replace' },
+  );
 });
