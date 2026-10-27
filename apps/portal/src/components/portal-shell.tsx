@@ -222,7 +222,16 @@ function PortalShellChrome({
 
   return (
     <>
-      <a href="#portal-main" className="portal-skip-link">
+      <a
+        href="#portal-main"
+        className="portal-skip-link"
+        onFocus={(event) => {
+          event.currentTarget.classList.add('portal-skip-link--visible');
+        }}
+        onBlur={(event) => {
+          event.currentTarget.classList.remove('portal-skip-link--visible');
+        }}
+      >
         {t('shell.skipNav')}
       </a>
       {useDrawerNav ? (
