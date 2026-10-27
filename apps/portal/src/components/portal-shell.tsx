@@ -178,38 +178,12 @@ function PortalShellChrome({
   );
 
   const accountMenu: MenuProps = {
-    selectable: true,
-    selectedKeys: [`locale-${locale}`],
     items: [
       {
         key: 'security',
         label: (
           <Link href="/account/security">{t('shell.account.security')}</Link>
         ),
-      },
-      {
-        key: 'language',
-        label: t('locale.label'),
-        children: [
-          {
-            key: 'locale-vi',
-            label: (
-              <span data-testid="portal-locale-vi">
-                {`${locale === 'vi' ? '✓ ' : ''}${t('locale.vi')}`}
-              </span>
-            ),
-            onClick: () => setLocale('vi'),
-          },
-          {
-            key: 'locale-en',
-            label: (
-              <span data-testid="portal-locale-en">
-                {`${locale === 'en' ? '✓ ' : ''}${t('locale.en')}`}
-              </span>
-            ),
-            onClick: () => setLocale('en'),
-          },
-        ],
       },
       {
         key: 'logout',
@@ -248,6 +222,9 @@ function PortalShellChrome({
 
   return (
     <>
+      <a href="#portal-main" className="portal-skip-link">
+        {t('shell.skipNav')}
+      </a>
       {useDrawerNav ? (
         <Drawer
           id="portal-nav-drawer"
@@ -304,11 +281,37 @@ function PortalShellChrome({
             Vemoki Portal
           </Link>
         </div>
-        <Dropdown menu={accountMenu} trigger={['click']}>
-          <Button type="text" data-testid="account-menu">
-            {t('shell.account.menu')}
-          </Button>
-        </Dropdown>
+        <div className="portal-header-actions">
+          <div
+            className="portal-locale-switch"
+            role="group"
+            aria-label={t('locale.label')}
+          >
+            <Button
+              type={locale === 'vi' ? 'primary' : 'text'}
+              size="small"
+              aria-pressed={locale === 'vi'}
+              data-testid="portal-locale-vi"
+              onClick={() => setLocale('vi')}
+            >
+              {t('locale.vi')}
+            </Button>
+            <Button
+              type={locale === 'en' ? 'primary' : 'text'}
+              size="small"
+              aria-pressed={locale === 'en'}
+              data-testid="portal-locale-en"
+              onClick={() => setLocale('en')}
+            >
+              {t('locale.en')}
+            </Button>
+          </div>
+          <Dropdown menu={accountMenu} trigger={['click']}>
+            <Button type="text" data-testid="account-menu">
+              {t('shell.account.menu')}
+            </Button>
+          </Dropdown>
+        </div>
       </Header>
       <Layout>
         {showSider && !useDrawerNav ? (
@@ -325,9 +328,6 @@ function PortalShellChrome({
         ) : null}
         <Layout>
           <Content style={{ padding: 0 }}>
-            <a href="#portal-main" className="portal-skip-link">
-              {t('shell.skipNav')}
-            </a>
             <div
               className="portal-context-strip"
               data-testid="portal-context-strip"

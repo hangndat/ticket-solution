@@ -88,6 +88,7 @@ export function ImportInvitationsPanel({
   const uploadFlight = useRef(false);
   const createIntent = useMutationIntent(tenantId, eventId, 'create-import');
   const commitIntent = useMutationIntent(tenantId, eventId, 'commit-import');
+  const dispatchIntent = useMutationIntent(tenantId, eventId, 'dispatch-invitations');
   const [previewRevision, setPreviewRevision] = useState<number | null>(null);
   const [importView, setImportView] = useState<ImportView | null>(null);
   const [inviteView, setInviteView] = useState<InvitationView | null>(null);
@@ -445,11 +446,22 @@ export function ImportInvitationsPanel({
     const invitationIds = selectedRowKeys.map(String);
     if (invitationIds.length === 0 || dispatchPreviewRevision === null) return;
     setBusy(true);
-    const result = await portalMutate(bffInvitations(tenantId, eventId), {
-      invitationIds,
-      previewRevision: dispatchPreviewRevision,
-      idempotencyKey: crypto.randomUUID(),
-    });
+    const outcome = await dispatchIntent.run(
+      { invitationIds, previewRevision: dispatchPreviewRevision },
+      (body) => portalMutate(bffInvitations(tenantId, eventId), body),
+      (response) => interpretDispatch(
+        response.status,
+        response.json,
+        response.networkError || response.timedOut,
+        locale,
+      ).kind === 'dispatch',
+    );
+    if (outcome.kind === 'blocked') {
+      setNotice(t('intent.blocked'));
+      setBusy(false);
+      return;
+    }
+    const result = outcome.response;
     const next = interpretDispatch(
       result.status,
       result.json,
@@ -670,6 +682,8 @@ export function ImportInvitationsPanel({
         onStartNew={() => { createIntent.release(); submittedCsv.current = null; setFileId(''); }} />
       <MutationIntentAlert pending={commitIntent.pending} needsReconciliation={commitIntent.needsReconciliation}
         onCheck={() => void refreshStatus()} onStartNew={commitIntent.release} />
+      <MutationIntentAlert pending={dispatchIntent.pending} needsReconciliation={dispatchIntent.needsReconciliation}
+        onCheck={() => void listInvitations()} onStartNew={dispatchIntent.release} />
 
       </> : null}
 
