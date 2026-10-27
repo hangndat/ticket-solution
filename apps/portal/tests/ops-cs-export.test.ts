@@ -95,6 +95,16 @@ describe('portal CS / export / decide helpers', () => {
       ticketId,
     );
     assert.equal(acceptedAlone.kind, 'unknown');
+
+    const cooldown = interpretCsResend(429,
+      { code: 'RESEND_COOLDOWN', message: 'Resend cooldown active', retryable: false },
+      false, ticketId);
+    assert.equal(cooldown.kind, 'rejected');
+    if (cooldown.kind === 'rejected') assert.equal(cooldown.code, 'RESEND_COOLDOWN');
+    const limit = interpretCsResend(429,
+      { code: 'RESEND_LIMIT', message: 'Resend limit reached', retryable: false },
+      false, ticketId);
+    assert.equal(limit.kind, 'rejected');
   });
 
   it('export create/status/download; rejects downloadUrl JSON', () => {
@@ -149,6 +159,12 @@ describe('portal CS / export / decide helpers', () => {
       'application/json',
     );
     assert.equal(fakeUrl.kind, 'unknown');
+
+    const expired = interpretExportDownload(422,
+      { code: 'EXPORT_EXPIRED', message: 'Export expired', retryable: false },
+      false, exportId, 'application/json');
+    assert.equal(expired.kind, 'rejected');
+    if (expired.kind === 'rejected') assert.equal(expired.code, 'EXPORT_EXPIRED');
   });
 
   it('decideAdmin approve/deny unknown on 5xx', () => {
