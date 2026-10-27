@@ -1,5 +1,7 @@
 # Roadmap — Event Ticketing Platform
 
+> **Mới 28/10/2026 — O27 / Epic [#914](https://github.com/hangndat/ticket-solution/issues/914):** iOS guest **không** NativeTabs (không catalog Sự kiện / Tài khoản / Vé khi logged out) — stack Đăng nhập + Đổi mã; attendee đã xác minh chỉ tabs Sự kiện + Vé của tôi, Account qua header; privacy **native** (không WebView); header large-title như staff. Staff Scan/`StaffGateScreenChrome`: đổi sự kiện **chỉ header**, icon SF, không picker body. VoiceOver vẫn ngoài #914. USB máy thật: [`.cursor/skills/ios-usb-device/SKILL.md`](../.cursor/skills/ios-usb-device/SKILL.md) (prod vs local API). Chi tiết [O27](./DECISION-LOG.md).
+
 > **Mới 26/10/2026 — O25 / Epic [#914](https://github.com/hangndat/ticket-solution/issues/914):** hoàn thiện sản phẩm cốt lõi và UX tự phục vụ. Roadmap thực thi canonical: [`plans/VEMOKI-CORE-UX-ROADMAP-2026-10-26.md`](./plans/VEMOKI-CORE-UX-ROADMAP-2026-10-26.md). `apps/portal` và `apps/web` là hai slice riêng; attendee web không cold-offline trong Epic này. Nợ #901/#903/#904/AR891-INT-F01 vẫn hoãn. **iOS VoiceOver ngoài phạm vi #914 / quyết định owner** — không AC S6/UAT, không known gap.
 
 > **Quyết định mới 24/10/2026 — O23:** bỏ Web Gate, Gate admission chỉ trên iOS Staff. Hướng thiết kế tại [`vemoki-unified-v1`](./design/vemoki-unified-v1/README.md) được chốt ở mức design; các checkpoint Web Gate lịch sử bên dưới giữ làm bằng chứng phạm vi cũ. D-6 đã xóa route `/gate` web; các link/copy cũ và direct-route behavior cần Task Spec, contract/ADR, review và nghiệm thu riêng trước khi coi migration hoàn tất. Chưa coi là acceptance complete hay pilot ready.
@@ -284,7 +286,7 @@ Vẫn **sau MVP** (không thuộc D7–D10, không bị “hủy” khỏi tầm
 - Repo: https://github.com/hangndat/ticket-solution
 - Agent rules: root [AGENTS.md](../AGENTS.md) + `.cursor/rules/*.mdc`
 - W0 evidence: [W0-FOUNDATION-REPORT.md](./W0-FOUNDATION-REPORT.md)
-- Chính sách iOS: không bao giờ Expo/EAS Cloud Build — xem root/mobile `AGENTS.md`, README, PRD, technical design.
+- Chính sách iOS: không bao giờ Expo/EAS Cloud Build — xem root/mobile `AGENTS.md`, README, PRD, technical design. Cài USB/máy thật: skill [ios-usb-device](../.cursor/skills/ios-usb-device/SKILL.md) — chọn mode **prod** (OIDC/API/APNs như TestFlight) hoặc **local API** trước khi bake; không trộn extras.
 - Bàn giao Cursor W0→roadmap (lịch sử): [BAN-GIAO-CURSOR.md](./BAN-GIAO-CURSOR.md)
 
 ## 10. Lịch sử — sau duyệt roadmap lần đầu (2026-10-16)
