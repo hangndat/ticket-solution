@@ -27,6 +27,7 @@ User duyệt định hướng/phạm vi Epic [#914](https://github.com/hangndat/
 | 1 | Ownership | `apps/portal` và `apps/web` là **hai ownership slice riêng**; mỗi slice tối đa một feature coding worker cùng lúc. Thay quy định "cùng slice web, kể cả `apps/web` và `apps/portal`" trong `docs/plans/PORTAL-ROADMAP.md` §4 và `docs/plans/PORTAL-IMPLEMENTATION-RUN.md`. Shared contracts, root tooling, lockfile, CI vẫn do coordinator. Giữ caps, employee identity, backpressure; không giao một employee hai dispatch chồng nhau. |
 | 2 | Offline attendee web | Attendee web cần mạng để tải vé lần đầu. Epic #914 **không** thêm cold-offline web, PWA hoặc cache offline. Tiêu chí cold-offline web trong #889/#881 là ngoài scope, không được ghi PASS. |
 | 3 | Offline iOS | iOS offline chỉ áp dụng cho dữ liệu đã tải theo contract hiện hành (ADR-18, O10); không mở rộng claim offline multi-device. |
+| 4 | iOS VoiceOver | Owner 28/10/2026: **loại khỏi plan Epic #914** — không AC S4/S6, không known gap, không follow-up. Không chặn `Hoàn thành`. |
 
 Architecture impact: **Không** (quy tắc ownership/scope, không đổi runtime). Approval ≠ code complete ≠ acceptance complete ≠ pilot ready.
 
