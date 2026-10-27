@@ -99,6 +99,14 @@ Local: [`PORTAL-LOCAL-CUTOVER-PREP.md`](./PORTAL-LOCAL-CUTOVER-PREP.md). Prod cu
 
 Cookie staff/platform trên portal: **host-only** (omit `Domain`). Kiểm tra realm JSON: `./scripts/portal-local-dual-run-check.sh`.
 
+## 7. Global redeem resolve (SCR)
+
+| Biến | Prod seed / TF attendee | Ý nghĩa |
+| --- | --- | --- |
+| `SINGLE_CODE_RESOLVE_GLOBAL` | `1` khi `code_routing` backfill xong và `AMBIGUOUS=0` | Bật `POST /v1/redemptions/resolve`. Compose **phải** truyền vào service `api` (không chỉ ghi `.env`). Tắt → 503 `RESOLVE_DISABLED`. Fallback secret: `CODE_HMAC_PEPPER` / `TICKET_CREDENTIAL_KEY`. |
+
+Mã seed prod (`VEM-HOIAN-*` trong `docs/demo/PROD-SEED-DATASET.md`) cần flag này + hàng `code_routing_*` (script `packages/backend/scripts/backfill-code-routing.cjs` hoặc SQL tương đương). Không invent lookup mới.
+
 ## Cấm
 
 - Commit `.env` thật, `.p8`, MinIO root production, SMTP password.
