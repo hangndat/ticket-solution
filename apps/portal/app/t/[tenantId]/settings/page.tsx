@@ -11,6 +11,7 @@ import {
   portalMutate,
 } from '../../../../src/client/portal-fetch';
 import { bffBranding } from '../../../../src/prep/bff-urls';
+import { TenantLimitsCard } from '../../../../src/components/tenant-limits-card';
 import { useTenantAccess } from '../../../../src/prep/use-event-access';
 import { canPerformTenantAction } from '../../../../src/nav/capability-policy';
 import { usePortalLocale } from '../../../../src/i18n';
@@ -246,6 +247,7 @@ export default function OrgSettingsPage() {
       ) : null}
       {kind === 'ready' ? (
         <>
+          <TenantLimitsCard tenantId={tenantId} />
           <ProForm
             form={form}
             onValuesChange={() => setDirty(true)}

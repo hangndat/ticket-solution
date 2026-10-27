@@ -25,12 +25,18 @@ import {
 } from '../../../../src/client/portal-fetch';
 import {
   bffInvites,
+  bffMemberEventAssignment,
   bffMemberRole,
   bffMembers,
   bffRevokeInvite,
   bffRevokeMember,
   bffRolePresets,
 } from '../../../../src/prep/bff-urls';
+import { InContextHelp } from '../../../../src/components/in-context-help';
+import {
+  eventAssignmentRoleAllowed,
+  isLastOwnerError,
+} from '../../../../src/ops/members-policy';
 import { useTenantAccess } from '../../../../src/prep/use-event-access';
 import { canPerformTenantAction } from '../../../../src/nav/capability-policy';
 import { usePortalLocale } from '../../../../src/i18n';
@@ -84,6 +90,8 @@ export default function MembersPage() {
     null,
   );
   const [assignRole, setAssignRole] = useState<MembershipRole>('Manager');
+  const [assignEventId, setAssignEventId] = useState<string | undefined>();
+  const [assignEventRole, setAssignEventRole] = useState<MembershipRole>('Manager');
   const [assignBusy, setAssignBusy] = useState(false);
   const [form] = Form.useForm<{
     email: string;
@@ -193,7 +201,7 @@ export default function MembersPage() {
   }, [access.kind, reload]);
 
   function showLastOwnerGuard(code: string | null, fallback: string) {
-    if (code === 'LAST_OWNER_REQUIRED') {
+    if (isLastOwnerError(code)) {
       Modal.error({
         title: t('members.roles.lastOwnerTitle'),
         content: t('members.roles.lastOwnerBody'),
@@ -290,17 +298,17 @@ export default function MembersPage() {
         ];
       }
       const outcome = await inviteIntent.run(body, (request) => portalMutate(bffInvites(tenantId), request), inviteQueued);
-      if (outcome.kind === 'blocked') {
-        setNotice('Lời mời trước chưa rõ kết quả. Kiểm tra danh sách lời mời trước khi tiếp tục.');
-        return;
-      }
+        if (outcome.kind === 'blocked') {
+          setNotice(t('members.intent.inviteUnknown'));
+          return;
+        }
       const res = outcome.response;
       if (res.networkError || res.timedOut || res.status >= 500) {
         setNotice(t('members.h_aa8wpg'));
         return;
       }
-      if (inviteDeliveryFailed(res)) {
-        setNotice('Lời mời đã được tạo nhưng gửi email thất bại. Kiểm tra lời mời và trạng thái gửi trước khi tiếp tục.');
+        if (inviteDeliveryFailed(res)) {
+          setNotice(t('members.intent.inviteDeliveryFailed'));
         void reload();
         return;
       }
@@ -337,6 +345,9 @@ export default function MembersPage() {
         ? row.role
         : ('Manager' as MembershipRole),
     );
+    const current = row.eventAssignments.find((a) => !a.revokedAt);
+    setAssignEventId(current?.eventId);
+    setAssignEventRole('Manager');
     setAssignOpen(true);
   }
 
@@ -357,6 +368,31 @@ export default function MembersPage() {
         return;
       }
       if (res.status >= 200 && res.status < 300) {
+        if (assignEventId && eventAssignmentRoleAllowed(assignEventRole)) {
+          const assigned = await portalMutate(
+            bffMemberEventAssignment(
+              tenantId,
+              assignTarget.membershipId,
+              assignEventId,
+            ),
+            {
+              role: assignEventRole,
+              reason: t('members.roles.changeReason'),
+            },
+            'PUT',
+          );
+          if (assigned.networkError || assigned.timedOut || assigned.status >= 500) {
+            setNotice(t('members.roles.changeUnknown'));
+            return;
+          }
+          if (assigned.status < 200 || assigned.status >= 300) {
+            showLastOwnerGuard(
+              apiErrorCode(assigned.json),
+              apiErrorMessage(assigned.json, t('members.roles.changeFailed')),
+            );
+            return;
+          }
+        }
         setNotice(t('members.roles.changeOk'));
         setAssignOpen(false);
         setAssignTarget(null);
@@ -388,7 +424,7 @@ export default function MembersPage() {
             typeof res.json === 'object' && (res.json as { membershipId?: unknown }).membershipId === membershipId,
         );
         if (outcome.kind === 'blocked') {
-          setNotice('Thu hồi thành viên trước chưa rõ kết quả. Kiểm tra danh sách thành viên.');
+          setNotice(t('members.intent.revokeMemberUnknown'));
           return;
         }
         const res = outcome.response;
@@ -397,7 +433,7 @@ export default function MembersPage() {
           setNotice(t('members.h_o8fp08'));
           void reload();
         } else if (res.status >= 200 && res.status < 300) {
-          setNotice('Thu hồi thành viên chưa xác định. Kiểm tra trạng thái trước khi tiếp tục.');
+          setNotice(t('members.intent.revokeMemberUnconfirmed'));
         } else if (res.networkError || res.status >= 500) {
           setNotice(t('members.h_suvvlr'));
         } else {
@@ -426,7 +462,7 @@ export default function MembersPage() {
             (res.json as { state?: unknown }).state === 'REVOKED',
         );
         if (outcome.kind === 'blocked') {
-          setNotice('Thu hồi lời mời trước chưa rõ kết quả. Kiểm tra danh sách lời mời.');
+          setNotice(t('members.intent.revokeInviteUnknown'));
           return;
         }
         const res = outcome.response;
@@ -436,7 +472,7 @@ export default function MembersPage() {
           setNotice(t('members.h_2cjh4e'));
           void reload();
         } else if (res.status >= 200 && res.status < 300) {
-          setNotice('Thu hồi lời mời chưa xác định. Kiểm tra trạng thái trước khi tiếp tục.');
+          setNotice(t('members.intent.revokeMemberUnconfirmed'));
         } else {
           setNotice(apiErrorMessage(res.json, t('members.h_1tmqlzc')));
         }
@@ -452,7 +488,8 @@ export default function MembersPage() {
     },
     {
       title: t('ops.export.statusButton'),
-      render: (_, row) => (row.revokedAt ? 'REVOKED' : 'ACTIVE'),
+      render: (_, row) =>
+        row.revokedAt ? t('members.status.revoked') : t('members.status.active'),
     },
     {
       title: t('members.h_r0iic4'),
@@ -473,6 +510,7 @@ export default function MembersPage() {
       title={t('members.h_i0adgn')}
       subTitle={t('members.inviteEventsHint')}
     >
+      <InContextHelp messageKey="members.help" testId="members-help" />
       <Alert
         type="info"
         showIcon
@@ -819,6 +857,31 @@ export default function MembersPage() {
               label: r,
             }))}
             aria-label={t('members.h_1mkpx3r')}
+          />
+          <Typography.Text>{t('members.assign.eventLabel')}</Typography.Text>
+          <Select
+            allowClear
+            style={{ width: '100%' }}
+            value={assignEventId}
+            onChange={(v) => setAssignEventId(v)}
+            options={access.events.map((e) => ({
+              value: e.eventId,
+              label: e.name,
+            }))}
+            aria-label={t('members.assign.eventLabel')}
+          />
+          <Typography.Text>{t('members.assign.eventRole')}</Typography.Text>
+          <Select
+            style={{ width: '100%' }}
+            value={assignEventRole}
+            onChange={(v) => setAssignEventRole(v)}
+            options={SYSTEM_MEMBERSHIP_ROLES.filter((r) =>
+              eventAssignmentRoleAllowed(r),
+            ).map((r) => ({
+              value: r,
+              label: r,
+            }))}
+            aria-label={t('members.assign.eventRole')}
           />
           <Typography.Paragraph type="secondary" style={{ marginBottom: 0 }}>
             {t('members.roles.assignBuiltInOnly')}
