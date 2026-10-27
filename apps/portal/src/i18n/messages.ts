@@ -293,6 +293,22 @@ export const VI = {
   'locale.en': 'English',
   'locale.label': 'Ngôn ngữ',
   'locale.vi': 'Tiếng Việt',
+  'intent.new': 'Tạo ý định mới',
+  'intent.newTitle': 'Tạo ý định mới?',
+  'intent.newBody':
+    'Thao tác trước có thể đã thành công. Hãy kiểm tra trạng thái trước; tiếp tục có nguy cơ tạo thao tác trùng.',
+  'intent.newOk': 'Tôi đã kiểm tra, tạo mới',
+  'intent.conflictTitle': 'Idempotency key không còn hợp lệ',
+  'intent.conflictBody':
+    'Key đã hết hiệu lực hoặc payload không khớp. Dừng thử lại và đối soát trạng thái tài nguyên.',
+  'intent.acceptedTitle': 'Yêu cầu đã được tiếp nhận, chờ kết quả cuối',
+  'intent.acceptedBody':
+    'HTTP 202 chỉ xác nhận đã nhận yêu cầu. Kiểm tra trạng thái job hoặc tài nguyên; chưa thể báo thành công.',
+  'intent.unknownTitle': 'Kết quả thao tác chưa xác định',
+  'intent.unknownBody':
+    'Có thể thao tác đã được ghi nhận. Thử lại cùng nút sẽ dùng cùng key và dữ liệu; nếu sửa dữ liệu, hãy kiểm tra trước khi tạo ý định mới.',
+  'intent.unknownRecovered':
+    'Phiên trước có thao tác chưa rõ kết quả. Kiểm tra trạng thái tài nguyên trước khi tiếp tục; danh sách không chứng minh riêng thao tác đã thành công.',
   'limits.guidance.attendeeLimitAction': 'Mở hạn mức suất của sự kiện',
   'limits.guidance.attendeeLimitBody':
     'Đã hết suất khách cho nguồn hoặc loại vé này. Xem hạn mức sự kiện; danh sách vé và check-in vẫn xem được.',
@@ -1234,6 +1250,22 @@ export const EN: { [K in MessageKey]: string } = {
   'locale.en': 'English',
   'locale.label': 'Language',
   'locale.vi': 'Tiếng Việt',
+  'intent.new': 'Start a new intent',
+  'intent.newTitle': 'Start a new intent?',
+  'intent.newBody':
+    'The previous action may already have succeeded. Check resource status first; continuing may create a duplicate.',
+  'intent.newOk': 'I checked — start new',
+  'intent.conflictTitle': 'Idempotency key is no longer valid',
+  'intent.conflictBody':
+    'The key expired or the payload does not match. Stop retrying and reconcile the resource.',
+  'intent.acceptedTitle': 'Request accepted — waiting for a final result',
+  'intent.acceptedBody':
+    'HTTP 202 only confirms the request was received. Check the job or resource; this is not success.',
+  'intent.unknownTitle': 'Action outcome is not confirmed',
+  'intent.unknownBody':
+    'The action may already be recorded. Retrying the same control reuses the same key and payload; if you change data, reconcile before starting a new intent.',
+  'intent.unknownRecovered':
+    'A previous session left an unresolved action. Check the resource before continuing; a list refresh alone does not prove success.',
   'limits.guidance.attendeeLimitAction': 'Open this event’s capacity',
   'limits.guidance.attendeeLimitBody':
     'Guest capacity for this source or ticket type is used up. Review event capacity; ticket lists and check-in stay available.',
@@ -1891,6 +1923,22 @@ export const DICTS: Record<PortalLocale, { [K in MessageKey]: string }> = {
 
 /** VI literal → message key (migration helpers / parity tests). */
 export const VI_TO_KEY: Record<string, MessageKey> = {
+  'Tạo ý định mới': 'intent.new',
+  'Tạo ý định mới?': 'intent.newTitle',
+  'Thao tác trước có thể đã thành công. Hãy kiểm tra trạng thái trước; tiếp tục có nguy cơ tạo thao tác trùng.':
+    'intent.newBody',
+  'Tôi đã kiểm tra, tạo mới': 'intent.newOk',
+  'Idempotency key không còn hợp lệ': 'intent.conflictTitle',
+  'Key đã hết hiệu lực hoặc payload không khớp. Dừng thử lại và đối soát trạng thái tài nguyên.':
+    'intent.conflictBody',
+  'Yêu cầu đã được tiếp nhận, chờ kết quả cuối': 'intent.acceptedTitle',
+  'HTTP 202 chỉ xác nhận đã nhận yêu cầu. Kiểm tra trạng thái job hoặc tài nguyên; chưa thể báo thành công.':
+    'intent.acceptedBody',
+  'Kết quả thao tác chưa xác định': 'intent.unknownTitle',
+  'Có thể thao tác đã được ghi nhận. Thử lại cùng nút sẽ dùng cùng key và dữ liệu; nếu sửa dữ liệu, hãy kiểm tra trước khi tạo ý định mới.':
+    'intent.unknownBody',
+  'Phiên trước có thao tác chưa rõ kết quả. Kiểm tra trạng thái tài nguyên trước khi tiếp tục; danh sách không chứng minh riêng thao tác đã thành công.':
+    'intent.unknownRecovered',
   'Ghép cột': 'ops.import.mappingStep',
   'Import gần đây': 'ops.import.jobsTitle',
   'Dòng lỗi': 'ops.import.errorsCount',
