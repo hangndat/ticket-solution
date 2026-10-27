@@ -207,7 +207,22 @@ export function MyTicketsScreen() {
     );
   }
 
-  return <TabStackTitle title="Vé của tôi" />;
+  return (
+    <>
+      <ScreenAtmosphere>
+        <ScrollView
+          contentInsetAdjustmentBehavior="automatic"
+          style={{ flex: 1 }}
+          contentContainerStyle={{ padding: space.xl }}
+        >
+          <EmptyState title={walletCopy.guestWalletBlockedTitle}>
+            {walletCopy.guestWalletBlockedBody}
+          </EmptyState>
+        </ScrollView>
+      </ScreenAtmosphere>
+      <TabStackTitle title="Vé của tôi" />
+    </>
+  );
 }
 
 /**

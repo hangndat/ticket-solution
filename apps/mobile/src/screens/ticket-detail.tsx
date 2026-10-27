@@ -11,7 +11,7 @@ import {
 import { ErrorState } from '@/components/screen-state';
 import { walletCopy } from '@/components/screen-state-copy';
 import { EventBanner, EventLogo } from '@/components/event-media';
-import { BrandWordmark, Notice, Page } from '@/components/page';
+import { Notice, Page } from '@/components/page';
 import { QrCode } from '@/components/qr-code';
 import { TicketStatusPill } from '@/components/ticket-status-pill';
 import { hasDemoMediaForEventId } from '@/data/demo-media';
@@ -368,9 +368,7 @@ export function TicketDetailScreen() {
                 testID="ticket-detail-logo"
                 accessibilityLabel="Logo sự kiện demo trên vé"
               />
-            ) : (
-              <BrandWordmark compact />
-            )}
+            ) : null}
             <TicketStatusPill label={row.statusLabel} />
           </View>
           <Text
