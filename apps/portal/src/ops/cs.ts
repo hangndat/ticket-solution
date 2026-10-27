@@ -244,10 +244,16 @@ export function interpretCsResend(
   ticketId: string,
   locale: PortalLocale = DEFAULT_PORTAL_LOCALE,
 ): CsView {
-  if (networkError || status === 0 || status === 429 || status >= 500) {
+  if (networkError || status === 0 || status >= 500) {
     return { kind: 'unknown', message: t(locale, 'ops.h_gafwuk') };
   }
   const body = asRecord(json);
+  if (status === 429) {
+    const err = apiErrorFrom(body);
+    return err && (err.code === 'RESEND_COOLDOWN' || err.code === 'RESEND_LIMIT')
+      ? { kind: 'rejected', ...err }
+      : { kind: 'unknown', message: t(locale, 'ops.h_gafwuk') };
+  }
   if (status === 200 || status === 201) {
     if (
       body &&
