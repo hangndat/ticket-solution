@@ -1,10 +1,28 @@
 # Decision log — sản phẩm & kỹ thuật
 
-Ngày cập nhật: 2026-10-26
+Ngày cập nhật: 2026-10-28
 Nguồn: [PRD](./PRD.md) mục 15, [Technical Design](./TECHNICAL-DESIGN.md) mục 2 & 18, [ROADMAP](./ROADMAP.md)
 Tracking: Issues [#10](https://github.com/hangndat/ticket-solution/issues/10), [#11](https://github.com/hangndat/ticket-solution/issues/11)
 
 **Kiến trúc hiện trạng (canonical, Epic [#891](https://github.com/hangndat/ticket-solution/issues/891) / F06):** [`docs/architecture/ar891-current-architecture.md`](./architecture/ar891-current-architecture.md) — deployed / tested / proposed; không thay nội dung quyết định lịch sử bên dưới.
+
+## O27 — iOS attendee IA, privacy native, staff event chrome, USB (28/10/2026)
+
+Owner chốt trên Epic [#914](https://github.com/hangndat/ticket-solution/issues/914) ngày 28/10/2026. **Không đóng Epic.** Implementation app iOS thuộc worker/slice `apps/mobile` riêng — quyết định này chỉ SoT product/UAT/docs.
+
+| # | Quyết định | Chi tiết |
+| - | ---------- | -------- |
+| 1 | iOS VoiceOver | **Giữ ngoài** Epic #914 (O25 §4). Không AC S4/S6, không case catalog UAT, không known gap, không follow-up, không chặn `Hoàn thành`. |
+| 2 | Chính sách quyền riêng tư | Màn **native** «Chính sách quyền riêng tư». **Không** webpage/WebView in-app. Không yêu cầu UAT mở `vemoki.com/privacy` trong WebView. |
+| 3 | Guest IA | **Không** `NativeTabs` cho attendee khi chưa đăng nhập: không tab Sự kiện, không Tài khoản, không Vé. Một stack: **Đăng nhập** + **Đổi mã**. Không section thông báo/phiên trống khi logged out. Login = CTA header kiểu staff (`person.circle`), **không** tab Tài khoản. |
+| 4 | Verified attendee | Tabs **Sự kiện** + **Vé của tôi** only. Account qua nút header (cùng pattern staff). **Không** tab Tài khoản. |
+| 5 | Headers | Attendee dùng cùng native large-title chrome như staff History/Manual (`tabRootStackScreenOptions`). |
+| 6 | USB / máy thật | Hai mode (prod extras vs local API) trong [`.cursor/skills/ios-usb-device/SKILL.md`](../.cursor/skills/ios-usb-device/SKILL.md). Không EAS Cloud Build. |
+| 7 | Staff đổi sự kiện | Scan và tab staff khác dùng `StaffGateScreenChrome`: bộ đổi sự kiện **chỉ trên header**, icon SF (không text-only). **Bỏ** picker sự kiện trùng trong body. |
+
+Thay các AC/UAT cũ yêu cầu catalog guest 2–3 tab (Sự kiện/Tài khoản/Vé), privacy WebView, hoặc picker sự kiện staff trong body. Không đảo O23 (Gate chỉ iOS Staff) hay O25 ownership/offline.
+
+Architecture impact: **Có** đối với navigation chrome iOS (IA/header/privacy/staff event switcher); commit docs này **không** đổi runtime. Approval ≠ code complete ≠ acceptance complete ≠ pilot ready.
 
 ## O26 — Portal dùng giao diện mặc định Ant Design (26/10/2026)
 

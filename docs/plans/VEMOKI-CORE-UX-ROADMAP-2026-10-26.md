@@ -45,7 +45,7 @@ Cột "Tái hiện": **Có (code)** = kết luận xác định từ luồng cod
 
 - **Trong phạm vi:** S0–S6 theo roadmap user; mọi task bám contract/API hiện có, chỉ thêm endpoint khi S0-T03 chốt contract.
 - **Deferred / On request (không estimate, không dispatch):** payment/refund, kiosk, in thẻ, quay số, quiz, marketplace, editor kéo-thả tổng quát.
-- **Non-goal giữ nguyên:** Android native, Web Gate admission, transfer, seat map, Wallet; không Zalo/ZNS, custom-domain/sender, CRM, SSO; không billing/paywall/pricing tiers, không claim unlimited/trọn đời/SLA; **iOS VoiceOver ngoài phạm vi #914 / quyết định owner** (không AC S4/S6).
+- **Non-goal giữ nguyên:** Android native, Web Gate admission, transfer, seat map, Wallet; không Zalo/ZNS, custom-domain/sender, CRM, SSO; không billing/paywall/pricing tiers, không claim unlimited/trọn đời/SLA; **iOS VoiceOver ngoài phạm vi #914 / quyết định owner** (không AC S4/S6). **Không** AC guest NativeTabs / catalog Sự kiện khi logged out / tab Tài khoản / privacy WebView; staff **không** AC picker sự kiện trùng trong body — IA/chrome theo [O27](../DECISION-LOG.md).
 - **Nợ hoãn giữ tách biệt:** #901, #903, #904, AR891-INT-F01 — không tạo task cùng việc.
 
 | Blocker | Chặn gì | Owner | Điều kiện mở |
@@ -103,10 +103,10 @@ AC: fixture vượt một trang vẫn tìm/duyệt/xuất đúng phạm vi; relo
 ### S4 — Attendee và iOS Staff
 
 - **T01** (Linh, `apps/web`) **verify-first**: chạy sớm chỉ phần kiểm chứng độc lập có deliverable rõ (ma trận state × route từ code/test, gap tái hiện được); không sửa theo suy đoán, không giữ worker chờ fixture. Phần runtime/fix đầy đủ mở khi S0-T04 sẵn sàng. Không cold-offline web/PWA/cache (O25).
-- **T02** (Zico, `apps/mobile`) Staff: tenant/event rõ, kết quả quét, confirm, pending/conflict/unknown, logout/revoke theo policy.
+- **T02** (Zico, `apps/mobile`) Staff: tenant/event rõ, kết quả quét, confirm, pending/conflict/unknown, logout/revoke theo policy. Đổi sự kiện trên Scan và tab dùng `StaffGateScreenChrome`: **chỉ header**, icon SF; không picker body ([O27](../DECISION-LOG.md)). IA attendee/guest do slice iOS khác — không AC catalog guest tab.
 - **T03** (Zico) regression retry/restart/offline queue/sync/receipt theo contract; offline chỉ dữ liệu đã tải (ADR-18); Portal chỉ báo cáo.
 
-AC: Manager phát vé → attendee thấy vé → Staff xác nhận → Portal phản ánh; có scenario retry/quét trùng/mất mạng; build local (không EAS); không claim offline multi-device chống trùng; không đổi ADR-18.
+AC: Manager phát vé → attendee thấy vé → Staff xác nhận → Portal phản ánh; có scenario retry/quét trùng/mất mạng; build local (không EAS); không claim offline multi-device chống trùng; không đổi ADR-18. Nghiệm thu iOS attendee/staff chrome theo O27 (không FAIL vì thiếu guest catalog tab, tab Tài khoản, WebView privacy, hoặc picker sự kiện trong body).
 
 ### S5 — Miễn phí có kiểm soát (portal)
 
@@ -121,7 +121,7 @@ AC: Manager phát vé → attendee thấy vé → Staff xác nhận → Portal p
 - **T02** (Mira, `ux`) a11y/responsive/interaction trong browser: keyboard, focus, label, contrast, zoom, 320–1440, empty/error/unknown. Không gồm iOS VoiceOver (ngoài phạm vi #914 / quyết định owner).
 - **T03** (Minh) đóng finding theo review-convergence, CI, docs/runbook/demo script, kết luận code complete / acceptance complete trong scope / release blockers / pilot readiness.
 
-T01 và T02 dùng **chung một evidence matrix** (route × persona × state × viewport/locale × SHA), mỗi bên chỉ kết luận checklist của mình. Evidence chuyển sang Issue cũ (#880/#881/#879/#882/#889) chỉ khi khớp đúng SHA, môi trường, persona, viewport/locale và AC của Issue đó; tiêu chí ngoài scope (vd. cold-offline web) ghi "ngoài scope theo O25", không PASS. S6 không thay #901/#903/#904; nghiệm thu local không là giấy phép pilot.
+T01 và T02 dùng **chung một evidence matrix** (route × persona × state × viewport/locale × SHA), mỗi bên chỉ kết luận checklist của mình. Evidence chuyển sang Issue cũ (#880/#881/#879/#882/#889) chỉ khi khớp đúng SHA, môi trường, persona, viewport/locale và AC của Issue đó; tiêu chí ngoài scope (vd. cold-offline web; guest NativeTabs/catalog; privacy WebView; VoiceOver) ghi "ngoài scope theo O25/O27", không PASS. S6 không thay #901/#903/#904; nghiệm thu local không là giấy phép pilot.
 
 ## 5. DAG và waves
 
@@ -163,7 +163,7 @@ WIP đầy (≥3 Chờ duyệt, ≥2 PR/slice chờ merge, ≥4 PR thiếu DoD+C
 | Portal UI khác | James · `dod+ux` | Như trên, states empty/error/unknown/stale |
 | Backend (S3-T01, backend limits nếu có) | James · `dod+sec` | test API + DB/RLS negative tenant; không BYPASSRLS; CI turbo |
 | Web attendee | James · `dod+sec+ux` | `pnpm --filter @ticket/web lint typecheck test build`; Orca browser owner/guest |
-| iOS | James · `dod+sec+ux` | local prebuild + `xcodebuild` (không EAS); Orca emulator; thiết bị thật cho camera/offline. Không VoiceOver (#914 ngoài phạm vi / quyết định owner) |
+| iOS | James · `dod+sec+ux` | local prebuild + `xcodebuild` (không EAS); USB theo skill `ios-usb-device` (prod vs local API); Orca emulator; thiết bị thật cho camera/offline. Không VoiceOver. Chrome attendee/staff theo [O27](../DECISION-LOG.md) |
 | Contract (S0-T03) | James · `dod+sec` | Security checklist; đối chiếu contract/DECISION-LOG/API hiện có |
 | Handoff PD (S0-T02) | Mira · `ux` | Đối chiếu O18/O23 |
 | Fixture tooling (S0-T04) | James · `dod+sec` | dữ liệu giả, negative access, reset giới hạn namespace, không secret commit, không đổi role DB |
@@ -195,4 +195,4 @@ Status từng item: xem Project #3 (nguồn duy nhất). Mapping với việc hi
 
 ## 9. Quyết định đã chốt trong vòng duyệt 26/10/2026
 
-Ghi tại [O25](../DECISION-LOG.md): (1) `apps/portal` và `apps/web` là hai slice riêng; (2) attendee web cần mạng để tải vé lần đầu, không cold-offline web/PWA/cache trong Epic #914, iOS offline chỉ dữ liệu đã tải theo contract hiện hành; (3) iOS VoiceOver ngoài phạm vi #914. Không còn quyết định mở chặn W1.
+Ghi tại [O25](../DECISION-LOG.md): (1) `apps/portal` và `apps/web` là hai slice riêng; (2) attendee web cần mạng để tải vé lần đầu, không cold-offline web/PWA/cache trong Epic #914, iOS offline chỉ dữ liệu đã tải theo contract hiện hành; (3) iOS VoiceOver ngoài phạm vi #914. [O27](../DECISION-LOG.md) (28/10/2026): guest không NativeTabs; attendee verified tabs Sự kiện + Vé; privacy native; header large-title; staff đổi sự kiện chỉ header SF icon; USB hai mode. Không còn quyết định mở chặn W1.
