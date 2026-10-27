@@ -10,12 +10,16 @@ import {
   usePortalLocale,
   type PortalLocale,
 } from '../i18n';
+import { PORTAL_ANTD_THEME } from '../theme/portal-antd-theme';
 
 function AntdLocaleBridge({ children }: { children: ReactNode }) {
   const { locale } = usePortalLocale();
 
   return (
-    <ConfigProvider locale={locale === 'en' ? enUS : viVN}>
+    <ConfigProvider
+      locale={locale === 'en' ? enUS : viVN}
+      theme={PORTAL_ANTD_THEME}
+    >
       <ProConfigProvider hashed={false}>
         <App>{children}</App>
       </ProConfigProvider>

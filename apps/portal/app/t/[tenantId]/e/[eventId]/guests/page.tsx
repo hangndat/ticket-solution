@@ -299,8 +299,8 @@ export default function EventGuestsPage() {
           style={{ marginBottom: 16 }}
           value={section}
           options={[
-            { label: 'Danh sách', value: 'list' },
-            { label: 'Vận hành', value: 'ops' },
+            { label: t('guests.section.list'), value: 'list' },
+            { label: t('guests.section.ops'), value: 'ops' },
           ]}
           onChange={(value) => setSection(value as 'list' | 'ops')}
         />

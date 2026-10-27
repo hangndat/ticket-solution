@@ -3,6 +3,24 @@
   <head>
     <meta charset="utf-8" />
     <title>Portal shell — EN locale + keyboard sample</title>
+    <style>
+      .portal-skip-link {
+        position: absolute;
+        clip-path: inset(50%);
+        width: 1px;
+        height: 1px;
+      }
+      .portal-skip-link:focus,
+      .portal-skip-link:focus-visible,
+      .portal-skip-link.portal-skip-link--visible {
+        position: fixed;
+        left: 8px;
+        top: 8px;
+        width: auto;
+        height: auto;
+        clip-path: none;
+      }
+    </style>
   </head>
   <body>
     <a href="#portal-main" class="portal-skip-link">Skip navigation</a>
