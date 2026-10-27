@@ -279,7 +279,16 @@ export function GlobalRedeemScreen() {
     }
     if (termsIssue) nextErrors.terms = termsIssue.message;
     setFieldErrors(nextErrors);
-    if (!validated.ok || termsIssue) return;
+    if (!validated.ok || termsIssue) {
+      setDecision({
+        kind: 'denied',
+        code: termsIssue?.code ?? 'FORM_INVALID',
+        message:
+          termsIssue?.message ??
+          'Điền đủ biểu mẫu rồi xác nhận. Chưa gửi lên máy chủ.'
+      });
+      return;
+    }
 
     const payload = {
       tenantId: resolveContext.tenantId,
@@ -529,18 +538,14 @@ export function GlobalRedeemScreen() {
         </Text>
       ) : null}
 
-      <AttendeeCta
-        label={
-          busy
-            ? 'Đang tra cứu…'
-            : resolved
-              ? redeemCopy.lookupAgainCta
-              : redeemCopy.lookupCta
-        }
-        disabled={busy || code.trim().length === 0}
-        onPress={() => void onContinueOrResolve()}
-        testID="global-redeem-cta-resolve"
-      />
+      {!resolved ? (
+        <AttendeeCta
+          label={busy ? 'Đang tra cứu…' : redeemCopy.lookupCta}
+          disabled={busy || code.trim().length === 0}
+          onPress={() => void onContinueOrResolve()}
+          testID="global-redeem-cta-resolve"
+        />
+      ) : null}
 
       {resolved ? (
         <>
