@@ -34,7 +34,7 @@ function validateField(
         return {
           fieldId: field.id,
           code: 'REQUIRED',
-          message: `${field.label} is required.`,
+          message: `${field.label} là bắt buộc.`,
         };
       }
       return null;
@@ -43,14 +43,14 @@ function validateField(
       return {
         fieldId: field.id,
         code: 'INVALID_TYPE',
-        message: `${field.label} must be true or false.`,
+        message: `${field.label} phải là có hoặc không.`,
       };
     }
     if (field.required && raw !== true) {
       return {
         fieldId: field.id,
         code: 'REQUIRED',
-        message: `${field.label} must be checked.`,
+        message: `${field.label} cần được chọn.`,
       };
     }
     return null;
@@ -62,7 +62,7 @@ function validateField(
       return {
         fieldId: field.id,
         code: 'REQUIRED',
-        message: `${field.label} is required.`,
+        message: `${field.label} là bắt buộc.`,
       };
     }
     return null;
@@ -73,7 +73,7 @@ function validateField(
       return {
         fieldId: field.id,
         code: 'TOO_LONG',
-        message: `${field.label} is too long.`,
+        message: `${field.label} quá dài.`,
       };
     }
     return null;
@@ -84,7 +84,7 @@ function validateField(
       return {
         fieldId: field.id,
         code: 'INVALID_EMAIL',
-        message: `${field.label} is not a valid email.`,
+        message: `${field.label} không phải email hợp lệ.`,
       };
     }
     return null;
@@ -99,7 +99,7 @@ function validateField(
       return {
         fieldId: field.id,
         code: 'INVALID_PHONE',
-        message: `${field.label} is not a valid phone.`,
+        message: `${field.label} không phải số điện thoại hợp lệ.`,
       };
     }
     return null;
@@ -111,7 +111,7 @@ function validateField(
       return {
         fieldId: field.id,
         code: 'INVALID_OPTION',
-        message: `${field.label} selection is not allowed.`,
+        message: `${field.label} không nằm trong lựa chọn cho phép.`,
       };
     }
     return null;
@@ -120,7 +120,7 @@ function validateField(
   return {
     fieldId: field.id,
     code: 'UNKNOWN_TYPE',
-    message: `${field.label} has an unsupported type.`,
+    message: `${field.label} có kiểu không hỗ trợ.`,
   };
 }
 
@@ -140,7 +140,7 @@ export function validateFormAnswers(
         issues: keys.map((fieldId) => ({
           fieldId,
           code: 'UNKNOWN_FIELD',
-          message: 'Unknown form field.',
+          message: 'Trường biểu mẫu không hợp lệ.',
         })),
       };
     }
@@ -154,7 +154,7 @@ export function validateFormAnswers(
       issues.push({
         fieldId: key,
         code: 'UNKNOWN_FIELD',
-        message: 'Unknown form field.',
+        message: 'Trường biểu mẫu không hợp lệ.',
       });
     }
   }
