@@ -219,10 +219,26 @@ function PortalShellChrome({
   const showGateScanHint = Boolean(caps?.showGateScanHint);
   const dualRunEnabled = isPortalDualRunBannerEnabled();
   const legacyAdmin = `${productOrigin}/admin`;
+  const skipRef = useRef<HTMLAnchorElement>(null);
+
+  useEffect(() => {
+    const el = skipRef.current;
+    if (!el) return;
+    const sync = () => {
+      el.classList.toggle(
+        'portal-skip-link--visible',
+        document.activeElement === el,
+      );
+    };
+    sync();
+    const id = window.setInterval(sync, 32);
+    return () => window.clearInterval(id);
+  }, []);
 
   return (
     <>
       <a
+        ref={skipRef}
         href="#portal-main"
         className="portal-skip-link"
         onFocus={(event) => {
