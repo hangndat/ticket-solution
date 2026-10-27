@@ -25,6 +25,12 @@ export const walletCopy = {
     body: 'Đăng nhập khi có mạng rồi kéo để làm mới nhằm lưu vé xem offline.',
   },
   errorTitle: 'Không tải được vé',
+  detailMissingTitle: 'Không tìm thấy vé',
+  detailMissingBody:
+    'Không có vé khớp id này cho danh tính hiện tại. Kéo để làm mới Vé của tôi khi online.',
+  detailProbeErrorTitle: 'Không tải được vé',
+  detailProbeErrorBody:
+    'Không kiểm tra được vé trên máy chủ. Thử lại khi có mạng — đây chưa phải vé thiếu.',
   signInErrorTitle: 'Không đăng nhập được',
   signInLoading: {
     title: 'Đang đăng nhập',
@@ -152,14 +158,23 @@ export const redeemCopy = {
   authRequiredBody:
     'Cần đăng nhập để tiếp tục đổi mã.',
   authGateCta: 'Tiếp tục đăng nhập',
-  globalGuestTitle: 'Đăng nhập',
+  screenTitle: 'Đổi mã lấy vé',
+  globalGuestTitle: 'Đăng nhập khi xác nhận',
   globalGuestBody:
-    'Đăng nhập để nhận vé vào ví. Sau khi xác minh, bạn có thể nhập hoặc dán mã nhận vé.',
+    'Nhập hoặc dán mã trước. Đăng nhập khi tìm vé hoặc xác nhận để nhận vé vào ví.',
   globalVerifiedHint:
     'Không cần chọn tổ chức hoặc sự kiện.',
   codeFieldLabel: 'Mã nhận vé',
   codeFieldPlaceholder: 'Nhập hoặc dán mã',
   lookupCta: 'Tìm vé',
   lookupAgainCta: 'Tìm lại',
+  confirmCta: 'Xác nhận đổi mã',
+  walletCta: 'Xem vé',
+  formSectionTitle: 'Thông tin bắt buộc',
+  formVersionPrefix: 'Phiên bản biểu mẫu',
+  formServerValidates: 'Máy chủ vẫn kiểm tra câu trả lời.',
+  termsTitle: 'Điều khoản',
+  termsVersionPrefix: 'Phiên bản',
+  requiredSuffix: '(bắt buộc)',
   eventDetailRedeemBlockTitle: 'Bạn có mã nhận vé?',
 } as const;

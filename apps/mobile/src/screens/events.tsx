@@ -137,7 +137,7 @@ export function EventsScreen() {
   const showAttendeeChrome = useShowAttendeeTabs();
   const tabBarInset = useAttendeeTabBarInset(56);
   const insets = useSafeAreaInsets();
-  const { applyBranding } = useTheme();
+  const { resetToDefault } = useTheme();
   const [published, setPublished] = useState<PublishedEventSummary[]>([]);
   const [publishedPhase, setPublishedPhase] = useState<PublishedListPhase>(() =>
     initialPublishedListPhase(isAppCatalogConfigured()),
@@ -186,19 +186,8 @@ export function EventsScreen() {
   }, [reloadKey]);
 
   useEffect(() => {
-    if (publishedPhase !== 'ready' || published.length === 0) return;
-    const first = published[0];
-    applyBranding(
-      {
-        tenantSlug: first.tenantSlug,
-        organizationName: first.brand.organizationName,
-        primaryColor: first.brand.primaryColor,
-        logoUrl: first.brand.logoUrl,
-        wordmark: first.brand.organizationName
-      },
-      'api',
-    );
-  }, [applyBranding, published, publishedPhase]);
+    resetToDefault();
+  }, [resetToDefault]);
 
   const normalizedQuery = searchQuery.trim().toLocaleLowerCase('vi');
   const listData =

@@ -8,6 +8,7 @@ import {
   ticketGateHint,
   ticketScheduleVenueLines
 } from '@/attendee/attendee-outcome-copy';
+import { ErrorState } from '@/components/screen-state';
 import { walletCopy } from '@/components/screen-state-copy';
 import { EventBanner, EventLogo } from '@/components/event-media';
 import { BrandWordmark, Notice, Page } from '@/components/page';
@@ -24,6 +25,7 @@ import { probeMeTickets } from '@/tickets/fetch-me-tickets';
 import {
   findOwnedTicket,
   normalizeTicketRouteId,
+  ticketDetailFromMeTicketsProbe,
   ticketDetailVerifiedScopes,
 } from '@/tickets/ticket-detail-lookup';
 import { walletFetchScopeFromEnv } from '@/tickets/wallet-fetch-scope';
@@ -46,13 +48,22 @@ type LoadState =
       syncedAt: string | null;
       fromCache: boolean;
     })
-  | (LoadOwner & { status: 'missing' });
+  | (LoadOwner & { status: 'missing' })
+  | (LoadOwner & {
+      status: 'error';
+      reason: 'unreachable' | 'unauthorized' | 'invalid';
+    });
 
 function loadMatchesOwner(
   load: LoadState,
   owner: LoadOwner | null,
-): load is Extract<LoadState, { status: 'ready' | 'missing' }> {
-  if (!owner || (load.status !== 'ready' && load.status !== 'missing')) {
+): load is Extract<LoadState, { status: 'ready' | 'missing' | 'error' }> {
+  if (
+    !owner ||
+    (load.status !== 'ready' &&
+      load.status !== 'missing' &&
+      load.status !== 'error')
+  ) {
     return false;
   }
   return (
@@ -82,6 +93,7 @@ export function TicketDetailScreen() {
     [fetchScope],
   );
   const [load, setLoad] = useState<LoadState>({ status: 'idle' });
+  const [reloadKey, setReloadKey] = useState(0);
 
   const verifiedUserId =
     identity.status === 'verified' ? identity.userId : null;
@@ -176,30 +188,50 @@ export function TicketDetailScreen() {
       if (mode === 'verified') {
         const credential = await session.resolveCredential();
         if (cancelled) return;
-        if (credential.status !== 'unavailable') {
-          const probe =
-            credential.status === 'refresh-unreachable'
-              ? ({ status: 'unreachable' } as const)
-              : await probeMeTickets(credential.accessToken, fetchScope);
-          if (cancelled) return;
+        if (credential.status === 'unavailable') {
+          setLoad({
+            status: 'error',
+            reason: 'unauthorized',
+            ownerUserId,
+            ownerTenantId,
+            ticketId: id,
+            mode
+          });
+          return;
+        }
+        const probe =
+          credential.status === 'refresh-unreachable'
+            ? ({ status: 'unreachable' } as const)
+            : await probeMeTickets(credential.accessToken, fetchScope);
+        if (cancelled) return;
+        const outcome = ticketDetailFromMeTicketsProbe(probe, id);
+        if (outcome.status === 'ready') {
           if (probe.status === 'ok') {
-            const live = findOwnedTicket(probe.body.tickets, id);
-            if (live) {
-              await session.load(sessionScope, 'me-tickets', async () => probe.body.tickets);
-              if (cancelled) return;
-              setLoad({
-                status: 'ready',
-                ticket: live,
-                syncedAt: new Date().toISOString(),
-                fromCache: false,
-                ownerUserId,
-                ownerTenantId,
-                ticketId: id,
-                mode
-              });
-              return;
-            }
+            await session.load(sessionScope, 'me-tickets', async () => probe.body.tickets);
           }
+          if (cancelled) return;
+          setLoad({
+            status: 'ready',
+            ticket: outcome.ticket,
+            syncedAt: new Date().toISOString(),
+            fromCache: false,
+            ownerUserId,
+            ownerTenantId,
+            ticketId: id,
+            mode
+          });
+          return;
+        }
+        if (outcome.status === 'error') {
+          setLoad({
+            status: 'error',
+            reason: outcome.reason,
+            ownerUserId,
+            ownerTenantId,
+            ticketId: id,
+            mode
+          });
+          return;
         }
       }
       if (cancelled) return;
@@ -220,6 +252,7 @@ export function TicketDetailScreen() {
     fetchScope,
     lookupCacheScope,
     lookupSessionScope,
+    reloadKey,
     ticketId,
   ]);
 
@@ -251,12 +284,25 @@ export function TicketDetailScreen() {
     );
   }
 
+  if (visibleLoad.status === 'error') {
+    return (
+      <Page>
+        <ErrorState
+          title={walletCopy.detailProbeErrorTitle}
+          onRetry={() => setReloadKey((key) => key + 1)}
+          retryLabel="Thử lại"
+        >
+          {walletCopy.detailProbeErrorBody}
+        </ErrorState>
+      </Page>
+    );
+  }
+
   if (visibleLoad.status === 'missing') {
     return (
       <Page>
-        <Notice title="Không tìm thấy vé">
-          Không có vé khớp id này cho danh tính hiện tại. Kéo để làm mới Vé của
-          tôi khi online.
+        <Notice title={walletCopy.detailMissingTitle}>
+          {walletCopy.detailMissingBody}
         </Notice>
       </Page>
     );
