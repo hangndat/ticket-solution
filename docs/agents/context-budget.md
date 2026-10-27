@@ -14,7 +14,7 @@ Giảm 5.108 bytes, khoảng 1.460 token (18,6%) ở phần cố định so vớ
 - `git-workflow.mdc` và `github-api-hygiene.mdc` giữ quyền/gates và trigger đọc; hướng dẫn đầy đủ chuyển sang hai file `*-details.mdc` requestable, không mất quy định review/CI/exact-SHA.
 - Rule local `apple-developer-personal.mdc` chuyển sang globs iOS/signing + description cho thao tác không mở file; AGENTS yêu cầu đọc trước build/signing/store. Không đưa tài khoản/cert vào repo. Rule local đã được sao lưu trước sửa; checkout trên máy khác phải cấu hình rule tương ứng.
 - Task/review spec có checkout tuyệt đối và phạm vi đọc ban đầu; [MCP-SETUP.md](MCP-SETUP.md) ghi cách thu hẹp monorepo, lấy output/archive và xử lý lỗi authority.
-- Giữ fan-out 5 non-review + 3 reviewer, một planner/Epic, model routing và reviewer độc lập. Không đổi lean-ctx runtime/policy/proxy hoặc xóa thống kê để tăng điểm.
+- Giữ fan-out 5 non-review + 3 reviewer; planner có điều kiện (không mặc định mỗi Epic); reviewer độc lập chỉ nhánh B. Không đổi lean-ctx runtime/policy/proxy hoặc xóa thống kê để tăng điểm.
 
 Theo dõi 5–10 task tương đương bằng evidence/telemetry hiện có: task + checkout/SHA, loại việc, token/cache nếu host có (thiếu ghi unknown), thời gian, lượt gọi/đọc lại, bounce mới và nguyên nhân, findings/rework. So sánh trước/sau trong cùng nguồn và khoảng đo; không gán toàn bộ stats store của máy cho repo này. Có thể chụp `lean-ctx gain --by-tool --json` trước/sau một batch để tham khảo; nếu có agent/repo khác chạy đồng thời thì số chênh không phải attribution riêng của batch.
 
@@ -38,7 +38,7 @@ Giới hạn đo: lịch sử dài của phiên hiện tại vẫn tồn tại; 
 
 - Template review đầy đủ chỉ dành cho coordinator, đọc một lần rồi gửi spec đã điền khoảng 150–250 từ. Reviewer không nạp template trống/task-spec/worker-report; vẫn đọc role/rules và source/evidence cần thiết. Báo cáo ≤3 câu tóm tắt + checks + findings mới/mở đủ bằng chứng; findings đóng dẫn ID/report trước. Coordinator chỉ ghi trạng thái/decision mới và link báo cáo để tránh phát sinh bản sao.
 
-- Theo điều chỉnh mới nhất của user: giữ max fan-out task ready trong scope, một planner/Epic, trần 5 non-review + 3 reviewer theo `orca-parallel-workers.mdc`. Tối ưu token bằng context/reuse/review theo diff, không hạ concurrency.
+- Max fan-out task ready trong scope, trần 5 non-review + 3 reviewer. Planner chỉ khi ≥2 owner và dep thật. Tối ưu token bằng hạt Story/PR, context/reuse, review theo rủi ro, dọn worktree (≤8 sống). Khi đổi phase: checkpoint sang session mới.
 - Chờ theo sự kiện và mốc liveness trong [mailbox](../../.cursor/rules/orca-coordinator-mailbox.mdc); fallback một `check --wait` tối đa 5 phút (CLI `--timeout-ms 300000`, rút ngắn nếu mốc liveness sớm hơn). Không enumerate theo số timeout, không poll 1 giây/đọc transcript liên tục.
 - Guide/rules coordinator nạp theo hành động trong `orca-leader-activation.mdc`; business docs đọc phần liên quan theo AGENTS. Không nạp tài liệu sản phẩm đầy đủ cho task docs/tooling thuần.
 - Các con số dưới đây là **ước lượng bytes/3.5 trên đĩa**, không phải token usage thực tế hay chi phí quota. Cursor alwaysApply không chứng minh Codex nạp cùng nội dung; runtime có thể thêm instructions/skills/history và cache. Không cộng toàn bộ requestable rules thành chi phí thực của mỗi turn.

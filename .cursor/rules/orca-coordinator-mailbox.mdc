@@ -12,7 +12,7 @@ Chỉ đọc khi supervise Orca Run; dùng guide phiên bản host và preamble 
 3. Ack sau khi xử lý hết batch; xét ready queue trong scope và budget rồi tiếp tục chờ nếu còn dispatch live.
 4. Không kết thúc turn khi còn live/unsettled, câu hỏi chưa trả lời, delivery chưa ack hoặc reclaimable chưa xử lý. Không chờ user nhắc check.
 5. Timeout/heartbeat/inbox rỗng không chứng minh worker đã dừng. Không enumerate theo số lần timeout. Chỉ kiểm liveness khi có lỗi/escalation, quá hạn budget của task, hoặc đã hơn 5 phút không có tín hiệu và đến mốc liveness đã ghi trong checkpoint; tối đa một lần mỗi 5 phút khi không có thay đổi. Dùng worker-list có scope Run và chỉ lấy dispatch/state/liveness/nextAction cần xử lý. Liveness unverifiable không cho phép stop/retry. Chỉ positive proof exited hoặc settlement hợp lệ mới cho hành động tương ứng.
-6. worker_done không thay DoD. Release đúng tài nguyên owned sau settlement, kiểm receipt; reuse chuyển ownership cleanup sang dispatch mới. Không xóa branch/worktree hoặc kill process không thuộc task.
+6. worker_done không thay DoD. Release đúng tài nguyên owned sau settlement, kiểm receipt; reuse chuyển ownership cleanup sang dispatch mới. Không xóa branch/worktree hoặc kill process không thuộc task. Dispatch failed/interrupted: ghi nguyên nhân; không `worker-start` lại cùng task trong wave nếu chưa có giả thuyết mới.
 7. Trước kết thúc, xác minh không còn reclaimable và delivery/question tồn đọng. Chỉ còn task bị chặn, không dispatch live/cleanup tồn đọng → báo checkpoint rồi dừng; không chờ vô hạn một quyết định chưa có.
 
 ## Tránh vòng model không có thông tin mới

@@ -198,7 +198,7 @@ ORCA orchestration worker-start \
 | Tier     | `--model` pin (cost-catalog)                                                                    |
 | -------- | ----------------------------------------------------------------------------------------------- |
 | cheap    | `composer-2.5` (Composer Standard; cấm `composer-2.5-fast`)                                     |
-| standard | `composer-2.5` (fallback `claude-sonnet-5-thinking-low`; cấm `claude-sonnet-5-thinking-medium`) |
+| standard | `composer-2.5` (fallback `grok-4.7-low` / `gemini-3.7-flash-low`; cấm `claude-sonnet-5-thinking-*` trên Cursor) |
 
 Sau wave: `node scripts/orca-cost-wave-evidence.mjs --run <RUN> --dispatch <DISPATCH> [--receipt-file <start-receipt.json>]` (lặp flag cho từng dispatch) → ghi dòng `cost-wave` (`source=receipt`). Comment wt `Cost … · model …` **không** thay `--model` argv.
 
