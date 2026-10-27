@@ -1,7 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { Button } from '@/components/ui/button';
 import { radius, space } from '@/theme/tokens';
-import { GateStatusStrip, StaffEventPicker } from './staff-gate-chrome.tsx';
+import { GateStatusStrip } from './staff-gate-chrome.tsx';
 import { offlineConflictBannerForScope, type ConnectivityState, type OfflineQueueSnapshot } from './offline-queue.ts';
 import type { GateOp } from './gate-scan.ts';
 import type { StaffGateScope } from './staff-gate-events.ts';
@@ -18,12 +18,7 @@ export function StaffGateOpsSticky({
   onSync,
   machineLabel,
   eventName,
-  canSwitchEvent,
-  eventPickerOpen,
-  onToggleEventPicker,
-  gateEventChoices,
   gateScope,
-  onSelectGateScope,
   pendingOp,
   onContinueScan,
   onReconcile,
@@ -36,12 +31,7 @@ export function StaffGateOpsSticky({
   onSync?: () => void;
   machineLabel: string;
   eventName: string | null;
-  canSwitchEvent: boolean;
-  eventPickerOpen: boolean;
-  onToggleEventPicker: () => void;
-  gateEventChoices: StaffGateScope[];
   gateScope: StaffGateScope | null;
-  onSelectGateScope: (scope: StaffGateScope) => void;
   pendingOp: GateOp | null;
   onContinueScan?: () => void;
   onReconcile?: () => void;
@@ -101,18 +91,6 @@ export function StaffGateOpsSticky({
             {sticky.statusText}
           </Text>
         </View>
-        {canSwitchEvent ? (
-          <Button
-            variant="ghost"
-            label="Đổi ›"
-            accessibilityLabel={
-              eventPickerOpen ? 'Đóng danh sách sự kiện' : 'Đổi sự kiện'
-            }
-            onPress={onToggleEventPicker}
-            hitSlop={space.sm}
-            style={styles.switchLink}
-          />
-        ) : null}
       </View>
       <Text
         numberOfLines={1}
@@ -157,13 +135,6 @@ export function StaffGateOpsSticky({
           </Text>
         </View>
       ) : null}
-      {eventPickerOpen && canSwitchEvent ? (
-        <StaffEventPicker
-          choices={gateEventChoices}
-          selected={gateScope}
-          onSelect={onSelectGateScope}
-        />
-      ) : null}
       {showPendingActions ? (
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.sm }}>
           {reconcileEnabled ? (
@@ -191,7 +162,6 @@ export function StaffGateOpsSticky({
 }
 
 const styles = StyleSheet.create({
-  switchLink: { paddingVertical: space.xs, paddingHorizontal: space.xxs },
   compactAction: {
     paddingVertical: space.sm,
     paddingHorizontal: space.md,
