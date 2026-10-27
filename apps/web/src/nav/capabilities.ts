@@ -32,9 +32,9 @@ export const GUEST_NAV_LINKS: NavLink[] = [
   { href: '/', label: 'Khám phá', testId: 'nav-events' },
   { href: '/redeem', label: 'Đổi mã', testId: 'nav-redeem' },
   {
-    href: '/api/auth/login?return=/account',
-    label: 'Tài khoản',
-    testId: 'nav-account',
+    href: '/api/auth/login?return=%2Fwallet',
+    label: 'Đăng nhập',
+    testId: 'nav-login',
   },
 ];
 
@@ -204,6 +204,6 @@ export function buildNavLinks(caps: NavCapabilities): NavLink[] {
   if (caps.showAccount) {
     links.push({ href: '/account', label: 'Tài khoản', testId: 'nav-account' });
   }
-  // Logged-in chrome: Tài khoản replaces «Đăng nhập» — avoid duplicate login CTA.
+  // Logged-in chrome: Tài khoản replaces guest «Đăng nhập» (PKCE → /wallet).
   return links;
 }
