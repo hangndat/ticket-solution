@@ -59,7 +59,7 @@ import {
   readStoredResolveToken,
   writeStoredResolveToken,
 } from '../../../src/redeem/resolve-session';
-import { loginHref } from '../../../src/oidc/login-href';
+import { redeemLoginHref } from '../../../src/redeem/login-href';
 import { RedeemTermsConsent } from '../../../src/redeem/redeem-terms-consent';
 import {
   authButtonsRow,
@@ -88,8 +88,6 @@ import {
 import { liveRegionForStatus } from '../../../src/ui/live-region';
 import { SurfaceState } from '../../../src/ui/surface-state';
 
-const REDEEM_LOGIN_HREF = loginHref('/redeem');
-
 type Props = {
   productChrome?: boolean;
   globalEntry?: boolean;
@@ -110,6 +108,10 @@ export function RedeemForm({
   initialTenantSlug = '',
   initialEventSlug = '',
 }: Props) {
+  const redeemLogin = redeemLoginHref({
+    tenantId: initialTenantId, eventId: initialEventId,
+    tenantSlug: initialTenantSlug, eventSlug: initialEventSlug,
+  });
   const [tenantId, setTenantId] = useState(initialTenantId);
   const [eventId, setEventId] = useState(initialEventId);
   const [tenantSlug, setTenantSlug] = useState(initialTenantSlug);
@@ -1225,7 +1227,7 @@ export function RedeemForm({
                 Xem vé của tôi
               </Button>
               <Button asChild variant="primary">
-                <a href={REDEEM_LOGIN_HREF}>Đăng nhập</a>
+                <a href={redeemLogin}>Đăng nhập</a>
               </Button>
             </>
           )}
@@ -1267,7 +1269,7 @@ export function RedeemForm({
           {ux.kind === 'auth' ? (
             <p className={authButtonsRow}>
               <Button asChild variant="brand">
-                <a href={REDEEM_LOGIN_HREF}>Đăng nhập</a>
+                <a href={redeemLogin}>Đăng nhập</a>
               </Button>
               {ux.title === 'Cần xác minh email' ? (
                 <Button asChild variant="secondary">

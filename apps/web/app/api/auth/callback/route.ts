@@ -8,9 +8,11 @@ import {
 import {
   ACCESS_COOKIE,
   ID_TOKEN_COOKIE,
+  NONCE_COOKIE,
   PKCE_COOKIE,
   REFRESH_COOKIE,
   STATE_COOKIE,
+  clearPendingLoginCookies,
   sessionCookieOptions,
 } from '../../../../src/oidc/cookies';
 import { WEB_AUTH_COOKIES } from '../../../../src/oidc/local-cookies';
@@ -47,17 +49,28 @@ export async function GET(request: NextRequest) {
   const state = url.searchParams.get('state');
   const oauthError = url.searchParams.get('error');
 
+  const jar = await cookies();
+
   if (oauthError) {
+    await clearPendingLoginCookies();
     return NextResponse.redirect(
       new URL(`/auth?error=${encodeURIComponent(oauthError)}`, origin),
     );
   }
 
-  const jar = await cookies();
   const expectedState = jar.get(STATE_COOKIE)?.value;
   const verifier = jar.get(PKCE_COOKIE)?.value;
+  const nonce = jar.get(NONCE_COOKIE)?.value;
 
-  if (!code || !state || !expectedState || state !== expectedState || !verifier) {
+  if (
+    !code ||
+    !state ||
+    !expectedState ||
+    state !== expectedState ||
+    !verifier ||
+    !nonce
+  ) {
+    await clearPendingLoginCookies();
     return NextResponse.redirect(new URL('/auth?error=invalid_state', origin));
   }
 
@@ -81,6 +94,7 @@ export async function GET(request: NextRequest) {
     });
     tokens = (await response.json()) as TokenGrantResponse;
     if (!response.ok || !tokens.access_token) {
+      await clearPendingLoginCookies();
       return NextResponse.redirect(
         new URL(
           `/auth?error=${encodeURIComponent(tokens.error ?? 'token_exchange')}`,
@@ -89,6 +103,7 @@ export async function GET(request: NextRequest) {
       );
     }
   } catch {
+    await clearPendingLoginCookies();
     return NextResponse.redirect(new URL('/auth?error=token_exchange', origin));
   }
 
@@ -103,10 +118,10 @@ export async function GET(request: NextRequest) {
       clientId: config.clientId,
       accessAudience: config.audience,
       jwks: getRemoteJwks(config.jwksUrl),
+      nonce,
     });
   } catch (error) {
-    jar.delete(PKCE_COOKIE);
-    jar.delete(STATE_COOKIE);
+    await clearPendingLoginCookies();
     const reason =
       error instanceof TokenVerifyError ? error.reason : 'token_verify';
     return NextResponse.redirect(
@@ -131,11 +146,8 @@ export async function GET(request: NextRequest) {
     grant.subject,
     sessionCookieOptions(60 * 60 * 24 * 30),
   );
-  jar.delete(PKCE_COOKIE);
-  jar.delete(STATE_COOKIE);
-
   const postLogin = sanitizePostLoginPath(jar.get(POST_LOGIN_COOKIE)?.value);
-  jar.delete(POST_LOGIN_COOKIE);
+  await clearPendingLoginCookies();
 
   const staffEligible = await lookupStaffEligible(grant.accessToken);
   const next = decideTicketWebPostLogin({

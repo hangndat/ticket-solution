@@ -1,0 +1,13 @@
+# HTTP fixture contract
+
+Runner dùng `E2E_MANIFEST` schemaVersion 1 và chỉ đọc `cases[ID].accounts` của từng ca. `runtime.httpClientId` = `e2e-http`, `runtime.httpClientSecret` do harness cấp trong manifest private. Token lấy bằng confidential password grant từ Keycloak realm `e2e-<runId>`; runner không in credential/token/manifest. API và Auth origins phải HTTPS. TLS trust và DNS preload do coordinator cấp cho process Node.
+
+| Case    | Fixture bắt buộc                                                                                                                                                                                                                                                            |
+| ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| SEC-01  | Tenant/event của ca; `accounts.owner` có `report.read` và assignment event; `data.foreignTenantId`, `data.foreignEventId` là UUID thật không có quyền của owner.                                                                                                            |
+| AUTH-03 | `code` AUTO còn dùng được; `accounts.unverified` emailVerified=false, `accounts.attendee` verified, `accounts.owner` report.read; `data.formVersion`, `data.termsVersion`, `data.answers` khớp published form. Attendee issue được cùng code sau lần unverified bị từ chối. |
+| GATE-01 | Event có scanner `gate.confirm`, owner `event.update` và assignment; `data.gateName` chưa tồn tại, `data.foreignEventId` là event khác owner/scanner không được assign; `data.foreignGateId` là cổng có thật ở event khác trong cùng tenant.                                |
+| GATE-03 | Event mở check-in; `ticketId` ACTIVE; scanner `gate.confirm`, owner `report.read`, attendee không có assignment. Invalid random ticket gây `gate.reject` audit.                                                                                                             |
+| DB-03   | `code` AUTO còn dùng được; attendee verified, owner report.read; published consent `data.formVersion`, `data.termsVersion`, `data.answers`; quota/counter có đủ một suất.                                                                                                   |
+
+Mỗi ID cần tenant/event/mã/tài khoản riêng. Seed không được tạo ticket trước cho `AUTH-03`/`DB-03` bằng `code` này; test tự issue. Các ca HTTP không phụ thuộc Playwright hoặc test khác. Thiếu manifest, key hoặc account làm test fail rõ `BLOCKED`, không skip.
