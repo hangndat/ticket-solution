@@ -10,6 +10,10 @@ export function ticketEventDisplayName(ticket: TicketSummary): string {
   return 'Sự kiện';
 }
 
+function isInactive(t: TicketSummary): boolean {
+  return ['USED', 'EXPIRED', 'REVOKED'].includes(t.state.trim().toUpperCase());
+}
+
 export type EventTicketGroup = {
   eventId: string;
   eventName: string;
@@ -32,8 +36,16 @@ export function groupTicketsByEvent(tickets: TicketSummary[]): EventTicketGroup[
       });
     }
   }
-  return [...map.values()].sort((a, b) =>
-    a.eventName.localeCompare(b.eventName, 'vi'),
+  const groups = [...map.values()].map((g) => ({
+    ...g,
+    tickets: sortTicketsActiveFirst(g.tickets),
+  }));
+  const allDone = (g: EventTicketGroup) =>
+    g.tickets.every(isInactive);
+  return groups.sort(
+    (a, b) =>
+      Number(allDone(a)) - Number(allDone(b)) ||
+      a.eventName.localeCompare(b.eventName, 'vi'),
   );
 }
 
@@ -77,4 +89,18 @@ export function resolveWalletFilterEventName(
 ): string {
   const match = tickets.find((row) => row.eventId === eventId);
   return match ? ticketEventDisplayName(match) : 'Sự kiện';
+}
+
+/** Valid tickets first; used / expired / revoked sink (stable within each band). */
+export function sortTicketsActiveFirst(tickets: TicketSummary[]): TicketSummary[] {
+  const rank = (t: TicketSummary) => (isInactive(t) ? 1 : 0);
+  return tickets
+    .map((t, i) => ({ t, i }))
+    .sort((a, b) => rank(a.t) - rank(b.t) || a.i - b.i)
+    .map(({ t }) => t);
+}
+
+/** Card title under an event section header: short ticket code, not the event again. */
+export function walletTicketCardTitle(ticket: TicketSummary): string {
+  return `Vé · ${ticket.ticketId.slice(0, 8).toUpperCase()}`;
 }
