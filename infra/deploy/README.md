@@ -80,6 +80,10 @@ Xem lệnh build, pin, verify và rollback trong [`docs/ops/IMMUTABLE-RELEASE.md
 
 `apps/mobile` không được cài vào image. File realm Keycloak phải đọc được bởi user trong container. Mode `600` của user host khác sẽ làm import thất bại và container thoát ngay.
 
+## Log container (json-file)
+
+Mọi service vemoki trong `compose.yaml` dùng `logging: *default-logging` (json-file, `max-size: 20m`, `max-file: 5`, tối đa ~100 MB/container). Chỉ có hiệu lực khi container được recreate (`up -d --no-deps --force-recreate <service>`); không cần restart Docker daemon. Container postgres đang chạy giữ log cũ không giới hạn cho tới lần recreate — chỉ `truncate -s 0` file `LogPath` sau khi không còn deploy đang chạy. Không áp dụng cho stack khác (`nginx-letencrypt`, `anphong`).
+
 ## Nginx
 
 Proxy (O13 dual-run / cutover):

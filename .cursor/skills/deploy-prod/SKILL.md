@@ -18,6 +18,8 @@ Build caches pnpm in `~/.cache/vemoki-release/pnpm-store-<platform>` (`--pnpm-st
 
 ## Shared rules
 
+- Log container: `compose.yaml` giới hạn json-file 20m x 5 qua `x-logging`; có hiệu lực khi recreate service (không restart daemon). Không `docker system prune`; truncate log postgres (`truncate -s 0 <LogPath>`) chỉ khi không có deploy đang chạy.
+
 - Do not touch `/media/anphong/nginx-letencrypt` except `data/nginx/vemoki.conf`. Leave vhosts `ancafe` and `dath` alone.
 - Do not publish 80, 443, 8080, 1883, 27017, or 9001. Network `edge` is external `nginx-letencrypt_nginx_network`.
 - App and migrate rollout requires explicit authorization for this production change, an exact reviewed source SHA, a verified Linux/Node 24 artifact for the host architecture, current schema evidence, and reviewed schema ranges and service pins. If any is missing, stop before changing the VPS.
