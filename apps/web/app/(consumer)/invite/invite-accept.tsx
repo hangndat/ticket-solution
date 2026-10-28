@@ -2,6 +2,8 @@
 
 import { Button } from '@ticket/ui';
 import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useAttendeeLocale } from '../../../src/i18n';
+import { invitePageCopy } from '../../../src/invite/invite-copy';
 import {
   interpretAcceptInvite,
   type ViewResult,
@@ -89,6 +91,8 @@ export function InviteAcceptForm({
 }: {
   portalOrigin: string | null;
 }) {
+  const { locale } = useAttendeeLocale();
+  const copy = invitePageCopy(locale);
   const locationToken = useSyncExternalStore(
     subscribeInviteToken,
     getInviteTokenSnapshot,
@@ -134,7 +138,7 @@ export function InviteAcceptForm({
       REQUEST_TIMEOUT_MS,
     );
     if (result.networkError || result.timedOut) {
-      setUx(inviteNetworkMessage());
+      setUx(inviteNetworkMessage(locale));
       setBusy(false);
       return;
     }
@@ -144,7 +148,7 @@ export function InviteAcceptForm({
       result.networkError || result.timedOut,
     );
     setView(next);
-    setUx(messageForInviteView(next));
+    setUx(messageForInviteView(next, locale));
     if (next.kind === 'ok') {
       try {
         sessionStorage.removeItem(STORAGE_KEY);
@@ -157,50 +161,45 @@ export function InviteAcceptForm({
   }
 
   const loginHref = '/api/auth/login?return=/invite';
+  const displayUx = view ? messageForInviteView(view, locale) : ux;
   const outcomeLive =
-    ux && ux.kind !== 'success'
+    displayUx && displayUx.kind !== 'success'
       ? liveRegionForStatus(
-          ux.kind === 'network' || ux.kind === 'unknown'
+          displayUx.kind === 'network' || displayUx.kind === 'unknown'
             ? 'unknown'
-            : ux.kind === 'auth' || ux.kind === 'denied'
+            : displayUx.kind === 'auth' || displayUx.kind === 'denied'
               ? 'error'
-              : ux.kind,
+              : displayUx.kind,
         )
-      : ux?.kind === 'success'
+      : displayUx?.kind === 'success'
         ? liveRegionForStatus('success')
         : null;
 
   return (
     <div className={claimFormRoot}>
-      <p className={inviteSupportCopy}>
-        Đăng nhập bằng đúng email đã được mời. Máy chủ kiểm tra hết hạn, dùng
-        một lần và khớp email — giao diện không tự cấp quyền Owner.
-      </p>
+      <p className={inviteSupportCopy}>{copy.support}</p>
       <div className={authButtonsRow}>
         <Button asChild variant="primary">
-          <a href={loginHref}>Đăng nhập</a>
+          <a href={loginHref}>{copy.login}</a>
         </Button>
       </div>
       <div className={inviteFormPanel}>
         <label>
-          Mã lời mời
+          {copy.tokenLabel}
           <input
             value={token}
             onChange={(e) => setTokenOverride(e.target.value)}
             autoComplete="off"
             spellCheck={false}
-            aria-label="Mã lời mời"
+            aria-label={copy.tokenLabel}
           />
         </label>
-        <span className={inviteFieldHint}>
-          Mở link mời (mã nằm sau # trên URL) — tránh dán mã dạng ?token= trên
-          thanh địa chỉ.
-        </span>
+        <span className={inviteFieldHint}>{copy.tokenHint}</span>
         {!token.trim() ? (
           <SurfaceState
             kind="empty"
-            title="Chưa có mã lời mời"
-            detail="Mở link mời hoặc dán mã vào ô trên sau khi đăng nhập đúng email."
+            title={copy.emptyTitle}
+            detail={copy.emptyDetail}
             testId="invite-token-empty"
           />
         ) : null}
@@ -209,24 +208,24 @@ export function InviteAcceptForm({
           variant="primary"
           disabled={busy || !token.trim() || !csrfReady}
           loading={busy}
-          loadingLabel="Đang nhận…"
+          loadingLabel={copy.accepting}
           onClick={() => void accept()}
           data-testid="invite-accept-submit"
         >
-          {csrfReady ? 'Nhận lời mời' : 'Đang chuẩn bị…'}
+          {csrfReady ? copy.submit : copy.preparing}
         </Button>
       </div>
       {busy ? (
         <div className={guestOutcomeWrap}>
           <SurfaceState
             kind="loading"
-            title="Đang nhận lời mời…"
-            detail="Máy chủ đang kiểm tra hết hạn, dùng một lần và khớp email — chưa coi là thành công."
+            title={copy.loadingTitle}
+            detail={copy.loadingDetail}
             testId="invite-accept-loading"
           />
         </div>
       ) : null}
-      {ux && ux.kind === 'success' && view?.kind === 'ok' ? (
+      {displayUx && displayUx.kind === 'success' && view?.kind === 'ok' ? (
         <section
           className={inviteSuccessOutcomeClass()}
           role={outcomeLive?.role ?? 'status'}
@@ -234,8 +233,8 @@ export function InviteAcceptForm({
           aria-atomic={outcomeLive?.ariaAtomic}
           data-testid="invite-accept-result"
         >
-          <h2>{ux.title}</h2>
-          <p>{ux.detail}</p>
+          <h2>{displayUx.title}</h2>
+          <p>{displayUx.detail}</p>
           <p className={authButtonsRow}>
             {portalOrigin ? (
               <Button asChild variant="primary">
@@ -247,19 +246,19 @@ export function InviteAcceptForm({
                   )}
                   data-testid="invite-accept-portal-cta"
                 >
-                  Mở portal quản trị
+                  {copy.openPortal}
                 </a>
               </Button>
             ) : null}
           </p>
         </section>
       ) : null}
-      {ux && ux.kind !== 'success' ? (
+      {displayUx && displayUx.kind !== 'success' ? (
         <div className={guestOutcomeWrap}>
           <SurfaceState
-            kind={surfaceKind(ux)}
-            title={ux.title}
-            detail={ux.detail}
+            kind={surfaceKind(displayUx)}
+            title={displayUx.title}
+            detail={displayUx.detail}
             testId="invite-accept-result"
           />
         </div>
