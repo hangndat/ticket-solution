@@ -1,5 +1,6 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import {
   createContext,
   useCallback,
@@ -19,6 +20,12 @@ import {
 } from './storage';
 import { t, type MessageKey, type TranslateVars } from './t';
 
+function applyHtmlLang(locale: PortalLocale): void {
+  if (typeof document === 'undefined') return;
+  document.documentElement.lang = locale;
+  document.documentElement.setAttribute('lang', locale);
+}
+
 type LocaleContextValue = {
   locale: PortalLocale;
   setLocale: (next: PortalLocale) => void;
@@ -35,6 +42,7 @@ export function PortalLocaleProvider({
   /** Must match `readPortalLocaleFromServerCookies()` on the server. */
   initialLocale?: PortalLocale;
 }) {
+  const router = useRouter();
   const [locale, setLocaleState] = useState<PortalLocale>(initialLocale);
   const [hydrated, setHydrated] = useState(false);
 
@@ -43,20 +51,31 @@ export function PortalLocaleProvider({
     if (stored !== initialLocale) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setLocaleState(stored);
+      applyHtmlLang(stored);
     }
     setHydrated(true);
   }, [initialLocale]);
 
   useEffect(() => {
     if (!hydrated) return;
-    document.documentElement.lang = locale;
+    applyHtmlLang(locale);
   }, [locale, hydrated]);
 
   const setLocale = useCallback((next: PortalLocale) => {
     setLocaleState(next);
     writeStoredPortalLocale(next);
-    document.documentElement.lang = next;
-  }, []);
+    applyHtmlLang(next);
+    void fetch('/api/locale', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify({ locale: next }),
+    })
+      .catch(() => undefined)
+      .finally(() => {
+        router.refresh();
+      });
+  }, [router]);
 
   const value = useMemo<LocaleContextValue>(
     () => ({
