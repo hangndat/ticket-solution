@@ -93,6 +93,18 @@ export const eventsCopy = {
   errorDetail: {
     title: 'Không tải được nội dung sự kiện',
   },
+  detail: {
+    aboutTitle: 'Giới thiệu',
+    guideTitle: 'Hướng dẫn',
+    faqTitle: 'Câu hỏi thường gặp',
+    termsTitle: 'Điều khoản',
+    organizerLabel: 'Đơn vị tổ chức',
+    contactLabel: 'Liên hệ',
+    seeMore: 'Xem thêm',
+    seeLess: 'Thu gọn',
+    redeemHintFallback: 'Có mã nhận vé? Đổi mã để thêm vé vào ví.',
+    fixtureNote: 'Dữ liệu mẫu — không đăng ký vé từ sự kiện demo.',
+  },
   heroHeadline: 'Sự kiện đang mở',
   heroSupport: 'Chọn sự kiện hoặc đổi mã để nhận vé vào ví.',
   searchPlaceholder: '⌕ Tìm tên sự kiện',

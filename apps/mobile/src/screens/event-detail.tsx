@@ -8,19 +8,27 @@ import {
 import { router } from 'expo-router';
 import { AttendeeCta } from '@/components/attendee-cta';
 import { EVENT_BANNER_HEIGHT_DETAIL } from '@/components/event-banner-metrics';
-import { EventBanner, EventLogo } from '@/components/event-media';
-import { Notice, Page } from '@/components/page';
+import {
+  CollapsibleRow,
+  EventDetailBody,
+  EventDetailLayout,
+  EventMeta,
+  ExpandableText,
+  SectionBlock
+} from '@/components/event-detail-blocks';
+import { EventBanner } from '@/components/event-media';
+import { Page } from '@/components/page';
 import {
   EmptyState,
   ErrorState,
   LoadingState
 } from '@/components/screen-state';
-import { eventsCopy, redeemCopy } from '@/components/screen-state-copy';
+import { eventsCopy } from '@/components/screen-state-copy';
 import { ATTENDEE_REDEEM_PATH } from '@/navigation/attendee-redeem-entry';
 import { eventDate, findDemoEvent } from '@/data/demo-events';
+import { buildEventDetailModel } from '@/published/event-detail-model';
 import {
-  fetchPublishedEventDetail,
-  visibleSectionsInOrder
+  fetchPublishedEventDetail
 } from '@/published/published-event-api';
 import type { PublishedEventDetail } from '@/published/types';
 import { brand, colors } from '@/theme/colors';
@@ -28,7 +36,7 @@ import { fontFamilies } from '@/theme/fonts';
 import { useTheme } from '@/theme/ThemeProvider';
 import { typography } from '@/theme/typography';
 import { WalletOwnedTicketsLink } from '@/components/wallet-owned-tickets-link';
-import { space, radius } from '@/theme/tokens';
+import { space } from '@/theme/tokens';
 
 export function EventDetailScreen({
   tenantSlug,
@@ -112,46 +120,43 @@ function FixtureDemoDetail({
     );
   }
   return (
-    <Page>
+    <EventDetailLayout>
       <Animated.View
-        style={{
-          opacity: reduceMotionOs ? 1 : heroOpacity,
-          gap: space.lg
-        }}
+        style={{ opacity: reduceMotionOs ? 1 : heroOpacity, gap: space.lg }}
       >
-        <Text
-          style={{ ...typography.caption, color: brand.signal,
-            fontFamily: fontFamilies.bodySemiBold, }}
-        >
-          Demo · dữ liệu mẫu · chưa xuất bản
-        </Text>
         <EventBanner
           eventId={event.id}
           tenantSlug={event.tenantSlug}
           wordmark={event.name}
           height={EVENT_BANNER_HEIGHT_DETAIL}
-          style={{ marginHorizontal: -20, borderRadius: 0, width: undefined }}
+          style={{ borderRadius: 0, width: undefined }}
           testID={`fixture-banner-${event.id}`}
           accessibilityLabel={`Banner ${event.name}`}
         />
-        <Text
-          accessibilityRole="header"
-          selectable
-          style={{ color: brand.ink, ...typography.display }}
-        >
-          {event.name}
-        </Text>
-        <Text
-          selectable
-          style={{ color: colors.secondary, ...typography.body }}
-        >
-          {[eventDate(event), event.location].filter(Boolean).join(' · ')}
-        </Text>
-        <Notice title="Đăng ký">
-          Chỉ thông tin mẫu. Không đăng ký vé từ dữ liệu demo.
-        </Notice>
+        <EventDetailBody>
+          <View style={{ gap: space.sm }}>
+            <Text
+              accessibilityRole="header"
+              selectable
+              style={{ color: brand.ink, ...typography.display }}
+            >
+              {event.name}
+            </Text>
+            <EventMeta
+              whenLine={eventDate(event) || null}
+              venue={event.location || null}
+              organizer={null}
+            />
+          </View>
+          <Text
+            selectable
+            style={{ ...typography.callout, color: colors.secondary }}
+          >
+            {eventsCopy.detail.fixtureNote}
+          </Text>
+        </EventDetailBody>
       </Animated.View>
-    </Page>
+    </EventDetailLayout>
   );
 }
 
@@ -263,7 +268,7 @@ function PublishedEventDetailView({
   return <PublishedEventComposition event={phase.event} />;
 }
 
-/** Live Pulse composition — media plane + typography stack; no thick floating card. */
+/** Published detail: banner → title + meta → about → quiet rows; pinned action bar. */
 function PublishedEventComposition({
   event
 }: {
@@ -271,12 +276,8 @@ function PublishedEventComposition({
 }) {
   const { applyBranding } = useTheme();
   const { heroOpacity, reduceMotionOs } = useHeroFade();
-  const sections = visibleSectionsInOrder(event);
-  const dateLine = event.startsAt
-    ? formatPublishedDate(event.startsAt, event.timezone)
-    : null;
-  const locationLine = event.location?.trim() || null;
-  const orgLine = event.brand.organizationName?.trim() || null;
+  const model = buildEventDetailModel(event);
+  const copy = eventsCopy.detail;
 
   useEffect(() => {
     applyBranding(
@@ -291,13 +292,37 @@ function PublishedEventComposition({
     );
   }, [applyBranding, event]);
 
+  const footer = (
+    <>
+      <WalletOwnedTicketsLink
+        eventId={event.id}
+        variant="card-row"
+        testID="event-detail-owned-tickets"
+      />
+      {model.redeemHint ? (
+        <Text
+          selectable
+          numberOfLines={2}
+          style={{ ...typography.callout, color: colors.secondary }}
+        >
+          {model.redeemHint}
+        </Text>
+      ) : null}
+      <AttendeeCta
+        label={eventsCopy.redeemCta}
+        accessibilityLabel={`${eventsCopy.redeemCta} — nhận vé cho ${event.name}`}
+        onPress={() => router.push(ATTENDEE_REDEEM_PATH)}
+        testID="event-detail-cta-redeem"
+      />
+    </>
+  );
+
+  const hasRows = model.guide || model.faq.length > 0 || model.terms;
+
   return (
-    <Page>
+    <EventDetailLayout footer={footer}>
       <Animated.View
-        style={{
-          opacity: reduceMotionOs ? 1 : heroOpacity,
-          gap: space.lg
-        }}
+        style={{ opacity: reduceMotionOs ? 1 : heroOpacity, gap: space.xl }}
       >
         <EventBanner
           eventId={event.id}
@@ -306,174 +331,90 @@ function PublishedEventComposition({
           fallbackColor={event.brand.primaryColor}
           wordmark={event.brand.organizationName}
           height={EVENT_BANNER_HEIGHT_DETAIL}
-          style={{ marginHorizontal: -20, borderRadius: 0, width: undefined }}
+          style={{ borderRadius: 0, width: undefined }}
           testID={`pub-detail-banner-${event.id}`}
           accessibilityLabel={`Banner ${event.name}`}
         />
-
-        {event.brand.logoUrl || event.brand.organizationName ? (
-          <EventLogo
-            eventId={event.id}
-            tenantSlug={event.tenantSlug}
-            logoUrl={event.brand.logoUrl}
-            testID={`pub-detail-logo-${event.id}`}
-          />
-        ) : null}
-
-        <Text
-          accessibilityRole="header"
-          selectable
-          style={{ color: brand.ink, ...typography.display }}
-        >
-          {event.name}
-        </Text>
-
-        <PublishedEventMetadataGroup
-          dateLine={dateLine}
-          locationLine={locationLine}
-          orgLine={orgLine}
-        />
-
-        <WalletOwnedTicketsLink
-          eventId={event.id}
-          variant="card-row"
-          testID="event-detail-owned-tickets"
-        />
-
-        <View style={{ gap: space.md }}>
-          <Text
-            style={{ ...typography.bodySemibold, color: brand.ink,
-              fontFamily: fontFamilies.bodySemiBold, }}
-          >
-            {redeemCopy.eventDetailRedeemBlockTitle}
-          </Text>
-          <AttendeeCta
-            label={eventsCopy.redeemCta}
-            onPress={() => router.push(ATTENDEE_REDEEM_PATH)}
-            testID="event-detail-cta-redeem"
-          />
-        </View>
-      </Animated.View>
-
-      {event.brand.contact ? (
-        <Text
-          selectable
-          style={{ color: colors.secondary, ...typography.callout }}
-        >
-          {event.brand.contact}
-        </Text>
-      ) : null}
-
-      {sections.map((section) => (
-        <Notice key={section.id} title={section.title ?? section.kind}>
-          {section.bodyMarkdown?.trim() || `(${section.kind})`}
-        </Notice>
-      ))}
-
-      {event.faq.length > 0 ? (
-        <Notice title="Câu hỏi thường gặp">
-          {event.faq.map((item, index) => (
+        <EventDetailBody>
+          <View style={{ gap: space.sm }}>
             <Text
-              key={`${item.q}-${index}`}
+              accessibilityRole="header"
               selectable
-              style={{ ...typography.body, color: colors.label,
-                fontFamily: fontFamilies.body,
-                lineHeight: 25 }}
+              style={{ color: brand.ink, ...typography.display }}
             >
-              H: {item.q}
-              {'\n'}
-              Đ: {item.a}
+              {model.title}
             </Text>
-          ))}
-        </Notice>
-      ) : null}
+            <EventMeta
+              whenLine={model.whenLine}
+              venue={model.venue}
+              organizer={model.organizer}
+            />
+          </View>
 
-      {event.terms ? (
-        <Notice title={`Điều khoản (${event.terms.version})`}>
-          {event.terms.bodyMarkdown}
-        </Notice>
-      ) : null}
+          {model.about ? (
+            <SectionBlock title={copy.aboutTitle}>
+              <ExpandableText text={model.about} testID="event-detail-about" />
+            </SectionBlock>
+          ) : null}
 
-      <AttendeeCta
-        label="Tất cả sự kiện"
-        variant="secondary"
-        onPress={() => router.replace('/')}
-        testID="event-detail-all-events"
-      />
-    </Page>
+          {hasRows ? (
+            <View>
+              {model.guide ? (
+                <CollapsibleRow title={copy.guideTitle}>
+                  <ExpandableText text={model.guide} />
+                </CollapsibleRow>
+              ) : null}
+              {model.faq.length > 0 ? (
+                <CollapsibleRow title={copy.faqTitle}>
+                  {model.faq.map((item, index) => (
+                    <View key={`${item.q}-${index}`} style={{ gap: space.xs }}>
+                      <Text
+                        selectable
+                        style={{
+                          ...typography.body,
+                          color: brand.ink,
+                          fontFamily: fontFamilies.bodySemiBold
+                        }}
+                      >
+                        {item.q}
+                      </Text>
+                      <Text
+                        selectable
+                        style={{
+                          ...typography.body,
+                          color: colors.secondary,
+                          fontFamily: fontFamilies.body
+                        }}
+                      >
+                        {item.a}
+                      </Text>
+                    </View>
+                  ))}
+                </CollapsibleRow>
+              ) : null}
+              {model.terms ? (
+                <CollapsibleRow
+                  title={copy.termsTitle}
+                  hint={model.terms.version ? `phiên bản ${model.terms.version}` : null}
+                  testID="event-detail-terms"
+                >
+                  <ExpandableText text={model.terms.body} />
+                </CollapsibleRow>
+              ) : null}
+            </View>
+          ) : null}
+
+          {model.contact ? (
+            <Text
+              selectable
+              accessibilityLabel={`${copy.contactLabel}: ${model.contact}`}
+              style={{ ...typography.callout, color: colors.secondary }}
+            >
+              {copy.contactLabel}: {model.contact}
+            </Text>
+          ) : null}
+        </EventDetailBody>
+      </Animated.View>
+    </EventDetailLayout>
   );
-}
-
-function PublishedEventMetadataGroup({
-  dateLine,
-  locationLine,
-  orgLine
-}: {
-  dateLine: string | null;
-  locationLine: string | null;
-  orgLine: string | null;
-}) {
-  const rows = [
-    dateLine ? { label: 'Ngày', value: dateLine } : null,
-    locationLine ? { label: 'Địa điểm', value: locationLine } : null,
-    orgLine ? { label: 'Đơn vị tổ chức', value: orgLine } : null,
-  ].filter(Boolean) as { label: string; value: string }[];
-
-  if (rows.length === 0) {
-    return (
-      <Text selectable style={{ color: colors.secondary, ...typography.body }}>
-        Chưa có giờ bắt đầu trên nội dung đã xuất bản
-      </Text>
-    );
-  }
-
-  return (
-    <View
-      style={{
-        backgroundColor: colors.onAccent,
-        borderRadius: radius.md,
-        borderCurve: 'continuous',
-        overflow: 'hidden'
-      }}
-    >
-      {rows.map((row, index) => (
-        <View
-          key={row.label}
-          style={{
-            paddingHorizontal: space.lg,
-            paddingVertical: space.md,
-            gap: space.xs,
-            borderTopWidth: index === 0 ? 0 : 1,
-            borderTopColor: colors.surfaceMuted
-          }}
-        >
-          <Text
-            style={{ ...typography.caption, color: colors.secondary,
-              fontFamily: fontFamilies.body }}
-          >
-            {row.label}
-          </Text>
-          <Text
-            selectable
-            style={{ ...typography.body, color: brand.ink,
-              fontFamily: fontFamilies.body }}
-          >
-            {row.value}
-          </Text>
-        </View>
-      ))}
-    </View>
-  );
-}
-
-function formatPublishedDate(startsAt: string, timezone: string): string {
-  try {
-    return new Intl.DateTimeFormat('vi', {
-      dateStyle: 'long',
-      timeStyle: 'short',
-      timeZone: timezone
-    }).format(new Date(startsAt));
-  } catch {
-    return startsAt;
-  }
 }
