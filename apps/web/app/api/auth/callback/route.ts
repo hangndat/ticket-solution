@@ -19,6 +19,11 @@ import {
   POST_LOGIN_COOKIE,
   sanitizePostLoginPath,
 } from '../../../../src/oidc/post-login';
+import {
+  decideTicketWebPostLogin,
+  lookupStaffEligible,
+  portalOriginForStaffBounce,
+} from '../../../../src/oidc/staff-portal-bounce';
 import type { TokenGrantResponse } from '../../../../src/oidc/refresh';
 import {
   acceptOidcTokenGrant,
@@ -132,7 +137,15 @@ export async function GET(request: NextRequest) {
   const postLogin = sanitizePostLoginPath(jar.get(POST_LOGIN_COOKIE)?.value);
   jar.delete(POST_LOGIN_COOKIE);
 
-  return NextResponse.redirect(
-    new URL(postLogin ?? '/', origin),
-  );
+  const staffEligible = await lookupStaffEligible(grant.accessToken);
+  const next = decideTicketWebPostLogin({
+    staffEligible,
+    portalOrigin: portalOriginForStaffBounce(),
+    attendeePath: postLogin ?? '/',
+  });
+  if (next.kind === 'portal') {
+    return NextResponse.redirect(next.location);
+  }
+
+  return NextResponse.redirect(new URL(next.path, origin));
 }
