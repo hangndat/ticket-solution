@@ -60,6 +60,14 @@ function AppStack() {
         }}
       />
       <Stack.Screen
+        name="attendee-account"
+        options={{
+          ...tabDetailStackScreenOptions,
+          headerShown: false,
+          title: 'Tài khoản',
+        }}
+      />
+      <Stack.Screen
         name="events/[tenantSlug]/[slug]"
         options={{
           ...stackBackFromTabs,
