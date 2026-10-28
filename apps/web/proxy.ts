@@ -85,6 +85,18 @@ export default function proxy(request: NextRequest) {
     });
   }
 
+  // A04 / Epic #1008: anonymous /gate → /auth?next=/gate (HTTP 307).
+  // Authenticated callers continue to SSR for capability checks.
+  if (pathname === '/gate' || pathname.startsWith('/gate/')) {
+    const hasAccess = Boolean(request.cookies.get('oidc_access_token')?.value?.trim());
+    if (!hasAccess) {
+      const auth = request.nextUrl.clone();
+      auth.pathname = '/auth';
+      auth.search = `next=${encodeURIComponent(pathname)}`;
+      return NextResponse.redirect(auth, 307);
+    }
+  }
+
   if (decision.type === 'rewrite') {
     const url = request.nextUrl.clone();
     url.pathname = decision.pathname;
