@@ -13,6 +13,8 @@ export { ticketStateLabel, ticketStateTagClass } from './ticket-state';
 export {
   OWNER_TICKET_COPY,
   WALLET_COPY,
+  WALLET_COPY_CATALOG,
+  walletCopy,
   type LoadOwnerTicketResult,
   type LoadOwnerWalletResult,
   type OwnerTicketDetail,
