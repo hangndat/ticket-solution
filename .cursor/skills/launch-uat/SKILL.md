@@ -33,7 +33,7 @@ Chỉ user demo trong catalog. Không tạo user mới trên realm production tr
 
 Một review file mới theo role. Verdict launch là `GO` hoặc `NO-GO`. `PASS with known gap` của DoD cũ không được nâng thành `GO`.
 
-Epic [#914](https://github.com/hangndat/ticket-solution/issues/914) / S6: **iOS VoiceOver ngoài phạm vi / quyết định owner** — không phải case catalog, không known gap, không chặn đóng Epic.
+[O33](../../../docs/DECISION-LOG.md): iOS/web a11y (VoiceOver, Dynamic Type, WCAG UAT) **OUT / N/A** MVP/pilot — không chạy, không known gap, không chặn #879/#889/#874/#1008/#914. Khớp O28 VoiceOver-ngoài-#914; **thay** leftover a11y hold VD-06/VD-08.
 
 [O28](../../../docs/DECISION-LOG.md) (sửa O27 §3–§4): guest NativeTabs **Sự kiện + Đổi mã**; verified **Sự kiện + Đổi mã + Vé của tôi**; Đổi mã là tab (không footer Events); header guest → OIDC. Privacy **native**; staff đổi sự kiện chỉ header SF icon; banner **per-event**. Không FAIL UAT theo AC guest-no-tabs hoặc WebView privacy cũ.
 
