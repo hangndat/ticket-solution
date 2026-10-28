@@ -8,7 +8,8 @@ import {
 } from '../src/branding';
 import { configuredPublicOrigin } from '../src/oidc/public-origin';
 import { DemoAttendeeStrip } from '../src/attendee-uplift/demo-attendee-strip';
-import { attendeeBody, attendeeSkip } from '../src/attendee-surface';
+import { attendeeBody } from '../src/attendee-surface';
+import { AttendeeLocaleProvider, ProductSkipLink } from '../src/i18n';
 import './globals.css';
 
 /** Prod default so OG/Twitter never fall back to request-host localhost. */
@@ -83,11 +84,11 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     >
       <body className={attendeeBody}>
         <ThemeProvider branding={VEMOKI_BRANDING}>
-          <a className={attendeeSkip} href="#main">
-            Bỏ qua đến nội dung
-          </a>
-          <DemoAttendeeStrip />
-          {children}
+          <AttendeeLocaleProvider>
+            <ProductSkipLink />
+            <DemoAttendeeStrip />
+            {children}
+          </AttendeeLocaleProvider>
         </ThemeProvider>
       </body>
     </html>
