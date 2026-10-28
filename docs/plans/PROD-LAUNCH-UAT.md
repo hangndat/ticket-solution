@@ -17,7 +17,7 @@ Role thực thi: [`launch-uat`](../agents/roles/launch-uat.md) · skill `.cursor
 `GO` đợt này khi mọi P0 ngoài mục hoãn **và ngoài OUT** = `PASS` và không còn P0 `BLOCKED`.
 `NO-GO` khi một P0 không hoãn / không OUT bị `FAIL` hoặc `BLOCKED`.
 Case `DEFERRED` (máy thật, quyết định 2026-10-19) không kéo verdict đợt này. Vẫn bắt buộc trước ngày diễn có quét QR / push trên máy.
-Case `OUT` (ngoài MVP / đã bỏ theo quyết định sản phẩm) = `N/A`, **không** kéo verdict — gồm A04, B04 và toàn suite E (web `/gate` đã bỏ theo [O23](../DECISION-LOG.md#o23--gate-chỉ-trên-ios-staff-chốt-hướng-thiết-kế-vemoki-24102026) + D-6). Cổng admission thật = **iOS staff (suite G)**.
+Case `OUT` (ngoài MVP / đã bỏ theo quyết định sản phẩm) = `N/A`, **không** kéo verdict — gồm A04, B04 và toàn suite E (web `/gate` đã bỏ theo [O23](../DECISION-LOG.md#o23--gate-chỉ-trên-ios-staff-chốt-hướng-thiết-kế-vemoki-24102026) + D-6 [#788](https://github.com/hangndat/ticket-solution/issues/788)/[#804](https://github.com/hangndat/ticket-solution/pull/804); residual [#878](https://github.com/hangndat/ticket-solution/issues/878)). **`GET /gate` → 308 `/` là leftover xóa route, không phải bug cần restore.** Cổng admission thật = **iOS staff (suite G)**.
 
 ## 2. Bề mặt và dữ liệu
 
@@ -59,7 +59,7 @@ Lớp thiết bị: `http` | `browser` | `sim` | `physical`.
 | A01 | P0 | http | `GET /` marketing, portal, app, auth | 200 hoặc 302 hợp lệ; không 502 |
 | A02 | P0 | http | Portal `/api/bff/me/subject` không cookie | 401 |
 | A03 | P0 | http | App `/api/bff/me` không cookie | 401 |
-| A04 | **OUT** | http | ~~`GET …/gate` → auth~~ | **N/A** — Web Gate đã bỏ ([O23](../DECISION-LOG.md#o23--gate-chỉ-trên-ios-staff-chốt-hướng-thiết-kế-vemoki-24102026), D-6 #788/#804). Prod có thể 308→`/`; **không** FAIL launch. Cổng = suite G |
+| A04 | **OUT** | http | ~~`GET …/gate` → auth~~ | **N/A** — O23 + D-6 [#788](https://github.com/hangndat/ticket-solution/issues/788)/[#804](https://github.com/hangndat/ticket-solution/pull/804); residual [#878](https://github.com/hangndat/ticket-solution/issues/878). **308→`/` không FAIL.** Cổng = suite G |
 | A05 | P0 | http | Host ancafe và dath | Vẫn 200; không đổi conf |
 | A06 | P1 | http | Cert các host vemoki còn hạn > 14 ngày | Ghi ngày hết hạn |
 
@@ -72,7 +72,7 @@ Client: `ticket-admin-web` (portal), `ticket-platform-web` (platform), `ticket-w
 | B01 | P0 | browser | Portal → Đăng nhập nhân sự → staff | Về `/` đã đăng nhập; shell có org, không kẹt «Cần đăng nhập» |
 | B02 | P0 | http | Authorize portal | `redirect_uri=https://portal.vemoki.com/api/auth/callback`, scope `openid profile email`, có PKCE. **Không** `offline_access` |
 | B03 | P0 | browser | Callback portal sau login | 307 về app, không 502 nginx |
-| B04 | **OUT** | browser | ~~App login staff `return=/gate`~~ | **N/A** — không còn surface web `/gate` (O23/D-6). Staff cổng = iOS (G). Không FAIL launch |
+| B04 | **OUT** | browser | ~~App login staff `return=/gate`~~ | **N/A** — O23/D-6/#878; không surface web `/gate`. Staff cổng = iOS (G). **Không FAIL** vì 308→`/` |
 | B05 | P0 | http | Authorize app | `redirect_uri=https://app.vemoki.com/api/auth/callback`, scope không `offline_access` |
 | B06 | P0 | browser | Attendee login portal | Không vào shell Owner; từ chối hoặc về bề mặt khách |
 | B07 | P0 | browser | Sai mật khẩu | Ở lại Keycloak, không set cookie app |
@@ -88,7 +88,7 @@ Client: `ticket-admin-web` (portal), `ticket-platform-web` (platform), `ticket-w
 | --- | --- | --- | --- | --- |
 | C01 | P0 | browser | Home sau login | Có tenant Aurora; không màn «Cần đăng nhập» |
 | C02 | P0 | browser | Chọn event Aurora Night | Overview event mở, không 422 |
-| C03 | P0 | browser | Trang portal «Cổng» / deep-link hint | Copy hướng dẫn soát vé **iOS Staff** (vd. «Soát vé bằng app Vemoki trên iPhone»). **Không** link `app.vemoki.com/gate`. **Cấm** `127.0.0.1`. Báo cáo cổng vẫn trên portal (O32) |
+| C03 | P0 | browser | Trang portal «Cổng» / deep-link hint | Copy hướng dẫn soát vé **iOS Staff** (#806/#808). **Không** link `app.vemoki.com/gate`. **Cấm** `127.0.0.1`. Báo cáo cổng portal (O32). 308 app `/gate` **không** liên quan C03 |
 | C04 | P0 | browser | Members | Danh sách tải; không lộ tenant khác |
 | C05 | P1 | browser | Mời thành viên (không gửi email khách) | Form chặn địa chỉ không hợp lệ; không gửi SMTP thật trong UAT |
 | C06 | P1 | browser | Cấu hình event / quota / nguồn mã (chỉ đọc) | Số liệu hiện, không 500 |
@@ -110,7 +110,7 @@ Client: `ticket-admin-web` (portal), `ticket-platform-web` (platform), `ticket-w
 
 ## 8. Suite E — Cổng web (đã bỏ — OUT)
 
-**OUT toàn suite** theo [O23](../DECISION-LOG.md#o23--gate-chỉ-trên-ios-staff-chốt-hướng-thiết-kế-vemoki-24102026) + D-6 (PR [#788](https://github.com/hangndat/ticket-solution/pull/788)/[#804](https://github.com/hangndat/ticket-solution/pull/804)): Web Gate đã xóa; admission chỉ trên **iOS Staff (suite G)**. Portal không deep-link `/gate` (PR [#808](https://github.com/hangndat/ticket-solution/pull/808)). Mọi E01–E07 = `N/A` — **không** FAIL / **không** BLOCKED launch.
+**OUT toàn suite** theo [O23](../DECISION-LOG.md#o23--gate-chỉ-trên-ios-staff-chốt-hướng-thiết-kế-vemoki-24102026) + D-6 ([#788](https://github.com/hangndat/ticket-solution/issues/788)/PR [#804](https://github.com/hangndat/ticket-solution/pull/804)) + residual [#878](https://github.com/hangndat/ticket-solution/issues/878): Web Gate đã xóa; admission chỉ trên **iOS Staff (suite G)**. Portal không deep-link `/gate` ([#806](https://github.com/hangndat/ticket-solution/issues/806)/PR [#808](https://github.com/hangndat/ticket-solution/pull/808)). Mọi E01–E07 = `N/A` — **không** FAIL vì 308→`/`.
 
 | ID | P | Lớp | Các bước | Đúng |
 | --- | --- | --- | --- | --- |
@@ -216,7 +216,7 @@ Cost tier worker: `standard`, model `composer-2.5`.
 ```text
 Launch: NO-GO | GO
 P0: pass n / fail n / blocked n / not-run n
-OUT (không kéo): A04, B04, E* (Web Gate bỏ — O23/D-6)
+OUT (không kéo): A04, B04, E* (Web Gate bỏ — O23 / #788 / #878; 308→/ ≠ FAIL)
 P1 gaps: …
 Deferred: G04–G06 (máy thật). G01–G03 PASS (TestFlight build 26, 2026-10-21); H01 PASS (sandbox 2026-10-17, production 2026-10-21)
 Drift git↔VPS: có | không

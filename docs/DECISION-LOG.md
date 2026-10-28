@@ -103,7 +103,7 @@ Hướng thiết kế được chốt tại [`docs/design/vemoki-unified-v1/`](.
 
 Architecture impact: **Có** — thay đổi kênh admission và migration Web Gate; cần contract/ADR và Task Spec theo ownership trước implementation.
 
-**Bổ sung catalog launch UAT (28/10/2026, Epic [#1008](https://github.com/hangndat/ticket-solution/issues/1008)):** A04 / B04 / suite E trong [`PROD-LAUNCH-UAT.md`](./plans/PROD-LAUNCH-UAT.md) = **OUT** — không FAIL launch vì thiếu web `/gate`. Cổng P0 = iOS Staff (suite G). Không khôi phục `apps/web` Gate; không mở lại #914 vì Web Gate.
+**Bổ sung catalog launch UAT (28/10/2026, Epic [#1008](https://github.com/hangndat/ticket-solution/issues/1008)):** A04 / B04 / suite E trong [`PROD-LAUNCH-UAT.md`](./plans/PROD-LAUNCH-UAT.md) = **OUT** — không FAIL launch vì `GET /gate` 308→`/` (leftover D-6 [#788](https://github.com/hangndat/ticket-solution/issues/788)/[#804](https://github.com/hangndat/ticket-solution/pull/804); residual [#878](https://github.com/hangndat/ticket-solution/issues/878)). Cổng P0 = iOS Staff (suite G). Không khôi phục `apps/web` Gate; không mở lại #914 vì Web Gate.
 
 ## O22 — Consumer web DS: Aceternity copy-paste + Tailwind v4 scoped (22/10/2026)
 
