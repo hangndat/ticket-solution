@@ -36,3 +36,5 @@ Một review file mới theo role. Verdict launch là `GO` hoặc `NO-GO`. `PASS
 Epic [#914](https://github.com/hangndat/ticket-solution/issues/914) / S6: **iOS VoiceOver ngoài phạm vi / quyết định owner** — không phải case catalog, không known gap, không chặn đóng Epic.
 
 [O28](../../../docs/DECISION-LOG.md) (sửa O27 §3–§4): guest NativeTabs **Sự kiện + Đổi mã**; verified **Sự kiện + Đổi mã + Vé của tôi**; Đổi mã là tab (không footer Events); header guest → OIDC. Privacy **native**; staff đổi sự kiện chỉ header SF icon; banner **per-event**. Không FAIL UAT theo AC guest-no-tabs hoặc WebView privacy cũ.
+
+[O23](../../../docs/DECISION-LOG.md#o23--gate-chỉ-trên-ios-staff-chốt-hướng-thiết-kế-vemoki-24102026) + D-6: **bỏ Web Gate**. Catalog A04/B04/E = OUT/`N/A`. Không khôi phục `apps/web/app/gate`. Cổng = iOS Staff (suite G). Portal hint iOS, không link `app.vemoki.com/gate`.
