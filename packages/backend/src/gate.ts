@@ -27,6 +27,16 @@ export type StaffSessionResult = {
   sessionId: string;
   eventId: string;
   status: 'ACTIVE';
+  /** O31: null when opened without a gate (legacy / event without gates). */
+  gateId: string | null;
+  gateName: string | null;
+};
+
+export type GateRecord = {
+  id: string;
+  eventId: string;
+  name: string;
+  sortOrder: number;
 };
 
 export type ReserveResult = {
@@ -292,9 +302,110 @@ async function denyGate(
   return { ok: false, code: input.code, message: input.message };
 }
 
-export async function openStaffSession(
+const PERMISSION_EVENT_UPDATE = 'event.update';
+
+type GateRow = { id: string; event_id: string; name: string; sort_order: number };
+
+function toGateRecord(row: GateRow): GateRecord {
+  return {
+    id: row.id,
+    eventId: row.event_id,
+    name: row.name,
+    sortOrder: row.sort_order,
+  };
+}
+
+/** O31: gates of an event for staff pickers (requires gate.confirm on the event). */
+export async function listEventGates(
   tx: Prisma.TransactionClient,
   input: { tenantId: string; eventId: string; userId: string },
+): Promise<GateRecord[]> {
+  await requireTenantPermission(tx, {
+    tenantId: input.tenantId,
+    userId: input.userId,
+    permission: PERMISSION_CONFIRM,
+    eventId: input.eventId,
+  });
+  const rows = await tx.$queryRaw<GateRow[]>`
+    SELECT id, event_id, name, sort_order
+    FROM gates
+    WHERE tenant_id = ${input.tenantId}::uuid
+      AND event_id = ${input.eventId}::uuid
+    ORDER BY sort_order ASC, name ASC, id ASC
+  `;
+  return rows.map(toGateRecord);
+}
+
+/** O31: organizer creates a gate (requires event.update on the event). */
+export async function createEventGate(
+  tx: Prisma.TransactionClient,
+  input: {
+    tenantId: string;
+    eventId: string;
+    userId: string;
+    name: string;
+    sortOrder?: number;
+  },
+): Promise<GateRecord> {
+  await requireTenantPermission(tx, {
+    tenantId: input.tenantId,
+    userId: input.userId,
+    permission: PERMISSION_EVENT_UPDATE,
+    eventId: input.eventId,
+  });
+  const name = input.name.trim();
+  if (name.length < 1 || name.length > 80) {
+    throw new GateError(
+      GATE_ERROR_CODES.GATE_NOT_FOUND,
+      'Gate name must be 1-80 characters',
+    );
+  }
+  const events = await tx.$queryRaw<Array<{ id: string }>>`
+    SELECT id FROM events
+    WHERE tenant_id = ${input.tenantId}::uuid AND id = ${input.eventId}::uuid
+    FOR SHARE
+  `;
+  if (!events[0]) {
+    throw new GateError(GATE_ERROR_CODES.EVENT_NOT_FOUND, 'Event not found');
+  }
+  const gateId = randomUUID();
+  const rows = await tx.$queryRaw<GateRow[]>`
+    INSERT INTO gates (tenant_id, event_id, id, name, sort_order)
+    VALUES (
+      ${input.tenantId}::uuid,
+      ${input.eventId}::uuid,
+      ${gateId}::uuid,
+      ${name},
+      ${input.sortOrder ?? 0}::int
+    )
+    ON CONFLICT (tenant_id, event_id, name) DO NOTHING
+    RETURNING id, event_id, name, sort_order
+  `;
+  if (!rows[0]) {
+    throw new GateError(
+      GATE_ERROR_CODES.GATE_NAME_CONFLICT,
+      'A gate with this name already exists for the event',
+    );
+  }
+  await writeAudit(tx, {
+    tenantId: input.tenantId,
+    eventId: input.eventId,
+    actorUserId: input.userId,
+    action: 'gate.create',
+    resourceType: 'gate',
+    resourceId: gateId,
+  });
+  return toGateRecord(rows[0]);
+}
+
+export async function openStaffSession(
+  tx: Prisma.TransactionClient,
+  input: {
+    tenantId: string;
+    eventId: string;
+    userId: string;
+    gateId?: string | null;
+  },
 ): Promise<StaffSessionResult> {
   await requireTenantPermission(tx, {
     tenantId: input.tenantId,
@@ -317,16 +428,34 @@ export async function openStaffSession(
     }
     throw err;
   }
+  let gateId: string | null = null;
+  let gateName: string | null = null;
+  if (input.gateId) {
+    const gates = await tx.$queryRaw<Array<{ id: string; name: string }>>`
+      SELECT id, name
+      FROM gates
+      WHERE tenant_id = ${input.tenantId}::uuid
+        AND event_id = ${input.eventId}::uuid
+        AND id = ${input.gateId}::uuid
+      FOR SHARE
+    `;
+    if (!gates[0]) {
+      throw new GateError(GATE_ERROR_CODES.GATE_NOT_FOUND, 'Gate not found');
+    }
+    gateId = gates[0].id;
+    gateName = gates[0].name;
+  }
   const sessionId = randomUUID();
   try {
     await tx.$executeRaw`
-      INSERT INTO staff_sessions (tenant_id, event_id, id, user_id, status)
+      INSERT INTO staff_sessions (tenant_id, event_id, id, user_id, status, gate_id)
       VALUES (
         ${input.tenantId}::uuid,
         ${input.eventId}::uuid,
         ${sessionId}::uuid,
         ${input.userId}::uuid,
-        'ACTIVE'
+        'ACTIVE',
+        ${gateId}::uuid
       )
     `;
   } catch (err) {
@@ -347,7 +476,13 @@ export async function openStaffSession(
     resourceType: 'staff_session',
     resourceId: sessionId,
   });
-  return { sessionId, eventId: input.eventId, status: 'ACTIVE' };
+  return {
+    sessionId,
+    eventId: input.eventId,
+    status: 'ACTIVE',
+    gateId,
+    gateName,
+  };
 }
 
 export async function revokeStaffSession(

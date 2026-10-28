@@ -263,6 +263,9 @@ export {
 export { GateError, GATE_ERROR_CODES, type GateErrorCode } from './gate-error';
 export {
   openStaffSession,
+  listEventGates,
+  createEventGate,
+  type GateRecord,
   revokeStaffSession,
   reserveCheckin,
   confirmCheckin,

@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { SymbolView } from 'expo-symbols';
 import type { GatePhase } from '@/gate/gate-scan';
-import type { ConnectivityState } from '@/gate/offline-queue';
 import type { StaffGateScope } from '@/gate/staff-gate-events';
 import { colors } from '@/theme/colors';
 import { radius, space } from '@/theme/tokens';
@@ -28,73 +27,6 @@ export function gateOutcomeGlyph(
   }
   if (phase === 'confirming' || phase === 'holding') return 'busy';
   return 'default';
-}
-
-export function GateStatusStrip({
-  connectivity,
-  hasSession,
-  queueAttention,
-  syncing,
-  onSync
-}: {
-  connectivity: ConnectivityState;
-  hasSession: boolean;
-  queueAttention: boolean;
-  syncing: boolean;
-  onSync?: () => void;
-}) {
-  const wifi =
-    connectivity === 'online'
-      ? 'wifi'
-      : connectivity === 'offline'
-        ? 'wifi.slash'
-        : 'wifi.exclamationmark';
-  const wifiColor =
-    connectivity === 'online' ? colors.admit : colors.secondary;
-
-  return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.xl }}>
-      <SymbolView
-        name={wifi}
-        size={22}
-        tintColor={wifiColor}
-        accessibilityLabel={
-          connectivity === 'online'
-            ? 'Trực tuyến'
-            : connectivity === 'offline'
-              ? 'Ngoại tuyến'
-              : 'Mạng chưa rõ'
-        }
-      />
-      <SymbolView
-        name={hasSession ? 'person.crop.circle.badge.checkmark' : 'person.crop.circle'}
-        size={22}
-        tintColor={hasSession ? colors.admit : colors.secondary}
-        accessibilityLabel={
-          hasSession ? 'Đã mở phiên cổng' : 'Chưa mở phiên cổng'
-        }
-      />
-      {queueAttention ? (
-        <Button
-          variant="ghost"
-          accessibilityLabel="Đồng bộ hàng đợi offline"
-          disabled={syncing}
-          loading={syncing}
-          onPress={onSync}
-          hitSlop={space.sm}
-          style={styles.iconTap}
-        >
-          {syncing ? null : (
-            <SymbolView
-              name="arrow.triangle.2.circlepath"
-              size={22}
-              tintColor={colors.unknown}
-            />
-          )}
-        </Button>
-      ) : null}
-    </View>
-  );
 }
 
 export function StaffEventRow({

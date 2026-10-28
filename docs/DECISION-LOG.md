@@ -6,6 +6,17 @@ Tracking: Issues [#10](https://github.com/hangndat/ticket-solution/issues/10), [
 
 **Kiến trúc hiện trạng (canonical, Epic [#891](https://github.com/hangndat/ticket-solution/issues/891) / F06):** [`docs/architecture/ar891-current-architecture.md`](./architecture/ar891-current-architecture.md) — deployed / tested / proposed; không thay nội dung quyết định lịch sử bên dưới.
 
+## O31 — Cổng (gate) theo sự kiện + mở phiên theo cổng + dòng trạng thái Scan (28/10/2026)
+
+Owner chốt trên Epic [#914](https://github.com/hangndat/ticket-solution/issues/914): nhân viên chọn cổng trước khi mở phiên cổng. **Không đóng Epic; migration/deploy prod cần ủy quyền riêng.**
+
+- **Dữ liệu (migration `202610280001_o31_gates`):** bảng `gates (tenant_id, event_id, id, name, sort_order, created_at)`, unique `(tenant_id, event_id, name)`, FK `(tenant_id, event_id)` → `events`, RLS FORCE + policy `gates_isolation` giống `staff_sessions`. `staff_sessions.gate_id` **NULLABLE**, FK ghép `(tenant_id, event_id, gate_id)` → `gates` (DB chặn cổng khác sự kiện/tenant). Phiên cũ không đổi.
+- **API:** `GET /v1/gate/events/{eventId}/gates?tenantId=` (quyền `gate.confirm` trên sự kiện); `POST /v1/gate/events/{eventId}/gates` `{tenantId,name,sortOrder?}` (quyền `event.update`; trùng tên → 409 `GATE_NAME_CONFLICT`); `POST .../sessions` nhận `gateId` tùy chọn (không thuộc sự kiện+tenant → 404 `GATE_NOT_FOUND`); response phiên thêm `gateId`, `gateName` (null nếu không có cổng).
+- **Tạo cổng:** chỉ endpoint organizer (ít xâm lấn nhất). **Không** tạo cổng mặc định lười: sự kiện 0 cổng giữ nguyên hành vi cũ (không picker). Chưa có UI portal tạo cổng — việc riêng.
+- **Invariant phiên:** hiện **không** có ràng buộc «một phiên mở / sự kiện» (mỗi lần mở chèn thêm hàng ACTIVE; ràng buộc duy nhất là hold một vé). Giữ nguyên, không thêm per-gate unique → mở lại cùng cổng tạo phiên mới như hôm nay.
+- **Mobile:** picker cổng chỉ hiện khi sự kiện có ≥1 cổng; nút «Mở phiên cổng» luôn có khi chưa có phiên (kể cả 0 cổng, mở không `gateId`); chưa có phiên → watermark camera tĩnh, không mount preview. Nếu tải danh sách cổng lỗi → giữ camera + mở phiên ở lượt quét đầu (không regress offline/first-scan). Tên cổng của phiên chỉ lưu trong bộ nhớ (mở lại app còn phiên nhưng không còn tên cổng).
+- **Dòng trạng thái:** một dòng duy nhất «● Chưa mở phiên» / «● Sẵn sàng · <cổng>» + icon bên phải (Mạng `wifi`/`wifi.slash`, Phiên cổng `door.left.hand.open|closed`, Chờ đồng bộ `icloud.and.arrow.up` chỉ khi có hàng đợi), chạm để xem giải thích. Bỏ dòng tên sự kiện, dòng «Phiên cổng · id», khối «Sẵn sàng quét» khi idle.
+
 ## O27 — iOS attendee IA, privacy native, staff event chrome, USB (28/10/2026)
 
 Owner chốt trên Epic [#914](https://github.com/hangndat/ticket-solution/issues/914) ngày 28/10/2026. **Không đóng Epic.** Implementation app iOS thuộc worker/slice `apps/mobile` riêng — quyết định này chỉ SoT product/UAT/docs.
