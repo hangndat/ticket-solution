@@ -649,6 +649,7 @@ export {
 export {
   tenantPermissionsForRole,
   eventPermissionsForRole,
+  samePermissionSet,
   isMembershipRole,
   isPresetId,
   isMembershipRoleOrPresetId,
