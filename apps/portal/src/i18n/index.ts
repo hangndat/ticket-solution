@@ -10,6 +10,11 @@ export {
   readStoredPortalLocale,
   writeStoredPortalLocale,
 } from './storage';
+export {
+  PORTAL_LOCALE_COOKIE_MAX_AGE_SEC,
+  portalLocaleCookieOptions,
+  portalLocaleFromJsonBody,
+} from './locale-cookie';
 export { DICTS, EN, VI, VI_TO_KEY, type MessageKey } from './messages';
 export { t, isMessageKey, type TranslateVars } from './t';
 export {
