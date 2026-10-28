@@ -1,9 +1,27 @@
 'use client';
 
-import { Typography } from 'antd';
+import { Button, Typography } from 'antd';
 import { usePortalLocale } from '../i18n';
 
-/** D-6: staff scan only on Vemoki iOS app — portal never mounts scanner or links to web /gate. */
+/** Launch UAT / Epic #1008: contingency web gate deeplink on app host. */
+export function GateDeeplinkButton(props: {
+  href: string;
+  label?: string;
+}) {
+  const { t } = usePortalLocale();
+  return (
+    <Button
+      type="default"
+      href={props.href}
+      target="_blank"
+      rel="noopener noreferrer"
+      data-testid="gate-deeplink"
+    >
+      {props.label ?? t('gateDeeplink.h_4pqjik')}
+    </Button>
+  );
+}
+
 export function GateIosScanHint() {
   const { t } = usePortalLocale();
   return (

@@ -22,7 +22,8 @@ function withRuntimeCsp(response: NextResponse): NextResponse {
 /**
  * Next.js 16 proxy — O13 host-aware marketing vs product.
  * OIDC session remains HttpOnly cookies on product host only (no Domain=.vemoki.com).
- * D-6: retired web gate — /gate|/gate/* → / (308).
+ * Launch UAT / Epic #1008: `/gate` stays on app host; anonymous SSR soft-redirects
+ * to `/auth?next=/gate` (see staff-route-guard). Do not 308 `/gate` → `/`.
  * O02: anonymous soft-redirect for staff deep-link /admin → /auth
  * (product host only — after apex→app host redirects).
  * ADR-20 §8 / D-7: GET/HEAD /admin|/platform → PORTAL_ORIGIN; legacy staff API → 410.
@@ -84,11 +85,16 @@ export default function proxy(request: NextRequest) {
     });
   }
 
+  // A04 / Epic #1008: anonymous /gate → /auth?next=/gate (HTTP 307).
+  // Authenticated callers continue to SSR for capability checks.
   if (pathname === '/gate' || pathname.startsWith('/gate/')) {
-    const home = request.nextUrl.clone();
-    home.pathname = '/';
-    home.search = '';
-    return NextResponse.redirect(home, 308);
+    const hasAccess = Boolean(request.cookies.get('oidc_access_token')?.value?.trim());
+    if (!hasAccess) {
+      const auth = request.nextUrl.clone();
+      auth.pathname = '/auth';
+      auth.search = `next=${encodeURIComponent(pathname)}`;
+      return NextResponse.redirect(auth, 307);
+    }
   }
 
   if (decision.type === 'rewrite') {
