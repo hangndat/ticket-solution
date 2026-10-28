@@ -168,6 +168,7 @@ export {
   PROD_SEED,
   PROD_SEED_NAMESPACE,
   seedProdDataset,
+  seedProdDemoGates,
   assertProdSeedDatabaseHostAllowed,
   assertProdSeedMutateAllowed,
   ProdSeedDryRunRollback,
