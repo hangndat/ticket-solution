@@ -4,7 +4,7 @@ Ngày thiết kế: 2026-10-19.
 Trạng thái: **thiết kế, chưa chạy đợt này.**
 Role thực thi: [`launch-uat`](../agents/roles/launch-uat.md) · skill `.cursor/skills/launch-uat/SKILL.md`.
 
-Đợt này trả lời một câu: **có được tuyên bố pilot ready / mở launch production không.** Không thay DoD từng PR (`reviewer-dod`) và không thay review bảo mật code (`reviewer-security`). **iOS VoiceOver ngoài phạm vi Epic #914 / quyết định owner** — không thêm case catalog, không chặn đóng #914. IA iOS attendee/staff chrome theo [O27](../DECISION-LOG.md): **không** FAIL vì thiếu guest catalog tab / NativeTabs / tab Tài khoản / privacy WebView; **không** FAIL vì thiếu picker sự kiện trong body Scan; **không** PASS catalog nếu cả list dùng banner/token của event đầu.
+Đợt này trả lời một câu: **có được tuyên bố pilot ready / mở launch production không.** Không thay DoD từng PR (`reviewer-dod`) và không thay review bảo mật code (`reviewer-security`). **iOS/web a11y (VoiceOver, Dynamic Type, WCAG UAT) = OUT / N/A** theo [O33](../DECISION-LOG.md) — không case catalog, không known gap, không chạy a11y, không chặn GO/#879/#889/#874/#1008/#914. Khớp O28 VoiceOver-ngoài-#914. IA iOS attendee/staff chrome theo [O27](../DECISION-LOG.md): **không** FAIL vì thiếu guest catalog tab / NativeTabs / tab Tài khoản / privacy WebView; **không** FAIL vì thiếu picker sự kiện trong body Scan; **không** PASS catalog nếu cả list dùng banner/token của event đầu.
 
 ## 1. Ba mức — đợt này chỉ chấm mức 3
 
