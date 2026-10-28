@@ -401,7 +401,7 @@
     ],
     "layers": ["D", "U", "H"],
     "status": "blocked",
-    "reason": "D/U masking/log subset + H live PASS (run mvshygj4-1a9ed3): audit/codes list no forbidden keys/raw-value leak, limit capped 100, cursor opaque + INVALID_CURSOR on tamper, deny bodies clean, report/me-tickets/gate-session Cache-Control không public. Thiếu H cho CS lookup/export và platform audit; Cache-Control các route này hiện absent (không explicit no-store như exports/inventory/tenant-limits) — gap ghi lại, không tự sửa product trong task test-only này."
+    "reason": "D/U masking/log subset + H live PASS (run mvsik1si-bee5e5 trên 97c15301): audit/codes list không lộ forbidden keys/raw values, limit cap 100, cursor opaque + INVALID_CURSOR, deny bodies sạch; report/me-tickets/gate-session/audit/codes assert Cache-Control private, no-store trên success và deny/error. Thiếu H cho CS lookup/export, process logs, platform audit và chưa bao phủ mọi endpoint nhạy cảm."
   },
   {
     "caseId": "POL-01",

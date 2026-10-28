@@ -45,7 +45,7 @@
     "tests": ["H:tests/e2e/http/live.test.mjs#[SEC-06]"],
     "layers": ["H"],
     "status": "blocked",
-    "reason": "H live PASS run mvshygj4-1a9ed3: audit/codes list default+oversized limit capped at 100, forbidden keys (reason/sanitizedDiff/codeHmac/rawCode/email/token) absent, seeded secret reason/email/hmac/rawCode never echoed in list/page2/cursor-error/deny bodies; cursor opaque (base64url id, rejects garbage with INVALID_CURSOR); codes `q` search resolves exact 1 item without echoing raw code/hmac; authz-denied (403 EVENT_ASSIGNMENT_REQUIRED, not 404, by design) bodies clean; report/me-tickets/gate-session responses have no Set-Cookie and no `public` Cache-Control directive (none set explicitly today — gap, not a leak). Gaps: no H coverage yet for CS lookup/export/log output or platform audit; Cache-Control is absent rather than explicit `private, no-store` on report/me-tickets/gate-session, unlike exports/inventory/tenant-limits routes — flagged for backend follow-up, not fixed here (test-only task)."
+    "reason": "H live PASS run mvsik1si-bee5e5 on 97c15301: audit/codes list default+oversized limit capped at 100, forbidden keys (reason/sanitizedDiff/codeHmac/rawCode/email/token) absent, seeded secret values never echoed in list/page2/cursor-error/deny bodies; cursor opaque and rejects garbage with INVALID_CURSOR; codes `q` search resolves exactly one item without echoing raw code/HMAC. Report, me-tickets, gate-session, audit and codes responses assert Cache-Control private, no-store on success and deny/error paths. Gaps: no H coverage yet for CS lookup/export, process log output or platform audit; other sensitive endpoints are not exhaustively covered."
   },
   {
     "caseId": "AUTH-03",
