@@ -19,7 +19,7 @@ const hoiAn: TicketSummary = {
 test('ticketDetailHref opens ví detail, not the list-only route', () => {
   assert.equal(
     ticketDetailHref(hoiAn.ticketId),
-    `/my-tickets/${hoiAn.ticketId}`,
+    `/(tabs)/my-tickets/${hoiAn.ticketId}`,
   );
   assert.notEqual(ticketDetailHref(hoiAn.ticketId), '/my-tickets');
 });

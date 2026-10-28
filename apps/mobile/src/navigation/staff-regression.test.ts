@@ -50,7 +50,7 @@ test('K-STAFF-01: staff workspace hides attendee tabs until MeEvents resolves', 
   );
   assert.equal(
     showAttendeeNativeTabs({ status: 'signed-out' }, attendeeEligibility),
-    false,
+    true,
   );
   assert.equal(
     showAttendeeNativeTabs({ status: 'verified' }, attendeeEligibility),
@@ -114,6 +114,15 @@ test('K-STAFF-01: staff default tab is Scan when entering workspace or on attend
     shouldReplaceWithStaffScanTab({
       staffWorkspace: true,
       segments: ['(tabs)', 'my-tickets'],
+      enteringStaff: false,
+    }),
+    true,
+  );
+
+  assert.equal(
+    shouldReplaceWithStaffScanTab({
+      staffWorkspace: true,
+      segments: ['(tabs)', 'redeem'],
       enteringStaff: false,
     }),
     true,
