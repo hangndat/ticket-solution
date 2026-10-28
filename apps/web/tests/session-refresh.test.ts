@@ -8,8 +8,13 @@ import {
 
 test('sessionRefreshRoutePath encodes allowlisted next paths', () => {
   assert.equal(
+    sessionRefreshRoutePath('/wallet'),
+    '/api/auth/refresh?next=%2Fwallet',
+  );
+  assert.equal(
     sessionRefreshRoutePath('/admin'),
-    '/api/auth/refresh?next=%2Fadmin',
+    '/api/auth/refresh?next=%2F',
+    'staff /admin is not an attendee post-login path',
   );
   assert.equal(
     sessionRefreshRoutePath('/gate'),
@@ -28,8 +33,12 @@ test('SSR refresh attempt cookie name is stable', () => {
 
 test('ssrTerminalAuthRejectPath fails closed without login redirect loop', () => {
   assert.equal(
+    ssrTerminalAuthRejectPath('/wallet'),
+    '/auth?error=session_rejected&next=%2Fwallet',
+  );
+  assert.equal(
     ssrTerminalAuthRejectPath('/admin'),
-    '/auth?error=session_rejected&next=%2Fadmin',
+    '/auth?error=session_rejected&next=%2F',
   );
   assert.equal(
     ssrTerminalAuthRejectPath('/gate'),
@@ -40,7 +49,7 @@ test('ssrTerminalAuthRejectPath fails closed without login redirect loop', () =>
     '/auth?error=session_rejected&next=%2F',
   );
   assert.doesNotMatch(
-    ssrTerminalAuthRejectPath('/admin'),
+    ssrTerminalAuthRejectPath('/wallet'),
     /\/auth\?next=/,
     'terminal path must not be bare /auth?next= (SSO loop)',
   );

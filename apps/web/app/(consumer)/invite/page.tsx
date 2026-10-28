@@ -6,6 +6,7 @@ import {
   guestPageMain,
 } from '../../../src/guest/guest-flow-surface';
 import { ConsumerPageShell } from '../../../src/consumer-page-shell';
+import { portalOriginFromEnv } from '../../../src/portal/dual-run';
 import { InviteAcceptForm } from './invite-accept';
 
 export const metadata: Metadata = {
@@ -26,7 +27,7 @@ export default function InvitePage() {
           khớp email được mời; giao diện không tự cấp quyền quản trị.
         </p>
       </header>
-      <InviteAcceptForm />
+      <InviteAcceptForm portalOrigin={portalOriginFromEnv()} />
       <p>
         <Link href="/">← Trang chủ</Link>
       </p>

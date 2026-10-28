@@ -4,7 +4,6 @@ import { Button, CatalogHeroBand } from '@ticket/ui';
 import { loginHref } from '../../src/oidc/login-href';
 import { authNoticeFromParam } from '../../src/oidc/auth-notice';
 import { loadOwnerWallet, ownedTicketCountByEventId } from '../../src/owner-ticket';
-import { staffDeniedNotice } from '../../src/nav/staff-denied-copy';
 import { ATTENDEE_COPY } from '../../src/attendee-copy';
 import { ConsumerPageShell } from '../../src/consumer-page-shell';
 import {
@@ -20,7 +19,7 @@ import {
 import { SurfaceState } from '../../src/ui/surface-state';
 import { HomeCatalogGrid } from '../../src/ui/event-media';
 
-/** Soft-redirect landing notices from staff routes (O02) + auth stub. */
+/** Attendee home + auth stub notices (staff lives on portal — ADR-20). */
 export const dynamic = 'force-dynamic';
 
 type Props = {
@@ -63,7 +62,6 @@ export default async function Home({ searchParams }: Props) {
     wallet.status === 'ok'
       ? ownedTicketCountByEventId(wallet.tickets)
       : undefined;
-  const denied = staffDeniedNotice(params.notice?.trim());
   const authNotice = authNoticeFromParam(params.notice?.trim(), {
     retryHref: loginHref('/'),
   });
@@ -97,34 +95,6 @@ export default async function Home({ searchParams }: Props) {
             <Button asChild variant="brand">
               <a href={authNotice.retryHref}>Thử lại</a>
             </Button>
-            <Button asChild variant="secondary">
-              <Link href="/">Ở lại trang chủ</Link>
-            </Button>
-          </p>
-        </aside>
-      ) : null}
-
-      {denied ? (
-        <aside
-          className={attendeeNoticeError}
-          role="status"
-          data-testid="staff-denied-notice"
-        >
-          <h2>{denied.title}</h2>
-          <p>{denied.detail}</p>
-          <p className={attendeeAuthButtons}>
-            {denied.portalAdminHref ? (
-              <Button asChild variant="brand">
-                <a href={denied.portalAdminHref} data-testid="staff-denied-portal-cta">
-                  Mở portal quản trị
-                </a>
-              </Button>
-            ) : null}
-            {params.notice?.trim() === 'gate_denied' ? (
-              <Button asChild variant="secondary">
-                <Link href="/wallet">Vé của tôi</Link>
-              </Button>
-            ) : null}
             <Button asChild variant="secondary">
               <Link href="/">Ở lại trang chủ</Link>
             </Button>

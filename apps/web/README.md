@@ -1,8 +1,9 @@
 # @ticket/web — Keycloak OIDC identity + redeem
 
-Next.js App Router shell for public demo events, admin placeholder,
-self-hosted OIDC identity session (Authorization Code + PKCE BFF), and
-redemption against Nest (real API, no mock proof).
+Next.js App Router shell for attendee/guest surfaces (catalog, wallet, redeem,
+invite), self-hosted OIDC identity session (Authorization Code + PKCE BFF), and
+redemption against Nest (real API, no mock proof). Staff admin is
+`portal.vemoki.com` (ADR-20) — not this app.
 
 ## Environment (Keycloak OIDC)
 
@@ -29,7 +30,9 @@ No Clerk / SaaS IdP.
 - `/` — demo event directory
 - `/auth` — Keycloak identity session (sign-in, BFF `/v1/me`, sign-out)
 - `/redeem` — form đổi mã → verify → success/ticket (Nest redeem)
-- `/admin` — shell placeholder
+- `/wallet` — attendee tickets
+- `/gate` — retired (O23); 308 → `/`
+- `/admin` · `/platform` — bookmark bounce to `PORTAL_ORIGIN` (no staff shell)
 
 ## BFF (redeem / tickets)
 
@@ -52,8 +55,8 @@ docker compose up -d keycloak mailpit
 pnpm --filter @ticket/web dev
 ```
 
-Demo users (realm import): `attendee@example.com` / `attendee-demo`,
-`staff@example.com` / `staff-demo`.
+Demo users (realm import): `attendee@example.com` / `attendee-demo` on this app.
+Staff (`staff@example.com` / `staff-demo`) signs in on portal (`ticket-admin-web`).
 
 **Local origin (P0):** Mở app và đăng nhập trên **cùng một host** — khuyến nghị `http://localhost:3000`.
 `OIDC_REDIRECT_URI`, `WEB_PUBLIC_ORIGIN` và tab trình duyệt phải khớp (không trộn `127.0.0.1`).
