@@ -11,7 +11,18 @@ import {
 } from '../src/invite/platform-messages';
 import { redeemFormCopy } from '../src/redeem/form-copy';
 import { messageForApiError, unknownMessage } from '../src/redeem/messages';
-import { WALLET_COPY, walletCopy } from '../src/owner-ticket/types';
+import { guestClaimCopy } from '../src/guest/claim-copy';
+import {
+  OWNER_TICKET_COPY,
+  ownerTicketCopy,
+  WALLET_COPY,
+  WALLET_COPY_CATALOG,
+  walletCopy,
+} from '../src/owner-ticket/types';
+import {
+  buildWalletEventFilters,
+  walletEventFilterLabel,
+} from '../src/owner-ticket/wallet-event-filters';
 import { interpretAcceptInvite } from '../src/bff/me-shape';
 
 test('O04 default remains VI for guest body catalogs', () => {
@@ -22,6 +33,9 @@ test('O04 default remains VI for guest body catalogs', () => {
   assert.equal(walletCopy('vi').title, WALLET_COPY.title);
   assert.equal(invitePageCopy('vi').title, 'Nhận lời mời thành viên');
   assert.equal(redeemFormCopy('vi').pageTitle, 'Đổi mã lấy vé');
+  assert.equal(OWNER_TICKET_COPY.title, 'Vé của bạn');
+  assert.equal(ownerTicketCopy('vi').title, OWNER_TICKET_COPY.title);
+  assert.equal(guestClaimCopy('vi').title, 'Nhận lời mời sự kiện');
 });
 
 test('EN toggle copy differs from VI for redeem/invite/wallet body', () => {
@@ -34,6 +48,36 @@ test('EN toggle copy differs from VI for redeem/invite/wallet body', () => {
   assert.equal(redeemFormCopy('en').submit, 'Redeem code');
   assert.notEqual(redeemFormCopy('en').codeLabel, redeemFormCopy('vi').codeLabel);
   assert.equal(ATTENDEE_COPY_CATALOG.redeemTitle.vi, ATTENDEE_COPY.redeemTitle);
+  assert.equal(ownerTicketCopy('en').title, 'Your ticket');
+  assert.notEqual(
+    ownerTicketCopy('en').needLogin.detail,
+    ownerTicketCopy('vi').needLogin.detail,
+  );
+  assert.equal(guestClaimCopy('en').submit, 'Claim invite');
+  assert.notEqual(guestClaimCopy('en').intro, guestClaimCopy('vi').intro);
+});
+
+test('unnamed-event wallet fallback switches with locale', () => {
+  const tickets = [
+    {
+      ticketId: '97f77680-4d65-4b6d-baf3-b3f699a006a6',
+      tenantId: '11111111-1111-4111-8111-111111111111',
+      eventId: '22222222-2222-4222-8222-222222222222',
+      ticketTypeId: '33333333-3333-4333-8333-333333333333',
+      sourceId: '44444444-4444-4444-8444-444444444444',
+      state: 'ACTIVE',
+      credentialVersion: 1,
+      createdAt: '2026-10-18T00:00:00.000Z',
+    },
+  ];
+  const [filter] = buildWalletEventFilters(tickets);
+  assert.ok(filter);
+  assert.equal(
+    walletEventFilterLabel(filter!, 'vi'),
+    'Sự kiện 22222222…',
+  );
+  assert.equal(walletEventFilterLabel(filter!, 'en'), 'Event 22222222…');
+  assert.equal(WALLET_COPY_CATALOG.eventFallback.en, 'Event {id}…');
 });
 
 test('redeem UX catalogs switch language without English error codes as titles', () => {
