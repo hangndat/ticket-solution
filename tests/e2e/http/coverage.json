@@ -41,6 +41,13 @@
     "reason": "H: live export CSV formula guard on masked email, import upload empty/MIME/byte/row caps, config CONFIG_UNSAFE_MARKUP no public persist, notification template reject+HTML escape preview, asset MIME deny, web+portal CSP/nosniff profile. B: security.spec.ts CSP home headers. Gaps: portal BFF multipart upload matrix, full rich-text surfaces, browser XSS execution paths (out of scope — inert markers only)."
   },
   {
+    "caseId": "SEC-06",
+    "tests": ["H:tests/e2e/http/live.test.mjs#[SEC-06]"],
+    "layers": ["H"],
+    "status": "blocked",
+    "reason": "H live PASS run mvshygj4-1a9ed3: audit/codes list default+oversized limit capped at 100, forbidden keys (reason/sanitizedDiff/codeHmac/rawCode/email/token) absent, seeded secret reason/email/hmac/rawCode never echoed in list/page2/cursor-error/deny bodies; cursor opaque (base64url id, rejects garbage with INVALID_CURSOR); codes `q` search resolves exact 1 item without echoing raw code/hmac; authz-denied (403 EVENT_ASSIGNMENT_REQUIRED, not 404, by design) bodies clean; report/me-tickets/gate-session responses have no Set-Cookie and no `public` Cache-Control directive (none set explicitly today — gap, not a leak). Gaps: no H coverage yet for CS lookup/export/log output or platform audit; Cache-Control is absent rather than explicit `private, no-store` on report/me-tickets/gate-session, unlike exports/inventory/tenant-limits routes — flagged for backend follow-up, not fixed here (test-only task)."
+  },
+  {
     "caseId": "AUTH-03",
     "tests": ["H:tests/e2e/http/live.test.mjs#[AUTH-03]"],
     "layers": ["H"],

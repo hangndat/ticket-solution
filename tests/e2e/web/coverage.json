@@ -78,10 +78,17 @@
   },
   {
     "caseId": "WEB-04",
-    "tests": ["redeem.spec.ts › [WEB-04]"],
+    "tests": [
+      "redeem.spec.ts › [WEB-04] negative redeem matrix › invalid code does not issue ticket or reveal owner data",
+      "redeem.spec.ts › [WEB-04] negative redeem matrix › expired redemption window returns closed UX without issuing",
+      "redeem.spec.ts › [WEB-04] negative redeem matrix › used code does not issue a second ticket",
+      "redeem.spec.ts › [WEB-04] negative redeem matrix › closed event does not issue ticket or leak email",
+      "redeem.spec.ts › [WEB-04] negative redeem matrix › exhausted quota does not issue ticket on submit",
+      "redeem.spec.ts › [WEB-04] negative redeem matrix › suspended tenant blocks redeem without leaking owner email"
+    ],
     "layers": ["B", "H"],
     "status": "blocked",
-    "reason": "Có invalid code/no-ticket; thiếu expired/used/closed/suspended/quota/limit matrix và DB state."
+    "reason": "Browser: invalid/used/expired-window/quota-exhausted/suspended + no @ + wallet unchanged trên fixture WEB-04 (seed block). Closed/cancelled event hiện redeem-ux-error (EVENT_CANCELLED chưa map closed) — ghi known gap. Thiếu H DB code/quota/operation đối soát và ATTENDEE_LIMIT nhánh limit riêng."
   },
   {
     "caseId": "WEB-05",
@@ -99,10 +106,15 @@
   },
   {
     "caseId": "WEB-07",
-    "tests": ["redeem.spec.ts › [WEB-07]"],
+    "tests": [
+      "redeem.spec.ts › [WEB-07] idempotent redemption › double submit issues one ticket for a fresh code",
+      "redeem.spec.ts › [WEB-07] idempotent redemption › lost response after server commit reconciles to one ticket via poll",
+      "redeem.spec.ts › [WEB-07] idempotent redemption › reload after success cannot replay a second ticket for the same code",
+      "redeem.spec.ts › [WEB-07] idempotent redemption › same idempotency key with a changed payload is rejected without issuing a second ticket"
+    ],
     "layers": ["B", "H"],
     "status": "blocked",
-    "reason": "Có double submit/one new ticket; thiếu lost-response/replay/payload-conflict/operation evidence."
+    "reason": "Có double submit, lost-response sau commit (Playwright route.fetch()+abort() cắt response client sau khi server thật đã commit, rồi UI tự poll reconcile), reload mất idempotency-key phía client rồi resume (CODE_CONSUMED → ux 'used'), và same-key đổi payload (409 IDEMPOTENCY_CONFLICT qua POST BFF thật, không mock) — ticket không nhân đôi ở mọi nhánh, wallet đối soát từng bước. H business-invariant (hash mismatch, CODE_CONSUMED) đã có unit riêng ở packages/backend/test/issue.test.cjs, test web không lặp lại. Thiếu: raw DB query bảng operations/redemption_codes từ phía web test, và race hai request đồng thời thật (double-click vẫn là 2 request nối tiếp rất gần theo UI, không phải song song tuyệt đối)."
   },
   {
     "caseId": "WEB-08",

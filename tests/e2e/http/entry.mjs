@@ -8,6 +8,7 @@ const cases = [
   'SEC-03',
   'SEC-04',
   'SEC-05',
+  'SEC-06',
   'AUTH-03',
   'GATE-01',
   'GATE-03',
@@ -29,7 +30,7 @@ if (
   (selected && !cases.includes(selected))
 ) {
   console.error(
-    'Usage: node tests/e2e/http/entry.mjs [--list] [--case SEC-01|SEC-02|SEC-03|SEC-04|SEC-05|AUTH-03|GATE-01|GATE-03|DB-03]',
+    'Usage: node tests/e2e/http/entry.mjs [--list] [--case SEC-01|SEC-02|SEC-03|SEC-04|SEC-05|SEC-06|AUTH-03|GATE-01|GATE-03|DB-03]',
   );
   process.exit(2);
 }
