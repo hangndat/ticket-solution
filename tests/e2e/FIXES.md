@@ -1,6 +1,6 @@
 # Sửa failures — yêu cầu user 2026-10-28
 
-Phạm vi: sửa nguyên nhân 8 browser failure của run `mvs8dgyy-e56379` và metric PostgreSQL còn fail, giữ acceptance và bảo mật. Lượt sửa product **2/2** cho F02 đã xong; các lượt trước khi sửa product là xây test/harness. Full browser mới PASS nhưng findings vẫn chờ review độc lập trên exact SHA.
+Phạm vi: sửa nguyên nhân 8 browser failure của run `mvs8dgyy-e56379` và metric PostgreSQL còn fail, giữ acceptance và bảo mật. Lượt sửa product **2/2** cho F02 đã xong; các lượt trước khi sửa product là xây test/harness. James đã review DoD/security PASS trên SHA `cffc5d69`; sau tích hợp main, full browser 42/42 PASS ở `mvse0ao9-872b62`; revalidation exact SHA tích hợp còn chờ.
 
 | ID | Finding / owner | Điều kiện đóng | Trạng thái |
 | --- | --- | --- | --- |

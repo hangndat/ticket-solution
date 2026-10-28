@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Button } from '@ticket/ui';
 import {
   Sheet,
@@ -26,6 +26,9 @@ import {
 } from './attendee-surface';
 import { BrandMark } from './brand-mark';
 import { useBranding } from './branding';
+import { useAttendeeLocale } from './i18n/locale-context';
+import { AttendeeLocaleSwitch } from './i18n/locale-switch';
+import { navLabelForTestId } from './i18n/nav-labels';
 import type { NavLink } from './nav/capabilities';
 import { bindNavCapabilitiesAuthzObserver } from './nav/bind-fetch-authz-observer';
 import { navCapabilitiesStore } from './nav/nav-capabilities-store';
@@ -33,7 +36,8 @@ import { navCapabilitiesStore } from './nav/nav-capabilities-store';
 /** Platform / tenant wordmark — defaults to Vemoki lockup from ThemeProvider. */
 export function Wordmark({ href = '/' }: { href?: string }) {
   const branding = useBranding();
-  const label = `${branding.displayName} — trang chủ`;
+  const { t } = useAttendeeLocale();
+  const label = `${branding.displayName} — ${t('nav.brandHome')}`;
   return (
     <Link
       href={href}
@@ -117,7 +121,7 @@ function NavLinkItem({
   }
   return (
     <Link key={item.href} href={item.href} {...common}>
-      {item.label}
+        {item.label}
     </Link>
   );
 }
@@ -128,6 +132,7 @@ function NavLinkItem({
  * SEC-CACHE: clears authenticated links on MEMBERSHIP_* 401/403; refetches on focus/visibility.
  */
 export function SiteNav({ trailing }: { trailing?: ReactNode }) {
+  const { locale, t } = useAttendeeLocale();
   const pathname = usePathname() ?? '/';
   const [links, setLinks] = useState<NavLink[]>(
     () => navCapabilitiesStore.getSnapshot().links,
@@ -202,6 +207,15 @@ export function SiteNav({ trailing }: { trailing?: ReactNode }) {
     };
   }, [authenticated]);
 
+  const labeledLinks = useMemo(
+    () =>
+      links.map((item) => ({
+        ...item,
+        label: navLabelForTestId(item.testId, locale, item.label),
+      })),
+    [links, locale],
+  );
+
   const closeMobile = useCallback(() => {
     setMobileMenu({ path: pathname, open: false });
   }, [pathname]);
@@ -217,12 +231,12 @@ export function SiteNav({ trailing }: { trailing?: ReactNode }) {
     <header className={attendeeSiteHeader} data-testid="site-header">
       <nav
         className={attendeeTopNav}
-        aria-label="Điều hướng chính"
+        aria-label={t('nav.primary')}
         data-testid="site-nav"
       >
         <Wordmark />
         <span className={attendeeNavLinksDesktop}>
-          {links.map((item) => (
+          {labeledLinks.map((item) => (
             <NavLinkItem
               key={item.href}
               item={item}
@@ -231,12 +245,13 @@ export function SiteNav({ trailing }: { trailing?: ReactNode }) {
           ))}
           {trailing}
         </span>
+        <AttendeeLocaleSwitch />
         {authenticated ? (
           <Link
             href="/account"
             className={attendeeNavAvatar}
             data-testid="nav-avatar"
-            aria-label={displayHint ? undefined : 'Tài khoản'}
+            aria-label={displayHint ? undefined : t('nav.account')}
           >
             <span className={attendeeNavAvatarBadge} aria-hidden="true">
               {avatarInitials ?? '…'}
@@ -258,7 +273,7 @@ export function SiteNav({ trailing }: { trailing?: ReactNode }) {
               data-testid="nav-menu-toggle"
             >
               <span className="text-xs max-[360px]:sr-only">
-                {mobileOpen ? 'Đóng' : 'Menu'}
+                {mobileOpen ? t('nav.menuClose') : t('nav.menu')}
               </span>
               <span className="text-lg leading-none" aria-hidden="true">
                 {mobileOpen ? '×' : '☰'}
@@ -281,8 +296,8 @@ export function SiteNav({ trailing }: { trailing?: ReactNode }) {
                 ?.focus();
             }}
           >
-            <SheetTitle className="sr-only">Menu điều hướng</SheetTitle>
-            {links.map((item) => (
+            <SheetTitle className="sr-only">{t('nav.menuTitle')}</SheetTitle>
+            {labeledLinks.map((item) => (
               <NavLinkItem
                 key={`mobile-${item.href}`}
                 item={item}

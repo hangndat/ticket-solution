@@ -313,6 +313,7 @@ function PortalShellChrome({
             aria-label={t('locale.label')}
           >
             <Button
+              htmlType="button"
               type={locale === 'vi' ? 'primary' : 'text'}
               size="small"
               aria-pressed={locale === 'vi'}
@@ -322,6 +323,7 @@ function PortalShellChrome({
               {t('locale.vi')}
             </Button>
             <Button
+              htmlType="button"
               type={locale === 'en' ? 'primary' : 'text'}
               size="small"
               aria-pressed={locale === 'en'}
@@ -473,7 +475,7 @@ function PortalShellChrome({
             </div>
             <div
               id="portal-main"
-              key={pathname}
+              key={`${pathname}:${locale}`}
               tabIndex={-1}
               className="portal-main-surface"
             >

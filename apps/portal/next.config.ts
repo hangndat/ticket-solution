@@ -43,6 +43,20 @@ const config: NextConfig = {
   poweredByHeader: false,
   // Next 16 blocks dev assets/HMR from 127.0.0.1 unless explicitly allowed.
   allowedDevOrigins: ['127.0.0.1', 'localhost'],
+  async redirects() {
+    return [
+      {
+        source: '/t/:tenantId/reports',
+        destination: '/t/:tenantId/analytics',
+        permanent: false,
+      },
+      {
+        source: '/t/:tenantId/e/:eventId/reports',
+        destination: '/t/:tenantId/e/:eventId/gate',
+        permanent: false,
+      },
+    ];
+  },
   async headers() {
     return [
       {
