@@ -24,8 +24,8 @@ export type StatusIconInfo = {
 
 /**
  * Glyphs are deliberately distinct from each other and from every other symbol
- * on the staff screens (header: person.circle, arrow.triangle.2.circlepath,
- * ellipsis.circle, arrow.clockwise; tabs: qrcode.viewfinder, keyboard,
+ * on the staff screens (header: person.circle.fill, arrow.triangle.2.circlepath;
+ * tabs: qrcode.viewfinder, keyboard,
  * clock.arrow.circlepath; panels: *.circle.fill, tray.full.fill).
  */
 export function statusIconInfo(
