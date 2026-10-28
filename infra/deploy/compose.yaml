@@ -1,5 +1,12 @@
 name: vemoki
 
+# Bounded json-file logs (20m x 5 per container). Applies on container recreate; no daemon restart.
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: '20m'
+    max-file: '5'
+
 networks:
   internal:
   edge:
@@ -14,6 +21,7 @@ services:
   postgres:
     image: postgres:18-alpine
     restart: unless-stopped
+    logging: *default-logging
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -34,6 +42,7 @@ services:
   mailpit:
     image: axllent/mailpit:v1.22
     restart: unless-stopped
+    logging: *default-logging
     networks:
       - internal
 
@@ -44,6 +53,7 @@ services:
     image: cleanstart/minio@sha256:4febd64f632c221b48e0fbf435ac534df822aa5b06805540c03973939e4cc82a
     user: '0:0'
     restart: unless-stopped
+    logging: *default-logging
     command:
       ['server', '/data', '--address', ':9000', '--console-address', ':9001']
     environment:
@@ -73,6 +83,7 @@ services:
   minio-init:
     image: amazon/aws-cli:2.17.50@sha256:ac68e76ae4bbb804b0c36d56c6fdc8e6800adb46d29867ac2b73280225a7b719
     restart: 'no'
+    logging: *default-logging
     environment:
       AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER}
       AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD}
@@ -101,6 +112,7 @@ services:
     volumes:
       - ${RELEASE_MIGRATE_DIR:?pin a verified release}:/app:ro
     restart: "no"
+    logging: *default-logging
     environment:
       MIGRATION_DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
     command: ['pnpm', '--filter', '@ticket/backend', 'exec', 'prisma', 'migrate', 'deploy']
@@ -113,6 +125,7 @@ services:
   keycloak:
     image: quay.io/keycloak/keycloak:26.0
     restart: unless-stopped
+    logging: *default-logging
     command: ['start', '--import-realm', '--http-port=8080']
     environment:
       KC_DB: postgres
@@ -149,6 +162,7 @@ services:
     volumes:
       - ${RELEASE_API_DIR:?pin a verified release}:/app:ro
     restart: unless-stopped
+    logging: *default-logging
     environment:
       NODE_ENV: production
       HOST: 0.0.0.0
@@ -204,6 +218,7 @@ services:
       - /opt/vemoki/state/web-data:/app/apps/web/.data
       - /opt/vemoki/state/web-next-cache:/app/apps/web/.next/cache
     restart: unless-stopped
+    logging: *default-logging
     environment:
       NODE_ENV: production
       OIDC_ISSUER: https://auth.vemoki.com/realms/ticket
@@ -254,6 +269,7 @@ services:
       - ${RELEASE_PORTAL_DIR:?pin a verified release}:/app:ro
       - /opt/vemoki/state/portal-next-cache:/app/apps/portal/.next/cache
     restart: unless-stopped
+    logging: *default-logging
     environment:
       NODE_ENV: production
       OIDC_ISSUER: https://auth.vemoki.com/realms/ticket
@@ -301,6 +317,7 @@ services:
       # set APNS_ENABLED=true + APNS_KEY_ID in /opt/vemoki/.env, then uncomment:
       - /opt/vemoki/secrets/apns:/run/secrets/apns:ro
     restart: unless-stopped
+    logging: *default-logging
     environment:
       NODE_ENV: production
       DATABASE_URL: postgresql://ticket_app:${TICKET_APP_PASSWORD}@postgres:5432/${POSTGRES_DB}
