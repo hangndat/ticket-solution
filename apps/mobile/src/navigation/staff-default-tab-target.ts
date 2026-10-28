@@ -1,3 +1,4 @@
+import { ATTENDEE_ACCOUNT_SEGMENT } from './attendee-account-route.ts';
 import { STAFF_ACCOUNT_SEGMENT } from './staff-account-route.ts';
 
 /** Expo Router segment names for the staff 3-tab workspace (K-STAFF-01). */
@@ -12,9 +13,13 @@ const ATTENDEE_ONLY_TAB_SEGMENTS = new Set(['(events)', 'redeem', 'my-tickets'])
 
 /**
  * Account routes staff may open without replacing to Scan (toolbar / hidden tab).
- * Legacy root `/account` kept for deep links; staff UI uses `staff-account`.
+ * Legacy root `/account` redirects; attendee UI uses `attendee-account`.
  */
-const STAFF_ACCOUNT_SEGMENTS = new Set(['account', STAFF_ACCOUNT_SEGMENT]);
+const STAFF_ACCOUNT_SEGMENTS = new Set([
+  'account',
+  ATTENDEE_ACCOUNT_SEGMENT,
+  STAFF_ACCOUNT_SEGMENT,
+]);
 
 export const STAFF_DEFAULT_SCAN_HREF = '/(tabs)/staff-scan' as const;
 

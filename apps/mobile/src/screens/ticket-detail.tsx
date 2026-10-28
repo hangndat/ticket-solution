@@ -4,10 +4,12 @@ import { Text, View } from 'react-native';
 import type { TicketSummary } from '@ticket/contracts';
 import {
   attendeeWalletCopy,
+  isUsedTicketState,
   presentTicketRow,
   ticketGateHint,
   ticketScheduleVenueLines
 } from '@/attendee/attendee-outcome-copy';
+import { TicketUsedStamp } from '@/components/ticket-used-stamp';
 import { ErrorState } from '@/components/screen-state';
 import { walletCopy } from '@/components/screen-state-copy';
 import { EVENT_BANNER_HEIGHT_TICKET } from '@/components/event-banner-metrics';
@@ -315,8 +317,11 @@ export function TicketDetailScreen() {
   const isDemo =
     hasDemoMediaForEventId(ticket.eventId) ||
     Boolean(findDemoEventById(ticket.eventId));
-  const gateHint = ticketGateHint(ticket.state, { demo: isDemo });
-  const qrA11y = `Mã QR vé ${row.eventTitle}`;
+  const used = isUsedTicketState(ticket.state);
+  const gateHint = used ? null : ticketGateHint(ticket.state, { demo: isDemo });
+  const qrA11y = used
+    ? attendeeWalletCopy.usedQrA11y
+    : `Mã QR vé ${row.eventTitle}`;
 
   return (
     <Page>
@@ -336,15 +341,18 @@ export function TicketDetailScreen() {
         </Notice>
       ) : null}
       <View
+        accessible={used}
+        accessibilityLabel={used ? attendeeWalletCopy.usedWatermarkA11y : undefined}
         style={{
           backgroundColor: colors.ticketCanvas,
           borderRadius: radius.xl,
           borderCurve: 'continuous',
           overflow: 'hidden',
           borderWidth: 1,
-          borderColor: brand.signal
+          borderColor: used ? colors.line : brand.signal
         }}
       >
+        {used ? <TicketUsedStamp /> : null}
         <View
           style={{
             height: 6,
@@ -369,7 +377,7 @@ export function TicketDetailScreen() {
                 accessibilityLabel="Logo sự kiện demo trên vé"
               />
             ) : null}
-            <TicketStatusPill label={row.statusLabel} />
+            {used ? null : <TicketStatusPill label={row.statusLabel} />}
           </View>
           <Text
             maxFontSizeMultiplier={2}
@@ -418,12 +426,14 @@ export function TicketDetailScreen() {
             }}
           />
           {qrValue ? (
-            <QrCode
-              value={qrValue}
-              inkColor={brand.ink}
-              paperColor={colors.onAccent}
-              accessibilityLabel={qrA11y}
-            />
+            <View style={{ opacity: used ? 0.28 : 1 }}>
+              <QrCode
+                value={qrValue}
+                inkColor={used ? colors.secondary : brand.ink}
+                paperColor={colors.onAccent}
+                accessibilityLabel={qrA11y}
+              />
+            </View>
           ) : null}
           <Text
             selectable

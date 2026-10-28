@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react';
-import { Stack, router } from 'expo-router';
+import { Stack, router, type Href } from 'expo-router';
 import { useAttendeeSignIn } from '@/attendee/use-attendee-sign-in';
 import { accountCopy } from '@/components/screen-state-copy';
 import { session } from '@/identity/session';
@@ -13,7 +13,8 @@ type AttendeeScreenChromeProps = {
 
 /**
  * Native tab-root chrome: large title + header identity (staff pattern).
- * Guest: OIDC sign-in on the current screen. Verified: push `/account`.
+ * Guest: OIDC sign-in on the current screen. Verified: push unique root
+ * `/attendee-account` (not the hidden NativeTabs `account` trigger).
  * Place after the scroll root.
  */
 export function AttendeeScreenChrome({
@@ -39,7 +40,7 @@ export function AttendeeScreenChrome({
           }
           onPress={() => {
             if (signedIn) {
-              router.push(ATTENDEE_ACCOUNT_HREF);
+              router.push(ATTENDEE_ACCOUNT_HREF as Href);
               return;
             }
             void signIn();

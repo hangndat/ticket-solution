@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import type { TicketSummary } from '@ticket/contracts';
 import {
   attendeeWalletCopy,
+  isUsedTicketState,
   presentRedeemDecision,
   presentTicketRow,
   ticketGateHint,
@@ -23,7 +24,10 @@ const sampleTicket: TicketSummary = {
 
 test('ticketStateLabelVi maps known states to Vietnamese', () => {
   assert.equal(ticketStateLabelVi('ACTIVE'), 'Chưa sử dụng');
-  assert.equal(ticketStateLabelVi('USED'), 'Đã dùng');
+  assert.equal(ticketStateLabelVi('USED'), 'Đã sử dụng');
+  assert.equal(isUsedTicketState('USED'), true);
+  assert.equal(isUsedTicketState('ACTIVE'), false);
+  assert.equal(attendeeWalletCopy.usedWatermark, 'Đã sử dụng');
   assert.equal(ticketStateLabelVi('REVOKED'), 'Đã thu hồi');
 });
 
