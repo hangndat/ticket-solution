@@ -1,24 +1,37 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { SymbolView } from 'expo-symbols';
 import { Button } from '@/components/ui/button';
 import { radius, space } from '@/theme/tokens';
-import { GateStatusStrip } from './staff-gate-chrome.tsx';
 import { offlineConflictBannerForScope, type ConnectivityState, type OfflineQueueSnapshot } from './offline-queue.ts';
 import type { GateOp } from './gate-scan.ts';
 import type { StaffGateScope } from './staff-gate-events.ts';
-import { shortId } from './gate-outcome-copy.ts';
-import { scanStickyStatusFromMachineLabel } from './staff-gate-scan-sticky-status.ts';
+import { scanStickyStatus } from './staff-gate-scan-sticky-status.ts';
+import {
+  statusIconInfo,
+  visibleStatusIcons,
+  type StatusIconInfo,
+} from './staff-gate-status-icons.ts';
 import { colors } from '@/theme/colors';
 import { typography } from '@/theme/typography';
 
+function iconTint(tone: StatusIconInfo['tone']): string {
+  if (tone === 'ok') return colors.admit;
+  if (tone === 'attention') return colors.unknown;
+  return colors.secondary;
+}
+
+/**
+ * One status line: dot + status on the left (truncates), tappable status icons
+ * on the right. The event name lives in the native header only.
+ */
 export function StaffGateOpsSticky({
   connectivity,
   hasSession,
-  sessionId,
+  gateName,
   queueSnap,
   onSync,
   machineLabel,
   eventName,
-  hideEventTitle = false,
   gateScope,
   pendingOp,
   onContinueScan,
@@ -27,13 +40,13 @@ export function StaffGateOpsSticky({
 }: {
   connectivity: ConnectivityState;
   hasSession: boolean;
-  sessionId?: string | null;
+  /** Gate of the open session (O31); null when none/legacy. */
+  gateName?: string | null;
   queueSnap: OfflineQueueSnapshot;
   onSync?: () => void;
   machineLabel: string;
+  /** Accessibility label only — the header already shows the event. */
   eventName: string | null;
-  /** Header chrome already shows the active event; skip the duplicate title. */
-  hideEventTitle?: boolean;
   gateScope: StaffGateScope | null;
   pendingOp: GateOp | null;
   onContinueScan?: () => void;
@@ -42,83 +55,80 @@ export function StaffGateOpsSticky({
 }) {
   const showPendingActions =
     pendingOp !== null && (reconcileEnabled || onContinueScan);
-  const sticky = scanStickyStatusFromMachineLabel(machineLabel);
-  const title = eventName?.trim() || 'Chưa chọn sự kiện';
+  const sticky = scanStickyStatus({ machineLabel, hasSession, gateName });
   const conflictBanner = offlineConflictBannerForScope(queueSnap, gateScope, connectivity);
+  const dotColor =
+    sticky.tone === 'ready' ? colors.admit : colors.secondary;
+  const iconInput = {
+    connectivity,
+    hasSession,
+    gateName,
+    pendingCount: queueSnap.pendingCount,
+    conflictCount: queueSnap.conflictCount,
+    syncing: queueSnap.syncing,
+  };
+  const icons = visibleStatusIcons(iconInput).map((id) =>
+    statusIconInfo(id, iconInput),
+  );
+  const event = eventName?.trim();
+
+  const explain = (info: StatusIconInfo) => {
+    if (info.id === 'sync' && onSync && !queueSnap.syncing) {
+      Alert.alert(info.title, info.message, [
+        { text: 'Đóng', style: 'cancel' },
+        { text: 'Đồng bộ ngay', onPress: onSync },
+      ]);
+      return;
+    }
+    Alert.alert(info.title, info.message, [{ text: 'Đóng' }]);
+  };
 
   return (
     <View
       style={{
         gap: space.sm,
-        paddingBottom: space.md,
+        paddingBottom: space.sm,
         borderBottomWidth: 1,
         borderBottomColor: colors.separator,
         backgroundColor: colors.paper
       }}
     >
-      <View
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: space.sm
-        }}
-      >
-        {hideEventTitle ? (
-          <View style={{ flex: 1 }} />
-        ) : (
-          <Text
-            numberOfLines={1}
-            accessibilityRole="header"
-            style={{ ...typography.subheadSemibold, flex: 1,
-              color: colors.label }}
-          >
-            {title}
-          </Text>
-        )}
+      <View style={styles.line}>
         <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: space.sm,
-            flexShrink: 1
-          }}
-          accessibilityLabel={sticky.statusText}
+          style={styles.statusLeft}
+          accessible
+          accessibilityRole="text"
+          accessibilityLabel={`${event ? `${event}. ` : ''}${sticky.statusText}`}
         >
-          <Text
-            style={{ ...typography.caption, 
-              color: sticky.ready ? colors.admit : colors.secondary }}
-          >
-            ●
-          </Text>
+          <Text style={{ ...typography.caption, color: dotColor }}>●</Text>
           <Text
             numberOfLines={1}
-            style={{ ...typography.caption, 
-              color: sticky.ready ? colors.admit : colors.secondary }}
+            style={{ ...typography.caption, color: dotColor, flexShrink: 1 }}
           >
             {sticky.statusText}
           </Text>
         </View>
+        <View style={styles.iconsRight}>
+          {icons.map((info) => (
+            <Pressable
+              key={info.id}
+              testID={`gate-status-icon-${info.id}`}
+              accessibilityRole="button"
+              accessibilityLabel={info.accessibilityLabel}
+              accessibilityHint={info.accessibilityHint}
+              hitSlop={space.xs}
+              onPress={() => explain(info)}
+              style={styles.iconTap}
+            >
+              <SymbolView
+                name={info.symbol}
+                size={22}
+                tintColor={iconTint(info.tone)}
+              />
+            </Pressable>
+          ))}
+        </View>
       </View>
-      <Text
-        numberOfLines={1}
-        style={{ ...typography.caption, color: colors.secondary }}
-        accessibilityLabel={`${hideEventTitle && eventName?.trim() ? `${eventName.trim()}. ` : ''}${
-          hasSession
-            ? `Phiên cổng ${shortId(sessionId, 8)}`
-            : 'Chưa mở phiên cổng'
-        }`}
-      >
-        {hasSession
-          ? `Phiên cổng · ${shortId(sessionId, 8)}`
-          : 'Chưa mở phiên cổng'}
-      </Text>
-      <GateStatusStrip
-        connectivity={connectivity}
-        hasSession={hasSession}
-        queueAttention={queueSnap.pendingCount > 0 || queueSnap.conflictCount > 0}
-        syncing={queueSnap.syncing}
-        onSync={onSync}
-      />
       {conflictBanner ? (
         <View
           accessible
@@ -169,6 +179,29 @@ export function StaffGateOpsSticky({
 }
 
 const styles = StyleSheet.create({
+  line: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.sm,
+    minHeight: 44
+  },
+  statusLeft: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.sm
+  },
+  iconsRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.xs
+  },
+  iconTap: {
+    minWidth: 44,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
   compactAction: {
     paddingVertical: space.sm,
     paddingHorizontal: space.md,

@@ -105,12 +105,11 @@ export function StaffManualEntryScreen() {
         <StaffGateOpsSticky
           connectivity={gate.connectivity}
           hasSession={Boolean(gate.sessionId)}
-          sessionId={gate.sessionId}
+          gateName={gate.gates.sessionGateName}
           queueSnap={gate.queueSnap}
           onSync={() => void gate.syncNow()}
           machineLabel={gate.machineLabel}
           eventName={gate.gateScope?.name ?? null}
-          hideEventTitle
           gateScope={gate.gateScope}
           pendingOp={gate.pendingOp}
           onContinueScan={
