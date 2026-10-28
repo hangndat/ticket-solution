@@ -4,6 +4,7 @@ import { useAttendeeSignIn } from '@/attendee/use-attendee-sign-in';
 import { accountCopy } from '@/components/screen-state-copy';
 import { session } from '@/identity/session';
 import { ATTENDEE_ACCOUNT_HREF } from '@/navigation/attendee-account-route';
+import { attendeeProfileHeaderIcon } from '@/navigation/attendee-profile-header';
 import { TabStackTitle } from '@/navigation/tab-stack-title';
 
 type AttendeeScreenChromeProps = {
@@ -34,7 +35,7 @@ export function AttendeeScreenChrome({
       <TabStackTitle title={title} large={large} />
       <Stack.Toolbar placement="right">
         <Stack.Toolbar.Button
-          icon="person.circle"
+          icon={attendeeProfileHeaderIcon(signedIn)}
           accessibilityLabel={
             signedIn ? accountCopy.screenTitle : accountCopy.guest.signInCta
           }

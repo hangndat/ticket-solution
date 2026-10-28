@@ -4,9 +4,10 @@ import {
   useRef,
   useState,
   useSyncExternalStore,
-  startTransition
+  startTransition,
+  type PropsWithChildren
 } from 'react';
-import { Animated, Text, View } from 'react-native';
+import { Animated, ScrollView, Text, View } from 'react-native';
 import { Input } from '@/components/ui/input';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import type { RedemptionResolveResponse } from '@ticket/contracts';
@@ -19,7 +20,8 @@ import {
 import { presentRedeemDecision } from '@/attendee/attendee-outcome-copy';
 import { useAttendeeSignIn } from '@/attendee/use-attendee-sign-in';
 import { AttendeeCta } from '@/components/attendee-cta';
-import { Notice, Page } from '@/components/page';
+import { Notice } from '@/components/page';
+import { AttendeeScreenChrome } from '@/navigation/attendee-screen-chrome';
 import { ErrorState, LoadingState } from '@/components/screen-state';
 import { redeemCopy } from '@/components/screen-state-copy';
 import { getApiBaseUrl } from '@/identity/config';
@@ -58,8 +60,9 @@ import { randomId } from '@/lib/random-id';
 import { refreshWalletAfterIssue } from '@/tickets/refresh-wallet-after-issue';
 import { ticketDetailHref } from '@/tickets/ticket-detail-href';
 import { resolveTermsForDisplay } from '@/redeem/terms-display';
-import { colors } from '@/theme/colors';
+import { brand, colors } from '@/theme/colors';
 import { fontFamilies } from '@/theme/fonts';
+import { space } from '@/theme/tokens';
 import { typography } from '@/theme/typography';
 
 const AUTH_CODES = new Set(['UNAUTHENTICATED', 'EMAIL_NOT_VERIFIED']);
@@ -462,16 +465,16 @@ export function GlobalRedeemScreen() {
 
   if (!configured) {
     return (
-      <Page>
+      <RedeemTabPage>
         <Notice title="Chưa sẵn sàng đổi mã">
           Bản dựng chưa bật đăng nhập. Bạn vẫn có thể xem sự kiện công khai.
         </Notice>
-      </Page>
+      </RedeemTabPage>
     );
   }
 
   return (
-    <Page>
+    <RedeemTabPage>
       {!verified ? (
         <>
           <Notice title={redeemCopy.globalGuestTitle}>
@@ -639,7 +642,29 @@ export function GlobalRedeemScreen() {
           testID="global-redeem-cta-re-resolve"
         />
       ) : null}
-    </Page>
+    </RedeemTabPage>
+  );
+}
+
+/** Scroll root first, then native large-title chrome (Events / Vé của tôi). */
+function RedeemTabPage({ children }: PropsWithChildren) {
+  return (
+    <>
+      <ScrollView
+        contentInsetAdjustmentBehavior="automatic"
+        keyboardShouldPersistTaps="handled"
+        style={{ flex: 1, backgroundColor: brand.paper }}
+        contentContainerStyle={{
+          paddingHorizontal: space.xl,
+          paddingTop: space.sm,
+          paddingBottom: space.huge,
+          gap: space.xl,
+        }}
+      >
+        {children}
+      </ScrollView>
+      <AttendeeScreenChrome title={redeemCopy.screenTitle} />
+    </>
   );
 }
 

@@ -51,8 +51,12 @@ test('status icons: explanation copy per state', () => {
 
 test('status icons: glyphs distinct from each other and from header symbols', () => {
   const taken = new Set([
-    'person.circle', 'arrow.triangle.2.circlepath', 'ellipsis.circle', 'arrow.clockwise',
-    'qrcode.viewfinder', 'keyboard', 'clock.arrow.circlepath', 'tray.full.fill',
+    'person.circle.fill',
+    'arrow.triangle.2.circlepath',
+    'qrcode.viewfinder',
+    'keyboard',
+    'clock.arrow.circlepath',
+    'tray.full.fill',
   ]);
   const symbols = new Set<string>();
   for (const connectivity of ['online', 'offline', 'unknown'] as const) {
