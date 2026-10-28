@@ -18,6 +18,7 @@ export function StaffGateOpsSticky({
   onSync,
   machineLabel,
   eventName,
+  hideEventTitle = false,
   gateScope,
   pendingOp,
   onContinueScan,
@@ -31,6 +32,8 @@ export function StaffGateOpsSticky({
   onSync?: () => void;
   machineLabel: string;
   eventName: string | null;
+  /** Header chrome already shows the active event; skip the duplicate title. */
+  hideEventTitle?: boolean;
   gateScope: StaffGateScope | null;
   pendingOp: GateOp | null;
   onContinueScan?: () => void;
@@ -60,14 +63,18 @@ export function StaffGateOpsSticky({
           gap: space.sm
         }}
       >
-        <Text
-          numberOfLines={1}
-          accessibilityRole="header"
-          style={{ ...typography.subheadSemibold, flex: 1,
-            color: colors.label }}
-        >
-          {title}
-        </Text>
+        {hideEventTitle ? (
+          <View style={{ flex: 1 }} />
+        ) : (
+          <Text
+            numberOfLines={1}
+            accessibilityRole="header"
+            style={{ ...typography.subheadSemibold, flex: 1,
+              color: colors.label }}
+          >
+            {title}
+          </Text>
+        )}
         <View
           style={{
             flexDirection: 'row',
@@ -95,11 +102,11 @@ export function StaffGateOpsSticky({
       <Text
         numberOfLines={1}
         style={{ ...typography.caption, color: colors.secondary }}
-        accessibilityLabel={
+        accessibilityLabel={`${hideEventTitle && eventName?.trim() ? `${eventName.trim()}. ` : ''}${
           hasSession
             ? `Phiên cổng ${shortId(sessionId, 8)}`
             : 'Chưa mở phiên cổng'
-        }
+        }`}
       >
         {hasSession
           ? `Phiên cổng · ${shortId(sessionId, 8)}`
