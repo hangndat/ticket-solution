@@ -88,7 +88,7 @@
     ],
     "layers": ["B", "H"],
     "status": "blocked",
-    "reason": "Browser: invalid/used/expired-window/quota-exhausted/suspended + no @ + wallet unchanged trên fixture WEB-04 (seed block). Closed/cancelled event hiện redeem-ux-error (EVENT_CANCELLED chưa map closed) — ghi known gap. Thiếu H DB code/quota/operation đối soát và ATTENDEE_LIMIT nhánh limit riêng."
+    "reason": "Browser: invalid/used/expired-window/quota-exhausted/suspended/cancelled-event với UX closed đúng nhóm, không lộ email và wallet không đổi trên fixture WEB-04; cancelled event dùng business_status=CANCELLED. Targeted 6/6 PASS run mvsis2hr-4a64e9. Thiếu H DB code/quota/operation đối soát và ATTENDEE_LIMIT nhánh limit riêng."
   },
   {
     "caseId": "WEB-05",
