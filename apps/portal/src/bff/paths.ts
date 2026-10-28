@@ -15,6 +15,11 @@ export const PORTAL_UPSTREAM = {
     `${eventBase(tenantId, eventId)}/archive`,
   ticketTypes: (tenantId: string, eventId: string) =>
     `${eventBase(tenantId, eventId)}/ticket-types`,
+  /** O31 gates — Nest `gate` module (tenantId in query/body). */
+  gates: (tenantId: string, eventId: string) =>
+    `/v1/gate/events/${encodeURIComponent(eventId)}/gates?tenantId=${encodeURIComponent(tenantId)}`,
+  gateCreate: (eventId: string) =>
+    `/v1/gate/events/${encodeURIComponent(eventId)}/gates`,
   sources: (tenantId: string, eventId: string) =>
     `${eventBase(tenantId, eventId)}/sources`,
   quota: (tenantId: string, eventId: string) =>
