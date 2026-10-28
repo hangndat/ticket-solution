@@ -12,6 +12,8 @@ export type StaffGateWorkspace = {
   v: 2;
   selected: StaffGateScope | null;
   sessionsByScope: Record<string, string>;
+  /** O32: gate chosen when the scope's session was opened (id only; name comes from the gates API). */
+  sessionGateByScope?: Record<string, { sessionId: string; gateId: string }>;
   opsByScope: Record<string, GateOp[]>;
 };
 
@@ -28,13 +30,49 @@ export function emptyStaffGateWorkspace(): StaffGateWorkspace {
 export function sliceWorkspaceForScope(
   workspace: StaffGateWorkspace,
   scope: StaffGateScope | null,
-): { ops: GateOp[]; sessionId: string | null } {
-  if (!scope) return { ops: [], sessionId: null };
+): { ops: GateOp[]; sessionId: string | null; gateId: string | null } {
+  if (!scope) return { ops: [], sessionId: null, gateId: null };
   const key = scopeStorageKey(scope);
+  const sessionId = workspace.sessionsByScope[key] ?? null;
   return {
     ops: recoverOps(workspace.opsByScope[key] ?? []),
-    sessionId: workspace.sessionsByScope[key] ?? null,
+    sessionId,
+    gateId: gateIdForSession(workspace, scope, sessionId),
   };
+}
+
+/** Gate id persisted with this exact session, else null. */
+export function gateIdForSession(
+  workspace: StaffGateWorkspace,
+  scope: Pick<StaffGateScope, 'tenantId' | 'eventId'>,
+  sessionId: string | null,
+): string | null {
+  if (!sessionId) return null;
+  const entry = workspace.sessionGateByScope?.[scopeStorageKey(scope)];
+  return entry && entry.sessionId === sessionId ? entry.gateId : null;
+}
+
+/** Record (or clear when gateId is null) the gate of an opened session. */
+export function recordSessionGate(
+  workspace: StaffGateWorkspace,
+  scope: Pick<StaffGateScope, 'tenantId' | 'eventId'>,
+  sessionId: string,
+  gateId: string | null,
+): StaffGateWorkspace {
+  const key = scopeStorageKey(scope);
+  const next = { ...(workspace.sessionGateByScope ?? {}) };
+  if (gateId) next[key] = { sessionId, gateId };
+  else delete next[key];
+  return { ...workspace, sessionGateByScope: next };
+}
+
+/** Resolve the display name from the API gates list (source of truth). */
+export function gateNameFromList(
+  gates: ReadonlyArray<{ id: string; name: string }>,
+  gateId: string | null,
+): string | null {
+  if (!gateId) return null;
+  return gates.find((g) => g.id === gateId)?.name ?? null;
 }
 
 /** Flush in-memory scope slice before switching or saving. */
@@ -51,8 +89,15 @@ export function flushScopeIntoWorkspace(
   } else {
     delete sessionsByScope[key];
   }
+  // The recorded gate only survives while it still belongs to the live session.
+  let sessionGateByScope = workspace.sessionGateByScope;
+  if (sessionGateByScope?.[key] && sessionGateByScope[key].sessionId !== sessionId) {
+    sessionGateByScope = { ...sessionGateByScope };
+    delete sessionGateByScope[key];
+  }
   return {
     ...workspace,
+    ...(sessionGateByScope ? { sessionGateByScope } : {}),
     opsByScope: {
       ...workspace.opsByScope,
       [key]: recoverOps([...ops]).slice(0, MAX_OPS_PER_SCOPE),

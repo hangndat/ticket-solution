@@ -85,6 +85,9 @@ import {
   persistActiveScope,
   scopeStorageKey,
   sliceWorkspaceForScope,
+  gateIdForSession,
+  gateNameFromList,
+  recordSessionGate,
   emptyStaffGateWorkspace
 } from '@/gate/staff-gate-workspace';
 import {
@@ -243,7 +246,6 @@ export function StaffGateWorkspaceProvider({
   const [sessionGateState, setSessionGateState] = useState<{
     sessionId: string;
     gateId: string | null;
-    gateName: string | null;
   } | null>(null);
   const [sessionOpening, setSessionOpening] = useState(false);
   const [sessionOpenError, setSessionOpenError] = useState<{ key: string; message: string } | null>(null);
@@ -514,8 +516,10 @@ export function StaffGateWorkspaceProvider({
     }
     if (!orderRejected || recoveryAttemptedSessionsRef.current.has(activeSession) || !receiptGuard()) return;
     recoveryAttemptedSessionsRef.current.add(activeSession);
+    const priorGateId = gateIdForSession(workspaceRef.current, scope, activeSession);
     const renewal = await openReplacementGateSession({
       bearer, apiBase, tenantId: scope.tenantId, eventId: scope.eventId,
+      gateId: priorGateId,
       shouldContinue: receiptGuard,
     });
     if (renewal.kind === 'auth') clearStaffChromeAfterAuthzDenial();
@@ -526,6 +530,10 @@ export function StaffGateWorkspaceProvider({
     feedbackGenerationRef.current += 1;
     const latestAtRenewal = viewRef.current.ops;
     viewRef.current = { gateScope: scope, sessionId: nextSession, ops: latestAtRenewal };
+    if (renewal.kind === 'ok') {
+      workspaceRef.current = recordSessionGate(workspaceRef.current, scope, renewal.sessionId, renewal.gateId);
+      setSessionGateState({ sessionId: renewal.sessionId, gateId: renewal.gateId });
+    }
     workspaceRef.current = persistActiveScope(workspaceRef.current, scope, latestAtRenewal, nextSession);
     setSessionId(nextSession);
     await saveWorkspace(userId);
@@ -612,6 +620,7 @@ export function StaffGateWorkspaceProvider({
       setGateScope(merged.scope);
       setOps(slice.ops);
       setSessionId(slice.sessionId);
+      setSessionGateState(slice.sessionId && slice.gateId ? { sessionId: slice.sessionId, gateId: slice.gateId } : null);
       viewRef.current = { gateScope: merged.scope, sessionId: slice.sessionId, ops: slice.ops };
       if (!currentView.gateScope || !sameStaffGateScope(currentView.gateScope, merged.scope) || currentView.sessionId !== slice.sessionId) {
         feedbackGenerationRef.current += 1;
@@ -816,6 +825,7 @@ export function StaffGateWorkspaceProvider({
       setGateScope(next);
       setOps(slice.ops);
       setSessionId(slice.sessionId);
+      setSessionGateState(slice.sessionId && slice.gateId ? { sessionId: slice.sessionId, gateId: slice.gateId } : null);
       clearScanFeedback();
       setEventPickerOpen(false);
       void saveWorkspace(verifiedUserId);
@@ -926,8 +936,15 @@ export function StaffGateWorkspaceProvider({
         setSessionGateState({
           sessionId: result.staffSessionId,
           gateId: result.openedSessionGate.gateId,
-          gateName: result.openedSessionGate.gateName,
         });
+        if (gateScope) {
+          workspaceRef.current = recordSessionGate(
+            workspaceRef.current,
+            gateScope,
+            result.staffSessionId,
+            result.openedSessionGate.gateId,
+          );
+        }
       }
       if (result.membershipAuthzDenied) {
         clearStaffChromeAfterAuthzDenial();
@@ -1279,7 +1296,8 @@ export function StaffGateWorkspaceProvider({
         if (gatesKey) void loadGates(gatesKey, scope);
         return;
       }
-      setSessionGateState({ sessionId: opened.sessionId, gateId: opened.gateId, gateName: opened.gateName });
+      setSessionGateState({ sessionId: opened.sessionId, gateId: opened.gateId });
+      workspaceRef.current = recordSessionGate(workspaceRef.current, scope, opened.sessionId, opened.gateId);
       setConnectivity('online');
       await persist(viewRef.current.ops, null, opened.sessionId, isCurrent);
     } finally {
@@ -1293,7 +1311,7 @@ export function StaffGateWorkspaceProvider({
       status: gatesForKey?.status ?? 'loading',
       gates: gatesForKey?.gates ?? [],
       selectedGateId: effectiveSelected?.id ?? null,
-      sessionGateName: sessionGate?.gateName ?? null,
+      sessionGateName: gateNameFromList(gatesForKey?.gates ?? [], sessionGate?.gateId ?? null),
       openUi,
       opening: sessionOpening,
       openError: sessionOpenError && sessionOpenError.key === gatesKey ? sessionOpenError.message : null,
