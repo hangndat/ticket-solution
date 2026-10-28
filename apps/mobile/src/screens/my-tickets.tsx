@@ -125,7 +125,7 @@ function EventIdentityBlock({ group }: { group: EventTicketGroup }) {
         <EventBanner
           eventId={group.eventId}
           height={size}
-          style={{ width: size, borderRadius: 0 }}
+          style={{ width: size, borderRadius: radius.none }}
           testID={`wallet-event-banner-${group.eventId}`}
           accessibilityLabel={`Banner ${group.eventName}`}
         />
@@ -148,9 +148,7 @@ function EventIdentityBlock({ group }: { group: EventTicketGroup }) {
     >
       <Text
         style={{
-          fontFamily: fontFamilies.display,
-          fontSize: 26,
-          fontWeight: '700',
+          ...typography.avatarInitial,
           color: colors.onAccent
         }}
       >
@@ -178,7 +176,7 @@ function EventTicketSection({
         style={{ flexDirection: 'row', alignItems: 'center', gap: space.md }}
       >
         <EventIdentityBlock group={group} />
-        <View style={{ flex: 1, flexShrink: 1, gap: 2 }}>
+        <View style={{ flex: 1, flexShrink: 1, gap: space.xxs }}>
           <Text style={{ ...typography.callout, color: brand.ink }}>
             {group.eventName}
           </Text>

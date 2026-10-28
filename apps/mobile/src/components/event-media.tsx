@@ -122,7 +122,6 @@ function EventBrandFallback({
           fontFamily: fontFamilies.display,
           fontSize,
           lineHeight: Math.round(fontSize * 1.05),
-          fontWeight: '700',
           color: colors.onAccent,
           textAlign: 'center',
         }}
@@ -134,9 +133,8 @@ function EventBrandFallback({
           numberOfLines={1}
           maxFontSizeMultiplier={1.2}
           style={{
-            ...typography.caption,
-            fontFamily: fontFamilies.body,
-            fontWeight: '600',
+            ...typography.subheadSemibold,
+            fontFamily: fontFamilies.bodySemiBold,
             color: colors.onAccent,
             textAlign: 'center',
             opacity: 0.95,

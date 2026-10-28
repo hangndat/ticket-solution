@@ -12,9 +12,16 @@ import {
  */
 export const brand = brandGenerated;
 
-export const space = spaceGenerated;
+export const space = {
+  none: 0,
+  ...spaceGenerated,
+} as const;
 
-export const radius = radiusGenerated;
+export const radius = {
+  none: 0,
+  xs: 4,
+  ...radiusGenerated,
+} as const;
 
 export const elevation: Record<'none' | 'card' | 'sheet', ViewStyle> =
   elevationGenerated;

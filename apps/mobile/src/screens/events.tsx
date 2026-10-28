@@ -78,7 +78,7 @@ function PublishedEventCard({ item }: { item: PublishedEventSummary }) {
             fallbackColor={item.brand.primaryColor}
             wordmark={item.name}
             height={EVENT_BANNER_HEIGHT_LIST}
-            style={{ borderRadius: 0 }}
+            style={{ borderRadius: radius.none }}
             testID={`pub-media-${item.id}-banner`}
             accessibilityLabel={`Banner ${item.name}`}
           />

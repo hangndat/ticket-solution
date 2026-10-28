@@ -1,6 +1,7 @@
-import { Pressable, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { SymbolView } from 'expo-symbols';
 import { Button } from '@/components/ui/button';
+import { Chip } from '@/components/ui/chip';
 import { Spinner } from '@/components/ui/spinner';
 import { colors } from '@/theme/colors';
 import { radius, space } from '@/theme/tokens';
@@ -77,33 +78,15 @@ export function StaffGateOpenSession({ gates }: { gates: StaffGateGatesValue }) 
             {gates.gates.map((gate) => {
               const selected = gate.id === gates.selectedGateId;
               return (
-                <Pressable
+                <Chip
                   key={gate.id}
                   testID={`gate-choice-${gate.id}`}
+                  label={gate.name}
+                  selected={selected}
                   accessibilityRole="radio"
-                  accessibilityState={{ selected }}
                   accessibilityLabel={`Cổng ${gate.name}`}
                   onPress={() => gates.selectGate(gate.id)}
-                  style={{
-                    minHeight: 44,
-                    paddingHorizontal: space.lg,
-                    justifyContent: 'center',
-                    borderRadius: radius.md,
-                    borderWidth: 1,
-                    borderColor: selected ? colors.accent : colors.line,
-                    backgroundColor: selected ? colors.accent : colors.surfaceMuted
-                  }}
-                >
-                  <Text
-                    numberOfLines={1}
-                    style={{
-                      ...typography.subheadSemibold,
-                      color: selected ? colors.onAccent : colors.label
-                    }}
-                  >
-                    {gate.name}
-                  </Text>
-                </Pressable>
+                />
               );
             })}
           </View>

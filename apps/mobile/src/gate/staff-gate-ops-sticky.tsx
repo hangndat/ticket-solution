@@ -1,6 +1,7 @@
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, StyleSheet, Text, View } from 'react-native';
 import { SymbolView } from 'expo-symbols';
 import { Button } from '@/components/ui/button';
+import { IconButton } from '@/components/ui/icon-button';
 import { radius, space } from '@/theme/tokens';
 import { offlineConflictBannerForScope, type ConnectivityState, type OfflineQueueSnapshot } from './offline-queue.ts';
 import type { GateOp } from './gate-scan.ts';
@@ -110,22 +111,19 @@ export function StaffGateOpsSticky({
         </View>
         <View style={styles.iconsRight}>
           {icons.map((info) => (
-            <Pressable
+            <IconButton
               key={info.id}
               testID={`gate-status-icon-${info.id}`}
-              accessibilityRole="button"
               accessibilityLabel={info.accessibilityLabel}
               accessibilityHint={info.accessibilityHint}
-              hitSlop={space.xs}
               onPress={() => explain(info)}
-              style={styles.iconTap}
             >
               <SymbolView
                 name={info.symbol}
                 size={22}
                 tintColor={iconTint(info.tone)}
               />
-            </Pressable>
+            </IconButton>
           ))}
         </View>
       </View>
@@ -195,12 +193,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.xs
-  },
-  iconTap: {
-    minWidth: 44,
-    minHeight: 44,
-    alignItems: 'center',
-    justifyContent: 'center'
   },
   compactAction: {
     paddingVertical: space.sm,

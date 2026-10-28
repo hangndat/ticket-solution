@@ -1,5 +1,6 @@
 import { useState, type PropsWithChildren, type ReactNode } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
+import { Button } from '@/components/ui/button';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { eventsCopy } from '@/components/screen-state-copy';
 import { isLongEventText } from '@/published/event-detail-model';
@@ -122,24 +123,14 @@ export function ExpandableText({
         {text}
       </Text>
       {long ? (
-        <Pressable
-          accessibilityRole="button"
+        <Button
+          variant="ghost"
+          label={open ? copy.seeLess : copy.seeMore}
           accessibilityLabel={open ? copy.seeLess : copy.seeMore}
           accessibilityState={{ expanded: open }}
           onPress={() => setOpen((v) => !v)}
-          hitSlop={space.sm}
-          style={{ minHeight: 44, justifyContent: 'center' }}
-        >
-          <Text
-            style={{
-              ...typography.callout,
-              fontFamily: fontFamilies.bodySemiBold,
-              color: brand.ink
-            }}
-          >
-            {open ? copy.seeLess : copy.seeMore}
-          </Text>
-        </Pressable>
+          style={{ minHeight: 44, alignSelf: 'flex-start', paddingHorizontal: space.none }}
+        />
       ) : null}
     </View>
   );
@@ -181,19 +172,24 @@ export function CollapsibleRow({
         borderTopColor: colors.surfaceMuted
       }}
     >
-      <Pressable
+      <Button
         testID={testID}
-        accessibilityRole="button"
+        variant="ghost"
         accessibilityLabel={hint ? `${title}, ${hint}` : title}
         accessibilityState={{ expanded: open }}
         onPress={() => setOpen((v) => !v)}
         style={{
           minHeight: 48,
           paddingVertical: space.md,
+          paddingHorizontal: space.none,
+          alignSelf: 'stretch',
+        }}
+        contentStyle={{
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'space-between',
-          gap: space.md
+          gap: space.md,
+          width: '100%',
         }}
       >
         <Text
@@ -213,7 +209,7 @@ export function CollapsibleRow({
         >
           {open ? '−' : '+'}
         </Text>
-      </Pressable>
+      </Button>
       {open ? (
         <View style={{ paddingBottom: space.md, gap: space.md }}>{children}</View>
       ) : null}
