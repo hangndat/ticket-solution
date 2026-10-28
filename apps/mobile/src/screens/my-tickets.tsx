@@ -332,13 +332,6 @@ function TicketRow({
           {walletTicketCardTitle(ticket)}
         </Text>
         <StatusChip status={status} />
-        <Text
-          accessibilityElementsHidden
-          importantForAccessibility="no-hide-descendants"
-          style={{ ...typography.title, color: colors.secondary }}
-        >
-          ›
-        </Text>
       </Pressable>
     </Link>
   );

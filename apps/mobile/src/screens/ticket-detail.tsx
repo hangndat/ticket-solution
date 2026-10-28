@@ -1,6 +1,12 @@
 import { useLocalSearchParams } from 'expo-router';
-import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
-import { Text, View } from 'react-native';
+import {
+  useEffect,
+  useMemo,
+  useState,
+  useSyncExternalStore,
+  type PropsWithChildren,
+} from 'react';
+import { ScrollView, Text, View } from 'react-native';
 import type { TicketSummary } from '@ticket/contracts';
 import {
   attendeeWalletCopy,
@@ -14,7 +20,7 @@ import { ErrorState } from '@/components/screen-state';
 import { walletCopy } from '@/components/screen-state-copy';
 import { EVENT_BANNER_HEIGHT_TICKET } from '@/components/event-banner-metrics';
 import { EventBanner, EventLogo } from '@/components/event-media';
-import { Notice, Page } from '@/components/page';
+import { Notice } from '@/components/page';
 import { QrCode } from '@/components/qr-code';
 import { TicketStatusPill } from '@/components/ticket-status-pill';
 import { hasDemoMediaForEventId } from '@/data/demo-media';
@@ -56,6 +62,23 @@ type LoadState =
       status: 'error';
       reason: 'unreachable' | 'unauthorized' | 'invalid';
     });
+
+function TicketDetailPage({ children }: PropsWithChildren) {
+  return (
+    <ScrollView
+      contentInsetAdjustmentBehavior="automatic"
+      style={{ flex: 1, backgroundColor: colors.paper }}
+      contentContainerStyle={{
+        paddingHorizontal: space.xl,
+        paddingTop: space.md,
+        paddingBottom: space.huge,
+        gap: space.xl,
+      }}
+    >
+      {children}
+    </ScrollView>
+  );
+}
 
 function loadMatchesOwner(
   load: LoadState,
@@ -269,27 +292,27 @@ export function TicketDetailScreen() {
 
   if (!displayMode || !owner) {
     return (
-      <Page>
+      <TicketDetailPage>
         <Notice title={walletCopy.guestWalletBlockedTitle}>
           {walletCopy.guestWalletBlockedBody}
         </Notice>
-      </Page>
+      </TicketDetailPage>
     );
   }
 
   if (visibleLoad.status === 'idle') {
     return (
-      <Page>
+      <TicketDetailPage>
         <Notice title={walletCopy.loading.title}>
           {walletCopy.loading.body}
         </Notice>
-      </Page>
+      </TicketDetailPage>
     );
   }
 
   if (visibleLoad.status === 'error') {
     return (
-      <Page>
+      <TicketDetailPage>
         <ErrorState
           title={walletCopy.detailProbeErrorTitle}
           onRetry={() => setReloadKey((key) => key + 1)}
@@ -297,17 +320,17 @@ export function TicketDetailScreen() {
         >
           {walletCopy.detailProbeErrorBody}
         </ErrorState>
-      </Page>
+      </TicketDetailPage>
     );
   }
 
   if (visibleLoad.status === 'missing') {
     return (
-      <Page>
+      <TicketDetailPage>
         <Notice title={walletCopy.detailMissingTitle}>
           {walletCopy.detailMissingBody}
         </Notice>
-      </Page>
+      </TicketDetailPage>
     );
   }
 
@@ -324,7 +347,7 @@ export function TicketDetailScreen() {
     : `Mã QR vé ${row.eventTitle}`;
 
   return (
-    <Page>
+    <TicketDetailPage>
       {mode === 'offline-display' || fromCache ? (
         <Notice title={attendeeWalletCopy.offlineBannerTitle}>
           {walletOfflineNoticeBody(
@@ -361,23 +384,30 @@ export function TicketDetailScreen() {
         />
         <EventBanner
           eventId={ticket.eventId}
-          wordmark={row.eventTitle}
           height={EVENT_BANNER_HEIGHT_TICKET}
           style={{ borderRadius: 0 }}
           testID="ticket-detail-banner"
           accessibilityLabel={`Banner ${row.eventTitle}`}
         />
-        <View style={{ padding: space.xl, gap: space.lg, alignItems: 'stretch' }}>
-          <View style={{ alignItems: 'center', gap: space.md, width: '100%' }}>
-            {hasDemoMediaForEventId(ticket.eventId) ? (
+        <View
+          style={{
+            paddingHorizontal: space.xl,
+            paddingTop: space.md,
+            paddingBottom: space.xl,
+            gap: space.md,
+            alignItems: 'stretch',
+          }}
+        >
+          {hasDemoMediaForEventId(ticket.eventId) ? (
+            <View style={{ alignItems: 'center' }}>
               <EventLogo
                 eventId={ticket.eventId}
                 height={32}
                 testID="ticket-detail-logo"
                 accessibilityLabel="Logo sự kiện demo trên vé"
               />
-            ) : null}
-          </View>
+            </View>
+          ) : null}
           <Text
             maxFontSizeMultiplier={2}
             accessibilityRole="header"
@@ -455,6 +485,6 @@ export function TicketDetailScreen() {
           </Text>
         </View>
       </View>
-    </Page>
+    </TicketDetailPage>
   );
 }
