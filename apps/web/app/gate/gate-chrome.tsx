@@ -1,5 +1,6 @@
 'use client';
 
+import { cn } from '../../lib/utils';
 import type { GateLinkState } from '../../src/gate/connectivity';
 import { connectivityLabel, shortId } from '../../src/gate/gate-outcome-copy';
 
@@ -20,7 +21,11 @@ type TabNavProps = {
 
 export function GateTabNav({ active, onChange }: TabNavProps) {
   return (
-    <nav className="gate-tabs" aria-label="Chế độ cổng" data-testid="gate-tabs">
+    <nav
+      className="mt-6 flex flex-wrap gap-2 border-b border-line pb-0"
+      aria-label="Chế độ cổng"
+      data-testid="gate-tabs"
+    >
       {TAB_ORDER.map((tab) => {
         const selected = active === tab;
         return (
@@ -32,7 +37,12 @@ export function GateTabNav({ active, onChange }: TabNavProps) {
             aria-selected={selected}
             aria-controls={`gate-panel-${tab}`}
             tabIndex={selected ? 0 : -1}
-            className={selected ? 'gate-tabs__btn gate-tabs__btn--active' : 'gate-tabs__btn'}
+            className={cn(
+              'inline-flex min-h-11 items-center rounded-t-md px-4 text-sm font-semibold transition-colors',
+              selected
+                ? 'border border-b-0 border-line bg-white text-ink shadow-[inset_0_-2px_0_var(--color-signal)]'
+                : 'text-muted hover:bg-ink/[0.04] hover:text-ink',
+            )}
             onClick={() => onChange(tab)}
             data-testid={`gate-tab-${tab}`}
           >
@@ -77,23 +87,35 @@ export function GateScopeBar({
     : scopedByDiscovery
       ? (gateDisplayName?.trim() || 'Cổng chính')
       : 'Cổng web';
-  const status =
-    link === 'online' ? 'Sẵn sàng' : connectivityLabel(link);
+  const status = link === 'online' ? 'Sẵn sàng' : connectivityLabel(link);
   const statusClass =
     link === 'online'
-      ? 'gatebar__status gatebar__status--ready'
+      ? 'text-admit'
       : link === 'offline'
-        ? 'gatebar__status gatebar__status--offline'
-        : 'gatebar__status gatebar__status--degraded';
+        ? 'text-destructive'
+        : 'text-[color-mix(in_srgb,var(--color-focus)_70%,var(--color-ink))]';
 
   return (
-    <div className="gatebar" data-testid="gate-bar">
-      <p className="gatebar__scope">
+    <div
+      className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-md border border-line bg-white px-4 py-3"
+      data-testid="gate-bar"
+    >
+      <p className="m-0 text-sm text-ink">
         <strong>{scopeLabel}</strong>
-        <span className="gatebar__gate-name"> · {gateName}</span>
+        <span className="text-muted"> · {gateName}</span>
       </p>
-      <p className={statusClass}>
-        <span className="gatebar__dot" aria-hidden="true" />
+      <p className={cn('m-0 inline-flex items-center gap-2 text-sm font-semibold', statusClass)}>
+        <span
+          className={cn(
+            'inline-block size-2.5 rounded-full',
+            link === 'online'
+              ? 'bg-admit'
+              : link === 'offline'
+                ? 'bg-destructive'
+                : 'bg-focus',
+          )}
+          aria-hidden="true"
+        />
         {status}
       </p>
     </div>

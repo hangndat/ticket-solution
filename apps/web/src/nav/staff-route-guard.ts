@@ -116,7 +116,7 @@ export async function requireAdminCapabilityOrHome(): Promise<void> {
     platformMe: null,
   });
 
-  if (!caps.showAdmin) {
+  if (!caps.showPortalStaff) {
     redirect('/?notice=admin_denied');
   }
 }

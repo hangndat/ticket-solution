@@ -1,4 +1,4 @@
-import type { MeEventItem } from '../../src/platform/contracts';
+import type { MeEventItem } from '../../src/bff/platform-contracts';
 
 const GATE_CONFIRM_PERMISSION = 'gate.confirm';
 

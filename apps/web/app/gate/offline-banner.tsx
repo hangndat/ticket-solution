@@ -1,7 +1,12 @@
 'use client';
 
+import { cn } from '../../lib/utils';
 import type { GateLinkState } from '../../src/gate/connectivity';
 import { bannerCopyForLink } from '../../src/gate/offline-messages';
+import {
+  attendeeNotice,
+  attendeeNoticeError,
+} from '../../src/attendee-surface';
 
 type Props = {
   link: GateLinkState;
@@ -21,8 +26,11 @@ export function GateOfflineBanner({ link }: Props) {
       data-link={link}
       className={
         link === 'offline'
-          ? 'notice gate-offline-banner gate-offline-banner--offline state-error'
-          : 'notice gate-offline-banner gate-offline-banner--degraded state-unknown'
+          ? attendeeNoticeError
+          : cn(
+              attendeeNotice,
+              'border-[color-mix(in_srgb,var(--color-focus)_50%,var(--color-ink))] bg-[color-mix(in_srgb,var(--color-focus)_12%,var(--color-paper))] text-ink',
+            )
       }
     >
       <h2>{copy.title}</h2>

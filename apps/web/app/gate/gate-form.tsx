@@ -1,5 +1,6 @@
 'use client';
 
+import { Button, Input } from '@ticket/ui';
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import {
   isApiUnreachableResult,
@@ -25,6 +26,7 @@ import {
 } from '../../src/gate/offline-messages';
 import { fetchJson } from '../../src/redeem/fetch-json';
 import { REQUEST_TIMEOUT_MS } from '../../src/redeem/poll-operation';
+import { redeemDevStatusClass } from '../../src/redeem/redeem-surface';
 import { liveRegionForStatus } from '../../src/ui/live-region';
 import {
   GateScopeBar,
@@ -295,10 +297,10 @@ export function GateForm({
         data-testid="gate-decision"
         className={
           outcome.tone === 'admit'
-            ? 'redeem-status redeem-status--success gate-status--admit gate-toast'
+            ? redeemDevStatusClass('success')
             : outcome.tone === 'deny'
-              ? 'redeem-status redeem-status--denied gate-status--deny gate-toast gate-toast--warn'
-              : 'redeem-status redeem-status--unknown state-unknown gate-toast gate-toast--warn'
+              ? redeemDevStatusClass('denied')
+              : redeemDevStatusClass('unknown')
         }
       >
         <h2>{outcome.title}</h2>
@@ -325,15 +327,20 @@ export function GateForm({
         aria-live="polite"
         aria-atomic="true"
         data-testid="gate-decision-idle"
-        className="redeem-status state-empty gate-toast gate-toast--idle"
+        className={redeemDevStatusClass('unknown')}
       >
         <h2>{outcome.title}</h2>
         <p>{outcome.detail}</p>
       </aside>
     );
 
+  const fieldLabel =
+    'grid gap-1.5 text-sm font-semibold text-ink [&_input]:mt-1 [&_input]:font-normal';
+  const formBlock = 'mt-6 grid gap-4 rounded-md border border-line bg-white p-5';
+  const panelClass = 'mt-4 grid gap-4';
+
   return (
-    <div className="gate-workspace" data-testid="gate-workspace">
+    <div className="mt-2 grid gap-2" data-testid="gate-workspace">
       <GateOfflineBanner link={link} />
       <GateScopeBar
         eventId={eventId}
@@ -345,9 +352,14 @@ export function GateForm({
       />
       <GateTabNav active={tab} onChange={setTab} />
 
-      <header className="gate-heading">
-        <h2 id={`gate-panel-${tab}-title`}>{tabCopy.title}</h2>
-        <p>{tabCopy.lead}</p>
+      <header className="mt-5 max-w-[42rem]">
+        <h2
+          id={`gate-panel-${tab}-title`}
+          className="m-0 font-display text-[1.35rem] font-bold tracking-[-0.02em] text-ink"
+        >
+          {tabCopy.title}
+        </h2>
+        <p className="mt-2 text-[0.95rem] leading-[1.55] text-muted">{tabCopy.lead}</p>
       </header>
 
       {tab === 'scan' ? (
@@ -355,25 +367,35 @@ export function GateForm({
           id="gate-panel-scan"
           role="tabpanel"
           aria-labelledby="gate-tab-scan gate-panel-scan-title"
-          className="gate-panel"
+          className={panelClass}
           data-testid="gate-panel-scan"
         >
-          <div className="gate-cols">
-            <div className="gate-camera" aria-hidden="true">
-              <div className="gate-camera__frame">
-                <span className="gate-camera__line" />
-                <span className="gate-camera__hint">Đưa QR vào khung</span>
+          <div className="grid gap-4 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
+            <div
+              className="grid min-h-56 place-items-center rounded-md border border-dashed border-line bg-[color-mix(in_srgb,var(--color-ink)_4%,var(--color-paper))]"
+              aria-hidden="true"
+            >
+              <div className="relative grid h-40 w-40 place-items-center rounded-md border-2 border-ink/25">
+                <span className="absolute inset-x-4 top-1/2 h-0.5 -translate-y-1/2 bg-signal/70" />
+                <span className="relative z-10 rounded bg-paper/90 px-2 py-1 text-xs font-semibold text-muted">
+                  Đưa QR vào khung
+                </span>
               </div>
             </div>
-            <aside className="gate-sidebox">
-              <h3>Camera quét vé</h3>
-              <p className="gate-sidebox__help">
+            <aside className="rounded-md border border-line bg-white p-5">
+              <h3 className="m-0 text-[1.05rem] font-bold text-ink">Camera quét vé</h3>
+              <p className="mt-2 text-sm leading-[1.55] text-muted">
                 Camera cần quyền truy cập và kết nối HTTPS. Cổng web hiện dùng nhập tay
                 qua API — không mô phòng quét trên trình duyệt này.
               </p>
-              <button type="button" className="button button-secondary" onClick={goManualTab}>
+              <Button
+                type="button"
+                variant="secondary"
+                className="mt-4"
+                onClick={goManualTab}
+              >
                 Nhập mã vé
-              </button>
+              </Button>
             </aside>
           </div>
           {decisionPanel}
@@ -385,73 +407,78 @@ export function GateForm({
           id="gate-panel-manual"
           role="tabpanel"
           aria-labelledby="gate-tab-manual gate-panel-manual-title"
-          className="gate-panel"
+          className={panelClass}
           data-testid="gate-panel-manual"
         >
           <section
-            className="gate-context"
+            className="rounded-md border border-line bg-white p-5"
             data-testid="gate-context"
             data-link={link}
             aria-label="Ngữ cảnh cổng"
           >
-            <p className="gate-context__eyebrow">Ngữ cảnh cổng</p>
-            <dl className="gate-context__meta">
+            <p className="m-0 text-xs font-bold uppercase tracking-[0.08em] text-muted">
+              Ngữ cảnh cổng
+            </p>
+            <dl className="mt-3 grid gap-3 sm:grid-cols-2">
               <div>
-                <dt>Kết nối</dt>
-                <dd data-testid="gate-connectivity">{connectivityLabel(link)}</dd>
+                <dt className="text-xs font-semibold text-muted">Kết nối</dt>
+                <dd className="m-0 mt-1 font-mono text-sm" data-testid="gate-connectivity">
+                  {connectivityLabel(link)}
+                </dd>
               </div>
               <div>
-                <dt>Sự kiện</dt>
-                <dd>
+                <dt className="text-xs font-semibold text-muted">Sự kiện</dt>
+                <dd className="m-0 mt-1 font-mono text-sm">
                   <code title={eventId || undefined}>{shortId(eventId)}</code>
                 </dd>
               </div>
               <div>
-                <dt>Tenant</dt>
-                <dd>
+                <dt className="text-xs font-semibold text-muted">Tenant</dt>
+                <dd className="m-0 mt-1 font-mono text-sm">
                   <code title={tenantId || undefined}>{shortId(tenantId)}</code>
                 </dd>
               </div>
               <div>
-                <dt>Phiên</dt>
-                <dd>
+                <dt className="text-xs font-semibold text-muted">Phiên</dt>
+                <dd className="m-0 mt-1 font-mono text-sm">
                   <code title={sessionId || undefined}>
                     {sessionId ? shortId(sessionId) : 'Chưa mở'}
                   </code>
                 </dd>
               </div>
             </dl>
-            <p className="gate-context__note">
+            <p className="mt-3 text-sm text-muted">
               Cổng web không xếp hàng offline. Khi mất mạng hãy dùng app Nhân viên.
             </p>
             {link === 'degraded' ? (
-              <button
+              <Button
                 type="button"
-                className="gate-retry-link button button-secondary"
+                variant="secondary"
+                className="mt-3"
                 data-testid="gate-retry-link"
                 onClick={clearUnreachable}
               >
                 Thử lại kết nối
-              </button>
+              </Button>
             ) : null}
           </section>
 
-          <div className="gate-narrow">
-            <form className="gate-form-block" onSubmit={openSession}>
-              <h3 className="gate-form-block__title">Mở phiên cổng</h3>
-              <div className="gate-form-grid">
-                <label>
+          <div className="mx-auto grid w-full max-w-[40rem] gap-4">
+            <form className={formBlock} onSubmit={openSession}>
+              <h3 className="m-0 text-[1.05rem] font-bold text-ink">Mở phiên cổng</h3>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className={fieldLabel}>
                   Tenant ID
-                  <input
+                  <Input
                     value={tenantId}
                     onChange={(e) => setTenantId(e.target.value)}
                     required
                     autoComplete="off"
                   />
                 </label>
-                <label>
+                <label className={fieldLabel}>
                   Event ID
-                  <input
+                  <Input
                     value={eventId}
                     onChange={(e) => setEventId(e.target.value)}
                     required
@@ -459,35 +486,33 @@ export function GateForm({
                   />
                 </label>
               </div>
-              <button
+              <Button
                 type="submit"
-                className="button"
                 disabled={busy || actionsBlocked}
                 data-testid="gate-session-submit"
               >
                 Mở phiên cổng
-              </button>
+              </Button>
               {sessionId ? (
-                <p className="gate-form-meta">
+                <p className="m-0 text-sm text-muted">
                   Phiên: <code>{sessionId}</code>
                 </p>
               ) : null}
             </form>
 
-            <form className="gate-form-block" onSubmit={confirmEntry}>
-              <h3 className="gate-form-block__title">Kiểm tra vé</h3>
-              <label>
+            <form className={formBlock} onSubmit={confirmEntry}>
+              <h3 className="m-0 text-[1.05rem] font-bold text-ink">Kiểm tra vé</h3>
+              <label className={fieldLabel}>
                 Mã vé (Ticket ID)
-                <input
+                <Input
                   value={ticketId}
                   onChange={(e) => setTicketId(e.target.value)}
                   required
                   autoComplete="off"
                 />
               </label>
-              <button
+              <Button
                 type="submit"
-                className="button"
                 disabled={busy || !sessionId || actionsBlocked}
                 data-testid="gate-confirm-submit"
                 title={
@@ -497,9 +522,9 @@ export function GateForm({
                 }
               >
                 Giữ chỗ và xác nhận
-              </button>
+              </Button>
               {hold ? (
-                <p className="gate-form-meta">
+                <p className="m-0 text-sm text-muted">
                   Đang giữ reservation <code>{hold.reservationId}</code>
                 </p>
               ) : null}
@@ -515,15 +540,14 @@ export function GateForm({
           id="gate-panel-history"
           role="tabpanel"
           aria-labelledby="gate-tab-history gate-panel-history-title"
-          className="gate-panel"
+          className={panelClass}
           data-testid="gate-panel-history"
         >
-          <div className="gate-tools">
-            <label className="gate-tools__search">
-              <span className="visually-hidden">Tìm trong các lượt đã tải</span>
-              <input
+          <div>
+            <label className="block max-w-md">
+              <span className="sr-only">Tìm trong các lượt đã tải</span>
+              <Input
                 type="search"
-                className="gate-search"
                 placeholder="Tìm trong các lượt đã tải"
                 value={historyFilter}
                 onChange={(e) => {
@@ -536,39 +560,39 @@ export function GateForm({
           </div>
 
           {visibleHistory.length === 0 ? (
-            <p className="gate-history-empty" role="status">
+            <p className="text-sm text-muted" role="status">
               Chưa có lượt check-in trên trình duyệt này.
             </p>
           ) : (
-            <div className="gate-tablewrap" data-testid="gate-history-table">
-              <table className="gate-table">
-                <thead>
+            <div className="overflow-x-auto rounded-md border border-line" data-testid="gate-history-table">
+              <table className="w-full min-w-[32rem] border-collapse text-left text-sm">
+                <thead className="bg-paper text-muted">
                   <tr>
-                    <th scope="col">Thời gian</th>
-                    <th scope="col">Vé</th>
-                    <th scope="col">Kết quả</th>
-                    <th scope="col">Chi tiết</th>
+                    <th scope="col" className="px-3 py-2 font-semibold">Thời gian</th>
+                    <th scope="col" className="px-3 py-2 font-semibold">Vé</th>
+                    <th scope="col" className="px-3 py-2 font-semibold">Kết quả</th>
+                    <th scope="col" className="px-3 py-2 font-semibold">Chi tiết</th>
                   </tr>
                 </thead>
                 <tbody>
                   {visibleHistory.map((row) => (
-                    <tr key={`${row.ticketId}-${row.checkinId}`}>
-                      <td data-label="Thời gian">{formatHistoryTime(row.recordedAt)}</td>
-                      <td data-label="Vé">
+                    <tr key={`${row.ticketId}-${row.checkinId}`} className="border-t border-line">
+                      <td className="px-3 py-2">{formatHistoryTime(row.recordedAt)}</td>
+                      <td className="px-3 py-2">
                         <code title={row.ticketId}>{shortId(row.ticketId)}</code>
                       </td>
-                      <td data-label="Kết quả">Được vào</td>
-                      <td data-label="Chi tiết">
-                        <button
+                      <td className="px-3 py-2">Được vào</td>
+                      <td className="px-3 py-2">
+                        <Button
                           type="button"
-                          className="button-link"
+                          variant="link"
                           onClick={() => {
                             setLookupId(row.ticketId);
                             setDecision(lookupKnownCheckin(notes, row.ticketId));
                           }}
                         >
                           Xem
-                        </button>
+                        </Button>
                       </td>
                     </tr>
                   ))}
@@ -577,37 +601,39 @@ export function GateForm({
             </div>
           )}
 
-          <div className="gate-history-more">
+          <div>
             {!historyExhausted && filteredHistory.length > 0 ? (
-              <button
+              <Button
                 type="button"
-                className="button button-secondary"
+                variant="secondary"
                 data-testid="gate-history-load-more"
                 onClick={() => setHistoryVisible((n) => n + HISTORY_PAGE)}
               >
                 Tải thêm
-              </button>
+              </Button>
             ) : filteredHistory.length > 0 ? (
-              <p className="gate-history-end">Đã tải hết lịch sử trên máy này.</p>
+              <p className="text-sm text-muted">Đã tải hết lịch sử trên máy này.</p>
             ) : null}
           </div>
 
-          <form className="gate-narrow gate-reconcile" onSubmit={lookup}>
-            <h3>Đối soát trên máy này</h3>
-            <p>
+          <form className={`${formBlock} max-w-[40rem]`} onSubmit={lookup}>
+            <h3 className="m-0 text-[1.05rem] font-bold text-ink">Đối soát trên máy này</h3>
+            <p className="m-0 text-sm text-muted">
               Chỉ hiện check-in API đã trả trên trình duyệt này. Không có mã thì không cho
               qua — không phải hàng đợi offline.
             </p>
-            <label>
+            <label className={fieldLabel}>
               Ticket ID cần tra
-              <input
+              <Input
                 value={lookupId}
                 onChange={(e) => setLookupId(e.target.value)}
                 required
                 autoComplete="off"
               />
             </label>
-            <button type="submit" className="button button-secondary">Đối soát</button>
+            <Button type="submit" variant="secondary">
+              Đối soát
+            </Button>
           </form>
 
           {decisionPanel}
