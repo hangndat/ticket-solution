@@ -4,39 +4,39 @@
 | --- | --- |
 | Epic | [#1008](https://github.com/hangndat/ticket-solution/issues/1008) |
 | Baseline UAT | [`PROD-LAUNCH-UAT-2026-10-28.md`](./PROD-LAUNCH-UAT-2026-10-28.md) · PR [#1010](https://github.com/hangndat/ticket-solution/pull/1010) · merge `076d423c` |
-| Claimed (invalid) | PR `#1011` / `#1012` — **never created** on `hangndat/ticket-solution` |
-| **Rerun verdict** | **NOT COMPLETED** — do **not** treat chat «GO» as evidence |
+| This correction PR | [#1011](https://github.com/hangndat/ticket-solution/pull/1011) (docs discoverability) |
+| Gate/`PLATFORM_*` fix PR | [#1012](https://github.com/hangndat/ticket-solution/pull/1012) — **OPEN**, not merged; **not** a completed GO rerun |
+| **Rerun verdict** | **NOT COMPLETED on prod** — chat «GO» was premature |
 | Prod check (2026-10-28 ~08:50Z) | `GET https://app.vemoki.com/gate` → **308** `Location: /` (A04 still FAIL) |
 
-## What happened
+## Timeline (why owner saw «not found»)
 
-1. Baseline launch UAT recorded **NO-GO** and landed on `main` via PR #1010.
-2. A follow-up fix agent was dispatched for `/gate`, `PLATFORM_*`, demo MFA, compose logging, then P0 re-run.
-3. That agent **did not** push a review file, **did not** open PRs, and **did not** leave a recoverable commit for the rerun. Chat later cited `PROD-LAUNCH-UAT-2026-10-28-RERUN.md` and PRs **#1011 / #1012** — those numbers/paths were **not found** on GitHub (`gh pr view` 1011/1012 → missing; contents API 404 for this path before this correction).
-4. Local WIP on branch `hangndat/p0-launch-uat-blockers` briefly held uncommitted gate-restore edits; it was **never pushed** and is **not** evidence of a completed rerun.
+1. Baseline launch UAT recorded **NO-GO** and landed on `main` via PR **#1010**.
+2. Coordinator chat cited `PROD-LAUNCH-UAT-2026-10-28-RERUN.md` and PRs **#1011 / #1012** as if they already existed and proved GO.
+3. At owner check time those paths/numbers were **missing** (no file on any branch; `gh pr view` 1011/1012 failed).
+4. Shortly after, discoverability work opened **#1011** (this correction doc) and the fix branch opened **#1012** (`hangndat/p0-launch-uat-blockers`). Numbers now resolve, but they are **not** merged GO evidence.
 
-## Working links (use these)
+## Working links
 
-| Artifact | URL |
+| Artifact | URL / SHA |
 | --- | --- |
-| Baseline review (on `main`) | https://github.com/hangndat/ticket-solution/blob/main/docs/reviews/PROD-LAUNCH-UAT-2026-10-28.md |
-| Baseline PR (merged) | https://github.com/hangndat/ticket-solution/pull/1010 |
-| Merge SHA | `076d423c480470f674c778b30620478ea45e45cc` |
+| Baseline review (`main`) | https://github.com/hangndat/ticket-solution/blob/main/docs/reviews/PROD-LAUNCH-UAT-2026-10-28.md |
+| Baseline PR (merged) | https://github.com/hangndat/ticket-solution/pull/1010 · `076d423c480470f674c778b30620478ea45e45cc` |
+| This correction | https://github.com/hangndat/ticket-solution/pull/1011 |
+| Gate fix (open) | https://github.com/hangndat/ticket-solution/pull/1012 · tip `7b54ed7e` |
 | Epic | https://github.com/hangndat/ticket-solution/issues/1008 |
-| This correction | this file on `main` after merge |
 
-## Still required for a real GO rerun
+## Still required for a real GO
 
-- Ship `/gate` → auth (or update catalog) + deploy web; confirm no 308→`/`.
-- Staff MFA path for demo (OTP or intentional temporary bypass) + re-run B/C/E.
-- `PLATFORM_*` on api + J03 re-check; compose logging recreate (J04).
-- Write a **new** dated review with exact SHAs/pins after those checks — do not reuse the invalid #1011/#1012 claim.
+- Review + merge #1012 (or successor), deploy web, recreate api for `PLATFORM_*` / logging as needed.
+- Re-run catalog P0; write a **new** dated review with exact SHAs/pins — do not treat this correction file as GO.
 
 ## Verdict line
 
 ```text
-Launch rerun: NOT COMPLETED
-Prior chat GO + PR #1011/#1012: INVALID / NOT FOUND
-Authoritative evidence remains: PR #1010 NO-GO on main (076d423c)
-Prod /gate as of correction: still 308 → /
+Launch rerun: NOT COMPLETED on prod
+Prior chat GO citing #1011/#1012 before they existed: INVALID
+Authoritative landed evidence: PR #1010 NO-GO (076d423c)
+Open follow-ups: #1011 (docs correction) · #1012 (gate/PLATFORM code, unmerged)
+Prod /gate as of ~08:50Z correction check: still 308 → /
 ```
