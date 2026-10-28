@@ -6,6 +6,16 @@ Tracking: Issues [#10](https://github.com/hangndat/ticket-solution/issues/10), [
 
 **Kiến trúc hiện trạng (canonical, Epic [#891](https://github.com/hangndat/ticket-solution/issues/891) / F06):** [`docs/architecture/ar891-current-architecture.md`](./architecture/ar891-current-architecture.md) — deployed / tested / proposed; không thay nội dung quyết định lịch sử bên dưới.
 
+## O33 — Waive a11y UAT cho MVP/pilot (28/10/2026)
+
+Owner hangndat (2026-10-28): «bỏ luôn phần a11y đi, đây là quyết định cuối».
+
+**iOS/web a11y (VoiceOver, Dynamic Type, WCAG UAT) được waive tường minh cho MVP/pilot.** Đây **không** phải known gap. **Không** chặn [#879](https://github.com/hangndat/ticket-solution/issues/879) / [#889](https://github.com/hangndat/ticket-solution/issues/889) / [#874](https://github.com/hangndat/ticket-solution/issues/874) / [#1008](https://github.com/hangndat/ticket-solution/issues/1008) / [#914](https://github.com/hangndat/ticket-solution/issues/914). Không chạy a11y UAT. Không giữ ticket OPEN chỉ vì a11y. **Không** ghi a11y PASS.
+
+Khớp [O28](#o28--guest-events-catalog--tab-đổi-mã-28102026) VoiceOver-ngoài-#914 và [O25](#o25--epic-914-tách-slice-portalweb-và-chốt-phạm-vi-offline-26102026) §4 / [O27](#o27--ios-attendee-ia-privacy-native-staff-event-chrome-usb-28102026) §1. **Thay** leftover a11y hold trên VD-06 (#879) và VD-08 (#889).
+
+Architecture impact: **Không**.
+
 ## O32 — Portal quản lý cổng + tên cổng lấy từ API (28/10/2026)
 
 Owner chốt «làm» trên Epic [#914](https://github.com/hangndat/ticket-solution/issues/914). **Không đóng Epic.** Deploy prod migration `202610280001_o31_gates` + api + portal được owner ủy quyền riêng cho task này.
