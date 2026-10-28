@@ -3,6 +3,7 @@ import {
   Body,
   Controller,
   Get,
+  Header,
   Headers,
   HttpException,
   Injectable,
@@ -477,6 +478,7 @@ export class TicketIssueController {
 
   @Get('me/redemptions/:requestId')
   @ApiBearerAuth()
+  @Header('Cache-Control', 'private, no-store')
   async meRedemptionStatus(
     @Headers('authorization') authorization: string | undefined,
     @Param('requestId') requestId: string,
@@ -515,6 +517,7 @@ export class TicketIssueController {
       'Optional tenant UUID; omit to list all owner tickets across tenants (W1 aggregate).',
   })
   @ApiOkResponse({ type: MeTicketsDto })
+  @Header('Cache-Control', 'private, no-store')
   async meTickets(
     @Headers('authorization') authorization: string | undefined,
     @Query('tenantId') tenantId?: string,
@@ -540,6 +543,7 @@ export class TicketIssueController {
   @Get('me/tickets/:ticketId')
   @ApiBearerAuth()
   @ApiOkResponse({ type: TicketSummaryDto })
+  @Header('Cache-Control', 'private, no-store')
   async meTicketById(
     @Headers('authorization') authorization: string | undefined,
     @Param('ticketId') ticketId: string,

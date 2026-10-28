@@ -10,6 +10,7 @@ const CASE_IDS = [
   'SEC-03',
   'SEC-04',
   'SEC-05',
+  'SEC-06',
   'AUTH-03',
   'GATE-01',
   'GATE-03',
@@ -313,8 +314,14 @@ function assertLocationOrigin(location, allowedOrigin, label) {
 function assertNoOpenRedirectVector(location) {
   assert.ok(!location.includes(EVIL_HOST), `open redirect leaked ${EVIL_HOST}`);
   assert.ok(!location.includes('evil.test'), 'open redirect leaked evil.test');
-  assert.ok(!/https?:\/\/[^/]*evil/i.test(location), `external redirect: ${location}`);
-  assert.ok(!location.includes('return=https'), 'unsafe return query in Location');
+  assert.ok(
+    !/https?:\/\/[^/]*evil/i.test(location),
+    `external redirect: ${location}`,
+  );
+  assert.ok(
+    !location.includes('return=https'),
+    'unsafe return query in Location',
+  );
   assert.ok(!location.includes('next=https'), 'unsafe next query in Location');
 }
 
@@ -380,6 +387,52 @@ function deny(result) {
   assert.equal(typeof result.body.code, 'string');
 }
 
+function assertNoForbiddenStrings(payload, forbidden, label) {
+  const blob = JSON.stringify(payload);
+  for (const value of forbidden) {
+    assert.equal(blob.includes(value), false, `${label}: leaked ${value}`);
+  }
+}
+
+function assertNoForbiddenKeys(obj, keys, label) {
+  for (const key of keys) {
+    assert.equal(
+      Object.prototype.hasOwnProperty.call(obj, key),
+      false,
+      `${label}: must not expose ${key}`,
+    );
+  }
+}
+
+function assertNotPublicCache(headers, label) {
+  const cacheControl = headers.get('cache-control');
+  if (cacheControl) {
+    assert.ok(
+      !/(^|[,\s])public(\s|,|$)/i.test(cacheControl),
+      `${label}: Cache-Control must not be public, got ${cacheControl}`,
+    );
+  }
+  assert.equal(
+    headers.get('set-cookie'),
+    null,
+    `${label}: bearer API response must not set cookies`,
+  );
+}
+
+function assertNoStoreCache(headers, label) {
+  const cacheControl = headers.get('cache-control');
+  assert.ok(
+    cacheControl && /(^|[,\s])no-store(\s|,|$)/i.test(cacheControl),
+    `${label}: Cache-Control must be private, no-store, got ${cacheControl}`,
+  );
+  assert.match(
+    cacheControl,
+    /(^|[,\s])private(\s|,|$)/i,
+    `${label}: Cache-Control must be private, got ${cacheControl}`,
+  );
+  assertNotPublicCache(headers, label);
+}
+
 const IMPORT_MAX_ROWS = 10_000;
 const XSS_INERT_PROBE = 'SEC05-INERT-XSS-MARKER';
 
@@ -438,16 +491,17 @@ async function downloadExportCsv(ctx, f, token, exportId) {
 
 function assertCsvFormulaGuard(csv, maskedEmail) {
   assert.ok(csv.includes('ownerEmailMasked'), 'export CSV must include header');
-  const line = csv
-    .split('\n')
-    .find((row) => row.includes(maskedEmail));
+  const line = csv.split('\n').find((row) => row.includes(maskedEmail));
   assert.ok(line, 'export must include masked formula-like email');
   const cell = line.split(',').pop()?.trim() ?? '';
   assert.ok(
     cell.startsWith("'") || cell.startsWith('"\''),
     `formula guard must prefix ownerEmailMasked cell, got ${cell}`,
   );
-  assert.ok(!cell.startsWith('='), 'CSV cell must not start with raw formula char');
+  assert.ok(
+    !cell.startsWith('='),
+    'CSV cell must not start with raw formula char',
+  );
 }
 
 function assertSecurityProfileHeaders(headers, label) {
@@ -773,7 +827,11 @@ for (const caseId of CASE_IDS) {
         { headers: forged },
       );
       assertRedirectStatus(refreshOpen);
-      assertLocationOrigin(refreshOpen.location, ctx.web, 'SSR refresh fail-closed');
+      assertLocationOrigin(
+        refreshOpen.location,
+        ctx.web,
+        'SSR refresh fail-closed',
+      );
       assertNoOpenRedirectVector(refreshOpen.location);
       const refreshTarget = new URL(refreshOpen.location, ctx.web);
       assert.ok(
@@ -801,7 +859,11 @@ for (const caseId of CASE_IDS) {
         { headers: forged },
       );
       assertRedirectStatus(adminMigrate);
-      assertLocationOrigin(adminMigrate.location, ctx.portal, 'legacy admin GET');
+      assertLocationOrigin(
+        adminMigrate.location,
+        ctx.portal,
+        'legacy admin GET',
+      );
       assertNoOpenRedirectVector(adminMigrate.location);
 
       const adminHead = await navigationFetch(
@@ -815,7 +877,10 @@ for (const caseId of CASE_IDS) {
 
       const adminPost = await navigationFetch(ctx.web, '/admin', {
         method: 'POST',
-        headers: { ...forged, 'content-type': 'application/x-www-form-urlencoded' },
+        headers: {
+          ...forged,
+          'content-type': 'application/x-www-form-urlencoded',
+        },
       });
       assert.ok(
         ![302, 307, 308].includes(adminPost.status),
@@ -829,7 +894,11 @@ for (const caseId of CASE_IDS) {
           ...forged,
         },
       });
-      assert.equal(apiHealth.status, 200, 'API health must not redirect on forged host');
+      assert.equal(
+        apiHealth.status,
+        200,
+        'API health must not redirect on forged host',
+      );
       assert.equal(apiHealth.headers.get('location'), null);
 
       const webPort = required(
@@ -850,7 +919,11 @@ for (const caseId of CASE_IDS) {
         { headers: forged },
       );
       assertRedirectStatus(directLogin);
-      assertLocationOrigin(directLogin.location, ctx.auth, 'direct OIDC login start');
+      assertLocationOrigin(
+        directLogin.location,
+        ctx.auth,
+        'direct OIDC login start',
+      );
       assertNoOpenRedirectVector(directLogin.location);
 
       const directRefresh = await directUpstreamFetch(
@@ -873,7 +946,11 @@ for (const caseId of CASE_IDS) {
         { headers: forged },
       );
       assertRedirectStatus(marketingAuth);
-      assertLocationOrigin(marketingAuth.location, ctx.web, 'marketing /auth bounce');
+      assertLocationOrigin(
+        marketingAuth.location,
+        ctx.web,
+        'marketing /auth bounce',
+      );
       assert.notEqual(
         new URL(marketingAuth.location, ctx.web).hostname,
         EVIL_HOST,
@@ -886,7 +963,11 @@ for (const caseId of CASE_IDS) {
         { headers: forged },
       );
       assertRedirectStatus(marketingAdmin);
-      assertLocationOrigin(marketingAdmin.location, ctx.web, 'marketing /admin bounce');
+      assertLocationOrigin(
+        marketingAdmin.location,
+        ctx.web,
+        'marketing /admin bounce',
+      );
       assert.notEqual(
         new URL(marketingAdmin.location, ctx.web).hostname,
         EVIL_HOST,
@@ -899,7 +980,11 @@ for (const caseId of CASE_IDS) {
         { headers: forged },
       );
       assertRedirectStatus(portalLogin);
-      assertLocationOrigin(portalLogin.location, ctx.auth, 'portal staff OIDC login');
+      assertLocationOrigin(
+        portalLogin.location,
+        ctx.auth,
+        'portal staff OIDC login',
+      );
       assertNoOpenRedirectVector(portalLogin.location);
 
       const portalPlatform = await navigationFetch(
@@ -908,7 +993,11 @@ for (const caseId of CASE_IDS) {
         { headers: forged },
       );
       assertRedirectStatus(portalPlatform);
-      assertLocationOrigin(portalPlatform.location, ctx.auth, 'portal platform OIDC login');
+      assertLocationOrigin(
+        portalPlatform.location,
+        ctx.auth,
+        'portal platform OIDC login',
+      );
       assertNoOpenRedirectVector(portalPlatform.location);
 
       const directPortalLogin = await directUpstreamFetch(
@@ -932,7 +1021,11 @@ for (const caseId of CASE_IDS) {
         { headers: forged },
       );
       assertRedirectStatus(directAdmin);
-      assertLocationOrigin(directAdmin.location, ctx.portal, 'direct legacy admin GET');
+      assertLocationOrigin(
+        directAdmin.location,
+        ctx.portal,
+        'direct legacy admin GET',
+      );
       assertNoOpenRedirectVector(directAdmin.location);
 
       return;
@@ -979,7 +1072,12 @@ for (const caseId of CASE_IDS) {
         },
       );
       expectStatus(badConfirm, 409, 'RESERVATION_TOKEN_MISMATCH');
-      const reportAfterBadToken = await request(ctx, 'GET', reportPath(f), owner);
+      const reportAfterBadToken = await request(
+        ctx,
+        'GET',
+        reportPath(f),
+        owner,
+      );
       expectStatus(reportAfterBadToken, 200);
       assert.equal(
         reportAfterBadToken.body.checkInSuccessCount,
@@ -1005,17 +1103,11 @@ for (const caseId of CASE_IDS) {
       );
 
       assertRateLimited(
-        await request(
-          ctx,
-          'POST',
-          gatePath(f, 'reservations'),
-          scanner,
-          {
-            tenantId: f.tenantId,
-            staffSessionId: session.body.sessionId,
-            ticketId: randomUUID(),
-          },
-        ),
+        await request(ctx, 'POST', gatePath(f, 'reservations'), scanner, {
+          tenantId: f.tenantId,
+          staffSessionId: session.body.sessionId,
+          ticketId: randomUUID(),
+        }),
         { code: 'RATE_LIMITED', retryable: true, noRetryAfter: true },
         'gate reserve',
       );
@@ -1045,9 +1137,8 @@ for (const caseId of CASE_IDS) {
         { code: 'RATE_LIMITED', retryable: true, noRetryAfter: true },
         'event redeem',
       );
-      const quotaAfterRedeem = (
-        await request(ctx, 'GET', reportPath(f), owner)
-      ).body.quota.allocated;
+      const quotaAfterRedeem = (await request(ctx, 'GET', reportPath(f), owner))
+        .body.quota.allocated;
       assert.equal(
         quotaAfterRedeem,
         quotaBeforeRedeem,
@@ -1147,7 +1238,10 @@ for (const caseId of CASE_IDS) {
       await waitExportReady(ctx, f, owner, exportId);
       const csv = await downloadExportCsv(ctx, f, owner, exportId);
       assertCsvFormulaGuard(csv, maskedFormulaEmail);
-      assert.ok(!csv.includes('=formula-'), 'export must not leak raw formula email');
+      assert.ok(
+        !csv.includes('=formula-'),
+        'export must not leak raw formula email',
+      );
 
       const importsBefore = await request(
         ctx,
@@ -1204,8 +1298,14 @@ for (const caseId of CASE_IDS) {
         },
       );
       expectStatus(rowOverflow, 201);
-      const overflowFileId = required(rowOverflow.body.fileId, 'overflow fileId');
-      const overflowHash = required(rowOverflow.body.fileHash, 'overflow fileHash');
+      const overflowFileId = required(
+        rowOverflow.body.fileId,
+        'overflow fileId',
+      );
+      const overflowHash = required(
+        rowOverflow.body.fileHash,
+        'overflow fileHash',
+      );
       const previewOverflow = await request(
         ctx,
         'POST',
@@ -1317,7 +1417,9 @@ for (const caseId of CASE_IDS) {
             order: 4,
             body: {
               title: 'FAQ',
-              items: [{ question: 'Khi nào?', answer: 'Trong thời gian sự kiện.' }],
+              items: [
+                { question: 'Khi nào?', answer: 'Trong thời gian sự kiện.' },
+              ],
             },
           },
           {
@@ -1481,6 +1583,243 @@ for (const caseId of CASE_IDS) {
         `direct web auth entry must redirect (${webLogin.status})`,
       );
       assertSecurityProfileHeaders(webLogin.headers, 'web CSP profile');
+      return;
+    }
+    if (caseId === 'SEC-06') {
+      const owner = await bearer(ctx, 'owner');
+      const scanner = await bearer(ctx, 'scanner');
+      const tenantId = required(f.tenantId, 'SEC-06 tenantId');
+      const eventId = required(f.eventId, 'SEC-06 eventId');
+      const secretReason = required(
+        f.data?.secretReason,
+        'SEC-06 secretReason',
+      );
+      const secretEmail = required(f.data?.secretEmail, 'SEC-06 secretEmail');
+      const secretHmac = required(f.data?.secretHmac, 'SEC-06 secretHmac');
+      const probeRawCode = required(
+        f.data?.probeRawCode,
+        'SEC-06 probeRawCode',
+      );
+      const codesSourceId = required(
+        f.data?.codesSourceId,
+        'SEC-06 codesSourceId',
+      );
+      const auditCount = required(f.data?.auditCount, 'SEC-06 auditCount');
+      const codesBulkCount = required(
+        f.data?.codesBulkCount,
+        'SEC-06 codesBulkCount',
+      );
+      const FORBIDDEN_VALUES = [
+        secretReason,
+        secretEmail,
+        secretHmac,
+        probeRawCode,
+      ];
+
+      const auditPath = `/tenants/${tenantId}/events/${eventId}/audit`;
+      const auditDefault = await request(ctx, 'GET', auditPath, owner);
+      expectStatus(auditDefault, 200);
+      assertNoStoreCache(auditDefault.headers, 'audit list');
+      assert.equal(
+        auditDefault.body.items.length,
+        20,
+        'audit default page size must stay clamped to default 20',
+      );
+      assert.ok(
+        auditDefault.body.nextCursor,
+        'audit must paginate when seeded rows exceed default page',
+      );
+      assertNoForbiddenStrings(
+        auditDefault.body,
+        FORBIDDEN_VALUES,
+        'audit list',
+      );
+      for (const item of auditDefault.body.items) {
+        assertNoForbiddenKeys(
+          item,
+          [
+            'reason',
+            'reasonCode',
+            'sanitizedDiff',
+            'sanitized_diff',
+            'codeHmac',
+            'code_hmac',
+            'rawCode',
+            'email',
+            'phone',
+            'token',
+          ],
+          'audit item',
+        );
+      }
+
+      const auditOversized = await request(
+        ctx,
+        'GET',
+        `${auditPath}?limit=100000`,
+        owner,
+      );
+      expectStatus(auditOversized, 200);
+      assert.ok(
+        auditOversized.body.items.length <= 100,
+        `audit limit must cap at 100, got ${auditOversized.body.items.length}`,
+      );
+      assert.ok(
+        auditOversized.body.items.length < auditCount,
+        'audit oversized limit must not return every seeded row (cap enforced)',
+      );
+
+      const cursor = auditDefault.body.nextCursor;
+      assert.doesNotMatch(
+        cursor,
+        /sec06\.demo|audit_logs|reason-/i,
+        'audit cursor must be opaque, not a readable payload',
+      );
+      const auditPage2 = await request(
+        ctx,
+        'GET',
+        `${auditPath}?cursor=${encodeURIComponent(cursor)}`,
+        owner,
+      );
+      expectStatus(auditPage2, 200);
+      assertNoForbiddenStrings(
+        auditPage2.body,
+        FORBIDDEN_VALUES,
+        'audit page 2',
+      );
+
+      const auditBadCursor = await request(
+        ctx,
+        'GET',
+        `${auditPath}?cursor=not-a-real-cursor`,
+        owner,
+      );
+      expectStatus(auditBadCursor, 422, 'INVALID_CURSOR');
+      assertNoStoreCache(auditBadCursor.headers, 'audit invalid cursor error');
+      assertNoForbiddenStrings(
+        auditBadCursor.body,
+        FORBIDDEN_VALUES,
+        'audit bad cursor error',
+      );
+
+      const auditDenied = await request(ctx, 'GET', auditPath, scanner);
+      deny(auditDenied);
+      assertNoStoreCache(auditDenied.headers, 'audit denied error');
+      assertNoForbiddenStrings(
+        auditDenied.body,
+        FORBIDDEN_VALUES,
+        'audit denied error',
+      );
+
+      const codesPath = `/tenants/${tenantId}/events/${eventId}/codes`;
+      const codesBySource = await request(
+        ctx,
+        'GET',
+        `${codesPath}?sourceId=${codesSourceId}&limit=100000`,
+        owner,
+      );
+      expectStatus(codesBySource, 200);
+      assertNoStoreCache(codesBySource.headers, 'codes list');
+      assert.ok(
+        codesBySource.body.items.length <= 100,
+        `codes limit must cap at 100, got ${codesBySource.body.items.length}`,
+      );
+      assert.ok(
+        codesBySource.body.items.length < codesBulkCount,
+        'codes oversized limit must not return every seeded row (cap enforced)',
+      );
+      for (const item of codesBySource.body.items) {
+        assertNoForbiddenKeys(
+          item,
+          ['codeHmac', 'code_hmac', 'rawCode', 'code', 'q', 'pepper'],
+          'codes item',
+        );
+      }
+      assertNoForbiddenStrings(
+        codesBySource.body,
+        [probeRawCode, secretHmac],
+        'codes list',
+      );
+
+      const codesByQ = await request(
+        ctx,
+        'GET',
+        `${codesPath}?q=${encodeURIComponent(probeRawCode)}`,
+        owner,
+      );
+      expectStatus(codesByQ, 200);
+      assert.equal(
+        codesByQ.body.items.length,
+        1,
+        'q search must resolve exactly the probed code',
+      );
+      assertNoForbiddenStrings(
+        codesByQ.body,
+        [probeRawCode, secretHmac],
+        'codes q search',
+      );
+
+      const codesDenied = await request(ctx, 'GET', codesPath, scanner);
+      deny(codesDenied);
+      assertNoStoreCache(codesDenied.headers, 'codes denied error');
+      assertNoForbiddenStrings(
+        codesDenied.body,
+        FORBIDDEN_VALUES,
+        'codes denied error',
+      );
+
+      const reportResp = await request(ctx, 'GET', reportPath(f), owner);
+      expectStatus(reportResp, 200);
+      assertNoStoreCache(reportResp.headers, 'event report');
+      const reportDenied = await request(ctx, 'GET', reportPath(f), scanner);
+      deny(reportDenied);
+      assertNoStoreCache(reportDenied.headers, 'event report denied');
+
+      const ticketsResp = await request(
+        ctx,
+        'GET',
+        `/me/tickets?tenantId=${tenantId}`,
+        owner,
+      );
+      expectStatus(ticketsResp, 200);
+      assertNoStoreCache(ticketsResp.headers, 'me/tickets');
+      const ticketsDenied = await request(ctx, 'GET', `/me/tickets?tenantId=${tenantId}`);
+      expectStatus(ticketsDenied, 401);
+      assertNoStoreCache(ticketsDenied.headers, 'me/tickets denied');
+
+      const sessionResp = await request(
+        ctx,
+        'POST',
+        gatePath(f, 'sessions'),
+        scanner,
+        { tenantId },
+      );
+      expectStatus(sessionResp, 200);
+      assertNoStoreCache(sessionResp.headers, 'gate session');
+      const sessionDenied = await request(
+        ctx,
+        'POST',
+        gatePath(f, 'sessions'),
+        null,
+        { tenantId },
+      );
+      expectStatus(sessionDenied, 401);
+      assertNoStoreCache(sessionDenied.headers, 'gate session denied');
+
+      const missingEvent = await request(
+        ctx,
+        'GET',
+        `/tenants/${tenantId}/events/${randomUUID()}/audit`,
+        owner,
+      );
+      deny(missingEvent);
+      assertNoStoreCache(missingEvent.headers, 'audit missing event error');
+      assert.equal(typeof missingEvent.body.requestId, 'string');
+      assert.equal(
+        'stack' in missingEvent.body,
+        false,
+        'error body must not leak stack',
+      );
       return;
     }
     if (caseId === 'AUTH-03') {

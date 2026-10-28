@@ -446,6 +446,46 @@ export async function seedRuntime(state, caseIds) {
         if (['WEB-06', 'PORT-06'].includes(caseId)) {
           await tx.$executeRaw`UPDATE issuance_sources SET approval_mode='MANUAL' WHERE tenant_id=${tenantId}::uuid AND id=${fixture.sourceId}::uuid`;
         }
+        if (caseId === 'WEB-07') {
+          // Extra single-use codes for the replay/reload/conflict cases — the
+          // double-submit case keeps using the generic fixture.code.
+          const lostResponseCode = `E2E-${state.id}-${caseId}-LR`;
+          const reloadCode = `E2E-${state.id}-${caseId}-RL`;
+          const conflictCode = `E2E-${state.id}-${caseId}-CF`;
+          fixture.data.lostResponseCode = lostResponseCode;
+          fixture.data.reloadCode = reloadCode;
+          fixture.data.conflictCode = conflictCode;
+          fixture.data.conflictAnswersAlt = {
+            ...formAnswers(accounts.attendee.username),
+            phone: '+639171234568',
+          };
+          for (const raw of [lostResponseCode, reloadCode, conflictCode]) {
+            const codeId = randomUUID();
+            const codeHmac = backend.hashRedemptionCode(hmac, raw);
+            await tx.$executeRaw`
+              INSERT INTO redemption_codes (
+                tenant_id, event_id, id, code_hmac, code_pepper_version,
+                source_id, ticket_type_id, status, created_at, updated_at
+              ) VALUES (
+                ${tenantId}::uuid, ${eventId}::uuid, ${codeId}::uuid,
+                ${codeHmac}, ${hmac.version},
+                ${fixture.sourceId}::uuid, ${fixture.ticketTypeId}::uuid,
+                'AVAILABLE', now(), now()
+              )
+            `;
+            await backend.attachCodeRoutingOnInsert(tx, {
+              peppers: [hmac],
+              fpSecret: state.secrets.hmac,
+              tenantId,
+              eventId,
+              redemptionCodeId: codeId,
+              rawCode: raw,
+              codeStatus: 'AVAILABLE',
+              insertPepperVersion: 1,
+              insertHmac: codeHmac,
+            });
+          }
+        }
         if (caseId === 'WEB-13') {
           const manualEventId = randomUUID();
           const manualEventSlug = 'manual-event';
@@ -517,7 +557,226 @@ export async function seedRuntime(state, caseIds) {
           await tx.$executeRaw`INSERT INTO gates (tenant_id, event_id, id, name, sort_order) VALUES (${tenantId}::uuid, ${foreignEventId}::uuid, ${foreignGateId}::uuid, 'Other gate', 0)`;
           fixture.data.foreignGateId = foreignGateId;
         }
+        if (caseId === 'WEB-04') {
+          const expiredEventId = randomUUID();
+          const closedEventId = randomUUID();
+          const quotaEventId = randomUUID();
+          const expiredCode = `E2E-${state.id}-${caseId}-X`;
+          const closedCode = `E2E-${state.id}-${caseId}-C`;
+          const quotaCode = `E2E-${state.id}-${caseId}-Q`;
+          const quotaConsumedCode = `E2E-${state.id}-${caseId}-QF`;
+          fixture.data.expiredCode = expiredCode;
+          fixture.data.closedCode = closedCode;
+          fixture.data.quotaCode = quotaCode;
+          fixture.data.usedCode = codes[1];
+          fixture.data.quotaEventId = quotaEventId;
+
+          async function seedNegativeEvent(
+            eventId,
+            eventSlug,
+            eventName,
+            rawCodes,
+            eventQuota,
+            afterPublish,
+          ) {
+            await tx.event.create({
+              data: {
+                tenantId,
+                id: eventId,
+                slug: eventSlug,
+                name: eventName,
+                status: 'PUBLISHED',
+                visibility: 'PUBLIC',
+              },
+            });
+            await backend.grantEventAssignment(tx, {
+              tenantId,
+              eventId,
+              membershipId: memberships.owner.membershipId,
+              permissions: backend.eventPermissionsForRole('Owner'),
+            });
+            const inventory = await backend.seedEventInventory(tx, hmac, {
+              tenantId,
+              eventId,
+              eventQuota,
+              rawCodes,
+              ticketTypeLabel: 'E2E Negative',
+              sourceName: 'E2E Negative',
+            });
+            for (let index = 0; index < rawCodes.length; index++) {
+              await backend.attachCodeRoutingOnInsert(tx, {
+                peppers: [hmac],
+                fpSecret: state.secrets.hmac,
+                tenantId,
+                eventId,
+                redemptionCodeId: inventory.codeIds[index],
+                rawCode: rawCodes[index],
+                codeStatus: 'AVAILABLE',
+                insertPepperVersion: 1,
+                insertHmac: backend.hashRedemptionCode(hmac, rawCodes[index]),
+              });
+            }
+            const saved = await backend.saveEventConfigVersion(tx, {
+              tenantId,
+              eventId,
+              actorUserId: accounts.owner.userId,
+              payload: eventPayload(`Tenant ${caseId}`, eventName),
+            });
+            await backend.publishEventConfig(tx, {
+              tenantId,
+              eventId,
+              actorUserId: accounts.owner.userId,
+              expectedVersion: saved.version,
+            });
+            if (afterPublish) await afterPublish(eventId);
+          }
+
+          await seedNegativeEvent(
+            expiredEventId,
+            'expired-event',
+            `Expired ${caseId}`,
+            [expiredCode],
+            10,
+            async (eventId) => {
+              await tx.$executeRaw`
+                UPDATE events
+                SET redemption_opens_at = now() - interval '7 days',
+                    redemption_closes_at = now() - interval '1 hour'
+                WHERE tenant_id = ${tenantId}::uuid AND id = ${eventId}::uuid
+              `;
+            },
+          );
+          await seedNegativeEvent(
+            closedEventId,
+            'closed-event',
+            `Closed ${caseId}`,
+            [closedCode],
+            10,
+            async (eventId) => {
+              await tx.$executeRaw`
+                UPDATE events
+                SET status = 'DRAFT', content_status = 'DRAFT'
+                WHERE tenant_id = ${tenantId}::uuid AND id = ${eventId}::uuid
+              `;
+            },
+          );
+          await seedNegativeEvent(
+            quotaEventId,
+            'quota-event',
+            `Quota ${caseId}`,
+            [quotaConsumedCode, quotaCode],
+            1,
+          );
+        }
       });
+      if (caseId === 'WEB-04') {
+        const answers = fixture.data.answers;
+        await backend.withTenant(db, tenantId, (tx) =>
+          backend.redeemAndIssueTicket(tx, hmac, state.secrets.credential, {
+            tenantId,
+            eventId,
+            actorUserId: accounts.attendee.userId,
+            actorEmail: accounts.attendee.username,
+            emailVerified: true,
+            rawCode: codes[1],
+            idempotencyKey: randomUUID(),
+            formVersion: 'form-v1',
+            termsVersion: 'terms-v1',
+            termsAccepted: true,
+            answers,
+          }),
+        );
+        await backend.withTenant(db, tenantId, (tx) =>
+          backend.redeemAndIssueTicket(tx, hmac, state.secrets.credential, {
+            tenantId,
+            eventId: fixture.data.quotaEventId,
+            actorUserId: accounts.attendee.userId,
+            actorEmail: accounts.attendee.username,
+            emailVerified: true,
+            rawCode: `E2E-${state.id}-${caseId}-QF`,
+            idempotencyKey: randomUUID(),
+            formVersion: 'form-v1',
+            termsVersion: 'terms-v1',
+            termsAccepted: true,
+            answers,
+          }),
+        );
+        const suspendedTenantId = randomUUID();
+        const suspendedEventId = randomUUID();
+        const suspendedSlug = `${slug}-suspended`;
+        const suspendedCode = `E2E-${state.id}-${caseId}-S`;
+        fixture.data.suspendedTenantId = suspendedTenantId;
+        fixture.data.suspendedTenantSlug = suspendedSlug;
+        fixture.data.suspendedCode = suspendedCode;
+        await backend.withTenant(db, suspendedTenantId, async (tx) => {
+          await tx.tenant.create({
+            data: {
+              id: suspendedTenantId,
+              slug: suspendedSlug,
+              name: `Suspended ${caseId}`,
+              status: 'ACTIVE',
+            },
+          });
+          await tx.event.create({
+            data: {
+              tenantId: suspendedTenantId,
+              id: suspendedEventId,
+              slug: 'event',
+              name: `Suspended ${caseId}`,
+              status: 'PUBLISHED',
+            },
+          });
+          const ownerMembership = await backend.grantMembership(tx, {
+            tenantId: suspendedTenantId,
+            userId: accounts.owner.userId,
+            role: 'Owner',
+            permissions: backend.tenantPermissionsForRole('Owner'),
+          });
+          await backend.grantEventAssignment(tx, {
+            tenantId: suspendedTenantId,
+            eventId: suspendedEventId,
+            membershipId: ownerMembership.membershipId,
+            permissions: backend.eventPermissionsForRole('Owner'),
+          });
+          const inventory = await backend.seedEventInventory(tx, hmac, {
+            tenantId: suspendedTenantId,
+            eventId: suspendedEventId,
+            eventQuota: 10,
+            rawCodes: [suspendedCode],
+            ticketTypeLabel: 'E2E Suspended',
+            sourceName: 'E2E Suspended',
+          });
+          await backend.attachCodeRoutingOnInsert(tx, {
+            peppers: [hmac],
+            fpSecret: state.secrets.hmac,
+            tenantId: suspendedTenantId,
+            eventId: suspendedEventId,
+            redemptionCodeId: inventory.codeIds[0],
+            rawCode: suspendedCode,
+            codeStatus: 'AVAILABLE',
+            insertPepperVersion: 1,
+            insertHmac: backend.hashRedemptionCode(hmac, suspendedCode),
+          });
+          const config = await backend.saveEventConfigVersion(tx, {
+            tenantId: suspendedTenantId,
+            eventId: suspendedEventId,
+            actorUserId: accounts.owner.userId,
+            payload: eventPayload(`Suspended ${caseId}`, `Suspended ${caseId}`),
+          });
+          await backend.publishEventConfig(tx, {
+            tenantId: suspendedTenantId,
+            eventId: suspendedEventId,
+            actorUserId: accounts.owner.userId,
+            expectedVersion: config.version,
+          });
+        });
+        await backend.withTenant(db, suspendedTenantId, (tx) =>
+          tx.tenant.update({
+            where: { id: suspendedTenantId },
+            data: { status: 'SUSPENDED' },
+          }),
+        );
+      }
       if (caseId === 'PLAT-02') {
         const pendingTenantId = randomUUID();
         const suspendedTenantId = randomUUID();
@@ -669,8 +928,7 @@ export async function seedRuntime(state, caseIds) {
         ].includes(caseId)
       ) {
         const answers =
-          fixture.data.answers ??
-          formAnswers(accounts.attendee.username);
+          fixture.data.answers ?? formAnswers(accounts.attendee.username);
         if (caseId === 'SEC-05') fixture.data.answers = answers;
         const outcome = await backend.withTenant(db, tenantId, (tx) =>
           backend.redeemAndIssueTicket(tx, hmac, state.secrets.credential, {
@@ -792,6 +1050,67 @@ export async function seedRuntime(state, caseIds) {
         });
         fixture.data.foreignTenantId = foreignTenantId;
         fixture.data.foreignEventId = foreignEventId;
+      }
+      if (caseId === 'SEC-06') {
+        await backend.withTenant(db, tenantId, async (tx) => {
+          const bulkCodes = Array.from(
+            { length: 110 },
+            (_, i) => `E2E-${state.id}-${caseId}-BULK-${i}`,
+          );
+          const bulkInventory = await backend.seedEventInventory(tx, hmac, {
+            tenantId,
+            eventId,
+            eventQuota: 1000,
+            rawCodes: bulkCodes,
+            ticketTypeLabel: 'E2E SEC-06 Bulk',
+            sourceName: 'E2E SEC-06 Bulk',
+          });
+          for (let index = 0; index < bulkCodes.length; index++) {
+            await backend.attachCodeRoutingOnInsert(tx, {
+              peppers: [hmac],
+              fpSecret: state.secrets.hmac,
+              tenantId,
+              eventId,
+              redemptionCodeId: bulkInventory.codeIds[index],
+              rawCode: bulkCodes[index],
+              codeStatus: 'AVAILABLE',
+              insertPepperVersion: 1,
+              insertHmac: backend.hashRedemptionCode(hmac, bulkCodes[index]),
+            });
+          }
+          fixture.data.codesSourceId = bulkInventory.sourceId;
+          fixture.data.codesTicketTypeId = bulkInventory.ticketTypeId;
+          fixture.data.codesBulkCount = bulkCodes.length;
+          fixture.data.probeRawCode = bulkCodes[0];
+
+          const secretReason = `SEC06-SECRET-REASON-${state.id}`;
+          const secretEmail = `sec06-secret-${state.id}@example.test`;
+          const secretHmac = backend.hashRedemptionCode(hmac, bulkCodes[0]);
+          fixture.data.secretReason = secretReason;
+          fixture.data.secretEmail = secretEmail;
+          fixture.data.secretHmac = secretHmac;
+          const auditCount = 105;
+          for (let i = 0; i < auditCount; i++) {
+            await tx.$executeRaw`
+              INSERT INTO audit_logs (
+                tenant_id, event_id, id, actor_user_id, action,
+                resource_type, resource_id, reason, sanitized_diff, operation_id
+              ) VALUES (
+                ${tenantId}::uuid, ${eventId}::uuid, ${randomUUID()}::uuid,
+                ${accounts.owner.userId}::uuid, ${'sec06.demo.' + i},
+                'event', ${eventId}::uuid,
+                ${i === 0 ? secretReason : 'reason-' + i},
+                ${JSON.stringify({
+                  email: secretEmail,
+                  hmac: secretHmac,
+                  rawCode: bulkCodes[0],
+                })}::jsonb,
+                ${randomUUID()}::uuid
+              )
+            `;
+          }
+          fixture.data.auditCount = auditCount;
+        });
       }
       manifest.cases[caseId] = fixture;
     }

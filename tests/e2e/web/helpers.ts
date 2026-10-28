@@ -131,6 +131,77 @@ export async function openCodeConfirmation(
   await expect(page.getByTestId('redeem-global-context')).toBeVisible();
 }
 
+/** Global resolve only — negative branches that fail before confirm. */
+export async function resolveGlobalCode(
+  page: Page,
+  manifest: E2EManifest,
+  code: string,
+) {
+  await page.goto(webUrl(manifest, '/redeem'));
+  await page.getByTestId('redeem-global-code').fill(code);
+  await page.getByTestId('redeem-global-resolve').click();
+}
+
+export async function assertRedeemOutcomePanel(
+  page: Page,
+  uxKind: string,
+  options?: { allowTicketCard?: boolean },
+) {
+  const panel = page.getByTestId(`redeem-ux-${uxKind}`);
+  await expect(panel).toBeVisible();
+  await expect(panel).not.toContainText('@');
+  if (!options?.allowTicketCard) {
+    await expect(page.getByTestId('redeem-ticket-card')).toHaveCount(0);
+  }
+}
+
+export async function submitGlobalRedeemForm(
+  page: Page,
+  answers: Record<string, string | boolean> | undefined,
+) {
+  await fillPublishedForm(page, answers);
+  await page
+    .getByRole('button', { name: 'Đổi mã lấy vé', exact: true })
+    .click();
+}
+
+/**
+ * Direct same-origin POST to /api/bff/redeem — bypasses the UI's
+ * idempotency-key-reuse rules so tests can send a fixed key with two
+ * different payloads (TD §8.1 hash-conflict case).
+ */
+export async function postRedeemDirect(
+  page: Page,
+  manifest: E2EManifest,
+  body: Record<string, unknown>,
+): Promise<{ status: number; json: unknown }> {
+  await page.request.get(webUrl(manifest, '/api/bff/csrf'));
+  const cookies = await page.context().cookies(manifest.origins.web);
+  const csrfToken = cookies.find((c) => c.name === 'vemoki_csrf')?.value ?? '';
+  const response = await page.request.post(
+    webUrl(manifest, '/api/bff/redeem'),
+    {
+      headers: {
+        'content-type': 'application/json',
+        origin: manifest.origins.web,
+        'x-csrf-token': csrfToken,
+      },
+      data: body,
+    },
+  );
+  const json = await response.json().catch(() => null);
+  return { status: response.status(), json };
+}
+
+export async function assertWalletUnchanged(
+  page: Page,
+  manifest: E2EManifest,
+  tenantId: string,
+  before: string[],
+) {
+  expect(await walletTicketIds(page, manifest, tenantId)).toEqual(before);
+}
+
 function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
