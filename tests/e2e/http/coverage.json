@@ -7,6 +7,40 @@
     "reason": "Đã viết H report own/cross-tenant/cross-event; chờ runtime. Chưa phủ toàn bộ resource read/mutate/list/export/operation và browser B."
   },
   {
+    "caseId": "SEC-02",
+    "tests": [
+      "H:tests/e2e/http/live.test.mjs#[SEC-02]",
+      "B:tests/e2e/harness/security.spec.ts › [SEC-02]"
+    ],
+    "layers": ["H", "B"],
+    "status": "blocked",
+    "reason": "H live PASS run mvsfkswp-8af93a: OAuth Set-Cookie host-only HttpOnly Secure SameSite=Lax on web+portal staff/platform login; portal/web BFF Origin thiếu/sai; JWT aud ticket-api↔ticket-platform-api disjoint + cross-API deny; evil Origin không thay bearer; foreign tenant deny với bearer. B: security.spec.ts cookie jar. Chưa platform/me 200 (browser MFA), mọi BFF mutate, CSRF 403 khi 401 trước session."
+  },
+  {
+    "caseId": "SEC-03",
+    "tests": ["H:tests/e2e/http/live.test.mjs#[SEC-03]"],
+    "layers": ["H"],
+    "status": "blocked",
+    "reason": "H live PASS run mvsf7i40-c3b9ff: HTTPS + direct upstream (runtime.upstreamPorts) login/refresh/admin fail-closed, marketing host bounce→web origin, portal staff/platform OIDC→auth, legacy GET|HEAD /admin→portal, POST /admin không nav-redirect, API health không redirect. E2E TLS proxy vẫn ghi đè X-Forwarded-Host (direct path bù). Marketing 302 có thể giữ query adversarial tới app host — chưa assert Cache-Control poison; mọi BFF return/next chưa phủ."
+  },
+  {
+    "caseId": "SEC-04",
+    "tests": ["H:tests/e2e/http/live.test.mjs#[SEC-04]"],
+    "layers": ["H"],
+    "status": "blocked",
+    "reason": "H live PASS run mvsfyyd6-b4ffc3: PG-primed bounded 429 — resolve/redeem/gate.reserve/receipt RATE_LIMITED retryable (no Retry-After); import list Retry-After; receipt vs offline-sync buckets; CS RESEND_COOLDOWN; bad admission token không check-in. Gaps: tenant-limits/invitations H, gate confirm/offline-sync 429, notification hourly cap."
+  },
+  {
+    "caseId": "SEC-05",
+    "tests": [
+      "H:tests/e2e/http/live.test.mjs#[SEC-05]",
+      "B:tests/e2e/harness/security.spec.ts › [SEC-05]"
+    ],
+    "layers": ["H", "B"],
+    "status": "blocked",
+    "reason": "H: live export CSV formula guard on masked email, import upload empty/MIME/byte/row caps, config CONFIG_UNSAFE_MARKUP no public persist, notification template reject+HTML escape preview, asset MIME deny, web+portal CSP/nosniff profile. B: security.spec.ts CSP home headers. Gaps: portal BFF multipart upload matrix, full rich-text surfaces, browser XSS execution paths (out of scope — inert markers only)."
+  },
+  {
     "caseId": "AUTH-03",
     "tests": ["H:tests/e2e/http/live.test.mjs#[AUTH-03]"],
     "layers": ["H"],

@@ -75,21 +75,23 @@
     "caseId": "DB-08",
     "tests": [
       "D:packages/backend/test/issue.test.cjs#issue: last-seat",
-      "D:packages/backend/test/issue.test.cjs#issue: terminal QUOTA_EXHAUSTED"
+      "D:packages/backend/test/issue.test.cjs#issue: terminal QUOTA_EXHAUSTED",
+      "D:packages/backend/test/db08-fault-rollback.test.cjs#DB-08: fault before commit rolls back ticket/quota/code/operation/outbox; lost response after commit reconciles same key; operation lookup scoped to actor/event/command"
     ],
     "layers": ["D"],
-    "status": "blocked",
-    "reason": "Thiếu fault injection trước commit và lost-response sau commit theo command scope."
+    "status": "implemented",
+    "reason": "DB-08 yêu cầu lớp D: fault ứng dụng trước commit rollback ticket/quota/code/operation/outbox, lost-response sau commit retry cùng key 3 lần về cùng kết quả, operation lookup từ chối actor/event/command sai; db08-fault-rollback.test.cjs PASS trên PostgreSQL thật. Chưa chứng minh process kill/TCP disconnect, nhưng PLAN.md cho phép crash/fault và không yêu cầu H cho ID này."
   },
   {
     "caseId": "DB-09",
     "tests": [
       "D:packages/backend/test/gate.test.cjs#gate: one confirm wins",
-      "D:packages/backend/test/event-lifecycle.test.cjs#C-E event lifecycle"
+      "D:packages/backend/test/event-lifecycle.test.cjs#C-E event lifecycle",
+      "D:packages/backend/test/db09-ticket-security-invariants.test.cjs#DB-09: revoke never reuses a redemption code; no path reassigns ticket owner; allocation is gated on the current event policy, not a stale snapshot"
     ],
     "layers": ["D"],
     "status": "blocked",
-    "reason": "D revoke; thiếu credential rotate và generic PATCH refusal H."
+    "reason": "D mới PASS trên PostgreSQL thật: revoke không tái dùng mã (code vẫn CONSUMED, active_request_id giữ nguyên, 2 lần redeem lại đều CODE_CONSUMED, chỉ 1 ticket); revoke invalidate credential hiện tại (ticket_credentials -> REVOKED) nhưng đây KHÔNG phải credential rotation — không có hàm reissue/rotate nào trong source (grep xác nhận, resend không rotate); owner_user_id bất biến qua reserve/confirm/undo/revoke bởi actor khác owner, có static guard chặn UPDATE tickets SET owner_user_id và @Patch route cho ticket; allocation (AUTO và MANUAL approve) bị chặn đúng theo policy hiện tại khi event bị cancel sau khi hold được tạo (EVENT_CANCELLED, quota=0, code không bị consume). Vẫn blocked vì credential rotate/reissue là product gap chưa build (PRD.md:198 yêu cầu nhưng chưa có endpoint) — xem .artifacts/db09-local.md. Thiếu thêm H cho generic PATCH refusal qua HTTP thật."
   },
   {
     "caseId": "DB-10",
@@ -369,22 +371,25 @@
     "tests": [
       "D:apps/api/test/redemptions-resolve-rls.test.cjs#resolve rate limit",
       "U:apps/api/test/import-list.test.cjs#G-09 API limits",
-      "U:apps/api/test/tenant-limits.test.cjs#G-10 API limiter"
+      "U:apps/api/test/tenant-limits.test.cjs#G-10 API limiter",
+      "H:tests/e2e/http/live.test.mjs#[SEC-04]"
     ],
-    "layers": ["D", "U"],
+    "layers": ["D", "U", "H"],
     "status": "blocked",
-    "reason": "U/H validation/rate subset; thiếu live bucket scopes và full 429 branch matrix."
+    "reason": "U/H validation/rate subset; thiếu live bucket scopes và full 429 branch matrix. H: tests/e2e/http/live.test.mjs#[SEC-04] bổ sung bounded Keycloak HTTP (resolve/redeem/gate/receipt/import/resend cooldown); D/U selectors giữ nguyên."
   },
   {
     "caseId": "SEC-05",
     "tests": [
       "U:packages/backend/test/csv-guard.test.cjs#csv guard prefixes",
       "D:packages/backend/test/config-publish.test.cjs#asset quarantine finalize",
-      "U:packages/backend/test/notification-unit.test.cjs#template allowlist"
+      "U:packages/backend/test/notification-unit.test.cjs#template allowlist",
+      "H:tests/e2e/http/live.test.mjs#[SEC-05]",
+      "B:tests/e2e/harness/security.spec.ts › [SEC-05]"
     ],
-    "layers": ["U", "D"],
+    "layers": ["U", "D", "H", "B"],
     "status": "blocked",
-    "reason": "D/U CSV/asset/template; thiếu H upload caps, rich text/XSS/CSP."
+    "reason": "D/U CSV/asset/template plus H/B upload caps, rich text/XSS/CSP subset on live stack. Gaps: portal BFF upload chunked cap, every export column formula matrix, full CSP nonce profile."
   },
   {
     "caseId": "SEC-06",
