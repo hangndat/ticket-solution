@@ -146,3 +146,7 @@ pnpm --filter @ticket/web-session build   # bắt buộc trước next dev (work
 State local (gitignored): `.fe-uat-stack/env.sh`.
 
 See evidence: [`docs/reviews/D9-DEMO-SEED.md`](../reviews/D9-DEMO-SEED.md).
+
+## S6 / TestFlight catalog (27/10/2026)
+
+Tên sự kiện `MFest · Demo` / `Studio Night · Demo` khớp catalog public trên TestFlight **1.0.0 (28)** (SHA nguồn `2645999f0ad535276b63a95c6c96bace9cff025e`) — launch PASS. Login OIDC trên bake 28 fail-closed; không dùng binary TF làm PASS attendee redeem. Persona local S6: [`docs/ops/UI925-LOCAL-PERSONA-FIXTURES.md`](../ops/UI925-LOCAL-PERSONA-FIXTURES.md), không seed prod (ADR-21).

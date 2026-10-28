@@ -1,6 +1,6 @@
 # Release bất biến cho VPS — #899
 
-**Trạng thái:** quy trình và fixture local; chưa chạy trên production/staging. Chỉ operator có ủy quyền production riêng mới chạy lệnh Compose trên VPS. Không đọc hoặc đưa `.env`, APNs `.p8`, realm secrets, signing keys vào release/log/manifest. `/opt/vemoki/state` và `/opt/vemoki/secrets` nằm ngoài release. Không chạm iOS/store/cloud.
+**Trạng thái:** cutover bất biến **đầu tiên trên production** 27/10/2026, SHA nguồn `2645999f0ad535276b63a95c6c96bace9cff025e` (5 service; evidence comment Epic #914). Quy trình dưới đây vẫn là hợp đồng pin/verify. Chỉ operator có ủy quyền production mới chạy Compose trên VPS. Không đọc hoặc đưa `.env`, APNs `.p8`, realm secrets, signing keys vào release/log/manifest. `/opt/vemoki/state` và `/opt/vemoki/secrets` nằm ngoài release. Cutover ≠ pilot ready ≠ store.
 
 ## Layout và contract
 

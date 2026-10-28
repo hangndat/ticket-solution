@@ -123,6 +123,8 @@ AC: Manager phát vé → attendee thấy vé → Staff xác nhận → Portal p
 
 T01 và T02 dùng **chung một evidence matrix** (route × persona × state × viewport/locale × SHA), mỗi bên chỉ kết luận checklist của mình. Evidence chuyển sang Issue cũ (#880/#881/#879/#882/#889) chỉ khi khớp đúng SHA, môi trường, persona, viewport/locale và AC của Issue đó; tiêu chí ngoài scope (vd. cold-offline web; guest NativeTabs/catalog; privacy WebView; VoiceOver; banner full-list từ event đầu) ghi "ngoài scope theo O25/O27", không PASS. S6 không thay #901/#903/#904; nghiệm thu local không là giấy phép pilot.
 
+**Snapshot giấy 27/10/2026 (không thay Project #3):** SHA `2645999f0ad535276b63a95c6c96bace9cff025e`; CI 29/29. Portal/web findings đã merge (#1000–#1003). Staff iOS thiết bị thật (16 Pro `00008140-000605803C01801C`): admit/dup/unknown/logout/pending/conflict/offline **PASS**. VoiceOver skip theo owner. TF 1.0.0 (28) catalog **PASS**, login OIDC fail-closed (không chờ). Prod cutover live cùng SHA. Bốn mức: code complete **có**; acceptance S6 **có** (known gap VO/revoke/TF login); Epic #914 **Đang làm** (KEYRING/TF login); pilot **không**.
+
 ## 5. DAG và waves
 
 ```text
