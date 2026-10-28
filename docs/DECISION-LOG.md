@@ -40,6 +40,14 @@ Owner **sửa** O27 §3–§4 trên Epic [#914](https://github.com/hangndat/tick
 
 Architecture impact: **Có** (IA NativeTabs guest + redeem tab). Approval ≠ code complete ≠ acceptance complete ≠ pilot ready.
 
+## O29 — Profile root stack + vé đã dùng watermark (28/10/2026)
+
+Owner USB 38 trên Epic [#914](https://github.com/hangndat/ticket-solution/issues/914). **Không đóng Epic.** O28 §2/§5 ghi header → `/account`; NativeTabs trigger `account` (hidden) **không điều hướng được trên iOS**, nên tap `person.circle` chết. Sửa giống staff: profile attendee = root stack **`/attendee-account`** (chrome `tabDetail` + back). `/account` redirect. Guest header vẫn OIDC trực tiếp.
+
+Vé **USED**: không notice/pill phía trên; stamp chéo bán trong suốt «Đã sử dụng» trên mặt vé (list + detail). QR used vẫn hiện nhưng mờ / không trông còn hiệu lực. Không file asset mới.
+
+Architecture impact: **Có** (route profile attendee). Approval ≠ code complete ≠ acceptance complete ≠ pilot ready.
+
 ## O26 — Portal dùng giao diện mặc định Ant Design (26/10/2026)
 
 User quyết định **toàn bộ UI component của `apps/portal` dùng component có sẵn của `antd` với giao diện/token mặc định**. Không tạo thêm UI component hoặc wrapper riêng, design system, token, theme hay CSS tùy biến cho Portal. Khi cần một UI mới, ghép các component chính thức của `antd`; logic nghiệp vụ, dữ liệu, quyền và điều hướng vẫn có thể nằm trong module/hook riêng. Quyết định này thay yêu cầu “theme Vemoki” của O16 và thay định hướng dùng ProComponents của O18 đối với UI Portal; component ProComponents/custom hiện có phải được kiểm kê và chuyển dần sang `antd` trong Task migration, không coi là đã hoàn tất từ quyết định này. Không đổi design system của `apps/web` hoặc iOS; giữ tiếng Việt và accessibility.

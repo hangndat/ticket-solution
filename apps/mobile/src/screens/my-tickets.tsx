@@ -28,8 +28,10 @@ import { eventsCopy, walletCopy } from '@/components/screen-state-copy';
 import { ATTENDEE_REDEEM_PATH } from '@/navigation/attendee-redeem-entry';
 import {
   attendeeWalletCopy,
+  isUsedTicketState,
   presentTicketRow
 } from '@/attendee/attendee-outcome-copy';
+import { TicketUsedStamp } from '@/components/ticket-used-stamp';
 import { AttendeeScreenChrome } from '@/navigation/attendee-screen-chrome';
 import { hasDemoMediaForEventId } from '@/data/demo-media';
 import { brand, colors } from '@/theme/colors';
@@ -123,6 +125,7 @@ function WalletGroupedTicketList({
 function TicketRow({ ticket }: { ticket: TicketSummary }) {
   const [focused, setFocused] = useState(false);
   const row = presentTicketRow(ticket);
+  const used = isUsedTicketState(ticket.state);
   return (
     <Link
       href={{
@@ -133,7 +136,11 @@ function TicketRow({ ticket }: { ticket: TicketSummary }) {
     >
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={row.accessibilityLabel}
+        accessibilityLabel={
+          used
+            ? `${row.eventTitle} · ${attendeeWalletCopy.usedWatermarkA11y}`
+            : row.accessibilityLabel
+        }
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
         style={({ pressed }) => ({
@@ -144,10 +151,11 @@ function TicketRow({ ticket }: { ticket: TicketSummary }) {
           borderWidth: focused ? 2 : 1,
           borderColor: focused ? colors.focus : colors.line,
           opacity: pressed ? 0.85 : 1,
-          gap: space.md
+          gap: space.md,
+          overflow: 'hidden',
         })}
       >
-        <TicketStatusPill label={row.statusLabel} />
+        {used ? <TicketUsedStamp /> : <TicketStatusPill label={row.statusLabel} />}
         {hasDemoMediaForEventId(ticket.eventId) ? (
           <EventLogo
             eventId={ticket.eventId}
