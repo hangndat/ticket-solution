@@ -1,11 +1,11 @@
 import Link from 'next/link';
 import type { PublishedEventSummary } from '@ticket/contracts';
-import { Button, CatalogHeroBand } from '@ticket/ui';
+import { Button } from '@ticket/ui';
 import { loginHref } from '../../src/oidc/login-href';
 import { authNoticeFromParam } from '../../src/oidc/auth-notice';
 import { loadOwnerWallet, ownedTicketCountByEventId } from '../../src/owner-ticket';
-import { ATTENDEE_COPY } from '../../src/attendee-copy';
 import { ConsumerPageShell } from '../../src/consumer-page-shell';
+import { HomeHero } from '../../src/i18n';
 import {
   attendeeAuthButtons,
   attendeeHomeMain,
@@ -71,17 +71,7 @@ export default async function Home({ searchParams }: Props) {
       mainClassName={attendeeHomeMain}
     >
       <div data-testid="attendee-home">
-      <CatalogHeroBand
-        titleId="home-title"
-        title={ATTENDEE_COPY.browseEvents}
-        intro="Tìm sự kiện và xem thông tin tham dự."
-      >
-        <p className="m-0 mt-3 max-w-[36rem] text-[0.95rem] text-muted">
-          <Link href="/redeem" className="font-semibold text-signal hover:underline">
-            Có mã mời? Đổi mã lấy vé
-          </Link>
-        </p>
-      </CatalogHeroBand>
+      <HomeHero />
 
       {authNotice ? (
         <aside
