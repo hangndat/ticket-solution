@@ -2,6 +2,11 @@
  * Guest-facing auth notices on origin screens (Home / Redeem / …).
  * Used when OIDC cancel/fail lands via `?notice=` after `/auth` stub redirect.
  */
+import { dual, pickDual } from '../i18n/dual';
+import {
+  DEFAULT_ATTENDEE_LOCALE,
+  type AttendeeLocale,
+} from '../i18n/locale';
 
 export type AuthNotice = {
   title: string;
@@ -9,13 +14,30 @@ export type AuthNotice = {
   retryHref: string;
 };
 
+const FAILED = {
+  title: dual('Không đăng nhập được', 'Could not sign in'),
+  detail: dual(
+    'Phiên đăng nhập bị hủy hoặc lỗi. Thử lại, hoặc ở lại trang này.',
+    'Sign-in was cancelled or failed. Try again, or stay on this page.',
+  ),
+};
+
+const UNAVAILABLE = {
+  title: dual('Cần đăng nhập', 'Sign in required'),
+  detail: dual(
+    'Đăng nhập chưa sẵn sàng trên môi trường này — không dùng phiên giả.',
+    'Sign-in is not available in this environment — a fake session is not used.',
+  ),
+};
+
 export function authNoticeFromParam(
   notice: string | undefined,
-  options?: { retryHref?: string },
+  options?: { retryHref?: string; locale?: AttendeeLocale },
 ): AuthNotice | null {
   const key = notice?.trim();
   if (!key) return null;
   const retryHref = options?.retryHref ?? '/api/auth/login?return=/';
+  const locale = options?.locale ?? DEFAULT_ATTENDEE_LOCALE;
 
   if (
     key === 'auth_failed' ||
@@ -26,18 +48,16 @@ export function authNoticeFromParam(
     key === 'misconfigured'
   ) {
     return {
-      title: 'Không đăng nhập được',
-      detail:
-        'Phiên đăng nhập bị hủy hoặc lỗi. Thử lại, hoặc ở lại trang này.',
+      title: pickDual(FAILED.title, locale),
+      detail: pickDual(FAILED.detail, locale),
       retryHref,
     };
   }
 
   if (key === 'auth_unavailable') {
     return {
-      title: 'Cần đăng nhập',
-      detail:
-        'Đăng nhập chưa sẵn sàng trên môi trường này — không dùng phiên giả.',
+      title: pickDual(UNAVAILABLE.title, locale),
+      detail: pickDual(UNAVAILABLE.detail, locale),
       retryHref,
     };
   }

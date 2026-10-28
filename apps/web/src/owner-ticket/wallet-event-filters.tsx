@@ -1,4 +1,8 @@
+'use client';
+
 import Link from 'next/link';
+import { useAttendeeLocale } from '../i18n';
+import { walletCopy } from './types';
 import {
   attendeeWalletFilterChip,
   attendeeWalletFilterCount,
@@ -47,12 +51,14 @@ export function WalletEventFilters({
   activeEventId,
   totalCount,
 }: Props) {
+  const { locale } = useAttendeeLocale();
+  const copy = walletCopy(locale);
   if (filters.length === 0) return null;
 
   return (
     <nav
       className={attendeeWalletFilters}
-      aria-label="Lọc vé theo sự kiện"
+      aria-label={copy.filterAria}
       data-testid="wallet-event-filters"
     >
       <Link
@@ -61,7 +67,7 @@ export function WalletEventFilters({
         aria-current={activeEventId ? undefined : 'true'}
         data-testid="wallet-filter-all"
       >
-        Tất cả
+        {copy.filterAll}
         <span className={attendeeWalletFilterCount}>{totalCount}</span>
       </Link>
       {filters.map((filter) => {
