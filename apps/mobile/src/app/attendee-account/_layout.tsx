@@ -4,7 +4,7 @@ import { tabDetailStackScreenOptions } from '@/navigation/tab-stack-options';
 /** Root stack (outside NativeTabs) — iOS cannot navigate hidden tab triggers. */
 export default function AttendeeAccountRootLayout() {
   return (
-    <Stack screenOptions={tabDetailStackScreenOptions}>
+    <Stack screenOptions={{ ...tabDetailStackScreenOptions, headerBackButtonDisplayMode: 'minimal' }}>
       <Stack.Screen name="index" options={{ title: 'Tài khoản' }} />
       <Stack.Screen name="delete" options={{ title: 'Xóa tài khoản' }} />
       <Stack.Screen

@@ -77,3 +77,13 @@ test('filter and aggregate helpers', () => {
   assert.equal(filterTicketsByEventId(tickets, 'evt-b').length, 1);
   assert.equal(filterTicketsByEventId(tickets, '').length, 2);
 });
+
+import { sortTicketsActiveFirst, walletTicketCardTitle } from './wallet-event-grouping.ts';
+
+test('sortTicketsActiveFirst sinks used tickets, stable otherwise', () => {
+  const mk = (id: string, state: string) =>
+    ({ ticketId: id, state, eventId: 'e', tenantId: 't', ticketTypeId: 'x', sourceId: 's', credentialVersion: 1, createdAt: '' }) as never;
+  const out = sortTicketsActiveFirst([mk('a', 'USED'), mk('b', 'ACTIVE'), mk('c', 'ACTIVE')]);
+  assert.deepEqual(out.map((t: { ticketId: string }) => t.ticketId), ['b', 'c', 'a']);
+  assert.equal(walletTicketCardTitle(mk('abcdef123456', 'ACTIVE')), 'Vé · ABCDEF12');
+});
