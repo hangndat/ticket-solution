@@ -9,11 +9,13 @@ import argparse
 import hashlib
 import json
 import os
+import platform as host_platform
 import re
 import shutil
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 SERVICES = ("api", "worker", "web", "portal", "migrate")
@@ -162,6 +164,86 @@ def write_pins(path, pins):
     os.chmod(temp, 0o600)
     os.replace(temp, path)
 
+STORE_MOUNT = "/pnpm-store"
+STEPS = (
+    ("install", "pnpm install --frozen-lockfile --filter @ticket/api... --filter @ticket/worker... --filter @ticket/web... --filter @ticket/portal..."),
+    ("build contracts", "pnpm --filter @ticket/contracts build"),
+    ("build backend", "pnpm --filter @ticket/backend build"),
+    ("build ui", "pnpm --filter @ticket/ui build"),
+    ("build web-session", "pnpm --filter @ticket/web-session build"),
+    ("build api", "pnpm --filter @ticket/api build"),
+    ("build worker", "pnpm --filter @ticket/worker build"),
+    ("build web", "pnpm --filter @ticket/web build"),
+    ("build portal", "pnpm --filter @ticket/portal build"),
+)
+ARCH_OF = {"x86_64": "linux/amd64", "amd64": "linux/amd64", "arm64": "linux/arm64", "aarch64": "linux/arm64"}
+
+
+def log(message):
+    print(f"[release {time.strftime('%H:%M:%S')}] {message}", flush=True)
+
+
+class Timed:
+    """Print start/end and duration of one build step (never prints env or args secrets)."""
+
+    def __init__(self, name):
+        self.name = name
+
+    def __enter__(self):
+        self.start = time.monotonic()
+        log(f"start: {self.name}")
+
+    def __exit__(self, kind, *_):
+        status = "FAILED" if kind else "done"
+        log(f"{status}: {self.name} ({time.monotonic() - self.start:.1f}s)")
+
+
+def default_pnpm_store(platform):
+    """Persistent host pnpm store, one per platform (native modules differ). Safe to delete."""
+    return Path.home() / ".cache" / "vemoki-release" / ("pnpm-store-" + platform.replace("/", "-"))
+
+
+def prepare_store(path):
+    path = Path(path).expanduser().absolute()
+    path.mkdir(parents=True, exist_ok=True)
+    os.chmod(path, 0o777)  # container user may not match the host user
+    return path
+
+
+def container_script():
+    """Shell run in the builder; the store is the external mount, never under /app."""
+    lines = [
+        'step() { n="$1"; shift; s=$(date +%s); echo "[container $(date +%H:%M:%S)] start: $n"; '
+        'if "$@"; then echo "[container $(date +%H:%M:%S)] done: $n ($(( $(date +%s) - s ))s)"; '
+        'else echo "[container $(date +%H:%M:%S)] FAILED: $n ($(( $(date +%s) - s ))s)"; return 1; fi; }',
+        f"pnpm config set store-dir {STORE_MOUNT}",
+        "pnpm config set package-import-method copy",
+    ]
+    lines += [f'step "{name}" {cmd}' for name, cmd in STEPS]
+    return "\n".join(lines)
+
+
+def docker_arch():
+    try:
+        out = subprocess.check_output(["docker", "info", "--format", "{{.Architecture}}"], text=True, timeout=30).strip()
+    except (OSError, subprocess.SubprocessError):
+        out = host_platform.machine()
+    return ARCH_OF.get(out.lower())
+
+
+def stale_builds(root, keep, min_age_minutes):
+    cutoff = time.time() - min_age_minutes * 60
+    return [p for p in sorted(root.glob(".build-*")) if p != keep and p.is_dir() and p.stat().st_mtime < cutoff]
+
+
+def remove_tree(path):
+    for directory in [path, *(p for p in path.rglob("*") if p.is_dir() and not p.is_symlink())]:
+        try:
+            os.chmod(directory, directory.stat().st_mode | 0o700)
+        except OSError:
+            pass
+    shutil.rmtree(path)
+
 
 def build(args):
     validate_root(args.root)
@@ -175,8 +257,25 @@ def build(args):
             or args.migrate_target < args.migrate_input_max):
         fail("invalid migration input/target contract")
     root.mkdir(parents=True, exist_ok=True)
+    store = prepare_store(args.pnpm_store or default_pnpm_store(args.platform))
     stage = Path(tempfile.mkdtemp(prefix=".build-", dir=root))
+    started = time.monotonic()
+    log(f"pnpm store (cache only, safe to delete): {store}")
+    old = stale_builds(root, stage, args.stale_min_age_minutes)
+    if old:
+        if args.clean_stale:
+            for path in old:
+                log(f"removing stale build dir (> {args.stale_min_age_minutes} min old): {path}")
+                try:
+                    remove_tree(path)
+                except OSError as error:
+                    log(f"could not remove {path}: {error}")
+        else:
+            log(f"WARNING: {len(old)} stale .build-* dir(s) older than {args.stale_min_age_minutes} min in {root} "
+                f"(dead runs?): {', '.join(p.name for p in old)}; rerun with --clean-stale to remove")
     try:
+        archive_timer = Timed("git archive + extract")
+        archive_timer.__enter__()
         archive = subprocess.Popen(["git", "archive", "--format=tar", args.sha, *SOURCE_PATHS], stdout=subprocess.PIPE)
         subprocess.run(["tar", "-xf", "-", "-C", str(stage)], stdin=archive.stdout, check=True)
         archive.stdout.close()
@@ -185,37 +284,39 @@ def build(args):
         for candidate in stage.rglob("*"):
             if candidate.is_file() and (candidate.name == ".env" or candidate.name.startswith(".env.")):
                 candidate.unlink()
+        archive_timer.__exit__(None)
         # Build inside Linux/Node 24. The store and every workspace link stay within stage.
-        command = " && ".join((
-            "pnpm config set store-dir /app/.pnpm-store",
-            "pnpm install --frozen-lockfile --filter @ticket/api... --filter @ticket/worker... --filter @ticket/web... --filter @ticket/portal...",
-            "pnpm --filter @ticket/contracts build",
-            "pnpm --filter @ticket/backend build",
-            "pnpm --filter @ticket/ui build",
-            "pnpm --filter @ticket/web-session build",
-            "pnpm --filter @ticket/api build",
-            "pnpm --filter @ticket/worker build",
-            "pnpm --filter @ticket/web build",
-            "pnpm --filter @ticket/portal build",
-        ))
-        platform = subprocess.check_output(["docker", "run", "--rm", "--platform", args.platform, args.image, "node", "-p",
-            "process.platform + '/' + process.arch + '/' + process.versions.node"], text=True).strip()
+        command = container_script()
+        with Timed("docker platform check"):
+            platform = subprocess.check_output(["docker", "run", "--rm", "--platform", args.platform, args.image, "node", "-p",
+                "process.platform + '/' + process.arch + '/' + process.versions.node"], text=True).strip()
+        host = docker_arch()
+        if host == args.platform:
+            log(f"docker platform {args.platform} runtime {platform}: native")
+        else:
+            log(f"docker platform {args.platform} runtime {platform}: EMULATED (docker host arch {host or 'unknown'}); "
+                "expect a much slower build, prefer a native builder or --platform matching the host")
         expected_arch = {"linux/amd64": "x64", "linux/arm64": "arm64"}[args.platform]
         if not re.fullmatch(r"linux/" + expected_arch + r"/24\.[0-9.]+", platform):
             fail(f"builder must be Linux Node 24: {platform}")
         image_id = subprocess.check_output(["docker", "image", "inspect", args.image,
             "--format", "{{.Id}}"], text=True).strip()
-        subprocess.run(["docker", "run", "--rm", "--platform", args.platform, "-v", f"{stage}:/app",
-                        "-w", "/app", args.image, "sh", "-ec", command], check=True)
-        subprocess.run(["docker", "run", "--rm", "--platform", args.platform, "-v", f"{stage}:/app:ro",
-                        "-w", "/app", args.image, "node", "-e",
-                        "require('./packages/backend/node_modules/sharp'); require('./packages/backend/dist/generated/prisma/client')"], check=True)
-        # Next's build cache and pnpm store are staging-only, never runtime state.
+        with Timed("container install + builds"):
+            subprocess.run(["docker", "run", "--rm", "--platform", args.platform, "-v", f"{stage}:/app",
+                            "-v", f"{store}:{STORE_MOUNT}", "-w", "/app", args.image, "sh", "-ec", command], check=True)
+        with Timed("verify native modules"):
+            subprocess.run(["docker", "run", "--rm", "--platform", args.platform, "-v", f"{stage}:/app:ro",
+                            "-w", "/app", args.image, "node", "-e",
+                            "require('./packages/backend/node_modules/sharp'); require('./packages/backend/dist/generated/prisma/client')"], check=True)
+        # Next's build cache is staging-only. The pnpm store lives outside stage (host cache);
+        # the rmtree stays as a guard so a store can never enter the artifact or hashes.
         shutil.rmtree(stage / ".pnpm-store", ignore_errors=True)
         for app in ("web", "portal"):
             shutil.rmtree(stage / "apps" / app / ".next" / "cache", ignore_errors=True)
             (stage / "apps" / app / ".next" / "cache").mkdir(parents=True)
         (stage / "apps" / "web" / ".data").mkdir(parents=True, exist_ok=True)
+        manifest_timer = Timed("inventory + manifest")
+        manifest_timer.__enter__()
         all_files = inventory(stage)
         source = {"format": 2, "sourceSha": args.sha,
                   "buildId": hashlib.sha256(json.dumps(all_files, sort_keys=True).encode()).hexdigest()[:12],
@@ -248,7 +349,10 @@ def build(args):
         if dest.exists():
             fail("release already exists; refusing overwrite")
         os.rename(stage, dest)
-        verify(dest)
+        manifest_timer.__exit__(None)
+        with Timed("final verify"):
+            verify(dest)
+        log(f"build total {time.monotonic() - started:.1f}s")
         print(json.dumps({"release": str(dest), "sourceSha": args.sha, "buildId": source["buildId"]}))
     finally:
         if stage.exists():
@@ -320,6 +424,10 @@ def main():
     b.add_argument("--sha", required=True)
     b.add_argument("--image", default="vemoki-runtime:local")
     b.add_argument("--platform", choices=("linux/amd64", "linux/arm64"), default="linux/amd64")
+    b.add_argument("--pnpm-store", type=Path, default=Path(os.environ["VEMOKI_PNPM_STORE"]) if os.environ.get("VEMOKI_PNPM_STORE") else None,
+                   help="persistent host pnpm store (default ~/.cache/vemoki-release/pnpm-store-<platform>, env VEMOKI_PNPM_STORE); cache only, safe to delete")
+    b.add_argument("--clean-stale", action="store_true", help="remove .build-* dirs in --root older than --stale-min-age-minutes")
+    b.add_argument("--stale-min-age-minutes", type=int, default=60)
     b.add_argument("--schema-min", type=int, required=True)
     b.add_argument("--schema-max", type=int, required=True)
     b.add_argument("--migrate-input-min", type=int, required=True)
