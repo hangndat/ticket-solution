@@ -105,17 +105,12 @@ export function StaffManualEntryScreen() {
         <StaffGateOpsSticky
           connectivity={gate.connectivity}
           hasSession={Boolean(gate.sessionId)}
-          sessionId={gate.sessionId}
+          gateName={gate.gates.sessionGateName}
           queueSnap={gate.queueSnap}
           onSync={() => void gate.syncNow()}
           machineLabel={gate.machineLabel}
           eventName={gate.gateScope?.name ?? null}
-          canSwitchEvent={gate.gateEventChoices.length > 1}
-          eventPickerOpen={gate.eventPickerOpen}
-          onToggleEventPicker={() => gate.setEventPickerOpen((open) => !open)}
-          gateEventChoices={gate.gateEventChoices}
           gateScope={gate.gateScope}
-          onSelectGateScope={gate.selectGateScope}
           pendingOp={gate.pendingOp}
           onContinueScan={
             gate.pendingOp && !gate.busy ? gate.dismissPendingAction : undefined

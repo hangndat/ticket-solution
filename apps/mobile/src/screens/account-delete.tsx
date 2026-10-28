@@ -17,7 +17,7 @@ export function AccountDeleteScreen() {
           <SessionScopedAccountDeletionPanel />
         </View>
       </ScrollView>
-      <TabStackTitle title="Xóa tài khoản" />
+      <TabStackTitle title="Xóa tài khoản" large={false} />
     </>
   );
 }

@@ -62,8 +62,8 @@ test('redeem deep link routes to global attendee entry', () => {
     const parsed = parseInstalledAppLink(input);
     assert.equal(parsed.kind, 'redeem-entry');
     if (parsed.kind !== 'redeem-entry') return;
-    assert.equal(parsed.href, '/redeem-global');
-    assert.equal(routeForInstalledAppLink(input), '/redeem-global');
+    assert.equal(parsed.href, '/(tabs)/redeem');
+    assert.equal(routeForInstalledAppLink(input), '/(tabs)/redeem');
   }
 });
 
@@ -75,7 +75,7 @@ test('redeem deep link preserves code query on global route', () => {
   if (parsed.kind !== 'redeem-entry') return;
   assert.equal(
     parsed.href,
-    `/redeem-global?code=${encodeURIComponent(code)}`,
+    `/(tabs)/redeem?code=${encodeURIComponent(code)}`,
   );
   assert.equal(routeForInstalledAppLink(input), parsed.href);
 });

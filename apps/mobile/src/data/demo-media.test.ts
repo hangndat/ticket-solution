@@ -32,3 +32,16 @@ test('demo tenant slugs map to bundled pack keys', () => {
   assert.equal(hasDemoMediaForTenantSlug('demo-studio'), true);
   assert.equal(hasDemoMediaForTenantSlug('acme'), false);
 });
+
+test('prod published seed UUIDs do not match fixture demo media by id', () => {
+  // api.vemoki.com seed reuses mfest-demo / demo-studio tenant slugs but
+  // distinct event ids — EventBanner must key demo pack off eventId only.
+  assert.equal(
+    hasDemoMediaForEventId('d9d9f001-0002-4000-8000-000000000001'),
+    false,
+  );
+  assert.equal(
+    hasDemoMediaForEventId('d9d9f001-0002-4000-8000-000000000002'),
+    false,
+  );
+});

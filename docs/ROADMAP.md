@@ -1,7 +1,10 @@
 # Roadmap — Event Ticketing Platform
 
+> **Mới 28/10/2026 — O28 / Epic [#914](https://github.com/hangndat/ticket-solution/issues/914):** Guest NativeTabs **Sự kiện + Đổi mã** (catalog public; không Tài khoản, không Vé). Verified: **Sự kiện + Đổi mã + Vé của tôi**. Đổi mã là **tab** (không CTA footer Events). Header guest → OIDC «Đăng nhập»; verified → `/account`. Deep link `/redeem` và `/redeem-global` → tab. Privacy native, staff header-only event switch, banner per-event, USB skill giữ [O27](./DECISION-LOG.md) (O27 §3–§4 guest-no-tabs **đã sửa** bởi O28). VoiceOver ngoài #914.
+
 > **S6 giấy nghiệm thu 27/10/2026 — Epic [#914](https://github.com/hangndat/ticket-solution/issues/914):** UAT + CI trên SHA `2645999f0ad535276b63a95c6c96bace9cff025e` (29/29 check-runs). Story S6 [#921](https://github.com/hangndat/ticket-solution/issues/921) / T01 [#946](https://github.com/hangndat/ticket-solution/issues/946) / T02 [#947](https://github.com/hangndat/ticket-solution/issues/947) / T03 [#948](https://github.com/hangndat/ticket-solution/issues/948) đóng theo comment GitHub. **Code complete** SHA này. **Acceptance complete trong scope S6** với known gap (VoiceOver/Dynamic Type owner skip; revoke giữa ca không chạy; TestFlight 1.0.0 (28) catalog PASS, OIDC login fail-closed — không chờ KEYRING). Cutover prod 5 service live cùng SHA. Epic **không** Hoàn thành; **không** pilot ready. Status live: Project #3.
-> **Mới 26/10/2026 — O25 / Epic [#914](https://github.com/hangndat/ticket-solution/issues/914):** hoàn thiện sản phẩm cốt lõi và UX tự phục vụ. Roadmap thực thi canonical: [`plans/VEMOKI-CORE-UX-ROADMAP-2026-10-26.md`](./plans/VEMOKI-CORE-UX-ROADMAP-2026-10-26.md). `apps/portal` và `apps/web` là hai slice riêng; attendee web không cold-offline trong Epic này. Nợ #901/#903/#904/AR891-INT-F01 vẫn hoãn.
+
+> **Mới 26/10/2026 — O25 / Epic [#914](https://github.com/hangndat/ticket-solution/issues/914):** hoàn thiện sản phẩm cốt lõi và UX tự phục vụ. Roadmap thực thi canonical: [`plans/VEMOKI-CORE-UX-ROADMAP-2026-10-26.md`](./plans/VEMOKI-CORE-UX-ROADMAP-2026-10-26.md). `apps/portal` và `apps/web` là hai slice riêng; attendee web không cold-offline trong Epic này. Nợ #901/#903/#904/AR891-INT-F01 vẫn hoãn. **iOS VoiceOver ngoài phạm vi #914 / quyết định owner** — không AC S6/UAT, không known gap.
 
 > **Quyết định mới 24/10/2026 — O23:** bỏ Web Gate, Gate admission chỉ trên iOS Staff. Hướng thiết kế tại [`vemoki-unified-v1`](./design/vemoki-unified-v1/README.md) được chốt ở mức design; các checkpoint Web Gate lịch sử bên dưới giữ làm bằng chứng phạm vi cũ. D-6 đã xóa route `/gate` web; các link/copy cũ và direct-route behavior cần Task Spec, contract/ADR, review và nghiệm thu riêng trước khi coi migration hoàn tất. Chưa coi là acceptance complete hay pilot ready.
 
@@ -285,7 +288,7 @@ Vẫn **sau MVP** (không thuộc D7–D10, không bị “hủy” khỏi tầm
 - Repo: https://github.com/hangndat/ticket-solution
 - Agent rules: root [AGENTS.md](../AGENTS.md) + `.cursor/rules/*.mdc`
 - W0 evidence: [W0-FOUNDATION-REPORT.md](./W0-FOUNDATION-REPORT.md)
-- Chính sách iOS: không bao giờ Expo/EAS Cloud Build — xem root/mobile `AGENTS.md`, README, PRD, technical design.
+- Chính sách iOS: không bao giờ Expo/EAS Cloud Build — xem root/mobile `AGENTS.md`, README, PRD, technical design. Cài USB/máy thật: skill [ios-usb-device](../.cursor/skills/ios-usb-device/SKILL.md) — chọn mode **prod** (OIDC/API/APNs như TestFlight) hoặc **local API** trước khi bake; không trộn extras.
 - Bàn giao Cursor W0→roadmap (lịch sử): [BAN-GIAO-CURSOR.md](./BAN-GIAO-CURSOR.md)
 
 ## 10. Lịch sử — sau duyệt roadmap lần đầu (2026-10-16)

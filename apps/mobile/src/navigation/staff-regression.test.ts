@@ -1,6 +1,11 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { isStaffWorkspace, showAttendeeTabs } from './staff-workspace.ts';
+import {
+  isGuestShell,
+  isStaffWorkspace,
+  showAttendeeNativeTabs,
+  showAttendeeTabs,
+} from './staff-workspace.ts';
 import { STAFF_TAB_TITLES } from './staff-tab-titles.ts';
 import {
   STAFF_DEFAULT_SCAN_HREF,
@@ -43,6 +48,20 @@ test('K-STAFF-01: staff workspace hides attendee tabs until MeEvents resolves', 
     showAttendeeTabs({ status: 'verified' }, attendeeEligibility),
     true,
   );
+  assert.equal(
+    showAttendeeNativeTabs({ status: 'signed-out' }, attendeeEligibility),
+    true,
+  );
+  assert.equal(
+    showAttendeeNativeTabs({ status: 'verified' }, attendeeEligibility),
+    true,
+  );
+  assert.equal(
+    showAttendeeNativeTabs({ status: 'verified' }, staffEligibility),
+    false,
+  );
+  assert.equal(isGuestShell({ status: 'signed-out' }), true);
+  assert.equal(isGuestShell({ status: 'verified' }), false);
   assert.equal(
     isStaffWorkspace({ status: 'verified' }, {
       ...staffEligibility,
@@ -95,6 +114,15 @@ test('K-STAFF-01: staff default tab is Scan when entering workspace or on attend
     shouldReplaceWithStaffScanTab({
       staffWorkspace: true,
       segments: ['(tabs)', 'my-tickets'],
+      enteringStaff: false,
+    }),
+    true,
+  );
+
+  assert.equal(
+    shouldReplaceWithStaffScanTab({
+      staffWorkspace: true,
+      segments: ['(tabs)', 'redeem'],
       enteringStaff: false,
     }),
     true,
