@@ -1,7 +1,12 @@
-import { Redirect } from 'expo-router';
-import { ATTENDEE_REDEEM_PATH } from '@/navigation/attendee-redeem-entry';
+import { Redirect, useLocalSearchParams, type Href } from 'expo-router';
+import { attendeeRedeemHref } from '@/navigation/attendee-redeem-entry';
 
-/** Attendee `/redeem` always uses global single-code flow (no scoped operator UI). */
+function firstParam(value: string | string[] | undefined): string | undefined {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+/** Legacy `/redeem` → attendee redeem tab (preserve `?code=`). */
 export default function RedeemRoute() {
-  return <Redirect href={ATTENDEE_REDEEM_PATH} />;
+  const { code } = useLocalSearchParams<{ code?: string | string[] }>();
+  return <Redirect href={attendeeRedeemHref(firstParam(code)) as Href} />;
 }

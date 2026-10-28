@@ -4,18 +4,12 @@ import { tabDetailStackScreenOptions } from '@/navigation/tab-stack-options';
 /** Root stack (outside NativeTabs) — iOS cannot navigate hidden tab triggers. */
 export default function StaffAccountRootLayout() {
   return (
-    <Stack screenOptions={tabDetailStackScreenOptions}>
+    <Stack screenOptions={{ ...tabDetailStackScreenOptions, headerBackButtonDisplayMode: 'minimal' }}>
       <Stack.Screen name="index" options={{ title: 'Tài khoản' }} />
-      <Stack.Screen
-        name="delete"
-        options={{ title: 'Xóa tài khoản', headerLargeTitleEnabled: false }}
-      />
+      <Stack.Screen name="delete" options={{ title: 'Xóa tài khoản' }} />
       <Stack.Screen
         name="privacy"
-        options={{
-          title: 'Chính sách quyền riêng tư',
-          headerLargeTitleEnabled: false
-        }}
+        options={{ title: 'Chính sách quyền riêng tư' }}
       />
     </Stack>
   );

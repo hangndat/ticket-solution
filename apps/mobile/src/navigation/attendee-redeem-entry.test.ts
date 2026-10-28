@@ -9,9 +9,9 @@ import {
 } from './attendee-redeem-entry.ts';
 
 test('scoped redeem path canonicalizes to global attendee entry', () => {
-  assert.equal(ATTENDEE_REDEEM_PATH, '/redeem-global');
-  assert.equal(normalizeAttendeeRedeemPath('/redeem'), '/redeem-global');
-  assert.equal(normalizeAttendeeRedeemPath('/redeem-global'), '/redeem-global');
+  assert.equal(ATTENDEE_REDEEM_PATH, '/(tabs)/redeem');
+  assert.equal(normalizeAttendeeRedeemPath('/redeem'), '/(tabs)/redeem');
+  assert.equal(normalizeAttendeeRedeemPath('/redeem-global'), '/(tabs)/redeem');
   assert.equal(normalizeAttendeeRedeemPath('/claim'), '/claim');
 });
 
@@ -26,6 +26,6 @@ test('redeem code query is sanitized and preserved on global href', () => {
   );
   assert.equal(
     attendeeRedeemHref(code),
-    `/redeem-global?code=${encodeURIComponent(code)}`,
+    `/(tabs)/redeem?code=${encodeURIComponent(code)}`,
   );
 });

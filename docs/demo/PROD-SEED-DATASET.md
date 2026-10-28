@@ -53,6 +53,21 @@ Quy ước segment: `686f0001-00{kind}-4000-8000-0000000000{nn}`.
 
 **Seed BE:** lưu `starts_at` / `ends_at` (hoặc tương đương schema) đúng ISO-8601 `+07:00`. Đặt `redemption_opens_at` / `check_in_opens_at` ≥ 2h trước `starts_at` và đóng sau `ends_at` (cùng pattern `demo-seed.ts`).
 
+### Gates / cổng (O31)
+
+Phân bổ **1 / 2 / 3** cổng trên 6 event (mỗi sự kiện có ít nhất một cổng). Tên VI ổn định; UUID kind `0009`: `686f0001-0009-4000-8000-00000000{ee}{gg}` (`ee` = event 01–06, `gg` = gate 01–03). Idempotent theo unique `(tenant_id, event_id, name)`.
+
+| Event slug | Số cổng | Tên |
+| --- | ---: | --- |
+| `dem-am-indie` | 1 | Cổng chính |
+| `pulse-afterhours` | 2 | Cổng chính, Cổng VIP |
+| `pulse-rooftop` | 3 | Cổng chính, Cổng VIP, Cổng phụ |
+| `pho-co-dem` | 1 | Cổng chính |
+| `song-thu-workshop` | 2 | Cổng chính, Cổng VIP |
+| `festival-an-song` | 3 | Cổng chính, Cổng VIP, Cổng phụ |
+
+Re-run gates-only: `GATE_SEED_CONFIRM=1 node packages/backend/scripts/seed-demo-gates.cjs` (trong container `api` theo [PROD-SEED-RUNBOOK](../ops/PROD-SEED-RUNBOOK.md)). Full seed (`prod-seed.cjs`) cũng gọi cùng `ensureGates`.
+
 ### Mô tả sự kiện (VI / EN)
 
 | Event slug | Mô tả VI (marketing hero) | Description EN |

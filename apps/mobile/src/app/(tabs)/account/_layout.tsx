@@ -1,19 +1,26 @@
 import { Stack } from 'expo-router';
-import { tabAttendeeCompactStackScreenOptions } from '@/navigation/tab-stack-options';
+import { accountCopy } from '@/components/screen-state-copy';
+import {
+  tabDetailStackScreenOptions,
+  tabRootStackScreenOptions,
+} from '@/navigation/tab-stack-options';
 
 export default function AccountTabLayout() {
   return (
-    <Stack screenOptions={tabAttendeeCompactStackScreenOptions}>
-      <Stack.Screen name="index" options={{ title: 'Tài khoản' }} />
+    <Stack screenOptions={tabRootStackScreenOptions}>
+      <Stack.Screen name="index" options={{ title: accountCopy.screenTitle }} />
       <Stack.Screen
         name="delete"
-        options={{ title: 'Xóa tài khoản', headerLargeTitleEnabled: false }}
+        options={{
+          ...tabDetailStackScreenOptions,
+          title: 'Xóa tài khoản',
+        }}
       />
       <Stack.Screen
         name="privacy"
         options={{
-          title: 'Quyền riêng tư',
-          headerLargeTitleEnabled: false
+          ...tabDetailStackScreenOptions,
+          title: 'Chính sách quyền riêng tư',
         }}
       />
     </Stack>

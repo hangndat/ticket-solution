@@ -4,7 +4,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { useLocalSearchParams, router } from 'expo-router';
 import { WebView } from 'react-native-webview';
 import { AttendeeCta } from '@/components/attendee-cta';
-import { BrandWordmark, Notice } from '@/components/page';
+import { Notice } from '@/components/page';
 import {
   buildMembershipInviteWebUrl,
   isMembershipInviteToken
@@ -59,10 +59,6 @@ export default function MembershipInviteScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: brand.paper }}>
       <View style={{ padding: space.xl, gap: space.lg, paddingBottom: space.sm }}>
-      <BrandWordmark compact />
-      <Text accessibilityRole="header" style={{ color: colors.ink, ...typography.display }}>
-        Lời mời thành viên
-      </Text>
       <Text style={{ color: colors.secondary, ...typography.body, fontFamily: fontFamilies.body }}>
         Nhận lời mời vào tổ chức trên web — đăng nhập đúng email đã được mời. Khác
         với «Nhận vé mời» (vé sự kiện) trong app.

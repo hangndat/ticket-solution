@@ -98,8 +98,10 @@ test('manual persistent status stays non-idle after toast op cleared', () => {
     op: selectScanFeedbackOp(queued, null),
     canReconcile: false,
   });
-  assert.match(idleToast.label, /Sẵn sàng quét/i);
-  assert.doesNotMatch(persistent.label, /Sẵn sàng quét/i);
+  // Idle is data only: the sticky row carries the single visible «Sẵn sàng».
+  assert.equal(idleToast.kind, 'idle');
+  assert.doesNotMatch(idleToast.label, /Sẵn sàng/i);
+  assert.equal(persistent.kind === 'idle', false);
   assert.match(persistent.label, /chờ|đồng bộ|offline/i);
 });
 

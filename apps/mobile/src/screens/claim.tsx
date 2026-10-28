@@ -13,7 +13,7 @@ import {
 import { presentRedeemDecision } from '@/attendee/attendee-outcome-copy';
 import { useAttendeeSignIn } from '@/attendee/use-attendee-sign-in';
 import { AttendeeCta } from '@/components/attendee-cta';
-import { BrandWordmark, Notice, Page } from '@/components/page';
+import { Notice, Page } from '@/components/page';
 import { getApiBaseUrl } from '@/identity/config';
 import { session } from '@/identity/session';
 import { fetchPublishedEventDetail } from '@/published/published-event-api';
@@ -27,10 +27,14 @@ import {
   resumeGuestClaimIntent
 } from '@/redeem/claim-intent';
 import { requireTermsConsent, validateFormAnswers } from '@/redeem/form-validate';
+import { resolveTermsForDisplay } from '@/redeem/terms-display';
+import { randomId } from '@/lib/random-id';
+import { refreshWalletAfterIssue } from '@/tickets/refresh-wallet-after-issue';
+import { ticketDetailHref } from '@/tickets/ticket-detail-href';
 import { fetchOwnerRedemptionStatus } from '@/redeem/owner-status';
 import type { RedeemDecision } from '@/redeem/redeem-client';
 import { RedeemFormFields } from '@/redeem/redeem-form-fields';
-import { brand, colors } from '@/theme/colors';
+import { colors } from '@/theme/colors';
 import { fontFamilies } from '@/theme/fonts';
 import { typography } from '@/theme/typography';
 import { space } from '@/theme/tokens';
@@ -193,8 +197,9 @@ export function ClaimScreen() {
       if (cancelled) return;
       if (result.status === 'ok') {
         setForm(result.event.form ?? null);
-        setTermsVersion(result.event.terms?.version ?? null);
-        setTermsBody(result.event.terms?.bodyMarkdown ?? null);
+        const terms = resolveTermsForDisplay(result.event.terms, result.event.terms);
+        setTermsVersion(terms.version);
+        setTermsBody(terms.body);
         setNotice(
           `Đã tải form đã xuất bản (schema v${result.event.schemaVersion}).`,
         );
@@ -254,7 +259,7 @@ export function ClaimScreen() {
         tenantId: intent.tenantId,
         eventId: intent.eventId,
         token: intent.token,
-        idempotencyKey: crypto.randomUUID(),
+        idempotencyKey: randomId(),
         formVersion: form?.formVersion,
         termsVersion: termsVersion ?? undefined,
         answers: validated.answers,
@@ -264,6 +269,11 @@ export function ClaimScreen() {
       setDecision(next);
       if (next.kind === 'issued' || next.kind === 'pending' || next.kind === 'denied') {
         clearGuestClaimIntent();
+      }
+      if (next.kind === 'issued') {
+        await refreshWalletAfterIssue();
+        if (!session.isEpochCurrent(epoch)) return;
+        router.push(ticketDetailHref(next.ticketId));
       }
     } finally {
       if (session.isEpochCurrent(epoch)) setBusy(false);
@@ -291,6 +301,9 @@ export function ClaimScreen() {
           requestId: result.body.requestId,
           replayed: true
         });
+        await refreshWalletAfterIssue();
+        if (!session.isEpochCurrent(epoch)) return;
+        router.push(ticketDetailHref(result.body.ticketId));
       } else if (result.status === 'ok' && result.body.status === 'REJECTED') {
         setDecision({
           kind: 'denied',
@@ -320,13 +333,6 @@ export function ClaimScreen() {
 
   return (
     <Page>
-      <BrandWordmark compact />
-      <Text
-        accessibilityRole="header"
-        style={{ color: brand.ink, ...typography.display }}
-      >
-        Nhận vé mời
-      </Text>
       <Text style={{ color: colors.secondary, ...typography.body }}>
         Chỉ email đã được mời và xác minh. Sau đăng nhập quay lại đây để hoàn
         tất; dữ liệu tạm xoá khi đăng xuất hoặc đổi tài khoản.
@@ -423,7 +429,9 @@ export function ClaimScreen() {
               <AttendeeCta
                 label="Xem vé của tôi"
                 variant="secondary"
-                onPress={() => router.push('/my-tickets')}
+                onPress={() =>
+                  router.push(ticketDetailHref(decision.ticketId))
+                }
                 testID="claim-cta-wallet"
               />
             </View>

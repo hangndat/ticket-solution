@@ -256,6 +256,7 @@ test(
         'operations',
         'audit_logs',
         'staff_sessions',
+        'gates',
         'checkin_reservations',
         'checkins',
         'offline_sync_events',
